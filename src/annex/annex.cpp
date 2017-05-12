@@ -26,6 +26,7 @@
 #include "annex-setup.h"
 #include "annex-update.h"
 #include "annex-create.h"
+#include "annex-status.h"
 #include "user-config-dir.h"
 
 // Why don't c-style timer callbacks have context pointers?
@@ -405,8 +406,10 @@ help( const char * argv0 ) {
 		"\n"
 		"OR, to do the one-time setup for an AWS account:\n"
 		"%s -setup [</full/path/to/access-key-file> </full/path/to/secret-key-file> [<CloudFormation URL>]]\n"
+		"OR, to check the status of your annex:\n"
+		"%s -check -annex[-name] <annex-name> [-classad[s]]\n"
 		"\n"
-		, argv0, argv0 );
+		, argv0, argv0, argv0 );
 }
 
 
@@ -661,6 +664,7 @@ annex_main( int argc, char ** argv ) {
 	argc = _argc;
 	argv = _argv;
 
+	bool wantClassAds = false;
 	int udSpecifications = 0;
 	const char * sfrConfigFile = NULL;
 	const char * annexName = NULL;
@@ -704,7 +708,8 @@ annex_main( int argc, char ** argv ) {
 		ct_default = 0,
 		ct_check_setup = 3,
 		ct_create_annex = 1,
-		ct_update_annex = 4
+		ct_update_annex = 4,
+		ct_status = 5
 	};
 	command_t theCommand = ct_default;
 	for( int i = 1; i < argc; ++i ) {
@@ -782,7 +787,7 @@ annex_main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -aws-user-data requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "annex-name", 6 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "annex-name", 5 ) ) {
 			++i;
 			if( i < argc && argv[i] != NULL ) {
 				annexName = argv[i];
@@ -1041,6 +1046,10 @@ annex_main( int argc, char ** argv ) {
 			theCommand = ct_check_setup;
 		} else if( is_dash_arg_prefix( argv[i], "setup", 5 ) ) {
 			theCommand = ct_setup;
+		} else if( is_dash_arg_prefix( argv[i], "status", 6 ) ) {
+			theCommand = ct_status;
+		} else if( is_dash_arg_prefix( argv[i], "classads", 7 ) ) {
+			wantClassAds = true;
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;
@@ -1053,11 +1062,6 @@ annex_main( int argc, char ** argv ) {
 
 	if( udSpecifications > 1 ) {
 		fprintf( stderr, "%s: you may specify no more than one of -aws-[default-]user-data[-file].\n", argv[0] );
-		return 1;
-	}
-
-	if( annexName == NULL ) {
-		fprintf( stderr, "%s: you must specify -annex-name.\n", argv[0] );
 		return 1;
 	}
 
@@ -1098,8 +1102,6 @@ annex_main( int argc, char ** argv ) {
 		unclaimedTimeout = param_integer( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
 	}
 
-	commandArguments.Assign( "AnnexName", annexName );
-
 	commandArguments.Assign( "TargetCapacity", count );
 
 	time_t now = time( NULL );
@@ -1130,6 +1132,21 @@ annex_main( int argc, char ** argv ) {
 				return 1;
 			}
 		}
+	}
+
+	switch( theCommand ) {
+		case ct_create_annex:
+		case ct_update_annex:
+		case ct_status:
+			if( annexName == NULL ) {
+				fprintf( stderr, "%s: you must specify -annex-name.\n", argv[0] );
+				return 1;
+			}
+			commandArguments.Assign( "AnnexName", annexName );
+			break;
+
+		default:
+			break;
 	}
 
 	switch( theCommand ) {
@@ -1184,6 +1201,9 @@ annex_main( int argc, char ** argv ) {
 	}
 
 	switch( theCommand ) {
+		case ct_status:
+			return status( annexName, wantClassAds, serviceURL );
+
 		case ct_setup:
 			return setup(	argc >= 2 ? argv[2] : NULL,
 							argc >= 3 ? argv[3] : NULL,
