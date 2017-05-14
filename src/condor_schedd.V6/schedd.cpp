@@ -10691,11 +10691,12 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	}
 
 		//
-		// Do not remove the ClaimId or RemoteHost if the keepClaimAttributes
+		// If the job is not in a terminal state (i.e. COMPLETED or REMOVED), then
+		// do not remove the ClaimId or RemoteHost if the keepClaimAttributes
 		// flag is set. This means that we want this job to reconnect
 		// when the schedd comes back online.
 		//
-	if ( ! rec->keepClaimAttributes ) {
+	if ( (!rec->keepClaimAttributes) || job_status == COMPLETED || job_status == REMOVED ) {
 		DeleteAttribute( cluster, proc, ATTR_PAIRED_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );

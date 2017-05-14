@@ -369,6 +369,7 @@ Matchmaker ()
 	char buf[64];
 
 	NegotiatorName = NULL;
+	NegotiatorNameInConfig = false;
 
 	AccountantHost  = NULL;
 	PreemptionReq = NULL;
@@ -480,7 +481,7 @@ Matchmaker::
 	if ( cachedName ) free(cachedName);
 	if ( cachedAddr ) free(cachedAddr);
 
-	if (NegotiatorName) free (NegotiatorName);
+	delete [] NegotiatorName;
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
@@ -499,8 +500,19 @@ Matchmaker::
 
 
 void Matchmaker::
-initialize ()
+initialize (const char *neg_name)
 {
+	// If -name or -local-name was given on the command line, use
+	// that for the negotiator's name.
+	// Otherwise, reinitialize() will set the name based on the
+	// config file (or use the default).
+	if ( neg_name == NULL ) {
+		neg_name = get_mySubSystem()->getLocalName();
+	}
+	if ( neg_name != NULL ) {
+		NegotiatorName = build_valid_daemon_name(neg_name);
+	}
+
 	// read in params
 	reinitialize ();
 
@@ -583,10 +595,18 @@ reinitialize ()
     // Initialize accountant params
     accountant.Initialize(hgq_root_group);
 
-	if (NegotiatorName) {
-		free(NegotiatorName);
-		NegotiatorName = NULL;
+	if ( NegotiatorNameInConfig || NegotiatorName == NULL ) {
+		char *tmp = param( "NEGOTIATOR_NAME" );
+		delete [] NegotiatorName;
+		if ( tmp ) {
+			NegotiatorName = build_valid_daemon_name( tmp );
+			free( tmp );
+			NegotiatorNameInConfig = true;
+		} else {
+			NegotiatorName = default_daemon_name();
+		}
 	}
+
 	init_public_ad();
 
 	// get timeout values
@@ -2541,6 +2561,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 
 				updateAd.Assign(ATTR_NAME, name.c_str()); // the hash key
+				updateAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 				updateAd.Assign("Priority", accountant.GetPriority(MyString(name)));
 
 				bool isGroup;
@@ -6423,21 +6444,6 @@ init_public_ad()
 	SetMyTypeName(*publicAd, NEGOTIATOR_ADTYPE);
 	SetTargetTypeName(*publicAd, "");
 
-	if( !NegotiatorName ) {
-		// optionally allow the negotiator name to be set, this is for unusual circumstances
-		// the default behavior will be to use the subsystem name as the negotiator name.
-		// we do this so that in a HAD configuration, the two negotiators will have the same name
-		// and thus overwrite each other's ad in the collector. 
-		NegotiatorName = param("NEGOTIATOR_NAME");
-		if ( ! NegotiatorName) {
-			const char * name = get_mySubSystem()->getLocalName();
-			if ( ! name) {
-				name = get_mySubSystem()->getName();
-				if ( ! name) { name = "NEGOTIATOR"; }
-			}
-			NegotiatorName = strdup(name);
-		}
-	}
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
 	publicAd->Assign(ATTR_NEGOTIATOR_IP_ADDR,daemonCore->InfoCommandSinfulString());

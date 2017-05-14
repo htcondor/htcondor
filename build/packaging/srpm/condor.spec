@@ -1390,7 +1390,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_reconfig
 %_sbindir/condor_replication
 %_sbindir/condor_restart
-%attr(6755, root, root) %_sbindir/condor_root_switchboard
 %_sbindir/condor_schedd
 %_sbindir/condor_set_shutdown
 %_sbindir/condor_shadow
@@ -1899,6 +1898,10 @@ fi
 %endif
 
 %changelog
+* Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
+- Fixed a bug where using an X.509 proxy might corrupt the job queue log
+- Fixed a memory leak in the Python bindings
+
 * Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.1-1
 - Several performance enhancements in the collector
 - Further refinement and initial documentation of the HTCondor Annex

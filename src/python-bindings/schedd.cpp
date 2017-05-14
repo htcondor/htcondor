@@ -1343,13 +1343,13 @@ struct Schedd {
     }
 
 
-    boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1)
+    boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
         std::string val_str;
         extract<ExprTreeHolder &> exprtree_extract(requirement);
         extract<std::string> string_extract(requirement);
         classad::ExprTree *expr = NULL;
-	boost::shared_ptr<classad::ExprTree> expr_ref;
+        boost::shared_ptr<classad::ExprTree> expr_ref;
         if (string_extract.check())
         {
             classad::ClassAdParser parser;
@@ -1381,9 +1381,52 @@ struct Schedd {
 		projList->push_back(entry);
 	}
 
+	// decode the since argument, this can either be an expression, or a string
+	// containing either an expression, a cluster id or a full job id.
+	classad::ExprTree *since_expr_copy = NULL;
+	extract<ExprTreeHolder &> since_exprtree_extract(since);
+	extract<std::string> since_string_extract(since);
+	extract<int>  since_cluster_extract(since);
+	if (since_cluster_extract.check()) {
+		std::string expr_str;
+		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
+		classad::ClassAdParser parser;
+		parser.ParseExpression(expr_str, since_expr_copy);
+	} else if (since_string_extract.check()) {
+		std::string since_str = since_string_extract();
+		classad::ClassAdParser parser;
+		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
+			THROW_EX(ValueError, "Unable to parse since argument as an expression or as a job id.");
+		} else {
+			classad::Value val;
+			if (ExprTreeIsLiteral(since_expr_copy, val) && val.IsNumber()) {
+				delete since_expr_copy; since_expr_copy = NULL;
+				// if the stop constraint is a numeric literal.
+				// then there are a few special cases...
+				// it might be a job id. or it might (someday) be a time value
+				PROC_ID jid;
+				const char * pend;
+				if (StrIsProcId(since_str.c_str(), jid.cluster, jid.proc, &pend) && !*pend) {
+					if (jid.proc >= 0) {
+						formatstr(since_str, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
+					} else {
+						formatstr(since_str, "ClusterId == %d", jid.cluster);
+					}
+					parser.ParseExpression(since_str, since_expr_copy);
+				}
+			}
+		}
+	} else if (since_exprtree_extract.check()) {
+		since_expr_copy = since_exprtree_extract().get()->Copy();
+	} else {
+		// it's ok for since argument to be an empty object.
+	}
+
+
 	classad::ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, expr_copy);
 	ad.InsertAttr(ATTR_NUM_MATCHES, match);
+	if (since_expr_copy) { ad.Insert("Since", since_expr_copy); }
 
 	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
 	ad.Insert(ATTR_PROJECTION, projTree);
@@ -2092,7 +2135,14 @@ void export_schedd()
             ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
             ":param match: Number of matches to return.\n"
-            ":return: An iterator for the matching job ads")
+            ":param since: optional job id or expression that will signal the end of records to return; the job that matches this will not be returned.\n"
+            ":return: An iterator for the matching job ads",
+#if BOOST_VERSION >= 103400
+             (boost::python::arg("self"),
+#endif
+             boost::python::arg("requirements"), boost::python::arg("projection"), boost::python::arg("match")=-1,
+             boost::python::arg("since")=boost::python::object())
+            )
         .def("refreshGSIProxy", &Schedd::refreshGSIProxy, "Refresh the GSI proxy for a given job\n"
             ":param cluster: Job cluster.\n"
             ":param proc: Job proc.\n"

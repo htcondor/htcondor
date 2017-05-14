@@ -41,7 +41,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug where per-instance job attributes like \AdAttr{RemoteHost}
+would show up in the history file for completed jobs.  This bug occurred if
+a job happened to complete while the schedd was in the process of a
+graceful shutdown.  
+\Ticket{6251}
+
+\item Fixed a bug that could cause \Condor{submit} to fail to submit a
+job with a proxy file to a \Condor{schedd} older than 8.5.8, due to the
+absence of an X.509 CA certificates directory.
+\Ticket{6258}
 
 \end{itemize}
 
@@ -53,17 +62,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.3 not yet released.
-%\item HTCondor version 8.6.3 released on Month Date, 2017.
-
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
+\item HTCondor version 8.6.3 released on May 9, 2017.
 
 \end{itemize}
 
@@ -71,7 +70,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that rarely corrupts the \Condor{schedd}'s job queue
+log file when the input sandbox of a job with an X.509 proxy file is
+spooled.
+\Ticket{6240}
+
+\item Fixed a memory leak in the Python bindings related to logging.
+\Ticket{6227}
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Allow Python modules to be used as \Condor{collector} plugin.
+This undocumented feature is to be used by expert developers only.
+\Ticket{6213}
 
 \end{itemize}
 
