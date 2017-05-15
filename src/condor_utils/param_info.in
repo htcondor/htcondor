@@ -3332,7 +3332,8 @@ usage=Circuit breaker to prevent an excessive number of a jobs in a single submi
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
-default=
+# default is 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
+default=100
 customization=normal
 description=Max running DAGs for a single owner
 usage=Ensure that a single user does not monopolize the SCHEDD
