@@ -347,3 +347,13 @@ bool AmazonCallFunction::ioCheck(char **argv, int argc) {
 		verify_string_name( argv[5] ) &&
 		verify_string_name( argv[6] );
 }
+
+// Expecting:	EC2_BULK_QUERY <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+bool AmazonBulkQuery::ioCheck(char **argv, int argc) {
+	return verify_min_number_args( argc, 5 ) &&
+		verify_request_id( argv[1] ) &&
+		verify_string_name( argv[2] ) &&
+		verify_string_name( argv[3] ) &&
+		verify_string_name( argv[4] );
+}

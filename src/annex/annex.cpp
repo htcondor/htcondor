@@ -562,8 +562,6 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 		fprintf( stderr, "Failed to start parsing spot fleet request.\n" );
 		exit( 2 );
 	} else {
-		// This is bugged, and doesn't actually do a merge.
-		// int numAttrs = ccafi.next( commandArguments, true );
 		ClassAd spotFleetRequest;
 		int numAttrs = ccafi.next( spotFleetRequest );
 		if( numAttrs <= 0 ) {
@@ -573,7 +571,10 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 			fprintf( stderr, "Failed to parse spot fleet reqeust, found too many attributes.\n" );
 			exit( 2 );
 		}
-		commandArguments.Update( spotFleetRequest );
+
+		// The command-line arguments beat the json file.
+		spotFleetRequest.Update( commandArguments );
+		commandArguments = spotFleetRequest;
 	}
 
 	fprintf( stdout,

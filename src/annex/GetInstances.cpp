@@ -4,11 +4,6 @@
 #include "Functor.h"
 #include "GetInstances.h"
 
-void
-assign( ClassAd * c, const std::string & a, const std::string & v ) {
-	c->Assign( a.c_str(), v );
-}
-
 int
 GetInstances::operator() () {
 	dprintf( D_FULLDEBUG, "GetInstances::operator()\n" );
@@ -18,7 +13,6 @@ GetInstances::operator() () {
 
 	std::string errorCode;
 	StringList returnStatus;
-	// Efficiency would improve if this accepted a filter argument.
 	int rc = gahp->ec2_vm_status_all(
 		service_url, public_key_file, secret_key_file,
 		returnStatus, errorCode
@@ -32,29 +26,45 @@ GetInstances::operator() () {
 		unsigned count = 0;
 		std::string iName;
 
+		int spotFleetRequestCount = 0;
+		scratchpad->LookupInteger( "SpotFleetRequestCount", spotFleetRequestCount );
+
+		std::string aName;
+		std::string sfrID;
+		std::set< std::string > spotFleetRequestIDs;
+		for( int i = 0; i < spotFleetRequestCount; ++i ) {
+			formatstr( aName, "SpotFleetRequest%d.ID", i );
+			scratchpad->LookupString( aName.c_str(), sfrID );
+			spotFleetRequestIDs.insert( sfrID );
+		}
+
 		returnStatus.rewind();
-		ASSERT( returnStatus.number() % 6 == 0 );
-		for( int i = 0; i < returnStatus.number(); i += 6 ) {
+		ASSERT( returnStatus.number() % 7 == 0 );
+		for( int i = 0; i < returnStatus.number(); i += 7 ) {
 			std::string instanceID = returnStatus.next();
 			std::string status = returnStatus.next();
 			std::string clientToken = returnStatus.next();
 			std::string keyName = returnStatus.next();
 			std::string stateReasonCode = returnStatus.next();
 			std::string publicDNSName = returnStatus.next();
+			std::string spotFleetRequestID = returnStatus.next();
 
 			// We could probably be a little more cautious about this match,
 			// but this has the nice property that we can use the same code
 			// for looking up both bulk request IDs and annex names.  (AWS
 			// can't filter on regexes or prefixes.)
-			if( clientToken.find( annexID ) != 0 ) { continue; }
+			if( (clientToken.find( annexID ) != 0)
+			 && (spotFleetRequestIDs.count( spotFleetRequestID ) == 0) ) {
+				continue;
+			}
 
 			formatstr( iName, "Instance%d", count++ );
-			assign( scratchpad, iName + ".instanceID", instanceID );
-			assign( scratchpad, iName + ".status", status );
-			assign( scratchpad, iName + ".clientToken", clientToken );
-			assign( scratchpad, iName + ".keyName", keyName );
-			assign( scratchpad, iName + ".stateReasonCode", stateReasonCode );
-			assign( scratchpad, iName + ".publicDNSName", publicDNSName );
+			scratchpad->Assign( (iName + ".instanceID").c_str(), instanceID );
+			scratchpad->Assign( (iName + ".status").c_str(), status );
+			scratchpad->Assign( (iName + ".clientToken").c_str(), clientToken );
+			scratchpad->Assign( (iName + ".keyName").c_str(), keyName );
+			scratchpad->Assign( (iName + ".stateReasonCode").c_str(), stateReasonCode );
+			scratchpad->Assign( (iName + ".publicDNSName").c_str(), publicDNSName );
 		}
 
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );

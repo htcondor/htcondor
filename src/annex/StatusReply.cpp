@@ -5,12 +5,7 @@
 #include "StatusReply.h"
 
 void
-lookupString( ClassAd * c, const std::string & a, std::string & v ) {
-	c->LookupString( a.c_str(), v );
-}
-
-void
-printClassAds( unsigned, const std::map< std::string, std::string > & instances, const std::string & annexID ) {
+printClassAds( unsigned count, const std::map< std::string, std::string > & instances, const std::string & annexID ) {
 	// Compute the summary information for the annex ad.
 	std::map< std::string, unsigned > statusCounts;
 	std::map< std::string, std::vector< std::string > > statusInstanceList;
@@ -27,6 +22,7 @@ printClassAds( unsigned, const std::map< std::string, std::string > & instances,
 	ClassAd annexAd;
 	annexAd.Assign( "MyType", "Annex" );
 	annexAd.Assign( "AnnexID", annexID );
+	annexAd.Assign( "TotalInstances", count );
 
 	for( auto i = statusCounts.begin(); i != statusCounts.end(); ++i ) {
 		std::string attr = i->first;
@@ -50,6 +46,7 @@ printClassAds( unsigned, const std::map< std::string, std::string > & instances,
 		// If these ever become evaluated ClassAds, we could stop tracking
 		// these and instead just make the attribute value 'size(...)'
 		annexAd.Assign( ("NumInstances" + attr).c_str(), i->second );
+		if( attr == "InPool" ) { continue; }
 
 		std::string expr;
 		std::vector< std::string > & instanceList = statusInstanceList[ i->first ];
@@ -76,11 +73,11 @@ printHumanReadable( unsigned count, const std::map< std::string, std::string > &
 		statusCounts[ i->second ] += 1;
 	}
 
-	fprintf( stdout, "%12.12s %5.5s\n", "STATE", "COUNT" );
+	fprintf( stdout, "%-14.14s %5.5s\n", "STATE", "COUNT" );
 	for( auto i = statusCounts.begin(); i != statusCounts.end(); ++i ) {
-		fprintf( stdout, "%12.12s %5u\n", i->first.c_str(), i->second );
+		fprintf( stdout, "%-14.14s %5u\n", i->first.c_str(), i->second );
 	}
-	fprintf( stdout, "%12.12s %5u\n", "TOTAL", count );
+	fprintf( stdout, "%-14.14s %5u\n", "TOTAL", count );
 
 	std::map< std::string, std::vector< std::string > > instanceIDsByStatus;
 	for( auto i = instances.begin(); i != instances.end(); ++i ) {
@@ -92,9 +89,17 @@ printHumanReadable( unsigned count, const std::map< std::string, std::string > &
 		fprintf( stdout, "Instances not in the pool, grouped by state:\n" );
 		for( auto i = instanceIDsByStatus.begin(); i != instanceIDsByStatus.end(); ++i ) {
 			if( i->first == "[in pool]" ) { continue; }
-			fprintf( stdout, "%12.12s ", i->first.c_str() );
+			fprintf( stdout, "%s", i->first.c_str() );
+			unsigned column = i->first.length();
 			for( unsigned j = 0; j < i->second.size(); ++j ) {
-				fprintf( stdout, "%s ", i->second[j].c_str() );
+				column += i->second[j].length() + 1;
+				if( column >= 80 ) {
+					fprintf( stdout, "\n" );
+					column = i->first.length();
+					fprintf( stdout, "%*.*s", column, column, "" );
+					column += i->second[j].length() + 1;
+				}
+				fprintf( stdout, " %s", i->second[j].c_str() );
 			}
 			fprintf( stdout, "\n" );
 		}
@@ -119,14 +124,14 @@ StatusReply::operator() () {
 				formatstr( iName, "Instance%d", count );
 
 				std::string instanceID;
-				lookupString( scratchpad, iName + ".instanceID", instanceID );
+				scratchpad->LookupString( (iName + ".instanceID").c_str(), instanceID );
 				if( instanceID.empty() ) { break; }
 				++count;
 
 				// fprintf( stderr, "Found instance ID %s.\n", instanceID.c_str() );
 
 				std::string status;
-				lookupString( scratchpad, iName + ".status", status );
+				scratchpad->LookupString( (iName + ".status").c_str(), status );
 				ASSERT(! status.empty());
 				instances[ instanceID ] = status;
 			} while( true );

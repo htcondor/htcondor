@@ -10,6 +10,7 @@
 
 #include "Functor.h"
 #include "FunctorSequence.h"
+#include "GetSFRs.h"
 #include "GetInstances.h"
 #include "StatusReply.h"
 
@@ -49,6 +50,9 @@ int status( const char * annexName, bool wantClassAds, const char * sURL ) {
 
 	scratchpad->Assign( "AnnexID", annexName );
 
+	GetSFRs * getSFRs = new GetSFRs( reply,
+		ec2Gahp, scratchpad, serviceURL, publicKeyFile, secretKeyFile,
+		commandState, commandID );
 	GetInstances * getInstances = new GetInstances( reply,
 		ec2Gahp, scratchpad, serviceURL, publicKeyFile, secretKeyFile,
 		commandState, commandID );
@@ -57,7 +61,7 @@ int status( const char * annexName, bool wantClassAds, const char * sURL ) {
 		commandState, commandID );
 
 	FunctorSequence * fs = new FunctorSequence(
-		{ getInstances }, statusReply,
+		{ getSFRs, getInstances }, statusReply,
 		commandState, commandID, scratchpad );
 
 	int timer = daemonCore->Register_Timer( 0, TIMER_NEVER,

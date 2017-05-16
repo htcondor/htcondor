@@ -862,6 +862,12 @@ class EC2GahpClient : public GahpClient {
 
 						std::string & error_code );
 
+		int bulk_query(	const std::string & service_url,
+						const std::string & publickeyfile,
+						const std::string & privatekeyfile,
+
+						StringList & returnStatus,
+						std::string & error_code );
 
 		int ec2_vm_start( const std::string & service_url,
 						  const std::string & publickeyfile,

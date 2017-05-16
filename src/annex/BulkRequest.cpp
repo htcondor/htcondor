@@ -35,7 +35,7 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 		return false;
 	}
 
-	int targetCapacity;
+	int targetCapacity = 0;
 	if(! command->LookupInteger( "TargetCapacity", targetCapacity )) {
 		validationError = "Attribute 'TargetCapacity' missing or not an integer.";
 		return false;
