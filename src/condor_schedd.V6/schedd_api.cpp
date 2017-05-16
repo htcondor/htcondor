@@ -286,6 +286,25 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 {
 	int i, rval;
 
+		// Flag this job as submitted via SOAP.
+		// This is important for disabling the alternate spool
+		// directory feature, which doesn't work with SOAP jobs.
+	rval = SetAttribute(id.cluster,
+						id.proc,
+						ATTR_SOAP_JOB,
+						"true");
+	if (rval < 0) {
+		errstack.pushf("SOAP",
+					   FAIL,
+					   "Failed to set job %d.%d's %s attribute to '%s'.",
+					   id.cluster,
+					   id.proc,
+					   ATTR_SOAP_JOB,
+					   "true");
+
+		return rval;
+	}
+
 		// XXX: This is ugly, and only should happen when spooling,
 		// i.e. not always with cedar.
 	rval = SetAttributeString(id.cluster,
