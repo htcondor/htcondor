@@ -85,6 +85,17 @@ error_cleanup:
 	return NULL;
 }
 
+char *GetSpooledExecutablePath( int cluster, const char *dir )
+{
+	if ( dir ) {
+		return gen_ckpt_name( dir, cluster, ICKPT, 0 );
+	} else {
+		std::string spool;
+		param( spool, "SPOOL" );
+		return gen_ckpt_name( spool.c_str(), cluster, ICKPT, 0 );
+	}
+}
+
 void
 GetJobExecutable( const classad::ClassAd *job_ad, std::string &executable )
 {
@@ -115,8 +126,10 @@ GetJobExecutable( const classad::ClassAd *job_ad, std::string &executable )
 }
 
 void
-SpooledJobFiles::getJobSpoolPath(int cluster,int proc,std::string &spool_path)
+SpooledJobFiles::_getJobSpoolPath(int cluster, int proc, const classad::ClassAd * job_ad, std::string &spool_path)
 {
+	// TODO examine job_ad for alternate spool directory
+	//   Don't use alternate spool directory if ATTR_SOAP_JOB=?=True
 	char * spool = param("SPOOL");
 	ASSERT( spool );
 	char * buf = gen_ckpt_name(spool, cluster, proc, 0);
@@ -125,6 +138,24 @@ SpooledJobFiles::getJobSpoolPath(int cluster,int proc,std::string &spool_path)
 	spool_path = buf;
 	free(buf);
 	free(spool);
+}
+
+void
+SpooledJobFiles::getJobSpoolPath(int cluster,int proc,std::string &spool_path)
+{
+	_getJobSpoolPath(cluster, proc, NULL, spool_path);
+}
+
+void
+SpooledJobFiles::getJobSpoolPath(const classad::ClassAd *job_ad, std::string &spool_path)
+{
+	int cluster = -1;
+	int proc = -1;
+
+	job_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+	job_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
+
+	_getJobSpoolPath( cluster, proc, job_ad, spool_path );
 }
 
 static bool
@@ -240,7 +271,7 @@ SpooledJobFiles::createJobSwapSpoolDirectory(classad::ClassAd const *job_ad,priv
 	job_ad->EvaluateAttrInt(ATTR_PROC_ID,proc);
 
 	std::string spool_path;
-	getJobSpoolPath(cluster, proc, spool_path);
+	_getJobSpoolPath(cluster, proc, job_ad, spool_path);
 	spool_path += ".swap";
 
 	if( !::createJobSpoolDirectory(job_ad,desired_priv_state,spool_path.c_str()) )
@@ -271,7 +302,7 @@ SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_sta
 	job_ad->EvaluateAttrInt(ATTR_PROC_ID,proc);
 
 	std::string spool_path;
-	getJobSpoolPath(cluster, proc, spool_path);
+	_getJobSpoolPath(cluster, proc, job_ad, spool_path);
 
 	std::string spool_path_tmp = spool_path.c_str();
 	spool_path_tmp += ".tmp";
@@ -311,7 +342,7 @@ SpooledJobFiles::createParentSpoolDirectories(classad::ClassAd const *job_ad)
 	job_ad->EvaluateAttrInt(ATTR_PROC_ID,proc);
 
 	std::string spool_path;
-	getJobSpoolPath(cluster,proc,spool_path);
+	_getJobSpoolPath(cluster, proc, job_ad, spool_path);
 
 	std::string parent,junk;
 	if( filename_split(spool_path.c_str(),parent,junk) ) {
@@ -376,7 +407,7 @@ SpooledJobFiles::removeJobSpoolDirectory(classad::ClassAd * ad)
 	ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
 
 	std::string spool_path;
-	getJobSpoolPath(cluster,proc,spool_path);
+	_getJobSpoolPath(cluster, proc, ad, spool_path);
 
 	if ( ! IsDirectory(spool_path.c_str()) ) {
 		// In this case, we can be fairly sure that these other spool directories
@@ -420,7 +451,7 @@ SpooledJobFiles::removeJobSwapSpoolDirectory(classad::ClassAd * ad)
 	ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
 	ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
 	std::string spool_path;
-	getJobSpoolPath(cluster,proc,spool_path);
+	_getJobSpoolPath(cluster, proc, ad, spool_path);
 
 	std::string swap_spool_path = spool_path;
 	swap_spool_path += ".swap";
@@ -433,7 +464,9 @@ SpooledJobFiles::removeClusterSpooledFiles(int cluster)
 	std::string spool_path;
 	std::string parent_path,junk;
 
-	getJobSpoolPath(cluster,ICKPT,spool_path);
+	char *buf = GetSpooledExecutablePath(cluster);
+	spool_path = buf;
+	free(buf);
 	int cluster_spool_dir_exists = filename_split(spool_path.c_str(),parent_path,junk) && IsDirectory( parent_path.c_str() );
 	
 	if ( !cluster_spool_dir_exists ) {
@@ -480,7 +513,7 @@ SpooledJobFiles::chownSpoolDirectoryToCondor(classad::ClassAd const *job_ad)
 	job_ad->EvaluateAttrInt(ATTR_CLUSTER_ID,cluster);
 	job_ad->EvaluateAttrInt(ATTR_PROC_ID,proc);
 
-	getJobSpoolPath(cluster, proc, sandbox);
+	_getJobSpoolPath(cluster, proc, job_ad, sandbox);
 
 	uid_t src_uid = 0;
 	uid_t dst_uid = get_condor_uid();

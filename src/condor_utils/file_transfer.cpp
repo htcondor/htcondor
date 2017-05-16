@@ -386,7 +386,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	m_jobid.formatstr("%d.%d",Cluster,Proc);
 	if ( IsServer() && Spool ) {
 
-		SpoolSpace = gen_ckpt_name(Spool,Cluster,Proc,0);
+		std::string buf;
+		SpooledJobFiles::getJobSpoolPath(Ad, buf);
+		SpoolSpace = strdup(buf.c_str());
 		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
@@ -406,7 +408,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// Note: This will break Condor-C jobs if the executable is ever
 		//   spooled the old-fashioned way (which doesn't happen currently).
 		if ( IsServer() && Spool ) {
-			ExecFile = gen_ckpt_name(Spool,Cluster,ICKPT,0);
+			ExecFile = GetSpooledExecutablePath(Cluster, Spool);
 			if ( access(ExecFile,F_OK | X_OK) < 0 ) {
 				free(ExecFile); ExecFile = NULL;
 			}

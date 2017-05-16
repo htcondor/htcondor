@@ -63,17 +63,9 @@ Job::~Job()
 int
 Job::initialize(CondorError &errstack)
 {
-	char * Spool = param("SPOOL");
-	ASSERT(Spool);
-
-	char *ckpt_name = gen_ckpt_name(Spool, id.cluster, id.proc, 0);
-	spoolDirectory = ckpt_name;
-	free(ckpt_name); ckpt_name = NULL;
-
-	if (Spool) {
-		free(Spool);
-		Spool = NULL;
-	}
+	std::string buf;
+	SpooledJobFiles::getJobSpoolPath(id.cluster, id.proc, buf);
+	spoolDirectory = buf;
 
 	struct stat stats;
 	if (-1 == stat(spoolDirectory.Value(), &stats)) {

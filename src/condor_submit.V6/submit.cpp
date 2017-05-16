@@ -2597,7 +2597,7 @@ SetExecutable()
 	// generate initial checkpoint file
 	// This is ignored by the schedd in 7.5.5+.  Prior to that, the
 	// basename must match the name computed by the schedd.
-	IckptName = gen_ckpt_name(0,ClusterId,ICKPT,0);
+	IckptName = GetSpooledExecutablePath(ClusterId, "");
 
 	// ensure the executables exist and spool them only if no 
 	// $$(arch).$$(opsys) are specified  (note that if we are simply
@@ -9835,7 +9835,7 @@ int SendLastExecutable()
 			ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
 		}
 		else {
-			char * chkptname = gen_ckpt_name(0, submit_hash.getClusterId(), ICKPT, 0);
+			char * chkptname = GetSpooledExecutablePath(submit_hash.getClusterId(), "");
 			SpoolEname = chkptname;
 			if (chkptname) free(chkptname);
 			ret = MyQ->send_SpoolFile(SpoolEname.Value());
