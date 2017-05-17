@@ -5,6 +5,7 @@
 #include "compat_classad.h"
 #include "classad_command_util.h"
 #include "classad_collection.h"
+#include "stat_wrapper.h"
 
 #include "annex.h"
 #include "annex-update.h"
@@ -63,13 +64,19 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	}
 	validateLease( endOfLease, errorString );
 
+	StatWrapper sw( secretKeyFile.c_str() );
+	mode_t mode = sw.GetBuf()->st_mode;
+	if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
+		formatstr( errorString, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner." );
+	}
+
 	if(! errorString.empty()) {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
 		reply->Assign( ATTR_ERROR_STRING, errorString );
 
 		if( replyStream ) {
 			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
-				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+				dprintf( D_ALWAYS, "Failed to reply to update request.\n" );
 			}
 		}
 

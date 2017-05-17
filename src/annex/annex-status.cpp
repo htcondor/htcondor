@@ -3,6 +3,7 @@
 #include "condor_config.h"
 #include "gahp-client.h"
 #include "classad_collection.h"
+#include "stat_wrapper.h"
 
 #include "annex.h"
 #include "annex-status.h"
@@ -44,6 +45,13 @@ int status( const char * annexName, bool wantClassAds, const char * sURL ) {
 
 	param( secretKeyFile, "ANNEX_DEFAULT_SECRET_KEY_FILE" );
 	command->LookupString( "SecretKeyFile", secretKeyFile );
+
+	StatWrapper sw( secretKeyFile.c_str() );
+	mode_t mode = sw.GetBuf()->st_mode;
+	if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
+		fprintf( stderr, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner.\n" );
+		return 1;
+	}
 
 	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, serviceURL );
 
