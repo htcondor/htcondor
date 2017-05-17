@@ -1301,13 +1301,13 @@ start_job( char *cluster_id, char *proc_id )
 		strcpy( CkptName, "" );
 		strcpy( TmpCkptName, "" );
 	} else {
-		tmp = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
-		snprintf( CkptName, MAXPATHLEN, "%s", tmp );
+		std::string buf;
+		SpooledJobFiles::getJobSpoolPath( JobAd, buf );
+		snprintf( CkptName, MAXPATHLEN, "%s", buf.c_str() );
 		sprintf( TmpCkptName, "%s.tmp", CkptName );
-		free(tmp); tmp = NULL;
 	}
 
-	tmp = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
+	tmp = GetSpooledExecutablePath( Proc->id.cluster, Spool );
 	snprintf( ICkptName, MAXPATHLEN, "%s", tmp );
 	free(tmp); tmp = NULL;
 
@@ -1565,7 +1565,7 @@ void RemoveNewShadowDroppings(char *cluster, char *proc)
 {
 	char names[2][1024];
 	int j;
-	char *ckpt_name;
+	std::string ckpt_name;
 	char *myspool;
 	struct stat buf;
 	int clusternum, procnum;
@@ -1617,12 +1617,11 @@ void RemoveNewShadowDroppings(char *cluster, char *proc)
 		free(myspool);
 		return;
 	}
-	ckpt_name = gen_ckpt_name( myspool, clusternum, procnum, 0 );
+	SpooledJobFiles::getJobSpoolPath( JobAd, ckpt_name );
 
-	strcpy(names[0], ckpt_name);
-	strcpy(names[1], ckpt_name);
+	strcpy(names[0], ckpt_name.c_str());
+	strcpy(names[1], ckpt_name.c_str());
 	strcat(names[1], ".tmp");
-	free(ckpt_name); ckpt_name = NULL;
 
 	for (j = 0; j < 2; j++)
 	{

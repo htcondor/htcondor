@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 //#include "condor_network.h"
 #include "condor_string.h"
-#include "spooled_job_files.h" // for gen_ckpt_name
+#include "spooled_job_files.h" // for GetSpooledExecutablePath()
 //#include "subsystem_info.h"
 //#include "env.h"
 #include "basename.h"
@@ -4654,7 +4654,7 @@ int SubmitHash::SetExecutable()
 	// generate initial checkpoint file
 	// This is ignored by the schedd in 7.5.5+.  Prior to that, the
 	// basename must match the name computed by the schedd.
-	char *IckptName = gen_ckpt_name(0, jid.cluster, ICKPT, 0);
+	char *IckptName = GetSpooledExecutablePath(jid.cluster, "");
 
 	// ensure the executables exist and spool them only if no 
 	// $$(arch).$$(opsys) are specified  (note that if we are simply

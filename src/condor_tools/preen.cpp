@@ -259,7 +259,8 @@ check_job_spool_hierarchy( char const *parent, char const *child, StringList &ba
 	ASSERT( parent );
 	ASSERT( child );
 
-		// We expect directories of the form produced by gen_ckpt_name().
+		// We expect directories of the form produced by SpooledJobFiles::getJobSpoolPath()
+		// and GetSpooledExecutablePath().
 		// e.g. $(SPOOL)/<cluster mod 10000>/<proc mod 10000>/cluster<cluster>.proc<proc>.subproc<proc>
 		// or $(SPOOL)/<cluster mod 10000>/cluster<cluster>.ickpt.subproc<subproc>
 
