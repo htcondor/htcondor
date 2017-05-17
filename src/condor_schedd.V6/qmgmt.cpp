@@ -1060,7 +1060,6 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 
 		std::string old_path;
 		std::string new_path;
-		char *tmp;
 
 		if( proc == ICKPT ) {
 			formatstr(old_path,"%s%ccluster%d.ickpt.subproc%d",spool,DIR_DELIM_CHAR,cluster,0);
