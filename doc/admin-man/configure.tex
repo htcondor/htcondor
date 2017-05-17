@@ -6653,6 +6653,12 @@ MAX_JOBS_RUNNING	= \
   The default value is \Expr{True}. A value of \Expr{False} in either \Condor{q} or
   the \Condor{schedd} will result in the old behavior of querying all jobs.
 
+\label{param:CondorQShowOldSummary}
+\item[\Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY}]
+  A boolean value that, when \Expr{True},
+  causes \Condor{q} to show the old single line summary totals. When \Expr{False}
+  \Condor{q} will show the new multi-line summary totals.
+
 \label{param:ScheddInterval}
 \item[\Macro{SCHEDD\_INTERVAL}]
   This macro determines the maximum interval for both how often the
@@ -8899,15 +8905,69 @@ These macros affect the \Condor{collector}.
 
 \label{param:CollectorQueryWorkers}
 \item[\Macro{COLLECTOR\_QUERY\_WORKERS}]
-  This variable sets the maximum
-  number of worker processes that the \Condor{collector} can have.  
-  When receiving a query request, 
-  the Unix \Condor{collector} will \Procedure{fork} a new
+  This macro sets the maximum
+  number of child worker processes that the \Condor{collector} can have, and
+  defaults to a value of 4 on Linux and MacOS platforms. 
+  When receiving a large query request, 
+  the  \Condor{collector} may \Procedure{fork} a new
   process to handle the query, freeing the main process to handle
-  other requests.  When the number of outstanding worker processes
-  reaches this maximum, the request is handled by the main process.
-  This variable is ignored on Windows, and its default value is zero.
-  The default configuration, however, has a value of 2.
+  other requests.  Each forked child process will consume memory, potentially
+  up to 50\% or more of the memory consumed by the parent collector process.
+  To limit the amount of memory consumed on the central manager to 
+  handle incoming queries, the default value for this macro is 4.
+  When the number of outstanding worker processes
+  reaches the maximum specified by this macro, 
+  any additional incoming query requests will be queued and serviced
+  after an existing child worker completes. 
+  Note that on Windows platforms, this macro has a value of zero and cannot
+  be changed.
+
+\label{param:CollectorQueryWorkersReserveForHighPrio}
+\item[\Macro{COLLECTOR\_QUERY\_WORKERS\_RESERVE\_FOR\_HIGH\_PRIO}]
+  This macro defines the number of \Macro{COLLECTOR\_QUERY\_WORKERS} slots will
+  be held in reserve to only service high priority query requests.  Currently,
+  high priority queries are defined as those coming from the
+  \Condor{negotiator} during the course of matchmaking, or via a ``condor\_sos
+  condor\_status'' command.  The idea here is the critical operation of
+  matchmaking machines to jobs will take precedence over user condor\_status
+  invocations.  Defaults to a value of 1.  The maximum allowable value for this
+  macro is equal to \Macro{COLLECTOR\_QUERY\_WORKERS} minus 1.
+
+\label{param:CollectorQueryWorkersPending}
+\item[\Macro{COLLECTOR\_QUERY\_WORKERS\_PENDING}]
+  This macro sets the maximum of collector pending query requests that can
+  be queued waiting for child workers to exit.  Queries that would exceed
+  this maximum are immediately aborted.  When a forked child worker exits,
+  a pending query will be pulled from the queue for service.
+  Note the collector will confirm that the client has not closed the TCP socket
+  (because it was tired of waiting) before going through all the work of
+  actually forking a child and starting to service the query.  Defaults to a
+  value of 50.
+
+\label{param:CollectorQueryMaxWorktime}
+\item[\Macro{COLLECTOR\_QUERY\_MAX\_WORKTIME}]
+  This macro defines the maximum amount of time in seconds that a query has to
+  complete before it is aborted.  Queries that wait in the pending queue longer
+  than this period of time will be aborted before forking. Queries that have
+  already forked will also abort after the worktime has expired - this protects
+  against clients on a very slow network connection. If set to 0, then there is
+  no timeout. The default is 0.
+
+\label{param:HandleQueryInProcPolicy}
+\item[\Macro{HANDLE\_QUERY\_IN\_PROC\_POLICY}]
+  This variable sets the policy for which queries the \Condor{collector} should handle
+  in process rather than by forking a worker. It should be set to one of the following values
+  \begin{itemize}
+  \item \MacroNI{always} Handle all queries in process
+  \item \MacroNI{never}  Handle all queries using fork workers
+  \item \MacroNI{small\_table} Handle only queries of small tables in process
+  \item \MacroNI{small\_query} Handle only small queries in process
+  \item \MacroNI{small\_table\_and\_query} Handle only small queries on small tables in process
+  \item \MacroNI{small\_table\_or\_query} Handle small queries or small tables in process
+  \end{itemize}
+  A small table is any table of ClassAds in the collector other than Master,Startd,Generic and Any ads.
+  A small query is a locate query, or any query with both a projection and a result limit that is smaller than 10.
+  The default value is \MacroNI{small\_table\_or\_query}.
 
 \label{param:CollectorDebug}
 \item[\Macro{COLLECTOR\_DEBUG}]
@@ -9848,8 +9908,9 @@ Configuration File Macros}
 \item[\Macro{BASE\_CGROUP}]
   The path to the directory used as the virtual file system for the
   implementation of Linux kernel cgroups.
-  This variable has no default value,
-  and if not defined, cgroup tracking will not be used.
+  This variable defaults to the string \Expr{htcondor}, and is only used on
+  Linux systems.  To disable cgroup tracking, define this to an empty
+  string.
   See section~\ref{sec:CGroupTracking} on page~\pageref{sec:CGroupTracking} for 
   a description of cgroup-based process tracking.
 
@@ -9871,6 +9932,11 @@ These macros affect the \Condor{credd}.
 \label{param:CreddHost}
 \item[\Macro{CREDD\_HOST}]
   The host name of the machine running the \Condor{credd} daemon.
+
+\label{param:CreddPollingTimeout}
+\item[\Macro{CREDD\_POLLING\_TIMEOUT}]
+  An integer value that determines how long the \Condor{credd} daemon will
+  poll for credentials in seconds. The default value is 20.
 
 \label{param:CreddCacheLocally}
 \item[\Macro{CREDD\_CACHE\_LOCALLY}]
@@ -10473,6 +10539,15 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   The Condor pool (\Condor{collector} address) of the \Condor{schedd}
   to which the routed copy of the jobs are submitted.
   If not specified, defaults to the local pool.
+
+\label{param:JobRouterRoundRobinSelection}
+\item[\Macro{JOB\_ROUTER\_ROUND\_ROBIN\_SELECTION}]
+  A boolean value that controls which route is chosen for a candidate
+  job that matches multiple routes.
+  When set to \Expr{False}, the default, the first matching route is
+  awlays selected.
+  When set to \Expr{True}, the Job Router attempts to distribute jobs
+  across all matching routes, round robin style.
 
 \end{description}
 

@@ -2508,6 +2508,16 @@ dprintf_dump_stack(void) {
 
 #endif
 
+// If outputs haven't been configured yet, stop buffering dprintf()
+// output until they are configured.
+void dprintf_pause_buffering()
+{
+	_condor_dprintf_works = 1;
+	if ( DebugLogs == NULL ) {
+		DebugLogs = new std::vector<DebugFileInfo>;
+	}
+}
+
 bool debug_open_fds(std::map<int,bool> &open_fds)
 {
 	bool found = false;

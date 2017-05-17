@@ -1261,6 +1261,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+%_libexecdir/condor/libcollector_python_plugin.so
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
@@ -1389,7 +1390,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_reconfig
 %_sbindir/condor_replication
 %_sbindir/condor_restart
-%attr(6755, root, root) %_sbindir/condor_root_switchboard
 %_sbindir/condor_schedd
 %_sbindir/condor_set_shutdown
 %_sbindir/condor_shadow
@@ -1898,6 +1898,26 @@ fi
 %endif
 
 %changelog
+* Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
+- Fixed a bug where using an X.509 proxy might corrupt the job queue log
+- Fixed a memory leak in the Python bindings
+
+* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.1-1
+- Several performance enhancements in the collector
+- Further refinement and initial documentation of the HTCondor Annex
+- Enable chirp for Docker jobs
+- Job Router uses first match rather than round-robin matching
+- The schedd tracks jobs counts by status for each owner
+- Technology preview of late job materialization in the schedd
+
+* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.2-1
+- New metaknobs for mapping users to groups
+- Now case-insensitive with Windows user names when storing credentials
+- Signal handling in the OpenMPI script
+- Report RemoteSysCpu for Docker jobs
+- Allow SUBMIT_REQUIREMENT to refer to X509 secure attributes
+- Linux kernel tuning script takes into account the machine's role
+
 * Thu Mar 02 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.0-1
 - Performance improvements in collector's ingestion of ClassAds
 - Added collector attributes to report query times and forks

@@ -116,7 +116,7 @@ a JSON blob which describes the Spot Fleet request you'd like to make.  (It's
 too complicated for a reasonable command-line interface.)  The AWS web
 console can be used to create such a file; the button to download that
 file is (currently) in the upper-right corner of the last page before
-you submit the Spot Fleet request; it is labelled `JSON config'.  You
+you submit the Spot Fleet request; it is labeled `JSON config'.  You
 may need to create an IAM role the first time you make a Spot Fleet
 request; please do so before running \Condor{annex}.
 
@@ -126,14 +126,14 @@ configuration macro \Macro{ANNEX\_DEFAULT\_ODI\_INSTANCE\_PROFILE\_ARN}
 by the setup procedure.
 
 %% I should really fix it so that the ODI InstanceProfileARN is preferred
-%% over the IamInstanceProfile specified in the JSON config file.
+%% over the IamInstanceProfile specified in the JSON configuration file.
 
-Specify the JSON config file using \Opt{-aws-spot-fleet-config-file},
+Specify the JSON configuration file using \Opt{-aws-spot-fleet-config-file},
 or set the configuration macro \Macro{ANNEX\_DEFAULT\_SFR\_CONFIG\_FILE} to
 the full path of the file you just downloaded, if you'd like it to become
 your default configuration for Spot annexes.  Be aware that \Condor{annex}
 does \emph{not} alter the validity period if one is set in the Spot
-Fleet config file.  You may want to remove the references to `ValidFrom'
+Fleet configuration file.  You should remove the references to `ValidFrom'
 and `ValidTo' in the JSON file to avoid confusing surprises later.
 
 Additionally, be aware that \Condor{annex} uses the Spot Fleet API in
@@ -151,8 +151,8 @@ instances.
 
 \subsubsection{Custom HTCondor Configuration}
 
-When you specify a custom configuration, you specify the full path to
-config directory which will be copied to the instance.  The customizations
+When you specify a custom configuration, you specify the full path to a
+configuration directory which will be copied to the instance.  The customizations
 performed by \Condor{annex} will be applied to a temporary copy of this
 directory before it is uploaded to the instance.  Those customizations
 consist of creating two files: {\tt password\_file.pl} (named that way to ensure
@@ -204,7 +204,7 @@ access (\Opt{-aws-access-key-file}) and
 secret key (\Opt{-aws-secret-key-file}) options.  Regular users may have
 an accounting reason to do this.
 
-The options labelled ``implementation details'' are probably best left
+The options labeled ``implementation details'' are probably best left
 unused unless you're a developer.
 
 %% Developers should but don't have an option to set the connectivity-checking

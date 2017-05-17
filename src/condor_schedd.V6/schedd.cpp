@@ -107,8 +107,6 @@
 
 char const * const HOME_POOL_SUBMITTER_TAG = "";
 
-extern char *gen_ckpt_name();
-
 extern GridUniverseLogic* _gridlogic;
 
 #include "qmgmt.h"
@@ -122,7 +120,6 @@ extern "C"
 /*	int SetCkptServerHost(const char *host);
 	int RemoveLocalOrRemoteFile(const char *, const char *);
 	int FileExists(const char *, const char *);
-	char* gen_ckpt_name(char*, int, int, int);
 	int getdtablesize();
 */
 	int prio_compar(prio_rec*, prio_rec*);
@@ -158,10 +155,13 @@ extern int grow_prio_recs(int);
 // We don't have a good schedd-internal header file, so we declare them
 // here for use in this file.
 int
-SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags);
+SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0);
 int
-SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags);
+SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int attr_value, SetAttributeFlags_t flags = 0);
+int
+SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value, SetAttributeFlags_t flags = 0);
 
+bool ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs );
 
 void cleanup_ckpt_files(int , int , char*);
 void send_vacate(match_rec*, int);
@@ -172,7 +172,6 @@ int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
 shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
-bool getSandbox( int cluster, int proc, MyString & path );
 bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
@@ -196,6 +195,19 @@ int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
+
+void UpdateJobProxyAttrs( PROC_ID job_id, const ClassAd &proxy_attrs )
+{
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd(true, true);
+
+	for (AttrList::const_iterator attr_it = proxy_attrs.begin(); attr_it != proxy_attrs.end(); ++attr_it)
+	{
+		std::string attr_value_buf;
+		unparse.Unparse(attr_value_buf, attr_it->second);
+		SetSecureAttribute(job_id.cluster, job_id.proc, attr_it->first.c_str(), attr_value_buf.c_str());
+	}
+}
 
 void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 {
@@ -283,25 +295,19 @@ void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
 	x509_proxy_free( proxy_handle );
 
 	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
-	SetSecureAttributeInt(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EXPIRATION, expire_time, 0);
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
-	SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_SUBJECT, proxy_identity?proxy_identity:"", 0);
 	if ( proxy_email ) {
 		dprintf( D_AUDIT, sock, "proxy email: %s\n", proxy_email );
-		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_EMAIL, proxy_email?proxy_email:"", 0);
 	}
 	if ( voname ) {
 		dprintf( D_AUDIT, sock, "proxy vo name: %s\n", voname );
-		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_VONAME, voname?voname:"", 0);
 	}
 	if ( firstfqan ) {
 		dprintf( D_AUDIT, sock, "proxy first fqan: %s\n", firstfqan );
-		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan?firstfqan:"", 0);
 	}
 	if ( fullfqan ) {
 		dprintf( D_AUDIT, sock, "proxy full fqan: %s\n", fullfqan );
-		SetSecureAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY_FQAN, fullfqan?fullfqan:"", 0);
 	}
 
 	free( proxy_subject );
@@ -3793,20 +3799,6 @@ jobCleanupNeedsThread( int /* cluster */, int /* proc */ )
 }
 
 
-bool
-getSandbox( int cluster, int proc, MyString & path )
-{
-	char * sandbox = gen_ckpt_name(Spool, cluster, proc, 0);
-	if( ! sandbox ) {
-		free(sandbox); sandbox = NULL;
-		return false;
-	}
-	path = sandbox;
-	free(sandbox); sandbox = NULL;
-	return true;
-}
-
-
 /** Last chance to prep a job before it (potentially) starts
 
 This is a last chance to do any final work before starting a
@@ -4186,10 +4178,9 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 			// If the user log is in the spool directory, try writing to
 			// it as user condor. The spool directory spends some of its
 			// time owned by condor.
-		char *tmp = gen_ckpt_name( Spool, job_id.cluster, job_id.proc, 0 );
-		std::string SpoolDir(tmp);
+		std::string SpoolDir;
+		SpooledJobFiles::getJobSpoolPath(ad, SpoolDir);
 		SpoolDir += DIR_DELIM_CHAR;
-		free( tmp );
 		if ( !strncmp( SpoolDir.c_str(), logfilename.c_str(),
 					SpoolDir.length() ) && ULog->initialize( logfiles,
 					job_id.cluster, job_id.proc, 0, gjid.Value() ) ) {
@@ -4613,6 +4604,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 	int jobIndex,cluster,proc;
 	int len = (*jobs).getlast() + 1;
+	MyString proxy_file;
 
 		// For each job, modify its ClassAd
 	for (jobIndex = 0; jobIndex < len; jobIndex++) {
@@ -4631,6 +4623,20 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// we note the transfer finish time _here_.  So we've got 
 			// to back off 1 second.
 			SetAttributeInt(cluster,proc,ATTR_STAGE_IN_FINISH,now - 1);
+		}
+
+		if (GetAttributeString(cluster, proc, ATTR_X509_USER_PROXY, proxy_file) == 0) {
+			MyString owner;
+			MyString iwd;
+			MyString full_file;
+			ClassAd proxy_attrs;
+			GetAttributeString(cluster, proc, ATTR_OWNER, owner);
+			GetAttributeString(cluster, proc, ATTR_JOB_IWD, iwd);
+			formatstr(full_file, "%s%c%s", iwd.Value(), DIR_DELIM_CHAR, proxy_file.Value());
+
+			if ( ReadProxyFileIntoAd(full_file.Value(), owner.Value(), proxy_attrs) ) {
+				UpdateJobProxyAttrs((*jobs)[jobIndex], proxy_attrs);
+			}
 		}
 
 			// And now release the job.
@@ -5268,8 +5274,9 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 
 		// Make certain this job has a x509 proxy, and that this 
 		// proxy is sitting in the SPOOL directory
-	char* SpoolSpace = gen_ckpt_name(Spool,jobid.cluster,jobid.proc,0);
-	ASSERT(SpoolSpace);
+	std::string SpoolSpace;
+	SpooledJobFiles::getJobSpoolPath(jobad, SpoolSpace);
+	ASSERT(!SpoolSpace.empty());
 	char *proxy_path = NULL;
 	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
 	if( proxy_path && is_relative_to_cwd(proxy_path) ) {
@@ -5280,12 +5287,11 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			proxy_path = strdup(iwd.Value());
 		}
 	}
-	if ( !proxy_path || strncmp(SpoolSpace,proxy_path,strlen(SpoolSpace)) ) {
+	if ( !proxy_path || strncmp(SpoolSpace.c_str(),proxy_path,SpoolSpace.length()) ) {
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
 			 "job %d.%d does not contain a gsi credential in SPOOL\n", 
 			 cmd, jobid.cluster, jobid.proc );
 		refuse(s);
-		free(SpoolSpace);
 		if (proxy_path) free(proxy_path);
 		return FALSE;
 	}
@@ -5304,13 +5310,12 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		//   the job's spool directory (CHOWN_JOB_SPOOL_FILES), this
 		//   check can be removed (the files will always be owned by
 		//   the job owner).
-	StatInfo si( SpoolSpace );
+	StatInfo si( SpoolSpace.c_str() );
 	if ( si.Error() != SIGood ) {
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
 			"stat of spool dirctory for job %d.%d failed: %d\n",
 			cmd, jobid.cluster, jobid.proc, (int)si.Error() );
 		refuse(s);
-		free(SpoolSpace);
 		return FALSE;
 	}
 	uid_t proxy_uid = si.GetOwner();
@@ -5327,7 +5332,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "Failed to find uid for user %s (job %d.%d)\n",
 				 job_owner.c_str(), jobid.cluster, jobid.proc );
 		refuse(s);
-		free(SpoolSpace);
 		return FALSE;
 	}
 		// If the uids match, then we need to switch to user priv to
@@ -5339,7 +5343,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
 					 job_owner.c_str() );
 			refuse(s);
-			free(SpoolSpace);
 			return FALSE;
 		}
 		priv = set_user_priv();
@@ -5352,8 +5355,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		job_owner.clear();
 	}
 #endif
-
-	free(SpoolSpace);
 
 		// Decode the proxy off the wire, and store into the
 		// file temp_proxy_path, which is known to be in the SPOOL dir
@@ -5457,6 +5458,10 @@ UpdateGSICredContinuation::finish_update(ReliSock *rsock, ReliSock::x509_delegat
 		} else {
 			reply = 1;	// reply of 1 means success
 
+			ClassAd proxy_attrs;
+			if ( ReadProxyFileIntoAd(m_final_path.c_str(), NULL, proxy_attrs) ) {
+				UpdateJobProxyAttrs(m_jobid, proxy_attrs);
+			}
 			AuditLogJobProxy( *rsock, m_jobid, m_final_path.c_str() );
 		}
 	}
@@ -9676,7 +9681,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// executable probably is owned by Condor in most circumstances, we
 	// must ensure the user can at least execute it.
 
-	ckpt_name = gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0);
+	ckpt_name = GetSpooledExecutablePath(job_id->cluster, Spool);
 	a_out_name = ckpt_name;
 	free(ckpt_name); ckpt_name = NULL;
 	errno = 0;
@@ -10662,11 +10667,12 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	}
 
 		//
-		// Do not remove the ClaimId or RemoteHost if the keepClaimAttributes
+		// If the job is not in a terminal state (i.e. COMPLETED or REMOVED), then
+		// do not remove the ClaimId or RemoteHost if the keepClaimAttributes
 		// flag is set. This means that we want this job to reconnect
 		// when the schedd comes back online.
 		//
-	if ( ! rec->keepClaimAttributes ) {
+	if ( (!rec->keepClaimAttributes) || job_status == COMPLETED || job_status == REMOVED ) {
 		DeleteAttribute( cluster, proc, ATTR_PAIRED_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
@@ -12245,8 +12251,7 @@ SetCkptServerHost(const char *)
 void
 cleanup_ckpt_files(int cluster, int proc, const char *owner)
 {
-    MyString	ckpt_name_buf;
-	char const *ckpt_name;
+	std::string	ckpt_name;
 	MyString	owner_buf;
 	MyString	server;
 	int		universe = CONDOR_UNIVERSE_STANDARD;
@@ -12262,16 +12267,15 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		}
 	}
 
+	ClassAd * ad = GetJobAd(cluster, proc);
+
 		/* Remove any checkpoint files.  If for some reason we do 
 		 * not know the owner, don't bother sending to the ckpt
 		 * server.
 		 */
 	GetAttributeInt(cluster,proc,ATTR_JOB_UNIVERSE,&universe);
 	if ( universe == CONDOR_UNIVERSE_STANDARD && owner ) {
-		char *ckpt_name_mem = gen_ckpt_name(Spool,cluster,proc,0);
-		ckpt_name_buf = ckpt_name_mem;
-		free(ckpt_name_mem); ckpt_name_mem = NULL;
-		ckpt_name = ckpt_name_buf.Value();
+		SpooledJobFiles::getJobSpoolPath(ad, ckpt_name);
 
 		if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
 							   server) == 0) {
@@ -12280,15 +12284,13 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 			SetCkptServerHost(NULL); // no ckpt on ckpt server
 		}
 
-		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
+		RemoveLocalOrRemoteFile(owner,Name,ckpt_name.c_str());
 
-		ckpt_name_buf += ".tmp";
-		ckpt_name = ckpt_name_buf.Value();
+		ckpt_name += ".tmp";
 
-		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
+		RemoveLocalOrRemoteFile(owner,Name,ckpt_name.c_str());
 	}
 
-	ClassAd * ad = GetJobAd(cluster, proc);
 	if(ad) {
 		SpooledJobFiles::removeJobSpoolDirectory(ad);
 		FreeJobAd(ad);

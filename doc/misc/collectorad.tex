@@ -1,6 +1,32 @@
 \index{ClassAd!Collector attributes}
 \begin{description}
 
+\index{ClassAd Collector attribute!ActiveQueryWorkers}
+\item[\AdAttr{ActiveQueryWorkers}:] Current number of forked child processes handling 
+	queries.
+
+\index{ClassAd Collector attribute!ActiveQueryWorkersPeak}
+\item[\AdAttr{ActiveQueryWorkersPeak}:] Peak number of forked child processes handling 
+	queries since collector startup or statistics reset.
+
+\index{ClassAd Collector attribute!PendingQueries}
+\item[\AdAttr{PendingQueries}:] Number of queries pending that are waiting
+	to fork.
+
+\index{ClassAd Collector attribute!PendingQueriesPeak}
+\item[\AdAttr{PendingQueriesPeak}:] Peak number of queries pending that are waiting
+	to fork since collector startup or statistics reset.
+
+\index{ClassAd Collector attribute!RecentDroppedQueries}
+\index{ClassAd Collector attribute!DroppedQueries}
+\item[\AdAttr{DroppedQueries}:] 
+  Total number of queries aborted since collector startup (or statistics reset) because
+  \Macro{COLLECTOR\_QUERY\_WORKERS\_PENDING} exceeded, or
+  \Macro{COLLECTOR\_QUERY\_MAX\_WORKTIME} exceeded, or client closed TCP socket while
+  request was pending. This statistic is also available as \AdAttr{RecentDroppedQueries}
+  which represents a count of recently dropped queries that occured within a recent time 
+  window (default of 20 minutes).
+
 \index{ClassAd Collector attribute!CollectorIpAddr}
 \item[\AdAttr{CollectorIpAddr}:] String with the IP and port address of the
   \Condor{collector} daemon which is publishing this ClassAd.
@@ -62,7 +88,8 @@ This attribute also has minimum, maximum, average and standard deviation statist
 The Windows operating system does not fork and will not have this statistic.
 
 \index{ClassAd Collector attribute!HandleLocateMissedFork}
-\item[\AdAttr{HandleLocateMissedFork}:] Number of locate queries the Collector has handled inline that should have been handled by forking since the Collector started.
+\item[\AdAttr{HandleLocateMissedFork}:] Number of locate queries the Collector 
+recieved since the Collector started that could not be handled immediately because there were already too many forked child processes.
 The Windows operating system does not fork and will not have this statistic.
 
 \index{ClassAd Collector attribute!HandleLocateMissedForkRuntimeAvg}
@@ -70,7 +97,7 @@ The Windows operating system does not fork and will not have this statistic.
 \index{ClassAd Collector attribute!HandleLocateMissedForkRuntimeMin}
 \index{ClassAd Collector attribute!HandleLocateMissedForkRuntimeStd}
 \index{ClassAd Collector attribute!HandleLocateMissedForkRuntime}
-\item[\AdAttr{HandleLocateMissedForkRuntime}:] Total time spent handling locate queries inline that should have been handled by forking since the Collector started.
+\item[\AdAttr{HandleLocateMissedForkRuntime}:] Total time spent queueing pending locate queries that could not be immediately handled by forking since the Collector started.
 This attribute also has minimum, maximum, average and standard deviation statistics with Min, Max, Avg and Std suffixes respectively.
 The Windows operating system does not fork and will not have this statistic.
 
@@ -99,7 +126,8 @@ This attribute also has minimum, maximum, average and standard deviation statist
 The Windows operating system does not fork and will not have this statistic.
 
 \index{ClassAd Collector attribute!HandleQueryMissedFork}
-\item[\AdAttr{HandleQueryMissedFork}:] Number of queries that are not locate queries the Collector has handled inline that should have been handled by forking since the Collector started.
+\item[\AdAttr{HandleQueryMissedFork}:] Number of queries that are not locate queries the Collector 
+recieved since the Collector started that could not be handled immediately because there were already too many forked child processes.
 The Windows operating system does not fork and will not have this statistic.
 
 \index{ClassAd Collector attribute!HandleQueryMissedForkRuntimeAvg}
@@ -107,7 +135,7 @@ The Windows operating system does not fork and will not have this statistic.
 \index{ClassAd Collector attribute!HandleQueryMissedForkRuntimeMin}
 \index{ClassAd Collector attribute!HandleQueryMissedForkRuntimeStd}
 \index{ClassAd Collector attribute!HandleQueryMissedForkRuntime}
-\item[\AdAttr{HandleQueryMissedForkRuntime}:] Total time spent handling queries that are not locate queries inline that should have been handled by forking since the Collector started.
+\item[\AdAttr{HandleQueryMissedForkRuntime}:] Total time spent queueing pending non-locate queries that could not be immediately handled by forking since the Collector started. 
 This attribute also has minimum, maximum, average and standard deviation statistics with Min, Max, Avg and Std suffixes respectively.
 The Windows operating system does not fork and will not have this statistic.
 

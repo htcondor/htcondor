@@ -22,6 +22,7 @@ use CondorTest;
 use CondorPersonal;
 use CondorUtils;
 use Check::SimpleJob;
+use CheckOutputFormats;
 use strict;
 use warnings;
 
@@ -47,8 +48,20 @@ if ($iswindows) {
 ';
 }
 
+###########  create submit file ##################
+my $pid = $$;
+my $submit_file = "$testname$pid.sub";
+my $submit_content = 
+"universe = docker
+executable = sleep.exe
+arguments = 600
+docker_image = foo
+queue";
 
-TLOG("Initialize\n");
+my $submitfile = "$testname$pid.sub";
+emit_dag_files($testname, $submit_content, $pid);
+
+TLOG("Try submit a docker job\n");
 my $config_file = CondorTest::CreateLocalConfig($append_content, "DOCKER");
 
 CondorTest::StartCondorWithParams(
@@ -56,16 +69,14 @@ CondorTest::StartCondorWithParams(
     fresh_local => "TRUE",
     condorlocalsrc => $config_file,
 );
+`condor_submit $submit_file`;
 
-my $result = SimpleJob::RunCheck(
-    on_execute => $on_execute,
-    on_success => $on_success,
-);
+my @run_result = `condor_q -af:, JobUniverse DockerImage WantDocker`;
+my $result = ($run_result[0] =~ /5, foo, true/);
 
 RegisterResult($result, $testname, "init");
 
 TLOG("Check docker_simulator.pl run --name <JOBNAME>\n");
-my @run_result;
 if ($iswindows) {
 	@run_result = `perl .\\docker_simulator.pl run --name job_foo`;
 } else {

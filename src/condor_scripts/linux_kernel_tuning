@@ -138,14 +138,15 @@ setKernelParameter() {
 increaseKernelParameter "GLOBAL_MAX_FDS" "/proc/sys/fs/file-max" ${GLOBAL_MAX_FDS}
 
 # Set GLOBAL_MAX_PROCESSES and LOCAL_PORT_TRANGE only for schedd machines.
-daemonList=`condor_config_val DAEMON_LIST`
+daemonList=`condor_config_val DAEMON_LIST | sed -e's/,/ /g'`
 for daemon in $daemonList; do
-	daemon=`echo $daemon | sed -e's/,//'`
 	daemonFile=`condor_config_val ${daemon}`
-	baseName=`basename ${daemonFile}`
-	if [ ${baseName} = "condor_schedd" ]; then
-		increaseKernelParameter "GLOBAL_MAX_PROCESSES" "/proc/sys/kernel/pid_max" ${GLOBAL_MAX_PROCESSES}
-		setKernelParameter "LOCAL_PORT_RANGE" "/proc/sys/net/ipv4/ip_local_port_range" "${LOCAL_PORT_RANGE}"
+	if [ -n "${daemonFile}" ]; then
+		baseName=`basename ${daemonFile}`
+		if [ ${baseName} = "condor_schedd" ]; then
+			increaseKernelParameter "GLOBAL_MAX_PROCESSES" "/proc/sys/kernel/pid_max" ${GLOBAL_MAX_PROCESSES}
+			setKernelParameter "LOCAL_PORT_RANGE" "/proc/sys/net/ipv4/ip_local_port_range" "${LOCAL_PORT_RANGE}"
+		fi
 	fi
 done
 

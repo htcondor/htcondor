@@ -212,6 +212,11 @@ void dprintf_after_shared_mem_clone( void );
 
 void dprintf_dump_stack(void);
 
+/* If outputs haven't been configured yet, stop buffering dprintf()
+ * output until they are configured.
+ */
+void dprintf_pause_buffering();
+
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
 /* write dprintf contribution to the daemon header */

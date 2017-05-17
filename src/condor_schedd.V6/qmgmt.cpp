@@ -907,8 +907,9 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 {
 	std::string old_path;
 	formatstr(old_path,"%s%ccluster%d.proc%d.subproc%d", spool, DIR_DELIM_CHAR, cluster, proc, 0);
-	char *new_path = gen_ckpt_name( spool, cluster, proc, 0 );
-	ASSERT( new_path );
+	std::string new_path;
+	SpooledJobFiles::getJobSpoolPath(job_ad, new_path);
+	ASSERT( !new_path.empty() );
 
 	static const int ATTR_ARRAY_SIZE = 6;
 	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = { 
@@ -931,7 +932,7 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 		char const *attr = AttrsToModify[a];
 		MyString v;
 		char const *o = old_path.c_str();
-		char const *n = new_path;
+		char const *n = new_path.c_str();
 
 		if( !job_ad->LookupString(attr,v) ) {
 			continue;
@@ -975,8 +976,6 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 			free( nv );
 		}
 	}
-
-	free( new_path );
 }
 
 
@@ -1061,7 +1060,6 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 
 		std::string old_path;
 		std::string new_path;
-		char *tmp;
 
 		if( proc == ICKPT ) {
 			formatstr(old_path,"%s%ccluster%d.ickpt.subproc%d",spool,DIR_DELIM_CHAR,cluster,0);
@@ -1069,9 +1067,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 		else {
 			formatstr(old_path,"%s%ccluster%d.proc%d.subproc%d",spool,DIR_DELIM_CHAR,cluster,proc,0);
 		}
-		tmp = gen_ckpt_name(spool,cluster,proc,0);
-		new_path = tmp;
-		free( tmp );
+		SpooledJobFiles::getJobSpoolPath(job_ad, new_path);
 
 		if( !SpooledJobFiles::createParentSpoolDirectories(job_ad) ) {
 			EXCEPT("Failed to create parent spool directories for "
@@ -4103,11 +4099,15 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	(void)x509_attrs;
 	return false;
 #else
-	if ( !init_user_ids( owner, NULL ) ) {
-		dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
-		return false;
+	// owner==NULL means don't try to switch our priv state.
+	TemporaryPrivSentry tps( owner != NULL );
+	if ( owner != NULL ) {
+		if ( !init_user_ids( owner, NULL ) ) {
+			dprintf( D_FAILURE, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
+			return false;
+		}
+		set_user_priv();
 	}
-	TemporaryPrivSentry tps( PRIV_USER, true );
 
 	StatInfo si( file );
 	if ( si.Error() == SINoFile ) {
@@ -5427,7 +5427,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 	char new_attr_name[500];
 	char *buf = NULL;
 	ExprTree *expr = NULL;
-	char *SpoolSpace = NULL;
+	std::string SpoolSpace;
 
 	snprintf(new_attr_name,500,"SUBMIT_%s",ATTR_JOB_IWD);
 	if ( job_ad->LookupExpr( new_attr_name ) ) {
@@ -5435,8 +5435,8 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		return false;
 	}
 
-	SpoolSpace = gen_ckpt_name(Spool,cluster,proc,0);
-	ASSERT(SpoolSpace);
+	SpooledJobFiles::getJobSpoolPath(job_ad, SpoolSpace);
+	ASSERT(!SpoolSpace.empty());
 
 		// Backup the original IWD at submit time
 	job_ad->LookupString(ATTR_JOB_IWD,&buf);
@@ -5459,7 +5459,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 	if ( modify_ad ) {
 		job_ad->Assign(ATTR_JOB_IWD,SpoolSpace);
 	} else {
-		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
+		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace.c_str());
 	}
 
 		// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
@@ -5560,7 +5560,6 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		}
 	}
 	if (buf) free(buf);
-	free(SpoolSpace);
 	return true;
 }
 
@@ -5787,7 +5786,7 @@ SendSpoolFile(char const *)
 		// We ignore the filename that was passed by the client.
 		// It is only there for backward compatibility reasons.
 
-	path = gen_ckpt_name(Spool,active_cluster_num,ICKPT,0);
+	path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
 	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
@@ -5822,7 +5821,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 	}
 	Q_SOCK->getReliSock()->encode();
 
-	char *path = gen_ckpt_name(Spool, active_cluster_num, ICKPT, 0);
+	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
 	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {

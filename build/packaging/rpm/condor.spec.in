@@ -84,8 +84,6 @@ Buildroot:      @CPACK_RPM_DIRECTORY@/@CPACK_PACKAGE_FILE_NAME@
 @CPACK_RPM_INSTALL_FILES@
 
 
-%attr(4755,root,root) %_sbindir/condor_root_switchboard
-
 %pre
 #Add condor group if not existed
 getent group condor >/dev/null || groupadd -r condor

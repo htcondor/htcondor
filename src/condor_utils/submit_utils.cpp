@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 //#include "condor_network.h"
 #include "condor_string.h"
-#include "spooled_job_files.h" // for gen_ckpt_name
+#include "spooled_job_files.h" // for GetSpooledExecutablePath()
 //#include "subsystem_info.h"
 //#include "env.h"
 #include "basename.h"
@@ -326,7 +326,7 @@ SubmitHash::SubmitHash()
 	, abort_code(0)
 	, abort_macro_name(NULL)
 	, abort_raw_macro_val(NULL)
-	, DisableFileChecks(false)
+	, DisableFileChecks(true)
 	, FakeFileCreationChecks(false)
 	, IsInteractiveJob(false)
 	, IsRemoteJob(false)
@@ -2750,16 +2750,19 @@ int SubmitHash::SetGSICredentials()
 
 		if(submit_sends_x509) {
 
-			if ( check_x509_proxy(proxy_file) != 0 ) {
+			globus_gsi_cred_handle_t proxy_handle;
+			proxy_handle = x509_proxy_read( proxy_file );
+			if ( proxy_handle == NULL ) {
 				push_error(stderr, "%s\n", x509_error_string() );
 				ABORT_AND_RETURN( 1 );
 			}
 
 			/* Insert the proxy expiration time into the ad */
 			time_t proxy_expiration;
-			proxy_expiration = x509_proxy_expiration_time(proxy_file);
+			proxy_expiration = x509_proxy_expiration_time(proxy_handle);
 			if (proxy_expiration == -1) {
 				push_error(stderr, "%s\n", x509_error_string() );
+				x509_proxy_free( proxy_handle );
 				ABORT_AND_RETURN( 1 );
 			}
 
@@ -2770,10 +2773,11 @@ int SubmitHash::SetGSICredentials()
 
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
-			proxy_subject = x509_proxy_identity_name(proxy_file);
+			proxy_subject = x509_proxy_identity_name(proxy_handle);
 
 			if ( !proxy_subject ) {
 				push_error(stderr, "%s\n", x509_error_string() );
+				x509_proxy_free( proxy_handle );
 				ABORT_AND_RETURN( 1 );
 			}
 
@@ -2784,7 +2788,7 @@ int SubmitHash::SetGSICredentials()
 
 			/* Insert the proxy email into the ad */
 			char *proxy_email;
-			proxy_email = x509_proxy_email(proxy_file);
+			proxy_email = x509_proxy_email(proxy_handle);
 
 			if ( proxy_email ) {
 				InsertJobExprString(ATTR_X509_USER_PROXY_EMAIL, proxy_email);
@@ -2796,7 +2800,7 @@ int SubmitHash::SetGSICredentials()
 			char *firstfqan = NULL;
 			char *quoted_DN_and_FQAN = NULL;
 
-			int error = extract_VOMS_info_from_file( proxy_file, 0, &voname, &firstfqan, &quoted_DN_and_FQAN);
+			int error = extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &quoted_DN_and_FQAN);
 			if ( error ) {
 				if (error == 1) {
 					// no attributes, skip silently.
@@ -2818,6 +2822,7 @@ int SubmitHash::SetGSICredentials()
 			// When new classads arrive, all this should be replaced with a
 			// classad holding the VOMS atributes.  -zmiller
 
+			x509_proxy_free( proxy_handle );
 		}
 // this is the end of the big, not-properly indented block (see above) that
 // causes submit to send the x509 attributes only when talking to older
@@ -4649,7 +4654,7 @@ int SubmitHash::SetExecutable()
 	// generate initial checkpoint file
 	// This is ignored by the schedd in 7.5.5+.  Prior to that, the
 	// basename must match the name computed by the schedd.
-	char *IckptName = gen_ckpt_name(0, jid.cluster, ICKPT, 0);
+	char *IckptName = GetSpooledExecutablePath(jid.cluster, "");
 
 	// ensure the executables exist and spool them only if no 
 	// $$(arch).$$(opsys) are specified  (note that if we are simply
