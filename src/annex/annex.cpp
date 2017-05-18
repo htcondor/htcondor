@@ -140,7 +140,7 @@ std::string commandStateFile;
 
 void
 main_config() {
-	commandStateFile = param( "ANNEXD_COMMAND_STATE" );
+	commandStateFile = param( "ANNEX_COMMAND_STATE" );
 }
 
 bool
@@ -356,6 +356,7 @@ readShortFile( const char * fileName, std::string & contents ) {
 void
 help( const char * argv0 ) {
 	fprintf( stdout, "usage: %s -annex-name <annex-name> -count|-slots <number>\n"
+		"\n"
 		"For on-demand instances:\n"
 		"\t[-aws-on-demand]\n"
 		"\t-count <integer number of instances>\n"
@@ -406,6 +407,7 @@ help( const char * argv0 ) {
 		"\n"
 		"OR, to do the one-time setup for an AWS account:\n"
 		"%s -setup [</full/path/to/access-key-file> </full/path/to/secret-key-file> [<CloudFormation URL>]]\n"
+		"\n"
 		"OR, to check the status of your annex:\n"
 		"%s -check -annex[-name] <annex-name> [-classad[s]]\n"
 		"\n"
@@ -1201,6 +1203,13 @@ annex_main( int argc, char ** argv ) {
 			break;
 	}
 
+	std::string arguments = argv[0]; arguments += " ";
+	for( int i = 1; i < argc; ++i ) {
+		formatstr( arguments, "%s%s ", arguments.c_str(), argv[i] );
+	}
+	arguments.erase( arguments.length() - 1 );
+	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", arguments.c_str() );
+
 	switch( theCommand ) {
 		case ct_status:
 			return status( annexName, wantClassAds, serviceURL );
@@ -1292,8 +1301,7 @@ main_pre_command_sock_init() {
 
 int
 main( int argc, char ** argv ) {
-	set_mySubSystem( "ANNEXD", SUBSYSTEM_TYPE_DAEMON );
-
+	set_mySubSystem( "ANNEX", SUBSYSTEM_TYPE_DAEMON );
 
 	// This is dumb, but easier than fighting daemon core about parsing.
 	_argc = argc;
@@ -1305,16 +1313,24 @@ main( int argc, char ** argv ) {
 	// This is also dumb, but less dangerous than (a) reaching into daemon
 	// core to set a flag and (b) hoping that my command-line arguments and
 	// its command-line arguments don't conflict.
-	char ** dcArgv = (char **)malloc( 4 * sizeof( char * ) );
+	char ** dcArgv = (char **)malloc( 6 * sizeof( char * ) );
 	dcArgv[0] = argv[0];
 	// Force daemon core to run in the foreground.
 	dcArgv[1] = strdup( "-f" );
 	// Disable the daemon core command socket.
 	dcArgv[2] = strdup( "-p" );
 	dcArgv[3] = strdup(  "0" );
-	argc = 4;
-	argv = dcArgv;
 
+	// We need to spin up the param system to find the user config directory,
+	// to which we want to log.
+	config_ex( CONFIG_OPT_WANT_META );
+	std::string userDir;
+	dcArgv[4] = strdup( "-log" );
+	if(! createUserConfigDir( userDir )) { return 1; }
+	dcArgv[5] = strdup( userDir.c_str() );
+
+	argc = 6;
+	argv = dcArgv;
 
 	dc_main_init = & main_init;
 	dc_main_config = & main_config;

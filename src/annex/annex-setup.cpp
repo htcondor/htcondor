@@ -79,7 +79,7 @@ check_account_setup( const std::string & publicKeyFile, const std::string & priv
 		sgStackName, sgStackDescription,
 		commandState, commandID );
 
-	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Your setup looks OK.\n", scratchpad,
+	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Your setup looks OK.", scratchpad,
 		replyStream, commandState, commandID );
 
 	FunctorSequence * fs = new FunctorSequence(
@@ -283,7 +283,7 @@ setup( const char * pukf, const char * prkf, const char * cloudFormationURL, con
 
 	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, scratchpad );
 
-	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Setup successful.\n", scratchpad,
+	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Setup successful.", scratchpad,
 		replyStream, commandState, commandID );
 
 	FunctorSequence * fs = new FunctorSequence(

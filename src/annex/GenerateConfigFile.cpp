@@ -26,7 +26,7 @@ GenerateConfigFile::operator() () {
 	// Append the annex configuration to the user config file.
 	FILE * configFile = NULL;
 
-	// Consider using createUserConfigDir() from CreateKeyPair.cpp.
+	// Consider using createUserConfigDir() from user-config-dir.h.
 	std::string userConfigName;
 	MyString userConfigSource;
 	param( userConfigName, "USER_CONFIG_FILE" );

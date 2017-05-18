@@ -58,13 +58,18 @@ printClassAds( unsigned count, const std::map< std::string, std::string > & inst
 		annexAd.AssignExpr( (attr + "InstancesList").c_str(), expr.c_str() );
 	}
 
-	fPrintAd( stdout, annexAd );
+	std::string ncaFormat;
+	classad::ClassAdUnParser caup;
+	caup.Unparse( ncaFormat, & annexAd );
+	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", ncaFormat.c_str() );
 
-	// Print an ad for each instance?
+	fPrintAd( stdout, annexAd );
 }
 
 void
 printHumanReadable( unsigned count, const std::map< std::string, std::string > & instances, const std::string & ) {
+	std::string auditString;
+
 	std::map< std::string, unsigned > statusCounts;
 	for( auto i = instances.begin(); i != instances.end(); ++i ) {
 		if( statusCounts.count( i->second ) == 0 ) {
@@ -75,8 +80,10 @@ printHumanReadable( unsigned count, const std::map< std::string, std::string > &
 
 	fprintf( stdout, "%-14.14s %5.5s\n", "STATE", "COUNT" );
 	for( auto i = statusCounts.begin(); i != statusCounts.end(); ++i ) {
+		formatstr( auditString, "%s%s %u, ", auditString.c_str(), i->first.c_str(), i->second );
 		fprintf( stdout, "%-14.14s %5u\n", i->first.c_str(), i->second );
 	}
+	formatstr( auditString, "%stotal %u", auditString.c_str(), count );
 	fprintf( stdout, "%-14.14s %5u\n", "TOTAL", count );
 
 	std::map< std::string, std::vector< std::string > > instanceIDsByStatus;
@@ -85,10 +92,12 @@ printHumanReadable( unsigned count, const std::map< std::string, std::string > &
 	}
 
 	if( statusCounts[ "[in pool]" ] != count ) {
+		formatstr( auditString, "%s; ", auditString.c_str() );
 		fprintf( stdout, "\n" );
 		fprintf( stdout, "Instances not in the pool, grouped by state:\n" );
 		for( auto i = instanceIDsByStatus.begin(); i != instanceIDsByStatus.end(); ++i ) {
 			if( i->first == "[in pool]" ) { continue; }
+			formatstr( auditString, "%s%s ", auditString.c_str(), i->first.c_str() );
 			fprintf( stdout, "%s", i->first.c_str() );
 			unsigned column = i->first.length();
 			for( unsigned j = 0; j < i->second.size(); ++j ) {
@@ -99,11 +108,16 @@ printHumanReadable( unsigned count, const std::map< std::string, std::string > &
 					fprintf( stdout, "%*.*s", column, column, "" );
 					column += i->second[j].length() + 1;
 				}
+				formatstr( auditString, "%s%s ", auditString.c_str(), i->second[j].c_str() );
 				fprintf( stdout, " %s", i->second[j].c_str() );
 			}
+			formatstr( auditString, "%s; ", auditString.substr( 0, auditString.length() - 1 ).c_str() );
 			fprintf( stdout, "\n" );
 		}
+		auditString.erase( auditString.length() - 2 );
 	}
+
+	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", auditString.c_str() );
 }
 
 int
@@ -137,6 +151,7 @@ StatusReply::operator() () {
 			} while( true );
 
 			if( count == 0 ) {
+				dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "Found no machines in that annex.\n" );
 				fprintf( stdout, "Found no machines in that annex.\n" );
 				goto cleanup;
 			}

@@ -2945,7 +2945,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=annexd_command.state, job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor
@@ -3592,29 +3592,26 @@ type=bool
 description=Master should automatically open ports in the Windows firewall for HTCondor daemons
 tags=master
 
-[ANNEXD]
-default=$(SBIN)/condor_annexd
+[ANNEX_COMMAND_STATE]
+default=$(LOG)/AnnexCommand.state
 type=path
-description=Path to the HTCondor annex daemon binary
-customization=devel
-tags=annex
-
-[ANNEXD_LOG]
-default=$(LOG)/AnnexdLog
-type=path
-tags=annex,log
-
-[ANNEXD_COMMAND_STATE]
-default=$(SPOOL)/annexd_command.state
-type=path
-reconfig=true
 customization=seldom
+tags=annex
+
+[ANNEX_LOG]
+default=$(LOG)/AnnexLog
+type=path
 tags=annex,log
 
-[ANNEXD_NAME]
-default=Annex Daemon@$(FULL_HOSTNAME)
-type=string
-tags=annex
+[ANNEX_AUDIT_LOG]
+default=$(LOG)/AnnexAuditLog
+type=path
+tags=annex,log
+
+[ANNEX_GAHP_LOG]
+default=$(LOG)/AnnexGahpLog
+type=path
+tags=annex,log
 
 [ANNEX_DEFAULT_LEASE_DURATION]
 default=3000
@@ -5068,10 +5065,6 @@ win32_default=$(LIBEXEC)\condor_gangliad.exe
 description=Path to the Gangila daemon binary
 type=path
 
-[ANNEXD]
-default=$(SBIN)/condor_annexd
-type=path
-
 [STARTER]
 default=$(SBIN)/condor_starter
 win32_default=$(SBIN)\condor_starter.exe
@@ -5251,7 +5244,8 @@ default=$(EC2_GAHP)
 type=path
 
 [ANNEX_GAHP_LOG]
-default=$(LOG)/AnnexGahpLog
+default=/tmp/AnnexGahpLog.$(USERNAME)
+win32_default=NUL
 
 [CREDD]
 default=$(SBIN)/condor_credd

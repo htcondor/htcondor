@@ -31,10 +31,18 @@ ReplyAndClean::operator() () {
 					if( alternateReply.empty() ) {
 						fprintf( stderr, "The success reply did not include the bulk request ID.\n" );
 					} else {
+						dprintf( D_AUDIT | D_IDENT | D_PID, getuid(),
+							"%s\n", alternateReply.c_str() );
 						fprintf( stdout, "%s\n", alternateReply.c_str() );
 					}
 				} else {
-					fprintf( stdout, "Annex started.  Its identity with the cloud provider is '%s'.", bulkRequestID.c_str() );
+					std::string message;
+					formatstr( message, "Annex started.  Its identity with the cloud provider is '%s'.", bulkRequestID.c_str() );
+
+					dprintf( D_AUDIT | D_IDENT | D_PID, getuid(),
+						"%s\n", message.c_str() );
+					fprintf( stdout, "%s", message.c_str() );
+
 					std::string expectedDelay;
 					reply->LookupString( "ExpectedDelay", expectedDelay );
 					if(! expectedDelay.empty()) {
@@ -46,8 +54,10 @@ ReplyAndClean::operator() () {
 				std::string errorString;
 				reply->LookupString( ATTR_ERROR_STRING, errorString );
 				if( errorString.empty() ) {
+					dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "The error reply (%s) did not include an error string.\n", resultString.c_str() );
 					fprintf( stderr, "The error reply (%s) did not include an error string.\n", resultString.c_str() );
 				} else {
+					dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", errorString.c_str() );
 					fprintf( stderr, "%s\n", errorString.c_str() );
 				}
 			}
