@@ -995,7 +995,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 	else {
 		// enter state machine
 		m_state = ServerRec1;
-		return (int)doServerRec1(errstack, non_blocking);
+		return WouldBlock;
 	}
 
 
