@@ -760,8 +760,6 @@ cmake \
 %endif
 %if %bundle_uw_externals || %bundle_std_univ_externals
        -DEXTERNALS_SOURCE_URL:STRING="$RPM_SOURCE_DIR" \
-%else
-       -DEXTERNALS_SOURCE_URL:STRING="http://mirror.batlab.org/pub/export/externals" \
 %endif
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=FALSE \
