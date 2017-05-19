@@ -2097,9 +2097,8 @@ secondPass (int argc, char *argv[])
 			query->addANDConstraint (argv[i+1]);
 			i++;
 		} else if (is_dash_arg_prefix (argv[i], "annex", 5)) {
-			++i;
 			std::string constraint;
-			formatstr( constraint, "AnnexName =?= \"%s\"", argv[i] );
+			formatstr( constraint, "AnnexName =?= \"%s\"", argv[i + 1] );
 			if (diagnose) { printf ("[%s]\n", constraint.c_str()); }
 			query->addANDConstraint (constraint.c_str());
 			i++;
