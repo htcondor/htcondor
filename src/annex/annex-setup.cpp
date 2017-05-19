@@ -111,6 +111,8 @@ check_setup() {
 	checkOneParameter( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN", rv );
 	checkOneParameter( "ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN", rv );
 
+	checkOneParameter( "SEC_PASSWORD_FILE", rv );
+
 	StatWrapper sw( secretKeyFile.c_str() );
 	mode_t mode = sw.GetBuf()->st_mode;
 	if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
@@ -121,6 +123,17 @@ check_setup() {
 	if( rv != 0 ) {
 		return rv;
 	} else {
+		std::string secPasswordFile;
+		param( secPasswordFile, "SEC_PASSWORD_FILE" );
+		int fd = open( secPasswordFile.c_str(), O_RDONLY );
+		if( fd == -1 ) {
+			fprintf( stderr, "Unable to open SEC_PASSWORD_FILE '%s': %s (%d).  Either create this file (run 'condor_store_cred -c add -f %s') or correct the value of SEC_PASSWORD_FILE (which you can locate by running 'condor_config_val -v SEC_PASSWORD_FILE').\n",
+				secPasswordFile.c_str(), strerror(errno), errno, secPasswordFile.c_str() );
+			return 1;
+		} else {
+			close( fd );
+		}
+
 		return check_account_setup( accessKeyFile, secretKeyFile, cfURL, ec2URL );
 	}
 }
