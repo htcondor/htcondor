@@ -71,13 +71,3 @@ CollectorPluginManager::Invalidate(int command, const ClassAd &ad)
 	}
 }
 
-CollectorPlugin::CollectorPlugin()
-{
-    if (PluginManager<CollectorPlugin>::registerPlugin(this)) {
-		dprintf(D_ALWAYS, "Plugin registration succeeded\n");
-	} else {
-		dprintf(D_ALWAYS, "Plugin registration failed\n");
-	}
-}
-
-CollectorPlugin::~CollectorPlugin() { }

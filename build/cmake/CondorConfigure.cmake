@@ -88,7 +88,6 @@ if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
 	# on systems with both python2 and python3.
 	if (DEFINED PYTHONLIBS_VERSION_STRING)
 		set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
-		set(PythonInterp_FIND_VERSION_EXACT ON)
 	endif()
 	include (FindPythonInterp)
 else()
