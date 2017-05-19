@@ -239,9 +239,18 @@ createConfigTarball(	const char * configDir,
 
 	std::string localPasswordFile;
 	param( localPasswordFile, "SEC_PASSWORD_FILE" );
-	if( passwordFile.empty() ) {
+	if( localPasswordFile.empty() ) {
 		formatstr( tarballError, "SEC_PASSWORD_FILE empty or undefined" );
 		return false;
+	}
+
+	fd = open( localPasswordFile.c_str(), O_RDONLY );
+	if( fd == -1 ) {
+		formatstr( tarballError, "Unable to open SEC_PASSWORD_FILE '%s': %s (%d)",
+			localPasswordFile.c_str(), strerror(errno), errno );
+		return false;
+	} else {
+		close( fd );
 	}
 
 	// FIXME: Rewrite without system().
