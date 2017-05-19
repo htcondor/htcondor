@@ -97,22 +97,25 @@ public:
 			const classad::ExprTree *m_requirements;
 			int m_timeslice_ms;
 			int m_done;
+			int m_options;
 
 		public:
-			filter_iterator(ClassAdLog<K,AltK,AD> &log, const classad::ExprTree *requirements, int timeslice_ms, bool invalid=false)
+			filter_iterator(ClassAdLog<K,AltK,AD> &log, const classad::ExprTree *requirements, int timeslice_ms, bool at_end=false)
 				: m_table(&log.table)
 				, m_cur(log.table.begin())
 				, m_found_ad(false)
 				, m_requirements(requirements)
 				, m_timeslice_ms(timeslice_ms)
-				, m_done(invalid) {}
+				, m_done(at_end)
+				, m_options(0) {}
 			filter_iterator(const filter_iterator &other)
 				: m_table(other.m_table)
 				, m_cur(other.m_cur)
 				, m_found_ad(other.m_found_ad)
 				, m_requirements(other.m_requirements)
 				, m_timeslice_ms(other.m_timeslice_ms)
-				, m_done(other.m_done) {}
+				, m_done(other.m_done)
+				, m_options(other.m_options) {}
 
 			~filter_iterator() {}
 			AD operator *() const {
@@ -131,6 +134,8 @@ public:
 				return true;
 			}
 			bool operator!=(const filter_iterator &rhs) {return !(*this == rhs);}
+			int set_options(int options) { int opts = m_options; m_options = options; return opts; }
+			int get_options() { return m_options; }
 	};
 
 

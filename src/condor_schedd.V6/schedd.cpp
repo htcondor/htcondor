@@ -2099,11 +2099,12 @@ sendDone(Stream *stream, bool send_job_counts, LiveJobCounters* query_counts, co
 	return true;
 }
 
-void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment)
+void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment /*, JobQueueJob * job*/)
 {
 	if (status == TRANSFERRING_OUTPUT) status = RUNNING;
 	switch (universe) {
 	case CONDOR_UNIVERSE_SCHEDULER:
+		//dprintf(D_ALWAYS | D_BACKTRACE, "IncrementLiveJobCounter(%p, %d, %d, %d) for %d.%d (%p)\n", &num.SchedulerJobsIdle, universe, status, increment, job->jid.cluster, job->jid.proc, job);
 		if (status > 0 && status <= HELD) {
 			(&num.SchedulerJobsIdle)[status-1] += increment;
 		}
@@ -2116,6 +2117,7 @@ void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, in
 		break;
 	*/
 	default:
+		//dprintf(D_ALWAYS | D_BACKTRACE, "IncrementLiveJobCounter(%p, %d, %d, %d) for %d.%d (%p)\n", &num.JobsIdle, universe, status, increment, job->jid.cluster, job->jid.proc, job);
 		if (status > 0 && status <= HELD) {
 			(&num.JobsIdle)[status-1] += increment;
 		} else if (status == SUSPENDED) {
@@ -2139,11 +2141,11 @@ struct QueryJobAdsContinuation : Service {
 	bool unfinished_eom;
 	bool registered_socket;
 
-	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0);
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0, int iter_opts=0);
 	int finish(Stream *);
 };
 
-QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms)
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms, int iter_opts)
 	: requirements(requirements_),
 	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
 	  match_limit(limit),
@@ -2152,6 +2154,7 @@ QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::Exp
 	  unfinished_eom(false),
 	  registered_socket(false)
 {
+	it.set_options(iter_opts);
 	my_job_counts.clear_counters();
 }
 
@@ -2357,7 +2360,13 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		resultLimit = -1;
 	}
 
-	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000);
+	int iter_options = 0;
+	bool include_cluster = false;
+	if (queryAd.EvaluateAttrBool("IncludeClusterAd", include_cluster) && include_cluster) {
+		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS;
+	}
+
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000, iter_options);
 	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
 	if (proj_err < 0) {
 		delete continuation;
@@ -5670,13 +5679,13 @@ Scheduler::actOnJobs(int, Stream* s)
 		switch( action ) {
 		case JA_REMOVE_JOBS:
 				// Don't remove removed jobs
-			snprintf( buf, 256, "(%s!=%d) && (", ATTR_JOB_STATUS, REMOVED );
+			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d)) && (", ATTR_JOB_STATUS, REMOVED );
 			break;
 		case JA_REMOVE_X_JOBS:
 				// only allow forced removal of previously "removed" jobs
 				// including jobs on hold that will go to the removed state
 				// upon release.
-			snprintf( buf, 256, "((%s==%d) || (%s==%d && %s=?=%d)) && (", 
+			snprintf( buf, 256, "(ProcId is undefined || (%s==%d) || (%s==%d && %s=?=%d)) && (", 
 				ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD,
 				ATTR_JOB_STATUS_ON_RELEASE,REMOVED);
 			break;
@@ -5999,8 +6008,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	for( i=0; i<num_cluster_matches; i++ ) {
 		tmp_id = clusters[i];
 		JobQueueJob * clusterad = GetJobAd(tmp_id);
-		// for now, we only care about clusters that have job factories
-		if ( ! clusterad || ! clusterad->factory)
+		if ( ! clusterad)
 			continue;
 
 		switch( action ) { 
@@ -6041,12 +6049,12 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_REMOVE_X_JOBS:
 			if (clusterad->factory) {
 				PauseJobFactory(clusterad->factory, 3);
-				//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
-				ScheduleClusterForDeferredCleanup(tmp_id.cluster);
-				// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
-				results.record( tmp_id, AR_SUCCESS );
-				num_success++;
 			}
+			//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
+			ScheduleClusterForDeferredCleanup(tmp_id.cluster);
+			// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
+			results.record( tmp_id, AR_SUCCESS );
+			num_success++;
 			break;
 		}
 	}

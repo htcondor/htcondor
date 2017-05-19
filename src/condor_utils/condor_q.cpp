@@ -385,7 +385,7 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 		return result;
 	}
 
-	if (fetch_opts != fetch_Default) {
+	if (fetch_opts != fetch_Jobs) {
 		free( constraint );
 		return Q_UNSUPPORTED_OPTION_ERROR;
 	}
@@ -456,6 +456,9 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 		}
 		if (fetch_opts & fetch_SummaryOnly) {
 			request_ad.InsertAttr("SummaryOnly", true);
+		}
+		if (fetch_opts & fetch_IncludeClusterAd) {
+			request_ad.InsertAttr("IncludeClusterAd", true);
 		}
 	}
 

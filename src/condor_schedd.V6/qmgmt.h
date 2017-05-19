@@ -141,8 +141,8 @@ public:
 	};
 	bool IsType(char _type) { if ( ! entry_type) this->PopulateFromAd(); return entry_type==_type; }
 	bool IsJob() { return IsType(entry_type_job); }
-	bool IsHeader() { return IsType(entry_type_cluster); }
-	bool IsCluster() { return IsType(entry_type_header); }
+	bool IsHeader() { return IsType(entry_type_header); }
+	bool IsCluster() { return IsType(entry_type_cluster); }
 	int  Universe() { return universe; }
 	int  Status() { return status; }
 	void SetUniverse(int uni) { universe = uni; }
@@ -327,6 +327,7 @@ typedef JOB_ID_KEY JobQueueKey;
 typedef JobQueueJob* JobQueuePayload;
 typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueueJob*> JobQueueLogType;
 
+#define JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS     0x0001
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
