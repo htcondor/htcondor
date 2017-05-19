@@ -570,7 +570,7 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 			fprintf( stderr, "Failed to parse spot fleet request, found no attributes.\n" );
 			exit( 2 );
 		} else if( numAttrs > 11 ) {
-			fprintf( stderr, "Failed to parse spot fleet reqeust, found too many attributes.\n" );
+			fprintf( stderr, "Failed to parse spot fleet request, found too many attributes.\n" );
 			exit( 2 );
 		}
 
@@ -580,7 +580,7 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 	}
 
 	fprintf( stdout,
-		"Will request %ld spot instance%s for %.2f hours.  "
+		"Will request %ld spot slot%s for %.2f hours.  "
 		"Each instance will terminate after being idle for %.2f hours.\n",
 		count,
 		count == 1 ? "" : "s",
@@ -653,6 +653,17 @@ void assignWithDefault(	ClassAd & commandArguments, const char * & value,
 	if( value ) {
 		commandArguments.Assign( argName, value );
 	}
+}
+
+void dumpParam( const char * attribute ) {
+	std::string value;
+	param( value, attribute );
+	dprintf( D_AUDIT | D_NOHEADER, "%s = %s\n", attribute, value.c_str() );
+}
+
+void dumpParam( const char * attribute, int defaultValue ) {
+	int value = param_integer( attribute, defaultValue );
+	dprintf( D_AUDIT | D_NOHEADER, "%s = %d\n", attribute, value );
 }
 
 int _argc;
@@ -1209,6 +1220,35 @@ annex_main( int argc, char ** argv ) {
 	}
 	arguments.erase( arguments.length() - 1 );
 	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", arguments.c_str() );
+
+	// Dump the relevant param table entires, if anyone's interested.
+	if( IsDebugCatAndVerbosity( (D_AUDIT | D_VERBOSE) ) ) {
+		dumpParam( "ANNEX_PROVISIONING_DELAY", 5 * 60 );
+		dumpParam( "COLLECTOR_HOST" );
+		dumpParam( "USER_CONFIG_FILE" );
+		dumpParam( "ANNEX_DEFAULT_EC2_URL" );
+		dumpParam( "ANNEX_DEFAULT_CWE_URL" );
+		dumpParam( "ANNEX_DEFAULT_LAMBDA_URL" );
+		dumpParam( "ANNEX_DEFAULT_S3_URL" );
+		dumpParam( "ANNEX_DEFAULT_CF_URL" );
+		dumpParam( "ANNEX_DEFAULT_CWE_URL" );
+		dumpParam( "ANNEX_DEFAULT_ACCESS_KEY_FILE" );
+		dumpParam( "ANNEX_DEFAULT_SECRET_KEY_FILE" );
+		dumpParam( "ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN" );
+		dumpParam( "ANNEX_GAHP_WORKER_MIN_NUM", 1 );
+		dumpParam( "ANNEX_GAHP_WORKER_MAX_NUM", 1 );
+		dumpParam( "ANNEX_GAHP_DEBUG");
+		dumpParam( "ANNEX_GAHP" );
+		dumpParam( "ANNEX_GAHP_CALL_TIMEOUT", 10 * 60 );
+		dumpParam( "ANNEX_COMMAND_STATE" );
+		dumpParam( "SEC_PASSWORD_FILE" );
+		dumpParam( "ANNEX_DEFAULT_LEASE_DURATION", 3000 );
+		dumpParam( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
+		dumpParam( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
+		dumpParam( "ANNEX_DEFAULT_S3_BUCKET" );
+		dumpParam( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN" );
+		dumpParam( "ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN" );
+	}
 
 	switch( theCommand ) {
 		case ct_status:
