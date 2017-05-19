@@ -904,8 +904,8 @@ Condor_Auth_Passwd::destroy_t_buf(struct msg_t_buf *t)
 
 int
 Condor_Auth_Passwd::authenticate(const char * /* remoteHost */, 
-				 CondorError* errstack,
-				 bool non_blocking )
+				 CondorError* /* errstack */,
+				 bool /* non_blocking */)
 {
 	m_client_status = AUTH_PW_A_OK;
 	m_server_status = AUTH_PW_A_OK;
