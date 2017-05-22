@@ -508,6 +508,7 @@ class Scheduler : public Service
 	// proper cleanup.
     int         	DelMrec(char const*);
     int         	DelMrec(match_rec*);
+    int         	unlinkMrec(match_rec*);
 	match_rec*      FindMrecByJobID(PROC_ID);
 	match_rec*      FindMrecByClaimID(char const *claim_id);
 	void            SetMrecJobID(match_rec *rec, int cluster, int proc);
@@ -1015,6 +1016,8 @@ private:
 	int m_history_helper_rid;
 
 	bool m_matchPasswordEnabled;
+
+	friend class DedicatedScheduler;
 };
 
 
