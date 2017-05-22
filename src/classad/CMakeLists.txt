@@ -82,10 +82,8 @@ if (NOT WINDOWS)
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
   if ( DARWIN )
-	add_custom_command( TARGET classad
-		POST_BUILD
-		WORKING_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
-		COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs libclassad.${PACKAGE_VERSION}.dylib )
+	set_target_properties( classad PROPERTIES INSTALL_NAME_DIR ${CLASSADS_INSTALL_LOC}/lib )
+	install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB_PUBLIC}/libclassad.${PACKAGE_VERSION}.dylib)" )
   endif()
 
   if ( LINUX OR DARWIN )
