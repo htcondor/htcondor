@@ -504,6 +504,9 @@ extern void dumpClassad( const char*, ClassAd*, int );
 // Returns false if no new job found.
 extern bool recycleShadow(int previous_job_exit_reason);
 
+// fix the update ad from the starter to work around starter bugs.
+extern void fix_update_ad(ClassAd & update_ad);
+
 extern BaseShadow *Shadow;
 
 #endif
