@@ -167,16 +167,13 @@ else()
       set_target_properties(htcondor PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
     endif()
 
-    install ( TARGETS pyclassad DESTINATION ${C_LIB} )
     install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )
 
     if ( DARWIN )
-          add_custom_command( TARGET classad_module htcondor
-                  POST_BUILD
-                  COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs classad.so htcondor.so )
-          add_custom_command( TARGET pyclassad
-                  POST_BUILD
-                  COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs lib${PYCLASSAD_LIB_NAME}.dylib )
+	set_target_properties( pyclassad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+        install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD_LIB_NAME}.dylib)" )
+        install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/classad.so)" )
+        install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/htcondor.so)" )
     endif()
 
     string( COMPARE EQUAL ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} INSOURCEBUILD)
@@ -203,14 +200,14 @@ else()
       endif()
       add_custom_target ( python_bindings_tests ALL DEPENDS tests/log_reader_tests.py tests/event_tests.py tests/job_queue.log tests/job.log tests/classad_tests.py tests/htcondor_version_tests.py tests/htcondor_tests.py tests/delayed_update_tests.py tests/test.ad tests/test_multiple.ad tests/test.old.ad tests/test_multiple.old.ad tests/submit.ad tests/submit_sleep.ad tests/submit_large.ad tests/delayed_submit.ad tests/delayed_update.py tests/test_log.txt ${CMAKE_CURRENT_BINARY_DIR}/test_driver )
       enable_testing()
-      if ( LINUX )
+      if ( LINUX OR DARWIN )
         if ( ${SYSTEM_NAME} MATCHES "rhel5" )
             message(STATUS "classad_test python bindings tests removed for RedHat 5 OS")
         else()
             add_test(python_classad_test test_driver tests/classad_tests.py -v)
             add_test(python_htcondor_test test_driver tests/htcondor_version_tests.py -v)
         endif()
-      endif ( LINUX )
+      endif ( LINUX OR DARWIN )
     endif (BUILD_TESTING)
   endif ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT SOLARIS )
 endif(WINDOWS)

@@ -105,6 +105,11 @@ if ($ENV{NMI_PLATFORM} =~ /macos/i) {
     }
     # Build binaries that will work on Mac OS X 10.7 and later.
     $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
+	# Hack. Some of the mac build machines have a python version in
+	# /usr/local/bin that cmake thinks won't work with the python
+	# library in /usr/lib. Prepend /usr/bin to the PATH to use that
+	# version of python.
+	$ENV{PATH} = "/usr/bin:$ENV{PATH}";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
