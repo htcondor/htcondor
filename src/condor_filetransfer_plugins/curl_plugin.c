@@ -8,7 +8,9 @@
 #endif
 
 #include <curl/curl.h>
+#include <sys/stat.h>
 #include <string.h>
+
 
 #define MAX_RETRY_ATTEMPTS 20
 
@@ -94,11 +96,11 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle ) {
     static int partial_file = 0;
     static long partial_bytes = 0;
 
+	// Input transfer: URL -> file
 	if ( !strncasecmp( argv[1], "http://", 7 ) ||
 		 !strncasecmp( argv[1], "ftp://", 6 ) ||
 		 !strncasecmp( argv[1], "file://", 7 ) ) {
 
-		// Input transfer: URL -> file
 		int close_output = 1;
 		if ( ! strcmp(argv[2],"-")) {
 			file = stdout;
@@ -161,53 +163,56 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle ) {
                 file = NULL; 
 			}
 		}
-	} else {
-		// Output transfer: file -> URL
+	} 
+    
+    // Output transfer: file -> URL
+    else {
 		int close_input = 1;
-		if ( ! strcmp(argv[1],"-")) {
+        int content_length = 0;
+        struct stat file_info;
 
-			file = stdin;
-			close_input = 0;
-			if (diagnostic) { fprintf(stderr, "sending stdin to %s\n", argv[2]); }
-		} else {
-			file = fopen(argv[1], "r");
+		if ( !strcmp(argv[1], "-") ) {
+            fprintf( stderr, "ERROR: stdin not supported for curl_plugin uploads" ); 
+            return 1;
+		} 
+        else {
+			file = fopen( argv[1], "r" );
+            fstat( fileno( file ), &file_info );
+            content_length = file_info.st_size;
 			close_input = 1;
-			if (diagnostic) { fprintf(stderr, "sending %s to %s\n", argv[1], argv[2]); }
+			if ( diagnostic ) { 
+                fprintf( stderr, "sending %s to %s\n", argv[1], argv[2] ); 
+            }
 		}
 		if(file) {
-			curl_easy_setopt(handle, CURLOPT_URL, argv[2]);
-			curl_easy_setopt(handle, CURLOPT_UPLOAD, 1);
-			curl_easy_setopt(handle, CURLOPT_READDATA, file);
-			curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
+			curl_easy_setopt( handle, CURLOPT_URL, argv[2] );
+			curl_easy_setopt( handle, CURLOPT_UPLOAD, 1 );
+			curl_easy_setopt( handle, CURLOPT_READDATA, file );
+			curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, -1 );
+            curl_easy_setopt( handle, CURLOPT_INFILESIZE_LARGE, (curl_off_t) content_length );
+            curl_easy_setopt( handle, CURLOPT_FAILONERROR, 1 );
+            if( diagnostic ) {
+                curl_easy_setopt( handle, CURLOPT_VERBOSE, 1 );
+            }
         
 			// Does curl protect against redirect loops otherwise?  It's
 			// unclear how to tune this constant.
 			// curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
-			rval = curl_easy_perform(handle);
 
-			if (diagnostic && rval) {
-				fprintf(stderr, "curl_easy_perform returned CURLcode %d: %s\n",
-						rval, curl_easy_strerror((CURLcode)rval));
+            // Perform the curl request
+			rval = curl_easy_perform( handle );
+
+            // Error handling and cleanup
+			if ( diagnostic && rval ) {
+				fprintf( stderr, "curl_easy_perform returned CURLcode %d: %s\n",
+						rval, curl_easy_strerror( ( CURLcode )rval ) );
 			}
-			if (close_input) {
-				fclose(file); file = NULL;
+			if ( close_input ) {
+				fclose( file ); 
+                file = NULL;
 			}
 
-			if( rval == 0 ) {
-				char * finalURL = NULL;
-				rval = curl_easy_getinfo( handle, CURLINFO_EFFECTIVE_URL, & finalURL );
-
-				if( rval == 0 ) {
-					if( strstr( finalURL, "http" ) == finalURL ) {
-						long httpCode = 0;
-						rval = curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, & httpCode );
-
-						if( rval == 0 ) {
-							if( httpCode != 200 ) { rval = 1; }
-						}
-					}
-				}
-			}
+			
 		}
 
 	}
