@@ -167,7 +167,7 @@ type=string
 description=List of configuration variables that can be set by condor_config_val -set
 customization=normal
 
-[SETTABLE_ATTRS_ADMINSTRATOR]
+[SETTABLE_ATTRS_ADMINISTRATOR]
 # This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>, where CONFIG is the level most used for this feature
 default=
 type=string
