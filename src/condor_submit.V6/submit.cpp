@@ -6955,6 +6955,8 @@ SetGSICredentials()
 // not be trusted.  in the meantime, though, we try to provide some cross
 // compatibility between the old and new.  i also didn't indent this properly
 // so as not to churn the old code.  -zmiller
+// Exception: Checking the proxy lifetime and throwing an error if it's
+// too short should remain. - jfrey
 
 		bool submit_sends_x509 = true;
 		CondorVersionInfo cvi(MySchedd ? MySchedd->version() : NULL);
@@ -6962,23 +6964,29 @@ SetGSICredentials()
 			submit_sends_x509 = false;
 		}
 
+		globus_gsi_cred_handle_t proxy_handle;
+		proxy_handle = x509_proxy_read( proxy_file );
+
+		if ( proxy_handle == NULL ) {
+			fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+			exit( 1 );
+		}
+
+		/* Insert the proxy expiration time into the ad */
+		time_t proxy_expiration;
+		proxy_expiration = x509_proxy_expiration_time(proxy_handle);
+		if (proxy_expiration == -1) {
+			fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+			exit( 1 );
+		} else if ( proxy_expiration < get_submit_time() ) {
+			fprintf( stderr, "\nERROR: proxy has expired\n" );
+			exit( 1 );
+		} else if ( proxy_expiration < get_submit_time() + param_integer( "CRED_MIN_TIME_LEFT" ) ) {
+			fprintf( stderr, "\nERROR: proxy lifetime too short\n" );
+			exit( 1 );
+		}
+
 		if(submit_sends_x509) {
-
-			globus_gsi_cred_handle_t proxy_handle;
-			proxy_handle = x509_proxy_read( proxy_file );
-
-			if ( proxy_handle == NULL ) {
-				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-				exit( 1 );
-			}
-
-			/* Insert the proxy expiration time into the ad */
-			time_t proxy_expiration;
-			proxy_expiration = x509_proxy_expiration_time(proxy_handle);
-			if (proxy_expiration == -1) {
-				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-				exit( 1 );
-			}
 
 			(void) buffer.formatstr( "%s=%li", ATTR_X509_USER_PROXY_EXPIRATION, 
 						   proxy_expiration);
@@ -7034,9 +7042,9 @@ SetGSICredentials()
 
 			// When new classads arrive, all this should be replaced with a
 			// classad holding the VOMS atributes.  -zmiller
-
-			x509_proxy_free( proxy_handle );
 		}
+
+		x509_proxy_free( proxy_handle );
 // this is the end of the big, not-properly indented block (see above) that
 // causes submit to send the x509 attributes only when talking to older
 // schedds.  at some point, probably 8.7.0, this entire block should be ripped
