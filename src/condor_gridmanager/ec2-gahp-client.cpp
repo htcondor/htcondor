@@ -280,7 +280,7 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
                 break;
 
             default:
-                if( (result->argc - 2) % 6 != 0 ) { EXCEPT( "Bad %s result", command ); }
+                if( (result->argc - 2) % 7 != 0 ) { EXCEPT( "Bad %s result", command ); }
                 for( int i = 2; i < result->argc; ++i ) {
                     returnStatus.append( result->argv[i] );
                 }
@@ -1039,6 +1039,50 @@ int EC2GahpClient::bulk_stop(	const std::string & service_url,
  			error_string = result->argv[3];
 		} else {
 			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}
+
+int EC2GahpClient::bulk_query(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+								StringList & returnStatus,
+								std::string & error_code ) {
+	static const char * command = "EC2_BULK_QUERY";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+
+	int cgf = callGahpFunction( command, arguments, result, high_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if( result ) {
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+            if( rc == 1 ) { error_string = ""; }
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+ 			error_code = result->argv[2];
+ 			error_string = result->argv[3];
+		} else {
+			if( (result->argc - 2) % 3 != 0 ) { EXCEPT( "Bad %s result", command ); }
+
+			rc = atoi( result->argv[1] );
+			for( int i = 2; i < result->argc; ++i ) {
+				returnStatus.append( result->argv[i] );
+			}
+			returnStatus.rewind();
 		}
 
 		delete result;

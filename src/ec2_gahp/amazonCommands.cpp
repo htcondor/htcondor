@@ -1043,7 +1043,7 @@ bool AmazonRequest::sendPreparedRequest(
         std::string rateLimit;
         formatstr( rateLimit, "%s_RATE_LIMIT", get_mySubSystem()->getName() );
         globalCurlThrottle.rateLimit = param_integer( rateLimit.c_str(), 100 );
-        dprintf( D_PERF_TRACE, "rate limit = %u\n", globalCurlThrottle.rateLimit );
+        dprintf( D_PERF_TRACE, "rate limit = %d\n", globalCurlThrottle.rateLimit );
         rateLimitInitialized = true;
     }
 
@@ -2228,9 +2228,9 @@ struct vmStatusSpotUD_t {
     bool inStatus;
     vmStatusSpotTags inWhichTag;
     AmazonStatusSpotResult * currentResult;
- 
+
     std::vector< AmazonStatusSpotResult > & results;
-    
+
     vmStatusSpotUD_t( std::vector< AmazonStatusSpotResult > & assrList ) :
         inItem( 0 ),
         inStatus( false ),
@@ -2251,7 +2251,7 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
         vsud->inItem += 1;
         return;
     }
-    
+
     if( strcasecmp( ignoringNameSpace( name ), "spotInstanceRequestId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::REQUEST_ID;
     } else if( strcasecmp( ignoringNameSpace( name ), "state" ) == 0 ) {
@@ -2272,7 +2272,7 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
 void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
     if( vsud->inItem != 1 ) { return; }
-    
+
     std::string * targetString = NULL;
     switch( vsud->inWhichTag ) {
         case vmStatusSpotUD::NONE:
@@ -2281,15 +2281,15 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
         case vmStatusSpotUD::REQUEST_ID:
             targetString = & vsud->currentResult->request_id;
             break;
-        
+
         case vmStatusSpotUD::STATE:
             targetString = & vsud->currentResult->state;
             break;
-        
+
         case vmStatusSpotUD::LAUNCH_GROUP:
             targetString = & vsud->currentResult->launch_group;
             break;
-        
+
         case vmStatusSpotUD::INSTANCE_ID:
             targetString = & vsud->currentResult->instance_id;
             break;
@@ -2302,7 +2302,7 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
             // This should never happen.
             break;
     }
-    
+
     appendToString( (const void *)cdata, len, 1, (void *)targetString );
 }
 
@@ -2315,7 +2315,7 @@ void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
             delete vsud->currentResult;
             vsud->currentResult = NULL;
         }
-        
+
         vsud->inItem -= 1;
     }
 
@@ -2454,7 +2454,9 @@ struct vmStatusUD_t {
         INSTANCE_TYPE,
         GROUP_ID,
         STATE_REASON_CODE,
-        CLIENT_TOKEN
+        CLIENT_TOKEN,
+        TAG_KEY,
+        TAG_VALUE
     };
     typedef enum vmStatusTags_t vmStatusTags;
 
@@ -2472,18 +2474,25 @@ struct vmStatusUD_t {
     bool inGroup;
     std::string currentSecurityGroup;
     std::vector< std::string > currentSecurityGroups;
-    
-    vmStatusUD_t( std::vector< AmazonStatusResult > & asrList ) : 
-        inInstancesSet( false ), 
+
+	bool inTagSet;
+	bool inTag;
+	std::string tagKey;
+	std::string tagValue;
+
+    vmStatusUD_t( std::vector< AmazonStatusResult > & asrList ) :
+        inInstancesSet( false ),
         inInstance( false ),
         inInstanceState( false ),
         inStateReason( false ),
-        inWhichTag( vmStatusUD_t::NONE ), 
-        currentResult( NULL ), 
+        inWhichTag( vmStatusUD_t::NONE ),
+        currentResult( NULL ),
         results( asrList ),
         inItem( 0 ),
         inGroupSet( false ),
-        inGroup( false ) { }
+        inGroup( false ),
+        inTagSet( false ),
+        inTag( false ) { }
 };
 typedef struct vmStatusUD_t vmStatusUD;
 
@@ -2493,16 +2502,16 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     if( ! vsud->inInstancesSet ) {
         if( strcasecmp( ignoringNameSpace( name ), "instancesSet" ) == 0 ) {
             vsud->inInstancesSet = true;
-        }            
+        }
         return;
-    } 
+    }
 
     if( ! vsud->inInstance ) {
         if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
             vsud->currentResult = new AmazonStatusResult();
             assert( vsud->currentResult != NULL );
             vsud->inInstance = true;
-            vsud->inItem += 1;        
+            vsud->inItem += 1;
         }
         return;
     }
@@ -2515,6 +2524,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     // to make sure we know which one closes the instance's item tag.
     if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
         vsud->inItem += 1;
+        if( vsud->inTagSet ) { vsud->inTag = true; }
         return;
     }
 
@@ -2523,7 +2533,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
         vsud->inGroupSet = true;
         return;
     }
-    
+
     //
     // Check for any tags of interest in the group set.
     //
@@ -2533,7 +2543,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
             return;
         }
     }
-        
+
     //
     // Check for any tags of interest in the instance.
     //
@@ -2569,6 +2579,13 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
         vsud->inStateReason = true;
     } else if( vsud->inStateReason && strcasecmp( ignoringNameSpace( name ), "code" ) == 0 )  {
         vsud->inWhichTag = vmStatusUD::STATE_REASON_CODE;
+    } else if( strcasecmp( ignoringNameSpace( name ), "tagSet" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        vsud->inTagSet = true;
+    } else if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "key" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::TAG_KEY;
+    } else if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "value" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::TAG_VALUE;
     }
 }
 
@@ -2593,23 +2610,23 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
     switch( vsud->inWhichTag ) {
         case vmStatusUD::NONE:
             return;
-        
+
         case vmStatusUD::INSTANCE_ID:
             targetString = & vsud->currentResult->instance_id;
             break;
-        
+
         case vmStatusUD::STATUS:
             targetString = & vsud->currentResult->status;
             break;
-        
+
         case vmStatusUD::AMI_ID:
             targetString = & vsud->currentResult->ami_id;
             break;
-        
+
         case vmStatusUD::PRIVATE_DNS:
             targetString = & vsud->currentResult->private_dns;
             break;
-            
+
         case vmStatusUD::PUBLIC_DNS:
             targetString = & vsud->currentResult->public_dns;
             break;
@@ -2617,7 +2634,7 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
         case vmStatusUD::KEY_NAME:
             targetString = & vsud->currentResult->keyname;
             break;
-        
+
         case vmStatusUD::INSTANCE_TYPE:
             targetString = & vsud->currentResult->instancetype;
             break;
@@ -2629,6 +2646,14 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
         case vmStatusUD::CLIENT_TOKEN:
             targetString = & vsud->currentResult->clientToken;
             break;
+
+		case vmStatusUD::TAG_KEY:
+			targetString = & vsud->tagKey;
+			break;
+
+		case vmStatusUD::TAG_VALUE:
+			targetString = & vsud->tagValue;
+			break;
 
         default:
             /* This should never happen. */
@@ -2645,16 +2670,16 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
     if( ! vsud->inInstancesSet ) {
         return;
     }
-    
+
     if( strcasecmp( ignoringNameSpace( name ), "instancesSet" ) == 0 ) {
         vsud->inInstancesSet = false;
         return;
     }
-    
+
     if( ! vsud->inInstance ) {
         return;
     }
-    
+
     if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
         vsud->inItem -= 1;
 
@@ -2664,6 +2689,15 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
             delete vsud->currentResult;
             vsud->currentResult = NULL;
             vsud->inInstance = false;
+        } else {
+            if( vsud->inTagSet ) {
+            	if( vsud->tagKey == "aws:ec2spot:fleet-request-id" ) {
+            		vsud->currentResult->spotFleetRequestID = vsud->tagValue;
+            	}
+            	vsud->tagKey.erase();
+            	vsud->tagValue.erase();
+            	vsud->inTag = false;
+            }
         }
 
         return;
@@ -2699,6 +2733,21 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
         vsud->inStateReason = false;
         return;
     }
+
+	if( strcasecmp( ignoringNameSpace( name ), "tagSet" ) == 0 ) {
+        vsud->inTagSet = false;
+        return;
+    }
+    if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "key" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        return;
+    }
+    if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "value" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        return;
+    }
+
+
 }
 
 bool AmazonVMStatusAll::SendRequest() {
@@ -2760,6 +2809,7 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 resultList.append( nullStringIfEmpty( asr.keyname ) );
                 resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
                 resultList.append( nullStringIfEmpty( asr.public_dns ) );
+                resultList.append( nullStringIfEmpty( asr.spotFleetRequestID ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -4345,3 +4395,122 @@ bool AmazonCallFunction::workerFunction( char ** argv, int argc, std::string & r
 	return true;
 }
 
+// ---------------------------------------------------------------------------
+
+AmazonBulkQuery::~AmazonBulkQuery() { }
+
+struct bulkQueryUD_t {
+	int	itemDepth;
+	bool inCreateTime;
+	bool inClientToken;
+	bool inSpotFleetRequestID;
+
+	std::string currentSFRID;
+	std::string currentCreateTime;
+	std::string currentClientToken;
+
+	StringList & resultList;
+
+	bulkQueryUD_t( StringList & r ) : itemDepth( 0 ), inCreateTime( false ),
+		inClientToken( false ), inSpotFleetRequestID( false ), resultList( r ) { }
+};
+typedef struct bulkQueryUD_t bulkQueryUD;
+
+void bulkQueryESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+	bulkQueryUD * bqUD = (bulkQueryUD *)vUserData;
+	if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
+		bqUD->itemDepth += 1;
+	} else if( strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+		bqUD->inSpotFleetRequestID = true;
+	} else if( strcasecmp( ignoringNameSpace( name ), "clientToken" ) == 0 ) {
+		bqUD->inClientToken = true;
+	} else if( strcasecmp( ignoringNameSpace( name ), "createTime" ) == 0 ) {
+		bqUD->inCreateTime = true;
+	}
+}
+
+void bulkQueryCDH( void * vUserData, const XML_Char * cdata, int len ) {
+	bulkQueryUD * bqUD = (bulkQueryUD *)vUserData;
+	if( bqUD->inSpotFleetRequestID ) {
+		appendToString( (const void *)cdata, len, 1, (void *) & bqUD->currentSFRID );
+	} else if( bqUD->inClientToken ) {
+		appendToString( (const void *)cdata, len, 1, (void *) & bqUD->currentClientToken );
+	} else if( bqUD->inCreateTime ) {
+		appendToString( (const void *)cdata, len, 1, (void *) & bqUD->currentCreateTime );
+	}
+}
+
+void bulkQueryEEH( void * vUserData, const XML_Char * name ) {
+	bulkQueryUD * bqUD = (bulkQueryUD *)vUserData;
+	if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
+		bqUD->itemDepth -= 1;
+
+		if( bqUD->itemDepth == 0 ) {
+			if(! bqUD->currentSFRID.empty()) {
+				bqUD->resultList.append( bqUD->currentSFRID.c_str() );
+				bqUD->resultList.append( nullStringIfEmpty( bqUD->currentCreateTime ) );
+				bqUD->resultList.append( nullStringIfEmpty( bqUD->currentClientToken ) );
+			}
+
+			bqUD->currentSFRID.clear();
+			bqUD->currentCreateTime.clear();
+			bqUD->currentClientToken.clear();
+		}
+	} else if( strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+		bqUD->inSpotFleetRequestID = false;
+	} else if( strcasecmp( ignoringNameSpace( name ), "clientToken" ) == 0 ) {
+		bqUD->inClientToken = false;
+	} else if( strcasecmp( ignoringNameSpace( name ), "createTime" ) == 0 ) {
+		bqUD->inCreateTime = false;
+	}
+}
+
+bool AmazonBulkQuery::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		bulkQueryUD bqUD( resultList );
+		XML_Parser xp = XML_ParserCreate( NULL );
+		XML_SetElementHandler( xp, & bulkQueryESH, & bulkQueryEEH );
+		XML_SetCharacterDataHandler( xp, & bulkQueryCDH );
+		XML_SetUserData( xp, & bqUD );
+		XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+		XML_ParserFree( xp );
+	}
+	return result;
+}
+
+bool AmazonBulkQuery::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_BULK_QUERY" ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 5 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonBulkQuery request = AmazonBulkQuery( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Fill in required parameters.
+	request.query_parameters[ "Action" ] = "DescribeSpotFleetRequests";
+	// See comment in AmazonBulkStart::workerFunction().
+	request.query_parameters[ "Version" ] = "2016-04-01";
+
+	if( ! request.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, & request.resultList );
+	}
+
+	return true;
+}

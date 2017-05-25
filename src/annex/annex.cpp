@@ -26,6 +26,7 @@
 #include "annex-setup.h"
 #include "annex-update.h"
 #include "annex-create.h"
+#include "annex-status.h"
 #include "user-config-dir.h"
 
 // Why don't c-style timer callbacks have context pointers?
@@ -139,7 +140,7 @@ std::string commandStateFile;
 
 void
 main_config() {
-	commandStateFile = param( "ANNEXD_COMMAND_STATE" );
+	commandStateFile = param( "ANNEX_COMMAND_STATE" );
 }
 
 bool
@@ -238,9 +239,18 @@ createConfigTarball(	const char * configDir,
 
 	std::string localPasswordFile;
 	param( localPasswordFile, "SEC_PASSWORD_FILE" );
-	if( passwordFile.empty() ) {
+	if( localPasswordFile.empty() ) {
 		formatstr( tarballError, "SEC_PASSWORD_FILE empty or undefined" );
 		return false;
+	}
+
+	fd = open( localPasswordFile.c_str(), O_RDONLY );
+	if( fd == -1 ) {
+		formatstr( tarballError, "Unable to open SEC_PASSWORD_FILE '%s': %s (%d)",
+			localPasswordFile.c_str(), strerror(errno), errno );
+		return false;
+	} else {
+		close( fd );
 	}
 
 	// FIXME: Rewrite without system().
@@ -355,6 +365,7 @@ readShortFile( const char * fileName, std::string & contents ) {
 void
 help( const char * argv0 ) {
 	fprintf( stdout, "usage: %s -annex-name <annex-name> -count|-slots <number>\n"
+		"\n"
 		"For on-demand instances:\n"
 		"\t[-aws-on-demand]\n"
 		"\t-count <integer number of instances>\n"
@@ -406,7 +417,10 @@ help( const char * argv0 ) {
 		"OR, to do the one-time setup for an AWS account:\n"
 		"%s -setup [</full/path/to/access-key-file> </full/path/to/secret-key-file> [<CloudFormation URL>]]\n"
 		"\n"
-		, argv0, argv0 );
+		"OR, to check the status of your annex:\n"
+		"%s -check -annex[-name] <annex-name> [-classad[s]]\n"
+		"\n"
+		, argv0, argv0, argv0 );
 }
 
 
@@ -559,22 +573,23 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 		fprintf( stderr, "Failed to start parsing spot fleet request.\n" );
 		exit( 2 );
 	} else {
-		// This is bugged, and doesn't actually do a merge.
-		// int numAttrs = ccafi.next( commandArguments, true );
 		ClassAd spotFleetRequest;
 		int numAttrs = ccafi.next( spotFleetRequest );
 		if( numAttrs <= 0 ) {
 			fprintf( stderr, "Failed to parse spot fleet request, found no attributes.\n" );
 			exit( 2 );
 		} else if( numAttrs > 11 ) {
-			fprintf( stderr, "Failed to parse spot fleet reqeust, found too many attributes.\n" );
+			fprintf( stderr, "Failed to parse spot fleet request, found too many attributes.\n" );
 			exit( 2 );
 		}
-		commandArguments.Update( spotFleetRequest );
+
+		// The command-line arguments beat the json file.
+		spotFleetRequest.Update( commandArguments );
+		commandArguments = spotFleetRequest;
 	}
 
 	fprintf( stdout,
-		"Will request %ld spot instance%s for %.2f hours.  "
+		"Will request %ld spot slot%s for %.2f hours.  "
 		"Each instance will terminate after being idle for %.2f hours.\n",
 		count,
 		count == 1 ? "" : "s",
@@ -598,11 +613,12 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 
 		exit( 1 );
 	} else {
-		fprintf( stdout, "Starting annex.  Once started, it will take about six minutes for the new machines to join the pool.  (Please wait.)\n" );
+		fprintf( stdout, "Starting annex...\n" );
+		commandArguments.Assign( "ExpectedDelay", "  It will take about six minutes for the new machines to join the pool." );
 	}
 }
 
-void getODIApproval(	ClassAd &,
+void getODIApproval(	ClassAd & commandArguments,
 						const char * odiInstanceType, bool odiInstanceTypeSpecified,
 						bool leaseDurationSpecified, bool unclaimedTimeoutSpecified,
 						long int count, long int leaseDuration, long int unclaimedTimeout ) {
@@ -633,7 +649,8 @@ void getODIApproval(	ClassAd &,
 
 		exit( 1 );
 	} else {
-		fprintf( stdout, "Starting annex.  Once started, it will take about three minutes for the new machines to join the pool.  (Please wait.)\n" );
+		fprintf( stdout, "Starting annex...\n" );
+		commandArguments.Assign( "ExpectedDelay", "  It will take about three minutes for the new machines to join the pool." );
 	}
 }
 
@@ -645,6 +662,17 @@ void assignWithDefault(	ClassAd & commandArguments, const char * & value,
 	if( value ) {
 		commandArguments.Assign( argName, value );
 	}
+}
+
+void dumpParam( const char * attribute ) {
+	std::string value;
+	param( value, attribute );
+	dprintf( D_AUDIT | D_NOHEADER, "%s = %s\n", attribute, value.c_str() );
+}
+
+void dumpParam( const char * attribute, int defaultValue ) {
+	int value = param_integer( attribute, defaultValue );
+	dprintf( D_AUDIT | D_NOHEADER, "%s = %d\n", attribute, value );
 }
 
 int _argc;
@@ -659,6 +687,7 @@ annex_main( int argc, char ** argv ) {
 	argc = _argc;
 	argv = _argv;
 
+	bool wantClassAds = false;
 	int udSpecifications = 0;
 	const char * sfrConfigFile = NULL;
 	const char * annexName = NULL;
@@ -702,7 +731,8 @@ annex_main( int argc, char ** argv ) {
 		ct_default = 0,
 		ct_check_setup = 3,
 		ct_create_annex = 1,
-		ct_update_annex = 4
+		ct_update_annex = 4,
+		ct_status = 5
 	};
 	command_t theCommand = ct_default;
 	for( int i = 1; i < argc; ++i ) {
@@ -780,7 +810,7 @@ annex_main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: -aws-user-data requires an argument.\n", argv[0] );
 				return 1;
 			}
-		} else if( is_dash_arg_prefix( argv[i], "annex-name", 6 ) ) {
+		} else if( is_dash_arg_prefix( argv[i], "annex-name", 5 ) ) {
 			++i;
 			if( i < argc && argv[i] != NULL ) {
 				annexName = argv[i];
@@ -1039,6 +1069,10 @@ annex_main( int argc, char ** argv ) {
 			theCommand = ct_check_setup;
 		} else if( is_dash_arg_prefix( argv[i], "setup", 5 ) ) {
 			theCommand = ct_setup;
+		} else if( is_dash_arg_prefix( argv[i], "status", 6 ) ) {
+			theCommand = ct_status;
+		} else if( is_dash_arg_prefix( argv[i], "classads", 7 ) ) {
+			wantClassAds = true;
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;
@@ -1051,11 +1085,6 @@ annex_main( int argc, char ** argv ) {
 
 	if( udSpecifications > 1 ) {
 		fprintf( stderr, "%s: you may specify no more than one of -aws-[default-]user-data[-file].\n", argv[0] );
-		return 1;
-	}
-
-	if( annexName == NULL ) {
-		fprintf( stderr, "%s: you must specify -annex-name.\n", argv[0] );
 		return 1;
 	}
 
@@ -1096,8 +1125,6 @@ annex_main( int argc, char ** argv ) {
 		unclaimedTimeout = param_integer( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
 	}
 
-	commandArguments.Assign( "AnnexName", annexName );
-
 	commandArguments.Assign( "TargetCapacity", count );
 
 	time_t now = time( NULL );
@@ -1128,6 +1155,21 @@ annex_main( int argc, char ** argv ) {
 				return 1;
 			}
 		}
+	}
+
+	switch( theCommand ) {
+		case ct_create_annex:
+		case ct_update_annex:
+		case ct_status:
+			if( annexName == NULL ) {
+				fprintf( stderr, "%s: you must specify -annex-name.\n", argv[0] );
+				return 1;
+			}
+			commandArguments.Assign( "AnnexName", annexName );
+			break;
+
+		default:
+			break;
 	}
 
 	switch( theCommand ) {
@@ -1181,7 +1223,46 @@ annex_main( int argc, char ** argv ) {
 			break;
 	}
 
+	std::string arguments = argv[0]; arguments += " ";
+	for( int i = 1; i < argc; ++i ) {
+		formatstr( arguments, "%s%s ", arguments.c_str(), argv[i] );
+	}
+	arguments.erase( arguments.length() - 1 );
+	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", arguments.c_str() );
+
+	// Dump the relevant param table entires, if anyone's interested.
+	if( IsDebugCatAndVerbosity( (D_AUDIT | D_VERBOSE) ) ) {
+		dumpParam( "ANNEX_PROVISIONING_DELAY", 5 * 60 );
+		dumpParam( "COLLECTOR_HOST" );
+		dumpParam( "USER_CONFIG_FILE" );
+		dumpParam( "ANNEX_DEFAULT_EC2_URL" );
+		dumpParam( "ANNEX_DEFAULT_CWE_URL" );
+		dumpParam( "ANNEX_DEFAULT_LAMBDA_URL" );
+		dumpParam( "ANNEX_DEFAULT_S3_URL" );
+		dumpParam( "ANNEX_DEFAULT_CF_URL" );
+		dumpParam( "ANNEX_DEFAULT_CWE_URL" );
+		dumpParam( "ANNEX_DEFAULT_ACCESS_KEY_FILE" );
+		dumpParam( "ANNEX_DEFAULT_SECRET_KEY_FILE" );
+		dumpParam( "ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN" );
+		dumpParam( "ANNEX_GAHP_WORKER_MIN_NUM", 1 );
+		dumpParam( "ANNEX_GAHP_WORKER_MAX_NUM", 1 );
+		dumpParam( "ANNEX_GAHP_DEBUG");
+		dumpParam( "ANNEX_GAHP" );
+		dumpParam( "ANNEX_GAHP_CALL_TIMEOUT", 10 * 60 );
+		dumpParam( "ANNEX_COMMAND_STATE" );
+		dumpParam( "SEC_PASSWORD_FILE" );
+		dumpParam( "ANNEX_DEFAULT_LEASE_DURATION", 3000 );
+		dumpParam( "ANNEX_DEFAULT_UNCLAIMED_TIMEOUT", 900 );
+		dumpParam( "ANNEX_DEFAULT_SFR_CONFIG_FILE" );
+		dumpParam( "ANNEX_DEFAULT_S3_BUCKET" );
+		dumpParam( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN" );
+		dumpParam( "ANNEX_DEFAULT_ODI_LEASE_FUNCTION_ARN" );
+	}
+
 	switch( theCommand ) {
+		case ct_status:
+			return status( annexName, wantClassAds, serviceURL );
+
 		case ct_setup:
 			return setup(	argc >= 2 ? argv[2] : NULL,
 							argc >= 3 ? argv[3] : NULL,
@@ -1269,8 +1350,7 @@ main_pre_command_sock_init() {
 
 int
 main( int argc, char ** argv ) {
-	set_mySubSystem( "ANNEXD", SUBSYSTEM_TYPE_DAEMON );
-
+	set_mySubSystem( "ANNEX", SUBSYSTEM_TYPE_DAEMON );
 
 	// This is dumb, but easier than fighting daemon core about parsing.
 	_argc = argc;
@@ -1282,16 +1362,24 @@ main( int argc, char ** argv ) {
 	// This is also dumb, but less dangerous than (a) reaching into daemon
 	// core to set a flag and (b) hoping that my command-line arguments and
 	// its command-line arguments don't conflict.
-	char ** dcArgv = (char **)malloc( 4 * sizeof( char * ) );
+	char ** dcArgv = (char **)malloc( 6 * sizeof( char * ) );
 	dcArgv[0] = argv[0];
 	// Force daemon core to run in the foreground.
 	dcArgv[1] = strdup( "-f" );
 	// Disable the daemon core command socket.
 	dcArgv[2] = strdup( "-p" );
 	dcArgv[3] = strdup(  "0" );
-	argc = 4;
-	argv = dcArgv;
 
+	// We need to spin up the param system to find the user config directory,
+	// to which we want to log.
+	config_ex( CONFIG_OPT_WANT_META );
+	std::string userDir;
+	dcArgv[4] = strdup( "-log" );
+	if(! createUserConfigDir( userDir )) { return 1; }
+	dcArgv[5] = strdup( userDir.c_str() );
+
+	argc = 6;
+	argv = dcArgv;
 
 	dc_main_init = & main_init;
 	dc_main_config = & main_config;

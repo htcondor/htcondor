@@ -621,6 +621,11 @@ main( int argc, char *argv[] )
 						formatstr( annexString, "(%s) && (%s)", constraint, annexString.c_str() );
 					}
 					constraint = annexString.c_str();
+
+					if( cmd == DAEMONS_OFF ) {
+						subsys_check( MyName );
+						dt = DT_MASTER;
+					}
 					break;
 				default:
 					fprintf( stderr, 

@@ -249,14 +249,15 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 		}
 
         returnStatus.rewind();
-        ASSERT( returnStatus.number() % 6 == 0 );
-        for( int i = 0; i < returnStatus.number(); i += 6 ) {
+        ASSERT( returnStatus.number() % 7 == 0 );
+        for( int i = 0; i < returnStatus.number(); i += 7 ) {
             std::string instanceID = returnStatus.next();
             std::string status = returnStatus.next();
             std::string clientToken = returnStatus.next();
             std::string keyName = returnStatus.next();
             std::string stateReasonCode = returnStatus.next();
             std::string publicDNSName = returnStatus.next();
+            /* std::string spotFleetRequestID = */ returnStatus.next();
 
             // Efficiency suggests we look via the instance ID first,
             // and then try to look things up via the client token

@@ -23,13 +23,16 @@ SetupReply::operator() () {
 			CAResult result = getCAResultNum( resultString.c_str() );
 
 			if( result == CA_SUCCESS ) {
-				fprintf( stdout, "%s", successString.c_str() );
+				dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", successString.c_str() );
+				fprintf( stdout, "%s\n", successString.c_str() );
 			} else {
 				std::string errorString;
 				reply->LookupString( ATTR_ERROR_STRING, errorString );
 				if( errorString.empty() ) {
+					dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "The error reply (%s) did not include an error string.\n", resultString.c_str() );
 					fprintf( stderr, "The error reply (%s) did not include an error string.\n", resultString.c_str() );
 				} else {
+					dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", errorString.c_str() );
 					fprintf( stderr, "%s\n", errorString.c_str() );
 				}
 			}

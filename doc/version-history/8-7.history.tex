@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item With an empty configuration file, HTCondor would behave as if
+\MacroNI{ALLOW\_ADMINISTRATOR} were \Expr{*}.  Changed the default to
+\Expr{\$(CONDOR\_HOST)}, which is much less insecure.
+\Ticket{6230}
+
 \item Improved the performance of the condor\_schedd by setting the
 default for the knob SUBMIT\_SKIP\_FILECHECKS to false.  This prevents
 the schedd from checking the readability of all input files, and skips
@@ -40,13 +45,18 @@ then is put on hold because the output file on the submit machine cannot
 by written to.
 \Ticket{6220}
 
+\item The configuration variable \MacroNI{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
+was set to default to 100. It formerly had no default value.
+\Ticket{6260}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item Prohibited illegal chars ('+', '.') in DAGMan node names
+\Ticket{5966}
 
 \end{itemize}
 

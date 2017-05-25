@@ -5,6 +5,7 @@
 #include "compat_classad.h"
 #include "classad_command_util.h"
 #include "classad_collection.h"
+#include "stat_wrapper.h"
 
 #include "annex.h"
 #include "annex-create.h"
@@ -51,6 +52,13 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		}
 
 		return FALSE;
+	}
+
+	// Is this less of a hack than handing the command ad to ReplyAndClean?
+	std::string expectedDelay;
+	command->LookupString( "ExpectedDelay", expectedDelay );
+	if(! expectedDelay.empty()) {
+		reply->Assign( "ExpectedDelay", expectedDelay );
 	}
 
 	//
@@ -110,6 +118,26 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		if( leaseFunctionARN.empty() ) {
 			formatstr( errorString, "%s%sLease function ARN not specified in command or defaults.", errorString.c_str(), errorString.empty() ? "" : "  " );
 		}
+		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
+
+		reply->Assign( "RequestVersion", 1 );
+		reply->Assign( ATTR_RESULT, getCAResultString( CA_INVALID_REQUEST ) );
+		reply->Assign( ATTR_ERROR_STRING, errorString );
+
+		if( replyStream ) {
+			if(! sendCAReply( replyStream, "CA_BULK_REQUEST", reply )) {
+				dprintf( D_ALWAYS, "Failed to reply to CA_BULK_REQUEST.\n" );
+			}
+		}
+
+		return FALSE;
+	}
+
+	StatWrapper sw( secretKeyFile.c_str() );
+	mode_t mode = sw.GetBuf()->st_mode;
+	if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
+		std::string errorString;
+		formatstr( errorString, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner." );
 		dprintf( D_ALWAYS, "%s\n", errorString.c_str() );
 
 		reply->Assign( "RequestVersion", 1 );

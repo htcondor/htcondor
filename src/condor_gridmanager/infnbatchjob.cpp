@@ -150,6 +150,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	std::string error_string = "";
 	char *gahp_path = NULL;
 	ArgList gahp_args;
+	MyString args_str;
 
 	gahpAd = NULL;
 	gmState = GM_INIT;
@@ -239,6 +240,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 			formatstr( error_string, "REMOTE_GAHP not defined" );
 			goto error_exit;
 		}
+		gahp_args.GetArgsStringV2Raw( &args_str, NULL );
 	} else {
 		// CRUFT: BATCH_GAHP was added in 7.7.6.
 		//   Checking <batch-type>_GAHP should be removed at some
@@ -259,7 +261,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 	buff = batchType;
 	if ( gahp_args.Count() > 0 ) {
-		formatstr_cat( buff, "/%s", gahp_args.GetArg( 0 ) );
+		formatstr_cat( buff, "/%s", args_str.Value() );
 		gahp_args.AppendArg( "batch_gahp" );
 	}
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
@@ -276,7 +278,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 			goto error_exit;
 		}
 
-		formatstr( buff, "xfer/%s/%s", batchType, gahp_args.GetArg( 0 ) );
+		formatstr( buff, "xfer/%s/%s", batchType, args_str.Value() );
 		gahp_args.RemoveArg( gahp_args.Count() - 1 );
 		gahp_args.AppendArg( "condor_ft-gahp" );
 		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );

@@ -107,8 +107,6 @@
 
 char const * const HOME_POOL_SUBMITTER_TAG = "";
 
-extern char *gen_ckpt_name();
-
 extern GridUniverseLogic* _gridlogic;
 
 #include "qmgmt.h"
@@ -122,7 +120,6 @@ extern "C"
 /*	int SetCkptServerHost(const char *host);
 	int RemoveLocalOrRemoteFile(const char *, const char *);
 	int FileExists(const char *, const char *);
-	char* gen_ckpt_name(char*, int, int, int);
 	int getdtablesize();
 */
 	int prio_compar(prio_rec*, prio_rec*);
@@ -175,7 +172,6 @@ int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
 shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
-bool getSandbox( int cluster, int proc, MyString & path );
 bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
@@ -2103,11 +2099,12 @@ sendDone(Stream *stream, bool send_job_counts, LiveJobCounters* query_counts, co
 	return true;
 }
 
-void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment)
+void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment /*, JobQueueJob * job*/)
 {
 	if (status == TRANSFERRING_OUTPUT) status = RUNNING;
 	switch (universe) {
 	case CONDOR_UNIVERSE_SCHEDULER:
+		//dprintf(D_ALWAYS | D_BACKTRACE, "IncrementLiveJobCounter(%p, %d, %d, %d) for %d.%d (%p)\n", &num.SchedulerJobsIdle, universe, status, increment, job->jid.cluster, job->jid.proc, job);
 		if (status > 0 && status <= HELD) {
 			(&num.SchedulerJobsIdle)[status-1] += increment;
 		}
@@ -2120,6 +2117,7 @@ void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, in
 		break;
 	*/
 	default:
+		//dprintf(D_ALWAYS | D_BACKTRACE, "IncrementLiveJobCounter(%p, %d, %d, %d) for %d.%d (%p)\n", &num.JobsIdle, universe, status, increment, job->jid.cluster, job->jid.proc, job);
 		if (status > 0 && status <= HELD) {
 			(&num.JobsIdle)[status-1] += increment;
 		} else if (status == SUSPENDED) {
@@ -2143,11 +2141,11 @@ struct QueryJobAdsContinuation : Service {
 	bool unfinished_eom;
 	bool registered_socket;
 
-	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0);
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0, int iter_opts=0);
 	int finish(Stream *);
 };
 
-QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms)
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms, int iter_opts)
 	: requirements(requirements_),
 	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
 	  match_limit(limit),
@@ -2156,6 +2154,7 @@ QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::Exp
 	  unfinished_eom(false),
 	  registered_socket(false)
 {
+	it.set_options(iter_opts);
 	my_job_counts.clear_counters();
 }
 
@@ -2361,7 +2360,13 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		resultLimit = -1;
 	}
 
-	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000);
+	int iter_options = 0;
+	bool include_cluster = false;
+	if (queryAd.EvaluateAttrBool("IncludeClusterAd", include_cluster) && include_cluster) {
+		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS;
+	}
+
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000, iter_options);
 	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
 	if (proj_err < 0) {
 		delete continuation;
@@ -3803,20 +3808,6 @@ jobCleanupNeedsThread( int /* cluster */, int /* proc */ )
 }
 
 
-bool
-getSandbox( int cluster, int proc, MyString & path )
-{
-	char * sandbox = gen_ckpt_name(Spool, cluster, proc, 0);
-	if( ! sandbox ) {
-		free(sandbox); sandbox = NULL;
-		return false;
-	}
-	path = sandbox;
-	free(sandbox); sandbox = NULL;
-	return true;
-}
-
-
 /** Last chance to prep a job before it (potentially) starts
 
 This is a last chance to do any final work before starting a
@@ -4196,10 +4187,9 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 			// If the user log is in the spool directory, try writing to
 			// it as user condor. The spool directory spends some of its
 			// time owned by condor.
-		char *tmp = gen_ckpt_name( Spool, job_id.cluster, job_id.proc, 0 );
-		std::string SpoolDir(tmp);
+		std::string SpoolDir;
+		SpooledJobFiles::getJobSpoolPath(ad, SpoolDir);
 		SpoolDir += DIR_DELIM_CHAR;
-		free( tmp );
 		if ( !strncmp( SpoolDir.c_str(), logfilename.c_str(),
 					SpoolDir.length() ) && ULog->initialize( logfiles,
 					job_id.cluster, job_id.proc, 0, gjid.Value() ) ) {
@@ -5293,8 +5283,9 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 
 		// Make certain this job has a x509 proxy, and that this 
 		// proxy is sitting in the SPOOL directory
-	char* SpoolSpace = gen_ckpt_name(Spool,jobid.cluster,jobid.proc,0);
-	ASSERT(SpoolSpace);
+	std::string SpoolSpace;
+	SpooledJobFiles::getJobSpoolPath(jobad, SpoolSpace);
+	ASSERT(!SpoolSpace.empty());
 	char *proxy_path = NULL;
 	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
 	if( proxy_path && is_relative_to_cwd(proxy_path) ) {
@@ -5305,12 +5296,11 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			proxy_path = strdup(iwd.Value());
 		}
 	}
-	if ( !proxy_path || strncmp(SpoolSpace,proxy_path,strlen(SpoolSpace)) ) {
+	if ( !proxy_path || strncmp(SpoolSpace.c_str(),proxy_path,SpoolSpace.length()) ) {
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
 			 "job %d.%d does not contain a gsi credential in SPOOL\n", 
 			 cmd, jobid.cluster, jobid.proc );
 		refuse(s);
-		free(SpoolSpace);
 		if (proxy_path) free(proxy_path);
 		return FALSE;
 	}
@@ -5329,13 +5319,12 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		//   the job's spool directory (CHOWN_JOB_SPOOL_FILES), this
 		//   check can be removed (the files will always be owned by
 		//   the job owner).
-	StatInfo si( SpoolSpace );
+	StatInfo si( SpoolSpace.c_str() );
 	if ( si.Error() != SIGood ) {
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
 			"stat of spool dirctory for job %d.%d failed: %d\n",
 			cmd, jobid.cluster, jobid.proc, (int)si.Error() );
 		refuse(s);
-		free(SpoolSpace);
 		return FALSE;
 	}
 	uid_t proxy_uid = si.GetOwner();
@@ -5352,7 +5341,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "Failed to find uid for user %s (job %d.%d)\n",
 				 job_owner.c_str(), jobid.cluster, jobid.proc );
 		refuse(s);
-		free(SpoolSpace);
 		return FALSE;
 	}
 		// If the uids match, then we need to switch to user priv to
@@ -5364,7 +5352,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
 					 job_owner.c_str() );
 			refuse(s);
-			free(SpoolSpace);
 			return FALSE;
 		}
 		priv = set_user_priv();
@@ -5377,8 +5364,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		job_owner.clear();
 	}
 #endif
-
-	free(SpoolSpace);
 
 		// Decode the proxy off the wire, and store into the
 		// file temp_proxy_path, which is known to be in the SPOOL dir
@@ -5694,13 +5679,13 @@ Scheduler::actOnJobs(int, Stream* s)
 		switch( action ) {
 		case JA_REMOVE_JOBS:
 				// Don't remove removed jobs
-			snprintf( buf, 256, "(%s!=%d) && (", ATTR_JOB_STATUS, REMOVED );
+			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d)) && (", ATTR_JOB_STATUS, REMOVED );
 			break;
 		case JA_REMOVE_X_JOBS:
 				// only allow forced removal of previously "removed" jobs
 				// including jobs on hold that will go to the removed state
 				// upon release.
-			snprintf( buf, 256, "((%s==%d) || (%s==%d && %s=?=%d)) && (", 
+			snprintf( buf, 256, "(ProcId is undefined || (%s==%d) || (%s==%d && %s=?=%d)) && (", 
 				ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD,
 				ATTR_JOB_STATUS_ON_RELEASE,REMOVED);
 			break;
@@ -6023,8 +6008,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	for( i=0; i<num_cluster_matches; i++ ) {
 		tmp_id = clusters[i];
 		JobQueueJob * clusterad = GetJobAd(tmp_id);
-		// for now, we only care about clusters that have job factories
-		if ( ! clusterad || ! clusterad->factory)
+		if ( ! clusterad)
 			continue;
 
 		switch( action ) { 
@@ -6065,12 +6049,12 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_REMOVE_X_JOBS:
 			if (clusterad->factory) {
 				PauseJobFactory(clusterad->factory, 3);
-				//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
-				ScheduleClusterForDeferredCleanup(tmp_id.cluster);
-				// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
-				results.record( tmp_id, AR_SUCCESS );
-				num_success++;
 			}
+			//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
+			ScheduleClusterForDeferredCleanup(tmp_id.cluster);
+			// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
+			results.record( tmp_id, AR_SUCCESS );
+			num_success++;
 			break;
 		}
 	}
@@ -9705,7 +9689,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// executable probably is owned by Condor in most circumstances, we
 	// must ensure the user can at least execute it.
 
-	ckpt_name = gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0);
+	ckpt_name = GetSpooledExecutablePath(job_id->cluster, Spool);
 	a_out_name = ckpt_name;
 	free(ckpt_name); ckpt_name = NULL;
 	errno = 0;
@@ -12275,8 +12259,7 @@ SetCkptServerHost(const char *)
 void
 cleanup_ckpt_files(int cluster, int proc, const char *owner)
 {
-    MyString	ckpt_name_buf;
-	char const *ckpt_name;
+	std::string	ckpt_name;
 	MyString	owner_buf;
 	MyString	server;
 	int		universe = CONDOR_UNIVERSE_STANDARD;
@@ -12292,16 +12275,15 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		}
 	}
 
+	ClassAd * ad = GetJobAd(cluster, proc);
+
 		/* Remove any checkpoint files.  If for some reason we do 
 		 * not know the owner, don't bother sending to the ckpt
 		 * server.
 		 */
 	GetAttributeInt(cluster,proc,ATTR_JOB_UNIVERSE,&universe);
 	if ( universe == CONDOR_UNIVERSE_STANDARD && owner ) {
-		char *ckpt_name_mem = gen_ckpt_name(Spool,cluster,proc,0);
-		ckpt_name_buf = ckpt_name_mem;
-		free(ckpt_name_mem); ckpt_name_mem = NULL;
-		ckpt_name = ckpt_name_buf.Value();
+		SpooledJobFiles::getJobSpoolPath(ad, ckpt_name);
 
 		if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
 							   server) == 0) {
@@ -12310,15 +12292,13 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 			SetCkptServerHost(NULL); // no ckpt on ckpt server
 		}
 
-		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
+		RemoveLocalOrRemoteFile(owner,Name,ckpt_name.c_str());
 
-		ckpt_name_buf += ".tmp";
-		ckpt_name = ckpt_name_buf.Value();
+		ckpt_name += ".tmp";
 
-		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
+		RemoveLocalOrRemoteFile(owner,Name,ckpt_name.c_str());
 	}
 
-	ClassAd * ad = GetJobAd(cluster, proc);
 	if(ad) {
 		SpooledJobFiles::removeJobSpoolDirectory(ad);
 		FreeJobAd(ad);
@@ -13990,7 +13970,16 @@ Scheduler::DelMrec(char const* id)
 
 
 int
-Scheduler::DelMrec(match_rec* match)
+Scheduler::DelMrec(match_rec *match) {
+	if (this->unlinkMrec(match) == 0) {
+		delete match;
+		return 0;
+	}
+	return -1;
+}
+
+int
+Scheduler::unlinkMrec(match_rec* match)
 {
 	if(!match)
 	{
@@ -14051,7 +14040,6 @@ Scheduler::DelMrec(match_rec* match)
 		// Remove this match from the associated shadowRec.
 	if (match->shadowRec)
 		match->shadowRec->match = NULL;
-	delete match;
 	
 	numMatches--; 
 	return 0;

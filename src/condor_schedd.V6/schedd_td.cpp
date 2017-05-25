@@ -746,7 +746,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 	char new_attr_value[500];
 	char *buf = NULL;
 	ExprTree *expr = NULL;
-	char *SpoolSpace = NULL;
+	std::string SpoolSpace;
 	time_t now = time(NULL);
 	SimpleList<ClassAd*> *treq_ads = NULL;
 	char *mySpool = NULL;
@@ -803,9 +803,8 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 		// the time the job was waiting for file transfer to complete.
 		jad = GetJobAd(cluster,proc);
 
-		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = gen_ckpt_name(mySpool,cluster,proc,0);
-		ASSERT(SpoolSpace);
+		SpooledJobFiles::getJobSpoolPath(jad, SpoolSpace);
+		ASSERT(!SpoolSpace.empty());
 
 		BeginTransaction();
 
@@ -820,7 +819,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 			buf = NULL;
 		}
 			// Modify the IWD to point to the spool space			
-		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
+		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace.c_str());
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
 		expr = jad->LookupExpr(ATTR_TRANSFER_OUTPUT_REMAPS);
@@ -875,7 +874,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 					base = old_path_buf;
 				} else if ( strcmp(base,old_path_buf)!=0 ) {
 					new_path_buf.formatstr(
-						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
+						"%s%c%s",SpoolSpace.c_str(),DIR_DELIM_CHAR,base);
 					base = new_path_buf.Value();
 					changed = true;
 				}
@@ -914,7 +913,6 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 					(TimerHandlercpp)&Scheduler::reschedule_negotiator_timer,
 					"Scheduler::reschedule_negotiator", this );
 
-	if (SpoolSpace) free(SpoolSpace);
 	if (mySpool) free(mySpool);
 	if (buf) free(buf);
 
@@ -1352,7 +1350,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	char new_attr_value[500];
 	char *buf = NULL;
 	ExprTree *expr = NULL;
-	char *SpoolSpace = NULL;
+	std::string SpoolSpace;
 		// figure out how many jobs we're dealing with
 	int len = (*jobs).getlast() + 1;
 
@@ -1368,9 +1366,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// just go to the next one
 			continue;
 		}
-		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = gen_ckpt_name(Spool,cluster,proc,0);
-		ASSERT(SpoolSpace);
+		SpooledJobFiles.getJobSpoolPath(ad, SpoolSpace);
+		ASSERT(!SpoolSpace.empty());
 
 		BeginTransaction();
 
@@ -1385,7 +1382,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			buf = NULL;
 		}
 			// Modify the IWD to point to the spool space			
-		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
+		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace.c_str());
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
 		expr = ad->LookupExpt(ATTR_TRANSFER_OUTPUT_REMAPS);
@@ -1438,7 +1435,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 				base = condor_basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
 					new_path_buf.sprintf(
-						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
+						"%s%c%s",SpoolSpace.c_str(),DIR_DELIM_CHAR,base);
 					base = new_path_buf.Value();
 					changed = true;
 				}
@@ -1479,7 +1476,6 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 	spoolJobFileWorkers->remove(tid);
 	delete jobs;
-	if (SpoolSpace) free(SpoolSpace);
 	if (buf) free(buf);
 	return TRUE;
 }

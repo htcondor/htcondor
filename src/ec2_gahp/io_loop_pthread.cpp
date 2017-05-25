@@ -129,7 +129,7 @@ registerAllAmazonCommands(void)
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_SERVER_TYPE,
             AmazonVMServerType::ioCheck, AmazonVMServerType::workerFunction);
 
-	// Spot Fleet commands
+	// Annex commands
 	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_START,
 			AmazonBulkStart::ioCheck, AmazonBulkStart::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_PUT_RULE,
@@ -152,6 +152,8 @@ registerAllAmazonCommands(void)
 			AmazonDescribeStacks::ioCheck, AmazonDescribeStacks::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_CALL_FUNCTION,
 			AmazonCallFunction::ioCheck, AmazonCallFunction::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_QUERY,
+			AmazonBulkQuery::ioCheck, AmazonBulkQuery::workerFunction );
 
 	return true;
 }

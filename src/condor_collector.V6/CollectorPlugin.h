@@ -51,9 +51,13 @@ class CollectorPlugin
      * statically initialized instance of itself, so that it will be
      * registered when its object file is loaded
      */
-    CollectorPlugin();
+    CollectorPlugin()
+    {
+        bool rc = PluginManager<CollectorPlugin>::registerPlugin(this);
+        dprintf(D_ALWAYS, "Plugin registration %s\n", rc ? "succeeded" : "failed");
+    };
 
-	virtual ~CollectorPlugin();
+	virtual ~CollectorPlugin() {};
 
 	virtual void initialize() = 0;
 

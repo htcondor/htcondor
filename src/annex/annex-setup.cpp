@@ -3,6 +3,7 @@
 #include "condor_config.h"
 #include "gahp-client.h"
 #include "classad_collection.h"
+#include "stat_wrapper.h"
 
 #include "annex.h"
 #include "annex-setup.h"
@@ -78,7 +79,7 @@ check_account_setup( const std::string & publicKeyFile, const std::string & priv
 		sgStackName, sgStackDescription,
 		commandState, commandID );
 
-	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Your setup looks OK.\n", scratchpad,
+	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Your setup looks OK.", scratchpad,
 		replyStream, commandState, commandID );
 
 	FunctorSequence * fs = new FunctorSequence(
@@ -110,9 +111,29 @@ check_setup() {
 	checkOneParameter( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN", rv );
 	checkOneParameter( "ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN", rv );
 
+	checkOneParameter( "SEC_PASSWORD_FILE", rv );
+
+	StatWrapper sw( secretKeyFile.c_str() );
+	mode_t mode = sw.GetBuf()->st_mode;
+	if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
+		fprintf( stderr, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner.\n" );
+		rv = 1;
+	}
+
 	if( rv != 0 ) {
 		return rv;
 	} else {
+		std::string secPasswordFile;
+		param( secPasswordFile, "SEC_PASSWORD_FILE" );
+		int fd = open( secPasswordFile.c_str(), O_RDONLY );
+		if( fd == -1 ) {
+			fprintf( stderr, "Unable to open SEC_PASSWORD_FILE '%s': %s (%d).  Either create this file (run 'condor_store_cred -c add -f %s') or correct the value of SEC_PASSWORD_FILE (which you can locate by running 'condor_config_val -v SEC_PASSWORD_FILE').\n",
+				secPasswordFile.c_str(), strerror(errno), errno, secPasswordFile.c_str() );
+			return 1;
+		} else {
+			close( fd );
+		}
+
 		return check_account_setup( accessKeyFile, secretKeyFile, cfURL, ec2URL );
 	}
 }
@@ -275,7 +296,7 @@ setup( const char * pukf, const char * prkf, const char * cloudFormationURL, con
 
 	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, scratchpad );
 
-	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Setup successful.\n", scratchpad,
+	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Setup successful.", scratchpad,
 		replyStream, commandState, commandID );
 
 	FunctorSequence * fs = new FunctorSequence(

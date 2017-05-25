@@ -502,7 +502,11 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 				if ( in_timeout->timeslice ) {
 					in_timeout->when += in_timeout->timeslice->getTimeToNextRun();
 				} else {
-					in_timeout->when += in_timeout->period;
+					if( in_timeout->period == TIMER_NEVER ) {
+						in_timeout->when = TIME_T_NEVER;
+					} else {
+						in_timeout->when += in_timeout->period;
+					}
 				}
 				InsertTimer( in_timeout );
 			} else {

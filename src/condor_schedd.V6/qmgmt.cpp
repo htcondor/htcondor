@@ -99,8 +99,15 @@ ClassAdLog<K,AltK,AD>::filter_iterator::operator++(int)
 		if ((miss_count % 500 == 0) && (sw.get_ms() > m_timeslice_ms)) {break;}
 
 		cur = *this;
-		ClassAd *tmp_ad = (*m_cur++).second;
+		AD tmp_ad = (*m_cur++).second;
 		if (!tmp_ad) continue;
+
+		// we want to ignore all but job ads, unless the options flag indicates we should
+		// also iterate cluster ads, in any case we always want to skip the header ad.
+		if ( ! tmp_ad->IsJob()) {
+			if ( ! (m_options & JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS) || ! tmp_ad->IsCluster()) continue;
+		}
+
 		if (m_requirements) {
 			classad::ExprTree &requirements = *const_cast<classad::ExprTree*>(m_requirements);
 			const classad::ClassAd *old_scope = requirements.GetParentScope();
@@ -118,10 +125,10 @@ ClassAdLog<K,AltK,AD>::filter_iterator::operator++(int)
 				continue;
 			}
 		}
-		int tmp_int;
-		if (!tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, tmp_int) || !tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, tmp_int)) {
-			continue;
-		}
+		//int tmp_int;
+		//if (!tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, tmp_int) || !tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, tmp_int)) {
+		//	continue;
+		//}
 		cur.m_found_ad = true;
 		m_found_ad = true;
 		break;
@@ -244,7 +251,7 @@ static const char *default_super_user =
 #endif
 
 // in schedd.cpp
-void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment);
+void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment /*, JobQueueJob * job*/);
 
 //static int allow_remote_submit = FALSE;
 JobQueueLogType::filter_iterator
@@ -907,8 +914,9 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 {
 	std::string old_path;
 	formatstr(old_path,"%s%ccluster%d.proc%d.subproc%d", spool, DIR_DELIM_CHAR, cluster, proc, 0);
-	char *new_path = gen_ckpt_name( spool, cluster, proc, 0 );
-	ASSERT( new_path );
+	std::string new_path;
+	SpooledJobFiles::getJobSpoolPath(job_ad, new_path);
+	ASSERT( !new_path.empty() );
 
 	static const int ATTR_ARRAY_SIZE = 6;
 	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = { 
@@ -931,7 +939,7 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 		char const *attr = AttrsToModify[a];
 		MyString v;
 		char const *o = old_path.c_str();
-		char const *n = new_path;
+		char const *n = new_path.c_str();
 
 		if( !job_ad->LookupString(attr,v) ) {
 			continue;
@@ -975,8 +983,6 @@ RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster
 			free( nv );
 		}
 	}
-
-	free( new_path );
 }
 
 
@@ -1061,7 +1067,6 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 
 		std::string old_path;
 		std::string new_path;
-		char *tmp;
 
 		if( proc == ICKPT ) {
 			formatstr(old_path,"%s%ccluster%d.ickpt.subproc%d",spool,DIR_DELIM_CHAR,cluster,0);
@@ -1069,9 +1074,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 		else {
 			formatstr(old_path,"%s%ccluster%d.proc%d.subproc%d",spool,DIR_DELIM_CHAR,cluster,proc,0);
 		}
-		tmp = gen_ckpt_name(spool,cluster,proc,0);
-		new_path = tmp;
-		free( tmp );
+		SpooledJobFiles::getJobSpoolPath(job_ad, new_path);
 
 		if( !SpooledJobFiles::createParentSpoolDirectories(job_ad) ) {
 			EXCEPT("Failed to create parent spool directories for "
@@ -2908,6 +2911,8 @@ enum {
 	idATTR_JOB_MATERIALIZE_DIGEST_FILE,
 	idATTR_JOB_MATERIALIZE_LIMIT,
 	idATTR_JOB_MATERIALIZE_PAUSED,
+	idATTR_HOLD_REASON,
+	idATTR_HOLD_REASON_CODE,
 };
 
 enum {
@@ -2921,6 +2926,7 @@ enum {
 	catSubmitterIdent = 0x0040,
 	catNewMaterialize = 0x0080,  // attributes that control the job factory
 	catMaterializeState = 0x0100, // change in state of job factory
+	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE_SpoolingInput
 	catCallbackTrigger = 0x1000, // indicates that a callback should happen on commit of this attribute
 	catCallbackNow = 0x20000,    // indicates that a callback should happen when setAttribute is called
 };
@@ -2947,6 +2953,8 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_CRON_HOURS,         catCron),
 	FILL(ATTR_CRON_MINUTES,       catCron),
 	FILL(ATTR_CRON_MONTHS,        catCron),
+	FILL(ATTR_HOLD_REASON,        0), // used to detect submit of jobs with the magic 'hold for spooling' hold code
+	FILL(ATTR_HOLD_REASON_CODE,   0), // used to detect submit of jobs with the magic 'hold for spooling' hold code
 	FILL(ATTR_JOB_MATERIALIZE_DIGEST_FILE, catNewMaterialize | catCallbackTrigger),
 	FILL(ATTR_JOB_MATERIALIZE_ITEMS_FILE, catNewMaterialize | catCallbackTrigger),
 	FILL(ATTR_JOB_MATERIALIZE_LIMIT, catMaterializeState | catCallbackTrigger),
@@ -3404,6 +3412,23 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, curr_status, flags );
 		}
 	}
+	else if (attr_id == idATTR_HOLD_REASON_CODE || attr_id == idATTR_HOLD_REASON) {
+		// if the hold reason is set to one of the magic values that indicate a hold for spooling
+		// data, we want to attach a trigger to the transaction so we know to do filepath fixups
+		// after the transaction is committed.
+		bool is_spooling_hold = false;
+		if (attr_id == idATTR_HOLD_REASON_CODE) {
+			int hold_reason = (int)strtol( attr_value, NULL, 10 );
+			is_spooling_hold = (CONDOR_HOLD_CODE_SpoolingInput == hold_reason);
+		} else if (attr_id == idATTR_HOLD_REASON) {
+			is_spooling_hold = YourString("Spooling input data files") == attr_value;
+		}
+		if (is_spooling_hold) {
+			// set a transaction trigger for spooling hold
+			JobQueue->SetTransactionTriggers(catSpoolingHold);
+		}
+	}
+
 #if defined(ADD_TARGET_SCOPING)
 /* Disable AddTargetRefs() for now
 	else if (attr_category & catTargetScope) {
@@ -3652,20 +3677,36 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 			JobQueueJob * job = NULL;
 			if ( ! JobQueue->Lookup(job_id, job)) continue; // Ignore if no job ad (yet). this happens on submit commits.
 
+#if 0
+			// during late materialization, we can get here with the Job object not yet fully initialized,
+			// we need to make sure that the universe at least, is set correctly.
+			int universe;
+			if ( ! job->LookupInteger(ATTR_JOB_UNIVERSE, universe)) {
+				dprintf(D_ALWAYS | D_BACKTRACE, "job %s has no universe!\n", it->c_str());
+				continue;
+			}
+#else
+			int universe = job->Universe();
+			if ( ! universe) {
+				dprintf(D_ALWAYS, "job %s has no universe! in DoSetAttributeCallbacks\n", it->c_str());
+				continue;
+			}
+#endif
+
 			int job_status = 0;
 			job->LookupInteger(ATTR_JOB_STATUS, job_status);
 			if (job_status != job->Status()) {
 				if (job->ownerinfo) {
-					IncrementLiveJobCounter(job->ownerinfo->live, job->Universe(), job->Status(), -1);
-					IncrementLiveJobCounter(job->ownerinfo->live, job->Universe(), job_status, 1);
+					IncrementLiveJobCounter(job->ownerinfo->live, universe, job->Status(), -1);
+					IncrementLiveJobCounter(job->ownerinfo->live, universe, job_status, 1);
 				}
 				//if (job->submitterdata) {
-				//	IncrementLiveJobCounter(job->submitterdata->live, job->Universe(), job->Status(), -1);
-				//	IncrementLiveJobCounter(job->submitterdata->live, job->Universe(), job_status, 1);
+				//	IncrementLiveJobCounter(job->submitterdata->live, universe, job->Status(), -1);
+				//	IncrementLiveJobCounter(job->submitterdata->live, universe, job_status, 1);
 				//}
 
-				IncrementLiveJobCounter(scheduler.liveJobCounts, job->Universe(), job->Status(), -1);
-				IncrementLiveJobCounter(scheduler.liveJobCounts, job->Universe(), job_status, 1);
+				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job->Status(), -1);
+				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job_status, 1);
 				job->SetStatus(job_status);
 			}
 		}
@@ -4004,11 +4045,15 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 {
 	int rval;
 
+	int triggers = JobQueue->GetTransactionTriggers();
+	bool has_spooling_hold = (triggers & catSpoolingHold) != 0;
+
 	// If we don't need to perform any submit_requirement checks
 	// and we don't need to perform any job transforms, then we should
 	// bail out now and avoid all the expensive computation below.
 	if ( !scheduler.shouldCheckSubmitRequirements() &&
-		 !scheduler.jobTransforms.shouldTransform() )
+		 !scheduler.jobTransforms.shouldTransform() &&
+		 !has_spooling_hold)
 	{
 		return 0;
 	}
@@ -4047,6 +4092,16 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 		if( rval < 0 ) {
 			errno = EINVAL;
 			return rval;
+		}
+
+		if (has_spooling_hold) {
+			// If this submit put one or more jobs into the special hold for spooling, we
+			// need to rewrite some job attributes here..
+			//
+			// This might be more correct to do be fore before checkSubmitRequirements,
+			// but before 8.7.2 it happened after the submit transaction had been committed
+			// so the conservative changes puts it here.
+			rewriteSpooledJobAd(&procAd, job.cluster, job.proc, false);
 		}
 	}
 
@@ -4256,6 +4311,12 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 	// we have to do late materialization in a different place than the normal triggers
 	bool has_late_materialize = (triggers & catNewMaterialize) != 0;
 	triggers &= ~catNewMaterialize;
+
+	// bool has_spooling_hold = (triggers & catSpoolingHold) != 0;
+	// spooling hold triggers are handled in CheckTransaction, and while processing new_ad_keys,
+	// so we can clear the trigger bit here.
+	triggers &= ~catSpoolingHold;
+
 	if (triggers) {
 		JobQueue->GetTransactionKeys(ad_keys);
 	}
@@ -4269,11 +4330,6 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 	}
 
 	// If the commit failed, we should never get here.
-
-	if (triggers) {
-		// TODO: convert the keys to PROC_IDs before calling DoSetAttributeCallbacks?
-		DoSetAttributeCallbacks(ad_keys, triggers);
-	}
 
 	// Now that the transaction has been commited, we need to chain proc
 	// ads to cluster ads if any new clusters have been submitted.
@@ -4324,6 +4380,8 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 							}
 						}
 					}
+
+					// TODO: write the new cluster / factory submit event here.
 				}
 				continue; // skip remaining processing for cluster ads
 			}
@@ -4386,14 +4444,16 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 				procad->LookupInteger(ATTR_JOB_STATUS, job_status);
 				procad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
 				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+				#if 0 // this code moved up into CheckTransaction
 					JobQueue->BeginTransaction();
 					rewriteSpooledJobAd(procad, job_id.cluster, job_id.proc, false);
 					JobQueue->CommitNondurableTransaction();
 					ScheduleJobQueueLogFlush();
+				#endif
 					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 				}
 
-				//don't need to do this... the trigger code above seems to handle it.
+				//don't need to do this... the trigger code below seems to handle it.
 				//IncrementLiveJobCounter(scheduler.liveJobCounts, procad->Universe(), job_status, 1);
 				//if (ownerinfo) { IncrementLiveJobCounter(ownerinfo->live, procad->Universe(), job_status, 1); }
 
@@ -4437,6 +4497,15 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted
+
+
+	// finally, invoke callbacks that were triggered by various SetAttribute calls in the transaction.
+	// NOTE: you might be tempted to move this up above the processing of new ad keys, but that won't work
+	// because most lookups in the job ad don't work until it has been chained to the cluster ad.
+	if (triggers) {
+		// TODO: convert the keys to PROC_IDs before calling DoSetAttributeCallbacks?
+		DoSetAttributeCallbacks(ad_keys, triggers);
+	}
 
 	xact_start_time = 0;
 	return 0;
@@ -5431,7 +5500,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 	char new_attr_name[500];
 	char *buf = NULL;
 	ExprTree *expr = NULL;
-	char *SpoolSpace = NULL;
+	std::string SpoolSpace;
 
 	snprintf(new_attr_name,500,"SUBMIT_%s",ATTR_JOB_IWD);
 	if ( job_ad->LookupExpr( new_attr_name ) ) {
@@ -5439,8 +5508,8 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		return false;
 	}
 
-	SpoolSpace = gen_ckpt_name(Spool,cluster,proc,0);
-	ASSERT(SpoolSpace);
+	SpooledJobFiles::getJobSpoolPath(job_ad, SpoolSpace);
+	ASSERT(!SpoolSpace.empty());
 
 		// Backup the original IWD at submit time
 	job_ad->LookupString(ATTR_JOB_IWD,&buf);
@@ -5463,7 +5532,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 	if ( modify_ad ) {
 		job_ad->Assign(ATTR_JOB_IWD,SpoolSpace);
 	} else {
-		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
+		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace.c_str());
 	}
 
 		// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
@@ -5564,7 +5633,6 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		}
 	}
 	if (buf) free(buf);
-	free(SpoolSpace);
 	return true;
 }
 
@@ -5791,7 +5859,7 @@ SendSpoolFile(char const *)
 		// We ignore the filename that was passed by the client.
 		// It is only there for backward compatibility reasons.
 
-	path = gen_ckpt_name(Spool,active_cluster_num,ICKPT,0);
+	path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
 	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
@@ -5826,7 +5894,7 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 	}
 	Q_SOCK->getReliSock()->encode();
 
-	char *path = gen_ckpt_name(Spool, active_cluster_num, ICKPT, 0);
+	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
 	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {

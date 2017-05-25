@@ -146,7 +146,8 @@ are case sensitive, as file names
 in a file system are case sensitive.
 The \Arg{JobName} can be any string that contains no white space, except
 for the strings \Arg{PARENT} and \Arg{CHILD} (in upper, lower, or mixed
-case).
+case). \Arg{JobName} also cannot contain special characters (\Arg{'.'}, 
+\Arg{'+'}) which are reserved for system use.
 
 Note that \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}, if used, must appear
 in the order shown above.

@@ -18,6 +18,21 @@
 
 if (NOT WINDOWS)
 
+install(FILES		condor-annex-ec2
+		DESTINATION	"${C_ETC_EXAMPLES}"
+		PERMISSIONS ${CONDOR_SCRIPT_PERMS}
+)
+
+install(FILES		50ec2.config
+		DESTINATION	"${C_CONFIGD}"
+)
+
+install(FILES		master_shutdown_script.sh
+		DESTINATION	"${C_CONFIGD}/.."
+		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
+)
+
+
 install(FILES		condor.sysconfig
 		DESTINATION	"${C_SYSCONFIG}"
 		PERMISSIONS ${CONDOR_SCRIPT_PERMS}
