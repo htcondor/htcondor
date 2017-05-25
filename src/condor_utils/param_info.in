@@ -1769,7 +1769,7 @@ type=int
 
 [CRED_MIN_TIME_LEFT]
 default=120
-type=string
+type=int
 
 [ALL_DEBUG]
 default=
