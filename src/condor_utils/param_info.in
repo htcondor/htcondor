@@ -3610,6 +3610,7 @@ tags=annex,log
 
 [ANNEX_GAHP_LOG]
 default=$(LOG)/AnnexGahpLog
+win32_default=NUL
 type=path
 tags=annex,log
 
@@ -5242,10 +5243,6 @@ win32_default=NUL
 [ANNEX_GAHP]
 default=$(EC2_GAHP)
 type=path
-
-[ANNEX_GAHP_LOG]
-default=/tmp/AnnexGahpLog.$(USERNAME)
-win32_default=NUL
 
 [CREDD]
 default=$(SBIN)/condor_credd

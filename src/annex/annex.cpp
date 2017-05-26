@@ -74,6 +74,13 @@ EC2GahpClient * startOneGahpClient( const std::string & publicKeyFile, const std
 	args.AppendArg( "-s" );
 	args.AppendArg( "ANNEX_GAHP" );
 
+	std::string logDirectory;
+	param( logDirectory, "LOG" );
+	if(! logDirectory.empty()) {
+		args.AppendArg( "-l" );
+		args.AppendArg( logDirectory.c_str() );
+	}
+
 	args.AppendArg( "-w" );
 	int minWorkerCount = param_integer( "ANNEX_GAHP_WORKER_MIN_NUM", 1 );
 	args.AppendArg( minWorkerCount );

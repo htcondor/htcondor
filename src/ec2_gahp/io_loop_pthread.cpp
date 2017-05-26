@@ -195,10 +195,16 @@ main( int argc, char ** const argv )
 	int min_workers = MIN_NUMBER_WORKERS;
 	int max_workers = -1;
 	const char * subSystemName = "EC2_GAHP";
+	const char * logDirectory = NULL;
 
 	int c = 0;
-	while ( (c = my_getopt(argc, argv, "s:f:d:w:m:" )) != -1 ) {
+	while ( (c = my_getopt(argc, argv, "l:s:f:d:w:m:" )) != -1 ) {
 		switch(c) {
+			case 'l':
+				if( my_optarg && *my_optarg ) {
+					logDirectory = my_optarg;
+				}
+				break;
 			case 's':
 				if( my_optarg && *my_optarg ) {
 					subSystemName = my_optarg;
@@ -230,6 +236,11 @@ main( int argc, char ** const argv )
 				usage();
 		}
 	}
+
+	// This is horrible, but I can't find the "right" way to do it.
+    if( logDirectory != NULL ) {
+    	setenv( "_CONDOR_LOG", logDirectory, 1 );
+    }
 
     set_mySubSystem( subSystemName, SUBSYSTEM_TYPE_GAHP );
     config();
