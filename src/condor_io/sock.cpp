@@ -58,7 +58,7 @@
 #define closesocket close
 #endif
 
-void dprintf ( int flags, Sock & sock, const char *fmt, ... )
+void dprintf ( int flags, const Sock & sock, const char *fmt, ... )
 {
     va_list args;
     va_start( args, fmt );

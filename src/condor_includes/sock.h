@@ -412,7 +412,7 @@ public:
 
 	void invalidateSock();
 
-	unsigned int getUniqueId() { return m_uniqueId; }
+	unsigned int getUniqueId() const { return m_uniqueId; }
 
 #ifdef WIN32
 	int set_inheritable( int flag );
@@ -646,6 +646,6 @@ private:
 	void cancel_connect();
 };
 
-void dprintf ( int flags, Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
+void dprintf ( int flags, const Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 #endif /* SOCK_H */
