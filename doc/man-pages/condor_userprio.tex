@@ -7,6 +7,7 @@
 \Opt{-help}
 
 \SynProg{\Condor{userprio}}
+\oOptArg{-name}{negotiatorname}
 \oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oOpt{Edit option} $|$ \oOpt{Display options}
 \oOptArg{-inputfile}{filename}
@@ -65,6 +66,10 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
 
 \OptItem{\Opt{-help}}
   {Display usage information and exit.}
+
+\OptItem{\OptArg{-name}{negotiatorname}}
+  {When querying ads from the \Condor{collector}, only retrieve ads
+  that came from the negotiator with the given name.}
 
 \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
   {Contact the specified \Arg{centralmanagerhostname} with an
@@ -240,7 +245,7 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
 here is an example of the default output for a pool that does not use 
 Hierarchical Group Quotas.
 This default output is the same as given with the \Opt{-most} Display option.
-\footnotesize
+\scriptsize
 \begin{verbatim}
 Last Priority Update:  1/19 13:14
                         Effective   Priority   Res   Total Usage  Time Since
@@ -273,7 +278,7 @@ Number of users: 19                              784   4969073.00    0+23:59
 \underline{Example 2} This is an example of the default output for a pool
 that uses hierarchical groups, and the groups accept surplus.
 This leads to a very wide display.
-\footnotesize
+\scriptsize
 \begin{verbatim}
 % condor_userprio -pool crane.cs.wisc.edu -allusers
 Last Priority Update:  1/19 13:18
