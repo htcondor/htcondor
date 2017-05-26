@@ -35,14 +35,18 @@ account, and then setting up that account for use with \Condor{annex}, see
 
 \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UsingCondorAnnexForTheFirstTimeEightSevenTwo}.
 
-As of v8.7.2, \Condor{annex} does not support joining pools which do not
-allow inbound access to port 9618.  \Condor{annex} will therefore check
-for this connectivity before starting an annex.  When checking connectivity
+Starting in v8.7.1, \Condor{annex} will check for inbound access to the
+collector (usually port 9618) before starting an annex (it does not
+support other network topologies).  When checking connectivity
 from AWS, the IP(s) used by the AWS Lambda function implementing this check
 may not be in the same range(s) as those used by AWS instance; please
 consult AWS's list of all their IP
 ranges\footnote{\URL{https://ip-ranges.amazonaws.com/ip-ranges.json}}
 when configuring your firewall.
+
+Starting in v8.7.2, \Condor{annex} requires that the AWS secret (private) key file
+be owned by the submitting user and not readable by anyone else.  This
+helps to ensure proper attribution.
 
 \subsection{Basic Usage}
 
