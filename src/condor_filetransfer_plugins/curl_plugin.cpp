@@ -123,6 +123,7 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
     char error_buffer[CURL_ERROR_SIZE];
     char partial_range[20];
     double bytes_downloaded;    
+    double bytes_uploaded; 
     double connected_time;
     double previous_connected_time;
     double transfer_connection_time;
@@ -134,7 +135,7 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
     int rval = -1;
     static int partial_file = 0;
     static long partial_bytes = 0;
-
+ 
     // Input transfer: URL -> file
     if ( !strncasecmp( argv[1], "http://", 7 ) ||
          !strncasecmp( argv[1], "ftp://", 6 ) ||
@@ -190,6 +191,7 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
             // curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
             
             // Gather some statistics
+            stats->Assign( "TRANSFER_TYPE", "download" );
             stats->LookupInteger( "TRANSFER_TRIES", previous_tries );
             stats->Assign( "TRANSFER_TRIES", previous_tries + 1 );
 
@@ -251,7 +253,7 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
         struct stat file_info;
 
         if ( !strcmp(argv[1], "-") ) {
-            fprintf( stderr, "ERROR: stdin not supported for curl_plugin uploads" ); 
+            fprintf( stderr, "ERROR: must provide a filename for curl_plugin uploads" ); 
             return 1;
         } 
         else {
@@ -279,8 +281,40 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
             // unclear how to tune this constant.
             // curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
 
+            // Gather some statistics
+            stats->Assign( "TRANSFER_TYPE", "upload" );
+            stats->LookupInteger( "TRANSFER_TRIES", previous_tries );
+            stats->Assign( "TRANSFER_TRIES", previous_tries + 1 );
+
             // Perform the curl request
             rval = curl_easy_perform( handle );
+
+            // Gather more statistics
+            stats->LookupInteger( "TRANSFER_TOTAL_BYTES", previous_total_bytes );
+            curl_easy_getinfo( handle, CURLINFO_SIZE_UPLOAD, &bytes_uploaded );
+            stats->Assign( "TRANSFER_TOTAL_BYTES", 
+                        ( long ) ( previous_total_bytes + bytes_uploaded ) );
+
+            stats->LookupFloat( "CONNECTION_TIME_SECONDS", previous_connected_time );
+            curl_easy_getinfo( handle, CURLINFO_CONNECT_TIME, 
+                            &transfer_connection_time );
+            curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &transfer_total_time );
+            connected_time = previous_connected_time + 
+                            ( transfer_total_time - transfer_connection_time );
+            stats->Assign( "CONNECTION_TIME_SECONDS", connected_time );
+            
+            curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &http_code );
+            stats->Assign( "HTTP_RETURN_CODE", http_code );
+
+            if( rval == CURLE_OK ) {
+                stats->Assign( "TRANSFER_SUCCESS", true );    
+                stats->Assign( "TRANSFER_ERROR", NULL );
+                stats->Assign( "TRANSFER_FILE_BYTES", ftell( file ) );
+            }
+            else {
+                stats->Assign( "TRANSFER_SUCCESS", false );
+                stats->Assign( "TRANSFER_ERROR", error_buffer );
+            }
 
             // Error handling and cleanup
             if ( diagnostic && rval ) {
@@ -353,31 +387,44 @@ void init_stats( ClassAd* stats, char **argv ) {
     // Set the transfer protocol. If it's not http, ftp and file, then just
     // leave it blank because this transfer will fail quickly.
     if ( !strncasecmp( argv[1], "http://", 7 ) ) {
-        stats->Assign("TRANSFER_PROTOCOL", "http");
+        stats->Assign( "TRANSFER_PROTOCOL", "http" );
     }
     else if ( !strncasecmp( argv[1], "ftp://", 6 ) ) {
-        stats->Assign("TRANSFER_PROTOCOL", "ftp");
+        stats->Assign( "TRANSFER_PROTOCOL", "ftp" );
     }
     else if ( !strncasecmp( argv[1], "file://", 7 ) ) {
-        stats->Assign("TRANSFER_PROTOCOL", "file");
+        stats->Assign( "TRANSFER_PROTOCOL", "file" );
     }
 
 }
 
-static size_t header_callback(char *buffer, size_t size, size_t nitems)
-{
+/*
+    Callback function provided by libcurl, which is called upon receiving
+    HTTP headers. We use this to gather statistics.
+*/
+static size_t header_callback(char *buffer, size_t size, size_t nitems) {
+
     size_t numBytes = nitems * size;
 
     // Parse this HTTP header
+    // We should probably add more error checking to this parse method...
     char *token = strtok( buffer, " " );
-    while(token) {
-        printf( "%s\n", token );
+    while( token ) {
+        // X-Cache header provides details about cache hits
         if( strcmp ( token, "X-Cache:" ) == 0 ) {
             token = strtok(NULL, " ");
             curl_stats->Assign( "HTTP_CACHE_HIT_OR_MISS", token );
             curl_stats->Assign( "HTTP_USED_CACHE", true );
         }
-        token = strtok(NULL, " ");
-    }
+        // Via header provides details about cache host
+        else if( strcmp ( token, "Via:" ) == 0 ) {
+            // The next token is a version number. We can ignore it.
+            token = strtok( NULL, " " );
+            // Next comes the actual cache host
+            token = strtok( NULL, " " );  
+            curl_stats->Assign( "HTTP_CACHE_HOST", token );
+        }
+        token = strtok( NULL, " " );
+    }       
     return numBytes;
 }
