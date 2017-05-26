@@ -687,6 +687,28 @@ Includes the libraries for external packages built when UW_BUILD is enabled
 
 %endif
 
+%package annex-ec2
+Summary: Configuration and scripts to make an EC2 image annex-compatible.
+Group: Applications/System
+Requires: %name = %version-%release
+Requires(post): /sbin/chkconfig
+Requires(preun): /sbin/chkconfig
+
+%description annex-ec2
+Configures HTCondor to make an EC2 image annex-compatible.  Do NOT install
+on a non-EC2 image.
+
+%files annex-ec2
+%_initrddir/condor-annex-ec2
+%config(noreplace) %_sysconfdir/condor/config.d/50ec2.config
+%config(noreplace) %_sysconfdir/condor/master_shutdown_script.sh
+
+%post annex-ec2
+/sbin/chkconfig --add condor-annex-ec2
+
+%preun annex-ec2
+/sbin/chkconfig --del condor-annex-ec2 > /dev/null 2>&1 || :
+
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
@@ -919,7 +941,7 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
-mkdir -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
+mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -999,6 +1021,7 @@ install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}
 # install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 %else
 # install the lsb init script
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_initrddir}/condor-annex-ec2
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
 %if 0%{?osg} || 0%{?hcc}
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor

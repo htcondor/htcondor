@@ -2739,6 +2739,8 @@ int SubmitHash::SetGSICredentials()
 // not be trusted.  in the meantime, though, we try to provide some cross
 // compatibility between the old and new.  i also didn't indent this properly
 // so as not to churn the old code.  -zmiller
+// Exception: Checking the proxy lifetime and throwing an error if it's
+// too short should remain. - jfrey
 
 		// Starting in 8.5.8, schedd clients can't set X509-related attributes
 		// other than the name of the proxy file.
@@ -2748,23 +2750,31 @@ int SubmitHash::SetGSICredentials()
 			submit_sends_x509 = false;
 		}
 
+		globus_gsi_cred_handle_t proxy_handle;
+		proxy_handle = x509_proxy_read( proxy_file );
+		if ( proxy_handle == NULL ) {
+			push_error(stderr, "%s\n", x509_error_string() );
+			ABORT_AND_RETURN( 1 );
+		}
+
+		/* Insert the proxy expiration time into the ad */
+		time_t proxy_expiration;
+		proxy_expiration = x509_proxy_expiration_time(proxy_handle);
+		if (proxy_expiration == -1) {
+			push_error(stderr, "%s\n", x509_error_string() );
+			x509_proxy_free( proxy_handle );
+			ABORT_AND_RETURN( 1 );
+		} else if ( proxy_expiration < submit_time ) {
+			push_error( stderr, "proxy has expired\n" );
+			x509_proxy_free( proxy_handle );
+			ABORT_AND_RETURN( 1 );
+		} else if ( proxy_expiration < submit_time + param_integer( "CRED_MIN_TIME_LEFT" ) ) {
+			push_error( stderr, "proxy lifetime too short\n" );
+			x509_proxy_free( proxy_handle );
+			ABORT_AND_RETURN( 1 );
+		}
+
 		if(submit_sends_x509) {
-
-			globus_gsi_cred_handle_t proxy_handle;
-			proxy_handle = x509_proxy_read( proxy_file );
-			if ( proxy_handle == NULL ) {
-				push_error(stderr, "%s\n", x509_error_string() );
-				ABORT_AND_RETURN( 1 );
-			}
-
-			/* Insert the proxy expiration time into the ad */
-			time_t proxy_expiration;
-			proxy_expiration = x509_proxy_expiration_time(proxy_handle);
-			if (proxy_expiration == -1) {
-				push_error(stderr, "%s\n", x509_error_string() );
-				x509_proxy_free( proxy_handle );
-				ABORT_AND_RETURN( 1 );
-			}
 
 			(void) buffer.formatstr( "%s=%li", ATTR_X509_USER_PROXY_EXPIRATION, 
 						   proxy_expiration);
@@ -2821,9 +2831,9 @@ int SubmitHash::SetGSICredentials()
 
 			// When new classads arrive, all this should be replaced with a
 			// classad holding the VOMS atributes.  -zmiller
-
-			x509_proxy_free( proxy_handle );
 		}
+
+		x509_proxy_free( proxy_handle );
 // this is the end of the big, not-properly indented block (see above) that
 // causes submit to send the x509 attributes only when talking to older
 // schedds.  at some point, probably 8.7.0, this entire block should be ripped

@@ -1735,6 +1735,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
 static void usage(const char* name) {
   fprintf( stderr, "usage: %s [options] [edit-option | display-options]\n"
      "    where [options] are\n"
+     "\t-name <name>\t\tName of negotiator\n"
      "\t-pool <host>\t\tUse host as the central manager to query\n"
      "\t-inputfile <file>\tDisplay priorities from <file>\n"
      "\t-help\t\t\tThis Screen\n"

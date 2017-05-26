@@ -751,6 +751,7 @@ ParallelShadow::updateFromStarter(int  /*command*/, Stream *s)
 	s->decode();
 	getClassAd(s, update_ad);
 	s->end_of_message();
+	fix_update_ad(update_ad);
 	return updateFromStarterClassAd(&update_ad);
 }
 

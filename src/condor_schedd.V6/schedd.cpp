@@ -13970,7 +13970,16 @@ Scheduler::DelMrec(char const* id)
 
 
 int
-Scheduler::DelMrec(match_rec* match)
+Scheduler::DelMrec(match_rec *match) {
+	if (this->unlinkMrec(match) == 0) {
+		delete match;
+		return 0;
+	}
+	return -1;
+}
+
+int
+Scheduler::unlinkMrec(match_rec* match)
 {
 	if(!match)
 	{
@@ -14031,7 +14040,6 @@ Scheduler::DelMrec(match_rec* match)
 		// Remove this match from the associated shadowRec.
 	if (match->shadowRec)
 		match->shadowRec->match = NULL;
-	delete match;
 	
 	numMatches--; 
 	return 0;
