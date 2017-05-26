@@ -62,7 +62,7 @@ void dprintf ( int flags, Sock & sock, const char *fmt, ... )
 {
     va_list args;
     va_start( args, fmt );
-    _condor_dprintf_va( flags, (DPF_IDENT)sock.getUniqueId(), fmt, args );
+    _condor_dprintf_va( flags|D_IDENT, (DPF_IDENT)sock.getUniqueId(), fmt, args );
     va_end( args );
 }
 

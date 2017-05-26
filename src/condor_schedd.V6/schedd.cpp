@@ -231,7 +231,8 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 		return;
 	}
 
-	if ( !strcmp( get_condor_username(), sock.getOwner() ) ) {
+	if ( !strcmp( get_condor_username(), sock.getOwner() ) ||
+	     !strcmp( CONDOR_CHILD_FQU, sock.getFullyQualifiedUser() ) ) {
 		return;
 	}
 
