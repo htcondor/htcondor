@@ -24,10 +24,25 @@ The details of each version are described below.
 
 \end{itemize}
 
-
 \noindent New Features:
 
 \begin{itemize}
+
+\item The \Condor{annex} tool now logs to the user config directory.  Added an
+audit log of \Condor{annex} commands and their results.
+\Ticket{6267}
+
+\item Changed \Condor{off} so that the \Expr{-annex} flag implies the
+\Expr{-master} flag, since this is more likely to be the right thing.
+\Ticket{6266}
+
+\item Added \Expr{-status} flag to \Condor{annex}, which reports on
+instances which are running but not in the pool.
+\Ticket{6257}
+
+\item If invoked with an annex name and duration (but not an instance or slot
+count), \Condor{annex} will now adjust the duration of the named annex.
+\Ticket{6161}
 
 \item With an empty configuration file, HTCondor would behave as if
 \MacroNI{ALLOW\_ADMINISTRATOR} were \Expr{*}.  Changed the default to
@@ -50,7 +65,7 @@ was set to default to 100. It formerly had no default value.
 \Ticket{6260}
 
 \item Improved support for multiple negotiators in \Condor{collector}
-and condor\{userprio}.
+and \Condor{userprio}.
 \Ticket{5717}
 
 \end{itemize}

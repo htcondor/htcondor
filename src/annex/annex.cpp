@@ -74,6 +74,13 @@ EC2GahpClient * startOneGahpClient( const std::string & publicKeyFile, const std
 	args.AppendArg( "-s" );
 	args.AppendArg( "ANNEX_GAHP" );
 
+	std::string logDirectory;
+	param( logDirectory, "LOG" );
+	if(! logDirectory.empty()) {
+		args.AppendArg( "-l" );
+		args.AppendArg( logDirectory.c_str() );
+	}
+
 	args.AppendArg( "-w" );
 	int minWorkerCount = param_integer( "ANNEX_GAHP_WORKER_MIN_NUM", 1 );
 	args.AppendArg( minWorkerCount );
@@ -364,7 +371,8 @@ readShortFile( const char * fileName, std::string & contents ) {
 
 void
 help( const char * argv0 ) {
-	fprintf( stdout, "usage: %s -annex-name <annex-name> -count|-slots <number>\n"
+	fprintf( stdout, "To create an annex:\n"
+		"%s -annex-name <annex-name> -count|-slots <number>\n"
 		"\n"
 		"For on-demand instances:\n"
 		"\t[-aws-on-demand]\n"
@@ -420,7 +428,10 @@ help( const char * argv0 ) {
 		"OR, to check the status of your annex:\n"
 		"%s -check -annex[-name] <annex-name> [-classad[s]]\n"
 		"\n"
-		, argv0, argv0, argv0 );
+		"OR, to reset the lease on an existing annex:\n"
+		"%s -annex[-name] <annex-name> -duration <lease duration in decimal hours>\n"
+		"\n"
+		, argv0, argv0, argv0, argv0 );
 }
 
 

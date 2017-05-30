@@ -21,22 +21,31 @@
   \oOpt{-aws-spot-fleet-*}
   \oOpt{common options}
 
+\SynProg{\Condor{annex}}
+  \OptArg{-annex-name}{name of the annex}
+  \OptArg{-duration}{hours}
+
 \Description
 
 \condor{annex} adds clouds resources to the pool.  (``The pool'' is determined
-in the usual manner for HTCondor daemons and tools.)  Version 8.7.1 supports
-only Amazon Web Services (`AWS').  To use ``on-demand'' instances, use
-the third form above; to use ``spot'' instances, use the fourth.  For an
+in the usual manner for HTCondor daemons and tools.)  Version 8.7.2 supports
+only Amazon Web Services (`AWS').  To add ``on-demand'' instances, use
+the third form listed above; to add ``spot'' instances, use the fourth.  For an
 explanation of terms, consult either the HTCondor manual
 (chapter \ref{cloud-computing}) or the AWS documentation.
+
+Using \Condor{annex} with AWS requires a one-time setup procedure
+performed by invoking \Condor{annex} with the \Opt{-setup} flag
+(the second form listed above).
+
+To reset the lease on an existing annex, invoke \Condor{annex} with
+only the \Opt{-annex-name} and \Opt{-duration} flags (the fifth form
+listed above).
 
 Common options are listed first, followed by options specific to AWS,
 followed by options specific to AWS' on-demand instances, followed by
 options specific to AWS' spot instances, followed by options intended
 for use by experts.
-
-Using \Condor{annex} with AWS requires a one-time setup procedure
-performed by invoking \Condor{annex} with the \Opt{-setup} flag.
 
 \begin{Options}
 %% COMMON OPTIONS

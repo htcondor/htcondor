@@ -30,17 +30,23 @@ account, and then setting up that account for use with \Condor{annex}, see
 %% This Wiki page should be frozen and migrated into the manual for
 %% the stable release (v8.8.0); ideally, this would also be a reasonable
 %% thing to do for the next development series (v8.9) as well.
+%%
+%% Be sure to include condor_{off,status} -annex when you do.
 
-\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UsingCondorAnnexForTheFirstTimeEightSevenOne}.
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UsingCondorAnnexForTheFirstTimeEightSevenTwo}.
 
-As of v8.7.1, \Condor{annex} does not support joining pools which do not
-allow inbound access to port 9618.  \Condor{annex} will therefore check
-for this connectivity before starting an annex.  When checking connectivity
+Starting in v8.7.1, \Condor{annex} will check for inbound access to the
+collector (usually port 9618) before starting an annex (it does not
+support other network topologies).  When checking connectivity
 from AWS, the IP(s) used by the AWS Lambda function implementing this check
 may not be in the same range(s) as those used by AWS instance; please
 consult AWS's list of all their IP
 ranges\footnote{\URL{https://ip-ranges.amazonaws.com/ip-ranges.json}}
 when configuring your firewall.
+
+Starting in v8.7.2, \Condor{annex} requires that the AWS secret (private) key file
+be owned by the submitting user and not readable by anyone else.  This
+helps to ensure proper attribution.
 
 \subsection{Basic Usage}
 
@@ -50,7 +56,7 @@ A quick-start guide with basic usage information is kept on our Wiki:
 %% the stable release (v8.8.0); ideally, this would also be a reasonable
 %% thing to do for the next development series (v8.9) as well.
 
-\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstances}.
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstancesEightSevenTwo}.
 
 \subsection{Advanced Usage}
 
@@ -166,7 +172,7 @@ you see fit.
 \subsubsection{AWS Instance User Data}
 
 HTCondor doesn't interfere with this in anyway, but if you'd like to set
-an instance's user data, you may do so.  However, as of v8.7.1, the
+an instance's user data, you may do so.  However, as of v8.7.2, the
 \Opt{-user-data} options don't work for on-demand instances (the default
 type).  If you'd like to specify user data for your Spot Fleet -driven
 annex, you may do so in four different ways: on the command-line or
