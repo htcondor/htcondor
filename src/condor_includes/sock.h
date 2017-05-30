@@ -207,12 +207,12 @@ public:
 	int timeout_no_timeout_multiplier(int sec);
     
 	/** Returns the timeout with timeout multiplier applied. */
-	int get_timeout_raw();
+	int get_timeout_raw() const;
 
 	/** get the number of bytes available to read without blocking.
 		@return number of bytes, or -1 on failure
 	*/
-	int bytes_available_to_read();
+	int bytes_available_to_read() const;
 
 	/**	@return true if > 0 bytes ready to read without blocking
 	*/
@@ -287,59 +287,59 @@ public:
 	*/
 
     /// peer's port and IP address in a struct sockaddr_in.
-	condor_sockaddr peer_addr();
+	condor_sockaddr peer_addr() const;
 
 	/// peer's port number 
-	int peer_port();
+	int peer_port() const;
 
 	/// peer's IP address, string verison (e.g. "128.105.101.17")
-	const char* peer_ip_str();
+	const char* peer_ip_str() const;
 
 	/// peer's IP address, integer version (e.g. 2154390801)
 
 	/// is peer a local interface, aka did this connection originate from a local process?
-	bool peer_is_local();
+	bool peer_is_local() const;
 
     /// my port and IP address in a class condor_sockaddr
-	condor_sockaddr my_addr();
-	condor_sockaddr my_addr_wildcard_okay();
+	condor_sockaddr my_addr() const;
+	condor_sockaddr my_addr_wildcard_okay() const;
 
 
 	/// my IP address, string version (e.g. "128.105.101.17")
-	virtual const char* my_ip_str();
+	virtual const char* my_ip_str() const;
 
 	/// local port number
-	int get_port();
+	int get_port() const;
 
     /// sinful address of mypoint() in the form of "<a.b.c.d:pppp>"
-    char const * get_sinful();
+    char const * get_sinful() const;
 
 	/// Sinful address for access from outside of our private network.
 	/// This takes into account TCP_FORWARDING_HOST.
-	char const *get_sinful_public();
+	char const *get_sinful_public() const;
 
 	/// sinful address of peer in form of "<a.b.c.d:pppp>"
-	char * get_sinful_peer();
+	char * get_sinful_peer() const;
 
 		// Address that was passed to connect().  This is useful in cases
 		// such as CCB or shared port where our peer address is not the
 		// address one would use to actually connect to the peer.
 		// Returns NULL if connect was never called.
-	char const *get_connect_addr();
+	char const *get_connect_addr() const;
 
 	/// sinful address of peer, suitable for passing to dprintf() (never NULL)
-	virtual char const *default_peer_description();
+	virtual char const *default_peer_description() const;
 
 	/// local file descriptor (fd) of this socket
-	int get_file_desc() { return _sock; }
+	int get_file_desc() const { return _sock; }
 
 	/// is a non-blocking connect outstanding?
-	bool is_connect_pending() { return _state == sock_connect_pending || _state == sock_connect_pending_retry || _state == sock_reverse_connect_pending; }
+	bool is_connect_pending() const { return _state == sock_connect_pending || _state == sock_connect_pending_retry || _state == sock_reverse_connect_pending; }
 
-	bool is_reverse_connect_pending() { return _state == sock_reverse_connect_pending; }
+	bool is_reverse_connect_pending() const { return _state == sock_reverse_connect_pending; }
 
 	/// is the socket connected?
-	bool is_connected() { return _state == sock_connect; }	
+	bool is_connected() const { return _state == sock_connect; }
 
     /// 
 	virtual ~Sock();
@@ -360,16 +360,16 @@ public:
 	void setFullyQualifiedUser(char const *fqu);
 
 	void setAuthenticationMethodUsed(char const *auth_method);
-	const char *getAuthenticationMethodUsed();
+	const char *getAuthenticationMethodUsed() const;
 
 	void setAuthenticationMethodsTried(char const *auth_methods);
-	const char *getAuthenticationMethodsTried();
+	const char *getAuthenticationMethodsTried() const;
 
 	void setAuthenticatedName(char const *auth_name);
-	const char *getAuthenticatedName();
+	const char *getAuthenticatedName() const;
 
 	void setCryptoMethodUsed(char const *crypto_method);
-	const char* getCryptoMethodUsed();
+	const char* getCryptoMethodUsed() const;
 
 	void setSessionID(const std::string &session_id) {_session = session_id;}
 	const std::string &getSessionID() const {return _session;}
@@ -408,11 +408,11 @@ public:
 
 	/// if we are connecting, merges together Stream::get_deadline
 	/// and connect_timeout_time()
-	virtual time_t get_deadline();
+	virtual time_t get_deadline() const;
 
 	void invalidateSock();
 
-	unsigned int getUniqueId() { return m_uniqueId; }
+	unsigned int getUniqueId() const { return m_uniqueId; }
 
 #ifdef WIN32
 	int set_inheritable( int flag );
@@ -499,7 +499,7 @@ protected:
     ///
 	bool test_connection();
 	/// get timeout time for pending connect operation;
-	time_t connect_timeout_time();
+	time_t connect_timeout_time() const;
 
 	///
 	int move_descriptor_up();
@@ -517,7 +517,7 @@ protected:
 	const KeyInfo& get_crypto_key() const;
 	const KeyInfo& get_md_key() const;
 	void resetCrypto();
-	virtual bool canEncrypt();
+	virtual bool canEncrypt() const;
 
 	/*
 	**	Data structures
@@ -542,7 +542,7 @@ protected:
 	bool ignore_connect_timeout;	// Used by HA Daemon
 
 	// Buffer to hold the string version of our own IP address. 
-	char _my_ip_buf[IP_STRING_BUF_SIZE];	
+	mutable char _my_ip_buf[IP_STRING_BUF_SIZE];
 
 	Condor_Crypt_Base * crypto_;         // The actual crypto
 	CONDOR_MD_MODE      mdMode_;        // MAC mode
@@ -571,16 +571,16 @@ private:
 	int bindWithin(condor_protocol proto, const int low, const int high);
 	///
 	// Buffer to hold the string version of our peer's IP address. 
-	char _peer_ip_buf[IP_STRING_BUF_SIZE];	
+	mutable char _peer_ip_buf[IP_STRING_BUF_SIZE];
 
 	// Buffer to hold the sinful address of our peer
-	char _sinful_peer_buf[SINFUL_STRING_BUF_SIZE];
+	mutable char _sinful_peer_buf[SINFUL_STRING_BUF_SIZE];
 
 	// Buffer to hold the sinful address of ourself
-	std::string _sinful_self_buf;
+	mutable std::string _sinful_self_buf;
 
 	// Buffer to hold the public sinful address of ourself
-	std::string _sinful_public_buf;
+	mutable std::string _sinful_public_buf;
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {
@@ -646,6 +646,6 @@ private:
 	void cancel_connect();
 };
 
-void dprintf ( int flags, Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
+void dprintf ( int flags, const Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 #endif /* SOCK_H */

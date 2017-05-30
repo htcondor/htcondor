@@ -26,6 +26,7 @@
 #include "condor_secman.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
+#include "authentication.h"
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
@@ -363,8 +364,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		char *attr_value=NULL;
 		int terrno;
 		SetAttributeFlags_t flags = 0;
-		const char *users_username;
-		const char *condor_username;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -375,8 +374,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		if( request_num == CONDOR_SetAttribute2 ) {
 			assert( syscall_sock->code( flags ) );
 		}
-		users_username = syscall_sock->getOwner();
-		condor_username = get_condor_username();
 		if (attr_name) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name);
 		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
 		assert( syscall_sock->end_of_message() );;
@@ -401,8 +398,12 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 				// If we're modifying a previously-submitted job AND either
 				// the client's username is not HTCondor's (i.e. not a
 				// daemon) OR the client says we should log...
-			if( (cluster_id != active_cluster_num) && (rval == 0) &&
-				( strcmp(users_username, condor_username) || (flags & SHOULDLOG) ) ) { 
+			if( ( IsDebugCategory( D_AUDIT ) ) &&
+			    ( cluster_id != active_cluster_num ) &&
+			    ( rval == 0 ) &&
+			    ( ( strcmp(syscall_sock->getOwner(), get_condor_username()) &&
+			        strcmp(syscall_sock->getFullyQualifiedUser(), CONDOR_CHILD_FQU) ) ||
+			      ( flags & SHOULDLOG ) ) ) {
 
 				dprintf( D_AUDIT, *syscall_sock, 
 						 "Set Attribute for job %d.%d, "

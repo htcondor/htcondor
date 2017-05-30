@@ -231,7 +231,8 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 		return;
 	}
 
-	if ( !strcmp( get_condor_username(), sock.getOwner() ) ) {
+	if ( !strcmp( get_condor_username(), sock.getOwner() ) ||
+	     !strcmp( CONDOR_CHILD_FQU, sock.getFullyQualifiedUser() ) ) {
 		return;
 	}
 
@@ -268,7 +269,7 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 	}
 }
 
-void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
+void AuditLogJobProxy( const Sock &sock, PROC_ID job_id, const char *proxy_file )
 {
 	dprintf( D_AUDIT, sock, "Received proxy for job %d.%d\n",
 			 job_id.cluster, job_id.proc );
@@ -319,7 +320,7 @@ void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
 #endif
 }
 
-void AuditLogJobProxy( Sock &sock, ClassAd *job_ad )
+void AuditLogJobProxy( const Sock &sock, ClassAd *job_ad )
 {
 	PROC_ID job_id;
 	std::string iwd;
