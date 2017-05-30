@@ -425,13 +425,16 @@ help( const char * argv0 ) {
 		"OR, to do the one-time setup for an AWS account:\n"
 		"%s -setup [</full/path/to/access-key-file> </full/path/to/secret-key-file> [<CloudFormation URL>]]\n"
 		"\n"
+		"OR, to check if the one-time setup has been done:\n"
+		"%s -check-setup\n"
+		"\n"
 		"OR, to check the status of your annex:\n"
-		"%s -check -annex[-name] <annex-name> [-classad[s]]\n"
+		"%s -status -annex[-name] <annex-name> [-classad[s]]\n"
 		"\n"
 		"OR, to reset the lease on an existing annex:\n"
 		"%s -annex[-name] <annex-name> -duration <lease duration in decimal hours>\n"
 		"\n"
-		, argv0, argv0, argv0, argv0 );
+		, argv0, argv0, argv0, argv0, argv0 );
 }
 
 

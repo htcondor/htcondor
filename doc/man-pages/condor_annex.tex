@@ -30,6 +30,8 @@
   \Opt{-status}
   \oOpt{-classad}
 
+\SynProg{\Condor{annex}} \OptArg{-check-setup}
+
 \Description
 
 \condor{annex} adds clouds resources to the pool.  (``The pool'' is determined
@@ -41,7 +43,8 @@ explanation of terms, consult either the HTCondor manual
 
 Using \Condor{annex} with AWS requires a one-time setup procedure
 performed by invoking \Condor{annex} with the \Opt{-setup} flag
-(the second form listed above).
+(the second form listed above).  You may check if this procedure has been
+performed with the \Opt{-check-setup} flag (the seventh form listed above).
 
 To reset the lease on an existing annex, invoke \Condor{annex} with
 only the \Opt{-annex-name} option and \Opt{-duration} flag (the fifth form
