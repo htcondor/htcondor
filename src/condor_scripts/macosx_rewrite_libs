@@ -32,7 +32,6 @@ for filename in "$@" ; do
     fi
     
     for lib in $libraries ; do
-      echo $lib
       baselib=`basename $lib`
       if echo $baselib | grep -q -e 'classad' -e 'condor' ; then
         install_name_tool -change "$lib" "$internal_resolver/$baselib" $filename
