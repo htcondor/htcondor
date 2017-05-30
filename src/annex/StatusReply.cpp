@@ -1,11 +1,13 @@
 #include "condor_common.h"
+#include "condor_config.h"
+#include "condor_md.h"
 #include "classad_collection.h"
 #include "gahp-client.h"
 #include "Functor.h"
 #include "StatusReply.h"
 
 void
-printClassAds( unsigned count, const std::map< std::string, std::string > & instances, const std::string & annexID ) {
+printClassAds( unsigned count, const std::map< std::string, std::string > & instances, const std::string & annexID, ClassAd * command ) {
 	// Compute the summary information for the annex ad.
 	std::map< std::string, unsigned > statusCounts;
 	std::map< std::string, std::vector< std::string > > statusInstanceList;
@@ -20,9 +22,35 @@ printClassAds( unsigned count, const std::map< std::string, std::string > & inst
 
 	// Print the annex ad.
 	ClassAd annexAd;
-	annexAd.Assign( "MyType", "Annex" );
 	annexAd.Assign( "AnnexID", annexID );
 	annexAd.Assign( "TotalInstances", count );
+
+	// Add the attributes necessary to insert it into the collector.  The
+	// name must be unique, but the annex ID is only is only unique per-
+	// credential.  What we actually want to uniquify with is the root
+	// account ID, but we don't have that.  Instead, we'll hash the
+	// public (access) key ID.
+	annexAd.Assign( "MyType", "Annex" );
+
+	std::string publicKeyFile;
+	param( publicKeyFile, "ANNEX_DEFAULT_ACCESS_KEY_FILE" );
+	command->LookupString( "PublicKeyFile", publicKeyFile );
+
+	Condor_MD_MAC mmc;
+	if(! mmc.addMDFile( publicKeyFile.c_str() )) {
+		fprintf( stderr, "Failed to hash the access (public) key file, aborting.\n" );
+		return;
+	}
+	unsigned char * md = mmc.computeMD();
+	MyString md5;
+	for( int i = 0; i < MAC_SIZE; ++i ) {
+		md5.formatstr_cat( "%02x", (int)(md[i]) );
+	}
+	free( md );
+
+	std::string name;
+	formatstr( name, "%s [%s]", annexID.c_str(), md5.c_str() );
+	annexAd.Assign( ATTR_NAME, name );
 
 	for( auto i = statusCounts.begin(); i != statusCounts.end(); ++i ) {
 		std::string attr = i->first;
@@ -183,7 +211,7 @@ StatusReply::operator() () {
 			}
 
 			if( wantClassAds ) {
-				printClassAds( count, instances, annexID );
+				printClassAds( count, instances, annexID, command );
 			} else {
 				printHumanReadable( count, instances, annexID );
 			}
