@@ -58,7 +58,7 @@ public:
 	*/
 	virtual bool msgReady();
 
-	virtual stream_type type() { return Stream::safe_sock; }
+	virtual stream_type type() const { return Stream::safe_sock; }
 
 	/** Connect to a host on a port
         @param port the port to connect to, ignorred if s includes port
@@ -75,7 +75,7 @@ public:
 	virtual int do_shared_port_local_connect( char const *shared_port_id, bool nonblocking,char const *sharedPortIP );
 
 	/// my IP address, string version (e.g. "128.105.101.17")
-	virtual const char* my_ip_str();
+	virtual const char* my_ip_str() const;
 
 	//
 	inline int connect(char const *h, char *s) { return connect(h,getportbyserv(s));}

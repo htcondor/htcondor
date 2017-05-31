@@ -1028,7 +1028,7 @@ ReliSock::attach_to_file_desc( int fd )
 #endif
 
 Stream::stream_type 
-ReliSock::type() 
+ReliSock::type() const
 { 
 	return Stream::reli_sock; 
 }

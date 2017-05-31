@@ -10,10 +10,10 @@
 
 class StatusReply : public Functor {
 	public:
-		StatusReply( ClassAd * r,
+		StatusReply( ClassAd * r, ClassAd * cad,
 			EC2GahpClient * g, ClassAd * s, bool w,
 			ClassAdCollection * c, const std::string & cid ) :
-			reply( r ),
+			reply( r ), command( cad ),
 			gahp( g ), scratchpad( s ), wantClassAds( w ),
 			commandState( c ), commandID( cid )
 		{ }
@@ -25,6 +25,7 @@ class StatusReply : public Functor {
 
 	private:
 		ClassAd * reply;
+		ClassAd * command;
 		EC2GahpClient * gahp;
 		ClassAd * scratchpad;
 

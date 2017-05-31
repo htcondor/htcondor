@@ -2136,7 +2136,7 @@ Stream::get_encryption() const
 
 
 char const *
-Stream::peer_description() {
+Stream::peer_description() const {
 	if(m_peer_description_str) {
 		return m_peer_description_str;
 	}
@@ -2198,19 +2198,19 @@ Stream::set_deadline(time_t t)
 }
 
 time_t
-Stream::get_deadline()
+Stream::get_deadline() const
 {
 	return m_deadline_time;
 }
 
 bool
-Stream::deadline_expired()
+Stream::deadline_expired() const
 {
 	return m_deadline_time != 0 && time(NULL) > m_deadline_time;
 }
 
 bool
-Stream::prepare_crypto_for_secret_is_noop()
+Stream::prepare_crypto_for_secret_is_noop() const
 {
 	CondorVersionInfo const *peer_ver = get_peer_version();
 	if( !peer_ver || peer_ver->built_since_version(7,1,3) ) {

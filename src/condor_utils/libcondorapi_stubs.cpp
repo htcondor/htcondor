@@ -276,7 +276,7 @@ int Stream::get_string_ptr(const char *&, int &){ return not_impl(); }
 
 void Stream::prepare_crypto_for_secret(){not_impl();}
 void Stream::restore_crypto_after_secret(){not_impl();}
-bool Stream::prepare_crypto_for_secret_is_noop(){not_impl();return true;}
+bool Stream::prepare_crypto_for_secret_is_noop() const{not_impl();return true;}
 bool Stream::set_crypto_mode(bool /*enabled*/){not_impl();return false;}
 bool Stream::get_encryption() const{not_impl();return false;}
 int Stream::put_secret( char const * /*s*/ ){not_impl();return 0;}
@@ -284,8 +284,8 @@ int Stream::get_secret( char *& /*s*/ ){not_impl();return 0;}
 int Stream::get_secret( const char *& /*s*/, int & /*len*/ ){not_impl();return 0;}
 void Stream::set_deadline_timeout(int){not_impl();}
 void Stream::set_deadline(time_t){not_impl();}
-time_t Stream::get_deadline(){not_impl();return 0;}
-bool Stream::deadline_expired(){not_impl();return false;}
+time_t Stream::get_deadline() const{not_impl();return 0;}
+bool Stream::deadline_expired() const{not_impl();return false;}
 
 
 /* stubs for generic query object */

@@ -48,8 +48,11 @@ finds permissions matching that pattern, it assumes that the corresponding
 S3 bucket is the one from which it should download, and does so; if
 successful, it untars the file in {\tt /etc/condor/config.d}.
 
-In v8.7.1, the script executing these steps is named {\tt49ec2-instance.sh},
+In v8.7.1, the script executing these steps is named {\tt 49ec2-instance.sh},
 and is called during configuration when HTCondor first starts up.
+
+In v8.7.2, the script executing these steps is named {\tt condor-annex-ec2},
+and is called during system start-up.
 
 The HTCondor configuration and security tokens are at this point protected
 on the instance's disk by the usual filesystem permissions.  To prevent

@@ -21,17 +21,6 @@
 #ifndef CONDOR_DEBUG_H
 #define CONDOR_DEBUG_H
 
-// Write a line to the audit log, if configured. Always insert the
-// connection id from the relevant Sock object.
-// TODO This declaration may need to be moved elsewhere
-// TODO Do we like this name?
-// TODO Once we have a connection id in Sock, use that
-#if defined(WIN32)
-#  define audit_log(df, sock, fmt, ...) dprintf(D_AUDIT | D_IDENT | df, (DPF_IDENT)((sock)->get_timeout_raw()), fmt, __VA_ARGS__)
-#else
-#  define audit_log(df, sock, fmt, ...) dprintf(D_AUDIT | D_IDENT | df, (DPF_IDENT)((sock)->get_timeout_raw()), fmt, ##__VA_ARGS__)
-#endif
-
 /*
 **	Definitions for category and flags to pass to dprintf
 **  Note: this is a little confusing, since the flags specify both

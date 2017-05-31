@@ -64,7 +64,7 @@ int status( const char * annexName, bool wantClassAds, const char * sURL ) {
 	GetInstances * getInstances = new GetInstances( reply,
 		ec2Gahp, scratchpad, serviceURL, publicKeyFile, secretKeyFile,
 		commandState, commandID );
-	StatusReply * statusReply = new StatusReply( reply,
+	StatusReply * statusReply = new StatusReply( reply, command,
 		ec2Gahp, scratchpad, wantClassAds,
 		commandState, commandID );
 

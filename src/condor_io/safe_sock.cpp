@@ -284,7 +284,7 @@ SafeSock::peek_end_of_message()
 
 MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 const char *
-SafeSock::my_ip_str()
+SafeSock::my_ip_str() const
 {
 	//
 	// FIXME: Do we still need to create and destroy a socket every time?

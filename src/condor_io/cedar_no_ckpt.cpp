@@ -1081,7 +1081,7 @@ ReliSock::sendTargetSharedPortID()
 }
 
 char const *
-Sock::get_sinful_public()
+Sock::get_sinful_public() const
 {
 		// In case TCP_FORWARDING_HOST changes, do not cache it.
 	MyString tcp_forwarding_host;

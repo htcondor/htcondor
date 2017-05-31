@@ -859,7 +859,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		  }
 		  if (!makeGenericAdHashKey (hk, clientAd))
 		  {
-			  dprintf(D_ALWAYS, "Could not make haskey --- ignoring ad\n");
+			  dprintf(D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
 			  insert = -3;
 			  retVal = 0;
 			  break;

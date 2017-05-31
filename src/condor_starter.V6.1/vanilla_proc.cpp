@@ -634,6 +634,15 @@ VanillaProc::StartJob()
 			ClassAd * MachineAd = Starter->jic->machClassAd();
 			int MemMb;
 			if (MachineAd->LookupInteger(ATTR_MEMORY, MemMb)) {
+				// cgroups prevents us from setting hard limits lower
+				// than memsw limit.  If we are reusing this cgroup,
+				// we don't know what the previous values were
+				// So, set mem to 0, memsw to +inf, so that the real
+				// values can be set without interference
+
+				climits.set_memory_limit_bytes(0);
+				climits.set_memsw_limit_bytes(ULONG_MAX);
+
 				uint64_t MemMb_big = MemMb;
 				m_memory_limit = MemMb_big;
 				climits.set_memory_limit_bytes(1024*1024*MemMb_big, mem_is_soft);
