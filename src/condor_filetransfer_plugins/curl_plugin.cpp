@@ -19,8 +19,8 @@
 int send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats );
 int server_supports_resume( CURL* handle, char* url );
 void init_stats( ClassAd* stats, char **argv );
-static size_t header_callback(char *buffer, size_t size, size_t nitems);
-
+static size_t header_callback( char *buffer, size_t size, size_t nitems );
+static size_t ftp_write_callback( void* buffer, size_t size, size_t nmemb, void* stream );
 
 static ClassAd* curl_stats;
 
@@ -32,7 +32,7 @@ int main( int argc, char **argv ) {
     int retry_count = 0;
     int rval = -1;
     int diagnostic = 0;
-    std::string stats_string;
+    MyString stats_string;
 
     // Point the global curl_stats pointer to our local object
     curl_stats = &stats;
@@ -74,7 +74,7 @@ int main( int argc, char **argv ) {
             sleep( retry_count++ );
         #endif
         
-        rval = send_curl_request(argv, diagnostic, handle, &stats);
+        rval = send_curl_request( argv, diagnostic, handle, &stats );
 
         // If curl request is successful, break out of the loop
         if( rval == CURLE_OK ) {    
@@ -102,15 +102,16 @@ int main( int argc, char **argv ) {
     end_time = _condor_debug_get_time_double();   
     stats.Assign("TRANSFER_TIME_SECONDS", end_time - start_time);
 
+    // If the transfer was successful, output the statistics to our log file
+    if( rval != -1 ) {
+        sPrintAd( stats_string, stats );
+        stats_string.replaceString( "\n", "; " );
+        printf( "[ %s]\n", stats_string.c_str() );
+    }
+
     // Cleanup 
     curl_easy_cleanup(handle);
     curl_global_cleanup();
-
-    
-    if( rval != -1 ) {
-        sPrintAd( stats_string, stats );
-        printf( "[\n%s]\n", stats_string.c_str() );
-    }
 
     return rval;    // 0 on success
 }
@@ -129,13 +130,16 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
     double transfer_connection_time;
     double transfer_total_time;
     FILE *file = NULL;
-    long http_code;
+    long return_code;
     long previous_total_bytes;
     int previous_tries;
     int rval = -1;
     static int partial_file = 0;
     static long partial_bytes = 0;
- 
+
+    // Determine the name of the file being requested
+    
+
     // Input transfer: URL -> file
     if ( !strncasecmp( argv[1], "http://", 7 ) ||
          !strncasecmp( argv[1], "ftp://", 6 ) ||
@@ -158,11 +162,21 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
         }
 
         if( file ) {
+            // Libcurl options that apply to all transfer protocols
             curl_easy_setopt( handle, CURLOPT_URL, argv[1] );
             curl_easy_setopt( handle, CURLOPT_CONNECTTIMEOUT, 60 );
             curl_easy_setopt( handle, CURLOPT_WRITEDATA, file );
-            curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, -1 );
-            curl_easy_setopt( handle, CURLOPT_HEADERFUNCTION, header_callback );
+
+            // Libcurl options for HTTP and FILE
+            if( !strncasecmp( argv[1], "http://", 7 ) || 
+                                !strncasecmp( argv[1], "file://", 7 ) ) {
+                curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, -1 );
+                curl_easy_setopt( handle, CURLOPT_HEADERFUNCTION, header_callback );
+            }
+            // Libcurl options for FTP
+            else if( !strncasecmp( argv[1], "ftp://", 6 ) ) {
+                curl_easy_setopt( handle, CURLOPT_WRITEFUNCTION, ftp_write_callback );
+            }
 
             // * If the following option is set to 0, then curl_easy_perform()
             // returns 0 even on errors (404, 500, etc.) So we can't identify
@@ -170,6 +184,7 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
             // * If the following option is set to 1, then something else bad
             // happens? 500 errors fail before we see HTTP headers but I don't
             // think that's a big deal.
+            // * Let's keep it set to 1 for now.
             curl_easy_setopt( handle, CURLOPT_FAILONERROR, 1 );
             
             if( diagnostic ) {
@@ -197,7 +212,7 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
 
             // Perform the curl request
             rval = curl_easy_perform( handle );
-            
+
             // Check if the request completed partially. If so, set some
             // variables so we can attempt a resume on the next try.
             if( rval == CURLE_PARTIAL_FILE ) {
@@ -221,12 +236,13 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
                             ( transfer_total_time - transfer_connection_time );
             stats->Assign( "CONNECTION_TIME_SECONDS", connected_time );
             
-            curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &http_code );
-            stats->Assign( "HTTP_RETURN_CODE", http_code );
+            curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &return_code );
+            stats->Assign( "TRANSFER_RETURN_CODE", return_code );
+
 
             if( rval == CURLE_OK ) {
-                stats->Assign( "TRANSFER_SUCCESS", true );    
-                stats->Assign( "TRANSFER_ERROR", NULL );
+                stats->Assign( "TRANSFER_SUCCESS", true );
+                stats->Delete( "TRANSFER_ERROR" );
                 stats->Assign( "TRANSFER_FILE_BYTES", ftell( file ) );
             }
             else {
@@ -241,7 +257,7 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
             }
             if( close_output ) {
                 fclose( file ); 
-                file = NULL; 
+                file = NULL;
             }
         }
     } 
@@ -303,8 +319,8 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
                             ( transfer_total_time - transfer_connection_time );
             stats->Assign( "CONNECTION_TIME_SECONDS", connected_time );
             
-            curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &http_code );
-            stats->Assign( "HTTP_RETURN_CODE", http_code );
+            curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &return_code );
+            stats->Assign( "TRANSFER_RETURN_CODE", return_code );
 
             if( rval == CURLE_OK ) {
                 stats->Assign( "TRANSFER_SUCCESS", true );    
@@ -341,7 +357,7 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
 */
 int server_supports_resume( CURL* handle, char* url ) {
 
-       int rval = -1;
+    int rval = -1;
 
     // Send a basic request, with Range set to a null range
     curl_easy_setopt( handle, CURLOPT_URL, url );
@@ -378,7 +394,10 @@ int server_supports_resume( CURL* handle, char* url ) {
     Initialize the stats ClassAd
 */
 void init_stats( ClassAd* stats, char **argv ) {
-
+    
+    char* request_url = strdup( argv[1] );
+    char* url_token;
+    
     // Initial values
     stats->Assign( "TRANSFER_TOTAL_BYTES", 0 );
     stats->Assign( "TRANSFER_TRIES", 0 );
@@ -386,29 +405,36 @@ void init_stats( ClassAd* stats, char **argv ) {
 
     // Set the transfer protocol. If it's not http, ftp and file, then just
     // leave it blank because this transfer will fail quickly.
-    if ( !strncasecmp( argv[1], "http://", 7 ) ) {
+    if ( !strncasecmp( request_url, "http://", 7 ) ) {
         stats->Assign( "TRANSFER_PROTOCOL", "http" );
     }
-    else if ( !strncasecmp( argv[1], "ftp://", 6 ) ) {
+    else if ( !strncasecmp( request_url, "ftp://", 6 ) ) {
         stats->Assign( "TRANSFER_PROTOCOL", "ftp" );
     }
-    else if ( !strncasecmp( argv[1], "file://", 7 ) ) {
+    else if ( !strncasecmp( request_url, "file://", 7 ) ) {
         stats->Assign( "TRANSFER_PROTOCOL", "file" );
     }
+    
+    // Set the request host name by parsing it out of the URL
+    url_token = strtok( request_url, ":/" );
+    url_token = strtok( NULL, "/" );
+    stats->Assign( "TRANSFER_HOST_NAME", url_token );
 
+    // Cleanup and exit
+    free( request_url );
 }
 
 /*
     Callback function provided by libcurl, which is called upon receiving
     HTTP headers. We use this to gather statistics.
 */
-static size_t header_callback(char *buffer, size_t size, size_t nitems) {
-
+static size_t header_callback( char *buffer, size_t size, size_t nitems ) {
+    
     size_t numBytes = nitems * size;
 
     // Parse this HTTP header
     // We should probably add more error checking to this parse method...
-    char *token = strtok( buffer, " " );
+    char* token = strtok( buffer, " " );
     while( token ) {
         // X-Cache header provides details about cache hits
         if( strcmp ( token, "X-Cache:" ) == 0 ) {
@@ -427,4 +453,13 @@ static size_t header_callback(char *buffer, size_t size, size_t nitems) {
         token = strtok( NULL, " " );
     }       
     return numBytes;
+}
+
+/*
+    Write callback function for FTP file transfers.
+*/
+static size_t ftp_write_callback( void* buffer, size_t size, size_t nmemb, void* stream ) {
+    FILE* outfile = ( FILE* ) stream;
+    return fwrite( buffer, size, nmemb, outfile); 
+ 
 }
