@@ -326,7 +326,6 @@ Requires: libcgroup >= 0.37
 %if %cream && ! %uw_build
 BuildRequires: glite-ce-cream-client-devel
 BuildRequires: glite-lbjp-common-gsoap-plugin-devel
-BuildRequires: glite-ce-cream-utils
 BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
