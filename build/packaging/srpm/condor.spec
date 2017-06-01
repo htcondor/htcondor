@@ -1015,6 +1015,9 @@ rm -rf %{buildroot}/%{_sysconfdir}/init.d
 mkdir -p %{buildroot}%{_tmpfilesdir}
 install -m 0644 %{buildroot}/etc/examples/condor-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
 
+# This is wrong (this initscript needs systemd integration) but unbreaks the build.
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_initrddir}/condor-annex-ec2
+
 mkdir -p %{buildroot}%{_unitdir}
 install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
