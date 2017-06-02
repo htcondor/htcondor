@@ -62,6 +62,7 @@ install (FILES
 		condor.service
 		condor.socket
 		condor-tmpfiles.conf
+		condor-annex-ec2.service
 		DESTINATION ${C_ETC_EXAMPLES})
 
 install (FILES
