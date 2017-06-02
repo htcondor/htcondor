@@ -6966,10 +6966,19 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 	ClassAd mutatedMachine(*machine); // make a copy to mutate
 
 	std::list<std::string> attrs;
-	attrs.push_back("cpus");
-	attrs.push_back("memory");
-	attrs.push_back("disk");
-		// need to add custom resources here
+	std::string attrs_str;
+	if ( machine->LookupString( ATTR_MACHINE_RESOURCES, attrs_str ) ) {
+		StringList attrs_list( attrs_str.c_str(), " " );
+		attrs_list.rewind();
+		char *entry;
+		while ( (entry = attrs_list.next()) ) {
+			attrs.push_back( entry );
+		}
+	} else {
+		attrs.push_back("cpus");
+		attrs.push_back("memory");
+		attrs.push_back("disk");
+	}
 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
 	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second <= newRank; slot++) {
