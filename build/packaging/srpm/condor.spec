@@ -1387,7 +1387,7 @@ rm -rf %{buildroot}
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
 %_bindir/condor_stats
-%_bindir/condor_top.pl
+%_bindir/condor_top
 %_bindir/condor_version
 %_bindir/condor_history
 %_bindir/condor_status
