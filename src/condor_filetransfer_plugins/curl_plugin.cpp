@@ -6,6 +6,7 @@
 #endif
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "MyString.h"
@@ -102,11 +103,11 @@ int main( int argc, char **argv ) {
     end_time = _condor_debug_get_time_double();   
     stats.Assign("TRANSFER_TIME_SECONDS", end_time - start_time);
 
-    // If the transfer was successful, output the statistics to our log file
+    // If the transfer was successful, output the statistics to stdout
     if( rval != -1 ) {
         sPrintAd( stats_string, stats );
         stats_string.replaceString( "\n", "; " );
-        printf( "[ %s]\n", stats_string.c_str() );
+        fprintf(stdout, "[ %s]\n", stats_string.c_str() );
     }
 
     // Cleanup 
@@ -136,9 +137,6 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
     int rval = -1;
     static int partial_file = 0;
     static long partial_bytes = 0;
-
-    // Determine the name of the file being requested
-    
 
     // Input transfer: URL -> file
     if ( !strncasecmp( argv[1], "http://", 7 ) ||

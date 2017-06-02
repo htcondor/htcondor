@@ -4251,23 +4251,34 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// if so, drop_privs should be false.  the default is to drop privs.
 	bool drop_privs = !param_boolean("RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false);
 
+    // Setup an output file for statistics
+    char stats_line[4096];
+    FILE* stats_file;
+    MyString stats_file_path = strcat( param( "LOCAL_DIR" ), "/log/curl_plugin_stats" );
+    stats_file = fopen( stats_file_path.Value(), "a+" );
+
 	// invoke it
 	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
+    while( fgets( stats_line, sizeof( stats_line ), plugin_pipe ) ) {
+        fprintf( stats_file, "%s\n", stats_line );   
+    }
 	int plugin_status = my_pclose(plugin_pipe);
 
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
 
 	// clean up
 	free(method);
+    fclose(stats_file);
 
 	// any non-zero exit from plugin indicates error.  this function needs to
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
+    /*
 	if (plugin_status != 0) {
 		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s", plugin_status, plugin.Value());
 		return GET_FILE_PLUGIN_FAILED;
 	}
-
+    */
 	return 0;
 }
 
