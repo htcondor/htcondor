@@ -418,7 +418,7 @@ def getConsoleSize():
         max_rows, max_cols = [int(x) for x in
                                   os.popen('stty size', 'r').read().split()]
     except Exception: # otherwise assume standard console size
-        max_rows = 25
+        max_rows = 24
         max_cols = 80
 
     return (max_rows, max_cols)
@@ -512,7 +512,7 @@ def printTimer(delay):
     sys.stdout.flush()
 
 def printRuntimeTable(old_ad, new_ad, sort='Runtime',
-                          monitor_rows=5, max_rows=25, max_cols=80):
+                          monitor_rows=5, max_rows=24, max_cols=80):
     """Prints the Runtime stats table"""
     
     # get the table
