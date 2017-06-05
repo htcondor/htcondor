@@ -12,18 +12,20 @@
 \oOpt{-tcp}
 \oOpt{-udp}
 \oOpt{-multiple}
-\Arg{update-command}
-\oArg{classad-filename}
+\oArg{update-command \oArg{classad-filename}}
 
 \Description
-\Condor{advertise} sends one or more ClassAds to the \Condor{collector} daemon on
-the central manager machine.
-The required argument \Arg{update-command} says what daemon type's ClassAd
-is to be updated.
+\Condor{advertise} sends one or more ClassAds to the \Condor{collector}
+daemon on the central manager machine.
+The optional argument \Arg{update-command} says what daemon type's ClassAd
+is to be updated; if it is absent, it assumed to be the update command
+corresponding to the type of the (first) ClassAd.
 The optional argument \Arg{classad-filename} is the file from which the
 ClassAd(s) should be read.
 If \Arg{classad-filename} is omitted or is the dash character ('-'),
 then the ClassAd(s) are read from standard input.
+You must specify \Arg{update-command} if you do not want to read from
+standard input.
 
 When \Opt{-multiple} is specified, multiple ClassAds may be published.
 Publishing many ClassAds in a single invocation of \Condor{advertise} is
