@@ -106,8 +106,7 @@ int main( int argc, char **argv ) {
     // If the transfer was successful, output the statistics to stdout
     if( rval != -1 ) {
         sPrintAd( stats_string, stats );
-        stats_string.replaceString( "\n", "; " );
-        fprintf(stdout, "[ %s]\n", stats_string.c_str() );
+        fprintf(stdout, "%s", stats_string.c_str() );
     }
 
     // Cleanup 

@@ -288,6 +288,7 @@ class FileTransfer: public Service {
 	MyString DeterminePluginMethods( CondorError &e, const char* path );
 	int InitializePlugins(CondorError &e);
 	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, const char* proxy_filename = NULL);
+    int OutputFileTransferStats( ClassAd stats );
 	MyString GetSupportedMethods();
 
 		// Convert directories with a trailing slash to a list of the contents

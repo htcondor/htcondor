@@ -4251,25 +4251,28 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// if so, drop_privs should be false.  the default is to drop privs.
 	bool drop_privs = !param_boolean("RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false);
 
-    // Setup an output file for statistics
-    char stats_line[4096];
-    FILE* stats_file;
-    MyString stats_file_path = strcat( param( "LOCAL_DIR" ), "/log/curl_plugin_stats" );
-    stats_file = fopen( stats_file_path.Value(), "a+" );
-
-	// invoke it
+    // Invoke the plugin
 	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
-    while( fgets( stats_line, sizeof( stats_line ), plugin_pipe ) ) {
-        fprintf( stats_file, "%s\n", stats_line );   
-    }
-	int plugin_status = my_pclose(plugin_pipe);
 
+    // Capture stdout from the plugin and dump it to the stats file
+    char single_stat[1024];
+    ClassAd plugin_stats;
+    while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
+        if( !plugin_stats.Insert( single_stat ) ) {
+            dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", single_stat);
+        }
+    }
+
+    // Close the plugin
+	int plugin_status = my_pclose(plugin_pipe);
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
 
 	// clean up
 	free(method);
-    fclose(stats_file);
 
+    // Save the statistics we gathered to disk
+    OutputFileTransferStats( plugin_stats );
+    
 	// any non-zero exit from plugin indicates error.  this function needs to
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
@@ -4282,11 +4285,29 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	return 0;
 }
 
+int FileTransfer::OutputFileTransferStats( ClassAd stats ) {
+    
+    // Setup an output file for statistics
+    FILE* stats_file;
+    MyString stats_file_path = strcat( param( "LOCAL_DIR" ), "/log/curl_plugin_history" );
+    stats_file = safe_fopen_wrapper_follow( stats_file_path.Value(), "a+" );
+
+    // Write the statistics
+    MyString stats_string;    
+    sPrintAd( stats_string, stats );
+    stats_string.replaceString( "\n", "; " );
+    fprintf( stats_file, "[%s]\n", stats_string.c_str() );
+
+    // All done, cleanup and return
+    fclose(stats_file);
+
+    return 0;
+}
 
 MyString FileTransfer::GetSupportedMethods() {
 	MyString method_list;
 
-	// iterate plugin_table if it exists
+	// iterate plugin_table if it existssrc
 	if (plugin_table) {
 		MyString junk;
 		MyString method;
