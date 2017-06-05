@@ -58,6 +58,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The \Condor{advertise} tool now assumes an update command if one is not
+specified on the command-line and attempts to determine exact command by
+inspecting the first ad to be advertised.
+\Ticket{6296}
+
 \item The \Condor{annex} tool now logs to the user config directory.  Added an
 audit log of \Condor{annex} commands and their results.
 \Ticket{6267}
