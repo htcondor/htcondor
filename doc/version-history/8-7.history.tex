@@ -74,6 +74,12 @@ and \Condor{userprio}.
 
 \begin{itemize}
 
+\item Changed the output of the \Condor{status} command so that the Load Average
+field now displays the load average of just the condor job running in that
+slot.  Previously, load associated from outside of condor was proportionately
+distributed into the condor slots, resulting in much confusion.
+\Ticket{6225}
+
 \item Prohibited illegal chars ('+', '.') in DAGMan node names
 \Ticket{5966}
 
@@ -100,36 +106,36 @@ and \Condor{userprio}.
 \begin{itemize}
 
 \item Previously, when the number of forked children processing Collector
-  queries surpassed the maximum set by the configuration knob \Macro{COLLECTOR\_QUERY\_WORKERS}, the
-  Collector handled all new incoming queries in-processes (i.e. without
-  forking). As processing a query and sending out the result to the network
-  could take a long time, the result of servicing such queries in-process in
-  the Collector is likely to drop a lot of updates. So now in v8.7.1, instead of
-  servicing such queries in-process, they are queued up for servicing as soon as
-  query worker child processes become available.  The configuration knob 
-  \Macro{COLLECTOR\_QUERY\_WORKERS\_PENDING} was introduced; see
-  section\~ref{param:CollectorQueryWorkersPending}.
+queries surpassed the maximum set by the configuration knob \MacroNI{COLLECTOR\_QUERY\_WORKERS}, the
+Collector handled all new incoming queries in-processes (i.e. without
+forking). As processing a query and sending out the result to the network
+could take a long time, the result of servicing such queries in-process in
+the Collector is likely to drop a lot of updates. So now in v8.7.1, instead of
+servicing such queries in-process, they are queued up for servicing as soon as
+query worker child processes become available.  The configuration knob
+\MacroNI{COLLECTOR\_QUERY\_WORKERS\_PENDING} was introduced; see
+section\~ref{param:CollectorQueryWorkersPending}.
 \Ticket{6192}
 
-\item Default value for \Macro{COLLECTOR\_QUERY\_WORKERS} changed from 2 to 4.
+\item Default value for \MacroNI{COLLECTOR\_QUERY\_WORKERS} changed from 2 to 4.
 \Ticket{6192}
 
 \item Introduced configuration macro
-	\MacroNI{COLLECTOR\_QUERY\_WORKERS\_RESERVE\_FOR\_HIGH\_PRIO} so that the
-	collector prioritizes queries that are important for the operation of the
-	pool (such as queries from the negotiator) ahead of servicing user
-	invocations of \Condor{status}.  
+\MacroNI{COLLECTOR\_QUERY\_WORKERS\_RESERVE\_FOR\_HIGH\_PRIO} so that the
+collector prioritizes queries that are important for the operation of the
+pool (such as queries from the negotiator) ahead of servicing user
+invocations of \Condor{status}.
 \Ticket{6192}
 
-\item Introduced configuration macro \Macro{COLLECTOR\_QUERY\_MAX\_WORKTIME} to
-	define the maximum amount of time the collector may service a query from a
-	client like condor\_status.  See section\~ref{param:CollectorQueryMaxWorktime}.
+\item Introduced configuration macro \MacroNI{COLLECTOR\_QUERY\_MAX\_WORKTIME} to
+define the maximum amount of time the collector may service a query from a
+client like condor\_status.  See section\~ref{param:CollectorQueryMaxWorktime}.
 \Ticket{6192}
 
 \item Added several new statistics on collector query performance into the Collector
-	ClassAd, including \AdAttr{ActiveQueryWorkers}, \AdAttr{ActiveQueryWokersPeak},
-	\AdAttr{PendingQueries}, \AdAttr{PendingQueriesPeak}, \AdAttr{DroppedQueries},
-	and \AdAttr{RecentDroppedQueries}.  See section\~ref{sec:Collector-ClassAd-Attributes}.
+ClassAd, including \AdAttr{ActiveQueryWorkers}, \AdAttr{ActiveQueryWokersPeak},
+\AdAttr{PendingQueries}, \AdAttr{PendingQueriesPeak}, \AdAttr{DroppedQueries},
+and \AdAttr{RecentDroppedQueries}.  See section\~ref{sec:Collector-ClassAd-Attributes}.
 \Ticket{6192}
 
 \item Further refinement and initial documentation of the HTCondor Annex.
@@ -156,14 +162,14 @@ style can be enabled by setting the new configuration parameter
 
 \item The \Condor{schedd} now keeps a count of jobs by state for each owner and submitter
 and will report them to \Condor{q}. Condor{q} will display these totals unless the new
-configuration parameter \Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} is set to true. In 8.7.1
+configuration parameter \MacroNI{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} is set to true. In 8.7.1
 this parameter defaults to true.
 \Ticket{6160}
 
 \item Milestone 1 for late materialization in the \Condor{schedd} was completed. This milestone adds the
 undocumented option \Opt{-factory} to \Condor{q} that can be used to submit a late materializing job cluster
-to the \Condor{schedd}.  The \Condor{schedd} will refuse the submission unless the configuration parameter 
-Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} is set to true.
+to the \Condor{schedd}.  The \Condor{schedd} will refuse the submission unless the configuration parameter
+\MacroNI{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} is set to true.
 \Ticket{6212}
 
 \item Increased the default value for configuration parameter
@@ -174,14 +180,14 @@ Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} is set to true.
 number of bytes in the UDP receive queue for daemons with a UDP command port.
 \Ticket{6183}
 
-\item Improved speed of handling queries to the collector by caching the 
+\item Improved speed of handling queries to the collector by caching the
 the configuration knob SHARED\_PORT\_ADDRESS\_REWRITING.
 \Ticket{6187}
 
 \item The \Condor{collector} on Linux now handles some queries in process and some
 by forking a child process. This allows it to avoid the overhead of forking to handle
 queries that will take little time. The policy for deciding which queries to handle in process
-is controlled by a new configuration parameter \Macro{HANDLE\_QUERY\_IN\_PROC\_POLICY}.
+is controlled by a new configuration parameter \MacroNI{HANDLE\_QUERY\_IN\_PROC\_POLICY}.
 \Ticket{6191}
 
 \item Added \Opt{-limit} option to \Condor{status} and changed the \Condor{collector} to honor it.
