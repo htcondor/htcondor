@@ -975,7 +975,6 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
 # not packaging legacy cruft
 rm -f %{buildroot}/%{_mandir}/man1/condor_master_off.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
-rm -f %{buildroot}/%{_mandir}/man1/condor_convert_history.1
 
 # not packaging quill bits
 rm -f %{buildroot}/%{_mandir}/man1/condor_load_history.1
@@ -1266,6 +1265,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_cod.1.gz
 %_mandir/man1/condor_config_val.1.gz
+%_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
 %_mandir/man1/condor_dagman_metrics_reporter.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
@@ -1375,6 +1375,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
+%_sbindir/condor_convert_history
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
