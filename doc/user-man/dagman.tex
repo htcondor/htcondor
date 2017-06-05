@@ -146,7 +146,8 @@ are case sensitive, as file names
 in a file system are case sensitive.
 The \Arg{JobName} can be any string that contains no white space, except
 for the strings \Arg{PARENT} and \Arg{CHILD} (in upper, lower, or mixed
-case).
+case). \Arg{JobName} also cannot contain special characters (\Arg{'.'}, 
+\Arg{'+'}) which are reserved for system use.
 
 Note that \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}, if used, must appear
 in the order shown above.
@@ -1029,6 +1030,7 @@ After placing the \Condor{dagman} job on hold,
 no new node jobs will be submitted,
 and no PRE or POST scripts will be run.
 Any node jobs already in the HTCondor queue will continue undisturbed.
+Any running PRE or POST scripts will be killed.
 If the \Condor{dagman} job is left on hold,
 it will remain in the HTCondor queue after all of the currently running
 node jobs are finished.
@@ -1064,6 +1066,16 @@ As any DAG is first submitted with \Condor{submit\_dag},
 a check is made for a halt file.
 If one exists, it is removed.
 \end{itemize}
+
+\Bold{Note that neither \Condor{hold} nor a DAG halt is propagated to
+sub-DAGs.}
+In other words, if you \Condor{hold} or create a halt file for a DAG that
+has sub-DAGs, any sub-DAGs that are already in the queue will continue
+to submit node jobs.
+
+A \Condor{hold} or DAG halt \emph{does}, however, apply to splices,
+because they are merged into the parent DAG and controlled by a single
+\Condor{dagman} instance.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:AdvDAGMan}Advanced Features of DAGMan}

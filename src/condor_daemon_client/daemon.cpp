@@ -72,6 +72,11 @@ Daemon::common_init() {
 	m_has_udp_command_port = true;
 }
 
+DaemonAllowLocateFull::DaemonAllowLocateFull( daemon_t tType, const char* tName, const char* tPool ) 
+	: Daemon(  tType, tName,  tPool ) 
+{
+
+}
 
 Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool ) 
 {
@@ -104,6 +109,11 @@ Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool )
 			 _addr ? _addr : "NULL" );
 }
 
+DaemonAllowLocateFull::DaemonAllowLocateFull( const ClassAd* tAd, daemon_t tType, const char* tPool ) 
+	: Daemon(  tAd,  tType,  tPool ) 
+{
+
+}
 
 Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool ) 
 {
@@ -171,6 +181,11 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 
 }
 
+DaemonAllowLocateFull::DaemonAllowLocateFull( const DaemonAllowLocateFull &copy )
+	: Daemon( copy )
+{
+
+}
 
 Daemon::Daemon( const Daemon &copy ): ClassyCountedPtr()
 {
@@ -180,7 +195,6 @@ Daemon::Daemon( const Daemon &copy ): ClassyCountedPtr()
 	deepCopy( copy );
 }
 
- 
 Daemon&
 Daemon::operator=(const Daemon &copy)
 {
@@ -946,6 +960,12 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 //////////////////////////////////////////////////////////////////////
 // Locate-related methods
 //////////////////////////////////////////////////////////////////////
+
+bool
+DaemonAllowLocateFull::locate( Daemon::LocateType method )
+{
+	return Daemon::locate( method );
+}
 
 bool
 Daemon::locate( Daemon::LocateType method )
@@ -2412,4 +2432,51 @@ void Daemon::sendBlockingMsg( classy_counted_ptr<DCMsg> msg )
 	DCMessenger *messenger = new DCMessenger(this);
 
 	messenger->sendBlockingMsg( msg );
+}
+
+bool
+Daemon::getInstanceID( std::string & instanceID ) {
+	// Enter the cargo cult.
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::getInstanceID() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if(! startCommand( DC_QUERY_INSTANCE, (Sock *) & rSock, 5 )) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to send "
+			"command to remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	if(! rSock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to send "
+			"end of message to remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	unsigned char instance_id[17];
+	const int instance_length = 16;
+	rSock.decode();
+	if(! rSock.get_bytes( instance_id, instance_length )) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to read "
+			"instance ID from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	if(! rSock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	instanceID.assign( (const char *)instance_id, instance_length );
+	return true;
 }

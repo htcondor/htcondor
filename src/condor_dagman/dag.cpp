@@ -4558,6 +4558,7 @@ Dag::LiftSplices(SpliceLayer layer)
 		_splices.remove(key);
 		delete splice;
 	}
+	ASSERT( _splices.getNumElements() == 0 );
 
 	// and prefix them if there was a DIR for the dag.
 	PropagateDirectoryToAllNodes();
@@ -4624,6 +4625,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 		}
 	}
 
+	// 1. Take ownership of the nodes
 	// 1b. Re-set the node categories (if any) so they point to the
 	// ThrottleByCategory object in *this* DAG rather than the splice
 	// DAG (which will be deleted soon).

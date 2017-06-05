@@ -1283,10 +1283,13 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 void
 ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 	// It turns out to be colossal pain to use the ClassAd for persistence.
-	static std::set< std::string > offlineUniverses;
+	static classad::References offlineUniverses;
 
 	if( ! cap ) { return; }
 	if( ! extras_classad ) { extras_classad = new ClassAd(); }
+
+	int topping = 0;
+	int obsolete_univ = false;
 
 	//
 	// The startd maintains the set offline universes, and the offline
@@ -1321,7 +1324,13 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		if( uo != attr ) { continue; }
 
 		std::string universeName( attr + 3 );
-		if( CondorUniverseNumber( universeName.c_str() ) == 0 ) { continue; }
+		int univ = CondorUniverseInfo( universeName.c_str(), &topping, &obsolete_univ );
+		if( univ == 0 || obsolete_univ) {
+			continue;
+		}
+
+		// convert universe name to canonical form
+		universeName = CondorUniverseOrToppingName(univ, topping);
 
 		std::string reasonTime = universeName + "OfflineTime";
 		std::string reasonName = universeName + "OfflineReason";
@@ -1348,18 +1357,18 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 	// Construct the OfflineUniverses attribute and set it in extras_classad.
 	//
 	std::string ouListString;
-	if( offlineUniverses.empty() ) {
-		ouListString = "{}";
-	} else {
-		std::set< std::string >::const_iterator i = offlineUniverses.begin();
-		for( ; i != offlineUniverses.end(); ++i ) {
-			int offlineUniverseNumber = CondorUniverseNumber( i->c_str() );
-			formatstr( ouListString, "%s\"%s\", %d, ", ouListString.c_str(), i->c_str(), offlineUniverseNumber );
-		}
-		// Remove the trailing ", ".
-		ouListString.erase( ouListString.length() - 2 );
-		ouListString = "{ " + ouListString + " }";
+	ouListString.reserve(10 + offlineUniverses.size()*20);
+	ouListString = "{";
+	classad::References::const_iterator i = offlineUniverses.begin();
+	for( ; i != offlineUniverses.end(); ++i ) {
+		int univ = CondorUniverseInfo( i->c_str(), &topping, &obsolete_univ );
+		if ( ! univ || obsolete_univ) { continue; }
+
+		if (ouListString.size() > 1) { ouListString += ", "; }
+		formatstr_cat(ouListString, "\"%s\"", i->c_str() );
+		if ( ! topping) { formatstr_cat(ouListString, ",%d", univ ); }
 	}
+	ouListString += "}";
 	dprintf( D_ALWAYS, "OfflineUniverses = %s\n", ouListString.c_str() );
 	extras_classad->AssignExpr( "OfflineUniverses", ouListString.c_str() );
 }

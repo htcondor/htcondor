@@ -12,36 +12,6 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-5-9}Version 8.5.9}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent Release Notes:
-
-\begin{itemize}
-
-\item HTCondor version 8.5.9 not yet released.
-%\item HTCondor version 8.5.9 released on Month Date, 2016.
-
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-5-8}Version 8.5.8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -49,8 +19,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.5.8 not yet released.
-%\item HTCondor version 8.5.8 released on Month Date, 2016.
+\item HTCondor version 8.5.8 released on December 13, 2016.
 
 \end{itemize}
 
@@ -60,14 +29,25 @@ The details of each version are described below.
 
 \item On Linux, the starter now puts all jobs in a cgroup by default.  The default
 for CGROUP\_MEMORY\_LIMIT\_POLICY is now "none".  To disable cgroups, an admin
-can set the BASE\_CGROUP param to the empty string.
+can set the BASE\_CGROUP parameter to the empty string.
 \Ticket{5936}
 
-\item Added new param \Macro{DOCKER\_VOLUME\_DIR\_XXX\_MOUNT\_IF} which is an expression,
+\item Added first-class \Condor{submit} commands supporting job retries.
+(See section~\ref{condor-submit-max-retries} for details.)
+\Ticket{5912}
+
+\item \Condor{qedit} now defaults to editing only jobs owned by the current user in the same way that
+\Condor{q} does. It also honors the \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration variable.
+\Ticket{5889}
+
+\item Added new parameter \Macro{DOCKER\_VOLUME\_DIR\_XXX\_MOUNT\_IF} which is an expression,
 evaluated in the context of the machine and job ad, which if it evaluates to a string,
 becomes a docker volume mount.  This allows admins to conditionally add docker volumes
 for certain types of jobs.
 \Ticket{5758}
+
+\item Added initial support for Singularity containers.
+\Ticket{5828}
 
 \item The XferStatsLog file on the submit side now contains TCP statistics for both the
 shadow point of view, and the starter point of view.  The starter side line is prefixed
@@ -177,21 +157,18 @@ in the job transform.
 \item A join function has been added to the ClassAd language.
 \Ticket{6018}
 
-\item \Condor{qedit} now defaults to editing only jobs owned by the current user in the same way that
-\Condor{q} does. It also honors the \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS} configuration variable.
-\Ticket{5889}
-
 \item \Condor{who} has additional options for querying the state and readiness of the various daemons.
 It has a command that can be used to wait for the daemons to startup with a timeout.
 \Ticket{5416}
 
-\item Added first-class \Condor{submit} commands supporting job retries.
-(See section~\ref{condor-submit-max-retries} for details.)
-\Ticket{5912}
+\item When submitting a job that has an associated X.509 proxy, or when
+authenticating to the \Condor{schedd} using X.509, the X.509 and VOMS
+attributes are securely extracted and carried along in the job ClassAd.  This
+allows them to be used, for example, in matchmaking policy and job routing.
+\Ticket{5064}
 
-\item Added initial support for Singularity containers.
-\Ticket{5828}
-
+\item Made \Condor{credd} configuration easier by automatically configuring
+network connections to use encryption.
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -256,7 +233,7 @@ job totals to be reported by \Condor{q} \Opt{-batch}.
 \item Preemption due to job priority is likely to fail if \MacroNI{PREEMPTION\_REQUIREMENTS}
 attempts to reference any resource usage or priority attributes. This issue has
 been fixed in v8.5.8.  If you cannot upgrade to v8.5.8, a work-around for v8.5.7
-is to set configuration macro \MacroNI{NEGOTIATOR\_CROSS\_SLOT\_PRIOS} to \Expr{True}.
+is to set configuration macro \MacroNI{NEGOTIATOR\_CROSS\_SLOT\_PERI'S} to \Expr{True}.
 \Ticket{6014}
 
 \end{itemize}
@@ -280,7 +257,6 @@ Also added an INCLUDE command to the DAG language (see
 of a node is now simply the sum of the explicit node priority and the
 overall DAG priority.  (See section ~\ref{sec:DAG-SetNodePriority} for
 more details.)
-sec:DAG-SetNodePriority
 \Ticket{4024}
 \Ticket{5749}
 
@@ -514,7 +490,7 @@ can be used to limit the number of DAGs that any single user can have running at
 a time.
 \Ticket{5568}
 
-\item Monitoring the status of PBS and SLURM jobs is now much more efficient.
+\item Monitoring the status of PBS and Slurm jobs is now much more efficient.
 Now, one query to the batch system is done for all jobs, instead of a
 separate query for each job.
 \Ticket{5722}
@@ -606,10 +582,10 @@ any resources.
 \Ticket{5743}
 
 \item No longer leak a file in the user's home directory each time a
-job is submitted to SLURM.
+job is submitted to Slurm.
 \Ticket{5742}
 
-\item Fix a bug that prevented HTCondor from removing jobs from SLURM.
+\item Fix a bug that prevented HTCondor from removing jobs from Slurm.
 \Ticket{5804}
 
 \item Fixed a bug when attempting to authenticate using multiple
@@ -869,7 +845,7 @@ the number of Idle and Running jobs for Scheduler universe and for Local
 universe.
 \Ticket{5519}
 
-\item Jobs can now be submitted to the SLURM batch scheduling system via
+\item Jobs can now be submitted to the Slurm batch scheduling system via
 the new \SubmitCmdNI{slurm} type in the grid universe.
 \Ticket{5515}
 

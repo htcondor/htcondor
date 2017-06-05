@@ -58,11 +58,11 @@
 #define closesocket close
 #endif
 
-void dprintf ( int flags, Sock & sock, const char *fmt, ... )
+void dprintf ( int flags, const Sock & sock, const char *fmt, ... )
 {
     va_list args;
     va_start( args, fmt );
-    _condor_dprintf_va( flags, (DPF_IDENT)sock.getUniqueId(), fmt, args );
+    _condor_dprintf_va( flags|D_IDENT, (DPF_IDENT)sock.getUniqueId(), fmt, args );
     va_end( args );
 }
 
@@ -677,7 +677,7 @@ int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
 
 
 int
-Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port, bool outbound)
+Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port)
 {
 	bool bind_all = (bool)_condor_bind_all_interfaces();
 
@@ -727,7 +727,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 		}
 #endif
 
-		bind_return_val = _bind_helper(_sock, addr, outbound, false);
+		bind_return_val = condor_bind(_sock, addr);
 
         addr_changed();
 
@@ -760,7 +760,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 	return FALSE;
 }
 
-int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
+int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback, condor_sockaddr *bindTo)
 {
 	if( proto <= CP_INVALID_MIN || proto >= CP_INVALID_MAX ) {
 		EXCEPT( "Unknown protocol (%d) in Sock::bind(); aborting.", proto );
@@ -783,6 +783,12 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 	if (_state != sock_assigned) {
 		dprintf(D_ALWAYS, "Sock::bind - _state is not correct\n");
 		return FALSE;
+	}
+
+	static bool reuse = param_boolean("ALWAYS_REUSEADDR", true);
+	if (reuse) {	
+		int one = 1;
+    	this->setsockopt(SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
 	}
 
 	// If 'port' equals 0 and if we have 'LOWPORT' and 'HIGHPORT' defined
@@ -817,7 +823,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 	int lowPort, highPort;
 	if ( port == 0 && !loopback && get_port_range((int)outbound, &lowPort, &highPort) == TRUE ) {
 			// Bind in a specific port range.
-		if ( bindWithin(proto, lowPort, highPort, outbound) != TRUE ) {
+		if ( bindWithin(proto, lowPort, highPort) != TRUE ) {
 			return FALSE;
 		}
 	} else {
@@ -831,7 +837,12 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 			addr.set_protocol(proto);
 		}
 		if( loopback ) {
-			addr.set_loopback();
+			if (bindTo) {
+				addr = *bindTo;
+			} else {
+				addr.set_loopback();
+			}
+
 		} else if( (bool)_condor_bind_all_interfaces() ) {
 			addr.set_addr_any();
 		} else {
@@ -852,7 +863,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 		}
 #endif
 
-		bind_return_value = _bind_helper(_sock, addr, outbound, loopback);
+		bind_return_value = condor_bind(_sock, addr);
 
         addr_changed();
 
@@ -1750,7 +1761,7 @@ Sock::cancel_connect()
 	}
 }
 
-time_t Sock::connect_timeout_time()
+time_t Sock::connect_timeout_time() const
 {
 		// This is called by DaemonCore or whoever is in charge of
 		// calling connect_retry() when the connection attempt times
@@ -1764,7 +1775,7 @@ time_t Sock::connect_timeout_time()
 }
 
 time_t
-Sock::get_deadline()
+Sock::get_deadline() const
 {
 	time_t deadline = Stream::get_deadline();
 	if( is_connect_pending() ) {
@@ -1862,7 +1873,7 @@ int Sock::close()
 #endif
 
 int
-Sock::bytes_available_to_read()
+Sock::bytes_available_to_read() const
 {
 	/*	Does this platform have FIONREAD? 
 		I think every platform support this, at least for network sockets.
@@ -1941,7 +1952,7 @@ Sock::readReady() {
 }
 
 int
-Sock::get_timeout_raw()
+Sock::get_timeout_raw() const
 {
 	return _timeout;
 }
@@ -2353,14 +2364,14 @@ Sock::addr_changed()
 }
 
 condor_sockaddr
-Sock::peer_addr()
+Sock::peer_addr() const
 {
 	return _who;
 }
 
 
 int
-Sock::peer_port()
+Sock::peer_port() const
 {
 		//return (int) ntohs( _who.sin_port );
 	return (int)(_who.get_port());
@@ -2378,7 +2389,7 @@ Sock::peer_ip_int()
 
 
 const char *
-Sock::peer_ip_str()
+Sock::peer_ip_str() const
 {
 	if (!_peer_ip_buf[0]) {
 		MyString peer_ip = _who.to_ip_string();
@@ -2399,7 +2410,7 @@ Sock::peer_ip_str()
 // return true if peer address corresponds to an interface local to this machine,
 // or false if not or if an error.
 bool 
-Sock::peer_is_local()
+Sock::peer_is_local() const
 {
 		// peer_is_local is called rarely and by few call sites.
 		// making hashtable for both ipv4 and ipv6 addresses does seem to
@@ -2507,7 +2518,7 @@ Sock::peer_is_local()
 }
 
 condor_sockaddr
-Sock::my_addr() 
+Sock::my_addr() const
 {
 	condor_sockaddr addr;
 	condor_getsockname_ex(_sock, addr);
@@ -2515,7 +2526,7 @@ Sock::my_addr()
 }
 
 condor_sockaddr
-Sock::my_addr_wildcard_okay() 
+Sock::my_addr_wildcard_okay() const
 {
 	condor_sockaddr addr;
 	condor_getsockname(_sock, addr);
@@ -2523,7 +2534,7 @@ Sock::my_addr_wildcard_okay()
 }
 
 const char *
-Sock::my_ip_str()
+Sock::my_ip_str() const
 {
 	if (!_my_ip_buf[0]) {
 		MyString ip_str = my_addr().to_ip_string();
@@ -2533,7 +2544,7 @@ Sock::my_ip_str()
 }
 
 char const *
-Sock::get_sinful()
+Sock::get_sinful() const
 {
     if( _sinful_self_buf.empty() ) {
 		condor_sockaddr addr;
@@ -2554,7 +2565,7 @@ Sock::get_sinful()
 }
 
 char *
-Sock::get_sinful_peer()
+Sock::get_sinful_peer() const
 {       
 	if ( !_sinful_peer_buf[0] ) {
 		MyString sinful_peer = _who.to_sinful();
@@ -2564,7 +2575,7 @@ Sock::get_sinful_peer()
 }
 
 char const *
-Sock::default_peer_description()
+Sock::default_peer_description() const
 {
 	char const *retval = get_sinful_peer();
 	if( !retval ) {
@@ -2574,7 +2585,7 @@ Sock::default_peer_description()
 }
 
 int
-Sock::get_port()
+Sock::get_port() const
 {
 	condor_sockaddr addr;
 	if (condor_getsockname(_sock, addr) < 0)
@@ -2758,7 +2769,7 @@ void Sock :: setAuthenticationMethodUsed(char const *auth_method)
 	_auth_method = strdup(auth_method);
 }
 
-const char* Sock :: getAuthenticationMethodUsed() {
+const char* Sock :: getAuthenticationMethodUsed() const {
 	return _auth_method;
 }
 
@@ -2768,7 +2779,7 @@ void Sock :: setAuthenticationMethodsTried(char const *auth_methods)
 	_auth_methods = strdup(auth_methods);
 }
 
-const char* Sock :: getAuthenticationMethodsTried() {
+const char* Sock :: getAuthenticationMethodsTried() const {
 	return _auth_methods;
 }
 
@@ -2778,7 +2789,7 @@ void Sock :: setAuthenticatedName(char const *auth_name)
 	_auth_name = strdup(auth_name);
 }
 
-const char* Sock :: getAuthenticatedName() {
+const char* Sock :: getAuthenticatedName() const {
 	return _auth_name;
 }
 
@@ -2790,7 +2801,7 @@ void Sock :: setCryptoMethodUsed(char const *crypto_method)
 	_crypto_method = strdup(crypto_method);
 }
 
-const char* Sock :: getCryptoMethodUsed() {
+const char* Sock :: getCryptoMethodUsed() const {
 	return _crypto_method;
 }
 
@@ -2862,18 +2873,6 @@ bool Sock :: is_encrypt()
 }
 
 
-int
-Sock::_bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback)
-{
-	int rval;
-
-	if (outbound) {} // To remove unused variable warning
-	if (loopback) {} // To remove unused variable warning
-		//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
-	rval = condor_bind(fd, addr);
-	return rval;
-}
-
 void
 Sock::set_connect_addr(char const *addr)
 {
@@ -2885,7 +2884,7 @@ Sock::set_connect_addr(char const *addr)
 }
 
 char const *
-Sock::get_connect_addr()
+Sock::get_connect_addr() const
 {
 	return m_connect_addr;
 }
@@ -3065,7 +3064,7 @@ Sock::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 }
 
 bool
-Sock::canEncrypt()
+Sock::canEncrypt() const
 {
 	return crypto_ != NULL;
 }

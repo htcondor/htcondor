@@ -50,16 +50,17 @@ HashTable<HashKey, BaseJob *> BaseJob::JobsByRemoteId( HASH_TABLE_SIZE,
 
 void BaseJob::BaseJobReconfig()
 {
-	int tmp_int;
-
 	if ( periodicPolicyEvalTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( periodicPolicyEvalTid );
 		periodicPolicyEvalTid = TIMER_UNSET;
 	}
 
-	tmp_int = param_integer( "PERIODIC_EXPR_INTERVAL", 300 );
-	if ( tmp_int > 0 ) {
-		periodicPolicyEvalTid = daemonCore->Register_Timer( tmp_int, tmp_int,
+	Timeslice periodic_interval;
+	periodic_interval.setMinInterval( param_integer( "PERIODIC_EXPR_INTERVAL", 60 ) );
+	periodic_interval.setMaxInterval( param_integer( "MAX_PERIODIC_EXPR_INTERVAL", 1200 ) );
+	periodic_interval.setTimeslice( param_double( "PERIODIC_EXPR_TIMESLICE", 0.01, 0, 1 ) );
+	if ( periodic_interval.getMinInterval() > 0 ) {
+		periodicPolicyEvalTid = daemonCore->Register_Timer( periodic_interval,
 							BaseJob::EvalAllPeriodicJobExprs,
 							"EvalAllPeriodicJobExprs" );
 	}
@@ -684,7 +685,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 			if ( (expr = new_ad->LookupExpr( held_removed_update_attrs[i] )) != NULL ) {
 				ExprTree * pTree = expr->Copy();
-				jobAd->Insert( held_removed_update_attrs[i], pTree, false );
+				jobAd->Insert( held_removed_update_attrs[i], pTree );
 			} else {
 				jobAd->Delete( held_removed_update_attrs[i] );
 			}
@@ -996,16 +997,16 @@ WriteUserLog*
 InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString userLogFile, dagmanNodeLog;
+	std::string userLogFile, dagmanNodeLog;
 	std::string gjid;
 	bool use_xml = false;
 	std::vector<const char*> logfiles;
 
 	if( getPathToUserLog(job_ad, userLogFile) ) {
-		logfiles.push_back(userLogFile.Value());
+		logfiles.push_back(userLogFile.c_str());
 	}
 	if( getPathToUserLog(job_ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {                   
-		logfiles.push_back(dagmanNodeLog.Value());
+		logfiles.push_back(dagmanNodeLog.c_str());
 	}
 	if(logfiles.empty()) {
 		return NULL;

@@ -254,19 +254,19 @@ class MyString
 	 *  Assuming, of course, that you don't run out of memory. 
 	 *  The returns true if it succeeded, false otherwise.
 	 */
-	bool formatstr(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
+	const char * formatstr(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 	/** Fills a MyString with what you would have gotten from vsprintf.
 	 *  This is handy if you define your own printf-like functions.
 	 */
 
-	bool vformatstr(const char *format, va_list args);
+	const char * vformatstr(const char *format, va_list args);
 
 	/** Like formatstr, but this appends to existing data. */
-	bool formatstr_cat(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
+	const char * formatstr_cat(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 	/** Like vformatstr, but this appends to existing data. */
-	bool vformatstr_cat(const char *format, va_list args);
+	const char * vformatstr_cat(const char *format, va_list args);
 
 	/** Append str.  If we are non-empty, append delim before str.
 	if str is empty, do nothing.
@@ -417,6 +417,8 @@ class MyString
 	//@}
 
 private:
+	friend class YourString;
+	friend class YourStringNoCase;
 	friend class MyStringSource;
 	friend class MyStringCharSource;
 
@@ -442,62 +444,66 @@ private:
 unsigned int MyStringHash( const MyString &str );
 
 class YourString {
+protected:
+	const char *m_str;
 public:
 	YourString() : m_str(0) {}
 	YourString(const char *str) : m_str(str) {}
 	YourString(const std::string & s) : m_str(s.c_str()) {}
+	YourString(const MyString & s) : m_str(s.Data) {}
 	YourString(const YourString &rhs) : m_str(rhs.m_str) {}
 
 	void operator =(const char *str) { m_str = str; }
+	const char * c_str() const { return m_str ? m_str : ""; }
 	const char * Value() const { return m_str ? m_str : ""; }
 	const char * ptr() const { return m_str; }
+	bool empty() const { return !m_str || !m_str[0]; }
 
 	operator const char * () const { return m_str; }
 
-	bool operator ==(const YourString &rhs) const {
-		if (m_str == rhs.m_str) return true;
-		if ((!m_str) || (!rhs.m_str)) return false;
-		return strcmp(m_str,rhs.m_str) == 0;
-	}
-	bool operator ==(const char * str) const {
-		if (m_str == str) return true;
-		if ((!m_str) || (!str)) return false;
-		return strcmp(m_str,str) == 0;
-	}
-	bool operator<(const char * str) const {
-		if ( ! m_str) {
-			 return str ? -1 : 0;
-		} else if ( ! str) {
-			return 1;
-		}
-		return strcmp(m_str, str) < 0;
-	}
-	bool operator<(const YourString &rhs) const {
-		if ( ! m_str) {
-			 return rhs.m_str ? -1 : 0;
-		} else if ( ! rhs.m_str) {
-			return 1;
-		}
-		return strcmp(m_str, rhs.m_str) < 0;
-	}
-	static unsigned int hashFunction(const YourString &s) {
-		// hash function for strings
-		// Chris Torek's world famous hashing function
-		unsigned int hash = 0;
-		if (!s.m_str) return 7; // Least random number
+	bool operator ==(const char * str) const;
+	bool operator ==(const std::string & str) const { return operator==(str.c_str()); }
+	bool operator ==(const MyString & str) const { return operator==(str.Data); }
+	bool operator ==(const YourString &rhs) const;
+	bool operator !=(const char * str) const { return !(operator==(str)); }
+	bool operator !=(const std::string & str) const { return !(operator==(str.c_str())); }
+	bool operator !=(const MyString & str) const { return !(operator==(str)); }
+	bool operator !=(const YourString &rhs) const { return !(operator==(rhs)); }
 
-		const char *p = s.m_str;
-		while (*p) {
-			hash = (hash<<5)+hash + (unsigned char)*p;
-			p++;
-		}
+	bool operator <(const char * str) const;
+	bool operator <(const std::string & str) const { return operator<(str.c_str()); }
+	bool operator <(const MyString & str) const { return operator<(str.Data); }
+	bool operator <(const YourString &rhs) const;
 
-		return hash;
-	}
-
-protected:
-	const char *m_str;
+	static unsigned int hashFunction(const YourString &s);
+	static unsigned int hashFunctionNoCase(const YourString &s);
 };
+
+class YourStringNoCase : public YourString {
+public:
+	YourStringNoCase(const char * str=NULL) : YourString(str) {}
+	YourStringNoCase(const MyString & str) : YourString(str.Data) {}
+	YourStringNoCase(const std::string &str) : YourString(str.c_str()) {}
+	YourStringNoCase(const YourString &rhs) : YourString(rhs) {}
+	YourStringNoCase(const YourStringNoCase &rhs) : YourString(rhs.m_str) {}
+
+	bool operator ==(const char * str) const;
+	bool operator ==(const std::string & str) const { return operator==(str.c_str()); }
+	bool operator ==(const MyString & str) const { return operator==(str.Data); }
+	bool operator ==(const YourStringNoCase &rhs) const;
+	bool operator !=(const char * str) const { return !(operator==(str)); }
+	bool operator !=(const std::string & str) const { return !(operator==(str.c_str())); }
+	bool operator !=(const MyString & str) const { return !(operator==(str.Data)); }
+	bool operator !=(const YourStringNoCase &rhs) const { return !(operator==(rhs)); }
+
+	bool operator <(const char * str) const;
+	bool operator <(const std::string & str) const { return operator<(str.c_str()); }
+	bool operator <(const MyString & str) const { return operator<(str.Data); }
+	bool operator <(const YourStringNoCase &rhs) const { return operator<(rhs.m_str); }
+
+	static unsigned int hashFunction(const YourStringNoCase &s) { return YourString::hashFunctionNoCase(s); }
+};
+
 
 // deserialization helper functions
 //
@@ -573,6 +579,9 @@ public:
 
 	char* Attach(char* src) { char* pOld = ptr; ptr = src; return pOld; }
 	char* Detach() { return Attach(NULL); }
+	const char * data() const { return ptr; }
+	int          pos() const { return ix; }
+	void rewind() { ix = 0; }
 	virtual bool readLine(MyString & str, bool append = false);
 	virtual bool isEof();
 protected:

@@ -34,14 +34,6 @@ typedef std::map< std::string, ActionHandler > ActionToHandlerMap;
  *      CreateTags
  */
 
-/*
- * Inexplicably, this isn't one of the standard specializations.
- * Even less explicably, you can't use namespace aliases to open a namespace.
- *
- * However, by supplying this specialization, all of the ext::hash_maps using
- * std::string as a key work without further ado.
- */
-
 std::string xmlTag( const char * tagName, const std::string & tagValue ) {
     std::ostringstream os;
     os << "<" << tagName << ">" << tagValue << "</" << tagName << ">";
@@ -254,7 +246,7 @@ User & validateAndAcquireUser( AttributeValueMap & avm, std::string & userID, st
 
     userID = getObject< std::string >( avm, "AWSAccessKeyId", found );
     if( (! found) || userID.empty() ) {
-        fprintf( stderr, "Failed to find userID in query.\n" );
+        fprintf( stderr, "Failed to find user ID in query.\n" );
         reply = "Required parameter 'AWSAccessKeyId' missing or empty.\n";
         found = false;
         return dummyUser;
@@ -664,6 +656,38 @@ void registerAllHandlers() {
     simulatorActions[ "CreateTags" ] = & handleCreateTags;
 }
 
+// m/^Authorization: <algorithm> Credential=<accessKeyID>/....
+bool extractAccessKeyID( const std::string & header, std::string & accessKeyID ) {
+	std::string::size_type i = header.find( "\r\nAuthorization: " );
+	if( std::string::npos == i ) {
+		fprintf( stderr, "Malformed header '%s': contains no Authorization header; failing.\n", header.c_str() );
+		return false;
+	}
+
+	std::string::size_type j = header.find( "\r\n", i + 2 );
+	if( std::string::npos == j ) {
+        fprintf( stderr, "Malformed request '%s': Authorization field not CR/LF terminated; failing.\n", header.c_str() );
+		return false;
+	}
+
+	std::string credential = "Credential=";
+	std::string::size_type k = header.find( credential, i );
+	if( std::string::npos == j || k >= j ) {
+		fprintf( stderr, "Malformed header '%s': Authorization field does not contain Credential.\n", header.c_str() );
+		return false;
+	}
+
+	std::string::size_type l = header.find( "/", k + credential.length() );
+	if( std::string::npos == j || l >= j ) {
+		fprintf( stderr, "Malformed header '%s': Credential does not contain '/'.\n", header.c_str() );
+		return false;
+	}
+
+	accessKeyID = header.substr( k + credential.length(), l - (k + credential.length()) );
+	// fprintf( stderr, "Found accessKeyID '%s'\n", accessKeyID.c_str() );
+	return true;
+}
+
 // m/^Host: <host>\r\n/
 bool extractHost( const std::string & request, std::string & host ) {
     std::string::size_type i = request.find( "\r\nHost: " );
@@ -813,6 +837,19 @@ std::string handleRequest( const std::string & header, std::string & request ) {
 
         i = ampersandIdx;
     }
+
+
+	//
+	// Quick hack to handle signature V4.
+	//
+	std::string accessKeyID = queryParameters[ "AWSAccessKeyId" ];
+	if( accessKeyID.empty() ) {
+    	if( ! extractAccessKeyID( header, accessKeyID ) ) {
+	        return constructReply( "HTTP/1.1 400 Bad Request", "Unable to extract accessKeyID" );
+    	}
+		queryParameters[ "AWSAccessKeyId" ] = accessKeyID;
+	}
+
 
     std::string method = "POST";
     if( ! validateSignature( method, host, URL, queryParameters ) ) {

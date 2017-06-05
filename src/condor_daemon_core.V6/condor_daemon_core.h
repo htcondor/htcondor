@@ -62,6 +62,7 @@
 #include "generic_stats.h"
 #include "filesystem_remap.h"
 #include "counted_ptr.h"
+#include "daemon_keep_alive.h"
 #include <vector>
 
 #include "../condor_procd/proc_family_io.h"
@@ -285,6 +286,7 @@ class DaemonCore : public Service
 #endif
   friend int dc_main(int, char**);
   friend class DaemonCommandProtocol;
+  friend class DaemonKeepAlive;
     
   public:
     
@@ -474,6 +476,12 @@ class DaemonCore : public Service
 		   otherwise NULL.
 		*/
 	const char* superUserNetworkIpAddr(void);
+
+		/** Determine if a Stream passed to a command handler
+			originated via the condor_sos command (i.e. via super user socket)
+			@return true if super user command, else false
+		*/
+	bool Is_Command_From_SuperUser( Stream *s );
 
 		/**
 		   @return The daemon's private network name, or NULL if there
@@ -1005,6 +1013,16 @@ class DaemonCore : public Service
         @param timeslice       Timeslice object specifying interval parameters
         @param event           Function to call when timer fires.
         @param event_descrip   String describing the function.
+        @return                Timer id or -1 on error
+    */
+    int Register_Timer (const Timeslice &timeslice,
+                        TimerHandler handler,
+                        const char * event_descrip);
+
+	/** 
+        @param timeslice       Timeslice object specifying interval parameters
+        @param event           Function to call when timer fires.
+        @param event_descrip   String describing the function.
         @param s               Service object of which function is a member.
         @return                Timer id or -1 on error
     */
@@ -1336,6 +1354,7 @@ class DaemonCore : public Service
 	int Kill_Thread(int tid);
 	//@}
 
+
 	/** Public method to allow things that fork() themselves without
 		using Create_Thread() to set the magic DC variable so that our
 		version of exit() uses _exit() instead of exit() and we don't
@@ -1513,7 +1532,7 @@ class DaemonCore : public Service
 		   is to send CHILDALIVEs.
 		*/
 	void WantSendChildAlive( bool send_alive )
-		{ m_want_send_child_alive = send_alive; }
+		{ m_DaemonKeepAlive.WantSendChildAlive(send_alive); }
 	
 		/**
 			Returns true if a wake signal was sent to the master's select.
@@ -1576,7 +1595,9 @@ class DaemonCore : public Service
       #ifdef WIN32
 	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
       #endif
+	   stats_entry_abs<int> UdpQueueDepth;  // Unread bytes for the UDP command port 
 
+		
        stats_entry_recent<Probe> PumpCycle;   // count of pump cycles plus sum of cycle time with min/max/avg/std 
        stats_entry_sum_ema_rate<int> Commands;
 
@@ -1631,6 +1652,7 @@ class DaemonCore : public Service
 	// one of our command ports.
 	bool is_command_port_do_not_use(const condor_sockaddr & addr);
 
+	bool wants_dc_udp_self() const { return m_wants_dc_udp_self;}
   private:      
 
 		// do and our parents/children want/have a udp comment socket?
@@ -1685,6 +1707,7 @@ class DaemonCore : public Service
 	SockPairVec dc_socks;
 	ReliSock* super_dc_rsock;	// super user tcp command socket
 	SafeSock* super_dc_ssock;	// super user udp command socket
+	int m_super_dc_port;		// super user listen port
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 	int m_iMaxReapsPerCycle; // maximum number reapers to invoke per event loop
 	int m_MaxTimeSkip;
@@ -1944,12 +1967,14 @@ class DaemonCore : public Service
         int is_local;
         int parent_is_local;
         int reaper_id;
-        int hung_tid;   // Timer to detect hung processes
-        int was_not_responding;
-        int got_alive_msg; // number of child alive messages received
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
         MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
         int stdin_offset;
+
+		// these three data members are set/used by the DaemonKeepAlive class
+        unsigned int hung_past_this_time;   // if >0, child is hung if time() > this value
+        int was_not_responding;
+        int got_alive_msg; // number of child alive messages received
 
 		/* the environment variables which allow me the track the pidfamily
 			of this pid (where applicable) */
@@ -2049,15 +2074,9 @@ class DaemonCore : public Service
 
     Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
 
-    // methods to detect and kill hung processes
-    int HandleChildAliveCommand(int command, Stream* stream);
-    int HungChildTimeout();
-    int SendAliveToParent();
-    int max_hang_time;
-	int max_hang_time_raw;
-	int m_child_alive_period;
-    int send_child_alive_timer;
-	bool m_want_send_child_alive;
+	// Methods to detect and kill hung processes are consolidated
+	// in the DaemonKeepAlive helper friend class.
+	DaemonKeepAlive m_DaemonKeepAlive;
 
 	// Method to check on and possibly recover from a bad connection
 	// to the procd. Suitable to be registered as a one-shot timer.
@@ -2143,6 +2162,12 @@ class DaemonCore : public Service
 	bool m_in_daemon_shutdown_fast;
 
 	char* m_private_network_name;
+
+	// This is the argument passed to InitDCCommandSocket(), taken from
+	// the -port command line argument (default -1). We need this to
+	// correctly handle configuration of the shared port endpoint for
+	// the command socket (if there is one).
+	int m_command_port_arg;
 
 	class CCBListeners *m_ccb_listeners;
 	class SharedPortEndpoint *m_shared_port_endpoint;

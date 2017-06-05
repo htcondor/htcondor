@@ -178,6 +178,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define SWAP_CLAIM_AND_ACTIVATION (SCHED_VERS+117) // swap claim & activation between two STARTD resources, for moving a job into a 'transfer' slot.
 #define SEND_RESOURCE_REQUEST_LIST	(SCHED_VERS+118)     // used in negotiation protocol
 #define QUERY_JOB_ADS_WITH_AUTH (SCHED_VERS+119) // Same as QUERY_JOB_ADS but requires authentication
+#define FETCH_PROXY_DELEGATION (SCHED_VERS+120)
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
@@ -406,6 +407,7 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define DC_OFF_FORCE       (DC_BASE+42)
 #define DC_SET_READY       (DC_BASE+43)  // sent to parent to indicate a demon is ready for use
 #define DC_QUERY_READY     (DC_BASE+44)  // daemon command handler should reply only once it and children are ready
+#define DC_QUERY_INSTANCE  (DC_BASE+45)  // ask if a daemon is alive - returns a random 64 bit int that will not change as long as this instance is alive.
 
 
 /*

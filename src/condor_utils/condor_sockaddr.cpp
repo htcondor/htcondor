@@ -116,13 +116,13 @@ condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 	clear();
 	switch( sa->sa_family ) {
 		case AF_INET:
-			v4 = * (const sockaddr_in *)sa;
+			v4 = * reinterpret_cast<const sockaddr_in *>(sa);
 			break;
 		case AF_INET6:
-			v6 = * (const sockaddr_in6 *)sa;
+			v6 = * reinterpret_cast<const sockaddr_in6 *>(sa);
 			break;
 		case AF_UNIX:
-			storage = * (const sockaddr_storage *)sa;
+			storage = * reinterpret_cast<const sockaddr_storage *>(sa);
 			break;
 		default:
 			EXCEPT( "Attempted to construct condor_sockaddr with unrecognized address family (%d), aborting.", sa->sa_family );

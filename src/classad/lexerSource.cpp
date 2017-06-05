@@ -85,67 +85,6 @@ FileLexerSource::AtEnd(void) const
 
 /*--------------------------------------------------------------------
  *
- * InputStreamLexerSource
- *
- *-------------------------------------------------------------------*/
-
-InputStreamLexerSource::InputStreamLexerSource(istream &stream) 
-{
-	SetNewSource(stream);
-	return;
-}
-
-InputStreamLexerSource::~InputStreamLexerSource()
-{
-	return;
-}
-
-void InputStreamLexerSource::SetNewSource(istream &stream)
-{
-	_stream = &stream;
-	return;
-}
-
-int 
-InputStreamLexerSource::ReadCharacter(void)
-{
-	char real_character;
-	int  character;
-
-	if (_stream != NULL && _stream->good()) {
-		_stream->get(real_character);
-		character = (unsigned char)real_character;
-	} else {
-		character = -1;
-	}
-   _previous_character = character;
-	return character;
-}
-
-void 
-InputStreamLexerSource::UnreadCharacter(void)
-{
-	//doesn't work on cin
-	//_stream->seekg(-1, ios::cur);
-	_stream->putback(_previous_character);
-	return;
-}
-
-bool 
-InputStreamLexerSource::AtEnd(void) const
-{
-	bool at_end;
-	
-	if (_stream != NULL) {
-		at_end = (_stream->eof());
-	} else {
-		at_end = true;
-	}
-	return at_end;
-}
-
-/*--------------------------------------------------------------------
- *
  * CharLexerSource
  *
  *-------------------------------------------------------------------*/

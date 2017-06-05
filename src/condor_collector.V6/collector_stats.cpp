@@ -28,6 +28,7 @@
 #include "collector_stats.h"
 #include "collector_engine.h"
 #include "condor_config.h"
+#include "classad/classadCache.h"
 
 // The hash function to use
 static unsigned int hashFunction (const StatsHashKey &key)
@@ -324,6 +325,11 @@ void stats_entry_lost_updates::Publish(ClassAd & ad, const char * pattr, int fla
 	}
 }
 
+
+#define ADD_EXTERN_RUNTIME(pool, name, ifpub) extern collector_runtime_probe name##_runtime;\
+	name##_runtime.Clear();\
+	(pool).AddProbe( #name, &name##_runtime, #name, ifpub | IF_RT_SUM)
+
 #define ADD_RECENT_PROBE(pool, probe, verb, suffix, recent_max) \
 	probe.Clear(); \
 	probe.SetRecentMax(recent_max); \
@@ -362,8 +368,91 @@ void UpdatesStats::Init()
 	this->RecentWindowMax = this->RecentWindowQuantum;
 
 	Any.RegisterCounters(Pool, NULL, 1);
-	Pool.AddProbe("MachineAds",   &MachineAds,    NULL, IF_BASICPUB | MachineAds.PubDefault);
-	Pool.AddProbe("SubmitterAds", &SubmitterAds, NULL, IF_BASICPUB | SubmitterAds.PubDefault);
+
+	STATS_POOL_ADD(Pool, "", MachineAds, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", SubmitterAds, IF_BASICPUB);
+
+	// stats for fork workers.
+	STATS_POOL_ADD(Pool, "", ActiveQueryWorkers, IF_BASICPUB);
+	STATS_POOL_ADD(Pool, "", PendingQueries, IF_BASICPUB);
+	STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", DroppedQueries, IF_BASICPUB);
+
+	ADD_EXTERN_RUNTIME(Pool, HandleQuery, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleLocate, IF_VERBOSEPUB);
+
+	ADD_EXTERN_RUNTIME(Pool, HandleQueryForked, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleQueryMissedFork, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleLocateForked, IF_VERBOSEPUB);
+	ADD_EXTERN_RUNTIME(Pool, HandleLocateMissedFork, IF_VERBOSEPUB);
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+    #define ADD_SUBSYS_PROBES(pool,subsys,as) \
+	   pool.AddProbe("InProcQueriesFrom" #subsys, &InProcQueriesFrom[SUBSYSTEM_ID_##subsys], "InProcQueriesFrom" #subsys, as | InProcQueriesFrom[SUBSYSTEM_ID_##subsys].PubDefault); \
+	   pool.AddProbe("ForkQueriesFrom" #subsys, &ForkQueriesFrom[SUBSYSTEM_ID_##subsys], "ForkQueriesFrom" #subsys, as | ForkQueriesFrom[SUBSYSTEM_ID_##subsys].PubDefault);
+
+	ADD_SUBSYS_PROBES(Pool,UNKNOWN,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,MASTER,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,COLLECTOR,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,NEGOTIATOR,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,SCHEDD,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,SHADOW,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,STARTD,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,STARTER,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,CREDD,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,KBDD,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,GRIDMANAGER,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,HAD,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,REPLICATION,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,TRANSFERER,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,TRANSFERD,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,ROOSTER,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,SHARED_PORT,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,JOB_ROUTER,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,DEFRAG,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,GANGLIAD,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,PANDAD,IF_BASICPUB | IF_NONZERO);
+
+	ADD_SUBSYS_PROBES(Pool,DAGMAN,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,TOOL,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,SUBMIT,IF_BASICPUB | IF_NONZERO);
+	ADD_SUBSYS_PROBES(Pool,ANNEXD,IF_BASICPUB | IF_NONZERO);
+
+	ADD_SUBSYS_PROBES(Pool,GAHP,IF_BASICPUB | IF_NONZERO);
+#endif
+
+
+	// receive_update and task breakdown
+	bool enable = param_boolean("PUBLISH_COLLECTOR_ENGINE_PROFILING_STATS",false);
+	int prof_publevel = enable ? IF_BASICPUB : IF_VERBOSEPUB;
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_receive_update, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_pre_collect, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_collect, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_plugins, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_forward, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ru_stash_socket, prof_publevel);
+
+	// ru_collect subtask breakdown
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_getAd, prof_publevel);
+	//ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_replaceAd5, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_authid, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_ruc_collect, prof_publevel);
+
+	// ruc_collect subtask breakdown
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_validateAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_makeHashKey, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_insertAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_updateAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_getPvtAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_insertPvtAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_updatePvtAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_repeatAd, prof_publevel);
+	ADD_EXTERN_RUNTIME(Pool, CollectorEngine_rucc_other, prof_publevel);
+
+	getClassAdEx_clearProfileStats();
+	getClassAdEx_addProfileStatsToPool(&Pool, prof_publevel);
+
 }
 
 void UpdatesStats::Clear()
@@ -435,6 +524,30 @@ void UpdatesStats::Publish(ClassAd & ad, int flags) const
 		}
 	}
 	Pool.Publish(ad, flags);
+
+	if (param_boolean("PUBLISH_COLLECTOR_ENGINE_PROFILING_STATS",false)) {
+		long dpf_skipped=-1, dpf_logged=-1;
+		double dpf_skipped_rt=-1, dpf_logged_rt=-1;
+		if (_condor_dprintf_runtime (dpf_skipped_rt, dpf_skipped, dpf_logged_rt, dpf_logged, false)) {
+			ad.Assign("DprintfSkipped", dpf_skipped);
+			ad.Assign("DprintfSkippedRuntime", dpf_skipped_rt);
+			ad.Assign("DprintfLogged", dpf_logged);
+			ad.Assign("DprintfLoggedRuntime", dpf_logged_rt);
+		}
+
+	#ifdef CLASSAD_CACHE_PROFILING
+		unsigned long hits, misses, querys, hitdels, removals, unparse;
+		if (classad::CachedExprEnvelope::_debug_get_counts(hits, misses, querys, hitdels, removals, unparse))
+		{
+			ad.Assign("ClassadCacheHits",hits);
+			ad.Assign("ClassadCacheMisses",misses);
+			ad.Assign("ClassadCacheQuerys",querys);
+			ad.Assign("ClassadCacheHitDeletes",hitdels);
+			ad.Assign("ClassadCacheRemovals",removals);
+			ad.Assign("ClassadCacheUnparse",unparse);
+		}
+	#endif
+	}
 }
 
 void UpdatesStats::Publish(ClassAd & ad, const char * config) const

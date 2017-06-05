@@ -198,7 +198,7 @@ int CondorFileAgent::read( off_t offset, char *data, int length )
 	}
 }
 
-int CondorFileAgent::write( off_t offset, char *data, int length )
+int CondorFileAgent::write( off_t offset, const char *data, int length )
 {
 	if( is_writeable() ) {
 		return local_copy->write( offset,data, length );

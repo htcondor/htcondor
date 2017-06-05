@@ -147,6 +147,16 @@ class TimerManager
                   unsigned     period          =  0);
 
     /** Create a timer using a timeslice object to control interval.
+        @param timeslice      Timeslice object specifying interval parameters
+        @param handler        Function to call when timer fires.
+        @param event_descrip  String describing the function.
+        @return The ID of the new timer, or -1 on failure
+    */
+    int NewTimer (const Timeslice &timeslice,
+                  TimerHandler handler,
+                  const char * event_descrip);
+
+    /** Create a timer using a timeslice object to control interval.
         @param s              Service object of which function is a member.
         @param timeslice      Timeslice object specifying interval parameters
         @param handler        Function to call when timer fires.

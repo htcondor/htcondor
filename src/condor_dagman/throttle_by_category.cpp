@@ -41,7 +41,6 @@ ThrottleByCategory::~ThrottleByCategory()
 	_throttles.startIterations();
 	ThrottleInfo	*info;
 	while ( _throttles.iterate( info ) ) {
-		delete info->_category;
 		delete info;
 	}
 }

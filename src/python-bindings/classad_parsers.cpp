@@ -71,7 +71,20 @@ ClassAdWrapper *parseOld(boost::python::object input)
             continue;
         }
         std::string line_str = boost::python::extract<std::string>(line);
-        if (!wrapper->Insert(line_str))
+        size_t pos = line_str.find('=');
+
+        // strip whitespace before the attribute and and around the =
+        size_t npos = pos;
+        while (npos > 0 && line_str[npos-1] == ' ') { npos--; }
+        size_t bpos = 0;
+        while (bpos < npos && line_str[bpos] == ' ') { bpos++; }
+        std::string name = line_str.substr(bpos, npos - bpos);
+
+        size_t vpos = pos+1;
+        while (line_str[vpos] == ' ') { vpos++; }
+        std::string szValue = line_str.substr(vpos);
+
+        if (!wrapper->InsertViaCache(name, szValue))
         {
             THROW_EX(ValueError, line_str.c_str());
         }
@@ -297,7 +310,20 @@ OldClassAdIterator::next()
             adchar++;
         }
         if (invalid) {continue;}
-        if (!m_ad->Insert(line_str))
+
+        size_t pos = line_str.find('=');
+
+        // strip whitespace before the attribute and and around the =
+        size_t npos = pos;
+        while (npos > 0 && line_str[npos-1] == ' ') { npos--; }
+        size_t bpos = 0;
+        while (bpos < npos && line_str[bpos] == ' ') { bpos++; }
+        std::string name = line_str.substr(bpos, npos - bpos);
+
+        size_t vpos = pos+1;
+        while (line_str[vpos] == ' ') { vpos++; }
+        std::string szValue = line_str.substr(vpos);
+        if (!m_ad->InsertViaCache(name, szValue))
         {
             THROW_EX(ValueError, line_str.c_str());
         }

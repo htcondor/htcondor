@@ -329,7 +329,7 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
 			ad->Assign(ATTR_VM_NETWORKING, m_vm_networking); 
 		}else {
 			ExprTree * pTree =  expr->Copy();
-			ad->Insert(attr_name, pTree, false);
+			ad->Insert(attr_name, pTree);
 		}
 	}
 
@@ -597,7 +597,8 @@ VMUniverseMgr::canCreateVM(ClassAd *jobAd)
 
 	// check free memory for VM
 	int int_value = 0;
-	if( jobAd->LookupInteger(ATTR_JOB_VM_MEMORY, int_value) != 1 ) {
+	if( (jobAd->LookupInteger(ATTR_JOB_VM_MEMORY, int_value) != 1) &&
+		(jobAd->LookupInteger(ATTR_REQUEST_MEMORY, int_value) != 1) ) {
 		dprintf(D_ALWAYS, "Can't find VM memory in Job ClassAd\n");
 		return false;
 	}
@@ -630,13 +631,15 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
 
 	// Find memory for VM
 	int vm_mem = 0;
-	if( ad.LookupInteger(ATTR_JOB_VM_MEMORY, vm_mem) != 1 ) {
+	if( (ad.LookupInteger(ATTR_JOB_VM_MEMORY, vm_mem) != 1) &&
+	    (ad.LookupInteger(ATTR_REQUEST_MEMORY, vm_mem) != 1) ) {
 		dprintf(D_ALWAYS, "Can't find VM memory in Job ClassAd\n");
 		return false;
 	}
 
 	int vcpus = 0;
-	if(ad.LookupInteger(ATTR_JOB_VM_VCPUS, vcpus) != 1)
+	if( (ad.LookupInteger(ATTR_JOB_VM_VCPUS, vcpus) != 1) &&
+	    (ad.LookupInteger(ATTR_REQUEST_CPUS, vcpus) != 1) )
 	  {
 	    dprintf(D_FULLDEBUG, "Defaulting to one CPU\n");
 	    vcpus = 1;
@@ -780,10 +783,14 @@ VMUniverseMgr::findVMStarterInfoWithIP(const char* ip)
 	return NULL;
 }
 
-void 
-VMUniverseMgr::checkVMUniverse(void)
+void
+VMUniverseMgr::checkVMUniverse( bool warn )
 {
-	dprintf( D_ALWAYS, "VM-gahp server reported an internal error\n");
+	// This might be better as detect, where detect never sets m_needCheck
+	// because it should be an error for there to be running VMs on startup.
+	if( warn ) {
+		dprintf( D_ALWAYS, "VM-gahp server reported an internal error\n");
+	}
 
 	if( numOfRunningVM() == 0 ) {
 		// There is no running VM job.
@@ -791,7 +798,7 @@ VMUniverseMgr::checkVMUniverse(void)
 		docheckVMUniverse();
 		return;
 	}
-	
+
 	// There are running VM jobs.
 	// We need to wait for all jobs to be finished
 	// When all jobs are finished, we will call docheckVMUniverse function

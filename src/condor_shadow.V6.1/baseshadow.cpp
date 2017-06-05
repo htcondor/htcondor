@@ -829,7 +829,7 @@ BaseShadow::emailUser( const char *subjectline )
 
 void BaseShadow::initUserLog()
 {
-	MyString logfilename,dagmanLogFile;
+	std::string logfilename,dagmanLogFile;
 	int  use_xml;
 
 		// we expect job_updater to already be initialized, in case we
@@ -839,19 +839,19 @@ void BaseShadow::initUserLog()
 
 	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(jobAd, logfilename) ) {
-		logfiles.push_back(logfilename.Value());
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());	
+		logfiles.push_back(logfilename.c_str());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.c_str());
 	}
 	if ( getPathToUserLog(jobAd, dagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG) ) {
-		logfiles.push_back(dagmanLogFile.Value());
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.Value());	
+		logfiles.push_back(dagmanLogFile.c_str());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.c_str());
 	}
 	if( !logfiles.empty()) {
 		if( !uLog.initialize (logfiles, cluster, proc, 0, gjid)) {
 			MyString hold_reason;
 			hold_reason.formatstr("Failed to initialize user log to %s%s%s",
-				logfilename.Value(), logfiles.size() == 1 ? "" : " or ",
-				dagmanLogFile.Value());
+				logfilename.c_str(), logfiles.size() == 1 ? "" : " or ",
+				dagmanLogFile.c_str());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 			holdJobAndExit(hold_reason.Value(),
 					CONDOR_HOLD_CODE_UnableToInitUserLog,0);

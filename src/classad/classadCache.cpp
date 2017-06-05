@@ -16,7 +16,10 @@
  * 
  ***************************************************************/
 
+#include "classad/common.h"
 #include "classad/classadCache.h"
+#include "classad/sink.h"
+#include "classad/source.h"
 #include <assert.h>
 #include <stdio.h>
 #include <list>
@@ -34,31 +37,51 @@ using namespace std;
 class ClassAdCache
 {
 protected:
-    
-        typedef classad_unordered<std::string, pCacheEntry> AttrValues;
-        typedef classad_unordered<std::string, pCacheEntry>::iterator value_iterator;
-        
+
+	typedef classad_unordered<std::string, pCacheEntry> AttrValues;
+	typedef classad_unordered<std::string, pCacheEntry>::iterator value_iterator;
+
 	typedef classad_unordered<std::string, AttrValues, ClassadAttrNameHash, CaseIgnEqStr> AttrCache;
 	typedef classad_unordered<std::string, AttrValues, ClassadAttrNameHash, CaseIgnEqStr>::iterator cache_iterator;
 
 	AttrCache m_Cache;		///< Data Store
 	unsigned long m_HitCount;	///< Hit Counter
 	unsigned long m_MissCount;	///< Miss Counter
-	unsigned long m_MissCheck;	///< Miss Counter
+	unsigned long m_QueryCount;	///< Checks that don't offer an expr-tree
+	unsigned long m_HitDelete;	///< Hits that freed the incoming expr tree
 	unsigned long m_RemovalCount;	///< Useful to see churn
+	unsigned long m_UnparseCount; ///< number of times we had to unparse a tree to populate the cache.
 	bool          m_destroyed;
 	
 public:
 	ClassAdCache()
 	: m_HitCount(0)
 	, m_MissCount(0)
-	, m_MissCheck(0)
+	, m_QueryCount(0)
+	, m_HitDelete(0)
 	, m_RemovalCount(0)
+	, m_UnparseCount(0)
 	, m_destroyed(false)
 	{ 
 	};
 	
 	virtual ~ClassAdCache(){ m_destroyed = true; };
+
+#ifndef WIN32
+	pCacheData cache( std::string & szName, ExprTree * pVal)
+#else
+	pCacheData cache(const std::string & szName, ExprTree * pVal)
+#endif
+	{
+		std::string szValue;
+		if (pVal) {
+			m_UnparseCount++;
+			ClassAdUnParser unparser;
+			//PRAGMA_REMIND("this should probably unparse in old classad form")
+			unparser.Unparse(szValue, pVal);
+		}
+		return cache(szName, szValue, pVal);
+	}
 
 	///< cache's a local attribute->ExpTree
 #ifndef WIN32
@@ -68,58 +91,88 @@ public:
 #endif
 	{
 		pCacheData pRet;
-		
+
 		cache_iterator itr = m_Cache.find(szName);
-                bool bValidName=false;
-		
-		if ( itr != m_Cache.end() ) 
-		{
-                  bValidName = true;
-                  value_iterator vtr = itr->second.find(szValue);
-                 #ifndef WIN32 // this just wastes time on windows
-                  szName = itr->first;
-                 #endif
+		bool bValidName=false;
 
-                  // check the value cache
-                  if (vtr != itr->second.end())
-                  {
-                    pRet = vtr->second.lock();
-                    
-                    m_HitCount++;
-                    if (pVal)
-                    {
-                        delete pVal;
-                    }
-                    
-                    // don't to any more checks just return.
-                    return pRet;
-                    
-                  }
-                  
-		} 
-		
+		if (itr != m_Cache.end()) {
+			bValidName = true;
+			value_iterator vtr = itr->second.find(szValue);
+#ifndef WIN32 // this just wastes time on windows
+			szName = itr->first;
+#endif
+
+			// check the value cache
+			if (vtr != itr->second.end()) {
+				pRet = vtr->second.lock();
+
+				m_HitCount++;
+				if (pVal) {
+					delete pVal;
+					m_HitDelete++;
+				} else {
+					m_QueryCount++;
+				}
+
+				// don't to any more checks just return.
+				return pRet;
+			}
+		}
+
 		// if we got here we missed 
-                if (pVal)
-                {
-                    pRet.reset( new CacheEntry(szName,szValue,pVal) );
+		if (pVal) {
+			pRet.reset( new CacheEntry(szName,szValue,pVal) );
 
-                    if (bValidName)
-                    {
-                        itr->second[szValue] = pRet;
-                    }
-                    else
-                    {
-                        AttrValues vCache;
-                        vCache[szValue] = pRet;
-                        m_Cache[szName] = vCache;
-                    }
+			if (bValidName) {
+				itr->second[szValue] = pRet;
+			} else {
+				(m_Cache[szName])[szValue] = pRet;
+			}
 
-                    m_MissCount++;
-                }
-                else
-                {
-                    m_MissCheck++;
-                }
+			m_MissCount++;
+		} else {
+			m_QueryCount++;
+		}
+
+		return pRet;
+	}
+
+#ifndef WIN32
+	pCacheData insert_lazy( std::string & szName, const std::string & szValue)
+#else
+	pCacheData insert_lazy(const std::string & szName, const std::string & szValue)
+#endif
+	{
+		pCacheData pRet;
+
+		cache_iterator itr = m_Cache.find(szName);
+		bool bValidName=false;
+
+		if (itr != m_Cache.end()) {
+			bValidName = true;
+			value_iterator vtr = itr->second.find(szValue);
+#ifndef WIN32 // this just wastes time on windows
+			szName = itr->first;
+#endif
+
+			// check the value cache
+			if (vtr != itr->second.end()) {
+				pRet = vtr->second.lock();
+				m_HitCount++;
+				// don't to any more checks just return.
+				return pRet;
+			}
+		}
+
+		// if we got here we missed
+		m_MissCount++;
+		pRet.reset( new CacheEntry(szName,szValue,NULL) );
+
+		if (bValidName) {
+			itr->second[szValue] = pRet;
+		} else {
+			(m_Cache[szName])[szValue] = pRet;
+		}
 
 		return pRet;
 	}
@@ -131,25 +184,21 @@ public:
 		// and possibly other places as well.
 		if (m_destroyed) return false;
 
-	  cache_iterator itr = m_Cache.find(szName);
+		cache_iterator itr = m_Cache.find(szName);
 
-      if (itr != m_Cache.end())
-	  {
-		  if (itr->second.size() == 1)
-			  {
+		if (itr != m_Cache.end()) {
+			if (itr->second.size() == 1) {
 				m_Cache.erase(itr);
-			  }
-			  else
-			  {
+			} else {
 				value_iterator vtr = itr->second.find(szValue);
 				itr->second.erase(vtr);
-		      }
+			}
 
-		  m_RemovalCount++;
-		  return (true);
-	  }
+			m_RemovalCount++;
+			return (true);
+		}
 
-	  return false;
+		return false;
 	} 
 	
 	///< dumps the contents of the cache to the file
@@ -204,7 +253,7 @@ public:
 	    getpid()
 #endif
 	    );
-	    fprintf( fp, "Hits [%lu - %f] Misses[%lu - %f] QueryMiss[%lu]\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_MissCheck ); 
+	    fprintf( fp, "Hits [%lu - %f] Misses[%lu - %f] Querys[%lu]\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_QueryCount ); 
 	    fprintf( fp, "Entries[%lu] UseCount[%lu] FlushedCount[%lu]\n", lEntries,lTotalUseCount,m_RemovalCount );
 	    fprintf( fp, "Pruned[%lu] - SHOULD BE 0\n",lTotalPruned);
 	    fprintf( fp, "------------------------------------------------\n");
@@ -266,9 +315,17 @@ public:
 
 		fprintf( fp, "Attribs: %lu SingleUseAttribs: %lu AttribsWithOnlySingletons: %lu\n",  cAttribs, cSingletonAttribs, cAttribsWithOnlySingletonValues);
 		fprintf( fp, "Values: %lu SingleUseValues: %lu UseCountTot:%lu UseCountMax: %lu\n", cTotalValues, cSingletonValues, cTotalUseCount, cMaxUseCount);
-		fprintf( fp, "Hits:%lu (%.2f%%) Misses: %lu (%.2f%%) QueryMiss: %lu\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_MissCheck ); 
+		fprintf( fp, "Hits:%lu (%.2f%%) Misses: %lu (%.2f%%) Querys: %lu\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_QueryCount ); 
 	};
 
+	void get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long & hitdels, unsigned long &removals, unsigned long &unparse) {
+		hits = m_HitCount;
+		misses = m_MissCount;
+		querys = m_QueryCount;
+		hitdels = m_HitDelete;
+		removals = m_RemovalCount;
+		unparse = m_UnparseCount;
+	}
 };
 
 
@@ -280,85 +337,74 @@ static classad_shared_ptr<ClassAdCache> _cache;
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-CacheEntry::CacheEntry()
-{
-	pData=0;
-}
-
-CacheEntry::CacheEntry(const std::string & szNameIn, const std::string & szValueIn, ExprTree * pDataIn)
-{
-    szName = szNameIn;
-    szValue = szValueIn;
-    pData = pDataIn;
-}
-
 CacheEntry::~CacheEntry()
 {
-    if (pData && _cache && _cache.use_count())
-    {
-        _cache->flush(szName, szValue);
-		delete pData;
-        pData=0;
-    }
+	if (_cache && _cache.use_count()) {
+		_cache->flush(szName, szValue);
+	}
+	delete pData;
+	pData = NULL;
 }
 
-CachedExprEnvelope::~CachedExprEnvelope()
+
+#ifndef WIN32
+ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree, const std::string & szValue)
+#else
+ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTree, const std::string & szValue)
+#endif
 {
-  // nothing to do shifted to the cache entry. 
+	ExprTree * pRet = pTree;
+	CachedExprEnvelope * pNewEnv = NULL;
+	
+	NodeKind nk = pTree->GetKind();
+	switch (nk)
+	{
+	case EXPR_ENVELOPE:
+		pRet = pTree;
+		break;
+
+	case EXPR_LIST_NODE:
+	case CLASSAD_NODE:
+#ifndef WIN32 // this just wastes time on windows.
+		// for classads the values are already cached but we still should string space the name
+		check_hit (pName, szValue);
+#endif
+		break;
+
+	default:
+		if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
+		pNewEnv = new CachedExprEnvelope();
+		pNewEnv->m_pLetter = _cache->cache(pName, szValue, pTree);
+		pRet = pNewEnv;
+		break;
+	}
+	
+	return pRet;
 }
 
 #ifndef WIN32
-ExprTree * CachedExprEnvelope::cache (std::string & pName, const std::string & szValue, ExprTree * pTree)
+ExprTree * CachedExprEnvelope::cache_lazy (std::string & pName, const std::string & szValue)
 #else
-ExprTree * CachedExprEnvelope::cache (const std::string & pName, const std::string & szValue, ExprTree * pTree)
+ExprTree * CachedExprEnvelope::cache_lazy (const std::string & pName, const std::string & szValue)
 #endif
 {
-	ExprTree * pRet=pTree;
-	const std::string * pszValue = &szValue;
-	NodeKind nk = pTree->GetKind();
-	
-	switch (nk)
-	{
-	  case EXPR_ENVELOPE:
-	     pRet = pTree;
-	  break;
-	  
-	  case EXPR_LIST_NODE:
-	  case CLASSAD_NODE:
-#ifndef WIN32 // this just wastes time on windows.
-	    // for classads the values are already cached but we still should string space the name
-	    check_hit (pName, szValue);
-#endif
-	  break;
-	    
-	  default:
-	  {
-	    CachedExprEnvelope * pNewEnv = new CachedExprEnvelope();
-	
-		// if no unparsed value was passed in, then unparse the passed-in ExprTree
-		std::string szUnparsedValue;
-		if (szValue.empty()) {
-			classad::val_str(szUnparsedValue, pTree);
-			pszValue = &szUnparsedValue;
-		}
-	
-	    if (!_cache)
-	    {
-	      _cache.reset( new ClassAdCache() );
-	    }
-
-	    pNewEnv->m_pLetter = _cache->cache(pName, *pszValue, pTree);
-	    pRet = pNewEnv;
-	  }
-	}
-	
-	return ( pRet );
+	if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
+	CachedExprEnvelope *pEnv = new CachedExprEnvelope();
+	pEnv->m_pLetter = _cache->insert_lazy(pName, szValue);
+	return pEnv;
 }
 
 bool CachedExprEnvelope::_debug_dump_keys(const string & szFile)
 {
   if ( ! _cache) return false;
   return _cache->dump_keys(szFile);
+}
+
+bool CachedExprEnvelope::_debug_get_counts(unsigned long &hits, unsigned long &misses, unsigned long &querys, unsigned long & hitdels, unsigned long &removals, unsigned long &unparse)
+{
+	if ( ! _cache) return false;
+	_cache->get_counts(hits, misses, querys, hitdels, removals, unparse);
+	return true;
 }
 
 void CachedExprEnvelope::_debug_print_stats(FILE* fp)
@@ -386,25 +432,35 @@ CachedExprEnvelope * CachedExprEnvelope::check_hit (string & szName, const strin
    return pRet;
 }
 
-void CachedExprEnvelope::getAttributeName(std::string & szFillMe)
-{
-    if (m_pLetter)
-    {
-        szFillMe = m_pLetter->szName;
-    }
-}
 
-ExprTree * CachedExprEnvelope::get()
+ExprTree * CachedExprEnvelope::get() const
 {
-	ExprTree * pRet = 0;
+	ExprTree * expr = NULL;
 	
-	if (m_pLetter)
-	{
-		pRet = m_pLetter->pData;
+	if (m_pLetter) {
+		CacheEntry * ptr = m_pLetter.get();
+		expr = ptr->pData;
+		if ( ! expr) {
+			ClassAdParser parser;
+			parser.SetOldClassAd(true);
+			expr = parser.ParseExpression(ptr->szValue);
+			ptr->pData = expr;
+		}
 	}
 	
-	return ( pRet );
+	return expr;
 }
+
+const std::string & CachedExprEnvelope::get_unparsed_str() const
+{
+	if (m_pLetter) {
+		return m_pLetter->szValue;
+	} else {
+		static std::string errbuf("error");
+		return errbuf;
+	}
+}
+
 
 ExprTree * CachedExprEnvelope::Copy( ) const
 {
@@ -412,94 +468,57 @@ ExprTree * CachedExprEnvelope::Copy( ) const
 	
 	// duplicate as little data as possible.
 	pRet->m_pLetter = this->m_pLetter;
+#if defined(SCOPE_REFACTOR)
+#else
 	pRet->parentScope = this->parentScope;
+#endif
 	
 	return ( pRet );
 }
 
-const ExprTree* CachedExprEnvelope::self() const
-{
-	return m_pLetter->pData;
-}
 
-/* This version is for shared-library compatibility.
- * Remove it the next time we have to bump the ClassAds SO version.
- */
-const ExprTree* CachedExprEnvelope::self()
-{
-	return m_pLetter->pData;
-}
-
-void CachedExprEnvelope::_SetParentScope( const ClassAd* )
-{
-	// nothing to do here already set @ base
-}
-
+// because of the lazy option, we want to try and avoid parsing
+// if we can.
 bool CachedExprEnvelope::SameAs(const ExprTree* tree) const
 {
-	bool bRet = false;
-	
-	if (tree && m_pLetter && m_pLetter->pData)
-	{
-		bRet = m_pLetter->pData->SameAs(((ExprTree*)tree)->self()) ;
+	if (this == tree) {
+		return true;
 	}
 
-	return bRet;
-}
-
-bool CachedExprEnvelope::isClassad( ClassAd ** ptr )
-{
-	bool bRet = false;
-	
-	if (m_pLetter && m_pLetter->pData && CLASSAD_NODE == m_pLetter->pData->GetKind() )
-	{
-		if (ptr)
-		{
-			*ptr = (ClassAd *) m_pLetter->pData;
+	if (tree->GetKind() != EXPR_ENVELOPE) {
+		if (m_pLetter && m_pLetter->pData) {
+			return m_pLetter->pData->SameAs(tree);
 		}
-		bRet = true;
+		return false;
 	}
-	
-	return bRet;
+
+	const CachedExprEnvelope* that = (const CachedExprEnvelope*)tree;
+	if ( ! m_pLetter || ! that->m_pLetter) return false;
+	if (m_pLetter == that->m_pLetter) return true;
+
+	return get()->SameAs(tree);
 }
 
 
 bool CachedExprEnvelope::_Evaluate( EvalState& st, Value& v ) const
 {
-	bool bRet = false;
-	
-	if (m_pLetter && m_pLetter->pData)
-	{
-		bRet = m_pLetter->pData->Evaluate(st,v);
-	}
-
-	return bRet;
+	ExprTree * tree = get();
+	if (tree) { return tree->Evaluate(st,v); }
+	return false;
 }
 
 bool CachedExprEnvelope::_Evaluate( EvalState& st, Value& v, ExprTree*& t) const
 {
-	bool bRet = false;
-	
-	if (m_pLetter && m_pLetter->pData)
-	{
-		bRet = m_pLetter->pData->Evaluate(st,v,t);
-	}
-
-	return bRet;
-	
+	ExprTree * tree = get();
+	if (tree) { return tree->Evaluate(st,v,t); }
+	return false;
 }
 
-bool CachedExprEnvelope::_Flatten( EvalState& st, Value& v, ExprTree*& t, int* i)const
+bool CachedExprEnvelope::_Flatten( EvalState& st, Value& v, ExprTree*& t, int* i) const
 {
-	bool bRet = false;
-	
-	if (m_pLetter && m_pLetter->pData)
-	{
-		bRet = m_pLetter->pData->Flatten(st,v,t,i);
-	}
-
-	return bRet;
-	
+	ExprTree * tree = get();
+	if (tree) { return tree->Flatten(st,v,t,i); }
+	return false;
 }
 
 

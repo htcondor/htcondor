@@ -308,7 +308,7 @@ void CondorFileCompress::read_string()
 
 /* Set up the decompression stream to work from the given offset, and then compress. */
 
-int CondorFileCompress::write( off_t offset, char *data, int length )
+int CondorFileCompress::write( off_t offset, const char *data, int length )
 {
 	if( offset==voffset && last_action==WRITE ) {
 
@@ -350,13 +350,13 @@ int CondorFileCompress::write( off_t offset, char *data, int length )
 
 /* Write data to the current logical offset.  If flush==Z_FINISH, push all the data out. */
 
-int CondorFileCompress::write_data( char *data, int length, int flushData )
+int CondorFileCompress::write_data( const char *data, int length, int flushData )
 {
 	int result;
 	int failure=0;
 	int bytes_written=0;
 
-	stream.next_in = (Bytef*) data;
+	stream.next_in = const_cast<Bytef*>((const Bytef*) data);
 	stream.avail_in = length;
 
 	while(1) {
@@ -386,7 +386,7 @@ int CondorFileCompress::write_data( char *data, int length, int flushData )
 	voffset += bytes_written;
 
 	if( bytes_written>0 ) {
-		crc = crc32(crc,(Bytef*)data,bytes_written);
+		crc = crc32(crc,(const Bytef*)data,bytes_written);
 		return bytes_written;
 	} else if( failure ) {
 		return -1;
@@ -417,7 +417,7 @@ int CondorFileCompress::write_header()
 	header.method = GZIP_METHOD_DEFLATED;
 	header.system = GZIP_SYSTEM_UNIX;
 
-	int result = original->write( poffset, (char*) &header, sizeof(header));
+	int result = original->write( poffset, (const char*) &header, sizeof(header));
 
 	if( result==sizeof(header) ) {
 		poffset += sizeof(header);

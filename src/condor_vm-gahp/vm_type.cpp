@@ -101,9 +101,9 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 	
 	m_result_msg = "";
 	// Read the amount of memory for VM
-	if( m_classAd.LookupInteger( ATTR_JOB_VM_MEMORY, m_vm_mem) != 1 ) {
-		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
-				ATTR_JOB_VM_MEMORY);
+	if( (m_classAd.LookupInteger( ATTR_JOB_VM_MEMORY, m_vm_mem) != 1)
+	 && (m_classAd.LookupInteger( ATTR_REQUEST_MEMORY, m_vm_mem) != 1) ) {
+		vmprintf(D_ALWAYS, "VM memory cannot be found in job classAd\n" );
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM;
 		return false;
 	}else {
@@ -118,7 +118,8 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 
 	vmprintf(D_FULLDEBUG, "Looking up number of vcpus.\n");
 	// Read the number of vcpus
-	if( m_classAd.LookupInteger( ATTR_JOB_VM_VCPUS, m_vcpus) != 1) {
+	if( (m_classAd.LookupInteger( ATTR_JOB_VM_VCPUS, m_vcpus) != 1) &&
+	    (m_classAd.LookupInteger( ATTR_REQUEST_CPUS, m_vcpus) != 1) ) {
 	  vmprintf(D_FULLDEBUG, "No VCPUS defined or VCPUS definition is bad.\n");
 	}
 	if(m_vcpus < 1) m_vcpus = 1;

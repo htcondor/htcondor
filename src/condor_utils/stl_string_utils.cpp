@@ -305,6 +305,17 @@ bool sort_decending_ignore_case(std::string const & a, std::string const & b)
 	return ! sort_ascending_ignore_case(a, b);
 }
 
+/*
+** Return true iff the given string is a blank line.
+*/
+int blankline( const char *str )
+{
+	while(isspace(*str))
+		str++;
+	return( (*str=='\0') ? 1 : 0);
+}
+
+
 static char *tokenBuf = NULL;
 static char *nextToken = NULL;
 

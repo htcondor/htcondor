@@ -69,7 +69,8 @@ public:
 		*/
 	bool initFromJobAd( ClassAd* ad,
 						const char* path_attr = ATTR_STARTER_ULOG_FILE,
-						const char* xml_attr = ATTR_STARTER_ULOG_USE_XML );
+						const char* xml_attr = ATTR_STARTER_ULOG_USE_XML,
+						bool write_event_log = false );
 
 		/// Initialize ourselves such that we won't write a user log 
 	bool initNoLogging( void );

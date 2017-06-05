@@ -2,9 +2,6 @@
 #define __QUERY_ITERATOR_H_
 
 
-#include <boost/python.hpp>
-
-
 class Sock;
 
 

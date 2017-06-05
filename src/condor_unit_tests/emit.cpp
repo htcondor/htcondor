@@ -37,6 +37,7 @@ Emitter::Emitter() {
 	buf = 0;
 	test_buf = 0;
 	cur_test_name = 0;
+	cur_test_step_failures = 0;
 }
 
 Emitter::~Emitter() {
@@ -116,9 +117,17 @@ void Emitter::emit_problem(const char* problem) {
 	print_now_if_possible();
 }
 
+/* Reports a failure of a subtest, but continues on
+ */
+void Emitter::emit_step_failure(int line, const char * description) {
+	buf->formatstr_cat("FAILED %5d:  %s\n", line, description);
+	++cur_test_step_failures;
+	print_now_if_possible();
+}
+
 /* Shows exactly what is going to be tested.
  */
-void Emitter::emit_test(const char* test) {
+void Emitter::emit_test_at(const char* test, const char * file, int line) {
 	if(cur_test_name) {
 		MyString s = "Starting new test \"";
 		s += test;
@@ -132,8 +141,13 @@ void Emitter::emit_test(const char* test) {
 	}
 	emit_test_break();
 	function_tests++;
-	buf->formatstr_cat("TEST:  %s\n", test);
+	if (file) {
+		buf->formatstr_cat("TEST:  %s begins at %s:%d\n", test, filename_from_path(file), line);
+	} else {
+		buf->formatstr_cat("TEST:  %s\n", test);
+	}
 	print_now_if_possible();
+	cur_test_step_failures = 0;
 	cur_test_name = new MyString(test);
 	start = time(0);
 }
@@ -167,7 +181,7 @@ void Emitter::emit_result_success(int line, const char * file) {
 		emit_alert("A test succeeded, but we're not in a test!");
 	}
 	buf->formatstr_cat("RESULT:  SUCCESS, test passed at %s:%d (%ld seconds)\n",
-		file, line, time(0) - start);
+		filename_from_path(file), line, time(0) - start);
 	print_now_if_possible();
 	if(print_successes && !print_failures) {
 		if(!test_buf->IsEmpty()) {
@@ -180,6 +194,7 @@ void Emitter::emit_result_success(int line, const char * file) {
 	passed_tests++;
 	delete cur_test_name;
 	cur_test_name = 0;
+	cur_test_step_failures = 0;
 }
 
 /* Prints out a message saying that the test failed. The function should
@@ -190,12 +205,23 @@ void Emitter::emit_result_failure(int line, const char * file) {
 		emit_alert("A test failed, but we're not in a test!");
 	}
 	buf->formatstr_cat("RESULT:  FAILURE, test failed at %s:%d (%ld seconds)\n", 
-		file, line, time(0) - start);
+		filename_from_path(file), line, time(0) - start);
 	print_now_if_possible();
 	print_result_failure();
 	failed_tests++;
 	delete cur_test_name;
 	cur_test_name = 0;
+	cur_test_step_failures = 0;
+}
+
+int Emitter::emit_result(int line, const char * file) {
+	int rval = cur_test_step_failures;
+	if (cur_test_step_failures) {
+		emit_result_failure(line, file);
+	} else {
+		emit_result_success(line, file);
+	}
+	return rval;
 }
 
 /* Prints out a message saying that the test was aborted for some unknown
@@ -213,6 +239,7 @@ void Emitter::emit_result_abort(int line, const char * file) {
 	aborted_tests++;
 	delete cur_test_name;
 	cur_test_name = 0;
+	cur_test_step_failures = 0;
 }
 
 /* Prints out a message saying that the test was skipped, for whatever reason.
@@ -305,8 +332,12 @@ void emit_problem(const char* problem) {
 	e.emit_problem(problem);
 }
 
-void emit_test(const char* test) {
-	e.emit_test(test);
+void emit_step_failure(int line, const char* description) {
+	e.emit_step_failure(line, description);
+}
+
+void emit_test_at(const char* test, const char * file, int line) {
+	e.emit_test_at(test, file, line);
 }
 
 void emit_skipped(const char* skipped) {
@@ -331,6 +362,10 @@ void emit_result_success(int line, const char * file) {
 
 void emit_result_failure(int line, const char * file) {
 	e.emit_result_failure(line, file);
+}
+
+int emit_result(int line, const char * file) {
+	return e.emit_result(line, file);
 }
 
 void emit_result_abort(int line, const char * file) {

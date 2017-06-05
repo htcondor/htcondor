@@ -49,7 +49,7 @@ void SecureZeroMemory(void *p, size_t n)
 int
 ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 {
-	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i contents: {%s}\n", user, len, mode, pw);
+	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i\n", user, len, mode);
 
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
@@ -725,7 +725,14 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 				// We don't allow one user to set another user's credential
 				// we don't allow updates to the pool password through this interface
 			const char *sock_owner = sock->getOwner();
-			if ( sock_owner == NULL || strncmp( sock_owner, user, tmp-user ) ) {
+			if ( sock_owner == NULL ||
+#if defined(WIN32)
+			     strncasecmp( sock_owner, user, tmp-user )
+#else
+			     strncmp( sock_owner, user, tmp-user )
+#endif
+			   )
+			{
 				dprintf( D_ALWAYS, "WARNING: store_cred() for user %s attempted by user %s, rejecting\n", user, sock_owner ? sock_owner : "<unknown>" );
 				answer = FAILURE;
 
@@ -757,7 +764,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 		if (answer == SUCCESS) {
 			StoreCredState* retry_state = (StoreCredState*)malloc(sizeof(StoreCredState));
 			retry_state->user = strdup(user);
-			retry_state->retries = 20;
+			retry_state->retries = param_integer("CREDD_POLLING_TIMEOUT", 20);
 			retry_state->s = new ReliSock(*((ReliSock*)s));
 
 			dprintf( D_FULLDEBUG, "NBSTORECRED: retry_state: %lx, dptr->user: %s, dptr->retries: %i, dptr->s %lx\n",

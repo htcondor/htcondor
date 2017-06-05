@@ -1,0 +1,137 @@
+#! /usr/bin/env perl
+#testreq: personal
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# This test checks that a DAG with a final node with multiple procs,
+# one of which fails.
+
+#TEMP -- this test sometimes succeeds and sometimes fails -- I think
+# there's a race condition.  (Seems like it fails if one of the succesful
+# procs completes after the failed one.)  wenger 2016-12-30
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'job_dagman_final-M.dag';
+$testdesc =  'Condor submit dag - basic condor_rm test - scheduler U';
+$testname = "job_dagman_final-M";
+$dagman_args = "-verbose";
+
+@outfiles = ("job_dagman_final-M.dag.dagman.out",
+	"job_dagman_final-M.status");
+
+# Note /s modifier where we match these below.
+#TEMPTEMP -- should we make sure this is the last DAG status in dagman.out?
+@expected_contents = ("DAG status: 2",
+	"DagStatus = 6");
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing temporary files.
+foreach $name (@outfiles) {
+	if (-e $name) {
+		runcmd("rm -f $name");
+	}
+}
+
+$abnormal = sub 
+{
+	die "Error: Want to see only submit, execute and failed completion\n";
+};
+
+$aborted = sub 
+{
+	die "Error: DAG should not abort!\n";
+};
+
+$held = sub 
+{
+	die "Error: Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and failed completion\n",1);
+};
+
+$success = sub
+{
+	die("Error: DAG is expected to fail.\n");
+};
+
+$failure = sub
+{
+	CondorTest::debug("DAG failed as expected\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+	foreach $file (@outfiles) {
+		CondorTest::debug("Checking $file\n",1);
+
+		$canopen = open(OUT, "<$file");
+		if (! (defined $canopen)) {
+			CondorTest::debug("Cannot open output file <$file>:$!\n",1);
+			$diditpass = 0;
+		} else {
+			$expected = shift @expected_contents;
+			$contents = do { local $/; <OUT>; };
+			chomp $contents;
+			if ($contents =~ /$expected/s) {
+				CondorTest::debug("Found <$expected> in $file\n",1);
+			} else {
+				CondorTest::debug("ERROR: expected <$expected> in file $file, didn't find it\n",1);
+				$diditpass = 0;
+			}
+
+			close(OUT);
+		}
+	} 
+	
+	if ($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure );
+CondorTest::RegisterExecute($testname, $executed );
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "Error: $testname: CondorTest::RunTest() failed\n";
+}
+

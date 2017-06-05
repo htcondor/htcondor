@@ -53,7 +53,7 @@ int CondorFileLocal::read(off_t pos, char *data, int length) {
 
 /* Write requires a seek and a write.  This could be optimized to use pwrite on the platforms that support it. */
 
-int CondorFileLocal::write(off_t pos, char *data, int length) {
+int CondorFileLocal::write(off_t pos, const char *data, int length) {
 	int result, scm;
 
 	scm = SetSyscalls(syscall_mode);

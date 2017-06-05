@@ -451,6 +451,7 @@ classad::ClassAdCollection *Scheduler::GetClassAds()
 void Scheduler::init() {  m_mirror->init(); }
 void Scheduler::config() { m_mirror->config(); }
 void Scheduler::stop()  { m_mirror->stop(); }
+void Scheduler::poll()  { }
 int  Scheduler::id() { return m_id; }
 
 
@@ -613,7 +614,15 @@ bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
 	return true;
 }
 
+bool WriteExecuteEventToUserLog( classad::ClassAd const &ad )
+{
+	return true;
+}
 
+bool WriteEvictEventToUserLog( classad::ClassAd const &ad )
+{
+	return true;
+}
 
 // The following is copied from gridmanager/basejob.C
 // TODO: put the code into a shared file.

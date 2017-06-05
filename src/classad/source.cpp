@@ -36,6 +36,7 @@ namespace classad {
 
 ClassAdParser::
 ClassAdParser ()
+	: oldClassAd(false)
 {
 }
 
@@ -46,11 +47,38 @@ ClassAdParser::
 }
 
 
+void ClassAdParser::
+SetOldClassAd( bool old_syntax )
+{
+	oldClassAd = old_syntax;
+	lexer.SetOldClassAdLex( old_syntax );
+}
+
+bool ClassAdParser::
+GetOldClassAd()
+{
+	return oldClassAd;
+}
+
 bool ClassAdParser::
 ParseExpression( const string &buffer, ExprTree *&tree, bool full )
 {
 	bool              success;
 	StringLexerSource lexer_source(&buffer);
+
+	success      = false;
+	if (lexer.Initialize(&lexer_source)) {
+		success = parseExpression(tree, full);
+	}
+
+	return success;
+}
+
+bool ClassAdParser::
+ParseExpression( const char *buffer, ExprTree *&tree, bool full )
+{
+	bool              success;
+	CharLexerSource lexer_source(buffer);
 
 	success      = false;
 	if (lexer.Initialize(&lexer_source)) {
@@ -79,6 +107,25 @@ ParseExpression( const string &buffer, bool full)
 {
 	ExprTree          *tree;
 	StringLexerSource lexer_source(&buffer);
+
+	tree = NULL;
+
+	if (lexer.Initialize(&lexer_source)) {
+		if (!parseExpression(tree, full)) {
+			if (tree) {
+				delete tree;
+				tree = NULL;
+			}
+		}
+	}
+	return tree;
+}
+
+ExprTree *ClassAdParser::
+ParseExpression( const char *buffer, bool full)
+{
+	ExprTree          *tree;
+	CharLexerSource lexer_source(buffer);
 
 	tree = NULL;
 
@@ -191,16 +238,6 @@ bool ClassAdParser::ParseClassAd(FILE *file, ClassAd &classad, bool full)
 	return success;
 }
 
-bool ClassAdParser::ParseClassAd(istream &stream, ClassAd &classad, bool full)
-{
-	bool                    success;
-	InputStreamLexerSource lexer_source(stream);
-
-	success = ParseClassAd(&lexer_source, classad, full);
-
-	return success;
-}
-
 bool ClassAdParser::
 ParseClassAd(LexerSource *lexer_source, ClassAd &classad, bool full)
 {
@@ -285,16 +322,6 @@ ParseClassAd(FILE *file, bool full)
 
 	ad = ParseClassAd(&lexer_source, full);
 
-	return ad;
-}
-
-ClassAd *ClassAdParser::
-ParseClassAd(istream &stream, bool full)
-{
-	ClassAd                *ad;
-	InputStreamLexerSource lexer_source(stream);
-
-	ad = ParseClassAd(&lexer_source, full);
 	return ad;
 }
 
@@ -1384,14 +1411,5 @@ Lexer::TokenType ClassAdParser::ConsumeToken(void)
         return Lexer::LEX_TOKEN_ERROR;
     }
 }
-
-std::istream & operator>>(std::istream &stream, ClassAd &ad)
-{
-	ClassAdParser parser;
-
-	parser.ParseClassAd(stream, ad);
-	return stream;
-}
-
 
 } // classad

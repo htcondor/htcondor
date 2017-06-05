@@ -267,7 +267,7 @@ void Partition::boot(char *script, PKind pkind)
 	args.AppendArg(pkind_xlate(get_pkind()).Value());
 
 	priv = set_root_priv();
-	fin = my_popen(args, "r", TRUE);
+	fin = my_popen(args, "r", MY_POPEN_OPT_WANT_STDERR);
 	line.readLine(fin); // read back OK or NOT_OK, XXX ignore
 	my_pclose(fin);
 	set_priv(priv);
@@ -294,7 +294,7 @@ void Partition::shutdown(char *script)
 	args.AppendArg(get_name());
 
 	priv = set_root_priv();
-	fin = my_popen(args, "r", TRUE);
+	fin = my_popen(args, "r", MY_POPEN_OPT_WANT_STDERR);
 	line.readLine(fin); // read back OK or NOT_OK, XXX ignore
 	my_pclose(fin);
 	set_priv(priv);
@@ -322,7 +322,7 @@ void Partition::back(char *script)
 	args.AppendArg(pkind_xlate(get_pkind()).Value());
 
 	priv = set_root_priv();
-	fin = my_popen(args, "r", TRUE);
+	fin = my_popen(args, "r", MY_POPEN_OPT_WANT_STDERR);
 	line.readLine(fin); // read back OK or NOT_OK, XXX ignore
 	my_pclose(fin);
 	set_priv(priv);

@@ -42,6 +42,7 @@
 #include "thread_control.h"
 #include <expat.h>
 #include "stl_string_utils.h"
+#include "subsystem_info.h"
 
 // Statistics of interest.
 int NumRequests = 0;
@@ -377,11 +378,13 @@ Throttle globalCurlThrottle;
 pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
 
 bool AmazonRequest::SendRequest() {
+    query_parameters.insert( std::make_pair( "Version", "2012-10-01" ) );
+
 	switch( signatureVersion ) {
 		case 2:
 			return sendV2Request();
 		case 4:
-			return sendV4Request();
+			return sendV4Request( canonicalizeQueryString() );
 		default:
 			this->errorCode = "E_INTERNAL";
 			this->errorMessage = "Invalid signature version.";
@@ -390,7 +393,8 @@ bool AmazonRequest::SendRequest() {
 	}
 }
 
-void AmazonRequest::canonicalizeQueryString( std::string & canonicalQueryString ) {
+std::string AmazonRequest::canonicalizeQueryString() {
+    std::string canonicalQueryString;
     for( auto i = query_parameters.begin(); i != query_parameters.end(); ++i ) {
         // Step 1A: The map sorts the query parameters for us.  Strictly
         // speaking, we should encode into a different AttributeValueMap
@@ -410,6 +414,7 @@ void AmazonRequest::canonicalizeQueryString( std::string & canonicalQueryString 
 
     // We'll always have a superflous trailing ampersand.
     canonicalQueryString.erase( canonicalQueryString.end() - 1 );
+    return canonicalQueryString;
 }
 
 bool parseURL(	const std::string & url,
@@ -425,7 +430,7 @@ bool parseURL(	const std::string & url,
     protocol = groups[1];
     host = groups[3];
     path = groups[4];
-	return true;
+    return true;
 }
 
 void convertMessageDigestToLowercaseHex(
@@ -439,6 +444,7 @@ void convertMessageDigestToLowercaseHex(
 		sprintf( ptr, "%02x", messageDigest[i] );
 	}
 	hexEncoded.assign( buffer, mdLength * 2 );
+	free(buffer);
 }
 
 
@@ -467,8 +473,29 @@ bool doSha256(	const std::string & payload,
 	return true;
 }
 
+std::string pathEncode( const std::string & original ) {
+	std::string segment;
+	std::string encoded;
+	const char * o = original.c_str();
+
+	size_t next = 0;
+	size_t offset = 0;
+	size_t length = strlen( o );
+	while( offset < length ) {
+		next = strcspn( o + offset, "/" );
+		if( next == 0 ) { encoded += "/"; offset += 1; continue; }
+
+		segment = std::string( o + offset, next );
+		encoded += amazonURLEncode( segment );
+
+		offset += next;
+	}
+	return encoded;
+}
+
 bool AmazonRequest::createV4Signature(	const std::string & payload,
-										std::string & authorizationValue ) {
+										std::string & authorizationValue,
+										bool sendContentSHA ) {
 	Throttle::now( & signatureTime );
 	time_t now; time( & now );
 	struct tm brokenDownTime; gmtime_r( & now, & brokenDownTime );
@@ -491,15 +518,8 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	if( canonicalURI.empty() ) { canonicalURI = "/"; }
 
 	// But that sounds like a lot of work, so until something we do actually
-	// requires it, I'll just assume the path is '/', which doesn't need
-	// anything done to it.
-	if( canonicalURI != "/" ) {
-		this->errorCode = "E_INVALID_SERVICE_URL";
-		this->errorMessage = "Service URL must not have a path component.";
-		dprintf( D_ALWAYS, "Service URL '%s' has a path component.\n", serviceURL.c_str() );
-		return false;
-	}
-
+	// requires it, I'll just assume the path is already normalized.
+	canonicalURI = pathEncode( canonicalURI );
 
 	// The canonical query string is the alphabetically sorted list of
 	// URI-encoded parameter names '=' values, separated by '&'s.  That
@@ -507,10 +527,40 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	// everything in the POST body, instead.
 	std::string canonicalQueryString;
 
+	// ... that is, unless we're using the GET method.
+	ASSERT( (httpVerb != "GET") || query_parameters.size() == 0 );
+
 	// The canonical headers must include the Host header, so add that
 	// now if we don't have it.
 	if( headers.find( "Host" ) == headers.end() ) {
 		headers[ "Host" ] = host;
+	}
+
+	// S3 complains if x-amz-date isn't signed, so do this early.
+	char dt[] = "YYYYMMDDThhmmssZ";
+	strftime( dt, sizeof(dt), "%Y%m%dT%H%M%SZ", & brokenDownTime );
+	headers[ "X-Amz-Date" ] = dt;
+
+	char d[] = "YYYYMMDD";
+	strftime( d, sizeof(d), "%Y%m%d", & brokenDownTime );
+
+	// S3 complains if x-amz-content-sha256 isn't signed, which makes sense,
+	// so do this early.
+
+	// The canonical payload hash is the lowercase hexadecimal string of the
+	// (SHA256) hash value of the payload.
+	unsigned int mdLength = 0;
+	unsigned char messageDigest[EVP_MAX_MD_SIZE];
+	if(! doSha256( payload, messageDigest, & mdLength )) {
+		this->errorCode = "E_INTERNAL";
+		this->errorMessage = "Unable to hash payload.";
+		dprintf( D_ALWAYS, "Unable to hash payload, failing.\n" );
+		return false;
+	}
+	std::string payloadHash;
+	convertMessageDigestToLowercaseHex( messageDigest, mdLength, payloadHash );
+	if( sendContentSHA ) {
+		headers[ "x-amz-content-sha256" ] = payloadHash;
 	}
 
 	// The canonical list of headers is a sorted list of lowercase header
@@ -522,6 +572,11 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 		std::transform( header.begin(), header.end(), header.begin(), & tolower );
 
 		std::string value = i->second;
+		// We need to leave empty headers alone so that they can be used
+		// to disable CURL stupidity later.
+		if( value.size() == 0 ) {
+			continue;
+		}
 
 		// Eliminate trailing spaces.
 		unsigned j = value.length() - 1;
@@ -571,27 +626,14 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	// dprintf( D_ALWAYS, "signedHeaders: '%s'\n", signedHeaders.c_str() );
 	// dprintf( D_ALWAYS, "canonicalHeaders: '%s'.\n", canonicalHeaders.c_str() );
 
-	// The canonical payload hash is the lowercase hexadecimal string of the
-	// (SHA256) hash value of the payload.
-	unsigned int mdLength = 0;
-	unsigned char messageDigest[EVP_MAX_MD_SIZE];
-	if(! doSha256( payload, messageDigest, & mdLength )) {
-		this->errorCode = "E_INTERNAL";
-		this->errorMessage = "Unable to hash payload.";
-		dprintf( D_ALWAYS, "Unable to hash payload, failing.\n" );
-		return false;
-	}
-	std::string payloadHash;
-	convertMessageDigestToLowercaseHex( messageDigest, mdLength, payloadHash );
-
 	// Task 1: create the canonical request.
-	std::string canonicalRequest = "POST\n"
+	std::string canonicalRequest = httpVerb + "\n"
 								 + canonicalURI + "\n"
 								 + canonicalQueryString + "\n"
 								 + canonicalHeaders + "\n"
 								 + signedHeaders + "\n"
 								 + payloadHash;
-	// dprintf( D_ALWAYS, "canonicalRequest:\n%s\n", canonicalRequest.c_str() );
+	dprintf( D_SECURITY | D_VERBOSE, "canonicalRequest:\n%s\n", canonicalRequest.c_str() );
 
 
 	//
@@ -608,36 +650,27 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	std::string canonicalRequestHash;
 	convertMessageDigestToLowercaseHex( messageDigest, mdLength, canonicalRequestHash );
 
-	char dt[] = "YYYYMMDDThhmmssZ";
-	strftime( dt, sizeof(dt), "%Y%m%dT%H%M%SZ", & brokenDownTime );
-	headers[ "X-Amz-Date" ] = dt;
-
-	char d[] = "YYYYMMDD";
-	strftime( d, sizeof(d), "%Y%m%d", & brokenDownTime );
-
 	std::string s = this->service;
 	if( s.empty() ) {
 		size_t i = host.find( "." );
-		if( i == std::string::npos ) {
-			this->errorCode = "E_INTERNAL";
-			this->errorMessage = "Unable to derive service from host.";
-			dprintf( D_ALWAYS, "Unable to derive service from host '%s', failing.\n", host.c_str() );
-			return false;
+		if( i != std::string::npos ) {
+			s = host.substr( 0, i );
+		} else {
+			dprintf( D_ALWAYS, "Could not derive service from host '%s'; using host name as service name for testing purposes.\n", host.c_str() );
+			s = host;
 		}
-		s = host.substr( 0, i );
 	}
 
 	std::string r = this->region;
 	if( r.empty() ) {
 		size_t i = host.find( "." );
 		size_t j = host.find( ".", i + 1 );
-		if( j == std::string::npos ) {
-			this->errorCode = "E_INTERNAL";
-			this->errorMessage = "Unable to derive region from host.";
-			dprintf( D_ALWAYS, "Unable to derive region from host '%s', failing.\n", host.c_str() );
-			return false;
+		if( j != std::string::npos ) {
+			r = host.substr( i + 1, j - i - 1 );
+		} else {
+			dprintf( D_ALWAYS, "Could not derive region from host '%s'; using host name as region name for testing purposes.\n", host.c_str() );
+			r = host;
 		}
-		r = host.substr( i + 1, j - i - 1 );
 	}
 
 
@@ -647,7 +680,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	std::string stringToSign;
 	formatstr( stringToSign, "AWS4-HMAC-SHA256\n%s\n%s\n%s",
 		dt, credentialScope.c_str(), canonicalRequestHash.c_str() );
-	// dprintf( D_ALWAYS, "string to sign:\n%s\n", stringToSign.c_str() );
+	dprintf( D_SECURITY | D_VERBOSE, "string to sign:\n%s\n", stringToSign.c_str() );
 
 
 	//
@@ -709,7 +742,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	return true;
 }
 
-bool AmazonRequest::sendV4Request() {
+bool AmazonRequest::sendV4Request( const std::string & payload, bool sendContentSHA ) {
     std::string protocol, host, path;
     if(! parseURL( serviceURL, protocol, host, path )) {
         this->errorCode = "E_INVALID_SERVICE_URL";
@@ -723,18 +756,16 @@ bool AmazonRequest::sendV4Request() {
         dprintf( D_ALWAYS, "Service URL '%s' not of a known protocol (http[s]).\n", serviceURL.c_str() );
         return false;
     }
-    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
 
-    // If we're worried about the duplicate work here and in parsing the
-    // URL, we could just pass more arguments into createV4Signature().
-    std::string payload;
-    canonicalizeQueryString( payload );
-    dprintf( D_FULLDEBUG, "Post body is '%s'\n", payload.c_str() );
+    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
+    if(! sendContentSHA) {
+    	dprintf( D_FULLDEBUG, "Payload is '%s'\n", payload.c_str() );
+    }
 
     std::string authorizationValue;
-    if(! createV4Signature( payload, authorizationValue )) {
-        this->errorCode = "E_INTERNAL";
-        this->errorMessage = "Failed to create v4 signature.";
+    if(! createV4Signature( payload, authorizationValue, sendContentSHA )) {
+        if( this->errorCode.empty() ) { this->errorCode = "E_INTERNAL"; }
+        if( this->errorMessage.empty() ) { this->errorMessage = "Failed to create v4 signature."; }
         dprintf( D_ALWAYS, "Failed to create v4 signature.\n" );
         return false;
     }
@@ -812,16 +843,6 @@ bool AmazonRequest::sendV2Request() {
     query_parameters.insert( std::make_pair( "SignatureMethod", "HmacSHA256" ) );
 
     //
-    // This implementation was written against the 2010-11-15 documentation.
-    //
-    // query_parameters.insert( std::make_pair( "Version", "2010-11-15" ) );
-
-    // Upgrading (2012-10-01 is the oldest version that will work) allows us
-    // to report the Spot Instance 'status-code's, which are much more
-    // useful than the status codes.  *sigh*
-    query_parameters.insert( std::make_pair( "Version", "2012-10-01" ) );
-
-    //
     // We're calculating the signature now. [YYYY-MM-DDThh:mm:ssZ]
     //
     Throttle::now( & signatureTime );
@@ -842,8 +863,7 @@ bool AmazonRequest::sendV2Request() {
      */
 
     // Step 1: Create the canonicalized query string.
-    std::string canonicalQueryString;
-    canonicalizeQueryString( canonicalQueryString );
+    std::string canonicalQueryString = canonicalizeQueryString();
 
     // Step 2: Create the string to sign.
     std::string stringToSign = "POST\n"
@@ -922,36 +942,95 @@ bool AmazonRequest::sendV2Request() {
     return sendPreparedRequest( protocol, postURI, canonicalQueryString );
 }
 
+bool AmazonRequest::SendURIRequest() {
+    httpVerb = "GET";
+    std::string noPayloadAllowed;
+    return sendV4Request( noPayloadAllowed );
+}
+
 bool AmazonRequest::SendJSONRequest( const std::string & payload ) {
     headers[ "Content-Type" ] = "application/x-amz-json-1.1";
+    return sendV4Request( payload );
+}
 
-    std::string protocol, host, path;
-    if(! parseURL( serviceURL, protocol, host, path )) {
-        this->errorCode = "E_INVALID_SERVICE_URL";
-        this->errorMessage = "Failed to parse service URL.";
-        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
-        return false;
-    }
-    if( (protocol != "http") && (protocol != "https") ) {
-        this->errorCode = "E_INVALID_SERVICE_URL";
-        this->errorMessage = "Service URL not of a known protocol (http[s]).";
-        dprintf( D_ALWAYS, "Service URL '%s' not of a known protocol (http[s]).\n", serviceURL.c_str() );
-        return false;
-    }
-    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", serviceURL.c_str() );
+// It's stated in the API documentation that you can upload to any region
+// via us-east-1, which is moderately crazy.
+bool AmazonRequest::SendS3Request( const std::string & payload ) {
+	headers[ "Content-Type" ] = "binary/octet-stream";
+	std::string contentLength; formatstr( contentLength, "%lu", payload.size() );
+	headers[ "Content-Length" ] = contentLength;
+	// Another undocumented CURL feature: transfer-encoding is "chunked"
+	// by default for "PUT", which we really don't want.
+	headers[ "Transfer-Encoding" ] = "";
+	service = "s3";
+	region = "us-east-1";
+	return sendV4Request( payload, true );
+}
 
-    dprintf( D_FULLDEBUG, "Post body is '%s'\n", payload.c_str() );
+int
+debug_callback( CURL *, curl_infotype ci, char * data, size_t size, void * ) {
+	switch( ci ) {
+		default:
+			dprintf( D_ALWAYS, "debug_callback( unknown )\n" );
+			break;
 
-    std::string authorizationValue;
-    if(! createV4Signature( payload, authorizationValue )) {
-        this->errorCode = "E_INTERNAL";
-        this->errorMessage = "Failed to create v4 signature.";
-        dprintf( D_ALWAYS, "Failed to create v4 signature.\n" );
-        return false;
-    }
-    headers[ "Authorization" ] = authorizationValue;
+		case CURLINFO_TEXT:
+			dprintf( D_ALWAYS, "debug_callback( TEXT ): '%*s'\n", (int)size, data );
+			break;
 
-    return sendPreparedRequest( protocol, serviceURL, payload );
+		case CURLINFO_HEADER_IN:
+			dprintf( D_ALWAYS, "debug_callback( HEADER_IN ): '%*s'\n", (int)size, data );
+			break;
+
+		case CURLINFO_HEADER_OUT:
+			dprintf( D_ALWAYS, "debug_callback( HEADER_IN ): '%*s'\n", (int)size, data );
+			break;
+
+		case CURLINFO_DATA_IN:
+			dprintf( D_ALWAYS, "debug_callback( DATA_IN )\n" );
+			break;
+
+		case CURLINFO_DATA_OUT:
+			dprintf( D_ALWAYS, "debug_callback( DATA_OUT )\n" );
+			break;
+
+		case CURLINFO_SSL_DATA_IN:
+			dprintf( D_ALWAYS, "debug_callback( SSL_DATA_IN )\n" );
+			break;
+
+		case CURLINFO_SSL_DATA_OUT:
+			dprintf( D_ALWAYS, "debug_callback( SSL_DATA_OUT )\n" );
+			break;
+	}
+
+	return 0;
+}
+
+size_t
+read_callback( char * buffer, size_t size, size_t n, void * v ) {
+	// This can be static because only one curl_easy_perform() can be
+	// running at a time.
+	static size_t sentSoFar = 0;
+	std::string * payload = (std::string *)v;
+
+	if( sentSoFar == payload->size() ) {
+		// dprintf( D_ALWAYS, "read_callback(): resetting sentSoFar.\n" );
+		sentSoFar = 0;
+		return 0;
+	}
+
+	size_t request = size * n;
+	if( request > payload->size() ) { request = payload->size(); }
+
+	if( sentSoFar + request > payload->size() ) {
+		request = payload->size() - sentSoFar;
+	}
+
+	// dprintf( D_ALWAYS, "read_callback(): sending %lu (sent %lu already).\n", request, sentSoFar );
+	memcpy( buffer, payload->data() + sentSoFar, request );
+	sentSoFar += request;
+
+	return request;
 }
 
 bool AmazonRequest::sendPreparedRequest(
@@ -960,8 +1039,11 @@ bool AmazonRequest::sendPreparedRequest(
         const std::string & payload ) {
     static bool rateLimitInitialized = false;
     if(! rateLimitInitialized) {
-        globalCurlThrottle.rateLimit = param_integer( "EC2_GAHP_RATE_LIMIT", 100 );
-        dprintf( D_PERF_TRACE, "rate limit = %u\n", globalCurlThrottle.rateLimit );
+        // FIXME: convert to the new form of param() when it becomes available.
+        std::string rateLimit;
+        formatstr( rateLimit, "%s_RATE_LIMIT", get_mySubSystem()->getName() );
+        globalCurlThrottle.rateLimit = param_integer( rateLimit.c_str(), 100 );
+        dprintf( D_PERF_TRACE, "rate limit = %d\n", globalCurlThrottle.rateLimit );
         rateLimitInitialized = true;
     }
 
@@ -995,8 +1077,19 @@ bool AmazonRequest::sendPreparedRequest(
         return false;
     }
 
-/*  // Useful for debuggery.  Could be rewritten with CURLOPT_DEBUGFUNCTION
-    // and dumped via dprintf() to allow control via EC2_GAHP_DEBUG.
+
+/*
+    rv = curl_easy_setopt( curl, CURLOPT_DEBUGFUNCTION, debug_callback );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_DEBUGFUNCTION ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_DEBUGFUNCTION ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        curl_easy_cleanup( curl );
+        return false;
+    }
+
+    // CURLOPT_DEBUGFUNCTION does nothing without CURLOPT_DEBUG set.
     rv = curl_easy_setopt( curl, CURLOPT_VERBOSE, 1 );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
@@ -1008,7 +1101,8 @@ bool AmazonRequest::sendPreparedRequest(
     }
 */
 
-	// dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_URL = '%s'\n", uri.c_str() );
+
+    // dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_URL = '%s'\n", uri.c_str() );
     rv = curl_easy_setopt( curl, CURLOPT_URL, uri.c_str() );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
@@ -1019,24 +1113,55 @@ bool AmazonRequest::sendPreparedRequest(
         return false;
     }
 
-    rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
-    if( rv != CURLE_OK ) {
-        this->errorCode = "E_CURL_LIB";
-        this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
-        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POST ) failed (%d): '%s', failing.\n",
-            rv, curl_easy_strerror( rv ) );
-        return false;
-    }
+	if( httpVerb == "POST" ) {
+		rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POST ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
 
-	// dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_POSTFIELDS = '%s'\n", payload.c_str() );
-    rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, payload.c_str() );
-    if( rv != CURLE_OK ) {
-        this->errorCode = "E_CURL_LIB";
-        this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
-        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
-            rv, curl_easy_strerror( rv ) );
-        return false;
-    }
+		// dprintf( D_ALWAYS, "sendPreparedRequest(): CURLOPT_POSTFIELDS = '%s'\n", payload.c_str() );
+		rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, payload.c_str() );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+	}
+
+	if( httpVerb == "PUT" ) {
+		rv = curl_easy_setopt( curl, CURLOPT_UPLOAD, 1 );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_UPLOAD ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_UPLOAD ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+
+		rv = curl_easy_setopt( curl, CURLOPT_READDATA, & payload );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATA ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+
+		rv = curl_easy_setopt( curl, CURLOPT_READFUNCTION, read_callback );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_READFUNCTION ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READFUNCTION ) failed (%d): '%s', failing.\n",
+				rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+	}
 
     rv = curl_easy_setopt( curl, CURLOPT_NOPROGRESS, 1 );
     if( rv != CURLE_OK ) {
@@ -1149,7 +1274,7 @@ bool AmazonRequest::sendPreparedRequest(
 	struct curl_slist * header_slist = NULL;
 	for( auto i = headers.begin(); i != headers.end(); ++i ) {
 		formatstr( headerPair, "%s: %s", i->first.c_str(), i->second.c_str() );
-		// dprintf( D_ALWAYS, "sendPreparedRequest(): adding header = '%s: %s'\n", i->first.c_str(), i->second.c_str() );
+		// dprintf( D_FULLDEBUG, "sendPreparedRequest(): adding header = '%s: %s'\n", i->first.c_str(), i->second.c_str() );
 		header_slist = curl_slist_append( header_slist, headerPair.c_str() );
 		if( header_slist == NULL ) {
 			this->errorCode = "E_CURL_LIB";
@@ -1300,7 +1425,7 @@ retry:
         return false;
     }
 
-    unsigned long responseCode = 0;
+    responseCode = 0;
     rv = curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, & responseCode );
     if( rv != CURLE_OK ) {
         // So we contacted the server but it returned such gibberish that
@@ -1461,8 +1586,9 @@ AmazonVMStart::~AmazonVMStart() { }
 struct vmStartUD_t {
     bool inInstanceId;
     std::string & instanceID;
+    std::vector< std::string > * instanceIDs;
 
-    vmStartUD_t( std::string & iid ) : inInstanceId( false ), instanceID( iid ) { }
+    vmStartUD_t( std::string & iid, std::vector< std::string > * iids = NULL ) : inInstanceId( false ), instanceID( iid ), instanceIDs( iids ) { }
 };
 typedef struct vmStartUD_t vmStartUD;
 
@@ -1484,13 +1610,17 @@ void vmStartEEH( void * vUserData, const XML_Char * name ) {
     vmStartUD * vsud = (vmStartUD *)vUserData;
     if( strcasecmp( ignoringNameSpace( name ), "instanceId" ) == 0 ) {
         vsud->inInstanceId = false;
+        if( vsud->instanceIDs ) {
+        	vsud->instanceIDs->push_back( vsud->instanceID );
+        	vsud->instanceID.clear();
+        }
     }
 }
 
 bool AmazonVMStart::SendRequest() {
     bool result = AmazonRequest::SendRequest();
     if ( result ) {
-        vmStartUD vsud( this->instanceID );
+        vmStartUD vsud( this->instanceID, & this->instanceIDs );
         XML_Parser xp = XML_ParserCreate( NULL );
         XML_SetElementHandler( xp, & vmStartESH, & vmStartEEH );
         XML_SetCharacterDataHandler( xp, & vmStartCDH );
@@ -1519,10 +1649,10 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
         requestID, argv[0] );
 
-    if( ! verify_min_number_args( argc, 15 ) ) {
+    if( ! verify_min_number_args( argc, 21 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
         dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-                 argc, 15, argv[0] );
+                 argc, 21, argv[0] );
         return false;
     }
 
@@ -1543,7 +1673,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 
     unsigned positionInList = 0;
     unsigned which = 0;
-    for( int i = 17; i < argc; ++i ) {
+    for( int i = 18; i < argc; ++i ) {
         if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
             ++which;
             positionInList = 0;
@@ -1582,6 +1712,10 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     vmStartRequest.query_parameters[ "MinCount" ] = "1";
     vmStartRequest.query_parameters[ "MaxCount" ] = "1";
     vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
+
+	if( strcasecmp( argv[17], NULLSTRING ) ) {
+		vmStartRequest.query_parameters[ "MaxCount" ] = argv[17];
+	}
 
     // Fill in optional parameters.
     if( strcasecmp( argv[6], NULLSTRING ) ) {
@@ -1684,7 +1818,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
             vmStartRequest.errorMessage.c_str(),
             vmStartRequest.errorCode.c_str() );
     } else {
-        if( vmStartRequest.instanceID.empty() ) {
+        if( vmStartRequest.instanceIDs.size() == 0 ) {
             dprintf( D_ALWAYS, "Got result from endpoint that did not include an instance ID, failing.  Response follows.\n" );
             dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
             dprintf( D_ALWAYS, "%s", vmStartRequest.resultString.c_str() );
@@ -1692,7 +1826,9 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
             result_string = create_failure_result( requestID, "Could not find instance ID in response from server.  Check the EC2 GAHP log for details.", "E_NO_INSTANCE_ID" );
         } else {
             StringList resultList;
-            resultList.append( vmStartRequest.instanceID.c_str() );
+            for( size_t i = 0; i < vmStartRequest.instanceIDs.size(); ++i ) {
+	            resultList.append( vmStartRequest.instanceIDs[i].c_str() );
+            }
             result_string = create_success_result( requestID, & resultList );
         }
     }
@@ -1927,6 +2063,13 @@ bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_str
     terminationRequest.query_parameters[ "Action" ] = "TerminateInstances";
     terminationRequest.query_parameters[ "InstanceId.1" ] = argv[5];
 
+	int parameterNumber = 2;
+	std::string parameterName;
+	for( int i = 6; i < argc; ++i, ++parameterNumber ) {
+		formatstr( parameterName, "InstanceId.%d", parameterNumber );
+		terminationRequest.query_parameters[ parameterName.c_str() ] = argv[i];
+	}
+
     // Send the request.
     if( ! terminationRequest.SendRequest() ) {
         result_string = create_failure_result( requestID,
@@ -2085,9 +2228,9 @@ struct vmStatusSpotUD_t {
     bool inStatus;
     vmStatusSpotTags inWhichTag;
     AmazonStatusSpotResult * currentResult;
- 
+
     std::vector< AmazonStatusSpotResult > & results;
-    
+
     vmStatusSpotUD_t( std::vector< AmazonStatusSpotResult > & assrList ) :
         inItem( 0 ),
         inStatus( false ),
@@ -2108,7 +2251,7 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
         vsud->inItem += 1;
         return;
     }
-    
+
     if( strcasecmp( ignoringNameSpace( name ), "spotInstanceRequestId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::REQUEST_ID;
     } else if( strcasecmp( ignoringNameSpace( name ), "state" ) == 0 ) {
@@ -2129,7 +2272,7 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
 void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
     if( vsud->inItem != 1 ) { return; }
-    
+
     std::string * targetString = NULL;
     switch( vsud->inWhichTag ) {
         case vmStatusSpotUD::NONE:
@@ -2138,15 +2281,15 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
         case vmStatusSpotUD::REQUEST_ID:
             targetString = & vsud->currentResult->request_id;
             break;
-        
+
         case vmStatusSpotUD::STATE:
             targetString = & vsud->currentResult->state;
             break;
-        
+
         case vmStatusSpotUD::LAUNCH_GROUP:
             targetString = & vsud->currentResult->launch_group;
             break;
-        
+
         case vmStatusSpotUD::INSTANCE_ID:
             targetString = & vsud->currentResult->instance_id;
             break;
@@ -2159,7 +2302,7 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
             // This should never happen.
             break;
     }
-    
+
     appendToString( (const void *)cdata, len, 1, (void *)targetString );
 }
 
@@ -2172,7 +2315,7 @@ void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
             delete vsud->currentResult;
             vsud->currentResult = NULL;
         }
-        
+
         vsud->inItem -= 1;
     }
 
@@ -2311,7 +2454,9 @@ struct vmStatusUD_t {
         INSTANCE_TYPE,
         GROUP_ID,
         STATE_REASON_CODE,
-        CLIENT_TOKEN
+        CLIENT_TOKEN,
+        TAG_KEY,
+        TAG_VALUE
     };
     typedef enum vmStatusTags_t vmStatusTags;
 
@@ -2329,18 +2474,25 @@ struct vmStatusUD_t {
     bool inGroup;
     std::string currentSecurityGroup;
     std::vector< std::string > currentSecurityGroups;
-    
-    vmStatusUD_t( std::vector< AmazonStatusResult > & asrList ) : 
-        inInstancesSet( false ), 
+
+	bool inTagSet;
+	bool inTag;
+	std::string tagKey;
+	std::string tagValue;
+
+    vmStatusUD_t( std::vector< AmazonStatusResult > & asrList ) :
+        inInstancesSet( false ),
         inInstance( false ),
         inInstanceState( false ),
         inStateReason( false ),
-        inWhichTag( vmStatusUD_t::NONE ), 
-        currentResult( NULL ), 
+        inWhichTag( vmStatusUD_t::NONE ),
+        currentResult( NULL ),
         results( asrList ),
         inItem( 0 ),
         inGroupSet( false ),
-        inGroup( false ) { }
+        inGroup( false ),
+        inTagSet( false ),
+        inTag( false ) { }
 };
 typedef struct vmStatusUD_t vmStatusUD;
 
@@ -2350,16 +2502,16 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     if( ! vsud->inInstancesSet ) {
         if( strcasecmp( ignoringNameSpace( name ), "instancesSet" ) == 0 ) {
             vsud->inInstancesSet = true;
-        }            
+        }
         return;
-    } 
+    }
 
     if( ! vsud->inInstance ) {
         if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
             vsud->currentResult = new AmazonStatusResult();
             assert( vsud->currentResult != NULL );
             vsud->inInstance = true;
-            vsud->inItem += 1;        
+            vsud->inItem += 1;
         }
         return;
     }
@@ -2372,6 +2524,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     // to make sure we know which one closes the instance's item tag.
     if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
         vsud->inItem += 1;
+        if( vsud->inTagSet ) { vsud->inTag = true; }
         return;
     }
 
@@ -2380,7 +2533,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
         vsud->inGroupSet = true;
         return;
     }
-    
+
     //
     // Check for any tags of interest in the group set.
     //
@@ -2390,7 +2543,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
             return;
         }
     }
-        
+
     //
     // Check for any tags of interest in the instance.
     //
@@ -2426,6 +2579,13 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
         vsud->inStateReason = true;
     } else if( vsud->inStateReason && strcasecmp( ignoringNameSpace( name ), "code" ) == 0 )  {
         vsud->inWhichTag = vmStatusUD::STATE_REASON_CODE;
+    } else if( strcasecmp( ignoringNameSpace( name ), "tagSet" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        vsud->inTagSet = true;
+    } else if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "key" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::TAG_KEY;
+    } else if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "value" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::TAG_VALUE;
     }
 }
 
@@ -2450,23 +2610,23 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
     switch( vsud->inWhichTag ) {
         case vmStatusUD::NONE:
             return;
-        
+
         case vmStatusUD::INSTANCE_ID:
             targetString = & vsud->currentResult->instance_id;
             break;
-        
+
         case vmStatusUD::STATUS:
             targetString = & vsud->currentResult->status;
             break;
-        
+
         case vmStatusUD::AMI_ID:
             targetString = & vsud->currentResult->ami_id;
             break;
-        
+
         case vmStatusUD::PRIVATE_DNS:
             targetString = & vsud->currentResult->private_dns;
             break;
-            
+
         case vmStatusUD::PUBLIC_DNS:
             targetString = & vsud->currentResult->public_dns;
             break;
@@ -2474,7 +2634,7 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
         case vmStatusUD::KEY_NAME:
             targetString = & vsud->currentResult->keyname;
             break;
-        
+
         case vmStatusUD::INSTANCE_TYPE:
             targetString = & vsud->currentResult->instancetype;
             break;
@@ -2486,6 +2646,14 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
         case vmStatusUD::CLIENT_TOKEN:
             targetString = & vsud->currentResult->clientToken;
             break;
+
+		case vmStatusUD::TAG_KEY:
+			targetString = & vsud->tagKey;
+			break;
+
+		case vmStatusUD::TAG_VALUE:
+			targetString = & vsud->tagValue;
+			break;
 
         default:
             /* This should never happen. */
@@ -2502,16 +2670,16 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
     if( ! vsud->inInstancesSet ) {
         return;
     }
-    
+
     if( strcasecmp( ignoringNameSpace( name ), "instancesSet" ) == 0 ) {
         vsud->inInstancesSet = false;
         return;
     }
-    
+
     if( ! vsud->inInstance ) {
         return;
     }
-    
+
     if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
         vsud->inItem -= 1;
 
@@ -2521,6 +2689,15 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
             delete vsud->currentResult;
             vsud->currentResult = NULL;
             vsud->inInstance = false;
+        } else {
+            if( vsud->inTagSet ) {
+            	if( vsud->tagKey == "aws:ec2spot:fleet-request-id" ) {
+            		vsud->currentResult->spotFleetRequestID = vsud->tagValue;
+            	}
+            	vsud->tagKey.erase();
+            	vsud->tagValue.erase();
+            	vsud->inTag = false;
+            }
         }
 
         return;
@@ -2556,6 +2733,21 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
         vsud->inStateReason = false;
         return;
     }
+
+	if( strcasecmp( ignoringNameSpace( name ), "tagSet" ) == 0 ) {
+        vsud->inTagSet = false;
+        return;
+    }
+    if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "key" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        return;
+    }
+    if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "value" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        return;
+    }
+
+
 }
 
 bool AmazonVMStatusAll::SendRequest() {
@@ -2617,6 +2809,7 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 resultList.append( nullStringIfEmpty( asr.keyname ) );
                 resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
                 resultList.append( nullStringIfEmpty( asr.public_dns ) );
+                resultList.append( nullStringIfEmpty( asr.spotFleetRequestID ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -3434,7 +3627,7 @@ bool AmazonPutRule::SendJSONRequest( const std::string & payload ) {
 }
 
 bool AmazonPutRule::workerFunction( char ** argv, int argc, std::string & result_string ) {
-	assert( strcasecmp( argv[0], "EC2_PUT_RULE" ) == 0 );
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_PUT_RULE ) == 0 );
 	int requestID;
 	get_int( argv[1], & requestID );
 	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
@@ -3516,7 +3709,7 @@ bool AmazonPutTargets::SendJSONRequest( const std::string & payload ) {
 }
 
 bool AmazonPutTargets::workerFunction( char ** argv, int argc, std::string & result_string ) {
-	assert( strcasecmp( argv[0], "EC2_PUT_TARGETS" ) == 0 );
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_PUT_TARGETS ) == 0 );
 	int requestID;
 	get_int( argv[1], & requestID );
 	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
@@ -3565,6 +3758,758 @@ bool AmazonPutTargets::workerFunction( char ** argv, int argc, std::string & res
 			request.errorCode.c_str() );
 	} else {
 		result_string = create_success_result( requestID, NULL );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonRemoveTargets::~AmazonRemoveTargets() { }
+
+bool AmazonRemoveTargets::SendJSONRequest( const std::string & payload ) {
+	bool result = AmazonRequest::SendJSONRequest( payload );
+	if( result ) {
+		ClassAd reply;
+		classad::ClassAdJsonParser cajp;
+		if(! cajp.ParseClassAd( this->resultString, reply, true )) {
+			dprintf( D_ALWAYS, "Failed to parse reply '%s' as JSON.\n", this->resultString.c_str() );
+			return false;
+		}
+
+		int failedEntryCount;
+		if(! reply.LookupInteger( "FailedEntryCount", failedEntryCount ) ) {
+			dprintf( D_ALWAYS, "Reply '%s' did contain FailedEntryCount attribute.\n", this->resultString.c_str() );
+			return false;
+		}
+		if( failedEntryCount != 0 ) {
+			dprintf( D_ALWAYS, "Reply '%s' indicates a failure.\n", this->resultString.c_str() );
+			return false;
+		}
+	}
+	return result;
+}
+
+bool AmazonRemoveTargets::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_REMOVE_TARGETS ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 7 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 7, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonRemoveTargets request = AmazonRemoveTargets( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Set the required headers.  (SendJSONRequest() sets the content-type.)
+	request.headers[ "X-Amz-Target" ] = "AWSEvents.RemoveTargets";
+
+	// Construct the JSON payload.
+	std::string ruleName, id;
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( ruleName, argv[5] );
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( id, argv[6] );
+
+	std::string payload;
+	formatstr( payload, "{\n"
+				"\"Ids\": [ \"%s\" ],\n"
+				"\"Rule\": \"%s\"\n"
+				"}\n",
+				ruleName.c_str(), id.c_str() );
+
+	if( ! request.SendJSONRequest( payload ) ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, NULL );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonDeleteRule::~AmazonDeleteRule() { }
+
+bool AmazonDeleteRule::SendJSONRequest( const std::string & payload ) {
+	bool result = AmazonRequest::SendJSONRequest( payload );
+	// Succesful results are defined to be empty.
+	return result;
+}
+
+bool AmazonDeleteRule::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_DELETE_RULE ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 6 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonDeleteRule request = AmazonDeleteRule( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Set the required headers.  (SendJSONRequest() sets the content-type.)
+	request.headers[ "X-Amz-Target" ] = "AWSEvents.DeleteRule";
+
+	// Construct the JSON payload.
+	std::string ruleName;
+	classad::ClassAdJsonUnParser::UnparseAuxEscapeString( ruleName, argv[5] );
+
+	std::string payload;
+	formatstr( payload, "{\n"
+				"\"Name\": \"%s\"\n"
+				"}\n",
+				ruleName.c_str() );
+
+	if( ! request.SendJSONRequest( payload ) ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, NULL );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonBulkStop::~AmazonBulkStop() { }
+
+struct bulkStopUD_t {
+	bool inFailure;
+	bool & success;
+
+    bulkStopUD_t( bool & s ) : inFailure( false ), success( s ) { }
+};
+typedef struct bulkStopUD_t bulkStopUD;
+
+void bulkStopESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+    bulkStopUD * bsud = (bulkStopUD *)vUserData;
+    if( strcasecmp( ignoringNameSpace( name ), "unsuccessfulFleetRequestSet" ) == 0 ) {
+    	bsud->inFailure = true;
+    }
+    if( bsud->inFailure && strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+        bsud->success = false;
+    }
+}
+
+void bulkStopCDH( void *, const XML_Char *, int ) {
+}
+
+void bulkStopEEH( void * vUserData, const XML_Char * name ) {
+    bulkStopUD * bsud = (bulkStopUD *)vUserData;
+    if( strcasecmp( ignoringNameSpace( name ), "unsuccessfulFleetRequestSet" ) == 0 ) {
+        bsud->inFailure = false;
+    }
+}
+
+bool AmazonBulkStop::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+        bulkStopUD bsud( this->success );
+        XML_Parser xp = XML_ParserCreate( NULL );
+        XML_SetElementHandler( xp, & bulkStopESH, & bulkStopEEH );
+        XML_SetCharacterDataHandler( xp, & bulkStopCDH );
+        XML_SetUserData( xp, & bsud );
+        XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+        XML_ParserFree( xp );
+	} else {
+		if( this->errorCode == "E_CURL_IO" ) {
+			// To be on the safe side, if the I/O failed, the annexd should
+			// check to see the Spot Fleet was stopped or not.
+			this->errorCode = "NEED_CHECK_BULK_STOP";
+			return false;
+		}
+	}
+	return result;
+}
+
+bool AmazonBulkStop::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_BULK_STOP" ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 6 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonBulkStop request = AmazonBulkStop( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Fill in required parameters.
+	request.query_parameters[ "Action" ] = "CancelSpotFleetRequests";
+	// See comment in AmazonBulkStart::workerFunction().
+	request.query_parameters[ "Version" ] = "2016-04-01";
+	request.query_parameters[ "SpotTerminateInstances" ] = "true";
+
+	request.query_parameters[ "SpotFleetRequestId.1" ] = argv[5];
+
+	if( ! request.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		if( request.success ) {
+			result_string = create_success_result( requestID, NULL );
+		} else {
+			// FIXME: Extract the error code and return success if it's
+			// 'fleetRequestIdDoesNotExist'.  It should never be, but if
+			// the user put it in 'fleetRequestNotInCancellableState',
+			// then we should wait a bit and retry (in the annex daemon,
+			// so maybe we should just return the error code in that field
+			// and let the daemon look at it, and maybe the message in
+			// the message field).  The 'unexpectedError' should also be
+			// retried, but 'fleetRequestIdMalformed' should probably
+			// cause an abort in the annex daemon.
+			std::string message;
+			formatstr( message, "Unexpected failure encountered while "
+				"cancelling spot fleet request '%s'.  Check the Annex GAHP "
+				"log for details.",
+				request.query_parameters[ "SpotFleetRequestId.1" ].c_str() );
+			result_string = create_failure_result( requestID, message.c_str(), "E_UNEXPECTED_ERROR" );
+		}
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonGetFunction::~AmazonGetFunction() { }
+
+bool AmazonGetFunction::SendURIRequest() {
+	bool result = AmazonRequest::SendURIRequest();
+	if( result ) {
+		ClassAd reply;
+		classad::ClassAdJsonParser cajp;
+		if(! cajp.ParseClassAd( this->resultString, reply, true )) {
+			dprintf( D_ALWAYS, "Failed to parse reply '%s' as JSON.\n", this->resultString.c_str() );
+			return false;
+		}
+
+		classad::ExprTree * c = reply.LookupExpr( "Configuration" );
+		classad::ClassAd * d = NULL;
+		if((! c) || (! c->isClassad( & d ))) {
+			dprintf( D_ALWAYS, "Failed to find JSON blob value 'Configuration' in reply.\n" );
+			return false;
+		}
+
+		ClassAd configuration( * d );
+		if(! configuration.LookupString( "CodeSha256", functionHash )) {
+			dprintf( D_ALWAYS, "Failed to find string value 'Configuration.CodeSha256' in reply.\n" );
+			return false;
+		}
+
+		return true;
+	} else {
+		if( responseCode == 404 &&
+		  errorMessage.find( "Function not found" ) != std::string::npos ) {
+		  	// This signals that our query successfully found nothing
+		  	// (so that we don't have to try again).
+		  	functionHash = "";
+			return true;
+		}
+	}
+	return result;
+}
+
+bool AmazonGetFunction::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_GET_FUNCTION ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 6 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonGetFunction request = AmazonGetFunction( requestID, argv[0] );
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	const char * separator = "/";
+	if( argv[2][strlen( argv[2] ) - 1] == '/' ) {
+		separator = "";
+	}
+	formatstr( request.serviceURL, "%s%s2015-03-31/functions/%s", argv[2],
+		separator, amazonURLEncode( argv[5] ).c_str() );
+
+	if( ! request.SendURIRequest() ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		StringList sl; sl.append( request.functionHash.c_str() );
+		result_string = create_success_result( requestID, & sl );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonS3Upload::~AmazonS3Upload() { }
+
+bool AmazonS3Upload::SendRequest() {
+	httpVerb = "PUT";
+	std::string payload;
+	if( ! readShortFile( this->path, payload ) ) {
+		this->errorCode = "E_FILE_IO";
+		this->errorMessage = "Unable to read file to upload '" + this->path + "'.";
+		dprintf( D_ALWAYS, "Unable to read from file to upload '%s', failing.\n", this->path.c_str() );
+		return false;
+	}
+	return SendS3Request( payload );
+}
+
+// Expecting:	S3_UPLOAD <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<bucketName> <fileName> <path>
+bool AmazonS3Upload::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcasecmp( argv[0], "S3_UPLOAD" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_number_args( argc, 8 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 8, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonS3Upload uploadRequest = AmazonS3Upload( requestID, argv[0] );
+
+	std::string serviceURL = argv[2];
+	std::string bucketName = argv[5];
+	std::string fileName = argv[6];
+
+	std::string protocol, host, canonicalURI;
+	if(! parseURL( serviceURL, protocol, host, canonicalURI )) {
+		uploadRequest.errorCode = "E_INVALID_SERVICE_URL";
+		uploadRequest.errorMessage = "Failed to parse service URL.";
+		dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+
+		result_string = create_failure_result( requestID,
+			uploadRequest.errorMessage.c_str(),
+			uploadRequest.errorCode.c_str() );
+		return false;
+	}
+	if( canonicalURI.empty() ) { canonicalURI = "/"; }
+
+	uploadRequest.serviceURL =	protocol + "://" + bucketName + "." +
+								host + canonicalURI + fileName;
+	uploadRequest.accessKeyFile = argv[3];
+	uploadRequest.secretKeyFile = argv[4];
+	uploadRequest.path = argv[7];
+
+	// Send the request.
+	if( ! uploadRequest.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+		uploadRequest.errorMessage.c_str(),
+		uploadRequest.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, NULL );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonCreateStack::~AmazonCreateStack() { }
+
+bool AmazonCreateStack::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		Regex r; int errCode = 0; const char * errString = 0;
+		bool patternOK = r.compile( "<StackId>(.*)</StackId>", & errString, & errCode );
+		ASSERT( patternOK );
+		ExtArray<MyString> groups(2);
+		if( r.match( resultString, & groups ) ) {
+			this->stackID = groups[1];
+		}
+	}
+	return result;
+}
+
+// Expecting:	CF_CREATE_STACK <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<stackName> <templateURL> <capability>
+//				(<parameters-name> <parameter-value>)* <NULLSTRING>
+
+bool AmazonCreateStack::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcasecmp( argv[0], "CF_CREATE_STACK" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 9 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 9, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonCreateStack csRequest = AmazonCreateStack( requestID, argv[0] );
+	csRequest.serviceURL = argv[2];
+	csRequest.accessKeyFile = argv[3];
+	csRequest.secretKeyFile = argv[4];
+
+	csRequest.query_parameters[ "Action" ] = "CreateStack";
+	csRequest.query_parameters[ "Version" ] = "2010-05-15";
+	csRequest.query_parameters[ "OnFailure" ] = "DELETE";
+	csRequest.query_parameters[ "StackName" ] = argv[5];
+	csRequest.query_parameters[ "TemplateURL" ] = argv[6];
+	if( strcasecmp( argv[7], NULLSTRING ) ) {
+		csRequest.query_parameters[ "Capabilities.member.1" ] = argv[7];
+	}
+
+	std::string pn;
+	for( int i = 8; i + 1 < argc && strcmp( argv[i], NULLSTRING ); i += 2 ) {
+		formatstr( pn, "Parameters.member.%d", (i - 6)/2 );
+		csRequest.query_parameters[ pn + ".ParameterKey" ] = argv[i];
+		csRequest.query_parameters[ pn + ".ParameterValue" ] = argv[i+1];
+	}
+
+	if(! csRequest.SendRequest()) {
+		result_string = create_failure_result( requestID,
+				csRequest.errorMessage.c_str(),
+				csRequest.errorCode.c_str() );
+	} else {
+		if( csRequest.stackID.empty() ) {
+			result_string = create_failure_result( requestID,
+				"Could not find stack ID in response from server.",
+				"E_NO_STACK_ID" );
+		} else {
+			StringList sl; sl.append( csRequest.stackID.c_str() );
+			result_string = create_success_result( requestID, & sl );
+		}
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonDescribeStacks::~AmazonDescribeStacks() { }
+
+bool AmazonDescribeStacks::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		int errCode = 0; const char * errString = 0;
+
+		Regex r;
+		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", & errString, & errCode );
+		ASSERT( patternOK );
+		ExtArray<MyString> statusGroups( 2 );
+		if( r.match( resultString, & statusGroups ) ) {
+			this->stackStatus = statusGroups[1];
+		}
+
+		Regex s;
+		patternOK = s.compile( "<Outputs>(.*)</Outputs>", & errString, & errCode, Regex::multiline | Regex::dotall );
+		ASSERT( patternOK );
+		ExtArray<MyString> outputGroups( 2 );
+		if( s.match( resultString, & outputGroups ) ) {
+			dprintf( D_ALWAYS, "Found output string '%s'.\n", outputGroups[1].c_str() );
+			MyString membersRemaining = outputGroups[1];
+
+			Regex t;
+			patternOK = t.compile( "\\s*<member>\\s*(.*?)\\s*</member>\\s*", & errString, & errCode, Regex::multiline | Regex::dotall );
+			ASSERT( patternOK );
+
+			ExtArray<MyString> memberGroups( 2 );
+			while( t.match( membersRemaining, & memberGroups ) ) {
+				std::string member = memberGroups[1].c_str();
+				dprintf( D_ALWAYS, "Found member '%s'.\n", member.c_str() );
+
+				Regex u;
+				patternOK = u.compile( "<OutputKey>(.*)</OutputKey>", & errString, & errCode );
+				ASSERT( patternOK );
+
+				std::string outputKey;
+				ExtArray<MyString> keyGroups( 2 );
+				if( u.match( member, & keyGroups ) ) {
+					outputKey = keyGroups[1];
+				}
+
+				Regex v;
+				patternOK = v.compile( "<OutputValue>(.*)</OutputValue>", & errString, & errCode );
+				ASSERT( patternOK );
+
+				std::string outputValue;
+				ExtArray<MyString> valueGroups( 2 );
+				if( v.match( member, & valueGroups ) ) {
+					outputValue = valueGroups[1];
+				}
+
+				if(! outputKey.empty()) {
+					outputs.push_back( outputKey );
+					outputs.push_back( outputValue );
+				}
+
+				membersRemaining.replaceString( memberGroups[0].c_str(), "" );
+			}
+		}
+	}
+	return result;
+}
+
+// Expecting:	CF_DESCRIBE_STACKS <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<stackName>
+bool AmazonDescribeStacks::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcasecmp( argv[0], "CF_DESCRIBE_STACKS" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_number_args( argc, 6 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonDescribeStacks dsRequest = AmazonDescribeStacks( requestID, argv[0] );
+	dsRequest.serviceURL = argv[2];
+	dsRequest.accessKeyFile = argv[3];
+	dsRequest.secretKeyFile = argv[4];
+
+	dsRequest.query_parameters[ "Action" ] = "DescribeStacks";
+	dsRequest.query_parameters[ "Version" ] = "2010-05-15";
+	dsRequest.query_parameters[ "StackName" ] = argv[5];
+
+	if(! dsRequest.SendRequest()) {
+		result_string = create_failure_result( requestID,
+				dsRequest.errorMessage.c_str(),
+				dsRequest.errorCode.c_str() );
+	} else {
+		if( dsRequest.stackStatus.empty() ) {
+		result_string = create_failure_result( requestID,
+			"Could not find stack status in response from server.",
+			"E_NO_STACK_STATUS" );
+		} else {
+			StringList sl; sl.append( dsRequest.stackStatus.c_str() );
+			for( unsigned i = 0; i < dsRequest.outputs.size(); ++i ) {
+				sl.append( nullStringIfEmpty( dsRequest.outputs[i] ) );
+			}
+			result_string = create_success_result( requestID, & sl );
+		}
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonCallFunction::~AmazonCallFunction() { }
+
+bool AmazonCallFunction::SendJSONRequest( const std::string & payload ) {
+	bool result = AmazonRequest::SendJSONRequest( payload );
+	return result;
+}
+
+// Expecting:   AWS_CALL_FUNCTION <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+//				<function-name-or-arn> <function-argument-blob>
+bool AmazonCallFunction::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_CALL_FUNCTION ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 7 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 7, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonCallFunction request = AmazonCallFunction( requestID, argv[0] );
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	const char * separator = "/";
+	if( argv[2][strlen( argv[2] ) - 1] == '/' ) {
+		separator = "";
+	}
+	formatstr( request.serviceURL, "%s%s2015-03-31/functions/%s/invocations", argv[2],
+		separator, amazonURLEncode( argv[5] ).c_str() );
+	request.headers[ "X-Amz-Invocation-Type" ] = "RequestResponse";
+
+	if( ! request.SendJSONRequest( argv[6] ) ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		StringList sl;
+		sl.append( request.resultString.c_str() );
+		result_string = create_success_result( requestID, & sl );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonBulkQuery::~AmazonBulkQuery() { }
+
+struct bulkQueryUD_t {
+	int	itemDepth;
+	bool inCreateTime;
+	bool inClientToken;
+	bool inSpotFleetRequestID;
+
+	std::string currentSFRID;
+	std::string currentCreateTime;
+	std::string currentClientToken;
+
+	StringList & resultList;
+
+	bulkQueryUD_t( StringList & r ) : itemDepth( 0 ), inCreateTime( false ),
+		inClientToken( false ), inSpotFleetRequestID( false ), resultList( r ) { }
+};
+typedef struct bulkQueryUD_t bulkQueryUD;
+
+void bulkQueryESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+	bulkQueryUD * bqUD = (bulkQueryUD *)vUserData;
+	if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
+		bqUD->itemDepth += 1;
+	} else if( strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+		bqUD->inSpotFleetRequestID = true;
+	} else if( strcasecmp( ignoringNameSpace( name ), "clientToken" ) == 0 ) {
+		bqUD->inClientToken = true;
+	} else if( strcasecmp( ignoringNameSpace( name ), "createTime" ) == 0 ) {
+		bqUD->inCreateTime = true;
+	}
+}
+
+void bulkQueryCDH( void * vUserData, const XML_Char * cdata, int len ) {
+	bulkQueryUD * bqUD = (bulkQueryUD *)vUserData;
+	if( bqUD->inSpotFleetRequestID ) {
+		appendToString( (const void *)cdata, len, 1, (void *) & bqUD->currentSFRID );
+	} else if( bqUD->inClientToken ) {
+		appendToString( (const void *)cdata, len, 1, (void *) & bqUD->currentClientToken );
+	} else if( bqUD->inCreateTime ) {
+		appendToString( (const void *)cdata, len, 1, (void *) & bqUD->currentCreateTime );
+	}
+}
+
+void bulkQueryEEH( void * vUserData, const XML_Char * name ) {
+	bulkQueryUD * bqUD = (bulkQueryUD *)vUserData;
+	if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
+		bqUD->itemDepth -= 1;
+
+		if( bqUD->itemDepth == 0 ) {
+			if(! bqUD->currentSFRID.empty()) {
+				bqUD->resultList.append( bqUD->currentSFRID.c_str() );
+				bqUD->resultList.append( nullStringIfEmpty( bqUD->currentCreateTime ) );
+				bqUD->resultList.append( nullStringIfEmpty( bqUD->currentClientToken ) );
+			}
+
+			bqUD->currentSFRID.clear();
+			bqUD->currentCreateTime.clear();
+			bqUD->currentClientToken.clear();
+		}
+	} else if( strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+		bqUD->inSpotFleetRequestID = false;
+	} else if( strcasecmp( ignoringNameSpace( name ), "clientToken" ) == 0 ) {
+		bqUD->inClientToken = false;
+	} else if( strcasecmp( ignoringNameSpace( name ), "createTime" ) == 0 ) {
+		bqUD->inCreateTime = false;
+	}
+}
+
+bool AmazonBulkQuery::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		bulkQueryUD bqUD( resultList );
+		XML_Parser xp = XML_ParserCreate( NULL );
+		XML_SetElementHandler( xp, & bulkQueryESH, & bulkQueryEEH );
+		XML_SetCharacterDataHandler( xp, & bulkQueryCDH );
+		XML_SetUserData( xp, & bqUD );
+		XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+		XML_ParserFree( xp );
+	}
+	return result;
+}
+
+bool AmazonBulkQuery::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_BULK_QUERY" ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 5 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonBulkQuery request = AmazonBulkQuery( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Fill in required parameters.
+	request.query_parameters[ "Action" ] = "DescribeSpotFleetRequests";
+	// See comment in AmazonBulkStart::workerFunction().
+	request.query_parameters[ "Version" ] = "2016-04-01";
+
+	if( ! request.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, & request.resultList );
 	}
 
 	return true;

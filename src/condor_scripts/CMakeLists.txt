@@ -17,6 +17,9 @@
  ############################################################### 
 
 
+install ( FILES condor_top DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES Condor.pm CondorUtils.pm CondorTest.pm CondorPersonal.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
 if (NOT WINDOWS)
 
     install ( FILES condor_run DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
@@ -39,9 +42,8 @@ if (NOT WINDOWS)
 
     if (LINUX)
         install ( FILES linux_kernel_tuning DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+        install ( FILES condor_aklog DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     endif(LINUX)
-
-    install ( FILES Condor.pm CondorUtils.pm CondorTest.pm CondorPersonal.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 	if (STD_UNIVERSE)
 		install ( FILES condor_compile DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

@@ -34,6 +34,7 @@ GetOptions(
 my $EXTERNALS_TASK        = "remote_task.externals";
 my $BUILD_TASK            = "remote_task.build";
 my $TAR_TASK              = "remote_task.create_tar";
+my $TAR_TESTS_TASK        = "remote_task.create_tests_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
 my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
@@ -64,7 +65,7 @@ if ($boos) {
 	mkdir 'sources';
 	open(FH, '>', 'swap_userdir.cmd') or print "Cant open swap_userdir.cmd for writing: $!\n";
 	if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-		print FH '"userdir\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/msconfig userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests userdir/src/classad/tests/testdata.txt' . "\n";
+		print FH '"userdir\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/msconfig userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
 		print FH 'move userdir\* sources' . "\n";
 		print FH 'move userdir\src sources\src' . "\n";
 		print FH 'move userdir\doc sources\doc' . "\n";
@@ -76,7 +77,7 @@ if ($boos) {
 		print FH '"sources\msconfig\tar.exe" -xvf swap_userdir.tgz' . "\n";
 	} else {
 		print FH '#!/bin/sh' . "\n";
-		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests userdir/src/classad/tests/testdata.txt' . "\n";
+		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
 		print FH 'for file in userdir/*; do if [ -f "$file" ]; then mv "$file" sources; fi; done' . "\n";
 		print FH 'mv userdir/src sources' . "\n";
 		print FH 'mv userdir/doc sources' . "\n";
@@ -119,12 +120,15 @@ else {
     print TASKLIST "$BUILD_TESTS_TASK 4h\n";
     print TASKLIST "$UNSTRIPPED_TASK 4h\n";
     print TASKLIST "$CHECK_UNSTRIPPED_TASK 4h\n";
-    if (!($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7)/)) {
+    if (!($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7|x86_64_Ubuntu16)/)) {
         print TASKLIST "$NATIVE_DEBUG_TASK 4h\n";
     }
-    print TASKLIST "$NATIVE_TASK 4h\n";
-    print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
+    if (!($ENV{NMI_PLATFORM} =~ /x86_64_Ubuntu16/)) {
+        print TASKLIST "$NATIVE_TASK 4h\n";
+        print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
+    }
     print TASKLIST "$TAR_TASK 4h\n";
+    print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$CHECK_TAR_TASK 4h\n";
     print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }

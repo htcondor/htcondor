@@ -1,0 +1,15 @@
+
+[Unit]
+Description=Boot-time configuration for an HTCondor annex instance
+Before=condor.service
+Wants=condor.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/condor/condor-annex-ec2 start
+TimeoutSec=infinity
+
+[Install]
+WantedBy=multi-user.target
+

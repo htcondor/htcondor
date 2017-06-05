@@ -20,11 +20,7 @@
 
 use CondorTest;
 
-#if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-#  $cmd = '_collector_tester.exe';
-#} else {
-#}
-$cmd = 'with_cache.exe';
+$cmd = '_test_classad_parse.exe -cache';
 $testdesc =  'classad with cache unit test';
 $testname = "classad_with_cache_unit_test";
 

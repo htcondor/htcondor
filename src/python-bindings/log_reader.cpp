@@ -9,7 +9,6 @@
 #include "ClassAdLogReader.h"
 
 #include <memory>
-#include <boost/python.hpp>
 
 #include "classad/value.h"
 #include "classad/source.h"

@@ -21,7 +21,7 @@
 #include "condor_common.h"
 
 #if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
-#define ouch(x) dprintf(D_ALWAYS,"%s",x)
+#define ouch(x) dprintf(D_SECURITY,"SSL Auth: %s",x)
 #include "authentication.h"
 #include "condor_auth_ssl.h"
 #include "condor_string.h"
@@ -104,7 +104,10 @@ bool Condor_Auth_SSL::Initialize()
 
 	dlerror();
 
-	if ( Condor_Auth_Kerberos::Initialize() == false ||
+	if (
+#if defined(HAVE_EXT_KRB5)
+		Condor_Auth_Kerberos::Initialize() == false ||
+#endif
 		 (dl_hdl = dlopen(LIBSSL_SO, RTLD_LAZY)) == NULL ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||

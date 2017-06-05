@@ -41,6 +41,7 @@ Lexer ()
 	tokenConsumed = true;
 	accumulating = false;
     initialized = false;
+	oldClassAdLex = false;
 	jsonLex = false;
 
 	// debug flag
@@ -96,10 +97,20 @@ WasInitialized(void)
 }
 
 bool Lexer::
+SetOldClassAdLex( bool do_old )
+{
+	bool prev = oldClassAdLex;
+	oldClassAdLex = do_old;
+	jsonLex = false;
+	return prev;
+}
+
+bool Lexer::
 SetJsonLex( bool do_json )
 {
 	bool old = jsonLex;
 	jsonLex = do_json;
+	oldClassAdLex = false;
 	return old;
 }
 
@@ -524,6 +535,9 @@ tokenizeString(char delim)
 {
 	bool stringComplete = false;
 
+	if ( oldClassAdLex ) {
+		return tokenizeStringOld(delim);
+	}
 	// need to mark() after the quote
 	inString = true;
 	wind ();
@@ -589,6 +603,78 @@ tokenizeString(char delim)
 		tokenType = LEX_TOKEN_ERROR; // string conatins a '\0' character inbetween
 	}
 	
+	return tokenType;
+}
+
+// Escaping is different in old ClassAd syntax.
+// Backslash isn't special unless it preceeds a quote character,
+// unless that quote character is the last character in the expression.
+int Lexer::
+tokenizeStringOld(char delim)
+{
+	bool stringComplete = false;
+
+	// need to mark() after the quote
+	inString = true;
+	wind ();
+	mark ();
+
+	while (!stringComplete) {
+		int oldCh = 0;
+		// consume the string literal; read upto " ignoring \"
+		while( ( ch > 0 ) && ( ch != delim ) ) {
+			oldCh = ch;
+			wind( );
+		}
+
+		if( ch == delim ) {
+			int tempch = ' ';
+			if ( oldCh != '\\' ) {
+				stringComplete = true;
+				continue;
+			}
+			// TODO any character after <backslash><quote> other than
+			//   newline means the quote is literal and the string
+			//   continues onwards. So you can't have trailing
+			//   whitespace after a string that ends with a backslash.
+			//   With some contortions, we can handle trailing whitespace.
+			tempch = lexSource->ReadCharacter();
+			if ( tempch > 0 ) {
+				lexSource->UnreadCharacter();
+			}
+			if ( tempch > 0 && tempch != '\n' ) {
+				// more text after quote, quote is part of the string value
+				// remove backslash before quote
+				lexBuffer.erase(lexBufferCount--);
+				lexBuffer[lexBufferCount] = '"';
+				wind();
+			} else {
+				// string ends with a backslash
+				stringComplete = true;
+			}
+		}
+		else {
+			// loop quit due to ch == 0 or ch == EOF
+			tokenType = LEX_TOKEN_ERROR;
+			return tokenType;
+		}
+	}
+	cut( );
+	wind( );	// skip over the close quote
+	bool validStr = true; // to check if string is valid after converting escape
+	yylval.SetStringValue( lexBuffer.c_str( ) );
+	if (validStr) {
+		if(delim == '\"') {
+			tokenType = LEX_STRING_VALUE;
+		}
+		else {
+			tokenType = LEX_IDENTIFIER;
+		}
+	}
+	else {
+		tokenType = LEX_TOKEN_ERROR; // string conatins a '\0' character inbetween
+	}
+
 	return tokenType;
 }
 

@@ -253,7 +253,7 @@ int
 pseudo_free_fs_blocks( const char *path )
 {
 	long long ck = sysapi_disk_space( path );
-	PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
+	//PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
 	return (int)MIN(INT_MAX, ck);
 }
 
@@ -348,7 +348,7 @@ int
 pseudo_report_error( const char *msg )
 {
 	dprintf(D_ALWAYS,"error: %s\n",msg);
-	return job_report_store_error( msg );
+	return job_report_store_error( msg, NULL );
 }
 
 int
@@ -543,20 +543,17 @@ pseudo_work_request( PROC *p, char *&a_out, char *&targ, char *&orig, int *kill_
 bool
 is_ckpt_file(const char path[])
 {
-	char *test_path;
+	std::string test_path;
 
-	test_path = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
-	if (strcmp(path, test_path) == 0) {
-		free(test_path); test_path = NULL;
+	SpooledJobFiles::getJobSpoolPath( JobAd, test_path );
+	if (strcmp(path, test_path.c_str()) == 0) {
 		return true;
 	}
-	strcat(test_path, ".tmp");
-	if (strcmp(path, test_path) == 0) {
-		free(test_path); test_path = NULL;
+	test_path += ".tmp";
+	if (strcmp(path, test_path.c_str()) == 0) {
 		return true;
 	}
 
-	free(test_path); test_path = NULL;
 	return false;
 }
 
@@ -570,7 +567,7 @@ is_ickpt_file(const char path[])
 {
 	char *test_path;
 
-	test_path = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
+	test_path = GetSpooledExecutablePath( Proc->id.cluster, Spool );
 	if (strcmp(path, test_path) == 0) {
 		free(test_path); test_path = NULL;
 		return true;
@@ -695,6 +692,7 @@ void createListenPort( int & fd, condor_sockaddr & saFileServer ) {
 	// but that seems unnecessary.
 	int rv = _condor_local_bind( FALSE, fd );
 	assert( rv == TRUE );
+	if (rv) {} // shut up warnings...
 
 	rv = listen( fd, 1 );
 	assert( rv == 0 );
@@ -1005,9 +1003,9 @@ pseudo_put_file_stream(
 
 			/* Send status assuring peer that we got everything */
 		answer = htonl( bytes_read );
-		write( data_sock, &answer, sizeof(answer));
+		rval = write( data_sock, &answer, sizeof(answer));
 		dprintf( D_ALWAYS,
-			"\tSTREAM FILE RECEIVED OK (%d bytes)\n", bytes_read );
+			"\tSTREAM FILE RECEIVED OK (%d bytes) %d wrote\n", bytes_read, rval);
 
 		exit( 0 );
 	  default:	/* the parent */
@@ -1959,7 +1957,7 @@ simp_log( const char *msg )
 		}
 	}
 
-	fprintf( fp, msg );
+	fputs( msg, fp );
 	(void)umask( omask );
 }
 

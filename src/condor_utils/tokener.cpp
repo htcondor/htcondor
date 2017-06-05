@@ -105,6 +105,9 @@ bool collapse_escapes(std::string & str)
 	return true;
 }
 
+#if 1
+//PRAGMA_REMIND("remove this dead code")
+#else
 bool CaseInsensitiveLiteral::operator ==(const char * str) const {
 	if (lit == str) return true;
 	if ((!lit) || (!str)) return false;
@@ -115,6 +118,7 @@ bool CaseInsensitiveLiteral::operator <(const char * str) const {
 	else if ( ! str) { return 1; }
 	return strcasecmp(lit, str) < 0;
 }
+#endif
 
 int tokener::compare_nocase(const char * pat) const
 {
@@ -132,9 +136,11 @@ int tokener::compare_nocase(const char * pat) const
 
 bool tokener::next()
 {
+	ch_quote = 0;
 	ix_cur = line.find_first_not_of(sep, ix_next);
 	if (ix_cur != std::string::npos && (line[ix_cur] == '"' || line[ix_cur] == '\'')) {
 		ix_next = line.find(line[ix_cur], ix_cur+1);
+		ch_quote = line[ix_cur];
 		ix_cur += 1; // skip leading "
 		cch = ix_next - ix_cur;
 		if (ix_next != std::string::npos) { ix_next += 1; /* skip trailing " */}
@@ -157,18 +163,17 @@ bool tokener::copy_regex(std::string & value, int & pcre_flags)
 	value = line.substr(ix_cur, cch); // return value between //'s
 	ix_next = ix+1; // skip trailing /
 	ix = line.find_first_of(sep, ix_next);
+	if (ix == std::string::npos) { ix = line.size(); }
 
 	// regex options will follow right after, or they will not exist.
 	pcre_flags = 0;
-	if (ix != std::string::npos) {
-		while (ix_next < ix) {
-			switch (line[ix_next++]) {
-			case 'g': pcre_flags |= 0x80000000; break;
-			case 'm': pcre_flags |= PCRE_MULTILINE; break;
-			case 'i': pcre_flags |= PCRE_CASELESS; break;
-			case 'U': pcre_flags |= PCRE_UNGREEDY; break;
-			default: return false;
-			}
+	while (ix_next < ix) {
+		switch (line[ix_next++]) {
+		case 'g': pcre_flags |= 0x80000000; break;
+		case 'm': pcre_flags |= PCRE_MULTILINE; break;
+		case 'i': pcre_flags |= PCRE_CASELESS; break;
+		case 'U': pcre_flags |= PCRE_UNGREEDY; break;
+		default: return false;
 		}
 	}
 	return true;

@@ -441,48 +441,23 @@ void GCEJob::doEvaluateState()
 					}
 				}
 
-				// If we're not doing recovery, start with GM_CLEAR_REQUEST.
-				gmState = GM_CLEAR_REQUEST;
-
-				if( ! m_instanceName.empty() ) {
-
-					// Because we have the instance name, we know that
-					// we still have the SSH keypair from the previous
-					// execution of GM_SAVE_INSTANCE_NAME.  We can therefore
-					// jump directly to GM_START_VM, where (using the
-					// instance name), we will call RunInstances()
-					// idempotently.
-					gmState = GM_START_VM;
-
-					// As an optimization, if we already have the instance
-					// ID, we can jump directly to GM_SUBMITTED.  This
-					// also allows us to avoid logging the submission and
-					// execution events twice.
-					//
-					// FIXME: If a job were removed before we begin
-					// recovery, would the execute event be logged twice?
-					if (!m_instanceId.empty()) {
-						submitLogged = true;
-						if ( condorState == RUNNING || condorState == COMPLETED ) {
-							executeLogged = true;
-						}
-						// Do NOT set probeNow; if we're recovering from
-						// a queue with 5000 jobs, we'd hit the service
-						// with 5000 status update requests, which is
-						// precisely what we're trying to avoid.
-						gmState = GM_SUBMITTED;
-					} else if( condorState == REMOVED ) {
-						// We don't know if the corresponding instance
-						// exists or not. And if we're creating the
-						// ssh keypair, we don't know if that exists.
-						// Rather than unconditionally
-						// create it (in GM_START_VM), check to see if
-						// exists first.  While this may be more efficient,
-						// the real benefit is that invalid jobs won't
-						// stay on hold when the user removes them
-						// (because we won't try to start them).
-						gmState = GM_SEEK_INSTANCE_ID;
+				if ( m_instanceName.empty() ) {
+					// This is a fresh job submission.
+					gmState = GM_CLEAR_REQUEST;
+				} else if ( m_instanceId.empty() ) {
+					// We died during submission. There may be a running
+					// instance whose ID we don't know.
+					// Wait for a bulk query of instances and see if an
+					// instance that matches our m_instanceName appears.
+					gmState = GM_SEEK_INSTANCE_ID;
+				} else {
+					// There is (or was) a running instance and we know
+					// its ID.
+					submitLogged = true;
+					if ( condorState == RUNNING || condorState == COMPLETED ) {
+						executeLogged = true;
 					}
+					gmState = GM_SUBMITTED;
 				}
 				break;
 
@@ -569,18 +544,6 @@ void GCEJob::doEvaluateState()
 
 					lastSubmitAttempt = time(NULL);
 
-					if ( rc != 0 &&
-						 gahp_error_code == "NEED_CHECK_VM_START" ) {
-						// get an error code from gahp server said that we should check if
-						// the VM has been started successfully in EC2
-
-						// Maxmium retry times is 3, if exceeds this limitation, we fall through
-						if ( m_retry_times++ < maxRetryTimes ) {
-							gmState = GM_START_VM;
-						}
-						break;
-					}
-
 					if ( rc == 0 ) {
 
 						ASSERT( instance_id != "" );
@@ -589,12 +552,6 @@ void GCEJob::doEvaluateState()
 
 						gmState = GM_SAVE_INSTANCE_ID;
 
-					} else if ( gahp_error_code == "InstanceLimitExceeded" ) {
-						// meet the resource limitation (maximum 20 instances)
-						// should retry this command later
-						myResource->CancelSubmit( this );
-						daemonCore->Reset_Timer( evaluateStateTid,
-												 submitInterval );
 					 } else {
 						errorString = gahp->getErrorString();
 						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
@@ -916,7 +873,8 @@ void GCEJob::doEvaluateState()
 				// If the bulk query found this job, it has an instance ID.
 				// (If the job had an instance ID before, we would be in
 				// an another state.)  Otherwise, the service doesn't know
-				// about this job, and we can remove it from the queue.
+				// about this job, and we can submit the job or let it
+				// leave the queue.
 				if( ! m_instanceId.empty() ) {
 					WriteGridSubmitEventToUserLog( jobAd );
 					gmState = GM_SAVE_INSTANCE_ID;
@@ -1088,7 +1046,7 @@ void GCEJob::StatusUpdate( const char * instanceID,
 	// SetRemoteJobStatus() sets the last-update timestamp, but
 	// only returns true if the status has changed.
 	if( SetRemoteJobStatus( status ) ) {
-		remoteJobState = status;
+		remoteJobState = status ? status : "";
 		probeNow = true;
 		SetEvaluateState();
 	}

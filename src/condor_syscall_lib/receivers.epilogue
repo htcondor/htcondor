@@ -43,7 +43,7 @@
 int
 CONDOR_NotSupported( int condor_sysnum,  ... )
 {
-	job_report_store_error( "%s - system call not supported by Condor",
+	job_report_store_error( "system call not supported by Condor",
 	                      _condor_syscall_name(condor_sysnum) );
 
 	errno = ENOSYS;

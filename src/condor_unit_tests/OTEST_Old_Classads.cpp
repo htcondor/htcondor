@@ -1272,12 +1272,12 @@ static bool test_expr_tree_to_string_short() {
 	emit_test("Test that ExprTreeToString() returns the correct string "
 		"representation of the ExprTree of the attribute in the classad when "
 		"the string is short.");
-    const char* classad_string = "\tRank = ( Memory >= 50 )";
+    const char* classad_string = "\tRank = (Memory >= 50)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	const char* attribute_name = "Rank";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
-	const char* expect = "( Memory >= 50 )";
+	const char* expect = "(Memory >= 50)";
 	const char* result = ExprTreeToString(expr);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -1339,10 +1339,10 @@ static bool test_expr_tree_to_string_long2() {
 	classad.initFromString(classad_string, NULL);
 	const char* attribute_name = "Requirements";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
-    const char* expect = "( a > 3 ) && ( b >= 1.3 ) && "
-		"( c < MY.rank ) && ( ( d <= TARGET.RANK ) || ( g == \"alain\" ) || "
-		"( g != \"roy\" ) || ( h =?= 5 ) || ( i =!= 6 ) ) && "
-		"( ( a + b ) < ( c - d ) ) && ( ( e * false ) > ( g / h ) ) && "
+    const char* expect = "(a > 3) && (b >= 1.3) && "
+		"(c < MY.rank) && ((d <= TARGET.RANK) || (g == \"alain\") || "
+		"(g != \"roy\") || (h =?= 5) || (i =!= 6)) && "
+		"((a + b) < (c - d)) && ((e * false) > (g / h)) && "
 		"x == false && y == true && z == false && j == true";
 	const char* result = ExprTreeToString(expr);
 	emit_input_header();
@@ -4946,7 +4946,13 @@ static bool test_round_negative_float() {
 	const char* classad_string = "\tA1=round(\"-3.5\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	int actual = -1, expect = -4;
+	int actual = -1;
+#ifdef WIN32
+	int expect = -3;
+#else
+	emit_problem("The correct answer should be -3 (round toward 0), but no matter the rounding mode, glibc always returns -4");
+	int expect = -4;
+#endif
 	int retVal = classad.EvalInteger("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -7027,9 +7033,9 @@ static bool test_equality() {
 		"and MyString.");
 	const char* classad_string = "\tFoo = 3";
 	ExprTree *e1, *e2;
-	MyString n1, n2;
-	Parse(classad_string, n1, e1);
-	Parse(classad_string, n2, e2);
+	std::string n1, n2;
+	ParseLongFormAttrValue(classad_string, n1, e1);
+	ParseLongFormAttrValue(classad_string, n2, e2);
 	emit_input_header();
 	emit_param("STRING", classad_string);
 	emit_output_expected_header();
@@ -7038,8 +7044,8 @@ static bool test_equality() {
 	emit_output_actual_header();
 	emit_param("ExprTree Equality", tfstr((*e1) == (*e2)));
 	emit_param("MyString Equality", tfstr(n1 == n2));
-	emit_param("n1", n1.Value());
-	emit_param("n2", n2.Value());
+	emit_param("n1", n1.c_str());
+	emit_param("n2", n2.c_str());
 	if(!((*e1) == (*e2)) || !(n1 == n2)) {
 		delete(e1); delete(e2);
 		FAIL;
@@ -7054,9 +7060,9 @@ static bool test_inequality() {
 	const char* classad_string1  = "Foo = 3";
 	const char* classad_string2  = "Bar = 5";
 	ExprTree *e1, *e2;
-	MyString n1, n2;
-	Parse(classad_string1, n1, e1);
-	Parse(classad_string2, n2, e2);
+	std::string n1, n2;
+	ParseLongFormAttrValue(classad_string1, n1, e1);
+	ParseLongFormAttrValue(classad_string2, n2, e2);
 	emit_input_header();
 	emit_param("STRING 1", classad_string1);
 	emit_param("STRING 2", classad_string2);
@@ -7649,19 +7655,17 @@ static bool test_nested_ads()
 	classad::ClassAd ad, ad2;
 	classad::ExprTree *tree;
 
-	emit_test("Testing classad caching with nested ads");
+	emit_test("Testing with nested ads");
 	
-	bool do_caching = true;
-
 	ad.InsertAttr( "A", 4 );
 	if ( !parser.ParseExpression( "{ [ Y = 1; Z = A; ] }", tree ) ) {
 		FAIL;
 	}
-	ad.Insert( "B", tree, do_caching );
+	ad.Insert( "B", tree );
 	if ( !parser.ParseExpression( "B[0].Z", tree ) ) {
 		FAIL;
 	}
-	ad.Insert( "C", tree, do_caching );
+	ad.Insert( "C", tree );
 
 	std::string str;
 	unparser.Unparse( str, &ad );

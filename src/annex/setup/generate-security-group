@@ -1,0 +1,52 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use JSON;
+
+my( $prettyPrint );
+GetOptions(
+	'pretty-print'	=> \$prettyPrint
+);
+
+	my $template;
+	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
+	$template->{ Description } = "HTCondorAnnex: Security Group";
+
+	# Handily, a security group defined without a VPC ID uses the default VPC.
+	$template->{ Resources }->{ SecurityGroup } = {
+		Type => "AWS::EC2::SecurityGroup",
+		Properties => {
+			GroupDescription => "Allow SSH and HTCondor from anywhere.",
+			SecurityGroupIngress => [
+				{
+					IpProtocol => "tcp",
+					FromPort => "22",
+					ToPort => "22",
+					CidrIp => "0.0.0.0/0"
+				},
+				{
+					IpProtocol => "tcp",
+					FromPort => "9618",
+					ToPort => "9618",
+					CidrIp => "0.0.0.0/0"
+				}
+			]
+		}
+	};
+
+	$template->{ Outputs } = {
+		"SecurityGroupID" => {
+			Value => { "Fn::GetAtt" => [ "SecurityGroup", "GroupId" ] }
+		}
+	};
+
+if( defined( $prettyPrint ) ) {
+	print( to_json( $template, { utf8 => 1, pretty => 1 } ) . "\n" );
+} else {
+	print( encode_json( $template ) . "\n" );
+}
+
+exit( 0 );

@@ -47,7 +47,7 @@ static void _condor_message( const char *text )
 	} else {
 		char* _text = strdup( text );		//de-const
 		REMOTE_CONDOR_report_error( _text );
-		dprintf(D_ALWAYS, _text);
+		dprintf(D_ALWAYS, "%s", _text);
 		free( _text );						//b/c of strdup
 	}
 }

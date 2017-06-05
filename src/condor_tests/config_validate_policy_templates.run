@@ -1,0 +1,218 @@
+#! /usr/bin/env perl
+#testreq: personal
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorPersonal;
+use CondorUtils;
+use Check::SimpleJob;
+use strict;
+use warnings;
+
+my $testname = "config_validate_policy_templates";
+my $configfile;
+my $appendcontent;
+my $result;
+
+$appendcontent = '
+    use POLICY:Always_Run_Jobs
+';
+
+TLOG("Initialize\n");
+$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "ConfigPolicy",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$result = SimpleJob::RunCheck();
+
+my $on_success = sub {
+	print "Success in RunCheck\n";
+};
+
+my $on_execute = sub {
+	runCondorTool("condor_q");
+};
+
+print "---------------------------------------------------------------------------------------------------------\n";
+TLOG("Checking Policy1, ALWAYS_RUN_JOBS\n");
+
+$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy1");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "ConfigPolicy1",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$result = SimpleJob::RunCheck(
+        on_execute => $on_execute,
+        on_success => $on_success,
+);
+
+RegisterResult(1, $testname, "ALWAYS_RUN_JOBS");
+
+print "---------------------------------------------------------------------------------------------------------\n";
+TLOG("Checking Policy2, DESKTOP\n");
+
+$appendcontent = '
+    use POLICY:Desktop
+';
+$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy2");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "ConfigPolicy2",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$result = CondorTest::SearchCondorLog("STARTD", 'Daemon Log is logging');
+print "result is $result\n";
+
+RegisterResult($result, $testname, "DESKTOP");
+
+print "---------------------------------------------------------------------------------------------------------\n";
+TLOG("Checking Policy3, HOLD_IF_CPUS_EXCEEDED\n");
+
+$appendcontent = '
+    use POLICY:Hold_If_Cpus_Exceeded
+';
+$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy3");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "ConfigPolicy3",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$result = SimpleJob::RunCheck(
+        on_execute => $on_execute,
+        on_success => $on_success,
+);
+
+RegisterResult(1, $testname, "HOLD_IF_CPUS_EXCEEDED");
+
+print "---------------------------------------------------------------------------------------------------------\n";
+TLOG("Checking Policy4, HOLD_IF_MEMORY_EXCEEDED\n");
+
+$appendcontent = '
+    use POLICY:HOLD_IF_MEMORY_EXCEEDED
+';
+$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy4");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "ConfigPolicy4",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$result = SimpleJob::RunCheck(
+        on_execute => $on_execute,
+        on_success => $on_success,
+);
+
+RegisterResult(1, $testname, "HOLD_IF_MEMORY_EXCEEDED");
+
+print "---------------------------------------------------------------------------------------------------------\n";
+TLOG("Checking Policy5, LIMIT_JOB_RUNTIMES\n");
+
+$appendcontent = '
+    use POLICY:LIMIT_JOB_RUNTIMES
+';
+$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy5");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "ConfigPolicy5",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$result = SimpleJob::RunCheck(
+        on_execute => $on_execute,
+        on_success => $on_success,
+);
+
+RegisterResult(1, $testname, "LIMIT_JOB_RUNTIMES");
+
+print "---------------------------------------------------------------------------------------------------------\n";
+TLOG("Checking Policy6, PREEMPT_IF_CPUS_EXCEEDED\n");
+
+$appendcontent = '
+    use POLICY:PREEMPT_IF_CPUS_EXCEEDED
+';
+$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy6");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "ConfigPolicy6",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$result = SimpleJob::RunCheck(
+        on_execute => $on_execute,
+        on_success => $on_success,
+);
+
+RegisterResult(1, $testname, "PREEMPT_IF_CPUS_EXCEEDED");
+
+print "---------------------------------------------------------------------------------------------------------\n";
+TLOG("Checking Policy7, PREEMPT_IF_MEMORY_EXCEEDED\n");
+
+$appendcontent = '
+    use POLICY:PREEMPT_IF_MEMORY_EXCEEDED
+';
+$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy7");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "ConfigPolicy7",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$result = SimpleJob::RunCheck(
+        on_execute => $on_execute,
+        on_success => $on_success,
+);
+
+RegisterResult(1, $testname, "PREEMPT_IF_MEMORY_EXCEEDED");
+
+print "---------------------------------------------------------------------------------------------------------\n";
+TLOG("Checking Policy8, UWCS_DESKTOP\n");
+
+$appendcontent = '
+    use POLICY:UWCS_DESKTOP
+';
+$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy8");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "ConfigPolicy8",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$result = CondorTest::SearchCondorLog("STARTD", "Daemon Log is logging");
+
+RegisterResult($result, $testname, "UWCS_DESKTOP");
+
+CondorTest::EndTest();
+exit(0);

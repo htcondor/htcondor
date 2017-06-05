@@ -1,6 +1,4 @@
 
-#include <boost/python.hpp>
-
 #include "classad_wrapper.h"
 
 enum ParserType {

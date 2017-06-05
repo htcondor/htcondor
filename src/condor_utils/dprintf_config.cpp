@@ -280,23 +280,6 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	DebugParams[0].accepts_all = true;
 
 	/*
-	 * The duplication of the param_function instance is to ensure no one else can change
-	 * the data structure out from under dprintf.  It is also to prevent transfer of ownership/
-	 * responsibility for the block of memory used to store the function pointers.
-	 */
-	/*
-	if(!dprintf_param_funcs)
-		dprintf_param_funcs = new param_functions();
-	if(p_funcs)
-	{
-		dprintf_param_funcs->set_param_func(p_funcs->get_param_func());
-		dprintf_param_funcs->set_param_bool_int_func(p_funcs->get_param_bool_int_func());
-		dprintf_param_funcs->set_param_wo_default_func(p_funcs->get_param_wo_default_func());
-		dprintf_param_funcs->set_param_int_func(p_funcs->get_param_int_func());
-	}
-	*/
-
-	/*
 	** First, add the debug flags that are shared by everyone.
 	*/
 	pval = param("ALL_DEBUG");//dprintf_param_funcs->param("ALL_DEBUG");
@@ -421,7 +404,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			** index 1
 			*/
 			subsys_and_level += _condor_DebugCategoryNames[debug_level]+1;
-			param_index = DebugParams.size();
+			param_index = (int)DebugParams.size();
 		}
 
 		(void)sprintf(pname, "%s_LOG", subsys_and_level.c_str());
@@ -581,11 +564,11 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			p_info[ii].VerboseCats   = DebugParams[ii].VerboseCats;
 		}
 		// return the NEEDED size of the p_info array, even if it is bigger than c_info
-		return DebugParams.size();
+		return (int)DebugParams.size();
 	}
 	else
 	{
-		dprintf_set_outputs(&DebugParams[0], DebugParams.size());
+		dprintf_set_outputs(&DebugParams[0], (int)DebugParams.size());
 	}
 	return 0;
 }

@@ -97,6 +97,14 @@ ActualScheddQ::~ActualScheddQ()
 bool ActualScheddQ::Connect(DCSchedd & MySchedd, CondorError & errstack) {
 	if (qmgr) return true;
 	qmgr = ConnectQ(MySchedd.addr(), 0 /* default */, false /* default */, &errstack, NULL, MySchedd.version());
+	allows_late = has_late = false;
+	if (qmgr) {
+		CondorVersionInfo cvi(MySchedd.version());
+		if (cvi.built_since_version(8,7,1)) {
+			has_late = true;
+			allows_late = param_boolean("SCHEDD_ALLOW_LATE_MATERIALIZE",has_late);
+		}
+	}
 	return qmgr != NULL;
 }
 
@@ -113,12 +121,52 @@ int ActualScheddQ::get_NewCluster() { return NewCluster(); }
 int ActualScheddQ::get_NewProc(int cluster_id) { return NewProc(cluster_id); }
 int ActualScheddQ::destroy_Cluster(int cluster_id, const char *reason) { return DestroyCluster(cluster_id, reason); }
 
+int ActualScheddQ::init_capabilities() {
+	int rval = 0;
+	if ( ! tried_to_get_capabilities) {
+		rval = GetScheddCapabilites(0, capabilities);
+		tried_to_get_capabilities = true;
+
+		// fetch late materialize caps from the capabilities ad.
+		allows_late = has_late = false;
+		if ( ! capabilities.LookupBool("LateMaterialize", allows_late)) {
+			allows_late = has_late = false;
+		} else {
+			has_late = true; // schedd knows about late materialize
+		}
+	}
+	return rval;
+}
+bool ActualScheddQ::has_late_materialize() {
+	init_capabilities();
+	return has_late;
+}
+bool ActualScheddQ::allows_late_materialize() {
+	init_capabilities();
+	return allows_late;
+}
+int ActualScheddQ::get_Capabilities(ClassAd & caps) {
+	int rval = init_capabilities();
+	if (rval == 0) {
+		caps.Update(capabilities);
+	}
+	return rval;
+}
+
 int ActualScheddQ::set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags) {
 	return SetAttribute(cluster, proc, attr, value, flags);
 }
 
 int ActualScheddQ::set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags) {
 	return SetAttributeInt(cluster, proc, attr, value, flags);
+}
+
+int ActualScheddQ::set_Factory(int cluster, int qnum, const char * filename, const char * text) {
+	return SetJobFactory(cluster, qnum, filename, text);
+}
+
+int ActualScheddQ::set_Foreach(int cluster, int itemnum, const char * filename, const char * text) {
+	return SetMaterializeData(cluster, itemnum, filename, text);
 }
 
 int ActualScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) { return SendSpoolFileIfNeeded(ad); }
@@ -183,6 +231,12 @@ int SimScheddQ::destroy_Cluster(int cluster_id, const char * /*reason*/) {
 	return 0;
 }
 
+int SimScheddQ::get_Capabilities(ClassAd & caps) {
+	caps.Assign( "LateMaterialize", true );
+	return GetScheddCapabilites(0, caps);
+}
+
+
 int SimScheddQ::set_Attribute(int cluster_id, int proc_id, const char *attr, const char *value, SetAttributeFlags_t /*flags*/) {
 	ASSERT(cluster_id == cluster);
 	ASSERT(proc_id == proc || proc_id == -1);
@@ -198,6 +252,26 @@ int SimScheddQ::set_AttributeInt(int cluster_id, int proc_id, const char *attr, 
 	if (fp) {
 		if (log_all_communication) fprintf(fp, "::int(%d,%d) ", cluster_id, proc_id);
 		fprintf(fp, "%s=%d\n", attr, value);
+	}
+	return 0;
+}
+
+int SimScheddQ::set_Factory(int cluster_id, int qnum, const char * filename, const char * text) {
+	ASSERT(cluster_id == cluster);
+	if (fp) {
+		if (log_all_communication) fprintf(fp, "::setFactory(%d,%d,%s,%s) ", cluster_id, qnum, filename?filename:"NULL", text?"<text>":"NULL");
+		//PRAGMA_REMIND("print the submit digest")
+		//fprintf(fp, "%s=%d\n", attr, value);
+	}
+	return 0;
+}
+
+int SimScheddQ::set_Foreach(int cluster_id, int itemnum, const char * filename, const char * text) {
+	ASSERT(cluster_id == cluster);
+	if (fp) {
+		if (log_all_communication) fprintf(fp, "::setForeach(%d,%d,%s,%s) ", cluster_id, itemnum, filename?filename:"NULL", text?"<items>":"NULL");
+		//PRAGMA_REMIND("print the foreach data")
+		//fprintf(fp, "%s=%d\n", attr, value);
 	}
 	return 0;
 }

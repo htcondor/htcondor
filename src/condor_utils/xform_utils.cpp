@@ -126,7 +126,7 @@ MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET& set)
 	int cbFree, cHunks, cb = set.apool.usage(cHunks, cbFree);
 	if (cHunks > 1 || cbFree < (int)(1024 + cbCheckpoint)) {
 		ALLOCATION_POOL tmp;
-		int cbAlloc = (int)MAX(cb*2, cb+4096+cbCheckpoint);
+		int cbAlloc = (int)MAX(cb*2, cb+4096+(int)cbCheckpoint);
 		tmp.reserve(cbAlloc);
 		set.apool.swap(tmp);
 
@@ -157,12 +157,12 @@ MACRO_SET_CHECKPOINT_HDR* checkpoint_macro_set(MACRO_SET& set)
 	pchka += sizeof(void*) - (((size_t)pchka) & (sizeof(void*)-1));
 
 	// write the checkpoint into it.
-	MACRO_SET_CHECKPOINT_HDR * phdr = (MACRO_SET_CHECKPOINT_HDR *)pchka;
+	MACRO_SET_CHECKPOINT_HDR * phdr = reinterpret_cast<MACRO_SET_CHECKPOINT_HDR *>(pchka);
 	pchka = (char*)(phdr+1);
 	phdr->cTable = phdr->cMetaTable = 0;
 	phdr->cSources = (int)set.sources.size();
 	if (phdr->cSources) {
-		const char ** psrc = (const char**)pchka;
+		const char ** psrc = reinterpret_cast<const char**>(pchka);
 		for (int ii = 0; ii < phdr->cSources; ++ii) {
 			*psrc++ = set.sources[ii];
 		}
@@ -195,7 +195,7 @@ void rewind_macro_set(MACRO_SET& set, MACRO_SET_CHECKPOINT_HDR* phdr, bool and_d
 
 	set.sources.clear();
 	if (phdr->cSources > 0) {
-		const char ** psrc = (const char **)pchka;
+		const char ** psrc = reinterpret_cast<const char **>(pchka);
 		for (int ii = 0; ii < phdr->cSources; ++ii) {
 			set.sources.push_back(*psrc++);
 		}
@@ -231,9 +231,9 @@ void XFormHash::setup_macro_defaults()
 {
 	// make an instance of the defaults table that is private to this function.
 	// we do this because of the 'live' keys in the 
-	struct condor_params::key_value_pair* pdi = (struct condor_params::key_value_pair*) LocalMacroSet.apool.consume(sizeof(XFormMacroDefaults), sizeof(void*));
+	struct condor_params::key_value_pair* pdi = reinterpret_cast<struct condor_params::key_value_pair*> (LocalMacroSet.apool.consume(sizeof(XFormMacroDefaults), sizeof(void*)));
 	memcpy((void*)pdi, XFormMacroDefaults, sizeof(XFormMacroDefaults));
-	LocalMacroSet.defaults = (MACRO_DEFAULTS*)LocalMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*));
+	LocalMacroSet.defaults = reinterpret_cast<MACRO_DEFAULTS*>(LocalMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*)));
 	LocalMacroSet.defaults->size = COUNTOF(XFormMacroDefaults);
 	LocalMacroSet.defaults->table = pdi;
 	LocalMacroSet.defaults->metat = NULL;
@@ -1117,11 +1117,11 @@ static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * att
 	} else {
 		ExprTree * tree = ad->Remove(attr);
 		if (tree) {
-			if (ad->Insert(attrNew, tree, false)) {
+			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
 				if (flags&1) fprintf(stderr, "ERROR: could not rename %s to %s\n", attr.c_str(), attrNew);
-				if ( ! ad->Insert(attr, tree, false)) {
+				if ( ! ad->Insert(attr, tree)) {
 					delete tree;
 				}
 			}
@@ -1144,7 +1144,7 @@ static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrN
 		ExprTree * tree = ad->Lookup(attr);
 		if (tree) {
 			tree = tree->Copy();
-			if (ad->Insert(attrNew, tree, false)) {
+			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
 				if (flags&1) fprintf(stderr, "ERROR: could not copy %s to %s\n", attr.c_str(), attrNew);
@@ -1372,6 +1372,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 	MacroStreamXFormSource & xform = pargs->xfm;
 
 	classad::ClassAdParser parser;
+	parser.SetOldClassAd(true);
 	std::string tmp3;
 
 	// give the line to our tokener so we can parse it.
@@ -1496,11 +1497,10 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 			if (is_tool) fprintf(stderr, "ERROR: SET %s has no value", attr.c_str());
 		} else {
 			ExprTree * expr = NULL;
-			if ( ! parser.ParseExpression(ConvertEscapingOldToNew(rhs.ptr()), expr, true)) {
+			if ( ! parser.ParseExpression(rhs.ptr(), expr, true)) {
 				if (is_tool) fprintf(stderr, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
-				const bool cache_it = false;
-				if ( ! ad->Insert(attr, expr, cache_it)) {
+				if ( ! ad->Insert(attr, expr)) {
 					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), rhs.ptr());
 					delete expr;
 				}
@@ -1518,8 +1518,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 				if (is_tool) fprintf(stderr, "ERROR: EVALSET %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				ExprTree * tree = XFormCopyValueToTree(val);
-				const bool cache_it = false;
-				if ( ! ad->Insert(attr, tree, cache_it)) {
+				if ( ! ad->Insert(attr, tree)) {
 					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
 					delete tree;
 				} else if (verbose) {
@@ -1760,135 +1759,19 @@ static int is_interesting_route_attr(const std::string & attr, int * popts=NULL)
 	return 0;
 }
 
-bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr)
-{
-	if ( ! expr) return false;
-
-	classad::ExprTree::NodeKind kind = expr->GetKind();
-	while (kind == classad::ExprTree::ATTRREF_NODE) {
-		classad::ExprTree *e2=NULL;
-		bool absolute;
-		((classad::AttributeReference*)expr)->GetComponents(e2, attr, absolute);
-		return !e2;
-	}
-	return false;
-}
-
-
-typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_MAP;
-static int rewrite_attr_refs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
-{
-	int iret = 0;
-	if ( ! tree) return 0;
-	switch (tree->GetKind()) {
-		case ExprTree::LITERAL_NODE: {
-			classad::ClassAd * ad;
-			classad::Value val;
-			classad::Value::NumberFactor	factor;
-			((classad::Literal*)tree)->GetComponents( val, factor );
-			if (val.IsClassAdValue(ad)) {
-				iret += rewrite_attr_refs(ad, mapping);
-			}
-		}
-		break;
-
-		case ExprTree::ATTRREF_NODE: {
-			classad::AttributeReference* atref = reinterpret_cast<classad::AttributeReference*>(tree);
-			classad::ExprTree *expr;
-			std::string ref;
-			std::string tmp;
-			bool absolute;
-			atref->GetComponents(expr, ref, absolute);
-			// if there is a non-trivial left hand side (something other than X from X.Y attrib ref)
-			// then recurse it.
-			if (expr && ! ExprTreeIsAttrRef(expr, tmp)) {
-				iret += rewrite_attr_refs(expr, mapping);
-			} else {
-				bool change_it = false;
-				if (expr) {
-					NOCASE_STRING_MAP::const_iterator found = mapping.find(tmp);
-					if (found != mapping.end()) {
-						if (found->second.empty()) {
-							expr = NULL; // the left hand side is a simple attr-ref. and we want to set it to EMPTY
-							change_it = true;
-						} else {
-							iret += rewrite_attr_refs(expr, mapping);
-						}
-					}
-				} else {
-					NOCASE_STRING_MAP::const_iterator found = mapping.find(ref);
-					if (found != mapping.end() && ! found->second.empty()) {
-						ref = found->second;
-						change_it = true;
-					}
-				}
-				if (change_it) {
-					atref->SetComponents(NULL, ref, absolute);
-					iret += 1;
-				}
-			}
-		}
-		break;
-
-		case ExprTree::OP_NODE: {
-			classad::Operation::OpKind	op;
-			classad::ExprTree *t1, *t2, *t3;
-			((classad::Operation*)tree)->GetComponents( op, t1, t2, t3 );
-			if (t1) iret += rewrite_attr_refs(t1, mapping);
-			if (t2) iret += rewrite_attr_refs(t2, mapping);
-			if (t3) iret += rewrite_attr_refs(t3, mapping);
-		}
-		break;
-
-		case ExprTree::FN_CALL_NODE: {
-			std::string fnName;
-			std::vector<classad::ExprTree*> args;
-			((classad::FunctionCall*)tree)->GetComponents( fnName, args );
-			for (std::vector<classad::ExprTree*>::iterator it = args.begin(); it != args.end(); ++it) {
-				iret += rewrite_attr_refs(*it, mapping);
-			}
-		}
-		break;
-
-		case ExprTree::CLASSAD_NODE: {
-			std::vector< std::pair<std::string, classad::ExprTree*> > attrs;
-			((classad::ClassAd*)tree)->GetComponents(attrs);
-			for (std::vector< std::pair<std::string, classad::ExprTree*> >::iterator it = attrs.begin(); it != attrs.end(); ++it) {
-				iret += rewrite_attr_refs(it->second, mapping);
-			}
-		}
-		break;
-
-		case ExprTree::EXPR_LIST_NODE: {
-			std::vector<classad::ExprTree*> exprs;
-			((classad::ExprList*)tree)->GetComponents( exprs );
-			for (std::vector<ExprTree*>::iterator it = exprs.begin(); it != exprs.end(); ++it) {
-				iret += rewrite_attr_refs(*it, mapping);
-			}
-		}
-		break;
-
-		case ExprTree::EXPR_ENVELOPE:
-		default:
-			// unknown or unallowed node.
-			ASSERT(0);
-		break;
-	}
-	return iret;
-}
 
 static int convert_target_to_my(classad::ExprTree * tree)
 {
 	NOCASE_STRING_MAP mapping;
 	mapping["TARGET"] = "MY";
-	return rewrite_attr_refs(tree, mapping);
+	return RewriteAttrRefs(tree, mapping);
 }
 
 static int strip_target_attr_ref(classad::ExprTree * tree)
 {
 	NOCASE_STRING_MAP mapping;
 	mapping["TARGET"] = "";
-	return rewrite_attr_refs(tree, mapping);
+	return RewriteAttrRefs(tree, mapping);
 }
 
 static void unparse_special (

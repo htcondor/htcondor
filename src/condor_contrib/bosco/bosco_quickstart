@@ -192,10 +192,6 @@ read -p "Type the queue manager for $REMOTE_HOST (pbs, condor, lsf, sge, slurm) 
 while [ "x$q_tmp" = "x" ]; do
   read -p "No default, please type the queue manager and press [ENTER]: " q_tmp
 done
-if [ "x$q_tmp" = "xslurm" ]; then
-  # SLURM is using PBS emulation
-  q_tmp="pbs"
-fi
 REMOTE_TYPE=$q_tmp
 
 echo "Connecting $REMOTE_HOST, user: $REMOTE_USER, queue manager: $REMOTE_TYPE"

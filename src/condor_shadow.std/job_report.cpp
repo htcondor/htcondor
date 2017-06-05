@@ -67,21 +67,24 @@ static struct error_node *error_head=0;
 
 /* Record a line of error information about the job */
 
-int job_report_store_error( const char *format, ... )
+int job_report_store_error( const char *message, const char * context )
 {
 	struct error_node *e;
-	char *text;
+	char * text;
 
-	text = (char*)malloc(JOB_REPORT_RECORD_MAX);
+	int cch = strlen(message)+1;
+	if (context) { cch += strlen(context) + 4; }
+
+	text = (char*)malloc(cch);
 	if(!text) return 0;
 
-	va_list args;
-	va_start( args, format );
-
-	/* Create a string according to the text */
-
-	vsprintf( text, format, args );
-	va_end(args);
+	if (context) {
+		strcpy(text, context);
+		strcat(text, " - ");
+		strcat(text, message);
+	} else {
+		strcpy(text, message);
+	}
 
 	/* Are there any duplicates? */
 
@@ -105,8 +108,6 @@ int job_report_store_error( const char *format, ... )
 	e->count = 1;
 	e->next = error_head;
 	error_head = e;
-
-	va_end( args );
 
 	return 1;
 }

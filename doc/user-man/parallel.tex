@@ -350,7 +350,8 @@ and then it invokes the MPI application's executable.
 The scripts are located in the
 \File{\MacroUNI{RELEASE\_DIR}/etc/examples} directory.
 The script for the Open MPI implementation is \File{openmpiscript}.
-The script for the MPICH implementation is \File{mp1script}.
+The scripts for MPICH implementations are \File{mp1script} and \File{mp2script}.
+An MPICH3 script is not available at this time.
 These scripts rely on running \Prog{ssh} 
 for communication between the nodes of the MPI application.
 The \Prog{ssh} daemon on Unix platforms restricts
@@ -427,12 +428,21 @@ but should work with more recent versions.
 Configuration variable \Macro{CONDOR\_SSH\_KEYGEN} points
 to the corresponding \Prog{ssh-keygen} executable.
 
-Both \Prog{mp1script} and \Prog{openmpiscript}
-require environmental support.
-\Prog{mp1script} requires the \Env{PATH} to the MPICH installation to be set.
-The shell variable \Env{MPdir} indicates its proper value.
+%Both \Prog{mp1script} and \Prog{openmpiscript}
+%require environmental support.
+\Prog{mp1script} and \Prog{mp2script} require the \Env{PATH} to the MPICH installation to be set.
+The variable \Env{MPDIR} may be modified in the scripts to indicate its proper value.
 This directory contains the MPICH \Prog{mpirun} executable.
-Open MPI also uses \Env{MPdir}.
+
+\Prog{openmpiscript} also requires the \Env{PATH} to the Open MPI installation.
+Either the variable \Env{MPDIR} can be set manually in the script,
+or the administrator can define \Env{MPDIR}
+using the configuration variable \Macro{OPENMPI\_INSTALL\_PATH}.
+When using Open MPI on a multi-machine HTCondor cluster,
+the administrator may also want to consider tweaking the
+\Macro{OPENMPI\_EXCLUDE\_NETWORK\_INTERFACES} configuration variable
+as well as set \MacroNI{MOUNT\_UNDER\_SCRATCH} = \File{/tmp}.
+%Open MPI also uses \Env{MPdir}.
 %For OpenMPI, there is a similar path setting, but it is called \Env{LAMDIR}
 %in the \Prog{openmpiscript} script.  
 %In addition, this path must be part of the
@@ -484,7 +494,6 @@ arguments = -np 2 my_mpi_linked_executable arg1 arg2 arg3
 should_transfer_files = yes
 when_to_transfer_output = on_exit
 transfer_input_files = my_mpi_linked_executable
-
 queue
 \end{verbatim}
 \normalsize

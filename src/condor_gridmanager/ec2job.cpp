@@ -834,7 +834,7 @@ void EC2Job::doEvaluateState()
 					}
 
 					// construct input parameters for ec2_vm_start()
-					std::string instance_id = "";
+					std::vector< std::string > instance_ids;
 
 					// For a given EC2 Job, in its life cycle, the attributes will not change
 
@@ -859,10 +859,11 @@ void EC2Job::doEvaluateState()
 											 m_block_device_mapping,
 											 m_iam_profile_arn,
 											 m_iam_profile_name,
+											 1,
 											 *m_group_names,
 											 *m_group_ids,
 											 *m_parameters_and_values,
-											 instance_id,
+											 instance_ids,
 											 gahp_error_code);
 
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -885,6 +886,8 @@ void EC2Job::doEvaluateState()
 					}
 
 					if ( rc == 0 ) {
+						ASSERT( instance_ids.size() == 1 );
+						std::string instance_id = instance_ids[0];
 						ASSERT( instance_id != "" );
 						SetInstanceId( instance_id.c_str() );
 						WriteGridSubmitEventToUserLog(jobAd);

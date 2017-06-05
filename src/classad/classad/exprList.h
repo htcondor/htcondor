@@ -80,9 +80,15 @@ class ExprList : public ExprTree
 		void erase(iterator it);
 		void erase(iterator f, iterator l);
 	
+#if defined(SCOPE_REFACTOR)
+		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
+#endif
 	private:
 		friend class ExprListIterator;
 
+#if defined(SCOPE_REFACTOR)
+		const ClassAd   *parentScope;
+#endif
 		std::vector<ExprTree*> exprList;
 
 		void Clear (void);

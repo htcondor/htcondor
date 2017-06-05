@@ -1,0 +1,10 @@
+# This DAG tests a final node with multiple procs, when the final
+# node succeeds and overrides the failure of a previous node.
+
+NODE_STATUS_FILE job_dagman_final-L.status
+
+# This will fail.
+JOB L_A job_dagman_final-L-node.sub
+
+# This job will have 3 procs, all of which will succeed.
+FINAL L_Z job_dagman_final-L-nodeZ.sub

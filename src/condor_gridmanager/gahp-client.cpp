@@ -921,8 +921,8 @@ GahpServer::Startup()
 	m_gahp_readfd = stdout_pipefds[0];
 	m_gahp_writefd = stdin_pipefds[1];
 #if !defined(WIN32)
-	m_gahp_real_readfd = daemonCore->Get_Pipe_FD( m_gahp_readfd, &m_gahp_real_readfd );
-	m_gahp_real_errorfd = daemonCore->Get_Pipe_FD( m_gahp_errorfd, &m_gahp_real_errorfd );
+	ASSERT( daemonCore->Get_Pipe_FD( m_gahp_readfd, &m_gahp_real_readfd ) );
+	ASSERT( daemonCore->Get_Pipe_FD( m_gahp_errorfd, &m_gahp_real_errorfd ) );
 #endif
 
 		// Read in the initial greeting from the GAHP, which is the version.
@@ -1730,9 +1730,14 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 			// Any text left at the end of the string is added to
 			// m_gahp_error_buffer to be printed when the next newline
 			// is read.
+			// Check for and remove any carriage return before each
+			// newline.
 		while ( (newline = strchr( newline + 1, '\n' ) ) != NULL ) {
 
 			*newline = '\0';
+			if ( newline >= buff && *(newline - 1) == '\r' ) {
+				*(newline - 1) = '\0';
+			}
 			dprintf( D_FULLDEBUG, "GAHP[%d] (stderr) -> %s%s\n", m_gahp_pid,
 					 m_gahp_error_buffer.c_str(), prev_line );
 
@@ -4214,6 +4219,73 @@ GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 }
 
 int
+GahpClient::blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad)
+{
+	static const char* command = "DOWNLOAD_PROXY";
+
+	std::string ad_string;
+
+		// Check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if ( !job_ad ) {
+		ad_string = NULLSTRING;
+	} else {
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
+	}
+	std::string reqline;
+	formatstr( reqline, "%s", escapeGahpString( sandbox_id ) );
+	formatstr_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc;
+		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
 GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 {
 	static const char* command = "DESTROY_SANDBOX";
@@ -4278,6 +4350,47 @@ GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 
 		// If we made it here, command is still pending...
 	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+bool
+GahpClient::blah_get_sandbox_path( const char *sandbox_id,
+								   std::string &sandbox_path )
+{
+	static const char *command = "GET_SANDBOX_PATH";
+
+		// Check if this command is supported
+	if  ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return false;
+	}
+
+	if ( sandbox_id == NULL ) {
+		return false;
+	}
+
+	std::string buf;
+	int x = formatstr( buf, "%s %s", command, escapeGahpString( sandbox_id ) );
+	ASSERT( x > 0 );
+	server->write_line( buf.c_str() );
+
+	Gahp_Args result;
+	server->read_argv(result);
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
+		if ( result.argc > 1 ) {
+			error_string = result.argv[1];
+		} else {
+			error_string = "Unspecified error";
+		}
+		return false;
+	}
+	if ( result.argc != 2 ) {
+		EXCEPT( "Bad %s Result", command );
+	}
+	if ( strcasecmp ( result.argv[1], NULLSTRING ) ) {
+		sandbox_path = result.argv[1];
+	} else {
+		sandbox_path = "";
+	}
+	return true;
 }
 
 int

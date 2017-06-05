@@ -79,9 +79,9 @@ int main( int argc, char ** argv ) {
 
 	int isEOF = 0, isError = 0, isEmpty = 0;
 	ClassAd update( f, "\n", isEOF, isError, isEmpty );
-	if( isEOF || isError || isEmpty ) {
+	if( isError || isEmpty ) {
 		fprintf( stderr, "Failed to parse '%s', aborting.\n", file );
-		if( isEOF ) { fprintf( stderr, "File ended unexpectedly.  Please add a blank line the end of the file.\n" ); }
+		//if( isEOF ) { fprintf( stderr, "File ended unexpectedly.  Please add a blank line the end of the file.\n" ); }
 		if( isEmpty ) { fprintf( stderr, "File was empty.\n" ); }
 		if( isError ) { fprintf( stderr, "Syntax error in file.\n" ); }
 		return 1;

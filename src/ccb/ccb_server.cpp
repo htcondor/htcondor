@@ -294,7 +294,7 @@ CCBServer::EpollSockets(int)
 	}
 #ifdef CONDOR_HAVE_EPOLL
 	int epfd = -1;
-	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == -1 || epfd == -1) {
+	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == FALSE || epfd == -1) {
 		dprintf(D_ALWAYS, "Unable to lookup epoll FD\n");
 		daemonCore->Close_Pipe(m_epfd);
 		m_epfd = -1;
@@ -342,7 +342,7 @@ CCBServer::EpollAdd(CCBTarget *target)
 	if ((-1 == m_epfd) || !target) {return;}
 #ifdef CONDOR_HAVE_EPOLL
 	int epfd = -1;
-	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == -1 || epfd == -1) {
+	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == FALSE || epfd == -1) {
 		dprintf(D_ALWAYS, "Unable to lookup epoll FD\n");
 		daemonCore->Close_Pipe(m_epfd);
 		m_epfd = -1;
@@ -368,7 +368,7 @@ CCBServer::EpollRemove(CCBTarget *target)
 	if ((-1 == m_epfd) || !target) {return;}
 #ifdef CONDOR_HAVE_EPOLL
 	int epfd = -1;
-	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == -1 || epfd == -1) {
+	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == FALSE || epfd == -1) {
 		dprintf(D_ALWAYS, "Unable to lookup epoll FD\n");
 		daemonCore->Close_Pipe(m_epfd);
 		m_epfd = -1;

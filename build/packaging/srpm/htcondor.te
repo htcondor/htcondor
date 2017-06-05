@@ -1,40 +1,90 @@
+# requires package selinux-policy-devel for macros
+# Build using:
+# make -f /usr/share/selinux/devel/Makefile htcondor.pp
 
-module htcondor 1.0;
+module htcondor 1.1;
 
 require {
-	type fs_t;
-	type autofs_t;
-	type nfs_t;
-	type user_home_dir_t;
-	type user_home_t;
-	type user_tmp_t;
-	type condor_master_t;
-	type condor_schedd_t;
-	type sysctl_fs_t;
-	type sysctl_kernel_t;
-	type sysctl_net_t;
-	type sendmail_exec_t;
-	class process { setrlimit setsched };
-	class dir { search getattr };
-	class file { getattr open read write append ioctl execute };
-	class filesystem getattr;
+        type autofs_t;
+        type condor_collector_t;
+        type condor_master_t;
+        type condor_negotiator_t;
+        type condor_procd_t;
+        type condor_schedd_t;
+        type condor_schedd_tmp_t;
+        type condor_var_lock_t;
+        type etc_t;
+        type fs_t;
+        type hostname_exec_t;
+        type nfs_t;
+        type sendmail_exec_t;
+        type sendmail_t;
+        type sysctl_fs_t;
+        type sysctl_kernel_t;
+        type sysctl_net_t;
+        type tmp_t;
+        type user_fonts_t;
+        type user_home_dir_t;
+        type user_home_t;
+        type user_tmp_t;
+        type var_lib_t;
+        type var_log_t;
+
+        class capability { chown net_admin };
+        class dir { getattr read search write };
+        class fd { use };
+        class fifo_file { append create getattr ioctl lock open read setattr unlink write };
+        class file { append execute execute_no_trans getattr ioctl open read rename setattr unlink write };
+        class filesystem getattr;
+        class process { setrlimit setsched sigchld transition };
+        class unix_stream_socket { accept connectto getattr read setopt write };
 }
 
+#============= condor_collector_t ==============
+allow condor_collector_t condor_master_t:unix_stream_socket { accept getattr read setopt write };
+allow condor_collector_t tmp_t:dir { write };
+allow condor_collector_t var_lib_t:file { getattr open read };
+allow condor_collector_t var_log_t:file { open rename setattr unlink };
+
+#============= condor_negotiator_t ==============
+allow condor_negotiator_t condor_master_t:unix_stream_socket { getattr setopt accept };
+
 #============= condor_master_t ==============
+allow condor_master_t etc_t:file { write append };
+allow condor_master_t condor_var_lock_t:fifo_file { create open read unlink write };
+allow condor_master_t self:capability { chown net_admin };
+allow condor_master_t self:unix_stream_socket { connectto };
 allow condor_master_t sysctl_fs_t:dir search;
+allow condor_master_t sysctl_fs_t:file { getattr open read };
 allow condor_master_t sysctl_kernel_t:file write;
 allow condor_master_t sysctl_net_t:dir search;
+allow condor_master_t sysctl_net_t:file { getattr open read write };
+allow condor_master_t var_lib_t:file { getattr open read };
+allow condor_master_t var_log_t:file { open read rename setattr unlink };
+
+#============= condor_procd_t ==============
+allow condor_procd_t condor_var_lock_t:fifo_file { create getattr open read setattr unlink write };
+allow condor_procd_t var_log_t:file { open rename unlink };
 
 #============= condor_schedd_t ==============
+#domain_transition_pattern(condor_schedd_t, condor_schedd_tmp_t, condor_schedd_tmp_t);
+domtrans_pattern(condor_schedd_t, sendmail_exec_t, sendmail_t);
+allow condor_schedd_t autofs_t:dir search;
+allow condor_schedd_t condor_master_t:unix_stream_socket { accept getattr read setopt write };
+allow condor_schedd_t condor_schedd_tmp_t:file { execute execute_no_trans };
+allow condor_schedd_t condor_var_lock_t:fifo_file { open read write };
 allow condor_schedd_t fs_t:filesystem getattr;
-allow condor_schedd_t self:process setrlimit;
+allow condor_schedd_t hostname_exec_t:file { getattr }; # Based on condor-ce job payload
+#allow condor_schedd_t nfs_t:dir { read }; # Based on condor-ce job payload (reading an nfs-mounted home directory)
+allow condor_schedd_t nfs_t:dir { getattr read search };
+allow condor_schedd_t nfs_t:file { getattr open read write append ioctl };
+allow condor_schedd_t self:process { setrlimit setsched };
+allow condor_schedd_t sendmail_exec_t:file { getattr open read execute };
+allow condor_schedd_t user_fonts_t:dir { getattr };
 allow condor_schedd_t user_home_dir_t:dir { search getattr };
 allow condor_schedd_t user_home_t:dir { search getattr };
-allow condor_schedd_t user_home_t:file { getattr open read write append ioctl };
+allow condor_schedd_t user_home_t:file { getattr open read write append ioctl setattr };
 allow condor_schedd_t user_tmp_t:dir getattr;
-allow condor_schedd_t autofs_t:dir search;
-allow condor_schedd_t nfs_t:dir { search getattr };
-allow condor_schedd_t nfs_t:file { getattr open read write append ioctl };
-allow condor_schedd_t self:process setsched;
-allow condor_schedd_t sendmail_exec_t:file { getattr open read execute };
+allow condor_schedd_t var_lib_t:file { getattr open read };
+allow condor_schedd_t var_log_t:file { open rename setattr unlink };
 

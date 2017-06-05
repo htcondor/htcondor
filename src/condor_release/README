@@ -10,6 +10,7 @@ LICENSE-2.0.txt  - by installing Condor, you agree to the contents of
                    the LICENSE-2.0.txt file
 README	         - this file
 bin              - directory containing command-line tools
+bosco_install    - perl script to install Bosco
 condor_configure - perl script to install and configure Condor
 condor_install   - perl script to install Condor
 etc              - directory to contain configuration files

@@ -68,7 +68,10 @@ INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_ty
 
 INFNBatchResource::INFNBatchResource( const char *batch_type, 
 	const char * resource_name )
-	: BaseResource( resource_name )
+	: BaseResource( resource_name ),
+	  m_xfer_gahp( NULL ),
+	  m_gahpCanRefreshProxy( false ),
+	  m_gahpRefreshProxyChecked( false )
 {
 	m_batchType = batch_type;
 	m_gahpIsRemote = false;
@@ -91,6 +94,17 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( INFNBatchJob::gahpCallTimeout );
+
+	if ( m_gahpIsRemote ) {
+		gahp_name.insert( 0, "xfer/" );
+		m_xfer_gahp = new GahpClient( gahp_name.c_str() );
+		m_xfer_gahp->setNotificationTimerId( pingTimerId );
+		m_xfer_gahp->setMode( GahpClient::normal );
+		m_xfer_gahp->setTimeout( INFNBatchJob::gahpCallTimeout );
+	} else {
+		m_gahpCanRefreshProxy = true;
+		m_gahpRefreshProxyChecked = true;
+	}
 }
 
 
@@ -122,6 +136,15 @@ void INFNBatchResource::PublishResourceAd( ClassAd *resource_ad )
 	BaseResource::PublishResourceAd( resource_ad );
 
 	gahp->PublishStats( resource_ad );
+}
+
+bool INFNBatchResource::GahpCanRefreshProxy()
+{
+	if ( !m_gahpRefreshProxyChecked && m_xfer_gahp->isStarted() ) {
+		m_gahpCanRefreshProxy = m_xfer_gahp->getCommands()->contains_anycase( "DOWNLOAD_PROXY" );
+		m_gahpRefreshProxyChecked = true;
+	}
+	return m_gahpCanRefreshProxy;
 }
 
 // we will use ec2 command "status_all" to do the Ping work

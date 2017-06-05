@@ -155,18 +155,18 @@ typedef struct _AttribValue {
     // the value string.
     //
     static struct _AttribValue * Allocate(const char * pszAttr, const char * value) {
-        int cchValue = value ? strlen(value)+1 : 1;
-        int cchAttr  = strlen(pszAttr) + 1;
-        int cb = sizeof(struct _AttribValue) + cchValue + cchAttr;
+        size_t cchValue = value ? strlen(value)+1 : 1;
+        size_t cchAttr  = strlen(pszAttr) + 1;
+        size_t cb = sizeof(struct _AttribValue) + cchValue + cchAttr;
         struct _AttribValue * pav = (struct _AttribValue *)malloc(cb);
         if (pav) {
-            pav->cb = cb;
+            pav->cb = (int)cb;
             strcpy((char*)(pav+1), pszAttr);
             pav->pszAttr = (char*)(pav+1);
 
             pav->vtype = AttribValue_DataType_String;
-            pav->value.zstr.ix = sizeof(struct _AttribValue) + cchAttr;
-            pav->value.zstr.cb = cchValue;
+            pav->value.zstr.ix = (int)(sizeof(struct _AttribValue) + cchAttr);
+            pav->value.zstr.cb = (int)cchValue;
             if (value)
                strcpy(const_cast<char*>(pav->StringValue()), value);
             else

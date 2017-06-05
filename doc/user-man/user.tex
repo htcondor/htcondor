@@ -619,6 +619,7 @@ ClassAd based upon the information,
 and HTCondor
 works toward running the job.
 
+%TEMP -- This paragraph seems unclear to me; maybe also mention DAGMan.
 \index{submit description file!contents of}
 The contents of a submit description file have been designed to
 save time for HTCondor users.
@@ -641,17 +642,23 @@ will need to use a separate subdirectory for the output of each run.
 The \Condor{submit} manual page 
 is on page~\pageref{man-condor-submit} and
 contains a complete and full description of how to use \Condor{submit}.
-It also includes descriptions of all the many commands that may be placed
+It also includes descriptions~\pageref{condor-submit-commands}
+of all of the many commands that may be placed
 into a submit description file.
 In addition, the index lists entries for each command under the
 heading of Submit Commands.
+
+Note that job ClassAd attributes can be set directly in a submit
+file using the \Opt{+$<$attribute$>$ = $<$value$>$} syntax (see
+~\pageref{man-condor-submit-submit-set-attribute} for details.)
 
 %%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:sample-submit-files}Sample submit description files}  
 %%%%%%%%%%%%%%%%%%%%
 
 In addition to the examples of submit description files given
-here, there are more in the \Condor{submit} manual page.
+here, there are more in the \Condor{submit} manual page (see
+~\pageref{man-condor-submit}).
 \index{submit description file!examples|(}
 
 \begin{description}
@@ -669,15 +676,16 @@ which is to run the job on a machine which has the same architecture
 and operating system as the machine where \Condor{submit} is run
 to submit the job. 
 
-Standard input for this job will come from file \File{inputfile},
+Standard input for this job will come from the file \File{inputfile},
 as specified by the \SubmitCmd{input} command,
-and standard output for this job will go to file \File{outputfile},
+and standard output for this job will go to the file \File{outputfile},
 as specified by the \SubmitCmd{output} command.
-HTCondor expects to find these files in the current working directory,
-as this job is submitted,
+HTCondor expects to find \File{inputfile} in the current working directory
+when this job is submitted,
 and the system will take care of getting the input file 
 to where it needs to be when the job is executed,
-as well as bring back the output results after job execution.
+as well as bringing back the output results (to the current
+working directory) after job execution.
 
 A log file, \File{myexe.log}, will also be produced that contains events
 the job had during its lifetime inside of HTCondor.
@@ -1944,7 +1952,7 @@ receives a fair share of machines.
 For a general discussion of
 limiting preemption,
 please see
-section \ref{sec:Disabling Preemption} of the Administrator's manual.
+section \ref{sec:DisablingPreemption} of the Administrator's manual.
 
 User priorities are keyed on \Expr{<username>@<domain>}, for example
 \Expr{johndoe@cs.wisc.edu}. The domain name to use, if any, is configured by
@@ -1955,7 +1963,7 @@ even if the user submits jobs from multiple machines.
 \index{nice job}
 \index{priority!nice job}
 An extra feature is the ability to submit a job as
-a \Term{nice} job (see page~\pageref{man-condor-submit-nice}).
+a \Term{nice} job (see page~\pageref{man-condor-submit-nice-user}).
 Nice jobs artificially boost the user priority 
 by ten million just for the nice job.
 This effectively means that nice jobs will only run on

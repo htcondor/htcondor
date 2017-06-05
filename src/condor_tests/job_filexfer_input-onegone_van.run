@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -88,6 +89,14 @@ $timed = sub
 };
 
 
+$held = sub
+{
+	CondorTest::debug("Good. Job with missing input file held, as expected\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+	return(0);
+};
+
 # make some needed files. All 0 sized and xxxxxx.txt for
 # easy cleanup
 
@@ -118,6 +127,7 @@ SimpleJob::RunCheck(
 	on_success=>$success,
 	on_execute=>$execute,
 	on_wanterror=>$wanterror,
+	on_hold=>$held,
 );
 
 

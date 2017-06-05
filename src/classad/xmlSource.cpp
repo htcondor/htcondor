@@ -76,17 +76,6 @@ ParseClassAd( FILE *file, ClassAd &ad )
 	return classad_out != NULL;
 }
 
-bool ClassAdXMLParser::
-ParseClassAd( std::istream& stream, ClassAd &ad )
-{
-	ClassAd *classad_out;
-	InputStreamLexerSource lexer_source(stream);
-
-	lexer.SetLexerSource(&lexer_source);
-	classad_out = ParseClassAd(&ad);
-	return classad_out != NULL;
-}
-
 ClassAd *ClassAdXMLParser::
 ParseClassAd( const string &buffer)
 {
@@ -118,18 +107,6 @@ ParseClassAd(FILE *file)
 	classad = ParseClassAd();
 	return classad;
 }
-
-ClassAd *ClassAdXMLParser::
-ParseClassAd( istream& stream)
-{
-	ClassAd *classad;
-	InputStreamLexerSource lexer_source(stream);
-	
-	lexer.SetLexerSource(&lexer_source);
-	classad = ParseClassAd();
-	return classad;
-}
-
 
 ClassAd *ClassAdXMLParser::
 ParseClassAd(ClassAd *classad_in)

@@ -302,6 +302,10 @@ our %submit_info = (
 		},
 	},
 
+	'x86_64_CentOS7'	=> 'x86_64_RedHat7',
+	'x86_64_SL7'		=> 'x86_64_RedHat7',
+
+
 	##########################################################################
 	# Platform RedHat and SL
 	##########################################################################
@@ -331,8 +335,6 @@ our %submit_info = (
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:rhel-6.4-64'	=> 'x86_64_RedHat6',
-
-	'x86_64_SL7'	=> 'x86_64_SL6',
 
 	# for now SL6 is the same as RedHat6
 	'x86_64_SL6'	=> 'x86_64_RedHat6',
@@ -506,6 +508,7 @@ our %submit_info = (
 	'x86_64_Fedora22'				=> 'x86_64_Fedora',
 	'x86_64_Fedora23'				=> 'x86_64_Fedora',
 	'x86_64_Fedora24'				=> 'x86_64_Fedora',
+	'x86_64_Fedora25'				=> 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',
 	'x86_64_fedora_16'				=> 'x86_64_Fedora',
@@ -517,6 +520,7 @@ our %submit_info = (
 	'x86_64_fedora_22'				=> 'x86_64_Fedora',
 	'x86_64_fedora_23'				=> 'x86_64_Fedora',
 	'x86_64_fedora_24'				=> 'x86_64_Fedora',
+	'x86_64_fedora_25'				=> 'x86_64_Fedora',
 
 	##########################################################################
 	# Platform Solaris 11 on x86_64
@@ -600,6 +604,22 @@ our %submit_info = (
 
 	# Only Ubuntu 14.04 has standard universe port.
 	'x86_64_Ubuntu14'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL' => 'OFF',
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	# Only Ubuntu 16.04 has standard universe port.
+	'x86_64_Ubuntu16'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				'-DCLIPPED:BOOL' => 'OFF',

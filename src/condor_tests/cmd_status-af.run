@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -125,6 +126,8 @@ while ($counter ne 0){
 `condor_rm -all`;
 
 %Attr_new = read_attr($new_ads);
+
+# remove classads that causes complications
 delete $Attr_new{0}{CpuBusy};
 delete $Attr_new{0}{IsValidCheckpointPlatform};
 delete $Attr_new{0}{Requirements};
@@ -133,6 +136,10 @@ delete $Attr_new{0}{Unhibernate};
 delete $Attr_new{0}{MachineMaxVacateTime};
 delete $Attr_new{0}{CondorVersion};
 delete $Attr_new{0}{AddressV1};
+delete $Attr_new{0}{TotalTimeClaimedIdle};
+for my $key (sort keys %{$Attr_new{0}}) {
+	if ($Attr_new{0}{$key} =~ /,/) { delete $Attr_new{0}{$key}; }
+}
 $sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
 $sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
 $sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
@@ -275,6 +282,7 @@ delete $Attr_new{0}{CondorVersion};
 delete $Attr_new{0}{AddressV1};
 delete $Attr_new{0}{RecentDaemonCoreDutyCycle};
 delete $Attr_new{0}{DaemonCoreDutyCycle};
+delete $Attr_new{0}{TotalTimeClaimedIdle};
 
 #$sel0 = "OpSys";
 #$sel1 = "CpuIsBusy";
@@ -410,7 +418,12 @@ print "$sel3\n$result3\n";
 
 RegisterResult(($result0 && $result1 && $result2 && $result2 && $result3),check_name=>"$option$flag", testname=>$testname);
 
-
+$flag = " \"%6.2f;\"";
+$sel0 = "Rank";
+@content = `condor_status -ads $new_ads -format$flag $sel0 -sort Name`;
+#print @content,"\n";
+$result0 = check_type(\%Attr_new, $flag, \@content, $sel0);
+RegisterResult($result0, check_name => "$option$flag", testname => $testname);
 
 CondorTest::EndTest();
 exit(0);

@@ -76,13 +76,26 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd );
 	is updated). Return function is true if ATTR_ULOG_FILE is found or
 	if EVENT_LOG is defined, else false.
 */
-bool getPathToUserLog(ClassAd *job_ad, MyString &result,
+bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
 					   const char* ulog_path_attr = ATTR_ULOG_FILE);
 
 
 // tokenize the input string, and insert tokens into the attrs set
-bool insert_tokens_as_attrs(const char * str, classad::References & attrs, const char * delims=NULL);
-inline bool insert_tokens_as_attrs(const std::string & str, classad::References & attrs, const char * delims=NULL) {
+bool add_attrs_from_string_tokens(classad::References & attrs, const char * str, const char * delims=NULL);
+inline bool add_attrs_from_string_tokens(classad::References & attrs, const std::string & str, const char * delims=NULL) {
 	if (str.empty()) return false;
-	return insert_tokens_as_attrs(str.c_str(), attrs, delims);
+	return add_attrs_from_string_tokens(attrs, str.c_str(), delims);
 }
+
+// copy string list items into an attribute set
+void add_attrs_from_StringList(classad::References & attrs, const StringList & list);
+
+// print attributes to a std::string, returning the result as a const char *
+const char *print_attrs(std::string &out, bool append, const classad::References & attrs, const char * delim);
+
+// copy attrs into stringlist, returns true if list was modified
+// if append is false, list is cleared first.
+// if check_exist is true, items are only added if the are not already in the list. comparison is case-insensitive.
+bool initStringListFromAttrs(StringList & list, bool append, const classad::References & attrs, bool check_exist=false);
+
+

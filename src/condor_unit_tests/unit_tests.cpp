@@ -48,6 +48,8 @@ bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
 bool FTEST_flatten_and_inline(void);
 bool FTEST_stl_string_utils(void);
+bool FTEST_your_string(void);
+bool FTEST_tokener(void);
 bool OTEST_HashTable(void);
 bool OTEST_MyString(void);
 bool OTEST_StringList(void);
@@ -80,6 +82,8 @@ const static struct {
 	map(FTEST_fullpath),
 	map(FTEST_flatten_and_inline),
 	map(FTEST_stl_string_utils),
+	map(FTEST_your_string),
+	map(FTEST_tokener),
 	{"start of objects", NULL},	//placeholder to separate functions and objects
 	map(OTEST_HashTable),
 	map(OTEST_MyString),
@@ -259,5 +263,12 @@ void print_usage(void) {
 		"-f: Only show output for tests that fail\n\t"
 		"-p: Only show output for tests that pass\n\t"
 		"-y: Only show summary\n\t"
-		"-h, --help: Print this out\n");
+		"-h, --help: Print this out\n"
+		"\nTest names are:\n"
+		);
+
+	for (size_t ii = 0; ii < sizeof(function_map)/sizeof(function_map[0]); ii++)
+	{
+		if (function_map[ii].name) { printf("\t%s\n", function_map[ii].name); }
+	}
 }

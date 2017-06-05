@@ -96,18 +96,18 @@ check_execute_event( void )
 extern "C" void 
 initializeUserLog ()
 {
-	MyString logfilename,dagmanLogName;
+	std::string logfilename,dagmanLogName;
 	MyString gjid;
 	int use_xml;
 	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(JobAd, logfilename) ) {
-		logfiles.push_back(logfilename.Value());	
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
+		logfiles.push_back(logfilename.c_str());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.c_str());
 	}
 	if ( getPathToUserLog(JobAd, dagmanLogName, ATTR_DAGMAN_WORKFLOW_LOG) ) {
-		logfiles.push_back(dagmanLogName.Value());
+		logfiles.push_back(dagmanLogName.c_str());
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG,
-			dagmanLogName.Value());
+			dagmanLogName.c_str());
 	}
 	if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, gjid) != 1) {
 		gjid = "Unknown";

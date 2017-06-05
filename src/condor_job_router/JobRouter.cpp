@@ -67,6 +67,7 @@ JobRouter::JobRouter(bool as_tool)
 	, m_schedd2_pool(NULL)
 	, m_schedd1_name(NULL)
 	, m_schedd1_pool(NULL)
+	, m_round_robin_selection(true)
 	, m_operate_as_tool(as_tool)
 {
 	m_scheduler = NULL;
@@ -128,11 +129,9 @@ JobRouter::~JobRouter() {
 #endif
 	if ( ! m_operate_as_tool) { InvalidatePublicAd(); }
 
-	m_scheduler->stop();
 	delete m_scheduler;
 	m_scheduler = NULL;
 	if( m_scheduler2 ) {
-		m_scheduler2->stop();
 		delete m_scheduler2;
 		m_scheduler2 = NULL;
 	}
@@ -205,8 +204,10 @@ JobRouter::config() {
 	}
 
 	m_scheduler->config();
+	m_scheduler->stop();
 	if( m_scheduler2 ) {
 		m_scheduler2->config();
+		m_scheduler2->stop();
 	}
 
 #if HAVE_JOB_HOOKS
@@ -248,7 +249,10 @@ JobRouter::config() {
 	std::string router_defaults;
 	if (param(router_defaults, PARAM_JOB_ROUTER_DEFAULTS) && ! router_defaults.empty()) {
 		// if the param doesn't start with [, then wrap it in [] before parsing, so that the parser knows to expect new classad syntax.
-		if (router_defaults[0] != '[') {
+		int i;
+		for ( i = 0; isspace(router_defaults[i]); i++ ) {
+		}
+		if (router_defaults[i] != '[') {
 			router_defaults.insert(0, "[ ");
 			router_defaults.append(" ]");
 			merge_defaults = false;
@@ -334,7 +338,7 @@ JobRouter::config() {
 			// away stderr altogether.  What generally happens is that the
 			// stderr produces a parse error, and we skip to the next
 			// entry.
-		FILE *fp = my_popen(args, "r", 1);
+		FILE *fp = my_popen(args, "r", MY_POPEN_OPT_WANT_STDERR);
 
 		if( !fp ) {
 			EXCEPT("Failed to run command '%s' specified for %s.",
@@ -385,6 +389,8 @@ JobRouter::config() {
 		// Whether to release the source job if the routed job
 		// goes on hold
 	m_release_on_hold = param_boolean("JOB_ROUTER_RELEASE_ON_HOLD", true);
+
+	m_round_robin_selection = param_boolean("JOB_ROUTER_ROUND_ROBIN_SELECTION", false);
 
 		// default is no maximum (-1)
 	m_max_jobs = param_integer("JOB_ROUTER_MAX_JOBS",-1);
@@ -577,10 +583,17 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 		// This brute-force update assumes that if  TimerRemove initially
 		// evaluates to an integer, it will continue to do so throughout
 		// the job's life.
+		// Do the same for x509UserProxyExpiration, which is used in some
+		// users' job policy expressions.
 		int timer_remove = -1;
+		MSC_SUPPRESS_WARNING(6011) // code analysis thinks orig_ad may be null, code analysis is wrong
 		if (orig_ad->EvaluateAttrInt(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
 			job->src_ad.InsertAttr(ATTR_TIMER_REMOVE_CHECK, timer_remove);
 			job->src_ad.MarkAttributeClean(ATTR_TIMER_REMOVE_CHECK);
+		}
+		if (orig_ad->EvaluateAttrInt(ATTR_X509_USER_PROXY_EXPIRATION, timer_remove)) {
+			job->src_ad.InsertAttr(ATTR_X509_USER_PROXY_EXPIRATION, timer_remove);
+			job->src_ad.MarkAttributeClean(ATTR_X509_USER_PROXY_EXPIRATION);
 		}
 		if (false == EvalSrcJobPeriodicExpr(job))
 		{
@@ -959,6 +972,7 @@ RoutedJob::RoutedJob() {
 	is_done = false;
 	is_running = false;
 	is_success = false;
+	is_interrupted = false;
 	is_sandboxed = false;
 	submission_time = 0;
 	retirement_time = 0;
@@ -984,6 +998,12 @@ JobRouter::NumManagedJobs() {
 void
 JobRouter::Poll() {
 	dprintf(D_FULLDEBUG,"JobRouter: polling state of (%d) managed jobs.\n",NumManagedJobs());
+
+	// Update our mirror(s) of the job queue(s).
+	m_scheduler->poll();
+	if ( m_scheduler2 ) {
+		m_scheduler2->poll();
+	}
 
 	m_poll_count++;
 	if((m_poll_count % 5) == 1) {
@@ -1030,7 +1050,7 @@ CombineParentAndChildClassAd(classad::ClassAd *dest,classad::ClassAd *ad,classad
 		dprintf(D_FULLDEBUG,"failed to copy %s value\n",itr->first.c_str());
 			return false;
 		}
-		if(!dest->Insert(itr->first,tree, false)) {
+		if(!dest->Insert(itr->first,tree)) {
 		dprintf(D_FULLDEBUG,"failed to insert %s\n",itr->first.c_str());	
 		return false;
 		}
@@ -1201,6 +1221,14 @@ JobRouter::AdoptOrphans() {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
 					error_details.Value());
+		} else {
+			// yield_job() sets the job's status to IDLE. If the job was
+			// previously running, we need an evict event.
+			int job_status = IDLE;
+			src_ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
+			if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
+				WriteEvictEventToUserLog( *src_ad );
+			}
 		}
 	} while (query.Next(src_key));
 }
@@ -1435,6 +1463,10 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 		mad.RemoveLeftAd();
 		mad.RemoveRightAd();
 #endif
+
+		if (!m_round_robin_selection && !matches.empty()) {
+			break;
+		}
 	}
 
 	if(!matches.size()) return NULL;
@@ -1879,6 +1911,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	if(!src_ad) {
 		dprintf(D_ALWAYS,"JobRouter (%s): failed to find src ad in job collection mirror.\n",job->JobDesc().c_str());
+		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
 	}
@@ -1886,6 +1919,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	int job_status = 0;
 	if( !src_ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status ) ) {
 		dprintf(D_ALWAYS, "JobRouter failure (%s): cannot evaluate JobStatus in src job\n",job->JobDesc().c_str());
+		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
 	}
@@ -1893,12 +1927,14 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	if(job_status == REMOVED) {
 		dprintf(D_FULLDEBUG, "JobRouter (%s): found src job marked for removal\n",job->JobDesc().c_str());
 		WriteAbortEventToUserLog( *src_ad );
+		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
 	}
 
 	if(job_status == HELD && !hold_copied_from_target_job(*src_ad) ) {
 		dprintf(D_FULLDEBUG, "JobRouter (%s): found src job on hold\n",job->JobDesc().c_str());
+		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
 	}
@@ -2024,9 +2060,16 @@ JobRouter::RerouteJob(RoutedJob *job) {
 
 void
 JobRouter::SetJobIdle(RoutedJob *job) {
-	job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
-	if(false == PushUpdatedAttributes(job->src_ad)) {
-		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
+	int old_status = IDLE;
+	job->src_ad.EvaluateAttrInt(ATTR_JOB_STATUS, old_status);
+	if ( old_status != IDLE ) {
+		if ( old_status == RUNNING || old_status == TRANSFERRING_OUTPUT ) {
+			WriteEvictEventToUserLog( job->src_ad );
+		}
+		job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
+		if(false == PushUpdatedAttributes(job->src_ad)) {
+			dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
+		}
 	}
 }
 
@@ -2382,6 +2425,13 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	if(job->is_claimed) {
 		MyString error_details;
 		bool keep_trying = true;
+		int job_status = IDLE;
+		// yield_job() sets the job's status to IDLE. If the job was
+		// previously running, we need an evict event.
+		job->src_ad.EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
+		if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
+			WriteEvictEventToUserLog( job->src_ad );
+		}
 		if(!yield_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),job->is_sandboxed,m_release_on_hold,&keep_trying))
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",
@@ -2412,7 +2462,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 			if(job->is_success) {
 				route->IncrementSuccesses();
 			}
-			else {
+			else if(!job->is_interrupted) {
 				route->IncrementFailures();
 			}
 		}
@@ -2880,7 +2930,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		else {
 			expr = expr->Copy();
 		}
-		if(!src_ad->Insert(new_attr,expr,false)) {
+		if(!src_ad->Insert(new_attr,expr)) {
 			return false;
 		}
 	}
@@ -2902,7 +2952,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree, false)) {
+		if(!src_ad->Insert(attr,tree)) {
 			return false;
 		}
 	}
@@ -2915,7 +2965,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree, false)) {
+		if(!src_ad->Insert(attr,tree)) {
 			return false;
 		}
 		classad::Value val;

@@ -52,14 +52,14 @@ private:
 	typedef std::vector<BirdIcon> BirdIconVector;
 	BirdIconVector vecIconsForEachCpu;
 
-	void setIcon(BirdIconVector::size_type iCpuId, HICON hToSet);
-	void removeIcon(BirdIconVector::size_type iCpuId);
+	void setIcon(UINT iCpuId, HICON hicon);
+	void removeIcon(UINT iCpuId);
 	
 	LRESULT onReceivedWindowsMessage(WindowsMessageReceiver *pSource, UINT message, WPARAM wParam, LPARAM lParam);
 	void reloadStatus();
 	WindowsMessageReceiver wmr;
 
-	int iTimerId;
+	UINT_PTR iTimerId;
 	bool bUseSingleIcon;
 
 	bool bMultipleCpusAvailable;

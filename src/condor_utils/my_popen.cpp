@@ -30,12 +30,19 @@
 #include "setenv.h"
 
 #ifdef WIN32
+#else
+#include <poll.h>
+#include <fcntl.h>
+#endif
+
+#ifdef WIN32
 typedef HANDLE child_handle_t;
-#define INVALID_CHILD_HANDLE INVALID_HANDLE_VALUE;
+#define INVALID_CHILD_HANDLE INVALID_HANDLE_VALUE
 #else
 typedef pid_t child_handle_t;
 #define INVALID_CHILD_HANDLE ((pid_t)-1)
 #endif
+
 
 /* We manage outstanding children with a simple linked list. */
 struct popen_entry {
@@ -48,7 +55,7 @@ struct popen_entry *popen_entry_head = NULL;
 static void add_child(FILE* fp, child_handle_t ch)
 {
 	struct popen_entry *pe = (struct popen_entry *)malloc(sizeof(struct popen_entry));
-	MSC_SUPPRESS_WARNING_FIXME(6011) // Dereferencing a null pointer, malloc can return NULL.
+	ASSERT(pe);
 	pe->fp = fp;
 	pe->ch = ch;
 	pe->next = popen_entry_head;
@@ -71,6 +78,20 @@ static child_handle_t remove_child(FILE* fp)
 	}
 	return INVALID_CHILD_HANDLE;
 }
+
+/* not currently used.
+static struct popen_entry * find_child(FILE* fp)
+{
+	struct popen_entry *pe = popen_entry_head;
+	while (pe != NULL) {
+		if (pe->fp == fp) { return pe; }
+		pe = pe->next;
+	}
+	return NULL;
+}
+*/
+
+
 
 /*
 
@@ -110,8 +131,10 @@ static child_handle_t remove_child(FILE* fp)
 //////////////////////////////////////////////////////////////////////////
 
 extern "C" FILE *
-my_popen(const char *const_cmd, const char *mode, int want_stderr)
+my_popen(const char *const_cmd, const char *mode, int options)
 {
+	int want_stderr = (options & MY_POPEN_OPT_WANT_STDERR);
+	int fail_quietly = (options & MY_POPEN_OPT_FAIL_QUIETLY);
 	BOOL read_mode;
 	SECURITY_ATTRIBUTES saPipe;
 	HANDLE hReadPipe, hWritePipe;
@@ -186,7 +209,7 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 		DWORD err = GetLastError();
 		CloseHandle(hParentPipe);
 		CloseHandle(hChildPipe);
-		dprintf(D_ALWAYS, "my_popen: CreateProcess failed err=%d\n", err);
+		if ( ! fail_quietly) { dprintf(D_ALWAYS, "my_popen: CreateProcess failed err=%d\n", err); }
 		return NULL;
 	}
 
@@ -218,7 +241,7 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV, bool drop_privs, const char *write_data)
+my_popen(const ArgList &args, const char *mode, int want_stderr, const Env *zkmENV, bool drop_privs, const char *write_data)
 {
 	/* drop_privs HAS NO EFFECT ON WINDOWS */
 	/* write_data IS NOT YET IMPLEMENTED ON WINDOWS - we can do so when we need it */
@@ -237,7 +260,7 @@ my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV, bool dro
 }
 
 extern "C" FILE *
-my_popenv(const char *const args[], const char *mode, int want_stderr)
+my_popenv(const char *const args[], const char *mode, int options)
 {
 	// build the argument list
 	ArgList arglist;
@@ -245,11 +268,11 @@ my_popenv(const char *const args[], const char *mode, int want_stderr)
 		arglist.AppendArg(args[i]);
 	}
 
-	return my_popen(arglist, mode, want_stderr);
+	return my_popen(arglist, mode, options);
 }
 
 extern "C" int
-my_pclose(FILE *fp)
+my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 {
 	HANDLE hChildProcess;
 	DWORD result;
@@ -258,18 +281,37 @@ my_pclose(FILE *fp)
 
 	fclose(fp);
 
-	result = WaitForSingleObject(hChildProcess, INFINITE);
-	if (result != WAIT_OBJECT_0) {
-		dprintf(D_FULLDEBUG, "my_pclose: WaitForSingleObject failed\n");
-		return -1;
+	if (INVALID_CHILD_HANDLE == hChildProcess) {
+		return MYPCLOSE_EX_NO_SUCH_FP;
 	}
-	if (!GetExitCodeProcess(hChildProcess, &result)) {
-		dprintf(D_FULLDEBUG, "my_pclose: GetExitCodeProcess failed\n");
-		return -1;
+
+	result = WaitForSingleObject(hChildProcess, timeout);
+	if (result != WAIT_OBJECT_0) {
+		dprintf(D_FULLDEBUG, "my_pclose: Child process has not exited after %u seconds\n", timeout);
+		if (kill_after_timeout) {
+			TerminateProcess(hChildProcess, -9);
+			CloseHandle(hChildProcess);
+			return MYPCLOSE_EX_I_KILLED_IT;
+		}
+	}
+	if ( ! GetExitCodeProcess(hChildProcess, &result)) {
+		dprintf(D_FULLDEBUG, "my_pclose: GetExitCodeProcess failed with error %d\n", GetLastError());
+		result = MYPCLOSE_EX_STATUS_UNKNOWN;
 	}
 	CloseHandle(hChildProcess);
 
 	return result;
+}
+
+// this is the backward compatible my_pclose function that NO CONDOR CODE SHOULD USE!
+extern "C"
+int my_pclose( FILE *fp )
+{
+	int rv = my_pclose_ex(fp, 0xFFFFFFFF, false);
+	if (rv == MYPCLOSE_EX_NO_SUCH_FP || rv == MYPCLOSE_EX_I_KILLED_IT || rv == MYPCLOSE_EX_STATUS_UNKNOWN) {
+		rv = -1; // set a backward compatible exit status.
+	}
+	return rv;
 }
 
 extern "C" int
@@ -293,12 +335,14 @@ static int	WRITE_END = 1;
 static FILE *
 my_popenv_impl( const char *const args[],
                 const char * mode,
-                int want_stderr,
+                int options,
                 uid_t privsep_uid,
-		Env *env_ptr = 0,
+		const Env *env_ptr = 0,
 		bool drop_privs = true,
 		const char *write_data = NULL )
 {
+	int want_stderr = (options & MY_POPEN_OPT_WANT_STDERR);
+	int fail_quietly = (options & MY_POPEN_OPT_FAIL_QUIETLY);
 	int	pipe_d[2], pipe_d2[2];
 	int pipe_writedata[2];
 	int want_writedata = 0;
@@ -570,8 +614,10 @@ my_popenv_impl( const char *const args[],
 			/* NOOP */
 		}
 
-		dprintf(D_ALWAYS, "my_popenv: Failed to exec in child, errno=%d (%s)\n",
+		if ( ! fail_quietly) {
+			dprintf(D_ALWAYS, "my_popenv: Failed to exec in child, errno=%d (%s)\n",
 				exit_code, strerror(exit_code));
+		}
 		errno = exit_code;
 		return NULL;
 	}
@@ -629,22 +675,22 @@ my_popenv_impl( const char *const args[],
 extern "C" FILE *
 my_popenv( const char *const args[],
            const char * mode,
-           int want_stderr )
+           int options )
 {
-	return my_popenv_impl(args, mode, want_stderr, (uid_t)-1);
+	return my_popenv_impl(args, mode, options, (uid_t)-1);
 }
 
 static FILE *
-my_popen_impl(ArgList &args,
+my_popen_impl(const ArgList &args,
               const char *mode,
-              int want_stderr,
+              int options,
               uid_t privsep_uid,
-              Env *env_ptr,
+              const Env *env_ptr,
               bool drop_privs = true,
 			  const char *write_data = NULL)
 {
 	char **string_array = args.GetStringArray();
-	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid,
+	FILE *fp = my_popenv_impl(string_array, mode, options, privsep_uid,
 			env_ptr, drop_privs, write_data);
 	deleteStringArray(string_array);
 
@@ -652,18 +698,19 @@ my_popen_impl(ArgList &args,
 }
 
 FILE*
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr, bool drop_privs,
+my_popen(const ArgList &args, const char *mode, int options, const Env *env_ptr, bool drop_privs,
 		 const char *write_data)
 {
-	return my_popen_impl(args, mode, want_stderr, (uid_t)-1, env_ptr, drop_privs, write_data);
+	return my_popen_impl(args, mode, options, (uid_t)-1, env_ptr, drop_privs, write_data);
 }
 
 FILE*
-privsep_popen(ArgList &args, const char *mode, int want_stderr, uid_t uid, Env *env_ptr)
+privsep_popen(ArgList &args, const char *mode, int options, uid_t uid, Env *env_ptr)
 {
-	return my_popen_impl(args, mode, want_stderr, uid, env_ptr);
+	return my_popen_impl(args, mode, options, uid, env_ptr);
 }
 
+// this is the backward compatible my_pclose function that NO CONDOR CODE SHOULD USE!
 extern "C" int
 my_pclose(FILE *fp)
 {
@@ -687,6 +734,72 @@ my_pclose(FILE *fp)
 		/* Now return status from child process */
 	return status;
 }
+
+// returns true if waitpid succeed and status was set.
+// status will be set to the exit status of the pid if true is returned
+// (or to MYPCLOSE_EX_STATUS_UNKNOWN if exit status is not available)
+static bool waitpid_with_timeout(pid_t pid, int *pstatus, time_t timeout)
+{
+	time_t begin_time = time(NULL);
+	for(;;)
+	{
+		int rv = waitpid(pid,pstatus,WNOHANG);
+		if (rv > 0) {
+			return true;
+		}
+		if (rv < 0 && errno != EINTR) {
+			*pstatus = MYPCLOSE_EX_STATUS_UNKNOWN;
+			return true;
+		}
+		time_t now = time(NULL);
+		if ((now - begin_time) > timeout) {
+			return false;
+		}
+		sleep(1);
+	}
+	return false;
+}
+
+
+extern "C" int
+my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
+{
+	int			status;
+	pid_t			pid;
+
+		/* Pop the child off our list */
+	pid = remove_child(fp);
+
+		/* Close the pipe */
+	(void)fclose( fp );
+
+	if (INVALID_CHILD_HANDLE == pid) {
+		return MYPCLOSE_EX_NO_SUCH_FP;
+	}
+
+		/* Wait for child process to exit and get its status */
+	if (waitpid_with_timeout(pid,&status,timeout)) {
+		return status;
+	}
+
+	// we get here if the wait pid timed out, in that case
+	// send a kill signal and wait for it to terminate
+	status = MYPCLOSE_EX_STILL_RUNNING;
+	if (kill_after_timeout) {
+		kill(pid,SIGKILL);
+		while (waitpid(pid,&status,0) < 0) {
+			if (errno != EINTR) {
+				break;
+			}
+		}
+		status = MYPCLOSE_EX_I_KILLED_IT;
+	}
+
+		/* Now return status from child process */
+	return status;
+}
+
+
 #endif // !WIN32
 
 extern "C" int
@@ -697,7 +810,7 @@ my_systemv(const char *const args[])
 }
 
 int
-my_system(ArgList &args, Env *env_ptr)
+my_system(const ArgList &args, const Env *env_ptr)
 {
 	FILE* fp = my_popen(args, "w", FALSE, env_ptr);
 	return (fp != NULL) ? my_pclose(fp): -1;
@@ -825,3 +938,294 @@ my_spawnv( const char* cmd, const char *const argv[] )
 }
 
 #endif // ndef WIN32
+
+
+// run a command and return its output in a buffer
+// the program is killed if the timeout expires.
+//
+// returns NULL and sets exit_status to errno if the timeout expires
+//
+// returns a null-terminated malloc'd buffer and sets exit_status to
+//   the programs exit status if the program ran to completion
+char* run_command(time_t timeout, const ArgList &args, int options, const Env* env_ptr, int *exit_status)
+{
+	bool want_stderr = (options & RUN_COMMAND_OPT_WANT_STDERR) != 0;
+	bool drop_privs =  0 == (options & RUN_COMMAND_OPT_USE_CURRENT_PRIVS);
+	MyPopenTimer pgm;
+	*exit_status = pgm.start_program(args, want_stderr, env_ptr, drop_privs);
+	if (*exit_status < 0) {
+		return NULL;
+	}
+	if (pgm.wait_for_exit(timeout, exit_status)) {
+		pgm.close_program(1); // close fp wait 1 sec, then SIGKILL (does nothing if program already exited)
+		char * out = pgm.output().Detach();
+		return out ? out : strdup("");
+	}
+	pgm.close_program(1); // close fp, wait 1 sec, then SIGKILL (does nothing if program already exited)
+	*exit_status = pgm.error_code();
+	return NULL;
+}
+
+//////////////////////////////////////////////////
+// MyPopenTimer methods
+//////////////////////////////////////////////////
+
+
+MyPopenTimer::~MyPopenTimer()
+{
+	clear();
+}
+
+void MyPopenTimer::clear()
+{
+	if (fp) {
+		my_pclose_ex(fp, 5, false);
+		fp = NULL;
+	}
+	status = 0;
+	error = NOT_INTIALIZED;
+	begin_time = 0;
+	src.rewind();
+	bytes_read = 0;
+}
+
+// run a program and begin capturing it's output
+int MyPopenTimer::start_program (
+	const ArgList &args,
+	bool also_stderr,
+	const Env* env_ptr /*=NULL*/,
+	bool drop_privs /*=true*/,
+	const char * stdin_data /*=NULL*/)
+{
+	if (fp) return -1;
+
+	//src.clear();
+	status = 0;
+	error = 0;
+
+#ifdef WIN32
+	const char * mode = "rb";
+#else
+	const char * mode = "r";
+#endif
+
+	int options = MY_POPEN_OPT_FAIL_QUIETLY;
+	if (also_stderr) options |= MY_POPEN_OPT_WANT_STDERR;
+	fp = my_popen(args, mode, options, env_ptr, drop_privs, stdin_data);
+	if ( ! fp) {
+		error = errno;
+#ifdef WIN32
+		// do a little error translation for windows to make sure that the caller can reasonable
+		// distinguish 'the program does not exist' from other errors.
+		DWORD err = GetLastError();
+		if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) {
+			error = ENOENT;
+		}
+#endif
+		return error;
+	}
+#ifdef WIN32
+	// no windows equivalent, 
+#else
+	int fd = fileno(fp);
+	int flags = fcntl(fd, F_GETFL, 0);
+	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#endif
+	begin_time = time(NULL);
+	return 0;
+}
+
+const char * MyPopenTimer::error_str() const
+{
+	const char * errmsg = "";
+	if (error == ETIMEDOUT) { errmsg = "Timed out waiting for program to exit"; }
+	else if (error == NOT_INTIALIZED) { errmsg = "start_program was never called"; }
+	else if (error) { errmsg = strerror(error); }
+	return errmsg;
+}
+
+// capture program output until it exits or the timout expires
+// returns true and the exit code if the program runs to completion.
+// returns false if the timeout expired or there was an error reading the output.
+bool MyPopenTimer::wait_for_exit(time_t timeout, int *exit_status)
+{
+	if (error && (error != ETIMEDOUT)) // if error was not a previous timeout, assume we cannot continue
+		return false;
+	if (read_until_eof(timeout) != 0)
+		return false;
+
+	*exit_status = status;
+	return true;
+}
+
+// close the program, sending a SIGTERM now if it has not yet exited
+// and a SIGKILL after wait_for_term if it still has not yet exited.
+// returns  true if program exited on its own, false if it had be signalled.
+bool MyPopenTimer::close_program(time_t wait_for_term)
+{
+	// Note: if program exits normally by itself within the alloted time,
+	// fp will always be NULL when we get here because
+	// read_until_eof called my_pclose at eof()
+	if (fp) {
+		status = my_pclose_ex(fp, (unsigned int)wait_for_term, true);
+		run_time = (int)(time(NULL) - begin_time);
+		fp = NULL;
+	}
+	return ! WIFSIGNALED(status);
+}
+
+// capture program output until the program exits or until timeout expires
+// timeout is measured relative to the time that start_program was called.
+// returns true if program runs to completion and output is captured
+// false if error or timeout while reading the output.
+const char*  MyPopenTimer::wait_for_output(time_t timeout)
+{
+	if (error && (error != ETIMEDOUT)) // if error was not a previous timeout, assume we cannot continue
+		return NULL;
+	if (read_until_eof(timeout) != 0)
+		return NULL;
+	return src.data() ? src.data() : "";
+}
+
+// helper function for read_until_eof
+// takes an array of fixed-size buffers and a total size
+// and squashes them into a single alloction and stores (or appends) that
+// into the given MyStringCharSource
+// TODO: make MyStringCharSource aware of the size of it's allocation so we an re-use instead of re-allocating.
+// 
+static void store_buffers (
+	MyStringCharSource & src,
+	char* bufs[],
+	int cbBuf,   // size of each buffer in bufs
+	int cbTot,   // total size to store (only the last buffer will be partially full)
+	bool append) // append to src, (if false, replaces src)
+{
+	char * old = src.Detach();
+	if ( ! old) append = false;
+
+	if ( ! append && (cbTot < cbBuf)) {
+		// if there is only one buffer, and we are not appending, we can just store it
+		char * out = bufs[0];
+		bufs[0] = NULL;
+		out[cbTot] = 0;
+		src.Attach(out);
+		if (old) free(old);
+		return;
+	}
+
+	int cbOld = append ? strlen(old) : 0;
+	char * out = (char*)malloc(cbOld+cbTot+1);
+	ASSERT(out);
+
+	int ix = 0;
+	if (cbOld) {
+		memcpy(out,old,cbOld);
+		ix += cbOld;
+	}
+	int cbRemain = cbTot;
+	for (size_t ii = 0; cbRemain > 0; ++ii) {
+		int cb = MIN(cbRemain, cbBuf);
+		memcpy(out+ix, bufs[ii], cb);
+		ix += cb;
+		cbRemain -= cb;
+		free(bufs[ii]);
+		bufs[ii] = NULL;
+	}
+	// make sure it is null terminated
+	out[cbTot] = 0;
+
+	// attach our new buffer to output source, and free the old buffer (if any)
+	src.Attach(out);
+	if (old) free(old);
+}
+
+
+// returns error, 0 on success
+int MyPopenTimer::read_until_eof(time_t timeout)
+{
+	if ( ! fp)
+		return error;
+
+#ifdef WIN32
+	// consider using a thread with: BOOL WINAPI CancelSynchronousIo(HANDLE hThread);
+#else
+	struct pollfd fdt;
+	fdt.fd = fileno(fp);
+	fdt.events = POLLIN;
+	fdt.revents = 0;
+#endif
+
+	std::vector<char*> bufs;
+	int cbTot = 0;
+	int ix = 0;
+	const int cbBuf = 0x2000;
+	char * buffer = (char*)calloc(1, cbBuf);
+	for(;;) {
+		bool wait_for_hotness = false;
+		int cb = fread(buffer+ix, 1, cbBuf-ix, fp);
+		if (cb > 0) {
+			// Otherwise, buffer should contain cb bytes.
+			cbTot += cb;
+			ix += cb;
+			if (ix >= cbBuf) {
+				bufs.push_back(buffer);
+				buffer = (char*)calloc(1, cbBuf);
+				ix = 0;
+			}
+		} else if (cb < 0) {
+			if (errno == EAGAIN) {
+				// there is no data to be read, right now, just wait a bit.
+				wait_for_hotness = true;
+			} else {
+				error = errno;
+				break;
+			}
+		} else {
+			ASSERT(cb == 0);
+			if (feof(fp)) {
+				// got end of file, so we can close the program and capture it's return value
+				time_t elapsed_time = (time(NULL) - begin_time);
+				time_t remain_time = elapsed_time < timeout ? timeout - elapsed_time : 0;
+				status = my_pclose_ex(fp, remain_time, true);
+				run_time = (int)(time(NULL) - begin_time);
+				fp = NULL;
+				error = 0;
+				break;
+			}
+			wait_for_hotness = true;
+		}
+
+		time_t now = time(NULL);
+		time_t elapsed_time = now - begin_time;
+		if (elapsed_time >= (unsigned int)timeout) {
+			error = ETIMEDOUT;
+			break;
+		}
+
+		if (wait_for_hotness) {
+			#ifdef WIN32
+				//PRAGMA_REMIND("use PeekNamedPipe to check for pipe hotness...")
+				sleep(2);
+			#else
+				int wait_time = timeout - (int)elapsed_time;
+				int rv = poll(&fdt, 1, wait_time*1000);
+				if(rv == 0) {
+					error = ETIMEDOUT;
+					break;
+				} else if (rv > 0) {
+					// new data can be read.
+				}
+			#endif
+		}
+	}
+	bufs.push_back(buffer);
+
+	// Now turn it into a single large buffer.
+	if (cbTot > 0) {
+		store_buffers(src, &bufs[0], cbBuf, cbTot, bytes_read > 0);
+		bytes_read += cbTot;
+	}
+
+	return error;
+}
+

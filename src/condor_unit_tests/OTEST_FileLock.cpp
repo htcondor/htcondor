@@ -59,6 +59,12 @@ static int fd1, fd2, fd3 = -1;
 
 bool OTEST_FileLock(void) {
 	emit_object("FileLock");
+#ifdef WIN32
+	emit_comment("The FileLock class doesn't work on Windows because locking is not done via. files "
+		"it is done via kernel object designed for locking. ");
+	//TODO: test the windows specific bits of the lock api.
+	int status = true;
+#else
 	emit_comment("Note that these tests are not exhaustive, but are "
 		"sufficient for testing the basics of FileLock. In order to fully "
 		"test FileLock, multiple processes would be needed.");
@@ -96,6 +102,7 @@ bool OTEST_FileLock(void) {
 		safe_open_wrapper_follow( existing_file, O_RDWR | O_CREAT, 0664 ) );
 	int status = driver.do_all_functions();
 	cut_assert_z( remove(created_file) );
+#endif
 
 	return status;
 }

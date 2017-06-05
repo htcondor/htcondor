@@ -16,6 +16,14 @@
  # 
  ############################################################### 
 
-condor_glob( UTHdrs UTSrcs test_daemon_core.cpp )
+file(GLOB FTSrcs "FTEST_*.cpp")
+file(GLOB OTSrcs "OTEST_*.cpp")
 
-condor_exe_test(condor_unit_tests "${UTSrcs}" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}")
+# old style condor unit tests that all link into a single huge exe
+condor_exe_test(condor_unit_tests "${FTSrcs};${OTSrcs};emit.cpp;function_test_driver.cpp;unit_test_utils.cpp;unit_tests.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}")
+
+# formly boost-testy unit tests that each link to a stand-alone exe
+condor_unit_test ( _ring_buffer_tester ring_buffer_tests.cpp "" OFF )
+condor_unit_test ( _consumption_policy_tester consumption_policy_tests.cpp "condor_utils" OFF )
+
+

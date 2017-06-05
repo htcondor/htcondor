@@ -297,6 +297,9 @@ public:
 	}
 #endif
 
+	int GetShutdownExitCode() { return m_shutdown_exit_code; };
+	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
+
 protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
@@ -396,6 +399,10 @@ private:
 
 		// true if allJobsDone() has been called
 	bool m_all_jobs_done;
+
+		// When doing a ShutdownFast or ShutdownGraceful, what should the
+		// starter's exit code be?
+	int m_shutdown_exit_code;
 };
 
 #endif

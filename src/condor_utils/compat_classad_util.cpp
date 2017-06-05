@@ -31,47 +31,11 @@
 
 /* TODO This function needs to be tested.
  */
-int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos)
-{
-	classad::ClassAdParser parser;
-	classad::ClassAd *newAd;
-
-		// We don't support the pos argument at the moment.
-	if ( pos ) {
-		*pos = 0;
-	}
-
-		// String escaping is different between new and old ClassAds.
-		// We need to convert the escaping from old to new style before
-		// handing the expression to the new ClassAds parser.
-	std::string newAdStr = "[";
-	newAdStr.append( compat_classad::ConvertEscapingOldToNew( str ) );
-	newAdStr += "]";
-	newAd = parser.ParseClassAd( newAdStr );
-	if ( newAd == NULL ) {
-		tree = NULL;
-		return 1;
-	}
-	if ( newAd->size() != 1 ) {
-		delete newAd;
-		tree = NULL;
-		return 1;
-	}
-	
-	classad::ClassAd::iterator itr = newAd->begin();
-	name = itr->first.c_str();
-	tree = itr->second->Copy();
-	delete newAd;
-	return 0;
-}
-
-/* TODO This function needs to be tested.
- */
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 {
 	classad::ClassAdParser parser;
-	std::string str = compat_classad::ConvertEscapingOldToNew( s );
-	if ( parser.ParseExpression( str, tree, true ) ) {
+	parser.SetOldClassAd( true );
+	if ( parser.ParseExpression( s, tree, true ) ) {
 		return 0;
 	} else {
 		tree = NULL;
@@ -80,6 +44,16 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 		}
 		return 1;
 	}
+}
+
+bool ParseLongFormAttrValue(const char * str, std::string & attr, classad::ExprTree*&tree, int*pos)
+{
+	const char * rhs = NULL;
+	if ( ! compat_classad::SplitLongFormAttrValue(str, attr, rhs)) {
+		if (pos) *pos = 0;
+		return 1;
+	}
+	return ParseClassAdRvalExpr(rhs, tree, pos) == 0;
 }
 
 /*
@@ -269,6 +243,259 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval)
 	if ( ! ExprTreeIsLiteral(expr, val)) return false;
 	return val.IsStringValue(sval);
 }
+
+bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute /*=NULL*/)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::ATTRREF_NODE) {
+		classad::ExprTree *e2=NULL;
+		bool absolute=false;
+		((classad::AttributeReference*)expr)->GetComponents(e2, attr, absolute);
+		if (is_absolute) *is_absolute = absolute;
+		return !e2;
+	}
+	return false;
+}
+
+static int GetAttrsAndScopes(classad::ExprTree * expr, classad::References * attrs, classad::References *scopes);
+
+// check to see that a classad expression is valid, and optionally return the names of the attributes that it references
+bool IsValidClassAdExpression(const char * str, classad::References * attrs /*=NULL*/, classad::References *scopes /*=NULL*/)
+{
+	if ( ! str || ! str[0]) return false;
+
+	classad::ExprTree * expr = NULL;
+	int rval = ParseClassAdRvalExpr(str, expr);
+	if (0 == rval) {
+		if (attrs) {
+			GetAttrsAndScopes(expr, attrs, scopes);
+		}
+		delete expr;
+	}
+	return rval == 0;
+}
+
+// walk an ExprTree, calling a function each time a ATTRREF_NODE is found.
+//
+int walk_attr_refs (
+	const classad::ExprTree * tree,
+	int (*pfn)(void *pv, const std::string & attr, const std::string &scope, bool absolute),
+	void *pv)
+{
+	int iret = 0;
+	if ( ! tree) return 0;
+	switch (tree->GetKind()) {
+		case classad::ExprTree::LITERAL_NODE: {
+			classad::ClassAd * ad;
+			classad::Value val;
+			classad::Value::NumberFactor	factor;
+			((const classad::Literal*)tree)->GetComponents( val, factor );
+			if (val.IsClassAdValue(ad)) {
+				iret += walk_attr_refs(ad, pfn, pv);
+			}
+		}
+		break;
+
+		case classad::ExprTree::ATTRREF_NODE: {
+			const classad::AttributeReference* atref = reinterpret_cast<const classad::AttributeReference*>(tree);
+			classad::ExprTree *expr;
+			std::string ref;
+			std::string tmp;
+			bool absolute;
+			atref->GetComponents(expr, ref, absolute);
+			// if there is a non-trivial left hand side (something other than X from X.Y attrib ref)
+			// then recurse it.
+			if (expr && ! ExprTreeIsAttrRef(expr, tmp)) {
+				iret += walk_attr_refs(expr, pfn, pv);
+			} else {
+				iret += pfn(pv, ref, tmp, absolute);
+			}
+		}
+		break;
+
+		case classad::ExprTree::OP_NODE: {
+			classad::Operation::OpKind	op;
+			classad::ExprTree *t1, *t2, *t3;
+			((const classad::Operation*)tree)->GetComponents( op, t1, t2, t3 );
+			if (t1) iret += walk_attr_refs(t1, pfn, pv);
+			//if (iret && stop_on_first_match) return iret;
+			if (t2) iret += walk_attr_refs(t2, pfn, pv);
+			//if (iret && stop_on_first_match) return iret;
+			if (t3) iret += walk_attr_refs(t3, pfn, pv);
+		}
+		break;
+
+		case classad::ExprTree::FN_CALL_NODE: {
+			std::string fnName;
+			std::vector<classad::ExprTree*> args;
+			((const classad::FunctionCall*)tree)->GetComponents( fnName, args );
+			for (std::vector<classad::ExprTree*>::iterator it = args.begin(); it != args.end(); ++it) {
+				iret += walk_attr_refs(*it, pfn, pv);
+				//if (iret && stop_on_first_match) return iret;
+			}
+		}
+		break;
+
+		case classad::ExprTree::CLASSAD_NODE: {
+			std::vector< std::pair<std::string, classad::ExprTree*> > attrs;
+			((const classad::ClassAd*)tree)->GetComponents(attrs);
+			for (std::vector< std::pair<std::string, classad::ExprTree*> >::iterator it = attrs.begin(); it != attrs.end(); ++it) {
+				iret += walk_attr_refs(it->second, pfn, pv);
+				//if (iret && stop_on_first_match) return iret;
+			}
+		}
+		break;
+
+		case classad::ExprTree::EXPR_LIST_NODE: {
+			std::vector<classad::ExprTree*> exprs;
+			((const classad::ExprList*)tree)->GetComponents( exprs );
+			for (std::vector<classad::ExprTree*>::iterator it = exprs.begin(); it != exprs.end(); ++it) {
+				iret += walk_attr_refs(*it, pfn, pv);
+				//if (iret && stop_on_first_match) return iret;
+			}
+		}
+		break;
+
+		case classad::ExprTree::EXPR_ENVELOPE: {
+			classad::ExprTree * expr = SkipExprEnvelope(const_cast<classad::ExprTree*>(tree));
+			if (expr) iret += walk_attr_refs(expr, pfn, pv);
+		}
+		break;
+
+		default:
+			// unknown or unallowed node.
+			ASSERT(0);
+		break;
+	}
+	return iret;
+}
+
+class AttrsAndScopes {
+public:
+	AttrsAndScopes() : attrs(NULL), scopes(NULL) {}
+	classad::References *attrs;
+	classad::References *scopes;
+};
+int AccumAttrsAndScopes(void *pv, const std::string & attr, const std::string &scope, bool /*absolute*/)
+{
+	AttrsAndScopes & p = *(AttrsAndScopes *)pv;
+	if ( ! attr.empty()) p.attrs->insert(attr);
+	if ( ! scope.empty()) p.scopes->insert(scope);
+	return 1;
+}
+
+static int GetAttrsAndScopes(classad::ExprTree * expr, classad::References * attrs, classad::References *scopes)
+{
+	 AttrsAndScopes tmp;
+	 tmp.attrs = attrs;
+	 tmp.scopes = scopes ? scopes : attrs;
+	 return walk_attr_refs(expr, AccumAttrsAndScopes, &tmp);
+}
+
+// edit the given expr changing attribute references as the mapping indicates
+int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
+{
+	int iret = 0;
+	if ( ! tree) return 0;
+	switch (tree->GetKind()) {
+		case classad::ExprTree::LITERAL_NODE: {
+			classad::ClassAd * ad;
+			classad::Value val;
+			classad::Value::NumberFactor	factor;
+			((classad::Literal*)tree)->GetComponents( val, factor );
+			if (val.IsClassAdValue(ad)) {
+				iret += RewriteAttrRefs(ad, mapping);
+			}
+		}
+		break;
+
+		case classad::ExprTree::ATTRREF_NODE: {
+			classad::AttributeReference* atref = reinterpret_cast<classad::AttributeReference*>(tree);
+			classad::ExprTree *expr;
+			std::string ref;
+			std::string tmp;
+			bool absolute;
+			atref->GetComponents(expr, ref, absolute);
+			// if there is a non-trivial left hand side (something other than X from X.Y attrib ref)
+			// then recurse it.
+			if (expr && ! ExprTreeIsAttrRef(expr, tmp)) {
+				iret += RewriteAttrRefs(expr, mapping);
+			} else {
+				bool change_it = false;
+				if (expr) {
+					NOCASE_STRING_MAP::const_iterator found = mapping.find(tmp);
+					if (found != mapping.end()) {
+						if (found->second.empty()) {
+							expr = NULL; // the left hand side is a simple attr-ref. and we want to set it to EMPTY
+							change_it = true;
+						} else {
+							iret += RewriteAttrRefs(expr, mapping);
+						}
+					}
+				} else {
+					NOCASE_STRING_MAP::const_iterator found = mapping.find(ref);
+					if (found != mapping.end() && ! found->second.empty()) {
+						ref = found->second;
+						change_it = true;
+					}
+				}
+				if (change_it) {
+					atref->SetComponents(NULL, ref, absolute);
+					iret += 1;
+				}
+			}
+		}
+		break;
+
+		case classad::ExprTree::OP_NODE: {
+			classad::Operation::OpKind	op;
+			classad::ExprTree *t1, *t2, *t3;
+			((classad::Operation*)tree)->GetComponents( op, t1, t2, t3 );
+			if (t1) iret += RewriteAttrRefs(t1, mapping);
+			if (t2) iret += RewriteAttrRefs(t2, mapping);
+			if (t3) iret += RewriteAttrRefs(t3, mapping);
+		}
+		break;
+
+		case classad::ExprTree::FN_CALL_NODE: {
+			std::string fnName;
+			std::vector<classad::ExprTree*> args;
+			((classad::FunctionCall*)tree)->GetComponents( fnName, args );
+			for (std::vector<classad::ExprTree*>::iterator it = args.begin(); it != args.end(); ++it) {
+				iret += RewriteAttrRefs(*it, mapping);
+			}
+		}
+		break;
+
+		case classad::ExprTree::CLASSAD_NODE: {
+			std::vector< std::pair<std::string, classad::ExprTree*> > attrs;
+			((classad::ClassAd*)tree)->GetComponents(attrs);
+			for (std::vector< std::pair<std::string, classad::ExprTree*> >::iterator it = attrs.begin(); it != attrs.end(); ++it) {
+				iret += RewriteAttrRefs(it->second, mapping);
+			}
+		}
+		break;
+
+		case classad::ExprTree::EXPR_LIST_NODE: {
+			std::vector<classad::ExprTree*> exprs;
+			((classad::ExprList*)tree)->GetComponents( exprs );
+			for (std::vector<classad::ExprTree*>::iterator it = exprs.begin(); it != exprs.end(); ++it) {
+				iret += RewriteAttrRefs(*it, mapping);
+			}
+		}
+		break;
+
+		case classad::ExprTree::EXPR_ENVELOPE:
+		default:
+			// unknown or unallowed node.
+			ASSERT(0);
+		break;
+	}
+	return iret;
+}
+
 
 #define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
 

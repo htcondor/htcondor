@@ -26,7 +26,7 @@
 //   * declare your probes as class (or struct) members
 //     * use stats_entry_abs<T>    for probes that need a value and a max value (i.e. number of shadows processes)
 //     * use stats_entry_recent<T> for probes that need a value and a recent value (i.e. number of jobs that have finished)
-//     * use stats_entry_recent<Probe> for general statistics value (min,max,avg,std)
+//     * use stats_entry_probe<T>  for general statistics value (min,max,avg,std)
 //     * use stats_recent_counter_timer for runtime accumulators (int count, double runtime with overall and recent)
 //     * use stats_ema for exponential moving averages
 //     * use stats_sum_ema_rate for computing a running total and exponential moving averages of the rate of change

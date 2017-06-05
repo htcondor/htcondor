@@ -56,6 +56,12 @@ my $debugmode = 0;
     #condorlocalsrc => "$configfile",
 #);
 
+# get the actual name of the collector exe, because that's what netstat will show.
+my $collector_exe = "condor_collector";
+my $collector_path = `condor_config_val collector`; fullchomp($collector_path);
+if ($collector_path =~ /(condor_[a-z\.]+)$/) { $collector_exe = $1; }
+print "collector_exe=$collector_exe\n";
+
 system("condor_config_val -dump enable_ipv4 -v");
 system("condor_config_val -dump enable_ipv6 -v");
 
@@ -79,6 +85,7 @@ if($ipv6 =~ /true/i) {
 print "Mixedmode:$mixedmode\n";
 	
 if(is_windows()) {
+	# on windows, we match this up with names from the PID files
 	@listeningdaemons = (
 		"condor_schedd",
 		"condor_collector",
@@ -96,7 +103,7 @@ if(is_windows()) {
 } else {
 	@listeningdaemons = (
 		"condor_schedd",
-		"condor_collector",
+		"$collector_exe",
 		"condor_shared_port",
 	);
 	if($mixedmode == 2) {
@@ -157,7 +164,12 @@ $on_execute = sub {
 		print "nstat: $line\n"
 	}
 
-	system("ps -ef | grep condor");
+	if (is_windows()) {
+		system("tasklist | grep condor");
+	} else {
+		system("ps -ef | grep condor");
+	}
+	system("condor_who -daemons -quick");
 
 	CondorTest::CreatePidsFile();
 

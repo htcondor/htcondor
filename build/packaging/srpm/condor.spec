@@ -326,7 +326,6 @@ Requires: libcgroup >= 0.37
 %if %cream && ! %uw_build
 BuildRequires: glite-ce-cream-client-devel
 BuildRequires: glite-lbjp-common-gsoap-plugin-devel
-BuildRequires: glite-ce-cream-utils
 BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
@@ -348,6 +347,7 @@ BuildRequires: qpid-qmf-devel
 %if %systemd
 BuildRequires: systemd-devel
 BuildRequires: systemd-units
+Requires: systemd
 %endif
 
 BuildRequires: transfig
@@ -389,6 +389,11 @@ Requires(post):/sbin/chkconfig
 Requires(preun):/sbin/chkconfig
 Requires(preun):/sbin/service
 Requires(postun):/sbin/service
+%endif
+
+%if 0%{?rhel} >= 7
+Requires(post): policycoreutils-python
+Requires(post): selinux-policy-targeted >= 3.13.1-102
 %endif
 
 #Provides: user(condor) = 43
@@ -681,19 +686,40 @@ Includes the libraries for external packages built when UW_BUILD is enabled
 
 %endif
 
-
-%package ec2
-Summary: Configuration and scripts for using HTCondor on EC2.
+%package annex-ec2
+Summary: Configuration and scripts to make an EC2 image annex-compatible.
 Group: Applications/System
 Requires: %name = %version-%release
+Requires(post): /sbin/chkconfig
+Requires(preun): /sbin/chkconfig
 
-%description ec2
-Configures HTCondor for use on EC2.
+%description annex-ec2
+Configures HTCondor to make an EC2 image annex-compatible.  Do NOT install
+on a non-EC2 image.
 
-%files ec2
+%files annex-ec2
+%if %systemd
+%_libexecdir/condor/condor-annex-ec2
+%{_unitdir}/condor-annex-ec2.service
+%else
+%_initrddir/condor-annex-ec2
+%endif
 %config(noreplace) %_sysconfdir/condor/config.d/50ec2.config
-%config(noreplace) %_sysconfdir/condor/config.d/49ec2-instance.sh
 %config(noreplace) %_sysconfdir/condor/master_shutdown_script.sh
+
+%post annex-ec2
+%if %systemd
+/bin/systemctl enable condor-annex-ec2
+%else
+/sbin/chkconfig --add condor-annex-ec2
+%endif
+
+%preun annex-ec2
+%if %systemd
+/bin/systemctl disable condor-annex-ec2
+%else
+/sbin/chkconfig --del condor-annex-ec2 > /dev/null 2>&1 || :
+%endif
 
 %package all
 Summary: All condor packages in a typical installation
@@ -890,11 +916,6 @@ make install DESTDIR=%{buildroot}
 # The install target puts etc/ under usr/, let's fix that.
 mv %{buildroot}/usr/etc %{buildroot}/%{_sysconfdir}
 
-# I fixed this in condor_examples/CMakeLists.txt, instead.
-# populate %_sysconfdir/condor/config.d %{buildroot}/%{_sysconfdir}/condor/config.d/50ec2.config
-# populate %_sysconfdir/condor/config.d %{buildroot}/%{_sysconfdir}/condor/config.d/49ec2-instance.sh
-# populate %_sysconfdir/condor %{buildroot}/${_sysconfdir}/master_shutdown_script.sh
-
 populate %_sysconfdir/condor %{buildroot}/%{_usr}/lib/condor_ssh_to_job_sshd_config_template
 
 # Things in /usr/lib really belong in /usr/share/condor
@@ -1006,13 +1027,17 @@ rm -rf %{buildroot}/%{_sysconfdir}/init.d
 mkdir -p %{buildroot}%{_tmpfilesdir}
 install -m 0644 %{buildroot}/etc/examples/condor-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
 
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_libexecdir}/condor/condor-annex-ec2
+
 mkdir -p %{buildroot}%{_unitdir}
+install -m 0644 %{buildroot}/etc/examples/condor-annex-ec2.service %{buildroot}%{_unitdir}/condor-annex-ec2.service
 install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_initrddir}/condor-annex-ec2
 %if 0%{?osg} || 0%{?hcc}
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
 %endif
@@ -1274,7 +1299,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+%_libexecdir/condor/libcollector_python_plugin.so
 %_mandir/man1/condor_advertise.1.gz
+%_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_cod.1.gz
@@ -1380,9 +1407,11 @@ rm -rf %{buildroot}
 %_bindir/condor_job_router_info
 %_bindir/condor_transform_ads
 %_bindir/condor_update_machine_ad
-# reconfig_schedd, restart
+%_bindir/condor_annex
 # sbin/condor is a link for master_off, off, on, reconfig,
+# reconfig_schedd, restart
 %_sbindir/condor_advertise
+%_sbindir/condor_aklog
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
@@ -1398,7 +1427,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_reconfig
 %_sbindir/condor_replication
 %_sbindir/condor_restart
-%attr(6755, root, root) %_sbindir/condor_root_switchboard
 %_sbindir/condor_schedd
 %_sbindir/condor_set_shutdown
 %_sbindir/condor_shadow
@@ -1653,6 +1681,7 @@ rm -rf %{buildroot}
 
 %files python
 %defattr(-,root,root,-)
+%_bindir/condor_top
 %_libdir/libpyclassad*.so
 %_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad.so
@@ -1803,6 +1832,7 @@ test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    restorecon -R -v /var/lock/condor
    setsebool -P condor_domain_can_network_connect 1
+   setsebool -P daemons_enable_cluster_mode 1
    semanage port -a -t condor_port_t -p tcp 12345
    # the number of extraneous SELinux warnings on f17 is very high
 fi
@@ -1810,8 +1840,15 @@ fi
 %if 0%{?rhel} >= 7
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
-   /usr/sbin/setsebool -P condor_domain_can_network_connect 1
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
+   /usr/sbin/setsebool -P condor_domain_can_network_connect 1
+   /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
+   /usr/sbin/semanage permissive -a condor_collector_t
+   /usr/sbin/semanage permissive -a condor_master_t
+   /usr/sbin/semanage permissive -a condor_negotiator_t
+   /usr/sbin/semanage permissive -a condor_procd_t
+   /usr/sbin/semanage permissive -a condor_schedd_t
+   /usr/sbin/semanage permissive -a condor_startd_t
 fi
 %endif
 if [ $1 -eq 1 ] ; then
@@ -1899,6 +1936,76 @@ fi
 %endif
 
 %changelog
+* Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
+- Fixed a bug where using an X.509 proxy might corrupt the job queue log
+- Fixed a memory leak in the Python bindings
+
+* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.1-1
+- Several performance enhancements in the collector
+- Further refinement and initial documentation of the HTCondor Annex
+- Enable chirp for Docker jobs
+- Job Router uses first match rather than round-robin matching
+- The schedd tracks jobs counts by status for each owner
+- Technology preview of late job materialization in the schedd
+
+* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.2-1
+- New metaknobs for mapping users to groups
+- Now case-insensitive with Windows user names when storing credentials
+- Signal handling in the OpenMPI script
+- Report RemoteSysCpu for Docker jobs
+- Allow SUBMIT_REQUIREMENT to refer to X509 secure attributes
+- Linux kernel tuning script takes into account the machine's role
+
+* Thu Mar 02 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.0-1
+- Performance improvements in collector's ingestion of ClassAds
+- Added collector attributes to report query times and forks
+- Removed extra white space around parentheses when unparsing ClassAds
+- Technology preview of the HTCondor Annex
+
+* Thu Mar 02 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.1-1
+- condor_q works in situations where user authentication is not configured
+- Updates to work with Docker version 1.13
+- Fix several problems with the Job Router
+- Update scripts to support current versions of Open MPI and MPICH2
+- Fixed a bug that could corrupt the job queue log when the disk is full
+
+* Thu Jan 26 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.0-1
+- condor_q shows shows only the current user's jobs by default
+- condor_q summarizes related jobs (batches) on a single line by default
+- Users can define their own job batch name at job submission time
+- Immutable/protected job attributes make SUBMIT_REQUIREMENTS more useful
+- The shared port daemon is enabled by default
+- Jobs run in cgroups by default
+- HTCondor can now use IPv6 addresses (Prefers IPv4 when both present)
+- DAGMan: Able to easily define SCRIPT, VARs, etc., for all nodes in a DAG
+- DAGMan: Revamped priority implementation
+- DAGMan: New splice connection feature
+- New slurm grid type in the grid universe for submitting to Slurm
+- Numerous improvements to Docker support
+- Several enhancements in the python bindings
+
+* Mon Jan 23 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.11-1
+- Fixed a bug which delayed startd access to stard cron job results
+- Fixed a bug in pslot preemption that could delay jobs starting
+- Fixed a bug in job cleanup at job lease expiration if using glexec
+- Fixed a bug in locating ganglia shared libraries on Debian and Ubuntu
+
+* Tue Dec 13 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.8-1
+- The starter puts all jobs in a cgroup by default
+- Added condor_submit commands that support job retries
+- condor_qedit defaults to the current user's jobs
+- Ability to add SCRIPTS, VARS, etc. to all nodes in a DAG using one command
+- Able to conditionally add Docker volumes for certain jobs
+- Initial support for Singularity containers
+- A 64-bit Windows release
+
+* Tue Dec 13 2016 Tim Theisen <tim@cs.wisc.edu> - 8.4.10-1
+- Updated SELinux profile for Enterprise Linux
+- Fixed a performance problem in the schedd when RequestCpus was an expression
+- Preserve permissions when transferring sub-directories of the job's sandbox
+- Fixed HOLD_IF_CPUS_EXCEEDED and LIMIT_JOB_RUNTIMES metaknobs
+- Fixed a bug in handling REMOVE_SIGNIFICANT_ATTRIBUTES
+
 * Thu Sep 29 2016 Tim Theisen <tim@cs.wisc.edu> - 8.5.7-1
 - The schedd can perform job ClassAd transformations
 - Specifying dependencies between DAGMan splices is much more flexible

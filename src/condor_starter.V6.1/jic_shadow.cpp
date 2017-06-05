@@ -436,6 +436,17 @@ JICShadow::transferOutput( bool &transient_failure )
 		// short of a hardkill. 
 	if( filetrans && ((requested_exit == false) || transfer_at_vacate) ) {
 
+		if ( shadowDisconnected() ) {
+				// trigger retransfer on reconnect
+			job_cleanup_disconnected = true;
+
+				// inform our caller that transfer will be retried
+				// when the shadow reconnects
+			transient_failure = true;
+
+			return false;
+		}
+
 			// add any dynamically-added output files to the FT
 			// object's list
 		m_added_output_files.rewind();
@@ -785,6 +796,16 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 	if( ! wrote_local_log_event ) {
 		if( u_log->logJobExit(&ad, reason) ) {
 			wrote_local_log_event = true;
+		}
+	}
+
+	// If shadow exits before the startd kills us, don't worry about
+	// getting notified that the syscall socket has closed.
+
+	if (syscall_sock) {
+		if (syscall_sock_registered) {
+			daemonCore->Cancel_Socket(syscall_sock);
+			syscall_sock_registered = false;
 		}
 	}
 
@@ -1940,10 +1961,10 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 
 
 
-std::auto_ptr<classad::ExprTree>
+std::unique_ptr<classad::ExprTree>
 JICShadow::getDelayedUpdate( const std::string &name )
 {
-	std::auto_ptr<classad::ExprTree> expr;
+	std::unique_ptr<classad::ExprTree> expr;
 	classad::ExprTree *borrowed_expr = NULL;
 	ClassAd *ad = jobClassAd();
 	dprintf(D_FULLDEBUG, "Looking up delayed attribute named %s.\n", name.c_str());
@@ -2270,9 +2291,11 @@ JICShadow::job_lease_expired()
 		ASSERT( !syscall_sock->is_connected() );
 	}
 
-	// Exit telling the startd we lost the shadow, which
-	// will normally result in the This does not return.
-	Starter->StarterExit(STARTER_EXIT_LOST_SHADOW_CONNECTION);
+	// Exit telling the startd we lost the shadow
+	Starter->SetShutdownExitCode(STARTER_EXIT_LOST_SHADOW_CONNECTION);
+	if ( Starter->RemoteShutdownFast(0) ) {
+		Starter->StarterExit( Starter->GetShutdownExitCode() );
+	}
 }
 
 bool
@@ -2343,7 +2366,9 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		const char *stats = m_ft_info.tcp_stats.c_str();
 		std::string full_stats = "(peer stats from starter): ";
 		full_stats += stats;
-		
+
+		ASSERT( !shadowDisconnected() );
+
 		REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
 
 			// If we transferred the executable, make sure it
@@ -2496,11 +2521,22 @@ JICShadow::initIOProxy( void )
 		want_delayed ? "true" : "false");
 	if( want_io_proxy || want_updates || want_delayed || job_universe==CONDOR_UNIVERSE_JAVA ) {
 		m_wrote_chirp_config = true;
+		condor_sockaddr *bindTo = NULL;
+		struct in_addr addr;
+		addr.s_addr = htonl(0xac110001);
+		condor_sockaddr dockerInterface(addr);
+
+		bool wantDocker = false;
+		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
+		if (wantDocker) {
+			bindTo = &dockerInterface;
+		}
+
 		io_proxy_config_file.formatstr( "%s%c%s" ,
 				 Starter->GetWorkingDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.Value());
-		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed) ) {
+		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;

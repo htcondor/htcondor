@@ -107,19 +107,16 @@ static bool test_is_symlink_dir(void);
 static bool test_is_symlink_symlink_file(void);
 static bool test_is_symlink_symlink_dir(void);
 static bool test_get_owner_not_exist(void);
-#ifndef WIN32
 static bool test_get_owner_file(void);
 static bool test_get_owner_dir(void);
 static bool test_get_owner_symlink_file(void);
 static bool test_get_owner_symlink_dir(void);
-#endif
 static bool test_get_group_not_exist(void);
-#ifndef WIN32
 static bool test_get_group_file(void);
 static bool test_get_group_dir(void);
 static bool test_get_group_symlink_file(void);
 static bool test_get_group_symlink_dir(void);
-#endif
+
 //Global variables
 static MyString
 	original_dir,
@@ -128,7 +125,8 @@ static MyString
 	empty_dir,
 	full_dir,
 	file_dir,
-	tmp;
+	tmp,
+	original_tmp;
 
 static const char
 	*readme = "README";
@@ -159,52 +157,57 @@ bool OTEST_StatInfo(void) {
 	driver.register_function(test_base_name_file);
 	driver.register_function(test_base_name_file_just_path);
 	driver.register_function(test_base_name_dir);
-	driver.register_function(test_base_name_symlink_file);
-	driver.register_function(test_base_name_symlink_dir);
 	driver.register_function(test_base_name_fd);
 	driver.register_function(test_dir_path_file);
 	driver.register_function(test_dir_path_file_no_delim);
 	driver.register_function(test_dir_path_file_just_path);
 	driver.register_function(test_dir_path_dir);
-	driver.register_function(test_dir_path_symlink_file);
-	driver.register_function(test_dir_path_symlink_dir);
 	driver.register_function(test_dir_path_fd);
 	driver.register_function(test_get_access_time_not_exist);
 	driver.register_function(test_get_access_time_file);
 	driver.register_function(test_get_access_time_file_old);
 	driver.register_function(test_get_access_time_dir);
-	driver.register_function(test_get_access_time_symlink_file);
-	driver.register_function(test_get_access_time_symlink_dir);
 	driver.register_function(test_get_modify_time_not_exist);
 	driver.register_function(test_get_modify_time_file);
 	driver.register_function(test_get_modify_time_file_old);
 	driver.register_function(test_get_modify_time_dir);
-	driver.register_function(test_get_modify_time_symlink_file);
-	driver.register_function(test_get_modify_time_symlink_dir);
 	driver.register_function(test_get_create_time_not_exist);
 	driver.register_function(test_get_create_time_file);
 	driver.register_function(test_get_create_time_file_old);
 	driver.register_function(test_get_create_time_dir);
-	driver.register_function(test_get_create_time_symlink_file);
-	driver.register_function(test_get_create_time_symlink_dir);
 	driver.register_function(test_get_file_size_not_exist);
 	driver.register_function(test_get_file_size_file);
 	driver.register_function(test_get_file_size_file_empty);
 	driver.register_function(test_get_file_size_dir);
 	driver.register_function(test_get_file_size_dir_empty);
-	driver.register_function(test_get_file_size_symlink_file);
-	driver.register_function(test_get_file_size_symlink_dir);
 	driver.register_function(test_get_mode_not_exist);
+#ifdef WIN32
+	// these tests abort with "Avoiding a use of an undefined mode" on windows
+#else
 	driver.register_function(test_get_mode_file);
-	driver.register_function(test_get_mode_dir);
 	driver.register_function(test_get_mode_symlink_file);
 	driver.register_function(test_get_mode_symlink_dir);
+#endif
+	driver.register_function(test_get_mode_dir);
 	driver.register_function(test_is_directory_not_exist);
 	driver.register_function(test_is_directory_file);
 	driver.register_function(test_is_directory_dir);
+	driver.register_function(test_is_executable_not_exist);
+#ifndef WIN32
+	driver.register_function(test_base_name_symlink_file);
+	driver.register_function(test_base_name_symlink_dir);
+	driver.register_function(test_dir_path_symlink_file);
+	driver.register_function(test_dir_path_symlink_dir);
+	driver.register_function(test_get_create_time_symlink_file);
+	driver.register_function(test_get_create_time_symlink_dir);
+	driver.register_function(test_get_access_time_symlink_file);
+	driver.register_function(test_get_access_time_symlink_dir);
+	driver.register_function(test_get_modify_time_symlink_file);
+	driver.register_function(test_get_modify_time_symlink_dir);
+	driver.register_function(test_get_file_size_symlink_file);
+	driver.register_function(test_get_file_size_symlink_dir);
 	driver.register_function(test_is_directory_symlink_file);
 	driver.register_function(test_is_directory_symlink_dir);
-	driver.register_function(test_is_executable_not_exist);
 	driver.register_function(test_is_executable_true);
 	driver.register_function(test_is_executable_false);
 	driver.register_function(test_is_symlink_not_exist);
@@ -212,6 +215,7 @@ bool OTEST_StatInfo(void) {
 	driver.register_function(test_is_symlink_dir);
 	driver.register_function(test_is_symlink_symlink_file);
 	driver.register_function(test_is_symlink_symlink_dir);
+#endif
 	driver.register_function(test_get_owner_not_exist);
 #ifndef WIN32
 	driver.register_function(test_get_owner_file);
@@ -258,6 +262,7 @@ static void setup() {
 	
 	// Directory strings
 	cut_assert_true( tmp.formatstr("testtmp%d", getpid()) );
+	original_tmp = tmp;
 	
 	// Make a temporary directory to test
 	cut_assert_z( mkdir(tmp.Value(), 0700) );
@@ -280,15 +285,16 @@ static void setup() {
 	cut_assert_z( mkdir("full_dir", 0700) );
 	
 	// Create some symbolic links
-#ifndef WIN32
+#ifdef WIN32
+#else
 	MyString link;
 	cut_assert_true( link.formatstr("%s%s", full_dir.Value(), "full_file") );
 	cut_assert_z( symlink(link.Value(), "symlink_file") );
 	cut_assert_true( link.formatstr("%s%s", full_dir.Value(), "link_dir") );
 	cut_assert_z( symlink(link.Value(), "symlink_dir") );
-	
-	cut_assert_z( chdir("full_dir") );
 #endif
+	cut_assert_z( chdir("full_dir") );
+
 	// Make a zero length, but executable, file
 	tmp_fd = cut_assert_gez( safe_open_wrapper_follow("executable_file", O_RDWR | 
 							 O_CREAT) );
@@ -314,23 +320,27 @@ static void setup() {
 
 MSC_DISABLE_WARNING(6031) // return value ignored.
 static void cleanup() {
+	cut_assert_z( close(fd) );
 	// Remove the created files/directories/symlinks
+	cut_assert_z( chdir(original_dir.Value()) );
 	cut_assert_z( chdir(tmp.Value()) );
 	cut_assert_z( rmdir("empty_dir") );
+#ifdef WIN32
+#else
 	cut_assert_z( remove("symlink_file") );
 	cut_assert_z( remove("symlink_dir") );
+#endif
 	cut_assert_z( chdir("full_dir") );
 	cut_assert_z( rmdir("link_dir") );
 	
 	// Just in case any of these weren't removed...
-	remove("empty_file");
+	cut_assert_z(remove("empty_file"));
 	remove("full_file");
 	remove("executable_file");
 	cut_assert_z(chdir(".."));
 	rmdir("full_dir");
 	cut_assert_z(chdir(".."));
 
-	cut_assert_z( close(fd) );
 	cut_assert_z( rmdir(tmp.Value()) );
 }
 MSC_RESTORE_WARNING(6031)

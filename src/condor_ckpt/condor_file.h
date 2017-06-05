@@ -65,7 +65,7 @@ public:
 	virtual int open( const char *url, int flags, int mode )=0;
 	virtual int close()=0;
 	virtual int read( off_t offset, char *data, int length )=0;
-	virtual int write( off_t offset, char *data, int length )=0;
+	virtual int write( off_t offset, const char *data, int length )=0;
 
 	virtual int fcntl( int cmd, int arg )=0;
 	virtual int ioctl( int cmd, long arg )=0;

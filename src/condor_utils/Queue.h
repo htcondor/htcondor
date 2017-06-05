@@ -95,6 +95,7 @@ int Queue<Value>::enqueue(const Value& value)
 			new_ht[j++] = ht[i];
 		}
 		for (i = 0; i < head; i++ ) {
+			MSC_SUPPRESS_WARNING(6386) // code analysis can't figure out buffer size, thinks it can overrun here.
 			new_ht[j++] = ht[i];
 		}
 

@@ -62,7 +62,7 @@ class ClassAdXMLUnParser
 	 */
 	void Unparse(std::string &buffer, const ExprTree *expr, int indent);
 
-	void Unparse(std::string &buffer, Value &val, int indent);
+	void Unparse(std::string &buffer, const Value &val, int indent);
 	virtual void UnparseAux(std::string &buffer, 
 							std::vector< std::pair< std::string, ExprTree*> >& attrlist,
 							int indent);

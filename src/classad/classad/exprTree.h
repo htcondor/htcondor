@@ -93,7 +93,7 @@ class ExprTree
 		};
 
 		/// Virtual destructor
-		virtual ~ExprTree ();
+		virtual ~ExprTree () {};
 
 		/** Sets the lexical parent scope of the expression, which is used to 
 				determine the lexical scoping structure for resolving attribute
@@ -107,10 +107,15 @@ class ExprTree
 		*/
 		void SetParentScope( const ClassAd* p );
 
+#if defined(SCOPE_REFACTOR)
+		virtual const ClassAd *GetParentScope( ) const = 0;
+#else
+
 		/** Gets the parent scope of the expression.
 		 	@return The parent scope of the expression.
 		*/
 		const ClassAd *GetParentScope( ) const { return( parentScope ); }
+#endif
 
 		/** Makes a deep copy of the expression tree
 		 * 	@return A deep copy of the expression, or NULL on failure.
@@ -172,12 +177,20 @@ class ExprTree
   	protected:
 		void debug_print(const char *message) const;
 		void debug_format_value(Value &value, double time=0) const;
-		ExprTree ();
+#if defined(SCOPE_REFACTOR)
+		ExprTree () {};
+#else
+		ExprTree (const ClassAd* parent=NULL) : parentScope(parent) {};
+#endif
 
-        /** Fill in this ExprTree with the contents of the other ExprTree.
-         *  @return true if the copy succeeded, false otherwise.
-         */
-        void CopyFrom(const ExprTree &literal);
+		/** Fill in this ExprTree with the contents of the other ExprTree.
+		*  @return true if the copy succeeded, false otherwise.
+		*/
+#if defined(SCOPE_REFACTOR)
+		void CopyFrom(const ExprTree &) { }
+#else
+		void CopyFrom(const ExprTree &that) { parentScope = that.parentScope; }
+#endif
 
 		bool Evaluate( Value& v, ExprTree*& t ) const;
 		bool Flatten( Value& val, ExprTree*& tree) const;
@@ -185,7 +198,10 @@ class ExprTree
 		bool Flatten( EvalState&, Value&, ExprTree*&, int* = NULL ) const;
 		bool Evaluate( EvalState &, Value &, ExprTree *& ) const;
 
+#if defined(SCOPE_REFACTOR)
+#else
 		const ClassAd	*parentScope;
+#endif
 
 		enum {
 			EVAL_FAIL,

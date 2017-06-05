@@ -29,6 +29,7 @@
 #include "string_list.h"
 #include "classad/classad_distribution.h"
 
+#include "submit_job.h"
 
 bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, const char * gridresource, bool is_sandboxed)
 {
@@ -80,6 +81,10 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	ad->Delete(ATTR_TOTAL_SUBMIT_PROCS);
 	ad->Delete( ATTR_STAGE_IN_FINISH );
 	ad->Delete( ATTR_STAGE_IN_START );
+	ad->Delete( ATTR_ULOG_FILE );
+	ad->Delete( ATTR_ULOG_USE_XML );
+	ad->Delete( ATTR_DAGMAN_WORKFLOW_LOG );
+	ad->Delete( ATTR_DAGMAN_WORKFLOW_MASK );
 
 	// We aren't going to forward updates to this attribute,
 	// so strip it out.
@@ -124,7 +129,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	}
 
 	ad->InsertAttr(ATTR_JOB_UNIVERSE, target_universe);
-	ad->Insert(remoteattr.Value(), olduniv, false);
+	ad->Insert(remoteattr.Value(), olduniv);
 		// olduniv is now controlled by ClassAd
 
 	if( target_universe == CONDOR_UNIVERSE_GRID ) {
@@ -234,13 +239,19 @@ static bool set_job_status_simple(classad::ClassAd const &orig,classad::ClassAd 
 }
 
 static void set_job_status_idle(classad::ClassAd const &orig, classad::ClassAd &update) {
-	set_job_status_simple(orig,update,IDLE);
+	int old_update_status = IDLE;
+	update.EvaluateAttrInt( ATTR_JOB_STATUS, old_update_status );
+	if ( set_job_status_simple(orig,update,IDLE) && old_update_status == RUNNING ) {
+		WriteEvictEventToUserLog( orig );
+	}
 }
 
 static void set_job_status_running(classad::ClassAd const &orig, classad::ClassAd &update) {
-	set_job_status_simple(orig,update,RUNNING);
-	// TODO: For new_status=RUNNING and set_job_status_simple()
-	// returned true, should we be calling WriteExecuteEventToUserLog?
+	int old_update_status = IDLE;
+	update.EvaluateAttrInt( ATTR_JOB_STATUS, old_update_status );
+	if ( set_job_status_simple(orig,update,RUNNING) && old_update_status == IDLE ) {
+		WriteExecuteEventToUserLog( orig );
+	}
 }
 
 static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &update,const char * hold_reason, int hold_code, int hold_subcode)
@@ -264,7 +275,7 @@ static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &u
 	classad::ExprTree * origexpr = update.Lookup(ATTR_RELEASE_REASON);
 	if(origexpr) {
 		classad::ExprTree * toinsert = origexpr->Copy(); 
-		update.Insert(ATTR_LAST_RELEASE_REASON, toinsert, false);
+		update.Insert(ATTR_LAST_RELEASE_REASON, toinsert);
 	}
 	update.Delete(ATTR_RELEASE_REASON);
 
@@ -379,7 +390,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		classad::ExprTree * newgridexpr = newgrid.Lookup(attrs_to_copy[index]);
 		if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
 			classad::ExprTree * toinsert = newgridexpr->Copy(); 
-			update.Insert(attrs_to_copy[index], toinsert, false);
+			update.Insert(attrs_to_copy[index], toinsert);
 		}
 	}
 
@@ -392,7 +403,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 			classad::ExprTree * newgridexpr = newgrid.Lookup(attr);
 			if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
 				classad::ExprTree * toinsert = newgridexpr->Copy(); 
-				update.Insert(attr, toinsert, false);
+				update.Insert(attr, toinsert);
 			}
 		}
 	}

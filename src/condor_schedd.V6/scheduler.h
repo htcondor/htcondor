@@ -117,6 +117,39 @@ struct shadow_rec
 }; 
 
 
+// The schedd will have one of these structures per owner, and one for the schedd as a whole
+// these counters are new for 8.7, and used with the code that keeps live counts of jobs
+// by tracking state transitions
+//
+struct LiveJobCounters {
+  int JobsSuspended;
+  int JobsIdle;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
+  int JobsRunning;
+  int JobsRemoved;
+  int JobsCompleted;
+  int JobsHeld;
+  int SchedulerJobsIdle;
+  int SchedulerJobsRunning;
+  int SchedulerJobsRemoved;
+  int SchedulerJobsCompleted;
+  int SchedulerJobsHeld;
+  void clear_counters() { memset(this, 0, sizeof(*this)); }
+  void publish(ClassAd & ad, const char * prefix);
+  LiveJobCounters()
+	: JobsSuspended(0)
+	, JobsIdle(0)
+	, JobsRunning(0)
+	, JobsRemoved(0)
+	, JobsCompleted(0)
+	, JobsHeld(0)
+	, SchedulerJobsIdle(0)
+	, SchedulerJobsRunning(0)
+	, SchedulerJobsRemoved(0)
+	, SchedulerJobsCompleted(0)
+	, SchedulerJobsHeld(0)
+  {}
+};
+
 // counters within the SubmitterData struct that are cleared and re-computed by count_jobs.
 struct SubmitterCounters {
   int JobsRunning;
@@ -206,6 +239,7 @@ struct RealOwnerCounters {
   {}
 };
 
+
 // The schedd will have one of these records for each unique owner, it counts jobs that
 // have that Owner attribute even if the jobs also have an AccountingGroup or NiceUser
 // attribute and thus have a different SUBMITTER name than their OWNER name
@@ -217,11 +251,13 @@ struct OwnerInfo {
   const char * Name() const { return name.empty() ? "" : name.c_str(); }
   bool empty() const { return name.empty(); }
   RealOwnerCounters num; // job counts by OWNER rather than by submitter
+  LiveJobCounters live; // job counts that are always up-to-date with the committed job state
   time_t LastHitTime; // records the last time we incremented num.Hit, use to expire OwnerInfo
   OwnerInfo() : LastHitTime(0) { }
 };
 
 typedef std::map<std::string, OwnerInfo> OwnerInfoMap;
+
 
 class match_rec: public ClaimIdParser
 {
@@ -472,6 +508,7 @@ class Scheduler : public Service
 	// proper cleanup.
     int         	DelMrec(char const*);
     int         	DelMrec(match_rec*);
+    int         	unlinkMrec(match_rec*);
 	match_rec*      FindMrecByJobID(PROC_ID);
 	match_rec*      FindMrecByClaimID(char const *claim_id);
 	void            SetMrecJobID(match_rec *rec, int cluster, int proc);
@@ -561,6 +598,9 @@ class Scheduler : public Service
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
 	int				aliveInterval( void ) { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
+	int				getMaxMaterializedJobsPerCluster() { return MaxMaterializedJobsPerCluster; }
+	bool			getAllowLateMaterialize() { return AllowLateMaterialize; }
+	int				getMaxJobsRunning() { return MaxJobsRunning; }
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
 	int				getMaxJobsPerOwner() { return MaxJobsPerOwner; }
@@ -651,8 +691,11 @@ class Scheduler : public Service
 	ScheddStatistics stats;
 	ScheddOtherStatsMgr OtherPoolStats;
 
+	// live counters for running/held/idle jobs
+	LiveJobCounters liveJobCounts; // job counts that are always up-to-date with the committed job state
+
 	const OwnerInfo * insert_owner_const(const char*);
-	void incrementRecentlyAdded(const char *);
+	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
 
 private:
 
@@ -695,6 +738,8 @@ private:
 	int             MaxNextJobDelay;
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
+	bool			AllowLateMaterialize;
+	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
 	int				MaxRunningSchedulerJobsPerOwner;
@@ -727,6 +772,7 @@ private:
 	SubmitterDataMap Submitters;   // map of job counters by submitter, used to make SUBMITTER ads
 	int				NumUniqueOwners;
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
+
 	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
@@ -970,6 +1016,8 @@ private:
 	int m_history_helper_rid;
 
 	bool m_matchPasswordEnabled;
+
+	friend class DedicatedScheduler;
 };
 
 

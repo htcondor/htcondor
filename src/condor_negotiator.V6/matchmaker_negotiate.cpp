@@ -141,6 +141,7 @@ ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &
 			ASSERT( !m_ads.empty() );
 			front = m_ads.front();
 			m_ads.pop_front();
+			MSC_SUPPRESS_WARNING(6011) // code analysis thinks front may be null, code analysis is wrong
 			front->LookupInteger(ATTR_AUTO_CLUSTER_ID,current_autocluster);
 			if ( m_rejected_auto_clusters.find(current_autocluster) != 
 					m_rejected_auto_clusters.end() ) 

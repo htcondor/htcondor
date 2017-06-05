@@ -53,6 +53,7 @@ private:
 	int failed_tests;
 	int aborted_tests;
 	int skipped_tests;
+	int cur_test_step_failures;
 
 	bool print_failures;
 	bool print_successes;
@@ -100,9 +101,13 @@ public:
 	 */
 	void emit_problem(const char* problem);
 
+	/* Reports a failure of a subtest, but continues on
+	 */
+	void emit_step_failure(int line, const char * description);
+
 	/* Shows exactly what is going to be tested.
 	 */
-	void emit_test(const char* test);
+	void emit_test_at(const char* test, const char *file, int line);
 	
 	/* Shows exactly what is going to be tested.
 	 */
@@ -129,6 +134,13 @@ public:
 	 * be called via the FAIL macro."
 	 */
 	void emit_result_failure(int line, const char * file);
+
+	/* Prints out a message saying that the test succeeded or failed based on whether
+	 * or not the cur_test_stop_failure count is 0. Use only with tests that
+	 * call emit_step_failure when a part of the test fails.
+	 * returns number of step failures.
+	 */
+	int emit_result(int line, const char * file);
 
 	/* Prints out a message saying that the test was aborted for some unknown
 	 * reason, probably given by emit_abort() before this function call.  The
@@ -168,8 +180,12 @@ void emit_comment(const char* comment);
 
 void emit_problem(const char* problem);
 
-void emit_test(const char* test);
-	
+void emit_step_failure(int line, const char* description);
+#define REQUIRE(condition) if (!(condition)) { emit_step_failure(__LINE__, #condition ); }
+
+void emit_test_at(const char* test, const char * file, int line);
+#define emit_test(test) emit_test_at(test, __FILE__, __LINE__)
+
 void emit_skipped(const char* skipped);
 
 void emit_input_header(void);
@@ -181,6 +197,9 @@ void emit_output_actual_header(void);
 void emit_result_success(int line, const char * file);
 
 void emit_result_failure(int line, const char * file);
+
+int emit_result(int line, const char * file);
+#define REQUIRED_RESULT() emit_result(__LINE__, __FILE__) == 0
 
 void emit_result_abort(int line, const char * file);
 

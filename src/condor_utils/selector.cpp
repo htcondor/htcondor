@@ -37,6 +37,16 @@ int poll(struct fake_pollfd *, int, int)
 }
 #endif
 
+#if defined(UNIX)
+#  define MY_FD_SET(fd, ptr)	FD_SET(fd % FD_SETSIZE, &ptr[fd / FD_SETSIZE])
+#  define MY_FD_CLR(fd, ptr)	FD_CLR(fd % FD_SETSIZE, &ptr[fd / FD_SETSIZE])
+#  define MY_FD_ISSET(fd, ptr)	FD_ISSET(fd % FD_SETSIZE, &ptr[fd / FD_SETSIZE])
+#else
+#  define MY_FD_SET		FD_SET
+#  define MY_FD_CLR		FD_CLR
+#  define MY_FD_ISSET	FD_ISSET
+#endif
+
 int Selector::_fd_select_size = -1;
 
 Selector::Selector()
@@ -199,7 +209,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 		}
 #endif
 		m_poll.events |= POLLIN;
-		FD_SET( fd, save_read_fds );
+		MY_FD_SET( fd, save_read_fds );
 		break;
 
 	  case IO_WRITE:
@@ -209,7 +219,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 		}
 #endif
 		m_poll.events |= POLLOUT;
-		FD_SET( fd, save_write_fds );
+		MY_FD_SET( fd, save_write_fds );
 		break;
 
 	  case IO_EXCEPT:
@@ -219,7 +229,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 		}
 #endif
 		m_poll.events |= POLLERR;
-		FD_SET( fd, save_except_fds );
+		MY_FD_SET( fd, save_except_fds );
 		break;
 
 	}
@@ -252,15 +262,15 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 	switch( interest ) {
 
 	  case IO_READ:
-		FD_CLR( fd, save_read_fds );
+		MY_FD_CLR( fd, save_read_fds );
 		break;
 
 	  case IO_WRITE:
-		FD_CLR( fd, save_write_fds );
+		MY_FD_CLR( fd, save_write_fds );
 		break;
 
 	  case IO_EXCEPT:
-		FD_CLR( fd, save_except_fds );
+		MY_FD_CLR( fd, save_except_fds );
 		break;
 
 	}
@@ -378,15 +388,15 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 	switch( interest ) {
 
 	  case IO_READ:
-		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & (POLLIN|POLLHUP)) : FD_ISSET( fd, read_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & (POLLIN|POLLHUP)) : MY_FD_ISSET( fd, read_fds );
 		break;
 
 	  case IO_WRITE:
-		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & (POLLOUT|POLLHUP)) : FD_ISSET( fd, write_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & (POLLOUT|POLLHUP)) : MY_FD_ISSET( fd, write_fds );
 		break;
 
 	  case IO_EXCEPT:
-		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLERR) : FD_ISSET( fd, except_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLERR) : MY_FD_ISSET( fd, except_fds );
 		break;
 
 	}
@@ -478,7 +488,7 @@ display_fd_set( const char *msg, fd_set *set, int max, bool try_dup )
 
 	dprintf( D_ALWAYS, "%s {", msg );
 	for( i=0, count=0; i<=max; i++ ) {
-		if( FD_ISSET(i,set) ) {
+		if( MY_FD_ISSET(i,set) ) {
 			count++;
 
 			dprintf( D_ALWAYS | D_NOHEADER, "%d", i );

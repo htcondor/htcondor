@@ -386,7 +386,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	m_jobid.formatstr("%d.%d",Cluster,Proc);
 	if ( IsServer() && Spool ) {
 
-		SpoolSpace = gen_ckpt_name(Spool,Cluster,Proc,0);
+		std::string buf;
+		SpooledJobFiles::getJobSpoolPath(Ad, buf);
+		SpoolSpace = strdup(buf.c_str());
 		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
@@ -406,7 +408,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// Note: This will break Condor-C jobs if the executable is ever
 		//   spooled the old-fashioned way (which doesn't happen currently).
 		if ( IsServer() && Spool ) {
-			ExecFile = gen_ckpt_name(Spool,Cluster,ICKPT,0);
+			ExecFile = GetSpooledExecutablePath(Cluster, Spool);
 			if ( access(ExecFile,F_OK | X_OK) < 0 ) {
 				free(ExecFile); ExecFile = NULL;
 			}
@@ -2167,10 +2169,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					// If file_mode is still NULL_FILE_PERMISSIONS here, it
 					// likely means that our peer is likely a Windows machine,
 					// since Windows will always claim a mode of 0000.
-					// In this case, default to mode 0600, which is a
+					// In this case, default to mode 0700, which is a
 					// conservative default, and matches what we do in
 					// ReliSock::get_file().
-					file_mode = (condor_mode_t) 0600;
+					file_mode = (condor_mode_t) 0700;
 				}
 				mode_t old_umask = umask(0);
 				rc = mkdir(fullname.Value(),(mode_t)file_mode);
@@ -2456,7 +2458,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		formatstr(full_stats, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
 			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
 		Info.tcp_stats = full_stats.c_str();
-		dprintf(D_STATS, full_stats.c_str());
+		dprintf(D_STATS, "%s", full_stats.c_str());
 	}
 
 
@@ -3851,7 +3853,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, int numFiles, ReliSock *s, p
 		formatstr(full_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n", 
 			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
 		Info.tcp_stats = full_stats.c_str();
-		dprintf(D_STATS, full_stats.c_str());
+		dprintf(D_STATS, "%s", full_stats.c_str());
 	}
 
 	return rc;

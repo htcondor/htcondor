@@ -174,6 +174,8 @@ bool WriteTerminateEventToUserLog( classad::ClassAd const &ad );
 bool WriteAbortEventToUserLog( classad::ClassAd const &ad );
 bool EmailTerminateEvent( classad::ClassAd const &ad );
 bool WriteHoldEventToUserLog( classad::ClassAd const &ad );
+bool WriteExecuteEventToUserLog( classad::ClassAd const &ad );
+bool WriteEvictEventToUserLog( classad::ClassAd const &ad );
 
 
 #endif /* INCLUDE_SUBMIT_JOB_H*/

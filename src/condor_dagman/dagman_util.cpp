@@ -36,7 +36,7 @@ int util_popen (ArgList &args) {
 	args.GetArgsStringForDisplay( &cmd );
     debug_printf( DEBUG_VERBOSE, "Running: %s\n", cmd.Value() );
 
-	FILE *fp = my_popen( args, "r", TRUE );
+	FILE *fp = my_popen( args, "r", MY_POPEN_OPT_WANT_STDERR );
 
     int r = 0;
     if (fp == NULL || (r = my_pclose(fp) & 0xff) != 0) {

@@ -43,6 +43,7 @@
 #include "setenv.h"
 #include "condor_daemon_core.h" // for extractInheritedSocks
 
+#include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
 #include "backward_file_reader.h"
 #include <fcntl.h>  // for O_BINARY
@@ -54,9 +55,9 @@
 #endif /* HAVE_EXT_POSTGRESQL */
 
 static int getConsoleWindowSize(int * pHeight = NULL);
-void Usage(char* name, int iExitCode=1);
+void Usage(const char* name, int iExitCode=1);
 
-void Usage(char* name, int iExitCode) 
+void Usage(const char* name, int iExitCode) 
 {
 	printf ("Usage: %s [source] [restriction-list] [options]\n"
 		"\n   where [source] is one of\n"
@@ -183,7 +184,7 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 }
 
 int
-main(int argc, char* argv[])
+main(int argc, const char* argv[])
 {
   Collectors = NULL;
 
@@ -208,7 +209,7 @@ main(int argc, char* argv[])
   bool fileisuserlog = false;
   bool dash_local = false; // set if -local is passed
 
-  char* JobHistoryFileName=NULL;
+  const char* JobHistoryFileName=NULL;
   const char * pcolon=NULL;
 
 
@@ -402,7 +403,7 @@ main(int argc, char* argv[])
 					"\t\te.g. condor_history -format '%%d' ClusterId\n");
 			exit(1);
 		}
-		mask.registerFormat(argv[i + 1], argv[i + 2]);
+		mask.registerFormatF(argv[i + 1], argv[i + 2], FormatOptionNoTruncate);
 		customFormat = true;
 		i += 2;
     }
@@ -416,7 +417,13 @@ main(int argc, char* argv[])
 			exit(1);
 		}
 		if (pcolon) ++pcolon; // if there are options, skip over the colon to the options.
-		int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, mask, diagnostic);
+		classad::References refs;
+		int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, mask, refs, diagnostic);
+		if (ixNext < 0) {
+			fprintf(stderr, "Error: invalid expression : %s\n", argv[-ixNext]);
+			exit(1);
+		}
+		initStringListFromAttrs(projection, true, refs, true);
 		if (ixNext > i)
 			i = ixNext-1;
 		customFormat = true;
@@ -674,7 +681,7 @@ main(int argc, char* argv[])
 			// to use quill, so get the schedd ad for the local machine if
 			// we can, figure out the name of the schedd and the 
 			// jobqueuebirthdate
-		Daemon schedd( DT_SCHEDD, 0, 0 );
+		DaemonAllowLocateFull schedd( DT_SCHEDD, 0, 0 );
 
         if ( schedd.locate(Daemon::LOCATE_FULL) ) {
 			char *scheddname = quillName;	
@@ -1157,7 +1164,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	}
 
 	compat_classad::ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, constraintExpr, false);
+	ad.Insert(ATTR_REQUIREMENTS, constraintExpr);
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 	// in 8.5.6, we can request that the remote side stream the results back. othewise
 	// the 8.4 protocol will only send EOM after the last result, and thus we print nothing
@@ -1167,7 +1174,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 		ad.InsertAttr("StreamResults", want_streamresults);
 	}
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
-	if (sinceExpr) ad.Insert("Since", sinceExpr, false);
+	if (sinceExpr) ad.Insert("Since", sinceExpr);
 
 	DCSchedd schedd(g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
 	if (!schedd.locate(Daemon::LOCATE_FOR_LOOKUP)) {
@@ -1816,6 +1823,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
+PRAGMA_REMIND("tj: TODO fix to handle summary print format")
 static int set_print_mask_from_stream(
 	AttrListPrintMask & print_mask,
 	std::string & constraint,
@@ -1824,8 +1832,7 @@ static int set_print_mask_from_stream(
 	bool is_filename)
 {
 	std::string messages;
-	printmask_aggregation_t aggregation;
-	printmask_headerfooter_t headFoot = STD_HEADFOOT;
+	PrintMaskMakeSettings propt;
 	std::vector<GroupByKeyInfo> group_by_keys;
 	SimpleInputStream * pstream = NULL;
 
@@ -1848,15 +1855,14 @@ static int set_print_mask_from_stream(
 					*pstream,
 					LocalPrintFormatsTable,
 					print_mask,
-					headFoot,
-					aggregation,
+					propt,
 					group_by_keys,
-					constraint,
-					attrs,
+					NULL,
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {
 		customFormat = true;
+		constraint = propt.where_expression;
 		if ( ! constraint.empty()) {
 			ExprTree *constraintExpr=NULL;
 			if ( ! ParseClassAdRvalExpr(constraint.c_str(), constraintExpr)) {
@@ -1866,10 +1872,11 @@ static int set_print_mask_from_stream(
 				delete constraintExpr;
 			}
 		}
-		if (aggregation) {
-			formatstr_cat(messages, "AUTOCLUSTER or UNIQUE aggregation is not supported.\n");
+		if (propt.aggregate) {
+			formatstr_cat(messages, "UNIQUE aggregation is not supported.\n");
 			err = -1;
 		}
+		initStringListFromAttrs(attrs, false, propt.attrs);
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;

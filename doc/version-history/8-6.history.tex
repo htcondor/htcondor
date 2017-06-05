@@ -1,0 +1,450 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-8-6}Stable Release Series 8.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a stable release series of HTCondor.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 8.6.x releases.
+New features will be added in the 8.7.x development series.
+
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-4}Version 8.6.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.4 not yet released.
+%\item HTCondor version 8.6.4 released on Month Date, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The parameter \Macro{SETTABLE\_ATTRS\_ADMINISTRATOR} is now correctly
+appears in condor\_config\_val.
+|Ticket{6286}
+
+\item Fixed a bug with PASSWORD authentication that would sporadically cause
+it to fail to exchange keys, due to whether or not the first round-trip of
+communications blocked on reading from the network.
+\Ticket{6265}
+
+\item Fixed a bug where per-instance job attributes like \AdAttr{RemoteHost}
+would show up in the history file for completed jobs.  This bug occurred if
+a job happened to complete while the schedd was in the process of a
+graceful shutdown.  
+\Ticket{6251}
+
+\item Fixed a bug that could cause \Condor{submit} to fail to submit a
+job with a proxy file to a \Condor{schedd} older than 8.5.8, due to the
+absence of an X.509 CA certificates directory.
+\Ticket{6258}
+
+\item Restored a check in \Condor{submit} about whether the job's X.509
+proxy has sufficient lifetime remaining.
+\Ticket{6283}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-3}Version 8.6.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.3 released on May 9, 2017.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that rarely corrupts the \Condor{schedd}'s job queue
+log file when the input sandbox of a job with an X.509 proxy file is
+spooled.
+\Ticket{6240}
+
+\item Fixed a memory leak in the Python bindings related to logging.
+\Ticket{6227}
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Allow Python modules to be used as \Condor{collector} plugin.
+This undocumented feature is to be used by expert developers only.
+\Ticket{6213}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-2}Version 8.6.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.2 released on April 24, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added metaknobs for defining map files for use with the ClassAd usermap function
+in the \Condor{schedd}, and a metaknob for automatically assigning an accounting group to
+a job based on a mapping of the owner name of the job.
+\Ticket{6179}
+
+\item When the \Condor{credd} is polling for credentials, the timeout is now
+configurable using \Macro{CREDD\_POLLING\_TIMEOUT}.
+
+\item The \Opt{reverse} option for \Condor{q} was changed to \Opt{reverse-analyze},
+and it now implies \Opt{better-analyze}. Formerly, the \Opt{reverse} option was ignored
+unless \Opt{-better-analyze} was also specified.
+\Ticket{6167}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that could cause \Condor{store\_cred} to fail on
+Windows due to a case-sensitive check of the user's account name.
+\Ticket{6200}
+
+\item Updated Open MPI helper script to catch and handle SIGTERM and
+to use bash explicitly.
+\Ticket{6194}
+
+\item Docker Universe jobs now update the RemoteSysCpu attributes for job
+and in the job log. Previously, this field was always 0.
+\Ticket{6173}
+
+\item Docker universe detection is now more robust in the
+face of extraneous output to standard error on docker startup.
+This was preventing Condor from detecting that docker was properly
+working on hosts.
+\Ticket{6185}
+
+\item Fixed a bug that prevented \MacroNI{SUBMIT\_REQUIREMENT} and
+\MacroNI{JOB\_TRANSFORM} expressions from referencing job attributes
+describing the job's X.509 proxy credential.
+\Ticket{6188}
+
+\item The Linux kernel tuning script no longer adjusts some kernel parameters
+unless a \Condor{schedd} will be started by the master.
+\Ticket{6208}
+
+\item Fixed a bug that caused all but the first in a list of metaknobs to be ignored
+unless there were commas separating the list items. So \Macro{use ROLE : Execute CentralManager}
+would incorrectly add only the Execute role.
+Previously, \Macro{use ROLE : Execute, CentralManager} would correctly add both roles.
+\Ticket{6171}
+
+\item Worked around a problem with FORTRAN programs built with \Condor{compile}
+and recent versions of gfortran (4.7.2 was OK, 4.8.5 was not), where those
+executables would not write to standard out if started in the standard universe.
+Also, updated the checkpointing library to permit \Condor{compile} to
+successfully link FORTRAN (and other) programs calling certain math
+functions and built against up-to-date versions of glibc.
+\Ticket{6026}
+
+\item The default values for \MacroNI{HAD\_SOCKET\_NAME} and
+\MacroNI{REPLICATION\_SOCKET\_NAME} have changed to enable the documented
+configuration for using these services with shared port to work.
+\Ticket{6186}
+
+\item Fixed a bug that caused \Condor{dagman} to sometimes (rarely, but
+repeatably) crash when parsing DAGs containing splices.
+\Ticket{6170}
+
+\item The configuration parameters that control when job policy expressions
+are evaluated now work as documented.
+Previously, the default value for \MacroNI{PERIODIC\_EXPR\_INTERVAL} was
+300, not 60 as intended.
+Also, the parameters \MacroNI{MAX\_PERIODIC\_EXPR\_INTERVAL} and
+\MacroNI{PERIODIC\_EXPR\_TIMESLICE} were ignored for grid universe jobs.
+\Ticket{6199}
+
+\item Fixed a bug that could cause the Job Router to crash if the
+\File{job\_queue.log} contained invalid or incomplete records.
+\Ticket{6195}
+
+\item Fixed a bug that caused updates of the job attribute
+\Attr{x509UserProxyExpiration} to be ignored for job policy evaluation
+when the job was managed by the Job Router.
+\Ticket{6209}
+
+\item Changed the default value of configuration parameters
+\MacroNI{CREAM\_GAHP\_WORKER\_THREADS} to the value of
+\MacroNI{GRIDMANAGER\_MAX\_PENDING\_REQUESTS}.
+This should prevent a back-log of commands in the CREAM GAHP observed
+by some users.
+\Ticket{6071}
+
+\item Fixed modification of \Env{PYTHONPATH} environment variable that
+could fail in bash if \Prog{set -u} is enabled.
+\Ticket{6211}
+
+\item \Prog{bosco\_quickstart} no longer assumes that submitting to a Slurm
+cluster requires the PBS emulation module.
+\Ticket{6211}
+
+\item Fixed a bug that caused \Condor{submit} \Opt{-dump} to crash when
+the submit file had an attribute to enable the use of an x509 user proxy.
+\Ticket{6197}
+
+\item Updated the supported platform list in the Bosco installer script to
+include Ubuntu 16 and Mac OSX 10.12. Also, dropped Ubuntu 12 and Mac OSX
+10.6 through 10.9.
+\Ticket{6178}
+
+\item Fixed a bug which in some obscure configurations caused a spurious
+PERMISSION DENIED error was printed in the StartLog when activating a claim.
+\Ticket{6172}.
+
+\item Fixed a bug which forced the administrator to restart (rather than
+reconfigure) running daemons after adding an entry to a \MacroNI{DENY\_*}
+authorization list.
+\Ticket{6172}.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-1}Version 8.6.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.1 released on March 2, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item \Condor{q} now checks to see if authentication and security negotiation are enabled before attempting to
+request only the current users jobs from the \Condor{schedd}.  Prior to this change, configurations that disabled
+security or authentication would also need to set \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS} to false.
+\Ticket{6125}
+
+\item The CLAIMTOBE authentication method is now in the list of methods for READ access if no list of
+authentication methods for READ or DEFAULT is specified in the configuration.  This change allows sites that
+use the default host based security model to use \Condor{q} \Opt{-global} with the only-my-jobs feature
+without making changes to their security configuration.
+\Ticket{6125}
+
+\item The collector now records the authentication method used to determine the authenticated identity.
+\Ticket{6122}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Update Docker interface to be able to retrieve usage information
+from running containers and to remove containers when certain errors
+occurred when using Docker version 1.13.
+\Ticket{6088}
+
+\item In Docker universe, all writes to files in \File{/tmp} and \File{/var/tmp} by default
+write inside the container.  There is a limit on the file size within the container,
+and jobs that write a lot to \File{/tmp} may hit that.  If a docker universe job now runs
+on a system with \MacroNI{MOUNT\_UNDER\_SCRATCH} defined, HTCondor now adds those
+mounts as volume mounts, so file writes do not go to the container, but to the host
+file system.
+\Ticket{6080}
+
+\item Fixed a bug in \Condor{status} \Opt{-format} and \Condor{q} \Opt{-format} that caused the
+tools to truncate output to the width specified in the format specifier. The most likely manifestation of
+this bug was that punctuation after the format would not be printed when the format had an explicit width.
+\Ticket{6120}
+
+\item Fixed a bug that caused spurious shared port-related error
+messages to appear in the \File{dagman.out} file (by adding the
+new \MacroNI{DAGMAN\_USE\_SHARED\_PORT} configuration macro).
+\Ticket{6156}
+
+\item Fixed a bug that caused VM universe jobs to fail if the
+\SubmitCmdNI{vm\_disk} submit command contained spaces after a comma.
+\Ticket{6132}
+
+\item Fixed a bug that can cause the Job Router and \Condor{c-gahp} to
+crash if they fail to submit a job due to submit transforms or
+submit requirements.
+\Ticket{6152}
+
+\item Fixed a bug that caused the Job Router to not route any jobs if
+the \MacroNI{JOB\_ROUTER\_DEFAULTS} configuration parameter value
+started with white space.
+\Ticket{6128}
+
+\item Fixed several bugs in how the Job Router writes to job event logs.
+\Ticket{6092}
+
+\item Removed Bosco's attempt to configure a default value for
+\SubmitCmdNI{grid\_resource} in the submit description file, as
+\Condor{submit} no longer supports this ability.
+Also, Bosco now works with Slurm clusters.
+\Ticket{6106}
+
+\item Changed Bosco's configuration of the \condor{ft-gahp} to eliminate
+worrying error messages in the \condor{ft-gahp}'s log file.
+\Ticket{6107}
+
+\item Fixed a bug that could cause a grid batch job submitted to PBS or
+Slurm to go on hold when the job's X.509 proxy is refreshed.
+\Ticket{6136}
+
+\item Fixed a bug where the \Condor{gridmanager} fails to put a job on
+hold due to the desired hold reason containing invalid characters.
+\Ticket{6142}
+
+\item Improved the hold reason when submission of a grid-type batch
+job fails.
+\Ticket{3377}
+
+\item Update helper scripts to work with current versions of Open MPI and MPICH2.
+\Ticket{6024}
+
+\item Fixes a bug that could cause events for local universe jobs to not
+be written to the global event log.
+\Ticket{6100}
+
+\item Fixed a bug on execute machines that enable PID namespaces that
+would generate a spurious error message in the daemon log when condor\_off -fast was issued.
+\Ticket{6137}
+
+\item Fixed a bug that could corrupt the job queue log file such that
+the \Condor{schedd} cannot restart.
+The bug is mostly likely to occur if the disk becomes full.
+\Ticket{6153}
+
+\item Incremented the ClassAd library version number, since the deprecated
+iostream interface has been removed.
+\Ticket{6050}
+\Ticket{6115}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-0}Version 8.6.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.0 released on January 26, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added two new job ClassAd attributes, \MacroNI{CumulativeRemoteSysCpu} and
+\MacroNI{CumulativeRemoteUserCpu}, which keep a running total of system and user
+CPU usage, respectively, across all job restarts.  Also, immediately clear attributes
+\MacroNI{RemoteSysCpu} and \MacroNI{RemoveUserCpu} on job start, instead of on first update.
+\Ticket{6022}
+
+\item Added a new configuration knob, \MacroNI{ALWAYS\_REUSEADDR}, which defaults
+to \Expr{True}.  When \Expr{True}, it tells HTCondor to set the
+\MacroNI{SO\_REUSEADDR} socket option, so that
+the schedd can run large numbers of very short jobs without exhausting the
+number of local ports needed for shadows.
+\Ticket{6040}
+
+\item Changed the default value of \MacroNI{IGNORE\_LEAF\_OOM} to \Expr{True}.
+\Ticket{5775}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug causing unnecessarily slow updates from the \Condor{startd}.
+If you depend on the old behavior, set \MacroNI{UPDATE\_SPREAD\_TIME} to 8.  A
+value of 0 enables the fix.
+\Ticket{6062}
+
+\item Fixed a race condition when running multiple concurrent jobs on the same claim.
+When the starter exits, it notifies the shadow, which tells the startd to kill the starter.
+Immediately after the shadows tells the startd, it fetches the next job, and tries to start it.
+If the starter hasn't completely exited yet (perhaps it needs to clean up a large sandbox),
+it will notice the shadow has closed the command socket, and the starter will go into disconnected
+mode, and get confused.  This has been fixed.
+\Ticket{6049}
+
+\item Fixed an infelicity with \Condor{submit} -i and docker universe,
+where it would start an interactive shell without a container.  Added error
+message expressing that this combination is not currently supported.
+\Ticket{6083}
+
+\item When a job claimed by the Job Router is held or removed, it is no
+longer considered a failure of the job route chosen for that job.
+\Ticket{5968}
+
+\item Fixed a bug in recovering a Google Compute Engine (GCE) job if the
+\Condor{gridmanager} restarts during submission of the instance request.
+\Ticket{6078}
+
+\item Fixed a bug that could cause re-installation of a remote cluster
+to fail in Bosco.
+\Ticket{6042}
+
+\item Fixed a bug with handling the proxy files of grid-type batch jobs
+when the proxy's file name is a relative path.
+\Ticket{6053}
+
+\item Fixed a bug that caused the \Prog{batch\_gahp} to crash when a job's
+X.509 proxy is refreshed and the \Prog{batch\_gahp} is configured to not
+create a limited copy of the proxy.
+\Ticket{6051}
+
+\item Fixed a bug in the virtual machine universe where \Attr{RequestMemory}
+and \Attr{RequestCPUs} were not changing the resources assigned to the VM
+created by HTCondor.  Now, \Attr{VM\_Memory} defaults to \Attr{RequestMemory},
+and the number of CPUs defaults to \Attr{RequestCPUs}.
+\Ticket{5998}
+
+\end{itemize}

@@ -4027,7 +4027,7 @@ sub CreateLocalConfigFromArrayRef
 	return($name);
 }
 
-sub VerifyNoJobsInState
+sub VerifyNumJobsInState
 {
 	my $state = shift;
 	my $number = shift;
@@ -4045,10 +4045,10 @@ sub VerifyNoJobsInState
 			return($jobsstatus{$state});
         }
         $count += 1;
-        @queue = `condor_q -tot`;
+        @queue = `condor_q -tot -all`;
         foreach my $line (@queue) {
             fullchomp($line);
-            if($line =~ /^(\d+)\s+jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended.*$/) {
+            if($line =~ /(\d+)\s+jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended/i) {
 				#print "$line\n";
 				$jobsstatus{jobs} = $1;
 				$jobsstatus{completed} = $2;
@@ -4058,11 +4058,11 @@ sub VerifyNoJobsInState
 				$jobsstatus{held} = $6;
 				$jobsstatus{suspended} = $7;
 				if($jobsstatus{$state} == $number){
-                    $done = 1;
+					$done = 1;
 					print "$number $state\n\n";
 					return($number)
 				}
-            }
+			}
         }
         if($done == 0) {
             #print "Waiting for $number $state\n";

@@ -518,10 +518,15 @@ job_status_re = re.compile(".*JobStatus=(\d+);.*")
 def main():
     initLog()
 
-    if len(sys.argv) != 2:
+    # Accept the optional -w argument, but ignore it
+    if len(sys.argv) == 2:
+        jobid_arg = sys.argv[1]
+    elif len(sys.argv) == 3 and sys.argv[1] == "-w":
+        jobid_arg = sys.argv[2]
+    else:
         print "1Usage: pbs_status.sh pbs/<date>/<jobid>"
         return 1
-    jobid = sys.argv[1].split("/")[-1].split(".")[0]
+    jobid = jobid_arg.split("/")[-1].split(".")[0]
     log("Checking cache for jobid %s" % jobid)
     cache_contents = None
     try:

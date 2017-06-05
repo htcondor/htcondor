@@ -131,7 +131,7 @@ FILE* LoadClassAdLog(
 			if (!active_transaction) {
 				errmsg.formatstr_cat("Warning: Encountered unmatched end transaction, log may be bogus...\n");
 			} else {
-				active_transaction->Commit(NULL, &la); // commit in memory only
+				active_transaction->Commit(NULL, NULL, &la); // commit in memory only
 				delete active_transaction;
 				active_transaction = NULL;
 			}
@@ -411,7 +411,7 @@ int ExamineLogTransaction(
 			}
 			if (!name) {
 				if ( !ad ) {
-					ad = maker.New();
+					ad = maker.New(((LogSetAttribute *)log)->get_key(), NULL);
 					//PRAGMA_REMIND("tj: don't turn on dirty tracking here!")
 					ad->EnableDirtyTracking();
 					ASSERT(ad);
@@ -420,14 +420,14 @@ int ExamineLogTransaction(
 					free(val);
 					val = NULL;
 				}
-                ExprTree* expr = ((LogSetAttribute *)log)->get_expr();
-                if (expr) {
-		    expr = expr->Copy();
-                    ad->Insert(lname, expr, false);
-                } else {
-                    val = strdup(((LogSetAttribute *)log)->get_value());
-                    ad->AssignExpr(lname, val);
-                }
+				ExprTree* expr = ((LogSetAttribute *)log)->get_expr();
+				if (expr) {
+					expr = expr->Copy();
+					ad->Insert(lname, expr);
+				} else {
+					val = strdup(((LogSetAttribute *)log)->get_value());
+					ad->AssignExpr(lname, val);
+				}
 				attrsAdded++;
 			}
 			break;
@@ -635,7 +635,7 @@ LogNewClassAd::Play(void *data_structure)
 {
 	int result;
 	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
-	ClassAd *ad = ctor.New();
+	ClassAd *ad = ctor.New(key, mytype);
 	SetMyTypeName(*ad, mytype);
 	SetTargetTypeName(*ad, targettype);
 	ad->EnableDirtyTracking();
@@ -783,18 +783,29 @@ LogSetAttribute::Play(void *data_structure)
 	ClassAd *ad = 0;
 	if ( ! table->lookup(key, ad))
 		return -1;
-    if (value_expr) {
+
+#if 1
+	std::string attr(name);
+	if (ad->InsertViaCache(attr, value)) {
+		rval = TRUE;
+	} else {
+		rval = FALSE;
+	}
+#else
+	PRAGMA_REMIND("tj: FIX to re-enable the use of the classadCache here")
+	if (value_expr) {
 		// Such a shame, do we really need to make a
 		// copy of value_expr here?  Seems like we could just
 		// assign it and then set value_expr to NULL and avoid
 		// copying a parse tree, since after we Play it I doubt
 		// this class does anything more with value_expr beyond
 		// deallocating it.  - Todd 11/13 <tannenba@cs.wisc.edu>
-        ExprTree * pTree = value_expr->Copy();
-        rval = ad->Insert(name, pTree, false);
-    } else {
-        rval = ad->AssignExpr(name, value);
-    }
+		ExprTree * pTree = value_expr->Copy();
+		rval = ad->Insert(name, pTree);
+	} else {
+		rval = ad->AssignExpr(name, value);
+	}
+#endif
 	ad->SetDirtyFlag(name, is_dirty);
 
 #if defined(HAVE_DLOPEN)
@@ -868,17 +879,17 @@ LogSetAttribute::ReadBody(FILE* fp)
 		return rval;
 	}
 
-    if (value_expr) delete value_expr;
-    value_expr = NULL;
-    if (ParseClassAdRvalExpr(value, value_expr)) {
-        if (value_expr) delete value_expr;
-        value_expr = NULL;
-        if (param_boolean("CLASSAD_LOG_STRICT_PARSING", true)) {
-            return -1;
-        } else {
-            dprintf(D_ALWAYS, "WARNING: strict classad parsing failed for expression: \"%s\"\n", value);
-        }
-    }
+	if (value_expr) delete value_expr;
+	value_expr = NULL;
+	if (ParseClassAdRvalExpr(value, value_expr)) {
+		if (value_expr) delete value_expr;
+		value_expr = NULL;
+		if (param_boolean("CLASSAD_LOG_STRICT_PARSING", true)) {
+			return -1;
+		} else {
+			dprintf(D_ALWAYS, "WARNING: strict classad parsing failed for expression: %s\n", value);
+		}
+	}
 	return rval + rval1;
 }
 

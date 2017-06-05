@@ -38,7 +38,6 @@
 #include "file_lock.h"
 #include "directory.h"
 #include "exit.h"
-#include "param_functions.h"
 #include "match_prefix.h"
 #include "historyFileFinder.h"
 
@@ -1228,6 +1227,37 @@ handle_fetch_log_history_purge(ReliSock *s) {
     return 0;
 }
 
+int
+handle_dc_query_instance( Service*, int, Stream* stream)
+{
+	if( !stream->end_of_message() ) {
+		dprintf( D_FULLDEBUG, "handle_dc_query_instance: failed to read end of message\n");
+		return FALSE;
+	}
+
+	// the first caller causes us to make a random instance id
+	// all subsequent queries will get the same instance id.
+	static char * instance_id = NULL;
+	const int instance_length = 16;
+	if ( ! instance_id) {
+		unsigned char * bytes = Condor_Crypt_Base::randomKey(instance_length/2);
+		ASSERT(bytes);
+		MyString tmp; tmp.reserve_at_least(instance_length+1);
+		for (int ii = 0; ii < instance_length/2; ++ii) {
+			tmp.formatstr_cat("%02x", bytes[ii]);
+		}
+		instance_id = tmp.StrDup();
+		free(bytes);
+	}
+
+	stream->encode();
+	if ( ! stream->put_bytes(instance_id, instance_length) ||
+		 ! stream->end_of_message()) {
+		dprintf( D_FULLDEBUG, "handle_dc_query_instance: failed to send instance value\n");
+	}
+
+	return TRUE;
+}
 
 int
 handle_nop( Service*, int, Stream* stream)
@@ -2683,7 +2713,14 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
 								  (CommandHandler)handle_invalidate_key,
 								  "handle_invalidate_key()", 0, ALLOW );
-								  
+
+		// DC_QUERY_INSTANCE is for determining if you are talking to the correct instance of a daemon.
+		// There is no need for security here, the use case is a lambda function in AWS which won't have
+		// authorization to do anything else.
+	daemonCore->Register_Command( DC_QUERY_INSTANCE, "DC_QUERY_INSTANCE",
+								  (CommandHandler)handle_dc_query_instance,
+								  "handle_dc_query_instance()", 0, ALLOW );
+
 		//
 		// The time offset command is used to figure out what
 		// the range of the clock skew is between the daemon code and another

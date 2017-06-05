@@ -365,7 +365,8 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 										condor_q_process_func process_func,
 										void * process_func_data,
 										int useFastPath,
-										CondorError* errstack)
+										CondorError* errstack,
+										ClassAd ** psummary_ad)
 {
 	Qmgr_connection *qmgr;
 	ExprTree		*tree;
@@ -379,12 +380,12 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	delete tree;
 
 	if (useFastPath > 1) {
-		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, useFastPath, errstack);
+		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, useFastPath, errstack, psummary_ad);
 		free( constraint);
 		return result;
 	}
 
-	if (fetch_opts != fetch_Default) {
+	if (fetch_opts != fetch_Jobs) {
 		free( constraint );
 		return Q_UNSUPPORTED_OPTION_ERROR;
 	}
@@ -420,7 +421,8 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 					void * process_func_data,
 					int connect_timeout,
 					int useFastPath,
-					CondorError *errstack)
+					CondorError *errstack,
+					ClassAd ** psummary_ad)
 {
 	classad::ClassAdParser parser;
 	classad::ExprTree *expr = NULL;
@@ -445,20 +447,84 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	} else if (fetch_opts == fetch_GroupBy) {
 		request_ad.InsertAttr("ProjectionIsGroupBy", true);
 		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
-	} else if (fetch_opts == fetch_MyJobs) {
-		const char * owner = my_username();
-		if (owner) { request_ad.InsertAttr("Me", owner); }
-		request_ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
-		want_authentication = true;
+	} else {
+		if (fetch_opts & fetch_MyJobs) {
+			const char * owner = my_username();
+			if (owner) { request_ad.InsertAttr("Me", owner); }
+			request_ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
+			want_authentication = true;
+		}
+		if (fetch_opts & fetch_SummaryOnly) {
+			request_ad.InsertAttr("SummaryOnly", true);
+		}
+		if (fetch_opts & fetch_IncludeClusterAd) {
+			request_ad.InsertAttr("IncludeClusterAd", true);
+		}
 	}
 
 	if (match_limit >= 0) {
 		request_ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
 	}
 
+	// determine if authentication can/will happen.  three reasons why it might not:
+	// 1) security negotiation is disabled (NEVER or OPTIONAL for outgoing connections)
+	// 2) Authentication is disabled (NEVER) by the client
+	// 3) Authentication is disabled (NEVER) by the server.  this is actually impossible to
+	//    get correct without actually querying the server but we make an educated guess by
+	//    paraming the READ auth level.
+	bool can_auth = true;
+	char *paramer = NULL;
+
+	paramer = SecMan::getSecSetting ("SEC_%s_NEGOTIATION", CLIENT_PERM);
+	if (paramer != NULL) {
+		char p = toupper(paramer[0]);
+		free(paramer);
+		if (p == 'N' || p == 'O') {
+			// authentication will not happen since no security negotiation will occur
+			can_auth = false;
+		}
+	}
+
+	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", CLIENT_PERM);
+	if (paramer != NULL) {
+		char p = toupper(paramer[0]);
+		free(paramer);
+		if (p == 'N') {
+			// authentication will not happen since client doesn't allow it.
+			can_auth = false;
+		}
+	}
+
+	// authentication will not happen since server probably doesn't allow it.
+	// on the off chance that someone's config manages to trick us, leave an
+	// undocumented knob as a last resort to disable our inference.
+	if (param_boolean("CONDOR_Q_INFER_SCHEDD_AUTHENTICATION", true)) {
+		paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", READ);
+		if (paramer != NULL) {
+			char p = toupper(paramer[0]);
+			free(paramer);
+			if (p == 'N') {
+				can_auth = false;
+			}
+		}
+
+		paramer = SecMan::getSecSetting ("SCHEDD.SEC_%s_AUTHENTICATION", READ);
+		if (paramer != NULL) {
+			char p = toupper(paramer[0]);
+			free(paramer);
+			if (p == 'N') {
+				can_auth = false;
+			}
+		}
+	}
+
+	if (!can_auth) {
+		dprintf (D_ALWAYS, "detected that authentication will not happen.  falling back to QUERY_JOB_ADS without authentication.\n");
+	}
+
 	DCSchedd schedd(host);
 	int cmd = QUERY_JOB_ADS;
-	if (want_authentication && (useFastPath > 2)) {
+	if (want_authentication && can_auth && (useFastPath > 2)) {
 		cmd = QUERY_JOB_ADS_WITH_AUTH;
 	}
 	Sock* sock;
@@ -468,37 +534,6 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 
 	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
 	dprintf(D_FULLDEBUG, "Sent classad to schedd\n");
-
-#if 0
-	// if doing MyJobs queryies, we can expect to get a late authentication request
-	// unless we have already authenticated, or the schedd is older and doesn't know to try.
-	if (expect_late_authentication) {
-		ReliSock* rsock = (ReliSock*)sock;
-		if (rsock->triedAuthentication()) {
-			expect_late_authentication = false;
-			dprintf(D_FULLDEBUG, "MyJobs option requires authentication, and it already happened.\n");
-		} else {
-			CondorVersionInfo const *peer_ver = rsock->get_peer_version();
-			auto_free_ptr verstr(peer_ver ? peer_ver->get_version_string() : NULL);
-			dprintf(D_FULLDEBUG, "Schedd version is %s\n", verstr ? verstr.ptr() : "NULL");
-			expect_late_authentication = peer_ver && peer_ver->built_since_version(8,5,5);
-			dprintf(D_FULLDEBUG, "MyJobs option requires authentication, and schedd %s late authentication\n", 
-				expect_late_authentication ? "supports" : "does not support");
-		}
-	}
-
-	// we interrupt this condor_q query to do authentication now.
-	if (expect_late_authentication) {
-		ReliSock* rsock = (ReliSock*)sock;
-		dprintf(D_FULLDEBUG, "Attempting late authentication\n");
-		CondorError errstack;
-		bool authenticated = SecMan::authenticate_sock(rsock, CLIENT_PERM, &errstack);
-		if ( ! authenticated && IsDebugCatAndVerbosity(D_FULLDEBUG)) {
-			dprintf(D_FULLDEBUG, "Authentication failed: %s\n", errstack.message());
-		}
-		dprintf(D_FULLDEBUG, "Continuing command %s Authentication\n", authenticated ? "with" : "without");
-	}
-#endif
 
 	int rval = 0;
 	do {
@@ -518,6 +553,14 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 			{
 				if (errstack) errstack->push("TOOL", intVal, errorMsg.c_str());
 				rval = Q_REMOTE_ERROR;
+			}
+			if (psummary_ad && rval == 0) {
+				std::string val;
+				if (ad->LookupString(ATTR_MY_TYPE, val) && val == "Summary") {
+					ad->Delete(ATTR_OWNER); // remove the bogus owner attribute
+					*psummary_ad = ad; // return the final ad, because it has summary information
+					ad = NULL; // so we don't delete it below.
+				}
 			}
 			break;
 		}

@@ -3235,7 +3235,7 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
   ++cGetSystemPerfDataCalls;
 
   while ( TRUE ) {
-    Size = _msize ( pDataBlock ); 
+    Size = (UINT)_msize ( pDataBlock ); 
     
     cbDataBlockAlloc = Size;
     ++cPerfDataQueries;

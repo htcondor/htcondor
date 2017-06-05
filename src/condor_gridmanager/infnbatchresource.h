@@ -42,6 +42,7 @@ public:
 													const char * resource_name );
 
 	GahpClient *gahp;
+	GahpClient *m_xfer_gahp;
 
 	INFNBatchResource( const char * batch_type,
 					   const char * resource_name );
@@ -58,6 +59,7 @@ public:
 
 	bool GahpIsRemote() { return m_gahpIsRemote; };
 	const char *RemoteHostname() { return m_remoteHostname.c_str(); };
+	bool GahpCanRefreshProxy();
 
 private:
 	void DoPing(unsigned & ping_delay,
@@ -66,6 +68,8 @@ private:
 
 	std::string m_batchType;
 	bool m_gahpIsRemote;
+	bool m_gahpCanRefreshProxy;
+	bool m_gahpRefreshProxyChecked;
 	std::string m_remoteHostname;
 };    
   

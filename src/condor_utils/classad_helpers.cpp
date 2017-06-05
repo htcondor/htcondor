@@ -373,14 +373,14 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	return job_ad;
 }
 
-bool getPathToUserLog(ClassAd *job_ad, MyString &result,
+bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
 					   const char* ulog_path_attr = ATTR_ULOG_FILE)
 {
 	bool ret_val = true;
 	char *global_log = NULL;
 
 	if ( job_ad == NULL || 
-	     job_ad->LookupString(ulog_path_attr,result) == 0 ) 
+	     job_ad->EvaluateAttrString(ulog_path_attr,result) == false )
 	{
 		// failed to find attribute, check config file
 		global_log = param("EVENT_LOG");
@@ -394,9 +394,9 @@ bool getPathToUserLog(ClassAd *job_ad, MyString &result,
 
 	if ( global_log ) free(global_log);
 
-	if( ret_val && is_relative_to_cwd(result.Value()) ) {
-		MyString iwd;
-		if( job_ad && job_ad->LookupString(ATTR_JOB_IWD,iwd) ) {
+	if( ret_val && is_relative_to_cwd(result.c_str()) ) {
+		std::string iwd;
+		if( job_ad && job_ad->EvaluateAttrString(ATTR_JOB_IWD,iwd) ) {
 			iwd += "/";
 			iwd += result;
 			result = iwd;
@@ -407,7 +407,7 @@ bool getPathToUserLog(ClassAd *job_ad, MyString &result,
 }
 
 // tokenize the input string, and insert tokens into the attrs set
-bool insert_tokens_as_attrs(const char * str, classad::References & attrs, const char * delims=NULL)
+bool add_attrs_from_string_tokens(classad::References & attrs, const char * str, const char * delims=NULL)
 {
 	if (str && str[0]) {
 		StringTokenIterator it(str, 40, delims ? delims : ", \t\r\n");
@@ -417,3 +417,54 @@ bool insert_tokens_as_attrs(const char * str, classad::References & attrs, const
 	}
 	return false;
 }
+
+void add_attrs_from_StringList(const StringList & list, classad::References & attrs)
+{
+	StringList &constList = const_cast<StringList &>(list);
+	for (const char * p = constList.first(); p != NULL; p = constList.next()) {
+		attrs.insert(p);
+	}
+}
+
+// print attributes to a std::string, returning the result as a const char *
+const char *print_attrs(std::string &out, bool append, const classad::References & attrs, const char * delim)
+{
+	if ( ! append) { out.clear(); }
+	size_t start = out.size();
+
+	int cchAttr = 24; // assume 24ish characters per attribute.
+	if (delim) cchAttr += strlen(delim);
+	out.reserve(out.size() + (attrs.size()*cchAttr));
+
+	for (classad::References::const_iterator it = attrs.begin(); it != attrs.end(); ++it) {
+		if (delim && (out.size() > start)) out += delim;
+		out += *it;
+	}
+	return out.c_str();
+}
+
+// copy attrs into stringlist, returns true if list was modified
+// if append is false, list is cleared first.
+// if check_exist is true, items are only added if the are not already in the list. comparison is case-insensitive.
+bool initStringListFromAttrs(StringList & list, bool append, const classad::References & attrs, bool check_exist /*=false*/)
+{
+	bool modified = false;
+	if ( ! append) {
+		if ( ! list.isEmpty()) {
+			modified = true;
+			list.clearAll();
+		}
+		check_exist = false; // no need to do this if we cleared the list
+	}
+	for (classad::References::const_iterator it = attrs.begin(); it != attrs.end(); ++it) {
+		if (check_exist && list.contains_anycase(it->c_str())) {
+			continue;
+		}
+		list.append(it->c_str());
+		modified = true;
+	}
+	return modified;
+}
+
+
+

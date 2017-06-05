@@ -14,7 +14,8 @@ using namespace htcondor;
 
 bool Singularity::m_enabled = false;
 bool Singularity::m_probed = false;
-std::string Singularity::m_singularity_version;
+int  Singularity::m_default_timeout = 120;
+MyString Singularity::m_singularity_version;
 
 
 static bool find_singularity(std::string &exec)
@@ -28,6 +29,7 @@ static bool find_singularity(std::string &exec)
 	exec = singularity;
 	return true;
 #else
+	(void) exec;
 	return false;
 #endif
 }
@@ -53,17 +55,16 @@ Singularity::enabled()
 	return detect(err);
 }
 
-bool
-Singularity::version(std::string &version)
+const char *
+Singularity::version()
 {
 	CondorError err;
-	if (!detect(err)) {return false;}
-	version = m_singularity_version;
-	return true;
+	if (!detect(err)) {return NULL;}
+	return m_singularity_version.c_str();
 }
 
 bool
-Singularity::detect(CondorError &/*err*/)
+Singularity::detect(CondorError &err)
 {
 	if (m_probed) {return m_enabled;}
 
@@ -80,33 +81,41 @@ Singularity::detect(CondorError &/*err*/)
 	infoArgs.GetArgsStringForLogging( & displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s %s'.\n", exec.c_str(), displayString.c_str());
 
-	FILE * singularityResults = my_popen( infoArgs, "r", 1 , 0, false);
-	if (singularityResults == NULL) { 
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
-		return false;
-	}   
-
-	// Even if we don't care about the success output, the failure output
-	// can be handy for debugging...
-	char buffer[1024];
-	std::vector< std::string > output;
-	while( fgets( buffer, 1024, singularityResults ) != NULL ) { 
-		unsigned end = MIN(strlen(buffer) - 1, 1023UL);
-		if( buffer[end] == '\n' ) { buffer[end] = '\0'; } 
-		output.push_back(buffer);
-	}   
-	for( unsigned i = 0; i < output.size(); ++i ) { 
-		dprintf( D_FULLDEBUG, "[singularity info] %s\n", output[i].c_str() );
-	}   
-
-	int exitCode = my_pclose( singularityResults );
-	if (exitCode != 0) { 
-		dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, output[0].c_str() );
+	MyPopenTimer pgm;
+	if (pgm.start_program(infoArgs, true, NULL, false) < 0) {
+		// treat 'file not found' as not really error
+		int d_level = D_FULLDEBUG;
+		if (pgm.error_code() != ENOENT) {
+			d_level = D_ALWAYS | D_FAILURE;
+			err.pushf("Singularity::detect", 1, "Failed to run '%s' errno = %d %s.", displayString.c_str(), pgm.error_code(), pgm.error_str());
+		}
+		dprintf(d_level, "Failed to run '%s' errno=%d %s.\n", displayString.c_str(), pgm.error_code(), pgm.error_str() );
 		return false;
 	}
 
-	m_enabled = true;
-	m_singularity_version = output[0];
+	int exitCode;
+	if ( ! pgm.wait_for_exit(m_default_timeout, &exitCode) || exitCode != 0) {
+		pgm.close_program(1);
+		MyString line;
+		line.readLine(pgm.output(), false); line.chomp();
+		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
+		err.pushf("Singularity::detect", 2, "'%s' exited with status %d", displayString.c_str(), exitCode);
+		return false;
+	}
+
+	m_singularity_version.readLine(pgm.output(), false);
+	m_singularity_version.chomp();
+	dprintf( D_FULLDEBUG, "[singularity version] %s\n", m_singularity_version.c_str() );
+	if (IsFulldebug(D_ALWAYS)) {
+		MyString line;
+		while (line.readLine(pgm.output(), false)) {
+			line.readLine(pgm.output(), false);
+			line.chomp();
+			dprintf( D_FULLDEBUG, "[singularity info] %s\n", line.c_str() );
+		}
+	}
+
+	m_enabled = ! m_singularity_version.empty();
 
 	return true;
 }

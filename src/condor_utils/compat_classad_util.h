@@ -22,7 +22,8 @@
 
 #include "compat_classad.h"
 
-int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos = NULL);
+// parse str into attr=expression, returning the attr and the expression and true on success
+bool ParseLongFormAttrValue(const char*str, std::string &attr, classad::ExprTree*& tree, int*pos = NULL);
 
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos = NULL);
 
@@ -37,6 +38,19 @@ bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char* & cstr);
 bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval);
+bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute=NULL);
+
+// check to see that a classad expression is valid
+// if attrs is not NULL, it also adds attribute references from the expression into the current set.
+bool IsValidClassAdExpression(const char * expr, classad::References * attrs=NULL, classad::References *scopes=NULL);
+
+typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_MAP;
+// edit the given expr changing attribute references as the mapping indicates
+// for instance if mapping["TARGET"] = "My" it will change all instance of "TARGET" to "MY"
+// if mapping["TARGET"] = "", it will remove target prefixes.
+int RewriteAttrRefs(classad::ExprTree * expr, const NOCASE_STRING_MAP & mapping);
+
+
 classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
 classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
 // create an op node, using copies of the input expr trees. this function will not copy envelope nodes (it skips over them)
@@ -45,7 +59,6 @@ classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
 classad::ExprTree * JoinExprTreeCopiesWithOp(classad::Operation::OpKind, classad::ExprTree * exp1, classad::ExprTree * exp2);
 // note: do NOT pass an envelope node to this function!! it's fine to pass the output of ParseClassAdRvalExpr
 classad::ExprTree * WrapExprTreeInParensForOp(classad::ExprTree * expr, classad::Operation::OpKind op);
-
 
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint);
 

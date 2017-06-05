@@ -88,8 +88,10 @@ class QmgmtPeer {
 
 #define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
 
-#define JQJ_CHACHE_DIRTY_JOBOBJ        0x00001 // set when an attribute cached in the JobQueueJob that doesn't have it's own flag has changed
-#define JQJ_CHACHE_DIRTY_SUBMITTERDATA 0x00002 // set when an attribute that affects the submitter name is changed
+#define JQJ_CACHE_DIRTY_JOBOBJ        0x00001 // set when an attribute cached in the JobQueueJob that doesn't have it's own flag has changed
+#define JQJ_CACHE_DIRTY_SUBMITTERDATA 0x00002 // set when an attribute that affects the submitter name is changed
+
+class JobFactory;
 
 // used to store a ClassAd + runtime information in a condor hashtable.
 class JobQueueJob : public ClassAd {
@@ -97,9 +99,9 @@ public:
 	JOB_ID_KEY jid;
 protected:
 	char entry_type;    // Job queue entry type: header, cluster or job (i.e. one of entry_type_xxx enum codes, 0 is unknown)
-	char universe;
+	char universe;      // this is in sync with ATTR_JOB_UNIVERSE
 	char has_noop_attr; // 1 if job has ATTR_JOB_NOOP
-	char future_status; // FUTURE: keep this in sync with job status
+	char status;        // this is in sync with committed job status and used when tracking job counts by state
 public:
 	int dirty_flags;	// one or more of JQJ_CHACHE_DIRTY_ flags indicating that the job ad differs from the JobQueueJob 
 	int spare;
@@ -109,6 +111,7 @@ public:
 	// DO NOT FREE FROM HERE!
 	struct SubmitterData * submitterdata;
 	struct OwnerInfo * ownerinfo;
+	JobFactory * factory; // this will be non-null only for cluster ads, and only when cluster is doing late materialization
 protected:
 	JobQueueJob * link; // FUTURE: jobs are linked to clusters.
 	int future_num_procs_or_hosts; // FUTURE: num_procs if cluster, num hosts if job
@@ -119,15 +122,16 @@ public:
 		, entry_type(_etype)
 		, universe(0)
 		, has_noop_attr(2) // value of 2 forces PopulateFromAd() to check if it exists.
-		, future_status(0) // JOB_STATUS_MIN
+		, status(0) // JOB_STATUS_MIN
 		, dirty_flags(0)
 		, autocluster_id(0)
 		, submitterdata(NULL)
 		, ownerinfo(NULL)
+		, factory(NULL)
 		, link(NULL)
 		, future_num_procs_or_hosts(0)
 	{}
-	virtual ~JobQueueJob() {};
+	virtual ~JobQueueJob();
 
 	enum {
 		entry_type_unknown=0,
@@ -137,14 +141,16 @@ public:
 	};
 	bool IsType(char _type) { if ( ! entry_type) this->PopulateFromAd(); return entry_type==_type; }
 	bool IsJob() { return IsType(entry_type_job); }
-	bool IsHeader() { return IsType(entry_type_cluster); }
-	bool IsCluster() { return IsType(entry_type_header); }
+	bool IsHeader() { return IsType(entry_type_header); }
+	bool IsCluster() { return IsType(entry_type_cluster); }
 	int  Universe() { return universe; }
+	int  Status() { return status; }
 	void SetUniverse(int uni) { universe = uni; }
+	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
 	// FUTURE:
 	int NumProcs() { if (entry_type == entry_type_cluster) return future_num_procs_or_hosts; return 0; }
-	int IncrementNumProcs() { if (entry_type == entry_type_cluster) return ++future_num_procs_or_hosts; return 0; }
+	int SetNumProcs(int num_procs) { if (entry_type == entry_type_cluster) { return future_num_procs_or_hosts = num_procs; } return 0; }
 	int NumHosts() { if (entry_type == entry_type_job) return future_num_procs_or_hosts; return 0; }
 
 	//JobQueueJob( const ClassAd &ad );
@@ -159,6 +165,18 @@ public:
 	}
 };
 
+
+// from qmgmt_factory.cpp
+class JobFactory * MakeJobFactory(JobQueueJob * job, const char * submit_file);
+void DestroyJobFactory(JobFactory * factory);
+int MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * cluster);
+int PostCommitJobFactoryProc(JobQueueJob * cluster, JobQueueJob * job);
+bool JobFactoryAllowsClusterRemoval(JobQueueJob * cluster);
+// if pause_code < 0, pause is permanent, if >= 3, cluster was removed
+int PauseJobFactory(JobFactory * factory, int pause_code);
+int ResumeJobFactory(JobFactory * factory, int pause_code);
+bool CheckJobFactoryPause(JobFactory * factory, int pause_code); // 0 for resume, 1 for pause, returns true if state changed
+void ScheduleClusterForDeferredCleanup(int cluster_id);
 
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
@@ -198,7 +216,14 @@ ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan)
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByCluster( int, int );
 JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);
+JobQueueJob* GetNextJobOrClusterByConstraint(const char *constraint, int initScan);
 JobQueueJob* GetNextDirtyJobByConstraint(const char *constraint, int initScan);
+
+// does the parts of NewProc that are common between external submit and schedd late materialization
+int NewProcInternal(int cluster_id, int proc_id);
+// call NewProcInternal, and then SetAttribute on all of the attributes in job that are not the same as ClusterAd
+typedef unsigned char SetAttributeFlags_t;
+int NewProcFromAd (const classad::ClassAd * job, int ProcId, JobQueueJob * ClusterAd, SetAttributeFlags_t flags);
 #endif
 
 void * BeginJobAggregation(const char * projection, bool create_if_not, const char * constraint);
@@ -248,7 +273,7 @@ template <>
 class ConstructClassAdLogTableEntry<JobQueueJob*> : public ConstructLogEntry
 {
 public:
-	virtual ClassAd* New() const { return new JobQueueJob(); }
+	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const { return new JobQueueJob(); }
 	virtual void Delete(ClassAd* &val) const;
 };
 
@@ -302,6 +327,7 @@ typedef JOB_ID_KEY JobQueueKey;
 typedef JobQueueJob* JobQueuePayload;
 typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueueJob*> JobQueueLogType;
 
+#define JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS     0x0001
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 

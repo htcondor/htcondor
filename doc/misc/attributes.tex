@@ -1,8 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:ClassAd-Types}ClassAd Types}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%TEMP -- add subsubsections for Job ClassAd, Machine ClassAd, etc.
-% to make them easier to find
 
 ClassAd attributes vary, 
 depending on the entity producing the ClassAd.
@@ -138,6 +136,10 @@ on page~\pageref{sec:DaemonCore-Statistics-Attributes}.
 \index{ClassAd attribute added by the condor\_collector!AuthenticatedIdentity}
 \item[\AdAttr{AuthenticatedIdentity}:] The authenticated name assigned
   by the \Condor{collector} to the daemon that published the ClassAd.
+
+\index{ClassAd attribute added by the condor\_collector!AuthenticationMethod}
+\item[\AdAttr{AuthenticationMethod}:] The authentication method used
+    by the \Condor{collector} to determine the \AdAttr{AuthenticatedIdentity}.
 
 \index{ClassAd attribute added by the condor\_collector!LastHeardFrom}
 \item[\AdAttr{LastHeardFrom}:] The time inserted into a daemon's

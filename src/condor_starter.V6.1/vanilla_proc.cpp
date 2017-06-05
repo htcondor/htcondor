@@ -169,7 +169,7 @@ VanillaProc::StartJob()
 	CHAR		interpreter[MAX_PATH+1],
 				systemshell[MAX_PATH+1];    
 	const char* jobtmp				= Starter->jic->origJobName();
-	int			joblen				= strlen(jobtmp);
+	size_t		joblen				= strlen(jobtmp);
 	const char	*extension			= joblen > 0 ? &(jobtmp[joblen-4]) : NULL;
 	bool		binary_executable	= ( extension && 
 										( MATCH == strcasecmp ( ".exe", extension ) || 
@@ -634,6 +634,15 @@ VanillaProc::StartJob()
 			ClassAd * MachineAd = Starter->jic->machClassAd();
 			int MemMb;
 			if (MachineAd->LookupInteger(ATTR_MEMORY, MemMb)) {
+				// cgroups prevents us from setting hard limits lower
+				// than memsw limit.  If we are reusing this cgroup,
+				// we don't know what the previous values were
+				// So, set mem to 0, memsw to +inf, so that the real
+				// values can be set without interference
+
+				climits.set_memory_limit_bytes(0);
+				climits.set_memsw_limit_bytes(ULONG_MAX);
+
 				uint64_t MemMb_big = MemMb;
 				m_memory_limit = MemMb_big;
 				climits.set_memory_limit_bytes(1024*1024*MemMb_big, mem_is_soft);
@@ -763,6 +772,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 
 int VanillaProc::pidNameSpaceReaper( int status ) {
+	if (requested_exit) {
+		return 0;
+	}
+
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	FILE *f = safe_fopen_wrapper_follow(m_pid_ns_status_filename.c_str(), "r");
 	if (f == NULL) {
@@ -1100,7 +1113,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 
 		//
 #ifdef LINUX
-	if (param_boolean("IGNORE_LEAF_OOM", false)) {
+	if (param_boolean("IGNORE_LEAF_OOM", true)) {
 		// if memory.use_hierarchy is 1, then hitting the limit at
 		// the parent notifies all children, even if those children
 		// are below their usage.  If we are below our usage, ignore
@@ -1110,8 +1123,8 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 
 		if (usage < (0.9 * m_memory_limit)) {
 			long long oomData = 0xdeadbeef;
-			int efd;
-			daemonCore->Get_Pipe_FD(m_oom_efd, &efd);
+			int efd = -1;
+			ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
 				// need to drain notification fd, or it will still
 				// be hot, and we'll come right back here again
 			int r = read(efd, &oomData, 8);

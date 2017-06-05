@@ -10,7 +10,6 @@
 
 #include "condor_common.h"
 
-#include <boost/python.hpp>
 #include <boost/python/overloads.hpp>
 
 #include "enum_utils.h"

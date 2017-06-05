@@ -197,17 +197,6 @@ ParseClassAd(FILE *file, ClassAd &classad, bool full)
 }
 
 bool ClassAdJsonParser::
-ParseClassAd(istream &stream, ClassAd &classad, bool full)
-{
-	bool                    success;
-	InputStreamLexerSource lexer_source(stream);
-
-	success = ParseClassAd(&lexer_source, classad, full);
-
-	return success;
-}
-
-bool ClassAdJsonParser::
 ParseClassAd(LexerSource *lexer_source, ClassAd &classad, bool full)
 {
 	bool              success;
@@ -291,16 +280,6 @@ ParseClassAd(FILE *file, bool full)
 
 	ad = ParseClassAd(&lexer_source, full);
 
-	return ad;
-}
-
-ClassAd *ClassAdJsonParser::
-ParseClassAd(istream &stream, bool full)
-{
-	ClassAd                *ad;
-	InputStreamLexerSource lexer_source(stream);
-
-	ad = ParseClassAd(&lexer_source, full);
 	return ad;
 }
 

@@ -62,7 +62,7 @@ void PartitionManager::query_available_partitions(char *script)
 	args.AppendArg(script);
 
 	priv = set_root_priv();
-	fin = my_popen(args, "r", TRUE);
+	fin = my_popen(args, "r", MY_POPEN_OPT_WANT_STDERR);
 
 	if (fin == NULL) {
 		EXCEPT("Can't execute %s", script);

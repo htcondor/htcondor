@@ -35,7 +35,7 @@ To change the default back to its pre-8.5.6 value, set the new
 configuration variable \MacroNI{CONDOR\_Q\_DASH\_BATCH\_IS\_DEFAULT} to
 \Expr{False}.}
 
-\subsection*{Batches of jobs}
+\subsection*{\label{batches-of-jobs}Batches of jobs}
 As of version 8.5.6, \Condor{q} defaults to displaying information about
 batches of jobs, rather than individual jobs.  The intention is that
 this will be a more useful, and user-friendly, format for users with
@@ -457,7 +457,7 @@ restriction.
     in XML format.
     The XML format is fully defined in the reference manual,
     obtained from the ClassAds web page, with a link at
-    \URL{http://research.cs.wisc.edu/htcondor/research.html}.}
+    \URL{http://htcondor.org/classad/classad.html}.}
   \OptItem{\Opt{-json}}{(output option) Display entire job ClassAds
     in JSON format.}
   \OptItem{\OptArg{-attributes}{Attr1[,Attr2 \Dots]}}{(output option)
@@ -598,7 +598,7 @@ restriction.
     the format produced by \Condor{userprio} \Opt{-long}.  }
   \OptItem{\Opt{-nouserprios}}{(analyze option)
     Do not consider user priority during the analysis. }
-  \OptItem{\Opt{-reverse}}{(analyze option) 
+  \OptItem{\Opt{-reverse-analyze}}{(analyze option)
     Analyze machine requirements against jobs.  }
   \OptItem{\Opt{-verbose}}{(analyze option) 
     When doing analysis, show progress and include

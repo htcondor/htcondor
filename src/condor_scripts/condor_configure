@@ -574,7 +574,11 @@ unless ( $opt_disable_env_scripts ) {
 	print SH "export CONDOR_CONFIG\n";
 	print SH "PATH=\"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
 	print SH "export PATH\n";
-	print SH "PYTHONPATH=\"$release_dir/lib/python:\$PYTHONPATH\"\n";
+	print SH "if [ \"X\" != \"X\${PYTHONPATH-}\" ]; then\n";
+	print SH "  PYTHONPATH=\"$release_dir/lib/python:\$PYTHONPATH\"\n";
+	print SH "else\n";
+	print SH "  PYTHONPATH=\"$release_dir/lib/python\"\n";
+	print SH "fi\n";
 	print SH "export PYTHONPATH\n";
 	close( SH );
 
@@ -583,7 +587,11 @@ unless ( $opt_disable_env_scripts ) {
 	print CSH "# The script should be sourced by /bin/csh or similar\n";
 	print CSH "setenv CONDOR_CONFIG \"$config_file\"\n";
 	print CSH "setenv PATH \"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
-	print CSH "setenv PYTHONPATH \"$release_dir/lib/python:\$PYTHONPATH\"\n";
+	print CSH "if (\$?PYTHONPATH) then\n";
+	print CSH "  setenv PYTHONPATH \"$release_dir/lib/python:\$PYTHONPATH\"\n";
+	print CSH "else\n";
+	print CSH "  setenv PYTHONPATH \"$release_dir/lib/python\"\n";
+	print CSH "endif\n";
 	close( CSH );
 
 	if ( $opt_bosco ) {

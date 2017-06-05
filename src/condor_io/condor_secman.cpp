@@ -467,7 +467,15 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// auth methods
 	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
 	if (paramer == NULL) {
-		paramer = strdup(SecMan::getDefaultAuthenticationMethods().Value());
+		MyString methods = SecMan::getDefaultAuthenticationMethods();
+		if(auth_level == READ) {
+			methods += ",CLAIMTOBE";
+			dprintf(D_SECURITY, "SECMAN: default READ methods: %s\n", methods.Value());
+		} else if (auth_level == CLIENT_PERM) {
+			methods += ",CLAIMTOBE";
+			dprintf(D_SECURITY, "SECMAN:: default CLIENT methods: %s\n", methods.Value());
+		}
+		paramer = strdup(methods.Value());
 	}
 
 	if (paramer) {
@@ -2743,7 +2751,7 @@ SecMan::sec_copy_attribute( classad::ClassAd &dest, const ClassAd &source, const
 	ExprTree *e = source.LookupExpr(attr);
 	if (e) {
 		ExprTree *cp = e->Copy();
-		dest.Insert(attr,cp,false);
+		dest.Insert(attr,cp);
 		return true;
 	} else {
 		return false;
@@ -2758,7 +2766,7 @@ SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, const ClassAd &s
 	}
 
 	e = e->Copy();
-	bool retval = dest.Insert(to_attr, e, false) != 0;
+	bool retval = dest.Insert(to_attr, e) != 0;
 	return retval;
 }
 
@@ -3221,6 +3229,17 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FIRST_FQAN);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FQAN);
 	return true;
+}
+
+bool
+SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name, std::string &attr_value)
+{
+	KeyCacheEntry *session_key = NULL;
+	if (!session_cache->lookup(session_id, session_key)) {return false;}
+	ClassAd *policy = session_key->policy();
+	if (!policy) {return false;}
+
+	return policy->LookupString(attr_name,attr_value) ? true : false;
 }
 
 bool

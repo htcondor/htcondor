@@ -563,12 +563,12 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	//	fp = privsep_popen(args, "r", want_stderr, job_user_uid);
 	//}
 	//else {
-	fp = my_popen( args, "r", merge_stderr_with_stdout );
+	fp = my_popen( args, "r", merge_stderr_with_stdout ? MY_POPEN_OPT_WANT_STDERR : 0 );
 	//}
 #else
 	// The old way of doing things (and the Win32 way of doing
 	//	things)
-	// fp = my_popen( args, "r", want_stderr );
+	// fp = my_popen( args, "r", want_stderr ? MY_POPEN_OPT_WANT_STDERR : 0 );
 	if((cmd_err != NULL) && merge_stderr_with_stdout)
 	  {
 	    vmprintf(D_ALWAYS, "Invalid use of systemCommand().\n");

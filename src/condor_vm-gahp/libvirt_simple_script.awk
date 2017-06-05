@@ -66,8 +66,19 @@ END {
 	exit(-1);
     }
     print "<name>" attrs["VMPARAM_VM_NAME"] "</name>" ;
-    print "<memory>" attrs["JobVMMemory"] * 1024 "</memory>" ;
-    print "<vcpu>" attrs["JobVM_VCPUS"] "</vcpu>" ;
+
+    if( attrs["JobVMMemory"] != "" && attrs["JobVMMemory"] != "undefined" ) {
+    	print "<memory>" attrs["JobVMMemory"] * 1024 "</memory>" ;
+    } else {
+	    print "<memory>" attrs["RequestMemory"] * 1024 "</memory>" ;
+    }
+
+    if( attrs["JobVM_VCPUS"] != "" && attrs["JobVM_VCPUS"] != "undefined" ) {
+	    print "<vcpu>" attrs["JobVM_VCPUS"] "</vcpu>" ;
+    } else {
+	    print "<vcpu>" attrs["RequestCpus"] "</vcpu>" ;
+    }
+
     print "<os><type>" os_type "</type>" ;
     if(kernel != "")
     {
@@ -132,7 +143,7 @@ END {
     }
 
     
-    n=split(attrs["VMPARAM_vm_Disk"], full_disk, ",");
+    n=split(attrs["VMPARAM_vm_Disk"], full_disk, " *, *");
     for ( i=1; i<=n; i++ )
     {
         # count is used to determine if format is passed.

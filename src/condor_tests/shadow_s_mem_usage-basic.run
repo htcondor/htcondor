@@ -64,6 +64,7 @@ my %memory_data64 = (
 	"sl7"      => "656",
 	"ubuntu12" => "684",
 	"ubuntu14" => "664",
+	"ubuntu16" => "664",
 );
 # for X86 shadows
 my %memory_data32 = (

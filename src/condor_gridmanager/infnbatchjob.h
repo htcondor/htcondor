@@ -85,6 +85,7 @@ class INFNBatchJob : public BaseJob
 	GahpClient *m_xfer_gahp;
 	FileTransfer *m_filetrans;
 	std::string m_sandboxPath;
+	std::string m_xferId;
 
 	void ProcessRemoteAd( ClassAd *remote_ad );
 

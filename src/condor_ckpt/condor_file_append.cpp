@@ -66,7 +66,7 @@ int CondorFileAppend::read( off_t offset, char *data, int length )
 	return original->read(offset,data,length);
 }
 
-int CondorFileAppend::write( off_t offset, char *data, int length )
+int CondorFileAppend::write( off_t offset, const char *data, int length )
 {
 	return original->write(offset,data,length);
 }

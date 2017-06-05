@@ -820,7 +820,6 @@ test_connection()
 int
 supervise_all()
 {
-	UserProc	*proc;
 	static Transition	*tr = 0;
 
 

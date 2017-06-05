@@ -308,49 +308,60 @@ static bool test_input_was_v1_true_v1r_or(void);
 static bool test_input_was_v1_true_v1r(void);
 static bool test_input_was_v1_true_ad(void);
 
+#ifdef WIN32
+#define V1_ENV_DELIM "|"
+#else
+#define V1_ENV_DELIM ";"
+#endif
+#define V1_ENV_DELIM_NIX ";"
+#define V1_ENV_DELIM_WIN "|"
+
+
 //char* constants
 static const char 
-	*V1R = "one=1;two=2;three=3",	//V1Raw format
+	*V1R = "one=1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3",	//V1Raw format
+	   *V1R_NIX = "one=1;two=2;three=3",
 	   *V1R_WIN = "one=1|two=2|three=3",
-	   *V1R_MISS_NAME = "=1;two=2;three=3",
-	   *V1R_MISS_DELIM = "one1;two=2;three=3",
-	   *V1R_MISS_BOTH = "=1;two2;three=3",
+	   *V1R_MISS_NAME = "=1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3",
+	   *V1R_MISS_DELIM = "one1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3",
+	   *V1R_MISS_BOTH = "=1" V1_ENV_DELIM "two2" V1_ENV_DELIM "three=3",
 	*V2R ="one=1 two=2 three=3",	//V2Raw format
 	   *V2R_MISS_NAME ="=1 two=2 three=3",
 	   *V2R_MISS_DELIM ="one1 two=2 three=3",
 	   *V2R_MISS_BOTH ="=1 two2 three=3",
 	   *ARRAY_SKIP_BAD_STR = "one=1 two2 three=3",
-	   *V2R_SEMI ="one=1 two=2 three=3 semi=;",
-	   *V2R_MARK =" one=1 two=2 three=3 semi=;",
+	   *V2R_SEMI ="one=1 two=2 three=3 semi=" V1_ENV_DELIM,
+	   *V2R_MARK =" one=1 two=2 three=3 semi=" V1_ENV_DELIM ,
 	*V2Q ="\"one=1 two=2 three=3\"",	//V2Quoted format
 	   *V2Q_MISS_NAME = "\"=1 two=2 three=3\"",
 	   *V2Q_MISS_DELIM = "\"one1 two=2 three=3\"",
 	   *V2Q_MISS_BOTH = "\"=1 two2 three=3\"",
 	   *V2Q_MISS_END = "\"one=1 two=2 three=3",
 	   *V2Q_TRAIL = "\"one=1 two=2 three=3\"extra=stuff",
-	   *V2Q_SEMI ="\"one=1 two=2 three=3 semi=;\"",
-	   *V2Q_DELIM_SEMI = "\"one=1;two=2;three=3\"",
-	*V1R_ADD = "four=4;five=5",	//V1Raw format
+	   *V2Q_SEMI ="\"one=1 two=2 three=3 semi=" V1_ENV_DELIM "\"",
+	   *V2Q_DELIM_SEMI = "\"one=1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3\"",
+	*V1R_ADD = "four=4" V1_ENV_DELIM "five=5",	//V1Raw format
 	*V2R_ADD = "four=4 five=5",	//V2Raw format
-	*V1R_REP = "one=10;two=200;three=3000",	//V1Raw format
+	*V1R_REP = "one=10" V1_ENV_DELIM "two=200" V1_ENV_DELIM "three=3000",	//V1Raw format
+//		*V1R_REP_NIX = "one=10;two=200;three=3000",
 		*V1R_REP_WIN = "one=10|two=200|three=3000",
 	*V2R_REP = "one=10 two=200 three=3000",	//V2Raw format
-	   *V2R_REP_SEMI = "one=10 two=200 three=3000 semi=;",
+	   *V2R_REP_SEMI = "one=10 two=200 three=3000 semi=" V1_ENV_DELIM,
 	*V2Q_REP = "\"one=10 two=200 three=3000\"",	//V2Quoted format
-	   *V2Q_REP_SEMI = "\"one=10 two=200 three=3000 semi=;\"",
-	*V1R_REP_ADD = "one=10;two=200;three=3000;four=4;five=5",	//V1Raw format
+	   *V2Q_REP_SEMI = "\"one=10 two=200 three=3000 semi=" V1_ENV_DELIM "\"",
+	*V1R_REP_ADD = "one=10" V1_ENV_DELIM "two=200" V1_ENV_DELIM "three=3000" V1_ENV_DELIM "four=4" V1_ENV_DELIM "five=5",	//V1Raw format
 	*V2R_REP_ADD = "one=10 two=200 three=3000 four=4 five=5",	//V2Raw format
-	   *V2R_REP_ADD_SEMI = "one=10 two=200 three=3000 four=4 five=5 semi=;",
+	   *V2R_REP_ADD_SEMI = "one=10 two=200 three=3000 four=4 five=5 semi=" V1_ENV_DELIM,
 	*V2Q_REP_ADD = "\"one=10 two=200 three=3000 four=4 five=5\"",	//V2Quoted
-	   *V2Q_REP_ADD_SEMI = "\"one=10 two=200 three=3000 four=4 five=5 semi=;\"",
+	   *V2Q_REP_ADD_SEMI = "\"one=10 two=200 three=3000 four=4 five=5 semi=" V1_ENV_DELIM "\"",
 	*AD = "\tone=1\n\t\ttwo=2\n\t\tthree=3",	//ClassAd string
-	*AD_V1 = "\tEnv = \"one=1;two=2;three=3\"",	//ClassAd with V1 Env 
+	*AD_V1 = "\tEnv = \"one=1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3\"",	//ClassAd with V1 Env 
 	   *AD_V1_WIN = "\tEnv = \"one=1|two=2|three=3\"\nEnvDelim = \"|\"", 
-	   *AD_V1_MISS_NAME = "\tEnv = \"=1;two=2;three=3\"",
-	   *AD_V1_MISS_DELIM = "\tEnv = \"one1;two=2;three=3\"",
-	   *AD_V1_MISS_BOTH = "\tEnv = \"=1;two2;three=3\"",
-	   *AD_V1_REP = "\tEnv = \"one=10;two=200;three=3000\"", 
-	   *AD_V1_REP_ADD = "\tEnv = \"one=10;two=200;three=3000;four=4;five=5\"", 
+	   *AD_V1_MISS_NAME = "\tEnv = \"=1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3\"",
+	   *AD_V1_MISS_DELIM = "\tEnv = \"one1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3\"",
+	   *AD_V1_MISS_BOTH = "\tEnv = \"=1" V1_ENV_DELIM "two2" V1_ENV_DELIM "three=3\"",
+	   *AD_V1_REP = "\tEnv = \"one=10" V1_ENV_DELIM "two=200" V1_ENV_DELIM "three=3000\"", 
+	   *AD_V1_REP_ADD = "\tEnv = \"one=10" V1_ENV_DELIM "two=200" V1_ENV_DELIM "three=3000" V1_ENV_DELIM "four=4" V1_ENV_DELIM "five=5\"", 
 	*AD_V2 = "\tEnvironment = \"one=1 two=2 three=3\"",	//ClassAd with V2 Env
 	   *AD_V2_MISS_NAME = "\tEnvironment = \"=1 two=2 three=3\"",
 	   *AD_V2_MISS_DELIM = "\tEnvironment = \"one1 two=2 three=3\"",
@@ -358,7 +369,7 @@ static const char
 	   *AD_V2_REP = "\tEnvironment = \"one=10 two=200 three=3000\"",
 	   *AD_V2_REP_ADD = "\tEnvironment = \"one=10 two=200 three=3000 four=4 "
 	    	"five=5\"",
-		*AD_V2_SEMI = "\tEnvironment = \"one=1 two=2 three=3 semi=;\"",
+		*AD_V2_SEMI = "\tEnvironment = \"one=1 two=2 three=3 semi=" V1_ENV_DELIM "\"",
 	*ONE = "one=1",	//Single Env Var string
 	   *ONE_MISS_NAME = "=1",
 	   *ONE_MISS_DELIM = "one1",
@@ -3777,7 +3788,7 @@ static bool test_insert_env_into_classad_v1_v1_replace() {
 	emit_param("ClassAd Env", "%s", V1R_REP);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
-	if(!strings_similar(actual, V1R_REP, ";")) {
+	if(!strings_similar(actual, V1R_REP, V1_ENV_DELIM)) {
 		free(actual);
 		FAIL;
 	}
@@ -3831,7 +3842,7 @@ static bool test_insert_env_into_classad_v2_v1_replace() {
 	emit_param("ClassAd Env", "%s", V1R_REP);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
-	if(!strings_similar(actual, V1R_REP, ";")) {
+	if(!strings_similar(actual, V1R_REP, V1_ENV_DELIM)) {
 		free(actual);
 		FAIL;
 	}
@@ -3886,7 +3897,7 @@ static bool test_insert_env_into_classad_version_v1() {
 	emit_param("ClassAd Env", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
-	if(!strings_similar(actual, V1R, ";")) {
+	if(!strings_similar(actual, V1R, V1_ENV_DELIM)) {
 		free(actual); free(version);
 		FAIL;
 	}
@@ -3970,10 +3981,10 @@ static bool test_insert_env_into_classad_version_v1_os_unix() {
 	emit_param("STRING", "%s", "UNIX");
 	emit_param("CondorVersionInfo", "%s", version);
 	emit_output_expected_header();
-	emit_param("ClassAd Env", "%s", V1R);
+	emit_param("ClassAd Env", "%s", V1R_NIX);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
-	if(!strings_similar(actual, V1R, ";")) {
+	if(!strings_similar(actual, V1R_NIX, V1_ENV_DELIM_NIX)) {
 		free(actual); free(version);
 		FAIL;
 	}
@@ -4004,7 +4015,7 @@ static bool test_insert_env_into_classad_version_v1_semi() {
 	emit_param("ClassAd Env", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
-	if(!strings_similar(actual, V1R, ";")) {
+	if(!strings_similar(actual, V1R, V1_ENV_DELIM)) {
 		free(actual); free(version);
 		FAIL;
 	}
@@ -4065,7 +4076,7 @@ static bool test_insert_env_into_classad_version_v1_current() {
 	emit_param("ClassAd Env", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
-	if(!strings_similar(actual, V1R, ";")) {
+	if(!strings_similar(actual, V1R, V1_ENV_DELIM)) {
 		free(actual); free(version);
 		FAIL;
 	}
@@ -4645,7 +4656,7 @@ static bool test_get_delim_str_v1_raw_result_v1() {
 	emit_param("Result MyString", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("Result MyString", "%s", actual.Value());
-	if(!strings_similar(actual.Value(), V1R, ";")) {
+	if(!strings_similar(actual.Value(), V1R, V1_ENV_DELIM)) {
 		FAIL;
 	}
 	PASS;
@@ -4666,7 +4677,7 @@ static bool test_get_delim_str_v1_raw_result_v2() {
 	emit_param("Result MyString", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("Result MyString", "%s", actual.Value());
-	if(!strings_similar(actual.Value(), V1R, ";")) {
+	if(!strings_similar(actual.Value(), V1R, V1_ENV_DELIM)) {
 		FAIL;
 	}
 	PASS;
@@ -4692,8 +4703,8 @@ static bool test_get_delim_str_v1_raw_result_add() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R_REP, ";") || 
-		!strings_similar(actual2.Value(), V1R_REP_ADD, ";"))
+	if(!strings_similar(actual1.Value(), V1R_REP, V1_ENV_DELIM) || 
+		!strings_similar(actual2.Value(), V1R_REP_ADD, V1_ENV_DELIM))
 	{
 		FAIL;
 	}
@@ -4720,8 +4731,8 @@ static bool test_get_delim_str_v1_raw_result_replace() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R, ";") || 
-		!strings_similar(actual2.Value(), V1R_REP, ";"))
+	if(!strings_similar(actual1.Value(), V1R, V1_ENV_DELIM) || 
+		!strings_similar(actual2.Value(), V1R_REP, V1_ENV_DELIM))
 	{
 		FAIL;
 	}
@@ -4748,8 +4759,8 @@ static bool test_get_delim_str_v1_raw_result_add_replace() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R, ";") || 
-		!strings_similar(actual2.Value(), V1R_REP_ADD, ";"))
+	if(!strings_similar(actual1.Value(), V1R, V1_ENV_DELIM) || 
+		!strings_similar(actual2.Value(), V1R_REP_ADD, V1_ENV_DELIM))
 	{
 		FAIL;
 	}
@@ -4958,7 +4969,7 @@ static bool test_get_delim_str_v1or2_raw_ad_result_v1() {
 	emit_param("Result MyString", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("Result MyString", "%s", actual.Value());
-	if(!strings_similar(actual.Value(), V1R, ";")) {
+	if(!strings_similar(actual.Value(), V1R, V1_ENV_DELIM)) {
 		FAIL;
 	}
 	PASS;
@@ -5009,8 +5020,8 @@ static bool test_get_delim_str_v1or2_raw_ad_result_replace() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R, ";") || 
-		!strings_similar(actual2.Value(), V1R_REP, ";")) 
+	if(!strings_similar(actual1.Value(), V1R, V1_ENV_DELIM) || 
+		!strings_similar(actual2.Value(), V1R_REP, V1_ENV_DELIM)) 
 	{
 		FAIL;
 	}
@@ -5117,7 +5128,7 @@ static bool test_get_delim_str_v1or2_raw_result_v1() {
 	emit_param("Result MyString", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("Result MyString", "%s", actual.Value());
-	if(!strings_similar(actual.Value(), V1R, ";")) {
+	if(!strings_similar(actual.Value(), V1R, V1_ENV_DELIM)) {
 		FAIL;
 	}
 	PASS;
@@ -5164,8 +5175,8 @@ static bool test_get_delim_str_v1or2_raw_result_add() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R_REP, ";") ||
-		!strings_similar(actual2.Value(), V1R_REP_ADD, ";")) 
+	if(!strings_similar(actual1.Value(), V1R_REP, V1_ENV_DELIM) ||
+		!strings_similar(actual2.Value(), V1R_REP_ADD, V1_ENV_DELIM)) 
 	{
 		FAIL;
 	}
@@ -5192,8 +5203,8 @@ static bool test_get_delim_str_v1or2_raw_result_replace() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R, ";") ||
-		!strings_similar(actual2.Value(), V1R_REP, ";")) 
+	if(!strings_similar(actual1.Value(), V1R, V1_ENV_DELIM) ||
+		!strings_similar(actual2.Value(), V1R_REP, V1_ENV_DELIM)) 
 	{
 		FAIL;
 	}
@@ -5220,8 +5231,8 @@ static bool test_get_delim_str_v1or2_raw_result_add_replace() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R, ";") ||
-		!strings_similar(actual2.Value(), V1R_REP_ADD, ";")) 
+	if(!strings_similar(actual1.Value(), V1R, V1_ENV_DELIM) ||
+		!strings_similar(actual2.Value(), V1R_REP_ADD, V1_ENV_DELIM)) 
 	{
 		FAIL;
 	}
@@ -5539,7 +5550,7 @@ static bool test_get_delim_str_v1r_or_v2q_result_v1() {
 	emit_param("Result MyString", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("Result MyString", "%s", actual.Value());
-	if(!strings_similar(actual.Value(), V1R, ";")) {
+	if(!strings_similar(actual.Value(), V1R, V1_ENV_DELIM)) {
 		FAIL;
 	}
 	PASS;
@@ -5588,8 +5599,8 @@ static bool test_get_delim_str_v1r_or_v2q_result_add() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R_REP, ";") ||
-		!strings_similar(actual2.Value(), V1R_REP_ADD, ";")) 
+	if(!strings_similar(actual1.Value(), V1R_REP, V1_ENV_DELIM) ||
+		!strings_similar(actual2.Value(), V1R_REP_ADD, V1_ENV_DELIM)) 
 	{
 		FAIL;
 	}
@@ -5616,8 +5627,8 @@ static bool test_get_delim_str_v1r_or_v2q_result_replace() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R, ";") ||
-		!strings_similar(actual2.Value(), V1R_REP, ";")) 
+	if(!strings_similar(actual1.Value(), V1R, V1_ENV_DELIM) ||
+		!strings_similar(actual2.Value(), V1R_REP, V1_ENV_DELIM)) 
 	{
 		FAIL;
 	}
@@ -5644,8 +5655,8 @@ static bool test_get_delim_str_v1r_or_v2q_result_add_replace() {
 	emit_output_actual_header();
 	emit_param("Result MyString Before", "%s", actual1.Value());
 	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R, ";") ||
-		!strings_similar(actual2.Value(), V1R_REP_ADD, ";")) 
+	if(!strings_similar(actual1.Value(), V1R, V1_ENV_DELIM) ||
+		!strings_similar(actual2.Value(), V1R_REP_ADD, V1_ENV_DELIM)) 
 	{
 		FAIL;
 	}
@@ -5995,9 +6006,9 @@ static bool test_is_safe_env_v1_value_false_semi() {
 		"with a semicolon.");
 	Env env;
 	bool expect = false;
-	bool actual = env.IsSafeEnvV1Value("semi=;");
+	bool actual = env.IsSafeEnvV1Value("semi=" V1_ENV_DELIM);
 	emit_input_header();
-	emit_param("STRING", "%s", "semi=;");
+	emit_param("STRING", "%s", "semi=" V1_ENV_DELIM);
 	emit_output_expected_header();
 	emit_retval("%s", tfstr(expect));
 	emit_output_actual_header();
@@ -6412,7 +6423,7 @@ static bool test_v2_quoted_to_v2_raw_result_semi() {
 	emit_param("Result MyString", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("Result MyString", "%s", result.Value());
-	if(!strings_similar(result.Value(), V1R, ";")) {
+	if(!strings_similar(result.Value(), V1R, V1_ENV_DELIM)) {
 		FAIL;
 	}
 	PASS;

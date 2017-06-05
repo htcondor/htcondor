@@ -57,7 +57,7 @@ template <typename AD>
 class ConstructClassAdLogTableEntry : public ConstructLogEntry
 {
 public:
-	virtual ClassAd* New() const { return new AD(); }
+	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const { return new AD(); }
 	virtual void Delete(ClassAd*& val) const { delete val; }
 };
 
@@ -66,7 +66,7 @@ class ConstructClassAdLogTableEntry<ClassAd*> : public ConstructLogEntry
 {
 public:
 	ConstructClassAdLogTableEntry() {}
-	virtual ClassAd* New() const { return new ClassAd(); }
+	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const { return new ClassAd(); }
 	virtual void Delete(ClassAd*& val) const { delete val; }
 };
 
@@ -97,22 +97,25 @@ public:
 			const classad::ExprTree *m_requirements;
 			int m_timeslice_ms;
 			int m_done;
+			int m_options;
 
 		public:
-			filter_iterator(ClassAdLog<K,AltK,AD> &log, const classad::ExprTree *requirements, int timeslice_ms, bool invalid=false)
+			filter_iterator(ClassAdLog<K,AltK,AD> &log, const classad::ExprTree *requirements, int timeslice_ms, bool at_end=false)
 				: m_table(&log.table)
 				, m_cur(log.table.begin())
 				, m_found_ad(false)
 				, m_requirements(requirements)
 				, m_timeslice_ms(timeslice_ms)
-				, m_done(invalid) {}
+				, m_done(at_end)
+				, m_options(0) {}
 			filter_iterator(const filter_iterator &other)
 				: m_table(other.m_table)
 				, m_cur(other.m_cur)
 				, m_found_ad(other.m_found_ad)
 				, m_requirements(other.m_requirements)
 				, m_timeslice_ms(other.m_timeslice_ms)
-				, m_done(other.m_done) {}
+				, m_done(other.m_done)
+				, m_options(other.m_options) {}
 
 			~filter_iterator() {}
 			AD operator *() const {
@@ -131,6 +134,8 @@ public:
 				return true;
 			}
 			bool operator!=(const filter_iterator &rhs) {return !(*this == rhs);}
+			int set_options(int options) { int opts = m_options; m_options = options; return opts; }
+			int get_options() { return m_options; }
 	};
 
 
@@ -142,11 +147,18 @@ public:
 	void CommitTransaction();
 	void CommitNondurableTransaction();
 	bool InTransaction() { return active_transaction != NULL; }
+	int SetTransactionTriggers(int mask);
+	int GetTransactionTriggers();
 
 	/** Get a list of all new keys created in this transaction
 		@param new_keys List object to populate
 	*/
 	void ListNewAdsInTransaction( std::list<std::string> &new_keys );
+
+	/** Get the set of all keys mentioned in this transaction
+	   returns false if there is not currently a transaction, true if there is.
+	*/
+	bool GetTransactionKeys( std::set<std::string> &keys );
 
 		// increase non-durable commit level
 		// if > 0, begin non-durable commits
@@ -688,7 +700,7 @@ ClassAdLog<K,AltK,AD>::CommitTransaction()
 		active_transaction->AppendLog(log);
 		bool nondurable = m_nondurable_level > 0;
 		ClassAdLogTable<K,AD> la(table);
-		active_transaction->Commit(log_fp, &la, nondurable );
+		active_transaction->Commit(log_fp, logFilename(), &la, nondurable );
 	}
 	delete active_transaction;
 	active_transaction = NULL;
@@ -792,6 +804,21 @@ ClassAdLog<K,AltK,AD>::setActiveTransaction(Transaction* & transaction)
 }
 
 template <typename K, typename AltK, typename AD>
+int ClassAdLog<K,AltK,AD>::SetTransactionTriggers(int mask)
+{
+	if (!active_transaction) return 0;
+	return active_transaction->SetTriggers(mask);
+}
+
+template <typename K, typename AltK, typename AD>
+int ClassAdLog<K,AltK,AD>::GetTransactionTriggers()
+{
+	if (!active_transaction) return 0;
+	return active_transaction->GetTriggers();
+}
+
+
+template <typename K, typename AltK, typename AD>
 bool
 ClassAdLog<K,AltK,AD>::AddAttrsFromTransaction(AltK key, ClassAd &ad)
 {
@@ -810,6 +837,14 @@ void ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( std::list<std::string> &new
 	}
 
 	active_transaction->InTransactionListKeysWithOpType( CondorLogOp_NewClassAd, new_keys );
+}
+
+template <typename K, typename AltK, typename AD>
+bool ClassAdLog<K,AltK,AD>::GetTransactionKeys( std::set<std::string> &keys )
+{
+	if ( ! active_transaction) { return false; }
+	active_transaction->KeysInTransaction( keys );
+	return true;
 }
 
 

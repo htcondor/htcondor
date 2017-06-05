@@ -48,7 +48,7 @@ const struct sysapi_cpuinfo *sysapi_processor_flags_raw( void ) {
     FILE * fp = safe_fopen_wrapper_follow( "/proc/cpuinfo", "r", 0644 );
     dprintf( D_LOAD, "Reading from /proc/cpuinfo\n" );
     if( fp ) {
-        size_t size = 128;
+        int size = 128;
         char * buffer = (char *)malloc( size );
         if( buffer == NULL ) {
             EXCEPT( "Failed to allocate buffer for parsing /proc/cpuinfo.\n" );
@@ -144,7 +144,7 @@ const struct sysapi_cpuinfo *sysapi_processor_flags( void ) {
     int maxFlagLength = 0;
     for( int i = 0; flagNames[i] != NULL; ++i ) {
         ++numFlags;
-        int curFlagLength = strlen( flagNames[i] );
+        int curFlagLength = (int)strlen( flagNames[i] );
         if( curFlagLength > maxFlagLength ) { maxFlagLength = curFlagLength; }
     }
 
@@ -169,7 +169,7 @@ const struct sysapi_cpuinfo *sysapi_processor_flags( void ) {
 
         for( flagEnd = flagStart; (* flagEnd != '\0') && (* flagEnd != ' '); ++flagEnd ) { ; }
 
-        int flagSize = (flagEnd - flagStart) / sizeof( char );
+        int flagSize = (flagEnd - flagStart) / (int)sizeof( char );
         if( flagSize > maxFlagLength ) {
             flagStart = flagEnd;
             continue;
@@ -196,7 +196,7 @@ const struct sysapi_cpuinfo *sysapi_processor_flags( void ) {
     /* How much space do we need? */
     int flagsLength = 1;
     for( int i = 0; i < numFlags; ++i ) {
-        int length = strlen( flags[i] );
+        int length = (int)strlen( flags[i] );
         if( length ) { flagsLength += length + 1; }
     }
     

@@ -37,6 +37,7 @@
 #include "condor_version.h"
 #include "natural_cmp.h"
 #include "classad/jsonSource.h"
+#include "classad_helpers.h"
 
 #include <vector>
 #include <sstream>
@@ -182,6 +183,7 @@ bool        expert = false;
 bool		wide_display = false; // when true, don't truncate field data
 bool		invalid_fields_empty = false; // when true, print "" instead of "[?]" for missing data
 const char * mode_constraint = NULL; // constraint set by mode
+int			result_limit = 0; // max number of results we want back.
 int			diagnose = 0;
 const char* diagnostics_ads_file = NULL; // filename to write diagnostics query ads to, from -diagnose:<filename>
 char*		direct = NULL;
@@ -217,19 +219,23 @@ void secondPass (int, char *[]);
 // and CondorQ::fetchQueueFromHostAndProcess callbacks.
 // callback should return false to take ownership of the ad
 typedef bool (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
-static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr);
+static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr, int limit);
 //void prettyPrint(ROD_MAP_BY_KEY &, TrackTotals *);
 ppOption prettyPrintHeadings (bool any_ads);
 void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, StringList * whitelist, bool fHashOrder);
 int getDisplayWidth(bool * is_piped=NULL);
 const char* digest_state_and_activity(char * sa, State st, Activity ac); //  in prettyPrint.cpp
+const CustomFormatFnTable * getCondorStatusPrintFormats();
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	int setPPstyle (ppOption, int, const char *);
 extern  void setPPwidth ();
 extern  void dumpPPMode(FILE* out);
+extern const char * paramNameFromPPMode(std::string &name);
+extern const char * adtypeNameFromPPMode();
 extern const char * getPPStyleStr (ppOption pps);
-extern void prettyPrintInitMask(classad::References & proj, const char * &constr);
+extern void prettyPrintInitMask(classad::References & proj, const char * &constr, bool no_pr_files);
+//extern void reverse_engineer_width(int &wid, int &wflags, const Formatter & fmt, int hwid);
 extern AdTypes setMode(int sdo_mode, int arg_index, const char * arg);
 extern AdTypes resetMode(int sdo_mode, int arg_index, const char * arg);
 extern  int  forced_display_width;
@@ -703,6 +709,10 @@ main (int argc, char *argv[])
 		query->addANDConstraint(mode_constraint);
 	}
 
+	// set result limit if any is desired.
+	if (result_limit > 0) {
+		query->setResultLimit(result_limit);
+	}
 
 		// if there was a generic type specified
 	if (genericType) {
@@ -746,17 +756,7 @@ main (int argc, char *argv[])
 
 	if(offlineMode) {
 		query->addANDConstraint( "size( OfflineUniverses ) != 0" );
-
 		projList.insert( "OfflineUniverses" );
-
-		//
-		// Since we can't add a regex to a projection, explicitly list all
-		// the attributes we know about.
-		//
-
-		projList.insert( "HasVM" );
-		projList.insert( "VMOfflineReason" );
-		projList.insert( "VMOfflineTime" );
 	}
 
 	if(absentMode) {
@@ -916,9 +916,9 @@ main (int argc, char *argv[])
 	}
 
 	// Setup the pretty printer for the given mode.
-	if ( ! PP_IS_LONGish(ppStyle) && ppStyle != PP_CUSTOM) {
+	if ( ! PP_IS_LONGish(ppStyle) && ppStyle != PP_CUSTOM && ! explicit_format) {
 		const char * constr = NULL;
-		prettyPrintInitMask(projList, constr);
+		prettyPrintInitMask(projList, constr, disable_user_print_files);
 		if (constr) { query->addANDConstraint(constr); }
 	}
 
@@ -926,6 +926,41 @@ main (int argc, char *argv[])
 	if (diagnose) {
 
 		FILE* fout = stderr;
+		if (disable_user_print_files) {
+			std::string temp;
+			fprintf(fout, "# for cmd:");
+			for (int ii = 0; ii < argc; ++ii) {
+				const char * pcolon;
+				if (is_dash_arg_colon_prefix(argv[ii], "diagnose", &pcolon, 3)) continue;
+				if (is_dash_arg_colon_prefix(argv[ii], "print-format", &pcolon, 2)) { ++ii; continue; }
+				fprintf(fout, " %s", argv[ii]);
+			}
+			fprintf(fout, "\n# %s\n", paramNameFromPPMode(temp));
+
+			PrintMaskMakeSettings pmms;
+			//pmms.aggregate =
+			const char *adtypeName = adtypeNameFromPPMode();
+			if (adtypeName) { pmms.select_from = adtypeNameFromPPMode(); }
+			pmms.headfoot = pmHeadFoot;
+			List<const char> * pheadings = NULL;
+			if ( ! pm.has_headings()) {
+				if (pm_head.Length() > 0) pheadings = &pm_head;
+			}
+			MyString requirements;
+			if (Q_OK == query->getRequirements(requirements) && ! requirements.empty()) {
+				ConstraintHolder constrRaw(requirements.StrDup());
+				ExprTree * tree = constrRaw.Expr();
+				ConstraintHolder constrReduced(SkipExprParens(tree)->Copy());
+				pmms.where_expression = constrReduced.c_str();
+			}
+			const CustomFormatFnTable * pFnTable = getCondorStatusPrintFormats();
+
+			temp.clear();
+			temp.reserve(4096);
+			PrintPrintMask(temp, *pFnTable, pm, pheadings, pmms, group_by_keys, NULL);
+			fprintf(fout, "%s\n", temp.c_str());
+			//exit (1);
+		}
 
 		fprintf(fout, "diagnose: ");
 		for (int ii = 0; ii < argc; ++ii) { fprintf(fout, "%s ", argv[ii]); }
@@ -944,7 +979,6 @@ main (int argc, char *argv[])
 		fprintf(fout, "Sort: [ %s<ord> ]\n", style_text.c_str());
 
 		style_text = "";
-		const CustomFormatFnTable * getCondorStatusPrintFormats();
 		List<const char> * pheadings = NULL;
 		if ( ! pm.has_headings()) {
 			if (pm_head.Length() > 0) pheadings = &pm_head;
@@ -960,11 +994,9 @@ main (int argc, char *argv[])
 		if (projList.empty()) {
 			fprintf(fout, "Projection: <NULL>\n");
 		} else {
-			fprintf(fout, "Projection:\n");
-			classad::References::const_iterator it;
-			for (it = projList.begin(); it != projList.end(); ++it) {
-				fprintf(fout, "  %s\n",  it->c_str());
-			}
+			const char * prefix = "\n  ";
+			std::string buf(prefix);
+			fprintf(fout, "Projection:%s\n", print_attrs(buf, true, projList, prefix));
 		}
 
 		fprintf (fout, "\n\n");
@@ -975,12 +1007,7 @@ main (int argc, char *argv[])
 	if ( ! projList.empty()) {
 		#if 0 // for debugging
 		std::string attrs;
-		attrs.reserve(projList.size()*24);
-		for (classad::References::const_iterator it = projList.begin(); it != projList.end(); ++it) {
-			if ( ! attrs.empty()) attrs += " ";
-			attrs += *it;
-		}
-		fprintf(stdout, "Projection is [%s]\n", attrs.c_str());
+		fprintf(stdout, "Projection is [%s]\n", print_attrs(attrs, false, projList, " "));
 		#endif
 		query->setDesiredAttrs(projList);
 	}
@@ -1059,7 +1086,7 @@ main (int argc, char *argv[])
 		MyString req; // query requirements
 		q = query->getRequirements(req);
 		const char * constraint = req.empty() ? NULL : req.c_str();
-		if (read_classad_file(ads_file, ads_file_format, process_ads_callback, &ai, constraint)) {
+		if (read_classad_file(ads_file, ads_file_format, process_ads_callback, &ai, constraint, result_limit)) {
 			q = Q_OK;
 		}
 	} else if (NULL != addr) {
@@ -1183,18 +1210,16 @@ main (int argc, char *argv[])
 	return 0;
 }
 
-const CustomFormatFnTable * getCondorStatusPrintFormats();
-
 
 int set_status_print_mask_from_stream (
 	const char * streamid,
 	bool is_filename,
 	const char ** pconstraint)
 {
-	std::string where_expr;
+	PrintMaskMakeSettings pmopt;
 	std::string messages;
-	StringList attrs;
-	printmask_aggregation_t aggregation;
+
+	pmopt.headfoot = pmHeadFoot;
 
 	SimpleInputStream * pstream = NULL;
 	*pconstraint = NULL;
@@ -1214,37 +1239,35 @@ int set_status_print_mask_from_stream (
 	}
 	ASSERT(pstream);
 
+	//PRAGMA_REMIND("tj: fix to handle summary formatting.")
 	int err = SetAttrListPrintMaskFromStream(
 					*pstream,
 					*getCondorStatusPrintFormats(),
 					pm,
-					pmHeadFoot,
-					aggregation,
+					pmopt,
 					group_by_keys,
-					where_expr,
-					attrs,
+					NULL,
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {
-		if (aggregation != PR_NO_AGGREGATION) {
+		if (pmopt.aggregate != PR_NO_AGGREGATION) {
 			fprintf(stderr, "print-format aggregation not supported\n");
 			return -1;
 		}
 
-		if ( ! where_expr.empty()) {
-			*pconstraint = pm.store(where_expr.c_str());
-			//if ( ! validate_constraint(*pconstraint)) {
-			//	formatstr_cat(messages, "WHERE expression is not valid: %s\n", *pconstraint);
-			//}
+		if ( ! pmopt.where_expression.empty()) {
+			*pconstraint = pm.store(pmopt.where_expression.c_str());
 		}
-		// convert projection list into the format that condor status likes. because programmers.
-		for (const char * attr = attrs.first(); attr; attr = attrs.next()) { projList.insert(attr); }
+		// copy attrs in the global projection
+		for (classad::References::const_iterator it = pmopt.attrs.begin(); it != pmopt.attrs.end(); ++it) {
+			projList.insert(*it);
+		}
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;
 }
 
-static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr)
+static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr, int limit)
 {
 	bool success = false;
 	if (ads_file_format < ClassAdFileParseType::Parse_long || ads_file_format > ClassAdFileParseType::Parse_auto) {
@@ -1283,12 +1306,15 @@ static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseT
 			if (close_file) { fclose(file); file = NULL; }
 			return false;
 		} else {
+			int index = 0;
+			if (limit <= 0) limit = INT_MAX;
 			success = true;
 			ClassAd * classad;
 			while ((classad = adIter.next(constraint.Expr()))) {
 				if (callback(pv, classad)) {
 					delete classad; // delete unless the callback took ownership.
 				}
+				if (++index >= limit) break;
 			}
 		}
 		file = NULL;
@@ -1310,6 +1336,7 @@ usage ()
 
 	fprintf (stderr,"\n    and [query-opt] is one of\n"
 		"\t-absent\t\t\tPrint information about absent resources\n"
+		"\t-annex <name>\t\tPrint information about the named annex\n"
 		"\t-avail\t\t\tPrint information about available resources\n"
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
@@ -1358,6 +1385,7 @@ usage ()
 		"\t-target <file>\t\tUse target classad with -format or -af evaluation\n"
 		"\n    and [display-opts] are one or more of\n"
 		"\t-long[:<form>]\t\tDisplay entire classads in format <form>. See -ads\n"
+		"\t-limit <n>\t\tDisplay no more than <n> classads.\n"
 		"\t-sort <expr>\t\tSort ClassAds by expressions. 'no' disables sorting\n"
 		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
 		"\t-total\t\t\tDisplay totals only\n"
@@ -1485,6 +1513,7 @@ firstPass (int argc, char *argv[])
 				++i;
 			}
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			MSC_SUPPRESS_WARNING(6011) // code analysis can't figure out that argc test protects us from de-refing a NULL in argv
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}
@@ -1494,7 +1523,13 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Error: Argument -print-format requires a filename argument\n");
 				exit( 1 );
 			}
-			explicit_format = true;
+			// allow -pr ! to disable use of user-default print format files.
+			if (MATCH == strcmp(argv[i+1], "!")) {
+				disable_user_print_files = true;
+			} else {
+				explicit_format = true;
+				setPPstyle (PP_CUSTOM, i, argv[i]);
+			}
 			++i; // eat the next argument.
 			// we can't fully parse the print format argument until the second pass, so we are done for now.
 		} else
@@ -1539,6 +1574,16 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 		} else
+		if (is_dash_arg_prefix (argv[i], "annex", 5)) {
+			// can add constraints on second pass only
+			i++;
+			if( ! argv[i] ) {
+				fprintf( stderr, "%s: -annex requires the annex name\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+		} else
 		if (is_dash_arg_prefix (argv[i], "direct", 3)) {
 			if( direct ) {
 				free( direct );
@@ -1567,6 +1612,15 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
 			usage ();
 			exit (0);
+		} else
+		if (is_dash_arg_prefix(argv[i], "limit", 2)) {
+			if( !argv[i+1] ) {
+				fprintf( stderr, "%s: -limit requires one additional argument\n", myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			++i;
+			result_limit = atoi(argv[i]);
 		} else
 		if (is_dash_arg_colon_prefix (argv[i], "long", &pcolon, 1)) {
 			ClassAdFileParseType::ParseType parse_type = ClassAdFileParseType::Parse_long;
@@ -1833,8 +1887,12 @@ secondPass (int argc, char *argv[])
 			i++;
 			continue;
 		}
+		if (is_dash_arg_prefix(argv[i], "limit", 2)) {
+			++i;
+			continue;
+		}
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
-			pm.registerFormat (argv[i+1], argv[i+2]);
+			pm.registerFormatF (argv[i+1], argv[i+2], FormatOptionNoTruncate);
 
 			StringList attributes;
 			ClassAd ad;
@@ -1923,6 +1981,7 @@ secondPass (int argc, char *argv[])
 				pm.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			MSC_SUPPRESS_WARNING(6011) // code analysis can't figure out that argc test protects us from de-refing a NULL in argv
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}
@@ -2033,10 +2092,15 @@ secondPass (int argc, char *argv[])
 			}
 			delete [] daemonname;
 			daemonname = NULL;
-		} else
-		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
+		} else if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
 			if (diagnose) { printf ("[%s]\n", argv[i+1]); }
 			query->addANDConstraint (argv[i+1]);
+			i++;
+		} else if (is_dash_arg_prefix (argv[i], "annex", 5)) {
+			std::string constraint;
+			formatstr( constraint, "AnnexName =?= \"%s\"", argv[i + 1] );
+			if (diagnose) { printf ("[%s]\n", constraint.c_str()); }
+			query->addANDConstraint (constraint.c_str());
 			i++;
 		}
 	}

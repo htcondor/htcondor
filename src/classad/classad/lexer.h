@@ -202,6 +202,7 @@ class Lexer
         
         bool WasInitialized(void);
 
+		bool SetOldClassAdLex( bool do_old );
 		bool SetJsonLex( bool do_json );
 
 		// cleanup function --- purges strings from string space
@@ -244,6 +245,7 @@ class Lexer
 		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
 		bool		jsonLex;
+		bool		oldClassAdLex;
 		int 		debug; 						// debug flag
 
 		// cached last token
@@ -260,6 +262,7 @@ class Lexer
 		int 		tokenizeAlphaHead (void);	// identifiers/reserved strings
 		int 		tokenizePunctOperator(void);// punctuation and operators
 		int         tokenizeString(char delim);//string constants
+		int         tokenizeStringOld(char delim);//string constants
 };
 
 } // classad

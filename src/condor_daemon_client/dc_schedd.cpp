@@ -494,7 +494,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 				new_attr_name++;
 					// insert attribute
 				pTree = tree->Copy();
-				job.Insert(new_attr_name, pTree, false);
+				job.Insert(new_attr_name, pTree);
 			}
 		}	// while next expr
 

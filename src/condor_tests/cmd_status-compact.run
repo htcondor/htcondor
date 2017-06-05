@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -128,7 +129,8 @@ TRANSFORM Arch,OS,OSAndVer,OSVer,OSName,OSMajor,OSShort,OSLegacy from (
   X86_64 LINUX   Ubuntu12    1204 Ubuntu      12 Ubuntu12  LINUX
   X86_64 LINUX   Ubuntu14    1404 Ubuntu      14 Ubuntu14  LINUX
   X86_64 LINUX   Fedora23    2300 Fedora      23 Fedora23  LINUX
-  X86_64 LINUX   Fedora24    2200 Fedora      22 Fedora24  LINUX
+  X86_64 LINUX   Fedora24    2400 Fedora      24 Fedora24  LINUX
+  X86_64 LINUX   Fedora25    2500 Fedora      25 Fedora25  LINUX
   X86_64 FREEBSD FreeBSD10   1003 FreeBSD     10 FreeBSD10 FREEBSD
 )";
 $rules_file = "$option.rules";
@@ -172,7 +174,8 @@ if (check_heading('status_compact_machine',\%table1) && check_heading('status_su
 } else {
 	RegisterResult(0, check_name => $option, test_name => $testname);
 }
-
+unlink($new_ads);
+unlink($orig_ads);
 print "############################################################################\n";
 $option = "run";
 `condor_submit $submitfile`;
@@ -184,6 +187,7 @@ while ($counter ne 0){
 	} else {
 		`condor_status -schedd -long > $orig_ads`;
 		%Attr_old = read_attr($orig_ads);
+#		if (scalar keys %Attr_old == 0){
 		if ($Attr_old{0}{ShadowsRunning} == 0){
 			sleep(1);
 		} else {

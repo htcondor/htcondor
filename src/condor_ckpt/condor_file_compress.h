@@ -45,7 +45,7 @@ public:
 	virtual int open(const char *url, int flags, int mode);
 	virtual int close();
 	virtual int read(off_t offset, char *data, int length);
-	virtual int write(off_t offset, char *data, int length);
+	virtual int write(off_t offset, const char *data, int length);
 
 	virtual int fcntl( int cmd, int arg );
 	virtual int ioctl( int cmd, long arg );
@@ -68,7 +68,7 @@ private:
 
 	void	end_compression();
 
-	int	write_data( char *data, int length, int flush );
+	int	write_data( const char *data, int length, int flush );
 	void	write_complete();
 	int	write_header();
 	int	write_int( int bytes, int value );

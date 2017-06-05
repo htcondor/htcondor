@@ -244,7 +244,7 @@ public:
 	bool recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr );
 
 		/* Return an attribute from the combination of the delayed ad and the starter */
-	std::auto_ptr<classad::ExprTree> getDelayedUpdate( const std::string &name );
+	std::unique_ptr<classad::ExprTree> getDelayedUpdate( const std::string &name );
 
 	virtual bool wroteChirpConfig() { return m_wrote_chirp_config; }
 	virtual const std::string chirpConfigFilename() { return m_chirp_config_filename; }
@@ -438,6 +438,8 @@ private:
 	void proxyExpiring();
 
 	bool refreshSandboxCredentials();
+
+	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
 
 		// // // // // // // //
 		// Private Data Members

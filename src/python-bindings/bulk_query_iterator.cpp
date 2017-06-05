@@ -5,8 +5,6 @@
 #include "condor_common.h"
 # endif
 
-#include <boost/python.hpp>
-
 #include "selector.h"
 
 #include "old_boost.h"

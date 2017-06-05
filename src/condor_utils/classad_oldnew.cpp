@@ -89,29 +89,29 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 		// pack exprs into classad
 	for( int i = 0 ; i < numExprs ; i++ ) {
 		char const *strptr = NULL;
-		string buffer;
 		if( !sock->get_string_ptr( strptr ) || !strptr ) {
-			return( false );	 
-		}		
+			return( false );
+		}
 
+		bool inserted = false;
 		if(strcmp(strptr,SECRET_MARKER) ==0 ){
 			char *secret_line = NULL;
 			if( !sock->get_secret(secret_line) ) {
 				dprintf(D_FULLDEBUG, "Failed to read encrypted ClassAd expression.\n");
 				break;
 			}
-			compat_classad::ConvertEscapingOldToNew(secret_line,buffer);
+			inserted = InsertLongFormAttrValue(ad, secret_line, true);
 			free( secret_line );
 		}
 		else {
-			compat_classad::ConvertEscapingOldToNew(strptr,buffer);
+			inserted = InsertLongFormAttrValue(ad, strptr, true);
 		}
 
 		// inserts expression at a time
-		if ( !ad.Insert(buffer) )
+		if ( ! inserted)
 		{
-		  dprintf(D_FULLDEBUG, "FAILED to insert %s\n", buffer.c_str() );
-		  return false;
+			dprintf(D_FULLDEBUG, "FAILED to insert %s\n", strptr );
+			return false;
 		}
 		
 	}
@@ -142,6 +142,278 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 	return true;
 }
 
+
+//uncomment this to enable runtime profiling of getClassAdEx, be aware that libcondorapi will have link errors with the profiling code.
+//#define PROFILE_GETCLASSAD
+#ifdef PROFILE_GETCLASSAD
+  #include "generic_stats.h"
+  stats_entry_probe<double> getClassAdEx_runtime;
+  stats_entry_probe<double> getClassAdExCache_runtime;
+  stats_entry_probe<double> getClassAdExCacheLazy_runtime;
+  stats_entry_probe<double> getClassAdExParse_runtime;
+  stats_entry_probe<double> getClassAdExLiteral_runtime;
+  stats_entry_probe<double> getClassAdExLiteralBool_runtime;
+  stats_entry_probe<double> getClassAdExLiteralNumber_runtime;
+  stats_entry_probe<double> getClassAdExLiteralString_runtime;
+  #define IF_PROFILE_GETCLASSAD(a) a;
+
+  void getClassAdEx_addProfileStatsToPool(StatisticsPool * pool, int publevel)
+  {
+	if ( ! pool) return;
+
+	#define ADD_PROBE(name) pool->AddProbe(#name, &name##_runtime, #name, publevel | IF_RT_SUM);
+	ADD_PROBE(getClassAdEx);
+	ADD_PROBE(getClassAdExCache);
+	ADD_PROBE(getClassAdExCacheLazy);
+	ADD_PROBE(getClassAdExParse);
+	ADD_PROBE(getClassAdExLiteral);
+	ADD_PROBE(getClassAdExLiteralBool);
+	ADD_PROBE(getClassAdExLiteralNumber);
+	ADD_PROBE(getClassAdExLiteralString);
+	#undef ADD_PROBE
+  }
+
+  void getClassAdEx_clearProfileStats()
+  {
+	getClassAdEx_runtime.Clear();
+	getClassAdExCache_runtime.Clear();
+	getClassAdExCacheLazy_runtime.Clear();
+	getClassAdExParse_runtime.Clear();
+	getClassAdExLiteral_runtime.Clear();
+	getClassAdExLiteralBool_runtime.Clear();
+	getClassAdExLiteralNumber_runtime.Clear();
+	getClassAdExLiteralString_runtime.Clear();
+  }
+
+#else
+  #define IF_PROFILE_GETCLASSAD(a)
+  void getClassAdEx_addProfileStatsToPool(StatisticsPool *, int) {}
+  void getClassAdEx_clearProfileStats() {}
+#endif
+
+// returns the length of the string including quotes 
+// if str starts and ends with doublequotes
+// and contains no internal \ or doublequotes.
+static size_t IsSimpleString( const char *str )
+{
+	if ( *str != '"') return false;
+
+	++str;
+	size_t n = strcspn(str,"\\\"");
+	if  (str[n] == '\\') {
+		return 0;
+	}
+	if (str[n] == '"') { // found a close quote - good so far.
+		// trailing whitespace is permitted (but leading whitespace is not)
+		// return 0 if anything but whitespace follows
+		// return length of quoted string (including quotes) if just whitespace.
+		str += n+1;
+		for (;;) {
+			char ch = *str++;
+			if ( ! ch) return n+2;
+			if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n') return 0;
+		}
+	}
+
+	return 0;
+}
+
+static long long myatoll(const char *s, const char* &end) {
+	long long result = 0;
+	int negative = 0;
+	if (*s == '-') {
+		negative = 1;
+		s++;
+	}
+
+	while ((*s >= '0') && (*s <= '9')) {
+		result = (result * 10) - (*s - '0');
+		s++;
+	}
+	end = s;
+	if (!negative) {
+		result = -result;
+	}
+	return result;
+}
+
+
+bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
+{
+	int cb;
+	const char *strptr;
+	std::string attr;
+	bool use_cache = (options & GET_CLASSAD_NO_CACHE) == 0;
+	bool cache_lazy = (options & GET_CLASSAD_LAZY_PARSE) != 0;
+	bool fast_tricks = (options & GET_CLASSAD_FAST) != 0;
+	const size_t always_cache_string_size = 128; // no fast parse for strings > this size.
+
+#ifdef PROFILE_GETCLASSAD
+	_condor_auto_accum_runtime< stats_entry_probe<double> > rt(getClassAdEx_runtime);
+	double rt_last = rt.begin;
+#endif
+
+	classad::ClassAdParser parser;
+	parser.SetOldClassAd(true);
+
+	if ( ! (options & GET_CLASSAD_NO_CLEAR)) {
+		ad.Clear( );
+	}
+
+	sock->decode( );
+
+	int numExprs;
+	if( !sock->code( numExprs ) ) {
+		return false;
+	}
+
+	// at least numExprs are coming, but we may add
+	// my, target, and a couple extra right away
+	// Auth (id,method) update(total,seq,lost,history)
+
+	if ( ! (options & GET_CLASSAD_NO_CLEAR)) {
+		ad.rehash(numExprs + 2 + 7);
+	}
+
+		// pack exprs into classad
+	for (int ii = 0 ; ii < numExprs ; ++ii) {
+		strptr = NULL;
+		if ( ! sock->get_string_ptr(strptr, cb) || ! strptr) {
+			return false;
+		}
+
+		bool its_a_secret = false;
+		if ((*strptr=='Z') && strptr[1] == 'K' && strptr[2] == 'M' && strptr[3] == 0) {
+			its_a_secret = true;
+			if ( ! sock->get_secret(strptr, cb) || ! strptr) {
+				dprintf(D_FULLDEBUG, "getClassAd Failed to read encrypted ClassAd expression.\n");
+				break;
+			}
+			int cch = strlen(strptr);
+			if (cch != cb) {
+				dprintf(D_FULLDEBUG, "getClassAd get_secret returned %d for string with 0 at %d\n", cb, cch);
+			}
+		}
+
+		// this splits at the =, puts the attribute name into attr
+		// and returns a pointer to the first non-whitespace character after the =
+		const char * rhs;
+		if ( ! SplitLongFormAttrValue(strptr, attr, rhs)) {
+			dprintf(D_ALWAYS, "getClassAd FAILED to insert%s %s\n", its_a_secret?" secret":"", strptr );
+			return false;
+		}
+
+		// Fast tricks pre-parses the right hand side when it is detected as a simple literal
+		// this is faster than letting the classad parser parse it (as of 8.7.0) and also
+		// uses less memory than letting the classad cache see it since literal nodes are the same
+		// size as envelope nodes.
+		//
+		bool inserted = false;
+		IF_PROFILE_GETCLASSAD(int subtype = 0);
+		size_t cbrhs = cb - (rhs - strptr);
+		if (fast_tricks) {
+			char ch = rhs[0];
+			if (cbrhs == 5 && (ch&~0x20) == 'T' && (rhs[1]&~0x20) == 'R' && (rhs[2]&~0x20) == 'U' && (rhs[3]&~0x20) == 'E') {
+				inserted = ad.InsertLiteral(attr, classad::Literal::MakeBool(true));
+				IF_PROFILE_GETCLASSAD(subtype = 1);
+			} else if (cbrhs == 6 && (ch&~0x20) == 'F' && (rhs[1]&~0x20) == 'A' && (rhs[2]&~0x20) == 'L' && (rhs[3]&~0x20) == 'S' && (rhs[4]&~0x20) == 'E') {
+				inserted = ad.InsertLiteral(attr, classad::Literal::MakeBool(false));
+				IF_PROFILE_GETCLASSAD(subtype = 1);
+			} else if (cbrhs < 30 && (ch == '-' || (ch >= '0' && ch <= '9'))) {
+				if (strchr(rhs, '.')) {
+					char *pe = NULL;
+					double d = strtod(rhs, &pe);
+					if (*pe == 0 || *pe == '\r' || *pe == '\n') {
+						inserted = ad.InsertLiteral(attr, classad::Literal::MakeReal(d));
+						IF_PROFILE_GETCLASSAD(subtype = 2);
+					}
+				} else {
+					const char * pe = NULL;
+					long long ll = myatoll(rhs, pe);
+					if (*pe == 0 || *pe == '\r' || *pe == '\n') {
+						inserted = ad.InsertLiteral(attr, classad::Literal::MakeLong(ll));
+						IF_PROFILE_GETCLASSAD(subtype = 2);
+					}
+				}
+			} else if (cbrhs < always_cache_string_size && ch == '"') { // 128 because we want long strings in the cache.
+				size_t cch = IsSimpleString(rhs);
+				if (cch) {
+					inserted = ad.InsertLiteral(attr, classad::Literal::MakeString(rhs+1, cch-2));
+					IF_PROFILE_GETCLASSAD(subtype = 3);
+				}
+			}
+		}
+
+		if (inserted) {
+		#ifdef PROFILE_GETCLASSAD
+			double dt = rt.tick(rt_last);
+			getClassAdExLiteral_runtime.Add(dt);
+			switch (subtype) {
+			case 1: getClassAdExLiteralBool_runtime.Add(dt); break;
+			case 2: getClassAdExLiteralNumber_runtime.Add(dt); break;
+			case 3: getClassAdExLiteralString_runtime.Add(dt); break;
+			}
+		#endif
+		} else {
+			// we can't cache nested classads or lists, so just parse and insert them
+			bool cache = use_cache && (*rhs != '[' && *rhs != '{');
+			if (cache) {
+				if (cache_lazy) {
+					inserted = ad.InsertViaCache(attr, rhs, true);
+					IF_PROFILE_GETCLASSAD(getClassAdExCacheLazy_runtime.Add(rt.tick(rt_last)));
+				} else {
+					inserted = ad.InsertViaCache(attr, rhs, false);
+					IF_PROFILE_GETCLASSAD(getClassAdExCache_runtime.Add(rt.tick(rt_last)));
+				}
+			} else {
+				ExprTree *tree = parser.ParseExpression(rhs);
+				if (tree) {
+					inserted = ad.Insert(attr, tree);
+				}
+				IF_PROFILE_GETCLASSAD(getClassAdExParse_runtime.Add(rt.tick(rt_last)));
+			}
+		}
+		if ( ! inserted) {
+			dprintf(D_ALWAYS, "getClassAd FAILED to insert%s %s\n", its_a_secret?" secret":"", strptr );
+			return false;
+		}
+	}
+
+	if (options & GET_CLASSAD_NO_TYPES) {
+		return true;
+	}
+
+		// get type info
+	if (!sock->get_string_ptr(strptr, cb)) {
+		dprintf(D_FULLDEBUG, "getClassAd FAILED to get MyType\n" );
+		return false;
+	}
+#if 0 // we fetch but ignore MyType and TargetType
+	if (strptr && strptr[0]) {
+		if (YourString(strptr) != "(unknown type)" && !ad.InsertAttr("MyType",strptr)) {
+			dprintf(D_FULLDEBUG, "getClassAd FAILED to insert MyType=\"%s\"\n", strptr );
+			return false;
+		}
+	}
+#endif
+
+	if (!sock->get_string_ptr(strptr, cb)) {
+		dprintf(D_FULLDEBUG, "getClassAd FAILED to get TargetType\n" );
+		return false;
+	}
+#if 0 // we fetch but ignore MyType and TargetType
+	if (strptr && strptr[0]) {
+		if (YourString(strptr) != "(unknown type)" && !ad.InsertAttr("TargetType",strptr)) {
+			dprintf(D_FULLDEBUG, "getClassAd FAILED to insert TargetType=\"%s\"\n", strptr );
+			return false;
+		}
+	}
+#endif
+
+	return true;
+}
+
+
 int getClassAdNonblocking( ReliSock *sock, classad::ClassAd& ad )
 {
 	int retval;
@@ -168,6 +440,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	classad::ClassAd		*upd=NULL;
 	MyString				inputLine;
 
+	parser.SetOldClassAd( true );
 
 	ad.Clear( );
 

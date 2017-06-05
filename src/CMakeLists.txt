@@ -31,10 +31,62 @@ if (BUILD_TESTING)
 	if (WINDOWS)
 		add_custom_target( BLD_TESTS )
 		add_dependencies( BLD_TESTS ${CONDOR_TESTS} )
+		set(COPY_COMMAND xcopy /y)
+		set(COPY_RECURSIVE_COMMAND xcopy /ys)
 	else(WINDOWS)
 		add_custom_target(tests)
 		add_dependencies(tests ${CONDOR_TESTS})
+		set(COPY_COMMAND cp)
+		set(COPY_RECURSIVE_COMMAND cp -r)
 	endif(WINDOWS)
+
+	# create the directory for copying the tests, and copy all the perl and binary tests
+	# currently we do not copy any payload required by the tests. Will need to figure out
+	# if the payload file names follow a particular format, so that it will be easy to
+	# copy all of them using regex/wildcards.
+	add_custom_target(tests-tar-pkg
+	    DEPENDS tests
+	    COMMAND ${CMAKE_COMMAND} -E make_directory ${CPACK_TEST_PACKAGE_FILE_NAME}
+	    COMMAND ${COPY_RECURSIVE_COMMAND} ${CMAKE_CURRENT_BINARY_DIR}/condor_tests/*.exe* ${CPACK_TEST_PACKAGE_FILE_NAME}
+	    COMMAND ${COPY_RECURSIVE_COMMAND} ${CONDOR_SOURCE_DIR}/src/condor_tests/*.pl ${CONDOR_SOURCE_DIR}/src/condor_tests/*.pm ${CONDOR_SOURCE_DIR}/src/condor_tests/*.run ${CPACK_TEST_PACKAGE_FILE_NAME}
+	)
+
+	foreach(scriptDir Check
+               ProcInfos
+               StatusAds
+               StatusConfigs
+               Includes
+               gsi)
+            add_custom_command(
+                TARGET tests-tar-pkg
+                POST_BUILD
+                COMMAND ${COPY_RECURSIVE_COMMAND} ${CONDOR_SOURCE_DIR}/src/condor_tests/${scriptDir} ${CPACK_TEST_PACKAGE_FILE_NAME}
+            )
+	endforeach(scriptDir)
+
+	set(CONDOR_SCRIPTS_DIR ${CONDOR_SOURCE_DIR}/src/condor_scripts)
+	foreach(scriptFile Condor.pm
+			   CondorTest.pm
+			   CondorPersonal.pm
+			   CondorUtils.pm
+			   CheckOutputFormats.pm
+			   run_test.pl)
+            add_custom_command(
+                TARGET tests-tar-pkg
+                POST_BUILD
+                COMMAND ${CMAKE_COMMAND} ARGS -E copy ${CONDOR_SCRIPTS_DIR}/${scriptFile} ${CPACK_TEST_PACKAGE_FILE_NAME}
+            )
+	endforeach(scriptFile)
+
+	add_custom_command(
+	    TARGET tests-tar-pkg
+	    POST_BUILD
+	    COMMAND ${CMAKE_COMMAND} -E tar czf ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz ${CPACK_TEST_PACKAGE_FILE_NAME}
+	    COMMAND ${CMAKE_COMMAND} -E copy ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz ${CMAKE_BINARY_DIR}
+	    COMMAND ${CMAKE_COMMAND} -E remove -f ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz
+	    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CPACK_TEST_PACKAGE_FILE_NAME}
+	)
+
 	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
 endif()
 

@@ -783,7 +783,7 @@ REMAP_TWO( memalign, __libc_memalign, void*, size_t, size_t )
 
 /* As above, except that our allocator doesn't provide posix_memalign(). */
 int posix_memalign( void ** ptr, size_t alignment, size_t size ) {
-	if( size == 0 ) { return NULL; }
+	if( size == 0 ) { * ptr = NULL; return 0; }
 	if( alignment % sizeof(void *) != 0 ) { return EINVAL; }
 	// Zero is not a power of two.  Iff alignment is a power of two, it has
 	// a single one bit in position p; all other bits are zero.  Subtracting

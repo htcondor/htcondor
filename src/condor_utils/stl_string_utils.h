@@ -22,7 +22,6 @@
 
 #include <string>
 #include <vector>
-#include <sstream>
 #include "condor_header_features.h"
 #include "MyString.h"
 
@@ -65,6 +64,9 @@ void assign(MyString& dst, const std::string& src);
 // to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& dst, FILE *fp, bool append);
 
+//Return true iff the given string is a blank line.
+int blankline ( const char *str );
+
 bool chomp(std::string &str);
 void trim(std::string &str);
 void lower_case(std::string &str);
@@ -94,20 +96,7 @@ void join(const std::vector< std::string > &v, char const *delim, std::string &r
 const char * filename_from_path(const char * pathname);
 inline char * filename_from_path(char * pathname) { return const_cast<char*>(filename_from_path(const_cast<const char *>(pathname))); }
 size_t filename_offset_from_path(std::string & pathname);
-inline std::string filename_from_path(std::string & pathname) { return pathname.substr(filename_offset_from_path(pathname)); }
 
-// Returns true iff (s) casts to <T>, and all of (s) is consumed,
-// i.e. if (s) is an exact representation of a value of <T>, no more and
-// no less.
-template<typename T>
-bool lex_cast(const std::string& s, T& v) {
-    std::stringstream ss(s);
-    ss >> v;
-    if ( !ss.eof() ) {
-        ss >> std::ws;
-    }
-    return ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit));
-}
 
 // iterate a Null terminated string constant in the same way that StringList does in initializeFromString
 // Use this class instead of creating a throw-away StringList just so you can iterate the tokens in a string.

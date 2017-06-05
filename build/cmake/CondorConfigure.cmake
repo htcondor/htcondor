@@ -37,12 +37,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 	endif()
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 	
-	# don't set -DWINDOWS if we are just going to set -DWINDOWS="WINDOWS_6.X" later... it just causes warnings...
-	if (NOT (${OS_NAME} STREQUAL "WINDOWS"))
-	   add_definitions(-DWINDOWS)
-	endif ()
-
-	if(MSVC11)
+	if(NOT (MSVC_VERSION LESS 1700))
 		set(PREFER_CPP11 TRUE)
 	endif()
 
@@ -93,7 +88,6 @@ if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
 	# on systems with both python2 and python3.
 	if (DEFINED PYTHONLIBS_VERSION_STRING)
 		set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
-		set(PythonInterp_FIND_VERSION_EXACT ON)
 	endif()
 	include (FindPythonInterp)
 else()
@@ -551,7 +545,11 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 
     check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
     if (HAVE_SD_DAEMON_H)
-        find_library(LIBSYSTEMD_DAEMON_PATH systemd-daemon)
+		# Since systemd-209, libsystemd-daemon.so has been deprecated
+		# and the symbols in that library now are in libsystemd.so.
+		# Since RHEL7 ships with systemd-219, it seems find for us to
+		# always use libsystemd and not worry about libsystemd-daemon.
+        find_library(LIBSYSTEMD_DAEMON_PATH systemd)
         find_so_name(LIBSYSTEMD_DAEMON_SO ${LIBSYSTEMD_DAEMON_PATH})
     endif()
 
@@ -737,8 +735,8 @@ endif()
 # above the addition of the .../src/classads subdir:
 if (LINUX
     AND PROPER 
-    AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")  
-    AND NOT ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 4.4.6))
+    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    AND NOT (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 4.4.6))
 
     # I wrote a nice macro for testing linker flags, but it is useless
     # because at least some older versions of linker ignore all '-z'
@@ -784,21 +782,19 @@ else ()
 	set( MAKE make -j${NUM_PROCESSORS} )
 endif()
 
-###########################################
-#if (NOT MSVC11) 
-#endif()
-
 if (WINDOWS)
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 
-  if (MSVC11)
-    if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
-    else()
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
-    endif()
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
+  if(NOT (MSVC_VERSION LESS 1700))
+	if (MSVC11)
+      if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+        set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
+      else()
+        set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
+	  endif()
+	endif()
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1j)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.33)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
@@ -1355,10 +1351,8 @@ dprint ( "BORLAND: ${BORLAND}" )
 
 if (WINDOWS)
 	dprint ( "MSVC: ${MSVC}" )
+	dprint ( "MSVC_VERSION: ${MSVC_VERSION}" )
 	dprint ( "MSVC_IDE: ${MSVC_IDE}" )
-	# only supported compilers for condor build
-	dprint ( "MSVC90: ${MSVC90}" )
-	dprint ( "MSVC10: ${MSVC10}" )
 endif(WINDOWS)
 
 # set this to true if you don't want to rebuild the object files if the rules have changed,

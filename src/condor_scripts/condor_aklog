@@ -1,0 +1,231 @@
+#!/bin/bash
+
+##**************************************************************
+##
+## Copyright (C) 1990-2016, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+## Author: Todd Tannenbaum <tannenba@cs.wisc.edu>, December 1, 2016.
+
+# condor_aklog is a wrapper script for aklog on Linux.
+#
+# How to use:
+# 1. Set environment variable KRB5CCNAME to point to the FILE-based
+#    Kerberos 5 credential cache that will be used to create the
+#    AFS token (same as with aklog).
+# 2. Optionally, set environment variable CONDOR_KRB5_UID to the uid
+#    which should have access to the AFS token to be created by aklog.
+#    If unset, condor_aklog attempt to lookup the Kerberos credential cache
+#    default principal in the passwd database (as defined by nsswitch.conf).
+# 3. Run condor_aklog with the same real-uid that was used to launch the
+#    condor_master daemon (typically root), using the same command-line
+#    arguments (if any) as were desired with aklog.
+#
+# Options:
+# Same as aklog.
+#
+# Exit status:
+# 50 if there is an error setting up the keyrings, else whatever exit
+# status is returned by aklog (zero on success, non-zero on failure).
+#
+# Description:
+# condor_aklog is a Linux-specifc wrapper script for aklog that will
+# store the AFS token into a kernel session keyring named "htcondor_uidX",
+# where X is the UID of the user being impersonated, by
+# 1. securely creating or joining session htcondor_uidX, 
+# 2. creating a PAG # in the session via pagsh if and only if a PAG does 
+#    not already exist, then
+# 3. run aklog, and finally
+# 4. link this session keyring to the user-specific keyring for the
+#    user that invoked condor_aklog so it is not garbage-collected.
+#
+# More information:
+# https://htcondor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6032
+
+##**************************************************************
+
+# Helper function: Exit with status $1 and send $2 to stderr.
+exitwitherr() { 
+  printf "%s. Aborting.\n" "$2" >&2
+  exit "$1"
+}
+
+# Helper function: Check that each parameter can be found in the PATH.
+checkexist() {
+  for prog in "$@"; do
+    hash $prog 2>/dev/null || exitwitherr 50 "Failed to find $prog installed in path"
+  done
+}
+
+# Our script is divded into two parts; Part 1 is invokved by the
+# user running "condor_aklog".  At the end of Part 1, condor_aklog
+# invokes itself a second time with "condor_aklog -htcpart2 ..." which
+# results in Part 2 of the script being executed as a child process.
+# This is neccesary because the "keyctl session" command
+# starts a new subshell process.
+# Part 2 does more setup and then invokes aklog, writing the exit
+# status of aklog into stdout where it is read by Part 1 and returned
+# to the user.
+
+#
+# PART 1
+# This is the entry-point of the script.
+#
+
+if [ "$1" != "-htcpart2" ]; then
+
+  # Make sure some required utilities are installed in our PATH.
+
+  checkexist klist keyctl aklog awk cut
+
+  # Validate we have a Kerberos credential cache.
+
+  klist -s || exitwitherr 50 "Failed to find a valid KRB5 credential cache"
+
+  # Set up reasonable defaults for CONDOR_RINGID and CONDOR_KRB5_UID.
+  # If CONDOR_KRB5_UID is unset, try to figure out the uid associated with the
+  # AFS token we are about to stash by looking for the Kerberos cache
+  # default principal in the passwd database.
+
+  export master_ring=${CONDOR_RINGID:-"@u"}
+  if [ -n "$CONDOR_KRB5_UID" ]; then
+    id="$CONDOR_KRB5_UID"
+  else
+    checkexist grep xargs getent
+    id="${CONDOR_KRB5_UID:-`klist | grep "Default principal" | cut -d' ' -f3 | cut -d@ -f1 | cut -d/ -f1 | xargs getent passwd`}" \
+      || exitwitherr 50 "Failed to find uid for default principal"
+    id=`echo "$id" | cut -d: -f3`
+  fi 
+
+  # Invoke "keyctl session htcondor_uidX", and run Part 2 of this
+  # script (see below) in that new session. Echo any output back
+  # to the terminal except for the "Joined session key..." crud that
+  # keyctl pollutes into stdout (we want our output to mimic aklog). Also
+  # Part2 of our script below will echo the exit status of the real aklog
+  # to our stream; read that exit status and exit with the same value
+  # so condor_aklog returns whatever aklog returned.  We need to do this
+  # because "keyctrl session" fails to propagate exit codes.
+
+  export uid_ring_name="htcondor_uid$id"
+  keyctl session "$uid_ring_name" "$0" "-htcpart2" "$@" |& awk \
+  '/^Joined session key/ { next }
+   /^aklog_real_exit_code/ { exit $2 }
+   { print $0 }
+  ' -
+
+  # Exit with whatever awk exits with in the command above, which
+  # is the same as whatever aklog exited with in Part 2 below.
+
+  exit $?
+
+#
+# End of PART 1
+#
+
+else 
+
+#
+# PART 2
+# This part of the script runs in after Part 1 has completed
+# and the htcondor_uidX keyring has been setup as the active
+# session keyring.
+#
+
+  # Throw away argument "-htcpart2" so we don't pass it to aklog.
+
+  shift
+
+  # Make sure we have some required utilities, aware that the PATH
+  # may have changed since PART 1 ran (although this is not likely).
+
+  checkexist keyctl aklog cut flock
+
+  # Make certain our real-uid matches the uid of the htcondor_uidX
+  # session keyring we joined at the end of PART 1.  We do this as
+  # a security safeguard because, unfortunately, "keyctl session <name>"
+  # will simply join the first visible keyring found with that description,
+  # and there is no way to join a keyring by id.  Sigh, the Linux kernel
+  # really should have a call to join a keyring by id, but it does not.
+  # The concern is a malicious non-privledged user could create a keyring
+  # named "htcondor_uidX" and set the Search permission control mask
+  # such that condor_aklog running "keyctl session htcondor_uidX" as root
+  # joins it (and then connects an AFS PAG to this keyring).  To prevent
+  # this, validate the uid owner of the session keyring is the same as
+  # our real-uid and bail-out now if funny business is detected.
+
+  session_uid=`keyctl rdescribe @s | cut -d\; -f2`
+  if [ "$session_uid" != $UID ]; then
+    exitwitherr 50 "Uid of keyring $uid_ring_name is $session_uid, but ruid is $UID"
+  fi
+
+  # Link our session keyring to the user-specific keyring that invoked
+  # condor_aklog (typically, the user keyring for uid 0) so that
+  # this session keyring is not immediately garbage-collected by the kernel
+  # when condor_aklog exits.
+
+  keyctl link @s "$master_ring" \
+    || exitwitherr 50 "Failed to link keyring $uid_ring_name to master ring $master_ring"
+
+  # Create a PAG in the session via pagsh if and only if a PAG does not
+  # already exist, and upon creating a it, link it to our
+  # current session keyring. If a PAG is not already found, we need
+  # to use a lock file to ensure there is only one PAG attached to this
+  # session keyring even in the event of multiple instances of condor_aklog
+  # running simultaneously.  If we need to lock, we use a read-only file
+  # descriptor to the KRB5 credential cache file since only trusted
+  # processes (root or the user that owns the cache) should be able to
+  # read that file.  This way we avoid creating lock files in /tmp with
+  # well-known names and expose root to symlink attacks (some Linux
+  # distros still have world-write permission on /var/lock... I am looking
+  # at you, Debian 7!).
+
+  export uid_ring_id=`keyctl search @s keyring "$uid_ring_name"`
+  lockfile="/${KRB5CCNAME#*/}"
+  if [ "$KRB5CCNAME" != "$lockfile" -a "${KRB5CCNAME%%:*}" != "FILE" ]; then
+    exitwitherr 50 "Only KRB5 caches of type FILE are supported"
+  fi
+  keyctl search @s afs_pag _pag >&/dev/null || \
+    { 
+	  # Wait for an exclusive lock, 20 second timeout
+	  flock -x -w 20 200 \
+	    || exitwitherr 50 "Failed to obtain file lock on $lockfile"
+	  # Make certain session keyring has uid write access so we can link
+	  # the PAG session below.
+	  keyctl setperm @s 0x1f3f0000 \
+		  || exitwitherr 50 "Failed to setperm on session keyring"
+	  # We must test again for the pag once we have the lock, in
+	  # order to guarantee an atomic test-and-set operation. If a search
+	  # for an afs_pag fails, create it via pagsh and link to our session.
+	  keyctl search @s afs_pag _pag >&/dev/null || \
+	    pagsh -c "keyctl link @s $uid_ring_id" || \
+		  exitwitherr 50 "Failed to link PAG to htcondor_uid session"
+    } 200<$lockfile || exitwitherr 50 "KRB5CCNAME file does not exist"
+
+  # Finally, run aklog with whatever command-line args the user gave us.
+  # Write the exit code returned by aklog onto stdout, which is read
+  # by our parent process (at the tail end of PART 1 above).
+
+  aklog "$@"
+  echo aklog_real_exit_code $?
+
+#
+# End PART2
+#
+
+fi
+
+# End of condor_aklog

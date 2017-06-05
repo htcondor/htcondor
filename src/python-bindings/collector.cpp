@@ -8,7 +8,6 @@
 #include "condor_version.h"
 
 #include <memory>
-#include <boost/python.hpp>
 
 #include "old_boost.h"
 #include "classad_wrapper.h"
@@ -198,12 +197,14 @@ struct Collector {
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
         if (my_daemon.locate())
         {
-            classad::ClassAd *daemonAd;
-            if ((daemonAd = my_daemon.daemonAd()))
-            {
-                wrapper->CopyFrom(*daemonAd);
-            }
-            else
+			/***  Note: calls to Daemon::locate() cannot invoke daemonAd() anymore.
+             *** classad::ClassAd *daemonAd;
+             *** if ((daemonAd = my_daemon.daemonAd()))
+             *** {
+             ***   wrapper->CopyFrom(*daemonAd);
+             *** }
+             *** else
+			 ***/
             {
                 std::string addr = my_daemon.addr();
                 if (!my_daemon.addr() || !wrapper->InsertAttr(ATTR_MY_ADDRESS, addr))
@@ -263,7 +264,7 @@ struct Collector {
     {
         m_collectors->rewind();
         Daemon *collector;
-        std::auto_ptr<Sock> sock;
+        std::unique_ptr<Sock> sock;
 
         int command = getCollectorCommandNum(command_str.c_str());
         if (command == -1)

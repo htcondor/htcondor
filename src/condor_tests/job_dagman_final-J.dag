@@ -1,0 +1,12 @@
+# This DAG tests a final node with PRE_SKIP overriding failure
+# of a previous node.
+
+NODE_STATUS_FILE job_dagman_final-J.status
+
+# This will fail.
+JOB J_A job_dagman_final-J-node.sub
+
+# PRE_SKIP will trigger for this node.
+FINAL J_Z job_dagman_final-J-node.sub
+SCRIPT PRE J_Z ./x_dagman_retry-monitor.pl 2
+PRE_SKIP J_Z 2

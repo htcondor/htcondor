@@ -22,6 +22,13 @@
  #endif
 #endif
 
+#ifdef __GNUC__
+  #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
+    // boost is full of these, gcc 4.8 treats them as warnings.
+    #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+  #endif
+#endif
+
 // pyconfig.h changes the definition of the PyObject structure if _DEBUG is defined!!!
 // On windows it also generates references to pythonNNN_d.lib library instead of pythonNNN.lib
 // but the python guys don't actually ship a pythonNNN_d.lib,  we avoid this problem by

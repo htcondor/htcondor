@@ -1,5 +1,5 @@
---- condor_config.generic	2014-09-30 09:57:58.000000003 -0500
-+++ condor_config.patched	2014-11-07 15:42:20.000000003 -0600
+--- condor_config.generic	2017-01-10 16:07:05.052352063 -0600
++++ condor_config.patched	2017-01-10 16:06:48.898201252 -0600
 @@ -19,25 +19,23 @@
  ######################################################################
  
@@ -31,7 +31,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-@@ -50,5 +48,33 @@
+@@ -50,5 +48,34 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -55,6 +55,7 @@
 +SBIN    = $(RELEASE_DIR)/sbin
 +LIBEXEC = $(RELEASE_DIR)/lib/condor/libexec
 +SHARE   = $(RELEASE_DIR)/share/condor
++GANGLIA_LIB64_PATH = /lib,/usr/lib,/usr/local/lib
 +
 +PROCD_ADDRESS = $(RUN)/procd_pipe
 +

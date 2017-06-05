@@ -9,9 +9,6 @@
 #include "condor_attributes.h"
 #include "daemon.h"
 #include "param_info.h"
-
-#include <boost/python.hpp>
-
 #include "old_boost.h"
 #include "classad_wrapper.h"
 

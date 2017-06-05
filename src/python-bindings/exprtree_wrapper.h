@@ -3,7 +3,6 @@
 #define __EXPRTREE_WRAPPER_H_
 
 #include <classad/exprTree.h>
-#include <boost/python.hpp>
 
 #define THIS_OPERATOR(kind, pykind) \
 ExprTreeHolder __ ##pykind##__(boost::python::object right) const {return apply_this_operator(classad::Operation:: kind, right);}

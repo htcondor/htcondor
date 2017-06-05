@@ -31,11 +31,13 @@ endif()
 #Setup package meta-data (used in packaging)
 set(PACKAGE "condor")
 
+#Setup test package meta-data (used in packaging)
+set(TEST_PACKAGE "condor_tests")
 # Condor version info
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "8.5.9")
+set(VERSION "8.7.3")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
@@ -55,6 +57,7 @@ endif( FORCE_PRE_RELEASE )
 
 set(PACKAGE_BUGREPORT "http://condor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
+set(TEST_PACKAGE_NAME ${TEST_PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
 set(PACKAGE_STRING ${PACKAGE} )
 string( TOUPPER "${CMAKE_SYSTEM_NAME}" OS_NAME )

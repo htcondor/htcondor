@@ -140,6 +140,10 @@ job_dagman_final-F: personal
 job_dagman_final-G: personal
 job_dagman_final-H: personal
 job_dagman_final-I: personal
+job_dagman_final-J: personal
+job_dagman_final-K: personal
+job_dagman_final-L: personal
+job_dagman_final-M: personal
 job_dagman_fullremove: personal
 job_dagman_global_event_log-A: personal
 job_dagman_global_event_log-B: personal
@@ -297,3 +301,13 @@ lib_procapi_pidtracking-byenv: personal
 lib_procapi_pidtracking-snapshot: personal
 lib_unit_tests: personal
 lib_userlog: personal
+config_validate_policy_templates: personal
+docker_simulator_test: personal
+job_ckpt_f-areauc_std: personal, IPv4
+job_ckpt_f-floats_std: personal, IPv4
+job_ckpt_f-integers_std: personal, IPv4
+job_ckpt_f-printer_std: personal, IPv4
+job_ckpt_f-reader_std: personal, IPv4
+job_rsc_f-direct-write_std: personal, IPv4
+map_user_to_groups_metaknob_test: personal
+cmd_submit-factory: personal

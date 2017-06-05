@@ -168,6 +168,8 @@ sysapi_is_linux_version_atleast(const char *version_num_to_check)
 	if ( kernelscalar >= inputscalar ) {
 		return true;
 	}
+#else
+	(void) version_num_to_check;
 #endif
 
 	return false;

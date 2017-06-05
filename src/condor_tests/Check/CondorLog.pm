@@ -43,12 +43,20 @@ sub RunCheck
     my $result;
     my $count = 0;
     while(1) {
-
-		if(defined $args{all}) {
+		if(defined $args{all} || defined $args{echo}) {
+		  if (defined $args{all}) {
 			$result = CondorTest::SearchCondorLog($daemon,$match_regexp,$args{all});
+		  } else {
+		    my @lines = ();
+			$result = CondorTest::SearchCondorLog($daemon,$match_regexp,\@lines);
+			if ($result) {
+			  for (@lines) { print $args{echo} . $_; }
+			}
+		  }
 		} else {
 			$result = CondorTest::SearchCondorLog($daemon,$match_regexp);
 		}
+		$count += 1;
 	
 		last if $result;
 		last if ($count >= $num_retries);
@@ -59,6 +67,7 @@ sub RunCheck
 	$result = !$result;
     }
 
+    if ($result) { $result = 1; }
     CondorTest::RegisterResult( $result, %args );
     return $result;
 }

@@ -70,6 +70,22 @@ class UserLogFilesize_t : public UserLogInt64_t
 };
 
 
+static int should_use_keyring_sessions() {
+#ifdef LINUX
+	static int UseKeyringSessions = FALSE;
+	static int DidParamForKeyringSessions = FALSE;
+
+	if(!DidParamForKeyringSessions) {
+		UseKeyringSessions = param_boolean("USE_KEYRING_SESSIONS", false);
+		DidParamForKeyringSessions = true;
+	}
+	return UseKeyringSessions;
+#else
+	return false;
+#endif
+}
+
+
 // ***************************
 //  WriteUserLog constructors
 // ***************************
@@ -262,6 +278,23 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 				dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s successfully\n",
 					log->path.c_str());
 				logs.push_back(log);
+
+				// setting the flag m_init_user_ids will cause the logging code in doWriteEvent()
+				// to switch to PRIV_USER every time it does a write (as opposed to PRIV_CONDOR).
+				// even though the file is already open, this is necessary because AFS needs access
+				// to the user token on every write(), whereas other filesystems typically only need
+				// permission on open().
+				//
+				// perhaps we should *always* do this, but because this went in the stable series I
+				// wanted to change as little behavior as possible for all of the places where this
+				// code is used.  -zmiller
+				if(should_use_keyring_sessions()) {
+					if(get_priv_state() == PRIV_USER || get_priv_state() == PRIV_USER_FINAL) {
+						dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s in priv state %i\n", log->path.c_str(), get_priv_state());
+						m_init_user_ids = true;
+					}
+				}
+
                 if (log_file_cache != NULL) {
                     dprintf(D_FULLDEBUG, "WriteUserLog::initialize: caching log file %s\n", *it);
                     (*log_file_cache)[*it] = log;

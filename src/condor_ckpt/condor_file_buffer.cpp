@@ -363,7 +363,7 @@ If the resulting list is larger than the required buffer size,
 select a block to write to disk.
 */
 
-int CondorFileBuffer::write(off_t offset, char *data, int length)
+int CondorFileBuffer::write(off_t offset, const char *data, int length)
 {
 	CondorChunk *c=0;
 

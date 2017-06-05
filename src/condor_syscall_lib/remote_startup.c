@@ -786,12 +786,7 @@ _set_priv()
 void
 display_ip_addr( unsigned int addr )
 {
-	int		net_part;
-	int		host_part;
-
 	if( IN_CLASSB(addr) ) {
-		net_part = B_NET(addr);
-		host_part = B_HOST(addr);
 		dprintf( D_FULLDEBUG, "%ld.%ld", HI(B_NET(addr)), LO(B_NET(addr)) );
 		dprintf( D_FULLDEBUG, ".%ld.%ld\n", HI(B_HOST(addr)), LO(B_HOST(addr)) );
 	} else {

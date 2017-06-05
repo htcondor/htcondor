@@ -40,6 +40,7 @@ static bool test_copy_constructor_value(void);
 static bool test_copy_constructor_empty(void);
 static bool test_copy_constructor_pointer(void);
 static bool test_initialize_from_string_empty_valid(void);
+static bool test_initialize_from_string_empty_valid_whitespace(void);
 static bool test_initialize_from_string_empty_empty(void);
 static bool test_initialize_from_string_empty_null(void);
 static bool test_initialize_from_string_non_empty_valid(void);
@@ -255,6 +256,7 @@ bool OTEST_StringList(void) {
 	driver.register_function(test_copy_constructor_empty);
 	driver.register_function(test_copy_constructor_pointer);
 	driver.register_function(test_initialize_from_string_empty_valid);
+	driver.register_function(test_initialize_from_string_empty_valid_whitespace);
 	driver.register_function(test_initialize_from_string_empty_empty);
 	driver.register_function(test_initialize_from_string_empty_null);
 	driver.register_function(test_initialize_from_string_non_empty_valid);
@@ -665,6 +667,27 @@ static bool test_initialize_from_string_empty_valid() {
 	StringList sl("", ";");
 	sl.initializeFromString("a;b;c");
 	const char* expect = "a,b,c";
+	char* retVal = sl.print_to_string();
+	emit_input_header();
+	emit_param("STRING", "a;b;c");
+	emit_output_expected_header();
+	emit_retval("%s", expect);
+	emit_output_actual_header();
+	emit_retval("%s", nicePrint(retVal));
+	if(niceStrCmp(expect, retVal) != MATCH) {
+		free(retVal);
+		FAIL;
+	}
+	free(retVal);
+	PASS;
+}
+
+static bool test_initialize_from_string_empty_valid_whitespace() {
+	emit_test("Test initializeFromString on an empty StringList when passed "
+		" a valid string with whitespace to be trimmed.");
+	StringList sl("", ";");
+	sl.initializeFromString(" a ; b b ; c ");
+	const char* expect = "a,b b,c";
 	char* retVal = sl.print_to_string();
 	emit_input_header();
 	emit_param("STRING", "a;b;c");

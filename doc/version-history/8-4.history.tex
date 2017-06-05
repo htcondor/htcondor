@@ -16,15 +16,15 @@ New features will be added in the 8.5.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-4-10}Version 8.4.10}
+\subsection*{\label{sec:New-8-4-12}Version 8.4.12}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.4.10 not yet released.
-%\item HTCondor version 8.4.10 released on Month Date, 2016.
+\item HTCondor version 8.4.12 not yet released.
+%\item HTCondor version 8.4.12 released on Month Date, 2016.
 
 \end{itemize}
 
@@ -41,17 +41,126 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added new parameter SCHEDD\_USE\_SLOT\_WEIGHT, which may be needed
-if SLOT\_WEIGHT is not the default of Cpus, and refers to expressions
-in the job ad.
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-11}Version 8.4.11}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.4.11 released on January 23, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added a new config knob, \MacroNI{IGNORE\_LEAF\_OOM}, which defaults to
+\Expr{False}.  When \Expr{True}, it tells HTCondor \emph{not} to
+kill and hold a job that is within its memory allocation, even if
+other processes within the same cgroup have exceeded theirs.
+\Ticket{5775}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug where the effects of a startd cron job would not be used by
+the \Condor{startd} when making policy decisions (e.g., evaluating the
+\MacroNI{START} expression) until an \MacroNI{UPDATE\_INTERVAL} had passed.  This
+was generally only noticeable if you set \MacroNI{STARTD\_CRON\_AUTOPUBLISH}
+to a value other than \Expr{NEVER}, which could cause the startd to reject claims
+from the negotiator that had been made based on the cron-updated value(s).
+\Ticket{6057}
+
+\item Fixed a bug in pslot preemption where it could cause matching jobs to
+not start for a long time.
+\Ticket{6055}
+
+\item Fixed a bug that caused a job to not be cleaned up when the job
+lease expires, if glexec is in use.
+\Ticket{6058}
+
+\item Fixed a problem, found while testing on Ubuntu 16, where the negotiator
+would crash at the end of the negotiation cycle.
+\Ticket{6064}
+
+\item Updated the default configuration in the Debian and Ubuntu packages to
+look for the Ganglia shared libraries in the proper place.
+\Ticket{5939}
+
+\item Updated the Enterprise Linux 7 RPM to require the proper SELinux
+utilities for its post-install script.
+\Ticket{6081}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-4-10}Version 8.4.10}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.4.10 released on December 13, 2016.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Added additional SELinux type enforcement rules on Enterprise Linux 7 for
+the \Condor{shared\_port} daemon and Linux tuning script. The RPM post install
+script makes the HTCondor SELinux domains permissive.
+\Ticket{5449}
+\Ticket{5560}
+\Ticket{5835}
+
+\item Fixed a performance problem in the \Condor{schedd} when
+\MacroNI{RequestCpus} was an expression. Added a new parameter
+\MacroNI{SCHEDD\_SLOT\_WEIGHT}, which may be needed
+if \MacroNI{SLOT\_WEIGHT} is not the default value of "Cpus", and refers to
+expressions in the job ad.
 \Ticket{5996}
 
-\item Fixed bug in the Hold if Cpus Exceeded configuration template metaknob.
+\item When transferring a job's sandbox, the permissions on sub-directories
+are now preserved in the same that they are for regular files.
+Previously, the permissions were modified by HTCondor daemon's umask,
+and directories transferred from a Windows machine to a UNIX machine had
+no permissions enabled.
+\Ticket{5948}
+
+\item Fixed bug in the \MacroNI{HOLD\_IF\_CPUS\_EXCEEDED} configuration template metaknob.
 \Ticket{5933}
 
-\item Fixed a bug in the LIMIT\_JOB\_RUNTIMES configuration template metaknob
+\item Fixed a bug in the \MacroNI{LIMIT\_JOB\_RUNTIMES} configuration template metaknob
 so that it works in the face of a non-default MaxJobRuntime.
 \Ticket{5961}
+
+\item Fixed a bug that made it so a restart of the \Condor{schedd} was required
+in order to change \MacroNI{REMOVE\_SIGNIFICANT\_ATTRIBUTES} to remove an attribute that
+the \Condor{schedd}s had already marked as significant.
+\Ticket{5983}
 
 \item When creating a Google Compute Engine instance, instruct the server
 to delete the auto-created disk image when the instance is removed.
@@ -75,8 +184,8 @@ core file would appear in the log directory after the command exited.
 \Ticket{5956}
 
 \item In the Python bindings, fixed bugs in the LogReader and EventIterator
-classes that could cause invocations of poll(), which should block
-indefinitely until an event occurs, to return prematurely with no event.
+classes that could cause invocations of poll() to return prematurely with
+no event.
 \Ticket{5920}
 
 \item Fixed a bug in \Condor{dagman} that caused a file named
@@ -89,14 +198,9 @@ to \Expr{True}.
 connection to the \Condor{shadow} is lost during file transfer.
 \Ticket{5972}
 
-\item Fixed a bug that allowed a user to bypass the \Macro{MAX\_JOBS\_PER\_OWNER}
+\item Fixed a bug that allowed a user to bypass the \MacroNI{MAX\_JOBS\_PER\_OWNER}
 limit by specifying an accounting group or nice\_user in their submit file.
 \Ticket{5946}
-
-\item Fixed a bug that made it so a restart of the \Condor{schedd} was required
-in order to change \Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES} to remove an attribute that
-the \Condor{schedd}s had already marked as significant.
-\Ticket{5983}
 
 \item When there are no GPUs on a machine, \Condor{gpu\_discovery} would write
  to stderr in addition to its normal output, this made it hard to use the
@@ -104,6 +208,22 @@ the \Condor{schedd}s had already marked as significant.
  that it will never write to stderr when the \Opt{-config} option is specified,
  instead it will write error messages as configuration comments to stdout.
  \Ticket{5989}
+
+\item Removed obsolete ControlGroup option from HTCondor's systemd service
+unit configuration file.
+\Ticket{5997}
+
+\item Compiled benchmarking programs as a Position Independent Executable.
+Position Independent Executables are a requirement for entry into Debian 9.
+\Ticket{5994}
+
+\item Fixed a denial of service vulnerability when using the \Condor{credd}
+on the Windows platform.
+\Ticket{5984}
+
+\item Fixed a bug where the \Opt{-pool} argument would be ignored by
+\Condor{ssh\_to\_job} under certain circumstances.
+\Ticket{5919}
 
 \end{itemize}
 

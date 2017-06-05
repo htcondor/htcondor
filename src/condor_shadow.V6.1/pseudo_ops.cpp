@@ -73,6 +73,7 @@ pseudo_register_starter_info( ClassAd* ad )
 int
 pseudo_register_job_info(ClassAd* ad)
 {
+	fix_update_ad(*ad);
 	Shadow->updateFromStarterClassAd(ad);
 	return 0;
 }
@@ -176,6 +177,42 @@ pseudo_get_user_info(ClassAd *&ad)
 	return 0;
 }
 
+// The list of attributes that some (old?) statrers try and incorrectly update
+// this table is used to remove or rename them before we process the update ad.
+//
+typedef struct {
+	const char * const updateAttr; // name in update ad
+	const char * const newAttr;    // rename to this before processing the update ad, if NULL, delete the attribute
+} AttrToAttr;
+static const AttrToAttr updateAdBlacklist[] = {
+	// Prior to 8.7.2, the starter incorrectly sends JobStartDate each time the job starts
+	// but JobStartDate is defined to be the timestamp of the FIRST execution of the job
+	// and it is set by the Schedd the first time it makes a shadow, so we want to just delete
+	// this attribute.
+	{ ATTR_JOB_START_DATE, NULL },
+};
+
+void fix_update_ad(ClassAd & update_ad)
+{
+	// remove or rename attributes in the update ad before we process it.
+	for (size_t ii = 0; ii < COUNTOF(updateAdBlacklist); ++ii) {
+		ExprTree * tree = update_ad.Remove(updateAdBlacklist[ii].updateAttr);
+		if (tree) {
+			if (IsDebugLevel(D_MACHINE)) {
+				dprintf(D_MACHINE, "Update ad contained '%s=%s' %s it\n",
+					updateAdBlacklist[ii].updateAttr, ExprTreeToString(tree),
+					updateAdBlacklist[ii].newAttr ? "Renaming" : "Removing"
+					);
+			}
+			if (updateAdBlacklist[ii].newAttr) {
+				update_ad.Insert(updateAdBlacklist[ii].newAttr, tree);
+			} else {
+				delete tree;
+			}
+		}
+	}
+}
+
 int
 pseudo_job_exit(int status, int reason, ClassAd* ad)
 {
@@ -199,6 +236,7 @@ pseudo_job_exit(int status, int reason, ClassAd* ad)
 		|| reason == JOB_COREDUMPED ) {
 		thisRemoteResource->incrementJobCompletionCount();
 	}
+	fix_update_ad(*ad);
 	thisRemoteResource->updateFromStarter( ad );
 	thisRemoteResource->resourceExit( reason, status );
 	return 0;

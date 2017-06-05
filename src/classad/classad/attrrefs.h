@@ -92,6 +92,9 @@ class AttributeReference : public ExprTree
          */
         friend bool operator==(const AttributeReference &ref1, const AttributeReference &ref2);
 
+#if defined(SCOPE_REFACTOR)
+		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
+#endif
 	protected:
 		/// Constructor
     	AttributeReference ();
@@ -105,6 +108,9 @@ class AttributeReference : public ExprTree
     	virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 		int	FindExpr( EvalState&, ExprTree*&, ExprTree*&, bool ) const;
 
+#if defined(SCOPE_REFACTOR)
+		const ClassAd *parentScope;
+#endif
 		ExprTree	*expr;
 		bool		absolute;
     	std::string attributeStr;

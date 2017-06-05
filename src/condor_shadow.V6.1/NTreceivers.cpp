@@ -2122,7 +2122,7 @@ case CONDOR_getdir:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
-		dprintf(D_STATS, message);
+		dprintf(D_STATS, "%s", message);
 		rval = 0; // don't check return value from dprintf
 		free(message);
 
