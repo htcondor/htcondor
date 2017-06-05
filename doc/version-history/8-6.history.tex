@@ -45,12 +45,6 @@ The details of each version are described below.
 appears in condor\_config\_val.
 |Ticket{6286}
 
-\item Changed the output of the condor\_status command so that the Load Average 
-field now displays the load average of just the condor job running in that 
-slot.  Previously, load associated from outside of condor was proportionately
-distributed into the condor slots, resulting in much confusion.
-\Ticket{6225}
-
 \item Fixed a bug with PASSWORD authentication that would sporadically cause
 it to fail to exchange keys, due to whether or not the first round-trip of
 communications blocked on reading from the network.
