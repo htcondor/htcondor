@@ -34,18 +34,34 @@ AC_DEFUN([gl_COMPILER_FLAGS],
 
 
 AC_PREREQ(2.57)
-AC_INIT([classad], [1.0-rc5], [condor-admin@cs.wisc.edu])
+AC_INIT([classad], [8.3.5], [condor-admin@cs.wisc.edu])
 #AC_CONFIG_AUX_DIR([build-aux])
 #AM_INIT_AUTOMAKE([1.6.3 -Wall -Werror foreign])
 AM_INIT_AUTOMAKE([1.6.3 foreign])
 AC_CONFIG_SRCDIR([classad.cpp])
 AC_CONFIG_HEADER([config.h])
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([
+	Makefile
+	tests/Makefile
+])
+
+CLASSAD_VERSION=$PACKAGE_VERSION
+CLASSAD_VERSION_MAJOR=$(echo $PACKAGE_VERSION | cut -d. -f1)
+CLASSAD_VERSION_MINOR=$(echo $PACKAGE_VERSION | cut -d. -f2)
+CLASSAD_VERSION_PATCH=$(echo $PACKAGE_VERSION | cut -d. -f3)
+
+# for shared library version
+# increase by CLASSAD_VERSION_MINOR on major version upgrades
+lt_offset=-1
+
+let lt_major=$lt_offset+$CLASSAD_VERSION_MAJOR+$CLASSAD_VERSION_MINOR
+VERSION_INFO="$lt_major:$CLASSAD_VERSION_PATCH:$CLASSAD_VERSION_MINOR"
+AC_SUBST(VERSION_INFO)
 
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
-AC_PROG_LIBTOOL
+LT_INIT
 AC_LANG([C++])
 
 # Check for compiler flags.
@@ -61,6 +77,7 @@ gl_COMPILER_FLAGS([-Winvalid-pch])
 gl_COMPILER_FLAGS([-Woverloaded-virtual])
 gl_COMPILER_FLAGS([-Wno-system-headers])
 CXXFLAGS="$COMPILER_FLAGS $CXXFLAGS"
+CPPFLAGS="-DCLASSAD_VERSION=\\\"$CLASSAD_VERSION\\\" -DCLASSAD_VERSION_MAJOR=$CLASSAD_VERSION_MAJOR -DCLASSAD_VERSION_MINOR=$CLASSAD_VERSION_MINOR -DCLASSAD_VERSION_PATCH=$CLASSAD_VERSION_PATCH $CPPFLAGS"
 
 # Checks for header files.
 AC_HEADER_STDC
