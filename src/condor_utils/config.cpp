@@ -4369,7 +4369,7 @@ unsigned int expand_macro (
 			ptrdiff_t cch = evaluate_macro_func(special_id, body, pos2, macro_set, ctx, errmsg);
 			if (cch < 0) {
 				//PRAGMA_REMIND("tj: put error reporting into MACRO_EVAL_CONTEXT_EX")
-				EXCEPT(errmsg.c_str());
+				EXCEPT("%s", errmsg.c_str());
 				break;
 			}
 			if ( ! cch) {
@@ -4475,7 +4475,7 @@ unsigned int selective_expand_macro (
 			ptrdiff_t cch = evaluate_macro_func(special_id, body, pos2, macro_set, ctx, errmsg);
 			if (cch < 0) {
 				//PRAGMA_REMIND("tj: put error reporting into MACRO_EVAL_CONTEXT_EX")
-				EXCEPT(errmsg.c_str());
+				EXCEPT("%s", errmsg.c_str());
 				break;
 			}
 			if ( ! cch) {
