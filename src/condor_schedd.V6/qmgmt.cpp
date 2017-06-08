@@ -5011,8 +5011,11 @@ ClassAd* GetExpandedJobAd(const PROC_ID& job_id, bool persist_expansions)
 	} else {
 		// Not a Globus job... find startd ad via the match rec
 		match_rec *mrec;
+		int sendToDS = 0;
+		ad->LookupInteger("WantParallelScheduling", sendToDS);
 		if ((job_universe == CONDOR_UNIVERSE_PARALLEL) ||
-			(job_universe == CONDOR_UNIVERSE_MPI)) {
+			(job_universe == CONDOR_UNIVERSE_MPI) ||
+			sendToDS) {
 			mrec = dedicated_scheduler.FindMRecByJobID( job_id );
 		} else {
 			mrec = scheduler.FindMrecByJobID( job_id );
