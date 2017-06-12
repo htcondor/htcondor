@@ -4286,11 +4286,16 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 }
 
 int FileTransfer::OutputFileTransferStats( ClassAd stats ) {
-    
+
     // Setup an output file for statistics
     FILE* stats_file;
-    MyString stats_file_path = strcat( param( "LOCAL_DIR" ), "/log/curl_plugin_history" );
-    stats_file = safe_fopen_wrapper_follow( stats_file_path.Value(), "a+" );
+
+    // Setup the file path in separate lines to avoid memory allocation
+    // problems with the param() function.
+    std::string stats_file_path = param("LOCAL_DIR");
+    stats_file_path += "/log/curl_plugin_history";
+
+    stats_file = safe_fopen_wrapper_follow( stats_file_path.c_str(), "a+" );
 
     // Write the statistics
     MyString stats_string;    
@@ -4299,8 +4304,7 @@ int FileTransfer::OutputFileTransferStats( ClassAd stats ) {
     fprintf( stats_file, "[%s]\n", stats_string.c_str() );
 
     // All done, cleanup and return
-    fclose(stats_file);
-
+    fclose( stats_file );
     return 0;
 }
 
