@@ -35,7 +35,7 @@ $dagman_args = "-verbose";
 # Note /s modifier where we match these below.
 #TEMPTEMP -- should we make sure this is the last DAG status in dagman.out?
 @expected_contents = ("DAG status: 2",
-	"DagStatus = 2");
+	"DagStatus = 6");
 
 my $killedchosen = 0;
 
