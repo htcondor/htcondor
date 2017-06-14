@@ -10,6 +10,7 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "MyString.h"
+#include "utc_time.h"
 
 #include <curl/curl.h>
 #include <sys/stat.h>
@@ -27,13 +28,14 @@ static ClassAd* curl_stats;
 
 
 int main( int argc, char **argv ) {
-    CURL *handle = NULL;
+    CURL* handle = NULL;
     ClassAd stats;
-    double start_time, end_time;
     int retry_count = 0;
     int rval = -1;
     int diagnostic = 0;
+    long start_time, end_time;
     MyString stats_string;
+    UtcTime time;
 
     // Point the global curl_stats pointer to our local object
     curl_stats = &stats;
@@ -63,7 +65,8 @@ int main( int argc, char **argv ) {
 
     // Initialize the stats structure
     init_stats( &stats, argv );
-    start_time = _condor_debug_get_time_double();
+    start_time = ( long ) time.getTimeDouble();
+    stats.Assign( "TRANSFER_START_TIME", start_time );
 
     // Enter the loop that will attempt/retry the curl request
     for(;;) {
@@ -100,13 +103,13 @@ int main( int argc, char **argv ) {
     }
 
     // Record some statistics
-    end_time = _condor_debug_get_time_double();   
-    stats.Assign("TRANSFER_TIME_SECONDS", end_time - start_time);
+    end_time = ( long ) time.getTimeDouble();   
+    stats.Assign( "TRANSFER_END_TIME", end_time );
 
     // If the transfer was successful, output the statistics to stdout
     if( rval != -1 ) {
         sPrintAd( stats_string, stats );
-        fprintf(stdout, "%s", stats_string.c_str() );
+        fprintf( stdout, "%s", stats_string.c_str() );
     }
 
     // Cleanup 
@@ -321,7 +324,7 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
 
             if( rval == CURLE_OK ) {
                 stats->Assign( "TRANSFER_SUCCESS", true );    
-                stats->Assign( "TRANSFER_ERROR", NULL );
+                stats->Delete( "TRANSFER_ERROR" );
                 stats->Assign( "TRANSFER_FILE_BYTES", ftell( file ) );
             }
             else {
@@ -448,7 +451,7 @@ static size_t header_callback( char *buffer, size_t size, size_t nitems ) {
             curl_stats->Assign( "HTTP_CACHE_HOST", token );
         }
         token = strtok( NULL, " " );
-    }       
+    }
     return numBytes;
 }
 
