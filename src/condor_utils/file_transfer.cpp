@@ -4300,8 +4300,7 @@ int FileTransfer::OutputFileTransferStats( ClassAd stats ) {
     // Write the statistics
     MyString stats_string;    
     sPrintAd( stats_string, stats );
-    stats_string.replaceString( "\n", "; " );
-    fprintf( stats_file, "[%s]\n", stats_string.c_str() );
+    fprintf( stats_file, "[\n%s]\n", stats_string.c_str() );
 
     // All done, cleanup and return
     fclose( stats_file );
