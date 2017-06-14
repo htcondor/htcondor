@@ -4067,6 +4067,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 
 	_jobstateLog.WriteSubmitFailure( node );
 
+    // Flag the status file as outdated so it gets updated soon.
+    _statusFileOutdated = true;
+
 	// Set the times to wait twice as long as last time.
 	int thisSubmitDelay = _nextSubmitDelay;
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
