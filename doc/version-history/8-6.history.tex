@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented parallel universe jobs from running
+that used \$\$( expansion in submit files.
+\Ticket{6299}
+
 \item Added a new knob, \Macro{STARTD\_RECOMPUTE\_DISK\_FREE}, which defaults
 to true, which tells the startd to peridoically recompute and advertise free
 disk space.  Admins can set this to false for partitionable slots whose execute
