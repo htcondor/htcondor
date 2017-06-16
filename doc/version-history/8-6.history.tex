@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented condor from correctly setting
+virtual memory cgroup limits when soft physical memory limits 
+were being used.
+\Ticket{6294}
+
 \item Fixed a bug that prevented parallel universe jobs from running
 that used \$\$( expansion in submit files.
 \Ticket{6299}
