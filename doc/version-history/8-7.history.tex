@@ -54,9 +54,28 @@ The details of each version are described below.
 
 \end{itemize}
 
+\noindent Known Issues:
+
+\begin{itemize}
+
+\item Our current implementation of late materialization is incompatible with
+\Condor{dagman} and will cause unexpected behavior, including failing without
+warning. This is a top-priority issue which aim to resolve in an upcoming
+release.
+\Ticket{6274}
+
+\end{itemize}
+
 \noindent New Features:
 
 \begin{itemize}
+
+\item Changed \Condor{submit} to not create empty stdout and stderr files before
+submitting jobs by default.  This caused confusion for users, and slowed down
+the submission process.  The older behaviour, where \Condor{submit} would fail
+if it could not create this files, is available when the parameter
+\Macro{SUBMIT\_SKIP\_FILECHECKS} is set to false.  The default is now true.
+\Ticket{6220}
 
 \item The \Condor{advertise} tool now assumes an update command if one is not
 specified on the command-line and attempts to determine exact command by

@@ -696,6 +696,17 @@ arguments = $$([DAGParentNodeNames])
 will pass the string \AdStr{B,C} as the command line argument when invoking
 the job.
 
+DAGMan supports jobs with queues of multiple procs, so for example:
+\begin{verbatim}
+queue 500
+\end{verbatim}
+will queue 500 procs as expected. However, \emph{as of version 8.7.2 DAGMan 
+does not support late materialization}. If a submit file queues multiple procs
+while the \Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} and
+\Macro{SUBMIT\_FACTORY\_JOBS\_BY\_DEFAULT} attributes are set to True, DAGMan
+will produce unexpected results, including failing without warning. We are
+working to resolve this as quickly as possible.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}DAG Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
