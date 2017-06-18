@@ -41,6 +41,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented condor from correctly setting
+virtual memory cgroup limits when soft physical memory limits 
+were being used.
+\Ticket{6294}
+
+\item Fixed a bug that prevented parallel universe jobs from running
+that used \$\$( expansion in submit files.
+\Ticket{6299}
+
+\item Added a new knob, \Macro{STARTD\_RECOMPUTE\_DISK\_FREE}, which defaults
+to true, which tells the startd to peridoically recompute and advertise free
+disk space.  Admins can set this to false for partitionable slots whose execute
+directory is not shared with non-condor jobs or uses.
+\Ticket{6301}
+
 \item The parameter \Macro{SETTABLE\_ATTRS\_ADMINISTRATOR} is now correctly
 appears in condor\_config\_val.
 |Ticket{6286}
@@ -68,6 +83,13 @@ proxy has sufficient lifetime remaining.
 \item Fixed a bug in \Condor{dagman} where the DAG status file showed an
 incorrect status code if submit attempts failed for the final node.
 \Ticket{6069}
+
+\item Bosco now properly identifies CentOS 7 as a supported platform.
+\Ticket{6303}
+
+\item The SELinux profile is now reloaded only once, when setting the HTCondor
+daemons to run in permissive mode, to speed up the installaton process.
+\Ticket{6303}
 
 \end{itemize}
 
