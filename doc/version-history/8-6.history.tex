@@ -87,6 +87,10 @@ incorrect status code if submit attempts failed for the final node.
 \item Bosco now properly identifies CentOS 7 as a supported platform.
 \Ticket{6303}
 
+\item The SELinux profile is now reloaded only once, when setting the HTCondor
+daemons to run in permissive mode, to speed up the installaton process.
+\Ticket{6303}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
