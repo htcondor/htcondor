@@ -70,6 +70,11 @@ release.
 
 \begin{itemize}
 
+\item Added a parameter \Macro{DEDICATED\_SCHEDULER\_USE\_SERIAL\_CLAIMS} which 
+defaults to false.  When true, allows the dedicated schedule to use claimed/idle
+slots that the serial scheduler has claimed.
+\Ticket{6276}
+
 \item Changed \Condor{submit} to not create empty stdout and stderr files before
 submitting jobs by default.  This caused confusion for users, and slowed down
 the submission process.  The older behaviour, where \Condor{submit} would fail
