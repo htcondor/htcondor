@@ -51,7 +51,7 @@ that used \$\$( expansion in submit files.
 \Ticket{6299}
 
 \item Added a new knob, \Macro{STARTD\_RECOMPUTE\_DISK\_FREE}, which defaults
-to true, which tells the startd to peridoically recompute and advertise free
+to true, which tells the startd to periodically recompute and advertise free
 disk space.  Admins can set this to false for partitionable slots whose execute
 directory is not shared with non-condor jobs or uses.
 \Ticket{6301}
@@ -88,8 +88,14 @@ incorrect status code if submit attempts failed for the final node.
 \Ticket{6303}
 
 \item The SELinux profile is now reloaded only once, when setting the HTCondor
-daemons to run in permissive mode, to speed up the installaton process.
+daemons to run in permissive mode, to speed up the installation process on
+Enterprise Linux 7.
 \Ticket{6303}
+
+\item Update the systemd configuration on Enterprise Linux 7 to start the
+\Condor{master} after time synchronization is achieved. This prevents
+unnecessary daemon restart due to sudden time shifts.
+\Ticket{6255}
 
 \end{itemize}
 
