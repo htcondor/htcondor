@@ -5928,7 +5928,7 @@ const char * const jobGrid_PrintFormat = "SELECT\n"
 "   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
 "   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
 "   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER\n"
-"   JobStatus     AS STATUS          WIDTH -10 PRINTAS GRID_STATUS\n"
+"   GridJobStatus AS STATUS          WIDTH -10 PRINTAS GRID_STATUS\n"
 "   GridResource  AS 'GRID->MANAGER    HOST' WIDTH -27 PRINTAS GRID_RESOURCE\n"
 "   GridJobId     AS GRID_JOB_ID             WIDTH   0 PRINTAS GRID_JOB_ID\n"
 "SUMMARY NONE\n";
