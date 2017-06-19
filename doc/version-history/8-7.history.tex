@@ -29,7 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added \Opt{-grid:ec2} to \Condor{q} to avoid truncating AWS' new,
+longer, instance IDs.  Replaced useless (given the instance ID) instance
+host name with the CMD column, to help distinguish EC2 jobs from each other.
+\Ticket{5478}
 
 \end{itemize}
 
