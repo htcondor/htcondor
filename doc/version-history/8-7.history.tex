@@ -47,7 +47,7 @@ slots that the serial scheduler has claimed.
 
 \item Changed \Condor{submit} to not create empty stdout and stderr files before
 submitting jobs by default.  This caused confusion for users, and slowed down
-the submission process.  The older behaviour, where \Condor{submit} would fail
+the submission process.  The older behavior, where \Condor{submit} would fail
 if it could not create this files, is available when the parameter
 \Macro{SUBMIT\_SKIP\_FILECHECKS} is set to false.  The default is now true.
 \Ticket{6220}
@@ -57,7 +57,7 @@ specified on the command-line and attempts to determine exact command by
 inspecting the first ad to be advertised.
 \Ticket{6296}
 
-\item The \Condor{annex} tool now logs to the user config directory.  Added an
+\item The \Condor{annex} tool now logs to the user configuration directory.  Added an
 audit log of \Condor{annex} commands and their results.
 \Ticket{6267}
 
@@ -112,7 +112,8 @@ distributed into the condor slots, resulting in much confusion.
 \item Prohibited illegal chars ('+', '.') in DAGMan node names
 \Ticket{5966}
 
-\item Made minor improvements to audit log messages.
+\item Improve audit log messages by including the connection ID and properly
+filtering out shadow and gridmanager modifications to the job queue log.
 \Ticket{6289}
 
 \end{itemize}
