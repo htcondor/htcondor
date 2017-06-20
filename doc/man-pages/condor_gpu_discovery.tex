@@ -122,10 +122,10 @@ attribute names.
     is suitable for use with \Condor{startd} cron.
     Combine this option with the \Opt{-dynamic} option to periodically refresh the dynamic
     Gpu information such as temperature. For example, to refresh GPU temperatures every 5 minutes
-    \begin{verbatim}
-    use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron)
-    \end{verbatim}
   }
+  \begin{verbatim}
+  use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron)
+  \end{verbatim}
   \OptItem{\Opt{-verbose}} {
     For interactive use of the tool, output extra information to show 
     detection while in progress.
