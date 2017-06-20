@@ -40,6 +40,11 @@ release.
 
 \begin{itemize}
 
+\item \Condor{q} will now show expanded totals when querying a \Condor{schedd} that is version 8.7.1 or later.
+The totals for the current user and for all users are provided by the \Condor{schedd}.
+To get the old totals display set the configuration parameter \Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} to true.
+\Ticket{6254}
+
 \item Added a parameter \Macro{DEDICATED\_SCHEDULER\_USE\_SERIAL\_CLAIMS} which 
 defaults to false.  When true, allows the dedicated schedule to use claimed/idle
 slots that the serial scheduler has claimed.
