@@ -120,6 +120,16 @@ distributed into the condor slots, resulting in much confusion.
 filtering out shadow and gridmanager modifications to the job queue log.
 \Ticket{6289}
 
+\item Fixed a bug where the \Condor{schedd} would incorrectly try to check the
+validity of output files and directories for late materialize jobs. The \Condor{schedd}
+will now always skip file checks for late materialize jobs.
+\Ticket{6246}
+
+\item Fixed a bug in the \Condor{schedd} where it did not account for the initial state of
+late materialize jobs when calculating the running totals of jobs by state. This bug
+resulted in \Condor{q} displaying incorrect totals when \Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY}
+was set to false.
+\Ticket{6272}
 
 \end{itemize}
 
