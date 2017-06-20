@@ -7653,6 +7653,16 @@ SYSTEM_PERIODIC_REMOVE = \
   be altered by the queue super-user, once they have committed values.
   The hard-code value is empty.
 
+\label{param:AlternateJobSpool}
+\item[\Macro{ALTERNATE\_JOB\_SPOOL}]
+  A ClassAd expression evaluated in the context of the job ad.
+  If the result is a string, the value is used an an alternate spool
+  directory under which the job's files will be stored.
+  This alternate directory must already exist and have the same
+  file ownership and permissions as the main \MacroNI{SPOOL} directory.
+  Care must be taken that the value won't change during the lifetime
+  of each job.
+
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Shadow-Config-File-Entries}\condor{shadow}
