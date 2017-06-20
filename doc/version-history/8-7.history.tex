@@ -106,6 +106,15 @@ and \Condor{userprio}.
 used directly as an executable of a \Condor{startd} cron job.
 \Ticket{6012}
 
+\item Improved support for running several \Condor{negotiator}s in a
+single pool.
+\MacroNI{NEGOTIATOR\_NAME} now works like \MacroNI{MASTER\_NAME}.
+\Condor{userprio} has a -name option to select a specific
+\Condor{negotiator}.
+Accounting ads from multiple \Condor{negotiator}s can co-exist in the
+\Condor{collector}.
+\Ticket{5717}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

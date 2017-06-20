@@ -7003,10 +7003,6 @@ MAX_JOBS_RUNNING	= \
   See the description of \MacroNI{MASTER\_NAME} in
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
   for defaults and composition of valid HTCondor daemon names.
-  Also, note that if the \MacroNI{MASTER\_NAME} setting is defined for
-  the \Condor{master} that spawned a given \Condor{schedd}, that name
-  will take precedence over whatever is defined in
-  \MacroNI{SCHEDD\_NAME}. 
 
 \label{param:ScheddAttrs}
 \item[\Macro{SCHEDD\_ATTRS}]
@@ -9069,7 +9065,21 @@ Configuration File Entries}
 
 These macros affect the \Condor{negotiator}.
 \begin{description}
-  
+
+\label{param:NegotiatorName}
+\item[\Macro{NEGOTIATOR\_NAME}]
+  Used to give an alternative value to the \Attr{Name} attribute
+  in the \Condor{negotiator}'s ClassAd and the \Attr{NegotiatorName}
+  attribute of its accounting ClassAds.
+  This configuration macro is useful in the situation
+  where there are two \Condor{negotiator} daemons running on one machine,
+  and both report to the same \Condor{collector}.
+  Different names will distinguish the two daemons.
+
+  See the description of \MacroNI{MASTER\_NAME} in
+  section~\ref{param:MasterName} on page~\pageref{param:MasterName}
+  for defaults and composition of valid HTCondor daemon names.
+
 \label{param:NegotiatorInterval}
 \item[\Macro{NEGOTIATOR\_INTERVAL}]
   Sets how often the \Condor{negotiator} starts a negotiation cycle.
