@@ -97,6 +97,15 @@ Enterprise Linux 7.
 unnecessary daemon restart due to sudden time shifts.
 \Ticket{6255}
 
+\item The \Condor{shadow} will now ignore updates of \Attr{JobStartDate} from the
+\Condor{starter} since the \Condor{schedd} already sets this attribute correctly and
+the \Condor{starter} incorrectly tries to set it even if the job has already run once.
+A consequence of this fix is that the value of \Attr{JobStartDate} that the \Condor{startd}
+uses for policy expressions will be different than the value that the \Condor{schedd} uses.
+Resolving this problem will potentially break existing policy expressions in the
+\Condor{startd}, so it will be be not be changed in the 8.6 series, but fixed in the 8.7 series.
+\Ticket{6280}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
