@@ -964,7 +964,7 @@ determined automatically at run time but which can be overwritten.
   For daemons started as root, but running under another UID
   (typically the user \Login{condor}), this will be the other UID.
 
-\label{param:FilesystemDomain}
+%\label{param:FilesystemDomain}
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
   Defaults to the fully
   qualified host name of the machine it is evaluated on.  See
@@ -3862,7 +3862,7 @@ Tracking process family by login "cndrusr1"
   \MacroNI{SLOT<N>\_USER}).  Therefore, when the job exits, all processes
   running under the same account will be killed.
 
-\label{param:FilesystemDomain}
+%\label{param:FilesystemDomain}
 \item[\Macro{FILESYSTEM\_DOMAIN}]
   An arbitrary string that is used to decide if
   the two machines, a submit machine and an execute machine,
@@ -14145,12 +14145,12 @@ in ClassAds that the \Condor{collector} daemon has.
   for all metrics.
   The expression may refer to attributes of the machine.
 
-\label{param:GangliadCluster}
+\label{param:GangliadMachine}
 \item[\Macro{GANGLIAD\_DEFAULT\_MACHINE}]
   An expression specifying the default machine name of Ganglia metrics.  The
   expression may refer to attributes of the machine.
 
-\label{param:GangliadCluster}
+\label{param:GangliadIP}
 \item[\Macro{GANGLIAD\_DEFAULT\_IP}]
   An expression specifying the default IP address of Ganglia metrics.
   The expression may refer to attributes of the machine.
