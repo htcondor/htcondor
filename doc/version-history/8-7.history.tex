@@ -84,7 +84,7 @@ count), \Condor{annex} will now adjust the duration of the named annex.
 \Ticket{6230}
 
 \item Improved the performance of the \Condor{schedd} by setting the
-default for the knob SUBMIT\_SKIP\_FILECHECKS to false.  This prevents
+default for the knob SUBMIT\_SKIP\_FILECHECKS to true.  This prevents
 the \Condor{schedd} from checking the readability of all input files, and skips
 the creation of the output files on the submit side at submit time.
 Output files are now created either at transfer time, when file transfer
