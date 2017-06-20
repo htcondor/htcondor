@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.4 not yet released.
-%\item HTCondor version 8.6.4 released on Month Date, 2017.
+\item HTCondor version 8.6.4 released on June 22, 2017.
 
 \end{itemize}
 
@@ -33,7 +32,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Python bindings are now available on MacOSX.
+\Ticket{6244}
+
+\item Allow Python modules to be used as \Condor{collector} plugin.
+This undocumented feature is to be used by expert developers only.
+\Ticket{6213}
+\Ticket{6295}
 
 \end{itemize}
 
@@ -41,35 +46,29 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug that prevented condor from correctly setting
-virtual memory cgroup limits when soft physical memory limits 
-were being used.
-\Ticket{6294}
-
-\item Fixed a bug that prevented parallel universe jobs from running
-that used \$\$( expansion in submit files.
-\Ticket{6299}
-
-\item Added a new knob, \Macro{STARTD\_RECOMPUTE\_DISK\_FREE}, which defaults
-to true, which tells the startd to periodically recompute and advertise free
-disk space.  Admins can set this to false for partitionable slots whose execute
-directory is not shared with non-condor jobs or uses.
-\Ticket{6301}
-
-\item The parameter \Macro{SETTABLE\_ATTRS\_ADMINISTRATOR} is now correctly
-appears in condor\_config\_val.
-|Ticket{6286}
-
 \item Fixed a bug with PASSWORD authentication that would sporadically cause
 it to fail to exchange keys, due to whether or not the first round-trip of
 communications blocked on reading from the network.
 \Ticket{6265}
 
-\item Fixed a bug where per-instance job attributes like \AdAttr{RemoteHost}
-would show up in the history file for completed jobs.  This bug occurred if
-a job happened to complete while the schedd was in the process of a
-graceful shutdown.  
-\Ticket{6251}
+\item Pslot preemption now properly handles machine custom resources,
+such as GPUs.
+\Ticket{6297}
+
+\item Fixed a bug that prevented HTCondor from correctly setting
+virtual memory cgroup limits when soft physical memory limits
+were being used.
+\Ticket{6294}
+
+\item Fixed a bug that prevented parallel universe jobs from running
+that used \$\$() expansion in submit files.
+\Ticket{6299}
+
+\item Added a new knob, \MacroNI{STARTD\_RECOMPUTE\_DISK\_FREE}, which defaults
+to true, which tells the startd to periodically recompute and advertise free
+disk space.  Admins can set this to false for partitionable slots whose execute
+directory is used by HTCondor alone.
+\Ticket{6301}
 
 \item Fixed a bug that could cause \Condor{submit} to fail to submit a
 job with a proxy file to a \Condor{schedd} older than 8.5.8, due to the
@@ -87,15 +86,44 @@ incorrect status code if submit attempts failed for the final node.
 \item Bosco now properly identifies CentOS 7 as a supported platform.
 \Ticket{6303}
 
-\item The SELinux profile is now reloaded only once, when setting the HTCondor
-daemons to run in permissive mode, to speed up the installation process on
-Enterprise Linux 7.
+\item Fixed a bug when Bosco is used to submit jobs to multiple remote
+clusters. When arguments to \Prog{remote\_gahp} are provided in the
+GridResource attribute, jobs could be submitted to the wrong cluster.
+\Ticket{6277}
+
+\item To speed up the installation process on Enterprise Linux 7, the
+SELinux profile is now reloaded only once, when setting the HTCondor
+daemons to run in permissive mode.
 \Ticket{6303}
 
 \item Update the systemd configuration on Enterprise Linux 7 to start the
 \Condor{master} after time synchronization is achieved. This prevents
-unnecessary daemon restart due to sudden time shifts.
+unnecessary daemon restarts due to sudden time shifts.
 \Ticket{6255}
+
+\item The \Condor{shadow} will now ignore updates of \Attr{JobStartDate}
+from the \Condor{starter} since the \Condor{schedd} already sets this
+attribute correctly and the \Condor{starter} incorrectly tries to set it
+even if the job has already run once. A consequence of this fix is that the
+value of \Attr{JobStartDate} that the \Condor{startd} uses for policy
+expressions will be different than the value that the \Condor{schedd} uses.
+Resolving this problem will potentially break existing policy expressions
+in the \Condor{startd}, so it will be be not be changed in the 8.6 series,
+but fixed in the 8.7 series.
+\Ticket{6280}
+
+\item Fixed a bug where per-instance job attributes like \AdAttr{RemoteHost}
+would show up in the history file for completed jobs.  This bug occurred if
+a job happened to complete while the \Condor{schedd} was in the process of a
+graceful shutdown.
+\Ticket{6251}
+
+\item The \Condor{convert\_history} command is present again in this release.
+\Ticket{6282}
+
+\item The parameter \MacroNI{SETTABLE\_ATTRS\_ADMINISTRATOR} is now correctly
+appears in \Condor{config\_val}.
+\Ticket{6286}
 
 \end{itemize}
 
@@ -125,16 +153,6 @@ spooled.
 
 \end{itemize}
 
-\noindent New Features:
-
-\begin{itemize}
-
-\item Allow Python modules to be used as \Condor{collector} plugin.
-This undocumented feature is to be used by expert developers only.
-\Ticket{6213}
-
-\end{itemize}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-6-2}Version 8.6.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -158,7 +176,7 @@ a job based on a mapping of the owner name of the job.
 \Ticket{6179}
 
 \item When the \Condor{credd} is polling for credentials, the timeout is now
-configurable using \Macro{CREDD\_POLLING\_TIMEOUT}.
+configurable using \MacroNI{CREDD\_POLLING\_TIMEOUT}.
 
 \item The \Opt{reverse} option for \Condor{q} was changed to \Opt{reverse-analyze},
 and it now implies \Opt{better-analyze}. Formerly, the \Opt{reverse} option was ignored
@@ -199,9 +217,9 @@ unless a \Condor{schedd} will be started by the master.
 \Ticket{6208}
 
 \item Fixed a bug that caused all but the first in a list of metaknobs to be ignored
-unless there were commas separating the list items. So \Macro{use ROLE : Execute CentralManager}
+unless there were commas separating the list items. So \MacroNI{use ROLE : Execute CentralManager}
 would incorrectly add only the Execute role.
-Previously, \Macro{use ROLE : Execute, CentralManager} would correctly add both roles.
+Previously, \MacroNI{use ROLE : Execute, CentralManager} would correctly add both roles.
 \Ticket{6171}
 
 \item Worked around a problem with FORTRAN programs built with \Condor{compile}
@@ -292,7 +310,7 @@ authorization list.
 
 \item \Condor{q} now checks to see if authentication and security negotiation are enabled before attempting to
 request only the current users jobs from the \Condor{schedd}.  Prior to this change, configurations that disabled
-security or authentication would also need to set \Macro{CONDOR\_Q\_ONLY\_MY\_JOBS} to false.
+security or authentication would also need to set \MacroNI{CONDOR\_Q\_ONLY\_MY\_JOBS} to false.
 \Ticket{6125}
 
 \item The CLAIMTOBE authentication method is now in the list of methods for READ access if no list of
@@ -356,8 +374,8 @@ started with white space.
 Also, Bosco now works with Slurm clusters.
 \Ticket{6106}
 
-\item Changed Bosco's configuration of the \condor{ft-gahp} to eliminate
-worrying error messages in the \condor{ft-gahp}'s log file.
+\item Changed Bosco's configuration of the \Condor{ft-gahp} to eliminate
+worrying error messages in the \Condor{ft-gahp}'s log file.
 \Ticket{6107}
 
 \item Fixed a bug that could cause a grid batch job submitted to PBS or
@@ -380,7 +398,7 @@ be written to the global event log.
 \Ticket{6100}
 
 \item Fixed a bug on execute machines that enable PID namespaces that
-would generate a spurious error message in the daemon log when condor\_off -fast was issued.
+    would generate a spurious error message in the daemon log when \Condor{off} -fast was issued.
 \Ticket{6137}
 
 \item Fixed a bug that could corrupt the job queue log file such that
