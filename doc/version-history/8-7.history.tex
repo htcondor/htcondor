@@ -97,6 +97,10 @@ was set to default to 100. It formerly had no default value.
 and \Condor{userprio}.
 \Ticket{5717}
 
+\item Added a new option \Opt{-cron} to \Condor{gpu\_discovery} that allows it to be
+used directly as an executable of a \Condor{startd} cron job.
+\Ticket{6012}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -115,6 +119,7 @@ distributed into the condor slots, resulting in much confusion.
 \item Improve audit log messages by including the connection ID and properly
 filtering out shadow and gridmanager modifications to the job queue log.
 \Ticket{6289}
+
 
 \end{itemize}
 
