@@ -106,6 +106,11 @@ and \Condor{userprio}.
 an HTCondor daemon needs to lookup the address of another daemon.
 \Ticket{6223}
 
+\item Reduced load on the \Condor{collector} by optimizing queries performed
+when using \condor{q} with several different command-line options such as
+\Opt{-submitter} and \Opt{-global}.
+\Ticket{6222}
+
 \item Added a new option \Opt{-cron} to \Condor{gpu\_discovery} that allows it to be
 used directly as an executable of a \Condor{startd} cron job.
 \Ticket{6012}
