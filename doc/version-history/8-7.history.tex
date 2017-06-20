@@ -102,6 +102,10 @@ was set to default to 100. It formerly had no default value.
 and \Condor{userprio}.
 \Ticket{5717}
 
+\item Reduced load on the \Condor{collector} by optimizing queries performed when
+an HTCondor daemon needs to lookup the address of another daemon.
+\Ticket{6223}
+
 \item Added a new option \Opt{-cron} to \Condor{gpu\_discovery} that allows it to be
 used directly as an executable of a \Condor{startd} cron job.
 \Ticket{6012}
