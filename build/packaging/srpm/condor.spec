@@ -1897,6 +1897,12 @@ fi
 %endif
 
 %changelog
+* Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.4-1
+- Python bindings are now available on MacOSX
+- Fixed a bug where PASSWORD authentication could fail to exchange keys
+- Pslot preemption now properly handles custom resources, such as GPUs
+- condor_submit now checks X.509 proxy expiration
+
 * Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
 - Fixed a bug where using an X.509 proxy might corrupt the job queue log
 - Fixed a memory leak in the Python bindings
