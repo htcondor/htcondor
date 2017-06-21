@@ -326,7 +326,6 @@ Requires: libcgroup >= 0.37
 %if %cream && ! %uw_build
 BuildRequires: glite-ce-cream-client-devel
 BuildRequires: glite-lbjp-common-gsoap-plugin-devel
-BuildRequires: glite-ce-cream-utils
 BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
@@ -699,15 +698,28 @@ Configures HTCondor to make an EC2 image annex-compatible.  Do NOT install
 on a non-EC2 image.
 
 %files annex-ec2
+%if %systemd
+%_libexecdir/condor/condor-annex-ec2
+%{_unitdir}/condor-annex-ec2.service
+%else
 %_initrddir/condor-annex-ec2
+%endif
 %config(noreplace) %_sysconfdir/condor/config.d/50ec2.config
 %config(noreplace) %_sysconfdir/condor/master_shutdown_script.sh
 
 %post annex-ec2
+%if %systemd
+/bin/systemctl enable condor-annex-ec2
+%else
 /sbin/chkconfig --add condor-annex-ec2
+%endif
 
 %preun annex-ec2
+%if %systemd
+/bin/systemctl disable condor-annex-ec2
+%else
 /sbin/chkconfig --del condor-annex-ec2 > /dev/null 2>&1 || :
+%endif
 
 %package all
 Summary: All condor packages in a typical installation
@@ -998,7 +1010,6 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
 # not packaging legacy cruft
 rm -f %{buildroot}/%{_mandir}/man1/condor_master_off.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
-rm -f %{buildroot}/%{_mandir}/man1/condor_convert_history.1
 
 # not packaging quill bits
 rm -f %{buildroot}/%{_mandir}/man1/condor_load_history.1
@@ -1015,14 +1026,17 @@ rm -rf %{buildroot}/%{_sysconfdir}/init.d
 mkdir -p %{buildroot}%{_tmpfilesdir}
 install -m 0644 %{buildroot}/etc/examples/condor-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
 
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_libexecdir}/condor/condor-annex-ec2
+
 mkdir -p %{buildroot}%{_unitdir}
+install -m 0644 %{buildroot}/etc/examples/condor-annex-ec2.service %{buildroot}%{_unitdir}/condor-annex-ec2.service
 install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 %else
 # install the lsb init script
-install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_initrddir}/condor-annex-ec2
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_initrddir}/condor-annex-ec2
 %if 0%{?osg} || 0%{?hcc}
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
 %endif
@@ -1291,6 +1305,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_cod.1.gz
 %_mandir/man1/condor_config_val.1.gz
+%_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
 %_mandir/man1/condor_dagman_metrics_reporter.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
@@ -1321,6 +1336,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%_mandir/man1/condor_top.1.gz
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
@@ -1372,7 +1388,6 @@ rm -rf %{buildroot}
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
 %_bindir/condor_stats
-%_bindir/condor_top.pl
 %_bindir/condor_version
 %_bindir/condor_history
 %_bindir/condor_status
@@ -1401,6 +1416,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
+%_sbindir/condor_convert_history
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
@@ -1667,6 +1683,7 @@ rm -rf %{buildroot}
 
 %files python
 %defattr(-,root,root,-)
+%_bindir/condor_top
 %_libdir/libpyclassad*.so
 %_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad.so
@@ -1828,11 +1845,11 @@ if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
-   /usr/sbin/semanage permissive -a condor_collector_t
-   /usr/sbin/semanage permissive -a condor_master_t
-   /usr/sbin/semanage permissive -a condor_negotiator_t
-   /usr/sbin/semanage permissive -a condor_procd_t
-   /usr/sbin/semanage permissive -a condor_schedd_t
+   /usr/sbin/semanage permissive -a -N condor_collector_t
+   /usr/sbin/semanage permissive -a -N condor_master_t
+   /usr/sbin/semanage permissive -a -N condor_negotiator_t
+   /usr/sbin/semanage permissive -a -N condor_procd_t
+   /usr/sbin/semanage permissive -a -N condor_schedd_t
    /usr/sbin/semanage permissive -a condor_startd_t
 fi
 %endif
@@ -1921,6 +1938,22 @@ fi
 %endif
 
 %changelog
+* Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-1
+- Improved condor_schedd performance by turning off file checks by default
+- condor_annex -status finds VM instances that have not joined the pool
+- Able to update an annex's lease without adding new instances
+- condor_annex now keeps a command log
+- condor_q produces an expanded multi-line summary
+- Automatically retry and/or resume http file transfers when appropriate
+- Reduced load on the condor_collector by optimizing queries
+- A python based condor_top tool
+
+* Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.4-1
+- Python bindings are now available on MacOSX
+- Fixed a bug where PASSWORD authentication could fail to exchange keys
+- Pslot preemption now properly handles custom resources, such as GPUs
+- condor_submit now checks X.509 proxy expiration
+
 * Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
 - Fixed a bug where using an X.509 proxy might corrupt the job queue log
 - Fixed a memory leak in the Python bindings

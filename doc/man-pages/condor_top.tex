@@ -1,0 +1,93 @@
+\begin{ManPage}{\label{man-condor-top}\Condor{top}}{1}
+{Display status and runtime statistics of a HTCondor daemon}
+
+\index{HTCondor commands!condor\_top}
+\index{condor\_top command}
+
+\Synopsis \SynProg{\Condor{top}}
+\oOpt{-h}
+
+\SynProg{\Condor{top}}
+\oOptArg{-p}{centralmanagerhostname[:portname]}
+\oOptArg{-n}{name}
+\oOptArg{-d}{delay}
+\oOptArg{-s}{sortcolumn}
+[\verb@--@\textbf{attrs=$<$attr1,attr2,...$>$}]
+\oArg{daemon options}
+
+\Description
+\Condor{top} displays the status (CPU time and memory usage) of
+and calculates and displays runtime statistics for
+a HTCondor daemon.
+\Condor{top} uses consecutive ClassAds
+to compute average runtimes and counts
+of the various commands
+worked on by the daemon.
+In the case that a \Condor{collector} is queried,
+the duty cycle and operations per second are also displayed.
+
+When no arguments are specified,
+\Condor{top} displays the \Condor{collector} status from \MacroNI{COLLECTOR\_HOST}.
+If the \Condor{collector} on \MacroNI{COLLECTOR\_HOST} returns multiple ClassAds,
+\Condor{top} displays stats from the first ClassAd returned.
+
+The default \Arg{delay} is \MacroNI{STATISTICS\_WINDOW\_QUANTUM},
+which is 4 minutes (240 seconds)
+in a default HTCondor configuration.
+Setting the delay smaller 
+can be helpful 
+for finding spikes of activity,
+but setting the delay too small
+will lead to inaccurate measurements
+of the \Condor{collector} duty cycle
+and of command counting rates.
+
+To exit \Condor{top},
+issue Ctrl-C.
+
+\begin{Options}
+
+    \OptItem{\Opt{-h}}
+            {Displays the list of options.}
+    \OptItem{\OptArg{-p}{centralmanagerhostname[:portname]}}
+            {Query the daemon via the specified central manager. If
+              omitted, the value of the configuration variable
+              \MacroNI{COLLECTOR\_HOST} is used.}
+    \OptItem{\OptArg{-n}{name}}
+            {Query the daemon named \Arg{name}. If omitted, the value
+              used will depend on the type of daemon queried (see
+              Daemon Options). If the named daemon returns multiple
+              ClassAds, the first ClassAd returned will be
+              monitored.}
+    \OptItem{\OptArg{-d}{delay}}
+            {Specifies the \Arg{delay} between ClassAd updates, in
+              integer seconds. If omitted, the value of the
+              configuration variable \MacroNI{STATISTICS\_WINDOW\_QUANTUM} is
+              used.}
+    \OptItem{\OptArg{-s}{sortcolumn}}
+            {Sort table by \Arg{sortcolumn}. Available columns: Runtime
+              (default), InstAvg, Avg, CountRate, Count, Max, Item}
+    \OptItem{\Opt{---attrs=$<$attr1,attr2,...$>$}}
+            {Comma-delimited list of additional ClassAd attributes
+              to monitor.}
+
+    \textbf{Daemon Options}
+    \OptItem{\Opt{---collector}}
+            {Monitor \Condor{collector} ClassAds. If -n is not set,
+              \MacroNI{COLLECTOR\_HOST} will be queried.}
+    \OptItem{\Opt{---master}}
+            {Monitor \Condor{master} ClassAds. If -n is not set,
+              \MacroNI{COLLECTOR\_HOST} will be queried.}
+    \OptItem{\Opt{---negotiator}}
+            {Monitor \Condor{negotiator} ClassAds. If -n is not set,
+              \MacroNI{COLLECTOR\_HOST} will be queried.}
+    \OptItem{\Opt{---schedd}}
+            {Monitor \Condor{schedd} ClassAds. If -n is not set,
+              \MacroNI{FULL\_HOSTNAME} will be queried.}
+    \OptItem{\Opt{---startd}}
+            {Monitor \Condor{startd} ClassAds. If -n is not set,
+              slot1@\MacroNI{FULL\_HOSTNAME} will be queried.}
+
+\end{Options}
+
+\end{ManPage}

@@ -31,6 +31,8 @@
 #include "dc_collector.h"
 #include "my_hostname.h"
 
+#include <algorithm>
+
 void
 usage( const char *cmd , const char * opt)
 {
@@ -247,6 +249,33 @@ int main( int argc, char *argv[] )
 	if(ads.Length() == 0) {
 		fprintf(stderr,"%s is empty\n",filename);
 		return 1;
+	}
+
+	// If the command is unspecified, guess.
+	if( command == -1 ) {
+		ads.Rewind();
+		ClassAd * c = ads.Next();
+		std::string myType;
+		c->LookupString( ATTR_MY_TYPE, myType );
+		if( myType.empty() ) {
+			fprintf( stderr, "MyType not set in ad, aborting.\n" );
+			return 1;
+		}
+		std::transform( myType.begin(), myType.end(), myType.begin(), toupper );
+
+		std::string commandString;
+		if( myType == "GENERIC" ) {
+			commandString = "UPDATE_AD_GENERIC";
+		} else {
+			formatstr( commandString, "UPDATE_%s_AD", myType.c_str() );
+		}
+
+		int commandInt = getCommandNum( commandString.c_str() );
+		if( commandInt == -1 ) {
+			dprintf( D_FULLDEBUG, "Unrecognized ad type '%s', using GENERIC.\n", myType.c_str() );
+			commandInt = UPDATE_AD_GENERIC;
+		}
+		command = commandInt;
 	}
 
 	CollectorList * collectors;

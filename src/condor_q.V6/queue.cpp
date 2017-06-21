@@ -887,6 +887,7 @@ enum {
 	QDO_JobGoodput,
 	QDO_JobGlobusInfo,
 	QDO_JobGridInfo,
+	QDO_JobGridEC2Info,
 	QDO_JobHold,
 	QDO_JobIO,
 	QDO_Factory,
@@ -1577,12 +1578,16 @@ processCommandLineArguments (int argc, const char *argv[])
 			current_run = true;
 		}
 		else
-		if (is_dash_arg_prefix(dash_arg, "grid", 2 )) {
+		if (is_dash_arg_colon_prefix(dash_arg, "grid", &pcolon, 2 )) {
 			// grid is a superset of globus, so we can't do grid if globus has been specifed
 			if ( ! dash_globus) {
 				dash_grid = true;
 				qdo_mode = QDO_JobGridInfo;
 				Q.addAND( "JobUniverse == 9" );
+
+				if( pcolon && strcmp( ++pcolon, "ec2" ) == 0 ) {
+					qdo_mode = QDO_JobGridEC2Info;
+				}
 			}
 		}
 		else
@@ -1801,7 +1806,7 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "run", "goodput", "globus", "grid", "hold", "io", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
+		const char * const amo[] = { "", "run", "goodput", "globus", "grid", "grid:ec2", "hold", "io", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
@@ -2987,6 +2992,7 @@ extern const char * const jobRuntime_PrintFormat;
 extern const char * const jobGoodput_PrintFormat;
 extern const char * const jobGlobus_PrintFormat;
 extern const char * const jobGrid_PrintFormat;
+extern const char * const jobGridEC2_PrintFormat;
 extern const char * const jobHold_PrintFormat;
 extern const char * const jobIO_PrintFormat;
 extern const char * const jobFactory_PrintFormat;
@@ -3038,17 +3044,18 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		const char * tag;
 		const char * fmt;
 	} info[] = {
-		{ QDO_JobNormal,    "",       jobDefault_PrintFormat },
-		{ QDO_JobRuntime,    "RUN",    jobRuntime_PrintFormat },
-		{ QDO_JobGoodput,    "GOODPUT",jobGoodput_PrintFormat },
-		{ QDO_JobGlobusInfo, "GLOBUS", jobGlobus_PrintFormat },
-		{ QDO_JobGridInfo,   "GRID",   jobGrid_PrintFormat },
-		{ QDO_JobHold,       "HOLD",   jobHold_PrintFormat },
-		{ QDO_JobIO,         "IO",	   jobIO_PrintFormat },
-		{ QDO_DAG,           "DAG",	   jobDAG_PrintFormat },
-		{ QDO_Factory,       "FACTORY", jobFactory_PrintFormat },
-		{ QDO_Totals,        "TOTALS", jobTotals_PrintFormat },
-		{ QDO_Progress,      "PROGRESS", jobProgress_PrintFormat },
+		{ QDO_JobNormal,      "",          jobDefault_PrintFormat },
+		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
+		{ QDO_JobGoodput,     "GOODPUT",  jobGoodput_PrintFormat },
+		{ QDO_JobGlobusInfo,  "GLOBUS",   jobGlobus_PrintFormat },
+		{ QDO_JobGridInfo,    "GRID",     jobGrid_PrintFormat },
+		{ QDO_JobGridEC2Info, "GRID_EC2", jobGridEC2_PrintFormat },
+		{ QDO_JobHold,        "HOLD",     jobHold_PrintFormat },
+		{ QDO_JobIO,          "IO",       jobIO_PrintFormat },
+		{ QDO_DAG,            "DAG",      jobDAG_PrintFormat },
+		{ QDO_Factory,        "FACTORY",  jobFactory_PrintFormat },
+		{ QDO_Totals,         "TOTALS",   jobTotals_PrintFormat },
+		{ QDO_Progress,       "PROGRESS", jobProgress_PrintFormat },
 		{ QDO_AutoclusterNormal, "AUTOCLUSTER", autoclusterNormal_PrintFormat },
 	};
 
@@ -5928,9 +5935,18 @@ const char * const jobGrid_PrintFormat = "SELECT\n"
 "   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
 "   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
 "   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER\n"
-"   JobStatus     AS STATUS          WIDTH -10 PRINTAS GRID_STATUS\n"
+"   GridJobStatus AS STATUS          WIDTH -10 PRINTAS GRID_STATUS\n"
 "   GridResource  AS 'GRID->MANAGER    HOST' WIDTH -27 PRINTAS GRID_RESOURCE\n"
 "   GridJobId     AS GRID_JOB_ID             WIDTH   0 PRINTAS GRID_JOB_ID\n"
+"SUMMARY NONE\n";
+
+const char * const jobGridEC2_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH    5 PRINTF  '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH    3 PRINTF  '%-3d'\n"
+"   Owner         AS OWNER           WIDTH  -14 PRINTAS OWNER\n"
+"   GridJobStatus AS STATUS          WIDTH  -10 PRINTAS GRID_STATUS\n"
+"   GridJobId     AS 'INSTANCE ID'   WIDTH AUTO PRINTAS GRID_JOB_ID\n"
+"   Cmd           AS CMD             WIDTH AUTO PRINTF  '%s'\n"
 "SUMMARY NONE\n";
 
 const char * const jobGlobus_PrintFormat = "SELECT\n"

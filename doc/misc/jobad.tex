@@ -907,6 +907,9 @@ the number, the greater (better) the priority.
 \item[\AdAttr{JobStartDate}:]  Time at which the job first began
 running.  Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+Due to a long standing bug in the 8.6 series and earlier, the job classad that is internal to the
+\Condor{startd} and \Condor{starter} sets this to the time that the job most
+recently began executing.  This bug is scheduled to be fixed in the 8.7 series.
 
 %%% ClassAd attribute: JobStatus
 \index{ClassAd job attribute!JobStatus}
@@ -1910,7 +1913,7 @@ This attribute is currently limited to apply only to Xen virtual machines.
 
 \end{description}
 
-\label{Job-ClassAd-DAGAttributes}
+\label{Job-ClassAd-DAGManAttributes}
 The following job ClassAd attributes appear in the job ClassAd
 only for the \Condor{dagman}
 job submitted under DAGMan.

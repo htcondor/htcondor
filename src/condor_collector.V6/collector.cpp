@@ -46,10 +46,8 @@
 
 #include "collector.h"
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 #include "CollectorPlugin.h"
-#endif
 #endif
 
 #include "ccb_server.h"
@@ -1081,10 +1079,8 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	CollectorPluginManager::Invalidate(command, cad);
-#endif
 #endif
 
 	if (viewCollectorTypes) {
@@ -1158,10 +1154,8 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	CollectorPluginManager::Update(command, *cad);
-#endif
 #endif
 
 	CollectorEngine_ru_plugins_runtime += rt.tick(rt_last);
@@ -1297,10 +1291,8 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 	if(cad)
     offline_plugin_.update ( command, *cad );
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
     CollectorPluginManager::Update ( command, *cad );
-#endif
 #endif
 
 	if (viewCollectorTypes) {

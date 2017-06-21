@@ -681,6 +681,7 @@ DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 		// This is a fast claim of a split dynamic resource
 		dedicated_scheduler.incrementSplitMatchCount();
 		if (dedicated_scheduler.getSplitMatchCount() > dedicated_scheduler.getResourceRequestSize()) {
+                        dprintf(D_FULLDEBUG, "Skipping further matches: (split match count) %d > %d (resource request size)\n", dedicated_scheduler.getSplitMatchCount(), dedicated_scheduler.getResourceRequestSize());
 			FreeJobAd( jobad );
 			return true;
 		}
@@ -1605,7 +1606,7 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 }
 
 
-void duplicate_partitionable_res(ResList*& resources) {
+void duplicate_partitionable_res(ResList*& resources, std::map<std::string, match_rec*> &pending_matches) {
     // This is a way to account for partitionable slots offering 
     // multiple cpus, that makes it easy to use slots fungably and also
     // avoids the need to make pervasive changes to memory 
@@ -1621,8 +1622,28 @@ void duplicate_partitionable_res(ResList*& resources) {
         res->LookupString(ATTR_NAME, resname);
         int ncpus=0;
         res->LookupInteger(ATTR_CPUS, ncpus);
-        dprintf(D_FULLDEBUG, "Duplicate x%d partitionable res %s\n", ncpus, resname.Value());
-        for (int j = 0;  j < ncpus;  ++j) dup_res->Append(res);
+        int ntotalcpus=0;
+        res->LookupInteger(ATTR_TOTAL_SLOT_CPUS, ntotalcpus);
+        if (ntotalcpus < ncpus) ntotalcpus = ncpus;
+        // Increase ncpus by the number of matches associated to this
+        // dynamic slot that haven't appeared in the idle slot list yet.
+        // This will prevent a successful match to a set of partitionable
+        // slots to turn into an unsuccessful match that will prevent further
+        // partitionable slots to be requested from the dynamic slot
+        // leftovers.
+        int npend=0;
+        MyString pname;
+        std::map<std::string, match_rec*>::const_iterator mr;
+        std::map<std::string, match_rec*>::const_iterator mre = pending_matches.end();
+        for (mr = pending_matches.begin(); mr != mre; ++mr) {
+            mr->second->my_match_ad->LookupString( ATTR_NAME, pname );
+            if (pname == resname) npend++;
+        }
+        int ndupl = ncpus + npend;
+        if (ndupl > ntotalcpus) ndupl = ntotalcpus;
+
+        dprintf(D_FULLDEBUG, "Duplicate x%d (%d/%d) partitionable res %s\n", ndupl, ncpus, npend, resname.Value());
+        for (int j = 0;  j < ndupl;  ++j) dup_res->Append(res);
     }
 
     delete resources;
@@ -1749,7 +1770,7 @@ DedicatedScheduler::sortResources( void )
 		EXCEPT("DedicatedScheduler got unknown status for match %d", mrec->status);
 	}
 
-    duplicate_partitionable_res(unclaimed_resources);
+    duplicate_partitionable_res(unclaimed_resources, pending_matches);
 
 	// If we are configured to steal claimed/idle matches from the serial
 	// scheduler, do so here
@@ -3481,6 +3502,7 @@ DedicatedScheduler::removeRequest( PROC_ID job_id )
 	{
 		if( *(id) == job_id ) {
 			resource_requests.erase( id );
+                        if (split_match_count > 0) split_match_count--;
 			break;
 		}
 	}
@@ -3542,6 +3564,10 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 void
 DedicatedScheduler::clearResourceRequests( void )
 {
+        // If a new set of resource requests is going to be generated
+        // make sure that scheduler_skipJob doesn'think that enough matches
+        // were found.
+        split_match_count = pending_matches.size();
 	resource_requests.clear();
 }
 

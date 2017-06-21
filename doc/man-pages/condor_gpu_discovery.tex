@@ -117,6 +117,15 @@ attribute names.
     An additional attribute is produced \Attr{NUM\_DETECTED\_GPUs} which
     is set to the number of GPUs detected.
   }
+  \OptItem{\Opt{-cron}} {
+    This option suppresses the \Attr{DetectedGpus} attribute so that the output
+    is suitable for use with \Condor{startd} cron.
+    Combine this option with the \Opt{-dynamic} option to periodically refresh the dynamic
+    Gpu information such as temperature. For example, to refresh GPU temperatures every 5 minutes
+  }
+  \begin{verbatim}
+  use FEATURE : StartdCronPeriodic(DYNGPUS, 5*60, $(LIBEXEC)/condor_gpu_discovery, -dynamic -cron)
+  \end{verbatim}
   \OptItem{\Opt{-verbose}} {
     For interactive use of the tool, output extra information to show 
     detection while in progress.
