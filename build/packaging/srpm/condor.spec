@@ -1336,6 +1336,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%_mandir/man1/condor_top.1.gz
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
@@ -1937,6 +1938,22 @@ fi
 %endif
 
 %changelog
+* Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-1
+- Improved condor_schedd performance by turning off file checks by default
+- condor_annex -status finds VM instances that have not joined the pool
+- Able to update an annex's lease without adding new instances
+- condor_annex now keeps a command log
+- condor_q produces an expanded multi-line summary
+- Automatically retry and/or resume http file transfers when appropriate
+- Reduced load on the condor_collector by optimizing queries
+- A python based condor_top tool
+
+* Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.4-1
+- Python bindings are now available on MacOSX
+- Fixed a bug where PASSWORD authentication could fail to exchange keys
+- Pslot preemption now properly handles custom resources, such as GPUs
+- condor_submit now checks X.509 proxy expiration
+
 * Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
 - Fixed a bug where using an X.509 proxy might corrupt the job queue log
 - Fixed a memory leak in the Python bindings
