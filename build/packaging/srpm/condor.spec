@@ -1940,7 +1940,9 @@ fi
 %changelog
 * Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-1
 - Improved condor_schedd performance by turning off file checks by default
-- Improvements to the HTCondor Annex
+- condor_annex -status finds VM instances that have not joined the pool
+- Able to update an annex's lease without adding new instances
+- condor_annex now keeps a command log
 - condor_q produces an expanded multi-line summary
 - Automatically retry and/or resume http file transfers when appropriate
 - Reduced load on the condor_collector by optimizing queries
