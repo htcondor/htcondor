@@ -1938,6 +1938,14 @@ fi
 %endif
 
 %changelog
+* Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-1
+- Improved condor_schedd performance by turning off file checks by default
+- Improvements to the HTCondor Annex
+- condor_q produces an expanded multi-line summary
+- Automatically retry and/or resume http file transfers when appropriate
+- Reduced load on the condor_collector by optimizing queries
+- A python based condor_top tool
+
 * Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.4-1
 - Python bindings are now available on MacOSX
 - Fixed a bug where PASSWORD authentication could fail to exchange keys
