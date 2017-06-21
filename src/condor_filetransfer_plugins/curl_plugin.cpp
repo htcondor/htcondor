@@ -30,10 +30,11 @@ static ClassAd* curl_stats;
 int main( int argc, char **argv ) {
     CURL* handle = NULL;
     ClassAd stats;
+    double end_time;
+    double start_time;
     int retry_count = 0;
     int rval = -1;
     int diagnostic = 0;
-    long start_time, end_time;
     MyString stats_string;
     UtcTime time;
 
@@ -65,8 +66,8 @@ int main( int argc, char **argv ) {
 
     // Initialize the stats structure
     init_stats( &stats, argv );
-    start_time = ( long ) time.getTimeDouble();
-    stats.Assign( "TRANSFER_START_TIME", start_time );
+    start_time = time.getTimeDouble();
+    stats.Assign( "TransferStartTime", start_time );
 
     // Enter the loop that will attempt/retry the curl request
     for(;;) {
@@ -103,8 +104,8 @@ int main( int argc, char **argv ) {
     }
 
     // Record some statistics
-    end_time = ( long ) time.getTimeDouble();   
-    stats.Assign( "TRANSFER_END_TIME", end_time );
+    end_time = time.getTimeDouble();   
+    stats.Assign( "TransferEndTime", end_time );
 
     // If the transfer was successful, output the statistics to stdout
     if( rval != -1 ) {
@@ -122,7 +123,7 @@ int main( int argc, char **argv ) {
 /*
     Perform the curl request, and output the results either to file to stdout.
 */
-int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats ) {
+int send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
  
     char error_buffer[CURL_ERROR_SIZE];
     char partial_range[20];
@@ -130,11 +131,11 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
     double bytes_uploaded; 
     double connected_time;
     double previous_connected_time;
-    double transfer_connection_time;
-    double transfer_total_time;
+    double Transferconnection_time;
+    double Transfertotal_time;
     FILE *file = NULL;
     long return_code;
-    long previous_total_bytes;
+    long previous_TotalBytes;
     int previous_tries;
     int rval = -1;
     static int partial_file = 0;
@@ -206,9 +207,9 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
             // curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
             
             // Gather some statistics
-            stats->Assign( "TRANSFER_TYPE", "download" );
-            stats->LookupInteger( "TRANSFER_TRIES", previous_tries );
-            stats->Assign( "TRANSFER_TRIES", previous_tries + 1 );
+            stats->Assign( "TransferType", "download" );
+            stats->LookupInteger( "TransferTries", previous_tries );
+            stats->Assign( "TransferTries", previous_tries + 1 );
 
             // Perform the curl request
             rval = curl_easy_perform( handle );
@@ -223,31 +224,31 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
             }
 
             // Gather more statistics
-            stats->LookupInteger( "TRANSFER_TOTAL_BYTES", previous_total_bytes );
+            stats->LookupInteger( "TransferTotalBytes", previous_TotalBytes );
             curl_easy_getinfo( handle, CURLINFO_SIZE_DOWNLOAD, &bytes_downloaded );
-            stats->Assign( "TRANSFER_TOTAL_BYTES", 
-                        ( long ) ( previous_total_bytes + bytes_downloaded ) );
+            stats->Assign( "TransferTotalBytes", 
+                        ( long ) ( previous_TotalBytes + bytes_downloaded ) );
 
-            stats->LookupFloat( "CONNECTION_TIME_SECONDS", previous_connected_time );
+            stats->LookupFloat( "ConnectionTimeSeconds", previous_connected_time );
             curl_easy_getinfo( handle, CURLINFO_CONNECT_TIME, 
-                            &transfer_connection_time );
-            curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &transfer_total_time );
+                            &Transferconnection_time );
+            curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &Transfertotal_time );
             connected_time = previous_connected_time + 
-                            ( transfer_total_time - transfer_connection_time );
-            stats->Assign( "CONNECTION_TIME_SECONDS", connected_time );
+                            ( Transfertotal_time - Transferconnection_time );
+            stats->Assign( "ConnectionTimeSeconds", connected_time );
             
             curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &return_code );
-            stats->Assign( "TRANSFER_RETURN_CODE", return_code );
+            stats->Assign( "TransferReturnCode", return_code );
 
 
             if( rval == CURLE_OK ) {
-                stats->Assign( "TRANSFER_SUCCESS", true );
-                stats->Delete( "TRANSFER_ERROR" );
-                stats->Assign( "TRANSFER_FILE_BYTES", ftell( file ) );
+                stats->Assign( "TransferSuccess", true );
+                stats->Delete( "TransferError" );
+                stats->Assign( "TransferFileBytes", ftell( file ) );
             }
             else {
-                stats->Assign( "TRANSFER_SUCCESS", false );
-                stats->Assign( "TRANSFER_ERROR", error_buffer );
+                stats->Assign( "TransferSuccess", false );
+                stats->Assign( "TransferError", error_buffer );
             }
 
             // Error handling and cleanup
@@ -298,38 +299,38 @@ int send_curl_request( char** argv, int diagnostic, CURL *handle, ClassAd* stats
             // curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
 
             // Gather some statistics
-            stats->Assign( "TRANSFER_TYPE", "upload" );
-            stats->LookupInteger( "TRANSFER_TRIES", previous_tries );
-            stats->Assign( "TRANSFER_TRIES", previous_tries + 1 );
+            stats->Assign( "TransferType", "upload" );
+            stats->LookupInteger( "TransferTries", previous_tries );
+            stats->Assign( "TransferTries", previous_tries + 1 );
 
             // Perform the curl request
             rval = curl_easy_perform( handle );
 
             // Gather more statistics
-            stats->LookupInteger( "TRANSFER_TOTAL_BYTES", previous_total_bytes );
+            stats->LookupInteger( "TransferTotalBytes", previous_TotalBytes );
             curl_easy_getinfo( handle, CURLINFO_SIZE_UPLOAD, &bytes_uploaded );
-            stats->Assign( "TRANSFER_TOTAL_BYTES", 
-                        ( long ) ( previous_total_bytes + bytes_uploaded ) );
+            stats->Assign( "TransferTotalBytes", 
+                        ( long ) ( previous_TotalBytes + bytes_uploaded ) );
 
-            stats->LookupFloat( "CONNECTION_TIME_SECONDS", previous_connected_time );
+            stats->LookupFloat( "ConnectionTimeSeconds", previous_connected_time );
             curl_easy_getinfo( handle, CURLINFO_CONNECT_TIME, 
-                            &transfer_connection_time );
-            curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &transfer_total_time );
+                            &Transferconnection_time );
+            curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &Transfertotal_time );
             connected_time = previous_connected_time + 
-                            ( transfer_total_time - transfer_connection_time );
-            stats->Assign( "CONNECTION_TIME_SECONDS", connected_time );
+                            ( Transfertotal_time - Transferconnection_time );
+            stats->Assign( "ConnectionTimeSeconds", connected_time );
             
             curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &return_code );
-            stats->Assign( "TRANSFER_RETURN_CODE", return_code );
+            stats->Assign( "TransferRETURN_CODE", return_code );
 
             if( rval == CURLE_OK ) {
-                stats->Assign( "TRANSFER_SUCCESS", true );    
-                stats->Delete( "TRANSFER_ERROR" );
-                stats->Assign( "TRANSFER_FILE_BYTES", ftell( file ) );
+                stats->Assign( "TransferSuccess", true );    
+                stats->Delete( "TransferError" );
+                stats->Assign( "TransferFileBytes", ftell( file ) );
             }
             else {
-                stats->Assign( "TRANSFER_SUCCESS", false );
-                stats->Assign( "TRANSFER_ERROR", error_buffer );
+                stats->Assign( "TransferSuccess", false );
+                stats->Assign( "TransferError", error_buffer );
             }
 
             // Error handling and cleanup
@@ -399,26 +400,27 @@ void init_stats( ClassAd* stats, char **argv ) {
     char* url_token;
     
     // Initial values
-    stats->Assign( "TRANSFER_TOTAL_BYTES", 0 );
-    stats->Assign( "TRANSFER_TRIES", 0 );
-    stats->Assign( "CONNECTION_TIME_SECONDS", 0 );
+    stats->Assign( "TransferTotalBytes", 0 );
+    stats->Assign( "TransferTries", 0 );
+    stats->Assign( "ConnectionTimeSeconds", 0 );
 
     // Set the transfer protocol. If it's not http, ftp and file, then just
     // leave it blank because this transfer will fail quickly.
     if ( !strncasecmp( request_url, "http://", 7 ) ) {
-        stats->Assign( "TRANSFER_PROTOCOL", "http" );
+        stats->Assign( "TransferProtocol", "http" );
     }
     else if ( !strncasecmp( request_url, "ftp://", 6 ) ) {
-        stats->Assign( "TRANSFER_PROTOCOL", "ftp" );
+        stats->Assign( "TransferProtocol", "ftp" );
     }
     else if ( !strncasecmp( request_url, "file://", 7 ) ) {
-        stats->Assign( "TRANSFER_PROTOCOL", "file" );
+        stats->Assign( "TransferProtocol", "file" );
     }
     
     // Set the request host name by parsing it out of the URL
+    stats->Assign( "TransferUrl", request_url );
     url_token = strtok( request_url, ":/" );
     url_token = strtok( NULL, "/" );
-    stats->Assign( "TRANSFER_HOST_NAME", url_token );
+    stats->Assign( "TransferHostName", url_token );
 
     // Cleanup and exit
     free( request_url );
@@ -439,8 +441,8 @@ static size_t header_callback( char *buffer, size_t size, size_t nitems ) {
         // X-Cache header provides details about cache hits
         if( strcmp ( token, "X-Cache:" ) == 0 ) {
             token = strtok(NULL, " ");
-            curl_stats->Assign( "HTTP_CACHE_HIT_OR_MISS", token );
-            curl_stats->Assign( "HTTP_USED_CACHE", true );
+            curl_stats->Assign( "HttpCacheHitOrMiss", token );
+            curl_stats->Assign( "HttpUsedCache", true );
         }
         // Via header provides details about cache host
         else if( strcmp ( token, "Via:" ) == 0 ) {
@@ -448,7 +450,7 @@ static size_t header_callback( char *buffer, size_t size, size_t nitems ) {
             token = strtok( NULL, " " );
             // Next comes the actual cache host
             token = strtok( NULL, " " );  
-            curl_stats->Assign( "HTTP_CACHE_HOST", token );
+            curl_stats->Assign( "HttpCacheHost", token );
         }
         token = strtok( NULL, " " );
     }

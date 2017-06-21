@@ -44,6 +44,7 @@
 #include "condor_url.h"
 #include "my_popen.h"
 #include <list>
+#include <fstream>
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -4285,25 +4286,62 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	return 0;
 }
 
-int FileTransfer::OutputFileTransferStats( ClassAd stats ) {
+int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 
-    // Setup an output file for statistics
-    FILE* stats_file;
+    // Read name of statistics file from params
+    std::string stats_file_path = param( "FILE_TRANSFER_STATS_LOG" );
 
-    // Setup the file path in separate lines to avoid memory allocation
-    // problems with the param() function.
-    std::string stats_file_path = param("LOCAL_DIR");
-    stats_file_path += "/log/curl_plugin_history";
+    // First, check for an existing statistics file. 
+    struct stat stats_file_buf;
+    int rc = stat( stats_file_path.c_str(), &stats_file_buf );
+    if( rc == 0 ) {
+        // If it already exists and is larger than 5 Mb, copy the contents 
+        // to a .old file. 
+        if( stats_file_buf.st_size > 5000000 ) {
+            std::string stats_file_old_path = param( "FILE_TRANSFER_STATS_LOG" );
+            stats_file_old_path += ".old";
 
-    stats_file = safe_fopen_wrapper_follow( stats_file_path.c_str(), "a+" );
+            std::ifstream stats_file_old_input( stats_file_path );
+            std::ofstream stats_file_old_output( stats_file_old_path, std::fstream::app );
 
-    // Write the statistics
+            std::string line;
+            dprintf(D_FULLDEBUG,"entering FileTransfer::SimpleInit\n");    
+            while( getline( stats_file_old_input, line ) ) {
+                stats_file_old_output << line << std::endl;
+            }
+
+            stats_file_old_input.close();
+            stats_file_old_output.close();
+
+            // Now delete the original stats file
+            unlink( stats_file_path.c_str() );
+            
+        }
+    }
+
+
+    // Add some new job-related statistics that were not available from
+    // the file transfer plugin.
+    int cluster_id;    
+    jobAd.LookupInteger( ATTR_CLUSTER_ID, cluster_id );
+   	stats.Assign( "JobClusterId", cluster_id );
+    
+    int proc_id;    
+    jobAd.LookupInteger( ATTR_PROC_ID, proc_id );
+   	stats.Assign( "JobProcId", proc_id );
+
+    MyString owner;
+    jobAd.LookupString( ATTR_OWNER, owner );
+    stats.Assign( "JobOwner", owner );
+
+    // Output statistics to file
     MyString stats_string;    
+    std::ofstream stats_file_output( stats_file_path, std::fstream::app );    
     sPrintAd( stats_string, stats );
-    fprintf( stats_file, "[\n%s]\n", stats_string.c_str() );
+    stats_file_output << stats_string.Value() << "***" << std::endl;    
 
     // All done, cleanup and return
-    fclose( stats_file );
+    stats_file_output.close();
     return 0;
 }
 
