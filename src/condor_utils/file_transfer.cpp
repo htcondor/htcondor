@@ -4304,8 +4304,7 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
             std::ifstream stats_file_old_input( stats_file_path );
             std::ofstream stats_file_old_output( stats_file_old_path, std::fstream::app );
 
-            std::string line;
-            dprintf(D_FULLDEBUG,"entering FileTransfer::SimpleInit\n");    
+            std::string line;    
             while( getline( stats_file_old_input, line ) ) {
                 stats_file_old_output << line << std::endl;
             }

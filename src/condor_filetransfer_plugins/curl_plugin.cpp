@@ -3,6 +3,8 @@
 #define CURL_STATICLIB // this has to match the way the curl library was built.
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
+#else
+#include "utc_time.h"
 #endif
 
 #include "condor_common.h"
@@ -10,7 +12,6 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "MyString.h"
-#include "utc_time.h"
 
 #include <curl/curl.h>
 #include <sys/stat.h>
