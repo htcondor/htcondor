@@ -32,7 +32,7 @@ The details of each version are described below.
 \Condor{dagman} and will cause unexpected behavior, including failing without
 warning. This is a top-priority issue which aim to resolve in an upcoming
 release.
-\Ticket{6274}
+\Ticket{6292}
 
 \end{itemize}
 
@@ -40,15 +40,16 @@ release.
 
 \begin{itemize}
 
-\item \Condor{q} will now show expanded totals when querying a \Condor{schedd} that is version 8.7.1 or later.
-The totals for the current user and for all users are provided by the \Condor{schedd}.
-To get the old totals display set the configuration parameter \MacroNI{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} to true.
-\Ticket{6254}
-
-\item Added a parameter \MacroNI{DEDICATED\_SCHEDULER\_USE\_SERIAL\_CLAIMS} which 
-defaults to false.  When true, allows the dedicated schedule to use claimed/idle
-slots that the serial scheduler has claimed.
-\Ticket{6276}
+\item Improved the performance of the \Condor{schedd} by setting the
+default for the knob \MacroNI{SUBMIT\_SKIP\_FILECHECKS} to true.  This prevents
+the \Condor{schedd} from checking the readability of all input files, and skips
+the creation of the output files on the submit side at submit time.
+Output files are now created either at transfer time, when file transfer
+is on, or by the job itself, if a shared filesystem is used.  As a result
+of this change, it is possible that a job will run to completion, and only
+then is put on hold because the output file on the submit machine cannot
+be written.
+\Ticket{6220}
 
 \item Changed \Condor{submit} to not create empty stdout and stderr files before
 submitting jobs by default.  This caused confusion for users, and slowed down
@@ -57,10 +58,10 @@ if it could not create this files, is available when the parameter
 \MacroNI{SUBMIT\_SKIP\_FILECHECKS} is set to false.  The default is now true.
 \Ticket{6220}
 
-\item The \Condor{advertise} tool now assumes an update command if one is not
-specified on the command-line and attempts to determine exact command by
-inspecting the first ad to be advertised.
-\Ticket{6296}
+\item \Condor{q} will now show expanded totals when querying a \Condor{schedd} that is version 8.7.1 or later.
+The totals for the current user and for all users are provided by the \Condor{schedd}.
+To get the old totals display set the configuration parameter \MacroNI{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} to true.
+\Ticket{6254}
 
 \item The \Condor{annex} tool now logs to the user configuration directory.  Added an
 audit log of \Condor{annex} commands and their results.
@@ -78,29 +79,11 @@ instances which are running but not in the pool.
 count), \Condor{annex} will now adjust the duration of the named annex.
 \Ticket{6161}
 
-\item With an empty configuration file, HTCondor would behave as if
-\MacroNI{ALLOW\_ADMINISTRATOR} were \Expr{*}.  Changed the default to
-\Expr{\$(CONDOR\_HOST)}, which is much less insecure.
-\Ticket{6230}
-
-\item Improved the performance of the \Condor{schedd} by setting the
-default for the knob SUBMIT\_SKIP\_FILECHECKS to true.  This prevents
-the \Condor{schedd} from checking the readability of all input files, and skips
-the creation of the output files on the submit side at submit time.
-Output files are now created either at transfer time, when file transfer
-is on, or by the job itself, if a shared filesystem is used.  As a result
-of this change, it is possible that a job runs to completion, and only
-then is put on hold because the output file on the submit machine cannot
-by written to.
-\Ticket{6220}
-
-\item The configuration variable \MacroNI{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
-was set to default to 100. It formerly had no default value.
-\Ticket{6260}
-
-\item Improved support for multiple negotiators in \Condor{collector}
-and \Condor{userprio}.
-\Ticket{5717}
+\item Job input files which are downloaded from http:// web addresses now
+have mechanisms to recover from transfer failures. This should increase the
+reliability of using web-based input files, especially under slow and/or
+unstable network conditions.
+\Ticket{5886}
 
 \item Reduced load on the \Condor{collector} by optimizing queries performed when
 an HTCondor daemon needs to look up the address of another daemon.
@@ -111,9 +94,28 @@ when using \condor{q} with several different command-line options such as
 \Opt{-submitter} and \Opt{-global}.
 \Ticket{6222}
 
+\item Added the \Condor{top} tool,
+an automated version of the now-defunct \Condor{top.pl}
+which uses the python bindings to monitor the status of daemons.
+\Ticket{6205}
+
 \item Added a new option \Opt{-cron} to \Condor{gpu\_discovery} that allows it to be
 used directly as an executable of a \Condor{startd} cron job.
 \Ticket{6012}
+
+\item The configuration variable \MacroNI{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
+was set to default to 100. It formerly had no default value.
+\Ticket{6260}
+
+\item Added a parameter \MacroNI{DEDICATED\_SCHEDULER\_USE\_SERIAL\_CLAIMS} which
+defaults to false.  When true, allows the dedicated schedule to use claimed/idle
+slots that the serial scheduler has claimed.
+\Ticket{6276}
+
+\item The \Condor{advertise} tool now assumes an update command if one is not
+specified on the command-line and attempts to determine exact command by
+inspecting the first ad to be advertised.
+\Ticket{6296}
 
 \item Improved support for running several \Condor{negotiator}s in a
 single pool.
@@ -129,16 +131,27 @@ an expression evaluated against the job ad, which specifies an alternate
 spool directory to use for files related to that job.
 \Ticket{6221}
 
-\item Added the \Condor{top} tool, 
-an automated version of the now-defunct \Condor{top.pl}
-which uses the python bindings to monitor the status of daemons.
-\Ticket{6205}
-
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item With an empty configuration file, HTCondor would behave as if
+\MacroNI{ALLOW\_ADMINISTRATOR} were \Expr{*}.  Changed the default to
+\Expr{\$(CONDOR\_HOST)}, which is much less insecure.
+\Ticket{6230}
+
+\item Fixed a bug in the \Condor{schedd} where it did not account for the initial state of
+late materialize jobs when calculating the running totals of jobs by state. This bug
+resulted in \Condor{q} displaying incorrect totals when \MacroNI{CONDOR\_Q\_SHOW\_OLD\_SUMMARY}
+was set to false.
+\Ticket{6272}
+
+\item Fixed a bug where the \Condor{schedd} would incorrectly try to check the
+validity of output files and directories for late materialize jobs. The \Condor{schedd}
+will now always skip file checks for late materialize jobs.
+\Ticket{6246}
 
 \item Changed the output of the \Condor{status} command so that the Load Average
 field now displays the load average of just the condor job running in that
@@ -146,23 +159,12 @@ slot.  Previously, load associated from outside of condor was proportionately
 distributed into the condor slots, resulting in much confusion.
 \Ticket{6225}
 
-\item Prohibited illegal chars ('+', '.') in DAGMan node names
+\item Illegal chars ('+', '.') are now prohibited in DAGMan node names.
 \Ticket{5966}
 
 \item Improve audit log messages by including the connection ID and properly
 filtering out shadow and gridmanager modifications to the job queue log.
 \Ticket{6289}
-
-\item Fixed a bug where the \Condor{schedd} would incorrectly try to check the
-validity of output files and directories for late materialize jobs. The \Condor{schedd}
-will now always skip file checks for late materialize jobs.
-\Ticket{6246}
-
-\item Fixed a bug in the \Condor{schedd} where it did not account for the initial state of
-late materialize jobs when calculating the running totals of jobs by state. This bug
-resulted in \Condor{q} displaying incorrect totals when \MacroNI{CONDOR\_Q\_SHOW\_OLD\_SUMMARY}
-was set to false.
-\Ticket{6272}
 
 \item \Condor{root\_switchboard} has been removed from the release, since
 PrivSep is no longer supported.
