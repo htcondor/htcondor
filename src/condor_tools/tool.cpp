@@ -131,6 +131,10 @@ usage( const char *str, int iExitCode )
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 	fprintf( stderr, 
 			 "    -all\t\tall hosts in your pool (overrides other targets)\n" );
+	fprintf( stderr,
+			 "    -annex-name <name>\tall annex hosts in the named annex\n" );
+	fprintf( stderr,
+			 "    -annex-slots\tall annex hosts in your pool\n" );
 	fprintf( stderr, "    hostname\t\tgiven host\n" );
 	fprintf( stderr, "    <ip.address:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr,
@@ -323,6 +327,7 @@ subsys_check( char* MyName )
 	subsys = (char*)1;
 }
 
+bool skipAfterAnnex = false;
 
 int
 main( int argc, char *argv[] )
@@ -624,16 +629,22 @@ main( int argc, char *argv[] )
 					if( strcmp( option, "-annex-name" ) == 0 ) {
 						if( argument ) {
 							formatstr( annexString, "AnnexName =?= \"%s\"", argument );
+							skipAfterAnnex = true;
 							++tmp;
 						} else {
 							fprintf( stderr, "ERROR: -annex-name requires an annex name\n" );
 							usage( NULL );
 						}
-					} else if( argument && argument[0] != '-' ) {
-						formatstr( annexString, "AnnexName =?= \"%s\"", argument );
-						++tmp;
-					} else {
+					} else if( strcmp( option, "-annex-slots" ) == 0 ) {
 						annexString = "AnnexName isnt undefined";
+					} else {
+						if( argument && argument[0] != '-' ) {
+							formatstr( annexString, "AnnexName =?= \"%s\"", argument );
+							skipAfterAnnex = true;
+							++tmp;
+						} else {
+							annexString = "AnnexName isnt undefined";
+						}
 					}
 
 					if( constraint && (! annexString.empty()) ) {
@@ -983,7 +994,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName,StringList & unresolved_names
 				//  -subsys XXX  (but not "-schedd" or "-startd")
 			switch( (*argv)[1] ) {
 			case 'a':
-				if( (*argv)[2] == 'n' ) {
+				if( (*argv)[2] == 'n' && skipAfterAnnex ) {
 					// this is -annex, skip the next one.
 					++argv;
 				}
