@@ -608,25 +608,39 @@ main( int argc, char *argv[] )
 						// We got a "-all", remember that
 					all = true;
 					break;
-				case 'n':
-					// We got -annex...
-					tmp++;
-					if( ! (tmp && *tmp) ) {
-						fprintf( stderr,
-								 "ERROR: -annex requires the annex name\n" );
-						usage( NULL );
-					}
-					formatstr( annexString, "AnnexName =?= \"%s\"", * tmp );
-					if( constraint ) {
-						formatstr( annexString, "(%s) && (%s)", constraint, annexString.c_str() );
-					}
-					constraint = annexString.c_str();
-
+				case 'n': {
+					// We got -annex*, all of which default to the master.
 					if( cmd == DAEMONS_OFF ) {
 						subsys_check( MyName );
 						dt = DT_MASTER;
 					}
-					break;
+
+					char * option = * tmp;
+					++tmp;
+					char * argument = NULL;
+					if( tmp ) { argument = * tmp; }
+					--tmp;
+
+					if( strcmp( option, "-annex-name" ) == 0 ) {
+						if( argument ) {
+							formatstr( annexString, "AnnexName =?= \"%s\"", argument );
+							++tmp;
+						} else {
+							fprintf( stderr, "ERROR: -annex-name requires an annex name\n" );
+							usage( NULL );
+						}
+					} else if( argument && argument[0] != '-' ) {
+						formatstr( annexString, "AnnexName =?= \"%s\"", argument );
+						++tmp;
+					} else {
+						annexString = "AnnexName isnt undefined";
+					}
+
+					if( constraint && (! annexString.empty()) ) {
+						formatstr( annexString, "(%s) && (%s)", constraint, annexString.c_str() );
+					}
+					constraint = annexString.c_str();
+					} break;
 				default:
 					fprintf( stderr, 
 							 "ERROR: unknown parameter: \"%s\"\n",
