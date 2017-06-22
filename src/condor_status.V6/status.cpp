@@ -1336,7 +1336,8 @@ usage ()
 
 	fprintf (stderr,"\n    and [query-opt] is one of\n"
 		"\t-absent\t\t\tPrint information about absent resources\n"
-		"\t-annex <name>\t\tPrint information about the named annex\n"
+		"\t-annex-name <name>\tPrint information about the named annex's slots\n"
+		"\t-annex-slots\t\tPrint information about any annex's slots\n"
 		"\t-avail\t\t\tPrint information about available resources\n"
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
@@ -1574,11 +1575,15 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 		} else
-		if (is_dash_arg_prefix (argv[i], "annex", 5)) {
+		if (is_dash_arg_prefix (argv[i], "annex-slots", 5)) {
+			// can add constraints on second pass only
+			if( argv[i + 1] && argv[i + 1][0] != '-' ) { ++i; }
+		} else
+		if (is_dash_arg_prefix (argv[i], "annex-name", 10)) {
 			// can add constraints on second pass only
 			i++;
 			if( ! argv[i] ) {
-				fprintf( stderr, "%s: -annex requires the annex name\n",
+				fprintf( stderr, "%s: -annex-name requires an annex name\n",
 						 myName );
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
@@ -2096,12 +2101,17 @@ secondPass (int argc, char *argv[])
 			if (diagnose) { printf ("[%s]\n", argv[i+1]); }
 			query->addANDConstraint (argv[i+1]);
 			i++;
-		} else if (is_dash_arg_prefix (argv[i], "annex", 5)) {
+		} else if( is_dash_arg_prefix( argv[i], "annex-slots", 5 ) ||
+		           is_dash_arg_prefix( argv[i], "annex-name", 10 ) ) {
 			std::string constraint;
-			formatstr( constraint, "AnnexName =?= \"%s\"", argv[i + 1] );
+			if( argv[i + 1] && (argv[i + 1][0] != '-' || is_dash_arg_prefix( argv[i], "annex-name", 10 )) ) {
+				formatstr( constraint, "AnnexName =?= \"%s\"", argv[i + 1] );
+				i++;
+			} else {
+				constraint = "AnnexName isnt undefined";
+			}
 			if (diagnose) { printf ("[%s]\n", constraint.c_str()); }
 			query->addANDConstraint (constraint.c_str());
-			i++;
 		}
 	}
 }
