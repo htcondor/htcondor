@@ -1418,8 +1418,8 @@ struct Schedd {
 		}
 	} else if (since_exprtree_extract.check()) {
 		since_expr_copy = since_exprtree_extract().get()->Copy();
-	} else {
-		// it's ok for since argument to be an empty object.
+	} else if (since.ptr() != Py_None) {
+		THROW_EX(ValueError, "invalid since argument");
 	}
 
 
