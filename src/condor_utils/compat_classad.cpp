@@ -62,6 +62,19 @@ static StringList ClassAdUserLibs;
 static void registerClassadFunctions();
 static void classad_debug_dprintf(const char *s);
 
+// The Windows compiler doesn't like this C++11 style of object
+// initialization.
+#if !defined(WIN32)
+classad::References ClassAdPrivateAttrs = { ATTR_CAPABILITY,
+		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
+		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
+#else
+static const std::string private_attrs[] = { ATTR_CAPABILITY,
+		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
+		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
+classad::References ClassAdPrivateAttrs( private_attrs, private_attrs + COUNTOF(private_attrs) );
+#endif
+
 bool ClassAd::m_initConfig = false;
 bool ClassAd::m_strictEvaluation = false;
 
@@ -1886,36 +1899,7 @@ int CondorClassAdListWriter::writeFooter(FILE* out, bool xml_always_write_header
 bool
 ClassAdAttributeIsPrivate( char const *name )
 {
-	if( strcasecmp(name,ATTR_CLAIM_ID) == 0 ) {
-			// This attribute contains the secret capability cookie
-		return true;
-	}
-	if( strcasecmp(name,ATTR_PAIRED_CLAIM_ID) == 0 ) {
-			// This attribute contains the secret capability cookie
-		return true;
-	}
-	if( strcasecmp(name,ATTR_CAPABILITY) == 0 ) {
-			// This attribute contains the secret capability cookie
-		return true;
-	}
-	if( strcasecmp(name,ATTR_CLAIM_IDS) == 0 ) {
-			// This attribute contains secret capability cookies
-		return true;
-	}
-	if( strcasecmp(name,ATTR_TRANSFER_KEY) == 0 ) {
-			// This attribute contains the secret file transfer cookie
-		return true;
-	}
-	if (strcasecmp(name,ATTR_CHILD_CLAIM_IDS) == 0) {
-			// In a partitionable slot, contains all the claim ids
-		return true;
-	}
-	if (strcasecmp(name,ATTR_CLAIM_ID_LIST) == 0) {
-			// In a partitionable slot with consumption policies,
-			// contains extra claim ids
-		return true;
-	}
-	return false;
+	return ClassAdPrivateAttrs.find( name ) != ClassAdPrivateAttrs.end();
 }
 
 bool ClassAd::Insert( const std::string &attrName, classad::ExprTree *& expr)
