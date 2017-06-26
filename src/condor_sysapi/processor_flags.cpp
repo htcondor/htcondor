@@ -137,7 +137,7 @@ const struct sysapi_cpuinfo *sysapi_processor_flags( void ) {
     }
 
     /* Which flags do we care about?  You MUST terminate this list with NULL. */
-    static const char * const flagNames[] = { "avx", "avx512", "ssse3", "sse4_1", "sse4_2", NULL };
+    static const char * const flagNames[] = { "avx", "avx2", "avx512", "ssse3", "sse4_1", "sse4_2", NULL };
 
     /* Do some memory-allocation math. */
     int numFlags = 0;
