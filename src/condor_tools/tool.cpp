@@ -636,14 +636,14 @@ main( int argc, char *argv[] )
 							usage( NULL );
 						}
 					} else if( strcmp( option, "-annex-slots" ) == 0 ) {
-						annexString = "AnnexName isnt undefined";
+						annexString = "IsAnnex";
 					} else {
 						if( argument && argument[0] != '-' ) {
 							formatstr( annexString, "AnnexName =?= \"%s\"", argument );
 							skipAfterAnnex = true;
 							++tmp;
 						} else {
-							annexString = "AnnexName isnt undefined";
+							annexString = "IsAnnex";
 						}
 					}
 

@@ -2108,7 +2108,7 @@ secondPass (int argc, char *argv[])
 				formatstr( constraint, "AnnexName =?= \"%s\"", argv[i + 1] );
 				i++;
 			} else {
-				constraint = "AnnexName isnt undefined";
+				constraint = "IsAnnex";
 			}
 			if (diagnose) { printf ("[%s]\n", constraint.c_str()); }
 			query->addANDConstraint (constraint.c_str());
