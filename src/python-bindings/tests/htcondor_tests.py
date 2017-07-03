@@ -413,7 +413,7 @@ class TestPythonBindings(WithDaemons):
                         ctrs[pos] += 1
                     except StopIteration:
                         iters.remove((it, pos))
-            print ctrs
+            print(ctrs)
             if ctrs[0] == 0:
                 break
             if i % 2 == 0:
@@ -429,13 +429,13 @@ class TestPythonBindings(WithDaemons):
         ads = []
         cluster = schedd.submit(submit_ad, 300, False, ads)
         ads = schedd.xquery("ClusterId == %d" % cluster)
-        print str(datetime.datetime.now())
-        print str(datetime.datetime.now())
+        print(str(datetime.datetime.now()))
+        print(str(datetime.datetime.now()))
         schedd.act(htcondor.JobAction.Remove, "ClusterId == %d" % cluster)
         time.sleep(3)
-        print str(datetime.datetime.now())
-        print len(list(ads))
-        print str(datetime.datetime.now())
+        print(str(datetime.datetime.now()))
+        print(len(list(ads)))
+        print(str(datetime.datetime.now()))
 
     def testScheddNonblockingQueryCount(self):
         os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
@@ -450,7 +450,7 @@ class TestPythonBindings(WithDaemons):
             ads = schedd.query("true")
         #print ads
         for i in range(1, 60):
-            print "Testing querying %d jobs in queue." % i
+            print("Testing querying %d jobs in queue." % i)
             schedd.submit(submit_ad, i, True, ads)
             ads = schedd.query("true", ["ClusterID", "ProcID"])
             ads2 = list(schedd.xquery("true", ["ClusterID", "ProcID", "a1", "a2", "a3", "a4"]))
