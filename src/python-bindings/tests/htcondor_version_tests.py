@@ -34,7 +34,7 @@ class TestClassadExtensions(unittest.TestCase):
         user = pw.pw_name
         home = pw.pw_dir
 
-	htcondor.param['CLASSAD_ENABLE_USER_HOME'] = 'true'
+        htcondor.param['CLASSAD_ENABLE_USER_HOME'] = 'true'
         self.assertRaises(TypeError, classad.ExprTree('userHome()').eval)
         self.assertRaises(TypeError, classad.ExprTree('userHome("a", "b", "c")').eval)
         self.assertEquals(classad.ExprTree('userHome("", "")').eval(), classad.Value.Undefined)
@@ -47,8 +47,8 @@ class TestClassadExtensions(unittest.TestCase):
         self.assertEquals(classad.ExprTree('userHome(undefined, "foo")').eval(), "foo")
         self.assertEquals(classad.ExprTree('userHome(1, "foo")').eval(), "foo")
         self.assertEquals(classad.ExprTree('userHome(1)').eval(), classad.Value.Error)
-	htcondor.param['CLASSAD_ENABLE_USER_HOME'] = 'false'
-	self.assertEquals(classad.ExprTree('userHome(%s)' % classad.quote(user)).eval(), classad.Value.Undefined)
+        htcondor.param['CLASSAD_ENABLE_USER_HOME'] = 'false'
+        self.assertEquals(classad.ExprTree('userHome(%s)' % classad.quote(user)).eval(), classad.Value.Undefined)
 
 
 class TestVersion(unittest.TestCase):
