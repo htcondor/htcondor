@@ -118,6 +118,13 @@ ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &
 		ClassAd *front = NULL;		
 		while ( front == NULL ) {
 			if ( m_ads.empty() ) {
+				// The prefetch of RRLs saw a NO_MORE_JOBS from the schedd.
+				// Don't ask the schedd for more jobs once m_ads is empty.
+				// Keep checking this, as we may be throwing out ads in
+				// m_ads because they're in rejected autoclusters.
+				if ( m_send_end_negotiate ) {
+					return false;
+				}
 				// No more requests stashed in our list, so go over the wire
 				// to the schedd and ask for more.
 				if ( m_clear_rejected_autoclusters ) {
