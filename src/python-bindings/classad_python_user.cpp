@@ -48,7 +48,11 @@ extern "C"
     {
         if (!Py_IsInitialized())
         {
+#if PY_MAJOR_VERSION >= 3
+            wchar_t pname[] = L"htcondor";
+#else
             char pname[] = "htcondor";
+#endif
             Py_SetProgramName(pname);
             Py_InitializeEx(0);
         }

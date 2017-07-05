@@ -69,7 +69,11 @@ PythonCollectorPlugin::initialize()
 {
     if (!Py_IsInitialized())
     {
+#if PY_MAJOR_VERSION >= 3
+        wchar_t pname[] = L"condor_collector";
+#else
         char pname[] = "condor_collector";
+#endif
         Py_SetProgramName(pname);
         Py_InitializeEx(0);
     }
