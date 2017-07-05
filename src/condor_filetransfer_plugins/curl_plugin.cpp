@@ -1,21 +1,12 @@
-#ifdef WIN32
-#include <windows.h>
-#define CURL_STATICLIB // this has to match the way the curl library was built.
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-#else
+#include "condor_common.h"
+#include "condor_classad.h"
 #include "utc_time.h"
+
+#ifdef WIN32
+#define CURL_STATICLIB // this has to match the way the curl library was built.
 #endif
 
-#include "condor_common.h"
-#include "condor_config.h"
-#include "condor_debug.h"
-#include "condor_classad.h"
-#include "MyString.h"
-
 #include <curl/curl.h>
-#include <sys/stat.h>
-#include <string.h>
 
 #define MAX_RETRY_ATTEMPTS 20
 
