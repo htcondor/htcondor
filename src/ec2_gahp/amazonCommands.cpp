@@ -1676,7 +1676,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     for( int i = 18; i < argc; ++i ) {
         if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
             ++which;
-            positionInList = 0;
+            positionInList = 1;
             continue;
         }
 
@@ -2693,6 +2693,8 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
             if( vsud->inTagSet ) {
             	if( vsud->tagKey == "aws:ec2spot:fleet-request-id" ) {
             		vsud->currentResult->spotFleetRequestID = vsud->tagValue;
+            	} else if( vsud->tagKey == "htcondor:AnnexName" ) {
+            		vsud->currentResult->annexName = vsud->tagValue;
             	}
             	vsud->tagKey.erase();
             	vsud->tagValue.erase();
@@ -2790,6 +2792,11 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
     saRequest.secretKeyFile = argv[4];
     saRequest.query_parameters[ "Action" ] = "DescribeInstances";
 
+	if( argc >= 7 && strcmp( argv[5], NULLSTRING ) && strcmp( argv[6], NULLSTRING ) ) {
+		saRequest.query_parameters[ "Filter.1.Name" ] = argv[5];
+		saRequest.query_parameters[ "Filter.1.Value.1" ] = argv[6];
+	}
+
     // Send the request.
     if( ! saRequest.SendRequest() ) {
         result_string = create_failure_result( requestID,
@@ -2810,6 +2817,7 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
                 resultList.append( nullStringIfEmpty( asr.public_dns ) );
                 resultList.append( nullStringIfEmpty( asr.spotFleetRequestID ) );
+                resultList.append( nullStringIfEmpty( asr.annexName ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }

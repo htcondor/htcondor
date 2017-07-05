@@ -15,6 +15,7 @@ GetInstances::operator() () {
 	StringList returnStatus;
 	int rc = gahp->ec2_vm_status_all(
 		service_url, public_key_file, secret_key_file,
+		"tag-key", "htcondor:AnnexName",
 		returnStatus, errorCode
 	);
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -39,8 +40,8 @@ GetInstances::operator() () {
 		}
 
 		returnStatus.rewind();
-		ASSERT( returnStatus.number() % 7 == 0 );
-		for( int i = 0; i < returnStatus.number(); i += 7 ) {
+		ASSERT( returnStatus.number() % 8 == 0 );
+		for( int i = 0; i < returnStatus.number(); i += 8 ) {
 			std::string instanceID = returnStatus.next();
 			std::string status = returnStatus.next();
 			std::string clientToken = returnStatus.next();
@@ -48,14 +49,18 @@ GetInstances::operator() () {
 			std::string stateReasonCode = returnStatus.next();
 			std::string publicDNSName = returnStatus.next();
 			std::string spotFleetRequestID = returnStatus.next();
+			std::string annexName = returnStatus.next();
 
-			// We could probably be a little more cautious about this match,
-			// but this has the nice property that we can use the same code
-			// for looking up both bulk request IDs and annex names.  (AWS
-			// can't filter on regexes or prefixes.)
-			if( (clientToken.find( annexID ) != 0)
-			 && (spotFleetRequestIDs.count( spotFleetRequestID ) == 0) ) {
-				continue;
+			// If we're looking for a specific annex's instances, filter.
+			if(! annexID.empty()) {
+				// Since SFR instances won't be tagged with their annex names
+				// until AWS introduces that feature sometime in 2017, we
+				// check and see if the instance is one belonging to a SFR
+				// whose client token starts with the annex ID.
+				if( annexName != annexID
+				 && spotFleetRequestIDs.count( spotFleetRequestID ) == 0 ) {
+					continue;
+				}
 			}
 
 			formatstr( iName, "Instance%d", count++ );
@@ -65,6 +70,7 @@ GetInstances::operator() () {
 			scratchpad->Assign( (iName + ".keyName").c_str(), keyName );
 			scratchpad->Assign( (iName + ".stateReasonCode").c_str(), stateReasonCode );
 			scratchpad->Assign( (iName + ".publicDNSName").c_str(), publicDNSName );
+			scratchpad->Assign( (iName + ".annexName").c_str(), annexName );
 		}
 
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );

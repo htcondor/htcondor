@@ -280,7 +280,58 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
                 break;
 
             default:
-                if( (result->argc - 2) % 7 != 0 ) { EXCEPT( "Bad %s result", command ); }
+                if( (result->argc - 2) % 8 != 0 ) { EXCEPT( "Bad %s result", command ); }
+                for( int i = 2; i < result->argc; ++i ) {
+                    returnStatus.append( result->argv[i] );
+                }
+                returnStatus.rewind();
+                break;
+        }
+
+		delete result;
+		return rc;
+	} else {
+		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
+	}
+}
+
+int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
+                                      const std::string & publickeyfile,
+                                      const std::string & privatekeyfile,
+                                      const std::string & filterName,
+                                      const std::string & filerValue,
+                                      StringList & returnStatus,
+                                      std::string & error_code )
+{
+    static const char * command = "EC2_VM_STATUS_ALL";
+
+	// callGahpFunction() checks if this command is supported.
+	CHECK_COMMON_ARGUMENTS;
+
+	Gahp_Args * result = NULL;
+	std::vector< YourString > arguments;
+	PUSH_COMMON_ARGUMENTS;
+	arguments.push_back( filterName );
+	arguments.push_back( filerValue );
+	int cgf = callGahpFunction( command, arguments, result, high_prio );
+	if( cgf != 0 ) { return cgf; }
+
+	if ( result ) {
+		int rc = atoi(result->argv[1]);
+
+		switch( result->argc ) {
+		    case 2:
+		        if( rc != 0 ) { EXCEPT( "Bad %s result", command ); }
+		        break;
+
+		    case 4:
+		        if( rc == 0 ) { EXCEPT( "Bad %s result", command ); }
+    		    error_code = result->argv[2];
+	    	    error_string = result->argv[3];
+                break;
+
+            default:
+                if( (result->argc - 2) % 8 != 0 ) { EXCEPT( "Bad %s result", command ); }
                 for( int i = 2; i < result->argc; ++i ) {
                     returnStatus.append( result->argv[i] );
                 }

@@ -95,7 +95,68 @@ printClassAds( unsigned count, const std::map< std::string, std::string > & inst
 }
 
 void
-printHumanReadable( unsigned count, const std::map< std::string, std::string > & instances, const std::string & ) {
+printHumanReadableSummary( unsigned,
+					std::map< std::string, std::string > & instances,
+					std::map< std::string, std::string > & annexes ) {
+
+	std::set< std::string > statuses;
+	std::map< std::string, unsigned > total;
+	std::map< std::string, std::map< std::string, unsigned > > output;
+	for( auto i = annexes.begin(); i != annexes.end(); ++i ) {
+		const std::string & annexName = i->second;
+		const std::string & instanceID = i->first;
+
+		ASSERT( instances.count( instanceID ) > 0 );
+		const std::string & status = instances[ instanceID ];
+		statuses.insert( status );
+
+		if( output.count( annexName ) == 0
+		 || output[ annexName ].count( status ) == 0 ) {
+			output[ annexName ][ status ] = 0;
+		}
+		output[ annexName ][ instances[ instanceID ] ] += 1;
+
+		if( total.count( annexName ) == 0 ) {
+			total[ annexName ] = 0;
+		}
+		total[ annexName ] += 1;
+	}
+
+	fprintf( stdout, "%-27.27s %5.5s", "NAME", "TOTAL" );
+	for( auto i = statuses.begin(); i != statuses.end(); ++i ) {
+		fprintf( stdout, " %s", i->c_str() );
+	}
+	fprintf( stdout, "\n" );
+
+	for( auto i = total.begin(); i != total.end(); ++i ) {
+		unsigned annexTotal = i->second;
+		const std::string & annexName = i->first;
+
+		fprintf( stdout, "%-27.27s %5u", annexName.c_str(), annexTotal );
+		for( auto j = statuses.begin(); j != statuses.end(); ++j ) {
+			auto & as = output[ annexName ];
+			const std::string & status = * j;
+
+			if( as.count( status ) == 0 ) {
+				fprintf( stdout, " %*s", status.length(), "0" );
+			} else {
+				fprintf( stdout, " %*d", status.length(), as[ status ] );
+			}
+		}
+		fprintf( stdout, "\n" );
+	}
+}
+
+void
+printHumanReadable( unsigned count,
+					std::map< std::string, std::string > & instances,
+					const std::string & annexID,
+					std::map< std::string, std::string > & annexes ) {
+	if( annexID.empty() ) {
+		printHumanReadableSummary( count, instances, annexes );
+		return;
+	}
+
 	std::string auditString;
 
 	std::map< std::string, unsigned > statusCounts;
@@ -158,6 +219,7 @@ StatusReply::operator() () {
 		CAResult result = getCAResultNum( resultString.c_str() );
 
 		if( result == CA_SUCCESS ) {
+			std::map< std::string, std::string > annexes;
 			std::map< std::string, std::string > instances;
 
 			std::string iName;
@@ -176,21 +238,38 @@ StatusReply::operator() () {
 				scratchpad->LookupString( (iName + ".status").c_str(), status );
 				ASSERT(! status.empty());
 				instances[ instanceID ] = status;
-			} while( true );
 
-			if( count == 0 ) {
-				dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "Found no machines in that annex.\n" );
-				fprintf( stdout, "Found no machines in that annex.\n" );
-				goto cleanup;
-			}
+				std::string annexName;
+				scratchpad->LookupString( (iName + ".annexName").c_str(), annexName );
+				// Spot instances don't have an annexName yet.
+				// ASSERT(! annexName.empty() );
+				annexes[ instanceID ] = annexName;
+			} while( true );
 
 			std::string annexID, annexName;
 			scratchpad->LookupString( "AnnexID", annexID );
 			annexName = annexID.substr( 0, annexID.find( "_" ) );
 
+			if( count == 0 ) {
+				std::string errorString;
+				if( annexName.empty() ) {
+					errorString = "Found no instances in any annex.";
+				} else {
+					errorString = "Found no machines in that annex.";
+				}
+
+				dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", errorString.c_str() );
+				fprintf( stdout, "%s\n", errorString.c_str() );
+				goto cleanup;
+			}
+
 			CondorQuery q( STARTD_AD );
 			std::string constraint;
-			formatstr( constraint, "AnnexName == \"%s\"", annexName.c_str() );
+			if( annexName.empty() ) {
+				formatstr( constraint, "IsAnnex" );
+			} else {
+				formatstr( constraint, "AnnexName == \"%s\"", annexName.c_str() );
+			}
 			q.addANDConstraint( constraint.c_str() );
 
 			ClassAdList cal;
@@ -213,7 +292,7 @@ StatusReply::operator() () {
 			if( wantClassAds ) {
 				printClassAds( count, instances, annexID, command );
 			} else {
-				printHumanReadable( count, instances, annexID );
+				printHumanReadable( count, instances, annexID, annexes );
 			}
 		} else {
 			std::string errorString;

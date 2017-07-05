@@ -690,6 +690,35 @@ void dumpParam( const char * attribute, int defaultValue ) {
 	dprintf( D_AUDIT | D_NOHEADER, "%s = %d\n", attribute, value );
 }
 
+int
+condor_status( int argc, char ** argv ) {
+	std::string csPath = argv[0];
+	csPath.replace( csPath.find( "condor_annex" ), strlen( "condor_annex" ), "condor_status" );
+
+	char ** csArgv = (char **)malloc( (argc + 2) * sizeof(char *) );
+	if( csArgv == NULL ) { return 2; }
+
+	csArgv[0] = strdup( csPath.c_str() );
+	if( csArgv[0] == NULL ) { return 2; }
+
+	csArgv[1] = strdup( "-annex" );
+	if( csArgv[1] == NULL ) { return 2; }
+
+	csArgv[2] = strdup( "-compact" );
+	if( csArgv[2] == NULL ) { return 2; }
+
+	for( int i = 2; i < argc; ++i ) {
+		csArgv[i + 1] = argv[i];
+	}
+	csArgv[argc + 1] = NULL;
+
+	if( csPath[0] == '/' ) {
+		return execv( csPath.c_str(), csArgv );
+	} else {
+		return execvp( csPath.c_str(), csArgv );
+	}
+}
+
 int _argc;
 char ** _argv;
 
@@ -732,6 +761,11 @@ annex_main( int argc, char ** argv ) {
 		at_odi = 2
 	};
 	annex_t annexType = at_none;
+
+	// Check for git-style subcommands.
+	if( strcmp( argv[1], "status" ) == 0 ) {
+		return condor_status( argc, argv );
+	}
 
 	long int unclaimedTimeout = 0;
 	bool unclaimedTimeoutSpecified = false;
@@ -1175,7 +1209,6 @@ annex_main( int argc, char ** argv ) {
 	switch( theCommand ) {
 		case ct_create_annex:
 		case ct_update_annex:
-		case ct_status:
 			if( annexName == NULL ) {
 				fprintf( stderr, "%s: you must specify -annex-name.\n", argv[0] );
 				return 1;
