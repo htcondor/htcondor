@@ -143,7 +143,7 @@ class WithDaemons(unittest.TestCase):
             pid, exit_status = os.waitpid(self.pid, 0)
             self.assertTrue(os.WIFEXITED(exit_status))
             code = os.WEXITSTATUS(exit_status)
-            self.assertEquals(code, 0)
+            self.assertEqual(code, 0)
 
     def waitLocalDaemon(self, daemon, timeout=5):
         address_file = htcondor.param[daemon + "_ADDRESS_FILE"]
@@ -177,7 +177,7 @@ class TestPythonBindings(WithDaemons):
         coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
         rparam = htcondor.RemoteParam(coll_ad)
         self.assertTrue("FOO" in rparam)
-        self.assertEquals(rparam["FOO"], "BAR")
+        self.assertEqual(rparam["FOO"], "BAR")
         self.assertTrue(len(rparam.keys()) > 100)
 
     def testRemoteSetParam(self):
@@ -196,7 +196,7 @@ class TestPythonBindings(WithDaemons):
         rparam2 = htcondor.RemoteParam(coll_ad)
         self.assertTrue(rparam2.get("FOO"))
         self.assertTrue("FOO" in rparam2)
-        self.assertEquals(rparam2["FOO"], "BAR")
+        self.assertEqual(rparam2["FOO"], "BAR")
         del rparam["FOO"]
         rparam2.refresh()
         htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
@@ -211,14 +211,14 @@ class TestPythonBindings(WithDaemons):
         coll = htcondor.Collector()
         coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
         self.assertTrue("MyAddress" in coll_ad)
-        self.assertEquals(coll_ad["Name"].split(":")[-1], os.environ["_condor_PORT"])
+        self.assertEqual(coll_ad["Name"].split(":")[-1], os.environ["_condor_PORT"])
 
     def testLocateList(self):
         self.launch_daemons(["COLLECTOR"])
         coll = htcondor.Collector()
         coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
         self.assertTrue("MyAddress" in coll_ad)
-        self.assertEquals(coll_ad["Name"].split(":")[-1], os.environ["_condor_PORT"])
+        self.assertEqual(coll_ad["Name"].split(":")[-1], os.environ["_condor_PORT"])
         # Make sure we can pass a list of addresses
         coll = htcondor.Collector(["collector.example.com", coll_ad['Name']])
         coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
@@ -230,14 +230,14 @@ class TestPythonBindings(WithDaemons):
         remote_ad = self.waitRemoteDaemon(htcondor.DaemonTypes.Collector, "%s@%s" % (htcondor.param["COLLECTOR_NAME"], htcondor.param["CONDOR_HOST"]))
         remote_address = remote_ad["MyAddress"].split(">")[0].split("?")[0].lower()
         coll_address = coll_ad["MyAddress"].split(">")[0].split("?")[0].lower()
-        self.assertEquals(remote_address, coll_address)
+        self.assertEqual(remote_address, coll_address)
 
     def testScheddLocate(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR"])
         coll = htcondor.Collector()
         name = "%s@%s" % (htcondor.param["SCHEDD_NAME"], htcondor.param["CONDOR_HOST"])
         schedd_ad = self.waitRemoteDaemon(htcondor.DaemonTypes.Schedd, name, timeout=10)
-        self.assertEquals(schedd_ad.eval("Name").lower(), name.lower())
+        self.assertEqual(schedd_ad.eval("Name").lower(), name.lower())
 
     def testCollectorAdvertise(self):
         self.launch_daemons(["COLLECTOR"])
@@ -249,9 +249,9 @@ class TestPythonBindings(WithDaemons):
             ads = coll.query(htcondor.AdTypes.Any, 'Name =?= "Foo"', ["Bar"])
             if ads: break
             time.sleep(1)
-        self.assertEquals(len(ads), 1)
+        self.assertEqual(len(ads), 1)
         self.assertTrue(isinstance(ads[0]["Bar"], types.FloatType))
-        self.assertEquals(ads[0]["Bar"], now)
+        self.assertEqual(ads[0]["Bar"], now)
         self.assertTrue("Foo" not in ads[0])
 
     def testScheddSubmit(self):
@@ -272,7 +272,7 @@ class TestPythonBindings(WithDaemons):
             if i % 2 == 0:
                 schedd.reschedule()
             time.sleep(1)
-        self.assertEquals(open(output_file).read(), "hello world\n");
+        self.assertEqual(open(output_file).read(), "hello world\n");
 
     def testScheddSubmitMany(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
@@ -293,7 +293,7 @@ class TestPythonBindings(WithDaemons):
             if i % 2 == 0:
                 schedd.reschedule()
             time.sleep(1)
-        self.assertEquals(open(output_file).read(), "hello world\n");
+        self.assertEqual(open(output_file).read(), "hello world\n");
 
     def testScheddSubmitMany2(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
@@ -310,14 +310,14 @@ class TestPythonBindings(WithDaemons):
             ads = list(ads)
             #print ads
             for ad in ads:
-                if ad['ProcId'] < 5: self.assertEquals(ad['foo'], 1)
-                else: self.assertEquals(ad['foo'], 2)
+                if ad['ProcId'] < 5: self.assertEqual(ad['foo'], 1)
+                else: self.assertEqual(ad['foo'], 2)
             if len(ads) == 0:
                 break
             if i % 2 == 0:
                 schedd.reschedule()
             time.sleep(1)
-        self.assertEquals(open(output_file).read(), "hello world\n");
+        self.assertEqual(open(output_file).read(), "hello world\n");
 
     def testScheddQueryPoll(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
@@ -366,20 +366,20 @@ class TestPythonBindings(WithDaemons):
                 time.sleep(1)
                 continue
             break
-        self.assertEquals(len(startd_ads), len(private_ads))
-        self.assertEquals(len(startd_ads), htcondor.param['NUM_CPUS'])
+        self.assertEqual(len(startd_ads), len(private_ads))
+        self.assertEqual(len(startd_ads), htcondor.param['NUM_CPUS'])
         for ad in htcondor.Collector().locateAll(htcondor.DaemonTypes.Startd):
             for pvt_ad in private_ads:
                 if pvt_ad.get('Name') == ad['Name']:
                     ad['ClaimId'] = pvt_ad['Capability']
                     claim_ads.append(ad)
-        self.assertEquals(len(claim_ads), len(startd_ads))
+        self.assertEqual(len(claim_ads), len(startd_ads))
         claim = claim_ads[0]
 
         me = "%s@%s" % (pwd.getpwuid(os.geteuid()).pw_name, htcondor.param['UID_DOMAIN'])
         with schedd.negotiate(me) as session:
             requests = list(session)
-            self.assertEquals(len(requests), 1)
+            self.assertEqual(len(requests), 1)
             request = requests[0]
             self.assertTrue(request.symmetricMatch(claim))
             session.sendClaim(claim['ClaimId'], claim, request)
@@ -390,7 +390,7 @@ class TestPythonBindings(WithDaemons):
             if len(ads) == 0:
                 break
             time.sleep(1)
-        self.assertEquals(open(output_file).read(), "hello world\n");
+        self.assertEqual(open(output_file).read(), "hello world\n");
 
     def testScheddNonblockingQuery(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
@@ -419,7 +419,7 @@ class TestPythonBindings(WithDaemons):
             if i % 2 == 0:
                 schedd.reschedule()
             time.sleep(1)
-        self.assertEquals(open(output_file).read(), "hello world\n");
+        self.assertEqual(open(output_file).read(), "hello world\n");
 
     def testScheddNonblockingQueryRemove(self):
         os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
@@ -464,8 +464,8 @@ class TestPythonBindings(WithDaemons):
                         found_ad = True
                         break
                 self.assertTrue(found_ad, msg="Ad %s missing from xquery results: %s" % (ad, ads2))
-            self.assertEquals(len(ads), i, msg="Old query protocol gives incorrect number of results (expected %d, got %d)" % (i, len(ads)))
-            self.assertEquals(len(ads2), i, msg="New query protocol gives incorrect number of results (expected %d, got %d)" % (i, len(ads2)))
+            self.assertEqual(len(ads), i, msg="Old query protocol gives incorrect number of results (expected %d, got %d)" % (i, len(ads)))
+            self.assertEqual(len(ads2), i, msg="New query protocol gives incorrect number of results (expected %d, got %d)" % (i, len(ads2)))
             schedd.act(htcondor.JobAction.Remove, "true")
             while ads:
                 time.sleep(.2)
@@ -485,7 +485,7 @@ class TestPythonBindings(WithDaemons):
         for i in range(60):
             ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
             #print ads
-            self.assertEquals(len(ads), 1)
+            self.assertEqual(len(ads), 1)
             if ads[0]["JobStatus"] == 4:
                 break
             if i % 5 == 0:
@@ -495,8 +495,8 @@ class TestPythonBindings(WithDaemons):
         #print "Final status:", schedd.query("ClusterId == %d" % cluster)[0];
         schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
-        self.assertEquals(len(ads), 0)
-        self.assertEquals(open(output_file).read(), "hello world\n")
+        self.assertEqual(len(ads), 0)
+        self.assertEqual(open(output_file).read(), "hello world\n")
 
 
     def testScheddSubmitFile(self):
@@ -506,15 +506,15 @@ class TestPythonBindings(WithDaemons):
         submit_obj['foo'] = '$(bar) 1'
         submit_obj['bar'] = '2'
 
-        self.assertEquals(str(submit_obj), "foo = $(bar) 1\nbar = 2\nqueue")
-        self.assertEquals(submit_obj.expand('foo'), "2 1")
-        self.assertEquals(set(submit_obj.keys()), set(['foo', 'bar']))
-        self.assertEquals(set(submit_obj.values()), set(['$(bar) 1', '2']))
-        self.assertEquals(set(submit_obj.items()), set([('foo', '$(bar) 1'), ('bar', '2')]))
+        self.assertEqual(str(submit_obj), "foo = $(bar) 1\nbar = 2\nqueue")
+        self.assertEqual(submit_obj.expand('foo'), "2 1")
+        self.assertEqual(set(submit_obj.keys()), set(['foo', 'bar']))
+        self.assertEqual(set(submit_obj.values()), set(['$(bar) 1', '2']))
+        self.assertEqual(set(submit_obj.items()), set([('foo', '$(bar) 1'), ('bar', '2')]))
         d = dict(submit_obj)
-        self.assertEquals(set(d.items()), set([('foo', '$(bar) 1'), ('bar', '2')]))
+        self.assertEqual(set(d.items()), set([('foo', '$(bar) 1'), ('bar', '2')]))
 
-        self.assertEquals(str(htcondor.Submit(d)), str(submit_obj))
+        self.assertEqual(str(htcondor.Submit(d)), str(submit_obj))
 
         submit_obj = htcondor.Submit({"executable": "/bin/sh",
                                       "arguments":  "-c ps faux",
@@ -527,16 +527,16 @@ class TestPythonBindings(WithDaemons):
         with schedd.transaction() as txn:
              cluster_id = submit_obj.queue(txn, ad_results=ads)
 
-        self.assertEquals(len(ads), 1)
+        self.assertEqual(len(ads), 1)
         ad = ads[0]
-        self.assertEquals(cluster_id, ad['ClusterId'])
-        self.assertEquals(ad['In'], '/dev/null')
-        self.assertEquals(ad['Args'], "-c ps faux")
+        self.assertEqual(cluster_id, ad['ClusterId'])
+        self.assertEqual(ad['In'], '/dev/null')
+        self.assertEqual(ad['Args'], "-c ps faux")
         outfile = "test.out.%d.0" % ad['ClusterId']
-        self.assertEquals(ad['Out'], outfile)
-        self.assertEquals(ad['foo'], True)
-        self.assertEquals(ad['baz_bar'], False)
-        self.assertEquals(ad['qux'], 1)
+        self.assertEqual(ad['Out'], outfile)
+        self.assertEqual(ad['foo'], True)
+        self.assertEqual(ad['baz_bar'], False)
+        self.assertEqual(ad['qux'], 1)
 
         finished = False
         for i in range(60):
@@ -578,7 +578,7 @@ class TestPythonBindings(WithDaemons):
         for i in range(10):
             if os.path.exists(output_file): break
             time.sleep(1)
-        self.assertEquals(open(output_file).read(), "hello world\n")
+        self.assertEqual(open(output_file).read(), "hello world\n")
         sleep_job = dict(job_common)
         sleep_job['Args'] = "-c 'sleep 5m'"
         claim.activate(sleep_job)
@@ -611,25 +611,25 @@ class TestPythonBindings(WithDaemons):
         secman = htcondor.SecMan()
         authz_ad = secman.ping(coll_ad, "WRITE")
         self.assertTrue("AuthCommand" in authz_ad)
-        self.assertEquals(authz_ad['AuthCommand'], 60021)
+        self.assertEqual(authz_ad['AuthCommand'], 60021)
         self.assertTrue("AuthorizationSucceeded" in authz_ad)
         self.assertTrue(authz_ad['AuthorizationSucceeded'])
 
         authz_ad = secman.ping(coll_ad["MyAddress"], "WRITE")
         self.assertTrue("AuthCommand" in authz_ad)
-        self.assertEquals(authz_ad['AuthCommand'], 60021)
+        self.assertEqual(authz_ad['AuthCommand'], 60021)
         self.assertTrue("AuthorizationSucceeded" in authz_ad)
         self.assertTrue(authz_ad['AuthorizationSucceeded'])
 
         authz_ad = secman.ping(coll_ad["MyAddress"])
         self.assertTrue("AuthCommand" in authz_ad)
-        self.assertEquals(authz_ad['AuthCommand'], 60011)
+        self.assertEqual(authz_ad['AuthCommand'], 60011)
         self.assertTrue("AuthorizationSucceeded" in authz_ad)
         self.assertTrue(authz_ad['AuthorizationSucceeded'])
 
     def testEventLog(self):
         events = list(htcondor.read_events(open("tests/test_log.txt")))
-        self.assertEquals(len(events), 4)
+        self.assertEqual(len(events), 4)
         a = dict(events[0])
         if 'CurrentTime' in a:
             del a['CurrentTime']
@@ -642,9 +642,9 @@ class TestPythonBindings(WithDaemons):
              "EventTime": "%d-11-15T17:05:55" % datetime.datetime.now().year,
              "SubmitHost": "<169.228.38.38:9615?sock=18627_6227_3>",
             }
-        self.assertEquals(set(a.keys()), set(b.keys()))
+        self.assertEqual(set(a.keys()), set(b.keys()))
         for key, val in a.items():
-            self.assertEquals(val, b[key])
+            self.assertEqual(val, b[key])
 
     def testTransaction(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
@@ -663,9 +663,9 @@ class TestPythonBindings(WithDaemons):
             schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(1))
             schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(2))
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar'])
-        self.assertEquals(len(ads), 1)
-        self.assertEquals(ads[0]['foo'], 1)
-        self.assertEquals(ads[0]['bar'], 2)
+        self.assertEqual(len(ads), 1)
+        self.assertEqual(ads[0]['foo'], 1)
+        self.assertEqual(ads[0]['bar'], 2)
 
         with schedd.transaction() as txn:
             schedd.edit(["%d.0" % cluster], 'baz', classad.Literal(3))
@@ -673,10 +673,10 @@ class TestPythonBindings(WithDaemons):
                 schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(4))
                 schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(5))
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar', 'baz'])
-        self.assertEquals(len(ads), 1)
-        self.assertEquals(ads[0]['foo'], 4)
-        self.assertEquals(ads[0]['bar'], 5)
-        self.assertEquals(ads[0]['baz'], 3)
+        self.assertEqual(len(ads), 1)
+        self.assertEqual(ads[0]['foo'], 4)
+        self.assertEqual(ads[0]['bar'], 5)
+        self.assertEqual(ads[0]['baz'], 3)
 
         try:
             with schedd.transaction() as txn:
@@ -687,11 +687,11 @@ class TestPythonBindings(WithDaemons):
             exctype, e = sys.exc_info()[:2]
             if not issubclass(exctype, Exception):
                 raise
-            self.assertEquals(str(e), "force abort")
+            self.assertEqual(str(e), "force abort")
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar'])
-        self.assertEquals(len(ads), 1)
-        self.assertEquals(ads[0]['foo'], 4)
-        self.assertEquals(ads[0]['bar'], 5)
+        self.assertEqual(len(ads), 1)
+        self.assertEqual(ads[0]['foo'], 4)
+        self.assertEqual(ads[0]['bar'], 5)
 
         try:
             with schedd.transaction() as txn:
@@ -704,16 +704,16 @@ class TestPythonBindings(WithDaemons):
             exctype, e = sys.exc_info()[:2]
             if not issubclass(exctype, Exception): 
                 raise
-            self.assertEquals(str(e), "force abort")
+            self.assertEqual(str(e), "force abort")
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar', 'baz'])
-        self.assertEquals(len(ads), 1)
-        self.assertEquals(ads[0]['foo'], 4)
-        self.assertEquals(ads[0]['bar'], 5)
-        self.assertEquals(ads[0]['baz'], 3)
+        self.assertEqual(len(ads), 1)
+        self.assertEqual(ads[0]['foo'], 4)
+        self.assertEqual(ads[0]['bar'], 5)
+        self.assertEqual(ads[0]['baz'], 3)
 
         schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
-        self.assertEquals(len(ads), 0)
+        self.assertEqual(len(ads), 0)
 
 
 if __name__ == '__main__':

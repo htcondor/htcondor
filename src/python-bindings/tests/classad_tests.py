@@ -14,8 +14,8 @@ class TestClassad(unittest.TestCase):
 
     def test_classad_constructor(self):
         ad = classad.ClassAd('[foo = "1"; bar = 2]')
-        self.assertEquals(ad['foo'], "1")
-        self.assertEquals(ad['bar'], 2)
+        self.assertEqual(ad['foo'], "1")
+        self.assertEqual(ad['bar'], 2)
         self.assertRaises(KeyError, ad.__getitem__, 'baz')
 
     def test_pickle(self):
@@ -25,8 +25,8 @@ class TestClassad(unittest.TestCase):
         pexpr = pickle.dumps(expr)
         ad2 = pickle.loads(pad)
         expr2 = pickle.loads(pexpr)
-        self.assertEquals(ad2.__repr__(), "[ one = 1 ]")
-        self.assertEquals(expr2.__repr__(), "2 + 2")
+        self.assertEqual(ad2.__repr__(), "[ one = 1 ]")
+        self.assertEqual(expr2.__repr__(), "2 + 2")
 
     def test_load_classad_from_file(self):
         with warnings.catch_warnings():
@@ -69,7 +69,7 @@ class TestClassad(unittest.TestCase):
         ad = ad_iter.next()
         self.assertEqual(len(ad), 1)
         self.assertEqual(ad["foo"], 1)
-        self.assertEquals(" [bar = 2]", tf.read())
+        self.assertEqual(" [bar = 2]", tf.read())
         tf = tempfile.TemporaryFile()
         tf.write("-----\nfoo = 1\n\nbar = 2\n")
         tf.seek(0)
@@ -79,7 +79,7 @@ class TestClassad(unittest.TestCase):
         ad = ad_iter.next()
         self.assertEqual(len(ad), 1)
         self.assertEqual(ad["foo"], 1)
-        self.assertEquals("bar = 2\n", tf.read())
+        self.assertEqual("bar = 2\n", tf.read())
 
     def test_parse_next(self):
         tf = tempfile.TemporaryFile()
@@ -88,14 +88,14 @@ class TestClassad(unittest.TestCase):
         ad = classad.parseNext(tf)
         self.assertEqual(len(ad), 1)
         self.assertEqual(ad["foo"], 1)
-        self.assertEquals(" [bar = 2]", tf.read())
+        self.assertEqual(" [bar = 2]", tf.read())
         tf = tempfile.TemporaryFile()
         tf.write("-----\nfoo = 1\n\nbar = 2\n")
         tf.seek(0)
         ad = classad.parseNext(tf)
         self.assertEqual(len(ad), 1)
         self.assertEqual(ad["foo"], 1)
-        self.assertEquals("bar = 2\n", tf.read())
+        self.assertEqual("bar = 2\n", tf.read())
 
     def new_ads_verify(self, ads):
         ads = list(ads)
@@ -241,84 +241,84 @@ class TestClassad(unittest.TestCase):
         ad = classad.ClassAd()
         ad["foo"] = classad.Value.Error
         self.assertTrue(isinstance(ad.lookup("foo"), classad.ExprTree))
-        self.assertEquals(ad.lookup("foo").eval(), classad.Value.Error)
+        self.assertEqual(ad.lookup("foo").eval(), classad.Value.Error)
 
     def test_get(self):
         ad = classad.ClassAd()
-        self.assertEquals(ad.get("foo"), None)
-        self.assertEquals(ad.get("foo", "bar"), "bar")
+        self.assertEqual(ad.get("foo"), None)
+        self.assertEqual(ad.get("foo", "bar"), "bar")
         ad["foo"] = "baz"
-        self.assertEquals(ad.get("foo"), "baz")
-        self.assertEquals(ad.get("foo", "bar"), "baz")
+        self.assertEqual(ad.get("foo"), "baz")
+        self.assertEqual(ad.get("foo", "bar"), "baz")
 
     def test_setdefault(self):
         ad = classad.ClassAd()
-        self.assertEquals(ad.setdefault("foo", "bar"), "bar")
-        self.assertEquals(ad.get("foo"), "bar")
+        self.assertEqual(ad.setdefault("foo", "bar"), "bar")
+        self.assertEqual(ad.get("foo"), "bar")
         ad["bar"] = "baz"
-        self.assertEquals(ad.setdefault("bar", "foo"), "baz")
+        self.assertEqual(ad.setdefault("bar", "foo"), "baz")
 
     def test_update(self):
         ad = classad.ClassAd()
         ad.update({"1": 2})
         self.assertTrue("1" in ad)
-        self.assertEquals(ad["1"], 2)
+        self.assertEqual(ad["1"], 2)
         ad.update([("1",3)])
-        self.assertEquals(ad["1"], 3)
+        self.assertEqual(ad["1"], 3)
         other = classad.ClassAd({"3": "5"})
         ad.update(other)
         del other
         self.assertTrue("3" in ad)
-        self.assertEquals(ad["3"], "5")
+        self.assertEqual(ad["3"], "5")
 
     def test_invalid_ref(self):
         expr = classad.ExprTree("foo")
-        self.assertEquals(classad.Value.Undefined, expr.eval())
+        self.assertEqual(classad.Value.Undefined, expr.eval())
 
     def test_temp_scope(self):
         expr = classad.ExprTree("foo")
-        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        self.assertEqual("bar", expr.eval({"foo": "bar"}))
         ad = classad.ClassAd({"foo": "baz", "test": classad.ExprTree("foo")})
         expr = ad["test"]
-        self.assertEquals("baz", expr.eval())
-        self.assertEquals("bar", expr.eval({"foo": "bar"}))
-        self.assertEquals("bar", expr.eval({"foo": "bar"}))
-        self.assertEquals("baz", expr.eval())
+        self.assertEqual("baz", expr.eval())
+        self.assertEqual("bar", expr.eval({"foo": "bar"}))
+        self.assertEqual("bar", expr.eval({"foo": "bar"}))
+        self.assertEqual("baz", expr.eval())
 
     def test_abstime(self):
         expr = classad.ExprTree('absTime("2013-11-12T07:50:23")')
         dt = expr.eval()
         self.assertTrue(isinstance(dt, datetime.datetime))
-        self.assertEquals(dt.year, 2013)
-        self.assertEquals(dt.month, 11)
-        self.assertEquals(dt.day, 12)
-        self.assertEquals(dt.hour, 7)
-        self.assertEquals(dt.minute, 50)
-        self.assertEquals(dt.second, 23)
+        self.assertEqual(dt.year, 2013)
+        self.assertEqual(dt.month, 11)
+        self.assertEqual(dt.day, 12)
+        self.assertEqual(dt.hour, 7)
+        self.assertEqual(dt.minute, 50)
+        self.assertEqual(dt.second, 23)
 
         ad = classad.ClassAd({"foo": dt})
         dt2 = ad["foo"]
         self.assertTrue(isinstance(dt2, datetime.datetime))
-        self.assertEquals(dt, dt2)
+        self.assertEqual(dt, dt2)
 
         ad = classad.ClassAd({"foo": datetime.datetime.now()});
         td = (datetime.datetime.now()-ad["foo"])
-        self.assertEquals(td.days, 0)
+        self.assertEqual(td.days, 0)
         self.assertTrue(td.seconds < 300)
 
     def test_reltime(self):
         expr = classad.ExprTree('relTime(5)')
-        self.assertEquals(expr.eval(), 5)
+        self.assertEqual(expr.eval(), 5)
 
     def test_quote(self):
-        self.assertEquals(classad.quote("foo"), '"foo"')
-        self.assertEquals(classad.quote('"foo'), '"\\"foo"')
+        self.assertEqual(classad.quote("foo"), '"foo"')
+        self.assertEqual(classad.quote('"foo'), '"\\"foo"')
         for i in ["foo", '"foo', '"\\"foo']:
-            self.assertEquals(i, classad.unquote(classad.quote(i)))
+            self.assertEqual(i, classad.unquote(classad.quote(i)))
 
     def test_literal(self):
-        self.assertEquals(classad.ExprTree('"foo"'), classad.Literal("foo"))
-        self.assertEquals(classad.Literal(1).eval(), 1)
+        self.assertEqual(classad.ExprTree('"foo"'), classad.Literal("foo"))
+        self.assertEqual(classad.Literal(1).eval(), 1)
 
     def test_operator(self):
         expr = classad.Literal(1) + 2
@@ -327,7 +327,7 @@ class TestClassad(unittest.TestCase):
         self.assertTrue(expr.sameAs(classad.ExprTree('1 + 2')))
         expr = classad.Literal(1) & 2
         self.assertTrue(isinstance(expr, classad.ExprTree))
-        self.assertEquals(expr.eval(), 0)
+        self.assertEqual(expr.eval(), 0)
         self.assertTrue(expr.sameAs(classad.ExprTree('1 & 2')))
         expr = classad.Attribute("foo").is_(classad.Value.Undefined)
         self.assertTrue(expr.eval())
@@ -341,15 +341,15 @@ class TestClassad(unittest.TestCase):
         ad = classad.ClassAd({'foo': [0,1,2,3]})
         expr = classad.Attribute("foo")._get(2)
         self.assertTrue(isinstance(expr, classad.ExprTree))
-        self.assertEquals(expr.eval(), classad.Value.Undefined)
-        self.assertEquals(expr.eval(ad), 2)
+        self.assertEqual(expr.eval(), classad.Value.Undefined)
+        self.assertEqual(expr.eval(ad), 2)
 
     def test_function(self):
         expr = classad.Function("strcat", "hello", " ", "world")
         self.assertTrue(isinstance(expr, classad.ExprTree))
-        self.assertEquals(expr.eval(), "hello world")
+        self.assertEqual(expr.eval(), "hello world")
         expr = classad.Function("regexp", ".*")
-        self.assertEquals(expr.eval(), classad.Value.Error)
+        self.assertEqual(expr.eval(), classad.Value.Error)
 
     def test_flatten(self):
         expr = classad.Attribute("foo") == classad.Attribute("bar")
@@ -387,53 +387,53 @@ class TestClassad(unittest.TestCase):
         classad.register(myExpr)
         classad.register(myFoo)
         classad.register(myIntersect)
-        self.assertEquals(3, classad.ExprTree('myAdd(1, 2)').eval())
-        self.assertEquals(3, classad.ExprTree('myAdd2(1, 2)').eval())
+        self.assertEqual(3, classad.ExprTree('myAdd(1, 2)').eval())
+        self.assertEqual(3, classad.ExprTree('myAdd2(1, 2)').eval())
         self.assertRaises(BadException, classad.ExprTree('myBad(1, 2)').eval)
         self.assertRaises(TypeError, classad.ExprTree('myComplex(1)').eval)
-        self.assertEquals(classad.Value.Undefined, classad.ExprTree('myExpr()').eval())
-        self.assertEquals(classad.ExprTree('myExpr()').eval({"foo": 2}), 2)
+        self.assertEqual(classad.Value.Undefined, classad.ExprTree('myExpr()').eval())
+        self.assertEqual(classad.ExprTree('myExpr()').eval({"foo": 2}), 2)
         self.assertRaises(TypeError, classad.ExprTree('myAdd(1)').eval) # myAdd requires 2 arguments; only one is given.
-        self.assertEquals(classad.ExprTree('myFoo([foo = 1])').eval(), 1)
-        self.assertEquals(classad.ExprTree('size(myIntersect({1, 2}, {2, 3}))').eval(), 1)
-        self.assertEquals(classad.ExprTree('myIntersect({1, 2}, {2, 3})[0]').eval(), 2)
+        self.assertEqual(classad.ExprTree('myFoo([foo = 1])').eval(), 1)
+        self.assertEqual(classad.ExprTree('size(myIntersect({1, 2}, {2, 3}))').eval(), 1)
+        self.assertEqual(classad.ExprTree('myIntersect({1, 2}, {2, 3})[0]').eval(), 2)
 
     def test_state(self):
         def myFunc(state): return 1 if state else 0
         classad.register(myFunc)
-        self.assertEquals(0, classad.ExprTree('myFunc(false)').eval())
-        self.assertEquals(1, classad.ExprTree('myFunc("foo")').eval())
+        self.assertEqual(0, classad.ExprTree('myFunc(false)').eval())
+        self.assertEqual(1, classad.ExprTree('myFunc("foo")').eval())
         ad = classad.ClassAd("""[foo = myFunc(); bar = 2]""")
-        self.assertEquals(1, ad.eval('foo'))
+        self.assertEqual(1, ad.eval('foo'))
         ad['foo'] = classad.ExprTree('myFunc(1)')
         self.assertRaises(TypeError, ad.eval, ('foo',))
         def myFunc(arg1, **kw): return kw['state']['bar']
         classad.register(myFunc)
-        self.assertEquals(2, ad.eval('foo'))
+        self.assertEqual(2, ad.eval('foo'))
 
     def test_refs(self):
         ad = classad.ClassAd({"bar": 2})
         expr = classad.ExprTree("foo =?= bar")
-        self.assertEquals(ad.externalRefs(expr), ["foo"])
-        self.assertEquals(ad.internalRefs(expr), ["bar"])
+        self.assertEqual(ad.externalRefs(expr), ["foo"])
+        self.assertEqual(ad.internalRefs(expr), ["bar"])
 
     def test_cast(self):
-        self.assertEquals(4, int(classad.ExprTree('1+3')))
-        self.assertEquals(4.5, float(classad.ExprTree('1.0+3.5')))
-        self.assertEquals(34, int(classad.ExprTree('strcat("3", "4")')))
-        self.assertEquals(34.5, float(classad.ExprTree('"34.5"')))
+        self.assertEqual(4, int(classad.ExprTree('1+3')))
+        self.assertEqual(4.5, float(classad.ExprTree('1.0+3.5')))
+        self.assertEqual(34, int(classad.ExprTree('strcat("3", "4")')))
+        self.assertEqual(34.5, float(classad.ExprTree('"34.5"')))
         self.assertRaises(ValueError, float, classad.ExprTree('"34.foo"'))
         self.assertRaises(ValueError, int, classad.ExprTree('"12 "'))
         ad = classad.ClassAd("""[foo = 2+5; bar = foo]""")
         expr = ad['bar']
-        self.assertEquals(7, int(expr))
-        self.assertEquals(7, int(ad.lookup('bar')))
-        self.assertEquals(0, int(classad.ExprTree('false')))
-        self.assertEquals(0.0, float(classad.ExprTree('false')))
-        self.assertEquals(1, int(classad.ExprTree('true')))
-        self.assertEquals(1.0, float(classad.ExprTree('true')))
-        self.assertEquals(3, int(classad.ExprTree('3.99')))
-        self.assertEquals(3.0, float(classad.ExprTree('1+2')))
+        self.assertEqual(7, int(expr))
+        self.assertEqual(7, int(ad.lookup('bar')))
+        self.assertEqual(0, int(classad.ExprTree('false')))
+        self.assertEqual(0.0, float(classad.ExprTree('false')))
+        self.assertEqual(1, int(classad.ExprTree('true')))
+        self.assertEqual(1.0, float(classad.ExprTree('true')))
+        self.assertEqual(3, int(classad.ExprTree('3.99')))
+        self.assertEqual(3.0, float(classad.ExprTree('1+2')))
         self.assertRaises(ValueError, int, classad.ExprTree('undefined'))
         self.assertRaises(ValueError, float, classad.ExprTree('error'))
         self.assertRaises(ValueError, float, classad.ExprTree('foo'))
@@ -447,7 +447,7 @@ class TestClassad(unittest.TestCase):
         wfd.write("[foo = 1]")
         wfd.close()
         ad = classad.parseNext(rfd ,parser=classad.Parser.New)
-        self.assertEquals(tuple(dict(ad).items()), (('foo', 1),))
+        self.assertEqual(tuple(dict(ad).items()), (('foo', 1),))
         self.assertRaises(StopIteration, classad.parseNext, rfd, classad.Parser.New)
         rfd.close()
         r, w = os.pipe()

@@ -43,12 +43,12 @@ class TestChirp(htcondor_tests.WithDaemons):
         result_ad = self.getLastHistory(cluster)
         attr = "%sFoo" % prefix
         self.assertTrue("ExitCode" in result_ad)
-        self.assertEquals(result_ad["ExitCode"], 0)
+        self.assertEqual(result_ad["ExitCode"], 0)
         last_line = open(output_file).readlines()[-1]
-        self.assertEquals(last_line, "SUCCESS\n")
+        self.assertEqual(last_line, "SUCCESS\n")
         if shouldwork:
             self.assertTrue(attr in result_ad)
-            self.assertEquals(result_ad[attr], 2)
+            self.assertEqual(result_ad[attr], 2)
 
     def tryIO(self, shouldwork=True, wantio=None):
         open(os.path.join(htcondor_tests.testdir, "test_chirp_io"), "w").write("hello world")
@@ -64,9 +64,9 @@ class TestChirp(htcondor_tests.WithDaemons):
         cluster = self.runJob(ad)
         result_ad = self.getLastHistory(cluster)
         self.assertTrue("ExitCode" in result_ad)
-        self.assertEquals(result_ad["ExitCode"], 0)
+        self.assertEqual(result_ad["ExitCode"], 0)
         last_line = open(output_file).readlines()[-1]
-        self.assertEquals(last_line, "SUCCESS\n")
+        self.assertEqual(last_line, "SUCCESS\n")
 
     def tryUpdate(self, shouldwork=True, wantio = None, wantupdate=None, prefix="NonChirp"):
         output_file = os.path.join(htcondor_tests.testdir, "test.out")
@@ -85,13 +85,13 @@ class TestChirp(htcondor_tests.WithDaemons):
         cluster = self.runJob(ad)
         result_ad = self.getLastHistory(cluster)
         self.assertTrue("ExitCode" in result_ad)
-        self.assertEquals(result_ad["ExitCode"], 0)
+        self.assertEqual(result_ad["ExitCode"], 0)
         last_line = open(output_file).readlines()[-1]
-        self.assertEquals(last_line, "SUCCESS\n")
+        self.assertEqual(last_line, "SUCCESS\n")
         if shouldwork:
             attr = "%sFoo" % prefix
             self.assertTrue(attr in result_ad)
-            self.assertEquals(result_ad[attr], 2)
+            self.assertEqual(result_ad[attr], 2)
 
     def testDelayedUpdate(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
@@ -148,11 +148,11 @@ class TestChirp(htcondor_tests.WithDaemons):
         cluster = self.runJob(ad)
         result_ad = self.getLastHistory(cluster)
         self.assertTrue("ExitCode" in result_ad)
-        self.assertEquals(result_ad["ExitCode"], 0)
+        self.assertEqual(result_ad["ExitCode"], 0)
         last_line = open(output_file).readlines()[-1]
-        self.assertEquals(last_line, "SUCCESS\n")
+        self.assertEqual(last_line, "SUCCESS\n")
         self.assertTrue("ChirpFoo" in result_ad)
-        self.assertEquals(result_ad["ChirpFoo"], "0" * 990)
+        self.assertEqual(result_ad["ChirpFoo"], "0" * 990)
         self.assertFalse("ChirpBar" in result_ad)
         for i in range(1, 50):
             self.assertTrue(("ChirpFoo%d" % i) in result_ad)
