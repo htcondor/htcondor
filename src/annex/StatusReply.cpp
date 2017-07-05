@@ -122,7 +122,6 @@ printHumanReadableSummary( unsigned,
 		total[ annexName ] += 1;
 	}
 
-
 	// Print the [annex-]NAME TOTAL <status1> ... <statusN> table.
 	unsigned longestStatus = 0;
 	fprintf( stdout, "%-27.27s %5.5s", "NAME", "TOTAL" );
@@ -132,23 +131,35 @@ printHumanReadableSummary( unsigned,
 	}
 	fprintf( stdout, "\n" );
 
+	std::string auditString;
 	for( auto i = total.begin(); i != total.end(); ++i ) {
 		unsigned annexTotal = i->second;
 		const std::string & annexName = i->first;
 
+		formatstr( auditString, "%s%s: %u total,", auditString.c_str(),
+			annexName.c_str(), annexTotal );
 		fprintf( stdout, "%-27.27s %5u", annexName.c_str(), annexTotal );
 		for( auto j = statuses.begin(); j != statuses.end(); ++j ) {
 			auto & as = output[ annexName ];
 			const std::string & status = * j;
 
 			if( as.count( status ) == 0 ) {
+				formatstr( auditString, "%s %u %s,", auditString.c_str(),
+					0, status.c_str() );
 				fprintf( stdout, " %*s", status.length(), "0" );
 			} else {
+				formatstr( auditString, "%s %u %s,", auditString.c_str(),
+					as[ status ], status.c_str() );
 				fprintf( stdout, " %*d", status.length(), as[ status ] );
 			}
 		}
+		auditString.erase( auditString.length() - 1 );
+		auditString += "; ";
 		fprintf( stdout, "\n" );
 	}
+	auditString.erase( auditString.length() - 2 );
+	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", auditString.c_str() );
+	auditString.clear();
 
 	// Print the table separator.
 	fprintf( stdout, "\n" );
@@ -164,18 +175,26 @@ printHumanReadableSummary( unsigned,
 			const std::string & status = j->first;
 			if( status == "in-pool" ) { continue; }
 
+			formatstr( auditString, "%s%s %s:", auditString.c_str(),
+				annexName.c_str(), status.c_str() );
 			fprintf( stdout, "%-27.27s %-*s", annexName.c_str(), longestStatus, status.c_str() );
 			for( auto k = instances.begin(); k != instances.end(); ++k ) {
 				const std::string & instanceID = k->first;
 				const std::string & instanceStatus = k->second;
 
 				if( status == instanceStatus && annexName == annexes[ instanceID ] ) {
+					formatstr( auditString, "%s %s", auditString.c_str(),
+						instanceID.c_str() );
 					fprintf( stdout, " %s", instanceID.c_str() );
 				}
 			}
+			auditString += "; ";
 			fprintf( stdout, "\n" );
 		}
 	}
+
+	auditString.erase( auditString.length() - 2 );
+	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", auditString.c_str() );
 }
 
 void
