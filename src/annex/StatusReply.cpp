@@ -54,7 +54,7 @@ printClassAds( unsigned count, const std::map< std::string, std::string > & inst
 
 	for( auto i = statusCounts.begin(); i != statusCounts.end(); ++i ) {
 		std::string attr = i->first;
-		if( attr == "[in pool]" ) { attr = "InPool"; }
+		if( attr == "in-pool" ) { attr = "InPool"; }
 
 		bool firstInWord = true;
 		for( unsigned i = 0; i < attr.size(); ++i ) {
@@ -98,7 +98,7 @@ void
 printHumanReadableSummary( unsigned,
 					std::map< std::string, std::string > & instances,
 					std::map< std::string, std::string > & annexes ) {
-
+	// Do some aggregation.
 	std::set< std::string > statuses;
 	std::map< std::string, unsigned > total;
 	std::map< std::string, std::map< std::string, unsigned > > output;
@@ -122,9 +122,13 @@ printHumanReadableSummary( unsigned,
 		total[ annexName ] += 1;
 	}
 
+
+	// Print the [annex-]NAME TOTAL <status1> ... <statusN> table.
+	unsigned longestStatus = 0;
 	fprintf( stdout, "%-27.27s %5.5s", "NAME", "TOTAL" );
 	for( auto i = statuses.begin(); i != statuses.end(); ++i ) {
 		fprintf( stdout, " %s", i->c_str() );
+		if( i->length() > longestStatus ) { longestStatus = i->length(); }
 	}
 	fprintf( stdout, "\n" );
 
@@ -144,6 +148,33 @@ printHumanReadableSummary( unsigned,
 			}
 		}
 		fprintf( stdout, "\n" );
+	}
+
+	// Print the table separator.
+	fprintf( stdout, "\n" );
+
+	// FIXME: Should this formatted as a table, or just as a series of lines?
+	// Print the [annex-]NAME STATE INSTANCES... table.
+	fprintf( stdout, "%-27.27s %-*s INSTANCES...\n", "NAME", longestStatus, "STATUS" );
+	for( auto i = output.begin(); i != output.end(); ++i ) {
+		const std::string & annexName = i->first;
+
+		auto & as = i->second;
+		for( auto j = as.begin(); j != as.end(); ++j ) {
+			const std::string & status = j->first;
+			if( status == "in-pool" ) { continue; }
+
+			fprintf( stdout, "%-27.27s %-*s", annexName.c_str(), longestStatus, status.c_str() );
+			for( auto k = instances.begin(); k != instances.end(); ++k ) {
+				const std::string & instanceID = k->first;
+				const std::string & instanceStatus = k->second;
+
+				if( status == instanceStatus && annexName == annexes[ instanceID ] ) {
+					fprintf( stdout, " %s", instanceID.c_str() );
+				}
+			}
+			fprintf( stdout, "\n" );
+		}
 	}
 }
 
@@ -180,12 +211,12 @@ printHumanReadable( unsigned count,
 		instanceIDsByStatus[ i->second ].push_back( i->first );
 	}
 
-	if( statusCounts[ "[in pool]" ] != count ) {
+	if( statusCounts[ "in-pool" ] != count ) {
 		formatstr( auditString, "%s; ", auditString.c_str() );
 		fprintf( stdout, "\n" );
 		fprintf( stdout, "Instances not in the pool, grouped by state:\n" );
 		for( auto i = instanceIDsByStatus.begin(); i != instanceIDsByStatus.end(); ++i ) {
-			if( i->first == "[in pool]" ) { continue; }
+			if( i->first == "in-pool" ) { continue; }
 			formatstr( auditString, "%s%s ", auditString.c_str(), i->first.c_str() );
 			fprintf( stdout, "%s", i->first.c_str() );
 			unsigned column = i->first.length();
@@ -286,7 +317,7 @@ StatusReply::operator() () {
 				cad->LookupString( "EC2InstanceID", instanceID );
 				cad->LookupString( "AnnexName", aName );
 
-				instances[ instanceID ] = "[in pool]";
+				instances[ instanceID ] = "in-pool";
 			}
 
 			if( wantClassAds ) {
