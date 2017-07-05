@@ -4431,8 +4431,11 @@ public:
 			}
 
 			int namelen = len;
-			const char * colon = strchr(body, ':');
-			if (colon) { namelen = (int)(colon - body); }
+			const char * colon = strchr(body, ':'); // this might return the pos of a colon AFTER len
+			if (colon) {
+				int colonlen = (int)(colon - body);
+				namelen = MIN(namelen, colonlen);
+			}
 			// skip $(knob) when knob is in the skip_knobs set.
 			std::string knob(body, namelen);
 			if (skip_knobs.find(knob) != skip_knobs.end()) {

@@ -24,7 +24,6 @@ environment = "TMOUT=7200"
 #
 # 
 transfer_executable = false
-copy_to_spool = false
 notification = never
 priority = 1000
 

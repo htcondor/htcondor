@@ -116,27 +116,17 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 		
 	}
 
-		// get type info
+	// We fetch but ignore the special MyType and TargetType fields.
+	// These attributes, if defined, are included in the regular set
+	// of name/value pairs.
 	if (!sock->get(inputLine)) {
 		 dprintf(D_FULLDEBUG, "FAILED to get(inputLine)\n" );
 		return false;
-	}
-	if (inputLine != "" && inputLine != "(unknown type)") {
-		if (!ad.InsertAttr("MyType",(string)inputLine.Value())) {
-			dprintf(D_FULLDEBUG, "FAILED to insert MyType\n" );
-			return false;
-		}
 	}
 
 	if (!sock->get(inputLine)) {
 		 dprintf(D_FULLDEBUG, "FAILED to get(inputLine) 2\n" );
 		return false;
-	}
-	if (inputLine != "" && inputLine != "(unknown type)") {
-		if (!ad.InsertAttr("TargetType",(string)inputLine.Value())) {
-		dprintf(D_FULLDEBUG, "FAILED to insert TargetType\n" );
-			return false;
-		}
 	}
 
 	return true;
@@ -665,19 +655,8 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
             if(!exclude_private ||
 			   !compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
             {
-                if(excludeTypes)
-                {
-                    if(strcasecmp( ATTR_MY_TYPE, attr.c_str() ) != 0 &&
-                        strcasecmp( ATTR_TARGET_TYPE, attr.c_str() ) != 0)
-                    {
-                        numExprs++;
-                    }
-                }
-                else { numExprs++; }
+                numExprs++;
             }
-			if ( strcasecmp( ATTR_CURRENT_TIME, attr.c_str() ) == 0 ) {
-				numExprs--;
-			}
         }
     }
 
@@ -713,19 +692,8 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
 
-			if(strcasecmp(ATTR_CURRENT_TIME,attr.c_str())==0) {
-				continue;
-			}
             if(exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr.c_str())){
                 continue;
-            }
-
-            if(excludeTypes){
-                if(strcasecmp( ATTR_MY_TYPE, attr.c_str( ) ) == 0 || 
-				   strcasecmp( ATTR_TARGET_TYPE, attr.c_str( ) ) == 0 )
-				{
-                    continue;
-                }
             }
 
 			buf = attr;
@@ -872,18 +840,9 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
     //  in the other places though.
     if(!excludeTypes)
     {
-        // Send the type
-        if (!ad.EvaluateAttrString(ATTR_MY_TYPE,buf)) {
-            buf="";
-        }
-        if (!sock->put(buf.c_str())) {
-            return false;
-        }
-
-        if (!ad.EvaluateAttrString(ATTR_TARGET_TYPE,buf)) {
-            buf="";
-        }
-        if (!sock->put(buf.c_str())) {
+        // Now, we always send empty strings for the special-case
+        // MyType/TargetType values at the end of the ad.
+        if (!sock->put("") || !souck->put("")) {
             return false;
         }
     }
@@ -941,7 +900,7 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 }
 
 // helper function for _putClassAd
-static int _putClassAdTrailingInfo(Stream *sock, classad::ClassAd& ad, bool send_server_time, bool excludeTypes)
+static int _putClassAdTrailingInfo(Stream *sock, classad::ClassAd& /* ad */, bool send_server_time, bool excludeTypes)
 {
     if (send_server_time)
     {
@@ -963,19 +922,9 @@ static int _putClassAdTrailingInfo(Stream *sock, classad::ClassAd& ad, bool send
     //  in the other places though.
     if (!excludeTypes)
     {
-        std::string buf;
-        // Send the type
-        if (!ad.EvaluateAttrString(ATTR_MY_TYPE,buf)) {
-            buf="";
-        }
-        if (!sock->put(buf.c_str())) {
-            return false;
-        }
-
-        if (!ad.EvaluateAttrString(ATTR_TARGET_TYPE,buf)) {
-            buf="";
-        }
-        if (!sock->put(buf.c_str())) {
+        // Now, we always send empty strings for the special-case
+        // MyType/TargetType values at the end of the ad.
+        if (!sock->put("") || !sock->put("")) {
             return false;
         }
     }
