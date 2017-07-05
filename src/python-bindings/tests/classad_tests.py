@@ -2,6 +2,7 @@
 
 import os
 import re
+import sys
 import types
 import pickle
 import classad
@@ -9,6 +10,8 @@ import datetime
 import unittest
 import warnings
 import tempfile
+
+_long_type = int if sys.version_info > (3,) else long
 
 class TestClassad(unittest.TestCase):
 
@@ -181,8 +184,8 @@ class TestClassad(unittest.TestCase):
 
     def test_list_conversion(self):
         ad = dict(classad.ClassAd("[a = {1,2,3}]"))
-        self.assertTrue(isinstance(ad["a"], types.ListType))
-        self.assertTrue(isinstance(ad["a"][0], types.LongType))
+        self.assertTrue(isinstance(ad["a"], list))
+        self.assertTrue(isinstance(ad["a"][0], _long_type))
         def listAdd(a, b): return a+b
         classad.register(listAdd)
         self.assertEqual(classad.ExprTree("listAdd({1,2}, {3,4})")[0], 1)
@@ -190,13 +193,13 @@ class TestClassad(unittest.TestCase):
     def test_dict_conversion(self):
         ad = classad.ClassAd({'a': [1,2, {}]})
         dict_ad = dict(ad)
-        self.assertTrue(isinstance(dict_ad["a"][2], types.DictType))
+        self.assertTrue(isinstance(dict_ad["a"][2], dict))
         self.assertEqual(classad.ClassAd(dict_ad).__repr__(), "[ a = { 1,2,[  ] } ]")
         ad = classad.ClassAd("[a = [b = {1,2,3}]]")
         inner_list = dict(ad)['a']['b']
-        self.assertTrue(isinstance(inner_list, types.ListType))
-        self.assertTrue(isinstance(inner_list[0], types.LongType))
-        self.assertTrue(isinstance(ad['a'], types.DictType))
+        self.assertTrue(isinstance(inner_list, list))
+        self.assertTrue(isinstance(inner_list[0], _long_type))
+        self.assertTrue(isinstance(ad['a'], dict))
 
     def test_ad_assignment(self):
         ad = classad.ClassAd()
