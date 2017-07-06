@@ -896,20 +896,23 @@ convert_python_to_exprtree(boost::python::object value)
     if (PyMapping_Check(value.ptr()))
     {
         PyObject *keys = PyMapping_Keys(value.ptr());
-        if (!keys) {THROW_EX(RuntimeError, "Unable to convert mapping to keys");}
-        ClassAdWrapper *ad = new ClassAdWrapper();
-        boost::python::object iter = boost::python::object(boost::python::handle<>(keys));
-        while (true)
-        {
-            PyObject *pyobj = PyIter_Next(iter.ptr());
-            if (!pyobj) {break;}
-            boost::python::object key_obj = boost::python::object(boost::python::handle<>(pyobj));
-            std::string key_str = boost::python::extract<std::string>(key_obj);
-            boost::python::object val = value[key_obj];
-            classad::ExprTree *val_expr = convert_python_to_exprtree(val);
-            ad->Insert(key_str, val_expr);
+        if (!keys) {
+            PyErr_Clear();
+        } else {
+            ClassAdWrapper *ad = new ClassAdWrapper();
+            boost::python::object iter = boost::python::object(boost::python::handle<>(keys));
+            while (true)
+            {
+                PyObject *pyobj = PyIter_Next(iter.ptr());
+                if (!pyobj) {break;}
+                boost::python::object key_obj = boost::python::object(boost::python::handle<>(pyobj));
+                std::string key_str = boost::python::extract<std::string>(key_obj);
+                boost::python::object val = value[key_obj];
+                classad::ExprTree *val_expr = convert_python_to_exprtree(val);
+                ad->Insert(key_str, val_expr);
+            }
+            return ad;
         }
-        return ad;
     }
     PyObject *py_iter = PyObject_GetIter(value.ptr());
     if (py_iter)
