@@ -47,7 +47,7 @@ if( FORCE_PRE_RELEASE )
   set(PRE_RELEASE ${FORCE_PRE_RELEASE})
 endif( FORCE_PRE_RELEASE )
 
-set(PACKAGE_BUGREPORT "http://condor-wiki.cs.wisc.edu/index.cgi/tktnew")
+set(PACKAGE_BUGREPORT "http://htcondor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
 set(PACKAGE_STRING ${PACKAGE} )
