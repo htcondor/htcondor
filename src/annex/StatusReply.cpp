@@ -7,7 +7,44 @@
 #include "StatusReply.h"
 
 void
-printClassAds( unsigned count, const std::map< std::string, std::string > & instances, const std::string & annexID, ClassAd * command ) {
+printClassAds(	const std::map< std::string, std::string > & instances,
+				const std::string & annexID,
+				ClassAd * command,
+				std::map< std::string, std::string > & annexes );
+
+void
+printClassAdsSummary(	const std::map< std::string, std::string > & instances,
+						ClassAd * command,
+						std::map< std::string, std::string > & annexes ) {
+	std::map< std::string, std::map< std::string, std::string > > instanceListsByAnnex;
+	for( auto i = instances.begin(); i != instances.end(); ++i ) {
+		const std::string & status = i->second;
+		const std::string & instanceID = i->first;
+		const std::string & annexName = annexes[ instanceID ];
+
+		instanceListsByAnnex[ annexName ][ instanceID ] = status;
+	}
+
+	std::map< std::string, std::string > dummy;
+	for( auto i = instanceListsByAnnex.begin(); i != instanceListsByAnnex.end(); ++i ) {
+		const std::string & annexName = i->first;
+		std::map< std::string, std::string > & instanceList = i->second;
+		printClassAds( instanceList, annexName, command, dummy );
+		fprintf( stdout, "\n" );
+	}
+}
+
+
+void
+printClassAds(	const std::map< std::string, std::string > & instances,
+				const std::string & annexID,
+				ClassAd * command,
+				std::map< std::string, std::string > & annexes ) {
+	if( annexID.empty() ) {
+		printClassAdsSummary( instances, command, annexes );
+		return;
+	}
+
 	// Compute the summary information for the annex ad.
 	std::map< std::string, unsigned > statusCounts;
 	std::map< std::string, std::vector< std::string > > statusInstanceList;
@@ -23,7 +60,7 @@ printClassAds( unsigned count, const std::map< std::string, std::string > & inst
 	// Print the annex ad.
 	ClassAd annexAd;
 	annexAd.Assign( "AnnexID", annexID );
-	annexAd.Assign( "TotalInstances", count );
+	annexAd.Assign( "TotalInstances", instances.size() );
 
 	// Add the attributes necessary to insert it into the collector.  The
 	// name must be unique, but the annex ID is only is only unique per-
@@ -95,9 +132,8 @@ printClassAds( unsigned count, const std::map< std::string, std::string > & inst
 }
 
 void
-printHumanReadableSummary( unsigned,
-					std::map< std::string, std::string > & instances,
-					std::map< std::string, std::string > & annexes ) {
+printHumanReadableSummary(	std::map< std::string, std::string > & instances,
+							std::map< std::string, std::string > & annexes ) {
 	// Do some aggregation.
 	std::set< std::string > statuses;
 	std::map< std::string, unsigned > total;
@@ -198,12 +234,11 @@ printHumanReadableSummary( unsigned,
 }
 
 void
-printHumanReadable( unsigned count,
-					std::map< std::string, std::string > & instances,
+printHumanReadable( std::map< std::string, std::string > & instances,
 					const std::string & annexID,
 					std::map< std::string, std::string > & annexes ) {
 	if( annexID.empty() ) {
-		printHumanReadableSummary( count, instances, annexes );
+		printHumanReadableSummary( instances, annexes );
 		return;
 	}
 
@@ -222,15 +257,15 @@ printHumanReadable( unsigned count,
 		formatstr( auditString, "%s%s %u, ", auditString.c_str(), i->first.c_str(), i->second );
 		fprintf( stdout, "%-14.14s %5u\n", i->first.c_str(), i->second );
 	}
-	formatstr( auditString, "%stotal %u", auditString.c_str(), count );
-	fprintf( stdout, "%-14.14s %5u\n", "TOTAL", count );
+	formatstr( auditString, "%stotal %u", auditString.c_str(), instances.size() );
+	fprintf( stdout, "%-14.14s %5u\n", "TOTAL", instances.size() );
 
 	std::map< std::string, std::vector< std::string > > instanceIDsByStatus;
 	for( auto i = instances.begin(); i != instances.end(); ++i ) {
 		instanceIDsByStatus[ i->second ].push_back( i->first );
 	}
 
-	if( statusCounts[ "in-pool" ] != count ) {
+	if( statusCounts[ "in-pool" ] != instances.size() ) {
 		formatstr( auditString, "%s; ", auditString.c_str() );
 		fprintf( stdout, "\n" );
 		fprintf( stdout, "Instances not in the pool, grouped by state:\n" );
@@ -340,9 +375,9 @@ StatusReply::operator() () {
 			}
 
 			if( wantClassAds ) {
-				printClassAds( count, instances, annexID, command );
+				printClassAds( instances, annexID, command, annexes );
 			} else {
-				printHumanReadable( count, instances, annexID, annexes );
+				printHumanReadable( instances, annexID, annexes );
 			}
 		} else {
 			std::string errorString;
