@@ -1908,6 +1908,9 @@ fi
 %endif
 
 %changelog
+* Thu Jul 13 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.12-1
+- Can configure the condor_startd to compute free disk space once
+
 * Mon Jan 23 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.11-1
 - Fixed a bug which delayed startd access to stard cron job results
 - Fixed a bug in pslot preemption that could delay jobs starting
