@@ -66,7 +66,7 @@ class TestClassad(unittest.TestCase):
 
     def test_parse_iter(self):
         tf = tempfile.TemporaryFile()
-        tf.write("[foo = 1] [bar = 2]")
+        tf.write(b"[foo = 1] [bar = 2]")
         tf.seek(0)
         ad_iter = classad.parseAds(tf)
         ad = ad_iter.next()
@@ -74,7 +74,7 @@ class TestClassad(unittest.TestCase):
         self.assertEqual(ad["foo"], 1)
         self.assertEqual(" [bar = 2]", tf.read())
         tf = tempfile.TemporaryFile()
-        tf.write("-----\nfoo = 1\n\nbar = 2\n")
+        tf.write(b"-----\nfoo = 1\n\nbar = 2\n")
         tf.seek(0)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -86,14 +86,14 @@ class TestClassad(unittest.TestCase):
 
     def test_parse_next(self):
         tf = tempfile.TemporaryFile()
-        tf.write("[foo = 1] [bar = 2]")
+        tf.write(b"[foo = 1] [bar = 2]")
         tf.seek(0)
         ad = classad.parseNext(tf)
         self.assertEqual(len(ad), 1)
         self.assertEqual(ad["foo"], 1)
         self.assertEqual(" [bar = 2]", tf.read())
         tf = tempfile.TemporaryFile()
-        tf.write("-----\nfoo = 1\n\nbar = 2\n")
+        tf.write(b"-----\nfoo = 1\n\nbar = 2\n")
         tf.seek(0)
         ad = classad.parseNext(tf)
         self.assertEqual(len(ad), 1)
