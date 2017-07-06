@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.4.12 not yet released.
-%\item HTCondor version 8.4.12 released on Month Date, 2016.
+\item HTCondor version 8.4.12 released on July 13, 2016.
 
 \end{itemize}
 
@@ -33,7 +32,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added a new knob, \MacroNI{STARTD\_RECOMPUTE\_DISK\_FREE}, which
+defaults to \Expr{true}, which tells the \Condor{startd} to periodically
+recompute and advertise free disk space. Administrators can set this to
+\Expr{false} for partitionable slots whose execute directory is used by
+HTCondor alone.
+\Ticket{6301}
 
 \end{itemize}
 

@@ -1938,6 +1938,9 @@ fi
 %endif
 
 %changelog
+* Thu Jul 13 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.12-1
+- Can configure the condor_startd to compute free disk space once
+
 * Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-1
 - Improved condor_schedd performance by turning off file checks by default
 - condor_annex -status finds VM instances that have not joined the pool
