@@ -159,6 +159,7 @@ printHumanReadableSummary(	std::map< std::string, std::string > & instances,
 	}
 
 	// Print the [annex-]NAME TOTAL <status1> ... <statusN> table.
+	bool instancesNotInPool = false;
 	unsigned longestStatus = 0;
 	fprintf( stdout, "%-27.27s %5.5s", "NAME", "TOTAL" );
 	for( auto i = statuses.begin(); i != statuses.end(); ++i ) {
@@ -184,6 +185,7 @@ printHumanReadableSummary(	std::map< std::string, std::string > & instances,
 					0, status.c_str() );
 				fprintf( stdout, " %*s", status.length(), "0" );
 			} else {
+				if( status != "in-pool" ) { instancesNotInPool += as[ status ]; }
 				formatstr( auditString, "%s %u %s,", auditString.c_str(),
 					as[ status ], status.c_str() );
 				fprintf( stdout, " %*d", status.length(), as[ status ] );
@@ -196,6 +198,10 @@ printHumanReadableSummary(	std::map< std::string, std::string > & instances,
 	auditString.erase( auditString.length() - 2 );
 	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", auditString.c_str() );
 	auditString.clear();
+
+	if(! instancesNotInPool) {
+		return;
+	}
 
 	// Print the table separator.
 	fprintf( stdout, "\n" );
@@ -229,8 +235,10 @@ printHumanReadableSummary(	std::map< std::string, std::string > & instances,
 		}
 	}
 
-	auditString.erase( auditString.length() - 2 );
-	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", auditString.c_str() );
+	if(! auditString.empty()) {
+		auditString.erase( auditString.length() - 2 );
+		dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", auditString.c_str() );
+	}
 }
 
 void

@@ -4,6 +4,10 @@
 #include "Functor.h"
 #include "GetInstances.h"
 
+const char * emptyStringIfNull( const char * str ) {
+	if( strcmp( str, "NULL" ) == 0 ) { return ""; } else { return str; }
+}
+
 int
 GetInstances::operator() () {
 	dprintf( D_FULLDEBUG, "GetInstances::operator()\n" );
@@ -15,7 +19,8 @@ GetInstances::operator() () {
 	StringList returnStatus;
 	int rc = gahp->ec2_vm_status_all(
 		service_url, public_key_file, secret_key_file,
-		"tag-key", "htcondor:AnnexName",
+		// We can't filter on this until AWS supports SFR pass-through tagging.
+		// "tag-key", "htcondor:AnnexName",
 		returnStatus, errorCode
 	);
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -48,8 +53,23 @@ GetInstances::operator() () {
 			std::string keyName = returnStatus.next();
 			std::string stateReasonCode = returnStatus.next();
 			std::string publicDNSName = returnStatus.next();
-			std::string spotFleetRequestID = returnStatus.next();
-			std::string annexName = returnStatus.next();
+			std::string spotFleetRequestID = emptyStringIfNull( returnStatus.next() );
+			std::string annexName = emptyStringIfNull( returnStatus.next() );
+
+			// An instance is in annex iff it has the 'htcondor:AnnexName'
+			// tag OR -- until AWS gets its act together -- it has a
+			// aws:ec2spot:fleet-request-id tag whose value is a SFR made
+			// by annex (as identified by the client token).
+			if( annexName.empty() && spotFleetRequestID.empty() ) {
+				continue;
+			}
+
+			// We can also remove this when AWS allows, etc.
+			if(! spotFleetRequestID.empty()) {
+				if( annexName.empty() ) {
+					annexName = "[spot requests]";
+				}
+			}
 
 			// If we're looking for a specific annex's instances, filter.
 			if(! annexID.empty()) {
