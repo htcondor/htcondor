@@ -1897,6 +1897,9 @@ fi
 %endif
 
 %changelog
+* Thu Jul 13 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.12-1
+- Can configure the condor_startd to compute free disk space once
+
 * Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.4-1
 - Python bindings are now available on MacOSX
 - Fixed a bug where PASSWORD authentication could fail to exchange keys
