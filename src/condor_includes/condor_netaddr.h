@@ -32,6 +32,7 @@
 
 class condor_netaddr
 {
+	bool matchesEverything;
 	condor_sockaddr base_;
 	unsigned int maskbit_;
 public:
