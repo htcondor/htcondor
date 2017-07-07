@@ -394,7 +394,7 @@ ExprTreeHolder::apply_unary_operator(classad::Operation::OpKind kind) const
 }
 
 bool
-ExprTreeHolder::__nonzero__()
+ExprTreeHolder::__bool__()
 {
     boost::python::object result = Evaluate();
     boost::python::extract<classad::Value::ValueType> value_extract(result);

@@ -236,7 +236,11 @@ BOOST_PYTHON_MODULE(classad)
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
         .def("_get", &ExprTreeHolder::subscript, condor::classad_expr_return_policy<>())
         .def("eval", &ExprTreeHolder::Evaluate, evaluate_overloads("Evalaute the expression, possibly within context of a ClassAd"))
-        .def("__nonzero__", &ExprTreeHolder::__nonzero__)
+#if PY_MAJOR_VERSION >= 3
+        .def("__bool__", &ExprTreeHolder::__bool__)
+#else
+        .def("__nonzero__", &ExprTreeHolder::__bool__)
+#endif
         .def("sameAs", &ExprTreeHolder::SameAs, "Returns true if given ExprTree is same as this one.")
         .def("and_", &ExprTreeHolder::__land__)
         .def("or_", &ExprTreeHolder::__lor__)
