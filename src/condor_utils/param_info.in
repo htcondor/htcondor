@@ -1277,6 +1277,12 @@ default=false
 type=bool
 tags=daemon_core
 
+[SEC_CREDENTIAL_REFRESH_INTERVAL]
+default=-1
+type=int
+description=Default interval for re-storing credentials
+tags=security
+
 [SEC_DEFAULT_AUTHENTICATION_TIMEOUT]
 default=20
 type=int
