@@ -783,7 +783,8 @@ pythonFunctionTrampoline_internal(const char *name, const classad::ArgumentList&
         pyKw["state"] = wrapper;
     }
 
-    boost::python::object pyResult = py_import("__main__").attr("__builtins__").attr("apply")(pyFunc, pyArgs, pyKw);
+    boost::python::object pyResult = boost::python::eval("lambda f,a,kw: f(*a,**kw)")(pyFunc, pyArgs, pyKw);
+
     classad::ExprTree* exprTreeResult = convert_python_to_exprtree(pyResult);
     if (!exprTreeResult || !exprTreeResult->Evaluate(state, result))
     {
