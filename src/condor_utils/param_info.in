@@ -4914,6 +4914,12 @@ type=bool
 customization=expert
 description=Should HTCondor manage AFS tokens in the kernel keyring
 
+[KEYRING_SESSION_CREATION_TIMEOUT]
+default=20
+type=int
+customization=expert
+description=How many seconds to block creating a new keyring session before EXCEPTing
+
 [DISCARD_SESSION_KEYRING_ON_STARTUP]
 default=true
 type=bool
