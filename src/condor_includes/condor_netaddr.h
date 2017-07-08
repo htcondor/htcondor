@@ -32,9 +32,9 @@
 
 class condor_netaddr
 {
-	bool matchesEverything;
 	condor_sockaddr base_;
 	unsigned int maskbit_;
+	bool matchesEverything;
 public:
 	condor_netaddr();
 	condor_netaddr(const condor_sockaddr& base, unsigned int maskbit);
