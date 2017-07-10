@@ -310,6 +310,30 @@ The \Condor{startd} will advertise which docker volumes it has available
 for mounting with the machine attributes HasDockerVolumeSOME\_NAME = true
 so that jobs can match to machines with volumes they need.
 
+Optionally, if the directory name is two directories, separated by a colon,
+the first directory is the name on the host machine, and the second is the
+value inside the container.  If a ":ro" is specified after the second directory
+name, the volume will be mounted read-only inside the container.
+
+These directories will be bind-mounted unconditionally inside the container.
+If an administrator wants to bind mount a directory only for some jobs, perhaps
+only those submitted by some trusted user, the setting
+\Macro{DOCKER\_VOLUME\_DIR\_xxx\_MOUNT\_IF} may be used.  This is a class ad
+expression, evaluated in the context of the job ad and the machine ad.  Only when it
+evaluted to TRUE, is the volume mounted.  Extending the above example,
+
+\begin{verbatim}
+DOCKER_VOLUMES = SOME_DIR, ANOTHER_DIR
+DOCKER_VOLUME_DIR_SOME_DIR = /path1
+DOCKER_VOLUME_DIR_SOME_DIR_MOUNT_IF = WantSomeDirMounted && Owner == "smith"
+DOCKER_VOLUME_DIR_ANOTHER_DIR = /path/to/no2
+DOCKER_MOUNT_VOLUMES = SOME_DIR, ANOTHER_DIR
+\end{verbatim}
+
+In this case, the directory /path1 will get mounted inside the container only for jobs
+owned by user "smith", and who set +WantSomeDirMounted = true in their submit file.
+
+
 In addition to installing the Docker service, 
 the single configuration variable \Macro{DOCKER} must be set.
 It defines the location of the Docker CLI and can also specify that

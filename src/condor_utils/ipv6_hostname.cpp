@@ -397,7 +397,7 @@ MyString get_hostname(const condor_sockaddr& addr) {
 	if (targ_addr.is_ipv6())
 		targ_addr.set_scope_id(0);
 
-	e = condor_getnameinfo(targ_addr, hostname, sizeof(hostname), NULL, 0, 0);
+	e = condor_getnameinfo(targ_addr, hostname, sizeof(hostname), NULL, 0, NI_NAMEREQD );
 	if (e)
 		return ret;
 

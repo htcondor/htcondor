@@ -69,12 +69,31 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 	// check to see if .cc already exists
 	char ccfilename[PATH_MAX];
 	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
-	struct stat junk_buf;
-	int rc = stat(ccfilename, &junk_buf);
-	if (rc==0) {
-		// if the credential cache already exists, we don't even need
-		// to write the file.  just return success as quickly as
-		// possible.
+	struct stat cred_stat_buf;
+	int rc = stat(ccfilename, &cred_stat_buf);
+
+	// if the credential already exists, we should update it if
+	// it's more than X seconds old.  if X is zero, we always
+	// update it.  if X is negative, we never update it.
+	int fresh_time = param_integer("SEC_CREDENTIAL_REFRESH_INTERVAL", -1);
+
+	// if it already exists and we don't update, call it a "success".
+	if (rc==0 && fresh_time < 0) {
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s already exist in %s, and interval is %i\n",
+			username, ccfilename, fresh_time );
+
+		return SUCCESS;
+	}
+
+	// return success if the credential exists and has been recently
+	// updated.  note that if fresh_time is zero, we'll never return
+	// success here, meaning we will always update the credential.
+	time_t now = time(NULL);
+	if ((rc==0) && (now - cred_stat_buf.st_mtime < fresh_time)) {
+		// was updated in the last X seconds, so call it a "success".
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s already exist in %s, and interval is %i\n",
+			username, ccfilename, fresh_time );
+
 		return SUCCESS;
 	}
 

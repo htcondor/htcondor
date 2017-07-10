@@ -286,6 +286,21 @@ static int should_use_keyring_sessions() {
 #endif
 }
 
+static int keyring_session_creation_timeout() {
+#ifdef LINUX
+	static int KeyringSessionCreationTimeout = 0;
+	static int DidParamForKeyringSessionCreationTimeout = FALSE;
+
+	if(!DidParamForKeyringSessionCreationTimeout) {
+		KeyringSessionCreationTimeout = param_boolean("KEYRING_SESSION_CREATION_TIMEOUT", 20);
+		DidParamForKeyringSessionCreationTimeout = true;
+	}
+	return KeyringSessionCreationTimeout;
+#else
+	return 0;
+#endif
+}
+
 
 /* End Common Bits */
 
@@ -1529,7 +1544,30 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 
 			// create a new session
 			set_root_euid();
-			condor_keyctl_session(NULL);
+
+			// if session creation fails, it could be that old
+			// sessions have not yet been garbage collected.
+			//
+			// since we can't continue without success, sleep a
+			// tiny amount and try again, up to a maximum timeout
+			// in which case we EXCEPT.
+
+			// record when we started and what the timeout is
+			time_t started = time(NULL);
+			int timeout = keyring_session_creation_timeout();
+
+			// attempt creation and loop until success or timeout.
+			while( condor_keyctl_session(NULL) == -1 ) {
+				// sleep briefly, squash return value
+				if(usleep(1)) {}
+
+				// check for timeout
+				time_t now = time(NULL);
+				if(now - started >= timeout) {
+					EXCEPT("FATAL: Unable to create new session keyring when switching priv.");
+				}
+			}
+
 			key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
 			if (dologging) dprintf(D_SECURITY, "KEYCTL: New session keyring %i\n", sess_keyring);
 
