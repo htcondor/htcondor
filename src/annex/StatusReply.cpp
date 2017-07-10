@@ -188,7 +188,7 @@ printHumanReadableSummary(	std::map< std::string, std::string > & instances,
 				if( status != "in-pool" ) { instancesNotInPool += as[ status ]; }
 				formatstr( auditString, "%s %u %s,", auditString.c_str(),
 					as[ status ], status.c_str() );
-				fprintf( stdout, " %*d", status.length(), as[ status ] );
+				fprintf( stdout, " %*d", (int)status.length(), as[ status ] );
 			}
 		}
 		auditString.erase( auditString.length() - 1 );
@@ -265,8 +265,8 @@ printHumanReadable( std::map< std::string, std::string > & instances,
 		formatstr( auditString, "%s%s %u, ", auditString.c_str(), i->first.c_str(), i->second );
 		fprintf( stdout, "%-14.14s %5u\n", i->first.c_str(), i->second );
 	}
-	formatstr( auditString, "%stotal %u", auditString.c_str(), instances.size() );
-	fprintf( stdout, "%-14.14s %5u\n", "TOTAL", instances.size() );
+	formatstr( auditString, "%stotal %lu", auditString.c_str(), instances.size() );
+	fprintf( stdout, "%-14.14s %5lu\n", "TOTAL", instances.size() );
 
 	std::map< std::string, std::vector< std::string > > instanceIDsByStatus;
 	for( auto i = instances.begin(); i != instances.end(); ++i ) {
