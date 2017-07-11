@@ -75,6 +75,7 @@ ScheddNegotiate::ScheddNegotiate
 	m_num_resource_reqs_sent(0),
 	m_num_resource_reqs_to_send(0),
 	m_negotiation_finished(false),
+	m_first_rrl_request(true),
 	m_operation(0)
 {
 	m_current_job_id.cluster = -1;
@@ -296,7 +297,17 @@ ScheddNegotiate::sendResourceRequestList(Sock *sock)
 
 	while (m_num_resource_reqs_to_send > 0) {
 
-		nextJob();
+		// Don't call nextJob() at the start of sending our first set
+		// of request ads. If we received match results before this,
+		// then nextJob() has already been called to ready the first
+		// ad that we want to send. If we haven't received match
+		// results, then sendJobInfo() will call nextJob() to ready
+		// the first ad.
+		if ( m_first_rrl_request ) {
+			m_first_rrl_request = false;
+		} else {
+			nextJob();
+		}
 
 		if ( !sendJobInfo(sock, true) ) {
 			return false;

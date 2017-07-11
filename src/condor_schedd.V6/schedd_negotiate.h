@@ -170,6 +170,7 @@ class ScheddNegotiate: public DCMsg {
 	int m_num_resource_reqs_to_send; // used when sending a resource request list
 
 	bool m_negotiation_finished;
+	bool m_first_rrl_request;
 
 		// data in message received from negotiator
 	int m_operation;             // the negotiation operation
