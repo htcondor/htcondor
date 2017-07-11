@@ -183,7 +183,7 @@ printHumanReadableSummary(	std::map< std::string, std::string > & instances,
 			if( as.count( status ) == 0 ) {
 				formatstr( auditString, "%s %u %s,", auditString.c_str(),
 					0, status.c_str() );
-				fprintf( stdout, " %*s", status.length(), "0" );
+				fprintf( stdout, " %*s", (int)status.length(), "0" );
 			} else {
 				if( status != "in-pool" ) { instancesNotInPool += as[ status ]; }
 				formatstr( auditString, "%s %u %s,", auditString.c_str(),
