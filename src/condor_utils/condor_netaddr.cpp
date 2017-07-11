@@ -78,6 +78,11 @@ static int convert_maskaddr_to_maskbit(uint32_t mask_value) {
 }
 
 bool condor_netaddr::from_net_string(const char* net) {
+	if( strcmp( net, "*" ) == 0 || strcmp( net, "*/*" ) == 0 ) {
+		matchesEverything = true;
+		return true;
+	}
+
 	const char* slash = strchr(net, '/');
 	const char* net_end = net + strlen(net);
 	if (slash) {
@@ -111,10 +116,6 @@ bool condor_netaddr::from_net_string(const char* net) {
 				if (maskbit_ == (unsigned int)-1) {
 					return false;
 				}
-
-				if( strcmp( net, "*/*" ) == 0 ) {
-					matchesEverything = true;
-				}
 			}
 		}
 	} else {
@@ -132,10 +133,6 @@ bool condor_netaddr::from_net_string(const char* net) {
 			maskbit_ = convert_maskaddr_to_maskbit(*(uint32_t*)&mask);
 			if( maskbit_ == (unsigned)-1 ) {
 				return false;
-			}
-
-			if( strcmp( net, "*" ) == 0 ) {
-				matchesEverything = true;
 			}
 		} else {
 			// IPv6 literal or asterisk.

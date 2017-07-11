@@ -32,6 +32,7 @@ uint32_t find_scope_id(const condor_sockaddr& addr) {
 			condor_sockaddr addr2(ifa->ifa_addr);
 			if (addr.compare_address(addr2)) {
 				result = addr2.to_sin6().sin6_scope_id;
+				break;
 			}
 		}
 	}
