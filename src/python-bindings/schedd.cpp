@@ -2222,16 +2222,16 @@ void export_schedd()
         ;
 
     class_<RequestIterator>("ResourceRequestIterator", no_init)
-        .def("next", &RequestIterator::next, "Get next resource request.")
+        .def(NEXT_FN, &RequestIterator::next, "Get next resource request.")
         ;
 
     class_<HistoryIterator>("HistoryIterator", no_init)
-        .def("next", &HistoryIterator::next)
+        .def(NEXT_FN, &HistoryIterator::next)
         .def("__iter__", &HistoryIterator::pass_through)
         ;
 
     class_<QueryIterator>("QueryIterator", no_init)
-        .def("next", &QueryIterator::next, "Return the next ad from the query results.\n"
+        .def(NEXT_FN, &QueryIterator::next, "Return the next ad from the query results.\n"
             ":param mode: One of the BlockingMode enum; Blocking or NonBlocking.\n"
             ":return: The next ad in the query results.  If NonBlocking mode is used, returns None if no ad is available..\n"
             "Throws a StopIterator exception if no results are available..\n",

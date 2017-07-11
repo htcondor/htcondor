@@ -275,17 +275,17 @@ BOOST_PYTHON_MODULE(classad)
         ;
 
     class_<OldClassAdIterator>("OldClassAdIterator", no_init)
-        .def("next", &OldClassAdIterator::next)
+        .def(NEXT_FN, &OldClassAdIterator::next)
         .def("__iter__", &OldClassAdIterator::pass_through)
         ;
 
     class_<ClassAdStringIterator>("ClassAdStringIterator", no_init)
-        .def("next", &ClassAdStringIterator::next)
+        .def(NEXT_FN, &ClassAdStringIterator::next)
         .def("__iter__", &OldClassAdIterator::pass_through)
         ;
 
     class_<ClassAdFileIterator>("ClassAdFileIterator")
-        .def("next", &ClassAdFileIterator::next)
+        .def(NEXT_FN, &ClassAdFileIterator::next)
         .def("__iter__", &OldClassAdIterator::pass_through)
         ;
 

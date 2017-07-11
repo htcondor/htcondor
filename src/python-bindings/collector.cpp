@@ -113,7 +113,7 @@ struct Collector {
             {
                 try
                 {
-                    boost::python::object next_obj = my_iter.attr("next")();
+                    boost::python::object next_obj = my_iter.attr(NEXT_FN)();
                     std::string pool_str = boost::python::extract<std::string>(next_obj);
                     collector_list.append(pool_str.c_str());
                 }
