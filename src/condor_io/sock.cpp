@@ -195,7 +195,7 @@ Sock::~Sock()
 		_auth_methods = NULL;
 	}
 	free(_auth_name);
-	free(_policy_ad);
+	delete _policy_ad;
 	if (_crypto_method) {
 		free(_crypto_method);
 		_crypto_method = NULL;
