@@ -42,7 +42,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug where reverse resolutions could return the string
+representation of the address in question instead of failing.  This
+resulted in spurious warnings of the form "WARNING: forward resolution of
+2001:630:10:f001::19a0 doesn't match 2001:630:10:f001::19a0!"
+\Ticket{6338}
+
+\item Fixed a bug where setting \MacroNI{NETWORK\_INTERFACE} to an
+IPv6 address could cause HTCondor daemons to except.
+\Ticket{6339}
 
 \end{itemize}
 
