@@ -52,6 +52,11 @@ resulted in spurious warnings of the form "WARNING: forward resolution of
 IPv6 address could cause HTCondor daemons to except.
 \Ticket{6339}
 
+\item Fixed a bug where the wildcard '*' in ALLOW or DENY lists was
+being interpreted as only matching IPv4 addresses.  It now properly
+matches any address family.
+\Ticket{6340}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
