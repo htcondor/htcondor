@@ -69,7 +69,7 @@ class TestClassad(unittest.TestCase):
         tf.write(b"[foo = 1] [bar = 2]")
         tf.seek(0)
         ad_iter = classad.parseAds(tf)
-        ad = ad_iter.next()
+        ad = next(ad_iter)
         self.assertEqual(len(ad), 1)
         self.assertEqual(ad["foo"], 1)
         self.assertEqual(" [bar = 2]", tf.read())
@@ -79,7 +79,7 @@ class TestClassad(unittest.TestCase):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             ad_iter = classad.parseOldAds(tf)
-        ad = ad_iter.next()
+        ad = next(ad_iter)
         self.assertEqual(len(ad), 1)
         self.assertEqual(ad["foo"], 1)
         self.assertEqual("bar = 2\n", tf.read())
