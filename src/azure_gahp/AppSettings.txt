@@ -1,0 +1,3 @@
+client_id deadbeef-0000-0000-0000-000000000000
+secret xxxxxxxxxxxxxxxx
+tenant_id deadbeef-0000-0000-0000-000000000000
