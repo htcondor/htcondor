@@ -518,6 +518,22 @@ int Sock::assignInvalidSocket( condor_protocol proto ) {
 	return assignSocket( proto, INVALID_SOCKET );
 }
 
+int Sock::assignCCBSocket( SOCKET s ) {
+	ABEND( s != INVALID_SOCKET );
+
+	if( IsDebugLevel( D_NETWORK ) && _who.is_valid() ) {
+		condor_sockaddr sockAddr;
+		ABEND( condor_getsockname( s, sockAddr ) == 0 );
+		condor_protocol sockProto = sockAddr.get_protocol();
+		condor_protocol objectProto = _who.get_protocol();
+		dprintf( D_NETWORK, "DEBUG: sockProto = %u, objectProto = %u\n", sockProto, objectProto );
+	}
+
+	_who.clear();
+
+	return assignSocket( s );
+}
+
 int Sock::assignSocket( SOCKET sockd ) {
 	ABEND( sockd != INVALID_SOCKET );
 

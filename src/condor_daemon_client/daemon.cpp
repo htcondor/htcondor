@@ -1611,7 +1611,7 @@ Daemon::initHostname( void )
 	if (fqdn.IsEmpty()) {
 		New_hostname( NULL );
 		New_full_hostname( NULL );
-		dprintf(D_HOSTNAME, "get_full_hostname() failed for address %s",
+		dprintf(D_HOSTNAME, "get_full_hostname() failed for address %s\n",
 				saddr.to_ip_string().Value());
 		std::string err_msg = "can't find host info for ";
 		err_msg += _addr;
