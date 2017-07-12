@@ -10,7 +10,11 @@ from azure.mgmt.compute import ComputeManagementClient
 from collections import deque
 
 
-valueSeparator = " "
+spaceSeparator = " "
+singleBackSlashSpaceSeparator = "\\ "
+doubleBackSlashSeparator = "\\\\"
+singleBackSlashSeparator = "\\"
+
 ########### CLASSES ##################
 class AzureGAHPCommandInfo:
     command = ""
@@ -151,13 +155,17 @@ class AzureGAHPCommandExec():
 
     def get_base64(self, data):
         if not os.path.exists(data): 
-            return base64.b64encode(data) #raw key
+            return base64.b64encode(data)
         filePath = os.path.expanduser(data)
         # Will raise if file not exists or not enough permission
         with open(filePath, 'r') as customData:
             return base64.b64encode(bytes(customData.read(), 'utf-8')).decode("utf-8")
 
     def create_vm_parameters(self,location, vmName, vmSize, storageAccountName, userName, key_info, osDiskName, nic_id, vm_reference,osType,tag,customData,dataDisks):
+        customImage = 0        
+        if "https://" in vm_reference:
+            customImage = 1
+            storageAccount = vm_reference.split('/')[2].split('.')[0]        
         key = self.get_ssh_key(key_info)        
         params = {
             'location': location,
@@ -168,13 +176,7 @@ class AzureGAHPCommandExec():
             'hardware_profile': {
                 'vm_size': vmSize
             },
-            'storage_profile': {
-                'image_reference': {
-                    'publisher': vm_reference['publisher'],
-                    'offer': vm_reference['offer'],
-                    'sku': vm_reference['sku'],
-                    'version': vm_reference['version']
-                },
+            'storage_profile': {               
                 'os_disk': {
                     'name': osDiskName,
                     'caching': 'None',
@@ -202,7 +204,24 @@ class AzureGAHPCommandExec():
         tags = {
                 "Group": tag
               }
-  
+
+        if customImage == 0:
+            imageReference = {
+                    'publisher': vm_reference['publisher'],
+                    'offer': vm_reference['offer'],
+                    'sku': vm_reference['sku'],
+                    'version': vm_reference['version']
+                }
+            params['storage_profile']['image_reference'] = imageReference            
+        else:
+            params['storage_profile']['os_disk']['caching'] = 'ReadWrite'
+            params['storage_profile']['os_disk']['os_type'] = osType
+            params['storage_profile']['os_disk']['vhd']['uri'] = 'https://{}.blob.core.windows.net/vhds/{}.vhd'.format(storageAccount, osDiskName)
+            imageUri = {
+            'uri': vm_reference.strip()
+                    }
+            params['storage_profile']['os_disk']['image'] = imageUri  
+
         if os.path.exists(key_info) and osType == 'Linux': 
             params['os_profile']['linux_configuration'] = linuxConf
         else:  
@@ -233,16 +252,16 @@ class AzureGAHPCommandExec():
             params['storage_profile']['data_disks'] = data_Disks
 
         return params
+
     def create_vm(self, compute_client, network_client, resource_client, storage_client, location, groupName, vnetName, subnetName, 
 osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vmSize, vmRef,osType,tag,customData,dataDisks):
         #nics = list(network_client.network_interfaces.list(
         #            groupName
         #        ))
-
         self.write_message('creating resource group' + "\r\n")
         resource_client.resource_groups.create_or_update(groupName, {'location':location})
         self.write_message('creating storage account' + "\r\n")
-        storageAccountName = storageAccountName.replace(valueSeparator,"").lower()
+        storageAccountName = storageAccountName.lower()
         storage_async_operation = storage_client.storage_accounts.create(groupName,
                 storageAccountName,
                 {
@@ -266,14 +285,7 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
         async_vm_delete.wait()
 
     def list_vm(self, compute_client, groupName, vmName):
-        #compute_client.virtual_machines.get(groupName, groupName+"vm",
-        #expand='instanceView')
-        #compute_client.virtual_machines.get_with_instance_view(groupName,
-        #groupName+"vm")
-        #vm = compute_client.virtual_machines.get(groupName, vmName,
-        #expand='instanceView')
-        vm = compute_client.virtual_machines.get(groupName, vmName, expand='instanceView')
-        
+        vm = compute_client.virtual_machines.get(groupName, vmName, expand='instanceView')        
         statuses = vm.instance_view.statuses
         numStatus = len(statuses)
         str_status_list = []
@@ -283,22 +295,8 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
             if(i != (numStatus - 1)):
                 str_status_list.append(",")
         
-        return (groupName.replace(valueSeparator,"\\ ").replace("\\", "\\\\") + self.separator + ''.join(str_status_list)+self.vmResultSeparator)
+        return (self.Escape(groupName)+ spaceSeparator + self.Escape(''.join(str_status_list))+ spaceSeparator)
 
-    def list_vm_tag(self, compute_client, groupName, vmName):
-        vm = compute_client.virtual_machines.get(groupName, vmName, expand='instanceView')
-        
-        statuses = vm.instance_view.statuses
-        numStatus = len(statuses)
-        str_status_list = []
-        
-        for i in range(numStatus):
-            str_status_list.append(statuses[i].code)
-            if(i != (numStatus - 1)):
-                str_status_list.append(",")
-        
-        return (groupName + " " + ''.join(str_status_list))
- 
     def list_rg(self, compute_client,groupName,tag):
         self.write_message('listing vms in RG: ' + groupName + "\r\n")  
         vms_info_list = []
@@ -308,8 +306,6 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
             vmList = compute_client.virtual_machines.list(groupName)
             for vm in vmList:
                 vmInfo = self.list_vm(compute_client, groupName, groupName + "vm")
-                #if(count != 0):
-                #    vms_info_list.append(self.separator)
                 vms_info_list.append(vmInfo)
                 count = count + 1
         elif(tag != ''):
@@ -376,70 +372,72 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
         
         if(ci.command.upper() == "AZURE_PING"):
             try:
-                #sample_create_vm()
                 credentials = self.create_credentials_from_file(ci.cred_file)
                 if(credentials is None):
-                    self.QueueResult(ci.request_id, "Error reading or creating credentials")
+                    self.QueueResult(ci.request_id, self.Escape("Error reading or creating credentials"))
                     return
                 client_libs = self.create_client_libraries(credentials, ci.subscription)
                 if(client_libs is None):
-                    self.QueueResult(ci.request_id, "Error creating client libraries")
+                    self.QueueResult(ci.request_id, self.Escape("Error creating client libraries"))
                     return
                 self.QueueResult(ci.request_id, "NULL")
             except Exception as e:
-                self.QueueResult(ci.request_id, str(e.args[0])) 
+                error = self.Escape(str(e.args[0]))
+                self.QueueResult(ci.request_id, error) 
         elif(ci.command.upper() == "AZURE_VM_CREATE"):
             try:
-                #sample_create_vm()
                 credentials = self.create_credentials_from_file(ci.cred_file)
                 if(credentials is None):
-                    self.QueueResult(ci.request_id, "Error reading or creating credentials")
+                    self.QueueResult(ci.request_id, self.Escape("Error reading or creating credentials"))
                     return
                 client_libs = self.create_client_libraries(credentials, ci.subscription)
                 if(client_libs is None):
-                    self.QueueResult(ci.request_id, "Error creating client libraries")
+                    self.QueueResult(ci.request_id, self.Escape("Error creating client libraries"))
                     return
                 self.create_vm(client_libs["compute_client"], client_libs["network_client"], client_libs["resource_client"], client_libs["storage_client"], ci.cmdParams["location"], ci.cmdParams["name"], ci.cmdParams["vnetName"], ci.cmdParams["subnetName"], ci.cmdParams["osDiskName"], ci.cmdParams["storageAccountName"], ci.cmdParams["ipConfigName"], ci.cmdParams["nicName"], ci.cmdParams["adminUsername"], ci.cmdParams["key"], ci.cmdParams["vmName"], ci.cmdParams["size"], ci.cmdParams["vmRef"], ci.cmdParams["osType"], ci.cmdParams["tag"],ci.cmdParams["customdata"],ci.cmdParams["datadisks"])
                 self.QueueResult(ci.request_id, "NULL")
             except Exception as e:
-                self.QueueResult(ci.request_id, str(e.args[0])) #todo: vm_id, ip address
+                error = self.Escape(str(e.args[0]))
+                self.QueueResult(ci.request_id, error) #todo: vm_id, ip address
         elif(ci.command.upper() == "AZURE_VM_DELETE"):
             try:
                 credentials = self.create_credentials_from_file(ci.cred_file)
                 if(credentials is None):
-                    self.QueueResult(ci.request_id, "Error reading or creating credentials")
+                    self.QueueResult(ci.request_id, self.Escape("Error reading or creating credentials"))
                     return
                 client_libs = self.create_client_libraries(credentials, ci.subscription)
                 if(client_libs is None):
-                    self.QueueResult(ci.request_id, "Error creating client libraries")
+                    self.QueueResult(ci.request_id, self.Escape("Error creating client libraries"))
                     return
                 self.delete_rg(client_libs["resource_client"], ci.cmdParams["vmName"]) # TODO: delete_vm needs 2 parameters: RG and VmName
                 self.QueueResult(ci.request_id, "NULL")
             except Exception as e:
-                self.QueueResult(ci.request_id, str(e.args[0])) #todo: vm_id, ip address
+                error = self.Escape(str(e.args[0]))
+                self.QueueResult(ci.request_id, error) #todo: vm_id, ip address
         elif(ci.command.upper() == "AZURE_VM_LIST"):
             try:
                 credentials = self.create_credentials_from_file(ci.cred_file)
                 if(credentials is None):
-                    self.QueueResult(ci.request_id, "Error reading or creating credentials")
+                    self.QueueResult(ci.request_id, self.Escape("Error reading or creating credentials"))
                     return
                 client_libs = self.create_client_libraries(credentials, ci.subscription)
                 if(client_libs is None):
-                    self.QueueResult(ci.request_id, "Error creating client libraries")
+                    self.QueueResult(ci.request_id, self.Escape("Error creating client libraries"))
                     return
                 vms_info_list = self.list_rg(client_libs["compute_client"], ci.cmdParams["vmName"], ci.cmdParams["tag"]) # TODO: list_vm needs 2 parameters: RG and VmName
-                result = "NULL" + self.separator + str(len(vms_info_list))+ self.separator + ''.join(vms_info_list).rstrip(self.separator)
+                result = "NULL" + spaceSeparator + str(len(vms_info_list))+ spaceSeparator + ''.join(vms_info_list)
                 self.QueueResult(ci.request_id, result)
             except Exception as e:
-                self.write_message("Error listing VMs: " + str(e.args[0]) + "\r\n")
-                self.QueueResult(ci.request_id, str(e.args[0])) #todo: vm_id, ip address sys.exc_info()[0]
+                error = self.Escape(str(e.args[0]))
+                self.write_message("Error listing VMs: " + error + "\r\n")
+                self.QueueResult(ci.request_id,error) #todo: vm_id, ip address sys.exc_info()[0]
 
     def get_create_vm_args(self, cmdParts):
         vmRef = {
             "linux-ubuntu-latest": {"publisher": "Canonical", "offer": "UbuntuServer", "sku": "16.04.0-LTS", "version": "latest"},
             "windows-server-latest": {"publisher": "MicrosoftWindowsServerEssentials", "offer": "WindowsServerEssentials", "sku": "WindowsServerEssentials","version": "latest"}
         }
-        createVMArgNames = ["name","location","image", "size", "dataDisks","adminUsername","key","vnetName","publicIPAddress","customData","tag"]
+        createVMArgNames = ["name","location","image", "size", "dataDisks","adminUsername","key","vnetName","publicIPAddress","customData","tag","ostype"]
         dnary = dict()
         
         #nvpStrings = cmdParts[4].split(separator)
@@ -456,6 +454,8 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
             if(nvp[0].upper() not in (val.upper() for val in createVMArgNames)):
                 self.write_message('Unrecogonized paramter name: ' + nvp[0] + "\r\n")
                 return None
+            if(nvp[0].lower() == "ostype"):
+                dnary["osType"] = nvp[1].title()             
             if(nvp[0].lower() == "image"):
                 if(nvp[1].lower() == "linux-ubuntu-latest"):
                     dnary["vmRef"] = vmRef[nvp[1]]
@@ -463,6 +463,8 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
                 elif(nvp[1].lower() == "windows-server-latest"):
                     dnary["vmRef"] = vmRef[nvp[1]]
                     dnary["osType"] = 'Windows'
+                elif("https://" in nvp[1].lower()):
+                    dnary["vmRef"] = nvp[1].strip()
                 else:
                     self.write_message('Unrecognized image: ' + nvp[1] + "\r\n")
                     return None
@@ -493,11 +495,11 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
         if(not "datadisks" in dnary):
             dnary["datadisks"] = ""
 
-        subnetName = dnary["name"] + "subnet" #"aa1rangassubnet"
-        osDiskName = dnary["name"] + "osdisk" #"aa1rangasosdisk"
-        storageAccountName = dnary["name"] + "sa" #"aa1rangassa"
-        ipConfigName = dnary["name"] + "ipconfig" #"aa1rangasipconfig"
-        nicName = dnary["name"] + "nic" #"aa1rangasnic"
+        subnetName = dnary["name"] + "subnet"
+        osDiskName = dnary["name"] + "osdisk"
+        storageAccountName = dnary["name"] + "sa"
+        ipConfigName = dnary["name"] + "ipconfig"
+        nicName = dnary["name"] + "nic"
 
         dnary["subnetName"] = subnetName
         dnary["osDiskName"] = osDiskName
@@ -506,6 +508,7 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
         dnary["nicName"] = nicName
         
         return dnary
+
 
     def get_list_vm_args(self, cmdParts):       
         dnary = dict() 
@@ -547,4 +550,8 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
         t = AzureGAHPCommandExecThread(self)
         t.start()
         return True
+
+    def Escape(self,msg):
+        return msg.replace(singleBackSlashSeparator,doubleBackSlashSeparator).replace(spaceSeparator,singleBackSlashSpaceSeparator)
+
     #### END FUNCTIONS ################################

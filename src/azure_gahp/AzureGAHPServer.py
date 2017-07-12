@@ -13,22 +13,18 @@ while(True):
         print("E Invalid command")
         continue
     # Spec: If a string argument contains a backslash character, it must be escaped by preceding it with another backslash character
-    inputLine = inputLine.replace("\\\\", "\\")
+    inputLine = inputLine.replace(AzureGAHPLib.doubleBackSlashSeparator, AzureGAHPLib.singleBackSlashSeparator)
     # Spec: In the event that a string argument needs to contain a <SP> within the string itself, it must be escaped by placing a backslash ("\")
-    inputLine = inputLine.replace("\\ ", UNIQUE_STR)
+    inputLine = inputLine.replace(AzureGAHPLib.singleBackSlashSpaceSeparator, UNIQUE_STR)
     # Replace "\ " with unqiue string with chars is not allowed so that the rest of the string can be split by space
-    parts = inputLine.split(" ")
+    parts = inputLine.split(AzureGAHPLib.spaceSeparator)
     
     if (len(parts) < 1):
         print("E Invalid command")
         continue
 
     for i in range(len(parts)):
-        #arr = parts[i].split('=')
-        #if( len(arr)> 1 and arr[0].lower()=="tag"):
-        #    parts[i] = parts[i].replace(UNIQUE_STR, " ")    
-        #else:
-            parts[i] = parts[i].replace(UNIQUE_STR, AzureGAHPLib.valueSeparator)
+        parts[i] = parts[i].replace(UNIQUE_STR, AzureGAHPLib.spaceSeparator)
 
     command = parts[0]
     if(command.upper() == "COMMANDS"):
