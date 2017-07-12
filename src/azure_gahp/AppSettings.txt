@@ -1,3 +1,4 @@
 client_id deadbeef-0000-0000-0000-000000000000
 secret xxxxxxxxxxxxxxxx
 tenant_id deadbeef-0000-0000-0000-000000000000
+max_vm_count_in_thread 5
