@@ -10,6 +10,7 @@ from azure.mgmt.compute import ComputeManagementClient
 from collections import deque
 
 
+valueSeparator = " "
 ########### CLASSES ##################
 class AzureGAHPCommandInfo:
     command = ""
@@ -32,6 +33,8 @@ class AzureGAHPCommandExec():
     commandQLock = None
     resultQLock = None
     separator = ' '
+    newLineSeparator = "\r\n"
+    vmResultSeparator = " "
 
     def __init__(self):
         self.commandQ = deque()  
@@ -113,7 +116,7 @@ class AzureGAHPCommandExec():
         subnet_info = async_subnet_creation.result()
         # Create public ip
         self.write_message('creating public ip' + "\r\n")
-        async_public_ip_creation = network_client.public_ip_addresses.create_or_update(groupName,'pip' + groupName,{
+        async_public_ip_creation = network_client.public_ip_addresses.create_or_update(groupName,groupName+'pip',{
                     'location': location,
                     'public_ip_allocation_method': 'Dynamic'
                 })
@@ -212,7 +215,23 @@ class AzureGAHPCommandExec():
             base64CustomData = self.get_base64(customData)
             params['os_profile']['custom_data'] = base64CustomData
      
-           
+        data_Disks = []
+        if(dataDisks != ''):
+            ddArr = dataDisks.split(',')
+            for index,val in enumerate(ddArr):    
+                dd = {
+                        'name': 'datadisk{}'.format(index),
+                        'disk_size_gb': val,
+                        'lun': index,
+                        'vhd': {
+                            'uri' : "http://{}.blob.core.windows.net/vhds/datadisk{}.vhd".format(
+                                storageAccountName,index)
+                        },
+                        'create_option': 'Empty'
+                      };
+                data_Disks.append(dd)
+            params['storage_profile']['data_disks'] = data_Disks
+
         return params
     def create_vm(self, compute_client, network_client, resource_client, storage_client, location, groupName, vnetName, subnetName, 
 osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vmSize, vmRef,osType,tag,customData,dataDisks):
@@ -223,7 +242,7 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
         self.write_message('creating resource group' + "\r\n")
         resource_client.resource_groups.create_or_update(groupName, {'location':location})
         self.write_message('creating storage account' + "\r\n")
-        storageAccountName=storageAccountName.lower()
+        storageAccountName = storageAccountName.replace(valueSeparator,"").lower()
         storage_async_operation = storage_client.storage_accounts.create(groupName,
                 storageAccountName,
                 {
@@ -264,7 +283,7 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
             if(i != (numStatus - 1)):
                 str_status_list.append(",")
         
-        return (groupName + " " + ''.join(str_status_list))
+        return (groupName.replace(valueSeparator,"\\ ").replace("\\", "\\\\") + self.separator + ''.join(str_status_list)+self.vmResultSeparator)
 
     def list_vm_tag(self, compute_client, groupName, vmName):
         vm = compute_client.virtual_machines.get(groupName, vmName, expand='instanceView')
@@ -283,31 +302,29 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
     def list_rg(self, compute_client,groupName,tag):
         self.write_message('listing vms in RG: ' + groupName + "\r\n")  
         vms_info_list = []
+        vmList = []
         count = 0
         if(groupName != ''):
-            for vm in compute_client.virtual_machines.list(groupName):
+            vmList = compute_client.virtual_machines.list(groupName)
+            for vm in vmList:
                 vmInfo = self.list_vm(compute_client, groupName, groupName + "vm")
-                if(count != 0):
-                    vms_info_list.append("\r\n")
+                #if(count != 0):
+                #    vms_info_list.append(self.separator)
                 vms_info_list.append(vmInfo)
                 count = count + 1
         elif(tag != ''):
             for vm in compute_client.virtual_machines.list_all():
                 if(vm.tags is not None):
                     for key in vm.tags:
-                        if(key == 'Group'):
+                        if(key == 'Group') and vm.tags['Group']==tag:
                             arr = vm.id.split('/')                                
-                            vmInfo = self.list_vm(compute_client, arr[4], vm.name)                       
-                            if(count != 0):
-                                vms_info_list.append("\r\n")
+                            vmInfo = self.list_vm(compute_client, arr[4], vm.name)
                             vms_info_list.append(vmInfo)
                             count = count + 1
         else:
             for vm in compute_client.virtual_machines.list_all():
                 arr = vm.id.split('/')                                
-                vmInfo = self.list_vm(compute_client, arr[4], vm.name)                       
-                if(count != 0):
-                    vms_info_list.append("\r\n")
+                vmInfo = self.list_vm(compute_client, arr[4], vm.name) 
                 vms_info_list.append(vmInfo)
                 count = count + 1
         return vms_info_list
@@ -411,9 +428,7 @@ osDiskName, storageAccountName, ipConfigName, nicName, userName, key, vmName, vm
                     self.QueueResult(ci.request_id, "Error creating client libraries")
                     return
                 vms_info_list = self.list_rg(client_libs["compute_client"], ci.cmdParams["vmName"], ci.cmdParams["tag"]) # TODO: list_vm needs 2 parameters: RG and VmName
-                #result = "NULL " + str(len(vms_info_list)) + "\r\n" +
-                                                                                                                   #''.join(vms_info_list)
-                result = "NULL " + str(len(vms_info_list)) + " " + ''.join(vms_info_list) 
+                result = "NULL" + self.separator + str(len(vms_info_list))+ self.separator + ''.join(vms_info_list).rstrip(self.separator)
                 self.QueueResult(ci.request_id, result)
             except Exception as e:
                 self.write_message("Error listing VMs: " + str(e.args[0]) + "\r\n")

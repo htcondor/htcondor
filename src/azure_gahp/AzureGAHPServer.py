@@ -24,7 +24,11 @@ while(True):
         continue
 
     for i in range(len(parts)):
-        parts[i] = parts[i].replace(UNIQUE_STR, " ")
+        #arr = parts[i].split('=')
+        #if( len(arr)> 1 and arr[0].lower()=="tag"):
+        #    parts[i] = parts[i].replace(UNIQUE_STR, " ")    
+        #else:
+            parts[i] = parts[i].replace(UNIQUE_STR, AzureGAHPLib.valueSeparator)
 
     command = parts[0]
     if(command.upper() == "COMMANDS"):
