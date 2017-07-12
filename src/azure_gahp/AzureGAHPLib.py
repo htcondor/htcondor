@@ -796,7 +796,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             length = len(pieces)
             filename = pieces[length - 1]
             extension_profile = {"extensions":[{
-            "name":vmss_name+"ext",
+            "name":vmss_name + "ext",
             "publisher":"Microsoft.Azure.Extensions",
             "settings":{"commandToExecute":"bash {}".format(filename),"fileUris":[key_vault_setup_script_url]},
             "type":"CustomScript",
@@ -889,27 +889,47 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
            date = datetime.datetime.strptime(schedule, "%Y%m%d%H%M")
 
         vmss_info = {"ResourceGroupName":vmss_group_name, "VmssName":vmss_name, "SecureToken":token}
-        params = {
-                "properties":{
-                    "start_time":date,
-                    "action":{
-                         "type":"https",                         
-                         "request":{
-                            "method":"POST",
-                            "uri":webhook_url,
-                             "headers":{
-                                "content-type":"text/plain"
-                                },
-                             "body":json.dumps(vmss_info)
-                            },                           
-                        }
-                    }
-                 }
-        self.write_message(request_id, "Creating job '{}' in '{}' job collection.\r\n".format(job_name, job_collection_name))
+        #params = {
+        #        "properties":{
+        #            "start_time":date,
+        #            "action":{
+        #                 "type":"https",
+        #                 "request":{
+        #                    "method":"POST",
+        #                    "uri":webhook_url,
+        #                     "headers":{
+        #                        "content-type":"text/plain"
+        #                        },
+        #                     "body":json.dumps(vmss_info)
+        #                    },
+        #                }
+        #            }
+        #         }        
+        #job_async = scheduler_client.jobs.create_or_update(group_name,
+        #                job_collection_name,
+        #                job_name,
+        #                params)  
+        prop = {
+                            "start_time":date,
+                            "action":{
+                                 "type":"https",                         
+                                 "request":{
+                                    "method":"POST",
+                                    "uri":webhook_url,
+                                     "headers":{
+                                        "content-type":"text/plain"
+                                        },
+                                     "body":json.dumps(vmss_info)
+                                    },                           
+                                }
+                            }
+                         
+        self.write_message(request_id, "Creating job '{}' in '{}' job collection.\r\n".format(job_name, job_collection_name))   
         job_async = scheduler_client.jobs.create_or_update(group_name,
                         job_collection_name,
                         job_name,
-                        params)        
+                        properties=prop
+                        )       
         self.write_message(request_id, "Completed job creation.\r\n")
         if(schedule.lower() == "now"):
             # Run the job
@@ -1297,7 +1317,9 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 if(client_libs is None):
                     self.queue_result(ci.request_id, self.escape("Error creating client libraries"))
                     return
-                #scheduler_configuration = self.create_scheduler_configuration_from_file(ci.request_id, ci.cred_file)
+                #scheduler_configuration =
+                #self.create_scheduler_configuration_from_file(ci.request_id,
+                #ci.cred_file)
                 app_settings = self.read_app_settings_from_file(ci.cred_file)
                 key_vault_download_command = self.get_vault_secret_download_command(ci.request_id, app_settings, ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"])
                 self.create_vmss(ci.request_id, client_libs["compute_client"], client_libs["network_client"], client_libs["resource_client"], 
@@ -1496,7 +1518,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             if(index < 4):
                 continue
             nvp = nvp_string.split("=")
-            if(nvp[0].lower()=="deletionjob"):
+            if(nvp[0].lower() == "deletionjob"):
                 dnary["deletionJob"] = True                
                 continue
             if(not nvp):
