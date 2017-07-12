@@ -5,6 +5,7 @@ import threading
 import base64
 import itertools
 import datetime
+import json
 from collections import deque
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.compute.models import DiskCreateOption
@@ -14,7 +15,9 @@ from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.compute import ComputeManagementClient
 from azure.storage import CloudStorageAccount
 from azure.storage.blob.models import ContentSettings, PublicAccess
-
+from azure.mgmt.scheduler import SchedulerManagementClient
+from azure.mgmt.scheduler.models import *
+from datetime import timedelta
 space_separator = " "
 single_backslash_space_separator = "\\ "
 double_backslash_separator = "\\\\"
@@ -66,7 +69,7 @@ class AzureGAHPCommandExec():
             self.debug_mode = False
 
     # Read credentails from file
-    def read_credentials_from_file(self, file_name):
+    def read_app_settings_from_file(self, file_name):
         dnary = dict()
         with open(file_name, "r") as f:
             for line in f:
@@ -117,11 +120,23 @@ class AzureGAHPCommandExec():
 
     # Load credentials from file
     def create_credentials_from_file(self, request_id, file_name):
-        dnary = self.read_credentials_from_file(file_name)
+        dnary = self.read_app_settings_from_file(file_name)
         cred = self.create_service_credentials(request_id, dnary)
         self.set_vm_count_in_thread(dnary)
         self.write_message(request_id, "Credentials created\r\n")
         return cred
+
+    # Load scheduler configuration from file
+    def create_scheduler_configuration_from_file(self, request_id, file_name):
+        app_settings = self.read_app_settings_from_file(file_name)
+        scheduler_configuration = {}
+        scheduler_configuration["webhook_url"] = ""
+        scheduler_configuration["token"] = ""
+        if "webhook_url" in app_settings:
+            scheduler_configuration["webhook_url"] = app_settings["webhook_url"]
+        if "token" in app_settings:
+            scheduler_configuration["token"] = app_settings["token"]
+        return scheduler_configuration
 
     # Create service principal credentials using client id, secret and tenant
     # id
@@ -141,12 +156,16 @@ class AzureGAHPCommandExec():
             subscription_id)
         storage_client = StorageManagementClient(credentials,
             subscription_id)
+        scheduler_client = SchedulerManagementClient(credentials,
+            subscription_id)
+        resource_client.providers.register('Microsoft.Scheduler')
 
         client_libs = {
             "compute_client": compute_client,
             "network_client": network_client,
             "resource_client": resource_client,
-            "storage_client": storage_client}
+            "storage_client": storage_client,
+            "scheduler_client": scheduler_client}
 
         self.write_message(request_id, "Creating client libraries: complete" + "\r\n")
         return client_libs
@@ -163,7 +182,7 @@ class AzureGAHPCommandExec():
     # Return base64 string
     def get_base64_string(self, data):
         if not os.path.exists(data): 
-            return base64.b64encode(data)#raw data
+            return base64.b64encode(bytes(data, utf_encoding)).decode(utf_encoding)#raw data
         file_path = os.path.expanduser(data)
         # Will raise if file not exists or not enough permission
         with open(file_path, "r") as custom_data:
@@ -261,7 +280,7 @@ class AzureGAHPCommandExec():
                     }
                 }]
             }   
-        #if  "id" in public_ip_info:
+        #if "id" in public_ip_info:
         if public_ip_info is not None:
             public_ip_address = {
                 "id" : public_ip_info.id
@@ -333,42 +352,47 @@ class AzureGAHPCommandExec():
         return async_subnet_creation.result()
 
     # Method will create virtual network,subnet,public ip and nic
-    def create_nic(self, request_id, network_client, location, group_name, vnet_name, vnet_rg_name, subnet_name, nic_name, ip_config_name):
+    def create_nic(self, request_id, network_client, location, group_name, vnet_name, 
+                   vnet_rg_name, subnet, nic_name, ip_config_name):
         
         #Create Virtual Network
         if vnet_name != "" and vnet_rg_name != "":
             self.write_message(request_id, "Using existing vnet '{}'\r\n".format(vnet_name))
-            async_vnet = network_client.virtual_networks.get(vnet_rg_name,
-                vnet_name)
-            if len(async_vnet.subnets) > 0 :
-                subnet_info = async_vnet.subnets[0]
+            async_vnet = network_client.virtual_networks.get(vnet_rg_name, vnet_name)
+            if(subnet == None):
+                subnets_of_vnet = async_vnet.subnets
+                if len(subnets_of_vnet) > 0:
+                    # use first subnet of the vnet
+                    subnet = subnets_of_vnet[0]
+                    self.write_message(request_id, "Using existing subnet '{}'\r\n".format(subnet.name))
+                else:
+                    # Create Subnet
+                    self.write_message(request_id, "Creating subnet" + "\r\n")
+                    address_prefix_ip = async_vnet.address_space.address_prefixes[0]
+                    async_subnet_creation = network_client.subnets.create_or_update(vnet_rg_name,
+                        vnet_name,
+                        subnet_name,
+                        {"address_prefix": "{}".format(address_prefix_ip)})
+                    subnet = async_subnet_creation.result()
             else:
-                # Create Subnet
-                self.write_message(request_id, "Creating subnet" + "\r\n")
-                address_prefix_ip = async_vnet.address_space.address_prefixes[0]
-                async_subnet_creation = network_client.subnets.create_or_update(vnet_rg_name,
-                    vnet_name,
-                    subnet_name,
-                    {"address_prefix": "{}".format(address_prefix_ip)})
-                subnet_info = async_subnet_creation.result()
+                self.write_message(request_id, "Using existing subnet '{}'\r\n".format(subnet.name))
         else:
             vnet_rg_name = group_name
             vnet_name = group_name + "vnet"
-            self.create_virtual_network(request_id, network_client, location, vnet_rg_name, vnet_name)            
-            # Create Subnet
-            subnet_info = self.create_subnet(request_id, network_client, vnet_rg_name, vnet_name, subnet_name)
+            subnet_name = group_name + "subnet"
+            self.create_virtual_network(request_id, network_client, location, vnet_rg_name, vnet_name)
+            subnet = self.create_subnet(request_id, network_client, vnet_rg_name, vnet_name, subnet_name)
 
         # Create public ip
         public_ip_name = group_name + "pip"
         public_ip_info = self.create_public_ip(request_id, network_client, group_name, location, public_ip_name, "Dynamic")
 
         # Create NIC
-        self.write_message(request_id, "Creating NIC '{}'\r\n".format(nic_name))        
-        nic_params = self.create_nic_parameters(location, ip_config_name, public_ip_info, subnet_info.id)
+        self.write_message(request_id, "Creating NIC '{}'\r\n".format(nic_name))
+        nic_params = self.create_nic_parameters(location, ip_config_name, public_ip_info, subnet.id)
         async_nic_creation = network_client.network_interfaces.create_or_update(group_name,
             nic_name,
-            nic_params
-            )
+            nic_params)
         return async_nic_creation.result()
 
     # Create public ip and load balancer
@@ -467,8 +491,7 @@ class AzureGAHPCommandExec():
     # Create image from vhd
     def create_image_from_vhd(self, request_id, compute_client, group_name, image_name, location, os_type, blob_uri):       
         self.write_message(request_id, "Creating image '{}'\r\n".format(image_name)) 
-        async_create_image = compute_client.images.create_or_update(
-            group_name,
+        async_create_image = compute_client.images.create_or_update(group_name,
             image_name,
             {
                 "location": location,
@@ -480,22 +503,21 @@ class AzureGAHPCommandExec():
                         "caching": "ReadWrite"
                     }
                 }
-            }
-        )
+            })
         return async_create_image.result()
 
     # Delete image
     def delete_image(self, request_id, compute_client, group_name, image_name):
         self.write_message(request_id, "Deleting image '{}'\r\n".format(image_name)) 
-        async_delete_image = compute_client.images.delete(
-            group_name,
+        async_delete_image = compute_client.images.delete(group_name,
             image_name)
         async_delete_image.wait()
           
     # Get vm public ip and vm id
     def print_vm_info(self, request_id, network_client, vm_id, public_ip, group_name):        
         # get public ip info
-        # public_ip = network_client.public_ip_addresses.get(group_name, group_name + "pip")
+        # public_ip = network_client.public_ip_addresses.get(group_name,
+        # group_name + "pip")
         #vm_id = vm_info.vm_id
         if public_ip is not None :
             public_ip = network_client.public_ip_addresses.get(group_name, group_name + "pip")
@@ -601,20 +623,50 @@ class AzureGAHPCommandExec():
         # return vm parameters
         return params
 
+    def check_existing_vnet_and_subnet(self, request_id, network_client, vnet_rg_name, vnet_name, subnet_name):
+        existing_subnet = None
+        subnets_of_vnet = None
+        error = None
+
+        async_vnet = network_client.virtual_networks.get(vnet_rg_name, vnet_name)
+        subnets_of_vnet = async_vnet.subnets
+        if len(subnets_of_vnet) > 0:
+            if subnet_name != "":
+                for subnet in subnets_of_vnet:
+                    if subnet_name == subnet.name:
+                        existing_subnet = subnet
+                if existing_subnet is None:
+                    error = "'{}' subnet is not found in '{}' vnet".format(subnet_name, vnet_name)
+                    self.write_message(request_id, "Error creating VM: " + error + "\r\n", logging.ERROR)
+            else:
+                try:
+                    existing_subnet = subnets_of_vnet[0]
+                except Exception as e:
+                    error = e.args[0]
+        return existing_subnet, error
+
     # Create virtual machine based on input parameters
     def create_vm(self, request_id, compute_client, network_client, resource_client, storage_client, location, group_name, vnet_name, vnet_rg_name, subnet_name, 
-os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm_name, vm_size, vm_reference,os_type,tag,custom_data,data_disks):
+os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm_name, vm_size, vm_reference, os_type,tag, custom_data, data_disks):
         
+        existing_subnet = None
+        # Check for existing Virtual Network and subnet
+        if vnet_name != "" and vnet_rg_name != "":
+            existing_subnet, error = self.check_existing_vnet_and_subnet(request_id, network_client, vnet_rg_name, vnet_name, subnet_name)
+            if(existing_subnet is None):
+                return error
+
         # Create resource group
         self.create_resource_group(request_id, resource_client, group_name, location)
         
         # Create Nic
         self.write_message(request_id, "Creating network\r\n")        
-        nic = self.create_nic(request_id,network_client, location, group_name, vnet_name, vnet_rg_name, subnet_name, nic_name, ip_config_name)      
+        nic = self.create_nic(request_id,network_client, location, group_name, vnet_name, 
+                              vnet_rg_name, existing_subnet, nic_name, ip_config_name)
         
         image_id = None
         if "https://" in vm_reference:
-            image = self.create_image_from_vhd(request_id, compute_client, group_name, group_name+"image", location, os_type, vm_reference)
+            image = self.create_image_from_vhd(request_id, compute_client, group_name, group_name + "image", location, os_type, vm_reference)
             image_id = image.id        
 
         # Create VM
@@ -624,12 +676,13 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         vm_info = async_vm_creation.result()
         self.write_message(request_id, "VM creation completed\r\n") 
         if "https://" in vm_reference: 
-            self.delete_image(request_id, compute_client, group_name, group_name+"image")
+            self.delete_image(request_id, compute_client, group_name, group_name + "image")
         vm_result = self.print_vm_info(request_id, network_client, vm_info.vm_id, nic.ip_configurations[0].public_ip_address, group_name)
         return "NULL {} {}".format(self.escape(vm_result["vm_id"]), self.escape(vm_result["public_ip"]))
   
     # Create VMSS parameters
-    def create_vmss_parameters(self,location, vmss_name, vm_size,capacity, storage_account_name, user_name, key_info, os_disk_name, subnet_id, load_balancer_info, vm_reference,os_type,tag,custom_data,data_disks, image_id):
+    def create_vmss_parameters(self, location, vmss_name, vm_size,capacity, storage_account_name, user_name, key_info, os_disk_name, subnet_id, load_balancer_info,
+                               vm_reference,os_type,tag,custom_data,data_disks, image_id, key_vault_download_command, key_vault_setup_script_url):
         back_end_address_pool_id = load_balancer_info.backend_address_pools[0].id
         inbound_nat_pool_id = load_balancer_info.inbound_nat_pools[0].id 
         inbound_nat_pool_windows_id = load_balancer_info.inbound_nat_pools[1].id        
@@ -715,8 +768,13 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         if tag != "":
             params["tags"] = tags
 
-        if custom_data != "":
+        base64_custom_data = ""
+        if key_vault_download_command != None:
+            base64_custom_data = self.get_base64_string(key_vault_download_command)
+        elif custom_data != "":
             base64_custom_data = self.get_base64_string(custom_data)
+        
+        if(base64_custom_data != ""):
             params["virtual_machine_profile"]["os_profile"]["custom_data"] = base64_custom_data
      
         dd_arr = []
@@ -730,12 +788,34 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                       }
                 dd_arr.append(dd)
             params["virtual_machine_profile"]["storage_profile"]["data_disks"] = dd_arr
+    
+
+         ### Install extension ####
+        if (key_vault_setup_script_url != "" and key_vault_download_command != None):
+            pieces = key_vault_setup_script_url.split("/")
+            length = len(pieces)
+            filename = pieces[length - 1]
+            extension_profile = {"extensions":[{
+            "name":vmss_name+"ext",
+            "publisher":"Microsoft.Azure.Extensions",
+            "settings":{"commandToExecute":"bash {}".format(filename),"fileUris":[key_vault_setup_script_url]},
+            "type":"CustomScript",
+            "type_handler_version":"2.0"
+            }]}
+            params["virtual_machine_profile"]["extension_profile"] = extension_profile
 
         return params
 
+    def get_vault_secret_download_command(self, request_id, app_settings, keyvault_name, vault_key):
+       if(keyvault_name and vault_key):
+           secret_file = "/root/scripts/{}.txt".format(keyvault_name)
+           return 'rm {} \naz login --service-principal -u {} --password {} --tenant {} \naz keyvault secret download --file {} --vault-name {} --name {} --encoding utf-8'.format(secret_file, app_settings["client_id"], app_settings["secret"], app_settings["tenant_id"], secret_file, keyvault_name, vault_key)
+       else:
+            return None
     # Create virtual machine scale set based on input parameters
-    def create_vmss(self, request_id, compute_client, network_client, resource_client, storage_client, location, group_name, vnet_name, vnet_rg_name, subnet_name, 
-os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vmss_name, vm_size, vm_reference,os_type,tag,custom_data,data_disks, nodecount):
+    def create_vmss(self, request_id, compute_client, network_client, resource_client, storage_client, scheduler_client, location, group_name, vnet_name, vnet_rg_name, subnet_name, 
+                    os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vmss_name, vm_size, vm_reference, os_type,tag,custom_data,data_disks,
+                    nodecount, deletion_job, schedule, keyvault_name, vault_key, key_vault_download_command, key_vault_setup_script_url, webhook_url, token):
 
         self.create_resource_group(request_id, resource_client, group_name, location)
 
@@ -771,18 +851,72 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         load_balancer_info = self.create_load_balancers(request_id, network_client, group_name, location, public_ip_name, lb_front_ip, lb_addr_pool, lb_prob, lb_name)        
 
         image_id = None
-        image_name = group_name+"image"
+        image_name = group_name + "image"
         if "https://" in vm_reference:
             image = self.create_image_from_vhd(request_id, compute_client, group_name, image_name, location, os_type, vm_reference)
             image_id = image.id 
 
-        self.write_message(request_id, "Creating vmss '{}' \r\n".format(vmss_name))          
-        vmss_parameters = self.create_vmss_parameters(location, vmss_name, vm_size, nodecount, storage_account_name, user_name, key, os_disk_name, subnet_info.id, load_balancer_info, vm_reference,os_type,tag,custom_data,data_disks, image_id)
+        self.write_message(request_id, "Creating vmss '{}' \r\n".format(vmss_name))            
+        vmss_parameters = self.create_vmss_parameters(location, vmss_name, vm_size, nodecount, storage_account_name, user_name, key, os_disk_name, subnet_info.id, load_balancer_info, vm_reference,os_type,tag,custom_data,data_disks, image_id, key_vault_download_command, key_vault_setup_script_url)
         async_vmss_creation = compute_client.virtual_machine_scale_sets.create_or_update(group_name, vmss_name, vmss_parameters)
         vmss_info = async_vmss_creation.result()
         self.write_message(request_id, "VMSS creation completed\r\n")
 
-    # Delete vm
+        if(deletion_job):
+            job_group_name = group_name + "jobrg"
+            job_collection_name = group_name + "jobcollection"
+            job_name = group_name + "job"
+            self.create_vmss_delete_job(request_id, resource_client, scheduler_client
+                                        , job_group_name, location, job_collection_name
+                                        , job_name, group_name, "", schedule
+                                        , webhook_url, token)
+
+    # Create job collection and job in scheduler
+    def create_vmss_delete_job(self, request_id, resource_client, scheduler_client, group_name, location, job_collection_name, job_name, vmss_group_name, vmss_name, schedule, webhook_url, token):
+        # Create resource group
+        self.create_resource_group(request_id, resource_client, group_name, location)
+
+        # Create job collection
+        self.write_message(request_id, "Creating job collection '{}'\r\n".format(job_collection_name))
+        scheduler_client.job_collections.create_or_update(group_name,
+        job_collection_name,
+        JobCollectionDefinition(location = location, properties = JobCollectionProperties(sku = Sku(name="Standard"))))        
+
+        # Create job collection
+        if(schedule.lower() == "now"):
+           date = datetime.datetime.now() - datetime.timedelta(days = 1)
+        else:
+           date = datetime.datetime.strptime(schedule, "%Y%m%d%H%M")
+
+        vmss_info = {"ResourceGroupName":vmss_group_name, "VmssName":vmss_name, "SecureToken":token}
+        params = {
+                "properties":{
+                    "start_time":date,
+                    "action":{
+                         "type":"https",                         
+                         "request":{
+                            "method":"POST",
+                            "uri":webhook_url,
+                             "headers":{
+                                "content-type":"text/plain"
+                                },
+                             "body":json.dumps(vmss_info)
+                            },                           
+                        }
+                    }
+                 }
+        self.write_message(request_id, "Creating job '{}' in '{}' job collection.\r\n".format(job_name, job_collection_name))
+        job_async = scheduler_client.jobs.create_or_update(group_name,
+                        job_collection_name,
+                        job_name,
+                        params)        
+        self.write_message(request_id, "Completed job creation.\r\n")
+        if(schedule.lower() == "now"):
+            # Run the job
+            scheduler_client.jobs.run(group_name, job_collection_name, job_name)
+            self.write_message(request_id, "Started '{}' job.\r\n".format(job_name))
+
+    # Delete VMs
     def delete_vms(self, request_id, resource_client, compute_client, group_name, vm_name):
         if(group_name != "" and vm_name != ""):
             self.delete_vm(request_id, compute_client, group_name, vm_name)
@@ -790,11 +924,23 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             self.delete_rg(request_id, resource_client, group_name)
     
     # Delete vmSS
-    def delete_virtual_machine_scale_set(self, request_id, resource_client, compute_client, group_name, vm_name):
-        if(group_name != "" and vm_name != ""):
-            self.delete_vmss(request_id, compute_client, group_name, vm_name)
-        elif(group_name != "" and vm_name == ""):
+    def delete_virtual_machine_scale_set(self, request_id, resource_client
+                                         , compute_client, scheduler_client
+                                         , deletion_job, group_name, vmss_name
+                                         , location, schedule, webhook_url, token):
+        if(deletion_job):
+            job_group_name = group_name + "jobrg"
+            job_collection_name = group_name + "jobcollection"
+            job_name = group_name + "job"
+            self.create_vmss_delete_job(request_id, resource_client, scheduler_client
+                                        , job_group_name, location, job_collection_name
+                                        , job_name, group_name, vmss_name, schedule
+                                        , webhook_url, token)
+        elif(group_name != "" and vmss_name != ""):
+            self.delete_vmss(request_id, compute_client, group_name, vmss_name)
+        elif(group_name != "" and vmss_name == ""):
             self.delete_rg(request_id, resource_client, group_name)
+        
 
      # Delete vm by resource group and vm name
     def delete_vm_and_associated_artifacts(self, request_id, compute_client, network_client, group_name, vm_name):
@@ -813,7 +959,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         for nic in vm.network_profile.network_interfaces:
             arr = nic.id.split("/")
             nic_rg = arr[4]
-            nic_name = arr[len(arr)-1]
+            nic_name = arr[len(arr) - 1]
             nic_info = network_client.network_interfaces.get(nic_rg, nic_name) 
 
             # Delete nic
@@ -834,14 +980,14 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             if(nic_info.network_security_group is not None):
                 nsg_arr = nic_info.network_security_group.id.split("/")
                 nsg_rg = nsg_arr[4]
-                nsg_name = nsg_arr[len(arr)-1]              
+                nsg_name = nsg_arr[len(arr) - 1]              
                 self.delete_nsg(request_id, network_client, nsg_rg, nsg_name)
 
             # Delete public ip address
             for ip in nic_info.ip_configurations:
-                arr =  ip.public_ip_address.id.split("/")
+                arr = ip.public_ip_address.id.split("/")
                 ip_rg = arr[4]
-                ip_name = arr[len(arr)-1]
+                ip_name = arr[len(arr) - 1]
 
                 # Delete Public IP
                 self.delete_public_ip(request_id, network_client, ip_rg, ip_name)
@@ -868,12 +1014,12 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
 
     # Delete all artifacts under resource group
     def delete_rg(self, request_id, resource_client, group_name):
-        self.write_message(request_id, "Deleting resource group" + "\r\n")
+        self.write_message(request_id, "Deleting resource group '{}'\r\n".format(group_name))
         delete_async_operation = resource_client.resource_groups.delete(group_name)
         delete_async_operation.wait()
-        self.write_message(request_id, "Resource group deleted" + "\r\n")
+        self.write_message(request_id, "Resource group '{}' deleted\r\n".format(group_name))
 
-     # Delete vmss by resource group and vmss name
+    # Delete vmss by resource group and vmss name
     def delete_vmss(self, request_id, compute_client, group_name, vmss_name):
         self.write_message(request_id, "Deleting VMSS '{}'\r\n".format(vmss_name))
         async_vm_delete = compute_client.virtual_machine_scale_sets.delete(group_name, vmss_name)
@@ -953,7 +1099,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         vm_list = compute_client.virtual_machines.list_all()
         return self.run_vm_list_thread(request_id, compute_client, network_client, vm_list)
      
-    # List VM by options  
+    # List VM by options
     def list_rg(self, request_id, compute_client, network_client, group_name, vm_name, tag):
         vms_info_list = []
         if(group_name != "" and vm_name != ""): # return vm based on resource group and vm name
@@ -991,11 +1137,11 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
     def scale_vmss(self, request_id, compute_client, group_name, vmss_name, node_count):
         vmss = compute_client.virtual_machine_scale_sets.get(group_name, vmss_name)
         capacity = vmss.sku.capacity   
-        self.write_message(request_id, "Scaling VMSS '{}' from {} to {}\r\n".format(vmss_name, vmss.sku.capacity, node_count))
+        self.write_message(request_id, "Scaling VMSS '{}' instances from {} to {}\r\n".format(vmss_name, vmss.sku.capacity, node_count))
         vmss.sku.capacity = node_count     
         async_vmss_scale = compute_client.virtual_machine_scale_sets.create_or_update(group_name, vmss_name, vmss)
         async_vmss_scale.wait()
-        self.write_message(request_id, "VMSS '{}' scaled from {} to {}\r\n".format(vmss_name, capacity, node_count))
+        self.write_message(request_id, "VMSS '{}' scaled from instances {} to {}\r\n".format(vmss_name, capacity, node_count))
 
     # Add command into queue
     def queue_command(self, ci):
@@ -1086,7 +1232,18 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 if(client_libs is None):
                     self.queue_result(ci.request_id, self.escape("Error creating client libraries"))
                     return
-                result = self.create_vm(ci.request_id, client_libs["compute_client"], client_libs["network_client"], client_libs["resource_client"], client_libs["storage_client"], ci.cmdParams["location"], ci.cmdParams["name"], ci.cmdParams["vnetName"],ci.cmdParams["vnetRGName"], ci.cmdParams["subnetName"], ci.cmdParams["osDiskName"], ci.cmdParams["storageAccountName"], ci.cmdParams["ipConfigName"], ci.cmdParams["nicName"], ci.cmdParams["adminUsername"], ci.cmdParams["key"], ci.cmdParams["vmName"], ci.cmdParams["size"], ci.cmdParams["vmRef"], ci.cmdParams["osType"], ci.cmdParams["tag"],ci.cmdParams["customdata"],ci.cmdParams["datadisks"])
+                result = self.create_vm(ci.request_id, 
+                                        client_libs["compute_client"], client_libs["network_client"], 
+                                        client_libs["resource_client"], client_libs["storage_client"], 
+                                        ci.cmdParams["location"], ci.cmdParams["name"], 
+                                        ci.cmdParams["vnetName"],ci.cmdParams["vnetRGName"], 
+                                        ci.cmdParams["subnetName"], ci.cmdParams["osDiskName"], 
+                                        ci.cmdParams["storageAccountName"], ci.cmdParams["ipConfigName"], 
+                                        ci.cmdParams["nicName"], ci.cmdParams["adminUsername"], 
+                                        ci.cmdParams["key"], ci.cmdParams["vmName"], 
+                                        ci.cmdParams["size"], ci.cmdParams["vmRef"], 
+                                        ci.cmdParams["osType"], ci.cmdParams["tag"],
+                                        ci.cmdParams["customdata"],ci.cmdParams["datadisks"])
                 self.queue_result(ci.request_id, result)                
             except Exception as e:
                 error = self.escape(str(e.args[0]))
@@ -1140,7 +1297,17 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 if(client_libs is None):
                     self.queue_result(ci.request_id, self.escape("Error creating client libraries"))
                     return
-                self.create_vmss(ci.request_id, client_libs["compute_client"], client_libs["network_client"], client_libs["resource_client"], client_libs["storage_client"], ci.cmdParams["location"], ci.cmdParams["name"], ci.cmdParams["vnetName"],ci.cmdParams["vnetRGName"], ci.cmdParams["subnetName"], ci.cmdParams["osDiskName"], ci.cmdParams["storageAccountName"], ci.cmdParams["ipConfigName"], ci.cmdParams["nicName"], ci.cmdParams["adminUsername"], ci.cmdParams["key"], ci.cmdParams["vmName"], ci.cmdParams["size"], ci.cmdParams["vmRef"], ci.cmdParams["osType"], ci.cmdParams["tag"],ci.cmdParams["customdata"],ci.cmdParams["datadisks"], ci.cmdParams["nodecount"])
+                #scheduler_configuration = self.create_scheduler_configuration_from_file(ci.request_id, ci.cred_file)
+                app_settings = self.read_app_settings_from_file(ci.cred_file)
+                key_vault_download_command = self.get_vault_secret_download_command(ci.request_id, app_settings, ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"])
+                self.create_vmss(ci.request_id, client_libs["compute_client"], client_libs["network_client"], client_libs["resource_client"], 
+                                 client_libs["storage_client"], client_libs["scheduler_client"], ci.cmdParams["location"], ci.cmdParams["name"],
+                                 ci.cmdParams["vnetName"], ci.cmdParams["vnetRGName"], ci.cmdParams["subnetName"], ci.cmdParams["osDiskName"],
+                                 ci.cmdParams["storageAccountName"], ci.cmdParams["ipConfigName"], ci.cmdParams["nicName"], ci.cmdParams["adminUsername"],
+                                 ci.cmdParams["key"], ci.cmdParams["vmName"], ci.cmdParams["size"], ci.cmdParams["vmRef"], ci.cmdParams["osType"],
+                                 ci.cmdParams["tag"],ci.cmdParams["customdata"], ci.cmdParams["datadisks"], ci.cmdParams["nodecount"],
+                                 ci.cmdParams["deletionJob"], ci.cmdParams["schedule"], ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"],
+                                 key_vault_download_command, app_settings["key_vault_setup_script_url"], app_settings["webhook_url"], app_settings["token"])
                 self.queue_result(ci.request_id, "NULL")
             except Exception as e:
                 error = self.escape(str(e.args[0]))    
@@ -1155,8 +1322,10 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 client_libs = self.create_client_libraries(ci.request_id, credentials, ci.subscription)
                 if(client_libs is None):
                     self.queue_result(ci.request_id, self.escape("Error creating client libraries"))
-                    return 
-                self.delete_virtual_machine_scale_set(ci.request_id, client_libs["resource_client"], client_libs["compute_client"], ci.cmdParams["rgName"], ci.cmdParams["vmssName"])
+                    return
+                scheduler_configuration = self.create_scheduler_configuration_from_file(ci.request_id, ci.cred_file) 
+                self.delete_virtual_machine_scale_set(ci.request_id, client_libs["resource_client"], client_libs["compute_client"], client_libs["scheduler_client"],
+                        ci.cmdParams["deletionJob"], ci.cmdParams["rgName"], ci.cmdParams["vmssName"], ci.cmdParams["location"], ci.cmdParams["schedule"], scheduler_configuration["webhook_url"], scheduler_configuration["token"])
                 self.queue_result(ci.request_id, "NULL")
             except Exception as e:
                 error = self.escape(str(e.args[0]))
@@ -1226,13 +1395,26 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 error = self.escape(str(e.args[0]))    
                 self.write_message(ci.request_id, "Error restarting VMSS: " + error + "\r\n", logging.ERROR)
                 self.queue_result(ci.request_id, error)
+
     # Create vm arguments based on input parameters
     def get_create_vm_args(self, request_id, cmd_parts):
         vm_ref = {
-            "linux-ubuntu-latest": {"publisher": "Canonical", "offer": "UbuntuServer", "sku": "16.04.0-LTS", "version": "latest"},
-            "windows-server-latest": {"publisher": "MicrosoftWindowsServerEssentials", "offer": "WindowsServerEssentials", "sku": "WindowsServerEssentials","version": "latest"}
+            "linux-ubuntu-latest": {
+                "publisher": "Canonical", 
+                "offer": "UbuntuServer", 
+                "sku": "16.04.0-LTS", 
+                "version": "latest"
+                },
+            "windows-server-latest": {
+                "publisher": "MicrosoftWindowsServer", 
+                "offer": "WindowsServer", 
+                "sku": "2012-R2-Datacenter", 
+                "version": "latest"
+                }
         }
-        create_vm_arg_names = ["name","location","image", "size", "dataDisks","adminUsername","key","vnetName","vnetRGName","publicIPAddress","customData","tag","ostype"]
+        create_vm_arg_names = ["name", "location", "image", "size", "dataDisks", "adminUsername", 
+                               "key", "vnetName", "vnetRGName", "publicIPAddress", 
+                               "customData", "tag", "ostype", "subnetName"]
         dnary = dict()
         
         for index,nvp_string in enumerate(cmd_parts):
@@ -1265,47 +1447,39 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             else:
                 dnary[nvp[0]] = nvp[1]
         
-        if((not "name" in dnary) or (not "location" in dnary) or (not "size" in dnary) or (not "vmRef" in dnary)):
+        if(("name" not in dnary) or ("location" not in dnary) or ("size" not in dnary) or ("vmRef" not in dnary)):
             self.write_message(request_id, "Missing mandatory arg" + "\r\n")
             return None
 
         dnary["vmName"] = dnary["name"] + "vm"
+        dnary["nicName"] = dnary["name"] + "nic"
+        dnary["osDiskName"] = dnary["name"] + "osdisk"
+        dnary["ipConfigName"] = dnary["name"] + "ipconfig"
+        dnary["storageAccountName"] = dnary["name"] + "sa"
 
-        if(not "adminUsername" in dnary):
+        if("adminUsername" not in dnary):
             dnary["adminUsername"] = "superuser"
 
-        if(not "key" in dnary):
+        if("key" not in dnary):
             dnary["key"] = "Super1234!@#$"
 
-        #if(not "vnetName" in dnary):
-        #    dnary["vnetName"] = dnary["name"] + "vnet"
-
-        if(not "vnetName" in dnary):
+        if("vnetName" not in dnary):
             dnary["vnetName"] = ""
 
-        if(not "vnetRGName" in dnary):
+        if("vnetRGName" not in dnary):
             dnary["vnetRGName"] = ""
 
-        if(not "tag" in dnary):
+        if("tag" not in dnary):
             dnary["tag"] = ""
 
-        if(not "customdata" in dnary):
+        if("customdata" not in dnary):
             dnary["customdata"] = ""
 
-        if(not "datadisks" in dnary):
+        if("datadisks" not in dnary):
             dnary["datadisks"] = ""
 
-        subnet_name = dnary["name"] + "subnet"
-        os_disk_name = dnary["name"] + "osdisk"
-        storage_account_name = dnary["name"] + "sa"
-        ip_config_name = dnary["name"] + "ipconfig"
-        nic_name = dnary["name"] + "nic"
-
-        dnary["subnetName"] = subnet_name
-        dnary["osDiskName"] = os_disk_name
-        dnary["storageAccountName"] = storage_account_name
-        dnary["ipConfigName"] = ip_config_name
-        dnary["nicName"] = nic_name
+        if("subnetName" not in dnary):
+            dnary["subnetName"] = ""
         
         return dnary
 
@@ -1313,15 +1487,18 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
     def get_create_vmss_args(self, request_id, cmd_parts):
         vm_ref = {
             "linux-ubuntu-latest": {"publisher": "Canonical", "offer": "UbuntuServer", "sku": "16.04.0-LTS", "version": "latest"},
-            "windows-server-latest": {"publisher": "MicrosoftWindowsServerEssentials", "offer": "WindowsServerEssentials", "sku": "WindowsServerEssentials","version": "latest"}
+            "windows-server-latest": {"publisher": "MicrosoftWindowsServer", "offer": "WindowsServer", "sku": "2012-R2-Datacenter","version": "latest"}            
         }
-        create_vm_arg_names = ["name","location","image", "size", "dataDisks","adminUsername","key", "vnetName", "vnetRGName", "publicIPAddress", "customData", "tag", "ostype", "nodecount"]
+        create_vm_arg_names = ["DeletionJob","name","location","image", "size", "dataDisks","adminUsername","key", "vnetName", "vnetRGName", "publicIPAddress", "customData", "tag", "ostype", "nodecount", "schedule", "keyvaultname", "vaultkey"]
         dnary = dict()
         
         for index,nvp_string in enumerate(cmd_parts):
             if(index < 4):
                 continue
             nvp = nvp_string.split("=")
+            if(nvp[0].lower()=="deletionjob"):
+                dnary["deletionJob"] = True                
+                continue
             if(not nvp):
                 self.write_message(request_id, "Empty args" + "\r\n")
                 return None
@@ -1381,6 +1558,20 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         if(not "nodecount" in dnary):
             dnary["nodecount"] = 1
 
+        if(not "keyvaultname" in dnary):
+            dnary["keyvaultname"] = ""
+
+        if(not "vaultkey" in dnary):
+            dnary["vaultkey"] = ""
+
+        if(not "deletionJob" in dnary):
+            dnary["deletionJob"] = False
+            dnary["schedule"] = ""
+        else:
+            if(not "schedule" in dnary):
+                self.write_message(request_id, "\r\nPlease provide schedule(YYYYMMDDHHmm) for deletion job and try again...\r\n")
+                return None
+
         subnet_name = dnary["name"] + "subnet"
         os_disk_name = dnary["name"] + "osdisk"
         storage_account_name = dnary["name"] + "sa"
@@ -1414,13 +1605,39 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         return dnary
 
     # Return arguments for vmss commands
-    def get_vmss_args(self, cmd_parts):       
+    def get_vmss_args(self, request_id, cmd_parts):       
         dnary = dict() 
+        dnary["deletionJob"] = False
         dnary["rgName"] = ""
         dnary["vmssName"] = ""
+        dnary["location"] = ""
+        dnary["schedule"] = ""
         dnary["tag"] = "" 
 
-        if(len(cmd_parts) > 5):
+        create_vm_arg_names = ["rgName","vmssName","location","schedule"]
+        
+        if(cmd_parts[4] == "DeletionJob" and len(cmd_parts) > 6):
+           for index,nvp_string in enumerate(cmd_parts):
+            if(index < 5):
+                continue
+            nvp = nvp_string.split("=")
+            if(not nvp):
+                self.write_message(request_id, "Empty args" + "\r\n")
+                return None
+            if(len(nvp) < 2):
+                self.write_message(request_id, "Insufficient args:" + nvp_string + "\r\n")
+                return None
+            if(nvp[0].upper() not in (val.upper() for val in create_vm_arg_names)):
+                self.write_message(request_id, "Unrecognized paramter name: " + nvp[0] + "\r\n")
+                return None
+            dnary["deletionJob"] = True
+            if(nvp[0].lower() == "rgname"):
+                dnary["rgName"] = nvp[1].title()
+            elif(nvp[0].lower() == "vmssname"):
+                dnary["vmssName"] = nvp[1].title()
+            else:
+                dnary[nvp[0]] = nvp[1]
+        elif(len(cmd_parts) > 5):
             dnary["rgName"] = cmd_parts[4]
             dnary["vmssName"] = cmd_parts[5]
         elif(len(cmd_parts) > 4):
@@ -1440,8 +1657,8 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
 
         if(len(cmd_parts) >= 5):
             dnary["rgName"] = cmd_parts[4]
-            dnary["vmssName"] = cmd_parts[4]+"vmss"
-            node_count = int(cmd_parts[5])
+            dnary["vmssName"] = cmd_parts[5]
+            node_count = int(cmd_parts[6])
             if(node_count > 0):
                 dnary["nodeCount"] = node_count 
             else:
@@ -1477,8 +1694,8 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             if(cmdParams is None):
                 return False
             ci.cmdParams = cmdParams
-        elif(ci.command.upper() == "AZURE_VMSS_DELETE" or ci.command.upper() == "AZURE_VMSS_START" or ci.command.upper() == "AZURE_VMSS_STOP"  or ci.command.upper() == "AZURE_VMSS_RESTART"):
-            cmdParams = self.get_vmss_args(cmd_parts)
+        elif(ci.command.upper() == "AZURE_VMSS_DELETE" or ci.command.upper() == "AZURE_VMSS_START" or ci.command.upper() == "AZURE_VMSS_STOP" or ci.command.upper() == "AZURE_VMSS_RESTART"):
+            cmdParams = self.get_vmss_args(ci.request_id, cmd_parts)
             if(cmdParams is None):
                 return False
             ci.cmdParams = cmdParams
