@@ -64,7 +64,7 @@ while(True):
             continue
         print("S")
     elif(command.upper() == "AZURE_VM_LIST"):
-        if (len(parts) < 5):
+        if (len(parts) < 4):
             print("E Invalid number of command args. Usage: AZURE_VM_LIST<SP><request-ID><SP><cred-file><SP><subscription><CRLF>")
             continue
         if not agce.HandleCommand(parts):
