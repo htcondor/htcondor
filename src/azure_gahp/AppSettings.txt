@@ -6,3 +6,8 @@ webhook_url https://s7events.azure-automation.net/...
 token sUp3rS3cr3TP@zzwerD
 key_vault_setup_script_url https://raw.githubusercontent.com/azmigproject/HTCondor/master/Setup.sh
 clean_job_webhook_url https://s7events.azure-automation.net/...
+jobs_rg GahpSchedulerJobRG
+job_collection GahpSchedulerJobCollection
+job_collection_sku Standard
+job_frequency_type Minute
+job_interval 5

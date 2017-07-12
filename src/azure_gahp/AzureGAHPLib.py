@@ -17,6 +17,8 @@ from azure.storage import CloudStorageAccount
 from azure.storage.blob.models import ContentSettings, PublicAccess
 from azure.mgmt.scheduler import SchedulerManagementClient
 from azure.mgmt.scheduler.models import *
+from azure.mgmt.keyvault import KeyVaultManagementClient
+from azure.mgmt.keyvault.models import *
 from datetime import timedelta
 space_separator = " "
 single_backslash_space_separator = "\\ "
@@ -791,7 +793,8 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
     
 
          ### Install extension ####
-        if (key_vault_setup_script_url != "" and key_vault_download_command != None):
+        if (key_vault_setup_script_url != "" and key_vault_download_command !=
+        None):
             pieces = key_vault_setup_script_url.split("/")
             length = len(pieces)
             filename = pieces[length - 1]
@@ -803,6 +806,22 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             "type_handler_version":"2.0"
             }]}
             params["virtual_machine_profile"]["extension_profile"] = extension_profile
+
+     ## Install Linux MSI extension
+     #   if (key_vault_setup_script_url != "" and key_vault_download_command != None):
+     #       pieces = key_vault_setup_script_url.split("/")
+     #       length = len(pieces)
+     #       filename = pieces[length - 1]
+     #       extension_profile = {
+     #           "extensions":[{
+     #               "name":vmss_name + "ext",
+     #               "publisher":"Microsoft.ManagedIdentity",
+     #               "type": "ManagedIdentityExtensionForLinux",
+     #               "type_handler_version": "1.0",
+     #               "settings":{"port": 50342}
+     #               }]
+     #           }
+     #       params["virtual_machine_profile"]["extension_profile"] = extension_profile
 
         return params
 
@@ -830,23 +849,31 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
        else:
             return None
 
-    def create_job(self, request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url, clean_job_webhook_url, token):
-        job_group_name = "SchedulerJobRG"
-        job_collection_name = "SchedulerJobCollection"
+    def create_job(self, request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url,
+                  job_group_name, job_collection_name, job_collection_sku, clean_job_webhook_url, clean_job_frequency, clean_job_interval, token):
+        #job_group_name = "SchedulerJobRG"
+        #job_collection_name = "SchedulerJobCollection"
         cleaner_job = "CleanerJob"
         job_name = group_name + "job"
         self.create_vmss_delete_job(request_id, resource_client, scheduler_client
-                                        , job_group_name, location, job_collection_name
+                                        , job_group_name, location, job_collection_name, job_collection_sku
                                         , job_name, cleaner_job, group_name, "", schedule
-                                        , webhook_url, clean_job_webhook_url, token)
+                                        , webhook_url, clean_job_webhook_url, clean_job_frequency, clean_job_interval, token)
 
     # Create virtual machine scale set based on input parameters
-    def create_vmss(self, request_id, compute_client, network_client, resource_client, storage_client, scheduler_client, location, group_name, vnet_name, vnet_rg_name, subnet_name, 
-                    os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vmss_name, vm_size, vm_reference, os_type,tag,custom_data,data_disks,
-                    nodecount, deletion_job, schedule, keyvault_name, vault_key, key_vault_download_command, key_vault_setup_script_url, webhook_url, clean_job_webhook_url, token):
+    def create_vmss(self, request_id, compute_client, network_client, resource_client, storage_client, scheduler_client, location, group_name, 
+                    vnet_name, vnet_rg_name, subnet_name, os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vmss_name,
+                    vm_size, vm_reference, os_type,tag,custom_data,data_disks, nodecount, deletion_job, schedule, keyvault_name, vault_key, 
+                    key_vault_download_command, key_vault_setup_script_url, webhook_url, job_group_name, job_collection_name, job_collection_sku,
+                    clean_job_webhook_url, clean_job_frequency, clean_job_interval, token):
+        
         # Create deletion job
         if(deletion_job):
-              self.create_job(request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url, clean_job_webhook_url, token)      
+              #self.create_job(request_id, resource_client, scheduler_client,
+              #group_name, location, schedule, webhook_url,
+              #clean_job_webhook_url, token)
+              self.create_job(request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url,
+                  job_group_name, job_collection_name, job_collection_sku, clean_job_webhook_url, clean_job_frequency, clean_job_interval, token)      
 
         self.create_resource_group(request_id, resource_client, group_name, location)
 
@@ -893,31 +920,62 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         vmss_info = async_vmss_creation.result()
         self.write_message(request_id, "VMSS creation completed\r\n")
 
-    def create_scheduler_job_collection(self, request_id, scheduler_client, group_name, location, job_collection_name, sku):
+    def create_scheduler_job_collection(self, request_id, scheduler_client, group_name, location, job_collection_name, sku_name):
         # Create job collection
         self.write_message(request_id, "Creating job collection '{}'\r\n".format(job_collection_name))
-        scheduler_client.job_collections.create_or_update(group_name,
-        job_collection_name,
-        JobCollectionDefinition(location = location, properties = JobCollectionProperties(sku = Sku(name=sku))))
+        param = {"location": "Central India",
+                  "properties": {
+                    "sku": {
+                      "name": sku_name
+                    },
+                    "state": "Enabled"
+                  }
+                }
+        scheduler_client.job_collections.create_or_update(group_name,job_collection_name,param)
 
     
+    def get_recurrence_frequency(self, request_id, frequency):
+        result = ""
+        if (frequency.upper() in RecurrenceFrequency.minute.value.upper()):
+            result = RecurrenceFrequency.minute.value
+        elif (frequency.upper() in RecurrenceFrequency.hour.value.upper()):
+            result = RecurrenceFrequency.hour.value
+        elif (frequency.upper() in RecurrenceFrequency.day.value.upper()):
+            result = RecurrenceFrequency.day.value
+        elif (frequency.upper() in RecurrenceFrequency.week.value.upper()):
+            result = RecurrenceFrequency.week.value
+        elif (frequency.upper() in RecurrenceFrequency.month.value.upper()):
+            result = RecurrenceFrequency.month.value
+        return result
+
+    def get_job_collection_sku(self, request_id, sku):
+        result = None
+        if (sku.upper() in SkuDefinition.free.value.upper()):
+            result = SkuDefinition.free.value
+        elif (sku.upper() in SkuDefinition.standard.value.upper()):
+            result = SkuDefinition.standard.value
+        elif (sku.upper() in SkuDefinition.p10_premium.value.upper()):
+            result = SkuDefinition.p10_premium.value
+        elif (sku.upper() in SkuDefinition.p20_premium.value.upper()):
+            result = SkuDefinition.p20_premium.value
+        return result
 
     # Create job collection and job in scheduler
-    def create_vmss_delete_job(self, request_id, resource_client, scheduler_client, group_name, location, job_collection_name, job_name, cleaner_job,
-                              job_group_name, vmss_name, schedule, webhook_url, clean_job_webhook_url, token):
+    def create_vmss_delete_job(self, request_id, resource_client, scheduler_client, group_name, location, job_collection_name, job_collection_sku, job_name, cleaner_job,
+                              job_group_name, vmss_name, schedule, webhook_url, clean_job_webhook_url, clean_job_frequency, clean_job_interval, token):
         # Create resource group
         self.create_resource_group(request_id, resource_client, group_name, location)
 
         # Create job collection
-        self.create_scheduler_job_collection(request_id, scheduler_client, group_name, location, job_collection_name, SkuDefinition.standard)   
+        self.create_scheduler_job_collection(request_id, scheduler_client, group_name, location, job_collection_name, self.get_job_collection_sku(request_id, job_collection_sku))   
 
         # Create cleaner job to delete all the expired job
         job_body = {"ResourceGroupName":group_name, "JobCollection":job_collection_name, "SecureToken":token}
         prop = {
             "start_time": datetime.datetime.utcnow() + datetime.timedelta(minutes = 5),
             "recurrence":{
-                "frequency":RecurrenceFrequency.minute,
-                "interval":10
+                "frequency":self.get_recurrence_frequency(request_id, clean_job_frequency),
+                "interval":clean_job_interval
             },
             "action": {
                 "type":"https",                         
@@ -981,7 +1039,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                                          , compute_client, scheduler_client
                                          , deletion_job, group_name, vmss_name
                                          , location, schedule, webhook_url, token):
-        if(deletion_job):
+        #if(deletion_job):
             #job_group_name = group_name + "jobrg"
             #job_collection_name = group_name + "jobcollection"
             #job_name = group_name + "job"
@@ -992,9 +1050,10 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             #                            , job_name, group_name, vmss_name,
             #                            schedule
             #                            , webhook_url, token)
-            self.create_job(request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url, token)
+            #self.create_job(request_id, resource_client, scheduler_client,
+            #group_name, location, schedule, webhook_url, token)
 
-        elif(group_name != "" and vmss_name != ""):
+        if(group_name != "" and vmss_name != ""):
             self.delete_vmss(request_id, compute_client, group_name, vmss_name)
         elif(group_name != "" and vmss_name == ""):
             self.delete_rg(request_id, resource_client, group_name)
@@ -1370,7 +1429,10 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                                  ci.cmdParams["key"], ci.cmdParams["vmName"], ci.cmdParams["size"], ci.cmdParams["vmRef"], ci.cmdParams["osType"],
                                  ci.cmdParams["tag"],ci.cmdParams["customdata"], ci.cmdParams["datadisks"], ci.cmdParams["nodecount"],
                                  ci.cmdParams["deletionJob"], ci.cmdParams["schedule"], ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"],
-                                 key_vault_download_command, app_settings["key_vault_setup_script_url"], app_settings["webhook_url"], app_settings["clean_job_webhook_url"], app_settings["token"])
+                                 key_vault_download_command, app_settings["key_vault_setup_script_url"], app_settings["webhook_url"], 
+                                 app_settings["jobs_rg"], app_settings["job_collection"], app_settings["job_collection_sku"], app_settings["clean_job_webhook_url"],
+                                 app_settings["job_frequency_type"], app_settings["job_interval"],
+                                 app_settings["token"])
                 self.queue_result(ci.request_id, "NULL")
             except Exception as e:
                 error = self.escape(str(e.args[0]))    
