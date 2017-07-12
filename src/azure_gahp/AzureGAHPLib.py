@@ -816,6 +816,15 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
     def create_vmss(self, request_id, compute_client, network_client, resource_client, storage_client, scheduler_client, location, group_name, vnet_name, vnet_rg_name, subnet_name, 
                     os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vmss_name, vm_size, vm_reference, os_type,tag,custom_data,data_disks,
                     nodecount, deletion_job, schedule, keyvault_name, vault_key, key_vault_download_command, key_vault_setup_script_url, webhook_url, token):
+        # Create deletion job
+        if(deletion_job):
+            job_group_name = group_name + "jobrg"
+            job_collection_name = group_name + "jobcollection"
+            job_name = group_name + "job"
+            self.create_vmss_delete_job(request_id, resource_client, scheduler_client
+                                        , job_group_name, location, job_collection_name
+                                        , job_name, group_name, "", schedule
+                                        , webhook_url, token)        
 
         self.create_resource_group(request_id, resource_client, group_name, location)
 
@@ -861,15 +870,6 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         async_vmss_creation = compute_client.virtual_machine_scale_sets.create_or_update(group_name, vmss_name, vmss_parameters)
         vmss_info = async_vmss_creation.result()
         self.write_message(request_id, "VMSS creation completed\r\n")
-
-        if(deletion_job):
-            job_group_name = group_name + "jobrg"
-            job_collection_name = group_name + "jobcollection"
-            job_name = group_name + "job"
-            self.create_vmss_delete_job(request_id, resource_client, scheduler_client
-                                        , job_group_name, location, job_collection_name
-                                        , job_name, group_name, "", schedule
-                                        , webhook_url, token)
 
     # Create job collection and job in scheduler
     def create_vmss_delete_job(self, request_id, resource_client, scheduler_client, group_name, location, job_collection_name, job_name, vmss_group_name, vmss_name, schedule, webhook_url, token):
