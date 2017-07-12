@@ -22,7 +22,9 @@
 
 #ifndef _BSD_SOURCE
 #define _BSD_SOURCE
-#define _DEFAULT_SOURCE
+# ifndef _DEFAULT_SOURCE
+#  define _DEFAULT_SOURCE
+# endif
 #endif
 
 #if defined(GLIBC)
