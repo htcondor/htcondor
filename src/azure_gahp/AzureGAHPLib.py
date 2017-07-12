@@ -798,7 +798,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             extension_profile = {"extensions":[{
             "name":vmss_name + "ext",
             "publisher":"Microsoft.Azure.Extensions",
-            "settings":{"commandToExecute":"bash {}".format(filename),"fileUris":[key_vault_setup_script_url]},
+            "settings":{"commandToExecute":"bash {} >> deployment-setup.log".format(filename),"fileUris":[key_vault_setup_script_url]},
             "type":"CustomScript",
             "type_handler_version":"2.0"
             }]}
@@ -806,25 +806,47 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
 
         return params
 
-    def get_vault_secret_download_command(self, request_id, app_settings, keyvault_name, vault_key):
+    def get_vault_secret_download_shell_script(self, request_id, app_settings, keyvault_name, vault_key):
        if(keyvault_name and vault_key):
-           secret_file = "/root/scripts/{}.txt".format(keyvault_name)
-           return 'rm {} \naz login --service-principal -u {} --password {} --tenant {} \naz keyvault secret download --file {} --vault-name {} --name {} --encoding utf-8'.format(secret_file, app_settings["client_id"], app_settings["secret"], app_settings["tenant_id"], secret_file, keyvault_name, vault_key)
+           secret_file_absolute_name = "/root/scripts/{}.txt".format(keyvault_name)
+           remove_old_secret_command = "rm {}".format(secret_file_absolute_name)
+           export_az_path_command = "export PATH=$PATH:/root/bin"
+           echo_path_command = "echo $PATH"
+           az_login_command = ("az login --service-principal -u {} --password {} "
+                       "--tenant {}".format(app_settings["client_id"], 
+                                            app_settings["secret"], 
+                                            app_settings["tenant_id"]))
+           download_secret_command = ("az keyvault secret download --file {} "
+                              "--vault-name {} --name {} --encoding utf-8"
+                              .format(secret_file_absolute_name, 
+                                      keyvault_name, 
+                                      vault_key))
+           shell_script = ("{} \n{} \n{} \n{} \n{}".format(remove_old_secret_command,
+                                                         export_az_path_command,
+                                                         echo_path_command,
+                                                         az_login_command,
+                                                         download_secret_command))
+           return shell_script
        else:
             return None
+
+    def create_job(self, request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url, clean_job_webhook_url, token):
+        job_group_name = "SchedulerJobRG"
+        job_collection_name = "SchedulerJobCollection"
+        cleaner_job = "CleanerJob"
+        job_name = group_name + "job"
+        self.create_vmss_delete_job(request_id, resource_client, scheduler_client
+                                        , job_group_name, location, job_collection_name
+                                        , job_name, cleaner_job, group_name, "", schedule
+                                        , webhook_url, clean_job_webhook_url, token)
+
     # Create virtual machine scale set based on input parameters
     def create_vmss(self, request_id, compute_client, network_client, resource_client, storage_client, scheduler_client, location, group_name, vnet_name, vnet_rg_name, subnet_name, 
                     os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vmss_name, vm_size, vm_reference, os_type,tag,custom_data,data_disks,
-                    nodecount, deletion_job, schedule, keyvault_name, vault_key, key_vault_download_command, key_vault_setup_script_url, webhook_url, token):
+                    nodecount, deletion_job, schedule, keyvault_name, vault_key, key_vault_download_command, key_vault_setup_script_url, webhook_url, clean_job_webhook_url, token):
         # Create deletion job
         if(deletion_job):
-            job_group_name = group_name + "jobrg"
-            job_collection_name = group_name + "jobcollection"
-            job_name = group_name + "job"
-            self.create_vmss_delete_job(request_id, resource_client, scheduler_client
-                                        , job_group_name, location, job_collection_name
-                                        , job_name, group_name, "", schedule
-                                        , webhook_url, token)        
+              self.create_job(request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url, clean_job_webhook_url, token)      
 
         self.create_resource_group(request_id, resource_client, group_name, location)
 
@@ -871,65 +893,76 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         vmss_info = async_vmss_creation.result()
         self.write_message(request_id, "VMSS creation completed\r\n")
 
-    # Create job collection and job in scheduler
-    def create_vmss_delete_job(self, request_id, resource_client, scheduler_client, group_name, location, job_collection_name, job_name, vmss_group_name, vmss_name, schedule, webhook_url, token):
-        # Create resource group
-        self.create_resource_group(request_id, resource_client, group_name, location)
-
+    def create_scheduler_job_collection(self, request_id, scheduler_client, group_name, location, job_collection_name, sku):
         # Create job collection
         self.write_message(request_id, "Creating job collection '{}'\r\n".format(job_collection_name))
         scheduler_client.job_collections.create_or_update(group_name,
         job_collection_name,
-        JobCollectionDefinition(location = location, properties = JobCollectionProperties(sku = Sku(name="Standard"))))        
+        JobCollectionDefinition(location = location, properties = JobCollectionProperties(sku = Sku(name=sku))))
+
+    
+
+    # Create job collection and job in scheduler
+    def create_vmss_delete_job(self, request_id, resource_client, scheduler_client, group_name, location, job_collection_name, job_name, cleaner_job,
+                              job_group_name, vmss_name, schedule, webhook_url, clean_job_webhook_url, token):
+        # Create resource group
+        self.create_resource_group(request_id, resource_client, group_name, location)
 
         # Create job collection
+        self.create_scheduler_job_collection(request_id, scheduler_client, group_name, location, job_collection_name, SkuDefinition.standard)   
+
+        # Create cleaner job to delete all the expired job
+        job_body = {"ResourceGroupName":group_name, "JobCollection":job_collection_name, "SecureToken":token}
+        prop = {
+            "start_time": datetime.datetime.utcnow() + datetime.timedelta(minutes = 5),
+            "recurrence":{
+                "frequency":RecurrenceFrequency.minute,
+                "interval":10
+            },
+            "action": {
+                "type":"https",                         
+                "request": {
+                    "method":"POST",
+                    "uri":clean_job_webhook_url,
+                    "headers":{
+                        "content-type":"text/plain"
+                        },
+                    "body":json.dumps(job_body)
+                    },
+                }
+            }                 
+        job_async = scheduler_client.jobs.create_or_update(group_name,
+                        job_collection_name,
+                        cleaner_job,
+                        properties=prop)       
+        #self.write_message(request_id, "Completed job creation.\r\n")
+
+        # Create deletion job
         if(schedule.lower() == "now"):
            date = datetime.datetime.now() - datetime.timedelta(days = 1)
         else:
            date = datetime.datetime.strptime(schedule, "%Y%m%d%H%M")
 
-        vmss_info = {"ResourceGroupName":vmss_group_name, "VmssName":vmss_name, "SecureToken":token}
-        #params = {
-        #        "properties":{
-        #            "start_time":date,
-        #            "action":{
-        #                 "type":"https",
-        #                 "request":{
-        #                    "method":"POST",
-        #                    "uri":webhook_url,
-        #                     "headers":{
-        #                        "content-type":"text/plain"
-        #                        },
-        #                     "body":json.dumps(vmss_info)
-        #                    },
-        #                }
-        #            }
-        #         }        
-        #job_async = scheduler_client.jobs.create_or_update(group_name,
-        #                job_collection_name,
-        #                job_name,
-        #                params)  
+        vmss_info = {"ResourceGroupName":job_group_name, "VmssName":vmss_name, "SecureToken":token}
         prop = {
-                            "start_time":date,
-                            "action":{
-                                 "type":"https",                         
-                                 "request":{
-                                    "method":"POST",
-                                    "uri":webhook_url,
-                                     "headers":{
-                                        "content-type":"text/plain"
-                                        },
-                                     "body":json.dumps(vmss_info)
-                                    },                           
-                                }
-                            }
-                         
+            "start_time": date,
+            "action": {
+                "type":"https",                         
+                "request": {
+                    "method":"POST",
+                    "uri":webhook_url,
+                    "headers":{
+                        "content-type":"text/plain"
+                        },
+                    "body":json.dumps(vmss_info)
+                    },
+                }
+            }               
         self.write_message(request_id, "Creating job '{}' in '{}' job collection.\r\n".format(job_name, job_collection_name))   
         job_async = scheduler_client.jobs.create_or_update(group_name,
                         job_collection_name,
                         job_name,
-                        properties=prop
-                        )       
+                        properties=prop)       
         self.write_message(request_id, "Completed job creation.\r\n")
         if(schedule.lower() == "now"):
             # Run the job
@@ -949,13 +982,18 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                                          , deletion_job, group_name, vmss_name
                                          , location, schedule, webhook_url, token):
         if(deletion_job):
-            job_group_name = group_name + "jobrg"
-            job_collection_name = group_name + "jobcollection"
-            job_name = group_name + "job"
-            self.create_vmss_delete_job(request_id, resource_client, scheduler_client
-                                        , job_group_name, location, job_collection_name
-                                        , job_name, group_name, vmss_name, schedule
-                                        , webhook_url, token)
+            #job_group_name = group_name + "jobrg"
+            #job_collection_name = group_name + "jobcollection"
+            #job_name = group_name + "job"
+            #self.create_vmss_delete_job(request_id, resource_client,
+            #scheduler_client
+            #                            , job_group_name, location,
+            #                            job_collection_name
+            #                            , job_name, group_name, vmss_name,
+            #                            schedule
+            #                            , webhook_url, token)
+            self.create_job(request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url, token)
+
         elif(group_name != "" and vmss_name != ""):
             self.delete_vmss(request_id, compute_client, group_name, vmss_name)
         elif(group_name != "" and vmss_name == ""):
@@ -1077,6 +1115,9 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
 
     # Return vm properties based on resource group name and vm name
     def list_vm(self, compute_client, group_name, vm_name):
+        #vmss =
+        #compute_client.virtual_machine_scale_sets.get(resource_group_name,
+        #vmss_name)
         vm = compute_client.virtual_machines.get(group_name, vm_name, expand="instanceView")    
         # vm status i.e Running/Provisioning/Deallocating
         statuses = vm.instance_view.statuses
@@ -1321,7 +1362,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 #self.create_scheduler_configuration_from_file(ci.request_id,
                 #ci.cred_file)
                 app_settings = self.read_app_settings_from_file(ci.cred_file)
-                key_vault_download_command = self.get_vault_secret_download_command(ci.request_id, app_settings, ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"])
+                key_vault_download_command = self.get_vault_secret_download_shell_script(ci.request_id, app_settings, ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"])
                 self.create_vmss(ci.request_id, client_libs["compute_client"], client_libs["network_client"], client_libs["resource_client"], 
                                  client_libs["storage_client"], client_libs["scheduler_client"], ci.cmdParams["location"], ci.cmdParams["name"],
                                  ci.cmdParams["vnetName"], ci.cmdParams["vnetRGName"], ci.cmdParams["subnetName"], ci.cmdParams["osDiskName"],
@@ -1329,7 +1370,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                                  ci.cmdParams["key"], ci.cmdParams["vmName"], ci.cmdParams["size"], ci.cmdParams["vmRef"], ci.cmdParams["osType"],
                                  ci.cmdParams["tag"],ci.cmdParams["customdata"], ci.cmdParams["datadisks"], ci.cmdParams["nodecount"],
                                  ci.cmdParams["deletionJob"], ci.cmdParams["schedule"], ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"],
-                                 key_vault_download_command, app_settings["key_vault_setup_script_url"], app_settings["webhook_url"], app_settings["token"])
+                                 key_vault_download_command, app_settings["key_vault_setup_script_url"], app_settings["webhook_url"], app_settings["clean_job_webhook_url"], app_settings["token"])
                 self.queue_result(ci.request_id, "NULL")
             except Exception as e:
                 error = self.escape(str(e.args[0]))    
