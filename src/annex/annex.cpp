@@ -705,7 +705,7 @@ condor_status( int argc, char ** argv ) {
 	if( csArgv[1] == NULL ) { return 2; }
 
 	csArgv[2] = strdup( "-compact" );
-	if( csArgv[2] == NULL ) { return 2; }
+	if( csArgv[2] == NULL ) { free(csArgv); return 2; }
 
 	for( int i = 2; i < argc; ++i ) {
 		csArgv[i + 1] = argv[i];
