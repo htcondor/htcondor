@@ -292,6 +292,7 @@ createConfigTarball(	const char * configDir,
 	if( tfd == -1 ) {
 		formatstr( tarballError, "failed to create temporary filename for tarball" );
 		free(cwd);
+		free(tarballName);
 		return false;
 	}
 
@@ -302,6 +303,7 @@ createConfigTarball(	const char * configDir,
 	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
 		formatstr( tarballError, "failed to create tarball" );
 		free(cwd);
+		free(tarballName);
 		return false;
 	}
 	tarballPath = tarballName;
@@ -312,10 +314,12 @@ createConfigTarball(	const char * configDir,
 		formatstr( tarballError, "unable to change back to working dir '%s' (%d): '%s'",
 			cwd, errno, strerror( errno ) );
 		free(cwd);
+		free(tarballName);
 		return false;
 	}
 	close( tfd );
 	free( cwd );
+	free(tarballName);
 	return true;
 }
 
