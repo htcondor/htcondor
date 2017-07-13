@@ -124,7 +124,7 @@ LoadPlugins()
 #ifdef WIN32
         if( NULL == LoadLibrary(plugin_file) ) {
 #else
-		if (!dlopen(plugin_file, RTLD_NOW)) {
+		if (!dlopen(plugin_file, RTLD_NOW | RTLD_GLOBAL)) {
 #endif
 			error = getErrorString();
 			if (error) {
