@@ -529,14 +529,8 @@ class AzureGAHPCommandExec():
 
         vm_id_msg = "VM Id {}\r\n".format(self.escape(vm_id))
         public_ip_msg = "Public IP {}".format(self.escape(public_ip_address))
-        if self.debug_mode: # Show message and write log for debug mode
-            self.write_message(request_id, vm_id_msg)
-            self.write_message(request_id, public_ip_msg)
-        else:# Write log and print message when not in debug mode
-            print(vm_id_msg)
-            print(public_ip_msg)
-            self.write_log(request_id, vm_id_msg)
-            self.write_log(request_id, public_ip_msg)
+        self.write_message(request_id, vm_id_msg)
+        self.write_message(request_id, public_ip_msg)
         vm_info = {
                     "vm_id":vm_id,
                     "public_ip":public_ip_address
@@ -1070,7 +1064,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         if(vm.storage_profile.os_disk.managed_disk is not None):            
             self.delete_disk(request_id, compute_client, group_name, vm.storage_profile.os_disk.name)
         else:
-            print("Unmanaged disk")
+            self.write_message(request_id, "Unmanaged disk")
 
         # Delete Nics
         for nic in vm.network_profile.network_interfaces:
@@ -1088,7 +1082,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             vnet_name = subnet_arr[8]
             vnet_info = network_client.virtual_networks.get(vnet_rg, vnet_name)
             if(vnet_info.subnets[0].ip_configurations is not None and len(vnet_info.subnets[0].ip_configurations) > 1):
-                print("VNET '{}' is shared with other resources so can not be deleted.".format(vnet_name))
+                self.write_message(request_id, "VNET '{}' is shared with other resources so can not be deleted.".format(vnet_name))
             else:
                 async_vnet_delete = network_client.virtual_networks.delete(vnet_rg, vnet_name)
                 async_vnet_delete.wait() 
@@ -1115,7 +1109,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 vnet_name = subnet_arr[8]
                 vnet_info = network_client.virtual_networks.get(vnet_rg, vnet_name)
                 if(vnet_info.subnets[0].ip_configurations is not None and len(vnet_info.subnets[0].ip_configurations) > 1):
-                    print("VNET '{}' is shared with other resources so can not be deleted.".format(vnet_name))
+                    self.write_message(request_id, "VNET '{}' is shared with other resources so can not be deleted.".format(vnet_name))
                 else:
                     async_vnet_delete = network_client.virtual_networks.delete(vnet_rg, vnet_name)
                     async_vnet_delete.wait() 
@@ -1787,7 +1781,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             if(node_count > 0):
                 dnary["nodeCount"] = node_count 
             else:
-                print("Invalid value {} for VMSS node count. Putting node count to 1.".format(node_count))
+                self.write_message(cmd_parts[1], "Invalid value {} for VMSS node count. Putting node count to 1.".format(node_count))
                 dnary["nodeCount"] = 1
         return dnary
 
