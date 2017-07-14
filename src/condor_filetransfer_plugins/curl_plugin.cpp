@@ -82,7 +82,6 @@ int main( int argc, char **argv ) {
         else if( retry_count <= MAX_RETRY_ATTEMPTS && 
                                   ( rval == CURLE_COULDNT_CONNECT ||
                                     rval == CURLE_PARTIAL_FILE || 
-                                    rval == CURLE_WRITE_ERROR || 
                                     rval == CURLE_READ_ERROR || 
                                     rval == CURLE_OPERATION_TIMEDOUT || 
                                     rval == CURLE_SEND_ERROR || 
@@ -116,7 +115,7 @@ int main( int argc, char **argv ) {
     Perform the curl request, and output the results either to file to stdout.
 */
 int send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
- 
+
     char error_buffer[CURL_ERROR_SIZE];
     char partial_range[20];
     double bytes_downloaded;    
@@ -414,8 +413,28 @@ void init_stats( ClassAd* stats, char **argv ) {
     url_token = strtok( NULL, "/" );
     stats->Assign( "TransferHostName", url_token );
 
+    // Set the host name of the local machine using getaddrinfo().
+    struct addrinfo hints, *info;
+    int addrinfo_result;
+
+    char hostname[1024];
+    hostname[1023] = '\0';
+    gethostname(hostname, 1023);
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_CANONNAME;
+
+    // Look up the host name. If this fails for any reason, do not include
+    // it with the stats.
+    if ( ( addrinfo_result = getaddrinfo( hostname, "http", &hints, &info ) ) == 0 ) {
+        stats->Assign( "TransferLocalMachineName", info->ai_canonname );
+    }
+
     // Cleanup and exit
     free( request_url );
+    freeaddrinfo( info );
 }
 
 /*
@@ -441,8 +460,9 @@ static size_t header_callback( char *buffer, size_t size, size_t nitems ) {
             // The next token is a version number. We can ignore it.
             token = strtok( NULL, " " );
             // Next comes the actual cache host
-            token = strtok( NULL, " " );  
+            token = strtok( NULL, " " );
             curl_stats->Assign( "HttpCacheHost", token );
+            curl_stats->Assign( "HttpUsedCache", true );
         }
         token = strtok( NULL, " " );
     }
