@@ -77,12 +77,11 @@ void MyAsyncFileReader::clear()
 	close();
 	error = NOT_INTIALIZED;
 
-	PRAGMA_REMIND("check to see if we should swap buf and pong before clearing/freeing?")
-	buf.clear();
+	buf.free();
 	nextbuf.free();
 }
 
-int MyAsyncFileReader::open (const char * filename)
+int MyAsyncFileReader::open (const char * filename, bool buffer_whole_file /*=false*/)
 {
 	if (error != NOT_INTIALIZED) return error;
 	ASSERT(fd == FILE_DESCR_NOT_SET);
@@ -97,7 +96,7 @@ int MyAsyncFileReader::open (const char * filename)
 		LARGE_INTEGER li;
 		if (GetFileSizeEx(fd, &li)) {
 			cbfile = li.QuadPart;
-			ixposX = 0;
+			ixpos = 0;
 			got_eof = false;
 		} else {
 			error = ENOENT;
@@ -122,7 +121,7 @@ int MyAsyncFileReader::open (const char * filename)
 			close();
 		} else {
 			cbfile = st.st_size;
-			ixposX = 0;
+			ixpos = 0;
 			got_eof = false;
 		}
 
@@ -133,15 +132,16 @@ int MyAsyncFileReader::open (const char * filename)
 	// if we opened the file and got its size, allocate buffers
 	if (fd != FILE_DESCR_NOT_SET) {
 		const int buffer_size = DEFAULT_BUFFER_SIZE; 
-		if (cbfile <= buffer_size*2) {
+		if (buffer_whole_file || (cbfile <= buffer_size*2)) {
 			if (cbfile == 0) {
 				// file has 0 size, just pretend we read the data already.
 				nextbuf.reset(DEFAULT_BUFFER_ALIGMENT);
 			} else {
-				// don't bother to make ping/pong buffers if the whole file is smaller than our buffering would be
-				// but we do want the buffer to still be big enough and aligned to the requirements of unbuffered io.
+				// don't bother to make ping/pong buffers if we will be buffering the whole file.
+				// we still need the buffer to be big enough and aligned to the requirements of unbuffered io.
 				int cbbuf = ALIGN_SIZE(cbfile, DEFAULT_BUFFER_ALIGMENT);
 				nextbuf.reset(cbbuf);
+				whole_file = true;
 			}
 		} else {
 			nextbuf.reset(buffer_size);
@@ -192,12 +192,12 @@ int MyAsyncFileReader::queue_next_read()
 		close();
 		return 0;
 	}
-	ab.aio_offset = this->ixposX;
+	ab.aio_offset = this->ixpos;
 
 	ASSERT(fd != FILE_DESCR_NOT_SET);
 	++total_reads;
 
-	this->ixposX += ab.aio_nbytes;
+	this->ixpos += ab.aio_nbytes;
 	nextbuf.set_pending_data(ab.aio_nbytes);
 #ifdef USE_WIN32_ASYNC_IO
 	DWORD cbRead = 0;
@@ -311,7 +311,7 @@ int MyAsyncFileReader::check_for_read_completion()
 
 		//fprintf(stderr, "aio_error for fd=%d returned %d %s\n", fd, rval, strerror(rval));
 		if (rval == EINPROGRESS) {
-			// not done yet.
+			++total_inprogress; // not done yet.
 		} else {
 			if (rval) {
 				// io failed or was cancelled.

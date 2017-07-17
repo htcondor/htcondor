@@ -21,6 +21,68 @@
 #ifndef __MY_ASYNC_FREAD__
 #define __MY_ASYNC_FREAD__
 
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ *
+ * MyAsyncFileReader and associated helper classes.
+ *
+ * A class that allows you to read a file a line at a time without blocking. It uses aio_*
+ * functions on Linux/Unix and native Windows API on Windows to do nonblocking file io.
+ * These APIs expect to be working with FILES and may or may not work with pipes etc.
+ *
+ * The basic use pattern is
+ *
+ *   MyAsyncFileReader reader;
+ *   if (reader.open() == 0) {
+ *      // optionally call reader.queue_next_read() to queue the first I/O
+ *      while(true) {
+ *         if (reader.readline(...)) {
+ *            // process the line
+ *         } else if (reader.done_reading()) {
+ *            // when readline returns false and done_reading() returns true we are
+ *            // either at end-of-file or there was an error. 
+ *            // check reader.error_code() for non-zero to see if there was an error.
+ *            break;
+ *         } else {
+ *            // in practice you wouldn't use this class like this. instead you would
+ *            // stash the reader class and come back later to try readline() again.
+ *            do_other_work_for_a_while();
+ *         }
+ *      }
+ *   }
+ *
+ *
+ * Implementation details.
+
+ * The class uses 1 or 2 buffers, nextbuf is queued for read, and it is swapped with buf
+ * once the read is completed and buf has been consumed. The buffers are classes that
+ * can keep track of whether they are empty, have valid data, or have been queued for
+ * a read and have pending data.
+ *
+ * A single buffer is used when the file size is detected on open() to be small enough to fit
+ * entirely in the default buffering. In that case only a single buffer is allocated and the
+ * first completed read will result in all of the data becoming available. By default this
+ * size is 128k or less (0x20000)
+ *
+ * Whenever get_data is called (readline calls it) it will first call check_for_read_completion()
+ * before returning pointers to valid data. check_for_read_completion() checks for completed IO
+ * and marks data as valid, possibly swapping the nextbuf and the buf if the nextbuf has completed
+ * and buf is empty. check_for_read_completion() will also call queue_next_read() if it detects
+ * that there are idle buffers after it has finished checking for completion.
+ *
+ * if readline finds a newline (or gets to EOF) in the valid data, it will copy the line into
+ * the supplied buffer and call consume_data() to mark the data as 'free'. consume_data() will
+ * in turn call queue_next_read() if it detects idle buffers.
+ *
+ * both queue_next_read() and check_for_read_completion() will close the file if they detect EOF
+ * or (sometimes) on error conditions.
+ *
+ * Once an error condition has been set, error_code() will return non-zero, at this point
+ * get_data() and readline() will ALWAYS return false and any buffered data is no longer accessible.
+ * no new reads will be queued, and the file may or may not be closed. calling close() or destroying
+ * the class will always close the file. 
+ *
+ *---------------------------------------------------------------------------------------------*/
+
 #include "MyString.h"
 #ifdef WIN32
 // if this is commented out, Windows will use fake aio_* routines that simulate async io.
@@ -72,6 +134,8 @@ protected:
 };
 
 
+// helper class for MyAsyncFileReader, used to hold a buffer for async io
+// this class keeps track of allocation size, valid data, and pending data
 class MyAsyncBuffer {
 protected:
 	void * ptr;
@@ -214,9 +278,7 @@ private:
 	MyAsyncBuffer& operator=(const MyAsyncBuffer & that);
 };
 
-// Class to hold an non-blocking FILE handle and read from it a line at a time.
-//
-// Usage:
+// Class to hold an non-blocking file handle and read from it a line at a time.
 //
 class MyAsyncFileReader {
 protected:
@@ -232,32 +294,38 @@ protected:
 	int fd;
 	aiocb ab;
 #endif
-	long long cbfile;
-	long long ixposX; // next position to queue for read, updated when the read is queued, not when it completes.
-	int    error;   // error code from reading
-	int    status; // last status return from aio_error
+	long long cbfile; // size of the file, determined after the file was open.
+	long long ixpos; // next position to queue for read, updated when the read is queued, not when it completes.
+	int    error;   // error code from reading, if any
+	int    status; // last status return from aio_error, used for debugging.
+	bool   whole_file; // true when the whole file will fit into the buffers (normally into a single buffer)
 	bool   got_eof; // set to true when eof was read
 	int    total_reads;   // number of aio_read/ReadFile calls
 	int    total_inprogress; // number of times aio_error/GetOverlappedResult returned EINPROGRESS
+
+	// a MyStringSource compatable class that is intimately tied to this class.
 	MyStringAioSource src;
 	friend class MyStringAioSource;
 
-	MyAsyncBuffer buf;  // the first async read buffer, what we are currently returning lines from.
-	MyAsyncBuffer nextbuf; // the next async buffer read buffer, usually the one that is queued.
+	// during operation, the guts of these classes periodically swap so that
+	// buf is always the one we return data from, and nextbuf is always queued for read.
+	MyAsyncBuffer buf;  // the buffer we are returing lines from.
+	MyAsyncBuffer nextbuf; // the buffer queued for read, or returning lines when a line straddles buf+nextbuf.
 
-	static const int DEFAULT_BUFFER_SIZE = 0x2000; // default to 64k buffers
-	static const int DEFAULT_BUFFER_ALIGMENT = 0x1000; // default to 1k buffer alignment
+	static const int DEFAULT_BUFFER_SIZE = 0x10000; // default to 64k buffers
+	static const int DEFAULT_BUFFER_ALIGMENT = 0x1000; // default to 4k buffer alignment
 
 public:
-	static const int NOT_INTIALIZED=0xd01e; // error or status value are uninitialized
-	static const int MAX_LINE_LENGTH_EXCEEDED=0xd00d; // error value for line length exceeded buffer capacity
-	static const int READ_QUEUED=0x1eee;   // status value when a read has been queued, but completion has never been checked.
-	MyAsyncFileReader() 
+	static const int NOT_INTIALIZED=0xd01e; // error_code() or status value are uninitialized
+	static const int MAX_LINE_LENGTH_EXCEEDED=0xd00d; // error_code() value for line length exceeded buffer capacity
+	static const int READ_QUEUED=0x1eee;   // current_status() value when a read has been queued, but completion has never been checked.
+	MyAsyncFileReader()
 		: fd(FILE_DESCR_NOT_SET)
 		, cbfile(-1)
-		, ixposX(0)
+		, ixpos(0)
 		, error(NOT_INTIALIZED)
 		, status(NOT_INTIALIZED)
+		, whole_file(false)
 		, got_eof(false)
 		, total_reads(0)
 		, total_inprogress(0)
@@ -265,62 +333,72 @@ public:
 	{}
 	virtual ~MyAsyncFileReader();
 
-	// prepare class for destruction or re-use.
-	// rewinds output buffer but does not free it.
+	// prepare class for destruction or re-use, closes the file and
+	// rewinds any input buffers, but does not free all of them.
 	void clear();
 
-	// open a file for non-blocking io and being reading from it into a buffer.
+	// open a file for non-blocking io
 	// returns 0 if file is opened
 	// returns -1 this class already has an open file
-	// returns errno file cannot be opened
-	int open (const char * filename);
+	// returns errno if file cannot be opened
+	int open (const char * filename, bool buffer_whole_file=false);
 
-	// close the file
+	// close the file, the file may be closed automatically once EOF is read.
+	// it will always be closed automatically when this class is destroyed.
 	bool close();
 
-	// returns true if the program and FILE* handle have been closed, false if not.
+	// returns true if the FILE* handle have been closed (or was never opened), false if not.
 	bool is_closed() const { return (fd == FILE_DESCR_NOT_SET); }
 
 	// returns true if we have read up to the end of file.
-	// NOTE: will return true when all of the data has been buffered, even if
-	// get_data has not yet returned all of it, and consume_data has not yet used all of it.
-	// so you should only call this when get_data returns false.
+	// NOTE: will return true when all of the data has been buffered, even if readline has not yet returned it.
+	// (effectively if get_data has not yet returned all of it, and consume_data has not yet used all of it.)
 	bool eof_was_read() const { return !error && got_eof; }
 
 	// returns true when the reader has either failed, or has buffered all of the data
 	// note that this ALSO returns true before you open() the file !
+	// Call this when readline/get_data returns false to determine if it is worthwhile to try again later.
 	bool done_reading() const { return error || got_eof || is_closed(); }
 
-	// return the stats for the reader.
-	void get_stats(int & reads, int & in_progress) { reads = total_reads; in_progress = total_inprogress; }
-
-	// once is_closed() returns true, these can be used to query the final state.
+	// once is_closed() returns true, this can be used to query the final state.
 	int error_code() const { return error; }
-	int current_status() const { return status; }
-	MyStringAioSource& output() { return src; } // if you call this before is_closed() is true, you must deal with pending data
 
 	// returns "" if no error, strerror() or some other short string
 	// if there was an error opening the file or reading output
 	const char * error_str() const;
 
-	// after we open the file, this queues the first io buffer
-	int queue_next_read();
-
-	// check to see if a pending io has completed, and queue the next one
-	// if there is more data to read and a free buffer to read into
-	int check_for_read_completion();
-
-	// returns raw pointers to available data without consuming it.
-	bool get_data(const char * & p1, int & cb1, const char * & p2, int & cb2);
-
-	// consumes data and possibly queues new reads
-	int consume_data(int cb);
-
 	// writes or appends the next line into the input str, and returns true if there was a line
 	// returns false if there is not yet enough data to find the next newline in the file, or
 	// if at the end of file or there was a read error and reading was aborted. 
 	// call done_reading() to determine if it is worthwhile to retry later.
+	// If this function returns true, the returned data is removed from this classes internal buffers
+	// by calling the consume_data() method below.
 	bool readline(MyString & str, bool append=false) { return src.readLine(str, append); }
+
+	// returns raw pointers to available data without consuming it.
+	// returns true if there is any data, false if there was an error or there is no data
+	bool get_data(const char * & p1, int & cb1, const char * & p2, int & cb2);
+
+	// consumes data and possibly queues new reads, used by readline
+	int consume_data(int cb);
+
+	// after we open the file, use this to queue the first io buffer if you want to begin reading right away.
+	// It is called by readline()/consume_data() as necessary to queue new reads.
+	int queue_next_read();
+
+	// check to see if a pending io has completed, and queue the next one
+	// if there is more data to read and a free buffer to read into
+	// called by readline/get_data() to check to see if pending buffers are ready.
+	int check_for_read_completion();
+
+	// Classes that parse via MyString::readLine can use this as a source once is_closed() or eof_was_read() returns true.
+	// if you call this before is_closed() is true, you must deal the fact that it's readLine method will return false when data is pending.
+	MyStringAioSource& output() { return src; }
+
+	// return the stats for the reader
+	void get_stats(int & reads, int & in_progress) { reads = total_reads; in_progress = total_inprogress; }
+	// last status return from aio_error, use for debugging.
+	int current_status() const { return status; }
 
 private:
 	void set_error_and_close(int err);

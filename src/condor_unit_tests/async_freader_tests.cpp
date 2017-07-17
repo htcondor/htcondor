@@ -425,6 +425,48 @@ BEGIN_TEST_CASE(1Megabyte) {
 	CHECK(reader.eof_was_read());
 } END_TEST_CASE
 
+BEGIN_TEST_CASE(1Megabyte_whole_file) {
+	MyAsyncFileReader reader;
+	const char * p1, *p2;
+	int c1, c2;
+	MyString str;
+
+	CHECK_EQUAL_INT(reader.open("async_test_1Megabyte.data", true), 0);
+	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
+
+	int cbdata = 0;
+	for (;;) {
+		if (reader.get_data(p1, c1, p2, c2)) {
+			// once we get any data, we should have all of it.
+			cbdata = c1 + (p2?c2:0);
+			break;
+		} else {
+			diag.collect(reader);
+			if (diagnostic) diag.report();
+			sleep(0);
+		}
+		CHECK_TEST_TIMEOUT(60);
+	}
+	CHECK_EQUAL_INT(reader.error_code(), 0);
+	CHECK_EQUAL_INT(cbdata, 1024*1024);
+
+	MyStringAioSource & src = reader.output();
+	CHECK(src.allDataIsAvailable());
+
+	// now read all of the data through the output method
+	cbdata = 0;
+	int lineno = 0;
+	while (src.readLine(str)) { 
+		++lineno;
+		if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.Value());
+		cbdata += str.size();
+	}
+	CHECK_EQUAL_INT(cbdata, 1024*1024);
+
+	CHECK(reader.is_closed());
+	CHECK(reader.eof_was_read());
+} END_TEST_CASE
+
 BEGIN_TEST_CASE(1Megabyte_no_final_newline) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
@@ -1105,6 +1147,7 @@ int main(int argc, const char * argv[])
 	test_1Kilobyte();
 	test_300000_bytes();
 	test_1Megabyte();
+	test_1Megabyte_whole_file();
 	test_30Megabytes();
 	test_no_newlines();
 	test_1Megabyte_no_final_newline();
