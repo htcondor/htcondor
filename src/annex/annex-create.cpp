@@ -226,6 +226,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 			}
 		}
 
+		delete gahp;
+		delete eventsGahp;
+		delete lambdaGahp;
 		return FALSE;
 	}
 
@@ -356,6 +359,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		command->LookupInteger( "EndOfLease", endOfLease );
 
 		if( (! odr->validateAndStore( command, validationError )) || (! validateLease( endOfLease, validationError )) ) {
+			delete cc;
 			delete odr;
 			goto cleanup;
 		}
@@ -430,6 +434,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 		delete reply;
 		delete scratchpad;
+		delete s3Gahp;
 
 		return FALSE;
 }
