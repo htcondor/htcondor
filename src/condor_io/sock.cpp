@@ -1604,7 +1604,7 @@ Sock::reportConnectionFailure(bool timed_out)
 	will_keep_trying[0] = '\0';
 	if(!connect_state.connect_refused && !timed_out) {
 		snprintf(will_keep_trying, sizeof(will_keep_trying),
-		        "  Will keep trying for %ld total seconds (%ld to go).\n",
+		        "  Will keep trying for %ld total seconds (%ld to go).",
 		        (long)connect_state.retry_timeout_interval,
 				(long)(connect_state.retry_timeout_time - time(NULL)));
 	}
