@@ -1238,7 +1238,7 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 			event_control << mount_info.path << "/";
 			break;
 		}
-		cgroup_get_controller_next(&handle, &mount_info);
+		ret = cgroup_get_controller_next(&handle, &mount_info);
 	}
 	if (!found_memcg && (ret != ECGEOF)) {
 		dprintf(D_ALWAYS,
