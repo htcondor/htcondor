@@ -269,6 +269,9 @@ OldClassAdIterator::next()
                     m_source.attr("seek")(end_ptr);
                     PyErr_Restore(ptype, pvalue, ptraceback);
                 }
+#if PY_MAJOR_VERSION >= 3
+                PyErr_Clear();
+#endif
                 return result;
             }
             boost::python::throw_error_already_set();
