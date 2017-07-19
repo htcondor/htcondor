@@ -535,7 +535,9 @@ int Sock::assignCCBSocket( SOCKET s ) {
 		ABEND( condor_getsockname( s, sockAddr ) == 0 );
 		condor_protocol sockProto = sockAddr.get_protocol();
 		condor_protocol objectProto = _who.get_protocol();
-		dprintf( D_NETWORK, "assignCCBSocket(): reverse connection made on different protocol than the request.\n", sockProto, objectProto );
+		if( objectProto != sockProto ) {
+			dprintf( D_NETWORK, "assignCCBSocket(): reverse connection made on different protocol than the request.\n"  );
+		}
 	}
 
 	// This assignSocket() is the only one that checks to see if the Sock
