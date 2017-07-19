@@ -1098,7 +1098,11 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 	if( !remote_sock ) {
 		remote_sock = new ReliSock();
 	}
-	remote_sock->assignSocket( passed_fd );
+	// Don't EXCEPT if the connection we just accepted isn't of the same
+	// protocol as the connection we were expecting, which can happen
+	// a CCB client calls back a daemon.  See the comment for this
+	// function in condor_includes/sock.h.
+	remote_sock->assignCCBSocket( passed_fd );
 	remote_sock->enter_connected_state();
 	remote_sock->isClient(false);
 
