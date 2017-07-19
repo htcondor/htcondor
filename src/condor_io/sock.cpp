@@ -355,6 +355,15 @@ int Sock::assign(
 	int socket_fd = WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, 
 					  FROM_PROTOCOL_INFO, pProtoInfo, 0, 0);
 
+	// This only works because the only call to this assign() is
+	// in SharedPortEndpoint::DoListenerAccept().  For how it works,
+	// see the comment in assignCCBSocket().  If we change the Linux code
+	// in SharedPortEndpoint::ReceiveSocket() to confirm that the
+	// connection being handed off came from CCB (before calling
+	// assignCCBSocket() instead of assignSocket()), we need to change
+	// this when we do the same for the equivalent Windows code in
+	// SharedPortEndpoint::DoListenerAccept().
+	_who.clear();
 	return assignSocket( socket_fd );
 }
 #endif
@@ -526,11 +535,16 @@ int Sock::assignCCBSocket( SOCKET s ) {
 		ABEND( condor_getsockname( s, sockAddr ) == 0 );
 		condor_protocol sockProto = sockAddr.get_protocol();
 		condor_protocol objectProto = _who.get_protocol();
-		dprintf( D_NETWORK, "DEBUG: sockProto = %u, objectProto = %u\n", sockProto, objectProto );
+		if( objectProto != sockProto ) {
+			dprintf( D_NETWORK, "assignCCBSocket(): reverse connection made on different protocol than the request.\n"  );
+		}
 	}
 
+	// This assignSocket() is the only one that checks to see if the Sock
+	// protocol and the socket protocol match, and the call to assignSocket()
+	// clear()s _who if s is not invalid, so we can just clear _who right
+	// here and avoid both the spurious ABEND and duplicating code.
 	_who.clear();
-
 	return assignSocket( s );
 }
 

@@ -47,6 +47,7 @@ cgroups were enabled on systems like Debian where the kernel has disabled
 the memory accounting controller.  A job on such a system would go into the
 "R" state, but never actually start running.
 \Ticket{6347}
+
 \item Fixed a bug where reverse resolutions could return the string
 representation of the address in question instead of failing.  This
 resulted in spurious warnings of the form "WARNING: forward resolution of
@@ -61,6 +62,10 @@ IPv6 address could cause HTCondor daemons to except.
 being interpreted as only matching IPv4 addresses.  It now properly
 matches any address family.
 \Ticket{6340}
+
+\item Fixed a bug where \Condor{q} \Opt{-grid} did not display the
+status column for any non-Globus job.
+\Ticket{6306}
 
 \end{itemize}
 
