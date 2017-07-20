@@ -68,6 +68,8 @@ class TestClassad(unittest.TestCase):
         tf = tempfile.TemporaryFile()
         tf.write(b"[foo = 1] [bar = 2]")
         tf.seek(0)
+        if sys.version_info > (3,):
+            tf,tf_ = open(tf.fileno()), tf
         ad_iter = classad.parseAds(tf)
         ad = next(ad_iter)
         self.assertEqual(len(ad), 1)
@@ -76,6 +78,8 @@ class TestClassad(unittest.TestCase):
         tf = tempfile.TemporaryFile()
         tf.write(b"-----\nfoo = 1\n\nbar = 2\n")
         tf.seek(0)
+        if sys.version_info > (3,):
+            tf,tf_ = open(tf.fileno()), tf
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             ad_iter = classad.parseOldAds(tf)
@@ -88,6 +92,8 @@ class TestClassad(unittest.TestCase):
         tf = tempfile.TemporaryFile()
         tf.write(b"[foo = 1] [bar = 2]")
         tf.seek(0)
+        if sys.version_info > (3,):
+            tf,tf_ = open(tf.fileno()), tf
         ad = classad.parseNext(tf)
         self.assertEqual(len(ad), 1)
         self.assertEqual(ad["foo"], 1)
@@ -95,6 +101,8 @@ class TestClassad(unittest.TestCase):
         tf = tempfile.TemporaryFile()
         tf.write(b"-----\nfoo = 1\n\nbar = 2\n")
         tf.seek(0)
+        if sys.version_info > (3,):
+            tf,tf_ = open(tf.fileno()), tf
         ad = classad.parseNext(tf)
         self.assertEqual(len(ad), 1)
         self.assertEqual(ad["foo"], 1)
