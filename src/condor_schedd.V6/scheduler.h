@@ -95,7 +95,8 @@ struct shadow_rec
     PROC_ID         job_id;
 	int				universe;
     match_rec*	    match;
-    int             preempted;
+    bool            preempted;
+	bool            preempt_pending;
     int             conn_fd;
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
