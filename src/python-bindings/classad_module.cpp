@@ -80,6 +80,7 @@ void *convert_to_FILEptr(PyObject* obj) {
     }
     const char * file_flags = (flags&O_RDWR) ? "w+" : ( (flags&O_WRONLY) ? "w" : "r" );
     FILE* fp = fdopen(fd, file_flags);
+    setbuf(fp, NULL);
     return fp;
 }
 #else
