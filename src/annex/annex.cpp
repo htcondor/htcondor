@@ -716,10 +716,10 @@ condor_status( int argc, char ** argv ) {
 	if( csArgv == NULL ) { return 2; }
 
 	csArgv[0] = strdup( csPath.c_str() );
-	if( csArgv[0] == NULL ) { return 2; }
+	if( csArgv[0] == NULL ) { free(csArgv); return 2; }
 
 	csArgv[1] = strdup( "-annex" );
-	if( csArgv[1] == NULL ) { return 2; }
+	if( csArgv[1] == NULL ) { free(csArgv) ; return 2; }
 
 	csArgv[2] = strdup( "-compact" );
 	if( csArgv[2] == NULL ) { free(csArgv); return 2; }
