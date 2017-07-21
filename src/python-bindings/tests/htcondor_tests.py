@@ -408,7 +408,7 @@ class TestPythonBindings(WithDaemons):
             while iters:
                 for it, pos in iters:
                     try:
-                        it.next()
+                        next(it)
                         ctrs[pos] += 1
                     except StopIteration:
                         iters.remove((it, pos))
