@@ -6,7 +6,6 @@ import pwd
 import sys
 import time
 import errno
-import types
 import atexit
 import signal
 import socket
@@ -250,7 +249,7 @@ class TestPythonBindings(WithDaemons):
             if ads: break
             time.sleep(1)
         self.assertEqual(len(ads), 1)
-        self.assertTrue(isinstance(ads[0]["Bar"], types.FloatType))
+        self.assertTrue(isinstance(ads[0]["Bar"], float))
         self.assertEqual(ads[0]["Bar"], now)
         self.assertTrue("Foo" not in ads[0])
 
