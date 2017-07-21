@@ -226,6 +226,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 			}
 		}
 
+		delete s3Gahp;
 		delete gahp;
 		delete eventsGahp;
 		delete lambdaGahp;
