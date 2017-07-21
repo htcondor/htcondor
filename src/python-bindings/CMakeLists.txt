@@ -148,14 +148,16 @@ else()
     endif()
     install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 
-    # This is to be used as a collector plugin module which invoke python functions.
-    add_library( collector_python_plugin SHARED collector_plugin.cpp )
-    target_link_libraries( collector_python_plugin condor_utils pyclassad )
-    set_target_properties( collector_python_plugin PROPERTIES SUFFIX ".so" )
-    if ( NOT CMAKE_SKIP_RPATH )
-      set_target_properties( collector_python_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
+    if ( LINUX )
+      # This is to be used as a collector plugin module which invoke python functions.
+      add_library( collector_python_plugin SHARED collector_plugin.cpp )
+      target_link_libraries( collector_python_plugin condor_utils pyclassad )
+      set_target_properties( collector_python_plugin PROPERTIES SUFFIX ".so" )
+      if ( NOT CMAKE_SKIP_RPATH )
+        set_target_properties( collector_python_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
+      endif()
+      install ( TARGETS collector_python_plugin DESTINATION "${C_LIBEXEC}" )
     endif()
-    install ( TARGETS collector_python_plugin DESTINATION "${C_LIBEXEC}" )
 
 
     set_source_files_properties(config.cpp collector.cpp negotiator.cpp secman.cpp dc_tool.cpp schedd.cpp classad.cpp classad_module.cpp classad_parsers.cpp event.cpp log_reader.cpp claim.cpp startd.cpp bulk_query_iterator.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
