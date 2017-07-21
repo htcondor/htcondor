@@ -462,7 +462,7 @@ These strings show definitions for operating systems no longer supported:
 a version number.
 
 For Linux operating systems, it is the value of the \Attr{OpSysName} attribute 
-concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
+concatenated with the string version of the \Attr{OpSysMajorVer} attribute:
 	\begin{description}
 	\item[\AdStr{RedHat5}:] for RedHat Linux version 5
 	\item[\AdStr{RedHat6}:] for RedHat Linux version 6
@@ -487,7 +487,7 @@ attribute concatenated with the string version of the \Attr{OpSysVer} attribute:
 	\item[\AdStr{MacOSX703}:] for MacOS version 10.7.3 (Lion)
 	\end{description}
 For BSD operating systems, it is the value of the \Attr{OpSysName} attribute 
-concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
+concatenated with the string version of the \Attr{OpSysMajorVer} attribute:
 	\begin{description}
 	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
@@ -499,7 +499,7 @@ it is the same value as the \Attr{OpSys} attribute:
 	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
 	\end{description}
 For Windows operating systems, it is the value of the \Attr{OpSys} attribute 
-concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
+concatenated with the string version of the \Attr{OpSysMajorVer} attribute:
 	\begin{description}
 	\item[\AdStr{WINDOWS500}:] for Windows 2000
 	\item[\AdStr{WINDOWS501}:] for Windows XP
@@ -548,8 +548,8 @@ with extra characters stripped off Debian versions.
 	\item[\AdStr{Windows 7 SP2}:] for Windows 7
 	\end{description}
 %
-\index{ClassAd machine attribute!OpSysMajorVersion}
-\item[\AdAttr{OpSysMajorVersion}:] An integer value representing the major version of the operating system.
+\index{ClassAd machine attribute!OpSysMajorVer}
+\item[\AdAttr{OpSysMajorVer}:] An integer value representing the major version of the operating system.
 	\begin{description}
 	\item[\Expr{5}:] for RedHat Linux version 5 
 and derived platforms such as Scientific Linux
