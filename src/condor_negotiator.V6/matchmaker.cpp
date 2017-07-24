@@ -4780,6 +4780,49 @@ rejectForConcurrencyLimits(std::string &limits)
 	return false;
 }
 
+//
+// getSinfulStringProtocolBools() short-circuits based on the comparison
+// in Matchmaker::matchmakingAlgorithm(); it is not a general-purpose function.
+//
+
+void
+getSinfulStringProtocolBools( bool isIPv4, bool isIPv6,
+		const char * sinfulString, bool & v4, bool & v6 ) {
+	// Compare the primary addresses.
+	if( sinfulString[1] == '[' ) {
+		v6 = true;
+		if( isIPv6 ) { return; }
+	}
+
+	if( isdigit( sinfulString[1] ) ) {
+		v4 = true;
+		if( isIPv4 ) { return; }
+	}
+
+	// Look for the addrs list.
+	const char * addr = strstr( sinfulString, "addrs=" );
+	if( ! addr ) { return; }
+	addr += 6;
+
+	const char * currentAddr = addr;
+	while( currentAddr[0] != '\0' ) {
+		if( currentAddr[0] == '[' ) {
+			v6 = true;
+			if( isIPv6 ) { return; }
+		}
+
+		if( isdigit( currentAddr[0] ) ) {
+			v4 = true;
+			if( isIPv4 ) { return; }
+		}
+
+		size_t span = strcspn( currentAddr, "+>&;" );
+		currentAddr += span;
+		if( currentAddr[0] != '+' ) { return; }
+		++currentAddr;
+	}
+}
+
 
 /*
 Warning: scheddAddr may not be the actual address we'll use to contact the
@@ -4951,7 +4994,21 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 	// scan the offer ads
 	startdAds.Open ();
+	std::string machineAddr;
+
+	bool isIPv4 = false;
+	bool isIPv6 = false;
+	getSinfulStringProtocolBools( true, true, scheddAddr, isIPv4, isIPv6 );
+
 	while ((candidate = startdAds.Next ())) {
+		bool v4 = false;
+		bool v6 = false;
+		candidate->LookupString( "MyAddress", machineAddr );
+		// This short-circuits based on the subsequent evaluation, so
+		// be sure only to change them in tandem.
+		getSinfulStringProtocolBools( isIPv4, isIPv6, machineAddr.c_str(),
+			v4, v6 );
+		if(! ((isIPv4 && v4) || (isIPv6 && v6))) { continue; }
 
 		if( IsDebugVerbose(D_MACHINE) ) {
 			dprintf(D_MACHINE,"Testing whether the job matches with the following machine ad:\n");
