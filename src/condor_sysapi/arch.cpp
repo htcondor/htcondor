@@ -272,7 +272,7 @@ sysapi_opsys_legacy(void)
 void sysapi_opsys_dump(int category)
 {
 	// Print out param values to the logfiles for debugging
-	dprintf(category, "OpSysMajorVersion:  %d \n", opsys_major_version);
+	dprintf(category, "OpSysMajorVer:  %d \n", opsys_major_version);
 	dprintf(category, "OpSysShortName:  %s \n", opsys_short_name);
 	dprintf(category, "OpSysLongName:  %s \n", opsys_long_name);
 	dprintf(category, "OpSysAndVer:  %s \n", opsys_versioned);
@@ -475,7 +475,7 @@ init_arch(void)
 void sysapi_opsys_dump(int category)
 {
 	// Print out param values to the logfiles for debugging
-	dprintf(category, "OpSysMajorVersion:  %d \n", opsys_major_version);
+	dprintf(category, "OpSysMajorVer:  %d \n", opsys_major_version);
 	dprintf(category, "OpSysShortName:  %s \n", opsys_short_name);
 	dprintf(category, "OpSysLongName:  %s \n", opsys_long_name);
 	dprintf(category, "OpSysAndVer:  %s \n", opsys_versioned);
