@@ -730,9 +730,13 @@ condor_status( int argc, char ** argv ) {
 	csArgv[argc + 1] = NULL;
 
 	if( csPath[0] == '/' ) {
-		return execv( csPath.c_str(), csArgv );
+		int r = execv( csPath.c_str(), csArgv );
+		free(csArgv);
+		return r;
 	} else {
-		return execvp( csPath.c_str(), csArgv );
+		int r = execvp( csPath.c_str(), csArgv );
+		free(csArgv);
+		return r;
 	}
 }
 
