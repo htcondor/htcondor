@@ -777,6 +777,7 @@ pythonFunctionTrampoline_internal(const char *name, const classad::ArgumentList&
         pyKw["state"] = wrapper;
     }
 
+    // the `apply` builtin is unavailable in python3; hack it with a lambda
     boost::python::object pyResult = boost::python::eval("lambda f,a,kw: f(*a,**kw)")(pyFunc, pyArgs, pyKw);
 
     classad::ExprTree* exprTreeResult = convert_python_to_exprtree(pyResult);
