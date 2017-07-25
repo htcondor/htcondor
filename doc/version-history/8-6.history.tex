@@ -42,6 +42,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in socket clean-up that was causing a memory leak.  This
+may have been particularly noticeable in the collector.
+\Ticket{6342}
+
 \item Fixed a bug that caused an infinite loop in the starter when
 cgroups were enabled on systems like Debian where the kernel has disabled
 the memory accounting controller.  A job on such a system would go into the
