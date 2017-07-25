@@ -242,7 +242,7 @@ class TestPythonBindings(WithDaemons):
         self.launch_daemons(["COLLECTOR"])
         coll = htcondor.Collector()
         now = time.time()
-        ad = classad.ClassAd('[MyType="GenericAd"; Name="Foo"; Foo=1; Bar=%f; Baz="foo"]' % now)
+        ad = classad.ClassAd('[MyType="GenericAd"; Name="Foo"; Foo=1; Bar=%.22f; Baz="foo"]' % now)
         coll.advertise([ad])
         for i in range(5):
             ads = coll.query(htcondor.AdTypes.Any, 'Name =?= "Foo"', ["Bar"])
