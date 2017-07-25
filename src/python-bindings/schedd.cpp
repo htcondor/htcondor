@@ -606,7 +606,10 @@ QueryIterator::nextAds()
         }
         catch (boost::python::error_already_set)
         {
-            if (PyErr_ExceptionMatches(PyExc_StopIteration)) {break;}
+            if (PyErr_ExceptionMatches(PyExc_StopIteration)) {
+                PyErr_Clear();
+                break;
+            }
             throw;
         }
     }
