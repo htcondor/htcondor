@@ -14,12 +14,6 @@
 
 #include "module_lock.h"
 
-// http://docs.python.org/3/c-api/apiabiversion.html#apiabiversion
-#if PY_MAJOR_VERSION >= 3
-   #define PyInt_Check(op)  PyNumber_Check(op)
-   #define PyString_Check(op)  PyBytes_Check(op)
-#endif
-
 using namespace boost::python;
 
 
@@ -85,7 +79,7 @@ struct Collector {
             m_collectors = CollectorList::create();
             m_default = true;
         }
-        else if (PyString_Check(pool.ptr()) || PyUnicode_Check(pool.ptr()))
+        else if (PyBytes_Check(pool.ptr()) || PyUnicode_Check(pool.ptr()))
         {
             std::string pool_str = boost::python::extract<std::string>(pool);
             if (pool_str.size())

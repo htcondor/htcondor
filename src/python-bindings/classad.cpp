@@ -19,12 +19,6 @@
 #include "exprtree_wrapper.h"
 #include "old_boost.h"
 
-// http://docs.python.org/3/c-api/apiabiversion.html#apiabiversion
-#if PY_MAJOR_VERSION >= 3
-   #define PyInt_Check(op)  PyNumber_Check(op)
-   #define PyString_Check(op)  PyBytes_Check(op)
-#endif
-
 
 void
 ExprTreeHolder::init()
@@ -851,7 +845,7 @@ convert_python_to_exprtree(boost::python::object value)
         classad::Value val; val.SetBooleanValue(cppvalue);
         return classad::Literal::MakeLiteral(val);
     }
-    if (PyString_Check(value.ptr()) || PyUnicode_Check(value.ptr()))
+    if (PyBytes_Check(value.ptr()) || PyUnicode_Check(value.ptr()))
     {
         std::string cppvalue = boost::python::extract<std::string>(value);
         classad::Value val; val.SetStringValue(cppvalue);

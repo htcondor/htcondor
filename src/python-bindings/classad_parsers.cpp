@@ -6,12 +6,6 @@
 
 #include "classad_parsers.h"
 
-// http://docs.python.org/3/c-api/apiabiversion.html#apiabiversion
-#if PY_MAJOR_VERSION >= 3
-   #define PyInt_Check(op)  PyNumber_Check(op)
-   #define PyString_Check(op)  PyBytes_Check(op)
-#endif
-
 static OldClassAdIterator parseOldAds_impl(boost::python::object input);
 
 ClassAdWrapper *parseString(const std::string &str)
@@ -343,7 +337,7 @@ static
 OldClassAdIterator
 parseOldAds_impl(boost::python::object input)
 {
-    boost::python::object input_iter = (PyString_Check(input.ptr()) || PyUnicode_Check(input.ptr())) ?
+    boost::python::object input_iter = (PyBytes_Check(input.ptr()) || PyUnicode_Check(input.ptr())) ?
           input.attr("splitlines")().attr("__iter__")()
         : input.attr("__iter__")();
 
