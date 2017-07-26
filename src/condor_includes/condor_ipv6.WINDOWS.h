@@ -20,6 +20,10 @@
 #ifndef CONDOR_WIN_IPV6_H
 #define CONDOR_WIN_IPV6_H
 
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS // Shut up Visual Studio 2013+
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
+
 #include "winsock2.h"
 #include "ws2tcpip.h"
 

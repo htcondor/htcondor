@@ -28,6 +28,7 @@
 */
 
 #ifdef WIN32
+#ifndef HAVE_WORKING_SNPRINTF
 int 
 snprintf(
 	char       *str, 
@@ -65,6 +66,7 @@ vsnprintf(
 
 	return length;
 }
+#endif /* ifndef HAVE_WORKING_SNPRINTF */
 		  
 
 // Returns the number of characters that a printf would return,

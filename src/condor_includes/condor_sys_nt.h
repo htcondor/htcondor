@@ -69,6 +69,9 @@
 // the ordering of the two following header files 
 // is important! Starting with the new SDK, we want 
 // winsock2.h not winsock.h, so we include it first. 
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS // Shut up Visual Studio 2013+
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
 #include <winsock2.h>
 #include <windows.h>
 
@@ -164,7 +167,9 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define S_IRWXO 2
 #define S_ISDIR(mode) (((mode)&_S_IFDIR) == _S_IFDIR)
 #define S_ISREG(mode) (((mode)&_S_IFREG) == _S_IFREG)
+#if _MSC_VER < 1800 // Added to the standard library in VS 2013
 #define rint(num) ((num<0.)? -floor(-num+.5):floor(num+.5))
+#endif
 
 #ifndef ETIMEDOUT
 #define ETIMEDOUT ERROR_TIMEOUT

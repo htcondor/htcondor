@@ -79,7 +79,7 @@
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define strtoll _strtoi64
-#ifndef rint
+#if _MSC_VER < 1800 // Added to the standard library in VS 2013
 #define rint(num) floor(num + .5)
 #endif
 #define isnan _isnan

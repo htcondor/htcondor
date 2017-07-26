@@ -117,6 +117,9 @@ my_timezone(int isdst)
 	  return tzname[0];
   }
 #else
+#ifndef timezone
+#define timezone _timezone
+#endif
 	// On Win32, tzname is useless.  It return a string like
 	// "Central Standard Time", which doesn't follow any standard,
 	// and thus cannot be used in things like valid SQL statements.
