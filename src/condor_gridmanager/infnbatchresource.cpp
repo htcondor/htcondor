@@ -112,6 +112,7 @@ INFNBatchResource::~INFNBatchResource()
 {
 	ResourcesByName.remove( HashKey( HashName( m_batchType.c_str(), resourceName ) ) );
 	if ( gahp ) delete gahp;
+	delete m_xfer_gahp;
 }
 
 
