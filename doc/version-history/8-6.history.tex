@@ -33,7 +33,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Add avx2 to the set of processor flags advertise by the \Condor{startd}.
+\item Added avx2 to the set of processor flags advertised by the \Condor{startd}.
 \Ticket{6317}
 
 \end{itemize}
@@ -43,11 +43,11 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Fixed a bug in socket clean-up that was causing a memory leak.  This
-may have been particularly noticeable in the collector.
+may have been particularly noticeable in the \Condor{collector}.
 \Ticket{6342}
 
 \item Fixed a bug that caused an infinite loop in the starter when
-cgroups were enabled on systems like Debian where the kernel has disabled
+cgroups were enabled on systems (such as Debian) where the kernel has disabled
 the memory accounting controller.  A job on such a system would go into the
 "R" state, but never actually start running.
 \Ticket{6347}
