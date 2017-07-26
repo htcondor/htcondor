@@ -199,10 +199,10 @@ if (BUILD_TESTING)
 	if(NOT SOLARIS AND NOT WINDOWS)
 		condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink")
 		condor_pl_test(job_core_killsignal_sched "Scheduler: Verify the specified input file is used" "core;quick;full;quicknolink")
-		condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink")
 		condor_pl_test(job_core_rmkillsig_sched "Scheduler: Verify the  remove_kill_sig" "core;quick;full;quicknolink")
 	endif()
 
+	condor_pl_test( test_protocol_matching "test: Protocol matching" "core;quick;full;quicknolink" )
 
 	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "core;quick;full;quicknolink")
 	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "core;quick;full;quicknolink")

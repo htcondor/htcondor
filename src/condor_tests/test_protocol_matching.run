@@ -1,0 +1,15 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+my $testName = "protocol-matching";
+my @expectedOutput = ( 'No failures detected.' );
+CondorTest::SetExpected(\@expectedOutput);
+
+my $testStatus = system( 'test_protocol_matching' );
+if( ($testStatus >> 8) == 0) {
+    CondorTest::RegisterResult( 1, "test_name", $testName );
+} else {
+    CondorTest::RegisterResult( 0, "test_name", $testName );
+}
+CondorTest::EndTest();
