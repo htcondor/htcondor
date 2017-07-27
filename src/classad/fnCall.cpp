@@ -28,7 +28,11 @@
 #include "classad/sink.h"
 #include "classad/util.h"
 
-#ifndef WIN32
+#ifdef WIN32
+ #if _MSC_VER < 1900
+ double rint(double rval) { return floor(rval + .5); }
+ #endif
+#else
 #include <sys/time.h>
 #endif
 
@@ -2201,7 +2205,7 @@ doRound( const char* name,const ArgumentList &argList,EvalState &state,
             double rvalue;
             realValue.IsRealValue(rvalue);
             if (strcasecmp("floor", name) == 0) {
-                result.SetIntegerValue((int) floor(rvalue));
+                result.SetIntegerValue((long long) floor(rvalue));
             } else if (   strcasecmp("ceil", name)    == 0 
                        || strcasecmp("ceiling", name) == 0) {
                 result.SetIntegerValue((long long) ceil(rvalue));

@@ -1,8 +1,25 @@
 #ifdef WIN32
-#include <windows.h>
-#define CURL_STATICLIB // this has to match the way the curl library was built.
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
+#if  _MSC_VER < 1900
+ #include <windows.h>
+ #define CURL_STATICLIB // this has to match the way the curl library was built.
+ #define strcasecmp _stricmp
+ #define strncasecmp _strnicmp
+#else
+ #define CURL_STATICLIB // this has to match the way the curl library was built.
+// because this isn't linking correctly on windows, we'll just supply a quick-n-dirty implementation
+static int inline lower(char ch) { if (ch >= 'A' && ch <= 'Z') { ch |= 0x20; } return ch; }
+int strncasecmp(const char *a, const char * b, int c) {
+	int diff = 0;
+	for (int d = 0; d < c; ++d, ++a, ++b) {
+		diff = lower(*b) - lower(*a);
+		if (diff) {
+			diff = (diff < 0) ? -1 : 1;
+			break;
+		}
+	}
+	return diff;
+ }
+#endif
 #else
 #include <unistd.h>
 #endif

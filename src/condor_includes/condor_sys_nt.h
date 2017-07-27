@@ -52,6 +52,9 @@
 #define _CRT_NONSTDC_NO_DEPRECATE 1
 #define _CRT_NONSTDC_NO_WARNINGS
 
+// we define this this to disable the warning about using WSAAddressToStringA
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+
 // #define NOGDI
 #define NOSOUND
 
