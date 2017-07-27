@@ -337,7 +337,7 @@ void export_event_reader()
         .value("WriteLock", WRITE_LOCK);
 
     boost::python::class_<EventIterator>("EventIterator", boost::python::no_init)
-        .def("next", &EventIterator::next, "Returns the next event; whether this blocks indefinitely for new events is controlled by setBlocking().\n"
+        .def(NEXT_FN, &EventIterator::next, "Returns the next event; whether this blocks indefinitely for new events is controlled by setBlocking().\n"
             ":return: The next event in the log.")
         .def("__iter__", &EventIterator::pass_through)
         .def("wait", &EventIterator::wait, "Wait until a new event is available.  No value is returned.\n")

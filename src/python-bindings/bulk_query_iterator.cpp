@@ -31,7 +31,7 @@ public:
         }
         boost::python::object iterable = input.attr("__iter__")();
 
-        bool input_has_next = py_hasattr(iterable, "next");
+        bool input_has_next = py_hasattr(iterable, NEXT_FN);
         while (true)
         {
             boost::python::object next_obj;
@@ -39,7 +39,7 @@ public:
             {
                 if (input_has_next)
                 {
-                    next_obj = iterable.attr("next")();
+                    next_obj = iterable.attr(NEXT_FN)();
                 }
                 else if (iterable.ptr() && iterable.ptr()->ob_type && iterable.ptr()->ob_type->tp_iternext)
                 {
@@ -174,7 +174,7 @@ export_query_iterator()
 
     boost::python::class_<BulkQueryIterator>("BulkQueryIterator", "A bulk interface for schedd queryies.", boost::python::no_init)
         .def("__iter__", &BulkQueryIterator::pass_through)
-        .def("next", &BulkQueryIterator::next, "Return the next ready QueryIterator object.\n")
+        .def(NEXT_FN, &BulkQueryIterator::next, "Return the next ready QueryIterator object.\n")
         ;
 
     boost::python::def("poll", pollAllAds,
