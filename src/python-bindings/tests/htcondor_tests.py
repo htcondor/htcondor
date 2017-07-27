@@ -111,8 +111,10 @@ class WithDaemons(unittest.TestCase):
         remove_ignore_missing(htcondor.param["SCHEDD_ADDRESS_FILE"])
         for key, val in config.items():
             os.environ["_condor_%s" % key] = val
+        os.environ["_condor_PORT"] = "9622"
+        os.environ["_condor_SHARED_PORT_PORT"] = "9622"
+        os.environ["_condor_COLLECTOR_PORT"] = "9622"
         if "COLLECTOR" in daemons:
-            os.environ["_condor_PORT"] = "9622"
             os.environ["_condor_COLLECTOR_ARGS"] = "-port $(PORT)"
             os.environ["_condor_COLLECTOR_HOST"] = "$(CONDOR_HOST):$(PORT)"
         if 'MASTER' not in daemons:
