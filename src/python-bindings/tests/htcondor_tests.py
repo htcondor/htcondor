@@ -457,7 +457,7 @@ class TestPythonBindings(WithDaemons):
             ads2 = list(schedd.xquery("true", ["ClusterID", "ProcID", "a1", "a2", "a3", "a4"]))
             #print ads
             #print ads2
-            self.assertNotEqual(ads2[0].lookup("ProcID"), classad.Value.Undefined)
+            self.assertFalse(ads2[0].lookup("ProcID") == classad.Value.Undefined)
             for ad in ads:
                 found_ad = False
                 for ad2 in ads2:
