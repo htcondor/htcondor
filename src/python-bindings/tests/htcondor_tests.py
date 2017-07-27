@@ -261,7 +261,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
-        ad = classad.parse(open("tests/submit.ad"))
+        ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(ad, 1, False, ads)
         #print ads[0]
@@ -281,7 +281,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
-        ad = classad.parse(open("tests/submit.ad"))
+        ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(ad, 10, False, ads)
         #print ads[0]
@@ -354,7 +354,7 @@ class TestPythonBindings(WithDaemons):
         schedd = htcondor.Schedd()
 
         schedd.act(htcondor.JobAction.Remove, 'true')
-        ad = classad.parse(open("tests/submit.ad"))
+        ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(ad, 1, False, ads)
 
@@ -399,7 +399,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
-        ad = classad.parse(open("tests/submit.ad"))
+        ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(ad, 10, False, ads)
         for i in range(60):
@@ -426,7 +426,7 @@ class TestPythonBindings(WithDaemons):
         os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
         self.launch_daemons(["SCHEDD"])
         schedd = htcondor.Schedd()
-        submit_ad = classad.parse(open("tests/submit.ad"))
+        submit_ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(submit_ad, 300, False, ads)
         ads = schedd.xquery("ClusterId == %d" % cluster)
@@ -442,7 +442,7 @@ class TestPythonBindings(WithDaemons):
         os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
         self.launch_daemons(["SCHEDD"])
         schedd = htcondor.Schedd()
-        submit_ad = classad.parse(open("tests/submit_large.ad"))
+        submit_ad = classad.parseOne(open("tests/submit_large.ad"))
         schedd.act(htcondor.JobAction.Remove, "true")
         ads = []
         time.sleep(1)
@@ -478,7 +478,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
-        ad = classad.parse(open("tests/submit.ad"))
+        ad = classad.parseOne(open("tests/submit.ad"))
         result_ads = []
         cluster = schedd.submit(ad, 1, True, result_ads)
         #print result_ads[0]
@@ -656,7 +656,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(log_file):
             os.unlink(log_file)
         schedd = htcondor.Schedd()
-        ad = classad.parse(open("tests/submit_sleep.ad"))
+        ad = classad.parseOne(open("tests/submit_sleep.ad"))
         result_ads = []
         cluster = schedd.submit(ad, 1, True, result_ads)
 
