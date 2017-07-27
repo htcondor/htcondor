@@ -602,7 +602,7 @@ class TestPythonBindings(WithDaemons):
             time.sleep(1)
         startd = htcondor.Startd(ads[0])
         drain_id = startd.drainJobs(htcondor.DrainTypes.Fast)
-        startd.cancelDrainAllJobs(drain_id)
+        startd.cancelDrainJobs(drain_id)
 
     def testPing(self):
         self.launch_daemons(["COLLECTOR"])
