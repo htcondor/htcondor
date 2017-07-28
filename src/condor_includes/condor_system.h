@@ -170,12 +170,6 @@
 #include <math.h>
 #include <utime.h>
 
-/* select() on all our platforms takes an fd_set pointer, so we can
-   just define this here for everyone.  We don't really need it
-   anymore, but we might hit a platform that has a different select,
-   so the level of indirection is worth keeping around. */
-typedef fd_set *SELECT_FDSET_PTR;
-
 #include "condor_unsetenv.h"
 
 #endif /* UNIX */
