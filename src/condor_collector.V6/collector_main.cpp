@@ -74,6 +74,7 @@ void main_shutdown_fast()
 #if defined(HAVE_DLOPEN) && !defined(DARWIN)
 	CollectorPluginManager::Shutdown();
 #endif
+	delete Daemon;
 	DC_Exit(0);
 }
 
@@ -85,6 +86,7 @@ void main_shutdown_graceful()
 #if defined(HAVE_DLOPEN) && !defined(DARWIN)
 	CollectorPluginManager::Shutdown();
 #endif
+	delete Daemon;
 	DC_Exit(0);
 }
 
