@@ -258,7 +258,10 @@ OldClassAdIterator::next()
                 m_ad.reset();
                 if (reset_ptr && py_hasattr(m_source, "seek"))
                 {
+                    PyObject *ptype, *pvalue, *ptraceback;
+                    PyErr_Fetch(&ptype, &pvalue, &ptraceback);
                     m_source.attr("seek")(end_ptr);
+                    PyErr_Restore(ptype, pvalue, ptraceback);
                 }
                 PyErr_Clear();
                 return result;
