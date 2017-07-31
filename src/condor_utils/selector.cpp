@@ -100,13 +100,13 @@ Selector::init_fd_sets()
 
 	if ( m_single_shot == SINGLE_SHOT_OK ) {
 		max_fd = m_poll.fd;
-		if ( m_poll.events | POLLIN ) {
+		if ( m_poll.events & POLLIN ) {
 			MY_FD_SET( m_poll.fd, save_read_fds );
 		}
-		if ( m_poll.events | POLLOUT ) {
+		if ( m_poll.events & POLLOUT ) {
 			MY_FD_SET( m_poll.fd, save_write_fds );
 		}
-		if ( m_poll.events | POLLERR ) {
+		if ( m_poll.events & POLLERR ) {
 			MY_FD_SET( m_poll.fd, save_except_fds );
 		}
 	}
