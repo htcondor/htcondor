@@ -71,6 +71,12 @@ matches any address family.
 status column for any non-Globus job.
 \Ticket{6306}
 
+\item Fixed a bug where removal of a job could cause another job from
+the same user to also be removed.
+This was mostly likely to happen when the \Condor{schedd} is under
+heavy load.
+\Ticket{6353}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
