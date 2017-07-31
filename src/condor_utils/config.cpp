@@ -4400,10 +4400,9 @@ unsigned int expand_macro (
 
 	// expand $(DOLLAR) unless the option flags tell us not to.
 	if ( ! (options & EXPAND_MACRO_OPT_KEEP_DOLLARDOLLAR)) {
-		const char * tmp = value.c_str();
 		DollarOnlyBody dollar_only; // matches only $(DOLLAR)
 		pos.dollar = 0;
-		while (next_config_macro(is_config_macro, dollar_only, tmp, pos.dollar, pos)) {
+		while (next_config_macro(is_config_macro, dollar_only, value.c_str(), pos.dollar, pos)) {
 			value.replace(pos.dollar, pos.right-pos.dollar, "$");
 		}
 	}
