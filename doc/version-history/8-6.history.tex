@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.5 not yet released.
-%\item HTCondor version 8.6.5 released on Month Date, 2017.
+\item HTCondor version 8.6.5 released on August 1, 2017.
 
 \end{itemize}
 
@@ -47,7 +46,7 @@ The details of each version are described below.
 may have been particularly noticeable in the \Condor{collector}.
 \Ticket{6342}
 
-\item Fixed a bug that caused an infinite loop in the starter when
+\item Fixed a bug that caused an infinite loop in the \Condor{starter} when
 cgroups were enabled on systems (such as Debian) where the kernel has disabled
 the memory accounting controller.  A job on such a system would go into the
 "R" state, but never actually start running.

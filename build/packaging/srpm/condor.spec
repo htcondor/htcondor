@@ -1897,6 +1897,14 @@ fi
 %endif
 
 %changelog
+* Tue Aug 01 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.5-1
+- Fixed a memory leak that would cause the HTCondor collector to slowly grow
+- Prevent the condor_starter from hanging when using cgroups on Debian
+- Fixed several issues that occur when IPv6 is in use
+- Support for using an ImDisk RAM drive on Windows as the execute directory
+- Fixed a bug where condor_rm rarely removed another one of the user's jobs
+- Fixed a bug with parallel universe jobs starting on partitionable slots
+
 * Thu Jul 13 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.12-1
 - Can configure the condor_startd to compute free disk space once
 
