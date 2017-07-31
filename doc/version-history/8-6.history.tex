@@ -77,6 +77,12 @@ This was mostly likely to happen when the \Condor{schedd} is under
 heavy load.
 \Ticket{6353}
 
+\item Fixed bugs in the \Condor{schedd} and \Condor{negotiator} that
+could cause jobs to not be negotiated for when
+\MacroNI{NEGOTIATOR\_PREFETCH\_REQUESTS} is set to \Expr{TRUE}.
+\Ticket{6336}
+\Ticket{6312}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
