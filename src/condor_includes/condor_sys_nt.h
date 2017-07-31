@@ -181,6 +181,8 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #	define EWOULDBLOCK EAGAIN
 #endif
 
+typedef fd_set *SELECT_FDSET_PTR;
+
 struct rusage {
     struct timeval ru_utime;    /* user time used */
     struct timeval ru_stime;    /* system time used */

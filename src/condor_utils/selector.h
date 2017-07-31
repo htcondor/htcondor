@@ -70,9 +70,6 @@ public:
 	void display();
 
 private:
-
-	void init_fd_sets();
-
 	enum SINGLE_SHOT {
 		SINGLE_SHOT_VIRGIN, SINGLE_SHOT_OK, SINGLE_SHOT_SKIP
 	};
