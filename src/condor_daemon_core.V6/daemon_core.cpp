@@ -8311,6 +8311,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	}
 	if ( (reaper_id < 1) || (reaper_id > nextReapId) ) {
 		dprintf(D_ALWAYS,"Create_Thread: invalid reaper_id\n");
+		free(arg); arg = NULL;
 		return FALSE;
 	}
 
@@ -8398,6 +8399,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
         dprintf( D_ALWAYS,
 				 "Create_Thread: pipe() failed with errno %d (%s)\n",
 				 errno, strerror(errno) );
+		free(arg); arg = NULL;
 		return FALSE;
     }
 	int tid;
@@ -8462,6 +8464,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 						 "(%d PIDs being tracked internally.)\n",
 						 num_pid_collisions, pidTable->getNumElements() );
 				num_pid_collisions = 0;
+				free(arg); arg = NULL;
 				return FALSE;
 			}
 				// if we're here, it means we had a pid collision,
@@ -8477,6 +8480,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		num_pid_collisions = 0;
         close( errorpipe[0] );
         close( errorpipe[1] );
+		free(arg); arg = NULL;
 		return FALSE;
 	}
 		// if we got here, there's no collision, so reset our counter

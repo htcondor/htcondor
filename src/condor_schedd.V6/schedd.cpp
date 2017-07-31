@@ -5174,7 +5174,6 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 
 	if ( tid == FALSE ) {
-		free(thread_arg);
 		if ( peer_version ) {
 			free( peer_version );
 		}

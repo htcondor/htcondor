@@ -1695,7 +1695,6 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 			dprintf(D_ALWAYS,
 					"Failed to create FileTransfer DownloadThread!\n");
 			ActiveTransferTid = -1;
-			free(info);
 			return FALSE;
 		}
 		dprintf(D_FULLDEBUG,
@@ -2706,7 +2705,6 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 						  (void *)info, s, ReaperId);
 		if (ActiveTransferTid == FALSE) {
 			dprintf(D_ALWAYS, "Failed to create FileTransfer UploadThread!\n");
-			free(info);
 			ActiveTransferTid = -1;
 			return FALSE;
 		}
