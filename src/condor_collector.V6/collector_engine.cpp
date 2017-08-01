@@ -1459,5 +1459,5 @@ killGenericHashTable(CollectorHashTable *table)
 	ASSERT(table != NULL);
 	killHashTable(*table);
 	delete table;
-	return 0;
+	return 1;
 }
