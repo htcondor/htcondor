@@ -99,7 +99,6 @@ Selector::init_fd_sets()
 	}
 
 	if ( m_single_shot == SINGLE_SHOT_OK ) {
-		max_fd = m_poll.fd;
 		if ( m_poll.events & POLLIN ) {
 			MY_FD_SET( m_poll.fd, save_read_fds );
 		}
