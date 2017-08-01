@@ -670,6 +670,7 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 	if (tid == FALSE) {
 		dprintf(D_ALWAYS,
 				"ERROR: Create_Thread failed trying to fork a QueryWorker!\n");
+		free(query_entry); // daemoncore won't free this if Create_Thread fails
 		delete sock;
 		delete query_classad;
 		return -1;
