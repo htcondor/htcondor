@@ -53,8 +53,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.5 not yet released.
-%\item HTCondor version 8.6.5 released on Month Date, 2017.
+\item HTCondor version 8.6.5 released on August 1, 2017.
 
 \end{itemize}
 
@@ -63,7 +62,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Add avx2 to the set of processor flags advertise by the \Condor{startd}.
+\item Added avx2 to the set of processor flags advertised by the
+\Condor{startd}.
 \Ticket{6317}
 
 \end{itemize}
@@ -73,14 +73,27 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Fixed a bug in socket clean-up that was causing a memory leak.  This
-may have been particularly noticeable in the collector.
+may have been particularly noticeable in the \Condor{collector}.
 \Ticket{6342}
 
-\item Fixed a bug that caused an infinite loop in the starter when
-cgroups were enabled on systems like Debian where the kernel has disabled
+\item Fixed a bug that caused an infinite loop in the \Condor{starter} when
+cgroups were enabled on systems (such as Debian) where the kernel has disabled
 the memory accounting controller.  A job on such a system would go into the
 "R" state, but never actually start running.
 \Ticket{6347}
+
+\item Fixed a bug where setting \MacroNI{NETWORK\_INTERFACE} to an
+IPv6 address could cause HTCondor daemons to except.
+\Ticket{6339}
+
+\item Fixed a bug where a cross protocol CCB connection would cause the
+\Condor{shadow} or \Condor{schedd} to except.
+\Ticket{6344}
+
+\item Fixed a bug where the wildcard '*' in ALLOW or DENY lists was
+being interpreted as only matching IPv4 addresses.  It now properly
+matches any address family.
+\Ticket{6340}
 
 \item Fixed a bug where reverse resolutions could return the string
 representation of the address in question instead of failing.  This
@@ -88,18 +101,33 @@ resulted in spurious warnings of the form "WARNING: forward resolution of
 2001:630:10:f001::19a0 doesn't match 2001:630:10:f001::19a0!"
 \Ticket{6338}
 
-\item Fixed a bug where setting \MacroNI{NETWORK\_INTERFACE} to an
-IPv6 address could cause HTCondor daemons to except.
-\Ticket{6339}
+\item Fixed a bug which prevented using an ImDisk RAM disk
+as the execute directory on Windows.
+\Ticket{6324}
 
-\item Fixed a bug where the wildcard '*' in ALLOW or DENY lists was
-being interpreted as only matching IPv4 addresses.  It now properly
-matches any address family.
-\Ticket{6340}
+\item Fixed a bug where removal of a job could cause another job from
+the same user to also be removed.
+This was mostly likely to happen when the \Condor{schedd} is under
+heavy load.
+\Ticket{6353}
 
-\item Fixed a bug where \Condor{q} \Opt{-grid} did not display the
+\item Fixed a bug that cause parallel universe jobs not to start on
+pools with partitionable slots.
+\Ticket{6308}
+
+\item Fixed a problem, introduced in HTCondor 8.6.4, where the
+\Condor{collector} plugins where loaded but not used.
+\Ticket{6343}
+
+\item Fixed a bug where "\Condor{q} \Opt{-grid}" did not display the
 status column for any non-Globus job.
 \Ticket{6306}
+
+\item Fixed bugs in the \Condor{schedd} and \Condor{negotiator} that
+could cause jobs to not be negotiated for when
+\MacroNI{NEGOTIATOR\_PREFETCH\_REQUESTS} is set to \Expr{TRUE}.
+\Ticket{6336}
+\Ticket{6312}
 
 \end{itemize}
 
