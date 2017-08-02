@@ -96,6 +96,17 @@ char *GetSpooledExecutablePath( int cluster, const char *dir )
 	}
 }
 
+void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir /*= NULL*/ )
+{
+	auto_free_ptr spooldir;
+	if ( ! dir) {
+		spooldir.set(param("SPOOL"));
+		dir = spooldir;
+	}
+
+	path.formatstr("%s%c%d%ccondor_submit.%d.digest", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
+}
+
 void
 GetJobExecutable( const classad::ClassAd *job_ad, std::string &executable )
 {
@@ -493,7 +504,7 @@ SpooledJobFiles::removeJobSwapSpoolDirectory(classad::ClassAd * ad)
 }
 
 void
-SpooledJobFiles::removeClusterSpooledFiles(int cluster)
+SpooledJobFiles::removeClusterSpooledFiles(int cluster, const char * submit_digest /*=NULL*/)
 {
 	std::string spool_path;
 	std::string parent_path,junk;
@@ -512,6 +523,18 @@ SpooledJobFiles::removeClusterSpooledFiles(int cluster)
 		if( errno != ENOENT ) {
 			dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
 					spool_path.c_str(),strerror(errno),errno);
+		}
+	}
+
+	// if a submit digest filename was supplied, and the file is in the spool directory
+	// try and delete the submit digest.
+	//
+	if (submit_digest && starts_with_ignore_case(submit_digest, spool_path)) {
+		if( unlink( submit_digest ) == -1 ) {
+			if( errno != ENOENT ) {
+				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
+						submit_digest,strerror(errno),errno);
+			}
 		}
 	}
 

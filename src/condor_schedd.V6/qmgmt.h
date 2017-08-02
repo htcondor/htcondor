@@ -178,6 +178,9 @@ int ResumeJobFactory(JobFactory * factory, int pause_code);
 bool CheckJobFactoryPause(JobFactory * factory, int pause_code); // 0 for resume, 1 for pause, returns true if state changed
 void ScheduleClusterForDeferredCleanup(int cluster_id);
 
+// called by qmgmt_recievers to handle the SetJobFactory RPC call
+int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * digest_text);
+
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );

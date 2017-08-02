@@ -226,6 +226,7 @@ typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 static int TotalJobsCount = 0;
 static std::set<int> ClustersNeedingCleanup;
+static std::map<int,JobFactory*> ClustersWithPendingFactorySubmits; // job factories that have been submitted, but not yet committed.
 static int defer_cleanup_timer_id = -1;
 
 // if false, we version check and fail attempts by newer clients to set secure attrs via the SetAttribute function
@@ -336,10 +337,14 @@ ClusterCleanup(int cluster_id)
 	IdToKey(cluster_id,-1,key);
 
 	// pull out the owner and hash used for ickpt sharing
-	MyString hash, owner;
+	MyString hash, owner, digest;
 	GetAttributeString(cluster_id, -1, ATTR_JOB_CMD_HASH, hash);
 	if ( ! hash.empty()) {
 		GetAttributeString(cluster_id, -1, ATTR_OWNER, owner);
+	}
+	const char * submit_digest = NULL;
+	if (GetAttributeString(cluster_id, -1, ATTR_JOB_MATERIALIZE_DIGEST_FILE, digest) >= 0 && ! digest.empty()) {
+		submit_digest = digest.c_str();
 	}
 
 	// remove entry in ClusterSizeHashTable 
@@ -348,7 +353,7 @@ ClusterCleanup(int cluster_id)
 	// delete the cluster classad
 	JobQueue->DestroyClassAd( key );
 
-	SpooledJobFiles::removeClusterSpooledFiles(cluster_id);
+	SpooledJobFiles::removeClusterSpooledFiles(cluster_id, submit_digest);
 
 	// garbage collect the shared ickpt file if necessary
 	if (!hash.IsEmpty()) {
@@ -1627,6 +1632,91 @@ int MaterializeJobs(JobQueueJob * clusterad)
 	}
 
 	return num_materialized;
+}
+
+// called by qmgmt_recievers to handle the SetJobFactory RPC call
+int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * digest_text)
+{
+	int rval = -1;
+	SetAttributeFlags_t flags = 0;
+	MyString spooled_filename;
+
+	if (digest_text && digest_text[0]) {
+
+		GetSpooledSubmitDigestPath(spooled_filename, cluster_id, Spool);
+		filename = spooled_filename.c_str();
+
+		int saved_errno = 0;
+		errno = 0;
+		std::string parent,junk;
+		if (filename_split(filename,parent,junk)) {
+				// Create directory hierarchy within spool directory.
+				// All sub-dirs in hierarchy are owned by condor.
+			if( !mkdir_and_parents_if_needed(parent.c_str(),0755,PRIV_CONDOR) ) {
+				saved_errno = errno;
+				dprintf(D_ALWAYS,
+					"Failed SetJobFactory %d because create parent spool directory of '%s' failed, errno = %d (%s)\n",
+						cluster_id, parent.c_str(), errno, strerror(errno));
+				errno = saved_errno;
+				return -1;
+			}
+		}
+
+		// Save the submit digest text to the spool directory.
+		int fd;
+		//int result;
+		int flags = O_WRONLY | _O_BINARY | _O_SEQUENTIAL | O_LARGEFILE | O_CREAT | O_TRUNC;
+
+		fd = safe_open_wrapper_follow( filename, flags, 0644 );
+		if (fd < 0) {
+			saved_errno = errno;
+			dprintf(D_ALWAYS, "Failing SetJobFactory %d because creat of '%s' failed, errno = %d (%s)\n",
+				cluster_id, filename, errno, strerror(errno));
+			errno = saved_errno;
+			return -1;
+		}
+
+		rval = 0;
+		size_t cb = strlen(digest_text);
+		size_t cbwrote = write(fd, digest_text, cb);
+		if (cbwrote != cb) {
+			saved_errno = errno;
+			dprintf(D_ALWAYS, "Failing SetJobFactory %d because write to '%s' failed, errno = %d (%s)\n",
+				cluster_id, filename, errno, strerror(errno));
+			rval = -1;
+		}
+
+		if (close(fd)!=0) {
+			saved_errno = errno;
+			dprintf(D_ALWAYS, "SetJobFactory %d close failed, errno = %d (%s)\n", cluster_id, errno, strerror(errno));
+			rval = -1;
+		}
+
+		if (rval < 0) {
+			if (unlink(filename) < 0) {
+				dprintf(D_FULLDEBUG, "SetJobFactory %d failed to unlink file '%s' errno = %d (%s)\n", cluster_id, filename, errno, strerror(errno));
+			}
+			errno = saved_errno;
+			return rval;
+		}
+
+#if 0 // future
+		JobFactory * factory = MakeJobFactory(cluster_id, digest_text);
+		if (factory) {
+			PRAGMA_REMIND("check for existing factory for this cluster so we don't end up leaking...")
+			ClustersWithPendingFactorySubmits[cluster_id] = factory;
+		}
+#endif
+	}
+
+	//const char *attr = ATTR_JOB_MATERIALIZE_DIGEST_FILE;
+	if (filename && filename[0]) {
+		rval = SetAttributeString( cluster_id, -1, ATTR_JOB_MATERIALIZE_DIGEST_FILE, filename, flags );
+	} else {
+		rval = -1;
+		dprintf(D_ALWAYS, "Failing SetJobFactory %d because factory filename is empty\n", cluster_id);
+	}
+	return rval;
 }
 
 

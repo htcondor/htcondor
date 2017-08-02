@@ -79,7 +79,7 @@ public:
 		 * This also removes the shared cluster directory from the
 		 * hierarchy if possible.
 		 */
-	static void removeClusterSpooledFiles(int cluster);
+	static void removeClusterSpooledFiles(int cluster, const char * submit_digest=NULL);
 
 		/* Restore ownership of spool directory to condor after job ran.
 		   Returns true on success.
@@ -111,6 +111,14 @@ char *gen_ckpt_name ( char const *dir, int cluster, int proc, int subproc );
  * The buffer returned must be deallocated with free().
  */
 char *GetSpooledExecutablePath( int cluster, const char *dir = NULL );
+
+/* Given a job cluster id and SPOOL directory, return the path where
+ * the job submit digest should reside if the submitter spooled it
+ * If the SPOOL directory argument is NULL, then the SPOOL parameter
+ * will be looked up.
+ * The buffer returned must be deallocated with free().
+ */
+void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir = NULL );
 
 /* Given a job ad, determine where the job's executable resides.
  * If the filename given by gen_ckpt_name(SPOOL,cluster,ICKPT,0) exists,

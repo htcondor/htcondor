@@ -75,13 +75,13 @@
 class JobFactory : public SubmitHash {
 
 public:
-	JobFactory(const char * digest_filename, int id);
+	JobFactory(const char * name, int id);
 	~JobFactory();
 
 	enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
 
 	// load the submit file/digest that was passed in our constructor
-	int LoadDigest(std::string & errmsg);
+	int LoadDigest(FILE* fp, std::string & errmsg);
 	// load the item data for the given row, and setup the live submit variables for that item.
 	int LoadRowData(int row, std::string * empty_var_names=NULL);
 
@@ -99,7 +99,7 @@ public:
 	}
 	bool IsPaused() { return paused != Running; }
 	bool IsComplete() { return paused > Hold; }
-	const char * Name() { return digest_file ? digest_file : "<empty>"; }
+	const char * Name() { return name ? name : "<empty>"; }
 	int ID() { return ident; }
 	int PauseMode() { return paused; }
 
@@ -147,8 +147,10 @@ public:
 	}
 
 protected:
-	const char * digest_file;
-	FILE * fp_digest;
+	const char * name;
+#ifdef HOLDS_DIGEST_FILE_OPEN
+	//FILE * fp_digest;
+#endif
 	int          ident;
 	PauseCode    paused; // 0 is not paused, non-zero is pause code.
 	MACRO_SOURCE source;
@@ -157,9 +159,11 @@ protected:
 	int cached_total_procs;
 };
 
-JobFactory::JobFactory(const char * subfile, int id)
-	: digest_file(NULL)
-	, fp_digest(NULL)
+JobFactory::JobFactory(const char * _name, int id)
+	: name(NULL)
+#ifdef HOLDS_DIGEST_FILE_OPEN
+	, fp_digestX(NULL)
+#endif
 	, ident(id)
 	, paused(InvalidSubmit)
 	, cached_total_procs(-42)
@@ -168,18 +172,17 @@ JobFactory::JobFactory(const char * subfile, int id)
 	this->init();
 	setScheddVersion(CondorVersion());
 	// add digestfile into string pool, and store that pointer in the class
-	insert_source(subfile, source);
-	digest_file = macro_source_filename(source, SubmitMacroSet);
+	insert_source(_name, source);
+	name = macro_source_filename(source, SubmitMacroSet);
 	// make sure that the string buffer for empty items is really empty.
 	memset(emptyItemString, 0, sizeof(emptyItemString));
 }
 
 JobFactory::~JobFactory()
 {
-	if (fp_digest) {
-		fclose(fp_digest);
-		fp_digest = NULL;
-	}
+#ifdef HOLDS_DIGEST_FILE_OPEN
+	if (fp_digest) { fclose(fp_digest); fp_digest = NULL; }
+#endif
 }
 
 // called in CommitTransaction after the commit
@@ -207,17 +210,55 @@ bool JobFactoryAllowsClusterRemoval(JobQueueJob * cluster)
 	return false;
 }
 
+// Make a job factory for a job object that has been submitted, but not yet committed.
+#if 0 // future
+class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text)
+{
+	JobFactory * factory = new JobFactory(NULL, cluster_id);
+
+	std::string errmsg = "";
+	int rval = factory->LoadDigest(submit_digest_text, errmsg);
+	if (rval) {
+		dprintf(D_ALWAYS, "failed to parse submit digest for factory %d : \n", cluster_id, errmsg.c_str());
+		delete factory;
+		factory = NULL;
+	}
+
+	return factory;
+}
+#endif
+
+// Make a job factory for a Job object that exists
 JobFactory * MakeJobFactory(JobQueueJob* job, const char * submit_digest_file)
 {
-	// for now, we impersonate the user while reading the submit file.
-	priv_state priv = set_user_priv_from_ad(*job);
 
 	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster);
-	std::string errmsg = "";
-	int rval = factory->LoadDigest(errmsg);
 
-	set_priv(priv);
-	uninit_user_ids();
+	// Starting the 8.7.2 The digest file may be in the spool directory and owned by condor
+	// or in the user directory and owned by the user (the 8.7.1 model). We will handle
+	// both cases by first trying to open the file as condor, and if that fails, try impersonating
+	// the user.
+	bool restore_priv = false;
+	priv_state priv = PRIV_UNKNOWN;
+
+	FILE* fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
+	// if we can't open the file, try impersonating the user
+	if ( ! fp) {
+		restore_priv = true;
+		priv = set_user_priv_from_ad(*job);
+		fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
+	}
+
+	// LoadDigest properly handles the case when fp is NULL, treating that as 'failed to open file'
+	std::string errmsg = "";
+	int rval = factory->LoadDigest(fp, errmsg);
+
+	if (fp) { fclose(fp); fp = NULL; }
+
+	if (restore_priv) {
+		set_priv(priv);
+		uninit_user_ids();
+	}
 
 	if (rval) {
 		dprintf(D_ALWAYS, "failed to load job factory %d submit digest %s : %s\n", job->jid.cluster, submit_digest_file, errmsg.c_str());
@@ -429,22 +470,18 @@ static const char * is_queue_statement(const char * line)
 	return NULL;
 }
 
-int JobFactory::LoadDigest(std::string & errmsg)
+int JobFactory::LoadDigest(FILE* fp, std::string & errmsg)
 {
-	if (fp_digest) {
-		fclose(fp_digest);
-		fp_digest = NULL;
-	}
-
-	FILE* fp_digest = safe_fopen_wrapper_follow(digest_file,"r");
-	if ( ! fp_digest ) {
+	if ( ! fp ) {
 		formatstr(errmsg, "Failed to open factory submit digest : %s", strerror(errno));
 		paused = InvalidSubmit;
 		return errno;
 	}
 
+	PRAGMA_REMIND("TODO: fix to accept the submit digest as a MacroStream so it can be a char source or file source.")
+
 	char * qline = NULL;
-	int rval = parse_file_up_to_q_line(fp_digest, source, errmsg, &qline);
+	int rval = parse_file_up_to_q_line(fp, source, errmsg, &qline);
 	if (rval == 0 && qline) {
 		const char * pqargs = is_queue_statement(qline);
 		rval = parse_q_args(pqargs, fea, errmsg);
@@ -467,7 +504,7 @@ int JobFactory::LoadDigest(std::string & errmsg)
 			this->optimize();
 
 			// load the foreach data
-			rval = load_q_foreach_items(fp_digest, source, fea, errmsg);
+			rval = load_q_foreach_items(fp, source, fea, errmsg);
 		}
 	}
 
