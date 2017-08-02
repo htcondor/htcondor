@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -18,27 +18,26 @@
 ##
 ##**************************************************************
 
-# async_freader_tests - runs unit tests of MyAsyncFileReader file reader class
-
 use strict;
 use warnings;
 use CondorTest;
 use CondorUtils;
 
-my $testname = "unit_test_async_fread";
-my $cmd = 'async_freader_tests';
+my $testname = "classad_cache_unit_test";
+my $cmd = '_test_classad_parse';
 if (CondorUtils::is_windows()) { $cmd .= ".exe"; }
-my $args = '-v';
+my $args = '';
 my $success = 0;
 
-TLOG "Generating test data files\n";
-my @lines = `$cmd -generate-test-files`;
-
+#
+# first test without classad cache enabled
+#
 TLOG "Running $cmd $args\n";
 
 open(ELOG,"$cmd $args 2>&1 |") || die "Could not run: $cmd $args: $!\n";
 while(<ELOG>) {
 	print $_;
+	if ($_ =~ /No errors detected/) { $success = 1; }
 }
 close(ELOG);
 # alternative: my $exitcode = ${^CHILD_ERROR_NATIVE}
@@ -47,7 +46,27 @@ my $exitcode = $?;
 print "\n";
 TLOG "exitcode = $exitcode\n";
 $success = $exitcode == 0;
-
 CondorTest::RegisterResult($success, "test_name", $testname);
+
+#
+# now test with the cache enabled
+#
+$args = '-cache';
+TLOG "Running $cmd $args\n";
+
+open(ELOG,"$cmd $args 2>&1 |") || die "Could not run: $cmd $args: $!\n";
+while(<ELOG>) {
+	print $_;
+}
+close(ELOG);
+# alternative: my $exitcode = ${^CHILD_ERROR_NATIVE}
+$exitcode = $?;
+
+print "\n";
+TLOG "exitcode = $exitcode\n";
+$success = $exitcode == 0;
+CondorTest::RegisterResult($success, "test_name", $testname);
+
+
 CondorTest::EndTest();
 
