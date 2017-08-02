@@ -40,6 +40,7 @@
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
 #include "file_transfer_db.h"
+#include "mk_cache_links.h"
 #include "subsystem_info.h"
 #include "condor_url.h"
 #include "my_popen.h"
@@ -100,6 +101,7 @@ extern "C" {
 	int		get_random_int();
 	int		set_seed( int );
 }
+
 
 struct upload_info {
 	FileTransfer *myobj;
@@ -323,6 +325,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	} else {
 		InputFiles = new StringList(NULL,",");
 	}
+	StringList PubInpFiles;
+	if (Ad->LookupString(ATTR_PUBLIC_INPUT_FILES, &dynamic_buf) == 1) {
+	      // Add PublicInputFiles to InputFiles list.
+	      // If these files will be transferred via web server cache,
+	      // they will be removed from InputFiles.
+	      PubInpFiles.initializeFromString(dynamic_buf);
+	      free(dynamic_buf);
+	      dynamic_buf = NULL;
+	      const char *path;
+	      PubInpFiles.rewind();
+	      while ((path = PubInpFiles.next()) != NULL) {
+		  if (!InputFiles->file_contains(path))
+		      InputFiles->append(path);			
+	      }
+	}
 	if (Ad->LookupString(ATTR_JOB_INPUT, buf, sizeof(buf)) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf) ) {			
@@ -330,7 +347,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
-
+	
 	// If we are spooling, we want to ignore URLs
 	// We want the file transfer plugin to be invoked at the starter, not the schedd.
 	// See https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=2162
@@ -345,7 +362,10 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		char *list = InputFiles->print_to_string();
 		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
 		free(list);
-	}
+	} else if (IsServer() && !is_spool && param_boolean("ENABLE_CACHE_TRANSFERS", false))
+		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
+		// For files to be cached, change file names to URLs
+
 	
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf, sizeof(buf)) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
@@ -440,7 +460,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			xferExec=1;
 		}
 
-		if ( xferExec && !InputFiles->file_contains(ExecFile) ) {
+		if ( xferExec && !InputFiles->file_contains(ExecFile) &&
+		  !PubInpFiles.file_contains(ExecFile)) {
+			// Don't add exec file if it already is in cached list
 			InputFiles->append(ExecFile);	
 		}	
 	} else if ( IsClient() && !simple_init ) {
@@ -574,8 +596,13 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
-	if(IsServer() && !spooling_output) {
-		if(!InitDownloadFilenameRemaps(Ad)) return 0;
+	if(!spooling_output) {
+		if(IsServer()) {
+			if(!InitDownloadFilenameRemaps(Ad)) return 0;
+		} else if( !simple_init ) {
+			// Only add input remaps for starter receiving
+			AddInputFilenameRemaps(Ad);
+		}
 	}
 
 	CondorError e;
@@ -621,6 +648,32 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	}
 	return 1;
 }
+
+int
+FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
+	dprintf(D_FULLDEBUG,"Entering FileTransfer::AddInputFilenameRemaps\n");
+
+	if(!Ad) {
+		dprintf(D_FULLDEBUG, "FileTransfer::AddInputFilenameRemaps -- job ad null\n");
+	  	return 1;
+	}
+	
+	download_filename_remaps = "";
+	char *remap_fname = NULL;
+
+	// when downloading files from the job, apply input name remaps
+	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,&remap_fname)) {
+		AddDownloadFilenameRemaps(remap_fname);
+		free(remap_fname);
+		remap_fname = NULL;
+	}
+	if(!download_filename_remaps.IsEmpty()) {
+		dprintf(D_FULLDEBUG, "FileTransfer: input file remaps: %s\n",download_filename_remaps.Value());
+	}
+	return 1;
+}
+
+
 int
 FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 	bool use_file_catalog) 

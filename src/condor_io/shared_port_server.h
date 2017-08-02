@@ -39,6 +39,7 @@ class SharedPortServer: Service {
 		// Remove address file left over from a previous run that exited
 		// without proper cleanup.
 	static void RemoveDeadAddressFile();
+	int HandleHttpRequest(int, Stream *sock);
 
  private:
 	bool m_registered_handlers;

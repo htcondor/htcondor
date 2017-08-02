@@ -1198,6 +1198,7 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 	}
 	else
 	{
+<<<<<<< HEAD
 		if ( CheckFilesRead.lookup(pathname,junk) < 0 ) {
 			// this file not found in our list; add it
 			CheckFilesRead.insert(pathname,junk);
