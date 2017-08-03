@@ -28,6 +28,7 @@
 #include "my_username.h"
 #include "daemon.h"
 #include "store_cred.h"
+#include "../condor_sysapi/sysapi.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
