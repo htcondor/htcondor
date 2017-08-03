@@ -1497,7 +1497,22 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	 * avoid potentially nasty recursive situations, ONLY call
 	 * dprintf() from inside of this function if the
 	 * dologging parameter is non-zero.
+	 * THIS IS A LIE, SEE COMMENT DIRECTLY BELOW.
 	 */
+
+	// dologging is NOT a boolean!  It currently can be one of:
+	//
+	// 0 == no logging (avoid recursion because of priv changes inside dprintf itself)
+	// 1 == go ahead and log
+	// 999 == in between clone() and exec(), so DEFINITELY DO NOT CALL dprintf()!!!!
+	//
+	// apparently, all the places that currently treat non-zero as true are not
+	// in execution paths that occur in practice.  however, the new keyring session
+	// code definitely hits this case.  in order to leave old code alone, I am only
+	// using the really_dologging inside the new keyring session code, but perhaps all
+	// instances of dologging should be changed to really_dologging in this function.
+	//
+	bool really_dologging = (dologging && (dologging != NO_PRIV_MEMORY_CHANGES));
 
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;
@@ -1523,13 +1538,6 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			EXCEPT("Programmer Error: attempted switch to user privilege, "
 				   "but user ids are not initialized");
 		}
-
-		// ultimately, to be extra-paranoid all switches need a new
-		// session (to shed any old creds).  however, that means we can
-		// no longer dprintf in any of the below code since doing so
-		// switches to condor priv, creates a new session, and messes
-		// up the whole process below.  so for now, we only do it when
-		// switching to user priv.
 
 		// We only get here if we are actually switching state. (Not if we
 		// requested to to switch to the current state, or if we requested
@@ -1607,7 +1615,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			}
 
 			key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
-			if (dologging) dprintf(D_SECURITY, "KEYCTL: New session keyring %i\n", sess_keyring);
+			if (really_dologging) dprintf(D_SECURITY|D_FULLDEBUG, "KEYCTL: New session keyring (%i)\n", sess_keyring);
 
 
 			// if we were in priv user and are switching out, we record the keyring
@@ -1663,20 +1671,20 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 					if(user_keyring == -1) {
 						CurrentSessionKeyring = KEY_SPEC_INVALID_KEYRING;
 						CurrentSessionKeyringUID = KEY_SPEC_INVALID_UID;
-						if (dologging) dprintf(D_ALWAYS,
+						if (really_dologging) dprintf(D_ALWAYS,
 							"KEYCTL: unable to find keyring '%s', error: %s\n",
 							ring_name.Value(), strerror(errno));
 					} else {
 						CurrentSessionKeyring = user_keyring;
 						CurrentSessionKeyringUID = UserUid;
-						if (dologging) dprintf(D_SECURITY,
+						if (really_dologging) dprintf(D_SECURITY,
 							 "KEYCTL: found user keyring %s (%li) for uid %i.\n",
 							 ring_name.Value(), (long)user_keyring, UserUid);
 					}
 				} else {
 					CurrentSessionKeyring = PreviousSessionKeyring;
 					CurrentSessionKeyringUID = PreviousSessionKeyringUID;
-					if (dologging) dprintf(D_SECURITY, "KEYCTL: resuming stored keyring %i and uid %i.\n",
+					if (really_dologging) dprintf(D_SECURITY, "KEYCTL: resuming stored keyring %i and uid %i.\n",
 						CurrentSessionKeyring, CurrentSessionKeyringUID);
 				}
 
@@ -1691,10 +1699,10 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 					// link the user keyring to our session keyring
 					long link_success = condor_keyctl_link(user_keyring, sess_keyring);
 					if(link_success == -1) {
-						if (dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
+						if (really_dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
 							(long)user_keyring, (long)sess_keyring, strerror(errno));
 					} else {
-						if (dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
+						if (really_dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
 							(long)user_keyring, (long)sess_keyring);
 					}
 				}
