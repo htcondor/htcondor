@@ -31,7 +31,6 @@
 
 static bool enable_convert_default_IP_to_socket_IP = false;
 static bool shared_port_address_rewriting = false;
-static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
 
@@ -67,15 +66,11 @@ const char* my_ip_string() {
 //}
 
 bool
-network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest, std::set< std::string > *network_interface_ips)
+network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest)
 {
 	ASSERT( interface_pattern );
 	if( !interface_param_name ) {
 		interface_param_name = "";
-	}
-
-	if( network_interface_ips ) {
-		network_interface_ips->clear();
 	}
 
 	condor_sockaddr addr;
@@ -88,9 +83,6 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			ipv6 = interface_pattern;
 			ipbest = ipv6;
 		}
-		if( network_interface_ips ) {
-			network_interface_ips->insert( interface_pattern );
-		}
 
 		dprintf(D_HOSTNAME,"%s=%s, so choosing IP %s\n",
 				interface_param_name,
@@ -101,6 +93,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		return true;
 	}
 
+	unsigned interfaceCount = 0;
 	StringList pattern(interface_pattern);
 
 	std::string matches_str;
@@ -156,10 +149,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		matches_str += dev->name();
 		matches_str += " ";
 		matches_str += dev->IP();
-
-		if( network_interface_ips ) {
-			network_interface_ips->insert( dev->IP() );
-		}
+		++interfaceCount;
 
 		int desireability = this_addr.desirability();
 		if(dev->is_up()) { desireability *= 10; }
@@ -186,13 +176,47 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			best_overall = desireability;
 			ipbest = dev->IP();
 		}
-
 	}
 
 	if( best_overall < 0 ) {
 		dprintf(D_ALWAYS,"Failed to convert %s=%s to an IP address.\n",
 				interface_param_name, interface_pattern);
 		return false;
+	}
+
+	//
+	// Add some smarts to ENABLE_IPV[4|6] = AUTO.
+	//
+	// If we only found one protocol, do nothing.  Otherwise,
+	// if both ipv4 and ipv6 are not at least as desirable as a private
+	// address, then do nothing.  If both are at least as desirable as a
+	// private address, do nothing.  If only one is, and that ENABLE
+	// knob is AUTO, clear the corresponding ipv[4|6] variable.
+	//
+	// We're using the raw desirability parameter here, but we should maybe
+	// be checking to see if the address is public or private instead...
+	//
+	condor_sockaddr v4sa, v6sa;
+	if( v4sa.from_ip_string( ipv4 ) && v6sa.from_ip_string( ipv6 ) ) {
+		if( (v4sa.desirability() < 4) ^ (v6sa.desirability() < 4) ) {
+			if( want_v4 && ! param_true( "ENABLE_IPV4" ) ) {
+				if( v4sa.desirability() < 4 ) {
+					ipv4.clear();
+					ipbest = ipv6;
+				}
+			}
+			if( want_v6 && ! param_true( "ENABLE_IPV6" ) ) {
+				if( v6sa.desirability() < 4) {
+					ipv6.clear();
+					ipbest = ipv4;
+				}
+			}
+		}
+	}
+
+	if( interfaceCount <= 1 ) {
+		enable_convert_default_IP_to_socket_IP = false;
+		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NETWORK_INTERFACE does not match multiple IPs.\n");
 	}
 
 	dprintf(D_HOSTNAME,"%s=%s matches %s, choosing IP %s\n",
@@ -229,8 +253,7 @@ init_network_interfaces( CondorError * errorStack )
 		network_interface.c_str(),
 		network_interface_ipv4,
 		network_interface_ipv6,
-		network_interface_best,
-		&configured_network_interface_ips);
+		network_interface_best);
 
 	if( !ok ) {
 		errorStack->pushf( "init_network_interfaces", 2,
@@ -314,11 +337,6 @@ void ConfigConvertDefaultIPToSocketIP()
 		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because TCP_FORWARDING_HOST is defined.\n");
 	}
 	free( str );
-
-	if( configured_network_interface_ips.size() <= 1 ) {
-		enable_convert_default_IP_to_socket_IP = false;
-		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NETWORK_INTERFACE does not match multiple IPs.\n");
-	}
 
 	if( !param_boolean("ENABLE_ADDRESS_REWRITING",true) ) {
 		enable_convert_default_IP_to_socket_IP = false;

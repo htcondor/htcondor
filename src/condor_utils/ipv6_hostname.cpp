@@ -83,7 +83,7 @@ bool init_local_hostname_impl()
 
 	if( ! local_ipaddr_initialized ) {
 		std::string ipv4, ipv6, ipbest;
-		if( network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ipv4, ipv6, ipbest, NULL)) {
+		if( network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ipv4, ipv6, ipbest)) {
 			ASSERT(local_ipaddr.from_ip_string(ipbest));
 			// If this fails, network_interface_to_ip returns something invalid.
 			local_ipaddr_initialized = true;
