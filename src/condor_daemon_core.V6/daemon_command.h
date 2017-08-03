@@ -56,8 +56,6 @@ private:
 	Sock   *m_sock;
 
 #ifdef HAVE_EXT_GSOAP
-	void CheckForWebServer();
-	void CheckForHttpPost(const char cmdbuf[]);
 	bool m_is_http_post;
 	bool m_is_http_get;
 #endif

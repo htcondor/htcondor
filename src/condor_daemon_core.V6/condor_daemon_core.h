@@ -409,23 +409,7 @@ class DaemonCore : public Service
                           bool               force_authentication = false,
 						  int                wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT);
 
-    /** Register_HttpHandler
-    	Register a handler for HTTP GET requests to be used instead of the
-    	gSOAP web server.
-        @param handler         Handler function pointer
-        @param handler_descrip Text name of handler
-        @param s               service (usually "this" of caller)
-       @return 1 for success, -1 otherwise
-    */
-    int Register_HttpHandler (
-      			CommandHandlercpp  handler, 
-      			const char *    handler_descrip,
-      			Service *          s);
-    
-    bool HttpHandlerIsRegistered() const {
-      return m_httpHandler.num;
-    }
-    
+
     /** Not_Yet_Documented
         @param command Not_Yet_Documented
         @return Not_Yet_Documented
@@ -792,7 +776,6 @@ class DaemonCore : public Service
 		// KEEP_STREAM, the stream is deleted
 	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
 	int CallUnregisteredCommandHandler(int req, Stream *stream);
-	int CallHttpHandler(int req, Stream *stream);
 
 
 		// This function is called in order to have
@@ -1848,7 +1831,7 @@ class DaemonCore : public Service
     int                 maxCommand;     // max number of command handlers
     int                 nCommand;       // number of command handlers used
     ExtArray<CommandEnt>         comTable;       // command table
-    CommandEnt          m_unregisteredCommand, m_httpHandler;
+    CommandEnt          m_unregisteredCommand;
 
     struct SignalEnt 
     {

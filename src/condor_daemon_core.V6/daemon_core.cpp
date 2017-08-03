@@ -301,7 +301,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	memset(&blankCommandEnt, '\0', sizeof(CommandEnt));
 	comTable.fill(blankCommandEnt);
 	m_unregisteredCommand.num = 0;
-	m_httpHandler.num = 0;
 
 	if(maxSig == 0)
 		maxSig = DEFAULT_MAXSIGNALS;
@@ -610,23 +609,7 @@ DaemonCore::~DaemonCore()
 		free(m_private_network_name);
 		m_private_network_name = NULL;
 	}
-	if (m_unregisteredCommand.command_descrip != NULL) {
-	  free(m_unregisteredCommand.command_descrip);
-	  m_unregisteredCommand.command_descrip = NULL;
-	}
-	if (m_unregisteredCommand.handler_descrip != NULL) {
-	  free(m_unregisteredCommand.handler_descrip);
-	  m_unregisteredCommand.handler_descrip = NULL;
-	}
-	if (m_httpHandler.command_descrip != NULL) {
-	  free(m_httpHandler.command_descrip);
-	  m_httpHandler.command_descrip = NULL;
-	}
-	if (m_httpHandler.handler_descrip != NULL) {
-	  free(m_httpHandler.handler_descrip);
-	  m_httpHandler.handler_descrip = NULL;
-	}
-} 
+}
 
 bool DaemonCore::setChildSharedPortID( pid_t pid, const char * sock ) {
 	PidEntry * pidinfo = NULL;
@@ -1027,26 +1010,6 @@ int DaemonCore::Register_UnregisteredCommandHandler(
 	m_unregisteredCommand.is_cpp = include_auth;
 	return 1;
 }
-
-
-int DaemonCore::Register_HttpHandler(
-	CommandHandlercpp handlercpp,
-	const char* handler_descrip,
-	Service* s)
-{
-	if (handlercpp == 0) {
-		dprintf(D_ALWAYS, "Can't register NULL HTTP handler\n");
-		return -1;
-	}
-	if (m_httpHandler.num) { EXCEPT("DaemonCore: Attempt to register a redundant HTTP handler"); }
-	m_httpHandler.handlercpp = handlercpp;
-	m_httpHandler.command_descrip = strdup("HTTP HANDLER");
-	m_httpHandler.handler_descrip = strdup(handler_descrip ? handler_descrip : EMPTY_DESCRIP);
-	m_httpHandler.service = s;
-	m_httpHandler.num = 1;
-	return 1;
-}
-
 
 int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
@@ -4329,44 +4292,6 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 	double handler_time = _condor_debug_get_time_double() - handler_start_time;
 
 	dprintf(D_COMMAND, "Return from HandleUnregisteredReq <%s, %d> (handler: %.3fs)\n", m_unregisteredCommand.handler_descrip, req, handler_time);
-
-        return result;
-}
-
-
-int DaemonCore::CallHttpHandler(int req, Stream *stream)
-{
-	double handler_start_time=0;
-	if (m_httpHandler.num != 1) {
-		dprintf(D_ALWAYS,
-			"Received %s command (%d) (%s) from %s %s\n",
-			(stream->type() == Stream::reli_sock) ? "TCP" : "UDP",
-			req,
-			"UNREGISTERED HTTP HANDLER!",
-			"UNKNOWN USER",
-			stream->peer_description());
-		return FALSE;
-	}
-	dprintf(D_COMMAND, "Calling HandleHttpReq <%s> (%d) for command %d from %s\n",
-			m_httpHandler.handler_descrip,
-			inServiceCommandSocket_flag,
-			req,
-			stream->peer_description());
-
-	handler_start_time = _condor_debug_get_time_double();
-
-
-	int result = FALSE;
-	if ( m_httpHandler.handlercpp )
-		result = (m_httpHandler.service->*(m_httpHandler.handlercpp))(req,stream);
-	      // handlercpp is a pointer to a method, so we need special syntax
-	      // to call that method belonging to "service".
-
-
-	double handler_time = _condor_debug_get_time_double() - handler_start_time;
-
-	dprintf(D_COMMAND, "Return from HandleHttpReq <%s, %d> (handler: %.3fs)\n", 
-	  m_httpHandler.handler_descrip, req, handler_time);
 
         return result;
 }

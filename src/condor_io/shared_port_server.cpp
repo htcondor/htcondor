@@ -58,12 +58,6 @@ SharedPortServer::InitAndReconfig() {
 			ALLOW );
 		ASSERT( rc >= 0 );
 
-		rc = daemonCore->Register_HttpHandler(
-			(CommandHandlercpp)&SharedPortServer::HandleHttpRequest,
-			"SharedPortServer::HandleHttpRequest",
-			this);
-		ASSERT( rc >= 0 );
-		
 		rc = daemonCore->Register_UnregisteredCommandHandler(
 			(CommandHandlercpp)&SharedPortServer::HandleDefaultRequest,
 			"SharedPortServer::HandleDefaultRequest",
@@ -171,25 +165,12 @@ SharedPortServer::PublishAddress()
 	daemonCore->UpdateLocalAd(&ad,m_shared_port_server_ad_file.Value());
 }
 
-
-int
-SharedPortServer::HandleHttpRequest(int, Stream *sock)
-{
-	char shared_port_id[512];
-  	const char *websvrpipe = param("WEB_SERVER_PIPE");
-  	if (websvrpipe == NULL)
-  	  return (FALSE);
-	strcpy(shared_port_id, websvrpipe);
-	return PassRequest(static_cast<Sock*>(sock), shared_port_id);
-}
-
-
 int
 SharedPortServer::HandleConnectRequest(int,Stream *sock)
 {
 	sock->decode();
 
-	// to avoid possible D-O-S attacks, we read into fixed-length buffers
+		// to avoid possible D-O-S attacks, we read into fixed-length buffers
 	char shared_port_id[512];
 	char client_name[512];
 	int deadline = 0;
@@ -248,6 +229,7 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 			deadline_desc.formatstr(" (deadline %ds)", deadline);
 		}
 	}
+
 	dprintf( D_FULLDEBUG,
 			"SharedPortServer: request from %s to connect to %s%s. (CurPending=%u PeakPending=%u)\n",
 			sock->peer_description(), shared_port_id, deadline_desc.Value(),
