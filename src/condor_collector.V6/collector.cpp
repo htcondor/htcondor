@@ -69,7 +69,7 @@ CollectorEngine CollectorDaemon::collector( &collectorStats );
 int CollectorDaemon::HandleQueryInProcPolicy = HandleQueryInProcSmallTableAndQuery;
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
-char* CollectorDaemon::CollectorName;
+char* CollectorDaemon::CollectorName = NULL;
 Timeslice CollectorDaemon::view_sock_timeslice;
 vector<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
 
@@ -81,7 +81,7 @@ List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
 std::string CollectorDaemon::__adType__;
 ExprTree *CollectorDaemon::__filter__;
 
-TrackTotals* CollectorDaemon::normalTotals;
+TrackTotals* CollectorDaemon::normalTotals = NULL;
 int CollectorDaemon::submittorRunningJobs;
 int CollectorDaemon::submittorIdleJobs;
 int CollectorDaemon::submittorNumAds;
@@ -95,13 +95,10 @@ int CollectorDaemon::machinesClaimed;
 int CollectorDaemon::machinesOwner;
 int CollectorDaemon::startdNumAds;
 
-ClassAd* CollectorDaemon::ad;
-CollectorList* CollectorDaemon::collectorsToUpdate;
-DCCollector* CollectorDaemon::worldCollector;
+ClassAd* CollectorDaemon::ad = NULL;
+CollectorList* CollectorDaemon::collectorsToUpdate = NULL;
+DCCollector* CollectorDaemon::worldCollector = NULL;
 int CollectorDaemon::UpdateTimerId;
-
-ClassAd *CollectorDaemon::query_any_result;
-ClassAd CollectorDaemon::query_any_request;
 
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
 
@@ -1641,11 +1638,6 @@ void CollectorDaemon::reportToDevelopers (void)
 	// If we don't have any machines reporting to us, bail out early
 	if (machinesTotal == 0) return;
 
-	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
-		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
-		return;
-	}
-
 	// Accumulate our monthly maxes
 	ustatsMonthly.setMax( ustatsAccum );
 
@@ -1660,13 +1652,14 @@ void CollectorDaemon::reportToDevelopers (void)
 	fprintf( mailer , "    %s\n", CondorVersion() );
 	fprintf( mailer , "    %s\n\n", CondorPlatform() );
 
-	delete normalTotals;
 	normalTotals = &totals;
 
 	if (!collector.walkHashTable (STARTD_AD, reportStartdScanFunc)) {
 		dprintf (D_ALWAYS, "Error making monthly report (startd scan) \n");
 	}
-		
+
+	normalTotals = NULL;
+
 	// output totals summary to the mailer
 	totals.displayTotals( mailer, 20 );
 
@@ -2004,6 +1997,11 @@ void CollectorDaemon::Exit()
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
 	}
+	free( CollectorName );
+	delete ad;
+	delete collectorsToUpdate;
+	delete worldCollector;
+	delete m_ccb_server;
 	return;
 }
 
@@ -2022,6 +2020,11 @@ void CollectorDaemon::Shutdown()
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
 	}
+	free( CollectorName );
+	delete ad;
+	delete collectorsToUpdate;
+	delete worldCollector;
+	delete m_ccb_server;
 	return;
 }
 
