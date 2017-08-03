@@ -234,12 +234,30 @@ init_network_interfaces( CondorError * errorStack )
 {
 	dprintf( D_HOSTNAME, "Trying to getting network interface information after reading config\n" );
 
+	bool enable_ipv4_true = false;
+	bool enable_ipv4_false = false;
+	bool enable_ipv6_true = false;
+	bool enable_ipv6_false = false;
+	std::string enable_ipv4_str;
+	std::string enable_ipv6_str;
+	param( enable_ipv4_str, "ENABLE_IPV4" );
+	param( enable_ipv6_str, "ENABLE_IPV6" );
+	bool result = false;
+	if ( string_is_boolean_param( enable_ipv4_str.c_str(), result ) ) {
+		enable_ipv4_true = result;
+		enable_ipv4_false = !result;
+	}
+	if ( string_is_boolean_param( enable_ipv6_str.c_str(), result ) ) {
+		enable_ipv6_true = result;
+		enable_ipv6_false = !result;
+	}
+
 	std::string network_interface;
 	param( network_interface, "NETWORK_INTERFACE" );
 
 	network_interface_matches_all = (network_interface == "*");
 
-	if( param_false( "ENABLE_IPV4" ) && param_false( "ENABLE_IPV6" ) ) {
+	if( enable_ipv4_false && enable_ipv6_false ) {
 		errorStack->pushf( "init_network_interfaces", 1, "ENABLE_IPV4 and ENABLE_IPV6 are both false." );
 		return false;
 	}
@@ -265,40 +283,36 @@ init_network_interfaces( CondorError * errorStack )
 	//
 	// Check the validity of the configuration.
 	//
-	if( network_interface_ipv4.empty() && param_true( "ENABLE_IPV4" ) ) {
+	if( network_interface_ipv4.empty() && enable_ipv4_true ) {
 		errorStack->pushf( "init_network_interfaces", 3, "ENABLE_IPV4 is TRUE, but no IPv4 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv6 address." );
 		return false;
 	}
 	// We don't have an enum type in the param system (yet), so check.
-	if( (!param_true( "ENABLE_IPV4" )) && (!param_false( "ENABLE_IPV4" )) ) {
-		std::string param_val;
-		param( param_val, "ENABLE_IPV4" );
-		if( strcasecmp( param_val.c_str(), "AUTO" ) ) {
-			errorStack->pushf( "init_network_interfaces", 4, "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", param_val.c_str() );
+	if( !enable_ipv4_true && !enable_ipv4_false ) {
+		if( strcasecmp( enable_ipv4_str.c_str(), "AUTO" ) ) {
+			errorStack->pushf( "init_network_interfaces", 4, "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", enable_ipv4_str.c_str() );
 			return false;
 		}
 	}
 
-	if( network_interface_ipv6.empty() && param_true( "ENABLE_IPV6" ) ) {
+	if( network_interface_ipv6.empty() && enable_ipv6_true ) {
 		errorStack->pushf( "init_network_interfaces", 5, "ENABLE_IPV6 is TRUE, but no IPv6 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv4 address." );
 		return false;
 	}
 	// We don't have an enum type in the param system (yet), so check.
-	if( (!param_true( "ENABLE_IPV6" )) && (!param_false( "ENABLE_IPV6" )) ) {
-		std::string param_val;
-		param( param_val, "ENABLE_IPV6" );
-		if( strcasecmp( param_val.c_str(), "AUTO" ) ) {
-			errorStack->pushf( "init_network_interfaces", 6, "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", param_val.c_str() );
+	if( !enable_ipv6_true && !enable_ipv6_false ) {
+		if( strcasecmp( enable_ipv6_str.c_str(), "AUTO" ) ) {
+			errorStack->pushf( "init_network_interfaces", 6, "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", enable_ipv6_str.c_str() );
 			return false;
 		}
 	}
 
-	if( (!network_interface_ipv4.empty()) && param_false( "ENABLE_IPV4" ) ) {
+	if( (!network_interface_ipv4.empty()) && enable_ipv4_false ) {
 		errorStack->pushf( "init_network_interfaces", 7, "ENABLE_IPV4 is false, yet we found an IPv4 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
 		return false;
 	}
 
-	if( (!network_interface_ipv6.empty()) && param_false( "ENABLE_IPV6" ) ) {
+	if( (!network_interface_ipv6.empty()) && enable_ipv6_false ) {
 		errorStack->pushf( "init_network_interfaces", 8, "ENABLE_IPV6 is false, yet we found an IPv6 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
 		return false;
 	}
