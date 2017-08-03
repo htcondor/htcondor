@@ -247,8 +247,10 @@ init_network_interfaces( CondorError * errorStack )
 	}
 	// We don't have an enum type in the param system (yet), so check.
 	if( (!param_true( "ENABLE_IPV4" )) && (!param_false( "ENABLE_IPV4" )) ) {
-		if( strcasecmp( param( "ENABLE_IPV4" ), "AUTO" ) ) {
-			errorStack->pushf( "init_network_interfaces", 4, "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV4" ) );
+		std::string param_val;
+		param( param_val, "ENABLE_IPV4" );
+		if( strcasecmp( param_val.c_str(), "AUTO" ) ) {
+			errorStack->pushf( "init_network_interfaces", 4, "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", param_val.c_str() );
 			return false;
 		}
 	}
@@ -259,8 +261,10 @@ init_network_interfaces( CondorError * errorStack )
 	}
 	// We don't have an enum type in the param system (yet), so check.
 	if( (!param_true( "ENABLE_IPV6" )) && (!param_false( "ENABLE_IPV6" )) ) {
-		if( strcasecmp( param( "ENABLE_IPV6" ), "AUTO" ) ) {
-			errorStack->pushf( "init_network_interfaces", 6, "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV6" ) );
+		std::string param_val;
+		param( param_val, "ENABLE_IPV6" );
+		if( strcasecmp( param_val.c_str(), "AUTO" ) ) {
+			errorStack->pushf( "init_network_interfaces", 6, "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", param_val.c_str() );
 			return false;
 		}
 	}
