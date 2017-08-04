@@ -41,7 +41,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that prevented condor daemons from writing out a
+core file for debugging in the very unlikely event that one of them
+crashed.
+\Ticket{6365}
+
+\item Fixed a bug that might cause the \Condor{schedd} or other daemons to
+crash when logging on Linux to the syslog facility, and the \Condor{reconfig}
+command was run.
+\Ticket{6364}
 
 \end{itemize}
 
@@ -71,16 +79,6 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item Fixed a bug that prevented condor daemons from writing out a
-core file for debugging in the very unlikely event that one of them
-crashed.
-\Ticket{6365}
-
-\item Fixed a bug that might cause the \Condor{schedd} or other daemons to
-crash when logging on Linux to the syslog facility, and the \Condor{reconfig}
-command was run.
-\Ticket{6364}
 
 \item Fixed a bug in socket clean-up that was causing a memory leak.  This
 may have been particularly noticeable in the \Condor{collector}.
