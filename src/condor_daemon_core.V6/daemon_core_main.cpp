@@ -761,17 +761,13 @@ void
 install_core_dump_handler()
 {
 #if HAVE_EXT_COREDUMPER
-		// We only need to do this if we're root.
-		if( getuid() == 0) {
-			dprintf(D_FULLDEBUG, "Running as root.  Enabling specialized core dump routines\n");
-			sigset_t fullset;
-			sigfillset( &fullset );
-			install_sig_handler_with_mask(SIGSEGV, &fullset, linux_sig_coredump);
-			install_sig_handler_with_mask(SIGABRT, &fullset, linux_sig_coredump);
-			install_sig_handler_with_mask(SIGILL, &fullset, linux_sig_coredump);
-			install_sig_handler_with_mask(SIGFPE, &fullset, linux_sig_coredump);
-			install_sig_handler_with_mask(SIGBUS, &fullset, linux_sig_coredump);
-		}
+		sigset_t fullset;
+		sigfillset( &fullset );
+		install_sig_handler_with_mask(SIGSEGV, &fullset, linux_sig_coredump);
+		install_sig_handler_with_mask(SIGABRT, &fullset, linux_sig_coredump);
+		install_sig_handler_with_mask(SIGILL, &fullset, linux_sig_coredump);
+		install_sig_handler_with_mask(SIGFPE, &fullset, linux_sig_coredump);
+		install_sig_handler_with_mask(SIGBUS, &fullset, linux_sig_coredump);
 #	endif // of ifdef HAVE_EXT_COREDUMPER
 }
 
