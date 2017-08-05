@@ -1815,12 +1815,6 @@ if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
-   /usr/sbin/semanage permissive -a condor_collector_t
-   /usr/sbin/semanage permissive -a condor_master_t
-   /usr/sbin/semanage permissive -a condor_negotiator_t
-   /usr/sbin/semanage permissive -a condor_procd_t
-   /usr/sbin/semanage permissive -a condor_schedd_t
-   /usr/sbin/semanage permissive -a condor_startd_t
 fi
 %endif
 if [ $1 -eq 1 ] ; then
@@ -1908,6 +1902,9 @@ fi
 %endif
 
 %changelog
+* Mon Aug 07 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.12-2
+- Update SELinux profile for Red Hat 7.4
+
 * Thu Jul 13 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.12-1
 - Can configure the condor_startd to compute free disk space once
 
