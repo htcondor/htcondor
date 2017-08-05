@@ -12,6 +12,7 @@ require {
         type condor_procd_t;
         type condor_schedd_t;
         type condor_schedd_tmp_t;
+        type condor_startd_t;
         type condor_var_lock_t;
         type etc_t;
         type fs_t;
@@ -39,6 +40,13 @@ require {
         class process { setrlimit setsched sigchld transition };
         class unix_stream_socket { accept connectto getattr read setopt write };
 }
+
+permissive condor_collector_t;
+permissive condor_master_t;
+permissive condor_negotiator_t;
+permissive condor_procd_t;
+permissive condor_schedd_t;
+permissive condor_startd_t;
 
 #============= condor_collector_t ==============
 allow condor_collector_t condor_master_t:unix_stream_socket { accept getattr read setopt write };
@@ -68,7 +76,7 @@ allow condor_procd_t var_log_t:file { open rename unlink };
 
 #============= condor_schedd_t ==============
 #domain_transition_pattern(condor_schedd_t, condor_schedd_tmp_t, condor_schedd_tmp_t);
-domtrans_pattern(condor_schedd_t, sendmail_exec_t, sendmail_t);
+#domtrans_pattern(condor_schedd_t, sendmail_exec_t, sendmail_t);
 allow condor_schedd_t autofs_t:dir search;
 allow condor_schedd_t condor_master_t:unix_stream_socket { accept getattr read setopt write };
 allow condor_schedd_t condor_schedd_tmp_t:file { execute execute_no_trans };
