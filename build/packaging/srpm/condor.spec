@@ -1932,7 +1932,7 @@ fi
 %endif
 
 %changelog
-* Mon Aug 07 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-2
+* Mon Aug 07 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.5-2
 - Update SELinux profile for Red Hat 7.4
 
 * Tue Aug 01 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.5-1
