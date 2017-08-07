@@ -38,15 +38,17 @@
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
-#	define file_contains contains_anycase
+    #define file_contains contains_anycase
+    #define lutimes _lutimes
+    #define realpath(path, resolved_path) _fullpath((resolved_path), (path), _MAX_PATH)
+    #define symlink(source, target) CreateSymbolicLink(source, target, 0)
 #else
-#	define file_contains contains
+    #define file_contains contains
 #endif
 
 #ifdef WIN32
     static const mode_t S_IROTH = mode_t(_S_IREAD);     ///< read by *USER*
 #endif
-
 
 using namespace std;
 
@@ -60,7 +62,7 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 	unsigned char hashResult[HASHNAMELEN * 3]; // Allocate extra space for safety.
 
     // Convert the modified time to a string object
-    std::string modifiedTimeStr = std::to_string(fileModifiedTime);
+    std::string modifiedTimeStr = std::to_string((long long int) fileModifiedTime);
 
     // Create a new string which will be the source for our hash function.
     // This will append two strings:
