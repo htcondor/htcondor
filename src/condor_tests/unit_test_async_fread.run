@@ -18,34 +18,36 @@
 ##
 ##**************************************************************
 
+# async_freader_tests - runs unit tests of MyAsyncFileReader file reader class
+
+use strict;
+use warnings;
 use CondorTest;
+use CondorUtils;
 
-$cmd = '_test_classad_parse.exe -nocache';
-$testdesc =  'classad without cache unit test';
-$testname = "classad_without_cache_unit_test";
+my $testname = "unit_test_async_fread";
+my $cmd = 'async_freader_tests';
+if (CondorUtils::is_windows()) { $cmd .= ".exe"; }
+my $args = '-v';
+my $success = 0;
 
+TLOG "Generating test data files\n";
+my @lines = `$cmd -generate-test-files`;
 
-my @expected_output =
-(
-'No errors detected'
-);
+TLOG "Running $cmd $args\n";
 
-CondorTest::SetExpected(\@expected_output);
-
-$execute = sub
-{
-    my %info = @_;
-    my $cluster = $info{"cluster"};
-    my $name = $info{"error"};
-    CondorTest::debug("condor_unit_tests executing\n",1);
-};
-
-CondorTest::RegisterExecute($testname, $execute);
-
-my $testStatus = system($cmd);
-if(($testStatus >> 8) == 0) {
-    CondorTest::RegisterResult(1, "test_name", $testname);
-} else {
-    CondorTest::RegisterResult(0, "test_name", $testname);
+open(ELOG,"$cmd $args 2>&1 |") || die "Could not run: $cmd $args: $!\n";
+while(<ELOG>) {
+	print $_;
 }
+close(ELOG);
+# alternative: my $exitcode = ${^CHILD_ERROR_NATIVE}
+my $exitcode = $?;
+
+print "\n";
+TLOG "exitcode = $exitcode\n";
+$success = $exitcode == 0;
+
+CondorTest::RegisterResult($success, "test_name", $testname);
 CondorTest::EndTest();
+

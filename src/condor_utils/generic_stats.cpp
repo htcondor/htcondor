@@ -1136,7 +1136,7 @@ void StatisticsPool::ClearRecent()
 
 void StatisticsPool::SetRecentMax(int window, int quantum)
 {
-   int cRecent = quantum ? window / quantum : window;
+   int cRecent = (quantum > 0) ? (window / quantum) : window;
 
    void* pitem;
    poolitem item;

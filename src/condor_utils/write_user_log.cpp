@@ -288,10 +288,17 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 				// perhaps we should *always* do this, but because this went in the stable series I
 				// wanted to change as little behavior as possible for all of the places where this
 				// code is used.  -zmiller
+				//
+				// furthermore, we need to have tokens when calling close() as well.  because close()
+				// is called in the destructor of the log_file object, we need to set a flag inside
+				// that object as well. -zmiller
+				//
 				if(should_use_keyring_sessions()) {
+					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: current priv is %i\n", get_priv_state());
 					if(get_priv_state() == PRIV_USER || get_priv_state() == PRIV_USER_FINAL) {
 						dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s in priv state %i\n", log->path.c_str(), get_priv_state());
 						m_init_user_ids = true;
+						log->set_user_priv_flag(true);
 					}
 				}
 
@@ -536,11 +543,19 @@ WriteUserLog::log_file& WriteUserLog::log_file::operator=(const WriteUserLog::lo
 	if(this != &rhs) {
 		if(!copied) {
 			if(fd >= 0) {
+				priv_state priv = PRIV_UNKNOWN;
+				dprintf( D_FULLDEBUG, "WriteUserLog::user_priv_flag (=) is %i\n", user_priv_flag);
+				if ( user_priv_flag ) {
+					priv = set_user_priv();
+				}
 				if(close(fd) != 0) {
 					dprintf( D_ALWAYS,
 							 "WriteUserLog::FreeLocalResources(): "
 							 "close() failed - errno %d (%s)\n",
 							 errno, strerror(errno) );
+				}
+				if ( user_priv_flag ) {
+					set_priv( priv );
 				}
 			}
 			delete lock;
@@ -549,11 +564,12 @@ WriteUserLog::log_file& WriteUserLog::log_file::operator=(const WriteUserLog::lo
 		fd = rhs.fd;
 		lock = rhs.lock;
 		rhs.copied = true;
+		user_priv_flag = rhs.user_priv_flag;
 	}
 	return *this;
 }
 WriteUserLog::log_file::log_file(const log_file& orig) : path(orig.path),
-	lock(orig.lock), fd(orig.fd), copied(false) 
+	lock(orig.lock), fd(orig.fd), copied(false), user_priv_flag(orig.user_priv_flag)
 {
 	orig.copied = true;
 }
@@ -562,11 +578,19 @@ WriteUserLog::log_file::~log_file()
 {
 	if(!copied) {
 		if(fd >= 0) {
+			priv_state priv = PRIV_UNKNOWN;
+			dprintf( D_FULLDEBUG, "WriteUserLog::user_priv_flag (~) is %i\n", user_priv_flag);
+			if ( user_priv_flag ) {
+				priv = set_user_priv();
+			}
 			if(close(fd) != 0) {
 				dprintf( D_ALWAYS,
 						 "WriteUserLog::FreeLocalResources(): "
 						 "close() failed - errno %d (%s)\n",
 						 errno, strerror(errno) );
+			}
+			if ( user_priv_flag ) {
+				set_priv( priv );
 			}
 			fd = -1;
 		}

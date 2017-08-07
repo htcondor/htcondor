@@ -164,6 +164,7 @@ createConfigTarball(	const char * configDir,
 	if( rv != 0 ) {
 		formatstr( tarballError, "unable to change to config dir '%s' (%d): '%s'",
 			configDir, errno, strerror( errno ) );
+		free(cwd);
 		return false;
 	}
 
@@ -174,6 +175,7 @@ createConfigTarball(	const char * configDir,
 	if( fd < 0 ) {
 		formatstr( tarballError, "failed to open config file '%s' for writing: '%s' (%d)",
 			"00ec2-dynamic.config", strerror( errno ), errno );
+		free(cwd);
 		return false;
 	}
 
@@ -184,16 +186,19 @@ createConfigTarball(	const char * configDir,
 	param( collectorHost, "COLLECTOR_HOST" );
 	if( collectorHost.empty() ) {
 		formatstr( tarballError, "COLLECTOR_HOST empty or undefined" );
+		free(cwd);
 		return false;
 	}
 
 	Daemon collector( DT_COLLECTOR, collectorHost.c_str() );
 	if(! collector.locate()) {
 		formatstr( tarballError, "unable to find collector defined by COLLECTOR_HOST (%s)", collectorHost.c_str() );
+		free(cwd);
 		return false;
 	}
 	if(! collector.getInstanceID( instanceID )) {
 		formatstr( tarballError, "unable to get collector's instance ID" );
+		free(cwd);
 		return false;
 	}
 
@@ -236,10 +241,12 @@ createConfigTarball(	const char * configDir,
 	if( rv == -1 ) {
 		formatstr( tarballError, "error writing to '%s': '%s' (%d)",
 			"00ec2-dynamic.config", strerror( errno ), errno );
+		free(cwd);
 		return false;
 	} else if( rv != (int)contents.size() ) {
 		formatstr( tarballError, "short write to '%s': '%s' (%d)",
 			"00ec2-dynamic.config", strerror( errno ), errno );
+		free(cwd);
 		return false;
 	}
 	close( fd );
@@ -249,6 +256,7 @@ createConfigTarball(	const char * configDir,
 	param( localPasswordFile, "SEC_PASSWORD_FILE" );
 	if( localPasswordFile.empty() ) {
 		formatstr( tarballError, "SEC_PASSWORD_FILE empty or undefined" );
+		free(cwd);
 		return false;
 	}
 
@@ -256,6 +264,7 @@ createConfigTarball(	const char * configDir,
 	if( fd == -1 ) {
 		formatstr( tarballError, "Unable to open SEC_PASSWORD_FILE '%s': %s (%d)",
 			localPasswordFile.c_str(), strerror(errno), errno );
+		free(cwd);
 		return false;
 	} else {
 		close( fd );
@@ -268,6 +277,7 @@ createConfigTarball(	const char * configDir,
 	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
 		formatstr( tarballError, "failed to copy '%s' to '%s'",
 			localPasswordFile.c_str(), passwordFile.c_str() );
+		free(cwd);
 		return false;
 	}
 
@@ -281,6 +291,8 @@ createConfigTarball(	const char * configDir,
 	int tfd = mkstemp( tarballName );
 	if( tfd == -1 ) {
 		formatstr( tarballError, "failed to create temporary filename for tarball" );
+		free(cwd);
+		free(tarballName);
 		return false;
 	}
 
@@ -290,6 +302,8 @@ createConfigTarball(	const char * configDir,
 	status = system( command.c_str() );
 	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
 		formatstr( tarballError, "failed to create tarball" );
+		free(cwd);
+		free(tarballName);
 		return false;
 	}
 	tarballPath = tarballName;
@@ -299,10 +313,13 @@ createConfigTarball(	const char * configDir,
 	if( rv != 0 ) {
 		formatstr( tarballError, "unable to change back to working dir '%s' (%d): '%s'",
 			cwd, errno, strerror( errno ) );
+		free(cwd);
+		free(tarballName);
 		return false;
 	}
 	close( tfd );
 	free( cwd );
+	free(tarballName);
 	return true;
 }
 
@@ -690,6 +707,39 @@ void dumpParam( const char * attribute, int defaultValue ) {
 	dprintf( D_AUDIT | D_NOHEADER, "%s = %d\n", attribute, value );
 }
 
+int
+condor_status( int argc, char ** argv ) {
+	std::string csPath = argv[0];
+	csPath.replace( csPath.find( "condor_annex" ), strlen( "condor_annex" ), "condor_status" );
+
+	char ** csArgv = (char **)malloc( (argc + 2) * sizeof(char *) );
+	if( csArgv == NULL ) { return 2; }
+
+	csArgv[0] = strdup( csPath.c_str() );
+	if( csArgv[0] == NULL ) { free(csArgv); return 2; }
+
+	csArgv[1] = strdup( "-annex" );
+	if( csArgv[1] == NULL ) { free(csArgv) ; return 2; }
+
+	csArgv[2] = strdup( "-compact" );
+	if( csArgv[2] == NULL ) { free(csArgv); return 2; }
+
+	for( int i = 2; i < argc; ++i ) {
+		csArgv[i + 1] = argv[i];
+	}
+	csArgv[argc + 1] = NULL;
+
+	if( csPath[0] == '/' ) {
+		int r = execv( csPath.c_str(), csArgv );
+		free(csArgv);
+		return r;
+	} else {
+		int r = execvp( csPath.c_str(), csArgv );
+		free(csArgv);
+		return r;
+	}
+}
+
 int _argc;
 char ** _argv;
 
@@ -732,6 +782,11 @@ annex_main( int argc, char ** argv ) {
 		at_odi = 2
 	};
 	annex_t annexType = at_none;
+
+	// Check for git-style subcommands.
+	if( strcmp( argv[1], "status" ) == 0 ) {
+		return condor_status( argc, argv );
+	}
 
 	long int unclaimedTimeout = 0;
 	bool unclaimedTimeoutSpecified = false;
@@ -1175,7 +1230,6 @@ annex_main( int argc, char ** argv ) {
 	switch( theCommand ) {
 		case ct_create_annex:
 		case ct_update_annex:
-		case ct_status:
 			if( annexName == NULL ) {
 				fprintf( stderr, "%s: you must specify -annex-name.\n", argv[0] );
 				return 1;

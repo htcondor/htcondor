@@ -27,7 +27,8 @@ if (WITH_GSOAP)
 
 		if (WINDOWS)
 			set (GSOAP_PATCH cp ${CMAKE_CURRENT_SOURCE_DIR}/config.WINDOWS.h gsoap/src/config.h &&
-                       patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch)
+                       patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
+                       patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/tcp_keepcnt_wrong_cast.patch)
 			
 			set (GSOAP_CONFIGURE cp ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.win32 gsoap/src/Makefile.win32 )
 			

@@ -2,15 +2,17 @@
 #include "condor_netaddr.h"
 #include "internet.h"
 
-condor_netaddr::condor_netaddr() : maskbit_((unsigned int)-1) {
+condor_netaddr::condor_netaddr() : maskbit_((unsigned int)-1), matchesEverything( false ) {
 }
 
 condor_netaddr::condor_netaddr(const condor_sockaddr& base,
 		unsigned int maskbit)
-: base_(base), maskbit_(maskbit) {
+: base_(base), maskbit_(maskbit), matchesEverything( false ) {
 }
 
 bool condor_netaddr::match(const condor_sockaddr& target) const {
+	if( matchesEverything ) { return true; }
+
 	// An unitialized network matches nothing.
 	if (maskbit_ == (unsigned int)-1) {
 		return false;
@@ -76,6 +78,11 @@ static int convert_maskaddr_to_maskbit(uint32_t mask_value) {
 }
 
 bool condor_netaddr::from_net_string(const char* net) {
+	if( strcmp( net, "*" ) == 0 || strcmp( net, "*/*" ) == 0 ) {
+		matchesEverything = true;
+		return true;
+	}
+
 	const char* slash = strchr(net, '/');
 	const char* net_end = net + strlen(net);
 	if (slash) {
@@ -106,8 +113,9 @@ bool condor_netaddr::from_net_string(const char* net) {
 				// convert to mask bit
 				const uint32_t* maskaddr_array = maskaddr.get_address();
 				maskbit_ = convert_maskaddr_to_maskbit(*maskaddr_array);
-				if (maskbit_ == (unsigned int)-1)
+				if (maskbit_ == (unsigned int)-1) {
 					return false;
+				}
 			}
 		}
 	} else {

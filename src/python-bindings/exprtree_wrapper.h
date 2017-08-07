@@ -67,7 +67,7 @@ struct ExprTreeHolder
     UNARY_OPERATOR(BITWISE_NOT_OP, invert)
     UNARY_OPERATOR(LOGICAL_NOT_OP, not)
 
-    bool __nonzero__();
+    bool __bool__();
 
     static void init();
 

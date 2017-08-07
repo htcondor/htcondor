@@ -13,7 +13,7 @@ class OnDemandRequest : public Functor {
 		OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 			const std::string & su, const std::string & pkf,
 			const std::string & skf, ClassAdCollection * c,
-			const std::string & commandID, const std::string & annexID );
+			const std::string & commandID, const std::string & aid );
 		virtual ~OnDemandRequest() { }
 
 		virtual int operator() ();
@@ -42,6 +42,8 @@ class OnDemandRequest : public Functor {
 		std::string commandID;
 		std::string bulkRequestID;
 		ClassAdCollection * commandState;
+
+		std::string annexID;
 };
 
 #endif /* _CONDOR_ONDEMANDREQUEST_H */

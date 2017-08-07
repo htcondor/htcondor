@@ -166,6 +166,19 @@ public:
 	int assignInvalidSocket();
 	int assignInvalidSocket( condor_protocol proto );
 	int assignDomainSocket( SOCKET s );
+	//
+	// Normally, we verify that the socket (fd) you're assigning to this
+	// Sock (object) has the same address family (protocol).  However,
+	// when using CCB, this restriction must be relaxed.  Consider an
+	// IPv4-only schedd matches against a mixed-mode startd using a
+	// mixed-mode CCB.  If the mixed-mode startd prefers its IPv6 address,
+	// and the schedd is configured to respect that preference, it will
+	// attempt to connect to the IPv6 address via CCB.  However, since the
+	// schedd connected to CCB using IPv4, CCB will ask the startd to
+	// also connect over IPv4, leading to a reverse connection over IPv4
+	// for an IPv6 address.
+	//
+	int assignCCBSocket( SOCKET s );
 #if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif

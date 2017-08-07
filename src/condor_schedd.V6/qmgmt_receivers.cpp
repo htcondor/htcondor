@@ -460,16 +460,21 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			const char * attr = (request_num == CONDOR_SetJobFactory) ? ATTR_JOB_MATERIALIZE_LIMIT : ATTR_JOB_MATERIALIZE_NEXT_ROW;
 			rval = SetAttributeInt( cluster_id, -1, attr, num, flags );
 			if (rval >= 0) {
-				attr = (request_num == CONDOR_SetJobFactory) ? ATTR_JOB_MATERIALIZE_DIGEST_FILE : ATTR_JOB_MATERIALIZE_ITEMS_FILE;
-				if (filename && filename[0]) {
-					rval = SetAttributeString( cluster_id, -1, attr, filename, flags );
-				} else {
-					// if no filename, text must be non-empty
-					//PRAGMA_REMIND("TODO: handle factory/foreach data passed in socket.")
-				}
 				if (request_num == CONDOR_SetJobFactory) {
-					const int first_proc_id = 0;
-					rval = SetAttributeInt(cluster_id, -1, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, first_proc_id, flags);
+					rval = QmgmtHandleSetJobFactory(cluster_id, filename, text);
+					if (rval == 0) {
+						//PRAGMA_REMIND("FUTURE: allow first proc id to be > 0 ?")
+						const int first_proc_id = 0;
+						rval = SetAttributeInt(cluster_id, -1, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, first_proc_id, flags);
+					}
+				} else {
+					attr = (request_num == CONDOR_SetJobFactory) ? ATTR_JOB_MATERIALIZE_DIGEST_FILE : ATTR_JOB_MATERIALIZE_ITEMS_FILE;
+					if (filename && filename[0]) {
+						rval = SetAttributeString( cluster_id, -1, attr, filename, flags );
+					} else {
+						// if no filename, text must be non-empty
+						//PRAGMA_REMIND("TODO: handle factory/foreach data passed in socket.")
+					}
 				}
 			}
 			terrno = errno;

@@ -182,9 +182,6 @@ protected:
 	static int QueryTimeout;
 	static char* CollectorName;
 
-	static ClassAd query_any_request;
-	static ClassAd *query_any_result;
-
 	static ClassAd* __query__;
 	static List<ClassAd>* __ClassAdResultList__;
 	static int __numAds__;

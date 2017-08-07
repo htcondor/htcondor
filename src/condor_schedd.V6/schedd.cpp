@@ -3452,6 +3452,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			case JA_HOLD_JOBS:
 					// for now, use the same as remove
 			case JA_REMOVE_JOBS:
+				srec->preempt_pending = true;
 				shadow_sig = SIGUSR1;
 				shadow_sig_str = "SIGUSR1";
 				break;
@@ -3464,10 +3465,12 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 				shadow_sig_str = "DC_SIGCONTINUE";
 				break;
 			case JA_VACATE_JOBS:
+				srec->preempt_pending = true;
 				shadow_sig = SIGTERM;
 				shadow_sig_str = "SIGTERM";
 				break;
 			case JA_VACATE_FAST_JOBS:
+				srec->preempt_pending = true;
 				shadow_sig = SIGQUIT;
 				shadow_sig_str = "SIGQUIT";
 				break;
@@ -10071,7 +10074,8 @@ shadow_rec::shadow_rec():
 	pid(-1),
 	universe(0),
     match(NULL),
-    preempted(FALSE),
+	preempted(false),
+	preempt_pending(false),
 	conn_fd(-1),
 	removed(FALSE),
 	isZombie(FALSE),
@@ -16087,10 +16091,21 @@ public:
 			case DC_SIGCONTINUE:
 				break;
 			default:
-				srec->preempted = TRUE;
+				srec->preempt_pending = false;
+				srec->preempted = true;
 			}
 		}
 		return DCSignalMsg::messageSent(messenger,sock);
+	}
+
+	virtual void messageSendFailed( DCMessenger *messenger )
+	{
+		// TODO Should we do anything else about this failure?
+		shadow_rec *srec = scheduler.FindSrecByProcID( m_proc );
+		if( srec && srec->pid == thePid() ) {
+			srec->preempt_pending = false;
+		}
+		DCSignalMsg::messageSendFailed( messenger );
 	}
 
 private:
@@ -16192,7 +16207,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	mrec = srec->match;
 
 		// currently we only support serial jobs here
-	if( !mrec || !mrec->user ||
+	if( !mrec || !mrec->user || srec->preempted || srec->preempt_pending ||
 		(srec->universe != CONDOR_UNIVERSE_VANILLA &&
 		 srec->universe != CONDOR_UNIVERSE_JAVA &&
 		 srec->universe != CONDOR_UNIVERSE_VM) )

@@ -1845,12 +1845,6 @@ if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
-   /usr/sbin/semanage permissive -a -N condor_collector_t
-   /usr/sbin/semanage permissive -a -N condor_master_t
-   /usr/sbin/semanage permissive -a -N condor_negotiator_t
-   /usr/sbin/semanage permissive -a -N condor_procd_t
-   /usr/sbin/semanage permissive -a -N condor_schedd_t
-   /usr/sbin/semanage permissive -a condor_startd_t
 fi
 %endif
 if [ $1 -eq 1 ] ; then
@@ -1938,6 +1932,20 @@ fi
 %endif
 
 %changelog
+* Mon Aug 07 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.5-2
+- Update SELinux profile for Red Hat 7.4
+
+* Tue Aug 01 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.5-1
+- Fixed a memory leak that would cause the HTCondor collector to slowly grow
+- Prevent the condor_starter from hanging when using cgroups on Debian
+- Fixed several issues that occur when IPv6 is in use
+- Support for using an ImDisk RAM drive on Windows as the execute directory
+- Fixed a bug where condor_rm rarely removed another one of the user's jobs
+- Fixed a bug with parallel universe jobs starting on partitionable slots
+
+* Thu Jul 13 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.12-1
+- Can configure the condor_startd to compute free disk space once
+
 * Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-1
 - Improved condor_schedd performance by turning off file checks by default
 - condor_annex -status finds VM instances that have not joined the pool

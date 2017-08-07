@@ -607,7 +607,7 @@ parse_node( Dag *dag,
             }
         }
         errorMessage += ")\n";
-        debug_error( 1, DEBUG_QUIET, errorMessage.Value() );
+        debug_error( 1, DEBUG_QUIET, "%s", errorMessage.Value() );
         return false;
     }
 

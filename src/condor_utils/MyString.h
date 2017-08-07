@@ -97,6 +97,7 @@ class MyString
 	int size() const { return Len; }
 	void clear() { assign_str(NULL, 0); }
 	void set(const char* p, int len) { assign_str(p, len); }
+	void append(const char *p, int len) { append_str(p, len); }
 	bool empty() const { return (0 == Len); }
 	const char * c_str() const { return Value(); }
 

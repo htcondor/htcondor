@@ -23,9 +23,17 @@ uint32_t find_scope_id(const condor_sockaddr& addr) {
 		if (ifa->ifa_addr == NULL)
 			continue;
 
-		condor_sockaddr addr2(ifa->ifa_addr);
-		if (addr.compare_address(addr2)) {
-			result = addr2.to_sin6().sin6_scope_id;
+		// There's no point looking for scope IDs on anything other than
+		// an IPv6 address.  Also, this check prevents condor_sockaddr()
+		// from EXCEPT()ing because of an invalid family (e.g., raw socket).
+		// We should probably add a from_sockaddr() function that can fail
+		// for this use case (called by and EXCEPT()d on by the constructor).
+		if( ifa->ifa_addr->sa_family == AF_INET6 ) {
+			condor_sockaddr addr2(ifa->ifa_addr);
+			if (addr.compare_address(addr2)) {
+				result = addr2.to_sin6().sin6_scope_id;
+				break;
+			}
 		}
 	}
 	freeifaddrs(ifaddr);

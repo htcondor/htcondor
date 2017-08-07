@@ -568,6 +568,10 @@ DaemonCore::~DaemonCore()
 	}
 
 	if( pipeTable ) {
+		for ( i = 0; i < nPipe; i++ ) {
+			free( (*pipeTable)[i].pipe_descrip );
+			free( (*pipeTable)[i].handler_descrip );
+		}
 		delete( pipeTable );
 	}
 

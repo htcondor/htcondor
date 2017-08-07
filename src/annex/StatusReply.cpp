@@ -7,7 +7,44 @@
 #include "StatusReply.h"
 
 void
-printClassAds( unsigned count, const std::map< std::string, std::string > & instances, const std::string & annexID, ClassAd * command ) {
+printClassAds(	const std::map< std::string, std::string > & instances,
+				const std::string & annexID,
+				ClassAd * command,
+				std::map< std::string, std::string > & annexes );
+
+void
+printClassAdsSummary(	const std::map< std::string, std::string > & instances,
+						ClassAd * command,
+						std::map< std::string, std::string > & annexes ) {
+	std::map< std::string, std::map< std::string, std::string > > instanceListsByAnnex;
+	for( auto i = instances.begin(); i != instances.end(); ++i ) {
+		const std::string & status = i->second;
+		const std::string & instanceID = i->first;
+		const std::string & annexName = annexes[ instanceID ];
+
+		instanceListsByAnnex[ annexName ][ instanceID ] = status;
+	}
+
+	std::map< std::string, std::string > dummy;
+	for( auto i = instanceListsByAnnex.begin(); i != instanceListsByAnnex.end(); ++i ) {
+		const std::string & annexName = i->first;
+		std::map< std::string, std::string > & instanceList = i->second;
+		printClassAds( instanceList, annexName, command, dummy );
+		fprintf( stdout, "\n" );
+	}
+}
+
+
+void
+printClassAds(	const std::map< std::string, std::string > & instances,
+				const std::string & annexID,
+				ClassAd * command,
+				std::map< std::string, std::string > & annexes ) {
+	if( annexID.empty() ) {
+		printClassAdsSummary( instances, command, annexes );
+		return;
+	}
+
 	// Compute the summary information for the annex ad.
 	std::map< std::string, unsigned > statusCounts;
 	std::map< std::string, std::vector< std::string > > statusInstanceList;
@@ -23,7 +60,7 @@ printClassAds( unsigned count, const std::map< std::string, std::string > & inst
 	// Print the annex ad.
 	ClassAd annexAd;
 	annexAd.Assign( "AnnexID", annexID );
-	annexAd.Assign( "TotalInstances", count );
+	annexAd.Assign( "TotalInstances", instances.size() );
 
 	// Add the attributes necessary to insert it into the collector.  The
 	// name must be unique, but the annex ID is only is only unique per-
@@ -54,7 +91,7 @@ printClassAds( unsigned count, const std::map< std::string, std::string > & inst
 
 	for( auto i = statusCounts.begin(); i != statusCounts.end(); ++i ) {
 		std::string attr = i->first;
-		if( attr == "[in pool]" ) { attr = "InPool"; }
+		if( attr == "in-pool" ) { attr = "InPool"; }
 
 		bool firstInWord = true;
 		for( unsigned i = 0; i < attr.size(); ++i ) {
@@ -95,7 +132,124 @@ printClassAds( unsigned count, const std::map< std::string, std::string > & inst
 }
 
 void
-printHumanReadable( unsigned count, const std::map< std::string, std::string > & instances, const std::string & ) {
+printHumanReadableSummary(	std::map< std::string, std::string > & instances,
+							std::map< std::string, std::string > & annexes ) {
+	// Do some aggregation.
+	std::set< std::string > statuses;
+	std::map< std::string, unsigned > total;
+	std::map< std::string, std::map< std::string, unsigned > > output;
+	for( auto i = annexes.begin(); i != annexes.end(); ++i ) {
+		const std::string & annexName = i->second;
+		const std::string & instanceID = i->first;
+
+		ASSERT( instances.count( instanceID ) > 0 );
+		const std::string & status = instances[ instanceID ];
+		statuses.insert( status );
+
+		if( output.count( annexName ) == 0
+		 || output[ annexName ].count( status ) == 0 ) {
+			output[ annexName ][ status ] = 0;
+		}
+		output[ annexName ][ instances[ instanceID ] ] += 1;
+
+		if( total.count( annexName ) == 0 ) {
+			total[ annexName ] = 0;
+		}
+		total[ annexName ] += 1;
+	}
+
+	// Print the [annex-]NAME TOTAL <status1> ... <statusN> table.
+	bool instancesNotInPool = false;
+	unsigned longestStatus = 0;
+	fprintf( stdout, "%-27.27s %5.5s", "NAME", "TOTAL" );
+	for( auto i = statuses.begin(); i != statuses.end(); ++i ) {
+		fprintf( stdout, " %s", i->c_str() );
+		if( i->length() > longestStatus ) { longestStatus = i->length(); }
+	}
+	fprintf( stdout, "\n" );
+
+	std::string auditString;
+	for( auto i = total.begin(); i != total.end(); ++i ) {
+		unsigned annexTotal = i->second;
+		const std::string & annexName = i->first;
+
+		formatstr( auditString, "%s%s: %u total,", auditString.c_str(),
+			annexName.c_str(), annexTotal );
+		fprintf( stdout, "%-27.27s %5u", annexName.c_str(), annexTotal );
+		for( auto j = statuses.begin(); j != statuses.end(); ++j ) {
+			auto & as = output[ annexName ];
+			const std::string & status = * j;
+
+			if( as.count( status ) == 0 ) {
+				formatstr( auditString, "%s %u %s,", auditString.c_str(),
+					0, status.c_str() );
+				fprintf( stdout, " %*s", (int)status.length(), "0" );
+			} else {
+				if( status != "in-pool" ) { instancesNotInPool += as[ status ]; }
+				formatstr( auditString, "%s %u %s,", auditString.c_str(),
+					as[ status ], status.c_str() );
+				fprintf( stdout, " %*d", (int)status.length(), as[ status ] );
+			}
+		}
+		auditString.erase( auditString.length() - 1 );
+		auditString += "; ";
+		fprintf( stdout, "\n" );
+	}
+	auditString.erase( auditString.length() - 2 );
+	dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", auditString.c_str() );
+	auditString.clear();
+
+	if(! instancesNotInPool) {
+		return;
+	}
+
+	// Print the table separator.
+	fprintf( stdout, "\n" );
+
+	// FIXME: Should this formatted as a table, or just as a series of lines?
+	// Print the [annex-]NAME STATE INSTANCES... table.
+	fprintf( stdout, "%-27.27s %-*s INSTANCES...\n", "NAME", longestStatus, "STATUS" );
+	for( auto i = output.begin(); i != output.end(); ++i ) {
+		const std::string & annexName = i->first;
+
+		auto & as = i->second;
+		for( auto j = as.begin(); j != as.end(); ++j ) {
+			const std::string & status = j->first;
+			if( status == "in-pool" ) { continue; }
+
+			formatstr( auditString, "%s%s %s:", auditString.c_str(),
+				annexName.c_str(), status.c_str() );
+			fprintf( stdout, "%-27.27s %-*s", annexName.c_str(), longestStatus, status.c_str() );
+			for( auto k = instances.begin(); k != instances.end(); ++k ) {
+				const std::string & instanceID = k->first;
+				const std::string & instanceStatus = k->second;
+
+				if( status == instanceStatus && annexName == annexes[ instanceID ] ) {
+					formatstr( auditString, "%s %s", auditString.c_str(),
+						instanceID.c_str() );
+					fprintf( stdout, " %s", instanceID.c_str() );
+				}
+			}
+			auditString += "; ";
+			fprintf( stdout, "\n" );
+		}
+	}
+
+	if(! auditString.empty()) {
+		auditString.erase( auditString.length() - 2 );
+		dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", auditString.c_str() );
+	}
+}
+
+void
+printHumanReadable( std::map< std::string, std::string > & instances,
+					const std::string & annexID,
+					std::map< std::string, std::string > & annexes ) {
+	if( annexID.empty() ) {
+		printHumanReadableSummary( instances, annexes );
+		return;
+	}
+
 	std::string auditString;
 
 	std::map< std::string, unsigned > statusCounts;
@@ -111,20 +265,20 @@ printHumanReadable( unsigned count, const std::map< std::string, std::string > &
 		formatstr( auditString, "%s%s %u, ", auditString.c_str(), i->first.c_str(), i->second );
 		fprintf( stdout, "%-14.14s %5u\n", i->first.c_str(), i->second );
 	}
-	formatstr( auditString, "%stotal %u", auditString.c_str(), count );
-	fprintf( stdout, "%-14.14s %5u\n", "TOTAL", count );
+	formatstr( auditString, "%stotal %lu", auditString.c_str(), instances.size() );
+	fprintf( stdout, "%-14.14s %5lu\n", "TOTAL", instances.size() );
 
 	std::map< std::string, std::vector< std::string > > instanceIDsByStatus;
 	for( auto i = instances.begin(); i != instances.end(); ++i ) {
 		instanceIDsByStatus[ i->second ].push_back( i->first );
 	}
 
-	if( statusCounts[ "[in pool]" ] != count ) {
+	if( statusCounts[ "in-pool" ] != instances.size() ) {
 		formatstr( auditString, "%s; ", auditString.c_str() );
 		fprintf( stdout, "\n" );
 		fprintf( stdout, "Instances not in the pool, grouped by state:\n" );
 		for( auto i = instanceIDsByStatus.begin(); i != instanceIDsByStatus.end(); ++i ) {
-			if( i->first == "[in pool]" ) { continue; }
+			if( i->first == "in-pool" ) { continue; }
 			formatstr( auditString, "%s%s ", auditString.c_str(), i->first.c_str() );
 			fprintf( stdout, "%s", i->first.c_str() );
 			unsigned column = i->first.length();
@@ -158,6 +312,7 @@ StatusReply::operator() () {
 		CAResult result = getCAResultNum( resultString.c_str() );
 
 		if( result == CA_SUCCESS ) {
+			std::map< std::string, std::string > annexes;
 			std::map< std::string, std::string > instances;
 
 			std::string iName;
@@ -176,21 +331,38 @@ StatusReply::operator() () {
 				scratchpad->LookupString( (iName + ".status").c_str(), status );
 				ASSERT(! status.empty());
 				instances[ instanceID ] = status;
-			} while( true );
 
-			if( count == 0 ) {
-				dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "Found no machines in that annex.\n" );
-				fprintf( stdout, "Found no machines in that annex.\n" );
-				goto cleanup;
-			}
+				std::string annexName;
+				scratchpad->LookupString( (iName + ".annexName").c_str(), annexName );
+				// Spot instances don't have an annexName yet.
+				// ASSERT(! annexName.empty() );
+				annexes[ instanceID ] = annexName;
+			} while( true );
 
 			std::string annexID, annexName;
 			scratchpad->LookupString( "AnnexID", annexID );
 			annexName = annexID.substr( 0, annexID.find( "_" ) );
 
+			if( count == 0 ) {
+				std::string errorString;
+				if( annexName.empty() ) {
+					errorString = "Found no instances in any annex.";
+				} else {
+					errorString = "Found no machines in that annex.";
+				}
+
+				dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", errorString.c_str() );
+				fprintf( stdout, "%s\n", errorString.c_str() );
+				goto cleanup;
+			}
+
 			CondorQuery q( STARTD_AD );
 			std::string constraint;
-			formatstr( constraint, "AnnexName == \"%s\"", annexName.c_str() );
+			if( annexName.empty() ) {
+				formatstr( constraint, "IsAnnex" );
+			} else {
+				formatstr( constraint, "AnnexName == \"%s\"", annexName.c_str() );
+			}
 			q.addANDConstraint( constraint.c_str() );
 
 			ClassAdList cal;
@@ -207,13 +379,13 @@ StatusReply::operator() () {
 				cad->LookupString( "EC2InstanceID", instanceID );
 				cad->LookupString( "AnnexName", aName );
 
-				instances[ instanceID ] = "[in pool]";
+				instances[ instanceID ] = "in-pool";
 			}
 
 			if( wantClassAds ) {
-				printClassAds( count, instances, annexID, command );
+				printClassAds( instances, annexID, command, annexes );
 			} else {
-				printHumanReadable( count, instances, annexID );
+				printHumanReadable( instances, annexID, annexes );
 			}
 		} else {
 			std::string errorString;

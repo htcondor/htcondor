@@ -10,10 +10,10 @@
 OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 	const std::string & su, const std::string & pkf, const std::string & skf,
 	ClassAdCollection * c, const std::string & cid,
-	const std::string & annexID ) :
+	const std::string & aid ) :
   gahp( egc ), reply( r ), scratchpad( s ),
   service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
-  commandID( cid ), commandState( c ) {
+  commandID( cid ), commandState( c ), annexID( aid ) {
   	ClassAd * commandState;
 	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ) {
 		commandState->LookupString( "State_ClientToken", clientToken );
@@ -169,6 +169,18 @@ OnDemandRequest::operator() () {
 		std::string availability_zone, vpc_subnet, vpc_id;
 		std::string block_device_mapping, iam_profile_name;
 		StringList group_names, group_ids( securityGroupIDs.c_str() ), parameters_and_values;
+
+		// Specify the htcondor:AnnexName = ${annexName} tag.
+		parameters_and_values.append( "TagSpecification.1.ResourceType" );
+		parameters_and_values.append( "instance" );
+		parameters_and_values.append( "TagSpecification.1.Tag.1.Key" );
+		parameters_and_values.append( "htcondor:AnnexName" );
+		parameters_and_values.append( "TagSpecification.1.Tag.1.Value" );
+		parameters_and_values.append( annexID.c_str() );
+
+		// Earlier versions of the API don't know about TagSpecification.
+		parameters_and_values.append( "Version" );
+		parameters_and_values.append( "2016-11-15" );
 
 		rc = gahp->ec2_vm_start( service_url, public_key_file, secret_key_file,
 					imageID, keyName, user_data, user_data_file,

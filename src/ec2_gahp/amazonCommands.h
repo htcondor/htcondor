@@ -207,6 +207,7 @@ class AmazonStatusResult {
         std::string stateReasonCode;
         std::string clientToken;
         std::string spotFleetRequestID;
+        std::string annexName;
 
         std::vector< std::string > securityGroups;
 };

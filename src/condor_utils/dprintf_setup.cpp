@@ -29,10 +29,6 @@
 #endif
 #include "condor_constants.h"
 
-#if HAVE_BACKTRACE
-#include "sig_install.h"
-#endif
-
 #include <sys/stat.h>
 #include <vector>
 
@@ -43,36 +39,6 @@ extern int		_condor_dprintf_works;
 
 extern bool		debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic);
 extern void		_condor_dprintf_saved_lines( void );
-
-#if HAVE_BACKTRACE
-static void
-sig_backtrace_handler(int signum)
-{
-	dprintf_dump_stack();
-
-		// terminate for the same reason.
-	struct sigaction sa;
-	sa.sa_handler = SIG_DFL;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-	sigaction(signum, &sa, NULL);
-	sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
-
-	raise(signum);
-}
-
-static void
-install_backtrace_handler(void)
-{
-	sigset_t fullset;
-	sigfillset( &fullset );
-	install_sig_handler_with_mask(SIGSEGV, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGABRT, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGILL, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGFPE, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGBUS, &fullset, sig_backtrace_handler);
-}
-#endif
 
 void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info)
 {
@@ -224,10 +190,6 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 
 	first_time = 0;
 	_condor_dprintf_works = 1;
-
-#if HAVE_BACKTRACE
-	install_backtrace_handler();
-#endif
 
 	if(debugLogsOld)
 	{

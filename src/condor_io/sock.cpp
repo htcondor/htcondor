@@ -195,7 +195,7 @@ Sock::~Sock()
 		_auth_methods = NULL;
 	}
 	free(_auth_name);
-	free(_policy_ad);
+	delete _policy_ad;
 	if (_crypto_method) {
 		free(_crypto_method);
 		_crypto_method = NULL;
@@ -355,6 +355,15 @@ int Sock::assign(
 	int socket_fd = WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, 
 					  FROM_PROTOCOL_INFO, pProtoInfo, 0, 0);
 
+	// This only works because the only call to this assign() is
+	// in SharedPortEndpoint::DoListenerAccept().  For how it works,
+	// see the comment in assignCCBSocket().  If we change the Linux code
+	// in SharedPortEndpoint::ReceiveSocket() to confirm that the
+	// connection being handed off came from CCB (before calling
+	// assignCCBSocket() instead of assignSocket()), we need to change
+	// this when we do the same for the equivalent Windows code in
+	// SharedPortEndpoint::DoListenerAccept().
+	_who.clear();
 	return assignSocket( socket_fd );
 }
 #endif
@@ -516,6 +525,27 @@ int Sock::assignInvalidSocket() {
 
 int Sock::assignInvalidSocket( condor_protocol proto ) {
 	return assignSocket( proto, INVALID_SOCKET );
+}
+
+int Sock::assignCCBSocket( SOCKET s ) {
+	ABEND( s != INVALID_SOCKET );
+
+	if( IsDebugLevel( D_NETWORK ) && _who.is_valid() ) {
+		condor_sockaddr sockAddr;
+		ABEND( condor_getsockname( s, sockAddr ) == 0 );
+		condor_protocol sockProto = sockAddr.get_protocol();
+		condor_protocol objectProto = _who.get_protocol();
+		if( objectProto != sockProto ) {
+			dprintf( D_NETWORK, "assignCCBSocket(): reverse connection made on different protocol than the request.\n"  );
+		}
+	}
+
+	// This assignSocket() is the only one that checks to see if the Sock
+	// protocol and the socket protocol match, and the call to assignSocket()
+	// clear()s _who if s is not invalid, so we can just clear _who right
+	// here and avoid both the spurious ABEND and duplicating code.
+	_who.clear();
+	return assignSocket( s );
 }
 
 int Sock::assignSocket( SOCKET sockd ) {
@@ -1588,7 +1618,7 @@ Sock::reportConnectionFailure(bool timed_out)
 	will_keep_trying[0] = '\0';
 	if(!connect_state.connect_refused && !timed_out) {
 		snprintf(will_keep_trying, sizeof(will_keep_trying),
-		        "  Will keep trying for %ld total seconds (%ld to go).\n",
+		        "  Will keep trying for %ld total seconds (%ld to go).",
 		        (long)connect_state.retry_timeout_interval,
 				(long)(connect_state.retry_timeout_time - time(NULL)));
 	}

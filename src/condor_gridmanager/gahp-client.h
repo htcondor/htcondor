@@ -909,6 +909,14 @@ class EC2GahpClient : public GahpClient {
 							   StringList & returnStatus,
 							   std::string & error_code );
 
+		int ec2_vm_status_all( const std::string & service_url,
+							   const std::string & publickeyfile,
+							   const std::string & privatekeyfile,
+							   const std::string & filterName,
+							   const std::string & filterValue,
+							   StringList & returnStatus,
+							   std::string & error_code );
+
 		int ec2_gahp_statistics( StringList & returnStatistics );
 
 		int ec2_ping( const std::string & service_url,

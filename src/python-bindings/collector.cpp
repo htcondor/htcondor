@@ -79,7 +79,7 @@ struct Collector {
             m_collectors = CollectorList::create();
             m_default = true;
         }
-        else if (PyString_Check(pool.ptr()) || PyUnicode_Check(pool.ptr()))
+        else if (PyBytes_Check(pool.ptr()) || PyUnicode_Check(pool.ptr()))
         {
             std::string pool_str = boost::python::extract<std::string>(pool);
             if (pool_str.size())
@@ -107,7 +107,7 @@ struct Collector {
             {
                 try
                 {
-                    boost::python::object next_obj = my_iter.attr("next")();
+                    boost::python::object next_obj = my_iter.attr(NEXT_FN)();
                     std::string pool_str = boost::python::extract<std::string>(next_obj);
                     collector_list.append(pool_str.c_str());
                 }

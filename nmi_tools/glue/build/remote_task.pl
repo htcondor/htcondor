@@ -97,12 +97,19 @@ if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
     $werror = "-DCONDOR_C_FLAGS:STRING=-Werror";
 }
 
-# enable use of VisualStudio 2012 (vs11) on the Windows8 platform
+# enable use of VisualStudio 9 2008 vs9 on the Windows7 platform
+my $enable_vs14 = 0;
 my $enable_vs9 = 0;
 #uncomment to use vs9 on Win7 platform# if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
 if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
 	$VCVER = "VC9";
 }
+if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $enable_vs14 = 1; }
+if ($enable_vs14 && $ENV{VS140COMNTOOLS} =~ /common7/i) {
+	$VCVER = "VC14";
+}
+
+
 
 # Checking task type
 if( $taskname eq $EXTERNALS_TASK ) {
@@ -217,9 +224,10 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     my $buildid = "";
     my $win64 = "x86";
     if ($cmake_args =~ /-DBUILDID:STRING=([0-9]+)/) { $buildid = $1; }
-    if ($cmake_args =~ /-G[ ]*"Visual Studio ([0-9]+)/i) {
-        $VCVER = "VC$1"; 
-        if ($cmake_args =~ /-G[ ]*"Visual Studio [0-9]+ Win64/i) { $win64 = "x64"; }
+    if ($cmake_args =~ /-G[ ]*"Visual Studio ([0-9 ]+)/i) {
+        $VCVER = "VC$1";
+        if ($VCVER =~ /^VC([0-9]+)\s+([0-9]+)\s*/) { $VCVER = "VC$1"; }
+        if ($cmake_args =~ /\s+Win64/i) { $win64 = "x64"; }
         print "cmake was invoked with a Visual Studio $VCVER $win64 generator\n";
     }
     if ($taskname eq $EXTERNALS_TASK) {

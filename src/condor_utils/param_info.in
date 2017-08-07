@@ -1277,6 +1277,12 @@ default=false
 type=bool
 tags=daemon_core
 
+[SEC_CREDENTIAL_REFRESH_INTERVAL]
+default=-1
+type=int
+description=Default interval for re-storing credentials
+tags=security
+
 [SEC_DEFAULT_AUTHENTICATION_TIMEOUT]
 default=20
 type=int
@@ -4907,6 +4913,12 @@ default=false
 type=bool
 customization=expert
 description=Should HTCondor manage AFS tokens in the kernel keyring
+
+[KEYRING_SESSION_CREATION_TIMEOUT]
+default=20
+type=int
+customization=expert
+description=How many seconds to block creating a new keyring session before EXCEPTing
 
 [DISCARD_SESSION_KEYRING_ON_STARTUP]
 default=true
