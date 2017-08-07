@@ -351,7 +351,9 @@ class FileTransfer: public Service {
 
 	void CommitFiles();
 	void ComputeFilesToSend();
+#ifndef WIN32
 	int AddInputFilenameRemaps(ClassAd *Ad);
+#endif
 	float bytesSent, bytesRcvd;
 	StringList* InputFiles;
 

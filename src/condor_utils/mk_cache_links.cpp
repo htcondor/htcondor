@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#ifndef WIN32
  
 #include "condor_common.h"
 #include "condor_attributes.h"
@@ -226,4 +227,6 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
     else	
         dprintf(D_FULLDEBUG, "No public input files.\n");
 }
+
+#endif
 

@@ -362,10 +362,13 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		char *list = InputFiles->print_to_string();
 		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
 		free(list);
-	} else if (IsServer() && !is_spool && param_boolean("ENABLE_CACHE_TRANSFERS", false))
-		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
+	} 
+#ifndef WIN32    
+    else if (IsServer() && !is_spool && param_boolean("ENABLE_CACHE_TRANSFERS", false)) {
 		// For files to be cached, change file names to URLs
-
+		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
+    }
+#endif
 	
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf, sizeof(buf)) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
@@ -599,10 +602,13 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	if(!spooling_output) {
 		if(IsServer()) {
 			if(!InitDownloadFilenameRemaps(Ad)) return 0;
-		} else if( !simple_init ) {
+		} 
+#ifndef WIN32
+        else if( !simple_init ) {
 			// Only add input remaps for starter receiving
 			AddInputFilenameRemaps(Ad);
 		}
+#endif
 	}
 
 	CondorError e;
@@ -649,6 +655,7 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	return 1;
 }
 
+#ifndef WIN32
 int
 FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 	dprintf(D_FULLDEBUG,"Entering FileTransfer::AddInputFilenameRemaps\n");
@@ -672,6 +679,7 @@ FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 	}
 	return 1;
 }
+#endif
 
 
 int

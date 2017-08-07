@@ -17,7 +17,8 @@
  *
  ***************************************************************/
 
- 
+#ifndef WIN32
+
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
@@ -27,3 +28,5 @@
 
 extern void ProcessCachedInpFiles(ClassAd *const Ad,
   StringList *const InputFiles, StringList &PubInpFiles);
+
+#endif
