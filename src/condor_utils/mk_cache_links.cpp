@@ -27,6 +27,13 @@
 #include "directory_util.h"
 #include "filename_tools.h"
 #include "stat_wrapper.h"
+#include <string> 
+
+#ifdef WIN32
+   #define stat _stat
+#else
+   #include <unistd.h>
+#endif
 
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
@@ -34,6 +41,10 @@
 #	define file_contains contains_anycase
 #else
 #	define file_contains contains
+#endif
+
+#ifdef WIN32
+    static const mode_t S_IROTH = mode_t(_S_IREAD);     ///< read by *USER*
 #endif
 
 
@@ -44,22 +55,38 @@ namespace {	// Anonymous namespace to limit scope of names to this file
 const int HASHNAMELEN = 17;
 
 
-static string MakeHashName(const char *fileName) {
-	unsigned char result[HASHNAMELEN * 3]; // Allocate extra space for safety.
-	memcpy(result, Condor_MD_MAC::computeOnce((unsigned char *) fileName,
-		strlen(fileName)), HASHNAMELEN);
-	char entryhashname[HASHNAMELEN * 2]; // 2 chars per hex byte
-	entryhashname[0] = '\0';
+static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
+
+	unsigned char hashResult[HASHNAMELEN * 3]; // Allocate extra space for safety.
+
+    // Convert the modified time to a string object
+    std::string modifiedTimeStr = std::to_string(fileModifiedTime);
+
+    // Create a new string which will be the source for our hash function.
+    // This will append two strings:
+    // 1. Full path to the file
+    // 2. Modified time of the file
+    unsigned char* hashSource = new unsigned char[strlen(fileName) 
+                                    + strlen(modifiedTimeStr.c_str()) + 1];
+    strcpy( (char*) hashSource, fileName );
+    strcat( (char*) hashSource, modifiedTimeStr.c_str() );
+
+    // Now calculate the hash
+	memcpy(hashResult, Condor_MD_MAC::computeOnce(hashSource,
+		strlen((const char*) hashSource)), HASHNAMELEN);
+	char entryHashName[HASHNAMELEN * 2]; // 2 chars per hex byte
+	entryHashName[0] = '\0';
 	char letter[3];
 	for (int ind = 0; ind < HASHNAMELEN - 1; ++ind) {
-		sprintf(letter, "%x", result[ind]);
-		strcat(entryhashname, letter);
+		sprintf(letter, "%x", hashResult[ind]);
+		strcat(entryHashName, letter);
 	}
-	return (entryhashname);
+
+	return entryHashName;
 }
 
 
-static bool MakeLink(const char *const srcFile, const string &newLink) {
+static bool MakeLink(const char* srcFile, const string &newLink) {
 	const char *const webRootDir = param("WEB_ROOT_DIR");
 	if (webRootDir == NULL) {
 		dprintf(D_ALWAYS, "WEB_ROOT_DIR not set\n");
@@ -69,7 +96,7 @@ static bool MakeLink(const char *const srcFile, const string &newLink) {
 	if (realpath(webRootDir, goodPath) == NULL) {
 		dprintf(D_ALWAYS, "WEB_ROOT_DIR not a valid path: %s\n", webRootDir);
 		return (false);
- }
+    }
 	StatWrapper fileMode;
 	bool fileOK = false;
 	if (fileMode.Stat(srcFile) == 0) {
@@ -94,10 +121,11 @@ static bool MakeLink(const char *const srcFile, const string &newLink) {
 				// Must be careful to operate on link, not target file.
 				if ((time(NULL) - filemtime) > 3600 && lutimes(targetLink, NULL) != 0) {
 					// Update mod time, but only once an hour to avoid excess file access
-		dprintf(D_ALWAYS, "Could not update modification date on %s, error = %s\n",
-			targetLink, strerror(errno));
-		 	}
-			} else dprintf(D_ALWAYS, "Could not stat file %s\n", targetLink);
+		            dprintf(D_ALWAYS, "Could not update modification date on %s, error = %s\n",
+			            targetLink, strerror(errno));
+		 	    }
+			} else 
+                dprintf(D_ALWAYS, "Could not stat file %s\n", targetLink);
 		} else if (symlink(srcFile, targetLink) == 0) {
 			retVal = true;
 		} else dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFile,
@@ -110,12 +138,12 @@ static bool MakeLink(const char *const srcFile, const string &newLink) {
 } // end namespace
 
 
-static string MakeAbsolutePath(const char *path, const char *const iwd) {
+static string MakeAbsolutePath(const char* path, const char* initialWorkingDir) {
 	if (is_relative_to_cwd(path)) {
-		string fullpath = iwd;
-		fullpath += DIR_DELIM_CHAR;
-		fullpath += path;
-		return (fullpath);
+		string fullPath = initialWorkingDir;
+		fullPath += DIR_DELIM_CHAR;
+		fullPath += path;
+		return (fullPath);
 	}
 	return (path);
 }
@@ -123,25 +151,48 @@ static string MakeAbsolutePath(const char *path, const char *const iwd) {
 
 void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 	StringList &PubInpFiles) {
+
+	char *initialWorkingDir = NULL;
+    const char *path;
+	MyString remap;
+    struct stat fileStat;
+    time_t fileModifiedTime;
+
 	if (PubInpFiles.isEmpty() == false) {
 		const char *webSrvrPort = param("WEB_SERVER_PORT");
+
+        // If a web server address is not defined, exit quickly. The file
+        // transfer will go on using the regular CEDAR porotocl.
+        if(!webSrvrPort) {
+            dprintf(D_FULLDEBUG, "mk_cache_links.cpp: WEB_SERVER_PORT parameter not defined!\n");
+            return;
+        }
+
+        // Build out the base URL for public files
 		string url = "http://";
-		url += webSrvrPort;
-		url += "/";
+        url += webSrvrPort; 
+        url += "/";
+
 		PubInpFiles.rewind();
-		const char *path;
-		MyString remap;
-		char *iwd = NULL;
-		if (Ad->LookupString(ATTR_JOB_IWD, &iwd) != 1) {
-			dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Job ad did not have an iwd!\n");
+		
+		if (Ad->LookupString(ATTR_JOB_IWD, &initialWorkingDir) != 1) {
+			dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Job ad did not have an initialWorkingDir!\n");
 			return;
 		}
 		while ((path = PubInpFiles.next()) != NULL) {
-			string fullpath = MakeAbsolutePath(path, iwd);
-			string hashName = MakeHashName(fullpath.c_str());
-			if (MakeLink(fullpath.c_str(), hashName)) {
+            // Determine the full path of the file to be transferred
+			string fullPath = MakeAbsolutePath(path, initialWorkingDir);
+
+            // Determine the time last modified of the file to be transferred
+            if( stat( fullPath.c_str(), &fileStat ) == 0 ) {
+                struct timespec fileTime = fileStat.st_mtim;
+                fileModifiedTime = fileTime.tv_sec;
+            }
+
+			string hashName = MakeHashName( fullPath.c_str(), fileModifiedTime );
+			if (MakeLink(fullPath.c_str(), hashName)) {
                 InputFiles->remove(path); // Remove plain file name from InputFiles
-                remap +=hashName;
+                remap += hashName;
                 remap += "=";
                 remap += basename(path);
                 remap += ";";
@@ -154,8 +205,8 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
                 else dprintf(D_FULLDEBUG, "url already in InputFiles: %s\n", namePtr);
 			}
 		}
-		free(iwd);
-		if (remap.Length() > 0) {
+		free( initialWorkingDir );
+		if ( remap.Length() > 0 ) {
 			MyString remapnew;
 			char *buf = NULL;
 			if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS, &buf) == 1) {
