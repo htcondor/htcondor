@@ -64,8 +64,8 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 	char entryHashName[HASHNAMELEN * 2]; // 2 chars per hex byte
 	entryHashName[0] = '\0';
 	char letter[3];
-	for (int ind = 0; ind < HASHNAMELEN - 1; ++ind) {
-		sprintf(letter, "%x", hashResult[ind]);
+	for (int i = 0; i < HASHNAMELEN - 1; ++i) {
+		sprintf(letter, "%x", hashResult[i]);
 		strcat(entryHashName, letter);
 	}
 
@@ -76,12 +76,12 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 static bool MakeLink(const char* srcFile, const string &newLink) {
 	const char *const webRootDir = param("WEB_ROOT_DIR");
 	if (webRootDir == NULL) {
-		dprintf(D_ALWAYS, "WEB_ROOT_DIR not set\n");
+		dprintf(D_ALWAYS, "mk_cache_links.cpp: WEB_ROOT_DIR not set\n");
 		return (false);
 	}
 	char goodPath[PATH_MAX];
 	if (realpath(webRootDir, goodPath) == NULL) {
-		dprintf(D_ALWAYS, "WEB_ROOT_DIR not a valid path: %s\n", webRootDir);
+		dprintf(D_ALWAYS, "mk_cache_links.cpp: WEB_ROOT_DIR not a valid path: %s\n", webRootDir);
 		return (false);
     }
 	StatWrapper fileMode;
@@ -99,7 +99,8 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 	const char *const targetLink = dircat(goodPath, newLink.c_str()); // needs to be freed
 	bool retVal = false;
 	if (targetLink != NULL) {
-		if (fileMode.Stat(targetLink, StatWrapper::STATOP_LSTAT) == 0) { // Check if target already exists
+        // Check if target already exists
+		if (fileMode.Stat(targetLink, StatWrapper::STATOP_LSTAT) == 0) { 
 			retVal = true; // Good enough if link exists, ok if update fails
 			// It is assumed that existing link points to srcFile
 			const StatStructType *statrec = fileMode.GetBuf();
@@ -108,8 +109,8 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 				// Must be careful to operate on link, not target file.
 				if ((time(NULL) - filemtime) > 3600 && lutimes(targetLink, NULL) != 0) {
 					// Update mod time, but only once an hour to avoid excess file access
-		            dprintf(D_ALWAYS, "Could not update modification date on %s, error = %s\n",
-			            targetLink, strerror(errno));
+		            dprintf(D_ALWAYS, "Could not update modification date on %s,"
+                                 "error = %s\n", targetLink, strerror(errno));
 		 	    }
 			} else 
                 dprintf(D_ALWAYS, "Could not stat file %s\n", targetLink);
@@ -122,9 +123,6 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 	return (retVal);
 }
 
-} // end namespace
-
-
 static string MakeAbsolutePath(const char* path, const char* initialWorkingDir) {
 	if (is_relative_to_cwd(path)) {
 		string fullPath = initialWorkingDir;
@@ -135,6 +133,7 @@ static string MakeAbsolutePath(const char* path, const char* initialWorkingDir) 
 	return (path);
 }
 
+} // end namespace
 
 void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 	StringList &PubInpFiles) {
@@ -151,7 +150,8 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
         // If a web server address is not defined, exit quickly. The file
         // transfer will go on using the regular CEDAR porotocl.
         if(!webSrvrPort) {
-            dprintf(D_FULLDEBUG, "mk_cache_links.cpp: WEB_SERVER_PORT parameter not defined!\n");
+            dprintf(D_FULLDEBUG, "mk_cache_links.cpp: WEB_SERVER_PORT not set! "
+                                    "Aborting public input file transfer\n");
             return;
         }
 
@@ -163,7 +163,8 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 		PubInpFiles.rewind();
 		
 		if (Ad->LookupString(ATTR_JOB_IWD, &initialWorkingDir) != 1) {
-			dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Job ad did not have an initialWorkingDir!\n");
+			dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Job ad did not have an "
+                "initialWorkingDir! Aborting public input file transfer\n");
 			return;
 		}
 		while ((path = PubInpFiles.next()) != NULL) {
@@ -187,10 +188,16 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
                 const char *const namePtr = hashName.c_str();
                 if ( !InputFiles->contains(namePtr) ) {
 		            InputFiles->append(namePtr);
-		            dprintf(D_FULLDEBUG, "Adding url to InputFiles: %s\n", namePtr);
+		            dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Adding url to "
+                                                "InputFiles: %s\n", namePtr);
 	            } 
-                else dprintf(D_FULLDEBUG, "url already in InputFiles: %s\n", namePtr);
+                else dprintf(D_FULLDEBUG, "mk_cache_links.cpp: url already "
+                                            "in InputFiles: %s\n", namePtr);
 			}
+            else {
+                dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Failed to generate "
+                                    " hash link for %s\n", fullPath.c_str());
+            }
 		}
 		free( initialWorkingDir );
 		if ( remap.Length() > 0 ) {
@@ -204,12 +211,13 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 			} 
 			remapnew += remap;
 			if (Ad->Assign(ATTR_TRANSFER_INPUT_REMAPS, remap.Value()) == false) {
-	            dprintf(D_ALWAYS, "Could not add to jobAd: %s\n", remap.c_str());
+	            dprintf(D_ALWAYS, "mk_cache_links.cpp: Could not add to jobAd: "
+                                                    "%s\n", remap.c_str());
 			}
 		}
 	} 
     else	
-        dprintf(D_FULLDEBUG, "No public input files.\n");
+        dprintf(D_FULLDEBUG, "mk_cache_links.cpp: No public input files.\n");
 }
 
 #endif
