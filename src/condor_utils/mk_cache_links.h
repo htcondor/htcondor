@@ -17,13 +17,15 @@
  *
  ***************************************************************/
 
-#ifndef WIN32
+
 
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_config.h"
 #include "condor_constants.h"
+
+#ifdef ENABLE_HTTP_PUBLIC_FILES
 
 
 extern void ProcessCachedInpFiles(ClassAd *const Ad,

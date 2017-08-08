@@ -113,7 +113,6 @@
 #define SUBMIT_KEY_SuspendJobAtExec "suspend_job_at_exec"
 
 #define SUBMIT_KEY_TransferInputFiles "transfer_input_files"
-#define SUBMIT_KEY_PublicInputFiles "public_input_files"
 #define SUBMIT_KEY_TransferOutputFiles "transfer_output_files"
 #define SUBMIT_KEY_TransferOutputRemaps "transfer_output_remaps"
 #define SUBMIT_KEY_TransferExecutable "transfer_executable"
@@ -122,6 +121,10 @@
 #define SUBMIT_KEY_TransferError "transfer_error"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
+
+#ifdef ENABLE_HTTP_PUBLIC_FILES
+    #define SUBMIT_KEY_PublicInputFiles "public_input_files"
+#endif
 
 #define SUBMIT_KEY_EncryptInputFiles "encrypt_input_files"
 #define SUBMIT_KEY_EncryptOutputFiles "encrypt_output_files"

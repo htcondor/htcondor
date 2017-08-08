@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-#ifndef WIN32
- 
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
@@ -30,26 +28,12 @@
 #include "stat_wrapper.h"
 #include <string> 
 
-#ifdef WIN32
-   #define stat _stat
-#else
-   #include <unistd.h>
-#endif
+// We are not supporting this functionality in Win32, so we can include
+// POSIX-only files without checking the platform.
 
+#include <unistd.h>
 
-// Filenames are case insensitive on Win32, but case sensitive on Unix
-#ifdef WIN32
-    #define file_contains contains_anycase
-    #define lutimes _lutimes
-    #define realpath(path, resolved_path) _fullpath((resolved_path), (path), _MAX_PATH)
-    #define symlink(source, target) CreateSymbolicLink(source, target, 0)
-#else
-    #define file_contains contains
-#endif
-
-#ifdef WIN32
-    static const mode_t S_IROTH = mode_t(_S_IREAD);     ///< read by *USER*
-#endif
+#ifdef ENABLE_HTTP_PUBLIC_FILES
 
 using namespace std;
 
@@ -201,7 +185,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
                 remap += ";";
                 hashName = url + hashName;
                 const char *const namePtr = hashName.c_str();
-                if ( !InputFiles->file_contains(namePtr) ) {
+                if ( !InputFiles->contains(namePtr) ) {
 		            InputFiles->append(namePtr);
 		            dprintf(D_FULLDEBUG, "Adding url to InputFiles: %s\n", namePtr);
 	            } 

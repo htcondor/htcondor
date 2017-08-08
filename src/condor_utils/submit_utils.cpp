@@ -6960,6 +6960,7 @@ int SubmitHash::SetTransferFiles()
 		if ( input_files.Length() > 0 ) {
 			InsertJobExpr (input_files);
 		}
+#ifdef ENABLE_HTTP_PUBLIC_FILES
         char *public_input_files = 
 			submit_param(SUBMIT_KEY_PublicInputFiles, ATTR_PUBLIC_INPUT_FILES);
 		if (public_input_files) {
@@ -6979,6 +6980,7 @@ int SubmitHash::SetTransferFiles()
 			}
 			free(public_input_files);
 		} 
+#endif
 		if ( output_files.Length() > 0 ) {
 			InsertJobExpr (output_files);
 		}
