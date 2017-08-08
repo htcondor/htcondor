@@ -2449,23 +2449,27 @@ Sock::peer_is_local() const
 	if (!peer_addr().is_valid())
 		return false;
 
-	bool result;
+	bool result = false;
 	condor_sockaddr addr = peer_addr();
 		// ... but use any old ephemeral port.
 	addr.set_port(0);
 	int sock = ::socket(addr.get_aftype(), SOCK_DGRAM, IPPROTO_UDP);
-		// invoke OS bind, not cedar bind - cedar bind does not allow us
-		// to specify the local address.
-	if (condor_bind(sock, addr) < 0) {
-		// failed to bind.  assume we failed  because the peer address is
-		// not local.
-		result = false;
-	} else {
-		// bind worked, assume address has a local interface.
-		result = true;
+
+	if (sock >= 0) { // unclear how this could fail, but best to check
+
+			// invoke OS bind, not cedar bind - cedar bind does not allow us
+			// to specify the local address.
+		if (condor_bind(sock, addr) < 0) {
+			// failed to bind.  assume we failed  because the peer address is
+			// not local.
+			result = false;
+		} else {
+			// bind worked, assume address has a local interface.
+			result = true;
+		}
+		// must not forget to close the socket we just created!
+		::closesocket(sock);
 	}
-	// must not forget to close the socket we just created!
-	::closesocket(sock);
 	return result;
 	
 		/*

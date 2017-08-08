@@ -6,6 +6,7 @@ module htcondor 1.1;
 
 require {
         type autofs_t;
+        type cgroup_t;
         type condor_collector_t;
         type condor_master_t;
         type condor_negotiator_t;
@@ -23,6 +24,7 @@ require {
         type sysctl_fs_t;
         type sysctl_kernel_t;
         type sysctl_net_t;
+        type sysctl_vm_t;
         type tmp_t;
         type user_fonts_t;
         type user_home_dir_t;
@@ -32,7 +34,7 @@ require {
         type var_log_t;
 
         class capability { chown net_admin };
-        class dir { getattr read search write };
+        class dir { add_name create getattr open read remove_name rmdir search setattr write };
         class fd { use };
         class fifo_file { append create getattr ioctl lock open read setattr unlink write };
         class file { append execute execute_no_trans getattr ioctl open read rename setattr unlink write };
@@ -67,10 +69,13 @@ allow condor_master_t sysctl_fs_t:file { getattr open read };
 allow condor_master_t sysctl_kernel_t:file write;
 allow condor_master_t sysctl_net_t:dir search;
 allow condor_master_t sysctl_net_t:file { getattr open read write };
+allow condor_master_t sysctl_vm_t:file { getattr open read write };
 allow condor_master_t var_lib_t:file { getattr open read };
 allow condor_master_t var_log_t:file { open read rename setattr unlink };
 
 #============= condor_procd_t ==============
+allow condor_procd_t cgroup_t:dir { add_name create getattr open read remove_name rmdir search setattr write };
+allow condor_procd_t cgroup_t:file { getattr open read setattr write };
 allow condor_procd_t condor_var_lock_t:fifo_file { create getattr open read setattr unlink write };
 allow condor_procd_t var_log_t:file { open rename unlink };
 
