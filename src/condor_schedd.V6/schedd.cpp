@@ -11672,6 +11672,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			stats.JobsShadowNoMemory += 1;
 			OTHER.JobsShadowNoMemory += 1;
 
+			// Fall through...
 		case JOB_EXEC_FAILED:
 				//
 				// The calling function will make sure that
