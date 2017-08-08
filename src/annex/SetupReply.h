@@ -23,7 +23,6 @@ class SetupReply : public Functor {
 		GahpClient * ec2Gahp;
 		std::string successString;
 		ClassAd * scratchpad;
-		GahpClient * eventsGahp;
 		ClassAdCollection * commandState;
 		std::string commandID;
 };

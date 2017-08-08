@@ -145,6 +145,10 @@ else()
     condor_selective_glob("dprintf_syslog*" ApiSrcs)
 endif()
 
+if(LINUX)
+    condor_selective_glob("../condor_sysapi/kernel_version.*;../condor_sysapi/sysapi.*;../condor_sysapi/reconfig.*" ApiSrcs)
+endif()
+
 condor_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi condor_utils )
 

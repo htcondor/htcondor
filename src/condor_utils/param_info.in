@@ -5302,6 +5302,14 @@ type=path
 [BENCHMARKS_KFLOPS_JOB_LOAD]
 default=1.0
 
+# File transfer statistics knobs
+
+[FILE_TRANSFER_STATS_LOG]
+default=$(LOG)/transfer_history
+type=path
+tags=file,transfer,stats,log
+
+
 # Useful constants
 [IsWindows]
 default=false

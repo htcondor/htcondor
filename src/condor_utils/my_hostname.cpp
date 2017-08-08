@@ -31,7 +31,6 @@
 
 static bool enable_convert_default_IP_to_socket_IP = false;
 static bool shared_port_address_rewriting = false;
-static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
 
@@ -67,15 +66,11 @@ const char* my_ip_string() {
 //}
 
 bool
-network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest, std::set< std::string > *network_interface_ips)
+network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest)
 {
 	ASSERT( interface_pattern );
 	if( !interface_param_name ) {
 		interface_param_name = "";
-	}
-
-	if( network_interface_ips ) {
-		network_interface_ips->clear();
 	}
 
 	condor_sockaddr addr;
@@ -88,9 +83,6 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			ipv6 = interface_pattern;
 			ipbest = ipv6;
 		}
-		if( network_interface_ips ) {
-			network_interface_ips->insert( interface_pattern );
-		}
 
 		dprintf(D_HOSTNAME,"%s=%s, so choosing IP %s\n",
 				interface_param_name,
@@ -101,6 +93,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		return true;
 	}
 
+	unsigned interfaceCount = 0;
 	StringList pattern(interface_pattern);
 
 	std::string matches_str;
@@ -156,10 +149,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		matches_str += dev->name();
 		matches_str += " ";
 		matches_str += dev->IP();
-
-		if( network_interface_ips ) {
-			network_interface_ips->insert( dev->IP() );
-		}
+		++interfaceCount;
 
 		int desireability = this_addr.desirability();
 		if(dev->is_up()) { desireability *= 10; }
@@ -186,13 +176,47 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			best_overall = desireability;
 			ipbest = dev->IP();
 		}
-
 	}
 
 	if( best_overall < 0 ) {
 		dprintf(D_ALWAYS,"Failed to convert %s=%s to an IP address.\n",
 				interface_param_name, interface_pattern);
 		return false;
+	}
+
+	//
+	// Add some smarts to ENABLE_IPV[4|6] = AUTO.
+	//
+	// If we only found one protocol, do nothing.  Otherwise,
+	// if both ipv4 and ipv6 are not at least as desirable as a private
+	// address, then do nothing.  If both are at least as desirable as a
+	// private address, do nothing.  If only one is, and that ENABLE
+	// knob is AUTO, clear the corresponding ipv[4|6] variable.
+	//
+	// We're using the raw desirability parameter here, but we should maybe
+	// be checking to see if the address is public or private instead...
+	//
+	condor_sockaddr v4sa, v6sa;
+	if( v4sa.from_ip_string( ipv4 ) && v6sa.from_ip_string( ipv6 ) ) {
+		if( (v4sa.desirability() < 4) ^ (v6sa.desirability() < 4) ) {
+			if( want_v4 && ! param_true( "ENABLE_IPV4" ) ) {
+				if( v4sa.desirability() < 4 ) {
+					ipv4.clear();
+					ipbest = ipv6;
+				}
+			}
+			if( want_v6 && ! param_true( "ENABLE_IPV6" ) ) {
+				if( v6sa.desirability() < 4) {
+					ipv6.clear();
+					ipbest = ipv4;
+				}
+			}
+		}
+	}
+
+	if( interfaceCount <= 1 ) {
+		enable_convert_default_IP_to_socket_IP = false;
+		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NETWORK_INTERFACE does not match multiple IPs.\n");
 	}
 
 	dprintf(D_HOSTNAME,"%s=%s matches %s, choosing IP %s\n",
@@ -210,12 +234,30 @@ init_network_interfaces( CondorError * errorStack )
 {
 	dprintf( D_HOSTNAME, "Trying to getting network interface information after reading config\n" );
 
+	bool enable_ipv4_true = false;
+	bool enable_ipv4_false = false;
+	bool enable_ipv6_true = false;
+	bool enable_ipv6_false = false;
+	std::string enable_ipv4_str;
+	std::string enable_ipv6_str;
+	param( enable_ipv4_str, "ENABLE_IPV4" );
+	param( enable_ipv6_str, "ENABLE_IPV6" );
+	bool result = false;
+	if ( string_is_boolean_param( enable_ipv4_str.c_str(), result ) ) {
+		enable_ipv4_true = result;
+		enable_ipv4_false = !result;
+	}
+	if ( string_is_boolean_param( enable_ipv6_str.c_str(), result ) ) {
+		enable_ipv6_true = result;
+		enable_ipv6_false = !result;
+	}
+
 	std::string network_interface;
 	param( network_interface, "NETWORK_INTERFACE" );
 
 	network_interface_matches_all = (network_interface == "*");
 
-	if( param_false( "ENABLE_IPV4" ) && param_false( "ENABLE_IPV6" ) ) {
+	if( enable_ipv4_false && enable_ipv6_false ) {
 		errorStack->pushf( "init_network_interfaces", 1, "ENABLE_IPV4 and ENABLE_IPV6 are both false." );
 		return false;
 	}
@@ -229,8 +271,7 @@ init_network_interfaces( CondorError * errorStack )
 		network_interface.c_str(),
 		network_interface_ipv4,
 		network_interface_ipv6,
-		network_interface_best,
-		&configured_network_interface_ips);
+		network_interface_best);
 
 	if( !ok ) {
 		errorStack->pushf( "init_network_interfaces", 2,
@@ -242,36 +283,36 @@ init_network_interfaces( CondorError * errorStack )
 	//
 	// Check the validity of the configuration.
 	//
-	if( network_interface_ipv4.empty() && param_true( "ENABLE_IPV4" ) ) {
+	if( network_interface_ipv4.empty() && enable_ipv4_true ) {
 		errorStack->pushf( "init_network_interfaces", 3, "ENABLE_IPV4 is TRUE, but no IPv4 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv6 address." );
 		return false;
 	}
 	// We don't have an enum type in the param system (yet), so check.
-	if( (!param_true( "ENABLE_IPV4" )) && (!param_false( "ENABLE_IPV4" )) ) {
-		if( strcasecmp( param( "ENABLE_IPV4" ), "AUTO" ) ) {
-			errorStack->pushf( "init_network_interfaces", 4, "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV4" ) );
+	if( !enable_ipv4_true && !enable_ipv4_false ) {
+		if( strcasecmp( enable_ipv4_str.c_str(), "AUTO" ) ) {
+			errorStack->pushf( "init_network_interfaces", 4, "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", enable_ipv4_str.c_str() );
 			return false;
 		}
 	}
 
-	if( network_interface_ipv6.empty() && param_true( "ENABLE_IPV6" ) ) {
+	if( network_interface_ipv6.empty() && enable_ipv6_true ) {
 		errorStack->pushf( "init_network_interfaces", 5, "ENABLE_IPV6 is TRUE, but no IPv6 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv4 address." );
 		return false;
 	}
 	// We don't have an enum type in the param system (yet), so check.
-	if( (!param_true( "ENABLE_IPV6" )) && (!param_false( "ENABLE_IPV6" )) ) {
-		if( strcasecmp( param( "ENABLE_IPV6" ), "AUTO" ) ) {
-			errorStack->pushf( "init_network_interfaces", 6, "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", param( "ENABLE_IPV6" ) );
+	if( !enable_ipv6_true && !enable_ipv6_false ) {
+		if( strcasecmp( enable_ipv6_str.c_str(), "AUTO" ) ) {
+			errorStack->pushf( "init_network_interfaces", 6, "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", enable_ipv6_str.c_str() );
 			return false;
 		}
 	}
 
-	if( (!network_interface_ipv4.empty()) && param_false( "ENABLE_IPV4" ) ) {
+	if( (!network_interface_ipv4.empty()) && enable_ipv4_false ) {
 		errorStack->pushf( "init_network_interfaces", 7, "ENABLE_IPV4 is false, yet we found an IPv4 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
 		return false;
 	}
 
-	if( (!network_interface_ipv6.empty()) && param_false( "ENABLE_IPV6" ) ) {
+	if( (!network_interface_ipv6.empty()) && enable_ipv6_false ) {
 		errorStack->pushf( "init_network_interfaces", 8, "ENABLE_IPV6 is false, yet we found an IPv6 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
 		return false;
 	}
@@ -314,11 +355,6 @@ void ConfigConvertDefaultIPToSocketIP()
 		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because TCP_FORWARDING_HOST is defined.\n");
 	}
 	free( str );
-
-	if( configured_network_interface_ips.size() <= 1 ) {
-		enable_convert_default_IP_to_socket_IP = false;
-		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NETWORK_INTERFACE does not match multiple IPs.\n");
-	}
 
 	if( !param_boolean("ENABLE_ADDRESS_REWRITING",true) ) {
 		enable_convert_default_IP_to_socket_IP = false;

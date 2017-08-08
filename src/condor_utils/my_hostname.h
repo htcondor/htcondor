@@ -62,15 +62,12 @@ void ConfigConvertDefaultIPToSocketIP();
  *        that match the interface pattern.
  * ipbest - If you absolutely need a single result, this is our best bet.
  *        But really, just don't do that. Should be one of ipv4 or ipv6.
- * network_interface_ips - Optional. A list of every IP address, v4 or v6,
- *        that matches the interface pattern.
  */
 bool network_interface_to_ip(
 	char const *interface_param_name,
 	char const *interface_pattern,
 	std::string & ipv4,
 	std::string & ipv6,
-	std::string & ipbest,
-	std::set< std::string > *network_interface_ips = NULL);
+	std::string & ipbest);
 
 #endif /* MY_HOSTNAME_H */

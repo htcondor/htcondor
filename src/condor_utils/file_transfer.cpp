@@ -45,6 +45,7 @@
 #include "condor_url.h"
 #include "my_popen.h"
 #include <list>
+#include <fstream>
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -4312,31 +4313,102 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// if so, drop_privs should be false.  the default is to drop privs.
 	bool drop_privs = !param_boolean("RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false);
 
-	// invoke it
+    // Invoke the plugin
 	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
-	int plugin_status = my_pclose(plugin_pipe);
 
+    // Capture stdout from the plugin and dump it to the stats file
+    char single_stat[1024];
+    ClassAd plugin_stats;
+    while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
+        if( !plugin_stats.Insert( single_stat ) ) {
+            dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", single_stat);
+        }
+    }
+
+    // Close the plugin
+	int plugin_status = my_pclose(plugin_pipe);
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
 
 	// clean up
 	free(method);
 
+    // Save the statistics we gathered to disk
+    OutputFileTransferStats( plugin_stats );
+    
 	// any non-zero exit from plugin indicates error.  this function needs to
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
+    /*
 	if (plugin_status != 0) {
 		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s", plugin_status, plugin.Value());
 		return GET_FILE_PLUGIN_FAILED;
 	}
-
+    */
 	return 0;
 }
 
+int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
+
+    // Read name of statistics file from params
+    std::string stats_file_path = param( "FILE_TRANSFER_STATS_LOG" );
+
+    // First, check for an existing statistics file. 
+    struct stat stats_file_buf;
+    int rc = stat( stats_file_path.c_str(), &stats_file_buf );
+    if( rc == 0 ) {
+        // If it already exists and is larger than 5 Mb, copy the contents 
+        // to a .old file. 
+        if( stats_file_buf.st_size > 5000000 ) {
+            std::string stats_file_old_path = param( "FILE_TRANSFER_STATS_LOG" );
+            stats_file_old_path += ".old";
+
+            std::ifstream stats_file_old_input( stats_file_path );
+            std::ofstream stats_file_old_output( stats_file_old_path, std::fstream::app );
+
+            std::string line;    
+            while( getline( stats_file_old_input, line ) ) {
+                stats_file_old_output << line << std::endl;
+            }
+
+            stats_file_old_input.close();
+            stats_file_old_output.close();
+
+            // Now delete the original stats file
+            unlink( stats_file_path.c_str() );
+            
+        }
+    }
+
+
+    // Add some new job-related statistics that were not available from
+    // the file transfer plugin.
+    int cluster_id;    
+    jobAd.LookupInteger( ATTR_CLUSTER_ID, cluster_id );
+   	stats.Assign( "JobClusterId", cluster_id );
+    
+    int proc_id;    
+    jobAd.LookupInteger( ATTR_PROC_ID, proc_id );
+   	stats.Assign( "JobProcId", proc_id );
+
+    MyString owner;
+    jobAd.LookupString( ATTR_OWNER, owner );
+    stats.Assign( "JobOwner", owner );
+
+    // Output statistics to file
+    MyString stats_string;    
+    std::ofstream stats_file_output( stats_file_path, std::fstream::app );    
+    sPrintAd( stats_string, stats );
+    stats_file_output << stats_string.Value() << "***" << std::endl;    
+
+    // All done, cleanup and return
+    stats_file_output.close();
+    return 0;
+}
 
 MyString FileTransfer::GetSupportedMethods() {
 	MyString method_list;
 
-	// iterate plugin_table if it exists
+	// iterate plugin_table if it existssrc
 	if (plugin_table) {
 		MyString junk;
 		MyString method;
