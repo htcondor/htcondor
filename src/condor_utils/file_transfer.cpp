@@ -364,8 +364,8 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
 		free(list);
 	} 
-#ifdef ENABLE_HTTP_PUBLIC_FILES    
-    else if (IsServer() && !is_spool && param_boolean("ENABLE_CACHE_TRANSFERS", false)) {
+#ifdef HAVE_HTTP_PUBLIC_FILES    
+    else if (IsServer() && !is_spool && param_boolean("ENABLE_HTTP_PUBLIC_FILES", false)) {
 		// For files to be cached, change file names to URLs
 		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
     }
@@ -604,7 +604,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		if(IsServer()) {
 			if(!InitDownloadFilenameRemaps(Ad)) return 0;
 		} 
-#ifdef ENABLE_HTTP_PUBLIC_FILES
+#ifdef HAVE_HTTP_PUBLIC_FILES
         else if( !simple_init ) {
 			// Only add input remaps for starter receiving
 			AddInputFilenameRemaps(Ad);
@@ -656,7 +656,7 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	return 1;
 }
 
-#ifdef ENABLE_HTTP_PUBLIC_FILES
+#ifdef HAVE_HTTP_PUBLIC_FILES
 int
 FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 	dprintf(D_FULLDEBUG,"Entering FileTransfer::AddInputFilenameRemaps\n");

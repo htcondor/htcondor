@@ -352,7 +352,7 @@ class FileTransfer: public Service {
 
 	void CommitFiles();
 	void ComputeFilesToSend();
-#ifdef ENABLE_HTTP_PUBLIC_FILES
+#ifdef HAVE_HTTP_PUBLIC_FILES
 	int AddInputFilenameRemaps(ClassAd *Ad);
 #endif
 	float bytesSent, bytesRcvd;

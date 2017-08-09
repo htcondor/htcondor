@@ -4703,6 +4703,24 @@ default=false
 type=bool
 description=Whether to invoke file transfer plugins as user or as root
 
+[ENABLE_HTTP_PUBLIC_FILES]
+default=false
+type=bool
+description=Allow public input files for a job to be transferred via HTTP
+tags=file_transfer
+
+[HTTP_PUBLIC_FILES_ADDRESS]
+default=127.0.0.1:8080
+type=string
+description=Web address (hostname + port) for HTTP public files
+tags=file_transfer
+
+[HTTP_PUBLIC_FILES_WEB_ROOT]
+default=
+type=string
+description=Web root folder (in the local filesystem) for HTTP public files
+tags=file_transfer
+
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
 default=10240
 range=0,

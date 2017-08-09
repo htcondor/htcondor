@@ -28,12 +28,11 @@
 #include "stat_wrapper.h"
 #include <string> 
 
-// We are not supporting this functionality in Win32, so we can include
-// POSIX-only files without checking the platform.
+#ifndef WIN32
+    #include <unistd.h>
+#endif
 
-#include <unistd.h>
-
-#ifdef ENABLE_HTTP_PUBLIC_FILES
+#ifdef HAVE_HTTP_PUBLIC_FILES
 
 using namespace std;
 
@@ -74,14 +73,17 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 
 
 static bool MakeLink(const char* srcFile, const string &newLink) {
-	const char *const webRootDir = param("WEB_ROOT_DIR");
+	const char *const webRootDir = param("HTTP_PUBLIC_FILES_ROOT_DIR");
 	if (webRootDir == NULL) {
-		dprintf(D_ALWAYS, "mk_cache_links.cpp: WEB_ROOT_DIR not set\n");
+		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_DIR "
+                        "not set! Falling back to regular file transfer\n");
 		return (false);
 	}
 	char goodPath[PATH_MAX];
 	if (realpath(webRootDir, goodPath) == NULL) {
-		dprintf(D_ALWAYS, "mk_cache_links.cpp: WEB_ROOT_DIR not a valid path: %s\n", webRootDir);
+		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_DIR "
+                "not a valid path: %s. Falling back to regular file transfer.\n", 
+                webRootDir);
 		return (false);
     }
 	StatWrapper fileMode;
@@ -112,15 +114,23 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 		            dprintf(D_ALWAYS, "Could not update modification date on %s,"
                                  "error = %s\n", targetLink, strerror(errno));
 		 	    }
-			} else 
+			} 
+            else { 
                 dprintf(D_ALWAYS, "Could not stat file %s\n", targetLink);
-		} else if (symlink(srcFile, targetLink) == 0) {
+            }
+		}
+        else if (symlink(srcFile, targetLink) == 0) {
 			retVal = true;
-		} else dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFile,
-			 targetLink, strerror(errno));
-		delete [] targetLink;
+		} 
+        else {
+            dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFile,
+			                        targetLink, strerror(errno));
+        }
+		
+        delete [] targetLink;
+
 	}
-	return (retVal);
+	return retVal;
 }
 
 static string MakeAbsolutePath(const char* path, const char* initialWorkingDir) {
@@ -145,26 +155,26 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
     time_t fileModifiedTime;
 
 	if (PubInpFiles.isEmpty() == false) {
-		const char *webSrvrPort = param("WEB_SERVER_PORT");
+		const char *webServerAddress = param("HTTP_PUBLIC_FILES_ADDRESS");
 
         // If a web server address is not defined, exit quickly. The file
-        // transfer will go on using the regular CEDAR porotocl.
-        if(!webSrvrPort) {
-            dprintf(D_FULLDEBUG, "mk_cache_links.cpp: WEB_SERVER_PORT not set! "
-                                    "Aborting public input file transfer\n");
+        // transfer will go on using the regular CEDAR protocol.
+        if(!webServerAddress) {
+            dprintf(D_FULLDEBUG, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ADDRESS "
+                            "not set! Falling back to regular file transfer\n");
             return;
         }
 
         // Build out the base URL for public files
 		string url = "http://";
-        url += webSrvrPort; 
+        url += webServerAddress; 
         url += "/";
 
 		PubInpFiles.rewind();
 		
 		if (Ad->LookupString(ATTR_JOB_IWD, &initialWorkingDir) != 1) {
 			dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Job ad did not have an "
-                "initialWorkingDir! Aborting public input file transfer\n");
+                "initialWorkingDir! Falling back to regular file transfer\n");
 			return;
 		}
 		while ((path = PubInpFiles.next()) != NULL) {

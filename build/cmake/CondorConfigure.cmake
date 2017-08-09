@@ -572,7 +572,7 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	glibc_detect( GLIBC_VERSION )
 
 	set(HAVE_GNU_LD ON)
-    option(ENABLE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
+    option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
 elseif(${OS_NAME} STREQUAL "AIX")
 	set(AIX ON)

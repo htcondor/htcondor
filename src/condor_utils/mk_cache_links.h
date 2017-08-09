@@ -25,8 +25,7 @@
 #include "condor_config.h"
 #include "condor_constants.h"
 
-#ifdef ENABLE_HTTP_PUBLIC_FILES
-
+#ifdef HAVE_HTTP_PUBLIC_FILES
 
 extern void ProcessCachedInpFiles(ClassAd *const Ad,
   StringList *const InputFiles, StringList &PubInpFiles);
