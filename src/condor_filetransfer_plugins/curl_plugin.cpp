@@ -15,7 +15,6 @@ int server_supports_resume( CURL* handle, char* url );
 void init_stats( ClassAd* stats, char** argv );
 static size_t header_callback( char* buffer, size_t size, size_t nitems );
 static size_t ftp_write_callback( void* buffer, size_t size, size_t nmemb, void* stream );
-static size_t upload_write_callback( void* contents, size_t size, size_t nmemb, void* userp );
 
 static ClassAd* curl_stats;
 
@@ -295,7 +294,6 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
         curl_easy_setopt( handle, CURLOPT_INFILESIZE_LARGE, 
                                         (curl_off_t) content_length );
         curl_easy_setopt( handle, CURLOPT_FAILONERROR, 1 );
-        curl_easy_setopt( handle, CURLOPT_WRITEFUNCTION, upload_write_callback );
         if( diagnostic ) {
             curl_easy_setopt( handle, CURLOPT_VERBOSE, 1 );
         }
@@ -484,16 +482,6 @@ header_callback( char* buffer, size_t size, size_t nitems ) {
         token = strtok( NULL, " " );
     }
     return numBytes;
-}
-
-/*
-    Write callback for HTTP POST uploads.
-    This only exists to suppress output, which we don't want to collide with
-    our stats data.
-*/
-static size_t
-upload_write_callback( void* contents, size_t size, size_t nmemb, void* userp ) {
-    return 0;
 }
 
 /*
