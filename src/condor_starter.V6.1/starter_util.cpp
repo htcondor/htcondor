@@ -1,0 +1,40 @@
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_config.h"
+
+#include "starter_util.h"
+
+int
+computeDesiredExitStatus( const std::string & prefix, ClassAd * ad,
+	bool * exitStatusSpecified ) {
+	if( ad == NULL ) { return 0; }
+
+	int desiredExitCode = 0;
+	std::string exitCode = "Success" + prefix + "ExitCode";
+	if( ad->LookupInteger( exitCode.c_str(), desiredExitCode ) ) {
+		if( exitStatusSpecified ) { * exitStatusSpecified = true; }
+	}
+
+	int desiredExitSignal = 0;
+	std::string exitSignal = "Success" + prefix + "ExitSignal";
+	if( ad->LookupInteger( exitSignal.c_str(), desiredExitSignal ) ) {
+		if( exitStatusSpecified ) { * exitStatusSpecified = true; }
+	}
+
+	bool desiredExitBySignal = false;
+	std::string exitBySignal = "Success" + prefix + "ExitBySignal";
+	ad->LookupBool( exitBySignal.c_str(), desiredExitBySignal );
+
+	int desiredExitStatus = 0;
+	if( desiredExitBySignal ) {
+		desiredExitStatus = desiredExitSignal;
+	} else if( desiredExitCode != 0 ) {
+#if defined( WINDOWS )
+		desiredExitStatus = desiredExitCode;
+#else
+		desiredExitStatus = desiredExitCode << 8;
+#endif
+	}
+	return desiredExitStatus;
+}
+

@@ -52,6 +52,7 @@
 #include "condor_base64.h"
 #include "my_username.h"
 #include <Regex.h>
+#include "starter_util.h"
 
 extern "C" int get_random_int();
 extern void main_shutdown_fast();
@@ -2758,9 +2759,31 @@ CStarter::Reaper(int pid, int exit_status)
 				 WEXITSTATUS(exit_status) );
 	}
 
-	if( pre_script && pre_script->JobReaper(pid, exit_status) ) {		
-			// TODO: deal with shutdown case?!?
-		
+	if( pre_script && pre_script->JobReaper(pid, exit_status) ) {
+		bool exitStatusSpecified = false;
+		int desiredExitStatus = computeDesiredExitStatus( "Pre", this->jic->jobClassAd(), & exitStatusSpecified );
+		if( exitStatusSpecified && exit_status != desiredExitStatus ) {
+			dprintf( D_ALWAYS, "Pre script failed, putting job on hold.\n" );
+
+			ClassAd updateAd;
+			publishUpdateAd( & updateAd );
+			updateAd.CopyAttribute( ATTR_ON_EXIT_CODE, "PreExitCode", & updateAd );
+			jic->periodicJobUpdate( & updateAd, true );
+
+			// This kills the shadow, which should cause us to catch a
+			// SIGQUIT from the startd in short order...
+			jic->holdJob( "Pre script failed.",
+				CONDOR_HOLD_CODE_PreScriptFailed,
+				0 );
+
+			// ... but we might as well do what the SIGQUIT handler does
+			// here and call main_shutdown_fast().  Maybe someday we'll
+			// fix main_shutdown_fast(), or write a similar function, that
+			// won't write spurious errors to the log.
+			main_shutdown_fast();
+			return FALSE;
+		}
+
 			// when the pre script exits, we know the m_job_list is
 			// going to be empty, so don't bother with any of the rest
 			// of this.  instead, the starter is now able to call
