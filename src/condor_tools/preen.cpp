@@ -50,6 +50,7 @@
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
+#include <dirent.h>
 
 State get_machine_state();
 
@@ -61,6 +62,7 @@ char		*Spool;				// dir for condor job queue
 StringList   ExecuteDirs;		// dirs for execution of condor jobs
 char		*Log;				// dir for condor program logs
 char		*DaemonSockDir;     // dir for daemon named sockets
+char        *PublicFilesWebrootDir; // dir for public input file hash links
 char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char        *ValidSpoolFiles;   // well known files in the spool dir
@@ -81,6 +83,7 @@ void check_log_dir();
 void rec_lock_cleanup(const char *path, int depth, bool remove_self = false);
 void check_tmp_dir();
 void check_daemon_sock_dir();
+void check_public_files_webroot_dir();
 void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
 void produce_output();
@@ -93,6 +96,7 @@ bool proc_exists( int, int );
 bool is_myproxy_file( const char *name );
 bool is_ccb_file( const char *name );
 bool touched_recently(char const *fname,time_t delta);
+bool linked_recently(char const *fname,time_t delta);
 
 /*
   Tell folks how to use this program.
@@ -181,6 +185,7 @@ main( int argc, char *argv[] )
 	check_execute_dir();
 	check_log_dir();
 	check_daemon_sock_dir();
+    check_public_files_webroot_dir();
 	check_tmp_dir();
 
 		// Produce output, either on stdout or by mail
@@ -730,6 +735,39 @@ check_daemon_sock_dir()
 	}
 }
 
+/*
+  Scan the webroot directory used for public input files. Remove any links
+  more than a week old, or that do not point to valid files.
+*/
+void 
+check_public_files_webroot_dir() 
+{
+    // Make sure that PublicFilesWebrootDir is actually set before proceeding!
+    // If not set, just ignore it and bail out here.
+    if( !PublicFilesWebrootDir ) {
+        return;
+    }
+
+    const char	*f;
+	Directory dir(PublicFilesWebrootDir, PRIV_ROOT);
+	std::string fullPath;
+
+    // Set the stale age for a file to be one week
+    time_t stale_age = 60 * 60 * 24 * 7;
+
+    while( ( f = dir.Next() ) ) {
+        fullPath = PublicFilesWebrootDir;
+        fullPath += DIR_DELIM_CHAR;
+        fullPath += f;
+        if( linked_recently( fullPath.c_str(), stale_age ) ) {
+            good_file( PublicFilesWebrootDir, f );
+        }
+        else {
+            bad_file( PublicFilesWebrootDir, f, dir );
+        }
+	}
+}
+
 void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 #if !defined(WIN32)
 	FileLock *lock = NULL;
@@ -815,6 +853,9 @@ init_params()
 	if( DaemonSockDir == NULL ) {
 		EXCEPT("DAEMON_SOCKET_DIR not defined");
 	}
+
+    // PublicFilesWebrootDir is optional, may not be set
+    PublicFilesWebrootDir = param("HTTP_PUBLIC_FILES_ROOT_DIR");
 
 	char *Execute = param("EXECUTE");
 	if( Execute ) {
@@ -981,6 +1022,26 @@ touched_recently(char const *fname,time_t delta)
 		// extend the window of what it means to have been touched "recently"
 		// both forwards and backwards in time to handle system clock jumps.
 	if( abs((int)(time(NULL)-statinfo.GetModifyTime())) > delta ) {
+		return false;
+	}
+	return true;
+}
+
+/*
+    Similar to touched_recently, but uses lstat instead of regular stat to look
+    at the link inodes directly (instead of the inodes they target)
+*/
+bool
+linked_recently(char const *fname, time_t delta)
+{
+    struct stat fileStat;            
+    if( lstat( fname, &fileStat ) != 0) {
+        dprintf(D_ALWAYS, "preen.cpp: Failed to open link %s (errno %d)\n", errno);
+        return false;
+    }
+		// extend the window of what it means to have been touched "recently"
+		// both forwards and backwards in time to handle system clock jumps.
+	if( abs((int)(time(NULL) - fileStat.st_mtime)) > delta ) {
 		return false;
 	}
 	return true;
