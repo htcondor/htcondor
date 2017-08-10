@@ -7425,6 +7425,30 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
 		char const *slot_name = slot_name_buf.c_str();
 
+			// Carry Negotiator Match expressions over from the
+			// match record.
+		match->my_match_ad->ResetName();
+		char const *c_name;
+		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
+		while( (c_name=match->my_match_ad->NextNameOriginal()) ) {
+			if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(c_name);
+				if ( expr ) {
+					continue;
+				}
+				expr = match->my_match_ad->LookupExpr(c_name);
+				if( !expr ) {
+					continue;
+				}
+				const char *new_value = NULL;
+				new_value = ExprTreeToString(expr);
+				ASSERT(new_value);
+				msg->leftover_startd_ad()->AssignExpr(c_name,new_value);
+ 				dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from match record.\n",
+                                	slot_name, c_name, new_value);
+			}
+		}
+
 			// dprintf a message saying we got a new match, but be certain
 			// to only output the public claim id (keep the capability private)
 		ClaimIdParser idp( msg->leftover_claim_id() );
