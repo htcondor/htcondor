@@ -50,7 +50,6 @@
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
-#include <dirent.h>
 
 State get_machine_state();
 
