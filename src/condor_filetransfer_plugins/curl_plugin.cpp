@@ -12,14 +12,15 @@
 
 int send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats );
 int server_supports_resume( CURL* handle, char* url );
-void init_stats( ClassAd* stats, char **argv );
-static size_t header_callback( char *buffer, size_t size, size_t nitems );
+void init_stats( ClassAd* stats, char** argv );
+static size_t header_callback( char* buffer, size_t size, size_t nitems );
 static size_t ftp_write_callback( void* buffer, size_t size, size_t nmemb, void* stream );
 
 static ClassAd* curl_stats;
 
 
-int main( int argc, char **argv ) {
+int 
+main( int argc, char **argv ) {
     CURL* handle = NULL;
     ClassAd stats;
     double end_time;
@@ -114,7 +115,8 @@ int main( int argc, char **argv ) {
 /*
     Perform the curl request, and output the results either to file to stdout.
 */
-int send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
+int 
+send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
 
     char error_buffer[CURL_ERROR_SIZE];
     char partial_range[20];
@@ -138,7 +140,7 @@ int send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats
          !strncasecmp( argv[1], "file://", 7 ) ) {
 
         int close_output = 1;
-        if ( ! strcmp(argv[2],"-")) {
+        if ( ! strcmp(argv[2],"-") ) {
             file = stdout;
             close_output = 0;
             if ( diagnostic ) { 
@@ -252,6 +254,9 @@ int send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats
                 file = NULL;
             }
         }
+        else {
+            fprintf( stderr, "ERROR: could not open output file %s\n", argv[2] ); 
+        }
     } 
     
     // Output transfer: file -> URL
@@ -261,80 +266,85 @@ int send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats
         struct stat file_info;
 
         if ( !strcmp(argv[1], "-") ) {
-            fprintf( stderr, "ERROR: must provide a filename for curl_plugin uploads" ); 
-            return 1;
+            fprintf( stderr, "ERROR: must provide a filename for curl_plugin uploads\n" ); 
+            exit(1);
         } 
-        else {
-            file = fopen( argv[1], "r" );
-            fstat( fileno( file ), &file_info );
-            content_length = file_info.st_size;
-            close_input = 1;
-            if ( diagnostic ) { 
-                fprintf( stderr, "sending %s to %s\n", argv[1], argv[2] ); 
-            }
+
+        // Verify that the specified file exists, and check its content length 
+        file = fopen( argv[1], "r" );
+        if( !file ) {
+            fprintf( stderr, "ERROR: File %s could not be opened\n", argv[1] );
+            exit(1);
         }
-        if(file) {
-            curl_easy_setopt( handle, CURLOPT_URL, argv[2] );
-            curl_easy_setopt( handle, CURLOPT_UPLOAD, 1 );
-            curl_easy_setopt( handle, CURLOPT_READDATA, file );
-            curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, -1 );
-            curl_easy_setopt( handle, CURLOPT_INFILESIZE_LARGE, 
-                                            (curl_off_t) content_length );
-            curl_easy_setopt( handle, CURLOPT_FAILONERROR, 1 );
-            if( diagnostic ) {
-                curl_easy_setopt( handle, CURLOPT_VERBOSE, 1 );
-            }
+        if( fstat( fileno( file ), &file_info ) == -1 ) {
+            fprintf( stderr, "ERROR: fstat failed to read file %s\n", argv[1] );
+            exit(1);
+        }
+        content_length = file_info.st_size;
+        close_input = 1;
+        if ( diagnostic ) { 
+            fprintf( stderr, "sending %s to %s\n", argv[1], argv[2] ); 
+        }
+
+        // Set curl upload options
+        curl_easy_setopt( handle, CURLOPT_URL, argv[2] );
+        curl_easy_setopt( handle, CURLOPT_UPLOAD, 1 );
+        curl_easy_setopt( handle, CURLOPT_READDATA, file );
+        curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, -1 );
+        curl_easy_setopt( handle, CURLOPT_INFILESIZE_LARGE, 
+                                        (curl_off_t) content_length );
+        curl_easy_setopt( handle, CURLOPT_FAILONERROR, 1 );
+        if( diagnostic ) {
+            curl_easy_setopt( handle, CURLOPT_VERBOSE, 1 );
+        }
+    
+        // Does curl protect against redirect loops otherwise?  It's
+        // unclear how to tune this constant.
+        // curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
+
+        // Gather some statistics
+        stats->Assign( "TransferType", "upload" );
+        stats->LookupInteger( "TransferTries", previous_tries );
+        stats->Assign( "TransferTries", previous_tries + 1 );
+
+        // Perform the curl request
+        rval = curl_easy_perform( handle );
+
+        // Gather more statistics
+        stats->LookupInteger( "TransferTotalBytes", previous_TotalBytes );
+        curl_easy_getinfo( handle, CURLINFO_SIZE_UPLOAD, &bytes_uploaded );
+        stats->Assign( "TransferTotalBytes", 
+                    ( long ) ( previous_TotalBytes + bytes_uploaded ) );
+
+        stats->LookupFloat( "ConnectionTimeSeconds", previous_connected_time );
+        curl_easy_getinfo( handle, CURLINFO_CONNECT_TIME, 
+                        &Transferconnection_time );
+        curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &Transfertotal_time );
+        connected_time = previous_connected_time + 
+                        ( Transfertotal_time - Transferconnection_time );
+        stats->Assign( "ConnectionTimeSeconds", connected_time );
         
-            // Does curl protect against redirect loops otherwise?  It's
-            // unclear how to tune this constant.
-            // curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
+        curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &return_code );
+        stats->Assign( "TransferReturnCode", return_code );
 
-            // Gather some statistics
-            stats->Assign( "TransferType", "upload" );
-            stats->LookupInteger( "TransferTries", previous_tries );
-            stats->Assign( "TransferTries", previous_tries + 1 );
+        if( rval == CURLE_OK ) {
+            stats->Assign( "TransferSuccess", true );    
+            stats->Delete( "TransferError" );
+            stats->Assign( "TransferFileBytes", ftell( file ) );
+        }
+        else {
+            stats->Assign( "TransferSuccess", false );
+            stats->Assign( "TransferError", error_buffer );
+        }
 
-            // Perform the curl request
-            rval = curl_easy_perform( handle );
-
-            // Gather more statistics
-            stats->LookupInteger( "TransferTotalBytes", previous_TotalBytes );
-            curl_easy_getinfo( handle, CURLINFO_SIZE_UPLOAD, &bytes_uploaded );
-            stats->Assign( "TransferTotalBytes", 
-                        ( long ) ( previous_TotalBytes + bytes_uploaded ) );
-
-            stats->LookupFloat( "ConnectionTimeSeconds", previous_connected_time );
-            curl_easy_getinfo( handle, CURLINFO_CONNECT_TIME, 
-                            &Transferconnection_time );
-            curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &Transfertotal_time );
-            connected_time = previous_connected_time + 
-                            ( Transfertotal_time - Transferconnection_time );
-            stats->Assign( "ConnectionTimeSeconds", connected_time );
-            
-            curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &return_code );
-            stats->Assign( "TransferRETURN_CODE", return_code );
-
-            if( rval == CURLE_OK ) {
-                stats->Assign( "TransferSuccess", true );    
-                stats->Delete( "TransferError" );
-                stats->Assign( "TransferFileBytes", ftell( file ) );
-            }
-            else {
-                stats->Assign( "TransferSuccess", false );
-                stats->Assign( "TransferError", error_buffer );
-            }
-
-            // Error handling and cleanup
-            if ( diagnostic && rval ) {
-                fprintf( stderr, "curl_easy_perform returned CURLcode %d: %s\n",
-                        rval, curl_easy_strerror( ( CURLcode )rval ) );
-            }
-            if ( close_input ) {
-                fclose( file ); 
-                file = NULL;
-            }
-
-            
+        // Error handling and cleanup
+        if ( diagnostic && rval ) {
+            fprintf( stderr, "curl_easy_perform returned CURLcode %d: %s\n",
+                    rval, curl_easy_strerror( ( CURLcode )rval ) );
+        }
+        if ( close_input ) {
+            fclose( file ); 
+            file = NULL;
         }
 
     }
@@ -347,7 +357,8 @@ int send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats
     resume is supported, code 200 means not supported. 
     Return 1 if resume is supported, 0 if not.
 */
-int server_supports_resume( CURL* handle, char* url ) {
+int 
+server_supports_resume( CURL* handle, char* url ) {
 
     int rval = -1;
 
@@ -385,7 +396,8 @@ int server_supports_resume( CURL* handle, char* url ) {
 /*
     Initialize the stats ClassAd
 */
-void init_stats( ClassAd* stats, char **argv ) {
+void 
+init_stats( ClassAd* stats, char **argv ) {
     
     char* request_url = strdup( argv[1] );
     char* url_token;
@@ -441,7 +453,8 @@ void init_stats( ClassAd* stats, char **argv ) {
     Callback function provided by libcurl, which is called upon receiving
     HTTP headers. We use this to gather statistics.
 */
-static size_t header_callback( char *buffer, size_t size, size_t nitems ) {
+static size_t 
+header_callback( char* buffer, size_t size, size_t nitems ) {
     
     size_t numBytes = nitems * size;
 
@@ -460,9 +473,11 @@ static size_t header_callback( char *buffer, size_t size, size_t nitems ) {
             // The next token is a version number. We can ignore it.
             token = strtok( NULL, " " );
             // Next comes the actual cache host
-            token = strtok( NULL, " " );
-            curl_stats->Assign( "HttpCacheHost", token );
-            curl_stats->Assign( "HttpUsedCache", true );
+            if( token != NULL ) {
+                token = strtok( NULL, " " );
+                curl_stats->Assign( "HttpCacheHost", token );
+                curl_stats->Assign( "HttpUsedCache", true );
+            }
         }
         token = strtok( NULL, " " );
     }
@@ -472,7 +487,8 @@ static size_t header_callback( char *buffer, size_t size, size_t nitems ) {
 /*
     Write callback function for FTP file transfers.
 */
-static size_t ftp_write_callback( void* buffer, size_t size, size_t nmemb, void* stream ) {
+static size_t 
+ftp_write_callback( void* buffer, size_t size, size_t nmemb, void* stream ) {
     FILE* outfile = ( FILE* ) stream;
     return fwrite( buffer, size, nmemb, outfile); 
  

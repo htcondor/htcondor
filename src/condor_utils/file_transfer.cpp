@@ -4329,6 +4329,23 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	int plugin_status = my_pclose(plugin_pipe);
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
 
+	// there is a unique issue when invoking plugins as root where shared
+	// libraries defined as relative to $ORIGIN in the RUNPATH will not
+	// be loaded for security reasons.  in this case the dynamic loader
+	// exits with 127 before even calling main() in the plugin.
+	//
+	// if we suspect this is the case, let's print a hint since it's
+	// otherwise very difficult to understand what is happening and why
+	// this failed.
+	if (!drop_privs && plugin_status == 32512) {
+		dprintf (D_ALWAYS, "FILETRANSFER: ERROR!  You are invoking plugins as root because "
+			"you have RUN_FILETRANSFER_PLUGINS_WITH_ROOT set to TRUE.  However, some of "
+			"the shared libraries in your plugin are likely paths that are relative to "
+			"$ORIGIN, and then dynamic library loader refuses to load those for security "
+			"reasons.  Run 'ldd' on your plugin and move needed libraries to a system "
+			"location controlled by root. Good luck!\n");
+	}
+
 	// clean up
 	free(method);
 
@@ -4338,12 +4355,12 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// any non-zero exit from plugin indicates error.  this function needs to
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
-    /*
+
 	if (plugin_status != 0) {
 		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s", plugin_status, plugin.Value());
 		return GET_FILE_PLUGIN_FAILED;
 	}
-    */
+
 	return 0;
 }
 

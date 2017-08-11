@@ -38,6 +38,7 @@
 #include "cgroup_limits.h"
 #include "selector.h"
 #include "singularity.h"
+#include "starter_util.h"
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -885,22 +886,7 @@ VanillaProc::JobReaper(int pid, int status)
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
 
-	int checkpointExitCode = 0;
-	JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_CODE, checkpointExitCode );
-	int checkpointExitSignal = 0;
-	JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_SIGNAL, checkpointExitSignal );
-	bool checkpointExitBySignal = 0;
-	JobAd->LookupBool( ATTR_CHECKPOINT_EXIT_BY_SIGNAL, checkpointExitBySignal );
-
-	int successfulCheckpointStatus = 0;
-	if( checkpointExitBySignal ) {
-		successfulCheckpointStatus = checkpointExitSignal;
-	} else if( checkpointExitCode != 0 ) {
-		successfulCheckpointStatus = checkpointExitCode << 8;
-#if defined( WINDOWS )
-		successfulCheckpointStatus = checkpointExitCode;
-#endif
-	}
+	int successfulCheckpointStatus = computeDesiredExitStatus( "Checkpoint", JobAd );
 
 	if( isCheckpointing ) {
 		dprintf( D_FULLDEBUG, "Inside VanillaProc::JobReaper() during a checkpoint\n" );
@@ -928,6 +914,13 @@ VanillaProc::JobReaper(int pid, int status)
 			// occur when the job goes on hold).
 			killFamilyIfWarranted();
 			recordFinalUsage();
+
+			int checkpointExitCode = 0;
+			JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_CODE, checkpointExitCode );
+			int checkpointExitSignal = 0;
+			JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_SIGNAL, checkpointExitSignal );
+			bool checkpointExitBySignal = 0;
+			JobAd->LookupBool( ATTR_CHECKPOINT_EXIT_BY_SIGNAL, checkpointExitBySignal );
 
 			std::string holdMessage;
 			formatstr( holdMessage, "Job did not exit as promised when sent its checkpoint signal.  "

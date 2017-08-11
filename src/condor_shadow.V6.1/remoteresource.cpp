@@ -1449,6 +1449,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_READS, update_ad);
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITES, update_ad);
 
+	// FIXME: Add PostExit[Code,Signal,BySignal].  Also, this is the wrong
+	// way to do this: we (a) probably don't want a whitelist here anyway,
+	// and (b) should implement all of the copies as a table anyway.
+	jobAd->CopyAttribute( "PreExitCode", update_ad );
+	jobAd->CopyAttribute( "PreExitSignal", update_ad );
+	jobAd->CopyAttribute( "PreExitBySignal", update_ad );
+
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics
     jobAd->CopyAttribute("StatsLastUpdateTimeStarter", "StatsLastUpdateTime", update_ad);
@@ -1582,6 +1589,12 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		// update (useful if CCB info changes).  It's a bit of a hack
 		// to do it through this channel, but better than nothing.
 		setStarterAddress( starter_addr.Value() );
+	}
+
+	if( IsDebugLevel(D_MACHINE) ) {
+		dprintf( D_MACHINE, "shadow's job ad after update:\n" );
+		dPrintAd( D_MACHINE, * jobAd );
+		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
 	}
 
 		// now that we've gotten an update, we should evaluate our
