@@ -61,6 +61,7 @@
 #include "condor_version.h"
 #include "submit_utils.h"
 #include "set_user_priv_from_ad.h"
+#include "my_async_fread.h"
 
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "ScheddPlugin.h"
@@ -81,18 +82,21 @@ public:
 	enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
 
 	// load the submit file/digest that was passed in our constructor
-	int LoadDigest(FILE* fp, std::string & errmsg);
+	int LoadDigest(MacroStream & ms, std::string & errmsg);
 	// load the item data for the given row, and setup the live submit variables for that item.
 	int LoadRowData(int row, std::string * empty_var_names=NULL);
+	// returns true when the row data is not yet loaded, but might be available if you try again later.
+	bool RowDataIsLoading(int row);
 
+	bool IsResumable() { return paused >= Running && paused < ClusterRemoved; }
 	int Pause(PauseCode pause_code) { 
-		if (paused >= Running && paused < ClusterRemoved) {
+		if (IsResumable()) {
 			if (pause_code && (pause_code > paused)) paused = pause_code;
 		}
 		return paused;
 	}
 	int Resume(PauseCode pause_code) {
-		if (paused >= Running && paused < ClusterRemoved) {
+		if (IsResumable()) {
 			if (paused && pause_code == paused) paused = Running;
 		}
 		return paused;
@@ -119,7 +123,7 @@ public:
 	// returns the first row selected by the slice (if any)
 	int FirstSelectedRow() {
 		if (fea.foreach_mode == foreach_not) return 0;
-		int num_rows = fea.items.number();
+		int num_rows = (fea.foreach_mode = foreach_from_async) ? INT_MAX : fea.items.number();
 		if (num_rows <= 0) return -1;
 		if (fea.slice.selected(0, num_rows))
 			return 0;
@@ -154,9 +158,20 @@ protected:
 	int          ident;
 	PauseCode    paused; // 0 is not paused, non-zero is pause code.
 	MACRO_SOURCE source;
+	MyAsyncFileReader reader; // used when there is external foreach data
 	SubmitForeachArgs fea;
 	char emptyItemString[4];
 	int cached_total_procs;
+
+	// let these functions access internal factory data
+	friend JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text);
+	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename);
+
+	// we override this so that we can use an async foreach implementation.
+	int  load_q_foreach_items(
+		FILE* fp_submit, MACRO_SOURCE& source, // IN: submit file and source information, used only if the items are inline.
+		SubmitForeachArgs & o,           // OUT: options & items from parsing the queue args
+		std::string & errmsg);           // OUT: error message if return value is not 0
 };
 
 JobFactory::JobFactory(const char * _name, int id)
@@ -187,7 +202,7 @@ JobFactory::~JobFactory()
 
 // called in CommitTransaction after the commit
 //
-int PostCommitJobFactoryProc(JobQueueJob * cluster, JobQueueJob * /*job*/)
+int PostCommitJobFactoryProc(JobQueueCluster * cluster, JobQueueJob * /*job*/)
 {
 	if ( ! cluster || ! cluster->factory)
 		return -1;
@@ -199,7 +214,7 @@ int PostCommitJobFactoryProc(JobQueueJob * cluster, JobQueueJob * /*job*/)
 // called by DecrementClusterSize to ask if the job factory wants
 // to defer cleanup of the cluster.
 //
-bool JobFactoryAllowsClusterRemoval(JobQueueJob * cluster)
+bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 {
 	if ( ! cluster || ! cluster->factory)
 		return true;
@@ -211,30 +226,33 @@ bool JobFactoryAllowsClusterRemoval(JobQueueJob * cluster)
 }
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
-#if 0 // future
+// this is the normal case for condor_submit from 8.7.3 onward.
 class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text)
 {
 	JobFactory * factory = new JobFactory(NULL, cluster_id);
 
+	MacroStreamMemoryFile ms(submit_digest_text, -1, factory->source);
+
 	std::string errmsg = "";
-	int rval = factory->LoadDigest(submit_digest_text, errmsg);
+	int rval = factory->LoadDigest(ms, errmsg);
 	if (rval) {
-		dprintf(D_ALWAYS, "failed to parse submit digest for factory %d : \n", cluster_id, errmsg.c_str());
+		dprintf(D_ALWAYS, "failed to parse submit digest for factory %d : %s\n", cluster_id, errmsg.c_str());
 		delete factory;
 		factory = NULL;
 	}
 
 	return factory;
 }
-#endif
 
-// Make a job factory for a Job object that exists
-JobFactory * MakeJobFactory(JobQueueJob* job, const char * submit_digest_file)
+// Make a job factory for a Job object that exists, this entry point is used when
+// the submit digest is a file on disk - either because condor_submit put it there, or
+// because we are restarting. 
+JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_file)
 {
 
 	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster);
 
-	// Starting the 8.7.2 The digest file may be in the spool directory and owned by condor
+	// Starting the 8.7.3 The digest file may be in the spool directory and owned by condor
 	// or in the user directory and owned by the user (the 8.7.1 model). We will handle
 	// both cases by first trying to open the file as condor, and if that fails, try impersonating
 	// the user.
@@ -249,11 +267,17 @@ JobFactory * MakeJobFactory(JobQueueJob* job, const char * submit_digest_file)
 		fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
 	}
 
-	// LoadDigest properly handles the case when fp is NULL, treating that as 'failed to open file'
 	std::string errmsg = "";
-	int rval = factory->LoadDigest(fp, errmsg);
-
-	if (fp) { fclose(fp); fp = NULL; }
+	int rval;
+	if ( ! fp) {
+		formatstr(errmsg, "Failed to open factory submit digest : %s", strerror(errno));
+		rval = errno ? errno : -1;
+	} else {
+		MacroStreamYourFile ms(fp, factory->source);
+		rval = factory->LoadDigest(ms, errmsg);
+		fclose(fp);
+		fp = NULL;
+	}
 
 	if (restore_priv) {
 		set_priv(priv);
@@ -268,6 +292,13 @@ JobFactory * MakeJobFactory(JobQueueJob* job, const char * submit_digest_file)
 		factory->set_cluster_ad(job);
 	}
 	return factory;
+}
+
+void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cad)
+{
+	ASSERT( ! cad->factory);
+	cad->factory = factory;
+	factory->set_cluster_ad(cad);
 }
 
 void DestroyJobFactory(JobFactory * factory)
@@ -303,6 +334,26 @@ int  ResumeJobFactory(JobFactory * factory, int pause_code)
 	return rval;
 }
 
+// reutrns true if cluster has a non-paused, non-complete factory
+bool CanMaterializeJobs(JobQueueCluster * cad)
+{
+	if ( ! cad || ! cad->factory) return false;
+	// since IsComplete implies IsPaused with a special pause code, we can just check the pause state here...
+	return ! cad->factory->IsPaused();
+}
+
+bool JobFactoryIsComplete(JobQueueCluster * cad)
+{
+	if ( ! cad || ! cad->factory) return true;
+	return cad->factory->IsComplete();
+}
+bool JobFactoryIsRunning(JobQueueCluster * cad)
+{
+	if ( ! cad || ! cad->factory) return true;
+	return cad->factory->PauseMode() == JobFactory::Running;
+}
+
+
 // returns true if the factory changed state, false otherwise.
 bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 {
@@ -330,9 +381,13 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 	}
 }
 
-int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
+int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd, int & retry_delay)
 {
+	retry_delay = 0;
 	if (factory->IsPaused()) {
+		// if the factory is paused but resumable, return a large value for the retry delay.
+		// in practice, this value really means "don't use a timer to retry, use a transaction trigger on the pause state to retry"
+		if (factory->IsResumable()) { retry_delay = 300; }
 		dprintf(D_MATERIALIZE, "in MaterializeNextFactoryJob for cluster=%d, Factory is paused (%d)\n", ClusterAd->jid.cluster, factory->PauseMode());
 		return 0;
 	}
@@ -363,6 +418,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 		if (next_proc_id >= step_size) {
 			dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. has_items=%d, next_proc_id=%d, step=%d\n", ClusterAd->jid.cluster, !no_items, next_proc_id, step_size);
 			// we are done
+			factory->Pause(JobFactory::NoMoreItems);
 			return 0;
 		}
 	} else {
@@ -382,10 +438,17 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 	if (item_index < 0) {
 		// we are done
 		dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. JobMaterializeNextRow is %d\n", ClusterAd->jid.cluster, item_index);
+		factory->Pause(JobFactory::NoMoreItems);
 		return 0; 
 	}
 	int row  = item_index;
 	
+	// if the row data is still loading, return 0 and a small value for the retry delay
+	if (factory->RowDataIsLoading(row)){
+		retry_delay = 1;
+		return 0;
+	}
+
 	JOB_ID_KEY jid(ClusterAd->jid.cluster, next_proc_id);
 	dprintf(D_ALWAYS, "Trying to Materializing new job %d.%d step=%d row=%d\n", jid.cluster, jid.proc, step, row);
 
@@ -396,6 +459,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 	if (row_num < row) {
 		// we are done
 		dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. LoadRowData returned %d for row %d\n", ClusterAd->jid.cluster, row_num, row);
+		factory->Pause(JobFactory::NoMoreItems);
 		return 0; 
 	}
 	// report empty vars.. do we still want to do this??
@@ -429,7 +493,6 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 
 	// have the factory make a job and give us a pointer to it.
 	// note that this ia not a transfer of ownership, the factory still owns the job and will delete it
-	// the only reason this is not a const ClassAd* is that you can't iterate a const (sigh)
 	const classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, NULL);
 	if ( ! job) {
 		std::string errmsg(factory->error_stack()->getFullText());
@@ -442,6 +505,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * ClusterAd)
 	if (rval < 0) {
 		if ( ! already_in_transaction) {
 			AbortTransaction();
+			ClusterAd->ClearPending();
 		}
 		return rval; // failed instantiation
 	}
@@ -470,18 +534,21 @@ static const char * is_queue_statement(const char * line)
 	return NULL;
 }
 
-int JobFactory::LoadDigest(FILE* fp, std::string & errmsg)
+#if 0 // this is obsolete
+int JobFactory::load_q_foreach_items(
+	FILE* fp_submit, MACRO_SOURCE& source, // IN: submit file and source information, used only if the items are inline.
+	SubmitForeachArgs & o,                 // OUT: options & items from parsing the queue args
+	std::string & errmsg)                  // OUT: error message if return value is not 0
 {
-	if ( ! fp ) {
-		formatstr(errmsg, "Failed to open factory submit digest : %s", strerror(errno));
-		paused = InvalidSubmit;
-		return errno;
-	}
+	// TODO: make this setup an asych foreach reader
+	return SubmitHash::load_q_foreach_items(fp_submit, source, o, errmsg);
+}
+#endif
 
-	PRAGMA_REMIND("TODO: fix to accept the submit digest as a MacroStream so it can be a char source or file source.")
-
+int JobFactory::LoadDigest(MacroStream &ms, std::string & errmsg)
+{
 	char * qline = NULL;
-	int rval = parse_file_up_to_q_line(fp, source, errmsg, &qline);
+	int rval = parse_up_to_q_line(ms, errmsg, &qline);
 	if (rval == 0 && qline) {
 		const char * pqargs = is_queue_statement(qline);
 		rval = parse_q_args(pqargs, fea, errmsg);
@@ -503,14 +570,73 @@ int JobFactory::LoadDigest(FILE* fp, std::string & errmsg)
 			// optimize the submit hash for lookups if we inserted anything.  we expect this to happen only once.
 			this->optimize();
 
-			// load the foreach data
-			rval = load_q_foreach_items(fp, source, fea, errmsg);
+			// load the inline foreach data, and check to see if there is external foreach data
+			rval = load_inline_q_foreach_items(ms, fea, errmsg);
+			if (rval == 1) {
+				rval = 0;
+				// there is external foreach data.  it had better be from a file, because that's the only form we support
+				if (fea.foreach_mode != foreach_from) {
+					formatstr(errmsg, "foreach mode %d is not supported by schedd job factory", fea.foreach_mode);
+					rval = -1;
+				} else if (fea.items_filename.empty()) {
+					// this is ok?
+				} else if (fea.items_filename == "<" || fea.items_filename == "=") {
+					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.Value());
+				} else {
+					// setup an async reader for the itemdata
+					rval = reader.open(fea.items_filename.c_str());
+					if (rval) {
+						formatstr(errmsg, "could not open item data file '%s', error = %d\n", fea.items_filename.Value(), rval);
+					} else {
+						rval = reader.queue_next_read();
+						if (rval) {
+							formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d\n", fea.items_filename.Value(), rval);
+						} else {
+							fea.foreach_mode = foreach_from_async;
+						}
+					}
+					// failed to open or start the item reader, so just close it and free the internal buffers.
+					if (rval) { reader.clear(); }
+				}
+			}
 		}
 	}
 
 	paused = rval ? InvalidSubmit : Running;
 
 	return rval;
+}
+
+// returns true when the row data is not yet loaded, but might be available if you try again later.
+bool JobFactory::RowDataIsLoading(int row)
+{
+	if (fea.foreach_mode == foreach_from_async) {
+
+		PRAGMA_REMIND("TODO: keep only unused items in the item list.")
+		// put all of the items we have read so far into the item list
+		MyString str;
+		while (reader.output().readLine(str, false)) {
+			str.trim();
+			fea.items.append(str.c_str());
+		}
+
+		if (reader.done_reading()) {
+			if (reader.error_code()) {
+				std::string filename;
+				dprintf(D_ALWAYS, "failed to read all of the item data from %s\n", fea.items_filename.Value());
+			}
+			// read all we are going to, so close the reader now.
+			reader.close();
+			reader.clear();
+			fea.foreach_mode = foreach_from;
+		} else if (fea.items.number() < row) {
+			// not done reading, and also haven't read this row. return true that row data is still loading.
+			reader.check_for_read_completion();
+			return true;
+		}
+	}
+
+	return false;
 }
 
 // set live submit variables for the row data for the given row. If empty_var_names is not null
