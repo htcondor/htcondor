@@ -22,6 +22,7 @@
 #include "condor_classad.h"
 #include "condor_config.h"
 #include "condor_constants.h"
+#include "condor_uid.h"
 #include "condor_md.h"
 #include "directory_util.h"
 #include "filename_tools.h"
@@ -98,6 +99,10 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 			"Cannot transfer -- public input file not world readable: %s\n", srcFile);
 		return (false);
 	}
+
+    // Jump to root privileges to ensure we can write a link in the webroot dir
+    priv_state priv = set_root_priv();
+
 	const char *const targetLink = dircat(goodPath, newLink.c_str()); // needs to be freed
 	bool retVal = false;
 	if (targetLink != NULL) {
@@ -126,10 +131,12 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
             dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFile,
 			                        targetLink, strerror(errno));
         }
-		
         delete [] targetLink;
-
 	}
+
+    // Return to original privilege level, and exit
+    set_priv(priv);    
+
 	return retVal;
 }
 
