@@ -253,6 +253,7 @@
 #define ATTR_HAS_REMOTE_SYSCALLS  "HasRemoteSyscalls"
 #define ATTR_HAS_SINGULARITY "HasSingularity"
 #define ATTR_HAS_TDP  "HasTDP"
+#define ATTR_HAS_TRANSFER_INPUT_REMAPS "HasTransferInputRemaps"
 #define ATTR_HAS_SOAP_API  "HasSOAPInterface"
 #define ATTR_HAS_WIN_RUN_AS_OWNER  "HasWindowsRunAsOwner"
 #define ATTR_HAS_VM  "HasVM"

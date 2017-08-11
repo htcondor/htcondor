@@ -1036,7 +1036,7 @@ linked_recently(char const *fname, time_t delta)
 {
     struct stat fileStat;            
     if( lstat( fname, &fileStat ) != 0) {
-        dprintf(D_ALWAYS, "preen.cpp: Failed to open link %s (errno %d)\n", errno);
+        dprintf(D_ALWAYS, "preen.cpp: Failed to open link %s (errno %d)\n", fname, errno);
         return false;
     }
 		// extend the window of what it means to have been touched "recently"
