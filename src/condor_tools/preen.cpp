@@ -1037,6 +1037,7 @@ touched_recently(char const *fname,time_t delta)
     Similar to touched_recently, but uses lstat instead of regular stat to look
     at the link inodes directly (instead of the inodes they target)
 */
+#ifdef HAVE_HTTP_PUBLIC_FILES
 bool
 linked_recently(char const *fname, time_t delta)
 {
@@ -1052,3 +1053,4 @@ linked_recently(char const *fname, time_t delta)
 	}
 	return true;
 }
+#endif

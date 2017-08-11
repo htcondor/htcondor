@@ -100,7 +100,7 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 		return (false);
 	}
 
-    // Jump to root privileges to ensure we can write a link in the webroot dir
+    // Jump to condor privileges to ensure we can write a link in the webroot dir
     priv_state priv = set_root_priv();
 
 	const char *const targetLink = dircat(goodPath, newLink.c_str()); // needs to be freed
