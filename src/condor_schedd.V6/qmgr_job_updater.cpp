@@ -159,12 +159,14 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT_TIME );
 	common_job_queue_attrs->insert( ATTR_NUM_JOB_COMPLETIONS );
 
-	// FIXME: Add PostExit[Code,Signal,BySignal].
 	// FIXME: What I'd actually like is a way to queue all attributes
 	// not in any whitelist for delivery with the last update.
 	common_job_queue_attrs->insert( "PreExitCode" );
 	common_job_queue_attrs->insert( "PreExitSignal" );
 	common_job_queue_attrs->insert( "PreExitBySignal" );
+	common_job_queue_attrs->insert( "PostExitCode" );
+	common_job_queue_attrs->insert( "PostExitSignal" );
+	common_job_queue_attrs->insert( "PostExitBySignal" );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
