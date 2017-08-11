@@ -83,7 +83,6 @@ void check_log_dir();
 void rec_lock_cleanup(const char *path, int depth, bool remove_self = false);
 void check_tmp_dir();
 void check_daemon_sock_dir();
-void check_public_files_webroot_dir();
 void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
 void produce_output();
@@ -97,6 +96,10 @@ bool is_myproxy_file( const char *name );
 bool is_ccb_file( const char *name );
 bool touched_recently(char const *fname,time_t delta);
 bool linked_recently(char const *fname,time_t delta);
+
+#ifdef HAVE_HTTP_PUBLIC_FILES
+void check_public_files_webroot_dir();
+#endif
 
 /*
   Tell folks how to use this program.
@@ -185,8 +188,10 @@ main( int argc, char *argv[] )
 	check_execute_dir();
 	check_log_dir();
 	check_daemon_sock_dir();
-    check_public_files_webroot_dir();
 	check_tmp_dir();
+#ifdef HAVE_HTTP_PUBLIC_FILES
+    check_public_files_webroot_dir();
+#endif
 
 		// Produce output, either on stdout or by mail
 	if( !BadFiles->isEmpty() ) {
@@ -739,6 +744,7 @@ check_daemon_sock_dir()
   Scan the webroot directory used for public input files. Remove any links
   more than a week old, or that do not point to valid files.
 */
+#ifdef HAVE_HTTP_PUBLIC_FILES
 void 
 check_public_files_webroot_dir() 
 {
@@ -767,6 +773,7 @@ check_public_files_webroot_dir()
         }
 	}
 }
+#endif
 
 void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 #if !defined(WIN32)
