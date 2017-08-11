@@ -90,8 +90,7 @@ class QmgmtPeer {
 
 
 #define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
-#define STORE_NUM_PROCS_IN_CLUSTER_OBJECT 1 // get rid of ClusterSizeHashTable and use the JobQueueCluster object for refcounting.
-#define TJ_REFACTOR_CLUSTER_REFCOUNTING 1
+//#define TJ_REFACTOR_CLUSTER_REFCOUNTING 1 // move cluster ref counting from a qmgmt hashtable into the JobQueueCluster object
 
 #define JQJ_CACHE_DIRTY_JOBOBJ        0x00001 // set when an attribute cached in the JobQueueJob that doesn't have it's own flag has changed
 #define JQJ_CACHE_DIRTY_SUBMITTERDATA 0x00002 // set when an attribute that affects the submitter name is changed
@@ -146,12 +145,8 @@ public:
 	struct SubmitterData * submitterdata;
 	struct OwnerInfo * ownerinfo;
 protected:
-#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
 	JobQueueCluster * parent; // job pointer back to the 
 	qelm qe;
-#else
-	JobQueueCluster * link;
-#endif
 
 public:
 	JobQueueJob(int _etype=0)
@@ -165,12 +160,7 @@ public:
 		, autocluster_id(0)
 		, submitterdata(NULL)
 		, ownerinfo(NULL)
-#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
 		, parent(NULL)
-#else
-		, link(NULL)
-#endif
-		//, future_num_procs_or_hosts(0)
 	{}
 	virtual ~JobQueueJob() {};
 
@@ -204,15 +194,7 @@ public:
 	void PopulateFromAd(); // populate this structure from contained ClassAd state
 
 	// if this object is a job object, it can be linked to it's cluster object
-#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
 	JobQueueCluster * Cluster() { if (entry_type == entry_type_job) return parent; return NULL; }
-#else
-	JobQueueCluster * Cluster() { if (entry_type == entry_type_job) return link; return NULL; }
-	void SetCluster(JobQueueCluster* _link) {
-		if (entry_type == entry_type_unknown) entry_type = entry_type_job;
-		if (entry_type == entry_type_job) link = _link;
-	}
-#endif
 };
 
 // structure of job_queue hashtable entries for clusters.
@@ -221,78 +203,33 @@ public:
 	JobFactory * factory; // this will be non-null only for cluster ads, and only when the cluster is doing late materialization
 protected:
 	int num_procs; // number of materialized jobs in this cluster that the schedd is currently tracking.
-#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-	// we use these to decide if it's ok to have a DestroyCluster in the current transaction
-	int num_attach_pending; // number NewProcs in uncommitted transaction
-	int num_detach_pending; // number of DestroyProcs in uncommitted transactions
-#else
-	int num_pending; // number of materialized jobs that this cluster will have when a pending transaction is committed.
-#endif
 
 public:
 	JobQueueCluster(JOB_ID_KEY & job_id)
 		: JobQueueJob(entry_type_cluster)
 		, factory(NULL)
 		, num_procs(0)
-#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-		, num_attach_pending(0)
-		, num_detach_pending(0)
-#else
-		, num_pending(0)
-#endif
 		{
 			jid.cluster = job_id.cluster;
 			jid.proc = -1;
-#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-			this->parent = NULL;
-#else
-			link = NULL; 
-#endif
+			parent = NULL;
 		}
 	virtual ~JobQueueCluster();
 
 	int NumProcs() { return num_procs; }
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
+	int SetNumProcs(int _num_procs) { num_procs = _num_procs; return num_procs; }
 	void AttachJob(JobQueueJob * job) {
 		if ( ! job) return;
-		++num_procs;
-		num_attach_pending = 0; // attach is no longer pending.
 		qe.append_tail(job->qe);
 		job->parent = this;
 	}
 	void DetachJob(JobQueueJob * job) {
 		--num_procs;
-		num_detach_pending = 0; // detach is no longer pending.
 		job->qe.detach();
 		job->parent = NULL;
 	}
 	bool HasAttachedJobs() { return ! qe.empty(); }
 	void DetachAllJobs(); // When you absolutely positively need to free this class...
-
-	// returns the number of procs that will be attached after committing the current transaction.
-	int NumProcsAfterCommit() { return num_procs + num_attach_pending - num_detach_pending; }
-	void AttachPending() { ++num_attach_pending; }
-	void DetachPending() { ++num_detach_pending; }
-	void ClearPending() { num_attach_pending = num_detach_pending = 0; }
-#else
-	int IncrementNumProcs() { ++num_procs; return num_procs; }
-	int DecrementNumProcs() { --num_procs; return num_procs; }
-	int IncrementNumProcsPending() { ++num_pending; return num_pending; }
-	int DecrementNumProcsPending() { --num_pending; return num_pending; }
-	void ClearPending() { num_pending = 0; }
-	void SwapPending() { int tmp = num_procs; num_procs = num_pending; num_pending = tmp; }
-#endif
-#else
-	int SetNumProcs(int _num_procs) { num_procs = _num_procs; return num_procs; }
-#endif
-
-#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-protected:
-	void append_to_list(JobQueueJob * job) {
-		qe.append_tail(job->qe);
-	}
-#endif
 };
 
 

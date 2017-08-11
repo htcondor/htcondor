@@ -123,7 +123,7 @@ public:
 	// returns the first row selected by the slice (if any)
 	int FirstSelectedRow() {
 		if (fea.foreach_mode == foreach_not) return 0;
-		int num_rows = (fea.foreach_mode = foreach_from_async) ? INT_MAX : fea.items.number();
+		int num_rows = (fea.foreach_mode == foreach_from_async) ? INT_MAX : fea.items.number();
 		if (num_rows <= 0) return -1;
 		if (fea.slice.selected(0, num_rows))
 			return 0;
@@ -505,7 +505,6 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	if (rval < 0) {
 		if ( ! already_in_transaction) {
 			AbortTransaction();
-			ClusterAd->ClearPending();
 		}
 		return rval; // failed instantiation
 	}
@@ -610,9 +609,10 @@ int JobFactory::LoadDigest(MacroStream &ms, std::string & errmsg)
 // returns true when the row data is not yet loaded, but might be available if you try again later.
 bool JobFactory::RowDataIsLoading(int row)
 {
+	//PRAGMA_REMIND("TODO: keep only unused items in the item list.")
+
 	if (fea.foreach_mode == foreach_from_async) {
 
-		PRAGMA_REMIND("TODO: keep only unused items in the item list.")
 		// put all of the items we have read so far into the item list
 		MyString str;
 		while (reader.output().readLine(str, false)) {
@@ -621,11 +621,11 @@ bool JobFactory::RowDataIsLoading(int row)
 		}
 
 		if (reader.done_reading()) {
-			if (reader.error_code()) {
+			if ( ! reader.eof_was_read()) {
 				std::string filename;
-				dprintf(D_ALWAYS, "failed to read all of the item data from %s\n", fea.items_filename.Value());
+				dprintf(D_ALWAYS, "failed to read all of the item data from '%s', error %d\n", fea.items_filename.Value(), reader.error_code());
 			}
-			// read all we are going to, so close the reader now.
+			// we have read all we are going to, so close the reader now.
 			reader.close();
 			reader.clear();
 			fea.foreach_mode = foreach_from;

@@ -217,8 +217,6 @@ JOB_ID_KEY_BUF HeaderKey(0,0);
 
 ForkWork schedd_forker;
 
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-#else
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
 static inline unsigned int compute_clustersize_hash(const int &key) {
@@ -226,7 +224,6 @@ static inline unsigned int compute_clustersize_hash(const int &key) {
 }
 typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
-#endif
 static int TotalJobsCount = 0;
 static std::set<int> ClustersNeedingCleanup;
 static int defer_cleanup_timer_id = -1;
@@ -321,20 +318,15 @@ ClassAd* ConstructClassAdLogTableEntry<JobQueueJob*>::New(const char * key, cons
 	}
 }
 
-// detach all of the procs from a cluster. if we get here and the number of procs are non-zero
-// there is a good chance that we will crash somewhere else in the schedd when some bit of code
-// tries to do an attribute lookup on a proc ad that we detach here - because it's someone elses
-// job to unchain the proc ads from this cluster ad, and if we get here with a non-empty attachment
-// list, the unchain was probably skipped also...
+// detach all of the procs from a cluster, we really hope that the list of attached proc
+// is empty before we get to the ::Delete call below, but just in case it isn't do the detach here.
 void JobQueueCluster::DetachAllJobs() {
 	while (qelm *q = qe.remove_head()) {
 		JobQueueJob * job = q->as<JobQueueJob>();
 		job->Unchain();
 		job->parent = NULL;
 	}
-	num_procs = 0;
 }
-
 
 // This is where we can clean up any data structures that refer to the job object
 void
@@ -386,11 +378,8 @@ ClusterCleanup(int cluster_id)
 		submit_digest = digest.c_str();
 	}
 
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-#else
 	// remove entry in ClusterSizeHashTable 
 	ClusterSizeHashTable->remove(cluster_id);
-#endif
 
 	// delete the cluster classad
 	JobQueue->DestroyClassAd( key );
@@ -486,7 +475,9 @@ JobMaterializeTimerCallback()
 						total_new_jobs += num_materialized;
 					} else {
 						int next_row = 0;
-						if (GetAttributeInt(cluster_id, -1, ATTR_JOB_MATERIALIZE_NEXT_ROW, &next_row) < 0) { next_row = 0; }
+						if (GetAttributeInt(cluster_id, -1, ATTR_JOB_MATERIALIZE_NEXT_ROW, &next_row) < 0) {
+							next_row = 0;
+						}
 						dprintf(D_MATERIALIZE | D_VERBOSE, "cluster %d has_jobs=%d next_row=%d\n", cluster_id, cad->HasAttachedJobs(), next_row);
 
 						// if we didn't materialize any jobs, the cluster has no attached jobs, and
@@ -556,32 +547,7 @@ DeferredClusterCleanupTimerCallback()
 		if ( ! JobQueue) continue;
 
 		bool do_cleanup = true;
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-		JobQueueCluster * clusterad = GetClusterAd(cluster_id);
-		if ( ! clusterad) {
-			// if no clusterad in the job queue, there is nothing to cleanup or materialize, so just skip it.
-			dprintf(D_ALWAYS, "\tWARNING: DeferredClusterCleanupTimerCallback could not find cluster ad for cluster %d\n", cluster_id);
-			continue;
-		}
-		ASSERT(clusterad->IsCluster());
-		int numOfProcs = clusterad->NumProcs();
-		do_cleanup = numOfProcs <= 0;
-		dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has %d procs, setting do_cleanup=%d\n", cluster_id, numOfProcs, do_cleanup);
 
-		// get the clusterad, and have it materialize factory jobs if any are desired
-		// if we materalized any jobs, then cleanup is cancelled.
-		if (scheduler.getAllowLateMaterialize()) {
-			if (clusterad->factory) {
-				dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has job factory, invoking it.\n", cluster_id);
-				int num_materialized = MaterializeJobs(clusterad);
-				if (num_materialized > 0) {
-					total_new_jobs += num_materialized;
-					do_cleanup = false;
-				}
-				dprintf(D_MATERIALIZE, "cluster %d job factory invoked, %d jobs materialized%s\n", cluster_id, num_materialized, do_cleanup ? ", doing cleanup" : "");
-			}
-		}
-#else
 		// first get the proc count for this cluster, if it is zero then we *might* want to do cleanup
 		int *numOfProcs = NULL;
 		if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
@@ -611,7 +577,6 @@ DeferredClusterCleanupTimerCallback()
 				dprintf(D_MATERIALIZE, "cluster %d job factory invoked, %d jobs materialized%s\n", cluster_id, num_materialized, do_cleanup ? ", doing cleanup" : "");
 			}
 		}
-#endif
 
 		// if cleanup is still desired, do it now.
 		if (do_cleanup) {
@@ -644,8 +609,6 @@ ScheduleClusterForDeferredCleanup(int cluster_id)
 	}
 }
 
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-#else
 static
 int
 IncrementClusterSize(int cluster_num)
@@ -712,8 +675,6 @@ DecrementClusterSize(int cluster_id, JobQueueCluster * clusterAd)
 		return 0;
 	}
 }
-
-#endif
 
 static 
 void
@@ -1389,10 +1350,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	CheckSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
 	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>(),job_queue_name,max_historical_logs);
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-#else
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
-#endif
 	TotalJobsCount = 0;
 	jobs_added_this_transaction = 0;
 
@@ -1538,11 +1496,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			ad->Delete(ATTR_AUTO_CLUSTER_ID);
 			ad->SetUniverse(universe);
 			if (clusterad) {
-#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
 				clusterad->AttachJob(ad);
-#else
-				ad->SetCluster(clusterad);
-#endif
 				clusterad->SetUniverse(universe);
 				clusterad->autocluster_id = -1;
 			}
@@ -1694,19 +1648,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				JobQueueDirty = true;
 			}
 
-		#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-			TotalJobsCount++;
-		#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-			// this is now done by JobQueueCluster::AttachJob
-		#else
-			// count up number of procs in cluster, we use this to decide when it's ok to delete the cluster object
-			clusterad->IncrementNumProcs();
-		#endif
-		#else
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			int num_procs = IncrementClusterSize(cluster_num);
 			clusterad->SetNumProcs(num_procs);
-		#endif
 		}
 	} // WHILE
 
@@ -1803,12 +1747,9 @@ DestroyJobQueue( void )
 
 	DirtyJobIDs.clearAll();
 
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-#else
 		// There's also our hashtable of the size of each cluster
 	delete ClusterSizeHashTable;
 	ClusterSizeHashTable = NULL;
-#endif
 	TotalJobsCount = 0;
 
 		// Also, clean up the array of super users
@@ -2504,12 +2445,7 @@ NewCluster()
 		return -1;
 	}
 
-
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-	int total_jobs = TotalJobsCount + jobs_added_this_transaction;
-#else
 	int total_jobs = TotalJobsCount;
-#endif
 
 		//
 		// I have seen a weird bug where the getMaxJobsSubmitted() returns
@@ -2580,13 +2516,7 @@ NewProc(int cluster_id)
 		return -1;
 	}
 
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-	int total_jobs = TotalJobsCount + jobs_added_this_transaction;
-#else
-	int total_jobs = TotalJobsCount;
-#endif
-
-	if ( total_jobs >= scheduler.getMaxJobsSubmitted() ) {
+	if ( TotalJobsCount >= scheduler.getMaxJobsSubmitted() ) {
 		dprintf(D_ALWAYS,
 			"NewProc(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
 		errno = EINVAL;
@@ -2642,13 +2572,7 @@ NewProc(int cluster_id)
 	}
 
 	proc_id = next_proc_num++;
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-	// instead of incrementing TotalJobsCount here, we will just use
-	// TotalJobsCount + jobs_added_this_transaction to calculate the submitter limit
-	// then update TotalJobsCount in commit transaction.
-#else
 	IncrementClusterSize(cluster_id);
-#endif
 	return NewProcInternal(cluster_id, proc_id);
 }
 
@@ -2742,16 +2666,8 @@ int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * Cl
 {
 	int ClusterId = ClusterAd->jid.cluster;
 
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-	#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-	ClusterAd->AttachPending(); // make sure that the cluster ad cannot be removed until we commit or abort this transaction
-	#else
-	ClusterAd->IncrementNumProcs();
-	#endif
-#else
 	int num_procs = IncrementClusterSize(ClusterId);
 	ClusterAd->SetNumProcs(num_procs);
-#endif
 	NewProcInternal(ClusterId, ProcId);
 
 	int rval = SetAttributeInt(ClusterId, ProcId, ATTR_PROC_ID, ProcId, flags | SetAttribute_LateMaterialization);
@@ -2963,17 +2879,7 @@ int DestroyProc(int cluster_id, int proc_id)
 
 	JobQueue->DestroyClassAd(key);
 
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-	#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-	if (clusterad) {
-		clusterad->DetachPending();
-	}
-	#else
-	if (clusterad) { clusterad->DecrementNumProcs(); }
-	#endif
-#else
 	DecrementClusterSize(cluster_id, clusterad);
-#endif
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
@@ -3003,44 +2909,10 @@ int DestroyProc(int cluster_id, int proc_id)
 				stillLooking = false;
 			} else {
 				JobQueue->DestroyClassAd(otherKey);
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-	#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-				if (clusterad) { clusterad->DetachPending(); }
-	#else
-				if (clusterad) { clusterad->DecrementNumProcs(); }
-	#endif
-#else
 				DecrementClusterSize(cluster_id, clusterad);
-#endif
 			}
 		}
 	}
-
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-	if (clusterad) {
-		bool cleanup_now = false;
-	#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-		if (clusterad->NumProcsAfterCommit() <= 0) {
-			cleanup_now = true;
-			if (scheduler.getAllowLateMaterialize() && ! JobFactoryAllowsClusterRemoval(clusterad)) {
-				ScheduleClusterForJobMaterializeNow(cluster_id);
-				cleanup_now = false;
-			}
-		}
-	#else
-		if (clusterad->NumProcs() <= 0) {
-			cleanup_now = true;
-			if (scheduler.getAllowLateMaterialize() && ! JobFactoryAllowsClusterRemoval(clusterad)) {
-				ScheduleClusterForDeferredCleanup(cluster_id);
-				cleanup_now = false;
-			}
-		}
-	#endif
-		// If this is the last job in the cluster, remove the initial
-		//    checkpoint file and the entry in the ClusterSizeHashTable.
-		if (cleanup_now) { ClusterCleanup(cluster_id); }
-	}
-#endif
 
 	if( !already_in_transaction ) {
 			// For performance, use a NONDURABLE transaction.  If we crash
@@ -4730,11 +4602,6 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 		JobQueueJob *procad = NULL;
 		JobQueueCluster *clusterad = NULL;
 
-	#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-		TotalJobsCount += jobs_added_this_transaction;
-		jobs_added_this_transaction = 0;
-	#endif
-
 		int counter = 0;
 		int ad_keys_size = new_ad_keys.size();
 		std::list<std::string>::iterator it;
@@ -4827,11 +4694,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 
 					// make sure the job objd and cluster object are populated
 				procad->jid = job_id;
-	#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
 				clusterad->AttachJob(procad);
-	#else
-				procad->SetCluster(clusterad);
-	#endif
 				procad->PopulateFromAd();
 				procad->ownerinfo = ownerinfo;
 
@@ -4925,48 +4788,6 @@ void
 AbortTransactionAndRecomputeClusters()
 {
 	if ( JobQueue->AbortTransaction() ) {
-#ifdef STORE_NUM_PROCS_IN_CLUSTER_OBJECT
-		/*	If we made it here, a transaction did exist that was not
-			committed, and we now aborted it.  This would happen if 
-			somebody hit ctrl-c on condor_rm or condor_status, etc,
-			or if any of these client tools bailed out due to a fatal error.
-			Because the removal of ads from the queue has been backed out,
-			we need to "back out" from any counts of pending add or remove
-			in the cluster objects. for now, we brute force it by walking
-			the entire job queue.
-			*/
-	#ifdef TJ_REFACTOR_CLUSTER_REFCOUNTING
-		JobQueueJob *job;
-		JobQueue->StartIterateAllClassAds();
-		while (JobQueue->Iterate(job)) {
-			if ( ! job->IsCluster()) continue; // ignore header and proc ads
-			JobQueueCluster* cad = static_cast<JobQueueCluster*>(job);
-			cad->ClearPending();
-		}
-	#else
-		JobQueueJob *job;
-		JobQueue->StartIterateAllClassAds();
-		while (JobQueue->Iterate(job)) {
-			if ( ! job->IsCluster()) continue; // ignore header and proc ads
-			JobQueueCluster* cad = static_cast<JobQueueCluster*>(job);
-			cad->ClearPending();
-		}
-
-		JobQueue->StartIterateAllClassAds();
-		while (JobQueue->Iterate(job)) {
-			if (!job->IsJob()) continue; // ignore header and cluster ads
-			job->Cluster()->IncrementNumProcsPending();
-		}
-
-		JobQueue->StartIterateAllClassAds();
-		while (JobQueue->Iterate(job)) {
-			if ( ! job->IsCluster()) continue; // ignore header and proc ads
-			JobQueueCluster* cad = static_cast<JobQueueCluster*>(job);
-			cad->SwapPending();
-			cad->ClearPending();
-		}
-	#endif
-#else
 		/*	If we made it here, a transaction did exist that was not
 			committed, and we now aborted it.  This would happen if 
 			somebody hit ctrl-c on condor_rm or condor_status, etc,
@@ -5005,7 +4826,6 @@ AbortTransactionAndRecomputeClusters()
 
 			}
 		}
-#endif
 	}	// end of if JobQueue->AbortTransaction == True
 }
 
