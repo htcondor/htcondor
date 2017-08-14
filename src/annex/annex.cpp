@@ -295,6 +295,7 @@ createConfigTarball(	const char * configDir,
 		free(tarballName);
 		return false;
 	}
+	close( tfd );
 
 	// FIXME: Rewrite without system().
 	std::string command;
@@ -314,12 +315,10 @@ createConfigTarball(	const char * configDir,
 		formatstr( tarballError, "unable to change back to working dir '%s' (%d): '%s'",
 			cwd, errno, strerror( errno ) );
 		free(cwd);
-		free(tarballName);
 		return false;
 	}
-	close( tfd );
 	free( cwd );
-	free(tarballName);
+
 	return true;
 }
 
