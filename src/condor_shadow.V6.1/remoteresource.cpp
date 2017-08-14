@@ -1449,12 +1449,16 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_READS, update_ad);
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITES, update_ad);
 
-	// FIXME: Add PostExit[Code,Signal,BySignal].  Also, this is the wrong
-	// way to do this: we (a) probably don't want a whitelist here anyway,
-	// and (b) should implement all of the copies as a table anyway.
+	// FIXME: If we're convinced that we want a whitelist here (chirp
+	// would seem to make a mockery of that), we should at least rewrite
+	// all of the copies to be based on a table.
 	jobAd->CopyAttribute( "PreExitCode", update_ad );
 	jobAd->CopyAttribute( "PreExitSignal", update_ad );
 	jobAd->CopyAttribute( "PreExitBySignal", update_ad );
+
+	jobAd->CopyAttribute( "PostExitCode", update_ad );
+	jobAd->CopyAttribute( "PostExitSignal", update_ad );
+	jobAd->CopyAttribute( "PostExitBySignal", update_ad );
 
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics

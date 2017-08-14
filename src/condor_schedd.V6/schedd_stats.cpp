@@ -336,8 +336,18 @@ ScheddOtherStats::~ScheddOtherStats()
 	sets.clear();
 }
 
+ScheddOtherStatsMgr::~ScheddOtherStatsMgr()
+{
+	Clear();
+}
+
 void ScheddOtherStatsMgr::Clear()
 {
+	ScheddOtherStats* po = NULL;
+	pools.startIterations();
+	while (pools.iterate(po)) {
+		delete po;
+	}
 	pools.clear();
 }
 

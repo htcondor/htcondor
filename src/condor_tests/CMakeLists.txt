@@ -316,8 +316,9 @@ if (BUILD_TESTING)
 	condor_pl_test(classad_unit_test "Run classads Unit Tests" "core;quick;full;quicknolink")
 	#condor_pl_test(classad_cache_unit_test "Run classads parse test with and without classad caching" "core;quick;full;quicknolink")
 	condor_pl_test(unit_test_async_fread "Run MyAsyncFileReader Unit Tests" "core;quick;full;quicknolink")
-	condor_pl_test(consumption_policy_unit_test, "Run Consumption policy unit tests", "core;quick;full;quicknolink")
-	condor_pl_test(ring_buffer_unit_test, "Run ring buffer unit tests", "core;quick;full;quicknolink")
+	#need to copy the underlying exe into condor_tests directory before these tests can be run
+	#condor_pl_test(consumption_policy_unit_test "Run Consumption policy unit tests" "core;quick;full;quicknolink")
+	#condor_pl_test(ring_buffer_unit_test "Run ring buffer unit tests" "core;quick;full;quicknolink")
 	# Not in use till endurance testing done.
 	# condor_pl_test(lib_sysapi "Run SysApi Tests" "core;quick;full;quicknolink")
 	# condor_pl_test(lib_procapi "Run ProcApi Tests" "core;quick;full;quicknolink")

@@ -518,6 +518,7 @@ match_rec::~match_rec()
 	if( pool ) {
 		free(pool);
 	}
+	delete auth_hole_id;
 
 		// If we are shuting down, the daemonCore instance will be null
 		// and any use of it will cause a core dump.  At best.
@@ -842,6 +843,9 @@ Scheduler::~Scheduler()
 		}
 		delete this->cronTabs;
 	}
+
+	delete slotWeightOfJob;
+	delete slotWeightGuessAd;
 }
 
 
@@ -14065,6 +14069,7 @@ Scheduler::unlinkMrec(match_rec* match)
 			        match->auth_hole_id->Value());
 		}
 		delete match->auth_hole_id;
+		match->auth_hole_id = NULL;
 	}
 
 		// Remove this match from the associated shadowRec.

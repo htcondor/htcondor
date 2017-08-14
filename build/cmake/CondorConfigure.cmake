@@ -572,6 +572,7 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	glibc_detect( GLIBC_VERSION )
 
 	set(HAVE_GNU_LD ON)
+    option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
 elseif(${OS_NAME} STREQUAL "AIX")
 	set(AIX ON)
@@ -977,6 +978,7 @@ set (CONDOR_COLLECTOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_collector.V6)
 set (CONDOR_NEGOTIATOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_negotiator.V6)
 set (CONDOR_SCHEDD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_schedd.V6)
 set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
+
 ###########################################
 
 ###########################################

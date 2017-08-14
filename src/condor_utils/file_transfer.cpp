@@ -40,6 +40,7 @@
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
 #include "file_transfer_db.h"
+#include "mk_cache_links.h"
 #include "subsystem_info.h"
 #include "condor_url.h"
 #include "my_popen.h"
@@ -101,6 +102,7 @@ extern "C" {
 	int		get_random_int();
 	int		set_seed( int );
 }
+
 
 struct upload_info {
 	FileTransfer *myobj;
@@ -324,6 +326,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	} else {
 		InputFiles = new StringList(NULL,",");
 	}
+	StringList PubInpFiles;
+	if (Ad->LookupString(ATTR_PUBLIC_INPUT_FILES, &dynamic_buf) == 1) {
+	      // Add PublicInputFiles to InputFiles list.
+	      // If these files will be transferred via web server cache,
+	      // they will be removed from InputFiles.
+	      PubInpFiles.initializeFromString(dynamic_buf);
+	      free(dynamic_buf);
+	      dynamic_buf = NULL;
+	      const char *path;
+	      PubInpFiles.rewind();
+	      while ((path = PubInpFiles.next()) != NULL) {
+		  if (!InputFiles->file_contains(path))
+		      InputFiles->append(path);			
+	      }
+	}
 	if (Ad->LookupString(ATTR_JOB_INPUT, buf, sizeof(buf)) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf) ) {			
@@ -331,7 +348,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
-
+	
 	// If we are spooling, we want to ignore URLs
 	// We want the file transfer plugin to be invoked at the starter, not the schedd.
 	// See https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=2162
@@ -346,7 +363,13 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		char *list = InputFiles->print_to_string();
 		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
 		free(list);
-	}
+	} 
+#ifdef HAVE_HTTP_PUBLIC_FILES    
+    else if (IsServer() && !is_spool && param_boolean("ENABLE_HTTP_PUBLIC_FILES", false)) {
+		// For files to be cached, change file names to URLs
+		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
+    }
+#endif
 	
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf, sizeof(buf)) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
@@ -441,7 +464,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			xferExec=1;
 		}
 
-		if ( xferExec && !InputFiles->file_contains(ExecFile) ) {
+		if ( xferExec && !InputFiles->file_contains(ExecFile) &&
+		  !PubInpFiles.file_contains(ExecFile)) {
+			// Don't add exec file if it already is in cached list
 			InputFiles->append(ExecFile);	
 		}	
 	} else if ( IsClient() && !simple_init ) {
@@ -575,8 +600,16 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
-	if(IsServer() && !spooling_output) {
-		if(!InitDownloadFilenameRemaps(Ad)) return 0;
+	if(!spooling_output) {
+		if(IsServer()) {
+			if(!InitDownloadFilenameRemaps(Ad)) return 0;
+		} 
+#ifdef HAVE_HTTP_PUBLIC_FILES
+        else if( !simple_init ) {
+			// Only add input remaps for starter receiving
+			AddInputFilenameRemaps(Ad);
+		}
+#endif
 	}
 
 	CondorError e;
@@ -622,6 +655,34 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	}
 	return 1;
 }
+
+#ifdef HAVE_HTTP_PUBLIC_FILES
+int
+FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
+	dprintf(D_FULLDEBUG,"Entering FileTransfer::AddInputFilenameRemaps\n");
+
+	if(!Ad) {
+		dprintf(D_FULLDEBUG, "FileTransfer::AddInputFilenameRemaps -- job ad null\n");
+	  	return 1;
+	}
+	
+	download_filename_remaps = "";
+	char *remap_fname = NULL;
+
+	// when downloading files from the job, apply input name remaps
+	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,&remap_fname)) {
+		AddDownloadFilenameRemaps(remap_fname);
+		free(remap_fname);
+		remap_fname = NULL;
+	}
+	if(!download_filename_remaps.IsEmpty()) {
+		dprintf(D_FULLDEBUG, "FileTransfer: input file remaps: %s\n",download_filename_remaps.Value());
+	}
+	return 1;
+}
+#endif
+
+
 int
 FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 	bool use_file_catalog) 
@@ -4267,6 +4328,23 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
     // Close the plugin
 	int plugin_status = my_pclose(plugin_pipe);
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
+
+	// there is a unique issue when invoking plugins as root where shared
+	// libraries defined as relative to $ORIGIN in the RUNPATH will not
+	// be loaded for security reasons.  in this case the dynamic loader
+	// exits with 127 before even calling main() in the plugin.
+	//
+	// if we suspect this is the case, let's print a hint since it's
+	// otherwise very difficult to understand what is happening and why
+	// this failed.
+	if (!drop_privs && plugin_status == 32512) {
+		dprintf (D_ALWAYS, "FILETRANSFER: ERROR!  You are invoking plugins as root because "
+			"you have RUN_FILETRANSFER_PLUGINS_WITH_ROOT set to TRUE.  However, some of "
+			"the shared libraries in your plugin are likely paths that are relative to "
+			"$ORIGIN, and then dynamic library loader refuses to load those for security "
+			"reasons.  Run 'ldd' on your plugin and move needed libraries to a system "
+			"location controlled by root. Good luck!\n");
+	}
 
 	// clean up
 	free(method);

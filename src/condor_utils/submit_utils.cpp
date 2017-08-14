@@ -6960,6 +6960,27 @@ int SubmitHash::SetTransferFiles()
 		if ( input_files.Length() > 0 ) {
 			InsertJobExpr (input_files);
 		}
+#ifdef HAVE_HTTP_PUBLIC_FILES
+        char *public_input_files = 
+			submit_param(SUBMIT_KEY_PublicInputFiles, ATTR_PUBLIC_INPUT_FILES);
+		if (public_input_files) {
+			StringList pub_inp_file_list(NULL, ",");
+			pub_inp_file_list.initializeFromString(public_input_files);
+			MyString unusedstr;
+			bool unusedbool = false;
+			// Process file list, but output string is for ATTR_TRANSFER_INPUT_FILES,
+			// so it's not used here.
+			process_input_file_list(&pub_inp_file_list, &unusedstr, &unusedbool, TransferInputSizeKb);
+			if (pub_inp_file_list.isEmpty() == false) {
+			  char *inp_file_str = pub_inp_file_list.print_to_string();
+			  if (inp_file_str) {
+			    	InsertJobExprString(ATTR_PUBLIC_INPUT_FILES, inp_file_str);
+			  	free(inp_file_str);
+			  }
+			}
+			free(public_input_files);
+		} 
+#endif
 		if ( output_files.Length() > 0 ) {
 			InsertJobExpr (output_files);
 		}
