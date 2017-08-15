@@ -74,17 +74,18 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 
 
 static bool MakeLink(const char* srcFile, const string &newLink) {
-	const char *const webRootDir = param("HTTP_PUBLIC_FILES_ROOT_DIR");
-	if (webRootDir == NULL) {
+	std::string webRootDir;
+	param(webRootDir, "HTTP_PUBLIC_FILES_ROOT_DIR");
+	if(webRootDir.empty()) {
 		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_DIR "
                         "not set! Falling back to regular file transfer\n");
 		return (false);
 	}
 	char goodPath[PATH_MAX];
-	if (realpath(webRootDir, goodPath) == NULL) {
+	if (realpath(webRootDir.c_str(), goodPath) == NULL) {
 		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_DIR "
                 "not a valid path: %s. Falling back to regular file transfer.\n", 
-                webRootDir);
+                webRootDir.c_str());
 		return (false);
     }
 	StatWrapper fileMode;
