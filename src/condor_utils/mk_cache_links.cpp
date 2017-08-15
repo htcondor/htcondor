@@ -73,20 +73,24 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 }
 
 
+// WARNING!  This code changes priv state.  Be very careful if modifying it.
+// Do not return in the block of code where the priv has been set to either
+// condor or root.  -zmiller
 static bool MakeLink(const char* srcFile, const string &newLink) {
-	const char *const webRootDir = param("HTTP_PUBLIC_FILES_ROOT_DIR");
-	if (webRootDir == NULL) {
+	std::string webRootDir;
+	param(webRootDir, "HTTP_PUBLIC_FILES_ROOT_DIR");
+	if(webRootDir.empty()) {
 		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_DIR "
                         "not set! Falling back to regular file transfer\n");
 		return (false);
 	}
 	char goodPath[PATH_MAX];
-	if (realpath(webRootDir, goodPath) == NULL) {
+	if (realpath(webRootDir.c_str(), goodPath) == NULL) {
 		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_DIR "
-                "not a valid path: %s. Falling back to regular file transfer.\n", 
-                webRootDir);
+			"not a valid path: %s. Falling back to regular file transfer.\n",
+			webRootDir.c_str());
 		return (false);
-    }
+	}
 	StatWrapper fileMode;
 	bool fileOK = false;
 	if (fileMode.Stat(srcFile) == 0) {
@@ -100,42 +104,145 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 		return (false);
 	}
 
-    // Jump to condor privileges to ensure we can write a link in the webroot dir
-    priv_state priv = set_root_priv();
 
+	// see how we should create the link.  There are a few options.
+	// 1) As the condor user.
+	// 2) As root, and then chown to the user.
+	// 3) As root, and then chown to some other user (like "httpd")
+	std::string link_owner;
+	param(link_owner, "HTTP_PUBLIC_FILES_USER");
+
+	uid_t link_uid = -1;
+	gid_t link_gid = -1;
+	bool  create_as_root = false;
+
+	priv_state priv = PRIV_UNKNOWN;
+
+	if (strcasecmp(link_owner.c_str(), "<user>") == 0) {
+		// we'll do everything in user priv except use root
+		// to create and chown the link
+
+		link_uid = get_user_uid();
+		link_gid = get_user_gid();
+		create_as_root = true;
+		priv = set_user_priv();
+	} else if (strcasecmp(link_owner.c_str(), "<condor>") == 0) {
+		// in this case we do everything as the condor user since they
+		// own the directory
+
+		priv = set_condor_priv();
+	} else {
+		// in this case we need to determine what uid they requested
+		// and then do everything as that user.  we set root priv and
+		// then temporarily assume the uid and gid of the specified
+		// user.
+
+		// has to be a username and not just a uid, since otherwise it
+		// isn't clear what gid we should use (if they aren't in the passwd
+		// file, for instance) and we also save on lookups.
+		bool isname = pcache()->get_user_ids(link_owner.c_str(), link_uid, link_gid);
+		if (!isname) {
+			dprintf(D_ALWAYS, "ERROR: unable to look up HTTP_PUBLIC_FILES_USER (%s)"
+				" in /etc/passwd.\n", link_owner.c_str());
+
+			// we ARE allowed to return here because we have not
+			// yet switched priv state in this case.
+			return false;
+		}
+
+		if (link_uid == 0 || link_gid == 0) {
+			dprintf(D_ALWAYS, "ERROR: HTTP_PUBLIC_FILES_USER (%s)"
+				" in /etc/passwd has UID 0.  Aborting.\n", link_owner.c_str());
+
+			// we ARE allowed to return here because we have not
+			// yet switched priv state in this case.
+			return false;
+		}
+
+
+		// now become the specified user for this operation.
+		priv = set_root_priv();
+		if (setegid(link_gid)) {}
+		if (seteuid(link_uid)) {}
+	}
+
+
+	// STARTING HERE, DO NOT RETURN FROM THIS FUNCTION WITHOUT RESETTING
+	// THE ORIGINAL PRIV STATE.
+
+	// we will now create or update the link
 	const char *const targetLink = dircat(goodPath, newLink.c_str()); // needs to be freed
 	bool retVal = false;
 	if (targetLink != NULL) {
-        // Check if target already exists
+		// Check if target already exists
 		if (fileMode.Stat(targetLink, StatWrapper::STATOP_LSTAT) == 0) { 
-			retVal = true; // Good enough if link exists, ok if update fails
-			// It is assumed that existing link points to srcFile
+			// Good enough if link exists, ok if update fails
+			retVal = true;
+
+			// It is assumed that existing link points to srcFile.
+			//
+			// I don't like this assumption.  I think we need to
+			// add username or uid to filename to prevent
+			// accidents/mischeif when two users happen to us the
+			// same file.  If user A then deletes or modifies the
+			// file, user B is stuck with a link they probably
+			// can't update.  To be fixed ASAP.  -zmiller
 			const StatStructType *statrec = fileMode.GetBuf();
 			if (statrec != NULL) {
 				time_t filemtime = statrec->st_mtime;
 				// Must be careful to operate on link, not target file.
+				//
+				// This should be done AS THE OWNER OF THE FILE.
 				if ((time(NULL) - filemtime) > 3600 && lutimes(targetLink, NULL) != 0) {
 					// Update mod time, but only once an hour to avoid excess file access
-		            dprintf(D_ALWAYS, "Could not update modification date on %s,"
-                                 "error = %s\n", targetLink, strerror(errno));
-		 	    }
-			} 
-            else { 
-                dprintf(D_ALWAYS, "Could not stat file %s\n", targetLink);
-            }
+					dprintf(D_ALWAYS, "Could not update modification date on %s,"
+						"error = %s\n", targetLink, strerror(errno));
+				}
+			} else {
+				dprintf(D_ALWAYS, "Could not stat file %s\n", targetLink);
+			}
+		} else {
+			// now create the link.  we may need to do this as root and chown
+			// it, depending on the create_as_root flag.  if that's false, just
+			// stay in the priv state we are in for creation and there's no need
+			// to chown.
+
+			priv_state link_priv = PRIV_UNKNOWN;
+			if (create_as_root) {
+				link_priv = set_root_priv();
+			}
+
+			if (symlink(srcFile, targetLink) == 0) {
+				// so far, so good!
+				retVal = true;
+			} else {
+				dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFile,
+					targetLink, strerror(errno));
+			}
+
+			if (create_as_root) {
+				// if we succesfully created the link, now chown to the user
+				if (retVal && lchown(targetLink, link_uid, link_gid) != 0) {
+					// chown didn't actually succeed, so this operation is now a failure.
+					retVal = false;
+
+					// destroy the evidence?
+					unlink(targetLink);
+
+					dprintf(D_ALWAYS, "Could not change ownership of %s to %i:%i, error = %s\n",
+						targetLink, link_uid, link_gid, strerror(errno));
+				}
+
+				// either way, reset priv state
+				set_priv(link_priv);
+			}
 		}
-        else if (symlink(srcFile, targetLink) == 0) {
-			retVal = true;
-		} 
-        else {
-            dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFile,
-			                        targetLink, strerror(errno));
-        }
-        delete [] targetLink;
+
+		delete [] targetLink;
 	}
 
-    // Return to original privilege level, and exit
-    set_priv(priv);    
+	// return to original privilege level, and exit
+	set_priv(priv);
 
 	return retVal;
 }
