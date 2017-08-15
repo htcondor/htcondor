@@ -34,7 +34,7 @@ When no arguments are specified,
 \Condor{top} displays the status 
 for the primary daemon
 based on the role of the current machine
-by scanning the \MacronNI{DAEMON\_LIST}
+by scanning the \MacroNI{DAEMON\_LIST}
 configuration setting.
 If multiple daemons are listed,
 \Condor{top} will monitor one of (in decreasing priority): 
@@ -128,25 +128,25 @@ The following subprocess stat columns may be displayed (*default):
     \textbf{Daemon Options}
     \OptItem{\Opt{---collector}}
             {Monitor \Condor{collector} ClassAds. If -n is not set,
-              the constraint ``Machine == \MacroNI{COLLECTOR_HOST}''
+              the constraint ``Machine == \MacroNI{COLLECTOR\_HOST}''
               will be used.}
     \OptItem{\Opt{---negotiator}}
             {Monitor \Condor{negotiator} ClassAds. If -n is not set,
-              the constraint ``Machine == \MacroNI{COLLECTOR_HOST}''
+              the constraint ``Machine == \MacroNI{COLLECTOR\_HOST}''
               will be used.}
     \OptItem{\Opt{---master}}
             {Monitor \Condor{master} ClassAds. If -n is not set,
-              the constraint ``Machine == \MacroNI{COLLECTOR_HOST}''
+              the constraint ``Machine == \MacroNI{COLLECTOR\_HOST}''
               will be used.}
     \OptItem{\Opt{---schedd}}
             {Monitor \Condor{schedd} ClassAds. If -n is not set,
-              the constraint ``Machine == \MacroNI{FULL_HOSTNAME}''
+              the constraint ``Machine == \MacroNI{FULL\_HOSTNAME}''
               will be tried, 
               otherwise the first \Condor{schedd} ClassAd
               returned from the \Condor{collector} will be used.}
     \OptItem{\Opt{---startd}}
             {Monitor \Condor{startd} ClassAds. If -n is not set,
-              the constraint ``Machine == \MacroNI{FULL_HOSTNAME}''
+              the constraint ``Machine == \MacroNI{FULL\_HOSTNAME}''
               will be tried, 
               otherwise the first \Condor{startd} ClassAd
               returned from the \Condor{collector} will be used.}

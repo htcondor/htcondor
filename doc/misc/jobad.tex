@@ -1342,6 +1342,161 @@ behavior changes:
   the parallel job has completed to consider the job finished.
   \end{description}
 
+%%% This is what the {Post,Pre}{Arg[ument]s,Env[ironment],Cmd}
+%%% attributes were called when they were documented in the condor_submit
+%%% man page, which was not the right place for them.
+\index{Starter pre and post scripts}
+
+%%% ClassAd attribute: PostArgs
+\index{ClassAd job attribute!PostArgs}
+\index{PostArgs!ClassAd job attribute}
+\item[\AdAttr{PostArgs}:] Defines the command-line arguments for the
+post command using the Old argument syntax. If both \AdAttr{PostArgs}
+and \AdAttr{PostArguments} exists, the former is ignored.
+
+%%% ClassAd attribute: PostArguments
+\index{ClassAd job attribute!PostArguments}
+\index{PostArguments!ClassAd job attribute}
+\item[\AdAttr{PostArguments}:] Defines the command-line arguments for the
+post command using the New argument syntax, excepting that double quotes must
+be escaped with a backslash instead of another double quote. If both
+\AdAttr{PostArgs} and \AdAttr{PostArguments} exists, the former is ignored.
+
+%%% ClassAd attribute: PostCmd
+\index{ClassAd job attribute!PostCmd}
+\index{PostCmd!ClassAd job attribute}
+\item[\AdAttr{PostCmd}:] A job in the vanilla, Docker, Java, or virtual machine
+universes may specify a command to run after the \SubmitCmd{Executable} has
+exited, but before file transfer is started.  Unlike a DAGMan POST script
+command, this command \emph{is} run on the execute machine; however, it
+is not run in the same environment as the \SubmitCmd{Executable}.  Instead,
+its environment is set by \AdAttr{PostEnv} or \AdAttr{PostEnvironment}.  Like
+the DAGMan POST script command, this command is not run in the same universe
+as the \SubmitCmd{Executable}; in particular, this command is not run in a
+Docker container, nor in a virtual machine, nor in Java.  This command is
+also not run with any of vanilla universe's features active, including (but
+not limited to): cgroups, PID namespaces, bind mounts, CPU affinity,
+Singularity, or job wrappers. This command is \emph{not}
+automatically transferred with the job, so if you're using file transfer,
+you must add it to the \SubmitCmd{transfer\_input\_files} list.
+
+If the specified command is in the job's execute directory, or any
+sub-directory, you should not set \SubmitCmd{vm\_no\_output\_vm}, as that
+will delete all the files in the job's execute directory before this
+command has a chance to run.  If you don't want any output back from
+your VM universe job, but you do want to run a post command, do not
+set \SubmitCmd{vm\_no\_output\_vm} and instead delete the job's execute
+directory in your post command.
+
+%%% ClassAd attribute: PostCmdExitBySignal
+\index{ClassAd job attribute!PostCmdExitBySignal}
+\index{PostCmdExitBySignal!ClassAd job attribute}
+\item[\AdAttr{PostCmdExitBySignal}:] If \AdAttr{SuccessPostExitCode} or
+\AdAttr{SuccessPostExitSignal} were set, and the post command has run,
+this attribute will true if the the post command exited on a signal and
+false if it did not.  It is otherwise unset.
+
+%%% ClassAd attribute: PostCmdExitCode
+\index{ClassAd job attribute!PostCmdExitCode}
+\index{PostCmdExitCode!ClassAd job attribute}
+\item[\AdAttr{PostCmdExitCode}:] If \AdAttr{SuccessPostExitCode} or
+\AdAttr{SuccessPostExitSignal} were set, the post command has run,
+and the post command did not exit on a signal, then this attribute will
+be set to the exit code.  It is otherwise unset.
+
+%%% ClassAd attribute: PostCmdExitSignal
+\index{ClassAd job attribute!PostCmdExitSignal}
+\index{PostCmdExitSignal!ClassAd job attribute}
+\item[\AdAttr{PostCmdExitSignal}:] If \AdAttr{SuccessPostExitCode} or
+\AdAttr{SuccessPostExitSignal} were set, the post command has run,
+and the post command exited on a signal, then this attribute will
+be set to that signal.  It is otherwise unset.
+
+%%% ClassAd attribute: PostEnv
+\index{ClassAd job attribute!PostEnv}
+\index{PostEnv!ClassAd job attribute}
+\item[\AdAttr{PostEnv}:] Defines the environment for the Postscript
+using the Old environment syntax. If both \AdAttr{PostEnv} and
+\AdAttr{PostEnvironment} exist, the former is ignored.
+
+%%% ClassAd attribute: PostEnvironment
+\index{ClassAd job attribute!PostEnvironment}
+\index{PostEnvironment!ClassAd job attribute}
+\item[\AdAttr{PostEnvironment}:] Defines the environment for the Postscript
+using the New environment syntax. If both \AdAttr{PostEnv} and
+\AdAttr{PostEnvironment} exist, the former is ignored.
+
+%%% ClassAd attribute: PreArgs
+\index{ClassAd job attribute!PreArgs}
+\index{PreArgs!ClassAd job attribute}
+\item[\AdAttr{PreArgs}:] Defines the command-line arguments for the
+pre command using the Old argument syntax. If both \AdAttr{PreArgs}
+and \AdAttr{PreArguments} exists, the former is ignored.
+
+%%% ClassAd attribute: PreArguments
+\index{ClassAd job attribute!PreArguments}
+\index{PreArguments!ClassAd job attribute}
+\item[\AdAttr{PreArguments}:] Defines the command-line arguments for the
+pre command using the New argument syntax, excepting that double quotes must
+be escape with a backslash instead of another double quote. If both
+\AdAttr{PreArgs} and \AdAttr{PreArguments} exists, the former is ignored.
+
+%%% ClassAd attribute: PreCmd
+\index{ClassAd job attribute!PreCmd}
+\index{PreCmd!ClassAd job attribute}
+\item[\AdAttr{PreCmd}:] A job in the vanilla, Docker, Java, or virtual machine
+universes may specify a command to run after file transfer (if any) completes
+but before the \SubmitCmd{Executable} is started. Unlike a DAGMan PRE script
+command, this command \emph{is} run on the execute machine; however, it
+is not run in the same environment as the \SubmitCmd{Executable}.  Instead,
+its environment is set by \AdAttr{PreEnv} or \AdAttr{PreEnvironment}.  Like
+the DAGMan POST script command, this command is not run in the same universe
+as the \SubmitCmd{Executable}; in particular, this command is not run in a
+Docker container, nor in a virtual machine, nor in Java.  This command is
+also not run with any of vanilla universe's features active, including (but
+not limited to): cgroups, PID namespaces, bind mounts, CPU affinity,
+Singularity, or job wrappers. This command is \emph{not}
+automatically transferred with the job, so if you're using file transfer,
+you must add it to the \SubmitCmd{transfer\_input\_files} list.
+
+%%% ClassAd attribute: PreCmdExitBySignal
+\index{ClassAd job attribute!PreCmdExitBySignal}
+\index{PreCmdExitBySignal!ClassAd job attribute}
+\item[\AdAttr{PreCmdExitBySignal}:] If \AdAttr{SuccessPreExitCode} or
+\AdAttr{SuccessPreExitSignal} were set, and the pre command has run,
+this attribute will true if the the pre command exited on a signal and
+false if it did not.  It is otherwise unset.
+
+%%% ClassAd attribute: PreCmdExitCode
+\index{ClassAd job attribute!PreCmdExitCode}
+\index{PreCmdExitCode!ClassAd job attribute}
+\item[\AdAttr{PreCmdExitCode}:] If \AdAttr{SuccessPreExitCode} or
+\AdAttr{SuccessPreExitSignal} were set, the pre command has run,
+and the pre command did not exit on a signal, then this attribute will
+be set to the exit code.  It is otherwise unset.
+
+%%% ClassAd attribute: PreCmdExitSignal
+\index{ClassAd job attribute!PreCmdExitSignal}
+\index{PreCmdExitSignal!ClassAd job attribute}
+\item[\AdAttr{PreCmdExitSignal}:] If \AdAttr{SuccessPreExitCode} or
+\AdAttr{SuccessPreExitSignal} were set, the pre command has run,
+and the pre command exited on a signal, then this attribute will
+be set to that signal.  It is otherwise unset.
+
+%%% ClassAd attribute: PreEnv
+\index{ClassAd job attribute!PreEnv}
+\index{PreEnv!ClassAd job attribute}
+\item[\AdAttr{PreEnv}:] Defines the environment for the prescript
+using the Old environment syntax. If both \AdAttr{PreEnv} and
+\AdAttr{PreEnvironment} exist, the former is ignored.
+
+%%% ClassAd attribute: PreEnvironment
+\index{ClassAd job attribute!PreEnvironment}
+\index{PreEnvironment!ClassAd job attribute}
+\item[\AdAttr{PreEnvironment}:] Defines the environment for the prescript
+using the New environment syntax. If both \AdAttr{PreEnv} and
+\AdAttr{PreEnvironment} exist, the former is ignored.
+
 %%% ClassAd attribute: PreJobPrio1
 \index{ClassAd job attribute!PreJobPrio1}
 \index{PreJobPrio1!job ClassAd attribute}
@@ -1674,7 +1829,59 @@ by the \Condor{negotiator} when it makes a match.
 \item[\AdAttr{SubmitterNegotiatingGroup}:]  The accounting group name under
 which the resource negotiated when it was claimed, 
 as set by the \Condor{negotiator}. 
- 
+
+%%% ClassAd attribute: SuccessPreExitBySignal
+\index{ClassAd job attribute!SuccessPreExitBySignal}
+\index{SuccessPreExitBySignal!ClassAd job attribute}
+\item[\AdAttr{SuccessPreExitBySignal}:] Specifies if a succesful pre command
+must exit with a signal.
+
+%%% ClassAd attribute: SuccessPreExitCode
+\index{ClassAd job attribute!SuccessPreExitCode}
+\index{SuccessPreExitCode!ClassAd job attribute}
+\item[\AdAttr{SuccessPreExitCode}:] Specifies the code with which the pre
+command must exit to be considered successful. Pre commands which are
+not successful cause the job to go on hold with \AdAttr{ExitCode} set to
+\Attr{PreCmdExitCode}. The exit status of a pre command without one of
+\AdAttr{SuccessPreExitCode} or \AdAttr{SuccessPreExitSignal} defined is
+ignored.
+
+%%% ClassAd attribute: SuccessPreExitSignal
+\index{ClassAd job attribute!SuccessPreExitSignal}
+\index{SuccessPreExitSignal!ClassAd job attribute}
+\item[\AdAttr{SuccessPreExitSignal}:] Specifies the signal on which the
+pre command must exit be considered successful. Pre commands which are not
+successful cause the job to go on hold with \AdAttr{ExitSignal} set to
+\AdAttr{PreCmdExitSignal}. The exit status of a pre command without one of
+\AdAttr{SuccessPreExitCode} or \AdAttr{SuccessPreExitSignal} defined is
+ignored.
+
+%%% ClassAd attribute: SuccessPostExitBySignal
+\index{ClassAd job attribute!SuccessPostExitBySignal}
+\index{SuccessPostExitBySignal!ClassAd job attribute}
+\item[\AdAttr{SuccessPostExitBySignal}:] Specifies if a succesful post command
+must exit with a signal.
+
+%%% ClassAd attribute: SuccessPostExitCode
+\index{ClassAd job attribute!SuccessPostExitCode}
+\index{SuccessPostExitCode!ClassAd job attribute}
+\item[\AdAttr{SuccessPostExitCode}:] Specifies the code with which the post
+command must exit to be considered successful. Post commands which are
+not successful cause the job to go on hold with \AdAttr{ExitCode} set to
+\Attr{PostCmdExitCode}. The exit status of a post command without one of
+\AdAttr{SuccessPostExitCode} or \AdAttr{SuccessPostExitSignal} defined is
+ignored.
+
+%%% ClassAd attribute: SuccessPostExitSignal
+\index{ClassAd job attribute!SuccessPostExitSignal}
+\index{SuccessPostExitSignal!ClassAd job attribute}
+\item[\AdAttr{SuccessPostExitSignal}:] Specifies the signal on which the
+post command must exit be considered successful. Post commands which are not
+successful cause the job to go on hold with \AdAttr{ExitSignal} set to
+\AdAttr{PostCmdExitSignal}. The exit status of a post command without one of
+\AdAttr{SuccessPostExitCode} or \AdAttr{SuccessPostExitSignal} defined is
+ignored.
+
 %%% ClassAd attribute: TotalSuspensions
 \index{ClassAd job attribute!TotalSuspensions}
 \index{TotalSuspensions!job ClassAd attribute}

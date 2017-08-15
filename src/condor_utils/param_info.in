@@ -4060,6 +4060,7 @@ type=double
 
 [DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME]
 default=86400
+range=0,
 type=int
 
 [STATISTICS_WINDOW_QUANTUM]
@@ -4715,10 +4716,16 @@ type=string
 description=Web address (hostname + port) for HTTP public files
 tags=file_transfer
 
-[HTTP_PUBLIC_FILES_WEB_ROOT]
-default=
+[HTTP_PUBLIC_FILES_ROOT_DIR]
+default=$(LOCAL_DIR)/public_files
 type=string
-description=Web root folder (in the local filesystem) for HTTP public files
+description=Folder in the local filesystem for HTTP public file links to be served from.
+tags=file_transfer
+
+[HTTP_PUBLIC_FILES_USER]
+default=<condor>
+type=string
+description=Username to create symlinks as, or token '<condor>' or token '<user>'.
 tags=file_transfer
 
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
