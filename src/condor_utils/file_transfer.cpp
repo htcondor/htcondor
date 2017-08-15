@@ -4846,12 +4846,12 @@ GetDesiredDelegatedJobCredentialExpiration(ClassAd *job)
 	}
 
 	time_t expiration_time = 0;
-	int lifetime = 0;
+	int lifetime = -1;
 	if( job ) {
 		job->LookupInteger(ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME,lifetime);
 	}
-	if( !lifetime ) {
-		lifetime = param_integer("DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME",3600*24);
+	if( lifetime < 0 ) {
+		lifetime = param_integer("DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME", 3600*24, 0);
 	}
 	if( lifetime ) {
 		expiration_time = time(NULL) + lifetime;
