@@ -4722,7 +4722,7 @@ description=Folder in the local filesystem for HTTP public file links to be serv
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_USER]
-default=<condor>
+default=condor
 type=string
 description=Username to create symlinks as, or token "<condor>" or token "<user>".
 tags=file_transfer
