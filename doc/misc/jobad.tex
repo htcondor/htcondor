@@ -1380,6 +1380,14 @@ Singularity, or job wrappers. This command is \emph{not}
 automatically transferred with the job, so if you're using file transfer,
 you must add it to the \SubmitCmd{transfer\_input\_files} list.
 
+If the specified command is in the job's execute directory, or any
+sub-directory, you should not set \SubmitCmd{vm\_no\_output\_vm}, as that
+will delete all the files in the job's execute directory before this
+command has a chance to run.  If you don't want any output back from
+your VM universe job, but you do want to run a post command, do not
+set \SubmitCmd{vm\_no\_output\_vm} and instead delete the job's execute
+directory in your post command.
+
 %%% ClassAd attribute: PostCmdExitBySignal
 \index{ClassAd job attribute!PostCmdExitBySignal}
 \index{PostCmdExitBySignal!ClassAd job attribute}
