@@ -3783,7 +3783,7 @@ DedicatedScheduler::checkSanity( void )
 int
 DedicatedScheduler::getUnusedTime( match_rec* mrec )
 {
-	if( mrec->scheduled || mrec->allocated ) {
+	if( mrec->allocated ) {
 			// We're either using this mrec now, or planning to in the
 			// near future, so say it's being used.
 		return 0;
