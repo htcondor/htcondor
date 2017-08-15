@@ -162,8 +162,8 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 
 		// now become the specified user for this operation.
 		priv = set_root_priv();
-		setegid(link_gid);
-		seteuid(link_uid);
+		if (setegid(link_gid)) {}
+		if (seteuid(link_uid)) {}
 	}
 
 
