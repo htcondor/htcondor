@@ -51,6 +51,11 @@ crash when logging on Linux to the syslog facility, and the \Condor{reconfig}
 command was run.
 \Ticket{6364}
 
+\item Fixed a bug where setting \MacroNI{delegate\_job\_gsi\_credentials\_lifetime}
+to 0 in a submit description file was treated the same as not setting
+it at all.
+\Ticket{6375}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
