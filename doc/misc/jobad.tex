@@ -702,16 +702,21 @@ reason that a job was put on hold.
 
 %% Don't mess with the column widths, as they currently fit within the pdf,
 %% even if they look stupid in the html.
+
+\setlength{\LTpre}{\smallskipamount}
+\setlength{\LTpost}{\smallskipamount}
+
 \begin{center}
-\begin{table}[p!]
-\begin{tabular}{|p{2cm}p{9cm}|p{4cm}} \hline
-\emph{Integer Code} & \emph{Reason for Hold} & \emph{HoldReasonSubCode} \\ \hline \hline
-1 & The user put the job on hold with \Condor{hold}.  \\ \hline
-2 & Globus middleware reported an error. & 
+\begin{longtable}{|p{2cm}p{9cm}|p{4cm}|} \hline
+\emph{Integer Code} & \emph{Reason for Hold} & \emph{HoldReasonSubCode} \\ \hline \hline \endhead
+\caption*{\emph{continued}\ldots} \\ \endfoot
+\endlastfoot
+1 & The user put the job on hold with \Condor{hold}. & \\ \hline
+2 & Globus middleware reported an error. &
   The GRAM error number. \\ \hline
-3 & The \MacroNI{PERIODIC\_HOLD} expression evaluated to \Expr{True}.  \\ \hline
-4 & The credentials for the job are invalid. \\ \hline
-5 & A job policy expression evaluated to \Expr{Undefined}. \\ \hline
+3 & The \MacroNI{PERIODIC\_HOLD} expression evaluated to \Expr{True}. & \\ \hline
+4 & The credentials for the job are invalid. & \\ \hline
+5 & A job policy expression evaluated to \Expr{Undefined}. & \\ \hline
 6 & The \Condor{starter} failed to start the executable. &
   The Unix  errno number. \\ \hline
 7 & The standard output file for the job could not be opened. &
@@ -722,41 +727,71 @@ reason that a job was put on hold.
   The Unix  errno number. \\ \hline
 10 & The standard input stream for the job could not be opened. &
   The Unix  errno number. \\ \hline
-11 & An internal HTCondor protocol error was encountered when transferring files. \\ \hline
+11 & An internal HTCondor protocol error was encountered when transferring files. & \\ \hline
 12 & The \Condor{starter} or \Condor{shadow} failed to receive or write job files. &
   The Unix  errno number. \\ \hline
 13 & The \Condor{starter} or \Condor{shadow} failed to read or send job files. &
   The Unix  errno number. \\ \hline
 14 & The initial working directory of the job cannot be accessed. &
   The Unix  errno number. \\ \hline
-15 & The user requested the job be submitted on hold. \\ \hline
-16 & Input files are being spooled. \\ \hline
+15 & The user requested the job be submitted on hold. & \\ \hline
+16 & Input files are being spooled. & \\ \hline
 17 & A standard universe job is not compatible with the
-  \Condor{shadow} version available on the submitting machine.  \\ \hline
+  \Condor{shadow} version available on the submitting machine. & \\ \hline
 18 & An internal HTCondor protocol error was encountered when transferring
-  files. \\ \hline
-19 & \Macro{<Keyword>\_HOOK\_PREPARE\_JOB} was defined but could not be executed or returned failure. \\ \hline
-20 & The job missed its deferred execution time and therefore failed to run. \\ \hline
-21 & The job was put on hold because \Macro{WANT\_HOLD} in the machine policy was true. \\ \hline
-22 & Unable to initialize job event log. \\ \hline
-23 & Failed to access user account. \\ \hline
-24 & No compatible shadow. \\ \hline
-25 & Invalid cron settings. \\ \hline
-26 & \Macro{SYSTEM\_PERIODIC\_HOLD} evaluated to true. \\ \hline
-27 & The system periodic job policy evaluated to undefined. \\ \hline
-28 & Failed while using glexec to set up the job's working directory (chown sandbox to the user). \\ \hline
-30 & Failed while using glexec to prepare output for transfer (chown sandbox to condor). \\ \hline
-32 & The maximum total input file transfer size was exceeded.  (See \Macro{MAX\_TRANSFER\_INPUT\_MB}.) \\ \hline
-33 & The maximum total output file transfer size was exceeded. (See \Macro{MAX\_TRANSFER\_OUTPUT\_MB}.) \\ \hline
-34 & Memory usage exceeds a memory limit. \\ \hline
-35 & Specified Docker image was invalid. \\ \hline
-36 & Job failed when sent the checkpoint signal it requested. \\ \hline
-\end{tabular}
-\end{table}
+  files. & \\ \hline
+19 & \Macro{<Keyword>\_HOOK\_PREPARE\_JOB} was defined but could not be executed or returned failure. & \\ \hline
+20 & The job missed its deferred execution time and therefore failed to run. & \\ \hline
+21 & The job was put on hold because \Macro{WANT\_HOLD} in the machine policy was true. & \\ \hline
+22 & Unable to initialize job event log. & \\ \hline
+23 & Failed to access user account. & \\ \hline
+24 & No compatible shadow. & \\ \hline
+25 & Invalid cron settings. & \\ \hline
+26 & \Macro{SYSTEM\_PERIODIC\_HOLD} evaluated to true. & \\ \hline
+27 & The system periodic job policy evaluated to undefined. & \\ \hline
+28 & Failed while using glexec to set up the job's working directory (chown sandbox to the user). & \\ \hline
+30 & Failed while using glexec to prepare output for transfer (chown sandbox to condor). & \\ \hline
+32 & The maximum total input file transfer size was exceeded.  (See \Macro{MAX\_TRANSFER\_INPUT\_MB}.) & \\ \hline
+33 & The maximum total output file transfer size was exceeded. (See \Macro{MAX\_TRANSFER\_OUTPUT\_MB}.) & \\ \hline
+34 & Memory usage exceeds a memory limit. & \\ \hline
+35 & Specified Docker image was invalid. & \\ \hline
+36 & Job failed when sent the checkpoint signal it requested. & \\ \hline
+37 & User error in the EC2 universe: & \\
+   & \hfill Public key file not defined. & 1 \\
+   & \hfill Private key file not defined. & 2 \\
+   & \hfill Grid resource string missing EC2 service URL. & 4 \\
+   & \hfill Failed to authenticate. & 9 \\
+   & \hfill Can't use existing SSH keypair with the given server's type. & 10 \\
+   & \hfill You, or somebody like you, cancelled this request. & 20 \\
+   \hline
+38 & Internal error in the EC2 universe: & \\
+   & \hfill Grid resource type not EC2. & 3 \\
+   & \hfill Grid resource type not set. & 5 \\
+   & \hfill Grid job ID is not for EC2. & 7 \\
+   & \hfill Unexpected remote job status. & 21 \\
+   \hline
+39 & Adminstrator error in the EC2 universe: & \\
+   & \hfill EC2\_GAHP not defined. & 6 \\
+   \hline
+40 & Connection problem in the EC2 universe & \\
+   & \hfill \ldots while creating an SSH keypair. & 11 \\
+   & \hfill \ldots while starting an on-demand instance. & 12 \\
+   & \hfill \ldots while requesting a spot instance. & 17 \\
+   \hline
+41 & Server error in the EC2 universe: & \\
+   & \hfill Abnormal instance termination reason. & 13 \\
+   & \hfill Unrecognized instance termination reason. & 14 \\
+   & \hfill Resource was down for too long. & 22 \\
+   \hline
+42 & Instance potentially lost due to an error in the EC2 universe: & \\
+   & \hfill Connection error while terminating an instance. & 15 \\
+   & \hfill Failed to terminate instance too many times. & 16 \\
+   & \hfill Connection error while terminating a spot request. & 17 \\
+   & \hfill Failed to terminated a spot request too many times. & 18 \\
+   & \hfill Spot instance request purged before instance ID acquired. & 19 \\
+   \hline
+\end{longtable}
 \end{center}
-
-%% so we're at the top of a float place for the table of HoldReasonCode:
-\clearpage
 
 %%% ClassAd attribute: HoldReasonSubCode
 \index{ClassAd job attribute!HoldReasonSubCode}
