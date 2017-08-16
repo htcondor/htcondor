@@ -369,7 +369,9 @@ public:
 	virtual ~ClassAdLogTable() {};
 	virtual bool lookup(const char * key, ClassAd*& ad) {
 		JOB_ID_KEY k(key);
-		int iret = table.lookup(k, reinterpret_cast<JobQueueJob*&>(ad));
+		JobQueueJob * Ad=NULL;
+		int iret = table.lookup(k, Ad);
+		ad=Ad;
 		return iret >= 0;
 	}
 	virtual bool remove(const char * key) {
@@ -378,20 +380,25 @@ public:
 	}
 	virtual bool insert(const char * key, ClassAd * ad) {
 		JOB_ID_KEY k(key);
-		ad->SetDirtyTracking(true);
-		int iret = table.insert(k, (JobQueueJob*)ad);
+		JobQueueJob * Ad = dynamic_cast<JobQueueJob*>(ad);
+		// if the incoming ad is really a ClassAd and not a JobQueueJob, then make a new object and delete the incoming ad.
+		if ( ! Ad) { Ad = new JobQueueJob(); Ad->Update(*ad); delete ad; }
+		Ad->SetDirtyTracking(true);
+		int iret = table.insert(k, Ad);
 		return iret >= 0;
 	}
 	virtual void startIterations() { table.startIterations(); } // begin iterations
 	virtual bool nextIteration(const char*& key, ClassAd*&ad) {
 		current_key.set(NULL); // make sure to clear out the string value for the current key
-		int iret = table.iterate(current_key, reinterpret_cast<JobQueueJob*&>(ad));
+		JobQueueJob* Ad=NULL;
+		int iret = table.iterate(current_key, Ad);
 		if (iret != 1) {
 			key = NULL;
 			ad = NULL;
 			return false;
 		}
 		key = current_key.c_str();
+		ad = Ad;
 		return true;
 	}
 protected:
