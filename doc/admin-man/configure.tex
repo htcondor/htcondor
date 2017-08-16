@@ -1075,15 +1075,23 @@ the default \\ \hline
 \item[\Macro{ENABLE\_IPV4}]
   A boolean with the additional special value of \Expr{auto}.  If true,
   HTCondor will use IPv4 if available, and fail otherwise.  If false,
-  HTCondor will not use IPv4.  If \Expr{auto}, HTCondor will use IPv4
-  if it can find an interface with an IPv4 address; this is the default.
+  HTCondor will not use IPv4.  If \Expr{auto}, which is the default,
+  HTCondor will use IPv4 if it can find an interface with an IPv4 address,
+  and that address is (a) public or private, or (b) no interface's
+  IPv6 address is public or private.  If HTCondor finds more than address
+  of each protocol, only the most public address is considered for that
+  protocol.
 
 \label{param:EnableIPv6}
 \item[\Macro{ENABLE\_IPV6}]
   A boolean with the additional special value of \Expr{auto}.  If true,
   HTCondor will use IPv6 if available, and fail otherwise.  If false,
-  HTCondor will not use IPv6.  If \Expr{auto}, HTCondor will use IPv6
-  if it can find an interface with an IPv6 address; this is the default.
+  HTCondor will not use IPv6.  If \Expr{auto}, which is the default,
+  HTCondor will use IPv6 if it can find an interface with an IPv6 address,
+  and that address is (a) public or private, or (b) no interface's
+  IPv4 address is public or private.  If HTCondor finds more than address
+  of each protocol, only the most public address is considered for that
+  protocol.
 
 \label{param:PreferIPv4}
 \item[\Macro{PREFER\_IPV4}]
