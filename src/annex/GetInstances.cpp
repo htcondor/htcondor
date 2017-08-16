@@ -19,8 +19,7 @@ GetInstances::operator() () {
 	StringList returnStatus;
 	int rc = gahp->ec2_vm_status_all(
 		service_url, public_key_file, secret_key_file,
-		// We can't filter on this until AWS supports SFR pass-through tagging.
-		// "tag-key", "htcondor:AnnexName",
+		"tag-key", "htcondor:AnnexName",
 		returnStatus, errorCode
 	);
 	if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -31,18 +30,6 @@ GetInstances::operator() () {
 	if( rc == 0 ) {
 		unsigned count = 0;
 		std::string iName;
-
-		int spotFleetRequestCount = 0;
-		scratchpad->LookupInteger( "SpotFleetRequestCount", spotFleetRequestCount );
-
-		std::string aName;
-		std::string sfrID;
-		std::set< std::string > spotFleetRequestIDs;
-		for( int i = 0; i < spotFleetRequestCount; ++i ) {
-			formatstr( aName, "SpotFleetRequest%d.ID", i );
-			scratchpad->LookupString( aName.c_str(), sfrID );
-			spotFleetRequestIDs.insert( sfrID );
-		}
 
 		returnStatus.rewind();
 		ASSERT( returnStatus.number() % 8 == 0 );
@@ -56,29 +43,14 @@ GetInstances::operator() () {
 			std::string spotFleetRequestID = emptyStringIfNull( returnStatus.next() );
 			std::string annexName = emptyStringIfNull( returnStatus.next() );
 
-			// An instance is in annex iff it has the 'htcondor:AnnexName'
-			// tag OR -- until AWS gets its act together -- it has a
-			// aws:ec2spot:fleet-request-id tag whose value is a SFR made
-			// by annex (as identified by the client token).
-			if( annexName.empty() && spotFleetRequestID.empty() ) {
+			// If it doesn't have an annex name, it isn't an annex.
+			if( annexName.empty()) {
 				continue;
-			}
-
-			// We can also remove this when AWS allows, etc.
-			if(! spotFleetRequestID.empty()) {
-				if( annexName.empty() ) {
-					annexName = "[spot requests]";
-				}
 			}
 
 			// If we're looking for a specific annex's instances, filter.
 			if(! annexID.empty()) {
-				// Since SFR instances won't be tagged with their annex names
-				// until AWS introduces that feature sometime in 2017, we
-				// check and see if the instance is one belonging to a SFR
-				// whose client token starts with the annex ID.
-				if( annexName != annexID
-				 && spotFleetRequestIDs.count( spotFleetRequestID ) == 0 ) {
+				if( strcasecmp( annexName.c_str(), annexID.c_str() ) != 0 ) {
 					continue;
 				}
 			}
