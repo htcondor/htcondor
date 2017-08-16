@@ -3,9 +3,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{IPv6|(}
 
-HTCondor supports using IPv4, IPv6, or both.  By default, HTCondor will
-look at a machine's interfaces, and on that machine, enable each protocol
-for which it finds at least one interface with an address of that procol.
+HTCondor supports using IPv4, IPv6, or both.
 
 To require IPv4, you may set \Macro{ENABLE\_IPV4} to true; if the
 machine does not have an interface with an IPv4 address, HTCondor will
@@ -16,8 +14,12 @@ If you set \Macro{ENABLE\_IPV4} to false, HTCondor will not use IPv4,
 even if it is available; likewise for \Macro{ENABLE\_IPV6} and IPv6.
 
 The default setting for \Macro{ENABLE\_IPV4} and \Macro{ENABLE\_IPV6} is
-\Expr{auto}, which uses the corresponding protocol if and only HTCondor
-finds an interface with an address of that protocol.
+\Expr{auto}.  If HTCondor does not find an interface with an address of
+the corresponding protocol, that protocol will not be used.  Additionally,
+if only one of the protocols has a private or public address, the other
+protocol will be disabled.  For instance, a machine with a private IPv4
+address and a loopback IPv6 address will only use IPv4; there's no point
+trying to contact some other machine via IPv6 over a loopback interface.
 
 If both IPv4 and IPv6 networking are enabled, HTCondor runs in mixed mode.
 In mixed mode, HTCondor daemons have at least one IPv4 address and at
