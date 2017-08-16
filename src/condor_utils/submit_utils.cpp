@@ -6961,7 +6961,7 @@ int SubmitHash::SetTransferFiles()
 			InsertJobExpr (input_files);
 		}
 #ifdef HAVE_HTTP_PUBLIC_FILES
-        char *public_input_files = 
+		char *public_input_files = 
 			submit_param(SUBMIT_KEY_PublicInputFiles, ATTR_PUBLIC_INPUT_FILES);
 		if (public_input_files) {
 			StringList pub_inp_file_list(NULL, ",");
@@ -6972,11 +6972,11 @@ int SubmitHash::SetTransferFiles()
 			// so it's not used here.
 			process_input_file_list(&pub_inp_file_list, &unusedstr, &unusedbool, TransferInputSizeKb);
 			if (pub_inp_file_list.isEmpty() == false) {
-			  char *inp_file_str = pub_inp_file_list.print_to_string();
-			  if (inp_file_str) {
-			    	InsertJobExprString(ATTR_PUBLIC_INPUT_FILES, inp_file_str);
-			  	free(inp_file_str);
-			  }
+				char *inp_file_str = pub_inp_file_list.print_to_string();
+				if (inp_file_str) {
+					InsertJobExprString(ATTR_PUBLIC_INPUT_FILES, inp_file_str);
+					free(inp_file_str);
+				}
 			}
 			free(public_input_files);
 		} 
