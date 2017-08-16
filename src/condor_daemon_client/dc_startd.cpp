@@ -341,7 +341,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -463,7 +463,7 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	if( !tmp->code(reply) || !tmp->end_of_message()) {
 		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		delete tmp;
 		return CONDOR_ERROR;
@@ -942,7 +942,7 @@ DCStartd::vacateClaim( const char* name_vacate )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::vacateClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -998,7 +998,7 @@ DCStartd::_suspendClaim( )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::_suspendClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -1056,7 +1056,7 @@ DCStartd::_continueClaim( )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::_continueClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -1107,7 +1107,7 @@ DCStartd::checkpointJob( const char* name_ckpt )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::checkpointJob: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
