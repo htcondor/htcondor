@@ -333,6 +333,11 @@ enum {
 	foreach_matching_files,
 	foreach_matching_dirs,
 	foreach_matching_any,
+
+	// special case of foreach from, where there is an async reader that we are actually getting items from.
+	// in this case the item stringlist will not contain all of the items. this mode is never set just
+	// from parsing the submit file, it is set at runtime while iterating.
+	foreach_from_async=0x102,
 };
 
 class SubmitForeachArgs {
@@ -410,6 +415,12 @@ public:
 	// the line text. the pqline pointer will be owned by getline_implementation
 	int  parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::string & errmsg, char** qline);
 
+	// parse a macro stream source until a queue statement is reached.
+	// if a valid queue line is reached, return value will be 0, and qline will point to
+	// the line text. the pqline pointer will be owned by getline_implementation
+	int parse_up_to_q_line(MacroStream & ms, std::string & errmsg, char** qline);
+
+
 	// parse the arguments after the Queue statement and populate a SubmitForeachArgs
 	// as much as possible without globbing or reading any files.
 	// if queue_args is "", then that is interpreted as Queue 1 just like condor_submit
@@ -418,14 +429,28 @@ public:
 		SubmitForeachArgs & o,           // OUT: options & items from parsing the queue args
 		std::string & errmsg);           // OUT: error message if return value is not 0
 
-	// finish populating the items in a SubmitForeachArgs by reading files and/or globbing.
-	int  load_q_foreach_items(
-		FILE* fp_submit, MACRO_SOURCE& source, // IN: submit file and source information, used only if the items are inline.
+	// finish populating the items in a SubmitForeachArgs if they are in the submit file itself.
+	// returns 0 for success, 1 if the items are external, < 0 for error.
+	int  load_inline_q_foreach_items(
+		MacroStream & ms,                // IN: submit file and source information, used only if the items are inline.
 		SubmitForeachArgs & o,           // OUT: options & items from parsing the queue args
 		std::string & errmsg);           // OUT: error message if return value is not 0
 
+	// finish populating the items in a SubmitForeachArgs by reading files and/or globbing.
+	int  load_external_q_foreach_items(
+		SubmitForeachArgs & o,     // IN,OUT: options & items from parsing the queue args
+		std::string & errmsg);     // OUT: error message if return value is not 0
+
 	// parse a submit file from fp using the given parse_q callback for handling queue statements
 	int  parse_file(FILE* fp, MACRO_SOURCE & source, std::string & errmsg, FNSUBMITPARSE parse_q, void* parse_pv);
+	// parse a submit file from memory buffer using the given parse_q callback for handling queue statements
+	int  parse_mem(MacroStreamMemoryFile &fp, std::string & errmsg, FNSUBMITPARSE parse_q, void* parse_pv);
+	// parse a submit file from null terminated memory buffer
+	int  parse_mem(const char * buf, MACRO_SOURCE & source, std::string & errmsg, FNSUBMITPARSE parse_q, void* parse_pv) {
+		MacroStreamMemoryFile ms(buf, -1, source);
+		return parse_mem(ms, errmsg, parse_q, parse_pv);
+	}
+
 	int  process_q_line(MACRO_SOURCE & source, char* line, std::string & errmsg, FNSUBMITPARSE parse_q, void* parse_pv);
 
 	void warn_unused(FILE* out, const char *app=NULL);
