@@ -398,7 +398,15 @@ int submit_factory_job (
 		bool spill_foreach_data = false; // set to true when we need to convert foreach into foreach from
 		if (o.foreach_mode != foreach_not) {
 			spill_foreach_data = (o.items_filename.empty() || (o.items_filename == "<" || o.items_filename == "-"));
-			rval = submit_hash.load_q_foreach_items(fp, source, o, errmsg);
+
+			MacroStreamYourFile ms(fp, source);
+			rval = submit_hash.load_inline_q_foreach_items(ms, o, errmsg);
+			if (rval == 1) {
+				rval = 0; // having external foreach data is not an error (yet)
+				if (spill_foreach_data) {
+					rval = submit_hash.load_external_q_foreach_items(o, errmsg);
+				}
+			}
 			if (rval)
 				break;
 
@@ -408,6 +416,7 @@ int submit_factory_job (
 		// if submit foreach data is not already a disk file, turn it into one.
 		bool make_foreach_file = false;
 		if (spill_foreach_data) {
+			PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
 			if (o.items.isEmpty()) {
 				o.foreach_mode = foreach_not;
 			} else {
