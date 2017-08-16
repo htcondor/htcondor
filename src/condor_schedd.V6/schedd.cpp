@@ -6015,7 +6015,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	//
 	for( i=0; i<num_cluster_matches; i++ ) {
 		tmp_id = clusters[i];
-		JobQueueJob * clusterad = GetJobAd(tmp_id);
+		JobQueueCluster * clusterad = GetClusterAd(tmp_id);
 		if ( ! clusterad)
 			continue;
 

@@ -534,6 +534,37 @@ BEGIN_C_DECLS
 		MACRO_SOURCE src;
 	};
 
+	// A MacroStream that parses memory in exactly the same way it would parse a FILE*
+	class MacroStreamMemoryFile : public MacroStream {
+	public:
+		MacroStreamMemoryFile(const char * _fp, ssize_t _cb, MACRO_SOURCE& _src) : ls(_fp, _cb, 0), src(&_src) {}
+		virtual ~MacroStreamMemoryFile() { ls.clear(); }
+		virtual char * getline(int gl_opt);
+		virtual MACRO_SOURCE& source() { return *src; }
+		void set(const char* _fp, ssize_t _cb, size_t _ix, MACRO_SOURCE& _src) { ls.init(_fp, _cb, _ix); src = &_src; }
+		void reset() { ls.clear(); src = NULL; }
+
+		// this class allows for template expansion of getline_implementation
+		class LineSource {
+		public:
+			const char* str;
+			ssize_t cb;
+			size_t ix;
+
+			LineSource(const char*p, ssize_t _cb, size_t _ix) : str(p), cb(_cb), ix(_ix) {}
+			~LineSource() {}
+
+			void init(const char*p, ssize_t _cb, size_t _ix) { str = p; cb = _cb; ix = _ix; }
+			void clear() { str= NULL; cb = 0; ix = 0; }
+			int at_eof();
+			char *readline(char *s, int cb); // returns up to \n, for use only by getline_implementation
+		};
+
+	protected:
+		LineSource ls;
+		MACRO_SOURCE * src;
+	};
+
 	class MacroStreamCharSource : public MacroStream {
 	public:
 		MacroStreamCharSource() 
@@ -563,6 +594,8 @@ BEGIN_C_DECLS
 
 	};
 
+	// this must be C++ linkage because condor_string already has a c linkage function by this name.
+	extern "C++" char * getline_trim(MacroStream & ms, int mode=0); // see condor_string.h for mode values
 
 	// populate a MACRO_SET from either a config file or a submit file.
 	#define READ_MACROS_SUBMIT_SYNTAX           0x01
