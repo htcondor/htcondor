@@ -659,6 +659,42 @@ Queue
 \end{description}
 
 %%%%%%%%%%%%
+\subsubsection{\label{sec:public-input-files}Public Input Files}
+%%%%%%%%%%%%
+There are some cases where HTCondor's file transfer mechanism is inefficient.
+For jobs that need to run a large number of times, the input files need to get 
+transferred for every job, even if those files are identical. This wastes 
+resources on both the submit machine and the network, slowing overall job 
+execution time.
+
+Public input files allow a user to specify files to be transferred over a 
+publicly-available HTTP web service. A system administrator can then configure
+caching proxies, load balancers, and other tools to dramatically improve 
+performance. \emph{Public input files are not available by default}, and need to 
+be explicitly enabled by a system administrator.
+
+To specify files that use this feature, the submit file should include a
+\SubmitCmd{public\_input\_files} command. This comma-separated list specifies
+files which HTCondor will transfer using the HTTP mechanism. For example:
+
+\begin{verbatim}
+  should_transfer_files = YES
+  when_to_transfer_output = ON_EXIT
+  transfer_input_files = file1,file2 
+  public_input_files = public_data1,public_data2
+\end{verbatim}
+
+Similar to the regular \SubmitCmd{transfer\_input\_files}, the files specified
+in \SubmitCmd{public\_input\_files} can be relative to the submit directory,
+or absolute paths. You can also specify an \SubmitCmd{initialDir}, and 
+\Condor{submit} will look for files relative to that directory. The files must
+be world-readable on the file system (files with permissions set to \emph{0644},
+directories with permissions set to \emph{0755}).
+
+Lastly, all files transferred using this method will be publicly available and
+world-readable, so this feature should not be used for any sensitive data.
+
+%%%%%%%%%%%%
 \subsubsection{Behavior for Error Cases}
 %%%%%%%%%%%%
 This section describes HTCondor's behavior for some error cases
