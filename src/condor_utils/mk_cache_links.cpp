@@ -303,6 +303,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 			else {
 				dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Unable to access file "
 					"%s. Falling back to regular file transfer\n", fullPath.c_str());
+				free( initialWorkingDir );
 				return;
 			}
 
