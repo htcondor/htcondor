@@ -133,6 +133,7 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	BaseJob( classad ),
 	m_preemptible( false ),
 	m_retry_times( 0 ),
+	m_failure_injection(NULL),
 	probeNow( false )
 {
 	string error_string = "";

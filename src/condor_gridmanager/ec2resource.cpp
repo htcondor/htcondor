@@ -72,7 +72,7 @@ EC2Resource::EC2Resource( const char *resource_name,
 	m_public_key_file = strdup(public_key_file);
 	m_private_key_file = strdup(private_key_file);
 
-	gahp = NULL;
+	status_gahp = gahp = NULL;
 
 	char * gahp_path = param( "EC2_GAHP" );
 	if ( gahp_path == NULL ) {
