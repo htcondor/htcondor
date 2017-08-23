@@ -277,9 +277,17 @@ def which(program):
     return None
 
 def convert_cpu_to_seconds(cpu_string):
+    # The time fields in sacct's output have this format:
+    #   [DD-[hh:]]mm:ss
+    # Convert that to just seconds.
     import re
-    h,m,s = re.split(':',cpu_string)
-    return int(h) * 3600 + int(m) * 60 + int(s)
+    elem = re.split('[-:]', cpu_string)
+    secs = int(elem[-1]) + int(elem[-2]) * 60
+    if len(elem) > 2:
+        secs += int(elem[-3]) * 3600
+    if len(elem) > 3:
+        secs += int(elem[-4]) * 86400
+    return secs
 
 def get_finished_job_stats(jobid):
     """
