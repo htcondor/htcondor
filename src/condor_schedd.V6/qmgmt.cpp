@@ -1448,7 +1448,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// initialize our list of job owners
 			AddOwnerHistory( owner );
 			ad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner.c_str()));
-			clusterad->ownerinfo = ad->ownerinfo;
+			if (clusterad)
+				clusterad->ownerinfo = ad->ownerinfo;
 
 			if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
 				dprintf(D_ALWAYS,
