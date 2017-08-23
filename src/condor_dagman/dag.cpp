@@ -729,7 +729,8 @@ void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 	if( job ) {
-
+		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessTerminatedEvent] job=%s\n", job->GetJobName());
+		
 		DecrementProcCount( job );
 
 		const JobTerminatedEvent * termEvent =
@@ -897,9 +898,12 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 		return;
 	}
 
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessJobProcEnd] job=%s, job->_queuedNodeJobProcs=%d\n", job->GetJobName(), job->_queuedNodeJobProcs);
 	if ( job->_queuedNodeJobProcs == 0 ) {
 			// All procs for this job are done.
-		debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
+			debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessJobProcEnd] Node %s job completed\n",
+			job->GetJobName() );
+			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 				job->GetJobName() );
 
 			// if a POST script is specified for the job, run it
@@ -2377,6 +2381,7 @@ Dag::WriteScriptToRescue( FILE *fp, Script *script )
 void
 Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::TerminateJob] job=%s\n", job->GetJobName());
 	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
 
@@ -4132,6 +4137,7 @@ Dag::DecrementProcCount( Job *node )
 {
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::DecrementProcCount] node=%s, node->_queuedNodeJobProcs=%d\n", node->GetJobName(), node->_queuedNodeJobProcs );
 
 	if( node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
