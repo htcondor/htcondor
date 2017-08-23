@@ -42,6 +42,7 @@
 #include "userlog_to_classads.h"
 #include "setenv.h"
 #include "condor_daemon_core.h" // for extractInheritedSocks
+#include "getConsoleWindowSize.h"
 
 #include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
@@ -786,32 +787,6 @@ main(int argc, char* argv[])
 #endif
   return 0;
 }
-
-
-#ifdef WIN32
-static int getConsoleWindowSize(int * pHeight /*= NULL*/) {
-	CONSOLE_SCREEN_BUFFER_INFO ws;
-	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
-		if (pHeight)
-			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
-		return (int)ws.dwSize.X;
-	}
-	return 80;
-}
-#else
-#include <sys/ioctl.h>
-static int getConsoleWindowSize(int * pHeight /*= NULL*/) {
-    struct winsize ws;
-	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
-		//printf ("lines %d\n", ws.ws_row);
-		//printf ("columns %d\n", ws.ws_col);
-		if (pHeight)
-			*pHeight = (int)ws.ws_row;
-		return (int) ws.ws_col;
-	}
-	return 80;
-}
-#endif
 
 static int getDisplayWidth() {
 	if (wide_format_width <= 0) {
