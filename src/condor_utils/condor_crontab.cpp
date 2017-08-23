@@ -47,6 +47,10 @@ Regex CronTab::regex;
  **/
 CronTab::CronTab()
 {
+	for (int i = 0; i < CRONTAB_FIELDS; i++) {
+		parameters[i] = 0;
+		ranges[i] = 0;
+	}
 	this->lastRunTime = CRONTAB_INVALID;
 	this->valid = false;
 }

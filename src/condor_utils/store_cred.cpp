@@ -47,9 +47,12 @@ void SecureZeroMemory(void *p, size_t n)
 
 
 int
-ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
+ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
 {
 	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i\n", user, len, mode);
+
+	// only set to true if it actually happens
+	cred_modified = false;
 
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
@@ -141,6 +144,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 	}
 
 	// credential succesfully stored
+	cred_modified = true;
 	return SUCCESS;
 }
 
@@ -236,7 +240,7 @@ char* getStoredCredential(const char *username, const char *domain)
 	return NULL;
 }
 
-int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode)
+int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode, int &cred_modified)
 {
 	const char *at = strchr(user, '@');
 	if ((at == NULL) || (at == user)) {
@@ -247,7 +251,7 @@ int store_cred_service(const char *user, const char *cred, const size_t credlen,
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
 		dprintf(D_ALWAYS, "ZKM: GOT UNIX STORE CRED\n");
-		return ZKM_UNIX_STORE_CRED(user, cred, credlen, mode);
+		return ZKM_UNIX_STORE_CRED(user, cred, credlen, mode, cred_modified);
 	}
 
 	//
@@ -316,6 +320,10 @@ int store_cred_service(const char *user, const char *cred, const size_t credlen,
 		free(filename);
 	}
 
+	// if we got here we were dealing with pool password.  a return value of
+	// SUCCESS means we operated on the credential, so it was modified.
+	cred_modified = (answer == SUCCESS);
+
 	return answer;
 }
 
@@ -368,7 +376,7 @@ char* getStoredCredential(const char *username, const char *domain)
 	return strdup(pw);
 }
 
-int store_cred_service(const char *user, const char *pw, const size_t, int mode)
+int store_cred_service(const char *user, const char *pw, const size_t, int mode, int &cred_modified)
 {
 
 	wchar_t pwbuf[MAX_PASSWORD_LENGTH];
@@ -479,6 +487,10 @@ int store_cred_service(const char *user, const char *pw, const size_t, int mode)
 		set_priv(priv);
 	}
 	
+	// if we got here we were dealing with pool password.  a return value of
+	// SUCCESS means we operated on the credential, so it was modified.
+	cred_modified = (answer == SUCCESS);
+
 	return answer;
 }	
 
@@ -700,6 +712,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	int mode;
 	int result;
 	int answer = FAILURE;
+	int cred_modified = false;
 	bool dcfound = daemonCore != NULL;
 
 	dprintf (D_ALWAYS, "ZKM: First potential block in store_cred_handler, DC==%i\n", dcfound);
@@ -766,7 +779,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 				if(pw) {
 					pwlen = strlen(pw)+1;
 				}
-				answer = store_cred_service(user,pw,pwlen,mode);
+				answer = store_cred_service(user,pw,pwlen,mode,cred_modified);
 			}
 		}
 	}
@@ -774,7 +787,9 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	// no credmon on windows
 #ifdef WIN32
 #else
-	if(answer == SUCCESS) {
+	// we only need to signal CREDMON if the file was just written.  if it
+	// already existed, just leave it be, and don't signal the CREDMON.
+	if(answer == SUCCESS && cred_modified) {
 		// good so far, but the real answer is determined by our ability
 		// to signal the credmon and have the .cc file appear.  we don't
 		// want this to block so we go back to daemoncore and set a timer
@@ -791,6 +806,8 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
 			daemonCore->Register_DataPtr(retry_state);
 		}
+	} else {
+		dprintf(D_SECURITY | D_FULLDEBUG, "NBSTORECRED: not signaling credmon.  (answer==%i, cred_modified==%i)\n", answer, cred_modified);
 	}
 #endif // WIN32
 
@@ -803,11 +820,16 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	}
 
 #ifndef WIN32  // no credmon on windows
-	// answer is SUCCESS only if we registered a timer to poll for the cred
-	// file, in which case we should return now instead of finishing the
-	// wire protocol.
-	if(answer == SUCCESS) {
-		return FALSE;
+	// if we modified the credential, then we also attempted to register a
+	// timer to poll for the cred file.  if that happened succesfully, return
+	// now so we can poll in a non-blocking way.
+	//
+	// if we either had a failure, or had success but didn't modify the file,
+	// then there's nothing to poll for and we should not return and should
+	// finish the wire protocol below.
+	//
+	if(answer == SUCCESS && cred_modified) {
+		return TRUE;
 	}
 #endif // WIN32
 
@@ -823,7 +845,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 			"store_cred: Failed to send end of message.\n");
 	}
 
-	return FALSE;
+	return (answer == SUCCESS);
 }
 
 
@@ -953,6 +975,10 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 	dprintf (D_ALWAYS, "ZKM: First potential block in store_pool_cred_handler, DC==%i\n", dcfound);
 
+	// we don't actually care if the cred was modified in this
+	// situation, but the below function signature requires it
+	int cred_modified = false;
+
 	s->decode();
 	if (!s->code(domain) || !s->code(pw) || !s->end_of_message()) {
 		dprintf(D_ALWAYS, "store_pool_cred: failed to receive all parameters\n");
@@ -969,11 +995,11 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	// do the real work
 	if (pw) {
 		size_t pwlen = strlen(pw)+1;
-		result = store_cred_service(username.Value(), pw, pwlen, ADD_MODE);
+		result = store_cred_service(username.Value(), pw, pwlen, ADD_MODE, cred_modified);
 		SecureZeroMemory(pw, strlen(pw));
 	}
 	else {
-		result = store_cred_service(username.Value(), NULL, 0, DELETE_MODE);
+		result = store_cred_service(username.Value(), NULL, 0, DELETE_MODE, cred_modified);
 	}
 
 	s->encode();
@@ -1022,7 +1048,11 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 		if(pw) {
 			pwlen=strlen(pw)+1;
 		}
-		return_val = store_cred_service(user,pw,pwlen,mode);
+		// we don't actually care if the cred was modified in this
+		// situation, but the below function signature requires it
+		int cred_modified = false;
+
+		return_val = store_cred_service(user,pw,pwlen,mode,cred_modified);
 	} else {
 			// send out the request remotely.
 

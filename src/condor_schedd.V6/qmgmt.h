@@ -27,6 +27,9 @@
 #include "condor_sockaddr.h"
 #include "classad_log.h"
 
+// the pedantic idiots at gcc generate this warning whenever you use offsetof on a struct or class that has a constructor....
+GCC_DIAG_OFF(invalid-offsetof)
+
 // this header declares functions internal to the schedd, it should not be included by code external to the schedd
 // and it should always be included before condor_qmgr.h so that it can disable external prototype declaraions in that file. 
 #define SCHEDD_INTERNAL_DECLARATIONS
@@ -87,11 +90,41 @@ class QmgmtPeer {
 
 
 #define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
+//#define TJ_REFACTOR_CLUSTER_REFCOUNTING 1 // move cluster ref counting from a qmgmt hashtable into the JobQueueCluster object
 
 #define JQJ_CACHE_DIRTY_JOBOBJ        0x00001 // set when an attribute cached in the JobQueueJob that doesn't have it's own flag has changed
 #define JQJ_CACHE_DIRTY_SUBMITTERDATA 0x00002 // set when an attribute that affects the submitter name is changed
 
 class JobFactory;
+class JobQueueCluster;
+
+// structures for a doubly linked list with append-to-tail and remove-from-head semantics (a.k.a a queue)
+// so that any element can act as a queue head, an empty queue will have next == prev == this
+// and elements not currently attached to any queue should also have next == prev == this.
+class qelm {
+public:
+	qelm() : nxt(this), prv(this) {}
+	qelm *next() const { return nxt; }
+	qelm *prev() const { return prv; }
+	bool empty() const { return nxt==this && prv==this; }
+	// append item to tail of this list
+	void append_tail(qelm &qe) { qe.nxt = this; qe.prv = prv; qe.prv->nxt = &qe; prv = &qe; }
+	// remove and return item from head of this list
+	qelm * remove_head() { if (empty()) { return NULL; } else { return nxt->detach(); } }
+	// detach from list.
+	qelm * detach() { prv->nxt = nxt; nxt->prv = prv; nxt = prv = this; return this; }
+
+	// return a pointer to the class that this qelm is part of.
+	template <typename T> T* as() {
+		if ( ! this) return NULL;
+		char * p = (char*)this - offsetof(T,qe);
+		return reinterpret_cast<T*>(p);
+	}
+private:
+	qelm *nxt;
+	qelm *prv;
+};
+	
 
 // used to store a ClassAd + runtime information in a condor hashtable.
 class JobQueueJob : public ClassAd {
@@ -111,27 +144,25 @@ public:
 	// DO NOT FREE FROM HERE!
 	struct SubmitterData * submitterdata;
 	struct OwnerInfo * ownerinfo;
-	JobFactory * factory; // this will be non-null only for cluster ads, and only when cluster is doing late materialization
 protected:
-	JobQueueJob * link; // FUTURE: jobs are linked to clusters.
-	int future_num_procs_or_hosts; // FUTURE: num_procs if cluster, num hosts if job
+	JobQueueCluster * parent; // job pointer back to the 
+	qelm qe;
 
 public:
 	JobQueueJob(int _etype=0)
 		: jid(0,0)
 		, entry_type(_etype)
 		, universe(0)
-		, has_noop_attr(2) // value of 2 forces PopulateFromAd() to check if it exists.
+		, has_noop_attr(2) // value of 2 forces IsNoopJob() to populate this field
 		, status(0) // JOB_STATUS_MIN
 		, dirty_flags(0)
+		, spare(0)
 		, autocluster_id(0)
 		, submitterdata(NULL)
 		, ownerinfo(NULL)
-		, factory(NULL)
-		, link(NULL)
-		, future_num_procs_or_hosts(0)
+		, parent(NULL)
 	{}
-	virtual ~JobQueueJob();
+	virtual ~JobQueueJob() {};
 
 	enum {
 		entry_type_unknown=0,
@@ -148,30 +179,78 @@ public:
 	void SetUniverse(int uni) { universe = uni; }
 	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
+#if 0
 	// FUTURE:
 	int NumProcs() { if (entry_type == entry_type_cluster) return future_num_procs_or_hosts; return 0; }
 	int SetNumProcs(int num_procs) { if (entry_type == entry_type_cluster) { return future_num_procs_or_hosts = num_procs; } return 0; }
 	int NumHosts() { if (entry_type == entry_type_job) return future_num_procs_or_hosts; return 0; }
+#endif
 
 	//JobQueueJob( const ClassAd &ad );
 	//JobQueueJob( const classad::ClassAd &ad );
+	friend class JobQueueCluster;
+	friend class qelm;
 
 	void PopulateFromAd(); // populate this structure from contained ClassAd state
+
 	// if this object is a job object, it can be linked to it's cluster object
-	JobQueueJob * Cluster() { if (entry_type == entry_type_job) return link; return NULL; }
-	void SetCluster(JobQueueJob* _link) {
-		if (entry_type == entry_type_unknown) entry_type = entry_type_job;
-		if (entry_type == entry_type_job) link = _link;
+	JobQueueCluster * Cluster() { if (entry_type == entry_type_job) return parent; return NULL; }
+};
+
+// structure of job_queue hashtable entries for clusters.
+class JobQueueCluster : public JobQueueJob {
+public:
+	JobFactory * factory; // this will be non-null only for cluster ads, and only when the cluster is doing late materialization
+protected:
+	int num_procs; // number of materialized jobs in this cluster that the schedd is currently tracking.
+
+public:
+	JobQueueCluster(JOB_ID_KEY & job_id)
+		: JobQueueJob(entry_type_cluster)
+		, factory(NULL)
+		, num_procs(0)
+		{
+			jid.cluster = job_id.cluster;
+			jid.proc = -1;
+			parent = NULL;
+		}
+	virtual ~JobQueueCluster();
+
+	int NumProcs() { return num_procs; }
+	int SetNumProcs(int _num_procs) { num_procs = _num_procs; return num_procs; }
+	void AttachJob(JobQueueJob * job) {
+		if ( ! job) return;
+		qe.append_tail(job->qe);
+		job->parent = this;
 	}
+	void DetachJob(JobQueueJob * job) {
+		--num_procs;
+		job->qe.detach();
+		job->parent = NULL;
+	}
+	bool HasAttachedJobs() { return ! qe.empty(); }
+	void DetachAllJobs(); // When you absolutely positively need to free this class...
 };
 
 
+
+
 // from qmgmt_factory.cpp
-class JobFactory * MakeJobFactory(JobQueueJob * job, const char * submit_file);
+class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text); // make a job factory from submit digest text
+class JobFactory * MakeJobFactory(JobQueueCluster * job, const char * submit_file); // make a job factory from an on-disk submit digest
 void DestroyJobFactory(JobFactory * factory);
-int MaterializeNextFactoryJob(JobFactory * factory, JobQueueJob * cluster);
-int PostCommitJobFactoryProc(JobQueueJob * cluster, JobQueueJob * job);
-bool JobFactoryAllowsClusterRemoval(JobQueueJob * cluster);
+
+void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
+
+// returns 1 if a job was materialized, 0 if factory was paused or complete or itemdata is not yet available
+// returns < 0 on error.  if return is 0, retry_delay is set to non-zero to indicate the retrying later might yield success
+int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, int & retry_delay);
+
+int PostCommitJobFactoryProc(JobQueueCluster * cluster, JobQueueJob * job);
+bool CanMaterializeJobs(JobQueueCluster * cluster); // reutrns true if cluster has a non-paused, non-complete factory
+bool JobFactoryIsComplete(JobQueueCluster * cluster);
+bool JobFactoryIsRunning(JobQueueCluster * cluster);
+bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster);
 // if pause_code < 0, pause is permanent, if >= 3, cluster was removed
 int PauseJobFactory(JobFactory * factory, int pause_code);
 int ResumeJobFactory(JobFactory * factory, int pause_code);
@@ -211,6 +290,8 @@ ClassAd* GetExpandedJobAd(const PROC_ID& jid, bool persist_expansions);
 #ifdef SCHEDD_INTERNAL_DECLARATIONS
 JobQueueJob* GetJobAd(const PROC_ID& jid);
 JobQueueJob* GetJobAd(int cluster, int proc);
+JobQueueCluster* GetClusterAd(const PROC_ID& jid);
+JobQueueCluster* GetClusterAd(int cluster);
 ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
 ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
 ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan);
@@ -226,7 +307,7 @@ JobQueueJob* GetNextDirtyJobByConstraint(const char *constraint, int initScan);
 int NewProcInternal(int cluster_id, int proc_id);
 // call NewProcInternal, and then SetAttribute on all of the attributes in job that are not the same as ClusterAd
 typedef unsigned char SetAttributeFlags_t;
-int NewProcFromAd (const classad::ClassAd * job, int ProcId, JobQueueJob * ClusterAd, SetAttributeFlags_t flags);
+int NewProcFromAd (const classad::ClassAd * job, int ProcId, JobQueueCluster * ClusterAd, SetAttributeFlags_t flags);
 #endif
 
 void * BeginJobAggregation(const char * projection, bool create_if_not, const char * constraint);
@@ -276,7 +357,7 @@ template <>
 class ConstructClassAdLogTableEntry<JobQueueJob*> : public ConstructLogEntry
 {
 public:
-	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const { return new JobQueueJob(); }
+	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const;
 	virtual void Delete(ClassAd* &val) const;
 };
 
@@ -287,8 +368,8 @@ public:
 	ClassAdLogTable(HashTable<JOB_ID_KEY,JobQueueJob*> & _table) : table(_table) {}
 	virtual ~ClassAdLogTable() {};
 	virtual bool lookup(const char * key, ClassAd*& ad) {
-		JobQueueJob* Ad=NULL;
 		JOB_ID_KEY k(key);
+		JobQueueJob * Ad=NULL;
 		int iret = table.lookup(k, Ad);
 		ad=Ad;
 		return iret >= 0;
@@ -299,16 +380,17 @@ public:
 	}
 	virtual bool insert(const char * key, ClassAd * ad) {
 		JOB_ID_KEY k(key);
-		JobQueueJob* Ad = new JobQueueJob();  // TODO: find out of we can count on ad already being a JobQueueJob*
-		Ad->Update(*ad); delete ad; // TODO: transfer ownership of attributes from ad to Ad? I think this ad is always nearly empty.
+		JobQueueJob * Ad = dynamic_cast<JobQueueJob*>(ad);
+		// if the incoming ad is really a ClassAd and not a JobQueueJob, then make a new object and delete the incoming ad.
+		if ( ! Ad) { Ad = new JobQueueJob(); Ad->Update(*ad); delete ad; }
 		Ad->SetDirtyTracking(true);
 		int iret = table.insert(k, Ad);
 		return iret >= 0;
 	}
 	virtual void startIterations() { table.startIterations(); } // begin iterations
 	virtual bool nextIteration(const char*& key, ClassAd*&ad) {
-		JobQueueJob* Ad=NULL;
 		current_key.set(NULL); // make sure to clear out the string value for the current key
+		JobQueueJob* Ad=NULL;
 		int iret = table.iterate(current_key, Ad);
 		if (iret != 1) {
 			key = NULL;

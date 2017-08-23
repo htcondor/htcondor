@@ -189,7 +189,7 @@ main( int argc, char *argv[] )
 	check_daemon_sock_dir();
 	check_tmp_dir();
 #ifdef HAVE_HTTP_PUBLIC_FILES
-    check_public_files_webroot_dir();
+	check_public_files_webroot_dir();
 #endif
 
 		// Produce output, either on stdout or by mail
@@ -860,8 +860,8 @@ init_params()
 		EXCEPT("DAEMON_SOCKET_DIR not defined");
 	}
 
-    // PublicFilesWebrootDir is optional, may not be set
-    PublicFilesWebrootDir = param("HTTP_PUBLIC_FILES_ROOT_DIR");
+	// PublicFilesWebrootDir is optional, may not be set
+	PublicFilesWebrootDir = param("HTTP_PUBLIC_FILES_ROOT_DIR");
 
 	char *Execute = param("EXECUTE");
 	if( Execute ) {
@@ -1034,18 +1034,18 @@ touched_recently(char const *fname,time_t delta)
 }
 
 /*
-    Similar to touched_recently, but uses lstat instead of regular stat to look
-    at the link inodes directly (instead of the inodes they target)
+	Similar to touched_recently, but uses lstat instead of regular stat to look
+	at the link inodes directly (instead of the inodes they target)
 */
 #ifdef HAVE_HTTP_PUBLIC_FILES
 bool
 linked_recently(char const *fname, time_t delta)
 {
-    struct stat fileStat;            
-    if( lstat( fname, &fileStat ) != 0) {
-        dprintf(D_ALWAYS, "preen.cpp: Failed to open link %s (errno %d)\n", fname, errno);
-        return false;
-    }
+	struct stat fileStat;            
+	if( lstat( fname, &fileStat ) != 0) {
+		dprintf(D_ALWAYS, "preen.cpp: Failed to open link %s (errno %d)\n", fname, errno);
+		return false;
+	}
 		// extend the window of what it means to have been touched "recently"
 		// both forwards and backwards in time to handle system clock jumps.
 	if( abs((int)(time(NULL) - fileStat.st_mtime)) > delta ) {

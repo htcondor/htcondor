@@ -6961,7 +6961,7 @@ int SubmitHash::SetTransferFiles()
 			InsertJobExpr (input_files);
 		}
 #ifdef HAVE_HTTP_PUBLIC_FILES
-        char *public_input_files = 
+		char *public_input_files = 
 			submit_param(SUBMIT_KEY_PublicInputFiles, ATTR_PUBLIC_INPUT_FILES);
 		if (public_input_files) {
 			StringList pub_inp_file_list(NULL, ",");
@@ -6972,11 +6972,11 @@ int SubmitHash::SetTransferFiles()
 			// so it's not used here.
 			process_input_file_list(&pub_inp_file_list, &unusedstr, &unusedbool, TransferInputSizeKb);
 			if (pub_inp_file_list.isEmpty() == false) {
-			  char *inp_file_str = pub_inp_file_list.print_to_string();
-			  if (inp_file_str) {
-			    	InsertJobExprString(ATTR_PUBLIC_INPUT_FILES, inp_file_str);
-			  	free(inp_file_str);
-			  }
+				char *inp_file_str = pub_inp_file_list.print_to_string();
+				if (inp_file_str) {
+					InsertJobExprString(ATTR_PUBLIC_INPUT_FILES, inp_file_str);
+					free(inp_file_str);
+				}
 			}
 			free(public_input_files);
 		} 
@@ -7833,10 +7833,75 @@ int SubmitHash::parse_q_args(
 	return 0;
 }
 
+// finish populating the items in a SubmitForeachArgs if they can be populated from the submit file itself.
+//
+int SubmitHash::load_inline_q_foreach_items (
+	MacroStream & ms,
+	SubmitForeachArgs & o,
+	std::string & errmsg)
+{
+	bool items_are_external = false;
+
+	// if no loop variable specified, but a foreach mode is used. use "Item" for the loop variable.
+	if (o.vars.isEmpty() && (o.foreach_mode != foreach_not)) { o.vars.append("Item"); }
+
+	if ( ! o.items_filename.empty()) {
+		if (o.items_filename == "<") {
+			MACRO_SOURCE & source = ms.source();
+			if ( ! source.id) {
+				errmsg = "unexpected error while attempting to read queue items from submit file.";
+				return -1;
+			}
+			// read items from submit file until we see the closing brace on a line by itself.
+			bool saw_close_brace = false;
+			int item_list_begin_line = source.line;
+			for(char * line=NULL; ; ) {
+				line = getline_trim(ms);
+				if ( ! line) break; // null indicates end of file
+				if (line[0] == '#') continue; // skip comments.
+				if (line[0] == ')') { saw_close_brace = true; break; }
+				if (o.foreach_mode == foreach_from) {
+					o.items.append(line);
+				} else {
+					o.items.initializeFromString(line);
+				}
+			}
+			if ( ! saw_close_brace) {
+				formatstr(errmsg, "Reached end of file without finding closing brace ')'"
+					" for Queue command on line %d", item_list_begin_line);
+				return -1;
+			}
+		} else {
+			// items from an external source.
+			items_are_external = true;
+		}
+	}
+
+	switch (o.foreach_mode) {
+	case foreach_in:
+	case foreach_from:
+		// itemlist is correct unless items were external
+		break;
+
+	case foreach_matching:
+	case foreach_matching_files:
+	case foreach_matching_dirs:
+	case foreach_matching_any:
+		items_are_external = true;
+		break;
+
+	default:
+	case foreach_not:
+		break;
+	}
+
+	return items_are_external ? 1 : 0;
+}
+
+
 // finish populating the items in a SubmitForeachArgs by reading files and/or globbing.
 //
-int SubmitHash::load_q_foreach_items (
-	FILE* fp_submit, MACRO_SOURCE& source, // IN: submit file and source information, used only if the items are inline.
+int SubmitHash::load_external_q_foreach_items (
 	SubmitForeachArgs & o,                 // OUT: options & items from parsing the queue args
 	std::string & errmsg)                  // OUT: error message if return value is not 0
 {
@@ -7873,32 +7938,9 @@ int SubmitHash::load_q_foreach_items (
 		free(parm); parm = NULL;
 	}
 
-	//PRAGMA_REMIND("tj: move this down into the switch...")
 	if ( ! o.items_filename.empty()) {
 		if (o.items_filename == "<") {
-			if ( ! fp_submit) {
-				errmsg = "unexpected error while attempting to read queue items from submit file.";
-				return -1;
-			}
-			// read items from submit file until we see the closing brace on a line by itself.
-			bool saw_close_brace = false;
-			int item_list_begin_line = source.line;
-			for(char * line=NULL; ; ) {
-				line = getline_trim(fp_submit, source.line);
-				if ( ! line) break; // null indicates end of file
-				if (line[0] == '#') continue; // skip comments.
-				if (line[0] == ')') { saw_close_brace = true; break; }
-				if (o.foreach_mode == foreach_from) {
-					o.items.append(line);
-				} else {
-					o.items.initializeFromString(line);
-				}
-			}
-			if ( ! saw_close_brace) {
-				formatstr(errmsg, "Reached end of file without finding closing brace ')'"
-					" for Queue command on line %d", item_list_begin_line);
-				return -1;
-			}
+			// items should have been loaded already by a call to load_inline_q_foreach_items
 		} else if (o.items_filename == "-") {
 			int lineno = 0;
 			for (char* line=NULL;;) {
@@ -7969,7 +8011,7 @@ int SubmitHash::load_q_foreach_items (
 	return 0; // success
 }
 
-
+// parse a submit file from fp using the given parse_q callback for handling queue statements
 int SubmitHash::parse_file(FILE* fp, MACRO_SOURCE & source, std::string & errmsg, FNSUBMITPARSE parse_q /*=NULL*/, void* parse_pv /*=NULL*/)
 {
 	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
@@ -7979,6 +8021,16 @@ int SubmitHash::parse_file(FILE* fp, MACRO_SOURCE & source, std::string & errmsg
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		&ctx, errmsg, parse_q, parse_pv);
 }
+
+// parse a submit file from memory buffer using the given parse_q callback for handling queue statements
+int SubmitHash::parse_mem(MacroStreamMemoryFile &fp, std::string & errmsg, FNSUBMITPARSE parse_q, void* parse_pv)
+{
+	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
+	return Parse_macros(fp,
+		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
+		&ctx, errmsg, parse_q, parse_pv);
+}
+
 
 int SubmitHash::process_q_line(MACRO_SOURCE & source, char* line, std::string & errmsg, FNSUBMITPARSE parse_q, void* parse_pv)
 {
@@ -8004,8 +8056,30 @@ static int parse_q_callback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*macro_s
 	pargs->line = line;
 	return 1; // stop scanning, return success
 }
+int SubmitHash::parse_up_to_q_line(MacroStream &ms, std::string & errmsg, char** qline)
+{
+	struct _parse_up_to_q_callback_args args = { NULL, ms.source().id };
+
+	*qline = NULL;
+
+	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
+
+	int err = Parse_macros(ms,
+		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
+		&ctx, errmsg, parse_q_callback, &args);
+	if (err < 0)
+		return err;
+
+	PRAGMA_REMIND("TJ:TODO qline is a pointer to a global (static) variable here, it should be instanced instead.")
+	*qline = args.line;
+	return 0;
+}
 int SubmitHash::parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::string & errmsg, char** qline)
 {
+#if 1
+	MacroStreamYourFile ms(fp, source);
+	return parse_up_to_q_line(ms, errmsg, qline);
+#else
 	struct _parse_up_to_q_callback_args args = { NULL, source.id };
 
 	*qline = NULL;
@@ -8021,6 +8095,7 @@ int SubmitHash::parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::st
 
 	*qline = args.line;
 	return 0;
+#endif
 }
 
 void SubmitHash::warn_unused(FILE* out, const char *app)

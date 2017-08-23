@@ -40,14 +40,189 @@ char * expand_meta_args(const char *value, std::string & argstr);
 bool has_meta_args(const char * value);
 #endif
 
+// change getline_implementation into a template, so it can be used with a FILE* or with a memory stream.
+#define GETLINE_IMPL_IS_TEMPLATE 1
+#ifdef GETLINE_IMPL_IS_TEMPLATE
+
+class FileStarLineSource {
+protected:
+	FILE*fp;
+public:
+	FileStarLineSource(FILE*f) : fp(f) {}
+	~FileStarLineSource() {}
+	int at_eof() { return feof(fp); }
+	char *readline(char *s, int cb) { return fgets(s, cb, fp); }
+};
+
+int MacroStreamMemoryFile::LineSource::at_eof() {
+	if ( ! str || ! cb) return true;
+	if (cb < 0) {
+		return str[ix] == 0;
+	}
+	return ix >= (size_t)cb;
+}
+
+char * MacroStreamMemoryFile::LineSource::readline(char *s, int cb)
+{
+	if (at_eof() || cb <= 0) return NULL;
+	const char * p = str+ix;
+	const char * pe = strchr(p, '\n');
+	size_t len;
+	if (pe) { len = (pe+1 - p); } else { len = strlen(p); }
+	len = MIN(len, (size_t)cb-1);
+	memcpy(s, p, len);
+	ix += len;
+	s[len] = 0;
+	return s;
+}
+
+#define CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE        1
+#define CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT  2
+
+/*
+** Read one line and any continuation lines that go with it.  Lines ending
+** with <white space><backslash> are continued onto the next line.
+** Lines can be of any lengh.  We pass back a pointer to a buffer; do _not_
+** free this memory.  It will get freed the next time getline() is called (this
+** function used to contain a fixed-size static buffer).
+*/
+template <class T>
+static char *
+getline_implementation( T & src, int requested_bufsize, int options, int & line_number )
+{
+	static char	*buf = NULL;
+	static unsigned int buflen = 0;
+	char	*end_ptr;	// Pointer to read into next read
+	char    *line_ptr;	// Pointer to beginning of current line from input
+	int      in_comment = FALSE;
+	//int      in_continuation = FALSE;
+
+	if( src.at_eof() ) {
+			// We're at the end of the file, clean up our buffers and
+			// return NULL.  
+		if ( buf ) {
+			free(buf);
+			buf = NULL;
+			buflen = 0;
+		}
+		return NULL;
+	}
+
+	if ( buflen < (unsigned int)requested_bufsize ) {
+		if ( buf ) free(buf);
+		buf = (char *)malloc(requested_bufsize);
+		buflen = requested_bufsize;
+	}
+	ASSERT( buf != NULL );
+	buf[0] = '\0';
+	end_ptr = buf;
+	line_ptr = buf;
+
+	// Loop 'til we're done reading a whole line, including continutations
+	for(;;) {
+		int		len = buflen - (end_ptr - buf);
+		if( len <= 5 ) {
+			// we need a larger buffer -- grow buffer by 4kbytes
+			char *newbuf = (char *)realloc(buf, 4096 + buflen);
+			if ( newbuf ) {
+				end_ptr = (end_ptr - buf) + newbuf;
+				line_ptr = (line_ptr - buf) + newbuf;
+				buf = newbuf;	// note: realloc() freed our old buf if needed
+				buflen += 4096;
+				len += 4096;
+			} else {
+				// malloc returned NULL, we're out of memory
+				EXCEPT( "Out of memory - config file line too long" );
+			}
+		}
+
+		if( src.readline(end_ptr,len) == NULL ) {
+			if( buf[0] == '\0' ) {
+				return NULL;
+			} else {
+				return buf;
+			}
+		}
+
+		// See if fgets read an entire line, or simply ran out of buffer space
+		if ( *end_ptr == '\0' ) {
+			continue;
+		}
+
+		size_t cch = strlen(end_ptr);
+		if (end_ptr[cch-1] != '\n') {
+			// if we made it here, fgets() ran out of buffer space.
+			// move our read_ptr pointer forward so we concatenate the
+			// rest on after we realloc our buffer above.
+			end_ptr += cch;
+			continue;	// since we are not finished reading this line
+		}
+
+		++line_number;
+		end_ptr += cch;
+
+			// Instead of calling ltrim() below, we do it inline,
+			// taking advantage of end_ptr to avoid overhead.
+
+			// trim whitespace from the end
+		while( end_ptr>line_ptr && isspace( end_ptr[-1] ) ) {
+			*(--end_ptr) = '\0';
+		}	
+
+			// trim whitespace from the beginning of the line
+		char	*ptr = line_ptr;
+		while( isspace(*ptr) ) {
+			ptr++;
+		}
+		// special interactions between \ and #.
+		// if we have a # AFTER a continuation then we may want to treat everthing between the # and \n
+		// as if it were whitespace. conversely, if the entire line begins with # we may want to ignore
+		// \ at the end of that line.
+		in_comment = (*ptr == '#');
+		if (in_comment) {
+			if (line_ptr == buf) {
+				// we are the the start of the whole line.
+			} else if (options & CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT) {
+				// pretend this is whitespace to the end of the line
+				ptr = end_ptr-1;
+				in_comment = false;
+			}
+		}
+		if( ptr != line_ptr ) {
+			(void)memmove( line_ptr, ptr, end_ptr-ptr+1 );
+			end_ptr = (end_ptr - ptr) + line_ptr;
+		}
+
+		if( end_ptr > buf && end_ptr[-1] == '\\' ) {
+			/* Ok read the continuation and concatenate it on */
+			*(--end_ptr) = '\0';
+
+			// special interactions between \ and #.
+			// if we have a \ at the end of a line that begins with #
+			// we want to pretend that the \ isn't there and NOT continue
+			// we do this on the theory that a comment that has continuation
+			// is likely to be an error.
+			if ( ! in_comment || ! (options & CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE)) {
+				line_ptr = end_ptr;
+				continue;
+			}
+		}
+		return buf;
+	}
+}
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
+#ifdef GETLINE_IMPL_IS_TEMPLATE
+// changed to a template and moved out of extern "C" block.
+#else
 #define CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE        1
 #define CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT  2
 static char *getline_implementation(FILE * fp, int buffer_size, int options, int & line_number);
+#endif
 
 
 //int		ConfigLineNo;
@@ -1117,6 +1292,25 @@ static bool parse_include_options(char * str, int & opts, char *& pinto, const c
 	return true;
 }
 
+
+#ifdef GETLINE_IMPL_IS_TEMPLATE
+
+char * MacroStreamYourFile::getline(int gl_opt) {
+	FileStarLineSource ls(fp);
+	return getline_implementation(ls, _POSIX_ARG_MAX, gl_opt, src->line);
+}
+
+char * MacroStreamFile::getline(int gl_opt) {
+	FileStarLineSource ls(fp);
+	return getline_implementation(ls, _POSIX_ARG_MAX, gl_opt, src.line);
+}
+
+char * MacroStreamMemoryFile::getline(int gl_opt) {
+	return getline_implementation(ls, _POSIX_ARG_MAX, gl_opt, src->line);
+}
+
+#else // GETLINE_IMPL_IS_TEMPLATE
+
 char * MacroStreamYourFile::getline(int gl_opt) {
 	return getline_implementation(fp, 128, gl_opt, src->line);
 }
@@ -1124,6 +1318,8 @@ char * MacroStreamYourFile::getline(int gl_opt) {
 char * MacroStreamFile::getline(int gl_opt) {
 	return getline_implementation(fp, 128, gl_opt, src.line);
 }
+
+#endif // GETLINE_IMPL_IS_TEMPLATE
 
 bool MacroStreamFile::open(const char * filename, bool is_command, MACRO_SET& set, std::string &errmsg) {
 	if (fp) fclose(fp);
@@ -2146,6 +2342,33 @@ int get_macro_ref_count (const char *name, MACRO_SET & set)
 	return -1;
 }
 
+#ifdef GETLINE_IMPL_IS_TEMPLATE
+
+
+// These provide external linkage to the getline_implementation function for use by non-config code
+extern "C" char * getline_trim( FILE *fp ) {
+	int lineno=0;
+	const int options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
+	FileStarLineSource ls(fp);
+	return getline_implementation(ls, _POSIX_ARG_MAX, options, lineno);
+}
+extern "C++" char * getline_trim( FILE *fp, int & lineno, int mode ) {
+	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
+	const int simple_options = 0;
+	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
+	FileStarLineSource ls(fp);
+	return getline_implementation(ls,_POSIX_ARG_MAX, options, lineno);
+}
+extern "C++" char * getline_trim( MacroStream & ms, int mode ) {
+	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
+	const int simple_options = 0;
+	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
+	return ms.getline(options);
+}
+
+
+#else
+
 // These provide external linkage to the getline_implementation function for use by non-config code
 extern "C" char * getline_trim( FILE *fp ) {
 	int lineno=0;
@@ -2289,6 +2512,7 @@ getline_implementation( FILE *fp, int requested_bufsize, int options, int & line
 		return buf;
 	}
 }
+#endif
 
 } // end of extern "C"
 
