@@ -341,4 +341,5 @@ HookJobExitClient::hookExited(int exit_status) {
 	HookClient::hookExited(exit_status);
 		// Tell the JIC that it can mark allJobsDone() finished.
 	Starter->jic->finishAllJobsDone();
+	Starter->StarterExit(0);
 }
