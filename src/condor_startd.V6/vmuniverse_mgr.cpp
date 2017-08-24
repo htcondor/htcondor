@@ -108,7 +108,6 @@ VMStarterInfo::getUsageOfVM(ProcFamilyUsage &usage)
 		usage.total_resident_set_size = m_vm_alive_pinfo.rssize;
 #if HAVE_PSS
 		usage.total_proportional_set_size = m_vm_alive_pinfo.pssize;
-		usage.total_proportional_set_size = m_vm_alive_pinfo.pssize_available;
 #endif
 	}else {
 		usage.total_image_size = 0;
