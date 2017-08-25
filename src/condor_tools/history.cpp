@@ -42,7 +42,7 @@
 #include "userlog_to_classads.h"
 #include "setenv.h"
 #include "condor_daemon_core.h" // for extractInheritedSocks
-#include "getConsoleWindowSize.h"
+#include "console-utils.h"
 
 #include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
