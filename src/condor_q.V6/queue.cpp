@@ -59,7 +59,7 @@
 #include "expr_analyze.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
 #include "classad_helpers.h"
-#include "getConsoleWindowSize.h"
+#include "console-utils.h"
 
 #define CONDOR_Q_HANDLE_CLUSTER_AD 1
 
