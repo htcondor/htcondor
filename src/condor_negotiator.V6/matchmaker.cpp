@@ -1339,7 +1339,7 @@ struct group_order {
 
     private:
     // I don't want anybody defaulting this obj by accident
-    group_order(){}
+    group_order() : autoregroup(false), root_group(0) {}
 };
 
 

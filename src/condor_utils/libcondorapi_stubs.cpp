@@ -289,7 +289,13 @@ bool Stream::deadline_expired() const{not_impl();return false;}
 
 
 /* stubs for generic query object */
-GenericQuery::GenericQuery(void) { integerThreshold = stringThreshold = floatThreshold = 0;}
+GenericQuery::GenericQuery(void) { 
+	integerThreshold = stringThreshold = floatThreshold = 0; 
+	integerConstraints = 0; 
+	floatConstraints = 0;
+	stringConstraints = 0;
+	integerKeywordList = floatKeywordList = stringKeywordList = 0;
+}
 GenericQuery::~GenericQuery(void) {}
 
 /* stubs for query object. */
