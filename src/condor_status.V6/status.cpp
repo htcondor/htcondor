@@ -38,15 +38,15 @@
 #include "natural_cmp.h"
 #include "classad/jsonSource.h"
 #include "classad_helpers.h"
+#include "prettyPrint.h"
+#include "setflags.h"
 
 #include <vector>
 #include <sstream>
 #include <iostream>
 
-
 // if enabled, use natural_cmp for numerical sorting of hosts/slots
 #define STRVCMP (naturalSort ? natural_cmp : strcmp)
-
 
 // the condor q strategy will be to ingest ads and print them into MyRowOfValues structures
 // then insert those into a map which is indexed (and thus ordered) by job id.
@@ -55,7 +55,6 @@
 
 // This structure hold the rendered fields from a single job ad, it will be inserted in to a map by job id
 // and also linked up using the various pointers
-//
 class StatusRowOfData {
 public:
 	MyRowOfValues rov;
@@ -164,24 +163,14 @@ protected:
 
 
 // global variables
-AttrListPrintMask pm;
-printmask_headerfooter_t pmHeadFoot = STD_HEADFOOT;
-List<const char> pm_head; // The list of headings for the mask entries
 std::vector<GroupByKeyInfo> group_by_keys; // TJ 8.1.5 for future use, ignored for now.
 bool explicit_format = false;
-bool using_print_format = false; // hack for now so we can get standard totals when using -print-format
 bool disable_user_print_files = false; // allow command line to defeat use of default user print files.
 const char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
-//AdTypes		type 	= (AdTypes) -1;
 int			sdo_mode = SDO_NotSet;
-ppOption	ppStyle	= PP_NOTSET;
-ppOption	ppTotalStyle = PP_NOTSET; // used when setting PP_CUSTOM to keep track of how to do totals.
-int			wantOnlyTotals 	= 0;
 int			summarySize = -1;
 bool        expert = false;
-bool		wide_display = false; // when true, don't truncate field data
-bool		invalid_fields_empty = false; // when true, print "" instead of "[?]" for missing data
 const char * mode_constraint = NULL; // constraint set by mode
 int			result_limit = 0; // max number of results we want back.
 int			diagnose = 0;
@@ -193,63 +182,51 @@ CondorQuery *query;
 char		buffer[1024];
 char		*myName;
 ClassadSortSpecs sortSpecs;
-bool            noSort = false; // set to true to disable sorting entirely
-bool            naturalSort = true;
-bool            javaMode = false;
-bool			vmMode = false;
-bool			absentMode = false;
-bool			offlineMode = false;
-bool			compactMode = false;
-char 		*target = NULL;
-const char * ads_file = NULL; // read classads from this file instead of querying them from the collector
-ClassAdFileParseType::ParseType ads_file_format = ClassAdFileParseType::Parse_long;
-bool            print_attrs_in_hash_order = false;
-ClassAd		*targetAd = NULL;
+bool			noSort = false; // set to true to disable sorting entirely
+bool			naturalSort = true;
 
 classad::References projList;
 StringList dashAttributes; // Attributes specifically requested via the -attributes argument
 
-// instantiate templates
+char *			target = NULL;
+bool			print_attrs_in_hash_order = false;
+
+
+// Global mode flags.
+bool			javaMode = false;
+bool			vmMode = false;
+bool			absentMode = false;
+bool			offlineMode = false;
+bool			mergeMode = false;
+bool			annexMode = false;
+bool			compactMode = false;
+
+// Merge-mode globals.
+const char * rightFileName = NULL;
+ClassAdFileParseType::ParseType rightFileFormat = ClassAdFileParseType::Parse_long;
+
+const char * leftFileName = NULL;
+ClassAdFileParseType::ParseType leftFileFormat = ClassAdFileParseType::Parse_long;
+
+typedef struct {
+	std::set< ClassAd * > * leftSet;
+	struct _process_ads_info * both_ai;
+	struct _process_ads_info * right_ai;
+} merge_ads_info;
+
+// The main pretty printer.
+PrettyPrinter mainPP( PP_NOTSET, PP_NOTSET, STD_HEADFOOT );
 
 // function declarations
 void usage 		();
 void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
+
 // prototype for CollectorList:query, CondorQuery::processAds,
 // and CondorQ::fetchQueueFromHostAndProcess callbacks.
 // callback should return false to take ownership of the ad
 typedef bool (*FNPROCESS_ADS_CALLBACK)(void* pv, ClassAd * ad);
 static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr, int limit);
-//void prettyPrint(ROD_MAP_BY_KEY &, TrackTotals *);
-ppOption prettyPrintHeadings (bool any_ads);
-void prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, StringList * whitelist, bool fHashOrder);
-int getDisplayWidth(bool * is_piped=NULL);
-const char* digest_state_and_activity(char * sa, State st, Activity ac); //  in prettyPrint.cpp
-const CustomFormatFnTable * getCondorStatusPrintFormats();
-
-extern "C" int SetSyscalls (int) {return 0;}
-extern	int setPPstyle (ppOption, int, const char *);
-extern  void setPPwidth ();
-extern  void dumpPPMode(FILE* out);
-extern const char * paramNameFromPPMode(std::string &name);
-extern const char * adtypeNameFromPPMode();
-extern const char * getPPStyleStr (ppOption pps);
-extern void prettyPrintInitMask(classad::References & proj, const char * &constr, bool no_pr_files);
-//extern void reverse_engineer_width(int &wid, int &wflags, const Formatter & fmt, int hwid);
-extern AdTypes setMode(int sdo_mode, int arg_index, const char * arg);
-extern AdTypes resetMode(int sdo_mode, int arg_index, const char * arg);
-extern  int  forced_display_width;
-
-
-#if 0 // not currently used.
-// callback for CollectorList::query to build a classad list.
-static bool AddToClassAdList(void * pv, ClassAd* ad) {
-	ClassAdList * plist = (ClassAdList*)pv;
-	plist->Insert(ad);
-	return false; // return false to indicate we took ownership of the ad.
-}
-#endif
-
 
 void ClassadSortSpecs::AddToProjection(classad::References & proj)
 {
@@ -346,11 +323,20 @@ struct _process_ads_info {
    int           columns;
    FILE *        hfDiag; // write raw ads to this file for diagnostic purposes
    unsigned int  diag_flags;
+   PrettyPrinter * pp;
 };
 
 extern int startdCompact_ixCol_Platform;  // Platform
 extern int startdCompact_ixCol_ActCode;   // ST State+Activity code
 int max_totals_subkey = -1;
+
+static bool store_ads_callback( void * arg, ClassAd * ad ) {
+	std::set< ClassAd * > * mySet = reinterpret_cast< std::set< ClassAd * > *>( arg );
+	mySet->insert( ad );
+
+	// Do _not_ delete the ad.
+	return false;
+}
 
 static bool process_ads_callback(void * pv,  ClassAd* ad)
 {
@@ -358,6 +344,8 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 	struct _process_ads_info * pi = (struct _process_ads_info *)pv;
 	ROD_MAP_BY_KEY * pmap = pi->pmap;
 	TrackTotals *    totals = pi->totals;
+	PrettyPrinter &  thePP = * pi->pp;
+	ASSERT( pi->pp != NULL );
 
 	std::string key;
 	unsigned int ord = pi->ordinal++;
@@ -400,7 +388,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 			StatusRowOfData & srod = pp.first->second;
 
 			srod.rov.SetMaxCols(pi->columns);
-			pm.render(srod.rov, ad);
+			thePP.pm.render(srod.rov, ad);
 
 			bool fPslot = false;
 			if (ad->LookupBool(ATTR_SLOT_PARTITIONABLE, fPslot) && fPslot) {
@@ -420,7 +408,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 			if (totals && compactMode) {
 				char keybuf[64] = " ";
 				const char * subtot_key = keybuf;
-				switch(ppTotalStyle) {
+				switch(thePP.ppTotalStyle) {
 					case PP_SUBMITTER_NORMAL: srod.getString(0, keybuf, sizeof(keybuf)); break;
 					case PP_SCHEDD_NORMAL:
 					case PP_SCHEDD_DATA:
@@ -543,6 +531,52 @@ bool same_primary_key(const std::string & aa, const std::string & bb)
 	return bb.size() == cb;
 }
 
+std::set< ClassAd * > markedAds;
+static void mark( ClassAd * ad ) {
+	markedAds.insert( ad );
+}
+
+static bool marked( ClassAd * ad ) {
+	return markedAds.find( ad ) != markedAds.end();
+}
+
+static bool canJoin( ClassAd * left, ClassAd * right ) {
+	// FIXME: for now, just use the default key.
+	std::string leftKey;
+	unsigned int ordinal = 0;
+	sortSpecs.RenderKey( leftKey, ordinal, left );
+
+	std::string rightKey;
+	sortSpecs.RenderKey( rightKey, ordinal, right );
+
+	return leftKey == rightKey;
+}
+
+static bool merge_ads_callback( void * arg, ClassAd * ad ) {
+	merge_ads_info * mai = (merge_ads_info *)arg;
+	std::set< ClassAd * > & leftSet = * mai->leftSet;
+	_process_ads_info * both_ai = mai->both_ai;
+	_process_ads_info * right_ai = mai->right_ai;
+
+	// Partially determine which ROD_MAP_BY_KEY we shove this ad in.
+	// (We'll do one last pass over leftSet before we starting printing;
+	// mark()ed ads will be put in the both ROD, the others in the
+	// right ROD.
+	bool wasMatched = false;
+	for( auto i = leftSet.begin(); i != leftSet.end(); ++i ) {
+		if( canJoin( * i, ad ) ) {
+			mark( * i );
+			wasMatched = true;
+		}
+	}
+
+	if( wasMatched ) {
+		return process_ads_callback( both_ai, ad );
+	} else {
+		return process_ads_callback( right_ai, ad );
+	}
+}
+
 extern int startdCompact_ixCol_FreeCpus;  // Cpus
 extern int startdCompact_ixCol_MaxSlotMem;// Max(ChildMemory)
 extern int startdCompact_ixCol_FreeMem;   // Memory
@@ -663,6 +697,8 @@ void reduce_slot_results(ROD_MAP_BY_KEY & rmap)
 	}
 }
 
+void doNormalOutput( struct _process_ads_info & ai, AdTypes & adType );
+void doMergeOutput( struct _process_ads_info & ai );
 
 int
 main (int argc, char *argv[])
@@ -682,13 +718,13 @@ main (int argc, char *argv[])
 	// query object.  We add implied constraints from the command line in
 	// the second pass.
 	firstPass (argc, argv);
-	
+
 	// if the mode has not been set, it is SDO_Startd, we set it here
 	// but with default priority, so that any mode set in the first pass
 	// takes precedence.
 	// the actual adType to be queried is returned, note that this will
 	// _not_ be STARTD_AD if another ad type was set in pass 1
-	AdTypes adType = setMode (SDO_Startd, 0, DEFAULT);
+	AdTypes adType = mainPP.setMode (SDO_Startd, 0, DEFAULT);
 	ASSERT(sdo_mode != SDO_NotSet);
 
 	/*
@@ -747,7 +783,7 @@ main (int argc, char *argv[])
 			printf ("Adding constraint [%s]\n", buffer);
 		}
 		query->addANDConstraint (buffer);
-		
+
 		projList.insert(ATTR_HAS_JAVA);
 		projList.insert(ATTR_JAVA_MFLOPS);
 		projList.insert(ATTR_JAVA_VENDOR);
@@ -765,7 +801,7 @@ main (int argc, char *argv[])
 	        printf( "Adding constraint %s\n", buffer );
 	    }
 	    query->addANDConstraint( buffer );
-	    
+
 	    projList.insert( ATTR_ABSENT );
 	    projList.insert( ATTR_LAST_HEARD_FROM );
 	    projList.insert( ATTR_CLASSAD_LIFETIME );
@@ -837,16 +873,19 @@ main (int argc, char *argv[])
 	sortSpecs.AddToProjection(projList);
 
 	// initialize the totals object
-	if (ppStyle == PP_CUSTOM && using_print_format) {
-		if (pmHeadFoot & HF_NOSUMMARY) ppTotalStyle = PP_CUSTOM;
+	if (mainPP.ppStyle == PP_CUSTOM && mainPP.using_print_format) {
+		if (mainPP.pmHeadFoot & HF_NOSUMMARY) mainPP.ppTotalStyle = PP_CUSTOM;
 	} else {
-		ppTotalStyle = ppStyle;
+		mainPP.ppTotalStyle = mainPP.ppStyle;
 	}
-	TrackTotals	totals(ppTotalStyle);
+	TrackTotals	rightTotals(mainPP.ppTotalStyle);
+
+	// In merge mode, the 'both' ads are printed normally.
+	TrackTotals bothTotals(mainPP.ppTotalStyle);
 
 	// in order to totals, the projection MUST have certain attributes
-	if (wantOnlyTotals || ((ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
-		switch (ppTotalStyle) {
+	if (mainPP.wantOnlyTotals || ((mainPP.ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
+		switch (mainPP.ppTotalStyle) {
 			case PP_STARTD_SERVER:
 				projList.insert(ATTR_MEMORY);
 				projList.insert(ATTR_DISK);
@@ -858,7 +897,7 @@ main (int argc, char *argv[])
 				// fall through
 			case PP_STARTD_NORMAL:
 			case PP_STARTD_COD:
-				if (ppTotalStyle == PP_STARTD_COD) {
+				if (mainPP.ppTotalStyle == PP_STARTD_COD) {
 					projList.insert(ATTR_CLAIM_STATE);
 					projList.insert(ATTR_COD_CLAIMS);
 				}
@@ -897,12 +936,12 @@ main (int argc, char *argv[])
 	// fetch the query
 	QueryResult q;
 
-	if (PP_IS_LONGish(ppStyle)) {
+	if (PP_IS_LONGish(mainPP.ppStyle)) {
 		// Remove everything from the projection list if we're displaying
 		// the "long form" of the ads.
 		projList.clear();
-		using_print_format = false;
-		pm.clearFormats();
+		mainPP.using_print_format = false;
+		mainPP.pm.clearFormats();
 
 		// but if -attributes was supplied, show only those attributes
 		if ( ! dashAttributes.isEmpty()) {
@@ -912,13 +951,13 @@ main (int argc, char *argv[])
 				projList.insert(s);
 			}
 		}
-		pmHeadFoot = HF_BARE;
+		mainPP.pmHeadFoot = HF_BARE;
 	}
 
 	// Setup the pretty printer for the given mode.
-	if ( ! PP_IS_LONGish(ppStyle) && ppStyle != PP_CUSTOM && ! explicit_format) {
+	if ( ! PP_IS_LONGish(mainPP.ppStyle) && mainPP.ppStyle != PP_CUSTOM && ! explicit_format) {
 		const char * constr = NULL;
-		prettyPrintInitMask(projList, constr, disable_user_print_files);
+		mainPP.prettyPrintInitMask(projList, constr, disable_user_print_files);
 		if (constr) { query->addANDConstraint(constr); }
 	}
 
@@ -939,12 +978,12 @@ main (int argc, char *argv[])
 
 			PrintMaskMakeSettings pmms;
 			//pmms.aggregate =
-			const char *adtypeName = adtypeNameFromPPMode();
-			if (adtypeName) { pmms.select_from = adtypeNameFromPPMode(); }
-			pmms.headfoot = pmHeadFoot;
+			const char *adtypeName = mainPP.adtypeNameFromPPMode();
+			if (adtypeName) { pmms.select_from = mainPP.adtypeNameFromPPMode(); }
+			pmms.headfoot = mainPP.pmHeadFoot;
 			List<const char> * pheadings = NULL;
-			if ( ! pm.has_headings()) {
-				if (pm_head.Length() > 0) pheadings = &pm_head;
+			if ( ! mainPP.pm.has_headings()) {
+				if (mainPP.pm_head.Length() > 0) pheadings = &mainPP.pm_head;
 			}
 			MyString requirements;
 			if (Q_OK == query->getRequirements(requirements) && ! requirements.empty()) {
@@ -957,7 +996,7 @@ main (int argc, char *argv[])
 
 			temp.clear();
 			temp.reserve(4096);
-			PrintPrintMask(temp, *pFnTable, pm, pheadings, pmms, group_by_keys, NULL);
+			PrintPrintMask(temp, *pFnTable, mainPP.pm, pheadings, pmms, group_by_keys, NULL);
 			fprintf(fout, "%s\n", temp.c_str());
 			//exit (1);
 		}
@@ -967,9 +1006,9 @@ main (int argc, char *argv[])
 		fprintf(fout, "\n----------\n");
 
 		// print diagnostic information about inferred internal state
-		dumpPPMode(fout);
-		fprintf(fout, "Totals: %s\n", getPPStyleStr(ppTotalStyle));
-		fprintf(fout, "Opts: HF=%x\n", pmHeadFoot);
+		mainPP.dumpPPMode(fout);
+		fprintf(fout, "Totals: %s\n", getPPStyleStr(mainPP.ppTotalStyle));
+		fprintf(fout, "Opts: HF=%x\n", mainPP.pmHeadFoot);
 
 		std::string style_text;
 		style_text.reserve(8000);
@@ -980,10 +1019,10 @@ main (int argc, char *argv[])
 
 		style_text = "";
 		List<const char> * pheadings = NULL;
-		if ( ! pm.has_headings()) {
-			if (pm_head.Length() > 0) pheadings = &pm_head;
+		if ( ! mainPP.pm.has_headings()) {
+			if (mainPP.pm_head.Length() > 0) pheadings = &mainPP.pm_head;
 		}
-		pm.dump(style_text, getCondorStatusPrintFormats(), pheadings);
+		mainPP.pm.dump(style_text, getCondorStatusPrintFormats(), pheadings);
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
 
 		ClassAd queryAd;
@@ -1055,38 +1094,93 @@ main (int argc, char *argv[])
 		}
 	}
 
+
+	// This awful construction is forced on us by our List class
+	// refusing to allow copying or assignment.
+	PrettyPrinter * lpp = & mainPP;
+	PrettyPrinter * bpp = & mainPP;
+	PrettyPrinter * rpp = & mainPP;
+
+	PrettyPrinter leftPP( PP_CUSTOM, PP_NOTSET, HF_NOSUMMARY );
+	PrettyPrinter rightPP( PP_CUSTOM, PP_NOTSET, HF_NOSUMMARY );
+	if( annexMode ) {
+		const char * constraint;
+		leftPP.ppSetAnnexInstanceCols( -1, constraint );
+		rightPP.ppSetAnnexInstanceCols( -1, constraint );
+
+		rpp = & rightPP;
+		lpp = & leftPP;
+	}
+
 	CondorError errstack;
-	ROD_MAP_BY_KEY admap;
-	struct _process_ads_info ai = {
-		&admap,
-		(pmHeadFoot&HF_NOSUMMARY) ? NULL : &totals,
+	ROD_MAP_BY_KEY right;
+	struct _process_ads_info right_ai = {
+		& right,
+		(mainPP.pmHeadFoot&HF_NOSUMMARY) ? NULL : & rightTotals,
 		1, // key of last resort, this counts up as members are added.
-		pm.ColCount(), // if 0, the ad is stored in the map, otherwise a row of data is stored and the add freed.
+		mainPP.pm.ColCount(), // if 0, the ad is stored in the map, otherwise a row of data is stored and the add freed.
 		NULL, 0, // diagnostic file, flags
+		rpp
 	};
 
 	bool close_hfdiag = false;
 	if (diagnose) {
-		ai.diag_flags = 1 | 2;
+		right_ai.diag_flags = 1 | 2;
 		if (diagnostics_ads_file && diagnostics_ads_file[0] != '-') {
-			ai.hfDiag = safe_fopen_wrapper_follow(diagnostics_ads_file, "w");
-			if ( ! ai.hfDiag) {
+			right_ai.hfDiag = safe_fopen_wrapper_follow(diagnostics_ads_file, "w");
+			if ( ! right_ai.hfDiag) {
 				fprintf(stderr, "\nERROR: Failed to open file -diag output file (%s)\n", strerror(errno));
 			}
 			close_hfdiag = true;
 		} else {
-			ai.hfDiag = stdout;
-			if (diagnostics_ads_file && diagnostics_ads_file[0] == '-' && diagnostics_ads_file[1] == '2') ai.hfDiag = stderr;
+			right_ai.hfDiag = stdout;
+			if (diagnostics_ads_file && diagnostics_ads_file[0] == '-' && diagnostics_ads_file[1] == '2') right_ai.hfDiag = stderr;
 			close_hfdiag = false;
 		}
-		if ( ! ai.hfDiag) { exit(2); }
+		if ( ! right_ai.hfDiag) { exit(2); }
 	}
 
-	if (NULL != ads_file) {
-		MyString req; // query requirements
+
+	//
+	// Read the left set of ads.
+	//
+	int leftLimit = -1;
+	const char * leftConstraint = NULL;
+	const char * leftFileName = "-";
+	std::set< ClassAd * > leftSet;
+	ClassAdFileParseType::ParseType leftParseType = ClassAdFileParseType::Parse_auto;
+	read_classad_file( leftFileName, leftParseType, store_ads_callback,
+		& leftSet, leftConstraint, leftLimit );
+
+	// Output storage.
+	ROD_MAP_BY_KEY left;
+	struct _process_ads_info left_ai = right_ai;
+	left_ai.pmap = & left;
+	left_ai.totals = NULL;
+	left_ai.pp = lpp;
+
+	// Although only one of both and right will ever display their totals,
+	// it's easier to compute them both and ignore one at print time.
+	ROD_MAP_BY_KEY both;
+	struct _process_ads_info both_ai = right_ai;
+	both_ai.pmap = & both;
+	both_ai.totals = (mainPP.pmHeadFoot&HF_NOSUMMARY) ? NULL : & bothTotals;
+	both_ai.pp = bpp;
+
+	// Argument for the merge callback;
+	merge_ads_info mai = { & leftSet, & both_ai, & right_ai };
+
+	//
+	// Read the right set of ads and do the merge in the same pass.
+	//
+	void * rightArg = & mai;
+	FNPROCESS_ADS_CALLBACK rightCallback = merge_ads_callback;
+
+	if( rightFileName != NULL ) {
+		MyString req;
 		q = query->getRequirements(req);
 		const char * constraint = req.empty() ? NULL : req.c_str();
-		if (read_classad_file(ads_file, ads_file_format, process_ads_callback, &ai, constraint, result_limit)) {
+		if( read_classad_file( rightFileName, rightFileFormat, rightCallback, rightArg, constraint, result_limit ) ) {
 			q = Q_OK;
 		}
 	} else if (NULL != addr) {
@@ -1094,33 +1188,30 @@ main (int argc, char *argv[])
 			// subsystem that corresponds to a daemon (above).
 			// Here 'addr' represents either the host:port of requested pool, or
 			// alternatively the host:port of daemon associated with requested subsystem (direct mode)
-		q = query->processAds (process_ads_callback, &ai, addr, &errstack);
+		q = query->processAds( rightCallback, rightArg, addr, & errstack );
 	} else {
 			// otherwise obtain list of collectors and submit query that way
 		CollectorList * collectors = CollectorList::create();
-		q = collectors->query (*query, process_ads_callback, &ai, &errstack);
+		q = collectors->query( * query, rightCallback, rightArg, & errstack );
 		delete collectors;
 	}
+
+	for( auto i = leftSet.begin(); i != leftSet.end(); ++i ) {
+		if( marked( * i ) ) {
+			// The ad is already in both if it was marked.
+		} else {
+			process_ads_callback( & left_ai, * i );
+		}
+	}
+
 	if (diagnose) {
 		if (close_hfdiag) {
-			fclose(ai.hfDiag);
-			ai.hfDiag = NULL;
+			fclose(right_ai.hfDiag);
+			right_ai.hfDiag = NULL;
 		}
 		exit(1);
 	}
 
-	if (compactMode) {
-		switch (adType) {
-		case STARTD_AD: {
-			if (wantOnlyTotals) {
-				fprintf(stderr, "Warning: ignoring -compact option because -total option is also set\n");
-			} else {
-				reduce_slot_results(admap);
-			}
-		} break;
-		default: break;
-		}
-	}
 
 	// if any error was encountered during the query, report it and exit 
 	if (Q_OK != q) {
@@ -1155,11 +1246,84 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
+	if(! mergeMode) {
+		doNormalOutput( right_ai, adType );
+	} else {
+		if( right_ai.pmap->size() > 0 ) {
+			doMergeOutput( right_ai );
+			if( both_ai.pmap->size() > 0 ) {
+				fprintf( stdout, "\n" );
+			}
+		}
+
+		if( both_ai.pmap->size() > 0 ) {
+			doNormalOutput( both_ai, adType );
+			if( left_ai.pmap->size() > 0 ) {
+				fprintf( stdout, "\n" );
+			}
+		}
+
+		if( left_ai.pmap->size() > 0 ) {
+			doMergeOutput( left_ai );
+		}
+	}
+
+	delete query;
+	return 0;
+}
+
+void doMergeOutput( struct _process_ads_info & ai ) {
+	ROD_MAP_BY_KEY & admap = * ai.pmap;
+	ASSERT( ai.pmap != NULL );
+	PrettyPrinter & pp = * ai.pp;
+	ASSERT( ai.pp != NULL );
+
 	bool any_ads = ! admap.empty();
-	ppOption pps = prettyPrintHeadings (any_ads);
+	ppOption pps = pp.prettyPrintHeadings( any_ads );
 
 	bool is_piped = false;
-	int display_width = getDisplayWidth(&is_piped);
+	int display_width = pp.getDisplayWidth( & is_piped );
+	std::string line;
+	line.reserve( is_piped ? 1024 : display_width );
+
+	int output_index = 0;
+	for( auto it = admap.begin(); it != admap.end(); ++it ) {
+		if( ai.columns ) {
+			line.clear();
+			pp.pm.display( line, it->second.rov );
+			fputs( line.c_str(), stdout );
+		} else {
+			StringList * whitelist = dashAttributes.isEmpty() ? NULL : & dashAttributes;
+			pp.prettyPrintAd( pps, it->second.ad, output_index, whitelist, print_attrs_in_hash_order );
+			if (it->second.ad) ++output_index;
+		}
+		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
+	}
+}
+
+void
+doNormalOutput( struct _process_ads_info & ai, AdTypes & adType ) {
+	TrackTotals * totals = ai.totals;
+	ROD_MAP_BY_KEY & admap = * ai.pmap;
+
+	if (compactMode) {
+		switch (adType) {
+		case STARTD_AD: {
+			if( mainPP.wantOnlyTotals ) {
+				fprintf(stderr, "Warning: ignoring -compact option because -total option is also set\n");
+			} else {
+				reduce_slot_results(admap);
+			}
+		} break;
+		default: break;
+		}
+	}
+
+	bool any_ads = ! admap.empty();
+	ppOption pps = mainPP.prettyPrintHeadings( any_ads );
+
+	bool is_piped = false;
+	int display_width = mainPP.getDisplayWidth(&is_piped);
 	std::string line; line.reserve(is_piped ? 1024 : display_width);
 
 	// for XML output, print the xml header even if there are no ads.
@@ -1175,16 +1339,16 @@ main (int argc, char *argv[])
 			continue;
 		if (ai.columns) {
 			line.clear();
-			pm.display(line, it->second.rov);
+			mainPP.pm.display(line, it->second.rov);
 			fputs(line.c_str(), stdout);
 		} else {
 			StringList * whitelist = dashAttributes.isEmpty() ? NULL : &dashAttributes;
-			prettyPrintAd(pps, it->second.ad, output_index, whitelist, print_attrs_in_hash_order);
+			mainPP.prettyPrintAd(pps, it->second.ad, output_index, whitelist, print_attrs_in_hash_order);
 			if (it->second.ad) ++output_index;
 		}
 		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
 	}
-	
+
 	// for XML output, print the xml footer even if there are no ads.
 	if (PP_XML == pps) {
 		line.clear();
@@ -1198,20 +1362,16 @@ main (int argc, char *argv[])
 	}
 
 	// if totals are required, display totals
-	if (any_ads && !(pmHeadFoot&HF_NOSUMMARY) && totals.haveTotals()) {
+	if (any_ads && !(mainPP.pmHeadFoot&HF_NOSUMMARY) && totals && totals->haveTotals()) {
 		fputc('\n', stdout);
-		bool auto_width = (ppTotalStyle == PP_SUBMITTER_NORMAL);
-		int totals_key_width = (wide_display || auto_width) ? -1 : MAX(20, max_totals_subkey);
-		totals.displayTotals(stdout, totals_key_width);
+		bool auto_width = (mainPP.ppTotalStyle == PP_SUBMITTER_NORMAL);
+		int totals_key_width = (mainPP.wide_display || auto_width) ? -1 : MAX(14, max_totals_subkey);
+		totals->displayTotals(stdout, totals_key_width);
 	}
-
-	delete query;
-
-	return 0;
 }
 
 
-int set_status_print_mask_from_stream (
+int PrettyPrinter::set_status_print_mask_from_stream (
 	const char * streamid,
 	bool is_filename,
 	const char ** pconstraint)
@@ -1435,7 +1595,7 @@ firstPass (int argc, char *argv[])
 	//   constraints are added on the second pass
 	for (int i = 1; i < argc; i++) {
 		if (is_dash_arg_prefix (argv[i], "avail", 2)) {
-			setMode (SDO_Startd_Avail, i, argv[i]);
+			mainPP.setMode (SDO_Startd_Avail, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "pool", 1)) {
 			if( pool ) {
@@ -1480,13 +1640,13 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 			i += 1;
-			ads_file = argv[i];
+			rightFileName = argv[i];
 			if (pcolon) {
-				ads_file_format = parseAdsFileFormat(++pcolon, ClassAdFileParseType::Parse_long);
+				rightFileFormat = parseAdsFileFormat(++pcolon, ClassAdFileParseType::Parse_long);
 			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
-			setPPstyle (PP_CUSTOM, i, argv[i]);
+			mainPP.setPPstyle (PP_CUSTOM, i, argv[i]);
 			if( !argv[i+1] || !argv[i+2] ) {
 				fprintf( stderr, "%s: -format requires two other arguments\n",
 						 myName );
@@ -1494,7 +1654,7 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 			i += 2;
-			pmHeadFoot = HF_BARE;
+			mainPP.pmHeadFoot = HF_BARE;
 			explicit_format = true;
 		} else
 		if (*argv[i] == '-' &&
@@ -1507,9 +1667,9 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
-			pmHeadFoot = HF_NOSUMMARY;
+			mainPP.pmHeadFoot = HF_NOSUMMARY;
 			explicit_format = true;
-			setPPstyle (PP_CUSTOM, i, argv[i]);
+			mainPP.setPPstyle (PP_CUSTOM, i, argv[i]);
 			while (argv[i+1] && *(argv[i+1]) != '-') {
 				++i;
 			}
@@ -1529,19 +1689,18 @@ firstPass (int argc, char *argv[])
 				disable_user_print_files = true;
 			} else {
 				explicit_format = true;
-				setPPstyle (PP_CUSTOM, i, argv[i]);
+				mainPP.setPPstyle (PP_CUSTOM, i, argv[i]);
 			}
 			++i; // eat the next argument.
 			// we can't fully parse the print format argument until the second pass, so we are done for now.
 		} else
 		if (is_dash_arg_colon_prefix (argv[i], "wide", &pcolon, 3)) {
-			wide_display = true; // when true, don't truncate field data
+			mainPP.wide_display = true; // when true, don't truncate field data
 			if (pcolon) {
-				forced_display_width = atoi(++pcolon);
-				if (forced_display_width <= 100) wide_display = false;
-				setPPwidth();
+				mainPP.forced_display_width = atoi(++pcolon);
+				if (mainPP.forced_display_width <= 100) mainPP.wide_display = false;
+				mainPP.setPPwidth();
 			}
-			//invalid_fields_empty = true;
 		} else
 		if (is_dash_arg_colon_prefix (argv[i], "natural", &pcolon, 3)) {
 			naturalSort = true;
@@ -1562,7 +1721,7 @@ firstPass (int argc, char *argv[])
 			target = argv[i];
 			FILE *targetFile = safe_fopen_wrapper_follow(target, "r");
 			int iseof, iserror, empty;
-			targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
+			mainPP.targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
 			fclose(targetFile);
 		} else
 		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
@@ -1578,6 +1737,7 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "annex-slots", 5)) {
 			// can add constraints on second pass only
 			if( argv[i + 1] && argv[i + 1][0] != '-' ) { ++i; }
+			annexMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "annex-name", 10)) {
 			// can add constraints on second pass only
@@ -1588,6 +1748,7 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
+			annexMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "direct", 3)) {
 			if( direct ) {
@@ -1612,7 +1773,7 @@ firstPass (int argc, char *argv[])
 			dprintf_set_tool_debug("TOOL", 0);
 		} else
 		if (is_dash_arg_prefix (argv[i], "defrag", 3)) {
-			setMode (SDO_Defrag, i, argv[i]);
+			mainPP.setMode (SDO_Defrag, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
 			usage ();
@@ -1642,17 +1803,17 @@ firstPass (int argc, char *argv[])
 			}
 			switch (parse_type) {
 				default:
-				case ClassAdFileParseType::Parse_long: setPPstyle (PP_LONG, i, argv[i]); break;
-				case ClassAdFileParseType::Parse_xml: setPPstyle (PP_XML, i, argv[i]); break;
-				case ClassAdFileParseType::Parse_json: setPPstyle (PP_JSON, i, argv[i]); break;
-				case ClassAdFileParseType::Parse_new: setPPstyle (PP_NEWCLASSAD, i, argv[i]); break;
+				case ClassAdFileParseType::Parse_long: mainPP.setPPstyle (PP_LONG, i, argv[i]); break;
+				case ClassAdFileParseType::Parse_xml: mainPP.setPPstyle (PP_XML, i, argv[i]); break;
+				case ClassAdFileParseType::Parse_json: mainPP.setPPstyle (PP_JSON, i, argv[i]); break;
+				case ClassAdFileParseType::Parse_new: mainPP.setPPstyle (PP_NEWCLASSAD, i, argv[i]); break;
 			}
 		} else
 		if (is_dash_arg_prefix (argv[i],"xml", 1)){
-			setPPstyle (PP_XML, i, argv[i]);
+			mainPP.setPPstyle (PP_XML, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i],"json", 2)){
-			setPPstyle (PP_JSON, i, argv[i]);
+			mainPP.setPPstyle (PP_JSON, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i],"attributes", 2)){
 			if( !argv[i+1] ) {
@@ -1662,31 +1823,31 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 			i++;
-		} else	
+		} else
 		if (is_dash_arg_prefix(argv[i], "claimed", 2)) {
-			setMode (SDO_Startd_Claimed, i, argv[i]);
+			mainPP.setMode (SDO_Startd_Claimed, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix(argv[i], "data", 2)) {
 			if (sdo_mode >= SDO_Schedd && sdo_mode < SDO_Schedd_Run) {
-				resetMode (SDO_Schedd_Data, i, argv[i]);
+				mainPP.resetMode (SDO_Schedd_Data, i, argv[i]);
 			} else {
-				setMode (SDO_Schedd_Data, i, argv[i]);
+				mainPP.setMode (SDO_Schedd_Data, i, argv[i]);
 			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "run", 1)) {
 			// NOTE: default for bare -run changed from SDO_Startd_Claimed to SDO_Schedd_Run in 8.5.7
 			if (sdo_mode == SDO_Startd || sdo_mode == SDO_Startd_Claimed) {
-				resetMode (SDO_Startd_Claimed, i, argv[i]);
+				mainPP.resetMode (SDO_Startd_Claimed, i, argv[i]);
 			} else {
 				if (sdo_mode == SDO_Schedd) {
-					resetMode (SDO_Schedd_Run, i, argv[i]);
+					mainPP.resetMode (SDO_Schedd_Run, i, argv[i]);
 				} else {
-					setMode (SDO_Schedd_Run, i, argv[i]);
+					mainPP.setMode (SDO_Schedd_Run, i, argv[i]);
 				}
 			}
 		} else
 		if( is_dash_arg_prefix (argv[i], "cod", 3) ) {
-			setMode (SDO_Startd_Cod, i, argv[i]);
+			mainPP.setMode (SDO_Startd_Cod, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "java", 1)) {
 			/*explicit_mode =*/ javaMode = true;
@@ -1697,11 +1858,14 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "offline", 2)) {
 			/*explicit_mode =*/ offlineMode = true;
 		} else
+		if (is_dash_arg_prefix (argv[i], "merge", 5)) {
+			mergeMode = true;
+		} else
 		if (is_dash_arg_prefix (argv[i], "vm", 2)) {
 			/*explicit_mode =*/ vmMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "slots", 2)) {
-			setMode (SDO_Startd, i, argv[i]);
+			mainPP.setMode (SDO_Startd, i, argv[i]);
 			compactMode = false;
 		} else
 		if (is_dash_arg_prefix (argv[i], "compact", 3)) {
@@ -1712,11 +1876,11 @@ firstPass (int argc, char *argv[])
 		} else
 		if (is_dash_arg_prefix (argv[i], "server", 2)) {
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
-			setPPstyle (PP_STARTD_SERVER, i, argv[i]);
+			mainPP.setPPstyle (PP_STARTD_SERVER, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "state", 4)) {
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
-			setPPstyle (PP_STARTD_STATE, i, argv[i]);
+			mainPP.setPPstyle (PP_STARTD_STATE, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			if( statistics ) {
@@ -1733,19 +1897,19 @@ firstPass (int argc, char *argv[])
 			statistics = strdup( argv[i] );
 		} else
 		if (is_dash_arg_prefix (argv[i], "startd", 4)) {
-			setMode (SDO_Startd,i, argv[i]);
+			mainPP.setMode (SDO_Startd,i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "schedd", 2)) {
 			if (sdo_mode == SDO_Startd_Claimed) {
-				resetMode (SDO_Schedd_Run, i, argv[i]);
+				mainPP.resetMode (SDO_Schedd_Run, i, argv[i]);
 			} else if (sdo_mode >= SDO_Schedd && sdo_mode <= SDO_Schedd_Run) {
 				// Do nothing.
 			} else {
-				setMode (SDO_Schedd, i, argv[i]);
+				mainPP.setMode (SDO_Schedd, i, argv[i]);
 			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "grid", 1)) {
-			setMode (SDO_Grid, i, argv[i]);
+			mainPP.setMode (SDO_Grid, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "subsystem", 4)) {
 			i++;
@@ -1777,31 +1941,31 @@ firstPass (int argc, char *argv[])
 				}
 			}
 			if (sm != SDO_NotSet) {
-				setMode (sm, i, argv[i]);
+				mainPP.setMode (sm, i, argv[i]);
 			} else {
 				genericType = argv[i];
-				setMode (SDO_Other, i, argv[i]);
+				mainPP.setMode (SDO_Other, i, argv[i]);
 			}
 		} else
 #ifdef HAVE_EXT_POSTGRESQL
 		if (is_dash_arg_prefix (argv[i], "quill", 1)) {
-			setMode (SDO_Quill, i, argv[i]);
+			mainPP.setMode (SDO_Quill, i, argv[i]);
 		} else
 #endif /* HAVE_EXT_POSTGRESQL */
 		if (is_dash_arg_prefix (argv[i], "license", 2)) {
-			setMode (SDO_License, i, argv[i]);
+			mainPP.setMode (SDO_License, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "storage", 3)) {
-			setMode (SDO_Storage, i, argv[i]);
+			mainPP.setMode (SDO_Storage, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "negotiator", 1)) {
-			setMode (SDO_Negotiator, i, argv[i]);
+			mainPP.setMode (SDO_Negotiator, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "generic", 2)) {
-			setMode (SDO_Generic, i, argv[i]);
+			mainPP.setMode (SDO_Generic, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "any", 2)) {
-			setMode (SDO_Any, i, argv[i]);
+			mainPP.setMode (SDO_Any, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "sort", 2)) {
 			i++;
@@ -1827,23 +1991,23 @@ firstPass (int argc, char *argv[])
 			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "submitters", 4)) {
-			setMode (SDO_Submitters, i, argv[i]);
+			mainPP.setMode (SDO_Submitters, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "master", 1)) {
-			setMode (SDO_Master, i, argv[i]);
+			mainPP.setMode (SDO_Master, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "collector", 3)) {
-			setMode (SDO_Collector, i, argv[i]);
+			mainPP.setMode (SDO_Collector, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "world", 1)) {
-			setMode (SDO_Collector, i, argv[i]);
+			mainPP.setMode (SDO_Collector, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "ckptsrvr", 2)) {
-			setMode (SDO_CkptSvr, i, argv[i]);
+			mainPP.setMode (SDO_CkptSvr, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "total", 1)) {
-			wantOnlyTotals = 1;
-			pmHeadFoot = (printmask_headerfooter_t)(HF_NOTITLE | HF_NOHEADER);
+			mainPP.wantOnlyTotals = true;
+			mainPP.pmHeadFoot = (printmask_headerfooter_t)(HF_NOTITLE | HF_NOHEADER);
 			explicit_format = true;
 		} else
 		if (is_dash_arg_prefix(argv[i], "expert", 1)) {
@@ -1897,7 +2061,7 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
-			pm.registerFormatF (argv[i+1], argv[i+2], FormatOptionNoTruncate);
+			mainPP.pm.registerFormatF (argv[i+1], argv[i+2], FormatOptionNoTruncate);
 
 			StringList attributes;
 			ClassAd ad;
@@ -1952,7 +2116,7 @@ secondPass (int argc, char *argv[])
 					++pcolon;
 				}
 			}
-			pm.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
+			mainPP.pm.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 
 			while (argv[i+1] && *(argv[i+1]) != '-') {
 				++i;
@@ -1971,11 +2135,11 @@ secondPass (int argc, char *argv[])
 				MyString lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
-				if (fheadings || pm_head.Length() > 0) { 
+				if (fheadings || mainPP.pm_head.Length() > 0) { 
 					const char * hd = fheadings ? argv[i] : "(expr)";
 					wid = 0 - (int)strlen(hd); 
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
-					pm_head.Append(hd);
+					mainPP.pm_head.Append(hd);
 				}
 				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
@@ -1983,7 +2147,7 @@ secondPass (int argc, char *argv[])
 					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",
 							i, lbl.Value(), wid, opts,  argv[i]);
 				}
-				pm.registerFormat(lbl.Value(), wid, opts, argv[i]);
+				mainPP.pm.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
 			MSC_SUPPRESS_WARNING(6011) // code analysis can't figure out that argc test protects us from de-refing a NULL in argv
@@ -2003,18 +2167,18 @@ secondPass (int argc, char *argv[])
 				disable_user_print_files = true;
 				continue;
 			}
-			ppTotalStyle = ppStyle;
-			setPPstyle (PP_CUSTOM, i, argv[i]);
-			setPPwidth();
+			mainPP.ppTotalStyle = mainPP.ppStyle;
+			mainPP.setPPstyle (PP_CUSTOM, i, argv[i]);
+			mainPP.setPPwidth();
 			++i; // skip to the next argument.
-			if (set_status_print_mask_from_stream(argv[i], true, &mode_constraint) < 0) {
+			if (mainPP.set_status_print_mask_from_stream(argv[i], true, &mode_constraint) < 0) {
 				fprintf(stderr, "Error: invalid select file %s\n", argv[i]);
 				exit (1);
 			}
 			if (mode_constraint) {
 				query->addANDConstraint(mode_constraint);
 			}
-			using_print_format = true; // so we can hack totals.
+			mainPP.using_print_format = true; // so we can hack totals.
 			continue;
 		}
 		if (is_dash_arg_prefix (argv[i], "target", 4)) {
@@ -2033,7 +2197,7 @@ secondPass (int argc, char *argv[])
 			}
 			continue;
 		}
-		
+
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			i += 2;
 			sprintf(buffer,"STATISTICS_TO_PUBLISH = \"%s\"", statistics);
@@ -2055,7 +2219,7 @@ secondPass (int argc, char *argv[])
 			i++;
 			continue;
 		}
-		
+
 
 
 		// figure out what the other parameters should do
@@ -2105,7 +2269,7 @@ secondPass (int argc, char *argv[])
 		           is_dash_arg_prefix( argv[i], "annex-name", 10 ) ) {
 			std::string constraint;
 			if( argv[i + 1] && (argv[i + 1][0] != '-' || is_dash_arg_prefix( argv[i], "annex-name", 10 )) ) {
-				formatstr( constraint, "AnnexName =?= \"%s\"", argv[i + 1] );
+				formatstr( constraint, ATTR_ANNEX_NAME " =?= \"%s\"", argv[i + 1] );
 				i++;
 			} else {
 				constraint = "IsAnnex";

@@ -162,9 +162,11 @@ displayTotals (FILE *file, int keyLength)
 		had_tot_keys = true;
 	}
 	delete [] keys;
-	if (had_tot_keys) fprintf(file, "\n");
-	fprintf (file, "%*.*s", keyLength, keyLength, "Total");
-	topLevelTotal->displayInfo(file,1);
+	if( allTotals.getNumElements() > 1 ) {
+		if (had_tot_keys) fprintf(file, "\n");
+		fprintf (file, "%*.*s", keyLength, keyLength, "Total");
+		topLevelTotal->displayInfo(file,1);
+	}
 
 	if (malformed > 0)
 	{
