@@ -1103,7 +1103,7 @@ main (int argc, char *argv[])
 
 	PrettyPrinter leftPP( PP_CUSTOM, PP_NOTSET, HF_NOSUMMARY );
 	PrettyPrinter rightPP( PP_CUSTOM, PP_NOTSET, HF_NOSUMMARY );
-	if( annexMode ) {
+	if( mergeMode && annexMode ) {
 		const char * constraint;
 		leftPP.ppSetAnnexInstanceCols( -1, constraint );
 		rightPP.ppSetAnnexInstanceCols( -1, constraint );
@@ -1116,11 +1116,8 @@ main (int argc, char *argv[])
 	ROD_MAP_BY_KEY right;
 	struct _process_ads_info right_ai = {
 		& right,
-		(mainPP.pmHeadFoot&HF_NOSUMMARY) ? NULL : & rightTotals,
-		1, // key of last resort, this counts up as members are added.
-		mainPP.pm.ColCount(), // if 0, the ad is stored in the map, otherwise a row of data is stored and the add freed.
-		NULL, 0, // diagnostic file, flags
-		rpp
+		(rpp->pmHeadFoot&HF_NOSUMMARY) ? NULL : & rightTotals,
+		1, rpp->pm.ColCount(), NULL, 0, rpp
 	};
 
 	bool close_hfdiag = false;
@@ -1154,18 +1151,18 @@ main (int argc, char *argv[])
 
 	// Output storage.
 	ROD_MAP_BY_KEY left;
-	struct _process_ads_info left_ai = right_ai;
-	left_ai.pmap = & left;
-	left_ai.totals = NULL;
-	left_ai.pp = lpp;
+	struct _process_ads_info left_ai = {
+		& left, NULL, 1, lpp->pm.ColCount(), NULL, 0, lpp
+	};
 
 	// Although only one of both and right will ever display their totals,
 	// it's easier to compute them both and ignore one at print time.
 	ROD_MAP_BY_KEY both;
-	struct _process_ads_info both_ai = right_ai;
-	both_ai.pmap = & both;
-	both_ai.totals = (mainPP.pmHeadFoot&HF_NOSUMMARY) ? NULL : & bothTotals;
-	both_ai.pp = bpp;
+	struct _process_ads_info both_ai = {
+		& both,
+		(bpp->pmHeadFoot&HF_NOSUMMARY) ? NULL : & bothTotals,
+		1, bpp->pm.ColCount(), NULL, 0, bpp
+	};
 
 	// Argument for the merge callback;
 	merge_ads_info mai = { & leftSet, & both_ai, & right_ai };
