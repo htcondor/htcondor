@@ -1828,7 +1828,7 @@ by specifying
 on the \Condor{submit\_dag} command line.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:MultipleDAGs}Optimization of Submission Time}
+\subsubsection{\label{sec:DAG-OptimizationOfSubmissionTime}Optimization of Submission Time}
 \index{DAGMan!optimization of submit time}
 
 \Condor{dagman} works by watching log files for events, such as submission,
@@ -1864,7 +1864,7 @@ of the node job, unless the job requests it using the submit command
 \SubmitCmd{keep\_claim\_idle}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
+\subsubsection{\label{sec:DAG-SingleSubmissionOfMultiple}Single Submission of Multiple, Independent DAGs}
 \index{DAGMan!single submission of multiple, independent DAGs}
 
 A single use of \Condor{submit\_dag} may execute multiple, independent DAGs.
@@ -2001,7 +2001,7 @@ This avoids having to duplicate the \Arg{JOB} and \Arg{PARENT/CHILD}
 commands for every dataset -- we can just re-use the \File{workflow.dag} file,
 in combination with a dataset-specific vars file.
 
-\subsubsection{\label{sec:DAGsinDAGs}Composing workflows from multiple
+\subsubsection{\label{sec:DAG-ComposingWorkflows}Composing workflows from multiple
 DAG files}
 \index{DAG input file!Composing workflows}
 \index{DAGMan!Composing workflows}
@@ -2015,7 +2015,7 @@ HTCondor DAGMan handles this situation easily, and allows
 DAGs to be nested to any depth.
 
 There are two ways that DAGs can be nested within other DAGs:
-sub-DAGs (see~\ref{sec:DAGsinDAGs}) and splices (see~\ref{sec:DAGSplicing}).
+sub-DAGs (see~\ref{sec:DAG-SubDAG}) and splices (see~\ref{sec:DAGSplicing}).
 
 With sub-DAGs, each DAG has its own \Condor{dagman} job, which
 then becomes a node job within the higher-level DAG.  With splices,
@@ -2054,7 +2054,7 @@ and can be nested to any depth (but be sure to avoid recursion, which
 will cause problems!).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
+\subsubsection{\label{sec:DAG-SubDAG}A DAG Within a DAG Is a SUBDAG}
 \index{DAG input file!SUBDAG command}
 \index{DAGMan!DAGs within DAGs}
 
