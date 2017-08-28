@@ -6200,7 +6200,7 @@ availability statistics in the \Condor{startd}.
   value is /usr/bin/docker.  Remember that the condor user must also
   be in the docker group for Docker Universe to work.
   See the Docker universe manual section for more details 
-	(~\ref{sec:Docker-Install})
+	(~\ref{sec:docker-install})
   An example of the configuration for running the Docker CLI:
 \begin{verbatim}
   DOCKER = /usr/bin/docker
@@ -6210,7 +6210,7 @@ availability statistics in the \Condor{startd}.
 \item[\Macro{DOCKER\_VOLUMES}]
   A list of directories on the host execute machine to be volume mounted
   within the container.  See the Docker Universe section for full details.
- 	(~\ref{sec:Docker-Install})
+ 	(~\ref{sec:docker-install})
 
 \label{param:DockerImageCacheSize}
 \item[\Macro{DOCKER\_IMAGE\_CACHE\_SIZE}]
@@ -8992,7 +8992,7 @@ page~\pageref{sec:Absent-Ads} for more details.
   If 0, the ClassAds persist forever.  
   Defaults to 30 days.
 
-\label{param:CollectorPersisentAdLog}
+\label{param:CollectorPersistentAdLog}
 \item[\Macro{COLLECTOR\_PERSISTENT\_AD\_LOG}]
   The full path and file name of a file that stores machine ClassAds 
   for every hibernating or absent machine.  This forms a persistent storage

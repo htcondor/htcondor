@@ -1952,7 +1952,7 @@ receives a fair share of machines.
 For a general discussion of
 limiting preemption,
 please see
-section \ref{sec:Disabling Preemption} of the Administrator's manual.
+section \ref{sec:DisablingPreemption} of the Administrator's manual.
 
 User priorities are keyed on \Expr{<username>@<domain>}, for example
 \Expr{johndoe@cs.wisc.edu}. The domain name to use, if any, is configured by
@@ -1963,7 +1963,7 @@ even if the user submits jobs from multiple machines.
 \index{nice job}
 \index{priority!nice job}
 An extra feature is the ability to submit a job as
-a \Term{nice} job (see page~\pageref{man-condor-submit-nice}).
+a \Term{nice} job (see page~\pageref{man-condor-submit-nice-user}).
 Nice jobs artificially boost the user priority 
 by ten million just for the nice job.
 This effectively means that nice jobs will only run on
