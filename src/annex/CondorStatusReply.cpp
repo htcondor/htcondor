@@ -7,29 +7,40 @@
 #include "CondorStatusReply.h"
 
 static bool
-exec_condor_status( int argc, char ** argv, unsigned subCommandIndex ) {
+exec_condor_status( int argc, char ** argv, unsigned subCommandIndex, const std::string & annexName ) {
 	std::string csPath = argv[0];
 	csPath.replace( csPath.find( "condor_annex" ), strlen( "condor_annex" ), "condor_status" );
 
-	const unsigned EXTRA_ARGS = 4;
+	unsigned EXTRA_ARGS = 4;
+	if(! annexName.empty()) {
+		EXTRA_ARGS += 2;
+	}
 	char ** csArgv = (char **)malloc( (argc - subCommandIndex + EXTRA_ARGS + 1) * sizeof(char *) );
 	if( csArgv == NULL ) { return false; }
 
 	csArgv[0] = strdup( csPath.c_str() );
-	if( csArgv[0] == NULL ) { free(csArgv); return false; }
-
 	csArgv[1] = strdup( "-annex" );
-	if( csArgv[1] == NULL ) { free(csArgv) ; return false; }
-
 	csArgv[2] = strdup( "-sort" );
-	if( csArgv[2] == NULL ) { free(csArgv) ; return false; }
-
 	csArgv[3] = strdup( "EC2InstanceID" );
-	if( csArgv[3] == NULL ) { free(csArgv) ; return false; }
-
 	csArgv[4] = strdup( "-merge" );
-	if( csArgv[4] == NULL ) { free(csArgv) ; return false; }
+	if(! annexName.empty()) {
+		csArgv[5] = strdup( "-annex-name" );
+		csArgv[6] = strdup( annexName.c_str() );
+	}
 
+	bool allocated = true;
+	for( unsigned i = 0; i < EXTRA_ARGS; ++i ) {
+		if( csArgv[i] == NULL ) { allocated = false; break; }
+	}
+	if(! allocated) {
+		for( unsigned i = 0; i < EXTRA_ARGS; ++i ) {
+			if( csArgv[i] == NULL ) { free(csArgv); }
+		}
+		free( csArgv );
+		return false;
+	}
+
+	// Copy any trailing arguments.
 	for( int i = subCommandIndex + 1; i < argc; ++i ) {
 		csArgv[EXTRA_ARGS + (i - subCommandIndex)] = argv[i];
 	}
@@ -145,7 +156,7 @@ CondorStatusReply::operator() () {
 				fclose( adFile );
 				return FALSE;
 			}
-			if(! exec_condor_status( argc, argv, subCommandIndex )) {
+			if(! exec_condor_status( argc, argv, subCommandIndex, annexName )) {
 				fprintf( stderr, "Failed to run condor_status, aborting.\n" );
 				fclose( adFile );
 				return FALSE;
