@@ -839,7 +839,6 @@ private:
 
 	// connection variables
 	struct sockaddr_in	From;
-	int					Len; 
 
 	ExprTree* slotWeightOfJob;
 	ClassAd * slotWeightGuessAd;
