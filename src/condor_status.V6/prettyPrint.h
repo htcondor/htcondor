@@ -129,6 +129,17 @@ class PrettyPrinter {
 			int				ppArgIndex;
 			const char *	ppArg;
 		}							setby;
+
+	// For compact mode.
+	public:
+		int max_totals_subkey = -1;
+		int startdCompact_ixCol_Platform = -1;
+		int startdCompact_ixCol_Slots = -2;
+		int startdCompact_ixCol_FreeCpus = -6;
+		int startdCompact_ixCol_FreeMem = -7; // double
+		int startdCompact_ixCol_ActCode = -9;
+		int startdCompact_ixCol_MaxSlotMem = -11; // double
+		int startdCompact_ixCol_JobStarts = -10; // double
 };
 
 #endif /* _CONDOR_PRETTY_PRINT_H */

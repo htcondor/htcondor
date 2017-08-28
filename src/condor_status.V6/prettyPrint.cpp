@@ -29,6 +29,7 @@
 #include "metric_units.h"
 #include "getConsoleWindowSize.h"
 #include "prettyPrint.h"
+#include "setflags.h"
 
 // global mode bits
 extern bool javaMode;
@@ -36,10 +37,6 @@ extern bool vmMode;
 extern bool absentMode;
 extern bool offlineMode;
 extern bool compactMode;
-
-// FIXME: should be declared in header files
-extern char *format_time( int );
-extern const char * paramNameFromPPMode(std::string &param_name);
 
 static int stashed_now = 0;
 
@@ -307,7 +304,6 @@ int ppFetchColumnWidths(void*pv, int /*index*/, Formatter * fmt, const char * /*
 	return 0;
 }
 
-
 ppOption PrettyPrinter::prettyPrintHeadings (bool any_ads)
 {
 	ppOption pps = ppStyle;
@@ -432,7 +428,6 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, S
 	}
 }
 
-
 const char *
 extractStringsFromList( const classad::Value & value, Formatter &, std::string &prettyList ) {
 	const classad::ExprList * list = NULL;
@@ -527,7 +522,6 @@ bool renderUniqueStrings( classad::Value & value, AttrList*, Formatter & fmt )
 	return true;
 }
 
-
 void PrettyPrinter::ppSetStartdOfflineCols()
 {
 		ppSetColumn( ATTR_NAME, -34, ! wide_display );
@@ -566,15 +560,6 @@ const char * const startdCompact_PrintFormat = "SELECT\n"
 "GROUP BY Machine\n"
 "SUMMARY STANDARD\n";
 
-// init these to negative numbers to disable them.
-int startdCompact_ixCol_Platform = -1;
-int startdCompact_ixCol_Slots = -2;
-int startdCompact_ixCol_FreeCpus = -6;
-int startdCompact_ixCol_FreeMem = -7; // double
-int startdCompact_ixCol_ActCode = -9;
-int startdCompact_ixCol_JobStarts = -10; // double
-int startdCompact_ixCol_MaxSlotMem = -11; // double
-
 int PrettyPrinter::ppSetStartdCompactCols (int /*width*/, int & mach_width, const char * & constr)
 {
 	const char * tag = "StartdCompact";
@@ -594,7 +579,6 @@ int PrettyPrinter::ppSetStartdCompactCols (int /*width*/, int & mach_width, cons
 	mach_width = 12; // set a minimum value for machine column.
 	return 12;
 }
-
 
 void PrettyPrinter::ppSetStartdNormalCols (int width)
 {
@@ -774,7 +758,6 @@ void PrettyPrinter::ppSetRunCols (int width)
 	ppSetColumn(ATTR_CLIENT_MACHINE, -16, ! wide_display);
 }
 
-
 void
 printCODDetailLine( ClassAd* ad, const char* id )
 {
@@ -814,7 +797,6 @@ printCODDetailLine( ClassAd* ad, const char* id )
 	free( job_id );
 	free( keyword );
 }
-
 
 void
 printCOD (ClassAd *ad)
@@ -862,7 +844,7 @@ printQuillNormal (ClassAd *ad) {
 			printf ("\n%-20.20s %-10.10s %-16.16s %-18.18s\n\n",
 				ATTR_NAME, ATTR_MACHINE, ATTR_QUILL_SQL_TOTAL,
 				ATTR_QUILL_SQL_LAST_BATCH);
-		
+
 			alpm.registerFormat("%-20.20s ", ATTR_NAME,
 													"[??????????????????] ");
 			alpm.registerFormat("%-10.10s ", ATTR_MACHINE,
@@ -974,7 +956,6 @@ int PrettyPrinter::ppSetSubmitterNormalCols (int width, int & mach_width)
 	return name_width;
 }
 
-
 void PrettyPrinter::ppSetCollectorNormalCols (int width)
 {
 	int name_width = wide_display ? -34 : -28;
@@ -994,7 +975,6 @@ void PrettyPrinter::ppSetCollectorNormalCols (int width)
 	ppSetColumn(ATTR_IDLE_JOBS,    "%8d", true);
 	ppSetColumn(ATTR_NUM_HOSTS_TOTAL,    "%10d", true);
 }
-
 
 const char * const masterNormal_PrintFormat = "SELECT\n"
 	"Name           AS Name         WIDTH AUTO\n"
@@ -1016,7 +996,6 @@ int PrettyPrinter::ppSetMasterNormalCols(int width)
 	// set a minumum size for name column
 	return width ? 12 : 12;
 }
-
 
 void PrettyPrinter::ppSetCkptSrvrNormalCols (int width)
 {
@@ -1142,7 +1121,6 @@ int PrettyPrinter::ppSetAnnexInstanceCols( int /* width */, const char * & const
 	return 15;
 }
 
-
 /*
 We can't use the AttrListPrintMask here, because the AttrList does not actually contain
 the MyType and TargetType fields that we want to display. 
@@ -1165,7 +1143,6 @@ void PrettyPrinter::ppSetAnyNormalCols()
 	ppSetColumn(ATTR_TARGET_TYPE, formatAdType, -18, true, CallInvalidField);
 	ppSetColumn(ATTR_NAME, wide_display ? "%-41s" : "%-41.41s", ! wide_display, ShortInvalidField /*"[???]"*/);
 }
-
 
 void
 printVerbose (ClassAd &ad, classad::References * attrs)
@@ -1251,7 +1228,6 @@ void PrettyPrinter::printCustom( ClassAd * ad )
 {
 	(void) pm.display (stdout, ad, targetAd);
 }
-
 
 int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 {
@@ -1454,7 +1430,6 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 	pm.adjust_formats(ppAdjustProjection, &wid_info);
 }
 
-
 static const char *
 formatLoadAvg (double fl, Formatter &)
 {
@@ -1470,7 +1445,7 @@ renderActivityTime (long long & atime, AttrList *al, Formatter &)
 	if (al->LookupInteger(ATTR_MY_CURRENT_TIME, now)
 		|| al->LookupInteger(ATTR_LAST_HEARD_FROM, now)) {
 		atime = now - atime; // format_time
-		return true; 
+		return true;
 	}
 	return false; // print "   [Unknown]"
 }

@@ -326,10 +326,6 @@ struct _process_ads_info {
    PrettyPrinter * pp;
 };
 
-extern int startdCompact_ixCol_Platform;  // Platform
-extern int startdCompact_ixCol_ActCode;   // ST State+Activity code
-int max_totals_subkey = -1;
-
 static bool store_ads_callback( void * arg, ClassAd * ad ) {
 	std::set< ClassAd * > * mySet = reinterpret_cast< std::set< ClassAd * > *>( arg );
 	mySet->insert( ad );
@@ -414,11 +410,11 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 					case PP_SCHEDD_DATA:
 					case PP_SCHEDD_RUN: subtot_key = NULL; break;
 					case PP_STARTD_STATE: subtot_key = NULL; break; /* use activity as key */
-					default: srod.getString(startdCompact_ixCol_Platform, keybuf, sizeof(keybuf)); break;
+					default: srod.getString(thePP.startdCompact_ixCol_Platform, keybuf, sizeof(keybuf)); break;
 				}
 				if (subtot_key) {
 					int len = strlen(subtot_key);
-					max_totals_subkey = MAX(max_totals_subkey, len);
+					thePP.max_totals_subkey = MAX(thePP.max_totals_subkey, len);
 				}
 				totals->update(ad, TOTALS_OPTION_ROLLUP_PARTITIONABLE | TOTALS_OPTION_IGNORE_DYNAMIC, subtot_key);
 				if ((srod.flags & (SROD_PARTITIONABLE_SLOT | SROD_EXHAUSTED_SLOT)) == SROD_PARTITIONABLE_SLOT) {
@@ -428,7 +424,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 
 			// for compact mode, we are about to throw about child state and activity attributes
 			// so roll them up now
-			if (compactMode && fPslot && startdCompact_ixCol_ActCode >= 0) {
+			if (compactMode && fPslot && thePP.startdCompact_ixCol_ActCode >= 0) {
 				State consensus_state = no_state;
 				Activity consensus_activity = no_act;
 
@@ -482,7 +478,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				}
 
 				// roll concensus state into parent slot state.
-				srod.getString(startdCompact_ixCol_ActCode, tmp, 4);
+				srod.getString(thePP.startdCompact_ixCol_ActCode, tmp, 4);
 				digest_state_and_activity(tmp+4, consensus_state, consensus_activity);
 				char bsc = tmp[4], bac = tmp[4+1];
 				char asc = tmp[0], aac = tmp[1];
@@ -502,7 +498,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				if (consensus_activity != no_act && aac != bac) aac = '*';
 				if (tmp[0] != asc || tmp[1] != aac) {
 					tmp[0] = asc; tmp[1] = aac; tmp[2] = 0;
-					srod.rov.Column(startdCompact_ixCol_ActCode)->SetStringValue(tmp);
+					srod.rov.Column(thePP.startdCompact_ixCol_ActCode)->SetStringValue(tmp);
 				}
 
 			}
@@ -577,14 +573,8 @@ static bool merge_ads_callback( void * arg, ClassAd * ad ) {
 	}
 }
 
-extern int startdCompact_ixCol_FreeCpus;  // Cpus
-extern int startdCompact_ixCol_MaxSlotMem;// Max(ChildMemory)
-extern int startdCompact_ixCol_FreeMem;   // Memory
-extern int startdCompact_ixCol_Slots;     // NumDynamicSlots
-extern int startdCompact_ixCol_JobStarts; // RecentJobStarts
-
 // fold slot bb into aa assuming startdCompact format
-void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb)
+void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb, PrettyPrinter & thePP)
 {
 	if (aa.rov.empty()) return;
 
@@ -592,23 +582,23 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb)
 	if ( ! (aa.flags & SROD_PARTITIONABLE_SLOT) && ! (aa.flags & SROD_COOKED)) {
 
 		// The MaxMem column will be undefined or error, set it equal to Memory
-		if (startdCompact_ixCol_FreeMem >= 0 && startdCompact_ixCol_MaxSlotMem >= 0) {
+		if (thePP.startdCompact_ixCol_FreeMem >= 0 && thePP.startdCompact_ixCol_MaxSlotMem >= 0) {
 			double amem;
-			aa.getNumber(startdCompact_ixCol_FreeMem, amem);
-			aa.rov.Column(startdCompact_ixCol_MaxSlotMem)->SetRealValue(amem);
-			aa.rov.set_col_valid(startdCompact_ixCol_MaxSlotMem, true);
+			aa.getNumber(thePP.startdCompact_ixCol_FreeMem, amem);
+			aa.rov.Column(thePP.startdCompact_ixCol_MaxSlotMem)->SetRealValue(amem);
+			aa.rov.set_col_valid(thePP.startdCompact_ixCol_MaxSlotMem, true);
 		}
 
 		// The FreeMem and FreeCpus columns should be set to 0 if the slot is busy (or unavailable?)
 		if (aa.flags & SROD_BUSY_SLOT) {
-			if (startdCompact_ixCol_FreeCpus >= 0) aa.rov.Column(startdCompact_ixCol_FreeCpus)->SetIntegerValue(0);
-			if (startdCompact_ixCol_FreeMem >= 0) aa.rov.Column(startdCompact_ixCol_FreeMem)->SetRealValue(0.0);
+			if (thePP.startdCompact_ixCol_FreeCpus >= 0) aa.rov.Column(thePP.startdCompact_ixCol_FreeCpus)->SetIntegerValue(0);
+			if (thePP.startdCompact_ixCol_FreeMem >= 0) aa.rov.Column(thePP.startdCompact_ixCol_FreeMem)->SetRealValue(0.0);
 		}
 
 		// The Slots column should be set to 1
-		if (startdCompact_ixCol_Slots >= 0) {
-			aa.rov.Column(startdCompact_ixCol_Slots)->SetIntegerValue(1);
-			aa.rov.set_col_valid(startdCompact_ixCol_Slots, true);
+		if (thePP.startdCompact_ixCol_Slots >= 0) {
+			aa.rov.Column(thePP.startdCompact_ixCol_Slots)->SetIntegerValue(1);
+			aa.rov.set_col_valid(thePP.startdCompact_ixCol_Slots, true);
 		}
 
 		aa.flags |= SROD_COOKED;
@@ -626,60 +616,60 @@ void fold_slot_result(StatusRowOfData & aa, StatusRowOfData * pbb)
 	double amem = 0.0;
 	double bmem = 0.0;
 
-	if (startdCompact_ixCol_MaxSlotMem >= 0) {
-		aa.getNumber(startdCompact_ixCol_MaxSlotMem, amem);
-		bb.getNumber(partitionable ? startdCompact_ixCol_MaxSlotMem : startdCompact_ixCol_FreeMem, bmem);
+	if (thePP.startdCompact_ixCol_MaxSlotMem >= 0) {
+		aa.getNumber(thePP.startdCompact_ixCol_MaxSlotMem, amem);
+		bb.getNumber(partitionable ? thePP.startdCompact_ixCol_MaxSlotMem : thePP.startdCompact_ixCol_FreeMem, bmem);
 		double maxslotmem = MAX(amem,bmem);
-		aa.rov.Column(startdCompact_ixCol_MaxSlotMem)->SetRealValue(maxslotmem);
+		aa.rov.Column(thePP.startdCompact_ixCol_MaxSlotMem)->SetRealValue(maxslotmem);
 	}
 
 	// Add FreeMem and FreeCpus from bb into aa if slot bb is not busy
 	if (partitionable || !(bb.flags & SROD_BUSY_SLOT)) {
-		if (startdCompact_ixCol_FreeMem >= 0) {
-			aa.getNumber(startdCompact_ixCol_FreeMem, amem);
-			aa.rov.Column(startdCompact_ixCol_FreeMem)->SetRealValue(bmem + amem);
+		if (thePP.startdCompact_ixCol_FreeMem >= 0) {
+			aa.getNumber(thePP.startdCompact_ixCol_FreeMem, amem);
+			aa.rov.Column(thePP.startdCompact_ixCol_FreeMem)->SetRealValue(bmem + amem);
 		}
 
 		int acpus, bcpus;
-		if (startdCompact_ixCol_FreeCpus >= 0) {
-			aa.getNumber(startdCompact_ixCol_FreeCpus, acpus);
-			bb.getNumber(startdCompact_ixCol_FreeCpus, bcpus);
-			aa.rov.Column(startdCompact_ixCol_FreeCpus)->SetIntegerValue(acpus + bcpus);
+		if (thePP.startdCompact_ixCol_FreeCpus >= 0) {
+			aa.getNumber(thePP.startdCompact_ixCol_FreeCpus, acpus);
+			bb.getNumber(thePP.startdCompact_ixCol_FreeCpus, bcpus);
+			aa.rov.Column(thePP.startdCompact_ixCol_FreeCpus)->SetIntegerValue(acpus + bcpus);
 		}
 	}
 
 	// Increment the aa Slots column
 	int aslots, bslots = 1;
-	if (startdCompact_ixCol_Slots >= 0) {
-		aa.getNumber(startdCompact_ixCol_Slots, aslots);
-		if (partitionable) bb.getNumber(startdCompact_ixCol_Slots, bslots);
-		aa.rov.Column(startdCompact_ixCol_Slots)->SetIntegerValue(aslots + bslots);
+	if (thePP.startdCompact_ixCol_Slots >= 0) {
+		aa.getNumber(thePP.startdCompact_ixCol_Slots, aslots);
+		if (partitionable) bb.getNumber(thePP.startdCompact_ixCol_Slots, bslots);
+		aa.rov.Column(thePP.startdCompact_ixCol_Slots)->SetIntegerValue(aslots + bslots);
 	}
 
 	// Sum the number of job starts
 	double astarts, bstarts;
-	if (startdCompact_ixCol_JobStarts >= 0) {
-		aa.getNumber(startdCompact_ixCol_JobStarts, astarts);
-		bb.getNumber(startdCompact_ixCol_JobStarts, bstarts);
-		aa.rov.Column(startdCompact_ixCol_JobStarts)->SetRealValue(astarts + bstarts);
+	if (thePP.startdCompact_ixCol_JobStarts >= 0) {
+		aa.getNumber(thePP.startdCompact_ixCol_JobStarts, astarts);
+		bb.getNumber(thePP.startdCompact_ixCol_JobStarts, bstarts);
+		aa.rov.Column(thePP.startdCompact_ixCol_JobStarts)->SetRealValue(astarts + bstarts);
 	}
 
 	// merge the state/activity (for static slots, partitionable merge happens elsewhere)
-	if (startdCompact_ixCol_ActCode >= 0) {
+	if (thePP.startdCompact_ixCol_ActCode >= 0) {
 		char ast[4] = {0,0,0,0}, bst[4] = {0,0,0,0};
-		aa.getString(startdCompact_ixCol_ActCode, ast, sizeof(ast));
-		bb.getString(startdCompact_ixCol_ActCode, bst, sizeof(bst));
+		aa.getString(thePP.startdCompact_ixCol_ActCode, ast, sizeof(ast));
+		bb.getString(thePP.startdCompact_ixCol_ActCode, bst, sizeof(bst));
 		char asc = ast[0], bsc = bst[0], aac = ast[1], bac = bst[1];
 		if (asc != bsc) asc = '*';
 		if (aac != bac) aac = '*';
 		if (ast[0] != asc || ast[1] != aac) {
 			ast[0] = asc; ast[1] = aac;
-			aa.rov.Column(startdCompact_ixCol_ActCode)->SetStringValue(ast);
+			aa.rov.Column(thePP.startdCompact_ixCol_ActCode)->SetStringValue(ast);
 		}
 	}
 }
 
-void reduce_slot_results(ROD_MAP_BY_KEY & rmap)
+void reduce_slot_results(ROD_MAP_BY_KEY & rmap, PrettyPrinter & thePP )
 {
 	if (rmap.empty())
 		return;
@@ -688,10 +678,10 @@ void reduce_slot_results(ROD_MAP_BY_KEY & rmap)
 	it = itMachine;
 	for (++it; it != rmap.end(); ++it) {
 		if (same_primary_key(it->first, itMachine->first)) {
-			fold_slot_result(itMachine->second, &it->second);
+			fold_slot_result(itMachine->second, &it->second, thePP);
 			it->second.flags |= SROD_FOLDED;
 		} else {
-			fold_slot_result(itMachine->second, NULL);
+			fold_slot_result(itMachine->second, NULL, thePP);
 			itMachine = it;
 		}
 	}
@@ -726,13 +716,6 @@ main (int argc, char *argv[])
 	// _not_ be STARTD_AD if another ad type was set in pass 1
 	AdTypes adType = mainPP.setMode (SDO_Startd, 0, DEFAULT);
 	ASSERT(sdo_mode != SDO_NotSet);
-
-	/*
-	if (compactMode && (adType != STARTD_AD)) {
-		fprintf(stderr, "Error: -compact option conflicts with type of ClassAd being queried.\n");
-		exit(1);
-	}
-	*/
 
 	// instantiate query object
 	if (!(query = new CondorQuery (adType))) {
@@ -866,8 +849,11 @@ main (int argc, char *argv[])
 		sortSpecs.Add(ATTR_MACHINE);
 		sortSpecs.Add(ATTR_NAME);
 	}
-	if (compactMode) {
-		// compact mode reqires machine to be the primary sort key.
+	if (compactMode && !mergeMode) {
+		// compact mode reqires machine to be the primary sort key,
+		// but merge mode requires that we respect the sort key.
+		// FIXME: We should be using a merge key for merging, probably,
+		// anyway, maybe even just as the argument to -merge.
 		sortSpecs.ForcePrimaryKey(ATTR_MACHINE);
 	}
 	sortSpecs.AddToProjection(projList);
@@ -1249,6 +1235,7 @@ main (int argc, char *argv[])
 		doNormalOutput( right_ai, adType );
 	} else {
 		if( right_ai.pmap->size() > 0 ) {
+			if(! annexMode) { fprintf( stdout, "The following ads were found only in the right-hand ads:\n" ); }
 			doMergeOutput( right_ai );
 			if( both_ai.pmap->size() > 0 ) {
 				fprintf( stdout, "\n" );
@@ -1256,6 +1243,7 @@ main (int argc, char *argv[])
 		}
 
 		if( both_ai.pmap->size() > 0 ) {
+			if(! annexMode) { fprintf( stdout, "The following ads were found in both the left and right -hand ads:\n" ); }
 			doNormalOutput( both_ai, adType );
 			if( left_ai.pmap->size() > 0 ) {
 				fprintf( stdout, "\n" );
@@ -1263,6 +1251,7 @@ main (int argc, char *argv[])
 		}
 
 		if( left_ai.pmap->size() > 0 ) {
+			if(! annexMode) { fprintf( stdout, "The following ads were found only in the left-hand ads:\n" ); }
 			doMergeOutput( left_ai );
 		}
 	}
@@ -1311,7 +1300,7 @@ doNormalOutput( struct _process_ads_info & ai, AdTypes & adType ) {
 			if( mainPP.wantOnlyTotals ) {
 				fprintf(stderr, "Warning: ignoring -compact option because -total option is also set\n");
 			} else {
-				reduce_slot_results(admap);
+				reduce_slot_results(admap, mainPP);
 			}
 		} break;
 		default: break;
@@ -1364,7 +1353,7 @@ doNormalOutput( struct _process_ads_info & ai, AdTypes & adType ) {
 	if (any_ads && !(mainPP.pmHeadFoot&HF_NOSUMMARY) && totals && totals->haveTotals()) {
 		fputc('\n', stdout);
 		bool auto_width = (mainPP.ppTotalStyle == PP_SUBMITTER_NORMAL);
-		int totals_key_width = (mainPP.wide_display || auto_width) ? -1 : MAX(14, max_totals_subkey);
+		int totals_key_width = (mainPP.wide_display || auto_width) ? -1 : MAX(14, mainPP.max_totals_subkey);
 		totals->displayTotals(stdout, totals_key_width);
 	}
 }
