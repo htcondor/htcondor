@@ -1567,14 +1567,18 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			break; // break out of while loop
 		}
 
-			// Check whether this submit cycle is taking too long.
-		time_t now = time( NULL );
-		time_t elapsed = now - cycleStart;
-		if ( elapsed > dm.m_user_log_scan_interval ) {
-       		debug_printf( DEBUG_QUIET,
-						"Warning: Submit cycle elapsed time (%d s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
-						(int)elapsed, dm.m_user_log_scan_interval );
-			break; // break out of while loop
+			// Check whether this submit cycle is taking too long (only if we
+			// are not in aggressive submit mode)
+		if( !dm.aggressive_submit ) {
+			time_t now = time( NULL );
+			time_t elapsed = now - cycleStart;
+			if ( elapsed > dm.m_user_log_scan_interval ) {
+				debug_printf( DEBUG_QUIET,
+					"Warning: Submit cycle elapsed time (%d s) has exceeded "
+					"log scan interval (%d s); bailing out of submit loop\n",
+					(int)elapsed, dm.m_user_log_scan_interval );
+				break; // break out of while loop
+			}
 		}
 
 			// remove & submit first job from ready queue

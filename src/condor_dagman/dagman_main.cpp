@@ -114,6 +114,7 @@ Dagman::Dagman() :
 	max_submit_attempts (6),
 	max_submits_per_interval (MAX_SUBMITS_PER_INT_DEFAULT), // so Coverity is happy
 	m_user_log_scan_interval (LOG_SCAN_INT_DEFAULT),
+	aggressive_submit (false),
 	primaryDagFile (""),
 	multiDags (false),
 	startup_cycle_detect (false), // so Coverity is happy
@@ -231,6 +232,11 @@ Dagman::Config()
 		max_submits_per_interval, 1, 1000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n",
 				max_submits_per_interval );
+
+	aggressive_submit =
+		param_boolean( "DAGMAN_AGGRESSIVE_SUBMIT", aggressive_submit );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_AGGRESSIVE_SUBMIT setting: %s\n",
+				aggressive_submit ? "True" : "False" );
 
 	m_user_log_scan_interval =
 		param_integer( "DAGMAN_USER_LOG_SCAN_INTERVAL",
