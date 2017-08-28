@@ -1146,8 +1146,10 @@ main (int argc, char *argv[])
 	const char * leftFileName = "-";
 	std::set< ClassAd * > leftSet;
 	ClassAdFileParseType::ParseType leftParseType = ClassAdFileParseType::Parse_auto;
-	read_classad_file( leftFileName, leftParseType, store_ads_callback,
-		& leftSet, leftConstraint, leftLimit );
+	if( mergeMode ) {
+		read_classad_file( leftFileName, leftParseType, store_ads_callback,
+			& leftSet, leftConstraint, leftLimit );
+	}
 
 	// Output storage.
 	ROD_MAP_BY_KEY left;
