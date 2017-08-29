@@ -44,8 +44,18 @@ class PrettyPrinter {
 			width_of_fixed_cols( -1 ),
 			ixCol_Name( -1 ),
 			ixCol_Machine( -1 ),
-			setby( { NO_AD, 0, NULL, 0, NULL } )
-		{ }
+			max_totals_subkey( -1 ),
+			startdCompact_ixCol_Platform( -1 ),
+			startdCompact_ixCol_Slots( -2 ),
+			startdCompact_ixCol_FreeCpus( -6 ),
+			startdCompact_ixCol_FreeMem( -7 ),
+			startdCompact_ixCol_ActCode( -9 ),
+			startdCompact_ixCol_MaxSlotMem( -11 ),
+			startdCompact_ixCol_JobStarts( -10 )
+		{
+			// For Windows.
+			setby = { NO_AD, 0, NULL, 0, NULL };
+		}
 
 		int getDisplayWidth( bool * is_piped );
 		void setPPwidth();
@@ -132,14 +142,14 @@ class PrettyPrinter {
 
 	// For compact mode.
 	public:
-		int max_totals_subkey = -1;
-		int startdCompact_ixCol_Platform = -1;
-		int startdCompact_ixCol_Slots = -2;
-		int startdCompact_ixCol_FreeCpus = -6;
-		int startdCompact_ixCol_FreeMem = -7; // double
-		int startdCompact_ixCol_ActCode = -9;
-		int startdCompact_ixCol_MaxSlotMem = -11; // double
-		int startdCompact_ixCol_JobStarts = -10; // double
+		int max_totals_subkey;
+		int startdCompact_ixCol_Platform;
+		int startdCompact_ixCol_Slots;
+		int startdCompact_ixCol_FreeCpus;
+		int startdCompact_ixCol_FreeMem;
+		int startdCompact_ixCol_ActCode;
+		int startdCompact_ixCol_MaxSlotMem;
+		int startdCompact_ixCol_JobStarts;
 };
 
 #endif /* _CONDOR_PRETTY_PRINT_H */
