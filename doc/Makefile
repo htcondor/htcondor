@@ -56,22 +56,34 @@ ref.pdf : ref.tex $(FIGURES) $(LINKS:%.tex=%.pdf.tex)
 	@rm -f symbol.tex ; ln -s symbol.pdf.tex symbol.tex
 	@rm -f fontsize.tex; ln -s fontsize.pdf.tex fontsize.tex
 	@rm -f figuresizing.tex; ln -s figuresizing.pdf.tex figuresizing.tex
+	@perl -p -i -e's#\includegraphics{([^\.]+)\.eps}#\includegraphics{\1.pdf}#g' `git grep -l includegraphics`
 	@pdflatex $(LATEX_ARGS) ref.tex
 	@makeindex ref
 	@pdflatex $(LATEX_ARGS) ref.tex
 	@pdflatex $(LATEX_ARGS) ref.tex
 
 # See ref.pdf comment above.
+#
+# Also, while we hope to be able to upgrade to a version of latex2html that
+# supports converting .pdf as well .eps, or maybe a version of pdflatex
+# that doesn't barf on .eps, until we do, rewriting the \includegraphics
+# line to have the extension that the program in question needs is the
+# least-awful way to make things work.
+#
+# The extra conversion lines are to handle when you interrupt latex2html.
 ref.html : ref.tex $(FIGURES) $(LINKS:%.tex=%.html.tex)
 	@rm -f font.tex ; ln -s font.html.tex font.tex
 	@rm -f symbol.tex ; ln -s symbol.html.tex symbol.tex
 	@rm -f fontsize.tex; ln -s fontsize.html.tex fontsize.tex
 	@rm -f figuresizing.tex; ln -s figuresizing.html.tex figuresizing.tex
+	@perl -p -i -e's#\includegraphics{([^\.]+)\.eps}#\includegraphics{\1.pdf}#g' `git grep -l includegraphics`
 	@pdflatex $(LATEX_ARGS) ref.tex
 	@makeindex ref
 	@pdflatex $(LATEX_ARGS) ref.tex
 	@pdflatex $(LATEX_ARGS) ref.tex
+	@perl -p -i -e's#\includegraphics{([^\.]+)\.pdf}#\includegraphics{\1.pdf}#g' `git grep -l includegraphics`
 	@latex2html -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	@perl -p -i -e's#\includegraphics{([^\.]+)\.eps}#\includegraphics{\1.pdf}#g' `git grep -l includegraphics`
 	@mv ref ref.html
 
 # See ref.pdf comment above.  Also note that we don't have a full set of
