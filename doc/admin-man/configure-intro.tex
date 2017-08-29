@@ -697,187 +697,6 @@ endif
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-Metaknobs}Metaknobs: Using Predefined Sets of Configuration}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{configuration!USE syntax}
-\index{USE configuration syntax}
-Predefined sets of configuration may be identified and incorporated
-into the configuration using the syntax
-\begin{verbatim}
-  use <category id> : <name of set> 
-\end{verbatim}
-
-The \MacroNI{use} key word is case insensitive.
-There are \emph{no} requirements for white space characters surrounding
-the colon character.
-More than one \MacroNI{<name of set>} identifier may be placed within
-a single \MacroNI{use} line. 
-Separate the names by a space character. 
-There is no mechanism by which the administrator may define their
-own custom \MacroNI{<category id>} or \MacroNI{<name of set>}.
-
-Each predefined \MacroNI{<category id>} has a fixed, case insensitive
-name for the sets of configuration that are predefined. 
-Placement of a \MacroNI{use} line in the configuration brings in
-the predefined configuration it identifies.
-
-There are four \MacroNI{<category id>} values.
-Within a category, a predefined, case insensitive name identifies
-the set of configuration it incorporates. 
-\begin{description}
-
-\label{usecategory:ROLE}
-\item[\MacroNI{ROLE}]
-  Describes configuration for the various roles that a machine might
-  play within an HTCondor pool. The configuration will identify which
-  daemons are running on a machine.
-  \begin{itemize}
-    \item \texttt{Personal}
-    Settings needed for when a single machine is the entire pool.
-    \item \texttt{Submit}
-    Settings needed to allow this machine to submit jobs to the pool.
-    May be combined with \texttt{Execute} and \texttt{CentralManager} roles.
-    \item \texttt{Execute}
-    Settings needed to allow this machine to execute jobs.
-    May be combined with \texttt{Submit} and \texttt{CentralManager} roles.
-    \item \texttt{CentralManager}
-    Settings needed to allow this machine to act as the central manager
-    for the pool.
-    May be combined with \texttt{Submit} and \texttt{Execute} roles.
-  \end{itemize}
-
-\label{usecategory:FEATURE}
-\item[\MacroNI{FEATURE}]
-  Describes configuration for implemented features. 
-  \begin{itemize}
-    \item \texttt{Remote\_Runtime\_Config}
-    Enables the use of \Condor{config\_val} \Opt{-rset} to the machine with
-    this configuration.
-    Note that there are security implications for use of this configuration,
-    as it potentially permits the arbitrary modification of configuration.
-    Variable \Macro{SETTABLE\_ATTRS\_CONFIG} must also be defined.
-    \item \texttt{Remote\_Config}
-    Enables the use of \Condor{config\_val} \Opt{-set} to the machine with
-    this configuration.
-    Note that there are security implications for use of this configuration,
-    as it potentially permits the arbitrary modification of configuration.
-    Variable \Macro{SETTABLE\_ATTRS\_CONFIG} must also be defined.
-    \item \texttt{VMware}
-    Enables use of the vm universe with VMware virtual machines.
-    Note that this feature depends on Perl. 
-    \item \texttt{GPUs}
-    Sets configuration based on detection with the \Condor{gpu\_discovery}
-    tool, and defines a custom resource using the name \Expr{GPUs}.
-    Supports both OpenCL and CUDA if detected. 
-  \end{itemize}
-
-\label{usecategory:POLICY}
-\item[\MacroNI{POLICY}]
-  Describes configuration for the circumstances under which
-  machines choose to run jobs.
-  \begin{itemize}
-    \item \texttt{Always\_Run\_Jobs}
-    Always start jobs and run them to completion, without consideration of
-    \Condor{negotiator} generated preemption or suspension.
-    This is the default policy, and it is intended to be used with dedicated
-    resources.
-    If this policy is used together with the \texttt{Limit\_Job\_Runtimes}
-    policy,
-    order the specification by placing this \texttt{Always\_Run\_Jobs} 
-    policy first. 
-    \item \texttt{UWCS\_Desktop}
-    This was the default policy before HTCondor version 8.1.6.
-    It is intended to be used with desktop machines not exclusively running
-    HTCondor jobs.
-    It injects \Expr{UWCS} into the name of some configuration variables.
-    \item \texttt{Desktop}
-    An updated and reimplementation of the \texttt{UWCS\_Desktop} policy,
-    but \emph{without} the \Expr{UWCS} naming of some configuration variables.
-    \item \texttt{Limit\_Job\_Runtimes}
-    Limits running jobs to a maximum of 24 hours using preemption.
-    To set the limit to a different amount of time, 
-    define configuration variable \MacroNI{MAX\_JOB\_RUNTIME}
-    with the desired limit in seconds;
-    place this definition of \MacroNI{MAX\_JOB\_RUNTIME} \emph{after} the
-    \Expr{use POLICY : Limit\_Job\_Runtimes} line within the configuration
-    file.  
-    If this policy is used together with the \texttt{Always\_Run\_Jobs} policy,
-    order the specification by placing this \texttt{Limit\_Job\_Runtimes} 
-    policy second. 
-	\item \texttt{Preempt\_If\_Cpus\_Exceeded}
-	If the startd observes the number of CPU cores used by the job exceed
-	the number of cores in the slot by more than 0.8 on average over the past
-	minute, preempt the job immediately
-	ignoring any job retirement time.
-	\item \texttt{Hold\_If\_Cpus\_Exceeded}
-	If the startd observes the number of CPU cores used by the job exceed
-	the number of cores in the slot by more than 0.8 on average over the past
-	minute, immediately place the job on hold
-	ignoring any job retirement time.  The job will go on hold with a reasonable
-	hold reason in job attribute \Attr{HoldReason} and a value of 101 in job
-	attribute \Attr{HoldReasonCode}.  The hold reason and code can be customized by
-	specifying \MacroNI{HOLD\_REASON\_CPU\_EXCEEDED} and
-	\MacroNI{HOLD\_SUBCODE\_CPU\_EXCEEDED} respectively.
-	\item \texttt{Preempt\_If\_Memory\_Exceeded}
-	If the startd observes the memory usage of the job exceed
-	the memory provisioned in the slot, preempt the job immediately
-	ignoring any job retirement time.
-	\item \texttt{Hold\_If\_Memory\_Exceeded}
-	If the startd observes the memory usage of the job exceed
-	the memory provisioned in the slot,
-	immediately place the job on hold
-	ignoring any job retirement time.
-	The job will go on hold with a reasonable
-	hold reason in job attribute \Attr{HoldReason} and a value of 102 in job
-	attribute \Attr{HoldReasonCode}.  The hold reason and code can be customized by
-	specifying \MacroNI{HOLD\_REASON\_MEMORY\_EXCEEDED} and
-	\MacroNI{HOLD\_SUBCODE\_MEMORY\_EXCEEDED} respectively.
-  \end{itemize}
-
-\label{usecategory:SECURITY}
-\item[\MacroNI{SECURITY}]
-  Describes configuration for an implemented security model.
-  \begin{itemize}
-    \item \texttt{Host\_Based}
-    The default security model used.
-    Do \emph{not} combine with \texttt{User\_Based} security.
-    \item \texttt{User\_Based}
-    Grants permissions to an administrator and uses 
-    \texttt{With\_Authentication}.
-    Do \emph{not} combine with \texttt{Host\_Based} security.
-    \item \texttt{With\_Authentication}
-    Requires both authentication and integrity checks.
-    \item \texttt{Strong}
-    Requires authentication, encryption, and integrity checks.
-  \end{itemize}
-
-\end{description}
-
-For pools that are transitioning to using this new syntax in configuration,
-while still having some tools and daemons with HTCondor versions 
-earlier than 8.1.6,
-special syntax in the configuration will cause those daemons to
-fail upon start up,
-rather than use the new, but misinterpreted, syntax. 
-Newer daemons will ignore the extra syntax.
-Placing the \verb|@| character before the \MacroNI{use} key word
-causes the older daemons to fail when they attempt to
-parse this syntax.
-
-As an example, consider the \Condor{startd} as it starts up.
-A \Condor{startd} previous to HTCondor version 8.1.6 fails to start
-when it sees:
-\begin{verbatim}
-@use feature : GPUs
-\end{verbatim}
-Running an older \Condor{config\_val} also identifies the \Expr{@use}
-line as being bad.
-A \Condor{startd} of HTCondor version 8.1.6 or more recent sees
-\begin{verbatim}
-use feature : GPUs
-\end{verbatim}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-IfElse}Conditionals in Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!IF/ELSE syntax}
@@ -936,16 +755,16 @@ This implies that a change to the underlying value of any of these
 variables will require a full restart of HTCondor in order to use
 the changed value.
 \begin{description}
-  
+
 \label{param:FullHostname}
 \item[\MacroU{FULL\_HOSTNAME}]
-  The fully qualified host name of the local machine, 
+  The fully qualified host name of the local machine,
   which is host name plus domain name.
-  
+
 \label{param:Hostname}
 \item[\MacroU{HOSTNAME}]
   The host name of the local machine, \emph{without} a domain name.
-  
+
 \label{param:IpAddress}
 \item[\MacroU{IP\_ADDRESS}]
   The ASCII string version of the local machine's ``most public'' IP address.
@@ -1112,7 +931,6 @@ determined automatically at run time but which can be overwritten.
   For daemons started as root, but running under another UID
   (typically the user \Login{condor}), this will be the other UID.
 
-\label{param:FilesystemDomain}
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
   Defaults to the fully
   qualified host name of the machine it is evaluated on.  See

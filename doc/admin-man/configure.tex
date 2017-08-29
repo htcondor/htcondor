@@ -1618,7 +1618,7 @@ of the subsystem corresponding to the daemon.
     including messages for the negotiation of a socket 
     authentication mechanism, the management of a session key cache.
     and messages about the authentication process itself.  See
-    section~\ref{sec:Config-Security} for more information about
+    section~\ref{sec:Security-Config} for more information about
     secure communication configuration.
 
   \label{dflag:procfamily}
@@ -4223,17 +4223,6 @@ WANT_HOLD_REASON = \
   full path, and HTCondor will automatically append the \verb@.slotX@
   portion of the file name.
 
-\label{param:SlotWeight}
-\item[\Macro{SlotWeight}]
-  This may be used to give a slot greater weight when
-  calculating usage, computing fair shares, and enforcing group
-  quotas.  For example, claiming a slot with \Expr{SlotWeight = 2} is
-  equivalent to claiming two \Expr{SlotWeight = 1} slots.  The default
-  value is \AdAttr{Cpus}, the number of CPUs associated with the slot,
-  which is 1 unless specially configured.  Any expression referring to
-  attributes of the slot ClassAd and evaluating to a positive floating
-  point number is valid.
-
 \label{param:NumCpus}
 \item[\Macro{NUM\_CPUS}]
   An integer value, which can be used to lie to the \Condor{startd} daemon
@@ -4904,21 +4893,25 @@ CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
 \end{verbatim}
   Custom resources have no default consumption policy.
 
+%% WTF?
+%%\label{param:SlotWeight}
+%%\item[\Macro{SlotWeight}]
+%%  This may be used to give a slot greater weight when
+%%  calculating usage, computing fair shares, and enforcing group
+%%  quotas.  For example, claiming a slot with \Expr{SlotWeight = 2} is
+%%  equivalent to claiming two \Expr{SlotWeight = 1} slots.  The default
+%%  value is \AdAttr{Cpus}, the number of CPUs associated with the slot,
+%%  which is 1 unless specially configured.  Any expression referring to
+%%  attributes of the slot ClassAd and evaluating to a positive floating
+%%  point number is valid.
+
 \label{param:SlotWeight}
 \item[\Macro{SLOT\_WEIGHT}]
   An expression that specifies a slot's weight, used as a multiplier
   the \Condor{negotiator} daemon during matchmaking to assess user usage
   of a slot, which affects user priority.
-  Defaults to \Attr{Cpus}.  
-  %In this example, a memory-centric slot
-  %weight is configured that corresponds with the slot's memory consumption
-  %policy:
-%\begin{verbatim}
-%# slot weight corresponds to the number of jobs that could be
-%# matched, given the memory consumption policy:
-%CONSUMPTION_MEMORY = quantize(target.RequestMemory, {512})
-%SLOT_WEIGHT = floor(Memory / 512)
-%\end{verbatim}
+  Defaults to \Attr{Cpus}.
+
   In the case of slots with consumption policies, the cost of each match is
   is assessed as the difference in the slot weight expression before and after
   the resources consumed by the match are deducted from the slot.  Only
@@ -12815,7 +12808,7 @@ on page~\pageref{sec:daemon-classad-hooks}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Config-hooks}Configuration File Entries Only for Windows Platforms}
+\subsection{\label{sec:Config-Windows-Only}Configuration File Entries Only for Windows Platforms}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!Windows platform configuration variables}
 These macros are utilized only on Windows platforms.
@@ -13109,18 +13102,18 @@ in ClassAds that the \Condor{collector} daemon has.
   the \File{libganglia} executable, if \Macro{GANGLIA\_LIB} is not configured.
   This is used in 64-bit versions of HTCondor.
 
-\label{param:GangliadCluster}
+\label{param:GangliadDefaultCluster}
 \item[\Macro{GANGLIAD\_DEFAULT\_CLUSTER}]
   An expression specifying the default name of the Ganglia cluster 
   for all metrics.
   The expression may refer to attributes of the machine.
 
-\label{param:GangliadCluster}
+\label{param:GangliadDefaultMachine}
 \item[\Macro{GANGLIAD\_DEFAULT\_MACHINE}]
   An expression specifying the default machine name of Ganglia metrics.  The
   expression may refer to attributes of the machine.
 
-\label{param:GangliadCluster}
+\label{param:GangliadDefaultIP}
 \item[\Macro{GANGLIAD\_DEFAULT\_IP}]
   An expression specifying the default IP address of Ganglia metrics.
   The expression may refer to attributes of the machine.

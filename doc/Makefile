@@ -59,6 +59,7 @@ ref.pdf : ref.tex $(FIGURES) $(LINKS:%.tex=%.pdf.tex)
 	@pdflatex $(LATEX_ARGS) ref.tex
 	@makeindex ref
 	@pdflatex $(LATEX_ARGS) ref.tex
+	@pdflatex $(LATEX_ARGS) ref.tex
 
 # See ref.pdf comment above.
 ref.html : ref.tex $(FIGURES) $(LINKS:%.tex=%.html.tex)
@@ -68,6 +69,7 @@ ref.html : ref.tex $(FIGURES) $(LINKS:%.tex=%.html.tex)
 	@rm -f figuresizing.tex; ln -s figuresizing.html.tex figuresizing.tex
 	@pdflatex $(LATEX_ARGS) ref.tex
 	@makeindex ref
+	@pdflatex $(LATEX_ARGS) ref.tex
 	@pdflatex $(LATEX_ARGS) ref.tex
 	@latex2html -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
 	@mv ref ref.html

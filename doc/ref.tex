@@ -152,14 +152,21 @@
 \label{sec:command-reference}
 \input{man-pages/man.tex}
 
+
 %
-%  The fancy header package gets confused after the man pages, so reset
-%  the header and footer style
+%  The fancy header package gets confused (stuck inserting the last man page's
+%  command name in the header) after the man pages, so reset the header
+%  and footer style.
 %
-  \fancyhead[LE,RO]{\thepage}
-  \fancyhead[RE]{\leftmark}
-  \fancyhead[LO]{\rightmark}
-  \fancyfoot[C]{HTCondor \VersionNotice\ Reference Manual}
+\if@twoside
+	\fancyhead[LE,RO]{\thepage}
+	\fancyhead[RE]{\leftmark}
+	\fancyhead[LO]{\rightmark}
+\else
+	\fancyhead[R]{\thepage}
+	\fancyhead[L]{\rightmark}
+\fi
+\fancyfoot[C]{HTCondor \VersionNotice\ Reference Manual}
 
 
 % an appendix for all the various kinds and ClassAd attributes
@@ -174,6 +181,8 @@
 
 % the index goes at the end of the documentation
 \backmatter
+% Fix the TOC link.
+\phantomsection
 \addcontentsline{toc}{chapter}{Index}
 \label{index}
 \printindex
