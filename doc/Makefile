@@ -99,9 +99,6 @@ just-man-pages : just-man-pages.tex $(LINKS:%.tex=%.html.tex)
 	@epstopdf $< > $@
 
 %.eps : %.fig
-	@fig2dev -L eps -m .4 $< > $@
-
-user-man/dagman-node.eps : user-man/dagman-node.fig
 	@fig2dev -L eps -m .6 $< > $@
 
 # Make automatically deletes intermediate files (files created as the
@@ -111,7 +108,6 @@ user-man/dagman-node.eps : user-man/dagman-node.fig
 # The special target .SECONDARY says to not delete the listed
 # intermediate files; this -- as far as I know -- is the only way to
 # make Make shut up about them.
-.INTERMEDIATE : user-man/dagman-node.eps
 .SECONDARY : $(FIG_FIGS)
 
 clean : figures-clean tex-clean pdf-clean html-clean man-clean
