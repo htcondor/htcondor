@@ -8590,6 +8590,7 @@ Scheduler::jobNeedsTransferd( int cluster, int proc, int univ )
 	// universe in question.
 	/////////////////////////////////////////////////////////////////////////
 
+/* Uncomment this dead code when shadow/starter usage implemented...
 	switch(univ) {
 		case CONDOR_UNIVERSE_VANILLA:
 		case CONDOR_UNIVERSE_JAVA:
@@ -8605,6 +8606,7 @@ Scheduler::jobNeedsTransferd( int cluster, int proc, int univ )
 	}
 
 	return false;
+*/
 }
 
 bool
