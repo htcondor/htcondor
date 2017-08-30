@@ -813,13 +813,16 @@ Here are the default clauses corresponding to the different values of
 \begin{enumerate}
 
 \item 
-\verb@should_transfer_files = YES@ results in the addition of
-the clause \verb@(HasFileTransfer)@.
+\verb@should_transfer_files = YES@ 
+
+  results in the addition of the clause \verb@(HasFileTransfer)@.
   If the job is always going to transfer files, it is required to 
   match with a machine that has the capability to transfer files.
 
 \item 
-\verb@should_transfer_files = NO@ results in the addition of
+\verb@should_transfer_files = NO@
+
+  results in the addition of
   \verb@(TARGET.FileSystemDomain == MY.FileSystemDomain)@.
   In addition, HTCondor automatically adds the
   \Attr{FileSystemDomain} attribute to the job ClassAd, with whatever
@@ -829,7 +832,8 @@ the clause \verb@(HasFileTransfer)@.
   it will need a shared file system, and therefore, a machine in the
   same \Attr{FileSystemDomain} as the submit machine.
 
-\item \verb@should_transfer_files = IF_NEEDED@ results in the addition of
+\item \verb@should_transfer_files = IF_NEEDED@
+  results in the addition of
 \footnotesize
 \begin{verbatim}
   (HasFileTransfer || (TARGET.FileSystemDomain == MY.FileSystemDomain))
