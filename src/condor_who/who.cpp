@@ -36,7 +36,7 @@
 #include "status_types.h"
 #include "directory.h"
 #include "format_time.h"
-#include "getConsoleWindowSize.h"
+#include "console-utils.h"
 #include <my_popen.h>
 
 #include "condor_distribution.h"

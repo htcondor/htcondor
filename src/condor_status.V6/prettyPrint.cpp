@@ -27,7 +27,7 @@
 #include "format_time.h"
 #include "string_list.h"
 #include "metric_units.h"
-#include "getConsoleWindowSize.h"
+#include "console-utils.h"
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;

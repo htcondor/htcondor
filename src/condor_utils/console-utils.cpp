@@ -1,5 +1,5 @@
 #include <condor_common.h>
-#include "getConsoleWindowSize.h"
+#include "console-utils.h"
 
 #ifdef WIN32
 

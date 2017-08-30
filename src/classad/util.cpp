@@ -153,6 +153,7 @@ void convert_escapes(string &text, bool &validStr)
 							}
 						}
 					}
+					ch = (char)number;
 					if(ch == 0) { // "\\0" is an invalid substring within a string literal
 						validStr = false;
 					}

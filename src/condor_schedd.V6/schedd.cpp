@@ -722,6 +722,30 @@ Scheduler::Scheduler() :
 	prevLHF = 0;
 #endif
 
+	JobStartCount = 0;
+	MaxNextJobDelay = 0;
+	JobsThisBurst = -1;
+
+	SwapSpaceExhausted = false;
+	MaxShadowsForSwap = 0;
+
+	BadCluster = BadProc = -1;
+	NumUniqueOwners = 0;
+	shadowReaperId = -1;
+	m_have_xfer_queue_contact = false;
+	AccountantName = 0;
+	UidDomain = 0;
+	From.sin_port =-1;
+	From.sin_family = 0;
+	From.sin_addr.s_addr = 0;
+
+	m_use_startd_for_local = false;
+	cronTabs = 0;
+	MaxExceptions = 0;
+	m_job_machine_attrs_history_length = 0;
+	m_history_helper_max = 0;
+	m_history_helper_rid = -1;
+	
 }
 
 
@@ -8566,6 +8590,7 @@ Scheduler::jobNeedsTransferd( int cluster, int proc, int univ )
 	// universe in question.
 	/////////////////////////////////////////////////////////////////////////
 
+/* Uncomment this dead code when shadow/starter usage implemented...
 	switch(univ) {
 		case CONDOR_UNIVERSE_VANILLA:
 		case CONDOR_UNIVERSE_JAVA:
@@ -8581,6 +8606,7 @@ Scheduler::jobNeedsTransferd( int cluster, int proc, int univ )
 	}
 
 	return false;
+*/
 }
 
 bool
