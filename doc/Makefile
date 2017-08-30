@@ -56,34 +56,45 @@ ref.pdf : ref.tex $(FIGURES) $(LINKS:%.tex=%.pdf.tex)
 	@rm -f symbol.tex ; ln -s symbol.pdf.tex symbol.tex
 	@rm -f fontsize.tex; ln -s fontsize.pdf.tex fontsize.tex
 	@rm -f figuresizing.tex; ln -s figuresizing.pdf.tex figuresizing.tex
-	@perl -p -i -e's#\includegraphics{([^\.]+)\.eps}#\includegraphics{\1.pdf}#g' `git grep -l includegraphics`
-	@pdflatex $(LATEX_ARGS) ref.tex
+	@echo Suppressing first pass output from pdflatex...
+	@pdflatex $(LATEX_ARGS) ref.tex &> /dev/null
 	@makeindex ref
-	@pdflatex $(LATEX_ARGS) ref.tex
+	@echo Suppressing second pass output from pdflatex...
+	@pdflatex $(LATEX_ARGS) ref.tex &> /dev/null
 	@pdflatex $(LATEX_ARGS) ref.tex
 
 # See ref.pdf comment above.
 #
-# Also, while we hope to be able to upgrade to a version of latex2html that
-# supports converting .pdf as well .eps, or maybe a version of pdflatex
-# that doesn't barf on .eps, until we do, rewriting the \includegraphics
-# line to have the extension that the program in question needs is the
-# least-awful way to make things work.
+# Rather than have a horrible hack where we use perl to rewrite the
+# file extensions in the \includegraphics commands, it turns out we
+# can just remove the extensions entirely, and let pdflatex and
+# latex2html pick which extension works for them.  Unfortunately,
+# this means that we actually generate ref.pdf -- with the wrong
+# symlinks -- when we generate the HTML.  At some point, it'd be nice
+# to take advantage of this somehow (can we get away with changing the
+# symlinks only for latex2html itself?*), but for now let's just use the
+# -draftmode flag to avoid producing any output.
 #
-# The extra conversion lines are to handle when you interrupt latex2html.
+# (*: The only substantial difference in the output html appears to be an
+# off-by-one difference in image numbering caused the presence of a .png
+# for the \dots command.  On the other hand, no one actually _uses_ the \dot
+# command, and the png appears in nowhere in the HTML.  Perhaps we could just
+# unconditionally undefine \dots at the beggining of ref.pdf (to make sure
+# nobody uses it accidentally) and carry on?)
+# (*: I inserted ref.pdf before ref.tex in the next line and removed the
+# pdflatex and mkindex lines to test this.)
 ref.html : ref.tex $(FIGURES) $(LINKS:%.tex=%.html.tex)
 	@rm -f font.tex ; ln -s font.html.tex font.tex
 	@rm -f symbol.tex ; ln -s symbol.html.tex symbol.tex
 	@rm -f fontsize.tex; ln -s fontsize.html.tex fontsize.tex
 	@rm -f figuresizing.tex; ln -s figuresizing.html.tex figuresizing.tex
-	@perl -p -i -e's#\includegraphics{([^\.]+)\.eps}#\includegraphics{\1.pdf}#g' `git grep -l includegraphics`
-	@pdflatex $(LATEX_ARGS) ref.tex
+	@echo Suppressing first pass output from pdflatex...
+	@pdflatex $(LATEX_ARGS) -draftmode ref.tex &> /dev/null
 	@makeindex ref
-	@pdflatex $(LATEX_ARGS) ref.tex
-	@pdflatex $(LATEX_ARGS) ref.tex
-	@perl -p -i -e's#\includegraphics{([^\.]+)\.pdf}#\includegraphics{\1.pdf}#g' `git grep -l includegraphics`
+	@echo Suppressing second pass output from pdflatex...
+	@pdflatex $(LATEX_ARGS) -draftmode ref.tex &> /dev/null
+	@pdflatex $(LATEX_ARGS) -draftmode ref.tex
 	@latex2html -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
-	@perl -p -i -e's#\includegraphics{([^\.]+)\.eps}#\includegraphics{\1.pdf}#g' `git grep -l includegraphics`
 	@mv ref ref.html
 
 # See ref.pdf comment above.  Also note that we don't have a full set of
