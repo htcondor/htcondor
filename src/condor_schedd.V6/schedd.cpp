@@ -8576,7 +8576,7 @@ Scheduler::StartJobHandler()
 }
 
 bool
-Scheduler::jobNeedsTransferd( int cluster, int proc, int univ )
+Scheduler::jobNeedsTransferd( int cluster, int proc, int /*univ*/ )
 {
 	ClassAd *jobad = GetJobAd(cluster, proc);
 	ASSERT(jobad);
