@@ -56,6 +56,21 @@ to 0 in a submit description file was treated the same as not setting
 it at all.
 \Ticket{6375}
 
+\item Fixed a bug in how the cpu usage of slurm jobs is interpreted.
+\Ticket{6380}
+
+\item HTCondor now works properly with systemd's watchdog feature on
+all flavors of linux.
+Previously, the \Condor{master} wouldn't send alive messages to systemd
+if systemd wasn't part of the linux distro's standard configuration.
+This would result in systemd killing the HTCondor daemons after a
+short period of time.
+\Ticket{6385}
+
+\item Fixed handling of backslashes in string values in old ClassAds
+format in the python bindings.
+\Ticket{6382}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

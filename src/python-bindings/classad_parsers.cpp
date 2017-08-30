@@ -41,6 +41,44 @@ ClassAdWrapper *parseFile(FILE *stream)
     return wrapper_result;
 }
 
+// Utility to clarify a couple of evaluations
+static inline bool
+IsStringEnd(const char *str, unsigned off)
+{
+    return (  (str[off] == '\0') || (str[off] == '\n') || (str[off] == '\r')  );
+}
+
+// Convert string escaping from old ClassAd syntax to new ClassAd syntax.
+void ConvertEscapingOldToNew( const char *str, std::string &buffer )
+{
+        // String escaping is different between new and old ClassAds.
+        // We need to convert the escaping from old to new style before
+        // handing the expression to the new ClassAds parser.
+    while( *str ) {
+        size_t n = strcspn(str,"\\");
+        buffer.append(str,n);
+        str += n;
+        if ( *str == '\\' ) {
+            buffer.append( 1, '\\' );
+            str++;
+            if(  (str[0] != '"') ||
+                 ( /*(str[0] == '"') && */ IsStringEnd(str, 1) )   )
+            {
+                buffer.append( 1, '\\' );
+            }
+        }
+    }
+        // remove trailing whitespace
+    int ix = (int)buffer.size();
+    while (ix > 1) {
+        char ch = buffer[ix-1];
+        if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n')
+            break;
+        --ix;
+    }
+    buffer.resize(ix);
+}
+
 ClassAdWrapper *parseOld(boost::python::object input)
 {
     PyErr_Warn(PyExc_DeprecationWarning, "ClassAd Deprecation: parseOld is deprecated; use parseOne, parseNext, or parseAds instead.");
@@ -65,6 +103,14 @@ ClassAdWrapper *parseOld(boost::python::object input)
             continue;
         }
         std::string line_str = boost::python::extract<std::string>(line);
+        // The ClassAd library doesn't understand old ClassAd string
+        // escaping rules. If the expression contains a backslash, we
+        // need to convert to new ClassAd escaping rules.
+        if ( strchr( line_str.c_str(), '\\' ) ) {
+            std::string src = line_str;
+            line_str.clear();
+            ConvertEscapingOldToNew( src.c_str(), line_str );
+        }
         size_t pos = line_str.find('=');
 
         // strip whitespace before the attribute and and around the =
@@ -305,6 +351,14 @@ OldClassAdIterator::next()
             adchar++;
         }
         if (invalid) {continue;}
+        // The ClassAd library doesn't understand old ClassAd string
+        // escaping rules. If the expression contains a backslash, we
+        // need to convert to new ClassAd escaping rules.
+        if ( strchr( line_str.c_str(), '\\' ) ) {
+            std::string src = line_str;
+            line_str.clear();
+            ConvertEscapingOldToNew( src.c_str(), line_str );
+        }
 
         size_t pos = line_str.find('=');
 
