@@ -6,6 +6,16 @@
 #include "systemd/sd-daemon.h"
 #endif
 
+#ifdef LINUX
+#ifndef SD_LISTEN_FDS_START
+#define SD_LISTEN_FDS_START 3
+#endif
+
+#ifndef LIBSYSTEMD_DAEMON_SO
+#define LIBSYSTEMD_DAEMON_SO "libsystemd.so.0"
+#endif
+#endif /* LINUX */
+
 #ifdef HAVE_DLOPEN
 #include <dlfcn.h>
 #endif
@@ -102,7 +112,7 @@ SystemdManager::InitializeFDs()
 	{
 		dprintf(D_FULLDEBUG, "systemd passed %d sockets.\n", fds);
 	}
-#ifdef HAVE_SD_DAEMON_H
+#ifdef SD_LISTEN_FDS_START
 	for (int fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++) {
 		if ((*m_is_socket_handle)(fd, 0, SOCK_STREAM, 1)) { m_inet_fds.push_back(fd); }
 	}
