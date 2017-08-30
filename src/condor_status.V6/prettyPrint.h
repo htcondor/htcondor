@@ -53,8 +53,12 @@ class PrettyPrinter {
 			startdCompact_ixCol_MaxSlotMem( -11 ),
 			startdCompact_ixCol_JobStarts( -10 )
 		{
-			// For Windows.
-			setby = { NO_AD, 0, NULL, 0, NULL };
+			// The versions of Visual Studio we use hate initializer lists. :(
+			setby.adType = NO_AD;
+			setby.argIndex = 0;
+			setby.Arg = NULL;
+			setby.ppArgIndex = 0;
+			setby.ppArg = NULL;
 		}
 
 		int getDisplayWidth( bool * is_piped );
