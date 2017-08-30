@@ -37,7 +37,7 @@ Figure~\ref{fig:dagman-node} illustrates the elements of a node.
 
 \begin{figure}[hbt]
 \centering
-\includegraphics{user-man/dagman-node.eps}
+\includegraphics{user-man/dagman-node.pdf}
 \caption{\label{fig:dagman-node}One Node within a DAG}
 \end{figure}
 
@@ -97,7 +97,7 @@ This DAG contains 4 nodes.
 
 \begin{figure}[hbt]
 \centering
-\includegraphics{user-man/dagman-diamond.eps}
+\includegraphics{user-man/dagman-diamond.pdf}
 \caption{\label{fig:dagman-diamond}Diamond DAG}
 \end{figure}
 
@@ -1876,7 +1876,7 @@ of the node job, unless the job requests it using the submit command
 \SubmitCmd{keep\_claim\_idle}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
+\subsubsection{\label{sec:DAG-SingleSubmissionOfMultiple}Single Submission of Multiple, Independent DAGs}
 \index{DAGMan!single submission of multiple, independent DAGs}
 
 A single use of \Condor{submit\_dag} may execute multiple, independent DAGs.
@@ -2027,7 +2027,7 @@ HTCondor DAGMan handles this situation easily, and allows
 DAGs to be nested to any depth.
 
 There are two ways that DAGs can be nested within other DAGs:
-sub-DAGs (see~\ref{sec:DAGsinDAGs}) and splices (see~\ref{sec:DAGSplicing}).
+sub-DAGs (see~\ref{sec:DAG-SubDAG}) and splices (see~\ref{sec:DAGSplicing}).
 
 With sub-DAGs, each DAG has its own \Condor{dagman} job, which
 then becomes a node job within the higher-level DAG.  With splices,
@@ -2066,7 +2066,7 @@ and can be nested to any depth (but be sure to avoid recursion, which
 will cause problems!).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
+\subsubsection{\label{sec:DAG-SubDAG}A DAG Within a DAG Is a SUBDAG}
 \index{DAG input file!SUBDAG command}
 \index{DAGMan!DAGs within DAGs}
 
@@ -2465,7 +2465,7 @@ This hierarchy of splice names assures unique names associated with all nodes.
 
 \begin{figure}
 \centering
-\includegraphics{user-man/splice-simple.eps}
+\includegraphics{user-man/splice-simple.pdf}
 \caption{\label{fig:dagman-splice-simple} The diamond-shaped DAG spliced between two nodes.}
 \end{figure}
 
@@ -2511,7 +2511,7 @@ new graph, even when the same DAG input file is specified.
 
 \begin{figure}
 \centering
-\includegraphics{user-man/splice-X.eps}
+\includegraphics{user-man/splice-X.pdf}
 \caption{\label{fig:dagman-splice-X} The X-shaped DAG.}
 \end{figure}
 
@@ -2548,7 +2548,7 @@ Figure~\ref{fig:dagman-splice-s1} illustrates the resulting DAG.
 
 \begin{figure}
 \centering
-\includegraphics{user-man/splice-s1.eps}
+\includegraphics{user-man/splice-s1.pdf}
 \caption{\label{fig:dagman-splice-s1} The DAG described by \File{s1.dag}.}
 \end{figure}
 
@@ -2592,7 +2592,7 @@ S3 not having any dependencies associated with it in this top level DAG.
 
 \begin{figure}
 \centering
-\includegraphics{user-man/splice-complex.eps}
+\includegraphics{user-man/splice-complex.pdf}
 \caption{\label{fig:dagman-splice-complex} The complex splice example DAG.}
 \end{figure}
 
@@ -2952,7 +2952,7 @@ A diagram of the above example:
 
 \begin{figure}[hbt]
 \centering
-\includegraphics{user-man/dagman-connect.eps}
+\includegraphics{user-man/dagman-connect.pdf}
 \caption{\label{fig:dagman-connect}Diagram of the splice connect example}
 \end{figure}
 
@@ -3911,12 +3911,11 @@ assuming the example \Arg{jobTag} field of \Expr{local}:
 \subsection{\label{sec:DAGStatusClassad}Status Information for the DAG in a ClassAd}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!DAG status in a job ClassAd}
-\label{Job-ClassAd-DAGAttributes}
 
 The \Condor{dagman} job places information about the status of the DAG
-into its own job ClassAd.  
+into its own job ClassAd.
 The attributes are fully described at
-section ~\ref{Job-ClassAd-DAGAttributes}.
+section ~\ref{Job-ClassAd-DAGManAttributes}.
 The attributes are
 
 \begin{itemize}
