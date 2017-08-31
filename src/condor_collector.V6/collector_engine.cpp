@@ -86,6 +86,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 
 	collectorStats = stats;
 	m_collector_requirements = NULL;
+	m_get_ad_options = 0;
 }
 
 

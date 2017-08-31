@@ -1825,6 +1825,8 @@ class DaemonCore : public Service
         void*           data_ptr;
         int             dprintf_flag;
 		int             wait_for_payload;
+
+		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), dprintf_flag(0), wait_for_payload(0) {}
     };
 
     void                DumpCommandTable(int, const char* = NULL);

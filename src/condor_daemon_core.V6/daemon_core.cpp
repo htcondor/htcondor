@@ -10492,9 +10492,11 @@ void DaemonCore :: invalidateSessionCache()
 	/* for now, never invalidate the session cache */
 	return;
 
+/* when we do invalidate the session cache, uncomment this...
     if (sec_man) {
         sec_man->invalidateAllCache();
     }
+*/
 }
 
 

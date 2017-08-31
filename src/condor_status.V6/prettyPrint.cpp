@@ -27,7 +27,7 @@
 #include "format_time.h"
 #include "string_list.h"
 #include "metric_units.h"
-#include "getConsoleWindowSize.h"
+#include "console-utils.h"
 #include "prettyPrint.h"
 #include "setflags.h"
 
@@ -576,7 +576,7 @@ int PrettyPrinter::ppSetStartdCompactCols (int /*width*/, int & mach_width, cons
 	startdCompact_ixCol_JobStarts = 10; // double
 	startdCompact_ixCol_MaxSlotMem = 11; // double
 
-	mach_width = 12; // set a minimum value for machine column.
+	mach_width = 12;
 	return 12;
 }
 
@@ -869,7 +869,7 @@ const char * const scheddNormal_PrintFormat = "SELECT\n"
 	"TotalHeldJobs    AS '  HeldJobs' PRINTF %10d\n"
 "SUMMARY STANDARD\n";
 
-int PrettyPrinter::ppSetScheddNormalCols (int width, int & mach_width)
+int PrettyPrinter::ppSetScheddNormalCols (int /* width */, int & mach_width)
 {
 	const char * tag = "Schedd";
 	const char * fmt = scheddNormal_PrintFormat;
@@ -878,8 +878,7 @@ int PrettyPrinter::ppSetScheddNormalCols (int width, int & mach_width)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 
-	// set a minimum size for name and machine columns
-	mach_width = width ? 12 : 12;
+	mach_width = 12;
 	int name_width = 15;
 	return name_width;
 }
@@ -921,7 +920,7 @@ const char * const scheddRun_PrintFormat = "SELECT\n"
 "WHERE (ShadowsRunning+TotalSchedulerJobsRunning) > 0\n"
 "SUMMARY NONE\n";
 
-int PrettyPrinter::ppSetScheddRunCols (int /*width*/, const char * & constr)
+int PrettyPrinter::ppSetScheddRunCols (int, const char * & constr)
 {
 	const char * tag = "ScheddRun";
 	const char * fmt = scheddRun_PrintFormat;
@@ -941,7 +940,7 @@ const char * const submitterNormal_PrintFormat = "SELECT\n"
 	"HeldJobs    AS '  HeldJobs' PRINTF %10d\n"
 "SUMMARY STANDARD\n";
 
-int PrettyPrinter::ppSetSubmitterNormalCols (int width, int & mach_width)
+int PrettyPrinter::ppSetSubmitterNormalCols (int, int & mach_width)
 {
 	const char * tag = "Submitter";
 	const char * fmt = submitterNormal_PrintFormat;
@@ -950,8 +949,7 @@ int PrettyPrinter::ppSetSubmitterNormalCols (int width, int & mach_width)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 
-	// set a minimum size for name and machine columns
-	mach_width = width ? 12 : 12;
+	mach_width = 12;
 	int name_width = 15;
 	return name_width;
 }
@@ -985,7 +983,7 @@ const char * const masterNormal_PrintFormat = "SELECT\n"
 	"DaemonStartTime AS '   Uptime' WIDTH 13 %T PRINTAS ELAPSED_TIME\n"
 "SUMMARY NONE\n";
 
-int PrettyPrinter::ppSetMasterNormalCols(int width)
+int PrettyPrinter::ppSetMasterNormalCols(int)
 {
 	const char * tag = "Master";
 	const char * fmt = masterNormal_PrintFormat;
@@ -993,8 +991,7 @@ int PrettyPrinter::ppSetMasterNormalCols(int width)
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
-	// set a minumum size for name column
-	return width ? 12 : 12;
+	return 12;
 }
 
 void PrettyPrinter::ppSetCkptSrvrNormalCols (int width)
@@ -1025,7 +1022,7 @@ const char * const defragNormal_PrintFormat = "SELECT\n"
 	"DrainedMachines AS TotalDrained PRINTF %12d\n"
 "SUMMARY NONE\n";
 
-int PrettyPrinter::ppSetDefragNormalCols (int width)
+int PrettyPrinter::ppSetDefragNormalCols (int)
 {
 	const char * tag = "Defrag";
 	const char * fmt = defragNormal_PrintFormat;
@@ -1033,8 +1030,7 @@ int PrettyPrinter::ppSetDefragNormalCols (int width)
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
-	// set a minumum size for name column
-	return width ? 12 : 12;
+	return 12;
 }
 
 const char * const accountingNormal_PrintFormat = "SELECT\n"
@@ -1046,7 +1042,7 @@ const char * const accountingNormal_PrintFormat = "SELECT\n"
 	"LastUsageTime  AS '  LastUsage' WIDTH 12 PRINTAS ELAPSED_TIME\n"
 "SUMMARY NONE\n";
 
-int PrettyPrinter::ppSetAccountingNormalCols(int width)
+int PrettyPrinter::ppSetAccountingNormalCols(int)
 {
 	const char * tag = "Accounting";
 	const char * fmt = accountingNormal_PrintFormat;
@@ -1054,13 +1050,12 @@ int PrettyPrinter::ppSetAccountingNormalCols(int width)
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
-	// set a minumum size for name column
-	return width ? 12 : 12;
+	return 12;
 }
 
 void PrettyPrinter::ppSetGridNormalCols (int width)
 {
-	int name_width = wide_display ? -34 : -34;
+	int name_width = -34;
 	if (width > 79 && ! wide_display) { name_width = MAX(-40, 41-width); }
 
 	ppSetColumn(ATTR_NAME, name_width, ! wide_display);
@@ -1083,7 +1078,7 @@ const char * const negotiatorNormal_PrintFormat = "SELECT\n"
 	"LastNegotiationCycleRejections0 AS Rejections PRINTF %10d\n"
 "SUMMARY NONE\n";
 
-int PrettyPrinter::ppSetNegotiatorNormalCols (int width)
+int PrettyPrinter::ppSetNegotiatorNormalCols (int)
 {
 	const char * tag = "Negotiator";
 	const char * fmt = negotiatorNormal_PrintFormat;
@@ -1091,8 +1086,7 @@ int PrettyPrinter::ppSetNegotiatorNormalCols (int width)
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
-	// set a minumum size for name column
-	return width ? 12 : 12;
+	return 12;
 }
 
 // Annex names are limited to 27 characters by the width of the client token

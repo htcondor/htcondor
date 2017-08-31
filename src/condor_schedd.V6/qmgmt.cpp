@@ -4878,8 +4878,8 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 		if( tmp_ad.LookupInteger(attr_name, *val) == 1) {
 			return 1;
 		}
-		return -1;
 		errno = EINVAL;
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -5084,8 +5084,8 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		if( ! JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
-			return -1;
 			errno = ENOENT;
+			return -1;
 		}
 	}
 

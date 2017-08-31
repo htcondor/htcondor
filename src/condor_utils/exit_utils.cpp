@@ -38,10 +38,10 @@ int input_code
 
 #if !defined(WIN32)
 	return( (input_code & 0x00FF) << 8);
-#endif
-
+#else
 	/* On Win32, we don't do anything special */
 	return input_code;
+#endif
 }
 
 /* Return the reverse of WTERMSIG */
@@ -52,8 +52,9 @@ int input_signal
 {
 #if !defined(WIN32)
 	return( (input_signal & 0x007F) );
-#endif
+#else
 
 	/* On Win32, we don't do anything special */
 	return input_signal;
+#endif
 }
