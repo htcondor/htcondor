@@ -972,7 +972,7 @@ const char * const scheddNormal_PrintFormat = "SELECT\n"
 	"TotalHeldJobs    AS '  HeldJobs' PRINTF %10d\n"
 "SUMMARY STANDARD\n";
 
-int ppSetScheddNormalCols (int width, int & mach_width)
+int ppSetScheddNormalCols (int /*width*/, int & mach_width)
 {
 	const char * tag = "Schedd";
 	const char * fmt = scheddNormal_PrintFormat;
@@ -982,7 +982,7 @@ int ppSetScheddNormalCols (int width, int & mach_width)
 	}
 
 	// set a minimum size for name and machine columns
-	mach_width = width ? 12 : 12;
+	mach_width = /*width ? 12 : */12;
 	int name_width = 15;
 	return name_width;
 }
@@ -1044,7 +1044,7 @@ const char * const submitterNormal_PrintFormat = "SELECT\n"
 	"HeldJobs    AS '  HeldJobs' PRINTF %10d\n"
 "SUMMARY STANDARD\n";
 
-int ppSetSubmitterNormalCols (int width, int & mach_width)
+int ppSetSubmitterNormalCols (int /*width*/, int & mach_width)
 {
 	const char * tag = "Submitter";
 	const char * fmt = submitterNormal_PrintFormat;
@@ -1054,7 +1054,7 @@ int ppSetSubmitterNormalCols (int width, int & mach_width)
 	}
 
 	// set a minimum size for name and machine columns
-	mach_width = width ? 12 : 12;
+	mach_width = /*width ? 12 : */12;
 	int name_width = 15;
 	return name_width;
 }
@@ -1090,7 +1090,7 @@ const char * const masterNormal_PrintFormat = "SELECT\n"
 	"DaemonStartTime AS '   Uptime' WIDTH 13 %T PRINTAS ELAPSED_TIME\n"
 "SUMMARY NONE\n";
 
-int ppSetMasterNormalCols(int width)
+int ppSetMasterNormalCols(int /*width*/)
 {
 	const char * tag = "Master";
 	const char * fmt = masterNormal_PrintFormat;
@@ -1099,7 +1099,7 @@ int ppSetMasterNormalCols(int width)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 	// set a minumum size for name column
-	return width ? 12 : 12;
+	return /*width ? 12 : */12;
 }
 
 
@@ -1152,7 +1152,7 @@ const char * const accountingNormal_PrintFormat = "SELECT\n"
 	"LastUsageTime  AS '  LastUsage' WIDTH 12 PRINTAS ELAPSED_TIME\n"
 "SUMMARY NONE\n";
 
-int ppSetAccountingNormalCols (int width)
+int ppSetAccountingNormalCols (int /*width*/)
 {
 	const char * tag = "Accounting";
 	const char * fmt = accountingNormal_PrintFormat;
@@ -1161,12 +1161,12 @@ int ppSetAccountingNormalCols (int width)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 	// set a minumum size for name column
-	return width ? 12 : 12;
+	return /*width ? 12 : */12;
 }
 
 void ppSetGridNormalCols (int width)
 {
-	int name_width = wide_display ? -34 : -34;
+	int name_width = /*wide_display ? -34 : */-34;
 	if (width > 79 && ! wide_display) { name_width = MAX(-40, 41-width); }
 
 	ppSetColumn(ATTR_NAME, name_width, ! wide_display);
@@ -1189,7 +1189,7 @@ const char * const negotiatorNormal_PrintFormat = "SELECT\n"
 	"LastNegotiationCycleRejections0 AS Rejections PRINTF %10d\n"
 "SUMMARY NONE\n";
 
-int ppSetNegotiatorNormalCols (int width)
+int ppSetNegotiatorNormalCols (int /*width*/)
 {
 #if 1
 	const char * tag = "Negotiator";
@@ -1199,7 +1199,7 @@ int ppSetNegotiatorNormalCols (int width)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 	// set a minumum size for name column
-	return width ? 12 : 12;
+	return /*width ? 12 : */12;
 #else
 	int name_width = wide_display ? -32 : -20;
 	if (width > 79 && ! wide_display) { name_width = MAX(-40, -width/3); }
