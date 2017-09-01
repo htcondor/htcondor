@@ -12,12 +12,14 @@
 #include "Functor.h"
 #include "FunctorSequence.h"
 #include "GetInstances.h"
-#include "StatusReply.h"
+#include "CondorStatusReply.h"
 
 extern ClassAd * command;
 extern ClassAdCollection * commandState;
 
-int status( const char * annexName, bool wantClassAds, const char * sURL ) {
+int
+condor_status(	const char * annexName, const char * sURL,
+				int argc, char ** argv, unsigned subCommandIndex ) {
 	// This (and the other sequences like it) should probably be handled
 	// by annex.cpp, in the argument-handling code.
 	std::string serviceURL = sURL ? sURL : "";
@@ -60,9 +62,10 @@ int status( const char * annexName, bool wantClassAds, const char * sURL ) {
 	GetInstances * getInstances = new GetInstances( reply,
 		ec2Gahp, scratchpad, serviceURL, publicKeyFile, secretKeyFile,
 		commandState, commandID );
-	StatusReply * statusReply = new StatusReply( reply, command,
-		ec2Gahp, scratchpad, wantClassAds,
-		commandState, commandID );
+	CondorStatusReply * statusReply = new CondorStatusReply( reply, command,
+		ec2Gahp, scratchpad,
+		commandState, commandID,
+		argc, argv, subCommandIndex );
 
 	FunctorSequence * fs = new FunctorSequence(
 		{ getInstances }, statusReply,

@@ -269,6 +269,27 @@ public:
 	classad::Value * next(int & index);
 	MyRowOfValues& operator+=(const classad::Value &S) { cat(S); return *this; }
 
+	MyRowOfValues& operator = ( const MyRowOfValues & rhs ) {
+		cols = rhs.cols;
+		cmax = rhs.cmax;
+
+		if( pvalid != NULL ) { delete pvalid; }
+		pvalid = new unsigned char[cmax];
+		memset( pvalid, '\0', cmax );
+
+		if( pdata != NULL ) { delete pdata; }
+		pdata = new classad::Value[cmax];
+		for( int i = 0; i < cmax; ++i ) {
+			pdata[i] = rhs.pdata[i];
+			pvalid[i] = rhs.pvalid[i];
+		}
+
+		return * this;
+	}
+
+	MyRowOfValues( const MyRowOfValues & in ) :
+	  pdata( NULL ), pvalid( NULL ), cols( 0 ), cmax( 0 ) { * this = in; }
+
 	bool empty() { return cols > 0; }
 	int ColCount() { return cols; }
 	classad::Value * Column(int index) {
