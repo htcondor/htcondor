@@ -2,10 +2,6 @@ admin-man/pool-arch.eps
 user-man/dagman-connect.eps
 user-man/dagman-diamond.eps
 user-man/dagman-node.eps
-font.tex
-symbol.tex
-fontsize.tex
-figuresizing.tex
 admin-man/activities.pdf
 admin-man/pool-arch.pdf
 admin-man/states.pdf
