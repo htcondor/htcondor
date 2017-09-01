@@ -24,8 +24,8 @@
 \newcommand{\Prog}[1]{\textit{#1}}              	% Program name
 \newcommand{\Term}[1]{\emph{#1}}			% Use this to introduce terminology
 \newcommand{\Cmd}[2]{\textit{#1}(#2)}           	% Command w/ section number
-\newcommand{\Sinful}[1]{$<$#1$>$}         	% Sinful string
-\newcommand{\SinfulAny}{$<$a.b.c.d:port$>$}        	% Arbitrary Sinful string
+\newcommand{\Sinful}[1]{\lt{}#1\gt{}}         	% Sinful string
+\newcommand{\SinfulAny}{\lt{}a.b.c.d:port\gt{}}        	% Arbitrary Sinful string
 \newcommand{\URL}[1]{\htmladdnormallink{#1}{#1}}	% a URL
 \newcommand{\Email}[1]{\htmladdnormallink{#1}{mailto:#1}}
 \newcommand{\File}[1]{\texttt{#1}}        	    	% File name
@@ -35,6 +35,9 @@
 \newcommand{\Circum}{\^{}}                      	% ^
 \newcommand{\Lbr}{[}                            	% [
 \newcommand{\Rbr}{]}                            	% ]
+\newcommand{\lt}{\textless}							% <
+\newcommand{\gt}{\textgreater}						% >
+\newcommand{\Meta}[1]{\lt{#1}\gt}					% <argument>
 \newcommand{\Percent}{\%}                       	% %
 \newcommand{\Opt}[1]{\mbox{\textbf{#1}}}            % Option
 \newcommand{\Arg}[1]{\mbox{\textit{#1}}}            % Argument
@@ -65,7 +68,6 @@
 \newcommand{\AdStr}[1]{\texttt{"#1"}}	% ClassAd Attribute string
 \newcommand{\Dflag}[1]{\texttt{D\_{#1}}}		% Debug flag name
 \newcommand{\Bold}[1]{\textbf{#1}}		% Something you want bold
-\input{fontsize.tex}
 \newcommand{\Note}{\underline{NOTE}: }          % NOTE:
 \newcommand{\Warn}{\underline{WARNING}: }       % WARNING:
 \newcommand{\Security}{\underline{\textit{Security Item}}: } % To identify release notes that pertain to security items

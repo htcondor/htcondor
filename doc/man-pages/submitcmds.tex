@@ -30,7 +30,7 @@ numerous.  They are listed here in alphabetical order by category.
 
 \index{submit commands!arguments}
 \label{man-condor-submit-arguments}
-\item[arguments = $<$argument\_list$>$]
+\item[arguments = \lt{}argument\_list\gt{}]
 List of arguments to be supplied
 to the executable as part of the command line.
 
@@ -149,7 +149,7 @@ This is for the convenience of Windows users.
 
 \index{submit commands!environment}
 \label{man-condor-submit-environment}
-\item[environment = $<$parameter\_list$>$] 
+\item[environment = \lt{}parameter\_list\gt{}] 
 List of environment
 \index{environment variables!setting, for a job}
 variables.
@@ -242,7 +242,7 @@ commands).
 
 \index{submit commands!error}
 \label{man-condor-submit-error}
-\item[error = $<$pathname$>$]
+\item[error = \lt{}pathname\gt{}]
 A path and file name used by HTCondor to capture any
 error messages the program would normally write to the screen
 (that is, this file becomes \File{stderr}).
@@ -270,7 +270,7 @@ tool \Prog{globus\_url\_copy} understands.
 
 \index{submit commands!executable}
 \label{man-condor-submit-executable}
-\item[executable = $<$pathname$>$]
+\item[executable = \lt{}pathname\gt{}]
 An optional path and a required file name of the executable file for this
 job cluster. Only one \SubmitCmd{executable} command within a
 submit description file is guaranteed to work properly.
@@ -295,7 +295,7 @@ argument must be a compiled \File{.class} file.
 
 \index{submit commands!getenv}
 \label{man-condor-submit-getenv}
-\item[getenv = $<$True \Bar\ False$>$] 
+\item[getenv = \lt{}True \Bar\ False\gt{}] 
 If \SubmitCmdNI{getenv} is set to
 \index{environment variables!copying current environment}
 \Expr{True}, then \Condor{submit} will copy all of the user's current
@@ -321,7 +321,7 @@ commands).
 
 \index{submit commands!input}
 \label{man-condor-submit-input}
-\item[input = $<$pathname$>$]
+\item[input = \lt{}pathname\gt{}]
 HTCondor assumes that its jobs are
 long-running, and that the user will not wait at the terminal for their
 completion. Because of this, the standard files which normally access
@@ -350,7 +350,7 @@ the \SubmitCmd{arguments} command.
 
 \index{submit commands!log}
 \label{man-condor-submit-log}
-\item[log = $<$pathname$>$] 
+\item[log = \lt{}pathname\gt{}] 
 Use \SubmitCmd{log} to specify a file name where
 HTCondor will write a log file of what is happening with this job cluster,
 called a job event log.
@@ -372,7 +372,7 @@ on the submit machine.
 
 \index{submit commands!log\_xml}
 \label{man-condor-submit-log-xml}
-\item[log\_xml = $<$True \Bar\ False$>$]
+\item[log\_xml = \lt{}True \Bar\ False\gt{}]
 If \SubmitCmd{log\_xml} is \Expr{True}, 
 then the job event log file will be written in ClassAd XML.
 If not specified, XML is not used.
@@ -391,7 +391,7 @@ this option in the same way.
 \index{notification!e-mail related to a job}
 \index{submit commands!notification}
 \label{man-condor-submit-notification}
-\item[notification = $<$Always \Bar\ Complete \Bar\ Error \Bar\ Never$>$]
+\item[notification = \lt{}Always \Bar\ Complete \Bar\ Error \Bar\ Never\gt{}]
 Owners of HTCondor jobs are notified by
 e-mail when certain events occur.
 If defined by \Arg{Always}, the owner will be notified
@@ -411,7 +411,7 @@ The HTCondor User's manual documents statistics included in the e-mail.
 
 \index{submit commands!notify\_user}
 \label{man-condor-submit-notify-user}
-\item[notify\_user = $<$email-address$>$]
+\item[notify\_user = \lt{}email-address\gt{}]
 Used to specify the e-mail
 address to use when HTCondor sends e-mail about a job.  If not specified,
 HTCondor defaults to using the e-mail address defined by
@@ -432,7 +432,7 @@ job-owner@submit-machine-name
 
 \index{submit commands!output}
 \label{man-condor-submit-output}
-\item[output = $<$pathname$>$]
+\item[output = \lt{}pathname\gt{}]
 The \SubmitCmd{output} file captures
 any information the program would ordinarily write to the screen
 (that is, this file becomes \File{stdout}).
@@ -463,7 +463,7 @@ that file should \emph{not} be specified as the \SubmitCmd{output} file.
 
 \index{submit commands!priority}
 \label{man-condor-submit-priority}
-\item[priority = $<$integer$>$] 
+\item[priority = \lt{}integer\gt{}] 
 An HTCondor job priority 
 can be any integer, with 0 being the default.
 Jobs with higher numerical priority will
@@ -526,9 +526,9 @@ one submit description file.
 
 \index{submit commands!universe}
 \label{man-condor-submit-universe}
-\item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
-\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm \Bar\ parallel \Bar\ docker$>$]
-%%\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
+\item[universe = \lt{}vanilla \Bar\ standard \Bar\ scheduler
+\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm \Bar\ parallel \Bar\ docker\gt{}]
+%%\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm\gt{}]
 Specifies which HTCondor universe to use when running this job.  The HTCondor
 universe specifies an HTCondor execution environment.
 
@@ -581,7 +581,7 @@ The \SubmitCmdNI{docker} universe runs a docker container as an HTCondor job.
 
 \index{submit commands!rank}
 \label{man-condor-submit-rank}
-\item[rank = $<$ClassAd Float Expression$>$]
+\item[rank = \lt{}ClassAd Float Expression\gt{}]
 A ClassAd Floating-Point
 expression that states how to rank machines which have already met the requirements
 expression. Essentially, rank expresses preference.  A higher numeric value
@@ -603,7 +603,7 @@ that can be used in the ClassAd expression.
 
 \index{submit commands!request\_cpus}
 \label{man-condor-submit-request-cpus}
-\item[request\_cpus = $<$num-cpus$>$] 
+\item[request\_cpus = \lt{}num-cpus\gt{}] 
 A requested number of CPUs (cores).
 If not specified, the number requested will be 1.
 If specified, 
@@ -624,7 +624,7 @@ resulting in a dynamic slot being created with this many cores.
 
 \index{submit commands!request\_disk}
 \label{man-condor-submit-request-disk}
-\item[request\_disk = $<$quantity$>$] 
+\item[request\_disk = \lt{}quantity\gt{}] 
 The requested amount of disk space in KiB requested for this job.
 If not specified, 
 it will be set to the job ClassAd attribute \Attr{DiskUsage}.
@@ -650,7 +650,7 @@ Characters may be appended to a numerical value to indicate units.
 
 \index{submit commands!request\_memory}
 \label{man-condor-submit-request-memory}
-\item[request\_memory = $<$quantity$>$] 
+\item[request\_memory = \lt{}quantity\gt{}] 
 The required amount of memory in MiB that this job needs
 to avoid excessive swapping.
 If not specified and the submit command \SubmitCmd{vm\_memory} is specified, 
@@ -686,7 +686,7 @@ Characters may be appended to a numerical value to indicate units.
 \index{submit commands!request\_GPUs}
 \index{GPUs!requesting GPUs for a job}
 \label{man-condor-submit-request-name}
-\item[request\_<name> = $<$quantity$>$] 
+\item[request\_<name> = \lt{}quantity\gt{}] 
 The required amount of the custom machine resource 
 identified by \Expr{<name>} that this job needs.
 The custom machine resource is defined in the machine's configuration.
@@ -699,7 +699,7 @@ to be \Expr{GPUs}.
 
 \index{submit commands!requirements}
 \label{man-condor-submit-requirements}
-\item[requirements = $<$ClassAd Boolean Expression$>$]
+\item[requirements = \lt{}ClassAd Boolean Expression\gt{}]
 The requirements
 command is a boolean ClassAd expression which uses C-like operators. In
 order for any job in this cluster to run on a given machine, this
@@ -769,7 +769,7 @@ that can be used in the ClassAd expression.
 \index{submit commands!dont\_encrypt\_input\_files}
 \index{file transfer mechanism!input file(s) encryption}
 \label{man-condor-submit-dont-encrypt-input-files}
-\item[dont\_encrypt\_input\_files = $<$ file1,file2,file... $>$] 
+\item[dont\_encrypt\_input\_files = \lt{} file1,file2,file... \gt{}] 
 A comma and/or space separated list of input files that are \emph{not} to be
 network encrypted when transferred with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
@@ -787,7 +787,7 @@ A single wild card character (\Expr{*}) may be used in each file name.
 \index{submit commands!dont\_encrypt\_output\_files}
 \index{file transfer mechanism!output file(s) encryption}
 \label{man-condor-submit-dont-encrypt-output-files}
-\item[dont\_encrypt\_output\_files = $<$ file1,file2,file... $>$] 
+\item[dont\_encrypt\_output\_files = \lt{} file1,file2,file... \gt{}] 
 A comma and/or space separated list of output files that are \emph{not} to be
 network encrypted when transferred back with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
@@ -805,7 +805,7 @@ A single wild card character (\Expr{*}) may be used in each file name.
 
 \index{submit commands!encrypt\_execute\_directory}
 \label{man-condor-submit-encrypt-execute-directory}
-\item[encrypt\_execute\_directory = $<$True \Bar\ False$>$]
+\item[encrypt\_execute\_directory = \lt{}True \Bar\ False\gt{}]
 Defaults to \Expr{False}. If set to \Expr{True}, 
 HTCondor will encrypt the contents of
 the remote scratch directory of the machine where the job is executed.
@@ -831,7 +831,7 @@ Linux platforms with the \Prog{ecryptfs-utils} package installed.
 \index{submit commands!encrypt\_input\_files}
 \index{file transfer mechanism!input file(s) encryption}
 \label{man-condor-submit-encrypt-input-files}
-\item[encrypt\_input\_files = $<$ file1,file2,file... $>$] 
+\item[encrypt\_input\_files = \lt{} file1,file2,file... \gt{}] 
 A comma and/or space separated list of input files that are to be
 network encrypted when transferred with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
@@ -852,7 +852,7 @@ mechanism must also fail for files to be network encrypted.
 \index{submit commands!encrypt\_output\_files}
 \index{file transfer mechanism!output file(s) encryption}
 \label{man-condor-submit-encrypt-output-files}
-\item[encrypt\_output\_files = $<$ file1,file2,file... $>$] 
+\item[encrypt\_output\_files = \lt{} file1,file2,file... \gt{}] 
 A comma and/or space separated list of output files that are to be
 network encrypted when transferred back with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
@@ -873,7 +873,7 @@ mechanism must also fail for files to be network encrypted.
 
 \index{submit commands!max\_transfer\_input\_mb}
 \label{man-condor-submit-max-transfer-input-mb}
-\item[max\_transfer\_input\_mb = $<$ClassAd Integer Expression$>$] 
+\item[max\_transfer\_input\_mb = \lt{}ClassAd Integer Expression\gt{}] 
 This integer expression specifies the maximum allowed total size in
 MiB of the input files that are transferred for a job.  This
 expression does \emph{not} apply to grid universe, standard universe, or
@@ -891,7 +891,7 @@ transfer is attempted.
 
 \index{submit commands!max\_transfer\_output\_mb}
 \label{man-condor-submit-max-transfer-output-mb}
-\item[max\_transfer\_output\_mb = $<$ClassAd Integer Expression$>$] 
+\item[max\_transfer\_output\_mb = \lt{}ClassAd Integer Expression\gt{}] 
 This integer expression specifies the maximum allowed total size in
 MiB of the output files that are transferred for a job.  This
 expression does \emph{not} apply to grid universe, standard universe, or
@@ -913,7 +913,7 @@ and some not at all.
 \index{submit commands!output\_destination}
 \index{file transfer mechanism!output file(s) specified by URL}
 \label{man-condor-submit-output-destintation}
-\item[output\_destination = $<$destination-URL$>$] 
+\item[output\_destination = \lt{}destination-URL\gt{}] 
 When present, defines a URL that specifies both a plug-in and a
 destination for the transfer of the entire output sandbox or
 a subset of output files as specified by the submit command
@@ -929,7 +929,7 @@ The HTCondor Administrator's manual has full details.
 \index{submit commands!should\_transfer\_files}
 \index{file transfer mechanism!submit command should\_transfer\_files}
 \label{man-condor-submit-should-transfer-files}
-\item[should\_transfer\_files = $<$YES \Bar\ NO \Bar\ IF\_NEEDED $>$] 
+\item[should\_transfer\_files = \lt{}YES \Bar\ NO \Bar\ IF\_NEEDED \gt{}] 
 The \SubmitCmd{should\_transfer\_files} setting is used to define if HTCondor
 should transfer files to and from the remote machine where the job
 runs.
@@ -959,7 +959,7 @@ for jobs submitted to the grid universe.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!skip\_filechecks}
 \label{man-condor-submit-skip-filechecks}
-\item[skip\_filechecks = $<$True \Bar\ False$>$]
+\item[skip\_filechecks = \lt{}True \Bar\ False\gt{}]
 When \Expr{True},
 file permission checks for the submitted job are disabled.
 When \Expr{False}, file permissions are checked; this is the behavior
@@ -976,7 +976,7 @@ such as a log file defined by \SubmitCmd{log} and output files defined with
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!stream\_error}
 \label{man-condor-submit-stream-error}
-\item[stream\_error = $<$True \Bar\ False$>$]
+\item[stream\_error = \lt{}True \Bar\ False\gt{}]
 If \Expr{True}, then \File{stderr} is streamed back to
 the machine from which the job was submitted.
 If \Expr{False}, \File{stderr} is stored locally
@@ -995,7 +995,7 @@ ignored on Windows machines.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!stream\_input}
 \label{man-condor-submit-stream-input}
-\item[stream\_input = $<$True \Bar\ False$>$]
+\item[stream\_input = \lt{}True \Bar\ False\gt{}]
 If \Expr{True}, then \File{stdin} is streamed from the
 machine on which the job was submitted.
 The default value is \Expr{False}.
@@ -1013,7 +1013,7 @@ ignored on Windows machines.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!stream\_output}
 \label{man-condor-submit-stream-output}
-\item[stream\_output = $<$True \Bar\ False$>$]
+\item[stream\_output = \lt{}True \Bar\ False\gt{}]
 If \Expr{True}, then \File{stdout} is streamed back to
 the machine from which the job was submitted.
 If \Expr{False}, \File{stdout} is stored locally
@@ -1033,7 +1033,7 @@ ignored on Windows machines.
 
 \index{submit commands!transfer\_executable}
 \label{man-condor-submit-transfer-executable}
-\item[transfer\_executable = $<$True \Bar\ False$>$]
+\item[transfer\_executable = \lt{}True \Bar\ False\gt{}]
 This command is applicable to jobs submitted to the grid
 and vanilla universes.
 If \SubmitCmdNI{transfer\_executable} is set to
@@ -1048,7 +1048,7 @@ The default value is \Expr{True}.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!transfer\_input\_files}
-\item[transfer\_input\_files = $<$ file1,file2,file... $>$]
+\item[transfer\_input\_files = \lt{} file1,file2,file... \gt{}]
 \label{man-condor-submit-transfer-input-files}
 A comma-delimited list of all the files and directories to be transferred
 into the working directory for the job, before the job is started.
@@ -1094,7 +1094,7 @@ and available plug-in.
 
 \index{submit commands!transfer\_output\_files}
 \label{man-condor-submit-transfer-output-files}
-\item[transfer\_output\_files = $<$ file1,file2,file... $>$]
+\item[transfer\_output\_files = \lt{} file1,file2,file... \gt{}]
 This command forms an explicit list of output files and directories 
 to be transferred
 back from the temporary working directory on the execute machine to
@@ -1160,7 +1160,7 @@ Transfer of symbolic links to directories is not currently supported.
 
 \index{submit commands!transfer\_output\_remaps}
 \label{man-condor-submit-transfer-output-remaps}
-\item[transfer\_output\_remaps $=$ $<$ `` name $=$ newname ; name2 $=$ newname2 ... ''$>$ ]
+\item[transfer\_output\_remaps $=$ \lt{} `` name $=$ newname ; name2 $=$ newname2 ... ''\gt{} ]
 This specifies the name (and optionally path) to use when downloading output
 files from the completed job.  Normally, output files are transferred back
 to the initial working directory with the same name they had in the execution
@@ -1182,7 +1182,7 @@ You cannot specify directories to be remapped.
 
 \index{submit commands!when\_to\_transfer\_output}
 \label{man-condor-submit-when-to-transfer-output}
-\item[when\_to\_transfer\_output = $<$ ON\_EXIT \Bar\ ON\_EXIT\_OR\_EVICT $>$] 
+\item[when\_to\_transfer\_output = \lt{} ON\_EXIT \Bar\ ON\_EXIT\_OR\_EVICT \gt{}] 
 
 Setting \SubmitCmd{when\_to\_transfer\_output} equal to \Arg{ON\_EXIT} will
 cause HTCondor to transfer the job's output files back to the submitting
@@ -1212,7 +1212,7 @@ automatically sent back out again as input files if the job restarts.
 
 \index{submit commands!max\_retries}
 \label{condor-submit-max-retries}
-\item[max\_retries = $<$integer$>$]
+\item[max\_retries = \lt{}integer\gt{}]
 The maximum number of retries allowed for this job (must be non-negative).
 If the job fails (does not exit with the \SubmitCmdNI{success\_exit\_code}
 exit code) it will be retried up to \SubmitCmdNI{max\_retries} times
@@ -1237,7 +1237,7 @@ expression generated by the retry commands.
 
 \index{submit commands!retry\_until}
 \label{condor-submit-retry-until}
-\item[retry\_until $<$Integer | ClassAd Boolean Expression$>$] 
+\item[retry\_until \lt{}Integer | ClassAd Boolean Expression\gt{}] 
 An integer value or boolean expression that prevents further retries
 from taking place, even if \SubmitCmdNI{max\_retries} have not been
 exhausted.  If \SubmitCmdNI{retry\_until} is an integer, the job
@@ -1251,7 +1251,7 @@ evaluating to \Expr{True} will cause retries to cease.
 
 \index{submit commands!success\_exit\_code}
 \label{condor-submit-success-exit-code}
-\item[success\_exit\_code = $<$integer$>$]
+\item[success\_exit\_code = \lt{}integer\gt{}]
 The exit code that is considered successful for this job.
 Defaults to 0 if not defined.
 
@@ -1273,7 +1273,7 @@ this limitation.
 
 \index{submit commands!hold}
 \label{man-condor-submit-hold}
-\item[hold = $<$True \Bar\ False$>$] 
+\item[hold = \lt{}True \Bar\ False\gt{}] 
 If \SubmitCmdNI{hold} is set to
 \Expr{True}, then the submitted job will be placed into the Hold state.
 Jobs in the Hold state will not run until released by \Condor{release}.
@@ -1285,7 +1285,7 @@ Defaults to \Expr{False}.
 
 \index{submit commands!keep\_claim\_idle}
 \label{condor-submit-keep-claim-idle}
-\item[keep\_claim\_idle = $<$integer$>$] 
+\item[keep\_claim\_idle = \lt{}integer\gt{}] 
 An integer number of seconds
 that a job requests the \Condor{schedd} to wait before releasing its
 claim after the job exits or after the job is removed.
@@ -1318,7 +1318,7 @@ in this state.
 
 \index{submit commands!leave\_in\_queue}
 \label{condor-submit-leave-in-queue}
-\item[leave\_in\_queue = $<$ClassAd Boolean Expression$>$]
+\item[leave\_in\_queue = \lt{}ClassAd Boolean Expression\gt{}]
 When the ClassAd Expression evaluates to \Expr{True}, the job is
 not removed from the queue upon completion.
 This allows the user of a remotely spooled job to retrieve output
@@ -1344,7 +1344,7 @@ leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
 
 \index{submit commands!next\_job\_start\_delay}
 \label{condor-submit-next-job-start-delay}
-\item[next\_job\_start\_delay = $<$ClassAd Boolean Expression$>$]
+\item[next\_job\_start\_delay = \lt{}ClassAd Boolean Expression\gt{}]
 This expression specifies the number of seconds to delay after starting up
 this job before the next job is started.  The maximum
 allowed delay is specified by the HTCondor configuration variable
@@ -1366,7 +1366,7 @@ accomplished through configuration of the \Condor{schedd} daemon.
 
 \index{submit commands!on\_exit\_hold}
 \label{condor-submit-on-exit-hold}
-\item[on\_exit\_hold = $<$ClassAd Boolean Expression$>$] 
+\item[on\_exit\_hold = \lt{}ClassAd Boolean Expression\gt{}] 
 The ClassAd expression is checked when the job exits, and if \Expr{True},
 places the job into the Hold state.
 If \Expr{False} (the default value when not defined),
@@ -1401,7 +1401,7 @@ It is additionally available, when submitted from a Unix machine,
 for the standard universe.
 
 \index{submit commands!on\_exit\_hold\_reason}
-\item[on\_exit\_hold\_reason = $<$ClassAd String Expression$>$]
+\item[on\_exit\_hold\_reason = \lt{}ClassAd String Expression\gt{}]
 When the job is placed on hold due to the \SubmitCmd{on\_exit\_hold}
 expression becoming \Expr{True}, this expression is evaluated to
 set the value of \Attr{HoldReason} in the job ClassAd.
@@ -1409,7 +1409,7 @@ If this expression is \Expr{UNDEFINED} or produces an empty or invalid string,
 a default description is used.
 
 \index{submit commands!on\_exit\_hold\_subcode}
-\item[on\_exit\_hold\_subcode = $<$ClassAd Integer Expression$>$]
+\item[on\_exit\_hold\_subcode = \lt{}ClassAd Integer Expression\gt{}]
 When the job is placed on hold due to the \SubmitCmd{on\_exit\_hold}
 expression becoming \Expr{True}, this expression is evaluated to set the
 value of \Attr{HoldReasonSubCode} in the job ClassAd.
@@ -1423,7 +1423,7 @@ indicates that the job went on hold due to a job policy expression.
 
 \index{submit commands!on\_exit\_remove}
 \label{condor-submit-on-exit-remove}
-\item[on\_exit\_remove = $<$ClassAd Boolean Expression$>$] 
+\item[on\_exit\_remove = \lt{}ClassAd Boolean Expression\gt{}] 
 The ClassAd expression is checked when the job exits, and if \Expr{True}
 (the default value when undefined),
 then it allows the job to leave the queue normally.
@@ -1481,7 +1481,7 @@ Only job ClassAd attributes will be defined for use by this ClassAd expression.
 
 \index{submit commands!periodic\_hold}
 \label{condor-submit-periodic-hold}
-\item[periodic\_hold = $<$ClassAd Boolean Expression$>$]
+\item[periodic\_hold = \lt{}ClassAd Boolean Expression\gt{}]
 This expression is checked periodically when the job is not in
 the Held state.
 If it becomes \Expr{True}, the job will be placed on hold.
@@ -1500,7 +1500,7 @@ these evaluations can be adjusted by setting the
 and \MacroNI{PERIODIC\_EXPR\_TIMESLICE} configuration macros.
 
 \index{submit commands!periodic\_hold\_reason}
-\item[periodic\_hold\_reason = $<$ClassAd String Expression$>$]
+\item[periodic\_hold\_reason = \lt{}ClassAd String Expression\gt{}]
 When the job is placed on hold due to the \SubmitCmd{periodic\_hold}
 expression becoming \Expr{True}, this expression is evaluated to
 set the value of \Attr{HoldReason} in the job ClassAd.
@@ -1508,7 +1508,7 @@ If this expression is \Expr{UNDEFINED} or produces an empty or invalid string,
 a default description is used.
 
 \index{submit commands!periodic\_hold\_subcode}
-\item[periodic\_hold\_subcode = $<$ClassAd Integer Expression$>$]
+\item[periodic\_hold\_subcode = \lt{}ClassAd Integer Expression\gt{}]
 When the job is placed on hold due to the \SubmitCmd{periodic\_hold}
 expression becoming true, this expression is evaluated to set the
 value of \AdAttr{HoldReasonSubCode} in the job ClassAd.
@@ -1521,7 +1521,7 @@ indicates that the job went on hold due to a job policy expression.
 
 \index{submit commands!periodic\_release}
 \label{condor-submit-periodic-release}
-\item[periodic\_release = $<$ClassAd Boolean Expression$>$]
+\item[periodic\_release = \lt{}ClassAd Boolean Expression\gt{}]
 This expression is checked periodically
 when the job is in the Held state.
 If the expression becomes \Expr{True}, the job will be released.
@@ -1551,7 +1551,7 @@ and \MacroNI{PERIODIC\_EXPR\_TIMESLICE} configuration macros.
 
 \index{submit commands!periodic\_remove}
 \label{condor-submit-periodic-remove}
-\item[periodic\_remove = $<$ClassAd Boolean Expression$>$]
+\item[periodic\_remove = \lt{}ClassAd Boolean Expression\gt{}]
 This expression is checked periodically.
 If it becomes \Expr{True}, the job is removed from the queue.
 If unspecified, the default value is \Expr{False}.
@@ -1589,7 +1589,7 @@ and \MacroNI{PERIODIC\_EXPR\_TIMESLICE} configuration macros.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!allow\_startup\_script}
 \label{condor-submit-allow-startup-script}
-\item[allow\_startup\_script = $<$True \Bar\ False$>$]
+\item[allow\_startup\_script = \lt{}True \Bar\ False\gt{}]
 If True, a standard universe job will execute a script
 instead of submitting the job,
 and the consistency check to see if the executable has
@@ -1653,9 +1653,9 @@ This option only applies to standard-universe jobs.
 \label{condor-submit-buffer-files}
 \label{condor-submit-buffer-size}
 \label{condor-submit-buffer-block-size}
-\item[buffer\_files $=$ $<$ `` name $=$ (size,block-size) ; name2 $=$ (size,block-size) ... '' $>$ ]
-\item[buffer\_size $=$ $<$bytes-in-buffer$>$]
-\item[buffer\_block\_size $=$ $<$bytes-in-block$>$]
+\item[buffer\_files $=$ \lt{} `` name $=$ (size,block-size) ; name2 $=$ (size,block-size) ... '' \gt{} ]
+\item[buffer\_size $=$ \lt{}bytes-in-buffer\gt{}]
+\item[buffer\_block\_size $=$ \lt{}bytes-in-block\gt{}]
 HTCondor keeps a buffer of recently-used data for each file a job accesses.
 This buffer is used both to cache commonly-used data and to consolidate small
 reads and writes into larger operations that get better throughput.
@@ -1741,7 +1741,7 @@ This option only applies to standard universe jobs.
 
 \index{submit commands!file\_remaps}
 \label{condor-submit-file-remaps}
-\item[file\_remaps $=$ $<$ `` name $=$ newname ; name2 $=$ newname2 ... ''$>$ ]
+\item[file\_remaps $=$ \lt{} `` name $=$ newname ; name2 $=$ newname2 ... ''\gt{} ]
 
 Directs HTCondor to use a new file name in place of an old one.  \Arg{name}
 describes a file name that your job may attempt to open, and \Arg{newname}
@@ -1812,7 +1812,7 @@ This option only applies to standard universe jobs.
 
 \index{submit commands!want\_remote\_io}
 \label{condor-submit-want-remote-io}
-\item[want\_remote\_io = $<$True \Bar\ False$>$]
+\item[want\_remote\_io = \lt{}True \Bar\ False\gt{}]
 This option controls how a file is opened and manipulated in a standard
 universe job.
 If this option is true, which is the default, then the \Condor{shadow}
@@ -1846,7 +1846,7 @@ conditions that were present when the job checkpointed.
 
 \index{submit commands!batch\_queue}
 \label{condor-submit-batch-queue}
-\item[batch\_queue = $<$queuename$>$]
+\item[batch\_queue = \lt{}queuename\gt{}]
 Used for \SubmitCmdNI{pbs}, \SubmitCmdNI{lsf}, and \SubmitCmdNI{sge} 
 grid universe jobs.
 Specifies the name of the PBS/LSF/SGE job queue into which the job should
@@ -1859,7 +1859,7 @@ If not specified, the default queue is used.
 
 \index{submit commands!boinc\_authenticator\_file}
 \label{condor-submit-boinc-authenticator-file}
-\item[boinc\_authenticator\_file = $<$pathname$>$]
+\item[boinc\_authenticator\_file = \lt{}pathname\gt{}]
 For grid type \SubmitCmdNI{boinc} jobs, 
 specifies a path and file name of the authorization file that grants
 permission for HTCondor to use the BOINC service.
@@ -1871,7 +1871,7 @@ There is no default value when not specified.
 
 \index{submit commands!cream\_attributes}
 \label{condor-submit-cream-attributes}
-\item[cream\_attributes = $<$name=value;\Dots;name=value$>$]
+\item[cream\_attributes = \lt{}name=value;\Dots;name=value\gt{}]
 Provides a list of attribute/value pairs to be set in a CREAM job description
 of a grid universe job destined for the CREAM grid system.
 The pairs are separated by semicolons, and written in New ClassAd syntax.
@@ -1882,7 +1882,7 @@ The pairs are separated by semicolons, and written in New ClassAd syntax.
 
 \index{submit commands!delegate\_job\_GSI\_credentials\_lifetime}
 \label{condor-submit-delegate-job-GSI-credentials-lifetime}
-\item[delegate\_job\_GSI\_credentials\_lifetime = $<$seconds$>$]
+\item[delegate\_job\_GSI\_credentials\_lifetime = \lt{}seconds\gt{}]
 Specifies the maximum number of seconds for which
 delegated proxies should be valid.  
 The default behavior when this command is not specified
@@ -1904,7 +1904,7 @@ because in that case the job proxy is copied rather than delegated.
 
 \index{submit commands!ec2\_access\_key\_id}
 \label{condor-submit-ec2-access-key-id}
-\item[ec2\_access\_key\_id = $<$pathname$>$]
+\item[ec2\_access\_key\_id = \lt{}pathname\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs,
 identifies the file containing the access key.  
 
@@ -1914,7 +1914,7 @@ identifies the file containing the access key.
 
 \index{submit commands!ec2\_ami\_id}
 \label{condor-submit-ec2-ami-id}
-\item[ec2\_ami\_id = $<$EC2 xMI ID$>$]
+\item[ec2\_ami\_id = \lt{}EC2 xMI ID\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, identifies the machine image.
 Services compatible with the EC2 Query API may refer to these
 with abbreviations other than \Expr{AMI},
@@ -1926,7 +1926,7 @@ for example \Expr{EMI} is valid for Eucalyptus.
 
 \index{submit commands!ec2\_availability\_zone}
 \label{condor-submit-ec2-availability-zone}
-\item[ec2\_availability\_zone = $<$zone name$>$]
+\item[ec2\_availability\_zone = \lt{}zone name\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the Availability Zone that the instance should be run in. 
 This command is optional, unless \SubmitCmd{ec2\_ebs\_volumes} is set.
@@ -1938,7 +1938,7 @@ As an example, one current zone is \Expr{us-east-1b}.
 
 \index{submit commands!ec2\_block\_device\_mapping}
 \label{condor-submit-ec2-block-device-mapping}
-\item[ec2\_block\_device\_mapping = $<$block-device$>$:$<$kernel-device$>$,$<$block-device$>$:$<$kernel-device$>$, \Dots]
+\item[ec2\_block\_device\_mapping = \lt{}block-device\gt{}:\lt{}kernel-device\gt{},\lt{}block-device\gt{}:\lt{}kernel-device\gt{}, \Dots]
 For grid type \SubmitCmdNI{ec2} jobs,
 specifies the block device to kernel device mapping.
 This command is optional.
@@ -1949,7 +1949,7 @@ This command is optional.
 
 \index{submit commands!ec2\_ebs\_volumes}
 \label{condor-submit-ec2-ebs-volumes}
-\item[ec2\_ebs\_volumes = $<$ebs name$>$:$<$device name$>$,$<$ebs name$>$:$<$device name$>$,\Dots]
+\item[ec2\_ebs\_volumes = \lt{}ebs name\gt{}:\lt{}device name\gt{},\lt{}ebs name\gt{}:\lt{}device name\gt{},\Dots]
 For grid type \SubmitCmdNI{ec2} jobs,
 optionally specifies a list of Elastic Block Store (EBS)
 volumes to be made available to the instance and the device names they
@@ -1961,7 +1961,7 @@ should have in the instance.
 
 \index{submit commands!ec2\_elastic\_ip}
 \label{condor-submit-ec2-elastic-id}
-\item[ec2\_elastic\_ip = $<$elastic IP address$>$]
+\item[ec2\_elastic\_ip = \lt{}elastic IP address\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs,
 and optional specification of an Elastic IP address 
 that should be assigned to this instance.
@@ -1972,7 +1972,7 @@ that should be assigned to this instance.
 
 \index{submit commands!ec2\_iam\_profile\_arn}
 \label{condor-submit-ec2-iam-profile-arn}
-\item[ec2\_iam\_profile\_arn = $<$IAM profile ARN$>$]
+\item[ec2\_iam\_profile\_arn = \lt{}IAM profile ARN\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs,
 an Amazon Resource Name (ARN)
 identifying which Identity and Access Management (IAM) (instance) profile to
@@ -1984,7 +1984,7 @@ associate with the instance.
 
 \index{submit commands!ec2\_iam\_profile\_name}
 \label{condor-submit-ec2-iam-profile-name}
-\item[ec2\_iam\_profile\_name= $<$IAM profile name$>$]
+\item[ec2\_iam\_profile\_name= \lt{}IAM profile name\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, a name
 identifying which Identity and Access Management (IAM) (instance) profile to
 associate with the instance.
@@ -1995,7 +1995,7 @@ associate with the instance.
 
 \index{submit commands!ec2\_instance\_type}
 \label{condor-submit-ec2-instance-type}
-\item[ec2\_instance\_type = $<$instance type$>$]
+\item[ec2\_instance\_type = \lt{}instance type\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, identifies the instance type.
 Different services may offer different instance types,
 so no default value is set.
@@ -2005,7 +2005,7 @@ so no default value is set.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!ec2\_keypair}
-\item[ec2\_keypair = $<$ssh key-pair name$>$]
+\item[ec2\_keypair = \lt{}ssh key-pair name\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the name of an SSH key-pair that is already registered
 with the EC2 service.
@@ -2017,7 +2017,7 @@ virtual machine once it is running.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!ec2\_keypair\_file}
-\item[ec2\_keypair\_file = $<$pathname$>$]
+\item[ec2\_keypair\_file = \lt{}pathname\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the complete path and file name of a file into which 
 HTCondor will write an SSH key for use with ec2 jobs. 
@@ -2041,8 +2041,8 @@ to pass when instantiating an instance.
 %% ec2_parameter_*
 %%%%%%%%%%%%%%%%%%%
 
-\index{submit commands!ec2\_parameter\_$<$name$>$}
-\item[ec2\_parameter\_$<$name$>$ = $<$value$>$]
+\index{submit commands!ec2\_parameter\_\lt{}name\gt{}}
+\item[ec2\_parameter\_\lt{}name\gt{} = \lt{}value\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs,
 specifies the value for the correspondingly named (instance instantiation)
 parameter.  
@@ -2056,7 +2056,7 @@ but with any periods replaced by underscores.
 
 \index{submit commands!ec2\_secret\_access\_key}
 \label{condor-submit-ec2-access-key}
-\item[ec2\_secret\_access\_key = $<$pathname$>$]
+\item[ec2\_secret\_access\_key = \lt{}pathname\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs,
 specifies the path and file name containing the secret access key.
 
@@ -2088,7 +2088,7 @@ should be associated with the job.
 
 \index{submit commands!ec2\_spot\_price}
 \label{condor-submit-ec2-spot-price}
-\item[ec2\_spot\_price = $<$bid$>$]
+\item[ec2\_spot\_price = \lt{}bid\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the spot instance bid, which is the most that the job submitter
 is willing to pay per hour to run this job.
@@ -2099,7 +2099,7 @@ is willing to pay per hour to run this job.
 
 \index{submit commands!ec2\_tag\_names}
 \label{condor-submit-ec2-tag-names}
-\item[ec2\_tag\_names = $<$name0,name1,name...$>$]
+\item[ec2\_tag\_names = \lt{}name0,name1,name...\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the case of tag names that will be associated with the
 running instance.
@@ -2110,8 +2110,8 @@ By default the list will be automatically generated.
 %% ec2_tag_*
 %%%%%%%%%%%%%%%%%%%
 
-\index{submit commands!ec2\_tag\_$<$name$>$}
-\item[ec2\_tag\_$<$name$>$ = $<$value$>$]
+\index{submit commands!ec2\_tag\_\lt{}name\gt{}}
+\item[ec2\_tag\_\lt{}name\gt{} = \lt{}value\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs,
 specifies a tag to be associated with the running instance.
 The tag name will be lower-cased, use \SubmitCmd{ec2\_tag\_names} to
@@ -2123,7 +2123,7 @@ change the case.
 
 \index{submit commands!WantNameTag}
 \label{condor-submit-want-name-tag}
-\item[WantNameTag = $<$True \Bar\ False$>$]
+\item[WantNameTag = \lt{}True \Bar\ False\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs,
 a job may request that its 'name' tag be (not) set by HTCondor.  If the job
 does not otherwise specify any tags, not setting its name tag will eliminate
@@ -2135,7 +2135,7 @@ a call by the EC2 GAHP, improving performance.
 
 \index{submit commands!ec2\_user\_data}
 \label{condor-submit-ec2-user-data}
-\item[ec2\_user\_data = $<$data$>$]
+\item[ec2\_user\_data = \lt{}data\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, 
 provides a block of data that can be accessed by the virtual machine.
 If both \SubmitCmd{ec2\_user\_data} and 
@@ -2150,7 +2150,7 @@ occurring first.
 
 \index{submit commands!ec2\_user\_data\_file}
 \label{condor-submit-ec2-user-data-file}
-\item[ec2\_user\_data\_file = $<$pathname$>$]
+\item[ec2\_user\_data\_file = \lt{}pathname\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, 
 specifies a path and file name whose contents can be 
 accessed by the virtual machine.
@@ -2166,7 +2166,7 @@ occurring first.
 
 \index{submit commands!ec2\_vpc\_ip}
 \label{condor-submit-ec2-vpc-ip}
-\item[ec2\_vpc\_ip = $<$a.b.c.d$>$]
+\item[ec2\_vpc\_ip = \lt{}a.b.c.d\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, 
 that are part of a Virtual Private Cloud (VPC),
 an optional specification of the IP address that this instance should have 
@@ -2178,7 +2178,7 @@ within the VPC.
 
 \index{submit commands!ec2\_vpc\_subnet}
 \label{condor-submit-ec2-vpc-subnet}
-\item[ec2\_vpc\_subnet = $<$subnet specification string$>$]
+\item[ec2\_vpc\_subnet = \lt{}subnet specification string\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs, 
 an optional specification of the Virtual Private Cloud (VPC) that
 this instance should be a part of.
@@ -2189,7 +2189,7 @@ this instance should be a part of.
 
 \index{submit commands!gce\_auth\_file}
 \label{condor-submit-gce-auth-file}
-\item[gce\_auth\_file = $<$pathname$>$]
+\item[gce\_auth\_file = \lt{}pathname\gt{}]
 For grid type \SubmitCmdNI{gce} jobs, 
 specifies a path and file name of the authorization file that grants
 permission for HTCondor to use the Google account.
@@ -2201,7 +2201,7 @@ There is no default value when not specified.
 
 \index{submit commands!gce\_image}
 \label{condor-submit-gce-image}
-\item[gce\_image = $<$image id$>$]
+\item[gce\_image = \lt{}image id\gt{}]
 For grid type \SubmitCmdNI{gce} jobs,
 the identifier of the virtual machine image representing the HTCondor job to
 be run.  This virtual machine image must already be register with GCE
@@ -2213,7 +2213,7 @@ and reside in Google's Cloud Storage service.
 
 \index{submit commands!gce\_json\_file}
 \label{condor-submit-gce-json-file}
-\item[gce\_json\_file = $<$pathname$>$]
+\item[gce\_json\_file = \lt{}pathname\gt{}]
 For grid type \SubmitCmdNI{gce} jobs,
 specifies the path and file name of a file that contains JSON elements
 that should be added to the instance description submitted to the GCE
@@ -2225,7 +2225,7 @@ service.
 
 \index{submit commands!gce\_machine\_type}
 \label{condor-submit-gce-machine-type}
-\item[gce\_machine\_type = $<$machine type$>$]
+\item[gce\_machine\_type = \lt{}machine type\gt{}]
 For grid type \SubmitCmdNI{gce} jobs,
 the long form of the URL that describes the machine configuration that the
 virtual machine instance is to run on. 
@@ -2236,7 +2236,7 @@ virtual machine instance is to run on.
 
 \index{submit commands!gce\_metadata}
 \label{condor-submit-gce-metadata}
-\item[gce\_metadata = $<$name=value,\Dots,name=value$>$]
+\item[gce\_metadata = \lt{}name=value,\Dots,name=value\gt{}]
 For grid type \SubmitCmdNI{gce} jobs,
 a comma separated list of name and value pairs that define metadata
 for a virtual machine instance that is an HTCondor job.
@@ -2247,7 +2247,7 @@ for a virtual machine instance that is an HTCondor job.
 
 \index{submit commands!gce\_metadata\_file}
 \label{condor-submit-gce-metadata-file}
-\item[gce\_metadata\_file = $<$pathname$>$]
+\item[gce\_metadata\_file = \lt{}pathname\gt{}]
 For grid type \SubmitCmdNI{gce} jobs, 
 specifies a path and file name of the file that contains metadata
 for a virtual machine instance that is an HTCondor job.
@@ -2260,7 +2260,7 @@ so, the pairs are separated by the newline character.
 
 \index{submit commands!gce\_preemptible}
 \label{condor-submit-gce-preemptible}
-\item[gce\_preemptible = $<$True \Bar\ False$>$]
+\item[gce\_preemptible = \lt{}True \Bar\ False\gt{}]
 For grid type \SubmitCmdNI{gce} jobs,
 specifies whether the virtual machine instance should be preemptible.
 The default is for the instance to not be preemptible.
@@ -2271,7 +2271,7 @@ The default is for the instance to not be preemptible.
 
 \index{submit commands!globus\_rematch}
 \label{condor-submit-globus-rematch}
-\item[globus\_rematch = $<$ClassAd Boolean Expression$>$]
+\item[globus\_rematch = \lt{}ClassAd Boolean Expression\gt{}]
 This expression is evaluated by the \Condor{gridmanager} whenever:
 \begin{enumerate}
 \item
@@ -2293,7 +2293,7 @@ The result is this job will be matched again.
 
 \index{submit commands!globus\_resubmit}
 \label{condor-submit-globus-resubmit}
-\item[globus\_resubmit = $<$ClassAd Boolean Expression$>$]
+\item[globus\_resubmit = \lt{}ClassAd Boolean Expression\gt{}]
 The expression is evaluated by the \Condor{gridmanager} each time
 the \Condor{gridmanager} gets a job ad to manage.
 Therefore, the expression is evaluated:
@@ -2321,7 +2321,7 @@ once.  Do not treat this operation lightly.
 
 \index{submit commands!globus\_rsl}
 \label{condor-submit-globus-rsl}
-\item[globus\_rsl = $<$RSL-string$>$]
+\item[globus\_rsl = \lt{}RSL-string\gt{}]
 Used to provide any additional Globus RSL
 string attributes which are not covered by other submit description
 file commands or job attributes. Used for \SubmitCmdNI{grid} \SubmitCmdNI{universe}
@@ -2333,7 +2333,7 @@ jobs, where the grid resource has a \SubmitCmdNI{grid-type-string} of
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!grid\_resource}
 \label{condor-submit-grid-resource}
-\item[grid\_resource = $<$grid-type-string$>$ $<$grid-specific-parameter-list$>$ ]
+\item[grid\_resource = \lt{}grid-type-string\gt{} \lt{}grid-specific-parameter-list\gt{} ]
 For each \SubmitCmdNI{grid-type-string} value, 
 there are further type-specific values that must specified.
 This submit description file command allows each to
@@ -2400,7 +2400,7 @@ The second parameter is the name of the Unicore Vsite to be used.
 
 \index{submit commands!keystore\_alias}
 \label{condor-submit-keystore-alias}
-\item[keystore\_alias = $<$name$>$]
+\item[keystore\_alias = \lt{}name\gt{}]
 A string to locate the certificate in a Java keystore file,
 as used for a \SubmitCmdNI{unicore} job.
 
@@ -2410,7 +2410,7 @@ as used for a \SubmitCmdNI{unicore} job.
 
 \index{submit commands!keystore\_file}
 \label{condor-submit-keystore-file}
-\item[keystore\_file = $<$pathname$>$]
+\item[keystore\_file = \lt{}pathname\gt{}]
 The complete path and file name of the Java keystore file
 containing the certificate to be used for a \SubmitCmdNI{unicore} job.
 
@@ -2419,7 +2419,7 @@ containing the certificate to be used for a \SubmitCmdNI{unicore} job.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!keystore\_passphrase\_file}
 \label{condor-submit-passphrase-file}
-\item[keystore\_passphrase\_file = $<$pathname$>$]
+\item[keystore\_passphrase\_file = \lt{}pathname\gt{}]
 The complete path and file name
 to the file containing the passphrase protecting a Java keystore
 file containing the certificate.
@@ -2431,7 +2431,7 @@ Relevant for a \SubmitCmdNI{unicore} job.
 
 \index{submit commands!MyProxyCredentialName}
 \label{condor-submit-MyProxyCredentialName}
-\item[MyProxyCredentialName = $<$symbolic name$>$]
+\item[MyProxyCredentialName = \lt{}symbolic name\gt{}]
 The symbolic name that identifies a credential to the \Prog{MyProxy} server.
 This symbolic name is set as the credential is
 initially stored on the server (using \Prog{myproxy-init}).
@@ -2443,7 +2443,7 @@ initially stored on the server (using \Prog{myproxy-init}).
 
 \index{submit commands!MyProxyHost}
 \label{condor-submit-MyProxyHost}
-\item[MyProxyHost = $<$host$>$:$<$port$>$]
+\item[MyProxyHost = \lt{}host\gt{}:\lt{}port\gt{}]
 The Internet address of the host that is the \Prog{MyProxy} server.
 The \SubmitCmdNI{host} may be specified by either a host name
 (as in \File{head.example.com}) or an IP address
@@ -2456,7 +2456,7 @@ The \SubmitCmdNI{port} number is an integer.
 
 \index{submit commands!MyProxyNewProxyLifetime}
 \label{condor-submit-MyProxyLifetime}
-\item[MyProxyNewProxyLifetime = $<$number-of-minutes$>$]
+\item[MyProxyNewProxyLifetime = \lt{}number-of-minutes\gt{}]
 The new lifetime (in minutes) of the proxy after it is refreshed.
 
 %%%%%%%%%%%%%%%%%%%
@@ -2465,7 +2465,7 @@ The new lifetime (in minutes) of the proxy after it is refreshed.
 
 \index{submit commands!MyProxyPassword}
 \label{condor-submit-MyProxyPassword}
-\item[MyProxyPassword = $<$password$>$]
+\item[MyProxyPassword = \lt{}password\gt{}]
 The password needed to refresh a credential on the \Prog{MyProxy} server.
 This password is set when the user initially stores
 credentials on the server (using \Prog{myproxy-init}).
@@ -2480,7 +2480,7 @@ with the \Arg{-password} argument.
 
 \index{submit commands!MyProxyRefreshThreshold}
 \label{condor-submit-MyProxyThreshhold}
-\item[MyProxyRefreshThreshold = $<$number-of-seconds$>$]
+\item[MyProxyRefreshThreshold = \lt{}number-of-seconds\gt{}]
 The time (in seconds) before the expiration of a proxy 
 that the proxy should be refreshed.
 For example, if \SubmitCmd{MyProxyRefreshThreshold} is set to the
@@ -2493,7 +2493,7 @@ it expires.
 
 \index{submit commands!MyProxyServerDN}
 \label{condor-submit-MyProxyServerDN}
-\item[MyProxyServerDN = $<$credential subject$>$]
+\item[MyProxyServerDN = \lt{}credential subject\gt{}]
 A string that specifies the expected Distinguished Name (credential subject,
 abbreviated DN)
 of the \Prog{MyProxy} server.
@@ -2510,7 +2510,7 @@ example, when the  \Prog{MyProxy} server DN begins with a user credential.
 
 \index{submit commands!nordugrid\_rsl}
 \label{condor-submit-nordugrid-rsl}
-\item[nordugrid\_rsl = $<$RSL-string$>$]
+\item[nordugrid\_rsl = \lt{}RSL-string\gt{}]
 Used to provide any additional RSL
 string attributes which are not covered by regular submit description
 file parameters. Used when the \SubmitCmdNI{universe} is \SubmitCmdNI{grid},
@@ -2522,7 +2522,7 @@ and the type of grid system is \SubmitCmdNI{nordugrid}.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!transfer\_error}
 \label{condor-submit-transfer-error}
-\item[transfer\_error = $<$True \Bar\ False$>$]
+\item[transfer\_error = \lt{}True \Bar\ False\gt{}]
 For jobs submitted to the grid universe only.
 If \Expr{True}, then the error output (from \File{stderr}) from the job
 is transferred from the remote machine back to the submit machine.
@@ -2539,7 +2539,7 @@ The default value is \Expr{True}.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!transfer\_input}
 \label{condor-submit-transfer-input}
-\item[transfer\_input = $<$True \Bar\ False$>$]
+\item[transfer\_input = \lt{}True \Bar\ False\gt{}]
 For jobs submitted to the grid universe only.
 If \Expr{True}, then the job input (\File{stdin}) is transferred
 from the machine where the job was submitted to the remote machine.
@@ -2558,7 +2558,7 @@ see \SubmitCmd{transfer\_input\_files}.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!transfer\_output}
 \label{condor-submit-transfer-output}
-\item[transfer\_output = $<$True \Bar\ False$>$]
+\item[transfer\_output = \lt{}True \Bar\ False\gt{}]
 For jobs submitted to the grid universe only.
 If \Expr{True}, then the output (from \File{stdout}) from the job
 is transferred from the remote machine back to the submit machine.
@@ -2579,7 +2579,7 @@ see \SubmitCmd{transfer\_output\_files}.
 
 \index{submit commands!use\_x509userproxy}
 \label{condor-submit-use-x509userproxy}
-\item[use\_x509userproxy = $<$True \Bar\ False$>$]
+\item[use\_x509userproxy = \lt{}True \Bar\ False\gt{}]
 Set this command to \Expr{True} to indicate that the job requires an
 X.509 user proxy.
 If \SubmitCmdNI{x509userproxy} is set, then that file is used for the proxy.
@@ -2596,7 +2596,7 @@ Defaults to \Expr{False}.
 
 \index{submit commands!x509userproxy}
 \label{condor-submit-x509userproxy}
-\item[x509userproxy = $<$full-pathname$>$] Used to override the default
+\item[x509userproxy = \lt{}full-pathname\gt{}] Used to override the default
 path name for X.509 user certificates. The default location for X.509 proxies
 is the \File{/tmp} directory,
 which is generally a local file system.
@@ -2633,7 +2633,7 @@ the job ClassAd.
 
 \index{submit commands!hold\_kill\_sig}
 \label{condor-submit-hold-kill-sig}
-\item[hold\_kill\_sig = $<$signal-number$>$] For the scheduler universe only,
+\item[hold\_kill\_sig = \lt{}signal-number\gt{}] For the scheduler universe only,
 \SubmitCmd{signal-number} is the signal delivered
 to the job when the job is put on hold
 with \Condor{hold}.
@@ -2649,7 +2649,7 @@ the value of \SubmitCmd{kill\_sig} is used.
 
 \index{submit commands!jar\_files}
 \label{condor-submit-jar-files}
-\item[jar\_files = $<$file\_list$>$]
+\item[jar\_files = \lt{}file\_list\gt{}]
 Specifies a list of additional JAR files to include when using
 the Java universe.  JAR files will be transferred along with
 the executable and automatically added to the classpath.
@@ -2660,7 +2660,7 @@ the executable and automatically added to the classpath.
 
 \index{submit commands!java\_vm\_args}
 \label{condor-submit-java-vm-args}
-\item[java\_vm\_args = $<$argument\_list$>$]
+\item[java\_vm\_args = \lt{}argument\_list\gt{}]
 Specifies a list of additional arguments to the Java VM itself,
 When HTCondor runs the Java program, these are the arguments that 
 go before the class name.  This can be used to set VM-specific 
@@ -2673,7 +2673,7 @@ and initial property values.
 
 \index{submit commands!machine\_count}
 \label{condor-submit-machine-count}
-\item[machine\_count = $<$max$>$] 
+\item[machine\_count = \lt{}max\gt{}] 
 For the parallel universe,
 a single value (\Arg{max}) is required.
 It is neither a maximum or minimum, but 
@@ -2685,7 +2685,7 @@ the number of machines to be dedicated toward running the job.
 
 \index{submit commands!remove\_kill\_sig}
 \label{condor-submit-remove-kill-sig}
-\item[remove\_kill\_sig = $<$signal-number$>$] For the scheduler universe only,
+\item[remove\_kill\_sig = \lt{}signal-number\gt{}] For the scheduler universe only,
 \SubmitCmd{signal-number} is the signal delivered
 to the job when the job is removed
 with \Condor{rm}.
@@ -2735,7 +2735,7 @@ vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 
 \index{submit commands!vm\_checkpoint}
 \label{condor-submit-vm-checkpoint}
-\item[vm\_checkpoint = $<$True \Bar\ False$>$]
+\item[vm\_checkpoint = \lt{}True \Bar\ False\gt{}]
 A boolean value specifying whether or not to take checkpoints.
 If not specified, the default value is \Expr{False}.
 In the current implementation, setting both
@@ -2750,7 +2750,7 @@ to another machine.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!vm\_macaddr}
 \label{condor-submit-vm-macaddr}
-\item[vm\_macaddr = $<$MACAddr$>$]
+\item[vm\_macaddr = \lt{}MACAddr\gt{}]
 Defines that MAC address that the virtual machine's network interface
 should have,
 in the standard format of six groups of
@@ -2762,7 +2762,7 @@ two hexadecimal digits separated by colons.
 
 \index{submit commands!vm\_memory}
 \label{condor-submit-vm-memory}
-\item[vm\_memory = $<$MBytes-of-memory$>$]
+\item[vm\_memory = \lt{}MBytes-of-memory\gt{}]
 The amount of memory in MBytes that a vm universe job
 requires.
 
@@ -2772,7 +2772,7 @@ requires.
 
 \index{submit commands!vm\_networking}
 \label{condor-submit-vm-networking}
-\item[vm\_networking = $<$True \Bar\ False$>$]
+\item[vm\_networking = \lt{}True \Bar\ False\gt{}]
 Specifies whether to use networking or not.
 In the current implementation, setting both
 \SubmitCmd{vm\_checkpoint} and \SubmitCmd{vm\_networking}
@@ -2787,7 +2787,7 @@ to another machine.
 
 \index{submit commands!vm\_networking\_type}
 \label{condor-submit-vm-networking-type}
-\item[vm\_networking\_type = $<$nat \Bar\ bridge $>$]
+\item[vm\_networking\_type = \lt{}nat \Bar\ bridge \gt{}]
 When \SubmitCmd{vm\_networking} is \Expr{True},
 this definition augments the job's requirements to match
 only machines with the specified networking.
@@ -2799,7 +2799,7 @@ If not specified, then either networking type matches.
 
 \index{submit commands!vm\_no\_output\_vm}
 \label{condor-submit-vm-no-output-vm}
-\item[vm\_no\_output\_vm = $<$True \Bar\ False$>$]
+\item[vm\_no\_output\_vm = \lt{}True \Bar\ False\gt{}]
 When \Expr{True}, prevents HTCondor from transferring output
 files back to the machine from which the vm universe job
 was submitted.
@@ -2811,7 +2811,7 @@ If not specified, the default value is \Expr{False}.
 
 \index{submit commands!vm\_type}
 \label{condor-submit-vm-type}
-\item[vm\_type = $<$vmware \Bar\ xen \Bar\ kvm$>$]
+\item[vm\_type = \lt{}vmware \Bar\ xen \Bar\ kvm\gt{}]
 Specifies the underlying virtual machine software that this
 job expects.
 
@@ -2821,7 +2821,7 @@ job expects.
 
 \index{submit commands!vmware\_dir}
 \label{condor-submit-vmware-dir}
-\item[vmware\_dir = $<$pathname$>$]
+\item[vmware\_dir = \lt{}pathname\gt{}]
 The complete path and name of the directory where VMware-specific
 files and applications such as the VMDK (Virtual Machine Disk Format) and
 VMX (Virtual Machine Configuration) reside.
@@ -2834,7 +2834,7 @@ are to be listed using \SubmitCmd{transfer\_input\_files}.
 
 \index{submit commands!vmware\_should\_transfer\_files}
 \label{condor-submit-vmware-should-transfer-files}
-\item[vmware\_should\_transfer\_files = $<$True \Bar\ False$>$]
+\item[vmware\_should\_transfer\_files = \lt{}True \Bar\ False\gt{}]
 Specifies whether HTCondor will transfer VMware-specific files 
 located as specified by \SubmitCmd{vmware\_dir} to
 the execute machine (\Expr{True}) or rely on access through 
@@ -2849,7 +2849,7 @@ job will not be submitted.
 
 \index{submit commands!vmware\_snapshot\_disk}
 \label{condor-submit-vmware-snapshot-disk}
-\item[vmware\_snapshot\_disk = $<$True \Bar\ False$>$]
+\item[vmware\_snapshot\_disk = \lt{}True \Bar\ False\gt{}]
 When \Expr{True}, causes HTCondor to utilize
 a VMware snapshot disk for new or modified files.
 If not specified, the default value is \Expr{True}.
@@ -2860,7 +2860,7 @@ If not specified, the default value is \Expr{True}.
 
 \index{submit commands!xen\_initrd}
 \label{condor-submit-xen-initrd}
-\item[xen\_initrd = $<$image-file$>$]
+\item[xen\_initrd = \lt{}image-file\gt{}]
 When \SubmitCmd{xen\_kernel} gives a file name for
 the kernel image to use, 
 this optional command may specify a path to a ramdisk 
@@ -2874,7 +2874,7 @@ should just be the simple file name (no path information).
 
 \index{submit commands!xen\_kernel}
 \label{condor-submit-xen-kernel}
-\item[xen\_kernel = $<$included \Bar\  path-to-kernel$>$]
+\item[xen\_kernel = \lt{}included \Bar\  path-to-kernel\gt{}]
 A value of \SubmitCmd{included} specifies that the kernel is
 included in the disk file.
 If not one of these values, then the value is a path and
@@ -2888,7 +2888,7 @@ should just be the simple file name (no path information).
 
 \index{submit commands!xen\_kernel\_params}
 \label{condor-submit-xen-kernel-params}
-\item[xen\_kernel\_params = $<$string$>$]
+\item[xen\_kernel\_params = \lt{}string\gt{}]
 A string that is appended to the Xen kernel command line.
 
 %%%%%%%%%%%%%%%%%%%
@@ -2897,7 +2897,7 @@ A string that is appended to the Xen kernel command line.
 
 \index{submit commands!xen\_root}
 \label{condor-submit-xen-root}
-\item[xen\_root = $<$string$>$]
+\item[xen\_root = \lt{}string\gt{}]
 A string that is appended to the Xen kernel command line
 to specify the root device. This string is required when
 \SubmitCmd{xen\_kernel} gives a path to a kernel.  Omission 
@@ -2917,7 +2917,7 @@ submission.
 
 \index{submit commands!docker\_image}
 \label{condor-submit-docker-image}
-\item[docker\_image = $<$ image-name $>$] Defines the name of the Docker
+\item[docker\_image = \lt{} image-name \gt{}] Defines the name of the Docker
 image that is the basis for the docker container.
 
 \end{description} 
@@ -2933,7 +2933,7 @@ image that is the basis for the docker container.
 
 \index{submit commands!accounting\_group}
 \label{condor-submit-accounting-group}
-\item[accounting\_group = $<$accounting-group-name$>$] 
+\item[accounting\_group = \lt{}accounting-group-name\gt{}] 
 Causes jobs to negotiate under the given accounting group.  
 This value is advertised in the job ClassAd as \AdAttr{AcctGroup}.
 The HTCondor Administrator's manual  contains more information about 
@@ -2945,7 +2945,7 @@ accounting groups.
 
 \index{submit commands!accounting\_group\_user}
 \label{condor-submit-accounting-group-user}
-\item[accounting\_group\_user = $<$accounting-group-user-name$>$] 
+\item[accounting\_group\_user = \lt{}accounting-group-user-name\gt{}] 
 Sets the user name associated with the accounting group name for 
 resource usage accounting purposes.  If not set, 
 defaults to the value of the job ClassAd attribute \AdAttr{Owner}.
@@ -2960,7 +2960,7 @@ this command is ignored.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!concurrency\_limits}
 \label{condor-submit-concurrency-limits}
-\item[concurrency\_limits = $<$string-list$>$]
+\item[concurrency\_limits = \lt{}string-list\gt{}]
 A list of resources that this job needs.
 The resources are presumed to have concurrency limits placed upon them,
 thereby limiting the number of concurrent jobs in execution which
@@ -2981,7 +2981,7 @@ Details on concurrency limits are in the HTCondor Administrator's manual.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!concurrency\_limits\_expr}
 \label{condor-submit-concurrency-limits-expr}
-\item[concurrency\_limits\_expr = $<$ClassAd String Expression$>$] 
+\item[concurrency\_limits\_expr = \lt{}ClassAd String Expression\gt{}] 
 A ClassAd expression that represents the list of resources that this job needs
 after evaluation.
 The ClassAd expression may specify machine ClassAd attributes that
@@ -2994,7 +2994,7 @@ After evaluation, the list sets \SubmitCmdNI{concurrency\_limits}.
 
 \index{submit commands!copy\_to\_spool}
 \label{condor-submit-copy-to-spool}
-\item[copy\_to\_spool = $<$True \Bar\ False$>$]
+\item[copy\_to\_spool = \lt{}True \Bar\ False\gt{}]
 If \SubmitCmd{copy\_to\_spool} is \Expr{True},
 then \Condor{submit} copies the executable to the local spool 
 directory before running it on a remote host. 
@@ -3013,7 +3013,7 @@ precisely the same executable that created the checkpoint.
 
 \index{submit commands!coresize}
 \label{condor-submit-coresize}
-\item[coresize = $<$size$>$] Should the user's program abort and produce
+\item[coresize = \lt{}size\gt{}] Should the user's program abort and produce
 a core file, \SubmitCmdNI{coresize} specifies the maximum size in bytes of the
 core file which the user wishes to keep. If \SubmitCmdNI{coresize} is not
 specified in the command file, the system's user resource limit
@@ -3032,7 +3032,7 @@ the system \Env{coredumpsize} limit will override \SubmitCmdNI{coresize}.
 %%%%%%%%%%%%%%%%%%
 \index{submit commands!cron\_day\_of\_month}
 \label{condor-submit-cron-day-of-month}
-\item[cron\_day\_of\_month = $<$Cron-evaluated Day$>$]
+\item[cron\_day\_of\_month = \lt{}Cron-evaluated Day\gt{}]
 The set of days of the month for which a deferral time applies.
 The HTCondor User's manual section on Time Scheduling for Job Execution
 has further details.
@@ -3042,7 +3042,7 @@ has further details.
 %%%%%%%%%%%%%%%%%%
 \index{submit commands!cron\_day\_of\_week}
 \label{condor-submit-cron-day-of-week}
-\item[cron\_day\_of\_week = $<$Cron-evaluated Day$>$]
+\item[cron\_day\_of\_week = \lt{}Cron-evaluated Day\gt{}]
 The set of days of the week for which a deferral time applies.
 The HTCondor User's manual section on Time Scheduling for Job Execution
 has further details.
@@ -3052,7 +3052,7 @@ has further details.
 %%%%%%%%%%%%%%%%%%
 \index{submit commands!cron\_hour}
 \label{condor-submit-cron-hour}
-\item[cron\_hour = $<$Cron-evaluated Hour$>$]
+\item[cron\_hour = \lt{}Cron-evaluated Hour\gt{}]
 The set of hours of the day for which a deferral time applies.
 The HTCondor User's manual section on Time Scheduling for Job Execution
 has further details.
@@ -3062,7 +3062,7 @@ has further details.
 %%%%%%%%%%%%%%%%%%
 \index{submit commands!cron\_minute}
 \label{condor-submit-cron-minute}
-\item[cron\_minute = $<$Cron-evaluated Minute$>$]
+\item[cron\_minute = \lt{}Cron-evaluated Minute\gt{}]
 The set of minutes within an hour for which a deferral time applies.
 The HTCondor User's manual section on Time Scheduling for Job Execution
 has further details.
@@ -3072,7 +3072,7 @@ has further details.
 %%%%%%%%%%%%%%%%%%
 \index{submit commands!cron\_month}
 \label{condor-submit-cron-month}
-\item[cron\_month = $<$Cron-evaluated Month$>$]
+\item[cron\_month = \lt{}Cron-evaluated Month\gt{}]
 The set of months within a year for which a deferral time applies.
 The HTCondor User's manual section on Time Scheduling for Job Execution
 has further details.
@@ -3082,7 +3082,7 @@ has further details.
 %%%%%%%%%%%%%%%%%%
 \index{submit commands!cron\_prep\_time}
 \label{condor-submit-cron-prep-time}
-\item[cron\_prep\_time = $<$ClassAd Integer Expression$>$]
+\item[cron\_prep\_time = \lt{}ClassAd Integer Expression\gt{}]
 Analogous to \SubmitCmd{deferral\_prep\_time}.
 The number of seconds prior to a job's deferral time that
 the job may be matched and sent to an execution machine.
@@ -3093,7 +3093,7 @@ the job may be matched and sent to an execution machine.
 
 \index{submit commands!cron\_window}
 \label{condor-submit-cron-window}
-\item[cron\_window = $<$ClassAd Integer Expression$>$]
+\item[cron\_window = \lt{}ClassAd Integer Expression\gt{}]
 Analogous to the submit command \SubmitCmd{deferral\_window}.
 It allows cron jobs that
 miss their deferral time to begin execution.
@@ -3107,7 +3107,7 @@ has further details.
 
 \index{submit commands!dagman\_log}
 \label{condor-submit-dagman-log}
-\item[dagman\_log = $<$pathname$>$] 
+\item[dagman\_log = \lt{}pathname\gt{}] 
 DAGMan inserts this command to specify an event log that it watches to maintain
 the state of the DAG. If the \SubmitCmd{log} command is not specified in the
 submit file, DAGMan uses the \SubmitCmd{log} command to specify the event log.
@@ -3118,7 +3118,7 @@ submit file, DAGMan uses the \SubmitCmd{log} command to specify the event log.
 
 \index{submit commands!deferral\_prep\_time}
 \label{condor-submit-deferral-prep-time}
-\item[deferral\_prep\_time = $<$ClassAd Integer Expression$>$]
+\item[deferral\_prep\_time = \lt{}ClassAd Integer Expression\gt{}]
 The number of seconds prior to a job's deferral time that
 the job may be matched and sent to an execution machine.
 
@@ -3131,7 +3131,7 @@ has further details.
 
 \index{submit commands!deferral\_time}
 \label{condor-submit-deferral-time}
-\item[deferral\_time = $<$ClassAd Integer Expression$>$]
+\item[deferral\_time = \lt{}ClassAd Integer Expression\gt{}]
 Allows a job to specify the time at which its execution
 is to begin,
 instead of beginning execution as soon as it arrives at the execution
@@ -3160,7 +3160,7 @@ a deferral time may not be used for scheduler universe jobs.
 
 \index{submit commands!deferral\_window}
 \label{condor-submit-deferral-window}
-\item[deferral\_window = $<$ClassAd Integer Expression$>$]
+\item[deferral\_window = \lt{}ClassAd Integer Expression\gt{}]
 The deferral window is used in conjunction with the
 \SubmitCmd{deferral\_time} command to allow jobs that
 miss their deferral time to begin execution.
@@ -3174,7 +3174,7 @@ has further details.
 
 \index{submit commands!description}
 \label{condor-submit-description}
-\item[description = $<$string$>$]
+\item[description = \lt{}string\gt{}]
 A string that sets the value of the job ClassAd attribute
 \Attr{JobDescription}.
 When set, tools which display the executable such as \Condor{q}
@@ -3186,7 +3186,7 @@ will instead use this string.
 
 \index{submit commands!email\_attributes}
 \label{condor-submit-email-attributes}
-\item[email\_attributes = $<$list-of-job-ad-attributes$>$] 
+\item[email\_attributes = \lt{}list-of-job-ad-attributes\gt{}] 
 A comma-separated list of attributes from the job ClassAd. These
 attributes and their values will be included in the e-mail notification
 of job completion.
@@ -3197,7 +3197,7 @@ of job completion.
 
 \index{submit commands!image\_size}
 \label{condor-submit-image-size}
-\item[image\_size = $<$size$>$] Advice to HTCondor specifying the maximum
+\item[image\_size = \lt{}size\gt{}] Advice to HTCondor specifying the maximum
 virtual image size to which the job will grow during its execution.
 HTCondor will then execute the job only on machines which have enough resources,
 (such as virtual memory), to support executing the job.
@@ -3217,7 +3217,7 @@ For example, for an image size of 8 MiB, \Arg{size} should be 8000.
 
 \index{submit commands!initialdir}
 \label{man-condor-submit-initialdir}
-\item[initialdir = $<$directory-path$>$] 
+\item[initialdir = \lt{}directory-path\gt{}] 
 Used to give jobs a directory with respect to file input and output.
 Also provides a directory 
 (on the machine from which the job is submitted)
@@ -3255,7 +3255,7 @@ directory in which the \Condor{submit} command is run.
 
 \index{submit commands!job\_ad\_information\_attrs}
 \label{man-condor-submit-job-ad-information-attrs}
-\item[job\_ad\_information\_attrs =  $<$attribute-list$>$]
+\item[job\_ad\_information\_attrs =  \lt{}attribute-list\gt{}]
 A comma-separated list of job ClassAd attribute names.
 The named attributes and their values are written to the job event log
 whenever any event is being written to the log.
@@ -3270,7 +3270,7 @@ but it applies to the job event log, instead of the system event log.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!JobBatchName}
 \label{condor-submit-JobBatchName}
-\item[JobBatchName = $<$batch\_name$>$] Set the batch name for this submit.
+\item[JobBatchName = \lt{}batch\_name\gt{}] Set the batch name for this submit.
   The batch name is displayed by \Condor{q} \Opt{-batch}.  It is intended
   for use by users to give meaningful names to their jobs and to influence
   how \Condor{q} groups jobs for display.  This value in a submit file
@@ -3283,7 +3283,7 @@ but it applies to the job event log, instead of the system event log.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!job\_lease\_duration}
 \label{condor-submit-job-lease-duration}
-\item[job\_lease\_duration = $<$number-of-seconds$>$] For vanilla,
+\item[job\_lease\_duration = \lt{}number-of-seconds\gt{}] For vanilla,
 parallel, VM,
 and java universe jobs only, the duration in seconds of a
 job lease.
@@ -3301,7 +3301,7 @@ has further details.
 \index{submit commands!job\_machine\_attrs}
 \index{submit commands!job\_machine\_attrs\_history\_length}
 \label{condor-submit-job-machine-attrs}
-\item[job\_machine\_attrs = $<$attr1, attr2, \Dots $>$]
+\item[job\_machine\_attrs = \lt{}attr1, attr2, \Dots \gt{}]
 A comma and/or space separated list of machine attribute names that
 should be recorded in the job ClassAd in addition to the ones specified
 by the \Condor{schedd} daemon's system configuration variable
@@ -3327,7 +3327,7 @@ recorded in the job ad will be \Expr{Undefined} or \Expr{Error}, respectively.
 
 \index{submit commands!want\_graceful\_removal}
 \label{condor-submit-want-graceful-removal}
-\item[want\_graceful\_removal = $<$boolean expression$>$]
+\item[want\_graceful\_removal = \lt{}boolean expression\gt{}]
 When \Expr{True}, this causes a graceful shutdown of the job when the
 job is removed or put on hold, giving it time to clean up or save state.
 Otherwise, the job is abruptly killed.  The default is \Expr{false}.
@@ -3338,7 +3338,7 @@ Otherwise, the job is abruptly killed.  The default is \Expr{false}.
 
 \index{submit commands!kill\_sig}
 \label{condor-submit-kill-sig}
-\item[kill\_sig = $<$signal-number$>$] When HTCondor needs to kick a job
+\item[kill\_sig = \lt{}signal-number\gt{}] When HTCondor needs to kick a job
 off of a machine, it will send the job the signal specified by
 \SubmitCmd{signal-number}.
 \SubmitCmd{signal-number} needs to be an integer which
@@ -3355,7 +3355,7 @@ is \verb@SIGTERM@, which is the standard way to terminate a program in Unix.
 
 \index{submit commands!kill\_sig\_timeout}
 \label{condor-submit-kill-sig-timeout}
-\item[kill\_sig\_timeout = $<$seconds$>$] This submit command should
+\item[kill\_sig\_timeout = \lt{}seconds\gt{}] This submit command should
 no longer be used as of HTCondor version 7.7.3;
 use \SubmitCmd{job\_max\_vacate\_time} instead.
 If \SubmitCmd{job\_max\_vacate\_time} is not defined,
@@ -3372,7 +3372,7 @@ the job is the smallest of this value and the configuration variable
 
 \index{submit commands!load\_profile}
 \label{condor-submit-load-profile}
-\item[load\_profile = $<$True \Bar\ False$>$]
+\item[load\_profile = \lt{}True \Bar\ False\gt{}]
 When \Expr{True}, loads the account profile of the dedicated run account for
 Windows jobs.
 May not be used with \SubmitCmd{run\_as\_owner}.
@@ -3383,7 +3383,7 @@ May not be used with \SubmitCmd{run\_as\_owner}.
 
 \index{submit commands!match\_list\_length}
 \label{condor-submit-match-list-length}
-\item[match\_list\_length = $<$integer value$>$]
+\item[match\_list\_length = \lt{}integer value\gt{}]
 Defaults to the value zero (0).
 When \SubmitCmd{match\_list\_length} is defined with an integer value
 greater than zero (0),
@@ -3418,7 +3418,7 @@ or a different resource than a previous match.
 \index{job\_max\_vacate\_time}
 \index{submit commands!job\_max\_vacate\_time}
 \label{condor-submit-job-max-vacate-time}
-\item[job\_max\_vacate\_time = $<$integer expression$>$]
+\item[job\_max\_vacate\_time = \lt{}integer expression\gt{}]
 An integer-valued expression (in seconds) that may be used to adjust
 the time given to an evicted job for gracefully shutting down.  If the
 job's setting is less than the machine's, the job's is used.  If the
@@ -3441,7 +3441,7 @@ expressions.
 \index{max\_job\_retirement\_time}
 \index{submit commands!max\_job\_retirement\_time}
 \label{condor-submit-max-job-retirement-time}
-\item[max\_job\_retirement\_time = $<$integer expression$>$]
+\item[max\_job\_retirement\_time = \lt{}integer expression\gt{}]
 An integer-valued expression (in seconds) that
 does nothing unless the machine that runs the job has been configured
 to provide retirement time.
@@ -3489,7 +3489,7 @@ specify this in the requirements and/or rank expressions.
 
 \index{submit commands!nice\_user}
 \label{man-condor-submit-nice-user}
-\item[nice\_user = $<$True \Bar\ False$>$] Normally, when a machine
+\item[nice\_user = \lt{}True \Bar\ False\gt{}] Normally, when a machine
 becomes available to HTCondor, HTCondor decides which job to run based upon
 user and job priorities. Setting \SubmitCmdNI{nice\_user} equal to \Expr{True}
 tells HTCondor not to use your regular user priority, but that this job
@@ -3508,7 +3508,7 @@ default value is \Expr{False}.
 
 \index{submit commands!noop\_job}
 \label{man-condor-submit-noop-job}
-\item[noop\_job = $<$ClassAd Boolean Expression$>$]
+\item[noop\_job = \lt{}ClassAd Boolean Expression\gt{}]
 When this boolean expression is \Expr{True},
 the job is immediately removed from the queue,
 and HTCondor makes no attempt at running the job.
@@ -3523,7 +3523,7 @@ unless the user specifies a different signal or exit code.
 
 \index{submit commands!noop\_job\_exit\_code}
 \label{man-condor-submit-noop-job-exit-code}
-\item[noop\_job\_exit\_code = $<$return value$>$]
+\item[noop\_job\_exit\_code = \lt{}return value\gt{}]
 When \SubmitCmd{noop\_job} is in the submit description file
 and evaluates to \Expr{True},
 this command allows the job
@@ -3538,7 +3538,7 @@ This overrides any value specified with \SubmitCmd{noop\_job\_exit\_signal}.
 
 \index{submit commands!noop\_job\_exit\_signal}
 \label{man-condor-submit-noop-job-exit-signal}
-\item[noop\_job\_exit\_signal = $<$signal number$>$]
+\item[noop\_job\_exit\_signal = \lt{}signal number\gt{}]
 When \SubmitCmd{noop\_job} is in the submit description file
 and evaluates to \Expr{True},
 this command allows the job
@@ -3551,7 +3551,7 @@ the job having terminated with.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!remote\_initialdir}
 \label{man-condor-submit-remote-initialdir}
-\item[remote\_initialdir = $<$directory-path$>$]
+\item[remote\_initialdir = \lt{}directory-path\gt{}]
 The path specifies the directory in which the job is to be
 executed on the remote machine.  This is currently supported in all
 universes except for the standard universe.
@@ -3562,7 +3562,7 @@ universes except for the standard universe.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!rendezvousdir}
 \label{man-condor-submit-rendezvousdir}
-\item[rendezvousdir = $<$directory-path$>$] Used to specify the
+\item[rendezvousdir = \lt{}directory-path\gt{}] Used to specify the
 shared file system directory to be used for file system authentication
 when submitting to a remote scheduler.  Should be a path to a preexisting
 directory.
@@ -3574,7 +3574,7 @@ directory.
 
 \index{submit commands!run\_as\_owner}
 \label{man-condor-submit-run-as-owner}
-\item[run\_as\_owner = $<$True \Bar\ False$>$]
+\item[run\_as\_owner = \lt{}True \Bar\ False\gt{}]
 A boolean value that causes the job to be run under the login of 
 the submitter,
 if supported by the joint configuration of the submit and execute machines.
@@ -3591,7 +3591,7 @@ configuring Windows to support this option.
 
 \index{submit commands!stack\_size}
 \label{man-condor-submit-stack-size}
-\item[stack\_size = $<$size in bytes$>$]
+\item[stack\_size = \lt{}size in bytes\gt{}]
 This command applies only to Linux platform jobs that are not standard
 universe jobs.
 An integer number of bytes, representing the amount of stack space to be 
@@ -3605,7 +3605,7 @@ which is unlimited in size.
 
 \index{submit commands!submit\_event\_notes}
 \label{man-condor-submit-submit-event-notes}
-\item[submit\_event\_notes = $<$note$>$]
+\item[submit\_event\_notes = \lt{}note\gt{}]
 A string that is appended to the submit event in the job's log file.
 For DAGMan jobs, the string \Expr{DAG Node:} and the node's name is
 automatically defined for \SubmitCmdNI{submit\_event\_notes},
@@ -3617,7 +3617,7 @@ causing the logged submit event to identify the DAG node job submitted.
 %%%%%%%%%%%%%%%%%%%
 
 \label{man-condor-submit-submit-set-attribute}
-\item[+$<$attribute$>$ = $<$value$>$] A line that begins with a '+'
+\item[+\lt{}attribute\gt{} = \lt{}value\gt{}] A line that begins with a '+'
 (plus) character instructs \Condor{submit} to insert the
 given \Arg{attribute} into the job ClassAd with the given 
 \Arg{value}. 
@@ -3643,7 +3643,7 @@ attributes.
 
 \label{man-condor-submit-prescript}
 \index{submit commands!+PreCmd}
-\item[+PreCmd = \texttt{"}$<$executable$>$\texttt{"}]
+\item[+PreCmd = \texttt{"}\lt{}executable\gt{}\texttt{"}]
 A vanilla universe job may specify that a script is to be run 
 on the execute machine before the job, and this is called a prescript.
 Definition of this specifically-named attribute causes the script,
@@ -3661,7 +3661,7 @@ when file transfer is enabled.
 %%%%%%%%%%%%%%%%%%%
 \label{man-condor-submit-preargs}
 \index{submit commands!+PreArgs}
-\item[+PreArgs = \texttt{"}$<$argument\_list$>$\texttt{"}]
+\item[+PreArgs = \texttt{"}\lt{}argument\_list\gt{}\texttt{"}]
 Defines command line arguments for the prescript, 
 presuming the Old argument syntax.
 
@@ -3670,7 +3670,7 @@ presuming the Old argument syntax.
 %%%%%%%%%%%%%%%%%%%
 \label{man-condor-submit-prearguments}
 \index{submit commands!+PreArguments}
-\item[+PreArguments = \texttt{"}$<$argument\_list$>$\texttt{"}]
+\item[+PreArguments = \texttt{"}\lt{}argument\_list\gt{}\texttt{"}]
 Defines command line arguments for the prescript, 
 presuming the New argument syntax.
 An exception to the syntax is that double
@@ -3685,7 +3685,7 @@ Note that if both +PreArgs and +PreArguments are specified, the
 %%%%%%%%%%%%%%%%%%%
 \label{man-condor-submit-preenv}
 \index{submit commands!+PreEnv}
-\item[+PreEnv = \texttt{"}$<$environment\_vars$>$\texttt{"}]
+\item[+PreEnv = \texttt{"}\lt{}environment\_vars\gt{}\texttt{"}]
 Defines the environment for the prescript,
 presuming the Old environment syntax.
 
@@ -3694,7 +3694,7 @@ presuming the Old environment syntax.
 %%%%%%%%%%%%%%%%%%%
 \label{man-condor-submit-preenvironment}
 \index{submit commands!+PreEnvironment}
-\item[+PreEnvironment = \texttt{"}$<$environment\_vars$>$\texttt{"}]
+\item[+PreEnvironment = \texttt{"}\lt{}environment\_vars\gt{}\texttt{"}]
 Defines the environment for the prescript,
 presuming the New environment syntax.
 
@@ -3707,7 +3707,7 @@ Note that if both +PreEnv and +PreEnvironment are specified, the
 
 \label{man-condor-submit-postscript}
 \index{submit commands!+PostCmd}
-\item[+PostCmd = \texttt{"}$<$executable$>$\texttt{"}]
+\item[+PostCmd = \texttt{"}\lt{}executable\gt{}\texttt{"}]
 A vanilla universe job may specify that a script is to be run 
 on the execute machine after the job exits, and this is called a postscript.
 Definition of this specifically-named attribute causes the script,
@@ -3725,7 +3725,7 @@ when file transfer is enabled.
 %%%%%%%%%%%%%%%%%%%
 \label{man-condor-submit-postargs}
 \index{submit commands!+PostArgs}
-\item[+PostArgs = \texttt{"}$<$argument\_list$>$\texttt{"}]
+\item[+PostArgs = \texttt{"}\lt{}argument\_list\gt{}\texttt{"}]
 Defines command line arguments for the postscript, 
 presuming the Old argument syntax.
 
@@ -3734,7 +3734,7 @@ presuming the Old argument syntax.
 %%%%%%%%%%%%%%%%%%%
 \label{man-condor-submit-postarguments}
 \index{submit commands!+PostArguments}
-\item[+PostArguments = \texttt{"}$<$argument\_list$>$\texttt{"}]
+\item[+PostArguments = \texttt{"}\lt{}argument\_list\gt{}\texttt{"}]
 Defines command line arguments for the postscript, 
 presuming the New argument syntax.
 An exception to the syntax is that double
@@ -3749,7 +3749,7 @@ Note that if both +PostArgs and +PostArguments are specified, the
 %%%%%%%%%%%%%%%%%%%
 \label{man-condor-submit-postenv}
 \index{submit commands!+PostEnv}
-\item[+PostEnv = \texttt{"}$<$environment\_vars$>$\texttt{"}]
+\item[+PostEnv = \texttt{"}\lt{}environment\_vars\gt{}\texttt{"}]
 Defines the environment for the postscript,
 presuming the Old environment syntax.
 
@@ -3758,7 +3758,7 @@ presuming the Old environment syntax.
 %%%%%%%%%%%%%%%%%%%
 \label{man-condor-submit-postenvironment}
 \index{submit commands!+PostEnvironment}
-\item[+PostEnvironment = \texttt{"}$<$environment\_vars$>$\texttt{"}]
+\item[+PostEnvironment = \texttt{"}\lt{}environment\_vars\gt{}\texttt{"}]
 Defines the environment for the postscript,
 presuming the New environment syntax.
 

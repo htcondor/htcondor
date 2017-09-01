@@ -9,8 +9,8 @@
 
 \SynProg{\Condor{updates\_stats}}
 [\verb@--@\textbf{long} $|$ \verb@-@\textbf{l}]
-[\verb@--@\textbf{history=$<$min$>$-$<$max$>$}]
-[\verb@--@\textbf{interval=$<$seconds$>$}]
+[\verb@--@\textbf{history=\lt{}min\gt{}-\lt{}max\gt{}}]
+[\verb@--@\textbf{interval=\lt{}seconds\gt{}}]
 [\verb@--@\textbf{notime}]
 [\verb@--@\textbf{time}]
 [\verb@--@\textbf{summary} $|$ \verb@-@\textbf{s}]
@@ -63,7 +63,7 @@ configurable on a per-source basis by configuration variable
     Without this option, the statistics are condensed.}
   \OptItem{\Opt{-l}}
     {Same as \Opt{---long}.  }
-  \OptItem{\Opt{---history=$<$min$>$-$<$max$>$}} {Sets the
+  \OptItem{\Opt{---history=\lt{}min\gt{}-\lt{}max\gt{}}} {Sets the
     range of update numbers that
     are printed.  By default, the entire history is displayed.
     To limit the range, the minimum and/or maximum
@@ -79,7 +79,7 @@ configurable on a per-source basis by configuration variable
     and usage information is displayed.
     If an  $=$ sign is given, with no minimum or maximum values,
     the default of the entire history is displayed.}
-  \OptItem{\Opt{---interval=$<$seconds$>$}} {The assumed update
+  \OptItem{\Opt{---interval=\lt{}seconds\gt{}}} {The assumed update
     interval, in seconds.
     Assumed times for the the updates are displayed, making the
     use of the \Opt{---time} option together with 

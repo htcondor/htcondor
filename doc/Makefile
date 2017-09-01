@@ -64,6 +64,7 @@ ref.html : ref.tex $(FIGURES) $(LINKS:%.tex=%.html.tex)
 	@rm -f fontsize.tex; ln -s fontsize.html.tex fontsize.tex
 	@rm -f figuresizing.tex; ln -s figuresizing.html.tex figuresizing.tex
 	@latex2html -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	@rm -fr ref.html
 	@mv ref ref.html
 
 # See ref.pdf comment above.  Also note that we don't have a full set of
