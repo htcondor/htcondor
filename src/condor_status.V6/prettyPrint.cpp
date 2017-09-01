@@ -1131,7 +1131,7 @@ const char * const defragNormal_PrintFormat = "SELECT\n"
 	"DrainedMachines AS TotalDrained PRINTF %12d\n"
 "SUMMARY NONE\n";
 
-int ppSetDefragNormalCols (int width)
+int ppSetDefragNormalCols (int /*width*/)
 {
 	const char * tag = "Defrag";
 	const char * fmt = defragNormal_PrintFormat;
@@ -1140,7 +1140,7 @@ int ppSetDefragNormalCols (int width)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 	// set a minumum size for name column
-	return width ? 12 : 12;
+	return /*width ? 12 : */12;
 }
 
 const char * const accountingNormal_PrintFormat = "SELECT\n"
