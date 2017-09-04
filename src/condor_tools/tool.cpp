@@ -628,7 +628,7 @@ main( int argc, char *argv[] )
 
 					if( strcmp( option, "-annex-name" ) == 0 ) {
 						if( argument ) {
-							formatstr( annexString, "AnnexName =?= \"%s\"", argument );
+							formatstr( annexString, ATTR_ANNEX_NAME " =?= \"%s\"", argument );
 							skipAfterAnnex = true;
 							++tmp;
 						} else {
@@ -639,7 +639,7 @@ main( int argc, char *argv[] )
 						annexString = "IsAnnex";
 					} else {
 						if( argument && argument[0] != '-' ) {
-							formatstr( annexString, "AnnexName =?= \"%s\"", argument );
+							formatstr( annexString, ATTR_ANNEX_NAME " =?= \"%s\"", argument );
 							skipAfterAnnex = true;
 							++tmp;
 						} else {

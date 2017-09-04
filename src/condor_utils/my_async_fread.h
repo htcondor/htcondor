@@ -330,7 +330,7 @@ public:
 		, total_reads(0)
 		, total_inprogress(0)
 		, src(*this) 
-	{}
+	{ memset(&ab, 0, sizeof(ab));}
 	virtual ~MyAsyncFileReader();
 
 	// prepare class for destruction or re-use, closes the file and

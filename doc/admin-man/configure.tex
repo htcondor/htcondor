@@ -1078,7 +1078,7 @@ the default \\ \hline
   HTCondor will not use IPv4.  If \Expr{auto}, which is the default,
   HTCondor will use IPv4 if it can find an interface with an IPv4 address,
   and that address is (a) public or private, or (b) no interface's
-  IPv6 address is public or private.  If HTCondor finds more than address
+  IPv6 address is public or private.  If HTCondor finds more than one address
   of each protocol, only the most public address is considered for that
   protocol.
 
@@ -1089,7 +1089,7 @@ the default \\ \hline
   HTCondor will not use IPv6.  If \Expr{auto}, which is the default,
   HTCondor will use IPv6 if it can find an interface with an IPv6 address,
   and that address is (a) public or private, or (b) no interface's
-  IPv4 address is public or private.  If HTCondor finds more than address
+  IPv4 address is public or private.  If HTCondor finds more than one address
   of each protocol, only the most public address is considered for that
   protocol.
 
@@ -1240,7 +1240,6 @@ of the subsystem corresponding to the daemon.
  
 \label{param:MaxDefaultLog}
 \item[\Macro{MAX\_DEFAULT\_LOG}]
-\begin{description} 
   Controls the maximum size in bytes or amount of time that any log
   not explicitly specified using  \Macro{MAX\_<SUBSYS>\_LOG}
   will be allowed to grow.
@@ -1268,7 +1267,6 @@ of the subsystem corresponding to the daemon.
   \item{\Expr{Hr} for hours}
   \item{\Expr{Day} for days}
   \item{\Expr{Wk} for weeks}
-\end{description} 
 
 \label{param:MaxNumSubsysLog}
 \item[\Macro{MAX\_NUM\_<SUBSYS>\_LOG}]

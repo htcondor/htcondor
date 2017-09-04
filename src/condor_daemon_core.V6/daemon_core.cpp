@@ -457,6 +457,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_wants_restart = true;
 	m_in_daemon_shutdown = false;
 	m_in_daemon_shutdown_fast = false;
+	sent_signal = false;
 	m_private_network_name = NULL;
 
 #ifdef HAVE_CLONE
@@ -471,6 +472,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	m_ccb_listeners = NULL;
 	m_shared_port_endpoint = NULL;
+	nRegisteredSocks = 0;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -10490,9 +10492,11 @@ void DaemonCore :: invalidateSessionCache()
 	/* for now, never invalidate the session cache */
 	return;
 
+/* when we do invalidate the session cache, uncomment this...
     if (sec_man) {
         sec_man->invalidateAllCache();
     }
+*/
 }
 
 

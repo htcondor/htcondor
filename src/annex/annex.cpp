@@ -27,6 +27,7 @@
 #include "annex-update.h"
 #include "annex-create.h"
 #include "annex-status.h"
+#include "annex-condor-status.h"
 #include "user-config-dir.h"
 
 // Why don't c-style timer callbacks have context pointers?
@@ -445,8 +446,8 @@ help( const char * argv0 ) {
 		"OR, to check if the one-time setup has been done:\n"
 		"%s -check-setup\n"
 		"\n"
-		"OR, to check the status of your annex:\n"
-		"%s -status -annex[-name] <annex-name> [-classad[s]]\n"
+		"OR, to check the status of your annex(es):\n"
+		"%s -status [-annex[-name] <annex-name>] [-classad[s]]\n"
 		"\n"
 		"OR, to reset the lease on an existing annex:\n"
 		"%s -annex[-name] <annex-name> -duration <lease duration in decimal hours>\n"
@@ -488,7 +489,7 @@ void prepareTarballForUpload(	ClassAd & commandArguments,
 								bool noOwner,
 								long int unclaimedTimeout ) {
 	std::string annexName;
-	commandArguments.LookupString( "AnnexName", annexName );
+	commandArguments.LookupString( ATTR_ANNEX_NAME, annexName );
 	ASSERT(! annexName.empty());
 
 	// Create a temporary directory.  If a config directory was specified,
@@ -645,7 +646,7 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 		exit( 1 );
 	} else {
 		fprintf( stdout, "Starting annex...\n" );
-		commandArguments.Assign( "ExpectedDelay", "  It will take about six minutes for the new machines to join the pool." );
+		commandArguments.Assign( "ExpectedDelay", "  It will take about three minutes for the new machines to join the pool." );
 	}
 }
 
@@ -706,39 +707,6 @@ void dumpParam( const char * attribute, int defaultValue ) {
 	dprintf( D_AUDIT | D_NOHEADER, "%s = %d\n", attribute, value );
 }
 
-int
-condor_status( int argc, char ** argv ) {
-	std::string csPath = argv[0];
-	csPath.replace( csPath.find( "condor_annex" ), strlen( "condor_annex" ), "condor_status" );
-
-	char ** csArgv = (char **)malloc( (argc + 2) * sizeof(char *) );
-	if( csArgv == NULL ) { return 2; }
-
-	csArgv[0] = strdup( csPath.c_str() );
-	if( csArgv[0] == NULL ) { free(csArgv); return 2; }
-
-	csArgv[1] = strdup( "-annex" );
-	if( csArgv[1] == NULL ) { free(csArgv) ; return 2; }
-
-	csArgv[2] = strdup( "-compact" );
-	if( csArgv[2] == NULL ) { free(csArgv); return 2; }
-
-	for( int i = 2; i < argc; ++i ) {
-		csArgv[i + 1] = argv[i];
-	}
-	csArgv[argc + 1] = NULL;
-
-	if( csPath[0] == '/' ) {
-		int r = execv( csPath.c_str(), csArgv );
-		free(csArgv);
-		return r;
-	} else {
-		int r = execvp( csPath.c_str(), csArgv );
-		free(csArgv);
-		return r;
-	}
-}
-
 int _argc;
 char ** _argv;
 
@@ -782,11 +750,7 @@ annex_main( int argc, char ** argv ) {
 	};
 	annex_t annexType = at_none;
 
-	// Check for git-style subcommands.
-	if( strcmp( argv[1], "status" ) == 0 ) {
-		return condor_status( argc, argv );
-	}
-
+	unsigned subCommandIndex = 0;
 	long int unclaimedTimeout = 0;
 	bool unclaimedTimeoutSpecified = false;
 	long int leaseDuration = 0;
@@ -797,15 +761,20 @@ annex_main( int argc, char ** argv ) {
 	bool noOwner = false;
 	enum command_t {
 		ct_setup = 2,
+		ct_status = 5,
 		ct_default = 0,
 		ct_check_setup = 3,
 		ct_create_annex = 1,
 		ct_update_annex = 4,
-		ct_status = 5
+		ct_condor_status = 6
 	};
 	command_t theCommand = ct_default;
 	for( int i = 1; i < argc; ++i ) {
-		if( is_dash_arg_prefix( argv[i], "aws-ec2-url", 11 ) ) {
+		if( strcmp( argv[i], "status" ) == 0 ) {
+			theCommand = ct_condor_status;
+			subCommandIndex = i;
+			break;
+		} else if( is_dash_arg_prefix( argv[i], "aws-ec2-url", 11 ) ) {
 			++i;
 			if( i < argc && argv[i] != NULL ) {
 				serviceURL = argv[i];
@@ -1233,7 +1202,7 @@ annex_main( int argc, char ** argv ) {
 				fprintf( stderr, "%s: you must specify -annex-name.\n", argv[0] );
 				return 1;
 			}
-			commandArguments.Assign( "AnnexName", annexName );
+			commandArguments.Assign( ATTR_ANNEX_NAME, annexName );
 			break;
 
 		default:
@@ -1328,6 +1297,10 @@ annex_main( int argc, char ** argv ) {
 	}
 
 	switch( theCommand ) {
+		case ct_condor_status:
+			return condor_status( annexName, serviceURL,
+				argc, argv, subCommandIndex );
+
 		case ct_status:
 			return status( annexName, wantClassAds, serviceURL );
 

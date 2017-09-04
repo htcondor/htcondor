@@ -108,7 +108,7 @@ else()
     set ( CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/lib64 )
     set ( CMAKE_LIBRARY_PATH CMAKE_LIBRARY_PATH_ORIG)
 
-    if (PROPER AND "${PYTHON_VERSION_MAJOR}" MATCHES "3")
+    if ("${PYTHON_VERSION_MAJOR}" MATCHES "3")
       set ( PYTHON_BOOST_LIB boost_python3 )
     else()
       set ( PYTHON_BOOST_LIB boost_python )

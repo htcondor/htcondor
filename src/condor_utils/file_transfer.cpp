@@ -365,10 +365,10 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		free(list);
 	} 
 #ifdef HAVE_HTTP_PUBLIC_FILES    
-    else if (IsServer() && !is_spool && param_boolean("ENABLE_HTTP_PUBLIC_FILES", false)) {
+	else if (IsServer() && !is_spool && param_boolean("ENABLE_HTTP_PUBLIC_FILES", false)) {
 		// For files to be cached, change file names to URLs
 		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
-    }
+	}
 #endif
 	
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf, sizeof(buf)) == 1 ) {
@@ -605,7 +605,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			if(!InitDownloadFilenameRemaps(Ad)) return 0;
 		} 
 #ifdef HAVE_HTTP_PUBLIC_FILES
-        else if( !simple_init ) {
+		else if( !simple_init ) {
 			// Only add input remaps for starter receiving
 			AddInputFilenameRemaps(Ad);
 		}

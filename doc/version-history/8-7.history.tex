@@ -59,6 +59,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added support for Public Input Files in HTCondor jobs. This allows
+users to transfer input files over a publicly-available HTTP web service,
+which can benefit from caching proxies, load balancers, and other tools
+to improve file transfer performance.
+\Ticket{6356}
+
 \item Changed how \Expr{auto} works for \MacroNI{ENABLE\_IPV4} and
 \MacroNI{ENABLE\_IPV6}.  HTCondor now ignores addresses that are likely
 to be useless (loopback or link-local) unless no address is likely to be
@@ -81,7 +87,8 @@ default to a transfer\_history file in the local logs folder.
 
 \begin{itemize}
 
-\item None.
+\item Fixed some small memory leaks in the HTCondor daemons.
+\Ticket{6361}
 
 \end{itemize}
 

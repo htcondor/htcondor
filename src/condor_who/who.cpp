@@ -36,6 +36,7 @@
 #include "status_types.h"
 #include "directory.h"
 #include "format_time.h"
+#include "console-utils.h"
 #include <my_popen.h>
 
 #include "condor_distribution.h"
@@ -253,31 +254,6 @@ void usage(bool and_exit)
 	if (and_exit)
 		exit( 1 );
 }
-
-#ifdef WIN32
-static int getConsoleWindowSize(int * pHeight = NULL) {
-	CONSOLE_SCREEN_BUFFER_INFO ws;
-	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
-		if (pHeight)
-			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
-		return (int)ws.dwSize.X;
-	}
-	return 80;
-}
-#else
-#include <sys/ioctl.h>
-static int getConsoleWindowSize(int * pHeight = NULL) {
-    struct winsize ws;
-	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
-		//printf ("lines %d\n", ws.ws_row);
-		//printf ("columns %d\n", ws.ws_col);
-		if (pHeight)
-			*pHeight = (int)ws.ws_row;
-		return (int) ws.ws_col;
-	}
-	return 80;
-}
-#endif
 
 // return true if p1 is longer than p2 and it ends with p2
 // if ppEnd is not NULL, return a pointer to the start of the end of p1

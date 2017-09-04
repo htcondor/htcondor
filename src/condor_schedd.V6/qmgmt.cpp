@@ -1448,7 +1448,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// initialize our list of job owners
 			AddOwnerHistory( owner );
 			ad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner.c_str()));
-			clusterad->ownerinfo = ad->ownerinfo;
+			if (clusterad)
+				clusterad->ownerinfo = ad->ownerinfo;
 
 			if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
 				dprintf(D_ALWAYS,
@@ -4877,8 +4878,8 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 		if( tmp_ad.LookupInteger(attr_name, *val) == 1) {
 			return 1;
 		}
-		return -1;
 		errno = EINVAL;
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -5083,8 +5084,8 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		if( ! JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
-			return -1;
 			errno = ENOENT;
+			return -1;
 		}
 	}
 

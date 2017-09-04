@@ -6,13 +6,13 @@
 #include "Functor.h"
 #include "StatusReply.h"
 
-void
+static void
 printClassAds(	const std::map< std::string, std::string > & instances,
 				const std::string & annexID,
 				ClassAd * command,
 				std::map< std::string, std::string > & annexes );
 
-void
+static void
 printClassAdsSummary(	const std::map< std::string, std::string > & instances,
 						ClassAd * command,
 						std::map< std::string, std::string > & annexes ) {
@@ -35,7 +35,7 @@ printClassAdsSummary(	const std::map< std::string, std::string > & instances,
 }
 
 
-void
+static void
 printClassAds(	const std::map< std::string, std::string > & instances,
 				const std::string & annexID,
 				ClassAd * command,
@@ -131,7 +131,7 @@ printClassAds(	const std::map< std::string, std::string > & instances,
 	fPrintAd( stdout, annexAd );
 }
 
-void
+static void
 printHumanReadableSummary(	std::map< std::string, std::string > & instances,
 							std::map< std::string, std::string > & annexes ) {
 	// Do some aggregation.
@@ -241,7 +241,7 @@ printHumanReadableSummary(	std::map< std::string, std::string > & instances,
 	}
 }
 
-void
+static void
 printHumanReadable( std::map< std::string, std::string > & instances,
 					const std::string & annexID,
 					std::map< std::string, std::string > & annexes ) {
@@ -334,8 +334,7 @@ StatusReply::operator() () {
 
 				std::string annexName;
 				scratchpad->LookupString( (iName + ".annexName").c_str(), annexName );
-				// Spot instances don't have an annexName yet.
-				// ASSERT(! annexName.empty() );
+				ASSERT(! annexName.empty() );
 				annexes[ instanceID ] = annexName;
 			} while( true );
 
@@ -361,7 +360,7 @@ StatusReply::operator() () {
 			if( annexName.empty() ) {
 				formatstr( constraint, "IsAnnex" );
 			} else {
-				formatstr( constraint, "AnnexName == \"%s\"", annexName.c_str() );
+				formatstr( constraint, ATTR_ANNEX_NAME " == \"%s\"", annexName.c_str() );
 			}
 			q.addANDConstraint( constraint.c_str() );
 
@@ -375,9 +374,9 @@ StatusReply::operator() () {
 			ClassAd * cad = NULL;
 			while( (cad = cal.Next()) != NULL ) {
 				std::string name, instanceID, aName;
-				cad->LookupString( "Name", name );
+				cad->LookupString( ATTR_NAME, name );
 				cad->LookupString( "EC2InstanceID", instanceID );
-				cad->LookupString( "AnnexName", aName );
+				cad->LookupString( ATTR_ANNEX_NAME, aName );
 
 				instances[ instanceID ] = "in-pool";
 			}

@@ -167,7 +167,6 @@ protected:
 	_condorInMsg *_longMsg;
     Condor_MD_MAC * mdChecker_;
 	int _tOutBtwPkts;
-	char* _fqu;  // fully qualified username
 	int m_udp_network_mtu;
 	int m_udp_loopback_mtu;
 

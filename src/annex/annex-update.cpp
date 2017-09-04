@@ -39,7 +39,7 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	command->LookupString( "LeaseFunctionARN", leaseFunctionARN );
 
 	std::string annexName;
-	command->LookupString( "AnnexName", annexName );
+	command->LookupString( ATTR_ANNEX_NAME, annexName );
 	std::string annexID = annexName.substr( 0, 27 );
 	scratchpad->Assign( "AnnexID", annexID );
 

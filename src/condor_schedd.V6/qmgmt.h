@@ -106,7 +106,7 @@ public:
 	qelm() : nxt(this), prv(this) {}
 	qelm *next() const { return nxt; }
 	qelm *prev() const { return prv; }
-	bool empty() const { return nxt==prv; }
+	bool empty() const { return nxt==this && prv==this; }
 	// append item to tail of this list
 	void append_tail(qelm &qe) { qe.nxt = this; qe.prv = prv; qe.prv->nxt = &qe; prv = &qe; }
 	// remove and return item from head of this list

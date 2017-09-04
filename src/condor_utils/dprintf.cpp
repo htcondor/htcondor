@@ -291,7 +291,8 @@ DebugFileInfo::DebugFileInfo(const dprintf_output_settings& p) :
 	outputTarget(STD_OUT), debugFP(NULL), choice(p.choice), headerOpts(p.HeaderOpts),
 	maxLog(p.logMax), logZero(0), maxLogNum(p.maxLogNum),
 	want_truncate(p.want_truncate), accepts_all(p.accepts_all),
-	rotate_by_time(p.rotate_by_time) {}
+	rotate_by_time(p.rotate_by_time), dont_panic(false),
+	userData(0), dprintfFunc(_dprintf_global_func) {}
 
 bool DebugFileInfo::MatchesCatAndFlags(int cat_and_flags) const
 {
