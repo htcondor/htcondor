@@ -28,13 +28,13 @@ exec_condor_status( int argc, char ** argv, unsigned subCommandIndex, const std:
 		csArgv[6] = strdup( annexName.c_str() );
 	}
 
-	bool allocated = true;
+	bool allDuplicated = true;
 	for( unsigned i = 0; i < EXTRA_ARGS; ++i ) {
-		if( csArgv[i] == NULL ) { allocated = false; break; }
+		if( csArgv[i] == NULL ) { allDuplicated = false; break; }
 	}
-	if(! allocated) {
+	if(! allDuplicated) {
 		for( unsigned i = 0; i < EXTRA_ARGS; ++i ) {
-			if( csArgv[i] == NULL ) { free(csArgv); }
+			if( csArgv[i] != NULL ) { free(csArgv[i]); }
 		}
 		free( csArgv );
 		return false;
@@ -161,6 +161,11 @@ CondorStatusReply::operator() () {
 				fclose( adFile );
 				return FALSE;
 			}
+
+			// We can't actually get here (exec_condor_status() either
+			// succeeds by not returning or fails), but Coverity doesn't
+			// know that.
+			fclose( adFile );
 		}
 
 		cleanup:
