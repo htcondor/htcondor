@@ -24,29 +24,18 @@
 #include "status_types.h"
 #include "totals.h"
 
+#include "condor_state.h"
+#include "prettyPrint.h"
+
 // use old diagnostic names when comparing v8.3 to v8.5
 #define USE_OLD_DIAGNOSTIC_NAMES 1
 
 extern int  sdo_mode;
-extern ppOption	ppStyle;
 #ifdef OLD_PF_SETUP
 extern bool explicit_format;
 extern bool using_print_format;
 extern bool disable_user_print_files; // allow command line to defeat use of default user print files.
 extern const char * mode_constraint; // constraint expression set by setMode
-extern int set_status_print_mask_from_stream (const char * streamid, bool is_filename, const char ** pconstraint);
-#endif
-
-static struct {
-	AdTypes      adType;
-	int          argIndex;
-	const char * Arg;
-	int          ppArgIndex;
-	const char * ppArg;
-} setby = {NO_AD, 0, NULL, 0, NULL};
-
-#if 0
-const char * getTypeStr ();
 #endif
 
 // lookup table to convert condor AD type constants into strings.
@@ -120,7 +109,7 @@ getPPStyleStr (ppOption pps)
 	return "<Unknown!>";
 }
 
-int setPPstyle (ppOption pps, int arg_index, const char * argv)
+int PrettyPrinter::setPPstyle( ppOption pps, int arg_index, const char * argv )
 {
 	// if the style has already been set, and is trying to be reset by default
 	// rules, override the default  (i.e., don't make a change)
@@ -269,7 +258,7 @@ const char * getSDOModeStr(int sm) {
 	return "<Unknown mode!>";
 }
 
-AdTypes setMode (int sm, int i, const char *argv)
+AdTypes PrettyPrinter::setMode (int sm, int i, const char *argv)
 {
 	if ( ! setby.argIndex) { // if not yet set. 
 		AdTypes adType = NO_AD;
@@ -304,13 +293,13 @@ AdTypes setMode (int sm, int i, const char *argv)
 	return setby.adType;
 }
 
-AdTypes resetMode(int sm, int arg_index, const char * arg)
+AdTypes PrettyPrinter::resetMode(int sm, int arg_index, const char * arg)
 {
 	setby.argIndex = 0;
 	return setMode(sm, arg_index, arg);
 }
 
-void dumpPPMode(FILE* out)
+void PrettyPrinter::dumpPPMode(FILE* out)
 {
 	const char * sdo_str = getSDOModeStr(sdo_mode);
 	const char * adtype_str = getAdTypeStr(setby.adType);
@@ -324,7 +313,7 @@ void dumpPPMode(FILE* out)
 	fprintf (out, "PrettyPrint: %s   (Set by arg %d '%s')\n", style_str, setby.ppArgIndex, setby.ppArg ? setby.ppArg : "NULL");
 }
 
-const char * adtypeNameFromPPMode()
+const char * PrettyPrinter::adtypeNameFromPPMode()
 {
 	return getAdTypeStr(setby.adType);
 }

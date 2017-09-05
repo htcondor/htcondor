@@ -3432,7 +3432,9 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 	// non-annex functionality with an older-interface service.  2015-04-15
 	// is the oldest API with Spot Fleet, but this code was implemented
 	// against the 2016-04-01 documentation.
-	request.query_parameters[ "Version" ] = "2016-04-01";
+	// request.query_parameters[ "Version" ] = "2016-04-01";
+	// We need version 2016-11-15 for Spot Fleet tags.
+	request.query_parameters[ "Version" ] = "2016-11-15";
 
 	if( strcasecmp( argv[5], NULLSTRING ) ) {
 		request.query_parameters[ "SpotFleetRequestConfig."
@@ -3502,6 +3504,28 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"SpotPlacement.AvailabilityZone", "AvailabilityZone" );
+
+		if(! blob[ "Tags" ].empty()) {
+			StringList sl( blob[ "Tags" ].c_str() );
+			sl.rewind();
+			char * tagSpec = NULL;
+			for( unsigned i = 1; (tagSpec = sl.next()) != NULL; ++i ) {
+				std::ostringstream ss;
+				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
+				ss << lcIndex << ".";
+
+				// Once again, the AWS documentation has this wrong.
+				ss << "tagSpecificationSet.1.";
+				request.query_parameters[ ss.str() + "ResourceType" ] = "instance";
+				ss << "Tag." << i << ".";
+
+				std::string tag( tagSpec );
+				request.query_parameters[ ss.str() + "Key" ] =
+					tag.substr( 0, tag.find( '=' ) );
+				request.query_parameters[ ss.str() + "Value" ] =
+					tag.substr( tag.find( '=' ) + 1 );
+			}
+		}
 
 		if(! blob[ "SecurityGroupNames" ].empty()) {
 			StringList sl( blob[ "SecurityGroupNames" ].c_str() );

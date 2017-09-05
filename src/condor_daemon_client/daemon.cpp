@@ -572,14 +572,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, i
 
 	start_command_result = sec_man->startCommand(cmd, sock, raw_protocol, errstack, subcmd, callback_fn, misc_data, nonblocking, cmd_description, sec_session_id);
 
-	if(callback_fn) {
-		// SecMan::startCommand() called the callback function, so we just return here
-		return start_command_result;
-	}
-	else {
-		// There is no callback function.
-		return start_command_result;
-	}
+	return start_command_result;
 }
 
 Sock *

@@ -303,9 +303,6 @@ if (BUILD_TESTING)
 		condor_pl_test(job_ckpt_open-N-parallel_std "ckpt/restore of N files open at once" "stduniv;quick;full;ckpt")
 		#condor_pl_test(job_ckpt_getrusage-loop_std "async ckpt/restore of open file table" "stduniv;quick;full;ckpt")
 		condor_pl_test(job_ckpt_socket-support_std "Do we support sockets around ckpt/restore?" "stduniv;long;full;ckpt")
-
-		dprint("UW - add fortran tests if desired")
-		
 	endif(STD_UNIVERSE)
 
 	##########################################################

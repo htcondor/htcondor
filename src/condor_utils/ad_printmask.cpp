@@ -475,12 +475,17 @@ static void appendFieldofChar(MyString & buf, int width, char ch = '?')
 
 MyRowOfValues::~MyRowOfValues()
 {
-	if ( ! pdata) return;
-	delete [] pdata;
-	delete [] pvalid;
+	if( pdata != NULL ) {
+		delete [] pdata;
+		pdata = NULL;
+	}
+
+	if( pvalid != NULL ) {
+		delete [] pvalid;
+		pvalid = NULL;
+	}
+
 	cmax = cols = 0;
-	pdata = NULL;
-	pvalid = NULL;
 }
 
 int MyRowOfValues::SetMaxCols(int max_cols)

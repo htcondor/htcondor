@@ -546,7 +546,12 @@ int submit_factory_job (
 			// materialize all of the jobs unless the user requests otherwise.
 			// (the admin can also set a limit which is applied at the schedd)
 			max_materialize = MIN(max_materialize, selected_item_count * (o.queue_num?o.queue_num:1));
-			MyQ->set_Factory(ClusterId, max_materialize, factory_path.c_str(), submit_digest.data());
+
+			// send the submit digest to the schedd. the schedd will parse the digest at this point
+			// and return success or failure.
+			rval = MyQ->set_Factory(ClusterId, max_materialize, factory_path.c_str(), submit_digest.data());
+			if (rval < 0)
+				break;
 
 			// make the cluster ad.
 			//
