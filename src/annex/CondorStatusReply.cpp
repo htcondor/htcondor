@@ -11,7 +11,7 @@ exec_condor_status( int argc, char ** argv, unsigned subCommandIndex, const std:
 	std::string csPath = argv[0];
 	csPath.replace( csPath.find( "condor_annex" ), strlen( "condor_annex" ), "condor_status" );
 
-	unsigned EXTRA_ARGS = 4;
+	unsigned EXTRA_ARGS = 5;
 	if(! annexName.empty()) {
 		EXTRA_ARGS += 2;
 	}
@@ -23,9 +23,10 @@ exec_condor_status( int argc, char ** argv, unsigned subCommandIndex, const std:
 	csArgv[2] = strdup( "-sort" );
 	csArgv[3] = strdup( "EC2InstanceID" );
 	csArgv[4] = strdup( "-merge" );
+	csArgv[5] = strdup( "-" );
 	if(! annexName.empty()) {
-		csArgv[5] = strdup( "-annex-name" );
-		csArgv[6] = strdup( annexName.c_str() );
+		csArgv[6] = strdup( "-annex-name" );
+		csArgv[7] = strdup( annexName.c_str() );
 	}
 
 	bool allDuplicated = true;
