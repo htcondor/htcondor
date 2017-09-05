@@ -64,6 +64,7 @@ class QmgmtPeer {
 		const char *endpoint_ip_str() const;
 		const condor_sockaddr endpoint() const;
 		const char* getOwner() const;
+		const char* getDomain() const;
 		const char* getRealOwner() const;
 		const char* getFullyQualifiedUser() const;
 		int isAuthenticated() const;
