@@ -729,8 +729,6 @@ void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 	if( job ) {
-		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessTerminatedEvent] job=%s\n", job->GetJobName());
-		
 		DecrementProcCount( job );
 
 		const JobTerminatedEvent * termEvent =
@@ -898,10 +896,8 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 		return;
 	}
 
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessJobProcEnd] job=%s, job->_queuedNodeJobProcs=%d\n", job->GetJobName(), job->_queuedNodeJobProcs);
 	if ( job->_queuedNodeJobProcs == 0 ) {
 			// All procs for this job are done.
-			debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessJobProcEnd] Node %s job completed\n",
 			job->GetJobName() );
 			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 				job->GetJobName() );
@@ -1500,7 +1496,6 @@ int
 Dag::SubmitReadyJobs(const Dagman &dm)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag::SubmitReadyJobs()\n" );
-
 	time_t cycleStart = time( NULL );
 
 		// Jobs deferred by category throttles.
@@ -1575,7 +1570,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		time_t now = time( NULL );
 		time_t elapsed = now - cycleStart;
 		if ( elapsed > dm.m_user_log_scan_interval ) {
-       		debug_printf( DEBUG_QUIET,
+			debug_printf( DEBUG_QUIET,
 						"Warning: Submit cycle elapsed time (%d s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
 						(int)elapsed, dm.m_user_log_scan_interval );
 			break; // break out of while loop
@@ -2381,7 +2376,6 @@ Dag::WriteScriptToRescue( FILE *fp, Script *script )
 void
 Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::TerminateJob] job=%s\n", job->GetJobName());
 	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
 
@@ -4137,8 +4131,7 @@ Dag::DecrementProcCount( Job *node )
 {
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::DecrementProcCount] node=%s, node->_queuedNodeJobProcs=%d\n", node->GetJobName(), node->_queuedNodeJobProcs );
-
+	
 	if( node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
 		node->Cleanup();

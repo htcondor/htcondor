@@ -92,7 +92,9 @@ enum ULogEventNumber {
 	/** Job performing stage-in   */  ULOG_JOB_STAGE_IN				= 31,
 	/** Job performing stage-out  */  ULOG_JOB_STAGE_OUT			= 32,
 	/** Attribute updated  */         ULOG_ATTRIBUTE_UPDATE			= 33,
-	/** PRE_SKIP event for DAGMan */  ULOG_PRESKIP					= 34
+    /** PRE_SKIP event for DAGMan */  ULOG_PRESKIP					= 34,
+    /** Cluster submitted         */  ULOG_CLUSTER_SUBMIT			= 35,
+    /** Cluster removed           */  ULOG_CLUSTER_REMOVED			= 36
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -1983,6 +1985,96 @@ class PreSkipEvent : public ULogEvent
     // dagman-supplied text to include in the log event
 	char* skipEventLogNotes;
 
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a Cluster Submit Log Event object.  Below is an example
+    Cluster Submit Log entry from Condor v8. <p>
+
+<PRE>
+000 (172.000.000) 10/20 16:56:54 Cluster submitted from host: <128.105.165.12:32779>
+...
+</PRE>
+*/
+class ClusterSubmitEvent : public ULogEvent
+{
+  public:
+    ///
+    ClusterSubmitEvent(void);
+    ///
+    ~ClusterSubmitEvent(void);
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
+
+    /** Return a ClassAd representation of this SubmitEvent.
+        @return NULL for failure, the ClassAd pointer otherwise
+    */
+    virtual ClassAd* toClassAd(void);
+
+    /** Initialize from this ClassAd.
+        @param a pointer to the ClassAd to initialize from
+    */
+    virtual void initFromClassAd(ClassAd* ad);
+
+    void setSubmitHost(char const *addr);
+
+ private:
+    /// For Condor v8, a host string in the form: "<128.105.165.12:32779>".
+    char *submitHost;
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a Cluster Remove Log Event object.  Below is an example
+    Cluster Remove Log entry from Condor v8. <p>
+
+<PRE>
+000 (172.000.000) 10/20 16:56:54 Cluster removed
+...
+</PRE>
+*/
+class ClusterRemovedEvent : public ULogEvent
+{
+  public:
+    ///
+    ClusterRemovedEvent(void);
+    ///
+    ~ClusterRemovedEvent(void);
+
+/** Read the body of the next Submit event.
+    @param file the non-NULL readable log file
+    @return 0 for failure, 1 for success
+*/
+virtual int readEvent (FILE *);
+
+/** Format the body of this event.
+    @param out string to which the formatted text should be appended
+    @return false for failure, true for success
+*/
+virtual bool formatBody( std::string &out );
+
+/** Return a ClassAd representation of this SubmitEvent.
+    @return NULL for failure, the ClassAd pointer otherwise
+*/
+virtual ClassAd* toClassAd(void);
+
+/** Initialize from this ClassAd.
+    @param a pointer to the ClassAd to initialize from
+*/
+virtual void initFromClassAd(ClassAd* ad);
+
+ private:
+    /// For Condor v8, a host string in the form: "<128.105.165.12:32779>".
+    char *submitHost;
 };
 
 #endif // __CONDOR_EVENT_H__

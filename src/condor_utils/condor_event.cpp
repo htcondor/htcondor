@@ -83,7 +83,9 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_JOB_STAGE_IN",			// Job staging in input files
 	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
 	"ULOG_ATTRIBUTE_UPDATE",			// Job attribute updated
-	"ULOG_PRESKIP"					// PRE_SKIP event for DAGMan
+	"ULOG_PRESKIP",					// PRE_SKIP event for DAGMan
+	"ULOG_CLUSTER_SUBMIT",			// Cluster submitted
+    "ULOG_CLUSTER_REMOVED" 			// Cluster removed
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -210,6 +212,12 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_PRESKIP:
 		return new PreSkipEvent;
+
+	case ULOG_CLUSTER_SUBMIT:
+		return new ClusterSubmitEvent;
+
+	case ULOG_CLUSTER_REMOVED:
+		return new ClusterRemovedEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
@@ -435,6 +443,12 @@ ULogEvent::toClassAd(void)
 		break;
 	case ULOG_ATTRIBUTE_UPDATE:
 		SetMyTypeName(*myad, "AttributeUpdateEvent");
+		break;
+	case ULOG_CLUSTER_SUBMIT:
+		SetMyTypeName(*myad, "ClusterSubmitEvent");
+		break;
+	case ULOG_CLUSTER_REMOVED:
+		SetMyTypeName(*myad, "ClusterRemovedEvent");
 		break;
 	  default:
 		delete myad;
@@ -5951,4 +5965,122 @@ void PreSkipEvent::setSkipNote(const char* s)
 	else {
 		skipEventLogNotes = NULL;
 	}
+}
+
+// ----- the ClusterSubmitEvent class
+ClusterSubmitEvent::ClusterSubmitEvent(void)
+{
+	eventNumber = ULOG_CLUSTER_SUBMIT;;
+	submitHost = NULL;
+}
+
+ClusterSubmitEvent::~ClusterSubmitEvent(void)
+{
+}
+
+void
+ClusterSubmitEvent::setSubmitHost(char const *addr)
+{
+	if( submitHost ) {
+		delete[] submitHost;
+	}
+	if( addr ) {
+		submitHost = strnewp(addr);
+		ASSERT( submitHost );
+	}
+	else {
+		submitHost = NULL;
+	}
+}
+
+bool
+ClusterSubmitEvent::formatBody( std::string &out )
+{
+	int retval = formatstr_cat (out, "Cluster submitted from host: %s\n", submitHost);
+	if (retval < 0)
+	{
+		return false;
+	}
+	return true;
+}
+
+int
+ClusterSubmitEvent::readEvent (FILE *file)
+{
+	
+	return 1;
+}
+
+ClassAd*
+ClusterSubmitEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if( submitHost && submitHost[0] ) {
+		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
+	}
+
+	return myad;
+}
+
+
+void
+ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+	char* mallocstr = NULL;
+	ad->LookupString("SubmitHost", &mallocstr);
+	if( mallocstr ) {
+		setSubmitHost(mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+}
+
+// ----- the ClusterRemovedEvent class
+ClusterRemovedEvent::ClusterRemovedEvent(void)
+{
+	eventNumber = ULOG_CLUSTER_REMOVED;
+}
+
+ClusterRemovedEvent::~ClusterRemovedEvent(void)
+{
+}
+
+bool
+ClusterRemovedEvent::formatBody( std::string &out )
+{
+	int retval = formatstr_cat (out, "Cluster removed\n");
+	if (retval < 0)
+	{
+		return false;
+	}
+	return true;
+}
+
+int
+ClusterRemovedEvent::readEvent (FILE *file)
+{
+	return 1;
+}
+
+ClassAd*
+ClusterRemovedEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	return myad;
+}
+
+
+void
+ClusterRemovedEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
 }
