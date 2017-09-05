@@ -11,3 +11,4 @@ job_collection_sku Standard
 job_frequency_type Minute
 job_interval 5
 key_vault_setup_script_url https://raw.githubusercontent.com/azmigproject/HTCondor/master/downloadsecret.sh
+ad_group_name GahpVMSSs
