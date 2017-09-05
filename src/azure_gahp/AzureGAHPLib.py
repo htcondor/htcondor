@@ -6,6 +6,7 @@ import base64
 import itertools
 import datetime
 import json
+import time
 from collections import deque
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.compute.models import DiskCreateOption
@@ -160,14 +161,18 @@ class AzureGAHPCommandExec():
             subscription_id)
         scheduler_client = SchedulerManagementClient(credentials,
             subscription_id)
+        keyvault_client = KeyVaultManagementClient(credentials, subscription_id)        
         resource_client.providers.register('Microsoft.Scheduler')
+        resource_client.providers.register('Microsoft.KeyVault')
 
         client_libs = {
             "compute_client": compute_client,
             "network_client": network_client,
             "resource_client": resource_client,
             "storage_client": storage_client,
-            "scheduler_client": scheduler_client}
+            "scheduler_client": scheduler_client,
+            "keyvault_client": keyvault_client
+            }
 
         self.write_message(request_id, "Creating client libraries: complete" + "\r\n")
         return client_libs
@@ -629,7 +634,7 @@ class AzureGAHPCommandExec():
         if len(subnets_of_vnet) > 0:
             if subnet_name != "":
                 for subnet in subnets_of_vnet:
-                    if subnet_name == subnet.name:
+                    if subnet_name.lower() == subnet.name.lower():
                         existing_subnet = subnet
                 if existing_subnet is None:
                     error = "'{}' subnet is not found in '{}' vnet".format(subnet_name, vnet_name)
@@ -678,7 +683,8 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
   
     # Create VMSS parameters
     def create_vmss_parameters(self, location, vmss_name, vm_size,capacity, storage_account_name, user_name, key_info, os_disk_name, subnet_id, load_balancer_info,
-                               vm_reference,os_type,tag,custom_data,data_disks, image_id, key_vault_download_command, key_vault_setup_script_url):
+                               vm_reference,os_type,tag,custom_data,data_disks, image_id,
+                               script_url, keyvault_name, secret_name, tenant_id):
         back_end_address_pool_id = load_balancer_info.backend_address_pools[0].id
         inbound_nat_pool_id = load_balancer_info.inbound_nat_pools[0].id 
         inbound_nat_pool_windows_id = load_balancer_info.inbound_nat_pools[1].id        
@@ -698,6 +704,9 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 "tier": "Standard",
                 "capacity": capacity
               },
+           "identity": {
+                "type": "systemAssigned"
+                },
             "virtual_machine_profile":
             {
                 "os_profile": {
@@ -765,9 +774,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             params["tags"] = tags
 
         base64_custom_data = ""
-        if key_vault_download_command != None:
-            base64_custom_data = self.get_base64_string(key_vault_download_command)
-        elif custom_data != "":
+        if custom_data != "":
             base64_custom_data = self.get_base64_string(custom_data)
         
         if(base64_custom_data != ""):
@@ -784,64 +791,23 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                       }
                 dd_arr.append(dd)
             params["virtual_machine_profile"]["storage_profile"]["data_disks"] = dd_arr
-    
-
-         ### Install extension ####
-        if (key_vault_setup_script_url != "" and key_vault_download_command !=
-        None):
-            pieces = key_vault_setup_script_url.split("/")
+   
+     # Install Linux MSI extension
+        if (script_url != "" and keyvault_name != "" and  secret_name != "" ):
+            pieces = script_url.split("/")
             length = len(pieces)
             filename = pieces[length - 1]
-            extension_profile = {"extensions":[{
-            "name":vmss_name + "ext",
-            "publisher":"Microsoft.Azure.Extensions",
-            "settings":{"commandToExecute":"bash {} >> deployment-setup.log".format(filename),"fileUris":[key_vault_setup_script_url]},
-            "type":"CustomScript",
-            "type_handler_version":"2.0"
-            }]}
+            extension_profile = {
+                "extensions":[{
+                        "name":vmss_name + "linuxmsiext",
+                        "publisher":"Microsoft.ManagedIdentity",
+                        "type": "ManagedIdentityExtensionForLinux",
+                        "type_handler_version": "1.0",
+                        "settings":{"port": 50342}
+                    }]
+                }
             params["virtual_machine_profile"]["extension_profile"] = extension_profile
-
-     ## Install Linux MSI extension
-     #   if (key_vault_setup_script_url != "" and key_vault_download_command != None):
-     #       pieces = key_vault_setup_script_url.split("/")
-     #       length = len(pieces)
-     #       filename = pieces[length - 1]
-     #       extension_profile = {
-     #           "extensions":[{
-     #               "name":vmss_name + "ext",
-     #               "publisher":"Microsoft.ManagedIdentity",
-     #               "type": "ManagedIdentityExtensionForLinux",
-     #               "type_handler_version": "1.0",
-     #               "settings":{"port": 50342}
-     #               }]
-     #           }
-     #       params["virtual_machine_profile"]["extension_profile"] = extension_profile
-
         return params
-
-    def get_vault_secret_download_shell_script(self, request_id, app_settings, keyvault_name, vault_key):
-       if(keyvault_name and vault_key):
-           secret_file_absolute_name = "/root/scripts/{}.txt".format(keyvault_name)
-           remove_old_secret_command = "rm {}".format(secret_file_absolute_name)
-           export_az_path_command = "export PATH=$PATH:/root/bin"
-           echo_path_command = "echo $PATH"
-           az_login_command = ("az login --service-principal -u {} --password {} "
-                       "--tenant {}".format(app_settings["client_id"], 
-                                            app_settings["secret"], 
-                                            app_settings["tenant_id"]))
-           download_secret_command = ("az keyvault secret download --file {} "
-                              "--vault-name {} --name {} --encoding utf-8"
-                              .format(secret_file_absolute_name, 
-                                      keyvault_name, 
-                                      vault_key))
-           shell_script = ("{} \n{} \n{} \n{} \n{}".format(remove_old_secret_command,
-                                                         export_az_path_command,
-                                                         echo_path_command,
-                                                         az_login_command,
-                                                         download_secret_command))
-           return shell_script
-       else:
-            return None
 
     def create_job(self, request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url,
                   job_group_name, job_collection_name, job_collection_sku, clean_job_webhook_url, clean_job_frequency, clean_job_interval, token):
@@ -852,24 +818,39 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         self.create_vmss_delete_job(request_id, resource_client, scheduler_client
                                         , job_group_name, location, job_collection_name, job_collection_sku
                                         , job_name, cleaner_job, group_name, "", schedule
-                                        , webhook_url, clean_job_webhook_url, clean_job_frequency, clean_job_interval, token)
+                                        , webhook_url, clean_job_webhook_url, clean_job_frequency, clean_job_interval, token)         
+
+    def add_keyvault_access_policy(self, tenant_id, principal_id, keyvault_properties):
+        access_policy = AccessPolicyEntry(tenant_id, principal_id, Permissions(keys=['all'], secrets=['all'], certificates=['all']))
+        keyvault_properties.properties.access_policies.append(access_policy)
+        return keyvault_properties
 
     # Create virtual machine scale set based on input parameters
-    def create_vmss(self, request_id, compute_client, network_client, resource_client, storage_client, scheduler_client, location, group_name, 
-                    vnet_name, vnet_rg_name, subnet_name, os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vmss_name,
-                    vm_size, vm_reference, os_type,tag,custom_data,data_disks, nodecount, deletion_job, schedule, keyvault_name, vault_key, 
-                    key_vault_download_command, key_vault_setup_script_url, webhook_url, job_group_name, job_collection_name, job_collection_sku,
-                    clean_job_webhook_url, clean_job_frequency, clean_job_interval, token):
-        
+    def create_vmss(
+            self, request_id, compute_client, network_client, 
+            resource_client, storage_client, scheduler_client, 
+            keyvault_client, location, group_name, vnet_name, 
+            vnet_rg_name, subnet_name, os_disk_name, 
+            storage_account_name, ip_config_name, nic_name, 
+            user_name, key, vmss_name, vm_size, vm_reference, 
+            os_type,tag, custom_data, data_disks, nodecount, 
+            deletion_job, schedule, keyvault_rg_name, keyvault_name, 
+            secret_name, script_url, webhook_url, job_group_name, 
+            job_collection_name, job_collection_sku, 
+            clean_job_webhook_url, clean_job_frequency, 
+            clean_job_interval, token, tenant_id):
+
         # Create deletion job
         if(deletion_job):
-              #self.create_job(request_id, resource_client, scheduler_client,
-              #group_name, location, schedule, webhook_url,
-              #clean_job_webhook_url, token)
-              self.create_job(request_id, resource_client, scheduler_client, group_name, location, schedule, webhook_url,
-                  job_group_name, job_collection_name, job_collection_sku, clean_job_webhook_url, clean_job_frequency, clean_job_interval, token)      
+              self.create_job(
+                  request_id, resource_client, scheduler_client, 
+                  group_name, location, schedule, webhook_url,
+                  job_group_name, job_collection_name, 
+                  job_collection_sku, clean_job_webhook_url, 
+                  clean_job_frequency, clean_job_interval, token)
 
-        self.create_resource_group(request_id, resource_client, group_name, location)
+        self.create_resource_group(
+            request_id, resource_client, group_name, location)
 
         #Create Virtual Network
         if vnet_name != "" and vnet_rg_name != "":
@@ -882,17 +863,20 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 # Create Subnet
                 self.write_message(request_id, "Creating subnet" + "\r\n")
                 address_prefix_ip = async_vnet.address_space.address_prefixes[0]
-                async_subnet_creation = network_client.subnets.create_or_update(vnet_rg_name,
-                    vnet_name,
-                    subnet_name,
+                async_subnet_creation = network_client.subnets.create_or_update(
+                    vnet_rg_name, vnet_name, subnet_name,
                     {"address_prefix": "{}".format(address_prefix_ip)})
                 subnet_info = async_subnet_creation.result()
         else:
             vnet_rg_name = group_name
             vnet_name = group_name + "vnet"
-            self.create_virtual_network(request_id, network_client, location, vnet_rg_name, vnet_name)            
+            self.create_virtual_network(
+                request_id, network_client, location, 
+                vnet_rg_name, vnet_name)            
             # Create Subnet
-            subnet_info = self.create_subnet(request_id, network_client, vnet_rg_name, vnet_name, subnet_name)
+            subnet_info = self.create_subnet(
+                request_id, network_client, vnet_rg_name, 
+                vnet_name, subnet_name)
 
         # Create load balancer
         public_ip_name = group_name + "pip"
@@ -900,23 +884,165 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         lb_front_ip = group_name + "lbfrontip"
         lb_addr_pool = group_name + "loadaddrpool"
         lb_prob = group_name + "loadprob"
-        load_balancer_info = self.create_load_balancers(request_id, network_client, group_name, location, public_ip_name, lb_front_ip, lb_addr_pool, lb_prob, lb_name)        
+        load_balancer_info = self.create_load_balancers(
+            request_id, network_client, group_name, location, 
+            public_ip_name, lb_front_ip, lb_addr_pool, lb_prob, 
+            lb_name)        
 
+        # Create image from VHD
         image_id = None
         image_name = group_name + "image"
         if "https://" in vm_reference:
-            image = self.create_image_from_vhd(request_id, compute_client, group_name, image_name, location, os_type, vm_reference)
+            image = self.create_image_from_vhd(
+                request_id, compute_client, group_name, 
+                image_name, location, os_type, vm_reference)
             image_id = image.id 
 
+        # Create VMSS
         self.write_message(request_id, "Creating vmss '{}' \r\n".format(vmss_name))            
-        vmss_parameters = self.create_vmss_parameters(location, vmss_name, vm_size, nodecount, storage_account_name, user_name, key, os_disk_name, subnet_info.id, load_balancer_info, vm_reference,os_type,tag,custom_data,data_disks, image_id, key_vault_download_command, key_vault_setup_script_url)
-        async_vmss_creation = compute_client.virtual_machine_scale_sets.create_or_update(group_name, vmss_name, vmss_parameters)
+        vmss_parameters = self.create_vmss_parameters(
+            location, vmss_name, vm_size, nodecount, 
+            storage_account_name, user_name, key, os_disk_name, 
+            subnet_info.id, load_balancer_info, vm_reference, 
+            os_type,tag,custom_data,data_disks, image_id, 
+            script_url, keyvault_name, secret_name, tenant_id)
+        async_vmss_creation = compute_client.virtual_machine_scale_sets.create_or_update(
+            group_name, vmss_name, vmss_parameters)
         vmss_info = async_vmss_creation.result()
+
+        # Download secret from Azure keyvault
+        if (keyvault_rg_name != "" and keyvault_name != ""
+            and  script_url != "" and vmss_info.identity is not None):
+
+            # Add access policy in the keyvault
+            self.write_message(
+                request_id, ("Adding access policy in {} "
+                             "keyvault\r\n".format(keyvault_name)))
+            keyvault = self.create_keyvault_access_policy(
+                keyvault_client, keyvault_rg_name, keyvault_name, 
+                tenant_id, vmss_info.identity.principal_id)
+            self.write_message(
+                request_id, ("Adding access policy: complete\r\n"))
+
+            # Create extension to run shell script
+            self.write_message(
+                request_id, 
+                ("Creating extension for shell script\r\n"))
+            
+            self.waiting_for_succeeded_status(compute_client, group_name, vmss_name)
+
+            extension = self.install_download_secret_extension(
+                compute_client, group_name, vmss_name, script_url, 
+                keyvault_name, secret_name, tenant_id)
+            self.write_message(
+                request_id, ("Creating extension: complete\r\n"))
+
+            # Update the VMSS instances to latest model
+            self.write_message(
+                request_id, ("Updating VMSS to latest model\r\n"))
+            updated_vmss_instances = self.update_vmss_instances(
+                compute_client, group_name, vmss_name)
+            self.write_message(
+                request_id, ("Updating VMSS: complete\r\n"))
+
         self.write_message(request_id, "VMSS creation completed\r\n")
 
-    def create_scheduler_job_collection(self, request_id, scheduler_client, group_name, location, job_collection_name, sku_name):
+    #
+    def waiting_for_succeeded_status(self, compute_client, group_name, vmss_name):
+        flag = True
+        while(flag):
+            time.sleep(10)
+            vmss_instances = compute_client.virtual_machine_scale_set_vms.list(
+                group_name, vmss_name)
+            flag = self.get_status(compute_client, group_name, vmss_name, vmss_instances)
+    # 
+    def get_status(self, compute_client, group_name, vmss_name, vmss_instances):
+        flag = False
+        for instance in vmss_instances:
+            id = instance.instance_id
+            vmss_node = compute_client.virtual_machine_scale_set_vms.get_instance_view(group_name, vmss_name, id)
+            statuses = vmss_node.statuses
+            num_status = len(statuses)
+        
+            for i in range(num_status):
+                if("SUCCEEDED" not in statuses[i].code.upper()
+                    and "RUNNING" not in statuses[i].code.upper()):
+                    flag =  True        
+        return flag
+
+    # Create access policy in an Azure keyvault
+    def create_keyvault_access_policy(
+            self, keyvault_client, keyvault_rg_name, keyvault_name, 
+            tenant_id, principal_id):
+        keyvault_properties = keyvault_client.vaults.get(
+            keyvault_rg_name, keyvault_name)
+        keyvault_paramters = self.add_keyvault_access_policy(
+            tenant_id, principal_id, keyvault_properties)
+        param = {
+            'location': keyvault_paramters.location,
+            'properties': keyvault_paramters.properties
+            }
+        keyvault = keyvault_client.vaults.create_or_update(
+            keyvault_rg_name, keyvault_name, param)
+        return keyvault
+    
+    # Create extension to run shell script to 
+    # download secret from Azure key vault
+    def install_download_secret_extension(
+            self, compute_client, group_name, vmss_name, 
+            script_url, keyvault_name, secret_name, tenant_id):        
+        extension = self.get_download_secret_ext_params(
+                vmss_name, script_url, keyvault_name, 
+                secret_name, tenant_id
+                )
+        extension_name = vmss_name + "_downloadsecret"
+        async_extension_creation = compute_client.virtual_machine_scale_set_extensions.create_or_update(
+            group_name, vmss_name, extension_name, extension)
+        return async_extension_creation.result()
+    
+    # Creates parameters for custom shell script extension
+    def get_download_secret_ext_params(
+            self, vmss_name, script_url, keyvault_name, 
+            secret_name, tenant_id):
+        pieces = script_url.split("/")
+        length = len(pieces)
+        filename = pieces[length - 1]
+        properties = {
+            "publisher": "Microsoft.Azure.Extensions",
+            "type": "CustomScript",
+            "type_handler_version": "2.0",
+            "settings": {
+                "fileUris": [script_url],
+                "commandToExecute": (
+                    "bash {} {} {} {} >> script-execution.log".format(
+                        filename, keyvault_name, 
+                        secret_name, tenant_id
+                        )
+                    )
+                }
+            }
+        return properties
+        
+    # Update the VMSS instances to latest model
+    def update_vmss_instances(
+            self, compute_client, group_name, vmss_name):
+        vmss_instances = compute_client.virtual_machine_scale_set_vms.list(
+            group_name, vmss_name)
+        instance_ids = []
+        for instance in vmss_instances:
+            instance_ids.append(instance.instance_id)
+        async_vmss_instances_update = compute_client.virtual_machine_scale_sets.update_instances(
+            group_name, vmss_name, instance_ids)
+        return async_vmss_instances_update.result()
+
+    def create_scheduler_job_collection(
+            self, request_id, scheduler_client, group_name, 
+            location, job_collection_name, sku_name):
         # Create job collection
-        self.write_message(request_id, "Creating job collection '{}'\r\n".format(job_collection_name))
+        self.write_message(
+            request_id, 
+            ("Creating job collection '{}'\r\n"
+             .format(job_collection_name)))
         param = {"location": "Central India",
                   "properties": {
                     "sku": {
@@ -925,9 +1051,9 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                     "state": "Enabled"
                   }
                 }
-        scheduler_client.job_collections.create_or_update(group_name,job_collection_name,param)
+        scheduler_client.job_collections.create_or_update(
+            group_name,job_collection_name,param)
 
-    
     def get_recurrence_frequency(self, request_id, frequency):
         result = ""
         if (frequency.upper() in RecurrenceFrequency.minute.value.upper()):
@@ -1052,7 +1178,6 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         elif(group_name != "" and vmss_name == ""):
             self.delete_rg(request_id, resource_client, group_name)
         
-
      # Delete vm by resource group and vm name
     def delete_vm_and_associated_artifacts(self, request_id, compute_client, network_client, group_name, vm_name):
         vm = compute_client.virtual_machines.get(group_name, vm_name)
@@ -1411,22 +1536,19 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
                 if(client_libs is None):
                     self.queue_result(ci.request_id, self.escape("Error creating client libraries"))
                     return
-                #scheduler_configuration =
-                #self.create_scheduler_configuration_from_file(ci.request_id,
-                #ci.cred_file)
                 app_settings = self.read_app_settings_from_file(ci.cred_file)
-                key_vault_download_command = self.get_vault_secret_download_shell_script(ci.request_id, app_settings, ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"])
-                self.create_vmss(ci.request_id, client_libs["compute_client"], client_libs["network_client"], client_libs["resource_client"], 
-                                 client_libs["storage_client"], client_libs["scheduler_client"], ci.cmdParams["location"], ci.cmdParams["name"],
+                self.create_vmss(ci.request_id, client_libs["compute_client"], client_libs["network_client"], client_libs["resource_client"],
+                                 client_libs["storage_client"], client_libs["scheduler_client"], client_libs["keyvault_client"],
+                                 ci.cmdParams["location"], ci.cmdParams["name"],
                                  ci.cmdParams["vnetName"], ci.cmdParams["vnetRGName"], ci.cmdParams["subnetName"], ci.cmdParams["osDiskName"],
                                  ci.cmdParams["storageAccountName"], ci.cmdParams["ipConfigName"], ci.cmdParams["nicName"], ci.cmdParams["adminUsername"],
                                  ci.cmdParams["key"], ci.cmdParams["vmName"], ci.cmdParams["size"], ci.cmdParams["vmRef"], ci.cmdParams["osType"],
                                  ci.cmdParams["tag"],ci.cmdParams["customdata"], ci.cmdParams["datadisks"], ci.cmdParams["nodecount"],
-                                 ci.cmdParams["deletionJob"], ci.cmdParams["schedule"], ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"],
-                                 key_vault_download_command, app_settings["key_vault_setup_script_url"], app_settings["webhook_url"], 
-                                 app_settings["jobs_rg"], app_settings["job_collection"], app_settings["job_collection_sku"], app_settings["clean_job_webhook_url"],
-                                 app_settings["job_frequency_type"], app_settings["job_interval"],
-                                 app_settings["token"])
+                                 ci.cmdParams["deletionJob"], ci.cmdParams["schedule"],
+                                 ci.cmdParams["keyvaultrg"], ci.cmdParams["keyvaultname"], ci.cmdParams["vaultkey"],app_settings["key_vault_setup_script_url"],
+                                 app_settings["webhook_url"], app_settings["jobs_rg"], app_settings["job_collection"], app_settings["job_collection_sku"], 
+                                 app_settings["clean_job_webhook_url"], app_settings["job_frequency_type"], app_settings["job_interval"],
+                                 app_settings["token"], app_settings["tenant_id"])
                 self.queue_result(ci.request_id, "NULL")
             except Exception as e:
                 error = self.escape(str(e.args[0]))    
@@ -1608,7 +1730,7 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
             "linux-ubuntu-latest": {"publisher": "Canonical", "offer": "UbuntuServer", "sku": "16.04.0-LTS", "version": "latest"},
             "windows-server-latest": {"publisher": "MicrosoftWindowsServer", "offer": "WindowsServer", "sku": "2012-R2-Datacenter","version": "latest"}            
         }
-        create_vm_arg_names = ["DeletionJob","name","location","image", "size", "dataDisks","adminUsername","key", "vnetName", "vnetRGName", "publicIPAddress", "customData", "tag", "ostype", "nodecount", "schedule", "keyvaultname", "vaultkey"]
+        create_vm_arg_names = ["DeletionJob","name","location","image", "size", "dataDisks","adminUsername","key", "vnetName", "vnetRGName", "publicIPAddress", "customData", "tag", "ostype", "nodecount", "schedule", "keyvaultrg", "keyvaultname", "vaultkey"]
         dnary = dict()
         
         for index,nvp_string in enumerate(cmd_parts):
@@ -1677,8 +1799,12 @@ os_disk_name, storage_account_name, ip_config_name, nic_name, user_name, key, vm
         if(not "nodecount" in dnary):
             dnary["nodecount"] = 1
 
+        if(not "keyvaultrg" in dnary):
+            dnary["keyvaultrg"] = ""
+
         if(not "keyvaultname" in dnary):
             dnary["keyvaultname"] = ""
+       
 
         if(not "vaultkey" in dnary):
             dnary["vaultkey"] = ""
