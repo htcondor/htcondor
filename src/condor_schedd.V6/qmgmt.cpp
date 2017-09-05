@@ -928,6 +928,15 @@ QmgmtPeer::getOwner() const
 }
 
 const char*
+QmgmtPeer::getDomain() const
+{
+	if ( sock ) {
+		return sock->getDomain();
+	}
+	return NULL;
+}
+
+const char*
 QmgmtPeer::getRealOwner() const
 {
 	if ( sock ) {
@@ -1815,6 +1824,34 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 
 	if (digest_text && digest_text[0]) {
 
+		// we have to switch to user priv before parsing the submit digest because there MAY be an itemdata file.
+		// PRAGMA_REMIND("TODO: move setpriv down into MakeJobFactory so we can skip it if there is no itemdata?")
+		priv_state priv = PRIV_UNKNOWN;
+		bool restore_priv = false;
+		if (Q_SOCK) {
+			if ( ! init_user_ids(Q_SOCK->getOwner(), Q_SOCK->getDomain())) {
+				errno = EACCES;
+				return rval;
+			}
+			set_user_priv();
+			restore_priv = true;
+		}
+
+		// parse the submit digest and (possibly) open the itemdata file.
+		JobFactory * factory = MakeJobFactory(cluster_id, digest_text);
+
+		if (restore_priv) {
+			set_priv(priv);
+			uninit_user_ids();
+		}
+
+		if ( ! factory) {
+			dprintf(D_MATERIALIZE, "Failing remote SetJobFactory %d because MakeJobFactory failed\n", cluster_id);
+			return rval;
+		}
+
+		// If the submit digest parsed correctly, we need to write it to spool so we can re-load if the schedd is restarted
+		//
 		GetSpooledSubmitDigestPath(spooled_filename, cluster_id, Spool);
 		filename = spooled_filename.c_str();
 
@@ -1829,6 +1866,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 				dprintf(D_ALWAYS,
 					"Failed SetJobFactory %d because create parent spool directory of '%s' failed, errno = %d (%s)\n",
 						cluster_id, parent.c_str(), errno, strerror(errno));
+				DestroyJobFactory(factory); factory = NULL;
 				errno = saved_errno;
 				return -1;
 			}
@@ -1844,6 +1882,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 			saved_errno = errno;
 			dprintf(D_ALWAYS, "Failing SetJobFactory %d because creat of '%s' failed, errno = %d (%s)\n",
 				cluster_id, filename, errno, strerror(errno));
+			DestroyJobFactory(factory); factory = NULL;
 			errno = saved_errno;
 			return -1;
 		}
@@ -1868,27 +1907,25 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 			if (unlink(filename) < 0) {
 				dprintf(D_FULLDEBUG, "SetJobFactory %d failed to unlink file '%s' errno = %d (%s)\n", cluster_id, filename, errno, strerror(errno));
 			}
+			DestroyJobFactory(factory); factory = NULL;
 			errno = saved_errno;
 			return rval;
 		}
 
-		JobFactory * factory = MakeJobFactory(cluster_id, digest_text);
-		if (factory) {
-			// to be extra careful, make sure that we don't have a factory pointer for that cluster already.
-			// if we do have one, delete the factory we just loaded and fail. this could only happen if
-			// condor_submit or the python bindings invoked the set_job_factory rpc twice in a row for the same
-			// cluster.  it's unlikely, but if they did we would end up leaking memory...
-			JobFactory*& pending = JobFactoriesSubmitPending[cluster_id];
-			if (pending) {
-				dprintf(D_ALWAYS, "Failing SetJobFactory %d because factory has already been set!\n", cluster_id);
-				DestroyJobFactory(factory); factory = NULL;
-				rval = -1;
-				return rval;
-			} else {
-				// ok, there wasn't a factory already, so save off the one we just created.
-				// the commit of this submit will find it and attach it to the cluster object.
-				pending = factory;
-			}
+		// to be extra careful, make sure that we don't have a factory pointer for that cluster already.
+		// if we do have one, delete the factory we just loaded and fail. this could only happen if
+		// condor_submit or the python bindings invoked the set_job_factory rpc twice in a row for the same
+		// cluster.  it's unlikely, but if they did we would end up leaking memory...
+		JobFactory*& pending = JobFactoriesSubmitPending[cluster_id];
+		if (pending) {
+			dprintf(D_ALWAYS, "Failing SetJobFactory %d because factory has already been set!\n", cluster_id);
+			DestroyJobFactory(factory); factory = NULL;
+			rval = -1;
+			return rval;
+		} else {
+			// ok, there wasn't a factory already, so save off the one we just created.
+			// the commit of this submit will find it and attach it to the cluster object.
+			pending = factory;
 		}
 	}
 
