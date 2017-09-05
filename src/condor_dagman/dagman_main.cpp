@@ -113,8 +113,8 @@ Dagman::Dagman() :
 	submit_delay (0),
 	max_submit_attempts (6),
 	max_submits_per_interval (MAX_SUBMITS_PER_INT_DEFAULT), // so Coverity is happy
-	m_user_log_scan_interval (LOG_SCAN_INT_DEFAULT),
 	aggressive_submit (false),
+	m_user_log_scan_interval (LOG_SCAN_INT_DEFAULT),
 	primaryDagFile (""),
 	multiDags (false),
 	startup_cycle_detect (false), // so Coverity is happy

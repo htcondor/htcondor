@@ -100,6 +100,9 @@ Sock::Sock() : Stream(), _policy_ad(NULL) {
     mdMode_ = MD_OFF;
     mdKey_ = 0;
 
+	connect_state.retry_timeout_interval = CONNECT_TIMEOUT;
+	connect_state.first_try_start_time = 0;
+
 	m_connect_addr = NULL;
     addr_changed();
 }

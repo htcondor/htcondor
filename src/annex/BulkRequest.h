@@ -27,6 +27,7 @@ class BulkRequest : public Functor {
 		EC2GahpClient * gahp;
 		ClassAd * reply;
 		ClassAd * scratchpad;
+		std::string annexID;
 
 		std::string service_url, public_key_file, secret_key_file;
 		std::string client_token, spot_price, target_capacity;
