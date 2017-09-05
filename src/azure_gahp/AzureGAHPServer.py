@@ -3,53 +3,35 @@ import platform
 
 import AzureGAHPLib
 
-double_line_break = "\r\n"
-
-class GahpCommandBuilder():
-    def __init__(self):
-        self.azure_keyvault_create = "AZURE_KEYVAULT_CREATE"
-        self.azure_ping = "AZURE_PING"
-        self.azure_vmss_create = "AZURE_VMSS_CREATE"
-        self.azure_vmss_delete = "AZURE_VMSS_DELETE"
-        self.azure_vmss_restart = "AZURE_VMSS_RESTART"
-        self.azure_vmss_scale = "AZURE_VMSS_SCALE"
-        self.azure_vmss_start = "AZURE_VMSS_START"
-        self.azure_vmss_stop = "AZURE_VMSS_STOP"
-        self.azure_vm_create = "AZURE_VM_CREATE"
-        self.azure_vm_delete = "AZURE_VM_DELETE"
-        self.azure_vm_list = "AZURE_VM_LIST"
-        self.commands = "COMMANDS"
-        self.quit = "QUIT"
-        self.results = "RESULTS"
-        self.version = "VERSION"
+double_line_break = "{}"
 
 class GahpMinParamsCountBuilder():
     def __init__(self):
-        self.azure_keyvault_create = 8
-        self.azure_ping = 4
-        self.azure_vmss_create = 5
-        self.azure_vmss_delete = 5
-        self.azure_vmss_restart = 6
-        self.azure_vmss_scale = 7
-        self.azure_vmss_start = 6
-        self.azure_vmss_stop = 6
-        self.azure_vm_create = 5
-        self.azure_vm_delete = 5
-        self.azure_vm_list = 4
+        self.create_keyvault = 8
+        self.create_vm = 5
+        self.create_vmss = 5
+        self.delete_vm = 5
+        self.delete_vmss = 5
+        self.list_vm = 4
+        self.ping_azure = 4
+        self.restart_vmss = 6
+        self.scale_vmss = 7
+        self.start_vmss = 6
+        self.stop_vmss = 6
 
 class GahpCommandUsageBuilder():
     def __init__(self):
-        self.azure_keyvault_create = "<SP>name=<Resource group name> location=<Region> sku=<SKU> users=<user_id0>,<user_id1>,..."
-        self.azure_ping = ""
-        self.azure_vmss_create = "<SP>name=vmssName<SP>location=region<SP>size=vmssSize<SP>image=osImage<SP>[dataDisks=disk1,disk2,...<SP>adminUsername=userName<SP>key=sshKeyOrPassword<SP>vnetName=azureVnetName<SP>publicIPAddress=vmPublicIpAddress<SP>customData=textOrScriptFile<SP>tag=vmTagName]<SP>nodecount=VmNodes"
-        self.azure_vmss_delete = "<SP>vmssName"
-        self.azure_vmss_restart = "<SP>groupName<SP>vmssName"
-        self.azure_vmss_scale = "<SP>vmssName<SP>requiredVmssNodeCount[must be greater than 0]"
-        self.azure_vmss_start = "<SP>groupName<SP>vmssName"
-        self.azure_vmss_stop = "<SP>groupName<SP>vmssName"
-        self.azure_vm_create = "<SP>name=vmName<SP>location=region<SP>size=vmSize<SP>image=osImage<SP>[dataDisks=disk1,disk2,...<SP>adminUsername=userName<SP>key=sshKeyOrPassword<SP>vnetName=azureVnetName<SP>publicIPAddress=vmPublicIpAddress<SP>customData=textOrScriptFile<SP>tag=vmTagName]"
-        self.azure_vm_delete = "<SP>vmName"
-        self.azure_vm_list = ""
+        self.create_keyvault = "<SP>name=<Resource group name> location=<Region> sku=<SKU> users=<user_id0>,<user_id1>,..."
+        self.ping_azure = ""
+        self.create_vmss = "<SP>name=vmssName<SP>location=region<SP>size=vmssSize<SP>image=osImage<SP>[dataDisks=disk1,disk2,...<SP>adminUsername=userName<SP>key=sshKeyOrPassword<SP>vnetName=azureVnetName<SP>publicIPAddress=vmPublicIpAddress<SP>customData=textOrScriptFile<SP>tag=vmTagName]<SP>nodecount=VmNodes"
+        self.delete_vmss = "<SP>vmssName"
+        self.restart_vmss = "<SP>groupName<SP>vmssName"
+        self.scale_vmss = "<SP>vmssName<SP>requiredVmssNodeCount[Between 0 and 100]"
+        self.start_vmss = "<SP>groupName<SP>vmssName"
+        self.stop_vmss = "<SP>groupName<SP>vmssName"
+        self.create_vm = "<SP>name=vmName<SP>location=region<SP>size=vmSize<SP>image=osImage<SP>[dataDisks=disk1,disk2,...<SP>adminUsername=userName<SP>key=sshKeyOrPassword<SP>vnetName=azureVnetName<SP>publicIPAddress=vmPublicIpAddress<SP>customData=textOrScriptFile<SP>tag=vmTagName]"
+        self.delete_vm = "<SP>vmName"
+        self.list_vm = ""
 
 def is_error_with_input_command_params(
         input_command_params, usage, min_params_count):
@@ -109,119 +91,119 @@ while(True):
     common_paramters = "<SP><request-ID><SP><cred-file><SP><subscription>"
 
     min_params_count = GahpMinParamsCountBuilder()
-    gahp_commands = GahpCommandBuilder()
-    gahp_commands_usage = GahpCommandUsageBuilder()
+    cmds = AzureGAHPLib.GahpCommandBuilder()
+    cmds_usage = GahpCommandUsageBuilder()
     
     for i in range(len(input_command_params)):
         input_command_params[i] = input_command_params[i].replace(
             unique_str, AzureGAHPLib.space_separator)
 
     input_command = input_command_params[0]
-    if(input_command.upper() == gahp_commands.commands):
-        all_commands = vars(gahp_commands)
+    if(input_command.upper() == cmds.commands):
+        all_commands = vars(cmds)
         sys.stdout.write("{} ".format(s_alphabet))
         for command in all_commands.values():
             sys.stdout.write("{} ".format(command))
         sys.stdout.write("{}".format(double_line_break))
         continue
-    elif(input_command.upper() == gahp_commands.version):
+    elif(input_command.upper() == cmds.version):
         print("{} {}".format(s_alphabet, version))
         continue
-    elif(input_command.upper() == gahp_commands.results):
+    elif(input_command.upper() == cmds.results):
         agce.deque_all_results_and_print()
         continue
-    elif(input_command.upper() == gahp_commands.quit):
+    elif(input_command.upper() == cmds.quit):
         print(s_alphabet)
         sys.exit()
-    elif(input_command.upper() == gahp_commands.azure_keyvault_create):
+    elif(input_command.upper() == cmds.create_keyvault):
         usage = "{}{}{}<CRLF>".format(
-            gahp_commands.azure_keyvault_create, common_paramters, 
-            gahp_commands_usage.azure_keyvault_create)
+            cmds.create_keyvault, common_paramters, 
+            cmds_usage.create_keyvault)
         if (is_error_with_input_command_params(
                 input_command_params, usage, 
-                min_params_count.azure_keyvault_create)
+                min_params_count.create_keyvault)
             ):
             continue
         print(s_alphabet)
-    elif(input_command.upper() == gahp_commands.azure_ping):
+    elif(input_command.upper() == cmds.ping_azure):
         usage = "{}{}{}<CRLF>".format(
-            gahp_commands.azure_ping, common_paramters, 
-            gahp_commands_usage.azure_ping)
+            cmds.ping_azure, common_paramters, 
+            cmds_usage.ping_azure)
         if (is_error_with_input_command_params(
                 input_command_params, usage, 
-                min_params_count.azure_ping)
+                min_params_count.ping_azure)
             ):
             continue
         print(s_alphabet)
-    elif(input_command.upper() == gahp_commands.azure_vmss_create):
+    elif(input_command.upper() == cmds.create_vmss):
         usage = "{}{}{}<CRLF>".format(
-            gahp_commands.azure_vmss_create, common_paramters, 
-            gahp_commands_usage.azure_vmss_create)
+            cmds.create_vmss, common_paramters, 
+            cmds_usage.create_vmss)
         if (is_error_with_input_command_params(
                 input_command_params, usage, 
-                min_params_count.azure_vmss_create)
+                min_params_count.create_vmss)
             ):
             continue
         print(s_alphabet)
-    elif(input_command.upper() == gahp_commands.azure_vmss_delete):
+    elif(input_command.upper() == cmds.delete_vmss):
         usage = "{}{}{}<CRLF>".format(
-            gahp_commands.azure_vmss_delete, common_paramters, 
-            gahp_commands_usage.azure_vmss_delete)
+            cmds.delete_vmss, common_paramters, 
+            cmds_usage.delete_vmss)
         if (is_error_with_input_command_params(
                 input_command_params, usage, 
-                min_params_count.azure_vmss_delete)
+                min_params_count.delete_vmss)
             ):
             continue
         print(s_alphabet)
-    elif(input_command.upper() == gahp_commands.azure_vmss_scale):
+    elif(input_command.upper() == cmds.scale_vmss):
         usage = "{}{}{}<CRLF>".format(
-            gahp_commands.azure_vmss_scale, common_paramters, 
-            gahp_commands_usage.azure_vmss_scale)
+            cmds.scale_vmss, common_paramters, 
+            cmds_usage.scale_vmss)
         if (is_error_with_input_command_params(
                 input_command_params, usage, 
-                min_params_count.azure_vmss_scale)
+                min_params_count.scale_vmss)
             ):
             continue
         print(s_alphabet)
-    elif(input_command.upper() == gahp_commands.azure_vmss_start 
-         or input_command.upper() == gahp_commands.azure_vmss_stop
-         or input_command.upper() == gahp_commands.azure_vmss_restart):
+    elif(input_command.upper() == cmds.start_vmss 
+         or input_command.upper() == cmds.stop_vmss
+         or input_command.upper() == cmds.restart_vmss):
         usage = "{}{}{}<CRLF>".format(
-            gahp_commands.azure_vmss_start, common_paramters, 
-            gahp_commands_usage.azure_vmss_start)
+            cmds.start_vmss, common_paramters, 
+            cmds_usage.start_vmss)
         if (is_error_with_input_command_params(
                 input_command_params, usage, 
-                min_params_count.azure_vmss_start)
+                min_params_count.start_vmss)
             ):
             continue
         print(s_alphabet)
-    elif(input_command.upper() == gahp_commands.azure_vm_create):
+    elif(input_command.upper() == cmds.create_vm):
         usage = "{}{}{}<CRLF>".format(
-            gahp_commands.azure_vm_create, common_paramters, 
-            gahp_commands_usage.azure_vm_create)
+            cmds.create_vm, common_paramters, 
+            cmds_usage.create_vm)
         if (is_error_with_input_command_params(
                 input_command_params, usage, 
-                min_params_count.azure_vm_create)
+                min_params_count.create_vm)
             ):
             continue
         print(s_alphabet)
-    elif(input_command.upper() == gahp_commands.azure_vm_delete):
+    elif(input_command.upper() == cmds.delete_vm):
         usage = "{}{}{}<CRLF>".format(
-            gahp_commands.azure_vm_delete, common_paramters, 
-            gahp_commands_usage.azure_vm_delete)
+            cmds.delete_vm, common_paramters, 
+            cmds_usage.delete_vm)
         if (is_error_with_input_command_params(
                 input_command_params, usage, 
-                min_params_count.azure_vm_delete)
+                min_params_count.delete_vm)
             ):
             continue
         print(s_alphabet)
-    elif(input_command.upper() == gahp_commands.azure_vm_list):
+    elif(input_command.upper() == cmds.list_vm):
         usage = "{}{}{}<CRLF>".format(
-            gahp_commands.azure_vm_list, common_paramters, 
-            gahp_commands_usage.azure_vm_list)
+            cmds.list_vm, common_paramters, 
+            cmds_usage.list_vm)
         if (is_error_with_input_command_params(
                 input_command_params, usage, 
-                min_params_count.azure_vm_list)
+                min_params_count.list_vm)
             ):
             continue
         print(s_alphabet)
