@@ -3,6 +3,8 @@ import platform
 
 import AzureGAHPLib
 
+double_line_break = "\r\n"
+
 class GahpCommandBuilder():
     def __init__(self):
         self.azure_keyvault_create = "AZURE_KEYVAULT_CREATE"
@@ -27,25 +29,25 @@ class GahpMinParamsCountBuilder():
         self.azure_ping = 4
         self.azure_vmss_create = 5
         self.azure_vmss_delete = 5
-        self.azure_vmss_restart = 5
-        self.azure_vmss_scale = 5
-        self.azure_vmss_start = 5
-        self.azure_vmss_stop = 5
+        self.azure_vmss_restart = 6
+        self.azure_vmss_scale = 7
+        self.azure_vmss_start = 6
+        self.azure_vmss_stop = 6
         self.azure_vm_create = 5
         self.azure_vm_delete = 5
         self.azure_vm_list = 4
 
 class GahpCommandUsageBuilder():
     def __init__(self):
-        self.azure_keyvault_create = "<SP>name=<Resource group name> location=<Region> sku=<SKU> users={{‘<user_id0>’, ‘<user_id1>’, …}}"
+        self.azure_keyvault_create = "<SP>name=<Resource group name> location=<Region> sku=<SKU> users=<user_id0>,<user_id1>,..."
         self.azure_ping = ""
-        self.azure_vmss_create = "<SP>name=vmssName<SP>location=region<SP>size=vmssSize<SP>image=osImage<SP>[dataDisks=disk1,disk2,...<SP>adminUsername=userName<SP>adminSshKey=sshKey<SP>vnetName=azureVnetName<SP>publicIPAddress=vmPublicIpAddress<SP>customData=textOrScriptFile<SP>tag=vmTagName]<SP>nodecount=VmNodes"
+        self.azure_vmss_create = "<SP>name=vmssName<SP>location=region<SP>size=vmssSize<SP>image=osImage<SP>[dataDisks=disk1,disk2,...<SP>adminUsername=userName<SP>key=sshKeyOrPassword<SP>vnetName=azureVnetName<SP>publicIPAddress=vmPublicIpAddress<SP>customData=textOrScriptFile<SP>tag=vmTagName]<SP>nodecount=VmNodes"
         self.azure_vmss_delete = "<SP>vmssName"
         self.azure_vmss_restart = "<SP>groupName<SP>vmssName"
-        self.azure_vmss_scale = "<SP>vmssName<SP>vmssNodeCount"
+        self.azure_vmss_scale = "<SP>vmssName<SP>requiredVmssNodeCount[must be greater than 0]"
         self.azure_vmss_start = "<SP>groupName<SP>vmssName"
         self.azure_vmss_stop = "<SP>groupName<SP>vmssName"
-        self.azure_vm_create = "<SP>name=vmName<SP>location=region<SP>size=vmSize<SP>image=osImage<SP>[dataDisks=disk1,disk2,...<SP>adminUsername=userName<SP>adminSshKey=sshKey<SP>vnetName=azureVnetName<SP>publicIPAddress=vmPublicIpAddress<SP>customData=textOrScriptFile<SP>tag=vmTagName]"
+        self.azure_vm_create = "<SP>name=vmName<SP>location=region<SP>size=vmSize<SP>image=osImage<SP>[dataDisks=disk1,disk2,...<SP>adminUsername=userName<SP>key=sshKeyOrPassword<SP>vnetName=azureVnetName<SP>publicIPAddress=vmPublicIpAddress<SP>customData=textOrScriptFile<SP>tag=vmTagName]"
         self.azure_vm_delete = "<SP>vmName"
         self.azure_vm_list = ""
 
@@ -116,10 +118,11 @@ while(True):
 
     input_command = input_command_params[0]
     if(input_command.upper() == gahp_commands.commands):
-        print("{}".format(s_alphabet))
         all_commands = vars(gahp_commands)
+        sys.stdout.write("{} ".format(s_alphabet))
         for command in all_commands.values():
-            print("{} ".format(command))
+            sys.stdout.write("{} ".format(command))
+        sys.stdout.write("{}".format(double_line_break))
         continue
     elif(input_command.upper() == gahp_commands.version):
         print("{} {}".format(s_alphabet, version))
