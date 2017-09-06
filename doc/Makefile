@@ -21,10 +21,6 @@ FIGURES =		$(FIG_FIGS:%.eps=%.pdf) \
 				$(DOT_FIGS:%.eps=%.pdf) \
 				$(PS_FIGS:%.ps=%.pdf)
 
-LINKS =			font.tex \
-				fontsize.tex \
-				figuresizing.tex
-
 LATEX_ARGS =	-file-line-error-style -halt-on-error
 
 # Convert the list of each ${manpage}.tex sourced to build the manual
@@ -79,7 +75,6 @@ just-man-pages : just-man-pages.tex
 .SECONDARY : $(FIG_FIGS)
 
 clean : figures-clean tex-clean pdf-clean html-clean man-clean
-	@rm -f $(LINKS)
 
 figures-clean :
 	@rm -f $(FIG_FIGS)
