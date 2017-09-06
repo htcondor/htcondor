@@ -18,6 +18,24 @@
 
 if (NOT WINDOWS)
 
+install(FILES		condor-annex-ec2
+		DESTINATION	"${C_ETC_EXAMPLES}"
+		PERMISSIONS ${CONDOR_SCRIPT_PERMS}
+)
+
+# Only install the ec2 configuration and master shutdown script on RHEL for now
+if (RPM_SYSTEM_NAME)
+install(FILES		50ec2.config
+		DESTINATION	"${C_CONFIGD}"
+)
+
+install(FILES		master_shutdown_script.sh
+		DESTINATION	"${C_CONFIGD}/.."
+		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
+)
+endif (RPM_SYSTEM_NAME)
+
+
 install(FILES		condor.sysconfig
 		DESTINATION	"${C_SYSCONFIG}"
 		PERMISSIONS ${CONDOR_SCRIPT_PERMS}
@@ -47,6 +65,7 @@ install (FILES
 		condor.service
 		condor.socket
 		condor-tmpfiles.conf
+		condor-annex-ec2.service
 		DESTINATION ${C_ETC_EXAMPLES})
 
 install (FILES

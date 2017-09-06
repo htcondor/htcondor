@@ -319,7 +319,7 @@ class DedicatedScheduler : public Service {
 		// Print out all our pending resource requests.
 	void displayResourceRequests( void );
 
-	void printSatisfaction( int cluster, CAList* idle, CAList* limbo,
+	void printSatisfaction( int cluster, CAList* idle, CAList *serial, CAList* limbo,
 							CAList* unclaimed, CAList* busy );
 
 	void sortResources( void );
@@ -396,10 +396,11 @@ class DedicatedScheduler : public Service {
 		// All resources, sorted by the time they'll next be available 
 		//AvailTimeList*			avail_time_list;	
 
-		// 	These four lists are the heart of the data structures for
+		// 	These five lists are the heart of the data structures for
 		// the dedicated scheduler: We prefer to schedule jobs from
 		// the idle_resources list, but if that's not possible, we
-		// then go to the limbo, then unclaimed list, to kick off
+		// then go to the limbo, then (if configured, claimed/idle 
+		// matches from the serial schedd), then unclaimed list, to kick off
 		// vanilla jobs.  If we still can't satisfy, then go to the
 		// busy list, and preempt those.
 
@@ -409,6 +410,10 @@ class DedicatedScheduler : public Service {
 																	   
 		// All resources that are idle and claimed by the ded sched
 	ResList*		idle_resources;
+
+		// All resources claimed/idle in the *serial* schedd that
+		// we could steal
+	ResList*		serial_resources;
 
 		// All resources that might be dedicated to us that aren't
 		// currently claimed by us -- they are probably running

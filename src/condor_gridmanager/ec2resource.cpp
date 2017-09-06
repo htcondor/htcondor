@@ -72,7 +72,7 @@ EC2Resource::EC2Resource( const char *resource_name,
 	m_public_key_file = strdup(public_key_file);
 	m_private_key_file = strdup(private_key_file);
 
-	gahp = NULL;
+	status_gahp = gahp = NULL;
 
 	char * gahp_path = param( "EC2_GAHP" );
 	if ( gahp_path == NULL ) {
@@ -249,14 +249,16 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 		}
 
         returnStatus.rewind();
-        ASSERT( returnStatus.number() % 6 == 0 );
-        for( int i = 0; i < returnStatus.number(); i += 6 ) {
+        ASSERT( returnStatus.number() % 8 == 0 );
+        for( int i = 0; i < returnStatus.number(); i += 8 ) {
             std::string instanceID = returnStatus.next();
             std::string status = returnStatus.next();
             std::string clientToken = returnStatus.next();
             std::string keyName = returnStatus.next();
             std::string stateReasonCode = returnStatus.next();
             std::string publicDNSName = returnStatus.next();
+            /* std::string spotFleetRequestID = */ returnStatus.next();
+            /* std::string annexName = */ returnStatus.next();
 
             // Efficiency suggests we look via the instance ID first,
             // and then try to look things up via the client token

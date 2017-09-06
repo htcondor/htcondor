@@ -123,7 +123,6 @@ void process_locals( const char*, const char*);
 void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
 void check_params();
-bool find_user_file(MyString & filename, const char * basename, bool check_access);
 
 // External variables
 //extern int	ConfigLineNo;

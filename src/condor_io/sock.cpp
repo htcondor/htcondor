@@ -58,11 +58,11 @@
 #define closesocket close
 #endif
 
-void dprintf ( int flags, Sock & sock, const char *fmt, ... )
+void dprintf ( int flags, const Sock & sock, const char *fmt, ... )
 {
     va_list args;
     va_start( args, fmt );
-    _condor_dprintf_va( flags, (DPF_IDENT)sock.getUniqueId(), fmt, args );
+    _condor_dprintf_va( flags|D_IDENT, (DPF_IDENT)sock.getUniqueId(), fmt, args );
     va_end( args );
 }
 
@@ -99,6 +99,9 @@ Sock::Sock() : Stream(), _policy_ad(NULL) {
     crypto_ = NULL;
     mdMode_ = MD_OFF;
     mdKey_ = 0;
+
+	connect_state.retry_timeout_interval = CONNECT_TIMEOUT;
+	connect_state.first_try_start_time = 0;
 
 	m_connect_addr = NULL;
     addr_changed();
@@ -195,7 +198,7 @@ Sock::~Sock()
 		_auth_methods = NULL;
 	}
 	free(_auth_name);
-	free(_policy_ad);
+	delete _policy_ad;
 	if (_crypto_method) {
 		free(_crypto_method);
 		_crypto_method = NULL;
@@ -355,6 +358,15 @@ int Sock::assign(
 	int socket_fd = WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, 
 					  FROM_PROTOCOL_INFO, pProtoInfo, 0, 0);
 
+	// This only works because the only call to this assign() is
+	// in SharedPortEndpoint::DoListenerAccept().  For how it works,
+	// see the comment in assignCCBSocket().  If we change the Linux code
+	// in SharedPortEndpoint::ReceiveSocket() to confirm that the
+	// connection being handed off came from CCB (before calling
+	// assignCCBSocket() instead of assignSocket()), we need to change
+	// this when we do the same for the equivalent Windows code in
+	// SharedPortEndpoint::DoListenerAccept().
+	_who.clear();
 	return assignSocket( socket_fd );
 }
 #endif
@@ -516,6 +528,27 @@ int Sock::assignInvalidSocket() {
 
 int Sock::assignInvalidSocket( condor_protocol proto ) {
 	return assignSocket( proto, INVALID_SOCKET );
+}
+
+int Sock::assignCCBSocket( SOCKET s ) {
+	ABEND( s != INVALID_SOCKET );
+
+	if( IsDebugLevel( D_NETWORK ) && _who.is_valid() ) {
+		condor_sockaddr sockAddr;
+		ABEND( condor_getsockname( s, sockAddr ) == 0 );
+		condor_protocol sockProto = sockAddr.get_protocol();
+		condor_protocol objectProto = _who.get_protocol();
+		if( objectProto != sockProto ) {
+			dprintf( D_NETWORK, "assignCCBSocket(): reverse connection made on different protocol than the request.\n"  );
+		}
+	}
+
+	// This assignSocket() is the only one that checks to see if the Sock
+	// protocol and the socket protocol match, and the call to assignSocket()
+	// clear()s _who if s is not invalid, so we can just clear _who right
+	// here and avoid both the spurious ABEND and duplicating code.
+	_who.clear();
+	return assignSocket( s );
 }
 
 int Sock::assignSocket( SOCKET sockd ) {
@@ -1588,7 +1621,7 @@ Sock::reportConnectionFailure(bool timed_out)
 	will_keep_trying[0] = '\0';
 	if(!connect_state.connect_refused && !timed_out) {
 		snprintf(will_keep_trying, sizeof(will_keep_trying),
-		        "  Will keep trying for %ld total seconds (%ld to go).\n",
+		        "  Will keep trying for %ld total seconds (%ld to go).",
 		        (long)connect_state.retry_timeout_interval,
 				(long)(connect_state.retry_timeout_time - time(NULL)));
 	}
@@ -1761,7 +1794,7 @@ Sock::cancel_connect()
 	}
 }
 
-time_t Sock::connect_timeout_time()
+time_t Sock::connect_timeout_time() const
 {
 		// This is called by DaemonCore or whoever is in charge of
 		// calling connect_retry() when the connection attempt times
@@ -1775,7 +1808,7 @@ time_t Sock::connect_timeout_time()
 }
 
 time_t
-Sock::get_deadline()
+Sock::get_deadline() const
 {
 	time_t deadline = Stream::get_deadline();
 	if( is_connect_pending() ) {
@@ -1873,7 +1906,7 @@ int Sock::close()
 #endif
 
 int
-Sock::bytes_available_to_read()
+Sock::bytes_available_to_read() const
 {
 	/*	Does this platform have FIONREAD? 
 		I think every platform support this, at least for network sockets.
@@ -1952,7 +1985,7 @@ Sock::readReady() {
 }
 
 int
-Sock::get_timeout_raw()
+Sock::get_timeout_raw() const
 {
 	return _timeout;
 }
@@ -2364,14 +2397,14 @@ Sock::addr_changed()
 }
 
 condor_sockaddr
-Sock::peer_addr()
+Sock::peer_addr() const
 {
 	return _who;
 }
 
 
 int
-Sock::peer_port()
+Sock::peer_port() const
 {
 		//return (int) ntohs( _who.sin_port );
 	return (int)(_who.get_port());
@@ -2389,7 +2422,7 @@ Sock::peer_ip_int()
 
 
 const char *
-Sock::peer_ip_str()
+Sock::peer_ip_str() const
 {
 	if (!_peer_ip_buf[0]) {
 		MyString peer_ip = _who.to_ip_string();
@@ -2410,7 +2443,7 @@ Sock::peer_ip_str()
 // return true if peer address corresponds to an interface local to this machine,
 // or false if not or if an error.
 bool 
-Sock::peer_is_local()
+Sock::peer_is_local() const
 {
 		// peer_is_local is called rarely and by few call sites.
 		// making hashtable for both ipv4 and ipv6 addresses does seem to
@@ -2419,23 +2452,27 @@ Sock::peer_is_local()
 	if (!peer_addr().is_valid())
 		return false;
 
-	bool result;
+	bool result = false;
 	condor_sockaddr addr = peer_addr();
 		// ... but use any old ephemeral port.
 	addr.set_port(0);
 	int sock = ::socket(addr.get_aftype(), SOCK_DGRAM, IPPROTO_UDP);
-		// invoke OS bind, not cedar bind - cedar bind does not allow us
-		// to specify the local address.
-	if (condor_bind(sock, addr) < 0) {
-		// failed to bind.  assume we failed  because the peer address is
-		// not local.
-		result = false;
-	} else {
-		// bind worked, assume address has a local interface.
-		result = true;
+
+	if (sock >= 0) { // unclear how this could fail, but best to check
+
+			// invoke OS bind, not cedar bind - cedar bind does not allow us
+			// to specify the local address.
+		if (condor_bind(sock, addr) < 0) {
+			// failed to bind.  assume we failed  because the peer address is
+			// not local.
+			result = false;
+		} else {
+			// bind worked, assume address has a local interface.
+			result = true;
+		}
+		// must not forget to close the socket we just created!
+		::closesocket(sock);
 	}
-	// must not forget to close the socket we just created!
-	::closesocket(sock);
 	return result;
 	
 		/*
@@ -2518,7 +2555,7 @@ Sock::peer_is_local()
 }
 
 condor_sockaddr
-Sock::my_addr() 
+Sock::my_addr() const
 {
 	condor_sockaddr addr;
 	condor_getsockname_ex(_sock, addr);
@@ -2526,7 +2563,7 @@ Sock::my_addr()
 }
 
 condor_sockaddr
-Sock::my_addr_wildcard_okay() 
+Sock::my_addr_wildcard_okay() const
 {
 	condor_sockaddr addr;
 	condor_getsockname(_sock, addr);
@@ -2534,7 +2571,7 @@ Sock::my_addr_wildcard_okay()
 }
 
 const char *
-Sock::my_ip_str()
+Sock::my_ip_str() const
 {
 	if (!_my_ip_buf[0]) {
 		MyString ip_str = my_addr().to_ip_string();
@@ -2544,7 +2581,7 @@ Sock::my_ip_str()
 }
 
 char const *
-Sock::get_sinful()
+Sock::get_sinful() const
 {
     if( _sinful_self_buf.empty() ) {
 		condor_sockaddr addr;
@@ -2565,7 +2602,7 @@ Sock::get_sinful()
 }
 
 char *
-Sock::get_sinful_peer()
+Sock::get_sinful_peer() const
 {       
 	if ( !_sinful_peer_buf[0] ) {
 		MyString sinful_peer = _who.to_sinful();
@@ -2575,7 +2612,7 @@ Sock::get_sinful_peer()
 }
 
 char const *
-Sock::default_peer_description()
+Sock::default_peer_description() const
 {
 	char const *retval = get_sinful_peer();
 	if( !retval ) {
@@ -2585,7 +2622,7 @@ Sock::default_peer_description()
 }
 
 int
-Sock::get_port()
+Sock::get_port() const
 {
 	condor_sockaddr addr;
 	if (condor_getsockname(_sock, addr) < 0)
@@ -2769,7 +2806,7 @@ void Sock :: setAuthenticationMethodUsed(char const *auth_method)
 	_auth_method = strdup(auth_method);
 }
 
-const char* Sock :: getAuthenticationMethodUsed() {
+const char* Sock :: getAuthenticationMethodUsed() const {
 	return _auth_method;
 }
 
@@ -2779,7 +2816,7 @@ void Sock :: setAuthenticationMethodsTried(char const *auth_methods)
 	_auth_methods = strdup(auth_methods);
 }
 
-const char* Sock :: getAuthenticationMethodsTried() {
+const char* Sock :: getAuthenticationMethodsTried() const {
 	return _auth_methods;
 }
 
@@ -2789,7 +2826,7 @@ void Sock :: setAuthenticatedName(char const *auth_name)
 	_auth_name = strdup(auth_name);
 }
 
-const char* Sock :: getAuthenticatedName() {
+const char* Sock :: getAuthenticatedName() const {
 	return _auth_name;
 }
 
@@ -2801,7 +2838,7 @@ void Sock :: setCryptoMethodUsed(char const *crypto_method)
 	_crypto_method = strdup(crypto_method);
 }
 
-const char* Sock :: getCryptoMethodUsed() {
+const char* Sock :: getCryptoMethodUsed() const {
 	return _crypto_method;
 }
 
@@ -2884,7 +2921,7 @@ Sock::set_connect_addr(char const *addr)
 }
 
 char const *
-Sock::get_connect_addr()
+Sock::get_connect_addr() const
 {
 	return m_connect_addr;
 }
@@ -3064,7 +3101,7 @@ Sock::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 }
 
 bool
-Sock::canEncrypt()
+Sock::canEncrypt() const
 {
 	return crypto_ != NULL;
 }

@@ -77,7 +77,7 @@ namespace compat_classad { class ClassAd; }
 class ConstructLogEntry
 {
 public:
-	virtual compat_classad::ClassAd* New() const = 0;
+	virtual compat_classad::ClassAd* New(const char * key, const char * mytype) const = 0;
 	virtual void Delete(compat_classad::ClassAd*& val) const = 0;
 	virtual ~ConstructLogEntry() {}; // declare (superfluous) virtual constructor to get rid of g++ warning.
 };

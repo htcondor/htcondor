@@ -546,10 +546,10 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 		ad->Assign(ATTR_RESIDENT_SET_SIZE, int(memUsage / 1024));
 		ad->Assign(ATTR_MEMORY_USAGE, int(memUsage / (1024 * 1024)));
 		ad->Assign(ATTR_IMAGE_SIZE, int(memUsage / (1024 * 1024)));
-		ad->Assign(ATTR_NETWORK_IN, double(netIn) / (1024 * 1024));
-		ad->Assign(ATTR_NETWORK_OUT, double(netOut) / (1024 * 1024));
-		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (int) (userCpu / (1024l * 1024l * 1024l)));
-		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (int) (sysCpu / (1024l * 1024l * 1024l)));
+		ad->Assign(ATTR_NETWORK_IN, double(netIn) / (1000 * 1000));
+		ad->Assign(ATTR_NETWORK_OUT, double(netOut) / (1000 * 1000));
+		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (int) (userCpu / (1000l * 1000l * 1000l)));
+		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (int) (sysCpu / (1000l * 1000l * 1000l)));
 	}
 	return OsProc::PublishUpdateAd( ad );
 }

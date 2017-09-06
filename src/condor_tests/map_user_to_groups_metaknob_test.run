@@ -1,0 +1,181 @@
+#! /usr/bin/env perl
+#testreq: personal
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use CheckOutputFormats;
+use File::Spec;
+use strict;
+use warnings;
+
+my $testname = "map_user_to_groups_metaknob_test";
+my $curcwd = getcwd();
+my $map_content;
+my $map_file = "$testname.map";
+my $path = File::Spec->rel2abs($map_file);
+
+my $append_config;
+$append_config = "
+	use FEATURE : AssignAccountingGroup($path)
+";
+
+###########  create submit file ##################
+my $pid = $$;
+my $submit_file = "$testname$pid.sub";
+my $submit_content = 
+"executable = sleep.exe
+arguments = 600
+queue";
+my $submitfile = "$testname$pid.sub";
+emit_dag_files($testname, $submit_content, $pid);
+
+########## create map file ##############
+my %Attr = combine_dry_ads($submitfile, "");
+my $owner = unquote($Attr{0}{Owner});
+$map_content = 
+"* $owner cs,condor
+";
+
+open(FH, ">$map_file") || print "ERROR opening file $map_file";
+print FH $map_content;
+close(FH);
+
+############ when owner is in map file ##################
+my $configfile = CondorTest::CreateLocalConfig($append_config, "map_test");
+CondorTest::StartCondorWithParams(
+	condor_name=>"map_test",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+`condor_submit $submitfile`;
+my $command = "condor_q -af:, AccountingGroup AcctGroup";
+my @content = `$command`;
+print "Command is $command.\nOutput is:\n", @content;
+if ($content[0] eq "cs.$owner, cs\n") {
+	RegisterResult(1, check_name=>"owner in map", test_name=>$testname);
+} else {
+	print "ERROR: should be able to submit job successfully\n";
+	RegisterResult(0, check_name=>"owner in map", test_name=>$testname);
+}
+
+`condor_rm -all`;
+
+########### when owner is not in map file ##############
+$map_content =
+"* foo cs,condor
+";
+
+open(FH, ">$map_file") || print "ERROR opening file $map_file";
+print FH $map_content;
+close(FH);
+
+$configfile = CondorTest::CreateLocalConfig($append_config, "map_test1");
+CondorTest::StartCondorWithParams(
+	condor_name=>"map_test1",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+`condor_submit $submitfile`;
+@content = `$command`;
+if (!(defined($content[0]))) {
+	RegisterResult(1, check_name=>"owner not in map", test_name=>$testname);
+} else {
+	print "ERROR: should not submit job successfully\n";
+	RegisterResult(0, check_name=>"owner not in map", test_name=>$testname);
+}
+
+`condor_rm -all`;
+
+########## usermap does not contain a group ###############
+$map_content =
+"* $owner 
+";
+
+open(FH, ">$map_file") || print "ERROR opening file $map_file";
+print FH $map_content;
+close(FH);
+
+$configfile = CondorTest::CreateLocalConfig($append_config, "map_test2");
+CondorTest::StartCondorWithParams(
+	condor_name=>"map_test2",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+`condor_submit $submitfile`;
+@content = `$command`;
+if (!(defined($content[0]))) {
+	RegisterResult(1, check_name=>"usermap doesn't have group", test_name=>$testname);
+} else {
+	print "ERROR: should not submit job successfully\n";
+	RegisterResult(0, check_name=>"usermap doesn't have group", test_name=>$testname);
+}
+`condor_rm -all`;
+
+########## multiple entries in usermap ###############
+$map_content =
+"* foo1 abc,123
+* foo2 abc,456
+* $owner def,789
+";
+
+open(FH, ">$map_file") || print "ERROR: opening file $map_file";
+print FH $map_content;
+close(FH);
+
+$configfile = CondorTest::CreateLocalConfig($append_config, "map_test3");
+CondorTest::StartCondorWithParams(
+	condor_name=>"map_test3",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+# map owner to group "def", succeed
+`condor_submit $submitfile accounting_group=def`;
+@content = `$command`;
+print "Command is $command.\nOutput is:\n", @content;
+if ($content[0] eq "def.$owner, def\n") {
+	RegisterResult(1, check_name=>"specify group in the list", test_name=>$testname);
+} else {
+	print "ERROR: should be able to submit job successfully\n";
+	RegisterResult(0, check_name=>"specify group in the list", test_name=>$testname);
+}
+
+`condor_rm -all`;
+
+# map owner to group "should_fail", succeed
+`condor_submit $submitfile accounting_group=should_fail`;
+@content = `$command`;
+if (!(defined($content[0]))) {
+	RegisterResult(1, check_name=>"specify group not in the list", test_name=>$testname);
+} else {
+	print "ERROE: should not submit job successfully\n";
+	RegisterResult(0, check_name=>"specify group not in the list", test_name=>$testname);
+}
+
+`condor_rm -all`;
+
+
+CondorTest::EndTest();
+exit(0);

@@ -59,37 +59,15 @@
 #include "expr_analyze.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
 #include "classad_helpers.h"
+#include "console-utils.h"
+
+#define CONDOR_Q_HANDLE_CLUSTER_AD 1
 
 static int cleanup_globals(int exit_code); // called on exit to do necessary cleanup
 #define exit(n) (exit)(cleanup_globals(n))
 
 
 struct 	PrioEntry { MyString name; float prio; };
-
-#ifdef WIN32
-static int getConsoleWindowSize(int * pHeight = NULL) {
-	CONSOLE_SCREEN_BUFFER_INFO ws;
-	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
-		if (pHeight)
-			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
-		return (int)ws.dwSize.X;
-	}
-	return 80;
-}
-#else
-#include <sys/ioctl.h> 
-static int getConsoleWindowSize(int * pHeight = NULL) {
-    struct winsize ws; 
-	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
-		//printf ("lines %d\n", ws.ws_row); 
-		//printf ("columns %d\n", ws.ws_col); 
-		if (pHeight)
-			*pHeight = (int)ws.ws_row;
-		return (int) ws.ws_col;
-	}
-	return 80;
-}
-#endif
 
 static  int  testing_width = 0;
 static int getDisplayWidth() {
@@ -171,10 +149,11 @@ static int parse_format_args(int argc, const char * argv[], AttrListPrintMask & 
 }
 
 /* Warn about schedd-wide limits that may confuse analysis code */
-bool warnScheddGlobalLimits(Daemon *schedd,MyString &result_buf);
+bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,MyString &result_buf);
 
 static 	int dash_long = 0, dash_tot = 0, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
 static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
+static  int dash_factory = 0;
 static ClassAdFileParseType::ParseType dash_long_format = ClassAdFileParseType::Parse_auto;
 static bool print_attrs_in_hash_order = false;
 static bool auto_standard_summary = false; // print standard summary
@@ -340,8 +319,8 @@ static std::vector<const char *> autoformat_args;
 static  int			findSubmittor( const char * );
 static	void 		setupAnalysis();
 static 	int			fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios);
-static	void		doJobRunAnalysis(ClassAd*, Daemon*, int details);
-static const char	*doJobRunAnalysisToBuffer(ClassAd *request, Daemon* schedd, anaCounters & ac, bool countMatches, bool noPrio, bool showMachines);
+static	void		doJobRunAnalysis(ClassAd*, DaemonAllowLocateFull*, int details);
+static const char	*doJobRunAnalysisToBuffer(ClassAd *request, DaemonAllowLocateFull* schedd, anaCounters & ac, bool countMatches, bool noPrio, bool showMachines);
 static const char	*doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *request, int details);
 
 static	void		doSlotRunAnalysis( ClassAd*, JobClusterMap & clusters, Daemon*, int console_width);
@@ -621,6 +600,17 @@ int main (int argc, const char **argv)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	// Setup a default projection for attributes we examine in the schedd/submittor ads.
+	// We do this very early to be a default, as we may override it with more specific
+	// options depending upon command line arguments, e.g. -name.
+	std::vector<std::string> attrs; attrs.reserve(4);
+	attrs.push_back(ATTR_SCHEDD_IP_ADDR);
+	attrs.push_back(ATTR_VERSION);
+	attrs.push_back(ATTR_NAME);
+	attrs.push_back(ATTR_MACHINE);
+	submittorQuery.setDesiredAttrs(attrs);
+	scheddQuery.setDesiredAttrs(attrs);
+
 	if (param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) {
 		default_fetch_opts |= CondorQ::fetch_MyJobs;
 	} else {
@@ -735,7 +725,7 @@ int main (int argc, const char **argv)
 		}
 	}
 
-	// get the list of ads from the collector
+	// Get the list of ads from the collector.  
 	if( querySchedds ) { 
 		result = Collectors->query ( scheddQuery, scheddList );
 	} else {
@@ -771,13 +761,18 @@ int main (int argc, const char **argv)
 	while ((ad = scheddList.Next()))
 	{
 		/* default to true for remotely queryable */
+
+		/* Warning!! Any attributes you lookup from the ad had better be
+		   included in the list of attributes given to scheddQuery.setDesiredAttrs()
+		   and to submittorQuery.setDesiredAttrs() !!! This is done early in main().
+		*/
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				ad->LookupString(ATTR_NAME, &scheddName) &&
 				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine))
 				)
 			)
 		{
-			/* something is wrong with this schedd/quill ad, try the next one */
+			/* something is wrong with this schedd/submittor ad, try the next one */
 			continue;
 		}
 
@@ -868,8 +863,10 @@ enum {
 	QDO_JobGoodput,
 	QDO_JobGlobusInfo,
 	QDO_JobGridInfo,
+	QDO_JobGridEC2Info,
 	QDO_JobHold,
 	QDO_JobIO,
+	QDO_Factory,
 	QDO_DAG,
 	QDO_Totals,
 	QDO_Progress,
@@ -1254,6 +1251,10 @@ processCommandLineArguments (int argc, const char *argv[])
 			dash_autocluster = CondorQ::fetch_GroupBy;
 		}
 		else
+		if (is_dash_arg_colon_prefix (dash_arg, "factory", &pcolon, 4)) {
+			dash_factory = true;
+		}
+		else
 		if (is_dash_arg_prefix (dash_arg, "attributes", 2)) {
 			if( argc <= i+1 ) {
 				fprintf( stderr, "Error: -attributes requires a list of attributes to show\n" );
@@ -1553,12 +1554,16 @@ processCommandLineArguments (int argc, const char *argv[])
 			current_run = true;
 		}
 		else
-		if (is_dash_arg_prefix(dash_arg, "grid", 2 )) {
+		if (is_dash_arg_colon_prefix(dash_arg, "grid", &pcolon, 2 )) {
 			// grid is a superset of globus, so we can't do grid if globus has been specifed
 			if ( ! dash_globus) {
 				dash_grid = true;
 				qdo_mode = QDO_JobGridInfo;
 				Q.addAND( "JobUniverse == 9" );
+
+				if( pcolon && strcmp( ++pcolon, "ec2" ) == 0 ) {
+					qdo_mode = QDO_JobGridEC2Info;
+				}
 			}
 		}
 		else
@@ -1759,7 +1764,9 @@ processCommandLineArguments (int argc, const char *argv[])
 				mode == QDO_JobNormal ||
 				mode == QDO_JobRuntime || // TODO: need a custom format for -batch -run
 				mode == QDO_DAG) { // DAG and batch go naturally together
-				dash_batch = dash_batch_is_default;
+				if ( ! dash_factory) {
+					dash_batch = dash_batch_is_default;
+				}
 			}
 		}
 
@@ -1775,7 +1782,7 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "run", "goodput", "globus", "grid", "hold", "io", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
+		const char * const amo[] = { "", "run", "goodput", "globus", "grid", "grid:ec2", "hold", "io", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
@@ -2655,7 +2662,7 @@ usage (const char *myName, int other)
 		"\t-userprios <file>\t Read user priorities for analysis from <file>\n"
 		"\t\t\t\t <file> can be the output of condor_userprio -l\n"
 		"\t-nouserprios\t\t Don't consider user priority during analysis (default)\n"
-		"\t-reverse\t\t Analyze Machine requirements against jobs\n"
+		"\t-reverse-analyze\t Analyze Machine requirements against jobs\n"
 		"\t-verbose\t\t Show progress and machine names in results\n"
 		"\n"
 		);
@@ -2961,8 +2968,10 @@ extern const char * const jobRuntime_PrintFormat;
 extern const char * const jobGoodput_PrintFormat;
 extern const char * const jobGlobus_PrintFormat;
 extern const char * const jobGrid_PrintFormat;
+extern const char * const jobGridEC2_PrintFormat;
 extern const char * const jobHold_PrintFormat;
 extern const char * const jobIO_PrintFormat;
+extern const char * const jobFactory_PrintFormat;
 extern const char * const jobDAG_PrintFormat;
 extern const char * const jobTotals_PrintFormat;
 extern const char * const jobProgress_PrintFormat; // NEW, summarize batch progress
@@ -2999,6 +3008,8 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 				mode = QDO_DAG;
 			} else if (dash_run) {
 				mode = QDO_JobRuntime;
+			} else if (dash_factory) {
+				mode = QDO_Factory;
 			}
 			qdo_mode |= mode;
 		}
@@ -3009,16 +3020,18 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		const char * tag;
 		const char * fmt;
 	} info[] = {
-		{ QDO_JobNormal,    "",       jobDefault_PrintFormat },
-		{ QDO_JobRuntime,    "RUN",    jobRuntime_PrintFormat },
-		{ QDO_JobGoodput,    "GOODPUT",jobGoodput_PrintFormat },
-		{ QDO_JobGlobusInfo, "GLOBUS", jobGlobus_PrintFormat },
-		{ QDO_JobGridInfo,   "GRID",   jobGrid_PrintFormat },
-		{ QDO_JobHold,       "HOLD",   jobHold_PrintFormat },
-		{ QDO_JobIO,         "IO",	   jobIO_PrintFormat },
-		{ QDO_DAG,           "DAG",	   jobDAG_PrintFormat },
-		{ QDO_Totals,        "TOTALS", jobTotals_PrintFormat },
-		{ QDO_Progress,      "PROGRESS", jobProgress_PrintFormat },
+		{ QDO_JobNormal,      "",          jobDefault_PrintFormat },
+		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
+		{ QDO_JobGoodput,     "GOODPUT",  jobGoodput_PrintFormat },
+		{ QDO_JobGlobusInfo,  "GLOBUS",   jobGlobus_PrintFormat },
+		{ QDO_JobGridInfo,    "GRID",     jobGrid_PrintFormat },
+		{ QDO_JobGridEC2Info, "GRID_EC2", jobGridEC2_PrintFormat },
+		{ QDO_JobHold,        "HOLD",     jobHold_PrintFormat },
+		{ QDO_JobIO,          "IO",       jobIO_PrintFormat },
+		{ QDO_DAG,            "DAG",      jobDAG_PrintFormat },
+		{ QDO_Factory,        "FACTORY",  jobFactory_PrintFormat },
+		{ QDO_Totals,         "TOTALS",   jobTotals_PrintFormat },
+		{ QDO_Progress,       "PROGRESS", jobProgress_PrintFormat },
 		{ QDO_AutoclusterNormal, "AUTOCLUSTER", autoclusterNormal_PrintFormat },
 	};
 
@@ -3100,7 +3113,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 // Given a list of jobs, do analysis for each job and print out the results.
 //
 static bool
-print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * pschedd_daemon)
+print_jobs_analysis(ClassAdList & jobs, const char * source_label, DaemonAllowLocateFull * pschedd_daemon)
 {
 	// note: pschedd_daemon may be NULL.
 
@@ -3280,6 +3293,10 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * psch
 
 static void count_job(LiveJobCounters & num, ClassAd *job)
 {
+#ifdef CONDOR_Q_HANDLE_CLUSTER_AD
+	if ( ! job->Lookup(ATTR_PROC_ID)) return;
+#endif
+
 	int status = 0, universe = CONDOR_UNIVERSE_VANILLA;
 	job->LookupInteger(ATTR_JOB_STATUS, status);
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
@@ -3421,6 +3438,16 @@ static long long resolve_job_batch_uid(JobRowOfData & jrod, ClassAd* job)
 	return true;
 }
 
+std::map<int, int> materialized_next_proc_by_cluster_map;
+static void track_job_materialize_info(int cluster_id, ClassAd* job) {
+
+	int proc_id = -1;
+	if ( ! job->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, proc_id) || proc_id < 0) {
+		return;
+	}
+	materialized_next_proc_by_cluster_map[cluster_id] = proc_id;
+}
+
 // returns an interator that points to the first use of a batch uid with first
 // being defined as the first to call this function with a unique batch_uid value.
 long long resolve_first_use_of_batch_uid(int batch_uid, long long id)
@@ -3484,7 +3511,7 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 		job->LookupInteger(attr_id, jobid.id);
 	} else {
 		job->LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
-		job->LookupInteger( ATTR_PROC_ID, jobid.proc );
+		if ( ! job->LookupInteger( ATTR_PROC_ID, jobid.proc )) { jobid.proc = -1; }
 	}
 
 	if (append_time_to_source_label && ! queue_time) {
@@ -3517,6 +3544,7 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 				//dag_to_cluster_map[dagid].insert(jobid.cluster);
 			} else if (dash_batch) {
 				resolve_job_batch_uid(pp.first->second, job);
+				track_job_materialize_info(jobid.cluster, job);
 			}
 			int universe = CONDOR_UNIVERSE_MIN;
 			if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) && universe == CONDOR_UNIVERSE_SCHEDULER) {
@@ -3849,7 +3877,7 @@ const char * const jobProgress_PrintFormat = "SELECT\n"
 	ATTR_DAG_NODES_QUEUED    " AS '  IDLE' WIDTH 6 PRINTF %6d OR _\n"  // Idle   // 5
 	ATTR_DAG_NODES_DONE      " AS '  HOLD' WIDTH 6 PRINTF %6d OR _\n"  // Held   // 6
 	ATTR_DAG_NODES_TOTAL "?:" ATTR_TOTAL_SUBMIT_PROCS " AS ' TOTAL' WIDTH 6 PRINTF %6d OR _\n"  // Total  // 7
-	ATTR_JOB_STATUS          " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
+	ATTR_JOB_STATUS "?:" ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " AS JOB_IDS WIDTH 0 PRINTAS JOB_STATUS\n"     // 8
 //	ATTR_JOB_REMOTE_USER_CPU " AS '    RUN_TIME'  WIDTH 12   PRINTAS CPU_TIME\n"
 //	ATTR_IMAGE_SIZE          " AS SIZE        WIDTH 4    PRINTAS MEMORY_USAGE\n"
 //	ATTR_HOLD_REASON         " AS HOLD_REASON\n"
@@ -3896,7 +3924,9 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 
 	union _jobid jid; jid.id = jr.id;
 	prog.cluster = jid.cluster;
-	prog.min_proc = prog.max_proc = jid.proc;
+	if (jid.proc >= 0) {
+		prog.min_proc = prog.max_proc = jid.proc;
+	}
 
 	int universe = CONDOR_UNIVERSE_MIN, status = 0;
 	if (jr.getNumber(ixUniverseCol, universe) && universe == CONDOR_UNIVERSE_SCHEDULER) {
@@ -3906,33 +3936,39 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 		if (jr.getNumber(ixDagNodesTotal, dag_total)) { prog.nodes_total += dag_total; }
 		if (jr.getNumber(ixDagNodesDone, dag_done)) { prog.nodes_done += dag_done; }
 	} else {
-		prog.jobs += 1;
+		if (jid.proc >= 0) {
+			prog.jobs += 1;
+		}
 
 		int num_procs = 0;
 		// as of 8.5.7 the schedd will inject ATTR_TOTAL_SUBMIT_PROCS into the cluster ad
 		// and we will have fetched it in the ixDagNodesTotal field.
 		// We don't add it to the total unless this cluster is NOT a node of a dag.
 		if (jr.getNumber(ixDagNodesTotal, num_procs)) { total_submit_procs = num_procs; }
-		jr.getNumber(ixJobStatusCol, status);
-		if (status < 0 || status > JOB_STATUS_MAX) status = 0;
-		prog.states[status] += 1;
+
+		if (jid.proc >= 0) {
+			jr.getNumber(ixJobStatusCol, status);
+			if (status < 0 || status > JOB_STATUS_MAX) status = 0;
+			prog.states[status] += 1;
+		}
 	}
 
 	JobRowOfData *jrod2 = jr.next_proc;
 	while (jrod2) {
+		union _jobid jid2; jid2.id = jrod2->id;
 		if ( ! (jrod2->flags & (JROD_FOLDED | JROD_SKIP))) {
-			prog.count += 1;
-			prog.jobs += 1; // on the assumption that dagmen can't be multi proc
+			if (jid2.proc >= 0) {
+				prog.count += 1;
+				prog.jobs += 1; // on the assumption that dagmen can't be multi proc
 
-			int st;
-			jrod2->getNumber(ixJobStatusCol, st);
-			if (st < 0 || st > JOB_STATUS_MAX) st = 0;
-			prog.states[st] += 1;
+				int st;
+				jrod2->getNumber(ixJobStatusCol, st);
+				if (st < 0 || st > JOB_STATUS_MAX) st = 0;
+				prog.states[st] += 1;
 
-			union _jobid jid2; jid2.id = jrod2->id;
-			prog.min_proc = MIN(prog.min_proc, jid2.proc);
-			prog.max_proc = MAX(prog.min_proc, jid2.proc);
-
+				prog.min_proc = MIN(prog.min_proc, jid2.proc);
+				prog.max_proc = MAX(prog.min_proc, jid2.proc);
+			}
 			jrod2->flags |= JROD_FOLDED;
 		}
 		jrod2 = jrod2->next_proc;
@@ -3951,6 +3987,10 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 		}
 		if (total) {
 			int done = total - prog.jobs;
+			if (materialized_next_proc_by_cluster_map.find(prog.cluster) != materialized_next_proc_by_cluster_map.end()) { 
+				int materialized_jobs = materialized_next_proc_by_cluster_map[prog.cluster];
+				done = materialized_jobs - prog.jobs;
+			}
 			prog.nodes_total += total;
 			prog.nodes_done += done;
 		} else {
@@ -4253,8 +4293,14 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ( ! fetch_opts && (useFastPath > 1)) {
 		fetch_opts = default_fetch_opts;
 	}
-	if (dash_tot && (useFastPath > 1) && (fetch_opts == CondorQ::fetch_Default || fetch_opts == CondorQ::fetch_MyJobs)) {
-		fetch_opts |= CondorQ::fetch_SummaryOnly;
+	if ((useFastPath > 1) && ((fetch_opts & CondorQ::fetch_FromMask) == CondorQ::fetch_Jobs)) {
+		if (dash_tot) {
+			fetch_opts |= CondorQ::fetch_SummaryOnly;
+#ifdef CONDOR_Q_HANDLE_CLUSTER_AD 
+		} else if (dash_factory && (dash_long || ! dash_batch)) {
+			fetch_opts |= CondorQ::fetch_IncludeClusterAd;
+#endif
+		}
 	}
 	StringList *pattrs = &app.attrs;
 	int fetchResult;
@@ -4314,7 +4360,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		}
 		
 		//PRAGMA_REMIND("TJ: shouldn't this be using scheddAddress instead of scheddName?")
-		Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
+		DaemonAllowLocateFull schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
 
 		return print_jobs_analysis(jobs, source_label.c_str(), &schedd);
 	}
@@ -4896,7 +4942,7 @@ static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
 }
 
 static void
-doJobRunAnalysis(ClassAd *job, Daemon *schedd, int details)
+doJobRunAnalysis(ClassAd *job, DaemonAllowLocateFull *schedd, int details)
 {
 	bool count_matches = (details & detail_always_analyze_req) != 0;
 
@@ -4943,7 +4989,7 @@ static bool is_exhausted_partionable_slot(ClassAd* slotAd, ClassAd* jobAd)
 // this funciton can count matching/non-matching machines, but
 // does NOT do matchmaking (requirements) analysis.
 static const char *
-doJobRunAnalysisToBuffer(ClassAd *request, Daemon* schedd, anaCounters & ac, bool count_matches, bool noPrio, bool showMachines)
+doJobRunAnalysisToBuffer(ClassAd *request, DaemonAllowLocateFull* schedd, anaCounters & ac, bool count_matches, bool noPrio, bool showMachines)
 {
 	char	owner[128];
 	std::string  user;
@@ -5416,7 +5462,7 @@ doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *request, int detai
 		if (analEachReqClause) {
 #endif
 			std::string subexpr_detail;
-			anaFormattingOptions fmt = { widescreen ? getConsoleWindowSize() : 80, details, "Requirements", "Job", "Slot" };
+			anaFormattingOptions fmt = { widescreen ? getDisplayWidth() : 80, details, "Requirements", "Job", "Slot" };
 			AnalyzeRequirementsForEachTarget(request, ATTR_REQUIREMENTS, inline_attrs, startdAds, subexpr_detail, fmt);
 			formatstr_cat(return_buf, "The Requirements expression for job %s reduces to these conditions:\n\n", request_id);
 			return_buf += subexpr_detail;
@@ -5769,7 +5815,7 @@ fixSubmittorName( const char *name, int niceUser )
 
 
 
-bool warnScheddGlobalLimits(Daemon *schedd,MyString &result_buf) {
+bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,MyString &result_buf) {
 	if( !schedd ) {
 		return false;
 	}
@@ -5817,6 +5863,18 @@ const char * const jobDefault_PrintFormat = "SELECT\n"
 "   Cmd           AS CMD             WIDTH 0 PRINTAS JOB_DESCRIPTION\n"
 "SUMMARY STANDARD\n";
 
+const char * const jobFactory_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX  WIDTH 5 PRINTF '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX  WIDTH 3 PRINTF '%-3d'\n"
+"   Owner         AS  OWNER           WIDTH -14 PRINTAS OWNER OR ??\n"
+"   QDate         AS '  SUBMITTED'    WIDTH 11 PRINTAS QDATE\n"
+    ATTR_JOB_MATERIALIZE_LIMIT        " AS ' LIMIT' WIDTH 6 PRINTF %6d\n"
+    ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " AS 'NEXTPROC' WIDTH 8 PRINTF %8d\n"
+    ATTR_JOB_MATERIALIZE_PAUSED       " AS PAUSED PRINTF %d or _\n"
+    ATTR_JOB_MATERIALIZE_DIGEST_FILE  " AS DIGEST\n"
+"WHERE ProcId is undefined\n"
+"SUMMARY NONE\n";
+
 const char * const jobDAG_PrintFormat = "SELECT\n"
 "   ClusterId     AS ' ID'  NOSUFFIX  WIDTH 5 PRINTF '%4d.'\n"
 "   ProcId        AS ' '    NOPREFIX  WIDTH 3 PRINTF '%-3d'\n"
@@ -5853,9 +5911,18 @@ const char * const jobGrid_PrintFormat = "SELECT\n"
 "   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
 "   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
 "   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER\n"
-"   JobStatus     AS STATUS          WIDTH -10 PRINTAS GRID_STATUS\n"
+"   GridJobStatus AS STATUS          WIDTH -10 PRINTAS GRID_STATUS\n"
 "   GridResource  AS 'GRID->MANAGER    HOST' WIDTH -27 PRINTAS GRID_RESOURCE\n"
 "   GridJobId     AS GRID_JOB_ID             WIDTH   0 PRINTAS GRID_JOB_ID\n"
+"SUMMARY NONE\n";
+
+const char * const jobGridEC2_PrintFormat = "SELECT\n"
+"   ClusterId     AS ' ID'  NOSUFFIX WIDTH    5 PRINTF  '%4d.'\n"
+"   ProcId        AS ' '    NOPREFIX WIDTH    3 PRINTF  '%-3d'\n"
+"   Owner         AS OWNER           WIDTH  -14 PRINTAS OWNER\n"
+"   GridJobStatus AS STATUS          WIDTH  -10 PRINTAS GRID_STATUS\n"
+"   GridJobId     AS 'INSTANCE ID'   WIDTH AUTO PRINTAS GRID_JOB_ID\n"
+"   Cmd           AS CMD             WIDTH AUTO PRINTF  '%s'\n"
 "SUMMARY NONE\n";
 
 const char * const jobGlobus_PrintFormat = "SELECT\n"

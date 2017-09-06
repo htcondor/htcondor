@@ -146,7 +146,8 @@ are case sensitive, as file names
 in a file system are case sensitive.
 The \Arg{JobName} can be any string that contains no white space, except
 for the strings \Arg{PARENT} and \Arg{CHILD} (in upper, lower, or mixed
-case).
+case). \Arg{JobName} also cannot contain special characters (\Arg{'.'}, 
+\Arg{'+'}) which are reserved for system use.
 
 Note that \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}, if used, must appear
 in the order shown above.
@@ -695,6 +696,17 @@ arguments = $$([DAGParentNodeNames])
 will pass the string \AdStr{B,C} as the command line argument when invoking
 the job.
 
+DAGMan supports jobs with queues of multiple procs, so for example:
+\begin{verbatim}
+queue 500
+\end{verbatim}
+will queue 500 procs as expected. However, \emph{as of version 8.7.2 DAGMan 
+does not support late materialization}. If a submit file queues multiple procs
+while the \Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} and
+\Macro{SUBMIT\_FACTORY\_JOBS\_BY\_DEFAULT} attributes are set to True, DAGMan
+will produce unexpected results, including failing without warning. We are
+working to resolve this as quickly as possible.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}DAG Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1065,6 +1077,16 @@ As any DAG is first submitted with \Condor{submit\_dag},
 a check is made for a halt file.
 If one exists, it is removed.
 \end{itemize}
+
+\Bold{Note that neither \Condor{hold} nor a DAG halt is propagated to
+sub-DAGs.}
+In other words, if you \Condor{hold} or create a halt file for a DAG that
+has sub-DAGs, any sub-DAGs that are already in the queue will continue
+to submit node jobs.
+
+A \Condor{hold} or DAG halt \emph{does}, however, apply to splices,
+because they are merged into the parent DAG and controlled by a single
+\Condor{dagman} instance.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:AdvDAGMan}Advanced Features of DAGMan}
@@ -1818,7 +1840,7 @@ by specifying
 on the \Condor{submit\_dag} command line.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:MultipleDAGs}Optimization of Submission Time}
+\subsubsection{\label{sec:OptimizingDAGSubmissionTime}Optimization of Submission Time}
 \index{DAGMan!optimization of submit time}
 
 \Condor{dagman} works by watching log files for events, such as submission,
@@ -1991,7 +2013,7 @@ This avoids having to duplicate the \Arg{JOB} and \Arg{PARENT/CHILD}
 commands for every dataset -- we can just re-use the \File{workflow.dag} file,
 in combination with a dataset-specific vars file.
 
-\subsubsection{\label{sec:DAGsinDAGs}Composing workflows from multiple
+\subsubsection{\label{sec:ComposingDAGs}Composing workflows from multiple
 DAG files}
 \index{DAG input file!Composing workflows}
 \index{DAGMan!Composing workflows}

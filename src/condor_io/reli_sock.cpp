@@ -1028,7 +1028,7 @@ ReliSock::attach_to_file_desc( int fd )
 #endif
 
 Stream::stream_type 
-ReliSock::type() 
+ReliSock::type() const
 { 
 	return Stream::reli_sock; 
 }
@@ -1335,7 +1335,7 @@ ReliSock::exit_reverse_connecting_state(ReliSock *sock)
 	_state = sock_virgin;
 
 	if( sock ) {
-		int assign_rc = assignSocket(sock->get_file_desc());
+		int assign_rc = assignCCBSocket(sock->get_file_desc());
 		ASSERT( assign_rc );
 		isClient(true);
 		if( sock->_state == sock_connect ) {

@@ -2584,20 +2584,41 @@ JICShadow::initUserCredentials() {
 	// check to see if .cc already exists
 	char ccfilename[PATH_MAX];
 	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, user.c_str());
-	struct stat junk_buf;
-	int rc = stat(ccfilename, &junk_buf);
-	if (rc==0) {
-		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s domain %s already exist in %s\n",
-			user.c_str(), domain.c_str(), ccfilename );
+	struct stat cred_stat_buf;
+	int rc = stat(ccfilename, &cred_stat_buf);
+
+	// if the credential already exists, we should update it if
+	// it's more than X seconds old.  if X is zero, we always
+	// update it.  if X is negative, we never update it.
+	int fresh_time = param_integer("SEC_CREDENTIAL_REFRESH_INTERVAL", -1);
+
+	if (rc==0 && fresh_time < 0) {
 		// if the credential cache already exists, we don't even need
 		// to talk to the shadow.  just return success as quickly as
 		// possible.
 		//
 		// before we do, copy the creds to the sandbox and initialize
 		// the timer to monitor them.  propagate any errors.
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s already exist in %s, and interval is %i\n",
+			user.c_str(), ccfilename, fresh_time );
+
 		rc = refreshSandboxCredentials();
 		return rc;
 	}
+
+	// return success if the credential exists and has been recently
+	// updated.  note that if fresh_time is zero, we'll never return
+	// success here, meaning we will always update the credential.
+	time_t now = time(NULL);
+	if ((rc==0) && (now - cred_stat_buf.st_mtime < fresh_time)) {
+		// was updated in the last X seconds, just copy existing to sandbox
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s already exist in %s, and interval is %i\n",
+			user.c_str(), ccfilename, fresh_time );
+
+		rc = refreshSandboxCredentials();
+		return rc;
+	}
+
 	dprintf(D_FULLDEBUG, "CREDMON: obtaining credentials for user %s domain %s from shadow %s\n",
 		 user.c_str(), domain.c_str(), shadow->addr() );
 
@@ -2607,8 +2628,9 @@ JICShadow::initUserCredentials() {
 	dprintf(D_FULLDEBUG, "CREDMON: got cred %s\n", credential.c_str());
 
 	//
-	// We should refactor the below code and that of ZKM_UNIX_STORE_CRED as
-	// they are essentially identical.
+	// We should refactor the below code and that of ZKM_UNIX_STORE_CRED
+	// as they are essentially identical other than copying the creds to
+	// the sandbox
 	//
 
 	// create filenames

@@ -291,7 +291,8 @@ DebugFileInfo::DebugFileInfo(const dprintf_output_settings& p) :
 	outputTarget(STD_OUT), debugFP(NULL), choice(p.choice), headerOpts(p.HeaderOpts),
 	maxLog(p.logMax), logZero(0), maxLogNum(p.maxLogNum),
 	want_truncate(p.want_truncate), accepts_all(p.accepts_all),
-	rotate_by_time(p.rotate_by_time) {}
+	rotate_by_time(p.rotate_by_time), dont_panic(false),
+	userData(0), dprintfFunc(_dprintf_global_func) {}
 
 bool DebugFileInfo::MatchesCatAndFlags(int cat_and_flags) const
 {
@@ -1834,7 +1835,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
 		   we call that here, as well. */
 	if( _EXCEPT_Cleanup ) {
-		(*_EXCEPT_Cleanup)( __LINE__, errno, "dprintf hit fatal errors\n" );
+		(*_EXCEPT_Cleanup)( __LINE__, errno, "dprintf hit fatal errors" );
 	}
 
 		/* Actually exit now */
@@ -2507,6 +2508,16 @@ dprintf_dump_stack(void) {
 #endif
 
 #endif
+
+// If outputs haven't been configured yet, stop buffering dprintf()
+// output until they are configured.
+void dprintf_pause_buffering()
+{
+	_condor_dprintf_works = 1;
+	if ( DebugLogs == NULL ) {
+		DebugLogs = new std::vector<DebugFileInfo>;
+	}
+}
 
 bool debug_open_fds(std::map<int,bool> &open_fds)
 {

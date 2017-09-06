@@ -555,7 +555,6 @@ static bool test_analyze_policy_empty() {
 	ad->Delete(ATTR_PERIODIC_REMOVE_CHECK);
 	ad->Delete(ATTR_ON_EXIT_HOLD_CHECK);
 	ad->Delete(ATTR_ON_EXIT_REMOVE_CHECK);
-	ad->Delete(ATTR_CURRENT_TIME);
 	int ret_val = POLICY_ANALYZE(ad, PERIODIC_ONLY);
 	emit_output_actual_header();
 	emit_retval("%d", ret_val);
@@ -1268,7 +1267,6 @@ static bool test_firing_expression_empty() {
 	ad->Delete(ATTR_PERIODIC_REMOVE_CHECK);
 	ad->Delete(ATTR_ON_EXIT_HOLD_CHECK);
 	ad->Delete(ATTR_ON_EXIT_REMOVE_CHECK);
-	ad->Delete(ATTR_CURRENT_TIME);
 	POLICY_ANALYZE(ad, PERIODIC_ONLY);
 	const char* ret_val = policy.FiringExpression();
 	emit_output_actual_header();
@@ -1774,7 +1772,6 @@ static bool test_firing_expression_value_empty() {
 	ad->Delete(ATTR_PERIODIC_REMOVE_CHECK);
 	ad->Delete(ATTR_ON_EXIT_HOLD_CHECK);
 	ad->Delete(ATTR_ON_EXIT_REMOVE_CHECK);
-	ad->Delete(ATTR_CURRENT_TIME);
 	POLICY_ANALYZE(ad, PERIODIC_ONLY);
 	int ret_val = policy.FiringExpressionValue();
 	emit_output_actual_header();
@@ -2285,7 +2282,6 @@ static bool test_firing_reason_empty() {
 	ad->Delete(ATTR_PERIODIC_REMOVE_CHECK);
 	ad->Delete(ATTR_ON_EXIT_HOLD_CHECK);
 	ad->Delete(ATTR_ON_EXIT_REMOVE_CHECK);
-	ad->Delete(ATTR_CURRENT_TIME);
 	POLICY_ANALYZE(ad, PERIODIC_ONLY);
 	MyString reason;
 	int code;

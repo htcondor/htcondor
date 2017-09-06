@@ -83,7 +83,7 @@ bool init_local_hostname_impl()
 
 	if( ! local_ipaddr_initialized ) {
 		std::string ipv4, ipv6, ipbest;
-		if( network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ipv4, ipv6, ipbest, NULL)) {
+		if( network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ipv4, ipv6, ipbest)) {
 			ASSERT(local_ipaddr.from_ip_string(ipbest));
 			// If this fails, network_interface_to_ip returns something invalid.
 			local_ipaddr_initialized = true;
@@ -397,7 +397,7 @@ MyString get_hostname(const condor_sockaddr& addr) {
 	if (targ_addr.is_ipv6())
 		targ_addr.set_scope_id(0);
 
-	e = condor_getnameinfo(targ_addr, hostname, sizeof(hostname), NULL, 0, 0);
+	e = condor_getnameinfo(targ_addr, hostname, sizeof(hostname), NULL, 0, NI_NAMEREQD );
 	if (e)
 		return ret;
 

@@ -3232,6 +3232,17 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 }
 
 bool
+SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name, std::string &attr_value)
+{
+	KeyCacheEntry *session_key = NULL;
+	if (!session_cache->lookup(session_id, session_key)) {return false;}
+	ClassAd *policy = session_key->policy();
+	if (!policy) {return false;}
+
+	return policy->LookupString(attr_name,attr_value) ? true : false;
+}
+
+bool
 SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	ASSERT( session_id );
 

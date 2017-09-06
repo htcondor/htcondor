@@ -326,7 +326,6 @@ Requires: libcgroup >= 0.37
 %if %cream && ! %uw_build
 BuildRequires: glite-ce-cream-client-devel
 BuildRequires: glite-lbjp-common-gsoap-plugin-devel
-BuildRequires: glite-ce-cream-utils
 BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
 %endif
@@ -687,6 +686,41 @@ Includes the libraries for external packages built when UW_BUILD is enabled
 
 %endif
 
+%package annex-ec2
+Summary: Configuration and scripts to make an EC2 image annex-compatible.
+Group: Applications/System
+Requires: %name = %version-%release
+Requires(post): /sbin/chkconfig
+Requires(preun): /sbin/chkconfig
+
+%description annex-ec2
+Configures HTCondor to make an EC2 image annex-compatible.  Do NOT install
+on a non-EC2 image.
+
+%files annex-ec2
+%if %systemd
+%_libexecdir/condor/condor-annex-ec2
+%{_unitdir}/condor-annex-ec2.service
+%else
+%_initrddir/condor-annex-ec2
+%endif
+%config(noreplace) %_sysconfdir/condor/config.d/50ec2.config
+%config(noreplace) %_sysconfdir/condor/master_shutdown_script.sh
+
+%post annex-ec2
+%if %systemd
+/bin/systemctl enable condor-annex-ec2
+%else
+/sbin/chkconfig --add condor-annex-ec2
+%endif
+
+%preun annex-ec2
+%if %systemd
+/bin/systemctl disable condor-annex-ec2
+%else
+/sbin/chkconfig --del condor-annex-ec2 > /dev/null 2>&1 || :
+%endif
+
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
@@ -919,7 +953,7 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
-mkdir -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
+mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -976,7 +1010,6 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
 # not packaging legacy cruft
 rm -f %{buildroot}/%{_mandir}/man1/condor_master_off.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
-rm -f %{buildroot}/%{_mandir}/man1/condor_convert_history.1
 
 # not packaging quill bits
 rm -f %{buildroot}/%{_mandir}/man1/condor_load_history.1
@@ -993,13 +1026,17 @@ rm -rf %{buildroot}/%{_sysconfdir}/init.d
 mkdir -p %{buildroot}%{_tmpfilesdir}
 install -m 0644 %{buildroot}/etc/examples/condor-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
 
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_libexecdir}/condor/condor-annex-ec2
+
 mkdir -p %{buildroot}%{_unitdir}
+install -m 0644 %{buildroot}/etc/examples/condor-annex-ec2.service %{buildroot}%{_unitdir}/condor-annex-ec2.service
 install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_initrddir}/condor-annex-ec2
 %if 0%{?osg} || 0%{?hcc}
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
 %endif
@@ -1261,11 +1298,14 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+%_libexecdir/condor/libcollector_python_plugin.so
 %_mandir/man1/condor_advertise.1.gz
+%_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_cod.1.gz
 %_mandir/man1/condor_config_val.1.gz
+%_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
 %_mandir/man1/condor_dagman_metrics_reporter.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
@@ -1296,6 +1336,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%_mandir/man1/condor_top.1.gz
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
@@ -1347,7 +1388,6 @@ rm -rf %{buildroot}
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
 %_bindir/condor_stats
-%_bindir/condor_top.pl
 %_bindir/condor_version
 %_bindir/condor_history
 %_bindir/condor_status
@@ -1376,6 +1416,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
+%_sbindir/condor_convert_history
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
@@ -1388,7 +1429,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_reconfig
 %_sbindir/condor_replication
 %_sbindir/condor_restart
-%attr(6755, root, root) %_sbindir/condor_root_switchboard
 %_sbindir/condor_schedd
 %_sbindir/condor_set_shutdown
 %_sbindir/condor_shadow
@@ -1643,6 +1683,7 @@ rm -rf %{buildroot}
 
 %files python
 %defattr(-,root,root,-)
+%_bindir/condor_top
 %_libdir/libpyclassad*.so
 %_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad.so
@@ -1804,12 +1845,6 @@ if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
-   /usr/sbin/semanage permissive -a condor_collector_t
-   /usr/sbin/semanage permissive -a condor_master_t
-   /usr/sbin/semanage permissive -a condor_negotiator_t
-   /usr/sbin/semanage permissive -a condor_procd_t
-   /usr/sbin/semanage permissive -a condor_schedd_t
-   /usr/sbin/semanage permissive -a condor_startd_t
 fi
 %endif
 if [ $1 -eq 1 ] ; then
@@ -1897,6 +1932,56 @@ fi
 %endif
 
 %changelog
+* Mon Aug 07 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.5-2
+- Update SELinux profile for Red Hat 7.4
+
+* Tue Aug 01 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.5-1
+- Fixed a memory leak that would cause the HTCondor collector to slowly grow
+- Prevent the condor_starter from hanging when using cgroups on Debian
+- Fixed several issues that occur when IPv6 is in use
+- Support for using an ImDisk RAM drive on Windows as the execute directory
+- Fixed a bug where condor_rm rarely removed another one of the user's jobs
+- Fixed a bug with parallel universe jobs starting on partitionable slots
+
+* Thu Jul 13 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.12-1
+- Can configure the condor_startd to compute free disk space once
+
+* Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-1
+- Improved condor_schedd performance by turning off file checks by default
+- condor_annex -status finds VM instances that have not joined the pool
+- Able to update an annex's lease without adding new instances
+- condor_annex now keeps a command log
+- condor_q produces an expanded multi-line summary
+- Automatically retry and/or resume http file transfers when appropriate
+- Reduced load on the condor_collector by optimizing queries
+- A python based condor_top tool
+
+* Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.4-1
+- Python bindings are now available on MacOSX
+- Fixed a bug where PASSWORD authentication could fail to exchange keys
+- Pslot preemption now properly handles custom resources, such as GPUs
+- condor_submit now checks X.509 proxy expiration
+
+* Tue May 09 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.3-1
+- Fixed a bug where using an X.509 proxy might corrupt the job queue log
+- Fixed a memory leak in the Python bindings
+
+* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.1-1
+- Several performance enhancements in the collector
+- Further refinement and initial documentation of the HTCondor Annex
+- Enable chirp for Docker jobs
+- Job Router uses first match rather than round-robin matching
+- The schedd tracks jobs counts by status for each owner
+- Technology preview of late job materialization in the schedd
+
+* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.2-1
+- New metaknobs for mapping users to groups
+- Now case-insensitive with Windows user names when storing credentials
+- Signal handling in the OpenMPI script
+- Report RemoteSysCpu for Docker jobs
+- Allow SUBMIT_REQUIREMENT to refer to X509 secure attributes
+- Linux kernel tuning script takes into account the machine's role
+
 * Thu Mar 02 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.0-1
 - Performance improvements in collector's ingestion of ClassAds
 - Added collector attributes to report query times and forks

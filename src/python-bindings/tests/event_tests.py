@@ -43,7 +43,7 @@ class TestEventReader(unittest.TestCase):
     def test_event_count(self):
         events = list(self.reader)
         #for event in events: print event
-        self.assertEquals(len(events), 6)
+        self.assertEqual(len(events), 6)
 
     def test_block(self):
         events = list(self.reader)
@@ -62,7 +62,7 @@ class TestEventReader(unittest.TestCase):
 
     def test_wait(self):
         events = list(self.reader)
-        self.assertEquals(len(events), 6)
+        self.assertEqual(len(events), 6)
         t = threading.Thread(target=self.targetSleepAndWrite, name="Sleep and write event")
         t.setDaemon(True)
         t.start()
@@ -83,7 +83,7 @@ class TestEventReader(unittest.TestCase):
 
     def test_poll(self):
         events = list(self.reader)
-        self.assertEquals(self.reader.poll(1000), None)
+        self.assertEqual(self.reader.poll(1000), None)
 
     def targetSleepAndWrite(self):
         time.sleep(.4)
@@ -94,7 +94,7 @@ class TestEventReader(unittest.TestCase):
 
     def test_invalid(self):
         events = list(self.reader)
-        self.assertEquals(len(events), 6)
+        self.assertEqual(len(events), 6)
         file2 = open(self.testname, "a")
         file2.write("...\n...\n")
         file2.flush()
@@ -108,11 +108,11 @@ class TestEventReader(unittest.TestCase):
         keys2 = list(two.keys())
         keys2.sort()
         keys2 = tuple(keys2)
-        self.assertEquals(keys1, keys2)
+        self.assertEqual(keys1, keys2)
         for key in keys1:
             if key in ['EventTime', 'CurrentTime']:
                 continue
-            self.assertEquals(one[key], two[key])
+            self.assertEqual(one[key], two[key])
 
 
 if __name__ == '__main__':

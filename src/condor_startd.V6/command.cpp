@@ -1277,6 +1277,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				if (! stream->get_secret(claim_id)) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
 					free(claim_id);
+					free(dslots);
 					ABORT;
 				}
 				dslots[i] = resmgr->get_by_any_id( claim_id );
@@ -1285,11 +1286,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 					free( claim_id );
+					free(dslots);
 					ABORT;
 				}
 				free( claim_id );
 				if ( !dslots[i]->retirementExpired() ) {
 					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
+					free(dslots);
 					ABORT;
 				}
 			}

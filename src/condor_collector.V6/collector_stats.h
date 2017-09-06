@@ -26,6 +26,11 @@
 #include "extArray.h"
 #include "generic_stats.h"
 
+#define TRACK_QUERIES_BY_SUBSYS 1 // for testing, we may want to turn this code off...
+#ifdef TRACK_QUERIES_BY_SUBSYS
+#include "subsystem_info.h"
+#endif
+
 #define DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL (3600*4)
 
 // probes for doing timing analysis, enable one, the probe is more detailed.
@@ -150,8 +155,8 @@ public:
 
 // update counters that are tracked globally, and per Ad type.
 struct UpdatesCounters {
-	stats_entry_recent<int>   UpdatesTotal;
-	stats_entry_recent<int>   UpdatesInitial;
+	stats_entry_recent<long>   UpdatesTotal;
+	stats_entry_recent<long>   UpdatesInitial;
 	//stats_entry_recent<Probe> UpdatesLost;
 	stats_entry_lost_updates  UpdatesLost;
 
@@ -165,6 +170,15 @@ struct UpdatesStats {
 	UpdatesCounters Any;
 	stats_entry_abs<int> MachineAds;
 	stats_entry_abs<int> SubmitterAds;
+
+	stats_entry_abs<int> ActiveQueryWorkers;
+	stats_entry_abs<int> PendingQueries;
+	stats_entry_recent<long> DroppedQueries;
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+	stats_entry_recent<long> InProcQueriesFrom[SUBSYSTEM_ID_COUNT]; // Track subsystems < the AUTO subsys.
+	stats_entry_recent<long> ForkQueriesFrom[SUBSYSTEM_ID_COUNT]; // Track subsystems < the AUTO subsys.
+#endif
 
 	// per-ad-type counters 
 	std::map<std::string, UpdatesCounters> PerClass;

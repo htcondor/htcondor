@@ -21,17 +21,6 @@
 #ifndef CONDOR_DEBUG_H
 #define CONDOR_DEBUG_H
 
-// Write a line to the audit log, if configured. Always insert the
-// connection id from the relevant Sock object.
-// TODO This declaration may need to be moved elsewhere
-// TODO Do we like this name?
-// TODO Once we have a connection id in Sock, use that
-#if defined(WIN32)
-#  define audit_log(df, sock, fmt, ...) dprintf(D_AUDIT | D_IDENT | df, (DPF_IDENT)((sock)->get_timeout_raw()), fmt, __VA_ARGS__)
-#else
-#  define audit_log(df, sock, fmt, ...) dprintf(D_AUDIT | D_IDENT | df, (DPF_IDENT)((sock)->get_timeout_raw()), fmt, ##__VA_ARGS__)
-#endif
-
 /*
 **	Definitions for category and flags to pass to dprintf
 **  Note: this is a little confusing, since the flags specify both
@@ -75,7 +64,7 @@ enum {
    D_AUDIT, // messages for the audit log
    D_TEST,  // messages with this category are parsed by various tests.
    D_STATS,
-   D_UNUSED30,
+   D_MATERIALIZE,
    D_BUG,   // messages that indicate the daemon is going down.
 
    // NOTE: can't go beyond 31 categories so long as DebugOutputChoice is just an unsigned int.
@@ -211,6 +200,11 @@ void dprintf_before_shared_mem_clone( void );
 void dprintf_after_shared_mem_clone( void );
 
 void dprintf_dump_stack(void);
+
+/* If outputs haven't been configured yet, stop buffering dprintf()
+ * output until they are configured.
+ */
+void dprintf_pause_buffering();
 
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);

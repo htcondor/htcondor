@@ -288,6 +288,7 @@ class FileTransfer: public Service {
 	MyString DeterminePluginMethods( CondorError &e, const char* path );
 	int InitializePlugins(CondorError &e);
 	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, const char* proxy_filename = NULL);
+    int OutputFileTransferStats( ClassAd &stats );
 	MyString GetSupportedMethods();
 
 		// Convert directories with a trailing slash to a list of the contents
@@ -297,6 +298,8 @@ class FileTransfer: public Service {
 		// explanation of why this is necessary.
 		// Returns false on failure and sets error_msg.
 	static bool ExpandInputFileList( ClassAd *job, MyString &error_msg );
+		// use this function when you don't want to party on the job ad like the above function does 
+	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, MyString &error_msg );
 
 	// When downloading files, store files matching source_name as the name
 	// specified by target_name.
@@ -349,6 +352,9 @@ class FileTransfer: public Service {
 
 	void CommitFiles();
 	void ComputeFilesToSend();
+#ifdef HAVE_HTTP_PUBLIC_FILES
+	int AddInputFilenameRemaps(ClassAd *Ad);
+#endif
 	float bytesSent, bytesRcvd;
 	StringList* InputFiles;
 
@@ -476,7 +482,6 @@ class FileTransfer: public Service {
 		// expanded_list - the list of files to transfer
 	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list );
 
-	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, MyString &error_msg );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing

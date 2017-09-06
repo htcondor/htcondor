@@ -44,29 +44,23 @@ for /D %%I in ("%VS110COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC110_
 for /D %%I in ("%VS110COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC110_IDE=%%~sdpICommon7\IDE
 for /D %%I in ("%VS110COMNTOOLS%..") do set VS110ROOT=%%~sdpI
 
-:: pick up compiler path from VS111COMNTOOLS environment variable
+:: pick up compiler path from VS120COMNTOOLS environment variable
 ::
-for /D %%I in ("%VS111COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC111_BIN=%%~sdpIVC\bin
-for /D %%I in ("%VS111COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC111_IDE=%%~sdpICommon7\IDE
-for /D %%I in ("%VS111COMNTOOLS%..") do set VS111ROOT=%%~sdpI
+for /D %%I in ("%VS120COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC120_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS120COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC120_IDE=%%~sdpICommon7\IDE
+for /D %%I in ("%VS120COMNTOOLS%..") do set VS120ROOT=%%~sdpI
 
-:: pick up compiler path from VS112COMNTOOLS environment variable
+:: pick up compiler path from VS140COMNTOOLS environment variable
 ::
-for /D %%I in ("%VS112COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC112_BIN=%%~sdpIVC\bin
-for /D %%I in ("%VS112COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC112_IDE=%%~sdpICommon7\IDE
-for /D %%I in ("%VS112COMNTOOLS%..") do set VS112ROOT=%%~sdpI
+for /D %%I in ("%VS140COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC140_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS140COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC140_IDE=%%~sdpICommon7\IDE
+for /D %%I in ("%VS140COMNTOOLS%..") do set VS140ROOT=%%~sdpI
 
-:: pick up compiler path from VS113COMNTOOLS environment variable
+:: pick up compiler path from VS150COMNTOOLS environment variable
 ::
-for /D %%I in ("%VS113COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC113_BIN=%%~sdpIVC\bin
-for /D %%I in ("%VS113COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC113_IDE=%%~sdpICommon7\IDE
-for /D %%I in ("%VS113COMNTOOLS%..") do set VS113ROOT=%%~sdpI
-
-:: pick up compiler path from VS114COMNTOOLS environment variable
-::
-for /D %%I in ("%VS114COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC114_BIN=%%~sdpIVC\bin
-for /D %%I in ("%VS114COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC114_IDE=%%~sdpICommon7\IDE
-for /D %%I in ("%VS114COMNTOOLS%..") do set VS114ROOT=%%~sdpI
+for /D %%I in ("%VS150COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC150_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS150COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC150_IDE=%%~sdpICommon7\IDE
+for /D %%I in ("%VS150COMNTOOLS%..") do set VS150ROOT=%%~sdpI
 
 set VS_DIR=%VS90ROOT:~0,-1%
 set VS_GEN="Visual Studio 9 2008"
@@ -85,21 +79,22 @@ if "%~2"=="VC11" (
 if "%~2"=="VC12" (
     if DEFINED VS120ROOT (
         set VS_DIR=%VS120ROOT:~0,-1%
-        set VS_GEN="Visual Studio 12"
-    )
-)
-if "%~2"=="VC13" (
-    if DEFINED VS130ROOT (
-        set VS_DIR=%VS130ROOT:~0,-1%
-        set VS_GEN="Visual Studio 13"
+        set VS_GEN="Visual Studio 12 2013"
     )
 )
 if "%~2"=="VC14" (
     if DEFINED VS140ROOT (
         set VS_DIR=%VS140ROOT:~0,-1%
-        set VS_GEN="Visual Studio 14"
+        set VS_GEN="Visual Studio 14 2015"
     )
 )
+if "%~2"=="VC15" (
+    if DEFINED VS150ROOT (
+        set VS_DIR=%VS150ROOT:~0,-1%
+        set VS_GEN="Visual Studio 15 2017"
+    )
+)
+:: append Win64 if needed, note we have to strip the quotes from the VS_GEN value before we append to it.
 if "%~3"=="x64" set VS_GEN="%VS_GEN:~1,-1% Win64"
 echo VS_DIR is now [%VS_DIR%] %VS_GEN%
 set VC_DIR=%VS_DIR%\VC
@@ -161,8 +156,24 @@ if NOT "~%_NMI_PREREQ_cmake_ROOT%"=="~" (
       echo guess CMAKE_BIN_DIR=%CMAKE_BIN_DIR%
    )
 )
+:: If building with Visual Studio 14 or later, cmake 3 is required
+for /F "tokens=3" %%I in ('%CMAKE_BIN_DIR%cmake.exe -version') do set CMAKE_VER=%%~nI
+echo CMAKE_VER=%CMAKE_VER%
+if "%~2"=="VC15" goto :need_cmake3
+if "%~2"=="VC14" goto :need_cmake3
+goto :clean_cmake
+:need_cmake3
+if "%CMAKE_VER:~0,1%"=="2" (
+    set CMAKE_BIN_DIR=C:\Program Files\CMake3\bin
+    for /F "tokens=3" %%I in ('%CMAKE_BIN_DIR%\cmake.exe -version') do set CMAKE_VER=%%~nI
+)
+echo using cmake CMAKE_BIN_DIR=%CMAKE_BIN_DIR%
+echo using cmake CMAKE_VER=%CMAKE_VER%
+
+:clean_cmake
 :: strip trailing \ from cmake bin dir
 if "~%CMAKE_BIN_DIR:~-1%"=="~\" set CMAKE_BIN_DIR=%CMAKE_BIN_DIR:~0,-1%
+
 
 :: set path to WIX binaries
 if "~%WIX%"=="~" goto no_wix
@@ -312,7 +323,7 @@ move src\classad\RelWithDebInfo\*.pdb src\condor_tests
 ::move src\condor_utils\tests\RelWithDebInfo\*.pdb src\condor_tests
 ::move src\condor_collector.V6\tests\RelWithDebInfo\*.exe src\condor_tests
 ::move src\condor_collector.V6\tests\RelWithDebInfo\*.pdb src\condor_tests
-copy bld_external\pcre-8.33\install\lib\pcre.dll src\condor_tests
+for /f %%I in ('dir /b/s bld_external\pcre.dll') do copy %%~fI src\condor_tests
 goto finis
 
 REM common exit

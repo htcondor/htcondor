@@ -761,17 +761,13 @@ void
 install_core_dump_handler()
 {
 #if HAVE_EXT_COREDUMPER
-		// We only need to do this if we're root.
-		if( getuid() == 0) {
-			dprintf(D_FULLDEBUG, "Running as root.  Enabling specialized core dump routines\n");
-			sigset_t fullset;
-			sigfillset( &fullset );
-			install_sig_handler_with_mask(SIGSEGV, &fullset, linux_sig_coredump);
-			install_sig_handler_with_mask(SIGABRT, &fullset, linux_sig_coredump);
-			install_sig_handler_with_mask(SIGILL, &fullset, linux_sig_coredump);
-			install_sig_handler_with_mask(SIGFPE, &fullset, linux_sig_coredump);
-			install_sig_handler_with_mask(SIGBUS, &fullset, linux_sig_coredump);
-		}
+		sigset_t fullset;
+		sigfillset( &fullset );
+		install_sig_handler_with_mask(SIGSEGV, &fullset, linux_sig_coredump);
+		install_sig_handler_with_mask(SIGABRT, &fullset, linux_sig_coredump);
+		install_sig_handler_with_mask(SIGILL, &fullset, linux_sig_coredump);
+		install_sig_handler_with_mask(SIGFPE, &fullset, linux_sig_coredump);
+		install_sig_handler_with_mask(SIGBUS, &fullset, linux_sig_coredump);
 #	endif // of ifdef HAVE_EXT_COREDUMPER
 }
 
@@ -1237,7 +1233,7 @@ handle_dc_query_instance( Service*, int, Stream* stream)
 
 	// the first caller causes us to make a random instance id
 	// all subsequent queries will get the same instance id.
-	const char * instance_id = NULL;
+	static char * instance_id = NULL;
 	const int instance_length = 16;
 	if ( ! instance_id) {
 		unsigned char * bytes = Condor_Crypt_Base::randomKey(instance_length/2);
@@ -2713,7 +2709,7 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
 								  (CommandHandler)handle_invalidate_key,
 								  "handle_invalidate_key()", 0, ALLOW );
-								  
+
 		// DC_QUERY_INSTANCE is for determining if you are talking to the correct instance of a daemon.
 		// There is no need for security here, the use case is a lambda function in AWS which won't have
 		// authorization to do anything else.

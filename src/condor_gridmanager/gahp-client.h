@@ -714,6 +714,28 @@ class EC2GahpClient : public GahpClient {
 		EC2GahpClient(	const char * id, const char * path, const ArgList * args );
 		~EC2GahpClient();
 
+		int describe_stacks(	const std::string & service_url,
+								const std::string & publickeyfile,
+								const std::string & privatekeyfile,
+
+								const std::string & stackName,
+
+								std::string & stackStatus,
+								std::map< std::string, std::string > & outputs,
+								std::string & errorCode );
+
+		int create_stack(	const std::string & service_url,
+							const std::string & publickeyfile,
+							const std::string & privatekeyfile,
+
+							const std::string & stackName,
+							const std::string & templateURL,
+							const std::string & capability,
+							const std::map< std::string, std::string > & parameters,
+
+							std::string & stackID,
+							std::string & errorCode );
+
 		int get_function(	const std::string & service_url,
 							const std::string & publickeyfile,
 							const std::string & privatekeyfile,
@@ -721,6 +743,16 @@ class EC2GahpClient : public GahpClient {
 							const std::string & functionARN,
 
 							std::string & functionHash,
+							std::string & errorCode );
+
+		int call_function(	const std::string & service_url,
+							const std::string & publickeyfile,
+							const std::string & privatekeyfile,
+
+							const std::string & functionARN,
+							const std::string & argumentBlob,
+
+							std::string & returnBlob,
 							std::string & errorCode );
 
 		int put_targets(	const std::string & service_url,
@@ -847,6 +879,12 @@ class EC2GahpClient : public GahpClient {
 
 						std::string & error_code );
 
+		int bulk_query(	const std::string & service_url,
+						const std::string & publickeyfile,
+						const std::string & privatekeyfile,
+
+						StringList & returnStatus,
+						std::string & error_code );
 
 		int ec2_vm_start( const std::string & service_url,
 						  const std::string & publickeyfile,
@@ -885,6 +923,14 @@ class EC2GahpClient : public GahpClient {
 		int ec2_vm_status_all( const std::string & service_url,
 							   const std::string & publickeyfile,
 							   const std::string & privatekeyfile,
+							   StringList & returnStatus,
+							   std::string & error_code );
+
+		int ec2_vm_status_all( const std::string & service_url,
+							   const std::string & publickeyfile,
+							   const std::string & privatekeyfile,
+							   const std::string & filterName,
+							   const std::string & filterValue,
 							   StringList & returnStatus,
 							   std::string & error_code );
 

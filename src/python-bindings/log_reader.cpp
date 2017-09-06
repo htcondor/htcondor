@@ -168,7 +168,7 @@ void export_log_reader()
         ;
 
     boost::python::class_<LogReader>("LogReader", "A class for reading or tailing ClassAd logs", boost::python::init<const std::string &>(":param filename: The filename to read."))
-        .def("next", &LogReader::next, "Returns the next event; whether this blocks indefinitely for new events is controlled by setBlocking().\n"
+        .def(NEXT_FN, &LogReader::next, "Returns the next event; whether this blocks indefinitely for new events is controlled by setBlocking().\n"
             ":return: The next event in the log.")
         .def("__iter__", &LogReader::pass_through)
         .def("wait", &LogReader::wait, "Wait until a new event is available.  No value is returned.\n")

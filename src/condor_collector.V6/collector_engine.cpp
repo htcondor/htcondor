@@ -86,6 +86,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 
 	collectorStats = stats;
 	m_collector_requirements = NULL;
+	m_get_ad_options = 0;
 }
 
 
@@ -859,7 +860,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		  }
 		  if (!makeGenericAdHashKey (hk, clientAd))
 		  {
-			  dprintf(D_ALWAYS, "Could not make haskey --- ignoring ad\n");
+			  dprintf(D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
 			  insert = -3;
 			  retVal = 0;
 			  break;
@@ -1459,5 +1460,5 @@ killGenericHashTable(CollectorHashTable *table)
 	ASSERT(table != NULL);
 	killHashTable(*table);
 	delete table;
-	return 0;
+	return 1;
 }

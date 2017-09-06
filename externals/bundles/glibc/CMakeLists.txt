@@ -183,7 +183,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 
 	elseif( ${GLIBC_VERSION} STREQUAL "217" )
 		#
-		# x86-64 RHEL 7 Beta
+		# x86-64 RHEL 7 .3
 		#
 		if( NOT ${SYS_ARCH} STREQUAL "X86_64" )
 			message( STATUS "HTCondor will not build 32-bit standard universe for glibc version ${GLIBC_VERSION}" )
@@ -191,8 +191,8 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 			set( CLIPPED ON PARENT_SCOPE )
 		endif()
 
-		set( VER 2.17-36-x86_64 )
-		set( GLIBC_TARNAME glibc-2.17-36-x86_64 )
+		set( VER 2.17-157-x86_64 )
+		set( GLIBC_TARNAME glibc-2.17-157-x86_64 )
 		set( GLIBC_FLAGS export CC=gcc && export CXX=g++ && export "CFLAGS=-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3" )
 		set( GLIBC_CONFIGURE ./configure CC=gcc CXX=g++ "CFLAGS=-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3 -fno-asynchronous-unwind-tables" --prefix=/usr --enable-add-ons=ports,nptl,rtkaio,c_stubs,libidn --with-headers=/usr/include --enable-kernel=2.6.32 --enable-bind-now --build=x86_64-redhat-linux --enable-multi-arch --enable-obsolete-rpc --enable-systemtap --disable-profile --enable-nss-crypt --enable-static-nss )
 

@@ -33,6 +33,7 @@
 #include "dc_startd.h"
 #include "get_daemon_name.h"
 #include <algorithm>
+#include <iterator>
 #include "defrag.h"
 
 

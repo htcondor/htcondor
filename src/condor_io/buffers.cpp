@@ -362,8 +362,6 @@ void ChainBuf::reset()
 }
 
 
-int dbg_count = 0;
-
 int ChainBuf::get(
 	void	*dta,
 	int		sz
@@ -371,11 +369,6 @@ int ChainBuf::get(
 {
 	int		last_incr;
 	int		nr;
-
-	if (dbg_count++ > 307){
-		dbg_count--;
-	}
-
 
 	for(nr=0; _curr; _curr=_curr->next()){
 		last_incr = _curr->get_max(&((char *)dta)[nr], sz-nr);

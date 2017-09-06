@@ -1,6 +1,8 @@
 \documentclass[titlepage,oneside,latex2html,ps2pdf,bookmarks,bookmarksnumbered,plainpages=false,pdfpagelabels]{book}
 % \includeonly{overview,user}
 
+\usepackage{longtable}
+
 %
 % Input a file written by our Makefile, which will setup to use Times font
 % and pull in the hyperref package if we are building the PDF version.
@@ -69,10 +71,6 @@
 	\renewcommand{\footrulewidth}{0.4pt}
 	\addtolength{\headwidth}{\oddsidemargin}
 
-	%
-	%  Fancy chapter banners
-	%
-	\usepackage[Bjarne]{fncychap}
 }
 
 
@@ -124,6 +122,11 @@
 \chapter{Grid Computing}
 \label{grid-computing}
 \input{grids/grid-computing.tex}
+
+% Cloud Computing
+\chapter{Cloud Computing}
+\label{cloud-computing}
+\input{clouds/cloud-computing.tex}
 
 % APIs
 \chapter{Application Programming Interfaces (APIs)}

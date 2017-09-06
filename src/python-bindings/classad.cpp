@@ -19,12 +19,6 @@
 #include "exprtree_wrapper.h"
 #include "old_boost.h"
 
-// http://docs.python.org/3/c-api/apiabiversion.html#apiabiversion
-#if PY_MAJOR_VERSION >= 3
-   #define PyInt_Check(op)  PyNumber_Check(op)
-   #define PyString_Check(op)  PyBytes_Check(op)
-#endif
-
 
 void
 ExprTreeHolder::init()
@@ -394,7 +388,7 @@ ExprTreeHolder::apply_unary_operator(classad::Operation::OpKind kind) const
 }
 
 bool
-ExprTreeHolder::__nonzero__()
+ExprTreeHolder::__bool__()
 {
     boost::python::object result = Evaluate();
     boost::python::extract<classad::Value::ValueType> value_extract(result);
@@ -783,7 +777,9 @@ pythonFunctionTrampoline_internal(const char *name, const classad::ArgumentList&
         pyKw["state"] = wrapper;
     }
 
-    boost::python::object pyResult = py_import("__main__").attr("__builtins__").attr("apply")(pyFunc, pyArgs, pyKw);
+    // the `apply` builtin is unavailable in python3; hack it with a lambda
+    boost::python::object pyResult = boost::python::eval("lambda f,a,kw: f(*a,**kw)")(pyFunc, pyArgs, pyKw);
+
     classad::ExprTree* exprTreeResult = convert_python_to_exprtree(pyResult);
     if (!exprTreeResult || !exprTreeResult->Evaluate(state, result))
     {
@@ -850,7 +846,7 @@ convert_python_to_exprtree(boost::python::object value)
         classad::Value val; val.SetBooleanValue(cppvalue);
         return classad::Literal::MakeLiteral(val);
     }
-    if (PyString_Check(value.ptr()) || PyUnicode_Check(value.ptr()))
+    if (PyBytes_Check(value.ptr()) || PyUnicode_Check(value.ptr()))
     {
         std::string cppvalue = boost::python::extract<std::string>(value);
         classad::Value val; val.SetStringValue(cppvalue);
@@ -896,20 +892,23 @@ convert_python_to_exprtree(boost::python::object value)
     if (PyMapping_Check(value.ptr()))
     {
         PyObject *keys = PyMapping_Keys(value.ptr());
-        if (!keys) {THROW_EX(RuntimeError, "Unable to convert mapping to keys");}
-        ClassAdWrapper *ad = new ClassAdWrapper();
-        boost::python::object iter = boost::python::object(boost::python::handle<>(keys));
-        while (true)
-        {
-            PyObject *pyobj = PyIter_Next(iter.ptr());
-            if (!pyobj) {break;}
-            boost::python::object key_obj = boost::python::object(boost::python::handle<>(pyobj));
-            std::string key_str = boost::python::extract<std::string>(key_obj);
-            boost::python::object val = value[key_obj];
-            classad::ExprTree *val_expr = convert_python_to_exprtree(val);
-            ad->Insert(key_str, val_expr);
+        if (!keys) {
+            PyErr_Clear();
+        } else {
+            ClassAdWrapper *ad = new ClassAdWrapper();
+            boost::python::object iter = boost::python::object(boost::python::handle<>(keys));
+            while (true)
+            {
+                PyObject *pyobj = PyIter_Next(iter.ptr());
+                if (!pyobj) {break;}
+                boost::python::object key_obj = boost::python::object(boost::python::handle<>(pyobj));
+                std::string key_str = boost::python::extract<std::string>(key_obj);
+                boost::python::object val = value[key_obj];
+                classad::ExprTree *val_expr = convert_python_to_exprtree(val);
+                ad->Insert(key_str, val_expr);
+            }
+            return ad;
         }
-        return ad;
     }
     PyObject *py_iter = PyObject_GetIter(value.ptr());
     if (py_iter)

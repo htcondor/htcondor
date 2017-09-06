@@ -46,6 +46,8 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
     \OptItem{\OptArg{-ads}{filename}}{(Query option) Read the set of 
       ClassAds in the file specified by \Arg{filename},
       instead of querying the \Condor{collector}.}
+    \OptItem{\OptArg{-annex}{name}}{(Query option) Query for and display only
+      resources in the named annex.}
     \OptItem{\Opt{-any}}{(Query option) Query all ClassAds and display 
       their type, target type, and name.}
     \OptItem{\Opt{-avail}}{(Query option) Query \Condor{startd} ClassAds 
@@ -121,6 +123,7 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
     \OptItem{\Opt{-expert}}{(Display option) Display shortened error messages.}
     \OptItem{\Opt{-long}}{(Display option) Display entire ClassAds.  Implies
       that totals will not be displayed.}
+    \OptItem{\Opt{-limit}{num}}{(Query option) At most \Arg{num} results should be displayed.}
     \OptItem{\OptArg{-sort}{expr}}{(Display option) Change the display order
       to be based on ascending values of an evaluated expression 
       given by \Arg{expr}.
@@ -148,7 +151,7 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       in JSON format.}
     \OptItem{\OptArg{-constraint}{const}}{(Custom option) Add constraint 
       expression.  }
-    \OptItem{\OptArg{-compact}}{(Custom option) Show compact form, 
+    \OptItem{\OptArg{-compact}{}}{(Custom option) Show compact form, 
       rolling up slots into a single line.  }
     \OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Display attribute
       or expression \Arg{attr} in format \Arg{fmt}.

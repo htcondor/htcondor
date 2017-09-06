@@ -101,7 +101,17 @@ class CondorQ
 	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
 
 	// option flags for fetchQueueFromHost* functions, these can modify the meaning of attrs
-	typedef enum { fetch_Default=0, fetch_DefaultAutoCluster=1, fetch_GroupBy=2, fetch_MyJobs=4, fetch_SummaryOnly=8 } QueryFetchOpts;
+	// use only one of the choices < fetch_FromMask, optionally OR'd with one or more fetch flags
+	// currently only fetch_Jobs accepts flags.
+	typedef enum {
+		fetch_Jobs=0,
+		fetch_DefaultAutoCluster=1,
+		fetch_GroupBy=2,
+		fetch_FromMask=0x03,         // mask off the 'from' bits
+		fetch_MyJobs=0x04,           // modifies fetch_Jobs
+		fetch_SummaryOnly=0x08,      // modifies fetch_Jobs
+		fetch_IncludeClusterAd=0x10, // modifies fetch_Jobs
+	} QueryFetchOpts;
 	
 		// fetch the job ads from database 	
 	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, const char * = 0, CondorError* errstack = 0);

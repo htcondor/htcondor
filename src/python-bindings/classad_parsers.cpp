@@ -6,12 +6,6 @@
 
 #include "classad_parsers.h"
 
-// http://docs.python.org/3/c-api/apiabiversion.html#apiabiversion
-#if PY_MAJOR_VERSION >= 3
-   #define PyInt_Check(op)  PyNumber_Check(op)
-   #define PyString_Check(op)  PyBytes_Check(op)
-#endif
-
 static OldClassAdIterator parseOldAds_impl(boost::python::object input);
 
 ClassAdWrapper *parseString(const std::string &str)
@@ -47,6 +41,44 @@ ClassAdWrapper *parseFile(FILE *stream)
     return wrapper_result;
 }
 
+// Utility to clarify a couple of evaluations
+static inline bool
+IsStringEnd(const char *str, unsigned off)
+{
+    return (  (str[off] == '\0') || (str[off] == '\n') || (str[off] == '\r')  );
+}
+
+// Convert string escaping from old ClassAd syntax to new ClassAd syntax.
+void ConvertEscapingOldToNew( const char *str, std::string &buffer )
+{
+        // String escaping is different between new and old ClassAds.
+        // We need to convert the escaping from old to new style before
+        // handing the expression to the new ClassAds parser.
+    while( *str ) {
+        size_t n = strcspn(str,"\\");
+        buffer.append(str,n);
+        str += n;
+        if ( *str == '\\' ) {
+            buffer.append( 1, '\\' );
+            str++;
+            if(  (str[0] != '"') ||
+                 ( /*(str[0] == '"') && */ IsStringEnd(str, 1) )   )
+            {
+                buffer.append( 1, '\\' );
+            }
+        }
+    }
+        // remove trailing whitespace
+    int ix = (int)buffer.size();
+    while (ix > 1) {
+        char ch = buffer[ix-1];
+        if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n')
+            break;
+        --ix;
+    }
+    buffer.resize(ix);
+}
+
 ClassAdWrapper *parseOld(boost::python::object input)
 {
     PyErr_Warn(PyExc_DeprecationWarning, "ClassAd Deprecation: parseOld is deprecated; use parseOne, parseNext, or parseAds instead.");
@@ -71,6 +103,14 @@ ClassAdWrapper *parseOld(boost::python::object input)
             continue;
         }
         std::string line_str = boost::python::extract<std::string>(line);
+        // The ClassAd library doesn't understand old ClassAd string
+        // escaping rules. If the expression contains a backslash, we
+        // need to convert to new ClassAd escaping rules.
+        if ( strchr( line_str.c_str(), '\\' ) ) {
+            std::string src = line_str;
+            line_str.clear();
+            ConvertEscapingOldToNew( src.c_str(), line_str );
+        }
         size_t pos = line_str.find('=');
 
         // strip whitespace before the attribute and and around the =
@@ -145,7 +185,7 @@ boost::shared_ptr<ClassAdWrapper> parseOne(boost::python::object input, ParserTy
     }
     boost::shared_ptr<ClassAdWrapper> result_ad(new ClassAdWrapper());
     input = parseAds(input, type);
-    bool input_has_next = py_hasattr(input, "next");
+    bool input_has_next = py_hasattr(input, NEXT_FN);
     while (true)
     {
         boost::python::object next_obj;
@@ -153,7 +193,7 @@ boost::shared_ptr<ClassAdWrapper> parseOne(boost::python::object input, ParserTy
         {
             if (input_has_next)
             {
-                next_obj = input.attr("next")();
+                next_obj = input.attr(NEXT_FN)();
             }
             else if (input.ptr() && input.ptr()->ob_type && input.ptr()->ob_type->tp_iternext)
             {
@@ -183,9 +223,9 @@ boost::shared_ptr<ClassAdWrapper> parseOne(boost::python::object input, ParserTy
 boost::python::object parseNext(boost::python::object source, ParserType type)
 {
     boost::python::object ad_iter = parseAds(source, type);
-    if (py_hasattr(ad_iter, "next"))
+    if (py_hasattr(ad_iter, NEXT_FN))
     {
-        return ad_iter.attr("next")();
+        return ad_iter.attr(NEXT_FN)();
     }
     if (source.ptr() && source.ptr()->ob_type && source.ptr()->ob_type->tp_iternext)
     {
@@ -200,7 +240,7 @@ boost::python::object parseNext(boost::python::object source, ParserType type)
 }
 
 OldClassAdIterator::OldClassAdIterator(boost::python::object source)
-    : m_done(false), m_source_has_next(py_hasattr(source, "next")),
+    : m_done(false), m_source_has_next(py_hasattr(source, NEXT_FN)),
       m_ad(new ClassAdWrapper()), m_source(source)
 {
     if (!m_source_has_next && !PyIter_Check(m_source.ptr()))
@@ -240,7 +280,7 @@ OldClassAdIterator::next()
         {
             if (m_source_has_next)
             {
-                next_obj = m_source.attr("next")();
+                next_obj = m_source.attr(NEXT_FN)();
             }
             else
             {
@@ -269,6 +309,7 @@ OldClassAdIterator::next()
                     m_source.attr("seek")(end_ptr);
                     PyErr_Restore(ptype, pvalue, ptraceback);
                 }
+                PyErr_Clear();
                 return result;
             }
             boost::python::throw_error_already_set();
@@ -310,6 +351,14 @@ OldClassAdIterator::next()
             adchar++;
         }
         if (invalid) {continue;}
+        // The ClassAd library doesn't understand old ClassAd string
+        // escaping rules. If the expression contains a backslash, we
+        // need to convert to new ClassAd escaping rules.
+        if ( strchr( line_str.c_str(), '\\' ) ) {
+            std::string src = line_str;
+            line_str.clear();
+            ConvertEscapingOldToNew( src.c_str(), line_str );
+        }
 
         size_t pos = line_str.find('=');
 
@@ -340,7 +389,7 @@ static
 OldClassAdIterator
 parseOldAds_impl(boost::python::object input)
 {
-    boost::python::object input_iter = (PyString_Check(input.ptr()) || PyUnicode_Check(input.ptr())) ?
+    boost::python::object input_iter = (PyBytes_Check(input.ptr()) || PyUnicode_Check(input.ptr())) ?
           input.attr("splitlines")().attr("__iter__")()
         : input.attr("__iter__")();
 
@@ -435,8 +484,8 @@ obj_iternext(PyObject *self)
         try
         {
             boost::python::object obj(boost::python::borrowed(self));
-            if (!py_hasattr(obj, "next")) THROW_EX(TypeError, "instance has no next() method");
-            boost::python::object result = obj.attr("next")();
+            if (!py_hasattr(obj, NEXT_FN)) THROW_EX(TypeError, "instance has no " NEXT_FN "() method");
+            boost::python::object result = obj.attr(NEXT_FN)();
             return boost::python::incref(result.ptr());
         }
         catch (...)

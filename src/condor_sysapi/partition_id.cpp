@@ -54,22 +54,32 @@ int sysapi_partition_id_raw(char const *path,char **result)
 		free(volume_path_name);
 		return 0;
 	}
-	*result = (char*)malloc(RESULT_BUFFER_SIZE);
-	ASSERT(*result != NULL);
+	char * volume_name = (char*)malloc(RESULT_BUFFER_SIZE);
+	ASSERT(volume_name != NULL);
 	ret = GetVolumeNameForVolumeMountPoint(volume_path_name,
-	                                       *result,
+	                                       volume_name,
 	                                       RESULT_BUFFER_SIZE);
-	free(volume_path_name);
-	if (ret == FALSE) {
-		dprintf(D_ALWAYS,
-		        "sysapi_partition_id: "
-		            "GetVolumeNameForVolumeMountPoint error: %u\n",
-		        GetLastError());
-		free(*result);
-		return 0;
+	if ( ! ret) {
+		DWORD err = GetLastError();
+		// There is a kind of ramdisk that creates pseudo volumes that work just fine but aren't actually mount points
+		// so if we get the 'not a reparse point' error, just use the volume path name as the partition id
+		// instead of the volume name
+		if (err == ERROR_NOT_A_REPARSE_POINT) {
+			dprintf(D_ALWAYS, "sysapi_partition_id: GetVolumeNameForVolumeMountPoint error: %u, falling back to use '%s' as the partition id\n", err, volume_path_name);
+			// swap volume_name and volume_path_name so end up freeing the volume_name and returning the volume_path_name
+			char * tmp = volume_name;
+			volume_name = volume_path_name;
+			volume_path_name = tmp;
+			ret = 1; // turn this into a success
+		} else {
+			dprintf(D_ALWAYS, "sysapi_partition_id: GetVolumeNameForVolumeMountPoint error: %u%s\n", err);
+			free(volume_name); volume_name = NULL;
+		}
 	}
+	free(volume_path_name);
+	*result = volume_name;
 
-	return 1;
+	return ret ? 1 : 0;
 }
 
 #else /* now the UNIX case */

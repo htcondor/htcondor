@@ -1567,14 +1567,18 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			break; // break out of while loop
 		}
 
-			// Check whether this submit cycle is taking too long.
-		time_t now = time( NULL );
-		time_t elapsed = now - cycleStart;
-		if ( elapsed > dm.m_user_log_scan_interval ) {
-       		debug_printf( DEBUG_QUIET,
-						"Warning: Submit cycle elapsed time (%d s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
-						(int)elapsed, dm.m_user_log_scan_interval );
-			break; // break out of while loop
+			// Check whether this submit cycle is taking too long (only if we
+			// are not in aggressive submit mode)
+		if( !dm.aggressive_submit ) {
+			time_t now = time( NULL );
+			time_t elapsed = now - cycleStart;
+			if ( elapsed > dm.m_user_log_scan_interval ) {
+				debug_printf( DEBUG_QUIET,
+					"Warning: Submit cycle elapsed time (%d s) has exceeded "
+					"log scan interval (%d s); bailing out of submit loop\n",
+					(int)elapsed, dm.m_user_log_scan_interval );
+				break; // break out of while loop
+			}
 		}
 
 			// remove & submit first job from ready queue
@@ -4067,6 +4071,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 
 	_jobstateLog.WriteSubmitFailure( node );
 
+    // Flag the status file as outdated so it gets updated soon.
+    _statusFileOutdated = true;
+
 	// Set the times to wait twice as long as last time.
 	int thisSubmitDelay = _nextSubmitDelay;
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
@@ -4548,6 +4555,7 @@ Dag::LiftSplices(SpliceLayer layer)
 		_splices.remove(key);
 		delete splice;
 	}
+	ASSERT( _splices.getNumElements() == 0 );
 
 	// and prefix them if there was a DIR for the dag.
 	PropagateDirectoryToAllNodes();
@@ -4614,6 +4622,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 		}
 	}
 
+	// 1. Take ownership of the nodes
 	// 1b. Re-set the node categories (if any) so they point to the
 	// ThrottleByCategory object in *this* DAG rather than the splice
 	// DAG (which will be deleted soon).

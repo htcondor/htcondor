@@ -296,6 +296,7 @@ struct RemoteParam
             {
                 if (PyErr_ExceptionMatches(PyExc_StopIteration))
                 {
+                    PyErr_Clear();
                     break;
                 }
                 boost::python::throw_error_already_set();

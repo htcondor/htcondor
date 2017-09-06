@@ -1,0 +1,111 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use JSON;
+
+my( $prettyPrint );
+GetOptions(
+	'pretty-print'	=> \$prettyPrint
+);
+
+	my $template;
+	$template->{ AWSTemplateFormatVersion } = "2010-09-09";
+	$template->{ Description } = "HTCondor Annex: Instance Profile";
+
+	$template->{ Parameters } = {
+		"S3BucketName" => {
+			Type => "String"
+		},
+		"S3FileName" => {
+			Type => "String",
+			Default => "config-*.tar.gz"
+		}
+	};
+
+	$template->{ Outputs } = {
+		"InstanceProfileARN" => {
+			Value => { "Fn::GetAtt" => [ "InstanceConfigurationProfile", "Arn" ] }
+		}
+	};
+
+
+	my $resource = { "Fn::Join" => [ "", [
+		"arn:aws:s3:::",
+		{ "Ref" => "S3BucketName" },
+		"/",
+		{ "Ref" => "S3FileName" }
+	] ] };
+
+	my $configurationPolicy = {
+		PolicyName => "Configuration",
+		PolicyDocument => {
+			Version => "2012-10-17",
+			Statement => [ {
+				Effect => "Allow",
+				Action => [
+						"s3:GetObject"
+					],
+				Resource => $resource
+			} ]
+		}
+	};
+
+	my $assumeRoleFromEC2 = {
+		Version => "2012-10-17",
+		Statement => [ {
+			Effect => "Allow",
+			Action => [ "sts:AssumeRole" ],
+			Principal => { Service => [ "ec2.amazonaws.com" ] }
+		} ]
+	};
+
+	$template->{ Resources }->{ InstanceConfigurationRole } = {
+		Type => "AWS::IAM::Role",
+		Properties => {
+			AssumeRolePolicyDocument => $assumeRoleFromEC2,
+			Policies => [
+				$configurationPolicy,
+				{
+					PolicyName => "Introspection",
+					PolicyDocument => {
+						Version => "2012-10-17",
+						Statement => [
+							{
+								Effect => "Allow",
+								Action => [
+									"iam:GetRolePolicy",
+									"iam:GetInstanceProfile",
+									"iam:GetPolicy",
+									"iam:GetPolicyVersion",
+									"iam:ListAttachedRolePolicies",
+									"iam:ListRolePolicies",
+									"ec2:DescribeInstances",
+									"ec2:DescribeSpotFleetRequests"
+								],
+								Resource => "*"
+							}
+						]
+					}
+				}
+			]
+		}
+	};
+
+	$template->{ Resources }->{ InstanceConfigurationProfile } = {
+		Type => "AWS::IAM::InstanceProfile",
+		Properties => {
+			Path => "/",
+			Roles => [ { Ref => "InstanceConfigurationRole" } ]
+		}
+	};
+
+if( defined( $prettyPrint ) ) {
+	print( to_json( $template, { utf8 => 1, pretty => 1 } ) . "\n" );
+} else {
+	print( encode_json( $template ) . "\n" );
+}
+
+exit( 0 );

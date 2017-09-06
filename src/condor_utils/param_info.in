@@ -167,7 +167,7 @@ type=string
 description=List of configuration variables that can be set by condor_config_val -set
 customization=normal
 
-[SETTABLE_ATTRS_ADMINSTRATOR]
+[SETTABLE_ATTRS_ADMINISTRATOR]
 # This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>, where CONFIG is the level most used for this feature
 default=
 type=string
@@ -205,6 +205,30 @@ default=9618
 range=0,65535
 type=int
 description=Default collector port
+
+[COLLECTOR_QUERY_WORKERS]
+default=4
+range=0,
+type=int
+description=Max number of Collector child processes
+
+[COLLECTOR_QUERY_WORKERS_RESERVE_FOR_HIGH_PRIO]
+default=1
+range=0,
+type=int
+description=Max number of Collector child processes reserved for high prioirty queries
+
+[COLLECTOR_QUERY_WORKERS_PENDING]
+default=50
+range=0,
+type=int
+description=Max number of Collector queries to queue
+
+[COLLECTOR_QUERY_MAX_WORKTIME]
+default=0
+range=0,
+type=int
+description=Max number of seconds to serve a Collector query, 0=no limit
 
 [SOCKET_LISTEN_BACKLOG]
 default=500
@@ -670,6 +694,12 @@ restart=never
 [DAGMAN_MAX_SUBMITS_PER_INTERVAL]
 default=5
 type=int
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_AGRESSIVE_SUBMIT]
+default=false
+type=bool
 tags=dagman,dagman_main
 restart=never
 
@@ -1253,6 +1283,12 @@ default=false
 type=bool
 tags=daemon_core
 
+[SEC_CREDENTIAL_REFRESH_INTERVAL]
+default=-1
+type=int
+description=Default interval for re-storing credentials
+tags=security
+
 [SEC_DEFAULT_AUTHENTICATION_TIMEOUT]
 default=20
 type=int
@@ -1536,6 +1572,10 @@ default=50
 type=int
 tags=gridmanager,gahp-client
 
+[CREAM_GAHP_WORKER_THREADS]
+default=$(GRIDMANAGER_MAX_PENDING_REQUESTS)
+type=int
+
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
 default=20
 type=int
@@ -1604,9 +1644,17 @@ type=int
 tags=gridmanager,globusjob
 
 [PERIODIC_EXPR_INTERVAL]
-default=300
+default=60
 type=int
-tags=gridmanager,basejob
+
+[MAX_PERIODIC_EXPR_INTERVAL]
+default=1200
+type=int
+
+[PERIODIC_EXPR_TIMESLICE]
+default=0.01
+type=double
+range=0.0,1.0
 
 [ENABLE_GRID_MONITOR]
 default=true
@@ -1757,7 +1805,7 @@ type=int
 
 [CRED_MIN_TIME_LEFT]
 default=120
-type=string
+type=int
 
 [ALL_DEBUG]
 default=
@@ -2136,7 +2184,7 @@ customization=devel
 tags=tt,jobqueuedbmanager
 
 [SUBMIT_SKIP_FILECHECKS]
-default=
+default=true
 type=string
 tags=submit
 
@@ -2383,6 +2431,11 @@ type=string
 tags=LoadPlugins
 
 [PLUGIN_DIR]
+default=
+type=string
+tags=LoadPlugins
+
+[COLLECTOR_PLUGIN_PYTHON_MODULES]
 default=
 type=string
 tags=LoadPlugins
@@ -2904,7 +2957,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=annexd_command.state, job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor
@@ -3039,6 +3092,10 @@ default=$(LOCK)/$(JOB_ROUTER_NAME)Lock
 type=string
 tags=JobRouter
 
+[JOB_ROUTER_ROUND_ROBIN_SELECTION]
+default=false
+type=bool
+
 [POLLING_PERIOD]
 default=
 type=string
@@ -3148,6 +3205,11 @@ tags=schedd,dedicated_scheduler
 default=$(LOG)/ScheddRestartReport
 type=string
 tags=schedd,dedicated_scheduler
+
+[SCHEDD_ALLOW_LATE_MATERIALIZE]
+default=false
+type=bool
+tags=schedd
 
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
@@ -3282,7 +3344,8 @@ usage=Circuit breaker to prevent an excessive number of a jobs in a single submi
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
-default=
+# default is 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
+default=100
 customization=normal
 description=Max running DAGs for a single owner
 usage=Ensure that a single user does not monopolize the SCHEDD
@@ -3410,6 +3473,11 @@ default=true
 type=bool
 tags=master
 
+[ALLOW_ADMINISTRATOR]
+default=$(CONDOR_HOST)
+type=string
+tags=security
+
 [PREEN]
 default=$(SBIN)/condor_preen
 win32_default=$(SBIN)\condor_preen.exe
@@ -3536,29 +3604,27 @@ type=bool
 description=Master should automatically open ports in the Windows firewall for HTCondor daemons
 tags=master
 
-[ANNEXD]
-default=$(SBIN)/condor_annexd
+[ANNEX_COMMAND_STATE]
+default=$(LOG)/AnnexCommand.state
 type=path
-description=Path to the HTCondor annex daemon binary
-customization=devel
-tags=annex
-
-[ANNEXD_LOG]
-default=$(LOG)/AnnexdLog
-type=path
-tags=annex,log
-
-[ANNEXD_COMMAND_STATE]
-default=$(SPOOL)/annexd_command.state
-type=path
-reconfig=true
 customization=seldom
+tags=annex
+
+[ANNEX_LOG]
+default=$(LOG)/AnnexLog
+type=path
 tags=annex,log
 
-[ANNEXD_NAME]
-default=Annex Daemon@$(FULL_HOSTNAME)
-type=string
-tags=annex
+[ANNEX_AUDIT_LOG]
+default=$(LOG)/AnnexAuditLog
+type=path
+tags=annex,log
+
+[ANNEX_GAHP_LOG]
+default=$(LOG)/AnnexGahpLog
+win32_default=NUL
+type=path
+tags=annex,log
 
 [ANNEX_DEFAULT_LEASE_DURATION]
 default=3000
@@ -3587,6 +3653,41 @@ tags=annex
 
 [ANNEX_DEFAULT_S3_URL]
 default = https://s3.amazonaws.com
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_CF_URL]
+default = https://cloudformation.us-east-1.amazonaws.com/
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN]
+default = HTCondorAnnex-CheckConnectivity
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_INSTANCE_TYPE]
+default = $(ANNEX_DEFAULT_ODI_INSTANCE_TYPE_V8_7_0)
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_INSTANCE_TYPE_V8_7_0]
+default = m4.large
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1)
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_0]
+default = ami-206ab336
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1]
+default = ami-35b13223
 type=string
 tags=annex
 
@@ -3965,6 +4066,7 @@ type=double
 
 [DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME]
 default=86400
+range=0,
 type=int
 
 [STATISTICS_WINDOW_QUANTUM]
@@ -4211,6 +4313,12 @@ type=string
 customization=expert
 description=MemoryUsage metric for VM Universe jobs
 tags=starter
+
+[DEFAULT_JOB_MAX_RETRIES]
+default=10
+type=int
+description=Default maximum number of retries when a submit file enables retries.
+tags=submit
 
 [JOB_DEFAULT_REQUESTMEMORY]
 default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
@@ -4602,6 +4710,30 @@ default=false
 type=bool
 description=Whether to invoke file transfer plugins as user or as root
 
+[ENABLE_HTTP_PUBLIC_FILES]
+default=false
+type=bool
+description=Allow public input files for a job to be transferred via HTTP
+tags=file_transfer
+
+[HTTP_PUBLIC_FILES_ADDRESS]
+default=127.0.0.1:8080
+type=string
+description=Web address (hostname + port) for HTTP public files
+tags=file_transfer
+
+[HTTP_PUBLIC_FILES_ROOT_DIR]
+default=$(LOCAL_DIR)/public_files
+type=string
+description=Folder in the local filesystem for HTTP public file links to be served from.
+tags=file_transfer
+
+[HTTP_PUBLIC_FILES_USER]
+default=<condor>
+type=string
+description=Username to create symlinks as, or token '<condor>' or token '<user>'.
+tags=file_transfer
+
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
 default=10240
 range=0,
@@ -4703,13 +4835,19 @@ usage=Set to false to disable V3 query protocol for condor_q.
 default=true
 type=bool
 description=Whether condor_q will query all jobs, or only the current owners jobs by default
-usage=Set to true to have condor_q query only the owners jobs by default
+usage=Set to true to have condor_q query only the owner's jobs by default
 
 [CONDOR_Q_DASH_BATCH_IS_DEFAULT]
 default=true
 type=bool
 description=Whether condor_q will default to -batch display
-usage=Set to true to have condor_q defaulit to -batch display
+usage=Set to true to have condor_q default to -batch display
+
+[CONDOR_Q_SHOW_OLD_SUMMARY]
+default=false
+type=bool
+description=Whether condor_q will show the old single line summary totals, or the new multi line one.
+usage=Set to true to have condor_q show the old single line summary totals
 
 [ENABLE_IPV6]
 default=auto
@@ -4806,6 +4944,12 @@ default=false
 type=bool
 customization=expert
 description=Should HTCondor manage AFS tokens in the kernel keyring
+
+[KEYRING_SESSION_CREATION_TIMEOUT]
+default=20
+type=int
+customization=expert
+description=How many seconds to block creating a new keyring session before EXCEPTing
 
 [DISCARD_SESSION_KEYRING_ON_STARTUP]
 default=true
@@ -4926,7 +5070,7 @@ description=Path to the High-Availability daemon binary
 type=path
 
 [HAD_SOCKET_NAME]
-default=$(LOCALNAME:had)
+default=had
 type=string
 
 [HAD_ARGS]
@@ -4940,7 +5084,7 @@ description=Path to the Replication daemon binary
 type=path
 
 [REPLICATION_SOCKET_NAME]
-default=$(LOCALNAME:replication)
+default=replication
 type=string
 
 [REPLICATION_ARGS]
@@ -4963,10 +5107,6 @@ type=path
 default=$(LIBEXEC)/condor_gangliad
 win32_default=$(LIBEXEC)\condor_gangliad.exe
 description=Path to the Gangila daemon binary
-type=path
-
-[ANNEXD]
-default=$(SBIN)/condor_annexd
 type=path
 
 [STARTER]
@@ -5147,9 +5287,6 @@ win32_default=NUL
 default=$(EC2_GAHP)
 type=path
 
-[ANNEX_GAHP_LOG]
-default=$(LOG)/AnnexGahpLog
-
 [CREDD]
 default=$(SBIN)/condor_credd
 win32_default=$(SBIN)\condor_credd.exe
@@ -5195,6 +5332,14 @@ win32_default=$(LIBEXEC)\condor_kflops.exe
 type=path
 [BENCHMARKS_KFLOPS_JOB_LOAD]
 default=1.0
+
+# File transfer statistics knobs
+
+[FILE_TRANSFER_STATS_LOG]
+default=$(LOG)/transfer_history
+type=path
+tags=file,transfer,stats,log
+
 
 # Useful constants
 [IsWindows]
@@ -5699,6 +5844,50 @@ default : @end
 	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
 	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
 	use SECURITY : WITH_AUTHENTICATION
+@end
+
+[$FEATURE.AssignAccountingGroup]
+description=Set the job accounting attributes by mapping the job's Owner attribute args:(map_file)
+default : @fin
+	if ! $(1?)
+	  error : use FEATURE : AssignAccountingGroup requires a map_file argument
+	endif
+	use FEATURE : ScheddUsermapFile(AssignAccountingGroup, $(1))
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAccountingGroup
+	JOB_TRANSFORM_AssignAccountingGroup = [ copy_Owner="AcctGroupUser"; copy_AcctGroup="RequestedAcctGroup"; eval_set_AcctGroup=usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup); eval_set_AccountingGroup=join(".",usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup),AcctGroupUser); ]
+	# make sure that the user can't qedit these attributes once they have been set.
+	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) AcctGroup AcctGroupUser AccountingGroup
+	# require that the user mapped into an accounting group
+	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) AssignAccountingGroup
+	SUBMIT_REQUIREMENT_AssignAccountingGroup = AcctGroup isnt undefined && AccountingGroup isnt undefined
+	SUBMIT_REQUIREMENT_AssignAccountingGroup_REASON = strcat("Submit requirement AssignAccountingGroup not met - Could not map '", Owner, "' to an accounting group", RequestedAcctGroup)
+@fin
+
+
+[$FEATURE.SetJobAttrFromUsermap]
+description=Set a job attribute from a usermap of another job attribute args:(dest_attr, src_attr, map_name [, map_file])
+default : @fin
+	if ! $(3?)
+	  error : use FEATURE : SetJobAttrFromUsermap requires at least 3 arguments: dest_attr, src_attr, map_name [,map_file]
+	endif
+	if $(4?)
+	   use FEATURE : ScheddUsermapFile($(3), $(4))
+	endif
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) Set$(1)
+	JOB_TRANSFORM_Set$(1) = [ eval_set_$(1)=usermap("$(3)",$(2),$(1)); ]
+	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) Require$(1)
+	SUBMIT_REQUIREMENT_Require$(1) = $(1) isnt undefined
+	SUBMIT_REQUIREMENT_Require$(1)_REASON = strcat("Submit requirement Require$(1) not met - Could not map '", $(2)?:"undefined", "' to a $(1)")
+@fin
+
+[$FEATURE.ScheddUsermapFile]
+description=Define a usermap mapping file args:(map_name , map_file)
+default : @end
+   if ! $(2?)
+     error : use FEATURE : ScheddUsermapFile requires 2 arguments: map_name, map_file
+   endif
+   SCHEDD_CLASSAD_USER_MAP_NAMES = $(SCHEDD_CLASSAD_USER_MAP_NAMES) $(1)
+   CLASSAD_USER_MAPFILE_$(1) = $(2)
 @end
 
 [$FEATURE.REMOTE_RUNTIME_CONFIG]

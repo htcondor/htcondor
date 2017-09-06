@@ -1,0 +1,96 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorPersonal;
+use CondorUtils;
+use Check::SimpleJob;
+use CheckOutputFormats;
+use strict;
+use warnings;
+
+my $testname = "docker_simulator_test";
+my $iswindows = CondorUtils::is_windows();
+
+my $on_success = sub {
+    print "Success in RunCheck\n";
+};
+
+my $on_execute = sub {
+    runCondorTool("condor_q");
+};
+
+my $append_content;
+if ($iswindows) {
+	$append_content = '
+    DOCKER = $(LIBEXEC)\docker_simulator.pl
+';
+} else {
+        $append_content = '
+    DOCKER = $(LIBEXEC)/docker_simulator.pl
+';
+}
+
+###########  create submit file ##################
+my $pid = $$;
+my $submit_file = "$testname$pid.sub";
+my $submit_content = 
+"universe = docker
+executable = sleep.exe
+arguments = 600
+docker_image = foo
+queue";
+
+my $submitfile = "$testname$pid.sub";
+emit_dag_files($testname, $submit_content, $pid);
+
+TLOG("Try submit a docker job\n");
+my $config_file = CondorTest::CreateLocalConfig($append_content, "DOCKER");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "docker_simulator_test",
+    fresh_local => "TRUE",
+    condorlocalsrc => $config_file,
+);
+`condor_submit $submit_file`;
+
+my @run_result = `condor_q -af:, JobUniverse DockerImage WantDocker`;
+my $result = ($run_result[0] =~ /5, foo, true/);
+
+RegisterResult($result, $testname, "init");
+
+TLOG("Check docker_simulator.pl run --name <JOBNAME>\n");
+if ($iswindows) {
+	@run_result = `perl .\\docker_simulator.pl run --name job_foo`;
+} else {
+	@run_result = `./docker_simulator.pl run --name job_foo`;
+}
+
+if ($run_result[0] =~ /Job: job_foo, Id: [0-9]+/) {
+	RegisterResult(1, $testname, "run");
+} else {
+	print "docker run was not successful.\nUsage: docker_simulator.pl run --name <JOBNAME>\n";
+	print "output is $run_result[0]\n";
+	RegisterResult(0, $testname, "run");
+}
+
+CondorTest::EndTest();
+exit(0);
+

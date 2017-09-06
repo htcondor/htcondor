@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -387,6 +388,8 @@ $Attr_RAW{7}{JobStatus} = 5;
 
 @fields = split_fields(\%data);
 %cnt_num = count_job_states(\%Attr);
+# remove dag nodes from counts, since the totals lines don't count them anymore.
+$cnt_num{0} -= 3; $cnt_num{2} -= 3;
 ($cluster_batch_ref,$user_batch_ref) = make_batch(\%Attr);
 %cluster_batch = %{$cluster_batch_ref};
 %user_batch = %{$user_batch_ref};

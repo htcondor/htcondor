@@ -1043,7 +1043,7 @@ bool AmazonRequest::sendPreparedRequest(
         std::string rateLimit;
         formatstr( rateLimit, "%s_RATE_LIMIT", get_mySubSystem()->getName() );
         globalCurlThrottle.rateLimit = param_integer( rateLimit.c_str(), 100 );
-        dprintf( D_PERF_TRACE, "rate limit = %u\n", globalCurlThrottle.rateLimit );
+        dprintf( D_PERF_TRACE, "rate limit = %d\n", globalCurlThrottle.rateLimit );
         rateLimitInitialized = true;
     }
 
@@ -1676,7 +1676,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     for( int i = 18; i < argc; ++i ) {
         if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
             ++which;
-            positionInList = 0;
+            positionInList = 1;
             continue;
         }
 
@@ -2228,9 +2228,9 @@ struct vmStatusSpotUD_t {
     bool inStatus;
     vmStatusSpotTags inWhichTag;
     AmazonStatusSpotResult * currentResult;
- 
+
     std::vector< AmazonStatusSpotResult > & results;
-    
+
     vmStatusSpotUD_t( std::vector< AmazonStatusSpotResult > & assrList ) :
         inItem( 0 ),
         inStatus( false ),
@@ -2251,7 +2251,7 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
         vsud->inItem += 1;
         return;
     }
-    
+
     if( strcasecmp( ignoringNameSpace( name ), "spotInstanceRequestId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::REQUEST_ID;
     } else if( strcasecmp( ignoringNameSpace( name ), "state" ) == 0 ) {
@@ -2272,7 +2272,7 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
 void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
     if( vsud->inItem != 1 ) { return; }
-    
+
     std::string * targetString = NULL;
     switch( vsud->inWhichTag ) {
         case vmStatusSpotUD::NONE:
@@ -2281,15 +2281,15 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
         case vmStatusSpotUD::REQUEST_ID:
             targetString = & vsud->currentResult->request_id;
             break;
-        
+
         case vmStatusSpotUD::STATE:
             targetString = & vsud->currentResult->state;
             break;
-        
+
         case vmStatusSpotUD::LAUNCH_GROUP:
             targetString = & vsud->currentResult->launch_group;
             break;
-        
+
         case vmStatusSpotUD::INSTANCE_ID:
             targetString = & vsud->currentResult->instance_id;
             break;
@@ -2302,7 +2302,7 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
             // This should never happen.
             break;
     }
-    
+
     appendToString( (const void *)cdata, len, 1, (void *)targetString );
 }
 
@@ -2315,7 +2315,7 @@ void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
             delete vsud->currentResult;
             vsud->currentResult = NULL;
         }
-        
+
         vsud->inItem -= 1;
     }
 
@@ -2454,7 +2454,9 @@ struct vmStatusUD_t {
         INSTANCE_TYPE,
         GROUP_ID,
         STATE_REASON_CODE,
-        CLIENT_TOKEN
+        CLIENT_TOKEN,
+        TAG_KEY,
+        TAG_VALUE
     };
     typedef enum vmStatusTags_t vmStatusTags;
 
@@ -2472,18 +2474,25 @@ struct vmStatusUD_t {
     bool inGroup;
     std::string currentSecurityGroup;
     std::vector< std::string > currentSecurityGroups;
-    
-    vmStatusUD_t( std::vector< AmazonStatusResult > & asrList ) : 
-        inInstancesSet( false ), 
+
+	bool inTagSet;
+	bool inTag;
+	std::string tagKey;
+	std::string tagValue;
+
+    vmStatusUD_t( std::vector< AmazonStatusResult > & asrList ) :
+        inInstancesSet( false ),
         inInstance( false ),
         inInstanceState( false ),
         inStateReason( false ),
-        inWhichTag( vmStatusUD_t::NONE ), 
-        currentResult( NULL ), 
+        inWhichTag( vmStatusUD_t::NONE ),
+        currentResult( NULL ),
         results( asrList ),
         inItem( 0 ),
         inGroupSet( false ),
-        inGroup( false ) { }
+        inGroup( false ),
+        inTagSet( false ),
+        inTag( false ) { }
 };
 typedef struct vmStatusUD_t vmStatusUD;
 
@@ -2493,16 +2502,16 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     if( ! vsud->inInstancesSet ) {
         if( strcasecmp( ignoringNameSpace( name ), "instancesSet" ) == 0 ) {
             vsud->inInstancesSet = true;
-        }            
+        }
         return;
-    } 
+    }
 
     if( ! vsud->inInstance ) {
         if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
             vsud->currentResult = new AmazonStatusResult();
             assert( vsud->currentResult != NULL );
             vsud->inInstance = true;
-            vsud->inItem += 1;        
+            vsud->inItem += 1;
         }
         return;
     }
@@ -2515,6 +2524,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     // to make sure we know which one closes the instance's item tag.
     if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
         vsud->inItem += 1;
+        if( vsud->inTagSet ) { vsud->inTag = true; }
         return;
     }
 
@@ -2523,7 +2533,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
         vsud->inGroupSet = true;
         return;
     }
-    
+
     //
     // Check for any tags of interest in the group set.
     //
@@ -2533,7 +2543,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
             return;
         }
     }
-        
+
     //
     // Check for any tags of interest in the instance.
     //
@@ -2569,6 +2579,13 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
         vsud->inStateReason = true;
     } else if( vsud->inStateReason && strcasecmp( ignoringNameSpace( name ), "code" ) == 0 )  {
         vsud->inWhichTag = vmStatusUD::STATE_REASON_CODE;
+    } else if( strcasecmp( ignoringNameSpace( name ), "tagSet" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        vsud->inTagSet = true;
+    } else if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "key" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::TAG_KEY;
+    } else if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "value" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::TAG_VALUE;
     }
 }
 
@@ -2593,23 +2610,23 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
     switch( vsud->inWhichTag ) {
         case vmStatusUD::NONE:
             return;
-        
+
         case vmStatusUD::INSTANCE_ID:
             targetString = & vsud->currentResult->instance_id;
             break;
-        
+
         case vmStatusUD::STATUS:
             targetString = & vsud->currentResult->status;
             break;
-        
+
         case vmStatusUD::AMI_ID:
             targetString = & vsud->currentResult->ami_id;
             break;
-        
+
         case vmStatusUD::PRIVATE_DNS:
             targetString = & vsud->currentResult->private_dns;
             break;
-            
+
         case vmStatusUD::PUBLIC_DNS:
             targetString = & vsud->currentResult->public_dns;
             break;
@@ -2617,7 +2634,7 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
         case vmStatusUD::KEY_NAME:
             targetString = & vsud->currentResult->keyname;
             break;
-        
+
         case vmStatusUD::INSTANCE_TYPE:
             targetString = & vsud->currentResult->instancetype;
             break;
@@ -2629,6 +2646,14 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
         case vmStatusUD::CLIENT_TOKEN:
             targetString = & vsud->currentResult->clientToken;
             break;
+
+		case vmStatusUD::TAG_KEY:
+			targetString = & vsud->tagKey;
+			break;
+
+		case vmStatusUD::TAG_VALUE:
+			targetString = & vsud->tagValue;
+			break;
 
         default:
             /* This should never happen. */
@@ -2645,16 +2670,16 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
     if( ! vsud->inInstancesSet ) {
         return;
     }
-    
+
     if( strcasecmp( ignoringNameSpace( name ), "instancesSet" ) == 0 ) {
         vsud->inInstancesSet = false;
         return;
     }
-    
+
     if( ! vsud->inInstance ) {
         return;
     }
-    
+
     if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
         vsud->inItem -= 1;
 
@@ -2664,6 +2689,17 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
             delete vsud->currentResult;
             vsud->currentResult = NULL;
             vsud->inInstance = false;
+        } else {
+            if( vsud->inTagSet ) {
+            	if( vsud->tagKey == "aws:ec2spot:fleet-request-id" ) {
+            		vsud->currentResult->spotFleetRequestID = vsud->tagValue;
+            	} else if( vsud->tagKey == "htcondor:AnnexName" ) {
+            		vsud->currentResult->annexName = vsud->tagValue;
+            	}
+            	vsud->tagKey.erase();
+            	vsud->tagValue.erase();
+            	vsud->inTag = false;
+            }
         }
 
         return;
@@ -2699,6 +2735,21 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
         vsud->inStateReason = false;
         return;
     }
+
+	if( strcasecmp( ignoringNameSpace( name ), "tagSet" ) == 0 ) {
+        vsud->inTagSet = false;
+        return;
+    }
+    if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "key" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        return;
+    }
+    if( vsud->inTag && strcasecmp( ignoringNameSpace( name ), "value" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        return;
+    }
+
+
 }
 
 bool AmazonVMStatusAll::SendRequest() {
@@ -2741,6 +2792,11 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
     saRequest.secretKeyFile = argv[4];
     saRequest.query_parameters[ "Action" ] = "DescribeInstances";
 
+	if( argc >= 7 && strcmp( argv[5], NULLSTRING ) && strcmp( argv[6], NULLSTRING ) ) {
+		saRequest.query_parameters[ "Filter.1.Name" ] = argv[5];
+		saRequest.query_parameters[ "Filter.1.Value.1" ] = argv[6];
+	}
+
     // Send the request.
     if( ! saRequest.SendRequest() ) {
         result_string = create_failure_result( requestID,
@@ -2760,6 +2816,8 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 resultList.append( nullStringIfEmpty( asr.keyname ) );
                 resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
                 resultList.append( nullStringIfEmpty( asr.public_dns ) );
+                resultList.append( nullStringIfEmpty( asr.spotFleetRequestID ) );
+                resultList.append( nullStringIfEmpty( asr.annexName ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -3374,7 +3432,9 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 	// non-annex functionality with an older-interface service.  2015-04-15
 	// is the oldest API with Spot Fleet, but this code was implemented
 	// against the 2016-04-01 documentation.
-	request.query_parameters[ "Version" ] = "2016-04-01";
+	// request.query_parameters[ "Version" ] = "2016-04-01";
+	// We need version 2016-11-15 for Spot Fleet tags.
+	request.query_parameters[ "Version" ] = "2016-11-15";
 
 	if( strcasecmp( argv[5], NULLSTRING ) ) {
 		request.query_parameters[ "SpotFleetRequestConfig."
@@ -3444,6 +3504,28 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"SpotPlacement.AvailabilityZone", "AvailabilityZone" );
+
+		if(! blob[ "Tags" ].empty()) {
+			StringList sl( blob[ "Tags" ].c_str() );
+			sl.rewind();
+			char * tagSpec = NULL;
+			for( unsigned i = 1; (tagSpec = sl.next()) != NULL; ++i ) {
+				std::ostringstream ss;
+				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
+				ss << lcIndex << ".";
+
+				// Once again, the AWS documentation has this wrong.
+				ss << "tagSpecificationSet.1.";
+				request.query_parameters[ ss.str() + "ResourceType" ] = "instance";
+				ss << "Tag." << i << ".";
+
+				std::string tag( tagSpec );
+				request.query_parameters[ ss.str() + "Key" ] =
+					tag.substr( 0, tag.find( '=' ) );
+				request.query_parameters[ ss.str() + "Value" ] =
+					tag.substr( tag.find( '=' ) + 1 );
+			}
+		}
 
 		if(! blob[ "SecurityGroupNames" ].empty()) {
 			StringList sl( blob[ "SecurityGroupNames" ].c_str() );
@@ -4095,6 +4177,371 @@ bool AmazonS3Upload::workerFunction(char **argv, int argc, std::string &result_s
 		uploadRequest.errorCode.c_str() );
 	} else {
 		result_string = create_success_result( requestID, NULL );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonCreateStack::~AmazonCreateStack() { }
+
+bool AmazonCreateStack::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		Regex r; int errCode = 0; const char * errString = 0;
+		bool patternOK = r.compile( "<StackId>(.*)</StackId>", & errString, & errCode );
+		ASSERT( patternOK );
+		ExtArray<MyString> groups(2);
+		if( r.match( resultString, & groups ) ) {
+			this->stackID = groups[1];
+		}
+	}
+	return result;
+}
+
+// Expecting:	CF_CREATE_STACK <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<stackName> <templateURL> <capability>
+//				(<parameters-name> <parameter-value>)* <NULLSTRING>
+
+bool AmazonCreateStack::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcasecmp( argv[0], "CF_CREATE_STACK" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 9 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 9, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonCreateStack csRequest = AmazonCreateStack( requestID, argv[0] );
+	csRequest.serviceURL = argv[2];
+	csRequest.accessKeyFile = argv[3];
+	csRequest.secretKeyFile = argv[4];
+
+	csRequest.query_parameters[ "Action" ] = "CreateStack";
+	csRequest.query_parameters[ "Version" ] = "2010-05-15";
+	csRequest.query_parameters[ "OnFailure" ] = "DELETE";
+	csRequest.query_parameters[ "StackName" ] = argv[5];
+	csRequest.query_parameters[ "TemplateURL" ] = argv[6];
+	if( strcasecmp( argv[7], NULLSTRING ) ) {
+		csRequest.query_parameters[ "Capabilities.member.1" ] = argv[7];
+	}
+
+	std::string pn;
+	for( int i = 8; i + 1 < argc && strcmp( argv[i], NULLSTRING ); i += 2 ) {
+		formatstr( pn, "Parameters.member.%d", (i - 6)/2 );
+		csRequest.query_parameters[ pn + ".ParameterKey" ] = argv[i];
+		csRequest.query_parameters[ pn + ".ParameterValue" ] = argv[i+1];
+	}
+
+	if(! csRequest.SendRequest()) {
+		result_string = create_failure_result( requestID,
+				csRequest.errorMessage.c_str(),
+				csRequest.errorCode.c_str() );
+	} else {
+		if( csRequest.stackID.empty() ) {
+			result_string = create_failure_result( requestID,
+				"Could not find stack ID in response from server.",
+				"E_NO_STACK_ID" );
+		} else {
+			StringList sl; sl.append( csRequest.stackID.c_str() );
+			result_string = create_success_result( requestID, & sl );
+		}
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonDescribeStacks::~AmazonDescribeStacks() { }
+
+bool AmazonDescribeStacks::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		int errCode = 0; const char * errString = 0;
+
+		Regex r;
+		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", & errString, & errCode );
+		ASSERT( patternOK );
+		ExtArray<MyString> statusGroups( 2 );
+		if( r.match( resultString, & statusGroups ) ) {
+			this->stackStatus = statusGroups[1];
+		}
+
+		Regex s;
+		patternOK = s.compile( "<Outputs>(.*)</Outputs>", & errString, & errCode, Regex::multiline | Regex::dotall );
+		ASSERT( patternOK );
+		ExtArray<MyString> outputGroups( 2 );
+		if( s.match( resultString, & outputGroups ) ) {
+			dprintf( D_ALWAYS, "Found output string '%s'.\n", outputGroups[1].c_str() );
+			MyString membersRemaining = outputGroups[1];
+
+			Regex t;
+			patternOK = t.compile( "\\s*<member>\\s*(.*?)\\s*</member>\\s*", & errString, & errCode, Regex::multiline | Regex::dotall );
+			ASSERT( patternOK );
+
+			ExtArray<MyString> memberGroups( 2 );
+			while( t.match( membersRemaining, & memberGroups ) ) {
+				std::string member = memberGroups[1].c_str();
+				dprintf( D_ALWAYS, "Found member '%s'.\n", member.c_str() );
+
+				Regex u;
+				patternOK = u.compile( "<OutputKey>(.*)</OutputKey>", & errString, & errCode );
+				ASSERT( patternOK );
+
+				std::string outputKey;
+				ExtArray<MyString> keyGroups( 2 );
+				if( u.match( member, & keyGroups ) ) {
+					outputKey = keyGroups[1];
+				}
+
+				Regex v;
+				patternOK = v.compile( "<OutputValue>(.*)</OutputValue>", & errString, & errCode );
+				ASSERT( patternOK );
+
+				std::string outputValue;
+				ExtArray<MyString> valueGroups( 2 );
+				if( v.match( member, & valueGroups ) ) {
+					outputValue = valueGroups[1];
+				}
+
+				if(! outputKey.empty()) {
+					outputs.push_back( outputKey );
+					outputs.push_back( outputValue );
+				}
+
+				membersRemaining.replaceString( memberGroups[0].c_str(), "" );
+			}
+		}
+	}
+	return result;
+}
+
+// Expecting:	CF_DESCRIBE_STACKS <req_id>
+//				<serviceurl> <accesskeyfile> <secretkeyfile>
+//				<stackName>
+bool AmazonDescribeStacks::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcasecmp( argv[0], "CF_DESCRIBE_STACKS" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_number_args( argc, 6 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonDescribeStacks dsRequest = AmazonDescribeStacks( requestID, argv[0] );
+	dsRequest.serviceURL = argv[2];
+	dsRequest.accessKeyFile = argv[3];
+	dsRequest.secretKeyFile = argv[4];
+
+	dsRequest.query_parameters[ "Action" ] = "DescribeStacks";
+	dsRequest.query_parameters[ "Version" ] = "2010-05-15";
+	dsRequest.query_parameters[ "StackName" ] = argv[5];
+
+	if(! dsRequest.SendRequest()) {
+		result_string = create_failure_result( requestID,
+				dsRequest.errorMessage.c_str(),
+				dsRequest.errorCode.c_str() );
+	} else {
+		if( dsRequest.stackStatus.empty() ) {
+		result_string = create_failure_result( requestID,
+			"Could not find stack status in response from server.",
+			"E_NO_STACK_STATUS" );
+		} else {
+			StringList sl; sl.append( dsRequest.stackStatus.c_str() );
+			for( unsigned i = 0; i < dsRequest.outputs.size(); ++i ) {
+				sl.append( nullStringIfEmpty( dsRequest.outputs[i] ) );
+			}
+			result_string = create_success_result( requestID, & sl );
+		}
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonCallFunction::~AmazonCallFunction() { }
+
+bool AmazonCallFunction::SendJSONRequest( const std::string & payload ) {
+	bool result = AmazonRequest::SendJSONRequest( payload );
+	return result;
+}
+
+// Expecting:   AWS_CALL_FUNCTION <req_id>
+//				<service_url> <accesskeyfile> <secretkeyfile>
+//				<function-name-or-arn> <function-argument-blob>
+bool AmazonCallFunction::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], AMAZON_COMMAND_CALL_FUNCTION ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 7 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 7, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonCallFunction request = AmazonCallFunction( requestID, argv[0] );
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	const char * separator = "/";
+	if( argv[2][strlen( argv[2] ) - 1] == '/' ) {
+		separator = "";
+	}
+	formatstr( request.serviceURL, "%s%s2015-03-31/functions/%s/invocations", argv[2],
+		separator, amazonURLEncode( argv[5] ).c_str() );
+	request.headers[ "X-Amz-Invocation-Type" ] = "RequestResponse";
+
+	if( ! request.SendJSONRequest( argv[6] ) ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		StringList sl;
+		sl.append( request.resultString.c_str() );
+		result_string = create_success_result( requestID, & sl );
+	}
+
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+
+AmazonBulkQuery::~AmazonBulkQuery() { }
+
+struct bulkQueryUD_t {
+	int	itemDepth;
+	bool inCreateTime;
+	bool inClientToken;
+	bool inSpotFleetRequestID;
+
+	std::string currentSFRID;
+	std::string currentCreateTime;
+	std::string currentClientToken;
+
+	StringList & resultList;
+
+	bulkQueryUD_t( StringList & r ) : itemDepth( 0 ), inCreateTime( false ),
+		inClientToken( false ), inSpotFleetRequestID( false ), resultList( r ) { }
+};
+typedef struct bulkQueryUD_t bulkQueryUD;
+
+void bulkQueryESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+	bulkQueryUD * bqUD = (bulkQueryUD *)vUserData;
+	if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
+		bqUD->itemDepth += 1;
+	} else if( strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+		bqUD->inSpotFleetRequestID = true;
+	} else if( strcasecmp( ignoringNameSpace( name ), "clientToken" ) == 0 ) {
+		bqUD->inClientToken = true;
+	} else if( strcasecmp( ignoringNameSpace( name ), "createTime" ) == 0 ) {
+		bqUD->inCreateTime = true;
+	}
+}
+
+void bulkQueryCDH( void * vUserData, const XML_Char * cdata, int len ) {
+	bulkQueryUD * bqUD = (bulkQueryUD *)vUserData;
+	if( bqUD->inSpotFleetRequestID ) {
+		appendToString( (const void *)cdata, len, 1, (void *) & bqUD->currentSFRID );
+	} else if( bqUD->inClientToken ) {
+		appendToString( (const void *)cdata, len, 1, (void *) & bqUD->currentClientToken );
+	} else if( bqUD->inCreateTime ) {
+		appendToString( (const void *)cdata, len, 1, (void *) & bqUD->currentCreateTime );
+	}
+}
+
+void bulkQueryEEH( void * vUserData, const XML_Char * name ) {
+	bulkQueryUD * bqUD = (bulkQueryUD *)vUserData;
+	if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
+		bqUD->itemDepth -= 1;
+
+		if( bqUD->itemDepth == 0 ) {
+			if(! bqUD->currentSFRID.empty()) {
+				bqUD->resultList.append( bqUD->currentSFRID.c_str() );
+				bqUD->resultList.append( nullStringIfEmpty( bqUD->currentCreateTime ) );
+				bqUD->resultList.append( nullStringIfEmpty( bqUD->currentClientToken ) );
+			}
+
+			bqUD->currentSFRID.clear();
+			bqUD->currentCreateTime.clear();
+			bqUD->currentClientToken.clear();
+		}
+	} else if( strcasecmp( ignoringNameSpace( name ), "spotFleetRequestId" ) == 0 ) {
+		bqUD->inSpotFleetRequestID = false;
+	} else if( strcasecmp( ignoringNameSpace( name ), "clientToken" ) == 0 ) {
+		bqUD->inClientToken = false;
+	} else if( strcasecmp( ignoringNameSpace( name ), "createTime" ) == 0 ) {
+		bqUD->inCreateTime = false;
+	}
+}
+
+bool AmazonBulkQuery::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		bulkQueryUD bqUD( resultList );
+		XML_Parser xp = XML_ParserCreate( NULL );
+		XML_SetElementHandler( xp, & bulkQueryESH, & bulkQueryEEH );
+		XML_SetCharacterDataHandler( xp, & bulkQueryCDH );
+		XML_SetUserData( xp, & bqUD );
+		XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+		XML_ParserFree( xp );
+	}
+	return result;
+}
+
+bool AmazonBulkQuery::workerFunction( char ** argv, int argc, std::string & result_string ) {
+	assert( strcasecmp( argv[0], "EC2_BULK_QUERY" ) == 0 );
+	int requestID;
+	get_int( argv[1], & requestID );
+	dprintf( D_PERF_TRACE, "request #%d (%s): work begins\n",
+		requestID, argv[0] );
+
+	if( ! verify_min_number_args( argc, 5 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+			argc, 6, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes.
+	AmazonBulkQuery request = AmazonBulkQuery( requestID, argv[0] );
+	request.serviceURL = argv[2];
+	request.accessKeyFile = argv[3];
+	request.secretKeyFile = argv[4];
+
+	// Fill in required parameters.
+	request.query_parameters[ "Action" ] = "DescribeSpotFleetRequests";
+	// See comment in AmazonBulkStart::workerFunction().
+	request.query_parameters[ "Version" ] = "2016-04-01";
+
+	if( ! request.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+			request.errorMessage.c_str(),
+			request.errorCode.c_str() );
+	} else {
+		result_string = create_success_result( requestID, & request.resultList );
 	}
 
 	return true;

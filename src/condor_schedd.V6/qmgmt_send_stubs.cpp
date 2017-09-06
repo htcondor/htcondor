@@ -213,6 +213,58 @@ DestroyCluster( int cluster_id, const char * /*reason*/ )
 	return rval;
 }
 
+static int SetFactoryInfo(int req, int cluster_id, int num, const char * filename, const char * text)
+{
+	int	rval;
+
+	CurrentSysCall = req;
+
+	qmgmt_sock->encode();
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(cluster_id) );
+	neg_on_error( qmgmt_sock->code(num) );
+	neg_on_error( qmgmt_sock->put(filename) );
+	neg_on_error( qmgmt_sock->put(text) );
+	neg_on_error( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	neg_on_error( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	neg_on_error( qmgmt_sock->end_of_message() );
+	return rval;
+}
+
+bool GetScheddCapabilites(int mask, ClassAd & ad)
+{
+	CurrentSysCall = CONDOR_GetCapabilities;
+
+	qmgmt_sock->encode();
+	if ( ! qmgmt_sock->code(CurrentSysCall) ||
+		 ! qmgmt_sock->code(mask) ||
+		 ! qmgmt_sock->end_of_message()) {
+		return false;
+	}
+	qmgmt_sock->decode();
+	if ( ! getClassAd(qmgmt_sock, ad) ) {
+		return false;
+	}
+	return qmgmt_sock->end_of_message() != 0;
+}
+
+int SetJobFactory(int cluster_id, int num, const char * filename, const char * text)
+{
+	return SetFactoryInfo(CONDOR_SetJobFactory, cluster_id, num, filename, text);
+}
+
+int SetMaterializeData(int cluster_id, int num, const char * filename, const char * text)
+{
+	return SetFactoryInfo(CONDOR_SetMaterializeData, cluster_id, num, filename, text);
+}
 
 #if 0
 int
@@ -695,6 +747,7 @@ CloseSocket()
 
 	return 0;
 }
+
 
 ClassAd *
 GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_expansions*/ )

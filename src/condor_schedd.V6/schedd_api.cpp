@@ -63,17 +63,9 @@ Job::~Job()
 int
 Job::initialize(CondorError &errstack)
 {
-	char * Spool = param("SPOOL");
-	ASSERT(Spool);
-
-	char *ckpt_name = gen_ckpt_name(Spool, id.cluster, id.proc, 0);
-	spoolDirectory = ckpt_name;
-	free(ckpt_name); ckpt_name = NULL;
-
-	if (Spool) {
-		free(Spool);
-		Spool = NULL;
-	}
+	std::string buf;
+	SpooledJobFiles::getJobSpoolPath(id.cluster, id.proc, buf);
+	spoolDirectory = buf;
 
 	struct stat stats;
 	if (-1 == stat(spoolDirectory.Value(), &stats)) {
@@ -285,6 +277,25 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 			CondorError &errstack)
 {
 	int i, rval;
+
+		// Flag this job as submitted via SOAP.
+		// This is important for disabling the alternate spool
+		// directory feature, which doesn't work with SOAP jobs.
+	rval = SetAttribute(id.cluster,
+						id.proc,
+						ATTR_SOAP_JOB,
+						"true");
+	if (rval < 0) {
+		errstack.pushf("SOAP",
+					   FAIL,
+					   "Failed to set job %d.%d's %s attribute to '%s'.",
+					   id.cluster,
+					   id.proc,
+					   ATTR_SOAP_JOB,
+					   "true");
+
+		return rval;
+	}
 
 		// XXX: This is ugly, and only should happen when spooling,
 		// i.e. not always with cedar.

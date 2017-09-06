@@ -62,15 +62,28 @@ if ($boos) { $CloneDir =~ s/userdir/sources/; }
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	my $enable_vs9 = 0;
 	my $enable_x64 = 0;
+	my $use_latest_vs = 0;
+	my $use_cmake3 = 0;
 
 	#uncomment to use vs9 on Win7 platform
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
+	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
+
 	#uncomment to build x64 on Win10 platform (the rest of the build will follow this)
 	if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $enable_x64 = 1; }
+	#if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
 
 	if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
 		$defines{visualstudio} = '-G "Visual Studio 9 2008"';
 		$ENV{PATH} = "$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
+	} elsif ($use_latest_vs) {
+		# todo, detect other VS versions here.
+		$defines{visualstudio} = '-G "Visual Studio 14 2015"';
+		$ENV{PATH} = "$ENV{VS140COMNTOOLS}..\\IDE;$ENV{VS140COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
+		$enable_x64 = 0; # switch to win32 build for now.
+		if ($enable_x64) {
+			$defines{visualstudio} = '-G "Visual Studio 14 2015 Win64"';
+		}
 	} else {
 		$defines{visualstudio} = '-G "Visual Studio 11"';
 		$ENV{PATH} = "$ENV{VS110COMNTOOLS}..\\IDE;$ENV{VS110COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
@@ -79,8 +92,12 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 		}
 	}
     $externals_loc   = "c:/temp/condor";
-	$ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{PATH}";
     #$ENV{CONDOR_BLD_EXTERNAL_STAGE} = "$externals_loc";
+	if ($use_cmake3) {
+		$ENV{PATH} = "C:\\Program Files\\CMake3\\bin;$ENV{PATH}";
+	} else {
+		$ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{PATH}";
+	}
 
 	# if not building Win64, change platform from x86_64_Windows to x86_Windows
 	if ( ! $enable_x64) {
@@ -105,6 +122,11 @@ if ($ENV{NMI_PLATFORM} =~ /macos/i) {
     }
     # Build binaries that will work on Mac OS X 10.7 and later.
     $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
+	# Hack. Some of the mac build machines have a python version in
+	# /usr/local/bin that cmake thinks won't work with the python
+	# library in /usr/lib. Prepend /usr/bin to the PATH to use that
+	# version of python.
+	$ENV{PATH} = "/usr/bin:$ENV{PATH}";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {

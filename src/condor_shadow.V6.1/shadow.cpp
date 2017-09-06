@@ -57,6 +57,7 @@ UniShadow::updateFromStarter(int /* command */, Stream *s)
 	}
 	s->end_of_message();
 
+	fix_update_ad(update_ad);
 	return updateFromStarterClassAd(&update_ad);
 }
 
@@ -68,6 +69,7 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 		// should never really happen...
 		return FALSE;
 	}
+
 
 		// Save the current image size, so that if it changes as a
 		// result of this update, we can log an event to the userlog.

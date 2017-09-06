@@ -509,6 +509,116 @@ SubsystemInfo::getString( void ) const
 	return buf;
 }
 
+static const char * SubsysNameById[] = {
+	"UNKNOWN",
+	// Daemon types
+	"MASTER",
+	"COLLECTOR",
+	"NEGOTIATOR",
+	"SCHEDD",
+	"SHADOW",
+	"STARTD",
+	"STARTER",
+	"CREDD",
+	"KBDD",
+	"GRIDMANAGER",
+	"HAD",
+	"REPLICATION",
+	"TRANSFERER",
+	"TRANSFERD",
+	"ROOSTER",
+	"SHARED_PORT",
+	"JOB_ROUTER",
+	"DEFRAG",
+	"GANGLIAD",
+	"PANDAD",
+
+	"DAGMAN",
+	"TOOL",
+	"SUBMIT",
+	"ANNEXD",
+
+	"GAHP",
+};
+
+#define  FILL(a) { #a, SUBSYSTEM_ID_ ## a }
+static const struct BSubsys {
+	const char * key;
+	KnownSubsystemId id;
+} SubsysIdByName[] = {
+	// this table must be sorted (case insenstitively)
+	FILL(ANNEXD),
+	FILL(COLLECTOR),
+	FILL(CREDD),
+	FILL(DAGMAN),
+	FILL(DEFRAG),
+	FILL(GAHP),
+	FILL(GANGLIAD),
+	FILL(GRIDMANAGER),
+	FILL(HAD),
+	FILL(JOB_ROUTER),
+	FILL(KBDD),
+	FILL(MASTER),
+	FILL(NEGOTIATOR),
+	FILL(PANDAD),
+	FILL(REPLICATION),
+	FILL(ROOSTER),
+	FILL(SCHEDD),
+	FILL(SHADOW),
+	FILL(SHARED_PORT),
+	FILL(STARTD),
+	FILL(STARTER),
+	FILL(SUBMIT),
+	FILL(TOOL),
+	FILL(TRANSFERD),
+	FILL(TRANSFERER),
+	FILL(UNKNOWN),
+};
+#undef FILL
+
+template <typename T>
+const T * BinaryLookup (const T aTable[], int cElms, const char * key, int (*fncmp)(const char *, const char *))
+{
+	if (cElms <= 0)
+		return NULL;
+
+	int ixLower = 0;
+	int ixUpper = cElms-1;
+	for (;;) {
+		if (ixLower > ixUpper)
+			return NULL; // return null for "not found"
+
+		int ix = (ixLower + ixUpper) / 2;
+		int iMatch = fncmp(aTable[ix].key, key);
+		if (iMatch < 0)
+			ixLower = ix+1;
+		else if (iMatch > 0)
+			ixUpper = ix-1;
+		else
+			return &aTable[ix];
+	}
+}
+
+
+// convert enum form of a known subsystem name to string. caller does not free the return value.
+extern "C" const char * getKnownSubsysString(int id)
+{
+	if (id >= 0 && id < SUBSYSTEM_TYPE_COUNT) return SubsysNameById[id];
+	return NULL;
+}
+
+// convert string form of a known subsystem name to enum
+extern "C" KnownSubsystemId getKnownSubsysNum(const char * subsys)
+{
+	const struct BSubsys * found = BinaryLookup<struct BSubsys>(SubsysIdByName, COUNTOF(SubsysIdByName), subsys, strcasecmp);
+	if (found) return found->id;
+	// special case for the GAHP's. 
+	const char * under = strchr(subsys,'_');
+	if (under && MATCH == strncasecmp(under, "_GAHP", 5)) return SUBSYSTEM_ID_GAHP;
+	return SUBSYSTEM_ID_UNKNOWN;
+}
+
+
 /* Helper function to retrieve the value of get_mySubSystem() global variable
  * from C functions.  This is helpful because get_mySubSystem() is decorated w/ C++
  * linkage.

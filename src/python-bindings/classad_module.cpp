@@ -80,6 +80,7 @@ void *convert_to_FILEptr(PyObject* obj) {
     }
     const char * file_flags = (flags&O_RDWR) ? "w+" : ( (flags&O_WRONLY) ? "w" : "r" );
     FILE* fp = fdopen(fd, file_flags);
+    setbuf(fp, NULL);
     return fp;
 }
 #else
@@ -236,7 +237,11 @@ BOOST_PYTHON_MODULE(classad)
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
         .def("_get", &ExprTreeHolder::subscript, condor::classad_expr_return_policy<>())
         .def("eval", &ExprTreeHolder::Evaluate, evaluate_overloads("Evalaute the expression, possibly within context of a ClassAd"))
-        .def("__nonzero__", &ExprTreeHolder::__nonzero__)
+#if PY_MAJOR_VERSION >= 3
+        .def("__bool__", &ExprTreeHolder::__bool__)
+#else
+        .def("__nonzero__", &ExprTreeHolder::__bool__)
+#endif
         .def("sameAs", &ExprTreeHolder::SameAs, "Returns true if given ExprTree is same as this one.")
         .def("and_", &ExprTreeHolder::__land__)
         .def("or_", &ExprTreeHolder::__lor__)
@@ -271,17 +276,17 @@ BOOST_PYTHON_MODULE(classad)
         ;
 
     class_<OldClassAdIterator>("OldClassAdIterator", no_init)
-        .def("next", &OldClassAdIterator::next)
+        .def(NEXT_FN, &OldClassAdIterator::next)
         .def("__iter__", &OldClassAdIterator::pass_through)
         ;
 
     class_<ClassAdStringIterator>("ClassAdStringIterator", no_init)
-        .def("next", &ClassAdStringIterator::next)
+        .def(NEXT_FN, &ClassAdStringIterator::next)
         .def("__iter__", &OldClassAdIterator::pass_through)
         ;
 
     class_<ClassAdFileIterator>("ClassAdFileIterator")
-        .def("next", &ClassAdFileIterator::next)
+        .def(NEXT_FN, &ClassAdFileIterator::next)
         .def("__iter__", &OldClassAdIterator::pass_through)
         ;
 

@@ -128,6 +128,20 @@ the set of configuration it incorporates.
 	See~\ref{sec:SMP-Divide} for information on partitionalble
 	slot policies.
 	
+    \item \texttt{AssignAccountingGroup( map\_filename )}
+	Sets up a \Condor{schedd} job transform that assigns an accounting group to
+	each job as it is submitted. The accounting is determined by mapping the
+	Owner attribute of the job using the given map file.
+
+    \item \texttt{ScheddUserMapFile( map\_name, map\_filename )}
+	Defines a \Condor{schedd} usermap named map\_name using the given map file.
+
+    \item \texttt{SetJobAttrFromUserMap( dst\_attr, src\_attr, map\_name [, map\_filename] )}
+	Sets up a \Condor{schedd} job transform that sets the dst\_attr attribute of each job
+	as it is submitted. The value of dst\_attr is determined by mapping the src\_attr of the job
+	using the usermap named map\_name.  If the optional map\_filename argument is specifed, then
+	this metaknob also defines a \Condor{schedd} usermap named map\_Name using the given map file.
+
     \item \texttt{StartdCronOneShot( job\_name, exe [, hook\_args] )}
 
 	Create a one-shot \Condor{startd} job hook.

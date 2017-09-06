@@ -404,7 +404,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
                     server_status = AUTH_SSL_QUITTING;
                 }
             }
-            dprintf(D_ALWAYS, "Status: c: %d, s: %d\n", client_status, server_status);
+            dprintf(D_SECURITY, "Status: c: %d, s: %d\n", client_status, server_status);
             if(server_status == AUTH_SSL_HOLDING
                && client_status == AUTH_SSL_HOLDING) {
                 done = 1;
@@ -599,7 +599,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
                 client_status = server_receive_message(
                     server_status, buffer, conn_in, conn_out );
             }
-            dprintf(D_ALWAYS, "Status: c: %d, s: %d\n", client_status, server_status);
+            dprintf(D_SECURITY, "Status: c: %d, s: %d\n", client_status, server_status);
             if(server_status == AUTH_SSL_HOLDING
                && client_status == AUTH_SSL_HOLDING) {
                 done = 1;

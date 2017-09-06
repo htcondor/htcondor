@@ -1,0 +1,48 @@
+*** gsoap-2.7.10/gsoap/stdsoap2.cpp	2017-08-13 08:36:05.158891305 -0500
+--- gsoap-2.7.10/gsoap/stdsoap2.cpp.new	2017-08-12 18:11:25.357173274 -0500
+***************
+*** 4058,4067 ****
+                int j;
+                if (!meth)
+                  break;
+!               data = ext->value->data;
+  #if (OPENSSL_VERSION_NUMBER > 0x00907000L)
+                if (meth->it) 
+!                 ext_data = ASN1_item_d2i(NULL, &data, ext->value->length, ASN1_ITEM_ptr(meth->it));
+                else
+                { /* OpenSSL not perfectly portable at this point (?):
+                     Some compilers appear to prefer
+--- 4058,4067 ----
+                int j;
+                if (!meth)
+                  break;
+!               data = X509_EXTENSION_get_data(ext)->data;
+  #if (OPENSSL_VERSION_NUMBER > 0x00907000L)
+                if (meth->it) 
+!                 ext_data = ASN1_item_d2i(NULL, &data, X509_EXTENSION_get_data(ext)->length, ASN1_ITEM_ptr(meth->it));
+                else
+                { /* OpenSSL not perfectly portable at this point (?):
+                     Some compilers appear to prefer
+***************
+*** 4069,4078 ****
+                     or
+                     meth->d2i(NULL, &data, ext->value->length);
+                  */
+!                 ext_data = meth->d2i(NULL, &data, ext->value->length);
+                }
+  #else
+!               ext_data = meth->d2i(NULL, &data, ext->value->length);
+  #endif
+                val = meth->i2v(meth, ext_data, NULL);
+                for (j = 0; j < sk_CONF_VALUE_num(val); j++)
+--- 4069,4078 ----
+                     or
+                     meth->d2i(NULL, &data, ext->value->length);
+                  */
+!                 ext_data = meth->d2i(NULL, &data, X509_EXTENSION_get_data(ext)->length);
+                }
+  #else
+!               ext_data = meth->d2i(NULL, &data, X509_EXTENSION_get_data(ext)->length);
+  #endif
+                val = meth->i2v(meth, ext_data, NULL);
+                for (j = 0; j < sk_CONF_VALUE_num(val); j++)

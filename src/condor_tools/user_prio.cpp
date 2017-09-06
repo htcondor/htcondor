@@ -363,6 +363,7 @@ main(int argc, const char* argv[])
   bool ResetAll=false;
   int GetResList=0;
   int UserPrioFile=0;
+  std::string neg_name;
   std::string pool;
   AttrListPrintMask print_mask;
   GenericQuery constraint; // used to build a complex constraint.
@@ -546,6 +547,11 @@ main(int argc, const char* argv[])
       if (argc-i<=1) usage(argv[0]);
       pool = argv[i+1];
       i++;
+    }
+    else if (IsArg(argv[i],"name")) {
+      if (argc-i<=1) usage(argv[0]);
+      neg_name = argv[i+1];
+      i++;
 	} 
 	else if (IsArg(argv[i], "collector", 3)) {
 		fromCollector = true;
@@ -563,7 +569,7 @@ main(int argc, const char* argv[])
   //----------------------------------------------------------
 
 	  // Get info on our negotiator
-  Daemon negotiator(DT_NEGOTIATOR, NULL, (pool != "") ? pool.c_str() : NULL);
+  Daemon negotiator(DT_NEGOTIATOR, (neg_name != "") ? neg_name.c_str() : NULL, (pool != "") ? pool.c_str() : NULL);
   if (!negotiator.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
               argv[0], (pool != "") ? pool.c_str() : "local pool");
@@ -923,6 +929,12 @@ main(int argc, const char* argv[])
 		ClassAdList ads;
 		CondorError errstack;
 		QueryResult q;
+
+		if ( !neg_name.empty() ) {
+			std::string constraint;
+			formatstr(constraint, "%s == \"%s\"", ATTR_NEGOTIATOR_NAME, neg_name.c_str());
+			query.addANDConstraint(constraint.c_str());
+		}
 
 		CollectorList * collectors = CollectorList::create((pool.length() > 0) ? pool.c_str() : 0);
 		q = collectors->query (query, ads, &errstack);
@@ -1723,6 +1735,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
 static void usage(const char* name) {
   fprintf( stderr, "usage: %s [options] [edit-option | display-options]\n"
      "    where [options] are\n"
+     "\t-name <name>\t\tName of negotiator\n"
      "\t-pool <host>\t\tUse host as the central manager to query\n"
      "\t-inputfile <file>\tDisplay priorities from <file>\n"
      "\t-help\t\t\tThis Screen\n"

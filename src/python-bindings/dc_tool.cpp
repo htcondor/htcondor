@@ -328,4 +328,5 @@ export_dc_tool()
         ;
 
     set_subsystem("TOOL", SUBSYSTEM_TYPE_TOOL);
+    dprintf_pause_buffering();
 }

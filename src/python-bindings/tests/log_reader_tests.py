@@ -20,7 +20,7 @@ class TestLogReader(unittest.TestCase):
     def test_event_count(self):
         events = list(self.reader)
         #for event in events: print event
-        self.assertEquals(len(events), 16)
+        self.assertEqual(len(events), 16)
 
     def test_block(self):
         events = list(self.reader)
@@ -43,7 +43,7 @@ class TestLogReader(unittest.TestCase):
         t.setDaemon(True)
         t.start()
         self.reader.wait()
-        self.assertEquals(self.reader.next(), self.sampleEvent)
+        self.assertEqual(self.reader.next(), self.sampleEvent)
 
     def test_wait2(self):
         events = list(self.reader)
@@ -59,7 +59,7 @@ class TestLogReader(unittest.TestCase):
 
     def test_poll(self):
         events = list(self.reader)
-        self.assertEquals(self.reader.poll(1000), None)
+        self.assertEqual(self.reader.poll(1000), None)
 
     def targetSleepAndWrite(self):
         time.sleep(.4)
@@ -72,7 +72,7 @@ class TestLogReader(unittest.TestCase):
         self.testfile.flush()
         events = list(self.reader)
         #print "LastEvent", events[-1]
-        self.assertEquals(classad.Function("isError", events[-1]['value']).eval(), True)
+        self.assertEqual(classad.Function("isError", events[-1]['value']).eval(), True)
 
     def compareEvents(self, one, two):
         keys1 = one.keys()
@@ -81,9 +81,9 @@ class TestLogReader(unittest.TestCase):
         keys2 = two.keys()
         keys2.sort()
         keys2 = tuple(keys2)
-        self.assertEquals(keys1, keys2)
+        self.assertEqual(keys1, keys2)
         for key in keys1:
-            self.assertEquals(one[key], two[key])
+            self.assertEqual(one[key], two[key])
 
 
 if __name__ == '__main__':

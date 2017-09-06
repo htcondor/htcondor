@@ -130,7 +130,14 @@ following columns of information, with one line of output per job:
 \begin{verbatim}
     ID, OWNER, STATUS, GRID->MANAGER, HOST, GRID_JOB_ID
 \end{verbatim}
-%TEMP -- disables totals line?
+%TEMP -- disables totals line
+
+If the \Opt{-grid:ec2} option is specified, \Condor{q} displays the
+following columns of information, with one line of output per job:
+\begin{verbatim}
+    ID, OWNER, STATUS, INSTANCE ID, CMD
+\end{verbatim}
+%TEMP -- disables totals line
 
 If the \Opt{-goodput} option is specified, \Condor{q} displays the
 following columns of information, with one line of output per job:
@@ -212,10 +219,11 @@ The available output data are as follows:
 	The actual value reported is taken from the job ClassAd attribute
 	\Attr{MemoryUsage} if this attribute is defined, and from job
 	attribute \Attr{ImageSize} otherwise.
-\item[CMD] (Non-batch mode only) The name of the executable. 
+\item[CMD] (Non-batch mode only) The name of the executable.  For EC2 jobs,
+    this field is arbitrary.
 \item[HOST(S)] (\Opt{-run} only) The host where the job is running.
 \item[STATUS] (\Opt{-grid} only) The state that HTCondor believes the job is in.
-Possible values are
+Possible values are grid-type specific, but include:
   \begin{description}
     \item[PENDING] The job is waiting for resources to become available
     in order to run.
@@ -246,6 +254,7 @@ Possible values are
 \item[HOST] (\Opt{-grid} only) The host to which the job was submitted.
 %TEMP -- update when I get example output from Jaime
 \item[GRID\_JOB\_ID] (\Opt{-grid} only) (More information needed here.)
+\item[INSTANCE ID] (\Opt{-grid:ec2} only) Usually EC2 instance ID; may be blank or the client token, depending on job progress.
 \item[GOODPUT] (\Opt{-goodput} only) The percentage of RUN\_TIME for this job which has been
   saved in a checkpoint.  A low GOODPUT value indicates that the job is
   failing to checkpoint.  If a job has not yet attempted a checkpoint,
@@ -420,9 +429,11 @@ restriction.
   %\OptItem{\Opt{-globus}}{(output option) Get information only about 
     %jobs submitted to grid resources described as \SubmitCmdNI{gt2}
     %or \SubmitCmdNI{gt5}.}
-  \OptItem{\Opt{-grid}}{(output option) Get information only about 
-    jobs submitted to grid resources described as \SubmitCmdNI{gt2}
-    or \SubmitCmdNI{gt5}.}
+  \OptItem{\Opt{-grid}}{(output option) Get information only about
+    jobs submitted to grid resources.}
+  \OptItem{\Opt{-grid:ec2}}{(output option) Get information only about
+    jobs submitted to grid resources and display it in a format
+    better-suited for EC2 than the default.}
   %TEMP -- -goodput implies -nobatch
   \OptItem{\Opt{-goodput}}{(output option) Display job goodput statistics.}
   \OptItem{\Opt{-help [Universe | State]}}{(output option) Print usage info, 
@@ -598,7 +609,7 @@ restriction.
     the format produced by \Condor{userprio} \Opt{-long}.  }
   \OptItem{\Opt{-nouserprios}}{(analyze option)
     Do not consider user priority during the analysis. }
-  \OptItem{\Opt{-reverse}}{(analyze option) 
+  \OptItem{\Opt{-reverse-analyze}}{(analyze option)
     Analyze machine requirements against jobs.  }
   \OptItem{\Opt{-verbose}}{(analyze option) 
     When doing analysis, show progress and include

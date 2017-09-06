@@ -52,6 +52,9 @@
 #define _CRT_NONSTDC_NO_DEPRECATE 1
 #define _CRT_NONSTDC_NO_WARNINGS
 
+// we define this this to disable the warning about using WSAAddressToStringA
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+
 // #define NOGDI
 #define NOSOUND
 
@@ -177,8 +180,6 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #ifndef EWOULDBLOCK
 #	define EWOULDBLOCK EAGAIN
 #endif
-
-typedef fd_set *SELECT_FDSET_PTR;
 
 struct rusage {
     struct timeval ru_utime;    /* user time used */

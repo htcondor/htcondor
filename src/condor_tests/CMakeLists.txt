@@ -71,7 +71,7 @@ if (BUILD_TESTING)
 	#endif(UNIX)
 
 	if(WINDOWS)
-		# can't build this using cmake because it insists on passing wrong compiler flags, the good thing is that we don't need to budil it anyway. 
+		# can't build this using cmake because it insists on passing wrong compiler flags, the good thing is that we don't need to build it anyway. 
 		# condor_exe_test(sleep.exe "sleep.cpp" "")
 	endif(WINDOWS)
 
@@ -144,15 +144,35 @@ if (BUILD_TESTING)
 		condor_std_exe_test(job_ckpt_open-N-parallel_std "${CMAKE_C_COMPILER}" "job_ckpt_open-N-parallel_std.c" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_ckpt_socket-support_std "${CMAKE_C_COMPILER}" "job_ckpt_socket-support_std.c" "${STDU_LDD_FLAGS}")
 
-		# someone else can add the fortran tests.
-		dprint("UW - add fortran .exe tests if desired")
+
+		# Fortran tests.
+		enable_language( Fortran )
+
+		condor_std_exe_test( job_ckpt_f-areauc_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-areauc_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-areauc_std "area under the curve?" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_ckpt_f-floats_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-floats_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-floats_std "ckpt/restore floating point registers" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_ckpt_f-integers_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-integers_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-integers_std "ckpt/restore integer registers" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_ckpt_f-printer_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-printer_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-printer_std "FIXME" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_ckpt_f-reader_std "${CMAKE_Fortran_COMPILER}" "job_ckpt_f-reader_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_ckpt_f-reader_std "FIXME" "stduniv;framework;quick;full;ckpt" )
+
+		condor_std_exe_test( job_rsc_f-direct-write_std "${CMAKE_Fortran_COMPILER}" "job_rsc_f-direct-write_std.f" "${STDU_LDD_FLAGS}" )
+		condor_pl_test( job_rsc_f-direct-write_std "FIXME" "stduniv;framework;quick;full;ckpt" )
+
 
 		if( ${SYS_ARCH} MATCHES "X86_64" )
 			if(  "${RPM_SYSTEM_NAME}" MATCHES "rhel5"
 			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel6"
 			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel7"
 			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl6"
-			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl6"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl7"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-6"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-7"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-8"
@@ -179,10 +199,10 @@ if (BUILD_TESTING)
 	if(NOT SOLARIS AND NOT WINDOWS)
 		condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink")
 		condor_pl_test(job_core_killsignal_sched "Scheduler: Verify the specified input file is used" "core;quick;full;quicknolink")
-		condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink")
 		condor_pl_test(job_core_rmkillsig_sched "Scheduler: Verify the  remove_kill_sig" "core;quick;full;quicknolink")
 	endif()
 
+	condor_pl_test( test_protocol_matching "test: Protocol matching" "core;quick;full;quicknolink" )
 
 	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "core;quick;full;quicknolink")
 	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "core;quick;full;quicknolink")
@@ -283,13 +303,23 @@ if (BUILD_TESTING)
 		condor_pl_test(job_ckpt_open-N-parallel_std "ckpt/restore of N files open at once" "stduniv;quick;full;ckpt")
 		#condor_pl_test(job_ckpt_getrusage-loop_std "async ckpt/restore of open file table" "stduniv;quick;full;ckpt")
 		condor_pl_test(job_ckpt_socket-support_std "Do we support sockets around ckpt/restore?" "stduniv;long;full;ckpt")
-
-		dprint("UW - add fortran tests if desired")
-		
 	endif(STD_UNIVERSE)
 
 	##########################################################
 	# now all the common tests.
+
+	##### generic lib tests
+	condor_pl_test(lib_unit_tests "Run condor_utils Unit Tests" "core;quick;full;quicknolink")
+	condor_pl_test(classad_unit_test "Run classads Unit Tests" "core;quick;full;quicknolink")
+	#condor_pl_test(classad_cache_unit_test "Run classads parse test with and without classad caching" "core;quick;full;quicknolink")
+	condor_pl_test(unit_test_async_fread "Run MyAsyncFileReader Unit Tests" "core;quick;full;quicknolink")
+	#need to copy the underlying exe into condor_tests directory before these tests can be run
+	#condor_pl_test(consumption_policy_unit_test "Run Consumption policy unit tests" "core;quick;full;quicknolink")
+	#condor_pl_test(ring_buffer_unit_test "Run ring buffer unit tests" "core;quick;full;quicknolink")
+	# Not in use till endurance testing done.
+	# condor_pl_test(lib_sysapi "Run SysApi Tests" "core;quick;full;quicknolink")
+	# condor_pl_test(lib_procapi "Run ProcApi Tests" "core;quick;full;quicknolink")
+
 	##### dagman tests
 	condor_pl_test(job_core_chirp_par "Exercise the chirp I/O C library in Parallel Universe" "lib;quick;full")
 	condor_pl_test(job_dagman_splice-scaling "Dagman Splice Parse Scaling" "core;dagman;quick;full;quicknolink")
@@ -332,10 +362,11 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_final-H "Simple Dagman Final Node H" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-I "Simple Dagman Final Node I" "core;dagman;quick;full;quicknolink")
 	#condor_pl_test(job_dagman_final-J "Test DAG with final node with PRE_SKIP" "dagman;quick;full;quicknolink")
-	#condor_pl_test(job_dagman_final-K "Test DAG with final node for which all submit attempts fail" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_final-K "Test DAG with final node for which all submit attempts fail" "dagman;quick;full;quicknolink")
 	#condor_pl_test(job_dagman_final-L "Test DAG with final node with multiple procs, all succeed" "dagman;quick;full;quicknolink")
 	#condor_pl_test(job_dagman_final-M "Test DAG with final node with multiple procs, one fails" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_nonexistent_subdag "Test for nonexistent subdag" "core;dagman;quick;full;quicknolink")
+
 	##### submit foreach variant tests
 	condor_pl_test(job_foreach_submit-filepartmacros "submit file usage file part macros" "core;quick;full;quicknolink")
 	condor_pl_test(job_foreach_submit-filepartmacros-run "submit file usage file part macros- run submit file" "core;quick;full;quicknolink")
@@ -355,17 +386,12 @@ if (BUILD_TESTING)
 	condor_pl_test(job_foreach_submit-queueitemMLineIn-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
 	condor_pl_test(job_foreach_submit-simple-glob "submit file usage match" "core;quick;full;quicknolink")
 	condor_pl_test(job_foreach_submit-simple-glob-run "submit file usage match - run submit file" "core;quick;full;quicknolink")
-    condor_pl_test(job_foreach_submit-queuesliceditemin-commalist "submit file slice test" "core;quick;full;quicknolink")
-	##### generic lib tests
-	# TSTCLAIR: I can not move the "condor_unit_tests" into the actual unit_test b/c it depends 
-	# on condor_config ++ deps. 
-	condor_pl_test(lib_unit_tests "Run Unit Tests Tests" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queuesliceditemin-commalist "submit file slice test" "core;quick;full;quicknolink")
+
+	# auth tests
 	condor_pl_test(lib_auth_config "Run Authorization Config Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_auth_protocol-fs "FS authentication test" "core;quick;full;quicknolink")
 	condor_pl_test(lib_auth_protocol-ctb "CTB authentication test" "core;quick;full;quicknolink")
-	# Not in use till endurance testing done.
-	# condor_pl_test(lib_sysapi "Run SysApi Tests" "core;quick;full;quicknolink")
-	# condor_pl_test(lib_procapi "Run ProcApi Tests" "core;quick;full;quicknolink")
 	## Disabled due to bugginess and dubious worth
 	#condor_pl_test(lib_auth_protocol-negot "4 way negotiation test - frist 8" "core;quick;full;quicknolink")
 	#condor_pl_test(lib_auth_protocol-negot-prt2 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
@@ -412,12 +438,16 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_submit-batchname "condor_submit -batch-name" "core;quick;full;quicknolink")
 	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
 	condor_pl_test(config_validate_policy_templates "config_validate_policy_templates" "core;quick;full;quicknolink")
+	condor_pl_test(docker_simulator_test "docker_simulator_test" "core;quick;full;quicknolink")
+	condor_pl_test(map_user_to_groups_metaknob_test "map_user_to_groups_metaknob_test" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_submit-factory "condor_submit -factory" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_curl_plugin "Success and failure scenarios for curl_plugin" "core;quick;full;quicknolink")
 
 	if (LINUX)
-          condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
+		condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
 	endif()
-        condor_pl_test(cmd_drain "condor_drain" "core;quick;full;quicknolink")
-        condor_pl_test(defrag "condor_defrag" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_drain "condor_drain" "core;quick;full;quicknolink")
+	condor_pl_test(defrag "condor_defrag" "core;quick;full;quicknolink")
 
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full")
@@ -640,7 +670,8 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_all_nodes "Test DAG ALL_NODES feature" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_script_args "Test pre/post script arguments" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_noop_node "Test noop nodes" "dagman;quick;full;quicknolink")
-	condor_pl_test(job_dagman_node_status "Test node status file" "dagman;quick;full;quicknolink")
+    condor_pl_test(job_dagman_node_name_illegal_chars "Test node names for illegal characters" "dagman;quick;full;quicknolink")	
+    condor_pl_test(job_dagman_node_status "Test node status file" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_node_status_rm "Test node status file /w condor_rm" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_job_held "Test removing jobs held too many times" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_reject "Test the REJECT keyword, inside a splice" "dagman;quick;full;quicknolink")

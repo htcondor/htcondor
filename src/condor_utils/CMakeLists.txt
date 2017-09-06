@@ -129,9 +129,8 @@ else()
 endif()
 if ( DARWIN )
 	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
-	add_custom_command( TARGET condor_utils
-		POST_BUILD
-		COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs lib${UTILS_LIB_NAME}.dylib )
+	set_target_properties( condor_utils PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+	install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${UTILS_LIB_NAME}.dylib)" )
 endif()
 add_dependencies(condor_utils utils_genparams syscall_numbers )
 
@@ -144,6 +143,10 @@ if(WINDOWS)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 else()
     condor_selective_glob("dprintf_syslog*" ApiSrcs)
+endif()
+
+if(LINUX)
+    condor_selective_glob("../condor_sysapi/kernel_version.*;../condor_sysapi/sysapi.*;../condor_sysapi/reconfig.*" ApiSrcs)
 endif()
 
 condor_static_lib( condorapi "${ApiSrcs}" )

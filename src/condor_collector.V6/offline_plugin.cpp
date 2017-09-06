@@ -49,6 +49,7 @@ int __cdecl expiration ( const char *ad, time_t *ttl );
 
 OfflineCollectorPlugin::OfflineCollectorPlugin () throw ()
 {
+	AbsentReq = NULL;
 	_ads = NULL;
 	_persistent_store = NULL;
 }

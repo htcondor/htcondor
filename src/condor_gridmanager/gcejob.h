@@ -29,7 +29,6 @@
 #include "gceresource.h"
 #include "proxymanager.h"
 #include "gahp-client.h"
-#include "vm_univ_utils.h"
 
 void GCEJobInit();
 void GCEJobReconfig();

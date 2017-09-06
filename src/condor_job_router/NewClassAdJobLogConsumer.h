@@ -55,5 +55,5 @@ public:
 	bool DeleteAttribute(const char *key,
 						 const char *name);
 
-	void SetJobLogReader(ClassAdLogReader *_reader) { m_reader = _reader; }
+	void SetClassAdLogReader(ClassAdLogReader *_reader) { m_reader = _reader; }
 };

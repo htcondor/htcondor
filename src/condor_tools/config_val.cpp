@@ -531,6 +531,7 @@ main( int argc, const char* argv[] )
 	bool    stats_with_defaults = false;
 	const char * debug_flags = NULL;
 	const char * check_configif = NULL;
+	int profile_test_id=0, profile_iter=0;
 	bool    check_config_for_obsolete_syntax = true;
 
 #ifdef WIN32
@@ -566,12 +567,12 @@ main( int argc, const char* argv[] )
 			if (MATCH == strcasecmp(argv[i], "use")) {
 				if (argv[i+1] && *argv[i+1] != '-') {
 					++i; // skip "use"
-					// save off the parameter name, prefixed with $ so that the code below we know it's a metaknob name.
-					std::string meta("$"); meta += argv[i];
+					// save off the parameter name, prefixed with ^ so that the code below we know it's a metaknob name.
+					std::string meta("^"); meta += argv[i];
 					params.append(meta.c_str());
 				} else {
 					fprintf(stderr, "use should be followed by a category or category:option argument\n");
-					params.append("$");
+					params.append("^");
 				}
 			#ifdef WIN32
 			} else if (i == 1 && wait_for_win32_debugger) {
@@ -752,6 +753,13 @@ main( int argc, const char* argv[] )
 			my_exit(0);
 		} else if (is_dash_arg_prefix(argv[i], "check-if", -1)) {
 			check_configif = use_next_arg("check-if", argv, i);
+		} else if (is_dash_arg_colon_prefix(argv[i], "profile", &pcolon, -1)) {
+			check_configif = "profile"; //use_next_arg("profile", argv, i);
+			if (pcolon) {
+				StringList opts(pcolon+1,":,");
+				tmp = opts.first(); if (tmp) profile_test_id = atoi(tmp);
+				tmp = opts.next(); if (tmp) profile_iter = atoi(tmp);
+			}
 		} else {
 			fprintf(stderr, "%s is not valid argument\n", argv[i]);
 			usage();
@@ -828,7 +836,12 @@ main( int argc, const char* argv[] )
 
 	// handle check-if to valididate config's if/else parsing and help users to write
 	// valid if conditions.
-	if (check_configif) { 
+	if (check_configif) {
+		if (MATCH == strcmp(check_configif, "profile")) {
+			extern void profile_test(bool verbose, int test, int iter);
+			profile_test(verbose, profile_test_id, profile_iter);
+			exit(0);
+		}
 		std::string err_reason;
 		bool bb = false;
 		bool valid = config_test_if_expression(check_configif, bb, local_name, subsys, err_reason);
@@ -1061,10 +1074,10 @@ main( int argc, const char* argv[] )
 		}
 	}
 
-	Daemon* target = NULL;
+	DaemonAllowLocateFull* target = NULL;
 	if( ask_a_daemon ) {
 		if( addr ) {
-			target = new Daemon( dt, addr, NULL );
+			target = new DaemonAllowLocateFull( dt, addr, NULL );
 		} else {
 			char* collector_addr = NULL;
 			if( pool ) {
@@ -1097,7 +1110,7 @@ main( int argc, const char* argv[] )
 				collector_addr = strdup(collector->addr());
 				delete collectors;
 			}
-			target = new Daemon( dt, name, collector_addr );
+			target = new DaemonAllowLocateFull( dt, name, collector_addr );
 			free( collector_addr );
 		}
 		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_LOOKUP) ) {
@@ -1140,7 +1153,7 @@ main( int argc, const char* argv[] )
 			int param_id = -1;
 			bool raw_supported = false;
 			//fprintf(stderr, "param = %s\n", tmp);
-			if (tmp[0] == '$') { // a leading '$' indicates a meta-param
+			if (tmp[0] == '^') { // a leading '^'
 				if (target) {
 					fprintf(stderr, "remote query not supported for use %s\n", tmp+1);
 					my_exit(1);
@@ -1265,6 +1278,15 @@ main( int argc, const char* argv[] )
                         fprintf(stderr, "Warning: Failed to evaluate '%s', returning it as config value\n", value);
                     }
                 }
+			} else if (expand_dumped_variables) {
+				std::string result(tmp);
+				unsigned int options = EXPAND_MACRO_OPT_IS_PATH;
+				MACRO_SET * mset = param_get_macro_set();
+				MACRO_EVAL_CONTEXT ctx; ctx.init(subsys); ctx.localname = local_name;
+				unsigned int exist = expand_macro(result, options, *mset, ctx);
+				printf("'%s' expands to: '%s'\n", tmp, result.c_str());
+				printf("\texist_mask: 0x%0X\n", exist);
+				continue;
 			} else {
 				const char * def_val;
 				const MACRO_META * pmet = NULL;
@@ -1713,11 +1735,13 @@ SetRemoteParam( Daemon* target, const char* param_value, ModeType mt )
 	switch (mt) {
 	case CONDOR_SET:
 		set = true;
+		// Fall through...
 	case CONDOR_UNSET:
 		cmd = DC_CONFIG_PERSIST;
 		break;
 	case CONDOR_RUNTIME_SET:
 		set = true;
+		// Fall through...
 	case CONDOR_RUNTIME_UNSET:
 		cmd = DC_CONFIG_RUNTIME;
 		break;
@@ -2429,4 +2453,157 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 
 }
 
+#ifdef TEST_NTH_LIST_FUNCTIONS
+// count the number of items in the list using the given char as separator
+// this function does NOT treat repeated separators as indicating only a single item
+// this  "a, b, , c" should return 4, not 3
+static int count_list_items(const char * list, char sep)
+{
+	int cnt = (list && (*list==sep)) ? 1 : 0;
+	for (const char * p = list; p; p = strchr(p+1,sep)) ++cnt;
+	return cnt;
+}
 
+// return start and end pointers for the Nth item in the list, using the sep char as item separator
+// returns NULL if the input list is empty or it does not have an Nth item.
+// if the return value is NULL, then the end pointer is not set.
+//
+static const char * nth_list_item(const char * list, char sep, const char * & endp, int index, bool trimmed)
+{
+	int ii = 0;
+	for (const char * p = list; p; ++ii) {
+		const char * e = strchr(p,sep);
+		if (ii == index) {
+			if (trimmed) { while (isspace(*p)) ++p; }
+			if ( ! e) {
+				e = p + strlen(p);
+			}
+			if (trimmed) { while (e > p && isspace(e[-1])) --e; }
+			endp = (e > p) ? e : p;
+			return p;
+		}
+		if ( ! e) break;
+		p = e+1;
+	}
+	return NULL;
+}
+
+// set buf to the value of the Nth list item and return a pointer to the start of that item.
+// returns NULL if the input list is NULL or if it has no Nth item.
+//
+static const char * get_nth_list_item(const char * list, char sep, std::string &buf, int index, bool trimmed=true) {
+	buf.clear();
+	const char * p, *e;
+	p = nth_list_item(list, sep, e, index, trimmed);
+	if (p) {
+		// if we got non-null back. always append something to insure that buf.c_str() will not fault.
+		if (e > p) { buf.append(p, e-p); } else { buf.append(""); }
+	}
+	return p;
+}
+
+static void test_nth_list_functions()
+{
+	static const char * lists[] = {
+		NULL, "", "   ", "a", " a", "a ", "  a  ",
+		"aaa,bbbb,cc,d", "a, bbb, cccc, dddddd",
+		"a,b", "a,b,c", "a,b,c,", ",b,c,",
+		"a, b", "a , b", ",b", " ,b", " , b", "a,", "a ,", "a, ",
+		"a, b, c, d", " a , b , c , d ", "a,,c", ",,,", " a, b, , ",
+	};
+	for (size_t ii = 0; ii < COUNTOF(lists); ++ii) {
+		const char * list = lists[ii];
+		int nn = count_list_items(list, ',');
+		printf("count_list_items(%s) = %d\n", list ? list : "NULL", nn);
+		std::string val;
+		for (int jj = 0; jj < nn; ++jj) {
+			val.clear();
+			const char * p = get_nth_list_item(list, ',', val, jj, true);
+			const char * v = val.c_str();
+			printf("\t[%d]='%s' p='%s'\n", jj, v ? v : "NULL", p ? p : "NULL");
+		}
+	}
+}
+#endif
+
+void profile_test(bool /*verbose*/, int test, int iter)
+{
+	static const char * aInput[] = {
+		"/scratch/condor/alt/test/log/SchedLog",
+
+		"$(LOG)/SchedLog",
+
+		"$(FOG)/SchedLog",
+
+		"$(FOG:/scratch/condor/alt/test/log)/SchedLog",
+
+		"$(LOG)\n$(LOG)\n$(LOG)\n$(LOG)\n$(LOG)",
+
+		"* foo      $(LOG:/home)/users/local/foo     \n"
+		"* bar      $(LOG:/home)/users/local/bar     \n"
+		"* baz      $(LOG:/home)/users/local/baz     \n"
+		"* john     $(LOG:/home)/users/local/john    \n"
+		"* alice    $(LOG:/home)/users/local/alice   \n"
+		"* bob      $(LOG:/home)/users/local/bob     \n"
+		"* james    $(LOG:/home)/users/local/james   \n"
+		"* mike     $(LOG:/home)/users/local/mike    \n"
+		"* oscar    $(LOG:/home)/users/local/oscar   \n"
+		"* tango    $(LOG:/home)/users/local/tango   \n"
+		"* foxtrot  $(LOG:/home)/users/local/foxtrot \n"
+		"* sally    $(LOG:/home)/users/local/sally   ",
+
+		"* foo      $(FOG:/home)/users/local/foo     \n"
+		"* bar      $(FOG:/home)/users/local/bar     \n"
+		"* baz      $(FOG:/home)/users/local/baz     \n"
+		"* john     $(FOG:/home)/users/local/john    \n"
+		"* alice    $(FOG:/home)/users/local/alice   \n"
+		"* bob      $(FOG:/home)/users/local/bob     \n"
+		"* james    $(FOG:/home)/users/local/james   \n"
+		"* mike     $(FOG:/home)/users/local/mike    \n"
+		"* oscar    $(FOG:/home)/users/local/oscar   \n"
+		"* tango    $(FOG:/home)/users/local/tango   \n"
+		"* foxtrot  $(FOG:/home)/users/local/foxtrot \n"
+		"* sally    $(FOG:/home)/users/local/sally   ",
+	};
+
+#ifdef TEST_NTH_LIST_FUNCTIONS
+	test_nth_list_functions();
+#endif
+
+	if ( ! iter) iter = 1;
+
+	MACRO_EVAL_CONTEXT ctx; ctx.init("TOOL");
+	MACRO_SET & mset = *param_get_macro_set();
+	std::string result;
+	auto_free_ptr ares;
+	unsigned int options = 0; // EXPAND_MACRO_OPT_IS_PATH;
+	const char * input = aInput[(test/2)%COUNTOF(aInput)];
+	bool new_algorithm = test&1;
+
+	// to make testing consistent between linux and windows.
+	insert_macro("RELEASE_DIR","/scratch/condor/alt/test",mset,DetectedMacro,ctx);
+	insert_macro("LOCAL_DIR","$(RELEASE_DIR)",mset,DetectedMacro,ctx);
+
+	double tBegin = _condor_debug_get_time_double();
+
+	for (int ixi = 0; ixi < iter; ++ixi) {
+		for (size_t ii = 0; ii < COUNTOF(aInput); ++ii) {
+			if ( ! new_algorithm) {
+				ares.set(expand_macro(input, mset, ctx));
+			} else {
+				result = input;
+				expand_macro(result, options, mset, ctx);
+			}
+		}
+	}
+
+	double tEnd = _condor_debug_get_time_double();
+
+	const char * test_name = new_algorithm ? "std::string" : "strdup";
+	const char * test_result = new_algorithm ? result.c_str() : ((const char *)ares);
+
+	printf("----------------------------\nTest %s (%d iter)\n", test_name, iter);
+	printf("Elapsed time = %.3f ms\n\n", (tEnd - tBegin)*1000.0);
+	printf("from input:\n%s\n------\n", input);
+	printf("%s\n", test_result);
+}

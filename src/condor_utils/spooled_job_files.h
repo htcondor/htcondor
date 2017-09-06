@@ -26,8 +26,16 @@
 
 
 class SpooledJobFiles {
+private:
+	static void _getJobSpoolPath(int cluster, int proc, const classad::ClassAd *job_ad, std::string &spool_path);
+
 public:
+		/* Query the path of the spool directory for the given job.
+		 * The first form is deprecated, as it doesn't consider
+		 * alternate spool directory configuration.
+		 */
 	static void getJobSpoolPath(int cluster,int proc,std::string &spool_path);
+	static void getJobSpoolPath(const classad::ClassAd *job_ad, std::string &spool_path);
 
 		/* Create the spool directory and/or chown the spool directory
 		   to the desired ownership.  The shared parent spool directories
@@ -71,7 +79,7 @@ public:
 		 * This also removes the shared cluster directory from the
 		 * hierarchy if possible.
 		 */
-	static void removeClusterSpooledFiles(int cluster);
+	static void removeClusterSpooledFiles(int cluster, const char * submit_digest=NULL);
 
 		/* Restore ownership of spool directory to condor after job ran.
 		   Returns true on success.
@@ -93,6 +101,24 @@ public:
  * The buffer returned must be deallocated with free().
  */
 char *gen_ckpt_name ( char const *dir, int cluster, int proc, int subproc );
+
+/* Given a job cluster id and SPOOL directory, return the path where
+ * the job executable should reside if the submitter spooled the
+ * executable apart from the input sandbox (i.e. if copy_to_spool is
+ * true in the submit file).
+ * If the SPOOL directory argument is NULL, then the SPOOL parameter
+ * will be looked up.
+ * The buffer returned must be deallocated with free().
+ */
+char *GetSpooledExecutablePath( int cluster, const char *dir = NULL );
+
+/* Given a job cluster id and SPOOL directory, return the path where
+ * the job submit digest should reside if the submitter spooled it
+ * If the SPOOL directory argument is NULL, then the SPOOL parameter
+ * will be looked up.
+ * The buffer returned must be deallocated with free().
+ */
+void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir = NULL );
 
 /* Given a job ad, determine where the job's executable resides.
  * If the filename given by gen_ckpt_name(SPOOL,cluster,ICKPT,0) exists,

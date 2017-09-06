@@ -87,14 +87,15 @@ registerAllAmazonCommands(void)
 	}
 
 	// EC2 Commands
-
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_START,
 			AmazonVMStart::ioCheck, AmazonVMStart::workerFunction);
+
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_START_SPOT,
             AmazonVMStartSpot::ioCheck, AmazonVMStartSpot::workerFunction);
 
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP,
 			AmazonVMStop::ioCheck, AmazonVMStop::workerFunction);
+
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP_SPOT,
 			AmazonVMStopSpot::ioCheck, AmazonVMStopSpot::workerFunction);
 
@@ -128,7 +129,7 @@ registerAllAmazonCommands(void)
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_SERVER_TYPE,
             AmazonVMServerType::ioCheck, AmazonVMServerType::workerFunction);
 
-	// Spot Fleet commands
+	// Annex commands
 	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_START,
 			AmazonBulkStart::ioCheck, AmazonBulkStart::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_PUT_RULE,
@@ -143,9 +144,16 @@ registerAllAmazonCommands(void)
 			AmazonRemoveTargets::ioCheck, AmazonRemoveTargets::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_GET_FUNCTION,
 			AmazonGetFunction::ioCheck, AmazonGetFunction::workerFunction );
-
-	registerAmazonGahpCommand( "S3_UPLOAD",
+	registerAmazonGahpCommand( AMAZON_COMMAND_S3_UPLOAD,
 			AmazonS3Upload::ioCheck, AmazonS3Upload::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_CF_CREATE_STACK,
+			AmazonCreateStack::ioCheck, AmazonCreateStack::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_CF_DESCRIBE_STACKS,
+			AmazonDescribeStacks::ioCheck, AmazonDescribeStacks::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_CALL_FUNCTION,
+			AmazonCallFunction::ioCheck, AmazonCallFunction::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_QUERY,
+			AmazonBulkQuery::ioCheck, AmazonBulkQuery::workerFunction );
 
 	return true;
 }
@@ -187,10 +195,16 @@ main( int argc, char ** const argv )
 	int min_workers = MIN_NUMBER_WORKERS;
 	int max_workers = -1;
 	const char * subSystemName = "EC2_GAHP";
+	const char * logDirectory = NULL;
 
 	int c = 0;
-	while ( (c = my_getopt(argc, argv, "s:f:d:w:m:" )) != -1 ) {
+	while ( (c = my_getopt(argc, argv, "l:s:f:d:w:m:" )) != -1 ) {
 		switch(c) {
+			case 'l':
+				if( my_optarg && *my_optarg ) {
+					logDirectory = my_optarg;
+				}
+				break;
 			case 's':
 				if( my_optarg && *my_optarg ) {
 					subSystemName = my_optarg;
@@ -222,6 +236,11 @@ main( int argc, char ** const argv )
 				usage();
 		}
 	}
+
+	// This is horrible, but I can't find the "right" way to do it.
+    if( logDirectory != NULL ) {
+    	setenv( "_CONDOR_LOG", logDirectory, 1 );
+    }
 
     set_mySubSystem( subSystemName, SUBSYSTEM_TYPE_GAHP );
     config();

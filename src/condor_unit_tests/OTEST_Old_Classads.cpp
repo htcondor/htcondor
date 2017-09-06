@@ -4947,7 +4947,8 @@ static bool test_round_negative_float() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1;
-#ifdef WIN32
+// Beginning with Visual Studio 2015, we use the c-runtime rint() function to implement round just like we do on *nix, so it has the same 'flaw'
+#if defined WIN32 && _MSC_VER < 1900
 	int expect = -3;
 #else
 	emit_problem("The correct answer should be -3 (round toward 0), but no matter the rounding mode, glibc always returns -4");

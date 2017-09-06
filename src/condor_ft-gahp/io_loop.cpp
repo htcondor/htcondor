@@ -734,6 +734,7 @@ enqueue_result (const std::string &req_id, const char ** results, const int argc
 				case '\r':
 				case '\n':
 					buffer += '\\';
+					// Fall through...
 				default:
 					buffer += results[i][j];
 				}
@@ -763,6 +764,7 @@ enqueue_result (int req_id, const char ** results, const int argc)
 				case '\r':
 				case '\n':
 					buffer += '\\';
+					// Fall through...
 				default:
 					buffer += results[i][j];
 				}

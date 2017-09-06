@@ -25,7 +25,7 @@ sshd_cleanup() {
     rm -f ${hostkey}.dsa ${hostkey}.rsa ${hostkey}.dsa.pub ${hostkey}.rsa.pub ${idkey} ${idkey}.pub $_CONDOR_SCRATCH_DIR/tmp/sshd.out $_CONDOR_SCRATCH_DIR/contact
 }
 
-trap sshd_cleanup 15
+trap sshd_cleanup SIGTERM
 
 # note the sshd requires full path
 SSHD=`condor_config_val CONDOR_SSHD`

@@ -40,6 +40,7 @@
 #include "tokener.h"
 #include <submit_utils.h>
 #include <xform_utils.h>
+#include <my_async_fread.h>
 
 #include <string>
 #include <set>
@@ -113,7 +114,7 @@ public:
 // forward function references
 void Usage(FILE*);
 void PrintRules(FILE*);
-int DoUnitTests(int options);
+int DoUnitTests(int options, std::vector<input_file> & inputs);
 int ApplyTransform(void *pv, ClassAd * job);
 bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args);
 #ifdef USE_XFORM_UTILS
@@ -505,7 +506,7 @@ main( int argc, const char *argv[] )
 	if (DashConvertOldRoutes) { exit(ConvertJobRouterRoutes(DashConvertOldRoutes)); }
 
 	// the -dry argument takes a qualifier that I'm hijacking to do queue parsing unit tests for now the 8.3 series.
-	if (UnitTestOpts > 0) { exit(DoUnitTests(UnitTestOpts)); }
+	if (UnitTestOpts > 0) { exit(DoUnitTests(UnitTestOpts, inputs)); }
 
 	// read the transform rules into the MacroStreamXFormSource
 	int rval = 0;
@@ -2429,8 +2430,93 @@ int ConvertJobRouterRoutes(int options)
 	return 0;
 }
 
-int DoUnitTests(int /*options*/)
+int DoUnitTests(int options, std::vector<input_file> & inputs)
 {
+	if (options) {
+		std::vector<MyAsyncFileReader*> readers;
+		for (std::vector<input_file>::iterator it = inputs.begin(); it != inputs.end(); ++it) {
+			MyAsyncFileReader * reader = new MyAsyncFileReader();
+
+			int rval = reader->open(it->filename);
+			if (rval < 0) {
+				fprintf(stdout, "async open failed : %d %s", reader->error_code(), strerror(reader->error_code()));
+			} else {
+				rval = reader->queue_next_read();
+				if (rval < 0) {
+					fprintf(stdout, "async read failed : %d %s", reader->error_code(), strerror(reader->error_code()));
+				}
+			}
+			if (rval < 0) {
+				delete reader;
+			} else {
+				readers.push_back(reader);
+			}
+		}
+
+		int cpending = 0;
+		const int max_pending = 10;
+		int lineno = 0;
+		while ( ! readers.empty()) {
+
+			for (std::vector<MyAsyncFileReader*>::iterator it = readers.begin(); it != readers.end(); /* advance in the loop*/) {
+				MyAsyncFileReader* reader = *it;
+
+				bool is_done = false;
+				const char * p1;
+				const char * p2;
+				int c1, c2;
+				if (reader->get_data(p1, c1, p2, c2)) {
+				#if 1
+					MyString tmp;
+					bool got_line = reader->output().readLine(tmp);
+					if (got_line) ++lineno;
+					if (options & 1) {
+						fprintf(stdout, "reader %p: get_data(%p, %d, %p, %d) %d [%3d]:%s\n", reader, p1, c1, p2, c2, got_line, lineno, tmp.Value());
+					} else {
+						fprintf(stdout, "%s", tmp.Value());
+					}
+					if ( ! got_line) {
+						++cpending;
+						if (cpending > max_pending) {
+							is_done = true;
+						}
+					}
+				#else
+					MyString tmp;
+					if (p1) { tmp.set(p1, MIN(c1,30)); }
+					fprintf(stdout, "reader %p: get_data(%p, %d, %p, %d) %s\n", reader, p1, c1, p2, c2, tmp.Value());
+					reader->consume_data(120);
+				#endif
+				} else if (reader->is_closed() || reader->error_code()) {
+					is_done = true;
+					int tot_reads=-1, tot_pending=-1;
+					reader->get_stats(tot_reads, tot_pending);
+					int err = reader->error_code();
+					if (err) {
+						fprintf(stdout, "reader %p: closed. reads=%d, pending=%d, error=%d %s\n",
+							reader, tot_reads, tot_pending, err, strerror(err));
+					} else {
+						fprintf(stdout, "reader %p: closed. reads=%d, pending=%d\n", reader, tot_reads, tot_pending);
+					}
+				} else {
+					fprintf(stdout, "reader %p: pending...\n", reader);
+					sleep(1);
+					++cpending;
+					if (cpending > max_pending) {
+						is_done = true;
+					}
+				}
+
+				if (is_done) {
+					delete *it;
+					it = readers.erase(it);
+				} else {
+					++it;
+				}
+			}
+		}
+	}
+
 	return 0;
 }
 

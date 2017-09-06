@@ -1,0 +1,86 @@
+	A running annex has four moving parts: the instances, the rule, the
+target, and the lease function.  For on-demand instances, the instances
+were started with the RunInstances() AWS API call.  For spot instances,
+the instance were started via RequestSpotFleet().  The rule is a
+CloudWatch Events rule that triggers every five minutes, and was created
+by PutRule().  The target (PutTargets()) calls the lease function with a
+constant argument set at annex creation (the name of the annex, the name
+of the configuration bucket, and when the lease expires).  The
+latter-most may be updates during the lease's lifetime.  The
+function (created during the initial setup; see below) checks if the
+lease has expired, and if it has, does the following: deletes the
+corresponding configuration tarball from the S3 bucket; finds instances
+whose client tokens being with the annex ID; terminates them;
+deletes its target; and deletes its rule (which will fail if any targets
+are left).
+
+	(The spot-fleet lease function behaves similarly, except that
+it checks the list of spot fleet requests for their client tokens
+in order to find which spot fleet request to terminate.)
+
+	The initial setup uses files in the annexd/setup directory.  For
+ease of construction and maintenance, the CloudFormation templates used
+to help automate setup are constructed for each release by running the
+corresponding generate-* script.  generate-bucket creates an S3 bucket
+and reports its automatically-generated name; generate-security-group
+generates a security group (firewall ruleset) for the default VPC
+allowing SSH and HTCondor from anywhere, and reports the security group
+ID; generate-template creates three Lambda functions -- the on-demand
+lease function, the spot fleet lease function, and a function use to
+check connectivity from the cloud to the designated collector.  It also
+creates the necessary security infrastructure for those functions to
+run successfully (IAM roles and Lambda permissions).  generate-role
+creates a role for the annex instances, giving the permission (a) to
+figure out which annex they're a part of and (b) download configuration
+files from the bucket.
+
+	We also create an SSH keypair, in case we need it for debugging.
+
+	The -check-setup command assumes that the -setup command created the
+stacks condor_annex needs with the default names and only complains if
+those names are missing -- it doesn't attempt to do any kind of analysis
+of the stacks to see if they did the right thing.  It also checks to
+make sure that the configuration has all of the necessary bits.
+
+	The -setup command creates the user's use-specific config directory
+(~/.condor), if necessary, and runs a series of functors: CreateStack
+and WaitForStack, one for each template.  CreateStack does just that;
+the real work is done in WaitForStack, which calls DescribeStacks()
+until the stack in question is in the CREATE_COMPLETE state.  At that
+point, WaitForStack shovels the attribute-value pairs from the stack's
+output section (the 'return' above) into the scratchpad classad; the
+last functor in the sequence writes those pairs into the config file,
+applying the necessary transformations along the way.
+
+	(A 'functor' in this sense is the C++ functor idiom as expressed by
+the Functor interface (abstract base class).  A Functor is called by the
+FunctorSequence DaemonCore Service subclass, that is, by a DaemonCore
+timer.  The FunctorSequence keeps track of where in the sequence it is,
+so the functors only have to implement operator() and the rollback()
+function.  While this makes certain state diagrams impossible (state
+transitions only go forward or back along the sequence), it simplifies
+writing what would otherwise be the state-transition case statements.
+It also minimizes accidental state-sharing; all shared state is either
+explicitly shared via the Functors constructors or via the scratchpad
+ClassAd (which is set via the constructors).  This allows the
+FunctorSequence to store the "global" state between transitions, which
+allows the Functors to manage only their local state during recovery.)
+
+	(condor_annex is a DaemonCore tool because it needs to use the EC2
+GAHP, and the only sensible way to do that is with the grid manager's
+gahp client, which requires DaemonCore.  We also originally thought it
+was going to be a (system-wide) daemon, which is why the
+argument-passing from the command-parsing code to -setup and the actual
+annex creation routine is so weird.  After we decided to merge the two
+for the first few prototypes, I started cheating a little and using
+fprintf( stderr, ... ) and company in a few places where the code would
+logically be running in the daemon and not have stdout or stderr.)
+
+	Creating an annex includes checking connectivity.  We use a
+DaemonClient function to ask the specified collector for a random number
+that is then fixed for the rest of the collector's lifetime; the python
+function does the same thing from AWS Lambda and we compare results to
+make sure the collector contacted from AWS Lambda is the collector
+we want to contact.  We also check to make sure that the configured
+lease function exists before creating the lease (or starting any
+instances).

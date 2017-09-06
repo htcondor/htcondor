@@ -42,6 +42,7 @@
 #include "userlog_to_classads.h"
 #include "setenv.h"
 #include "condor_daemon_core.h" // for extractInheritedSocks
+#include "console-utils.h"
 
 #include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
@@ -54,7 +55,6 @@
 #define NUM_PARAMETERS 3
 #endif /* HAVE_EXT_POSTGRESQL */
 
-static int getConsoleWindowSize(int * pHeight = NULL);
 void Usage(const char* name, int iExitCode=1);
 
 void Usage(const char* name, int iExitCode) 
@@ -681,7 +681,7 @@ main(int argc, const char* argv[])
 			// to use quill, so get the schedd ad for the local machine if
 			// we can, figure out the name of the schedd and the 
 			// jobqueuebirthdate
-		Daemon schedd( DT_SCHEDD, 0, 0 );
+		DaemonAllowLocateFull schedd( DT_SCHEDD, 0, 0 );
 
         if ( schedd.locate(Daemon::LOCATE_FULL) ) {
 			char *scheddname = quillName;	
@@ -792,32 +792,6 @@ main(int argc, const char* argv[])
 #endif
   return 0;
 }
-
-
-#ifdef WIN32
-static int getConsoleWindowSize(int * pHeight /*= NULL*/) {
-	CONSOLE_SCREEN_BUFFER_INFO ws;
-	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
-		if (pHeight)
-			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
-		return (int)ws.dwSize.X;
-	}
-	return 80;
-}
-#else
-#include <sys/ioctl.h>
-static int getConsoleWindowSize(int * pHeight /*= NULL*/) {
-    struct winsize ws;
-	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
-		//printf ("lines %d\n", ws.ws_row);
-		//printf ("columns %d\n", ws.ws_col);
-		if (pHeight)
-			*pHeight = (int)ws.ws_row;
-		return (int) ws.ws_col;
-	}
-	return 80;
-}
-#endif
 
 static int getDisplayWidth() {
 	if (wide_format_width <= 0) {

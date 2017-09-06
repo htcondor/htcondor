@@ -155,7 +155,7 @@ class CondorQuery
 	QueryResult addANDConstraint (const char *);		 // custom constraints
 
 	// This query should perform only a location lookup.
-	bool setLocationLookup(const std::string &location);
+	bool setLocationLookup(const std::string &location, bool want_one_result=true);
 
 	// fetch from collector
 	QueryResult fetchAds (ClassAdList &adList, const char * pool, CondorError* errstack = NULL);
@@ -188,6 +188,9 @@ class CondorQuery
 	void setDesiredAttrs(const char * attrs) { extraAttrs.Assign(ATTR_PROJECTION, attrs); }
 	void setDesiredAttrsExpr(const char *expr);
 
+	void setResultLimit(int limit) { resultLimit = limit; }
+	int  getResultLimit() { return resultLimit; }
+
   private:
 		// These are unimplemented, so make them private so that they
 		// can't be used.
@@ -198,6 +201,7 @@ class CondorQuery
 	AdTypes     queryType;
 	GenericQuery query;
 	char*		genericQueryType;
+	int         resultLimit; // limit on number of desired results. collectors prior to 8.7.1 will ignore this.
 
  // Stores extra attributes other than reqs to send to server
 	ClassAd		extraAttrs;

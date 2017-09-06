@@ -131,6 +131,10 @@ usage( const char *str, int iExitCode )
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 	fprintf( stderr, 
 			 "    -all\t\tall hosts in your pool (overrides other targets)\n" );
+	fprintf( stderr,
+			 "    -annex-name <name>\tall annex hosts in the named annex\n" );
+	fprintf( stderr,
+			 "    -annex-slots\tall annex hosts in your pool\n" );
 	fprintf( stderr, "    hostname\t\tgiven host\n" );
 	fprintf( stderr, "    <ip.address:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr,
@@ -323,6 +327,7 @@ subsys_check( char* MyName )
 	subsys = (char*)1;
 }
 
+bool skipAfterAnnex = false;
 
 int
 main( int argc, char *argv[] )
@@ -608,20 +613,45 @@ main( int argc, char *argv[] )
 						// We got a "-all", remember that
 					all = true;
 					break;
-				case 'n':
-					// We got -annex...
-					tmp++;
-					if( ! (tmp && *tmp) ) {
-						fprintf( stderr,
-								 "ERROR: -annex requires the annex name\n" );
-						usage( NULL );
+				case 'n': {
+					// We got -annex*, all of which default to the master.
+					if( cmd == DAEMONS_OFF ) {
+						subsys_check( MyName );
+						dt = DT_MASTER;
 					}
-					formatstr( annexString, "AnnexName =?= \"%s\"", * tmp );
-					if( constraint ) {
+
+					char * option = * tmp;
+					++tmp;
+					char * argument = NULL;
+					if( tmp ) { argument = * tmp; }
+					--tmp;
+
+					if( strcmp( option, "-annex-name" ) == 0 ) {
+						if( argument ) {
+							formatstr( annexString, ATTR_ANNEX_NAME " =?= \"%s\"", argument );
+							skipAfterAnnex = true;
+							++tmp;
+						} else {
+							fprintf( stderr, "ERROR: -annex-name requires an annex name\n" );
+							usage( NULL );
+						}
+					} else if( strcmp( option, "-annex-slots" ) == 0 ) {
+						annexString = "IsAnnex";
+					} else {
+						if( argument && argument[0] != '-' ) {
+							formatstr( annexString, ATTR_ANNEX_NAME " =?= \"%s\"", argument );
+							skipAfterAnnex = true;
+							++tmp;
+						} else {
+							annexString = "IsAnnex";
+						}
+					}
+
+					if( constraint && (! annexString.empty()) ) {
 						formatstr( annexString, "(%s) && (%s)", constraint, annexString.c_str() );
 					}
 					constraint = annexString.c_str();
-					break;
+					} break;
 				default:
 					fprintf( stderr, 
 							 "ERROR: unknown parameter: \"%s\"\n",
@@ -964,7 +994,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName,StringList & unresolved_names
 				//  -subsys XXX  (but not "-schedd" or "-startd")
 			switch( (*argv)[1] ) {
 			case 'a':
-				if( (*argv)[2] == 'n' ) {
+				if( (*argv)[2] == 'n' && skipAfterAnnex ) {
 					// this is -annex, skip the next one.
 					++argv;
 				}

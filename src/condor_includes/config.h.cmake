@@ -184,6 +184,9 @@
 /* Define to 1 to support condor_shared_port(s) passing fds (USED)*/
 #cmakedefine HAVE_SCM_RIGHTS_PASSFD 1
 
+/* Define to 1 to support public input file transfer over HTTP */
+#cmakedefine HAVE_HTTP_PUBLIC_FILES 1
+
 /* Define if doing a clipped build (USED)*/
 #cmakedefine CLIPPED 1
 

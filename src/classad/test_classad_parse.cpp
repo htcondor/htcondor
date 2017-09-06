@@ -154,6 +154,9 @@ bool adsource::get_line(std::string & buffer)
 // --------------------------------------------------------------------
 int parse_ads(bool with_cache, bool verbose=false)
 {
+	int barf_counter = 0;
+	int rval = 0;
+
 	if (with_cache) {
 		ClassAdSetExpressionCaching(true); 
 	} else {
@@ -163,7 +166,6 @@ int parse_ads(bool with_cache, bool verbose=false)
 	vector< classad_shared_ptr<ClassAd> > ads;
 	vector<string> inputData;
 	classad_shared_ptr<ClassAd> pAd(new ClassAd);
-
 
 	srand(42);
 	adsource infile;
@@ -200,7 +202,13 @@ int parse_ads(bool with_cache, bool verbose=false)
 
 		if ( pAd->InsertViaCache(name, szValue) )
 		{
+			++barf_counter;
 			fprintf(stdout, "BARFED ON: %s\n", szInput.c_str());
+			if (barf_counter > 1000) {
+				fprintf(stdout, "error count exceeds 1000, aborting test\n");
+				rval = 1;
+				break;
+			}
 		}
 	}
 
@@ -210,7 +218,7 @@ int parse_ads(bool with_cache, bool verbose=false)
 	CachedExprEnvelope::_debug_dump_keys("output.txt");
 
 	ads.clear();
-	return 0;
+	return rval;
 }
 
 int main(int argc, const char ** argv)

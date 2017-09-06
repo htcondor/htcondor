@@ -8,6 +8,7 @@
 
 \SynProg{\Condor{off}}
 \oOptnm{-graceful $|$ -fast  $|$ -peaceful $|$ -force-graceful}
+\oOptArg{-annex}{name}
 \ToolDebugOption
 \ToolWhere
 \ToolArgsAffect
@@ -20,7 +21,8 @@ It does this cleanly so that checkpointable jobs may gracefully exit with
 minimal loss of work.
 
 The command \Condor{off} without any arguments will shut down
-all daemons except \Condor{master}.
+all daemons except \Condor{master}, unless \OptArg{-annex}{name} is
+specified.
 The \Condor{master} can then handle both local and remote
 requests to restart the other HTCondor daemons if need be.  To restart
 HTCondor running on a machine, see the \Condor{on} command.
@@ -44,6 +46,7 @@ to distinguish it from the \Opt{-force-graceful} command.}
 	\OptItem{\Opt{-force-graceful}}{Force a graceful shutdown, even after issuing a \Opt{-peaceful} command.
 A minimum of the first two characters of this option must be specified,
 to distinguish it from the \Opt{-fast} command.}
+	\OptItem{\OptArg{-annex}{name}}{Turn off master daemons in the specified annex.  By default this will result in the corresponding instances shutting down.}
 	\ToolDebugDesc
 	\ToolArgsLocateDesc
 	\ToolArgsAffectDesc

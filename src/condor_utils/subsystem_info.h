@@ -73,6 +73,46 @@ typedef enum {
 	SUBSYSTEM_TYPE_MAX = SUBSYSTEM_TYPE_COUNT - 1,
 } SubsystemType;
 
+// This enum bakes the ids of known subsystem values into an integer
+typedef enum {
+	SUBSYSTEM_ID_UNKNOWN = 0,
+	SUBSYSTEM_ID_MIN = 1,	// Min valid subsystem type, don't start at zero
+
+	// 
+	SUBSYSTEM_ID_MASTER = SUBSYSTEM_ID_MIN,
+	SUBSYSTEM_ID_COLLECTOR,
+	SUBSYSTEM_ID_NEGOTIATOR,
+	SUBSYSTEM_ID_SCHEDD,
+	SUBSYSTEM_ID_SHADOW,
+	SUBSYSTEM_ID_STARTD,
+	SUBSYSTEM_ID_STARTER,
+	SUBSYSTEM_ID_CREDD,
+	SUBSYSTEM_ID_KBDD,
+	SUBSYSTEM_ID_GRIDMANAGER,
+	SUBSYSTEM_ID_HAD,
+	SUBSYSTEM_ID_REPLICATION,
+	SUBSYSTEM_ID_TRANSFERER,
+	SUBSYSTEM_ID_TRANSFERD,
+	SUBSYSTEM_ID_ROOSTER,
+	SUBSYSTEM_ID_SHARED_PORT,
+	SUBSYSTEM_ID_JOB_ROUTER,
+	SUBSYSTEM_ID_DEFRAG,
+	SUBSYSTEM_ID_GANGLIAD,
+	SUBSYSTEM_ID_PANDAD,
+
+	SUBSYSTEM_ID_DAGMAN,
+	SUBSYSTEM_ID_TOOL,
+	SUBSYSTEM_ID_SUBMIT,
+	SUBSYSTEM_ID_ANNEXD,
+
+	// Gahps (many names map to this)
+	SUBSYSTEM_ID_GAHP,
+
+	// Delimiters, these MUST BE LAST
+	SUBSYSTEM_ID_COUNT,
+	SUBSYSTEM_ID_MAX = SUBSYSTEM_ID_COUNT - 1,
+} KnownSubsystemId;
+
 // -----------------------------------------------------------------
 // **** README README README README README README README README ****
 // There's probably no reason for you to EVER add to this
@@ -171,7 +211,12 @@ BEGIN_C_DECLS
 
 const char* get_mySubSystemName(void);
 SubsystemType get_mySubSystemType(void);
-	
+
+// convert enum form of a known subsystem name to string. caller does not free the return value.
+const char * getKnownSubsysString(int id);
+// convert string form of a known subsystem name to SUBSYSTEM_ID_* enum value
+KnownSubsystemId getKnownSubsysNum(const char * subsys);
+
 END_C_DECLS
 
 

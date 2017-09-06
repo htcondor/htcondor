@@ -1,15 +1,15 @@
-#!/bin/sh
+#!/usr/bin/env bash
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
-## 
+##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
 ## may not use this file except in compliance with the License.  You may
 ## obtain a copy of the License at
-## 
+##
 ##    http://www.apache.org/licenses/LICENSE-2.0
-## 
+##
 ## Unless required by applicable law or agreed to in writing, software
 ## distributed under the License is distributed on an "AS IS" BASIS,
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,7 +45,7 @@
 # You may set it manually (not recommended)
 #MPDIR=/usr/lib64/openmpi
 # The pool admin may set it via OPENMPI_INSTALL_PATH in the condor_config (recommended)
-MPDIR=`condor_config_val OPENMPI_INSTALL_PATH`
+MPDIR=$(condor_config_val OPENMPI_INSTALL_PATH)
 
 # $EXINT is a comma-delimited list of excluded network interfaces.
 # If your mpi jobs are hanging, OpenMPI may be trying to use too many
@@ -53,13 +53,13 @@ MPDIR=`condor_config_val OPENMPI_INSTALL_PATH`
 # You may set it manually (not recommended)
 #EXINT="docker0,virbr0"
 # The pool admin may set it via OPENMPI_EXCLUDE_NETWORK_INTERFACES in the condor_config (recommended)
-EXINT=`condor_config_val OPENMPI_EXCLUDE_NETWORK_INTERFACES`
+EXINT=$(condor_config_val OPENMPI_EXCLUDE_NETWORK_INTERFACES)
 
 # We recommend that your pool admin use MOUNT_UNDER_SCRATCH = /tmp
 # so that OpenMPI caches all data under the user's scratch directory.
 # Not having /tmp mounted under scratch can also lead to unlink errors,
 # which may hang mpi jobs.
-_USE_SCRATCH=`condor_config_val MOUNT_UNDER_SCRATCH`
+_USE_SCRATCH=$(condor_config_val MOUNT_UNDER_SCRATCH)
 if [ -z $_USE_SCRATCH ]; then
     echo "WARNING: MOUNT_UNDER_SCRATCH not set in condor_config"
 elif test "${_USE_SCRATCH#*/tmp}" == "$_USE_SCRATCH"; then
@@ -81,15 +81,45 @@ if [ -z $EXINT ]; then
 fi
 
 # The condor_ssh and sshd.sh helper scripts reside in $(LIBEXEC)
-CONDOR_SSH=`condor_config_val libexec`
+CONDOR_SSH=$(condor_config_val libexec)
 CONDOR_SSH=$CONDOR_SSH/condor_ssh
 
-SSHD_SH=`condor_config_val libexec`
+SSHD_SH=$(condor_config_val libexec)
 SSHD_SH=$SSHD_SH/sshd.sh
 ##
 
 # Set up SSHD on the node
-. $SSHD_SH $_CONDOR_PROCNO $_CONDOR_NPROCS 
+. $SSHD_SH $_CONDOR_PROCNO $_CONDOR_NPROCS
+
+# Set up mpirun cleanup function
+_MPIRUN_PID=0
+mpirun_cleanup() {
+    echo "Caught SIGTERM, cleaning up..."
+    if [ "$_MPIRUN_PID" -ne "0" ]; then
+
+        # Send SIGTERM to mpirun
+        echo "Sending SIGTERM to mpirun (${_MPIRUN_PID})..."
+        kill -s SIGTERM $_MPIRUN_PID
+
+        # Give mpirun 60 seconds to exit nicely before proceeding
+        echo "Waiting for mpirun to exit..."
+        for i in {1..12}; do
+            kill -0 $_MPIRUN_PID 2> /dev/null # Returns 0 if PID is running
+            if [ "$?" -ne "0" ]; then
+                break
+            fi
+            sleep 5
+        done
+    fi
+
+    # Cleanup sshd
+    echo "Cleaning up sshd files..."
+    sshd_cleanup
+    rm -f machines
+
+    echo "Exiting early."
+    exit 1
+}
 
 # If not the head node, just sleep forever to let the SSHDs run
 if [ $_CONDOR_PROCNO -ne 0 ]
@@ -97,6 +127,9 @@ then
     wait
     sshd_cleanup
     exit 0
+# If the head node, then set the trap to cleanup mpirun (also does sshd_cleanup)
+else
+    trap mpirun_cleanup SIGTERM
 fi
 
 EXECUTABLE=$1
@@ -119,10 +152,10 @@ sort -n -k 1 < $CONDOR_CONTACT_FILE | awk '{print $1}' > machines
 _MCA_FAIL=true
 for mca_ssh_agent in orte_rsh_agent plm_rsh_agent
 do
-    if `ompi_info -a | grep \"${mca_ssh_agent}\" 1>/dev/null 2>&1`
+    if $(ompi_info -a | grep \"${mca_ssh_agent}\" 1>/dev/null 2>&1)
     then
-        if `ompi_info -a | grep \"${mca_ssh_agent}\" | grep deprecated 1>/dev/null 2>&1`; then continue; fi
-        
+        if $(ompi_info -a | grep \"${mca_ssh_agent}\" | grep deprecated 1>/dev/null 2>&1); then continue; fi
+
         _MCA_FAIL=false
 
         # set MCA values for running on HTCondor
@@ -133,10 +166,12 @@ do
         #export OMPI_MCA_plm_base_verbose=30
         #export OMPI_MCA_btl_base_verbose=30
 
-        # run the executable
-        mpirun -v --prefix $MPDIR --mca $mca_ssh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@
-        continue
-        
+        # run mpirun in the background and wait for it to exit
+        mpirun -v --prefix $MPDIR --mca $mca_ssh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@ &
+	_MPIRUN_PID=$!
+	wait $_MPIRUN_PID
+	
+        break
     fi
 done
 

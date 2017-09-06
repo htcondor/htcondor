@@ -18,19 +18,20 @@ DEB7="DEB7"
 DEB8="DEB8"
 UBUNTU12="UBUNTU12"
 UBUNTU14="UBUNTU14"
+UBUNTU16="UBUNTU16"
 
-SUPPORTED_OSX = ['10.6', '10.7', '10.8', '10.9', '10.10', '10.11']
-SUPPORTED_PLATFORMS = [ RH6, RH7, OSX, DEB7, DEB8, UBUNTU12, UBUNTU14 ]
+SUPPORTED_OSX = ['10.10', '10.11', '10.12']
+SUPPORTED_PLATFORMS = [ RH6, RH7, OSX, DEB7, DEB8, UBUNTU14, UBUNTU16 ]
 
 # download URLs for the different platforms
 URL_DICT={
   DEB7: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Debian7.tar.gz",
   DEB8: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Debian8.tar.gz",
-  OSX: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_MacOSX7.tar.gz",
+  OSX: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_MacOSX.tar.gz",
   RH6: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat6.tar.gz",
   RH7: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat7.tar.gz",
-  UBUNTU12: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu12.tar.gz",
   UBUNTU14: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu14.tar.gz",
+  UBUNTU16: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu16.tar.gz",
 }
 
 BIT32="32bit"
@@ -115,6 +116,8 @@ Codename:    oneiric
           retv=UBUNTU12
         if line[len('DISTRIB_RELEASE='):].startswith('14.'):
           retv=UBUNTU14
+        if line[len('DISTRIB_RELEASE='):].startswith('16.'):
+          retv=UBUNTU16
   return retv
 
 def findversion():
@@ -148,6 +151,8 @@ def findversion():
           return UBUNTU12
         if mydist[1].startswith('14'):
           return UBUNTU14
+        if mydist[1].startswith('16'):
+          return UBUNTU16
     if os.path.isfile('/etc/redhat-release'):
       return findversion_redhat()
     elif os.path.isfile('/etc/lsb-release'):
@@ -175,7 +180,7 @@ def install(platform, multiuser=False, options=None):
   import commands
   # make tmp dir
   if not platform in SUPPORTED_PLATFORMS:
-      print "You system is not supported. Aborting the installation."
+      print "Your system is not supported. Aborting the installation."
       sys.exit(1)
   try:
     tmp_dir = tempfile.mkdtemp() # create dir

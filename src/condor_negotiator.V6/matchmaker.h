@@ -108,7 +108,7 @@ class Matchmaker : public Service
 		~Matchmaker();
 
 		// initialization method (registers command handlers, etc)
-		void initialize ();
+		void initialize (const char *neg_name = NULL);
 
 		// reinitialization method (reconfig)
 		int reinitialize ();	
@@ -152,6 +152,7 @@ class Matchmaker : public Service
 
     protected:
 		char * NegotiatorName;
+		bool NegotiatorNameInConfig;
 		int update_interval;
 		
 

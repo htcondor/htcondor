@@ -52,6 +52,7 @@ const SetAttributeFlags_t SETDIRTY = (1<<2);
 const SetAttributeFlags_t SHOULDLOG = (1<<3);
 const SetAttributeFlags_t SetAttribute_OnlyMyJobs = (1<<4);
 const SetAttributeFlags_t SetAttribute_QueryOnly = (1<<5); // check if change is allowed, but don't actually change.
+const SetAttributeFlags_t SetAttribute_LateMaterialization = (1<<6); // check if change is allowed, but don't actually change.
 
 #define SHADOW_QMGMT_TIMEOUT 300
 
@@ -116,6 +117,16 @@ int DestroyProc(int cluster_id, int proc_id);
 /** Remove a cluster of jobs from the queue.
 */
 int DestroyCluster(int cluster_id, const char *reason = NULL);
+
+// add schedd capabilities into the given ad, based on the mask. (mask is for future use)
+bool GetScheddCapabilites(int mask, ClassAd & ad);
+
+// either factory filename or factory text may be null, but not both.
+int SetJobFactory(int cluster_id, int qnum, const char * factory_filename, const char * factory_text);
+
+// either factory filename or factory text may be null, but not both.
+int SetMaterializeData(int cluster_id, int itemnum, const char * foreach_filename, const char * foreach_text);
+
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value should be a valid ClassAd value (strings
 	should be surrounded by quotes).
@@ -204,6 +215,12 @@ int SetTimerAttribute(int cluster, int proc, const char *attr_name, int dur);
 int SetMyProxyPassword (int cluster, int proc, const char * pwd);
 
 
+/** populate the scheduler capabilities ad
+	mask - reserved for future use, must be 0
+	@return -1 on failure; 0 on success
+*/
+int GetSchedulerCapabilities(int mask, ClassAd & reply);
+
 /** Tell the schedd that we're about to close the network socket. This
 	call will not commit an active transaction. Callers of DisconnectQ()
 	should not use this call.
@@ -227,8 +244,10 @@ int RemoteCommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=N
 /** The difference between this and RemoteCommitTransaction is that
 	this function never returns if there is a failure.  This function
 	should only be called from the schedd.
+    Exception: This function can return failure if a SUBMIT_REQUIREMEMT
+      expression evaluates to False.
 */
-void CommitTransaction(SetAttributeFlags_t flags=0);
+int CommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=NULL);
 
 int AbortTransaction();
 void AbortTransactionAndRecomputeClusters();

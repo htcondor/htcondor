@@ -5,11 +5,259 @@
 %%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:History-8-5}Development Release Series 8.7}
+\section{\label{sec:History-8-7}Development Release Series 8.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is the development release series of HTCondor.
 The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-7-4}Version 8.7.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.7.4 not yet released.
+%\item HTCondor version 8.7.4 released on Month Date, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-7-3}Version 8.7.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.7.3 not yet released.
+%\item HTCondor version 8.7.3 released on Month Date, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added support for Public Input Files in HTCondor jobs. This allows
+users to transfer input files over a publicly-available HTTP web service,
+which can benefit from caching proxies, load balancers, and other tools
+to improve file transfer performance.
+\Ticket{6356}
+
+\item Changed how \Expr{auto} works for \MacroNI{ENABLE\_IPV4} and
+\MacroNI{ENABLE\_IPV6}.  HTCondor now ignores addresses that are likely
+to be useless (loopback or link-local) unless no address is likely to be
+useful (private or public).
+\Ticket{6348}
+
+\item Added \Opt{-grid:ec2} to \Condor{q} to avoid truncating AWS' new,
+longer, instance IDs.  Replaced useless (given the instance ID) instance
+host name with the CMD column, to help distinguish EC2 jobs from each other.
+\Ticket{5478}
+
+\item Added statistical output for job input files transferred from web servers
+using the curl\_plugin tool. Statistics are stored in ClassAd format, saved by
+default to a transfer\_history file in the local logs folder.
+\Ticket{6229}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that would prevent dollar-dollar expansion from 
+working correctly for parallel universe jobs running on partitionable 
+slots 
+\Ticket{6370}
+\item Fixed some small memory leaks in the HTCondor daemons.
+\Ticket{6361}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-7-2}Version 8.7.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.7.2 released on June 22, 2017.
+
+\end{itemize}
+
+\noindent Known Issues:
+
+\begin{itemize}
+
+\item Our current implementation of late materialization is incompatible with
+\Condor{dagman} and will cause unexpected behavior, including failing without
+warning. This is a top-priority issue which aim to resolve in an upcoming
+release.
+\Ticket{6292}
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Improved the performance of the \Condor{schedd} by setting the
+default for the knob \MacroNI{SUBMIT\_SKIP\_FILECHECKS} to true.  This prevents
+the \Condor{schedd} from checking the readability of all input files, and skips
+the creation of the output files on the submit side at submit time.
+Output files are now created either at transfer time, when file transfer
+is on, or by the job itself, if a shared filesystem is used.  As a result
+of this change, it is possible that a job will run to completion, and only
+then is put on hold because the output file on the submit machine cannot
+be written.
+\Ticket{6220}
+
+\item Changed \Condor{submit} to not create empty stdout and stderr files before
+submitting jobs by default.  This caused confusion for users, and slowed down
+the submission process.  The older behavior, where \Condor{submit} would fail
+if it could not create this files, is available when the parameter
+\MacroNI{SUBMIT\_SKIP\_FILECHECKS} is set to false.  The default is now true.
+\Ticket{6220}
+
+\item \Condor{q} will now show expanded totals when querying a \Condor{schedd} that is version 8.7.1 or later.
+The totals for the current user and for all users are provided by the \Condor{schedd}.
+To get the old totals display set the configuration parameter \MacroNI{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} to true.
+\Ticket{6254}
+
+\item The \Condor{annex} tool now logs to the user configuration directory.  Added an
+audit log of \Condor{annex} commands and their results.
+\Ticket{6267}
+
+\item Changed \Condor{off} so that the \Expr{-annex} flag implies the
+\Expr{-master} flag, since this is more likely to be the right thing.
+\Ticket{6266}
+
+\item Added \Expr{-status} flag to \Condor{annex}, which reports on
+instances which are running but not in the pool.
+\Ticket{6257}
+
+\item If invoked with an annex name and duration (but not an instance or slot
+count), \Condor{annex} will now adjust the duration of the named annex.
+\Ticket{6161}
+
+\item Job input files which are downloaded from http:// web addresses now
+have mechanisms to recover from transfer failures. This should increase the
+reliability of using web-based input files, especially under slow and/or
+unstable network conditions.
+\Ticket{5886}
+
+\item Reduced load on the \Condor{collector} by optimizing queries performed when
+an HTCondor daemon needs to look up the address of another daemon.
+\Ticket{6223}
+
+\item Reduced load on the \Condor{collector} by optimizing queries performed
+when using \condor{q} with several different command-line options such as
+\Opt{-submitter} and \Opt{-global}.
+\Ticket{6222}
+
+\item Added the \Condor{top} tool,
+an automated version of the now-defunct \Condor{top.pl}
+which uses the python bindings to monitor the status of daemons.
+\Ticket{6205}
+
+\item Added a new option \Opt{-cron} to \Condor{gpu\_discovery} that allows it to be
+used directly as an executable of a \Condor{startd} cron job.
+\Ticket{6012}
+
+\item The configuration variable \MacroNI{MAX\_RUNNING\_SCHEDULER\_JOBS\_PER\_OWNER}
+was set to default to 100. It formerly had no default value.
+\Ticket{6260}
+
+\item Added a parameter \MacroNI{DEDICATED\_SCHEDULER\_USE\_SERIAL\_CLAIMS} which
+defaults to false.  When true, allows the dedicated schedule to use claimed/idle
+slots that the serial scheduler has claimed.
+\Ticket{6276}
+
+\item The \Condor{advertise} tool now assumes an update command if one is not
+specified on the command-line and attempts to determine exact command by
+inspecting the first ad to be advertised.
+\Ticket{6296}
+
+\item Improved support for running several \Condor{negotiator}s in a
+single pool.
+\MacroNI{NEGOTIATOR\_NAME} now works like \MacroNI{MASTER\_NAME}.
+\Condor{userprio} has a -name option to select a specific
+\Condor{negotiator}.
+Accounting ads from multiple \Condor{negotiator}s can co-exist in the
+\Condor{collector}.
+\Ticket{5717}
+
+\item Package EC2 Annex components in the condor-annex-ec2 sub RPM.
+\Ticket{6202}
+
+\item Added configuration parameter \MacroNI{ALTERNATE\_JOB\_SPOOL},
+an expression evaluated against the job ad, which specifies an alternate
+spool directory to use for files related to that job.
+\Ticket{6221}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item With an empty configuration file, HTCondor would behave as if
+\MacroNI{ALLOW\_ADMINISTRATOR} were \Expr{*}.  Changed the default to
+\Expr{\$(CONDOR\_HOST)}, which is much less insecure.
+\Ticket{6230}
+
+\item Fixed a bug in the \Condor{schedd} where it did not account for the initial state of
+late materialize jobs when calculating the running totals of jobs by state. This bug
+resulted in \Condor{q} displaying incorrect totals when \MacroNI{CONDOR\_Q\_SHOW\_OLD\_SUMMARY}
+was set to false.
+\Ticket{6272}
+
+\item Fixed a bug where the \Condor{schedd} would incorrectly try to check the
+validity of output files and directories for late materialize jobs. The \Condor{schedd}
+will now always skip file checks for late materialize jobs.
+\Ticket{6246}
+
+\item Changed the output of the \Condor{status} command so that the Load Average
+field now displays the load average of just the condor job running in that
+slot.  Previously, load associated from outside of condor was proportionately
+distributed into the condor slots, resulting in much confusion.
+\Ticket{6225}
+
+\item Illegal chars ('+', '.') are now prohibited in DAGMan node names.
+\Ticket{5966}
+
+\item Improve audit log messages by including the connection ID and properly
+filtering out shadow and gridmanager modifications to the job queue log.
+\Ticket{6289}
+
+\item \Condor{root\_switchboard} has been removed from the release, since
+PrivSep is no longer supported.
+\Ticket{6259}
+
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-7-1}Version 8.7.1}
@@ -19,8 +267,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.1 not yet released.
-%\item HTCondor version 8.7.1 released on Month Date, 2017.
+\item HTCondor version 8.7.1 released on April 24, 2017.
 
 \end{itemize}
 
@@ -29,9 +276,97 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Previously, when the number of forked children processing Collector
+queries surpassed the maximum set by the configuration knob \MacroNI{COLLECTOR\_QUERY\_WORKERS}, the
+Collector handled all new incoming queries in-processes (i.e. without
+forking). As processing a query and sending out the result to the network
+could take a long time, the result of servicing such queries in-process in
+the Collector is likely to drop a lot of updates. So now in v8.7.1, instead of
+servicing such queries in-process, they are queued up for servicing as soon as
+query worker child processes become available.  The configuration knob
+\MacroNI{COLLECTOR\_QUERY\_WORKERS\_PENDING} was introduced; see
+section\~ref{param:CollectorQueryWorkersPending}.
+\Ticket{6192}
+
+\item Default value for \MacroNI{COLLECTOR\_QUERY\_WORKERS} changed from 2 to 4.
+\Ticket{6192}
+
+\item Introduced configuration macro
+\MacroNI{COLLECTOR\_QUERY\_WORKERS\_RESERVE\_FOR\_HIGH\_PRIO} so that the
+collector prioritizes queries that are important for the operation of the
+pool (such as queries from the negotiator) ahead of servicing user
+invocations of \Condor{status}.
+\Ticket{6192}
+
+\item Introduced configuration macro \MacroNI{COLLECTOR\_QUERY\_MAX\_WORKTIME} to
+define the maximum amount of time the collector may service a query from a
+client like condor\_status.  See section\~ref{param:CollectorQueryMaxWorktime}.
+\Ticket{6192}
+
+\item Added several new statistics on collector query performance into the Collector
+ClassAd, including \AdAttr{ActiveQueryWorkers}, \AdAttr{ActiveQueryWokersPeak},
+\AdAttr{PendingQueries}, \AdAttr{PendingQueriesPeak}, \AdAttr{DroppedQueries},
+and \AdAttr{RecentDroppedQueries}.  See section\~ref{sec:Collector-ClassAd-Attributes}.
+\Ticket{6192}
+
+\item Further refinement and initial documentation of the HTCondor Annex.
+\Ticket{6147}
+\Ticket{6149}
+\Ticket{6150}
+\Ticket{6155}
+\Ticket{6157}
+\Ticket{6184}
+\Ticket{6196}
+\Ticket{6216}
+\Ticket{6218}
+
+\item Docker universe jobs can now use condor\_chirp command
+(if it is in the image).
+\Ticket{6162}
+
+\item In the Job Router, when a candidate job matches multiple routes,
+the first route is now always selected.
+The old behavior of spreading jobs across all matching routes round-robin
+style can be enabled by setting the new configuration parameter
+\MacroNI{JOB\_ROUTER\_ROUND\_ROBIN\_SELECTION} to \Expr{True}.
+\Ticket{6190}
+
+\item The \Condor{schedd} now keeps a count of jobs by state for each owner and submitter
+and will report them to \Condor{q}. Condor{q} will display these totals unless the new
+configuration parameter \MacroNI{CONDOR\_Q\_SHOW\_OLD\_SUMMARY} is set to true. In 8.7.1
+this parameter defaults to true.
+\Ticket{6160}
+
+\item Milestone 1 for late materialization in the \Condor{schedd} was completed. This milestone adds the
+undocumented option \Opt{-factory} to \Condor{q} that can be used to submit a late materializing job cluster
+to the \Condor{schedd}.  The \Condor{schedd} will refuse the submission unless the configuration parameter
+\MacroNI{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} is set to true.
+\Ticket{6212}
+
 \item Increased the default value for configuration parameter
 \MacroNI{NEGOTIATOR\_SOCKET\_CACHE\_SIZE} to 500.
 \Ticket{6165}
+
+\item Added new DaemonCore statistics UdpQueueDepth to measure the
+number of bytes in the UDP receive queue for daemons with a UDP command port.
+\Ticket{6183}
+
+\item Improved speed of handling queries to the collector by caching the
+the configuration knob SHARED\_PORT\_ADDRESS\_REWRITING.
+\Ticket{6187}
+
+\item The \Condor{collector} on Linux now handles some queries in process and some
+by forking a child process. This allows it to avoid the overhead of forking to handle
+queries that will take little time. The policy for deciding which queries to handle in process
+is controlled by a new configuration parameter \MacroNI{HANDLE\_QUERY\_IN\_PROC\_POLICY}.
+\Ticket{6191}
+
+\item Added \Opt{-limit} option to \Condor{status} and changed the \Condor{collector} to honor it.
+\Ticket{6198}
+
+\item \Condor{submit} was changed to use the same utility library that the submit python bindings use.
+This should help insure that submit via python bindings will give the same results as using \Condor{submit}.
+\Ticket{6181}.
 
 \end{itemize}
 
@@ -93,6 +428,14 @@ an argument; the request is constrained to match machines whose
 \Expr{AnnexName} ClassAd attribute matches the argument.
 \Ticket{6116}
 \Ticket{6117}
+
+\item A refreshed X.509 proxy is now forwarded to the remote cluster
+in Bosco.
+\Ticket{5841}
+
+\item Added several new statistics to the Negotiator ad, mainly
+detailing how time is spent in the negotiation cycle.
+\Ticket{6060}
 
 \end{itemize}
 

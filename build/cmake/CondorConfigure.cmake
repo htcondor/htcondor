@@ -82,15 +82,19 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
+	if (DEFINED PYTHON_VERSION)
+		set(Python_ADDITIONAL_VERSIONS ${PYTHON_VERSION})
+	endif()
 	include (FindPythonLibs)
+	message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
 	# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
 	# This helps ensure we get the same version of the libraries and python
 	# on systems with both python2 and python3.
 	if (DEFINED PYTHONLIBS_VERSION_STRING)
 		set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
-		set(PythonInterp_FIND_VERSION_EXACT ON)
 	endif()
 	include (FindPythonInterp)
+	message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
 else()
 	if(WINDOWS)
 		#only for Visual Studio 2012
@@ -568,6 +572,7 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	glibc_detect( GLIBC_VERSION )
 
 	set(HAVE_GNU_LD ON)
+    option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
 elseif(${OS_NAME} STREQUAL "AIX")
 	set(AIX ON)
@@ -787,7 +792,18 @@ if (WINDOWS)
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 
-  if(NOT (MSVC_VERSION LESS 1700))
+  if(NOT (MSVC_VERSION LESS 1900))
+    if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+      set(BOOST_DOWNLOAD_WIN boost-1.64.0-VC15-Win64.tar.gz)
+    else()
+      set(BOOST_DOWNLOAD_WIN boost-1.64.0-VC15-Win32.tar.gz)
+    endif()
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.64.0)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.2l)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.40)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.14.5)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.54.1)
+  elseif(NOT (MSVC_VERSION LESS 1700))
 	if (MSVC11)
       if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
         set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
@@ -815,7 +831,7 @@ else ()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.64.0)
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
@@ -962,6 +978,7 @@ set (CONDOR_COLLECTOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_collector.V6)
 set (CONDOR_NEGOTIATOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_negotiator.V6)
 set (CONDOR_SCHEDD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_schedd.V6)
 set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
+
 ###########################################
 
 ###########################################

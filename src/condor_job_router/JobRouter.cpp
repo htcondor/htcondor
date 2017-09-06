@@ -67,6 +67,7 @@ JobRouter::JobRouter(bool as_tool)
 	, m_schedd2_pool(NULL)
 	, m_schedd1_name(NULL)
 	, m_schedd1_pool(NULL)
+	, m_round_robin_selection(true)
 	, m_operate_as_tool(as_tool)
 {
 	m_scheduler = NULL;
@@ -389,6 +390,8 @@ JobRouter::config() {
 		// goes on hold
 	m_release_on_hold = param_boolean("JOB_ROUTER_RELEASE_ON_HOLD", true);
 
+	m_round_robin_selection = param_boolean("JOB_ROUTER_ROUND_ROBIN_SELECTION", false);
+
 		// default is no maximum (-1)
 	m_max_jobs = param_integer("JOB_ROUTER_MAX_JOBS",-1);
 
@@ -580,11 +583,17 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 		// This brute-force update assumes that if  TimerRemove initially
 		// evaluates to an integer, it will continue to do so throughout
 		// the job's life.
+		// Do the same for x509UserProxyExpiration, which is used in some
+		// users' job policy expressions.
 		int timer_remove = -1;
 		MSC_SUPPRESS_WARNING(6011) // code analysis thinks orig_ad may be null, code analysis is wrong
 		if (orig_ad->EvaluateAttrInt(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
 			job->src_ad.InsertAttr(ATTR_TIMER_REMOVE_CHECK, timer_remove);
 			job->src_ad.MarkAttributeClean(ATTR_TIMER_REMOVE_CHECK);
+		}
+		if (orig_ad->EvaluateAttrInt(ATTR_X509_USER_PROXY_EXPIRATION, timer_remove)) {
+			job->src_ad.InsertAttr(ATTR_X509_USER_PROXY_EXPIRATION, timer_remove);
+			job->src_ad.MarkAttributeClean(ATTR_X509_USER_PROXY_EXPIRATION);
 		}
 		if (false == EvalSrcJobPeriodicExpr(job))
 		{
@@ -1454,6 +1463,10 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 		mad.RemoveLeftAd();
 		mad.RemoveRightAd();
 #endif
+
+		if (!m_round_robin_selection && !matches.empty()) {
+			break;
+		}
 	}
 
 	if(!matches.size()) return NULL;

@@ -243,7 +243,7 @@ public:
 	*/
 
     ///
-	virtual stream_type type();
+	virtual stream_type type() const;
 
 	//	byte operations
 	//
@@ -263,7 +263,7 @@ public:
     ///
 	int authenticate_continue( CondorError* errstack, bool non_blocking, char **method_used );
     ///
-	int isClient() { return is_client; };
+	int isClient() const { return is_client; };
 
 	// Normally, the side of the connection that called connect() is
 	// the client.  The opposite is true for a reversed connection.
@@ -275,7 +275,7 @@ public:
 	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
 	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}
 
-	bool is_closed() {return rcv_msg.m_closed;}
+	bool is_closed() const {return rcv_msg.m_closed;}
 
 	// serialize and deserialize
 	const char * serialize(const char *);	// restore state from buffer

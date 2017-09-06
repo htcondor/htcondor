@@ -65,8 +65,9 @@ FileLexerSource::ReadCharacter(void)
 void 
 FileLexerSource::UnreadCharacter(void)
 {
-	//fseek(_file, -1, SEEK_CUR);
-	ungetc(_previous_character, _file);
+	// keep FILE pos in sync with fd, for the sake of Python 3 objects
+	fseek(_file, -1, SEEK_CUR);
+	//ungetc(_previous_character, _file);
 	return;
 }
 

@@ -1,0 +1,180 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This is a very basic test of curl_plugin to show that it works
+## corretly in certain success and failure conditions. 
+##
+##**************************************************************
+
+use Carp;
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+use Cwd;
+use ConfigTools;
+use POSIX;
+
+use warnings;
+use strict;
+
+my $childPid;
+my $childProcess;
+my $curlBinary;
+my $localDir = cwd();
+my $partialNoRangeSize;
+my $partialSize;
+my $returnCode;
+
+# Set the full path to the curl_plugin binary
+if ($^O eq 'MSWin32') {
+	$curlBinary = "curl_plugin.exe"; # Assume curl_plugin is on the path.
+}
+else {
+	$curlBinary = $localDir . "/../condor_filetransfer_plugins/curl_plugin";
+}
+
+# Start the http server then wait a second
+startFlakyWebServer();
+sleep(1);
+
+# Read in the address of the http server from file
+local $/=undef;
+open FILE, "$localDir/flaky-http-address";
+my $url = <FILE>;
+close FILE;
+
+# Test a successful curl request to the http server
+$returnCode = system("$curlBinary http://$url curl_output.txt");    
+# To get the actual exit code, take the returned value and shift right by 8
+$returnCode = $returnCode >> 8;
+if ($returnCode == 0) {
+    RegisterResult(1, "test_name", "curl-success");
+}
+else {
+    RegisterResult(0, "test_name", "curl-success");
+}
+
+# Test a 500 server error
+# This test sometimes causes the Python server to throw an exception and output
+# a traceback. This happens because curl_plugin closes its socket as soon as it
+# sees the 500 error and Python doesn't always have time to finish sending its
+# response. 
+$returnCode = system("$curlBinary http://$url/servererror curl_output.txt");
+$returnCode = $returnCode >> 8;
+if ($returnCode == 22) {
+    RegisterResult(1, "test_name", "curl-http-error-500");
+}
+else {
+    RegisterResult(0, "test_name", "curl-http-error-500");
+}
+
+# Test an HTTP resume request for partial content downloads. The flaky web
+# server should eventually return exactly 50 bytes on a request to /partial.
+system("$curlBinary http://$url/partial curl_partial.txt");
+$partialSize = (stat "curl_partial.txt")[7];
+if ($partialSize == 50) {
+    RegisterResult(1, "test_name", "curl-partial-download-resume");
+}
+else {
+    RegisterResult(0, "test_name", "curl-partial-download-resume");
+}
+
+# Test an HTTP resume request for partial content on a server that doesn't
+# support resume requests. The flaky web server should eventually return exactly 
+# 58 bytes on a request to /partial-norange
+system("$curlBinary http://$url/partial-norange curl_partial_norange.txt");
+$partialNoRangeSize = (stat "curl_partial_norange.txt")[7];
+if ($partialNoRangeSize == 58) {
+    RegisterResult(1, "test_name", "curl-partial-resume-not-supported");
+}
+else {
+    RegisterResult(0, "test_name", "curl-partial-resume-not-supported");
+}
+
+# Clean up before exit
+unlink "$localDir/flaky-http-address";
+
+stopFlakyWebServer();
+
+exit(0);
+
+# This sub is based off http://www.perlmonks.org/?node_id=663081
+sub startFlakyWebServer {
+    # Windows
+	if ($^O eq 'MSWin32') { 
+        
+        require Win32::Process;
+        
+        # Figure out location of the python binary
+        my @myPython = `where python*.exe`;
+        if(not(@myPython)) {
+            TLOG "Python is required but not available. Expect test failure.\n";
+        }
+		my $pythonBinary = $myPython[0];
+		fullchomp($pythonBinary);
+
+        # Launch the web server process
+		Win32::Process::Create($childProcess, $pythonBinary, 
+                        "$pythonBinary flaky_http_server.py", 0, 0, ".") 
+                        || confess "Could not spawn child: $!";
+        $childPid = $childProcess->GetProcessID();
+    }
+    # Unix
+    else {
+        $SIG{CHLD} = 'IGNORE';
+        $childPid = fork();
+        unless (defined $childPid) {
+            confess "Could not spawn child (Unix): $!";
+        }
+        if ($childPid == 0 ) { # child
+            setsid or warn "setsid cannot start a new session: $!";
+            local $| = 1;
+            unless (exec("python flaky_http_server.py")) {
+                confess "Could not start child: python: $!";
+                CORE::exit(0);
+            }
+        }
+        # parent
+        $SIG{CHLD} = 'DEFAULT';
+    }
+    # Catch early child exit, e.g. if program path is incorrect
+    sleep(1.0);
+    POSIX::waitpid(-1, POSIX::WNOHANG()); # clean up any defunct child process
+    if (kill(0, $childPid)) {
+        print "Started child process id $childPid\n";
+    }
+    else {
+        warn "Child process exited quickly: python: process $childPid";
+    }
+}
+
+# This sub is based off http://www.perlmonks.org/?node_id=663081
+sub stopFlakyWebServer {
+    # Windows
+    if ($^O eq 'MSWin32') {
+        Win32::Process::KillProcess($childPid,0);
+    }
+    # Unix
+    else {
+        kill 9, $childPid || warn "could not kill process $childPid: $!";
+    }
+    print "Stopped child process id $childPid\n";
+}

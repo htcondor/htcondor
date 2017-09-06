@@ -13,7 +13,7 @@ void enable_deprecation_warnings()
     bool do_warnings = param_boolean("ENABLE_DEPRECATION_WARNINGS", true);
 
     boost::python::object warnings_module = py_import(boost::python::str("warnings"));
-    boost::python::object exceptions_module = py_import(boost::python::str("exceptions"));
+    boost::python::object exceptions_module = py_import("__main__").attr("__builtins__");
     boost::python::object warning_class = exceptions_module.attr("DeprecationWarning");
     warnings_module.attr("filterwarnings")(do_warnings ? "default" : "ignore", "ClassAd Deprecation:.*", warning_class, ".*");
 }

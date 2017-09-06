@@ -58,7 +58,7 @@ void ScheddStatistics::Reconfig()
 void ScheddStatistics::SetWindowSize(int window)
 {
    this->RecentWindowMax = window;
-   Pool.SetRecentMax(window, this->RecentWindowQuantum);
+   Pool.SetRecentMax(window, MAX(this->RecentWindowQuantum,1));
 }
 
 
@@ -159,12 +159,12 @@ void ScheddJobStatistics::InitOther(int window, int quantum)
 {
    Pool.Clear();
    InitJobCounters(Pool, IF_VERBOSEPUB);
-   Pool.SetRecentMax(window, quantum);
+   Pool.SetRecentMax(window, MAX(quantum, 1));
 }
 
 void ScheddJobStatistics::SetWindowSize(int window, int quantum)
 {
-   Pool.SetRecentMax(window, quantum);
+   Pool.SetRecentMax(window, MAX(quantum,1));
 }
 
 // extern a schedd_runtime_probe and then add that into the given stats pool.
@@ -336,8 +336,18 @@ ScheddOtherStats::~ScheddOtherStats()
 	sets.clear();
 }
 
+ScheddOtherStatsMgr::~ScheddOtherStatsMgr()
+{
+	Clear();
+}
+
 void ScheddOtherStatsMgr::Clear()
 {
+	ScheddOtherStats* po = NULL;
+	pools.startIterations();
+	while (pools.iterate(po)) {
+		delete po;
+	}
 	pools.clear();
 }
 

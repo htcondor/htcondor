@@ -277,6 +277,19 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// then $(subsys.self) and/or $(localname.self) is also expanded.
 	char * expand_self_macro(const char *value, const char *self, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
 
+	// do $() macro expansion in-place in a std:string. This function is more efficient than the the above
+	// it takes option flags that influence the expansion
+	#define EXPAND_MACRO_OPT_KEEP_DOLLARDOLLAR 0x0001 // don't expand $(DOLLAR)
+	#define EXPAND_MACRO_OPT_IS_PATH           0x0002 // fixup path separators (remove extras, fix for windows)
+	// Returns: a bit mask of macros that expanded to non-empty values
+	//          where bit 0 is the first macro in the input, etc.
+	unsigned int expand_macro(std::string &value, unsigned int options, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+
+	// do macro expansion in-place in a std::string, expanding only macros not in the skip list
+	// returns the number of macros that were skipped.
+	unsigned int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+
+
 	// this is the lowest level primative to doing a lookup in the macro set.
 	// it looks ONLY for an exact match of "name" in the given macro set and does
 	// not look in the defaults (param) table.
@@ -356,7 +369,7 @@ extern "C" {
 	// this function allows tests to set the actual backend data for a param value and returns the old value.
 	// make sure that live_value stays in scope until you put the old value back
 	const char * set_live_param_value(const char * name, const char * live_value);
-
+	bool find_user_file(MyString & filename, const char * basename, bool check_access);
 } // end extern "C"
 
 
@@ -521,6 +534,37 @@ BEGIN_C_DECLS
 		MACRO_SOURCE src;
 	};
 
+	// A MacroStream that parses memory in exactly the same way it would parse a FILE*
+	class MacroStreamMemoryFile : public MacroStream {
+	public:
+		MacroStreamMemoryFile(const char * _fp, ssize_t _cb, MACRO_SOURCE& _src) : ls(_fp, _cb, 0), src(&_src) {}
+		virtual ~MacroStreamMemoryFile() { ls.clear(); }
+		virtual char * getline(int gl_opt);
+		virtual MACRO_SOURCE& source() { return *src; }
+		void set(const char* _fp, ssize_t _cb, size_t _ix, MACRO_SOURCE& _src) { ls.init(_fp, _cb, _ix); src = &_src; }
+		void reset() { ls.clear(); src = NULL; }
+
+		// this class allows for template expansion of getline_implementation
+		class LineSource {
+		public:
+			const char* str;
+			ssize_t cb;
+			size_t ix;
+
+			LineSource(const char*p, ssize_t _cb, size_t _ix) : str(p), cb(_cb), ix(_ix) {}
+			~LineSource() {}
+
+			void init(const char*p, ssize_t _cb, size_t _ix) { str = p; cb = _cb; ix = _ix; }
+			void clear() { str= NULL; cb = 0; ix = 0; }
+			int at_eof();
+			char *readline(char *s, int cb); // returns up to \n, for use only by getline_implementation
+		};
+
+	protected:
+		LineSource ls;
+		MACRO_SOURCE * src;
+	};
+
 	class MacroStreamCharSource : public MacroStream {
 	public:
 		MacroStreamCharSource() 
@@ -550,6 +594,8 @@ BEGIN_C_DECLS
 
 	};
 
+	// this must be C++ linkage because condor_string already has a c linkage function by this name.
+	extern "C++" char * getline_trim(MacroStream & ms, int mode=0); // see condor_string.h for mode values
 
 	// populate a MACRO_SET from either a config file or a submit file.
 	#define READ_MACROS_SUBMIT_SYNTAX           0x01

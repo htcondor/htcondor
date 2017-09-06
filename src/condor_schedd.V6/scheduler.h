@@ -95,7 +95,8 @@ struct shadow_rec
     PROC_ID         job_id;
 	int				universe;
     match_rec*	    match;
-    int             preempted;
+    bool            preempted;
+	bool            preempt_pending;
     int             conn_fd;
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
@@ -508,6 +509,7 @@ class Scheduler : public Service
 	// proper cleanup.
     int         	DelMrec(char const*);
     int         	DelMrec(match_rec*);
+    int         	unlinkMrec(match_rec*);
 	match_rec*      FindMrecByJobID(PROC_ID);
 	match_rec*      FindMrecByClaimID(char const *claim_id);
 	void            SetMrecJobID(match_rec *rec, int cluster, int proc);
@@ -597,6 +599,9 @@ class Scheduler : public Service
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
 	int				aliveInterval( void ) { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
+	int				getMaxMaterializedJobsPerCluster() { return MaxMaterializedJobsPerCluster; }
+	bool			getAllowLateMaterialize() { return AllowLateMaterialize; }
+	int				getMaxJobsRunning() { return MaxJobsRunning; }
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
 	int				getMaxJobsPerOwner() { return MaxJobsPerOwner; }
@@ -691,7 +696,7 @@ class Scheduler : public Service
 	LiveJobCounters liveJobCounts; // job counts that are always up-to-date with the committed job state
 
 	const OwnerInfo * insert_owner_const(const char*);
-	OwnerInfo * incrementRecentlyAdded(const char *);
+	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
 
 private:
 
@@ -734,6 +739,8 @@ private:
 	int             MaxNextJobDelay;
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
+	bool			AllowLateMaterialize;
+	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
 	int				MaxRunningSchedulerJobsPerOwner;
@@ -832,7 +839,6 @@ private:
 
 	// connection variables
 	struct sockaddr_in	From;
-	int					Len; 
 
 	ExprTree* slotWeightOfJob;
 	ClassAd * slotWeightGuessAd;
@@ -1010,6 +1016,8 @@ private:
 	int m_history_helper_rid;
 
 	bool m_matchPasswordEnabled;
+
+	friend class DedicatedScheduler;
 };
 
 

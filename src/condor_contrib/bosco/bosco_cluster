@@ -268,6 +268,8 @@ ssh_find_remote () {
                        ;;
             redhat7*) echo "`$findplatform_path --url --force RH7`"
                        ;;
+            centos7*) echo "`$findplatform_path --url --force RH7`"
+                       ;;
             debian6*) echo "`$findplatform_path --url --force DEB6`"
                        ;;
             debian7*) echo "`$findplatform_path --url --force DEB7`"
@@ -910,7 +912,7 @@ if [ "x$url" == "x" ]; then
     # Attempt in a different way
     url=`ssh_find_remote $remote_host $findplatform_path`
     if [ "x$url" == "x" ]; then
-        echo "BOSCO is not supporting the remote platform."
+        echo "BOSCO does not support the remote host's OS."
         echo "Aborting installation to $remote_host."
         exit 1
     fi

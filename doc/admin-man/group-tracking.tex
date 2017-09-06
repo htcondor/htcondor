@@ -77,66 +77,57 @@ Even if cgroup support is built into the kernel,
 many distributions do not install the cgroup tools by default.
 
 The interface between the kernel cgroup functionality is via a (virtual) 
-file system.  
-If this file system is not mounted, 
-HTCondor can not use cgroups, 
-and a warning will be printed to the \File{StartLog}. 
-Unfortunately, there is no standard way to mount 
-the file system, nor is there a standard place to mount it,
-across Linux distributions.  
+file system.  When the condor\_master starts on a Linux system with
+cgroup support in the kernel, it checks to see if cgroups are mounted,
+and if not, it will try to mount the cgroup virtual
+filesystem onto the directory /cgroup.
 
 If your Linux distribution uses \Prog{systemd}, 
 it will mount the cgroup file system, 
 and the only remaining item is to set configuration variable
 \Macro{BASE\_CGROUP}, as described below.
 
-If the Linux distribution does \emph{not} use \Prog{systemd}, 
-you can mount all of the cgroup file systems, 
-one per controller, "by hand,"
-with the \Prog{mount} command, 
-but that will not survive a reboot.
-The minimal set of cgroup controllers that must be mounted are 
-\File{blkio}, \File{freezer}, \File{memory}, \File{cpuacct}, and \File{cpu}.
 
-RHEL6 and related distributions that support the \Prog{cgconfig} service 
-will mount them at boot time.
+%RHEL6 and related distributions that support the \Prog{cgconfig} service 
+%will mount them at boot time.
 
-On RPM-based systems, these can be installed with the command
+%On RPM-based systems, these can be installed with the command
 
-\begin{verbatim}
-  yum install libcgroup\*
-\end{verbatim}
+%\begin{verbatim}
+%  yum install libcgroup\*
+%\end{verbatim}
 
-After these tools are installed, the \Prog{cgconfig} service needs to be
-running.  It parses the \File{/etc/cgconfig.conf} file, and makes
-appropriate mounts under \File{/cgroup}.  Before starting the \Prog{cgconfig}
-service, you will need to edit the file \File{/etc/cgconfig.conf} to
-add a group specific to HTCondor.
+%After these tools are installed, the \Prog{cgconfig} service needs to be
+%running.  It parses the \File{/etc/cgconfig.conf} file, and makes
+%appropriate mounts under \File{/cgroup}.  Before starting the \Prog{cgconfig}
+%service, you will need to edit the file \File{/etc/cgconfig.conf} to
+%add a group specific to HTCondor.
+%
+%Here is an example of the contents of file \File{/etc/cgconfig.conf} with
+%appropriate values for the \texttt{htcondor} group:
 
-Here is an example of the contents of file \File{/etc/cgconfig.conf} with
-appropriate values for the \texttt{htcondor} group:
+%\begin{verbatim}
+%mount {
+%        cpu	= /cgroup/cpu;
+%        cpuset	= /cgroup/cpuset;
+%        cpuacct = /cgroup/cpuacct;
+%        memory  = /cgroup/memory;
+%        freezer = /cgroup/freezer;
+%        blkio   = /cgroup/blkio;
+%}
 
-\begin{verbatim}
-mount {
-        cpu	= /cgroup/cpu;
-        cpuset	= /cgroup/cpuset;
-        cpuacct = /cgroup/cpuacct;
-        memory  = /cgroup/memory;
-        freezer = /cgroup/freezer;
-        blkio   = /cgroup/blkio;
-}
-
-group htcondor {
-	cpu {}
-        cpuacct {}
-        memory {}
-        freezer {}
-        blkio {}
-}
-\end{verbatim}
+%group htcondor {
+%	cpu {}
+%        cpuacct {}
+%        memory {}
+%        freezer {}
+%        blkio {}
+%}
+%\end{verbatim}
 
 On Debian based systems, the memory cgroup controller is often not 
 on by default, and needs to be enabled with a boot time option.
+
 This setting needs to be inherited
 down to the per-job cgroup with the following commands in \File{rc.local}:
 
@@ -145,55 +136,33 @@ down to the per-job cgroup with the following commands in \File{rc.local}:
 /bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone_children
 \end{verbatim}
 
-Also for Debian, add the following field to group \texttt{htcondor}:
 
-\begin{verbatim}
-cpuset {
-	cpusets.mems = 0;
-}
-\end{verbatim}
+%Also for Debian, add the following field to group \texttt{htcondor}:
 
-After the \File{/etc/cgconfig.conf} file has had the \texttt{htcondor} group
-added to it, add and start the \Prog{cgconfig} service by running
+%\begin{verbatim}
+%cpuset {
+%	cpusets.mems = 0;
+%%}
+%\end{verbatim}
 
-\begin{verbatim}
-chkconfig --add cgconfig
-service cgconfig start
-\end{verbatim}
+%After the \File{/etc/cgconfig.conf} file has had the \texttt{htcondor} group
+%added to it, add and start the \Prog{cgconfig} service by running
 
-On some older Linux kernels, including those in the RHEL 6 series,
-there is a bug in the way that memory usage is charged to cgroups.
-If a process writes a lot of data to the file system quickly, 
-the kernel may decide that it is using too much memory, 
-and kill it with the Out of Memory killer.
-To work around this problem, the administrator
-can set the configurable parameter \Expr{/proc/sys/vm/dirty\_bytes}
-to a fixed value.
-100 MB for this value seems to provide good trade offs.
+%\begin{verbatim}
+%chkconfig --add cgconfig
+%service cgconfig start
+%\end{verbatim}
 
-When the \Prog{cgconfig} service is correctly running, 
-the virtual file system
+When cgroups are correctly configured and running, the virtual file system
 mounted on \File{/cgroup} should have several subdirectories under it, 
 and there should an \File{htcondor} subdirectory under the directory 
 \File{/cgroup/cpu}.
 
-The \Condor{starter} daemon can optionally use cgroups
+The \Condor{starter} daemon uses cgroups by default on Linux systems
 to accurately track all the processes started by a job, 
 even when quickly-exiting parent processes spawn many child processes.
 As with the GID-based tracking, this is only implemented when a 
-\Condor{procd} daemon is running.  The HTCondor team recommends enabling 
-this feature on Linux platforms that support it.  
-When cgroup tracking is enabled, 
-HTCondor is able to report a much more accurate
-measurement of the physical memory used by a set of processes.
-
-To enable cgroup tracking in HTCondor, once cgroups have been enabled
-in the operating system, set the \Macro{BASE\_CGROUP} configuration
-variable to the string that matches the group name specified in 
-the \File{/etc/cgconfig.conf}.
-In the example above, \texttt{htcondor} is the choice.  
-There is no default value for \Macro{BASE\_CGROUP}, 
-and if left unset, cgroup tracking will not be used.
+\Condor{procd} daemon is running.  
 
 Kernel cgroups are named in a virtual file system hierarchy. 
 HTCondor will put each running job on the execute node in a distinct cgroup.

@@ -369,6 +369,7 @@ Matchmaker ()
 	char buf[64];
 
 	NegotiatorName = NULL;
+	NegotiatorNameInConfig = false;
 
 	AccountantHost  = NULL;
 	PreemptionReq = NULL;
@@ -480,7 +481,7 @@ Matchmaker::
 	if ( cachedName ) free(cachedName);
 	if ( cachedAddr ) free(cachedAddr);
 
-	if (NegotiatorName) free (NegotiatorName);
+	delete [] NegotiatorName;
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
@@ -499,8 +500,19 @@ Matchmaker::
 
 
 void Matchmaker::
-initialize ()
+initialize (const char *neg_name)
 {
+	// If -name or -local-name was given on the command line, use
+	// that for the negotiator's name.
+	// Otherwise, reinitialize() will set the name based on the
+	// config file (or use the default).
+	if ( neg_name == NULL ) {
+		neg_name = get_mySubSystem()->getLocalName();
+	}
+	if ( neg_name != NULL ) {
+		NegotiatorName = build_valid_daemon_name(neg_name);
+	}
+
 	// read in params
 	reinitialize ();
 
@@ -583,10 +595,18 @@ reinitialize ()
     // Initialize accountant params
     accountant.Initialize(hgq_root_group);
 
-	if (NegotiatorName) {
-		free(NegotiatorName);
-		NegotiatorName = NULL;
+	if ( NegotiatorNameInConfig || NegotiatorName == NULL ) {
+		char *tmp = param( "NEGOTIATOR_NAME" );
+		delete [] NegotiatorName;
+		if ( tmp ) {
+			NegotiatorName = build_valid_daemon_name( tmp );
+			free( tmp );
+			NegotiatorNameInConfig = true;
+		} else {
+			NegotiatorName = default_daemon_name();
+		}
 	}
+
 	init_public_ad();
 
 	// get timeout values
@@ -1319,7 +1339,7 @@ struct group_order {
 
     private:
     // I don't want anybody defaulting this obj by accident
-    group_order(){}
+    group_order() : autoregroup(false), root_group(0) {}
 };
 
 
@@ -2541,6 +2561,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 
 				updateAd.Assign(ATTR_NAME, name.c_str()); // the hash key
+				updateAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 				updateAd.Assign("Priority", accountant.GetPriority(MyString(name)));
 
 				bool isGroup;
@@ -4080,7 +4101,7 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 		if (!workCount) {continue;}
 		dprintf(D_FULLDEBUG, "Waiting on the results of %u negotiation sessions.\n", workCount);
 		selector.execute();
-		if (selector.timed_out() && selector.failed())
+		if (selector.timed_out() || selector.failed())
 		{
 			for (FDToRRLMap::const_iterator it = fdToRRL.begin(); it != fdToRRL.end(); it++)
 			{
@@ -4090,6 +4111,8 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 				if (!sock) {continue;}
 				CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
 				if (iter != currentWork.end()) {currentWork.erase(iter);}
+				endNegotiate(scheddAddr);
+				sockCache->invalidateSock(scheddAddr.c_str());
 				if (selector.timed_out()) {dprintf(D_ALWAYS, "Timeout when prefetching from %s; will skip this schedd for the remainder of prefetch cycle.\n", scheddAddr.c_str());}
 				else {dprintf(D_ALWAYS, "Failure when waiting on results of negotiations sessions (%s, errno=%d).\n", strerror(selector.select_errno()), selector.select_errno());}
 			}
@@ -4142,8 +4165,8 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 	{
 		timedOutPrefetches++;
 		dprintf(D_ALWAYS, "At end of the prefetch cycle, still waiting on response from %s; giving up and invalidating socket.\n", it->first.c_str());
-		sockCache->invalidateSock(it->first);
 		endNegotiate(it->first);
+		sockCache->invalidateSock(it->first);
 	}
 	dprintf(D_ALWAYS, "Prefetch summary: %u attempted, %u successful.\n", attemptedPrefetches, successfulPrefetches);
 	if (timedOutPrefetches)
@@ -4850,6 +4873,49 @@ rejectForConcurrencyLimits(std::string &limits)
 	return false;
 }
 
+//
+// getSinfulStringProtocolBools() short-circuits based on the comparison
+// in Matchmaker::matchmakingAlgorithm(); it is not a general-purpose function.
+//
+
+void
+getSinfulStringProtocolBools( bool isIPv4, bool isIPv6,
+		const char * sinfulString, bool & v4, bool & v6 ) {
+	// Compare the primary addresses.
+	if( sinfulString[1] == '[' ) {
+		v6 = true;
+		if( isIPv6 ) { return; }
+	}
+
+	if( isdigit( sinfulString[1] ) ) {
+		v4 = true;
+		if( isIPv4 ) { return; }
+	}
+
+	// Look for the addrs list.
+	const char * addr = strstr( sinfulString, "addrs=" );
+	if( ! addr ) { return; }
+	addr += 6;
+
+	const char * currentAddr = addr;
+	while( currentAddr[0] != '\0' ) {
+		if( currentAddr[0] == '[' ) {
+			v6 = true;
+			if( isIPv6 ) { return; }
+		}
+
+		if( isdigit( currentAddr[0] ) ) {
+			v4 = true;
+			if( isIPv4 ) { return; }
+		}
+
+		size_t span = strcspn( currentAddr, "+>&;" );
+		currentAddr += span;
+		if( currentAddr[0] != '+' ) { return; }
+		++currentAddr;
+	}
+}
+
 
 /*
 Warning: scheddAddr may not be the actual address we'll use to contact the
@@ -5021,7 +5087,21 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 
 	// scan the offer ads
 	startdAds.Open ();
+	std::string machineAddr;
+
+	bool isIPv4 = false;
+	bool isIPv6 = false;
+	getSinfulStringProtocolBools( true, true, scheddAddr, isIPv4, isIPv6 );
+
 	while ((candidate = startdAds.Next ())) {
+		bool v4 = false;
+		bool v6 = false;
+		candidate->LookupString( "MyAddress", machineAddr );
+		// This short-circuits based on the subsequent evaluation, so
+		// be sure only to change them in tandem.
+		getSinfulStringProtocolBools( isIPv4, isIPv6, machineAddr.c_str(),
+			v4, v6 );
+		if(! ((isIPv4 && v4) || (isIPv6 && v6))) { continue; }
 
 		if( IsDebugVerbose(D_MACHINE) ) {
 			dprintf(D_MACHINE,"Testing whether the job matches with the following machine ad:\n");
@@ -6421,21 +6501,6 @@ init_public_ad()
 	SetMyTypeName(*publicAd, NEGOTIATOR_ADTYPE);
 	SetTargetTypeName(*publicAd, "");
 
-	if( !NegotiatorName ) {
-		// optionally allow the negotiator name to be set, this is for unusual circumstances
-		// the default behavior will be to use the subsystem name as the negotiator name.
-		// we do this so that in a HAD configuration, the two negotiators will have the same name
-		// and thus overwrite each other's ad in the collector. 
-		NegotiatorName = param("NEGOTIATOR_NAME");
-		if ( ! NegotiatorName) {
-			const char * name = get_mySubSystem()->getLocalName();
-			if ( ! name) {
-				name = get_mySubSystem()->getName();
-				if ( ! name) { name = "NEGOTIATOR"; }
-			}
-			NegotiatorName = strdup(name);
-		}
-	}
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
 	publicAd->Assign(ATTR_NEGOTIATOR_IP_ADDR,daemonCore->InfoCommandSinfulString());
@@ -6958,10 +7023,19 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 	ClassAd mutatedMachine(*machine); // make a copy to mutate
 
 	std::list<std::string> attrs;
-	attrs.push_back("cpus");
-	attrs.push_back("memory");
-	attrs.push_back("disk");
-		// need to add custom resources here
+	std::string attrs_str;
+	if ( machine->LookupString( ATTR_MACHINE_RESOURCES, attrs_str ) ) {
+		StringList attrs_list( attrs_str.c_str(), " " );
+		attrs_list.rewind();
+		char *entry;
+		while ( (entry = attrs_list.next()) ) {
+			attrs.push_back( entry );
+		}
+	} else {
+		attrs.push_back("cpus");
+		attrs.push_back("memory");
+		attrs.push_back("disk");
+	}
 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
 	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second <= newRank; slot++) {

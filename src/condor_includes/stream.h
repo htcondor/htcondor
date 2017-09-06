@@ -461,7 +461,7 @@ public:
 		// or this socket is already encrypting everything
 		// or this socket is not capable of encrypting
 		// or our peer is too old to read secrets correctly.
-	bool prepare_crypto_for_secret_is_noop();
+	bool prepare_crypto_for_secret_is_noop() const;
 
 	/*
 	**	Stream protocol
@@ -522,7 +522,7 @@ public:
 	virtual int timeout(int) = 0;
 
 	/// get number of bytes currently available to read, -1 on failure
-	virtual int bytes_available_to_read() = 0;
+	virtual int bytes_available_to_read() const = 0;
 
 	/// set timeout in seconds for sum of all socket operations
 	/// After this amount of time (from now), all operations on
@@ -544,28 +544,28 @@ public:
 
 	/// Returns the current deadline time.
 	/// The special value 0 indicates no deadline.
-	virtual time_t get_deadline();
+	virtual time_t get_deadline() const;
 
 	/// returns true if the deadline timeout for this socket has expired
-	bool deadline_expired();
+	bool deadline_expired() const;
 
 	/// For stream types that support it, this returns the ip address we are connecting from.
-	virtual char const *my_ip_str() = 0;
+	virtual char const *my_ip_str() const = 0;
 
 	/// For stream types that support it, this returns the ip address we are connecting to.
-	virtual char const *peer_ip_str() = 0;
+	virtual char const *peer_ip_str() const = 0;
 
 	/// For stream types that support it, test if peer is a local interface, aka did this connection 
 	/// originate from a local process?
-	virtual bool peer_is_local() = 0;
+	virtual bool peer_is_local() const = 0;
 
 	/// For stream types that support it, this is the sinful address of peer.
-	virtual char const *default_peer_description() = 0;
+	virtual char const *default_peer_description() const = 0;
 
 	/// For stream types that support it, this is the sinful address of peer
 	/// or a more descriptive string assigned by set_peer_description().
 	/// This is suitable for passing to dprintf() (never NULL).
-	char const *peer_description();
+	char const *peer_description() const;
 
 	void set_peer_description(char const *str);
 
@@ -579,7 +579,7 @@ public:
 	/** Get this stream's type.
         @return the type of this stream
     */
-	virtual stream_type type() = 0;
+	virtual stream_type type() const = 0;
 
 	/** Create a copy of this stream (e.g. dups underlying socket).
 		Caller should delete the returned stream when finished with it.
@@ -609,7 +609,7 @@ public:
         //------------------------------------------
 
 	/** Returns true if this stream can turn on encryption. */
-	virtual bool canEncrypt() = 0;
+	virtual bool canEncrypt() const = 0;
 
 	static int set_timeout_multiplier(int secs);
 	static int get_timeout_multiplier();

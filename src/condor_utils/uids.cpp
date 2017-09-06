@@ -28,6 +28,7 @@
 #include "my_username.h"
 #include "daemon.h"
 #include "store_cred.h"
+#include "../condor_sysapi/sysapi.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
@@ -47,14 +48,6 @@ static bool only_SYSTEM_can_switch_ids = true;
 THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 #else
 static priv_state CurrentPrivState = PRIV_UNKNOWN;
-#endif
-
-#ifdef LINUX
-static int   CurrentSessionKeyring;
-static uid_t CurrentSessionKeyringUID;
-static int   PreviousSessionKeyring;
-static uid_t PreviousSessionKeyringUID;
-static pid_t SessionKeyringPID = 0;
 #endif
 
 priv_state
@@ -286,11 +279,40 @@ static int should_use_keyring_sessions() {
 
 	if(!DidParamForKeyringSessions) {
 		UseKeyringSessions = param_boolean("USE_KEYRING_SESSIONS", false);
+
+		if (UseKeyringSessions) {
+			// pre 3.X kernels don't have full support for our use
+			// of this.  specifically, you can't create a new
+			// keyring session in a clone() which we rely on (by
+			// default) for spawning shadows.  suggest a config
+			// change as a workaround and EXCEPT if that's the
+			// case.
+			bool using_clone = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
+			bool is_modern = sysapi_is_linux_version_atleast("3.0.0");
+			if (using_clone && !is_modern) {
+				EXCEPT("USE_KEYRING_SESSIONS==true and USE_CLONE_TO_CREATE_PROCESSES==true are not compatible with a pre-3.0.0 kernel!");
+			}
+		}
 		DidParamForKeyringSessions = true;
 	}
 	return UseKeyringSessions;
 #else
 	return false;
+#endif
+}
+
+static int keyring_session_creation_timeout() {
+#ifdef LINUX
+	static int KeyringSessionCreationTimeout = 0;
+	static int DidParamForKeyringSessionCreationTimeout = FALSE;
+
+	if(!DidParamForKeyringSessionCreationTimeout) {
+		KeyringSessionCreationTimeout = param_boolean("KEYRING_SESSION_CREATION_TIMEOUT", 20);
+		DidParamForKeyringSessionCreationTimeout = true;
+	}
+	return KeyringSessionCreationTimeout;
+#else
+	return 0;
 #endif
 }
 
@@ -1443,7 +1465,7 @@ set_file_owner_ids( uid_t uid, gid_t gid )
   #define KEY_SPEC_SESSION_KEYRING        -3      /* - key ID for session-specific keyring */
   #define KEY_SPEC_USER_KEYRING           -4      /* - key ID for UID-specific keyring */
   #define KEY_SPEC_INVALID_KEYRING        -99     /* - key ID for "invalid keyring" */
-  #define KEY_SPEC_INVALID_UID            -99     /* - user ID for "invalid user" */
+  #define KEY_SPEC_INVALID_UID            -1      /* - user ID for "invalid user" */
 #endif  // of ifndef KEYCTL_JOIN_SESSION_KEYRING
 
 // helper functions to avoid importing libkeyutils
@@ -1459,9 +1481,11 @@ static long condor_keyctl_link(key_serial_t k, key_serial_t r) {
   return syscall(__NR_keyctl, KEYCTL_LINK, k, r);
 }
 
-static long condor_keyctl_unlink(key_serial_t k, key_serial_t r) {
-  return syscall(__NR_keyctl, KEYCTL_UNLINK, k, r);
-}
+static int   CurrentSessionKeyring = KEY_SPEC_INVALID_KEYRING;
+static uid_t CurrentSessionKeyringUID = KEY_SPEC_INVALID_UID;
+static int   PreviousSessionKeyring = KEY_SPEC_INVALID_KEYRING;
+static uid_t PreviousSessionKeyringUID = KEY_SPEC_INVALID_UID;
+
 #endif
 
 
@@ -1474,7 +1498,22 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	 * avoid potentially nasty recursive situations, ONLY call
 	 * dprintf() from inside of this function if the
 	 * dologging parameter is non-zero.
+	 * THIS IS A LIE, SEE COMMENT DIRECTLY BELOW.
 	 */
+
+	// dologging is NOT a boolean!  It currently can be one of:
+	//
+	// 0 == no logging (avoid recursion because of priv changes inside dprintf itself)
+	// 1 == go ahead and log
+	// 999 == in between clone() and exec(), so DEFINITELY DO NOT CALL dprintf()!!!!
+	//
+	// apparently, all the places that currently treat non-zero as true are not
+	// in execution paths that occur in practice.  however, the new keyring session
+	// code definitely hits this case.  in order to leave old code alone, I am only
+	// using the really_dologging inside the new keyring session code, but perhaps all
+	// instances of dologging should be changed to really_dologging in this function.
+	//
+	bool really_dologging = (dologging && (dologging != NO_PRIV_MEMORY_CHANGES));
 
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;
@@ -1501,13 +1540,6 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 				   "but user ids are not initialized");
 		}
 
-		// ultimately, to be extra-paranoid all switches need a new
-		// session (to shed any old creds).  however, that means we can
-		// no longer dprintf in any of the below code since doing so
-		// switches to condor priv, creates a new session, and messes
-		// up the whole process below.  so for now, we only do it when
-		// switching to user priv.
-
 		// We only get here if we are actually switching state. (Not if we
 		// requested to to switch to the current state, or if we requested
 		// to switch away from a _FINAL state).
@@ -1515,29 +1547,94 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 #ifdef LINUX
 		if(should_use_keyring_sessions()) {
 
-			// if we were in priv user and are switching out, we need to unlink
-			// the keyring holding the user's AFS token.  we can assume that these
-			// structures exist since they were initialized when going INTO user priv.
+			// capture current priv state.  we will need to become root to link/unlink keys,
+			// create new sessions, etc.  but if we need to switch back to PRIV_UNKNOWN, or
+			// hit the 'default' case in the switch statement below, the result should be
+			// that we didn't change euid or egid.
+			uid_t saveeuid = geteuid();
+			uid_t saveegid = getegid();
 
-			if(PrevPrivState == PRIV_USER) {
-				// find the user and session keyring
-				key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
-				key_serial_t user_keyring = CurrentSessionKeyring;
-				if (dologging) dprintf(D_SECURITY, "KEYCTL: unlinking keyring %i from %i\n", user_keyring, sess_keyring);
 
-				// unlink current creds as root.
-				set_root_euid();
-				long unlink_success = condor_keyctl_unlink(user_keyring, sess_keyring);
+			// no matter what state we're switching to, we always create a new
+			// session.  that way we drop the user's creds if switching to condor
+			// or root priv.  we'll have our own keyring if we just recently forked
+			// as well.  and if we're switching to user priv we'll attach the AFS
+			// keyring to this new session.
+			//
+			// creating sessions is cheap and they are garbage
+			// collected very agressively so this is not a problem.
 
-				if (unlink_success == 0) {
-					// update state
-					PreviousSessionKeyring = CurrentSessionKeyring;
-					PreviousSessionKeyringUID = CurrentSessionKeyringUID;
+
+			// create a new session
+			set_root_euid();
+
+			// if session creation fails, it could be that old
+			// sessions have not yet been garbage collected.
+			//
+			// since we can't continue without success, sleep a
+			// tiny amount and try again, up to a maximum timeout
+			// in which case we EXCEPT.
+
+			// record when we started and what the timeout is
+			time_t started = time(NULL);
+			int timeout = keyring_session_creation_timeout();
+
+			// attempt creation and loop until success or timeout.
+			while( condor_keyctl_session(NULL) == -1 ) {
+				if (errno == EDQUOT) {
+					// sleep briefly, squash return value
+					if(usleep(1)) {}
+
+					// check for timeout
+					time_t now = time(NULL);
+					if(now - started >= timeout) {
+						EXCEPT("FATAL: Unable to create new session keyring when switching priv.");
+					}
 				} else {
-					PreviousSessionKeyring = KEY_SPEC_INVALID_KEYRING;
-					PreviousSessionKeyringUID = KEY_SPEC_INVALID_UID;
+/* DEBUG CODE
+					// something is terribly wrong.  we couldn't change credentials.
+					// we probably can't log anything.  we can't call EXCEPT() here
+					// because it will recursively call dprintf() which will call
+					// this function again.
+					//
+					// best I can think of is to  try to
+					// drop a message in a bottle into /tmp.
+
+					// NOTE: this is a serious problem for 2.X linux kernels.  you
+					// need to be running 3.10.X at least to use keyring sessions that
+					// actually work inside the kernel. -zmiller 7/2017
+
+					char fname[100];
+					sprintf(fname, "/tmp/EXCEPT.%i", getpid());
+					FILE* f = fopen(fname, "w");
+					fprintf(f, "errno %i (%s)\n", errno, strerror(errno));
+					fflush(f);
+					fclose(f);
+*/
+					_exit(99);
 				}
 			}
+
+			key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
+			if (really_dologging) dprintf(D_SECURITY|D_FULLDEBUG, "KEYCTL: New session keyring (%i)\n", sess_keyring);
+
+
+			// if we were in priv user and are switching out, we record the keyring
+			// id holding the user's AFS token, since it's likely we'll switch back
+			// to it and can avoid looking it up again.
+
+			if(PrevPrivState == PRIV_USER) {
+				// update state
+				PreviousSessionKeyring = CurrentSessionKeyring;
+				PreviousSessionKeyringUID = CurrentSessionKeyringUID;
+			}
+
+			// restore us to the same euid and egid as when we were called.
+			// the if statements are there just to avoid a compiler warning
+			// about not checking the return value.
+			set_root_euid();
+			if(setegid(saveegid)) {}
+			if(seteuid(saveeuid)) {}
 		}
 #endif
 
@@ -1557,26 +1654,6 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 #ifdef LINUX
 			if(should_use_keyring_sessions()) {
 
-				// if we're going to be using USER_PRIV states at all, we need to have
-				// our own session keyring per-process.  we accomplish this with static
-				// variables and by checking our pid to see if we fork()ed.  The initial
-				// value of SessionKeyringPID is zero, so the first time through we'll
-				// always create a new session.  Then, only of our pid changes.
-
-				pid_t curpid = getpid();
-				if((SessionKeyringPID != curpid)) {
-					set_root_euid();
-					// create a new session
-					condor_keyctl_session(NULL);
-					key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
-					if (dologging) dprintf(D_SECURITY,
-						"KEYCTL: oldpid: %i, newpid: %i.  New session keyring %i\n",
-						SessionKeyringPID, curpid, sess_keyring);
-
-					SessionKeyringPID = curpid;
-				}
-
-
 				// First, see if we can simply attach the previously-used keyring
 				if(UserUid != PreviousSessionKeyringUID) {
 					set_root_euid();
@@ -1595,26 +1672,26 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 					if(user_keyring == -1) {
 						CurrentSessionKeyring = KEY_SPEC_INVALID_KEYRING;
 						CurrentSessionKeyringUID = KEY_SPEC_INVALID_UID;
-						if (dologging) dprintf(D_ALWAYS,
+						if (really_dologging) dprintf(D_ALWAYS,
 							"KEYCTL: unable to find keyring '%s', error: %s\n",
 							ring_name.Value(), strerror(errno));
 					} else {
 						CurrentSessionKeyring = user_keyring;
 						CurrentSessionKeyringUID = UserUid;
-						if (dologging) dprintf(D_SECURITY,
+						if (really_dologging) dprintf(D_SECURITY,
 							 "KEYCTL: found user keyring %s (%li) for uid %i.\n",
 							 ring_name.Value(), (long)user_keyring, UserUid);
 					}
 				} else {
 					CurrentSessionKeyring = PreviousSessionKeyring;
 					CurrentSessionKeyringUID = PreviousSessionKeyringUID;
-					if (dologging) dprintf(D_SECURITY, "KEYCTL: resuming stored keyring %i and uid %i.\n",
+					if (really_dologging) dprintf(D_SECURITY, "KEYCTL: resuming stored keyring %i and uid %i.\n",
 						CurrentSessionKeyring, CurrentSessionKeyringUID);
 				}
 
 
 				// only link if there's something to link to
-				if(CurrentSessionKeyring != KEY_SPEC_INVALID_KEYRING) {
+				if(CurrentSessionKeyringUID != (uid_t)KEY_SPEC_INVALID_UID) {
 					set_root_euid();
 					// locate the session keyring and uid 0 keyring.
 					key_serial_t user_keyring = CurrentSessionKeyring;
@@ -1623,10 +1700,10 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 					// link the user keyring to our session keyring
 					long link_success = condor_keyctl_link(user_keyring, sess_keyring);
 					if(link_success == -1) {
-						if (dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
+						if (really_dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
 							(long)user_keyring, (long)sess_keyring, strerror(errno));
 					} else {
-						if (dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
+						if (really_dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
 							(long)user_keyring, (long)sess_keyring);
 					}
 				}

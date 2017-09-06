@@ -38,6 +38,7 @@
 #include "cgroup_limits.h"
 #include "selector.h"
 #include "singularity.h"
+#include "starter_util.h"
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -634,6 +635,15 @@ VanillaProc::StartJob()
 			ClassAd * MachineAd = Starter->jic->machClassAd();
 			int MemMb;
 			if (MachineAd->LookupInteger(ATTR_MEMORY, MemMb)) {
+				// cgroups prevents us from setting hard limits lower
+				// than memsw limit.  If we are reusing this cgroup,
+				// we don't know what the previous values were
+				// So, set mem to 0, memsw to +inf, so that the real
+				// values can be set without interference
+
+				climits.set_memory_limit_bytes(0);
+				climits.set_memsw_limit_bytes(ULONG_MAX);
+
 				uint64_t MemMb_big = MemMb;
 				m_memory_limit = MemMb_big;
 				climits.set_memory_limit_bytes(1024*1024*MemMb_big, mem_is_soft);
@@ -876,22 +886,7 @@ VanillaProc::JobReaper(int pid, int status)
 	bool wantsFileTransferOnCheckpointExit = false;
 	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
 
-	int checkpointExitCode = 0;
-	JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_CODE, checkpointExitCode );
-	int checkpointExitSignal = 0;
-	JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_SIGNAL, checkpointExitSignal );
-	bool checkpointExitBySignal = 0;
-	JobAd->LookupBool( ATTR_CHECKPOINT_EXIT_BY_SIGNAL, checkpointExitBySignal );
-
-	int successfulCheckpointStatus = 0;
-	if( checkpointExitBySignal ) {
-		successfulCheckpointStatus = checkpointExitSignal;
-	} else if( checkpointExitCode != 0 ) {
-		successfulCheckpointStatus = checkpointExitCode << 8;
-#if defined( WINDOWS )
-		successfulCheckpointStatus = checkpointExitCode;
-#endif
-	}
+	int successfulCheckpointStatus = computeDesiredExitStatus( "Checkpoint", JobAd );
 
 	if( isCheckpointing ) {
 		dprintf( D_FULLDEBUG, "Inside VanillaProc::JobReaper() during a checkpoint\n" );
@@ -919,6 +914,13 @@ VanillaProc::JobReaper(int pid, int status)
 			// occur when the job goes on hold).
 			killFamilyIfWarranted();
 			recordFinalUsage();
+
+			int checkpointExitCode = 0;
+			JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_CODE, checkpointExitCode );
+			int checkpointExitSignal = 0;
+			JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_SIGNAL, checkpointExitSignal );
+			bool checkpointExitBySignal = 0;
+			JobAd->LookupBool( ATTR_CHECKPOINT_EXIT_BY_SIGNAL, checkpointExitBySignal );
 
 			std::string holdMessage;
 			formatstr( holdMessage, "Job did not exit as promised when sent its checkpoint signal.  "
@@ -1229,7 +1231,7 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 			event_control << mount_info.path << "/";
 			break;
 		}
-		cgroup_get_controller_next(&handle, &mount_info);
+		ret = cgroup_get_controller_next(&handle, &mount_info);
 	}
 	if (!found_memcg && (ret != ECGEOF)) {
 		dprintf(D_ALWAYS,

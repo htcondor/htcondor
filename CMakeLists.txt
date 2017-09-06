@@ -37,7 +37,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "8.7.1")
+set(VERSION "8.7.4")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
@@ -55,7 +55,7 @@ if( FORCE_PRE_RELEASE )
   set(PRE_RELEASE ${FORCE_PRE_RELEASE})
 endif( FORCE_PRE_RELEASE )
 
-set(PACKAGE_BUGREPORT "http://condor-wiki.cs.wisc.edu/index.cgi/tktnew")
+set(PACKAGE_BUGREPORT "http://htcondor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
 set(TEST_PACKAGE_NAME ${TEST_PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
@@ -105,7 +105,7 @@ include (AddSubdirectories)
 include (CTest)
 include (CondorPLTest)
 include (CondorExeTest)
-include (CondorUnitTest)
+#include (CondorUnitTest)
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)

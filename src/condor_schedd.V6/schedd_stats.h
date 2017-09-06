@@ -179,6 +179,7 @@ public:
      : config(stats)
 	 , pools(10, MyStringHash, updateDuplicateKeys)
    {};
+   ~ScheddOtherStatsMgr();
 
    void Clear();
    time_t Tick(time_t now); // call this when time may have changed to update StatsUpdateTime, etc.
