@@ -4,13 +4,13 @@
 
                            GRID ASCII HELPER PROTOCOL
                            for Microsoft Azure Cloud
-                                 VERSION 0.1
+                                 VERSION 0.2
 
 
                                  Jaime Frey
                              [jfrey@cs.wisc.edu]
 
-                                  March 2017
+                                 August 2017
 
                                HTCondor Project
                     [http://research.cs.wisc.edu/htcondor]
@@ -78,13 +78,10 @@
 
 1.2   AVAILABLE AZURE GAHP SERVERS
 
-    The HTCondor Project at the University of Wisconsin-Madison has
-    developed an Azure GAHP server, written in C++, which uses pthreads
-    and libcurl to support portions of the Azure REST protocol.  Many
-    Unix platforms are supported.
-
-    This GAHP is available as part of the HTCondor software distribution,
-    version FIXME.FIXME or later.
+    The Center for High Throughput Computing at the University of
+    Wisconsin-Madison and Microsoft have developed an Azure GAHP server,
+    written in Python, which uses the Azure SDK to support portions of
+    the Azure REST protocol.
 
 2.0   GAHP SERVER IMPLEMENTATION
 
@@ -127,6 +124,12 @@
         AZURE_VM_CREATE
         AZURE_VM_DELETE
         AZURE_VM_LIST
+        AZURE_VMSS_CREATE
+        AZURE_VMSS_DELETE
+        AZURE_VMSS_START
+        AZURE_VMSS_STOP
+        AZURE_VMSS_RESTART
+        AZURE_VMSS_SCALE
 
 3.1   CONVENTIONS AND TERMS USED IN SECTION 3.2
 
