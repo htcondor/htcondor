@@ -59,7 +59,7 @@ just-man-pages : just-man-pages.tex
 	@rm -fr just-man-pages
 
 %.pdf : %.ps
-	@ps2pdf $< $@
+	@ps2pdf -dEPSCrop $< $@
 
 %.pdf : %.eps
 	@epstopdf $< > $@
