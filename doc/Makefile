@@ -34,9 +34,12 @@ all : ref.pdf
 # of ref.pdf; that will force it to be rebuilt every time.
 figures : $(FIGURES)
 
+# Only the v8.7 branch requires the fourth run to remove the 'labels may
+# changed' warning.  We should figure out why.
 ref.pdf : ref.tex $(FIGURES)
 	@pdflatex $(LATEX_ARGS) ref.tex
 	@makeindex ref
+	@pdflatex $(LATEX_ARGS) ref.tex
 	@pdflatex $(LATEX_ARGS) ref.tex
 	@pdflatex $(LATEX_ARGS) ref.tex
 
