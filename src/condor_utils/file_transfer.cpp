@@ -4413,7 +4413,12 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 
     // Output statistics to file
     MyString stats_string;    
-    std::ofstream stats_file_output( stats_file_path, std::fstream::app );    
+    std::ofstream stats_file_output;
+    stats_file_output.open( stats_file_path, std::fstream::app );
+    if( stats_file_output.fail() ) {
+        dprintf( D_ALWAYS, "FILETRANSFER: failed to write statistics file %s with"
+            " error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
+    }
     sPrintAd( stats_string, stats );
     stats_file_output << stats_string.Value() << "***" << std::endl;    
 
