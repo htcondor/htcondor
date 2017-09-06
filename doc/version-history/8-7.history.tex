@@ -29,7 +29,28 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added \Arg{status} command to \Condor{annex}.  This command invokes
+\Condor{status} to display information about annex instances that have
+reported to the collector.  It also gathers information about annex instances
+from EC2 and forwards that data to \Condor{status} to detect instances which
+the collector does not yet or any longer know about.  The annex instance ads
+fabricated for this purpose are not real slot ads, so some options you may
+know from \Condor{status} do not apply to the \Arg{status} command of
+\Condor{annex}.  See section~\ref{cloud-computing} for details.
+\Ticket{6321}
+
+\item Added a ``merge'' mode to \Condor{status}.  When invoked with the
+\oOptArg{-merge}{<file>} option, ads will be read from \Arg{file}, which
+can be \Expr{-} to indicate standard in, and compared to the ads selected
+by the query specified as usual by the remainder of the command-line.  Ads
+will be compared on the basis of the sort key (which you can change with
+\oOptArg{-sort}{<key>}).  \Condor{status} will print three tables based on
+that comparison: the first table will be generated from those ads whose key
+was in the query but not in \Arg{file}; the second table will be generated
+from those ads whose key was appeared in both the query and in \Arg{file},
+and the third table will be generated from those ads whose key appeared
+only in \Arg{file}.
+\Ticket{6321}
 
 \end{itemize}
 
