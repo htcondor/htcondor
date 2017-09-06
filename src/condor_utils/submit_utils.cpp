@@ -3667,6 +3667,77 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	//
+	// Azure grid-type submit attributes
+	//
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureAuthFile, ATTR_AZURE_AUTH_FILE )) ) {
+		// check auth file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				push_error(stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
+				           full_path(tmp), strerror(errno));
+				ABORT_AND_RETURN(1);
+			}
+			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				push_error(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				ABORT_AND_RETURN( 1 );
+			}
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_AUTH_FILE, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAuthFile );
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureImage, ATTR_AZURE_IMAGE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_IMAGE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureImage );
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureLocation, ATTR_AZURE_LOCATION )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_LOCATION, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureLocation );
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureSize, ATTR_AZURE_SIZE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_SIZE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureSize );
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureAdminUsername, ATTR_AZURE_ADMIN_USERNAME )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_ADMIN_USERNAME, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAdminUsername );
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( (tmp = submit_param( SUBMIT_KEY_AzureAdminKey, ATTR_AZURE_ADMIN_KEY )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_AZURE_ADMIN_KEY, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( gridType == "azure" ) {
+		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAdminKey );
+		ABORT_AND_RETURN( 1 );
+	}
 
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
@@ -4505,6 +4576,7 @@ int SubmitHash::SetExecutable()
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   ( gridType == "ec2" ||
 			 gridType == "gce"  ||
+			 gridType == "azure"  ||
 			 gridType == "boinc" ) ) ) {
 		ignore_it = true;
 		role = SFR_PSEUDO_EXECUTABLE;
@@ -4908,6 +4980,7 @@ int SubmitHash::SetUniverse()
 				gridType == "nordugrid" ||
 				gridType == "ec2" ||
 				gridType == "gce" ||
+				gridType == "azure" ||
 				gridType == "unicore" ||
 				gridType == "boinc" ||
 				gridType == "cream"){
@@ -4919,7 +4992,7 @@ int SubmitHash::SetUniverse()
 			} else {
 
 				push_error(stderr, "Invalid value '%s' for grid type\n"
-					"Must be one of: gt2, gt5, pbs, lsf, sge, nqs, condor, nordugrid, unicore, ec2, gce, cream, or boinc\n",
+					"Must be one of: gt2, gt5, pbs, lsf, sge, nqs, condor, nordugrid, unicore, ec2, gce, azure, cream, or boinc\n",
 					JobGridType.Value() );
 				ABORT_AND_RETURN( 1 );
 			}

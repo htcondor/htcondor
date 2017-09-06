@@ -44,6 +44,7 @@
 
 #include "ec2job.h"
 #include "gcejob.h"
+#include "azurejob.h"
 
 #if !defined(WIN32)
 #  include "creamjob.h"
@@ -364,6 +365,14 @@ Init()
 	new_type->ReconfigFunc = GCEJobReconfig;
 	new_type->AdMatchFunc = GCEJobAdMatch;
 	new_type->CreateFunc = GCEJobCreate;
+	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "Azure" );
+	new_type->InitFunc = AzureJobInit;
+	new_type->ReconfigFunc = AzureJobReconfig;
+	new_type->AdMatchFunc = AzureJobAdMatch;
+	new_type->CreateFunc = AzureJobCreate;
 	jobTypes.Append( new_type );
 #endif
 	

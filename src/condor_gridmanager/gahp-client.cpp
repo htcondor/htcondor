@@ -6572,6 +6572,249 @@ int GahpClient::gce_instance_list( const std::string &service_url,
 }
 
 
+int GahpClient::azure_ping( const std::string &auth_file,
+		                    const std::string &subscription )
+{
+	static const char* command = "AZURE_PING";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( subscription );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::azure_vm_create( const std::string &auth_file,
+                                 const std::string &subscription,
+                                 StringList &vm_params, std::string &vm_id,
+                                 std::string &ip_address )
+{
+	static const char* command = "AZURE_VM_CREATE";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( subscription );
+
+	const char *next_param;
+	vm_params.rewind();
+	while ( (next_param = vm_params.next()) ) {
+		reqline += " ";
+		reqline += escapeGahpString( next_param );
+	}
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			if ( result->argc != 4 ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			vm_id = result->argv[2];
+			if ( strcmp( result->argv[3], NULLSTRING ) != 0 ) {
+				ip_address = result->argv[3];
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::azure_vm_delete( const std::string &auth_file,
+		                         const std::string &subscription,
+		                         const std::string &vm_name )
+{
+	static const char* command = "AZURE_VM_DELETE";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( subscription );
+	reqline += " ";
+	reqline += escapeGahpString( vm_name );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::azure_vm_list( const std::string &auth_file,
+                               const std::string &subscription,
+		                       StringList &vm_names,
+		                       StringList &vm_statuses )
+{
+	static const char* command = "AZURE_VM_LIST";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( subscription );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			if ( result->argc < 3 ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			int cnt = atoi( result->argv[2] );
+			if ( cnt < 0 || result->argc != 3 + 2 * cnt ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			for ( int i = 0; i < cnt; i++ ) {
+				vm_names.append( result->argv[3 + 2*i] );
+				vm_statuses.append( result->argv[3 + 2*i + 1] );
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
 int GahpClient::boinc_ping()
 {
 	static const char* command = "BOINC_PING";
