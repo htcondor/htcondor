@@ -49,7 +49,7 @@ IsStringEnd(const char *str, unsigned off)
 }
 
 // Convert string escaping from old ClassAd syntax to new ClassAd syntax.
-void ConvertEscapingOldToNew( const char *str, std::string &buffer )
+static void ConvertEscapingOldToNew( const char *str, std::string &buffer )
 {
         // String escaping is different between new and old ClassAds.
         // We need to convert the escaping from old to new style before
