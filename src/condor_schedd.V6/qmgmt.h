@@ -142,6 +142,7 @@ public:
 	int  Universe() { return universe; }
 	void SetUniverse(int uni) { universe = uni; }
 	bool IsNoopJob();
+	void DirtyNoopAttr() { has_noop_attr = 2; }
 	// FUTURE:
 	int NumProcs() { if (entry_type == entry_type_cluster) return future_num_procs_or_hosts; return 0; }
 	int IncrementNumProcs() { if (entry_type == entry_type_cluster) return ++future_num_procs_or_hosts; return 0; }
@@ -342,7 +343,6 @@ extern int grow_prio_recs(int);
 
 extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user);
 extern int Runnable(PROC_ID*);
-extern int Runnable(ClassAd*);
 
 extern class ForkWork schedd_forker;
 
