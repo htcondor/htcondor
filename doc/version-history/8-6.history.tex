@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused a machine to stick in the
+Preempting/Vacating state after a job was removed 
+when a JOB\_EXIT\_HOOK was defined.
+\Ticket{6383}
+
 \item Fixed a bug that prevented condor daemons from writing out a
 core file for debugging in the very unlikely event that one of them
 crashed.
@@ -70,6 +75,9 @@ short period of time.
 \item Fixed handling of backslashes in string values in old ClassAds
 format in the python bindings.
 \Ticket{6382}
+
+\item Fixed handling of octal escape sequences in ClassAd strings.
+\Ticket{6384}
 
 \end{itemize}
 
