@@ -72,8 +72,9 @@ AzureResource::AzureResource( const char *resource_name,
 	m_auth_file = strdup(auth_file);
 	m_subscription = strdup(subscription);
 
-	gahp = NULL;
+	status_gahp = gahp = NULL;
 
+	
 	char * gahp_path = param( "AZURE_GAHP" );
 	if ( gahp_path == NULL ) {
 		dprintf(D_ALWAYS, "AZURE_GAHP not defined! \n");

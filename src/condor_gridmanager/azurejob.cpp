@@ -145,6 +145,11 @@ AzureJob::AzureJob( ClassAd *classad ) :
 	myResource = NULL;
 	gahp = NULL;
 
+	// Check for failure injections.
+	m_failure_injection = getenv( "GM_FAILURE_INJECTION" );
+	if( m_failure_injection == NULL ) { m_failure_injection = ""; }
+	dprintf( D_FULLDEBUG, "GM_FAILURE_INJECTION = %s\n", m_failure_injection );
+
 	// check the auth_file
 	jobAd->LookupString( ATTR_AZURE_AUTH_FILE, m_authFile );
 
@@ -152,11 +157,6 @@ AzureJob::AzureJob( ClassAd *classad ) :
 		error_string = "Auth file not defined";
 		goto error_exit;
 	}
-
-	// Check for failure injections.
-	m_failure_injection = getenv( "GM_FAILURE_INJECTION" );
-	if( m_failure_injection == NULL ) { m_failure_injection = ""; }
-	dprintf( D_FULLDEBUG, "GM_FAILURE_INJECTION = %s\n", m_failure_injection );
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
