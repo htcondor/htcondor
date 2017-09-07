@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused a machine claimed by a parallel universe
+job to stick in the Claimed/Idle state forever.  This could only happen
+if the job was removed as it was in the process of claiming resources.
+\Ticket{6376}
+
 \item Fixed a bug that caused a machine to stick in the
 Preempting/Vacating state after a job was removed 
 when a JOB\_EXIT\_HOOK was defined.
