@@ -898,7 +898,6 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 	if ( job->_queuedNodeJobProcs == 0 ) {
 			// All procs for this job are done.
-			job->GetJobName() );
 			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 				job->GetJobName() );
 

@@ -4547,6 +4547,53 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 	return true;
 }
 
+bool
+Scheduler::WriteFactorySubmitToUserLog( JobQueueJob* job, bool do_fsync )
+{
+	WriteUserLog* ULog = this->InitializeUserLog( job->jid );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	FactorySubmitEvent event;
+
+	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
+
+	ULog->setEnableFsync(do_fsync);
+	bool status = ULog->writeEvent(&event, job);
+	delete ULog;
+
+	if (!status) {
+		dprintf( D_ALWAYS,
+				 "Unable to log ULOG_FACTORY_SUBMIT event for job %d.%d\n",
+				 job->jid.cluster, job->jid.proc );
+		return false;
+	}
+	return true;
+}
+
+bool
+Scheduler::WriteFactoryRemoveToUserLog( JobQueueJob* job, bool do_fsync )
+{
+	WriteUserLog* ULog = this->InitializeUserLog( job->jid );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	FactoryRemoveEvent event;
+
+	ULog->setEnableFsync(do_fsync);
+	bool status = ULog->writeEvent(&event, job);
+	delete ULog;
+
+	if (!status) {
+		dprintf( D_ALWAYS,
+				 "Unable to log ULOG_FACTORY_REMOVE event for job %d.%d\n",
+				 job->jid.cluster, job->jid.proc );
+		return false;
+	}
+	return true;
+}
 
 int
 Scheduler::transferJobFilesReaper(int tid,int exit_status)

@@ -367,6 +367,12 @@ ClusterCleanup(int cluster_id)
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,-1,key);
 
+	// If this cluster has a job factory, write a log event
+	JobQueueCluster * clusterad = GetClusterAd(cluster_id);
+	if( clusterad->factory ) {
+		scheduler.WriteFactoryRemoveToUserLog( clusterad, false );
+	}
+	
 	// pull out the owner and hash used for ickpt sharing
 	MyString hash, owner, digest;
 	GetAttributeString(cluster_id, -1, ATTR_JOB_CMD_HASH, hash);
@@ -4591,7 +4597,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 	}
 
 	// If the commit failed, we should never get here.
-
+	
 	// Now that the transaction has been commited, we need to chain proc
 	// ads to cluster ads if any new clusters have been submitted.
 	// Also, if EVENT_LOG is defined in condor_config, we will write
@@ -4651,6 +4657,8 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 					}
 
 					// TODO: write the new cluster / factory submit event here.
+					scheduler.WriteFactorySubmitToUserLog( clusterad, doFsync );
+					
 				}
 				continue; // skip remaining processing for cluster ads
 			}

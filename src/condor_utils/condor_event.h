@@ -93,8 +93,8 @@ enum ULogEventNumber {
 	/** Job performing stage-out  */  ULOG_JOB_STAGE_OUT			= 32,
 	/** Attribute updated  */         ULOG_ATTRIBUTE_UPDATE			= 33,
     /** PRE_SKIP event for DAGMan */  ULOG_PRESKIP					= 34,
-    /** Cluster submitted         */  ULOG_CLUSTER_SUBMIT			= 35,
-    /** Cluster removed           */  ULOG_CLUSTER_REMOVED			= 36
+    /** Factory submitted         */  ULOG_FACTORY_SUBMIT			= 35,
+    /** Factory removed           */  ULOG_FACTORY_REMOVE			= 36
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -1988,21 +1988,21 @@ class PreSkipEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a Cluster Submit Log Event object.  Below is an example
-    Cluster Submit Log entry from Condor v8. <p>
+/** Framework for a Factory Submit Log Event object.  Below is an example
+    Factory Submit Log entry from Condor v8. <p>
 
 <PRE>
-000 (172.000.000) 10/20 16:56:54 Cluster submitted from host: <128.105.165.12:32779>
+000 (172.000.000) 10/20 16:56:54 Factory submitted from host: <128.105.165.12:32779>
 ...
 </PRE>
 */
-class ClusterSubmitEvent : public ULogEvent
+class FactorySubmitEvent : public ULogEvent
 {
   public:
     ///
-    ClusterSubmitEvent(void);
+    FactorySubmitEvent(void);
     ///
-    ~ClusterSubmitEvent(void);
+    ~FactorySubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -2034,21 +2034,21 @@ class ClusterSubmitEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a Cluster Remove Log Event object.  Below is an example
-    Cluster Remove Log entry from Condor v8. <p>
+/** Framework for a Factory Remove Log Event object.  Below is an example
+    Factory Remove Log entry from Condor v8. <p>
 
 <PRE>
-000 (172.000.000) 10/20 16:56:54 Cluster removed
+000 (172.000.000) 10/20 16:56:54 Factory removed
 ...
 </PRE>
 */
-class ClusterRemovedEvent : public ULogEvent
+class FactoryRemoveEvent : public ULogEvent
 {
   public:
     ///
-    ClusterRemovedEvent(void);
+    FactoryRemoveEvent(void);
     ///
-    ~ClusterRemovedEvent(void);
+    ~FactoryRemoveEvent(void);
 
 /** Read the body of the next Submit event.
     @param file the non-NULL readable log file
@@ -2072,9 +2072,6 @@ virtual ClassAd* toClassAd(void);
 */
 virtual void initFromClassAd(ClassAd* ad);
 
- private:
-    /// For Condor v8, a host string in the form: "<128.105.165.12:32779>".
-    char *submitHost;
 };
 
 #endif // __CONDOR_EVENT_H__

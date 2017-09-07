@@ -546,6 +546,8 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
+	bool			WriteFactorySubmitToUserLog( JobQueueJob* job, bool do_fsync );
+	bool			WriteFactoryRemoveToUserLog( JobQueueJob* job, bool do_fsync );
 	int				receive_startd_alive(int cmd, Stream *s);
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions

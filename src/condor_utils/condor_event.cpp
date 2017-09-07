@@ -84,8 +84,8 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
 	"ULOG_ATTRIBUTE_UPDATE",			// Job attribute updated
 	"ULOG_PRESKIP",					// PRE_SKIP event for DAGMan
-	"ULOG_CLUSTER_SUBMIT",			// Cluster submitted
-    "ULOG_CLUSTER_REMOVED" 			// Cluster removed
+	"ULOG_FACTORY_SUBMIT",			// Factory submitted
+    "ULOG_FACTORY_REMOVE" 			// Factory removed
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -213,11 +213,11 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_PRESKIP:
 		return new PreSkipEvent;
 
-	case ULOG_CLUSTER_SUBMIT:
-		return new ClusterSubmitEvent;
+	case ULOG_FACTORY_SUBMIT:
+		return new FactorySubmitEvent;
 
-	case ULOG_CLUSTER_REMOVED:
-		return new ClusterRemovedEvent;
+	case ULOG_FACTORY_REMOVE:
+		return new FactoryRemoveEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
@@ -444,11 +444,11 @@ ULogEvent::toClassAd(void)
 	case ULOG_ATTRIBUTE_UPDATE:
 		SetMyTypeName(*myad, "AttributeUpdateEvent");
 		break;
-	case ULOG_CLUSTER_SUBMIT:
-		SetMyTypeName(*myad, "ClusterSubmitEvent");
+	case ULOG_FACTORY_SUBMIT:
+		SetMyTypeName(*myad, "FactorySubmitEvent");
 		break;
-	case ULOG_CLUSTER_REMOVED:
-		SetMyTypeName(*myad, "ClusterRemovedEvent");
+	case ULOG_FACTORY_REMOVE:
+		SetMyTypeName(*myad, "FactoryRemoveEvent");
 		break;
 	  default:
 		delete myad;
@@ -5967,19 +5967,19 @@ void PreSkipEvent::setSkipNote(const char* s)
 	}
 }
 
-// ----- the ClusterSubmitEvent class
-ClusterSubmitEvent::ClusterSubmitEvent(void)
+// ----- the FactorySubmitEvent class
+FactorySubmitEvent::FactorySubmitEvent(void)
 {
-	eventNumber = ULOG_CLUSTER_SUBMIT;;
+	eventNumber = ULOG_FACTORY_SUBMIT;
 	submitHost = NULL;
 }
 
-ClusterSubmitEvent::~ClusterSubmitEvent(void)
+FactorySubmitEvent::~FactorySubmitEvent(void)
 {
 }
 
 void
-ClusterSubmitEvent::setSubmitHost(char const *addr)
+FactorySubmitEvent::setSubmitHost(char const *addr)
 {
 	if( submitHost ) {
 		delete[] submitHost;
@@ -5993,10 +5993,15 @@ ClusterSubmitEvent::setSubmitHost(char const *addr)
 	}
 }
 
+void 
+FactorySubmitEvent::setNumProcs(int procs) {
+	num_procs = procs;
+}
+
 bool
-ClusterSubmitEvent::formatBody( std::string &out )
+FactorySubmitEvent::formatBody( std::string &out )
 {
-	int retval = formatstr_cat (out, "Cluster submitted from host: %s\n", submitHost);
+	int retval = formatstr_cat (out, "Factory submitted from host %s\n", submitHost);
 	if (retval < 0)
 	{
 		return false;
@@ -6005,14 +6010,14 @@ ClusterSubmitEvent::formatBody( std::string &out )
 }
 
 int
-ClusterSubmitEvent::readEvent (FILE *file)
+FactorySubmitEvent::readEvent (FILE *file)
 {
 	
 	return 1;
 }
 
 ClassAd*
-ClusterSubmitEvent::toClassAd(void)
+FactorySubmitEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
@@ -6026,7 +6031,7 @@ ClusterSubmitEvent::toClassAd(void)
 
 
 void
-ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
+FactorySubmitEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -6040,20 +6045,20 @@ ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
 	}
 }
 
-// ----- the ClusterRemovedEvent class
-ClusterRemovedEvent::ClusterRemovedEvent(void)
+// ----- the FactoryRemoveEvent class
+FactoryRemoveEvent::FactoryRemoveEvent(void)
 {
-	eventNumber = ULOG_CLUSTER_REMOVED;
+	eventNumber = ULOG_FACTORY_REMOVE;
 }
 
-ClusterRemovedEvent::~ClusterRemovedEvent(void)
+FactoryRemoveEvent::~FactoryRemoveEvent(void)
 {
 }
 
 bool
-ClusterRemovedEvent::formatBody( std::string &out )
+FactoryRemoveEvent::formatBody( std::string &out )
 {
-	int retval = formatstr_cat (out, "Cluster removed\n");
+	int retval = formatstr_cat (out, "Factory removed\n");
 	if (retval < 0)
 	{
 		return false;
@@ -6062,13 +6067,13 @@ ClusterRemovedEvent::formatBody( std::string &out )
 }
 
 int
-ClusterRemovedEvent::readEvent (FILE *file)
+FactoryRemoveEvent::readEvent (FILE *file)
 {
 	return 1;
 }
 
 ClassAd*
-ClusterRemovedEvent::toClassAd(void)
+FactoryRemoveEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
@@ -6078,7 +6083,7 @@ ClusterRemovedEvent::toClassAd(void)
 
 
 void
-ClusterRemovedEvent::initFromClassAd(ClassAd* ad)
+FactoryRemoveEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
