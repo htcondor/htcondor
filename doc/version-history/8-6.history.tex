@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where the negotiator would make matches where the daemons
+involved did not share an IP version, and thus could not talk to each other.
+\Ticket{6351}
+
 \item Fixed a bug that caused a machine to stick in the
 Preempting/Vacating state after a job was removed 
 when a JOB\_EXIT\_HOOK was defined.
