@@ -367,7 +367,7 @@ ClusterCleanup(int cluster_id)
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,-1,key);
 
-	// If this cluster has a job factory, write a log event
+	// If this cluster has a job factory, write a FactoryRemove log event
 	JobQueueCluster * clusterad = GetClusterAd(cluster_id);
 	if( clusterad->factory ) {
 		scheduler.WriteFactoryRemoveToUserLog( clusterad, false );
@@ -4656,8 +4656,10 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 						}
 					}
 
-					// TODO: write the new cluster / factory submit event here.
-					scheduler.WriteFactorySubmitToUserLog( clusterad, doFsync );
+					// If this is a factory job, log the FactorySubmit event here
+					if( clusterad->factory ) {
+						scheduler.WriteFactorySubmitToUserLog( clusterad, doFsync );
+					}
 					
 				}
 				continue; // skip remaining processing for cluster ads

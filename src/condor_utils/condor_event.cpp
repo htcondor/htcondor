@@ -5993,11 +5993,6 @@ FactorySubmitEvent::setSubmitHost(char const *addr)
 	}
 }
 
-void 
-FactorySubmitEvent::setNumProcs(int procs) {
-	num_procs = procs;
-}
-
 bool
 FactorySubmitEvent::formatBody( std::string &out )
 {

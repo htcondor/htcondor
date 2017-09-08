@@ -654,6 +654,14 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				// _jobstateLog.WriteJobSuccessOrFailure( job );
 				break;
 
+			case ULOG_FACTORY_SUBMIT:
+				ProcessFactorySubmitEvent(job, recovery);
+				break;
+
+			case ULOG_FACTORY_REMOVE:
+				ProcessFactoryRemoveEvent(job, recovery);
+				break;
+
 			case ULOG_CHECKPOINTED:
 			case ULOG_IMAGE_SIZE:
 			case ULOG_NODE_EXECUTE:
@@ -728,7 +736,10 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
+			
 	if( job ) {
+		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessTerminatedEvent] called, job cluster=%d, proc=%d, is_factory=%s\n", job->GetID()._cluster, job->GetID()._proc, job->is_factory ? "True" : "False");
+		
 		DecrementProcCount( job );
 
 		const JobTerminatedEvent * termEvent =
@@ -859,7 +870,7 @@ Dag::RemoveBatchJob(Job *node) {
 // in here according to whether job succeeded or failed?  wenger 2014-03-18
 void
 Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
-
+	
 	// This function should never be called when the dag object is
 	// being used to parse a splice.
 	ASSERT ( _isSplice == false );
@@ -896,7 +907,10 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 		return;
 	}
 
-	if ( job->_queuedNodeJobProcs == 0 ) {
+	// If this is *not* a factory job, and no more procs are outstanding, start
+	// shutting things down now.
+	// Factory jobs get shut down in ProcessFactoryRemoveEvent().
+	if ( job->_queuedNodeJobProcs == 0 && !job->is_factory ) {
 			// All procs for this job are done.
 			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 				job->GetJobName() );
@@ -1051,6 +1065,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		return;
 	}
 
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessSubmitEvent] called, job cluster=%d, proc=%d, is_factory=%s\n", job->GetID()._cluster, job->GetID()._proc, job->is_factory ? "True" : "False");
 		// If we're in recovery mode, we need to keep track of the
 		// maximum subprocID for NOOP jobs, so we can start out at
 		// the next value instead of zero.
@@ -1243,6 +1258,56 @@ Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 	}
 	if( job->Release( event->proc ) ) {
 		_numHeldJobProcs--;
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessFactorySubmitEvent(Job *job, bool recovery) {
+
+	if ( !job ) {
+		return;
+	}
+	job->is_factory = true;
+	debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessFactorySubmitEvent] setting factory for job ID=%d, is_factory=%s\n", job->GetID()._cluster, job->is_factory ? "True" : "False" );
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
+
+	if ( !job ) {
+		return;
+	}
+
+	debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessFactoryRemoveEvent] called, jobID=%d, isFactory=%s, queuedNodeJobProcs=%d, scriptPost=%s\n", job->GetID()._cluster, job->is_factory ? "True" : "False", job->_queuedNodeJobProcs, job->_scriptPost ? "True" : "False" );
+		
+	// Make sure the job is a factory, and has no more queued procs. 
+	// Otherwise something is wrong.
+	if ( job->_queuedNodeJobProcs == 0 && job->is_factory ) {
+		// All procs for this job are done.
+		debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
+			job->GetJobName() );
+		// If a post script is defined for this job, that will run after we
+		// receive the FactoryRemove event. In that case, run the post script
+		// now and don't call TerminateJob(); that will get called later by
+		// ProcessPostTermEvent().
+		if( job->_scriptPost != NULL ) {
+			if ( recovery ) {
+				job->SetStatus( Job::STATUS_POSTRUN );
+				_postRunNodeCount++;
+			} else {
+				(void)RunPostScript( job, _alwaysRunPost, 0 );
+			}
+		} else if( job->GetStatus() != Job::STATUS_ERROR ) {
+			// no POST script was specified, so update DAG with
+			// node's successful completion if the node succeeded.
+			debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessFactoryRemoveEvent] calling TerminateJob\n");
+			TerminateJob( job, recovery );
+		}
+	}
+	else {
+		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessFactoryRemoveEvent] something is wrong! job->_queuedNodeJobProcs=%d, job->is_factory=%s\n", job->_queuedNodeJobProcs, job->is_factory ? "True" : "False");
 	}
 }
 
@@ -2375,6 +2440,7 @@ Dag::WriteScriptToRescue( FILE *fp, Script *script )
 void
 Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::TerminateJob] called, job cluster=%d, proc=%d, is_factory=%s\n", job->GetID()._cluster, job->GetID()._proc, job->is_factory ? "True" : "False");
 	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
 
