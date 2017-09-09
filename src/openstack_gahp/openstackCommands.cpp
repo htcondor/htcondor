@@ -451,6 +451,7 @@ done:
 
 NovaRequest::NovaRequest() :
 	contentType( "application/json" ),
+	responseCode(0),
 	includeResponseHeader( false ) { }
 NovaRequest::~NovaRequest() { }
 

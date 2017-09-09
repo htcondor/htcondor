@@ -71,6 +71,8 @@ VMProc::VMProc(ClassAd *jobAd) : OsProc(jobAd)
 	m_vm_cputime = 0;
 	m_vm_utilization = -1.0;
 
+	m_vm_max_memory = 0;
+
 	//Find the interval of sending vm status command to vmgahp server
 	m_vmstatus_interval = param_integer( "VM_STATUS_INTERVAL", 
 			VM_DEFAULT_STATUS_INTERVAL);
