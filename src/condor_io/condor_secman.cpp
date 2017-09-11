@@ -2705,6 +2705,7 @@ SecMan::SecMan() :
 	m_cached_auth_level((DCpermission)-1),
 	m_cached_raw_protocol(false),
 	m_cached_use_tmp_sec_session(false),
+	m_cached_force_authentication(false),
 	m_cached_return_value(-1) {
 	
 	if ( NULL == m_ipverify ) {
@@ -2718,6 +2719,7 @@ SecMan::SecMan(const SecMan & rhs/* copy */) :
 	m_cached_auth_level(rhs.m_cached_auth_level), 
 	m_cached_raw_protocol(rhs.m_cached_raw_protocol), 
 	m_cached_use_tmp_sec_session(rhs.m_cached_use_tmp_sec_session), 
+	m_cached_force_authentication(rhs.m_cached_force_authentication),
 	m_cached_return_value(rhs.m_cached_return_value) {
 
 	sec_man_ref_count++;
