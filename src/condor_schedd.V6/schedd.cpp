@@ -4548,9 +4548,9 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 }
 
 bool
-Scheduler::WriteFactorySubmitToUserLog( JobQueueJob* job, bool do_fsync )
+Scheduler::WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync )
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job->jid );
+	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -4560,22 +4560,22 @@ Scheduler::WriteFactorySubmitToUserLog( JobQueueJob* job, bool do_fsync )
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
 
 	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, job);
+	bool status = ULog->writeEvent(&event, cluster);
 	delete ULog;
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_FACTORY_SUBMIT event for job %d.%d\n",
-				 job->jid.cluster, job->jid.proc );
+				 cluster->jid.cluster, cluster->jid.proc );
 		return false;
 	}
 	return true;
 }
 
 bool
-Scheduler::WriteFactoryRemoveToUserLog( JobQueueJob* job, bool do_fsync )
+Scheduler::WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync )
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job->jid );
+	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -4583,13 +4583,13 @@ Scheduler::WriteFactoryRemoveToUserLog( JobQueueJob* job, bool do_fsync )
 	FactoryRemoveEvent event;
 
 	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, job);
+	bool status = ULog->writeEvent(&event, cluster);
 	delete ULog;
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_FACTORY_REMOVE event for job %d.%d\n",
-				 job->jid.cluster, job->jid.proc );
+				 cluster->jid.cluster, cluster->jid.proc );
 		return false;
 	}
 	return true;
