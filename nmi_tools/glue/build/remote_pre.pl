@@ -109,7 +109,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
 }
 if ($ENV{NMI_PLATFORM} =~ /macos/i) {
-    # Bad hack for now. Older versions of cmake will use gcc and c++ for
+    # Bad hack for now. Versions of cmake older than 2.8.10 will use gcc and c++ for
     # the C and C++ compilers. On older macs, these invoke different
     # compilers (llvm gnu and clang, respectively). Setting CC and CXX
     # is the best way to pick a consistent set of compilers.
