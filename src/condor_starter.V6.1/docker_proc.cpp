@@ -598,7 +598,12 @@ bool DockerProc::Version( std::string & version ) {
 static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd) {
 	// Bind mount items from MOUNT_UNDER_SCRATCH into working directory
 	std::string scratchNames;
-	if (param(scratchNames, "MOUNT_UNDER_SCRATCH")) {
+	if (!param_eval_string(scratchNames, "MOUNT_UNDER_SCRATCH", "", &jobAd)) {
+		// If not an expression, maybe a literal
+		param(scratchNames, "MOUNT_UNDER_SCRATCH");
+	} 
+
+	if (scratchNames.length() > 0) {
 		std::string workingDir = Starter->GetWorkingDir();
 		StringList sl(scratchNames.c_str());
 		sl.rewind();
