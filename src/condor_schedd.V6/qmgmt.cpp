@@ -2515,6 +2515,7 @@ enum {
 	idATTR_RANK,
 	idATTR_REQUIREMENTS,
 	idATTR_NUM_JOB_RECONNECTS,
+	idATTR_JOB_NOOP,
 };
 
 enum {
@@ -2550,6 +2551,7 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_CRON_HOURS,         catCron),
 	FILL(ATTR_CRON_MINUTES,       catCron),
 	FILL(ATTR_CRON_MONTHS,        catCron),
+	FILL(ATTR_JOB_NOOP,           catDirtyPrioRec),
 	FILL(ATTR_JOB_PRIO,           catDirtyPrioRec),
 	FILL(ATTR_JOB_STATUS,         catJobObj),
 	FILL(ATTR_JOB_UNIVERSE,       catJobObj),
@@ -2911,6 +2913,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					 "", owner.Value(), scheduler.uidDomain() );
 			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags );
 		}
+	}
+	else if (attr_id == idATTR_JOB_NOOP) {
+		// whether the job has an IsNoopJob attribute or not is cached in the job object
+		// so if this is set, we need to mark the cached value as dirty.
+		if (job) { job->DirtyNoopAttr(); }
 	}
 	else if (attr_category & catJobId) {
 		char *endptr = NULL;
@@ -5414,6 +5421,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts>=max_hosts || job_status==HELD || 
 			job_status==REMOVED || job_status==COMPLETED ||
+			job->IsNoopJob() ||
 			!service_this_universe(universe,job)) 
 	{
         return cur_hosts;
@@ -6049,9 +6057,15 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	// no more jobs to run anywhere.  nothing more to do.  failure.
 }
 
-int Runnable(ClassAd *job)
+int Runnable(JobQueueJob *job)
 {
 	int status, universe, cur = 0, max = 1;
+
+	if (job->IsNoopJob())
+	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (IsNoopJob)\n");
+		return FALSE;
+	}
 
 	if ( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 )
 	{
@@ -6103,7 +6117,7 @@ int Runnable(ClassAd *job)
 
 int Runnable(PROC_ID* id)
 {
-	ClassAd *jobad;
+	JobQueueJob *jobad;
 	
 	dprintf (D_FULLDEBUG, "Job %d.%d:", id->cluster, id->proc);
 
