@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Condor{status} will now print longer lines when its output is
+redirected into a pipe, rather than its input coming from one.
+\Ticket{6381}
+
 \item Added \Arg{status} command to \Condor{annex}.  This command invokes
 \Condor{status} to display information about annex instances that have
 reported to the collector.  It also gathers information about annex instances
