@@ -1568,6 +1568,7 @@ usage ()
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
+		"\t-merge <file>\t\tCompare ads in file and query by sort key\n"
 		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
 		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
 		);
