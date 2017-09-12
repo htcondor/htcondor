@@ -144,7 +144,7 @@ Reconfig()
 	}
 }
 
-static classad::MatchClassAd *the_match_ad = NULL;
+static classad::MatchClassAd the_match_ad;
 static bool the_match_ad_in_use = false;
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 									  classad::ClassAd *target )
@@ -152,18 +152,15 @@ classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 	ASSERT( !the_match_ad_in_use );
 	the_match_ad_in_use = true;
 
-	if( !the_match_ad ) {
-		the_match_ad = new classad::MatchClassAd( );
-	}
-	the_match_ad->ReplaceLeftAd( source );
-	the_match_ad->ReplaceRightAd( target );
+	the_match_ad.ReplaceLeftAd( source );
+	the_match_ad.ReplaceRightAd( target );
 
 	if ( !ClassAd::m_strictEvaluation ) {
 		source->alternateScope = target;
 		target->alternateScope = source;
 	}
 
-	return the_match_ad;
+	return &the_match_ad;
 }
 
 void releaseTheMatchAd()
@@ -171,9 +168,9 @@ void releaseTheMatchAd()
 	ASSERT( the_match_ad_in_use );
 
 	classad::ClassAd *ad;
-	ad = the_match_ad->RemoveLeftAd();
+	ad = the_match_ad.RemoveLeftAd();
 	ad->alternateScope = NULL;
-	ad = the_match_ad->RemoveRightAd();
+	ad = the_match_ad.RemoveRightAd();
 	ad->alternateScope = NULL;
 
 	the_match_ad_in_use = false;

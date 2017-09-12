@@ -1932,6 +1932,12 @@ fi
 %endif
 
 %changelog
+* Tue Sep 12 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.3-1
+- Further updates to the late job materialization technology preview
+- An improved condor_top tool
+- Enhanced the AUTO setting for ENABLE_IPV{4,6} to be more selective
+- Fixed several small memory leaks
+
 * Tue Sep 12 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.6-1
 - HTCondor daemons no longer crash on reconfig if syslog is used for logging
 - HTCondor daemons now reliably leave a core file when killed by a signal
