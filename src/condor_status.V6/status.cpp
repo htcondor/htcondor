@@ -1233,6 +1233,27 @@ main (int argc, char *argv[])
 
 	if(! mergeMode) {
 		doNormalOutput( right_ai, adType );
+	// This conditional stolen from PrettyPrinter::prettyPrintHeadings().
+	} else if( (!mainPP.using_print_format) && mainPP.ppStyle == PP_JSON ) {
+			fputs( "{\n\"query-only\": ", stdout );
+			if( right_ai.pmap->size() > 0 ) {
+				doMergeOutput( right_ai );
+			} else {
+				fputs( "[ ]", stdout );
+			}
+			fputs( ",\n\"both\": ", stdout );
+			if( both_ai.pmap->size() > 0 ) {
+				doNormalOutput( both_ai, adType );
+			} else {
+				fputs( "[ ]", stdout );
+			}
+			fputs( ",\n\"file-only\": ", stdout );
+			if( left_ai.pmap->size() > 0 ) {
+				doMergeOutput( left_ai );
+			} else {
+				fputs( "[ ]", stdout );
+			}
+			fputs( "\n}\n", stdout );
 	} else {
 		if( right_ai.pmap->size() > 0 ) {
 			if(! annexMode) { fprintf( stdout, "The following ads were found only in the query:\n" ); }
@@ -1274,6 +1295,13 @@ void doMergeOutput( struct _process_ads_info & ai ) {
 	std::string line;
 	line.reserve( is_piped ? 1024 : display_width );
 
+	// for XML output, print the xml header even if there are no ads.
+	if (PP_XML == pps) {
+		line.clear();
+		AddClassAdXMLFileHeader(line);
+		fputs(line.c_str(), stdout); // xml string already ends in a newline.
+	}
+
 	int output_index = 0;
 	for( auto it = admap.begin(); it != admap.end(); ++it ) {
 		if( ai.columns ) {
@@ -1286,6 +1314,18 @@ void doMergeOutput( struct _process_ads_info & ai ) {
 			if (it->second.ad) ++output_index;
 		}
 		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
+	}
+
+	// for XML output, print the xml footer even if there are no ads.
+	if (PP_XML == pps) {
+		line.clear();
+		AddClassAdXMLFileFooter(line);
+		fputs(line.c_str(), stdout);
+		// PRAGMA_REMIND("tj: XML output used to have an extra trailing newline, do we need to preserve that?")
+	} else if (output_index > 0 && (PP_JSON == pps || PP_NEWCLASSAD == pps)) {
+		// if we wrote any ads IN JSON or new classad format, then we need a closing list operator
+		line = (PP_JSON == pps) ? "]\n" : "}\n";
+		fputs(line.c_str(), stdout);
 	}
 
 	TrackTotals * totals = ai.totals;
