@@ -11,22 +11,22 @@
 [\verb@--@\textbf{usage}]
 
 \SynProg{\Condor{configure}} or \SynProg{\Condor{install}}
-[\verb@--@\textbf{install[=$<$path/to/release$>$] }]
-[\verb@--@\textbf{install-dir=$<$path$>$}]
-[\verb@--@\textbf{prefix=$<$path$>$}]
-[\verb@--@\textbf{local-dir=$<$path$>$}]
+[\verb@--@\textbf{install[=\lt{}path/to/release\gt{}] }]
+[\verb@--@\textbf{install-dir=\lt{}path\gt{}}]
+[\verb@--@\textbf{prefix=\lt{}path\gt{}}]
+[\verb@--@\textbf{local-dir=\lt{}path\gt{}}]
 [\verb@--@\textbf{make-personal-condor}]
 [\verb@--@\textbf{bosco}]
-[\verb@--@\textbf{type = $<$ submit, execute, manager $>$}]
-[\verb@--@\textbf{central-manager = $<$ hostname$>$}]
-[\verb@--@\textbf{owner = $<$ ownername $>$}]
+[\verb@--@\textbf{type = \lt{} submit, execute, manager \gt{}}]
+[\verb@--@\textbf{central-manager = \lt{} hostname\gt{}}]
+[\verb@--@\textbf{owner = \lt{} ownername \gt{}}]
 [\verb@--@\textbf{maybe-daemon-owner}]
-[\verb@--@\textbf{install-log = $<$ file $>$}]
+[\verb@--@\textbf{install-log = \lt{} file \gt{}}]
 [\verb@--@\textbf{overwrite}]
 [\verb@--@\textbf{ignore-missing-libs}]
 [\verb@--@\textbf{force}]
 [\verb@--@\textbf{no-env-scripts}]
-[\verb@--@\textbf{env-scripts-dir = $<$ directory $>$}]
+[\verb@--@\textbf{env-scripts-dir = \lt{} directory \gt{}}]
 [\verb@--@\textbf{backup}]
 [\verb@--@\textbf{credd}]
 [\verb@--@\textbf{verbose}]
@@ -115,14 +115,14 @@ released with HTCondor.  This list includes:
     configuration files and local directory are preserved.  This
     is the default behavior of \Condor{install}. }
 
-  \OptItem{\Opt{---install-dir=$<$path$>$}} {Specifies the path
+  \OptItem{\Opt{---install-dir=\lt{}path\gt{}}} {Specifies the path
     where HTCondor should be installed or the path where it already is
     installed. The default is the current working directory.}
 
-  \OptItem{\Opt{---prefix=$<$path$>$}} {This is an alias for
+  \OptItem{\Opt{---prefix=\lt{}path\gt{}}} {This is an alias for
     \Opt{--install-dir}.}
 
-  \OptItem{\Opt{---local-dir=$<$path$>$}} {Specifies the
+  \OptItem{\Opt{---local-dir=\lt{}path\gt{}}} {Specifies the
     location of the local directory, which is the directory that generally 
     contains the local (machine-specific) configuration file as well as the
     directories where HTCondor daemons write their run-time information 
@@ -147,7 +147,7 @@ released with HTCondor.  This list includes:
   \OptItem{\Opt{---bosco}} {Installs and configures Bosco, a personal
      HTCondor that submits jobs to remote batch systems.}
 
-  \OptItem{\Opt{---type= $<$ submit, execute, manager $>$}} {One
+  \OptItem{\Opt{---type= \lt{} submit, execute, manager \gt{}}} {One
     or more of the types may be listed.
     This determines the roles that a machine may play in a pool.
     In general, any machine can be a submit and/or execute machine,
@@ -155,7 +155,7 @@ released with HTCondor.  This list includes:
     In the case of a Personal HTCondor,
     the machine fulfills all three of these roles.}
 
-  \OptItem {\Opt{---central-manager=$<$hostname$>$}} {Instructs
+  \OptItem {\Opt{---central-manager=\lt{}hostname\gt{}}} {Instructs
     the current HTCondor installation to use the specified machine
     as the central manager. 
     This modifies the configuration variable \MacroNI{COLLECTOR\_HOST}
@@ -164,7 +164,7 @@ released with HTCondor.  This list includes:
     to be independently configured to 
     act as a manager using the option \Opt{--type=manager}. }
 
-  \OptItem{\Opt{---owner=$<$ownername$>$}} {Set configuration
+  \OptItem{\Opt{---owner=\lt{}ownername\gt{}}} {Set configuration
     such that HTCondor daemons will be executed as the given owner.
     This modifies the 
     ownership on the \File{log}, \File{spool} and \File{execute}
@@ -181,7 +181,7 @@ released with HTCondor.  This list includes:
     needed by users but can be useful for scripts that invoke
     condor\_configure to install Condor.}
 
-  \OptItem{\Opt{---install-log=$<$file$>$}} {Save information about the
+  \OptItem{\Opt{---install-log=\lt{}file\gt{}}} {Save information about the
     installation in the specified file. This is normally only needed
     when condor\_configure is called by a higher-level script, not when
     invoked by a person.}
@@ -252,7 +252,7 @@ released with HTCondor.  This list includes:
     variables.  This option prevents \Condor{configure} from
     generating these scripts.  }
 
-  \OptItem{\Opt{---env-scripts-dir=$<$directory$>$}} {
+  \OptItem{\Opt{---env-scripts-dir=\lt{}directory\gt{}}} {
     By default, the simple \Prog{sh} and \Prog{csh} shell scripts (see
     \Opt{---no-env-scripts} for details) are created in 
     the root directory of the HTCondor installation.  This option

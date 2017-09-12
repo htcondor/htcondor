@@ -2657,6 +2657,8 @@ OpToString( string &buffer, classad::Operation::OpKind op )
 HyperRect::
 HyperRect( )
 {
+	dimensions = 0;
+	numContexts = 0;
 	initialized = false;
 	ivals = 0;
 }

@@ -22,14 +22,10 @@
 \ResetParaSpacing
 
 %
-%  Let the figures take up more than half of the page
-%
-\input{figuresizing.tex}
-
-%
 %  Bring in Condor macros
 %
 \input{condor-macros.tex}
+\input{fontsize.html.tex}
 \input{man-macros.tex}
 
 %
@@ -58,11 +54,6 @@
 	\renewcommand{\footrulewidth}{0.4pt}
 	\addtolength{\headwidth}{\oddsidemargin}
 }
-
-%
-% Input a file written by our Makefile, which will setup to use Times font
-% and pull in the hyperref package if we are building the PDF version.
-\input{timesfont.tex}
 
 % This turns off the hbox underfull warnings, but
 % does not change the formatting of the text

@@ -104,6 +104,7 @@ class ClassAd : public ExprTree
 		bool InsertLiteral(const std::string& attrName, Literal* lit); // (ignores cache)
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
+		// parsing of the rhs expression is done use old ClassAds syntax
 		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
 #else
 		// 

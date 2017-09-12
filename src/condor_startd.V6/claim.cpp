@@ -95,6 +95,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 
 	c_last_state = CLAIM_UNCLAIMED;
 	c_pledged_machine_max_vacate_time = 0;
+	c_starter_handles_alives = false;
 }
 
 

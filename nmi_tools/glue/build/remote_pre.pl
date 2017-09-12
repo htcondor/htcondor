@@ -70,8 +70,8 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
 
 	#uncomment to build x64 on Win10 platform (the rest of the build will follow this)
-	if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $enable_x64 = 1; }
-	#if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
+	#if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $enable_x64 = 1; }
+	if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
 
 	if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
 		$defines{visualstudio} = '-G "Visual Studio 9 2008"';
@@ -80,7 +80,6 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 		# todo, detect other VS versions here.
 		$defines{visualstudio} = '-G "Visual Studio 14 2015"';
 		$ENV{PATH} = "$ENV{VS140COMNTOOLS}..\\IDE;$ENV{VS140COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
-		$enable_x64 = 0; # switch to win32 build for now.
 		if ($enable_x64) {
 			$defines{visualstudio} = '-G "Visual Studio 14 2015 Win64"';
 		}
@@ -109,7 +108,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
 }
 if ($ENV{NMI_PLATFORM} =~ /macos/i) {
-    # Bad hack for now. Older versions of cmake will use gcc and c++ for
+    # Bad hack for now. Versions of cmake older than 2.8.10 will use gcc and c++ for
     # the C and C++ compilers. On older macs, these invoke different
     # compilers (llvm gnu and clang, respectively). Setting CC and CXX
     # is the best way to pick a consistent set of compilers.

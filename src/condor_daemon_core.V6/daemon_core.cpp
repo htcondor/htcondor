@@ -5645,6 +5645,7 @@ public:
  	   m_fs_remap(fs_remap),
 	   m_wrote_tracking_gid(false),
 	   m_no_dprintf_allowed(false),
+	   m_priv_state(PRIV_USER),
 	   m_clone_newpid_pid(-1),
 	   m_clone_newpid_ppid(-1)
 	{
