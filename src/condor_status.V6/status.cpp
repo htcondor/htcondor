@@ -1129,7 +1129,6 @@ main (int argc, char *argv[])
 	//
 	int leftLimit = -1;
 	const char * leftConstraint = NULL;
-	const char * leftFileName = "-";
 	std::set< ClassAd * > leftSet;
 	ClassAdFileParseType::ParseType leftParseType = ClassAdFileParseType::Parse_auto;
 	if( mergeMode ) {
@@ -1847,6 +1846,14 @@ firstPass (int argc, char *argv[])
 			/*explicit_mode =*/ offlineMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "merge", 5)) {
+			if( !argv[i+1] ) {
+				fprintf( stderr, "%s: -merge requires a filename argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			i += 1;
+			leftFileName = argv[i];
 			mergeMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "vm", 2)) {
@@ -2174,6 +2181,10 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if (is_dash_arg_colon_prefix(argv[i], "ads", &pcolon, 2)) {
+			++i;
+			continue;
+		}
+		if (is_dash_arg_prefix (argv[i], "merge", 5)) {
 			++i;
 			continue;
 		}

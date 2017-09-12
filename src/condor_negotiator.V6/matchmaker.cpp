@@ -458,6 +458,7 @@ Matchmaker ()
 	classad::FunctionCall::RegisterFunction( name,
 											 ResourcesInUseByUsersGroup_classad_func );
 	slotWeightStr = 0;
+	m_staticRanks = false;
 }
 
 Matchmaker::

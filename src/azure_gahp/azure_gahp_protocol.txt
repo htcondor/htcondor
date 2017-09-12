@@ -3,14 +3,14 @@
 
 
                            GRID ASCII HELPER PROTOCOL
-                           for Google Compute Engine
-                                 VERSION 0.1
+                           for Microsoft Azure Cloud
+                                 VERSION 0.2
 
 
                                  Jaime Frey
                              [jfrey@cs.wisc.edu]
 
-                                 Febuary 2014
+                                 August 2017
 
                                HTCondor Project
                     [http://research.cs.wisc.edu/htcondor]
@@ -35,7 +35,7 @@
 
     The first GAHP specification focused on the GRAM and GASS grid
     services of the Globus Toolkit. This GAHP specification focuses on
-    the Google Compute Engine (GCE) cloud service.
+    the Microsoft Azure cloud service.
 
 1.1   WHY A GAHP?
 
@@ -76,15 +76,12 @@
     and said GAHP server could be running locally or as a daemon on a
     remote host.
 
-1.2   AVAILABLE GCE GAHP SERVERS
+1.2   AVAILABLE AZURE GAHP SERVERS
 
-    The HTCondor Project at the University of Wisconsin-Madison has
-    developed a GCE GAHP server, written in C++, which uses pthreads and
-    libcurl to support portions of the GCE protocol.  Many Unix
-    platforms are supported.
-
-    This GAHP is available as part of the HTCondor software distribution,
-    version 8.1.4 or later.
+    The Center for High Throughput Computing at the University of
+    Wisconsin-Madison and Microsoft have developed an Azure GAHP server,
+    written in Python, which uses the Azure SDK to support portions of
+    the Azure REST protocol.
 
 2.0   GAHP SERVER IMPLEMENTATION
 
@@ -120,13 +117,19 @@
         ASYNC_MODE_OFF
         RESPONSE_PREFIX
 
-    The following commands are specific to GCE and must be implemented
-    by a GCE GAHP server:
+    The following commands are specific to Azure and must be implemented
+    by an Azure GAHP server:
 
-        GCE_PING
-        GCE_INSTANCE_INSERT
-        GCE_INSTANCE_DELETE
-        GCE_INSTANCE_LIST
+        AZURE_PING
+        AZURE_VM_CREATE
+        AZURE_VM_DELETE
+        AZURE_VM_LIST
+        AZURE_VMSS_CREATE
+        AZURE_VMSS_DELETE
+        AZURE_VMSS_START
+        AZURE_VMSS_STOP
+        AZURE_VMSS_RESTART
+        AZURE_VMSS_SCALE
 
 3.1   CONVENTIONS AND TERMS USED IN SECTION 3.2
 
@@ -246,7 +249,7 @@
 
     This section contains the syntax for the Request, Return, and Result
     line for each command. The commands common to all GAHPs are defined
-    first, followed by commands specific to the GCE GAHP procotol.
+    first, followed by commands specific to the Azure GAHP procotol.
 
 3.5.1 COMMON GAHP COMMANDS
 
@@ -525,19 +528,16 @@
 
     -----------------------------------------------
 
-3.5.2 GAHP COMMANDS SPECIFIC TO GCE
+3.5.2 GAHP COMMANDS SPECIFIC TO AZURE
 
-    The following commands are specific to the GCE GAHP. All commands
+    The following commands are specific to the Azure GAHP. All commands
     will include the following arguments.
 
     * request-ID    = a non-zero Request ID
-    * service-URL   = the URL used to access the GCE service's RESTful
-                      API
     * cred-file     = the full path to a file containing a valid set of
-                      Google OAuth credentials in the JSON format used
-                      by Google's gcutil command-line client program
-    * project       = the GCE project to be used
-    * zone          = the GCE zone to be used
+                      OAuth credentials in the JSON format used
+                      by Azure's az command-line client program
+    * subscription  = the Azure subscription to be used
 
     We do not directly specify keys to minimize the chance of interception.
 
@@ -545,7 +545,7 @@
     quotes), as this denotes that the corresponding attribute was not set.
     If an optional value is not set, it _must_ be represented in this way.
 
-    The following is the Return Line for all GCE GAHP commands unless
+    The following is the Return Line for all Azure GAHP commands unless
     otherwise specified.
 
     + Return Line:
@@ -560,7 +560,7 @@
                                an unrecognized or unsupported command, or
                                missing or malformed arguments)
 
-    The following is the Result Line for all GCE GAHP commands unless
+    The following is the Result Line for all Azure GAHP commands unless
     otherwise specified.
 
     + Result Line:
@@ -573,48 +573,54 @@
 
     -----------------------------------------------
 
-    GCE_PING
+    AZURE_PING
 
-    Send a simple request to the GCE server in order to determine if it
-    is alive, reachable, responds to queries, and accepts the provided
+    Send a simple request to the Azure service in order to determine if
+    it is alive, reachable, responds to queries, and accepts the provided
     credentials.
 
     + Request Line:
 
-        GCE_PING <SP> <request-ID> <SP> <service-URL>
-            <SP> <cred-file> <SP> <project> <SP> <zone> <CRLF>
+        AZURE_PING <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> <CRLF>
 
     -----------------------------------------------
 
-    GCE_INSTANCE_INSERT
+    AZURE_VM_CREATE
 
-    Create an instance with the given properties
+    Create a VM and associated resources in a new resource group with
+    the given properties.
 
     + Request Line:
 
-        GCE_INSTANCE_INSERT <SP> <request-ID> <SP> <service-URL>
-            <SP> <cred-file> <SP> <project> <SP> <zone>
-            <SP> <instance-name> <SP> <machine-type>
-            <SP> <image> <SP> <metadata> <SP> <metadata-file>
-            <SP> <preemptible> <SP> <json-file> <CRLF>
+        AZURE_VM_CREATE <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> [<SP> <key>=<value>]* <CRLF>
 
-        The following attributes are required.
+        The following key/value pairs are required.
 
-        * instance-name = a value for the 'name' property
+        * name: a unique name for this VM
+        * location: the Azure location where this VM should reside
+        * size: the hardware configuration, represented as the vmSize
+            element of the VM's description
+        * image: the image from which the OS disk should be created
 
-        The following are optional.
+        The following key/value pairs are optional.
 
-        * machine-type = a value for the 'machineType' property
-        * image = a value for the 'image' property
-        * metadata = a set of metadata name/value pairs of the form
-            <name>=<value>,<name>=<value>...
-        * metadata-file = the full path to a file containing metadata
-            name/value pairs of the form
-            <name>=<value>\n<name>=<value>\n...
-        * preemptible = 'true' or 'false', which will determine
-            whether the instance submitted can be preempted
-        * json-file = the full path to a file containing additional
-            JSON that will be added to the GCE instance insert request
+        * dataDisks: a comma-separated list of data disks sizes in GB
+            that should be created for this VM
+        * adminUsername: user account that should be created in the VM
+        * key: an SSH public key or public key file path, or a password
+            for the admin account
+        * vnetName: resource id of a virtual network to use.
+            If omitted, create a virtual network for this VM.
+        * vnetRGName: resource group containing the virtual network
+            named by the vnetName attribute
+        * publicIPAddress: resource id of a public IP address to use,
+            or the string 'dynamic' to indicate one should be created
+        * customData: custom init script file or text
+        * tag: a name/value pair that should be a tag on the VM
+            resource. This option can be given multiple times with
+            different names, and the value is optional.
 
     + Result Line:
 
@@ -622,39 +628,42 @@
         failed. The second should be used if the command succeeded.
 
         <request-ID> <SP> <error-string> <CRLF>
-        <request-ID> <SP> NULL <SP> <instance-ID> <CRLF>
+        <request-ID> <SP> NULL <SP> <vm-id> <SP> <ip-address> <CRLF>
 
         * error-string = string describing the nature of the failure
-        * instance-ID = the id of the created instance
+        * vm-id = the vmId attribute of the VM
+        * ip-address = the public IP address of the VM, or NULL if none.
 
     -----------------------------------------------
 
-    GCE_INSTANCE_DELETE
+    AZURE_VM_DELETE
 
-    Delete the given instance (halting exeucting of the VM)
+    Delete the given VM (halting exeucting and releasing all resources).
 
     + Request Line:
 
-        GCE_INSTANCE_DELETE <SP> <request-ID> <SP> <service-URL>
-            <SP> <cred-file> <SP> <project> <SP> <zone>
-            <SP> <instance-ID> <CRLF>
+        AZURE_VM_DELETE <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> <SP> <name> <CRLF>
 
         The following attribute is required.
 
-        * instance-ID = the id of the instance to delete
+        * name = the name for the VM as given in AZURE_VM_CREATE
 
     -----------------------------------------------
 
-    GCE_INSTANCE_LIST
+    AZURE_VM_LIST
 
-    Query the status of all instances the given credentials can observe.
-    This may include instances not started by the GAHP; the client must
-    maintain its own list of instances if it cares.
+    Query the status of all VMs under the given subscription.
+    This may include VMs not started by the GAHP; the client must
+    maintain its own list of VMs if it cares.
 
     + Request Line:
 
-        GCE_INSTANCE_LIST <SP> <request-ID> <SP> <service-URL>
-            <SP> <cred-file> <SP> <project> <SP> <zone> <CRLF>
+        AZURE_VM_LIST <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> [<SP> <id>] <CRLF>
+
+        * id = either the name given in a AZURE_VM_CREATE request or a
+            tag name with optional value
 
     + Result Line:
 
@@ -663,18 +672,149 @@
 
         <request-ID> <SP> <error-string> <CRLF>
         <request-ID> <SP> NULL <SP> <count>
-            [<SP> <instance-ID> <SP> <instance-name> <SP>
-             <SP> <status> <SP> <status-msg>]* <CRLF>
+            [<SP> <name> <SP> <status> ]* <CRLF>
 
         * error-string = string describing the nature of the failure
-        * count = the number of instances whose information will follow
-        * instance-ID = the id of an instance
-        * instance-name = the 'name' property of an instance
-        * status = the 'status' property of an instance
-        * status-msg = the 'statusMessage' property of an instance
+        * count = the number of VMs whose information will follow
+        * name = the name of the VM as given in AZURE_VM_CREATE
+        * status = the 'powerState' property of the VM
 
         On success, <count> is an integer indicating the number of
-        instances returned by the query. It is followed by the given
-        four properties of each instance. If the command was successful
-        but returned no instances, then <count> is 0 and no arguments
+        VMs returned by the query. It is followed by the given
+        four properties of each vm. If the command was successful
+        but returned no vms, then <count> is 0 and no arguments
         follow it.
+
+    -----------------------------------------------
+
+    AZURE_VMSS_CREATE
+
+    Create a VM scale set and associated resources in a new resource
+    group with the given properties.
+
+    + Request Line:
+
+        AZURE_VMSS_CREATE <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> [<SP> <key>=<value>]* <CRLF>
+
+        The following key/value pairs are required.
+
+        * name: a unique name for this scale set
+        * location: the Azure location where this scale set should
+            reside
+        * size: the hardware configuration, represented as the vmSize
+            element of the VM's description
+        * image: the image from which the OS disk should be created
+        * nodecount: the number of VMs in the scale set
+
+        The following key/value pairs are optional.
+
+        * dataDisks: a comma-separated list of data disks sizes in GB
+            that should be created for this VM
+        * adminUsername: user account that should be created in the VMs
+        * key: an SSH public key or public key file path, or a password
+            for the admin account
+        * vnetName: resource id of a virtual network to use.
+            If omitted, create a virtual network for these VMs.
+        * vnetRGName: resource group containing the virtual network
+            named by the vnetName attribute
+        * publicIPAddress: resource id of a public IP address to use,
+            or the string 'dynamic' to indicate one should be created
+        * customData: custom init script file or text
+        * tag: a name/value pair that should be a tag on the scale set
+            resource. This option can be given multiple times with
+            different names, and the value is optional.
+        * deletionjob: indicates that this scale set should be
+            automatically deleted at a time given by the attribute
+            'schedule'
+        * schedule: a time at which the scale set should be
+            automatically deleted. The format of the value is
+            YYYYMMDDhhmm in UTC.
+        * keyvaultname: name of a key vault from which a secret will be
+            obtained and inserted in the the VMs
+        * vaultkey: name of a secret in the key vault named by
+            'keyvaultname', which will be obtained and inserted in the
+            VMs
+
+    -----------------------------------------------
+
+    AZURE_VMSS_DELETE
+
+    Delete the given scale set (halting exeucting and releasing all
+    resources).
+
+    + Request Line:
+
+        AZURE_VMSS_DELETE <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> <SP> <name> <CRLF>
+
+        The following attribute is required.
+
+        * name = the name for the scale set as given in
+            AZURE_VMSS_CREATE
+
+    -----------------------------------------------
+
+    AZURE_VMSS_START
+
+    Start the VMs in the given scale set.
+
+    + Request Line:
+
+        AZURE_VMSS_START <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> <SP> <name> <CRLF>
+
+        The following attribute is required.
+
+        * name = the name for the scale set as given in
+            AZURE_VMSS_CREATE
+
+    -----------------------------------------------
+
+    AZURE_VMSS_STOP
+
+    Stop the VMs in the given scale set.
+
+    + Request Line:
+
+        AZURE_VMSS_STOP <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> <SP> <name> <CRLF>
+
+        The following attribute is required.
+
+        * name = the name for the scale set as given in
+            AZURE_VMSS_CREATE
+
+    -----------------------------------------------
+
+    AZURE_VMSS_RESTART
+
+    Restart the VMs in the given scale set.
+
+    + Request Line:
+
+        AZURE_VMSS_RESTART <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> <SP> <name> <CRLF>
+
+        The following attribute is required.
+
+        * name = the name for the scale set as given in
+            AZURE_VMSS_CREATE
+
+    -----------------------------------------------
+
+    AZURE_VMSS_SCALE
+
+    Change the number of VMs in the given scale set.
+
+    + Request Line:
+
+        AZURE_VMSS_SCALE <SP> <request-ID> <SP> <cred-file>
+            <SP> <subscription> <SP> name=<name> <SP>
+            nodecount=<count> <CRLF>
+
+        The following attribute is required.
+
+        * name = the name for the scale set as given in
+            AZURE_VMSS_CREATE
+        * count = the new number of VMs in the scale set

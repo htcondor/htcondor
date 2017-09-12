@@ -12,7 +12,7 @@ echo "* Another option would be to run ccmake or cmake-gui"
 echo "-------------------------------------------------------------------"
 PWD=`pwd`
 if [ `uname` = "Darwin" ] ; then
-  # In older verisons, cmake will use gcc and c++ for the C and C++ compilers.
+  # In verisons older than 2.8.10, cmake will use gcc and c++ for the C and C++ compilers.
   # On Mac OS X, these invoke different compilers (llvm gnu and clang,
   # respectively).
   # For newer versions of OS X (10.9.x and later), use Clang.

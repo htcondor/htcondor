@@ -13,6 +13,7 @@ OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 	const std::string & aid ) :
   gahp( egc ), reply( r ), scratchpad( s ),
   service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
+  targetCapacity(0),
   commandID( cid ), commandState( c ), annexID( aid ) {
   	ClassAd * commandState;
 	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ) {

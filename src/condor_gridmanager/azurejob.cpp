@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -33,14 +33,14 @@
 #endif
 
 #include "gridmanager.h"
-#include "gcejob.h"
+#include "azurejob.h"
 #include "condor_config.h"
 
 using namespace std;
 
 #define GM_INIT							0
 #define GM_START_VM						1
-#define GM_SAVE_INSTANCE_ID				2
+#define GM_SAVE_VM_INFO					2
 #define GM_SUBMITTED					3
 #define GM_DONE_SAVE					4
 #define GM_CANCEL						5
@@ -48,13 +48,13 @@ using namespace std;
 #define GM_CLEAR_REQUEST				7
 #define GM_HOLD							8
 #define GM_PROBE_JOB					9
-#define GM_SAVE_INSTANCE_NAME			10
-#define GM_SEEK_INSTANCE_ID				11
+#define GM_SAVE_VM_NAME					10
+#define GM_CHECK_SUBMISSION				11
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_START_VM",
-	"GM_SAVE_INSTANCE_ID",
+	"GM_SAVE_VM_INFO",
 	"GM_SUBMITTED",
 	"GM_DONE_SAVE",
 	"GM_CANCEL",
@@ -62,46 +62,44 @@ static const char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
 	"GM_PROBE_JOB",
-	"GM_SAVE_INSTANCE_NAME",
-	"GM_SEEK_INSTANCE_ID",
+	"GM_SAVE_VM_NAME",
+	"GM_CHECK_SUBMISSION",
 };
 
-#define GCE_INSTANCE_PROVISIONING		"PROVISIONING"
-#define GCE_INSTANCE_STAGING			"STAGING"
-#define GCE_INSTANCE_RUNNING			"RUNNING"
-#define GCE_INSTANCE_STOPPING			"STOPPING"
-#define GCE_INSTANCE_STOPPED			"STOPPED"
-#define GCE_INSTANCE_TERMINATED			"TERMINATED"
+#define AZURE_VM_STARTING		"starting"
+#define AZURE_VM_RUNNING		"running"
+#define AZURE_VM_DEALLOCATING	"deallocating"
+#define AZURE_VM_DEALLOCATED	"deallocated"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
 
-void GCEJobInit()
+void AzureJobInit()
 {
 }
 
 
-void GCEJobReconfig()
+void AzureJobReconfig()
 {
     int gct = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 10 * 60 );
-	GCEJob::setGahpCallTimeout( gct );
+	AzureJob::setGahpCallTimeout( gct );
 
 	int cfrc = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT", 3);
-	GCEJob::setConnectFailureRetry( cfrc );
+	AzureJob::setConnectFailureRetry( cfrc );
 
 	// Tell all the resource objects to deal with their new config values
-	GCEResource *next_resource;
+	AzureResource *next_resource;
 
-	GCEResource::ResourcesByName.startIterations();
+	AzureResource::ResourcesByName.startIterations();
 
-	while ( GCEResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+	while ( AzureResource::ResourcesByName.iterate( next_resource ) != 0 ) {
 		next_resource->Reconfig();
 	}
 }
 
 
-bool GCEJobAdMatch( const ClassAd *job_ad )
+bool AzureJobAdMatch( const ClassAd *job_ad )
 {
 	int universe;
 	string resource;
@@ -110,7 +108,7 @@ bool GCEJobAdMatch( const ClassAd *job_ad )
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
 
 	if ( (universe == CONDOR_UNIVERSE_GRID) &&
-		 (strncasecmp( resource.c_str(), "gce", 3 ) == 0) )
+		 (strncasecmp( resource.c_str(), "azure", 3 ) == 0) )
 	{
 		return true;
 	}
@@ -118,30 +116,24 @@ bool GCEJobAdMatch( const ClassAd *job_ad )
 }
 
 
-BaseJob* GCEJobCreate( ClassAd *jobad )
+BaseJob* AzureJobCreate( ClassAd *jobad )
 {
-	return (BaseJob *)new GCEJob( jobad );
+	return (BaseJob *)new AzureJob( jobad );
 }
 
-int GCEJob::gahpCallTimeout = 600;
-int GCEJob::submitInterval = 300;
-int GCEJob::maxConnectFailures = 3;
-int GCEJob::funcRetryInterval = 15;
-int GCEJob::maxRetryTimes = 3;
+int AzureJob::gahpCallTimeout = 600;
+int AzureJob::submitInterval = 300;
+int AzureJob::maxConnectFailures = 3;
+int AzureJob::funcRetryInterval = 15;
+int AzureJob::maxRetryTimes = 3;
 
-GCEJob::GCEJob( ClassAd *classad ) :
+AzureJob::AzureJob( ClassAd *classad ) :
 	BaseJob( classad ),
-	m_preemptible( false ),
 	m_retry_times( 0 ),
-	m_failure_injection(NULL),
 	probeNow( false )
 {
 	string error_string = "";
 	char *gahp_path = NULL;
-	char *gahp_log = NULL;
-	int gahp_worker_cnt = 0;
-	char *gahp_debug = NULL;
-	ArgList args;
 	string value;
 
 	remoteJobState = "";
@@ -153,35 +145,18 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	myResource = NULL;
 	gahp = NULL;
 
-	// check the auth_file
-	jobAd->LookupString( ATTR_GCE_AUTH_FILE, m_authFile );
-
-	if ( m_authFile.empty() ) {
-		error_string = "Auth file not defined";
-		goto error_exit;
-	}
-
 	// Check for failure injections.
 	m_failure_injection = getenv( "GM_FAILURE_INJECTION" );
 	if( m_failure_injection == NULL ) { m_failure_injection = ""; }
 	dprintf( D_FULLDEBUG, "GM_FAILURE_INJECTION = %s\n", m_failure_injection );
 
-	jobAd->LookupString( ATTR_GCE_IMAGE, m_image );
+	// check the auth_file
+	jobAd->LookupString( ATTR_AZURE_AUTH_FILE, m_authFile );
 
-	// if user assigns both metadata and metadata_file, the two will
-	// be concatenated by the gahp
-	// TODO Do we need to process this attribute value before passing it
-	//   to the gahp?
-	jobAd->LookupString( ATTR_GCE_METADATA_FILE, m_metadataFile );
-
-	jobAd->LookupString( ATTR_GCE_METADATA, m_metadata );
-
-	jobAd->LookupBool( ATTR_GCE_PREEMPTIBLE, m_preemptible );
-
-	jobAd->LookupString( ATTR_GCE_JSON_FILE, m_jsonFile );
-
-	// get VM machine type
-	jobAd->LookupString( ATTR_GCE_MACHINE_TYPE, m_machineType );
+	if ( m_authFile.empty() ) {
+		error_string = "Auth file not defined";
+		goto error_exit;
+	}
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -197,87 +172,43 @@ GCEJob::GCEJob( ClassAd *classad ) :
 		Tokenize( value );
 
 		token = GetNextToken( " ", false );
-		if ( !token || strcasecmp( token, "gce" ) ) {
-			formatstr( error_string, "%s not of type gce",
+		if ( !token || strcasecmp( token, "azure" ) ) {
+			formatstr( error_string, "%s not of type azure",
 									  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 		token = GetNextToken( " ", false );
 		if ( token && *token ) {
-			m_serviceUrl = token;
+			m_subscription = token;
 		} else {
-			formatstr( error_string, "%s missing GCE service URL",
+			formatstr( error_string, "%s missing Azure subscription",
 									  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = GetNextToken( " ", false );
-		if ( token && *token ) {
-			m_project = token;
-		} else {
-			formatstr( error_string, "%s missing GCE project",
-									  ATTR_GRID_RESOURCE );
-			goto error_exit;
-		}
-
-		token = GetNextToken( " ", false );
-		if ( token && *token ) {
-			m_zone = token;
-		} else {
-			formatstr( error_string, "%s missing GCE zone",
-									  ATTR_GRID_RESOURCE );
-			goto error_exit;
-		}
 	} else {
 		formatstr( error_string, "%s is not set in the job ad",
 								  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
-	gahp_path = param( "GCE_GAHP" );
+	gahp_path = param( "AZURE_GAHP" );
 	if ( gahp_path == NULL ) {
-		error_string = "GCE_GAHP not defined";
+		error_string = "AZURE_GAHP not defined";
 		goto error_exit;
 	}
 
-	gahp_log = param( "GCE_GAHP_LOG" );
-	if ( gahp_log == NULL ) {
-		dprintf(D_ALWAYS, "Warning: No GCE_GAHP_LOG defined\n");
-	} else {
-		args.AppendArg("-f");
-		args.AppendArg(gahp_log);
-		free(gahp_log);
-	}
-
-	args.AppendArg("-w");
-	gahp_worker_cnt = param_integer( "GCE_GAHP_WORKER_MIN_NUM", 1 );
-	args.AppendArg(gahp_worker_cnt);
-
-	args.AppendArg("-m");
-	gahp_worker_cnt = param_integer( "GCE_GAHP_WORKER_MAX_NUM", 5 );
-	args.AppendArg(gahp_worker_cnt);
-
-	args.AppendArg("-d");
-	gahp_debug = param( "GCE_GAHP_DEBUG" );
-	if (!gahp_debug) {
-		args.AppendArg("D_ALWAYS");
-	} else {
-		args.AppendArg(gahp_debug);
-		free(gahp_debug);
-	}
-
-	gahp = new GahpClient( GCE_RESOURCE_NAME, gahp_path, &args );
+	gahp = new GahpClient( AZURE_RESOURCE_NAME, gahp_path );
 	free(gahp_path);
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
 	myResource =
-		GCEResource::FindOrCreateResource( m_serviceUrl.c_str(),
-										   m_project.c_str(),
-										   m_zone.c_str(),
-										   m_authFile.c_str() );
+		AzureResource::FindOrCreateResource( "azure",
+		                                     m_subscription.c_str(),
+		                                     m_authFile.c_str() );
 	myResource->RegisterJob( this );
 
 	value.clear();
@@ -290,31 +221,22 @@ GCEJob::GCEJob( ClassAd *classad ) :
 		Tokenize( value );
 
 		token = GetNextToken( " ", false );
-		if ( !token || strcasecmp( token, "gce" ) ) {
-			formatstr( error_string, "%s not of type gce", ATTR_GRID_JOB_ID );
+		if ( !token || strcasecmp( token, "azure" ) ) {
+			formatstr( error_string, "%s not of type azure", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
-			// Skip the service URL
-		GetNextToken( " ", false );
-
 		token = GetNextToken( " ", false );
 		if ( token ) {
-			m_instanceName = token;
-			dprintf( D_FULLDEBUG, "Found instance name '%s'.\n", m_instanceName.c_str() );
-		}
-
-		token = GetNextToken( " ", false );
-		if ( token ) {
-			m_instanceId = token;
-			dprintf( D_FULLDEBUG, "Found instance ID '%s'.\n", m_instanceId.c_str() );
+			m_vmName = token;
+			dprintf( D_FULLDEBUG, "Found vm name '%s'.\n", m_vmName.c_str() );
 		}
 	}
 
-	if ( !m_instanceId.empty() ) {
-		myResource->AlreadySubmitted( this );
-		SetInstanceId( m_instanceId.c_str() );
-	}
+//	if ( !m_instanceId.empty() ) {
+//		myResource->AlreadySubmitted( this );
+//		SetInstanceId( m_instanceId.c_str() );
+//	}
 
 	jobAd->LookupString( ATTR_GRID_JOB_STATUS, remoteJobState );
 
@@ -338,25 +260,22 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	return;
 }
 
-GCEJob::~GCEJob()
+AzureJob::~AzureJob()
 {
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
-		if( ! m_instanceId.empty() ) {
-			myResource->jobsByInstanceID.remove( HashKey( m_instanceId.c_str() ) );
-		}
 	}
 	delete gahp;
 }
 
 
-void GCEJob::Reconfig()
+void AzureJob::Reconfig()
 {
 	BaseJob::Reconfig();
 }
 
 
-void GCEJob::doEvaluateState()
+void AzureJob::doEvaluateState()
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
@@ -366,6 +285,7 @@ void GCEJob::doEvaluateState()
 	bool attr_dirty;
 	int rc;
 	std::string gahp_error_code;
+	std::string tmp_str;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
 
@@ -401,7 +321,7 @@ void GCEJob::doEvaluateState()
 		switch ( gmState )
 		{
 			case GM_INIT:
-				// This is the state all jobs start in when the GCEJob object
+				// This is the state all jobs start in when the AzureJob object
 				// is first created. Here, we do things that we didn't want to
 				// do in the constructor because they could block (the
 				// constructor is called while we're connected to the schedd).
@@ -429,7 +349,7 @@ void GCEJob::doEvaluateState()
 				//
 				if( ! myResource->didFirstPing() ) { break; }
 				if( myResource->hadAuthFailure() ) {
-					if( condorState == REMOVED && m_instanceName.empty() && m_instanceId.empty() ) {
+					if( condorState == REMOVED && m_vmName.empty() ) {
 						gmState = GM_DELETE;
 						break;
 					} else {
@@ -442,17 +362,17 @@ void GCEJob::doEvaluateState()
 					}
 				}
 
-				if ( m_instanceName.empty() ) {
+				if ( m_vmName.empty() ) {
 					// This is a fresh job submission.
 					gmState = GM_CLEAR_REQUEST;
-				} else if ( m_instanceId.empty() ) {
+				} else if ( !jobAd->LookupString( ATTR_AZURE_VM_ID, tmp_str ) ) {
 					// We died during submission. There may be a running
-					// instance whose ID we don't know.
-					// Wait for a bulk query of instances and see if an
-					// instance that matches our m_instanceName appears.
-					gmState = GM_SEEK_INSTANCE_ID;
+					// vm whose ID we don't know.
+					// Wait for a bulk query of vms and see if a vm
+					// that matches our m_vmName appears.
+					gmState = GM_CHECK_SUBMISSION;
 				} else {
-					// There is (or was) a running instance and we know
+					// There is (or was) a running vm and we know
 					// its ID.
 					submitLogged = true;
 					if ( condorState == RUNNING || condorState == COMPLETED ) {
@@ -462,15 +382,14 @@ void GCEJob::doEvaluateState()
 				}
 				break;
 
-
-			case GM_SAVE_INSTANCE_NAME: {
+			case GM_SAVE_VM_NAME: {
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CLEAR_REQUEST;
 					break;
 				}
 
-				if (m_instanceName.empty()) {
-					SetInstanceName(build_instance_name().c_str());
+				if (m_vmName.empty()) {
+					SetRemoteJobId(build_vm_name().c_str());
 				}
 
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
@@ -517,22 +436,22 @@ void GCEJob::doEvaluateState()
 						break;
 					}
 
-					// construct input parameters for gce_instance_insert()
-					std::string instance_id = "";
+					std::string vm_id;
+					std::string ip_address;
 
-					// gce_instance_insert() will check the input arguments
-					rc = gahp->gce_instance_insert( m_serviceUrl,
-													m_authFile,
-													m_project,
-													m_zone,
-													m_instanceName,
-													m_machineType,
-													m_image,
-													m_metadata,
-													m_metadataFile,
-													m_preemptible,
-													m_jsonFile,
-													instance_id );
+					if ( m_vmParams.isEmpty() ) {
+						if ( !BuildVmParams() ) {
+							myResource->CancelSubmit(this);
+							gmState = GM_HOLD;
+							break;
+						}
+					}
+
+					rc = gahp->azure_vm_create( m_authFile,
+					                            m_subscription,
+					                            m_vmParams,
+					                            vm_id,
+					                            ip_address );
 
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -543,11 +462,13 @@ void GCEJob::doEvaluateState()
 
 					if ( rc == 0 ) {
 
-						ASSERT( instance_id != "" );
-						SetInstanceId( instance_id.c_str() );
+						ASSERT( vm_id != "" );
+						jobAd->Assign( ATTR_AZURE_VM_ID, vm_id );
+						jobAd->Assign( "VmIpAddress", ip_address );
 						WriteGridSubmitEventToUserLog(jobAd);
+						submitLogged = true;
 
-						gmState = GM_SAVE_INSTANCE_ID;
+						gmState = GM_SAVE_VM_INFO;
 
 					 } else {
 						errorString = gahp->getErrorString();
@@ -559,22 +480,14 @@ void GCEJob::doEvaluateState()
 					}
 
 				} else {
-					if ( (condorState == REMOVED) || (condorState == HELD) ) {
-						gmState = GM_CANCEL;
-						break;
-					}
-
-					unsigned int delay = 0;
-					if ( (lastSubmitAttempt + submitInterval) > now ) {
-						delay = (lastSubmitAttempt + submitInterval) - now;
-					}
-					daemonCore->Reset_Timer( evaluateStateTid, delay );
+					gmState = GM_CANCEL;
+					break;
 				}
 
 				break;
 
 
-			case GM_SAVE_INSTANCE_ID:
+			case GM_SAVE_VM_INFO:
 
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID,
 									 &attr_exists, &attr_dirty );
@@ -595,7 +508,7 @@ void GCEJob::doEvaluateState()
 
 
 			case GM_SUBMITTED:
-				if ( remoteJobState == GCE_INSTANCE_TERMINATED ) {
+				if ( remoteJobState == AZURE_VM_DEALLOCATED ) {
 					gmState = GM_DONE_SAVE;
 				}
 
@@ -615,7 +528,7 @@ void GCEJob::doEvaluateState()
 					// every "funcRetryInterval" seconds. Otherwise the interval should
 					// be "probeInterval" seconds.
 					int interval = myResource->GetJobPollInterval();
-					if ( remoteJobState != GCE_INSTANCE_RUNNING ) {
+					if ( remoteJobState != AZURE_VM_RUNNING ) {
 						interval = funcRetryInterval;
 					}
 
@@ -634,8 +547,6 @@ void GCEJob::doEvaluateState()
 
 
 			case GM_DONE_SAVE:
-
-					// XXX: Review this
 
 				if ( condorState != HELD && condorState != REMOVED ) {
 					JobTerminated();
@@ -671,7 +582,7 @@ void GCEJob::doEvaluateState()
 				// forgetting about current submission and trying again.
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
-				if ( !m_instanceId.empty() && condorState != REMOVED
+				if ( !m_vmName.empty() && condorState != REMOVED
 					 && wantResubmit == 0 && doResubmit == 0 ) {
 					gmState = GM_HOLD;
 					break;
@@ -696,8 +607,18 @@ void GCEJob::doEvaluateState()
 
 				errorString = "";
 				myResource->CancelSubmit( this );
-				SetInstanceId( NULL );
-				SetInstanceName( NULL );
+				// TODO Can we make SetRemoteJobId() more intelligent
+				//   about not dirtying the job if the value won't
+				//   change?
+				if ( !m_vmName.empty() ) {
+					SetRemoteJobId( NULL );
+				}
+				if ( jobAd->LookupString( ATTR_AZURE_VM_ID, tmp_str ) ) {
+					jobAd->AssignExpr( ATTR_AZURE_VM_ID, "Undefined" );
+				}
+				if ( jobAd->LookupString( "VmIpAddress", tmp_str ) ) {
+					jobAd->AssignExpr( "VmIpAddress", "Undefined" );
+				}
 
 				JobIdle();
 
@@ -758,7 +679,7 @@ void GCEJob::doEvaluateState()
 				if ( (condorState == REMOVED) || (condorState == HELD) ) {
 					gmState = GM_DELETE;
 				} else {
-					gmState = GM_SAVE_INSTANCE_NAME;
+					gmState = GM_SAVE_VM_NAME;
 				}
 			} break;
 
@@ -776,10 +697,9 @@ void GCEJob::doEvaluateState()
 
 					// We don't check for a status change, because this
 					// state is now only entered if we had one.
-					if( remoteJobState == GCE_INSTANCE_RUNNING ||
-						remoteJobState == GCE_INSTANCE_STOPPING ||
-						remoteJobState == GCE_INSTANCE_STOPPED ||
-						remoteJobState == GCE_INSTANCE_TERMINATED ) {
+					if( remoteJobState == AZURE_VM_RUNNING ||
+						remoteJobState == AZURE_VM_DEALLOCATING ||
+						remoteJobState == AZURE_VM_DEALLOCATED ) {
 						JobRunning();
 					}
 
@@ -789,22 +709,20 @@ void GCEJob::doEvaluateState()
 				break;
 
 			case GM_CANCEL:
-				// Delete the instance on the server. This can be due
+				// Delete the vm on the server. This can be due
 				// to the user running condor_rm/condor_hold or the
 				// the instance shutting down (job completion).
 
-				rc = gahp->gce_instance_delete( m_serviceUrl,
-												m_authFile,
-												m_project,
-												m_zone,
-												m_instanceName );
+				rc = gahp->azure_vm_delete( m_authFile,
+											m_subscription,
+											m_vmName );
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 
-				if( rc != 0 && !strstr( gahp->getErrorString(), "was not found" ) ) {
+				if( rc != 0 && !strstr( gahp->getErrorString(), "could not be found" ) ) {
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
 							 procID.cluster, procID.proc,
@@ -820,8 +738,7 @@ void GCEJob::doEvaluateState()
 				} else {
 					// Clear the contact string here because it may not get
 					// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-					SetInstanceId( NULL );
-					SetInstanceName( NULL );
+					SetRemoteJobId( NULL );
 					gmState = GM_CLEAR_REQUEST;
 				}
 				break;
@@ -863,7 +780,7 @@ void GCEJob::doEvaluateState()
 				break;
 
 
-			case GM_SEEK_INSTANCE_ID: {
+			case GM_CHECK_SUBMISSION: {
 				// Wait for the next scheduled bulk query.
 				if( ! probeNow ) { break; }
 
@@ -872,9 +789,16 @@ void GCEJob::doEvaluateState()
 				// an another state.)  Otherwise, the service doesn't know
 				// about this job, and we can submit the job or let it
 				// leave the queue.
-				if( ! m_instanceId.empty() ) {
+				std::string vm_id;
+				if( !remoteJobState.empty() ) {
 					WriteGridSubmitEventToUserLog( jobAd );
-					gmState = GM_SAVE_INSTANCE_ID;
+					submitLogged = true;
+						// TODO add and invoke an AZURE_VM_INFO command to
+						//   get vm id and public ip address.
+						//   For now, set AzureVmId to an empty string to
+						//   indicate a successful submission.
+					jobAd->Assign( ATTR_AZURE_VM_ID, "" );
+					gmState = GM_SAVE_VM_INFO;
 				} else if ( condorState == REMOVED ) {
 					gmState = GM_DELETE;
 				} else {
@@ -902,75 +826,38 @@ void GCEJob::doEvaluateState()
 }
 
 
-BaseResource* GCEJob::GetResource()
+BaseResource* AzureJob::GetResource()
 {
 	return (BaseResource *)myResource;
 }
 
 
-// setup the public name of gce remote VM, which can be used the clients
-void GCEJob::SetRemoteVMName( const char * newName )
-{
-	if( newName == NULL ) {
-		newName = "Undefined";
-	}
-
-	std::string oldName;
-	jobAd->LookupString( ATTR_EC2_REMOTE_VM_NAME, oldName );
-	if( oldName != newName ) {
-		jobAd->Assign( ATTR_EC2_REMOTE_VM_NAME, newName );
-		requestScheddUpdate( this, false );
-	}
-}
-
-void GCEJob::SetInstanceName(const char *instance_name)
-{
-	if( instance_name != NULL ) {
-		m_instanceName = instance_name;
-	} else {
-		m_instanceName.clear();
-	}
-	GCESetRemoteJobId(m_instanceName.empty() ? NULL : m_instanceName.c_str(),
-				   m_instanceId.c_str());
-}
-
-void GCEJob::SetInstanceId( const char *instance_id )
-{
-	// Don't unconditionally clear the remote job ID -- if we do,
-	// SetInstanceId( m_instanceId.c_str() ) does exactly the opposite
-	// of what you'd expect, because the c_str() is cleared as well.
-	if( instance_id == NULL ) {
-		m_instanceId.clear();
-	} else {
-		m_instanceId = instance_id;
-	}
-	GCESetRemoteJobId( m_instanceName.c_str(),
-					m_instanceId.empty() ? NULL : m_instanceId.c_str() );
-}
-
-// GCESetRemoteJobId() is used to set the value of global variable "remoteJobID"
-// Don't call this function directly!
-// It doesn't update m_instanceName or m_instanceId!
-// Use SetInstanceName() or SetInstanceId() instead.
-void GCEJob::GCESetRemoteJobId( const char *instance_name, const char *instance_id )
+void AzureJob::SetRemoteJobId( const char *vm_name )
 {
 	string full_job_id;
-	if ( instance_name && instance_name[0] ) {
-		formatstr( full_job_id, "gce %s %s", m_serviceUrl.c_str(), instance_name );
-		if ( instance_id && instance_id[0] ) {
-			// We need this to do bulk status queries.
-			myResource->jobsByInstanceID.insert( HashKey( instance_id ), this );
-			formatstr_cat( full_job_id, " %s", instance_id );
-		}
+	if ( vm_name && vm_name[0] ) {
+		m_vmName = vm_name;
+		formatstr( full_job_id, "azure %s", vm_name );
+	} else {
+		m_vmName.clear();
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 
-// Instance name is max 63 characters, matching this pattern:
-//    [a-z]([-a-z0-9]*[a-z0-9])?
-string GCEJob::build_instance_name()
+// Instance name is max 64 characters, alphanumberic, underscore, and hyphen
+string AzureJob::build_vm_name()
 {
+	// TODO Currently, a storage account name is derived from our
+	//   unique name, and those have max length 24 and must be
+	//   alphanumeric.
+	//   Once the gahp can support using managed disks in Azure,
+	//   this naming restriction will go away.
+#if 1
+	string final_str;
+	formatstr( final_str, "condorc%dp%d", procID.cluster, procID.proc );
+	return final_str;
+#else
 #ifdef WIN32
 	GUID guid;
 	if (S_OK != CoCreateGuid(&guid))
@@ -997,52 +884,90 @@ string GCEJob::build_instance_name()
 	final_str += uuid_str;
 	return final_str;
 #endif
+#endif
 }
 
-void GCEJob::StatusUpdate( const char * instanceID,
-						   const char * status,
-						   const char * stateReasonCode,
-						   const char * publicDNSName ) {
-	// This avoids having to store the public DNS name for GM_PROBE_JOB.
-	if( publicDNSName != NULL && strlen( publicDNSName ) != 0
-	 && strcmp( publicDNSName, "NULL" ) != 0 ) {
-		SetRemoteVMName( publicDNSName );
-	}
+bool AzureJob::BuildVmParams()
+{
+	string value;
+	string name_value;
 
-	if( stateReasonCode != NULL && strlen( stateReasonCode ) != 0
-	 && strcmp( stateReasonCode, "NULL" ) != 0 ) {
-		m_state_reason_code = stateReasonCode;
-	} else {
-		m_state_reason_code.clear();
-	}
+	m_vmParams.clearAll();
 
-	// To avoid concurrency issues, we could delay calling SetEvaluateState()
-	// until just before we exit the function.
+	name_value = "name=";
+	name_value += m_vmName;
+	m_vmParams.append( name_value.c_str() );
+
+	if ( !jobAd->LookupString( ATTR_AZURE_LOCATION, value ) ) {
+		errorString = "Missing attribute " ATTR_AZURE_LOCATION;
+		return false;
+	}
+	name_value = "location=";
+	name_value += value;
+	m_vmParams.append( name_value.c_str() );
+
+	if ( !jobAd->LookupString( ATTR_AZURE_IMAGE, value ) ) {
+		errorString = "Missing attribute " ATTR_AZURE_IMAGE;
+		return false;
+	}
+	name_value = "image=";
+	name_value += value;
+	m_vmParams.append( name_value.c_str() );
+
+	if ( !jobAd->LookupString( ATTR_AZURE_SIZE, value ) ) {
+		errorString = "Missing attribute " ATTR_AZURE_SIZE;
+		return false;
+	}
+	name_value = "size=";
+	name_value += value;
+	m_vmParams.append( name_value.c_str() );
+
+	if ( !jobAd->LookupString( ATTR_AZURE_ADMIN_USERNAME, value ) ) {
+		errorString = "Missing attribute " ATTR_AZURE_ADMIN_USERNAME;
+		return false;
+	}
+	name_value = "adminUsername=";
+	name_value += value;
+	m_vmParams.append( name_value.c_str() );
+
+	if ( !jobAd->LookupString( ATTR_AZURE_ADMIN_KEY, value ) ) {
+		errorString = "Missing attribute " ATTR_AZURE_ADMIN_KEY;
+		return false;
+	}
+	name_value = "key=";
+	name_value += value;
+	m_vmParams.append( name_value.c_str() );
+
+	return true;
+}
+
+void AzureJob::StatusUpdate( const char * status )
+{
+	// Currently, the AZURE_VM_LIST command returns a series of State
+	// attributes for the vm, as illustrated below.
+	// We only care about hte PowerState, which we assume will be
+	// last.
+	// Example:
+	//   ProvisioningState/succeeded,OSState/generalized,PowerState/deallocated
+	if ( status ) {
+		const char *ptr = strrchr( status, '/' );
+		if ( ptr ) {
+			status = ptr + 1;
+		}
+	}
 
 	// If the bulk status update didn't find this job, assume it's gone.
-	// The job will be unblocked after the SetRemoteStatus() call below
-	// if it wasn't previously purged.
-	if( !m_instanceId.empty() && status == NULL ) {
-		status = GCE_INSTANCE_TERMINATED;
-	}
-
-	// Update the instance ID, if this is the first time we've seen it.
-	if( m_instanceId.empty() ) {
-		if( instanceID && *instanceID ) {
-			SetInstanceId( instanceID );
-		}
-
-		// We only consider discovering the instance ID a status change
-		// when it occurs while we're blocked in GM_SEEK_INSTANCE_ID.
-		if( gmState == GM_SEEK_INSTANCE_ID ) {
-			probeNow = true;
-			SetEvaluateState();
-		}
+	// We use submitLogged as an indicator that we know that the vm
+	// was successfully created.
+	if( submitLogged && status == NULL ) {
+		status = AZURE_VM_DEALLOCATED;
 	}
 
 	// SetRemoteJobStatus() sets the last-update timestamp, but
 	// only returns true if the status has changed.
-	if( SetRemoteJobStatus( status ) ) {
+	// If we're in GM_CHECK_SUBMISSION, always trigger a reaction to the
+	// updated status.
+	if( SetRemoteJobStatus( status ) || gmState == GM_CHECK_SUBMISSION ) {
 		remoteJobState = status ? status : "";
 		probeNow = true;
 		SetEvaluateState();
