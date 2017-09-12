@@ -94,7 +94,9 @@ process_submit_errstack(CondorError *errstack)
         }
         else
         {
+#if (PY_MINOR_VERSION >= 6) || (PY_MAJOR_VERSION > 2)
             PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 0);
+#endif
         }
     }
 }
