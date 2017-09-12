@@ -868,6 +868,7 @@ main (int argc, char *argv[])
 
 	// In merge mode, the 'both' ads are printed normally.
 	TrackTotals bothTotals(mainPP.ppTotalStyle);
+	TrackTotals leftTotals(mainPP.ppTotalStyle);
 
 	// in order to totals, the projection MUST have certain attributes
 	if (mainPP.wantOnlyTotals || ((mainPP.ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
@@ -1139,11 +1140,11 @@ main (int argc, char *argv[])
 	// Output storage.
 	ROD_MAP_BY_KEY left;
 	struct _process_ads_info left_ai = {
-		& left, NULL, 1, lpp->pm.ColCount(), NULL, 0, lpp
+		& left,
+		(lpp->pmHeadFoot&HF_NOSUMMARY) ? NULL : & leftTotals,
+		1, lpp->pm.ColCount(), NULL, 0, lpp
 	};
 
-	// Although only one of both and right will ever display their totals,
-	// it's easier to compute them both and ignore one at print time.
 	ROD_MAP_BY_KEY both;
 	struct _process_ads_info both_ai = {
 		& both,
@@ -1234,7 +1235,7 @@ main (int argc, char *argv[])
 		doNormalOutput( right_ai, adType );
 	} else {
 		if( right_ai.pmap->size() > 0 ) {
-			if(! annexMode) { fprintf( stdout, "The following ads were found only in the right-hand ads:\n" ); }
+			if(! annexMode) { fprintf( stdout, "The following ads were found only in the query:\n" ); }
 			doMergeOutput( right_ai );
 			if( both_ai.pmap->size() > 0 ) {
 				fprintf( stdout, "\n" );
@@ -1242,7 +1243,7 @@ main (int argc, char *argv[])
 		}
 
 		if( both_ai.pmap->size() > 0 ) {
-			if(! annexMode) { fprintf( stdout, "The following ads were found in both the left and right -hand ads:\n" ); }
+			if(! annexMode) { fprintf( stdout, "The following ads were found in both the query and in '%s':\n", leftFileName ); }
 			doNormalOutput( both_ai, adType );
 			if( left_ai.pmap->size() > 0 ) {
 				fprintf( stdout, "\n" );
@@ -1250,7 +1251,7 @@ main (int argc, char *argv[])
 		}
 
 		if( left_ai.pmap->size() > 0 ) {
-			if(! annexMode) { fprintf( stdout, "The following ads were found only in the left-hand ads:\n" ); }
+			if(! annexMode) { fprintf( stdout, "The following ads were found only in '%s':\n", leftFileName ); }
 			doMergeOutput( left_ai );
 		}
 	}
@@ -1285,6 +1286,14 @@ void doMergeOutput( struct _process_ads_info & ai ) {
 			if (it->second.ad) ++output_index;
 		}
 		it->second.flags |= SROD_PRINTED; // for debugging, keep track of what we already printed.
+	}
+
+	TrackTotals * totals = ai.totals;
+	if (any_ads && !(pp.pmHeadFoot&HF_NOSUMMARY) && totals && totals->haveTotals()) {
+		fputc('\n', stdout);
+		bool auto_width = (pp.ppTotalStyle == PP_SUBMITTER_NORMAL);
+		int totals_key_width = (pp.wide_display || auto_width) ? -1 : MAX(14, pp.max_totals_subkey);
+		totals->displayTotals(stdout, totals_key_width);
 	}
 }
 
