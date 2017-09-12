@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.6 not yet released.
-%\item HTCondor version 8.6.6 released on Month Date, 2017.
+\item HTCondor version 8.6.6 released on September 12, 2017.
 
 \end{itemize}
 
@@ -41,42 +40,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug that caused a machine claimed by a parallel universe
-job to stick in the Claimed/Idle state forever.  This could only happen
-if the job was removed as it was in the process of claiming resources.
-\Ticket{6376}
-
-\item Fixed a bug where the negotiator would make matches where the daemons
-involved did not share an IP version, and thus could not talk to each other.
-\Ticket{6351}
-
-\item Fixed a bug that caused a machine to stick in the
-Preempting/Vacating state after a job was removed 
-when a JOB\_EXIT\_HOOK was defined.
-\Ticket{6383}
+\item Fixed a bug that might cause the \Condor{schedd} or other daemons to
+crash when logging on Linux to the syslog facility, and the \Condor{reconfig}
+command was run.
+\Ticket{6364}
 
 \item Fixed a bug that prevented condor daemons from writing out a
 core file for debugging in the very unlikely event that one of them
 crashed.
 \Ticket{6365}
 
-\item Fixed a bug that might cause the \Condor{schedd} or other daemons to
-crash when logging on Linux to the syslog facility, and the \Condor{reconfig}
-command was run.
-\Ticket{6364}
-
-\item Fixed a bug where setting \MacroNI{delegate\_job\_gsi\_credentials\_lifetime}
-to 0 in a submit description file was treated the same as not setting
-it at all.
-\Ticket{6375}
-
-\item Fixed a bug in how the cpu usage of slurm jobs is interpreted.
-\Ticket{6380}
+\item Fixed a bug where the negotiator would make matches where the daemons
+involved did not share an IP version, and thus could not talk to each other.
+\Ticket{6351}
 
 \item HTCondor now works properly with systemd's watchdog feature on
-all flavors of linux.
+all flavors of Linux.
 Previously, the \Condor{master} wouldn't send alive messages to systemd
-if systemd wasn't part of the linux distro's standard configuration.
+if systemd wasn't part of the Linux distribution's standard configuration.
 This would result in systemd killing the HTCondor daemons after a
 short period of time.
 \Ticket{6385}
@@ -85,8 +66,33 @@ short period of time.
 format in the python bindings.
 \Ticket{6382}
 
+\item Fixed a bug in how the CPU usage of Slurm jobs is interpreted.
+\Ticket{6380}
+
+\item Fixed a bug that caused a machine claimed by a parallel universe
+job to stick in the Claimed/Idle state forever.  This could only happen
+if the job was removed as it was in the process of claiming resources.
+\Ticket{6376}
+
+\item Fixed a bug that caused a machine to stick in the
+Preempting/Vacating state after a job was removed
+when a \MacroNI{JOB\_EXIT\_HOOK} was defined.
+\Ticket{6383}
+
+\item Added type enforcement rules for cgroups to HTCondor's SELinux
+profile.
+\Ticket{6168}
+
+\item Fixed a bug where setting \MacroNI{delegate\_job\_gsi\_credentials\_lifetime}
+to 0 in a submit description file was treated the same as not setting
+it at all.
+\Ticket{6375}
+
 \item Fixed handling of octal escape sequences in ClassAd strings.
 \Ticket{6384}
+
+\item Updated Boost external to version 1.64.
+\Ticket{6369}
 
 \end{itemize}
 
