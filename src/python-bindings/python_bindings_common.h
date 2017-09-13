@@ -56,13 +56,10 @@
  #undef HAVE_IO_H
 #endif // _MSC_VER
 
-// http://docs.python.org/3/c-api/apiabiversion.html#apiabiversion
 // the "next" method for iterators in python3 is "__next__"
 // https://docs.python.org/2/library/functions.html#next
 // https://docs.python.org/3/library/functions.html#next
 #if PY_MAJOR_VERSION >= 3
-   #define PyInt_Check(op)  PyNumber_Check(op)
-   #define PyString_Check(op)  PyBytes_Check(op)
    #define NEXT_FN "__next__"
 #else
    #define NEXT_FN "next"
