@@ -2633,6 +2633,8 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_KERBEROS;
 	} else if ( !strcasecmp( method, "CLAIMTOBE" ) ) {
 		return CAUTH_CLAIMTOBE;
+	} else if ( !strcasecmp( method, "MUNGE" ) ) {
+		return CAUTH_MUNGE;
 	} else if ( !strcasecmp( method, "ANONYMOUS" ) ) {
 		return CAUTH_ANONYMOUS;
 	}
