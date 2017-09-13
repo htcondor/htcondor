@@ -52,6 +52,10 @@ public:
 		qdate = 0;
 		*owner='\0';
 		auto_cluster_id = 0;
+		pre_job_prio1 = 0;
+		pre_job_prio2 = 0;
+		post_job_prio1 = 0;
+		post_job_prio2 = 0;
 	}
 };
 
