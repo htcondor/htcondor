@@ -76,8 +76,12 @@
 class AmazonRequest {
     public:
         AmazonRequest( int i, const char * c, int sv = 4 ) :
-            includeResponseHeader(false), requestID(i), requestCommand(c),
-            signatureVersion(sv), httpVerb( "POST" ) { }
+            responseCode(0), includeResponseHeader(false), 
+			requestID(i), requestCommand(c),
+            signatureVersion(sv), httpVerb( "POST" ) {
+				mutexReleased = lockGained = requestBegan = requestEnded =
+					mutexGained = sleepBegan = liveLine = sleepEnded = {0,0};
+			}
         virtual ~AmazonRequest();
 
         virtual bool SendRequest();
