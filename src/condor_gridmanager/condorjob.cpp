@@ -166,6 +166,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	calcRuntimeStats = false;
 
 	remoteJobId.cluster = 0;
+	remoteJobId.proc = 0;
 	gahpAd = NULL;
 	gmState = GM_INIT;
 	remoteState = JOB_STATE_UNKNOWN;
