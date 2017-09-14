@@ -575,6 +575,8 @@ getEventMask()
 			ULOG_GLOBUS_SUBMIT,			// For Pegasus
 			ULOG_JOB_RECONNECT_FAILED,
 			ULOG_GRID_SUBMIT,			// For Pegasus
+			ULOG_FACTORY_SUBMIT,
+			ULOG_FACTORY_REMOVE,
 			-1
 		};
 

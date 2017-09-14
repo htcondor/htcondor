@@ -738,7 +738,6 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 			
 	if( job ) {
-		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessTerminatedEvent] called, job cluster=%d, proc=%d, is_factory=%s\n", job->GetID()._cluster, job->GetID()._proc, job->is_factory ? "True" : "False");
 		
 		DecrementProcCount( job );
 
@@ -1266,10 +1265,11 @@ void
 Dag::ProcessFactorySubmitEvent(Job *job, bool recovery) {
 
 	if ( !job ) {
+		debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessFactorySubmitEvent] job not set, exiting\n");
 		return;
 	}
 	job->is_factory = true;
-	debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessFactorySubmitEvent] setting factory for job ID=%d, is_factory=%s\n", job->GetID()._cluster, job->is_factory ? "True" : "False" );
+	debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessFactorySubmitEvent] setting factory for job ID=%d, proc=%d, is_factory=%s\n", job->GetID()._cluster, job->GetID()._proc, job->is_factory ? "True" : "False" );
 }
 
 //---------------------------------------------------------------------------
@@ -1417,7 +1417,7 @@ Job * Dag::FindNodeByEventID ( const CondorID condorID ) const {
 	if ( condorID._cluster == -1 ) {
 		return NULL;
 	}
-
+	
 	Job *	node = NULL;
 	bool isNoop = JobIsNoop( condorID );
 	int id = GetIndexID( condorID );
@@ -1452,7 +1452,7 @@ Job * Dag::FindNodeByEventID ( const CondorID condorID ) const {
 		}
 		ASSERT( isNoop == node->GetNoop() );
 	}
-
+	
 	return node;
 }
 
@@ -3561,7 +3561,7 @@ bool Dag::Add( Job& job )
 {
 	int insertResult = _nodeNameHash.insert( job.GetJobName(), &job );
 	ASSERT( insertResult == 0 );
-
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::Add] inserting job name=%s, ID=%d\n", job.GetJobName(), job.GetJobID());
 	insertResult = _nodeIDHash.insert( job.GetJobID(), &job );
 	ASSERT( insertResult == 0 );
 
@@ -3752,13 +3752,14 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 	    return node;
 	  }
 	}
-
+	
 		// if the job ID wasn't familiar and we didn't find a node
 		// above, there are at least four possibilites:
 		//	
 		// 1) it's the submit event for a node we just submitted, and
 		// we don't yet know the job ID; in this case, we look up the
-		// node name in the event body.
+		// node name in the event body. Alternately if we are in recovery
+		// mode we don't yet know the job ID.
 		//
 		// 2) it's the POST script terminated event for a job whose
 		// submission attempts all failed, leaving it with no valid
@@ -3769,6 +3770,9 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		// DAGMan, and can/should be ignored (we return NULL).
 		//
 		// 4) it's a pre skip event, which is handled similarly to
+		// a submit event.
+		//
+		// 5) it's a factory submit event, which is handled similarly to
 		// a submit event.
 	if( event->eventNumber == ULOG_SUBMIT ) {
 		const SubmitEvent* submit_event = (const SubmitEvent*)event;
@@ -3849,6 +3853,46 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 			debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
 						"in skip event notes: <%s>\n",
 						skip_event->skipEventLogNotes );
+		}
+		return node;
+	}
+
+	if( event->eventNumber == ULOG_FACTORY_SUBMIT ) {
+		const FactorySubmitEvent* factory_submit_event = (const FactorySubmitEvent*)event;
+		if ( factory_submit_event->submitEventLogNotes ) {
+			char nodeName[1024] = "";
+			if ( sscanf( factory_submit_event->submitEventLogNotes,
+						 "DAG Node: %1023s", nodeName ) == 1 ) {
+				node = FindNodeByName( nodeName );
+				if( node ) {
+					submitEventIsSane = SanityCheckSubmitEvent( condorID,
+								node );
+					node->SetCondorID( condorID );
+
+						// Insert this node into the CondorID->node hash
+						// table if we don't already have it (e.g., recovery
+						// mode).  (In "normal" mode we should have already
+						// inserted it when we did the condor_submit.)
+					Job *tmpNode = NULL;
+					bool isNoop = JobIsNoop( condorID );
+					ASSERT( isNoop == node->GetNoop() );
+					int id = GetIndexID( condorID );
+					HashTable<int, Job *> *ht =
+								GetEventIDHash( isNoop );
+					if ( ht->lookup(id, tmpNode) != 0 ) {
+							// Node not found.
+						int insertResult = ht->insert( id, node );
+						ASSERT( insertResult == 0 );
+					} else {
+							// Node was found.
+						ASSERT( tmpNode == node );
+					}
+				}
+			} else {
+				debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
+							"in factory submit event notes: <%s>\n",
+							factory_submit_event->submitEventLogNotes );
+			}
 		}
 		return node;
 	}

@@ -2028,6 +2028,11 @@ class FactorySubmitEvent : public ULogEvent
 
     void setSubmitHost(char const *addr);
 
+    // dagman-supplied text to include in the log event
+    char* submitEventLogNotes;
+    // user-supplied text to include in the log event
+    char* submitEventUserNotes;
+
  private:
     /// For Condor v8, a host string in the form: "<128.105.165.12:32779>".
     char *submitHost;

@@ -5970,12 +5970,23 @@ void PreSkipEvent::setSkipNote(const char* s)
 // ----- the FactorySubmitEvent class
 FactorySubmitEvent::FactorySubmitEvent(void)
 {
-	eventNumber = ULOG_FACTORY_SUBMIT;
+	submitEventLogNotes = NULL;
+	submitEventUserNotes = NULL;
 	submitHost = NULL;
+	eventNumber = ULOG_FACTORY_SUBMIT;
 }
 
 FactorySubmitEvent::~FactorySubmitEvent(void)
 {
+	if( submitHost ) {
+		delete[] submitHost;
+	}
+	if( submitEventLogNotes ) {
+		delete[] submitEventLogNotes;
+	}
+	if( submitEventUserNotes ) {
+		delete[] submitEventUserNotes;
+	}
 }
 
 void
@@ -5996,10 +6007,22 @@ FactorySubmitEvent::setSubmitHost(char const *addr)
 bool
 FactorySubmitEvent::formatBody( std::string &out )
 {
-	int retval = formatstr_cat (out, "Factory submitted from host %s\n", submitHost);
+	int retval = formatstr_cat (out, "Factory submitted from host: %s\n", submitHost);
 	if (retval < 0)
 	{
 		return false;
+	}
+	if( submitEventLogNotes ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes );
+		if( retval < 0 ) {
+			return false;
+		}
+	}
+	if( submitEventUserNotes ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes );
+		if( retval < 0 ) {
+			return false;
+		}
 	}
 	return true;
 }
@@ -6007,7 +6030,67 @@ FactorySubmitEvent::formatBody( std::string &out )
 int
 FactorySubmitEvent::readEvent (FILE *file)
 {
+	char s[8192];
+	s[0] = '\0';
+	delete[] submitEventLogNotes;
+	submitEventLogNotes = NULL;
+	MyString line;
+	if( !line.readLine(file) ) {
+		return 0;
+	}
+	setSubmitHost(line.Value()); // allocate memory
+	if( sscanf( line.Value(), "Factory submitted from host: %s\n", submitHost ) != 1 ) {
+		return 0;
+	}
+
+	// check if event ended without specifying submit host.
+	// in this case, the submit host would be the event delimiter
+	if ( strncmp(submitHost,"...",3)==0 ) {
+		submitHost[0] = '\0';
+		// Backup to leave event delimiter unread go past \n too
+		fseek( file, -4, SEEK_CUR );
+		return 1;
+	}
 	
+	// see if the next line contains an optional event notes string,
+	// and, if not, rewind, because that means we slurped in the next
+	// event delimiter looking for it...
+	
+	fpos_t filep;
+	fgetpos( file, &filep );
+	
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+	
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+	
+		// some users of this library (dagman) depend on whitespace
+		// being stripped from the beginning of the log notes field
+	char const *strip_s = s;
+	while( *strip_s && isspace(*strip_s) ) {
+		strip_s++;
+	}
+	
+	submitEventLogNotes = strnewp( strip_s );
+	
+	// see if the next line contains an optional user event notes
+	// string, and, if not, rewind, because that means we slurped in
+	// the next event delimiter looking for it...
+	
+	fgetpos( file, &filep );
+	
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+	
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+	submitEventUserNotes = strnewp( s );
+
 	return 1;
 }
 

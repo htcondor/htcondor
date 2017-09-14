@@ -4550,6 +4550,8 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 bool
 Scheduler::WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync )
 {
+	std::string submitUserNotes, submitEventNotes;
+
 	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
 	if( ! ULog ) {
 			// User didn't want log
@@ -4558,6 +4560,12 @@ Scheduler::WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	FactorySubmitEvent event;
 
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
+	if ( cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
+		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
+	}
+	if ( cluster->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
+		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
+	}
 
 	ULog->setEnableFsync(do_fsync);
 	bool status = ULog->writeEvent(&event, cluster);
