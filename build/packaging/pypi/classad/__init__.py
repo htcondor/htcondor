@@ -1,3 +1,3 @@
 
-from _classad import *
+from ._classad import *
 

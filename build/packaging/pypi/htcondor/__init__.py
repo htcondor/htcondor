@@ -1,3 +1,3 @@
 
-from _htcondor import *
+from ._htcondor import *
 
