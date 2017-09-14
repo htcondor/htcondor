@@ -68,10 +68,11 @@ MyString::~MyString()
     if (Data) {
 		delete[] Data;
 	}
+#if 0
 	delete [] tokenBuf;
+#endif
 	init(); // for safety -- errors if you try to re-use this object
 }
-
 
 MyString::operator std::string()
 {
@@ -92,6 +93,7 @@ MyString::operator[](int pos) const
     return Data[pos];
 }
 
+#if 0
 const char&
 MyString::operator[](int pos)
 {
@@ -101,6 +103,7 @@ MyString::operator[](int pos)
 	}	
 	return Data[pos];
 }
+#endif
 
 void
 MyString::setChar(int pos, char value)
@@ -142,6 +145,8 @@ MyString::operator=( const char *s )
 	assign_str(s, (int)s_len);
     return *this;
 }
+
+
 
 void
 MyString::assign_str( const char *s, int s_len ) 
@@ -940,9 +945,11 @@ MyString::init()
     Data=NULL;
     Len=0;
     capacity = 0;
+#if 0
 	tokenBuf = NULL;
 	nextToken = NULL;
 	dummy = '\0';
+#endif
 }
 
 /*--------------------------------------------------------------------
@@ -1145,8 +1152,83 @@ bool MyString::readLine( MyStringSource & src, bool append /*= false*/) {
  *
  *--------------------------------------------------------------------*/
 
+MyStringTokener::MyStringTokener() : tokenBuf(NULL), nextToken(NULL) {}
+/*
+MyStringTokener::MyStringTokener(const char *str) : tokenBuf(NULL), nextToken(NULL)
+{
+	if (str) Tokenize(str);
+}
+*/
+MyStringTokener::~MyStringTokener()
+{
+	if (tokenBuf) {
+		free(tokenBuf);
+		tokenBuf = NULL;
+	}
+	nextToken = NULL;
+}
+
+void MyStringTokener::Tokenize(const char *str)
+{
+	if (tokenBuf) { 
+		free( tokenBuf );
+		tokenBuf = NULL;
+	}
+	nextToken = NULL;
+	if ( str ) {
+		tokenBuf = strdup( str );
+		if ( strlen( tokenBuf ) > 0 ) {
+			nextToken = tokenBuf;
+		}
+	}
+}
+
+const char *MyStringTokener::GetNextToken(const char *delim, bool skipBlankTokens)
+{
+	const char *result = nextToken;
+
+	if ( !delim || strlen(delim) == 0 ) {
+		result = NULL;
+	}
+
+	if ( result != NULL ) {
+		while ( *nextToken != '\0' && index(delim, *nextToken) == NULL ) {
+			nextToken++;
+		}
+
+		if ( *nextToken != '\0' ) {
+			*nextToken = '\0';
+			nextToken++;
+		} else {
+			nextToken = NULL;
+		}
+	}
+
+	if ( skipBlankTokens && result && strlen(result) == 0 ) {
+		result = GetNextToken(delim, skipBlankTokens);
+	}
+
+	return result;
+}
+
+
+MyStringWithTokener::MyStringWithTokener(const MyString &S)
+{
+	init();
+	assign_str(S.Value(), S.Len);
+}
+
+MyStringWithTokener::MyStringWithTokener(const char *s)
+{
+	init();
+	size_t s_len = s ? strlen(s) : 0;
+	assign_str(s, (int)s_len);
+}
+
+#if 1
+#else
 void
-MyString::Tokenize()
+MyStringWithTokener::Tokenize()
 {
 	delete [] tokenBuf;
 	tokenBuf = new char[strlen(Value()) + 1];
@@ -1159,7 +1241,7 @@ MyString::Tokenize()
 }
 
 const char *
-MyString::GetNextToken(const char *delim, bool skipBlankTokens)
+MyStringTokener::GetNextToken(const char *delim, bool skipBlankTokens)
 {
 	const char *result = nextToken;
 
@@ -1184,6 +1266,7 @@ MyString::GetNextToken(const char *delim, bool skipBlankTokens)
 
 	return result;
 }
+#endif
 
 
 /*--------------------------------------------------------------------

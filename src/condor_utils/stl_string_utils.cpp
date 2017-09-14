@@ -316,6 +316,13 @@ int blankline( const char *str )
 }
 
 
+#if 1
+static MyStringTokener tokenbuf;
+void Tokenize(const char *str) { tokenbuf.Tokenize(str); }
+void Tokenize(const MyString &str) { Tokenize(str.Value()); }
+void Tokenize(const std::string &str) { Tokenize(str.c_str()); }
+const char *GetNextToken(const char *delim, bool skipBlankTokens) { return tokenbuf.GetNextToken(delim, skipBlankTokens); }
+#else
 static char *tokenBuf = NULL;
 static char *nextToken = NULL;
 
@@ -369,6 +376,7 @@ const char *GetNextToken(const char *delim, bool skipBlankTokens)
 
 	return result;
 }
+#endif
 
 void join(const std::vector< std::string > &v, char const *delim, std::string &result)
 {

@@ -29,7 +29,7 @@ int main( int argc, char * argv[] ) {
 	int numSpaces = 0;
 	for( int i = 0; i < cmdline.length() && numSpaces < 2; ++i ) {
 		if( cmdline[i] == ' ' ) {
-			sinful = &cmdline[i];
+			sinful = cmdline.c_str()+i;
 			numSpaces += 1;
 		}
 	}

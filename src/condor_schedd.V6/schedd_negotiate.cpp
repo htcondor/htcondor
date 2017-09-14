@@ -454,10 +454,11 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		// this information out of m_reject_reason.
 		int pos = m_reject_reason.FindChar('|');
 		if ( pos >= 0 ) {
-			m_reject_reason.Tokenize();
-			/*const char *reason =*/ m_reject_reason.GetNextToken("|",false);
-			const char *ac = m_reject_reason.GetNextToken("|",false);
-			const char *jobid = m_reject_reason.GetNextToken("|",false);
+			MyStringTokener tok;
+			tok.Tokenize(m_reject_reason.Value());
+			/*const char *reason =*/ tok.GetNextToken("|",false);
+			const char *ac = tok.GetNextToken("|",false);
+			const char *jobid = tok.GetNextToken("|",false);
 			if (ac && jobid) {
 				int rr_cluster, rr_proc;
 				m_current_auto_cluster_id = atoi(ac);
