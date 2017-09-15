@@ -72,6 +72,10 @@ BaseResource::BaseResource( const char *resource_name )
 
 	m_batchStatusActive = false;
 	m_batchPollTid = TIMER_UNSET;
+
+	m_paramJobPollRate = -1;
+	m_paramJobPollInterval = -1;
+	m_jobPollInterval = 0;
 }
 
 BaseResource::~BaseResource()

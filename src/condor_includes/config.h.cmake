@@ -294,6 +294,9 @@
 /* Do we have the krb5 external (USED)*/
 #cmakedefine HAVE_EXT_KRB5 1
 
+/* Do we have the munge external (USED)*/
+#cmakedefine HAVE_EXT_MUNGE 1
+
 /* Do we have the openssl external (USED)*/
 #cmakedefine HAVE_EXT_OPENSSL 1
 

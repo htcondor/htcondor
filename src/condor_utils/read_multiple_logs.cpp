@@ -502,20 +502,21 @@ MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-MultiLogFiles::getParamFromSubmitLine(MyString &submitLine,
+MultiLogFiles::getParamFromSubmitLine(MyString &submitLineIn,
 		const char *paramName)
 {
 	MyString	paramValue("");
 
 	const char *DELIM = "=";
 
-	submitLine.Tokenize();
-	const char *	rawToken = submitLine.GetNextToken(DELIM, true);
+	MyStringTokener submittok;
+	submittok.Tokenize(submitLineIn.Value());
+	const char *	rawToken = submittok.GetNextToken(DELIM, true);
 	if ( rawToken ) {
 		MyString	token(rawToken);
 		token.trim();
 		if ( !strcasecmp(token.Value(), paramName) ) {
-			rawToken = submitLine.GetNextToken(DELIM, true);
+			rawToken = submittok.GetNextToken(DELIM, true);
 			if ( rawToken ) {
 				paramValue = rawToken;
 				paramValue.trim();
@@ -548,7 +549,7 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 		while ( logicalLine[logicalLine.Length()-1] == continuation ) {
 
 				// Remove the continuation character.
-			logicalLine.setChar(logicalLine.Length()-1, '\0');
+			logicalLine.truncate(logicalLine.Length()-1);
 
 				// Append the next physical line.
 			physicalLine = listIn.next();

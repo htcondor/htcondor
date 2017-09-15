@@ -523,7 +523,7 @@ is_valid_sinful( const char *sinful )
 		MyString ipaddr = acc;
 		int colon_pos = ipaddr.FindChar(':');
 		if(colon_pos == -1) { return false; }
-		ipaddr.setChar(colon_pos, 0);
+		ipaddr.truncate(colon_pos);
 		if( ! is_ipv4_addr_implementation(ipaddr.Value(),NULL,NULL,false) ) {
 			return FALSE;
 		}

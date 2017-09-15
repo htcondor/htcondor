@@ -251,7 +251,7 @@ create_name_for_VM(ClassAd *ad, MyString& vmname)
 	// replace '@' with '_'
 	int pos = -1;
 	while( (pos = stringattr.find("@") ) >= 0 ) {
-		stringattr.setChar(pos, '_');
+		stringattr.setAt(pos, '_');
 	}
 
 	vmname = stringattr;

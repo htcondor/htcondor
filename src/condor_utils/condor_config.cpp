@@ -2670,7 +2670,7 @@ bool param_find_item (
 		if (pdf) {
 			name_found = name;
 			name_found.upper_case();
-			name_found.setChar((int)(pdot - name)+1, 0); // MyString trucates when you setChar(,0)
+			name_found.truncate((int)(pdot - name)+1);
 			name_found += pdf->key;
 			it.is_def = true;
 			it.pdef = pdf;

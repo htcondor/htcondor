@@ -471,6 +471,7 @@ DedicatedScheduler::DedicatedScheduler()
 	shadow_obj = NULL;
 
 	startdQueryTime = 0;
+	split_match_count = 0;
 }
 
 

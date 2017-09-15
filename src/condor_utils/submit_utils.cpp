@@ -3761,7 +3761,7 @@ int SubmitHash::SetGridParams()
 				resource.replaceString( "/cream-", "/ce-cream/services/CREAM2 ", pos );
 				pos += 26;
 				if ( ( pos2 = resource.find( "-", pos ) ) >= 0 ) {
-					resource.setChar( pos2, ' ' );
+					resource.setAt( pos2, ' ' );
 				}
 
 				buffer.formatstr( "%s = \"%s\"", ATTR_GRID_RESOURCE,
@@ -4951,7 +4951,7 @@ int SubmitHash::SetUniverse()
 			// truncate at the first space
 			int ix = JobGridType.FindChar(' ', 0);
 			if (ix >= 0) {
-				JobGridType.setChar(ix, 0);
+				JobGridType.truncate(ix);
 			}
 		}
 

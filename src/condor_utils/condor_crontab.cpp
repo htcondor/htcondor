@@ -740,10 +740,11 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// out into a range that can be put in array of integers
 		// First start by spliting the string by commas
 		//
-	param->Tokenize();
+	MyStringTokener tok;
+	tok.Tokenize(param->Value());
 	const char *_token;
-	while ( ( _token = param->GetNextToken( CRONTAB_DELIMITER, true ) ) != NULL ) {
-		MyString token( _token );
+	while ( ( _token = tok.GetNextToken( CRONTAB_DELIMITER, true ) ) != NULL ) {
+		MyStringWithTokener token( _token );
 		int cur_min = min, cur_max = max, cur_step = 1;
 		
 			// -------------------------------------------------

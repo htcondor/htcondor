@@ -385,9 +385,10 @@ FetchClient::hookExited(int exit_status) {
 	if (m_std_out.Length()) {
 		ASSERT(m_job_ad == NULL);
 		m_job_ad = new ClassAd();
-		m_std_out.Tokenize();
+		MyStringTokener tok;
+		tok.Tokenize(m_std_out.Value());
 		const char* hook_line = NULL;
-		while ((hook_line = m_std_out.GetNextToken("\n", true))) {
+		while ((hook_line = tok.GetNextToken("\n", true))) {
 			if (!m_job_ad->Insert(hook_line)) {
 				dprintf(D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
 						"ignoring invalid hook output\n", hook_line);

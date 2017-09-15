@@ -602,7 +602,7 @@ Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_del
 
 	if(result->Length() > old_len) {
 		// Clear any partial output we may have generated above.
-		result->setChar(old_len,'\0');
+		result->truncate(old_len);
 	}
 
 	return getDelimitedStringV2Raw(result,error_msg,true);
@@ -626,7 +626,7 @@ Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) con
 		return true;
 	}
 	else {
-		result->setChar(0, '\0');
+		result->truncate(0);
 		return getDelimitedStringV2Quoted(result,error_msg);
 	}
 }

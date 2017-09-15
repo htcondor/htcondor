@@ -881,7 +881,7 @@ static bool square_brackets_operator_last_char() {
 static bool set_char_empty() {
 	emit_test("Does an empty MyString stay the same after calling setChar()");
 	MyString empty;
-	empty.setChar(0, 'a');
+	empty.setAt(0, 'a');
 	emit_input_header();
 	emit_param("pos", "%d", 0);
 	emit_param("value", "%c", 'a');
@@ -902,7 +902,7 @@ static bool set_char_truncate() {
 	emit_test("Does calling setChar() with '\\0' truncate the original "
 		"MyString");
 	MyString s("Eddy Merckx");
-	s.setChar(5, '\0');
+	s.truncate(5);
 	emit_input_header();
 	emit_param("MyString", "%s", s.Value());
 	emit_param("pos", "%d", 5);
@@ -922,7 +922,7 @@ static bool set_char_truncate() {
 static bool set_char_first() {
 	emit_test("setChar() on the first char of a MyString");
 	MyString s("foo");
-	s.setChar(0, 't');
+	s.setAt(0, 't');
 	emit_input_header();
 	emit_param("MyString", "%s", s.Value());
 	emit_param("pos", "%d", 0);
@@ -942,7 +942,7 @@ static bool set_char_first() {
 static bool set_char_last() {
 	emit_test("setChar() on the last char of a MyString");
 	MyString s("foo");
-	s.setChar(2, 'r');
+	s.setAt(2, 'r');
 	emit_input_header();
 	emit_param("MyString", "%s", s.Value());
 	emit_param("pos", "%d", 2);
@@ -3834,7 +3834,7 @@ static bool read_line_multiple() {
 static bool tokenize_null() {
 	emit_test("Does calling GetNextToken() before calling Tokenize() return "
 		"NULL?");
-	MyString a("foo, bar");
+	MyStringWithTokener a("foo, bar");
 	const char* tok = a.GetNextToken(",", false);
 	emit_input_header();
 	emit_param("delim", "%s", ",");
@@ -3850,8 +3850,8 @@ static bool tokenize_null() {
 //in test_mystring.cpp 471
 static bool tokenize_skip() {
 	emit_test("Test GetNextToken() when skipping blank tokens.");
-	MyString a("     Ottavio Bottechia_");
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("     Ottavio Bottechia_");
 	const char* tok = a.GetNextToken(" ", true);
 	emit_input_header();
 	emit_param("delim", "%s", " ");
@@ -3869,8 +3869,8 @@ static bool tokenize_skip() {
 //in test_mystring.cpp 483
 static bool tokenize_multiple_calls() {
 	emit_test("Test multiple calls to GetNextToken().");
-	MyString a("To  be or not to be; that is the question");
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("To  be or not to be; that is the question");
 	const char* expectedTokens[] = {"To", "", "be", "or", "not", "to", "be", ""
 		, "that", "is", "the", "question"};
 	const char* resultToken0 = a.GetNextToken(" ;", false);
@@ -3934,8 +3934,8 @@ static bool tokenize_multiple_calls() {
 //in test_mystring.cpp 491
 static bool tokenize_end() {
 	emit_test("Test GetNextToken() after getting to the end.");
-	MyString a("foo;");
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("foo;");
 	const char* tok = a.GetNextToken(";", false);
 	tok = a.GetNextToken(";", false);
 	tok = a.GetNextToken(";", false);
@@ -3953,8 +3953,8 @@ static bool tokenize_end() {
 //in test_mystring.cpp 519
 static bool tokenize_empty() {
 	emit_test("Test GetNextToken() on an empty MyString.");
-	MyString a;
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("");
 	const char* tok = a.GetNextToken(" ", false);
 	emit_input_header();
 	emit_param("delim", "%s", " ");
@@ -3970,8 +3970,8 @@ static bool tokenize_empty() {
 //in test_mystring.cpp 529
 static bool tokenize_empty_delimiter() {
 	emit_test("Test GetNextToken() on an empty delimiter string.");
-	MyString a("foobar");
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("foobar");
 	const char* tok = a.GetNextToken("", false);
 	emit_input_header();
 	emit_param("delim", "%s", " ");
