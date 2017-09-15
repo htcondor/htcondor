@@ -59,7 +59,7 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=
       char ch = str[ii];
       if (ch == '_' || (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'))
          continue;
-      str.setChar(ii,chReplace);
+      str.setAt(ii,chReplace);
       }
 
    // if compact, convert runs of chReplace with a single instance,

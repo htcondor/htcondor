@@ -881,7 +881,7 @@ static bool square_brackets_operator_last_char() {
 static bool set_char_empty() {
 	emit_test("Does an empty MyString stay the same after calling setChar()");
 	MyString empty;
-	empty.setChar(0, 'a');
+	empty.setAt(0, 'a');
 	emit_input_header();
 	emit_param("pos", "%d", 0);
 	emit_param("value", "%c", 'a');
@@ -902,7 +902,7 @@ static bool set_char_truncate() {
 	emit_test("Does calling setChar() with '\\0' truncate the original "
 		"MyString");
 	MyString s("Eddy Merckx");
-	s.setChar(5, '\0');
+	s.truncate(5);
 	emit_input_header();
 	emit_param("MyString", "%s", s.Value());
 	emit_param("pos", "%d", 5);
@@ -922,7 +922,7 @@ static bool set_char_truncate() {
 static bool set_char_first() {
 	emit_test("setChar() on the first char of a MyString");
 	MyString s("foo");
-	s.setChar(0, 't');
+	s.setAt(0, 't');
 	emit_input_header();
 	emit_param("MyString", "%s", s.Value());
 	emit_param("pos", "%d", 0);
@@ -942,7 +942,7 @@ static bool set_char_first() {
 static bool set_char_last() {
 	emit_test("setChar() on the last char of a MyString");
 	MyString s("foo");
-	s.setChar(2, 'r');
+	s.setAt(2, 'r');
 	emit_input_header();
 	emit_param("MyString", "%s", s.Value());
 	emit_param("pos", "%d", 2);

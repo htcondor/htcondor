@@ -42,7 +42,7 @@ void append_arg(char const *arg,MyString &result) {
 			if(result.Length() && result[result.Length()-1] == '\'') {
 				//combine preceeding quoted section with this one,
 				//so we do not introduce a repeated quote.
-				result.setChar(result.Length()-1,'\0');
+				result.truncate(result.Length()-1);
 			}
 			else {
 				result += '\'';
@@ -757,7 +757,7 @@ ArgList::GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const
 
 	if(result->Length() > old_len) {
 		// Clear any partial output we may have generated above.
-		result->setChar(old_len,'\0');
+		result->truncate(old_len);
 	}
 
 	(*result) += RAW_V2_ARGS_MARKER;

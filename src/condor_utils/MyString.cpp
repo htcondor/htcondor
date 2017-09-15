@@ -106,13 +106,24 @@ MyString::operator[](int pos)
 #endif
 
 void
-MyString::setChar(int pos, char value)
+MyString::setAt(int pos, char value)
 {
 	if ( pos >= 0 && pos < Len ) {
 		Data[pos] = value;
 		if ( value == '\0' ) {
 			Len = pos;
 		}
+	} else {
+		// No op.
+	}
+}
+
+void
+MyString::truncate(int pos)
+{
+	if ( pos >= 0 && pos < Len ) {
+		Data[pos] = '\0';
+		Len = pos;
 	} else {
 		// No op.
 	}
@@ -876,7 +887,7 @@ MyString::compressSpaces( void )
 		if ( isspace ( Data[i] ) ) {
 			i++;
 		}
-		setChar ( j, Data[i] );
+		setAt ( j, Data[i] );
 	}
 }
 

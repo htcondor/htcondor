@@ -4553,7 +4553,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
 			setStartdAddr( line.Value()+(i+1) );
-			line.setChar( i, '\0' );
+			line.truncate( i );
 			setStartdName( line.Value() );
 		} else {
 			return 0;
@@ -4565,7 +4565,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
 			setStartdAddr( line.Value()+(i+1) );
-			line.setChar( i, '\0' );
+			line.truncate( i );
 			setStartdName( line.Value() );
 		} else {
 			return 0;
@@ -5016,7 +5016,7 @@ JobReconnectFailedEvent::readEvent( FILE *file )
 			// now everything until the first ',' will be the name
 		int i = line.FindChar( ',' );
 		if( i > 0 ) {
-			line.setChar( i, '\0' );
+			line.truncate( i );
 			setStartdName( line.Value() );
 		} else {
 			return 0;

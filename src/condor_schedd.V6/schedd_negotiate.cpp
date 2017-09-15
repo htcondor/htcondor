@@ -469,7 +469,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 				m_current_job_id.cluster = rr_cluster;
 				m_current_job_id.proc = rr_proc;
 			}
-			m_reject_reason.setChar(pos,'\0');	// will truncate string at pos
+			m_reject_reason.truncate(pos);	// will truncate string at pos
 		}
 		scheduler_handleJobRejected( m_current_job_id, m_reject_reason.c_str() );
 		m_jobs_rejected++;

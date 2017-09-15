@@ -359,7 +359,7 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 	}
 
 	if (overall_max_width && retval.Length() > overall_max_width)
-		retval.setChar(overall_max_width, 0);
+		retval.truncate(overall_max_width);
 
 	if (row_suffix)
 		retval += row_suffix;

@@ -592,7 +592,7 @@ MyString convert_ipaddr_to_hostname(const condor_sockaddr& addr)
 	ret = addr.to_ip_string();
 	for (int i = 0; i < ret.Length(); ++i) {
 		if (ret[i] == '.' || ret[i] == ':')
-			ret.setChar(i, '-');
+			ret.setAt(i, '-');
 	}
 	ret += ".";
 	ret += default_domain;
@@ -657,7 +657,7 @@ condor_sockaddr convert_hostname_to_ipaddr(const MyString& fullname)
 		// converts hostname to IP address string
 	for (int i = 0; i < hostname.Length(); ++i) {
 		if (hostname[i] == '-')
-			hostname.setChar(i, target_char);
+			hostname.setAt(i, target_char);
 	}
 
 	condor_sockaddr ret;

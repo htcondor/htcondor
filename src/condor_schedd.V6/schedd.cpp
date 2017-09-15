@@ -12745,7 +12745,7 @@ Scheduler::Init()
 						// can't start atributes with a digit, start with _ instead
 						other.formatstr("_%s", groups[2].Value());
 					} else {
-						other.setChar(0, toupper(other[0])); // capitalize it.
+						other.setAt(0, toupper(other[0])); // capitalize it.
 					}
 
 					// for 'by' type stats, we also allow an expiration.

@@ -457,7 +457,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
         }
 
 		if ( strncmp( inputLine.Value(), "ConcurrencyLimit.", 17 ) == 0 ) {
-			inputLine.setChar( 16, '_' );
+			inputLine.setAt( 16, '_' );
 		}
 		buffer += string(inputLine.Value()) + ";";
 	}

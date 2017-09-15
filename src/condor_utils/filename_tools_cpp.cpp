@@ -31,7 +31,7 @@ int filename_split( const char *path, MyString &dir, MyString &file )
 	last_slash = strrchr(path,DIR_DELIM_CHAR);
 	if(last_slash) {
 		dir = path;
-		dir.setChar((last_slash-path),'\0');
+		dir.truncate(last_slash - path);
 		last_slash++;
 		file = last_slash;
 		return 1;

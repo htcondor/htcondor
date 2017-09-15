@@ -3545,7 +3545,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			owner_buf = owner+1;
 			if( owner_buf.Length() && owner_buf[owner_buf.Length()-1] == '"' )
 			{
-				owner_buf.setChar(owner_buf.Length()-1,'\0');
+				owner_buf.truncate(owner_buf.Length()-1);
 				owner_is_quoted = true;
 			}
 			owner = owner_buf.Value();
@@ -5342,7 +5342,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 					MyString expr_to_add;
 					expr_to_add.formatstr("string(%s", name + 1);
-					expr_to_add.setChar(expr_to_add.Length()-1, ')');
+					expr_to_add.setAt(expr_to_add.Length()-1, ')');
 
 						// Any backwacked double quotes or backwacks
 						// within the []'s should be unbackwacked.
@@ -5360,11 +5360,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 							read_pos++; // skip over backwack
 						}
 						if( read_pos != write_pos ) {
-							expr_to_add.setChar(write_pos,expr_to_add[read_pos]);
+							expr_to_add.setAt(write_pos,expr_to_add[read_pos]);
 						}
 					}
 					if( read_pos != write_pos ) { // terminate the string
-						expr_to_add.setChar(write_pos,'\0');
+						expr_to_add.truncate(write_pos);
 					}
 
 					ClassAd tmpJobAd(*ad);
@@ -6967,7 +6967,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 	at_sign_pos = owner.FindChar('@');
 	if ( at_sign_pos >= 0 ) {
-		owner.setChar(at_sign_pos,'\0');
+		owner.truncate(at_sign_pos);
 	}
 
 	bool rebuilt_prio_rec_array = BuildPrioRecArray();

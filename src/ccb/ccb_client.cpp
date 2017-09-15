@@ -353,7 +353,7 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, MyString &ccb_address,
 		return false;
 	}
 	ccb_address = ccb_contact;
-	ccb_address.setChar(ptr-ccb_contact,'\0');
+	ccb_address.truncate(ptr-ccb_contact);
 	ccbid = ptr+1;
 	return true;
 }
