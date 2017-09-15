@@ -93,7 +93,8 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       Identifies which Statistics attributes to include in the ClassAd.
       \Arg{WhichStatistics} is specified using the same syntax as defined 
       for \MacroNI{STATISTICS\_TO\_PUBLISH}.  A definition is in the
-      HTCondor Administrator's manual section on configuration.}
+      HTCondor Administrator's manual section on configuration
+      (section~\ref{param:StatisticsToPublish}).}
     \OptItem{\Opt{-storage}}{(Query option) Display attributes of machines
       with network storage resources.}
     \OptItem{\Opt{-submitters}}{(Query option) Query ClassAds sent by 
@@ -237,6 +238,28 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
     \OptItem{\OptArg{-target}{filename}}{(Custom option) Where evaluation
       requires a target ClassAd to evaluate against, file \Arg{filename}
       contains the target ClassAd.  }
+    \OptItem{\OptArg{-merge}{filename}}{(Custom option) Ads will be read
+    from \Arg{filename}, which may be \Expr{-} to indicate standard in,
+    and compared to the ads selected by the query specified by the remainder
+    of the command line.  Ads will be considered the same if their sort
+    keys match; sort keys may be specified with \oOptArg{-sort}{<key>}.
+    This option will cause up to three tables to print, in the following
+    order, depending on where a given ad appeared: first,
+    the ads which appeared in the query but not in \Arg{filename}; second,
+    the ads which appeared in both the query and in \Arg{filename}; third,
+    the ads which appeared in \Arg{filename} but not in the query.
+
+    By default, banners will label each table.  If \Opt{-xml} is also
+    given, the same banners will separate three valid XML documents, one
+    for each table.  If \Opt{-json} is also given, a single JSON object
+    will be produced, with the usual JSON output for each table labeled
+    as an element in the object.
+
+    The \Opt{-annex} option changes this default so that the banners are
+    not printed and the tables are formatted differently.  In this case,
+    the ads in \Arg{filename} are expected to have different contents from
+    the ads in the query, so many others will behave strangely.
+    }
 \end{Options}
 
 \GenRem
@@ -261,7 +284,7 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
 	\item Note that the \texttt{ActivityTime} in the \texttt{Idle} state is
 	\emph{not} the amount of time that the machine has been idle.  See the
 	section on \Condor{startd} states in the \emph{Administrator's Manual}
-	for more information.
+	for more information (section~\ref{fig:machine-activities}).
 
 	\item When using \Condor{status} on a pool with SMP machines,
 	you can either provide the host name, in which case you will
