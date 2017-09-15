@@ -110,6 +110,8 @@ BoincResource::BoincResource( const char *resource_name,
 	m_submitGahp = NULL;
 	m_activeSubmitBatch = NULL;
 
+	m_activeLeaseTime = 0;
+
 //	hasLeases = true;
 //	m_hasSharedLeases = true;
 //	m_defaultLeaseDuration = 6 * 60 * 60;

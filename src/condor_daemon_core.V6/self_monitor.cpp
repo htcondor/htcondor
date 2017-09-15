@@ -655,8 +655,11 @@ dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int 
           this->probe->SetRecentMax(daemonCore->dc_stats.RecentWindowMax / daemonCore->dc_stats.RecentWindowQuantum);
        }
    }
-   if (this->probe)
+   if (this->probe) {
        this->begin = _condor_debug_get_time_double();
+	} else {
+	   this->begin = 0;
+	}
 }
 
 dc_stats_auto_runtime_probe::~dc_stats_auto_runtime_probe()
