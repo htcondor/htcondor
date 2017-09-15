@@ -193,20 +193,20 @@ MyString::reserve( const int sz )
 	if (sz < 0) {
 		return false;
 	}
+	if (sz <= capacity) {
+		return true;
+	}
     char *buf = new char[ sz+1 ];
     if (!buf) {
 		return false;
 	}
     buf[0] = '\0';
     if (Data) {
-	  // newlen is needed in case we are shortening the string.
-	  int newlen = MIN(sz, Len);
       // Only copy over existing data into the new buffer.
-      strncpy( buf, Data, newlen ); 
+      strncpy( buf, Data, Len );
 	  // Make sure it's NULL terminated. strncpy won't make sure of it.
-	  buf[newlen] = '\0'; 
+	  buf[Len] = '\0';
       delete [] Data;
-	  Len = newlen;
     }
     // Len will be the same, since we didn't add new text
     capacity = sz;
@@ -231,7 +231,9 @@ MyString::reserve_at_least(const int sz)
 	bool success;
 
 	twice_as_much = 2 * capacity;
-	if (twice_as_much > sz) {
+	if (sz <= capacity) {
+		success = true;
+	} else if (twice_as_much > sz) {
 		success = reserve(twice_as_much);
 		if (!success) { // allocate failed, get just enough?
 			success = reserve(sz);
