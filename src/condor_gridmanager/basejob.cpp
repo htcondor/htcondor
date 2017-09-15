@@ -95,7 +95,7 @@ BaseJob::BaseJob( ClassAd *classad )
 
 	jobAd = classad;
 
-	procID = {0,0};
+	procID.cluster = procID.proc = 0;
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	jobAd->LookupInteger( ATTR_PROC_ID, procID.proc );
 
