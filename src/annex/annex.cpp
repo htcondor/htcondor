@@ -28,6 +28,7 @@
 #include "annex-create.h"
 #include "annex-status.h"
 #include "annex-condor-status.h"
+#include "annex-condor-off.h"
 #include "user-config-dir.h"
 
 // Why don't c-style timer callbacks have context pointers?
@@ -763,6 +764,7 @@ annex_main( int argc, char ** argv ) {
 		ct_setup = 2,
 		ct_status = 5,
 		ct_default = 0,
+		ct_condor_off = 7,
 		ct_check_setup = 3,
 		ct_create_annex = 1,
 		ct_update_annex = 4,
@@ -772,6 +774,10 @@ annex_main( int argc, char ** argv ) {
 	for( int i = 1; i < argc; ++i ) {
 		if( strcmp( argv[i], "status" ) == 0 ) {
 			theCommand = ct_condor_status;
+			subCommandIndex = i;
+			break;
+		} else if( strcmp( argv[i], "off" ) == 0 ) {
+			theCommand = ct_condor_off;
 			subCommandIndex = i;
 			break;
 		} else if( is_dash_arg_prefix( argv[i], "aws-ec2-url", 11 ) ) {
@@ -1297,6 +1303,9 @@ annex_main( int argc, char ** argv ) {
 	}
 
 	switch( theCommand ) {
+		case ct_condor_off:
+			return condor_off( annexName, argc, argv, subCommandIndex );
+
 		case ct_condor_status:
 			return condor_status( annexName, serviceURL,
 				argc, argv, subCommandIndex );
