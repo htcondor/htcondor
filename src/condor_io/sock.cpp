@@ -133,6 +133,8 @@ Sock::Sock(const Sock & orig) : Stream(), _policy_ad(NULL) {
 	connect_state.host = NULL;
 	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
+	connect_state.retry_timeout_interval = 0;
+	connect_state.first_try_start_time = 0;
 	_who.clear();
 	// TODO Do we want a new unique ID here?
 	m_uniqueId = m_nextUniqueId++;
