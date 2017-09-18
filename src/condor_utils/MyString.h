@@ -160,14 +160,14 @@ class MyString
 	//@{ 
 	/** This is like calling malloc: it makes sure the capacity of the 
 	 *  string is sz bytes, and it copies whatever is in the string into
-	 *  the memory. It will truncate the string if you decrease the size. 
+	 *  the memory. It will not truncate the string if you decrease the size.
 	 *  You don't normally need to call this. */
 	bool reserve(const int sz);
 
 	/** This is like calling malloc, but more interesting: it makes
 	 *  sure the capacity of the string is at least sz bytes, and
 	 *  preferably twice sz bytes. It copies whatever is in the string
-	 *  into the memory. It will truncate the string if you decrease
+	 *  into the memory. It will not truncate the string if you decrease
 	 *  the size.  You don't normally need to call this--it's used to
 	 *  make appending to a string more efficient.  */
 	bool reserve_at_least(const int sz);
