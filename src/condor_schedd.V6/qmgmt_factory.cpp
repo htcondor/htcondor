@@ -166,6 +166,7 @@ protected:
 	// let these functions access internal factory data
 	friend JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text);
 	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename);
+	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 
 	// we override this so that we can use an async foreach implementation.
 	int  load_q_foreach_items(
@@ -353,6 +354,18 @@ bool JobFactoryIsRunning(JobQueueCluster * cad)
 	return cad->factory->PauseMode() == JobFactory::Running;
 }
 
+void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
+{
+	iad.Assign("JobFactoryId", factory->ident);
+	//iad.Assign("JobFactoryName", factory->Name());
+	iad.Assign("JobFactoryPaused", factory->paused);
+	iad.Assign("JobFactoryTotalProcs", factory->cached_total_procs);
+	iad.Assign("JobFactoryStepSize", factory->StepSize());
+	iad.Assign("JobFactoryItemCount", factory->fea.items.number());
+	iad.Assign("JobFactoryItemReaderDone", factory->reader.done_reading());
+	// iad.Assign("JobFactoryItemReaderError", factory->reader.error_str());
+	iad.Assign("JobFactoryItemReaderErrorCode", factory->reader.error_code());
+}
 
 // returns true if the factory changed state, false otherwise.
 bool CheckJobFactoryPause(JobFactory * factory, int want_pause)

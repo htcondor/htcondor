@@ -2220,9 +2220,20 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		//}
 		int retval = 1;
 		if ( ! summary_only) {
-			retval = putClassAd(sock, *job,
-					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
-					projection.empty() ? NULL : &projection);
+			if (job->IsCluster()) {
+				// if this is a cluster ad, then we are responding to a -factory query. In that case, we want to fake up
+				// a child ad so we can send some extra attributes.
+				JobQueueCluster * cad = static_cast<JobQueueCluster*>(job);
+				ClassAd iad;
+				cad->PopulateInfoAd(iad, true);
+				retval = putClassAd(sock, iad,
+						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+						projection.empty() ? NULL : &projection);
+			} else {
+				retval = putClassAd(sock, *job,
+						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+						projection.empty() ? NULL : &projection);
+			}
 		}
 		match_count++;
 		if (retval == 2) {
