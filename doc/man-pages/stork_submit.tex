@@ -42,7 +42,7 @@ file syntax.  See \URL{http://www.cs.wisc.edu/condor/classad/}.
 %%%%%%%%%%%%%%%%%%%
 \item[dap\_type = transfer;]
 % only "transfer" for now
-%\item[dap\_type = $<$reserve \Bar\ release \Bar\ transfer \Bar\ stage \Bar\ remove $>$]
+%\item[dap\_type = \lt{}reserve \Bar\ release \Bar\ transfer \Bar\ stage \Bar\ remove \gt{}]
 \index{Stork submit commands!dap\_type}
 Required command identifying that there will be
 a transfer from source to destination.
@@ -51,7 +51,7 @@ a transfer from source to destination.
 %% arguments
 %%%%%%%%%%%%%%%%%%%
 
-\item[arguments = "$<$argument\_list$>$";]
+\item[arguments = "\lt{}argument\_list\gt{}";]
 List of arguments to be supplied
 to the module on the command line.
 Arguments are delimited (separated) by space characters.
@@ -60,7 +60,7 @@ Arguments are delimited (separated) by space characters.
 %% input
 %%%%%%%%%%%%%%%%%%%
 
-\item[input = "$<$pathname$>$";]
+\item[input = "\lt{}pathname\gt{}";]
 Stork assumes that its jobs are
 long-running, and that the user will not wait at the terminal for their
 completion. Because of this, the standard files which normally access
@@ -87,7 +87,7 @@ the \SubmitCmd{arguments} command.
 %% output
 %%%%%%%%%%%%%%%%%%%
 
-\item[output = "$<$pathname$>$";]
+\item[output = "\lt{}pathname\gt{}";]
 The \SubmitCmd{output} file name will capture
 any information the program would normally write to the screen
 (that is, this file becomes \File{stdout}).
@@ -114,7 +114,7 @@ the Stork server host.
 %% error
 %%%%%%%%%%%%%%%%%%%
 
-\item[err = "$<$pathname$>$";]
+\item[err = "\lt{}pathname\gt{}";]
 The \SubmitCmd{err} file name will capture any
 error messages the program would normally write to the screen
 (that is, this file becomes \File{stderr}).
@@ -137,7 +137,7 @@ the Stork server host.
 %% log
 %%%%%%%%%%%%%%%%%%%
 
-\item[log = "$<$pathname$>$";]
+\item[log = "\lt{}pathname\gt{}";]
 Use \SubmitCmd{log} to specify a file name where
 \index{submit commands!log}
 Stork will write a log file of what is happening with this job cluster.
@@ -165,7 +165,7 @@ single log file, it is up to you to make sure that all of them specify
 %%%%%%%%%%%%%%%%%%%
 % src_url
 %%%%%%%%%%%%%%%%%%%
-\item[src\_url = $<$protocol-name:URL$>$]
+\item[src\_url = \lt{}protocol-name:URL\gt{}]
 \index{Stork submit commands!src\_url}
 A (required) URL to identify the data source, 
 as well as the protocol to be used at the source.
@@ -174,7 +174,7 @@ as well as the protocol to be used at the source.
 %%%%%%%%%%%%%%%%%%%
 % dest_url
 %%%%%%%%%%%%%%%%%%%
-\item[dest\_url = $<$protocol-name:URL$>$]
+\item[dest\_url = \lt{}protocol-name:URL\gt{}]
 \index{Stork submit commands!dest\_url}
 A (required) URL to identify the data destination, 
 as well as the protocol to be used at the destination.
@@ -183,7 +183,7 @@ as well as the protocol to be used at the destination.
 %%%%%%%%%%%%%%%%%%%
 % reserve_id
 %%%%%%%%%%%%%%%%%%%
-%\item[reserve\_id = $<$ID$>$]
+%\item[reserve\_id = \lt{}ID\gt{}]
 %\index{Stork submit commands!reserve\_id}
 % Description of this command, including possible default if not present
 % but necessary.
@@ -191,7 +191,7 @@ as well as the protocol to be used at the destination.
 %%%%%%%%%%%%%%%%%%%
 % reserve_size
 %%%%%%%%%%%%%%%%%%%
-%\item[reserve\_size = $<$size-in-bytes$>$]
+%\item[reserve\_size = \lt{}size-in-bytes\gt{}]
 %\index{Stork submit commands!reserve\_size}
 % Description of this command, including possible default if not present
 % but necessary.
@@ -199,7 +199,7 @@ as well as the protocol to be used at the destination.
 %%%%%%%%%%%%%%%%%%%
 % x509proxy
 %%%%%%%%%%%%%%%%%%%
-\item[x509proxy = $<$path-to-proxy$>$]
+\item[x509proxy = \lt{}path-to-proxy\gt{}]
 \index{Stork submit commands!x509proxy}
 The path to and file name of an X.509 proxy when needed
 for GSI authentication.  A value of \SubmitCmd{"default"} directs Stork to
@@ -208,7 +208,7 @@ search in the standard Globus GSI proxy locations.
 %%%%%%%%%%%%%%%%%%%
 % cred_name
 %%%%%%%%%%%%%%%%%%%
-\item[cred\_name = $<$credential-handle$>$]
+\item[cred\_name = \lt{}credential-handle\gt{}]
 \index{Stork submit commands!cred\_name}
 Alternatively, a X.509 proxy may be managed via the Stork credential manager.
 The \SubmitCmd{cred\_name} specifies the name by which the credential was
@@ -218,7 +218,7 @@ stored in the credential manager.  See the
 %%%%%%%%%%%%%%%%%%%
 % alt_protocols
 %%%%%%%%%%%%%%%%%%%
-\item[alt\_protocols = $<$sourceprotocol-desinationprotocol, sourceprotocol-desinationprotocol, ...$>$]
+\item[alt\_protocols = \lt{}sourceprotocol-desinationprotocol, sourceprotocol-desinationprotocol, ...\gt{}]
 \index{Stork submit commands!alt\_protocols}
 A comma separated list of alternative protocol pairings to be used
 when a data transfer fails.

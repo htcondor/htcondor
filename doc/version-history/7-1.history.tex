@@ -92,8 +92,8 @@ supported for VMware or Xen.
   program as it shuts down.  This can be particularly useful for doing
   a graceful shutdown, followed by, a reboot.  This is
   accomplished through the new 
-  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} configuration variable.
-  The configuration variable \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$}
+  \MacroNI{MASTER\_SHUTDOWN\_\lt{}Name\gt{}} configuration variable.
+  The configuration variable \MacroNI{MASTER\_SHUTDOWN\_\lt{}Name\gt{}}
   is defined on page \pageref{param:MasterShutdownProgram}),
   and the manual page for \Condor{set\_shutdown}
   is on page~\pageref{man-condor-set-shutdown}.
@@ -203,7 +203,7 @@ numbers of startds.
   \pageref{param:XenLocalSettingsFile} for details.
 
 \item The configuration parameter family
-  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} can be used in conjunction
+  \MacroNI{MASTER\_SHUTDOWN\_\lt{}Name\gt{}} can be used in conjunction
   with \Condor{set\_shutdown} to cause the \Condor{master} to execute
   a specified program as it shuts down.  See
   \pageref{param:MasterShutdownProgram} and \Condor{set\_shutdown}

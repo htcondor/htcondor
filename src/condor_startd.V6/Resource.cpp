@@ -2130,7 +2130,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// get the same values as their parent slots.
 		MyString slot_name(r_id_str);
 		int iUnderPos = slot_name.find("_");
-		if (iUnderPos >=0) { slot_name.setChar (iUnderPos,  '\0'); }
+		if (iUnderPos >=0) { slot_name.truncate (iUnderPos); }
 
 		// load the relevant param that controls the attribute list.  
 		// We preserve the behavior of config_fill_ad here so the effective list is STARTD_ATTRS + SLOTn_STARTD_ATTRS

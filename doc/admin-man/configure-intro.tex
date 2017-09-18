@@ -755,16 +755,16 @@ This implies that a change to the underlying value of any of these
 variables will require a full restart of HTCondor in order to use
 the changed value.
 \begin{description}
-  
+
 \label{param:FullHostname}
 \item[\MacroU{FULL\_HOSTNAME}]
-  The fully qualified host name of the local machine, 
+  The fully qualified host name of the local machine,
   which is host name plus domain name.
-  
+
 \label{param:Hostname}
 \item[\MacroU{HOSTNAME}]
   The host name of the local machine, \emph{without} a domain name.
-  
+
 \label{param:IpAddress}
 \item[\MacroU{IP\_ADDRESS}]
   The ASCII string version of the local machine's ``most public'' IP address.
@@ -931,7 +931,6 @@ determined automatically at run time but which can be overwritten.
   For daemons started as root, but running under another UID
   (typically the user \Login{condor}), this will be the other UID.
 
-\label{param:FilesystemDomain}
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
   Defaults to the fully
   qualified host name of the machine it is evaluated on.  See

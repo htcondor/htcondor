@@ -815,7 +815,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 				 && (MATCH == strcasecmp(value.Value(), FLOPPY_DEVICE)))) {
 				pos = name.FindChar('.', 0);
 				if( pos > 0 ) {
-					name.setChar(pos, '\0');
+					name.truncate(pos);
 					strip_devices.append(name.Value());
 					continue;
 				}
@@ -829,7 +829,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 			pos = name.FindChar('.', 0);
 			if (pos > 0) {
 				const char * field = name.Value()+pos+1;
-				name.setChar(pos, '\0');
+				name.truncate(pos);
 				if (MATCH == strcasecmp(field, "autodetect")) {
 					strip = (MATCH == strcasecmp(value.Value(), "true"));
 				} else if (MATCH == strcasecmp(field, "filename")) {
@@ -939,7 +939,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 				// It means to disable write cache
 				pos = tmp_name.FindChar('.', 0);
 				if( pos > 0 ) {
-					tmp_name.setChar(pos, '\0');
+					tmp_name.truncate(pos);
 					tmp_line.formatstr("%s.writeThrough = \"TRUE\"", tmp_name.Value());
 					m_configVars.append(tmp_line.Value());
 				}

@@ -4554,7 +4554,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
 		line.chomp();
-		setDisconnectReason( &line[4] );
+		setDisconnectReason( line.Value()+4 );
 	} else {
 		return 0;
 	}
@@ -4566,9 +4566,9 @@ JobDisconnectedEvent::readEvent( FILE *file )
 	if( line.replaceString("    Trying to reconnect to ", "") ) {
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
-			line.setChar( i, '\0' );
+			setStartdAddr( line.Value()+(i+1) );
+			line.truncate( i );
 			setStartdName( line.Value() );
-			setStartdAddr( &line[i+1] );
 		} else {
 			return 0;
 		}
@@ -4578,9 +4578,9 @@ JobDisconnectedEvent::readEvent( FILE *file )
 		}
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
-			line.setChar( i, '\0' );
+			setStartdAddr( line.Value()+(i+1) );
+			line.truncate( i );
 			setStartdName( line.Value() );
-			setStartdAddr( &line[i+1] );
 		} else {
 			return 0;
 		}
@@ -4588,7 +4588,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 			&& line[2] == ' ' && line[3] == ' ' && line[4] )
 		{
 			line.chomp();
-			setNoReconnectReason( &line[4] );
+			setNoReconnectReason( line.Value()+4 );
 		} else {
 			return 0;
 		}
@@ -5018,7 +5018,7 @@ JobReconnectFailedEvent::readEvent( FILE *file )
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
 		line.chomp();
-		setReason( &line[4] );
+		setReason( line.Value()+4 );
 	} else {
 		return 0;
 	}
@@ -5030,7 +5030,7 @@ JobReconnectFailedEvent::readEvent( FILE *file )
 			// now everything until the first ',' will be the name
 		int i = line.FindChar( ',' );
 		if( i > 0 ) {
-			line.setChar( i, '\0' );
+			line.truncate( i );
 			setStartdName( line.Value() );
 		} else {
 			return 0;

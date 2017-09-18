@@ -77,7 +77,12 @@ class Dagman {
     int max_submit_attempts;
 		// maximum number of jobs to submit in a single periodic timer
 		// interval
-    int max_submits_per_interval;
+	int max_submits_per_interval;
+		// In "aggressive submit" mode, DAGMan overrides the timer interval
+		// which DaemonCore fires every m_user_log_scan_interval seconds. 
+		// The submit cycle will continue submitting jobs until there are no 
+		// more ready jobs available, or until it exceeds max_submit_attempts.
+	bool aggressive_submit;
 
 		// How long dagman waits before checking the log files to see if
 		// some events happened. With very short running jobs in a linear

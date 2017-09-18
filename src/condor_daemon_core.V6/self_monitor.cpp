@@ -640,7 +640,8 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
 }
 
 dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int as)
-{
+{	
+   begin = 0;
    if ( ! daemonCore->dc_stats.enabled) { this->probe = NULL; return; }
 
    StatisticsPool * pool = &daemonCore->dc_stats.Pool;
@@ -655,8 +656,9 @@ dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int 
           this->probe->SetRecentMax(daemonCore->dc_stats.RecentWindowMax / daemonCore->dc_stats.RecentWindowQuantum);
        }
    }
-   if (this->probe)
+   if (this->probe) {
        this->begin = _condor_debug_get_time_double();
+	} 
 }
 
 dc_stats_auto_runtime_probe::~dc_stats_auto_runtime_probe()

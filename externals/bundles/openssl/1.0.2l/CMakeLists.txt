@@ -24,12 +24,10 @@ if (WITH_OPENSSL)
 
   if ( NOT OPENSSL_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
-    set (OPENSSL_DOWNLOAD ${OPENSSL_VER}.tar.gz)
     condor_pre_external( OPENSSL openssl-1.0.2l "lib;include" "include/openssl/ssl.h")
+    set (OPENSSL_DOWNLOAD ${OPENSSL_VER}.tar.gz)
 
     if (WINDOWS)
-
-      condor_pre_external( OPENSSL openssl-1.0.2l "lib;include" "include/openssl/ssl.h")
 
       set (OPENSSL_INSTALL cp lib/*.lib ${OPENSSL_INSTALL_LOC}/lib \r\n
         cp bin/*.dll ${OPENSSL_INSTALL_LOC}/lib \r\n

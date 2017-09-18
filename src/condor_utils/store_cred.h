@@ -63,7 +63,7 @@ class Daemon;
 
 void store_pool_cred_handler(void *, int i, Stream *s);
 int store_cred(const char *user, const char* pw, int mode, Daemon *d = NULL, bool force = false);
-int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode);
+int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode, int &cred_modified);
 int store_cred_handler(void *, int i, Stream *s);
 int get_cred_handler(void *, int i, Stream *s);
 bool read_from_keyboard(char* buf, int maxlength, bool echo = true);

@@ -385,12 +385,12 @@ DagmanMetrics::ParseBraindumpFile()
 	const char *line;
 		// Note:  getline() frees memory from the previous call each time.
 	while ( (line = getline_trim( fp, lineno ) ) ) {
-		MyString lineStr( line );
-		lineStr.Tokenize();
+		MyStringTokener tok;
+		tok.Tokenize(line);
 		const char *token1;
-		token1 = lineStr.GetNextToken( " \t", true );
+		token1 = tok.GetNextToken( " \t", true );
 		if ( token1 ) {
-			const char *token2 = lineStr.GetNextToken( " \t", true );
+			const char *token2 = tok.GetNextToken( " \t", true );
 			if ( token2 ) {
 				if ( strcmp( token1, "wf_uuid" ) == 0 ) {
 					_workflowId = token2;

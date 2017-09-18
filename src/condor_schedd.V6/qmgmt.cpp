@@ -934,6 +934,15 @@ QmgmtPeer::getOwner() const
 }
 
 const char*
+QmgmtPeer::getDomain() const
+{
+	if ( sock ) {
+		return sock->getDomain();
+	}
+	return NULL;
+}
+
+const char*
 QmgmtPeer::getRealOwner() const
 {
 	if ( sock ) {
@@ -1454,7 +1463,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// initialize our list of job owners
 			AddOwnerHistory( owner );
 			ad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(owner.c_str()));
-			clusterad->ownerinfo = ad->ownerinfo;
+			if (clusterad)
+				clusterad->ownerinfo = ad->ownerinfo;
 
 			if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
 				dprintf(D_ALWAYS,
@@ -1820,6 +1830,34 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 
 	if (digest_text && digest_text[0]) {
 
+		// we have to switch to user priv before parsing the submit digest because there MAY be an itemdata file.
+		// PRAGMA_REMIND("TODO: move setpriv down into MakeJobFactory so we can skip it if there is no itemdata?")
+		priv_state priv = PRIV_UNKNOWN;
+		bool restore_priv = false;
+		if (Q_SOCK) {
+			if ( ! init_user_ids(Q_SOCK->getOwner(), Q_SOCK->getDomain())) {
+				errno = EACCES;
+				return rval;
+			}
+			set_user_priv();
+			restore_priv = true;
+		}
+
+		// parse the submit digest and (possibly) open the itemdata file.
+		JobFactory * factory = MakeJobFactory(cluster_id, digest_text);
+
+		if (restore_priv) {
+			set_priv(priv);
+			uninit_user_ids();
+		}
+
+		if ( ! factory) {
+			dprintf(D_MATERIALIZE, "Failing remote SetJobFactory %d because MakeJobFactory failed\n", cluster_id);
+			return rval;
+		}
+
+		// If the submit digest parsed correctly, we need to write it to spool so we can re-load if the schedd is restarted
+		//
 		GetSpooledSubmitDigestPath(spooled_filename, cluster_id, Spool);
 		filename = spooled_filename.c_str();
 
@@ -1834,6 +1872,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 				dprintf(D_ALWAYS,
 					"Failed SetJobFactory %d because create parent spool directory of '%s' failed, errno = %d (%s)\n",
 						cluster_id, parent.c_str(), errno, strerror(errno));
+				DestroyJobFactory(factory); factory = NULL;
 				errno = saved_errno;
 				return -1;
 			}
@@ -1849,6 +1888,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 			saved_errno = errno;
 			dprintf(D_ALWAYS, "Failing SetJobFactory %d because creat of '%s' failed, errno = %d (%s)\n",
 				cluster_id, filename, errno, strerror(errno));
+			DestroyJobFactory(factory); factory = NULL;
 			errno = saved_errno;
 			return -1;
 		}
@@ -1873,27 +1913,25 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 			if (unlink(filename) < 0) {
 				dprintf(D_FULLDEBUG, "SetJobFactory %d failed to unlink file '%s' errno = %d (%s)\n", cluster_id, filename, errno, strerror(errno));
 			}
+			DestroyJobFactory(factory); factory = NULL;
 			errno = saved_errno;
 			return rval;
 		}
 
-		JobFactory * factory = MakeJobFactory(cluster_id, digest_text);
-		if (factory) {
-			// to be extra careful, make sure that we don't have a factory pointer for that cluster already.
-			// if we do have one, delete the factory we just loaded and fail. this could only happen if
-			// condor_submit or the python bindings invoked the set_job_factory rpc twice in a row for the same
-			// cluster.  it's unlikely, but if they did we would end up leaking memory...
-			JobFactory*& pending = JobFactoriesSubmitPending[cluster_id];
-			if (pending) {
-				dprintf(D_ALWAYS, "Failing SetJobFactory %d because factory has already been set!\n", cluster_id);
-				DestroyJobFactory(factory); factory = NULL;
-				rval = -1;
-				return rval;
-			} else {
-				// ok, there wasn't a factory already, so save off the one we just created.
-				// the commit of this submit will find it and attach it to the cluster object.
-				pending = factory;
-			}
+		// to be extra careful, make sure that we don't have a factory pointer for that cluster already.
+		// if we do have one, delete the factory we just loaded and fail. this could only happen if
+		// condor_submit or the python bindings invoked the set_job_factory rpc twice in a row for the same
+		// cluster.  it's unlikely, but if they did we would end up leaking memory...
+		JobFactory*& pending = JobFactoriesSubmitPending[cluster_id];
+		if (pending) {
+			dprintf(D_ALWAYS, "Failing SetJobFactory %d because factory has already been set!\n", cluster_id);
+			DestroyJobFactory(factory); factory = NULL;
+			rval = -1;
+			return rval;
+		} else {
+			// ok, there wasn't a factory already, so save off the one we just created.
+			// the commit of this submit will find it and attach it to the cluster object.
+			pending = factory;
 		}
 	}
 
@@ -3183,6 +3221,7 @@ enum {
 	idATTR_RANK,
 	idATTR_REQUIREMENTS,
 	idATTR_NUM_JOB_RECONNECTS,
+	idATTR_JOB_NOOP,
 	idATTR_JOB_MATERIALIZE_ITEMS_FILE,
 	idATTR_JOB_MATERIALIZE_DIGEST_FILE,
 	idATTR_JOB_MATERIALIZE_LIMIT,
@@ -3231,6 +3270,7 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_CRON_MONTHS,        catCron),
 	FILL(ATTR_HOLD_REASON,        0), // used to detect submit of jobs with the magic 'hold for spooling' hold code
 	FILL(ATTR_HOLD_REASON_CODE,   0), // used to detect submit of jobs with the magic 'hold for spooling' hold code
+	FILL(ATTR_JOB_NOOP,           catDirtyPrioRec),
 	FILL(ATTR_JOB_MATERIALIZE_DIGEST_FILE, catNewMaterialize | catCallbackTrigger),
 	FILL(ATTR_JOB_MATERIALIZE_ITEMS_FILE, catNewMaterialize | catCallbackTrigger),
 	FILL(ATTR_JOB_MATERIALIZE_LIMIT, catMaterializeState | catCallbackTrigger),
@@ -3511,7 +3551,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			owner_buf = owner+1;
 			if( owner_buf.Length() && owner_buf[owner_buf.Length()-1] == '"' )
 			{
-				owner_buf.setChar(owner_buf.Length()-1,'\0');
+				owner_buf.truncate(owner_buf.Length()-1);
 				owner_is_quoted = true;
 			}
 			owner = owner_buf.Value();
@@ -3611,6 +3651,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					 "", owner.Value(), scheduler.uidDomain() );
 			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags );
 		}
+	}
+	else if (attr_id == idATTR_JOB_NOOP) {
+		// whether the job has an IsNoopJob attribute or not is cached in the job object
+		// so if this is set, we need to mark the cached value as dirty.
+		if (job) { job->DirtyNoopAttr(); }
 	}
 	else if (attr_category & catJobId) {
 		char *endptr = NULL;
@@ -4887,8 +4932,8 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 		if( tmp_ad.LookupInteger(attr_name, *val) == 1) {
 			return 1;
 		}
-		return -1;
 		errno = EINVAL;
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -5093,8 +5138,8 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		if( ! JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
-			return -1;
 			errno = ENOENT;
+			return -1;
 		}
 	}
 
@@ -5307,7 +5352,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 					MyString expr_to_add;
 					expr_to_add.formatstr("string(%s", name + 1);
-					expr_to_add.setChar(expr_to_add.Length()-1, ')');
+					expr_to_add.setAt(expr_to_add.Length()-1, ')');
 
 						// Any backwacked double quotes or backwacks
 						// within the []'s should be unbackwacked.
@@ -5325,11 +5370,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 							read_pos++; // skip over backwack
 						}
 						if( read_pos != write_pos ) {
-							expr_to_add.setChar(write_pos,expr_to_add[read_pos]);
+							expr_to_add.setAt(write_pos,expr_to_add[read_pos]);
 						}
 					}
 					if( read_pos != write_pos ) { // terminate the string
-						expr_to_add.setChar(write_pos,'\0');
+						expr_to_add.truncate(write_pos);
 					}
 
 					ClassAd tmpJobAd(*ad);
@@ -6392,6 +6437,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts>=max_hosts || job_status==HELD || 
 			job_status==REMOVED || job_status==COMPLETED ||
+			job->IsNoopJob() ||
 			!service_this_universe(universe,job)) 
 	{
         return cur_hosts;
@@ -6931,7 +6977,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 	at_sign_pos = owner.FindChar('@');
 	if ( at_sign_pos >= 0 ) {
-		owner.setChar(at_sign_pos,'\0');
+		owner.truncate(at_sign_pos);
 	}
 
 	bool rebuilt_prio_rec_array = BuildPrioRecArray();
@@ -7079,9 +7125,15 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	// no more jobs to run anywhere.  nothing more to do.  failure.
 }
 
-int Runnable(ClassAd *job)
+int Runnable(JobQueueJob *job)
 {
 	int status, universe, cur = 0, max = 1;
+
+	if (job->IsNoopJob())
+	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (IsNoopJob)\n");
+		return FALSE;
+	}
 
 	if ( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 )
 	{
@@ -7133,7 +7185,7 @@ int Runnable(ClassAd *job)
 
 int Runnable(PROC_ID* id)
 {
-	ClassAd *jobad;
+	JobQueueJob *jobad;
 	
 	dprintf (D_FULLDEBUG, "Job %d.%d:", id->cluster, id->proc);
 

@@ -359,7 +359,7 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 	}
 
 	if (overall_max_width && retval.Length() > overall_max_width)
-		retval.setChar(overall_max_width, 0);
+		retval.truncate(overall_max_width);
 
 	if (row_suffix)
 		retval += row_suffix;
@@ -475,12 +475,17 @@ static void appendFieldofChar(MyString & buf, int width, char ch = '?')
 
 MyRowOfValues::~MyRowOfValues()
 {
-	if ( ! pdata) return;
-	delete [] pdata;
-	delete [] pvalid;
+	if( pdata != NULL ) {
+		delete [] pdata;
+		pdata = NULL;
+	}
+
+	if( pvalid != NULL ) {
+		delete [] pvalid;
+		pvalid = NULL;
+	}
+
 	cmax = cols = 0;
-	pdata = NULL;
-	pvalid = NULL;
 }
 
 int MyRowOfValues::SetMaxCols(int max_cols)

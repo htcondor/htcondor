@@ -1630,14 +1630,18 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			break; // break out of while loop
 		}
 
-			// Check whether this submit cycle is taking too long.
-		time_t now = time( NULL );
-		time_t elapsed = now - cycleStart;
-		if ( elapsed > dm.m_user_log_scan_interval ) {
-			debug_printf( DEBUG_QUIET,
-						"Warning: Submit cycle elapsed time (%d s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
-						(int)elapsed, dm.m_user_log_scan_interval );
-			break; // break out of while loop
+			// Check whether this submit cycle is taking too long (only if we
+			// are not in aggressive submit mode)
+		if( !dm.aggressive_submit ) {
+			time_t now = time( NULL );
+			time_t elapsed = now - cycleStart;
+			if ( elapsed > dm.m_user_log_scan_interval ) {
+				debug_printf( DEBUG_QUIET,
+					"Warning: Submit cycle elapsed time (%d s) has exceeded "
+					"log scan interval (%d s); bailing out of submit loop\n",
+					(int)elapsed, dm.m_user_log_scan_interval );
+				break; // break out of while loop
+			}
 		}
 
 			// remove & submit first job from ready queue
@@ -4401,7 +4405,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	int last = parentName.Length() - 1;
 	ASSERT( last >= 0 );
 	if ( parentName[last] == '+' ) {
-		parentName.setChar( last, '\0' );
+		parentName.truncate( last );
 	}
 
 	MyString childName = childSplice->_spliceScope;
@@ -4409,7 +4413,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	last = childName.Length() - 1;
 	ASSERT( last >= 0 );
 	if ( childName[last] == '+' ) {
-		childName.setChar( last, '\0' );
+		childName.truncate( last );
 	}
 
 		// Make sure the parent and child splices have pin_ins/pin_outs

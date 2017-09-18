@@ -200,7 +200,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 	command->LookupString( "AnnexID", annexID );
 	if( annexID.empty() ) {
 		std::string annexName;
-		command->LookupString( "AnnexName", annexName );
+		command->LookupString( ATTR_ANNEX_NAME, annexName );
 		if( annexName.empty() ) {
 			generateAnnexID( annexID );
 		} else {

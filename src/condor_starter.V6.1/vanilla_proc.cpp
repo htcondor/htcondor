@@ -392,7 +392,7 @@ VanillaProc::StartJob()
                bool acceptable_chroot = false;
                std::string requested_chroot;
                while ( (next_chroot=chroot_list.next()) ) {
-                       MyString chroot_spec(next_chroot);
+                       MyStringWithTokener chroot_spec(next_chroot);
                        chroot_spec.Tokenize();
                        const char * chroot_name = chroot_spec.GetNextToken("=", false);
                        if (chroot_name == NULL) {

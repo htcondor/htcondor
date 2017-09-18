@@ -10,8 +10,8 @@
 BulkRequest::BulkRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 	const std::string & su, const std::string & pkf, const std::string & skf,
 	ClassAdCollection * c, const std::string & cid,
-	const std::string & annexID ) :
-  gahp( egc ), reply( r ), scratchpad( s ),
+	const std::string & aid ) :
+  gahp( egc ), reply( r ), scratchpad( s ), annexID( aid ),
   service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
   commandID( cid ), commandState( c ) {
   	ClassAd * commandState;
@@ -95,6 +95,9 @@ BulkRequest::validateAndStore( ClassAd const * command, std::string & validation
 		launchConfiguration.LookupString( "InstanceType", blob[ "InstanceType" ] );
 		launchConfiguration.LookupString( "SubnetId", blob[ "SubnetId" ] );
 		launchConfiguration.LookupString( "WeightedCapacity", blob[ "WeightedCapacity" ] );
+
+		// We can add support for the actual tagging specification later.
+		blob[ "Tags" ] = "htcondor:AnnexName=" + annexID;
 
 		ExprTree * iipTree = launchConfiguration.Lookup( "IamInstanceProfile" );
 		if( iipTree != NULL ) {

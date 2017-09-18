@@ -1240,7 +1240,6 @@ of the subsystem corresponding to the daemon.
  
 \label{param:MaxDefaultLog}
 \item[\Macro{MAX\_DEFAULT\_LOG}]
-\begin{description} 
   Controls the maximum size in bytes or amount of time that any log
   not explicitly specified using  \Macro{MAX\_<SUBSYS>\_LOG}
   will be allowed to grow.
@@ -1268,7 +1267,6 @@ of the subsystem corresponding to the daemon.
   \item{\Expr{Hr} for hours}
   \item{\Expr{Day} for days}
   \item{\Expr{Wk} for weeks}
-\end{description} 
 
 \label{param:MaxNumSubsysLog}
 \item[\Macro{MAX\_NUM\_<SUBSYS>\_LOG}]
@@ -1626,7 +1624,7 @@ of the subsystem corresponding to the daemon.
     including messages for the negotiation of a socket 
     authentication mechanism, the management of a session key cache.
     and messages about the authentication process itself.  See
-    section~\ref{sec:Config-Security} for more information about
+    section~\ref{sec:Security-Model} for more information about
     secure communication configuration.
 
   \label{dflag:procfamily}
@@ -4231,17 +4229,6 @@ WANT_HOLD_REASON = \
   full path, and HTCondor will automatically append the \verb@.slotX@
   portion of the file name.
 
-\label{param:SlotWeight}
-\item[\Macro{SlotWeight}]
-  This may be used to give a slot greater weight when
-  calculating usage, computing fair shares, and enforcing group
-  quotas.  For example, claiming a slot with \Expr{SlotWeight = 2} is
-  equivalent to claiming two \Expr{SlotWeight = 1} slots.  The default
-  value is \AdAttr{Cpus}, the number of CPUs associated with the slot,
-  which is 1 unless specially configured.  Any expression referring to
-  attributes of the slot ClassAd and evaluating to a positive floating
-  point number is valid.
-
 \label{param:NumCpus}
 \item[\Macro{NUM\_CPUS}]
   An integer value, which can be used to lie to the \Condor{startd} daemon
@@ -4455,7 +4442,7 @@ WANT_HOLD_REASON = \
 
   \Bold{Note that the \MacroNI{MOUNT\_UNDER\_SCRATCH} mounts do not
   take place until the PreCmd of the job, if any, completes.}
-  (See~\ref{man-condor-submit-prescript} for information on PreCmd.)
+  (See~\ref{PreCmd} for information on PreCmd.)
 
   Also note that, if \MacroNI{MOUNT\_UNDER\_SCRATCH} is defined, it
   must either be a string or an expression that evaluates to a
@@ -4912,21 +4899,13 @@ CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
 \end{verbatim}
   Custom resources have no default consumption policy.
 
-\label{param:NegotiatorSlotWeight}
+\label{param:SlotWeight}
 \item[\Macro{SLOT\_WEIGHT}]
   An expression that specifies a slot's weight, used as a multiplier
   the \Condor{negotiator} daemon during matchmaking to assess user usage
   of a slot, which affects user priority.
-  Defaults to \Attr{Cpus}.  
-  %In this example, a memory-centric slot
-  %weight is configured that corresponds with the slot's memory consumption
-  %policy:
-%\begin{verbatim}
-%# slot weight corresponds to the number of jobs that could be
-%# matched, given the memory consumption policy:
-%CONSUMPTION_MEMORY = quantize(target.RequestMemory, {512})
-%SLOT_WEIGHT = floor(Memory / 512)
-%\end{verbatim}
+  Defaults to \Attr{Cpus}.
+
   In the case of slots with consumption policies, the cost of each match is
   is assessed as the difference in the slot weight expression before and after
   the resources consumed by the match are deducted from the slot.  Only
@@ -5242,7 +5221,7 @@ availability statistics in the \Condor{startd}.
   value is /usr/bin/docker.  Remember that the condor user must also
   be in the docker group for Docker Universe to work.
   See the Docker universe manual section for more details 
-	(~\ref{sec:Docker-Install})
+	(~\ref{sec:docker-install})
   An example of the configuration for running the Docker CLI:
 \begin{verbatim}
   DOCKER = /usr/bin/docker
@@ -5252,7 +5231,7 @@ availability statistics in the \Condor{startd}.
 \item[\Macro{DOCKER\_VOLUMES}]
   A list of directories on the host execute machine to be volume mounted
   within the container.  See the Docker Universe section for full details.
- 	(~\ref{sec:Docker-Install})
+ 	(~\ref{sec:docker-install})
 
 \label{param:DockerImageCacheSize}
 \item[\Macro{DOCKER\_IMAGE\_CACHE\_SIZE}]
@@ -13208,18 +13187,18 @@ in ClassAds that the \Condor{collector} daemon has.
   the \File{libganglia} executable, if \Macro{GANGLIA\_LIB} is not configured.
   This is used in 64-bit versions of HTCondor.
 
-\label{param:GangliadCluster}
+\label{param:GangliadDefaultCluster}
 \item[\Macro{GANGLIAD\_DEFAULT\_CLUSTER}]
   An expression specifying the default name of the Ganglia cluster 
   for all metrics.
   The expression may refer to attributes of the machine.
 
-\label{param:GangliadMachine}
+\label{param:GangliadDefaultMachine}
 \item[\Macro{GANGLIAD\_DEFAULT\_MACHINE}]
   An expression specifying the default machine name of Ganglia metrics.  The
   expression may refer to attributes of the machine.
 
-\label{param:GangliadIP}
+\label{param:GangliadDefaultIP}
 \item[\Macro{GANGLIAD\_DEFAULT\_IP}]
   An expression specifying the default IP address of Ganglia metrics.
   The expression may refer to attributes of the machine.

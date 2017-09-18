@@ -29,7 +29,32 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{status} will now print longer lines when its output is
+redirected into a pipe, rather than its input coming from one.
+\Ticket{6381}
+
+\item Added \Arg{status} command to \Condor{annex}.  This command invokes
+\Condor{status} to display information about annex instances that have
+reported to the collector.  It also gathers information about annex instances
+from EC2 and forwards that data to \Condor{status} to detect instances which
+the collector does not yet or any longer know about.  The annex instance ads
+fabricated for this purpose are not real slot ads, so some options you may
+know from \Condor{status} do not apply to the \Arg{status} command of
+\Condor{annex}.  See section~\ref{cloud-computing} for details.
+\Ticket{6321}
+
+\item Added a ``merge'' mode to \Condor{status}.  When invoked with the
+\oOptArg{-merge}{<file>} option, ads will be read from \Arg{file}, which
+can be \Expr{-} to indicate standard in, and compared to the ads selected
+by the query specified as usual by the remainder of the command-line.  Ads
+will be compared on the basis of the sort key (which you can change with
+\oOptArg{-sort}{<key>}).  \Condor{status} will print three tables based on
+that comparison: the first table will be generated from those ads whose key
+was in the query but not in \Arg{file}; the second table will be generated
+from those ads whose key was appeared in both the query and in \Arg{file},
+and the third table will be generated from those ads whose key appeared
+only in \Arg{file}.
+\Ticket{6321}
 
 \end{itemize}
 
@@ -49,27 +74,44 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.3 not yet released.
-%\item HTCondor version 8.7.3 released on Month Date, 2017.
+\item HTCondor version 8.7.3 released on September 12, 2017.
 
 \end{itemize}
 
+\noindent Known Issues:
+
+\begin{itemize}
+
+\item Our current implementation of late materialization is incompatible with
+\Condor{dagman} and will cause unexpected behavior, including failing without
+warning. This is a top-priority issue which aim to resolve in an upcoming
+release.
+\Ticket{6292}
+
+\end{itemize}
 
 \noindent New Features:
 
 \begin{itemize}
 
-\item Added support for Public Input Files in HTCondor jobs. This allows
-users to transfer input files over a publicly-available HTTP web service,
-which can benefit from caching proxies, load balancers, and other tools
-to improve file transfer performance.
-\Ticket{6356}
+\item Changed \Condor{top} tool 
+to monitor the \Condor{schedd} by default, 
+to show more useful columns in the default view,
+to better format output when redirected or piped, and
+to optionally take input of two classad files.
+\Ticket{6352}
 
 \item Changed how \Expr{auto} works for \MacroNI{ENABLE\_IPV4} and
 \MacroNI{ENABLE\_IPV6}.  HTCondor now ignores addresses that are likely
 to be useless (loopback or link-local) unless no address is likely to be
 useful (private or public).
 \Ticket{6348}
+
+\item Added support for Public Input Files in HTCondor jobs. This allows
+users to transfer input files over a publicly-available HTTP web service,
+which can benefit from caching proxies, load balancers, and other tools
+to improve file transfer performance.
+\Ticket{6356}
 
 \item Added \Opt{-grid:ec2} to \Condor{q} to avoid truncating AWS' new,
 longer, instance IDs.  Replaced useless (given the instance ID) instance
@@ -89,6 +131,11 @@ default to a transfer\_history file in the local logs folder.
 
 \item Fixed some small memory leaks in the HTCondor daemons.
 \Ticket{6361}
+
+\item Fixed a bug that would prevent dollar-dollar expansion from 
+working correctly for parallel universe jobs running on partitionable 
+slots 
+\Ticket{6370}
 
 \end{itemize}
 

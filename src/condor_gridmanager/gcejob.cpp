@@ -133,6 +133,7 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	BaseJob( classad ),
 	m_preemptible( false ),
 	m_retry_times( 0 ),
+	m_failure_injection(NULL),
 	probeNow( false )
 {
 	string error_string = "";
@@ -463,10 +464,6 @@ void GCEJob::doEvaluateState()
 
 
 			case GM_SAVE_INSTANCE_NAME: {
-				// If we don't know yet what type of server we're talking
-				// to (e.g. all pings have failed because the server's
-				// down), we have to wait here, as that affects how we'll
-				// submit the job.
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CLEAR_REQUEST;
 					break;

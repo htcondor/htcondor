@@ -458,6 +458,7 @@ Matchmaker ()
 	classad::FunctionCall::RegisterFunction( name,
 											 ResourcesInUseByUsersGroup_classad_func );
 	slotWeightStr = 0;
+	m_staticRanks = false;
 }
 
 Matchmaker::
@@ -1339,7 +1340,7 @@ struct group_order {
 
     private:
     // I don't want anybody defaulting this obj by accident
-    group_order(){}
+    group_order() : autoregroup(false), root_group(0) {}
 };
 
 

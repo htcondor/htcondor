@@ -1575,43 +1575,24 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			// tiny amount and try again, up to a maximum timeout
 			// in which case we EXCEPT.
 
-			// record when we started and what the timeout is
-			time_t started = time(NULL);
+			// get the timeout.  if we're going to sleep for 1 millisecond,
+			// convert the timeout to a count and only try that many times.
 			int timeout = keyring_session_creation_timeout();
+			const int sleep_amount = 1000; // 1000 usec == 1 millisec
+			int max_attempts = timeout * (1000000/sleep_amount);
 
 			// attempt creation and loop until success or timeout.
 			while( condor_keyctl_session(NULL) == -1 ) {
 				if (errno == EDQUOT) {
-					// sleep briefly, squash return value
-					if(usleep(1)) {}
-
 					// check for timeout
-					time_t now = time(NULL);
-					if(now - started >= timeout) {
+					if (max_attempts-- <= 0) {
 						EXCEPT("FATAL: Unable to create new session keyring when switching priv.");
 					}
+
+					// sleep briefly, squash return value, try again
+					if(usleep(sleep_amount)) {}
 				} else {
-/* DEBUG CODE
-					// something is terribly wrong.  we couldn't change credentials.
-					// we probably can't log anything.  we can't call EXCEPT() here
-					// because it will recursively call dprintf() which will call
-					// this function again.
-					//
-					// best I can think of is to  try to
-					// drop a message in a bottle into /tmp.
-
-					// NOTE: this is a serious problem for 2.X linux kernels.  you
-					// need to be running 3.10.X at least to use keyring sessions that
-					// actually work inside the kernel. -zmiller 7/2017
-
-					char fname[100];
-					sprintf(fname, "/tmp/EXCEPT.%i", getpid());
-					FILE* f = fopen(fname, "w");
-					fprintf(f, "errno %i (%s)\n", errno, strerror(errno));
-					fflush(f);
-					fclose(f);
-*/
-					_exit(99);
+					_exit(98);
 				}
 			}
 

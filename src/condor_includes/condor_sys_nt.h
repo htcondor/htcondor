@@ -167,7 +167,9 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define S_IRWXO 2
 #define S_ISDIR(mode) (((mode)&_S_IFDIR) == _S_IFDIR)
 #define S_ISREG(mode) (((mode)&_S_IFREG) == _S_IFREG)
+#if _MSC_VER < 1800 // Added to the standard library in VS 2013
 #define rint(num) ((num<0.)? -floor(-num+.5):floor(num+.5))
+#endif
 
 #ifndef ETIMEDOUT
 #define ETIMEDOUT ERROR_TIMEOUT

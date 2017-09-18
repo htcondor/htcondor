@@ -84,7 +84,7 @@
     platforms are supported.
 
     This GAHP is available as part of the HTCondor software distribution,
-    version FIXME.FIXME or later.
+    version 8.1.4 or later.
 
 2.0   GAHP SERVER IMPLEMENTATION
 

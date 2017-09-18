@@ -4366,6 +4366,10 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 
+    // this log is meant to be kept in the condor LOG directory, so switch to
+    // the correct priv state to manipulate files in that dir.
+    priv_state saved_priv = set_condor_priv();
+
     // Read name of statistics file from params
     std::string stats_file_path = param( "FILE_TRANSFER_STATS_LOG" );
 
@@ -4413,12 +4417,21 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 
     // Output statistics to file
     MyString stats_string;    
-    std::ofstream stats_file_output( stats_file_path, std::fstream::app );    
+    std::ofstream stats_file_output;
+    stats_file_output.open( stats_file_path, std::fstream::app );
+    if( stats_file_output.fail() ) {
+        dprintf( D_ALWAYS, "FILETRANSFER: failed to write statistics file %s with"
+            " error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
+    }
     sPrintAd( stats_string, stats );
     stats_file_output << stats_string.Value() << "***" << std::endl;    
 
     // All done, cleanup and return
     stats_file_output.close();
+
+    // back to previous priv state
+    set_priv(saved_priv);
+
     return 0;
 }
 

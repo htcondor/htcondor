@@ -77,7 +77,7 @@ GCEResource::GCEResource( const char *resource_name,
 	m_project = strdup(project);
 	m_zone = strdup(zone);
 
-	gahp = NULL;
+	status_gahp = gahp = NULL;
 
 	char * gahp_path = param( "GCE_GAHP" );
 	if ( gahp_path == NULL ) {

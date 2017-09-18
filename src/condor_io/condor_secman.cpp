@@ -2633,6 +2633,8 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_KERBEROS;
 	} else if ( !strcasecmp( method, "CLAIMTOBE" ) ) {
 		return CAUTH_CLAIMTOBE;
+	} else if ( !strcasecmp( method, "MUNGE" ) ) {
+		return CAUTH_MUNGE;
 	} else if ( !strcasecmp( method, "ANONYMOUS" ) ) {
 		return CAUTH_ANONYMOUS;
 	}
@@ -2701,17 +2703,27 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 }
 
 
-SecMan::SecMan()
-{
+SecMan::SecMan() :
+	m_cached_auth_level((DCpermission)-1),
+	m_cached_raw_protocol(false),
+	m_cached_use_tmp_sec_session(false),
+	m_cached_force_authentication(false),
+	m_cached_return_value(-1) {
+	
 	if ( NULL == m_ipverify ) {
 		m_ipverify = new IpVerify( );
 	}
-	m_cached_auth_level = (DCpermission)-1; // intentionally invalid
 	sec_man_ref_count++;
 }
 
 
-SecMan::SecMan(const SecMan & /* copy */) {
+SecMan::SecMan(const SecMan & rhs/* copy */) : 
+	m_cached_auth_level(rhs.m_cached_auth_level), 
+	m_cached_raw_protocol(rhs.m_cached_raw_protocol), 
+	m_cached_use_tmp_sec_session(rhs.m_cached_use_tmp_sec_session), 
+	m_cached_force_authentication(rhs.m_cached_force_authentication),
+	m_cached_return_value(rhs.m_cached_return_value) {
+
 	sec_man_ref_count++;
 }
 
@@ -3024,7 +3036,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( crypto_methods.Length() ) {
 		int pos = crypto_methods.FindChar(',');
 		if( pos >= 0 ) {
-			crypto_methods.setChar(pos,'\0');
+			crypto_methods.truncate(pos);
 			policy.Assign(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
 		}
 	}
@@ -3187,7 +3199,7 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	}
 
 		// get rid of final ']'
-	buf.setChar(buf.Length()-1,'\0');
+	buf.truncate(buf.Length()-1);
 
 	StringList lines(buf.Value(),";");
 	lines.rewind();

@@ -64,6 +64,7 @@ class QmgmtPeer {
 		const char *endpoint_ip_str() const;
 		const condor_sockaddr endpoint() const;
 		const char* getOwner() const;
+		const char* getDomain() const;
 		const char* getRealOwner() const;
 		const char* getFullyQualifiedUser() const;
 		int isAuthenticated() const;
@@ -179,6 +180,7 @@ public:
 	void SetUniverse(int uni) { universe = uni; }
 	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
+	void DirtyNoopAttr() { has_noop_attr = 2; }
 #if 0
 	// FUTURE:
 	int NumProcs() { if (entry_type == entry_type_cluster) return future_num_procs_or_hosts; return 0; }
@@ -453,7 +455,6 @@ extern int grow_prio_recs(int);
 
 extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user);
 extern int Runnable(PROC_ID*);
-extern int Runnable(ClassAd*);
 
 extern class ForkWork schedd_forker;
 

@@ -1388,20 +1388,23 @@ behavior changes:
 \index{ClassAd job attribute!PostArgs}
 \index{PostArgs!ClassAd job attribute}
 \item[\AdAttr{PostArgs}:] Defines the command-line arguments for the
-post command using the Old argument syntax. If both \AdAttr{PostArgs}
+post command using the \emph{old} argument syntax, as specified in
+section~\ref{man-condor-submit-arguments}. If both \AdAttr{PostArgs}
 and \AdAttr{PostArguments} exists, the former is ignored.
 
 %%% ClassAd attribute: PostArguments
 \index{ClassAd job attribute!PostArguments}
 \index{PostArguments!ClassAd job attribute}
 \item[\AdAttr{PostArguments}:] Defines the command-line arguments for the
-post command using the New argument syntax, excepting that double quotes must
+post command using the \emph{new} argument syntax, as specified in
+section~\ref{man-condor-submit-arguments}, excepting that double quotes must
 be escaped with a backslash instead of another double quote. If both
 \AdAttr{PostArgs} and \AdAttr{PostArguments} exists, the former is ignored.
 
 %%% ClassAd attribute: PostCmd
 \index{ClassAd job attribute!PostCmd}
 \index{PostCmd!ClassAd job attribute}
+\label{PostCmd}
 \item[\AdAttr{PostCmd}:] A job in the vanilla, Docker, Java, or virtual machine
 universes may specify a command to run after the \SubmitCmd{Executable} has
 exited, but before file transfer is started.  Unlike a DAGMan POST script
@@ -1467,20 +1470,23 @@ using the New environment syntax. If both \AdAttr{PostEnv} and
 \index{ClassAd job attribute!PreArgs}
 \index{PreArgs!ClassAd job attribute}
 \item[\AdAttr{PreArgs}:] Defines the command-line arguments for the
-pre command using the Old argument syntax. If both \AdAttr{PreArgs}
+pre command using the \emph{old} argument syntax, as specified in
+section~\ref{man-condor-submit-arguments}.  If both \AdAttr{PreArgs}
 and \AdAttr{PreArguments} exists, the former is ignored.
 
 %%% ClassAd attribute: PreArguments
 \index{ClassAd job attribute!PreArguments}
 \index{PreArguments!ClassAd job attribute}
 \item[\AdAttr{PreArguments}:] Defines the command-line arguments for the
-pre command using the New argument syntax, excepting that double quotes must
+pre command using the \emph{new} argument syntax, as specified in
+section~\ref{man-condor-submit-arguments}, excepting that double quotes must
 be escape with a backslash instead of another double quote. If both
 \AdAttr{PreArgs} and \AdAttr{PreArguments} exists, the former is ignored.
 
 %%% ClassAd attribute: PreCmd
 \index{ClassAd job attribute!PreCmd}
 \index{PreCmd!ClassAd job attribute}
+\label{PreCmd}
 \item[\AdAttr{PreCmd}:] A job in the vanilla, Docker, Java, or virtual machine
 universes may specify a command to run after file transfer (if any) completes
 but before the \SubmitCmd{Executable} is started. Unlike a DAGMan PRE script

@@ -1,12 +1,10 @@
-\documentclass[titlepage,oneside,latex2html,ps2pdf,bookmarks,bookmarksnumbered,plainpages=false,pdfpagelabels]{book}
-% \includeonly{overview,user}
-
+\documentclass[titlepage,oneside,bookmarks,bookmarksnumbered,plainpages=false,pdfpagelabels]{book}
 \usepackage{longtable}
+\usepackage{html}
 
-%
-% Input a file written by our Makefile, which will setup to use Times font
-% and pull in the hyperref package if we are building the PDF version.
-\input{timesfont.tex}
+%begin{latexonly}
+\input{font.pdf.tex}
+%end{latexonly}
 
 %
 %  For use with latex2html
@@ -16,6 +14,7 @@
 \usepackage{makeidx}
 \usepackage{upquote}
 \usepackage[T1]{fontenc}
+\usepackage{microtype}
 
 
 %
@@ -36,15 +35,26 @@
 %
 %  Let the figures take up more than half of the page
 %
-\input{figuresizing.tex}
+
+%begin{latexonly}
+\input{figuresizing.pdf.tex}
+%end{latexonly}
 
 %
 %  Bring in HTCondor macros
 %
 \input{condor-macros.tex}
+
+\begin{htmlonly}
+\input{fontsize.html.tex}
+\end{htmlonly}
+
+%begin{latexonly}
+\input{fontsize.pdf.tex}
+%end{latexonly}
+
 \input{man-macros.tex}
 
-%
 % hyphenation of our terms
 \hyphenation{Class-Ads Class-Ad}
 
@@ -71,15 +81,10 @@
 	\renewcommand{\footrulewidth}{0.4pt}
 	\addtolength{\headwidth}{\oddsidemargin}
 
-	%
-	%  Fancy chapter banners
-	%
-	\usepackage[Bjarne]{fncychap}
 }
 
 
 % generate index
-%
 \makeindex
 
 % This turns off the hbox underfull warnings, but
@@ -88,6 +93,9 @@
 \hbadness=10000
 
 \begin{document}
+
+% Only to suppress a pdflatex warning.
+\pagenumbering{Alph}
 
 \title{HTCondor\textsuperscript{\small{\texttrademark}} \VersionNotice\ Manual}
 \author{\AuthorNotice}
@@ -158,14 +166,21 @@
 \label{sec:command-reference}
 \input{man-pages/man.tex}
 
+
 %
-%  The fancy header package gets confused after the man pages, so reset
-%  the header and footer style
+%  The fancy header package gets confused (stuck inserting the last man page's
+%  command name in the header) after the man pages, so reset the header
+%  and footer style.
 %
-  \fancyhead[LE,RO]{\thepage}
-  \fancyhead[RE]{\leftmark}
-  \fancyhead[LO]{\rightmark}
-  \fancyfoot[C]{HTCondor \VersionNotice\ Reference Manual}
+\if@twoside
+	\fancyhead[LE,RO]{\thepage}
+	\fancyhead[RE]{\leftmark}
+	\fancyhead[LO]{\rightmark}
+\else
+	\fancyhead[R]{\thepage}
+	\fancyhead[L]{\rightmark}
+\fi
+\fancyfoot[C]{HTCondor \VersionNotice\ Reference Manual}
 
 
 % an appendix for all the various kinds and ClassAd attributes
@@ -180,6 +195,8 @@
 
 % the index goes at the end of the documentation
 \backmatter
+% Fix the TOC link.
+\phantomsection
 \addcontentsline{toc}{chapter}{Index}
 \label{index}
 \printindex

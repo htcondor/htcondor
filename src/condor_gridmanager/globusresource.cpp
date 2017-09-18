@@ -105,6 +105,7 @@ GlobusResource::GlobusResource( const char *resource_name,
 	monitorDirectory = NULL;
 	monitorJobStatusFile = NULL;
 	monitorLogFile = NULL;
+	jobStatusFileLastReadTime = 0;
 	logFileLastReadTime = 0;
 	jobStatusFileLastUpdate = 0;
 	monitorGramJobId = NULL;

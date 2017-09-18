@@ -60,6 +60,13 @@ EventHandler::EventHandler( void (*f)(int), sigset_t m )
 	func = f;
 	mask = m;
 	is_installed = FALSE;
+	for( int i = 0; i < N_POSIX_SIGS; i++) {
+		sigemptyset(&(o_action[i].sa_mask));
+		o_action[i].sa_flags = 0;
+#ifdef LINUX
+		o_action[i].sa_restorer = 0;
+#endif
+	}
 }
 
 void

@@ -179,6 +179,7 @@ struct SubmitterCounters {
 	, JobsHeld(0)
 	, JobsFlocked(0)
 	, JobsFlockedHere(0)
+	, WeightedJobsFlockedHere(0)
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
 	, Hits(0)
@@ -843,7 +844,6 @@ private:
 
 	// connection variables
 	struct sockaddr_in	From;
-	int					Len; 
 
 	ExprTree* slotWeightOfJob;
 	ClassAd * slotWeightGuessAd;
