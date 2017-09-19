@@ -166,8 +166,6 @@ class GlobusJob : public BaseJob
 	bool restartingJM;
 	time_t restartWhen;
 
-	int numGlobusSubmits;
-
 	std::string outputClassadFilename;
 	bool useGridShell;
 
