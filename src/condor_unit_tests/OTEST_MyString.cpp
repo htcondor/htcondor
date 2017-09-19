@@ -1282,7 +1282,7 @@ static bool reserve_shortening_0() {
 
 //in test_mystring.cpp 434
 static bool reserve_shortening_smaller() {
-	emit_test("Does reserve() correctly shorten a MyString when passed a size"
+	emit_test("Does reserve() correctly not shorten a MyString when passed a size"
 		" smaller than the length of the MyString?");
 	MyString a("Miguel Indurain");
 	a.reserve(6);
@@ -1294,7 +1294,7 @@ static bool reserve_shortening_smaller() {
 	emit_output_actual_header();
 	emit_param("MyString", "%s", a.Value());
 	emit_param("Length", "%d", a.Length());
-	if(strcmp(a.Value(), "Miguel") != MATCH || a.Length() != 6) {
+	if(strcmp(a.Value(), "Miguel Indurain") != MATCH || a.Length() != 15) {
 		FAIL;
 	}
 	PASS;
@@ -1356,8 +1356,9 @@ static bool reserve_larger_capacity() {
 static bool reserve_smaller_capacity() {
 	emit_test("Does reverse() decrease the capacity of a MyString when passed"
 		" a smaller size?");
-	MyString a("foobar");
-	int size = 1;
+	MyString a("foobarfoobarfoobarfoobarfoobarfoobar");
+	int size = 10;
+	a.truncate(6);
 	a.reserve(size);
 	emit_input_header();
 	emit_param("INT", "%d", size);

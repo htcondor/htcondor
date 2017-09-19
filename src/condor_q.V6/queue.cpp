@@ -1787,6 +1787,12 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
 		initOutputMask(app.prmask, qdo_mode, widescreen);
+	} else {
+		// handle flags that just set a constraint when used with a formatting option, but
+		// set a constraint and a format when used alone.
+		if (dash_factory) {
+			Q.addAND("ProcId is undefined && JobMaterializeDigestFile isnt undefined");
+		}
 	}
 
 	// convert cluster and cluster.proc into constraints
@@ -2572,6 +2578,24 @@ format_q_date (long long d, Formatter &)
 	return format_date((int)d);
 }
 
+static const char *
+format_job_factory_mode (const classad::Value &val, Formatter &)
+{
+	if (val.IsUndefinedValue()) return "";
+	int pause_mode = 0;
+	if (val.IsNumber(pause_mode)) {
+		switch(pause_mode) {
+		case -1: return "Errs";  // InvalidSubmit
+		case 0:  return "Norm";  // Running
+		case 1:  return "Held";  // Hold
+		case 2:  return "Done";  // Done
+		case 3:  return "Gone";  // Removed
+		default: return "Unk";   // 
+		}
+	} else {
+		return "????";
+	}
+}
 
 static void
 usage (const char *myName, int other)
@@ -5869,10 +5893,14 @@ const char * const jobFactory_PrintFormat = "SELECT\n"
 "   Owner         AS  OWNER           WIDTH -14 PRINTAS OWNER OR ??\n"
 "   QDate         AS '  SUBMITTED'    WIDTH 11 PRINTAS QDATE\n"
     ATTR_JOB_MATERIALIZE_LIMIT        " AS ' LIMIT' WIDTH 6 PRINTF %6d\n"
-    ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " AS 'NEXTPROC' WIDTH 8 PRINTF %8d\n"
-    ATTR_JOB_MATERIALIZE_PAUSED       " AS PAUSED PRINTF %d or _\n"
+   "JobsPresent   AS 'PRESNT' WIDTH 6 PRINTF %6d\n"
+   "JobsRunning   AS '  RUN ' WIDTH 6 PRINTF %6d\n"
+   "JobsIdle      AS '  IDLE' WIDTH 6 PRINTF %6d\n"
+   "JobsIdle      AS '  HOLD' WIDTH 6 PRINTF %6d\n"
+    ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " AS 'NEXTID' WIDTH 6 PRINTF %6d\n"
+    ATTR_JOB_MATERIALIZE_PAUSED       " AS MODE PRINTAS JOB_FACTORY_MODE OR _\n"
     ATTR_JOB_MATERIALIZE_DIGEST_FILE  " AS DIGEST\n"
-"WHERE ProcId is undefined\n"
+"WHERE (ProcId is undefined) && (" ATTR_JOB_MATERIALIZE_DIGEST_FILE " isnt undefined)\n"
 "SUMMARY NONE\n";
 
 const char * const jobDAG_PrintFormat = "SELECT\n"
@@ -5981,6 +6009,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, render_gridResource, ATTR_EC2_REMOTE_VM_NAME "\0" },
 	{ "GRID_STATUS",     ATTR_GRID_JOB_STATUS, 0, render_gridStatus, ATTR_GLOBUS_STATUS "\0" },
 	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, 0, render_job_description, ATTR_JOB_ARGUMENTS1 "\0" ATTR_JOB_ARGUMENTS2 "\0" ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
+	{ "JOB_FACTORY_MODE",ATTR_JOB_MATERIALIZE_PAUSED, 0, format_job_factory_mode, NULL },
 	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" },
 	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, 0, format_job_status_raw, NULL },
