@@ -129,6 +129,13 @@ DownloadReplicaTransferer::transferFileCommand( )
     }
 	temporarySocket.close( );
     m_socket = listeningSocket.accept( );
+	if ( m_socket == NULL ) {
+		dprintf( D_NETWORK, "DownloadReplicaTransferer::transferFileCommand "
+		         "timed out waiting for peer to connect\n" );
+		listeningSocket.close( );
+
+		return TRANSFERER_FALSE;
+	}
 //	m_socket->set_timeout_multiplier( 1 );
     m_socket->timeout( INT_MAX ); //m_connectionTimeout );
     m_socket->doNotEnforceMinimalCONNECT_TIMEOUT( );
