@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 		printf("%s",
 			"PluginVersion = \"0.1\"\n"
 			"PluginType = \"FileTransfer\"\n"
-			"SupportedMethods = \"http,ftp,file\"\n"
+			"SupportedMethods = \"http,https,ftp,file\"\n"
 			);
 
 		return 0;
@@ -30,14 +30,15 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	// Initialize win32 socket libraries, but not ssl
-	curl_global_init(CURL_GLOBAL_WIN32);
+	// Initialize win32 + SSL socket libraries
+	curl_global_init(CURL_GLOBAL_DEFAULT);
 
 	if ( (handle = curl_easy_init()) == NULL ) {
 		return -1;
 	}
 
 	if ( !strncasecmp( argv[1], "http://", 7 ) ||
+		 !strncasecmp( argv[1], "https://", 8 ) ||
 		 !strncasecmp( argv[1], "ftp://", 6 ) ||
 		 !strncasecmp( argv[1], "file://", 7 ) ) {
 
