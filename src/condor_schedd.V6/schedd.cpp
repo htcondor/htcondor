@@ -2756,7 +2756,7 @@ int Scheduler::guessJobSlotWeight(JobQueueJob * job)
 		req_mem = req_cpus * 1024;
 	}
 	if ( ! job->LookupInteger(ATTR_REQUEST_DISK, req_disk)) {
-		req_disk = req_cpus * 1024;
+		req_disk = req_cpus * 1024ll;
 	}
 
 	ad->Assign(ATTR_CPUS, req_cpus);
