@@ -114,6 +114,8 @@ utilToString( int command )
             return "REPLICATION_LEADER_VERSION";
         case REPLICATION_TRANSFER_FILE:
             return "REPLICATION_TRANSFER_FILE";
+        case REPLICATION_TRANSFER_FILE_NEW:
+            return "REPLICATION_TRANSFER_FILE_NEW";
         case REPLICATION_NEWLY_JOINED_VERSION:
             return "REPLICATION_NEWLY_JOINED_VERSION";
         case REPLICATION_GIVING_UP_VERSION:

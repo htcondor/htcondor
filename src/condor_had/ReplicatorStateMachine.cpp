@@ -123,6 +123,7 @@ ReplicatorStateMachine::initialize( )
     registerCommand(HAD_IN_LEADER_STATE);
     registerCommand(REPLICATION_LEADER_VERSION);
     registerCommand(REPLICATION_TRANSFER_FILE);
+    registerCommand(REPLICATION_TRANSFER_FILE_NEW);
     registerCommand(REPLICATION_NEWLY_JOINED_VERSION);
     registerCommand(REPLICATION_GIVING_UP_VERSION);
     registerCommand(REPLICATION_SOLICIT_VERSION);
@@ -519,7 +520,11 @@ ReplicatorStateMachine::onLeaderVersion( Stream* stream )
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::onLeaderVersion "
 				"downloading from %s\n", 
 				newVersion->getSinfulString( ).Value( ) );
-        download( newVersion->getSinfulString( ).Value( ) );
+		if ( newVersion->knowsNewTransferProtocol() ) {
+			downloadNew( newVersion->getSinfulString( ).Value( ) );
+		} else {
+			download( newVersion->getSinfulString( ).Value( ) );
+		}
     }
     // replication leader must not send a version which hasn't been updated
     //assert(downloadNeeded);
@@ -541,6 +546,15 @@ ReplicatorStateMachine::onTransferFile( char* daemonSinfulString )
         upload( daemonSinfulString );
     }
 }
+void
+ReplicatorStateMachine::onTransferFileNew( Stream *stream )
+{
+	dprintf( D_ALWAYS, "ReplicatorStateMachine::onTransferFileNew started\n" );
+	if( m_state == REPLICATION_LEADER ) {
+		uploadNew( stream );
+	}
+}
+
 /* Function   : onSolicitVersion
  * Arguments  : daemonSinfulString - the address of remote replication daemon,
  *              which sent the REPLICATION_SOLICIT_VERSION command 
@@ -660,6 +674,9 @@ ReplicatorStateMachine::commandHandler( int command, Stream* stream )
         case REPLICATION_TRANSFER_FILE:
             onTransferFile( daemonSinfulString );
             
+            break;
+        case REPLICATION_TRANSFER_FILE_NEW:
+            onTransferFileNew( stream );
             break;
         case REPLICATION_SOLICIT_VERSION:
             onSolicitVersion( daemonSinfulString );
@@ -886,7 +903,11 @@ ReplicatorStateMachine::versionRequestingTimer( )
     Version updatedVersion;
 
     if( replicaSelectionHandler( updatedVersion ) ) {
-        download( updatedVersion.getSinfulString( ).Value( ) );
+		if ( updatedVersion.knowsNewTransferProtocol() ) {
+			downloadNew( updatedVersion.getSinfulString( ).Value( ) );
+		} else {
+			download( updatedVersion.getSinfulString( ).Value( ) );
+		}
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::versionRequestingTimer "
 				"registering version downloading timer\n" );
         m_versionDownloadingTimerId = daemonCore->Register_Timer( 

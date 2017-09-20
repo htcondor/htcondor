@@ -56,28 +56,51 @@ safeUnlinkStateAndVersionFiles( const MyString& stateFilePath,
 int
 UploadReplicaTransferer::initialize( )
 {
-    reinitialize( );
+	reinitialize( );
 
-    m_socket = new ReliSock( );
+	if ( m_command == "up-new" ) {
+		// Try to get inherited socket
+		Stream **socks = daemonCore->GetInheritedSocks();
+		if (socks[0] == NULL ||
+			socks[0]->type() != Stream::reli_sock) {
+			dprintf( D_ALWAYS,
+				"UploadReplicaTransferer::initialize failed to get inherited socket\n" );
+			return TRANSFERER_FALSE;
+		}
+		m_socket = (ReliSock *)socks[0];
 
-	// enable timeouts, we set them to the maximal possible value because the
-	// maximal life policy of transferers is managed from within the code of
-	// replication daemon, so that transferers behave as if they are given the
-	// infinite time to upload the files
-    //m_socket->set_timeout_multiplier( 1 );
-    m_socket->timeout( INT_MAX ); // m_connectionTimeout );
-    // no retries after 'm_connectionTimeout' seconds of unsuccessful connection
-    m_socket->doNotEnforceMinimalCONNECT_TIMEOUT( );
+		int reply = 1;
+		m_socket->encode();
+		if( ! m_socket->code( reply ) ||
+			! m_socket->end_of_message( ) ) {
+			dprintf( D_ALWAYS,
+				"UploadReplicaTransferer::initialize failed to send reply\n" );
+			return TRANSFERER_FALSE;
+		}
+		m_socket->timeout( INT_MAX ); // m_connectionTimeout );
 
-    if( ! m_socket->connect( 
-		const_cast<char*>( m_daemonSinfulString.Value( ) ), 0, false ) ) {
-        dprintf( D_ALWAYS, 
+	} else {
+		m_socket = new ReliSock( );
+
+		// enable timeouts, we set them to the maximal possible value because the
+		// maximal life policy of transferers is managed from within the code of
+		// replication daemon, so that transferers behave as if they are given the
+		// infinite time to upload the files
+		//m_socket->set_timeout_multiplier( 1 );
+		m_socket->timeout( INT_MAX ); // m_connectionTimeout );
+		// no retries after 'm_connectionTimeout' seconds of unsuccessful connection
+		m_socket->doNotEnforceMinimalCONNECT_TIMEOUT( );
+
+		if( ! m_socket->connect(
+		        const_cast<char*>( m_daemonSinfulString.Value( ) ), 0, false ) ) {
+			dprintf( D_ALWAYS,
 				"UploadReplicaTransferer::initialize cannot connect to %s\n",
-                 m_daemonSinfulString.Value( ) );
-        return TRANSFERER_FALSE;
-    }
-    // send accounting information and version files
-    return upload( );
+				m_daemonSinfulString.Value( ) );
+			return TRANSFERER_FALSE;
+		}
+	}
+	// send accounting information and version files
+	return upload( );
 }
 
 /* Function    : upload

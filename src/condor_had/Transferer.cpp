@@ -171,12 +171,14 @@ main_init( int argc, char *argv[] )
 
     if( ! strncmp( argv[1], "down", strlen( "down" ) ) ) {
         replicaTransferer = new DownloadReplicaTransferer( 
+								argv[1],
 								argv[2], 
 								argv[3], 
 								//argv[4] );
 								stateFilePathsList );
 	} else if( ! strncmp( argv[1], "up", strlen( "up" ) ) ) {
         replicaTransferer = new UploadReplicaTransferer( 
+								argv[1],
 								argv[2], 
 								argv[3], 
 								//argv[4] );
@@ -188,6 +190,8 @@ main_init( int argc, char *argv[] )
     }
 
     int result = replicaTransferer->initialize( );
+
+    delete replicaTransferer;
 
     DC_Exit( result );
 }

@@ -39,12 +39,18 @@
 int
 DownloadReplicaTransferer::initialize( )
 {
-    reinitialize( );
+	reinitialize( );
 
-    if( transferFileCommand( ) == TRANSFERER_FALSE ) {
-        return TRANSFERER_FALSE;
-    }
-    return download( );
+	int result;
+	if ( m_command == "down-new" ) {
+		result = transferFileCommandNew();
+	} else {
+		result = transferFileCommand();
+	}
+	if( result == TRANSFERER_FALSE ) {
+		return TRANSFERER_FALSE;
+	}
+	return download( );
 }
 
 /* Function    : transferFileCommand
@@ -71,7 +77,7 @@ DownloadReplicaTransferer::transferFileCommand( )
     temporarySocket.doNotEnforceMinimalCONNECT_TIMEOUT( );
 
     if( ! temporarySocket.connect( temporaryDaemonSinfulString, 0, false ) ) {
-        dprintf( D_NETWORK, "DownloadReplicaTransferer::transferFileCommand "
+        dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
                             "unable to connect to %s, reason: %s\n",
                    temporaryDaemonSinfulString, strerror( errno ) );
         temporarySocket.close( );
@@ -80,7 +86,7 @@ DownloadReplicaTransferer::transferFileCommand( )
     }
     if( ! daemon.startCommand( REPLICATION_TRANSFER_FILE, &temporarySocket,
                                                  m_connectionTimeout ) ) {
-        dprintf( D_COMMAND, "DownloadReplicaTransferer::transferFileCommand "
+        dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
 							"unable to start command to addr %s\n",
                    temporaryDaemonSinfulString );
 		temporarySocket.close( );
@@ -117,7 +123,7 @@ DownloadReplicaTransferer::transferFileCommand( )
     char* temporarySinfulString = const_cast<char*>( sinfulString.Value( ) );
     if( ! temporarySocket.code( temporarySinfulString ) ||
         ! temporarySocket.end_of_message( ) ) {
-        dprintf( D_NETWORK, "DownloadReplicaTransferer::transferFileCommand "
+        dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
                "unable to code the sinful string %s\n", temporarySinfulString );
 		temporarySocket.close( );
 		listeningSocket.close( );
@@ -130,7 +136,7 @@ DownloadReplicaTransferer::transferFileCommand( )
 	temporarySocket.close( );
     m_socket = listeningSocket.accept( );
 	if ( m_socket == NULL ) {
-		dprintf( D_NETWORK, "DownloadReplicaTransferer::transferFileCommand "
+		dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
 		         "timed out waiting for peer to connect\n" );
 		listeningSocket.close( );
 
@@ -146,6 +152,79 @@ DownloadReplicaTransferer::transferFileCommand( )
 					   "request on port no. %d\n", m_socket->get_port( ) );
     return TRANSFERER_TRUE;
 }
+
+int
+DownloadReplicaTransferer::transferFileCommandNew( )
+{
+	char* temporaryDaemonSinfulString =
+		const_cast<char*>( m_daemonSinfulString.Value( ) );
+
+	dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
+		"to %s started\n", temporaryDaemonSinfulString );
+	Daemon daemon( DT_ANY, temporaryDaemonSinfulString );
+	ReliSock *temporarySocket = new ReliSock;
+
+	// no retries after 'm_connectionTimeout' seconds of unsuccessful connection
+	temporarySocket->timeout( m_connectionTimeout );
+	temporarySocket->doNotEnforceMinimalCONNECT_TIMEOUT( );
+
+	if( ! temporarySocket->connect( temporaryDaemonSinfulString, 0, false ) ) {
+		dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
+			"unable to connect to %s, reason: %s\n",
+			temporaryDaemonSinfulString, strerror( errno ) );
+		delete temporarySocket;
+
+		return TRANSFERER_FALSE;
+	}
+	if( ! daemon.startCommand( REPLICATION_TRANSFER_FILE_NEW, temporarySocket,
+	                           m_connectionTimeout ) ) {
+		dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
+			"unable to start command to addr %s\n",
+			temporaryDaemonSinfulString );
+		delete temporarySocket;
+
+		return TRANSFERER_FALSE;
+	}
+
+	temporarySocket->encode();
+	if( ! temporarySocket->put( "" ) ||
+	    ! temporarySocket->end_of_message( ) ) {
+		dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
+			"unable to send empty sinful string\n" );
+		delete temporarySocket;
+
+		return TRANSFERER_FALSE;
+	}
+
+	int reply = 0;
+	temporarySocket->decode();
+	if( ! temporarySocket->code( reply ) ||
+	    ! temporarySocket->end_of_message( ) ) {
+		dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
+			"unable to receive reply\n" );
+		delete temporarySocket;
+
+		return TRANSFERER_FALSE;
+	} else if ( reply <= 0 ) {
+		dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
+			"server sent failure code %d\n", reply );
+		delete temporarySocket;
+		return TRANSFERER_FALSE;
+	} else {
+		dprintf( D_NETWORK, "DownloadReplicaTransferer::transferFileCommandNew "
+			"server sent success code %d\n", reply );
+	}
+	m_socket = temporarySocket;
+//	m_socket->set_timeout_multiplier( 1 );
+	m_socket->timeout( INT_MAX ); //m_connectionTimeout );
+	m_socket->doNotEnforceMinimalCONNECT_TIMEOUT( );
+
+	dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
+		"sent transfer command successfully and accepted "
+		"request on port no. %d\n", m_socket->get_port( ) );
+	return TRANSFERER_TRUE;
+}
+
 /* Function    : download
  * Return value: TRANSFERER_TRUE - upon success, 
  *               TRANSFERER_FALSE - upon failure

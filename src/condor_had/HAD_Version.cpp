@@ -24,6 +24,7 @@
 #include "stat_wrapper.h"
 // for 'getHostFromAddr' and 'getPortFromAddr'
 #include "internet.h"
+#include "condor_ver_info.h"
 
 #include "Version.h"
 #include "FilesOperations.h"
@@ -44,7 +45,7 @@ createFile(const MyString& filePath)
 
 Version::Version():
     m_gid( 0 ), m_logicalClock( 0 ), m_state( VERSION_REQUESTING ),
-	m_isPrimary( FALSE )
+	m_isPrimary( FALSE ), m_knowsNewTransferProtocol( true )
 {
 }
 
@@ -64,6 +65,7 @@ Version::initialize( const MyString& pStateFilePath,
     synchronize( false );
 
     m_sinfulString = daemonCore->InfoCommandSinfulString( );
+	m_knowsNewTransferProtocol = true;
 //char* sinfulStringString = 0;
 //    get_full_hostname( hostNameString );
 //    hostName = hostNameString;
@@ -186,6 +188,13 @@ Version::decode( Stream* stream )
         return false;
     }
 
+	const CondorVersionInfo *peer_ver = stream->get_peer_version();
+	if ( peer_ver ) {
+		m_knowsNewTransferProtocol = peer_ver->built_since_version( 8, 7, 4 );
+	} else {
+		m_knowsNewTransferProtocol = false;
+	}
+
     m_gid          = temporaryGid;
     m_logicalClock = temporaryLogicalClock;
     m_sinfulString = temporarySinfulString;
@@ -243,15 +252,14 @@ Version::operator >= (const Version& version) const
 MyString
 Version::toString( ) const
 {
-    MyString versionAsString = "logicalClock = ";
+	MyString versionAsString;
 
-    versionAsString += m_logicalClock;
-    versionAsString += ", gid = ";
-    versionAsString += m_gid;
-    versionAsString += ", belongs to ";
-    versionAsString += m_sinfulString;
-    
-    return versionAsString;
+	formatstr( versionAsString,
+		"logicalClock = %d, gid = %d, belongs to %s, transferProtocol = %s",
+		m_logicalClock, m_gid, m_sinfulString.Value(),
+		m_knowsNewTransferProtocol ? "new" : "old" );
+
+	return versionAsString;
 }
 /* Function    : load
  * Return value: bool - success/failure value

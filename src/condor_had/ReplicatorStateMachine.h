@@ -139,6 +139,7 @@ private:
 // Command handlers
     void onLeaderVersion(Stream* stream);
     void onTransferFile(char* daemonSinfulString);
+    void onTransferFileNew(Stream *stream);
     void onSolicitVersion( char* daemonSinfulString );
     void onSolicitVersionReply(Stream* stream);
     void onNewlyJoinedVersion(Stream* stream);
