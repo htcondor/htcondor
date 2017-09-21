@@ -393,11 +393,7 @@ JICLocal::initJobInfo( void )
 	}
 
 	if( Starter->isGridshell() ) { 
-		MyString iwd_str = ATTR_JOB_IWD;
-		iwd_str += "=\"";
-		iwd_str += Starter->origCwd();
-		iwd_str += '"';
-		job_ad->Insert( iwd_str.Value() );
+		job_ad->Assign( ATTR_JOB_IWD, Starter->origCwd() );
 	}
 	job_ad->LookupString( ATTR_JOB_IWD, &job_iwd );
 	if( ! job_iwd ) {
@@ -413,13 +409,8 @@ JICLocal::initJobInfo( void )
 		dprintf( D_FULLDEBUG, "warning: %s not specified as full path, "
 				 "prepending job's IWD (%s)\n", ATTR_JOB_CMD, job_iwd );
 		MyString job_cmd;
-		job_cmd += ATTR_JOB_CMD;
-		job_cmd += "=\"";
-		job_cmd += job_iwd;
-		job_cmd += DIR_DELIM_CHAR;
-		job_cmd += orig_job_name;
-		job_cmd += '"';
-		job_ad->Insert( job_cmd.Value() );
+		formatstr( job_cmd, "%s%c%s", job_iwd, DIR_DELIM_CHAR, orig_job_name );
+		job_ad->Assign( ATTR_JOB_CMD, job_cmd );
 	}
 		
 		// now that we have the real iwd we'll be using, we can
