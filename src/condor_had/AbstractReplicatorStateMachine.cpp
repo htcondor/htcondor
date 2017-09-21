@@ -224,10 +224,10 @@ AbstractReplicatorStateMachine::downloadReplicaTransfererReaper(
             pid, WEXITSTATUS( exitStatus ) );
         return TRANSFERER_FALSE;
     }
-    MyString temporaryFilesExtension( pid );
+    MyString temporaryFilesExtension;
 
-    temporaryFilesExtension += ".";
-    temporaryFilesExtension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
+    formatstr( temporaryFilesExtension, "%d.%s", pid,
+               DOWNLOADING_TEMPORARY_FILES_EXTENSION );
     // the rotation and the version synchronization appear in the code
     // sequentially, trying to make the gap between them as less as possible;
     // upon failure we do not synchronize the local version, since such
@@ -754,11 +754,11 @@ AbstractReplicatorStateMachine::killTransferers()
 		// when the process is killed, it could have not yet erased its
         // temporary files, this is why we ensure it by erasing it in killer
         // function
-        MyString extension( m_downloadTransfererMetadata.m_pid );
+        MyString extension;
         // the .down ending is needed in order not to confuse between upload and
         // download processes temporary files
-        extension += ".";
-        extension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
+        formatstr( extension, "%d.%s", m_downloadTransfererMetadata.m_pid,
+                   DOWNLOADING_TEMPORARY_FILES_EXTENSION );
 
         FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
                                          extension.Value( ) );
@@ -784,11 +784,11 @@ AbstractReplicatorStateMachine::killTransferers()
 			            // erased its
             // temporary files, this is why we ensure it by erasing it in killer
             // function
-            MyString extension( uploadTransfererMetadata->m_pid );
+            MyString extension;
             // the .up ending is needed in order not to confuse between
             // upload and download processes temporary files
-            extension += ".";
-            extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
+            formatstr( extension, "%d.%s", uploadTransfererMetadata->m_pid,
+                       UPLOADING_TEMPORARY_FILES_EXTENSION );
 
             FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
                                              extension.Value( ) );

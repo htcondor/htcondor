@@ -64,22 +64,19 @@ DownloadReplicaTransferer::initialize( )
 int
 DownloadReplicaTransferer::transferFileCommand( )
 {
-    char* temporaryDaemonSinfulString =
-        const_cast<char*>( m_daemonSinfulString.Value( ) );
-
     dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
-                       "to %s started\n", temporaryDaemonSinfulString );
-    Daemon daemon( DT_ANY, temporaryDaemonSinfulString );
+             "to %s started\n", m_daemonSinfulString.Value() );
+    Daemon daemon( DT_ANY, m_daemonSinfulString.Value() );
     ReliSock temporarySocket;
     
     // no retries after 'm_connectionTimeout' seconds of unsuccessful connection
     temporarySocket.timeout( m_connectionTimeout );
     temporarySocket.doNotEnforceMinimalCONNECT_TIMEOUT( );
 
-    if( ! temporarySocket.connect( temporaryDaemonSinfulString, 0, false ) ) {
+    if( ! temporarySocket.connect( m_daemonSinfulString.Value(), 0, false ) ) {
         dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
-                            "unable to connect to %s, reason: %s\n",
-                   temporaryDaemonSinfulString, strerror( errno ) );
+                 "unable to connect to %s, reason: %s\n",
+                 m_daemonSinfulString.Value(), strerror( errno ) );
         temporarySocket.close( );
 
 		return TRANSFERER_FALSE;
@@ -87,8 +84,8 @@ DownloadReplicaTransferer::transferFileCommand( )
     if( ! daemon.startCommand( REPLICATION_TRANSFER_FILE, &temporarySocket,
                                                  m_connectionTimeout ) ) {
         dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
-							"unable to start command to addr %s\n",
-                   temporaryDaemonSinfulString );
+                 "unable to start command to addr %s\n",
+                 m_daemonSinfulString.Value() );
 		temporarySocket.close( );
 
         return TRANSFERER_FALSE;
@@ -120,18 +117,17 @@ DownloadReplicaTransferer::transferFileCommand( )
     sinfulString = listeningSocket.get_sinful_public();
     // after the socket for the downloading/uploading process is occupied,
     // its number is sent to the remote replication daemon
-    char* temporarySinfulString = const_cast<char*>( sinfulString.Value( ) );
-    if( ! temporarySocket.code( temporarySinfulString ) ||
+    if( ! temporarySocket.code( sinfulString ) ||
         ! temporarySocket.end_of_message( ) ) {
         dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
-               "unable to code the sinful string %s\n", temporarySinfulString );
+                 "unable to code the sinful string %s\n", sinfulString.Value() );
 		temporarySocket.close( );
 		listeningSocket.close( );
 
         return TRANSFERER_FALSE;
     } else {
         dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
-               "sinful string %s coded successfully\n", temporarySinfulString );
+                 "sinful string %s coded successfully\n", sinfulString.Value() );
     }
 	temporarySocket.close( );
     m_socket = listeningSocket.accept( );
@@ -156,22 +152,19 @@ DownloadReplicaTransferer::transferFileCommand( )
 int
 DownloadReplicaTransferer::transferFileCommandNew( )
 {
-	char* temporaryDaemonSinfulString =
-		const_cast<char*>( m_daemonSinfulString.Value( ) );
-
 	dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
-		"to %s started\n", temporaryDaemonSinfulString );
-	Daemon daemon( DT_ANY, temporaryDaemonSinfulString );
+	         "to %s started\n", m_daemonSinfulString.Value() );
+	Daemon daemon( DT_ANY, m_daemonSinfulString.Value() );
 	ReliSock *temporarySocket = new ReliSock;
 
 	// no retries after 'm_connectionTimeout' seconds of unsuccessful connection
 	temporarySocket->timeout( m_connectionTimeout );
 	temporarySocket->doNotEnforceMinimalCONNECT_TIMEOUT( );
 
-	if( ! temporarySocket->connect( temporaryDaemonSinfulString, 0, false ) ) {
+	if( ! temporarySocket->connect( m_daemonSinfulString.Value(), 0, false ) ) {
 		dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
 			"unable to connect to %s, reason: %s\n",
-			temporaryDaemonSinfulString, strerror( errno ) );
+			m_daemonSinfulString.Value(), strerror( errno ) );
 		delete temporarySocket;
 
 		return TRANSFERER_FALSE;
@@ -180,7 +173,7 @@ DownloadReplicaTransferer::transferFileCommandNew( )
 	                           m_connectionTimeout ) ) {
 		dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommandNew "
 			"unable to start command to addr %s\n",
-			temporaryDaemonSinfulString );
+			m_daemonSinfulString.Value() );
 		delete temporarySocket;
 
 		return TRANSFERER_FALSE;

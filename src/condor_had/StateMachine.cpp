@@ -635,9 +635,9 @@ HADStateMachine::sendReplicationCommand( int command )
         return false;
     }
 
-    char* subsys = const_cast<char*>( daemonCore->InfoCommandSinfulString( ) );
+    if( !sock.put(daemonCore->InfoCommandSinfulString( )) ||
+        !sock.end_of_message() ) {
 
-    if( !sock.code(subsys) || !sock.end_of_message() ) {
         dprintf( D_ALWAYS, "send to replication daemon, !sock.code false \n");
         sock.close();
 

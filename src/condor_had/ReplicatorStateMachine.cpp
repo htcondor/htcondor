@@ -726,7 +726,7 @@ void
 ReplicatorStateMachine::registerCommand(int command)
 {
     daemonCore->Register_Command(
-        command, const_cast<char*>( utilToString( command ) ),
+        command, utilToString( command ),
         (CommandHandlercpp) &ReplicatorStateMachine::commandHandler,
         "commandHandler", this, DAEMON );
 }
@@ -761,11 +761,11 @@ ReplicatorStateMachine::killStuckDownloadingTransferer( time_t currentTime )
 		// when the process is killed, it could have not yet erased its
 		// temporary files, this is why we ensure it by erasing it in killer
 		// function
-		MyString extension( m_downloadTransfererMetadata.m_pid );
+		MyString extension;
         // the .down ending is needed in order not to confuse between upload and
         // download processes temporary files
-        extension += ".";
-        extension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
+		formatstr( extension, "%d.%s", m_downloadTransfererMetadata.m_pid,
+		           DOWNLOADING_TEMPORARY_FILES_EXTENSION );
 
         FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
                                          extension.Value( ) );
@@ -806,11 +806,11 @@ ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
 			// when the process is killed, it could have not yet erased its
         	// temporary files, this is why we ensure it by erasing it in killer
         	// function	
-			MyString extension( uploadTransfererMetadata->m_pid );
+			MyString extension;
             // the .up ending is needed in order not to confuse between
             // upload and download processes temporary files
-            extension += ".";
-            extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
+			formatstr( extension, "%d.%s", uploadTransfererMetadata->m_pid,
+			           UPLOADING_TEMPORARY_FILES_EXTENSION );
 
             FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
                                              extension.Value( ) );
