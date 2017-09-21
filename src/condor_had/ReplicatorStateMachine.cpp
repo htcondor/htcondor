@@ -657,7 +657,7 @@ ReplicatorStateMachine::commandHandler( int command, Stream* stream )
 	{
         dprintf( D_NETWORK, "ReplicatorStateMachine::commandHandler "
                             "cannot read remote daemon sinful string for %s\n",
-                 utilToString( command ) );
+                 getCommandStringSafe( command ) );
 	    free( daemonSinfulString );
 
 		return;
@@ -665,7 +665,7 @@ ReplicatorStateMachine::commandHandler( int command, Stream* stream )
 
     dprintf( /*D_COMMAND*/
              D_FULLDEBUG, "ReplicatorStateMachine::commandHandler received "
-			"command %s from %s\n", utilToString(command), daemonSinfulString );
+			"command %s from %s\n", getCommandStringSafe(command), daemonSinfulString );
     switch( command ) {
         case REPLICATION_LEADER_VERSION:
             onLeaderVersion( stream );
@@ -726,7 +726,7 @@ void
 ReplicatorStateMachine::registerCommand(int command)
 {
     daemonCore->Register_Command(
-        command, utilToString( command ),
+        command, getCommandStringSafe( command ),
         (CommandHandlercpp) &ReplicatorStateMachine::commandHandler,
         "commandHandler", this, DAEMON );
 }

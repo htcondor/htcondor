@@ -635,7 +635,7 @@ AbstractReplicatorStateMachine::sendCommand(
     int command, char* daemonSinfulString, CommandFunction function )
 {
     dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand %s to %s\n",
-               utilToString( command ), daemonSinfulString );
+               getCommandStringSafe( command ), daemonSinfulString );
     Daemon  daemon( DT_ANY, daemonSinfulString );
     ReliSock socket;
 
@@ -655,7 +655,7 @@ AbstractReplicatorStateMachine::sendCommand(
     if( ! daemon.startCommand( command, &socket, m_connectionTimeout ) ) {
         dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand "
                             "cannot start command %s to %s\n",
-                   utilToString( command ), daemonSinfulString );
+                   getCommandStringSafe( command ), daemonSinfulString );
 		socket.close( );
 
         return ;
@@ -693,7 +693,7 @@ AbstractReplicatorStateMachine::sendCommand(
 	socket.close( );
    	dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand "
                        "%s command sent to %s successfully\n",
-             utilToString( command ), daemonSinfulString );
+             getCommandStringSafe( command ), daemonSinfulString );
 }
 
 // specific command function - sends local daemon's version over the socket
