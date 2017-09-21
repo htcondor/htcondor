@@ -162,6 +162,8 @@ int EC2Job::maxRetryTimes = 3;
 MSC_DISABLE_WARNING(6262) // function uses more than 16k of stack
 EC2Job::EC2Job( ClassAd *classad ) :
 	BaseJob( classad ),
+	holdReasonCode( 0 ),
+	holdReasonSubCode( 0 ),
 	m_was_job_completion( false ),
 	m_retry_times( 0 ),
 	probeNow( false ),
@@ -169,8 +171,6 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	purgedTwice( false ),
 	updatedOnce( false )
 {
-	int holdReasonCode = 0;
-	int holdReasonSubCode = 0;
 	string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
