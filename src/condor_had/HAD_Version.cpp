@@ -165,21 +165,18 @@ Version::decode( Stream* stream )
                             "unable to decode the gid\n" );
         return false;
     }
-    stream->decode( );
 
     if( ! stream->code( temporaryLogicalClock ) ) {
         dprintf( D_NETWORK, "Version::decode "
                             "unable to decode the logical clock\n" );
         return false;
     }
-    stream->decode( );
 
     if( ! stream->code( temporarySinfulString ) ) {
         dprintf( D_NETWORK, "Version::decode "
                             "unable to decode the sinful string\n" );
         return false;
     }
-	stream->decode( );
 
 	if( ! stream->code( temporaryIsPrimary ) ) {
         dprintf( D_NETWORK, "Version::decode "

@@ -645,7 +645,7 @@ ReplicatorStateMachine::downloadReplicaTransfererReaper(
 						  arrived
  * Description: handles various commands sent to this replication daemon
  */
-void
+int
 ReplicatorStateMachine::commandHandler( int command, Stream* stream )
 {
     char* daemonSinfulString = 0;
@@ -660,7 +660,7 @@ ReplicatorStateMachine::commandHandler( int command, Stream* stream )
                  getCommandStringSafe( command ) );
 	    free( daemonSinfulString );
 
-		return;
+		return FALSE;
     }
 
     dprintf( /*D_COMMAND*/
@@ -717,6 +717,7 @@ ReplicatorStateMachine::commandHandler( int command, Stream* stream )
         dprintf( D_NETWORK, "ReplicatorStateMachine::commandHandler "
                             "cannot read the end of the message\n" );
     }
+    return FALSE;
 }
 /* Function   : registerCommand 
  * Arguments  : command - id to register

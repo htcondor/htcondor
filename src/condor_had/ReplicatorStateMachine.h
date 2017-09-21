@@ -126,7 +126,7 @@ private:
 	void killStuckDownloadingTransferer(time_t currentTime);
 	void killStuckUploadingTransferers (time_t currentTime);
 // End of managing stuck transferers
-    void commandHandler(int command, Stream* stream);
+    int commandHandler(int command, Stream* stream);
     void registerCommand(int command);
 
     void finalize();
