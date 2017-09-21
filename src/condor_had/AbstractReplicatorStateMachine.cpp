@@ -224,10 +224,10 @@ AbstractReplicatorStateMachine::downloadReplicaTransfererReaper(
             pid, WEXITSTATUS( exitStatus ) );
         return TRANSFERER_FALSE;
     }
-    MyString temporaryFilesExtension( pid );
+    MyString temporaryFilesExtension;
 
-    temporaryFilesExtension += ".";
-    temporaryFilesExtension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
+    formatstr( temporaryFilesExtension, "%d.%s", pid,
+               DOWNLOADING_TEMPORARY_FILES_EXTENSION );
     // the rotation and the version synchronization appear in the code
     // sequentially, trying to make the gap between them as less as possible;
     // upon failure we do not synchronize the local version, since such
@@ -366,6 +366,63 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
     return true;
 }
 
+bool
+AbstractReplicatorStateMachine::downloadNew( const char* daemonSinfulString )
+{
+	ArgList  processArguments;
+	processArguments.AppendArg( m_transfererPath.Value() );
+	processArguments.AppendArg( "-f" );
+	processArguments.AppendArg( "down-new" );
+	processArguments.AppendArg( daemonSinfulString );
+	processArguments.AppendArg( m_versionFilePath.Value() );
+	processArguments.AppendArg( "1" );
+	processArguments.AppendArg( m_stateFilePath.Value() );
+	// Get arguments from this ArgList object for descriptional purposes.
+	MyString	s;
+	processArguments.GetArgsStringForDisplay( &s );
+	dprintf( D_FULLDEBUG,
+		"AbstractReplicatorStateMachine::downloadNew creating "
+		"downloading condor_transferer process: \n \"%s\"\n",
+		s.Value( ) );
+
+	// PRIV_ROOT privilege is necessary here to create the process
+	// so we can read GSI certs <sigh>
+	priv_state privilege = PRIV_ROOT;
+
+	int transfererPid = daemonCore->Create_Process(
+		m_transfererPath.Value( ),    // name
+		processArguments,             // args
+		privilege,                    // priv
+		m_downloadReaperId,           // reaper id
+		FALSE,                        // command port needed?
+		FALSE,                        // command port needed?
+		NULL,                         // env
+		NULL,                         // cwd
+		NULL                          // process family info
+		);
+	if( transfererPid == FALSE ) {
+		dprintf( D_ALWAYS,
+			"AbstractReplicatorStateMachine::downloadNew unable to create "
+			"downloading condor_transferer process\n" );
+		return false;
+	} else {
+		dprintf( D_FULLDEBUG,
+			"AbstractReplicatorStateMachine::downloadNew downloading "
+			"condor_transferer process created with pid = %d\n",
+			transfererPid );
+		REPLICATION_ASSERT( ! m_downloadTransfererMetadata.isValid() );
+		/* Remembering the last time, when the downloading 'condor_transferer'
+		 * was created: the monitoring might be useful in possible prevention
+		 * of stuck 'condor_transferer' processes. Remembering the pid of the
+		 * downloading process as well: to terminate it when the downloading
+		 * process is stuck
+		 */
+		m_downloadTransfererMetadata.set(transfererPid, time( NULL ) );
+	}
+
+	return true;
+}
+
 // creating uploading transferer process and remembering its pid and
 // creation time
 bool
@@ -431,6 +488,78 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
     }
 
     return true;
+}
+
+bool
+AbstractReplicatorStateMachine::uploadNew( Stream *stream )
+{
+	// TODO take ReliSock instead of sinful
+	//   have child inherit ReliSock
+	ArgList  processArguments;
+	processArguments.AppendArg( m_transfererPath.Value() );
+	processArguments.AppendArg( "-f" );
+	processArguments.AppendArg( "up-new" );
+	processArguments.AppendArg( "" );
+	processArguments.AppendArg( m_versionFilePath.Value() );
+	processArguments.AppendArg( "1" );
+	processArguments.AppendArg( m_stateFilePath.Value() );
+
+	Stream *inherit_list[] =
+		{ stream /*connection to client*/,
+		  0 /*terminal NULL*/ };
+
+	// Get arguments from this ArgList object for descriptional purposes.
+	MyString	s;
+	processArguments.GetArgsStringForDisplay( &s );
+	dprintf( D_FULLDEBUG,
+		"AbstractReplicatorStateMachine::uploadNew creating "
+		"uploading condor_transferer process: \n \"%s\"\n",
+		s.Value( ) );
+
+	// PRIV_ROOT privilege is necessary here to create the process
+	// so we can read GSI certs <sigh>
+	priv_state privilege = PRIV_ROOT;
+
+	int transfererPid = daemonCore->Create_Process(
+		m_transfererPath.Value( ),    // name
+		processArguments,             // args
+		privilege,                    // priv
+		m_uploadReaperId,             // reaper id
+		FALSE,                        // tcp command port needed?
+		FALSE,                        // udp command port needed?
+		NULL,                         // envs
+		NULL,                         // cwd
+		NULL,                         // process family info
+		inherit_list                  // inherited socks
+		);
+	if ( transfererPid == FALSE ) {
+		dprintf( D_PROC,
+			"AbstractReplicatorStateMachine::uploadNew unable to create "
+			"uploading condor_transferer process\n");
+		return false;
+	} else {
+		dprintf( D_FULLDEBUG,
+			"AbstractReplicatorStateMachine::uploadNew uploading "
+			"condor_transferer process created with pid = %d\n",
+			transfererPid );
+		/* Remembering the last time, when the uploading 'condor_transferer'
+		 * was created: the monitoring might be useful in possible prevention
+		 * of stuck 'condor_transferer' processes. Remembering the pid of the
+		 * uploading process as well: to terminate it when the uploading
+		 * process is stuck
+		 */
+// TODO: Atomic operation
+		// dynamically allocating the memory for the pid, since it is going to
+		// be inserted into Condor's list which stores the pointers to the data,
+		// rather than the data itself, that's why it is impossible to pass a
+		// local integer variable to append to this list
+		ProcessMetadata* uploadTransfererMetadata =
+				new ProcessMetadata( transfererPid, time( NULL ) );
+		m_uploadTransfererMetadataList.Append( uploadTransfererMetadata );
+// End of TODO: Atomic operation
+	}
+
+	return true;
 }
 
 // sending command, along with the local replication daemon's version and state
@@ -506,7 +635,7 @@ AbstractReplicatorStateMachine::sendCommand(
     int command, char* daemonSinfulString, CommandFunction function )
 {
     dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand %s to %s\n",
-               utilToString( command ), daemonSinfulString );
+               getCommandStringSafe( command ), daemonSinfulString );
     Daemon  daemon( DT_ANY, daemonSinfulString );
     ReliSock socket;
 
@@ -526,7 +655,7 @@ AbstractReplicatorStateMachine::sendCommand(
     if( ! daemon.startCommand( command, &socket, m_connectionTimeout ) ) {
         dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand "
                             "cannot start command %s to %s\n",
-                   utilToString( command ), daemonSinfulString );
+                   getCommandStringSafe( command ), daemonSinfulString );
 		socket.close( );
 
         return ;
@@ -564,7 +693,7 @@ AbstractReplicatorStateMachine::sendCommand(
 	socket.close( );
    	dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand "
                        "%s command sent to %s successfully\n",
-             utilToString( command ), daemonSinfulString );
+             getCommandStringSafe( command ), daemonSinfulString );
 }
 
 // specific command function - sends local daemon's version over the socket
@@ -625,11 +754,11 @@ AbstractReplicatorStateMachine::killTransferers()
 		// when the process is killed, it could have not yet erased its
         // temporary files, this is why we ensure it by erasing it in killer
         // function
-        MyString extension( m_downloadTransfererMetadata.m_pid );
+        MyString extension;
         // the .down ending is needed in order not to confuse between upload and
         // download processes temporary files
-        extension += ".";
-        extension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
+        formatstr( extension, "%d.%s", m_downloadTransfererMetadata.m_pid,
+                   DOWNLOADING_TEMPORARY_FILES_EXTENSION );
 
         FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
                                          extension.Value( ) );
@@ -655,11 +784,11 @@ AbstractReplicatorStateMachine::killTransferers()
 			            // erased its
             // temporary files, this is why we ensure it by erasing it in killer
             // function
-            MyString extension( uploadTransfererMetadata->m_pid );
+            MyString extension;
             // the .up ending is needed in order not to confuse between
             // upload and download processes temporary files
-            extension += ".";
-            extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
+            formatstr( extension, "%d.%s", uploadTransfererMetadata->m_pid,
+                       UPLOADING_TEMPORARY_FILES_EXTENSION );
 
             FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
                                              extension.Value( ) );
