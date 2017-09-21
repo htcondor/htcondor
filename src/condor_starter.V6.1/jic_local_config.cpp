@@ -110,7 +110,7 @@ JICLocalConfig::getLocalJobAd( void )
 			char const *local_domain = ".";
 			char *name = NULL, *domain = NULL;
 			getDomainAndName ( owner_defined, domain, name );
-			job_ad->Assign( OWNER, name );
+			job_ad->Assign( ATTR_OWNER, name );
 			job_ad->Assign( ATTR_NT_DOMAIN, domain ? domain : local_domain );
 		} else {
 			dprintf( D_ALWAYS, "Local job \"Owner\" defined, "
