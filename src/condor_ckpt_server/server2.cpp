@@ -724,7 +724,7 @@ void Server::HandleRequest(int req_sd,
 void Server::ProcessServiceReq(int             req_id,
 							   FDContext       *fdc,
 							   struct in_addr  shadow_IP,
-							   service_req_pkt service_req)
+							   const service_req_pkt &service_req)
 {  
 	service_reply_pkt  service_reply;
 	char               log_msg[256];
@@ -1107,8 +1107,8 @@ void Server::ProcessServiceReq(int             req_id,
 }
 
 
-void Server::ScheduleReplication(struct in_addr shadow_IP, char *owner,
-								 char *filename, int level)
+void Server::ScheduleReplication(struct in_addr shadow_IP, const char *owner,
+								 const char *filename, int level)
 {
 	char        log_msg[256];
 	static bool first_time = true;

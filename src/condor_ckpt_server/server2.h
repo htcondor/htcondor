@@ -74,15 +74,15 @@ class Server
     int SetUpPort(u_short port);
 	void SetUpPeers();
 	ReplicationSchedule replication_schedule;
-	void ScheduleReplication(struct in_addr shadow_IP, char *owner,
-							 char *filename, int level);
+	void ScheduleReplication(struct in_addr shadow_IP, const char *owner,
+							 const char *filename, int level);
 	void Replicate();
     void HandleRequest(int          req_sd,
 		       request_type req);
     void ProcessServiceReq(int            req_id,
 				FDContext *fdc,
 				struct in_addr shadow_IP,
-				service_req_pkt service_req);
+				const service_req_pkt &service_req);
     void ProcessStoreReq(int            req_id,
 				FDContext *fdc,
 				struct in_addr shadow_IP,
