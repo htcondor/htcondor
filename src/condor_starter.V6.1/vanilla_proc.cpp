@@ -641,7 +641,7 @@ VanillaProc::StartJob()
 				// values can be set without interference
 
 				climits.set_memory_limit_bytes(0);
-				climits.set_memsw_limit_bytes(ULONG_MAX);
+				climits.set_memsw_limit_bytes(LONG_MAX);
 
 				uint64_t MemMb_big = MemMb;
 				m_memory_limit = MemMb_big;
