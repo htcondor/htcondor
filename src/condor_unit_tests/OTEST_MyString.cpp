@@ -116,8 +116,6 @@ static bool concatenation_long_empty(void);
 static bool concatenation_long_non_empty(void);
 static bool concatenation_long_large(void);
 static bool concatenation_long_small(void);
-static bool concatenation_double_empty(void);
-static bool concatenation_double_non_empty(void);
 static bool substr_empty(void);
 static bool substr_beginning(void);
 static bool substr_end(void);
@@ -338,8 +336,6 @@ bool OTEST_MyString(void) {
 	driver.register_function(concatenation_long_non_empty);
 	driver.register_function(concatenation_long_large);
 	driver.register_function(concatenation_long_small);
-	driver.register_function(concatenation_double_empty);
-	driver.register_function(concatenation_double_non_empty);
 	driver.register_function(substr_empty);
 	driver.register_function(substr_beginning);
 	driver.register_function(substr_end);
@@ -1952,39 +1948,6 @@ static bool concatenation_long_small() {
 	emit_output_actual_header();
 	emit_retval("%s", a.Value());
 	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-//in test_mystring.cpp 180
-static bool concatenation_double_empty() {
-	emit_test("Test concatenating an empty MyString with a double.");
-	MyString a;
-	a += 12.3;
-	emit_input_header();
-	emit_param("MyString", "%f", 12.3);
-	emit_output_expected_header();
-	emit_retval("%s", "12.3");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strncmp(a.Value(), "12.3", 4) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_double_non_empty() {
-	emit_test("Test concatenating a non-empty MyString with a double.");
-	MyString a("foo");
-	a += 12.3;
-	emit_input_header();
-	emit_param("MyString", "%f", 12.3);
-	emit_output_expected_header();
-	emit_retval("%s", "foo12.3");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strncmp(a.Value(), "foo12.3", 7) != MATCH) {
 		FAIL;
 	}
 	PASS;
