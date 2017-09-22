@@ -192,6 +192,10 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	m_keypair_created = false;
 	std::string gahpName;
 
+	m_failure_injection = 0;
+	m_parameters_and_values = 0;
+	m_group_ids = 0;
+
 	// check the public_key_file
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
 
