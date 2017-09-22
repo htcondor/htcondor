@@ -1120,12 +1120,11 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		// log to the order in which we submitted the jobs -- but if we
 		// have >1 userlog we can't count on any order, so we can't sanity-check
 		// in this way.
-		// MRC: What happens if we have more than one log? Will the DAG run
+		// What happens if we have more than one log? Will the DAG run
 		// correctly without hitting this code block?
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessSubmitEvent] about to check for dequeue, job->GetID()._proc=%d, queuedNodeJobProcs=%d\n", job->GetID()._proc, job->_queuedNodeJobProcs);
 	if ( TotalLogFileCount() == 1 ) {
 
-			// MRC: Only perform sanity check on the first proc in a cluster.
+			// Only perform sanity check on the first proc in a cluster.
 			// Previously we checked job->_queuedNodeJobProcs but that does not
 			// work for late materialization. Now we check the proc ID.
 		if( job->GetID()._proc == 0 ) {
@@ -1269,11 +1268,9 @@ void
 Dag::ProcessFactorySubmitEvent(Job *job, bool recovery) {
 
 	if ( !job ) {
-		debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessFactorySubmitEvent] job not set, exiting\n");
 		return;
 	}
 	job->is_factory = true;
-	debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessFactorySubmitEvent] setting factory for job ID=%d, proc=%d, is_factory=%s\n", job->GetID()._cluster, job->GetID()._proc, job->is_factory ? "True" : "False" );
 }
 
 //---------------------------------------------------------------------------
@@ -1284,8 +1281,6 @@ Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
 		return;
 	}
 
-	debug_printf( DEBUG_NORMAL, "MRC [Dag::ProcessFactoryRemoveEvent] called, jobID=%d, isFactory=%s, queuedNodeJobProcs=%d, scriptPost=%s\n", job->GetID()._cluster, job->is_factory ? "True" : "False", job->_queuedNodeJobProcs, job->_scriptPost ? "True" : "False" );
-		
 	// Make sure the job is a factory, and has no more queued procs. 
 	// Otherwise something is wrong.
 	if ( job->_queuedNodeJobProcs == 0 && job->is_factory ) {
@@ -1306,12 +1301,13 @@ Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
 		} else if( job->GetStatus() != Job::STATUS_ERROR ) {
 			// no POST script was specified, so update DAG with
 			// node's successful completion if the node succeeded.
-			debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessFactoryRemoveEvent] calling TerminateJob\n");
 			TerminateJob( job, recovery );
 		}
 	}
 	else {
-		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessFactoryRemoveEvent] something is wrong! job->_queuedNodeJobProcs=%d, job->is_factory=%s\n", job->_queuedNodeJobProcs, job->is_factory ? "True" : "False");
+		debug_printf(DEBUG_NORMAL, "ERROR: ProcessFactoryRemoveEvent() called"
+			" for job %s although %d procs still queued.\n", 
+			job->GetJobName(), job->_queuedNodeJobProcs);
 	}
 }
 
@@ -1679,7 +1675,6 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				// Note:  I'm not sure why we don't just use the default
 				// constructor here.  wenger 2015-09-25
 			CondorID condorID( 0, 0, 0 );
-			debug_printf(DEBUG_NORMAL, "MRC [Dag::SubmitReadyJobs] Submitting job %s\n", job->GetJobName());
 			submit_result_t submit_result = SubmitNodeJob( dm, job, condorID );
 	
 				// Note: if instead of switch here so we can use break
@@ -2449,7 +2444,6 @@ Dag::WriteScriptToRescue( FILE *fp, Script *script )
 void
 Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::TerminateJob] called, job cluster=%d, proc=%d, is_factory=%s\n", job->GetID()._cluster, job->GetID()._proc, job->is_factory ? "True" : "False");
 	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
 
@@ -3570,7 +3564,6 @@ bool Dag::Add( Job& job )
 {
 	int insertResult = _nodeNameHash.insert( job.GetJobName(), &job );
 	ASSERT( insertResult == 0 );
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::Add] inserting job name=%s, ID=%d\n", job.GetJobName(), job.GetJobID());
 	insertResult = _nodeIDHash.insert( job.GetJobID(), &job );
 	ASSERT( insertResult == 0 );
 
