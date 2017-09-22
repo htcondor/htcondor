@@ -1064,7 +1064,6 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		return;
 	}
 
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessSubmitEvent] called, job cluster=%d, proc=%d, is_factory=%s\n", job->GetID()._cluster, job->GetID()._proc, job->is_factory ? "True" : "False");
 		// If we're in recovery mode, we need to keep track of the
 		// maximum subprocID for NOOP jobs, so we can start out at
 		// the next value instead of zero.
@@ -1117,38 +1116,43 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		return;
 	}
 
-		// if we only have one log, compare
-		// the order of submit events in the
-		// log to the order in which we
-		// submitted the jobs -- but if we
-		// have >1 userlog we can't count on
-		// any order, so we can't sanity-check
-		// in this way
+		// If we only have one log, compare the order of submit events in the
+		// log to the order in which we submitted the jobs -- but if we
+		// have >1 userlog we can't count on any order, so we can't sanity-check
+		// in this way.
+		// MRC: What happens if we have more than one log? Will the DAG run
+		// correctly without hitting this code block?
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessSubmitEvent] about to check for dequeue, job->GetID()._proc=%d, queuedNodeJobProcs=%d\n", job->GetID()._proc, job->_queuedNodeJobProcs);
+	if ( TotalLogFileCount() == 1 ) {
 
-	if ( TotalLogFileCount() == 1 && job->_queuedNodeJobProcs == 1 ) {
+			// MRC: Only perform sanity check on the first proc in a cluster.
+			// Previously we checked job->_queuedNodeJobProcs but that does not
+			// work for late materialization. Now we check the proc ID.
+		if( job->GetID()._proc == 0 ) {
 
-			// as a sanity check, compare the job from the
-			// submit event to the job we expected to see from
-			// our submit queue
- 		Job* expectedJob = NULL;
-		if ( _submitQ->dequeue( expectedJob ) == -1 ) {
-			debug_printf( DEBUG_QUIET,
+				// as a sanity check, compare the job from the
+				// submit event to the job we expected to see from
+				// our submit queue
+			Job* expectedJob = NULL;
+			if ( _submitQ->dequeue( expectedJob ) == -1 ) {
+				debug_printf( DEBUG_QUIET,
 						"Unrecognized submit event (for job "
 						"\"%s\") found in log (none expected)\n",
 						job->GetJobName() );
-			return;
-		} else if ( job != expectedJob ) {
-			ASSERT( expectedJob != NULL );
-			debug_printf( DEBUG_QUIET,
+				return;
+			} 
+			else if ( job != expectedJob ) {
+				ASSERT( expectedJob != NULL );
+				debug_printf( DEBUG_QUIET,
 						"Unexpected submit event (for job "
 						"\"%s\") found in log; job \"%s\" "
 						"was expected.\n",
 						job->GetJobName(),
 						expectedJob->GetJobName() );
 				// put expectedJob back onto submit queue
-			_submitQ->enqueue( expectedJob );
-
-			return;
+				_submitQ->enqueue( expectedJob );
+				return;
+			}
 		}
 	}
 
@@ -1674,7 +1678,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 
 				// Note:  I'm not sure why we don't just use the default
 				// constructor here.  wenger 2015-09-25
-    		CondorID condorID( 0, 0, 0 );
+			CondorID condorID( 0, 0, 0 );
+			debug_printf(DEBUG_NORMAL, "MRC [Dag::SubmitReadyJobs] Submitting job %s\n", job->GetJobName());
 			submit_result_t submit_result = SubmitNodeJob( dm, job, condorID );
 	
 				// Note: if instead of switch here so we can use break
@@ -4141,7 +4146,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 
     // append node to the submit queue so we can match it with its
     // submit event once the latter appears in the HTCondor job log
-    if( _submitQ->enqueue( node ) == -1 ) {
+	if( _submitQ->enqueue( node ) == -1 ) {
 		debug_printf( DEBUG_QUIET, "ERROR: _submitQ->enqueue() failed!\n" );
 	}
 
