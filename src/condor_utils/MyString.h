@@ -205,9 +205,6 @@ class MyString
 	MyString& operator+=(long l);
 	MyString& operator+=(long long l);
 
-	/** Appends the string version of the given double */
-	MyString& operator+=(double d);
-
 
 	/** Returns a new string that is S1 followed by S2 */
 	friend MyString operator+(const MyString &S1, const MyString &S2); 

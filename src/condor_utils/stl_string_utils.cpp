@@ -23,13 +23,6 @@
 
 #include "stl_string_utils.h"
 
-void assign(std::string& dst, const MyString& src) {
-    dst = src.Value();
-}
-void assign(MyString& dst, const std::string& src) {
-    dst = src.c_str();
-}
-
 bool operator==(const MyString& L, const std::string& R) { return R == L.Value(); }
 bool operator==(const std::string& L, const MyString& R) { return L == R.Value(); }
 bool operator!=(const MyString& L, const std::string& R) { return R != L.Value(); }
@@ -117,7 +110,7 @@ int formatstr(MyString& s, const char* format, ...) {
     // this gets me the sprintf-standard return value (# chars printed)
     int r = vformatstr(t, format, args);
     va_end(args);
-    assign(s, t);
+    s = t;
     return r;
 }
 

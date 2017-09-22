@@ -397,19 +397,6 @@ MyString::operator+=( long long l )
 }
 
 
-MyString& 
-MyString::operator+=( double d )
-{
-	const int bufLen = 128;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%f", d );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
 // ----------------------------------------
 //           Serialization helpers
 // ----------------------------------------

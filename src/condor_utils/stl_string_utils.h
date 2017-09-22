@@ -54,13 +54,6 @@ bool operator<=(const std::string& L, const MyString& R);
 bool operator>=(const MyString& L, const std::string& R);
 bool operator>=(const std::string& L, const MyString& R);
 
-// MyString now provides casting ops that make these unnecessary.
-// Can now use '=' between MyString <--> std::string
-// The below assignment std::string <-- MyString will be more 
-// efficient, due to some copying in the casting op, if that matters.
-void assign(std::string& dst, const MyString& src);
-void assign(MyString& dst, const std::string& src);
-
 // to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& dst, FILE *fp, bool append);
 
