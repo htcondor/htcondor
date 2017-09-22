@@ -369,10 +369,16 @@ ClusterCleanup(int cluster_id)
 
 	// If this cluster has a job factory, write a FactoryRemove log event
 	JobQueueCluster * clusterad = GetClusterAd(cluster_id);
-	if( clusterad->factory ) {
-		scheduler.WriteFactoryRemoveToUserLog( clusterad, false );
+	if( clusterad ) {
+		if( clusterad->factory ) {
+			scheduler.WriteFactoryRemoveToUserLog( clusterad, false );
+		}
 	}
-	
+	else {
+		dprintf(D_ALWAYS, "ERROR: ClusterCleanup() could not find ad for"
+				" cluster ID %d\n", cluster_id);
+	}
+
 	// pull out the owner and hash used for ickpt sharing
 	MyString hash, owner, digest;
 	GetAttributeString(cluster_id, -1, ATTR_JOB_CMD_HASH, hash);

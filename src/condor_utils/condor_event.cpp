@@ -85,7 +85,7 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_ATTRIBUTE_UPDATE",			// Job attribute updated
 	"ULOG_PRESKIP",					// PRE_SKIP event for DAGMan
 	"ULOG_FACTORY_SUBMIT",			// Factory submitted
-    "ULOG_FACTORY_REMOVE" 			// Factory removed
+	"ULOG_FACTORY_REMOVE" 			// Factory removed
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -6051,19 +6051,19 @@ FactorySubmitEvent::readEvent (FILE *file)
 		fseek( file, -4, SEEK_CUR );
 		return 1;
 	}
-	
+
 	// see if the next line contains an optional event notes string,
 	// and, if not, rewind, because that means we slurped in the next
 	// event delimiter looking for it...
-	
+
 	fpos_t filep;
 	fgetpos( file, &filep );
-	
+
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
-	
+
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
 	
@@ -6073,20 +6073,20 @@ FactorySubmitEvent::readEvent (FILE *file)
 	while( *strip_s && isspace(*strip_s) ) {
 		strip_s++;
 	}
-	
+
 	submitEventLogNotes = strnewp( strip_s );
-	
+
 	// see if the next line contains an optional user event notes
 	// string, and, if not, rewind, because that means we slurped in
 	// the next event delimiter looking for it...
-	
+
 	fgetpos( file, &filep );
-	
+
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
-	
+
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
 	submitEventUserNotes = strnewp( s );

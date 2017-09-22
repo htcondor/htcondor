@@ -124,6 +124,7 @@ Job::Job( const char* jobName,
 	_dfsOrder = -1; // so Coverity is happy
 
 	_queuedNodeJobProcs = 0;
+	_numSubmittedProcs = 0;
 
 	_explicitPriority = 0;
 	_effectivePriority = _explicitPriority;

@@ -736,9 +736,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
-			
+
 	if( job ) {
-		
 		DecrementProcCount( job );
 
 		const JobTerminatedEvent * termEvent =
@@ -869,7 +868,7 @@ Dag::RemoveBatchJob(Job *node) {
 // in here according to whether job succeeded or failed?  wenger 2014-03-18
 void
 Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
-	
+
 	// This function should never be called when the dag object is
 	// being used to parse a splice.
 	ASSERT ( _isSplice == false );
@@ -1099,6 +1098,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		//
 	if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 		job->_queuedNodeJobProcs++;
+		job->_numSubmittedProcs++;
 	}
 
 		// Note:  in non-recovery mode, we increment _numJobsSubmitted
@@ -1107,7 +1107,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 				// Only increment the submitted job count on
 				// the *first* proc of a job.
-			if( job->_queuedNodeJobProcs == 1 ) {
+			if( job->_numSubmittedProcs == 1 ) {
 				UpdateJobCounts( job, 1 );
 			}
 		}
@@ -1124,10 +1124,8 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		// correctly without hitting this code block?
 	if ( TotalLogFileCount() == 1 ) {
 
-			// Only perform sanity check on the first proc in a cluster.
-			// Previously we checked job->_queuedNodeJobProcs but that does not
-			// work for late materialization. Now we check the proc ID.
-		if( job->GetID()._proc == 0 ) {
+			// Only perform sanity check on the first proc in a job cluster.
+		if( job->_numSubmittedProcs == 1 ) {
 
 				// as a sanity check, compare the job from the
 				// submit event to the job we expected to see from
@@ -1319,7 +1317,7 @@ Job * Dag::FindNodeByName (const char * jobName) const {
 
 	Job *	job = NULL;
 	if ( _nodeNameHash.lookup(jobName, job) != 0 ) {
-    	debug_printf( DEBUG_VERBOSE, "ERROR: job %s not found!\n", jobName);
+		debug_printf( DEBUG_VERBOSE, "ERROR: job %s not found!\n", jobName);
 		job = NULL;
 	}
 
@@ -1417,7 +1415,7 @@ Job * Dag::FindNodeByEventID ( const CondorID condorID ) const {
 	if ( condorID._cluster == -1 ) {
 		return NULL;
 	}
-	
+
 	Job *	node = NULL;
 	bool isNoop = JobIsNoop( condorID );
 	int id = GetIndexID( condorID );
@@ -1452,7 +1450,7 @@ Job * Dag::FindNodeByEventID ( const CondorID condorID ) const {
 		}
 		ASSERT( isNoop == node->GetNoop() );
 	}
-	
+
 	return node;
 }
 
@@ -3754,7 +3752,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 	    return node;
 	  }
 	}
-	
+
 		// if the job ID wasn't familiar and we didn't find a node
 		// above, there are at least four possibilites:
 		//	
@@ -4242,7 +4240,7 @@ Dag::DecrementProcCount( Job *node )
 {
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
-	
+
 	if( node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
 		node->Cleanup();

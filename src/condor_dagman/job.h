@@ -474,6 +474,9 @@ public:
 		// queue for this node.
 	int _queuedNodeJobProcs;
 
+		// Count of the number of overall procs submitted for this job
+	int _numSubmittedProcs;
+
 		// Node priority.  Higher number is better priority (submit first).
 		// Explicit priority is the priority actually set in the DAG
 		// file (0 if not set).
