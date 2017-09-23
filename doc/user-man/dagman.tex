@@ -38,6 +38,22 @@ Figure~\ref{fig:dagman-node} illustrates the elements of a node.
 \begin{figure}[hbt]
 \centering
 \includegraphics{user-man/dagman-node}
+
+%% Someday we can use tikz for diagrams instead of random
+%% external programs which generate bitmaps.
+
+%%\tikzstyle{Part} = [shape = rectangle,  minimum width    = 8ex, draw]
+%%\tikzstyle{BigCircle} = [thick, shape = circle, minimum width = 40ex, draw]
+
+%%\begin{tikzpicture}
+%%    \node[Part] (PRE) at (0,1) {[optional] PRE Script};
+%%    \node[Part] (JOB) at (0,0)  {HTCondor job};
+%%    \node[Part] (POST) at(0,-1)  {[optional] POST script};
+%%    \node[BigCircle] (ALL) at (0,0) {};
+
+%%    \path[Dependency] (PRE) edge (JOB);
+%%    \path[Dependency] (JOB) edge (POST);
+%%\end{tikzpicture}
 \caption{\label{fig:dagman-node}One Node within a DAG}
 \end{figure}
 
@@ -98,6 +114,27 @@ This DAG contains 4 nodes.
 \begin{figure}[hbt]
 \centering
 \includegraphics{user-man/dagman-diamond}
+
+%% Someday we can use tikz for diagrams instead of random
+%% external programs which generate bitmaps.
+
+%% %%\usetikzlibrary{shapes.geometric}
+%% \usetikzlibrary{shapes}
+%% \tikzstyle{Job} = [shape = ellipse,  minimum width    = 8ex, draw]
+%% \tikzstyle{Dependency}   = [->]
+
+%% \begin{tikzpicture}[scale=1,thick]
+%%     \node[Job] (A) at (0,2)  {A};
+%%     \node[Job] (B) at (1,1)  {B};
+%%     \node[Job] (C) at (-1,1) {C};
+%%     \node[Job] (D) at (0,0)  {D};
+
+%%     \path[Dependency] (A) edge (B);
+%%     \path[Dependency] (A) edge (C);
+%%     \path[Dependency] (B) edge (D);
+%%     \path[Dependency] (C) edge (D);
+%% \end{tikzpicture}
+
 \caption{\label{fig:dagman-diamond}Diamond DAG}
 \end{figure}
 
