@@ -5220,8 +5220,8 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	}
 	
 	if (Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
-		return -1;
 		errno = EACCES;
+		return -1;
 	}
 
 	JobQueue->DeleteAttribute(key.c_str(), attr_name);
