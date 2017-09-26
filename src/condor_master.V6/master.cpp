@@ -1638,8 +1638,7 @@ main_pre_command_sock_init()
 	p = param("SEC_CREDENTIAL_DIRECTORY");
 	if(p) {
 		MyString cred_file;
-		cred_file = p;
-		cred_file = cred_file + DIR_DELIM_CHAR + "CREDMON_COMPLETE";
+		formatstr( cred_file, "%s%cCREDMON_COMPLETE", p, DIR_DELIM_CHAR );
 		dprintf(D_SECURITY, "CREDMON: unlinking %s.", cred_file.Value());
 		unlink(cred_file.Value());
 	}
