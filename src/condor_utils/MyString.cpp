@@ -809,17 +809,20 @@ MyString::trim_quotes(const char * quote_chars)
 }
 
 void
-MyString::compressSpaces( void )
+MyString::RemoveAllWhitespace( void )
 {
-	if( Len == 0 ) {
-		return;
-	}
-	for ( int i = 0, j = 0; i <= Length(); ++i, ++j ) {
-		if ( isspace ( Data[i] ) ) {
-			i++;
+	int i;
+	int j;
+	for ( i = 0, j = 0; i < Length(); i++ ) {
+		if ( !isspace( Data[i] ) ) {
+			if ( i != j ) {
+				Data[j] = Data[i];
+			}
+			j++;
 		}
-		setAt ( j, Data[i] );
 	}
+	Data[j] = '\0';
+	Len = j;
 }
 
 // if len is 10, this means 10 random ascii characters from the set.

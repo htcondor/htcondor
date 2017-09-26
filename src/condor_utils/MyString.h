@@ -302,7 +302,7 @@ class MyString
 
 	/** Remove all the whitespace from this string
 	*/
-	void compressSpaces( void );
+	void RemoveAllWhitespace( void );
 
 	// ----------------------------------------
 	//           Serialization helpers

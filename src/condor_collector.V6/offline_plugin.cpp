@@ -169,7 +169,7 @@ OfflineCollectorPlugin::makeOfflineKey(
 
 	}
 	hashKey.sprint ( s );
-	s.compressSpaces();
+	s.RemoveAllWhitespace();
 	return s.Value();
 }
 
