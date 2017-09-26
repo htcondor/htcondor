@@ -54,10 +54,6 @@ class MyString
 	/** Default constructor  */
 	MyString();  
 
-	/** Constructor to make an integer string. For example, if you pass
-	 *  50, you get the string "50".*/
-	MyString(int i);
-
 	/** Constructor to make a copy of a null-terminated character string. */
 	MyString(const char* S);
 
@@ -194,17 +190,6 @@ class MyString
 		you can append a bunch of characters at a time and it will act
 		reasonably.  */
 	MyString& operator+=(const char ); 
-
-	/** Appends the string version of the given int */
-	MyString& operator+=(int i);
-
-	/** Appends the string version of the given unsigned int */
-	MyString& operator+=(unsigned int ui);
-
-	/** Appends the string version of the given long int */
-	MyString& operator+=(long l);
-	MyString& operator+=(long long l);
-
 
 	/** Returns a new string that is S1 followed by S2 */
 	friend MyString operator+(const MyString &S1, const MyString &S2); 

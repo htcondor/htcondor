@@ -38,12 +38,6 @@ MyString::MyString()
 	init();
     return;
 }
-  
-MyString::MyString(int i) 
-{
-	init();
-	*this += i;
-};
 
 MyString::MyString(const char* S) 
 {
@@ -344,58 +338,6 @@ MyString operator+(const MyString& S1, const MyString& S2)
 
 // the buffers below are all sufficiently large that this is no danger of non-null termination.
 MSC_DISABLE_WARNING(6053) // call to snprintf might not null terminate string.
-
-MyString& 
-MyString::operator+=( int i )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%d", i );
-    int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-    return *this;
-}
-
-
-MyString& 
-MyString::operator+=( unsigned int ui )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%u", ui );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString& 
-MyString::operator+=( long l )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%ld", l );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString&
-MyString::operator+=( long long l )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%lld", l );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
 
 // ----------------------------------------
 //           Serialization helpers
