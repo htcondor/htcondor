@@ -3725,7 +3725,7 @@ obtainAdsFromCollector (
 					// By design, if negotiator has want_globaljobprio and a schedd
 					// does not give us a job prio array, behave as if this SubmitterAd had a
 					// JobPrioArray attribute with a single value w/ the worst job priority
-					jobprioarray = INT_MIN;
+					jobprioarray = IntToStr( INT_MIN );
 				}
 
 				jobprios.initializeFromString( jobprioarray.Value() );

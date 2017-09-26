@@ -1159,7 +1159,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 			if ( !str.IsEmpty() ) {
 				str += ",";
 			}
-			str += *rit;
+			str += IntToStr( *rit );
 			num_entries++;
 		}
 		// NOTE: we rely on that fact that str.Value() will return "", not NULL, if empty
@@ -12187,7 +12187,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"Putting job on hold. (Reason: %s)\n",
 				 job_id.cluster, job_id.proc, action, reason.Value());
 			MyString reason2 = "Unknown action (";
-			reason2 += action;
+			reason2 += IntToStr( action );
 			reason2 += ") ";
 			reason2 += reason;
 			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
@@ -15020,7 +15020,7 @@ moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 		return false;
 	}
 	
-	new_value += value;
+	new_value += IntToStr( value );
 
 	rval = SetAttribute( job_id.cluster, job_id.proc, new_attr,
 						 new_value.Value() ); 

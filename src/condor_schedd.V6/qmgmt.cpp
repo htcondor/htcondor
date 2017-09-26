@@ -2704,13 +2704,13 @@ int NewProcInternal(int cluster_id, int proc_id)
 	MyString gjid = "\"";
 	gjid += Name;             // schedd's name
 	gjid += "#";
-	gjid += cluster_id;
+	gjid += IntToStr( cluster_id );
 	gjid += ".";
-	gjid += proc_id;
+	gjid += IntToStr( proc_id );
 	if (param_boolean("GLOBAL_JOB_ID_WITH_TIME", true)) {
 		int now = (int)time(0);
 		gjid += "#";
-		gjid += now;
+		gjid += IntToStr( now );
 	}
 	gjid += "\"";
 	JobQueue->SetAttribute(key.c_str(), ATTR_GLOBAL_JOB_ID, gjid.Value());
@@ -3926,7 +3926,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				ivalue = ((ivalue + base - 1) / base) * base;
 
 					// make it a string, courtesty MyString conversion.
-				new_value = ivalue;
+				new_value = IntToStr( ivalue );
 
 					// if it was a float, append ".0" to keep it a float
 				if ( attr_type == classad::Value::REAL_VALUE ) {

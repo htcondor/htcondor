@@ -1541,8 +1541,7 @@ VMProc::reportErrorToStartd()
 	}
 
 	// Send pid of this starter
-	MyString s_pid;
-	s_pid += (int)daemonCore->getpid();
+	MyString s_pid = IntToStr( (int)daemonCore->getpid() );
 
 	char *buffer = strdup(s_pid.Value());
 	ASSERT(buffer);
@@ -1594,8 +1593,7 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 	}
 
 	// Send the pid of this starter
-	MyString s_pid;
-	s_pid += (int)daemonCore->getpid();
+	MyString s_pid = IntToStr( (int)daemonCore->getpid() );
 
 	char *starter_pid = strdup(s_pid.Value());
 	ASSERT(starter_pid);
@@ -1656,8 +1654,7 @@ VMProc::setVMPID(int vm_pid)
 	// Get initial usage of the process	
 	updateUsageOfVM();
 
-	MyString pid_string;
-	pid_string += (int)m_vm_pid;
+	MyString pid_string = IntToStr( (int)m_vm_pid );
 
 	// Report this PID to local startd
 	reportVMInfoToStartd(VM_UNIV_VMPID, pid_string.Value());

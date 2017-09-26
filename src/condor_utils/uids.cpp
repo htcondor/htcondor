@@ -1646,7 +1646,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 
 					// create the keyring name for user keyring
 					MyString ring_name = "htcondor_uid";
-					ring_name = ring_name + UserUid;
+					ring_name += IntToStr( UserUid );
 
 					// locate the user keyring
 					key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.Value(), 0);
