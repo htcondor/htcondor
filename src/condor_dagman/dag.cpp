@@ -655,7 +655,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				break;
 
 			case ULOG_FACTORY_SUBMIT:
-				ProcessFactorySubmitEvent(job, recovery);
+				ProcessFactorySubmitEvent(job);
 				break;
 
 			case ULOG_FACTORY_REMOVE:
@@ -1267,7 +1267,7 @@ Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessFactorySubmitEvent(Job *job, bool recovery) {
+Dag::ProcessFactorySubmitEvent(Job *job) {
 
 	if ( !job ) {
 		return;

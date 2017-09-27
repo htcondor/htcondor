@@ -6147,6 +6147,9 @@ FactoryRemoveEvent::formatBody( std::string &out )
 int
 FactoryRemoveEvent::readEvent (FILE *file)
 {
+	if( !file ) {
+		return 0;
+	}
 	return 1;
 }
 

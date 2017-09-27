@@ -282,7 +282,7 @@ class Dag {
 	    @param The job corresponding to this event.
 		@param Whether we're in recovery mode.
 	*/
-	void ProcessFactorySubmitEvent(Job *job, bool recovery);
+	void ProcessFactorySubmitEvent(Job *job);
 
 		/** Process a factory remove event.
 	    @param The job corresponding to this event.
