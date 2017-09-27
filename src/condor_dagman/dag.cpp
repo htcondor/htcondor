@@ -718,8 +718,10 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 				  ULogEventNumberNames[event->eventNumber],
 				  event->cluster, event->proc, event->subproc );
 			job->retval = DAG_ERROR_CONDOR_JOB_ABORTED;
+			debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessAbortEvent] job->_queuedNodeJobProcs=%d\n", job->_queuedNodeJobProcs);
 			if ( job->_queuedNodeJobProcs > 0 ) {
 			  // once one job proc fails, remove the whole cluster
+			  	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessAbortEvent] calling RemoveBatchJob\n");
 				RemoveBatchJob( job );
 			}
 			if ( job->_scriptPost != NULL) {
@@ -873,8 +875,10 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// being used to parse a splice.
 	ASSERT ( _isSplice == false );
 
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessJobProcEnd] job->_queuedNodeJobProcs=%d\n", job->_queuedNodeJobProcs);
 	if ( job->_queuedNodeJobProcs == 0 ) {
 			// Log job success or failure if necessary.
+		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessJobProcEnd] no more job procs, log job success or failure\n");
 		_jobstateLog.WriteJobSuccessOrFailure( job );
 	}
 
@@ -933,7 +937,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 void
 Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
-
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessPostTermEvent] called\n");
 	if( job ) {
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
@@ -1307,6 +1311,10 @@ Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
 			" for job %s although %d procs still queued.\n", 
 			job->GetJobName(), job->_queuedNodeJobProcs);
 	}
+
+	// Cleanup the job. For non-factory jobs, this is done in DecrementProcCount
+	UpdateJobCounts( job, -1 );
+	job->Cleanup();
 }
 
 //---------------------------------------------------------------------------
@@ -4241,7 +4249,7 @@ Dag::DecrementProcCount( Job *node )
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
-	if( node->_queuedNodeJobProcs == 0 ) {
+	if( !node->is_factory && node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
 		node->Cleanup();
 	}
