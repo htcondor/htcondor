@@ -721,7 +721,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessAbortEvent] job->_queuedNodeJobProcs=%d\n", job->_queuedNodeJobProcs);
 			if ( job->_queuedNodeJobProcs > 0 ) {
 			  // once one job proc fails, remove the whole cluster
-			  	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessAbortEvent] calling RemoveBatchJob\n");
+				debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessAbortEvent] calling RemoveBatchJob\n");
 				RemoveBatchJob( job );
 			}
 			if ( job->_scriptPost != NULL) {
@@ -937,7 +937,6 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 void
 Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessPostTermEvent] called\n");
 	if( job ) {
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
@@ -2552,6 +2551,7 @@ Dag::RestartNode( Job *node, bool recovery )
     }
 	node->SetStatus( Job::STATUS_READY );
 	node->retries++;
+	node->_numSubmittedProcs = 0;
 	ASSERT( node->GetRetries() <= node->GetRetryMax() );
 	if( node->_scriptPre ) {
 		// undo PRE script completion
@@ -4161,7 +4161,6 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
         // with what we see in the userlog later as a sanity-check
         // (note: this sanity-check is not possible during recovery,
         // since we won't have seen the submit command stdout...)
-
 	node->SetCondorID( condorID );
 	ASSERT( JobIsNoop( node->GetID() ) == node->GetNoop() );
 	int id = GetIndexID( node->GetID() );
