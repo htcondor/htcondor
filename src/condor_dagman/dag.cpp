@@ -718,10 +718,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 				  ULogEventNumberNames[event->eventNumber],
 				  event->cluster, event->proc, event->subproc );
 			job->retval = DAG_ERROR_CONDOR_JOB_ABORTED;
-			debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessAbortEvent] job->_queuedNodeJobProcs=%d\n", job->_queuedNodeJobProcs);
-			if ( job->_queuedNodeJobProcs > 0 ) {
+			if ( job->_numSubmittedProcs > 0 ) {
 			  // once one job proc fails, remove the whole cluster
-				debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessAbortEvent] calling RemoveBatchJob\n");
 				RemoveBatchJob( job );
 			}
 			if ( job->_scriptPost != NULL) {
@@ -875,10 +873,8 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// being used to parse a splice.
 	ASSERT ( _isSplice == false );
 
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessJobProcEnd] job->_queuedNodeJobProcs=%d\n", job->_queuedNodeJobProcs);
-	if ( job->_queuedNodeJobProcs == 0 ) {
+	if ( job->_queuedNodeJobProcs == 0 && !job->is_factory  ) {
 			// Log job success or failure if necessary.
-		debug_printf(DEBUG_NORMAL, "MRC [Dag::ProcessJobProcEnd] no more job procs, log job success or failure\n");
 		_jobstateLog.WriteJobSuccessOrFailure( job );
 	}
 
@@ -1311,7 +1307,9 @@ Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
 			job->GetJobName(), job->_queuedNodeJobProcs);
 	}
 
-	// Cleanup the job. For non-factory jobs, this is done in DecrementProcCount
+	// Cleanup the job and write succcess/failure to the log. 
+	// For non-factory jobs, this is done in DecrementProcCount
+	_jobstateLog.WriteJobSuccessOrFailure( job );
 	UpdateJobCounts( job, -1 );
 	job->Cleanup();
 }
