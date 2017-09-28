@@ -112,7 +112,6 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 
  private:
 	bool multiple;
-	FILE * out;
 	std::string delim;
 };
 

@@ -271,8 +271,8 @@ can_switch_ids( void )
 }
 
 
-static int should_use_keyring_sessions() {
 #ifdef LINUX
+static int should_use_keyring_sessions() {
 	static int UseKeyringSessions = FALSE;
 	static int DidParamForKeyringSessions = FALSE;
 
@@ -281,10 +281,8 @@ static int should_use_keyring_sessions() {
 		DidParamForKeyringSessions = true;
 	}
 	return UseKeyringSessions;
-#else
-	return false;
-#endif
 }
+#endif
 
 
 /* End Common Bits */
