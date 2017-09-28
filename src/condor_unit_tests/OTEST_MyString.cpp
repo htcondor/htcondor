@@ -31,7 +31,6 @@
 
 // function prototypes
 static bool default_constructor(void);
-static bool int_constructor(void);
 static bool char_constructor(void);
 static bool stdstring_constructor(void);
 static bool copy_constructor_value_check(void);
@@ -105,19 +104,6 @@ static bool concatenation_std_string_non_empty_non_empty(void);
 static bool concatenation_char_empty(void);
 static bool concatenation_char_non_empty(void);
 static bool concatenation_char_null(void);
-static bool concatenation_int_empty(void);
-static bool concatenation_int_non_empty(void);
-static bool concatenation_int_large(void);
-static bool concatenation_int_small(void);
-static bool concatenation_uint_empty(void);
-static bool concatenation_uint_non_empty(void);
-static bool concatenation_uint_large(void);
-static bool concatenation_long_empty(void);
-static bool concatenation_long_non_empty(void);
-static bool concatenation_long_large(void);
-static bool concatenation_long_small(void);
-static bool concatenation_double_empty(void);
-static bool concatenation_double_non_empty(void);
 static bool substr_empty(void);
 static bool substr_beginning(void);
 static bool substr_end(void);
@@ -253,7 +239,6 @@ bool OTEST_MyString(void) {
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
 	driver.register_function(default_constructor);
-	driver.register_function(int_constructor);
 	driver.register_function(char_constructor);
 	driver.register_function(stdstring_constructor);
 	driver.register_function(copy_constructor_value_check);
@@ -327,19 +312,6 @@ bool OTEST_MyString(void) {
 	driver.register_function(concatenation_char_empty);
 	driver.register_function(concatenation_char_non_empty);
 	driver.register_function(concatenation_char_null);
-	driver.register_function(concatenation_int_empty);
-	driver.register_function(concatenation_int_non_empty);
-	driver.register_function(concatenation_int_large);
-	driver.register_function(concatenation_int_small);
-	driver.register_function(concatenation_uint_empty);
-	driver.register_function(concatenation_uint_non_empty);
-	driver.register_function(concatenation_uint_large);
-	driver.register_function(concatenation_long_empty);
-	driver.register_function(concatenation_long_non_empty);
-	driver.register_function(concatenation_long_large);
-	driver.register_function(concatenation_long_small);
-	driver.register_function(concatenation_double_empty);
-	driver.register_function(concatenation_double_non_empty);
 	driver.register_function(substr_empty);
 	driver.register_function(substr_beginning);
 	driver.register_function(substr_end);
@@ -470,24 +442,6 @@ static bool default_constructor() {
 	emit_output_actual_header();
 	emit_retval("%s", s.Value());
 	if(strcmp(s.Value(), "") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-//in test_mystring.cpp 655
-static bool int_constructor() {
-	emit_test("Test constructor to make an integer string");
-	const int param = 123;
-	MyString s(param);
-	const char *expected = "123";
-	emit_input_header();
-	emit_param("INT", "%d", param);
-	emit_output_expected_header();
-	emit_retval("%s", expected);
-	emit_output_actual_header();
-	emit_retval("%s", s.Value());
-	if(strcmp(s.Value(), expected) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -1759,232 +1713,6 @@ static bool concatenation_char_null() {
 	emit_retval("%s", a.Value());
 	emit_param("Length", "%d", a.Length());
 	if(strcmp(a.Value(), "pow") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_int_empty() {
-	emit_test("Test concatenating an empty MyString with an integer.");
-	MyString a;
-	a += 123;
-	emit_input_header();
-	emit_param("INT", "%d", 123);
-	emit_output_expected_header();
-	emit_retval("%s", "123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-//in test_mystring.cpp 170
-static bool concatenation_int_non_empty() {
-	emit_test("Test concatenating a non-empty MyString with an integer.");
-	MyString a("Lance Armstrong");
-	a += 123;
-	emit_input_header();
-	emit_param("INT", "%d", 123);
-	emit_output_expected_header();
-	emit_retval("%s", "Lance Armstrong123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "Lance Armstrong123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_int_large() {
-	emit_test("Test concatenating a MyString with INT_MAX.");
-	char buf[1024];
-	sprintf(buf, "%s%d", "foo", INT_MAX);
-	MyString a("foo");
-	a += INT_MAX;
-	emit_input_header();
-	emit_param("INT", "%d", INT_MAX);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_int_small() {
-	emit_test("Test concatenating a MyString with INT_MIN.");	
-	char buf[1024];
-	sprintf(buf, "%s%d", "foo", INT_MIN);
-	MyString a("foo");
-	a += INT_MIN;
-	emit_input_header();
-	emit_param("INT", "%d", INT_MIN);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_uint_empty() {
-	emit_test("Test concatenating an empty MyString with an unsigned "
-		"integer.");
-	MyString a;
-	unsigned int b = 123;
-	a += b;
-	emit_input_header();
-	emit_param("UINT", "%u", b);
-	emit_output_expected_header();
-	emit_retval("%s", "123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_uint_non_empty() {
-	emit_test("Test concatenating a non-empty MyString with an unsigned "
-		"integer.");
-	MyString a("foo");
-	unsigned int b = 123;
-	a += b;
-	emit_input_header();
-	emit_param("UINT", "%u", b);
-	emit_output_expected_header();
-	emit_retval("%s", "foo123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "foo123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_uint_large() {
-	emit_test("Test concatenating a MyString with UINT_MAX");	
-	char buf[1024];
-	sprintf(buf, "%s%u", "foo", UINT_MAX);
-	MyString a("foo");
-	a += UINT_MAX;
-	emit_input_header();
-	emit_param("UINT", "%u", UINT_MAX);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_long_empty() {
-	emit_test("Test concatenating an empty MyString with a long.");
-	MyString a;
-	long b = 123;
-	a += b;
-	emit_input_header();
-	emit_param("LONG", "%ld", b);
-	emit_output_expected_header();
-	emit_retval("%s", "123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_long_non_empty() {
-	emit_test("Test concatenating a non-empty MyString with a long.");
-	MyString a("foo");
-	long b = 123;
-	a += b;
-	emit_input_header();
-	emit_param("LONG", "%ld", b);
-	emit_output_expected_header();
-	emit_retval("%s", "foo123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "foo123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_long_large() {
-	emit_test("Test concatenating a MyString with LONG_MAX.");
-	char buf[1024];
-	sprintf(buf, "%s%ld", "foo", LONG_MAX);
-	MyString a("foo");
-	a += LONG_MAX;
-	emit_input_header();
-	emit_param("LONG", "%ld", LONG_MAX);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_long_small() {
-	emit_test("Test concatenating a MyString with LONG_MIN.");
-	char buf[1024];
-	sprintf(buf, "%s%ld", "foo", LONG_MIN);
-	MyString a("foo");
-	a += LONG_MIN;
-	emit_input_header();
-	emit_param("LONG", "%ld", LONG_MIN);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-//in test_mystring.cpp 180
-static bool concatenation_double_empty() {
-	emit_test("Test concatenating an empty MyString with a double.");
-	MyString a;
-	a += 12.3;
-	emit_input_header();
-	emit_param("MyString", "%f", 12.3);
-	emit_output_expected_header();
-	emit_retval("%s", "12.3");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strncmp(a.Value(), "12.3", 4) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_double_non_empty() {
-	emit_test("Test concatenating a non-empty MyString with a double.");
-	MyString a("foo");
-	a += 12.3;
-	emit_input_header();
-	emit_param("MyString", "%f", 12.3);
-	emit_output_expected_header();
-	emit_retval("%s", "foo12.3");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strncmp(a.Value(), "foo12.3", 7) != MATCH) {
 		FAIL;
 	}
 	PASS;

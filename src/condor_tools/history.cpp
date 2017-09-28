@@ -1343,7 +1343,13 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
     long prevOffset = -1, completionDate = -1;
     int clusterId = -1, procId = -1;
   
-    fseek(fd, currOffset, SEEK_SET);
+    int ret = fseek(fd, currOffset, SEEK_SET);
+
+	if (ret < 0) {
+		fprintf(stderr, "Error %d: cannot fseek on history file %s\n", errno, filename);
+		exit(1);
+	}
+
     buf.readLine(fd);
   
     owner = (char *) malloc(buf.Length() * sizeof(char)); 

@@ -7291,6 +7291,8 @@ int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
 	baseJob.Assign(ATTR_JOB_LOCAL_SYS_CPU,     0.0);
 	baseJob.Assign(ATTR_JOB_REMOTE_USER_CPU,   0.0);
 	baseJob.Assign(ATTR_JOB_REMOTE_SYS_CPU,    0.0);
+	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU,   0.0);
+	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU,    0.0);
 
 	baseJob.Assign(ATTR_JOB_EXIT_STATUS, 0);
 	baseJob.Assign(ATTR_NUM_CKPTS, 0);

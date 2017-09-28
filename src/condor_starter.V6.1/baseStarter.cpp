@@ -2260,11 +2260,8 @@ CStarter::removeDeferredJobs() {
 			// We failed to cancel the timer!
 			// This is bad because our job might execute when it shouldn't have
 			//
-		MyString error = "Failed to cancel deferred execution timer for Job ";
-		error += this->jic->jobCluster();
-		error += ".";
-		error += this->jic->jobProc();
-		EXCEPT( "%s", error.Value() );
+		EXCEPT( "Failed to cancel deferred execution timer for Job %d.%d",
+		        this->jic->jobCluster(), this->jic->jobProc() );
 		ret = false;
 	}
 	return ( ret );
@@ -3240,12 +3237,12 @@ CStarter::PublishToEnv( Env* proc_env )
 	if (get_port_range (TRUE, &low, &high) == TRUE) {
 		MyString tmp_port_number;
 
-		tmp_port_number = high;
+		tmp_port_number = IntToStr( high );
 		env_name = base.Value();
 		env_name += "HIGHPORT";
 		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
 
-		tmp_port_number = low;
+		tmp_port_number = IntToStr( low );
 		env_name = base.Value();
 		env_name += "LOWPORT";
 		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
@@ -3270,7 +3267,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		int cpus = 0;
 		if (mach->LookupInteger(ATTR_CPUS, cpus)) {
 			if (cpus > 0) {
-				proc_env->SetEnv("OMP_NUM_THREADS", cpus);
+				proc_env->SetEnv("OMP_NUM_THREADS", IntToStr( cpus ));
 			}
 		}
 	}
@@ -3630,7 +3627,7 @@ CStarter::removeTempExecuteDir( void )
 	}
 
 	MyString dir_name = "dir_";
-	dir_name += (int)daemonCore->getpid();
+	dir_name += IntToStr( daemonCore->getpid() );
 
 #if !defined(WIN32)
 	if (condorPrivSepHelper() != NULL) {

@@ -32,6 +32,11 @@
 #include "defrag_stats.h"
 
 DefragStats::DefragStats():
+	InitTime(0),
+	Lifetime(0),
+	LastUpdateTime(0),
+	RecentLifetime(0),
+	RecentTickTime(0),
 	RecentWindowMax(1),
 	RecentWindowQuantum(1),
 	PublishFlags(IF_BASICPUB | IF_RECENTPUB)

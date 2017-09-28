@@ -35,9 +35,9 @@ public:
 	struct in_addr ShadowIP() { return _shadow_IP; }
 	void ShadowIP(struct in_addr s) { _shadow_IP = s; }
 	char *Owner() { return _owner_name; }
-	void Owner(char *o);		// stores a copy
+	void Owner(const char *o);		// stores a copy
 	char *File() { return _file; }
-	void File(char *f);			// stores a copy
+	void File(const char *f);			// stores a copy
 	friend class ReplicationSchedule;
 private:
 	int _prio;

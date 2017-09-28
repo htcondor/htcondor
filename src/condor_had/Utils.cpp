@@ -106,43 +106,6 @@ utilCancelReaper(int& reaperId)
     }
 }
 
-const char*
-utilToString( int command )
-{
-    switch( command ) {
-        case REPLICATION_LEADER_VERSION:
-            return "REPLICATION_LEADER_VERSION";
-        case REPLICATION_TRANSFER_FILE:
-            return "REPLICATION_TRANSFER_FILE";
-        case REPLICATION_NEWLY_JOINED_VERSION:
-            return "REPLICATION_NEWLY_JOINED_VERSION";
-        case REPLICATION_GIVING_UP_VERSION:
-            return "REPLICATION_GIVING_UP_VERSION";
-        case REPLICATION_SOLICIT_VERSION:
-            return "REPLICATION_SOLICIT_VERSION";
-        case REPLICATION_SOLICIT_VERSION_REPLY:
-            return "REPLICATION_SOLICIT_VERSION_REPLY";
-        case HAD_BEFORE_PASSIVE_STATE:
-            return "HAD_BEFORE_PASSIVE_STATE";
-        case HAD_AFTER_ELECTION_STATE:
-            return "HAD_AFTER_ELECTION_STATE";
-        case HAD_AFTER_LEADER_STATE:
-            return "HAD_AFTER_LEADER_STATE";
-        case HAD_IN_LEADER_STATE:
-            return "HAD_IN_LEADER_STATE";
-        case HAD_ALIVE_CMD:
-            return "HAD_ALIVE_CMD";
-        case HAD_SEND_ID_CMD:
-            return "HAD_SEND_ID_CMD";
-        case CHILD_ON:
-            return "CHILD_ON";
-        case CHILD_OFF_FAST:
-            return "CHILD_OFF_FAST";
-        default:
-            return "unknown command";
-    }
-}
-
 // returns allocated by 'malloc' string upon success or NULL upon failure
 // to be deallocated by 'free' function only
 char*

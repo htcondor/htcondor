@@ -164,9 +164,9 @@ class Matchmaker : public Service
 		void updateCollector();
 		
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList&, ClassAdListDoesNotDeleteAds&, ClassAdListDoesNotDeleteAds&, std::set<std::string> &, ClaimIdHash& );	
+		bool obtainAdsFromCollector (ClassAdList &allAds, ClassAdListDoesNotDeleteAds &startdAds, ClassAdListDoesNotDeleteAds &submitterAds, std::set<std::string> &submitterNames, ClaimIdHash &claimIds );	
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
-		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & scheddAds);
+		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & submitterAds);
 
 		/**
 		 * Start the network communication necessary for a negotiation cycle.
@@ -183,7 +183,7 @@ class Matchmaker : public Service
 		/**
 		 * Try starting negotiations with all schedds in parallel.
 		 */
-		void prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &scheddAds);
+		void prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds);
 		typedef std::map<std::string, classad_shared_ptr<ResourceRequestList> > RRLHash;
 		RRLHash m_cachedRRLs;
 
@@ -215,7 +215,7 @@ class Matchmaker : public Service
 					MM_DONE if schedd got all the resources it wanted,
 					MM_ERROR if problem negotiating w/ this schedd.
 		**/
-		int negotiate(char const* groupName, char const *submitterName, const ClassAd *scheddAd,
+		int negotiate(char const* groupName, char const *submitterName, const ClassAd *submitterAd,
 		   double priority,
            double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
@@ -226,7 +226,7 @@ class Matchmaker : public Service
 								 double untrimmedSlotWeightTotal,
 								 double minSlotWeight,
 			ClassAdListDoesNotDeleteAds& startdAds, 
-			ClaimIdHash& claimIds, ClassAdListDoesNotDeleteAds& scheddAds, 
+			ClaimIdHash& claimIds, ClassAdListDoesNotDeleteAds& submitterAds, 
 			float groupQuota=INT_MAX, const char* groupName=NULL);
 
 		
@@ -238,8 +238,8 @@ class Matchmaker : public Service
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* submitterName, const char* scheddAddr);
-		void calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &, double &, double &,
-										   double &, double &);
+		void calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds, double &max, double &normalFactor,
+										   double &maxAbs, double &normalAbsFactor);
 
 		// Check to see if any concurrency limit is violated with the given set of limits.
 		// *Note* limits will be changed to lower-case.
@@ -284,7 +284,7 @@ class Matchmaker : public Service
 
 		/** Calculate how much pie might be dished out in this round.
 			@param quiet Do not emitt debug information about the calculation
-			@param scheddAds List of submitters
+			@param submitterAds List of submitters
 			@param groupAccountingName Group name for all of these submitters
 			@param groupQuota Usage limit for this group.
 			@param maxPrioValue Largest prio value of any submitter.
@@ -293,7 +293,7 @@ class Matchmaker : public Service
 			@param normalAbsFactor Normalization for prio factors
 			@param pieLeft Sum of submitterLimits
 		**/
-		void calculatePieLeft( ClassAdListDoesNotDeleteAds &scheddAds,
+		void calculatePieLeft( ClassAdListDoesNotDeleteAds &submitterAds,
 		                       char const *groupAccountingName,
 		                       float groupQuota,
 				       float groupusage,

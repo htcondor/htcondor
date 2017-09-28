@@ -608,7 +608,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 		MyString errmsg;
 		if( rval < 0 ) {
 			errmsg = "my_spawnl returned ";
-			errmsg += rval;
+			errmsg += IntToStr( rval );
 		} else {
 			errmsg = "/bin/rm ";
 			statusString( rval, errmsg );

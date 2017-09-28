@@ -2446,7 +2446,7 @@ static MyString munge_job_name(const char *jobName)
 	MyString newName;
 
 	if ( _mungeNames ) {
-		newName = MyString(_thisDagNum) + "." + jobName;
+		newName = IntToStr(_thisDagNum) + "." + jobName;
 	} else {
 		newName = jobName;
 	}

@@ -145,7 +145,7 @@ DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
 			// DAG file (base name only).
 		batchName = condor_basename( primaryDagFile.Value() );
 		batchName += "+";
-		batchName += _dagmanId._cluster;
+		batchName += IntToStr( _dagmanId._cluster );
 		SetDagAttribute( ATTR_JOB_BATCH_NAME, batchName );
 	}
 

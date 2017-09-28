@@ -162,13 +162,9 @@ pseudo_get_user_info(ClassAd *&ad)
 		user_ad = new ClassAd;
 
 #ifndef WIN32
-		char buf[1024];
+		user_ad->Assign( ATTR_UID, (int)get_user_uid() );
 
-		sprintf( buf, "%s = %d", ATTR_UID, (int)get_user_uid() );
-		user_ad->Insert( buf );
-
-		sprintf( buf, "%s = %d", ATTR_GID, (int)get_user_gid() );
-		user_ad->Insert( buf );
+		user_ad->Assign( ATTR_GID, (int)get_user_gid() );
 #endif
 
 	}

@@ -59,8 +59,6 @@ void
 ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
 
-	char buf[256];
-
     if( ! job_ad ) {
         EXCEPT( "No job_ad defined!" );
     }
@@ -86,16 +84,14 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 	SpooledJobFiles::getJobSpoolPath(jobAd, dir);
 	job_ad->Assign(ATTR_REMOTE_SPOOL_DIR,dir);
 
-    snprintf( buf, 256, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
-    if( !job_ad->Insert(buf) ) {
-        dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
+    if( !job_ad->Assign(ATTR_MPI_IS_MASTER, true) ) {
+        dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", ATTR_MPI_IS_MASTER );
         shutDown( JOB_NOT_STARTED );
     }
 
 	replaceNode( job_ad, 0 );
 	rr->setNode( 0 );
-	snprintf( buf, 256, "%s = 0", ATTR_NODE );
-	job_ad->Insert( buf );
+	job_ad->Assign( ATTR_NODE, 0 );
     rr->setJobAd( job_ad );
 
 	rr->setStartdInfo( job_ad );
@@ -193,7 +189,6 @@ ParallelShadow::getResources( void )
     char *claim_id = NULL;
     MpiResource *rr;
 	int job_cluster;
-	char buf[128];
 
     int numProcs=0;    // the # of procs to come
     int numInProc=0;   // the # in a particular proc.
@@ -289,11 +284,9 @@ ParallelShadow::getResources( void )
 
 			replaceNode ( job_ad, nodenum );
 			rr->setNode( nodenum );
-			snprintf( buf, 128, "%s = %d", ATTR_NODE, nodenum );
-			job_ad->Insert( buf );
-			snprintf( buf, 128, "%s = \"%s\"", ATTR_MY_ADDRESS,
-					 daemonCore->InfoCommandSinfulString() );
-			job_ad->Insert( buf );
+			job_ad->Assign( ATTR_NODE, nodenum );
+			job_ad->Assign( ATTR_MY_ADDRESS,
+			                daemonCore->InfoCommandSinfulString() );
 
 				// We want the spool directory of Proc 0, so use data
 				// member jobAd, NOT local variable job_ad.

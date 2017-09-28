@@ -83,10 +83,10 @@ public:
 
 		if(cluster != -1) {
 			msg += "(";
-			msg += cluster;
+			msg += IntToStr( cluster );
 			if(proc != -1) {
 				msg += ".";
-				msg += proc;
+				msg += IntToStr( proc );
 			}
 			msg += ") ";
 		}

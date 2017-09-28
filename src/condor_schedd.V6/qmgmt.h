@@ -195,7 +195,7 @@ public:
 
 	void PopulateFromAd(); // populate this structure from contained ClassAd state
 
-	// if this object is a job object, it can be linked to it's cluster object
+	// if this object is a job object, it should be linked to its cluster object
 	JobQueueCluster * Cluster() { if (entry_type == entry_type_job) return parent; return NULL; }
 };
 
@@ -204,13 +204,21 @@ class JobQueueCluster : public JobQueueJob {
 public:
 	JobFactory * factory; // this will be non-null only for cluster ads, and only when the cluster is doing late materialization
 protected:
-	int num_procs; // number of materialized jobs in this cluster that the schedd is currently tracking.
+	int cluster_size; // number of materialized jobs in this cluster that the schedd is currently tracking.
+	int num_attached; // number of procs attached to this cluster.
+	int num_idle;
+	int num_running;
+	int num_held;
 
 public:
 	JobQueueCluster(JOB_ID_KEY & job_id)
 		: JobQueueJob(entry_type_cluster)
 		, factory(NULL)
-		, num_procs(0)
+		, cluster_size(0)
+		, num_attached(0)
+		, num_idle(0)
+		, num_running(0)
+		, num_held(0)
 		{
 			jid.cluster = job_id.cluster;
 			jid.proc = -1;
@@ -218,20 +226,19 @@ public:
 		}
 	virtual ~JobQueueCluster();
 
-	int NumProcs() { return num_procs; }
-	int SetNumProcs(int _num_procs) { num_procs = _num_procs; return num_procs; }
-	void AttachJob(JobQueueJob * job) {
-		if ( ! job) return;
-		qe.append_tail(job->qe);
-		job->parent = this;
-	}
-	void DetachJob(JobQueueJob * job) {
-		--num_procs;
-		job->qe.detach();
-		job->parent = NULL;
-	}
+	// NumProcs is a copy of the count of procs in the ClusterSizeHashTable.
+	// it will differ from the number of attached jobs when a createproc or destroyproc
+	// has been started but the transaction has not yet been committed.
+	int ClusterSize() { return cluster_size; }
+	int SetClusterSize(int _cluster_size) { cluster_size = _cluster_size; return cluster_size; }
+
 	bool HasAttachedJobs() { return ! qe.empty(); }
+	void AttachJob(JobQueueJob * job);
+	void DetachJob(JobQueueJob * job);
 	void DetachAllJobs(); // When you absolutely positively need to free this class...
+	void JobStatusChanged(int old_status, int new_status);  // update cluster counters by job status.
+
+	void PopulateInfoAd(ClassAd & iad, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
 };
 
 
@@ -257,6 +264,7 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster);
 int PauseJobFactory(JobFactory * factory, int pause_code);
 int ResumeJobFactory(JobFactory * factory, int pause_code);
 bool CheckJobFactoryPause(JobFactory * factory, int pause_code); // 0 for resume, 1 for pause, returns true if state changed
+void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
 
 // called by qmgmt_recievers to handle the SetJobFactory RPC call

@@ -16,6 +16,7 @@
 #include "basename.h"
 #include "selector.h"
 #include "my_username.h"
+#include "condor_version.h"
 
 #include <classad/operators.h>
 
@@ -419,6 +420,7 @@ public:
     bool transaction() const {return m_transaction;}
     void reschedule();
     std::string owner() const;
+    std::string schedd_version();
 
     static boost::shared_ptr<ConnectionSentry> enter(boost::shared_ptr<ConnectionSentry> obj);
     static bool exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object obj2, boost::python::object obj3);
@@ -1590,6 +1592,12 @@ ConnectionSentry::owner() const
     return m_schedd.owner();
 }
 
+std::string
+ConnectionSentry::schedd_version()
+{
+	return m_schedd.m_version;
+}
+
 
 void
 ConnectionSentry::abort()
@@ -1935,6 +1943,19 @@ public:
         {
             keep_results = true;
         }
+
+		// Before calling init_cluster_ad(), we should invoke methods to tell
+		// the submit code if we want file checks, and to tell the version of the
+		// remote schedd.  If for some reason we do not have a the remote
+		// schedd version, assume it is running the same version we are (this is
+		// the same logic employed by condor_submit).
+
+		m_hash.setDisableFileChecks( param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", true) ? 1 : 0 );
+		if ( txn->schedd_version().length() > 0 ) {
+			m_hash.setScheddVersion(txn->schedd_version().c_str());
+		} else {
+			m_hash.setScheddVersion(CondorVersion());
+		}
 
         if (m_hash.init_cluster_ad(time(NULL), txn->owner().c_str()))
         {

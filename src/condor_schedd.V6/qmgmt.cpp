@@ -318,6 +318,58 @@ ClassAd* ConstructClassAdLogTableEntry<JobQueueJob*>::New(const char * key, cons
 	}
 }
 
+
+void JobQueueCluster::AttachJob(JobQueueJob * job)
+{
+	if ( ! job) return;
+	++num_attached;
+	qe.append_tail(job->qe);
+	job->parent = this;
+	switch (job->Status()) {
+	case HELD: ++num_held; break;
+	case IDLE: ++num_idle; break;
+	case RUNNING: case TRANSFERRING_OUTPUT: case SUSPENDED: ++num_running; break;
+	}
+}
+void JobQueueCluster::DetachJob(JobQueueJob * job)
+{
+	--num_attached;
+	job->qe.detach();
+	job->parent = NULL;
+	switch (job->Status()) {
+	case HELD: --num_held; break;
+	case IDLE: --num_idle; break;
+	case RUNNING: case TRANSFERRING_OUTPUT: case SUSPENDED: --num_running; break;
+	}
+}
+void JobQueueCluster::JobStatusChanged(int old_status, int new_status)
+{
+	switch (old_status) {
+	case HELD: --num_held; break;
+	case IDLE: --num_idle; break;
+	case RUNNING: case TRANSFERRING_OUTPUT: case SUSPENDED: --num_running; break;
+	}
+	switch (new_status) {
+	case HELD: ++num_held; break;
+	case IDLE: ++num_idle; break;
+	case RUNNING: case TRANSFERRING_OUTPUT: case SUSPENDED: ++num_running; break;
+	}
+}
+
+void JobQueueCluster::PopulateInfoAd(ClassAd & iad, bool include_factory_info)
+{
+	iad.Assign("JobsPresent", num_attached);
+	iad.Assign("JobsIdle", num_idle);
+	iad.Assign("JobsRunning", num_running);
+	iad.Assign("JobsHeld", num_held);
+	iad.Assign("ClusterSize", cluster_size);
+	if (this->factory && include_factory_info) {
+		PopulateFactoryInfoAd(this->factory, iad);
+	}
+	iad.ChainToAd(this);
+}
+
+
 // detach all of the procs from a cluster, we really hope that the list of attached proc
 // is empty before we get to the ::Delete call below, but just in case it isn't do the detach here.
 void JobQueueCluster::DetachAllJobs() {
@@ -325,6 +377,11 @@ void JobQueueCluster::DetachAllJobs() {
 		JobQueueJob * job = q->as<JobQueueJob>();
 		job->Unchain();
 		job->parent = NULL;
+		--num_attached;
+		if (num_attached < -100) break; // something is seriously wrong here...
+	}
+	if (num_attached != 0) {
+		dprintf(D_ALWAYS, "ERROR - Cluster %d has num_attached=%d after detaching all jobs\n", jid.cluster, num_attached);
 	}
 }
 
@@ -339,7 +396,7 @@ ConstructClassAdLogTableEntry<JobQueueJob*>::Delete(ClassAd* &ad) const
 			// this is a cluster, detach all jobs
 			JobQueueCluster * clusterad = static_cast<JobQueueCluster*>(job);
 			if (clusterad->HasAttachedJobs()) {
-				dprintf(D_ALWAYS, "WARNING - Cluster %d was deleted with proc ads still attached to it\n", clusterad->jid.cluster);
+				dprintf(D_ALWAYS, "WARNING - Cluster %d was deleted with proc ads still attached to it. This should only happen during schedd shutdown.\n", clusterad->jid.cluster);
 				clusterad->DetachAllJobs();
 			}
 		} else {
@@ -463,13 +520,14 @@ JobMaterializeTimerCallback()
 					}
 					int effective_limit = MIN(proc_limit, system_limit);
 
-					dprintf(D_MATERIALIZE | D_VERBOSE, "in JobMaterializeTimerCallback, proc_limit=%d, sys_limit=%d MIN(%d,%d,%d)  NumProcs=%d\n",
+					dprintf(D_MATERIALIZE | D_VERBOSE, "in JobMaterializeTimerCallback, proc_limit=%d, sys_limit=%d MIN(%d,%d,%d), ClusterSize=%d\n",
 						proc_limit, system_limit,
 						scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), scheduler.getMaxJobsPerOwner(),
-						cad->NumProcs());
+						cad->ClusterSize());
 
 					int num_materialized = 0;
-					while (cad->NumProcs() < effective_limit) {
+					int cluster_size = cad->ClusterSize();
+					while ((cluster_size + num_materialized) < effective_limit) {
 						int retry_delay = 0; // will be set to non-zero when we should try again later.
 						if (MaterializeNextFactoryJob(cad->factory, cad, retry_delay) == 1) {
 							num_materialized += 1;
@@ -658,7 +716,7 @@ DecrementClusterSize(int cluster_id, JobQueueCluster * clusterAd)
 
 		bool cleanup_now = (*numOfProcs <= 0);
 		if (clusterAd) {
-			clusterAd->SetNumProcs(*numOfProcs);
+			clusterAd->SetClusterSize(*numOfProcs);
 			if (scheduler.getAllowLateMaterialize()) {
 				// if there is a job factory, and it doesn't want us to do cleanup
 				// then schedule deferred cleanup even if the cluster is not yet empty
@@ -1526,7 +1584,12 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 			int job_status = 0;
 			if (ad->LookupInteger(ATTR_JOB_STATUS, job_status)) {
-				ad->SetStatus(job_status);
+				if (ad->Status() != job_status) {
+					if (clusterad) {
+						clusterad->JobStatusChanged(ad->Status(), job_status);
+					}
+					ad->SetStatus(job_status);
+				}
 				IncrementLiveJobCounter(scheduler.liveJobCounts, ad->Universe(), ad->Status(), 1);
 				if (ad->ownerinfo) { IncrementLiveJobCounter(ad->ownerinfo->live, ad->Universe(), ad->Status(), 1); }
 			}
@@ -1672,7 +1735,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			int num_procs = IncrementClusterSize(cluster_num);
-			clusterad->SetNumProcs(num_procs);
+			clusterad->SetClusterSize(num_procs);
 		}
 	} // WHILE
 
@@ -1803,13 +1866,14 @@ int MaterializeJobs(JobQueueCluster * clusterad)
 
 	int effective_limit = MIN(proc_limit, system_limit);
 
-	dprintf(D_MATERIALIZE | D_VERBOSE, "in MaterializeJobs, proc_limit=%d, sys_limit=%d MIN(%d,%d,%d)  NumProcs=%d\n",
+	dprintf(D_MATERIALIZE | D_VERBOSE, "in MaterializeJobs, proc_limit=%d, sys_limit=%d MIN(%d,%d,%d), ClusterSize=%d\n",
 		proc_limit, system_limit,
 		scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), scheduler.getMaxJobsPerOwner(),
-		clusterad->NumProcs());
+		clusterad->ClusterSize());
 
 	int num_materialized = 0;
-	while (clusterad->NumProcs() < effective_limit) {
+	int cluster_size = clusterad->ClusterSize();
+	while ((cluster_size + num_materialized) < effective_limit) {
 		int retry_delay = 0;
 		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, retry_delay) == 1) {
 			num_materialized += 1;
@@ -2652,13 +2716,13 @@ int NewProcInternal(int cluster_id, int proc_id)
 	MyString gjid = "\"";
 	gjid += Name;             // schedd's name
 	gjid += "#";
-	gjid += cluster_id;
+	gjid += IntToStr( cluster_id );
 	gjid += ".";
-	gjid += proc_id;
+	gjid += IntToStr( proc_id );
 	if (param_boolean("GLOBAL_JOB_ID_WITH_TIME", true)) {
 		int now = (int)time(0);
 		gjid += "#";
-		gjid += now;
+		gjid += IntToStr( now );
 	}
 	gjid += "\"";
 	JobQueue->SetAttribute(key.c_str(), ATTR_GLOBAL_JOB_ID, gjid.Value());
@@ -2717,7 +2781,7 @@ int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * Cl
 	int ClusterId = ClusterAd->jid.cluster;
 
 	int num_procs = IncrementClusterSize(ClusterId);
-	ClusterAd->SetNumProcs(num_procs);
+	ClusterAd->SetClusterSize(num_procs);
 	NewProcInternal(ClusterId, ProcId);
 
 	int rval = SetAttributeInt(ClusterId, ProcId, ATTR_PROC_ID, ProcId, flags | SetAttribute_LateMaterialization);
@@ -3874,7 +3938,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				ivalue = ((ivalue + base - 1) / base) * base;
 
 					// make it a string, courtesty MyString conversion.
-				new_value = ivalue;
+				new_value = IntToStr( ivalue );
 
 					// if it was a float, append ".0" to keep it a float
 				if ( attr_type == classad::Value::REAL_VALUE ) {
@@ -4025,6 +4089,8 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 
 				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job->Status(), -1);
 				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job_status, 1);
+
+				if (job->Cluster()) { job->Cluster()->JobStatusChanged(job->Status(), job_status); }
 				job->SetStatus(job_status);
 			}
 		}
@@ -4867,24 +4933,36 @@ AbortTransactionAndRecomputeClusters()
 		*/
 		//TODO: move cluster count from hashtable into the cluster's JobQueueJob object.
 		ClusterSizeHashTable->clear();
-		ClassAd *ad;
+		JobQueueJob *job;
 		JobQueueKey key;
-		int 	*numOfProcs = NULL;	
-		int cluster_num;
 		JobQueue->StartIterateAllClassAds();
-		while (JobQueue->IterateAllClassAds(ad,key)) {
-			cluster_num = key.cluster;
-			if ( ! cluster_num) continue;  // skip cluster & header ads
-			else {
+		while (JobQueue->Iterate(key, job)) {
+			if (key.cluster > 0 && key.proc >= 0) { // look at job ads only.
+				int *numOfProcs = NULL;
 				// count up number of procs in cluster, update ClusterSizeHashTable
-				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
+				if ( ClusterSizeHashTable->lookup(key.cluster,numOfProcs) == -1 ) {
 					// First proc we've seen in this cluster; set size to 1
-					ClusterSizeHashTable->insert(cluster_num,1);
+					ClusterSizeHashTable->insert(key.cluster,1);
 				} else {
 					// We've seen this cluster_num go by before; increment proc count
 					(*numOfProcs)++;
 				}
+			}
+		}
 
+		// now update the clustersize field in the cluster object so that it matches
+		// the cluster size hashtable.
+		JobQueue->StartIterateAllClassAds();
+		while (JobQueue->Iterate(key, job)) {
+			if (key.cluster > 0 && key.proc == -1) { // look at cluster ads only
+				JobQueueCluster * cad = static_cast<JobQueueCluster*>(job);
+				int *numOfProcs = NULL;
+				// count up number of procs in cluster, update ClusterSizeHashTable
+				if ( ClusterSizeHashTable->lookup(key.cluster,numOfProcs) == -1 ) {
+					cad->SetClusterSize(0); // not in the cluster size hash table, so there are no procs...
+				} else {
+					cad->SetClusterSize(*numOfProcs); // copy num of procs into the cluster object.
+				}
 			}
 		}
 	}	// end of if JobQueue->AbortTransaction == True
@@ -5158,8 +5236,8 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	}
 	
 	if (Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
-		return -1;
 		errno = EACCES;
+		return -1;
 	}
 
 	JobQueue->DeleteAttribute(key.c_str(), attr_name);
@@ -6444,7 +6522,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     if (cur_hosts>=max_hosts || job_status==HELD || 
 			job_status==REMOVED || job_status==COMPLETED ||
 			job->IsNoopJob() ||
-			!service_this_universe(universe,job)) 
+			!service_this_universe(universe,job))
 	{
         return cur_hosts;
 	}

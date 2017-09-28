@@ -168,11 +168,8 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				dprintf (D_ALWAYS, "AUTHENTICATE_FS: FS_REMOTE was used but no FS_REMOTE_DIR defined!\n");
 				filename = "/tmp";
 			}
-			filename += "/FS_REMOTE_";
-			filename += get_local_hostname();
-			filename += "_";
-			filename += mypid;
-			filename += "_XXXXXXXXX";
+			formatstr_cat( filename, "/FS_REMOTE_%s_%d_XXXXXXXXX",
+			               get_local_hostname().Value(), mypid );
 			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", filename.c_str() );
 
 			int sync_fd;
@@ -302,11 +299,8 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			// construct the template. mkstemp modifies the string you pass
 			// in so we create a dup of it just in case MyString does
 			// anything funny or uses string spaces, etc.
-			filename_template += "/FS_REMOTE_";
-			filename_template += get_local_hostname();
-			filename_template += "_";
-			filename_template += mypid;
-			filename_template += "_XXXXXX";
+			formatstr_cat( filename_template, "/FS_REMOTE_%s_%d_XXXXXX",
+			               get_local_hostname().Value(), mypid );
 			char* filename_inout = strdup(filename_template.Value());
 
 			dprintf( D_SECURITY, "FS_REMOTE: sync filename is %s\n", filename_inout );

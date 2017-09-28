@@ -289,7 +289,16 @@ class ClassAdLogTable : public LoggableClassAdTable {
 public:
 	ClassAdLogTable(HashTable<K,AD> & _table) : table(_table) {}
 	virtual ~ClassAdLogTable() {};
-	virtual bool lookup(const char * key, ClassAd*& ad) { AD Ad; int iret = table.lookup(K(key), Ad); ad=Ad; return iret >= 0; }
+	virtual bool lookup(const char * key, ClassAd*& out) {
+		AD Ad = NULL;
+		int iret = table.lookup(K(key), Ad);
+		if( iret >= 0 ) {
+			out = static_cast<ClassAd *>(Ad);
+			return true;
+		} else {
+			return false;
+		}
+	}
 	virtual bool remove(const char * key) { return table.remove(K(key)) >= 0; }
 	virtual bool insert(const char * key, ClassAd * ad) { int iret = table.insert(K(key), AD(ad)); return iret >= 0; }
 	virtual void startIterations() { table.startIterations(); } // begin iterations

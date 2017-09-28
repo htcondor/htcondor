@@ -241,14 +241,14 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// append a line adding the parent DAGMan's cluster ID to the job ad
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString dagJobId = MyString( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
-				dm.DAGManJobId._cluster;
+				IntToStr( dm.DAGManJobId._cluster );
 	args.AppendArg( dagJobId.Value() );
 
 		// now we append a line setting the same thing as a submit-file macro
 		// (this is necessary so the user can reference it in the priority)
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString dagJobIdMacro = MyString( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
-				dm.DAGManJobId._cluster;
+				IntToStr( dm.DAGManJobId._cluster );
 	args.AppendArg( dagJobIdMacro.Value() );
 
 		// Pass the batch name to lower levels.
@@ -290,7 +290,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	if ( priority != 0 ) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString prioStr = "priority=";
-		prioStr += priority;
+		prioStr += IntToStr( priority );
 		args.AppendArg( prioStr.Value() );
 	}
 
@@ -318,7 +318,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			// we can't do this in Job::ResolveVarsInterpolations()
 			// because that's only called at parse time.
 		MyString value = nodeVar._value;
-		MyString retryStr( retry );
+		MyString retryStr = IntToStr( retry );
 		value.replaceString( "$(RETRY)", retryStr.Value() );
 		MyString varStr = nodeVar._name + " = " + value;
 
@@ -330,20 +330,20 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// "final" nodes).
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString var = "DAG_STATUS = ";
-	var += dm.dag->_dagStatus;
+	var += IntToStr( (int)dm.dag->_dagStatus );
 	args.AppendArg( var.Value() );
 
 		// Set the special FAILED_COUNT variable (mainly for use by
 		// "final" nodes).
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	var = "FAILED_COUNT = ";
-	var += dm.dag->NumNodesFailed();
+	var += IntToStr( dm.dag->NumNodesFailed() );
 	args.AppendArg( var.Value() );
 
 	if( hold_claim ){
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString holdit = MyString("+") + MyString(ATTR_JOB_KEEP_CLAIM_IDLE) + " = "
-			+ dm._claim_hold_time;
+			+ IntToStr( dm._claim_hold_time );
 		args.AppendArg( holdit.Value() );	
 	}
 	
