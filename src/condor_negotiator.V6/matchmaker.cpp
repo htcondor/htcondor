@@ -1378,7 +1378,7 @@ negotiationTime ()
         //ClaimIdHash claimIds(MyStringHash);
     ClaimIdHash claimIds;
 	std::set<std::string> accountingNames; // set of active submitter names to publish
-	ClassAdListDoesNotDeleteAds scheddAds; // ptrs to schedd ads in allAds
+	ClassAdListDoesNotDeleteAds submitterAds; // ptrs to submitter ads in allAds
 
 	ranksMap.clear();
 
@@ -1431,7 +1431,7 @@ negotiationTime ()
     time_t start_time_phase1 = time(NULL);
 	double start_usage_phase1 = get_rusage_utime();
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
-	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds, accountingNames,
+	if( !obtainAdsFromCollector( allAds, startdAds, submitterAds, accountingNames,
 		claimIds ) )
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
@@ -1535,7 +1535,7 @@ negotiationTime ()
         // If there is only one group (the root group) we are in traditional non-HGQ mode.
         // It seems cleanest to take the traditional case separately for maximum backward-compatible behavior.
         // A possible future change would be to unify this into the HGQ code-path, as a "root-group-only" case. 
-        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, scheddAds);
+        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submitterAds);
     } else {
         // Otherwise we are in HGQ mode, so begin HGQ computations
 
@@ -1565,9 +1565,9 @@ negotiationTime ()
 
 
         // cycle through the submitter ads, and load them into the appropriate group node in the tree
-        dprintf(D_ALWAYS, "group quotas: assigning %d submitters to accounting groups\n", int(scheddAds.MyLength()));
-        scheddAds.Open();
-        while (ClassAd* ad = scheddAds.Next()) {
+        dprintf(D_ALWAYS, "group quotas: assigning %d submitters to accounting groups\n", int(submitterAds.MyLength()));
+        submitterAds.Open();
+        while (ClassAd* ad = submitterAds.Next()) {
             MyString tname;
             if (!ad->LookupString(ATTR_NAME, tname)) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
@@ -2753,14 +2753,14 @@ void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
 
 /*
  consolidate_globaljobprio_submitter_ads()
- Scan through scheddAds looking for globaljobprio submitter ads, consolidating
+ Scan through submitterAds looking for globaljobprio submitter ads, consolidating
  them into a minimal set of submitter ads that contain JOBPRIO_MIN and
  JOBPRIO_MAX attributes to reflect job priority ranges.
  Return true on success and/or want_globaljobprio should be true,
  false if there is a data structure inconsistency and/or want_globaljobprio should be false.
 */
 bool Matchmaker::
-consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& scheddAds)
+consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAds)
 {
 	// nothing to do if unless want_globaljobprio is true...
 	if (!want_globaljobprio) {
@@ -2772,8 +2772,8 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& scheddAds)
 	MyString curr_name, curr_addr, prev_name, prev_addr;
 	int min_prio=INT_MAX, max_prio=INT_MIN; // initialize to shut gcc up, the loop always sets before using.
 
-	scheddAds.Open();
-	while ( (curr_ad = scheddAds.Next()) )
+	submitterAds.Open();
+	while ( (curr_ad = submitterAds.Next()) )
 	{
 		// skip this submitter if we cannot identify its origin
 		if (!curr_ad->LookupString(ATTR_NAME,curr_name)) continue;
@@ -2825,8 +2825,8 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& scheddAds)
 		}
 		// and now may as well delete the curr_ad, since negotiation will
 		// be handled by the first ad for this user/schedd_addr
-		scheddAds.Remove(curr_ad);
-	}	// end of while iterate through scheddAds
+		submitterAds.Remove(curr_ad);
+	}	// end of while iterate through submitterAds
 
 	return true;
 }
@@ -2837,10 +2837,10 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					 double minSlotWeight,
 					 ClassAdListDoesNotDeleteAds& startdAds,
 					 ClaimIdHash& claimIds, 
-					 ClassAdListDoesNotDeleteAds& scheddAds, 
+					 ClassAdListDoesNotDeleteAds& submitterAds, 
 					 float groupQuota, const char* groupName)
 {
-	ClassAd		*schedd;
+	ClassAd		*submitter_ad;
 	MyString    submitterName;
 	MyString    scheddName;
 	MyString    scheddAddr;
@@ -2857,7 +2857,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	double		submitterAbsShare = 0.0;
 	double		pieLeft;
 	double 		pieLeftOrig;
-	int         scheddAdsCountOrig;
+	int         submitterAdsCountOrig;
 	int			totalTime;
 	int			totalTimeSchedd;
 	int			num_idle_jobs;
@@ -2897,10 +2897,10 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
         // filter submitters with no idle jobs to avoid unneeded computations and log output
         if (!ConsiderPreemption) {
-            filter_submitters_no_idle(scheddAds);
+            filter_submitters_no_idle(submitterAds);
         }
 
-		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
+		calculateNormalizationFactor( submitterAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
 		numStartdAds = untrimmed_num_startds;
 			// If operating on a group with a quota, consider the size of 
@@ -2912,7 +2912,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		}
 
 		calculatePieLeft(
-			scheddAds,
+			submitterAds,
 			groupName,
 			groupQuota,
 			groupusage,
@@ -2942,13 +2942,13 @@ negotiateWithGroup ( int untrimmed_num_startds,
             time_t start_time_phase3 = time(NULL);
 			double start_usage_phase3 = get_rusage_utime();
             dprintf(D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n");
-            scheddAds.Sort((lessThanFunc)comparisonFunction, this);
+            submitterAds.Sort((lessThanFunc)comparisonFunction, this);
 
-			// Now that the submitter ad list (scheddAds) is sorted, we can
+			// Now that the submitter ad list (submitterAds) is sorted, we can
 			// scan through it looking for globaljobprio submitter ads, consolidating
 			// them into a minimal set of submitter ads that contain JOBPRIO_MIN and
 			// JOBPRIO_MAX attributes to reflect job priority ranges.
-			want_globaljobprio = consolidate_globaljobprio_submitter_ads(scheddAds);
+			want_globaljobprio = consolidate_globaljobprio_submitter_ads(submitterAds);
 
             duration_phase3 += time(NULL) - start_time_phase3;
 			phase3_cpu_time += get_rusage_utime() - start_usage_phase3;
@@ -2957,13 +2957,13 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		start_time_prefetch = time(NULL);
 		start_usage_prefetch = get_rusage_utime();
 
-	prefetchResourceRequestLists(scheddAds);
+		prefetchResourceRequestLists(submitterAds);
 
 		negotiation_cycle_stats[0]->prefetch_duration = time(NULL) - start_time_prefetch;
 		negotiation_cycle_stats[0]->prefetch_cpu_time += get_rusage_utime() - start_usage_prefetch;
 
 		pieLeftOrig = pieLeft;
-		scheddAdsCountOrig = scheddAds.MyLength();
+		submitterAdsCountOrig = submitterAds.MyLength();
 
 		// ----- Negotiate with the schedds in the sorted list
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",
@@ -2974,11 +2974,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		dprintf (D_FULLDEBUG, "    pieLeft = %.3f\n", pieLeft);
 		dprintf (D_FULLDEBUG, "    NormalFactor = %f\n", normalFactor);
 		dprintf (D_FULLDEBUG, "    MaxPrioValue = %f\n", maxPrioValue);
-		dprintf (D_FULLDEBUG, "    NumSubmitterAds = %d\n", scheddAds.MyLength());
-		scheddAds.Open();
-        // These are submitter ads, not the actual schedd daemon ads.
-        // "schedd" seems to be used interchangeably with "submitter" here
-		while( (schedd = scheddAds.Next()) )
+		dprintf (D_FULLDEBUG, "    NumSubmitterAds = %d\n", submitterAds.MyLength());
+		submitterAds.Open();
+		while( (submitter_ad = submitterAds.Next()) )
 		{
             if (!ignore_submitter_limit && (NULL != groupName) && (accountant.GetWeightedResourcesUsed(groupName) >= groupQuota)) {
                 // If we met group quota, and if we're respecting submitter limits, halt.
@@ -2986,25 +2984,25 @@ negotiateWithGroup ( int untrimmed_num_startds,
                 break;
             }
 			// get the name of the submitter and address of the schedd-daemon it came from
-			if( !schedd->LookupString( ATTR_NAME, submitterName ) ||
-				!schedd->LookupString( ATTR_SCHEDD_NAME, scheddName ) ||
-				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
+			if( !submitter_ad->LookupString( ATTR_NAME, submitterName ) ||
+				!submitter_ad->LookupString( ATTR_SCHEDD_NAME, scheddName ) ||
+				!submitter_ad->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
 			{
 				dprintf (D_ALWAYS,"  Error!  Could not get %s, %s and %s from ad\n",
 						 ATTR_NAME, ATTR_SCHEDD_NAME, ATTR_SCHEDD_IP_ADDR);
-				dprintf( D_ALWAYS, "  Ignoring this schedd and continuing\n" );
-				scheddAds.Remove( schedd );
+				dprintf( D_ALWAYS, "  Ignoring this submitter and continuing\n" );
+				submitterAds.Remove( submitter_ad );
 				continue;
 			}
 
 			num_idle_jobs = 0;
-			schedd->LookupInteger(ATTR_IDLE_JOBS,num_idle_jobs);
+			submitter_ad->LookupInteger(ATTR_IDLE_JOBS,num_idle_jobs);
 			if ( num_idle_jobs < 0 ) {
 				num_idle_jobs = 0;
 			}
 
 			totalTime = 0;
-			schedd->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE,totalTime);
+			submitter_ad->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE,totalTime);
 			if ( totalTime < 0 ) {
 				totalTime = 0;
 			}
@@ -3141,12 +3139,12 @@ negotiateWithGroup ( int untrimmed_num_startds,
                 }
 				negotiation_cycle_stats[0]->active_submitters.insert(submitterName.Value());
 				negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.Value());
-				result=negotiate(groupName, submitterName.Value(), schedd, submitterPrio,
+				result=negotiate(groupName, submitterName.Value(), submitter_ad, submitterPrio,
                               submitterLimit, submitterLimitUnclaimed,
 							  startdAds, claimIds, 
 							  ignore_submitter_limit,
 							  deadline, numMatched, pieLeft);
-				updateNegCycleEndTime(startTime, schedd);
+				updateNegCycleEndTime(startTime, submitter_ad);
 			}
 
 			switch (result)
@@ -3172,7 +3170,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
                         scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.Value());
                         dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.Value(),
                                  accountant.GetWeightedResourcesUsed(submitterName.Value()));
-						scheddAds.Remove( schedd);
+						submitterAds.Remove( submitter_ad );
 					}
 					break;
 				case MM_ERROR:
@@ -3183,18 +3181,18 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName.Value());
 					dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.Value(),
 						    accountant.GetWeightedResourcesUsed(submitterName.Value()));
-					scheddAds.Remove( schedd );
+					submitterAds.Remove( submitter_ad );
 					negotiation_cycle_stats[0]->submitters_failed.insert(submitterName.Value());
 			}
 		}
-		scheddAds.Close();
+		submitterAds.Close();
 		dprintf( D_FULLDEBUG, " resources used scheddUsed= %f\n",scheddUsed);
 
-	} while ( ( pieLeft < pieLeftOrig || scheddAds.MyLength() < scheddAdsCountOrig )
-			  && (scheddAds.MyLength() > 0)
+	} while ( ( pieLeft < pieLeftOrig || submitterAds.MyLength() < submitterAdsCountOrig )
+			  && (submitterAds.MyLength() > 0)
 			  && (startdAds.MyLength() > 0) );
 
-	dprintf( D_ALWAYS, " negotiateWithGroup resources used scheddAds length %d \n",scheddAds.MyLength());
+	dprintf( D_ALWAYS, " negotiateWithGroup resources used submitterAds length %d \n",submitterAds.MyLength());
 
     negotiation_cycle_stats[0]->duration_phase3 += duration_phase3;
     negotiation_cycle_stats[0]->duration_phase4 += (time(NULL) - start_time_phase4) - duration_phase3;
@@ -3449,7 +3447,7 @@ bool Matchmaker::
 obtainAdsFromCollector (
 						ClassAdList &allAds,
 						ClassAdListDoesNotDeleteAds &startdAds, 
-						ClassAdListDoesNotDeleteAds &scheddAds, 
+						ClassAdListDoesNotDeleteAds &submitterAds, 
 						std::set<std::string> &submitterNames,
 						ClaimIdHash &claimIds )
 {
@@ -3737,12 +3735,12 @@ obtainAdsFromCollector (
 					ClassAd *adCopy = new ClassAd( *ad );
 					ASSERT(adCopy);
 					adCopy->Assign(ATTR_JOB_PRIO,atoi(prio));
-					scheddAds.Insert(adCopy);
+					submitterAds.Insert(adCopy);
 				}
 			} else {
 				// want_globaljobprio is false, so just insert the submitter
 				// ad into our list as-is
-				scheddAds.Insert(ad);
+				submitterAds.Insert(ad);
 			}
 		}
         free(remoteHost);
@@ -3752,15 +3750,15 @@ obtainAdsFromCollector (
 
 	// In the processing of allAds above, if want_globaljobprio is true,
 	// we may have created additional submitter ads and inserted them
-	// into scheddAds on the fly.
-	// As ads in scheddAds are not deleted when scheddAds is destroyed,
+	// into submitterAds on the fly.
+	// As ads in submitterAds are not deleted when submitterAds is destroyed,
 	// we must be certain to insert these ads into allAds so it gets deleted.
-	// To accomplish this, we simply iterate through scheddAds and insert all
-	// ads found into scheddAds. No worries about duplicates since the Insert()
+	// To accomplish this, we simply iterate through submitterAds and insert all
+	// ads found into submitterAds. No worries about duplicates since the Insert()
 	// method checks for duplicates already.
 	if (want_globaljobprio) {
-		scheddAds.Open();
-		while( (ad=scheddAds.Next()) ) {
+		submitterAds.Open();
+		while( (ad=submitterAds.Next()) ) {
 			allAds.Insert(ad);
 		}
 	}
@@ -3771,7 +3769,7 @@ obtainAdsFromCollector (
 	        allAds.MyLength(),claimIds.size());
 
 	dprintf(D_ALWAYS, "Public ads include %d submitter, %d startd\n",
-		scheddAds.MyLength(), startdAds.MyLength() );
+		submitterAds.MyLength(), startdAds.MyLength() );
 
 	return true;
 }
@@ -4388,7 +4386,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 }
 
 int Matchmaker::
-negotiate(char const* groupName, char const *submitterName, const ClassAd *scheddAd, double priority,
+negotiate(char const* groupName, char const *submitterName, const ClassAd *submitterAd, double priority,
 		   double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   bool ignore_schedd_limit, time_t deadline,
@@ -4410,11 +4408,11 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *sched
 
 	numMatched = 0;
 
-	classad_shared_ptr<ResourceRequestList> request_list = startNegotiate(submitterName, *scheddAd, sock);
+	classad_shared_ptr<ResourceRequestList> request_list = startNegotiate(submitterName, *submitterAd, sock);
 	if (!request_list.get()) {return MM_ERROR;}
 
 	std::string scheddAddr;
-	if (!getScheddAddr(*scheddAd, scheddAddr))
+	if (!getScheddAddr(*submitterAd, scheddAddr))
 	{
 		dprintf (D_ALWAYS, "Matchmaker::negotiate: Internal error: Missing IP address for schedd %s.  Please contact the Condor developers.\n", submitterName);
 		return MM_ERROR;
@@ -5907,7 +5905,7 @@ Matchmaker::calculateSubmitterLimit(
 
 void
 Matchmaker::calculatePieLeft(
-	ClassAdListDoesNotDeleteAds &scheddAds,
+	ClassAdListDoesNotDeleteAds &submitterAds,
 	char const *groupAccountingName,
 	float groupQuota,
 	float groupusage,
@@ -5919,13 +5917,13 @@ Matchmaker::calculatePieLeft(
 		/* result parameters: */
 	double &pieLeft)
 {
-	ClassAd *schedd;
+	ClassAd *submitter;
 
 		// Calculate sum of submitterLimits in this spin of the pie.
 	pieLeft = 0;
 
-	scheddAds.Open();
-	while ((schedd = scheddAds.Next()))
+	submitterAds.Open();
+	while ((submitter = submitterAds.Next()))
 	{
 		double submitterShare = 0.0;
 		double submitterAbsShare = 0.0;
@@ -5936,7 +5934,7 @@ Matchmaker::calculatePieLeft(
         double submitterLimitUnclaimed = 0.0;
 		double submitterUsage = 0.0;
 
-		schedd->LookupString( ATTR_NAME, submitterName );
+		submitter->LookupString( ATTR_NAME, submitterName );
 
 		calculateSubmitterLimit(
 			submitterName.Value(),
@@ -5957,22 +5955,22 @@ Matchmaker::calculatePieLeft(
 			submitterPrio,
 			submitterPrioFactor);
 
-        schedd->Assign("SubmitterStarvation", starvation_ratio(submitterUsage, submitterUsage+submitterLimit));
+        submitter->Assign("SubmitterStarvation", starvation_ratio(submitterUsage, submitterUsage+submitterLimit));
 			
 		pieLeft += submitterLimit;
 	}
-	scheddAds.Close();
+	submitterAds.Close();
 }
 
 void Matchmaker::
-calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
+calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 							  double &max, double &normalFactor,
 							  double &maxAbs, double &normalAbsFactor)
 {
 	// find the maximum of the priority values (i.e., lowest priority)
 	max = maxAbs = DBL_MIN;
-	scheddAds.Open();
-	while (ClassAd* ad = scheddAds.Next()) {
+	submitterAds.Open();
+	while (ClassAd* ad = submitterAds.Next()) {
 		// this will succeed (comes from collector)
         MyString subname;
 		ad->LookupString(ATTR_NAME, subname);
@@ -5981,7 +5979,7 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
 		double prioFactor = accountant.GetPriorityFactor(subname);
 		if (prioFactor > maxAbs) maxAbs = prioFactor;
 	}
-	scheddAds.Close();
+	submitterAds.Close();
 
 	// calculate the normalization factor, i.e., sum of the (max/scheddprio)
 	// also, do not factor in ads with the same ATTR_NAME more than once -
@@ -5990,8 +5988,8 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
     set<MyString> names;
 	normalFactor = 0.0;
 	normalAbsFactor = 0.0;
-	scheddAds.Open();
-	while (ClassAd* ad = scheddAds.Next()) {
+	submitterAds.Open();
+	while (ClassAd* ad = submitterAds.Next()) {
         MyString subname;
 		ad->LookupString(ATTR_NAME, subname);
         std::pair<set<MyString>::iterator, bool> r = names.insert(subname);
@@ -6003,7 +6001,7 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
 		double prioFactor = accountant.GetPriorityFactor(subname);
 		normalAbsFactor += maxAbs/prioFactor;
 	}
-	scheddAds.Close();
+	submitterAds.Close();
 }
 
 
