@@ -77,6 +77,10 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 // Do not return in the block of code where the priv has been set to either
 // condor or root.  -zmiller
 static bool MakeLink(const char* srcFile, const string &newLink) {
+
+	bool retVal = false;
+
+	// Make sure the necessary parameters are set
 	std::string webRootDir;
 	param(webRootDir, "HTTP_PUBLIC_FILES_ROOT_DIR");
 	if(webRootDir.empty()) {
@@ -91,20 +95,81 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 			webRootDir.c_str());
 		return (false);
 	}
-	StatWrapper fileMode;
+	
+	// Impersonate the user and open the file using safe_open(). This will allow
+	// us to verify the user has privileges to access the file, and later to
+	// verify the hard link points back to the same inode.
+	uid_t link_uid = get_user_uid();
+	gid_t link_gid = get_user_gid();
+	priv_state original_priv = set_user_priv();
+	dprintf(D_ALWAYS, "MRC [MakeLink] link_uid=%d, link_gid=%d\n", link_uid, link_gid);
+	StatWrapper srcFileMode;
 	bool fileOK = false;
-	if (fileMode.Stat(srcFile) == 0) {
-		const StatStructType *statrec = fileMode.GetBuf();
+	if (srcFileMode.Stat(srcFile) == 0) {
+		const StatStructType *statrec = srcFileMode.GetBuf();
 		if (statrec != NULL)
-			fileOK = (statrec->st_mode & S_IROTH); // Verify readable by all
+			fileOK = (statrec->st_mode & S_IRUSR); // Verify readable by owner
 	}
 	if (fileOK == false) {
 		dprintf(D_ALWAYS,
-			"Cannot transfer -- public input file not world readable: %s\n", srcFile);
+			"Cannot transfer -- public input file not readable by user: %s\n", srcFile);
 		return (false);
 	}
 
+	// Create the hard link using root privileges; it will automatically get
+	// owned by the same owner of the file.. If the link already exists, don't do 
+	// anything at this point, we'll check later to make sure it points to the
+	// correct inode.
+	const char *const targetLink = dircat(goodPath, newLink.c_str()); // needs to be freed
+	StatWrapper targetLinkMode;
+	if (targetLink != NULL) {
+		// Check if target already exists
+		if (targetLinkMode.Stat(targetLink, StatWrapper::STATOP_LSTAT) == 0) { 
+			// Good enough if link exists, ok if update fails
+			retVal = true;
+		} 
+		else {
+			// Now create the link as root.
+			set_root_priv();
+			if (link(srcFile, targetLink) == 0) {
+				// so far, so good!
+				retVal = true;
+			} 
+			else {
+				dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFile,
+					targetLink, strerror(errno));
+			}
+		}
+	}
 
+	// Open the hard link using safe_open as user condor, and fstat() the two 
+	// open file handles to make sure the inodes match.
+	if (retVal == true) {
+		set_condor_priv();
+
+		if (srcFileMode.Stat(srcFile) == 0 && targetLinkMode.Stat(targetLink) == 0) {
+			const StatStructType *srcFileStat = srcFileMode.GetBuf();
+			const StatStructType *targetLinKStat = targetLinkMode.GetBuf();
+			if (srcFileStat != NULL && targetLinKStat != NULL) {
+				retVal = (srcFileStat->st_ino == targetLinKStat->st_ino);
+			}
+			else {
+				retVal = false;
+			}
+		}
+		else {
+			retVal = false;
+		}
+	}
+	
+
+	// Free the hard link filename
+	delete [] targetLink;
+
+	// Reset priv state
+	set_priv(original_priv);
+
+	/*
 	// see how we should create the link.  There are a few options.
 	// 1) As the condor user.
 	// 2) As root, and then chown to the user.
@@ -243,7 +308,7 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 
 	// return to original privilege level, and exit
 	set_priv(priv);
-
+	*/
 	return retVal;
 }
 
