@@ -45,7 +45,6 @@ class Server
     int            restore_req_sd;
     int            service_req_sd;
 	int            replicate_req_sd;
-	int            socket_bufsize;
     int            max_xfers;
     int            max_store_xfers;
     int            max_restore_xfers;
