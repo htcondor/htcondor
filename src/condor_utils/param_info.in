@@ -1817,6 +1817,11 @@ default=
 type=string
 tags=startd,Resource
 
+[STARTD_RECOMPUTE_DISK_FREE]
+default=false
+type=bool
+tags=startd
+
 [STARTD_JOB_HOOK_KEYWORD]
 default=
 type=string
