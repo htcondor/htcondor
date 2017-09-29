@@ -32,7 +32,7 @@ int DockerAPI::default_timeout = 120;
 // care if the image is stored locally or not (except to the extent that
 // remote image pull violates the principle of least astonishment).
 //
-int DockerAPI::run(
+int DockerAPI::createContainer(
 	ClassAd &machineAd,
 	ClassAd &jobAd,
 	const std::string & containerName,
@@ -55,7 +55,7 @@ int DockerAPI::run(
 	ArgList runArgs;
 	if ( ! add_docker_arg(runArgs))
 		return -1;
-	runArgs.AppendArg( "run" );
+	runArgs.AppendArg( "create" );
 
 	// Write out a file with the container ID.
 	// FIXME: The startd can check this to clean up after us.
@@ -178,6 +178,38 @@ int DockerAPI::run(
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
 	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
+		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, NULL, "/",
+		& fi, NULL, childFDs );
+
+	if( childPID == FALSE ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Create_Process() failed.\n" );
+		return -1;
+	}
+	pid = childPID;
+
+	return 0;
+}
+
+int DockerAPI::startContainer(
+	const std::string &containerName,
+	int & pid,
+	int * childFDs,
+	CondorError & /* err */ ) {
+
+	ArgList startArgs;
+	if ( ! add_docker_arg(startArgs))
+		return -1;
+	startArgs.AppendArg("start");
+	startArgs.AppendArg("-a"); // start in Attached mode
+	startArgs.AppendArg(containerName);
+
+	MyString displayString;
+	startArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_ALWAYS, "Runnning: %s\n", displayString.c_str() );
+
+	FamilyInfo fi;
+	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
+	int childPID = daemonCore->Create_Process( startArgs.GetArg(0), startArgs,
 		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, NULL, "/",
 		& fi, NULL, childFDs );
 
