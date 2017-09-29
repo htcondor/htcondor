@@ -718,8 +718,12 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 				  ULogEventNumberNames[event->eventNumber],
 				  event->cluster, event->proc, event->subproc );
 			job->retval = DAG_ERROR_CONDOR_JOB_ABORTED;
-			if ( job->_numSubmittedProcs > 0 ) {
-			  // once one job proc fails, remove the whole cluster
+			
+			// It seems like we should be checking _numSubmittedProcs here, but
+			// that breaks a test in Windows. Keep an eye on this in case we
+			// have trouble recovering from aborted jobs using late materialization.
+			if ( job->_queuedNodeJobProcs > 0 ) {
+				// once one job proc fails, remove the whole cluster
 				RemoveBatchJob( job );
 			}
 			if ( job->_scriptPost != NULL) {
