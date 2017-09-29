@@ -984,7 +984,7 @@ main( int argc, const char *argv[] )
 							"Schedd rejected sand box location request:\n");
 						respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
 						fprintf( stderr, "\t%s\n", reason.Value());
-						return false;
+						return 0;
 					}
 
 					respad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);

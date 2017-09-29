@@ -269,13 +269,6 @@ GetJobQueueIteratorEnd()
 	return JobQueue->GetIteratorEnd();
 }
 
-static inline
-void
-DeadIdToStr(int cluster, int proc, char *buf)
-{
-	ProcIdToStr(cluster,proc,buf);
-}
-
 static inline JobQueueKey& IdToKey(int cluster, int proc, JobQueueKey& key)
 {
 	key.cluster = cluster;

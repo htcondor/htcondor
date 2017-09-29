@@ -75,9 +75,9 @@ int DockerAPI::run(
 	int cpuShare;
 
 	if (machineAd.LookupInteger(ATTR_CPUS, cpus)) {
-		cpuShare = 10 * cpus;
+		cpuShare = 100 * cpus;
 	} else {
-		cpuShare = 10;
+		cpuShare = 100;
 	}
 	std::string cpuShareStr;
 	formatstr(cpuShareStr, "--cpu-shares=%d", cpuShare);
