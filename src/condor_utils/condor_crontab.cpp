@@ -116,27 +116,27 @@ CronTab::CronTab(	int minutes,
 	if ( minutes == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_MINUTES_IDX] = new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_MINUTES_IDX] = new MyString( minutes );
+		this->parameters[CRONTAB_MINUTES_IDX] = new MyString( IntToStr( minutes ) );
 	}
 	if ( hours == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_HOURS_IDX]	= new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_HOURS_IDX]	= new MyString( hours );
+		this->parameters[CRONTAB_HOURS_IDX]	= new MyString( IntToStr( hours ) );
 	}
 	if ( days_of_month == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_DOM_IDX] = new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_DOM_IDX] = new MyString( days_of_month );
+		this->parameters[CRONTAB_DOM_IDX] = new MyString( IntToStr( days_of_month ) );
 	}
 	if ( months == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_MONTHS_IDX] = new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_MONTHS_IDX] = new MyString( months );
+		this->parameters[CRONTAB_MONTHS_IDX] = new MyString( IntToStr( months ) );
 	}
 	if ( days_of_week == CRONTAB_CRONOS_STAR ) {
 		this->parameters[CRONTAB_DOW_IDX] = new MyString( CRONTAB_WILDCARD );
 	} else {
-		this->parameters[CRONTAB_DOW_IDX] = new MyString( days_of_week );
+		this->parameters[CRONTAB_DOW_IDX] = new MyString( IntToStr( days_of_week ) );
 	}
 	this->init();
 }
@@ -740,10 +740,11 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// out into a range that can be put in array of integers
 		// First start by spliting the string by commas
 		//
-	param->Tokenize();
+	MyStringTokener tok;
+	tok.Tokenize(param->Value());
 	const char *_token;
-	while ( ( _token = param->GetNextToken( CRONTAB_DELIMITER, true ) ) != NULL ) {
-		MyString token( _token );
+	while ( ( _token = tok.GetNextToken( CRONTAB_DELIMITER, true ) ) != NULL ) {
+		MyStringWithTokener token( _token );
 		int cur_min = min, cur_max = max, cur_step = 1;
 		
 			// -------------------------------------------------

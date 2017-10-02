@@ -676,6 +676,11 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	mergedGridShellOutClassad = false;
 	jmShouldBeStoppingTime = 0;
 
+	outputWaitOutputSize = 0;
+	outputWaitErrorSize = 0;
+	useGridJobMonitor = true;
+	globusError = 0;
+
 	{
 		int use_gridshell;
 		if( classad->LookupBool(ATTR_USE_GRID_SHELL, use_gridshell) ) {

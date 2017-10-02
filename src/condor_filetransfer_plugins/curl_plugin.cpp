@@ -38,7 +38,7 @@ main( int argc, char **argv ) {
         printf("%s",
             "PluginVersion = \"0.1\"\n"
             "PluginType = \"FileTransfer\"\n"
-            "SupportedMethods = \"http,ftp,file\"\n"
+            "SupportedMethods = \"http,https,ftp,file\"\n"
             );
 
         return 0;
@@ -46,10 +46,12 @@ main( int argc, char **argv ) {
 
     if ((argc > 3) && ! strcmp(argv[3],"-diagnostic")) {
         diagnostic = 1;
-    } else if(argc != 3) {
+    } 
+    else if(argc != 3) {
         return -1;
     }
 
+<<<<<<< HEAD
     // Initialize win32 socket libraries, but not ssl
     int init = curl_global_init( CURL_GLOBAL_WIN32 );
     if( init != 0 ) {
@@ -57,6 +59,10 @@ main( int argc, char **argv ) {
                                                 " code %d\n", init ); 
         return -1;
     }
+=======
+    // Initialize win32 + SSL libraries
+    curl_global_init( CURL_GLOBAL_DEFAULT );
+>>>>>>> master
 
     if ( ( handle = curl_easy_init() ) == NULL ) {
         return -1;
@@ -129,11 +135,11 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
     double bytes_uploaded; 
     double connected_time;
     double previous_connected_time;
-    double Transferconnection_time;
-    double Transfertotal_time;
+    double transfer_connection_time;
+    double transfer_total_time;
     FILE *file = NULL;
     long return_code;
-    long previous_TotalBytes;
+    long previous_total_bytes;
     int previous_tries;
     int rval = -1;
     static int partial_file = 0;
@@ -141,6 +147,7 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
 
     // Input transfer: URL -> file
     if ( !strncasecmp( argv[1], "http://", 7 ) ||
+         !strncasecmp( argv[1], "https://", 8 ) ||
          !strncasecmp( argv[1], "ftp://", 6 ) ||
          !strncasecmp( argv[1], "file://", 7 ) ) {
 
@@ -166,10 +173,11 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
             curl_easy_setopt( handle, CURLOPT_CONNECTTIMEOUT, 60 );
             curl_easy_setopt( handle, CURLOPT_WRITEDATA, file );
 
-            // Libcurl options for HTTP and FILE
+            // Libcurl options for HTTP, HTTPS and FILE
             if( !strncasecmp( argv[1], "http://", 7 ) || 
+                                !strncasecmp( argv[1], "https://", 8 ) || 
                                 !strncasecmp( argv[1], "file://", 7 ) ) {
-                curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, -1 );
+                curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, 1 );
                 curl_easy_setopt( handle, CURLOPT_HEADERFUNCTION, header_callback );
             }
             // Libcurl options for FTP
@@ -204,7 +212,7 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
             // unclear how to tune this constant.
             // curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
             
-            // Gather some statistics
+            // Update some statistics
             stats->Assign( "TransferType", "download" );
             stats->LookupInteger( "TransferTries", previous_tries );
             stats->Assign( "TransferTries", previous_tries + 1 );
@@ -222,22 +230,21 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
             }
 
             // Gather more statistics
-            stats->LookupInteger( "TransferTotalBytes", previous_TotalBytes );
+            stats->LookupInteger( "TransferTotalBytes", previous_total_bytes );
             curl_easy_getinfo( handle, CURLINFO_SIZE_DOWNLOAD, &bytes_downloaded );
             stats->Assign( "TransferTotalBytes", 
-                        ( long ) ( previous_TotalBytes + bytes_downloaded ) );
+                        ( long ) ( previous_total_bytes + bytes_downloaded ) );
 
             stats->LookupFloat( "ConnectionTimeSeconds", previous_connected_time );
             curl_easy_getinfo( handle, CURLINFO_CONNECT_TIME, 
-                            &Transferconnection_time );
-            curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &Transfertotal_time );
+                            &transfer_connection_time );
+            curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &transfer_total_time );
             connected_time = previous_connected_time + 
-                            ( Transfertotal_time - Transferconnection_time );
+                            ( transfer_total_time - transfer_connection_time );
             stats->Assign( "ConnectionTimeSeconds", connected_time );
             
             curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &return_code );
             stats->Assign( "TransferReturnCode", return_code );
-
 
             if( rval == CURLE_OK ) {
                 stats->Assign( "TransferSuccess", true );
@@ -316,17 +323,17 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, ClassAd* stats ) {
         rval = curl_easy_perform( handle );
 
         // Gather more statistics
-        stats->LookupInteger( "TransferTotalBytes", previous_TotalBytes );
+        stats->LookupInteger( "TransferTotalBytes", previous_total_bytes );
         curl_easy_getinfo( handle, CURLINFO_SIZE_UPLOAD, &bytes_uploaded );
         stats->Assign( "TransferTotalBytes", 
-                    ( long ) ( previous_TotalBytes + bytes_uploaded ) );
+                    ( long ) ( previous_total_bytes + bytes_uploaded ) );
 
         stats->LookupFloat( "ConnectionTimeSeconds", previous_connected_time );
         curl_easy_getinfo( handle, CURLINFO_CONNECT_TIME, 
-                        &Transferconnection_time );
-        curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &Transfertotal_time );
+                        &transfer_connection_time );
+        curl_easy_getinfo( handle, CURLINFO_TOTAL_TIME, &transfer_total_time );
         connected_time = previous_connected_time + 
-                        ( Transfertotal_time - Transferconnection_time );
+                        ( transfer_total_time - transfer_connection_time );
         stats->Assign( "ConnectionTimeSeconds", connected_time );
         
         curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, &return_code );
@@ -417,6 +424,9 @@ init_stats( ClassAd* stats, char **argv ) {
     if ( !strncasecmp( request_url, "http://", 7 ) ) {
         stats->Assign( "TransferProtocol", "http" );
     }
+    else if ( !strncasecmp( request_url, "https://", 8 ) ) {
+        stats->Assign( "TransferProtocol", "https" );
+    }
     else if ( !strncasecmp( request_url, "ftp://", 6 ) ) {
         stats->Assign( "TransferProtocol", "ftp" );
     }
@@ -461,30 +471,31 @@ init_stats( ClassAd* stats, char **argv ) {
 static size_t 
 header_callback( char* buffer, size_t size, size_t nitems ) {
     
+    const char* delimiters = " \r\n";
     size_t numBytes = nitems * size;
 
     // Parse this HTTP header
     // We should probably add more error checking to this parse method...
-    char* token = strtok( buffer, " " );
+    char* token = strtok( buffer, delimiters );
     while( token ) {
         // X-Cache header provides details about cache hits
         if( strcmp ( token, "X-Cache:" ) == 0 ) {
-            token = strtok(NULL, " ");
+            token = strtok( NULL, delimiters );
             curl_stats->Assign( "HttpCacheHitOrMiss", token );
             curl_stats->Assign( "HttpUsedCache", true );
         }
         // Via header provides details about cache host
         else if( strcmp ( token, "Via:" ) == 0 ) {
             // The next token is a version number. We can ignore it.
-            token = strtok( NULL, " " );
+            token = strtok( NULL, delimiters );
             // Next comes the actual cache host
             if( token != NULL ) {
-                token = strtok( NULL, " " );
+                token = strtok( NULL, delimiters );
                 curl_stats->Assign( "HttpCacheHost", token );
                 curl_stats->Assign( "HttpUsedCache", true );
             }
         }
-        token = strtok( NULL, " " );
+        token = strtok( NULL, delimiters );
     }
     return numBytes;
 }

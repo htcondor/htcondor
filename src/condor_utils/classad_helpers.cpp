@@ -59,7 +59,7 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=
       char ch = str[ii];
       if (ch == '_' || (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'))
          continue;
-      str.setChar(ii,chReplace);
+      str.setAt(ii,chReplace);
       }
 
    // if compact, convert runs of chReplace with a single instance,
@@ -165,7 +165,7 @@ printExitString( ClassAd* ad, int exit_reason, MyString &str )
 
 	default:
 		str += "has a strange exit reason code of ";
-		str += exit_reason;
+		str += IntToStr( exit_reason );
 		return true;
 		break;
 
@@ -229,12 +229,12 @@ printExitString( ClassAd* ad, int exit_reason, MyString &str )
 				str += reason_str;
 			} else {
 				str += "died on signal ";
-				str += exit_value;
+				str += IntToStr( exit_value );
 			}
 		}
 	} else {
 		str += "exited normally with status ";
-		str += exit_value;
+		str += IntToStr( exit_value );
 	}
 
 	if( ename ) {

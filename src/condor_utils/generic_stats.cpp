@@ -62,15 +62,15 @@ void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int f
 template <>
 void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
    MyString str;
-   str += (long)this->value;
+   str += IntToStr( (long)this->value );
    str += " ";
-   str += (long)this->recent;
+   str += IntToStr( (long)this->recent );
    str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          str += !ix ? "[" : (ix == this->buf.cMax ? "|" : ",");
-         str += (long)this->buf.pbuf[ix];
+         str += IntToStr( (long)this->buf.pbuf[ix] );
          }
       str += "]";
       }

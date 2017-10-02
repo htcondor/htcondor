@@ -111,6 +111,9 @@ bool Condor_Crypt_3des :: decrypt(unsigned char *  input,
 
 Condor_Crypt_3des :: Condor_Crypt_3des()
 {
+	memset(&keySchedule1_.ks,0,sizeof(keySchedule1_));
+	memset(&keySchedule2_.ks,0,sizeof(keySchedule2_));
+	memset(&keySchedule3_.ks,0,sizeof(keySchedule3_));
 	resetState();
 }
 

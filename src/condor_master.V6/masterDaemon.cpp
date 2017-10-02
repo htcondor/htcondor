@@ -1242,7 +1242,7 @@ daemon::Exited( int status )
 	}
 	else {
 		msg += "exited with status ";
-		msg += WEXITSTATUS(status);
+		msg += IntToStr( WEXITSTATUS(status) );
 		if( WEXITSTATUS(status) == DAEMON_NO_RESTART ) {
 			had_failure = false;
 			msg += " (daemon will not restart automatically)";

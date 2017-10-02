@@ -79,7 +79,7 @@ static bool handleFTL(int error) {
 // the full container ID as (part of) the cgroup identifier(s).
 //
 
-DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1) { }
+DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1), waitForCreate(false) { }
 
 DockerProc::~DockerProc() { }
 
@@ -142,39 +142,13 @@ int DockerProc::StartJob() {
 	recoveryAd.Assign("DockerContainerName", containerName.c_str());
 	Starter->WriteRecoveryFile(&recoveryAd);
 
-
-
-	//
-	// Do I/O redirection (includes streaming).
-	//
-
-	int childFDs[3] = { -2, -2, -2 };
-	{
-	TemporaryPrivSentry sentry(PRIV_USER);
-	// getStdFile() returns -1 on error.
-
-	if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdin.\n" );
-		return FALSE;
-	}
-	if( -1 == (childFDs[1] = openStdFile( SFT_OUT, NULL, true, "Output file" )) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdout.\n" );
-		daemonCore->Close_FD( childFDs[0] );
-		return FALSE;
-	}
-	if( -1 == (childFDs[2] = openStdFile( SFT_ERR, NULL, true, "Error file" )) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stderr.\n" );
-		daemonCore->Close_FD( childFDs[0] );
-		daemonCore->Close_FD( childFDs[1] );
-		return FALSE;
-	}
-	}
+	int childFDs[3] = { 0, 0, 0 }; // GGT Fix!
 
 	  // Ulog the execute event
 	Starter->jic->notifyJobPreSpawn();
 
 	CondorError err;
-	// DockerAPI::run() returns a PID from daemonCore->Create_Process(), which
+	// DockerAPI::createContainer() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
 	// will trigger the reaper(s) when the container terminates.
 	
@@ -185,31 +159,71 @@ int DockerProc::StartJob() {
 
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
-	int rv = DockerAPI::run( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, err );
+	int rv = DockerAPI::createContainer( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, err );
 	if( rv < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
+		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		handleFTL(rv);
 		return FALSE;
 	}
-	dprintf( D_FULLDEBUG, "DockerAPI::run() returned pid %d\n", JobPid );
+	dprintf( D_FULLDEBUG, "DockerAPI::createContainer() returned pid %d\n", JobPid );
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "Create_Process succeeded, pid=%d\n", JobPid);
 	// If we manage to start the Docker job, clear the offline state for docker universe
 	handleFTL(0);
 
-	// Start a timer to poll for job usage updates.
-	updateTid = daemonCore->Register_Timer(2, 
-			20, (TimerHandlercpp)&DockerProc::getStats, 
-				"DockerProc::getStats",this);
-
-	++num_pids; // Used by OsProc::PublishUpdateAd().
+	waitForCreate = true;  // Tell the reaper to run start container on exit
 	return TRUE;
 }
 
 
 bool DockerProc::JobReaper( int pid, int status ) {
-	TemporaryPrivSentry sentry(PRIV_ROOT);
 	dprintf( D_FULLDEBUG, "DockerProc::JobReaper()\n" );
+
+	if (waitForCreate) {
+		waitForCreate = false;
+		dprintf(D_FULLDEBUG, "DockerProc::JobReaper docker create (pid %d) exited with status %d\n", pid, status);
+		
+		CondorError err;
+
+		//
+		// Do I/O redirection (includes streaming).
+		//
+
+		int childFDs[3] = { -2, -2, -2 };
+		{
+		TemporaryPrivSentry sentry(PRIV_USER);
+		// getStdFile() returns -1 on error.
+
+		if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdin.\n" );
+			return FALSE;
+		}
+
+		if( -1 == (childFDs[1] = openStdFile( SFT_OUT, NULL, true, "Output file" )) ) {
+
+			dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdout.\n" );
+			daemonCore->Close_FD( childFDs[0] );
+			return FALSE;
+		}
+		if( -1 == (childFDs[2] = openStdFile( SFT_ERR, NULL, true, "Error file" )) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stderr.\n" );
+			daemonCore->Close_FD( childFDs[0] );
+			daemonCore->Close_FD( childFDs[1] );
+			return FALSE;
+		}
+		}
+
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		
+		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
+		// Start a timer to poll for job usage updates.
+		updateTid = daemonCore->Register_Timer(2, 
+				20, (TimerHandlercpp)&DockerProc::getStats, 
+					"DockerProc::getStats",this);
+
+		++num_pids; // Used by OsProc::PublishUpdateAd().
+		return false; // don't exit
+	}
 
 	daemonCore->Cancel_Timer(updateTid);
 
@@ -217,6 +231,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 	// This should mean that the container has terminated.
 	//
 	if( pid == JobPid ) {
+		TemporaryPrivSentry sentry(PRIV_ROOT);
 		//
 		// Even running Docker in attached mode, we have a race condition
 		// is exiting when the container exits, not when the docker daemon

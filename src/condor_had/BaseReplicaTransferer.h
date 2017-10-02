@@ -77,7 +77,7 @@ public:
 // Inspectors
 	MyString getVersionFilePath() { return m_versionFilePath; };
 	//MyString getStateFilePath()   { return m_stateFilePath; };
-	const StringList& getStateFilePathsList() { return m_stateFilePathsList; };
+	StringList& getStateFilePathsList() { return m_stateFilePathsList; };
 // End of inspectors
 protected:
 	
@@ -89,7 +89,7 @@ protected:
 	 *				 according to the specified extension
 	 */
 	static void
-	safeUnlinkStateAndVersionFiles(const StringList& stateFilePathsList,
+	safeUnlinkStateAndVersionFiles(StringList& stateFilePathsList,
 	                               const MyString&   versionFilePath,
 			                       const MyString&   extension);
 	// address of the downloading/uploading counterpart	

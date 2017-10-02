@@ -54,10 +54,6 @@ class MyString
 	/** Default constructor  */
 	MyString();  
 
-	/** Constructor to make an integer string. For example, if you pass
-	 *  50, you get the string "50".*/
-	MyString(int i);
-
 	/** Constructor to make a copy of a null-terminated character string. */
 	MyString(const char* S);
 
@@ -112,12 +108,16 @@ class MyString
 
 	/** Returns a single character from the string. Returns 0
 	 *  if out of bounds. */
+	/* removed - it was implemented in an unsafe way and barely used
 	const char& operator[](int pos);
+	*/
 
 	/** Sets the character at the given position to the given value,
-	 *  if the position is within the string.  Setting the character
-	 *  to '\0' truncates the string to end at that position. */
-	void setChar(int pos, char value);
+	 *  if the position is within the string. */
+	void setAt(int pos, char value);
+
+	/** Sets the character '\0' at the given position and truncate the string to end at that position. */
+	void truncate(int pos);
 
 	/** Clears the current string in the MyString, and fills it with a
 	 *	randomly generated set derived from 'set' of len characters. */
@@ -156,14 +156,14 @@ class MyString
 	//@{ 
 	/** This is like calling malloc: it makes sure the capacity of the 
 	 *  string is sz bytes, and it copies whatever is in the string into
-	 *  the memory. It will truncate the string if you decrease the size. 
+	 *  the memory. It will not truncate the string if you decrease the size.
 	 *  You don't normally need to call this. */
 	bool reserve(const int sz);
 
 	/** This is like calling malloc, but more interesting: it makes
 	 *  sure the capacity of the string is at least sz bytes, and
 	 *  preferably twice sz bytes. It copies whatever is in the string
-	 *  into the memory. It will truncate the string if you decrease
+	 *  into the memory. It will not truncate the string if you decrease
 	 *  the size.  You don't normally need to call this--it's used to
 	 *  make appending to a string more efficient.  */
 	bool reserve_at_least(const int sz);
@@ -190,20 +190,6 @@ class MyString
 		you can append a bunch of characters at a time and it will act
 		reasonably.  */
 	MyString& operator+=(const char ); 
-
-	/** Appends the string version of the given int */
-	MyString& operator+=(int i);
-
-	/** Appends the string version of the given unsigned int */
-	MyString& operator+=(unsigned int ui);
-
-	/** Appends the string version of the given long int */
-	MyString& operator+=(long l);
-	MyString& operator+=(long long l);
-
-	/** Appends the string version of the given double */
-	MyString& operator+=(double d);
-
 
 	/** Returns a new string that is S1 followed by S2 */
 	friend MyString operator+(const MyString &S1, const MyString &S2); 
@@ -316,7 +302,7 @@ class MyString
 
 	/** Remove all the whitespace from this string
 	*/
-	void compressSpaces( void );
+	void RemoveAllWhitespace( void );
 
 	// ----------------------------------------
 	//           Serialization helpers
@@ -398,6 +384,7 @@ class MyString
 	bool readLine( FILE* fp, bool append = false);
 	bool readLine( MyStringSource & src, bool append = false);
 
+#if 0
 	// ----------------------------------------
 	//           Tokenize (safe replacement for strtok())
 	// ----------------------------------------
@@ -416,8 +403,10 @@ class MyString
 	    */
 	const char *GetNextToken(const char *delim, bool skipBlankTokens);
 	//@}
+#endif
 
 private:
+	friend class MyStringWithTokener;
 	friend class YourString;
 	friend class YourStringNoCase;
 	friend class MyStringSource;
@@ -431,16 +420,64 @@ private:
 	void assign_str( const char *s, int s_len );
 
   char* Data;	// array containing the C string of this MyString's value
+#if 0
   char dummy;	// used for '\0' char in operator[] when the index
   				// is past the end of the string (effectively it's
 				// a const, but compiler doesn't like that)
+#endif
   int Len;		// the length of the string
   int capacity;	// capacity of the data array, not counting null terminator
 
+#if 0
   char *tokenBuf;
   char *nextToken;
-  
+#endif
 };
+
+class MyStringTokener
+{
+public:
+  MyStringTokener();
+  // MyStringTokener(const char * str);
+  ~MyStringTokener();
+  void Tokenize(const char * str);
+  void Tokenize(const MyString & str) { Tokenize(str.Value()); }
+  const char *GetNextToken(const char *delim, bool skipBlankTokens);
+protected:
+  char *tokenBuf;
+  char *nextToken;
+};
+
+class MyStringWithTokener : public MyString 
+{
+public:
+	MyStringWithTokener(const MyString &S);
+	MyStringWithTokener(const char *s);
+	~MyStringWithTokener() {}
+
+	// ----------------------------------------
+	//           Tokenize (safe replacement for strtok())
+	// ----------------------------------------
+	/**@name Tokenize */
+	//@{ 
+
+	/** Initialize the tokenizing of this string.  */
+	void Tokenize() { tok.Tokenize(Value()); }
+
+	/** Get the next token, with tokens separated by the characters
+	    in delim.  Note that the value of delim may change from call to
+		call.
+		WARNING: changing the value of this object between a call to
+		Tokenize() and a call to GetNextToken() will result in an error
+		(incorrect value from GetNextToken()).
+	    */
+	const char *GetNextToken(const char *delim, bool skipBlankTokens) { return tok.GetNextToken(delim, skipBlankTokens); }
+	//@}
+
+protected:
+	MyStringTokener tok;
+};
+
 
 unsigned int MyStringHash( const MyString &str );
 

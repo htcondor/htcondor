@@ -500,8 +500,14 @@ CondorVersionInfo::string_to_PlatformData(const char *platformstring,
 	}
 
 	char const *ptr = strchr(platformstring,' ');
-	ptr++;		// skip space after the colon
 
+	// No space mean ill-formed string, punt to our own version number
+	if (!ptr) {
+		ver = myversion;
+		return true;
+	}
+
+	ptr++;		// skip space after the colon
 
 	size_t len = strcspn(ptr,"-");
 	if( len ) {

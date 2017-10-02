@@ -36,14 +36,14 @@ ReplicationEvent::~ReplicationEvent()
 	delete _file;
 }
 
-void ReplicationEvent::Owner(char *o)
+void ReplicationEvent::Owner(const char *o)
 {
 	delete _owner_name;
 	_owner_name = new char[strlen(o)+1];
 	strcpy(_owner_name, o);
 }
 
-void ReplicationEvent::File(char *f)
+void ReplicationEvent::File(const char *f)
 {
 	delete _file;
 	_file = new char[strlen(f)+1];

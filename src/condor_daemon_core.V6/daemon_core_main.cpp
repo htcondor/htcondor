@@ -1514,7 +1514,7 @@ handle_config( Service *, int cmd, Stream *stream )
 		dprintf( D_ALWAYS, "handle_config: failed to read end of message\n");
 		return FALSE;
 	}
-	bool is_meta = admin && admin[0] == '$';
+	bool is_meta = admin[0] == '$';
 	if( config && config[0] ) {
 		#if 0 // tj: we've decide to just fail the assign instead of 'fixing' it. //def WARN_COLON_FOR_PARAM_ASSIGN
 		// for backward compat with older senders, change first : to = before we do the assignment.

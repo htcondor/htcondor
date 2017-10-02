@@ -194,12 +194,12 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 		int	slot;
 		if (ad->LookupInteger( ATTR_SLOT_ID, slot)) {
 			hk.name += ":";
-			hk.name += slot;
+			hk.name += IntToStr( slot );
 		}
 		else if (param_boolean("ALLOW_VM_CRUFT", false) &&
 				 ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot)) {
 			hk.name += ":";
-			hk.name += slot;
+			hk.name += IntToStr( slot );
 		}
 	}
 

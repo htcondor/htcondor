@@ -139,17 +139,22 @@ protected:
 	 *									 version from
 	 * Return value: bool - success/failure value
 	 * Description : starts downloading 'condor_transferer' process to download
-	 *				 the version of remote replication daemon
+	 *				 the version of remote replication daemon.
+	 *				 downloadNew() uses a newer protocol.
      */
     bool download(const char* daemonSinfulString);
+    bool downloadNew(const char* daemonSinfulString);
 	/* Function    : upload
      * Arguments   : daemonSinfulString - address of daemon to upload the
      *                                   version to
 	 * Return value: bool - success/failure value
      * Description : starts uploading 'condor_transferer' process to upload
-     *               the version to remote replication daemon
+     *               the version to remote replication daemon.
+     *               uploadNew() uses a newer protocol, where the transferer
+     *               inherits the given connection.
      */
     bool upload(const char* daemonSinfulString);
+    bool uploadNew(Stream *stream);
 	/* Function   : finalize
 	 * Description: clears and resets all inner structures and data members
 	 */

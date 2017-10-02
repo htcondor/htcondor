@@ -64,9 +64,15 @@ int BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, off_t offset, int 
 	if ( ! reserve(((cb + 16) & ~15) + 16))
 		return 0;
 
-	fseek(file, offset, SEEK_SET);
+	int ret = fseek(file, offset, SEEK_SET);
+	if (ret < 0) {
+		error = ferror(file);
+		return 0;
+	} else {
+		error = 0;
+	}
 
-	int ret = (int)fread(data, 1, cb, file);
+	ret = (int)fread(data, 1, cb, file);
 	cbData = ret;
 
 	if (ret <= 0) {

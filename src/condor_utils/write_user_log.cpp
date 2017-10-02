@@ -1588,18 +1588,11 @@ WriteUserLog::GetGlobalIdBase( void )
 		return m_global_id_base;
 	}
 	MyString	base;
-	base = "";
-	base += getuid();
-	base += '.';
-	base += getpid();
-	base += '.';
-
 	UtcTime	utc;
+
 	utc.getTime();
-	base += utc.seconds();
-	base += '.';
-	base += utc.microseconds();
-	base += '.';
+	formatstr( base, "%d.%d.%ld.%ld.", getuid(), getpid(), utc.seconds(),
+	           utc.microseconds() );
 
 	m_global_id_base = strdup( base.Value( ) );
 	return m_global_id_base;
@@ -1612,6 +1605,11 @@ WriteUserLog::GenerateGlobalId( MyString &id )
 	UtcTime	utc;
 	utc.getTime();
 
+	// First pass -- initialize the sequence #
+	if ( m_global_sequence == 0 ) {
+		m_global_sequence = 1;
+	}
+
 	id = "";
 
 	// Add in the creator name
@@ -1620,17 +1618,8 @@ WriteUserLog::GenerateGlobalId( MyString &id )
 		id += ".";
 	}
 
-	id += GetGlobalIdBase( );
-
-	// First pass -- initialize the sequence #
-	if ( m_global_sequence == 0 ) {
-		m_global_sequence = 1;
-	}
-	id += m_global_sequence;
-	id += '.';
-	id += utc.seconds();
-	id += '.';
-	id += utc.microseconds();
+	formatstr_cat( id, "%s%d.%ld.%ld", GetGlobalIdBase(), m_global_sequence,
+	               utc.seconds(), utc.microseconds() );
 }
 /*
 ### Local Variables: ***

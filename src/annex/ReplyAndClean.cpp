@@ -78,22 +78,6 @@ ReplyAndClean::operator() () {
 		commandState->CommitTransaction();
 	}
 
-	// The following is complete BS, but it prevents the preceding calls to
-	// DestroyClassAd() and CommitTransaction() from throwing a fatal-on-
-	// Fedora warning in ClassAdLogTable<K, AD>::lookup().  I don't know
-	// how that works; I discovered the work-around trying to figure out
-	// why the same code sequence doesn't trigger the warning in
-	// FunctorSequence.cpp.  I'm more than a little worried by this, but
-	// I can't spend any more time trying to figure it out.
-	ClassAd * dummy = NULL;
-	commandState->Lookup( HashKey( "dummy" ), dummy );
-
-	// For future reference, the following also avoids the warning.  Neither
-	// of these [l|L]ookup() calls calls ClassAdLogTable<K, AD>::lookup()
-	// in any (obvious) way.
-	// auto ht = commandState->Table();
-	// ht->lookup( HashKey( "dummy" ), dummyDummy );
-
 	// We're done with the stream, now, so clean it up.
 	if( replyStream ) { delete replyStream; }
 

@@ -38,12 +38,6 @@ MyString::MyString()
 	init();
     return;
 }
-  
-MyString::MyString(int i) 
-{
-	init();
-	*this += i;
-};
 
 MyString::MyString(const char* S) 
 {
@@ -68,10 +62,11 @@ MyString::~MyString()
     if (Data) {
 		delete[] Data;
 	}
+#if 0
 	delete [] tokenBuf;
+#endif
 	init(); // for safety -- errors if you try to re-use this object
 }
-
 
 MyString::operator std::string()
 {
@@ -92,6 +87,7 @@ MyString::operator[](int pos) const
     return Data[pos];
 }
 
+#if 0
 const char&
 MyString::operator[](int pos)
 {
@@ -101,15 +97,27 @@ MyString::operator[](int pos)
 	}	
 	return Data[pos];
 }
+#endif
 
 void
-MyString::setChar(int pos, char value)
+MyString::setAt(int pos, char value)
 {
 	if ( pos >= 0 && pos < Len ) {
 		Data[pos] = value;
 		if ( value == '\0' ) {
 			Len = pos;
 		}
+	} else {
+		// No op.
+	}
+}
+
+void
+MyString::truncate(int pos)
+{
+	if ( pos >= 0 && pos < Len ) {
+		Data[pos] = '\0';
+		Len = pos;
 	} else {
 		// No op.
 	}
@@ -142,6 +150,8 @@ MyString::operator=( const char *s )
 	assign_str(s, (int)s_len);
     return *this;
 }
+
+
 
 void
 MyString::assign_str( const char *s, int s_len ) 
@@ -177,20 +187,20 @@ MyString::reserve( const int sz )
 	if (sz < 0) {
 		return false;
 	}
+	if (sz <= Len && Data) {
+		return true;
+	}
     char *buf = new char[ sz+1 ];
     if (!buf) {
 		return false;
 	}
     buf[0] = '\0';
     if (Data) {
-	  // newlen is needed in case we are shortening the string.
-	  int newlen = MIN(sz, Len);
       // Only copy over existing data into the new buffer.
-      strncpy( buf, Data, newlen ); 
+      strncpy( buf, Data, Len );
 	  // Make sure it's NULL terminated. strncpy won't make sure of it.
-	  buf[newlen] = '\0'; 
+	  buf[Len] = '\0';
       delete [] Data;
-	  Len = newlen;
     }
     // Len will be the same, since we didn't add new text
     capacity = sz;
@@ -215,7 +225,9 @@ MyString::reserve_at_least(const int sz)
 	bool success;
 
 	twice_as_much = 2 * capacity;
-	if (twice_as_much > sz) {
+	if (sz <= capacity && capacity > 0) {
+		success = true;
+	} else if (twice_as_much > sz) {
 		success = reserve(twice_as_much);
 		if (!success) { // allocate failed, get just enough?
 			success = reserve(sz);
@@ -326,71 +338,6 @@ MyString operator+(const MyString& S1, const MyString& S2)
 
 // the buffers below are all sufficiently large that this is no danger of non-null termination.
 MSC_DISABLE_WARNING(6053) // call to snprintf might not null terminate string.
-
-MyString& 
-MyString::operator+=( int i )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%d", i );
-    int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-    return *this;
-}
-
-
-MyString& 
-MyString::operator+=( unsigned int ui )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%u", ui );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString& 
-MyString::operator+=( long l )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%ld", l );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString&
-MyString::operator+=( long long l )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%lld", l );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString& 
-MyString::operator+=( double d )
-{
-	const int bufLen = 128;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%f", d );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
 
 // ----------------------------------------
 //           Serialization helpers
@@ -862,17 +809,20 @@ MyString::trim_quotes(const char * quote_chars)
 }
 
 void
-MyString::compressSpaces( void )
+MyString::RemoveAllWhitespace( void )
 {
-	if( Len == 0 ) {
-		return;
-	}
-	for ( int i = 0, j = 0; i <= Length(); ++i, ++j ) {
-		if ( isspace ( Data[i] ) ) {
-			i++;
+	int i;
+	int j;
+	for ( i = 0, j = 0; i < Length(); i++ ) {
+		if ( !isspace( Data[i] ) ) {
+			if ( i != j ) {
+				Data[j] = Data[i];
+			}
+			j++;
 		}
-		setChar ( j, Data[i] );
 	}
+	Data[j] = '\0';
+	Len = j;
 }
 
 // if len is 10, this means 10 random ascii characters from the set.
@@ -940,9 +890,11 @@ MyString::init()
     Data=NULL;
     Len=0;
     capacity = 0;
+#if 0
 	tokenBuf = NULL;
 	nextToken = NULL;
 	dummy = '\0';
+#endif
 }
 
 /*--------------------------------------------------------------------
@@ -1145,8 +1097,83 @@ bool MyString::readLine( MyStringSource & src, bool append /*= false*/) {
  *
  *--------------------------------------------------------------------*/
 
+MyStringTokener::MyStringTokener() : tokenBuf(NULL), nextToken(NULL) {}
+/*
+MyStringTokener::MyStringTokener(const char *str) : tokenBuf(NULL), nextToken(NULL)
+{
+	if (str) Tokenize(str);
+}
+*/
+MyStringTokener::~MyStringTokener()
+{
+	if (tokenBuf) {
+		free(tokenBuf);
+		tokenBuf = NULL;
+	}
+	nextToken = NULL;
+}
+
+void MyStringTokener::Tokenize(const char *str)
+{
+	if (tokenBuf) { 
+		free( tokenBuf );
+		tokenBuf = NULL;
+	}
+	nextToken = NULL;
+	if ( str ) {
+		tokenBuf = strdup( str );
+		if ( strlen( tokenBuf ) > 0 ) {
+			nextToken = tokenBuf;
+		}
+	}
+}
+
+const char *MyStringTokener::GetNextToken(const char *delim, bool skipBlankTokens)
+{
+	const char *result = nextToken;
+
+	if ( !delim || strlen(delim) == 0 ) {
+		result = NULL;
+	}
+
+	if ( result != NULL ) {
+		while ( *nextToken != '\0' && index(delim, *nextToken) == NULL ) {
+			nextToken++;
+		}
+
+		if ( *nextToken != '\0' ) {
+			*nextToken = '\0';
+			nextToken++;
+		} else {
+			nextToken = NULL;
+		}
+	}
+
+	if ( skipBlankTokens && result && strlen(result) == 0 ) {
+		result = GetNextToken(delim, skipBlankTokens);
+	}
+
+	return result;
+}
+
+
+MyStringWithTokener::MyStringWithTokener(const MyString &S)
+{
+	init();
+	assign_str(S.Value(), S.Len);
+}
+
+MyStringWithTokener::MyStringWithTokener(const char *s)
+{
+	init();
+	size_t s_len = s ? strlen(s) : 0;
+	assign_str(s, (int)s_len);
+}
+
+#if 1
+#else
 void
-MyString::Tokenize()
+MyStringWithTokener::Tokenize()
 {
 	delete [] tokenBuf;
 	tokenBuf = new char[strlen(Value()) + 1];
@@ -1159,7 +1186,7 @@ MyString::Tokenize()
 }
 
 const char *
-MyString::GetNextToken(const char *delim, bool skipBlankTokens)
+MyStringTokener::GetNextToken(const char *delim, bool skipBlankTokens)
 {
 	const char *result = nextToken;
 
@@ -1184,6 +1211,7 @@ MyString::GetNextToken(const char *delim, bool skipBlankTokens)
 
 	return result;
 }
+#endif
 
 
 /*--------------------------------------------------------------------

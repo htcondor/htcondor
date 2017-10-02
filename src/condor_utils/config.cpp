@@ -3925,8 +3925,10 @@ static ptrdiff_t evaluate_macro_func (
 			int rand_entry = (get_random_int() % num_entries);
 			p = nth_list_item(items, ',', endp, rand_entry, true);
 			if ( ! p || endp <= p) {
+				retval = 0;
 				buffer.erase(pos.dollar, pos.right - pos.dollar);
 			} else {
+				retval = endp - p;
 				buffer.replace(pos.dollar, pos.right - pos.dollar, p, endp - p);
 			}
 		}
@@ -3950,7 +3952,7 @@ static ptrdiff_t evaluate_macro_func (
 			const char * ival = get_lookup_and_expand_macro_arg(name, 0, argbuf, macro_set, ctx);
 			long long index = -1;
 			if ( ! string_is_long_param(ival, index) || index < 0 || index >= INT_MAX) {
-				formatstr(errmsg, "$CHOICE() error: '%s' is invalid index", ival );
+				formatstr(errmsg, "$CHOICE() error: '%s' is invalid index", ival);
 				return -1;
 			}
 
@@ -3989,8 +3991,10 @@ static ptrdiff_t evaluate_macro_func (
 				return -1;
 			}
 			if ( ! tvalue || endp <= tvalue) {
+				retval = 0;
 				buffer.erase(pos.dollar, pos.right - pos.dollar);
 			} else {
+				retval = endp - tvalue;
 				buffer.replace(pos.dollar, pos.right - pos.dollar, tvalue, endp - tvalue);
 			}
 		}
@@ -4035,6 +4039,7 @@ static ptrdiff_t evaluate_macro_func (
 
 			// convert it to a string and insert it into the output buffer
 			formatstr(argbuf, "%ld", random_value);
+			retval = argbuf.size();
 			buffer.replace(pos.dollar, pos.right - pos.dollar, argbuf);
 		}
 		break;
@@ -4098,6 +4103,7 @@ static ptrdiff_t evaluate_macro_func (
 			if (sub_len < 0) { sub_len = 0; }
 			else if (sub_len > cch) { sub_len = cch; }
 
+			retval = sub_len;
 			buffer.replace(pos.dollar, pos.right - pos.dollar, mval, sub_len);
 		}
 		break;
@@ -4147,6 +4153,7 @@ static ptrdiff_t evaluate_macro_func (
 				formatstr(argbuf, fmt ? fmt : "%.16G", dbl_val);
 				if (fmt && ! strchr(argbuf.c_str(), '.')) { argbuf += ".0"; } // force it to look like a real
 			}
+			retval = argbuf.size();
 			buffer.replace(pos.dollar, pos.right - pos.dollar, argbuf);
 		}
 		break;
@@ -4190,9 +4197,11 @@ static ptrdiff_t evaluate_macro_func (
 
 			if (fmt) {
 				formatstr(argbuf, fmt, mval);
+				retval = argbuf.size();
 				buffer.replace(pos.dollar, pos.right - pos.dollar, argbuf);
 			} else {
 				// no format, we just use mbuf directly
+				retval = strlen(mval);
 				buffer.replace(pos.dollar, pos.right - pos.dollar, mval);
 			}
 		}
@@ -4234,6 +4243,7 @@ static ptrdiff_t evaluate_macro_func (
 				}
 			}
 
+			retval = argbuf.size();
 			buffer.replace(pos.dollar, pos.right - pos.dollar, argbuf);
 		}
 		break;
@@ -4243,7 +4253,7 @@ static ptrdiff_t evaluate_macro_func (
 		case SPECIAL_MACRO_ID_FILENAME:
 		{
 			const char * mval = lookup_macro(name, macro_set, ctx);
-			if (strchr(mval, '$')) {
+			if (mval && strchr(mval, '$')) {
 				argbuf = mval;
 				expand_macro(argbuf, EXPAND_MACRO_OPT_KEEP_DOLLARDOLLAR, macro_set, ctx);
 				mval = argbuf.c_str();

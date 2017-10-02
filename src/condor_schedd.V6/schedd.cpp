@@ -1159,7 +1159,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flo
 			if ( !str.IsEmpty() ) {
 				str += ",";
 			}
-			str += *rit;
+			str += IntToStr( *rit );
 			num_entries++;
 		}
 		// NOTE: we rely on that fact that str.Value() will return "", not NULL, if empty
@@ -2220,9 +2220,20 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		//}
 		int retval = 1;
 		if ( ! summary_only) {
-			retval = putClassAd(sock, *job,
-					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
-					projection.empty() ? NULL : &projection);
+			if (job->IsCluster()) {
+				// if this is a cluster ad, then we are responding to a -factory query. In that case, we want to fake up
+				// a child ad so we can send some extra attributes.
+				JobQueueCluster * cad = static_cast<JobQueueCluster*>(job);
+				ClassAd iad;
+				cad->PopulateInfoAd(iad, true);
+				retval = putClassAd(sock, iad,
+						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+						projection.empty() ? NULL : &projection);
+			} else {
+				retval = putClassAd(sock, *job,
+						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+						projection.empty() ? NULL : &projection);
+			}
 		}
 		match_count++;
 		if (retval == 2) {
@@ -2742,10 +2753,10 @@ int Scheduler::guessJobSlotWeight(JobQueueJob * job)
 	long long req_mem = (long long)req_cpus * 1024;
 	long long req_disk = (long long)req_cpus * 1024;
 	if ( ! job->LookupInteger(ATTR_REQUEST_MEMORY, req_mem)) {
-		req_mem = req_cpus * 1024;
+		req_mem = req_cpus * 1024ll;
 	}
 	if ( ! job->LookupInteger(ATTR_REQUEST_DISK, req_disk)) {
-		req_disk = req_cpus * 1024;
+		req_disk = req_cpus * 1024ll;
 	}
 
 	ad->Assign(ATTR_CPUS, req_cpus);
@@ -12176,7 +12187,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"Putting job on hold. (Reason: %s)\n",
 				 job_id.cluster, job_id.proc, action, reason.Value());
 			MyString reason2 = "Unknown action (";
-			reason2 += action;
+			reason2 += IntToStr( action );
 			reason2 += ") ";
 			reason2 += reason;
 			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
@@ -12745,7 +12756,7 @@ Scheduler::Init()
 						// can't start atributes with a digit, start with _ instead
 						other.formatstr("_%s", groups[2].Value());
 					} else {
-						other.setChar(0, toupper(other[0])); // capitalize it.
+						other.setAt(0, toupper(other[0])); // capitalize it.
 					}
 
 					// for 'by' type stats, we also allow an expiration.
@@ -15009,7 +15020,7 @@ moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 		return false;
 	}
 	
-	new_value += value;
+	new_value += IntToStr( value );
 
 	rval = SetAttribute( job_id.cluster, job_id.proc, new_attr,
 						 new_value.Value() ); 

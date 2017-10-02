@@ -815,7 +815,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 				 && (MATCH == strcasecmp(value.Value(), FLOPPY_DEVICE)))) {
 				pos = name.FindChar('.', 0);
 				if( pos > 0 ) {
-					name.setChar(pos, '\0');
+					name.truncate(pos);
 					strip_devices.append(name.Value());
 					continue;
 				}
@@ -829,7 +829,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 			pos = name.FindChar('.', 0);
 			if (pos > 0) {
 				const char * field = name.Value()+pos+1;
-				name.setChar(pos, '\0');
+				name.truncate(pos);
 				if (MATCH == strcasecmp(field, "autodetect")) {
 					strip = (MATCH == strcasecmp(value.Value(), "true"));
 				} else if (MATCH == strcasecmp(field, "filename")) {
@@ -939,7 +939,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 				// It means to disable write cache
 				pos = tmp_name.FindChar('.', 0);
 				if( pos > 0 ) {
-					tmp_name.setChar(pos, '\0');
+					tmp_name.truncate(pos);
 					tmp_line.formatstr("%s.writeThrough = \"TRUE\"", tmp_name.Value());
 					m_configVars.append(tmp_line.Value());
 				}
@@ -1650,21 +1650,17 @@ VMwareType::Status()
 		}
 		m_vm_pid = vm_pid;
 
-		m_result_msg += "Running";
-		m_result_msg += " ";
+		formatstr_cat( m_result_msg, "Running %s=%d",
+		               VMGAHP_STATUS_COMMAND_PID, m_vm_pid );
 
-		m_result_msg += VMGAHP_STATUS_COMMAND_PID;
-		m_result_msg += "=";
-		m_result_msg += m_vm_pid;
 		if( cputime > 0 ) {
 			// Update vm running time
 			m_cpu_time = cputime;
 
-			m_result_msg += " ";
-			m_result_msg += VMGAHP_STATUS_COMMAND_CPUTIME;
-			m_result_msg += "=";
-			m_result_msg += m_cpu_time;
-			//m_result_msg += (double)(m_cpu_time + m_cputime_before_suspend);
+			formatstr_cat( m_result_msg, " %s=%f",
+			               VMGAHP_STATUS_COMMAND_CPUTIME,
+			               m_cpu_time );
+			//               m_cpu_time + m_cputime_before_suspend );
 		}
 
 		return true;

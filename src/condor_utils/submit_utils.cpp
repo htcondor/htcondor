@@ -3761,7 +3761,7 @@ int SubmitHash::SetGridParams()
 				resource.replaceString( "/cream-", "/ce-cream/services/CREAM2 ", pos );
 				pos += 26;
 				if ( ( pos2 = resource.find( "-", pos ) ) >= 0 ) {
-					resource.setChar( pos2, ' ' );
+					resource.setAt( pos2, ' ' );
 				}
 
 				buffer.formatstr( "%s = \"%s\"", ATTR_GRID_RESOURCE,
@@ -4951,7 +4951,7 @@ int SubmitHash::SetUniverse()
 			// truncate at the first space
 			int ix = JobGridType.FindChar(' ', 0);
 			if (ix >= 0) {
-				JobGridType.setChar(ix, 0);
+				JobGridType.truncate(ix);
 			}
 		}
 
@@ -7291,6 +7291,8 @@ int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
 	baseJob.Assign(ATTR_JOB_LOCAL_SYS_CPU,     0.0);
 	baseJob.Assign(ATTR_JOB_REMOTE_USER_CPU,   0.0);
 	baseJob.Assign(ATTR_JOB_REMOTE_SYS_CPU,    0.0);
+	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU,   0.0);
+	baseJob.Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU,    0.0);
 
 	baseJob.Assign(ATTR_JOB_EXIT_STATUS, 0);
 	baseJob.Assign(ATTR_NUM_CKPTS, 0);

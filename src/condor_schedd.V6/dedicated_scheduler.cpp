@@ -471,6 +471,7 @@ DedicatedScheduler::DedicatedScheduler()
 	shadow_obj = NULL;
 
 	startdQueryTime = 0;
+	split_match_count = 0;
 }
 
 
@@ -3631,7 +3632,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 	msg.formatstr( "Satisfied job %d with ", cluster );
 	bool had_one = false;
 	if( idle && idle->Length() ) {
-		msg += idle->Length();
+		msg += IntToStr( idle->Length() );
 		msg += " idle";
 		had_one = true;
 	}
@@ -3639,7 +3640,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += limbo->Length();
+		msg += IntToStr( limbo->Length() );
 		msg += " limbo";
 		had_one = true;
 	}
@@ -3647,7 +3648,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += serial->Length();
+		msg += IntToStr( serial->Length() );
 		msg += " serial";
 		had_one = true;
 	}
@@ -3655,7 +3656,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += unclaimed->Length();
+		msg += IntToStr( unclaimed->Length() );
 		msg += " unclaimed";
 		had_one = true;
 	}
@@ -3663,7 +3664,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle, CAList *serial
 		if( had_one ) {
 			msg += ", ";
 		}
-		msg += busy->Length();
+		msg += IntToStr( busy->Length() );
 		msg += " busy";
 		had_one = true;
 	}

@@ -93,10 +93,10 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 			arg += _node->GetJobName();
 
 		} else if ( !strcasecmp( token, "$RETRY" ) ) {
-            arg += _node->GetRetries();
+            arg += IntToStr( _node->GetRetries() );
 
 		} else if ( !strcasecmp( token, "$MAX_RETRIES" ) ) {
-            arg += _node->GetRetryMax();
+            arg += IntToStr( _node->GetRetryMax() );
 
         } else if ( !strcasecmp( token, "$JOBID" ) ) {
 			if ( !_post ) {
@@ -105,9 +105,9 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 				check_warning_strictness( DAG_STRICT_1 );
 				arg += token;
 			} else {
-            	arg += _node->GetCluster();
+				arg += IntToStr( _node->GetCluster() );
             	arg += '.';
-            	arg += _node->GetProc();
+				arg += IntToStr( _node->GetProc() );
 			}
 
         } else if (!strcasecmp(token, "$RETURN")) {
@@ -116,7 +116,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 							"not be used as a PRE script argument!\n" );
 				check_warning_strictness( DAG_STRICT_1 );
 			}
-			arg += _retValJob;
+			arg += IntToStr( _retValJob );
 
 		} else if (!strcasecmp( token, "$PRE_SCRIPT_RETURN" ) ) {
 			if ( !_post ) {
@@ -124,13 +124,13 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 						"not be used as a PRE script argument!\n" );
 				check_warning_strictness( DAG_STRICT_1 );
 			}
-			arg += _retValScript;
+			arg += IntToStr( _retValScript );
 
 		} else if (!strcasecmp(token, "$DAG_STATUS")) {
-			arg += dagStatus;
+			arg += IntToStr( dagStatus );
 
 		} else if (!strcasecmp(token, "$FAILED_COUNT")) {
-			arg += failedCount;
+			arg += IntToStr( failedCount );
 
 		} else if (token[0] == '$') {
 			// This should probably be a fatal error when -strict is

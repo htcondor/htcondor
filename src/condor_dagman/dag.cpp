@@ -4297,7 +4297,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	int last = parentName.Length() - 1;
 	ASSERT( last >= 0 );
 	if ( parentName[last] == '+' ) {
-		parentName.setChar( last, '\0' );
+		parentName.truncate( last );
 	}
 
 	MyString childName = childSplice->_spliceScope;
@@ -4305,7 +4305,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	last = childName.Length() - 1;
 	ASSERT( last >= 0 );
 	if ( childName[last] == '+' ) {
-		childName.setChar( last, '\0' );
+		childName.truncate( last );
 	}
 
 		// Make sure the parent and child splices have pin_ins/pin_outs

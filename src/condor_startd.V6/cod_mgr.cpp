@@ -61,16 +61,9 @@ CODMgr::publish( ClassAd* ad, amask_t mask )
 		}
 	}
 
-	MyString line = ATTR_NUM_COD_CLAIMS;
-	line += '=';
-	line += num_claims;
-	ad->Insert( line.Value() );
+	ad->Assign( ATTR_NUM_COD_CLAIMS, num_claims );
 
-	line = ATTR_COD_CLAIMS;
-	line += " = \"";
-	line += claim_names.Value();
-	line +='"';
-	ad->Insert( line.Value() );
+	ad->Assign( ATTR_COD_CLAIMS, claim_names );
 }
 
 

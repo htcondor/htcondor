@@ -31,7 +31,6 @@
 
 // function prototypes
 static bool default_constructor(void);
-static bool int_constructor(void);
 static bool char_constructor(void);
 static bool stdstring_constructor(void);
 static bool copy_constructor_value_check(void);
@@ -105,19 +104,6 @@ static bool concatenation_std_string_non_empty_non_empty(void);
 static bool concatenation_char_empty(void);
 static bool concatenation_char_non_empty(void);
 static bool concatenation_char_null(void);
-static bool concatenation_int_empty(void);
-static bool concatenation_int_non_empty(void);
-static bool concatenation_int_large(void);
-static bool concatenation_int_small(void);
-static bool concatenation_uint_empty(void);
-static bool concatenation_uint_non_empty(void);
-static bool concatenation_uint_large(void);
-static bool concatenation_long_empty(void);
-static bool concatenation_long_non_empty(void);
-static bool concatenation_long_large(void);
-static bool concatenation_long_small(void);
-static bool concatenation_double_empty(void);
-static bool concatenation_double_non_empty(void);
 static bool substr_empty(void);
 static bool substr_beginning(void);
 static bool substr_end(void);
@@ -253,7 +239,6 @@ bool OTEST_MyString(void) {
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
 	driver.register_function(default_constructor);
-	driver.register_function(int_constructor);
 	driver.register_function(char_constructor);
 	driver.register_function(stdstring_constructor);
 	driver.register_function(copy_constructor_value_check);
@@ -327,19 +312,6 @@ bool OTEST_MyString(void) {
 	driver.register_function(concatenation_char_empty);
 	driver.register_function(concatenation_char_non_empty);
 	driver.register_function(concatenation_char_null);
-	driver.register_function(concatenation_int_empty);
-	driver.register_function(concatenation_int_non_empty);
-	driver.register_function(concatenation_int_large);
-	driver.register_function(concatenation_int_small);
-	driver.register_function(concatenation_uint_empty);
-	driver.register_function(concatenation_uint_non_empty);
-	driver.register_function(concatenation_uint_large);
-	driver.register_function(concatenation_long_empty);
-	driver.register_function(concatenation_long_non_empty);
-	driver.register_function(concatenation_long_large);
-	driver.register_function(concatenation_long_small);
-	driver.register_function(concatenation_double_empty);
-	driver.register_function(concatenation_double_non_empty);
 	driver.register_function(substr_empty);
 	driver.register_function(substr_beginning);
 	driver.register_function(substr_end);
@@ -470,24 +442,6 @@ static bool default_constructor() {
 	emit_output_actual_header();
 	emit_retval("%s", s.Value());
 	if(strcmp(s.Value(), "") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-//in test_mystring.cpp 655
-static bool int_constructor() {
-	emit_test("Test constructor to make an integer string");
-	const int param = 123;
-	MyString s(param);
-	const char *expected = "123";
-	emit_input_header();
-	emit_param("INT", "%d", param);
-	emit_output_expected_header();
-	emit_retval("%s", expected);
-	emit_output_actual_header();
-	emit_retval("%s", s.Value());
-	if(strcmp(s.Value(), expected) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -881,7 +835,7 @@ static bool square_brackets_operator_last_char() {
 static bool set_char_empty() {
 	emit_test("Does an empty MyString stay the same after calling setChar()");
 	MyString empty;
-	empty.setChar(0, 'a');
+	empty.setAt(0, 'a');
 	emit_input_header();
 	emit_param("pos", "%d", 0);
 	emit_param("value", "%c", 'a');
@@ -902,7 +856,7 @@ static bool set_char_truncate() {
 	emit_test("Does calling setChar() with '\\0' truncate the original "
 		"MyString");
 	MyString s("Eddy Merckx");
-	s.setChar(5, '\0');
+	s.truncate(5);
 	emit_input_header();
 	emit_param("MyString", "%s", s.Value());
 	emit_param("pos", "%d", 5);
@@ -922,7 +876,7 @@ static bool set_char_truncate() {
 static bool set_char_first() {
 	emit_test("setChar() on the first char of a MyString");
 	MyString s("foo");
-	s.setChar(0, 't');
+	s.setAt(0, 't');
 	emit_input_header();
 	emit_param("MyString", "%s", s.Value());
 	emit_param("pos", "%d", 0);
@@ -942,7 +896,7 @@ static bool set_char_first() {
 static bool set_char_last() {
 	emit_test("setChar() on the last char of a MyString");
 	MyString s("foo");
-	s.setChar(2, 'r');
+	s.setAt(2, 'r');
 	emit_input_header();
 	emit_param("MyString", "%s", s.Value());
 	emit_param("pos", "%d", 2);
@@ -1282,7 +1236,7 @@ static bool reserve_shortening_0() {
 
 //in test_mystring.cpp 434
 static bool reserve_shortening_smaller() {
-	emit_test("Does reserve() correctly shorten a MyString when passed a size"
+	emit_test("Does reserve() correctly not shorten a MyString when passed a size"
 		" smaller than the length of the MyString?");
 	MyString a("Miguel Indurain");
 	a.reserve(6);
@@ -1294,7 +1248,7 @@ static bool reserve_shortening_smaller() {
 	emit_output_actual_header();
 	emit_param("MyString", "%s", a.Value());
 	emit_param("Length", "%d", a.Length());
-	if(strcmp(a.Value(), "Miguel") != MATCH || a.Length() != 6) {
+	if(strcmp(a.Value(), "Miguel Indurain") != MATCH || a.Length() != 15) {
 		FAIL;
 	}
 	PASS;
@@ -1356,8 +1310,9 @@ static bool reserve_larger_capacity() {
 static bool reserve_smaller_capacity() {
 	emit_test("Does reverse() decrease the capacity of a MyString when passed"
 		" a smaller size?");
-	MyString a("foobar");
-	int size = 1;
+	MyString a("foobarfoobarfoobarfoobarfoobarfoobar");
+	int size = 10;
+	a.truncate(6);
 	a.reserve(size);
 	emit_input_header();
 	emit_param("INT", "%d", size);
@@ -1758,232 +1713,6 @@ static bool concatenation_char_null() {
 	emit_retval("%s", a.Value());
 	emit_param("Length", "%d", a.Length());
 	if(strcmp(a.Value(), "pow") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_int_empty() {
-	emit_test("Test concatenating an empty MyString with an integer.");
-	MyString a;
-	a += 123;
-	emit_input_header();
-	emit_param("INT", "%d", 123);
-	emit_output_expected_header();
-	emit_retval("%s", "123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-//in test_mystring.cpp 170
-static bool concatenation_int_non_empty() {
-	emit_test("Test concatenating a non-empty MyString with an integer.");
-	MyString a("Lance Armstrong");
-	a += 123;
-	emit_input_header();
-	emit_param("INT", "%d", 123);
-	emit_output_expected_header();
-	emit_retval("%s", "Lance Armstrong123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "Lance Armstrong123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_int_large() {
-	emit_test("Test concatenating a MyString with INT_MAX.");
-	char buf[1024];
-	sprintf(buf, "%s%d", "foo", INT_MAX);
-	MyString a("foo");
-	a += INT_MAX;
-	emit_input_header();
-	emit_param("INT", "%d", INT_MAX);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_int_small() {
-	emit_test("Test concatenating a MyString with INT_MIN.");	
-	char buf[1024];
-	sprintf(buf, "%s%d", "foo", INT_MIN);
-	MyString a("foo");
-	a += INT_MIN;
-	emit_input_header();
-	emit_param("INT", "%d", INT_MIN);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_uint_empty() {
-	emit_test("Test concatenating an empty MyString with an unsigned "
-		"integer.");
-	MyString a;
-	unsigned int b = 123;
-	a += b;
-	emit_input_header();
-	emit_param("UINT", "%u", b);
-	emit_output_expected_header();
-	emit_retval("%s", "123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_uint_non_empty() {
-	emit_test("Test concatenating a non-empty MyString with an unsigned "
-		"integer.");
-	MyString a("foo");
-	unsigned int b = 123;
-	a += b;
-	emit_input_header();
-	emit_param("UINT", "%u", b);
-	emit_output_expected_header();
-	emit_retval("%s", "foo123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "foo123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_uint_large() {
-	emit_test("Test concatenating a MyString with UINT_MAX");	
-	char buf[1024];
-	sprintf(buf, "%s%u", "foo", UINT_MAX);
-	MyString a("foo");
-	a += UINT_MAX;
-	emit_input_header();
-	emit_param("UINT", "%u", UINT_MAX);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_long_empty() {
-	emit_test("Test concatenating an empty MyString with a long.");
-	MyString a;
-	long b = 123;
-	a += b;
-	emit_input_header();
-	emit_param("LONG", "%ld", b);
-	emit_output_expected_header();
-	emit_retval("%s", "123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_long_non_empty() {
-	emit_test("Test concatenating a non-empty MyString with a long.");
-	MyString a("foo");
-	long b = 123;
-	a += b;
-	emit_input_header();
-	emit_param("LONG", "%ld", b);
-	emit_output_expected_header();
-	emit_retval("%s", "foo123");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), "foo123") != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_long_large() {
-	emit_test("Test concatenating a MyString with LONG_MAX.");
-	char buf[1024];
-	sprintf(buf, "%s%ld", "foo", LONG_MAX);
-	MyString a("foo");
-	a += LONG_MAX;
-	emit_input_header();
-	emit_param("LONG", "%ld", LONG_MAX);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_long_small() {
-	emit_test("Test concatenating a MyString with LONG_MIN.");
-	char buf[1024];
-	sprintf(buf, "%s%ld", "foo", LONG_MIN);
-	MyString a("foo");
-	a += LONG_MIN;
-	emit_input_header();
-	emit_param("LONG", "%ld", LONG_MIN);
-	emit_output_expected_header();
-	emit_retval("%s", buf);
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strcmp(a.Value(), buf) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-//in test_mystring.cpp 180
-static bool concatenation_double_empty() {
-	emit_test("Test concatenating an empty MyString with a double.");
-	MyString a;
-	a += 12.3;
-	emit_input_header();
-	emit_param("MyString", "%f", 12.3);
-	emit_output_expected_header();
-	emit_retval("%s", "12.3");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strncmp(a.Value(), "12.3", 4) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool concatenation_double_non_empty() {
-	emit_test("Test concatenating a non-empty MyString with a double.");
-	MyString a("foo");
-	a += 12.3;
-	emit_input_header();
-	emit_param("MyString", "%f", 12.3);
-	emit_output_expected_header();
-	emit_retval("%s", "foo12.3");
-	emit_output_actual_header();
-	emit_retval("%s", a.Value());
-	if(strncmp(a.Value(), "foo12.3", 7) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -3834,7 +3563,7 @@ static bool read_line_multiple() {
 static bool tokenize_null() {
 	emit_test("Does calling GetNextToken() before calling Tokenize() return "
 		"NULL?");
-	MyString a("foo, bar");
+	MyStringWithTokener a("foo, bar");
 	const char* tok = a.GetNextToken(",", false);
 	emit_input_header();
 	emit_param("delim", "%s", ",");
@@ -3850,8 +3579,8 @@ static bool tokenize_null() {
 //in test_mystring.cpp 471
 static bool tokenize_skip() {
 	emit_test("Test GetNextToken() when skipping blank tokens.");
-	MyString a("     Ottavio Bottechia_");
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("     Ottavio Bottechia_");
 	const char* tok = a.GetNextToken(" ", true);
 	emit_input_header();
 	emit_param("delim", "%s", " ");
@@ -3869,8 +3598,8 @@ static bool tokenize_skip() {
 //in test_mystring.cpp 483
 static bool tokenize_multiple_calls() {
 	emit_test("Test multiple calls to GetNextToken().");
-	MyString a("To  be or not to be; that is the question");
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("To  be or not to be; that is the question");
 	const char* expectedTokens[] = {"To", "", "be", "or", "not", "to", "be", ""
 		, "that", "is", "the", "question"};
 	const char* resultToken0 = a.GetNextToken(" ;", false);
@@ -3934,8 +3663,8 @@ static bool tokenize_multiple_calls() {
 //in test_mystring.cpp 491
 static bool tokenize_end() {
 	emit_test("Test GetNextToken() after getting to the end.");
-	MyString a("foo;");
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("foo;");
 	const char* tok = a.GetNextToken(";", false);
 	tok = a.GetNextToken(";", false);
 	tok = a.GetNextToken(";", false);
@@ -3953,8 +3682,8 @@ static bool tokenize_end() {
 //in test_mystring.cpp 519
 static bool tokenize_empty() {
 	emit_test("Test GetNextToken() on an empty MyString.");
-	MyString a;
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("");
 	const char* tok = a.GetNextToken(" ", false);
 	emit_input_header();
 	emit_param("delim", "%s", " ");
@@ -3970,8 +3699,8 @@ static bool tokenize_empty() {
 //in test_mystring.cpp 529
 static bool tokenize_empty_delimiter() {
 	emit_test("Test GetNextToken() on an empty delimiter string.");
-	MyString a("foobar");
-	a.Tokenize();
+	MyStringTokener a;
+	a.Tokenize("foobar");
 	const char* tok = a.GetNextToken("", false);
 	emit_input_header();
 	emit_param("delim", "%s", " ");

@@ -29,7 +29,7 @@ CgroupLimits::set_memsw_limit_bytes(uint64_t mem_bytes)
 	struct cgroup_controller * mem_controller;
 	const char * limit = "memory.memsw.limit_in_bytes";
 
-	dprintf(D_ALWAYS, "Limiting memsw usage to %ld bytes\n", mem_bytes);
+	dprintf(D_ALWAYS, "Limiting memsw usage to %lu bytes\n", mem_bytes);
 	struct cgroup *memcg = &m_cgroup.getCgroup();
 	if ((mem_controller = cgroup_get_controller(memcg, MEMORY_CONTROLLER_STR)) == NULL) {
 		dprintf(D_ALWAYS,
@@ -75,15 +75,15 @@ int CgroupLimits::set_memory_limit_bytes(uint64_t mem_bytes, bool soft)
 		return 1;
 	} else if ((err = cgroup_set_value_uint64(mem_controller, limit, mem_bytes))) {
 		dprintf(D_ALWAYS,
-			"Unable to set memory soft limit for %s: %u %s\n",
+			"Unable to set memory limit for %s: %u %s\n",
 			m_cgroup_string.c_str(), err, cgroup_strerror(err));
 		return 1;
 	} else {
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		if ((err = cgroup_modify_cgroup(memcg))) {
 			dprintf(D_ALWAYS,
-				"Unable to commit memory soft limit for %s "
-				": %u %s\n",
+				"Unable to commit %s to %ld for %s "
+				": %u %s\n", limit, mem_bytes,
 				m_cgroup_string.c_str(), err, cgroup_strerror(err));
 			return 1;
 		}

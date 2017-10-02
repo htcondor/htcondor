@@ -104,7 +104,7 @@ convert_ad_to_adStruct(struct soap *s,
   // And, ServerTime...
   ad_struct->__ptr[attr_index].name = (char *) ATTR_SERVER_TIME;
   ad_struct->__ptr[attr_index].type = INTEGER_ATTR;
-  MyString timeString = MyString((int) time(NULL));
+  MyString timeString = IntToStr((int) time(NULL));
   ad_struct->__ptr[attr_index].value =
 	  (char *) soap_malloc(s, strlen(timeString.Value()) + 1);
   strcpy(ad_struct->__ptr[attr_index].value, timeString.Value());

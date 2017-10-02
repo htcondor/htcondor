@@ -2446,7 +2446,7 @@ static MyString munge_job_name(const char *jobName)
 	MyString newName;
 
 	if ( _mungeNames ) {
-		newName = MyString(_thisDagNum) + "." + jobName;
+		newName = IntToStr(_thisDagNum) + "." + jobName;
 	} else {
 		newName = jobName;
 	}
@@ -2558,11 +2558,11 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 		if ( !escaped ) {
 			if ( *str == '"' ) {
 				// we don't want that last " in the string
-				varValue.setChar( varValue.Length() - 1, '\0' );
+				varValue.truncate( varValue.Length() - 1 );
 				stillInQuotes = false;
 			} else if ( *str == '\\' ) {
 				// on the next pass it will be filled in appropriately
-				varValue.setChar( varValue.Length() - 1, '\0' );
+				varValue.truncate( varValue.Length() - 1 );
 				escaped = true;
 				continue;
 			}

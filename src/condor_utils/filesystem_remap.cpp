@@ -586,7 +586,7 @@ void FilesystemRemap::ParseMountinfo() {
 
 #if defined(LINUX)
 
-	MyString str, str2;
+	MyString str2;
 	const char * token;
 	FILE *fd;
 	bool is_shared;
@@ -601,7 +601,7 @@ void FilesystemRemap::ParseMountinfo() {
 	}
 
 	while (str2.readLine(fd, false)) {
-		str = str2;
+		MyStringWithTokener str(str2);
 		str.Tokenize();
 		ADVANCE_TOKEN(token, str) // mount ID
 		ADVANCE_TOKEN(token, str) // parent ID
@@ -641,7 +641,7 @@ root_dir_list()
 		chroot_list.rewind();
 		const char * next_chroot;
 		while ( (next_chroot=chroot_list.next()) ) {
-			MyString chroot_spec(next_chroot);
+			MyStringWithTokener chroot_spec(next_chroot);
 			chroot_spec.Tokenize();
 			const char * chroot_name = chroot_spec.GetNextToken("=", false);
 			if (chroot_name == NULL) {

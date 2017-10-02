@@ -3036,7 +3036,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( crypto_methods.Length() ) {
 		int pos = crypto_methods.FindChar(',');
 		if( pos >= 0 ) {
-			crypto_methods.setChar(pos,'\0');
+			crypto_methods.truncate(pos);
 			policy.Assign(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
 		}
 	}
@@ -3199,7 +3199,7 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	}
 
 		// get rid of final ']'
-	buf.setChar(buf.Length()-1,'\0');
+	buf.truncate(buf.Length()-1);
 
 	StringList lines(buf.Value(),";");
 	lines.rewind();

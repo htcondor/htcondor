@@ -251,13 +251,9 @@ create_name_for_VM(ClassAd *ad, MyString& vmname)
 	// replace '@' with '_'
 	int pos = -1;
 	while( (pos = stringattr.find("@") ) >= 0 ) {
-		stringattr.setChar(pos, '_');
+		stringattr.setAt(pos, '_');
 	}
 
-	vmname = stringattr;
-	vmname += "_";
-	vmname += cluster_id;
-	vmname += "_";
-	vmname += proc_id;
+	formatstr( vmname, "%s_%d.%d", stringattr.Value(), cluster_id, proc_id );
 	return true;
 }

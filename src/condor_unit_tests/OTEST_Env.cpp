@@ -3139,13 +3139,15 @@ static bool test_set_env_with_error_message_err_invalid_name() {
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
 	MyString actual;
-	actual = env.SetEnvWithErrorMessage(ONE_MISS_NAME, &actual);
+	bool retval;
+	retval = env.SetEnvWithErrorMessage(ONE_MISS_NAME, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", ONE_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
 	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Return Value", "%s", retval ? "true" : "false");
+	if(actual.IsEmpty() || retval) {
 		FAIL;
 	}
 	PASS;
@@ -3157,13 +3159,15 @@ static bool test_set_env_with_error_message_err_invalid_delim() {
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
 	MyString actual;
-	actual = env.SetEnvWithErrorMessage(ONE_MISS_DELIM, &actual);
+	bool retval;
+	retval = env.SetEnvWithErrorMessage(ONE_MISS_DELIM, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", ONE_MISS_DELIM);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
 	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Return Value", "%s", retval ? "true" : "false");
+	if(actual.IsEmpty() || retval) {
 		FAIL;
 	}
 	PASS;

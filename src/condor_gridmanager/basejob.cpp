@@ -95,6 +95,7 @@ BaseJob::BaseJob( ClassAd *classad )
 
 	jobAd = classad;
 
+	procID.cluster = procID.proc = 0;
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	jobAd->LookupInteger( ATTR_PROC_ID, procID.proc );
 
@@ -106,6 +107,7 @@ BaseJob::BaseJob( ClassAd *classad )
 		JobsByRemoteId.insert( HashKey( remote_id.c_str() ), this );
 	}
 
+	condorState = IDLE; // Just in case lookup fails
 	jobAd->LookupInteger( ATTR_JOB_STATUS, condorState );
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,

@@ -44,11 +44,11 @@ DagmanMetrics::SetDagmanIds( const CondorID &DAGManJobId,
 			int parentDagmanCluster )
 {
 	_dagmanId = "";
-	_dagmanId += DAGManJobId._cluster;
+	_dagmanId += IntToStr( DAGManJobId._cluster );
 
 	if ( parentDagmanCluster >= 0 ) {
 		_parentDagmanId = "";
-		_parentDagmanId += parentDagmanCluster;
+		_parentDagmanId += IntToStr( parentDagmanCluster );
 	}
 }
 
@@ -205,7 +205,7 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 			reporterPath += "condor_dagman_metrics_reporter";
 		}
 
-		MyString duration = param_integer( "DAGMAN_PEGASUS_REPORT_TIMEOUT", 100, 0 );
+		MyString duration = IntToStr( param_integer( "DAGMAN_PEGASUS_REPORT_TIMEOUT", 100, 0 ) );
 
 		MyString metricsOutputFile( _primaryDagFile );
 		metricsOutputFile += ".metrics.out";
@@ -385,12 +385,12 @@ DagmanMetrics::ParseBraindumpFile()
 	const char *line;
 		// Note:  getline() frees memory from the previous call each time.
 	while ( (line = getline_trim( fp, lineno ) ) ) {
-		MyString lineStr( line );
-		lineStr.Tokenize();
+		MyStringTokener tok;
+		tok.Tokenize(line);
 		const char *token1;
-		token1 = lineStr.GetNextToken( " \t", true );
+		token1 = tok.GetNextToken( " \t", true );
 		if ( token1 ) {
-			const char *token2 = lineStr.GetNextToken( " \t", true );
+			const char *token2 = tok.GetNextToken( " \t", true );
 			if ( token2 ) {
 				if ( strcmp( token1, "wf_uuid" ) == 0 ) {
 					_workflowId = token2;

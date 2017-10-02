@@ -80,7 +80,7 @@ class AmazonRequest {
 			requestID(i), requestCommand(c),
             signatureVersion(sv), httpVerb( "POST" ) {
 				mutexReleased = lockGained = requestBegan = requestEnded =
-					mutexGained = sleepBegan = liveLine = sleepEnded = {0,0};
+					signatureTime = mutexGained = sleepBegan = liveLine = sleepEnded = {0,0};
 			}
         virtual ~AmazonRequest();
 

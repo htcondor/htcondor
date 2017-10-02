@@ -392,7 +392,7 @@ VanillaProc::StartJob()
                bool acceptable_chroot = false;
                std::string requested_chroot;
                while ( (next_chroot=chroot_list.next()) ) {
-                       MyString chroot_spec(next_chroot);
+                       MyStringWithTokener chroot_spec(next_chroot);
                        chroot_spec.Tokenize();
                        const char * chroot_name = chroot_spec.GetNextToken("=", false);
                        if (chroot_name == NULL) {
@@ -642,7 +642,7 @@ VanillaProc::StartJob()
 				// values can be set without interference
 
 				climits.set_memory_limit_bytes(0);
-				climits.set_memsw_limit_bytes(ULONG_MAX);
+				climits.set_memsw_limit_bytes(LONG_MAX);
 
 				uint64_t MemMb_big = MemMb;
 				m_memory_limit = MemMb_big;

@@ -181,15 +181,9 @@ TransferRequest::dprintf(unsigned int lvl)
 void
 TransferRequest::set_num_transfers(int nt)
 {
-	MyString str;
-
 	ASSERT(m_ip != NULL);
 
-	str += ATTR_IP_NUM_TRANSFERS;
-	str += " = ";
-	str += nt;
-
-	m_ip->Insert(str.Value());
+	m_ip->Assign( ATTR_IP_NUM_TRANSFERS, nt );
 }
 
 int
@@ -215,16 +209,9 @@ TransferRequest::set_transfer_service(MyString &mode)
 void
 TransferRequest::set_transfer_service(const char *mode)
 {
-	MyString str;
-
 	ASSERT(m_ip != NULL);
 
-	str += ATTR_IP_TRANSFER_SERVICE;
-	str += " = \"";
-	str += mode;
-	str += "\"";
-
-	m_ip->Insert(str.Value());
+	m_ip->Assign( ATTR_IP_TRANSFER_SERVICE, mode );
 }
 
 void
@@ -252,13 +239,7 @@ TransferRequest::set_protocol_version(int pv)
 {
 	ASSERT(m_ip != NULL);
 
-	MyString str;
-
-	str += ATTR_IP_PROTOCOL_VERSION;
-	str += " = ";
-	str += pv;
-
-	m_ip->Insert(str.Value());
+	m_ip->Assign( ATTR_IP_PROTOCOL_VERSION, pv );
 }
 
 int
@@ -278,13 +259,7 @@ TransferRequest::set_xfer_protocol(int xp)
 {
 	ASSERT(m_ip != NULL);
 
-	MyString str;
-
-	str += ATTR_TREQ_FTP;
-	str += " = ";
-	str += xp;
-
-	m_ip->Insert(str.Value());
+	m_ip->Assign( ATTR_TREQ_FTP, xp );
 }
 
 int
@@ -304,13 +279,7 @@ TransferRequest::set_direction(int dir)
 {
 	ASSERT(m_ip != NULL);
 
-	MyString str;
-
-	str += ATTR_TREQ_DIRECTION;
-	str += " = ";
-	str += dir;
-
-	m_ip->Insert(str.Value());
+	m_ip->Assign( ATTR_TREQ_DIRECTION, dir );
 }
 
 int
@@ -331,13 +300,7 @@ TransferRequest::set_used_constraint(bool con)
 {
 	ASSERT(m_ip != NULL);
 
-	MyString str;
-
-	str += ATTR_TREQ_HAS_CONSTRAINT;
-	str += " = ";
-	str += con==true?"TRUE":"FALSE";
-
-	m_ip->Insert(str.Value());
+	m_ip->Assign( ATTR_TREQ_HAS_CONSTRAINT, con );
 }
 
 bool
@@ -355,16 +318,9 @@ TransferRequest::get_used_constraint(void)
 void
 TransferRequest::set_peer_version(MyString &pv)
 {
-	MyString str;
-
 	ASSERT(m_ip != NULL);
 
-	str += ATTR_IP_PEER_VERSION;
-	str += " = \"";
-	str += pv;
-	str += "\"";
-
-	m_ip->Insert(str.Value());
+	m_ip->Assign( ATTR_IP_PEER_VERSION, pv );
 }
 
 void

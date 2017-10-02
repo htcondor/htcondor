@@ -718,10 +718,6 @@ VirshType::Status()
 	    m_cpu_time = info->cpuTime / 1000000000.0;
 	    m_result_msg += "Running";
 
-	    m_result_msg += " ";
-	    m_result_msg += VMGAHP_STATUS_COMMAND_CPUUTILIZATION;
-	    m_result_msg += "=";
-
 	    if ( (CurrentStamp - LastStamp) > 0 )
 	    {
 	      // Old calc method because of libvirt version mismatches.
@@ -730,21 +726,23 @@ VirshType::Status()
 	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1000000000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
 	    }
 
-	    m_result_msg += percentUtilization;
+	    formatstr_cat( m_result_msg, " %s=%f",
+	                   VMGAHP_STATUS_COMMAND_CPUUTILIZATION,
+	                   percentUtilization );
 
-	    m_result_msg += " " VMGAHP_STATUS_COMMAND_CPUTIME "=";
-	    m_result_msg += m_cpu_time;
+	    formatstr_cat( m_result_msg, " %s=%f",
+	                   VMGAHP_STATUS_COMMAND_CPUTIME, m_cpu_time );
 
 	    LastCpuTime = CurrentCpuTime;
 	    LastStamp = CurrentStamp;
 
 	    // Memory usage is in kbytes.
 	    if( info->memory != 0 ) {
-	    	formatstr( m_result_msg, "%s %s=%lu", m_result_msg.c_str(), VMGAHP_STATUS_COMMAND_MEMORY, info->memory );
+	    	formatstr_cat( m_result_msg, " %s=%lu", VMGAHP_STATUS_COMMAND_MEMORY, info->memory );
 	    }
 
 	    if( info->maxMem != 0 ) {
-	    	formatstr( m_result_msg, "%s %s=%lu", m_result_msg.c_str(), VMGAHP_STATUS_COMMAND_MAX_MEMORY, info->maxMem );
+	    	formatstr_cat( m_result_msg, " %s=%lu", VMGAHP_STATUS_COMMAND_MAX_MEMORY, info->maxMem );
 	    }
 
 		vmprintf( D_FULLDEBUG, "Reporting status: %s\n", m_result_msg.c_str() );
@@ -808,10 +806,10 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
 		m_xml += m_vm_name;
 		m_xml += "</name>";
 		m_xml += "<memory>";
-		m_xml += m_vm_mem * 1024;
+		m_xml += IntToStr( m_vm_mem * 1024 );
 		m_xml += "</memory>";
 		m_xml += "<vcpu>";
-		m_xml += m_vcpus;
+		m_xml += IntToStr( m_vcpus );
 		m_xml += "</vcpu>";
 		m_xml += "<os><type>hvm</type></os>";
 		m_xml += "<devices>";
@@ -867,10 +865,10 @@ XenType::CreateVirshConfigFile(const char* filename)
 		m_xml += m_vm_name;
 		m_xml += "</name>";
 		m_xml += "<memory>";
-		m_xml += m_vm_mem * 1024;
+		m_xml += IntToStr( m_vm_mem * 1024 );
 		m_xml += "</memory>";
 		m_xml += "<vcpu>";
-		m_xml += m_vcpus;
+		m_xml += IntToStr( m_vcpus );
 		m_xml += "</vcpu>";
 		m_xml += "<os><type>linux</type>";
 

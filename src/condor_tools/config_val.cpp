@@ -119,10 +119,10 @@ usage(int retval = 1)
 		"\tspecified. When used with -dump, <var> is regular expression.\n"
 		"\n    where <view> is one or more of\n"
 		"\t-dump\t\tPrint values of all variables that match <var>\n"
-		"\t\t\tThe value is raw unless -expand, -default, or -evaluate\n"
+		"\t\t\tThe value is raw unless -expanded, -default, or -evaluate\n"
 		"\t\t\tis specified. If no <vars>, Print all variables\n"
 		"\t-default\tPrint default value\n"
-		"\t-expand\t\tPrint expanded value\n"
+		"\t-expanded\t\tPrint expanded value\n"
 		"\t-raw\t\tPrint raw value as it appears in the file\n"
 		//"\t-stats\t\tPrint statistics of the configuration system\n"
 		"\t-verbose\tPrint source, raw, expanded, and default values\n"
@@ -135,6 +135,8 @@ usage(int retval = 1)
 		"\t-unused\t\tPrint only variables not used by the specified daemon\n"
 		"      these options apply when reading configuration files\n"
 		"\t-config\t\tPrint the locations of configuration files\n"
+		"\t-macro[:path]\tMacro expand <vars> as if they were config values\n"
+		"\t\t\tif the path option is specified, canonicalize the result\n"
 		"\t-writeconfig[:<filter>[,only]] <file>\tWrite configuration to <file>\n"
 		"\t\twhere <filter> is a comma separated filter option\n"
 		"\t\t\tdefault - compile time default values\n"
@@ -519,6 +521,8 @@ main( int argc, const char* argv[] )
 	bool    dump_stats = false;
 	bool    show_param_info = false; // show info from param table
 	bool    expand_dumped_variables = false;
+	bool    macro_expand_this = false; // set when -macro arg is used.
+	bool    macro_expand_this_as_path = false; // set when -macro:path is used
 	bool    show_by_usage = false;
 	bool    show_by_usage_unused = false;
 	bool    evaluate_daemon_vars = false;
@@ -688,6 +692,11 @@ main( int argc, const char* argv[] )
 			verbose = true;
 		} else if (is_arg_prefix(arg, "expanded", 2)) {
 			expand_dumped_variables = true;
+		} else if (is_arg_colon_prefix(arg, "macro", &pcolon, 3)) {
+			macro_expand_this = true;
+			if (pcolon && is_arg_prefix(pcolon+1, "path", 4)) {
+				macro_expand_this_as_path = true;
+			}
 		} else if (is_arg_prefix(arg, "evaluate", 2)) {
 			evaluate_daemon_vars = true;
 		} else if (is_arg_prefix(arg, "unused", 4)) {
@@ -1278,14 +1287,18 @@ main( int argc, const char* argv[] )
                         fprintf(stderr, "Warning: Failed to evaluate '%s', returning it as config value\n", value);
                     }
                 }
-			} else if (expand_dumped_variables) {
+			} else if (macro_expand_this) {
 				std::string result(tmp);
-				unsigned int options = EXPAND_MACRO_OPT_IS_PATH;
+				unsigned int options = (macro_expand_this_as_path ? EXPAND_MACRO_OPT_IS_PATH : 0) | EXPAND_MACRO_OPT_KEEP_DOLLARDOLLAR;
 				MACRO_SET * mset = param_get_macro_set();
 				MACRO_EVAL_CONTEXT ctx; ctx.init(subsys); ctx.localname = local_name;
 				unsigned int exist = expand_macro(result, options, *mset, ctx);
-				printf("'%s' expands to: '%s'\n", tmp, result.c_str());
-				printf("\texist_mask: 0x%0X\n", exist);
+				if (verbose) {
+					printf("%s expands to: %s\n", tmp, result.c_str());
+					printf(" # exist: 0x%0X\n", exist);
+				} else {
+					printf("%s\n", result.c_str());
+				}
 				continue;
 			} else {
 				const char * def_val;
@@ -2576,7 +2589,7 @@ void profile_test(bool /*verbose*/, int test, int iter)
 	MACRO_SET & mset = *param_get_macro_set();
 	std::string result;
 	auto_free_ptr ares;
-	unsigned int options = 0; // EXPAND_MACRO_OPT_IS_PATH;
+	unsigned int options = EXPAND_MACRO_OPT_KEEP_DOLLARDOLLAR; // EXPAND_MACRO_OPT_IS_PATH;
 	const char * input = aInput[(test/2)%COUNTOF(aInput)];
 	bool new_algorithm = test&1;
 
