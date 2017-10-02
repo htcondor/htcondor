@@ -51,7 +51,6 @@ main( int argc, char **argv ) {
         return -1;
     }
 
-<<<<<<< HEAD
     // Initialize win32 socket libraries, but not ssl
     int init = curl_global_init( CURL_GLOBAL_WIN32 );
     if( init != 0 ) {
@@ -59,10 +58,6 @@ main( int argc, char **argv ) {
                                                 " code %d\n", init ); 
         return -1;
     }
-=======
-    // Initialize win32 + SSL libraries
-    curl_global_init( CURL_GLOBAL_DEFAULT );
->>>>>>> master
 
     if ( ( handle = curl_easy_init() ) == NULL ) {
         return -1;
