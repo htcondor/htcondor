@@ -79,6 +79,10 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 static bool MakeLink(const char* srcFile, const string &newLink) {
 
 	bool retVal = false;
+	const StatStructType *srcFileStat;
+	const StatStructType *targetLinKStat;
+	StatWrapper srcFileMode;
+	StatWrapper targetLinkMode;
 
 	// Make sure the necessary parameters are set
 	std::string webRootDir;
@@ -99,16 +103,12 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 	// Impersonate the user and open the file using safe_open(). This will allow
 	// us to verify the user has privileges to access the file, and later to
 	// verify the hard link points back to the same inode.
-	uid_t link_uid = get_user_uid();
-	gid_t link_gid = get_user_gid();
 	priv_state original_priv = set_user_priv();
-	dprintf(D_ALWAYS, "MRC [MakeLink] link_uid=%d, link_gid=%d\n", link_uid, link_gid);
-	StatWrapper srcFileMode;
 	bool fileOK = false;
 	if (srcFileMode.Stat(srcFile) == 0) {
-		const StatStructType *statrec = srcFileMode.GetBuf();
-		if (statrec != NULL)
-			fileOK = (statrec->st_mode & S_IRUSR); // Verify readable by owner
+		srcFileStat = srcFileMode.GetBuf();
+		if (srcFileStat != NULL)
+			fileOK = (srcFileStat->st_mode & S_IRUSR); // Verify readable by owner
 	}
 	if (fileOK == false) {
 		dprintf(D_ALWAYS,
@@ -121,7 +121,6 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 	// anything at this point, we'll check later to make sure it points to the
 	// correct inode.
 	const char *const targetLink = dircat(goodPath, newLink.c_str()); // needs to be freed
-	StatWrapper targetLinkMode;
 	if (targetLink != NULL) {
 		// Check if target already exists
 		if (targetLinkMode.Stat(targetLink, StatWrapper::STATOP_LSTAT) == 0) { 
@@ -148,8 +147,7 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 		set_condor_priv();
 
 		if (srcFileMode.Stat(srcFile) == 0 && targetLinkMode.Stat(targetLink) == 0) {
-			const StatStructType *srcFileStat = srcFileMode.GetBuf();
-			const StatStructType *targetLinKStat = targetLinkMode.GetBuf();
+			targetLinKStat = targetLinkMode.GetBuf();
 			if (srcFileStat != NULL && targetLinKStat != NULL) {
 				retVal = (srcFileStat->st_ino == targetLinKStat->st_ino);
 			}
