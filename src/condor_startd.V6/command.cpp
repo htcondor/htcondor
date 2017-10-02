@@ -1576,8 +1576,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 {
 	int interval = -1;
 	char *client_addr = NULL;
-	char RemoteOwner[512];
-	RemoteOwner[0] = '\0';
+	std::string RemoteOwner;
 	Resource * ripb = NULL;
 
 		// There should not be a pre claim object now.
@@ -1710,20 +1709,20 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 
 		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
-		EvalString( ATTR_USER, rip->r_cur->ad(), RemoteOwner ) == 0 ) { 
+			EvalString( ATTR_USER, rip->r_cur->ad(), RemoteOwner ) == 0 ) {
 		rip->dprintf( D_ALWAYS, 
 				 "Can't evaluate attribute %s in request ad.\n", 
 				 ATTR_USER );
-		RemoteOwner[0] = '\0';
+		RemoteOwner.clear();
 	}
-	if( '\0' != RemoteOwner[0] ) {
-		if (ripb) { ripb->r_cur->client()->setowner( RemoteOwner ); ripb->r_cur->client()->setuser( RemoteOwner ); }
-		rip->r_cur->client()->setowner( RemoteOwner );
+	if( !RemoteOwner.empty() ) {
+		if (ripb) { ripb->r_cur->client()->setowner( RemoteOwner.c_str() ); ripb->r_cur->client()->setuser( RemoteOwner.c_str() ); }
+		rip->r_cur->client()->setowner( RemoteOwner.c_str() );
 			// For now, we say the remote user is the same as the
 			// remote owner.  In the future, we might decide to leave
 			// RemoteUser undefined until the resource is busy...
-		rip->r_cur->client()->setuser( RemoteOwner );
-		rip->dprintf( D_ALWAYS, "Remote owner is %s\n", RemoteOwner );
+		rip->r_cur->client()->setuser( RemoteOwner.c_str() );
+		rip->dprintf( D_ALWAYS, "Remote owner is %s\n", RemoteOwner.c_str() );
 	} else {
 		rip->dprintf( D_ALWAYS, "Remote owner is NULL\n" );
 			// TODO: What else should we do here???
