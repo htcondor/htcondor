@@ -1,0 +1,202 @@
+#! /usr/bin/env perl
+#testreq: personal
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# This is a basic test to determine that DAGMan works correctly with late
+# materialization. It tests for simple things, like that we never exceed the
+# max_materialize number of jobs (set to 2) and that the second factory does
+# not get submitted until the first one is complete.
+
+use CondorTest;
+use CondorUtils;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	SCHEDD_ALLOW_LATE_MATERIALIZE = true
+	SUBMIT_FACTORY_JOBS_BY_DEFAULT = true
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+$cmd = 'job_dagman_latemat-A.dag';
+$testdesc =  'Condor submit dag - Late Materialization Test A';
+$testname = "job_dagman_latemat-A";
+$dagman_args = "-verbose";
+
+$nodes_log_file = "job_dagman_latemat-A.dag.nodes.log";
+
+# Note #1: We must find these lines in the specified order. It does not matter
+# 	if extra lines appear in the log file. We're only concerned with the order
+#	in which certain events happen.
+# Note #2: These will all be evaluated as regular expressions. They are written
+# 	here as strings because Perl does not allow regex arrays.
+
+my @nodes_output_regex = (
+	# Start with the NodeA jobs.
+	"-01\.000(.*)Factory submitted",
+	"000\.000(.*)Job submitted",
+	"001\.000(.*)Job submitted",
+	# After two jobs are submitted, we should see a terminate event before any
+	# more submit events. However cannot guarantee order of terminate events.
+	"Job terminated",
+	"002\.000(.*)Job submitted",
+	"003\.000(.*)Job submitted",
+	# Continue keeping an eye out for terminate events. We should see enough to
+	# guarantee that jobs are not getting materialized all at once, but byeond
+	# that it's hard to test rigorously because they're non-deterministic.
+	# Is there a better way to do this?
+	"Job terminated",
+	"004\.000(.*)Job submitted",
+	"005\.000(.*)Job submitted",
+	"Job terminated",
+	"006\.000(.*)Job submitted",
+	"007\.000(.*)Job submitted",
+	"Job terminated",
+	"008\.000(.*)Job submitted",
+	"009\.000(.*)Job submitted",
+	"Job terminated",
+	"-01\.000(.*)Factory removed",
+	# Now we move on to the NodeB jobs. The second factory should not get 
+	# submitted until the first one is removed!
+	"-01\.000(.*)Factory submitted",
+	"000\.000(.*)Job submitted",
+	"001\.000(.*)Job submitted",
+	"Job terminated",
+	"002\.000(.*)Job submitted",
+	"003\.000(.*)Job submitted",
+	"Job terminated",
+	"004\.000(.*)Job submitted",
+	"Job terminated",
+	"-01\.000(.*)Factory removed"
+);
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing output files.
+runcmd("rm -f job_dagman_latemat-A.dag.*");
+
+# Debug: dump all condor config values
+runcmd("condor_config_val -write:up -");
+
+$abnormal = sub 
+{
+	die "Error: Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Error: DAG should not abort!\n";
+};
+
+$held = sub 
+{
+	die "Error: Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("Submitted: This test will see submit, executing and successful completion\n",1);
+};
+
+$success = sub
+{
+	CondorTest::debug("DAG completed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	# Make sure all expected lines are in the node output file, in the
+	# correct order.
+	# Extra lines are allowed because of the undeterministic nature of late
+	# materialized jobs.
+	CondorTest::debug("Checking $nodes_log_file\n",1);
+	open(CHECK, "<$nodes_log_file") ||
+			die "Error: Cannot open $nodes_log_file: $!\n";
+	@output_lines = <CHECK>;
+	close(CHECK);
+	
+	$max = $#node_output_lines > $#output_lines ? $#node_output_lines : $#output_lines;
+	$regexindex = 0;
+	
+	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
+		$line = $output_lines[$lineindex];
+		$regex = $nodes_output_regex[$regexindex];
+		chomp($line);
+		CondorTest::debug("Comparing <$line> to <$regex>\n");
+		if ($line =~ /$regex/) {
+			CondorTest::debug("\tGot a match: $line\n");
+			$regexindex += 1;
+		}
+
+		# If regexindex exceeds the number of regex's we're looking for, then
+		# we're all done
+		CondorTest::debug("Regexindex=$regexindex, num nodes_output_regex=$#nodes_output_regex\n");
+		if($regexindex > $#nodes_output_regex) {
+			CondorTest::debug("Matched all regex expressions!");
+			last;
+		}
+	}
+
+	# If we didn't match every regex in the ordered list, the job failed
+	if($regexindex <= $#nodes_output_regex) {
+		CondorTest::debug("Did not match all regex expressions");
+		$diditpass = 0;
+	}
+
+	if($diditpass == 0) {
+		die "Error: All expected files and correct output failed\n";
+	}
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
+$failure = sub
+{
+	die "Error: DAG is not expected to fail!\n";
+};
+
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
+CondorTest::RegisterExitedSuccess( $testname, $success );
+CondorTest::RegisterExitedFailure( $testname, $failure );
+CondorTest::RegisterExecute($testname, $executed );
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "Error: $testname: CondorTest::RunTest() failed\n";
+}
+

@@ -1,0 +1,4 @@
+JOB NodeA job_dagman_latemat-A-nodeA.cmd
+JOB NodeB job_dagman_latemat-A-nodeB.cmd
+
+PARENT NodeA CHILD NodeB
