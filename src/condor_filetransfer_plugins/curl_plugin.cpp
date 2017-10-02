@@ -51,7 +51,12 @@ main( int argc, char **argv ) {
     }
 
     // Initialize win32 socket libraries, but not ssl
-    curl_global_init( CURL_GLOBAL_WIN32 );
+    int init = curl_global_init( CURL_GLOBAL_WIN32 );
+    if( init != 0 ) {
+        fprintf( stderr, "Error: curl_plugin initialization failed with error"
+                                                " code %d\n", init ); 
+        return -1;
+    }
 
     if ( ( handle = curl_easy_init() ) == NULL ) {
         return -1;
