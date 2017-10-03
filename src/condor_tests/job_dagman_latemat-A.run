@@ -93,11 +93,6 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-# Get rid of any existing output files.
-runcmd("dir");
-runcmd("rm -f job_dagman_latemat-A.dag.*");
-runcmd("dir");
-
 # Debug: dump all condor config values
 runcmd("condor_config_val -write:up -");
 
