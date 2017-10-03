@@ -1393,6 +1393,14 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		ATTR_JOB_IWD,
 		ATTR_GRID_RESOURCE,
 		ATTR_REQUEST_MEMORY,
+		"CERequirements",
+		"NodeNumber",
+		"HostNumber",
+		"SMPGranularity",
+		"WholeNodes",
+		"HostSMPSize",
+		"BatchExtraSubmitArgs",
+		"StageCmd",
 		NULL };		// list must end with a NULL
 
 	submit_ad = new ClassAd;

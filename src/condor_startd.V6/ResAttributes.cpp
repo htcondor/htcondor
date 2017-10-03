@@ -1351,7 +1351,7 @@ CpuAttributes::compute( amask_t how_much )
 			c_total_disk = temp_disk;
 		} else {
 			// only calculate total_disk once
-			if ((c_total_disk == 0) || (param_boolean("STARTD_RECOMPUTE_DISK_FREE", true))) {
+			if ((c_total_disk == 0) || (param_boolean("STARTD_RECOMPUTE_DISK_FREE", false))) {
 				c_total_disk = sysapi_disk_space(rip->executeDir());
 			}
 		}
