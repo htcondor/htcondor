@@ -576,7 +576,7 @@ static bool test_copy_constructor_actuals() {
 	classad->initFromString(classad_string, NULL);
 	compat_classad::ClassAd* classadCopy = new ClassAd(*classad);
 	int actual1 = -1, actual2 = -1;
-	char actual3[1024];
+	std::string actual3;
 	classadCopy->EvalInteger("A", NULL, actual1);
 	classadCopy->EvalBool("B", NULL, actual2);
 	classadCopy->EvalString("C", NULL, actual3);
@@ -589,8 +589,8 @@ static bool test_copy_constructor_actuals() {
 	emit_output_actual_header();
 	emit_param("A", "%d", actual1);
 	emit_param("B", "%d", actual2);
-	emit_param("C", actual3);
-	if(actual1 != 1 || actual2 != 1 || strcmp(actual3, "String") != MATCH) {
+	emit_param("C", "%s", actual3.c_str());
+	if(actual1 != 1 || actual2 != 1 || strcmp(actual3.c_str(), "String") != MATCH) {
 		delete classad; delete classadCopy;
 		FAIL;
 	}
@@ -628,7 +628,7 @@ static bool test_assignment_actuals() {
 	compat_classad::ClassAd* classadAssign = new ClassAd;
 	*classadAssign = *classad;
 	int actual1 = -1, actual2 = -1;
-	char actual3[1024];
+	std::string actual3;
 	classadAssign->EvalInteger("A", NULL, actual1);
 	classadAssign->EvalBool("B", NULL, actual2);
 	classadAssign->EvalString("C", NULL, actual3);
@@ -641,8 +641,8 @@ static bool test_assignment_actuals() {
 	emit_output_actual_header();
 	emit_param("A", "%d", actual1);
 	emit_param("B", "%d", actual2);
-	emit_param("C", actual3);
-	if(actual1 != 1 || actual2 != 1 || strcmp(actual3, "String") != MATCH) {
+	emit_param("C", "%s", actual3.c_str());
+	if(actual1 != 1 || actual2 != 1 || strcmp(actual3.c_str(), "String") != MATCH) {
 		delete classad; delete classadAssign;
 		FAIL;
 	}
@@ -662,7 +662,7 @@ static bool test_assignment_actuals_before() {
 	classadAssign->initFromString(classad_string2, NULL);
 	*classadAssign = *classad;
 	int actual1 = -1, actual2 = -1;
-	char actual3[1024];
+	std::string actual3;
 	classadAssign->EvalInteger("A", NULL, actual1);
 	classadAssign->EvalBool("B", NULL, actual2);
 	classadAssign->EvalString("C", NULL, actual3);
@@ -675,8 +675,8 @@ static bool test_assignment_actuals_before() {
 	emit_output_actual_header();
 	emit_param("A", "%d", actual1);
 	emit_param("B", "%d", actual2);
-	emit_param("C", actual3);
-	if(actual1 != 1 || actual2 != 1 || strcmp(actual3, "String") != MATCH) {
+	emit_param("C", "%s", actual3.c_str());
+	if(actual1 != 1 || actual2 != 1 || strcmp(actual3.c_str(), "String") != MATCH) {
 		delete classad; delete classadAssign;
 		FAIL;
 	}
@@ -3173,7 +3173,7 @@ static bool test_if_then_else_false() {
 		"small\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "small";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
@@ -3186,8 +3186,8 @@ static bool test_if_then_else_false() {
 	emit_param("STRING Value", "%s", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "%s", actual);
-	if(retVal == 0 || strcmp(actual, expect)) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal == 0 || strcmp(actual.c_str(), expect)) {
 		FAIL;
 	}
 	PASS;
@@ -3201,7 +3201,7 @@ static bool test_if_then_else_false_error() {
 		"\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "small";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
@@ -3214,8 +3214,8 @@ static bool test_if_then_else_false_error() {
 	emit_param("STRING Value", "%s", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "%s", actual);
-	if(retVal == 0 || strcmp(actual, expect)) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal == 0 || strcmp(actual.c_str(), expect)) {
 		FAIL;
 	}
 	PASS;
@@ -3228,7 +3228,7 @@ static bool test_if_then_else_false_constant() {
     const char* classad_string = "\tB=ifThenElse(0.0, \"then\", \"else\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "else";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
@@ -3241,8 +3241,8 @@ static bool test_if_then_else_false_constant() {
 	emit_param("STRING Value", "%s", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "%s", actual);
-	if(retVal == 0 || strcmp(actual, expect)) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal == 0 || strcmp(actual.c_str(), expect)) {
 		FAIL;
 	}
 	PASS;
@@ -3255,7 +3255,7 @@ static bool test_if_then_else_true() {
 		"\"small\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "big";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
@@ -3268,8 +3268,8 @@ static bool test_if_then_else_true() {
 	emit_param("STRING Value", "%s", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "%s", actual);
-	if(retVal == 0 || strcmp(actual, expect)) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal == 0 || strcmp(actual.c_str(), expect)) {
 		FAIL;
 	}
 	PASS;
@@ -3283,7 +3283,7 @@ static bool test_if_then_else_true_error() {
 		"4 / 0)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "big";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
@@ -3296,8 +3296,8 @@ static bool test_if_then_else_true_error() {
 	emit_param("STRING Value", "%s", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "%s", actual);
-	if(retVal == 0 || strcmp(actual, expect)) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal == 0 || strcmp(actual.c_str(), expect)) {
 		FAIL;
 	}
 	PASS;
@@ -3310,7 +3310,7 @@ static bool test_if_then_else_true_constant1() {
     const char* classad_string = "\tB=ifThenElse(1.0, \"then\", \"else\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "then";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
@@ -3323,8 +3323,8 @@ static bool test_if_then_else_true_constant1() {
 	emit_param("STRING Value", "%s", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "%s", actual);
-	if(retVal == 0 || strcmp(actual, expect)) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal == 0 || strcmp(actual.c_str(), expect)) {
 		FAIL;
 	}
 	PASS;
@@ -3337,7 +3337,7 @@ static bool test_if_then_else_true_constant2() {
     const char* classad_string = "\tB=ifThenElse(3.7, \"then\", \"else\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "then";
 	int retVal = classad.EvalString("B", NULL, actual);
 	emit_input_header();
@@ -3350,8 +3350,8 @@ static bool test_if_then_else_true_constant2() {
 	emit_param("STRING Value", "%s", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "%s", actual);
-	if(retVal == 0 || strcmp(actual, expect)) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal == 0 || strcmp(actual.c_str(), expect)) {
 		FAIL;
 	}
 	PASS;
@@ -4568,7 +4568,7 @@ static bool test_string_negative_int() {
 	const char* classad_string = "\tA1=string(\"-3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4591,7 +4591,7 @@ static bool test_string_positive_int() {
 	const char* classad_string = "\tA1=string(123)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4614,7 +4614,7 @@ static bool test_strcat_short() {
 	const char* classad_string = "\tA1=strcat(\"-3\",\"3\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "-33";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -4627,8 +4627,8 @@ static bool test_strcat_short() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -4641,7 +4641,7 @@ static bool test_strcat_long() {
 		"\"f\",\"g\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "abcdefg";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -4654,8 +4654,8 @@ static bool test_strcat_long() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -5738,7 +5738,7 @@ static bool test_substr_end() {
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "defg";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -5751,8 +5751,8 @@ static bool test_substr_end() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -5764,7 +5764,7 @@ static bool test_substr_middle() {
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, 2)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "de";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -5777,8 +5777,8 @@ static bool test_substr_middle() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -5790,7 +5790,7 @@ static bool test_substr_negative_index() {
 	const char* classad_string = "\tA1=substr(\"abcdefg\", -2, 1)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "f";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -5803,8 +5803,8 @@ static bool test_substr_negative_index() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -5816,7 +5816,7 @@ static bool test_substr_negative_length() {
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, -1)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "def";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -5829,8 +5829,8 @@ static bool test_substr_negative_length() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -5842,7 +5842,7 @@ static bool test_substr_out_of_bounds() {
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, -9)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -5855,10 +5855,9 @@ static bool test_substr_out_of_bounds() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
-		FAIL;
-	}
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
+		FAIL;	}
 	PASS;
 }
 
@@ -5922,7 +5921,7 @@ static bool test_formattime_empty() {
 	const char* classad_string = "\tA1=formattime()";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5948,14 +5947,14 @@ static bool test_formattime_current() {
 		"CurrentTime)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
-	char expect[1024];
+	std::string actual;
+	std::string expect;
 	int retVal, attempts = 0;
 	do {	
 		classad.EvalString("A0", NULL, expect);
 		retVal = classad.EvalString("A1", NULL, actual);
 		attempts++;
-	}while(attempts < 10 && strcmp(actual, expect) != MATCH);
+	}while(attempts < 10 && strcmp(actual.c_str(), expect.c_str()) != MATCH);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "A1");
@@ -5963,11 +5962,11 @@ static bool test_formattime_current() {
 	emit_param("STRING", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("STRING Value", expect);
+	emit_param("STRING Value", "%s", expect.c_str());
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -5983,14 +5982,14 @@ static bool test_formattime_current_options() {
 		"CurrentTime,\"%c\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
-	char expect[1024];
+	std::string actual;
+	std::string expect;
 	int retVal = -1, attempts = 0;
 	do {	
 		classad.EvalString("A0", NULL, expect);
 		retVal = classad.EvalString("A1", NULL, actual);
 		attempts++;
-	}while(attempts < 10 && strcmp(actual, expect) != MATCH);
+	}while(attempts < 10 && strcmp(actual.c_str(), expect.c_str()) != MATCH);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string);
 	emit_param("Attribute", "A1");
@@ -5998,11 +5997,11 @@ static bool test_formattime_current_options() {
 	emit_param("STRING", "");
 	emit_output_expected_header();
 	emit_retval("1");
-	emit_param("STRING Value", expect);
+	emit_param("STRING Value", "%s", expect.c_str());
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -6014,7 +6013,7 @@ static bool test_formattime_int() {
 	const char* classad_string = "\tA1=formattime(1174737600,\"%m/%d/%y\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "03/24/07";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -6027,8 +6026,8 @@ static bool test_formattime_int() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -6516,7 +6515,7 @@ static bool test_regexps_match() {
 		"\"thisisamatchlist\", \"one is \\1 two is \\2\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "one is mat two is h";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -6529,8 +6528,8 @@ static bool test_regexps_match() {
 	emit_param("STRING Value", "%s", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "%s", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -6543,7 +6542,7 @@ static bool test_regexps_match_case() {
 		"\"thisisamatchlist\", \"one is \\1 two is \\2\",\"i\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "one is mat two is h";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -6556,8 +6555,8 @@ static bool test_regexps_match_case() {
 	emit_param("STRING Value", "%s", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "%s", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -7441,7 +7440,7 @@ static bool test_interval_minute() {
 	const char* classad_string = "\tA1=Interval(60)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "1:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -7454,8 +7453,8 @@ static bool test_interval_minute() {
 	emit_param("STRING Value", "'%s'", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "'%s'", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "'%s'", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -7470,7 +7469,7 @@ static bool test_interval_hour() {
 	const char* classad_string = "\tA1=Interval(3600)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "1:00:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -7483,8 +7482,8 @@ static bool test_interval_hour() {
 	emit_param("STRING Value", "'%s'", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "'%s'", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "'%s'", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -7499,7 +7498,7 @@ static bool test_interval_day() {
 	const char* classad_string = "\tA1=Interval(86400)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "1+00:00:00";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -7512,8 +7511,8 @@ static bool test_interval_day() {
 	emit_param("STRING Value", "'%s'", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", "'%s'", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "'%s'", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -7525,7 +7524,7 @@ static bool test_to_upper() {
 	const char* classad_string = "\tA1=toupper(\"AbCdEfg\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "ABCDEFG";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -7538,8 +7537,8 @@ static bool test_to_upper() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -7551,7 +7550,7 @@ static bool test_to_lower() {
 	const char* classad_string = "\tA1=toLower(\"ABCdeFg\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	char actual[1024];
+	std::string actual;
 	const char* expect = "abcdefg";
 	int retVal = classad.EvalString("A1", NULL, actual);
 	emit_input_header();
@@ -7564,8 +7563,8 @@ static bool test_to_lower() {
 	emit_param("STRING Value", expect);
 	emit_output_actual_header();
 	emit_retval("%d", retVal);
-	emit_param("STRING Value", actual);
-	if(retVal != 1 || strcmp(actual, expect) != MATCH) {
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
