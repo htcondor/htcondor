@@ -58,7 +58,7 @@ my @nodes_output_regex = (
 	"002\.000(.*)Job submitted",
 	"003\.000(.*)Job submitted",
 	# Continue keeping an eye out for terminate events. We should see enough to
-	# guarantee that jobs are not getting materialized all at once, but byeond
+	# guarantee that jobs are not getting materialized all at once, but beyond
 	# that it's hard to test rigorously because they're non-deterministic.
 	# Is there a better way to do this?
 	"Job terminated",
@@ -94,7 +94,9 @@ sub HELD{5};
 sub RUNNING{2};
 
 # Get rid of any existing output files.
+runcmd("dir");
 runcmd("rm -f job_dagman_latemat-A.dag.*");
+runcmd("dir");
 
 # Debug: dump all condor config values
 runcmd("condor_config_val -write:up -");
