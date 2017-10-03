@@ -23,6 +23,7 @@
 #include "dag.h"
 #include "string_list.h"
 #include "dagman_classad.h"
+#include "dagman_stats.h"
 
 	// Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
@@ -234,6 +235,9 @@ class Dagman {
 		// True iff we should remove node jobs ourself when we are
 		// condor_rm'ed.
 	bool _removeNodeJobs;
+
+		// Dagman runtime statistics
+	static DagmanRuntimeStats _runtimeStats;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H
