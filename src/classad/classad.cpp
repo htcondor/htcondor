@@ -336,6 +336,8 @@ InsertAttr( const string &name, long long value, Value::NumberFactor f )
 bool ClassAd::
 InsertAttr( const string &name, long long value)
 {
+	MarkAttributeDirty(name);
+
 	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
@@ -400,6 +402,8 @@ InsertAttr( const string &name, double value, Value::NumberFactor f )
 bool ClassAd::
 InsertAttr( const string &name, double value)
 {
+	MarkAttributeDirty(name);
+
 	// Optimized insert of Real values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
@@ -431,6 +435,8 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value,
 bool ClassAd::
 InsertAttr( const string &name, bool value )
 {
+	MarkAttributeDirty(name);
+
 	// Optimized insert of bool values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
@@ -468,6 +474,8 @@ InsertAttr( const string &name, const char *value )
 bool ClassAd::
 InsertAttr( const string &name, const char * str, size_t len)
 {
+	MarkAttributeDirty(name);
+
 	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
@@ -612,6 +620,7 @@ bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 		insert_result.first->second = lit;
 	}
 #endif
+	MarkAttributeDirty(name);
 	return true;
 }
 
