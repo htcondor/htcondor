@@ -710,8 +710,13 @@ int DaemonCore::FileDescriptorSafetyLimit()
 			// Our max is the maxiumum file descriptor that our Selector
 			// class says it can handle.
 		int file_descriptor_max = Selector::fd_select_size();
+#ifdef WIN32
+		// Set the danger level at 1 less than the max (Windows doesn't put sockets into the same table as files)
+		file_descriptor_safety_limit = file_descriptor_max - 1;
+#else
 		// Set the danger level at 80% of the max
 		file_descriptor_safety_limit = file_descriptor_max - file_descriptor_max/5;
+#endif
 		if( file_descriptor_safety_limit < MIN_FILE_DESCRIPTOR_SAFETY_LIMIT ) {
 				// There is no point trying to live within this limit,
 				// because it is too small.  It is better to try and fail
