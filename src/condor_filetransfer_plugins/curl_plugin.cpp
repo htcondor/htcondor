@@ -51,8 +51,10 @@ main( int argc, char **argv ) {
         return -1;
     }
 
-    // Initialize win32 socket libraries, but not ssl
-    int init = curl_global_init( CURL_GLOBAL_WIN32 );
+    // Initialize win32 + SSL socket libraries.
+    // Do not initialize these separately! Doing so causes https:// transfers
+    // to segfault.
+    int init = curl_global_init( CURL_GLOBAL_DEFAULT );
     if( init != 0 ) {
         fprintf( stderr, "Error: curl_plugin initialization failed with error"
                                                 " code %d\n", init ); 
