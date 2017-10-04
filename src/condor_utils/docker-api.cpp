@@ -545,9 +545,9 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 	memUsage = netIn = netOut = userCpu = sysCpu = 0;
 
 		// Would really like a real JSON parser here...
-	pos = response.find("\"max_usage\"");
+	pos = response.find("\"rss\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"max_usage\":%" SCNu64, &memUsage);
+		sscanf(response.c_str()+pos, "\"rss\":%" SCNu64, &memUsage);
 	}
 	pos = response.find("\"tx_bytes\"");
 	if (pos != std::string::npos) {
