@@ -81,6 +81,7 @@
 #define ATTR_BYTES_RECVD  "BytesRecvd"
 #define ATTR_CAN_HIBERNATE  "CanHibernate"
 #define ATTR_CAPABILITY  "Capability"
+#define ATTR_CE_REQUIREMENTS  "CERequirements"
 #define ATTR_CKPT_SERVER  "CkptServer"
 #define ATTR_CLAIM_STARTD  "ClaimStartd"
 #define ATTR_COD_CLAIMS  "CODClaims"
