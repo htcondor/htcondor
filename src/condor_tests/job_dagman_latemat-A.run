@@ -20,12 +20,15 @@
 ##**************************************************************
 
 # This is a basic test to determine that DAGMan works correctly with late
-# materialization. It tests for simple things, like that we never exceed the
-# max_materialize number of jobs (set to 2) and that the second factory does
-# not get submitted until the first one is complete.
+# materialization. It tests two simple things:
+# 1. We never exceed the max_materialize number of jobs (set to 2). 
+# 2. The second factory does not get submitted until the first one is complete.
 
 use CondorTest;
 use CondorUtils;
+
+# Instruct the test to start a new personal Condor instance with late
+# materialization active.
 
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
@@ -34,32 +37,61 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
-$cmd = 'job_dagman_latemat-A.dag';
-$testdesc =  'Condor submit dag - Late Materialization Test A';
-$testname = "job_dagman_latemat-A";
-$dagman_args = "-verbose";
 
-$nodes_log_file = "job_dagman_latemat-A.dag.nodes.log";
+my $testDescription =  'Condor DAGMan - Late Materialization Test A';
+my $testName = "job_dagman_latemat-A";
 
-# Note #1: We must find these lines in the specified order. It does not matter
-# 	if extra lines appear in the log file. We're only concerned with the order
-#	in which certain events happen.
+my $dagFileName = 'job_dagman_latemat-A.dag';
+my $dagmanArgs = "-verbose";
+my $nodesLogFile = "job_dagman_latemat-A.dag.nodes.log";
+
+# Cleanup old files
+runcmd("rm -f job_dagman_latemat-A.dag.*");
+
+# Generate the DAG files we need
+my $dagFileContent = "
+	JOB NodeA job_dagman_latemat-A-nodeA.cmd
+	JOB NodeB job_dagman_latemat-A-nodeB.cmd
+	PARENT NodeA CHILD NodeB
+";
+my $nodeAFileContent = "
+	executable          = x_sleep.pl
+	max_materialize     = 2
+	queue 10
+";
+my $nodeBFileContent = "
+	executable          = x_sleep.pl
+	max_materialize     = 2
+	queue 5
+";
+runcmd("ls");
+emit_file("job_dagman_latemat-A.dag", $dagFileContent);
+emit_file("job_dagman_latemat-A-nodeA.cmd", $nodeAFileContent);
+emit_file("job_dagman_latemat-A-nodeB.cmd", $nodeBFileContent);
+runcmd("ls");
+
+# Describe a series of regular expressions we expect to see in the nodes
+
+# Note #1: We must find these lines in the specified order. Extra lines will 
+#   appear in the log file; we can ignore these. We're only concerned that we 
+#   see all these events, and that they appear in the correct order.
+
 # Note #2: These will all be evaluated as regular expressions. They are written
-# 	here as strings because Perl does not allow regex arrays.
+#   here as strings because Perl does not allow regex arrays.
 
-my @nodes_output_regex = (
+my @nodesOutputRegex = (
 	# Start with the NodeA jobs.
 	"-01\.000(.*)Factory submitted",
 	"000\.000(.*)Job submitted",
 	"001\.000(.*)Job submitted",
 	# After two jobs are submitted, we should see a terminate event before any
-	# more submit events. However cannot guarantee order of terminate events.
+	# more submit events.
 	"Job terminated",
 	"002\.000(.*)Job submitted",
 	"003\.000(.*)Job submitted",
 	# Continue keeping an eye out for terminate events. We should see enough to
-	# guarantee that jobs are not getting materialized all at once, but beyond
-	# that it's hard to test rigorously because they're non-deterministic.
+	# guarantee that jobs are not getting materialized all at once, however
+	# beyond this we can't tell when they will appear.
 	# Is there a better way to do this?
 	"Job terminated",
 	"004\.000(.*)Job submitted",
@@ -85,8 +117,6 @@ my @nodes_output_regex = (
 	"Job terminated",
 	"-01\.000(.*)Factory removed"
 );
-
-my $killedchosen = 0;
 
 # truly const variables in perl
 sub IDLE{1};
@@ -127,15 +157,15 @@ $success = sub
 {
 	CondorTest::debug("DAG completed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
-	$diditpass = 1;
+	$didItPass = 1;
 
 	# Make sure all expected lines are in the node output file, in the
 	# correct order.
 	# Extra lines are allowed because of the undeterministic nature of late
 	# materialized jobs.
-	CondorTest::debug("Checking $nodes_log_file\n",1);
-	open(CHECK, "<$nodes_log_file") ||
-			die "Error: Cannot open $nodes_log_file: $!\n";
+	CondorTest::debug("Checking $nodesLogFile\n",1);
+	open(CHECK, "<$nodesLogFile") ||
+			die "Error: Cannot open $nodesLogFile: $!\n";
 	@output_lines = <CHECK>;
 	close(CHECK);
 	
@@ -144,7 +174,7 @@ $success = sub
 	
 	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
 		$line = $output_lines[$lineindex];
-		$regex = $nodes_output_regex[$regexindex];
+		$regex = $nodesOutputRegex[$regexindex];
 		chomp($line);
 		CondorTest::debug("Comparing <$line> to <$regex>\n");
 		if ($line =~ /$regex/) {
@@ -154,20 +184,20 @@ $success = sub
 
 		# If regexindex exceeds the number of regex's we're looking for, then
 		# we're all done
-		CondorTest::debug("Regexindex=$regexindex, num nodes_output_regex=$#nodes_output_regex\n");
-		if($regexindex > $#nodes_output_regex) {
+		CondorTest::debug("Regexindex=$regexindex, num nodesOutputRegex=$#nodesOutputRegex\n");
+		if($regexindex > $#nodesOutputRegex) {
 			CondorTest::debug("Matched all regex expressions!");
 			last;
 		}
 	}
 
 	# If we didn't match every regex in the ordered list, the job failed
-	if($regexindex <= $#nodes_output_regex) {
+	if($regexindex <= $#nodesOutputRegex) {
 		CondorTest::debug("Did not match all regex expressions");
-		$diditpass = 0;
+		$didItPass = 0;
 	}
 
-	if($diditpass == 0) {
+	if($didItPass == 0) {
 		die "Error: All expected files and correct output failed\n";
 	}
 };
@@ -181,19 +211,30 @@ $failure = sub
 	die "Error: DAG is not expected to fail!\n";
 };
 
-CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
-CondorTest::RegisterExitedSuccess( $testname, $success );
-CondorTest::RegisterExitedFailure( $testname, $failure );
-CondorTest::RegisterExecute($testname, $executed );
-CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
-CondorTest::RegisterAbort( $testname, $aborted );
-CondorTest::RegisterHold( $testname, $held );
-CondorTest::RegisterSubmit( $testname, $submitted );
+CondorTest::RegisterEvictedWithoutCheckpoint($testName, $on_evictedwithoutcheckpoint);
+CondorTest::RegisterExitedSuccess( $testName, $success );
+CondorTest::RegisterExitedFailure( $testName, $failure );
+CondorTest::RegisterExecute($testName, $executed );
+CondorTest::RegisterExitedAbnormal( $testName, $abnormal );
+CondorTest::RegisterAbort( $testName, $aborted );
+CondorTest::RegisterHold( $testName, $held );
+CondorTest::RegisterSubmit( $testName, $submitted );
 
-if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+if( CondorTest::RunDagTest($testName, $dagFileName, 0, $dagmanArgs) ) {
+	CondorTest::debug("$testName: SUCCESS\n",1);
 	exit(0);
 } else {
-	die "Error: $testname: CondorTest::RunTest() failed\n";
+	die "Error: $testName: CondorTest::RunTest() failed\n";
 }
 
+
+sub emit_file {
+	my $namex = shift;
+	my $content = shift;
+
+	my $fname = $testname . $namex;
+	open (FH, ">$fname") || die "error writing to $fname: $!\n";
+	print FH $content;
+	close (FH);
+	if ( ! CondorUtils::is_windows()) { chmod (0755, $fname); }
+}
