@@ -64,11 +64,10 @@ my $nodeBFileContent = "
 	max_materialize     = 2
 	queue 5
 ";
-runcmd("ls");
 emit_file("job_dagman_latemat-A.dag", $dagFileContent);
 emit_file("job_dagman_latemat-A-nodeA.cmd", $nodeAFileContent);
 emit_file("job_dagman_latemat-A-nodeB.cmd", $nodeBFileContent);
-runcmd("ls");
+
 
 # Describe a series of regular expressions we expect to see in the nodes
 
