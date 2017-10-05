@@ -365,6 +365,8 @@ class SubmitEvent : public ULogEvent
     char* submitEventLogNotes;
     // user-supplied text to include in the log event
     char* submitEventUserNotes;
+    // schedd-supplied warning about unmet future requirements
+    char* submitEventWarnings;
 
  private:
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
