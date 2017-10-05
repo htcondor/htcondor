@@ -333,7 +333,9 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
   if(tmp != NULL)
     {
       MyString errormsg;
-      args.AppendArgsV1RawOrV2Quoted(tmp,&errormsg);
+      if (!args.AppendArgsV1RawOrV2Quoted(tmp,&errormsg)) {
+		vmprintf(D_ALWAYS, "Cannot parse LIBVIRT_XML_SCRIPT_ARGS: %s\n", tmp);
+	  }
       free(tmp);
     }
   StringList input_strings, output_strings, error_strings;
