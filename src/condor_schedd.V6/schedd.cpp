@@ -13224,7 +13224,11 @@ Scheduler::Init()
 						}
 					}
 
-					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement, submitReason );
+					std::string isWarningName;
+					formatstr( isWarningName, "SUBMIT_REQUIREMENT_%s_IS_WARNING", srName );
+					bool isWarning = param_boolean( isWarningName.c_str(), false );
+
+					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement, submitReason, isWarning );
 					m_submitRequirements.push_back( sre );
 				} else {
 					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName );
@@ -16687,7 +16691,12 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 				}
 
 				if ( errorStack ) {
-					errorStack->pushf( "QMGMT", 2, "%s", reasonString.c_str() );
+					if( it->isWarning ) {
+						errorStack->pushf( "QMGMT", 0, "%s", reasonString.c_str() );
+						continue;
+					} else {
+						errorStack->pushf( "QMGMT", 2, "%s", reasonString.c_str() );
+					}
 				}
 				return -1;
 			}
