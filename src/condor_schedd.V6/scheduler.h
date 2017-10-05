@@ -432,6 +432,24 @@ private:
 	classad_shared_ptr<Stream> m_stream;
 };
 
+#define USE_VANILLA_START 1
+
+class VanillaMatchAd : public ClassAd
+{
+	public:
+		/// Default constructor
+		VanillaMatchAd() {};
+		virtual ~VanillaMatchAd() { Reset(); };
+
+	bool Insert(const std::string &attr, ClassAd*ad);
+	bool EvalAsBool(ExprTree *expr, bool def_value);
+	bool EvalExpr(ExprTree *expr, classad::Value &val);
+	void Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob * job);
+	void Reset();
+private:
+	ClassAd owner_ad;
+};
+
 class Scheduler : public Service
 {
   public:
@@ -508,6 +526,13 @@ class Scheduler : public Service
 	int 			publish( ClassAd *ad );
 	void			OptimizeMachineAdForMatchmaking(ClassAd *ad);
     match_rec*      AddMrec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
+	// support for START_VANILLA_UNIVERSE
+	ExprTree *      flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo* powni);
+	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const char *&because); // returns true when START_VANILLA allows this job to run on this match
+	bool            jobCanNegotiate(JobQueueJob * job, const char *&because); // returns true when START_VANILLA allows this job to negotiate
+	bool            vanillaStartExprIsConst(VanillaMatchAd &vad, bool &bval);
+	bool            evalVanillaStartExpr(VanillaMatchAd &vad);
+
 	// All deletions of match records _MUST_ go through DelMrec() to ensure
 	// proper cleanup.
     int         	DelMrec(char const*);
@@ -522,6 +547,7 @@ class Scheduler : public Service
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	void            sendSignalToShadow(pid_t pid,int sig,PROC_ID proc);
 	int				AlreadyMatched(PROC_ID*);
+	int				AlreadyMatched(JobQueueJob * job, int universe);
 	void			ExpediteStartJobs();
 	void			StartJobs();
 	void			StartJob(match_rec *rec);
@@ -700,7 +726,13 @@ class Scheduler : public Service
 	// live counters for running/held/idle jobs
 	LiveJobCounters liveJobCounts; // job counts that are always up-to-date with the committed job state
 
+	// the significant attributes that the schedd belives are absolutely required.
+	// This is NOT the effective set of sig attrs we get after we talk to negotiators
+	// it is the basic set needed for correct operation of the Schedd: Requirements,Rank,
+	classad::References MinimalSigAttrs;
+
 	const OwnerInfo * insert_owner_const(const char*);
+	const OwnerInfo * lookup_owner_const(const char*);
 	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
 
 private:
@@ -814,6 +846,9 @@ private:
 
 	SelfDrainingQueue job_is_finished_queue;
 	int jobIsFinishedHandler( ServiceData* job_id );
+
+		// variables to implement SCHEDD_VANILLA_START expression
+	ConstraintHolder vanilla_start_expr;
 
 		// Get the associated GridJobCounts object for a given
 		// user identity.  If necessary, will create a new one for you.

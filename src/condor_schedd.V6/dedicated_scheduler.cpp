@@ -670,11 +670,23 @@ DedicatedScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 	return true;
 }
 
+
 bool
-DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
+DedicatedScheddNegotiate::scheduler_getRequestConstraints(PROC_ID /*job_id*/, ClassAd &/*request_ad*/, int * match_max)
 {
-	ClassAd *jobad = GetJobAd(jobid.cluster,jobid.proc);
+	// No constraints?
+	if (match_max) { *match_max = INT_MAX; }
+	return true;
+}
+
+
+bool
+DedicatedScheddNegotiate::scheduler_skipJob(JobQueueJob *jobad, ClassAd * /*match_ad*/, bool &skip_all, const char * &because) // match ad may be null
+{
+	because = "got enough matches";
+	skip_all = false;
 	if( !jobad ) {
+		because = "job was removed";
 		return true;
 	}
 
@@ -701,10 +713,13 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 			"DedicatedScheduler: Received match for job %d.%d: %s\n",
 			job_id.cluster, job_id.proc, slot_name);
 
-	if( scheduler_skipJob(job_id) ) {
+	bool skip_all = false;
+	const char * because = "";
+	if( scheduler_skipJob(GetJobAd(job_id), &match_ad, skip_all, because) ) {
 		dprintf(D_FULLDEBUG,
-				"DedicatedScheduler: job %d.%d no longer needs a match.\n",
-				job_id.cluster,job_id.proc);
+				"DedicatedScheduler: job %d.%d %s.\n",
+				job_id.cluster,job_id.proc,
+				because);
 			// TODO: see if one of the other parallel jobs matches this machine
 		return false;
 	}

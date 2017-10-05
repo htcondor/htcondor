@@ -50,6 +50,9 @@ typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_
 // if mapping["TARGET"] = "", it will remove target prefixes.
 int RewriteAttrRefs(classad::ExprTree * expr, const NOCASE_STRING_MAP & mapping);
 
+// add attribute references to attrs when they are of the given scope. for example when scope is "MY"
+// and the expression contains MY.Foo, the Foo is added to attrs.
+int GetAttrRefsOfScope(classad::ExprTree * expr, classad::References &attrs, const std::string &scope);
 
 classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
 classad::ExprTree * SkipExprParens(classad::ExprTree * tree);

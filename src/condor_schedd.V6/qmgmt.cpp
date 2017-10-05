@@ -166,7 +166,9 @@ static QmgmtPeer *Q_SOCK = NULL;
 static HashTable<MyString,int> owner_history(MyStringHash);
 
 int		do_Q_request(ReliSock *,bool &may_fork);
+#if 0 // not used?
 void	FindPrioJob(PROC_ID &);
+#endif
 void	DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers);
 int		MaterializeJobs(JobQueueCluster * clusterAd);
 
@@ -6046,6 +6048,29 @@ GetJobAd(const PROC_ID &job_id)
 	return NULL;
 }
 
+int GetJobInfo(JobQueueJob *job, const OwnerInfo*& powni)
+{
+	if (job) {
+		powni = job->ownerinfo;
+		return job->Universe();
+	}
+	powni = NULL;
+	return CONDOR_UNIVERSE_MIN;
+}
+
+JobQueueJob* 
+GetJobAndInfo(const PROC_ID& jid, int &universe, const OwnerInfo *&powni)
+{
+	universe = CONDOR_UNIVERSE_MIN;
+	powni = NULL;
+	JobQueueJob	*job = NULL;
+	if (JobQueue && JobQueue->Lookup(JobQueueKey(jid), job)) {
+		universe = GetJobInfo(job, powni);
+		return job;
+	}
+	return NULL;
+}
+
 JobQueueJob*
 GetJobAd(int cluster_id, int proc_id)
 {
@@ -7023,6 +7048,20 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 	return true;
 }
 
+// whether or not a job should obey the START_VANILLA_UNIVERSE expression
+bool UniverseUsesVanillaStartExpr(int universe)
+{
+	switch (universe) {
+	case CONDOR_UNIVERSE_SCHEDULER:
+	case CONDOR_UNIVERSE_PARALLEL:
+	case CONDOR_UNIVERSE_LOCAL:
+	case CONDOR_UNIVERSE_GRID:
+		return false;
+	default:
+		return true;
+	}
+}
+
 /*
  * Find the job with the highest priority that matches with
  * my_match_ad (which is a startd ad).  If user is NULL, get a job for
@@ -7031,12 +7070,14 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
 					 char const * user)
 {
-	ClassAd				*ad;
+	JobQueueJob *ad;
 
 	if (user && (strlen(user) == 0)) {
 		user = NULL;
 	}
 
+	// this is true only when we are claiming the local startd
+	// because the negotiator went missing for too long.
 	bool match_any_user = (user == NULL) ? true : false;
 
 	ASSERT(my_match_ad);
@@ -7057,7 +7098,28 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		owner.truncate(at_sign_pos);
 	}
 
+#ifdef USE_VANILLA_START
+	std::string job_attr("JOB");
+	bool eval_for_each_job = false;
+	bool start_is_true = true;
+	VanillaMatchAd vad;
+	const OwnerInfo * powni = scheduler.lookup_owner_const(owner.Value());
+	vad.Init(my_match_ad, powni, NULL);
+	if ( ! scheduler.vanillaStartExprIsConst(vad, start_is_true)) {
+		eval_for_each_job = true;
+		if (IsDebugLevel(D_MATCH)) {
+			std::string slotname = "<none>";
+			if (my_match_ad) { my_match_ad->LookupString(ATTR_NAME, slotname); }
+			dprintf(D_MATCH, "VANILLA_START is const %d for owner=%s, slot=%s\n", start_is_true, owner.Value(), slotname.c_str());
+		}
+	} else if ( ! start_is_true) {
+		// START_VANILLA is const and false, no job will ever match, nothing more to do
+		return;
+	}
+#endif
+
 	bool rebuilt_prio_rec_array = BuildPrioRecArray();
+
 
 		// Iterate through the most recently constructed list of
 		// jobs, nicely pre-sorted in priority order.
@@ -7129,6 +7191,22 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					// Move along to the next job in the prio rec array
 				continue;
 			}
+
+				// Now check of the job can be started - this checks various schedd limits
+				// as embodied by the START_VANILLA_UNIVERSE expression.
+#ifdef USE_VANILLA_START
+			if (eval_for_each_job) {
+				vad.Insert(job_attr, ad);
+				bool runnable = scheduler.evalVanillaStartExpr(vad);
+				vad.Remove(job_attr);
+
+				if ( ! runnable) {
+					dprintf(D_FULLDEBUG | D_MATCH, "job %d.%d Matches, but START_VANILLA_UNIVERSE is false\n", ad->jid.cluster, ad->jid.proc);
+						// Move along to the next job in the prio rec array
+					continue;
+				}
+			}
+#endif
 
 				// Make sure that the startd ranks this job >= the
 				// rank of the job that initially claimed it.
@@ -7202,48 +7280,59 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	// no more jobs to run anywhere.  nothing more to do.  failure.
 }
 
-int Runnable(JobQueueJob *job)
+int Runnable(JobQueueJob *job, const char *& reason)
 {
 	int status, universe, cur = 0, max = 1;
 
+	if ( ! job || ! job->IsJob())
+	{
+		reason = "not runnable (not found)";
+		return FALSE;
+	}
+
 	if (job->IsNoopJob())
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (IsNoopJob)\n");
+		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (IsNoopJob)\n");
+		reason = "not runnable (IsNoopJob)";
 		return FALSE;
 	}
 
 	if ( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 )
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",ATTR_JOB_STATUS);
+		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",ATTR_JOB_STATUS);
+		reason = "not runnable (no " ATTR_JOB_STATUS ")";
 		return FALSE;
 	}
 	if (status == HELD)
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (HELD)\n");
+		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (HELD)\n");
+		reason = "not runnable (HELD)";
 		return FALSE;
 	}
 	if (status == REMOVED)
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (REMOVED)\n");
+		// dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (REMOVED)\n");
+		reason = "not runnable (REMOVED)";
 		return FALSE;
 	}
 	if (status == COMPLETED)
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (COMPLETED)\n");
+		// dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (COMPLETED)\n");
+		reason = "not runnable (COMPLETED)";
 		return FALSE;
 	}
 
 
 	if ( job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 )
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
-				ATTR_JOB_UNIVERSE);
+		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n", ATTR_JOB_UNIVERSE);
+		reason = "not runnable (no " ATTR_JOB_UNIVERSE ")";
 		return FALSE;
 	}
 	if( !service_this_universe(universe,job) )
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (Universe=%s)\n",
-			CondorUniverseName(universe) );
+		//dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (Universe=%s)\n", CondorUniverseName(universe) );
+		reason = "not runnable (universe not in service)";
 		return FALSE;
 	}
 
@@ -7252,29 +7341,25 @@ int Runnable(JobQueueJob *job)
 
 	if (cur < max)
 	{
-		dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");
+		// dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");
+		reason = "is runnable";
 		return TRUE;
 	}
 	
-	dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable (default rule)\n");
+	//dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable (default rule)\n");
+	reason = "not runnable (default rule)";
 	return FALSE;
 }
 
 int Runnable(PROC_ID* id)
 {
-	JobQueueJob *jobad;
-	
-	dprintf (D_FULLDEBUG, "Job %d.%d:", id->cluster, id->proc);
-
-	if (id->cluster < 1 || id->proc < 0 || (jobad=GetJobAd(id->cluster,id->proc))==NULL )
-	{
-		dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable\n");
-		return FALSE;
-	}
-
-	return Runnable(jobad);
+	const char * reason = "";
+	int runnable = Runnable(GetJobAd(id->cluster,id->proc), reason);
+	dprintf (D_FULLDEBUG, "Job %d.%d: %s\n", id->cluster, id->proc, reason);
+	return runnable;
 }
 
+#if 0 // not used
 // From the priority records, find the runnable job with the highest priority
 // use the function prio_compar. By runnable I mean that its status is IDLE.
 void FindPrioJob(PROC_ID & job_id)
@@ -7317,6 +7402,7 @@ void FindPrioJob(PROC_ID & job_id)
 	job_id.proc = PrioRec[0].id.proc;
 	job_id.cluster = PrioRec[0].id.cluster;
 }
+#endif
 
 void
 dirtyJobQueue()
