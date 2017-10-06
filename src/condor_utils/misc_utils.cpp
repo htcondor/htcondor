@@ -96,7 +96,7 @@ startdClaimIdFile( int slot_id )
 
 	if( slot_id ) {
 		filename += ".slot";
-		filename += slot_id;
+		filename += IntToStr( slot_id );
 	}			
 	return strdup( filename.Value() );
 }

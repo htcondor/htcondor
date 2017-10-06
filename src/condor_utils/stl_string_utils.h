@@ -40,6 +40,9 @@ int vformatstr(std::string& s, const char* format, va_list pargs);
 int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int formatstr_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 
+// Return the string form of the given integer value
+template <typename T> std::string IntToStr( T val );
+
 // comparison ops between the two houses divided
 bool operator==(const MyString& L, const std::string& R);
 bool operator==(const std::string& L, const MyString& R);
@@ -53,13 +56,6 @@ bool operator<=(const MyString& L, const std::string& R);
 bool operator<=(const std::string& L, const MyString& R);
 bool operator>=(const MyString& L, const std::string& R);
 bool operator>=(const std::string& L, const MyString& R);
-
-// MyString now provides casting ops that make these unnecessary.
-// Can now use '=' between MyString <--> std::string
-// The below assignment std::string <-- MyString will be more 
-// efficient, due to some copying in the casting op, if that matters.
-void assign(std::string& dst, const MyString& src);
-void assign(MyString& dst, const std::string& src);
 
 // to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& dst, FILE *fp, bool append);

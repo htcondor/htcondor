@@ -299,6 +299,8 @@ ClassAd* GetExpandedJobAd(const PROC_ID& jid, bool persist_expansions);
 
 #ifdef SCHEDD_INTERNAL_DECLARATIONS
 JobQueueJob* GetJobAd(const PROC_ID& jid);
+JobQueueJob* GetJobAndInfo(const PROC_ID& jid, int &universe, const OwnerInfo* &powni); // Used by schedd.cpp since JobQueueJob is not a public structure
+int GetJobInfo(JobQueueJob *job, const OwnerInfo* &powni); // returns universe and OwnerInfo pointer for job
 JobQueueJob* GetJobAd(int cluster, int proc);
 JobQueueCluster* GetClusterAd(const PROC_ID& jid);
 JobQueueCluster* GetClusterAd(int cluster);
@@ -449,6 +451,8 @@ void MarkJobClean(const char* job_id_str);
 
 bool Reschedule();
 
+bool UniverseUsesVanillaStartExpr(int universe);
+
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 
 QmgmtPeer* getQmgmtConnectionInfo();
@@ -463,6 +467,7 @@ extern int grow_prio_recs(int);
 
 extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user);
 extern int Runnable(PROC_ID*);
+extern int Runnable(JobQueueJob *job, const char *& reason);
 
 extern class ForkWork schedd_forker;
 

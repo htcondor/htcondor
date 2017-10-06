@@ -29,7 +29,7 @@ CgroupLimits::set_memsw_limit_bytes(uint64_t mem_bytes)
 	struct cgroup_controller * mem_controller;
 	const char * limit = "memory.memsw.limit_in_bytes";
 
-	dprintf(D_ALWAYS, "Limiting memsw usage to %ld bytes\n", mem_bytes);
+	dprintf(D_ALWAYS, "Limiting memsw usage to %lu bytes\n", mem_bytes);
 	struct cgroup *memcg = &m_cgroup.getCgroup();
 	if ((mem_controller = cgroup_get_controller(memcg, MEMORY_CONTROLLER_STR)) == NULL) {
 		dprintf(D_ALWAYS,

@@ -887,6 +887,12 @@ main( int argc, const char *argv[] )
 			}
 			exit(1);
 		}
+		if(! errstack.empty()) {
+			// This never returns NULL, which is annoying.
+			const char * message = errstack.message();
+			fprintf( stderr, "\nWARNING: Committed job submission into the queue with the following warning:\n" );
+			fprintf( stderr, "WARNING: %s\n", message );
+		}
 	}
 
 	if ( ! SubmitFromStdin && ! terse) {
@@ -984,7 +990,7 @@ main( int argc, const char *argv[] )
 							"Schedd rejected sand box location request:\n");
 						respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
 						fprintf( stderr, "\t%s\n", reason.Value());
-						return false;
+						return 0;
 					}
 
 					respad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);

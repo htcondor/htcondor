@@ -88,14 +88,14 @@ cleanTemporaryFiles()
 {
 	dprintf( D_ALWAYS, "cleanTemporaryFiles started\n" );
 
-	MyString downloadingExtension( daemonCore->getpid( ) );
-	MyString uploadingExtension( daemonCore->getpid( ) );
+	MyString downloadingExtension;
+	MyString uploadingExtension;
 	char*    stateFilePath = NULL;	
 
-	downloadingExtension += ".";
-	downloadingExtension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
-	uploadingExtension   += ".";
-	uploadingExtension   += UPLOADING_TEMPORARY_FILES_EXTENSION;
+	formatstr( downloadingExtension, "%d.%s", daemonCore->getpid( ),
+	           DOWNLOADING_TEMPORARY_FILES_EXTENSION );
+	formatstr( uploadingExtension, "%d.%s", daemonCore->getpid( ),
+	           UPLOADING_TEMPORARY_FILES_EXTENSION );
 
 	// we first delete the possible temporary version files
 	FilesOperations::safeUnlinkFile(
@@ -106,8 +106,7 @@ cleanTemporaryFiles()
         uploadingExtension.Value( ) );
 
 	// then the possible temporary state files
-    StringList& stateFilePathsList = 
-		const_cast<StringList& >( replicaTransferer->getStateFilePathsList( ) );
+    StringList& stateFilePathsList = replicaTransferer->getStateFilePathsList( );
 
 	stateFilePathsList.rewind( );
 
@@ -171,12 +170,14 @@ main_init( int argc, char *argv[] )
 
     if( ! strncmp( argv[1], "down", strlen( "down" ) ) ) {
         replicaTransferer = new DownloadReplicaTransferer( 
+								argv[1],
 								argv[2], 
 								argv[3], 
 								//argv[4] );
 								stateFilePathsList );
 	} else if( ! strncmp( argv[1], "up", strlen( "up" ) ) ) {
         replicaTransferer = new UploadReplicaTransferer( 
+								argv[1],
 								argv[2], 
 								argv[3], 
 								//argv[4] );
@@ -188,6 +189,8 @@ main_init( int argc, char *argv[] )
     }
 
     int result = replicaTransferer->initialize( );
+
+    delete replicaTransferer;
 
     DC_Exit( result );
 }

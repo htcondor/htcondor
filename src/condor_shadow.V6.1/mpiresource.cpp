@@ -43,10 +43,8 @@ void
 MpiResource::hadContact(void) {
 	RemoteResource::hadContact();
 
-	char contact_buf[40];
-    snprintf( contact_buf, 32, "%s=%d", ATTR_LAST_JOB_LEASE_RENEWAL,
-              (int)last_job_lease_renewal );
-    shadow->getJobAd()->Insert( contact_buf );
+    shadow->getJobAd()->Assign( ATTR_LAST_JOB_LEASE_RENEWAL,
+	                            last_job_lease_renewal );
 
 }
 

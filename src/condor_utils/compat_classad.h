@@ -256,15 +256,6 @@ class ClassAd : public classad::ClassAd
 		 */
 	int EvalAttr (const char *name, classad::ClassAd *target, classad::Value & value);
 
-		/** Lookup and evaluate an attribute in the ClassAd that is a string
-		 *  @param name The name of the attribute
-		 *  @param target A ClassAd to resolve MY or other references
-		 *  @param value Where we the copy the string. Danger: we just use strcpy.
-		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-		 *  but is not a string.
-		 */
-	int EvalString (const char *name, classad::ClassAd *target, char *value);
-
         /** Same as EvalString, but ensures we have enough space for value first.
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references

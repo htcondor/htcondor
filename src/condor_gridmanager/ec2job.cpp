@@ -162,6 +162,8 @@ int EC2Job::maxRetryTimes = 3;
 MSC_DISABLE_WARNING(6262) // function uses more than 16k of stack
 EC2Job::EC2Job( ClassAd *classad ) :
 	BaseJob( classad ),
+	holdReasonCode( 0 ),
+	holdReasonSubCode( 0 ),
 	m_was_job_completion( false ),
 	m_retry_times( 0 ),
 	probeNow( false ),
@@ -169,8 +171,6 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	purgedTwice( false ),
 	updatedOnce( false )
 {
-	int holdReasonCode = 0;
-	int holdReasonSubCode = 0;
 	string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
@@ -191,6 +191,10 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	m_should_gen_key_pair = false;
 	m_keypair_created = false;
 	std::string gahpName;
+
+	m_failure_injection = 0;
+	m_parameters_and_values = 0;
+	m_group_ids = 0;
 
 	// check the public_key_file
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );

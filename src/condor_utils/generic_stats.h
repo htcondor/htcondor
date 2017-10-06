@@ -1208,10 +1208,10 @@ public:
    static const int PubDefault = PubValue;
    void AppendToString(MyString & str) const {
       if (this->cLevels > 0) {
-         str += this->data[0];
+         str += IntToStr( this->data[0] );
          for (int ix = 1; ix <= this->cLevels; ++ix) {
             str += ", ";
-            str += this->data[ix];
+            str += IntToStr( this->data[ix] );
             }
          }
       }

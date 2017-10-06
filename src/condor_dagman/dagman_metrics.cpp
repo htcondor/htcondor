@@ -44,11 +44,11 @@ DagmanMetrics::SetDagmanIds( const CondorID &DAGManJobId,
 			int parentDagmanCluster )
 {
 	_dagmanId = "";
-	_dagmanId += DAGManJobId._cluster;
+	_dagmanId += IntToStr( DAGManJobId._cluster );
 
 	if ( parentDagmanCluster >= 0 ) {
 		_parentDagmanId = "";
-		_parentDagmanId += parentDagmanCluster;
+		_parentDagmanId += IntToStr( parentDagmanCluster );
 	}
 }
 
@@ -205,7 +205,7 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 			reporterPath += "condor_dagman_metrics_reporter";
 		}
 
-		MyString duration = param_integer( "DAGMAN_PEGASUS_REPORT_TIMEOUT", 100, 0 );
+		MyString duration = IntToStr( param_integer( "DAGMAN_PEGASUS_REPORT_TIMEOUT", 100, 0 ) );
 
 		MyString metricsOutputFile( _primaryDagFile );
 		metricsOutputFile += ".metrics.out";

@@ -742,8 +742,7 @@ VMGahp::executeStart(VMRequest *req)
 		req->m_is_success = true;
 
 		// Result is set to a new vm_id
-		req->m_result = "";
-		req->m_result += new_vm->getVMId();
+		formatstr( req->m_result, "%d", new_vm->getVMId() );
 
 		addVM(new_vm);
 		vmprintf(D_FULLDEBUG, "executeStart success!\n");
@@ -981,8 +980,7 @@ VMGahp::executeGetpid(VMRequest *req)
 		req->m_is_success = true;
 
 		// Result is set to the pid of actual process for VM
-		req->m_result = "";
-		req->m_result += vm->PidOfVM();
+		formatstr( req->m_result, "%d", vm->PidOfVM() );
 		return;
 	}
 }
@@ -1053,27 +1051,13 @@ VMGahp::make_result_line(VMRequest *req)
 	if(req->m_is_success) {
 		// Success
 		// Format: <req_id> 0 <result string>
-		res_str += req->m_reqid;
-		res_str += " ";
-		res_str += 0;
-		res_str += " ";
-		if( req->m_result.Length() == 0) {
-			res_str += "NULL";
-		} else {
-			res_str += req->m_result.Value();
-		}
+		formatstr( res_str, "%d 0 %s", req->m_reqid,
+		           req->m_result.Length() ? req->m_result.Value() : "NULL" );
 	}else {
 		// Error
 		// Format: <req_id> 1 <result string>
-		res_str += req->m_reqid;
-		res_str += " ";
-		res_str += 1;
-		res_str += " ";
-		if( req->m_result.Length() == 0) {
-			res_str += "NULL";
-		} else {
-			res_str += req->m_result.Value();
-		}
+		formatstr( res_str, "%d 1 %s", req->m_reqid,
+		           req->m_result.Length() ? req->m_result.Value() : "NULL" );
 	}
 	return res_str.Value();
 }

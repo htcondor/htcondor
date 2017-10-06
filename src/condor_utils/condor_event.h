@@ -92,7 +92,9 @@ enum ULogEventNumber {
 	/** Job performing stage-in   */  ULOG_JOB_STAGE_IN				= 31,
 	/** Job performing stage-out  */  ULOG_JOB_STAGE_OUT			= 32,
 	/** Attribute updated  */         ULOG_ATTRIBUTE_UPDATE			= 33,
-	/** PRE_SKIP event for DAGMan */  ULOG_PRESKIP					= 34
+	/** PRE_SKIP event for DAGMan */  ULOG_PRESKIP					= 34,
+	/** Factory submitted         */  ULOG_FACTORY_SUBMIT			= 35,
+	/** Factory removed           */  ULOG_FACTORY_REMOVE			= 36
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -365,6 +367,8 @@ class SubmitEvent : public ULogEvent
     char* submitEventLogNotes;
     // user-supplied text to include in the log event
     char* submitEventUserNotes;
+    // schedd-supplied warning about unmet future requirements
+    char* submitEventWarnings;
 
  private:
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
@@ -1982,6 +1986,98 @@ class PreSkipEvent : public ULogEvent
 
     // dagman-supplied text to include in the log event
 	char* skipEventLogNotes;
+
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a Factory Submit Log Event object.  Below is an example
+    Factory Submit Log entry from Condor v8. <p>
+
+<PRE>
+000 (172.000.000) 10/20 16:56:54 Factory submitted from host: <128.105.165.12:32779>
+...
+</PRE>
+*/
+class FactorySubmitEvent : public ULogEvent
+{
+  public:
+    ///
+    FactorySubmitEvent(void);
+    ///
+    ~FactorySubmitEvent(void);
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
+
+    /** Return a ClassAd representation of this SubmitEvent.
+        @return NULL for failure, the ClassAd pointer otherwise
+    */
+    virtual ClassAd* toClassAd(void);
+
+    /** Initialize from this ClassAd.
+        @param a pointer to the ClassAd to initialize from
+    */
+    virtual void initFromClassAd(ClassAd* ad);
+
+    void setSubmitHost(char const *addr);
+
+    // dagman-supplied text to include in the log event
+    char* submitEventLogNotes;
+    // user-supplied text to include in the log event
+    char* submitEventUserNotes;
+
+ private:
+    /// For Condor v8, a host string in the form: "<128.105.165.12:32779>".
+    char *submitHost;
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a Factory Remove Log Event object.  Below is an example
+    Factory Remove Log entry from Condor v8. <p>
+
+<PRE>
+000 (172.000.000) 10/20 16:56:54 Factory removed
+...
+</PRE>
+*/
+class FactoryRemoveEvent : public ULogEvent
+{
+  public:
+    ///
+    FactoryRemoveEvent(void);
+    ///
+    ~FactoryRemoveEvent(void);
+
+/** Read the body of the next Submit event.
+    @param file the non-NULL readable log file
+    @return 0 for failure, 1 for success
+*/
+virtual int readEvent (FILE *);
+
+/** Format the body of this event.
+    @param out string to which the formatted text should be appended
+    @return false for failure, true for success
+*/
+virtual bool formatBody( std::string &out );
+
+/** Return a ClassAd representation of this SubmitEvent.
+    @return NULL for failure, the ClassAd pointer otherwise
+*/
+virtual ClassAd* toClassAd(void);
+
+/** Initialize from this ClassAd.
+    @param a pointer to the ClassAd to initialize from
+*/
+virtual void initFromClassAd(ClassAd* ad);
 
 };
 

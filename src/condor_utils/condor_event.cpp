@@ -83,7 +83,9 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_JOB_STAGE_IN",			// Job staging in input files
 	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
 	"ULOG_ATTRIBUTE_UPDATE",			// Job attribute updated
-	"ULOG_PRESKIP"					// PRE_SKIP event for DAGMan
+	"ULOG_PRESKIP",					// PRE_SKIP event for DAGMan
+	"ULOG_FACTORY_SUBMIT",			// Factory submitted
+	"ULOG_FACTORY_REMOVE" 			// Factory removed
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -210,6 +212,12 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_PRESKIP:
 		return new PreSkipEvent;
+
+	case ULOG_FACTORY_SUBMIT:
+		return new FactorySubmitEvent;
+
+	case ULOG_FACTORY_REMOVE:
+		return new FactoryRemoveEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
@@ -435,6 +443,12 @@ ULogEvent::toClassAd(void)
 		break;
 	case ULOG_ATTRIBUTE_UPDATE:
 		SetMyTypeName(*myad, "AttributeUpdateEvent");
+		break;
+	case ULOG_FACTORY_SUBMIT:
+		SetMyTypeName(*myad, "FactorySubmitEvent");
+		break;
+	case ULOG_FACTORY_REMOVE:
+		SetMyTypeName(*myad, "FactoryRemoveEvent");
 		break;
 	  default:
 		delete myad;
@@ -732,6 +746,7 @@ SubmitEvent::SubmitEvent(void)
 	submitHost = NULL;
 	submitEventLogNotes = NULL;
 	submitEventUserNotes = NULL;
+	submitEventWarnings = NULL;
 	eventNumber = ULOG_SUBMIT;
 }
 
@@ -745,6 +760,9 @@ SubmitEvent::~SubmitEvent(void)
     }
     if( submitEventUserNotes ) {
         delete[] submitEventUserNotes;
+    }
+    if( submitEventWarnings ) {
+        delete[] submitEventWarnings;
     }
 }
 
@@ -786,6 +804,12 @@ SubmitEvent::formatBody( std::string &out )
 			return false;
 		}
 	}
+	if( submitEventWarnings ) {
+		retval = formatstr_cat( out, "    WARNING: Committed job submission into the queue with the following warning: %.8113s\n", submitEventWarnings );
+		if( retval < 0 ) {
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -820,39 +844,44 @@ SubmitEvent::readEvent (FILE *file)
 
 	fpos_t filep;
 	fgetpos( file, &filep );
-
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
-
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
 
-		// some users of this library (dagman) depend on whitespace
-		// being stripped from the beginning of the log notes field
+	// some users of this library (dagman) depend on whitespace
+	// being stripped from the beginning of the log notes field
 	char const *strip_s = s;
 	while( *strip_s && isspace(*strip_s) ) {
 		strip_s++;
 	}
-
 	submitEventLogNotes = strnewp( strip_s );
+
 
 	// see if the next line contains an optional user event notes
 	// string, and, if not, rewind, because that means we slurped in
 	// the next event delimiter looking for it...
-
 	fgetpos( file, &filep );
-
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
-
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
-
 	submitEventUserNotes = strnewp( s );
+
+
+	fgetpos( file, &filep );
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+	submitEventWarnings = strnewp( s );
+
 	return 1;
 }
 
@@ -871,6 +900,9 @@ SubmitEvent::toClassAd(void)
 	}
 	if( submitEventUserNotes && submitEventUserNotes[0] ) {
 		if( !myad->InsertAttr("UserNotes",submitEventUserNotes) ) return NULL;
+	}
+	if( submitEventWarnings && submitEventWarnings[0] ) {
+		if( !myad->InsertAttr("Warnings",submitEventUserNotes) ) return NULL;
 	}
 
 	return myad;
@@ -904,6 +936,14 @@ SubmitEvent::initFromClassAd(ClassAd* ad)
 	if( mallocstr ) {
 		submitEventUserNotes = new char[strlen(mallocstr) + 1];
 		strcpy(submitEventUserNotes, mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+
+	ad->LookupString("Warnings", &mallocstr);
+	if( mallocstr ) {
+		submitEventWarnings = new char[strlen(mallocstr) + 1];
+		strcpy(submitEventWarnings, mallocstr);
 		free(mallocstr);
 		mallocstr = NULL;
 	}
@@ -5951,4 +5991,208 @@ void PreSkipEvent::setSkipNote(const char* s)
 	else {
 		skipEventLogNotes = NULL;
 	}
+}
+
+// ----- the FactorySubmitEvent class
+FactorySubmitEvent::FactorySubmitEvent(void)
+{
+	submitEventLogNotes = NULL;
+	submitEventUserNotes = NULL;
+	submitHost = NULL;
+	eventNumber = ULOG_FACTORY_SUBMIT;
+}
+
+FactorySubmitEvent::~FactorySubmitEvent(void)
+{
+	if( submitHost ) {
+		delete[] submitHost;
+	}
+	if( submitEventLogNotes ) {
+		delete[] submitEventLogNotes;
+	}
+	if( submitEventUserNotes ) {
+		delete[] submitEventUserNotes;
+	}
+}
+
+void
+FactorySubmitEvent::setSubmitHost(char const *addr)
+{
+	if( submitHost ) {
+		delete[] submitHost;
+	}
+	if( addr ) {
+		submitHost = strnewp(addr);
+		ASSERT( submitHost );
+	}
+	else {
+		submitHost = NULL;
+	}
+}
+
+bool
+FactorySubmitEvent::formatBody( std::string &out )
+{
+	int retval = formatstr_cat (out, "Factory submitted from host: %s\n", submitHost);
+	if (retval < 0)
+	{
+		return false;
+	}
+	if( submitEventLogNotes ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes );
+		if( retval < 0 ) {
+			return false;
+		}
+	}
+	if( submitEventUserNotes ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes );
+		if( retval < 0 ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+int
+FactorySubmitEvent::readEvent (FILE *file)
+{
+	char s[8192];
+	s[0] = '\0';
+	delete[] submitEventLogNotes;
+	submitEventLogNotes = NULL;
+	MyString line;
+	if( !line.readLine(file) ) {
+		return 0;
+	}
+	setSubmitHost(line.Value()); // allocate memory
+	if( sscanf( line.Value(), "Factory submitted from host: %s\n", submitHost ) != 1 ) {
+		return 0;
+	}
+
+	// check if event ended without specifying submit host.
+	// in this case, the submit host would be the event delimiter
+	if ( strncmp(submitHost,"...",3)==0 ) {
+		submitHost[0] = '\0';
+		// Backup to leave event delimiter unread go past \n too
+		fseek( file, -4, SEEK_CUR );
+		return 1;
+	}
+
+	// see if the next line contains an optional event notes string,
+	// and, if not, rewind, because that means we slurped in the next
+	// event delimiter looking for it...
+
+	fpos_t filep;
+	fgetpos( file, &filep );
+
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+	
+		// some users of this library (dagman) depend on whitespace
+		// being stripped from the beginning of the log notes field
+	char const *strip_s = s;
+	while( *strip_s && isspace(*strip_s) ) {
+		strip_s++;
+	}
+
+	submitEventLogNotes = strnewp( strip_s );
+
+	// see if the next line contains an optional user event notes
+	// string, and, if not, rewind, because that means we slurped in
+	// the next event delimiter looking for it...
+
+	fgetpos( file, &filep );
+
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+	submitEventUserNotes = strnewp( s );
+
+	return 1;
+}
+
+ClassAd*
+FactorySubmitEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if( submitHost && submitHost[0] ) {
+		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
+	}
+
+	return myad;
+}
+
+
+void
+FactorySubmitEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+	char* mallocstr = NULL;
+	ad->LookupString("SubmitHost", &mallocstr);
+	if( mallocstr ) {
+		setSubmitHost(mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+}
+
+// ----- the FactoryRemoveEvent class
+FactoryRemoveEvent::FactoryRemoveEvent(void)
+{
+	eventNumber = ULOG_FACTORY_REMOVE;
+}
+
+FactoryRemoveEvent::~FactoryRemoveEvent(void)
+{
+}
+
+bool
+FactoryRemoveEvent::formatBody( std::string &out )
+{
+	int retval = formatstr_cat (out, "Factory removed\n");
+	if (retval < 0)
+	{
+		return false;
+	}
+	return true;
+}
+
+int
+FactoryRemoveEvent::readEvent (FILE *file)
+{
+	if( !file ) {
+		return 0;
+	}
+	return 1;
+}
+
+ClassAd*
+FactoryRemoveEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	return myad;
+}
+
+
+void
+FactoryRemoveEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
 }

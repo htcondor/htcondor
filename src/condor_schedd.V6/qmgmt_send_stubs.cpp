@@ -480,16 +480,21 @@ RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 	}
 	neg_on_error( qmgmt_sock->end_of_message() );
 
+
+	ClassAd reply;
 	qmgmt_sock->decode();
 	neg_on_error( qmgmt_sock->code(rval) );
+	const CondorVersionInfo *vers = qmgmt_sock->get_peer_version();
+	bool has_classad = vers && vers->built_since_version(8, 3, 4);
+	bool always_has_classad = vers && vers->built_since_version(8, 7, 4);
 	if( rval < 0 ) {
 		neg_on_error( qmgmt_sock->code(terrno) );
-		const CondorVersionInfo *vers = qmgmt_sock->get_peer_version();
-		if (vers && vers->built_since_version(8, 3, 4))
-		{
-			ClassAd reply;
-			neg_on_error( getClassAd( qmgmt_sock, reply ) );
-
+	}
+	if( (rval < 0 && has_classad) || always_has_classad ) {
+		neg_on_error( getClassAd( qmgmt_sock, reply ) );
+	}
+	if( rval < 0 ) {
+		if( has_classad ) {
 			std::string errmsg;
 			if( errstack && reply.LookupString( "ErrorReason", errmsg ) ) {
 				int errCode = terrno;
@@ -500,6 +505,11 @@ RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
+	} else if( always_has_classad ) {
+		std::string warningReason;
+		if( errstack && reply.LookupString( "WarningReason", warningReason ) ) {
+			errstack->push( "SCHEDD", 0, warningReason.c_str() );
+		}
 	}
 	neg_on_error( qmgmt_sock->end_of_message() );
 

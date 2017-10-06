@@ -119,10 +119,12 @@ Job::Job( const char* jobName,
 	abort_dag_val = -1; // so Coverity is happy
 	have_abort_dag_return_val = false;
 	abort_dag_return_val = -1; // so Coverity is happy
+	is_factory = false;
 	_visited = false;
 	_dfsOrder = -1; // so Coverity is happy
 
 	_queuedNodeJobProcs = 0;
+	_numSubmittedProcs = 0;
 
 	_explicitPriority = 0;
 	_effectivePriority = _explicitPriority;

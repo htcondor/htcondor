@@ -38,12 +38,6 @@ MyString::MyString()
 	init();
     return;
 }
-  
-MyString::MyString(int i) 
-{
-	init();
-	*this += i;
-};
 
 MyString::MyString(const char* S) 
 {
@@ -344,71 +338,6 @@ MyString operator+(const MyString& S1, const MyString& S2)
 
 // the buffers below are all sufficiently large that this is no danger of non-null termination.
 MSC_DISABLE_WARNING(6053) // call to snprintf might not null terminate string.
-
-MyString& 
-MyString::operator+=( int i )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%d", i );
-    int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-    return *this;
-}
-
-
-MyString& 
-MyString::operator+=( unsigned int ui )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%u", ui );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString& 
-MyString::operator+=( long l )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%ld", l );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString&
-MyString::operator+=( long long l )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%lld", l );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString& 
-MyString::operator+=( double d )
-{
-	const int bufLen = 128;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%f", d );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
 
 // ----------------------------------------
 //           Serialization helpers
@@ -880,17 +809,20 @@ MyString::trim_quotes(const char * quote_chars)
 }
 
 void
-MyString::compressSpaces( void )
+MyString::RemoveAllWhitespace( void )
 {
-	if( Len == 0 ) {
-		return;
-	}
-	for ( int i = 0, j = 0; i <= Length(); ++i, ++j ) {
-		if ( isspace ( Data[i] ) ) {
-			i++;
+	int i;
+	int j;
+	for ( i = 0, j = 0; i < Length(); i++ ) {
+		if ( !isspace( Data[i] ) ) {
+			if ( i != j ) {
+				Data[j] = Data[i];
+			}
+			j++;
 		}
-		setAt ( j, Data[i] );
 	}
+	Data[j] = '\0';
+	Len = j;
 }
 
 // if len is 10, this means 10 random ascii characters from the set.
