@@ -4261,7 +4261,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 }
 
 bool
-Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync )
+Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning )
 {
 	std::string submitUserNotes, submitEventNotes;
 
@@ -4286,6 +4286,9 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync )
 	}
 	if ( job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
 		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
+	}
+	if ( warning != NULL ) {
+		event.submitEventWarnings = strnewp( warning );
 	}
 
 	ULog->setEnableFsync(do_fsync);

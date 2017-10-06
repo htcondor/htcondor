@@ -4853,7 +4853,11 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						scheduler.WriteSubmitToUserLog( procad, doFsync );
+						const char * warning = NULL;
+						if(! errorStack->empty()) {
+							warning = errorStack->message();
+						}
+						scheduler.WriteSubmitToUserLog( procad, doFsync, warning );
 					}
 				}
 				
