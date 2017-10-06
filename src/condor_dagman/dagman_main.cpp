@@ -1566,6 +1566,11 @@ void condor_event_timer () {
 	
 	static double eventTimerStartTime = 0;
 	static double eventTimerEndTime = 0;
+	
+	double logProcessCycleStartTime;
+	double logProcessCycleEndTime;
+	double submitCycleStartTime;
+	double submitCycleEndTime;
 
 	// Gather some statistics
 	eventTimerStartTime = dagman._utcTime.getTimeDouble();
@@ -1578,7 +1583,10 @@ void condor_event_timer () {
 
 	int justSubmitted;
 	debug_printf( DEBUG_DEBUG_1, "Starting submit cycle\n" );
+	submitCycleStartTime = dagman._utcTime.getTimeDouble();
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
+	submitCycleEndTime = dagman._utcTime.getTimeDouble();
+	dagman._dagmanStats.SubmitCycleTime.Add(submitCycleEndTime - submitCycleStartTime);
 	debug_printf( DEBUG_DEBUG_1, "Finished submit cycle\n" );
 	if( justSubmitted ) {
 			// Note: it would be nice to also have the proc submit
@@ -1589,6 +1597,7 @@ void condor_event_timer () {
 
 	// If the log has grown
 	if( dagman.dag->DetectCondorLogGrowth() ) {
+		logProcessCycleStartTime = dagman._utcTime.getTimeDouble();
 		if( dagman.dag->ProcessLogEvents() == false ) {
 			debug_printf( DEBUG_NORMAL,
 						"ProcessLogEvents() returned false\n" );
@@ -1596,6 +1605,8 @@ void condor_event_timer () {
 			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return;
 		}
+		logProcessCycleEndTime = dagman._utcTime.getTimeDouble();
+		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
 	}
 
     // print status if anything's changed (or we're in a high debug level)

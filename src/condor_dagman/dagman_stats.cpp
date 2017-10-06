@@ -27,8 +27,10 @@ DagmanStats::DagmanStats() {
 DagmanStats::~DagmanStats() {}
 
 void DagmanStats::Init() {
-    Pool.AddProbe("SleepCycleTime", &SleepCycleTime, "SleepCycleTime", IS_CLS_PROBE);
     Pool.AddProbe("EventCycleTime", &EventCycleTime, "EventCycleTime", IS_CLS_PROBE);
+    Pool.AddProbe("LogProcessCycleTime", &LogProcessCycleTime, "LogProcessCycleTime", IS_CLS_PROBE);
+    Pool.AddProbe("SleepCycleTime", &SleepCycleTime, "SleepCycleTime", IS_CLS_PROBE);
+    Pool.AddProbe("SubmitCycleTime", &SubmitCycleTime, "SubmitCycleTime", IS_CLS_PROBE);
 }
 
 void DagmanStats::Publish(ClassAd &ad) const {

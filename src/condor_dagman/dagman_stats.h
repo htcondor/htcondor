@@ -33,8 +33,10 @@
 		DagmanStats();
 		~DagmanStats();
 		
-		stats_entry_probe<double> SleepCycleTime;
 		stats_entry_probe<double> EventCycleTime;
+		stats_entry_probe<double> LogProcessCycleTime;
+		stats_entry_probe<double> SleepCycleTime;
+		stats_entry_probe<double> SubmitCycleTime;
 
 		StatisticsPool Pool;
 
