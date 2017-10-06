@@ -510,7 +510,7 @@ JobMaterializeTimerCallback()
 					dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has running job factory, invoking it.\n", cluster_id);
 
 					int proc_limit = INT_MAX;
-					if ( ! cad->LookupInteger(ATTR_JOB_MATERIALIZE_LIMIT, proc_limit)) {
+					if ( ! cad->LookupInteger(ATTR_JOB_MATERIALIZE_LIMIT, proc_limit) || proc_limit <= 0) {
 						proc_limit = INT_MAX;
 					}
 					int effective_limit = MIN(proc_limit, system_limit);
@@ -1852,7 +1852,7 @@ int MaterializeJobs(JobQueueCluster * clusterad)
 		return 0;
 
 	int proc_limit = INT_MAX;
-	if ( ! clusterad->LookupInteger(ATTR_JOB_MATERIALIZE_LIMIT, proc_limit)) {
+	if ( ! clusterad->LookupInteger(ATTR_JOB_MATERIALIZE_LIMIT, proc_limit) || proc_limit <= 0) {
 		proc_limit = INT_MAX;
 	}
 	int system_limit = MIN(scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission());
