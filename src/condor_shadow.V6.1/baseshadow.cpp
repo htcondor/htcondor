@@ -135,20 +135,12 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 		// construct the core file name we'd get if we had one.
 	MyString tmp_name = iwd;
-	tmp_name += DIR_DELIM_CHAR;
-	tmp_name += "core.";
-	tmp_name += cluster;
-	tmp_name += '.';
-	tmp_name += proc;
+	formatstr_cat( tmp_name, "%ccore.%d.%d", DIR_DELIM_CHAR, cluster, proc );
 	core_file_name = strdup( tmp_name.Value() );
 
         // put the shadow's sinful string into the jobAd.  Helpful for
         // the mpi shadow, at least...and a good idea in general.
-	MyString tmp_addr = ATTR_MY_ADDRESS;
-	tmp_addr += "=\"";
-	tmp_addr += daemonCore->InfoCommandSinfulString();
-	tmp_addr += '"';
-    if ( !jobAd->Insert( tmp_addr.Value() )) {
+    if ( !jobAd->Assign( ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString() )) {
         EXCEPT( "Failed to insert %s!", ATTR_MY_ADDRESS );
     }
 
@@ -500,14 +492,7 @@ void BaseShadow::removeJobPre( const char* reason )
 	cleanUp( jobWantsGracefulRemoval() );
 
 	// Put the reason in our job ad.
-	int size = strlen( reason ) + strlen( ATTR_REMOVE_REASON ) + 4;
-	char* buf = (char*)malloc( size * sizeof(char) );
-	if( ! buf ) {
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( buf, "%s=\"%s\"", ATTR_REMOVE_REASON, reason );
-	jobAd->Insert( buf );
-	free( buf );
+	jobAd->Assign( ATTR_REMOVE_REASON, reason );
 
 	emailRemoveEvent( reason );
 
@@ -564,7 +549,6 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 {
 	int reason;
 	bool signaled;
-	MyString str;
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In terminateJob() w/ NULL JobAd!" );
@@ -573,8 +557,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	/* The first thing we do is record that we are in a termination pending
 		state. */
 	if (kind == US_NORMAL) {
-		str.formatstr("%s = TRUE", ATTR_TERMINATION_PENDING);
-		jobAd->Insert(str.Value());
+		jobAd->Assign( ATTR_TERMINATION_PENDING, true );
 	}
 
 	if (kind == US_TERMINATE_PENDING) {
@@ -606,8 +589,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 		if (exited_by_signal == TRUE) {
 			reason = JOB_COREDUMPED;
-			str.formatstr("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, core_file_name);
-			jobAd->Insert(str.Value());
+			jobAd->Assign( ATTR_JOB_CORE_FILENAME, core_file_name );
 		} else {
 			reason = JOB_EXITED;
 		}
@@ -637,8 +619,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	/* also store the corefilename into the jobad so we can recover this 
 		during a termination pending scenario. */
 	if( reason == JOB_COREDUMPED ) {
-		str.formatstr("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, getCoreName());
-		jobAd->Insert(str.Value());
+		jobAd->Assign( ATTR_JOB_CORE_FILENAME, getCoreName() );
 	}
 
     // Update final Job committed time
@@ -744,9 +725,7 @@ BaseShadow::evictJob( int reason )
 	logEvictEvent( reason );
 
 		// record the time we were vacated into the job ad 
-	char buf[64];
-	sprintf( buf, "%s = %d", ATTR_LAST_VACATE_TIME, (int)time(0) ); 
-	jobAd->Insert( buf );
+	jobAd->Assign( ATTR_LAST_VACATE_TIME, (int)time(0) );
 
 		// update the job ad in the queue with some important final
 		// attributes so we know what happened to the job when using
@@ -775,14 +754,7 @@ BaseShadow::requeueJob( const char* reason )
 	cleanUp();
 
 		// Put the reason in our job ad.
-	int size = strlen( reason ) + strlen( ATTR_REQUEUE_REASON ) + 4;
-	char* buf = (char*)malloc( size * sizeof(char) );
-	if( ! buf ) {
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( buf, "%s=\"%s\"", ATTR_REQUEUE_REASON, reason );
-	jobAd->Insert( buf );
-	free( buf );
+	jobAd->Assign( ATTR_REQUEUE_REASON, reason );
 
 		// write stuff to user log:
 	logRequeueEvent( reason );
@@ -1437,26 +1409,13 @@ BaseShadow::startQueueUpdateTimer( void )
 void
 BaseShadow::publishShadowAttrs( ClassAd* ad )
 {
-	MyString tmp;
-	tmp = ATTR_SHADOW_IP_ADDR;
-	tmp += "=\"";
-	tmp += daemonCore->InfoCommandSinfulString();
-    tmp += '"';
-	ad->Insert( tmp.Value() );
+	ad->Assign( ATTR_SHADOW_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 
-	tmp = ATTR_SHADOW_VERSION;
-	tmp += "=\"";
-	tmp += CondorVersion();
-    tmp += '"';
-	ad->Insert( tmp.Value() );
+	ad->Assign( ATTR_SHADOW_VERSION, CondorVersion() );
 
 	char* my_uid_domain = param( "UID_DOMAIN" );
 	if( my_uid_domain ) {
-		tmp = ATTR_UID_DOMAIN;
-		tmp += "=\"";
-		tmp += my_uid_domain;
-		tmp += '"';
-		ad->Insert( tmp.Value() );
+		ad->Assign( ATTR_UID_DOMAIN, my_uid_domain );
 		free( my_uid_domain );
 	}
 }

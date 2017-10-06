@@ -649,12 +649,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	ClassAd reply;
 	publishStarterInfo( &reply );
 
-	MyString line;
-	line = ATTR_RESULT;
-	line += "=\"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 
 	if( ! sendCAReply(s, getCommandString(CA_RECONNECT_JOB), &reply) ) {
 		dprintf( D_ALWAYS, "Failed to reply to request\n" );
@@ -943,71 +938,34 @@ JICShadow::registerStarterInfo( void )
 void
 JICShadow::publishStarterInfo( ClassAd* ad )
 {
-	char *tmp = NULL;
 	char* tmp_val = NULL;
-	int size;
 
-	size = strlen(uid_domain) + strlen(ATTR_UID_DOMAIN) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=\"%s\"", ATTR_UID_DOMAIN, uid_domain );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_UID_DOMAIN, uid_domain );
 
-	size = strlen(fs_domain) + strlen(ATTR_FILE_SYSTEM_DOMAIN) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, fs_domain ); 
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_FILE_SYSTEM_DOMAIN, fs_domain );
 
 	MyString slotName = Starter->getMySlotName();
-	MyString line = ATTR_NAME;
-	line += "=\"";
-	line += slotName;
-	line += '@';
-	
-	line += get_local_fqdn();
-	line += '"';
-	ad->Insert( line.Value() );
+	slotName += '@';
+	slotName += get_local_fqdn();
+	ad->Assign( ATTR_NAME, slotName );
 
 	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 
 	tmp_val = param( "ARCH" );
-	size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=\"%s\"", ATTR_ARCH, tmp_val );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_ARCH, tmp_val );
 	free( tmp_val );
 
 	tmp_val = param( "OPSYS" );
-	size = strlen(tmp_val) + strlen(ATTR_OPSYS) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=\"%s\"", ATTR_OPSYS, tmp_val );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_OPSYS, tmp_val );
 	free( tmp_val );
 
 	tmp_val = param( "CKPT_SERVER_HOST" );
 	if( tmp_val ) {
-		size = strlen(tmp_val) + strlen(ATTR_CKPT_SERVER) + 5; 
-		tmp = (char*) malloc( size * sizeof(char) );
-		ASSERT( tmp != NULL );
-		sprintf( tmp, "%s=\"%s\"", ATTR_CKPT_SERVER, tmp_val ); 
-		ad->Insert( tmp );
-		free( tmp );
+		ad->Assign( ATTR_CKPT_SERVER, tmp_val );
 		free( tmp_val );
 	}
 
-	size = strlen(ATTR_HAS_RECONNECT) + 6;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=TRUE", ATTR_HAS_RECONNECT );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_HAS_RECONNECT, true );
 
 		// Finally, publish all the DC-managed attributes.
 	daemonCore->publish(ad);
@@ -1509,11 +1467,7 @@ JICShadow::initWithFileTransfer()
 	wants_file_transfer = true;
 	change_iwd = true;
 	job_iwd = strdup( Starter->GetWorkingDir() );
-	MyString line = ATTR_JOB_IWD;
-	line += " = \"";
-	line += job_iwd;
-	line+= '"';
-	job_ad->Insert( line.Value() );
+	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
 
 		// now that we've got the iwd we're using and all our
 		// transfer-related flags set, we can finally initialize the
@@ -2042,7 +1996,6 @@ bool
 JICShadow::publishJobExitAd( ClassAd* ad )
 {
 	filesize_t execsz = 0;
-	char buf[200];
 
 	// if there is a filetrans object, then let's send the current
 	// size of the starter execute directory back to the shadow.  this
@@ -2053,8 +2006,7 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		// owns the directory and it may not be world-readable
 		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
 		execsz = starter_dir.GetDirectorySize();
-		sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
-		ad->Insert( buf );
+		ad->Assign( ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) );
 
 	}
 	MyString spooled_files;

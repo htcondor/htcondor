@@ -710,8 +710,13 @@ int DaemonCore::FileDescriptorSafetyLimit()
 			// Our max is the maxiumum file descriptor that our Selector
 			// class says it can handle.
 		int file_descriptor_max = Selector::fd_select_size();
+#ifdef WIN32
+		// Set the danger level at 1 less than the max (Windows doesn't put sockets into the same table as files)
+		file_descriptor_safety_limit = file_descriptor_max - 1;
+#else
 		// Set the danger level at 80% of the max
 		file_descriptor_safety_limit = file_descriptor_max - file_descriptor_max/5;
+#endif
 		if( file_descriptor_safety_limit < MIN_FILE_DESCRIPTOR_SAFETY_LIMIT ) {
 				// There is no point trying to live within this limit,
 				// because it is too small.  It is better to try and fail
@@ -6371,7 +6376,7 @@ void CreateProcessForkit::exec() {
 				// Now, if we didn't find it in the inherit list, close it
 			if ( ( ! found ) && ( close ( q ) != -1 ) ) {
 				closed_fds[num_closed++] = q;
-				msg += q;
+				msg += IntToStr( q );
 				msg += ' ';
 			}
 		}
@@ -6520,7 +6525,7 @@ void CreateProcessForkit::exec() {
 			// exec().  Otherwise, it would be a leak.
 		MyString msg = "Printing fds to inherit: ";
 		for ( int a=0 ; a<m_numInheritFds ; a++ ) {
-			msg += m_inheritFds[a];
+			msg += IntToStr( m_inheritFds[a] );
 			msg += ' ';
 		}
 		dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
@@ -8988,7 +8993,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 				desired_size = param_integer("COLLECTOR_SOCKET_BUFSIZE",
 											 10000 * 1024, 1024);
 				int final_udp = it->ssock()->set_os_buffers(desired_size);
-				msg += (int)(final_udp / 1024);
+				msg += IntToStr(final_udp / 1024);
 				msg += "k (UDP), ";
 			}
 
@@ -8999,7 +9004,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 											 128 * 1024, 1024 );
 				int final_tcp = it->rsock()->set_os_buffers( desired_size, true );
 
-				msg += (int)(final_tcp / 1024);
+				msg += IntToStr(final_tcp / 1024);
 				msg += "k (TCP)";
 			}
 			if( !msg.IsEmpty() ) {

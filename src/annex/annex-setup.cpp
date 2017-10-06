@@ -111,6 +111,7 @@ check_setup() {
 	checkOneParameter( "ANNEX_DEFAULT_SFR_LEASE_FUNCTION_ARN", rv );
 	checkOneParameter( "ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN", rv );
 
+	checkOneParameter( "COLLECTOR_HOST", rv );
 	checkOneParameter( "SEC_PASSWORD_FILE", rv );
 
 	StatWrapper sw( secretKeyFile.c_str() );
@@ -133,6 +134,34 @@ check_setup() {
 		} else {
 			close( fd );
 		}
+
+		// Is the PASSWORD method available?
+		fprintf( stderr, "Checking security configuration... " );
+		Daemon * daemon = new Daemon( DT_COLLECTOR, NULL );
+		if(! daemon->locate(Daemon::LOCATE_FOR_LOOKUP)) {
+			fprintf( stderr, "Unable to locate collector.  Make sure COLLECTOR_HOST is set correctly.\n" );
+			delete daemon;
+			return 1;
+		} else {
+			CondorError errorStack;
+			ReliSock * sock = (ReliSock *) daemon->makeConnectedSocket(
+				Stream::reli_sock, 0, 0, & errorStack );
+			if( sock == NULL ) {
+				fprintf( stderr, "Failed to connect to to collector at '%s'.  Make sure COLLECTOR_HOST is set correctly.  If it is, ask your administrator about firewalls.", daemon->addr() );
+				fprintf( stderr, "  Because firewalls are machine-specific, we will continue to check your set-up.  However, if your instances fail to report to your pool, you may want to address this problem and try again.\n" );
+				fprintf( stderr, "\n" );
+			} else {
+				if(! daemon->startSubCommand( DC_SEC_QUERY, UPDATE_STARTD_AD, sock, 0, & errorStack )) {
+					fprintf( stderr, "We were not authorized to advertise to the collector.  Run 'condor_ping -verbose -type COLLECTOR UPDATE_STARTD_AD' for more information." );
+					fprintf( stderr, "  Although it is possible to configure PASSWORD -based security in a host-specific way, it would be unusual to do so, so we recommend you investigate this problem.  We will continue to check your set-up.\n" );
+					fprintf( stderr, "\n" );
+				} else {
+					fprintf( stderr, "OK.\n" );
+				}
+				delete sock;
+			}
+		}
+		delete daemon;
 
 		return check_account_setup( accessKeyFile, secretKeyFile, cfURL, ec2URL );
 	}

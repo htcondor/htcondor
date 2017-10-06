@@ -41,7 +41,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a crash in \Condor{transferer} when a connection can't be
+established with its peer.
+\Ticket{6412}
+
+\item Fixed support for HTTPS transfers in the \MacroNI{curl\_plugin}
+utility.
+\Ticket{6253}
+
+\item Fixed problems in python bindings when using the Submit class
+to submit jobs specifying environment variables or file redirection.
+\Ticket{6420}
 
 \end{itemize}
 

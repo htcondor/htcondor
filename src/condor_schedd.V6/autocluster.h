@@ -102,7 +102,7 @@ public:
 		valid.   In practice in the schedd, if config() returns True, the
 		ATTR_AUTO_CLUSTER_ID attribute should be cleared from all job ads.
 	*/
-	bool config(const char* significant_target_attrs = NULL);
+	bool config(const classad::References &basic_attrs, const char* significant_target_attrs = NULL);
 	
 	/** Given a job classad, return the value of the attribute
 		ATTR_AUTO_CLUSTER_ID, or if this attribute is not present,

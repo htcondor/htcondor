@@ -120,14 +120,14 @@ CheckEvents::CheckJobSubmit(const MyString &idStr, const JobInfo *info,
 		MyString &errorMsg, check_event_result_t &result)
 {
 	if ( info->submitCount != 1 ) {
-		errorMsg = idStr + " submitted, submit count != 1 (" +
-				MyString(info->submitCount) + ")";
+		formatstr( errorMsg, "%s submitted, submit count != 1 (%d)",
+		           idStr.Value(), info->submitCount );
 		result = AllowDuplicates() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 
 	if ( info->TotalEndCount() != 0 ) {
-		errorMsg = idStr + " submitted, total end count != 0 (" +
-				MyString(info->TotalEndCount()) + ")";
+		formatstr( errorMsg, "%s submitted, total end count != 0 (%d)",
+		           idStr.Value(), info->TotalEndCount() );
 		result = AllowExecSubmit() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 }
@@ -138,15 +138,15 @@ CheckEvents::CheckJobExecute(const MyString &idStr, const JobInfo *info,
 		MyString &errorMsg, check_event_result_t &result)
 {
 	if ( info->submitCount < 1 ) {
-		errorMsg = idStr + " executing, submit count < 1 (" +
-				MyString(info->submitCount) + ")";
+		formatstr( errorMsg, "%s executing, submit count < 1 (%d)",
+		           idStr.Value(), info->submitCount );
 		result = (AllowExecSubmit() || AllowGarbage()) ?
 				EVENT_WARNING : EVENT_ERROR;
 	}
 
 	if ( info->TotalEndCount() != 0 ) {
-		errorMsg = idStr + " executing, total end count != 0 (" +
-				MyString(info->TotalEndCount()) + ")";
+		formatstr( errorMsg, "%s executing, total end count != 0 (%d)",
+		           idStr.Value(), info->TotalEndCount() );
 		result = AllowExtraRuns() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 }
@@ -157,16 +157,16 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 		MyString &errorMsg, check_event_result_t &result)
 {
 	if ( info->submitCount < 1 ) {
-		errorMsg = idStr + " ended, submit count < 1 (" +
-				MyString(info->submitCount) + ")";
+		formatstr( errorMsg, "%s ended, submit count < 1 (%d)",
+		           idStr.Value(), info->submitCount );
 		result = (AllowExecSubmit() ||
 				(AllowGarbage() && (info->submitCount <= 1))) ?
 				EVENT_WARNING : EVENT_ERROR;
 	}
 
 	if ( info->TotalEndCount() != 1 ) {
-		errorMsg = idStr + " ended, total end "
-				"count != 1 (" + MyString(info->TotalEndCount()) + ")";
+		formatstr( errorMsg, "%s ended, total end count != 1 (%d)",
+		           idStr.Value(), info->TotalEndCount() );
 		if ( AllowExtraAborts() &&
 				(info->abortCount == 1) && (info->termCount == 1) ) {
 			result = EVENT_BAD_EVENT;
@@ -184,8 +184,8 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 	}
 
 	if ( info->postScriptCount != 0 ) {
-		errorMsg = idStr + " ended, post script "
-				"count != 0 (" + MyString(info->postScriptCount) + ")";
+		formatstr( errorMsg, "%s ended, post script count != 0 (%d)",
+		           idStr.Value(), info->postScriptCount );
 		result = AllowDuplicates() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 }
@@ -204,22 +204,22 @@ CheckEvents::CheckPostTerm(const MyString &idStr,
 	}
 
 	if ( info->submitCount < 1 ) {
-		errorMsg = idStr + " post script ended, submit count < 1 (" +
-				MyString(info->submitCount) + ")";
+		formatstr( errorMsg, "%s post script ended, submit count < 1 (%d)",
+		           idStr.Value(), info->submitCount );
 		result = (AllowDuplicates() ||
 				(AllowGarbage() && (info->submitCount <= 1))) ?
 				EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 
 	if ( info->TotalEndCount() < 1 ) {
-		errorMsg = idStr + " post script ended, total end "
-				"count < 1 (" + MyString(info->TotalEndCount()) + ")";
+		formatstr( errorMsg, "%s post script ended, total end count < 1 (%d)",
+				   idStr.Value(), info->TotalEndCount() );
 		result = AllowAlmostAll() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 
 	if ( info->postScriptCount > 1 ) {
-		errorMsg = idStr + " post script ended, post script "
-				"count > 1 (" + MyString(info->postScriptCount) + ")";
+		formatstr( errorMsg, "%s post script ended, post script count > 1 (%d)",
+		           idStr.Value(), info->postScriptCount );
 		result = (AllowDuplicates() || AllowGarbage()) ?
 				EVENT_BAD_EVENT : EVENT_ERROR;
 	}
@@ -244,16 +244,16 @@ CheckEvents::CheckJobFinal(const MyString &idStr,
 	}
 
 	if ( info->submitCount != 1 ) {
-		errorMsg = idStr + " ended, submit count != 1 (" +
-				MyString(info->submitCount) + ")";
+		formatstr( errorMsg, "%s ended, submit count != 1 (%d)",
+		           idStr.Value(), info->submitCount );
 		result = (AllowAlmostAll() ||
 				(AllowGarbage() && (info->submitCount <= 1))) ?
 				EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 
 	if ( info->TotalEndCount() != 1 ) {
-		errorMsg = idStr + " ended, total end "
-				"count != 1 (" + MyString(info->TotalEndCount()) + ")";
+		formatstr( errorMsg, "%s ended, total end count != 1 (%d)",
+		           idStr.Value(), info->TotalEndCount() );
 		if ( AllowExtraAborts() &&
 				(info->abortCount == 1) && (info->termCount == 1) ) {
 			result = EVENT_BAD_EVENT;
@@ -273,8 +273,8 @@ CheckEvents::CheckJobFinal(const MyString &idStr,
 	}
 
 	if ( info->postScriptCount > 1 ) {
-		errorMsg = idStr + " ended, post script "
-				"count > 1 (" + MyString(info->postScriptCount) + ")";
+		formatstr( errorMsg, "%s ended, post script count > 1 (%d)",
+		           idStr.Value(), info->postScriptCount );
 		result = (AllowDuplicates() || AllowGarbage()) ?
 				EVENT_BAD_EVENT : EVENT_ERROR;
 	}

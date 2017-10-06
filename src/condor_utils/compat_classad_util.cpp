@@ -394,6 +394,28 @@ static int GetAttrsAndScopes(classad::ExprTree * expr, classad::References * att
 	 return walk_attr_refs(expr, AccumAttrsAndScopes, &tmp);
 }
 
+int AccumAttrsOfScopes(void *pv, const std::string & attr, const std::string &scope, bool /*absolute*/)
+{
+	AttrsAndScopes & p = *(AttrsAndScopes *)pv;
+	if (p.scopes->find(scope) != p.scopes->end()) {
+		p.attrs->insert(attr);
+	}
+	return 1;
+}
+
+// add attribute references to attrs when they are of the given scope. for example when scope is "MY"
+// and the expression contains MY.Foo, the Foo is added to attrs.
+int GetAttrRefsOfScope(classad::ExprTree * expr, classad::References &attrs, const std::string &scope)
+{
+	 classad::References scopes;
+	 scopes.insert(scope);
+	 AttrsAndScopes tmp;
+	 tmp.attrs = &attrs;
+	 tmp.scopes = &scopes;
+	 return walk_attr_refs(expr, AccumAttrsOfScopes, &tmp);
+}
+
+
 // edit the given expr changing attribute references as the mapping indicates
 int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 {

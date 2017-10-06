@@ -1635,23 +1635,19 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 		// copy of the job ClassAd
 	int now = (int)time(NULL);
 	int total_suspensions = 0;
-	char tmp[256];
 
 	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
 	total_suspensions++;
-	sprintf( tmp, "%s = %d", ATTR_TOTAL_SUSPENSIONS, total_suspensions );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
 
-	sprintf( tmp, "%s = %d", ATTR_LAST_SUSPENSION_TIME, now );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_LAST_SUSPENSION_TIME, now );
 
 	// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
 	
 	// TSTCLAIR: In promotion to 1st class status we *must* 
 	// update the job in the queue
-	sprintf( tmp, "%s = %d", ATTR_JOB_STATUS , SUSPENDED );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_JOB_STATUS, SUSPENDED );
 	shadow->updateJobInQueue(U_STATUS);
 	
 	return rval;
@@ -1674,7 +1670,6 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 	int now = (int)time(NULL);
 	int cumulative_suspension_time = 0;
 	int last_suspension_time = 0;
-	char tmp[256];
 
 		// add in the time I spent suspended to a running total
 	jobAd->LookupInteger( ATTR_CUMULATIVE_SUSPENSION_TIME,
@@ -1692,21 +1687,17 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 		jobAd->Assign(ATTR_UNCOMMITTED_SUSPENSION_TIME, uncommitted_suspension_time);
 	}
 
-	sprintf( tmp, "%s = %d", ATTR_CUMULATIVE_SUSPENSION_TIME,
-			 cumulative_suspension_time );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, cumulative_suspension_time );
 
 		// set the current suspension time to zero, meaning not suspended
-	sprintf(tmp, "%s = 0", ATTR_LAST_SUSPENSION_TIME );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
 
 		// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
 
 	// TSTCLAIR: In promotion to 1st class status we *must* 
 	// update the job in the queue
-	sprintf( tmp, "%s = %d", ATTR_JOB_STATUS , RUNNING );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_JOB_STATUS, RUNNING );
 	shadow->updateJobInQueue(U_STATUS);
 
 	return rval;
@@ -1928,24 +1919,19 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 			   always done in the past, so it's no less accurate than
 			   an old shadow talking to the same starter...
 			*/
-		char tmp[64];
 		if( WIFSIGNALED(exit_status) ) {
 			exited_by_signal = true;
-			sprintf( tmp, "%s=TRUE", ATTR_ON_EXIT_BY_SIGNAL );
-			jobAd->Insert( tmp );
+			jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
 
 			exit_value = WTERMSIG( exit_status );
-			sprintf( tmp, "%s=%d", ATTR_ON_EXIT_SIGNAL, exit_value );
-			jobAd->Insert( tmp );
+			jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exit_value );
 
 		} else {
 			exited_by_signal = false;
-			sprintf( tmp, "%s=FALSE", ATTR_ON_EXIT_BY_SIGNAL );
-			jobAd->Insert( tmp );
+			jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 
 			exit_value = WEXITSTATUS( exit_status );
-			sprintf( tmp, "%s=%d", ATTR_ON_EXIT_CODE, exit_value );
-			jobAd->Insert( tmp );
+			jobAd->Assign( ATTR_ON_EXIT_CODE, exit_value );
 		}
 	}
 }
@@ -2023,13 +2009,7 @@ RemoteResource::beginExecution( void )
 void
 RemoteResource::hadContact( void )
 {
-		// Length: ATTR_LAST_JOB_LEASE_RENEWAL is 19, '=' is 1,
-		// MAX_INT is 10, and another 10 to spare should plenty... 
-	char contact_buf[40];
-	last_job_lease_renewal = time(0);
-	snprintf( contact_buf, 32, "%s=%d", ATTR_LAST_JOB_LEASE_RENEWAL,
-			  (int)last_job_lease_renewal );
-	jobAd->Insert( contact_buf );
+	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, (int)last_job_lease_renewal );
 }
 
 
@@ -2097,13 +2077,11 @@ RemoteResource::reconnect( void )
 		// each time we get here, see how much time remains...
 	int remaining = remainingLeaseDuration();
 	if( !remaining ) {
-	dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
+		dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
 			 ATTR_JOB_LEASE_DURATION );
-		MyString reason = "Job disconnected too long: ";
-		reason += ATTR_JOB_LEASE_DURATION;
-		reason += " (";
-		reason += lease_duration;
-		reason += " seconds) expired";
+		MyString reason;
+		formatstr( reason, "Job disconnected too long: %s (%d seconds) expired",
+		           ATTR_JOB_LEASE_DURATION, lease_duration );
 		shadow->reconnectFailed( reason.Value() );
 	}
 	dprintf( D_ALWAYS, "%s remaining: %d\n", ATTR_JOB_LEASE_DURATION,
@@ -2377,8 +2355,7 @@ RemoteResource::requestReconnect( void )
 	char* value = NULL;
 	jobAd->LookupString(ATTR_TRANSFER_KEY,&value);
 	if (value) {
-		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_KEY,value);
-		req.Insert(msg.Value());
+		req.Assign(ATTR_TRANSFER_KEY, value);
 		free(value);
 		value = NULL;
 	} else {
@@ -2387,8 +2364,7 @@ RemoteResource::requestReconnect( void )
 	}
 	jobAd->LookupString(ATTR_TRANSFER_SOCKET,&value);
 	if (value) {
-		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_SOCKET,value);
-		req.Insert(msg.Value());
+		req.Assign(ATTR_TRANSFER_SOCKET, value);
 		free(value);
 		value = NULL;
 	} else {

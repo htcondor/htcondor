@@ -75,6 +75,10 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
     int     found   = 0;
 
+	// Basic initialization
+	m_port = 0;
+    memset ( &m_broadcast, 0, sizeof (m_broadcast));
+
     /* make sure we are only capable of sending the WOL
     magic packet if all of the initialization succeds */
     m_can_wake = false;

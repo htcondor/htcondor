@@ -40,6 +40,7 @@ class DockerProc : public VanillaProc {
 		std::string containerName;
 		int updateTid;
 		uint64_t memUsage, netIn, netOut, userCpu, sysCpu;
+		bool waitForCreate;
 };
 
 #endif /* _CONDOR_DOCKER_PROC_H */

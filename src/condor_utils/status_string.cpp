@@ -26,9 +26,9 @@ statusString( int status, MyString& str )
 {
 	if( WIFSIGNALED(status) ) {
 		str += "died with signal ";
-		str += WTERMSIG(status);
+		str += IntToStr( WTERMSIG(status) );
 	} else {
 		str += "exited with status ";
-		str += WEXITSTATUS(status);
+		str += IntToStr( WEXITSTATUS(status) );
 	}
 }

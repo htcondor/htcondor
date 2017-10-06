@@ -357,7 +357,7 @@ Claim::publishCOD( ClassAd* cad )
 	line += '_';
 	line += ATTR_ENTERED_CURRENT_STATE;
 	line += '=';
-	line += (int)c_entered_state;
+	line += IntToStr( (int)c_entered_state );
 	cad->Insert( line.Value() );
 
 	if( c_client ) {
@@ -422,7 +422,7 @@ Claim::publishCOD( ClassAd* cad )
 			line += '_';
 			line += ATTR_JOB_START;
 			line += '=';
-			line += c_job_start; 
+			line += IntToStr( c_job_start );
 			cad->Insert( line.Value() );
 		}	
 	}
@@ -2314,12 +2314,7 @@ newIdString( char** id_str_ptr )
 
 	ASSERT( my_addr && !strchr(my_addr,'#') );
 
-	id += my_addr;
-	id += '#';
-	id += (int)startd_startup;
-	id += '#';
-	id += sequence_num;
-	id += "#";
+	formatstr( id, "%s#%d#%d#", my_addr, (int)startd_startup, sequence_num );
 
 		// keylen is 20 in order to avoid generating claim ids that
 		// overflow the 80 byte buffer in pre-7.1.3 negotiators

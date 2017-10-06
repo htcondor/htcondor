@@ -256,7 +256,7 @@ fillRequirements( ClassAd* req )
 		require += "TARGET.";
 		require += ATTR_SLOT_ID;
 		require += "==";
-		require += slot_id;
+		require += IntToStr( slot_id );
 		require += ")&&(";
 	}
 	else if (param_boolean("ALLOW_VM_CRUFT", false)) {
@@ -270,7 +270,7 @@ fillRequirements( ClassAd* req )
 			require += "TARGET.";
 			require += ATTR_VIRTUAL_MACHINE_ID;
 			require += "==";
-			require += vm_id;
+			require += IntToStr( vm_id );
 			require += ")&&(";
 		}
 	}
@@ -309,31 +309,17 @@ fillActivateAd( ClassAd* req )
 {
 	fillRequirements( req );
 
-	MyString line;
 	if( cluster_id >= 0 ) {
-		line = ATTR_CLUSTER_ID;
-		line += '=';
-		line += cluster_id;
-		req->Insert( line.Value() );
+		req->Assign( ATTR_CLUSTER_ID, cluster_id );
 	}
 	if( proc_id >= 0 ) {
-		line = ATTR_PROC_ID;
-		line += '=';
-		line += proc_id;
-		req->Insert( line.Value() );
+		req->Assign( ATTR_PROC_ID, proc_id );
 	}
 	if( job_keyword ) {
-		line = ATTR_JOB_KEYWORD;
-		line += "=\"";
-		line += job_keyword;
-		line += '"';
-		req->Insert( line.Value() );
+		req->Assign( ATTR_JOB_KEYWORD, job_keyword );
 	}
 	if( jobad_path ) {
-		line = ATTR_HAS_JOB_AD;
-		line += '=';
-		line += "TRUE";
-		req->Insert( line.Value() );
+		req->Assign( ATTR_HAS_JOB_AD, true );
 		dumpAdIntoRequest( req );
 	}
 }

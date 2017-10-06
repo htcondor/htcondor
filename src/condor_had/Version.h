@@ -99,6 +99,7 @@ public:
  	 *               to the specified arguments
  	 */
 	bool load( int& temporaryGid, int& temporaryLogicalClock ) const;
+	bool knowsNewTransferProtocol() const { return m_knowsNewTransferProtocol; };
 // End of inspectors
 // Comparison operators
 	/* Function    : isComparable
@@ -182,6 +183,7 @@ private:
 	// added support for conservative policy of accepting updates from primary
 	// HAD machines only
 	int					  m_isPrimary;
+	bool                  m_knowsNewTransferProtocol;
 };
 //bool operator == (const Version& , const Version& );
 

@@ -613,25 +613,36 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
+		const CondorVersionInfo *vers = syscall_sock->get_peer_version();
+		bool send_classad = vers && vers->built_since_version(8, 3, 4);
+		bool always_send_classad = vers && vers->built_since_version(8, 7, 4);
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
-			const CondorVersionInfo *vers = syscall_sock->get_peer_version();
-			if (vers && vers->built_since_version(8, 3, 4))
-			{
-				// Send a classad, for less backwards-incompatibility.
-				int code = 1;
-				const char * reason = "QMGMT rejected job submission.";
-				if( errstack.subsys() ) {
-					code = 2;
-					reason = errstack.message();
-				}
-
-				ClassAd reply;
-				reply.Assign( "ErrorCode", code );
-				reply.Assign( "ErrorReason", reason );
-				assert( putClassAd( syscall_sock, reply ) );
-			}
 		}
+		if( rval < 0 && send_classad ) {
+			// Send a classad, for less backwards-incompatibility.
+			int code = 1;
+			const char * reason = "QMGMT rejected job submission.";
+			if( errstack.subsys() ) {
+				code = 2;
+				reason = errstack.message();
+			}
+
+			ClassAd reply;
+			reply.Assign( "ErrorCode", code );
+			reply.Assign( "ErrorReason", reason );
+			assert( putClassAd( syscall_sock, reply ) );
+		} else if( always_send_classad ) {
+			const char * reason = NULL;
+			if( errstack.subsys() ) {
+				reason = errstack.message();
+			}
+
+			ClassAd reply;
+			reply.Assign( "WarningReason", reason );
+			assert( putClassAd( syscall_sock, reply ) );
+		}
+
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}

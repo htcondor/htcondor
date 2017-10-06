@@ -81,6 +81,7 @@
 #define ATTR_BYTES_RECVD  "BytesRecvd"
 #define ATTR_CAN_HIBERNATE  "CanHibernate"
 #define ATTR_CAPABILITY  "Capability"
+#define ATTR_CE_REQUIREMENTS  "CERequirements"
 #define ATTR_CKPT_SERVER  "CkptServer"
 #define ATTR_CLAIM_STARTD  "ClaimStartd"
 #define ATTR_COD_CLAIMS  "CODClaims"
@@ -565,6 +566,7 @@
 #define ATTR_REMOVE_REASON  "RemoveReason"
 #define ATTR_REQUEUE_REASON  "RequeueReason"
 #define ATTR_REQUIREMENTS  "Requirements"
+#define ATTR_RESOURCE_REQUEST_CONSTRAINT "_condor_RESOURCE_CONSTRAINT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"
 #define ATTR_RESOURCE_REQUEST_PROC "_condor_RESOURCE_PROC"

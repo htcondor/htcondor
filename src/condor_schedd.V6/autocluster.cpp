@@ -350,7 +350,8 @@ AutoCluster::~AutoCluster()
 {
 }
 
-bool AutoCluster::config(const char* significant_target_attrs)
+// configure or expand the significant attribute set.
+bool AutoCluster::config(const classad::References &basic_attrs, const char* significant_target_attrs)
 {
 	bool sig_attrs_changed = false;
 	char *new_sig_attrs =  param ("SIGNIFICANT_ATTRIBUTES");
@@ -377,17 +378,20 @@ bool AutoCluster::config(const char* significant_target_attrs)
 		}
 		sig_attrs_came_from_config_file = true;
 	} else if ( ! significant_target_attrs && significant_attrs) {
-		// in this case, we have an cached lifetime set of significant attributes, but have been called with NULL
-		// (this happens on reconfig). What we need to do here is check to see if one of the banned attrs
-		// is in the cache, and if so, arrange for the cache to be cleaned.
+		// in this case, we have an cached lifetime set of significant attributes
+		// but have been called with NULL (this happens on reconfig).
+		// we want to check of there have been any changes that require we clean the cache.
+
+		// check various things to see if the current set of significant attributes should be cleaned
+		bool cache_needs_cleaning = false;
+
+		// Check to see if one of the banned attrs is in the current set of significant attributes
 		char * rm_attrs = param("REMOVE_SIGNIFICANT_ATTRIBUTES");
 		if (rm_attrs) {
 			classad::References banned_attrs;
 			StringTokenIterator rt(rm_attrs);
 			while ((attr = rt.next_string())) { banned_attrs.insert(*attr); }
 			free(rm_attrs);
-
-			bool cache_needs_cleaning = false;
 
 			// determine if the current cached set of significant attrs contains a banned attr
 			// and if it does, set the cache_needs_cleaning flag
@@ -398,18 +402,31 @@ bool AutoCluster::config(const char* significant_target_attrs)
 					break;
 				}
 			}
+		}
 
-			// if we need to clean banned attrs out of the cached significant attributues
-			// we will do that by copying the cache to a temp variable and pretending that it is the input list
-			// Then we delete the cache and fall down into the code below that will adjust the input list
-			// and merge it into the (now empty) cache.
-			if (cache_needs_cleaning) {
-				auto_target_attrs = significant_attrs;
-				significant_target_attrs = auto_target_attrs.c_str();
-				// delete the cache
-				free(const_cast<char*>(significant_attrs));
-				significant_attrs = NULL;
+		// check to see if there are new basic attributes that should be added to the list.
+		if ( ! cache_needs_cleaning) {
+			classad::References cur_attrs;
+			StringTokenIterator st(significant_attrs);
+			while ((attr = st.next_string())) { cur_attrs.insert(*attr); }
+			for (classad::References::const_iterator it = basic_attrs.begin(); it != basic_attrs.end(); ++it) {
+				if (cur_attrs.find(*it) == cur_attrs.end()) {
+					cache_needs_cleaning = true;
+					break;
+				}
 			}
+		}
+
+		// if we need to add or remove attrs from the cached significant attributues
+		// we will do that by copying the cache to a temp variable and pretending that it is the input list
+		// Then we delete the cache and fall down into the code below that will adjust the input list
+		// and merge it into the (now empty) cache.
+		if (cache_needs_cleaning) {
+			auto_target_attrs = significant_attrs;
+			significant_target_attrs = auto_target_attrs.c_str();
+			// delete the cache
+			free(const_cast<char*>(significant_attrs));
+			significant_attrs = NULL;
 		}
 	}
 
@@ -421,13 +438,11 @@ bool AutoCluster::config(const char* significant_target_attrs)
 	if ( ! new_sig_attrs && significant_target_attrs) {
 		sig_attrs_came_from_config_file = false;
 
-		// there are some attribs that we always want, regardless of whether the caller specified them or not.
-		// so we check to see if they are in the list, and if not, we make our own list.
+		// init set of required attrs from the basic attrs.
 		classad::References required_attrs;
-		required_attrs.insert(ATTR_REQUIREMENTS);
-		required_attrs.insert(ATTR_RANK);
-		required_attrs.insert(ATTR_NICE_USER);
-		required_attrs.insert(ATTR_CONCURRENCY_LIMITS);
+		for (classad::References::const_iterator it = basic_attrs.begin(); it != basic_attrs.end(); ++it) {
+			required_attrs.insert(*it);
+		}
 
 		// If the configuration specifies a whitelist of attributes, add them to the required attrs list
 		std::string other_attrs;

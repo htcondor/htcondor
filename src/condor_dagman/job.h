@@ -447,6 +447,9 @@ public:
 		// Indicates whether abort_dag_return_val was set.
 	bool have_abort_dag_return_val;
 
+		// Indicates if this is a factory job or not
+	bool is_factory;
+
 	// somewhat kludgey, but this indicates to Dag::TerminateJob()
 	// whether Dag::_numJobsDone has been incremented for this node
 	// yet or not (since that method can now be called more than once
@@ -470,6 +473,9 @@ public:
 		// Count of the number of job procs currently in the batch system
 		// queue for this node.
 	int _queuedNodeJobProcs;
+
+		// Count of the number of overall procs submitted for this job
+	int _numSubmittedProcs;
 
 		// Node priority.  Higher number is better priority (submit first).
 		// Explicit priority is the priority actually set in the DAG

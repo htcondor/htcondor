@@ -29,7 +29,28 @@ enum AllocStatus { A_NEW, A_RUNNING, A_DYING };
 enum NegotiationResult { NR_MATCHED, NR_REJECTED, NR_END_NEGOTIATE, 
 						 NR_LIMIT_REACHED, NR_ERROR };
 
-class CAList : public List<ClassAd> {};
+class CAList {
+public:
+	CAList() {};
+
+	// Instead of deriving from List, have-a list internally instead
+	// allows us to controll access and replace List with std::list
+
+	void Rewind() { l.Rewind();}
+	ClassAd *Next() {return l.Next();}
+	ClassAd *Head() {return l.Head();}
+
+	int Number() { return l.Number();}
+	int Length() { return l.Length();}
+
+	bool Delete(ClassAd *ad) {return l.Delete(ad);}
+	void DeleteCurrent() {l.DeleteCurrent();}
+
+	void Append(ClassAd *ad) {l.Append(ad);}
+	void Insert(ClassAd *ad) {l.Insert(ad);}
+private:
+	List<ClassAd> l;
+};
 
 class MRecArray : public ExtArray<match_rec*> {};
 
