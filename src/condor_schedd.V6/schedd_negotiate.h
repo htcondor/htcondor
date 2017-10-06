@@ -83,6 +83,8 @@ class ResourceRequestList: public std::list<ResourceRequestCluster *> {
  *
  */
 
+class JobQueueJob; // forward ref
+
 class ScheddNegotiate: public DCMsg {
  public:
 	ScheddNegotiate(
@@ -125,7 +127,12 @@ class ScheddNegotiate: public DCMsg {
 	virtual bool scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad ) = 0;
 
 		// returns false if we should still try getting a match
-	virtual bool scheduler_skipJob(PROC_ID job_id) = 0;
+	virtual bool scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad, bool &skip_all, const char * &skip_because) = 0;
+
+		// returns false if we should skip this request ad (i.e. and not send it to the negotiator at all)
+		// if return is true, and match_max is not null, match_max will be set to the maximum matches constraint
+		// and the request constraint expression will be added to the request_ad
+	virtual bool scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max) = 0;
 
 		// a job was rejected by the negotiator
 	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason) = 0;
@@ -223,7 +230,9 @@ public:
 
 	virtual bool scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad );
 
-	virtual bool scheduler_skipJob(PROC_ID job_id);
+	virtual bool scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad, bool &skip_all, const char * &skip_because); // match ad may be null
+
+	virtual bool scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max);
 
 	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
 

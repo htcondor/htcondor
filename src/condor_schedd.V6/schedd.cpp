@@ -650,6 +650,9 @@ Scheduler::Scheduler() :
 		// 
 	StartSchedulerUniverse = NULL;
 
+		// variables for START_VANILLA_UNIVERSE
+	vanilla_start_expr.clear();
+
 	ShadowSizeEstimate = 0;
 
 	NumSubmitters = 0;
@@ -3197,6 +3200,12 @@ Scheduler::find_ownerinfo(const char * owner)
 	return NULL;
 }
 
+const OwnerInfo *
+Scheduler::lookup_owner_const(const char * owner)
+{
+	return find_ownerinfo(owner);
+}
+
 OwnerInfo *
 Scheduler::insert_ownerinfo(const char * owner)
 {
@@ -4252,7 +4261,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 }
 
 bool
-Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync )
+Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning )
 {
 	std::string submitUserNotes, submitEventNotes;
 
@@ -4277,6 +4286,9 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync )
 	}
 	if ( job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
 		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
+	}
+	if ( warning != NULL ) {
+		event.submitEventWarnings = strnewp( warning );
 	}
 
 	ULog->setEnableFsync(do_fsync);
@@ -6572,15 +6584,19 @@ public:
 		char const *remote_pool
 	): ScheddNegotiate(cmd,jobs,owner,remote_pool) {}
 
+#if 0 // not used
 		// returns true if no job similar to job_id may be started right now
 		// (e.g. MAX_JOBS_RUNNING could cause this to return true)
 	bool skipAllSuchJobs(PROC_ID job_id);
+#endif
 
 		// Define the virtual functions required by ScheddNegotiate //
 
 	virtual bool scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad );
 
-	virtual bool scheduler_skipJob(PROC_ID job_id);
+	virtual bool scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad, bool &skip_all_such, const char * &skip_because); // match ad may be null
+
+	virtual bool scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max);
 
 	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
 
@@ -6615,55 +6631,129 @@ MainScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 		return false;
 	}
 
+	// return a copy of the job ad.
 	job_ad = *ad;
 
 	FreeJobAd( ad );
 	return true;
 }
 
-bool
-MainScheddNegotiate::scheduler_skipJob(PROC_ID job_id)
+
+	// returns false if we should skip this request ad (i.e. and not send it to the negotiator at all)
+	// if return is true, and match_max is not null, match_max will be set to the maximum matches constraint, or MAX_INT
+	// The request constraint expression will be added to the request_ad if it is more complex than a simple boolean literal
+bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max)
 {
-	if( scheduler.AlreadyMatched(&job_id) ) {
-		return true;
-	}
-	if( !Runnable(&job_id) ) {
-		return true;
-	}
+	// TODO: set this to the max matches we can allow for this resource request
+	if (match_max) { *match_max = INT_MAX; }
 
-	return skipAllSuchJobs(job_id);
-}
+#ifdef USE_VANILLA_START
+	const OwnerInfo* powni = NULL;
+	int universe = CONDOR_UNIVERSE_MIN;
+	JobQueueJob * job = GetJobAndInfo(job_id, universe, powni);
+	if (job) {
+		ExprTree * tree = scheduler.flattenVanillaStartExpr(job, powni);
+		if (tree) {
+			bool bval = false;
+			// don't bother to put a literal into the request ad, just return it's value
+			// the caller will then either skip this request_ad (if it is false), or continue on
+			// without a request constraint expression (if it is true)
+			if (ExprTreeIsLiteralBool(tree, bval)) {
+				delete tree;
+				return bval;
+			} else {
+				std::string tmpbuf="";
+				ExprTreeToString(tree, tmpbuf);
+				dprintf(D_FULLDEBUG | D_MATCH, "START_VANILLA flattened to '%s' for RequestConstraint for job %d.%d\n", tmpbuf.c_str(), job_id.cluster, job_id.proc);
 
-bool
-MainScheddNegotiate::skipAllSuchJobs(PROC_ID job_id)
-{
-		// Figure out if this request would result in another shadow
-		// process if matched.  If Grid, the answer is no.  Otherwise,
-		// always yes.
+				NOCASE_STRING_MAP mapping;
+				mapping["SLOT"] = "TARGET";
+				mapping["JOB"] = "MY";
+				RewriteAttrRefs(tree, mapping);
+				tmpbuf.clear();
+				ExprTreeToString(tree, tmpbuf);
+				dprintf(D_FULLDEBUG | D_MATCH, "returning '%s' as the RequestConstraint for job %d.%d\n", tmpbuf.c_str(), job_id.cluster, job_id.proc);
 
-	int job_universe;
+				request_ad.Insert(ATTR_RESOURCE_REQUEST_CONSTRAINT, tree);
 
-	if (GetAttributeInt(job_id.cluster, job_id.proc,
-						ATTR_JOB_UNIVERSE, &job_universe) < 0) {
-		dprintf(D_FULLDEBUG, "Failed to get universe for job %d.%d\n",
-				job_id.cluster, job_id.proc);
-		return true;
-	}
-	int shadow_num_increment = 1;
-	if(job_universe == CONDOR_UNIVERSE_GRID) {
-		shadow_num_increment = 0;
-	}
-
-		// Next, make sure we could start another shadow without
-		// violating some limit.
-	if( shadow_num_increment ) {
-		if( !scheduler.canSpawnShadow() ) {
-			return true;
+				// now make a new Requirements expression that ANDs in the request constraint
+				std::string attr_req(ATTR_REQUIREMENTS);
+				ExprTree * reqexp = request_ad.Lookup(attr_req);
+				if (reqexp) {
+					tmpbuf = ATTR_RESOURCE_REQUEST_CONSTRAINT " && (";
+					ExprTreeToString(SkipExprParens(reqexp), tmpbuf); tmpbuf += ")";
+					request_ad.InsertViaCache(attr_req, tmpbuf);
+				} else {
+					request_ad.InsertViaCache(attr_req, ATTR_RESOURCE_REQUEST_CONSTRAINT);
+				}
+				/* this is not just the request ad, it's the whole ad.
+				if (IsDebugVerbose(D_MATCH)) {
+					dprintf(D_MATCH | D_VERBOSE, "resource request for job %d.%d :\n", job_id.cluster, job_id.proc);
+					dPrintAd(D_MATCH | D_VERBOSE, request_ad, true);
+				}
+				*/
+			}
 		}
 	}
+#else
+	if (job_id.cluster < 0 || request_ad.size() < 0) {
+		dprintf(D_ALWAYS, "unexpected arguments to scheduler_getRequestConstraints\n");
+	}
+#endif
+
+	return true;
+}
+
+
+// match_ad will be null when this is called from ScheddNegotiate::nextJob
+bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad, bool & skip_all_such, const char * &because)
+{
+	int universe = CONDOR_UNIVERSE_MIN;
+	skip_all_such = false;
+	because = "job was removed";
+	if ( ! job || ! job->LookupInteger(ATTR_JOB_UNIVERSE, universe)) {
+		// this can happen if the job was removed while the negotiator was considering it.
+		return true;
+	}
+
+	// If we need to spawn a shadow and can't, then we can't use this match
+	if ((universe != CONDOR_UNIVERSE_GRID) && ! scheduler.canSpawnShadow()) {
+		because = "no more shadows";
+		skip_all_such = true;
+		return true;
+	}
+
+	if( scheduler.AlreadyMatched(job, universe) ) {
+		because = "job no longer needs a match";
+		return true;
+	}
+	if( ! Runnable(job, because) ) {
+		return true;
+	}
+
+#ifdef USE_VANILLA_START
+	// match_ad will be NULL when this function is called while building up the list of resource requests to send to the negotiator
+	if (UniverseUsesVanillaStartExpr(universe)) {
+		int runnable = true;
+		if (match_ad) {
+			//PRAGMA_REMIND("add skip_all_such check to jobCanUseMatch")
+			runnable = scheduler.jobCanUseMatch(job, match_ad, because);
+			dprintf(D_MATCH | D_VERBOSE, "jobCanUseMatch returns %d for job %d.%d (%s)\n", runnable, job->jid.cluster, job->jid.proc, because);
+		} else {
+			runnable = scheduler.jobCanNegotiate(job, because);
+			dprintf(D_MATCH | D_VERBOSE, "jobCanNegotiate returns %d for job %d.%d (%s)\n", runnable, job->jid.cluster, job->jid.proc, because);
+		}
+		return ! runnable;
+	}
+#else
+	if (match_ad) {
+		// dprintf(D_MATCH | D_VERBOSE, "VANILLA_START is disabled\n");
+	}
+#endif
 
 	return false;
 }
+
 
 bool
 MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name)
@@ -6671,46 +6761,37 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	ASSERT( claim_id );
 	ASSERT( slot_name );
 
-	dprintf(D_FULLDEBUG,"Received match for job %d.%d (delivered=%d): %s\n",
+	dprintf(D_MATCH,"Received match for job %d.%d (delivered=%d): %s\n",
 			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
-	if( scheduler_skipJob(job_id) ) {
+	const char* because = "";
+	bool skip_all_such = false;
+	JobQueueJob *job = GetJobAd(job_id);
+	if (scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
+		// TODO: try a different owner??
+		FindRunnableJob(job_id, &match_ad, getOwner());
 
-		bool orig_job_id_invalid = job_id.cluster == -1 || job_id.proc == -1;
-
+		// we may have found a new job. but FindRunnableJob doesn't check to see
+		// if we hit the shadow limit, so we need to do that here.
 		if( job_id.cluster != -1 && job_id.proc != -1 ) {
-			if( skipAllSuchJobs(job_id) ) {
-					// No point in trying to find a different job,
-					// because we've hit MAX_JOBS_RUNNING or something
-					// like that.
-				dprintf(D_FULLDEBUG,
-					"Rejecting match to %s "
-					"because no job may be started to run on it right now.\n",
-					slot_name);
-				return false;
+			int universe = CONDOR_UNIVERSE_MIN;
+			const OwnerInfo * powni = NULL;
+			GetJobAndInfo(job_id, universe, powni);
+			// If we need to spawn a shadow and can't, then we can't use this match
+			if ((universe != CONDOR_UNIVERSE_GRID) && ! scheduler.canSpawnShadow()) {
+				skip_all_such = true;
+				because = "no more shadows";
+			} else {
+				dprintf(D_MATCH,"Rematched %s to job %d.%d\n", slot_name, job_id.cluster, job_id.proc );
 			}
-
-			dprintf(D_FULLDEBUG,
-					"Skipping job %d.%d because it no longer needs a match.\n",
-					job_id.cluster,job_id.proc);
 		}
-
-		FindRunnableJob(job_id,&match_ad,getOwner());
-
-		if( job_id.cluster != -1 && job_id.proc != -1 ) {
-				// If we got an initial job_id of -1.-1, then the
-				// previous check of skipAllSuchJobs() was skipped.
-				// Check it now that we do have a valid job_id.
-			if ( orig_job_id_invalid && skipAllSuchJobs(job_id) ) {
-				dprintf(D_FULLDEBUG,
-					"Rejecting match to %s "
-					"because no job may be started to run on it right now.\n",
-					slot_name);
-				return false;
-			}
-			dprintf(D_FULLDEBUG,"Rematched %s to job %d.%d\n",
-					slot_name, job_id.cluster, job_id.proc );
-		}
+	}
+	if (skip_all_such) {
+		// No point in trying to find a different job,
+		// because we've hit MAX_JOBS_RUNNING or something
+		// like that.
+		dprintf(D_MATCH,"Rejecting match to %s because %s\n", slot_name, because);
+		return false;
 	}
 	if( job_id.cluster == -1 || job_id.proc == -1 ) {
 		dprintf(D_FULLDEBUG,"No job found to run on %s\n",slot_name);
@@ -7171,7 +7252,7 @@ Scheduler::negotiate(int command, Stream* s)
 		// Tell the autocluster code what significant attributes the
 		// negotiator told us about
 	if ( sig_attrs_from_cm ) {
-		if ( autocluster.config(sig_attrs_from_cm) ) {
+		if ( autocluster.config(MinimalSigAttrs, sig_attrs_from_cm) ) {
 			// clear out auto cluster id attributes
 			WalkJobQueue(clear_autocluster_id);
 			DirtyPrioRecArray(); // should rebuild PrioRecArray
@@ -7962,7 +8043,7 @@ PostInitJobQueue()
 						"Scheduler::WriteRestartReport", &scheduler );
 
 		// The below must happen _after_ InitJobQueue is called.
-	if ( scheduler.autocluster.config() ) {
+	if ( scheduler.autocluster.config(scheduler.MinimalSigAttrs) ) {
 		// clear out auto cluster id attributes
 		WalkJobQueue(clear_autocluster_id);
 	}
@@ -8368,7 +8449,17 @@ Scheduler::StartJob(match_rec *rec)
 		// This is the case we want to try and start a job.
 	id.cluster = rec->cluster;
 	id.proc = rec->proc; 
+#ifdef USE_VANILLA_START
+	const char * reason = "job was removed";
+	JobQueueJob * job = GetJobAd(id);
+	if ( ! Runnable(job, reason) || ! jobCanUseMatch(job, rec->my_match_ad, reason)) {
+		if (IsDebugLevel(D_MATCH)) {
+			dprintf(D_MATCH, "match (%s) was activated, but job %d.%d no longer runnable because %s. searching for new job\n", 
+				rec->description(), id.cluster, id.proc, reason);
+		}
+#else
 	if(!Runnable(&id)) {
+#endif
 			// find the job in the cluster with the highest priority
 		id.proc = -1;
 		if( !FindRunnableJobForClaim(rec) ) {
@@ -8765,6 +8856,192 @@ Scheduler::startTransferd( int cluster, int proc )
 		m_tdman.invoke_a_td(td);
 	}
 
+	return true;
+}
+
+bool VanillaMatchAd::Insert(const std::string &attr, ClassAd*ad)
+{
+	return static_cast<classad::ClassAd*>(this)->Insert(attr, ad);
+}
+
+bool VanillaMatchAd::EvalExpr(ExprTree *expr, classad::Value &val)
+{
+	classad::EvalState state;
+	state.SetScopes(this);
+	return expr->Evaluate(state , val);
+}
+
+bool VanillaMatchAd::EvalAsBool(ExprTree *expr, bool def_value)
+{
+	bool bval = def_value;
+	classad::Value val;
+	if (EvalExpr(expr, val) && val.IsBooleanValueEquiv(bval)) {
+		return bval;
+	}
+	return def_value;
+}
+
+
+void VanillaMatchAd::Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob * job)
+{
+	// Insert the slot ad, making sure that the old slot ad is removed (i.e. not deleted)
+	std::string slot_attr("SLOT");
+	this->Remove(slot_attr);
+	if (slot_ad) {
+		this->Insert(slot_attr, slot_ad);
+	}
+
+	std::string owner_attr("OWNER");
+	this->Remove(owner_attr);
+	if (powni) {
+		owner_ad.Assign("name", powni->Name());
+		owner_ad.Assign("JobsRunning", powni->live.JobsRunning + powni->live.JobsSuspended);
+		owner_ad.Assign("JobsHeld", powni->live.JobsHeld);
+		owner_ad.Assign("JobsIdle", powni->live.JobsIdle);
+		this->Insert(owner_attr, &owner_ad);
+	}
+
+	std::string job_attr("JOB");
+	this->Remove(job_attr);
+	if (job) { this->Insert(job_attr, job); }
+}
+
+void VanillaMatchAd::Reset()
+{
+	std::string slot_attr("SLOT");
+	this->Remove(slot_attr);
+
+	std::string owner_attr("OWNER");
+	this->Remove(owner_attr);
+
+	std::string job_attr("JOB");
+	this->Remove(job_attr);
+}
+
+// convert the vanilla start expression to a sub-expression that references the SLOT ad
+// references to the USER ad or JOB ad will be converted to constants, and then the constants will be folded
+//
+ExprTree * Scheduler::flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo * powni)
+{
+	ExprTree * expr = vanilla_start_expr.Expr();
+	if ( ! expr) return NULL;
+
+	classad::Value flat_val;
+	ExprTree * flat_expr = NULL;
+
+	VanillaMatchAd vad;
+	vad.Init(NULL, powni, job);
+	vad.FlattenAndInline(expr, flat_val, flat_expr);
+	vad.Reset();
+
+	if ( ! flat_expr) {
+		flat_expr = classad::Literal::MakeLiteral(flat_val);
+	} else {
+		/* caller does this now.
+		NOCASE_STRING_MAP mapping;
+		mapping["SLOT"] = "TARGET";
+		mapping["JOB"] = "MY";
+		RewriteAttrRefs(flat_expr, mapping);
+		*/
+	}
+
+	return flat_expr;
+}
+
+// Check START_VANILLA_UNIVERSE of a job vs a SLOT.  This is called after the negotiator
+// has given us a match, but before we try and activate it.
+//
+bool Scheduler::jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const char *&reason)
+{
+	if ( ! job) {
+		reason = "job not found";
+		return false;
+	}
+
+	bool runnable = true;
+	reason = "no START_VANILLA expression";
+	ExprTree * expr = vanilla_start_expr.Expr();
+	if (expr) {
+		VanillaMatchAd vad;
+
+		const OwnerInfo * powni = NULL;
+		GetJobInfo(job, powni);
+
+		vad.Init(slot_ad, powni, job);
+
+		runnable = vad.EvalAsBool(expr, false);
+
+		vad.Reset();
+		reason = "from eval of START_VANILLA";
+	}
+
+	return runnable;
+}
+
+// Check START_VANILLA_UNIVERSE of a job for all possible slots. This is called when the schedd
+// is building up the match list
+//
+bool Scheduler::jobCanNegotiate(JobQueueJob * job, const char *&reason)
+{
+	// TODO: move this into the ScheddNegotiate so we can avoid having to setup the VanillaMatchAd repeatedly
+	if ( ! job) {
+		reason = "job not found";
+		return false;
+	}
+
+	bool runnable = true;
+	ExprTree * expr = vanilla_start_expr.Expr();
+	if (expr) {
+		VanillaMatchAd vad;
+
+		const OwnerInfo * powni = NULL;
+		GetJobInfo(job, powni);
+
+		vad.Init(NULL, powni, job);
+
+		classad::Value val;
+		if (vad.EvalExpr(expr, val)) {
+			if ( ! val.IsBooleanValueEquiv(runnable)) {
+				runnable = true;
+				reason = "indeterminate";
+			} else {
+				reason = runnable ? "matches everything" : "matches nothing";
+			}
+		}
+		vad.Reset();
+	}
+
+	return runnable;
+}
+
+// check to see if the START_VANILLA_UNIVERSE expression evaluates to a constant bool
+// against the current (possibly incomplete) vanilla match ad. We use this to
+// early out in FindRunnableJob
+bool Scheduler::vanillaStartExprIsConst(VanillaMatchAd &vad, bool &bval)
+{
+	int   is_const = true;
+	bool  const_value = true;
+
+	// if we haven't yet checked to see if the vanilla start expresssion evaluates to a constant, do that now.
+	ExprTree * expr = vanilla_start_expr.Expr();
+	if (expr) {
+		is_const = false;
+		classad::Value val;
+		val.SetUndefinedValue();
+		if (vad.EvalExpr(expr, val)) {
+			is_const = val.IsBooleanValueEquiv(const_value);
+		}
+	}
+	bval = const_value;
+	return is_const;
+}
+
+bool Scheduler::evalVanillaStartExpr(VanillaMatchAd &vad)
+{
+	ExprTree * expr = vanilla_start_expr.Expr();
+	if (expr) {
+		return vad.EvalAsBool(expr, false);
+	}
 	return true;
 }
 
@@ -12642,6 +12919,37 @@ Scheduler::Init()
 		// note: the special value 0 means 'unlimited'
 	max_pending_startd_contacts = param_integer( "MAX_PENDING_STARTD_CONTACTS", 0, 0 );
 
+
+#ifdef USE_VANILLA_START
+		// Start "vanilla" universe expression
+		// All jobs that make a shadow (i.e. not Local, Grid or Scheduler universe)
+		// will evaluate this expression in addition to their requirements
+		// and not activate a claim if it does not evaluate to true.
+	vanilla_start_expr.clear(); // clear explicitly because set(NULL) won't clear.. is that a bug?
+	//vanilla_start_expr_is_const = -1; // force it to recalculate
+	//vanilla_start_expr_const_value = true;
+	vanilla_start_expr.set(param("START_VANILLA_UNIVERSE"));
+	int expr_error = 0;
+	vanilla_start_expr.Expr(&expr_error); // force it to parse, a noop if there is no expression.
+	if (expr_error) {
+		dprintf(D_ALWAYS, "START_VANILLA_UNIVERSE expression '%s' does not parse, defaulting to TRUE\n", vanilla_start_expr.c_str()); 
+		vanilla_start_expr.clear();
+	}
+#endif
+
+	// there are some attribs that we always want in the significant attributes list,
+	// regardless of what the negotiators want. That minimum set is 4 things, plus whatever 
+	// job references there are in the vanilla_start_expr
+	MinimalSigAttrs.clear();
+	if ( ! vanilla_start_expr.empty()) {
+		GetAttrRefsOfScope(vanilla_start_expr.Expr(), MinimalSigAttrs, "JOB");
+	}
+	MinimalSigAttrs.insert(ATTR_REQUIREMENTS);
+	MinimalSigAttrs.insert(ATTR_RANK);
+	MinimalSigAttrs.insert(ATTR_NICE_USER);
+	MinimalSigAttrs.insert(ATTR_CONCURRENCY_LIMITS);
+
+
 		//
 		// Start Local Universe Expression
 		// This will be added into the requirements expression for
@@ -12703,6 +13011,7 @@ Scheduler::Init()
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	MaxJobsPerOwner = param_integer( "MAX_JOBS_PER_OWNER", INT_MAX );
 	MaxJobsPerSubmission = param_integer( "MAX_JOBS_PER_SUBMISSION", INT_MAX );
+
 
 	NegotiateAllJobsInCluster = param_boolean_crufty("NEGOTIATE_ALL_JOBS_IN_CLUSTER", false);
 
@@ -13279,7 +13588,11 @@ Scheduler::Init()
 						}
 					}
 
-					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement, submitReason );
+					std::string isWarningName;
+					formatstr( isWarningName, "SUBMIT_REQUIREMENT_%s_IS_WARNING", srName );
+					bool isWarning = param_boolean( isWarningName.c_str(), false );
+
+					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement, submitReason, isWarning );
 					m_submitRequirements.push_back( sre );
 				} else {
 					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName );
@@ -13684,7 +13997,7 @@ void Scheduler::reconfig() {
 
 
 		// clear out auto cluster id attributes
-	if ( autocluster.config() ) {
+	if ( autocluster.config(MinimalSigAttrs) ) {
 		WalkJobQueue(clear_autocluster_id);
 	}
 
@@ -14249,41 +14562,43 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 	}
 }
 
-int
-Scheduler::AlreadyMatched(PROC_ID* id)
+int Scheduler::AlreadyMatched(JobQueueJob * job, int universe)
 {
-	int universe;
-
-	if ((id->cluster == -1) && (id->proc == -1)) {
-		return FALSE;
-	}
-
-	if (GetAttributeInt(id->cluster, id->proc,
-						ATTR_JOB_UNIVERSE, &universe) < 0) {
-		// Failing to get the JOB_UNIVERSE is common 
-		// because the job may have left the queue.
-		// So in this case, just return FALSE, since a job
-		// not in the queue is most certainly not matched :)
-		return FALSE;
-	}
-
-	if ( (universe == CONDOR_UNIVERSE_MPI) ||
+	if ( ! job || ! job->IsJob() ||
+		 (universe == CONDOR_UNIVERSE_MPI) ||
 		 (universe == CONDOR_UNIVERSE_GRID) ||
-		 (universe == CONDOR_UNIVERSE_PARALLEL) )
+		 (universe == CONDOR_UNIVERSE_PARALLEL) ) {
 		return FALSE;
+	}
 
-	if( FindMrecByJobID(*id) ) {
+	if( FindMrecByJobID(job->jid) ) {
 			// It is possible for there to be a match rec but no shadow rec,
 			// if the job is waiting in the runnable job queue before the
 			// shadow is launched.
 		return TRUE;
 	}
-	if( FindSrecByProcID(*id) ) {
+	if( FindSrecByProcID(job->jid) ) {
 			// It is possible for there to be a shadow rec but no match rec,
 			// if the match was deleted but the shadow has not yet gone away.
 		return TRUE;
 	}
 	return FALSE;
+
+}
+int Scheduler::AlreadyMatched(PROC_ID* id)
+{
+	int universe = CONDOR_UNIVERSE_MIN;
+	const OwnerInfo * powni = NULL;
+	JobQueueJob * job = GetJobAndInfo(*id, universe, powni);
+
+		// Failing to find the job or get the JOB_UNIVERSE is common 
+		// because the job may have left the queue.
+		// So in this case, just return FALSE, since a job
+		// not in the queue is most certainly not matched :)
+	if ( ! job || ! job->IsJob() || ! universe)
+		return FALSE;
+
+	return AlreadyMatched(job, universe);
 }
 
 /*
@@ -16742,7 +17057,12 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 				}
 
 				if ( errorStack ) {
-					errorStack->pushf( "QMGMT", 2, "%s", reasonString.c_str() );
+					if( it->isWarning ) {
+						errorStack->pushf( "QMGMT", 0, "%s", reasonString.c_str() );
+						continue;
+					} else {
+						errorStack->pushf( "QMGMT", 2, "%s", reasonString.c_str() );
+					}
 				}
 				return -1;
 			}

@@ -746,6 +746,7 @@ SubmitEvent::SubmitEvent(void)
 	submitHost = NULL;
 	submitEventLogNotes = NULL;
 	submitEventUserNotes = NULL;
+	submitEventWarnings = NULL;
 	eventNumber = ULOG_SUBMIT;
 }
 
@@ -759,6 +760,9 @@ SubmitEvent::~SubmitEvent(void)
     }
     if( submitEventUserNotes ) {
         delete[] submitEventUserNotes;
+    }
+    if( submitEventWarnings ) {
+        delete[] submitEventWarnings;
     }
 }
 
@@ -800,6 +804,12 @@ SubmitEvent::formatBody( std::string &out )
 			return false;
 		}
 	}
+	if( submitEventWarnings ) {
+		retval = formatstr_cat( out, "    WARNING: Committed job submission into the queue with the following warning: %.8113s\n", submitEventWarnings );
+		if( retval < 0 ) {
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -834,39 +844,44 @@ SubmitEvent::readEvent (FILE *file)
 
 	fpos_t filep;
 	fgetpos( file, &filep );
-
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
-
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
 
-		// some users of this library (dagman) depend on whitespace
-		// being stripped from the beginning of the log notes field
+	// some users of this library (dagman) depend on whitespace
+	// being stripped from the beginning of the log notes field
 	char const *strip_s = s;
 	while( *strip_s && isspace(*strip_s) ) {
 		strip_s++;
 	}
-
 	submitEventLogNotes = strnewp( strip_s );
+
 
 	// see if the next line contains an optional user event notes
 	// string, and, if not, rewind, because that means we slurped in
 	// the next event delimiter looking for it...
-
 	fgetpos( file, &filep );
-
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
-
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
-
 	submitEventUserNotes = strnewp( s );
+
+
+	fgetpos( file, &filep );
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+	submitEventWarnings = strnewp( s );
+
 	return 1;
 }
 
@@ -885,6 +900,9 @@ SubmitEvent::toClassAd(void)
 	}
 	if( submitEventUserNotes && submitEventUserNotes[0] ) {
 		if( !myad->InsertAttr("UserNotes",submitEventUserNotes) ) return NULL;
+	}
+	if( submitEventWarnings && submitEventWarnings[0] ) {
+		if( !myad->InsertAttr("Warnings",submitEventUserNotes) ) return NULL;
 	}
 
 	return myad;
@@ -918,6 +936,14 @@ SubmitEvent::initFromClassAd(ClassAd* ad)
 	if( mallocstr ) {
 		submitEventUserNotes = new char[strlen(mallocstr) + 1];
 		strcpy(submitEventUserNotes, mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+
+	ad->LookupString("Warnings", &mallocstr);
+	if( mallocstr ) {
+		submitEventWarnings = new char[strlen(mallocstr) + 1];
+		strcpy(submitEventWarnings, mallocstr);
 		free(mallocstr);
 		mallocstr = NULL;
 	}

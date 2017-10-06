@@ -153,7 +153,7 @@ bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,MyString &result_buf);
 
 static 	int dash_long = 0, dash_tot = 0, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
 static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
-static  int dash_factory = 0;
+static  int dash_factory = 0; // if non zero, bits are options, 1=cluster-ads-only, 2=late-materialize-only
 static ClassAdFileParseType::ParseType dash_long_format = ClassAdFileParseType::Parse_auto;
 static bool print_attrs_in_hash_order = false;
 static bool auto_standard_summary = false; // print standard summary
@@ -1252,7 +1252,20 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 		else
 		if (is_dash_arg_colon_prefix (dash_arg, "factory", &pcolon, 4)) {
-			dash_factory = true;
+			if (pcolon) {
+				StringList opts(++pcolon, ",");
+				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+					if (is_arg_prefix(opt, "clusters_only", 1)) {
+						dash_factory |= 1;
+					} else if (is_arg_prefix(opt, "late_materialize", 1)) {
+						dash_factory |= 2;
+					} else {
+						fprintf( stderr, "Error: unknown option %s for -factory\n", opt );
+						exit (1);
+					}
+				}
+			}
+			if ( ! dash_factory) { dash_factory = 3; } // all-cluster-ads | late-materialize-only
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "attributes", 2)) {
@@ -1791,7 +1804,8 @@ processCommandLineArguments (int argc, const char *argv[])
 		// handle flags that just set a constraint when used with a formatting option, but
 		// set a constraint and a format when used alone.
 		if (dash_factory) {
-			Q.addAND("ProcId is undefined && JobMaterializeDigestFile isnt undefined");
+			if (dash_factory & 1) Q.addAND("ProcId is undefined");
+			if (dash_factory & 2) Q.addAND("JobMaterializeDigestFile isnt undefined");
 		}
 	}
 
