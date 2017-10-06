@@ -572,6 +572,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
 	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
+	dagman.PublishStats();
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
@@ -595,6 +596,7 @@ void ExitSuccess() {
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	dagman.dag->ReportMetrics( EXIT_OKAY );
+	dagman.PublishStats();
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
@@ -1492,6 +1494,15 @@ Dagman::ResolveDefaultLog()
 }
 
 void
+Dagman::PublishStats() {
+	ClassAd statsAd;
+	MyString statsString;
+	dagman._dagmanStats.Publish(statsAd);
+	sPrintAd( statsString, statsAd );
+	debug_printf( DEBUG_NORMAL, "DAGMan Runtime Statistics:\n%s\n", statsString.Value() );
+}
+
+void
 print_status() {
 	debug_printf( DEBUG_VERBOSE, "DAG status: %d (%s)\n",
 				dagman.dag->_dagStatus,
@@ -1551,7 +1562,17 @@ void condor_event_timer () {
     static int prevJobsSubmitted = 0;
     static int prevJobsReady = 0;
     static int prevScriptRunNodes = 0;
-    static int prevJobsHeld = 0;
+	static int prevJobsHeld = 0;
+	
+	static double eventTimerStartTime = 0;
+	static double eventTimerEndTime = 0;
+
+	// Gather some statistics
+	eventTimerStartTime = dagman._utcTime.getTimeDouble();
+	if(eventTimerEndTime > 0) {
+		dagman._dagmanStats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime);
+	}
+	
 
 	dagman.dag->RunWaitingScripts();
 
@@ -1698,7 +1719,12 @@ void condor_event_timer () {
 
 		main_shutdown_rescue( EXIT_ERROR, dagStatus );
 		return;
-    }
+	}
+	
+	// Statistics gathering
+	eventTimerEndTime = dagman._utcTime.getTimeDouble();
+	dagman._dagmanStats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
+
 }
 
 

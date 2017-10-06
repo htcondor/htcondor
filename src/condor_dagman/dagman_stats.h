@@ -21,53 +21,29 @@
  #define __DAGMAN_STATS_H__
  
  #include "condor_classad.h"
- #include "extArray.h"
+ #include "condor_collector.h"
  #include "hashkey.h"
+ #include "extArray.h"
  #include "generic_stats.h"
  
- 
- // Probes for doing timing analysis
- #define dagman_runtime_probe stats_entry_probe<double>
 
- 
- // Base
- class DagmanRuntimeStats
+ class DagmanStats
  {
 	 public:
-		DagmanRuntimeStats( int history_size = 0 );
-		~DagmanRuntimeStats( void	);
-		int updateStats( bool sequened, int dropped );
-		void reset( void );
-		int setHistorySize( int size );
-		 
-		/*
-		int getTotal( void ) { return updatesTotal; };
-		int getSequenced( void ) { return updatesSequenced; };
-		int getDropped( void ) { return updatesDropped; };
-		char *getHistoryString( char * );
-		int getHistoryStringLen( void ) { return 1 + ( (historySize + 3) / 4 ); };
-		bool wasRecentlyUpdated() { return m_recently_updated; }
-		void setRecentlyUpdated(bool value) { m_recently_updated=value; }
-		*/
+		DagmanStats();
+		~DagmanStats();
+		
+		stats_entry_probe<double> SleepCycleTime;
+		stats_entry_probe<double> EventCycleTime;
 
+		StatisticsPool Pool;
+
+		void Init();
+		void Publish(ClassAd & ad) const;
+		void Publish(ClassAd & ad, char* attr) const;
+		 
 	 private:
-		int storeStats( bool sequened, int dropped );
-		int setHistoryBits( bool dropped, int count );
- 
-		/*
-		int			updatesTotal;			// Total # of updates received
-		int			updatesSequenced;		// # of updates "sequenced" (Total+dropped-Initial) expected to match UpdateSequenceNumber if Initial==1
-		int			updatesDropped;			// # of updates dropped
-    
-    // History info
-		unsigned	*historyBuffer;			// History buffer
-		int			historySize;			// Size of history to report
-		int			historyWords;			// # of words allocated
-		int			historyWordBits;		// # of bits / word (used a lot)
-		int			historyBitnum;			// Current bit #
-		int			historyMaxbit;			// Max bit #
-		*/
-		bool		m_recently_updated;		// true if not updated since last sweep
+		
  };
 
  #endif
