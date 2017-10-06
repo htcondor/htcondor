@@ -1944,7 +1944,7 @@ FILE* Open_macro_source (
 			}
 			fp = my_popen(argList, "r", 0 | MY_POPEN_OPT_FAIL_QUIETLY);
 			if ( ! fp) {
-				config_errmsg = "not a valid command";
+				formatstr(config_errmsg, "not a valid command, errno=%d : %s", errno, strerror(errno));
 				return NULL;
 			}
 		} else {
