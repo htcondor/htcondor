@@ -23,6 +23,8 @@
 #include "dag.h"
 #include "string_list.h"
 #include "dagman_classad.h"
+#include "dagman_stats.h"
+#include "utc_time.h"
 
 	// Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
@@ -58,6 +60,9 @@ class Dagman {
 		// Resolve macro substitutions in _defaultNodeLog.  Also check
 		// for some errors/warnings.
 	void ResolveDefaultLog();
+
+		// Publish statistics to a log file.
+	void PublishStats();
 
     Dag * dag;
     int maxIdle;  // Maximum number of idle DAG nodes
@@ -234,6 +239,12 @@ class Dagman {
 		// True iff we should remove node jobs ourself when we are
 		// condor_rm'ed.
 	bool _removeNodeJobs;
+
+		// Dagman statistics
+	DagmanStats _dagmanStats;
+
+		// UTC time tracker
+	UtcTime _utcTime;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H
