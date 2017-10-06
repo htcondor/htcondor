@@ -887,6 +887,11 @@ main( int argc, const char *argv[] )
 			}
 			exit(1);
 		}
+		const char * message = errstack.message();
+		if( message != NULL ) {
+			fprintf( stderr, "\nWARNING: Committed job submission into the queue with the following warning:\n" );
+			fprintf( stderr, "WARNING: %s\n", message );
+		}
 	}
 
 	if ( ! SubmitFromStdin && ! terse) {

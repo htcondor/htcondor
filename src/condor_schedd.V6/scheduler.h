@@ -743,8 +743,9 @@ private:
 		const char *		name;
 		classad::ExprTree *	requirement;
 		classad::ExprTree * reason;
+		bool				isWarning;
 
-		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr ) : name(n), requirement(r), reason(rr) {}
+		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr, bool iw ) : name(n), requirement(r), reason(rr), isWarning(iw) {}
 	} SubmitRequirementsEntry;
 
 	typedef std::vector< SubmitRequirementsEntry > SubmitRequirements;
