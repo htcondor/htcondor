@@ -6655,7 +6655,7 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 		ExprTree * tree = scheduler.flattenVanillaStartExpr(job, powni);
 		if (tree) {
 			bool bval = false;
-			// don't bother to put a literal into the request ad, just return it's value
+			// don't bother to put a literal bool into the request ad, just return it's value
 			// the caller will then either skip this request_ad (if it is false), or continue on
 			// without a request constraint expression (if it is true)
 			if (ExprTreeIsLiteralBool(tree, bval)) {
@@ -6663,16 +6663,22 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 				return bval;
 			} else {
 				std::string tmpbuf="";
-				ExprTreeToString(tree, tmpbuf);
-				dprintf(D_FULLDEBUG | D_MATCH, "START_VANILLA flattened to '%s' for RequestConstraint for job %d.%d\n", tmpbuf.c_str(), job_id.cluster, job_id.proc);
+				if (IsDebugVerbose(D_MATCH)) {
+					ExprTreeToString(tree, tmpbuf);
+					dprintf(D_FULLDEBUG | D_MATCH, "START_VANILLA flattened to '%s' for RequestConstraint for job %d.%d\n", tmpbuf.c_str(), job_id.cluster, job_id.proc);
+				}
 
+				// Convert SLOT prefix to TARGET and JOB prefix to MY
 				NOCASE_STRING_MAP mapping;
 				mapping["SLOT"] = "TARGET";
 				mapping["JOB"] = "MY";
 				RewriteAttrRefs(tree, mapping);
-				tmpbuf.clear();
-				ExprTreeToString(tree, tmpbuf);
-				dprintf(D_FULLDEBUG | D_MATCH, "returning '%s' as the RequestConstraint for job %d.%d\n", tmpbuf.c_str(), job_id.cluster, job_id.proc);
+
+				if (IsDebugVerbose(D_MATCH)) {
+					tmpbuf = "";
+					ExprTreeToString(tree, tmpbuf);
+					dprintf(D_FULLDEBUG | D_MATCH, "returning '%s' as the RequestConstraint for job %d.%d\n", tmpbuf.c_str(), job_id.cluster, job_id.proc);
+				}
 
 				request_ad.Insert(ATTR_RESOURCE_REQUEST_CONSTRAINT, tree);
 
@@ -6681,17 +6687,12 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 				ExprTree * reqexp = request_ad.Lookup(attr_req);
 				if (reqexp) {
 					tmpbuf = ATTR_RESOURCE_REQUEST_CONSTRAINT " && (";
-					ExprTreeToString(SkipExprParens(reqexp), tmpbuf); tmpbuf += ")";
+					ExprTreeToString(SkipExprParens(reqexp), tmpbuf);
+					tmpbuf += ")";
 					request_ad.InsertViaCache(attr_req, tmpbuf);
 				} else {
 					request_ad.InsertViaCache(attr_req, ATTR_RESOURCE_REQUEST_CONSTRAINT);
 				}
-				/* this is not just the request ad, it's the whole ad.
-				if (IsDebugVerbose(D_MATCH)) {
-					dprintf(D_MATCH | D_VERBOSE, "resource request for job %d.%d :\n", job_id.cluster, job_id.proc);
-					dPrintAd(D_MATCH | D_VERBOSE, request_ad, true);
-				}
-				*/
 			}
 		}
 	}
@@ -8931,18 +8932,21 @@ ExprTree * Scheduler::flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo
 
 	VanillaMatchAd vad;
 	vad.Init(NULL, powni, job);
-	vad.FlattenAndInline(expr, flat_val, flat_expr);
-	vad.Reset();
+	if (vad.FlattenAndInline(expr, flat_val, flat_expr)) {
+		vad.Reset();
 
-	if ( ! flat_expr) {
-		flat_expr = classad::Literal::MakeLiteral(flat_val);
+		if ( ! flat_expr) {
+			flat_expr = classad::Literal::MakeLiteral(flat_val);
+		} else {
+			/* caller does this now.
+			NOCASE_STRING_MAP mapping;
+			mapping["SLOT"] = "TARGET";
+			mapping["JOB"] = "MY";
+			RewriteAttrRefs(flat_expr, mapping);
+			*/
+		}
 	} else {
-		/* caller does this now.
-		NOCASE_STRING_MAP mapping;
-		mapping["SLOT"] = "TARGET";
-		mapping["JOB"] = "MY";
-		RewriteAttrRefs(flat_expr, mapping);
-		*/
+		flat_expr = expr->Copy(); // flattening failed, use the unflat expression.
 	}
 
 	return flat_expr;
