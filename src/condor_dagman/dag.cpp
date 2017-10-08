@@ -715,7 +715,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			job->TerminateFailure();
 			job->error_text.formatstr (
 				  "HTCondor reported %s event for job proc (%d.%d.%d)",
-				  ULogEventNumberNames[event->eventNumber],
+				  event->eventName(),
 				  event->cluster, event->proc, event->subproc );
 			job->retval = DAG_ERROR_CONDOR_JOB_ABORTED;
 			

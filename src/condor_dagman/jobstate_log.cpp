@@ -312,7 +312,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 	ASSERT( node );
 
 	const char *prefix = "ULOG_";
-	const char *eventName = ULogEventNumberNames[event->eventNumber];
+	const char *eventName = event->eventName();
 	if ( strstr( eventName, prefix ) != eventName ) {
        	debug_printf( DEBUG_QUIET, "Warning: didn't find expected prefix "
 					"%s in event name %s\n", prefix, eventName );

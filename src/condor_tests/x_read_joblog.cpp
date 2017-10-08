@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
 						printf("skipping cluster %d\n",e->cluster);
 					break;
 				}
-				//cout << "+-" << ULogEventNumberNames[e->eventNumber] << endl;
+				//cout << "+-" << e->eventName() << endl;
 			}
 			if( strcmp(action, "MACHINE") == 0 ) 
 			{

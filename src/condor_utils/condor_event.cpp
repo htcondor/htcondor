@@ -220,10 +220,8 @@ instantiateEvent (ULogEventNumber event)
 		return new FactoryRemoveEvent;
 
 	default:
-		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
-		// Return NULL/0 here instead of EXCEPTing to fix Gnats PR 706.
-		// wenger 2006-06-08.
-		return 0;
+		dprintf( D_ALWAYS, "Unknown ULogEventNumber: %d, reading it as a FutureEvent\n", event );
+		return new FutureEvent(event);
 	}
 
     return 0;
@@ -272,12 +270,21 @@ bool ULogEvent::formatEvent( std::string &out )
 	return formatHeader( out ) && formatBody( out );
 }
 
-const char* ULogEvent::eventName(void) const
+const char * getULogEventNumberName(ULogEventNumber number)
 {
-	if( eventNumber == (ULogEventNumber)-1 ) {
+	if( number == (ULogEventNumber)-1 ) {
 		return NULL;
 	}
-	return ULogEventNumberNames[eventNumber];
+	if (number < COUNTOF(ULogEventNumberNames)) {
+		return ULogEventNumberNames[number];
+	}
+	return "ULOG_FUTURE_EVENT";
+}
+
+
+const char* ULogEvent::eventName(void) const
+{
+	return getULogEventNumberName(eventNumber);
 }
 
 
@@ -450,9 +457,9 @@ ULogEvent::toClassAd(void)
 	case ULOG_FACTORY_REMOVE:
 		SetMyTypeName(*myad, "FactoryRemoveEvent");
 		break;
-	  default:
-		delete myad;
-		return NULL;
+	default:
+		SetMyTypeName(*myad, "FutureEvent");
+		break;
 	}
 
 	char* eventTimeStr = time_to_iso8601(eventTime, ISO8601_ExtendedFormat,
@@ -739,6 +746,105 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 	*ppusageAd = puAd;
 }
 
+// ----- the FutureEvent class
+bool
+FutureEvent::formatBody( std::string &out )
+{
+	out += head;
+	out += "\n";
+	if ( ! payload.empty()) {
+		out += payload;
+	}
+	return true;
+}
+
+int
+FutureEvent::readEvent (FILE * file)
+{
+	// read lines until we see "...\n"
+	// then rewind to the beginning of the end sentinal and return
+
+	fpos_t filep;
+	fgetpos( file, &filep );
+
+	bool athead = true;
+	MyString line;
+	while (line.readLine(file)) {
+		if (line == "...\n") {
+			fsetpos( file, &filep );
+			break;
+		}
+		else if (athead) {
+			line.chomp();
+			head = line;
+			athead = false;
+		} else {
+			payload += line;
+		}
+	}
+	return 1;
+}
+
+ClassAd*
+FutureEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	myad->Assign("EventHead", head.c_str());
+	if ( ! payload.empty()) {
+		StringTokenIterator lines(payload, 120, "\r\n");
+		const std::string * str;
+		while ((str = lines.next_string())) { 
+			if ( ! myad->Insert(*str)) {
+				// TODO: append lines that are not classad statements to an "EventPayloadLines" attribute.
+			}
+		}
+	}
+	return myad;
+}
+
+void
+FutureEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if ( ! ad->LookupString("EventHead", head)) { head.clear(); }
+
+	// Get the list of attributes that remain after we remove the known ones.
+	classad::References attrs;
+	sGetAdAttrs(attrs, *ad, false, NULL);
+	attrs.erase(ATTR_MY_TYPE);
+	attrs.erase("EventTypeNumber");
+	attrs.erase("Cluster");
+	attrs.erase("Proc");
+	attrs.erase("Subproc");
+	attrs.erase("EventTime");
+	attrs.erase("EventHead");
+	attrs.erase("EventPayloadLines");
+
+	// print the remaining attributes into the payload.
+	payload.clear();
+	if ( ! attrs.empty()) {
+		sPrintAdAttrs(payload, *ad, attrs);
+	}
+
+	// TODO Print value of EventPayloadLines attribute as raw text to the payload
+}
+
+void FutureEvent::setHead(const char * head_text)
+{
+	MyString line(head_text);
+	line.chomp();
+	head = line;
+}
+
+void FutureEvent::setPayload(const char * payload_text)
+{
+	payload = payload_text;
+}
+
+
 
 // ----- the SubmitEvent class
 SubmitEvent::SubmitEvent(void)
@@ -812,6 +918,7 @@ SubmitEvent::formatBody( std::string &out )
 	}
 	return true;
 }
+
 
 int
 SubmitEvent::readEvent (FILE *file)

@@ -98,7 +98,12 @@ enum ULogEventNumber {
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
+#if 1
+// use ULogEvent::eventName() instead....
+// extern const char * getULogEventNumberName(ULogEventNumber number);
+#else
 extern const char ULogEventNumberNames[][30];
+#endif
 
 //----------------------------------------------------------------------------
 /** Enumeration of possible outcomes after attempting to read an event.
@@ -319,6 +324,47 @@ ULogEvent *instantiateEvent (ULogEventNumber event);
 	@return a new object, subclass of ULogEvent
 */
 ULogEvent *instantiateEvent (ClassAd *ad);
+
+
+// This event type is used for all events where the event ID is not in the ULogEventNumber enum
+// for this build.
+class FutureEvent : public ULogEvent
+{
+  public:
+    FutureEvent(ULogEventNumber en) { eventNumber = en; };
+    ~FutureEvent(void) {};
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
+
+	/** Return a ClassAd representation of this SubmitEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd(void);
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+	const std::string & Head() { return head; } // remainder of event line (without trailing \n)
+	const std::string & Payload() { return payload; } // other lines of the event (\n separated)
+	void setHead(const char * head_text);
+	void setPayload(const char * payload_text);
+
+private:
+	std::string head; // the remainder of the first line of the event, after the  timestamp (may be empty)
+	std::string payload; // the body text of the event (may be empty)
+};
 
 //----------------------------------------------------------------------------
 /** Framework for a single Submit Log Event object.  Below is an example

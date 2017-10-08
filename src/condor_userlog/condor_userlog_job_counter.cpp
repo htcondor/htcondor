@@ -59,7 +59,7 @@ int main( int argc, char** argv )
  
         case ULOG_OK:
 
-            eventName = ULogEventNumberNames[e->eventNumber];
+            eventName = e->eventName();
 
 			switch( e->eventNumber ) {
 

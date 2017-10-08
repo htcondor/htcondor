@@ -773,7 +773,7 @@ PrintEvent(ULogEvent *event)
 {
 	if ( event ) {
 		printf("Event: %d.%d.%d: %s", event->cluster, event->proc,
-				event->subproc,ULogEventNumberNames[event->eventNumber]);
+				event->subproc,event->eventName());
 		fflush(stdout);
 	} else {
 		printf("Event: NULL\n");
