@@ -1009,7 +1009,7 @@ SubmitEvent::toClassAd(void)
 		if( !myad->InsertAttr("UserNotes",submitEventUserNotes) ) return NULL;
 	}
 	if( submitEventWarnings && submitEventWarnings[0] ) {
-		if( !myad->InsertAttr("Warnings",submitEventUserNotes) ) return NULL;
+		if( !myad->InsertAttr("Warnings",submitEventWarnings) ) return NULL;
 	}
 
 	return myad;
