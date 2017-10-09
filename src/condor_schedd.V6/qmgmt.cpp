@@ -4854,7 +4854,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
 						const char * warning = NULL;
-						if(! errorStack->empty()) {
+						if(errorStack && (! errorStack->empty())) {
 							warning = errorStack->message();
 						}
 						scheduler.WriteSubmitToUserLog( procad, doFsync, warning );
