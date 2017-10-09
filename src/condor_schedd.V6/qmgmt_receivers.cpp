@@ -603,7 +603,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		else {
 			flags = 0;
 		}
-		assert( syscall_sock->end_of_message() );;
+		assert( syscall_sock->end_of_message() );
 
 		CondorError errstack;
 		errno = 0;
@@ -623,7 +623,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			// Send a classad, for less backwards-incompatibility.
 			int code = 1;
 			const char * reason = "QMGMT rejected job submission.";
-			if( errstack.subsys() ) {
+			if(! errstack.empty()) {
 				code = 2;
 				reason = errstack.message();
 			}
@@ -634,7 +634,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( putClassAd( syscall_sock, reply ) );
 		} else if( always_send_classad ) {
 			const char * reason = NULL;
-			if( errstack.subsys() ) {
+			if(! errstack.empty()) {
 				reason = errstack.message();
 			}
 

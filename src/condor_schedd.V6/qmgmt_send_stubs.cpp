@@ -484,17 +484,23 @@ RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 	ClassAd reply;
 	qmgmt_sock->decode();
 	neg_on_error( qmgmt_sock->code(rval) );
-	const CondorVersionInfo *vers = qmgmt_sock->get_peer_version();
-	bool has_classad = vers && vers->built_since_version(8, 3, 4);
-	bool always_has_classad = vers && vers->built_since_version(8, 7, 4);
 	if( rval < 0 ) {
 		neg_on_error( qmgmt_sock->code(terrno) );
 	}
-	if( (rval < 0 && has_classad) || always_has_classad ) {
+
+	// In some situations, we (the client) won't know the server's version,
+	// but the server will know our version.  To handle that, we have to
+	// look at what's on the wire, rather than what we should expect.
+	// Luckily, the only thing after the terrno, if any, is a classad, so
+	// this shouldn't cause future version incompabilities.
+	bool gotClassAd = false;
+	if(! qmgmt_sock->peek_end_of_message()) {
 		neg_on_error( getClassAd( qmgmt_sock, reply ) );
+		gotClassAd = true;
 	}
+
 	if( rval < 0 ) {
-		if( has_classad ) {
+		if( gotClassAd ) {
 			std::string errmsg;
 			if( errstack && reply.LookupString( "ErrorReason", errmsg ) ) {
 				int errCode = terrno;
@@ -505,7 +511,7 @@ RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
-	} else if( always_has_classad ) {
+	} else if( gotClassAd ) {
 		std::string warningReason;
 		if( errstack && reply.LookupString( "WarningReason", warningReason ) ) {
 			errstack->push( "SCHEDD", 0, warningReason.c_str() );
