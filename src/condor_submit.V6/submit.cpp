@@ -888,7 +888,6 @@ main( int argc, const char *argv[] )
 			exit(1);
 		}
 		if(! errstack.empty()) {
-			// This never returns NULL, which is annoying.
 			const char * message = errstack.message();
 			fprintf( stderr, "\nWARNING: Committed job submission into the queue with the following warning:\n" );
 			fprintf( stderr, "WARNING: %s\n", message );
