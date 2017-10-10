@@ -523,9 +523,10 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	}
 
 	if( !already_in_transaction ) {
-		rval = CommitTransaction();
+		CondorError errorStack;
+		rval = CommitTransactionAndLive( 0, & errorStack );
 		if (rval < 0) {
-			dprintf(D_ALWAYS, "CommitTransaction() Failed for job %d.%d rval=%d\n", jid.cluster, jid.proc, rval);
+			dprintf(D_ALWAYS, "CommitTransaction() failed for job %d.%d rval=%d (%s)\n", jid.cluster, jid.proc, rval, errorStack.empty() ? "no message" : errorStack.message() );
 			return rval;
 		}
 	}

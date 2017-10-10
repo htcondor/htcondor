@@ -607,7 +607,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 		CondorError errstack;
 		errno = 0;
-		rval = CommitTransaction( flags, & errstack );
+		rval = CommitTransactionAndLive( flags, & errstack );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
 

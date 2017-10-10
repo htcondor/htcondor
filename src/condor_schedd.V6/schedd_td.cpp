@@ -906,7 +906,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 
 			// And now release the job.
 		releaseJob(cluster,proc,"Data files spooled",false,false,false,false);
-		CommitTransaction();
+		CommitTransactionOrDieTrying();
 	}
 
 	daemonCore->Register_Timer( 0, 
