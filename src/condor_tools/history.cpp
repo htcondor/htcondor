@@ -1497,15 +1497,15 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
         if (!constraint || constraint[0]=='\0' || EvalBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
-					fPrintAdAsXML(stdout, *ad);
+					fPrintAdAsXML(stdout, *ad, projection.isEmpty() ? NULL : &projection);
 				} else if ( use_json ) {
 					if ( printCount != 0 ) {
 						printf(",\n");
 					}
-					fPrintAdAsJson(stdout, *ad);
+					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection);
 				}
 				else {
-					fPrintAd(stdout, *ad);
+					fPrintAd(stdout, *ad, false, projection.isEmpty() ? NULL : &projection);
 				}
 				printf("\n"); 
             } else {
