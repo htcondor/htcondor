@@ -1117,12 +1117,6 @@ static void printHeader()
 			mask.display_Headings(stdout);
 		}
 	}
-}
-
-// Read history from a remote schedd
-static void readHistoryRemote(classad::ExprTree *constraintExpr)
-{
-	printHeader(); // this has the side effect of setting the projection for the default output
 	if(longformat && use_xml) {
 		std::string out;
 		AddClassAdXMLFileHeader(out);
@@ -1130,6 +1124,23 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	} else if( use_json ) {
 		printf( "[\n" );
 	}
+}
+
+static void printFooter()
+{
+	if(longformat && use_xml) {
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "]\n" );
+	}
+}
+
+// Read history from a remote schedd
+static void readHistoryRemote(classad::ExprTree *constraintExpr)
+{
+	printHeader(); // this has the side effect of setting the projection for the default output
 
 	compat_classad::ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, constraintExpr, false);
@@ -1218,13 +1229,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 		printJob(ad);
 	}
 
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileFooter(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "]\n" );
-	}
+	printFooter();
 }
 
 // Read the history from the specified history file, or from all the history files.
@@ -1278,6 +1283,7 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
             freeHistoryFilesList(historyFiles);
         }
     }
+    printFooter();
     return;
 }
 
@@ -1448,14 +1454,6 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
     }
 
 
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileHeader(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "[\n" );
-	}
-
     while(!EndFlag) {
 
         if (backwards) { // Read history file backwards
@@ -1539,13 +1537,6 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             ad = NULL;
         }
     }
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileFooter(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "]\n" );
-	}
     fclose(LogFile);
     return;
 }
@@ -1648,14 +1639,6 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 
 static void printJobAds(ClassAdList & jobs)
 {
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileHeader(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "[\n" );
-	}
-
 	jobs.Open();
 	ClassAd	*job;
 	while (( job = jobs.Next())) {
@@ -1663,14 +1646,6 @@ static void printJobAds(ClassAdList & jobs)
 		if (abort_transfer) break;
 	}
 	jobs.Close();
-
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileFooter(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "]\n" );
-	}
 }
 
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards)
@@ -1694,14 +1669,6 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		// report error??
 		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(reader.LastError()));
 		exit(1);
-	}
-
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileHeader(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "[\n" );
 	}
 
 	std::string line;        // holds the current line from the log file.
@@ -1767,13 +1734,6 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		exprs.clear();
 	}
 
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileFooter(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "]\n" );
-	}
 	reader.Close();
 }
 
