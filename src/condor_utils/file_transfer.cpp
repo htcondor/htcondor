@@ -4313,19 +4313,19 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// if so, drop_privs should be false.  the default is to drop privs.
 	bool drop_privs = !param_boolean("RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false);
 
-    // Invoke the plugin
+	// Invoke the plugin
 	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
 
-    // Capture stdout from the plugin and dump it to the stats file
-    char single_stat[1024];
-    ClassAd plugin_stats;
-    while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
-        if( !plugin_stats.Insert( single_stat ) ) {
-            dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", single_stat);
-        }
-    }
+	// Capture stdout from the plugin and dump it to the stats file
+	char single_stat[1024];
+	ClassAd plugin_stats;
+	while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
+		if( !plugin_stats.Insert( single_stat ) ) {
+			dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", single_stat);
+		}
+	}
 
-    // Close the plugin
+	// Close the plugin
 	int plugin_status = my_pclose(plugin_pipe);
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
 
@@ -4349,9 +4349,9 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// clean up
 	free(method);
 
-    // Save the statistics we gathered to disk
-    OutputFileTransferStats( plugin_stats );
-    
+	// Save the statistics we gathered to disk
+	OutputFileTransferStats( plugin_stats );
+
 	// any non-zero exit from plugin indicates error.  this function needs to
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
@@ -4366,73 +4366,73 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 
-    // this log is meant to be kept in the condor LOG directory, so switch to
-    // the correct priv state to manipulate files in that dir.
-    priv_state saved_priv = set_condor_priv();
+	// this log is meant to be kept in the condor LOG directory, so switch to
+	// the correct priv state to manipulate files in that dir.
+	priv_state saved_priv = set_condor_priv();
 
-    // Read name of statistics file from params
-    std::string stats_file_path = param( "FILE_TRANSFER_STATS_LOG" );
+	// Read name of statistics file from params
+	std::string stats_file_path = param( "FILE_TRANSFER_STATS_LOG" );
 
-    // First, check for an existing statistics file. 
-    struct stat stats_file_buf;
-    int rc = stat( stats_file_path.c_str(), &stats_file_buf );
-    if( rc == 0 ) {
-        // If it already exists and is larger than 5 Mb, copy the contents 
-        // to a .old file. 
-        if( stats_file_buf.st_size > 5000000 ) {
-            std::string stats_file_old_path = param( "FILE_TRANSFER_STATS_LOG" );
-            stats_file_old_path += ".old";
+	// First, check for an existing statistics file. 
+	struct stat stats_file_buf;
+	int rc = stat( stats_file_path.c_str(), &stats_file_buf );
+	if( rc == 0 ) {
+		// If it already exists and is larger than 5 Mb, copy the contents 
+		// to a .old file. 
+		if( stats_file_buf.st_size > 5000000 ) {
+			std::string stats_file_old_path = param( "FILE_TRANSFER_STATS_LOG" );
+			stats_file_old_path += ".old";
 
-            std::ifstream stats_file_old_input( stats_file_path );
-            std::ofstream stats_file_old_output( stats_file_old_path, std::fstream::app );
+			std::ifstream stats_file_old_input( stats_file_path );
+			std::ofstream stats_file_old_output( stats_file_old_path, std::fstream::app );
 
-            std::string line;    
-            while( getline( stats_file_old_input, line ) ) {
-                stats_file_old_output << line << std::endl;
-            }
+			std::string line;    
+			while( getline( stats_file_old_input, line ) ) {
+				stats_file_old_output << line << std::endl;
+			}
 
-            stats_file_old_input.close();
-            stats_file_old_output.close();
+			stats_file_old_input.close();
+			stats_file_old_output.close();
 
-            // Now delete the original stats file
-            unlink( stats_file_path.c_str() );
-            
-        }
-    }
+			// Now delete the original stats file
+			unlink( stats_file_path.c_str() );
+
+		}
+	}
 
 
-    // Add some new job-related statistics that were not available from
-    // the file transfer plugin.
-    int cluster_id;    
-    jobAd.LookupInteger( ATTR_CLUSTER_ID, cluster_id );
-   	stats.Assign( "JobClusterId", cluster_id );
-    
-    int proc_id;    
-    jobAd.LookupInteger( ATTR_PROC_ID, proc_id );
-   	stats.Assign( "JobProcId", proc_id );
+	// Add some new job-related statistics that were not available from
+	// the file transfer plugin.
+	int cluster_id;    
+	jobAd.LookupInteger( ATTR_CLUSTER_ID, cluster_id );
+	stats.Assign( "JobClusterId", cluster_id );
 
-    MyString owner;
-    jobAd.LookupString( ATTR_OWNER, owner );
-    stats.Assign( "JobOwner", owner );
+	int proc_id;    
+	jobAd.LookupInteger( ATTR_PROC_ID, proc_id );
+	stats.Assign( "JobProcId", proc_id );
 
-    // Output statistics to file
-    MyString stats_string;    
-    std::ofstream stats_file_output;
-    stats_file_output.open( stats_file_path, std::fstream::app );
-    if( stats_file_output.fail() ) {
-        dprintf( D_ALWAYS, "FILETRANSFER: failed to write statistics file %s with"
-            " error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
-    }
-    sPrintAd( stats_string, stats );
-    stats_file_output << stats_string.Value() << "***" << std::endl;    
+	MyString owner;
+	jobAd.LookupString( ATTR_OWNER, owner );
+	stats.Assign( "JobOwner", owner );
 
-    // All done, cleanup and return
-    stats_file_output.close();
+	// Output statistics to file
+	MyString stats_string;    
+	std::ofstream stats_file_output;
+	stats_file_output.open( stats_file_path, std::fstream::app );
+	if( stats_file_output.fail() ) {
+		dprintf( D_ALWAYS, "FILETRANSFER: failed to write statistics file %s with"
+			" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
+	}
+	sPrintAd( stats_string, stats );
+	stats_file_output << stats_string.Value() << "***" << std::endl;    
 
-    // back to previous priv state
-    set_priv(saved_priv);
+	// All done, cleanup and return
+	stats_file_output.close();
 
-    return 0;
+	// back to previous priv state
+	set_priv(saved_priv);
+
+	return 0;
 }
 
 MyString FileTransfer::GetSupportedMethods() {
