@@ -27,7 +27,7 @@
 #include "format_time.h"
 #include "string_list.h"
 #include "metric_units.h"
-
+#include "console-utils.h"
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
@@ -156,31 +156,6 @@ format_readable_kb(const classad::Value &val, Formatter &)
 	}
 	return metric_units(kb);
 }
-
-#ifdef WIN32
-int getConsoleWindowSize(int * pHeight = NULL) {
-	CONSOLE_SCREEN_BUFFER_INFO ws;
-	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
-		if (pHeight)
-			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
-		return (int)ws.dwSize.X;
-	}
-	return -1;
-}
-#else
-#include <sys/ioctl.h> 
-int getConsoleWindowSize(int * pHeight = NULL) {
-    struct winsize ws; 
-	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
-		//printf ("lines %d\n", ws.ws_row); 
-		//printf ("columns %d\n", ws.ws_col); 
-		if (pHeight)
-			*pHeight = (int)ws.ws_row;
-		return (int) ws.ws_col;
-	}
-	return -1;
-}
-#endif
 
 int  forced_display_width = 0;
 int getDisplayWidth(bool * is_piped) {

@@ -68,7 +68,7 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 	// Some compilers whine when you have virtual methods but not an
 	// explicit virtual destructor
 	virtual ~ToolClassAdFileParseHelper() {}
-	ToolClassAdFileParseHelper(bool multi, FILE* errout) : multiple(multi), out(errout) {};
+	ToolClassAdFileParseHelper(bool multi) : multiple(multi) {};
 
 	// return non-zero if new parser, o if old (line oriented) parser
 	// TODO: fix this to handle new style classads also...
@@ -112,7 +112,6 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 
  private:
 	bool multiple;
-	FILE * out;
 	std::string delim;
 };
 
@@ -216,7 +215,7 @@ int main( int argc, char *argv[] )
 	}
 
 	// create class that we can use to influence the behavior of Classad::InsertFromFile
-	ToolClassAdFileParseHelper parse_helper(allow_multiple, stderr);
+	ToolClassAdFileParseHelper parse_helper(allow_multiple);
 
 	for (;;) {
 		ClassAd *ad = new ClassAd();

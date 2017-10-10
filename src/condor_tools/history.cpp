@@ -42,6 +42,7 @@
 #include "userlog_to_classads.h"
 #include "setenv.h"
 #include "condor_daemon_core.h" // for extractInheritedSocks
+#include "console-utils.h"
 
 #include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
@@ -54,7 +55,6 @@
 #define NUM_PARAMETERS 3
 #endif /* HAVE_EXT_POSTGRESQL */
 
-static int getConsoleWindowSize(int * pHeight = NULL);
 void Usage(char* name, int iExitCode=1);
 
 void Usage(char* name, int iExitCode) 
@@ -787,32 +787,6 @@ main(int argc, char* argv[])
   return 0;
 }
 
-
-#ifdef WIN32
-static int getConsoleWindowSize(int * pHeight /*= NULL*/) {
-	CONSOLE_SCREEN_BUFFER_INFO ws;
-	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
-		if (pHeight)
-			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
-		return (int)ws.dwSize.X;
-	}
-	return 80;
-}
-#else
-#include <sys/ioctl.h>
-static int getConsoleWindowSize(int * pHeight /*= NULL*/) {
-    struct winsize ws;
-	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
-		//printf ("lines %d\n", ws.ws_row);
-		//printf ("columns %d\n", ws.ws_col);
-		if (pHeight)
-			*pHeight = (int)ws.ws_row;
-		return (int) ws.ws_col;
-	}
-	return 80;
-}
-#endif
-
 static int getDisplayWidth() {
 	if (wide_format_width <= 0) {
 		wide_format_width = getConsoleWindowSize();
@@ -1143,12 +1117,6 @@ static void printHeader()
 			mask.display_Headings(stdout);
 		}
 	}
-}
-
-// Read history from a remote schedd
-static void readHistoryRemote(classad::ExprTree *constraintExpr)
-{
-	printHeader(); // this has the side effect of setting the projection for the default output
 	if(longformat && use_xml) {
 		std::string out;
 		AddClassAdXMLFileHeader(out);
@@ -1156,6 +1124,23 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	} else if( use_json ) {
 		printf( "[\n" );
 	}
+}
+
+static void printFooter()
+{
+	if(longformat && use_xml) {
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
+	} else if( use_json ) {
+		printf( "]\n" );
+	}
+}
+
+// Read history from a remote schedd
+static void readHistoryRemote(classad::ExprTree *constraintExpr)
+{
+	printHeader(); // this has the side effect of setting the projection for the default output
 
 	compat_classad::ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, constraintExpr, false);
@@ -1244,13 +1229,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 		printJob(ad);
 	}
 
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileFooter(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "]\n" );
-	}
+	printFooter();
 }
 
 // Read the history from the specified history file, or from all the history files.
@@ -1304,6 +1283,7 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
             freeHistoryFilesList(historyFiles);
         }
     }
+    printFooter();
     return;
 }
 
@@ -1474,14 +1454,6 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
     }
 
 
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileHeader(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "[\n" );
-	}
-
     while(!EndFlag) {
 
         if (backwards) { // Read history file backwards
@@ -1525,15 +1497,15 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
         if (!constraint || constraint[0]=='\0' || EvalBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
-					fPrintAdAsXML(stdout, *ad);
+					fPrintAdAsXML(stdout, *ad, projection.isEmpty() ? NULL : &projection);
 				} else if ( use_json ) {
 					if ( printCount != 0 ) {
 						printf(",\n");
 					}
-					fPrintAdAsJson(stdout, *ad);
+					fPrintAdAsJson(stdout, *ad, projection.isEmpty() ? NULL : &projection);
 				}
 				else {
-					fPrintAd(stdout, *ad);
+					fPrintAd(stdout, *ad, false, projection.isEmpty() ? NULL : &projection);
 				}
 				printf("\n"); 
             } else {
@@ -1565,13 +1537,6 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             ad = NULL;
         }
     }
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileFooter(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "]\n" );
-	}
     fclose(LogFile);
     return;
 }
@@ -1674,14 +1639,6 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 
 static void printJobAds(ClassAdList & jobs)
 {
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileHeader(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "[\n" );
-	}
-
 	jobs.Open();
 	ClassAd	*job;
 	while (( job = jobs.Next())) {
@@ -1689,14 +1646,6 @@ static void printJobAds(ClassAdList & jobs)
 		if (abort_transfer) break;
 	}
 	jobs.Close();
-
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileFooter(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "]\n" );
-	}
 }
 
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards)
@@ -1720,14 +1669,6 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		// report error??
 		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(reader.LastError()));
 		exit(1);
-	}
-
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileHeader(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "[\n" );
 	}
 
 	std::string line;        // holds the current line from the log file.
@@ -1793,13 +1734,6 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		exprs.clear();
 	}
 
-	if(longformat && use_xml) {
-		std::string out;
-		AddClassAdXMLFileFooter(out);
-		printf("%s\n", out.c_str());
-	} else if( use_json ) {
-		printf( "]\n" );
-	}
 	reader.Close();
 }
 

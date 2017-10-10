@@ -59,6 +59,7 @@
 #include "expr_analyze.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
 #include "classad_helpers.h"
+#include "console-utils.h"
 
 static int cleanup_globals(int exit_code); // called on exit to do necessary cleanup
 #define exit(n) (exit)(cleanup_globals(n))
@@ -88,31 +89,6 @@ enum {
 };
 
 struct 	PrioEntry { MyString name; float prio; };
-
-#ifdef WIN32
-static int getConsoleWindowSize(int * pHeight = NULL) {
-	CONSOLE_SCREEN_BUFFER_INFO ws;
-	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
-		if (pHeight)
-			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
-		return (int)ws.dwSize.X;
-	}
-	return 80;
-}
-#else
-#include <sys/ioctl.h> 
-static int getConsoleWindowSize(int * pHeight = NULL) {
-    struct winsize ws; 
-	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
-		//printf ("lines %d\n", ws.ws_row); 
-		//printf ("columns %d\n", ws.ws_col); 
-		if (pHeight)
-			*pHeight = (int)ws.ws_row;
-		return (int) ws.ws_col;
-	}
-	return 80;
-}
-#endif
 
 static  int  testing_width = 0;
 static int getDisplayWidth() {
@@ -5768,7 +5744,7 @@ doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *request, int detai
 		if (analEachReqClause) {
 #endif
 			std::string subexpr_detail;
-			anaFormattingOptions fmt = { widescreen ? getConsoleWindowSize() : 80, details, "Requirements", "Job", "Slot" };
+			anaFormattingOptions fmt = { widescreen ? getDisplayWidth() : 80, details, "Requirements", "Job", "Slot" };
 			AnalyzeRequirementsForEachTarget(request, ATTR_REQUIREMENTS, inline_attrs, startdAds, subexpr_detail, fmt);
 			formatstr_cat(return_buf, "The Requirements expression for job %s reduces to these conditions:\n\n", request_id);
 			return_buf += subexpr_detail;
