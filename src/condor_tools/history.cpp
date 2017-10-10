@@ -55,7 +55,6 @@
 #define NUM_PARAMETERS 3
 #endif /* HAVE_EXT_POSTGRESQL */
 
-static int getConsoleWindowSize(int * pHeight = NULL);
 void Usage(char* name, int iExitCode=1);
 
 void Usage(char* name, int iExitCode) 
