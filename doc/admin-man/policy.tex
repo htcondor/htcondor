@@ -2238,8 +2238,58 @@ Where there are
 multiple jobs in a cluster, 
 if any job within the cluster is rejected due to a submit requirement,
 the entire cluster of jobs will be rejected.
-%please note that while we
-%evaluate the submit requirements against individual jobs, any individual
-%job failing the submit requirements will cause the entire submit to
-%fail; the other jobs in the cluster will not enter the queue.
 
+\subsubsection{\label{sec:Schedd-Config-Submit-Warnings}Submit Warnings}
+\index{submit warnings}
+
+Starting in HTCondor 8.7.4, you may instead configure submit warnings.  A
+submit warning is a submit requirement for which
+\Macro{SUBMIT\_REQUIREMENT\_<Name>\_IS\_WARNING}
+is true.  A submit warning does \emph{not} cause the submission to fail;
+instead, it returns a warning to the user's console (when triggered via
+\Condor{submit}) or writes a message to the user log (always).  Submit
+warnings are intended to allow HTCondor administrators to provide their
+users with advance warning of new submit requirements.  For example, if
+you want to increase the minimum request memory, you could use the
+following configuration.
+
+\footnotesize
+\begin{verbatim}
+SUBMIT_REQUIREMENT_NAMES = OneGig $(SUBMIT_REQUIREMENT_NAMES)
+SUBMIT_REQUIREMENT_OneGig = RequestMemory > 1024
+SUBMIT_REQUIREMENT_OneGig_REASON = "As of <date>, the minimum requested memory will be 1024."
+SUBMIT_REQUIREMENT_OneGig_IS_WARNING = TRUE
+\end{verbatim}
+\normalsize
+
+When a user runs \Condor{submit} to submit a job with \Attr{RequestMemory}
+between 512 and 1024, they will see (something like) the following, assuming
+that the job meets all the other requirements.
+
+\footnotesize
+\begin{verbatim}
+Submitting job(s).
+WARNING: Committed job submission into the queue with the following warning:
+WARNING: As of <date>, the minimum requested memory will be 1024.
+
+1 job(s) submitted to cluster 452.
+\end{verbatim}
+\normalsize
+
+The job will contain (something like) the following:
+
+\footnotesize
+\begin{verbatim}
+000 (452.000.000) 10/06 13:40:45 Job submitted from host: <128.105.136.53:37317?addrs=128.105.136.53-37317+[fc00--1]-37317&noUDP&sock=19966_e869_5>
+    WARNING: Committed job submission into the queue with the following warning: As of <date>, the minimum requested memory will be 1024.
+...
+\end{verbatim}
+\normalsize
+
+Marking a submit requirement as a warning does \emph{not} change when or how
+it is evaluated, only the result of doing so.  In particular, failing a
+submit warning does \emph{not} terminate further evaluation of the submit
+requirements list.  Currently, only one (the most recent) problem is reported
+for each submit attempt.  This means users will see (as they previously did)
+only the first failed requirement; if all requirements passed, they will see
+the last failed warning, if any.

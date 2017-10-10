@@ -117,13 +117,14 @@ if ($res eq 10) {
 
 sub count_jobs {
 	my @content = @{$_[0]};
-	my $index = 0;
-	my $res;
-	while (! ($content[$index] =~ /([0-9]+)\s*job\(?s\)?/)) {
-		$index++;
+	my $res = -1;
+	for my $i (0..(scalar @content)-1) {
+		# extract count of jobs N from the line that says "submitted N jobs"
+		if ($content[$i] =~ /([0-9]+)\s*job\(?s\)?/) {
+			$res = $1;
+			last;
+		}
 	}
-	$content[$index] =~ /([0-9]+)\s*job\(?s\)?/;
-	$res = $1;
 	return $res;
 }
 
