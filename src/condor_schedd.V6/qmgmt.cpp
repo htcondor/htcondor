@@ -4672,9 +4672,9 @@ CommitTransactionOrDieTrying() {
 	int rval = CommitTransactionInternal( true, & errorStack );
 	if( rval < 0 ) {
 		if( errorStack.empty() ) {
-			dprintf( D_ERROR, "ERROR: CommitTransactionOrDieTrying() failed but did not die.\n" );
+			dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitTransactionOrDieTrying() failed but did not die.\n" );
 		} else {
-			dprintf( D_ERROR, "ERROR: CommitTransactionOrDieTrying() failed but did not die, with error '%s'.\n", errorStack.getFullText().c_str() );
+			dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitTransactionOrDieTrying() failed but did not die, with error '%s'.\n", errorStack.getFullText().c_str() );
 		}
 	}
 }
@@ -4685,9 +4685,9 @@ CommitNonDurableTransactionOrDieTrying() {
 	int rval = CommitTransactionInternal( false, & errorStack );
 	if( rval < 0 ) {
 		if( errorStack.empty() ) {
-			dprintf( D_ERROR, "ERROR: CommitNonDurableTransactionOrDieTrying() failed but did not die.\n" );
+			dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitNonDurableTransactionOrDieTrying() failed but did not die.\n" );
 		} else {
-			dprintf( D_ERROR, "ERROR: CommitNonDurableTransactionOrDieTrying() failed but did not die, with error '%s'.\n", errorStack.getFullText().c_str() );
+			dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitNonDurableTransactionOrDieTrying() failed but did not die, with error '%s'.\n", errorStack.getFullText().c_str() );
 		}
 	}
 }
@@ -4698,11 +4698,11 @@ CommitTransactionAndLive( SetAttributeFlags_t flags,
 {
 	bool durable = !(flags & NONDURABLE);
 	if( (durable && flags != 0) || ((!durable) && flags != NONDURABLE) ) {
-		dprintf( D_ERROR, "ERROR: CommitTransaction(): Flags other than NONDURABLE not supported.\n" );
+		dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitTransaction(): Flags other than NONDURABLE not supported.\n" );
 	}
 
 	if( errorStack == NULL ) {
-		dprintf( D_ERROR, "ERROR: CommitTransaction() called with NULL error stack.\n" );
+		dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitTransaction() called with NULL error stack.\n" );
 	}
 
 	return CommitTransactionInternal( durable, errorStack );
