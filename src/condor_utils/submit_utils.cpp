@@ -2720,19 +2720,9 @@ int SubmitHash::SetGSICredentials()
 	}
 
 	if (proxy_file != NULL) {
-		if ( proxy_file[0] == '#' ) {
-			buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
-						   &proxy_file[1]);
-			InsertJobExpr(buffer);	
-
-//			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-//						   proxy_file);
-//			InsertJobExpr(buffer);	
-			free( proxy_file );
-		} else {
-			char *full_proxy_file = strdup( full_path( proxy_file ) );
-			free( proxy_file );
-			proxy_file = full_proxy_file;
+		char *full_proxy_file = strdup( full_path( proxy_file ) );
+		free( proxy_file );
+		proxy_file = full_proxy_file;
 #if defined(HAVE_EXT_GLOBUS)
 // this code should get torn out at some point (8.7.0) since the SchedD now
 // manages these attributes securely and the values provided by submit should
@@ -2840,11 +2830,10 @@ int SubmitHash::SetGSICredentials()
 // out. -zmiller
 #endif
 
-			(void) buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-						   proxy_file);
-			InsertJobExpr(buffer);	
-			free( proxy_file );
-		}
+		(void) buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY,
+					   proxy_file);
+		InsertJobExpr(buffer);
+		free( proxy_file );
 	}
 
 	char* tmp = submit_param(SUBMIT_KEY_DelegateJobGSICredentialsLifetime,ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME);

@@ -1617,11 +1617,6 @@ default=5
 type=int
 tags=gridmanager,gridmanager
 
-[JOB_PROXY_OVERRIDE_FILE]
-default=
-type=string
-tags=gridmanager,proxymanager
-
 [GRIDMANAGER_PROXY_REFRESH_TIME]
 default=21600
 type=string
