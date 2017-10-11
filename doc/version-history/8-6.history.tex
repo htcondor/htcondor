@@ -41,6 +41,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Asking systemd to stop condor now allows the HTCondor daemons to properly
+clean up, instead of simply immediately sending a SIGKILL.  As a result,
+HTCondor daemons stopped via systemd will no longer continue to appear 
+alive with \Condor{status}.
+\Ticket{6096}
+
 \item \Condor{status} will now print longer lines when its output is
 redirected into a pipe, rather than its input coming from one.
 \Ticket{6381}
