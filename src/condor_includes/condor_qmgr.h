@@ -241,13 +241,14 @@ int BeginTransaction();
 */
 int RemoteCommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=NULL);
 
-/** The difference between this and RemoteCommitTransaction is that
-	this function never returns if there is a failure.  This function
-	should only be called from the schedd.
-    Exception: This function can return failure if a SUBMIT_REQUIREMEMT
-      expression evaluates to False.
+/** These functions should only be called from the schedd.  Because
+    of submit requirements, we need to distinguish between sites which
+    don't handle failure and those which do.
 */
-int CommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=NULL);
+void CommitNonDurableTransactionOrDieTrying();
+void CommitTransactionOrDieTrying();
+int CommitTransactionAndLive( SetAttributeFlags_t flags, CondorError * errstack );
+
 
 int AbortTransaction();
 void AbortTransactionAndRecomputeClusters();

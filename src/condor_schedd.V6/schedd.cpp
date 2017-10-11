@@ -4760,7 +4760,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 			// And now release the job.
 		releaseJob(cluster,proc,"Data files spooled",false,false,false,false);
-		CommitTransaction();
+		CommitTransactionOrDieTrying();
 	}
 
 	daemonCore->Register_Timer( 0, 
@@ -6232,7 +6232,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		// execute. This dprintf() will help in debugging.
 	time_t before = time(NULL);
 	if( needs_transaction ) {
-		CommitTransaction();
+		CommitTransactionOrDieTrying();
 	}
 	time_t after = time(NULL);
 	if ( (after - before) > 5 ) {
@@ -9887,7 +9887,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	free( public_part );
 	free( private_part );
 
-	CommitTransaction(NONDURABLE);
+	CommitNonDurableTransactionOrDieTrying();
 
 	Env starter_env;
 	MyString execute_env;
@@ -10755,7 +10755,7 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 	FreeJobAd( job );
 
 	if( !already_in_transaction ) {
-		CommitTransaction(NONDURABLE);
+		CommitNonDurableTransactionOrDieTrying();
 	}
 }
 
@@ -10852,7 +10852,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	}
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
 	add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
-	CommitTransaction();
+	CommitTransactionOrDieTrying();
 	if( new_rec->pid ) {
 		dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 				 new_rec->pid, cluster, proc );
@@ -10946,7 +10946,7 @@ CkptWallClock()
 		}
 	}
 	if( began_transaction ) {
-		CommitTransaction();
+		CommitTransactionOrDieTrying();
 	}
 }
 
@@ -11116,7 +11116,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// call check_zombie() since it might do it's own
 		// transactions of one sort or another...
 		// Nothing written in this transaction requires immediate sync to disk.
-	CommitTransaction( NONDURABLE );
+	CommitNonDurableTransactionOrDieTrying();
 
 	if( ! rec->keepClaimAttributes ) {
 			// We do _not_ want to call check_zombie if we are detaching
@@ -11223,7 +11223,7 @@ mark_serial_job_running( PROC_ID *job_id )
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 		// nothing that has been written in this transaction needs to
 		// be immediately synced to disk
-	CommitTransaction( NONDURABLE );
+	CommitNonDurableTransactionOrDieTrying();
 }
 
 /*
@@ -11320,7 +11320,7 @@ mark_job_stopped(PROC_ID* job_id)
 			// The worst that can happen if this transaction is
 			// lost is that we will try to reconnect to the job
 			// and find that it is no longer running.
-		CommitTransaction( NONDURABLE );
+		CommitNonDurableTransactionOrDieTrying();
 	}
 }
 
@@ -11748,7 +11748,7 @@ set_job_status(int cluster, int proc, int status)
 
 		// Nothing written in this transaction requires immediate
 		// sync to disk.
-	CommitTransaction( NONDURABLE );
+	CommitNonDurableTransactionOrDieTrying();
 }
 
 void
@@ -14776,7 +14776,7 @@ Scheduler::sendAlives()
 							 ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
 		}
 	}
-	CommitTransaction();
+	CommitTransactionOrDieTrying();
 
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
@@ -15472,7 +15472,7 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 
 	if(use_transaction) {
 		if(result) {
-			CommitTransaction();
+			CommitTransactionOrDieTrying();
 		} else {
 			AbortTransaction();
 		}
@@ -15545,7 +15545,7 @@ abortJobsByConstraint( const char *constraint,
 
 	if ( use_transaction ) {
 		if ( result ) {
-			CommitTransaction();
+			CommitTransactionOrDieTrying();
 		} else {
 			AbortTransaction();
 		}
@@ -15720,7 +15720,7 @@ holdJob( int cluster, int proc, const char* reason,
 
 	if(use_transaction) {
 		if(result) {
-			CommitTransaction();
+			CommitTransactionOrDieTrying();
 		} else {
 			AbortTransaction();
 		}
@@ -15858,7 +15858,7 @@ releaseJob( int cluster, int proc, const char* reason,
 
 	if(use_transaction) {
 		if(result) {
-			CommitTransaction();
+			CommitTransactionOrDieTrying();
 		} else {
 			AbortTransaction();
 		}
