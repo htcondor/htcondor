@@ -911,7 +911,7 @@ SubmitEvent::formatBody( std::string &out )
 		}
 	}
 	if( submitEventWarnings ) {
-		retval = formatstr_cat( out, "    WARNING: Committed job submission into the queue with the following warning: %.8113s\n", submitEventWarnings );
+		retval = formatstr_cat( out, "    WARNING: Committed job submission into the queue with the following warning(s): %.8110s\n", submitEventWarnings );
 		if( retval < 0 ) {
 			return false;
 		}

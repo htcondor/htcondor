@@ -4887,11 +4887,11 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						const char * warning = NULL;
+						std::string warning;
 						if(errorStack && (! errorStack->empty())) {
-							warning = errorStack->message();
+							warning = errorStack->getFullText();
 						}
-						scheduler.WriteSubmitToUserLog( procad, doFsync, warning );
+						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.c_str() );
 					}
 				}
 

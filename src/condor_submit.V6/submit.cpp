@@ -889,7 +889,7 @@ main( int argc, const char *argv[] )
 		}
 		if(! errstack.empty()) {
 			const char * message = errstack.message();
-			fprintf( stderr, "\nWARNING: Committed job submission into the queue with the following warning:\n" );
+			fprintf( stderr, "\nWARNING: Committed job submission into the queue with the following warning(s):\n" );
 			fprintf( stderr, "WARNING: %s\n", message );
 		}
 	}

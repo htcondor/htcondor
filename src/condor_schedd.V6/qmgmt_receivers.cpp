@@ -633,9 +633,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			reply.Assign( "ErrorReason", reason );
 			assert( putClassAd( syscall_sock, reply ) );
 		} else if( always_send_classad ) {
-			const char * reason = NULL;
+			std::string reason;
 			if(! errstack.empty()) {
-				reason = errstack.message();
+				reason = errstack.getFullText();
 			}
 
 			ClassAd reply;
