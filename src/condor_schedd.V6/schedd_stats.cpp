@@ -608,7 +608,7 @@ bool ScheddOtherStatsMgr::DisableAll()
 	ScheddOtherStats* po = NULL;
 	pools.startIterations();
 	while (pools.iterate(po)) {
-		any_enabled = any_enabled && po->enabled;
+		any_enabled = any_enabled || po->enabled;
 		po->enabled = false;
 	}
 	return any_enabled;

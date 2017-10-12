@@ -14360,8 +14360,7 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 	} 
 
 	if( matches->insert( HashKey( id ), rec ) != 0 ) {
-		dprintf( D_ALWAYS, "match \"%s\" insert failed\n",
-				 id ? id : "(null)" );
+		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", id);
 		delete rec;
 		return NULL;
 	}
