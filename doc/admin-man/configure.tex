@@ -7589,6 +7589,13 @@ do not specify their own with:
   The default is \File{\MacroUNI{RELEASE\_DIR}/libexec/interactive.sub}
   when not defined.
 
+\label{param:CredMinTimeLeft}
+\item[\Macro{CRED\_MIN\_TIME\_LEFT}]
+  When a job uses an X509 user proxy, condor\_submit will refuse to
+submit a job whose x509 expiration time is less than this many seconds
+in the future.  The default is to only refuse jobs whose expiration
+time has already passed.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
