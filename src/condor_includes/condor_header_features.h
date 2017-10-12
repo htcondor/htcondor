@@ -82,4 +82,10 @@ b - Argument position of the "..."
 # define GCC_NORETURN
 #endif
 
+#if defined(__GNUC__)
+#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+#define WARN_UNUSED_RESULT
+#endif
+
 #endif /* CONDOR_SYS_FEATURES_H */
