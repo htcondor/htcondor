@@ -500,32 +500,26 @@ MSC_RESTORE_WARNING(6052) // call to snprintf might not null terminate string.
  *--------------------------------------------------------------------*/
 
 MyString 
-MyString::Substr(int pos1, int pos2) const 
+MyString::substr(int pos, int len) const
 {
     MyString S;
 
-	if (Len <= 0) {
+	if ( pos >= Len || len <= 0 ) {
 	    return S;
 	}
-
-    if (pos2 >= Len) {
-		pos2 = Len - 1;
+	if ( pos < 0 ) {
+		pos = 0;
 	}
-    if (pos1 < 0) {
-		pos1=0;
+	if ( pos + len > Len ) {
+		len = Len - pos;
 	}
-    if (pos1 > pos2) {
-		return S;
-	}
-    int len = pos2-pos1+1;
-    char* tmp = new char[len+1];
-    strncpy(tmp,Data+pos1,len);
-    tmp[len]='\0';
-    S=tmp;
-    delete[] tmp;
+	S.reserve( len );
+	strncpy( S.Data, Data+pos, len );
+	S.Data[len] = '\0';
+	S.Len = len;
     return S;
 }
-    
+
 // this function escapes characters by putting some other
 // character before them.  it does NOT convert newlines to
 // the two chars '\n'.
@@ -785,7 +779,7 @@ MyString::trim( void )
 	while ( end >= 0 && isspace(Data[end]) ) { --end; }
 
 	if ( begin != 0 || end != Length() - 1 ) {
-		*this = Substr(begin, end);
+		*this = substr(begin, 1 + end - begin);
 	}
 }
 
@@ -796,12 +790,10 @@ MyString::trim_quotes(const char * quote_chars)
 	if( Len < 2 ) {
 		return 0;
 	}
-	int begin = 0;
-	char ch = Data[begin];
+	char ch = Data[0];
 	if (strchr(quote_chars, ch)) {
-		int end = Length() -1;
-		if (end > begin && Data[end] == ch) {
-			*this = Substr(begin+1, end-1);
+		if (Data[Len - 1] == ch) {
+			*this = substr(1, Len - 2);
 			return ch;
 		}
 	}

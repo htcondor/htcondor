@@ -204,11 +204,11 @@ parse_param_string(const char *line, MyString &name, MyString &value, bool del_q
 		return;
 	}
 
-	name = one_line.Substr(0, pos -1);
+	name = one_line.substr(0, pos);
 	if( pos == (one_line.Length() - 1) ) {
 		value = "";
 	}else {
-		value = one_line.Substr( pos+1, one_line.Length() - 1); 
+		value = one_line.substr( pos+1, one_line.Length());
 	}
 
 	name.trim();

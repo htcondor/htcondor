@@ -131,7 +131,7 @@ PBuffer::Write (const char * towrite) {
 	int numwritten = daemonCore->Write_Pipe (pipe_end, buffer.Value(), len);
 	if (numwritten > 0) {
 		// shorten the buffer
-		buffer = buffer.Substr(numwritten, buffer.Length());
+		buffer = buffer.substr(numwritten, buffer.Length());
 		return numwritten;
 	} else if ( numwritten == 0 ) {
 		return 0;
