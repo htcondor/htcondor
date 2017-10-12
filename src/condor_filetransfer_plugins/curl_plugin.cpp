@@ -1,6 +1,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "file_transfer_stats.h"
+#include "../condor_utils/file_transfer_stats.h"
 #include "utc_time.h"
 
 #ifdef WIN32

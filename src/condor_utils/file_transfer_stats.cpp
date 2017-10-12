@@ -53,6 +53,8 @@ void FileTransferStats::Publish(ClassAd &ad) const {
         ad.Assign("HttpCacheHost", HttpCacheHost);
     if (!TransferError.empty())
         ad.Assign("TransferError", TransferError);
+    if (!TransferFileName.empty())
+        ad.Assign("TransferFileName", TransferFileName);
     if (!TransferHostName.empty())
         ad.Assign("TransferHostName", TransferHostName);
     if (!TransferLocalMachineName.empty())

@@ -44,6 +44,7 @@
 #include "subsystem_info.h"
 #include "condor_url.h"
 #include "my_popen.h"
+#include "file_transfer_stats.h"
 #include <list>
 #include <fstream>
 
@@ -2101,7 +2102,16 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		start = time(NULL);
-
+		
+		// Setup the FileTransferStats object for this file, which we'll use
+		// to gather per-transfer statistics (different from the other
+		// statistics gathering which only tracks cumulative totals)
+		FileTransferStats thisFileStats;
+		thisFileStats.TransferFileBytes = 0;
+		thisFileStats.TransferFileName = filename.Value();
+		thisFileStats.TransferProtocol = "cedar";
+		thisFileStats.TransferStartTime = _condor_debug_get_time_double();
+		thisFileStats.TransferType = "download";
 
 		if (reply == 999) {
 			// filename already received:
@@ -2291,6 +2301,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		elapsed = time(NULL)-start;
+		thisFileStats.TransferEndTime = _condor_debug_get_time_double();
+		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
 		if( rc < 0 ) {
 			int the_error = errno;
@@ -2395,9 +2407,24 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 		*total_bytes += bytes;
+		thisFileStats.TransferFileBytes += bytes;
+		thisFileStats.TransferTotalBytes += bytes;
 		bytes = 0;
 
 		numFiles++;
+
+		// Gather a few more statistics
+		thisFileStats.TransferSuccess = download_success;
+
+		// If this file transfer was not done using a 3rd party plugin, output
+		// statistics to the transfer_history log. (3rd party plugins gather
+		// their own stats)
+		if (reply != 5) {
+			ClassAd thisFileStatsAd;
+			thisFileStats.Publish(thisFileStatsAd);
+			OutputFileTransferStats(thisFileStatsAd);
+		}
+
 
 #ifdef HAVE_EXT_POSTGRESQL
 	        file_transfer_record record;
