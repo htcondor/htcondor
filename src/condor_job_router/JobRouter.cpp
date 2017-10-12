@@ -214,17 +214,19 @@ JobRouter::config() {
 #endif
 
 	m_job_router_entries_refresh = param_integer(PARAM_JOB_ROUTER_ENTRIES_REFRESH,0);
-	if( m_job_router_refresh_timer >= 0 ) {
-		daemonCore->Cancel_Timer(m_job_router_refresh_timer);
-		m_job_router_refresh_timer = -1;
-	}
-	if( m_job_router_entries_refresh > 0 ) {
-		m_job_router_refresh_timer = 
-			daemonCore->Register_Timer(
-				m_job_router_entries_refresh,
-				m_job_router_entries_refresh,
-				(TimerHandlercpp)&JobRouter::config,
-				"JobRouter::config", this);
+	if ( ! m_operate_as_tool ) {
+		if( m_job_router_refresh_timer >= 0 ) {
+			daemonCore->Cancel_Timer(m_job_router_refresh_timer);
+			m_job_router_refresh_timer = -1;
+		}
+		if( m_job_router_entries_refresh > 0 ) {
+			m_job_router_refresh_timer =
+				daemonCore->Register_Timer(
+					m_job_router_entries_refresh,
+					m_job_router_entries_refresh,
+					(TimerHandlercpp)&JobRouter::config,
+					"JobRouter::config", this);
+		}
 	}
 
 	char *constraint = param("JOB_ROUTER_SOURCE_JOB_CONSTRAINT");
