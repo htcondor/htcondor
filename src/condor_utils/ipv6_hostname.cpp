@@ -165,7 +165,7 @@ bool init_local_hostname_impl()
 					const char* dotpos = strchr(name, '.');
 					if (dotpos) { // consider it as a FQDN
 						local_fqdn = name;
-						local_hostname = local_fqdn.Substr(0, dotpos-name-1);
+						local_hostname = local_fqdn.substr(0, dotpos-name);
 					} else {
 						local_hostname = name;
 						local_fqdn = local_hostname;
@@ -618,7 +618,7 @@ condor_sockaddr convert_hostname_to_ipaddr(const MyString& fullname)
 		int pos = fullname.find(dotted_domain.Value());
 		if (pos != -1) {
 			truncated = true;
-			hostname = fullname.Substr(0, pos - 1);
+			hostname = fullname.substr(0, pos);
 		}
 	}
 	if (!truncated)
