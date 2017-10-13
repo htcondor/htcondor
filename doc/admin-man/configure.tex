@@ -7376,6 +7376,12 @@ Configuration File Entries}
   and not by user request. 
   If \Expr{NEVER}, the owner will not receive email. 
 
+\label{param:JobDefaultLeaseDuration}
+\item[\Macro{JOB\_DEFAULT\_LEASE\_DURATION}]
+  The default value for the \SubmitCmd{job\_lease\_duration} submit command
+  when the submit file does not specify a value. The default
+  value is 2400, which is 40 minutes.
+
 \label{param:JobDefaultRequestMemory}
 \item[\Macro{JOB\_DEFAULT\_REQUESTMEMORY}]
   The amount of memory in MiB to acquire for a job, 
