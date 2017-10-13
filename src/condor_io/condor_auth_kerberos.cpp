@@ -1557,7 +1557,7 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
 
 int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * /* ticket */ )
 {
-    krb5_error_code  code;
+    //krb5_error_code  code;
 	//krb5_ccache      ccache;
     //krb5_principal   client;
     //krb5_data        request;
