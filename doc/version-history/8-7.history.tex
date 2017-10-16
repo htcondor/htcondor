@@ -85,6 +85,11 @@ and the third table will be generated from those ads whose key appeared
 only in \Arg{file}.
 \Ticket{6321}
 
+\item Added support for late materialization into \Condor{dagman}. DAGs that
+include late materialized jobs now work correctly in both normal and recovery 
+conditions.
+\Ticket{6274}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
