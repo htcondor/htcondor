@@ -352,6 +352,12 @@ int Server::SetUpPort(u_short port)
       dprintf(D_ALWAYS, "ERROR: cannot open a server request socket\n");
       exit(CKPT_SERVER_SOCKET_ERROR);
   }
+
+  if (temp_sd < 0) {
+      dprintf(D_ALWAYS, "ERROR: cannot create server request socket\n");
+      exit(CKPT_SERVER_SOCKET_ERROR);
+  }
+
   socket_addr.set_ipv4();
   socket_addr.set_addr_any();
   socket_addr.set_port(port);
@@ -884,6 +890,13 @@ void Server::ProcessServiceReq(int             req_id,
 					close(fdc->fd);
 					return;
 				}
+
+ 				if (data_conn_sd < 0) {
+					Log("Cannot obtain a socket from server");
+					close(fdc->fd);
+					return;
+				}
+
 				server_sa.clear();
 				server_sa.set_ipv4();
 				server_sa.set_addr_any();
