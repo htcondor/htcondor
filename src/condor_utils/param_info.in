@@ -3023,11 +3023,6 @@ default=
 type=string
 tags=shadow,pseudo_ops
 
-[EMAIL_NOTIFICATION_CC]
-default=
-type=string
-tags=shadow,shadow_common
-
 [DBMSMANAGER_NAME]
 default=
 type=string

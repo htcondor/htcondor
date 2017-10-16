@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-FILE * email_open( const char *email_addr, const char *subject );
+FILE * email_nonjob_open( const char *email_addr, const char *subject );
 
 FILE * email_admin_open(const char *subject);
 
@@ -34,7 +34,7 @@ FILE * email_developers_open(const char *subject);
 void email_close(FILE *mailer);
 
 void email_asciifile_tail( FILE* mailer, const char* filename,
-						   int lines );  
+						   int lines );
 
 void email_corefile_tail( FILE* mailer, const char* subsystem_name );
 

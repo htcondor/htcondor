@@ -141,36 +141,6 @@ NotifyUser( char *buf, PROC *proc )
 			return;
 		}
 
-			// email HACK for John Bent <johnbent@cs.wisc.edu>
-			// added by Derek Wright <wright@cs.wisc.edu> 2005-02-20
-		char* email_cc = param( "EMAIL_NOTIFICATION_CC" );
-		if( email_cc ) {
-			bool allows_cc = true;
-			int bool_val;
-			if( JobAd->LookupBool(ATTR_ALLOW_NOTIFICATION_CC, bool_val) ) {
-				dprintf( D_FULLDEBUG, "Job defined %s to %s\n",
-						 ATTR_ALLOW_NOTIFICATION_CC,
-						 bool_val ? "TRUE" : "FALSE" );
-				allows_cc = (bool)bool_val;
-			} else {
-				dprintf( D_FULLDEBUG, "%s not defined, assuming TRUE\n",
-						 ATTR_ALLOW_NOTIFICATION_CC );
-			}
-			if( allows_cc ) {
-				dprintf( D_FULLDEBUG, "%s is TRUE, sending email to \"%s\"\n",
-						 ATTR_ALLOW_NOTIFICATION_CC, email_cc );
-				mailer = email_open( email_cc, subject );
-				publishNotifyEmail( mailer, buf, proc );
-				email_close( mailer );
-			} else {
-				dprintf( D_FULLDEBUG,
-						 "%s is FALSE, not sending email copy\n",
-						 ATTR_ALLOW_NOTIFICATION_CC );
-			}
-			free( email_cc );
-			email_cc = NULL;
-		}
-
         /* If user loaded program incorrectly, always send a message. */
         if( MainSymbolExists == TRUE ) {
                 switch( proc->notification ) {

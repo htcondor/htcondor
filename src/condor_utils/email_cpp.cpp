@@ -97,7 +97,9 @@ email_user_open_id( ClassAd *jobAd, int cluster, int proc,
 	}
 		// make sure we've got a valid address with a domain
 	email_full_addr = email_check_domain( email_addr, jobAd );
-	fp = email_open( email_full_addr, subject );
+	// This is the only place email_nonjob_open() should be called for
+	// a job-related email.
+	fp = email_nonjob_open( email_full_addr, subject );
 	free( email_addr );
 	free( email_full_addr );
 	return fp;
@@ -569,6 +571,17 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 				code != CONDOR_HOLD_CODE_SubmittedOnHold) )
 			{
 					return true;
+			}
+
+			{
+			int successExitCode = 0;
+			ad->LookupInteger( ATTR_JOB_SUCCESS_EXIT_CODE, successExitCode );
+			int exitCode = 0;
+			if( ad->LookupInteger( ATTR_ON_EXIT_CODE, exitCode ) ) {
+				if( exitCode != successExitCode ) {
+					return true;
+				}
+			}
 			}
 			break;
 		default:

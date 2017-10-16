@@ -17145,7 +17145,7 @@ Scheduler::WriteRestartReport()
 
 		char *address = param( "SCHEDD_ADMIN_EMAIL" );
 		if(address) {
-			mailer = email_open( address, email_subject.c_str() );
+			mailer = email_nonjob_open( address, email_subject.c_str() );
 			free( address );
 		} else {
 			mailer = email_admin_open( email_subject.c_str() );

@@ -56,7 +56,7 @@ static void email_write_header_string(FILE *stream, const char *data);
 extern DLL_IMPORT_MAGIC char **environ;
 
 FILE *
-email_open( const char *email_addr, const char *subject )
+email_nonjob_open( const char *email_addr, const char *subject )
 {
 	char *Sendmail = NULL;
 	char *Mailer = NULL;
@@ -343,7 +343,7 @@ email_open_implementation( const char * final_args[])
 FILE *
 email_admin_open(const char *subject)
 {
-	return email_open(NULL,subject);
+	return email_nonjob_open(NULL,subject);
 }
 
 FILE *
@@ -372,7 +372,7 @@ email_developers_open(const char *subject)
         return NULL;
     }
 
-	mailer = email_open(tmp,subject);		
+	mailer = email_nonjob_open(tmp,subject);
 
 	/* Don't forget to free tmp! */
 	free(tmp);
