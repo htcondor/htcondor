@@ -741,7 +741,7 @@ queue 500
 will queue 500 procs as expected. 
 
 Additionally, as of version 8.7.4 DAGMan supports late materialization. To use
-this functionality, setting both \Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} 
+this functionality, set both \Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} 
 and \Macro{SUBMIT\_FACTORY\_JOBS\_BY\_DEFAULT} knobs in your HTCondor
 configuration to True. This will have the side effect of submitting all jobs as
 factory jobs (not just the ones you explicitly flag) so use this sparingly.
