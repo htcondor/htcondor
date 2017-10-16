@@ -90,6 +90,13 @@ include late materialized jobs now work correctly in both normal and recovery
 conditions.
 \Ticket{6274}
 
+\item We now produce runtime statistics in \Condor{dagman}, tracking how 
+much time DAGMan spends idle, how much time it spends submitting jobs and
+processing log files. This information could be used to determine why a DAG 
+is submitting jobs slowly and how to optimize it. These statistics currently get 
+dumped into the .dagman.out file at the end of a DAGs execution.
+\Ticket {6411}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
