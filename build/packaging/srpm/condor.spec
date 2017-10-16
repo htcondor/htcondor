@@ -634,6 +634,7 @@ Url: http://bosco.opensciencegrid.org
 Group: Applications/System
 Requires: python >= 2.2
 Requires: %name = %version-%release
+Requires: rsync
 
 %description bosco
 BOSCO allows a locally-installed HTCondor to submit jobs to remote clusters,
