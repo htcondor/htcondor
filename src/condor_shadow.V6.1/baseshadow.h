@@ -276,12 +276,6 @@ class BaseShadow : public Service
 		 */
 	int handleUpdateJobAd(int sig);
 
-		/** This function returns a file pointer that one can 
-			write an email message into.
-			@return A mail message file pointer.
-		*/
-	FILE* emailUser( const char *subjectline );
-
 		/** This is used to tack on something (like "res #") 
 			after the header and before the text of a dprintf
 			message.

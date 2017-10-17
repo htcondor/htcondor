@@ -5791,7 +5791,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 			char buf[256];
 			snprintf(buf,256,"Your job (%d.%d) is on hold",cluster_id,proc_id);
-			FILE* email = email_user_open(ad,buf);
+			Email mailer;
+			FILE * email = mailer.open_stream( ad, JOB_SHOULD_HOLD, buf );
 			if ( email ) {
 				fprintf(email,"Condor failed to start your job %d.%d \n",
 					cluster_id,proc_id);
@@ -5805,7 +5806,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					"\n\nPlease correct this problem and release your "
 					"job with:\n   \"condor_release %d.%d\"\n\n",
 					cluster_id,proc_id);
-				email_close(email);
+				mailer.send();
 			}
 		}
 

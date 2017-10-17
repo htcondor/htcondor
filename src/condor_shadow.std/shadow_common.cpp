@@ -58,7 +58,7 @@
 
 extern "C" {
 	int JobIsStandard();
-	void NotifyUser( char *buf, PROC *proc );
+	void NotifyUser( char *buf, int reason, PROC *proc );
 	int terminate_is_pending(void);
 	void publishNotifyEmail( FILE* mailer, char* buf, PROC* proc );
 	void HoldJob( const char* long_reason, const char* short_reason,
@@ -126,7 +126,7 @@ terminate_is_pending(void)
 }
 
 void
-NotifyUser( char *buf, PROC *proc )
+NotifyUser( char *buf, int reason, PROC *proc )
 {
         FILE *mailer;
         char subject[ BUFSIZ ];	
@@ -166,7 +166,8 @@ NotifyUser( char *buf, PROC *proc )
                 }
         }
 
-		mailer = email_user_open(JobAd, subject);
+		Email em;
+		mailer = em.open_stream( JobAd, reason, subject );
         if( mailer == NULL ) {
                 dprintf(D_ALWAYS,
                         "Shadow: Cannot notify user( %s, %s, %s )\n",
@@ -175,7 +176,7 @@ NotifyUser( char *buf, PROC *proc )
 				return;
         }
 		publishNotifyEmail( mailer, buf, proc );
-		email_close(mailer);
+		em.send();
 }
 
 
@@ -366,7 +367,7 @@ HoldJob( const char* long_reason, const char* short_reason, int reason_code,
 		dprintf( D_ALWAYS, "Failed to commit updated job queue status!\n" );
 	}
 
-	mailer = email_user_open(JobAd, subject);
+	mailer = Email::open_stream( JobAd, JOB_SHOULD_HOLD, subject );
 	if( ! mailer ) {
 			// User didn't want email, so just exit now with the right
 			// value so the schedd actually puts the job on hold.

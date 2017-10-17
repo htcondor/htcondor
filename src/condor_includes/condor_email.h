@@ -48,8 +48,6 @@ void email_corefile_tail( FILE* mailer, const char* subsystem_name );
 #if defined(__cplusplus)
 #include "condor_classad.h"
 
-FILE * email_user_open( ClassAd* jobAd, const char *subject );
-
 void email_custom_attributes( FILE* mailer, ClassAd* job_ad );
 
 char* email_check_domain( const char* addr, ClassAd* job_ad );
@@ -66,7 +64,7 @@ public:
 		*/
 	FILE* open_stream( ClassAd* ad, int exit_reason = -1,
 				const char* subject = NULL );
-	
+
 		/** Write exit info about the job into an open Email.
 			@param ad Job to extract info from
 			@param exit_reason The Condor exit_reason (not status int)
@@ -105,7 +103,7 @@ public:
 							float run_sent, float run_recv,
 							float tot_sent, float tot_recv );
 		/* TODO
-	void sendError( ClassAd* ad, const char* err_summary, 
+	void sendError( ClassAd* ad, const char* err_summary,
 					const char* err_msg );
 		*/
 	void sendHold( ClassAd* ad, const char* reason );
