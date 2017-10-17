@@ -367,7 +367,8 @@ HoldJob( const char* long_reason, const char* short_reason, int reason_code,
 		dprintf( D_ALWAYS, "Failed to commit updated job queue status!\n" );
 	}
 
-	mailer = Email::open_stream( JobAd, JOB_SHOULD_HOLD, subject );
+	Email em;
+	mailer = em.open_stream( JobAd, JOB_SHOULD_HOLD, subject );
 	if( ! mailer ) {
 			// User didn't want email, so just exit now with the right
 			// value so the schedd actually puts the job on hold.
@@ -390,7 +391,7 @@ HoldJob( const char* long_reason, const char* short_reason, int reason_code,
 	}
 	fprintf( mailer, "\nis being put on hold.\n\n" );
 	fprintf( mailer, "%s", long_reason );
-	email_close(mailer);
+	em.send();
 
 		// Now that the user knows why, exit with the right code. 
 	dprintf( D_ALWAYS, "Job going into Hold state.\n");
