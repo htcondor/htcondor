@@ -147,13 +147,18 @@ Reconfig()
 static classad::MatchClassAd the_match_ad;
 static bool the_match_ad_in_use = false;
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
-									  classad::ClassAd *target )
+                                      classad::ClassAd *target,
+                                      const std::string &source_alias,
+                                      const std::string &target_alias )
 {
 	ASSERT( !the_match_ad_in_use );
 	the_match_ad_in_use = true;
 
 	the_match_ad.ReplaceLeftAd( source );
 	the_match_ad.ReplaceRightAd( target );
+
+	the_match_ad.SetLeftAlias( source_alias );
+	the_match_ad.SetRightAlias( target_alias );
 
 	return &the_match_ad;
 }
