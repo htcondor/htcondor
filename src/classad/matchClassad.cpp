@@ -269,7 +269,7 @@ void MatchClassAd::
 SetLeftAlias( const std::string &name )
 {
 	CaseIgnEqStr attr_cmp;
-	if ( attr_cmp( name.c_str(), lAlias.c_str() ) == 0 ) {
+	if ( attr_cmp( name.c_str(), lAlias.c_str() ) ) {
 		return;
 	}
 	// TODO Use ClassAd::Remove() to allow reuse of existing ExprTrees?
@@ -289,7 +289,7 @@ void MatchClassAd::
 SetRightAlias( const std::string &name )
 {
 	CaseIgnEqStr attr_cmp;
-	if ( attr_cmp( name.c_str(), rAlias.c_str() ) == 0 ) {
+	if ( attr_cmp( name.c_str(), rAlias.c_str() ) ) {
 		return;
 	}
 	// TODO Use ClassAd::Remove() to allow reuse of existing ExprTrees?
