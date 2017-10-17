@@ -6159,12 +6159,12 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_REMOVE_X_JOBS:
 			if (clusterad->factory) {
 				PauseJobFactory(clusterad->factory, 3);
+				//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
+				ScheduleClusterForDeferredCleanup(tmp_id.cluster);
+				// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
+				results.record( tmp_id, AR_SUCCESS );
+				num_success++;
 			}
-			//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
-			ScheduleClusterForDeferredCleanup(tmp_id.cluster);
-			// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
-			results.record( tmp_id, AR_SUCCESS );
-			num_success++;
 			break;
 		}
 	}
