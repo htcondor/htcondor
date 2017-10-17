@@ -65,7 +65,14 @@ much time DAGMan spends idle, how much time it spends submitting jobs and
 processing log files. This information could be used to determine why a DAG 
 is submitting jobs slowly and how to optimize it. These statistics currently get 
 dumped into the .dagman.out file at the end of a DAGs execution.
-\Ticket {6411}
+\Ticket{6411}
+
+\item Added a new knob to \Condor{dagman}, \MacroNI{DAGMAN\_AGGRESSIVE\_SUBMIT}.
+When set to True, this tells DAGMan to ignore the interval time limit for 
+submitting jobs (defined by \MacroNI{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}) and to 
+continuously submit jobs until no more are ready, or until it hits a different
+limit. 
+\Ticket{6386}
 
 \end{itemize}
 
