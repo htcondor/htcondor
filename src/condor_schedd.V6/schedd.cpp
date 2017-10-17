@@ -17029,7 +17029,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 	SubmitRequirements::iterator it = m_submitRequirements.begin();
 	for( ; it != m_submitRequirements.end(); ++it ) {
 		classad::Value result;
-		rval = EvalExprTree( it->requirement, m_adSchedd, procAd, result );
+		rval = EvalExprTree( it->requirement, m_adSchedd, procAd, result, "SCHEDD", "JOB" );
 
 		if( rval ) {
 			bool bVal;
@@ -17046,7 +17046,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 				formatstr( reasonString, "Submit requirement %s not met.\n", it->name );
 
 				if( it->reason != NULL ) {
-					int sval = EvalExprTree( it->reason, m_adSchedd, procAd, reason );
+					int sval = EvalExprTree( it->reason, m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
 					if( ! sval ) {
 						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name );
 					} else {

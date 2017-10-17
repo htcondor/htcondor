@@ -643,7 +643,9 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 }
 
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
-				  compat_classad::ClassAd *target, classad::Value &result )
+				  compat_classad::ClassAd *target, classad::Value &result,
+				  const std::string & sourceAlias,
+				  const std::string & targetAlias )
 {
 	int rc = TRUE;
 	if ( !expr || !source ) {
@@ -655,7 +657,7 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 	expr->SetParentScope( source );
 	if ( target && target != source ) {
-		mad = compat_classad::getTheMatchAd( source, target );
+		mad = compat_classad::getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
 	if ( !source->EvaluateExpr( expr, result ) ) {
 		rc = FALSE;
