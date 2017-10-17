@@ -652,7 +652,9 @@ const char*	GetTargetTypeName(const classad::ClassAd& ad);
 
 
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
-									  classad::ClassAd *target );
+                                      classad::ClassAd *target,
+                                      const std::string &source_alias = "",
+                                      const std::string &target_alias = "" );
 void releaseTheMatchAd();
 
 

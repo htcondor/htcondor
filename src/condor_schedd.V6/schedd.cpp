@@ -6159,12 +6159,12 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_REMOVE_X_JOBS:
 			if (clusterad->factory) {
 				PauseJobFactory(clusterad->factory, 3);
+				//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
+				ScheduleClusterForDeferredCleanup(tmp_id.cluster);
+				// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
+				results.record( tmp_id, AR_SUCCESS );
+				num_success++;
 			}
-			//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
-			ScheduleClusterForDeferredCleanup(tmp_id.cluster);
-			// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
-			results.record( tmp_id, AR_SUCCESS );
-			num_success++;
 			break;
 		}
 	}
@@ -17029,7 +17029,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 	SubmitRequirements::iterator it = m_submitRequirements.begin();
 	for( ; it != m_submitRequirements.end(); ++it ) {
 		classad::Value result;
-		rval = EvalExprTree( it->requirement, m_adSchedd, procAd, result );
+		rval = EvalExprTree( it->requirement, m_adSchedd, procAd, result, "SCHEDD", "JOB" );
 
 		if( rval ) {
 			bool bVal;
@@ -17046,7 +17046,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 				formatstr( reasonString, "Submit requirement %s not met.\n", it->name );
 
 				if( it->reason != NULL ) {
-					int sval = EvalExprTree( it->reason, m_adSchedd, procAd, reason );
+					int sval = EvalExprTree( it->reason, m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
 					if( ! sval ) {
 						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name );
 					} else {
