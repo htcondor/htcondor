@@ -24,34 +24,66 @@
 #if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_MUNGE)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
+#include "condor_crypt_3des.h"
 
 class Condor_Auth_MUNGE : public Condor_Auth_Base {
- public:
-    Condor_Auth_MUNGE(ReliSock * sock);
-    //------------------------------------------
-    // Constructor
-    //------------------------------------------
+public:
+	Condor_Auth_MUNGE(ReliSock * sock);
+	//------------------------------------------
+	// Constructor
+	//------------------------------------------
 
-    ~Condor_Auth_MUNGE();
-    //------------------------------------------
-    // Destructor
-    //------------------------------------------
+	~Condor_Auth_MUNGE();
+	//------------------------------------------
+	// Destructor
+	//------------------------------------------
 
-    int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
+	int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
+	//------------------------------------------
+	// PURPOSE: authenticate with the other side
+	// REQUIRE: hostAddr -- host to authenticate
+	// RETURNS:
+	//------------------------------------------
 
-    //------------------------------------------
-    // PURPOSE: authenticate with the other side
-    // REQUIRE: hostAddr -- host to authenticate
-    // RETURNS:
-    //------------------------------------------
+	int isValid() const;
+	//------------------------------------------
+	// PURPOSE: whether the authenticator is in
+	//          valid state.
+	// REQUIRE: None
+	// RETURNS: 1 -- true; 0 -- false
+	//------------------------------------------
 
-    int isValid() const;
-    //------------------------------------------
-    // PURPOSE: whether the authenticator is in
-    //          valid state.
-    // REQUIRE: None
-    // RETURNS: 1 -- true; 0 -- false
-    //------------------------------------------
+	int wrap(char* input, int input_len, char*& output, int& output_len);
+	//------------------------------------------
+	// PURPOSE: Encrypt the input buffer into an output buffer.  The output
+	//          buffer must be dealloated by the caller with free().
+	// REQUIRE: input buffer and output destination to be filled in
+	// RETURNS: 1 -- success; 0 -- failure
+	//------------------------------------------
+
+	int unwrap(char* input, int input_len, char*& output, int& output_len);
+	//------------------------------------------
+	// PURPOSE: Decrypt the input buffer into an output buffer.  The output
+	//          buffer must be dealloated by the caller with free().
+	// REQUIRE: input buffer and output destination to be filled in
+	// RETURNS: 1 -- success; 0 -- failure
+	//------------------------------------------
+
+private:
+	// the shared session key produced as output of the protocol
+	Condor_Crypt_3des* m_crypto;
+
+	// Produce the shared key object from raw key material.
+	bool setupCrypto(unsigned char* key, const int keylen);
+
+	// Encrypt data using the session key.  Called by wrap.
+	bool encrypt(unsigned char* input, int input_len, unsigned char* &output, int &output_len);
+
+	// Decrypt data based on the session key.  Called by unwrap.
+	bool decrypt(unsigned char* input, int input_len, unsigned char* &output, int &output_len);
+
+	// Decrypt or encrypt based on first argument.
+	bool encrypt_or_decrypt(bool want_encrypt, unsigned char *input, int input_len, unsigned char* &output, int &output_len);
 
 };
 

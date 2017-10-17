@@ -1941,9 +1941,11 @@ Sock::bytes_available_to_read() const
 	}
 
 		/* Make certain our cast is safe to do */
+#ifdef WIN32
 	if ( num_bytes > INT_MAX ) {
 		return -1;
 	}
+#endif
 	
 	int ret_val = (int) num_bytes;	// explicit cast to prevent warnings
 

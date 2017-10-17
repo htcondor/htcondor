@@ -4336,6 +4336,12 @@ type=string
 description=Default RequestCpus expression if not specified in submit file
 tags=submit
 
+[JOB_DEFAULT_LEASE_DURATION]
+default=2400
+type=string
+description=Default JobLeaseDuration expression if not specified in submit file
+tags=submit
+
 [MUST_MODIFY_REQUEST_EXPRS]
 default=false
 version=7.7.6
