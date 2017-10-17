@@ -171,6 +171,7 @@ Source1: generate-tarball.sh
 %endif
 
 # % if %systemd
+Source3: osg-env.conf
 # % else
 Source4: condor.osg-sysconfig
 # % endif
@@ -996,10 +997,16 @@ mkdir -p %{buildroot}%{_unitdir}
 install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
+%if 0%{?osg} || 0%{?hcc}
+# Set condor service enviroment variables for LCMAPS on OSG systems
+mkdir -p %{buildroot}%{_unitdir}/condor.service.d
+install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/%{SOURCE3}
+%endif
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
 %if 0%{?osg} || 0%{?hcc}
+# Set condor service enviroment variables for LCMAPS on OSG systems
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
 %endif
 mkdir %{buildroot}%{_sysconfdir}/sysconfig/
