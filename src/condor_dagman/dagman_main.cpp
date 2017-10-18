@@ -1532,7 +1532,7 @@ print_status() {
 	if ( dagman._dagmanClassad ) {
 		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
 					ready, failed, unready, dagman.dag->_dagStatus,
-					dagman.dag->Recovery() );
+					dagman.dag->Recovery(), dagman._dagmanStats );
 	}
 }
 
