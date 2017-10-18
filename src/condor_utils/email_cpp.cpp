@@ -43,46 +43,13 @@ static void
 construct_custom_attributes( MyString &attributes, ClassAd* job_ad );
 
 FILE *
-email_user_open( ClassAd *jobAd, const char *subject )
-{
-	int cluster = 0, proc = 0;
-	jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	jobAd->LookupInteger( ATTR_PROC_ID, proc );
-	return email_user_open_id( jobAd, cluster, proc, subject );
-}
-
-
-FILE *
-email_user_open_id( ClassAd *jobAd, int cluster, int proc, 
-					const char *subject )
+email_user_open_id( ClassAd *jobAd, int, int, const char *subject )
 {
 	FILE* fp = NULL;
     char* email_addr = NULL;
     char* email_full_addr = NULL;
-    int notification = NOTIFY_COMPLETE; // default
 
 	ASSERT(jobAd);
-
-		// TODO make this all work properly w/ shouldSend()
-    jobAd->LookupInteger( ATTR_JOB_NOTIFICATION, notification );
-    switch( notification ) {
-	case NOTIFY_NEVER:
-		dprintf( D_FULLDEBUG, 
-				 "The owner of job %d.%d doesn't want email.\n",
-				 cluster, proc );
-		return NULL;
-		break;
-	case NOTIFY_COMPLETE:
-			// Should this get email or not?
-	case NOTIFY_ERROR:
-	case NOTIFY_ALWAYS:
-		break;
-	default:
-		dprintf( D_ALWAYS, 
-				 "Condor Job %d.%d has unrecognized notification of %d\n",
-				 cluster, proc, notification );
-		break;
-    }
 
     /*
 	  Job may have an email address to whom the notification
@@ -97,7 +64,9 @@ email_user_open_id( ClassAd *jobAd, int cluster, int proc,
 	}
 		// make sure we've got a valid address with a domain
 	email_full_addr = email_check_domain( email_addr, jobAd );
-	fp = email_open( email_full_addr, subject );
+	// This is the only place email_nonjob_open() should be called for
+	// a job-related email.
+	fp = email_nonjob_open( email_full_addr, subject );
 	free( email_addr );
 	free( email_full_addr );
 	return fp;
@@ -522,7 +491,7 @@ Email::sendExitWithBytes( ClassAd* ad, int exit_reason,
 }
 
 
-bool 
+bool
 Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 {
 	if ( !ad ) {
@@ -532,6 +501,7 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 	int ad_cluster = 0, ad_proc = 0;
 	int exit_by_signal = FALSE;
 	int code = -1, status = -1;
+	int exitCode = 0, successExitCode = 0;
 
 	// send email if user requested it
 	int notification = NOTIFY_COMPLETE;	// default
@@ -549,28 +519,44 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 				return true;
 			}
 			break;
+
 		case NOTIFY_ERROR:
-				// only send email if the job was killed by a signal
-				// and/or core dumped.
+			// Was there an error?  Did the job core-dump?
 			if( is_error || (exit_reason == JOB_COREDUMPED) ) {
 				return true;
 			}
+
+			// Did the job exit on a signal?
 			ad->LookupBool( ATTR_ON_EXIT_BY_SIGNAL, exit_by_signal );
 			if( exit_reason == JOB_EXITED && exit_by_signal ) {
 				return true;
 			}
-				// send mail if job was put on hold because of some problem
-				// (not via condor_hold, periodic hold, or submitted on hold)
-			if( (ad->LookupInteger(ATTR_JOB_STATUS, status) &&
-				status == HELD) &&
-				(ad->LookupInteger(ATTR_HOLD_REASON_CODE, code) &&
+
+			// Was the job put on hold (or is about to be put on hold)
+			// because of some problem (not via condor_hold, periodic hold,
+			// or submitted on hold)?
+			ad->LookupInteger( ATTR_JOB_STATUS, status );
+			ad->LookupInteger( ATTR_HOLD_REASON_CODE, code );
+			if( (status == HELD || exit_reason == JOB_SHOULD_HOLD) &&
 				code != CONDOR_HOLD_CODE_UserRequest &&
 				code != CONDOR_HOLD_CODE_JobPolicy &&
-				code != CONDOR_HOLD_CODE_SubmittedOnHold) )
+				code != CONDOR_HOLD_CODE_SubmittedOnHold )
 			{
-					return true;
+				return true;
+			}
+
+			// Did the job exit successfully?  Note that the initialized
+			// value for exitCode is 0 rather than -1, because the original
+			// code's default for not finding an exit code in the job ad
+			// was not to warn about the erroneous job state, but to not
+			// send the notification email.
+			ad->LookupInteger( ATTR_ON_EXIT_CODE, exitCode );
+			ad->LookupInteger( ATTR_JOB_SUCCESS_EXIT_CODE, successExitCode );
+			if( exitCode != successExitCode ) {
+				return true;
 			}
 			break;
+
 		default:
 			ad->LookupInteger( ATTR_CLUSTER_ID, ad_cluster );
 			ad->LookupInteger( ATTR_PROC_ID, ad_proc );

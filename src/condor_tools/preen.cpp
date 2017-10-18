@@ -224,7 +224,7 @@ produce_output()
 		(BadFiles->number() > 1)?"s":"");
 
 	if( MailFlag ) {
-		if( (mailer=email_open(PreenAdmin, subject.Value())) == NULL ) {
+		if( (mailer=email_nonjob_open(PreenAdmin, subject.Value())) == NULL ) {
 			EXCEPT( "Can't do email_open(\"%s\", \"%s\")",PreenAdmin,subject.Value());
 		}
 	} else {

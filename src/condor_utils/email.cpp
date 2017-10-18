@@ -56,7 +56,7 @@ static void email_write_header_string(FILE *stream, const char *data);
 extern DLL_IMPORT_MAGIC char **environ;
 
 FILE *
-email_open( const char *email_addr, const char *subject )
+email_nonjob_open( const char *email_addr, const char *subject )
 {
 	char *Sendmail = NULL;
 	char *Mailer = NULL;
@@ -343,7 +343,7 @@ email_open_implementation( const char * final_args[])
 FILE *
 email_admin_open(const char *subject)
 {
-	return email_open(NULL,subject);
+	return email_nonjob_open(NULL,subject);
 }
 
 FILE *
@@ -372,7 +372,7 @@ email_developers_open(const char *subject)
         return NULL;
     }
 
-	mailer = email_open(tmp,subject);		
+	mailer = email_nonjob_open(tmp,subject);
 
 	/* Don't forget to free tmp! */
 	free(tmp);
@@ -406,7 +406,7 @@ email_close(FILE *mailer)
 		fprintf( mailer, "\n");
 		free(customSig);
 	} else {
-		
+
 		/* Put a signature on the bottom of the email */
 		fprintf( mailer, "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n" );
 		fprintf( mailer, "Questions about this message or HTCondor in general?\n" );
@@ -432,15 +432,15 @@ email_close(FILE *mailer)
 		set to something useable for the close operation. -pete 9/11/99
 	*/
 	prev_umask = umask(022);
-	/* 
-	** we fclose() on UNIX, pclose on win32 
+	/*
+	** we fclose() on UNIX, pclose on win32
 	*/
 #if defined(WIN32)
 	if (EMAIL_FINAL_COMMAND == NULL) {
 		my_pclose( mailer );
 	} else {
 		char *email_filename = NULL;
-		/* Should this be a pclose??? -Erik 9/21/00 */ 
+		/* Should this be a pclose??? -Erik 9/21/00 */
 		fclose( mailer );
 		dprintf(D_FULLDEBUG,"Sending email via system(%s)\n",
 			EMAIL_FINAL_COMMAND);
