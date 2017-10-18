@@ -65,6 +65,19 @@ SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttribu
 }
 
 int
+SetAttributeClassAd(int cl, int pr, const char *name, ClassAd ad, SetAttributeFlags_t flags )
+{
+	std::string buf;
+	int rval;
+
+	classad::ClassAdUnParser unp;
+	unp.Unparse( buf, &ad );
+
+	rval = SetAttribute(cl,pr,name,buf.c_str(),flags);
+	return(rval);
+}
+
+int
 SetAttributeIntByConstraint(const char *con, const char *name, int val, SetAttributeFlags_t flags)
 {
 	char buf[100];

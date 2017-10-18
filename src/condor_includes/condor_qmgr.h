@@ -184,7 +184,13 @@ int SetAttributeFloat(int cluster, int proc, const char *attr, float value, SetA
 */
 int SetAttributeString(int cluster, int proc, const char *attr,
 					   const char *value, SetAttributeFlags_t flags = 0);
-
+/** Set attr = value for job with specified cluster and proc.  The value
+	should be a valid ClassAd value (strings should be surrounded by
+	quotes)
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeClassAd(int cluster, int proc, const char *attr,
+						ClassAd ad, SetAttributeFlags_t flags = 0);
 /** Set attr = value for a job with the specified cluster and proc.  The value
  *  will be converted to a valid, quoted classad string
  *  @return -1 on failure; 0 on success
