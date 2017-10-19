@@ -1902,7 +1902,9 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		}
 
 		int JobUniverse = submit_hash.getUniverse();
-		SendLastExecutable(); // if spooling the exe, send it now.
+		if ( ProcId == 0 ) {
+			SendLastExecutable(); // if spooling the exe, send it now.
+		}
 		SetSendCredentialInAd( job );
 		NewExecutable = false;
 		// write job ad to schedd or dump to file, depending on what type MyQ is

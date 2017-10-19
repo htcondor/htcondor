@@ -4751,7 +4751,7 @@ int SubmitHash::SetExecutable()
 		}
 
 		// spool executable if necessary
-		if ( copy_to_spool ) {
+		if ( copy_to_spool && jid.proc == 0 ) {
 
 			bool try_ickpt_sharing = false;
 			CondorVersionInfo cvi(getScheddVersion());
