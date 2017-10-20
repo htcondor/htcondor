@@ -14,6 +14,7 @@ require {
         type condor_schedd_t;
         type condor_schedd_tmp_t;
         type condor_startd_t;
+        type condor_var_lib_t;
         type condor_var_lock_t;
         type etc_t;
         type fs_t;
@@ -21,6 +22,9 @@ require {
         type nfs_t;
         type sendmail_exec_t;
         type sendmail_t;
+        type ssh_keygen_t;
+        type sshd_t;
+        type sshd_net_t;
         type sysctl_fs_t;
         type sysctl_kernel_t;
         type sysctl_net_t;
@@ -37,9 +41,10 @@ require {
         class dir { add_name create getattr open read remove_name rmdir search setattr write };
         class fd { use };
         class fifo_file { append create getattr ioctl lock open read setattr unlink write };
-        class file { append execute execute_no_trans getattr ioctl open read rename setattr unlink write };
+        class file { append create execute execute_no_trans getattr ioctl open read rename setattr unlink write };
         class filesystem getattr;
         class process { setrlimit setsched sigchld transition };
+        class tcp_socket { getattr getopt read setopt write };
         class unix_stream_socket { accept connectto getattr read setopt write };
 }
 
@@ -101,3 +106,12 @@ allow condor_schedd_t user_tmp_t:dir getattr;
 allow condor_schedd_t var_lib_t:file { getattr open read };
 allow condor_schedd_t var_log_t:file { open rename setattr unlink };
 
+#============= ssh_keygen_t ==============
+allow ssh_keygen_t condor_var_lib_t:dir { add_name search write };
+allow ssh_keygen_t condor_var_lib_t:file { create getattr open write };
+
+#============= sshd_t ==============
+allow sshd_t condor_master_t:tcp_socket { getattr getopt read setopt write };
+
+#============= sshd_net_t ==============
+allow sshd_net_t condor_master_t:tcp_socket { read write };
