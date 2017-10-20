@@ -1720,9 +1720,9 @@ static bool concatenation_char_null() {
 
 //in test_mystring.cpp 379
 static bool substr_empty() {
-	emit_test("Test Substr() on an empty MyString.");
+	emit_test("Test substr() on an empty MyString.");
 	MyString a;
-	MyString b = a.Substr(0, 5);
+	MyString b = a.substr(0, 5);
 	emit_input_header();
 	emit_param("Pos1", "%d", 0);
 	emit_param("Pos2", "%d", 1);
@@ -1738,12 +1738,12 @@ static bool substr_empty() {
 
 //in test_mystring.cpp 191
 static bool substr_beginning() {
-	emit_test("Test Substr() on the beginning of a MyString.");
+	emit_test("Test substr() on the beginning of a MyString.");
 	MyString a("blahbaz!");
-	MyString b = a.Substr(0, 3);
+	MyString b = a.substr(0, 4);
 	emit_input_header();
 	emit_param("Pos1", "%d", 0);
-	emit_param("Pos2", "%d", 3);
+	emit_param("Pos2", "%d", 4);
 	emit_output_expected_header();
 	emit_retval("%s", "blah");
 	emit_output_actual_header();
@@ -1756,12 +1756,12 @@ static bool substr_beginning() {
 
 //in test_mystring.cpp 200
 static bool substr_end() {
-	emit_test("Test Substr() on the end of a MyString.");
+	emit_test("Test substr() on the end of a MyString.");
 	MyString a("blahbaz!");
-	MyString b = a.Substr(4, 7);
+	MyString b = a.substr(4, 4);
 	emit_input_header();
 	emit_param("Pos1", "%d", 4);
-	emit_param("Pos2", "%d", 7);
+	emit_param("Pos2", "%d", 4);
 	emit_output_expected_header();
 	emit_retval("%s", "baz!");
 	emit_output_actual_header();
@@ -1774,13 +1774,13 @@ static bool substr_end() {
 
 //in test_mystring.cpp 218
 static bool substr_outside_beginning() {
-	emit_test("Test Substr() when passed a position before the beginning of "
+	emit_test("Test substr() when passed a position before the beginning of "
 		"the MyString.");
 	MyString a("blahbaz!");
-	MyString b = a.Substr(-2, 5);
+	MyString b = a.substr(-2, 6);
 	emit_input_header();
 	emit_param("Pos1", "%d", -2);
-	emit_param("Pos2", "%d", 5);
+	emit_param("Pos2", "%d", 6);
 	emit_output_expected_header();
 	emit_retval("%s", "blahba");
 	emit_output_actual_header();
@@ -1793,10 +1793,10 @@ static bool substr_outside_beginning() {
 
 //in test_mystring.cpp 209
 static bool substr_outside_end() {
-	emit_test("Test Substr() when passed a position after the end of the "
+	emit_test("Test substr() when passed a position after the end of the "
 		"MyString.");
 	MyString a("blahbaz!");
-	MyString b = a.Substr(5, 10);
+	MyString b = a.substr(5, 10);
 	emit_input_header();
 	emit_param("Pos1", "%d", 5);
 	emit_param("Pos2", "%d", 10);

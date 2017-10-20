@@ -362,7 +362,7 @@ static MyString getWritePassword(const char *write_passwd_fname,
 			// check if the entry matches the prefix
 		if (strncmp(buf, prefix.Value(), len) == 0) {
 				// extract the password
-			passwd = msbuf.Substr(len, msbuf.Length());
+			passwd = msbuf.substr(len, msbuf.Length());
 			found = TRUE;
 
 			break;

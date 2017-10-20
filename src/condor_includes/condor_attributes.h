@@ -46,7 +46,6 @@
 #define ATTR_ACTION_RESULT  "ActionResult"
 #define ATTR_ACTION_RESULT_TYPE  "ActionResultType"
 #define ATTR_ACTIVITY  "Activity"
-#define ATTR_ALLOW_NOTIFICATION_CC  "AllowNotificationCC"
 #define ATTR_ALL_REMOTE_HOSTS  "AllRemoteHosts"
 #define ATTR_ANNEX_NAME  "AnnexName"
 #define ATTR_APPEND_FILES  "AppendFiles"

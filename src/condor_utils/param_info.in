@@ -3023,11 +3023,6 @@ default=
 type=string
 tags=shadow,pseudo_ops
 
-[EMAIL_NOTIFICATION_CC]
-default=
-type=string
-tags=shadow,shadow_common
-
 [DBMSMANAGER_NAME]
 default=
 type=string
@@ -4339,6 +4334,12 @@ default=1
 version=7.7.6
 type=string
 description=Default RequestCpus expression if not specified in submit file
+tags=submit
+
+[JOB_DEFAULT_LEASE_DURATION]
+default=2400
+type=string
+description=Default JobLeaseDuration expression if not specified in submit file
 tags=submit
 
 [MUST_MODIFY_REQUEST_EXPRS]

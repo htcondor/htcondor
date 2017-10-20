@@ -3272,6 +3272,7 @@ enum {
 	idATTR_none=0,
 	idATTR_CLUSTER_ID,
 	idATTR_PROC_ID,
+	idATTR_CONCURRENCY_LIMITS,
 	idATTR_CRON_DAYS_OF_MONTH,
 	idATTR_CRON_DAYS_OF_WEEK,
 	idATTR_CRON_HOURS,
@@ -3328,6 +3329,7 @@ typedef struct attr_ident_pair {
 static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_ACCOUNTING_GROUP,   catDirtyPrioRec | catSubmitterIdent),
 	FILL(ATTR_CLUSTER_ID,         catJobId),
+	FILL(ATTR_CONCURRENCY_LIMITS, catDirtyPrioRec),
 	FILL(ATTR_CRON_DAYS_OF_MONTH, catCron),
 	FILL(ATTR_CRON_DAYS_OF_WEEK,  catCron),
 	FILL(ATTR_CRON_HOURS,         catCron),
@@ -4887,11 +4889,11 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						const char * warning = NULL;
+						std::string warning;
 						if(errorStack && (! errorStack->empty())) {
-							warning = errorStack->message();
+							warning = errorStack->getFullText();
 						}
-						scheduler.WriteSubmitToUserLog( procad, doFsync, warning );
+						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.c_str() );
 					}
 				}
 
@@ -5789,7 +5791,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 			char buf[256];
 			snprintf(buf,256,"Your job (%d.%d) is on hold",cluster_id,proc_id);
-			FILE* email = email_user_open(ad,buf);
+			Email mailer;
+			FILE * email = mailer.open_stream( ad, JOB_SHOULD_HOLD, buf );
 			if ( email ) {
 				fprintf(email,"Condor failed to start your job %d.%d \n",
 					cluster_id,proc_id);
@@ -5803,7 +5806,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					"\n\nPlease correct this problem and release your "
 					"job with:\n   \"condor_release %d.%d\"\n\n",
 					cluster_id,proc_id);
-				email_close(email);
+				mailer.send();
 			}
 		}
 
@@ -6379,6 +6382,14 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 
 	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
+
+	StatInfo exe_stat( path );
+	if ( exe_stat.Error() == SIGood ) {
+		Q_SOCK->getReliSock()->put(1);
+		Q_SOCK->getReliSock()->end_of_message();
+		free(path);
+		return 0;
+	}
 
 	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
 		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);

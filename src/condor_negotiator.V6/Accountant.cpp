@@ -1659,7 +1659,7 @@ MyString Accountant::GetDomain(const MyString& CustomerName)
   MyString S;
   int pos=CustomerName.FindChar('@');
   if (pos==-1) return S;
-  S=CustomerName.Substr(pos+1,CustomerName.Length()-1);
+  S=CustomerName.substr(pos+1,CustomerName.Length());
   return S;
 }
 

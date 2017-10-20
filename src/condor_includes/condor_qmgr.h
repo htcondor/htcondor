@@ -253,7 +253,8 @@ int RemoteCommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=N
 */
 void CommitNonDurableTransactionOrDieTrying();
 void CommitTransactionOrDieTrying();
-int CommitTransactionAndLive( SetAttributeFlags_t flags, CondorError * errstack );
+int CommitTransactionAndLive( SetAttributeFlags_t flags, CondorError * errstack )
+	WARN_UNUSED_RESULT;
 
 
 int AbortTransaction();

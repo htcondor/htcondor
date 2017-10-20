@@ -147,7 +147,9 @@ Reconfig()
 static classad::MatchClassAd the_match_ad;
 static bool the_match_ad_in_use = false;
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
-									  classad::ClassAd *target )
+                                      classad::ClassAd *target,
+                                      const std::string &source_alias,
+                                      const std::string &target_alias )
 {
 	ASSERT( !the_match_ad_in_use );
 	the_match_ad_in_use = true;
@@ -155,10 +157,8 @@ classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 	the_match_ad.ReplaceLeftAd( source );
 	the_match_ad.ReplaceRightAd( target );
 
-	if ( !ClassAd::m_strictEvaluation ) {
-		source->alternateScope = target;
-		target->alternateScope = source;
-	}
+	the_match_ad.SetLeftAlias( source_alias );
+	the_match_ad.SetRightAlias( target_alias );
 
 	return &the_match_ad;
 }
@@ -167,11 +167,8 @@ void releaseTheMatchAd()
 {
 	ASSERT( the_match_ad_in_use );
 
-	classad::ClassAd *ad;
-	ad = the_match_ad.RemoveLeftAd();
-	ad->alternateScope = NULL;
-	ad = the_match_ad.RemoveRightAd();
-	ad->alternateScope = NULL;
+	the_match_ad.RemoveLeftAd();
+	the_match_ad.RemoveRightAd();
 
 	the_match_ad_in_use = false;
 }

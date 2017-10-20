@@ -397,7 +397,18 @@ int submit_factory_job (
 
 		bool spill_foreach_data = false; // set to true when we need to convert foreach into foreach from
 		if (o.foreach_mode != foreach_not) {
-			spill_foreach_data = (o.items_filename.empty() || (o.items_filename == "<" || o.items_filename == "-"));
+			spill_foreach_data = (
+				o.items_filename.empty() ||
+				o.items_filename.FindChar('|') > 0 || // is items from a command (or invalid filename)
+				o.items_filename == "<" ||            // is remainder of file. aka 'inline' items
+				o.items_filename == "-"               // is items from stdin
+				);
+
+			// In order to get a correct item count, we have to always spill the foreach data
+			// even when the submit file has a "queue from <file>" command already.
+			if (param_boolean("SUBMIT_ALWAYS_COUNT_ITEMS", true)) {
+				spill_foreach_data = true;
+			}
 
 			MacroStreamYourFile ms(fp, source);
 			rval = submit_hash.load_inline_q_foreach_items(ms, o, errmsg);

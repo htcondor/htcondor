@@ -514,7 +514,9 @@ RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 	} else if( gotClassAd ) {
 		std::string warningReason;
 		if( errstack && reply.LookupString( "WarningReason", warningReason ) ) {
-			errstack->push( "SCHEDD", 0, warningReason.c_str() );
+			if(! warningReason.empty()) {
+				errstack->push( "SCHEDD", 0, warningReason.c_str() );
+			}
 		}
 	}
 	neg_on_error( qmgmt_sock->end_of_message() );

@@ -696,7 +696,7 @@ void Hadoop::updateClassAd( MyString safemode, MyString stats) {
        int ln_end = 0;
 
        while( (ln_end = stats.FindChar('\n', ln_begin+1)) > 0 ) {
-            MyString line = stats.Substr(ln_begin, ln_end-1);
+            MyString line = stats.substr(ln_begin, ln_end-ln_begin);
             ln_begin = ln_end;
             line.trim();
             if( line.Length() < 2 )
@@ -706,10 +706,10 @@ void Hadoop::updateClassAd( MyString safemode, MyString stats) {
             if( pos < 0 ) //omit unncessary output
                 continue;
 
-            adKey = line.Substr(0, pos-1);
+            adKey = line.substr(0, pos);
             adKey.replaceString(" ","_");
             adKey.replaceString("%","Percent");
-            adValue = line.Substr(pos+1, line.Length() );
+            adValue = line.substr(pos+1, line.Length() );
             adValue.replaceString("�", "0"); //this a bug in hdfs
             adValue.trim();
             m_hdfsAd.Assign(adKey.Value(), adValue.Value() );
@@ -742,8 +742,8 @@ int Hadoop::stdoutHandler(int /*pipe*/) {
              int pos = m_line_stdout.FindChar('\n', 0);
              while (pos > 0) {                
                     //Here we get a newline terminated string to process.
-                    MyString line = m_line_stdout.Substr(0, pos-1);
-                    m_line_stdout = m_line_stdout.Substr(pos+1, m_line_stdout.Length());
+                    MyString line = m_line_stdout.substr(0, pos);
+                    m_line_stdout = m_line_stdout.substr(pos+1, m_line_stdout.Length());
 
                     if (line.find("START_AD") >= 0) {
                             MyString adKey, adValue;
@@ -784,8 +784,8 @@ int Hadoop::stderrHandler(int /*pipe*/) {
              int pos = m_line_stderr.FindChar('\n', 0);
              while (pos > 0) {                
                     //Here we get a newline terminated string to process.
-                    MyString line = m_line_stderr.Substr(0, pos-1);
-                    m_line_stderr = m_line_stderr.Substr(pos+1, m_line_stderr.Length());
+                    MyString line = m_line_stderr.substr(0, pos);
+                    m_line_stderr = m_line_stderr.substr(pos+1, m_line_stderr.Length());
                     dprintf(D_ALWAYS, "STDERR: %s\n", line.Value());
                     pos = m_line_stderr.FindChar('\n', 0);
              }

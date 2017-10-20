@@ -40,7 +40,7 @@ MyString getURLType( const char *url ) {
 	MyString t;
 	if(IsUrl(url)) {
 		MyString u = url;
-		t = u.Substr(0,u.FindChar(':')-1);
+		t = u.substr(0,u.FindChar(':'));
 	}
 	return t;
 }

@@ -70,7 +70,9 @@ bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree);
 bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
 
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
-				  compat_classad::ClassAd *target, classad::Value &result );
+				  compat_classad::ClassAd *target, classad::Value &result,
+				  const std::string & sourceAlias = "",
+				  const std::string & targetAlias = "" );
 
 //ad2 treated as candidate to match against ad1, so we want to find a match for ad1
 bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 );

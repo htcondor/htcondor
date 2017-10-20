@@ -788,17 +788,6 @@ BaseShadow::emailRemoveEvent( const char* reason )
 }
 
 
-FILE*
-BaseShadow::emailUser( const char *subjectline )
-{
-	dprintf(D_FULLDEBUG, "BaseShadow::emailUser() called.\n");
-	if( !jobAd ) {
-		return NULL;
-	}
-	return email_user_open( jobAd, subjectline );
-}
-
-
 void BaseShadow::initUserLog()
 {
 	std::string logfilename,dagmanLogFile;

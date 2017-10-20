@@ -1539,9 +1539,12 @@ JobActionResults::record( PROC_ID job_id, action_result_t result )
 	}
 
 	if( result_type == AR_LONG ) {
-			// Put it directly in our ad
-		sprintf( buf, "job_%d_%d = %d", job_id.cluster, job_id.proc,
-				 (int)result );
+		// Put it directly in our ad
+		if (job_id.proc < 0) {
+			sprintf( buf, "cluster_%d = %d", job_id.cluster, (int)result );
+		} else {
+			sprintf( buf, "job_%d_%d = %d", job_id.cluster, job_id.proc, (int)result );
+		}
 		result_ad->Insert( buf );
 		return;
 	}

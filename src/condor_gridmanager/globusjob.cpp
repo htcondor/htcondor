@@ -586,7 +586,7 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 					"Failed to parse \"%s\", ignoring.", line.Value());
 				continue;
 			}
-			MyString attr = line.Substr(0, n - 1);
+			MyString attr = line.substr(0, n);
 
 			dprintf( D_ALWAYS, "FILE: %s\n", line.Value() );
 			if( ! SAVE_ATTRS.contains_anycase(attr.Value()) ) {

@@ -439,7 +439,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		classad::ExprTree *tree = parser.ParseExpression(rlimit_expr);
 		if (tree) {
 			classad::Value val;
-			long long result;
+			long long result = 0L;
 
 			if (EvalExprTree(tree, Starter->jic->machClassAd(), JobAd, val) && 
 				val.IsIntegerValue(result)) {

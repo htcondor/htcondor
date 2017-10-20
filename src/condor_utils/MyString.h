@@ -202,11 +202,11 @@ class MyString
 	//@{ 
 
 	/** Returns a new MyString that is the portion of the string from 
-	 *  pos1 to pos2 (including both pos1 and pos2). 
+	 *  pos and continuing for len characters (or the end of the string).
 	 *  The first character in the string is position 0. 
 	 */
-	MyString Substr(int pos1, int pos2) const;
-    
+	MyString substr(int pos, int len) const;
+
 	/** Returns a new MyString. Q is a string of characters that need
      *  to be escaped, and the "escape" is the character to put before
      *  each character. For example, if you pass "abc" and '\' and the
