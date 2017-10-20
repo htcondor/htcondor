@@ -6383,6 +6383,14 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
+	StatInfo exe_stat( path );
+	if ( exe_stat.Error() == SIGood ) {
+		Q_SOCK->getReliSock()->put(1);
+		Q_SOCK->getReliSock()->end_of_message();
+		free(path);
+		return 0;
+	}
+
 	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
 		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);
 		Q_SOCK->getReliSock()->put(-1);
