@@ -136,24 +136,21 @@ int SetAttributeByConstraint(const char *constraint, const char *attr,
 							 const char *value,
 							 SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
-	attr = value.  The value should be a valid ClassAd value (strings
-	should be surrounded by quotes).
+	attr = value.  The value will be a ClassAd integer literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeIntByConstraint(const char *constraint, const char *attr,
 							 int value,
 							 SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
-	attr = value.  The value should be a valid ClassAd value (strings
-	should be surrounded by quotes).
+	attr = value.  The value will be a ClassAd floating-point literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeFloatByConstraint(const char *constraing, const char *attr,
 							   float value,
 							   SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
-	attr = value.  The value should be a valid ClassAd value (strings
-	should be surrounded by quotes).
+	attr = value.  The value will be a ClassAd string literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeStringByConstraint(const char *constraint, const char *attr,
@@ -173,20 +170,17 @@ int SetAttributeExprByConstraint(const char *constraint, const char *attr,
 */
 int SetAttribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 /** Set attr = value for job with specified cluster and proc.  The value
-	should be a valid ClassAd value (strings should be surrounded by
-	quotes)
+	will be a ClassAd integer literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
 /** Set attr = value for job with specified cluster and proc.  The value
-	should be a valid ClassAd value (strings should be surrounded by
-	quotes)
+	will be a ClassAd floating-point literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeFloat(int cluster, int proc, const char *attr, float value, SetAttributeFlags_t flags = 0);
 /** Set attr = value for job with specified cluster and proc.  The value
-	should be a valid ClassAd value (strings should be surrounded by
-	quotes)
+	will be a ClassAd string literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeString(int cluster, int proc, const char *attr,
@@ -202,11 +196,6 @@ int SetAttributeExpr(int cluster, int proc, const char *attr,
 int SetSecureAttributeInt(int cluster_id, int proc_id,
                           const char *attr_name, int attr_value,
                           SetAttributeFlags_t flags);
-
-// Internal function for only the schedd to use.
-int SetSecureAttributeRawString(int cluster_id, int proc_id,
-                                const char *attr_name, const char *attr_value,
-                                SetAttributeFlags_t flags);
 
 /** Set LastJobLeaseRenewalReceived = <xact start time> and
     JobLeaseDurationReceived = dur for the specified cluster/proc.
