@@ -27,6 +27,7 @@
 #include "directory_util.h"
 #include "filename_tools.h"
 #include "stat_wrapper.h"
+#include <sys/stat.h>
 #include <string> 
 
 #ifndef WIN32
@@ -76,13 +77,13 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 // WARNING!  This code changes priv state.  Be very careful if modifying it.
 // Do not return in the block of code where the priv has been set to either
 // condor or root.  -zmiller
-static bool MakeLink(const char* srcFile, const string &newLink) {
+static bool MakeLink(const char* srcFilePath, const string &newLink) {
 
 	bool retVal = false;
-	const StatStructType *srcFileStat;
-	const StatStructType *targetLinKStat;
-	StatWrapper srcFileMode;
-	StatWrapper targetLinkMode;
+	int srcFileInodeNum;
+	int targetLinkInodeNum;
+	struct stat srcFileStat;
+	struct stat targetLinkStat;
 
 	// Make sure the necessary parameters are set
 	std::string webRootDir;
@@ -110,56 +111,54 @@ static bool MakeLink(const char* srcFile, const string &newLink) {
 	priv_state original_priv = set_user_priv();
 	
 	bool fileOK = false;
-	if (srcFileMode.Stat(srcFile) == 0) {
-		srcFileStat = srcFileMode.GetBuf();
-		if (srcFileStat != NULL)
-			fileOK = (srcFileStat->st_mode & S_IRUSR); // Verify readable by owner
+	FILE *srcFile = safe_fopen_wrapper(srcFilePath, "r");
+	if (srcFile) {
+		if(stat(srcFilePath, &srcFileStat) == 0) {
+			srcFileInodeNum = srcFileStat.st_ino;
+			fileOK = (srcFileStat.st_mode & S_IRUSR); // Verify readable by owner
+		}
 	}
 	if (fileOK == false) {
 		dprintf(D_ALWAYS,
-			"Cannot transfer -- public input file not readable by user: %s\n", srcFile);
+			"Cannot transfer -- public input file not readable by user: %s\n", srcFilePath);
 		set_priv(original_priv);
 		return (false);
 	}
+	fclose(srcFile);
 
 	// Create the hard link using root privileges; it will automatically get
 	// owned by the same owner of the file.. If the link already exists, don't do 
 	// anything at this point, we'll check later to make sure it points to the
 	// correct inode.
-	const char *const targetLink = dircat(goodPath, newLink.c_str()); // needs to be freed
-	if (targetLink != NULL) {
-		// Check if target already exists
-		if (targetLinkMode.Stat(targetLink, StatWrapper::STATOP_LSTAT) == 0) { 
-			// Good enough if link exists, ok if update fails
+	const char *const targetLinkPath = dircat(goodPath, newLink.c_str()); // needs to be freed
+	FILE *targetLink = safe_fopen_wrapper(targetLinkPath, "r");
+	// Check if target already exists
+	if (targetLink) {
+		// Good enough if link exists, ok if update fails
+		retVal = true;
+		fclose(targetLink);
+	}	 
+	else {
+		// Now create the link as root.
+		set_root_priv();
+		if (link(srcFilePath, targetLinkPath) == 0) {
+			// so far, so good!
 			retVal = true;
 		} 
 		else {
-			// Now create the link as root.
-			set_root_priv();
-			if (link(srcFile, targetLink) == 0) {
-				// so far, so good!
-				retVal = true;
-			} 
-			else {
-				dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFile,
-					targetLink, strerror(errno));
-			}
+			dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFilePath,
+				targetLinkPath, strerror(errno));
 		}
 	}
-
+	
 	// Open the hard link using safe_open as user condor, and fstat() the two 
 	// open file handles to make sure the inodes match.
 	if (retVal == true) {
 		set_condor_priv();
 
-		if (srcFileMode.Stat(srcFile) == 0 && targetLinkMode.Stat(targetLink) == 0) {
-			targetLinKStat = targetLinkMode.GetBuf();
-			if (srcFileStat != NULL && targetLinKStat != NULL) {
-				retVal = (srcFileStat->st_ino == targetLinKStat->st_ino);
-			}
-			else {
-				retVal = false;
-			}
+		if (stat(targetLinkPath, &targetLinkStat) == 0) {
+			targetLinkInodeNum = targetLinkStat.st_ino;
+			retVal = (srcFileInodeNum == targetLinkInodeNum);
 		}
 		else {
 			retVal = false;
