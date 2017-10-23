@@ -107,7 +107,7 @@ class DagmanClassad {
 			@param attrName The name of the attribute to set.
 			@param ad The ClassAd to set.
 		*/
-	void SetDagAttribute( const char *attrName, ClassAd ad );
+	void SetDagAttribute( const char *attrName, const ClassAd &ad );
 
 		/** Get the specified attribute (string) value from our ClassAd.
 			@param attrName: The name of the attribute.

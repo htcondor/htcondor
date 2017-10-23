@@ -159,6 +159,13 @@ int SetAttributeFloatByConstraint(const char *constraing, const char *attr,
 int SetAttributeStringByConstraint(const char *constraint, const char *attr,
 							     const char *value,
 							     SetAttributeFlags_t flags=0);
+/** For all jobs in the queue for which constraint evaluates to true, set
+	attr = value.  The value expression is set as-is (unevaluated).
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeExprByConstraint(const char *constraint, const char *attr,
+                                 const ExprTree *value,
+                                 SetAttributeFlags_t flags=0);
 /** Set attr = value for job with specified cluster and proc.  The value
 	should be a valid ClassAd value (strings should be surrounded by
 	quotes)
@@ -185,18 +192,11 @@ int SetAttributeFloat(int cluster, int proc, const char *attr, float value, SetA
 int SetAttributeString(int cluster, int proc, const char *attr,
 					   const char *value, SetAttributeFlags_t flags = 0);
 /** Set attr = value for job with specified cluster and proc.  The value
-	should be a valid ClassAd value (strings should be surrounded by
-	quotes)
+	expression is set as-is (unevaluated).
 	@return -1 on failure; 0 on success
 */
-int SetAttributeClassAd(int cluster, int proc, const char *attr,
-						ClassAd ad, SetAttributeFlags_t flags = 0);
-/** Set attr = value for a job with the specified cluster and proc.  The value
- *  will be converted to a valid, quoted classad string
- *  @return -1 on failure; 0 on success
- */
-int SetAttributeRawString(int cluster, int proc, const char *attr,
-                          const char *value, SetAttributeFlags_t flags = 0);
+int SetAttributeExpr(int cluster, int proc, const char *attr,
+                     const ExprTree *value, SetAttributeFlags_t flags = 0);
 
 // Internal function for only the schedd to use.
 int SetSecureAttributeInt(int cluster_id, int proc_id,
@@ -377,9 +377,6 @@ void WalkJobQueue(scan_func fn, void* pv);
 int rusage_to_float(const struct rusage &, double *, double *);
 int float_to_rusage(double, double, struct rusage *);
 
-
-#define SetAttributeExpr(cl, pr, name, val) SetAttribute(cl, pr, name, val);
-#define SetAttributeExprByConstraint(con, name, val) SetAttributeByConstraint(con, name, val);
 
 /* Set the effective owner to use for authorizing subsequent qmgmt
    opperations. Setting to NULL or an empty string will reset the

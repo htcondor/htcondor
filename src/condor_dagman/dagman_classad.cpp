@@ -270,10 +270,10 @@ DagmanClassad::SetDagAttribute( const char *attrName, const MyString &value )
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::SetDagAttribute( const char *attrName, ClassAd ad )
+DagmanClassad::SetDagAttribute( const char *attrName, const ClassAd &ad )
 {
-	if ( SetAttributeClassAd( _dagmanId._cluster, _dagmanId._proc,
-						  attrName, ad ) != 0 ) {
+	if ( SetAttributeExpr( _dagmanId._cluster, _dagmanId._proc,
+						  attrName, &ad ) != 0 ) {
 		debug_printf( DEBUG_QUIET,
 					  "WARNING: failed to set attribute %s\n", attrName );
 		check_warning_strictness( DAG_STRICT_3 );
