@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused systems using cgroup memory limits to
+not properly reset the memory limit after the first use of a slot.  The memory
+limit would get reused from the previous slot value.
+\Ticket{6414}
+
 \item Asking systemd to stop condor now allows the HTCondor daemons to properly
 clean up, instead of simply immediately sending a SIGKILL.  As a result,
 HTCondor daemons stopped via systemd will no longer continue to appear 
