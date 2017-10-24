@@ -59,6 +59,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When docker universe reports memory usage, it now reports the
+RSS (Resident Set Size) of the container, previously it reported
+RSS + page cache size
+\Ticket{6430}
+
 \item Added \Arg{off} command to \Condor{annex}.  This command invokes
 \Condor{off} \Arg{-annex} appropriately.
 \Ticket{6408}
