@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Change the default value of STARTD\_RECOMPUTE\_DISK\_FREE to false, so 
+that the Disk attribute is mostly correct for partitionable slots.
+\Ticket{6424}
+
 \item Docker universe now sets the cgroup cpu-shares field to 100 times the number of requested cores, which matches vanilla universe
 \Ticket{6423}
 
