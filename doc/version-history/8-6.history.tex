@@ -41,6 +41,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Docker universe now sets the cgroup cpu-shares field to 100 times the number of requested cores, which matches vanilla universe
+\Ticket{6423}
+
 \item MOUNT\_UNDER\_SCRATCH when used in Docker universe can now be an expression, not just a literal string.  This matches the way it works in vanilla universe
 \Ticket{6401}
 
