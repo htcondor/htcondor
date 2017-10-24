@@ -118,7 +118,10 @@ limit.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug introduced in 8.7.0 where the job attributes RemoteUserCpu
+and RemoteSysCpu where never updated in the history file, or in condor\_q
+output.  The user log would show the correct values.
+\Ticket{6426}
 
 \end{itemize}
 
