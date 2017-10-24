@@ -1751,7 +1751,11 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 
 		// Send our reply back to the client
 	rsock->encode();
-	rsock->code(reply);
+	if (!rsock->code(reply)) {
+		dprintf(D_ALWAYS,
+		        "Attempt to refresh X509 proxy failed to reply\n");
+		reply = false;
+	}
 	rsock->end_of_message();
 
 	if(reply) {
