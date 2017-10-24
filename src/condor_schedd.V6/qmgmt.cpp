@@ -343,7 +343,6 @@ IncrementClusterSize(int cluster_num)
 		// We've seen this cluster_num go by before; increment proc count
 		(*numOfProcs)++;
 	}
-	TotalJobsCount++;
 
 		// return the number of procs in this cluster
 	if ( numOfProcs ) {
@@ -1330,6 +1329,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			IncrementClusterSize(cluster_num);
+			TotalJobsCount++;
 
 		}
 	} // WHILE
@@ -2052,7 +2052,7 @@ NewProc(int cluster_id)
 		return -1;
 	}
 
-	if ( TotalJobsCount >= scheduler.getMaxJobsSubmitted() ) {
+	if ( (TotalJobsCount + jobs_added_this_transaction) >= scheduler.getMaxJobsSubmitted() ) {
 		dprintf(D_ALWAYS,
 			"NewProc(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
 		return -2;
@@ -3742,6 +3742,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 	else {
 		JobQueue->CommitTransaction();
 	}
+
+	// Now that we've commited for sure, up the TotalJobsCount
+	TotalJobsCount += jobs_added_this_transaction; 
 
 	// If the commit failed, we should never get here.
 
