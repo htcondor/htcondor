@@ -93,6 +93,13 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 						"not set! Falling back to regular file transfer\n");
 		return (false);
 	}
+	std::string webRootOwner;
+	param(webRootOwner, "HTTP_PUBLIC_FILES_ROOT_OWNER");
+	if(webRootOwner.empty()) {
+		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_OWNER "
+						"not set! Falling back to regular file transfer\n");
+		return (false);
+	}
 	char goodPath[PATH_MAX];
 	if (realpath(webRootDir.c_str(), goodPath) == NULL) {
 		dprintf(D_ALWAYS, "mk_cache_links.cpp: HTTP_PUBLIC_FILES_ROOT_DIR "
@@ -127,47 +134,82 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	fclose(srcFile);
 
 	// Create the hard link using root privileges; it will automatically get
-	// owned by the same owner of the file.. If the link already exists, don't do 
+	// owned by the same owner of the file. If the link already exists, don't do 
 	// anything at this point, we'll check later to make sure it points to the
 	// correct inode.
 	const char *const targetLinkPath = dircat(goodPath, newLink.c_str()); // needs to be freed
+
+	// Switch to root privileges, so we can test if the link exists, and create
+	// it if it does not
+	set_root_priv();
+	
+	// Check if target link already exists
 	FILE *targetLink = safe_fopen_wrapper(targetLinkPath, "r");
-	// Check if target already exists
 	if (targetLink) {
-		// Good enough if link exists, ok if update fails
+		// If link exists, update the .access file timestamp
 		retVal = true;
 		fclose(targetLink);
-	}	 
+		dprintf(D_ALWAYS, "Target link %s exists, updating access time\n", targetLinkPath);
+		// MRC: To be completed in #6453
+	}	
 	else {
-		// Now create the link as root.
-		set_root_priv();
+		// Link does not exist, so create it as root.
 		if (link(srcFilePath, targetLinkPath) == 0) {
 			// so far, so good!
 			retVal = true;
-		} 
+		}
 		else {
-			dprintf(D_ALWAYS, "Could not link %s to %s, error = %s\n", srcFilePath,
-				targetLinkPath, strerror(errno));
+			dprintf(D_ALWAYS, "Could not link %s to %s, error: %s\n", targetLinkPath,
+				srcFilePath, strerror(errno));
 		}
 	}
 	
-	// Open the hard link using safe_open as user condor, and fstat() the two 
-	// open file handles to make sure the inodes match.
-	if (retVal == true) {
-		set_condor_priv();
+	// Now we need to make sure nothing devious has happened, that the hard link 
+	// points to the file we're expecting. First, make sure that the user 
+	// specified by HTTP_PUBLIC_FILES_ROOT_OWNER is a valid user.
+	uid_t link_uid = -1;
+	gid_t link_gid = -1;
+	bool isValidUser = pcache()->get_user_ids(webRootOwner.c_str(), link_uid, link_gid);
+	if (!isValidUser) {
+		dprintf(D_ALWAYS, "Unable to look up HTTP_PUBLIC_FILES_ROOT_OWNER (%s)"
+				" in /etc/passwd. Aborting.\n", webRootOwner.c_str());
+		retVal = false;
+	}
 
+	if (link_uid == 0 || link_gid == 0) {
+		dprintf(D_ALWAYS, "HTTP_PUBLIC_FILES_ROOT_OWNER (%s)"
+			" in /etc/passwd has UID 0.  Aborting.\n", webRootOwner.c_str());
+		retVal = false;
+	}
+
+	// Now that we've verified HTTP_PUBLIC_FILES_ROOT_OWNER is a valid user, 
+	// switch privileges to this user. Open the hard link. Verify that the
+	// inode is the same as the file we opened earlier on.	
+	if (retVal == true) {
+		setegid(link_gid);
+		seteuid(link_uid);
+	
 		if (stat(targetLinkPath, &targetLinkStat) == 0) {
 			targetLinkInodeNum = targetLinkStat.st_ino;
-			retVal = (srcFileInodeNum == targetLinkInodeNum);
+			if (srcFileInodeNum == targetLinkInodeNum) {
+				retVal = true;
+			}
+			else {
+				dprintf(D_ALWAYS, "Source file %s inode (%d) does not match "
+					"hard link %s inode (%d), aborting.\n", srcFilePath, 
+					srcFileInodeNum, targetLinkPath, targetLinkInodeNum);
+			}
 		}
 		else {
 			retVal = false;
+			dprintf(D_ALWAYS, "Cannot open hard link %s as user %s. Reverting to "
+				"regular file transfer.\n", targetLinkPath, webRootOwner.c_str());
 		}
 	}
 	
 
 	// Free the hard link filename
-	delete [] targetLink;
+	delete [] targetLinkPath;
 
 	// Reset priv state
 	set_priv(original_priv);
@@ -254,7 +296,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 			}
 			else {
 				dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Failed to generate "
-									" hash link for %s\n", fullPath.c_str());
+									 "hash link for %s\n", fullPath.c_str());
 			}
 		}
 		free( initialWorkingDir );
