@@ -4893,7 +4893,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 						if(errorStack && (! errorStack->empty())) {
 							warning = errorStack->getFullText();
 						}
-						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.c_str() );
+						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.empty() ? NULL : warning.c_str() );
 					}
 				}
 
