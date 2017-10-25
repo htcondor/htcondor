@@ -4990,7 +4990,7 @@ review=tlmiller
 tags=schedd
 
 [IS_OWNER]
-default=(START =?= False)
+default=False
 version=8.2.8
 type=string
 description=When a slot should be in Owner state
@@ -5575,6 +5575,7 @@ default : @end
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
+	IS_OWNER=(START =?= False)
 @end
 
 # no-preemption policy, formerly called TESTINGMODE_
