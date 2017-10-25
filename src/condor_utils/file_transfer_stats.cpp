@@ -27,7 +27,6 @@ FileTransferStats::FileTransferStats() {
 FileTransferStats::~FileTransferStats() {}
 
 void FileTransferStats::Init() {
-    HttpUsedCache = false;
     TransferReturnCode = -1;
     TransferSuccess = false;
     TransferTotalBytes = 0;
@@ -39,7 +38,6 @@ void FileTransferStats::Publish(ClassAd &ad) const {
     
     // The following statistics appear in every ad
     ad.Assign("ConnectionTimeSeconds", ConnectionTimeSeconds);
-    ad.Assign("HttpUsedCache", HttpUsedCache);
     ad.Assign("TransferEndTime", TransferEndTime);
     ad.Assign("TransferFileBytes", TransferFileBytes);
     ad.Assign("TransferStartTime", TransferStartTime);

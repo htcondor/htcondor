@@ -451,7 +451,6 @@ header_callback( char* buffer, size_t size, size_t nitems ) {
         if( strcmp ( token, "X-Cache:" ) == 0 ) {
             token = strtok( NULL, delimiters );
             ft_stats->HttpCacheHitOrMiss = token;
-            ft_stats->HttpUsedCache = true;
         }
         // Via header provides details about cache host
         else if( strcmp ( token, "Via:" ) == 0 ) {
@@ -461,7 +460,6 @@ header_callback( char* buffer, size_t size, size_t nitems ) {
             if( token != NULL ) {
                 token = strtok( NULL, delimiters );
                 ft_stats->HttpCacheHost = token;
-                ft_stats->HttpUsedCache = true;
             }
         }
         token = strtok( NULL, delimiters );
