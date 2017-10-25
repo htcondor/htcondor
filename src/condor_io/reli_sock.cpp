@@ -1041,8 +1041,8 @@ ReliSock::serialize() const
 	// first, get the state from our parent class
 	char * parent_state = Sock::serialize();
     // now concatenate our state
-	char * outbuf = new char[50];
-    memset(outbuf, 0, 50);
+	char * outbuf = new char[150];
+    memset(outbuf, 0, 150);
 	sprintf(outbuf,"%d*%s*",_special_state,_who.to_sinful().Value());
 	strcat(parent_state,outbuf);
 
