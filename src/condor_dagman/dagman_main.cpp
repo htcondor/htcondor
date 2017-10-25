@@ -100,6 +100,7 @@ static void Usage() {
 #define MAX_IDLE_DEFAULT 1000
 #define MAX_SUBMITS_PER_INT_DEFAULT 5
 #define LOG_SCAN_INT_DEFAULT 5
+#define SCHEDD_UPDATE_INTERVAL_DEFAULT 120
 
 Dagman::Dagman() :
 	dag (NULL),
@@ -115,6 +116,7 @@ Dagman::Dagman() :
 	max_submits_per_interval (MAX_SUBMITS_PER_INT_DEFAULT), // so Coverity is happy
 	aggressive_submit (false),
 	m_user_log_scan_interval (LOG_SCAN_INT_DEFAULT),
+	schedd_update_interval (SCHEDD_UPDATE_INTERVAL_DEFAULT),
 	primaryDagFile (""),
 	multiDags (false),
 	startup_cycle_detect (false), // so Coverity is happy
@@ -243,6 +245,12 @@ Dagman::Config()
 		m_user_log_scan_interval, 1, INT_MAX);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n",
 				m_user_log_scan_interval );
+
+	schedd_update_interval =
+			param_integer( "DAGMAN_SCHEDD_UPDATE_INTERVAL",
+			schedd_update_interval, 1, INT_MAX);
+		debug_printf( DEBUG_NORMAL, "DAGMAN_SCHEDD_UPDATE_INTERVAL setting: %d\n",
+		schedd_update_interval );
 
 	_priority = param_integer( "DAGMAN_DEFAULT_PRIORITY",
 				_priority, INT_MIN, INT_MAX, false );
@@ -1532,10 +1540,22 @@ print_status() {
 
 	dagman.PublishStats();
 
-	if ( dagman._dagmanClassad ) {
-		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-					ready, failed, unready, dagman.dag->_dagStatus,
-					dagman.dag->Recovery(), dagman._dagmanStats );
+	// Set up a static double to track the last schedd update time. On the first
+	// iteration we'll set it to the current time. On subsequent iterations it 
+	// will only be updated when we call a schedd update.
+	double currentTime = dagman._utcTime.getTimeDouble();
+	static double scheddLastUpdateTime = 0.0;
+	if ( scheddLastUpdateTime <= 0.0 ) {
+		scheddLastUpdateTime = currentTime;
+	}
+	
+	if( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) {
+			if ( dagman._dagmanClassad ) {
+			dagman._dagmanClassad->Update( total, done, pre, submitted, post,
+						ready, failed, unready, dagman.dag->_dagStatus,
+						dagman.dag->Recovery(), dagman._dagmanStats );
+		}
+		scheddLastUpdateTime = currentTime;
 	}
 }
 
