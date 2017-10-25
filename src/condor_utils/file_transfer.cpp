@@ -4389,7 +4389,12 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// proper value.
 
 	if (plugin_status != 0) {
-		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s", plugin_status, plugin.Value());
+		std::string errorMessage;
+		std::string transferUrl;
+		plugin_stats->LookupString("TransferError", errorMessage);
+		plugin_stats->LookupString("TransferUrl", transferUrl);
+		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)", 
+			plugin_status, plugin.Value(), errorMessage.c_str(), transferUrl.c_str());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 
