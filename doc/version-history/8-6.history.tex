@@ -44,6 +44,21 @@ a prefix of \Attr{Remote\_}.
 
 \begin{itemize}
 
+\item Change the default value of STARTD\_RECOMPUTE\_DISK\_FREE to false, so 
+that the Disk attribute is mostly correct for partitionable slots.
+\Ticket{6424}
+
+\item Docker universe now sets the cgroup cpu-shares field to 100 times the number of requested cores, which matches vanilla universe
+\Ticket{6423}
+
+\item MOUNT\_UNDER\_SCRATCH when used in Docker universe can now be an expression, not just a literal string.  This matches the way it works in vanilla universe
+\Ticket{6401}
+
+\item Fixed a bug that caused systems using cgroup memory limits to
+not properly reset the memory limit after the first use of a slot.  The memory
+limit would get reused from the previous slot value.
+\Ticket{6414}
+
 \item Fixed a bug that could cause the \Condor{startd} to crash when spawning
 a \Condor{starter} with mixed mode networking.
 \Ticket{6461}
