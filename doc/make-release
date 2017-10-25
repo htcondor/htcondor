@@ -15,8 +15,8 @@ VERSION=`grep set\(VERSION ../CMakeLists.txt | awk '{print $2}' \
 VERSION_STRING=V`echo ${VERSION} | sed -e's/\./_/g'`
 
 # Miscellaneous constants
-ROOT=/tmp/install-test
-# ROOT=/p/condor/public/html/htcondor/manual
+# ROOT=/tmp/install-test
+ROOT=/p/condor/public/html/htcondor/manual
 INSTALL_DIR=${ROOT}/v${VERSION}
 STAGING_DIR=${INSTALL_DIR}.new
 
