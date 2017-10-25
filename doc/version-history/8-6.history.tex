@@ -33,7 +33,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Job attributes that are recognized by the \Prog{batch\_gahp}
+but not by HTCondor can now be specified in the job ad without using
+a prefix of \Attr{Remote\_}.
+\Ticket{6422}
 
 \end{itemize}
 
@@ -55,6 +58,10 @@ that the Disk attribute is mostly correct for partitionable slots.
 not properly reset the memory limit after the first use of a slot.  The memory
 limit would get reused from the previous slot value.
 \Ticket{6414}
+
+\item Fixed a bug that could cause the \Condor{startd} to crash when spawning
+a \Condor{starter} with mixed mode networking.
+\Ticket{6461}
 
 \item Asking systemd to stop condor now allows the HTCondor daemons to properly
 clean up, instead of simply immediately sending a SIGKILL.  As a result,
