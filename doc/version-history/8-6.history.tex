@@ -44,6 +44,10 @@ a prefix of \Attr{Remote\_}.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause the \Condor{startd} to crash when spawning
+a \Condor{starter} with mixed mode networking.
+\Ticket{6461}
+
 \item Asking systemd to stop condor now allows the HTCondor daemons to properly
 clean up, instead of simply immediately sending a SIGKILL.  As a result,
 HTCondor daemons stopped via systemd will no longer continue to appear 
