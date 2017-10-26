@@ -265,24 +265,66 @@ RemoveRightAd( )
 	return( ad );
 }
 
-bool MatchClassAd::
-OptimizeRightAdForMatchmaking( ClassAd *ad, std::string *error_msg )
+void MatchClassAd::
+SetLeftAlias( const std::string &name )
 {
-	return MatchClassAd::OptimizeAdForMatchmaking( ad, true, error_msg );
+	CaseIgnEqStr attr_cmp;
+	if ( attr_cmp( name.c_str(), lAlias.c_str() ) ) {
+		return;
+	}
+	// TODO Use ClassAd::Remove() to allow reuse of existing ExprTrees?
+	if ( !lAlias.empty() ) {
+		lCtx->Delete( name );
+		rCtx->Delete( name );
+	}
+	lAlias = name;
+	if ( !lAlias.empty() ) {
+		// TODO make reference in right ad point directly at '.LEFT.rCtx.ad'?
+		lCtx->Insert( lAlias, AttributeReference::MakeAttributeReference( NULL, "ad", false ) );
+		rCtx->Insert( lAlias, AttributeReference::MakeAttributeReference( NULL, "LEFT", true ) );
+	}
+}
+
+void MatchClassAd::
+SetRightAlias( const std::string &name )
+{
+	CaseIgnEqStr attr_cmp;
+	if ( attr_cmp( name.c_str(), rAlias.c_str() ) ) {
+		return;
+	}
+	// TODO Use ClassAd::Remove() to allow reuse of existing ExprTrees?
+	if ( !rAlias.empty() ) {
+		lCtx->Delete( name );
+		rCtx->Delete( name );
+	}
+	rAlias = name;
+	if ( !rAlias.empty() ) {
+		// TODO make reference in left ad point directly at '.RIGHT.rCtx.ad'?
+		lCtx->Insert( rAlias, AttributeReference::MakeAttributeReference( NULL, "RIGHT", true ) );
+		rCtx->Insert( rAlias, AttributeReference::MakeAttributeReference( NULL, "ad", false ) );
+	}
 }
 
 bool MatchClassAd::
-OptimizeLeftAdForMatchmaking( ClassAd *ad, std::string *error_msg )
+OptimizeRightAdForMatchmaking( ClassAd *ad, std::string *error_msg, const std::string &left_alias, const std::string &right_alias )
 {
-	return MatchClassAd::OptimizeAdForMatchmaking( ad, false, error_msg );
+	return MatchClassAd::OptimizeAdForMatchmaking( ad, true, error_msg, left_alias, right_alias );
 }
 
 bool MatchClassAd::
-OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
+OptimizeLeftAdForMatchmaking( ClassAd *ad, std::string *error_msg, const std::string &left_alias, const std::string &right_alias )
+{
+	return MatchClassAd::OptimizeAdForMatchmaking( ad, false, error_msg, left_alias, right_alias );
+}
+
+bool MatchClassAd::
+OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg, const std::string &left_alias, const std::string &right_alias )
 {
 	if( ad->Lookup("my") ||
 		ad->Lookup("target") ||
 		ad->Lookup("other") ||
+		( !left_alias.empty() && ad->Lookup(left_alias) ) ||
+		( !right_alias.empty() && ad->Lookup(right_alias) ) ||
 		ad->Lookup(ATTR_UNOPTIMIZED_REQUIREMENTS) )
 	{
 		if( error_msg ) {
@@ -316,6 +358,20 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 	
 	ad->Insert("target",target);
 	ad->Insert("other",t2);
+	if ( !left_alias.empty() ) {
+		if ( is_right ) {
+			ad->Insert( left_alias, AttributeReference::MakeAttributeReference( NULL, "LEFT", true ) );
+		} else {
+			ad->Insert( left_alias, AttributeReference::MakeAttributeReference( NULL, "self", false ) );
+		}
+	}
+	if ( !right_alias.empty() ) {
+		if ( is_right ) {
+			ad->Insert( right_alias, AttributeReference::MakeAttributeReference( NULL, "self", false ) );
+		} else {
+			ad->Insert( right_alias, AttributeReference::MakeAttributeReference( NULL, "RIGHT", true ) );
+		}
+	}
 
 
 	ExprTree *flat_requirements = NULL;
@@ -356,11 +412,18 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 		// After flatenning, no references should remain to MY or TARGET.
 		// Even if there are, those can be resolved by the context ads, so
 		// we don't need to leave these attributes in the ad.
+	// TODO The failure cases above should run this cleanup code
 	if ( !_useOldClassAdSemantics ) {
 		ad->Delete("my");
 	}
 	ad->Delete("other"); 
 	ad->Delete("target");
+	if ( !left_alias.empty() ) {
+		ad->Delete( left_alias );
+	}
+	if ( !right_alias.empty() ) {
+		ad->Delete( right_alias );
+	}
 
 	return true;
 }

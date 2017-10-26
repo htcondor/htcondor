@@ -194,7 +194,7 @@ public:
    bool Enable(const char * pre, const char * trig, bool stats_by_trig_value=false, time_t lifetime=0);
    bool Contains(const char * pre) { return pools.exists(pre) == 0; }
    ScheddOtherStats * Lookup(const char * pre) { ScheddOtherStats * po = NULL; pools.lookup(pre, po); return po; }
-   bool DisableAll();
+   bool DisableAll(); // returns true if any were enabled before this call
    bool RemoveDisabled();
    bool AnyEnabled();
    void DeferJobsSubmitted(int cluster, int proc);

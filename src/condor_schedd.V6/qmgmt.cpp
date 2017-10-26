@@ -687,7 +687,6 @@ IncrementClusterSize(int cluster_num)
 		// We've seen this cluster_num go by before; increment proc count
 		(*numOfProcs)++;
 	}
-	TotalJobsCount++;
 
 		// return the number of procs in this cluster
 	if ( numOfProcs ) {
@@ -1731,6 +1730,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			int num_procs = IncrementClusterSize(cluster_num);
 			clusterad->SetClusterSize(num_procs);
+			TotalJobsCount++;
 		}
 	} // WHILE
 
@@ -2625,7 +2625,7 @@ NewProc(int cluster_id)
 		return -1;
 	}
 
-	if ( TotalJobsCount >= scheduler.getMaxJobsSubmitted() ) {
+	if ( (TotalJobsCount + jobs_added_this_transaction) >= scheduler.getMaxJobsSubmitted() ) {
 		dprintf(D_ALWAYS,
 			"NewProc(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
 		errno = EINVAL;
@@ -3032,7 +3032,7 @@ int DestroyProc(int cluster_id, int proc_id)
 			// transaction is marked DURABLE, since all of those tasks
 			// are not atomic with respect to this transaction anyway.
 
-		CommitTransaction(NONDURABLE);
+		CommitNonDurableTransactionOrDieTrying();
 	}
 
 		// remove jobid from any indexes
@@ -3272,6 +3272,7 @@ enum {
 	idATTR_none=0,
 	idATTR_CLUSTER_ID,
 	idATTR_PROC_ID,
+	idATTR_CONCURRENCY_LIMITS,
 	idATTR_CRON_DAYS_OF_MONTH,
 	idATTR_CRON_DAYS_OF_WEEK,
 	idATTR_CRON_HOURS,
@@ -3328,6 +3329,7 @@ typedef struct attr_ident_pair {
 static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_ACCOUNTING_GROUP,   catDirtyPrioRec | catSubmitterIdent),
 	FILL(ATTR_CLUSTER_ID,         catJobId),
+	FILL(ATTR_CONCURRENCY_LIMITS, catDirtyPrioRec),
 	FILL(ATTR_CRON_DAYS_OF_MONTH, catCron),
 	FILL(ATTR_CRON_DAYS_OF_WEEK,  catCron),
 	FILL(ATTR_CRON_HOURS,         catCron),
@@ -4664,11 +4666,51 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 	}
 }
 
+int CommitTransactionInternal( bool durable, CondorError * errorStack );
+
+void
+CommitTransactionOrDieTrying() {
+	CondorError errorStack;
+	int rval = CommitTransactionInternal( true, & errorStack );
+	if( rval < 0 ) {
+		if( errorStack.empty() ) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitTransactionOrDieTrying() failed but did not die.\n" );
+		} else {
+			dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitTransactionOrDieTrying() failed but did not die, with error '%s'.\n", errorStack.getFullText().c_str() );
+		}
+	}
+}
+
+void
+CommitNonDurableTransactionOrDieTrying() {
+	CondorError errorStack;
+	int rval = CommitTransactionInternal( false, & errorStack );
+	if( rval < 0 ) {
+		if( errorStack.empty() ) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitNonDurableTransactionOrDieTrying() failed but did not die.\n" );
+		} else {
+			dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitNonDurableTransactionOrDieTrying() failed but did not die, with error '%s'.\n", errorStack.getFullText().c_str() );
+		}
+	}
+}
+
 int
-CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
-                  CondorError * errorStack /* = NULL */)
+CommitTransactionAndLive( SetAttributeFlags_t flags,
+                          CondorError * errorStack )
 {
-	int rval = 0;
+	bool durable = !(flags & NONDURABLE);
+	if( (durable && flags != 0) || ((!durable) && flags != NONDURABLE) ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitTransaction(): Flags other than NONDURABLE not supported.\n" );
+	}
+
+	if( errorStack == NULL ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "ERROR: CommitTransaction() called with NULL error stack.\n" );
+	}
+
+	return CommitTransactionInternal( durable, errorStack );
+}
+
+int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 	std::list<std::string> new_ad_keys;
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
@@ -4677,7 +4719,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 	if ( !new_ad_keys.empty() ) {
 		AddSessionAttributes(new_ad_keys);
 
-		rval = CheckTransaction(new_ad_keys, errorStack);
+		int rval = CheckTransaction(new_ad_keys, errorStack);
 		if ( rval < 0 ) {
 			return rval;
 		}
@@ -4700,7 +4742,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 		JobQueue->GetTransactionKeys(ad_keys);
 	}
 
-	if( flags & NONDURABLE ) {
+	if(! durable) {
 		JobQueue->CommitNondurableTransaction();
 		ScheduleJobQueueLogFlush();
 	}
@@ -4708,8 +4750,11 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 		JobQueue->CommitTransaction();
 	}
 
+	// Now that we've commited for sure, up the TotalJobsCount
+	TotalJobsCount += jobs_added_this_transaction; 
+
 	// If the commit failed, we should never get here.
-	
+
 	// Now that the transaction has been commited, we need to chain proc
 	// ads to cluster ads if any new clusters have been submitted.
 	// Also, if EVENT_LOG is defined in condor_config, we will write
@@ -4772,7 +4817,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 					if( clusterad->factory ) {
 						scheduler.WriteFactorySubmitToUserLog( clusterad, doFsync );
 					}
-					
+
 				}
 				continue; // skip remaining processing for cluster ads
 			}
@@ -4833,12 +4878,6 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 				procad->LookupInteger(ATTR_JOB_STATUS, job_status);
 				procad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
 				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
-				#if 0 // this code moved up into CheckTransaction
-					JobQueue->BeginTransaction();
-					rewriteSpooledJobAd(procad, job_id.cluster, job_id.proc, false);
-					JobQueue->CommitNondurableTransaction();
-					ScheduleJobQueueLogFlush();
-				#endif
 					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 				}
 
@@ -4853,18 +4892,18 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */,
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						const char * warning = NULL;
+						std::string warning;
 						if(errorStack && (! errorStack->empty())) {
-							warning = errorStack->message();
+							warning = errorStack->getFullText();
 						}
-						scheduler.WriteSubmitToUserLog( procad, doFsync, warning );
+						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.empty() ? NULL : warning.c_str() );
 					}
 				}
-				
+
 				int iDup, iTotal;
 				iDup = procad->PruneChildAd();
 				iTotal = procad->size();
-				
+
 				dprintf(D_FULLDEBUG,"New job: %s, Duplicate Keys: %d, Total Keys: %d \n", job_id.c_str(), iDup, iTotal);
 			}
 
@@ -5643,7 +5682,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		if( started_transaction ) {
 			// To reduce the number of fsyncs, we mark this as a non-durable transaction.
 			// Otherwise we incur two fsync's per matched job (one here, one for the job start).
-			CommitTransaction(NONDURABLE);
+			CommitNonDurableTransactionOrDieTrying();
 		}
 
 		if ( startd_ad ) {
@@ -5755,7 +5794,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 			char buf[256];
 			snprintf(buf,256,"Your job (%d.%d) is on hold",cluster_id,proc_id);
-			FILE* email = email_user_open(ad,buf);
+			Email mailer;
+			FILE * email = mailer.open_stream( ad, JOB_SHOULD_HOLD, buf );
 			if ( email ) {
 				fprintf(email,"Condor failed to start your job %d.%d \n",
 					cluster_id,proc_id);
@@ -5769,7 +5809,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					"\n\nPlease correct this problem and release your "
 					"job with:\n   \"condor_release %d.%d\"\n\n",
 					cluster_id,proc_id);
-				email_close(email);
+				mailer.send();
 			}
 		}
 
@@ -6346,6 +6386,14 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
+	StatInfo exe_stat( path );
+	if ( exe_stat.Error() == SIGood ) {
+		Q_SOCK->getReliSock()->put(1);
+		Q_SOCK->getReliSock()->end_of_message();
+		free(path);
+		return 0;
+	}
+
 	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
 		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);
 		Q_SOCK->getReliSock()->put(-1);
@@ -6744,7 +6792,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* pvArg)
 		// all jobs are marked idle in mark_jobs_idle() we force the log, and 
 		// b) in the worst case, we would just redo this work in the unfortuante evenent 
 		// we crash again before an fsync.
-		CommitTransaction( NONDURABLE );
+		CommitNonDurableTransactionOrDieTrying();
 	}
 
 	return 1;

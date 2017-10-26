@@ -1557,7 +1557,7 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
 
 int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * /* ticket */ )
 {
-    krb5_error_code  code;
+    //krb5_error_code  code;
 	//krb5_ccache      ccache;
     //krb5_principal   client;
     //krb5_data        request;
@@ -1669,6 +1669,7 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * /* ticket */ )
     
     return 0;  // Everything is fine
   
+/* This is only needed when the above code is uncommented
 // error:
     dprintf(D_ALWAYS, "KERBEROS: %s\n", (*error_message_ptr)(code));
     //if (ccache) {
@@ -1676,6 +1677,7 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * /* ticket */ )
     //}
     
     return 1;
+*/
 }
     
 int Condor_Auth_Kerberos :: read_request(krb5_data * request)

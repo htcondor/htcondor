@@ -158,17 +158,12 @@ class MatchClassAd : public ClassAd
 		*/
 		ClassAd *RemoveRightAd( );
 
-		/** Modifies the requirements expression in the given ad to
-			make matchmaking more efficient.  This will only improve
-			efficiency if it is called once and then the resulting
-			requirements are used multiple times.  Saves the old
-			requirements expression so it can be restored via
-			UnoptimizeAdForMatchmaking.
-			@param ad The ad to be optimized.
-			@param error_msg non-NULL if an error description is desired.
-			@return True on success.
-		*/
-		static bool OptimizeRightAdForMatchmaking( ClassAd *ad, std::string *error_msg );
+		/** Sets an alternate name by which the left/right ad can be
+		 *  referred to from either ad (in addition to the relative
+		 *  names 'My', 'Target', and 'Other').
+		 */
+		void SetLeftAlias( const std::string &name );
+		void SetRightAlias( const std::string &name );
 
 		/** Modifies the requirements expression in the given ad to
 			make matchmaking more efficient.  This will only improve
@@ -180,7 +175,19 @@ class MatchClassAd : public ClassAd
 			@param error_msg non-NULL if an error description is desired.
 			@return True on success.
 		*/
-		static bool OptimizeLeftAdForMatchmaking( ClassAd *ad, std::string *error_msg );
+		static bool OptimizeRightAdForMatchmaking( ClassAd *ad, std::string *error_msg, const std::string &left_alias = "", const std::string &right_alias = "" );
+
+		/** Modifies the requirements expression in the given ad to
+			make matchmaking more efficient.  This will only improve
+			efficiency if it is called once and then the resulting
+			requirements are used multiple times.  Saves the old
+			requirements expression so it can be restored via
+			UnoptimizeAdForMatchmaking.
+			@param ad The ad to be optimized.
+			@param error_msg non-NULL if an error description is desired.
+			@return True on success.
+		*/
+		static bool OptimizeLeftAdForMatchmaking( ClassAd *ad, std::string *error_msg, const std::string &left_alias = "", const std::string &right_alias = "" );
 
 		/** Restores ad previously optimized with OptimizeAdForMatchmaking.
 			@param ad The ad to be unoptimized.
@@ -192,6 +199,7 @@ class MatchClassAd : public ClassAd
 		const ClassAd *ladParent, *radParent;
 		ClassAd *lCtx, *rCtx, *lad, *rad;
 		ExprTree *symmetric_match, *right_matches_left, *left_matches_right;
+		std::string lAlias, rAlias;
 
     private:
         // The copy constructor and assignment operator are defined
@@ -212,7 +220,7 @@ class MatchClassAd : public ClassAd
 			@param error_msg non-NULL if an error description is desired.
 			@return True on success.
 		*/
-		static bool OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg );
+		static bool OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg, const std::string &left_alias, const std::string &right_alias );
 
 		/**
 		   @return true if the given expression evaluates to true

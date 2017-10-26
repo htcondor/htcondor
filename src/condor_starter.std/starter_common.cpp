@@ -217,7 +217,9 @@ NewConnection( int id )
 		EXCEPT( "Can't read port number for new connection" );
 	}
 	if( portno < 0 ) {
-		SyscallStream->code( errno );
+		if (!SyscallStream->code( errno )) {
+			dprintf(D_ALWAYS, "Can't send error back to shadow on failed CONDOR_new_connection request\n");
+		}
 		EXCEPT( "Can't get port for new connection" );
 	}
 	SyscallStream->end_of_message();

@@ -1365,7 +1365,7 @@ daemon::Obituary( int status )
     sprintf( buf, "%s_ADMIN_EMAIL", name_in_config_file );
     char *address = param(buf);
     if(address) {
-        mailer = email_open(address, email_subject.Value());
+        mailer = email_nonjob_open(address, email_subject.Value());
         free(address);
     } else {
         mailer = email_admin_open(email_subject.Value());

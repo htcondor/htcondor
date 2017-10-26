@@ -66,7 +66,9 @@ Foo::timerone()
 	rsock->encode();
 	rsock->snd_int(1,FALSE);
 	char *buf="Please Work!";
-	rsock->code(buf);
+	if (!rsock->code(buf)) {
+		printf("ERROR CODING STRING!\n");
+	}
 	rsock->end_of_message();
 	delete rsock;
 }

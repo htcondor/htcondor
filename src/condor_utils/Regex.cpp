@@ -114,7 +114,8 @@ Regex::match(const MyString & string,
 
 	if (NULL != groups) {
 		for (int i = 0; i < rc; i++) {
-			(*groups)[i] = string.Substr(ovector[i * 2], ovector[i * 2 + 1] - 1);
+			(*groups)[i] = string.substr(ovector[i * 2],
+			                             ovector[i * 2 + 1] - ovector[i * 2]);
 		}
 	}
 

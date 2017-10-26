@@ -738,12 +738,13 @@ DAGMan supports jobs with queues of multiple procs, so for example:
 \begin{verbatim}
 queue 500
 \end{verbatim}
-will queue 500 procs as expected. However, \emph{as of version 8.7.2 DAGMan 
-does not support late materialization}. If a submit file queues multiple procs
-while the \Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} and
-\Macro{SUBMIT\_FACTORY\_JOBS\_BY\_DEFAULT} attributes are set to True, DAGMan
-will produce unexpected results, including failing without warning. We are
-working to resolve this as quickly as possible.
+will queue 500 procs as expected. 
+
+Additionally, as of version 8.7.4 DAGMan supports late materialization. To use
+this functionality, set both \Macro{SCHEDD\_ALLOW\_LATE\_MATERIALIZATION} 
+and \Macro{SUBMIT\_FACTORY\_JOBS\_BY\_DEFAULT} knobs in your HTCondor
+configuration to True. This will have the side effect of submitting all jobs as
+factory jobs (not just the ones you explicitly flag) so use this sparingly.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}DAG Submission}

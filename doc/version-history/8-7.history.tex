@@ -59,6 +59,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When docker universe reports memory usage, it now reports the
+RSS (Resident Set Size) of the container, previously it reported
+RSS + page cache size
+\Ticket{6430}
+
+\item Added \Arg{off} command to \Condor{annex}.  This command invokes
+\Condor{off} \Arg{-annex} appropriately.
+\Ticket{6408}
+
+\item Updated \Condor{annex} \Arg{-check-setup} to check collector security
+as well as connectivity.
+\Ticket{6322}
+
 \item Added submit warnings.  See section \ref{sec:Schedd-Config-Submit-Warnings}.
 \Ticket{5971}
 
@@ -85,13 +98,35 @@ and the third table will be generated from those ads whose key appeared
 only in \Arg{file}.
 \Ticket{6321}
 
+\item Added support for late materialization into \Condor{dagman}. DAGs that
+include late materialized jobs now work correctly in both normal and recovery 
+conditions.
+\Ticket{6274}
+
+\item We now produce runtime statistics in \Condor{dagman}, tracking how 
+much time DAGMan spends idle, how much time it spends submitting jobs and
+processing log files. This information could be used to determine why a DAG 
+is submitting jobs slowly and how to optimize it. These statistics currently get 
+dumped into the .dagman.out file at the end of a DAGs execution.
+\Ticket{6411}
+
+\item Added a new knob to \Condor{dagman}, \MacroNI{DAGMAN\_AGGRESSIVE\_SUBMIT}.
+When set to True, this tells DAGMan to ignore the interval time limit for 
+submitting jobs (defined by \MacroNI{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}) and to 
+continuously submit jobs until no more are ready, or until it hits a different
+limit. 
+\Ticket{6386}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug introduced in 8.7.0 where the job attributes RemoteUserCpu
+and RemoteSysCpu where never updated in the history file, or in condor\_q
+output.  The user log would show the correct values.
+\Ticket{6426}
 
 \end{itemize}
 

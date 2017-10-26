@@ -136,29 +136,33 @@ int SetAttributeByConstraint(const char *constraint, const char *attr,
 							 const char *value,
 							 SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
-	attr = value.  The value should be a valid ClassAd value (strings
-	should be surrounded by quotes).
+	attr = value.  The value will be a ClassAd integer literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeIntByConstraint(const char *constraint, const char *attr,
 							 int value,
 							 SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
-	attr = value.  The value should be a valid ClassAd value (strings
-	should be surrounded by quotes).
+	attr = value.  The value will be a ClassAd floating-point literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeFloatByConstraint(const char *constraing, const char *attr,
 							   float value,
 							   SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
-	attr = value.  The value should be a valid ClassAd value (strings
-	should be surrounded by quotes).
+	attr = value.  The value will be a ClassAd string literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeStringByConstraint(const char *constraint, const char *attr,
 							     const char *value,
 							     SetAttributeFlags_t flags=0);
+/** For all jobs in the queue for which constraint evaluates to true, set
+	attr = value.  The value expression is set as-is (unevaluated).
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeExprByConstraint(const char *constraint, const char *attr,
+                                 const ExprTree *value,
+                                 SetAttributeFlags_t flags=0);
 /** Set attr = value for job with specified cluster and proc.  The value
 	should be a valid ClassAd value (strings should be surrounded by
 	quotes)
@@ -166,41 +170,32 @@ int SetAttributeStringByConstraint(const char *constraint, const char *attr,
 */
 int SetAttribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 /** Set attr = value for job with specified cluster and proc.  The value
-	should be a valid ClassAd value (strings should be surrounded by
-	quotes)
+	will be a ClassAd integer literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
 /** Set attr = value for job with specified cluster and proc.  The value
-	should be a valid ClassAd value (strings should be surrounded by
-	quotes)
+	will be a ClassAd floating-point literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeFloat(int cluster, int proc, const char *attr, float value, SetAttributeFlags_t flags = 0);
 /** Set attr = value for job with specified cluster and proc.  The value
-	should be a valid ClassAd value (strings should be surrounded by
-	quotes)
+	will be a ClassAd string literal.
 	@return -1 on failure; 0 on success
 */
 int SetAttributeString(int cluster, int proc, const char *attr,
 					   const char *value, SetAttributeFlags_t flags = 0);
-
-/** Set attr = value for a job with the specified cluster and proc.  The value
- *  will be converted to a valid, quoted classad string
- *  @return -1 on failure; 0 on success
- */
-int SetAttributeRawString(int cluster, int proc, const char *attr,
-                          const char *value, SetAttributeFlags_t flags = 0);
+/** Set attr = value for job with specified cluster and proc.  The value
+	expression is set as-is (unevaluated).
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeExpr(int cluster, int proc, const char *attr,
+                     const ExprTree *value, SetAttributeFlags_t flags = 0);
 
 // Internal function for only the schedd to use.
 int SetSecureAttributeInt(int cluster_id, int proc_id,
                           const char *attr_name, int attr_value,
                           SetAttributeFlags_t flags);
-
-// Internal function for only the schedd to use.
-int SetSecureAttributeRawString(int cluster_id, int proc_id,
-                                const char *attr_name, const char *attr_value,
-                                SetAttributeFlags_t flags);
 
 /** Set LastJobLeaseRenewalReceived = <xact start time> and
     JobLeaseDurationReceived = dur for the specified cluster/proc.
@@ -241,13 +236,15 @@ int BeginTransaction();
 */
 int RemoteCommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=NULL);
 
-/** The difference between this and RemoteCommitTransaction is that
-	this function never returns if there is a failure.  This function
-	should only be called from the schedd.
-    Exception: This function can return failure if a SUBMIT_REQUIREMEMT
-      expression evaluates to False.
+/** These functions should only be called from the schedd.  Because
+    of submit requirements, we need to distinguish between sites which
+    don't handle failure and those which do.
 */
-int CommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=NULL);
+void CommitNonDurableTransactionOrDieTrying();
+void CommitTransactionOrDieTrying();
+int CommitTransactionAndLive( SetAttributeFlags_t flags, CondorError * errstack )
+	WARN_UNUSED_RESULT;
+
 
 int AbortTransaction();
 void AbortTransactionAndRecomputeClusters();
@@ -369,9 +366,6 @@ void WalkJobQueue(scan_func fn, void* pv);
 int rusage_to_float(const struct rusage &, double *, double *);
 int float_to_rusage(double, double, struct rusage *);
 
-
-#define SetAttributeExpr(cl, pr, name, val) SetAttribute(cl, pr, name, val);
-#define SetAttributeExprByConstraint(con, name, val) SetAttributeByConstraint(con, name, val);
 
 /* Set the effective owner to use for authorizing subsequent qmgmt
    opperations. Setting to NULL or an empty string will reset the

@@ -163,11 +163,11 @@ and in others, it appears as
 The characters \verb@+%s@ tell the \Prog{date} program
 to give the output as a Unix epoch time.
 
-The job always waits 60 seconds before
+The job always waits 60 seconds after submission before
 beginning execution:
 
 \begin{verbatim} 
-   deferral_time = (time() + 60)
+   deferral_time = (QDate + 60)
 \end{verbatim}
 
 In this example, assume that the deferral time is 45 seconds

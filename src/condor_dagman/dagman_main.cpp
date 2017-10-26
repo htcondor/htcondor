@@ -1499,7 +1499,8 @@ Dagman::PublishStats() {
 	MyString statsString;
 	dagman._dagmanStats.Publish(statsAd);
 	sPrintAd( statsString, statsAd );
-	debug_printf( DEBUG_NORMAL, "DAGMan Runtime Statistics:\n%s\n", statsString.Value() );
+	statsString.replaceString("\n", "; ");
+	debug_printf( DEBUG_VERBOSE, "DAGMan Runtime Statistics: [ %s]\n", statsString.Value() );
 }
 
 void
@@ -1529,10 +1530,12 @@ print_status() {
 				dagman.dag->NumHeldJobProcs() );
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
 
+	dagman.PublishStats();
+
 	if ( dagman._dagmanClassad ) {
 		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
 					ready, failed, unready, dagman.dag->_dagStatus,
-					dagman.dag->Recovery() );
+					dagman.dag->Recovery(), dagman._dagmanStats );
 	}
 }
 

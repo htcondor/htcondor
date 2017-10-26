@@ -47,6 +47,8 @@ TransferD::refuse(Sock *sock)
 	int val = NOT_OK;
 
 	sock->encode();
-	sock->code( val );
+	if (!sock->code( val )) {
+		dprintf(D_ALWAYS, "Failed to refuse td connection to remote side\n");
+	}
 	sock->end_of_message();
 }

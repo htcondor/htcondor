@@ -607,7 +607,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 		CondorError errstack;
 		errno = 0;
-		rval = CommitTransaction( flags, & errstack );
+		rval = CommitTransactionAndLive( flags, & errstack );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
 
@@ -633,13 +633,14 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			reply.Assign( "ErrorReason", reason );
 			assert( putClassAd( syscall_sock, reply ) );
 		} else if( always_send_classad ) {
-			const char * reason = NULL;
+			ClassAd reply;
+
+			std::string reason;
 			if(! errstack.empty()) {
-				reason = errstack.message();
+				reason = errstack.getFullText();
+				reply.Assign( "WarningReason", reason );
 			}
 
-			ClassAd reply;
-			reply.Assign( "WarningReason", reason );
 			assert( putClassAd( syscall_sock, reply ) );
 		}
 

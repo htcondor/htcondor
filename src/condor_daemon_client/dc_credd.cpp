@@ -104,7 +104,10 @@ DCCredd::storeCredential (Credential * cred,
 
 		// Receive the return code
 	rsock->decode();
-	rsock->code(rc);
+	if (!rsock->code(rc)) {
+		condor_error.pushf ("DC_CREDD", 4, "Communication error, recv return cod\n");
+		rc = -1;
+	}
 
 	rsock->close();
 	if (rc) {

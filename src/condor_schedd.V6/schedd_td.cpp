@@ -906,7 +906,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 
 			// And now release the job.
 		releaseJob(cluster,proc,"Data files spooled",false,false,false,false);
-		CommitTransaction();
+		CommitTransactionOrDieTrying();
 	}
 
 	daemonCore->Register_Timer( 0, 
@@ -1290,7 +1290,11 @@ Scheduler::uploadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 	rsock->encode();
 
 	answer = OK;
-	rsock->code(answer);
+	if (!rsock->code(answer)) {
+		dprintf(D_ALWAYS, "uploadGeneralJobFilesWorkerThread failed to get response\n");
+		answer = ~OK;
+	}
+
 	rsock->end_of_message();
 
 	s->timeout(old_timeout);
@@ -1744,7 +1748,10 @@ Scheduler::downloadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 	rsock->decode();
 	answer = -1;
 
-	rsock->code(answer);
+	if (!rsock->code(answer)) {
+		dprintf(D_ALWAYS, "generalJobFilesWorkerThread, failed to get answer from peer\n");
+		answer = -1;
+	}
 	rsock->end_of_message();
 	s->timeout(old_timeout);
 

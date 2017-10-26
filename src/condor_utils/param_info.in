@@ -1617,11 +1617,6 @@ default=5
 type=int
 tags=gridmanager,gridmanager
 
-[JOB_PROXY_OVERRIDE_FILE]
-default=
-type=string
-tags=gridmanager,proxymanager
-
 [GRIDMANAGER_PROXY_REFRESH_TIME]
 default=21600
 type=string
@@ -3028,11 +3023,6 @@ default=
 type=string
 tags=shadow,pseudo_ops
 
-[EMAIL_NOTIFICATION_CC]
-default=
-type=string
-tags=shadow,shadow_common
-
 [DBMSMANAGER_NAME]
 default=
 type=string
@@ -4346,6 +4336,12 @@ type=string
 description=Default RequestCpus expression if not specified in submit file
 tags=submit
 
+[JOB_DEFAULT_LEASE_DURATION]
+default=2400
+type=string
+description=Default JobLeaseDuration expression if not specified in submit file
+tags=submit
+
 [MUST_MODIFY_REQUEST_EXPRS]
 default=false
 version=7.7.6
@@ -4994,7 +4990,7 @@ review=tlmiller
 tags=schedd
 
 [IS_OWNER]
-default=(START =?= False)
+default=False
 version=8.2.8
 type=string
 description=When a slot should be in Owner state
@@ -5579,6 +5575,7 @@ default : @end
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
+	IS_OWNER=(START =?= False)
 @end
 
 # no-preemption policy, formerly called TESTINGMODE_

@@ -656,7 +656,7 @@ int
 ScheddTransaction::commit()
 {
 		// XXX: This will need to take a transaction
-	CommitTransaction();
+	CommitTransactionOrDieTrying();
 
 		// aboutToSpawnJobHandler() needs to be called before a job
 		// can potentially run. For most job types, it's called just

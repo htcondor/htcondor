@@ -32,6 +32,9 @@ void FileTransferStats::Init() {
     TransferTotalBytes = 0;
     TransferTries = 0;
     ConnectionTimeSeconds = 0;
+	TransferEndTime = 0;
+	TransferStartTime = 0;
+	TransferFileBytes = 0;
 }
 
 void FileTransferStats::Publish(ClassAd &ad) const {

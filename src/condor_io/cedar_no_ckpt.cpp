@@ -115,7 +115,7 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 		dprintf(D_ALWAYS,
 				"ReliSock: get_file: close failed, errno = %d (%s)\n",
 				errno, strerror(errno));
-		return -1;
+		result = -1;
 	}
 
 	if(result<0) {

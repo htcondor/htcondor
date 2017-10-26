@@ -2606,8 +2606,14 @@ this value would allow HTCondor to access the proxy in a shared file system
 HTCondor will use the proxy specified in the submit description file first.
 If nothing is specified in the submit description file,
 it will use the environment variable X509\_USER\_PROXY.
-If that variable is not present,
-it will search in the default location.
+If that variable is not present, it will search in the default location.
+Note that proxies are only valid for a limited time.  Condor\_submit will
+not submit a job with an expired proxy, it will return an error.  Also,
+if the configuration parameter CRED\_MIN\_TIME\_LEFT is set to some number
+of seconds, and if the proxy will expire before that many seconds, condor\_submit
+will also refuse to submit the job.  That is, if CRED\_MIN\_TIME\_LEFT is set to 
+60, condor\_submit will refuse to submit a job whose proxy will expire 60 seconds
+from the time of submission.
 
 \SubmitCmd{x509userproxy} is relevant when
 the \SubmitCmdNI{universe} is \SubmitCmdNI{vanilla},

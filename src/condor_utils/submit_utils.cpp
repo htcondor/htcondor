@@ -2168,12 +2168,16 @@ int SubmitHash::SetJobLease()
 				  reconnectable jobs can survive schedd crashes and
 				  the like...
 				*/
-			lease_duration = 40 * 60;
+			tmp.set(param("JOB_DEFAULT_LEASE_DURATION"));
 		} else {
 				// not defined and can't reconnect, we're done.
 			return 0;
 		}
-	} else {
+	}
+
+	// first try parsing as an integer
+	if (tmp)
+	{
 		char *endptr = NULL;
 		lease_duration = strtol(tmp.ptr(), &endptr, 10);
 		if (endptr != tmp.ptr()) {
@@ -2199,6 +2203,7 @@ int SubmitHash::SetJobLease()
 			}
 		}
 	}
+	// if lease duration was an integer, lease_duration will have the value.
 	if (lease_duration) {
 		AssignJobVal(ATTR_JOB_LEASE_DURATION, lease_duration);
 	} else if (tmp) {
@@ -2720,19 +2725,9 @@ int SubmitHash::SetGSICredentials()
 	}
 
 	if (proxy_file != NULL) {
-		if ( proxy_file[0] == '#' ) {
-			buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
-						   &proxy_file[1]);
-			InsertJobExpr(buffer);	
-
-//			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-//						   proxy_file);
-//			InsertJobExpr(buffer);	
-			free( proxy_file );
-		} else {
-			char *full_proxy_file = strdup( full_path( proxy_file ) );
-			free( proxy_file );
-			proxy_file = full_proxy_file;
+		char *full_proxy_file = strdup( full_path( proxy_file ) );
+		free( proxy_file );
+		proxy_file = full_proxy_file;
 #if defined(HAVE_EXT_GLOBUS)
 // this code should get torn out at some point (8.7.0) since the SchedD now
 // manages these attributes securely and the values provided by submit should
@@ -2840,11 +2835,10 @@ int SubmitHash::SetGSICredentials()
 // out. -zmiller
 #endif
 
-			(void) buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-						   proxy_file);
-			InsertJobExpr(buffer);	
-			free( proxy_file );
-		}
+		(void) buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY,
+					   proxy_file);
+		InsertJobExpr(buffer);
+		free( proxy_file );
 	}
 
 	char* tmp = submit_param(SUBMIT_KEY_DelegateJobGSICredentialsLifetime,ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME);
@@ -4757,7 +4751,7 @@ int SubmitHash::SetExecutable()
 		}
 
 		// spool executable if necessary
-		if ( copy_to_spool ) {
+		if ( copy_to_spool && jid.proc == 0 ) {
 
 			bool try_ickpt_sharing = false;
 			CondorVersionInfo cvi(getScheddVersion());

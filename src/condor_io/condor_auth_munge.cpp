@@ -31,7 +31,8 @@
 #include "ipv6_hostname.h"
 
 Condor_Auth_MUNGE :: Condor_Auth_MUNGE(ReliSock * sock)
-    : Condor_Auth_Base    ( sock, CAUTH_MUNGE )
+    : Condor_Auth_Base    ( sock, CAUTH_MUNGE ),
+	m_crypto(NULL)
 {
 }
 
@@ -50,6 +51,12 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 
 	if ( mySock_->isClient() ) {
 
+		// Generate a "payload" that will be sent (securely) to the
+		// server.  This payload will become the encryption key if
+		// encryption or integrity is enabled on this connection.
+		// Without this, keys would just be exchanged in the clear.
+		unsigned char* key = Condor_Crypt_Base::randomKey(24);
+
 		// Until session caching supports clients that present
 		// different identities to the same service at different
 		// times, we want condor daemons to always authenticate
@@ -57,7 +64,7 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 		// For tools and daemons not started as root, this
 		// is a no-op.
 		priv_state saved_priv = set_condor_priv();
-		err = munge_encode (&munge_token, NULL, NULL, 0);
+		err = munge_encode (&munge_token, NULL, key, 24);
 		set_priv(saved_priv);
 
 		if ( err != EMUNGE_SUCCESS ) {
@@ -72,7 +79,11 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 			// success on client side
 			dprintf(D_SECURITY, "AUTHENTICATE_MUNGE: Client succeeded.\n");
 			client_result = 0;
+			setupCrypto(key, 24);
 		}
+
+		// key no longer needed.
+		free(key);
 
 		dprintf (D_SECURITY | D_FULLDEBUG, "AUTHENTICATE_MUNGE: sending client_result %i, munge_token %s\n", client_result, munge_token);
 
@@ -135,7 +146,9 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 			dprintf(D_SECURITY, "AUTHENTICATE_MUNGE: Client succeeded.\n");
 		}
 
-		err = munge_decode (munge_token, NULL, NULL, NULL, &uid, &gid);
+		unsigned char *key;
+		int   len;
+		err = munge_decode (munge_token, NULL, (void**)&key, &len, &uid, &gid);
 		free(munge_token);
 
 		if (err != EMUNGE_SUCCESS) {
@@ -158,8 +171,12 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 				setAuthenticatedName( tmpOwner );
 				free( tmpOwner );
 				setRemoteDomain( getLocalDomain() );
+				setupCrypto(key, len);
 			}
 		}
+
+		// free the key (payload) from munge_decode
+		free(key);
 
 		mySock_->encode();
 		if (!mySock_->code( server_result ) || !mySock_->end_of_message()) {
@@ -179,6 +196,110 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 int Condor_Auth_MUNGE :: isValid() const
 {
     return TRUE;
+}
+
+bool
+Condor_Auth_MUNGE::setupCrypto(unsigned char* key, const int keylen)
+{
+	// get rid of any old crypto object
+	if ( m_crypto ) delete m_crypto;
+	m_crypto = NULL;
+
+	if ( !key || !keylen ) {
+		// cannot setup anything without a key
+		return false;
+	}
+
+	// This could be 3des -- maybe we should use "best crypto" indirection.
+	KeyInfo thekey(key,keylen,CONDOR_3DES);
+	m_crypto = new Condor_Crypt_3des(thekey);
+	return m_crypto ? true : false;
+}
+
+bool
+Condor_Auth_MUNGE::encrypt(unsigned char* input, int input_len, unsigned char* &output, int &output_len)
+{
+	return encrypt_or_decrypt(true,input,input_len,output,output_len);
+}
+
+bool
+Condor_Auth_MUNGE::decrypt(unsigned char* input, int input_len, unsigned char* &output, int &output_len)
+{
+	return encrypt_or_decrypt(false,input,input_len,output,output_len);
+}
+
+bool
+Condor_Auth_MUNGE::encrypt_or_decrypt(bool want_encrypt, unsigned char* input, int input_len, unsigned char* &output, int &output_len)
+{
+	bool result;
+
+	// clean up any old buffers that perhaps were left over
+	if ( output ) free(output);
+	output = NULL;
+	output_len = 0;
+
+	// check some intput params
+	if (!input || input_len < 1) {
+		return false;
+	}
+
+	// make certain we got a crypto object
+	if (!m_crypto) {
+		dprintf(D_SECURITY, "In Condor_Auth_MUNGE.  No m_crypto!\n");
+		return false;
+	}
+
+	// do the work
+	m_crypto->resetState();
+	if (want_encrypt) {
+		result = m_crypto->encrypt(input,input_len,output,output_len);
+	} else {
+		result = m_crypto->decrypt(input,input_len,output,output_len);
+	}
+
+	// mark output_len as zero upon failure
+	if (!result) {
+		output_len = 0;
+	}
+
+	// an output_len of zero means failure; cleanup and return
+	if ( output_len == 0 ) {
+		if ( output ) free(output);
+		output = NULL;
+		return false;
+	}
+
+	// if we made it here, we're golden!
+	return true;
+}
+
+int
+Condor_Auth_MUNGE::wrap(char *input, int input_len, char* &output, int &output_len)
+{
+	bool result;
+	unsigned char* in = (unsigned char*)input;
+	unsigned char* out = (unsigned char*)output;
+	dprintf(D_SECURITY, "In Condor_Auth_MUNGE::wrap.\n");
+	result = encrypt(in,input_len,out,output_len);
+
+	output = (char *)out;
+
+	return result ? TRUE : FALSE;
+}
+
+int
+Condor_Auth_MUNGE::unwrap(char *input, int input_len, char* &output, int &output_len)
+{
+	bool result;
+	unsigned char* in = (unsigned char*)input;
+	unsigned char* out = (unsigned char*)output;
+
+	dprintf(D_SECURITY, "In Condor_Auth_MUNGE::unwrap.\n");
+	result = decrypt(in,input_len,out,output_len);
+
+	output = (char *)out;
+
+	return result ? TRUE : FALSE;
 }
 
 #endif

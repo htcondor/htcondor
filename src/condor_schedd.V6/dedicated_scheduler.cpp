@@ -993,7 +993,7 @@ DedicatedScheduler::sendAlives( void )
 		}
 	}
 
-	CommitTransaction();
+	CommitTransactionOrDieTrying();
 
 	if( numsent ) {
 		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "

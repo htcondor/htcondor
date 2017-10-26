@@ -603,7 +603,7 @@ parseArgumentsLine( const MyString &subLine,
 
 	MyString arguments;
 	if ( start && end ) {
-		arguments = subLine.Substr( start - line, end - line );
+		arguments = subLine.substr( start - line, 1 + end - start );
 	} else {
 		fprintf( stderr, "Missing quotes in arguments line: <%s>\n",
 					subLine.Value() );

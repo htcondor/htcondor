@@ -310,7 +310,7 @@ bool stripdoublequotes_MyString(MyString &value) {
 		/* strip enclosing double quotes
 		*/
 	if (value[attValLen-1] == '"' && value[0] == '"') {
-		value = value.Substr(1, attValLen-2);
+		value = value.substr(1, attValLen-2);
 		return TRUE;
 	} else {
 		return FALSE;

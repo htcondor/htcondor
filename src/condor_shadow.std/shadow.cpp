@@ -82,7 +82,7 @@ extern "C" {
 	void handle_terminate_pending();
 	int terminate_is_pending(void);
 	void get_local_rusage( struct rusage *bsd_rusage );
-	void NotifyUser( char *buf, PROC *proc );
+	void NotifyUser( char *buf, int reason, PROC *proc );
 	FILE	*fdopen(int, const char *);
 	int		whoami(char **buf,int *bufpos,int *buflen);
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
@@ -574,7 +574,7 @@ handle_terminate_pending()
 	log_termination (&local_rusage, &JobRusage);
 
 	if( notification[0] ) {
-		NotifyUser( notification, Proc );
+		NotifyUser( notification, ExitReason, Proc );
 	}
 
 	/* using the above ExitReason... */
@@ -772,7 +772,7 @@ Wrapup( )
 	log_termination (&local_rusage, &JobRusage);
 
 	if( notification[0] ) {
-		NotifyUser( notification, Proc );
+		NotifyUser( notification, ExitReason, Proc );
 	}
 }
 

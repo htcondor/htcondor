@@ -33,13 +33,41 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Job attributes that are recognized by the \Prog{batch\_gahp}
+but not by HTCondor can now be specified in the job ad without using
+a prefix of \Attr{Remote\_}.
+\Ticket{6422}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Change the default value of STARTD\_RECOMPUTE\_DISK\_FREE to false, so 
+that the Disk attribute is mostly correct for partitionable slots.
+\Ticket{6424}
+
+\item Docker universe now sets the cgroup cpu-shares field to 100 times the number of requested cores, which matches vanilla universe
+\Ticket{6423}
+
+\item MOUNT\_UNDER\_SCRATCH when used in Docker universe can now be an expression, not just a literal string.  This matches the way it works in vanilla universe
+\Ticket{6401}
+
+\item Fixed a bug that caused systems using cgroup memory limits to
+not properly reset the memory limit after the first use of a slot.  The memory
+limit would get reused from the previous slot value.
+\Ticket{6414}
+
+\item Fixed a bug that could cause the \Condor{startd} to crash when spawning
+a \Condor{starter} with mixed mode networking.
+\Ticket{6461}
+
+\item Asking systemd to stop condor now allows the HTCondor daemons to properly
+clean up, instead of simply immediately sending a SIGKILL.  As a result,
+HTCondor daemons stopped via systemd will no longer continue to appear 
+alive with \Condor{status}.
+\Ticket{6096}
 
 \item \Condor{status} will now print longer lines when its output is
 redirected into a pipe, rather than its input coming from one.
@@ -56,6 +84,15 @@ utility.
 \item Fixed problems in python bindings when using the Submit class
 to submit jobs specifying environment variables or file redirection.
 \Ticket{6420}
+
+\item Fixed a bug that caused \Condor{job\_router\_info} to crash if
+configuration paramater \MacroNI{JOB\_ROUTER\_ENTRIES\_REFRESH} was
+set to a positive value.
+\Ticket{6444}
+
+\item Fixed a bug in \Condor{history} that caused it to print invalid
+XML or JSON syntax when reading from multiple history files.
+\Ticket{6437}
 
 \end{itemize}
 
