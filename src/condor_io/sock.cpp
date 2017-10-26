@@ -2264,8 +2264,6 @@ char * Sock::serialize() const
 
 	MyString out;
 	char * outbuf = NULL;
-	// must overallocate because other people will append to this buffer!!!
-	out.reserve(1000); //(int)(verstring_len+fqu_len+8+(6*10)));
 	if (out.serialize_int(_sock)                 && out.serialize_sep("*") &&
 		out.serialize_int((int)_state)           && out.serialize_sep("*") &&
 		out.serialize_int(_timeout)              && out.serialize_sep("*") &&
@@ -2277,7 +2275,7 @@ char * Sock::serialize() const
 	{
 		outbuf = out.detach_buffer();
 	}
-	else 
+	else
 	{
 		dprintf(D_ALWAYS, "Sock::serialize failed - Out of memory?\n");
 	}
