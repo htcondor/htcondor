@@ -99,6 +99,12 @@ limit.
 \item Added support for both user and daemon authentication using the MUNGE service.
 \Ticket{6404}
 
+\item \File{openmpiscript} now uses \Condor{chirp} to run Open MPI's execute daemons
+(orted) directly under the \Condor{starter} (instead of using SSH). \File{openmpiscript}
+now also puts information about the number of CPUs in the hostfile given to \File{mpirun}
+and now includes an option for jobs that intend to use hybrid Open MPI+OpenMP.
+\TIcket{6403}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
