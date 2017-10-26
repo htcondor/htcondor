@@ -94,6 +94,16 @@ set to a positive value.
 XML or JSON syntax when reading from multiple history files.
 \Ticket{6437}
 
+\item Fixed a bug in the \Condor{schedd} which resulted in the \Attr{IsNoopJob}
+job attribute sometimes being ignored if the the value of this attribute was
+changed after the job was submitted.
+\Ticket{6396}
+
+\item Fixed a bug that caused the \Condor{collector} on Windows to refuse connections
+whenever the number of open sockets was more than 820 even though space was allocated
+for 1024 open sockets.
+\Ticket{6425}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
