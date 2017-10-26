@@ -812,19 +812,13 @@ int SafeSock::attach_to_file_desc(int fd)
 
 char * SafeSock::serialize() const
 {
-	// here we want to save our state into a buffer
-
-	// first, get the state from our parent class
 	char * parent_state = Sock::serialize();
-	// now concatenate our state
-	char outbuf[50];
 
-    memset(outbuf, 0, 50);
+	MyString state;
+	formatstr( state, "%s%d*%s*", parent_state, _special_state, _who.to_sinful().Value() );
+	delete[] parent_state;
 
-	sprintf(outbuf,"%d*%s*", _special_state, _who.to_sinful().Value());
-	strcat(parent_state,outbuf);
-
-	return( parent_state );
+	return state.detach_buffer();
 }
 
 const char * SafeSock::serialize(const char *buf)
