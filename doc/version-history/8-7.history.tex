@@ -105,13 +105,21 @@ now also puts information about the number of CPUs in the hostfile given to \Fil
 and now includes an option for jobs that intend to use hybrid Open MPI+OpenMP.
 \TIcket{6403}
 
+\item Added a new \Opt{-macro} argument to \Condor{config\_val}.  This argument causes
+\Condor{config\_val} to show the results of doing \Expr{$()} expansion of its arguments
+as if they were the result of a lookup rather than the names of configuration variables
+to look up.
+\Ticket{6416}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item The new behavior of the \Opt{-expand} command line argument of \Condor{config\_val} was breaking some
+scripts, so that functionality has been moved and \Opt{-expand} reverted to the pre 8.7.2 behavior.
+\Ticket{6416}
 
 \end{itemize}
 
