@@ -117,6 +117,11 @@ to look up.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in 8.7.0 where the job attributes RemoteUserCpu
+and RemoteSysCpu where never updated in the history file, or in condor\_q
+output.  The user log would show the correct values.
+\Ticket{6426}
+
 \item The new behavior of the \Opt{-expand} command line argument of \Condor{config\_val} was breaking some
 scripts, so that functionality has been moved and \Opt{-expand} reverted to the pre 8.7.2 behavior.
 \Ticket{6416}
