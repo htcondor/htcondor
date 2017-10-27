@@ -279,9 +279,28 @@ our %submit_info = (
 		},
 	},
 
-	# '0' instead of '8' since it's still in testing.
-	'x86_64_Debian0'	=> 'x86_64_Debian7',
 	'x86_64_Debian8'	=> 'x86_64_Debian7',
+
+	##########################################################################
+	# Platform DEB 9 on x86_64
+	##########################################################################
+	'x86_64_Debian9'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+								  '-DWITH_CREAM:BOOL' => 'OFF',
+								  '-DWITH_BOINC:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=>	undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
 
 	##########################################################################
 	# Platform RHEL 7 on x86_64

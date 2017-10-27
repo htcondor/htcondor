@@ -75,9 +75,7 @@ if (WITH_GLOBUS)
 							DEPENDS ${GLOBUS_DEPENDS}
 							#-- Download Step ----------
 							DOWNLOAD_DIR ${GLOBUS_STAGE}/dl
-							URL ${EXTERNALS_SOURCE_URL}/globus_toolkit-6.0.1441801527.tar.gz
-							#--Patch step ----------
-							PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/globus_bash.patch -p1
+							URL ${EXTERNALS_SOURCE_URL}/globus_toolkit-6.0.1506371041.tar.gz
 							#--Configure step ----------
 							CONFIGURE_COMMAND ./configure --prefix=${GLOBUS_INSTALL_LOC}
 							#--Build Step ----------
