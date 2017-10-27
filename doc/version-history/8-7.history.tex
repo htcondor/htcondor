@@ -59,6 +59,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When Docker universe starts a job, it no longer uses the docker
+run command line to do so.  Now, it first creates a container with
+docker create, then starts it with docker start.  This allows HTCondor
+to better isolate errors at container creation time, but should not
+result in any user visible changes at runtime.  The StarterLog will
+now always print the docker command line for the start and create,
+and not the run that it used to.
+\Ticket{6377}
+
 \item When docker universe reports memory usage, it now reports the
 RSS (Resident Set Size) of the container, previously it reported
 RSS + page cache size
@@ -120,6 +129,18 @@ limit.
 \item Added support for both user and daemon authentication using the MUNGE service.
 \Ticket{6404}
 
+\item \File{openmpiscript} now uses \Condor{chirp} to run Open MPI's execute daemons
+(orted) directly under the \Condor{starter} (instead of using SSH). \File{openmpiscript}
+now also puts information about the number of CPUs in the hostfile given to \File{mpirun}
+and now includes an option for jobs that intend to use hybrid Open MPI+OpenMP.
+\TIcket{6403}
+
+\item Added a new \Opt{-macro} argument to \Condor{config\_val}.  This argument causes
+\Condor{config\_val} to show the results of doing \Expr{$()} expansion of its arguments
+as if they were the result of a lookup rather than the names of configuration variables
+to look up.
+\Ticket{6416}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -130,6 +151,10 @@ limit.
 and RemoteSysCpu where never updated in the history file, or in condor\_q
 output.  The user log would show the correct values.
 \Ticket{6426}
+
+\item The new behavior of the \Opt{-expand} command line argument of \Condor{config\_val} was breaking some
+scripts, so that functionality has been moved and \Opt{-expand} reverted to the pre 8.7.2 behavior.
+\Ticket{6416}
 
 \end{itemize}
 
