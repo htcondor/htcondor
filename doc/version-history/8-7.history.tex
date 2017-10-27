@@ -103,10 +103,10 @@ limit.
 (orted) directly under the \Condor{starter} (instead of using SSH). \File{openmpiscript}
 now also puts information about the number of CPUs in the hostfile given to \File{mpirun}
 and now includes an option for jobs that intend to use hybrid Open MPI+OpenMP.
-\TIcket{6403}
+\Ticket{6403}
 
 \item Added a new \Opt{-macro} argument to \Condor{config\_val}.  This argument causes
-\Condor{config\_val} to show the results of doing \Expr{$()} expansion of its arguments
+\Condor{config\_val} to show the results of doing \Expr{\$()} expansion of its arguments
 as if they were the result of a lookup rather than the names of configuration variables
 to look up.
 \Ticket{6416}
