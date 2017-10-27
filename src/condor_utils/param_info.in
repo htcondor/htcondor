@@ -751,7 +751,7 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_SCHEDD_UPDATE_INTERVAL]
-default=120
+default=$(UPDATE_INTERVAL)
 type=int
 tags=dagman,dagman_main
 restart=never

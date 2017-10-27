@@ -509,7 +509,7 @@ main_shutdown_fast()
 // shutdown gracefully; this also gets called if condor_hold is done
 // on the DAGMan job
 void main_shutdown_graceful() {
-	print_status();
+	print_status( true );
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
 	// Don't report metrics here because we should restart.
@@ -574,7 +574,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 			inShutdownRescue = false;
 			return;
 		}
-		print_status();
+		print_status( true );
 		bool removed = ( dagStatus == Dag::DAG_STATUS_RM );
 		dagman.dag->DumpNodeStatus( false, removed );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
@@ -600,7 +600,7 @@ int main_shutdown_remove(Service *, int) {
 }
 
 void ExitSuccess() {
-	print_status();
+	print_status( true );
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	dagman.dag->ReportMetrics( EXIT_OKAY );
@@ -1512,7 +1512,7 @@ Dagman::PublishStats() {
 }
 
 void
-print_status() {
+print_status( bool forceScheddUpdate ) {
 	debug_printf( DEBUG_VERBOSE, "DAG status: %d (%s)\n",
 				dagman.dag->_dagStatus,
 				dagman.dag->GetStatusName() );
@@ -1549,7 +1549,8 @@ print_status() {
 		scheddLastUpdateTime = currentTime;
 	}
 	
-	if( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) {
+	if( forceScheddUpdate || 
+		( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) ) {
 			if ( dagman._dagmanClassad ) {
 			dagman._dagmanClassad->Update( total, done, pre, submitted, post,
 						ready, failed, unready, dagman.dag->_dagStatus,
