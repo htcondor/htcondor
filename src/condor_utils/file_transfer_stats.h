@@ -49,6 +49,7 @@
 		string HttpCacheHitOrMiss;
 		string HttpCacheHost;
 		string TransferError;
+		string TransferFileName;
 		string TransferHostName;
 		string TransferLocalMachineName;
 		string TransferProtocol;

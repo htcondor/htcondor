@@ -1748,7 +1748,10 @@ Scheduler::downloadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 	rsock->decode();
 	answer = -1;
 
-	rsock->code(answer);
+	if (!rsock->code(answer)) {
+		dprintf(D_ALWAYS, "generalJobFilesWorkerThread, failed to get answer from peer\n");
+		answer = -1;
+	}
 	rsock->end_of_message();
 	s->timeout(old_timeout);
 

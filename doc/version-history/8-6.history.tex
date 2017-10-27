@@ -16,6 +16,36 @@ New features will be added in the 8.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-8}Version 8.6.8}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.8 not yet released.
+%\item HTCondor version 8.6.8 released on Month Date, 2017.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-6-7}Version 8.6.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -33,13 +63,35 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Job attributes that are recognized by the \Prog{batch\_gahp}
+but not by HTCondor can now be specified in the job ad without using
+a prefix of \Attr{Remote\_}.
+\Ticket{6422}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Change the default value of STARTD\_RECOMPUTE\_DISK\_FREE to false, so 
+that the Disk attribute is mostly correct for partitionable slots.
+\Ticket{6424}
+
+\item Docker universe now sets the cgroup cpu-shares field to 100 times the number of requested cores, which matches vanilla universe
+\Ticket{6423}
+
+\item MOUNT\_UNDER\_SCRATCH when used in Docker universe can now be an expression, not just a literal string.  This matches the way it works in vanilla universe
+\Ticket{6401}
+
+\item Fixed a bug that caused systems using cgroup memory limits to
+not properly reset the memory limit after the first use of a slot.  The memory
+limit would get reused from the previous slot value.
+\Ticket{6414}
+
+\item Fixed a bug that could cause the \Condor{startd} to crash when spawning
+a \Condor{starter} with mixed mode networking.
+\Ticket{6461}
 
 \item Asking systemd to stop condor now allows the HTCondor daemons to properly
 clean up, instead of simply immediately sending a SIGKILL.  As a result,
@@ -71,6 +123,16 @@ set to a positive value.
 \item Fixed a bug in \Condor{history} that caused it to print invalid
 XML or JSON syntax when reading from multiple history files.
 \Ticket{6437}
+
+\item Fixed a bug in the \Condor{schedd} which resulted in the \Attr{IsNoopJob}
+job attribute sometimes being ignored if the the value of this attribute was
+changed after the job was submitted.
+\Ticket{6396}
+
+\item Fixed a bug that caused the \Condor{collector} on Windows to refuse connections
+whenever the number of open sockets was more than 820 even though space was allocated
+for 1024 open sockets.
+\Ticket{6425}
 
 \end{itemize}
 
