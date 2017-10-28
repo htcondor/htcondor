@@ -1038,7 +1038,7 @@ install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}
 %if 0%{?osg} || 0%{?hcc}
 # Set condor service enviroment variables for LCMAPS on OSG systems
 mkdir -p %{buildroot}%{_unitdir}/condor.service.d
-install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/%{SOURCE3}
+install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/osg-env.conf
 %endif
 %else
 # install the lsb init script
@@ -1217,6 +1217,9 @@ rm -rf %{buildroot}
 %if %systemd
 %{_tmpfilesdir}/%{name}.conf
 %{_unitdir}/condor.service
+%if 0%{?osg} || 0%{?hcc}
+%{_unitdir}/condor.service.d/osg-env.conf
+%endif
 # Disabled until HTCondor security fixed.
 # %{_unitdir}/condor.socket
 %else
