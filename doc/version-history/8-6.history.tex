@@ -94,6 +94,18 @@ set to a positive value.
 XML or JSON syntax when reading from multiple history files.
 \Ticket{6437}
 
+\item Fixed a bug that rarely caused slurm jobs to be held.
+When slurm reports memory utilization and it is a multiple of 1024k,
+Slurm uses the 'M' suffix.
+The parsing logic was extended to also interpret the 'M', 'G', 'T', and 'P'
+suffixes for memory utilization.
+\Ticket{6431}
+
+\item To avoid unnecessary transfers when \MacroNI{copy\_to\_spool} is set in
+the submit file, HTCondor no longer copies the executable to the
+local spool directory more than once for a cluster.
+\Ticket{6454}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
