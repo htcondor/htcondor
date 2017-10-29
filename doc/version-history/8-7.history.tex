@@ -59,30 +59,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item When Docker universe starts a job, it no longer uses the docker
-run command line to do so.  Now, it first creates a container with
-docker create, then starts it with docker start.  This allows HTCondor
-to better isolate errors at container creation time, but should not
-result in any user visible changes at runtime.  The StarterLog will
-now always print the docker command line for the start and create,
-and not the run that it used to.
-\Ticket{6377}
+\item Added support for late materialization into \Condor{dagman}. DAGs that
+include late materialized jobs now work correctly in both normal and recovery
+conditions.
+\Ticket{6274}
 
-\item When docker universe reports memory usage, it now reports the
-RSS (Resident Set Size) of the container, previously it reported
-RSS + page cache size
-\Ticket{6430}
+\item We now produce run time statistics in \Condor{dagman}, tracking how
+much time DAGMan spends idle, how much time it spends submitting jobs and
+processing log files. This information could be used to determine why a DAG
+is submitting jobs slowly and how to optimize it. These statistics currently get
+dumped into the .dagman.out file at the end of a DAGs execution.
+\Ticket{6411}
 
-\item Added \Arg{off} command to \Condor{annex}.  This command invokes
-\Condor{off} \Arg{-annex} appropriately.
-\Ticket{6408}
-
-\item Updated \Condor{annex} \Arg{-check-setup} to check collector security
-as well as connectivity.
-\Ticket{6322}
-
-\item Added submit warnings.  See section \ref{sec:Schedd-Config-Submit-Warnings}.
-\Ticket{5971}
+\item Added a new knob to \Condor{dagman}, \MacroNI{DAGMAN\_AGGRESSIVE\_SUBMIT}.
+When set to True, this tells DAGMan to ignore the interval time limit for
+submitting jobs (defined by \MacroNI{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}) and to
+continuously submit jobs until no more are ready, or until it hits a different
+limit.
+\Ticket{6386}
 
 \item Added \Arg{status} command to \Condor{annex}.  This command invokes
 \Condor{status} to display information about annex instances that have
@@ -107,27 +101,16 @@ and the third table will be generated from those ads whose key appeared
 only in \Arg{file}.
 \Ticket{6321}
 
-\item Added support for late materialization into \Condor{dagman}. DAGs that
-include late materialized jobs now work correctly in both normal and recovery 
-conditions.
-\Ticket{6274}
+\item Added \Arg{off} command to \Condor{annex}.  This command invokes
+\Condor{off} \Arg{-annex} appropriately.
+\Ticket{6408}
 
-\item We now produce runtime statistics in \Condor{dagman}, tracking how 
-much time DAGMan spends idle, how much time it spends submitting jobs and
-processing log files. This information could be used to determine why a DAG 
-is submitting jobs slowly and how to optimize it. These statistics currently get 
-dumped into the .dagman.out file at the end of a DAGs execution.
-\Ticket{6411}
+\item Updated \Condor{annex} \Arg{-check-setup} to check collector security
+as well as connectivity.
+\Ticket{6322}
 
-\item Added a new knob to \Condor{dagman}, \MacroNI{DAGMAN\_AGGRESSIVE\_SUBMIT}.
-When set to True, this tells DAGMan to ignore the interval time limit for 
-submitting jobs (defined by \MacroNI{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}) and to 
-continuously submit jobs until no more are ready, or until it hits a different
-limit. 
-\Ticket{6386}
-
-\item Added support for both user and daemon authentication using the MUNGE service.
-\Ticket{6404}
+\item Added submit warnings.  See section \ref{sec:Schedd-Config-Submit-Warnings}.
+\Ticket{5971}
 
 \item \File{openmpiscript} now uses \Condor{chirp} to run Open MPI's execute daemons
 (orted) directly under the \Condor{starter} (instead of using SSH). \File{openmpiscript}
@@ -135,11 +118,36 @@ now also puts information about the number of CPUs in the hostfile given to \Fil
 and now includes an option for jobs that intend to use hybrid Open MPI+OpenMP.
 \Ticket{6403}
 
+\item The High Availability \Condor{replication} daemon now works on machines
+using mixed IPV6/IPV4 addressing or using the \Condor{shared\_port} daemon.
+\Ticket{6413}
+
+\item When Docker universe starts a job, it no longer uses the docker
+run command line to do so.  Now, it first creates a container with
+docker create, then starts it with docker start.  This allows HTCondor
+to better isolate errors at container creation time, but should not
+result in any user visible changes at run time.  The StarterLog will
+now always print the docker command line for the start and create,
+and not the run that it used to.
+\Ticket{6377}
+
+\item When docker universe reports memory usage, it now reports the
+RSS (Resident Set Size) of the container, previously it reported
+RSS + page cache size
+\Ticket{6430}
+
+\item Added support for both user and daemon authentication using the MUNGE service.
+\Ticket{6404}
+
 \item Added a new \Opt{-macro} argument to \Condor{config\_val}.  This argument causes
 \Condor{config\_val} to show the results of doing \Expr{\$()} expansion of its arguments
-as if they were the result of a lookup rather than the names of configuration variables
+as if they were the result of a look up rather than the names of configuration variables
 to look up.
 \Ticket{6416}
+
+\item Remove CE requirements for the BLAHP can now be expressed in a simple form
+such as a string or nested ClassAd.
+\Ticket{6133}
 
 \end{itemize}
 
@@ -155,6 +163,10 @@ output.  The user log would show the correct values.
 \item The new behavior of the \Opt{-expand} command line argument of \Condor{config\_val} was breaking some
 scripts, so that functionality has been moved and \Opt{-expand} reverted to the pre 8.7.2 behavior.
 \Ticket{6416}
+
+\item Grid type boinc jobs are now considered running when they are reported as
+IN\_PROGRESS.
+\Ticket{6405}
 
 \end{itemize}
 
@@ -186,8 +198,8 @@ release.
 
 \begin{itemize}
 
-\item Changed \Condor{top} tool 
-to monitor the \Condor{schedd} by default, 
+\item Changed \Condor{top} tool
+to monitor the \Condor{schedd} by default,
 to show more useful columns in the default view,
 to better format output when redirected or piped, and
 to optionally take input of two classad files.
@@ -224,9 +236,9 @@ default to a transfer\_history file in the local logs folder.
 \item Fixed some small memory leaks in the HTCondor daemons.
 \Ticket{6361}
 
-\item Fixed a bug that would prevent dollar-dollar expansion from 
-working correctly for parallel universe jobs running on partitionable 
-slots 
+\item Fixed a bug that would prevent dollar-dollar expansion from
+working correctly for parallel universe jobs running on partitionable
+slots.
 \Ticket{6370}
 
 \end{itemize}
