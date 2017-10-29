@@ -111,6 +111,14 @@ as if they were the result of a lookup rather than the names of configuration va
 to look up.
 \Ticket{6416}
 
+\item Remove CE requiremts for the BLAHP can now be expressed in a simple form
+such as a string or nested ClassAd.
+\Ticket{6133}
+
+\item The High Availability \Condor{replication} daemon now works on machines
+using mixed IPV6/IPV4 addressing or using the \Condor{shared\_port} daemon.
+\Ticket{6413}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -125,6 +133,10 @@ output.  The user log would show the correct values.
 \item The new behavior of the \Opt{-expand} command line argument of \Condor{config\_val} was breaking some
 scripts, so that functionality has been moved and \Opt{-expand} reverted to the pre 8.7.2 behavior.
 \Ticket{6416}
+
+\item Grid type boinc jobs are now considered running when they are reported as
+IN\_PROGRESS.
+\Ticket{6405}
 
 \end{itemize}
 
