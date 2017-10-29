@@ -109,6 +109,14 @@ local spool directory more than once for a cluster.
 \item The \Condor{master} shutdown script now runs on the Windows platform.
 \Ticket{6458}
 
+\item The condor-bosco RPM ensures the \Prog{rsync} is installed as required
+by the Bosco scripts.
+\Ticket{6439}
+
+\item Added SELinux type enforcement rules to allow \Prog{condor\_ssh\_to\_job}
+to function on Enterprise Linux 7.
+\Ticket{6362}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
