@@ -1,0 +1,17 @@
+--- glibc-2.24-11/nscd/nscd_helper.c	2017-10-29 13:45:41.207223396 -0500
++++ glibc-2.24-11/nscd/nscd_helper.c.patched	2017-10-29 13:51:25.537717344 -0500
+@@ -165,6 +165,14 @@
+ open_socket (request_type type, const char *key, size_t keylen)
+ {
+   int sock;
++  /* Patched by tlmiller on 2017-10-29 (based on an earlier patch by
++   * jfrey, which was based on an earlier patch by psilord) to turn off
++   * connecting to the nscd via a unix domain socket, which in some
++   * cases is left open permanently.  This open socket defers
++   * checkpointing forever.
++   */
++  errno = ENOENT;
++  return -1;
+ 
+   sock = __socket (PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
+   if (sock < 0)

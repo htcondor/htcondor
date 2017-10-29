@@ -86,7 +86,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 
 			set (GLIBC_FLAGS export CC=gcc-4.3 && export CXX=g++-4.3 && export AUTOCONF=false && export MAKEINFO=: && export "CFLAGS=-pipe -O2 -fstrict-aliasing -g" )
 
-            set (GLIBC_CONFIGURE ./configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --without-selinux --enable-kernel=2.6.8 --disable-profile --with-headers=${GLIBC_BUILD_PREFIX}/debian/include --enable-bind-now --with-tls --with-__thread --enable-static-nss)
+			set (GLIBC_CONFIGURE ./configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --without-selinux --enable-kernel=2.6.8 --disable-profile --with-headers=${GLIBC_BUILD_PREFIX}/debian/include --enable-bind-now --with-tls --with-__thread --enable-static-nss)
 
 			set (GLIBC_MAKE ${MAKE} -r)
 		else()
@@ -164,11 +164,11 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 
 			set (GLIBC_FLAGS export CC=gcc-4.4 && export CXX=g++-4.4 && export AUTOCONF=false && export MAKEINFO=: && export "CFLAGS=-pipe -O2 -fstrict-aliasing -g")
 
-            # Omitted --enable-stackguard-randomization
-            # Debian's ./debian/rules constructs a local include/ directory
-            # that's duplicated in /usr/include, but only if you install
-            # the 'gcc-multilib' package.  Installing a gcc-specific multilib
-            # won't work.  *sigh*
+			# Omitted --enable-stackguard-randomization
+			# Debian's ./debian/rules constructs a local include/ directory
+			# that's duplicated in /usr/include, but only if you install
+			# the 'gcc-multilib' package.  Installing a gcc-specific multilib
+			# won't work.  *sigh*
 			set (GLIBC_CONFIGURE ./configure CC=gcc-4.4 CXX=g++-4.4 "CFLAGS=-pipe -O2 -fstrict-aliasing -g" --host=x86_64-linux-gnu --build=x86_64-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --enable-profile --without-selinux "--with-pkgversion=Debian EGLIBC 2.13-38" --with-bugurl=http://www.debian.org/Bugs/ --with-headers=/usr/include --enable-kernel=2.6.26 --enable-multi-arch --enable-static-nss)
 
 			set (GLIBC_MAKE ${MAKE} -r)
@@ -214,6 +214,25 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 		set( GLIBC_TARNAME glibc-2.19-0ubuntu6 )
 		set( GLIBC_FLAGS export CC=x86_64-linux-gnu-gcc-4.8 && export CXX=x86_64-linux-gnu-g++-4.8 && export AUTOCONF=false )
 		set( GLIBC_CONFIGURE ./configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --prefix=/usr --without-cvs --enable-add-ons=libidn,nptl --enable-profile --without-selinux --enable-stackguard-randomization --enable-obsolete-rpc "--with-pkgversion=Ubuntu EGLIBC 2.19-0ubuntu6" --with-bugurl=https://bugs.launchpad.net/ubuntu/+source/eglibc/+bugs --enable-pt_chown --with-headers=${GLIBC_BUILD_PREFIX}/debian/include --enable-kernel=2.6.24 --enable-multi-arch )
+
+		set( GLIBC_MAKE make -r )
+
+		set (GLIBC_PATCH patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch && patch --binary -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch)
+
+	elseif( ${GLIBC_VERSION} STREQUAL "224" )
+		#
+		# Debian 9
+		#
+		if( NOT ${SYS_ARCH} STREQUAL "X86_64" )
+			message( STATUS "HTCondor does not support 32-bit Debian 9." )
+			set( GLIBC_DETECTED OFF )
+			set( CLIPPED ON PARENT_SCOPE )
+		endif()
+
+		set( VER 2.24-11 )
+		set( GLIBC_TARNAME glibc-2.24-11 )
+		set( GLIBC_FLAGS export "CC=x86_64-linux-gnu-gcc-6 -no-pie -fno-PIE" && export "CXX=x86_64-linux-gnu-g++-6 -no-pie -fno-PIE" && export MIG=x86_64-linux-gnu-mig && export AUTOCONF=false && export MAKEINFO=: )
+		set( GLIBC_CONFIGURE ./configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --prefix=/usr --enable-add-ons=libidn --without-selinux --enable-stackguard-randomization --enable-obsolete-rpc "--with-pkgversion=Debian GLIBC 2.24-11+deb9u1" --with-bugurl=http://www.debian.org/Bugs/ --with-headers=${GLIBC_BUILD_PREFIX}/debian/include --enable-kernel=2.6.32 --with-selinux --enable-multi-arch )
 
 		set( GLIBC_MAKE make -r )
 
