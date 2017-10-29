@@ -33,6 +33,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added support for HTTPS transfers in the \MacroNI{curl\_plugin} utility.
+\Ticket{6253}
+
 \item Job attributes that are recognized by the \Prog{batch\_gahp}
 but not by HTCondor can now be specified in the job ad without using
 a prefix of \Attr{Remote\_}.
@@ -44,30 +47,49 @@ a prefix of \Attr{Remote\_}.
 
 \begin{itemize}
 
-\item Change the default value of STARTD\_RECOMPUTE\_DISK\_FREE to false, so 
-that the Disk attribute is mostly correct for partitionable slots.
-\Ticket{6424}
-
-\item Docker universe now sets the cgroup cpu-shares field to 100 times the number of requested cores, which matches vanilla universe
-\Ticket{6423}
-
-\item MOUNT\_UNDER\_SCRATCH when used in Docker universe can now be an expression, not just a literal string.  This matches the way it works in vanilla universe
-\Ticket{6401}
-
 \item Fixed a bug that caused systems using cgroup memory limits to
 not properly reset the memory limit after the first use of a slot.  The memory
 limit would get reused from the previous slot value.
 \Ticket{6414}
 
+\item Added SELinux type enforcement rules to allow \Prog{condor\_ssh\_to\_job}
+to function on Enterprise Linux 7.
+\Ticket{6362}
+
+\item Asking systemd to stop condor now allows the HTCondor daemons to properly
+clean up, instead of simply immediately sending a SIGKILL.  As a result,
+HTCondor daemons stopped via systemd will no longer continue to appear
+alive with \Condor{status}.
+\Ticket{6096}
+
+\item Fixed problems in python bindings when using the Submit class
+to submit jobs specifying environment variables or file redirection.
+\Ticket{6420}
+
+\item Change the default value of STARTD\_RECOMPUTE\_DISK\_FREE to false, so
+that the Disk attribute is mostly correct for partitionable slots.
+\Ticket{6424}
+
+\item Docker universe now sets the cgroup cpu-shares field to 100 times the
+number of requested cores, which matches vanilla universe.
+\Ticket{6423}
+
+\item MOUNT\_UNDER\_SCRATCH when used in Docker universe can now be an
+expression, not just a literal string.
+This matches the way it works in vanilla universe.
+\Ticket{6401}
+
 \item Fixed a bug that could cause the \Condor{startd} to crash when spawning
 a \Condor{starter} with mixed mode networking.
 \Ticket{6461}
 
-\item Asking systemd to stop condor now allows the HTCondor daemons to properly
-clean up, instead of simply immediately sending a SIGKILL.  As a result,
-HTCondor daemons stopped via systemd will no longer continue to appear 
-alive with \Condor{status}.
-\Ticket{6096}
+\item Fixed a bug that caused the \Condor{collector} on Windows to refuse
+connections whenever the number of open sockets was more than 820 even though
+space was allocated for 1024 open sockets.
+\Ticket{6425}
+
+\item The \Condor{master} shutdown script now runs on the Windows platform.
+\Ticket{6458}
 
 \item \Condor{status} will now print longer lines when its output is
 redirected into a pipe, rather than its input coming from one.
@@ -77,16 +99,8 @@ redirected into a pipe, rather than its input coming from one.
 established with its peer.
 \Ticket{6412}
 
-\item Fixed support for HTTPS transfers in the \MacroNI{curl\_plugin}
-utility.
-\Ticket{6253}
-
-\item Fixed problems in python bindings when using the Submit class
-to submit jobs specifying environment variables or file redirection.
-\Ticket{6420}
-
 \item Fixed a bug that caused \Condor{job\_router\_info} to crash if
-configuration paramater \MacroNI{JOB\_ROUTER\_ENTRIES\_REFRESH} was
+configuration parameter \MacroNI{JOB\_ROUTER\_ENTRIES\_REFRESH} was
 set to a positive value.
 \Ticket{6444}
 
@@ -99,11 +113,6 @@ job attribute sometimes being ignored if the the value of this attribute was
 changed after the job was submitted.
 \Ticket{6396}
 
-\item Fixed a bug that caused the \Condor{collector} on Windows to refuse connections
-whenever the number of open sockets was more than 820 even though space was allocated
-for 1024 open sockets.
-\Ticket{6425}
-
 \item Fixed a bug that rarely caused slurm jobs to be held.
 When slurm reports memory utilization and it is a multiple of 1024k,
 Slurm uses the 'M' suffix.
@@ -111,21 +120,14 @@ The parsing logic was extended to also interpret the 'M', 'G', 'T', and 'P'
 suffixes for memory utilization.
 \Ticket{6431}
 
-\item To avoid unnecessary transfers when \MacroNI{copy\_to\_spool} is set in
-the submit file, HTCondor no longer copies the executable to the
-local spool directory more than once for a cluster.
-\Ticket{6454}
-
-\item The \Condor{master} shutdown script now runs on the Windows platform.
-\Ticket{6458}
-
 \item The condor-bosco RPM ensures the \Prog{rsync} is installed as required
 by the Bosco scripts.
 \Ticket{6439}
 
-\item Added SELinux type enforcement rules to allow \Prog{condor\_ssh\_to\_job}
-to function on Enterprise Linux 7.
-\Ticket{6362}
+\item To avoid unnecessary transfers when \MacroNI{copy\_to\_spool} is set in
+the submit file, HTCondor no longer copies the executable to the
+local spool directory more than once for a cluster.
+\Ticket{6454}
 
 \end{itemize}
 
