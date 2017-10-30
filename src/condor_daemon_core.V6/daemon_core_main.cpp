@@ -1099,7 +1099,9 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 	}
 
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
-	stream->code(result);
+	if (!stream->code(result)) {
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log: client hung up before we could send result back\n");
+	}
 
 	filesize_t size;
 	stream->put_file(&size, fd);
@@ -1145,7 +1147,9 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	}
 
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
-	stream->code(result);
+	if (!stream->code(result)) {
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history: client hung up before we could send result back\n");
+	}
 
 	for (int f = 0; f < numHistoryFiles; f++) {
 		filesize_t size;
@@ -1193,7 +1197,10 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 
 	free(dirName);
 
-	stream->code(zero); // no more data
+
+	if (!stream->code(zero)) { // no more data
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: client hung up before we could send result back\n");
+	}
 	stream->end_of_message();
 	return 0;
 }
@@ -1230,7 +1237,9 @@ handle_fetch_log_history_purge(ReliSock *s) {
 
     free(dirName);
 
-    s->code(result); // no more data
+    if (!s->code(result)) { // no more data
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history_purge: client hung up before we could send result back\n");
+	}
     s->end_of_message();
     return 0;
 }
