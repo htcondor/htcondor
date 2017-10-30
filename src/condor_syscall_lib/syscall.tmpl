@@ -1554,7 +1554,10 @@ not_supported {
 	int execvp( const char *file, char *const argv[] );
 
 #	if defined(LINUX)
+#if defined(GLIBC224)
+#else
 		pid_t wait4( pid_t pid, void *status, int options, struct rusage *ru );
+#endif
 #	else
 		pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru );
 #	endif

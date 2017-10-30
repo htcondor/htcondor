@@ -228,7 +228,11 @@ REMAP_ONE( uname, __uname, int , struct utsname *)
 
 REMAP_ONE( unlink, __unlink, int , const char *)
 REMAP_TWO( utime, __utime, int, const char *, const struct utimbuf * )
+#if defined(GLIBC224)
+REMAP_FOUR( wait4, __wait4, pid_t , pid_t , int *, int , struct rusage *)
+#else
 REMAP_FOUR( wait4, __wait4, pid_t , pid_t , void *, int , struct rusage *)
+#endif
 
 #if defined(I386)
 REMAP_THREE( waitpid, __waitpid, pid_t , pid_t , int *, int )

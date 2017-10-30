@@ -62,4 +62,9 @@
 #define CGV_MINOR 19
 #endif
 
+/* Skipping 20-23 for now. */
+#if defined(GLIBC224)
+#define CGV_MINOR 24
+#endif
+
 #endif
