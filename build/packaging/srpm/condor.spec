@@ -1945,6 +1945,15 @@ fi
 %endif
 
 %changelog
+* Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.4-1
+- Improvements to DAGMan including support for late job materialization
+- Updates to condor_annex including improved status reporting
+- When submitting jobs, HTCondor can now warn about job requirements
+- Fixed a bug where remote CPU time was not recorded in the history
+- Improved support for OpenMPI jobs
+- The high availability daemon now works with IPV6 and shared_port
+- The HTCondor Python bindings are now available for Python 2 and 3 in pip
+
 * Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.7-1
 - Fixed a bug where memory limits might not be updated in cgroups
 - Add SELinux type enforcement rules to allow condor_ssh_to_job to work
