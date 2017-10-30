@@ -740,14 +740,12 @@ struct Schedd {
             q.addAND(constraint.c_str());
 
         StringList attrs_list(NULL, "\n");
-        // Must keep strings alive; StringList does not create an internal copy.
+        // Must keep strings alive; note StringList DOES create an internal copy
         int len_attrs = py_len(attrs);
-        std::vector<std::string> attrs_str; attrs_str.reserve(len_attrs);
         for (int i=0; i<len_attrs; i++)
         {
             std::string attrName = extract<std::string>(attrs[i]);
-            attrs_str.push_back(attrName);
-            attrs_list.append(attrs_str[i].c_str());
+            attrs_list.append(attrName.c_str()); // note append() does strdup
         }
 
         ClassAdList jobs;
