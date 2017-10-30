@@ -1902,6 +1902,9 @@ fi
 %endif
 
 %changelog
+* Tue Nov 14 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.8-1
+- Fixed an issue validating VOMS proxies
+
 * Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.7-1
 - Fixed a bug where memory limits might not be updated in cgroups
 - Add SELinux type enforcement rules to allow condor_ssh_to_job to work
