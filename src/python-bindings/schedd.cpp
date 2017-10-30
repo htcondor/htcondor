@@ -1193,7 +1193,7 @@ struct Schedd {
             boost::shared_ptr<compat_classad::ClassAd> tmp_ad(new compat_classad::ClassAd());
             job_tmp_array.push_back(tmp_ad);
             tmp_ad->CopyFrom(wrapper);
-            job_array[i] = job_tmp_array[i].get();
+            job_array.push_back(job_tmp_array[i].get());
         }
         CondorError errstack;
         bool result;
