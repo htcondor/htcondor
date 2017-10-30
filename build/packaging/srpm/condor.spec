@@ -1945,6 +1945,13 @@ fi
 %endif
 
 %changelog
+* Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.7-1
+- Fixed a bug where memory limits might not be updated in cgroups
+- Add SELinux type enforcement rules to allow condor_ssh_to_job to work
+- Updated systemd configuration to shutdown HTCondor in an orderly fashion
+- The curl_plugin utility can now do HTTPS transfers
+- Specifying environment variables now works with the Python Submit class
+
 * Tue Sep 12 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.3-1
 - Further updates to the late job materialization technology preview
 - An improved condor_top tool
