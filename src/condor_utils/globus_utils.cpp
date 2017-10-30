@@ -867,13 +867,19 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 	// multiple certs.
 	voms_cert = voms_data->data[0];
 
+	if (voms_cert == NULL) {
+		// No VOMS certs?? Treat like VOMS_Retrieve() returned VERR_NOEXT.
+		ret = 1;
+		goto end;
+	}
+
 	// fill in the unquoted versions of things
 	if(voname) {
-		*voname = strdup(voms_cert->voname);
+		*voname = strdup(voms_cert->voname ? voms_cert->voname : "");
 	}
 
 	if(firstfqan) {
-		*firstfqan = strdup(voms_cert->fqan[0]);
+		*firstfqan = strdup(voms_cert->fqan[0] ? voms_cert->fqan[0] : "");
 	}
 
 	// only construct the quoted_DN_and_FQAN if needed
