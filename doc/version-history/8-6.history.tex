@@ -45,6 +45,11 @@ The details of each version are described below.
 \Condor{startd} to crash when spawning a starter.
 \Ticket {6462}
 
+\item Fixed a bug in the Python bindings when doing queries that specify a
+	projection with the ``attr\_list'' argument.  The bug could could
+	potentially result in memory corruption of the python interpreter process.
+\Ticket{6468}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
