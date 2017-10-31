@@ -87,7 +87,9 @@ connections whenever the number of open sockets was more than 820 even though
 space was allocated for 1024 open sockets.
 \Ticket{6425}
 
-\item The \Condor{master} shutdown script now runs on the Windows platform.
+\item Fixed a bug that caused the configuration variable
+\MacroNI{DEFAULT\_MASTER\_SHUTDOWN\_SCRIPT} to be ignored on Windows when the
+\Condor{master} was running as a service.
 \Ticket{6458}
 
 \item \Condor{status} will now print longer lines when its output is
@@ -106,10 +108,6 @@ set to a positive value.
 \item Fixed a bug in \Condor{history} that caused it to print invalid
 XML or JSON syntax when reading from multiple history files.
 \Ticket{6437}
-
-\item Fixed a bug that caused the configuration variable \Macro{DEFAULT\_MASTER\_SHUTDOWN\_SCRIPT}
-to be ignored on Windows when the \Condor{master} was running as a service.
-\Ticket{6458}
 
 \item Fixed a bug in the \Condor{schedd} which resulted in the \Attr{IsNoopJob}
 job attribute sometimes being ignored if the the value of this attribute was
