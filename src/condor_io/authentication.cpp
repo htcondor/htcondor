@@ -912,7 +912,11 @@ int Authentication::exchangeKey(KeyInfo *& key)
 
     if (mySock->isClient()) {
         mySock->decode();
-        mySock->code(hasKey);
+        if (!mySock->code(hasKey)) {
+			hasKey = 0;
+			retval = 0;
+			dprintf(D_SECURITY, "Authentication::exchangeKey server disconnected from us\n");
+		}
         mySock->end_of_message();
         if (hasKey) {
             if (!mySock->code(keyLength) ||
@@ -943,7 +947,11 @@ int Authentication::exchangeKey(KeyInfo *& key)
         mySock->encode();
         if (key == 0) {
             hasKey = 0;
-            mySock->code(hasKey);
+            if (!mySock->code(hasKey)) {
+				dprintf(D_SECURITY, "Authentication::exchangeKey client hung up during key exchange\n");
+            	mySock->end_of_message();
+				return 0;
+			}
             mySock->end_of_message();
             return 1;
         }
