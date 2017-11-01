@@ -671,10 +671,10 @@ FileLock::updateLockTimestamp(void)
 		// or similar things.
 
 		p = set_condor_priv();
-
+		dprintf(D_FULLDEBUG, "MRC [FileLock::updateLockTimestamp] about to update timestamp on %s\n", m_path);
 		// set the updated atime and mtime for the file to now.
 		if (utime(m_path, NULL) < 0) {
-
+			dprintf(D_FULLDEBUG, "MRC [FileLock::updateLockTimestamp] something went wrong, permission problem?\n");
 			// Only emit message if it isn't a permission problem....
 			if (errno != EACCES && errno != EPERM) {
 				dprintf(D_FULLDEBUG, "FileLock::updateLockTime(): utime() "

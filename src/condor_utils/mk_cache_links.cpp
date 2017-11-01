@@ -25,10 +25,12 @@
 #include "condor_uid.h"
 #include "condor_md.h"
 #include "directory_util.h"
+#include "file_lock.h"
 #include "filename_tools.h"
 #include "stat_wrapper.h"
 #include <sys/stat.h>
 #include <string> 
+#include <unistd.h>
 
 #ifndef WIN32
 	#include <unistd.h>
@@ -79,6 +81,7 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 // condor or root.  -zmiller
 static bool MakeLink(const char* srcFilePath, const string &newLink) {
 
+	bool accessFileExists = false;
 	bool retVal = false;
 	int srcFileInodeNum;
 	int targetLinkInodeNum;
@@ -107,15 +110,43 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 			webRootDir.c_str());
 		return (false);
 	}
+	std::string accessFilePath;
+	accessFilePath = dircat(goodPath, newLink.c_str());
+	accessFilePath += ".access";
+
+	// STARTING HERE, DO NOT RETURN FROM THIS FUNCTION WITHOUT RESETTING
+	// THE ORIGINAL PRIV STATE.
+	
+	// Check if an access file exists (which will be the case if someone has
+	// already sent the source file).
+	// If it does exist, lock it so that condor_preen cannot open it while
+	// garbage collecting.
+	// If it does not exist, carry on. We'll create it before exiting.
+	
+	priv_state original_priv = set_root_priv();
+	FileLock *accessFileLock = NULL;
+	
+	if(access(accessFilePath.c_str(), F_OK) == 0) {
+		accessFileLock = new FileLock(accessFilePath.c_str(), true, false);
+		bool obtainedLock = accessFileLock->obtain(READ_LOCK);
+		while (!obtainedLock) {
+			dprintf(D_ALWAYS, "MakeLink: Could not obtain lock for %s, waiting "
+				"to try again\n", accessFilePath.c_str());
+			#ifdef WIN32
+				Sleep(1000);
+			#else
+				sleep(1);
+			#endif
+			obtainedLock = accessFileLock->obtain(READ_LOCK);
+		}
+		accessFileExists = true;
+	}
+	
 	
 	// Impersonate the user and open the file using safe_open(). This will allow
 	// us to verify the user has privileges to access the file, and later to
 	// verify the hard link points back to the same inode.
-
-	// STARTING HERE, DO NOT RETURN FROM THIS FUNCTION WITHOUT RESETTING
-	// THE ORIGINAL PRIV STATE.
-
-	priv_state original_priv = set_user_priv();
+	set_user_priv();
 	
 	bool fileOK = false;
 	FILE *srcFile = safe_fopen_wrapper(srcFilePath, "r");
@@ -146,11 +177,10 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	// Check if target link already exists
 	FILE *targetLink = safe_fopen_wrapper(targetLinkPath, "r");
 	if (targetLink) {
-		// If link exists, update the .access file timestamp
+		// If link exists, update the .access file timestamp.
 		retVal = true;
 		fclose(targetLink);
-		dprintf(D_ALWAYS, "Target link %s exists, updating access time\n", targetLinkPath);
-		// MRC: To be completed in #6453
+		// ... to be completed
 	}	
 	else {
 		// Link does not exist, so create it as root.
@@ -207,6 +237,25 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 		}
 	}
 	
+	// If the access file does't exist, create it now. If it does exist, we 
+	// can assume it's locked, so release the lock and update the timestamp.
+	if(!accessFileExists) {
+		FILE* accessFile = fopen(accessFilePath.c_str(), "w");
+		fclose(accessFile);
+	}
+	else {
+		if(accessFileLock) {
+			accessFileLock->release();
+		}
+		else {
+			dprintf(D_ALWAYS, "Access file exists but is not locked. Something "
+				"is wrong here.\n");
+		}
+		if(lutimes(accessFilePath.c_str(), NULL) != 0) {
+			dprintf(D_ALWAYS, "MakeLink: Failed to update timestamp on "
+				"access file %s\n", accessFilePath.c_str());
+		}
+	}
 
 	// Free the hard link filename
 	delete [] targetLinkPath;
