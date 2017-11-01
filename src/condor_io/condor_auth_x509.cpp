@@ -138,7 +138,9 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 		if (mySock_->isClient()) {
 			// Tell the other side, abort
 			mySock_->encode();
-			mySock_->code(status);
+			if (!mySock_->code(status)) {
+        		dprintf( D_SECURITY, "authenticate: and the remote side hung up on us.\n" );
+			}
 			mySock_->end_of_message();
 		}
 		else {
@@ -150,7 +152,9 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 			if (reply == 1) { 
 				// The other side was okay, tell them the bad news
 				mySock_->encode();
-				mySock_->code(status);
+				if (!mySock_->code(status)) {
+					dprintf(D_SECURITY,"authenticate: the client hung up before authenticatiation\n");
+				}
 				mySock_->end_of_message();
 			}
 		}
