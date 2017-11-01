@@ -124,7 +124,9 @@ connections whenever the number of open sockets was more than 820 even though
 space was allocated for 1024 open sockets.
 \Ticket{6425}
 
-\item The \Condor{master} shutdown script now runs on the Windows platform.
+\item Fixed a bug that caused the configuration variable
+\MacroNI{DEFAULT\_MASTER\_SHUTDOWN\_SCRIPT} to be ignored on Windows when the
+\Condor{master} was running as a service.
 \Ticket{6458}
 
 \item \Condor{status} will now print longer lines when its output is
