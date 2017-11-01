@@ -247,9 +247,9 @@ Dagman::Config()
 				m_user_log_scan_interval );
 
 	schedd_update_interval =
-			param_integer( "DAGMAN_SCHEDD_UPDATE_INTERVAL",
+			param_integer( "DAGMAN_QUEUE_UPDATE_INTERVAL",
 			schedd_update_interval, 1, INT_MAX);
-		debug_printf( DEBUG_NORMAL, "DAGMAN_SCHEDD_UPDATE_INTERVAL setting: %d\n",
+		debug_printf( DEBUG_NORMAL, "DAGMAN_QUEUE_UPDATE_INTERVAL setting: %d\n",
 		schedd_update_interval );
 
 	_priority = param_integer( "DAGMAN_DEFAULT_PRIORITY",
@@ -1549,9 +1549,8 @@ print_status( bool forceScheddUpdate ) {
 		scheddLastUpdateTime = currentTime;
 	}
 	
-	if( forceScheddUpdate || 
-		( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) ) {
-			if ( dagman._dagmanClassad ) {
+	if( forceScheddUpdate || ( currentTime > ( scheddLastUpdateTime + (double) dagman.schedd_update_interval ) ) ) {
+		if ( dagman._dagmanClassad ) {
 			dagman._dagmanClassad->Update( total, done, pre, submitted, post,
 						ready, failed, unready, dagman.dag->_dagStatus,
 						dagman.dag->Recovery(), dagman._dagmanStats );

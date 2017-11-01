@@ -750,12 +750,11 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_SCHEDD_UPDATE_INTERVAL]
-default=$(UPDATE_INTERVAL)
+[DAGMAN_QUEUE_UPDATE_INTERVAL]
+default=300
 type=int
 tags=dagman,dagman_main
 restart=never
-
 
 [DAGMAN_USE_STRICT]
 default=1
