@@ -69,8 +69,9 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
 
-	#uncomment to build x64 on Win10 platform (the rest of the build will follow this)
-	#if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $enable_x64 = 1; }
+	#uncomment to build x64 on Win7 platform (the rest of the build will follow this)
+	if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_x64 = 1; }
+
 	if ($ENV{NMI_PLATFORM} =~ /Windows10/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
 
 	if ($enable_vs9 && $ENV{VS90COMNTOOLS} =~ /common7/i) {
