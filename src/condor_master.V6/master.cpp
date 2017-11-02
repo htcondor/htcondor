@@ -246,6 +246,59 @@ cleanup_memory( void )
 	}
 }
 
+#ifdef WIN32
+// we can't use execl on Windows (read the docs), and anyway, we don't want to
+// if we are running as a serices because we MUST call our terminate() function to exit
+static void Win32RunShutdownProgram(char * shutdown_program)
+{
+	STARTUPINFO si;
+	ZeroMemory(&si, sizeof(si)); si.cb = sizeof(si);
+
+	HANDLE hLog = INVALID_HANDLE_VALUE;
+
+	// Open a log file for the shutdown programs stdout and stderr
+	std::string shutdown_log;
+	if (param(shutdown_log, "MASTER_SHUTDOWN_LOG") &&  ! shutdown_log.empty()) {
+		SECURITY_ATTRIBUTES sa;
+		ZeroMemory(&sa, sizeof(sa));
+		sa.bInheritHandle = TRUE;
+
+		hLog = CreateFile(shutdown_log.c_str(), FILE_APPEND_DATA,
+			FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (INVALID_HANDLE_VALUE != hLog) { si.hStdError = si.hStdOutput = hLog; }
+
+		si.dwFlags = STARTF_USESTDHANDLES;
+	}
+
+	// create the shutdown program, we create it suspended so that we can log success or failure
+	// and then get a head start to exit before it actually begins running.  That still doesn't
+	// guarantee that we have exited before it starts though...
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&pi, sizeof(pi));
+	priv_state p = set_root_priv( );
+	BOOL exec_status = CreateProcess( NULL, shutdown_program, NULL, NULL, TRUE, DETACHED_PROCESS | CREATE_SUSPENDED, NULL, NULL, &si, &pi );
+	set_priv( p );
+
+	if (INVALID_HANDLE_VALUE != hLog) {
+		formatstr(shutdown_log, "==== Master (pid %d) shutting down. output of shutdown script '%s' (pid %d) follows ====\n",
+			GetCurrentProcessId(), shutdown_program, pi.dwProcessId);
+		DWORD dwWrote;
+		WriteFile(hLog, shutdown_log.c_str(), shutdown_log.size(), &dwWrote, NULL);
+		CloseHandle(hLog);
+	}
+
+	if ( ! exec_status ) {
+		dprintf( D_ALWAYS, "**** CreateProcess(%s) FAILED %d %s\n",
+					shutdown_program, GetLastError(), GetLastErrorString(GetLastError()) );
+	} else {
+		dprintf( D_ALWAYS, "**** CreateProcess(%s) SUCCEEDED pid=%lu\n", shutdown_program, pi.dwProcessId );
+		ResumeThread(pi.hThread); // let the shutdown process start.
+		CloseHandle(pi.hThread);
+		CloseHandle(pi.hProcess);
+	}
+}
+#endif
+
 
 int
 master_exit(int retval)
@@ -265,6 +318,15 @@ master_exit(int retval)
 
 #ifdef WIN32
 	if ( NT_ServiceFlag == TRUE ) {
+		// retval == 2 indicates that we never actually started
+		// so we don't want to invoke the shutdown program in that case.
+		if (retval != 2 && shutdown_program) {
+			dprintf( D_ALWAYS,
+						"**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
+						"condor_master", "condor", "MASTER", GetCurrentProcessId(), shutdown_program );
+			Win32RunShutdownProgram(shutdown_program);
+			shutdown_program = NULL; // in case terminate doesn't kill us, make sure we don't run the shutdown program more than once.
+		}
 		terminate(retval);
 	}
 #endif
@@ -292,6 +354,15 @@ master_exit(int retval)
 
 	// Exit via specified shutdown_program UNLESS retval is 2, which
 	// means the master never started and we are exiting via usage() message.
+#ifdef WIN32
+	if (retval != 2 && shutdown_program) {
+		dprintf( D_ALWAYS,
+					"**** %s (%s_%s) pid %lu RUNNING SHUTDOWN PROGRAM %s\n",
+					"condor_master", "condor", "MASTER", GetCurrentProcessId(), shutdown_program );
+		Win32RunShutdownProgram(shutdown_program);
+		shutdown_program = NULL; // don't let DC_Exit run the shutdown program on Windows.
+	}
+#endif
 	DC_Exit(retval, retval == 2 ? NULL : shutdown_program );
 
 	return 1;	// just to satisfy vc++

@@ -65,6 +65,20 @@ SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttribu
 }
 
 int
+SetAttributeExpr(int cl, int pr, const char *name, const ExprTree *val, SetAttributeFlags_t flags )
+{
+	std::string buf;
+	int rval;
+
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+	unp.Unparse( buf, val );
+
+	rval = SetAttribute(cl,pr,name,buf.c_str(),flags);
+	return(rval);
+}
+
+int
 SetAttributeIntByConstraint(const char *con, const char *name, int val, SetAttributeFlags_t flags)
 {
 	char buf[100];
@@ -100,4 +114,19 @@ SetAttributeStringByConstraint(const char *con, const char *name,
 	return(rval);
 }
 
+int
+SetAttributeExprByConstraint(const char *con, const char *name,
+                             const ExprTree *val,
+                             SetAttributeFlags_t flags)
+{
+	std::string buf;
+	int rval;
+
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+	unp.Unparse( buf, val );
+
+	rval = SetAttributeByConstraint(con, name, buf.c_str(), flags);
+	return rval;
+}
 

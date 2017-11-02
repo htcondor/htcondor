@@ -90,7 +90,7 @@ if(!$ENV{_NMI_STEP_FAILED}) {
 if( defined $opt_without_tests ) {
     print "--without-tests specified on command-line, NOT submitting tests\n";
     exit 0;
-}   
+}
 
 if(defined $opt_test_args) {
     print "--test-args specified on command-line, additional args for condor_nmi_submit:\n";
@@ -173,7 +173,7 @@ if( ! -x $cns ) {
 my $cmd1 = "";
 my $cmd2 = "--platforms=$platform "; 
 my $cmd3 = "";
-my $desc = "--desc=\'Auto-Test Suite for ($platform, $runid)\'";
+my $desc = "--desc=\'Auto-Test Suite for ($platform, $runid)\' ";
 
 if(defined $opt_tests_at_once) {
     # hand off the concurrency test running back to condor_nmi_submit
@@ -191,21 +191,31 @@ else {
     # set up tests for a workspace build
     $cmd1 = "$cns --test --buildid=$runid $git_cmd_arg ";
 }
+
 my $cmd = $cmd1 . $cmd2 . $cmd3 . $desc;
+#
+# Reconfigure some platforms.
+#
+my $baseConfigDir = "nmi_tools/glue/test/configs";
+my $reconfigDir = "mixed-multi";
+my %reconfigurationPlatforms = ( 'x86_64_CentOS7' => 1 );
+my $reconfigurationPlatform = $reconfigurationPlatforms{ $platform };
+if( defined( $reconfigurationPlatform ) && $reconfigurationPlatform ) {
+	$cmd .= "--append-config-dir=${baseConfigDir}/${reconfigDir} ";
+}
 submit_test($cmd, $platform);
 
 #
 # Submit additional tests with different configurations.
 #
 my $atwdcBaseCommand = $cmd1 . $cmd2 . $cmd3;
-my $baseConfigDir = "nmi_tools/glue/test/configs";
 my @configurationDirectories = ( 'mixed-multi' );
-my %atwdcPlatforms = ( 'x86_64_RedHat6' => 1 );
+my %atwdcPlatforms = ();
 # The 8.4.x mixed-mode tests require a machine whose IPv6 address resolves.
 # Since we need to fix that (by adding a 'self' identifier and using it
 # in the test suite), for now we'd rather steer the tests than change the
 # machines.
-my %atwdcPlatformToMachineMap = ( 'x86_64_RedHat6' => 'exec-8.batlab.org' );
+my %atwdcPlatformToMachineMap = ();
 
 my $atwdcPlatform = $atwdcPlatforms{ $platform };
 if( defined( $atwdcPlatform ) && $atwdcPlatform ) {

@@ -17,6 +17,7 @@ my $nodename = $ARGV[1];
 	"DAG_NodesReady = 0",
 	"DAG_NodesTotal = 3",
 	"DAG_NodesUnready = 2",
+	"DAG_Stats = (.*)",
 	"DAG_Status = 0");
 	#"Node NodeA succeeded");
 
@@ -29,6 +30,7 @@ my $nodename = $ARGV[1];
 	"DAG_NodesReady = 0",
 	"DAG_NodesTotal = 3",
 	"DAG_NodesUnready = 1",
+	"DAG_Stats = (.*)",
 	"DAG_Status = 0");
 	#"Node NodeB succeeded");
 
@@ -41,6 +43,7 @@ my $nodename = $ARGV[1];
 	"DAG_NodesReady = 0",
 	"DAG_NodesTotal = 3",
 	"DAG_NodesUnready = 0",
+	"DAG_Stats = (.*)",
 	"DAG_Status = 0");
 	#"Node NodeC succeeded");
 
@@ -104,7 +107,7 @@ sub LookupString
 	chomp($search);
 	# look for string in expected results
 	foreach my $maybe (@resultsarray) {
-		if($search eq $maybe) {
+		if($search =~ /$maybe/) {
 			return(0);
 		}
 	}

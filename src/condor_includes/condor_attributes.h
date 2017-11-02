@@ -158,6 +158,7 @@
 #define ATTR_DAG_NODES_TOTAL "DAG_NodesTotal"
 #define ATTR_DAG_NODES_UNREADY "DAG_NodesUnready"
 #define ATTR_DAG_STATUS "DAG_Status"
+#define ATTR_DAG_STATS "DAG_Stats"
 #define ATTR_DEFERRAL_OFFSET  "DeferralOffset"
 #define ATTR_DEFERRAL_PREP_TIME  "DeferralPrepTime"
 #define ATTR_DEFERRAL_TIME  "DeferralTime"

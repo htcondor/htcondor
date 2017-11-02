@@ -687,7 +687,6 @@ IncrementClusterSize(int cluster_num)
 		// We've seen this cluster_num go by before; increment proc count
 		(*numOfProcs)++;
 	}
-	TotalJobsCount++;
 
 		// return the number of procs in this cluster
 	if ( numOfProcs ) {
@@ -1731,6 +1730,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			int num_procs = IncrementClusterSize(cluster_num);
 			clusterad->SetClusterSize(num_procs);
+			TotalJobsCount++;
 		}
 	} // WHILE
 
@@ -2625,7 +2625,7 @@ NewProc(int cluster_id)
 		return -1;
 	}
 
-	if ( TotalJobsCount >= scheduler.getMaxJobsSubmitted() ) {
+	if ( (TotalJobsCount + jobs_added_this_transaction) >= scheduler.getMaxJobsSubmitted() ) {
 		dprintf(D_ALWAYS,
 			"NewProc(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
 		errno = EINVAL;
@@ -4750,6 +4750,9 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		JobQueue->CommitTransaction();
 	}
 
+	// Now that we've commited for sure, up the TotalJobsCount
+	TotalJobsCount += jobs_added_this_transaction; 
+
 	// If the commit failed, we should never get here.
 
 	// Now that the transaction has been commited, we need to chain proc
@@ -4893,7 +4896,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 						if(errorStack && (! errorStack->empty())) {
 							warning = errorStack->getFullText();
 						}
-						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.c_str() );
+						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.empty() ? NULL : warning.c_str() );
 					}
 				}
 
@@ -6382,6 +6385,14 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 
 	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
+
+	StatInfo exe_stat( path );
+	if ( exe_stat.Error() == SIGood ) {
+		Q_SOCK->getReliSock()->put(1);
+		Q_SOCK->getReliSock()->end_of_message();
+		free(path);
+		return 0;
+	}
 
 	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
 		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);

@@ -171,6 +171,7 @@ Source1: generate-tarball.sh
 %endif
 
 # % if %systemd
+Source3: osg-env.conf
 # % else
 Source4: condor.osg-sysconfig
 # % endif
@@ -634,6 +635,7 @@ Url: http://bosco.opensciencegrid.org
 Group: Applications/System
 Requires: python >= 2.2
 Requires: %name = %version-%release
+Requires: rsync
 
 %description bosco
 BOSCO allows a locally-installed HTCondor to submit jobs to remote clusters,
@@ -1033,11 +1035,17 @@ install -m 0644 %{buildroot}/etc/examples/condor-annex-ec2.service %{buildroot}%
 install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
+%if 0%{?osg} || 0%{?hcc}
+# Set condor service enviroment variables for LCMAPS on OSG systems
+mkdir -p %{buildroot}%{_unitdir}/condor.service.d
+install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/osg-env.conf
+%endif
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
 install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_initrddir}/condor-annex-ec2
 %if 0%{?osg} || 0%{?hcc}
+# Set condor service enviroment variables for LCMAPS on OSG systems
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
 %endif
 mkdir %{buildroot}%{_sysconfdir}/sysconfig/
@@ -1209,6 +1217,9 @@ rm -rf %{buildroot}
 %if %systemd
 %{_tmpfilesdir}/%{name}.conf
 %{_unitdir}/condor.service
+%if 0%{?osg} || 0%{?hcc}
+%{_unitdir}/condor.service.d/osg-env.conf
+%endif
 # Disabled until HTCondor security fixed.
 # %{_unitdir}/condor.socket
 %else
@@ -1247,6 +1258,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
 %_libexecdir/condor/sshd.sh
+%_libexecdir/condor/get_orted_cmd.sh
+%_libexecdir/condor/orted_launcher.sh
 %_libexecdir/condor/condor_history_helper
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
@@ -1932,6 +1945,22 @@ fi
 %endif
 
 %changelog
+* Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.4-1
+- Improvements to DAGMan including support for late job materialization
+- Updates to condor_annex including improved status reporting
+- When submitting jobs, HTCondor can now warn about job requirements
+- Fixed a bug where remote CPU time was not recorded in the history
+- Improved support for OpenMPI jobs
+- The high availability daemon now works with IPV6 and shared_port
+- The HTCondor Python bindings are now available for Python 2 and 3 in pip
+
+* Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.7-1
+- Fixed a bug where memory limits might not be updated in cgroups
+- Add SELinux type enforcement rules to allow condor_ssh_to_job to work
+- Updated systemd configuration to shutdown HTCondor in an orderly fashion
+- The curl_plugin utility can now do HTTPS transfers
+- Specifying environment variables now works with the Python Submit class
+
 * Tue Sep 12 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.3-1
 - Further updates to the late job materialization technology preview
 - An improved condor_top tool

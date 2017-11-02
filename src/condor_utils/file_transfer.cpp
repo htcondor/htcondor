@@ -44,6 +44,8 @@
 #include "subsystem_info.h"
 #include "condor_url.h"
 #include "my_popen.h"
+#include "file_transfer_stats.h"
+#include "utc_time.h"
 #include <list>
 #include <fstream>
 
@@ -1838,6 +1840,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
 	int numFiles = 0;
+	UtcTime utcTime;
 
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
@@ -2101,7 +2104,20 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		start = time(NULL);
+		
+		// Setup the FileTransferStats object for this file, which we'll use
+		// to gather per-transfer statistics (different from the other
+		// statistics gathering which only tracks cumulative totals)
+		FileTransferStats thisFileStats;
+		thisFileStats.TransferFileBytes = 0;
+		thisFileStats.TransferFileName = filename.Value();
+		thisFileStats.TransferProtocol = "cedar";
+		thisFileStats.TransferStartTime = utcTime.getTimeDouble();
+		thisFileStats.TransferType = "download";
 
+		// Create a ClassAd we'll use to store stats from a file transfer
+		// plugin, if we end up using one.
+		ClassAd pluginStatsAd;
 
 		if (reply == 999) {
 			// filename already received:
@@ -2200,7 +2216,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 
-			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), LocalProxyName.Value());
+			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
 
 
 		} else if ( reply == 4 ) {
@@ -2291,6 +2307,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		elapsed = time(NULL)-start;
+		thisFileStats.TransferEndTime = utcTime.getTimeDouble();
+		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
 		if( rc < 0 ) {
 			int the_error = errno;
@@ -2395,9 +2413,26 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 		*total_bytes += bytes;
+		thisFileStats.TransferFileBytes += bytes;
+		thisFileStats.TransferTotalBytes += bytes;
 		bytes = 0;
 
 		numFiles++;
+
+		// Gather a few more statistics
+		thisFileStats.TransferSuccess = download_success;
+
+		// Merge the file transfer stats we recorded here with the stats 
+		// retrieved from a plugin. If we didn't use a file transfer plugin 
+		// this time, this ClassAd will just be empty.
+		ClassAd thisFileStatsAd;
+		thisFileStats.Publish(thisFileStatsAd);
+		thisFileStatsAd.Update(pluginStatsAd);
+
+		// Write stats to disk
+		OutputFileTransferStats(thisFileStatsAd);
+
+
 
 #ifdef HAVE_EXT_POSTGRESQL
 	        file_transfer_record record;
@@ -3258,9 +3293,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				URL += filename;
 
 				// actually invoke the plugin.  this could block indefinitely.
+				ClassAd pluginStatsAd;
 				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.Value(), URL.Value());
 				dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.Value());
-				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), URL.Value(), LocalProxyName.Value());
+				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), URL.Value(), &pluginStatsAd, LocalProxyName.Value());
 				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.Value(), URL.Value(), rc);
 
 				// report the results:
@@ -4230,7 +4266,7 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 }
 
 
-int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, const char* proxy_filename) {
+int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, ClassAd* plugin_stats, const char* proxy_filename) {
 
 	if (plugin_table == NULL) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", source);
@@ -4318,9 +4354,8 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 	// Capture stdout from the plugin and dump it to the stats file
 	char single_stat[1024];
-	ClassAd plugin_stats;
 	while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
-		if( !plugin_stats.Insert( single_stat ) ) {
+		if( !plugin_stats->Insert( single_stat ) ) {
 			dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", single_stat);
 		}
 	}
@@ -4349,15 +4384,17 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// clean up
 	free(method);
 
-	// Save the statistics we gathered to disk
-	OutputFileTransferStats( plugin_stats );
-
 	// any non-zero exit from plugin indicates error.  this function needs to
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
 
 	if (plugin_status != 0) {
-		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s", plugin_status, plugin.Value());
+		std::string errorMessage;
+		std::string transferUrl;
+		plugin_stats->LookupString("TransferError", errorMessage);
+		plugin_stats->LookupString("TransferUrl", transferUrl);
+		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)", 
+			plugin_status, plugin.Value(), errorMessage.c_str(), transferUrl.c_str());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 

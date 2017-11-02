@@ -363,24 +363,21 @@ private:
             result = "LocationQuery = " + result;
             query.addExtraAttribute(result.c_str());
         }
-        std::vector<const char *> attrs_char;
-        std::vector<std::string> attrs_str;
+
         int len_attrs = py_len(attrs);
         if (len_attrs)
         {
+            std::vector<std::string> attrs_str;
             attrs_str.reserve(len_attrs);
-            attrs_char.reserve(len_attrs+1);
-            attrs_char[len_attrs] = NULL;
             for (int i=0; i<len_attrs; i++)
             {
                 std::string str = extract<std::string>(attrs[i]);
                 attrs_str.push_back(str);
-                attrs_char[i] = attrs_str[i].c_str();
             }
-            query.setDesiredAttrs(&attrs_char[0]);
+            query.setDesiredAttrs(attrs_str);
         }
-        ClassAdList adList;
 
+        ClassAdList adList;
         QueryResult result;
         {
         condor::ModuleLock ml;

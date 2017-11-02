@@ -3239,7 +3239,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		CpuAttributes *cpu_attrs;
 		MyString type;
 		StringList type_list;
-		int cpus, memory, disk, swap;
+		int cpus;
+		long long disk, memory, swap;
 		bool must_modify_request = param_boolean("MUST_MODIFY_REQUEST_EXPRS",false,false,req_classad,mach_classad);
 		ClassAd *unmodified_req_classad = NULL;
 
@@ -3262,7 +3263,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			if( tmp ) {
 				ExprTree *tree = NULL;
 				classad::Value result;
-				int val;
+				long long val = 0;
 				ParseClassAdRvalExpr(tmp, tree);
 				if ( tree &&
 					 EvalExprTree(tree,req_classad,mach_classad,result) &&
@@ -3373,7 +3374,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     return NULL;
                 }
             }
-            type.formatstr_cat( "memory=%d ", memory );
+            type.formatstr_cat( "memory=%lld ", memory );
 
                 // Look to see how much DISK is being requested.
             schedd_requested_attr = "_condor_";

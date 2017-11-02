@@ -750,6 +750,12 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_QUEUE_UPDATE_INTERVAL]
+default=300
+type=int
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_USE_STRICT]
 default=1
 type=int
@@ -4990,7 +4996,7 @@ review=tlmiller
 tags=schedd
 
 [IS_OWNER]
-default=(START =?= False)
+default=False
 version=8.2.8
 type=string
 description=When a slot should be in Owner state
@@ -5575,6 +5581,7 @@ default : @end
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
+	IS_OWNER=(START =?= False)
 @end
 
 # no-preemption policy, formerly called TESTINGMODE_

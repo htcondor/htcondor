@@ -153,7 +153,8 @@ REMOTE_CONDOR_get_job_info(ClassAd *ad)
 	CurrentSysCall = CONDOR_get_job_info;
 
 	syscall_sock->encode();
-	syscall_sock->code(CurrentSysCall);
+	result = syscall_sock->code(CurrentSysCall);
+	ASSERT( result );
 	result = syscall_sock->end_of_message();
 	ASSERT( result );
 

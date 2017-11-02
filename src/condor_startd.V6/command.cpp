@@ -870,7 +870,11 @@ command_vm_register( Service*, int, Stream* s )
 
 	if( vmapi_register_cmd_handler(raddr, &permission) == TRUE ) {
 		s->encode();
-		s->code(permission);
+		if (!s->code(permission)) {
+			dprintf( D_ALWAYS, "command_vm_register: Can't send permisison\n");
+			free(raddr);
+			return(false);
+		}
 		s->end_of_message();
 	}else{
 		free(raddr);

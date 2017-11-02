@@ -1034,7 +1034,9 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 		default:
 			dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: I don't know about log type %d!\n",type);
 			result = DC_FETCH_LOG_RESULT_BAD_TYPE;
-			stream->code(result);
+			if (!stream->code(result)) {
+				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
+			}
 			stream->end_of_message();
 			free(name);
 			return FALSE;
@@ -1062,7 +1064,9 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 	if(!filename) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: no parameter named %s\n",pname);
 		result = DC_FETCH_LOG_RESULT_NO_NAME;
-		stream->code(result);
+		if (stream->code(result)) {
+				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
+		}
 		stream->end_of_message();
         free(pname);
         free(name);
@@ -1084,7 +1088,9 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 	if(fd<0) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
-		stream->code(result);
+		if (!stream->code(result)) {
+				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
+		}
 		stream->end_of_message();
         free(filename);
         free(pname);
@@ -1093,7 +1099,9 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 	}
 
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
-	stream->code(result);
+	if (!stream->code(result)) {
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log: client hung up before we could send result back\n");
+	}
 
 	filesize_t size;
 	stream->put_file(&size, fd);
@@ -1131,13 +1139,17 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 
 	if (!historyFiles) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
-		stream->code(result);
+		if (!stream->code(result)) {
+				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
+		}
 		stream->end_of_message();
 		return FALSE;
 	}
 
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
-	stream->code(result);
+	if (!stream->code(result)) {
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history: client hung up before we could send result back\n");
+	}
 
 	for (int f = 0; f < numHistoryFiles; f++) {
 		filesize_t size;
@@ -1158,7 +1170,9 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 	char *dirName = param("STARTD.PER_JOB_HISTORY_DIR"); 
 	if (!dirName) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: no parameter named PER_JOB\n");
-		stream->code(result);
+		if (!stream->code(result)) {
+				dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: and the remote side hung up\n");
+		}
 		stream->end_of_message();
 		return FALSE;
 	}
@@ -1183,7 +1197,10 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 
 	free(dirName);
 
-	stream->code(zero); // no more data
+
+	if (!stream->code(zero)) { // no more data
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: client hung up before we could send result back\n");
+	}
 	stream->end_of_message();
 	return 0;
 }
@@ -1201,7 +1218,9 @@ handle_fetch_log_history_purge(ReliSock *s) {
 	char *dirName = param("STARTD.PER_JOB_HISTORY_DIR"); 
 	if (!dirName) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: no parameter named PER_JOB\n");
-		s->code(result);
+		if (!s->code(result)) {
+				dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: and the remote side hung up\n");
+		}
 		s->end_of_message();
 		return FALSE;
 	}
@@ -1218,7 +1237,9 @@ handle_fetch_log_history_purge(ReliSock *s) {
 
     free(dirName);
 
-    s->code(result); // no more data
+    if (!s->code(result)) { // no more data
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history_purge: client hung up before we could send result back\n");
+	}
     s->end_of_message();
     return 0;
 }

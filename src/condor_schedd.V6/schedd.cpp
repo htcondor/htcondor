@@ -4287,7 +4287,7 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 	if ( job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
 		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
 	}
-	if ( warning != NULL ) {
+	if ( warning != NULL && warning[0] ) {
 		event.submitEventWarnings = strnewp( warning );
 	}
 
