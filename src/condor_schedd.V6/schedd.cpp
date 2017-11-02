@@ -358,7 +358,7 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 {
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	classad::Value val;
-	const char *str;
+	const char *str = NULL;
 	if ( ad && tree && 
 		 EvalExprTree(tree,ad,NULL,val) && val.IsStringValue(str) )
 	{

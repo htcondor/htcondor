@@ -44,7 +44,9 @@ int Condor_Auth_Anonymous :: authenticate(const char * /* remoteHost */, CondorE
     // be anonymous directly
     if ( mySock_->isClient() ) {
         mySock_->decode();
-        mySock_->code( retval );
+        if (!mySock_->code( retval )) {
+			dprintf(D_SECURITY, "CondorAuthAnonymous::authenicate cannot get retval from server\n");
+		}
         mySock_->end_of_message();
     } 
     else { //server side
@@ -52,7 +54,9 @@ int Condor_Auth_Anonymous :: authenticate(const char * /* remoteHost */, CondorE
 		setAuthenticatedName( STR_ANONYMOUS );
         mySock_->encode();
         retval = 1;
-        mySock_->code( retval );
+        if (!mySock_->code( retval )) {
+			dprintf(D_SECURITY, "CondorAuthAnonymous::authenicate cannot send retval to client\n");
+		}
         mySock_->end_of_message();
     }
     

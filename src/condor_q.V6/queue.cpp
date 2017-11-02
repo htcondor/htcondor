@@ -3957,6 +3957,7 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 	const int ixDagNodesDone = 6;
 	const int ixDagNodesTotal = 7; // ATTR_DAG_NODES_TOTAL ?: ATTR_TOTAL_SUBMIT_PROCS
 	int total_submit_procs = 0;
+	int num_procs = 0;
 
 	prog.count += 1;
 
@@ -3978,11 +3979,10 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 			prog.jobs += 1;
 		}
 
-		int num_procs = 0;
 		// as of 8.5.7 the schedd will inject ATTR_TOTAL_SUBMIT_PROCS into the cluster ad
 		// and we will have fetched it in the ixDagNodesTotal field.
 		// We don't add it to the total unless this cluster is NOT a node of a dag.
-		if (jr.getNumber(ixDagNodesTotal, num_procs)) { total_submit_procs = num_procs; }
+		if (jr.getNumber(ixDagNodesTotal, num_procs)) { total_submit_procs = num_procs; num_procs = 1; }
 
 		if (jid.proc >= 0) {
 			jr.getNumber(ixJobStatusCol, status);
@@ -4009,6 +4009,7 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 			}
 			jrod2->flags |= JROD_FOLDED;
 		}
+		++num_procs;
 		jrod2 = jrod2->next_proc;
 	}
 
@@ -4024,7 +4025,7 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 			total = prog.max_proc+1;
 		}
 		if (total) {
-			int done = total - prog.jobs;
+			int done = total - num_procs;
 			if (materialized_next_proc_by_cluster_map.find(prog.cluster) != materialized_next_proc_by_cluster_map.end()) { 
 				int materialized_jobs = materialized_next_proc_by_cluster_map[prog.cluster];
 				done = materialized_jobs - prog.jobs;
