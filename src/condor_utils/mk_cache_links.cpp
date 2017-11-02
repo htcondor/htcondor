@@ -216,9 +216,15 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	// switch privileges to this user. Open the hard link. Verify that the
 	// inode is the same as the file we opened earlier on.	
 	if (retVal == true) {
-		setegid(link_gid);
-		seteuid(link_uid);
-	
+		if(setegid(link_gid) == -1) {
+			dprintf(D_ALWAYS, "MakeLink: Error switching to group ID %d\n", link_gid);
+			retVal = false;
+		}
+		if(seteuid(link_uid) == -1) {
+			dprintf(D_ALWAYS, "MakeLink: Error switching to user ID %d\n", link_uid);
+			retVal = false;
+		}
+
 		if (stat(targetLinkPath, &targetLinkStat) == 0) {
 			targetLinkInodeNum = targetLinkStat.st_ino;
 			if (srcFileInodeNum == targetLinkInodeNum) {
