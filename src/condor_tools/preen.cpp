@@ -740,36 +740,59 @@ check_daemon_sock_dir()
 }
 
 /*
-  Scan the webroot directory used for public input files. Remove any links
-  more than a week old, or that do not point to valid files.
+  Scan the webroot directory used for public input files. Look for .access files
+  more than a week old, and remove their respective hard links (same filename
+  minus the .access extension)
 */
 #ifdef HAVE_HTTP_PUBLIC_FILES
 void 
 check_public_files_webroot_dir() 
 {
-    // Make sure that PublicFilesWebrootDir is actually set before proceeding!
-    // If not set, just ignore it and bail out here.
-    if( !PublicFilesWebrootDir ) {
-        return;
-    }
+	// Make sure that PublicFilesWebrootDir is actually set before proceeding!
+	// If not set, just ignore it and bail out here.
+	if( !PublicFilesWebrootDir ) {
+		return;
+	}
 
-    const char	*f;
+	const char *filename;
 	Directory dir(PublicFilesWebrootDir, PRIV_ROOT);
-	std::string fullPath;
+	FileLock *accessFileLock;
+	std::string accessFilePath;
+	std::string hardLinkName;
+	std::string hardLinkPath;
 
-    // Set the stale age for a file to be one week
-    time_t stale_age = 60 * 60 * 24 * 7;
+	// Set the stale age for a file to be one week
+	time_t stale_age = 5;//60 * 60 * 24 * 7;
 
-    while( ( f = dir.Next() ) ) {
-        fullPath = PublicFilesWebrootDir;
-        fullPath += DIR_DELIM_CHAR;
-        fullPath += f;
-        if( linked_recently( fullPath.c_str(), stale_age ) ) {
-            good_file( PublicFilesWebrootDir, f );
-        }
-        else {
-            bad_file( PublicFilesWebrootDir, f, dir );
-        }
+	while( ( filename = dir.Next() ) ) {
+		if(strstr(filename, ".access")) {
+			accessFilePath = PublicFilesWebrootDir;
+			accessFilePath += DIR_DELIM_CHAR;
+			accessFilePath += filename;
+
+			// Try to obtain a lock for the access file. If this fails for any
+			// reason, just bail out and move on.
+			accessFileLock = new FileLock( accessFilePath.c_str(), true, false );
+			if( !accessFileLock->obtain( READ_LOCK ) ) {
+				continue;
+			}
+			hardLinkPath = accessFilePath.substr( 0, accessFilePath.length()-7 );
+			hardLinkName = hardLinkPath.substr( hardLinkPath.find_last_of("/") );
+			
+			// If the access file is stale, unlink both that and the hard link.
+			if( linked_recently( accessFilePath.c_str(), stale_age ) ) {
+				good_file( PublicFilesWebrootDir, filename );
+				good_file( PublicFilesWebrootDir, hardLinkName.c_str() );
+			}
+			else {
+				// Something is weird here. I'm sending only the filename
+				// of the access file, but the full path of the hard link? All
+				// other things seem equal? And it works correctly?
+				bad_file( PublicFilesWebrootDir, filename, dir );
+				bad_file( PublicFilesWebrootDir, hardLinkPath.c_str(), dir );
+			}
+			accessFileLock->release();
+		}
 	}
 }
 #endif
