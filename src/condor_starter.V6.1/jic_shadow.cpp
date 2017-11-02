@@ -494,7 +494,9 @@ JICShadow::transferOutput( bool &transient_failure )
 		std::string full_stats = "(peer stats from starter): ";
 		full_stats += stats;
 		
-		REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+		if (shadow_version && shadow_version->built_since_version(8, 5, 8)) {
+			REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+		}
 		set_priv(saved_priv);
 
 		if( m_ft_rval ) {
@@ -2325,7 +2327,9 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 		ASSERT( !shadowDisconnected() );
 
-		REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+		if (shadow_version && shadow_version->built_since_version(8, 5, 8)) {
+			REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+		}
 
 			// If we transferred the executable, make sure it
 			// has its execute bit set.
