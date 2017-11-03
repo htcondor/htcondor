@@ -30,7 +30,6 @@
 #include "stat_wrapper.h"
 #include <sys/stat.h>
 #include <string> 
-#include <unistd.h>
 
 #ifndef WIN32
 	#include <unistd.h>
