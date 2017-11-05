@@ -39,6 +39,7 @@
 #include "docker_proc.h"
 #include "condor_getcwd.h"
 #include "singularity.h"
+#include "charliecloud.h"
 
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
@@ -158,6 +159,12 @@ printClassAd( void )
 			// except with ATTR_DOCKER_VERSION in it.  *sigh*
 			printf( "%s = \"CondorVersion, IsDaemonCore\"\n", ATTR_STARTER_IGNORED_ATTRS );
 		}
+	}
+
+	// Charliecloud support
+	if (htcondor::Charliecloud::enabled()) {
+		printf("%s = True\n", ATTR_HAS_CHARLIECLOUD);
+		printf("%s = \"%s\"\n", ATTR_CHARLIECLOUD_VERSION, htcondor::Charliecloud::version());
 	}
 
 	// Singularity support

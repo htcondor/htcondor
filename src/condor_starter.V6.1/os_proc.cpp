@@ -43,6 +43,7 @@
 #endif
 #include "classad_oldnew.h"
 #include "singularity.h"
+#include "charliecloud.h"
 
 extern CStarter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
@@ -499,6 +500,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	ss2 << Starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
 	std::string execute_dir = ss2.str();
 	htcondor::Singularity::result sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd, execute_dir, job_env);
+	htcondor::Charliecloud::result ch_result = htcondor::Charliecloud::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd, execute_dir, job_env);
 	if (sing_result == htcondor::Singularity::SUCCESS) {
 		dprintf(D_ALWAYS, "Running job via singularity.\n");
 		if (fs_remap) {
@@ -512,6 +514,21 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 	} else if (sing_result == htcondor::Singularity::FAILURE) {
 		dprintf(D_ALWAYS, "Singularity enabled but setup failed; failing job.\n");
+		job_not_started = true;
+		return 0;
+	} else if (ch_result == htcondor::Charliecloud::SUCCESS) {
+		dprintf(D_ALWAYS, "Running job via charliecloud.\n");
+		if (fs_remap) {
+			dprintf(D_ALWAYS, "Disabling filesystem remapping; charliecloud will perform these features.\n");
+			fs_remap = NULL;
+		}
+		if (family_info && family_info->want_pid_namespace) {
+			dprintf(D_FULLDEBUG, "PID namespaces cannot yet be enabled for charliecloud jobs.\n");
+			job_not_started = true;
+			return 0;
+		}
+	} else if (ch_result == htcondor::Charliecloud::FAILURE) {
+		dprintf(D_ALWAYS, "Charliecloud enabled but setup failed; failing job.\n");
 		job_not_started = true;
 		return 0;
 	} else if( Starter->glexecPrivSepHelper() ) {

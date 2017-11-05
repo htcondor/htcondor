@@ -1886,6 +1886,43 @@ default=
 type=string
 tags=startd,command
 
+[CHARLIECLOUD]
+default=/usr/bin/ch-run
+win32_default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Charliecloud location
+review=?
+tags=startd,command
+
+[CHARLIECLOUD_JOB]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable Charliecloud for a job
+review=?
+tags=startd
+
+[CHARLIECLOUD_MOUNT_HOME]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable Charliecloud to bind-mount user's home
+review=?
+tags=startd
+
+[CHARLIECLOUD_CONTAINER_EXPR]
+default=CharliecloudContainer
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Expression to determine Charliecloud container
+review=?
+tags=startd
+
 [SINGULARITY]
 default=/usr/bin/singularity
 win32_default=

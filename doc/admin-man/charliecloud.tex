@@ -1,0 +1,62 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:charliecloud-support}Charliecloud Support}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{installation!Charliecloud}
+\index{Charliecloud}
+
+Note:  This documentation is very basic and needs improvement!
+
+Here's an example configuration file:
+
+\begin{verbatim}
+  # Only set if charliecloud is not in $PATH.
+  #CHARLIECLOUD = /opt/charliecloud/bin/ch-run
+
+  # Forces _all_ jobs to run inside charliecloud.
+  CHARLIECLOUD_JOB = true
+
+  # Forces all jobs to use the CernVM-based container.
+  CHARLIECLOUD_CONTAINER_EXPR = "/cvmfs/cernvm-prod.cern.ch/cvm3"
+
+  # Do not bind-mount user's home into the container (on by default).
+  CHARLIECLOUD_MOUNT_HOME = false
+
+  # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the container.
+  CHARLIECLOUD_TARGET_DIR = /srv
+
+  # Perform some bind mounts (target directories must exist in container!).
+  CHARLIECLOUD_BIND_EXPR = "/cvmfs:/cvmfs,/beegfs:/beegfs"
+\end{verbatim}
+
+This provides the user with no opportunity to select a specific container.
+Here are some changes to the above example to allow the user to specify a
+container path:
+
+\begin{verbatim}
+  CHARLIECLOUD_JOB = !isUndefined(TARGET.CharliecloudContainer)
+  CHARLIECLOUD_CONTAINER_EXPR = TARGET.CharliecloudContainer
+\end{verbatim}
+
+Then, users could add the following to their submit file
+(note the quoting):
+
+\begin{verbatim}
+  +CharliecloudContainer = "/cvmfs/cernvm-prod.cern.ch/cvm3"
+\end{verbatim}
+
+Finally, let's pick an container based on the OS -- not the filename:
+
+\begin{verbatim}
+  CHARLIECLOUD_JOB = (TARGET.DESIRED_OS isnt MY.OpSysAndVer) && ((TARGET.DESIRED_OS is "CentOS6") || (TARGET.DESIRED_OS is "CentOS7"))
+  CHARLIECLOUD_CONTAINER_EXPR = (TARGET.DESIRED_OS is "CentOS6") ? "/cvmfs/cernvm-prod.cern.ch/cvm3" : "/cvmfs/cms.cern.ch/rootfs/x86_64/centos7/latest"
+\end{verbatim}
+
+Then, the user adds to their submit file:
+
+\begin{verbatim}
+  +DESIRED_OS="CentOS6"
+\end{verbatim}
+
+That would cause the job to run on the native host for CentOS6 hosts
+and inside a CentOS6 Charliecloud container on CentOS7 hosts.
