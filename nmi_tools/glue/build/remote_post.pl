@@ -106,6 +106,7 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 		print "COMPUTERNAME=$ENV{COMPUTERNAME} In new batlab\n";
 		if ( -f "$bsdtar" ) {
 			my $zips = ""; if ( <$BaseDir/*.zip> ) { $zips = '*.zip'; }
+			my $tars = ""; if ( <$BaseDir/*.gz> ) { $tars = '*.gz'; }
 			my $msis = ""; if ( <$BaseDir/*.msi> ) { $msis = '*.msi'; }
 			my $reldir = ""; if ( -d "$BaseDir/release_dir" ) { $reldir = "release_dir"; }
 			print "Is param_info_tables.h here: $BldDir/condor_utils?\n";
@@ -153,8 +154,8 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 				print "$BldDir now:\n";
 				system("dir $BldDir");
 			}
-			print "Tarring up results and tests ($zips $msis $reldir)\n";
-			open( TAR, "$bsdtar -czvf results.tar.gz -C $BaseDir $zips $msis $reldir msconfig -C $BldDir condor_tests condor_examples |" ) || 
+			print "Tarring up results and tests ($zips $tars $msis $reldir)\n";
+			open( TAR, "$bsdtar -czvf results.tar.gz -C $BaseDir $zips $tars $msis $reldir msconfig -C $BldDir condor_tests condor_examples |" ) || 
 				die "Can't open tar as a pipe: $!\n";
 			while( <TAR> ) { 
 				print;
