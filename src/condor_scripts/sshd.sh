@@ -114,7 +114,7 @@ done
 rm $_CONDOR_SCRATCH_DIR/tmp/sshd.out
 
 # create contact file
-hostname=`hostname`
+hostname=`hostname -i`
 currentDir=`pwd`
 user=`whoami`
 
