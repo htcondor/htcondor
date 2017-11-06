@@ -48,7 +48,9 @@ _CONDOR_NPROCS=$2
 
 # make a tmp dir to store keys, etc, that
 # wont get transfered back
-mkdir $_CONDOR_SCRATCH_DIR/tmp
+if [ ! -d  $_CONDOR_SCRATCH_DIR/tmp ] ; then
+    mkdir $_CONDOR_SCRATCH_DIR/tmp
+fi
 
 # Create the host keys
 
