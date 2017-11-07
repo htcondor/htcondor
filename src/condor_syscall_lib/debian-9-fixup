@@ -1,7 +1,7 @@
 #!/bin/bash
 LIBCONDOR_C=$1
 if [ ! -f "${LIBCONDOR_C}" ]; then	
-	echo "You must specify the location of libcondor_c.a"
+	echo "You must specify the location of libcondor_c.a (it's not '${LIBCONDOR_C}')"
 	exit 1
 fi
 ar x ${LIBCONDOR_C} malloc.o
@@ -21,3 +21,4 @@ objcopy \
 	malloc.o
 ar r ${LIBCONDOR_C} malloc.o
 rm malloc.o
+exit 0

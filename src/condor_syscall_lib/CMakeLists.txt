@@ -157,10 +157,13 @@ if( STD_UNIVERSE )
 		set_source_files_properties(getcwd.c remote_startup.c PROPERTIES COMPILE_FLAGS "-Wno-nonnull -Wno-deprecated-declarations")
 	endif(UNIX)
 
-	# Fix up libcondor_c here for now.
+	# We want to fix up libcondor_c.a, but that's copied from libc.a at
+	# install time by the glibc external CMakeFile, so just fiddle it
+	# there.
 	command_target( debianninehack.command
 		"${PROJECT_SOURCE_DIR}/src/condor_syscall_lib/debian-9-fixup"
-		"${CMAKE_INSTALL_PREFIX}/${C_LIB}/libcondor_c.a"
+		"${CMAKE_BINARY_DIR}/bld_external/glibc-2.24-11/install/lib/libc.a"
 		debianninehack )
+
 
 endif( STD_UNIVERSE )
