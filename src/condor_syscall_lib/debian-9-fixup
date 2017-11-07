@@ -1,0 +1,23 @@
+#!/bin/bash
+LIBCONDOR_C=$1
+if [ ! -f "${LIBCONDOR_C}" ]; then	
+	echo "You must specify the location of libcondor_c.a"
+	exit 1
+fi
+ar x ${LIBCONDOR_C} malloc.o
+# Convert all symbols in malloc.o to local symbols.  This forcibly prevents
+# them from polluting the namespace and ensures we use the versions in
+# libcondorsyscall.
+objcopy -G '' malloc.o
+# Evidence that this is a work-around: the copy of fork() that we shouldn't
+# have in libcondorsyscall requires these symbols from malloc.o; otherwise,
+# we could just remove the object entirely.  (I have /no idea/ why our
+# [some of?] our remaps are getting their implementations copied from
+# glibc, when all they do is call the internal versions.)
+objcopy \
+	--globalize-symbol=__malloc_fork_lock_parent \
+	--globalize-symbol=__malloc_fork_unlock_parent \
+	--globalize-symbol=__malloc_fork_unlock_child \
+	malloc.o
+ar r ${LIBCONDOR_C} malloc.o
+rm malloc.o

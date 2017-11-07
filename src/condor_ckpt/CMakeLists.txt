@@ -30,6 +30,11 @@ if( STD_UNIVERSE )
 	# NOTE: all glibc ripping which existed here has moved to syscall_lib
 	# where it is actually bound in.
 	###########################################################################
+	# Do NOT dynamic link /anything/ in standard universe.
+	set( CMAKE_C_FLAGS_DEBUG "-static" )
+	set( CMAKE_C_FLAGS_RELEASE "-static" )
+	set( CMAKE_CXX_FLAGS_DEBUG "-static" )
+	set( CMAKE_CXX_FLAGS_RELEASE "-static" )
 	set( CMAKE_BUILD_TYPE Debug )
 	
 	###########################################################################

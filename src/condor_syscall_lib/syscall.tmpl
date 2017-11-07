@@ -1555,6 +1555,7 @@ not_supported {
 
 #	if defined(LINUX)
 #if defined(GLIBC224)
+		pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru );
 #else
 		pid_t wait4( pid_t pid, void *status, int options, struct rusage *ru );
 #endif

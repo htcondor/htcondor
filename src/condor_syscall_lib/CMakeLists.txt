@@ -27,6 +27,12 @@
 if( STD_UNIVERSE )
 
 	###########################################################################
+	# Do NOT dynamic link /anything/ in standard universe.
+	set( CMAKE_C_FLAGS_DEBUG "-static" )
+	set( CMAKE_C_FLAGS_RELEASE "-static" )
+	set( CMAKE_CXX_FLAGS_DEBUG "-static" )
+	set( CMAKE_CXX_FLAGS_RELEASE "-static" )
+
 	# set the local build to debug only *no optimizations*
 	set( CMAKE_BUILD_TYPE Debug )
 
@@ -35,7 +41,7 @@ if( STD_UNIVERSE )
 	include (StdUnivExtractNToUpper)
 	add_definitions(${STD_U_C_FLAGS} -DREMOTE_SYSCALLS -DSKIP_AUTHENTICATION -DHEADER_DES_LOCL_H -DFILE_TABLE )
 	include_directories(${CONDOR_SOURCE_DIR}/src/condor_shadow.std ${CONDOR_SOURCE_DIR}/src/condor_ckpt ${CMAKE_CURRENT_SOURCE_DIR})
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -static")
 
 	###########################################################################
 	# Begin symbol transformation.
@@ -150,4 +156,11 @@ if( STD_UNIVERSE )
 		set_source_files_properties(receivers.cpp senders.cpp PROPERTIES COMPILE_FLAGS "-Wno-uninitialized -Wno-unused-variable -Wno-unused-parameter")
 		set_source_files_properties(getcwd.c remote_startup.c PROPERTIES COMPILE_FLAGS "-Wno-nonnull -Wno-deprecated-declarations")
 	endif(UNIX)
+
+	# Fix up libcondor_c here for now.
+	command_target( debianninehack.command
+		"${PROJECT_SOURCE_DIR}/src/condor_syscall_lib/debian-9-fixup"
+		"${CMAKE_INSTALL_PREFIX}/${C_LIB}/libcondor_c.a"
+		debianninehack )
+
 endif( STD_UNIVERSE )
