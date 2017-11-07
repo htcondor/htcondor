@@ -85,8 +85,9 @@ int JavaProc::StartJob()
 						// Jar file exists locally, use local name
 					jarfiles_local_list.append( local_name.Value() );
 				} else {
-						// Use the original name
-					jarfiles_local_list.append (jarfile_name);
+					dprintf(D_ALWAYS, "JavaProc::StartJob could not stat jar file %s: errno %d\n",
+						local_name.c_str(), errno);
+					jarfiles_local_list.append (local_name.c_str());
 				}
 			} // while(jarfiles_orig_list)
 
