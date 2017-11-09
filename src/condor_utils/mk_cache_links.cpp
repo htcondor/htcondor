@@ -29,6 +29,7 @@
 #include "filename_tools.h"
 #include "stat_wrapper.h"
 #include <sys/stat.h>
+#include <stdlib.h>
 #include <string> 
 
 #ifndef WIN32
@@ -80,7 +81,6 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 // condor or root.  -zmiller
 static bool MakeLink(const char* srcFilePath, const string &newLink) {
 
-	bool accessFileExists = false;
 	bool retVal = false;
 	int srcFileInodeNum;
 	int targetLinkInodeNum;
@@ -127,20 +127,17 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	
 	if(access(accessFilePath.c_str(), F_OK) == 0) {
 		accessFileLock = new FileLock(accessFilePath.c_str(), true, false);
-		bool obtainedLock = accessFileLock->obtain(READ_LOCK);
-		while (!obtainedLock) {
-			dprintf(D_ALWAYS, "MakeLink: Could not obtain lock for %s, waiting "
-				"to try again\n", accessFilePath.c_str());
-			#ifdef WIN32
-				Sleep(1000);
-			#else
-				sleep(1);
-			#endif
-			obtainedLock = accessFileLock->obtain(READ_LOCK);
+
+		// Try to grab a lock on the access file. This should block until it 
+		// obtains the lock. If this fails for any reason, bail out.
+		bool obtainedLock = accessFileLock->obtain(WRITE_LOCK);
+		if(!obtainedLock) {
+			dprintf(D_ALWAYS, "MakeLink: Failed to obtain lock on access file with"
+				" error code %d (%s).\n", errno, strerror(errno));
+			set_priv(original_priv);
+			return (false);
 		}
-		accessFileExists = true;
 	}
-	
 	
 	// Impersonate the user and open the file using safe_open(). This will allow
 	// us to verify the user has privileges to access the file, and later to
@@ -156,8 +153,8 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 		}
 	}
 	if (fileOK == false) {
-		dprintf(D_ALWAYS,
-			"Cannot transfer -- public input file not readable by user: %s\n", srcFilePath);
+		dprintf(D_ALWAYS, "MakeLink: Cannot transfer -- public input file not "
+			"readable by user: %s\n", srcFilePath);
 		set_priv(original_priv);
 		return (false);
 	}
@@ -179,7 +176,6 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 		// If link exists, update the .access file timestamp.
 		retVal = true;
 		fclose(targetLink);
-		// ... to be completed
 	}	
 	else {
 		// Link does not exist, so create it as root.
@@ -188,11 +184,11 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 			retVal = true;
 		}
 		else {
-			dprintf(D_ALWAYS, "Could not link %s to %s, error: %s\n", targetLinkPath,
-				srcFilePath, strerror(errno));
+			dprintf(D_ALWAYS, "MakeLink: Could not link %s to %s, error: %s\n", 
+				targetLinkPath, srcFilePath, strerror(errno));
 		}
 	}
-	
+
 	// Now we need to make sure nothing devious has happened, that the hard link 
 	// points to the file we're expecting. First, make sure that the user 
 	// specified by HTTP_PUBLIC_FILES_ROOT_OWNER is a valid user.
@@ -242,24 +238,15 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 		}
 	}
 	
-	// If the access file does't exist, create it now. If it does exist, we 
-	// can assume it's locked, so release the lock and update the timestamp.
-	if(!accessFileExists) {
-		FILE* accessFile = fopen(accessFilePath.c_str(), "w");
-		fclose(accessFile);
-	}
-	else {
-		if(accessFileLock) {
-			accessFileLock->release();
-		}
-		else {
-			dprintf(D_ALWAYS, "Access file exists but is not locked. Something "
-				"is wrong here.\n");
-		}
-		if(lutimes(accessFilePath.c_str(), NULL) != 0) {
-			dprintf(D_ALWAYS, "MakeLink: Failed to update timestamp on "
-				"access file %s\n", accessFilePath.c_str());
-		}
+	// Touch the access file. This will create it if it doesn't exist, or update
+	// the timestamp if it does.
+	FILE* accessFile = fopen(accessFilePath.c_str(), "w");
+	fclose(accessFile);
+	
+	// Release the lock on the access file
+	if(!accessFileLock->release()) {
+		dprintf(D_ALWAYS, "MakeLink: Failed to release lock on access file with"
+			" error code %d (%s).\n", errno, strerror(errno));
 	}
 
 	// Free the hard link filename
