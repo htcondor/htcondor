@@ -790,7 +790,6 @@ check_public_files_webroot_dir()
 			// Try to obtain a lock for the access file. If this fails for any
 			// reason, just bail out and move on.
 			accessFileLock = new FileLock( accessFilePath.c_str(), true, false );
-			accessFileLock->setBlocking( false );
 			if( !accessFileLock->obtain( WRITE_LOCK ) ) {
 				dprintf( D_ALWAYS, "check_public_files_webroot_dir: Failed to "
 					"obtain lock on %s, ignoring file\n", accessFilePath.c_str() );
@@ -812,6 +811,8 @@ check_public_files_webroot_dir()
 				good_file( PublicFilesWebrootDir, filename );
 				good_file( PublicFilesWebrootDir, hardLinkPath.c_str() );
 			}
+
+			// Release the lock before moving on
 			accessFileLock->release();
 		}
 	}

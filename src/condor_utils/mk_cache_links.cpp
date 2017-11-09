@@ -81,7 +81,6 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 // condor or root.  -zmiller
 static bool MakeLink(const char* srcFilePath, const string &newLink) {
 
-	bool accessFileExists = false;
 	bool retVal = false;
 	int srcFileInodeNum;
 	int targetLinkInodeNum;
@@ -128,35 +127,15 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	
 	if(access(accessFilePath.c_str(), F_OK) == 0) {
 		accessFileLock = new FileLock(accessFilePath.c_str(), true, false);
-		accessFileLock->setBlocking(false);
 
-		// Try to grab a lock on the access file. If we got it, set a flag.
+		// Try to grab a lock on the access file. This should block until it 
+		// obtains the lock. If this fails for any reason, bail out.
 		bool obtainedLock = accessFileLock->obtain(WRITE_LOCK);
-		if(obtainedLock) {
-			accessFileExists = true;
-		}
-
-		// If the access file was locked, wait until it is no longer locked.
-		// At this point, we can assume that preen has erased both the access
-		// file and hard link, so there isn't a file to grab a lock on anymore.
-		int numFailedLockAttempts = 0;
-		while (!obtainedLock) {
-			dprintf(D_ALWAYS, "MakeLink: Could not obtain lock for %s, waiting "
-				"to try again\n", accessFilePath.c_str());
-			numFailedLockAttempts++;
-			if(numFailedLockAttempts > 20) {
-				dprintf(D_ALWAYS,
-					"MakeLink: Failed to grab lock on %s after 20 attempts, "
-						"aborting.\n", accessFilePath.c_str());
-				set_priv(original_priv);
-				return (false);
-			}
-			#ifdef WIN32
-				Sleep(1000);
-			#else
-				sleep(1);
-			#endif
-			obtainedLock = accessFileLock->obtain(WRITE_LOCK);
+		if(!obtainedLock) {
+			dprintf(D_ALWAYS, "MakeLink: Failed to obtain lock on access file with"
+				" error code %d (%s).\n", errno, strerror(errno));
+			set_priv(original_priv);
+			return (false);
 		}
 	}
 	
@@ -259,24 +238,15 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 		}
 	}
 	
-	// If the access file does't exist, create it now. If it does exist, we 
-	// can assume it's locked, so release the lock and update the timestamp.
-	if(!accessFileExists) {
-		FILE* accessFile = fopen(accessFilePath.c_str(), "w");
-		fclose(accessFile);
-	}
-	else {
-		if(accessFileLock) {
-			accessFileLock->release();
-		}
-		else {
-			dprintf(D_ALWAYS, "MakeLink: Access file exists but is not locked. "
-				"Something is very wrong here.\n");
-		}
-		if(lutimes(accessFilePath.c_str(), NULL) != 0) {
-			dprintf(D_ALWAYS, "MakeLink: Failed to update timestamp on "
-				"access file %s\n", accessFilePath.c_str());
-		}
+	// Touch the access file. This will create it if it doesn't exist, or update
+	// the timestamp if it does.
+	FILE* accessFile = fopen(accessFilePath.c_str(), "w");
+	fclose(accessFile);
+	
+	// Release the lock on the access file
+	if(!accessFileLock->release()) {
+		dprintf(D_ALWAYS, "MakeLink: Failed to release lock on access file with"
+			" error code %d (%s).\n", errno, strerror(errno));
 	}
 
 	// Free the hard link filename
