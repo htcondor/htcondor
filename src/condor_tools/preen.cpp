@@ -762,34 +762,38 @@ check_public_files_webroot_dir()
 	std::string hardLinkPath;
 
 	// Set the stale age for a file to be one week
-	time_t stale_age = 5;//60 * 60 * 24 * 7;
+	time_t stale_age = param_integer( "HTTP_PUBLIC_FILES_STALE_AGE", 604800 );
 
 	while( ( filename = dir.Next() ) ) {
-		if(strstr(filename, ".access")) {
+		if( strstr( filename, ".access" ) ) {
 			accessFilePath = PublicFilesWebrootDir;
 			accessFilePath += DIR_DELIM_CHAR;
 			accessFilePath += filename;
-
+			
 			// Try to obtain a lock for the access file. If this fails for any
 			// reason, just bail out and move on.
 			accessFileLock = new FileLock( accessFilePath.c_str(), true, false );
-			if( !accessFileLock->obtain( READ_LOCK ) ) {
+			accessFileLock->setBlocking( false );
+			if( !accessFileLock->obtain( WRITE_LOCK ) ) {
+				dprintf( D_ALWAYS, "check_public_files_webroot_dir: Failed to "
+					"obtain lock on %s, ignoring file\n", accessFilePath.c_str() );
 				continue;
 			}
+
 			hardLinkPath = accessFilePath.substr( 0, accessFilePath.length()-7 );
-			hardLinkName = hardLinkPath.substr( hardLinkPath.find_last_of("/") );
-			
+			hardLinkName = hardLinkPath.substr( hardLinkPath.find_last_of( DIR_DELIM_CHAR ) );
+
 			// If the access file is stale, unlink both that and the hard link.
-			if( linked_recently( accessFilePath.c_str(), stale_age ) ) {
-				good_file( PublicFilesWebrootDir, filename );
-				good_file( PublicFilesWebrootDir, hardLinkName.c_str() );
-			}
-			else {
+			if( !linked_recently( accessFilePath.c_str(), stale_age ) ) {
 				// Something is weird here. I'm sending only the filename
-				// of the access file, but the full path of the hard link? All
-				// other things seem equal? And it works correctly?
+				// of the access file, but the full path of the hard link, and 
+				// it works correctly??
 				bad_file( PublicFilesWebrootDir, filename, dir );
 				bad_file( PublicFilesWebrootDir, hardLinkPath.c_str(), dir );
+			}
+			else {
+				good_file( PublicFilesWebrootDir, filename );
+				good_file( PublicFilesWebrootDir, hardLinkPath.c_str() );
 			}
 			accessFileLock->release();
 		}
