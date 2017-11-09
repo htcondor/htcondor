@@ -2171,6 +2171,7 @@ Daemons::InitParams()
 					// in the master by checking if a daemon we're starting is
 					// both a DC daemon and not in the list of DC daemons.
 					iter->second->isDC = true;
+					break;
 				}
 			}
 		}
