@@ -111,6 +111,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print TASKLIST "$BUILD_TESTS_TASK 4h\n";
     print TASKLIST "$NATIVE_TASK 4h\n";
     print TASKLIST "$TAR_TASK 4h\n";
+    print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }    
 else {

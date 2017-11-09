@@ -275,7 +275,7 @@ const char * getULogEventNumberName(ULogEventNumber number)
 	if( number == (ULogEventNumber)-1 ) {
 		return NULL;
 	}
-	if (number < COUNTOF(ULogEventNumberNames)) {
+	if (number < (int)COUNTOF(ULogEventNumberNames)) {
 		return ULogEventNumberNames[number];
 	}
 	return "ULOG_FUTURE_EVENT";

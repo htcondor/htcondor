@@ -1182,7 +1182,10 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 	int one=1;
 	int zero=0;
 	while ((filename = d.Next())) {
-		stream->code(one); // more data
+		if (!stream->code(one)) { // more data
+			dprintf(D_ALWAYS, "fetch_log_history_dir: client disconnected\n");
+			break;
+		}
 		stream->put(filename);
 		MyString fullPath(dirName);
 		fullPath += "/";
@@ -1210,7 +1213,9 @@ handle_fetch_log_history_purge(ReliSock *s) {
 
 	int result = 0;
 	time_t cutoff = 0;
-	s->code(cutoff);
+	if (!s->code(cutoff)) {
+		dprintf(D_ALWAYS, "fetch_log_history_purge: client disconnect\n");
+	}
 	s->end_of_message();
 
 	s->encode();
@@ -1345,7 +1350,9 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 			if ( ! re.compile(restr, &pszMsg, &err, PCRE_CASELESS)) {
 				dprintf( D_ALWAYS, "Can't compile regex for DC_CONFIG_VAL ?names query\n" );
 				MyString errmsg; errmsg.formatstr("!error:regex:%d: %s", err, pszMsg ? pszMsg : "");
-				stream->code(errmsg);
+				if (!stream->code(errmsg)) {
+						dprintf( D_ALWAYS, "and remote side disconnected from use\n" );
+				}
 				retval = FALSE;
 			} else {
 				std::vector<std::string> names;
