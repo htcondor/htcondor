@@ -29,6 +29,10 @@
 #include <stdlib.h>
 #include "MyString.h"
 
+// the documentation for the chirp tool is that it returns 1 on failure, so that is what we will do.
+// when the chirp_client API calls abort().
+void abort_handler(int /*signum*/) { exit(1); }
+
 #define DISCONNECT_AND_RETURN(client, rval) \
 	int save_errno = errno; \
 	chirp_client_disconnect((client)); \
@@ -999,6 +1003,18 @@ main(int argc, char **argv) {
 		usage();
 		exit(-1);
 	}
+
+#ifdef WIN32
+	// defeat the windows abort message and/or dialog box. and also the crash dump
+	_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#else
+	// catch abort, and exit with code 1 instead.
+	struct sigaction act;
+	act.sa_handler = abort_handler;
+	act.sa_flags = 0;
+	sigfillset(&act.sa_mask);
+	sigaction(SIGABRT,&act,0);
+#endif
 
 	if (strcmp("fetch", argv[1]) == 0) {
 		ret_val = chirp_fetch(argc, argv);

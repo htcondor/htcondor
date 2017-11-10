@@ -281,8 +281,10 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		if(result>=0) {
 			char *buffer = (char*) malloc(1024);
 			ASSERT( buffer != NULL );
-			REMOTE_CONDOR_stat(path, buffer);
-			r->put_bytes_raw(buffer,strlen(buffer));
+			REMOTE_CONDOR_fstat(result, buffer);
+			int len = strlen(buffer);
+			if (len == 0) { buffer[0] = '\n'; len = 1; }
+			r->put_bytes_raw(buffer,len);
 			free( buffer );
 		}
 
