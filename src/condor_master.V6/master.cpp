@@ -66,14 +66,6 @@ extern DWORD start_as_service();
 extern void terminate(DWORD);
 #endif
 
-typedef void (*SIGNAL_HANDLER)();
-
-// prototypes of library functions
-extern "C"
-{
-	void install_sig_handler( int, SIGNAL_HANDLER );
-}
-
 
 // local function prototypes
 void	init_params();

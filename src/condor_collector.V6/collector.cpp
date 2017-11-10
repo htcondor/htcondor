@@ -113,7 +113,6 @@ bool CollectorDaemon::filterAbsentAds;
 typedef void (*SIGNAL_HANDLER)();
 extern "C"
 {
-	void install_sig_handler( int, SIGNAL_HANDLER );
 	void schedule_event ( int month, int day, int hour, int minute, int second, SIGNAL_HANDLER );
 }
  
