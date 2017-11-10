@@ -41,6 +41,7 @@ SystemdManager::~SystemdManager()
 
 SystemdManager::SystemdManager()
 	: m_watchdog_usecs(0),
+	  m_services_active(false),
 	  m_handle(NULL),
 	  m_notify_handle(NULL),
 	  m_listen_fds_handle(NULL),
@@ -49,14 +50,15 @@ SystemdManager::SystemdManager()
 #ifdef LINUX
 	const char *tmp_val = getenv("NOTIFY_SOCKET");
 	m_notify_socket = tmp_val ? tmp_val : "";
-	if ((tmp_val = getenv("WATCHDOG_USEC")))
+	if (!m_notify_socket.empty() && (tmp_val = getenv("WATCHDOG_USEC")))
 	{
 		YourStringDeserializer tmp(tmp_val);
 		if ( ! tmp.deserialize_int(&m_watchdog_usecs))
 		{
-			m_watchdog_usecs = 1000;
+			m_watchdog_usecs = 1000000;
 			dprintf(D_ALWAYS, "Unable to parse watchdog interval from systemd; assuming 1s\n");
 		}
+		m_services_active = true;
 	}
 
 #ifdef HAVE_DLOPEN
@@ -111,6 +113,7 @@ SystemdManager::InitializeFDs()
 	else
 	{
 		dprintf(D_FULLDEBUG, "systemd passed %d sockets.\n", fds);
+		m_services_active = true;
 	}
 #ifdef SD_LISTEN_FDS_START
 	for (int fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++) {
@@ -141,7 +144,7 @@ SystemdManager::GetHandle(const std::string &name)
 int
 SystemdManager::Notify(const char *fmt, ... ) const
 {
-	if (m_notify_handle == NULL)
+	if (m_notify_handle == NULL || m_watchdog_usecs == 0)
 	{
 		return 0;
 	}
