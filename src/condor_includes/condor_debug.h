@@ -199,6 +199,12 @@ void dprintf_before_shared_mem_clone( void );
 /* must call this after clone(CLONE_VM|CLONE_VFORK) returns */
 void dprintf_after_shared_mem_clone( void );
 
+/* A simple function for writing to the primary daemon log in an
+ * async-safe manner (e.g. from a signal handler).
+ * See safe_async_simple_fwrite_fd() for argument usage.
+ */
+void dprintf_async_safe( char const *msg, unsigned long *args, unsigned int num_args );
+
 void dprintf_dump_stack(void);
 
 /* If outputs haven't been configured yet, stop buffering dprintf()

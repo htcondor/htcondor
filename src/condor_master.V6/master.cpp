@@ -66,14 +66,6 @@ extern DWORD start_as_service();
 extern void terminate(DWORD);
 #endif
 
-typedef void (*SIGNAL_HANDLER)();
-
-// prototypes of library functions
-extern "C"
-{
-	void install_sig_handler( int, SIGNAL_HANDLER );
-}
-
 
 // local function prototypes
 void	init_params();
@@ -159,17 +151,22 @@ public:
 	config()
 	{
 		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
-		int watchdog_secs = sd.GetWatchdogUsecs() / 1e6 / 3;
-		if (watchdog_secs <= 0) { watchdog_secs = 1; }
-		Timeslice ts;
-		ts.setDefaultInterval(watchdog_secs);
-		m_watchdog_timer = daemonCore->Register_Timer(ts, static_cast<TimerHandlercpp>(&SystemdNotifier::status_handler),
-				"systemd status updater", this);
-		if (m_watchdog_timer < 0)
-		{
-			dprintf(D_ALWAYS, "Failed to register systemd update timer.\n");
+		int watchdog_secs = sd.GetWatchdogUsecs();
+		if ( watchdog_secs > 0 ) {
+			watchdog_secs = watchdog_secs / 1e6 / 3;
+			if (watchdog_secs <= 0) { watchdog_secs = 1; }
+			Timeslice ts;
+			ts.setDefaultInterval(watchdog_secs);
+			m_watchdog_timer = daemonCore->Register_Timer(ts,
+					static_cast<TimerHandlercpp>(&SystemdNotifier::status_handler),
+					"systemd status updater", this);
+			if (m_watchdog_timer < 0) {
+				dprintf(D_ALWAYS, "Failed to register systemd update timer.\n");
+			} else {
+				dprintf(D_FULLDEBUG, "Set systemd to be notified once every %d seconds.\n", watchdog_secs);
+			}
 		} else {
-			dprintf(D_FULLDEBUG, "Set systemd to be notified once every %d seconds.\n", watchdog_secs);
+			dprintf(D_FULLDEBUG, "Not setting systemd watchdog timer\n");
 		}
 	}
 
