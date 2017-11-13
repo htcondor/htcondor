@@ -190,6 +190,9 @@ void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg ) GC
 void _condor_fd_panic( int line, const char *file );
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 int  _condor_dprintf_is_initialized();
+void _condor_save_dprintf_line_va( int flags, const char* fmt, va_list args );
+void _condor_save_dprintf_line( int flags, const char* fmt, ... );
+void _condor_dprintf_saved_lines( void );
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
 

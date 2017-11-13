@@ -88,7 +88,8 @@ static FILE *preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t
 FILE *open_debug_file( int debug_level, const char flags[] );
 
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
-static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
+void _condor_save_dprintf_line_va( int flags, const char* fmt, va_list args );
+void _condor_save_dprintf_line( int flags, const char* fmt, ... );
 void _condor_dprintf_saved_lines( void );
 struct saved_dprintf {
 	int level;
@@ -870,7 +871,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		   initialized until we call dprintf_config().
 		*/
 	if( ! _condor_dprintf_works ) {
-		_condor_save_dprintf_line( cat_and_flags, fmt, args );
+		_condor_save_dprintf_line_va( cat_and_flags, fmt, args );
 		return; 
 	} 
 
@@ -1938,8 +1939,17 @@ mkargv( int* argc, char* argv[], char* line )
 	return( _condor_mkargv(argc, argv, line) );
 }
 
-static void
-_condor_save_dprintf_line( int flags, const char* fmt, va_list args )
+void
+_condor_save_dprintf_line( int flags, const char* fmt, ... )
+{
+	va_list ap;
+	va_start(ap, fmt);
+	_condor_save_dprintf_line_va( flags, fmt, ap );
+	va_end(ap);
+}
+
+void
+_condor_save_dprintf_line_va( int flags, const char* fmt, va_list args )
 {
 	char* buf;
 	struct saved_dprintf* new_node;
@@ -1979,6 +1989,13 @@ _condor_dprintf_saved_lines( void )
 	struct saved_dprintf* next;
 
 	if( ! saved_list ) {
+		return;
+	}
+
+	if( ! _condor_dprintf_works ) {
+		// if this function was called, but there's no place to put
+		// the saved dprintf messages, there's nothing we can do at the
+		// moment so just return.  The messages are still saved.
 		return;
 	}
 
