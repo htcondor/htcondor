@@ -27,6 +27,10 @@
 #include "condor_arglist.h"
 #include "utc_time.h"
 
+#include <iostream>
+
+using namespace std;
+
 double DagmanMetrics::_startTime = 0.0;
 MyString DagmanMetrics::_dagmanId = "";
 MyString DagmanMetrics::_parentDagmanId = "";
@@ -124,8 +128,8 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 		//
 		// Gather metrics about the size, shape of the graph.
 		//
-	_graphWidth = GetGraphWidth();
-	_graphHeight = GetGraphHeight();
+	_graphWidth = GetGraphWidth(dag);
+	_graphHeight = GetGraphHeight(dag);
 }
 
 //---------------------------------------------------------------------------
@@ -360,14 +364,64 @@ DagmanMetrics::GetTime( const struct tm &eventTime )
 
 //---------------------------------------------------------------------------
 int
-DagmanMetrics::GetGraphHeight()
+DagmanMetrics::GetGraphHeight( Dag* dag )
 {
+	int maxHeight = 0;
+	Job *node;
+	unordered_map<string, bool> visited;
+
+	dag->_jobs.Rewind();
+	while ( (node = dag->_jobs.Next()) ) {
+		// Check if we've already visited this node before
+		string jobName = node->GetJobName();
+		unordered_map<string, bool>::const_iterator results = visited.find( jobName );
+
+		// If this node does not appear in the visited list, get its height
+		// (maximum length from this node to any connected leaf node)
+		if ( results == visited.end() ) {
+			int thisNodeHeight = GetGraphHeightRecursive(node, dag, &visited);
+			maxHeight = ( thisNodeHeight > maxHeight ) ? thisNodeHeight : maxHeight;
+		}
+	}
+	return maxHeight;
+}
+
+//---------------------------------------------------------------------------
+int
+DagmanMetrics::GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<string, bool>* visited )
+{
+	// This should never happen, but let's check just in case
+	if( node == NULL ) {
+		return 0;
+	}
+
+	// Check if this node has been visited. If not, add it to the visited list.	
+	// If this node is non-null, add it to the visited list
+	unordered_map<string, bool>::const_iterator visitedResults = visited->find( node->GetJobName() );
+	if ( visitedResults == visited->end() ) {
+		pair<string, bool> thisNode( node->GetJobName(), true );
+		visited->insert( thisNode );
+	}
+
+	// Base case: if this is a leaf node, return 1
+	if( node->NumChildren() == 0 ) {
+		return 1;
+	}
+
+	// Recursive case: call this function recursively on all child nodes
+	set<JobID_t>& childNodes = node->GetQueueRef( Job::Q_CHILDREN );
+	set<JobID_t>::const_iterator it;
+	for ( it = childNodes.begin(); it != childNodes.end(); it++ ) {
+		Job* child = dag->FindNodeByNodeID( *it );
+		return 1 + GetGraphHeightRecursive( child, dag, visited );
+	}
+
 	return 0;
 }
 
 //---------------------------------------------------------------------------
 int
-DagmanMetrics::GetGraphWidth()
+DagmanMetrics::GetGraphWidth( Dag* dag )
 {
 	return 0;
 }
