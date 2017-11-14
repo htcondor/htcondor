@@ -831,7 +831,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
         status = 0;
         mySock_->encode();
         if (!mySock_->code(status)) {
-			dprintf("Authenticate: failed to inform client of failure to authenticate\n");
+			dprintf(D_ALWAYS, "Authenticate: failed to inform client of failure to authenticate\n");
 		}
         mySock_->end_of_message();
     }
