@@ -146,7 +146,9 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 		else {
 			// I am server, first wait for the other side
 			mySock_->decode();
-			mySock_->code(reply);
+			if (!mySock_->code(reply)) {
+        		dprintf( D_SECURITY, "authenticate: the client side hung up on us.\n" );
+			}
 			mySock_->end_of_message();
 
 			if (reply == 1) { 
@@ -828,7 +830,9 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
         // the loop.
         status = 0;
         mySock_->encode();
-        mySock_->code(status);
+        if (!mySock_->code(status)) {
+			dprintf("Authenticate: failed to inform client of failure to authenticate\n");
+		}
         mySock_->end_of_message();
     }
     else {
