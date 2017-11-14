@@ -62,7 +62,11 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_simpleNodesFailed( 0 ),
 	_subdagNodesSuccessful( 0 ),
 	_subdagNodesFailed( 0 ), 
-	_totalNodeJobTime( 0.0 )
+	_totalNodeJobTime( 0.0 ),
+	_graphHeight( 0 ),
+	_graphWidth( 0 ),
+	_graphNumEdges( 0 ),
+	_graphNumVertices( 0 )
 {
 	_primaryDagFile = strnewp(primaryDagFile);
 
@@ -109,12 +113,19 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	Job *node;
 	dag->_jobs.Rewind();
 	while ( (node = dag->_jobs.Next()) ) {
+		_graphNumVertices++;
 		if ( node->GetDagFile() ) {
 			_subdagNodes++;
 		} else {
 			_simpleNodes++;
 		}
 	}
+
+		//
+		// Gather metrics about the size, shape of the graph.
+		//
+	_graphWidth = GetGraphWidth();
+	_graphHeight = GetGraphHeight();
 }
 
 //---------------------------------------------------------------------------
@@ -308,6 +319,10 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 				_subdagNodesSuccessful + _subdagNodesFailed;
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
 	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
+	fprintf( fp, "    \"graph_height\":%d,\n", _graphHeight );
+	fprintf( fp, "    \"graph_width\":%d,\n", _graphWidth );
+	fprintf( fp, "    \"graph_num_edges\":%d,\n", _graphNumEdges );
+	fprintf( fp, "    \"graph_num_vertices\":%d,\n", _graphNumVertices );
 
 		// Last item must NOT have trailing comma!
 	fprintf( fp, "    \"dag_status\":%d\n", status );
@@ -341,6 +356,20 @@ DagmanMetrics::GetTime( const struct tm &eventTime )
 	time_t result = mktime( &tmpTime );
 
 	return (double)result;
+}
+
+//---------------------------------------------------------------------------
+int
+DagmanMetrics::GetGraphHeight()
+{
+	return 0;
+}
+
+//---------------------------------------------------------------------------
+int
+DagmanMetrics::GetGraphWidth()
+{
+	return 0;
 }
 
 //---------------------------------------------------------------------------
