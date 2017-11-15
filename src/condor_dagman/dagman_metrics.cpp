@@ -428,16 +428,21 @@ DagmanMetrics::GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<strin
 int
 DagmanMetrics::GetGraphWidth( Dag* dag )
 {
+	int currentNodeLevel = 0;
+	int currentLevelWidth = 0;
 	int maxWidth = 0;
 	Job *job;
-	queue<Job*> bfsQueue;
 	set<Job*> bfsJobTracker;
 	unordered_map<string, bool> visited;
 
+	// The queue we use for BFS traversal keeps track of the jobs as well as
+	// their level in the graph.
+	queue<pair<Job*, int>> bfsQueue;
+
 	// Iterate through the list of jobs. Now we'll use iterative BFS to 
 	// determine the maximum width of the graph (largest number of sibling nodes 
-	// at the same level). We also need to account for the fact the graph might 
-	// be disconnected, so we'll try kicking off a BFS algorithm for every 
+	// at the same level). We also have to account for the fact the graph might 
+	// be disconnected, so we'll need to kick off a BFS algorithm for every 
 	// unvisited node.
 	dag->_jobs.Rewind();
 	while ( ( job = dag->_jobs.Next() ) ) {
@@ -449,19 +454,29 @@ DagmanMetrics::GetGraphWidth( Dag* dag )
 		}
 			
 		// Now do the BFS dance for this job
-		bfsQueue.emplace( job );
+		bfsQueue.emplace( make_pair( job, 1 ) );
 		bfsJobTracker.insert( job );
 		while ( !bfsQueue.empty() ) {
-			Job* thisNode = bfsQueue.front();
+			Job* thisNode = bfsQueue.front().first;
+			int thisNodeLevel = bfsQueue.front().second;
 			
 			// Add to visited list if not already there
 			if ( visited.find( thisNode->GetJobName() ) == visited.end() ) {
-				pair<string, bool> thisNodePair( thisNode->GetJobName(), true );
-				visited.insert( thisNodePair );
+				visited.insert( make_pair( thisNode->GetJobName(), true ) ) ;
 			}
 
-			// Now remove the front node
-			bfsQueue.pop();
+			// Check the level of the front node of the queue. If this is a 
+			// different level than what we were previously tracking, adjust
+			// counters accordingly.
+			if ( ( thisNodeLevel != currentNodeLevel )) {
+				maxWidth = ( maxWidth > currentLevelWidth ) ? maxWidth : currentLevelWidth;
+				currentNodeLevel = thisNodeLevel;
+				currentLevelWidth = 1;
+			}
+			// If the same level, just increment current level width counter.
+			else {
+				currentLevelWidth ++;
+			}
 
 			// For each child of this node, check if they've already in the BFS
 			// queue by looking in bfsJobTracker. If not, then add them to the 
@@ -471,12 +486,17 @@ DagmanMetrics::GetGraphWidth( Dag* dag )
 			for ( it = childNodes.begin(); it != childNodes.end(); it++ ) {
 				Job* child = dag->FindNodeByNodeID( *it );
 				if ( bfsJobTracker.find( child ) == bfsJobTracker.end() ) {
-					bfsQueue.emplace( child );
+					bfsQueue.emplace( make_pair( child, thisNodeLevel+1 ) );
 					bfsJobTracker.insert( child );
 				}
 			}
+
+			// Finally, remove the front node.
+			bfsQueue.pop();
 		}
-		
+
+		// Check the width of the last level of the graph
+		maxWidth = ( maxWidth > currentLevelWidth ) ? maxWidth : currentLevelWidth;
 	}
 
 	return maxWidth;
