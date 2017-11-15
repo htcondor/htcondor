@@ -197,22 +197,6 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: 1 -- success; -1:  failure
     //------------------------------------------
     
-    int forward_tgt_creds(krb5_creds      * creds,
-                          krb5_ccache       ccache);
-    //------------------------------------------
-    // PURPOSE: Forwarding tgt to another process
-    // REQUIRE: krb5_creds
-    // RETURNS: 1 -- unable to forward
-    //          0 -- success
-    //------------------------------------------
-    int receive_tgt_creds(krb5_ticket * ticket);
-    //------------------------------------------
-    // PURPOSE: Receive tgt from another process
-    // REQUIRE: ticket, context
-    // RETURNS: 1 -- unable to receive tgt
-    //          0 -- success
-    //------------------------------------------
-    
     int read_request(krb5_data * request);
     //------------------------------------------
     // PURPOSE: Read a request

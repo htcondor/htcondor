@@ -95,7 +95,7 @@ html-clean :
 
 man-clean :
 	@rm -fr man just-man-pages
-	@cd makeman; make clean >& /dev/null
+	@cd makeman; make clean > /dev/null 2>&1
 
 release : ref.pdf ref.html
 	@/bin/bash -e make-release
