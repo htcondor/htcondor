@@ -1945,6 +1945,9 @@ fi
 %endif
 
 %changelog
+* Tue Nov 14 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.5-1
+- Fixed an issue validating VOMS proxies
+
 * Tue Nov 14 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.8-1
 - Fixed an issue validating VOMS proxies
 
