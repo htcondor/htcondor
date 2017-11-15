@@ -28,6 +28,7 @@
 #include "utc_time.h"
 
 #include <iostream>
+#include <queue>
 
 using namespace std;
 
@@ -109,7 +110,9 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	}
 
 		//
-		// Get DAG node counts.
+		// Get DAG node counts. Also gather some simple graph metrics here 
+		// (ie. number of edges) to save other iterations through the jobs list 
+		// later.
 		// Note:  We don't check for nodes already marked being done (e.g.,
 		// in a rescue DAG) because they should have already been reported
 		// as being run.  wenger 2013-06-27
@@ -118,6 +121,7 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	dag->_jobs.Rewind();
 	while ( (node = dag->_jobs.Next()) ) {
 		_graphNumVertices++;
+		_graphNumEdges += node->NumChildren();
 		if ( node->GetDagFile() ) {
 			_subdagNodes++;
 		} else {
@@ -130,6 +134,8 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 		//
 	_graphWidth = GetGraphWidth(dag);
 	_graphHeight = GetGraphHeight(dag);
+
+	dag->_jobs.Rewind();
 }
 
 //---------------------------------------------------------------------------
@@ -367,7 +373,7 @@ int
 DagmanMetrics::GetGraphHeight( Dag* dag )
 {
 	int maxHeight = 0;
-	Job *node;
+	Job* node;
 	unordered_map<string, bool> visited;
 
 	dag->_jobs.Rewind();
@@ -379,7 +385,7 @@ DagmanMetrics::GetGraphHeight( Dag* dag )
 		// If this node does not appear in the visited list, get its height
 		// (maximum length from this node to any connected leaf node)
 		if ( results == visited.end() ) {
-			int thisNodeHeight = GetGraphHeightRecursive(node, dag, &visited);
+			int thisNodeHeight = GetGraphHeightRecursive( node, dag, &visited );
 			maxHeight = ( thisNodeHeight > maxHeight ) ? thisNodeHeight : maxHeight;
 		}
 	}
@@ -397,8 +403,7 @@ DagmanMetrics::GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<strin
 
 	// Check if this node has been visited. If not, add it to the visited list.	
 	// If this node is non-null, add it to the visited list
-	unordered_map<string, bool>::const_iterator visitedResults = visited->find( node->GetJobName() );
-	if ( visitedResults == visited->end() ) {
+	if ( visited->find( node->GetJobName() ) == visited->end() ) {
 		pair<string, bool> thisNode( node->GetJobName(), true );
 		visited->insert( thisNode );
 	}
@@ -423,7 +428,58 @@ DagmanMetrics::GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<strin
 int
 DagmanMetrics::GetGraphWidth( Dag* dag )
 {
-	return 0;
+	int maxWidth = 0;
+	Job *job;
+	queue<Job*> bfsQueue;
+	set<Job*> bfsJobTracker;
+	unordered_map<string, bool> visited;
+
+	// Iterate through the list of jobs. Now we'll use iterative BFS to 
+	// determine the maximum width of the graph (largest number of sibling nodes 
+	// at the same level). We also need to account for the fact the graph might 
+	// be disconnected, so we'll try kicking off a BFS algorithm for every 
+	// unvisited node.
+	dag->_jobs.Rewind();
+	while ( ( job = dag->_jobs.Next() ) ) {
+		
+		// Check if this job has already been visited. If so, move along. If
+		// not, leave it for now, it will get added during the BFS sequence
+		if ( visited.find( job->GetJobName() ) != visited.end() ) {
+			continue;
+		}
+			
+		// Now do the BFS dance for this job
+		bfsQueue.emplace( job );
+		bfsJobTracker.insert( job );
+		while ( !bfsQueue.empty() ) {
+			Job* thisNode = bfsQueue.front();
+			
+			// Add to visited list if not already there
+			if ( visited.find( thisNode->GetJobName() ) == visited.end() ) {
+				pair<string, bool> thisNodePair( thisNode->GetJobName(), true );
+				visited.insert( thisNodePair );
+			}
+
+			// Now remove the front node
+			bfsQueue.pop();
+
+			// For each child of this node, check if they've already in the BFS
+			// queue by looking in bfsJobTracker. If not, then add them to the 
+			// BFS queue. Otherwise just ignore and move on.
+			set<JobID_t>& childNodes = thisNode->GetQueueRef( Job::Q_CHILDREN );
+			set<JobID_t>::const_iterator it;
+			for ( it = childNodes.begin(); it != childNodes.end(); it++ ) {
+				Job* child = dag->FindNodeByNodeID( *it );
+				if ( bfsJobTracker.find( child ) == bfsJobTracker.end() ) {
+					bfsQueue.emplace( child );
+					bfsJobTracker.insert( child );
+				}
+			}
+		}
+		
+	}
+
+	return maxWidth;
 }
 
 //---------------------------------------------------------------------------

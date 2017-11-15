@@ -34,6 +34,8 @@
 // test.  wenger 2013-07-09
 #define DISABLE_NODE_TIME_METRICS
 
+using namespace std;
+
 class DagmanMetrics {
 public:
 		/** Sets the start time for the metrics.  This is not in the
@@ -112,13 +114,13 @@ private:
 		*/
 	static MyString GetVersion();
 
-		/*** Returns the height of the graph, ie. the longest possible route
+		/** Returns the height of the graph, ie. the longest possible route
 			 from root node to leaf node.
 		*/
 	static int GetGraphHeight( Dag* dag );
 	static int GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<string, bool>* visited );
 
-		/*** Returns the width of the graph, ie. the largest number of siblings
+		/** Returns the width of the graph, ie. the largest number of siblings
 			 that occurs for any given node.
 		*/
 	static int GetGraphWidth( Dag* dag );
