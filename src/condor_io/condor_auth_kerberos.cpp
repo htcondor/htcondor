@@ -80,7 +80,6 @@ static void (KRB5_CALLCONV *krb5_free_creds_ptr)(krb5_context, krb5_creds *) = N
 static void (KRB5_CALLCONV *krb5_free_keyblock_ptr)(krb5_context, register krb5_keyblock *) = NULL;
 static void (KRB5_CALLCONV *krb5_free_principal_ptr)(krb5_context, krb5_principal) = NULL;
 static void (KRB5_CALLCONV *krb5_free_ticket_ptr)(krb5_context, krb5_ticket *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_fwd_tgt_creds_ptr)(krb5_context, krb5_auth_context, char *, krb5_principal, krb5_principal, krb5_ccache, int, krb5_data *) = NULL;
 static krb5_error_code (KRB5_CALLCONV *krb5_get_credentials_ptr)(krb5_context, krb5_flags, krb5_ccache, krb5_creds *, krb5_creds **) = NULL;
 // The presence of KRB5_RESPONDER_QUESTION_PASSWORD is a hacky substitute
 // for detecting the version of Kerberos where the function signature
@@ -196,7 +195,6 @@ bool Condor_Auth_Kerberos::Initialize()
 		 !(krb5_free_keyblock_ptr = (void (*)(krb5_context, register krb5_keyblock *))dlsym(dl_hdl, "krb5_free_keyblock")) ||
 		 !(krb5_free_principal_ptr = (void (*)(krb5_context, krb5_principal))dlsym(dl_hdl, "krb5_free_principal")) ||
 		 !(krb5_free_ticket_ptr = (void (*)(krb5_context, krb5_ticket *))dlsym(dl_hdl, "krb5_free_ticket")) ||
-		 !(krb5_fwd_tgt_creds_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context, char *, krb5_principal, krb5_principal, krb5_ccache, int, krb5_data *))dlsym(dl_hdl, "krb5_fwd_tgt_creds")) ||
 		 !(krb5_get_credentials_ptr = (krb5_error_code (*)(krb5_context, krb5_flags, krb5_ccache, krb5_creds *, krb5_creds **))dlsym(dl_hdl, "krb5_get_credentials")) ||
 #if defined(KRB5_RESPONDER_QUESTION_PASSWORD)
 		 !(krb5_get_init_creds_keytab_ptr = (krb5_error_code (*)(krb5_context, krb5_creds *, krb5_principal, krb5_keytab, krb5_deltat, const char *, krb5_get_init_creds_opt *))dlsym(dl_hdl, "krb5_get_init_creds_keytab")) ||
@@ -250,7 +248,6 @@ bool Condor_Auth_Kerberos::Initialize()
 	krb5_free_keyblock_ptr = krb5_free_keyblock;
 	krb5_free_principal_ptr = krb5_free_principal;
 	krb5_free_ticket_ptr = krb5_free_ticket;
-	krb5_fwd_tgt_creds_ptr = krb5_fwd_tgt_creds;
 	krb5_get_credentials_ptr = krb5_get_credentials;
 	krb5_get_init_creds_keytab_ptr = krb5_get_init_creds_keytab;
 	krb5_init_context_ptr = krb5_init_context;
@@ -803,10 +800,6 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
             // regardless of where client/server are located
             
             // This is an implict GRANT
-            //if (forward_tgt_creds(creds_, 0)) {
-            //    dprintf(D_ALWAYS,"KERBEROS: Unable to forward credentials\n");
-            //return FALSE;  
-            //            }
         case KERBEROS_GRANT:
             break; 
         default:
@@ -1041,7 +1034,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_2()
         dprintf(D_SECURITY, "Client address is %s\n", getRemoteHost());
     }    
 
-    // First, map the name, this has to take place before receive_tgt_creds!
+    // First, map the name
     if (!map_kerberos_name(&(ticket_->enc_part2->client))) {
         dprintf(D_SECURITY, "Unable to map Kerberos name\n");
         goto error;
@@ -1508,176 +1501,6 @@ int Condor_Auth_Kerberos :: init_server_info()
 }
 
 
-int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
-                                              krb5_ccache       ccache)
-{
-    krb5_error_code  code;
-    krb5_data        request;
-    int              message, rc = 1;
-	MyString         hostname;
-    
-	hostname = get_hostname(mySock_->peer_addr());
-	char* hostname_char = strdup(hostname.Value());
-    
-    if ((code = (*krb5_fwd_tgt_creds_ptr)(krb_context_, 
-                                  auth_context_,
-	                              hostname_char,
-                                  cred->client, 
-                                  cred->server,
-                                  ccache, 
-                                  KDC_OPT_FORWARDABLE,
-                                  &request))) {
-		free(hostname_char);
-        goto error;
-    }
-	free(hostname_char);
-    
-    // Now, send it
-    
-    message = KERBEROS_FORWARD;
-    mySock_->encode();
-    if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
-        dprintf(D_ALWAYS, "Failed to send KERBEROS_FORWARD response\n");
-        goto cleanup;
-    }
-    
-    rc = !(send_request_and_receive_reply(&request) == KERBEROS_GRANT);
-    
-    goto cleanup;
-    
- error:
-    dprintf( D_ALWAYS, "KERBEROS: %s\n", (*error_message_ptr)(code) );
-    
- cleanup:
-    
-    free(request.data);
-    
-    return rc;
-}
-
-int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * /* ticket */ )
-{
-    krb5_error_code  code;
-	//krb5_ccache      ccache;
-    //krb5_principal   client;
-    //krb5_data        request;
-    //krb5_creds **    creds;
-    //char             defaultCCName[MAXPATHLEN+1];
-    int              message;
-    // First find out who we are talking to.
-    // In case of host or condor, we do not need to receive credential
-    // This is really ugly
-    /*
-    //
-    //if (!((strncmp(claimToBe, "host/"  , strlen("host/")) == 0) || 
-    //      (strncmp(claimToBe, "condor/", strlen("condor/")) == 0))) {
-    //    if (defaultStash_) {
-    //        sprintf(defaultCCName, STR_KRB_FORMAT, defaultStash_, claimToBe);
-    //        dprintf(D_ALWAYS, "%s\n", defaultCCName);
-    //  
-    //        // First, check to see if we have a stash ticket
-    //        if (code = (*krb5_cc_resolve_ptr)(krb_context_, defaultCCName, &ccache)) {
-      goto error;
-      }
-      
-      // A very weak assumption that client == ticket->enc_part2->client
-      // But this is what I am going to do right now
-      if (code = (*krb5_cc_get_principal_ptr)(krb_context_, ccache, &client)) {
-      // We need use to forward credential
-      message = KERBEROS_FORWARD;
-      
-      mySock_->encode();
-      if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
-      dprintf( D_ALWAYS,
-	  "Failed to send KERBEROS_FORWARD response in receive_tgt_creds()\n" );
-      return 1;
-      }
-      
-      // Expecting KERBEROS_FORWARD as well
-	mySock_->decode();
-	
-	if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
-	  dprintf(D_ALWAYS,
-	  "Failed to receive KERBEROS_FORWARD response in receive_tgt_creds()\n");
-	  return 1;
-          }
-          
-          if (message != KERBEROS_FORWARD) {
-	  dprintf(D_ALWAYS, "Client did not send KERBEROS_FORWARD message!\n");
-	  return 1;
-          }
-          else {
-	  if (!mySock_->code(request.length)) {
-          dprintf(D_ALWAYS, "KERBEROS: Credential length is invalid!\n");
-          return 1;
-	  }
-	  
-	  request.data = (char *) malloc(request.length);
-	  
-	  if ((!mySock_->get_bytes(request.data, request.length)) ||
-          (!mySock_->end_of_message())) {
-          dprintf(D_ALWAYS, "KERBEROS: Credential is invalid!\n");
-          return 1;
-	  }
-	  
-          // Technically spearking, we have the credential now
-	  if (code = (*krb5_rd_cred_ptr)(krb_context_, 
-          auth_context_, 
-          &request, 
-          &creds, 
-          NULL)) {
-          goto error;
-	  }
-	  
-	  // Now, try to store it
-	  if (code = (*krb5_cc_initialize_ptr)(krb_context_, 
-          ccache, 
-          ticket->enc_part2->client)) {
-          goto error;
-	  }
-	  
-	  if (code = (*krb5_cc_store_cred_ptr)(krb_context_, ccache, *creds)) {
-          goto error;
-	  }
-	  
-	  // free the stuff
-	  (*krb5_free_creds_ptr)(krb_context_, *creds);
-	  
-	  free(request.data);
-          }
-          }
-          
-          (*krb5_cc_close_ptr)(krb_context_, ccache);
-          
-          }
-          else {
-          dprintf(D_ALWAYS, "KERBEROS: Stash location is not set!\n");
-          goto error;
-          }
-          }
-    */
-    //------------------------------------------
-    // Tell the other side the good news
-    //------------------------------------------
-    message = KERBEROS_GRANT;
-  
-    mySock_->encode();
-    if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
-        dprintf(D_ALWAYS, "Failed to send KERBEROS_GRANT response\n");
-        return 1;
-    }
-    
-    return 0;  // Everything is fine
-  
-// error:
-    dprintf(D_ALWAYS, "KERBEROS: %s\n", (*error_message_ptr)(code));
-    //if (ccache) {
-    //  (*krb5_cc_destroy_ptr)(krb_context_, ccache);
-    //}
-    
-    return 1;
-}
-    
 int Condor_Auth_Kerberos :: read_request(krb5_data * request)
 {
     int code = TRUE, message = 0;
