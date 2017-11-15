@@ -5125,7 +5125,9 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case SPOOL_JOB_FILES:
 		case SPOOL_JOB_FILES_WITH_PERMS:
 			for (i=0; i<JobAdsArrayLen; i++) {
-				rsock->code(a_job);
+				if (!rsock->code(a_job)) {
+					dprintf(D_ALWAYS, "spoolJobFiles(): cannot recv job from client\n");
+				}
 					// Only add jobs to our list if the caller has permission 
 					// to do so.
 					// cuz only the owner of a job (or queue super user) 
@@ -5599,7 +5601,9 @@ UpdateGSICredContinuation::finish_update(ReliSock *rsock, ReliSock::x509_delegat
 
 		// Send our reply back to the client
 	rsock->encode();
-	rsock->code(reply);
+	if (!rsock->code(reply)) {
+		dprintf(D_ALWAYS, "updateGSICred: failed to reply to client\n");
+	}
 	rsock->end_of_message();
 
 	dprintf( D_AUDIT | D_ALWAYS, *rsock, "Refresh GSI cred for job %d.%d %s\n",
