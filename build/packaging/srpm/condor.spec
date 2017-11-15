@@ -1945,6 +1945,12 @@ fi
 %endif
 
 %changelog
+* Tue Nov 14 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.5-1
+- Fixed an issue validating VOMS proxies
+
+* Tue Nov 14 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.8-1
+- Fixed an issue validating VOMS proxies
+
 * Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.4-1
 - Improvements to DAGMan including support for late job materialization
 - Updates to condor_annex including improved status reporting

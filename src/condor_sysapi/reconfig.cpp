@@ -46,9 +46,9 @@ time_t _sysapi_last_x_event = 0;
 
 /* needed by free_fs_blocks.c */
 #ifndef WIN32
-int _sysapi_reserve_afs_cache = FALSE;
+long long _sysapi_reserve_afs_cache = FALSE;
 #endif
-int _sysapi_reserve_disk = 0;
+long long _sysapi_reserve_disk = 0;
 
 /* needed by idle_time.C */
 #ifndef WIN32

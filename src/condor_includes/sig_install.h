@@ -20,21 +20,25 @@
 #ifndef _CONDOR_SIG_INSTALL_H
 #define _CONDOR_SIG_INSTALL_H
 
+#ifndef WIN32
+
 #ifdef __cplusplus 
 extern "C" {
 #endif
 
 typedef void (*SIG_HANDLER)(int);
+typedef void (*SIG_ACTION)(int, siginfo_t *, void *);
 
 void install_sig_handler( int sig, SIG_HANDLER handler );
-#ifndef WIN32
 void install_sig_handler_with_mask( int sig, sigset_t* set, SIG_HANDLER handler );
-#endif
+void install_sig_action_with_mask( int sig, sigset_t* set, SIG_ACTION handler );
 void block_signal( int sig );
 void unblock_signal( int sig );
 
 #ifdef __cplusplus 
 }
 #endif
+
+#endif /* !WIN32 */
 
 #endif /* _CONDOR_SIG_INSTALL_H */

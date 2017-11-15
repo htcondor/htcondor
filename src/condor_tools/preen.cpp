@@ -86,9 +86,10 @@ void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
 void produce_output();
 bool is_valid_shared_exe( const char *name );
-bool is_ckpt_file( const char *name );
+bool is_ckpt_file_or_submit_digest( const char *name );
 bool is_v2_ckpt( const char *name );
 bool is_v3_ckpt( const char *name );
+bool is_submit_digest( const char *name );
 bool cluster_exists( int );
 bool proc_exists( int, int );
 bool is_myproxy_file( const char *name );
@@ -287,7 +288,7 @@ check_job_spool_hierarchy( char const *parent, char const *child, StringList &ba
 	while( (f=dir.Next()) ) {
 
 			// see if it's a legitimate job spool file/directory
-		if( is_ckpt_file(f) ) {
+		if( is_ckpt_file_or_submit_digest(f) ) {
 			good_file( topdir.c_str(), f );
 			continue;
 		}
@@ -376,8 +377,8 @@ check_spool_dir()
 		if ( ! well_known_list.contains(valid_list[ix])) well_known_list.append(valid_list[ix]);
 	}
 	
-	// connect to the Q manager
-	if (!(qmgr = ConnectQ (0))) {
+	// connect to the Q manager in read-only mode.
+	if (!(qmgr = ConnectQ (0,0,false))) {
 		dprintf( D_ALWAYS, "Not cleaning spool directory: Can't contact schedd\n" );
 		return;
 	}
@@ -424,7 +425,7 @@ check_spool_dir()
 		}
 
 			// see if it's a legitimate checkpoint
-		if( is_ckpt_file(f) ) {
+		if( is_ckpt_file_or_submit_digest(f) ) {
 			good_file( Spool, f );
 			continue;
 		}
@@ -491,20 +492,23 @@ is_valid_shared_exe( const char *name )
 
 /*
   Given the name of a file in the spool directory, return true if it's a
-  legitimate checkpoint file, and false otherwise.  If the name starts
-  with "cluster", it should be a V3 style checkpoint.  Otherwise it is
-  either a V2 style checkpoint, or not a checkpoint at all.
+  legitimate checkpoint file or submit digest, and false otherwise.  If the name starts
+  with "cluster", it should be a V3 style checkpoint. If it starts with condor_submit
+  it's a submit digest, Otherwise it is either a V2 style checkpoint, or not a checkpoint at all.
 */
 bool
-is_ckpt_file( const char *name )
+is_ckpt_file_or_submit_digest( const char *name )
 {
-
-	if( strstr(name,"cluster") ) {
-		return is_v3_ckpt( name );
-	} else {
+	if (name[0] == 'c') { // might start with 'cluster' or 'condor_submit'
+		if( name[1] == 'l' ) { // might start with 'cluster'
+			return is_v3_ckpt( name );
+		} else if ( name[1] == 'o' ) { // might start with 'condor_submit'
+			return is_submit_digest( name );
+		}
+	} else if ( name[0] == 'j') { // might start with 'job'
 		return is_v2_ckpt( name );
 	}
-
+	return false;
 }
 
 
@@ -580,6 +584,18 @@ is_v3_ckpt( const char *name )
 }
 
 /*
+  Check whether the given file could be a valid submit digest
+  for a queued late materialization job factory
+*/
+bool
+is_submit_digest( const char *name )
+{
+	int cluster = grab_val( name, "condor_submit." );
+	return cluster_exists( cluster );
+}
+
+
+/*
   Check whether the given file could be a valid MyProxy password file
   for a queued job.
 */
@@ -626,11 +642,12 @@ cluster_exists( int cluster )
 bool
 proc_exists( int cluster, int proc )
 {
-	ClassAd *ad;
+	if (cluster <= 0)
+		return false;
 
-	if ((ad = GetJobAd(cluster,proc)) != NULL) {
-		FreeJobAd(ad);
-		return true;
+	int id = 0;
+	if (GetAttributeInt(cluster, proc, ATTR_CLUSTER_ID, &id) < 0) {
+		return false;
 	}
 
 	return false;
@@ -740,36 +757,64 @@ check_daemon_sock_dir()
 }
 
 /*
-  Scan the webroot directory used for public input files. Remove any links
-  more than a week old, or that do not point to valid files.
+  Scan the webroot directory used for public input files. Look for .access files
+  more than a week old, and remove their respective hard links (same filename
+  minus the .access extension)
 */
 #ifdef HAVE_HTTP_PUBLIC_FILES
 void 
 check_public_files_webroot_dir() 
 {
-    // Make sure that PublicFilesWebrootDir is actually set before proceeding!
-    // If not set, just ignore it and bail out here.
-    if( !PublicFilesWebrootDir ) {
-        return;
-    }
+	// Make sure that PublicFilesWebrootDir is actually set before proceeding!
+	// If not set, just ignore it and bail out here.
+	if( !PublicFilesWebrootDir ) {
+		return;
+	}
 
-    const char	*f;
+	const char *filename;
 	Directory dir(PublicFilesWebrootDir, PRIV_ROOT);
-	std::string fullPath;
+	FileLock *accessFileLock;
+	std::string accessFilePath;
+	std::string hardLinkName;
+	std::string hardLinkPath;
 
-    // Set the stale age for a file to be one week
-    time_t stale_age = 60 * 60 * 24 * 7;
+	// Set the stale age for a file to be one week
+	time_t stale_age = param_integer( "HTTP_PUBLIC_FILES_STALE_AGE", 604800 );
 
-    while( ( f = dir.Next() ) ) {
-        fullPath = PublicFilesWebrootDir;
-        fullPath += DIR_DELIM_CHAR;
-        fullPath += f;
-        if( linked_recently( fullPath.c_str(), stale_age ) ) {
-            good_file( PublicFilesWebrootDir, f );
-        }
-        else {
-            bad_file( PublicFilesWebrootDir, f, dir );
-        }
+	while( ( filename = dir.Next() ) ) {
+		if( strstr( filename, ".access" ) ) {
+			accessFilePath = PublicFilesWebrootDir;
+			accessFilePath += DIR_DELIM_CHAR;
+			accessFilePath += filename;
+			
+			// Try to obtain a lock for the access file. If this fails for any
+			// reason, just bail out and move on.
+			accessFileLock = new FileLock( accessFilePath.c_str(), true, false );
+			if( !accessFileLock->obtain( WRITE_LOCK ) ) {
+				dprintf( D_ALWAYS, "check_public_files_webroot_dir: Failed to "
+					"obtain lock on %s, ignoring file\n", accessFilePath.c_str() );
+				continue;
+			}
+
+			hardLinkPath = accessFilePath.substr( 0, accessFilePath.length()-7 );
+			hardLinkName = hardLinkPath.substr( hardLinkPath.find_last_of( DIR_DELIM_CHAR ) );
+
+			// If the access file is stale, unlink both that and the hard link.
+			if( !linked_recently( accessFilePath.c_str(), stale_age ) ) {
+				// Something is weird here. I'm sending only the filename
+				// of the access file, but the full path of the hard link, and 
+				// it works correctly??
+				bad_file( PublicFilesWebrootDir, filename, dir );
+				bad_file( PublicFilesWebrootDir, hardLinkPath.c_str(), dir );
+			}
+			else {
+				good_file( PublicFilesWebrootDir, filename );
+				good_file( PublicFilesWebrootDir, hardLinkPath.c_str() );
+			}
+
+			// Release the lock before moving on
+			accessFileLock->release();
+		}
 	}
 }
 #endif

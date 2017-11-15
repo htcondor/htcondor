@@ -236,6 +236,9 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD $VCVER $win64 $buildid";
     } elsif ($taskname eq $BUILD_TESTS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat BLD_TESTS $VCVER $win64 $buildid";
+    } elsif ($taskname eq $TAR_TESTS_TASK) {
+        print "Windows CREATE_TESTS_TAR task\n";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat TAR_TESTS $VCVER $win64 $buildid";
     } elsif ($taskname eq $NATIVE_TASK) {
         print "Windows NATIVE (MSI) task\n";
         $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER $win64 $buildid";

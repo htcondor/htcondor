@@ -4735,11 +4735,17 @@ type=string
 description=Folder in the local filesystem for HTTP public file links to be served from.
 tags=file_transfer
 
-[HTTP_PUBLIC_FILES_USER]
-default=<condor>
+[HTTP_PUBLIC_FILES_ROOT_OWNER]
+default=apache
 type=string
-description=Username to create symlinks as, or token '<condor>' or token '<user>'.
+description=Owner of the user who owns the directory specified by HTTP_PUBLIC_FILES_ROOT_DIR
 tags=file_transfer
+
+[HTTP_PUBLIC_FILES_STALE_AGE]
+default=604800
+type=int
+description=Age (in seconds) after which preen determines this file is stale and removes it
+tags=file_transfer,preen
 
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
 default=10240

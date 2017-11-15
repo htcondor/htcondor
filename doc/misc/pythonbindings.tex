@@ -488,7 +488,7 @@ Parameter \texttt{daemon\_type} is the type of daemon;
 must be of the enum \texttt{DaemonTypes}. 
 
 \\ \hline
-\texttt{query( (AdTypes)ad\_type, constraint=True, attrs=[], (str)statistics = '' )}
+\texttt{query( (AdTypes)ad\_type, constraint=True, projection=[], (str)statistics = '' )}
 
 Query the contents of a \Condor{collector} daemon.
 Returns a list of ClassAds that match the \texttt{constraint} parameter.
@@ -500,7 +500,7 @@ If not specified, the type will be \texttt{ANY\_AD}.
 Optional parameter \texttt{constraint} is a constraint for the ClassAd query.
 It defaults to \texttt{True}.
 
-Optional parameter \texttt{attrs} is a list of attributes.
+Optional parameter \texttt{projection} is a list of attributes.
 If specified, the returned ClassAds will be projected along these attributes.
 
 Optional parameter \texttt{statistics} is a list of statistics attributes

@@ -358,7 +358,7 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 {
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	classad::Value val;
-	const char *str;
+	const char *str = NULL;
 	if ( ad && tree && 
 		 EvalExprTree(tree,ad,NULL,val) && val.IsStringValue(str) )
 	{
@@ -14705,7 +14705,9 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 	}
 
 	s->encode();
-	s->code(ret_value);
+	if (!s->code(ret_value)) {
+		dprintf(D_FULLDEBUG, "Unable to send ACK to startd keepalive, startd disconnected\n");
+	}
 	s->end_of_message();
 
 	if (claim_id) free(claim_id);
@@ -15263,7 +15265,9 @@ Scheduler::dumpState(int, Stream* s) {
 	job_ad.Assign( "Mail", Mail );
 	
 	int cmd = 0;
-	s->code( cmd );
+	if (!s->code( cmd )) {
+		dprintf(D_ALWAYS, "Squawk client disconnected from server\n");
+	}
 	s->end_of_message();
 
 	s->encode();

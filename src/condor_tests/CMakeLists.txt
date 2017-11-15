@@ -46,6 +46,8 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
+	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;CheckOutputFormats.pm;run_test.pl")
+
 	##########################################################
 	# exe test targets
 	condor_exe_test(x_return-n.exe "x_return-n.cpp;x_waste_second.c" "")
@@ -428,12 +430,12 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_q_formats "Condor_q formats" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-batch "Condor_q shows batch" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-af "Condor_q_shows af" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_status-af "Condor_status af" "core;quick;full'quicknolink")
+	condor_pl_test(cmd_status-af "Condor_status af" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_format_file "Condor_q format_file" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_transform_ads "Condor_transform_ads" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_status-transform "Condor_status transform" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_status-compact "Condor_status compact" "core;quick;full;quicknolink")
-	condor_pl_test(max_jobs_per_owner_test "Max_jobs_per_owner_test" "core;qiuck;full;quicknolink")
+	condor_pl_test(max_jobs_per_owner_test "Max_jobs_per_owner_test" "core;quick;full;quicknolink")
 	condor_pl_test(max_jobs_per_owner_test_group "Max_jobs_per_owner_test -group" "core;quick;full;quicknolink")
 	condor_pl_test(job_transform_names_test "Job_transform_names_test" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_submit-batchname "condor_submit -batch-name" "core;quick;full;quicknolink")

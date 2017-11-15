@@ -94,16 +94,16 @@ printClassAds(	const std::map< std::string, std::string > & instances,
 		if( attr == "in-pool" ) { attr = "InPool"; }
 
 		bool firstInWord = true;
-		for( unsigned i = 0; i < attr.size(); ++i ) {
-			if(! isalpha( attr[i] )) {
-				attr.erase( i, 1 );
-				--i;
+		for( unsigned n = 0; n < attr.size(); ++n ) {
+			if(! isalpha( attr[n] )) {
+				attr.erase( n, 1 );
+				--n;
 				firstInWord = true;
 				continue;
 			}
 
 			if( firstInWord ) {
-				attr[i] = toupper( attr[i] );
+				attr[n] = toupper( attr[n] );
 				firstInWord = false;
 			}
 		}

@@ -2171,6 +2171,7 @@ Daemons::InitParams()
 					// in the master by checking if a daemon we're starting is
 					// both a DC daemon and not in the list of DC daemons.
 					iter->second->isDC = true;
+					break;
 				}
 			}
 		}
@@ -2792,6 +2793,7 @@ void
 Daemons::FinalRestartMaster()
 {
 	int i;
+	const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
 
 	CleanupBeforeRestart();
 
@@ -2823,6 +2825,9 @@ Daemons::FinalRestartMaster()
 			(void)execl(systemshell, "/Q", "/C",
 				command.Value(), 0);
 #endif
+		} else if ( sd.ServicesActive() ) {
+			dprintf( D_ALWAYS, "Systemd services in use, exiting to be restarted by systemd\n" );
+			master_exit( 1 );
 		} else {
 			dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
 				 master->process_name);

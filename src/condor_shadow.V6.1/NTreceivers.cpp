@@ -48,9 +48,6 @@ static bool write_access(const char * filename ) {
 
 static int stat_string( char *line, struct stat *info )
 {
-#ifdef WIN32
-	return 0;
-#else
 	return sprintf(line,"%lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld\n",
 		(long long) info->st_dev,
 		(long long) info->st_ino,
@@ -60,13 +57,17 @@ static int stat_string( char *line, struct stat *info )
 		(long long) info->st_gid,
 		(long long) info->st_rdev,
 		(long long) info->st_size,
+#ifdef WIN32
+		(long long) 0, // use 0 as a placeholder
+		(long long) 0, // use 0 as a placeholder
+#else
 		(long long) info->st_blksize,
 		(long long) info->st_blocks,
+#endif
 		(long long) info->st_atime,
 		(long long) info->st_mtime,
 		(long long) info->st_ctime
 	);
-#endif
 }
 
 #if defined(Solaris)

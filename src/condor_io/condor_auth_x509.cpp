@@ -138,19 +138,25 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 		if (mySock_->isClient()) {
 			// Tell the other side, abort
 			mySock_->encode();
-			mySock_->code(status);
+			if (!mySock_->code(status)) {
+        		dprintf( D_SECURITY, "authenticate: and the remote side hung up on us.\n" );
+			}
 			mySock_->end_of_message();
 		}
 		else {
 			// I am server, first wait for the other side
 			mySock_->decode();
-			mySock_->code(reply);
+			if (!mySock_->code(reply)) {
+        		dprintf( D_SECURITY, "authenticate: the client side hung up on us.\n" );
+			}
 			mySock_->end_of_message();
 
 			if (reply == 1) { 
 				// The other side was okay, tell them the bad news
 				mySock_->encode();
-				mySock_->code(status);
+				if (!mySock_->code(status)) {
+					dprintf(D_SECURITY,"authenticate: the client hung up before authenticatiation\n");
+				}
 				mySock_->end_of_message();
 			}
 		}
@@ -824,7 +830,9 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
         // the loop.
         status = 0;
         mySock_->encode();
-        mySock_->code(status);
+        if (!mySock_->code(status)) {
+			dprintf(D_ALWAYS, "Authenticate: failed to inform client of failure to authenticate\n");
+		}
         mySock_->end_of_message();
     }
     else {

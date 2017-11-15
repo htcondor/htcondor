@@ -309,6 +309,9 @@ public:
 	// check to see if ix is selected for by the slice. negative iteration is ignored 
 	bool selected(int ix, int len);
 
+	// returns number of selected items for a list of the given length, result is never negative
+	int length_for(int len);
+
 	int to_string(char * buf, int cch);
 
 private:
@@ -361,6 +364,8 @@ public:
 	}
 
 	int  parse_queue_args(char* pqargs); // destructively parse queue line.
+	int  item_len();           // returns number of selected items, the items member must have been populated, or the mode must be foreach_not
+	                           // the return does not take queue_num into account.
 
 	int        foreach_mode;   // the mode of operation for foreach, one of the foreach_xxx enum values
 	int        queue_num;      // the count of processes to queue for each item
@@ -508,7 +513,7 @@ public:
 	void optimize() { if (SubmitMacroSet.sorted < SubmitMacroSet.size) optimize_macros(SubmitMacroSet); }
 	void dump(FILE* out, int flags);
 	const char* to_string(std::string & buf, int flags);
-	const char* make_digest(std::string & buf, int cluster_id, SubmitForeachArgs fea, int options);
+	const char* make_digest(std::string & buf, int cluster_id, StringList & vars, int options);
 	void setup_macro_defaults(); // setup live defaults table
 
 	MACRO_SET& macros() { return SubmitMacroSet; }

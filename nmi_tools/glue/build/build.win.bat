@@ -362,6 +362,16 @@ move src\classad\RelWithDebInfo\*.pdb src\condor_tests
 for /f %%I in ('dir /b/s bld_external\pcre.dll') do copy %%~fI src\condor_tests
 goto finis
 
+:TAR_TESTS
+where devenv || goto :msb_tar_tests
+@echo devenv CONDOR.sln /Build RelWithDebInfo /project tests-tar-pkg
+devenv CONDOR.sln /Build RelWithDebInfo /project tests-tar-pkg
+goto :finis
+:msb_tar_tests
+@echo msbuild /m:4 /p:Configuration=RelWithDebInfo /fl1 src\tests-tar-pkg.vcxproj
+msbuild /m:4 /p:Configuration=RelWithDebInfo /fl1 src\tests-tar-pkg.vcxproj
+goto :finis
+
 REM common exit
 :finis
 REM if the build failed, we don't want to continue, just exit the cmd shell and return the error
