@@ -3,7 +3,7 @@
 
 #include "export_headers.h"
 
-BOOST_PYTHON_MODULE(classad)
+BOOST_PYTHON_MODULE(_classad)
 {
     export_classad();
 }
