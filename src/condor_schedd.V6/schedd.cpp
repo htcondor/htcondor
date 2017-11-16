@@ -4963,7 +4963,10 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		rsock->decode();
 		answer = -1;
 	}
-	rsock->code(answer);
+	if (!rsock->code(answer)) {
+			dprintf(D_FULLDEBUG,"generalJobFilesWorkerThread(): "
+					"cannot send answer to client\n");
+	}
 	rsock->end_of_message();
 	s->timeout(old_timeout);
 
@@ -6249,7 +6252,9 @@ Scheduler::actOnJobs(int, Stream* s)
 		// since if that CommitTransaction failed, we'd EXCEPT()
 	rsock->encode();
 	int answer = OK;
-	rsock->code( answer );
+	if (!rsock->code( answer )) {
+		dprintf(D_FULLDEBUG, "actOnJobs(): tool hung up on us\n");
+	}
 	rsock->end_of_message();
 
 		// Now that we know the events are logged and commited to
