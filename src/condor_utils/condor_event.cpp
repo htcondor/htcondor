@@ -3424,6 +3424,7 @@ ShadowExceptionEvent::readEvent (FILE *file)
 bool
 ShadowExceptionEvent::formatBody( std::string &out )
 {
+#ifdef HAVE_EXT_POSTGRESQL
 	if (FILEObj) {
 		char messagestr[512];
 		ClassAd tmpCl1, tmpCl2;
@@ -3469,6 +3470,7 @@ ShadowExceptionEvent::formatBody( std::string &out )
 		}
 
 	}
+#endif
 
 	if (formatstr_cat( out, "Shadow exception!\n\t" ) < 0)
 		return false;
