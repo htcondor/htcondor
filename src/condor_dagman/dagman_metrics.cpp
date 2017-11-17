@@ -130,12 +130,6 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 		}
 	}
 
-		//
-		// Gather metrics about the size, shape of the graph.
-		//
-	_graphWidth = GetGraphWidth(dag);
-	_graphHeight = GetGraphHeight(dag);
-
 	dag->_jobs.Rewind();
 }
 
@@ -367,6 +361,18 @@ DagmanMetrics::GetTime( const struct tm &eventTime )
 	time_t result = mktime( &tmpTime );
 
 	return (double)result;
+}
+
+//---------------------------------------------------------------------------
+/* This function gathers metrics of a graph using various DFS and BFS
+   algorithms.
+*/
+void
+DagmanMetrics::GatherGraphMetrics( Dag* dag )
+{
+	// Gather metrics about the size, shape of the graph.
+	_graphWidth = GetGraphWidth( dag );
+	_graphHeight = GetGraphHeight( dag );
 }
 
 //---------------------------------------------------------------------------

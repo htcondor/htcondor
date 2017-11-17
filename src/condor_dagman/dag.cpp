@@ -272,6 +272,9 @@ Dag::CreateMetrics( const char *primaryDagFile, int rescueDagNum )
 void
 Dag::ReportMetrics( int exitCode )
 {
+	if(_dagStatus != dag_status::DAG_STATUS_CYCLE) {
+		_metrics->GatherGraphMetrics( this );
+	}
 	(void)_metrics->Report( exitCode, _dagStatus );
 }
 

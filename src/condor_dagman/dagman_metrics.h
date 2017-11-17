@@ -88,6 +88,11 @@ public:
 		*/
 	bool Report( int exitCode, Dag::dag_status status );
 
+		/** Calls other functions which measure some graph metrics. Assumes the
+			DAG is valid and does not contain any cycles.
+		*/
+	void GatherGraphMetrics(  Dag* dag  );
+
 		/** Write the metrics file.
 			@param exitCode The exit code of this DAGMan.
 			@param status The status of this DAGMan (see dag_status in
@@ -146,6 +151,9 @@ private:
 
 		// The name of the primary DAG file.
 	char *_primaryDagFile;
+
+		// Pointer to the DAG we're running 
+	static Dag* _dag;
 
 		// The number of the rescue DAG we're running (0 if not running
 		// a rescue DAG).
