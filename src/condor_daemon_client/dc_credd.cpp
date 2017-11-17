@@ -206,8 +206,7 @@ DCCredd::listCredentials (SimpleList <Credential*> & result,
 		// Receive response
 	rsock->decode();
 
-	rsock->code (size);
-	if (size == 0) {
+	if (!rsock->code(size) || (size == 0)) {
 		rtnVal = true;
 		goto EXIT;
 	}
