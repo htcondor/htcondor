@@ -60,6 +60,7 @@ extern int		master_exit(int);
 extern int		update_interval;
 extern int		check_new_exec_interval;
 extern int		preen_interval;
+extern int		preen_pid;
 extern int		new_bin_delay;
 extern StopStateT new_bin_restart_mode;
 extern char*	FS_Preen;
@@ -2969,6 +2970,16 @@ Daemons::DefaultReaper(int pid, int status)
 		valid_iter->second->Exited( status );
  		delete valid_iter->second;
 		exit_allowed.erase(valid_iter);
+		return TRUE;
+	} else if ( pid == preen_pid ) {
+		if ( WIFSIGNALED( status ) ) {
+			dprintf( D_ALWAYS, "Preen (pid %d) died due to %s\n", preen_pid,
+					 daemonCore->GetExceptionString( status ) );
+		} else {
+			dprintf( D_ALWAYS, "Preen (pid %d) exited with status %d\n",
+					 preen_pid, WEXITSTATUS( status ) );
+		}
+		preen_pid = -1;
 		return TRUE;
 	} else {
 		dprintf( D_ALWAYS, "DefaultReaper unexpectedly called on pid %i, status %i.\n", pid, status);

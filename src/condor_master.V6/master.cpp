@@ -102,6 +102,7 @@ int		MasterLockFD;
 int		update_interval;
 int		check_new_exec_interval;
 int		preen_interval;
+int		preen_pid = -1;
 int		new_bin_delay;
 StopStateT new_bin_restart_mode = GRACEFUL;
 char	*MasterName = NULL;
@@ -1618,13 +1619,15 @@ NewExecutable(char* file, time_t *tsp)
 void
 run_preen()
 {
-	int		child_pid;
 	char *args=NULL;
 	const char	*preen_base;
 	ArgList arglist;
 	MyString error_msg;
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
+	if ( preen_pid > 0 ) {
+		dprintf( D_ALWAYS, "WARNING: Preen is already running (pid %d)\n", preen_pid );
+	}
 
 	if( FS_Preen == NULL ) {
 		return;
@@ -1638,13 +1641,13 @@ run_preen()
 	}
 	free(args);
 
-	child_pid = daemonCore->Create_Process(
+	preen_pid = daemonCore->Create_Process(
 					FS_Preen,		// program to exec
 					arglist,   		// args
 					PRIV_ROOT,		// privledge level
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
-	dprintf( D_ALWAYS, "Preen pid is %d\n", child_pid );
+	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
 }
 
 
