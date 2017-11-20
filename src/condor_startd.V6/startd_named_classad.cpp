@@ -70,8 +70,8 @@ StartdNamedClassAd::ShouldMergeInto(ClassAd * merge_into, const char ** pattr_us
 		int matches = false;
 		if (merge_from->EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_into, matches)) {
 			if (pattr_used) *pattr_used = ATTR_SLOT_MERGE_CONSTRAINT;
-			return matches;
 		}
+		return matches;
 	}
 
 	// if there is a "Name" or "SlotName" attribute in the source, then merge into slots
