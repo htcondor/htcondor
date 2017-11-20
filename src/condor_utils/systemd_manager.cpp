@@ -133,9 +133,11 @@ SystemdManager::PrepareForExec() const
 	if ( m_need_restart ) {
 		return false;
 	}
+#ifdef LINUX
 	if ( !m_notify_socket.empty() ) {
 		setenv( "NOTIFY_SOCKET", m_notify_socket.c_str(), 1 );
 	}
+#endif
 	return true;
 }
 
