@@ -66,7 +66,7 @@ DagmanClassad::~DagmanClassad()
 void
 DagmanClassad::Update( int total, int done, int pre, int submitted,
 			int post, int ready, int failed, int unready,
-			Dag::dag_status dagStatus, bool recovery, DagmanStats stats )
+			Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats )
 {
 
 	if ( !_valid ) {
