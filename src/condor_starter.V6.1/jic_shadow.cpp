@@ -1651,7 +1651,9 @@ refuse(ReliSock * s)
 	ASSERT(s);
 	s->encode();
 	int i = 0; // == failure;
-	s->code(i); // == failure
+	if (!s->code(i)) {
+		dprintf(D_ALWAYS, "Unable to refuse X509 proxy update -- has client gone away?\n");
+	}
 	s->end_of_message();
 }
 
@@ -1799,7 +1801,9 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 	if( ! usingFileTransfer() ) {
 		s->encode();
 		int i = 2; // == success, but please don't call any more.
-		s->code(i); // == success, but please don't call any more.
+		if (!s->code(i)) { // == success, but please don't call any more.
+			dprintf(D_ALWAYS, "Unable to update X509 proxy request -- has client gone away?\n");
+		}
 		s->end_of_message();
 		refuse(s);
 		return false;
