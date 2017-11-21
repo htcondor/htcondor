@@ -41,6 +41,10 @@
 #include "match_prefix.h"
 #include "historyFileFinder.h"
 
+#ifdef LINUX
+#include <sys/prctl.h>
+#endif
+
 #include "file_sql.h"
 #include "file_xml.h"
 
@@ -759,6 +763,12 @@ unix_sig_coredump(int signum, siginfo_t *s_info, void *)
 	WriteCoreDump(core_name ? core_name : "core");
 #endif
 
+#ifdef LINUX
+	if ( prctl(PR_SET_DUMPABLE, 1, 0, 0) != 0 ) {
+		log_args[0] = (unsigned long)errno;
+		dprintf_async_safe("Warning: prctl() failed: errno %0\n", log_args, 1);
+	}
+#endif
 	// It would be a good idea to actually terminate for the same reason.
 	sa.sa_handler = SIG_DFL;
 	sigemptyset(&sa.sa_mask);
