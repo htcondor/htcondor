@@ -109,10 +109,14 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 			webRootDir.c_str());
 		return (false);
 	}
-	std::string accessFilePath;
-	accessFilePath = dircat(goodPath, newLink.c_str());
-	accessFilePath += ".access";
 
+	// Determine the full path of the access file. Save it to a std::string and
+	// deallocate the memory that dircat() returned.
+	char* hardLinkFilePath = dircat(goodPath, newLink.c_str());
+	std::string accessFilePath(hardLinkFilePath);
+	accessFilePath += ".access";
+	delete [] hardLinkFilePath;
+	
 	// STARTING HERE, DO NOT RETURN FROM THIS FUNCTION WITHOUT RESETTING
 	// THE ORIGINAL PRIV STATE.
 	
@@ -175,6 +179,7 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	if (targetLink) {
 		// If link exists, update the .access file timestamp.
 		retVal = true;
+		delete [] targetLinkPath;
 		fclose(targetLink);
 	}	
 	else {
@@ -241,7 +246,12 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	// Touch the access file. This will create it if it doesn't exist, or update
 	// the timestamp if it does.
 	FILE* accessFile = fopen(accessFilePath.c_str(), "w");
-	fclose(accessFile);
+	if (accessFile) {
+		fclose(accessFile);
+	}
+	else {
+		dprintf(D_ALWAYS, "Failed to update access file %s.\n", accessFilePath.c_str());
+	}
 	
 	// Release the lock on the access file
 	if(!accessFileLock->release()) {
@@ -249,7 +259,7 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 			" error code %d (%s).\n", errno, strerror(errno));
 	}
 
-	// Free the hard link filename
+	// Free the target link path
 	delete [] targetLinkPath;
 
 	// Reset priv state
