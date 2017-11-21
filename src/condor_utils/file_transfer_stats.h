@@ -34,7 +34,6 @@
 		FileTransferStats();
 		~FileTransferStats();
 
-		bool HttpUsedCache;
 		bool TransferSuccess;
 		
 		double ConnectionTimeSeconds;
