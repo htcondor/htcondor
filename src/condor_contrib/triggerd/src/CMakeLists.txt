@@ -48,7 +48,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 
 file( GLOB Srcs TriggerConsole.* Triggerd.* TriggerObject.* triggerd_main.cpp )
-condor_exe( condor_triggerd "${Srcs};CondorTrigger.cpp;CondorTriggerService.cpp;EventCondorTriggerNotify.cpp" "${C_SBIN}" "${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${QPID_FOUND};broker_utils" OFF )
+condor_exe( condor_triggerd "${Srcs};CondorTrigger.cpp;CondorTriggerService.cpp;EventCondorTriggerNotify.cpp" "${C_SBIN}" "${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND};broker_utils" OFF )
 
 #############################
 

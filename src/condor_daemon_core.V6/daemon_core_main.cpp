@@ -55,9 +55,6 @@
 #ifdef WIN32
 #include "exception_handling.WINDOWS.h"
 #endif
-#if HAVE_EXT_COREDUMPER
-#include "google/coredumper.h"
-#endif
 
 // Externs to Globals
 extern DLL_IMPORT_MAGIC char **environ;
@@ -758,10 +755,6 @@ unix_sig_coredump(int signum, siginfo_t *s_info, void *)
 			dprintf_async_safe("Error: chdir(%s0) failed: %1\n", log_args, 3);
 		}
 	}
-
-#if HAVE_EXT_COREDUMPER
-	WriteCoreDump(core_name ? core_name : "core");
-#endif
 
 #ifdef LINUX
 	if ( prctl(PR_SET_DUMPABLE, 1, 0, 0) != 0 ) {

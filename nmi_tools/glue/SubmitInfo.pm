@@ -83,7 +83,6 @@ my @minimal_build_configure_args =
 	 '-D_VERBOSE:BOOL'			  => 'ON',
 	 '-DCLIPPED:BOOL'			  => 'ON',
 	 '-DWITH_BLAHP:BOOL'		 => 'OFF',
-	 '-DWITH_COREDUMPER:BOOL'	 => 'OFF',
 	 '-DWITH_CREAM:BOOL'		 => 'OFF',
 	 '-DWITH_DRMAA:BOOL'		 => 'OFF',
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
