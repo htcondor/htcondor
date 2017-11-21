@@ -2826,7 +2826,7 @@ Daemons::FinalRestartMaster()
 			(void)execl(systemshell, "/Q", "/C",
 				command.Value(), 0);
 #endif
-		} else if ( sd.ServicesActive() ) {
+		} else if ( !sd.PrepareForExec() ) {
 			dprintf( D_ALWAYS, "Systemd services in use, exiting to be restarted by systemd\n" );
 			master_exit( 1 );
 		} else {
