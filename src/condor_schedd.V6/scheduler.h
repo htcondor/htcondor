@@ -577,6 +577,7 @@ class Scheduler : public Service
 	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
 	bool			WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 	int				receive_startd_alive(int cmd, Stream *s);
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions
@@ -1086,6 +1087,7 @@ extern bool releaseJob( int cluster, int proc, const char* reason = NULL,
 					 bool use_transaction = false, 
 					 bool email_user = false, bool email_admin = false,
 					 bool write_to_user_log = true);
+extern bool setJobFactoryPauseAndLog(JobQueueCluster * cluster, int pause_mode, int hold_code, const std::string& reason);
 
 
 /** Hook to call whenever we're going to give a job to a "job
