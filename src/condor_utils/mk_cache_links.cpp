@@ -179,7 +179,6 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	if (targetLink) {
 		// If link exists, update the .access file timestamp.
 		retVal = true;
-		delete [] targetLinkPath;
 		fclose(targetLink);
 	}	
 	else {
