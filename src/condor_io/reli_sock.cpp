@@ -1392,7 +1392,10 @@ ReliSock::get_statistics() {
 		"snd_ssthresh: %d "
 		"snd_cwnd: %d "
 		"advmss: %d "
-		"reordering: %d ",
+		"reordering: %d "
+		"rcv_rtt: %d "
+		"rcv_space: %d "
+		"total_retrans: %d ",
 		
 		ti.tcpi_rto,
 		ti.tcpi_ato,
@@ -1409,7 +1412,10 @@ ReliSock::get_statistics() {
 		ti.tcpi_snd_ssthresh,
 		ti.tcpi_snd_cwnd,
 		ti.tcpi_advmss,
-		ti.tcpi_reordering);
+		ti.tcpi_reordering,
+		ti.tcpi_rcv_rtt,
+		ti.tcpi_rcv_space,
+		ti.tcpi_total_retrans);
 		
 	return statsBuf;
 #endif
