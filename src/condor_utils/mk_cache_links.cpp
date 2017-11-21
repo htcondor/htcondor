@@ -179,6 +179,7 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	if (targetLink) {
 		// If link exists, update the .access file timestamp.
 		retVal = true;
+		delete [] targetLinkPath;
 		fclose(targetLink);
 	}	
 	else {
@@ -245,10 +246,12 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	// Touch the access file. This will create it if it doesn't exist, or update
 	// the timestamp if it does.
 	FILE* accessFile = fopen(accessFilePath.c_str(), "w");
-	if (!accessFile) {
+	if (accessFile) {
+		fclose(accessFile);
+	}
+	else {
 		dprintf(D_ALWAYS, "Failed to update access file %s.\n", accessFilePath.c_str());
 	}
-	fclose(accessFile);
 	
 	// Release the lock on the access file
 	if(!accessFileLock->release()) {
