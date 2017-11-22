@@ -194,7 +194,6 @@ Source90: find-requires.sh
 Source101: blahp-1.16.5.1.tar.gz
 Source102: boost_1_49_0.tar.gz
 Source103: c-ares-1.3.0.tar.gz
-Source104: coredumper-2011.05.24-r31.tar.gz
 Source105: drmaa-1.6.1.tar.gz
 Source106: glite-ce-cream-client-api-c-1.14.0-4.sl6.tar.gz
 Source107: glite-ce-wsdl-1.14.0-4.sl6.tar.gz
