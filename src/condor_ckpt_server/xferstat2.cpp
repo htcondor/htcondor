@@ -281,8 +281,8 @@ void TransferState::Insert(int            child_pid,
     }
 	memcpy((char*) &t->shadow_addr, (char*) &shadow_addr, 
 		   sizeof(struct in_addr));
-	strncpy(t->filename, filename, MAX_CONDOR_FILENAME_LENGTH);
-	strncpy(t->owner, owner, MAX_NAME_LENGTH);
+	strncpy(t->filename, filename, MAX_CONDOR_FILENAME_LENGTH - 1);
+	strncpy(t->owner, owner, MAX_NAME_LENGTH - 1);
 	t->req_id = req_id;
 	t->child_pid = child_pid;
 	t->start_time = time(NULL);

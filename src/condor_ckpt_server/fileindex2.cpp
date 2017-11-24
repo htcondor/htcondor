@@ -138,7 +138,7 @@ owner_node* FileIndex::FindOrAddOwner(machine_node* m,
             }
           ptr->left = NULL;
           ptr->right = NULL;
-          strncpy(ptr->owner_name, owner_name, MAX_NAME_LENGTH);
+          strncpy(ptr->owner_name, owner_name, MAX_NAME_LENGTH - 1);
           ptr->file_root = NULL;
           if (trail == NULL)
             m->owner_root = ptr;
@@ -191,7 +191,7 @@ file_node* FileIndex::FindOrAddFile(file_node*& file_root,
 	    }
 	  ptr->left = NULL;
 	  ptr->right = NULL;
-	  strncpy(ptr->file_name, file_name, MAX_CONDOR_FILENAME_LENGTH);
+	  strncpy(ptr->file_name, file_name, MAX_CONDOR_FILENAME_LENGTH - 1);
 	  ptr->file_data = NULL;
 	  if (trail == NULL)
 	    file_root = ptr;
