@@ -7312,6 +7312,41 @@ REM Run the actual job now
   which currently defaults to 10 MiB in size.
   Values are specified with the same syntax as \MacroNI{MAX\_DEFAULT\_LOG}.
 
+\label{param:Charliecloud}
+\item[\Macro{CHARLIECLOUD}]
+  The path to the Charliecloud binary.
+  The default value is \File{/usr/bin/ch-run}.
+
+\label{param:CharliecloudMountHome}
+\item[\Macro{CHARLIECLOUD\_MOUNT\_HOME}]
+  A boolean value specifying whether the user's home should be mounted
+  inside the Charliecloud container.
+  The default value is \Expr{True}.
+
+\label{param:CharliecloudJob}
+\item[\Macro{CHARLIECLOUD\_JOB}]
+  A boolean value specifying whether this startd should run jobs
+  under Charliecloud.
+  The default value is \Expr{False}.
+
+\label{param:CharliecloudContainerExpr}
+\item[\Macro{CHARLIECLOUD\_CONTAINER\_EXPR}]
+  The path to the Charliecloud container directory.
+  The default value is \AdStr{CharliecloudContainer}.
+
+\label{param:CharliecloudTargetDir}
+\item[\Macro{CHARLIECLOUD\_TARGET\_DIR}]
+  A directory within the Charliecloud image to which
+  \MacroNI{\$\_CONDOR\_SCRATCH\_DIR}
+  on the host should be mapped.
+  The default value is \AdStr{}.
+
+\label{param:CharliecloudBindExpr}
+\item[\Macro{CHARLIECLOUD\_BIND\_EXPR}]
+  A string value containing a list of bind mount specifications to
+  be passed to Charliecloud.
+  The default value is \AdStr{CharliecloudBind}.
+
 \label{param:Singularity}
 \item[\Macro{SINGULARITY}]
   The path to the Singularity binary.

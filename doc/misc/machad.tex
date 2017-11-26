@@ -241,6 +241,11 @@ the SSSE 3 instructions, and \Expr{Undefined} otherwise.
 if the machine being advertised supports
 the avx instructions, and \Expr{Undefined} otherwise.
 %
+\index{ClassAd machine attribute!HasCharliecloud}
+\item[\AdAttr{HasCharliecloud}:] A boolean value set to \Expr{True}
+if the machine being advertised supports running jobs within
+Charliecloud containers.
+%
 \index{ClassAd machine attribute!HasSingularity}
 \item[\AdAttr{HasSingularity}:] A boolean value set to \Expr{True}
 if the machine being advertised supports running jobs within
@@ -671,6 +676,12 @@ is the negotiated amount of time remaining for the current running
 job.  This may be less than the amount offered by the machine's
 \AdAttr{MaxJobRetirementTime} expression, because the job may
 ask for less.
+%
+\index{ClassAd machine attribute!CharliecloudVersion}
+\item[\AdAttr{CharliecloudVersion}:]
+A string containing the version of Singularity available, if the
+machine being advertised supports running jobs within a Charliecloud
+container (see \MacroNI{HasCharliecloud}).
 %
 \index{ClassAd machine attribute!SingularityVersion}
 \item[\AdAttr{SingularityVersion}:]

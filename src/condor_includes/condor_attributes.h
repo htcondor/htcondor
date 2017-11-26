@@ -92,6 +92,7 @@
 #define ATTR_CKPT_LAST_READ  "CkptLastRead"
 #define ATTR_CKPT_OPSYS  "CkptOpSys"
 #define ATTR_PAIRED_CLAIM_ID  "PairedClaimId"
+#define ATTR_CHARLIECLOUD_VERSION "CharliecloudVersion"
 #define ATTR_CHECKPOINT_SIG  "CheckpointSig"
 #define ATTR_CHILD_CLAIM_IDS "ChildClaimIds"
 #define ATTR_CLAIM_ID  "ClaimId"
@@ -243,6 +244,7 @@
 #define ATTR_MYPROXY_NEW_PROXY_LIFETIME  "MyProxyNewProxyLifetime"
 // END ckireyev myproxy
 #define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
+#define ATTR_HAS_CHARLIECLOUD "HasCharliecloud"
 #define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
 #define ATTR_HAS_DOCKER  "HasDocker"
 #define ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY "HasEncryptExecuteDirectory"
