@@ -4441,7 +4441,9 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 
 	// Output statistics to file
 	MyString stats_string;
+	MyString stats_output = "***\n";
 	sPrintAd( stats_string, stats );
+	stats_output += stats_string;
 
 	FILE* stats_file = safe_fopen_wrapper( stats_file_path.c_str(), "a" );
 	if( !stats_file ) {
@@ -4449,7 +4451,8 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 			" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
 	}
 	else {
-		fprintf( stats_file, "***\n%s", stats_string.Value() );
+		int stats_file_fd = fileno( stats_file );
+		write( stats_file_fd, stats_output.Value(), stats_output.length() );
 		fclose( stats_file );
 	}
 	
