@@ -36,7 +36,7 @@ add_library (aviary_query_axis SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
 target_link_libraries (aviary_query_axis ${WSO2_FOUND})
 
 condor_exe( aviary_query_server "${JOB_SERVER_SRCS}" "${C_SBIN}" 
-    "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${WSO2_FOUND};aviary_wso2_common;aviary_axis_provider" OFF )
+    "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${WSO2_FOUND};aviary_wso2_common;aviary_axis_provider" OFF )
 
 ############################
 # install target

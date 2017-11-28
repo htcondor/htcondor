@@ -102,9 +102,9 @@ file_info_node* FileInformation::AddFileInfo(const condor_sockaddr& machine_IP,
     }
   n->data.machine_IP = machine_IP;
   machine_IP.to_ip_string(temp_name, sizeof(temp_name));
-  strncpy(n->data.machine_IP_name, temp_name, MAX_MACHINE_NAME_LENGTH);
-  strncpy(n->data.owner_name, owner_name, MAX_NAME_LENGTH);
-  strncpy(n->data.file_name, file_name, MAX_CONDOR_FILENAME_LENGTH);
+  strncpy(n->data.machine_IP_name, temp_name, MAX_MACHINE_NAME_LENGTH - 1);
+  strncpy(n->data.owner_name, owner_name, MAX_NAME_LENGTH - 1);
+  strncpy(n->data.file_name, file_name, MAX_CONDOR_FILENAME_LENGTH - 1);
   n->data.size = file_size;
   n->data.last_modified_time = time(NULL);
   n->data.state = state;

@@ -303,6 +303,7 @@
 #define ATTR_JOB_MATERIALIZE_NEXT_ROW     "JobMaterializeNextRow"
 #define ATTR_JOB_MATERIALIZE_STEP_SIZE    "JobMaterializeStepSize"
 #define ATTR_JOB_MATERIALIZE_PAUSED       "JobMaterializePaused"
+#define ATTR_JOB_MATERIALIZE_PAUSE_REASON "JobMaterializePauseReason"
 #define ATTR_JOB_ARGUMENTS1  "Args"
 #define ATTR_JOB_ARGUMENTS2  "Arguments"
 #define ATTR_JOB_CMD  "Cmd"

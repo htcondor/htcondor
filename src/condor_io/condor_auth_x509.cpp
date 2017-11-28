@@ -166,11 +166,15 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 		if (mySock_->isClient()) {
 			// Tell the other side, that I am fine, then wait for answer
 			mySock_->encode();
-			mySock_->code(status);
+			if (!mySock_->code(status)) {
+				dprintf(D_SECURITY, "authenticate: the service hung up before authentication\n");
+			}
 			mySock_->end_of_message();
 
 			mySock_->decode();
-			mySock_->code(reply);
+			if (!mySock_->code(reply)) {
+				dprintf(D_SECURITY, "authenticate: the service hung up before authentication reply could be sent\n");
+			}
 			mySock_->end_of_message();
 			if (reply == 0) {   // The other side failed, abort
 				errstack->push("GSI", GSI_ERR_REMOTE_SIDE_FAILED,

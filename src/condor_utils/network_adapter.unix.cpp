@@ -254,7 +254,7 @@ UnixNetworkAdapter::setNetMask( const struct ifreq &ifr )
 		(const struct sockaddr_in *) &(m_netmask);
 	strncpy( m_netmask_str,
 			 inet_ntoa(in_addr->sin_addr),
-			 sizeof(m_netmask_str) );
+			 sizeof(m_netmask_str) - 1);
 }
 
 #endif

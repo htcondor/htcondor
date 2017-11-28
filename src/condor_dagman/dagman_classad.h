@@ -54,7 +54,7 @@ class DagmanClassad {
 	*/
 	void Update( int total, int done, int pre, int submitted, int post,
 				int ready, int failed, int unready,
-				Dag::dag_status dagStatus, bool recovery, DagmanStats stats );
+				Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A MyString to receive the Owner value.

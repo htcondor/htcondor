@@ -4637,6 +4637,21 @@ Scheduler::WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	}
 	FactoryRemoveEvent event;
 
+	MyString reason;
+	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
+	if ( ! reason.empty()) { event.notes = reason.StrDup(); }
+
+	int code = 0;
+	GetJobFactoryMaterializeMode(cluster, code);
+	switch (code) {
+	case mmInvalid: event.completion = FactoryRemoveEvent::CompletionCode::Error; break;
+	case mmRunning: event.completion = FactoryRemoveEvent::CompletionCode::Incomplete; break;
+	case mmHold: event.completion = FactoryRemoveEvent::CompletionCode::Paused; break;
+	case mmNoMoreItems: event.completion = FactoryRemoveEvent::CompletionCode::Complete; break;
+	}
+	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, event.next_proc_id);
+	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_ROW, event.next_row);
+
 	ULog->setEnableFsync(do_fsync);
 	bool status = ULog->writeEvent(&event, cluster);
 	delete ULog;
@@ -4649,6 +4664,70 @@ Scheduler::WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	}
 	return true;
 }
+
+bool
+Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync )
+{
+	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	ULog->setEnableFsync(do_fsync);
+
+	int code = mmRunning;
+	if ( ! cluster->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, code)) {
+		// can't figure out the pause mode of the factory.
+		return false;
+	}
+
+	// if no reason supplied as an argument, use the one in the cluster ad (if any)
+	std::string reason_buf;
+	if ( ! reason) {
+		cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason_buf);
+		if ( ! reason_buf.empty()) { reason = reason_buf.c_str(); }
+	}
+
+	bool status;
+
+	if (code != mmRunning) {
+		// factory is paused.
+		FactoryPausedEvent event;
+		if (reason) event.setReason(reason);
+		// if the code is mmInvalid, there is no hold code, just use the pause reason code (for now)
+		if (code == mmInvalid) {
+			event.setPauseCode(code);
+		} else if (code == mmHold) {
+			// we expect to get here only when code == mmHold, so use the hold_code as the code value
+			// the reason text will also be the hold reason text.
+			// (the other codes are mmNoMoreItems && mmClusterRemoved, which we don't log)
+			event.setPauseCode(code);
+			event.setHoldCode(hold_code);
+		} else {
+			#if 1 //def DEBUG
+			// in debug mode, always write the pause code
+			event.setPauseCode(code);
+			#endif
+		}
+		status = ULog->writeEvent(&event,cluster);
+	} else {
+		// factory is resumed.
+		FactoryResumedEvent event;
+		if (reason) event.setReason(reason);
+		status = ULog->writeEvent(&event,cluster);
+	}
+
+	delete ULog;
+
+	if (!status) {
+		dprintf( D_ALWAYS, "Unable to log %s event for job %d.%d\n", 
+			(code != mmRunning) ? "ULOG_FACTORY_PAUSED" : "ULOG_FACTORY_RESUMED", 
+			cluster->jid.cluster, cluster->jid.proc );
+		return false;
+	}
+	return true;
+}
+
 
 int
 Scheduler::transferJobFilesReaper(int tid,int exit_status)
@@ -4963,7 +5042,10 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		rsock->decode();
 		answer = -1;
 	}
-	rsock->code(answer);
+	if (!rsock->code(answer)) {
+			dprintf(D_FULLDEBUG,"generalJobFilesWorkerThread(): "
+					"cannot send answer to client\n");
+	}
 	rsock->end_of_message();
 	s->timeout(old_timeout);
 
@@ -5125,7 +5207,9 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case SPOOL_JOB_FILES:
 		case SPOOL_JOB_FILES_WITH_PERMS:
 			for (i=0; i<JobAdsArrayLen; i++) {
-				rsock->code(a_job);
+				if (!rsock->code(a_job)) {
+					dprintf(D_ALWAYS, "spoolJobFiles(): cannot recv job from client\n");
+				}
 					// Only add jobs to our list if the caller has permission 
 					// to do so.
 					// cuz only the owner of a job (or queue super user) 
@@ -5599,7 +5683,9 @@ UpdateGSICredContinuation::finish_update(ReliSock *rsock, ReliSock::x509_delegat
 
 		// Send our reply back to the client
 	rsock->encode();
-	rsock->code(reply);
+	if (!rsock->code(reply)) {
+		dprintf(D_ALWAYS, "updateGSICred: failed to reply to client\n");
+	}
 	rsock->end_of_message();
 
 	dprintf( D_AUDIT | D_ALWAYS, *rsock, "Refresh GSI cred for job %d.%d %s\n",
@@ -5620,7 +5706,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	int num_cluster_matches = 0;
 	int new_status = -1;
 	char buf[256];
-	char *reason = NULL;
+	MyString reason;
 	const char *reason_attr_name = NULL;
 	ReliSock* rsock = (ReliSock*)s;
 	bool needs_transaction = true;
@@ -5732,24 +5818,14 @@ Scheduler::actOnJobs(int, Stream* s)
 		return FALSE;
 	}
 		// Grab the reason string if the command ad gave it to us
-	char *tmp = NULL;
-	const char *owner;
 	if( reason_attr_name ) {
-		command_ad.LookupString( reason_attr_name, &tmp );
+		command_ad.LookupString( reason_attr_name, reason );
 	}
-	if( tmp ) {
+	if( ! reason.empty() ) {
 			// patch up the reason they gave us to include who did
 			// it. 
-		owner = rsock->getOwner();
-		int size = strlen(tmp) + strlen(owner) + 14;
-		reason = (char*)malloc( size * sizeof(char) );
-		if( ! reason ) {
-				// Maybe change EXCEPT to print to the audit log with D_AUDIT
-			EXCEPT( "Out of memory!" );
-		}
-		sprintf( reason, "\"%s (by user %s)\"", tmp, owner );
-		free( tmp );
-		tmp = NULL;
+		const char *owner = rsock->getOwner();
+		reason += " (by user "; reason += owner; reason += ")";
 	}
 
 	if( action == JA_HOLD_JOBS ) {
@@ -5779,8 +5855,6 @@ Scheduler::actOnJobs(int, Stream* s)
 	if( tree ) {
 		const char *value = ExprTreeToString( tree );
 		if( ! value ) {
-				// TODO: deal with this kind of error
-			free(reason);
 			return false;
 		}
 
@@ -5849,7 +5923,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	} else {
 		constraint = NULL;
 	}
-	tmp = NULL;
+	char * tmp = NULL;
 	if( command_ad.LookupString(ATTR_ACTION_IDS, &tmp) ) {
 		if( constraint ) {
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs(): "
@@ -5858,7 +5932,6 @@ Scheduler::actOnJobs(int, Stream* s)
 			refuse( s );
 			free( tmp );
 			free( constraint );
-			if( reason ) { free( reason ); }
 			return FALSE;
 		}
 		job_ids.initializeFromString( tmp );
@@ -6099,9 +6172,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			jobs[i].cluster = -1;
 			continue;
 		}
-		if( reason ) {
-			SetAttribute( tmp_id.cluster, tmp_id.proc,
-						  reason_attr_name, reason );
+		if( ! reason.empty() ) {
+			SetAttributeString( tmp_id.cluster, tmp_id.proc,
+						  reason_attr_name, reason.Value() );
 				// TODO: deal w/ failure here, too?
 		}
 		SetAttributeInt( tmp_id.cluster, tmp_id.proc,
@@ -6110,8 +6183,6 @@ Scheduler::actOnJobs(int, Stream* s)
 		results.record( tmp_id, AR_SUCCESS );
 		num_success++;
 	}
-
-	if( reason ) { free( reason ); }
 
 	// With late materialization, we may need to operate on clusters (actually the cluster factory) also
 	//
@@ -6133,10 +6204,11 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		case JA_HOLD_JOBS:
 			if (clusterad->factory) {
-				//PRAGMA_REMIND("TODO: make a proper hold (with reasons) for the job factory")
-				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, 1)) {
+				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmHold)) {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
+
+					SetAttributeString(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason.Value());
 				} else {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 				}
@@ -6145,10 +6217,11 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		case JA_RELEASE_JOBS:
 			if (clusterad->factory) {
-				//PRAGMA_REMIND("TODO: make a proper hold (with reasons) for the job factory")
-				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, 0)) {
+				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmRunning)) {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
+
+					DeleteAttribute(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSE_REASON); 
 				} else {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 				}
@@ -6158,7 +6231,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
 			if (clusterad->factory) {
-				PauseJobFactory(clusterad->factory, 3);
+				PauseJobFactory(clusterad->factory, mmClusterRemoved);
 				//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
 				ScheduleClusterForDeferredCleanup(tmp_id.cluster);
 				// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
@@ -6168,7 +6241,6 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		}
 	}
-
 
 	ClassAd* response_ad;
 
@@ -6245,7 +6317,9 @@ Scheduler::actOnJobs(int, Stream* s)
 		// since if that CommitTransaction failed, we'd EXCEPT()
 	rsock->encode();
 	int answer = OK;
-	rsock->code( answer );
+	if (!rsock->code( answer )) {
+		dprintf(D_FULLDEBUG, "actOnJobs(): tool hung up on us\n");
+	}
 	rsock->end_of_message();
 
 		// Now that we know the events are logged and commited to
@@ -6256,6 +6330,18 @@ Scheduler::actOnJobs(int, Stream* s)
 			continue;
 		}
 		enqueueActOnJobMyself( jobs[i], action, true );
+	}
+	for( i=0; i<num_cluster_matches; i++ ) {
+		tmp_id = clusters[i];
+		JobQueueCluster * clusterad = GetClusterAd(tmp_id);
+		if ( ! clusterad || ! clusterad->factory)
+			continue;
+		if (action == JA_HOLD_JOBS) {
+			// log the change in pause state
+			setJobFactoryPauseAndLog(clusterad, mmHold, CONDOR_HOLD_CODE_UserRequest, reason.Value());
+		} else if (action == JA_RELEASE_JOBS) {
+			setJobFactoryPauseAndLog(clusterad, mmRunning, CONDOR_HOLD_CODE_UserRequest, reason.Value());
+		}
 	}
 
 		// In case we have removed jobs that were queued to run, scan
@@ -15870,6 +15956,28 @@ releaseJob( int cluster, int proc, const char* reason,
 	scheduler.needReschedule();
 
 	return result;
+}
+
+bool setJobFactoryPauseAndLog(JobQueueCluster * cad, int pause_mode, int hold_code, const std::string & reason)
+{
+	if ( ! cad) return false;
+
+	cad->Assign(ATTR_JOB_MATERIALIZE_PAUSED, pause_mode);
+	if (reason.empty() || pause_mode == mmRunning) {
+		cad->Delete(ATTR_JOB_MATERIALIZE_PAUSE_REASON);
+	} else {
+		cad->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
+	}
+
+	if (cad->factory) {
+		// make sure that the factory state is in sync with the pause mode
+		CheckJobFactoryPause(cad->factory, pause_mode);
+	}
+
+	// log the change in pause state
+	const char * reason_ptr = reason.empty() ? NULL : reason.c_str();
+	scheduler.WriteFactoryPauseToUserLog(cad, hold_code, reason_ptr);
+	return true;
 }
 
 // Throttle job starts, with bursts of JobStartCount jobs, every
