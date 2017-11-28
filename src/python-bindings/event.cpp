@@ -69,7 +69,8 @@ EventIterator::wait_internal(int timeout_ms)
     clearerr(m_source);
     int fd = fileno(m_source);
     struct stat result;
-    while ((-1 != fstat(fd, &result)) && (result.st_size == m_done))
+	int r = 0;
+    while ((-1 != (r = fstat(fd, &result))) && (result.st_size == m_done))
     {
         struct pollfd fd;
         fd.fd = watch();
@@ -92,11 +93,10 @@ EventIterator::wait_internal(int timeout_ms)
         time_remaining -= step;
         if (time_remaining == 0)
         {
-            errno = 0;
             break;
         }
     }
-    if (errno)
+    if (r == -1)
     {
         THROW_EX(IOError, "Failure when checking file size of event log.");
     }
