@@ -155,10 +155,10 @@ ProcAPI::getAllPids( pid_t* &pids, int &numpids ) {
     PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
 	numpids = pThisObject->NumInstances;
 	pids = new pid_t[numpids];
-	DWORD ctrblk;
+	UINT_PTR ctrblk;
 		
 	for( int i=0 ; i<numpids ; i++ ) {
-        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
+        ctrblk = ((UINT_PTR)pThisInstance) + pThisInstance->ByteLength;
         pids[i] = (pid_t) *((pid_t*)(ctrblk + offsets->procid));
         pThisInstance = nextInstance(pThisInstance);        
 	}
@@ -731,7 +731,7 @@ ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
 
 		// at this point we're all set to march through the data block to find
         // the pids that we want
-    DWORD ctrblk;
+    UINT_PTR ctrblk;
 	int instanceNum = 0;
     pid_t thispid;
     
@@ -745,7 +745,7 @@ ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
 
     while( instanceNum < pThisObject->NumInstances ) {
         
-        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
+        ctrblk = ((UINT_PTR)pThisInstance) + pThisInstance->ByteLength;
         thispid = (pid_t) *((pid_t*)(ctrblk + offsets->procid));
 
         if( isinlist(thispid, pidlist, numpids) != -1 ) {
