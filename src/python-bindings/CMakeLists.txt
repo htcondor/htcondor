@@ -35,13 +35,21 @@ if(WINDOWS)
             # Note we do not use condor_shared_lib below because we want a separate install target.
             # the 'optimized' keyword indicates that the library following it is for release builds only
             # the 'debug' keyword indicates that the library following it is for debug builds only
-            add_library( classad_module SHARED classad_module.cpp classad_parsers.cpp )
+            add_library( classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
             target_link_libraries( classad_module pyclassad ${PCRE_FOUND}
               optimized ${PYTHON_LIBRARY_BOOST_ONE} debug ${PYTHON_LIBRARY_BOOST_ONE_D}
               optimized ${PYTHON_LIBRARY_BOOST_TWO} debug ${PYTHON_LIBRARY_BOOST_TWO_D}
               ${PYTHON_LIBRARIES} )
             set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
             set_target_properties(classad_module PROPERTIES SUFFIX ".pyd" )
+
+	    add_library( _classad_module SHARED _classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
+	    target_link_libraries(_classad_module pyclassad ${PCRE_FOUND}
+              optimized ${PYTHON_LIBRARY_BOOST_ONE} debug ${PYTHON_LIBRARY_BOOST_ONE_D}
+              optimized ${PYTHON_LIBRARY_BOOST_TWO} debug ${PYTHON_LIBRARY_BOOST_TWO_D} )
+	    set_target_properties(_classad_module PROPERTIES PREFIX "" OUTPUT_NAME _classad )
+	    set_target_properties(_classad_module PROPERTIES SUFFIX ".pyd" )
+	    set_target_properties(_classad_module PROPERTIES INSTALL_RPATH "$ORIGIN/../htcondor/condor_libs")
 
             # This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
             # python functions.
@@ -51,11 +59,19 @@ if(WINDOWS)
             install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 
             add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
+	    add_library( _htcondor SHARED _htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp log_reader.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
             target_link_libraries( htcondor pyclassad condor_utils
               optimized ${PYTHON_LIBRARY_BOOST_ONE} debug ${PYTHON_LIBRARY_BOOST_ONE_D}
               optimized ${PYTHON_LIBRARY_BOOST_TWO} debug ${PYTHON_LIBRARY_BOOST_TWO_D}
               ${PYTHON_LIBRARIES} ${CONDOR_WIN_LIBS} )
             set_target_properties( htcondor PROPERTIES SUFFIX ".pyd" )
+	    target_link_libraries( _htcondor pyclassad condor_utils
+	      optimized ${PYTHON_LIBRARY_BOOST_ONE} debug ${PYTHON_LIBRARY_BOOST_ONE_D}
+              optimized ${PYTHON_LIBRARY_BOOST_TWO} debug ${PYTHON_LIBRARY_BOOST_TWO_D} )
+	    set_target_properties( _htcondor PROPERTIES PREFIX "" )
+	    set_target_properties( _htcondor PROPERTIES SUFFIX ".pyd" )
+	    set_target_properties(_htcondor PROPERTIES INSTALL_RPATH "$ORIGIN/condor_libs")
+
 
             install ( TARGETS pyclassad DESTINATION ${C_LIB} )
             install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )
