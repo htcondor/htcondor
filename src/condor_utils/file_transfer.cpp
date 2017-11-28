@@ -751,7 +751,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		// this only has to happen once, and we will only be in this section
 		// of the code once (because the CommandsRegistered flag is static),
 		// initialize the C++ random number generator here as well.
-		set_seed( time(NULL) + (unsigned long)this + (unsigned long)Ad );
+		set_seed( (int)(time(NULL) + (time_t)this + (time_t)Ad) );
 	}
 
 	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf, sizeof(buf)) != 1) {

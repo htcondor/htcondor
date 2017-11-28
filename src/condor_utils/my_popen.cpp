@@ -219,7 +219,7 @@ my_popen(const char *const_cmd, const char *mode, int options)
 	CloseHandle(hChildPipe);
 
 	// convert pipe handle specified in mode into a FILE pointer
-	fd = _open_osfhandle((long)hParentPipe, 0);
+	fd = _open_osfhandle((intptr_t)hParentPipe, 0);
 	if (fd == -1) {
 		CloseHandle(hParentPipe);
 		CloseHandle(pi.hProcess);
@@ -1106,7 +1106,7 @@ static void store_buffers (
 		return;
 	}
 
-	int cbOld = append ? strlen(old) : 0;
+	int cbOld = append ? (int)strlen(old) : 0;
 	char * out = (char*)malloc(cbOld+cbTot+1);
 	ASSERT(out);
 
@@ -1155,7 +1155,7 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 	char * buffer = (char*)calloc(1, cbBuf);
 	for(;;) {
 		bool wait_for_hotness = false;
-		int cb = fread(buffer+ix, 1, cbBuf-ix, fp);
+		int cb = (int)fread(buffer+ix, 1, cbBuf-ix, fp);
 		if (cb > 0) {
 			// Otherwise, buffer should contain cb bytes.
 			cbTot += cb;
