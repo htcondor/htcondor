@@ -205,7 +205,7 @@ int MyAsyncFileReader::queue_next_read()
 	ab.ovl.Offset = li.LowPart;
 	ab.ovl.OffsetHigh = li.HighPart;
 	ab.ovl.hEvent = NULL;
-	if (ReadFile(fd, ab.aio_buf, ab.aio_nbytes, &cbRead, &ab.ovl)) {
+	if (ReadFile(fd, ab.aio_buf, (DWORD)ab.aio_nbytes, &cbRead, &ab.ovl)) {
 		// read completed synchronously, so 'unqueue' the read
 		// and also handle end-of-file detection.
 		nextbuf.set_valid_data(0, cbRead);
