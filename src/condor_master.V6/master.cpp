@@ -280,7 +280,7 @@ static void Win32RunShutdownProgram(char * shutdown_program)
 		formatstr(shutdown_log, "==== Master (pid %d) shutting down. output of shutdown script '%s' (pid %d) follows ====\n",
 			GetCurrentProcessId(), shutdown_program, pi.dwProcessId);
 		DWORD dwWrote;
-		WriteFile(hLog, shutdown_log.c_str(), shutdown_log.size(), &dwWrote, NULL);
+		WriteFile(hLog, shutdown_log.c_str(), (DWORD)shutdown_log.size(), &dwWrote, NULL);
 		CloseHandle(hLog);
 	}
 

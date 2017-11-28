@@ -5379,7 +5379,7 @@ void *DaemonCore::GetDataPtr()
 // else FALSE means not inheritable.
 int DaemonCore::SetFDInheritFlag(int fh, int flag)
 {
-	long underlying_handle;
+	intptr_t underlying_handle;
 
 	underlying_handle = _get_osfhandle(fh);
 
@@ -7172,7 +7172,7 @@ int DaemonCore::Create_Process(
 				else {
 					// we are handing down a C library FD
 					SetFDInheritFlag(std[ii],TRUE);	// set handle inheritable
-					long longTemp = _get_osfhandle(std[ii]);
+					intptr_t longTemp = _get_osfhandle(std[ii]);
 					if (longTemp != -1 ) {
 						valid = TRUE;
 						*std_handles[ii] = (HANDLE)longTemp;

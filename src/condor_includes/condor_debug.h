@@ -214,7 +214,11 @@ void dprintf_after_shared_mem_clone( void );
  * async-safe manner (e.g. from a signal handler).
  * See safe_async_simple_fwrite_fd() for argument usage.
  */
+#ifdef _WIN64
+void dprintf_async_safe(char const *msg, ULONG_PTR *args, unsigned int num_args);
+#else
 void dprintf_async_safe( char const *msg, unsigned long *args, unsigned int num_args );
+#endif
 
 void dprintf_dump_stack(void);
 
