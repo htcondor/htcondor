@@ -354,6 +354,7 @@ check_spool_dir()
    	startd_history = condor_basename(startd_history);
    	startd_history_length = strlen(startd_history);
 
+	last_connection_time = _condor_debug_get_time_double();
 	max_connection_time = param_integer("PREEN_MAX_SCHEDD_CONNECTION_TIME");
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
@@ -478,20 +479,22 @@ check_spool_dir()
 		if ( is_schedd_connected ) {
 			if ( _condor_debug_get_time_double() > 
 							( last_connection_time + max_connection_time ) ) {
-				if( DisconnectQ( qmgr ) ) {
-						// We were actually talking to a real queue the whole time
-						// and didn't have any errors.  So, it's now safe to
-						// delete the files we think we can delete.
-					bad_spool_files.rewind();
-					while( (f = bad_spool_files.next()) ) {
-						bad_file( Spool, f, dir );
+				if ( qmgr ) {
+					if ( DisconnectQ( qmgr ) ) {
+							// We were actually talking to a real queue the whole time
+							// and didn't have any errors.  So, it's now safe to
+							// delete the files we think we can delete.
+						bad_spool_files.rewind();
+						while( (f = bad_spool_files.next()) ) {
+							bad_file( Spool, f, dir );
+						}
+						is_schedd_connected = false;
+						bad_spool_files.clearAll();
+					} else {
+						dprintf( D_ALWAYS, 
+								"Error disconnecting from job queue, not deleting "
+									"spool files.\n" );
 					}
-					is_schedd_connected = false;
-					bad_spool_files.clearAll();
-				} else {
-					dprintf( D_ALWAYS, 
-							"Error disconnecting from job queue, not deleting "
-							 	"spool files.\n" );
 				}
 			}
 		}
@@ -500,15 +503,17 @@ check_spool_dir()
 		// All done. If the schedd connection is open, disconnect and make the
 		// remaining files for deletion.
 	if ( is_schedd_connected ) {
-		if( DisconnectQ( qmgr ) ) {
-			bad_spool_files.rewind();
-			while( (f = bad_spool_files.next()) ) {
-				bad_file( Spool, f, dir );
+		if ( qmgr ) {
+			if( DisconnectQ( qmgr ) ) {
+				bad_spool_files.rewind();
+				while( (f = bad_spool_files.next()) ) {
+					bad_file( Spool, f, dir );
+				}
+			} else {
+				dprintf( D_ALWAYS, 
+						"Error disconnecting from job queue, not deleting "
+							"spool files.\n" );
 			}
-		} else {
-			dprintf( D_ALWAYS, 
-					"Error disconnecting from job queue, not deleting "
-						 "spool files.\n" );
 		}
 	}
 }
