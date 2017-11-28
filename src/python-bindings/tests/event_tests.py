@@ -35,7 +35,6 @@ class TestEventReader(unittest.TestCase):
             'MemoryUsage': 1, 
             'Size': 260,
             'ResidentSetSize': 252,
-            'CurrentTime': 0,
             'EventTime': 0,
         }
         self.sampleEventText = SAMPLE_EVENT_TEXT
