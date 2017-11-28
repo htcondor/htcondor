@@ -336,7 +336,7 @@ check_spool_dir()
     const char      *history, *startd_history;
 	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list, bad_spool_files;
-	Qmgr_connection *qmgr;
+	Qmgr_connection *qmgr = new Qmgr_connection();
 	bool			is_schedd_connected = false;
 	double			last_connection_time;
 	double			max_connection_time;
@@ -479,22 +479,20 @@ check_spool_dir()
 		if ( is_schedd_connected ) {
 			if ( _condor_debug_get_time_double() > 
 							( last_connection_time + max_connection_time ) ) {
-				if ( qmgr ) {
-					if ( DisconnectQ( qmgr ) ) {
-							// We were actually talking to a real queue the whole time
-							// and didn't have any errors.  So, it's now safe to
-							// delete the files we think we can delete.
-						bad_spool_files.rewind();
-						while( (f = bad_spool_files.next()) ) {
-							bad_file( Spool, f, dir );
-						}
-						is_schedd_connected = false;
-						bad_spool_files.clearAll();
-					} else {
-						dprintf( D_ALWAYS, 
-								"Error disconnecting from job queue, not deleting "
-									"spool files.\n" );
+				if ( DisconnectQ( qmgr ) ) {
+						// We were actually talking to a real queue the whole time
+						// and didn't have any errors.  So, it's now safe to
+						// delete the files we think we can delete.
+					bad_spool_files.rewind();
+					while( (f = bad_spool_files.next()) ) {
+						bad_file( Spool, f, dir );
 					}
+					is_schedd_connected = false;
+					bad_spool_files.clearAll();
+				} else {
+					dprintf( D_ALWAYS, 
+							"Error disconnecting from job queue, not deleting "
+								"spool files.\n" );
 				}
 			}
 		}
@@ -503,17 +501,15 @@ check_spool_dir()
 		// All done. If the schedd connection is open, disconnect and make the
 		// remaining files for deletion.
 	if ( is_schedd_connected ) {
-		if ( qmgr ) {
-			if( DisconnectQ( qmgr ) ) {
-				bad_spool_files.rewind();
-				while( (f = bad_spool_files.next()) ) {
-					bad_file( Spool, f, dir );
-				}
-			} else {
-				dprintf( D_ALWAYS, 
-						"Error disconnecting from job queue, not deleting "
-							"spool files.\n" );
+		if( DisconnectQ( qmgr ) ) {
+			bad_spool_files.rewind();
+			while( (f = bad_spool_files.next()) ) {
+				bad_file( Spool, f, dir );
 			}
+		} else {
+			dprintf( D_ALWAYS, 
+					"Error disconnecting from job queue, not deleting "
+						"spool files.\n" );
 		}
 	}
 }
