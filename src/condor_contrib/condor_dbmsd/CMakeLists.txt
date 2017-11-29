@@ -19,6 +19,6 @@
 if (WANT_QUILL AND HAVE_EXT_POSTGRESQL)
 
 	condor_glob( dbmsdHdrs dbmsdSrcs "" )
-	condor_exe( condor_dbmsd "${dbmsdHdrs};${dbmsdSrcs}" OFF "tt;${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND}" OFF )
+	condor_exe( condor_dbmsd "${dbmsdHdrs};${dbmsdSrcs}" OFF "tt;${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND}" OFF )
 
 endif()

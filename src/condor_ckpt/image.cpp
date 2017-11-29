@@ -893,7 +893,7 @@ Image::Restore()
     /* save the initial working directory onto the stack because the one in
        memory is going to be altered to the previous checkpoint's version
        of this in the MyImage object */
-    strncpy( wd, m_iwd, _POSIX_PATH_MAX );
+    strncpy( wd, m_iwd, _POSIX_PATH_MAX - 1);
 
 #if defined(COMPRESS_CKPT)
 	// If the checkpoint header contains an alt heap pointer, then we must

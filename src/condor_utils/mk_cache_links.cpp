@@ -253,7 +253,7 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	}
 	
 	// Release the lock on the access file
-	if(!accessFileLock->release()) {
+	if(accessFileLock && !accessFileLock->release()) {
 		dprintf(D_ALWAYS, "MakeLink: Failed to release lock on access file with"
 			" error code %d (%s).\n", errno, strerror(errno));
 	}

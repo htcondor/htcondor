@@ -278,8 +278,10 @@ pseudo_register_mpi_master_info( ClassAd* ad )
 	if( ! Shadow->setMpiMasterInfo(addr) ) {
 		dprintf( D_ALWAYS, "ERROR: received "
 				 "pseudo_register_mpi_master_info for a non-MPI job!\n" );
+		free(addr);
 		return -1;
 	}
+	free(addr);
 	return 0;
 }
 

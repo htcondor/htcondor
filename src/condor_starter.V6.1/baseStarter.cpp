@@ -1639,6 +1639,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	}
 	if( !proc->SshStartJob(std,std_fname) ) {
 		dprintf(D_ALWAYS,"Failed to start sshd.\n");
+		delete proc;
 		return FALSE;
 	}
 	m_job_list.Append(proc);

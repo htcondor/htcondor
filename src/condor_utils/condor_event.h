@@ -94,7 +94,9 @@ enum ULogEventNumber {
 	/** Attribute updated  */         ULOG_ATTRIBUTE_UPDATE			= 33,
 	/** PRE_SKIP event for DAGMan */  ULOG_PRESKIP					= 34,
 	/** Factory submitted         */  ULOG_FACTORY_SUBMIT			= 35,
-	/** Factory removed           */  ULOG_FACTORY_REMOVE			= 36
+	/** Factory removed           */  ULOG_FACTORY_REMOVE			= 36,
+	/** Factory paused            */  ULOG_FACTORY_PAUSED			= 37,
+	/** Factory resumed           */  ULOG_FACTORY_RESUMED			= 38,
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -2125,7 +2127,77 @@ virtual ClassAd* toClassAd(void);
 */
 virtual void initFromClassAd(ClassAd* ad);
 
+	enum CompletionCode {
+		Error=-1, Incomplete=0, Complete=1, Paused=2
+	};
+
+	int next_proc_id;
+	int next_row;
+	CompletionCode completion; // -1 == error, 0 = incomplete, 1 = normal-completion, 2 = paused
+	char * notes;
 };
+
+//------------------------------------------------------------------------
+/** Framework for a job factory paused event object.
+ *  Occurs if job factory pauses for a reason other than completion
+*/
+class FactoryPausedEvent : public ULogEvent
+{
+	char* reason; // why the factory was paused
+	int pause_code;  // hold code if the factory is paused because the cluster is held
+	int hold_code;
+
+public:
+	FactoryPausedEvent () : reason(NULL), pause_code(0), hold_code(0) { eventNumber = ULOG_FACTORY_PAUSED; };
+	~FactoryPausedEvent () { if (reason) { free(reason); } reason = NULL; };
+
+	// initialize this class by reading the next event from the given log file
+	virtual int readEvent (FILE * log_file);
+
+	// Format the body of this event, and append to the given std::string
+	virtual bool formatBody( std::string &out );
+
+	// Return a ClassAd representation of this event
+	virtual ClassAd* toClassAd(void);
+
+	// initialize this class from the given ClassAd
+	virtual void initFromClassAd(ClassAd* ad);
+
+	// @return pointer to reason, will be NULL if not set
+	const char* getReason() const { return reason; }
+	int getPauseCode() const { return pause_code; }
+	int getHoldCode() const { return hold_code; }
+
+	// set the reason member to the given string
+	void setReason(const char* str);
+	void setPauseCode(const int code) { pause_code = code; }
+	void setHoldCode(const int code) { hold_code = code; }
+};
+
+class FactoryResumedEvent : public ULogEvent
+{
+	char* reason;
+
+public:
+	FactoryResumedEvent () : reason(NULL) { eventNumber = ULOG_FACTORY_RESUMED; };
+	~FactoryResumedEvent () { if (reason) { free(reason); } reason = NULL; };
+
+	// initialize this class by reading the next event from the given log file
+	virtual int readEvent (FILE *);
+	// Format the body of this event, and append to the given std::string
+	virtual bool formatBody( std::string &out );
+	// Return a ClassAd representation of this event
+	virtual ClassAd* toClassAd(void);
+	// initialize this class from the given ClassAd
+	virtual void initFromClassAd(ClassAd* ad);
+
+	// @return pointer to reason, will be "" if not set
+	const char* getReason() const { return reason; }
+
+	// set the reason member to the given string
+	void setReason(const char* str);
+};
+
 
 #endif // __CONDOR_EVENT_H__
 

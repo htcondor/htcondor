@@ -751,7 +751,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		// this only has to happen once, and we will only be in this section
 		// of the code once (because the CommandsRegistered flag is static),
 		// initialize the C++ random number generator here as well.
-		set_seed( time(NULL) + (unsigned long)this + (unsigned long)Ad );
+		set_seed( (int)(time(NULL) + (time_t)this + (time_t)Ad) );
 	}
 
 	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf, sizeof(buf)) != 1) {
@@ -4419,24 +4419,11 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 		if( stats_file_buf.st_size > 5000000 ) {
 			std::string stats_file_old_path = param( "FILE_TRANSFER_STATS_LOG" );
 			stats_file_old_path += ".old";
-
-			std::ifstream stats_file_old_input( stats_file_path );
-			std::ofstream stats_file_old_output( stats_file_old_path, std::fstream::app );
-
-			std::string line;    
-			while( getline( stats_file_old_input, line ) ) {
-				stats_file_old_output << line << std::endl;
-			}
-
-			stats_file_old_input.close();
-			stats_file_old_output.close();
-
-			// Now delete the original stats file
-			unlink( stats_file_path.c_str() );
-
+			// TODO: Add a lock to prevent two starters from rotating the log 
+			// at the same time.
+			rotate_file( stats_file_path.c_str(), stats_file_old_path.c_str() );
 		}
 	}
-
 
 	// Add some new job-related statistics that were not available from
 	// the file transfer plugin.
@@ -4453,19 +4440,25 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 	stats.Assign( "JobOwner", owner );
 
 	// Output statistics to file
-	MyString stats_string;    
-	std::ofstream stats_file_output;
-	stats_file_output.open( stats_file_path, std::fstream::app );
-	if( stats_file_output.fail() ) {
-		dprintf( D_ALWAYS, "FILETRANSFER: failed to write statistics file %s with"
+	MyString stats_string;
+	MyString stats_output = "***\n";
+	sPrintAd( stats_string, stats );
+	stats_output += stats_string;
+
+	FILE* stats_file = safe_fopen_wrapper( stats_file_path.c_str(), "a" );
+	if( !stats_file ) {
+		dprintf( D_ALWAYS, "FILETRANSFER: failed to open statistics file %s with"
 			" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
 	}
-	sPrintAd( stats_string, stats );
-	stats_file_output << stats_string.Value() << "***" << std::endl;    
-
-	// All done, cleanup and return
-	stats_file_output.close();
-
+	else {
+		int stats_file_fd = fileno( stats_file );
+		if ( write( stats_file_fd, stats_output.Value(), stats_output.length() ) == -1 ) {
+			dprintf( D_ALWAYS, "FILETRANSFER: failed to write to statistics file %s with"
+				" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
+		}
+		fclose( stats_file );
+	}
+	
 	// back to previous priv state
 	set_priv(saved_priv);
 

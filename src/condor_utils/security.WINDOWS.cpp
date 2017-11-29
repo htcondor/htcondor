@@ -87,10 +87,8 @@ GetFileSecurityAttributes (
         one big block: placing the descriptor at the end of 
         the attributes structure. this means we only need to 
         call delete [] once on the returned pointer */
-        source_descriptor = (PSECURITY_DESCRIPTOR) 
-            ( ( (ULONG) buffer ) + extra );
-        destination_attributes->lpSecurityDescriptor = 
-            source_descriptor;
+        source_descriptor = (PSECURITY_DESCRIPTOR) (buffer + extra);
+        destination_attributes->lpSecurityDescriptor = source_descriptor;
 
         /* now, with the buffers allocated, get the actual 
         information we are interested in */

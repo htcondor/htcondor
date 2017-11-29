@@ -265,7 +265,7 @@ cudaError_t CUDACALL sim_cudaGetDeviceProperties(struct cudaDeviceProp * p, int 
 		dev = aSimConfig[sim_index].device;
 	}
 
-	strncpy(p->name, dev->name, sizeof(p->name));
+	strncpy(p->name, dev->name, sizeof(p->name) - 1);
 	p->major = (dev->SM & 0xF0) >> 4;
 	p->minor = (dev->SM & 0x0F);
 	p->multiProcessorCount = dev->multiProcessorCount;

@@ -38,7 +38,7 @@ int natural_cmp(const char *s1, const char *s2)
 
 	// fewer leading zeros comes first
 	if (z1_end - n1_beg != z2_end - n2_beg) {
-		return (z2_end - n2_beg) - (z1_end - n1_beg);
+		return (int)((z2_end - n2_beg) - (z1_end - n1_beg));
 	}
 
 	// for an equal positive number of leading zeros, compare mismatch
@@ -51,7 +51,7 @@ int natural_cmp(const char *s1, const char *s2)
 	for (n2_end = z2_end; isdigit(*n2_end); ++n2_end) {}
 
 	if (n1_end - n1_beg != n2_end - n2_beg) {
-		return (n1_end - n1_beg) - (n2_end - n2_beg);
+		return (int)((n1_end - n1_beg) - (n2_end - n2_beg));
 	} else {
 		return *s1 - *s2;
 	}
