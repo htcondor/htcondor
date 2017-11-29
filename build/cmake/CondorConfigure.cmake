@@ -177,6 +177,8 @@ else()
 						message(STATUS "PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
 						set(PYTHONLIBS_FOUND TRUE)
 						set(PYTHONINTERP_FOUND TRUE)
+						set(PYTHON_VERSION_STRING "${_PYTHON_VERSION_LIST}")
+						message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
 					endif()
 				endif()
 			endif()
@@ -633,6 +635,7 @@ option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
 
 #####################################
 # PROPER option
@@ -779,6 +782,18 @@ if (NOT WINDOWS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
 
+#####################################
+# If building wheels, set the python helper info at the global level so we can reference it from the packaging.
+if (WANT_PYTHON_WHEELS)
+  get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
+  string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
+  if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
+    set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+    set( UTILS_LIB_NAME "condor_utils_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+  else()
+    message(FATAL_ERROR "Can't determine HTCondor version!")
+  endif()
+endif()
 
 #####################################
 # Do we want to link in libssl and kerberos or dlopen() them at runtime?
