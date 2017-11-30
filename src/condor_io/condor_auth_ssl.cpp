@@ -877,6 +877,7 @@ int Condor_Auth_SSL :: receive_message( int &status, int &len, char *buf )
     mySock_ ->decode( );
     if( !(mySock_ ->code( status ))
         || !(mySock_ ->code( len ))
+        || !(len <= AUTH_SSL_BUF_SIZE)
         || !(len == (mySock_ ->get_bytes( buf, len )))
         || !(mySock_ ->end_of_message( )) ) {
         ouch( "Error communicating with peer.\n" );
