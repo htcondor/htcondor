@@ -27,6 +27,12 @@
 #include "condor_arglist.h"
 #include "utc_time.h"
 
+#include <iostream>
+#include <queue>
+#include <unordered_map>
+
+using namespace std;
+
 double DagmanMetrics::_startTime = 0.0;
 MyString DagmanMetrics::_dagmanId = "";
 MyString DagmanMetrics::_parentDagmanId = "";
@@ -62,7 +68,11 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_simpleNodesFailed( 0 ),
 	_subdagNodesSuccessful( 0 ),
 	_subdagNodesFailed( 0 ), 
-	_totalNodeJobTime( 0.0 )
+	_totalNodeJobTime( 0.0 ),
+	_graphHeight( 0 ),
+	_graphWidth( 0 ),
+	_graphNumEdges( 0 ),
+	_graphNumVertices( 0 )
 {
 	_primaryDagFile = strnewp(primaryDagFile);
 
@@ -101,7 +111,9 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	}
 
 		//
-		// Get DAG node counts.
+		// Get DAG node counts. Also gather some simple graph metrics here 
+		// (ie. number of edges) to save other iterations through the jobs list 
+		// later.
 		// Note:  We don't check for nodes already marked being done (e.g.,
 		// in a rescue DAG) because they should have already been reported
 		// as being run.  wenger 2013-06-27
@@ -109,12 +121,16 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	Job *node;
 	dag->_jobs.Rewind();
 	while ( (node = dag->_jobs.Next()) ) {
+		_graphNumVertices++;
+		_graphNumEdges += node->NumChildren();
 		if ( node->GetDagFile() ) {
 			_subdagNodes++;
 		} else {
 			_simpleNodes++;
 		}
 	}
+
+	dag->_jobs.Rewind();
 }
 
 //---------------------------------------------------------------------------
@@ -308,6 +324,10 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 				_subdagNodesSuccessful + _subdagNodesFailed;
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
 	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
+	fprintf( fp, "    \"graph_height\":%d,\n", _graphHeight );
+	fprintf( fp, "    \"graph_width\":%d,\n", _graphWidth );
+	fprintf( fp, "    \"graph_num_edges\":%d,\n", _graphNumEdges );
+	fprintf( fp, "    \"graph_num_vertices\":%d,\n", _graphNumVertices );
 
 		// Last item must NOT have trailing comma!
 	fprintf( fp, "    \"dag_status\":%d\n", status );
@@ -341,6 +361,152 @@ DagmanMetrics::GetTime( const struct tm &eventTime )
 	time_t result = mktime( &tmpTime );
 
 	return (double)result;
+}
+
+//---------------------------------------------------------------------------
+/* This function gathers metrics of a graph using various DFS and BFS
+   algorithms.
+*/
+void
+DagmanMetrics::GatherGraphMetrics( Dag* dag )
+{
+	// Gather metrics about the size, shape of the graph.
+	_graphWidth = GetGraphWidth( dag );
+	_graphHeight = GetGraphHeight( dag );
+}
+
+//---------------------------------------------------------------------------
+int
+DagmanMetrics::GetGraphHeight( Dag* dag )
+{
+	int maxHeight = 0;
+	Job* node;
+	unordered_map<string, bool> visited;
+
+	dag->_jobs.Rewind();
+	while ( (node = dag->_jobs.Next()) ) {
+		// Check if we've already visited this node before
+		string jobName = node->GetJobName();
+		unordered_map<string, bool>::const_iterator results = visited.find( jobName );
+
+		// If this node does not appear in the visited list, get its height
+		// (maximum length from this node to any connected leaf node)
+		if ( results == visited.end() ) {
+			int thisNodeHeight = GetGraphHeightRecursive( node, dag, &visited );
+			maxHeight = ( thisNodeHeight > maxHeight ) ? thisNodeHeight : maxHeight;
+		}
+	}
+	return maxHeight;
+}
+
+//---------------------------------------------------------------------------
+int
+DagmanMetrics::GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<string, bool>* visited )
+{
+	// This should never happen, but let's check just in case
+	if( node == NULL ) {
+		return 0;
+	}
+
+	// Check if this node has been visited. If not, add it to the visited list.	
+	// If this node is non-null, add it to the visited list
+	if ( visited->find( node->GetJobName() ) == visited->end() ) {
+		pair<string, bool> thisNode( node->GetJobName(), true );
+		visited->insert( thisNode );
+	}
+
+	// Base case: if this is a leaf node, return 1
+	if( node->NumChildren() == 0 ) {
+		return 1;
+	}
+
+	// Recursive case: call this function recursively on all child nodes
+	set<JobID_t>& childNodes = node->GetQueueRef( Job::Q_CHILDREN );
+	set<JobID_t>::const_iterator it;
+	for ( it = childNodes.begin(); it != childNodes.end(); it++ ) {
+		Job* child = dag->FindNodeByNodeID( *it );
+		return 1 + GetGraphHeightRecursive( child, dag, visited );
+	}
+
+	return 0;
+}
+
+//---------------------------------------------------------------------------
+int
+DagmanMetrics::GetGraphWidth( Dag* dag )
+{
+	int currentNodeLevel = 0;
+	int currentLevelWidth = 0;
+	int maxWidth = 0;
+	Job *job;
+	set<Job*> bfsJobTracker;
+	unordered_map<string, bool> visited;
+
+	// The queue we use for BFS traversal keeps track of the jobs as well as
+	// their level in the graph.
+	queue<pair<Job*, int>> bfsQueue;
+
+	// Iterate through the list of jobs. Now we'll use iterative BFS to 
+	// determine the maximum width of the graph (largest number of sibling nodes 
+	// at the same level). We also have to account for the fact the graph might 
+	// be disconnected, so we'll need to kick off a BFS algorithm for every 
+	// unvisited node.
+	dag->_jobs.Rewind();
+	while ( ( job = dag->_jobs.Next() ) ) {
+		
+		// Check if this job has already been visited. If so, move along. If
+		// not, leave it for now, it will get added during the BFS sequence
+		if ( visited.find( job->GetJobName() ) != visited.end() ) {
+			continue;
+		}
+			
+		// Now do the BFS dance for this job
+		bfsQueue.emplace( make_pair( job, 1 ) );
+		bfsJobTracker.insert( job );
+		while ( !bfsQueue.empty() ) {
+			Job* thisNode = bfsQueue.front().first;
+			int thisNodeLevel = bfsQueue.front().second;
+			
+			// Add to visited list if not already there
+			if ( visited.find( thisNode->GetJobName() ) == visited.end() ) {
+				visited.insert( make_pair( thisNode->GetJobName(), true ) ) ;
+			}
+
+			// Check the level of the front node of the queue. If this is a 
+			// different level than what we were previously tracking, adjust
+			// counters accordingly.
+			if ( ( thisNodeLevel != currentNodeLevel )) {
+				maxWidth = ( maxWidth > currentLevelWidth ) ? maxWidth : currentLevelWidth;
+				currentNodeLevel = thisNodeLevel;
+				currentLevelWidth = 1;
+			}
+			// If the same level, just increment current level width counter.
+			else {
+				currentLevelWidth ++;
+			}
+
+			// For each child of this node, check if they've already in the BFS
+			// queue by looking in bfsJobTracker. If not, then add them to the 
+			// BFS queue. Otherwise just ignore and move on.
+			set<JobID_t>& childNodes = thisNode->GetQueueRef( Job::Q_CHILDREN );
+			set<JobID_t>::const_iterator it;
+			for ( it = childNodes.begin(); it != childNodes.end(); it++ ) {
+				Job* child = dag->FindNodeByNodeID( *it );
+				if ( bfsJobTracker.find( child ) == bfsJobTracker.end() ) {
+					bfsQueue.emplace( make_pair( child, thisNodeLevel+1 ) );
+					bfsJobTracker.insert( child );
+				}
+			}
+
+			// Finally, remove the front node.
+			bfsQueue.pop();
+		}
+
+		// Check the width of the last level of the graph
+		maxWidth = ( maxWidth > currentLevelWidth ) ? maxWidth : currentLevelWidth;
+	}
+
+	return maxWidth;
 }
 
 //---------------------------------------------------------------------------

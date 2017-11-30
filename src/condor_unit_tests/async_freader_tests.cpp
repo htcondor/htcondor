@@ -618,7 +618,7 @@ int generate_file(const char *filename, const char * dir, char* buf, int bufsize
 			DWORD err;
 			if ( ! WriteFile(fd, pv, cb, (DWORD*)&cbwrote, NULL)) {
 				err = GetLastError();
-				fprintf(stdout, "Write failed %d != %d, err=%d %s\n", cb, cbwrote, err);
+				fprintf(stdout, "Write failed %d != %d, err=%d\n", cb, cbwrote, err);
 		#else
 			int err;
 			cbwrote = (int)write(fd, pv, cb);
@@ -645,7 +645,7 @@ int generate_file(const char *filename, const char * dir, char* buf, int bufsize
 		DWORD err;
 		if ( ! WriteFile(fd, pv, cbwrite, (DWORD*)&cbwrote, NULL)) {
 			err = GetLastError();
-			fprintf(stdout, "\nWrite of final data block failed, err=%d\n", err, cbwrite, cbwrote);
+			fprintf(stdout, "\nWrite of final data block failed %d!=%d, err=%d\n", cbwrite, cbwrote, err);
 	#else
 		int err;
 		cbwrote = (int)write(fd, pv, cbwrite);
@@ -723,7 +723,7 @@ const char * literal_line_generator(void* inst, int step, int /*cbtot*/, int &cb
 {
 	if (step > 0) { cb = 0; return NULL; }
 	const char * line = (const char *)inst;
-	cb = strlen(line);
+	cb = (int)strlen(line);
 	return line;
 }
 
