@@ -714,6 +714,10 @@ main( int argc, const char** argv)
 		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
 				opt_pre_arg = argv[++i];
+				if (strlen(opt_pre_arg) > 80) {
+						fprintf (stderr, "Error: -prefix should be less than 80 characters\n");
+						return 1;
+				}
 			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "device", 3)) {
