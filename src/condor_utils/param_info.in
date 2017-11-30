@@ -79,6 +79,11 @@ type=int
 default=86400
 type=int
 
+[PREEN_MAX_SCHEDD_CONNECTION_TIME]
+default=20
+type=int
+tags=preen
+
 [DEFAULT_MASTER_SHUTDOWN_SCRIPT]
 default=
 type=path

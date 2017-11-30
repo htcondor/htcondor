@@ -751,7 +751,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		// this only has to happen once, and we will only be in this section
 		// of the code once (because the CommandsRegistered flag is static),
 		// initialize the C++ random number generator here as well.
-		set_seed( time(NULL) + (unsigned long)this + (unsigned long)Ad );
+		set_seed( (int)(time(NULL) + (time_t)this + (time_t)Ad) );
 	}
 
 	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf, sizeof(buf)) != 1) {
@@ -4447,12 +4447,15 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 
 	FILE* stats_file = safe_fopen_wrapper( stats_file_path.c_str(), "a" );
 	if( !stats_file ) {
-		dprintf( D_ALWAYS, "FILETRANSFER: failed to write statistics file %s with"
+		dprintf( D_ALWAYS, "FILETRANSFER: failed to open statistics file %s with"
 			" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
 	}
 	else {
 		int stats_file_fd = fileno( stats_file );
-		write( stats_file_fd, stats_output.Value(), stats_output.length() );
+		if ( write( stats_file_fd, stats_output.Value(), stats_output.length() ) == -1 ) {
+			dprintf( D_ALWAYS, "FILETRANSFER: failed to write to statistics file %s with"
+				" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
+		}
 		fclose( stats_file );
 	}
 	

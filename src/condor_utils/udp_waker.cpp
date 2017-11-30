@@ -430,7 +430,11 @@ UdpWakeOnLanWaker::doWake () const
     }
 
 	int  error	= SOCKET_ERROR;
+#ifdef WIN32
+	INT_PTR sock = INVALID_SOCKET;
+#else
 	int	 sock	= INVALID_SOCKET;
+#endif
 	int	 on		= 1;
 	bool ok		= false;
 	

@@ -110,7 +110,7 @@ void CondorSystrayNotifier::writeNumCpusToRegistry()
 {
 	HKEY hNotifyHandle;
 	DWORD dwCreatedOrOpened;
-	int iResult = RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\condor", 0, "REG_DWORD", 
+	int iResult = RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\condor", 0, NULL,
 		REG_OPTION_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 
 	if (  iResult != ERROR_SUCCESS ) {
@@ -150,7 +150,7 @@ void CondorSystrayNotifier::notifyRegistryChanged()
 	HKEY hNotifyHandle;
 	DWORD dwCreatedOrOpened;
 	DWORD result;
-	result = RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\condor", 0, "REG_DWORD", 
+	result = RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\condor", 0, NULL,
 		REG_OPTION_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 
 	if ( result != ERROR_SUCCESS ) {
@@ -158,15 +158,14 @@ void CondorSystrayNotifier::notifyRegistryChanged()
 	}
 
 	// now read the systray notify handle (this SHOULD be a "volatile" handle stored only in memory
-	DWORD dwType = NULL;
-	DWORD dwData = NULL;
-	DWORD dwDataLen = sizeof(dwData);
+	DWORD dwType = 0;
+	ULONGLONG qwData = 0;
+	DWORD dwDataLen = sizeof(qwData);
 	
 	
-	RegQueryValueEx(hNotifyHandle, "systray_notify_handle", 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
+	RegQueryValueEx(hNotifyHandle, "systray_notify_handle", 0, &dwType, (unsigned char *) &qwData, &dwDataLen);
 
-	unsigned uHandle = dwData;
-	HWND hToNotify = (HWND) uHandle;
+	HWND hToNotify = (HWND)(ULONG_PTR)qwData;
 	if (IsWindow(hToNotify))
 		PostMessage(hToNotify, CONDOR_SYSTRAY_NOTIFY_CHANGED, 0, 0);
 
