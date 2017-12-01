@@ -824,6 +824,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					}
 				}
 
+				std::string peer_version;
+
 				// grab some attributes out of the policy.
 				if (m_policy) {
 					char *tmp  = NULL;
@@ -849,12 +851,25 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						tmp = NULL;
 					}
 
+					m_policy->LookupString( ATTR_SEC_REMOTE_VERSION, peer_version );
 
 					bool tried_authentication=false;
 					m_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
 					m_sock->setTriedAuthentication(tried_authentication);
 					m_sock->setSessionID(session->id());
 				}
+
+				// When using a cached session, only use the version
+				// from the session for the socket's peer version.
+				// This maintains symmetry of version info between
+				// client and server.
+				if ( !peer_version.empty() ) {
+					CondorVersionInfo ver_info( peer_version.c_str() );
+					m_sock->set_peer_version( &ver_info );
+				} else {
+					m_sock->set_peer_version( NULL );
+				}
+
 				m_new_session = false;
 
 			} // end of case: using existing session
