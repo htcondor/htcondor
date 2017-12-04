@@ -665,15 +665,17 @@ Includes all the files necessary to support running standard universe jobs.
 %endif
 
 %if %uw_build
-%package static-shadow
-Summary: Statically linked condow_shadow and condor_master binaries
+
+%ifarch %{ix86}
+%package small-shadow
+Summary: 32-bit condor_shadow binary
 Group: Applications/System
 
-%description static-shadow
-Provides condor_shadow_s and condor_master_s, which have all the globus
-libraries statically linked in and, as a result, have a smaller private
+%description small-shadow
+Provides the 32-bit condor_shadow_s, which has a smaller private
 memory footprint per process.  This makes it possible to run more shadows
 on a single machine at once when memory is the limiting factor.
+%endif
 
 %package externals
 Summary: External packages built into HTCondor
@@ -1474,7 +1476,6 @@ rm -rf %{buildroot}
 %_sbindir/nordugrid_gahp
 %_sbindir/gce_gahp
 %if %uw_build
-%_sbindir/condor_master_s
 %_sbindir/boinc_gahp
 %endif
 %_libexecdir/condor/condor_gpu_discovery
@@ -1776,8 +1777,11 @@ rm -rf %{buildroot}
 %endif
 
 %if %uw_build
-%files static-shadow
+
+%ifarch %{ix86}
+%files small-shadow
 %{_sbindir}/condor_shadow_s
+%endif
 
 %files external-libs
 %dir %_libdir/condor
