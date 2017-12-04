@@ -318,7 +318,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7|x86_CentOS7)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {
