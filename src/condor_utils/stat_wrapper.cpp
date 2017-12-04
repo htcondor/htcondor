@@ -20,18 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "stat_wrapper_internal.h"
 #include "stat_wrapper.h"
-
-// Ugly hack: stat64 prototyps are wacked on HPUX, so define them myself
-// These are cut & pasted from the HPUX man pages...
-#if defined( HPUX )
-extern "C" {
-	extern int stat64(const char *path, struct stat64 *buf);
-	extern int lstat64(const char *path, struct stat64 *buf);
-	extern int fstat64(int fildes, struct stat64 *buf);
-}
-#endif
 
 // These are the actual stat functions that we'll use below
 #if defined(HAVE_STAT64) && !defined(DARWIN)
@@ -78,321 +67,167 @@ extern "C" {
 
 
 //
-// Simple class to wrap which we should do
-//
-class StatWrapperOp
-{
-public:
-	StatWrapperOp( StatWrapperIntBase	*stat,
-				   StatWrapperIntBase	*lstat,
-				   StatWrapperIntBase	*fstat,
-				   StatWrapperIntBase	*primary )
-		{
-			m_stat   = stat;
-			m_lstat  = lstat;
-			m_fstat  = fstat;
-
-			m_all[0] = stat;
-			m_all[1] = lstat;
-			m_all[2] = fstat;
-
-			m_primary = primary;
-		}
-	~StatWrapperOp( void ) { };
-
-	// Perform the actual stat operation
-	int StatAll( bool force );
-
-	StatWrapperIntBase	*getPrimary( void ) {
-		return m_primary;
-	}
-	StatWrapperIntBase	**getAll( void ) {
-		return m_all;
-	}
-
-private:
-	StatWrapperIntBase	*m_stat;
-	StatWrapperIntBase	*m_fstat;
-	StatWrapperIntBase	*m_lstat;
-
-	StatWrapperIntBase	*m_primary;
-	StatWrapperIntBase	*m_all[3];
-};
-
-int
-StatWrapperOp::StatAll( bool force )
-{
-	m_stat ->Stat( force );
-	m_lstat->Stat( force );
-	m_fstat->Stat( force );
-
-	if ( m_stat ->GetRc( ) ) return m_stat ->GetRc();
-	if ( m_lstat->GetRc( ) ) return m_lstat->GetRc();
-	if ( m_fstat->GetRc( ) ) return m_fstat->GetRc();
-	return 0;
-}
-
-
-//
 // StatWrapper proper class methods
 //
-StatWrapper::StatWrapper( const MyString &path, StatOpType which )
+StatWrapper::StatWrapper( const MyString &path, bool do_lstat )
+	: m_rc( 0 ),
+	  m_errno( 0 ),
+	  m_fd( -1 ),
+	  m_do_lstat( do_lstat ),
+	  m_buf_valid( false )
 {
-	init( );
+	memset( &m_statbuf, 0, sizeof(StatStructType) );
 
-	if ( which != STATOP_NONE ) {
-		(void) Stat( path, which, true );
+	if ( !path.empty() ) {
+		m_path = path.Value();
+		Stat();
 	}
 }
 
-StatWrapper::StatWrapper( const char *path, StatOpType which )
+StatWrapper::StatWrapper( const char *path, bool do_lstat )
+	: m_rc( 0 ),
+	  m_errno( 0 ),
+	  m_fd( -1 ),
+	  m_do_lstat( do_lstat ),
+	  m_buf_valid( false )
 {
-	init( );
-	m_stat ->SetPath( path );
-	m_lstat->SetPath( path );
+	memset( &m_statbuf, 0, sizeof(StatStructType) );
 
-	if ( which != STATOP_NONE ) {
-		(void) Stat( path, which, true );
+	if ( path != NULL ) {
+		m_path = path;
+		Stat();
 	}
 }
 
-StatWrapper::StatWrapper( int fd, StatOpType which )
+StatWrapper::StatWrapper( int fd )
+	: m_rc( 0 ),
+	  m_errno( 0 ),
+	  m_fd( fd ),
+	  m_do_lstat( false ),
+	  m_buf_valid( false )
 {
-	init( );
-	m_fstat->SetFD( fd );
+	memset( &m_statbuf, 0, sizeof(StatStructType) );
 
-	if ( which != STATOP_NONE ) {
-		(void) Stat( fd, true );
+	if ( m_fd > 0 ) {
+		Stat();
 	}
 }
 
 StatWrapper::StatWrapper( void )
+	: m_rc( 0 ),
+	  m_errno( 0 ),
+	  m_fd( -1 ),
+	  m_do_lstat( false ),
+	  m_buf_valid( false )
 {
-	init( );
+	memset( &m_statbuf, 0, sizeof(StatStructType) );
 }
 
 StatWrapper::~StatWrapper( void )
 {
-	for(int i=STATOP_MIN; i<=STATOP_MAX; i++ ) {
-		if( m_ops[i] ) {
-			delete m_ops[i];
-		}
-	}
-
-	delete m_nop;
-	delete m_stat;
-	delete m_lstat;
-	delete m_fstat;
 }
 
 bool
 StatWrapper::IsInitialized( void ) const
 {
-	return m_stat->IsValid() || m_fstat->IsValid();
+	return !m_path.empty() || m_fd >= 0;
 }
 
-// Internal
+// Set the path(s)
 void
-StatWrapper::init( void )
+StatWrapper::SetPath( const MyString &path, bool do_lstat )
 {
-	m_nop   = new StatWrapperIntNop(  NULL,       NULL );
-	m_stat  = new StatWrapperIntPath( STAT_NAME,  STAT_FUNC  );
-	m_lstat = new StatWrapperIntPath( LSTAT_NAME, LSTAT_FUNC );
-	m_fstat = new StatWrapperIntFd(   FSTAT_NAME, FSTAT_FUNC );
-
-	// Initialize the ops table
-	//  Note: we use m_stat if we don't have a real lstat()
-	memset( m_ops, 0, sizeof(m_ops) );
-# ifdef HAVE_AN_LSTAT
-	StatWrapperIntPath	*lstat = m_lstat;
-# else
-	StatWrapperIntPath	*lstat = m_stat;
-# endif
-	m_ops[STATOP_NONE]	= new StatWrapperOp( m_nop,  m_nop, m_nop,   m_nop );
-	m_ops[STATOP_STAT]	= new StatWrapperOp( m_stat, m_nop, m_nop,   m_stat );
-	m_ops[STATOP_LSTAT]	= new StatWrapperOp( m_nop,  lstat, m_nop,   m_lstat );
-	m_ops[STATOP_BOTH]	= new StatWrapperOp( m_stat, lstat, m_nop,   m_nop );
-	m_ops[STATOP_FSTAT]	= new StatWrapperOp( m_nop,  m_nop, m_fstat, m_fstat );
-	m_ops[STATOP_ALL]	= new StatWrapperOp( m_stat, lstat, m_fstat, m_nop );
-	m_ops[STATOP_LAST]	= new StatWrapperOp( m_nop,  m_nop, m_nop,   m_nop );
-
-	m_last_op = m_ops[STATOP_NONE];
-	m_last_which = STATOP_NONE;
+	SetPath( path.Value(), do_lstat );
 }
 
 // Set the path(s)
-bool
-StatWrapper::SetPath( const MyString &path )
+void
+StatWrapper::SetPath( const char *path, bool do_lstat )
 {
-	return SetPath( path.IsEmpty() ? NULL : path.Value());
+	m_buf_valid = false;
+	m_fd = -1;
+	if ( path ) {
+		m_path = path;
+	} else {
+		m_path.clear();
+	}
+	m_do_lstat = do_lstat;
 }
 
-// Set the path(s)
-bool
-StatWrapper::SetPath( const char *path )
-{
-	bool status = true;
-
-	if ( !m_stat->SetPath( path ) ) {
-		status = false;
-	}
-	if ( !m_lstat->SetPath( path ) ) {
-		status = false;
-	}
-
-	return status;
-}
-
-bool
+void
 StatWrapper::SetFD( int fd )
 {
-	return m_fstat->SetFD( fd );
-}
-
-int
-StatWrapper::GetRc( const StatWrapperIntBase *stat ) const
-{
-	if ( !stat ) {
-		return -1;
-	}
-	return stat->GetRc( );
-}
-
-int
-StatWrapper::GetErrno( const StatWrapperIntBase *stat ) const
-{
-	if ( !stat ) {
-		return -1;
-	}
-	return stat->GetErrno( );
-}
-
-bool
-StatWrapper::IsValid( const StatWrapperIntBase *stat ) const
-{
-	if ( !stat ) {
-		return false;
-	}
-	return stat->IsValid( );
+	m_buf_valid = false;
+	m_path.clear();
+	m_fd = fd;
 }
 
 const char *
-StatWrapper::GetStatFn( const StatWrapperIntBase *stat ) const
+StatWrapper::GetStatFn() const
 {
-	if ( !stat ) {
+	if ( m_fd >= 0 ) {
+		return FSTAT_NAME;
+	} else if ( !m_path.empty() ) {
+		if ( m_do_lstat ) {
+			return LSTAT_NAME;
+		} else {
+			return STAT_NAME;
+		}
+	} else {
 		return NULL;
 	}
-	return stat->GetFnName( );
-}
-
-bool
-StatWrapper::IsBufValid( const StatWrapperIntBase *stat ) const
-{
-	if ( !stat ) {
-		return false;
-	}
-	return stat->IsBufValid( );
-}
-
-const StatStructType *
-StatWrapper::GetBuf( const StatWrapperIntBase *stat ) const
-{
-	if ( !stat ) {
-		return NULL;
-	}
-	return stat->GetBuf( );
-}
-
-bool
-StatWrapper::GetBuf( const StatWrapperIntBase *stat,
-					 StatStructType &buf ) const
-{
-	if ( !stat ) {
-		return false;
-	}
-	return stat->GetBuf( buf );
-}
-
-const StatAccess &
-StatWrapper::GetAccess( const StatWrapperIntBase *stat ) const
-{
-	return stat->GetAccess( );
-}
-
-bool
-StatWrapper::GetAccess( const StatWrapperIntBase *stat,
-						StatAccess &abuf ) const
-{
-	if ( !stat ) {
-		return false;
-	}
-	return stat->GetAccess( abuf );
-}
+};
 
 
-// stat() that'll run all of the stats
 int
-StatWrapper::Stat( StatOpType which, bool force )
+StatWrapper::Stat()
 {
-	StatWrapperOp	*op = m_ops[which];
-
-	m_last_op = op;
-	m_last_which = which;
-	//m_last_stat = op->getPrimary( );
-
-	// Invoke the relevant stat functions
-	return op->StatAll( force );
-}
-
-// Path specific Stat() - Will run stat() and lstat()
-int
-StatWrapper::Stat( const MyString &path, StatOpType which, bool force )
-{
-	if ( !SetPath( path ) ) {
-		return -1;
+	if ( m_fd >= 0 ) {
+		m_rc = FSTAT_FUNC( m_fd, &m_statbuf );
+	} else if ( !m_path.empty() ) {
+		if ( m_do_lstat ) {
+			m_rc = LSTAT_FUNC( m_path.c_str(), &m_statbuf );
+		} else {
+			m_rc = STAT_FUNC( m_path.c_str(), &m_statbuf );
+		}
+	} else {
+		return -3;
 	}
 
-	return Stat( which, force );
-}
-
-// Path specific Stat() - Will run stat() and lstat()
-int
-StatWrapper::Stat( const char *path, StatOpType which, bool force )
-{
-	if ( !SetPath( path ) ) {
-		return -1;
+	if ( m_rc == 0 ) {
+		m_buf_valid = true;
+		m_errno = 0;
+	} else {
+		m_buf_valid = false;
+		m_errno = errno;
 	}
 
-	return Stat( which, force );
+	return m_rc;
+}
+
+// Path specific Stat() - Will run stat() or lstat()
+int
+StatWrapper::Stat( const MyString &path, bool do_lstat )
+{
+	SetPath( path, do_lstat );
+
+	return Stat();
+}
+
+// Path specific Stat() - Will run stat() or lstat()
+int
+StatWrapper::Stat( const char *path, bool do_lstat )
+{
+	SetPath( path, do_lstat );
+
+	return Stat();
 }
 
 // FD specific Stat()
 int
-StatWrapper::Stat( int fd, bool force )
+StatWrapper::Stat( int fd )
 {
-	if ( !SetFD( fd ) ) {
-		return -1;
-	}
+	SetFD( fd );
 
-	return Stat( STATOP_FSTAT, force );
-}
-
-// Retry the last operation
-int
-StatWrapper::Retry( void )
-{
-	return m_last_op->StatAll( true );
-}
-
-// Get the stat structure
-StatWrapperIntBase *
-StatWrapper::GetStat( StatOpType which ) const
-{
-	if ( STATOP_LAST == which ) {
-		which = m_last_which;
-	}
-	if ( (which < STATOP_MIN) || (which > STATOP_MAX) ) {
-		which = STATOP_NONE;
-	}
-	return m_ops[which]->getPrimary( );
+	return Stat();
 }

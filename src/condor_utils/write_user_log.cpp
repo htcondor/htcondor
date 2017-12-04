@@ -372,7 +372,7 @@ WriteUserLog::Configure( bool force )
 	if ( NULL == m_global_path ) {
 		return true;
 	}
-	m_global_stat = new StatWrapper( m_global_path, StatWrapper::STATOP_NONE );
+	m_global_stat = new StatWrapper( m_global_path );
 	m_global_state = new WriteUserLogState( );
 
 
@@ -1105,7 +1105,7 @@ WriteUserLog::updateGlobalStat( void )
 	if ( (NULL == m_global_stat) || (m_global_stat->Stat()) ) {
 		return false;
 	}
-	if ( NULL == m_global_stat->GetBuf() ) {
+	if ( m_global_stat->IsBufValid() == false ) {
 		return false;
 	}
 	return true;
@@ -1171,7 +1171,7 @@ WriteUserLog::doRotation( const char *path, int &fd,
 			MyString old1( path );
 			old1.formatstr_cat(".%d", i-1 );
 
-			StatWrapper	s( old1, StatWrapper::STATOP_STAT );
+			StatWrapper	s( old1 );
 			if ( 0 == s.GetRc() ) {
 				MyString old2( path );
 				old2.formatstr_cat(".%d", i );

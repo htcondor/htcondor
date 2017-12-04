@@ -34,7 +34,6 @@
 #include "HashTable.h"
 #include "condor_id.h"
 #include "CondorError.h"
-#include "stat_struct.h"
 #include <iosfwd>
 #include <string>
 
