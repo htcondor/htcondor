@@ -92,6 +92,13 @@
 %endif
 %endif
 
+# Don't bother building CREAM for 32-bit RHEL7
+%ifarch %{ix86}
+%if 0%{?rhel} >= 7
+%define cream 0
+%endif
+%endif
+
 %if 0%{?osg} && 0%{?rhel} == 7
 %define aviary 0
 %define std_univ 0
@@ -352,6 +359,7 @@ Requires: systemd
 
 BuildRequires: transfig
 BuildRequires: latex2html
+BuildRequires: texlive-epstopdf
 
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
@@ -766,6 +774,11 @@ cmake \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DWITH_POSTGRESQL:BOOL=FALSE \
+%if %cream
+       -DWITH_CREAM:BOOL=TRUE \
+%else
+       -DWITH_CREAM:BOOL=FALSE \
+%endif
        -DWANT_LEASE_MANAGER:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
