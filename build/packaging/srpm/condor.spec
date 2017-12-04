@@ -359,7 +359,8 @@ Requires: systemd
 
 BuildRequires: transfig
 BuildRequires: latex2html
-BuildRequires: texlive-epstopdf
+# We don't build the manual (yet)
+#BuildRequires: texlive-epstopdf
 
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
