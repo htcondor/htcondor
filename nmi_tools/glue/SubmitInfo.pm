@@ -304,6 +304,22 @@ our %submit_info = (
 	'x86_64_CentOS7'	=> 'x86_64_RedHat7',
 	'x86_64_SL7'		=> 'x86_64_RedHat7',
 
+	# 32 bit CentOS 7
+	'x86_CentOS7'		=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DWITH_CREAM:BOOL' => 'OFF',
+			 },
+			'prereqs'	=> [ ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
 
 	##########################################################################
 	# Platform RedHat and SL
