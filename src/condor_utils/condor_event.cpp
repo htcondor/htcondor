@@ -3438,54 +3438,6 @@ ShadowExceptionEvent::readEvent (FILE *file)
 bool
 ShadowExceptionEvent::formatBody( std::string &out )
 {
-#ifdef HAVE_EXT_POSTGRESQL
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		snprintf(messagestr, 512, "Shadow exception: %s", message);
-		messagestr[COUNTOF(messagestr)-1] = 0;
-
-		// remove the new line in the end if any
-		if  (messagestr[strlen(messagestr)-1] == '\n')
-			messagestr[strlen(messagestr)-1] = '\0';
-
-		if (began_execution) {
-			tmpCl1.Assign("endts", (int)GetEventclock());
-			tmpCl1.Assign("endtype", ULOG_SHADOW_EXCEPTION);
-			tmpCl1.Assign("endmessage", messagestr);
-			tmpCl1.Assign("runbytessent", sent_bytes);
-
-			tmpCl1.Assign("runbytesreceived", recvd_bytes);
-
-			// this inserts scheddname, cluster, proc, etc
-			insertCommonIdentifiers(tmpCl2);
-
-			tmp.formatstr( "endtype = null");
-			tmpCl2.Insert(tmp.Value());
-
-			if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Logging Event 13--- Error\n");
-				return false; // return a error code, false
-			}
-		} else {
-			// this inserts scheddname, cluster, proc, etc
-			insertCommonIdentifiers(tmpCl1);
-
-			tmpCl1.Assign("eventtype", ULOG_SHADOW_EXCEPTION);
-			tmpCl1.Assign("eventtime", (int)GetEventclock());
-			tmpCl1.Assign("description", messagestr);
-
-			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Logging Event 14 --- Error\n");
-				return false; // return a error code, false
-			}
-		}
-
-	}
-#endif
-
 	if (formatstr_cat( out, "Shadow exception!\n\t" ) < 0)
 		return false;
 	if (formatstr_cat( out, "%s\n", message ) < 0)

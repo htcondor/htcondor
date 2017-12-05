@@ -54,11 +54,6 @@ int 	engine_housekeepingHandler  (Service *);
 CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction),
-
-#ifdef HAVE_EXT_POSTGRESQL
-	QuillAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
-#endif /* HAVE_EXT_POSTGRESQL */
-
 	ScheddAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	SubmittorAds  (GREATER_TABLE_SIZE, &adNameHashFunction),
 	LicenseAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
@@ -93,10 +88,6 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 CollectorEngine::
 ~CollectorEngine ()
 {
-#ifdef HAVE_EXT_POSTGRESQL
-	killHashTable (QuillAds);
-#endif /* HAVE_EXT_POSTGRESQL */
-
 	killHashTable (StartdAds);
 	killHashTable (StartdPrivateAds);
 	killHashTable (ScheddAds);
@@ -303,9 +294,6 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			MasterAds.walk(scanFunction) &&
 			SubmittorAds.walk(scanFunction) &&
 			NegotiatorAds.walk(scanFunction) &&
-#ifdef HAVE_EXT_POSTGRESQL
-			QuillAds.walk(scanFunction) &&
-#endif
 			HadAds.walk(scanFunction) &&
 			GridAds.walk(scanFunction) &&
 			XferServiceAds.walk(scanFunction) &&
@@ -670,21 +658,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		retVal=mergeClassAd (StartdAds, "StartdAd     ", "Start",
 							  clientAd, hk, hashString, insert, from );
 		break;
-
-#ifdef HAVE_EXT_POSTGRESQL
-	  case UPDATE_QUILL_AD:
-		if (!makeQuillAdHashKey (hk, clientAd))
-		{
-			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
-			insert = -3;
-			retVal = 0;
-			break;
-		}
-		hashString.Build( hk );
-		retVal=updateClassAd (QuillAds, "QuillAd     ", "Quill",
-							  clientAd, hk, hashString, insert, from );
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case UPDATE_SCHEDD_AD:
 		if (!makeScheddAdHashKey (hk, clientAd))
@@ -1231,11 +1204,6 @@ housekeeper()
 
 	dprintf (D_ALWAYS, "\tCleaning StartdPrivateAds ...\n");
 	cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
-
-#ifdef HAVE_EXT_POSTGRESQL
-	dprintf (D_ALWAYS, "\tCleaning QuillAds ...\n");
-	cleanHashTable (QuillAds, now, makeQuillAdHashKey);
-#endif /* HAVE_EXT_POSTGRESQL */
 
 	dprintf (D_ALWAYS, "\tCleaning ScheddAds ...\n");
 	cleanHashTable (ScheddAds, now, makeScheddAdHashKey);

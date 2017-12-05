@@ -15,15 +15,3 @@
  # limitations under the License. 
  # 
  ############################################################### 
-
-##############
-if (WANT_QUILL AND HAVE_EXT_POSTGRESQL)
-	condor_selective_glob("condor_ttdb*;jobqueuecollection*" ttLibSrcs)
-
-	condor_glob( ttHdrs ttSrcs "${ttLibSrcs}" )
-
-	condor_static_lib( tt "${ttLibSrcs}" )
-
-	condor_exe(condor_quill "${ttHdrs};${ttSrcs}" OFF "tt;${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND}" OFF)
-
-endif()

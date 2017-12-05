@@ -333,9 +333,6 @@
 ///* Do we have the pcre external*/
 #cmakedefine HAVE_EXT_PCRE
 
-///* Do we have the postgresql external*/
-#cmakedefine HAVE_EXT_POSTGRESQL
-
 ///* Do we have the libcgroup external */
 #cmakedefine HAVE_EXT_LIBCGROUP
 

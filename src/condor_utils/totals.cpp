@@ -92,11 +92,6 @@ bool TrackTotals::haveTotals()
     	case PP_STARTD_RUN:
 		case PP_STARTD_STATE:
     	case PP_STARTD_COD:
-
-#ifdef HAVE_EXT_POSTGRESQL
-    	case PP_QUILL_NORMAL:
-#endif /* HAVE_EXT_POSTGRESQL */
-
     	case PP_SCHEDD_NORMAL:
     	case PP_SUBMITTER_NORMAL:
     	case PP_CKPT_SRVR_NORMAL:
@@ -768,11 +763,6 @@ makeTotalObject (ppOption ppo)
 		case PP_STARTD_STATE:		ct = new StartdStateTotal;	break;
 		case PP_STARTD_COD:			ct = new StartdCODTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
-
-#ifdef HAVE_EXT_POSTGRESQL
-		case PP_QUILL_NORMAL:		ct = new QuillNormalTotal; break;
-#endif /* HAVE_EXT_POSTGRESQL */
-
 		case PP_SUBMITTER_NORMAL:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
 
@@ -816,13 +806,6 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 
 		// all ads in the following categories hash to the same key for totals
 		case PP_CKPT_SRVR_NORMAL:
-
-		//here we might want a separate case for QUILL_NORMAL 
-		//but we keep it here for now
-#ifdef HAVE_EXT_POSTGRESQL
-		case PP_QUILL_NORMAL:
-#endif /* HAVE_EXT_POSTGRESQL */
-
 		case PP_SCHEDD_NORMAL:
 			key = " ";
 			return 1;

@@ -1557,9 +1557,6 @@ usage ()
 		"\t       auto    Guess the format from reading the input stream\n"
 		"\t-grid\t\t\tDisplay grid resources\n"
 		"\t-run\t\t\tDisplay running job stats\n"
-#ifdef HAVE_EXT_POSTGRESQL
-		"\t-quill\t\t\tDisplay attributes of quills\n"
-#endif /* HAVE_EXT_POSTGRESQL */
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
@@ -1992,11 +1989,6 @@ firstPass (int argc, char *argv[])
 				mainPP.setMode (SDO_Other, i, argv[i]);
 			}
 		} else
-#ifdef HAVE_EXT_POSTGRESQL
-		if (is_dash_arg_prefix (argv[i], "quill", 1)) {
-			mainPP.setMode (SDO_Quill, i, argv[i]);
-		} else
-#endif /* HAVE_EXT_POSTGRESQL */
 		if (is_dash_arg_prefix (argv[i], "license", 2)) {
 			mainPP.setMode (SDO_License, i, argv[i]);
 		} else
