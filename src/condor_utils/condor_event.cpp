@@ -42,9 +42,6 @@
 #define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
 					 return 0; }
 
-#include "file_sql.h"
-extern FILESQL *FILEObj;
-
 
 //extern ClassAd *JobAd;
 
@@ -1602,51 +1599,6 @@ RemoteErrorEvent::formatBody( std::string &out )
 
 	if(!critical_error) error_type = "Warning";
 
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1, tmpCl2;
-
-		snprintf(messagestr, 512, "Remote %s from %s on %s",
-				 error_type,
-				 daemon_name,
-				 execute_host);
-
-		if (critical_error) {
-			tmpCl1.Assign("endts", (int)GetEventclock());
-			tmpCl1.Assign("endtype", ULOG_REMOTE_ERROR);
-			tmpCl1.Assign("endmessage", messagestr);
-
-			// this inserts scheddname, cluster, proc, etc
-			insertCommonIdentifiers(tmpCl2);
-
-			MyString tmp;
-			tmp.formatstr("endtype = null");
-			tmpCl2.Insert(tmp.Value());
-
-			// critical error means this run is ended.
-			// condor_event.o is part of cplus_lib.a, which may be linked by
-			// non-daemons who wouldn't have initialized FILEObj. We don't
-			// need to log events for non-daemons.
-			if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2)
-				== QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Logging Event 5--- Error\n");
-				return 0; // return a error code, 0
-			}
-		} else {
-		        // this inserts scheddname, cluster, proc, etc
-			insertCommonIdentifiers(tmpCl1);
-
-			tmpCl1.Assign("eventtype", ULOG_REMOTE_ERROR);
-			tmpCl1.Assign("eventtime", (int)GetEventclock());
-			tmpCl1.Assign("description", messagestr);
-
-			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Logging Event 5--- Error\n");
-				return 0; // return a error code, 0
-			}
-		}
-	}
-
 	retval = formatstr_cat(
 	  out,
 	  "%s from %s on %s:\n",
@@ -1886,60 +1838,6 @@ ExecuteEvent::formatBody( std::string &out )
 {
 	int retval;
 
-	if (FILEObj) {
-		ClassAd tmpCl1, tmpCl2, tmpCl3;
-		MyString tmp = "";
-
-		scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-		if(scheddname)
-			dprintf(D_FULLDEBUG, "scheddname = %s\n", scheddname);
-		else
-			dprintf(D_FULLDEBUG, "scheddname is null\n");
-
-		if( !executeHost ) {
-			setExecuteHost("");
-		}
-
-		dprintf(D_FULLDEBUG, "executeHost = %s\n", executeHost);
-
-		dprintf(D_FULLDEBUG, "Executehost name = %s\n", remoteName ? remoteName : "" );
-
-		tmpCl1.Assign("endts", (int)GetEventclock());
-
-		tmp.formatstr("endtype = -1");
-		tmpCl1.Insert(tmp.Value());
-
-		tmp.formatstr("endmessage = \"UNKNOWN ERROR\"");
-		tmpCl1.Insert(tmp.Value());
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmp.formatstr("endtype = null");
-		tmpCl2.Insert(tmp.Value());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
-			return false; // return a error code, false
-		}
-
-		if( !remoteName ) {
-			setRemoteName("");
-		}
-		tmpCl3.Assign("machine_id", remoteName);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl3);
-
-		tmpCl3.Assign("startts", (int)GetEventclock());
-
-		if (FILEObj->file_newEvent("Runs", &tmpCl3) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	retval = formatstr_cat( out, "Job executing on host: %s\n", executeHost );
 
 	if (retval < 0) {
@@ -2021,27 +1919,6 @@ bool
 ExecutableErrorEvent::formatBody( std::string &out )
 {
 	int retval;
-
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		tmpCl1.Assign("endts", (int)GetEventclock());
-		tmpCl1.Assign("endtype", ULOG_EXECUTABLE_ERROR);
-		tmpCl1.Assign("endmessage", messagestr);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmp.formatstr( "endtype = null");
-		tmpCl2.Insert(tmp.Value());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 12--- Error\n");
-			return false; // return a error code, false
-		}
-	}
 
 	switch (errType)
 	{
@@ -2138,26 +2015,6 @@ CheckpointedEvent::~CheckpointedEvent(void)
 bool
 CheckpointedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-
-		sprintf(messagestr,  "Job was checkpointed");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_CHECKPOINTED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 6--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if ((formatstr_cat( out, "Job was checkpointed.\n" ) < 0)	||
 		(!formatRusage( out, run_remote_rusage ))				||
 		(formatstr_cat( out, "  -  Run Remote Usage\n" ) < 0)	||
@@ -2503,68 +2360,6 @@ JobEvictedEvent::formatBody( std::string &out )
 		formatUsageAd( out, pusageAd );
 	}
 
-	if (FILEObj) {
-		char messagestr[512], checkpointedstr[6], terminatestr[512];
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		strcpy(checkpointedstr, "");
-		strcpy(messagestr, "");
-		strcpy(terminatestr, "");
-
-		if( terminate_and_requeued ) {
-			sprintf(messagestr,  "Job evicted, terminated and was requeued");
-			strcpy(checkpointedstr, "false");
-		} else if( checkpointed ) {
-			sprintf(messagestr,  "Job evicted and was checkpointed");
-			strcpy(checkpointedstr, "true");
-		} else {
-			sprintf(messagestr,  "Job evicted and was not checkpointed");
-			strcpy(checkpointedstr, "false");
-		}
-
-		if(terminate_and_requeued ) {
-			if( normal ) {
-				sprintf(terminatestr,  " (1) Normal termination (return value %d)", return_value);
-			} else {
-				sprintf(terminatestr,  " (0) Abnormal termination (signal %d)", signal_number);
-
-				if( core_file ) {
-					strcat(terminatestr, " (1) Corefile in: ");
-					strcat(terminatestr, core_file);
-				} else {
-					strcat(terminatestr, " (0) No core file ");
-				}
-			}
-
-			if( reason ) {
-				strcat(terminatestr,  " reason: ");
-				strcat(terminatestr,  reason);
-			}
-		}
-
-		tmpCl1.Assign("endts", (int)GetEventclock());
-		tmpCl1.Assign("endtype", ULOG_JOB_EVICTED);
-
-		tmp.formatstr( "endmessage = \"%s%s\"", messagestr, terminatestr);
-		tmpCl1.Insert(tmp.Value());
-
-		tmpCl1.Assign("wascheckpointed", checkpointedstr);
-		tmpCl1.Assign("runbytessent", sent_bytes);
-		tmpCl1.Assign("runbytesreceived", recvd_bytes);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmp.formatstr( "endtype = null");
-		tmpCl2.Insert(tmp.Value());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 2 --- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
   return true;
 }
 
@@ -2732,29 +2527,6 @@ JobAbortedEvent::getReason( void ) const
 bool
 JobAbortedEvent::formatBody( std::string &out )
 {
-
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-		MyString tmp = "";
-
-		if (reason)
-			snprintf(messagestr,  512, "Job was aborted by the user: %s", reason);
-		else
-			sprintf(messagestr,  "Job was aborted by the user");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_ABORTED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 7--- Error\n");
-			return false; // return a error code, false
-		}
-	}
 
 	if( formatstr_cat( out, "Job was aborted by the user.\n" ) < 0 ) {
 		return false;
@@ -2925,40 +2697,6 @@ TerminatedEvent::formatBody( std::string &out, const char *header )
 		formatUsageAd( out, pusageAd );
 	}
 
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		strcpy(messagestr, "");
-
-		if( normal ) {
-			sprintf(messagestr,  "(1) Normal termination (return value %d)", returnValue);
-		} else {
-			sprintf(messagestr,  "(0) Abnormal termination (signal %d)", signalNumber);
-			if( core_file ) {
-				strcat(messagestr, " (1) Corefile in: ");
-				strcat(messagestr, core_file);
-			} else {
-				strcat(messagestr, " (0) No core file ");
-			}
-		}
-
-		tmpCl1.Assign("endmessage", messagestr);
-		tmpCl1.Assign("runbytessent", sent_bytes);
-		tmpCl1.Assign("runbytesreceived", recvd_bytes);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmpCl2.Assign("endts", (int)GetEventclock());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 3--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	return true;
 }
 
@@ -3097,25 +2835,6 @@ JobTerminatedEvent::~JobTerminatedEvent(void)
 bool
 JobTerminatedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		tmpCl1.Assign("endts", (int)GetEventclock());
-		tmpCl1.Assign("endtype", ULOG_JOB_TERMINATED);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmp.formatstr( "endtype = null");
-		tmpCl2.Insert(tmp.Value());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 4--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
   if( formatstr_cat( out, "Job terminated.\n" ) < 0 ) {
 	  return false;
   }
@@ -3514,26 +3233,6 @@ JobSuspendedEvent::readEvent (FILE *file)
 bool
 JobSuspendedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-		MyString tmp = "";
-
-		sprintf(messagestr, "Job was suspended (Number of processes actually suspended: %d)", num_pids);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_SUSPENDED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 8--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if (formatstr_cat( out, "Job was suspended.\n\t" ) < 0)
 		return false;
 	if (formatstr_cat( out, "Number of processes actually suspended: %d\n",
@@ -3588,26 +3287,6 @@ JobUnsuspendedEvent::readEvent (FILE *file)
 bool
 JobUnsuspendedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-		MyString tmp = "";
-
-		sprintf(messagestr, "Job was unsuspended");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_UNSUSPENDED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
- 	    if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 9--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if (formatstr_cat( out, "Job was unsuspended.\n" ) < 0)
 		return false;
 
@@ -3739,28 +3418,6 @@ JobHeldEvent::readEvent( FILE *file )
 bool
 JobHeldEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-
-		if (reason)
-			snprintf(messagestr, 512, "Job was held: %s", reason);
-		else
-			sprintf(messagestr, "Job was held: reason unspecified");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_HELD);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 10--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if( formatstr_cat( out, "Job was held.\n" ) < 0 ) {
 		return false;
 	}
@@ -3897,29 +3554,6 @@ JobReleasedEvent::readEvent( FILE *file )
 bool
 JobReleasedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-		MyString tmp = "";
-
-		if (reason)
-			snprintf(messagestr, 512, "Job was released: %s", reason);
-		else
-			sprintf(messagestr, "Job was released: reason unspecified");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_RELEASED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 11--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if( formatstr_cat( out, "Job was released.\n" ) < 0 ) {
 		return false;
 	}

@@ -45,9 +45,6 @@
 #include <sys/prctl.h>
 #endif
 
-#include "file_sql.h"
-#include "file_xml.h"
-
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
 #include "classad/classadCache.h"
@@ -99,11 +96,6 @@ time_t daemon_stop_time;
 
 /* ODBC object */
 //extern ODBC *DBObj;
-
-/* FILESQL object */
-extern FILESQL *FILEObj;
-/* FILEXML object */
-extern FILEXML *XMLObj;
 
 #ifdef WIN32
 int line_where_service_stopped = 0;
@@ -255,15 +247,6 @@ DC_Exit( int status, const char *shutdown_program )
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
 	clean_files();
-
-	if(FILEObj) {
-		delete FILEObj;
-		FILEObj = NULL;
-	}
-	if(XMLObj) {
-		delete XMLObj;
-		XMLObj = NULL;
-	}
 
 #ifdef LINUX
 		// Remove any keys stored in the kernel (for ecryptfs)
@@ -2803,14 +2786,6 @@ int dc_main( int argc, char** argv )
 
 	// create a database connection object
 	//DBObj = createConnection();
-
-	// create a sql log object. We always have one defined, but 
-	// if quill is not enabled we never write data to the logfile
-	bool use_sql_log = param_boolean( "QUILL_USE_SQL_LOG", false );
-
-	FILEObj = FILESQL::createInstance(use_sql_log); 
-    // create an xml log object
-    XMLObj = FILEXML::createInstanceXML();
 
 	InstallOutOfMemoryHandler();
 

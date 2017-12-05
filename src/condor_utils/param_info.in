@@ -1482,12 +1482,6 @@ default=
 type=string
 tags=daemons
 
-[QUILL_USE_SQL_LOG]
-default=false
-type=bool
-customization=devel
-tags=daemon_core
-
 [COLLECTOR_NAME]
 default=My Pool - $(CONDOR_HOST)
 type=string
@@ -2306,12 +2300,6 @@ tags=submit
 default=
 type=string
 tags=submit
-
-[MAX_XML_LOG]
-# XXX Um, how does this default work in terms of the emitted C?
-default=1900000000
-type=long
-tags=file_xml
 
 [QUILL_DB_TYPE]
 default=PGSQL

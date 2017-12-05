@@ -27,7 +27,6 @@
 #include "jobqueuedatabase.h"
 #include "condor_ttdb.h"
 #include "jobqueuedbmanager.h"
-#include "dbms_utils.h"
 
 //! constructor
 JobQueueCollection::JobQueueCollection(int iBucketNum)

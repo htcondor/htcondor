@@ -32,13 +32,10 @@
 
 #include "jobqueuedbmanager.h"
 #include "ttmanager.h"
-#include "file_sql.h"
-#include "file_xml.h"
 #include "jobqueuedatabase.h"
 #include "pgsqldatabase.h"
 #include "misc_utils.h"
 #include "condor_ttdb.h"
-#include "dbms_utils.h"
 #include "ipv6_hostname.h"
 
 char logParamList[][30] = {"NEGOTIATOR_SQLLOG", "SCHEDD_SQLLOG", 

@@ -6527,11 +6527,6 @@ Matchmaker::updateCollector() {
         daemonCore->dc_stats.Publish(*publicAd);
 		daemonCore->monitor_data.ExportData(publicAd);
 
-		if ( FILEObj ) {
-			// log classad into sql log so that it can be updated to DB
-			FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);
-		}
-
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 		NegotiatorPluginManager::Update(*publicAd);
@@ -6573,9 +6568,6 @@ Matchmaker::invalidateNegotiatorAd( void )
 /* CONDORDB functions */
 void Matchmaker::insert_into_rejects(char const *userName, ClassAd& job)
 {
-	if ( !FILEObj ) {
-		return;
-	}
 	int cluster, proc;
 //	char startdname[80];
 	char globaljobid[200];
@@ -6610,14 +6602,9 @@ void Matchmaker::insert_into_rejects(char const *userName, ClassAd& job)
 
 	snprintf(tmp, 512, "GlobalJobId = \"%s\"", globaljobid);
 	tmpClP->Insert(tmp);
-	
-	FILEObj->file_newEvent("Rejects", tmpClP);
 }
 void Matchmaker::insert_into_matches(char const * userName,ClassAd& request, ClassAd& offer)
 {
-	if ( !FILEObj ) {
-		return;
-	}
 	char startdname[80],remote_user[80];
 	char globaljobid[200];
 	float remote_prio;
@@ -6667,8 +6654,6 @@ void Matchmaker::insert_into_matches(char const * userName,ClassAd& request, Cla
 		snprintf(tmp, 512, "remote_priority = %f", remote_prio);
 		tmpClP->Insert(tmp);
 	}
-	
-	FILEObj->file_newEvent("Matches", tmpClP);
 }
 /* This extracts the machine name from the global job ID [user@]machine.name#timestamp#cluster.proc*/
 static int get_scheddname_from_gjid(const char * globaljobid, char * scheddname )

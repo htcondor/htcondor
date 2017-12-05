@@ -1025,17 +1025,6 @@ private:
 	int m_send_reschedule_timer;
 	Timeslice m_negotiate_timeslice;
 
-	// some stuff about Quill that should go into the ad
-#ifdef HAVE_EXT_POSTGRESQL
-	int quill_enabled;
-	int quill_is_remotely_queryable;
-	char *quill_name;
-	char *quill_db_name;
-	char *quill_db_ip_addr;
-	char *quill_db_query_password;
-	int prevLHF;
-#endif
-
 	StringList m_job_machine_attrs;
 	int m_job_machine_attrs_history_length;
 

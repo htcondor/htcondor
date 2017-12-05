@@ -103,7 +103,6 @@
 //   either completely case-sensitive (and use MyStringHash()) or
 //   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
 static unsigned int hashFunction( const MyString& );
-#include "file_sql.h"
 
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 

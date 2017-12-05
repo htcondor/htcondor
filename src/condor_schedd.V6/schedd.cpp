@@ -73,8 +73,6 @@
 #include "condor_mkstemp.h"
 #include "tdman.h"
 #include "utc_time.h"
-#include "schedd_files.h"
-#include "file_sql.h"
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
@@ -143,8 +141,6 @@ extern char *DebugLock;
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
-
-extern FILESQL *FILEObj;
 
 // priority records
 extern prio_rec *PrioRec;

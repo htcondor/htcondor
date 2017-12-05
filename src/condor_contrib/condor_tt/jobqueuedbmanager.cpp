@@ -42,7 +42,6 @@
 #include "jobqueuecollection.h"
 
 #include "condor_ttdb.h"
-#include "dbms_utils.h"
 
 //! constructor
 JobQueueDBManager::JobQueueDBManager()

@@ -34,10 +34,7 @@ extern "C" void event_mgr (void);
 
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"
-#include "file_sql.h"
 #include "classad_merge.h"
-
-extern FILESQL *FILEObj;
 
 //-------------------------------------------------------------
 

@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "ManagedDatabase.h"
-#include "dbms_utils.h"
 #include "condor_config.h"
 #include "pgsqldatabase.h"
 #include "condor_email.h"
