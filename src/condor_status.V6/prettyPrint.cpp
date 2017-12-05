@@ -303,7 +303,7 @@ ppOption PrettyPrinter::prettyPrintHeadings (bool any_ads)
 {
 	ppOption pps = ppStyle;
 	bool no_headings = wantOnlyTotals || ! any_ads;
-	bool old_headings = (pps == PP_STARTD_COD) || (pps == PP_QUILL_NORMAL);
+	bool old_headings = (pps == PP_STARTD_COD);
 	bool long_form = PP_IS_LONGish(pps);
 	const char * newline_after_headings = "\n";
 	if ((pps == PP_CUSTOM) || using_print_format) {

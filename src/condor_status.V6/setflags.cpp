@@ -40,7 +40,6 @@ extern const char * mode_constraint; // constraint expression set by setMode
 
 // lookup table to convert condor AD type constants into strings.
 static const char * const adtype_names[] = {
-	QUILL_ADTYPE,
 	STARTD_ADTYPE,
 	SCHEDD_ADTYPE,
 	MASTER_ADTYPE,
@@ -59,7 +58,6 @@ static const char * const adtype_names[] = {
 	GENERIC_ADTYPE,
 	CREDD_ADTYPE,
 	DATABASE_ADTYPE,
-	DBMSD_ADTYPE,
 	TT_ADTYPE,
 	GRID_ADTYPE,
 	XFER_SERVICE_ADTYPE,
@@ -168,7 +166,6 @@ const char * getOldModeStr(int sdo_mode)
 		case SDO_Startd_Avail:		return "Available (Startd)";
 		case SDO_Startd_Claimed:	return "Claimed (Startd)";
 		case SDO_Startd_Cod:		return "COD (Startd)";
-		case SDO_Quill:		return "Normal (Quill)";
 		case SDO_Schedd:	return "Normal (Schedd)";
 		case SDO_Submitters:	return "Submittors (Schedd)";
 		case SDO_Master:	return "Normal (Master)";
@@ -228,7 +225,6 @@ static const struct _sdo_mode_info {
 	SDO(SDO_Startd_Avail,  STARTD_AD, PP_STARTD_NORMAL),//  MODE_STARTD_AVAIL,
 	SDO(SDO_Startd_Claimed,STARTD_AD, PP_STARTD_RUN),	//  MODE_STARTD_RUN,
 	SDO(SDO_Startd_Cod,    STARTD_AD, PP_STARTD_COD),	//  MODE_STARTD_COD,
-	SDO(SDO_Quill,          QUILL_AD, PP_QUILL_NORMAL),	//  MODE_QUILL_NORMAL,
 	SDO(SDO_Schedd,        SCHEDD_AD, PP_SCHEDD_NORMAL),//  MODE_SCHEDD_NORMAL,
 	SDO(SDO_Schedd_Data,   SCHEDD_AD, PP_SCHEDD_DATA),     //  MODE_SCHEDD_NORMAL,
 	SDO(SDO_Schedd_Run,    SCHEDD_AD, PP_SCHEDD_RUN),      //  MODE_SCHEDD_NORMAL,

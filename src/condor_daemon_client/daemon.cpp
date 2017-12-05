@@ -146,9 +146,6 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_CREDD:
 		_subsys = strnewp( "CREDD" );
 		break;
-	case DT_QUILL:
-		_subsys = strnewp( "QUILL" );
-		break;
 	case DT_LEASE_MANAGER:
 		_subsys = strnewp( "LEASE_MANAGER" );
 		break;
@@ -1033,10 +1030,6 @@ Daemon::locate( Daemon::LocateType method )
 		do {
 			rval = getCmInfo( "COLLECTOR" );
 		} while (rval == false && nextValidCm() == true);
-		break;
-	case DT_QUILL:
-		setSubsystem( "QUILL" );
-		rval = getDaemonInfo( SCHEDD_AD, true, method );
 		break;
 	case DT_TRANSFERD:
 		setSubsystem( "TRANSFERD" );

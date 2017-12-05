@@ -1051,7 +1051,6 @@ main (int argc, char *argv[])
 		switch (adType) {
 		case MASTER_AD: d = new Daemon( DT_MASTER, direct, addr ); break;
 		case STARTD_AD: d = new Daemon( DT_STARTD, direct, addr ); break;
-		case QUILL_AD:  d = new Daemon( DT_QUILL, direct, addr ); break;
 		case SCHEDD_AD:
 		case SUBMITTOR_AD: d = new Daemon( DT_SCHEDD, direct, addr ); break;
 		case NEGOTIATOR_AD:
@@ -1965,7 +1964,6 @@ firstPass (int argc, char *argv[])
 				{"schedd", SDO_Schedd},
 				{"submitters", SDO_Submitters},
 				{"startd", SDO_Startd},
-				{"quill", SDO_Quill},
 				{"defrag", SDO_Defrag},
 				{"grid", SDO_Grid},
 				{"accounting", SDO_Accounting},

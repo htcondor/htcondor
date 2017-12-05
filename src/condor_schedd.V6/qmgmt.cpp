@@ -4183,7 +4183,7 @@ ScheduleJobQueueLogFlush()
 {
 		// Flush the log after a short delay so that we avoid spending
 		// a lot of time waiting for the disk but we also make things
-		// visible to JobRouter and Quill within a maximum delay.
+		// visible to JobRouter within a maximum delay.
 	if( flush_job_queue_log_timer_id == -1 ) {
 		flush_job_queue_log_timer_id = daemonCore->Register_Timer(
 			flush_job_queue_log_delay,

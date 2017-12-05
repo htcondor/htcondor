@@ -1358,7 +1358,7 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 		// hear from the starter, the semantics are about as solid as
 		// we can hope for, but it's a schedd scalability problem.  If
 		// we do a lazy update, there's no additional cost to the
-		// schedd, but it means that condor_q and quill won't see the
+		// schedd, but it means that condor_q won't see the
 		// change for N minutes, and if we happen to crash during that
 		// time, the attribute is never incremented.  However, the
 		// semantics aren't 100% solid, even if we don't update lazy,

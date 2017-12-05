@@ -873,16 +873,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_UPDATESTATS_LOST  "UpdatesLost"
 #define ATTR_UPDATESTATS_HISTORY  "UpdatesHistory"
 
-#define ATTR_QUILL_ENABLED  "QuillEnabled"
-#define ATTR_QUILL_NAME  "QuillName"
-#define ATTR_QUILL_IS_REMOTELY_QUERYABLE  "QuillIsRemotelyQueryable"
-#define ATTR_QUILL_DB_IP_ADDR  "QuillDatabaseIpAddr"
-#define ATTR_QUILL_DB_NAME  "QuillDatabaseName"
-#define ATTR_QUILL_DB_QUERY_PASSWORD  "QuillDatabaseQueryPassword"
-
-#define ATTR_QUILL_SQL_TOTAL  "NumSqlTotal"
-#define ATTR_QUILL_SQL_LAST_BATCH  "NumSqlLastBatch"
-
 #define ATTR_CHECKPOINT_PLATFORM  "CheckpointPlatform"
 #define ATTR_LAST_CHECKPOINT_PLATFORM  "LastCheckpointPlatform"
 #define ATTR_IS_VALID_CHECKPOINT_PLATFORM  "IsValidCheckpointPlatform"

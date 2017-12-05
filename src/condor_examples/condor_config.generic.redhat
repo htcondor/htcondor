@@ -1106,7 +1106,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT, \
+#JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT, \
 #DEFRAG, GANGLIAD, ANNEXD
 
 
@@ -1791,8 +1791,7 @@ WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
 ##  What files should condor_preen leave in the spool directory?
 VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
                           Accountant.log, Accountantnew.log, \
-                          local_univ_execute, .quillwritepassword, \
-						  .pgpass, \
+                          local_univ_execute, .pgpass, \
 			  .schedd_address, .schedd_address.super, .schedd_classad
 
 ##  What files should condor_preen remove from the log directory?

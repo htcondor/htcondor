@@ -558,50 +558,6 @@ displayInfo( FILE *file, int )
 			 running, suspended, vacating, killing );
 }
 
-QuillNormalTotal::
-QuillNormalTotal()
-{
-	numSqlTotal = 0;
-	numSqlLastBatch = 0;
-}
-
-int QuillNormalTotal::
-update (ClassAd *ad, int /*options*/)
-{
-	int attrSqlTotal, attrSqlLastBatch;
-	bool badAd = false;
-
-	if (ad->LookupInteger(ATTR_QUILL_SQL_TOTAL, attrSqlTotal)) {
-		 numSqlTotal += attrSqlTotal;
-	} else {
-		badAd = true;
-	}
-
-	if( ad->LookupInteger(ATTR_QUILL_SQL_LAST_BATCH, 
-						  attrSqlLastBatch) ) {
-		numSqlLastBatch += attrSqlLastBatch;
-	} else {
-		badAd = true;
-	}
-
-	return !badAd;
-}
-
-
-void QuillNormalTotal::
-displayHeader(FILE *file)
-{
-	fprintf (file, "%18s %18s\n", "NumSqlTotal", "NumSqlLastBatch");
-}
-
-
-void QuillNormalTotal::
-displayInfo (FILE *file, int tl)
-{
-	if (tl) fprintf(file,"%18d %18d\n", numSqlTotal, numSqlLastBatch);
-}
-
-
 ScheddNormalTotal::
 ScheddNormalTotal()
 {

@@ -255,13 +255,6 @@ CondorQuery (AdTypes qType)
 		command = QUERY_ANY_ADS;
 		break;
 
-	  case DBMSD_AD:
-		query.setNumStringCats (0);
-		query.setNumIntegerCats(0);
-		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
-		break;
-
 	  case TT_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -591,10 +584,6 @@ getQueryAd (ClassAd &queryAd)
 
 	  case DATABASE_AD:
 		SetTargetTypeName (queryAd, DATABASE_ADTYPE);
-		break;
-
-	  case DBMSD_AD:
-		SetTargetTypeName (queryAd, DBMSD_ADTYPE);
 		break;
 
 	  case TT_AD:

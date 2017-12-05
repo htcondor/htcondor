@@ -441,9 +441,6 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	  case UPDATE_NEGOTIATOR_AD:
 		  ipattr = ATTR_NEGOTIATOR_IP_ADDR;
 		  break;
-	  case UPDATE_QUILL_AD:
-		  ipattr = ATTR_QUILL_DB_IP_ADDR;
-		  break;
 	  case UPDATE_COLLECTOR_AD:
 		  ipattr = ATTR_COLLECTOR_IP_ADDR;
 		  break;
@@ -1323,12 +1320,6 @@ CollectorEngine::LookupByAdType(AdTypes adType,
 			table = &StartdAds;
 			func = makeStartdAdHashKey;
 			break;
-#ifdef WANT_QUILL
-		case QUILL_AD:
-			table = &QuillAds;
-			func = makeQuillAdHashKey;
-			break;
-#endif /* WANT_QUILL */
 		case SCHEDD_AD:
 			table = &ScheddAds;
 			func = makeScheddAdHashKey;

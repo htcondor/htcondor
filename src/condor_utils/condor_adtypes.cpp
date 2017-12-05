@@ -27,7 +27,6 @@ struct Lookup {
 };
 static const Lookup adtypes [] =
 {
-	{ QUILL_ADTYPE,			QUILL_AD, },
 	{ STARTD_ADTYPE,		STARTD_AD, },
 	{ SCHEDD_ADTYPE,		SCHEDD_AD, },
 	{ MASTER_ADTYPE,		MASTER_AD, },
@@ -46,7 +45,6 @@ static const Lookup adtypes [] =
 	{ GENERIC_ADTYPE,		GENERIC_AD, },
 	{ CREDD_ADTYPE,			CREDD_AD, },
 	{ DATABASE_ADTYPE,		DATABASE_AD, },
-	{ DBMSD_ADTYPE,			DBMSD_AD, },
 	{ TT_ADTYPE,			TT_AD, },
 	{ GRID_ADTYPE, 			GRID_AD, },
 	{ XFER_SERVICE_ADTYPE,	XFER_SERVICE_AD, },

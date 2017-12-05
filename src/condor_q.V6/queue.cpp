@@ -751,10 +751,6 @@ int main (int argc, const char **argv)
 		exit( 1 );
 	}
 
-		/*if(querySchedds && scheddList.MyLength() == 0) {
-		  result = Collectors->query(quillQuery, quillList);
-		}*/
-
 	first = true;
 	// get queue from each ScheddIpAddr in ad
 	scheddList.Open();
@@ -1104,8 +1100,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			// the direct argument is vistigial, because only schedd is allowed, but we still parse and accept it.
 			i++;
 			if (MATCH != strcasecmp(argv[i], "schedd")) {
-				fprintf( stderr, "Error: Quill feature set is not available.\n"
-					"-direct may only take 'schedd' as an option.\n" );
+				fprintf( stderr, "Error: -direct may only take 'schedd' as an option.\n" );
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -4264,12 +4259,9 @@ const char * summarize_sinful_for_display(std::string & addrsumy, const char * a
 }
 
 
-// query SCHEDD or QUILLD daemon for jobs. and then print out the desired job info.
+// query SCHEDD daemon for jobs. and then print out the desired job info.
 // this function handles -analyze, -streaming, -dag and all normal condor_q output
-// when the source is a SCHEDD or QUILLD.
-// TJ isn't sure that the QUILL daemon can use fast path, prior to the 2013 refactor, 
-// the old code didn't try.
-//
+// when the source is a SCHEDD.
 static bool
 show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
 {

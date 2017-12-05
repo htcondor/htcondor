@@ -1943,9 +1943,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	classad::ClassAd *ad = ad_collection2->GetClassAd(job->dest_key);
 
-	// If ad is not found, this could be because Quill hasn't seen
-	// it yet, in which case this is not a problem.  The following
-	// attempts to ensure this by seeing if enough time has passed
+	// If ad is not found, check if enough time has passed
 	// since we submitted the job.
 
 	if(!ad) {

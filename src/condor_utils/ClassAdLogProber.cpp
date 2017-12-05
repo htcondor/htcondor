@@ -191,12 +191,6 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 			   "type %d, but sees %d instead.",
 			   CondorLogOp_LogHistoricalSequenceNumber,
 			   caLogParser.getCurCALogEntry()->op_type);
-#else
-		dprintf(D_ALWAYS,
-				"ERROR: quill prober expects first classad log entry to be "
-				"type %d, but sees %d instead.",
-				CondorLogOp_LogHistoricalSequenceNumber,
-				caLogParser.getCurCALogEntry()->op_type);
 #endif
 		return PROBE_FATAL_ERROR;
 	}
@@ -217,11 +211,6 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 		atol(((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->key);
 	cur_probed_creation_time = 
 		atol(((ClassAdLogEntry *)caLogParser.getCurCALogEntry())->value);
-
-	if (last_size == 0) {
-			// starting phase
-		return INIT_QUILL;
-	}	
 
 	if(cur_probed_seq_num != last_seq_num) {
 		return COMPRESSED;

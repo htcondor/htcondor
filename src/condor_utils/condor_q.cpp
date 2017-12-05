@@ -27,7 +27,6 @@
 #include "condor_config.h"
 #include "CondorError.h"
 #include "condor_classad.h"
-#include "quill_enums.h"
 #include "dc_schedd.h"
 #include "my_username.h"
 

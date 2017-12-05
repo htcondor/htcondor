@@ -298,10 +298,6 @@ const int UPDATE_NEGOTIATOR_AD 	= 49;
 const int QUERY_NEGOTIATOR_ADS	= 50;
 const int INVALIDATE_NEGOTIATOR_ADS = 51;
 
-const int UPDATE_QUILL_AD	= 52;
-const int QUERY_QUILL_ADS	= 53;
-const int INVALIDATE_QUILL_ADS  = 54;
-
 const int UPDATE_HAD_AD = 55;
 const int QUERY_HAD_ADS = 56;
 const int INVALIDATE_HAD_ADS = 57;

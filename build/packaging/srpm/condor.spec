@@ -859,7 +859,6 @@ cmake \
        -DHAVE_HIBERNATION:BOOL=TRUE \
        -DWANT_LEASE_MANAGER:BOOL=FALSE \
        -DWANT_HDFS:BOOL=FALSE \
-       -DWANT_QUILL:BOOL=FALSE \
        -DWITH_ZLIB:BOOL=FALSE \
        -DWITH_POSTGRESQL:BOOL=FALSE \
        -DWANT_CONTRIB:BOOL=ON \
@@ -1027,9 +1026,6 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
 # not packaging legacy cruft
 rm -f %{buildroot}/%{_mandir}/man1/condor_master_off.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
-
-# not packaging quill bits
-rm -f %{buildroot}/%{_mandir}/man1/condor_load_history.1
 
 # this one got removed but the manpage was left around
 rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
