@@ -359,7 +359,8 @@ Requires: systemd
 
 BuildRequires: transfig
 BuildRequires: latex2html
-BuildRequires: texlive-epstopdf
+# We don't build the manual (yet)
+#BuildRequires: texlive-epstopdf
 
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
@@ -1096,6 +1097,9 @@ rm -rf %{buildroot}%{_sbindir}/condor_install
 rm -rf %{buildroot}%{_sbindir}/condor_install_local
 rm -rf %{buildroot}%{_sbindir}/condor_local_start
 rm -rf %{buildroot}%{_sbindir}/condor_local_stop
+%ifarch x86_64
+rm -rf %{buildroot}%{_sbindir}/condor_shadow_s
+%endif
 rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
 rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
 rm -rf %{buildroot}%{_sbindir}/filelock_midwife
