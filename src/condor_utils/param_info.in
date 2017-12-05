@@ -3708,13 +3708,6 @@ type=path
 customization=devel
 tags=master
 
-[DBMSD]
-default=$(SBIN)/condor_dbmsd
-win32_default=$(SBIN)\condor_dbmsd.exe
-type=path
-customization=devel
-tags=master
-
 [CCB_POLLING_TIMESLICE]
 default=0.05
 type=double
