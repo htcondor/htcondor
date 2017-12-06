@@ -324,7 +324,10 @@ check_spool_dir()
     const char      *history, *startd_history;
 	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list, bad_spool_files;
-	Qmgr_connection *qmgr;
+	Qmgr_connection *qmgr = new Qmgr_connection();
+	bool			is_schedd_connected = false;
+	double			last_connection_time;
+	double			max_connection_time;
 
 	if ( ValidSpoolFiles == NULL ) {
 		dprintf( D_ALWAYS, "Not cleaning spool directory: No VALID_SPOOL_FILES defined\n");
@@ -337,7 +340,10 @@ check_spool_dir()
 
     startd_history = param("STARTD_HISTORY");
    	startd_history = condor_basename(startd_history);
-   	startd_history_length = strlen(startd_history);
+	startd_history_length = strlen(startd_history);
+	   
+	last_connection_time = _condor_debug_get_time_double();
+	max_connection_time = param_integer("PREEN_MAX_SCHEDD_CONNECTION_TIME");
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
 	if (UserValidSpoolFiles) {
@@ -365,12 +371,6 @@ check_spool_dir()
 		if ( ! well_known_list.contains(valid_list[ix])) well_known_list.append(valid_list[ix]);
 	}
 	
-	// connect to the Q manager
-	if (!(qmgr = ConnectQ (0))) {
-		dprintf( D_ALWAYS, "Not cleaning spool directory: Can't contact schedd\n" );
-		return;
-	}
-
 		// Check each file in the directory
 	while( (f = dir.Next()) ) {
 			// see if it's on the list
@@ -412,18 +412,6 @@ check_spool_dir()
 			continue;
 		}
 
-			// see if it's a legitimate checkpoint
-		if( is_ckpt_file(f) ) {
-			good_file( Spool, f );
-			continue;
-		}
-
-			// See if it's a legimate MyProxy password file
-		if ( is_myproxy_file( f ) ) {
-			good_file( Spool, f );
-			continue;
-		}
-
 			// See if it's a CCB server file
 		if ( is_ccb_file( f ) ) {
 			good_file( Spool, f );
@@ -437,24 +425,81 @@ check_spool_dir()
 			}
 		}
 
+			// If none of the previous checks succeeded, we can try a couple
+			// other checks which require an active connection to the schedd. 
+			// Establish a connection (if not already connected). If this fails
+			// for any reason, abort and don't delete any files.
+		if ( !is_schedd_connected ) {
+			if ( !( qmgr = ConnectQ (0,0,false) ) ) {
+				return;
+			}
+			is_schedd_connected = true;
+			last_connection_time = _condor_debug_get_time_double();
+		}
+
+		sleep(1);
+
+			// See if it's a legitimate checkpoint. Needs an active connection
+			// to the schedd.
+		if( is_ckpt_file(f) ) {
+			good_file( Spool, f );
+			continue;
+		}
+
+			// See if it's a legimate MyProxy password file. Needs an active
+			// connection to the schedd.
+		if ( is_myproxy_file( f ) ) {
+			good_file( Spool, f );
+			continue;
+		}
+
 			// We think it's bad.  For now, just append it to a
 			// StringList, instead of actually deleting it.  This way,
 			// if DisconnectQ() fails, we can abort and not actually
 			// delete any of these files.  -Derek Wright 3/31/99
 		bad_spool_files.append( f );
+
+			// If the schedd is connected, check how long the connection has
+			// been active. If it has exceeded a maximum connection time 
+			// (defined by PREEN_MAX_SCHEDD_CONNECTION_TIME) then disconnect,
+			// and mark bad files for deletion.
+			// We also need to run this code when we hit the last file in the
+			// directory. Is there some way to know if this is the last file?
+		if ( is_schedd_connected ) {
+			if ( _condor_debug_get_time_double() > 
+							( last_connection_time + max_connection_time ) ) {
+				if ( DisconnectQ( qmgr ) ) {
+						// We were actually talking to a real queue the whole time
+						// and didn't have any errors.  So, it's now safe to
+						// delete the files we think we can delete.
+					bad_spool_files.rewind();
+					while( (f = bad_spool_files.next()) ) {
+						bad_file( Spool, f, dir );
+					}
+					is_schedd_connected = false;
+					bad_spool_files.clearAll();
+				} else {
+					dprintf( D_ALWAYS, 
+							"Error disconnecting from job queue, not deleting "
+								"spool files.\n" );
+				}
+			}
+		}
 	}
 
-	if( DisconnectQ(qmgr) ) {
-			// We were actually talking to a real queue the whole time
-			// and didn't have any errors.  So, it's now safe to
-			// delete the files we think we can delete.
-		bad_spool_files.rewind();
-		while( (f = bad_spool_files.next()) ) {
-			bad_file( Spool, f, dir );
+		// All done. If the schedd connection is open, disconnect and make the
+		// remaining files for deletion.
+	if ( is_schedd_connected ) {
+		if( DisconnectQ( qmgr ) ) {
+			bad_spool_files.rewind();
+			while( (f = bad_spool_files.next()) ) {
+				bad_file( Spool, f, dir );
+			}
+		} else {
+			dprintf( D_ALWAYS, 
+					"Error disconnecting from job queue, not deleting "
+						"spool files.\n" );
 		}
-	} else {
-		dprintf( D_ALWAYS, 
-				 "Error disconnecting from job queue, not deleting spool files.\n" );
 	}
 }
 
