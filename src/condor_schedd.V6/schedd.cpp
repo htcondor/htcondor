@@ -73,8 +73,6 @@
 #include "condor_mkstemp.h"
 #include "tdman.h"
 #include "utc_time.h"
-#include "schedd_files.h"
-#include "file_sql.h"
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
@@ -143,8 +141,6 @@ extern char *DebugLock;
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
-
-extern FILESQL *FILEObj;
 
 // priority records
 extern prio_rec *PrioRec;
@@ -683,15 +679,6 @@ Scheduler::Scheduler() :
 	startjobsid = -1;
 	periodicid = -1;
 
-#ifdef HAVE_EXT_POSTGRESQL
-	quill_enabled = FALSE;
-	quill_is_remotely_queryable = 0; //false
-	quill_name = NULL;
-	quill_db_name = NULL;
-	quill_db_ip_addr = NULL;
-	quill_db_query_password = NULL;
-#endif
-
 	checkContactQueue_tid = -1;
 	checkReconnectQueue_tid = -1;
 	num_pending_startd_contacts = 0;
@@ -721,9 +708,6 @@ Scheduler::Scheduler() :
     m_userlog_file_cache_clear_interval = 60;
 
 	jobThrottleNextJobDelay = 0;
-#ifdef HAVE_EXT_POSTGRESQL
-	prevLHF = 0;
-#endif
 
 	JobStartCount = 0;
 	MaxNextJobDelay = 0;
@@ -1490,13 +1474,6 @@ Scheduler::count_jobs()
 	m_adBase->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
 
 	daemonCore->UpdateLocalAd(cad);
-
-		// log classad into sql log so that it can be updated to DB
-#ifdef HAVE_EXT_POSTGRESQL
-	if ( FILEObj ) {
-		FILESQL::daemonAdInsert(cad, "ScheddAd", FILEObj, prevLHF);
-	}
-#endif
 
 #if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
@@ -13309,79 +13286,6 @@ Scheduler::Init()
 
 	RequestClaimTimeout = param_integer("REQUEST_CLAIM_TIMEOUT",60*30);
 
-#ifdef HAVE_EXT_POSTGRESQL
-
-	/* See if QUILL is configured for this schedd */
-	if (param_boolean("QUILL_ENABLED", false) == false) {
-		quill_enabled = FALSE;
-	} else {
-		quill_enabled = TRUE;
-	}
-
-	/* only force definition of these attributes if I have to */
-	if (quill_enabled == TRUE) {
-
-		/* set up whether or not the quill daemon is remotely queryable */
-		if (param_boolean("QUILL_IS_REMOTELY_QUERYABLE", true) == true) {
-			quill_is_remotely_queryable = TRUE;
-		} else {
-			quill_is_remotely_queryable = FALSE;
-		}
-
-		/* set up a required quill_name */
-		tmp = param("QUILL_NAME");
-		if (!tmp) {
-			EXCEPT( "No QUILL_NAME specified in config file" );
-		}
-		if (quill_name != NULL) {
-			free(quill_name);
-			quill_name = NULL;
-		}
-		quill_name = strdup(tmp);
-		free(tmp);
-		tmp = NULL;
-
-		/* set up a required database ip address quill needs to use */
-		tmp = param("QUILL_DB_IP_ADDR");
-		if (!tmp) {
-			EXCEPT( "No QUILL_DB_IP_ADDR specified in config file" );
-		}
-		if (quill_db_ip_addr != NULL) {
-			free(quill_db_ip_addr);
-			quill_db_ip_addr = NULL;
-		}
-		quill_db_ip_addr = strdup(tmp);
-		free(tmp);
-		tmp = NULL;
-
-		/* Set up the name of the required database ip address */
-		tmp = param("QUILL_DB_NAME");
-		if (!tmp) {
-			EXCEPT( "No QUILL_DB_NAME specified in config file" );
-		}
-		if (quill_db_name != NULL) {
-			free(quill_db_name);
-			quill_db_name = NULL;
-		}
-		quill_db_name = strdup(tmp);
-		free(tmp);
-		tmp = NULL;
-
-		/* learn the required password field to access the database */
-		tmp = param("QUILL_DB_QUERY_PASSWORD");
-		if (!tmp) {
-			EXCEPT( "No QUILL_DB_QUERY_PASSWORD specified in config file" );
-		}
-		if (quill_db_query_password != NULL) {
-			free(quill_db_query_password);
-			quill_db_query_password = NULL;
-		}
-		quill_db_query_password = strdup(tmp);
-		free(tmp);
-		tmp = NULL;
-	}
-#endif
-
 	int int_val = param_integer( "JOB_IS_FINISHED_INTERVAL", 0, 0 );
 	job_is_finished_queue.setPeriod( int_val );
 	int_val = param_integer( "JOB_IS_FINISHED_COUNT", 1, 1 );
@@ -13469,31 +13373,6 @@ Scheduler::Init()
 	// Since we don't know how many there are yet, just say 0, it will get
 	// fixed in count_job() -Erik 12/18/2006
 	m_adSchedd->Assign(ATTR_NUM_USERS, 0);
-
-#ifdef HAVE_EXT_POSTGRESQL
-	// Put the quill stuff into the add as well
-	if (quill_enabled == TRUE) {
-		m_adSchedd->Assign( ATTR_QUILL_ENABLED, true ); 
-
-		m_adSchedd->Assign( ATTR_QUILL_NAME, quill_name ); 
-
-		m_adSchedd->Assign( ATTR_QUILL_DB_NAME, quill_db_name ); 
-
-		MyString expr;
-		expr.formatstr( "%s = \"<%s>\"", ATTR_QUILL_DB_IP_ADDR,
-					  quill_db_ip_addr ); 
-		m_adSchedd->Insert( expr.Value() );
-
-		m_adSchedd->Assign( ATTR_QUILL_DB_QUERY_PASSWORD, quill_db_query_password); 
-
-		m_adSchedd->Assign( ATTR_QUILL_IS_REMOTELY_QUERYABLE, 
-					  quill_is_remotely_queryable == TRUE ? true : false );
-
-	} else {
-
-		m_adSchedd->Assign( ATTR_QUILL_ENABLED, false );
-	}
-#endif
 
 	char *collectorHost = NULL;
 	collectorHost  = param("COLLECTOR_HOST");

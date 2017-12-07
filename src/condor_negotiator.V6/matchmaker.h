@@ -34,9 +34,6 @@
 #include <map>
 #include <algorithm>
 
-/* FILESQL include */
-#include "file_sql.h"
-
 typedef struct MapEntry {
 	char *remoteHost;
 	int sequenceNum;
@@ -44,8 +41,6 @@ typedef struct MapEntry {
 } MapEntry;
 /* ODBC object extern */
 //extern ODBC *DBObj;
-/* FILESQL object extern */
-extern FILESQL *FILEObj;
 
 struct GroupEntry {
     typedef vector<int>::size_type size_type;

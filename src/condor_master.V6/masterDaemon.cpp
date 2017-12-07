@@ -33,7 +33,6 @@
 #include "internet.h"
 #include "strupr.h"
 #include "condor_netdb.h"
-#include "file_sql.h"
 #include "file_lock.h"
 #include "stat_info.h"
 #include "shared_port_endpoint.h"
@@ -73,7 +72,6 @@ extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
 extern void		run_preen();
 
-extern FILESQL *FILEObj;
 extern int condor_main_argc;
 extern char **condor_main_argv;
 extern time_t daemon_stop_time;
@@ -3240,11 +3238,6 @@ Daemons::UpdateCollector()
 	MasterPluginManager::Update(ad);
 #endif
 #endif
-
-	if ( FILEObj ) {
-		// log classad into sql log so that it can be updated to DB
-		FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
-	}
 
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );

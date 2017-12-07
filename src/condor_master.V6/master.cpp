@@ -137,7 +137,7 @@ const char	*default_daemon_list[] = {
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
 "VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, HDFS, "
-"REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER, SHARED_PORT, "
+"REPLICATION, JOB_ROUTER, ROOSTER, SHARED_PORT, "
 "DEFRAG, GANGLIAD, ANNEXD";
 
 // create an object of class daemons.
@@ -1799,10 +1799,9 @@ void init_firewall_exceptions() {
 
 	bool add_exception;
 	char *master_image_path, *schedd_image_path, *startd_image_path,
-		 *dbmsd_image_path, *quill_image_path, *dagman_image_path, 
-		 *negotiator_image_path, *collector_image_path, *starter_image_path,
-		 *shadow_image_path, *gridmanager_image_path, *gahp_image_path,
-		 *gahp_worker_image_path, *credd_image_path, 
+		 *dagman_image_path, *negotiator_image_path, *collector_image_path, 
+		 *starter_image_path, *shadow_image_path, *gridmanager_image_path, 
+		 *gahp_image_path, *gahp_worker_image_path, *credd_image_path, 
 		 *vmgahp_image_path, *kbdd_image_path, *hdfs_image_path, *bin_path;
 	const char* dagman_exe = "condor_dagman.exe";
 
@@ -1835,11 +1834,6 @@ void init_firewall_exceptions() {
 
 	schedd_image_path = param("SCHEDD");
 	startd_image_path = param("STARTD");
-
-	// We to also add exceptions for Quill and DBMSD
-
-	quill_image_path = param("QUILL");
-	dbmsd_image_path = param("DBMSD");
 
 	// And add exceptions for all the other daemons, since they very well
 	// may need to open a listen port for mechanisms like CCB, or HTTPS
@@ -1943,22 +1937,6 @@ void init_firewall_exceptions() {
 		}
 	}
 
-	if ( (daemons.FindDaemon("QUILL") != NULL) && quill_image_path ) {
-		if ( !SUCCEEDED(wfh.addTrusted(quill_image_path)) ) {
-			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-				"windows firewall exception list.\n",
-				quill_image_path);
-		}
-	}
-
-	if ( (daemons.FindDaemon("DBMSD") != NULL) && dbmsd_image_path ) {
-		if ( !SUCCEEDED(wfh.addTrusted(dbmsd_image_path)) ) {
-			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-				"windows firewall exception list.\n",
-				dbmsd_image_path);
-		}
-	}
-
 	if ( starter_image_path ) {
 		if ( !SUCCEEDED(wfh.addTrusted(starter_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
@@ -2001,8 +1979,6 @@ void init_firewall_exceptions() {
 	if ( master_image_path ) { free(master_image_path); }
 	if ( schedd_image_path ) { free(schedd_image_path); }
 	if ( startd_image_path ) { free(startd_image_path); }
-	if ( quill_image_path )  { free(quill_image_path); }
-	if ( dbmsd_image_path )  { free(dbmsd_image_path); }
 	if ( dagman_image_path ) { free(dagman_image_path); }
 	if ( negotiator_image_path ) { free(negotiator_image_path); }
 	if ( collector_image_path ) { free(collector_image_path); }

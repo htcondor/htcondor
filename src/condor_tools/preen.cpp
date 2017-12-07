@@ -375,9 +375,6 @@ check_spool_dir()
 		// SCHEDD.lock: High availability lock file.  Current
 		// manual recommends putting it in the spool, so avoid it.
 		"SCHEDD.lock",
-		// These are Quill-related files
-		".quillwritepassword",
-		".pgpass",
 		};
 	for (int ix = 0; ix < (int)(sizeof(valid_list)/sizeof(valid_list[0])); ++ix) {
 		if ( ! well_known_list.contains(valid_list[ix])) well_known_list.append(valid_list[ix]);

@@ -16,4 +16,4 @@
  # 
  ############################################################### 
 
-condor_exe(condor_q "queue.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${POSTGRESQL_FOUND}" OFF)
+condor_exe(condor_q "queue.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)

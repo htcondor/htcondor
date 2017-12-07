@@ -1061,7 +1061,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT, \
+#JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT, \
 #DEFRAG, GANGLIAD, ANNEXD
 
 
@@ -1510,7 +1510,6 @@ SCHEDD_ADDRESS_FILE	= $(SPOOL)/.schedd_address
 ##  as well as sending it to the collector. This way, tools that need
 ##  information about a daemon do not have to contact the central manager
 ##  to get information about a daemon on the same machine.
-##  This feature is necessary for Quill to work.
 SCHEDD_DAEMON_AD_FILE = $(SPOOL)/.schedd_classad
 
 ##  How often should the schedd send an update to the central manager?

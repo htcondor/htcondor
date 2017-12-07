@@ -50,7 +50,6 @@
 #include "fileno.h"
 #include "exit.h"
 
-#include "file_sql.h"
 #include "spool_version.h"
 
 /* XXX This should not be here */
@@ -59,8 +58,6 @@
 #endif
 
 int	UsePipes;
-
-extern FILESQL *FILEObj;
 
 extern "C" {
 	void reaper(int);
@@ -314,19 +311,12 @@ main(int argc, char *argv[] )
 	reserved_swap = param_integer("RESERVED_SWAP", 0);
 	reserved_swap *= 1024; /* megabytes -> kb */
 
-	bool use_sql_log = param_boolean("QUILL_USE_SQL_LOG", false);
-    FILEObj = FILESQL::createInstance(use_sql_log);
-	
 	free_swap = sysapi_swap_space();
 
 	dprintf( D_FULLDEBUG, "*** Reserved Swap = %d\n", reserved_swap );
 	dprintf( D_FULLDEBUG, "*** Free Swap = %d\n", free_swap );
 	if( reserved_swap && free_swap < reserved_swap ) {
 		dprintf( D_ALWAYS, "Not enough reserved swap space\n" );
-		if(FILEObj) {
-		  delete FILEObj;
-		}
-
 		exit( JOB_NO_MEM );
 	}
 
@@ -525,9 +515,6 @@ main(int argc, char *argv[] )
     if( My_Filesystem_Domain ) {
         free( My_Filesystem_Domain );
     }
-        if(FILEObj) {
-                delete FILEObj;
-        }
 
 	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
 		ExitReason );

@@ -1337,21 +1337,12 @@ sub PostTunePersonalCondor
 	my $outputarrayref = shift;
 	debug("PostTunePersonalCondor: getting DAEMON_LIST from $config_file\n",2);
 
-    # If this is a quill test, then quill is within
-    # $personal_daemons AND $topleveldir/../pgpass wants to  be
-    # $topleveldir/spool/.pgpass
-
     my $configured_daemon_list;
 	if (defined $outputarrayref) {
     	$configured_daemon_list = CondorConfigVal($config_file,"daemon_list", $outputarrayref);
 	} else {
     	$configured_daemon_list = CondorConfigVal($config_file,"daemon_list");
 	}
-    if($configured_daemon_list =~ m/quill/i ) {
-        debug( "This is a quill test (because DAEMON_LIST=$configured_daemon_list)\n", $debuglevel );
-        my $cmd = "cp $topleveldir/../pgpass $topleveldir/spool/.pgpass";
-        system("$cmd");
-    }
 }
 
 #################################################################

@@ -458,9 +458,6 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_eventlog-xml "Basic XML Event Log Test" "core;quick;full")
 	condor_pl_test(lib_eventlog_base "Test re-initialization of eventlog reader does not cause seg faults" "lib;quick;full")
 
-	# condor_pl_test(job_quill_basic "Basic Quill Test" "core;quick;full;quicknolink")
-	# alread built as part of make tests prior to running batch_test
-
 	#dprint("TODO: Need to fix lib_eventlog_rotation-defaults test")
 	#condor_pl_test(lib_eventlog_rotation-defaults "Event Log Rotation: Default settings" "core;quick;full")
 	condor_pl_test(lib_chirp "Exercise the chirp I/O tool" "lib;quick;full")

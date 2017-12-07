@@ -913,36 +913,6 @@ default=2308032
 type=int
 tags=accountant
 
-[QUILL_ENABLED]
-default=false
-type=bool
-customization=devel
-tags=q,queue
-
-[QUILL_NAME]
-default=
-type=string
-customization=devel
-tags=q,queue
-
-[QUILL_DB_IP_ADDR]
-default=
-type=string
-customization=devel
-tags=q,queue
-
-[QUILL_DB_NAME]
-default=
-type=string
-customization=devel
-tags=q,queue
-
-[QUILL_DB_QUERY_PASSWORD]
-default=
-type=string
-customization=devel
-tags=q,queue
-
 [REAL_TIME_JOB_SUSPEND_UPDATES]
 default=
 type=string
@@ -1015,46 +985,10 @@ default=0
 type=int
 tags=shadow,baseshadow
 
-[QUILL_MANAGE_VACUUM]
-default=false
-type=bool
-customization=devel
-tags=quill,jobqueuedbmanager
-
-[QUILL_POLLING_PERIOD]
-default=10
-type=int
-customization=devel
-tags=quill,jobqueuedbmanager
-
-[QUILL_HISTORY_DURATION]
-default=180
-type=int
-customization=devel
-tags=quill,jobqueuedbmanager
-
-[QUILL_HISTORY_CLEANING_INTERVAL]
-default=24
-type=int
-customization=devel
-tags=quill,jobqueuedbmanager
-
-[QUILL_SHOULD_REINDEX]
-default=true
-type=bool
-customization=devel
-tags=quill,jobqueuedbmanager
-
 [SCHEDD_NAME]
 default=
 type=string
-tags=quill,jobqueuedbmanager
-
-[QUILL_IS_REMOTELY_QUERYABLE]
-default=true
-type=bool
-customization=devel
-tags=quill,jobqueuedbmanager
+tags=jobqueuedbmanager
 
 [COUNT_HYPERTHREAD_CPUS]
 default=true
@@ -1481,12 +1415,6 @@ tags=daemons
 default=
 type=string
 tags=daemons
-
-[QUILL_USE_SQL_LOG]
-default=false
-type=bool
-customization=devel
-tags=daemon_core
 
 [COLLECTOR_NAME]
 default=My Pool - $(CONDOR_HOST)
@@ -2165,34 +2093,10 @@ default=false
 type=bool
 default=false
 
-[QUILL_MAINTAIN_DB_CONN]
-default=true
-type=bool
-customization=devel
-tags=tt,ttmanager
-
-[QUILL_MAINTAIN_SOFT_STATE]
-default=true
-type=bool
-customization=devel
-tags=tt,ttmanager
-
-[QUILL_USE_TEMP_TABLE]
-default=false
-type=bool
-customization=devel
-tags=tt,ttmanager
-
 [WANT_XML_LOG]
 default=false
 type=bool
 tags=tt,ttmanager
-
-[QUILL_DB_USER]
-default=
-type=string
-customization=devel
-tags=tt,jobqueuedbmanager
 
 [SUBMIT_SKIP_FILECHECKS]
 default=true
@@ -2306,18 +2210,6 @@ tags=submit
 default=
 type=string
 tags=submit
-
-[MAX_XML_LOG]
-# XXX Um, how does this default work in terms of the emitted C?
-default=1900000000
-type=long
-tags=file_xml
-
-[QUILL_DB_TYPE]
-default=PGSQL
-type=string
-customization=devel
-tags=jobqueuesnapshot
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
 default=2
@@ -2968,7 +2860,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor
@@ -3033,45 +2925,6 @@ tags=shadow,shadow
 default=
 type=string
 tags=shadow,pseudo_ops
-
-[DBMSMANAGER_NAME]
-default=
-type=string
-tags=dbmsd,DBMSManager
-
-[DATABASE_PURGE_INTERVAL]
-default=
-type=string
-tags=dbmsd,DBMSManager
-
-[DATABASE_REINDEX_INTERVAL]
-default=
-type=string
-tags=dbmsd,DBMSManager
-
-[QUILL_RESOURCE_HISTORY_DURATION]
-default=
-type=string
-customization=devel
-tags=dbmsd,ManagedDatabase
-
-[QUILL_RUN_HISTORY_DURATION]
-default=
-type=string
-customization=devel
-tags=dbmsd,ManagedDatabase
-
-[QUILL_JOB_HISTORY_DURATION]
-default=
-type=string
-customization=devel
-tags=dbmsd,ManagedDatabase
-
-[QUILL_DBSIZE_LIMIT]
-default=
-type=string
-customization=devel
-tags=dbmsd,ManagedDatabase
 
 [JOB_ROUTER_SOURCE_JOB_CONSTRAINT]
 default=
@@ -3711,20 +3564,6 @@ win32_default=$(SBIN)\condor_startd.exe
 type=path
 customization=devel
 description=Path to the HTCondor startd daemon binary
-tags=master
-
-[QUILL]
-default=$(SBIN)/condor_quill
-win32_default=$(SBIN)\condor_quill.exe
-type=path
-customization=devel
-tags=master
-
-[DBMSD]
-default=$(SBIN)/condor_dbmsd
-win32_default=$(SBIN)\condor_dbmsd.exe
-type=path
-customization=devel
 tags=master
 
 [CCB_POLLING_TIMESLICE]
@@ -6107,10 +5946,6 @@ default : @end
 	LeaseManager.PRUNE_INTERVAL
 	LeaseManager.DEBUG_ADS
 	LeaseManager.CLASSAD_LOG
-	QUILL_LOG
-	QUILL_ADDRESS_FILE
-	DBMSD_ARGS
-	DBMSD_LOG
 	STORK
 	STORK_ADDRESS_FILE
 	STORK_LOG_BASE
@@ -6162,8 +5997,8 @@ default : @end
 	MAX_C_GAHP_LOG=1000000
 	MAX_VM_GAHP_LOG=1000000
 	MAX_CREDD_LOG=4000000
-	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
-	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad, OfflineLog
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_classad
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_classad, OfflineLog
 @end
 
 # This table is for platform-specific knobs that fit the rules for $UPGRADE.DISCARDIF above

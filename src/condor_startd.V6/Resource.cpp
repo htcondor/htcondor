@@ -24,7 +24,6 @@
 #include "classad_merge.h"
 #include "vm_common.h"
 #include "VMRegister.h"
-#include "file_sql.h"
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
@@ -42,8 +41,6 @@
 #ifndef max
 #define max(x,y) (((x) < (y)) ? (y) : (x))
 #endif
-
-extern FILESQL *FILEObj;
 
 std::vector<SlotType> SlotType::types(10);
 static bool warned_startd_attrs_once = false; // used to prevent repetition of the warning about mixing STARTD_ATTRS and STARTD_EXPRS
@@ -1333,11 +1330,6 @@ Resource::publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad )
     }
 
     this->publish_private( private_ad );
-
-    // log classad into sql log so that it can be updated to DB
-    if (FILEObj) {
-        FILESQL::daemonAdInsert(public_ad, "Machines", FILEObj, prevLHF);
-	}
 }
 
 

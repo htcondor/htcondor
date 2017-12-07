@@ -143,9 +143,6 @@ ClassAdLog<K,AltK,AD>::filter_iterator::operator++(int)
 typedef GenericClassAdCollection<JobQueueKey, const char*,JobQueuePayload> JobQueueType;
 template class ClassAdLog<JobQueueKey,const char*,JobQueuePayload>;
 
-#include "file_sql.h"
-extern FILESQL *FILEObj;
-
 extern char *Spool;
 extern char *Name;
 extern Scheduler scheduler;
@@ -2973,12 +2970,6 @@ int DestroyProc(int cluster_id, int proc_id)
   ScheddPluginManager::Archive(ad);
 #endif
 
-  if ( FILEObj ) {
-	  if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
-		  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
-	  }
-  }
-
   // save job ad to the log
 	bool already_in_transaction = InTransaction();
 	if( !already_in_transaction ) {
@@ -3132,12 +3123,6 @@ int DestroyCluster(int cluster_id, const char* reason)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 				ScheddPluginManager::Archive(ad);
 #endif
-
-				if ( FILEObj ) {
-					if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
-						dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
-					}
-		  		}
 
   // save job ad to the log
 
@@ -4198,7 +4183,7 @@ ScheduleJobQueueLogFlush()
 {
 		// Flush the log after a short delay so that we avoid spending
 		// a lot of time waiting for the disk but we also make things
-		// visible to JobRouter and Quill within a maximum delay.
+		// visible to JobRouter within a maximum delay.
 	if( flush_job_queue_log_timer_id == -1 ) {
 		flush_job_queue_log_timer_id = daemonCore->Register_Timer(
 			flush_job_queue_log_delay,

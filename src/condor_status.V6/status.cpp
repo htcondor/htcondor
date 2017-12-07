@@ -1051,7 +1051,6 @@ main (int argc, char *argv[])
 		switch (adType) {
 		case MASTER_AD: d = new Daemon( DT_MASTER, direct, addr ); break;
 		case STARTD_AD: d = new Daemon( DT_STARTD, direct, addr ); break;
-		case QUILL_AD:  d = new Daemon( DT_QUILL, direct, addr ); break;
 		case SCHEDD_AD:
 		case SUBMITTOR_AD: d = new Daemon( DT_SCHEDD, direct, addr ); break;
 		case NEGOTIATOR_AD:
@@ -1557,9 +1556,6 @@ usage ()
 		"\t       auto    Guess the format from reading the input stream\n"
 		"\t-grid\t\t\tDisplay grid resources\n"
 		"\t-run\t\t\tDisplay running job stats\n"
-#ifdef HAVE_EXT_POSTGRESQL
-		"\t-quill\t\t\tDisplay attributes of quills\n"
-#endif /* HAVE_EXT_POSTGRESQL */
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
@@ -1968,7 +1964,6 @@ firstPass (int argc, char *argv[])
 				{"schedd", SDO_Schedd},
 				{"submitters", SDO_Submitters},
 				{"startd", SDO_Startd},
-				{"quill", SDO_Quill},
 				{"defrag", SDO_Defrag},
 				{"grid", SDO_Grid},
 				{"accounting", SDO_Accounting},
@@ -1992,11 +1987,6 @@ firstPass (int argc, char *argv[])
 				mainPP.setMode (SDO_Other, i, argv[i]);
 			}
 		} else
-#ifdef HAVE_EXT_POSTGRESQL
-		if (is_dash_arg_prefix (argv[i], "quill", 1)) {
-			mainPP.setMode (SDO_Quill, i, argv[i]);
-		} else
-#endif /* HAVE_EXT_POSTGRESQL */
 		if (is_dash_arg_prefix (argv[i], "license", 2)) {
 			mainPP.setMode (SDO_License, i, argv[i]);
 		} else

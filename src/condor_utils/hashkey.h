@@ -53,7 +53,6 @@ typedef HashTable <MyString, CollectorHashTable *> GenericAdHashTable;
 
 // functions to make the hashkeys
 bool makeStartdAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeQuillAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeScheddAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeLicenseAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeMasterAdHashKey (AdNameHashKey &, ClassAd *);

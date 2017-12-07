@@ -166,9 +166,6 @@
 /* Define if enabling NeST (USED)*/
 #cmakedefine WANT_NEST 1
 
-/* Define if enabling Quill (USED)*/
-#cmakedefine WANT_QUILL 1
-
 /* Define to 1 to support invoking hooks throughout the workflow of a job (USED)*/
 #cmakedefine HAVE_JOB_HOOKS 1
 
@@ -332,9 +329,6 @@
 
 ///* Do we have the pcre external*/
 #cmakedefine HAVE_EXT_PCRE
-
-///* Do we have the postgresql external*/
-#cmakedefine HAVE_EXT_POSTGRESQL
 
 ///* Do we have the libcgroup external */
 #cmakedefine HAVE_EXT_LIBCGROUP

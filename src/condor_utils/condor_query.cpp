@@ -127,15 +127,6 @@ CondorQuery (AdTypes qType)
 		command = QUERY_STARTD_PVT_ADS;
 		break;
 
-#ifdef HAVE_EXT_POSTGRESQL
-	  case QUILL_AD:
-		query.setNumStringCats (0);
-		query.setNumIntegerCats(0);
-		query.setNumFloatCats  (0);
-		command = QUERY_QUILL_ADS;
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
-
 	  case SCHEDD_AD:
 		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
 		query.setNumIntegerCats(SCHEDD_INT_THRESHOLD);
@@ -258,13 +249,6 @@ CondorQuery (AdTypes qType)
 		break;
 
 	  case DATABASE_AD:
-		query.setNumStringCats (0);
-		query.setNumIntegerCats(0);
-		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
-		break;
-
-	  case DBMSD_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
@@ -533,11 +517,6 @@ getQueryAd (ClassAd &queryAd)
 	// fix types
 	SetMyTypeName (queryAd, QUERY_ADTYPE);
 	switch (queryType) {
-#ifdef HAVE_EXT_POSTGRESQL
-	  case QUILL_AD:
-		SetTargetTypeName (queryAd, QUILL_ADTYPE);
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case DEFRAG_AD:
 		SetTargetTypeName(queryAd, DEFRAG_ADTYPE);
@@ -605,10 +584,6 @@ getQueryAd (ClassAd &queryAd)
 
 	  case DATABASE_AD:
 		SetTargetTypeName (queryAd, DATABASE_ADTYPE);
-		break;
-
-	  case DBMSD_AD:
-		SetTargetTypeName (queryAd, DBMSD_ADTYPE);
 		break;
 
 	  case TT_AD:

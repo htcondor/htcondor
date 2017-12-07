@@ -51,7 +51,6 @@ condor__insertAd(struct soap *soap,
 	int command;
 	switch (type) {
 	case STARTD_AD_TYPE:     command = UPDATE_STARTD_AD;     break;
-	case QUILL_AD_TYPE:      command = UPDATE_QUILL_AD;      break;
 	case SCHEDD_AD_TYPE:     command = UPDATE_SCHEDD_AD;     break;
 	case SUBMITTOR_AD_TYPE:  command = UPDATE_SUBMITTOR_AD;  break;
 	case LICENSE_AD_TYPE:    command = UPDATE_LICENSE_AD;    break;

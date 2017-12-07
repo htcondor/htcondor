@@ -39,11 +39,6 @@ extern bool offlineMode;
 extern bool compactMode;
 
 static int stashed_now = 0;
-
-#ifdef HAVE_EXT_POSTGRESQL
-void printQuillNormal 	(ClassAd *);
-#endif /* HAVE_EXT_POSTGRESQL */
-
 const int cchReserveForPrintingAds = 16384;
 
 void printCOD    		(ClassAd *);
@@ -308,7 +303,7 @@ ppOption PrettyPrinter::prettyPrintHeadings (bool any_ads)
 {
 	ppOption pps = ppStyle;
 	bool no_headings = wantOnlyTotals || ! any_ads;
-	bool old_headings = (pps == PP_STARTD_COD) || (pps == PP_QUILL_NORMAL);
+	bool old_headings = (pps == PP_STARTD_COD);
 	bool long_form = PP_IS_LONGish(pps);
 	const char * newline_after_headings = "\n";
 	if ((pps == PP_CUSTOM) || using_print_format) {
@@ -416,11 +411,6 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, S
 		case PP_CUSTOM:
 			printCustom (ad);
 			break;
-	#ifdef HAVE_EXT_POSTGRESQL
-		case PP_QUILL_NORMAL:
-			printQuillNormal (ad);
-			break;
-	#endif /* HAVE_EXT_POSTGRESQL */
 		default:
 			pm.display(stdout, ad);
 			break;
@@ -829,37 +819,6 @@ printCOD (ClassAd *ad)
 		}
 	}
 }
-
-#ifdef HAVE_EXT_POSTGRESQL
-void
-printQuillNormal (ClassAd *ad) {
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			printf ("\n%-20.20s %-10.10s %-16.16s %-18.18s\n\n",
-				ATTR_NAME, ATTR_MACHINE, ATTR_QUILL_SQL_TOTAL,
-				ATTR_QUILL_SQL_LAST_BATCH);
-
-			alpm.registerFormat("%-20.20s ", ATTR_NAME,
-													"[??????????????????] ");
-			alpm.registerFormat("%-10.10s ", ATTR_MACHINE,
-													"[????????] ");
-			alpm.registerFormat("%16d ",ATTR_QUILL_SQL_TOTAL,
-													"[??????????????] ");
-			alpm.registerFormat("%18d\n",ATTR_QUILL_SQL_LAST_BATCH,
-													"[???????????]\n");
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-}
-#endif /* HAVE_EXT_POSTGRESQL */
 
 const char * const scheddNormal_PrintFormat = "SELECT\n"
 	"Name           AS Name         WIDTH AUTO\n"
@@ -1341,13 +1300,6 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 
 		case PP_STARTD_STATE:
 		ppSetStateCols(display_width);
-		break;
-
-		case PP_QUILL_NORMAL:
-		#ifdef HAVE_EXT_POSTGRESQL
-			PRAGMA_REMIND("QUILL format needs conversion to ppSetQuillNormalCols")
-		ppSetQuillNormalCols(display_width);
-		#endif /* HAVE_EXT_POSTGRESQL */
 		break;
 
 		case PP_SCHEDD_NORMAL:
