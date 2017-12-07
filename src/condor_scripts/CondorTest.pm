@@ -43,7 +43,7 @@ my $porttool = "";
 
 use base 'Exporter';
 
-our @EXPORT = qw(PrintTimeStamp SetTLOGLevel TLOG timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindHttpPort CleanUpChildren StartWebServer);
+our @EXPORT = qw(PrintTimeStamp SetTLOGLevel TLOG timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindHttpPort CleanUpChildren StartWebServer VerifyNumJobsInState);
 
 my %securityoptions =
 (
