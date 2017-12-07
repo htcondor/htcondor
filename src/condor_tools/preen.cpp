@@ -437,8 +437,6 @@ check_spool_dir()
 			last_connection_time = _condor_debug_get_time_double();
 		}
 
-		sleep(1);
-
 			// See if it's a legitimate checkpoint. Needs an active connection
 			// to the schedd.
 		if( is_ckpt_file(f) ) {
