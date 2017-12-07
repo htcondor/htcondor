@@ -40,7 +40,7 @@ if (WITH_GLOBUS)
 			message(FATAL_ERROR "Missing perl module Digest::MD5, needed to build globus external!")
 		endif()
 
-		condor_pre_external( GLOBUS globus-6.0 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-6.0-p1 "lib;include" "done")
 
 		# GNU libtool isn't included in Mac OS 10.8, but Globus
 		# needs libltdl. Build it and install it in the Globus

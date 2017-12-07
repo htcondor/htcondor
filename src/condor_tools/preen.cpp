@@ -352,7 +352,10 @@ check_spool_dir()
 
     startd_history = param("STARTD_HISTORY			// connect to the Q manager in read-only mode.");
    	startd_history = condor_basename(startd_history);
-   	startd_history_length = strlen(startd_history);
+	startd_history_length = strlen(startd_history);
+	   
+	last_connection_time = _condor_debug_get_time_double();
+	max_connection_time = param_integer("PREEN_MAX_SCHEDD_CONNECTION_TIME");
 
 	last_connection_time = _condor_debug_get_time_double();
 	max_connection_time = param_integer("PREEN_MAX_SCHEDD_CONNECTION_TIME");
@@ -463,6 +466,32 @@ check_spool_dir()
 			continue;
 		}
 			
+
+			// If none of the previous checks succeeded, we can try a couple
+			// other checks which require an active connection to the schedd. 
+			// Establish a connection (if not already connected). If this fails
+			// for any reason, abort and don't delete any files.
+		if ( !is_schedd_connected ) {
+			if ( !( qmgr = ConnectQ (0,0,false) ) ) {
+				return;
+			}
+			is_schedd_connected = true;
+			last_connection_time = _condor_debug_get_time_double();
+		}
+
+			// See if it's a legitimate checkpoint. Needs an active connection
+			// to the schedd.
+		if( is_ckpt_file(f) ) {
+			good_file( Spool, f );
+			continue;
+		}
+
+			// See if it's a legimate MyProxy password file. Needs an active
+			// connection to the schedd.
+		if ( is_myproxy_file( f ) ) {
+			good_file( Spool, f );
+			continue;
+		}
 
 			// We think it's bad.  For now, just append it to a
 			// StringList, instead of actually deleting it.  This way,
