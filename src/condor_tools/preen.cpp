@@ -357,9 +357,6 @@ check_spool_dir()
 	last_connection_time = _condor_debug_get_time_double();
 	max_connection_time = param_integer("PREEN_MAX_SCHEDD_CONNECTION_TIME");
 
-	last_connection_time = _condor_debug_get_time_double();
-	max_connection_time = param_integer("PREEN_MAX_SCHEDD_CONNECTION_TIME");
-
 	well_known_list.initializeFromString (ValidSpoolFiles);
 	if (UserValidSpoolFiles) {
 		StringList tmp(UserValidSpoolFiles);
@@ -455,33 +452,6 @@ check_spool_dir()
 			// See if it's a legitimate checkpoint. Needs an active connection
 			// to the schedd.
 		if( is_ckpt_file_or_submit_digest(f) ) {
-			good_file( Spool, f );
-			continue;
-		}
-
-			// See if it's a legimate MyProxy password file. Needs an active
-			// connection to the schedd.
-		if ( is_myproxy_file( f ) ) {
-			good_file( Spool, f );
-			continue;
-		}
-			
-
-			// If none of the previous checks succeeded, we can try a couple
-			// other checks which require an active connection to the schedd. 
-			// Establish a connection (if not already connected). If this fails
-			// for any reason, abort and don't delete any files.
-		if ( !is_schedd_connected ) {
-			if ( !( qmgr = ConnectQ (0,0,false) ) ) {
-				return;
-			}
-			is_schedd_connected = true;
-			last_connection_time = _condor_debug_get_time_double();
-		}
-
-			// See if it's a legitimate checkpoint. Needs an active connection
-			// to the schedd.
-		if( is_ckpt_file(f) ) {
 			good_file( Spool, f );
 			continue;
 		}
