@@ -6181,26 +6181,26 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		case JA_HOLD_JOBS:
 			if (clusterad->factory) {
-				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmHold)) {
+				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmHold) < 0) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+				} else {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
 
 					SetAttributeString(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason.Value());
-				} else {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
 				}
 			}
 			break;
 
 		case JA_RELEASE_JOBS:
 			if (clusterad->factory) {
-				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmRunning)) {
+				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmRunning) < 0) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+				} else {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
 
 					DeleteAttribute(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSE_REASON); 
-				} else {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
 				}
 			}
 			break;
@@ -6208,12 +6208,18 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
 			if (clusterad->factory) {
-				PauseJobFactory(clusterad->factory, mmClusterRemoved);
-				//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
-				ScheduleClusterForDeferredCleanup(tmp_id.cluster);
-				// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
-				results.record( tmp_id, AR_SUCCESS );
-				num_success++;
+				// check to see if we are allowed to pause this factory, but don't actually change it's
+				// pause state, the mmClusterRemoved pause mode is a runtime-only schedd state.
+				if (SetAttribute(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, "3", SetAttribute_QueryOnly) < 0) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+				} else {
+					PauseJobFactory(clusterad->factory, mmClusterRemoved);
+					//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
+					ScheduleClusterForDeferredCleanup(tmp_id.cluster);
+					// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
+					results.record( tmp_id, AR_SUCCESS );
+					num_success++;
+				}
 			}
 			break;
 		}
@@ -15845,7 +15851,16 @@ bool setJobFactoryPauseAndLog(JobQueueCluster * cad, int pause_mode, int hold_co
 	if (reason.empty() || pause_mode == mmRunning) {
 		cad->Delete(ATTR_JOB_MATERIALIZE_PAUSE_REASON);
 	} else {
-		cad->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
+		if (strchr(reason.c_str(), '\n')) {
+			// make sure that the reason  has no embedded newlines because if it does,
+			// it will cause the SCHEDD to abort when it rotates the job log.
+			std::string msg(reason);
+			std::replace(msg.begin(), msg.end(), '\n', ' ');
+			std::replace(msg.begin(), msg.end(), '\r', ' ');
+			cad->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, msg);
+		} else {
+			cad->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
+		}
 	}
 
 	if (cad->factory) {
