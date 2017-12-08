@@ -103,6 +103,13 @@ StartdCronJobMgr	*cron_job_mgr;
 // Benchmark stuff
 StartdBenchJobMgr	*bench_job_mgr;
 
+// Cleanup reminders, for things we tried to cleanup but initially failed.
+// for instance, the execute directory on Windows when antivirus software is hold a file in it open.
+static int cleanup_reminder_timer_id = -1;
+int cleanup_reminder_timer_interval = 62; // default to doing at least some cleanup once a minute (ish)
+CleanupReminderMap cleanup_reminders;
+extern void register_cleanup_reminder_timer();
+
 /*
  * Prototypes of static functions.
  */
@@ -560,6 +567,9 @@ init_params( int /* first_time */)
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
 
+	// a 0 or negative value for the timer interval will disable cleanup reminders entirely
+	cleanup_reminder_timer_interval = param_integer( "STARTD_CLEANUP_REMINDER_TIMER_INTERVAL", 62 );
+
 	compute_avail_stats = false;
 	compute_avail_stats = param_boolean( "STARTD_COMPUTE_AVAIL_STATS", false );
 
@@ -626,6 +636,97 @@ init_params( int /* first_time */)
 	return TRUE;
 }
 
+// implement an exponential backoff by skipping some iterations
+// the algorithm is even powers of 2 until iteration 60, then once per 'hour' for 24 hours, then once per 'day' forever
+// The algorithm assumes that the iteration tick rate is once per minute.
+// if it is not then 'hour' or 'day' will be faster or slower to match the tick rate.
+//
+static bool retry_on_this_iter(int iter, CleanupReminder::category /*cat*/)
+{
+	// try once a day once we the we have been at it longer than a day.
+	if (iter > 60*24) return (iter % (60*24)) == 0;
+
+	// try once an hour once we the we have been at it longer than an hour
+	if (iter > 60) return (iter % 60) == 0;
+
+	// do exponential back off for the first hour
+	if ((iter & (iter-1)) == 0)
+		return true;
+	return false;
+}
+
+// process the cleanup reminders.
+void CleanupReminderTimerCallback()
+{
+	dprintf(D_FULLDEBUG, "In CleanupReminderTimerCallback() there are %d reminders\n", (int)cleanup_reminders.size());
+
+	for (auto jt = cleanup_reminders.begin(); jt != cleanup_reminders.end(); /* advance in the loop */) {
+		auto it = jt++; // so we can remove the current item if we manage to clean it up
+		it->second += 1; // record that we looked at this.
+		bool erase_it = false; // set this to true when we succeed (or don't need to try anymore)
+
+		const CleanupReminder & cr = it->first; // alias the CleanupReminder so that the code below is clearer
+
+		bool retry_now = retry_on_this_iter(it->second, cr.cat);
+		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.Value(), it->second, retry_now);
+
+		// if our exponential backoff says we should retry this time, attempt the cleanup.
+		if (retry_now) {
+			int err=0;
+			switch (cr.cat) {
+			case CleanupReminder::category::exec_dir:
+				if (retry_cleanup_execute_dir(cr.name, cr.opt, err)) {
+					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.Value());
+					erase_it = true;
+				} else {
+					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.Value(), err);
+				}
+				break;
+			case CleanupReminder::category::account:
+				if (retry_cleanup_user_account(cr.name, cr.opt, err)) {
+					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.Value());
+					erase_it = true;
+				} else {
+					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.Value(), err);
+				}
+				break;
+			}
+
+		}
+
+		// if we successfully cleaned up, or cleanup is now moot, remove the item from the list.
+		if (erase_it) {
+			cleanup_reminders.erase(it);
+		}
+	}
+
+	// if the collection of things to try and clean up is empty, turn off the timer
+	// it will get turned back on the next time an item is added to the collection
+	if (cleanup_reminders.empty() && cleanup_reminder_timer_id != -1) {
+		daemonCore->Cancel_Timer(cleanup_reminder_timer_id);
+		cleanup_reminder_timer_id = -1;
+		dprintf( D_ALWAYS, "Cancelling timer for cleanup reminders - collection is empty.\n" );
+	}
+}
+
+// register a timer to process the cleanup reminders, if the timer is not already registered
+void register_cleanup_reminder_timer()
+{
+	// a timer interval of 0 or negative will disable cleanup reminders
+	if (cleanup_reminder_timer_interval <= 0)
+		return;
+	if (cleanup_reminder_timer_id < 0) {
+		dprintf( D_ALWAYS, "Starting timer for cleanup reminders.\n" );
+		int id = daemonCore->Register_Timer(cleanup_reminder_timer_interval,
+								cleanup_reminder_timer_interval,
+								(TimerHandler)CleanupReminderTimerCallback,
+								"CleanupReminderTimerCallback");
+		if  (id < 0) {
+			EXCEPT( "Can't register DaemonCore timer for cleanup reminders" );
+		}
+		cleanup_reminder_timer_id = id;
+	}
+}
 
 void PREFAST_NORETURN
 startd_exit() 

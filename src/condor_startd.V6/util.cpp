@@ -316,6 +316,45 @@ cleanup_execute_dirs( StringList &list )
 	}
 }
 
+bool retry_cleanup_user_account(const MyString & name, int /*options*/, int & err)
+{
+	err = 0;
+	if (name.empty()) {
+		// name is empty, return 'sure, that user is gone'
+		return true;
+	}
+
+	// TODO: write this.
+	EXCEPT("retry_cleanup_user_account is not implemented");
+
+	return false;
+}
+
+
+bool retry_cleanup_execute_dir(const MyString & path, int /*options*/, int & err)
+{
+	err = 0;
+	if (path.empty()) {
+		// path is empty, return 'sure, I deleted *everything*...'
+		return true;
+	}
+
+	StatInfo si( path.Value() );
+	if (si.Error() == SINoFile) {
+		// it's gone now. return true
+		err = EALREADY;
+		return true;
+	}
+
+	Directory dir( path.Value() );
+	bool success = dir.Remove_Full_Path(path.Value());
+	if ( ! success) {
+		// unfortunately Remove_Full_path doesn't tell us why we failed, so assume it's a permissions issue... <sigh>
+		err = EPERM;
+	}
+	return success;
+}
+
 void
 cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 {
@@ -345,10 +384,11 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
  
 	check_recovery_file( buf.Value() );
 
-	Directory dir( buf.Value() );
-	dir.Remove_Full_Path(buf.Value());
-
-
+	int err = 0;
+	if ( ! retry_cleanup_execute_dir(buf, 0, err)) {
+		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", buf.Value());
+		add_exec_dir_cleanup_reminder(buf, 0);
+	}
 
 #else /* UNIX */
 
@@ -362,23 +402,6 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 	pid_dir_path.formatstr( "%s/%s", exec_path, pid_dir.Value() );
 
 	check_recovery_file( pid_dir_path.Value() );
-
-		// if we're using PrivSep, we won't have the permissions
-		// needed to clean up - ask the Switchboard to do it; but
-		// before we do that, use stat to see if there's anything
-		// to clean up and save the Switchboard invocation if not
-	if (privsep_enabled()) {
-		struct stat stat_buf;
-		if (stat(pid_dir_path.Value(), &stat_buf) == -1) {
-			return;
-		}
-		if (!privsep_remove_dir(pid_dir_path.Value())) {
-			dprintf(D_ALWAYS,
-			        "privsep_remove_dir failed to remove %s\n",
-			        pid_dir_path.Value());
-		}
-		return;
-	}
 
 	// Instantiate a directory object pointing at the execute directory
 	pair_strings_vector root_dirs = root_dir_list();
@@ -401,6 +424,35 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 		delete [] exec_path_full;
 	}
 #endif  /* UNIX */
+}
+
+extern void register_cleanup_reminder_timer();
+extern int cleanup_reminder_timer_interval;
+
+void add_exec_dir_cleanup_reminder(const MyString & dir, int opts)
+{
+	// a timer interval of 0 or negative will disable cleanup reminders
+	if (cleanup_reminder_timer_interval <= 0)
+		return;
+	CleanupReminder rd(dir, CleanupReminder::category::exec_dir, opts);
+	if (cleanup_reminders.find(rd) == cleanup_reminders.end()) {
+		dprintf(D_FULLDEBUG, "Adding cleanup reminder for exec_dir %s\n", dir.c_str());
+		cleanup_reminders[rd] = 0;
+		register_cleanup_reminder_timer();
+	}
+}
+
+void add_account_cleanup_reminder(const MyString & name)
+{
+	// a timer interval of 0 or negative will disable cleanup reminders
+	if (cleanup_reminder_timer_interval <= 0)
+		return;
+	CleanupReminder rd(name, CleanupReminder::category::account);
+	if (cleanup_reminders.find(rd) == cleanup_reminders.end()) {
+		dprintf(D_FULLDEBUG, "Adding cleanup reminder for account %s\n", name.c_str());
+		cleanup_reminders[rd] = 0;
+		register_cleanup_reminder_timer();
+	}
 }
 
 #if defined( DEPRECATED_SOCKET_CALLS )

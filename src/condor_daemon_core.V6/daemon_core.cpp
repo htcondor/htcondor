@@ -4860,6 +4860,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 				// below to determine whether we should send a UNIX
 				// SIGTERM or a DC signal.
 			if ( pid != mypid && target_has_dcpm == FALSE ) {
+				dprintf(D_ALWAYS, "Send_Signal SIGTERM to pid %d using Shutdown_Graceful\n", pid);
 				if( Shutdown_Graceful(pid) ) {
 					msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
 				}
@@ -4985,9 +4986,11 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, destination );
 
 	// now destination process is local, send via UDP; if remote, send via TCP
+	bool is_udp = false;
 	if ( is_local == TRUE && d->hasUDPCommandPort()) {
 		msg->setStreamType(Stream::safe_sock);
 		if( !nonblocking ) msg->setTimeout(3);
+		is_udp = true;
 	}
 	else {
 		msg->setStreamType(Stream::reli_sock);
@@ -4996,6 +4999,8 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	{
 		msg->setSecSessionId(pidinfo->child_session_id);
 	}
+	dprintf(D_FULLDEBUG, "Send_Signal %d to pid %d via %s in %s mode\n", sig, pid, is_udp ? "UDP" : "TCP", nonblocking ? "nonblocking" : "blocking");
+
 	msg->messengerDelivery( true ); // we really are sending this message
 	if( nonblocking ) {
 		d->sendMsg( msg.get() );
