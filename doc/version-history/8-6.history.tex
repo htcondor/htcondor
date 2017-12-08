@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug on 32 bit Linux systems that caused the starter to crash
+on startup if cgroup limits were enabled.
+\Ticket{6501}
+
 \item Fixed a bug in \Term{Startd Cron} (see \ref{sec:daemon-classad-hooks})
 where, in effect, \MacroNI{SlotMergeConstraint} was ignored.
 \Ticket{6488}
