@@ -518,6 +518,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 			std::string msg;
 			formatstr(msg, "job %d.%d row=%d : %s have empty values", jid.cluster, jid.proc, step, empty_var_names.c_str());
 			dprintf(D_ALWAYS, "Failing Materialize of %s\n", msg.c_str());
+			chomp(msg);
 			setJobFactoryPauseAndLog(ClusterAd, mmInvalid, 0, msg);
 			//factory->Pause(mmInvalid);
 			//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSED, mmInvalid);

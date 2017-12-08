@@ -3073,6 +3073,11 @@ int DestroyCluster(int cluster_id, const char* reason)
 	// find the cluster ad and turn off the job factory
 	JobQueueCluster * clusterad = GetClusterAd(cluster_id);
 	if (clusterad && clusterad->factory) {
+		// Only the owner can delete a cluster
+		if ( Q_SOCK && !OwnerCheck(clusterad, Q_SOCK->getOwner() )) {
+			errno = EACCES;
+			return -1;
+		}
 		PauseJobFactory(clusterad->factory, mmClusterRemoved);
 	}
 
@@ -4812,6 +4817,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 								std::string errmsg;
 								clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str(), errmsg);
 								if ( ! clusterad->factory) {
+									chomp(errmsg);
 									setJobFactoryPauseAndLog(clusterad, mmInvalid, 0, errmsg);
 								}
 							}
@@ -6989,6 +6995,7 @@ void load_job_factories()
 				// if the factory failed to load, put it into a non-durable pause mode
 				// a condor_q -factory will show the mmInvalid state, but it doesn't get reflected
 				// in the job queue
+				chomp(errmsg);
 				setJobFactoryPauseAndLog(clusterad, mmInvalid, 0, errmsg);
 			}
 		}
