@@ -1,11 +1,4 @@
-#ifdef HAVE_EXT_GSOAP
 #include "stdsoap2.h"
-#else
-#include <stddef.h>
-struct soap;
-#define SOAP_FMAC1
-#define SOAP_FMAC2
-#endif
 
 SOAP_FMAC1 const char** SOAP_FMAC2 soap_faultcode(struct soap*)
 { return NULL; }
