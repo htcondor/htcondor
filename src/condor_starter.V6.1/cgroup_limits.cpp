@@ -18,7 +18,7 @@ CgroupLimits::CgroupLimits(std::string &cgroup) : m_cgroup_string(cgroup)
 }
 
 int 
-CgroupLimits::set_memsw_limit_bytes(uint64_t mem_bytes)
+CgroupLimits::set_memsw_limit_bytes(long long mem_bytes)
 {
 	if (!m_cgroup.isValid() || !CgroupManager::getInstance().isMounted(CgroupManager::MEMORY_CONTROLLER)) {
 		dprintf(D_ALWAYS, "Unable to set memsw limit because cgroup is invalid.\n");
@@ -29,7 +29,7 @@ CgroupLimits::set_memsw_limit_bytes(uint64_t mem_bytes)
 	struct cgroup_controller * mem_controller;
 	const char * limit = "memory.memsw.limit_in_bytes";
 
-	dprintf(D_ALWAYS, "Limiting memsw usage to %lu bytes\n", mem_bytes);
+	dprintf(D_ALWAYS, "Limiting memsw usage to %llu bytes\n", mem_bytes);
 	struct cgroup *memcg = &m_cgroup.getCgroup();
 	if ((mem_controller = cgroup_get_controller(memcg, MEMORY_CONTROLLER_STR)) == NULL) {
 		dprintf(D_ALWAYS,
@@ -54,7 +54,7 @@ CgroupLimits::set_memsw_limit_bytes(uint64_t mem_bytes)
 	return 0;
 }
 
-int CgroupLimits::set_memory_limit_bytes(uint64_t mem_bytes, bool soft)
+int CgroupLimits::set_memory_limit_bytes(long long mem_bytes, bool soft)
 {
 	if (!m_cgroup.isValid() || !CgroupManager::getInstance().isMounted(CgroupManager::MEMORY_CONTROLLER)) {
 		dprintf(D_ALWAYS, "Unable to set memory limit because cgroup is invalid.\n");
@@ -66,7 +66,7 @@ int CgroupLimits::set_memory_limit_bytes(uint64_t mem_bytes, bool soft)
 	struct cgroup_controller * mem_controller;
 	const char * limit = soft ? mem_soft_limit : mem_hard_limit;
 
-	dprintf(D_ALWAYS, "Limiting (%s) memory usage to %ld bytes\n", soft ? "soft" : "hard", mem_bytes);
+	dprintf(D_ALWAYS, "Limiting (%s) memory usage to %lld bytes\n", soft ? "soft" : "hard", mem_bytes);
 	struct cgroup *memcg = &m_cgroup.getCgroup();
 	if ((mem_controller = cgroup_get_controller(memcg, MEMORY_CONTROLLER_STR)) == NULL) {
 		dprintf(D_ALWAYS,
@@ -82,7 +82,7 @@ int CgroupLimits::set_memory_limit_bytes(uint64_t mem_bytes, bool soft)
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		if ((err = cgroup_modify_cgroup(memcg))) {
 			dprintf(D_ALWAYS,
-				"Unable to commit %s to %ld for %s "
+				"Unable to commit %s to %lld for %s "
 				": %u %s\n", limit, mem_bytes,
 				m_cgroup_string.c_str(), err, cgroup_strerror(err));
 			return 1;

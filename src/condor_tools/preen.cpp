@@ -352,8 +352,8 @@ check_spool_dir()
 
     startd_history = param("STARTD_HISTORY			// connect to the Q manager in read-only mode.");
    	startd_history = condor_basename(startd_history);
-   	startd_history_length = strlen(startd_history);
-
+	startd_history_length = strlen(startd_history);
+	   
 	last_connection_time = _condor_debug_get_time_double();
 	max_connection_time = param_integer("PREEN_MAX_SCHEDD_CONNECTION_TIME");
 
@@ -459,7 +459,6 @@ check_spool_dir()
 			good_file( Spool, f );
 			continue;
 		}
-			
 
 			// We think it's bad.  For now, just append it to a
 			// StringList, instead of actually deleting it.  This way,

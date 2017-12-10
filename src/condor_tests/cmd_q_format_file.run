@@ -280,7 +280,7 @@ print FHOUT "Q_DEFAULT_HOLD_PRINT_FORMAT_FILE=q_totals.cpf\n";
 print FHOUT "Q_DEFAULT_GOODPUT_PRINT_FORMAT_FILE=normal.cpf\n";
 print FHOUT "Q_DEFAULT_GLOBUS_PRINT_FORMAT_FILE=normal.cpf\n";
 print FHOUT "Q_DEFAULT_GRID_PRINT_FORMAT_FILE=normal.cpf\n";
--
+
 close FHOUT;
 
 ($other_ref,$data_ref,$summary_ref) = create_table(\%Attr,$testname,"-run -nobatch");
