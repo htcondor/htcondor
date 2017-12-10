@@ -744,7 +744,7 @@ sub TimeStr
 	my $ac = scalar(@_);
 	my $T = $ac > 0 && $_[$ac-1] eq 'T';
 	if ($ac < 5) { @_ = localtime(); }
-	if ($T) { return sprintf "%02d:%02d:%02d", @_[reverse 0..3]; }
+	if ($T) { return sprintf "%02d:%02d:%02d", @_[reverse 0..2]; }
 	return sprintf '%d-%02d-%02d %02d:%02d:%02d', $_[5]+1900, $_[4]+1, @_[reverse 0..3];
 }
 
