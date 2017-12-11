@@ -65,13 +65,25 @@ are not enabled by default and are not likely to work outside of Linux
 environments with a single Python installation.
 \Ticket{6486}
 
+\item HTCondor now respects \Attr{ATTR\_JOB\_SUCCESS\_EXIT\_CODE} when sending
+job notifications.
+\Ticket{6432}
+
+\item You may now use SCHEDD and JOB instead of MY and TARGET in
+\MacronNI{SUBMIT\_REQUIREMENTS} expressions.
+\Ticket{4818}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item The job log should no longer contain empty submit warnings.
+\Ticket{6465}
+
+\item HTCondor now reports all submit warnings, not just the first one.
+\Ticket{6446}
 
 \end{itemize}
 

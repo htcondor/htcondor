@@ -6616,8 +6616,10 @@ SYSTEM_PERIODIC_REMOVE = \
 \item[\Macro{SUBMIT\_REQUIREMENT\_<Name>}]
   A boolean expression 
   evaluated in the context of the \Condor{schedd} daemon ClassAd,
-  which is the \Expr{MY.} name space and the job ClassAd, 
-  which is the \Expr{TARGET.} name space.
+  which is the \Expr{SCHEDD.} or
+  \Expr{MY.} name space and the job ClassAd, 
+  which is the \Exprt{JOB.} or
+  \Expr{TARGET.} name space.
   When \Expr{False}, it causes the \Condor{schedd} to reject 
   the submission of the job or cluster of jobs. 
   \MacroNI{<Name>} corresponds to a name listed in 
