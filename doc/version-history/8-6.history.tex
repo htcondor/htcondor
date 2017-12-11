@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in the Java universe that prevented jar files with relative
+paths to work when submitting from a Linux submit machine to a Windows
+execute machine or vice versa.
+\Ticket{6474}
+
 \item Fixed a bug on 32 bit Linux systems that caused the starter to crash
 on startup if cgroup limits were enabled.
 \Ticket{6501}
