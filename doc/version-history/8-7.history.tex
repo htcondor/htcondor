@@ -59,6 +59,14 @@ They specify the project/allocation name and maximum runtime in seconds
 for the job that's submited to the underlying batch system.
 \Ticket{6451}
 
+\item HTCondor now respects \Attr{ATTR\_JOB\_SUCCESS\_EXIT\_CODE} when sending
+job notifications.
+\Ticket{6432}
+
+\item You may now use SCHEDD and JOB instead of MY and TARGET in
+\MacroNI{SUBMIT\_REQUIREMENTS} expressions.
+\Ticket{4818}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -69,6 +77,12 @@ for the job that's submited to the underlying batch system.
 \Condor{submit} now attempts to transfer the job exectuable only once per
 job cluster, instead of once per job.
 \Ticket{6459}
+
+\item The job log should no longer contain empty submit warnings.
+\Ticket{6465}
+
+\item HTCondor now reports all submit warnings, not just the first one.
+\Ticket{6446}
 
 \end{itemize}
 
