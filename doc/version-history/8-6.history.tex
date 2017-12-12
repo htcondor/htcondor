@@ -75,6 +75,11 @@ when multiple clusters shared a batch name.
 and \MacroNI{SSL} authentication methods.
 \Ticket{6493}
 
+\item Reduced preen connections to the schedd. Preen now connects only when
+specifically needed, and automatically disconnects after 
+\Macro{PREEN\_MAX\_SCHEDD\_CONNECTION\_TIME} seconds.
+\Ticket{6490}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
