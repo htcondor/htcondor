@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug on Windows that would often result in the job sandbox on the execute node
+not being deleted when the \Condor{schedd} relenquished its claim on the slot before the
+\Condor{starter} had exited.
+\Ticket{6497}
+
 \item Fixed a bug with the \Macro{RESERVED\_DISK} parameter that would not
 accept an argument larger than 2 Gb.
 \Ticket{6472}
