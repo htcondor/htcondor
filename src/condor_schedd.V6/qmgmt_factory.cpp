@@ -82,7 +82,7 @@ public:
 	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
 
 	// load the submit file/digest that was passed in our constructor
-	int LoadDigest(MacroStream & ms, std::string & errmsg);
+	int LoadDigest(MacroStream & ms, ClassAd * user_ident, std::string & errmsg);
 	// load the item data for the given row, and setup the live submit variables for that item.
 	int LoadRowData(int row, std::string * empty_var_names=NULL);
 	// returns true when the row data is not yet loaded, but might be available if you try again later.
@@ -164,8 +164,8 @@ protected:
 	int cached_total_procs;
 
 	// let these functions access internal factory data
-	friend JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, std::string & errmsg);
-	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename, std::string & errmsg);
+	friend JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
+	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename, bool spooled_submit_file, std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 
 	// we override this so that we can use an async foreach implementation.
@@ -228,14 +228,14 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
 // this is the normal case for condor_submit from 8.7.3 onward.
-class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, std::string & errmsg)
+class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg)
 {
 	JobFactory * factory = new JobFactory(NULL, cluster_id);
 
 	MacroStreamMemoryFile ms(submit_digest_text, -1, factory->source);
 
 	errmsg = "";
-	int rval = factory->LoadDigest(ms, errmsg);
+	int rval = factory->LoadDigest(ms, user_ident, errmsg);
 	if (rval) {
 		dprintf(D_ALWAYS, "failed to parse submit digest for factory %d : %s\n", cluster_id, errmsg.c_str());
 		delete factory;
@@ -248,21 +248,22 @@ class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_tex
 // Make a job factory for a Job object that exists, this entry point is used when
 // the submit digest is a file on disk - either because condor_submit put it there, or
 // because we are restarting. 
-JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_file, std::string & errmsg)
+JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_file, bool spooled_submit_file, std::string & errmsg)
 {
 
 	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster);
 
 	// Starting the 8.7.3 The digest file may be in the spool directory and owned by condor
 	// or in the user directory and owned by the user (the 8.7.1 model). We will handle
-	// both cases by first trying to open the file as condor, and if that fails, try impersonating
-	// the user.
+	// The caller will tell use which it is, and we will decide whether to inpersonate the user
+	// while opening the submit digest on that basis. 
 	bool restore_priv = false;
 	priv_state priv = PRIV_UNKNOWN;
 
-	FILE* fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
-	// if we can't open the file, try impersonating the user
-	if ( ! fp) {
+	FILE* fp = NULL;
+	if (spooled_submit_file) {
+		safe_fopen_wrapper_follow(submit_digest_file, "r");
+	} else {
 		restore_priv = true;
 		priv = set_user_priv_from_ad(*job);
 		fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
@@ -275,7 +276,8 @@ JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_fil
 		rval = errno ? errno : -1;
 	} else {
 		MacroStreamYourFile ms(fp, factory->source);
-		rval = factory->LoadDigest(ms, errmsg);
+		// If we are already impersonating the user, dont pass the job ad to LoadDigest since it only needs it to impersonate the user
+		rval = factory->LoadDigest(ms, restore_priv ? NULL : job, errmsg);
 		fclose(fp);
 		fp = NULL;
 	}
@@ -608,7 +610,7 @@ int JobFactory::load_q_foreach_items(
 }
 #endif
 
-int JobFactory::LoadDigest(MacroStream &ms, std::string & errmsg)
+int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & errmsg)
 {
 	char * qline = NULL;
 	int rval = parse_up_to_q_line(ms, errmsg, &qline);
@@ -646,20 +648,32 @@ int JobFactory::LoadDigest(MacroStream &ms, std::string & errmsg)
 				} else if (fea.items_filename == "<" || fea.items_filename == "=") {
 					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.Value());
 				} else {
+					// before opening the item data file, we (may) want to impersonate the user
+					bool restore_priv = false;
+					priv_state priv = PRIV_UNKNOWN;
+					if  (user_ident) {
+						restore_priv = true;
+						priv = set_user_priv_from_ad(*user_ident);
+					}
 					// setup an async reader for the itemdata
 					rval = reader.open(fea.items_filename.c_str());
 					if (rval) {
-						formatstr(errmsg, "could not open item data file '%s', error = %d\n", fea.items_filename.Value(), rval);
+						formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
 					} else {
 						rval = reader.queue_next_read();
 						if (rval) {
-							formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d\n", fea.items_filename.Value(), rval);
+							formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
 						} else {
 							fea.foreach_mode = foreach_from_async;
 						}
 					}
 					// failed to open or start the item reader, so just close it and free the internal buffers.
 					if (rval) { reader.clear(); }
+
+					if (restore_priv) {
+						set_priv(priv);
+						uninit_user_ids();
+					}
 				}
 			}
 		}

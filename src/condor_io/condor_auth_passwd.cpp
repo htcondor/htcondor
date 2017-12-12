@@ -955,6 +955,10 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 		if(m_client_status == AUTH_PW_ABORT) {
 			goto client_abort;
 		}
+		if ( m_server_status == AUTH_PW_ERROR ) {
+			dprintf(D_SECURITY, "PW: Client received ERROR from server, propagating\n");
+			m_client_status = AUTH_PW_ERROR;
+		}
 
 			// Now that we've received the server's name, we can go
 			// ahead and setup the keys.
@@ -1080,9 +1084,6 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 
 		// ** server side authentication **
 
-	// declare now because of use of goto below
-	int tmp_rv = 0;
-
 		// First we get the client's name and ra, protocol step
 		// (a).
 	dprintf(D_SECURITY, "PW: Server receiving 1.\n");
@@ -1116,14 +1117,14 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 				memcpy(m_t_server.ra, m_t_client.ra, AUTH_PW_KEY_LEN);
 			}
 		}
+	} else if ( m_client_status == AUTH_PW_ERROR ) {
+		dprintf(D_SECURITY, "PW: Server received ERROR from client, propagating\n");
+		m_server_status = AUTH_PW_ERROR;
 	}
 
 		// Protocol message (2), step (b).
 	dprintf(D_SECURITY, "PW: Server sending.\n");
-	tmp_rv = server_send(m_server_status, &m_t_server, &m_sk);
-	if(m_server_status == AUTH_PW_A_OK) {
-		m_server_status = tmp_rv;
-	}
+	m_server_status = server_send(m_server_status, &m_t_server, &m_sk);
 	if(m_server_status == AUTH_PW_ABORT) {
 		m_ret_value = 0;
 		goto server_rec_1_abort;
@@ -1458,7 +1459,7 @@ int Condor_Auth_Passwd::server_receive_two(int *server_status,
 	memset(rb, 0, AUTH_PW_KEY_LEN);
 	memset(hk, 0, EVP_MAX_MD_SIZE);
 
-	if(!t_client->a || !t_client->rb) {
+	if(*server_status == AUTH_PW_A_OK && (!t_client->a || !t_client->rb)) {
 		dprintf(D_SECURITY, "Can't compare to null.\n");
 		*server_status = client_status = AUTH_PW_ABORT;
 		goto server_receive_two_abort;
@@ -1469,7 +1470,7 @@ int Condor_Auth_Passwd::server_receive_two(int *server_status,
 		|| !mySock_->code(a_len)
 		|| !mySock_->code(a)
 		|| !mySock_->code(rb_len)
-		|| !(rb_len == AUTH_PW_KEY_LEN)
+		|| !(rb_len <= AUTH_PW_KEY_LEN)
 		|| !(rb_len == mySock_->get_bytes(rb, rb_len))
 		|| !mySock_->code(hk_len)
 		|| !(hk_len <= EVP_MAX_MD_SIZE)
@@ -1676,10 +1677,10 @@ int Condor_Auth_Passwd :: client_receive(int *client_status,
 		|| !mySock_->code(b_len)
 		|| !mySock_->get(b,AUTH_PW_MAX_NAME_LEN)
 		|| !mySock_->code(ra_len)
-		|| !(ra_len == AUTH_PW_KEY_LEN)
+		|| !(ra_len <= AUTH_PW_KEY_LEN)
 		|| !(ra_len  == mySock_->get_bytes(ra, ra_len))
 		|| !mySock_->code(rb_len)
-		|| !(rb_len == AUTH_PW_KEY_LEN)
+		|| !(rb_len <= AUTH_PW_KEY_LEN)
 		|| !(rb_len  == mySock_->get_bytes(rb, rb_len))
 		|| !mySock_->code(hkt_len)
 		|| !(hkt_len <= EVP_MAX_MD_SIZE)
@@ -1692,7 +1693,7 @@ int Condor_Auth_Passwd :: client_receive(int *client_status,
 	}
 
 		// Make sure the random strings are the right size.
-	if(ra_len != AUTH_PW_KEY_LEN || rb_len != AUTH_PW_KEY_LEN) {
+	if(server_status == AUTH_PW_A_OK && (ra_len != AUTH_PW_KEY_LEN || rb_len != AUTH_PW_KEY_LEN)) {
 		dprintf(D_SECURITY, "Incorrect protocol.\n");
 		server_status = AUTH_PW_ERROR;
 	}
@@ -1786,7 +1787,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 		|| !mySock_->code(a_len)
 		|| !mySock_->code(a) 
 		|| !mySock_->code(ra_len)
-		|| !(ra_len == AUTH_PW_KEY_LEN)
+		|| !(ra_len <= AUTH_PW_KEY_LEN)
 		|| !(ra_len == mySock_->get_bytes(ra, ra_len))
 		|| !mySock_->end_of_message()) {
 

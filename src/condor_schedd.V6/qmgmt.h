@@ -245,10 +245,10 @@ public:
 
 
 // from qmgmt_factory.cpp
- // make a job factory from submit digest text, used on submit
-class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, std::string & errmsg);
+// make a job factory from submit digest text, used on submit, optional user_ident is who to inpersonate when reading item data file (if any)
+class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
 // make a job factory from an on-disk submit digest - used on schedd restart
-class JobFactory * MakeJobFactory(JobQueueCluster * job, const char * submit_file, std::string & errmsg);
+class JobFactory * MakeJobFactory(JobQueueCluster * job, const char * submit_file, bool spooled_submit_file, std::string & errmsg);
 void DestroyJobFactory(JobFactory * factory);
 
 void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);

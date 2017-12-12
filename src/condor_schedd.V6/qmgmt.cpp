@@ -1902,6 +1902,21 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 
 	if (digest_text && digest_text[0]) {
 
+#if 1
+		ClassAd user_ident_ad;
+		ClassAd * user_ident = NULL;
+		if (Q_SOCK) {
+			// build a ad with the user identity so we can use set_user_priv_from_ad
+			// here just like we would if the cluster ad was available.
+			user_ident_ad.Assign(ATTR_OWNER, Q_SOCK->getOwner());
+			user_ident_ad.Assign(ATTR_NT_DOMAIN, Q_SOCK->getDomain());
+			user_ident = &user_ident_ad;
+		}
+
+		// parse the submit digest and (possibly) open the itemdata file.
+		std::string errmsg;
+		JobFactory * factory = MakeJobFactory(cluster_id, digest_text, user_ident, errmsg);
+#else
 		// we have to switch to user priv before parsing the submit digest because there MAY be an itemdata file.
 		// PRAGMA_REMIND("TODO: move setpriv down into MakeJobFactory so we can skip it if there is no itemdata?")
 		priv_state priv = PRIV_UNKNOWN;
@@ -1923,6 +1938,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 			set_priv(priv);
 			uninit_user_ids();
 		}
+#endif
 
 		if ( ! factory) {
 			dprintf(D_MATERIALIZE, "Failing remote SetJobFactory %d because MakeJobFactory failed : %s\n", cluster_id, errmsg.c_str());
@@ -4799,8 +4815,15 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 							std::string submit_digest;
 							if (clusterad->LookupString(ATTR_JOB_MATERIALIZE_DIGEST_FILE, submit_digest)) {
 								ASSERT( ! clusterad->factory);
+
+								// we need to let MakeJobFactory know whether the digest has been spooled or not
+								// because it needs to know whether to impersonate the user or not.
+								MyString spooled_filename;
+								GetSpooledSubmitDigestPath(spooled_filename, clusterad->jid.cluster, Spool);
+								bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
+
 								std::string errmsg;
-								clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str(), errmsg);
+								clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str(), spooled_digest, errmsg);
 								if ( ! clusterad->factory) {
 									chomp(errmsg);
 									setJobFactoryPauseAndLog(clusterad, mmInvalid, 0, errmsg);
@@ -6970,8 +6993,15 @@ void load_job_factories()
 
 		submit_digest.clear();
 		if (clusterad->LookupString(ATTR_JOB_MATERIALIZE_DIGEST_FILE, submit_digest)) {
+
+			// we need to let MakeJobFactory know whether the digest has been spooled or not
+			// because it needs to know whether to impersonate the user or not.
+			MyString spooled_filename;
+			GetSpooledSubmitDigestPath(spooled_filename, clusterad->jid.cluster, Spool);
+			bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
+
 			std::string errmsg;
-			clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str(), errmsg);
+			clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str(), spooled_digest, errmsg);
 			if (clusterad->factory) {
 				++num_loaded;
 			} else {
