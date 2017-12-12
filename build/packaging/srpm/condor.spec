@@ -92,6 +92,13 @@
 %endif
 %endif
 
+# Don't bother building CREAM for 32-bit RHEL7
+%ifarch %{ix86}
+%if 0%{?rhel} >= 7
+%define cream 0
+%endif
+%endif
+
 %if 0%{?osg} && 0%{?rhel} == 7
 %define aviary 0
 %define std_univ 0
@@ -194,7 +201,6 @@ Source90: find-requires.sh
 Source101: blahp-1.16.5.1.tar.gz
 Source102: boost_1_49_0.tar.gz
 Source103: c-ares-1.3.0.tar.gz
-Source104: coredumper-2011.05.24-r31.tar.gz
 Source105: drmaa-1.6.1.tar.gz
 Source106: glite-ce-cream-client-api-c-1.14.0-4.sl6.tar.gz
 Source107: glite-ce-wsdl-1.14.0-4.sl6.tar.gz
@@ -353,6 +359,8 @@ Requires: systemd
 
 BuildRequires: transfig
 BuildRequires: latex2html
+# We don't build the manual (yet)
+#BuildRequires: texlive-epstopdf
 
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
@@ -767,6 +775,11 @@ cmake \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DWITH_POSTGRESQL:BOOL=FALSE \
+%if %cream
+       -DWITH_CREAM:BOOL=TRUE \
+%else
+       -DWITH_CREAM:BOOL=FALSE \
+%endif
        -DWANT_LEASE_MANAGER:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \

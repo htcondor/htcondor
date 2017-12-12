@@ -2003,7 +2003,11 @@ void dprintf_print_daemon_header(void)
 // that args[n] is a null-terminated pointer to a string.  x and X print args[n] as
 // hex. X prints leading zeros and x does not.
 static int
+#ifdef _WIN64
+safe_async_simple_fwrite_fd(int fd, char const *msg, ULONG_PTR *args, unsigned int num_args)
+#else
 safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned long *args,unsigned int num_args)
+#endif
 {
 	unsigned int arg_index;
 	unsigned int digit,arg;
@@ -2146,8 +2150,11 @@ safe_async_log_close(int fd)
  * that are not async-safe.
  * See safe_async_simple_fwrite_fd() for argument usage.
  */
-void
-dprintf_async_safe(char const *msg,unsigned long *args,unsigned int num_args)
+#ifdef _WIN64
+void dprintf_async_safe(char const *msg, ULONG_PTR *args, unsigned int num_args)
+#else
+void dprintf_async_safe(char const *msg,unsigned long *args,unsigned int num_args)
+#endif
 {
 	// Use the async-safe logging operations.
 	int fd = safe_async_log_open();
@@ -2279,10 +2286,10 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 // WinXP sp3 or later is needed to collect the backtrace.
 static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 {
-	unsigned long args[3];
+	ULONG_PTR args[3];
 	char szModule[MAX_PATH];
 	for (int ix = 0; ix < cFrames; ++ix) {
-#ifdef X86_64
+#if 0 //def _WIN64
 		PRAGMA_REMIND("write win64 backtrace printing.")
 		args[0] = (ULONG_PTR)trace[ix];
 		//void* imageBase;
@@ -2292,8 +2299,8 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 		args[1] = (ULONG_PTR)imageBase;
 		args[2] = args[0] - (ULONG_PTR)imageBase;
 		safe_async_simple_fwrite_fd(fd,"  %X0 %x1 + %2\n",args,3);
-#else // 32bit
-		args[0] = (unsigned long)trace[ix];
+#else // 32bit -- tj/2017 - maybe works for x64 also?
+		args[0] = (ULONG_PTR)trace[ix];
 	#ifdef _DBGHELP_
 		if (backtrace_have_symbols) {
 			DWORD64 displacement = 0;
@@ -2301,8 +2308,8 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 			psym->SizeOfStruct = sizeof(SYMBOL_INFO);
 			psym->MaxNameLen = 1 + (sizeof(szModule) - sizeof(SYMBOL_INFO)) / sizeof(psym->Name[0]);
 			if (SymFromAddr(GetCurrentProcess(), (DWORD64)(ULONG_PTR)trace[ix], &displacement, psym)) {
-				args[1] = (unsigned long)psym->Name;
-				args[2] = args[0] - (unsigned long)psym->Address;
+				args[1] = (ULONG_PTR)psym->Name;
+				args[2] = args[0] - (ULONG_PTR)psym->Address;
 				safe_async_simple_fwrite_fd(fd,"  %X0 %s1 + %2\n",args,3);
 				continue;
 			}
@@ -2312,14 +2319,14 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 		SIZE_T cb = VirtualQuery (trace[ix], &mbi, sizeof(mbi));
 		if (cb == sizeof(mbi) && mbi.AllocationBase > 0) {
 			if (GetModuleFileNameA ((HMODULE)mbi.AllocationBase, szModule, COUNTOF(szModule))) {
-				args[1] = (unsigned long)szModule;
+				args[1] = (ULONG_PTR)szModule;
 				// print only the part after the last path separator.
-				args[1] = (unsigned long)filename_from_path(szModule);
-				args[2] = args[0] - (unsigned long)mbi.AllocationBase;
+				args[1] = (ULONG_PTR)filename_from_path(szModule);
+				args[2] = args[0] - (ULONG_PTR)mbi.AllocationBase;
 				safe_async_simple_fwrite_fd(fd,"  %X0 %s1 + %2\n",args,3);
 			} else {
-				args[1] = (unsigned long)mbi.AllocationBase;
-				args[2] = args[0] - (unsigned long)mbi.AllocationBase;
+				args[1] = (ULONG_PTR)mbi.AllocationBase;
+				args[2] = args[0] - (ULONG_PTR)mbi.AllocationBase;
 				safe_async_simple_fwrite_fd(fd,"  %X0 0x%x1 + %2\n",args,3);
 			}
 		} else {
@@ -2332,7 +2339,7 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 void
 dprintf_dump_stack(void) {
 	int fd;
-	unsigned long args[3];
+	ULONG_PTR args[3];
 	void* trace[50];
 	int cFrames = CaptureStackBackTrace(0, COUNTOF(trace), trace, NULL);
 
@@ -2342,9 +2349,9 @@ dprintf_dump_stack(void) {
 
 		// sprintf() and other convenient string-handling functions
 		// are not officially async-signal safe, so use a crude replacement
-	args[0] = (unsigned long)GetCurrentProcessId();
-	args[1] = (unsigned long)time(NULL);
-	args[2] = (unsigned long)cFrames;
+	args[0] = (ULONG_PTR)GetCurrentProcessId();
+	args[1] = (ULONG_PTR)time(NULL);
+	args[2] = (ULONG_PTR)cFrames;
 	safe_async_simple_fwrite_fd(fd,"Stack dump for process %0 at timestamp %1 (%2 frames)\n",args,3);
 
 	backtrace_symbols_fd(trace,cFrames,fd);

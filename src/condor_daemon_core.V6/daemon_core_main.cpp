@@ -41,6 +41,10 @@
 #include "match_prefix.h"
 #include "historyFileFinder.h"
 
+#ifdef LINUX
+#include <sys/prctl.h>
+#endif
+
 #include "file_sql.h"
 #include "file_xml.h"
 
@@ -50,9 +54,6 @@
 
 #ifdef WIN32
 #include "exception_handling.WINDOWS.h"
-#endif
-#if HAVE_EXT_COREDUMPER
-#include "google/coredumper.h"
 #endif
 
 // Externs to Globals
@@ -755,10 +756,12 @@ unix_sig_coredump(int signum, siginfo_t *s_info, void *)
 		}
 	}
 
-#if HAVE_EXT_COREDUMPER
-	WriteCoreDump(core_name ? core_name : "core");
+#ifdef LINUX
+	if ( prctl(PR_SET_DUMPABLE, 1, 0, 0) != 0 ) {
+		log_args[0] = (unsigned long)errno;
+		dprintf_async_safe("Warning: prctl() failed: errno %0\n", log_args, 1);
+	}
 #endif
-
 	// It would be a good idea to actually terminate for the same reason.
 	sa.sa_handler = SIG_DFL;
 	sigemptyset(&sa.sa_mask);
@@ -766,12 +769,16 @@ unix_sig_coredump(int signum, siginfo_t *s_info, void *)
 	sigaction(signum, &sa, NULL);
 	sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
 
-	raise(signum);
+	if ( raise(signum) != 0 ) {
+		log_args[0] = (unsigned long)signum;
+		log_args[1] = (unsigned long)errno;
+		dprintf_async_safe("Error: raise(%0) failed: errno %1\n", log_args, 2);
+	}
 
 	// If for whatever reason the second raise doesn't kill us properly, 
 	// we shall exit with a non-zero code so if anything depends on us,
 	// at least they know there was a problem.
-	exit(1);
+	_exit(JOB_EXCEPTION);
 }
 #endif
 

@@ -43,8 +43,12 @@ SystrayManager::SystrayManager()
 	RegCreateKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\condor"), 0, NULL, 
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 	
-	DWORD dwValue = (unsigned) wmr.getHWnd();
-	RegSetValueEx(hNotifyHandle, TEXT("systray_notify_handle"), 0, REG_DWORD, (unsigned char *) &dwValue, sizeof(DWORD));
+	HWND hwnd = wmr.getHWnd();
+#ifdef _WIN64
+	RegSetValueEx(hNotifyHandle, TEXT("systray_notify_handle"), 0, REG_QWORD, (unsigned char *)&hwnd, sizeof(HWND));
+#else
+	RegSetValueEx(hNotifyHandle, TEXT("systray_notify_handle"), 0, REG_DWORD, (unsigned char *) &hwnd, sizeof(HWND));
+#endif
 	
 	DWORD dwType;
 	DWORD dwData = 1; // assume one-bird mode

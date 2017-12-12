@@ -587,8 +587,8 @@ LogHistoricalSequenceNumber::ReadBody(FILE *fp)
 	char *buf = NULL;
 	rval = readword(fp, buf);
 	if (rval < 0) return rval;
-	MSC_SUPPRESS_WARNING_FIXME(6031)// return value of scanf ignored. int64 does not match %lu
-	sscanf(buf,"%lu",&historical_sequence_number);
+	YourStringDeserializer des(buf);
+	des.deserialize_int(&historical_sequence_number);
 	free(buf);
 
 	rval1 = readword(fp, buf); //the label of the attribute 
@@ -598,8 +598,8 @@ LogHistoricalSequenceNumber::ReadBody(FILE *fp)
 
 	rval1 = readword(fp, buf);
 	if (rval1 < 0) return rval1;
-	MSC_SUPPRESS_WARNING_FIXME(6031 6328)// return value of scanf ignored. int64 does not match %lu
-	sscanf(buf,"%lu",&timestamp);
+	des = buf;
+	des.deserialize_int(&timestamp);
 	free(buf);
 	return rval + rval1;
 }

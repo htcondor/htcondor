@@ -68,9 +68,9 @@ static int (*SSL_read_ptr)(SSL *, void *, int) = NULL;
 static void (*SSL_set_bio_ptr)(SSL *, BIO *, BIO *) = NULL;
 static int (*SSL_write_ptr)(SSL *, const void *, int) = NULL;
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
-static SSL_METHOD *(*SSLv23_method_ptr)() = NULL;
+static SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #else
-static const SSL_METHOD *(*SSLv23_method_ptr)() = NULL;
+static const SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #endif
 
 bool Condor_Auth_SSL::m_initTried = false;
@@ -141,9 +141,11 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_set_bio_ptr = (void (*)(SSL *, BIO *, BIO *))dlsym(dl_hdl, "SSL_set_bio")) ||
 		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
-		 !(SSLv23_method_ptr = (SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
+		 !(SSL_method_ptr = (SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
+#elif OPENSSL_VERSION_NUMBER < 0x10100000L
+		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
 #else
-		 !(SSLv23_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
+		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "TLS_method"))
 #endif
 		 ) {
 
@@ -187,7 +189,11 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_read_ptr = SSL_read;
 	SSL_set_bio_ptr = SSL_set_bio;
 	SSL_write_ptr = SSL_write;
-	SSLv23_method_ptr = SSLv23_method;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	SSL_method_ptr = SSLv23_method;
+#else
+	SSL_method_ptr = TLS_method;
+#endif
 	m_initSuccess = true;
 #endif
 
@@ -877,6 +883,7 @@ int Condor_Auth_SSL :: receive_message( int &status, int &len, char *buf )
     mySock_ ->decode( );
     if( !(mySock_ ->code( status ))
         || !(mySock_ ->code( len ))
+        || !(len <= AUTH_SSL_BUF_SIZE)
         || !(len == (mySock_ ->get_bytes( buf, len )))
         || !(mySock_ ->end_of_message( )) ) {
         ouch( "Error communicating with peer.\n" );
@@ -1151,7 +1158,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(keyfile)    dprintf( D_SECURITY, "KEYFILE:    '%s'\n", keyfile    );
     if(cipherlist) dprintf( D_SECURITY, "CIPHERLIST: '%s'\n", cipherlist );
         
-    ctx = (*SSL_CTX_new_ptr)( (*SSLv23_method_ptr)(  ) );
+    ctx = (*SSL_CTX_new_ptr)( (*SSL_method_ptr)(  ) );
 	if(!ctx) {
 		ouch( "Error creating new SSL context.\n");
 		goto setup_server_ctx_err;

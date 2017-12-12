@@ -225,16 +225,16 @@ BOOL ExceptionHandler::GetLogicalAddress(
     MEMORY_BASIC_INFORMATION mbi;
     if ( !VirtualQuery( addr, &mbi, sizeof(mbi) ) )        
 		return FALSE;
-    DWORD hMod = (DWORD)mbi.AllocationBase;
+    UINT_PTR hMod = (UINT_PTR)mbi.AllocationBase;
     if ( !GetModuleFileName( (HMODULE)hMod, szModule, len ) )
         return FALSE;    // Point to the DOS header in memory
     PIMAGE_DOS_HEADER pDosHdr = (PIMAGE_DOS_HEADER)hMod;
     // From the DOS header, find the NT (PE) header
     PIMAGE_NT_HEADERS pNtHdr = (PIMAGE_NT_HEADERS)(hMod + pDosHdr->e_lfanew);
     PIMAGE_SECTION_HEADER pSection = IMAGE_FIRST_SECTION( pNtHdr );
-    DWORD rva = (DWORD)addr - hMod; // RVA is offset from module load address
+    UINT_PTR rva = (UINT_PTR)addr - hMod; // RVA is offset from module load address
     // Iterate through the section table, looking for the one that encompasses
-    // the linear address.    
+    // the linear address.
 	for (   unsigned i = 0;
             i < pNtHdr->FileHeader.NumberOfSections;
             i++, pSection++ )    {
@@ -245,9 +245,9 @@ BOOL ExceptionHandler::GetLogicalAddress(
         if ( (rva >= sectionStart) && (rva <= sectionEnd) ) {
             // Yes, address is in the section.  Calculate section and offset,
             // and store in the "section" & "offset" params, which were
-            // passed by reference.            
+            // passed by reference.
 			section = i+1;
-            offset = rva - sectionStart;            
+            offset = (DWORD)(rva - sectionStart);
 			return TRUE;        
 		}    
 	}
@@ -260,6 +260,7 @@ void ExceptionHandler::IntelStackWalk( PCONTEXT pContext ) {
     _tprintf( _T("\nCall stack:\n") );
     _tprintf( _T("Address   Frame     Logical addr  Module\n") );
 #ifdef _WIN64
+	PRAGMA_REMIND("WIN64 implementation needed")
 #else
     DWORD pc = pContext->Eip;    
 	PDWORD pFrame, pPrevFrame;    
@@ -325,6 +326,7 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
 //	_tprintf( _T(_SymGetLineFromAddr ? "(Line number api available)\n" : "(Line number api not available)\n"));
 	_tprintf( _T("Address   Frame\n") );
 #ifdef _WIN64
+	PRAGMA_REMIND("WIN64 implementation needed")
 #else
 	SymSetOptions(SYMOPT_LOAD_LINES);
 

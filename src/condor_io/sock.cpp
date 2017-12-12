@@ -2288,9 +2288,9 @@ Sock::close_serialized_socket(char const *buf)
 {
 		// grab the fd from the serialized string and close it
 	SOCKET passed_sock;
-	int i;
-	i = sscanf(buf,"%u*",&passed_sock);
-	ASSERT( i == 1 );
+	YourStringDeserializer in(buf);
+	bool ok = in.deserialize_int(&passed_sock);
+	ASSERT( ok );
 	::close(passed_sock);
 }
 
