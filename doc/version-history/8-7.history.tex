@@ -35,6 +35,12 @@ are not enabled by default and are not likely to work outside of Linux
 environments with a single Python installation.
 \Ticket{6486}
 
+\item DAGMan now enforces the \MacroNI{DAGMAN\_MAX\_JOB\_HOLDS} limit by the
+number of held jobs in a cluster at the same time. Previously it counted all
+holds over the lifetime of a cluster, even if only a small number of them are
+active at the same time.
+\Ticket{6492}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
