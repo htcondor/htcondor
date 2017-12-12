@@ -262,7 +262,7 @@ JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_fil
 
 	FILE* fp = NULL;
 	if (spooled_submit_file) {
-		safe_fopen_wrapper_follow(submit_digest_file, "r");
+		fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
 	} else {
 		restore_priv = true;
 		priv = set_user_priv_from_ad(*job);
