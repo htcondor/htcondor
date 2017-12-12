@@ -41,6 +41,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug with the \Macro{RESERVED\_DISK} parameter that would not
+accept an argument larger than 2 Gb.
+\Ticket{6472}
+
+\item Fixed a bug in the Java universe that prevented jar files with relative
+paths to work when submitting from a Linux submit machine to a Windows
+execute machine or vice versa.
+\Ticket{6474}
+
 \item Fixed a bug on 32 bit Linux systems that caused the starter to crash
 on startup if cgroup limits were enabled.
 \Ticket{6501}
@@ -65,6 +74,11 @@ when multiple clusters shared a batch name.
 \item Improved validation of the lengths of messages in \MacroNI{PASSWORD}
 and \MacroNI{SSL} authentication methods.
 \Ticket{6493}
+
+\item Reduced preen connections to the schedd. Preen now connects only when
+specifically needed, and automatically disconnects after 
+\Macro{PREEN\_MAX\_SCHEDD\_CONNECTION\_TIME} seconds.
+\Ticket{6490}
 
 \end{itemize}
 
