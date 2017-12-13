@@ -324,8 +324,7 @@ check_spool_dir()
     const char      *history, *startd_history;
 	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list, bad_spool_files;
-	Qmgr_connection *qmgr = new Qmgr_connection();
-	bool			is_schedd_connected = false;
+	Qmgr_connection *qmgr = NULL;
 	double			last_connection_time;
 	double			max_connection_time;
 
@@ -429,11 +428,10 @@ check_spool_dir()
 			// other checks which require an active connection to the schedd. 
 			// Establish a connection (if not already connected). If this fails
 			// for any reason, abort and don't delete any files.
-		if ( !is_schedd_connected ) {
+		if ( !qmgr ) {
 			if ( !( qmgr = ConnectQ (0,0,false) ) ) {
 				return;
 			}
-			is_schedd_connected = true;
 			last_connection_time = _condor_debug_get_time_double();
 		}
 
@@ -463,7 +461,7 @@ check_spool_dir()
 			// and mark bad files for deletion.
 			// We also need to run this code when we hit the last file in the
 			// directory. Is there some way to know if this is the last file?
-		if ( is_schedd_connected ) {
+		if ( qmgr ) {
 			if ( _condor_debug_get_time_double() > 
 							( last_connection_time + max_connection_time ) ) {
 				if ( DisconnectQ( qmgr ) ) {
@@ -474,7 +472,7 @@ check_spool_dir()
 					while( (f = bad_spool_files.next()) ) {
 						bad_file( Spool, f, dir );
 					}
-					is_schedd_connected = false;
+					qmgr = NULL;
 					bad_spool_files.clearAll();
 				} else {
 					dprintf( D_ALWAYS, 
@@ -487,7 +485,7 @@ check_spool_dir()
 
 		// All done. If the schedd connection is open, disconnect and make the
 		// remaining files for deletion.
-	if ( is_schedd_connected ) {
+	if ( qmgr ) {
 		if( DisconnectQ( qmgr ) ) {
 			bad_spool_files.rewind();
 			while( (f = bad_spool_files.next()) ) {
