@@ -85,6 +85,10 @@ specifically needed, and automatically disconnects after
 \Macro{PREEN\_MAX\_SCHEDD\_CONNECTION\_TIME} seconds.
 \Ticket{6490}
 
+\item Fixed a bug that resulted in an incorrect value in the DONE column of
+\Condor{q} output when multiple job clusters had the same batch name.
+\Ticket{6469}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -104,8 +108,8 @@ specifically needed, and automatically disconnects after
 
 \begin{itemize}
 
-\item \Condor{chirip} will now no longer abort when given a command that it cannot execute
-successfully execute, such as fetching from a file that does not exist.
+\item \Condor{chirp} will now no longer abort when given a command that it cannot
+successfully execute, such as fetching a file that does not exist.
 \Ticket{6402}
 
 \end{itemize}
