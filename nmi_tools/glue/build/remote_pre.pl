@@ -138,7 +138,7 @@ print "Configure args: " . join(' ', @ARGV) . "\n";
 ######################################################################
 # Save source tree for native redhat RPM builds
 ######################################################################
-if ($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7)/) {
+if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS)/) {
     system("cd $CloneDir && tar cfz $ENV{TMP}/condor.tar.gz *");
 }
 

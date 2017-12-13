@@ -33,13 +33,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When a daemon crashes, more information about the cause is now
+written to its log file.
+\Ticket{6483}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug when handling a VM universe job that specified a disk
+image which existed but was in the wrong format; for some formats that
+would the file being the wrong size.  Instead of offlining the VM universe,
+HTCondor now recognizes this situation and puts the job on hold.
+\Ticket{6505}
+
+\item Fixed a bug on Windows that would often result in the job sandbox on the execute node
+not being deleted when the \Condor{schedd} relenquished its claim on the slot before the
+\Condor{starter} had exited.
+\Ticket{6497}
 
 \item Fixed a bug with the \Macro{RESERVED\_DISK} parameter that would not
 accept an argument larger than 2 Gb.
@@ -77,8 +90,22 @@ and \MacroNI{SSL} authentication methods.
 
 \item Reduced preen connections to the schedd. Preen now connects only when
 specifically needed, and automatically disconnects after 
-\Macro{PREEN\_MAX\_SCHEDD\_CONNECTION\_TIME} seconds.
+\MacroNI{PREEN\_MAX\_SCHEDD\_CONNECTION\_TIME} seconds.
 \Ticket{6490}
+
+\item Fixed a bug that resulted in an incorrect value in the DONE column of
+\Condor{q} output when multiple job clusters had the same batch name.
+\Ticket{6469}
+
+\item Removed unneeded \MacroNI{copy\_to\_spool} statement from default interactive
+submit file.
+\Ticket{6315}
+
+\item Fixed issue on newer versions of linux where core files generated
+by a daemon were not usable by gdb.
+A side effect of this fix is that the configuration parameter
+\MacroNI{CORE\_FILE\_NAME} no longer has any effect on linux.
+\Ticket{6482}
 
 \end{itemize}
 
@@ -99,7 +126,9 @@ specifically needed, and automatically disconnects after
 
 \begin{itemize}
 
-\item None.
+\item \Condor{chirp} will now no longer abort when given a command that it cannot
+successfully execute, such as fetching a file that does not exist.
+\Ticket{6402}
 
 \end{itemize}
 

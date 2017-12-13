@@ -575,6 +575,7 @@ VMProc::StartJob()
 	//			"Can't create vm with $vmconfig" (?)
 	//			"vmconfig $vmconfig does not exist" (C)
 	//			"vmconfig $vmconfig is not readable" (C)
+	//		VMGAHP_ERR_BAD_IMAGE (U)
 	//
 
 	Gahp_Args * result = new_req->getResult();
@@ -634,7 +635,8 @@ VMProc::StartJob()
 			"VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM",
 			"VMGAHP_ERR_JOBCLASSAD_KVM_INVALID_DISK_PARAM",
 			"VMGAHP_ERR_JOBCLASSAD_KVM_MISMATCHED_CHECKPOINT",
-			"VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM"
+			"VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM",
+			"VMGAHP_ERR_BAD_IMAGE"
 			};
 		unsigned holdingErrorCount = sizeof( holdingErrors ) / sizeof(  const char * const );
 		for( unsigned i = 0; i < holdingErrorCount; ++i ) {
