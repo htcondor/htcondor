@@ -101,6 +101,12 @@ specifically needed, and automatically disconnects after
 submit file.
 \Ticket{6315}
 
+\item Fixed issue on newer versions of linux where core files generated
+by a daemon were not usable by gdb.
+A side effect of this fix is that the configuration parameter
+\MacroNI{CORE\_FILE\_NAME} no longer has any effect on linux.
+\Ticket{6482}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
