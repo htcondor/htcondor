@@ -48,6 +48,11 @@ output.
 \item Removed Quill from HTCondor codebase.
 \Ticket{6496}
 
+\item Changed the default value of configuration parameter \MacroNI{IS\_OWNER} to \Expr{False}.
+The previous default value is now set as part of the \texttt{use POLICY : Desktop}
+configuration template.
+\Ticket{6463}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

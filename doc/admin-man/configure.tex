@@ -3950,13 +3950,12 @@ WANT_HOLD_REASON = \
 
 \label{param:IsOwner}
 \item[\Macro{IS\_OWNER}]
-  A boolean expression that defaults to being defined as
-\begin{verbatim}
-        IS_OWNER = (START =?= FALSE)
-\end{verbatim}
-  Used to describe the state of the machine with respect to its use
-  by its owner.
-  Job ClassAd attributes are not used in defining \MacroNI{IS\_OWNER},
+  A boolean expression that determines when a machine ad should enter
+  the \Expr{Owner} state.
+  While in the \Expr{Owner} state, the machine ad will not be matched to
+  any jobs.
+  The default value is \Expr{False} (never enter \Expr{Owner} state).
+  Job ClassAd attributes should not be used in defining \MacroNI{IS\_OWNER},
   as they would be \Expr{Undefined}.
 
 \label{param:StartdHistory}
