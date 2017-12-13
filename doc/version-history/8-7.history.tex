@@ -59,7 +59,10 @@ configuration template.
 
 \begin{itemize}
 
-\item None.
+\item When \MacroNI{copy\_to\_spool} is set to \Expr{True},
+\Condor{submit} now attempts to transfer the job exectuable only once per
+job cluster, instead of once per job.
+\Ticket{6459}
 
 \end{itemize}
 
