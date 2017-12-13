@@ -465,6 +465,7 @@ check_spool_dir()
 			if ( _condor_debug_get_time_double() > 
 							( last_connection_time + max_connection_time ) ) {
 				if ( DisconnectQ( qmgr ) ) {
+					qmgr = NULL;
 						// We were actually talking to a real queue the whole time
 						// and didn't have any errors.  So, it's now safe to
 						// delete the files we think we can delete.
@@ -472,7 +473,6 @@ check_spool_dir()
 					while( (f = bad_spool_files.next()) ) {
 						bad_file( Spool, f, dir );
 					}
-					qmgr = NULL;
 					bad_spool_files.clearAll();
 				} else {
 					dprintf( D_ALWAYS, 
@@ -487,6 +487,7 @@ check_spool_dir()
 		// remaining files for deletion.
 	if ( qmgr ) {
 		if( DisconnectQ( qmgr ) ) {
+			qmgr = NULL;
 			bad_spool_files.rewind();
 			while( (f = bad_spool_files.next()) ) {
 				bad_file( Spool, f, dir );
