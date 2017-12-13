@@ -43,6 +43,12 @@ written to its log file.
 
 \begin{itemize}
 
+\item Fixed a bug when handling a VM universe job that specified a disk
+image which existed but was in the wrong format; for some formats that
+would the file being the wrong size.  Instead of offlining the VM universe,
+HTCondor now recognizes this situation and puts the job on hold.
+\Ticket{6505}
+
 \item Fixed a bug on Windows that would often result in the job sandbox on the execute node
 not being deleted when the \Condor{schedd} relenquished its claim on the slot before the
 \Condor{starter} had exited.
