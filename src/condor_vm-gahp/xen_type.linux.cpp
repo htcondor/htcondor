@@ -160,6 +160,11 @@ VirshType::Start()
 	    // was
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
 	    vmprintf(D_ALWAYS, "Failed to create libvirt domain: %s\n", (err ? err->message : "No reason found"));
+
+	    if( strstr( err->message, "mage is not in qcow2 format" ) != NULL ) {
+			m_result_msg = VMGAHP_ERR_BAD_IMAGE;
+		}
+
 	    //virFreeError(err);
 	    return false;
 	  }
