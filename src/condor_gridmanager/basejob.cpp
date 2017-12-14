@@ -1000,7 +1000,6 @@ InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	std::string userLogFile, dagmanNodeLog;
-	std::string gjid;
 	bool use_xml = false;
 	std::vector<const char*> logfiles;
 
@@ -1016,11 +1015,10 @@ InitializeUserLog( ClassAd *job_ad )
 
 	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-	job_ad->LookupString( ATTR_GLOBAL_JOB_ID, gjid );
 	job_ad->LookupBool( ATTR_ULOG_USE_XML, use_xml );
 
 	WriteUserLog *ULog = new WriteUserLog();
-	ULog->initialize(logfiles, cluster, proc, 0, gjid.c_str());
+	ULog->initialize(logfiles, cluster, proc, 0);
 	ULog->setUseXML( use_xml );
 	return ULog;
 }

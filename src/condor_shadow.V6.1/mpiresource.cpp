@@ -118,10 +118,10 @@ MpiResource::writeULogEvent( ULogEvent* event )
 	// FIXME - we dont' have the gjid here (grr) so pass NULL to initialize
 	// the userlog
 	shadow->uLog.initialize( shadow->getCluster(), 
-							 shadow->getProc(), node_num, NULL );
+							 shadow->getProc(), node_num );
 	rval = RemoteResource::writeULogEvent( event );
 	shadow->uLog.initialize( shadow->getCluster(), 
-							 shadow->getProc(), 0, NULL ); 
+							 shadow->getProc(), 0 );
 	return rval;
 }
 

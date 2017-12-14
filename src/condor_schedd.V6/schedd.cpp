@@ -4178,12 +4178,10 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	MyString owner;
 	MyString domain;
 	MyString iwd;
-	MyString gjid;
 	int use_xml;
 
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
-	GetAttributeString(job_id.cluster, job_id.proc, ATTR_GLOBAL_JOB_ID, gjid);
 
 	for(std::vector<const char*>::iterator p = logfiles.begin();
 			p != logfiles.end(); ++p) {
@@ -4207,7 +4205,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
     }
 
 	if (ULog->initialize(owner.Value(), domain.Value(), logfiles,
-			job_id.cluster, job_id.proc, 0, gjid.Value())) {
+			job_id.cluster, job_id.proc, 0)) {
 		if(logfiles.size() > 1) {
 			InitializeMask(ULog,job_id.cluster, job_id.proc);
 		}
@@ -4221,7 +4219,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 		SpoolDir += DIR_DELIM_CHAR;
 		if ( !strncmp( SpoolDir.c_str(), logfilename.c_str(),
 					SpoolDir.length() ) && ULog->initialize( logfiles,
-					job_id.cluster, job_id.proc, 0, gjid.Value() ) ) {
+					job_id.cluster, job_id.proc, 0 ) ) {
 			if(logfiles.size() > 1) {
 				InitializeMask(ULog,job_id.cluster,job_id.proc);
 			}

@@ -208,7 +208,6 @@ class ULogEvent {
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 	   
-	void setGlobalJobId(const char *gjid) { m_gjid = gjid; } 
     /// The event last read, or to be written.
     ULogEventNumber    eventNumber;
 
@@ -231,10 +230,6 @@ class ULogEvent {
     /// The subproc field of the Condor ID for this event
     int                subproc;
     
-    /// Added by Ameet
-    char *scheddname;
-    //char globaljobid[100];
-
   protected:
 
     /** Read the resource usage from the log file.
@@ -290,10 +285,6 @@ class ULogEvent {
      *  @return false for failure, true for success
      */
     bool formatHeader( std::string &out );
-
-	/// the global job id for the job associated with this event
-	void insertCommonIdentifiers(ClassAd &adToFill);
-	const char *m_gjid;
 
   private:
     /// The time this event occurred (eventclock is Unix timestamp;

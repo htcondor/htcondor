@@ -1895,7 +1895,7 @@ Dag::PostScriptReaper( Job *job, int status )
 				"Initializing user log writer for %s, (%d.%d.%d)\n",
 				DefaultNodeLog(), event.cluster, event.proc, event.subproc );
 	ulog.initialize( DefaultNodeLog(), event.cluster, event.proc,
-				event.subproc, NULL );
+				event.subproc );
 
 	for(int write_attempts = 0;;++write_attempts) {
 		if( !ulog.writeEvent( &event ) ) {

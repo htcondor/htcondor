@@ -879,7 +879,6 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool
 	std::string owner;
 	std::string userLogFile;
 	std::string domain;
-	std::string gjid;
 	std::string dagmanLogFile;
 	bool use_xml = false;
 
@@ -905,9 +904,8 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool
 	job_ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
 	job_ad.EvaluateAttrString( ATTR_NT_DOMAIN, domain );
 	job_ad.EvaluateAttrBool( ATTR_ULOG_USE_XML, use_xml );
-	job_ad.EvaluateAttrString( ATTR_GLOBAL_JOB_ID, gjid );
 
-	if(!ulog->initialize(owner.c_str(), domain.c_str(), logfiles, cluster, proc, 0, gjid.c_str())) {
+	if(!ulog->initialize(owner.c_str(), domain.c_str(), logfiles, cluster, proc, 0)) {
 		return false;
 	}
 	ulog->setUseXML( use_xml );

@@ -808,7 +808,7 @@ void BaseShadow::initUserLog()
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.c_str());
 	}
 	if( !logfiles.empty()) {
-		if( !uLog.initialize (logfiles, cluster, proc, 0, gjid)) {
+		if( !uLog.initialize (logfiles, cluster, proc, 0)) {
 			MyString hold_reason;
 			hold_reason.formatstr("Failed to initialize user log to %s%s%s",
 				logfilename.c_str(), logfiles.size() == 1 ? "" : " or ",

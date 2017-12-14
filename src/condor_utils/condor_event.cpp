@@ -249,9 +249,6 @@ ULogEvent::ULogEvent(void)
 	tm = localtime(&eventTimeval.tv_sec);
 	eventTime = *tm;
 #endif
-
-	scheddname = NULL;
-	m_gjid = NULL;
 }
 
 
@@ -531,26 +528,6 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("Cluster", cluster);
 	ad->LookupInteger("Proc", proc);
 	ad->LookupInteger("Subproc", subproc);
-}
-
-void
-ULogEvent::insertCommonIdentifiers(ClassAd &adToFill)
-{
-	//if( !adToFill ) return;
-	if(!scheddname) {
-		scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-	}
-	if(scheddname) {
-	  adToFill.Assign("scheddname", scheddname);
-	}
-
-	if(m_gjid) {
-	  adToFill.Assign("globaljobid", m_gjid);
-	}
-
-	adToFill.Assign("cluster_id", cluster);
-	adToFill.Assign("proc_id", proc);
-	adToFill.Assign("spid", subproc);
 }
 
 
