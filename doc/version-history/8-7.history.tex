@@ -65,6 +65,30 @@ are not enabled by default and are not likely to work outside of Linux
 environments with a single Python installation.
 \Ticket{6486}
 
+\item DAGMan now enforces the \MacroNI{DAGMAN\_MAX\_JOB\_HOLDS} limit by the
+number of held jobs in a cluster at the same time. Previously it counted all
+holds over the lifetime of a cluster, even if only a small number of them are
+active at the same time.
+\Ticket{6492}
+
+\item Added some graph metrics (height, width, etc.) to DAGMan's metrics file
+output.
+\Ticket{6470}
+
+\item Removed Quill from HTCondor codebase.
+\Ticket{6496}
+
+\item Changed the default value of configuration parameter \MacroNI{IS\_OWNER} to \Expr{False}.
+The previous default value is now set as part of the \texttt{use POLICY : Desktop}
+configuration template.
+\Ticket{6463}
+
+\item Added new job attributes BatchProject and BatchRuntime for grid-type
+batch jobs.
+They specify the project/allocation name and maximum runtime in seconds
+for the job that's submited to the underlying batch system.
+\Ticket{6451}
+
 \item HTCondor now respects \Attr{ATTR\_JOB\_SUCCESS\_EXIT\_CODE} when sending
 job notifications.
 \Ticket{6432}
@@ -78,6 +102,11 @@ job notifications.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item When \MacroNI{copy\_to\_spool} is set to \Expr{True},
+\Condor{submit} now attempts to transfer the job exectuable only once per
+job cluster, instead of once per job.
+\Ticket{6459}
 
 \item The job log should no longer contain empty submit warnings.
 \Ticket{6465}

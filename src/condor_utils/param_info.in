@@ -5504,6 +5504,7 @@ default : @end
 	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
 	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
+	IS_OWNER=(START =?= False)
 @end
 
 [$POLICY.LIMIT_JOB_RUNTIMES]
