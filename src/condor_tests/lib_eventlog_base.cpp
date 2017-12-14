@@ -126,7 +126,7 @@ WriteEventLog( const char *event_log, int &num_events )
 {
 	int			errors = 0;
 	WriteUserLog		writer;
-	if (!writer.initialize("owner", NULL, event_log, 1, 1, 1, NULL)) {
+	if (!writer.initialize("owner", NULL, event_log, 1, 1, 1)) {
 		fprintf( stderr, "Failed to initailize writer (#1)\n" );
 		errors++;
 	}
@@ -146,7 +146,7 @@ WriteEventLog( const char *event_log, int &num_events )
 	}
 
 	// Generate an execute event
-	if (!writer.initialize("owner", NULL, event_log, 1, 1, 1, NULL)) {
+	if (!writer.initialize("owner", NULL, event_log, 1, 1, 1)) {
 		fprintf( stderr, "Failed to initailize writer (#2)\n" );
 		errors++;
 	}
