@@ -98,6 +98,8 @@ char* dirname( const char* path );
    return TRUE if the given path is a full pathname, FALSE if not.  by
    full pathname, we mean it either begins with "/" or "\" or "*:\"
    (something like "c:\..." on windoze).
+   This does NOT mean it is in any sort of absolute "canonical" format.
+   It may still contain references to ".." or to symlinks or whatever.
 */
 int fullpath( const char* path );
 

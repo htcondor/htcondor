@@ -1073,7 +1073,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		size_t size = 0;
 		off_t offset = *it2;
 
-		if (it->size() && ((*it)[0] != DIR_DELIM_CHAR))
+		if ( it->size() && !fullpath(it->c_str()) )
 		{
 			*it = iwd + DIR_DELIM_CHAR + *it;
 		}

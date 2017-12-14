@@ -256,10 +256,9 @@ so CurrentWorkingDir is replaced with the job's iwd.
  
 static void complete_path( const char *short_path, MyString &full_path )
 {
-	if(short_path[0]==DIR_DELIM_CHAR) {
+	if ( fullpath(short_path) ) {
 		full_path = short_path;
 	} else {
-		// strcpy(full_path,CurrentWorkingDir);
 		full_path.formatstr("%s%s%s",
 						  Shadow->getIwd(),
 						  DIR_DELIM_STRING,

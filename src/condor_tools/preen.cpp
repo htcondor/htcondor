@@ -1030,8 +1030,8 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	MyString	pathname;
 	MyString	buf;
 
-	if( is_relative_to_cwd( name ) ) {
-	pathname.formatstr( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	if( !fullpath( name ) ) {
+		pathname.formatstr( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
 	}
 	else {
 		pathname = name;

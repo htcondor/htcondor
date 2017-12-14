@@ -83,21 +83,6 @@ void filename_url_parse_malloc( char const *input, char **method, char **server,
 	*path = strdup(p);
 }
 
-int is_relative_to_cwd( std::string &path ) {
-	return is_relative_to_cwd(path.c_str());
-}
-
-int is_relative_to_cwd( const char *path )
-{
-#if WIN32
-	if(*path == '/' || *path == '\\') return 0;
-	if(('A' <= toupper(*path) && toupper(*path) <= 'Z') && path[1] == ':') return 0;
-#else
-	if(*path == DIR_DELIM_CHAR) return 0;
-#endif
-	return 1;
-}
-
 // keep in sync with version in filename_tools_cpp.C
 int filename_split( const char *path, char *dir, char *file )
 {

@@ -26,6 +26,7 @@
 #include "directory.h"
 #include "my_popen.h"
 #include "condor_daemon_core.h"
+#include "basename.h"
 
 #if defined(LINUX)
 #include <sys/utsname.h>
@@ -251,7 +252,7 @@ bool FilesystemRemap::EncryptedMappingDetect()
 
 
 int FilesystemRemap::AddMapping(std::string source, std::string dest) {
-	if (!is_relative_to_cwd(source) && !is_relative_to_cwd(dest)) {
+	if (fullpath(source.c_str()) && fullpath(dest.c_str())) {
 		std::list<pair_strings>::const_iterator it;
 		for (it = m_mappings.begin(); it != m_mappings.end(); it++) {
 			if ((it->second.length() == dest.length()) && (it->second.compare(dest) == 0)) {
@@ -278,7 +279,7 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 		dprintf(D_ALWAYS, "Unable to add encrypted mappings: not supported on this machine\n");
 		return -1;
 	}
-	if (is_relative_to_cwd(mountpoint)) {
+	if (!fullpath(mountpoint.c_str())) {
 		dprintf(D_ALWAYS, "Unable to add encrypted mappings for relative directories (%s).\n",
 				mountpoint.c_str());
 		return -1;

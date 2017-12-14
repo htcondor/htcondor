@@ -865,26 +865,3 @@ int IOProxyHandler::convert( int result, int unix_errno )
 			return CHIRP_ERROR_UNKNOWN;
 	}
 }
-
-void IOProxyHandler::fix_chirp_path( char *path )
-{
-#ifdef WIN32
-#else
-	char temp_path[CHIRP_LINE_MAX];
-
-	// Get rid of leading '//','/','\','\\'
-	if(path && path[0] == DIR_DELIM_CHAR) {
-		if(path[1] == DIR_DELIM_CHAR) {
-			strncpy(temp_path, path+2, CHIRP_LINE_MAX);
-			temp_path[CHIRP_LINE_MAX-1] = '\0';
-			strcpy(path, temp_path);
-		}
-		else {
-			strncpy(temp_path, path+1, CHIRP_LINE_MAX);
-			temp_path[CHIRP_LINE_MAX-1] = '\0';
-			strcpy(path, temp_path);
-		}
-	}
-
-#endif
-}

@@ -26,7 +26,7 @@
 #include "condor_md.h"
 #include "directory_util.h"
 #include "file_lock.h"
-#include "filename_tools.h"
+#include "basename.h"
 #include "stat_wrapper.h"
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -268,7 +268,7 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 }
 
 static string MakeAbsolutePath(const char* path, const char* initialWorkingDir) {
-	if (is_relative_to_cwd(path)) {
+	if (!fullpath(path)) {
 		string fullPath = initialWorkingDir;
 		fullPath += DIR_DELIM_CHAR;
 		fullPath += path;

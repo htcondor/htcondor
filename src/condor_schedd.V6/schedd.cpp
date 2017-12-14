@@ -5459,7 +5459,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	ASSERT(!SpoolSpace.empty());
 	char *proxy_path = NULL;
 	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
-	if( proxy_path && is_relative_to_cwd(proxy_path) ) {
+	if( proxy_path && !fullpath(proxy_path) ) {
 		MyString iwd;
 		if( jobad->LookupString(ATTR_JOB_IWD,iwd) ) {
 			iwd.formatstr_cat("%c%s",DIR_DELIM_CHAR,proxy_path);

@@ -1505,7 +1505,7 @@ find_user_file(MyString &file_location, const char * basename, bool check_access
 
 	if (can_switch_ids())
 		return false;
-	if ( ! is_relative_to_cwd(basename)) {
+	if ( fullpath(basename)) {
 		file_location = basename;
 	} else {
 #ifdef UNIX

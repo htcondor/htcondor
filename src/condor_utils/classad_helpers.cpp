@@ -30,7 +30,7 @@
 #include "enum_utils.h"
 #include "condor_adtypes.h"
 #include "condor_config.h"
-#include "filename_tools.h"
+#include "basename.h"
 #include "proc.h"
 #include "condor_version.h"
 
@@ -394,7 +394,7 @@ bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
 
 	if ( global_log ) free(global_log);
 
-	if( ret_val && is_relative_to_cwd(result.c_str()) ) {
+	if( ret_val && !fullpath(result.c_str()) ) {
 		std::string iwd;
 		if( job_ad && job_ad->EvaluateAttrString(ATTR_JOB_IWD,iwd) ) {
 			iwd += "/";

@@ -43,7 +43,6 @@ private:
 	void handle_cookie_request( ReliSock *r, char *line );
 	void handle_standard_request( ReliSock *r, char *line );
 	int convert( int result, int unix_errno );
-	void fix_chirp_path( char *path );
 
 	JICShadow *m_shadow;
 	char *cookie;
