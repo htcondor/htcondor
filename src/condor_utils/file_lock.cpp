@@ -689,8 +689,7 @@ FileLock::updateLockTimestamp(void)
 }
 
 
-// create a temporary lock path
-// return value must be freed via delete[] by caller.
+// create a temporary lock path name into supplied buffer.
 const char *
 FileLock::getTempPath(MyString & pathbuf)
 {
