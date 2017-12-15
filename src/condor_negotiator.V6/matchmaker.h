@@ -145,6 +145,9 @@ class Matchmaker : public Service
 
 		void calculateRanks(ClassAd &request, ClassAd *offer, PreemptState candidatePreemptState, double &candidateRankValue, double &candidatePreJobRankValue, double &candidatePostJobRankValue, double &candidatePreemptRankValue);
 
+		void setDryRun(bool d) {m_dryrun = d;}
+		bool getDryRun() const {return m_dryrun;}
+
     protected:
 		char * NegotiatorName;
 		bool NegotiatorNameInConfig;
@@ -424,6 +427,7 @@ class Matchmaker : public Service
 		int rejForSubmitterLimit;   //   - not enough group quota?
 	std::set<std::string> rejectedConcurrencyLimits;
 	std::string lastRejectedConcurrencyString;
+		bool m_dryrun;
 
 
 		// Class used to store each individual entry in the
