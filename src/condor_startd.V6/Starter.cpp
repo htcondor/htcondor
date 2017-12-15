@@ -46,7 +46,6 @@ Starter::Starter()
 	s_ad = NULL;
 	s_path = NULL;
 	s_is_dc = false;
-	s_already_sent_sigquit = false;
 
 	initRunData();
 }
@@ -90,7 +89,6 @@ Starter::initRunData( void )
 	s_port1 = -1;
 	s_port2 = -1;
 	s_reaper_id = -1;
-	s_already_sent_sigquit = false;
 
 #if HAVE_BOINC
 	s_is_boinc = false;
@@ -112,8 +110,6 @@ Starter::initRunData( void )
 Starter::~Starter()
 {
 	cancelKillTimer();
-
-	//dprintf(D_ALWAYS | D_BACKTRACE, "destructor for Starter pid %d\n", s_pid);
 
 	if (s_path) {
 		delete [] s_path;
@@ -499,29 +495,13 @@ Starter::reallykill( int signo, int type )
 		// Finally, do the deed.
 	switch( type ) {
 	case 0:
-		if( is_dc() ) {
-#ifdef WIN32
-			// On Windows, if we alrady sent a SIGQUIT, sending a SIGKILL is just going to block until
-			// the Starter exits, so pretend we sent the SIGTERM, but don't actually do it.
-			if ((signo == SIGTERM) && s_already_sent_sigquit) {
-				dprintf( D_ALWAYS,  "Skipping signal %d to Starter because it's already processing a SIGQUIT\n", signo);
-				ret = 0;
-				break;
-			}
-#endif
+		if( is_dc() ) {		
 			ret = daemonCore->Send_Signal( (s_pid), signo );
 				// Translate Send_Signal's return code to Unix's kill()
 			if( ret == FALSE ) {
 				ret = -1;
 			} else {
 				ret = 0;
-#ifdef WIN32
-				// On windows, we need to remember sending the SIGQUIT, because once we have sent it
-				// subsequent attempts to send 'signals' that a really TCP messages will just block.
-				if (signo == SIGQUIT) {
-					s_already_sent_sigquit = true;
-				}
-#endif
 			}
 			break;
 		} 
