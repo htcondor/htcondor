@@ -76,8 +76,8 @@ class GridUniverseLogic : public Service
 		static void SendRemoveSignal();
 
 		// given a pointer to a gman_node_t, return path to a scratch
-		// directory -- note: caller must call delete [] on returned pointer
-		static char *scratchFilePath(gman_node_t *);
+		// write the scratch dirctory into the path argument and return path.Value()
+		static const char *scratchFilePath(gman_node_t *, MyString & path);
 
 		typedef HashTable<MyString,gman_node_t *> GmanPidTable_t;
 		static GmanPidTable_t * gman_pid_table;

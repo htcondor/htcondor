@@ -20,7 +20,7 @@
 #ifndef DIRECTORY_UTIL_H
 #define DIRECTORY_UTIL_H
 
-#include <string>
+#include <MyString.h>
 
 /** Returns a path to subdirectory to use for temporary files.
   @return The pointer returned must be de-allocated by the caller w/ free()
@@ -29,27 +29,35 @@ char* temp_dir_path();
 
 /** Take two strings, a directory path, and a filename, and
   concatenate them together.  If the directory path doesn't end with
-  the appropriate directory deliminator for this platform, this
-  function will ensure that the directory delimiter is included in the
+  the appropriate directory deliminator for this platform or has excess delimiters, this
+  function will ensure that only a single, correct directory delimiter is included in the
   resulting full path.
+  for example all of the examples below write path/to/file" into buf
+      dirscat("path/to", "file", buf)
+      dirscat("path/to/", "/file", buf)
+      dirscat("path/to//", "file", buf)
   @param dirpath The directory path.
   @param filename The filename.
-  @return A string created with new() that contains the full pathname.
+  @param result  The output buffer
+  @return Value() of result parameter after it has been set by this function
 */
-char* dircat( const char* dirpath, const char* filename );
+const char* dircat(const char* dirpath, const char* filename, MyString & result);
 
 /** Take two strings, a directory path, and a subdirectory, and
-  concatenate them together.  If the directory or subdirectory paths 
-  don't end with
-  the appropriate directory deliminator for this platform, this
-  function will ensure that the directory delimiters are included in the
-  resulting full path. 
+  concatenate them together.  If the directory or subdirectory paths
+  don't end with the appropriate directory deliminator for this platform, or have excess delimiters
+  this function will ensure that a single, correct directory delimiters are included in the
+  resulting full path.  This is just like the above dircat except it also includes a trailing directory delimiter
+  for example all of the examples below write path/to/file/" into buf
+      dirscat("path/to", "file", buf)
+      dirscat("path/to/", "/file", buf)
+      dirscat("path/to//", "file//", buf)
   @param dirpath The directory path.
   @param subdir The subdirectory.
-  @return A string created with new() that contains the full pathname.
+  @param result  The output buffer
+  @return Value() of result parameter after it has been set by this function
 */
-char* dirscat( std::string &dirpath, std::string &subdir );
-char* dirscat( const char* dirpath, const char* subdir );
+const char* dirscat(const char* dirpath, const char* subdir, MyString & result);
 
 /** Touch a file and create directory path as well if necessary
 	@param path: the full path to the file to be touched

@@ -35,9 +35,9 @@ classad_visa_write(ClassAd* ad,
 {
 	int cluster, proc, i;
 	ClassAd visa_ad;
-	MyString filename;
+	MyString filename, fullpath;
 
-	char* file_path = NULL;
+	const char *file_path = NULL;
 	int fd = -1;
 	FILE *file = NULL;
 	bool ret = false;
@@ -101,7 +101,7 @@ classad_visa_write(ClassAd* ad,
 	i = 0;
 	filename.formatstr("jobad.%d.%d", cluster, proc);
 	ASSERT(dir_path != NULL);
-	file_path = dircat(dir_path, filename.Value());
+	file_path = dircat(dir_path, filename.Value(), fullpath);
 	while (-1 == (fd = safe_open_wrapper_follow(file_path,
 	                                     O_WRONLY|O_CREAT|O_EXCL))) {
 		if (EEXIST != errno) {
@@ -111,9 +111,8 @@ classad_visa_write(ClassAd* ad,
 			goto EXIT;
 		}
 
-		delete[] file_path;
 		filename.formatstr("jobad.%d.%d.%d", cluster, proc, i++);
-		file_path = dircat(dir_path, filename.Value());
+		file_path = dircat(dir_path, filename.Value(), fullpath);
 	}
 
 	if (NULL == (file = fdopen(fd, "w"))) {
@@ -137,9 +136,6 @@ classad_visa_write(ClassAd* ad,
 	ret = true;
 
 EXIT:
-	if (file_path != NULL) {
-		delete[] file_path;
-	}
 	if (file) {
 		fclose(file);
 	} else {

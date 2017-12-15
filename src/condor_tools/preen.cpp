@@ -904,16 +904,12 @@ void check_tmp_dir(){
 #if !defined(WIN32)
 	if (!RmFlag) return;
 
-	const char *tmpDir = NULL;
 	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
-				// create a dummy FileLock for TmpPath access
-		FileLock *lock = new FileLock(-1, NULL, NULL);
-		tmpDir = lock->GetTempPath();	
-		delete lock;
-		rec_lock_cleanup(tmpDir, 3);
-		if (tmpDir != NULL)
-			delete []tmpDir;
+		// get temp path for file locking from the FileLock class
+		MyString tmpDir;
+		FileLock::getTempPath(tmpDir);
+		rec_lock_cleanup(tmpDir.Value(), 3);
 	}
   
 #endif	

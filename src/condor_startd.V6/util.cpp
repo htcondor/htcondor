@@ -287,9 +287,10 @@ cleanup_execute_dirs( StringList &list )
 		// list them and ask the Switchboard to delete each one
 		//
 
+		MyString dirbuf;
 		pair_strings_vector root_dirs = root_dir_list();
 		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-			const char * exec_path_full = dirscat(it->second.c_str(), exec_path);
+			const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
 			if(exec_path_full) {
 				dprintf(D_FULLDEBUG, "Looking at %s\n",exec_path_full);
 			}
@@ -310,7 +311,6 @@ cleanup_execute_dirs( StringList &list )
 			else {
 				execute_dir.Remove_Entire_Directory();
 			}
-			delete [] exec_path_full;
 		}
 #endif
 	}
@@ -404,9 +404,10 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 	check_recovery_file( pid_dir_path.Value() );
 
 	// Instantiate a directory object pointing at the execute directory
+	MyString dirbuf;
 	pair_strings_vector root_dirs = root_dir_list();
 	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-		const char * exec_path_full = dirscat(it->second.c_str(), exec_path);
+		const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
 
 		Directory execute_dir( exec_path_full, PRIV_ROOT );
 
@@ -421,7 +422,6 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 				execute_dir.Remove_Current_File();
 			}
 		}
-		delete [] exec_path_full;
 	}
 #endif  /* UNIX */
 }

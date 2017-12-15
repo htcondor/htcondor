@@ -50,9 +50,8 @@ void build_job_env(Env &job_env, const ClassAd & ad, bool using_file_transfer)
 		}
 		if( ! fullpath(X509Path.Value()) ) {
 			// It's not a full path, so glob on the IWD onto the front
-			char * newpath = dircat(Iwd.Value(), X509Path.Value());
-			X509Path = newpath;
-			delete [] newpath; // dircat returnned newed memory.
+			MyString tmp = X509Path.Value();
+			dircat(Iwd.Value(), tmp.Value(), X509Path);
 
 		}
 		job_env.SetEnv(X509_USER_PROXY, X509Path.Value());

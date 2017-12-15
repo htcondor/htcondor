@@ -3678,12 +3678,9 @@ CStarter::removeTempExecuteDir( void )
 			// for chroots other than the trivial one, cat the chroot to the configured execute dir
 			// we don't expect to ever get here on Windows.
 			// If we do get here on Windows, Find_Named_Entry will just fail to find a match
-			const char *tmp = dircat(it->second.c_str(), Execute);
-			if ( ! tmp) {
+			if ( ! dircat(it->second.c_str(), Execute, full_exec_dir)) {
 				continue;
 			}
-			full_exec_dir = tmp;
-			delete [] tmp;
 		}
 		Directory execute_dir( full_exec_dir.Value(), PRIV_ROOT );
 		if ( execute_dir.Find_Named_Entry( dir_name.Value() ) ) {

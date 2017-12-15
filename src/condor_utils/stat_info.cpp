@@ -70,7 +70,9 @@ StatInfo::StatInfo( const char *param_dirpath,
 {
 	this->filename = strnewp( param_filename );
 	this->dirpath = make_dirpath( param_dirpath );
-	fullpath = dircat( param_dirpath, param_filename );
+	MyString buf;
+	dircat( param_dirpath, param_filename, buf );
+	fullpath = buf.detach_buffer();
 	stat_file( fullpath );
 }
 
@@ -91,7 +93,9 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 {
 	this->dirpath = strnewp( dirpath );
 	this->filename = strnewp( filename );
-	fullpath = dircat( dirpath, filename );
+	MyString buf;
+	dircat( dirpath, filename, buf);
+	fullpath = buf.detach_buffer();
 	si_error = SIGood;
 	si_errno = 0;
 	access_time = time_access;

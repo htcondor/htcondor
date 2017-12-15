@@ -110,12 +110,10 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 		return (false);
 	}
 
-	// Determine the full path of the access file. Save it to a std::string and
-	// deallocate the memory that dircat() returned.
-	char* hardLinkFilePath = dircat(goodPath, newLink.c_str());
-	std::string accessFilePath(hardLinkFilePath);
+	// Determine the full path of the access file.
+	MyString accessFilePath;
+	dircat(goodPath, newLink.c_str(), accessFilePath);
 	accessFilePath += ".access";
-	delete [] hardLinkFilePath;
 	
 	// STARTING HERE, DO NOT RETURN FROM THIS FUNCTION WITHOUT RESETTING
 	// THE ORIGINAL PRIV STATE.
@@ -168,7 +166,8 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	// owned by the same owner of the file. If the link already exists, don't do 
 	// anything at this point, we'll check later to make sure it points to the
 	// correct inode.
-	const char *const targetLinkPath = dircat(goodPath, newLink.c_str()); // needs to be freed
+	MyString linkpathbuf;
+	const char *const targetLinkPath = dircat(goodPath, newLink.c_str(), linkpathbuf);
 
 	// Switch to root privileges, so we can test if the link exists, and create
 	// it if it does not
@@ -257,9 +256,6 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 		dprintf(D_ALWAYS, "MakeLink: Failed to release lock on access file with"
 			" error code %d (%s).\n", errno, strerror(errno));
 	}
-
-	// Free the target link path
-	delete [] targetLinkPath;
 
 	// Reset priv state
 	set_priv(original_priv);
