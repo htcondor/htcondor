@@ -113,6 +113,8 @@ Starter::~Starter()
 {
 	cancelKillTimer();
 
+	//dprintf(D_ALWAYS | D_BACKTRACE, "destructor for Starter pid %d\n", s_pid);
+
 	if (s_path) {
 		delete [] s_path;
 	}
@@ -499,10 +501,8 @@ Starter::reallykill( int signo, int type )
 	case 0:
 		if( is_dc() ) {
 #ifdef WIN32
-			// On Windows, if we alrady sent a SIGQUIT, sending a SIGTERM is just going to block until the Starter exits.
-			// Even on Linux, a SIGTERM that follows as SIGQUIT will never be acted on by the daemon.
-			// On Windows when shared port is enabled, "signals" are really socket messages and will block
-			// So we pretend to send the signal, but don't actually do it.
+			// On Windows, if we alrady sent a SIGQUIT, sending a SIGKILL is just going to block until
+			// the Starter exits, so pretend we sent the SIGTERM, but don't actually do it.
 			if ((signo == SIGTERM) && s_already_sent_sigquit) {
 				dprintf( D_ALWAYS,  "Skipping signal %d to Starter because it's already processing a SIGQUIT\n", signo);
 				ret = 0;
