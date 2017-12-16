@@ -144,7 +144,6 @@ private:
 	ClassAd* s_ad;
 	char*	s_path;
 	bool 	s_is_dc;
-	bool	s_already_sent_sigquit;
 
 		// data that only makes sense once this Starter object has
 		// been assigned to a given resource and spawned.
