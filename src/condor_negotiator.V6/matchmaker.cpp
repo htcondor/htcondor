@@ -2095,6 +2095,18 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
     // Current group gets anything remaining after assigning to any children
     // If there are no children (a leaf) then this group gets all the quota
     group->quota = (allow_quota_oversub) ? quota : (quota - chq);
+
+	// However, if we are the root ("<none>") group, the "quota" cannot be configured by the
+	// admin, and the "quota" represents the entire pool.  We calculate the surplus at any node
+	// as the difference between this quota and any demand.  So, if we left the "quota" to be the 
+	// whole pool, we would be double-counting surplus slots.  Therefore, no matter what allow_quota_oversub
+	// is, set the "quota" of the root <none> node (really the limit of usage at exactly this node) 
+	// to be the total size of the pool, minus the sum allocation of all the child nodes under it, recursively.
+
+	if (group->name == "<none>") {
+		group->quota = quota - chq;
+	}
+
     if (group->quota < 0) group->quota = 0;
     dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", group->name.c_str(), group->quota);
 }
@@ -2118,7 +2130,9 @@ double Matchmaker::hgq_fairshare(GroupEntry* group) {
             group->name.c_str(), group->quota, group->allocated, group->requested);
 
     // If this is a leaf group, we're finished: return the surplus
-    if (group->children.empty()) return surplus;
+    if (group->children.empty()) {
+		return surplus;
+	}
 
     // This is an internal group: perform fairshare recursively on children
     for (unsigned long j = 0;  j < group->children.size();  ++j) {
