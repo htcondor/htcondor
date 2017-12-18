@@ -2302,6 +2302,19 @@ DedicatedScheduler::computeSchedule( void )
 			bool psgIsPreferred = false; 
 			psgIsPreferred = job->LookupBool(ATTR_PREFER_PARALLEL_SCHEDULING_GROUP, psgIsPreferred);
 
+			// if job had a previous match, set PSG to true, so it can now match any PSG
+			if (job->LookupExpr(ATTR_MATCHED_PSG)) {
+				std::string psgString;
+				if (!job->LookupString(ATTR_MATCHED_PSG, psgString)) {
+					// Make sure the Matched_PSG attribute is not a string, this was the
+					// old way of doing things, and we'll skip that case.
+
+					// Assume here it is an expression of the form ParallelSchedulingGroup == "somegroup"
+					// and set it to true now, to match any group
+					job->Assign(ATTR_MATCHED_PSG, true);
+				}
+			}
+
 			foundMatch = satisfyJobWithGroups(jobs, cluster, nprocs);
 			
 				// If we found a matching set of machines, or PSG is a hard requirement, we're
@@ -3121,20 +3134,25 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 					// Make sure it matches this PSG
 				ClassAd *aJob = unclaimed_candidate_jobs.Next();
 				
-				char *previousPSG = NULL;
-				aJob->LookupString(ATTR_MATCHED_PSG, &previousPSG);
+				ExprTree *previousPSG = NULL;
+				previousPSG = aJob->LookupExpr(ATTR_MATCHED_PSG);
 				
-				if (previousPSG) {
-					// We've already munged the Requirements, don't do it again
-					// just update the matched PSG attr
-					free(previousPSG);
-				} else {
+				if (!previousPSG) {
+					// We've haven't already munged the Requirements, do it just this once
 					ExprTree *requirements = aJob->LookupExpr(ATTR_REQUIREMENTS);
 					const char *rhs = ExprTreeToString(requirements);
-					std::string newRequirements = std::string("( ParallelSchedulingGroup =?= my.Matched_PSG) && ")  + rhs;
+					std::string newRequirements = std::string("(my.Matched_PSG) && ")  + rhs;
 					aJob->AssignExpr(ATTR_REQUIREMENTS, newRequirements.c_str());
 				}
-				aJob->Assign(ATTR_MATCHED_PSG, groupName);
+				std::string psgString;
+				if (!aJob->LookupString(ATTR_MATCHED_PSG, psgString)) {
+					string psgExpr;
+					formatstr(psgExpr, "ParallelSchedulingGroup =?= \"%s\"", groupName);
+					aJob->AssignExpr(ATTR_MATCHED_PSG, psgExpr.c_str());
+				} else {
+					// The old way, keep for backward compatibility of running jobs
+					aJob->Assign(ATTR_MATCHED_PSG, groupName);
+				}
 				generateRequest(aJob);
 			}
 				
