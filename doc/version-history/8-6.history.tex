@@ -43,6 +43,12 @@ written to its log file.
 
 \begin{itemize}
 
+\item Fixed a bug with the use of the scheduler parameter
+\Macro{MAX\_JOBS\_SUBMITTED}.  If this limit was ever reached by a
+submit with more than one proc in the cluster, the limit would be
+reduced by the difference until the schedd was restarted.
+\Ticket{6460}
+
 \item Fixed a bug when handling a VM universe job that specified a disk
 image which existed but was in the wrong format; for some formats that
 would the file being the wrong size.  Instead of offlining the VM universe,
