@@ -43,6 +43,11 @@ written to its log file.
 
 \begin{itemize}
 
+\item Fixed a bug that caused very large RequestDisk requests 
+to fail, and cause the Disk attribute in the machine ad to go
+negative.
+\Ticket{6467}
+
 \item Fixed a bug with the use of the scheduler parameter
 \Macro{MAX\_JOBS\_SUBMITTED}.  If this limit was ever reached by a
 submit with more than one proc in the cluster, the limit would be
