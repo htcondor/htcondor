@@ -43,6 +43,11 @@ written to its log file.
 
 \begin{itemize}
 
+\item Fixed a bug in the group quotas that would give too much surplus
+quota to some groups when \Macro{ACCEPT\_SURPLUS} is on and
+\Macro{NEGOTAITOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION} is true (the default)
+\Ticket{6514}
+
 \item Fixed a bug that caused very large RequestDisk requests 
 to fail, and cause the Disk attribute in the machine ad to go
 negative.
