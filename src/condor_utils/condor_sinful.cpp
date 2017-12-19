@@ -495,17 +495,15 @@ Sinful::Sinful( char const * sinful ) {
 		} break;
 
 		default: {
-			// If this is a naked IPv6 address, reject, since we can't
-			// reliably tell where the address ends and the port begins.
-			if( hasTwoColonsInHost( sinful ) ) {
-				m_valid = false;
-				return;
-			}
-
 			// Otherwise, it may be an unbracketed original Sinful from
 			// an old implementation of CCB... or from the command line,
 			// or from a config setting.
-			formatstr( m_sinfulString, "<%s>", sinful );
+			// If it's a naked IPv6 address, add square brackets.
+			if ( hasTwoColonsInHost( sinful ) ) {
+				formatstr( m_sinfulString, "<[%s]>", sinful );
+			} else {
+				formatstr( m_sinfulString, "<%s>", sinful );
+			}
 			parseSinfulString();
 		} break;
 	}
