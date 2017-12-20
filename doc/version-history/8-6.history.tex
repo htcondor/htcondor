@@ -45,7 +45,7 @@ written to its log file.
 
 \item Fixed a bug in the group quotas that would give too much surplus
 quota to some groups when \Macro{ACCEPT\_SURPLUS} is on and
-\Macro{NEGOTAITOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION} is true (the default)
+\Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION} is true (the default)
 \Ticket{6514}
 
 \item Fixed a bug that caused very large RequestDisk requests 
@@ -66,12 +66,12 @@ HTCondor now recognizes this situation and puts the job on hold.
 \Ticket{6505}
 
 \item Fixed a bug on Windows that would often result in the job sandbox on the execute node
-not being deleted when the \Condor{schedd} relenquished its claim on the slot before the
+not being deleted when the \Condor{schedd} relinquished its claim on the slot before the
 \Condor{starter} had exited.
 \Ticket{6497}
 
 \item Fixed a bug with the \Macro{RESERVED\_DISK} parameter that would not
-accept an argument larger than 2 Gb.
+accept an argument larger than 2 Gigabytes.
 \Ticket{6472}
 
 \item Fixed a bug in the Java universe that prevented jar files with relative
@@ -117,10 +117,10 @@ specifically needed, and automatically disconnects after
 submit file.
 \Ticket{6315}
 
-\item Fixed issue on newer versions of linux where core files generated
+\item Fixed issue on newer versions of Linux where core files generated
 by a daemon were not usable by gdb.
 A side effect of this fix is that the configuration parameter
-\MacroNI{CORE\_FILE\_NAME} no longer has any effect on linux.
+\MacroNI{CORE\_FILE\_NAME} no longer has any effect on Linux.
 \Ticket{6482}
 
 \item Fixed a bug where the \Condor{master} stopped sending watchdog
@@ -128,6 +128,11 @@ notifications to systemd after restarting itself.
 This resulted in systemd killing the \Condor{master} shortly after
 the restart.
 \Ticket{6476}
+
+\item Updated the systemd configuration to only restart HTCondor upon
+failure. Otherwise, systemd would restart HTCondor if \Condor{off}
+requested the \Condor{master} to exit.
+\Ticket{6503}
 
 \end{itemize}
 
