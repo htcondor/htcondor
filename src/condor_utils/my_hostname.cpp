@@ -214,7 +214,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		}
 	}
 
-	if( interfaceCount <= 1 ) {
+	if( interfaceCount <= 1 && !strcmp( interface_param_name, "NETWORK_INTERFACE" ) ) {
 		enable_convert_default_IP_to_socket_IP = false;
 		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NETWORK_INTERFACE does not match multiple IPs.\n");
 	}

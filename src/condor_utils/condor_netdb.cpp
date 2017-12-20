@@ -26,6 +26,7 @@
 #include "condor_netdb.h"
 #include "ipv6_hostname.h"
 #include "condor_sockfunc.h"
+#include "my_hostname.h"
 
 #ifndef   NI_MAXHOST
 #define   NI_MAXHOST 1025
@@ -165,7 +166,15 @@ condor_gethostname(char *name, size_t namelen) {
 			dprintf( D_HOSTNAME, "NO_DNS: Using NETWORK_INTERFACE='%s' "
 					 "to determine hostname\n", param_buf );
 
-			snprintf( ip_str, MAXHOSTNAMELEN, "%s", param_buf );
+			std::string ipv4;
+			std::string ipv6;
+			std::string ipbest;
+			if ( !network_interface_to_ip("NETWORK_INTERFACE", param_buf, ipv4, ipv6, ipbest) ) {
+				dprintf(D_HOSTNAME, "NO_DNS: network_interface_to_ip() failed\n");
+				free( param_buf );
+				return -1;
+			}
+			snprintf( ip_str, MAXHOSTNAMELEN, "%s", ipbest.c_str() );
 			free( param_buf );
 
 			if (!addr.from_ip_string(ip_str)) {
