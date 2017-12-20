@@ -123,6 +123,12 @@ A side effect of this fix is that the configuration parameter
 \MacroNI{CORE\_FILE\_NAME} no longer has any effect on linux.
 \Ticket{6482}
 
+\item Fixed a bug where the \Condor{master} stopped sending watchdog
+notifications to systemd after restarting itself.
+This resulted in systemd killing the \Condor{master} shortly after
+the restart.
+\Ticket{6476}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
