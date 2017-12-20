@@ -73,6 +73,11 @@ job notifications.
 
 \begin{itemize}
 
+\item Fixed a bug with concurrency limits where condor\_qedit'ing a 
+job in the queue, and changing any of the concurrency limits of that
+job had no effect.
+\Ticket{6448}
+
 \item When \MacroNI{copy\_to\_spool} is set to \Expr{True},
 \Condor{submit} now attempts to transfer the job exectuable only once per
 job cluster, instead of once per job.
