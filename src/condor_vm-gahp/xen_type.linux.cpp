@@ -1452,7 +1452,7 @@ VirshType::killVMFast(const char* vmname, virConnectPtr libvirt_con)
 	    virErrorPtr err = virConnGetLastError(libvirt_con);
 	    if (err && err->code != VIR_ERR_NO_DOMAIN)
 	      {
-		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", vmname, (err ? err->message : "No reason found"));
+		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", vmname, (err->message ? err->message : "No reason found"));
 		return false;
 	      }
 	    else
