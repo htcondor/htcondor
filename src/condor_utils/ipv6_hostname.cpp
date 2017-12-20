@@ -121,9 +121,7 @@ bool init_local_hostname_impl()
 		const int SLEEP_DUR = 3;
 		bool gai_success = false;
 		for(int try_count = 1; true; try_count++) {
-			addrinfo hint = get_default_hint();
-			hint.ai_family = AF_UNSPEC;
-			int ret = ipv6_getaddrinfo(test_hostname.Value(), NULL, ai, hint);
+			int ret = ipv6_getaddrinfo(test_hostname.Value(), NULL, ai);
 			if(ret == 0) { gai_success = true; break; }
 			if(ret != EAI_AGAIN ) {
 				dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() could not look up '%s': %s (%d).  Error is not recoverable; giving up.  Problems are likely.\n", test_hostname.Value(), gai_strerror(ret), ret );
