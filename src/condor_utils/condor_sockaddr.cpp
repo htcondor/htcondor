@@ -614,7 +614,14 @@ bool condor_sockaddr::is_private_network() const
 		return p10.match(*this) || p172_16.match(*this) || p192_168.match(*this);
 	}
 	else if (is_ipv6()) {
-		return IN6_IS_ADDR_LINKLOCAL(&v6.sin6_addr);
+		static bool initialized = false;
+		static condor_netaddr pfc00;
+		if(!initialized) {
+			pfc00.from_net_string("fc00::/7");
+			initialized = true;
+		}
+
+		return pfc00.match(*this);
 	}
 	else {
 
