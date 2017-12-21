@@ -57,6 +57,7 @@
 
 #include "network2.h"
 #include "internet.h"
+#include "internet_obsolete.h"
 
 #include <stdio.h>
 #include <stdlib.h>

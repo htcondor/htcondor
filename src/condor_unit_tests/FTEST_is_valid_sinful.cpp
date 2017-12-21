@@ -18,7 +18,7 @@
  ***************************************************************/
 
 /*
-	This code tests the sin_to_string() function implementation.
+	This code tests the is_valid_sinful() function implementation.
  */
 
 #include "condor_common.h"

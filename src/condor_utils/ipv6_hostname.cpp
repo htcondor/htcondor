@@ -379,7 +379,7 @@ MyString get_hostname(const condor_sockaddr& addr) {
 
 	condor_sockaddr targ_addr;
 
-	// just like sin_to_string(), if given address is 0.0.0.0 or equivalent,
+	// if given address is 0.0.0.0 or equivalent,
 	// it changes to local IP address.
 	if (addr.is_addr_any())
 		targ_addr = get_local_ipaddr(addr.get_protocol());

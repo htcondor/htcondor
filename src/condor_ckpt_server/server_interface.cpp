@@ -24,6 +24,7 @@
 #include "constants2.h"
 #include "network2.h"
 #include "internet.h"
+#include "internet_obsolete.h"
 #include "condor_netdb.h"
 #include "condor_sockaddr.h"
 #include "ipv6_hostname.h"

@@ -2826,44 +2826,6 @@ SecMan::invalidateExpiredCache()
 	}
 }
 
-/*
-
-			// a failure here signals that the cache may be invalid.
-			// delete this entry from table and force normal auth.
-			KeyCacheEntry * ek = NULL;
-			if (session_cache->lookup(keybuf, ek) == 0) {
-				delete ek;
-			} else {
-				dprintf (D_SECURITY, "SECMAN: unable to delete KeyCacheEntry.\n");
-			}
-			session_cache->remove(keybuf);
-			m_have_session = false;
-
-			// close this connection and start a new one
-			if (!sock->close()) {
-				dprintf ( D_ALWAYS, "SECMAN: could not close socket to %s\n",
-						sin_to_string(sock->peer_addr()));
-				return false;
-			}
-
-			KeyInfo* nullp = 0;
-			if (!sock->set_crypto_key(false, nullp)) {
-				dprintf ( D_ALWAYS, "SECMAN: could not re-init crypto!\n");
-				return false;
-			}
-			if (!sock->set_MD_mode(MD_OFF, nullp)) {
-				dprintf ( D_ALWAYS, "SECMAN: could not re-init MD5!\n");
-				return false;
-			}
-			if (!sock->connect(sock->get_connect_addr(), 0)) {
-				dprintf ( D_ALWAYS, "SECMAN: could not reconnect to %s.\n",
-						sin_to_string(sock->peer_addr()));
-				return false;
-			}
-
-			goto choose_action;
-*/
-
 
 MyString SecMan::getDefaultAuthenticationMethods() {
 	MyString methods;

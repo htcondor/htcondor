@@ -18,7 +18,7 @@
  ***************************************************************/
 
 /*
-	This code tests the sin_to_string() function implementation.
+	This code tests the host_in_domain() function implementation.
  */
 
 #include "condor_common.h"

@@ -697,7 +697,6 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 			} else {
 				condor_netaddr netaddr;
 				if (netaddr.from_net_string(permbuf)) {
-				//if (is_valid_network(permbuf, NULL, NULL)) {
 					*user = strdup("*");
 					*host = strdup(permbuf);
 				} else {
@@ -1221,71 +1220,3 @@ IpVerify::PermTypeEntry::~PermTypeEntry() {
 	}
 }
 
-
-#ifdef WANT_STANDALONE_TESTING
-#include "condor_io.h"
-#ifdef WIN32
-#	include <crtdbg.h>
-   _CrtMemState s1, s2, s3;
-#endif
-int
-main()
-{
-	char buf[50];
-	char buf1[50];
-	struct sockaddr_in sin;
-	SafeSock ssock;
-	IpVerify* userverify;
-
-	set_mySubSystem( "COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
-
-	config();
-
-#ifdef WIN32
-	_CrtMemCheckpoint( &s1 );
-#endif
-
-	userverify = new IpVerify();
-
-	userverify->Init();
-
-	buf[0] = '\0';
-
-	while( 1 ) {
-		printf("Enter test:\n");
-		scanf("%s",buf);
-		if ( strncmp(buf,"exit",4) == 0 )
-			break;
-		if ( strncmp(buf,"reinit",6) == 0 ) {
-			config();
-			userverify->Init();
-			continue;
-		}
-		printf("Verifying %s ... ",buf);
-		sprintf(buf1,"<%s:1970>",buf);
-		string_to_sin(buf1,&sin);
-		if ( userverify->Verify(WRITE,&sin) == TRUE )
-			printf("ALLOW\n");
-		else
-			printf("DENY\n");
-	}
-	
-	delete userverify;
-
-#ifdef WIN32
-	_CrtMemCheckpoint( &s2 );
-	// _CrtMemDumpAllObjectsSince( &s1 );
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
-    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDOUT);
-    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
-	if ( _CrtMemDifference( &s3, &s1, &s2 ) )
-      _CrtMemDumpStatistics( &s3 );
-	// _CrtDumpMemoryLeaks();	// report any memory leaks on Win32
-#endif
-
-	return TRUE;
-}
-#endif	// of WANT_STANDALONE_TESTING

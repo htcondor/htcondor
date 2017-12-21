@@ -27,8 +27,6 @@
 //
 // the purpose of the class is to have all the relevant functions in
 // single place.
-//
-// Also, this is replacement for is_valid_network() in internet.cpp
 
 class condor_netaddr
 {
