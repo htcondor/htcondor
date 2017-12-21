@@ -49,15 +49,6 @@ char * hostname_to_string (const char * hostname, const int default_port );
 
 const char *sock_to_string(SOCKET sockd);
 
-/*
- Puts socket peer's sinful address in buf.  Returns this value or the
- specified unknown value if address could not be determined.
- Buffer should be at least SINFUL_STRING_BUF_SIZE,
- but if it is less, the value will be truncated if necessary.
-*/
-char const *
-sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown);
-
 /* Returns 1 if h1 and h2 are both hostnames which refer to the same
    host, 0 if they don't, and -1 on error. */
 int same_host(const char *h1, const char *h2);

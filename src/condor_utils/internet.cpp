@@ -63,20 +63,6 @@ sock_to_string(SOCKET sockd)
 	return sinful;
 }
 
-char const *
-sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown )
-{
-	condor_sockaddr addr;
-	if (condor_getpeername(fd, addr) <0)
-		return unknown;
-
-	addr.to_sinful(buf, buflen);
-	return buf;
-}
-
-
-
-
 
 int
 same_host(const char *h1, const char *h2)
