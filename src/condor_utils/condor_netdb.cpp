@@ -63,12 +63,12 @@ nodns_enabled( void )
 /* WARNING: None of these functions properly set h_error, or errno */
 
 int
-convert_ip_to_hostname(const char *addr,
+convert_ip_to_fake_hostname(const char *addr,
 					   char *h_name,
 					   int maxlen);
 
 int
-convert_hostname_to_ip(const char *name,
+convert_fake_hostname_to_ip(const char *name,
 					   char **h_addr_list,
 					   int maxaddrs);
 
@@ -82,7 +82,7 @@ struct hostent * get_nodns_hostent(const char* name)
 	static char *h_addr_list[MAXSIMULATEDADDRS];
 	static char h_name[NI_MAXHOST];
 
-		if (convert_hostname_to_ip(name, h_addr_list, MAXSIMULATEDADDRS)) {
+		if (convert_fake_hostname_to_ip(name, h_addr_list, MAXSIMULATEDADDRS)) {
 				// We've failed
 			return NULL;
 		} else {
@@ -119,7 +119,7 @@ struct hostent* get_nodns_addr(const char* addr) {
 	static char *h_aliases[1] = {NULL};
 	static char h_name[NI_MAXHOST]; // from /usr/include/sys/param.h
 
-		if (convert_ip_to_hostname(addr, h_name, MAXHOSTNAMELEN)) {
+		if (convert_ip_to_fake_hostname(addr, h_name, MAXHOSTNAMELEN)) {
 				// We've failed
 			return NULL;
 		} else {
@@ -184,7 +184,7 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
-			MyString hostname = convert_ipaddr_to_hostname(addr);
+			MyString hostname = convert_ipaddr_to_fake_hostname(addr);
 			if (hostname.Length() >= (int) namelen) {
 				return -1;
 			}
@@ -262,7 +262,7 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			close(s);
-			MyString hostname = convert_ipaddr_to_hostname(addr);
+			MyString hostname = convert_ipaddr_to_fake_hostname(addr);
 			if (hostname.Length() >= (int) namelen) {
 				return -1;
 			}
@@ -286,7 +286,7 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
-			MyString hostname = convert_ipaddr_to_hostname(addrs.front());
+			MyString hostname = convert_ipaddr_to_fake_hostname(addrs.front());
 			if (hostname.Length() >= (int) namelen) {
 				return -1;
 			}
@@ -304,7 +304,7 @@ condor_gethostname(char *name, size_t namelen) {
 }
 
 int
-convert_ip_to_hostname(const char *addr,
+convert_ip_to_fake_hostname(const char *addr,
 					   char *h_name,
 					   int maxlen) {
 	char *default_domain_name;
@@ -336,7 +336,7 @@ convert_ip_to_hostname(const char *addr,
 }
 
 int
-convert_hostname_to_ip(const char *name,
+convert_fake_hostname_to_ip(const char *name,
 					   char **h_addr_list,
 					   int maxaddrs) {
 	static struct in_addr addr;

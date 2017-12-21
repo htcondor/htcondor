@@ -107,7 +107,7 @@ bool init_local_hostname_impl()
 		local_fqdn = local_hostname;
 		local_fqdn_initialized = true;
 		if (!local_ipaddr_initialized) {
-			local_ipaddr = convert_hostname_to_ipaddr(local_hostname);
+			local_ipaddr = convert_fake_hostname_to_ipaddr(local_hostname);
 			if (local_ipaddr != condor_sockaddr::null) {
 				local_ipaddr_initialized = true;
 			}
@@ -307,9 +307,9 @@ int get_fqdn_and_ip_from_hostname(const MyString& hostname,
 
 	if (nodns_enabled()) {
 		// if nodns is enabled, convert hostname to ip address directly
-		ret_addr = convert_hostname_to_ipaddr(hostname);
+		ret_addr = convert_fake_hostname_to_ipaddr(hostname);
 
-		// note that convert_hostname_to_ipaddr() could fail; if so,
+		// note that convert_fake_hostname_to_ipaddr() could fail; if so,
 		// leave found_ip = false and fall through to the block below
 		// where we try to use the resolver.
 		if (ret_addr != condor_sockaddr::null) {
@@ -375,7 +375,7 @@ int get_fqdn_and_ip_from_hostname(const MyString& hostname,
 MyString get_hostname(const condor_sockaddr& addr) {
 	MyString ret;
 	if (nodns_enabled())
-		return convert_ipaddr_to_hostname(addr);
+		return convert_ipaddr_to_fake_hostname(addr);
 
 	condor_sockaddr targ_addr;
 
@@ -528,7 +528,7 @@ std::vector<condor_sockaddr> resolve_hostname(const MyString& hostname)
 {
 	std::vector<condor_sockaddr> ret;
 	if (nodns_enabled()) {
-		condor_sockaddr addr = convert_hostname_to_ipaddr(hostname);
+		condor_sockaddr addr = convert_fake_hostname_to_ipaddr(hostname);
 		if (addr == condor_sockaddr::null)
 			return ret;
 		ret.push_back(addr);
@@ -576,7 +576,7 @@ std::vector<condor_sockaddr> resolve_hostname_raw(const MyString& hostname) {
 	return ret;
 }
 
-MyString convert_ipaddr_to_hostname(const condor_sockaddr& addr)
+MyString convert_ipaddr_to_fake_hostname(const condor_sockaddr& addr)
 {
 	MyString ret;
 	MyString default_domain;
@@ -605,7 +605,7 @@ MyString convert_ipaddr_to_hostname(const condor_sockaddr& addr)
 }
 
 // Upon failure, return condor_sockaddr::null
-condor_sockaddr convert_hostname_to_ipaddr(const MyString& fullname)
+condor_sockaddr convert_fake_hostname_to_ipaddr(const MyString& fullname)
 {
 	MyString hostname;
 	MyString default_domain;
