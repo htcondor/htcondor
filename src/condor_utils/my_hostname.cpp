@@ -402,7 +402,7 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 
 	// Skip if Stream doesn't have address associated with it
 	condor_sockaddr connectionSA;
-	if( ! connectionSA.from_ip_string( s.my_ip_str() ) ) {
+	if( !s.my_ip_str() || !connectionSA.from_ip_string( s.my_ip_str() ) ) {
 		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to generate socket address from stream's IP string (%s).\n", attr_name, expr_string.c_str(), s.my_ip_str() );
 		return;
 	}
