@@ -161,7 +161,7 @@ VirshType::Start()
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
 	    vmprintf(D_ALWAYS, "Failed to create libvirt domain: %s\n", (err ? err->message : "No reason found"));
 
-	    if (err->message && (strstr(err->message, "image is not in qcow2 format") != NULL)) {
+	    if (err && err->message && (strstr(err->message, "image is not in qcow2 format") != NULL)) {
 			m_result_msg = VMGAHP_ERR_BAD_IMAGE;
 		}
 
