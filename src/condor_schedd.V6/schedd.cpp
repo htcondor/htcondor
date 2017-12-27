@@ -9180,7 +9180,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	PROC_ID* job_id = &srec->job_id;
 
 	Shadow*	shadow_obj = NULL;
-	int		sh_is_dc = FALSE;
+	bool	sh_is_dc = FALSE;
 	char* 	shadow_path = NULL;
 	bool wants_reconnect = false;
 
@@ -9255,14 +9255,12 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		}
 	}
 
-	sh_is_dc = (int)shadow_obj->isDC();
+	sh_is_dc = shadow_obj->isDC();
 	bool sh_reads_file = shadow_obj->provides( ATTR_HAS_JOB_AD_FROM_FILE );
 	shadow_path = strdup( shadow_obj->path() );
 
-	if ( shadow_obj ) {
-		delete( shadow_obj );
-		shadow_obj = NULL;
-	}
+	delete( shadow_obj );
+	shadow_obj = NULL;
 
 #endif /* ! WIN32 */
 
