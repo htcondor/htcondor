@@ -420,15 +420,18 @@ DagmanMetrics::GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<strin
 		return 1;
 	}
 
-	// Recursive case: call this function recursively on all child nodes
+	// Recursive case: call this function recursively on all child nodes, then
+	// return the greatest height found among all children.
 	set<JobID_t>& childNodes = node->GetQueueRef( Job::Q_CHILDREN );
 	set<JobID_t>::const_iterator it;
+	int maxHeight = 0;
 	for ( it = childNodes.begin(); it != childNodes.end(); it++ ) {
 		Job* child = dag->FindNodeByNodeID( *it );
-		return 1 + GetGraphHeightRecursive( child, dag, visited );
+		int thisChildHeight = 1 + GetGraphHeightRecursive( child, dag, visited );
+		maxHeight = ( thisChildHeight > maxHeight ) ? thisChildHeight : maxHeight;
 	}
 
-	return 0;
+	return maxHeight;
 }
 
 //---------------------------------------------------------------------------
