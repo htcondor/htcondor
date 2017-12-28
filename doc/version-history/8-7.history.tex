@@ -96,6 +96,12 @@ job cluster, instead of once per job.
 \condor{rm} when the \Opt{-totals} option is used.
 \Ticket{6450}
 
+\item DAGMan previously connected to \Condor{schedd} every time it detected
+an update in its internal state. This is too aggressive for rapidly changing
+DAGs, so we've changed the connection to happen in time intervals defined by
+\MacroNI{DAGMAN\_QUEUE\_UPDATE\_INTERVAL}, by default once every five minutes.
+\Ticket{6464}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
