@@ -23,7 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.9 released on December 28, 2017.
+\item HTCondor version 8.6.9 released on January 4, 2018.
 
 \end{itemize}
 
@@ -47,10 +47,33 @@ quota to some groups when \MacroNI{ACCEPT\_SURPLUS} is on and
 \MacroNI{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION} is true (the default)
 \Ticket{6514}
 
-\item Fixed a bug that caused very large RequestDisk requests 
-to fail, and cause the Disk attribute in the machine ad to go
-negative.
-\Ticket{6467}
+\item Fixed a bug in the Python bindings when doing queries that specify a
+projection with the ``attr\_list'' argument. The bug could could
+potentially result in memory corruption of the python interpreter process.
+\Ticket{6468}
+
+\item Reduced the amount of time that \Condor{preen} will block the
+\Condor{schedd}.
+\Condor{preen} now connects only when specifically needed,
+and automatically disconnects after
+\MacroNI{PREEN\_MAX\_SCHEDD\_CONNECTION\_TIME} seconds.
+\Ticket{6490}
+
+\item Fixed a bug on Windows that would often result in the job sandbox
+on the execute node not being deleted when the \Condor{schedd} relinquished
+its claim on the slot before the \Condor{starter} had exited.
+\Ticket{6497}
+
+\item Fixed a bug where the \Condor{master} stopped sending watchdog
+notifications to systemd after restarting itself.
+This resulted in systemd killing the \Condor{master} shortly after
+the restart.
+\Ticket{6476}
+
+\item Updated the systemd configuration to only restart HTCondor upon
+failure. Otherwise, systemd would restart HTCondor if \Condor{off}
+requested the \Condor{master} to exit.
+\Ticket{6503}
 
 \item Fixed a bug with the use of the scheduler parameter
 \MacroNI{MAX\_JOBS\_SUBMITTED}. If this limit was ever reached by a
@@ -58,18 +81,23 @@ submit with more than one proc in the cluster, the limit would be
 reduced by the difference until the \Condor{schedd} was restarted.
 \Ticket{6460}
 
-\item Fixed a problem where the VM universe would be taken offline
-on the execute node, if the qcow2 disk image was corrupt.
-\Ticket{6505}
-
-\item Fixed a bug on Windows that would often result in the job sandbox
-on the execute node not being deleted when the \Condor{schedd} relinquished
-its claim on the slot before the \Condor{starter} had exited.
-\Ticket{6497}
+\item Fixed a bug that caused very large RequestDisk requests
+to fail, and cause the Disk attribute in the machine ad to go
+negative.
+\Ticket{6467}
 
 \item Fixed a bug with the \MacroNI{RESERVED\_DISK} parameter that would not
 accept an argument larger than 2 Gigabytes.
 \Ticket{6472}
+
+\item Improved validation of the lengths of messages in \MacroNI{PASSWORD}
+and \MacroNI{SSL} authentication methods.
+\Ticket{6493}
+
+\item Fixed a problem where the VM universe would be taken offline
+on the execute node, if the qcow2 disk image was corrupt.
+The offending job is now put on hold with an appropriate hold message.
+\Ticket{6505}
 
 \item Fixed a problem which would prevent Java universe jobs from working
 when using a relative path name to a jar file and submitting from Linux to
@@ -88,40 +116,15 @@ where, in effect, \MacroNI{SlotMergeConstraint} was ignored.
 \Condor{startd} to crash when spawning a starter.
 \Ticket {6462}
 
-\item Fixed a bug in the Python bindings when doing queries that specify a
-projection with the ``attr\_list'' argument. The bug could could
-potentially result in memory corruption of the python interpreter process.
-\Ticket{6468}
-
 \item Fixed a bug in \Condor{q} which could cause the DONE amount to be
 incorrect when multiple clusters shared a batch name.
 \Ticket{6469}
-
-\item Improved validation of the lengths of messages in \MacroNI{PASSWORD}
-and \MacroNI{SSL} authentication methods.
-\Ticket{6493}
-
-\item Reduced preen connections to the \Condor{schedd}. Preen now connects
-only when specifically needed, and automatically disconnects after 
-\MacroNI{PREEN\_MAX\_SCHEDD\_CONNECTION\_TIME} seconds.
-\Ticket{6490}
 
 \item Fixed issue on newer versions of Linux where core files generated
 by a daemon were not usable by gdb.
 A side effect of this fix is that the configuration parameter
 \MacroNI{CORE\_FILE\_NAME} no longer has any effect on Linux.
 \Ticket{6482}
-
-\item Fixed a bug where the \Condor{master} stopped sending watchdog
-notifications to systemd after restarting itself.
-This resulted in systemd killing the \Condor{master} shortly after
-the restart.
-\Ticket{6476}
-
-\item Updated the systemd configuration to only restart HTCondor upon
-failure. Otherwise, systemd would restart HTCondor if \Condor{off}
-requested the \Condor{master} to exit.
-\Ticket{6503}
 
 \item \Condor{chirp} will now no longer abort when given a command that it
 cannot successfully execute, such as fetching a file that does not exist.
