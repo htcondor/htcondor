@@ -1915,6 +1915,15 @@ fi
 %endif
 
 %changelog
+* Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.9-1
+- Fixed a bug where some Accounting Groups could get too much surplus quota
+- Fixed a Python binding bug where some queries could corrupt memory
+- Fixed a problem where preen could block the schedd for a long time
+- Fixed a bug in Windows where the job sandbox would not be cleaned up
+- Fixed problems with the interaction between the master and systemd
+- Fixed a bug where MAX_JOBS_SUBMITTED could be permanently reduced
+- Fixed problems with very large disk requests
+
 * Tue Nov 14 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.8-1
 - Fixed an issue validating VOMS proxies
 
