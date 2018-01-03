@@ -2187,7 +2187,7 @@ REMOTE_CONDOR_dprintf_stats(char *message)
 	condor_errno_t terrno;
 
 	const CondorVersionInfo *shadowVer = syscall_sock->get_peer_version();
-	if (!shadowVer->built_since_version(8,5,8)) {
+	if (!shadowVer || !shadowVer->built_since_version(8,5,8)) {
 		dprintf ( D_SYSCALLS, "NOT Doing CONDOR_dprintf_stats, shadow is too old\n" );
 		return 0;
 	}
