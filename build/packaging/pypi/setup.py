@@ -29,7 +29,7 @@ class BinaryDistribution(Distribution):
 
 setup(name=package_name,
       version=classad.version(),
-      url='https://research.cs.wisc.edu/htcondor/',
+      url='http://htcondor.org/',
       license='ASL 2.0',
       description='HTCondor Python bindings',
       long_description=long_description,

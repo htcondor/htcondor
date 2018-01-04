@@ -49,8 +49,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.6 not yet released.
-%\item HTCondor version 8.7.6 released on Month Date, 2017.
+\item HTCondor version 8.7.6 released on January 4, 2018.
 
 \end{itemize}
 
@@ -59,29 +58,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Changed the default value of configuration parameter \MacroNI{IS\_OWNER}
+to \Expr{False}. The previous default value is now set as part of the
+\texttt{use POLICY : Desktop} configuration template.
+\Ticket{6463}
+
+\item You may now use SCHEDD and JOB instead of MY and TARGET in
+\MacroNI{SUBMIT\_REQUIREMENTS} expressions.
+\Ticket{4818}
+
 \item Added cmake build option \MacroNI{WANT\_PYTHON\_WHEELS} and make target
-\Expr{pypi\_staging} to build the framework for Python wheels. This option and target
+\Expr{pypi\_staging} to build the framework for Python wheels.
+This option and target
 are not enabled by default and are not likely to work outside of Linux
 environments with a single Python installation.
 \Ticket{6486}
-
-\item DAGMan now enforces the \MacroNI{DAGMAN\_MAX\_JOB\_HOLDS} limit by the
-number of held jobs in a cluster at the same time. Previously it counted all
-holds over the lifetime of a cluster, even if only a small number of them are
-active at the same time.
-\Ticket{6492}
-
-\item Added some graph metrics (height, width, etc.) to DAGMan's metrics file
-output.
-\Ticket{6470}
-
-\item Removed Quill from HTCondor codebase.
-\Ticket{6496}
-
-\item Changed the default value of configuration parameter \MacroNI{IS\_OWNER} to \Expr{False}.
-The previous default value is now set as part of the \texttt{use POLICY : Desktop}
-configuration template.
-\Ticket{6463}
 
 \item Added new job attributes BatchProject and BatchRuntime for grid-type
 batch jobs.
@@ -93,9 +84,12 @@ for the job that's submited to the underlying batch system.
 job notifications.
 \Ticket{6432}
 
-\item You may now use SCHEDD and JOB instead of MY and TARGET in
-\MacroNI{SUBMIT\_REQUIREMENTS} expressions.
-\Ticket{4818}
+\item Added some graph metrics (height, width, etc.) to DAGMan's metrics file
+output.
+\Ticket{6470}
+
+\item Removed Quill from HTCondor codebase.
+\Ticket{6496}
 
 \end{itemize}
 
@@ -103,16 +97,40 @@ job notifications.
 
 \begin{itemize}
 
+\item HTCondor now reports all submit warnings, not just the first one.
+\Ticket{6446}
+
+\item The job log will no longer contain empty submit warnings.
+\Ticket{6465}
+
+\item DAGMan previously connected to \Condor{schedd} every time it detected
+an update in its internal state. This is too aggressive for rapidly changing
+DAGs, so we've changed the connection to happen in time intervals defined by
+\MacroNI{DAGMAN\_QUEUE\_UPDATE\_INTERVAL}, by default once every five minutes.
+\Ticket{6464}
+
+\item DAGMan now enforces the \MacroNI{DAGMAN\_MAX\_JOB\_HOLDS} limit by the
+number of held jobs in a cluster at the same time. Previously it counted all
+holds over the lifetime of a cluster, even if only a small number of them are
+active at the same time.
+\Ticket{6492}
+
+\item Fixed a bug where on rare occasions the \File{ShadowLog} would
+become owned by \Login{root}.
+\Ticket{6485}
+
+\item Fixed a bug where using \Condor{qedit}
+to change any of the concurrency limits of a job would have no effect.
+\Ticket{6448}
+
 \item When \MacroNI{copy\_to\_spool} is set to \Expr{True},
 \Condor{submit} now attempts to transfer the job exectuable only once per
 job cluster, instead of once per job.
 \Ticket{6459}
 
-\item The job log should no longer contain empty submit warnings.
-\Ticket{6465}
-
-\item HTCondor now reports all submit warnings, not just the first one.
-\Ticket{6446}
+\item Fixed a bug that could result in an incorrect total reported by
+\condor{rm} when the \Opt{-totals} option is used.
+\Ticket{6450}
 
 \end{itemize}
 
@@ -232,7 +250,7 @@ using mixed IPV6/IPV4 addressing or using the \Condor{shared\_port} daemon.
 run command line to do so.  Now, it first creates a container with
 docker create, then starts it with docker start.  This allows HTCondor
 to better isolate errors at container creation time, but should not
-result in any user visible changes at run time.  The StarterLog will
+result in any user visible changes at run time.  The \File{StarterLog} will
 now always print the docker command line for the start and create,
 and not the run that it used to.
 \Ticket{6377}
