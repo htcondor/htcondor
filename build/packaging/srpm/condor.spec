@@ -1965,7 +1965,7 @@ fi
 %endif
 
 %changelog
-* Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.5-1
+* Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.6-1
 - Machines won't enter "Owner" state unless using the Desktop policy
 - One can use SCHEDD and JOB instead of MY and TARGET in SUBMIT_REQUIREMENTS
 - HTCondor now reports all submit warnings, not just the first one
