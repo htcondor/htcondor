@@ -1965,6 +1965,12 @@ fi
 %endif
 
 %changelog
+* Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.5-1
+- Machines won't enter "Owner" state unless using the Desktop policy
+- One can use SCHEDD and JOB instead of MY and TARGET in SUBMIT_REQUIREMENTS
+- HTCondor now reports all submit warnings, not just the first one
+- The HTCondor Python bindings in pip are now built from the release branch
+
 * Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.9-1
 - Fixed a bug where some Accounting Groups could get too much surplus quota
 - Fixed a Python binding bug where some queries could corrupt memory
