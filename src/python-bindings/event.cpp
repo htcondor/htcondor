@@ -28,18 +28,20 @@ bool
 EventIterator::get_filename(std::string &fname)
 {
     int fd = fileno(m_source);
-    std::stringstream ss;
-    ss << "/proc/self/fd/" << fd;
-    std::string proc_fname = ss.str();
-    std::vector<char> linkname; linkname.reserve(1024);
+
+	char buf[32]; // 17 for /proc/self/fd, 10 for the int, and more to be sure
+	char linkedName[1024];
+
+    sprintf(buf,"/proc/self/fd/%d", fd);
+
     ssize_t link_size;
-    if (-1 == (link_size = readlink(proc_fname.c_str(), &linkname[0], 1023)))
+    if (-1 == (link_size = readlink(buf, linkedName, 1023)))
     {
          return false;
     }
-    linkname[link_size] = '\0';
+    linkedName[link_size] = '\0';
 
-    fname = &linkname[0];
+    fname = linkedName;
     return true;
 }
 
