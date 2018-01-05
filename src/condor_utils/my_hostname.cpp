@@ -384,7 +384,7 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 		return;
 	}
 
-	if( ! enable_convert_default_IP_to_socket_IP ) {
+	if( ! enable_convert_default_IP_to_socket_IP || ! shared_port_address_rewriting ) {
 		if( ! loggedConfigMessage ) {
 			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: by configuration.\n" );
 			loggedConfigMessage = true;
