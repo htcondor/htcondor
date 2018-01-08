@@ -1,6 +1,6 @@
 Condor
 
-Copyright (C) 1990-2016, HTCondor Team, Computer Sciences Department,
+Copyright (C) 1990-2018, HTCondor Team, Computer Sciences Department,
 University of Wisconsin-Madison, WI.
 
 This source code is covered by the Apache License, Version 2.0, which
