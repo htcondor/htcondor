@@ -71,6 +71,9 @@ int		match_timeout;		// How long you're willing to be
 int		killing_timeout;	// How long you're willing to be in
 							// preempting/killing before you drop the
 							// hammer on the starter
+int		vm_killing_timeout;	// How long you're willing to be
+							// in preempting/killing before you
+							// drop the hammer on the starter for VM universe jobs
 int		max_claim_alives_missed;  // how many keepalives can we miss
 								  // until we timeout the claim
 time_t	startd_startup;		// Time when the startd started up
@@ -502,6 +505,8 @@ init_params( int /* first_time */)
 	match_timeout = param_integer( "MATCH_TIMEOUT", 120 );
 
 	killing_timeout = param_integer( "KILLING_TIMEOUT", 30 );
+	vm_killing_timeout = param_integer( "VM_KILLING_TIMEOUT", 60);
+	if (vm_killing_timeout < killing_timeout) { vm_killing_timeout = killing_timeout; } // use the larger of the two for VM universe
 
 	max_claim_alives_missed = param_integer( "MAX_CLAIM_ALIVES_MISSED", 6 );
 
@@ -864,7 +869,6 @@ main_shutdown_graceful()
 int
 reaper(Service *, int pid, int status)
 {
-	Claim* foo;
 
 	if( WIFSIGNALED(status) ) {
 		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d died on signal %d (%s)\n",
@@ -878,11 +882,17 @@ reaper(Service *, int pid, int status)
 	// Adjust info for vm universe
 	resmgr->m_vmuniverse_mgr.freeVM(pid);
 
-	foo = resmgr->getClaimByPid(pid);
-	if( foo ) {
-		foo->starterExited(status);
+	Starter * starter = findStarterByPid(pid);
+	Claim* claim = resmgr->getClaimByPid(pid);
+	if (claim) {
+		// this will call the starter->exited method also
+		claim->starterExited(starter, status);
+	} else if (starter) {
+		// claim is gone, we want to call the starter->exited method ourselves.
+		starter->exited(NULL, status);
+		delete starter;
 	} else {
-		dprintf(D_FAILURE|D_ALWAYS, "Warning: Starter pid %d is not associated with a claim. A slot may fail to transition to Idle.\n", pid);
+		dprintf(D_FAILURE|D_ALWAYS, "ERROR: Starter pid %d is not associated with a Starter object or a Claim.\n", pid);
 	}
 	return TRUE;
 }

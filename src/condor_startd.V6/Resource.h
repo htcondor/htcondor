@@ -155,7 +155,7 @@ public:
 
 		// Load Average related methods
 	float	condor_load( void ) {return r_attr->condor_load();};
-	float	compute_condor_load( void );
+	float	compute_condor_usage( void );
 	float	owner_load( void ) {return r_attr->owner_load();};
 	void	set_owner_load( float val ) {r_attr->set_owner_load(val);};
 	void	compute_cpu_busy( void );
@@ -198,7 +198,7 @@ public:
 	bool	acceptClaimRequest();
 
 		// Called when the starter of one of our claims exits
-	void	starterExited( Claim* cur_claim );	
+	void	starterExited( Claim* cur_claim );
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we

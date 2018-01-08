@@ -321,7 +321,7 @@ BOINC_BackfillMgr::spawnClient( Resource *rip )
 		fake_req.formatstr( "%s = TARGET.%s", ATTR_REQUIREMENTS,
 						  ATTR_HAS_JIC_LOCAL_CONFIG );
 		fake_ad.Insert( fake_req.Value() );
-		tmp_starter = resmgr->starter_mgr.findStarter( &fake_ad, NULL, no_starter );
+		tmp_starter = resmgr->starter_mgr.newStarter( &fake_ad, NULL, no_starter );
 		if( ! tmp_starter ) {
 			dprintf( D_ALWAYS, "ERROR: Can't find a starter with %s\n",
 					 ATTR_HAS_JIC_LOCAL_CONFIG );
@@ -335,7 +335,7 @@ BOINC_BackfillMgr::spawnClient( Resource *rip )
 	}
 
 		// now, we can actually spawn the BOINC client
-	if( ! m_boinc_starter->spawn(time(NULL), NULL) ) {
+	if( ! m_boinc_starter->spawn(NULL, time(NULL), NULL) ) {
 		dprintf( D_ALWAYS, "ERROR spawning BOINC client\n" );
 		return false;
 	}
@@ -348,7 +348,7 @@ BOINC_BackfillMgr::spawnClient( Resource *rip )
 bool
 BOINC_BackfillMgr::killClient( void )
 {
-	bool rval = m_boinc_starter->killHard();
+	bool rval = m_boinc_starter->killHard(killing_timeout);
 	if( ! rval ) {
 		dprintf( D_ALWAYS, "BOINC_BackfillMgr::killClient(): "
 				 "ERROR telling BOINC starter (pid %d) to hardkill\n",
@@ -379,7 +379,7 @@ BOINC_BackfillMgr::reaper( int pid, int status )
 	}
 	
 		// tell our starter object its starter exited
-	m_boinc_starter->exited(status);
+	m_boinc_starter->exited(NULL, status);
 	delete m_boinc_starter;
 	m_boinc_starter = NULL;
 

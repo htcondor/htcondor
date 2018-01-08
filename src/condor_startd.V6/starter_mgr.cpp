@@ -104,7 +104,7 @@ StarterMgr::init( void )
 			// starter.  try to run it with a -classad option and grab
 			// the output (which should be a classad), and construct
 			// the appropriate Starter object for it.
-		tmp_starter = makeStarter( starter_path );
+		tmp_starter = registerStarter( starter_path );
 		if( tmp_starter ) {
 			starters.Append( tmp_starter );
 		}
@@ -159,7 +159,7 @@ StarterMgr::publish( ClassAd* ad, amask_t mask )
 
 
 Starter*
-StarterMgr::findStarter( ClassAd* job_ad, ClassAd* mach_ad, bool &no_starter,
+StarterMgr::newStarter( ClassAd* job_ad, ClassAd* mach_ad, bool &no_starter,
 						 int starter_num ) 
 {
 	Starter *new_starter, *tmp_starter;
@@ -199,7 +199,7 @@ StarterMgr::findStarter( ClassAd* job_ad, ClassAd* mach_ad, bool &no_starter,
 			break;
 		default:
 			dprintf( D_ALWAYS, "ERROR: unknown starter type (%d) in "
-					 "StarterMgr::findStarter(), returning failure\n",
+					 "StarterMgr::newStarter(), returning failure\n",
 					 starter_num );
 			return NULL;
 			break;
@@ -217,7 +217,7 @@ StarterMgr::findStarter( ClassAd* job_ad, ClassAd* mach_ad, bool &no_starter,
 
 
 Starter*
-StarterMgr::makeStarter( const char* path )
+StarterMgr::registerStarter( const char* path )
 {
 	Starter* new_starter;
 	FILE* fp;
