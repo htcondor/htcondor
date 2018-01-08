@@ -27,6 +27,9 @@
 #include "condor_sys.h"
 #include "starter.h"
 #include "condor_event.h"
+#include "condor_config.h"
+#include "secure_file.h"
+#include "zkm_base64.h"
 
 #include "NTsenders.h"
 
@@ -2213,6 +2216,107 @@ REMOTE_CONDOR_dprintf_stats(char *message)
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
 	return rval;
+}
+
+
+// take NO parameters.  the shadow knows which creds belong to the job
+// and will only give out those creds.  the creds are ALWAYS written to
+// the SEC_CREDENTIAL_DIRECTORY so no path is needed either.
+//
+// on the wire, for future compatibility, we send a string.  currently
+// this is ignored by the receiver.
+int
+REMOTE_CONDOR_getcreds(const char *cluster_id, const char *proc_id)
+{
+	int result = 0;
+
+	if(!(syscall_sock->get_encryption())) {
+		dprintf ( D_ALWAYS, "ERROR: Can't do CONDOR_getcreds, syscall_sock not encrypted\n" );
+		// fail
+		return -1;
+	}
+
+	dprintf ( D_ALWAYS, "Doing CONDOR_getcreds\n" );
+
+	CurrentSysCall = CONDOR_getcreds;
+	char empty[1] = "";
+	char* empty_ptr = empty;
+
+	syscall_sock->encode();
+	result = ( syscall_sock->code(CurrentSysCall) );
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->code(empty_ptr) );
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+
+	// send response
+	syscall_sock->decode();
+
+	MyString cred_dir_name;
+	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
+		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
+		return -1;
+	}
+	cred_dir_name += DIR_DELIM_CHAR;
+	cred_dir_name += cluster_id;
+	cred_dir_name += '.';
+	cred_dir_name += proc_id;
+
+	// driver:  receive int.  -1 == error, 0 == done, 1 == cred classad coming
+	int cmd;
+	for(;;) {
+		result = ( syscall_sock->code(cmd) );
+		ON_ERROR_RETURN( result );
+		if( cmd <= 0 ) {
+			// no more creds to receive, or error
+			break;
+		}
+
+		ClassAd ad;
+		result = ( getClassAd(syscall_sock, ad) );
+		ASSERT( result );
+		dprintf( D_ALWAYS, "CONDOR_getcreds: received ad:\n" );
+		dPrintAd(D_ALWAYS, ad);
+
+		MyString fname, b64;
+		ad.LookupString("Service", fname);
+		ad.LookupString("Data", b64);
+
+		MyString full_name = cred_dir_name;
+		full_name += DIR_DELIM_CHAR;
+		full_name += fname;
+
+		// contents of pw are base64 encoded.  decode now just before they go
+		// into the file.
+		int rawlen = -1;
+		unsigned char* rawbuf = NULL;
+		zkm_base64_decode(b64.Value(), &rawbuf, &rawlen);
+
+		if (rawlen <= 0) {
+			dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+			free(rawbuf);
+			EXCEPT("failure");
+			return false;
+		}
+
+		// write temp file
+		int rc = write_secure_file(full_name.Value(), rawbuf, rawlen, true);
+
+		// caller of condor_base64_decode is responsible for freeing buffer
+		free(rawbuf);
+
+		if (rc != 0) {
+			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", full_name.Value());
+			EXCEPT("failure");
+		}
+	}
+
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+
+	// return status
+	return cmd;
 }
 
 
