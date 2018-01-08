@@ -240,7 +240,9 @@ AvailStats::checkpoint_filename( MyString filename )
 		MyString state;
 		char buf[1025];
 		memset(buf, 0, 1025);
-		while( fread(buf, sizeof(char), 1024, fp) ) {
+		int ret = 0;
+		while((ret = fread(buf, sizeof(char), 1024, fp)) > 0) {
+			buf[ret] = '\0';	
 			state += buf;
 		}
 		fclose(fp);
