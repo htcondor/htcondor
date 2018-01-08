@@ -65,8 +65,6 @@ const condor_mode_t NULL_FILE_PERMISSIONS = (condor_mode_t)0;
 
     The condor stream library consists of (for now)<br>
     <ul>
-	  <li> File streams (file.h)
-	  <li> InCore streams (incore.h)
 	  <li> Network socket streams (socks.h)
       <ul>
 	    <li> Reliable network streams (on top of tcp)
@@ -74,15 +72,6 @@ const condor_mode_t NULL_FILE_PERMISSIONS = (condor_mode_t)0;
       </ul>
     </ul>
 
-
-	<h3> DATA REPRESENTATION </h3>
-
-	Streams can be in 3 modes:
-    <ul>
-	  <li> Internal binary representation
-	  <li> External binary representation
-	  <li> Ascii representation	(not implemented)
-    </ul>
 
 	<h3> CODING/DECODING </h3>
 
@@ -173,19 +162,6 @@ public:
         /** */ reli_sock
     };
 
-    ///
-	enum stream_code {
-        /** */ internal,
-        /** */ external,
-        /** */ ascii
-    };
-
-    ///
-	inline stream_code representation() const { return _code; }
-    ///
-	inline void set_representation(stream_code c) { _code = c; }
-
-    ///
 	inline void encode() { _coding = stream_encode; }
     ///
 	inline void decode() { _coding = stream_decode; }
@@ -643,7 +619,7 @@ protected:
 
 	//	constructor
 	//
-	Stream(stream_code c=external);
+	Stream();
 	/*
 	**	Data structures
 	*/
@@ -651,7 +627,6 @@ protected:
 	bool                encrypt_;        // Encryption mode
 	bool                crypto_mode_;    // true == enabled, false == disabled.
 	bool m_crypto_state_before_secret;
-	stream_code	    _code;
 	stream_coding	    _coding;
 
 	int allow_empty_message_flag;
