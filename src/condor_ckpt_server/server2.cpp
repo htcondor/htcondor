@@ -936,6 +936,7 @@ void Server::ProcessServiceReq(int             req_id,
 	  		sprintf(log_msg, "STATUS service address: %s:%d", 
 	  			inet_ntoa(server_addr), service_reply.port);
 	  		Log(log_msg);
+			close(data_conn_sd);
 			break;
 
 		case SERVICE_RENAME:
