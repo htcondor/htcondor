@@ -45,26 +45,6 @@ const char* my_ip_string() {
     return __my_ip_string.Value();
 }
 
-//void
-//init_full_hostname()
-//{
-//	char *tmp;
-//
-//	tmp = get_full_hostname( hostname );
-//
-//	if( full_hostname ) {
-//		free( full_hostname );
-//	}
-//	if( tmp ) {
-//			// Found it, use it.
-//		full_hostname = strdup( tmp );
-//		delete [] tmp;
-//	} else {
-//			// Couldn't find it, just use what we've already got.
-//		full_hostname = strdup( hostname );
-//	}
-//}
-
 bool
 network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest)
 {
@@ -335,13 +315,6 @@ static bool is_sender_ip_attr(char const *attr_name)
 
 void ConfigConvertDefaultIPToSocketIP()
 {
-		// do not need to call init_ipaddr() since init_ipaddr() has no effect
-		// on this function.
-//	if( ! ipaddr_initialized ) {
-//		init_ipaddr(0);
-//	}
-
-
 	enable_convert_default_IP_to_socket_IP = true;
 
 	/*

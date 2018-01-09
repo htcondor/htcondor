@@ -1128,7 +1128,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		free( config_source );
 	}
 
-	// init_ipaddr and init_full_hostname is now obsolete
 	CondorError errorStack;
 	if(! init_network_interfaces( & errorStack )) {
 		const char * subsysName = get_mySubSystem()->getName();
@@ -1145,11 +1144,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		free( tmp );
 		reset_local_hostname();
 	}
-
-		// Also, we should be safe to process the NETWORK_INTERFACE
-		// parameter at this point, if it's set.
-	//init_ipaddr( TRUE );
-
 
 		// The IPv6 code currently caches some results that depend
 		// on configuration settings such as NETWORK_INTERFACE.
