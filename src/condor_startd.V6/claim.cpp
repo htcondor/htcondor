@@ -514,7 +514,12 @@ Claim::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
-	c_rip->dprintf_va( flags, fmt, args );
+	if (c_rip) {
+		c_rip->dprintf_va( flags, fmt, args );
+	} else {
+		const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
+		::_condor_dprintf_va( flags, ident, fmt, args );
+	}
 	va_end( args );
 }
 
@@ -1496,8 +1501,11 @@ Claim::starterExited( Starter* starter, int status)
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
 		// execute directory, and do any other cleanup. 
-	starter->exited(this, status);
-	delete starter; starter = NULL;
+		// note: null pointer check here is to make coverity happy, not because we think it possible for starter to be null.
+	if (starter) {
+		starter->exited(this, status);
+		delete starter; starter = NULL;
+	}
 
 	if( c_badput_caused_by_draining ) {
 		int badput = (int)getJobTotalRunTime() * c_rip->r_attr->num_cpus();

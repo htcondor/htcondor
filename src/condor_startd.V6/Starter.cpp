@@ -662,6 +662,7 @@ int Starter::spawn(Claim * claim, time_t now, Stream* s)
 	}
 	else {
 			// Use old icky non-daemoncore starter.
+		ASSERT(claim);
 		s_pid = execOldStarter(claim);
 	}
 
