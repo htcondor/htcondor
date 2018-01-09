@@ -247,6 +247,10 @@ addrinfo* addrinfo_iterator::next()
 			// more broken for host with IPv6 addresses.)  We can't just
 			// copy the pointer because then it will be double-free()d.
 			//
+			// TODO: Since we no longer filter out IPv6 entries in the
+			// results of getaddrinfo() (we now do so via the hints
+			// parameter), this juggling of ai_canonname is probably no
+			// longer necessary.
 			if( current_ == cxt_->head && cxt_->head->ai_canonname ) {
 				addrinfo * hack = next();
 				if( hack ) {
