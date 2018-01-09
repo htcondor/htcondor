@@ -26,7 +26,6 @@
 #include "claim.h"
 #include "Reqexp.h"
 #include "LoadQueue.h"
-#include "AvailStats.h"
 #include "cod_mgr.h"
 #include "IdDispenser.h"
 
@@ -303,7 +302,6 @@ public:
 	int				r_sub_id;	// Sub id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
 	char*			r_pair_name; // Name of the resource paired with this one, NULL is no pair (the default), may contain "#type" during the slot building process
-	AvailStats		r_avail_stats; // computes resource availability stats
 	int             prevLHF;
 	bool 			m_bUserSuspended;
 	bool			r_no_collector_updates;

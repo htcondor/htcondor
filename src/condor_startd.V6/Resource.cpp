@@ -328,20 +328,6 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 
 	update_tid = -1;
 
-		// Set ckpt filename for avail stats here, since this object
-		// knows the resource id, and we need to use a different ckpt
-		// file for each resource.
-	if( compute_avail_stats ) {
-		char *log = param("LOG");
-		if (log) {
-			MyString avail_stats_ckpt_file(log);
-			free(log);
-			tmp.formatstr( "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
-			avail_stats_ckpt_file += tmp;
-			r_avail_stats.checkpoint_filename(avail_stats_ckpt_file);
-		}
-	}
-
 	r_cpu_busy = 0;
 	r_cpu_busy_start_time = 0;
 	r_last_compute_condor_load = resmgr->now();
@@ -2308,9 +2294,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		r_pre->publishPreemptingClaim( cap, mask );
 	}
 
-		// Put in availability statistics
-	r_avail_stats.publish( cap, mask );
-
 	r_cod_mgr->publish( cap, mask );
 
 	// Publish the supplemental Class Ads
@@ -2566,10 +2549,6 @@ Resource::compute( amask_t mask )
 		// Actually, we'll have the Reqexp object compute too, so that
 		// we get static stuff recomputed on reconfig, etc.
 	r_reqexp->compute( mask );
-
-		// Compute availability statistics
-	r_avail_stats.compute( mask );
-
 }
 
 
