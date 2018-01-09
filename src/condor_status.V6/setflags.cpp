@@ -104,7 +104,6 @@ getPPStyleStr (ppOption pps)
 		case PP_CUSTOM:			return "Custom";
 		default:				return "<Unknown!>";
 	}
-	return "<Unknown!>";
 }
 
 int PrettyPrinter::setPPstyle( ppOption pps, int arg_index, const char * argv )
