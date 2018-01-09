@@ -1233,6 +1233,11 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		// Sinful in the address file will have TCP_FORWARDING_HOST as its
 		// primary address, and older versions of HTCondor don't ignore
 		// the primary address).
+		//
+		// NOTE: For the primary address in our sinful string, prefer an
+		// IPv4 address, if available. The primary address is only used by
+		// older clients (pre-8.3.x) that don't understand the addrs field
+		// and probably don't have good IPv6 support.
 		char const * addr = sock->get_sinful_public();
 		if(! sa.is_ipv4()) {
 			for( int i = initialCommandSock; i < nSock; ++i ) {
