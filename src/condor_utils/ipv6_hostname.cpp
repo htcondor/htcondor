@@ -21,24 +21,6 @@ static bool nodns_enabled()
 	return param_boolean("NO_DNS", false);
 }
 
-#ifdef TEST_DNS_TODO
-static void replace_higher_scoring_addr(const char * reason, condor_sockaddr & current, int & current_score,
-	const condor_sockaddr & potential, int potential_score) {
-	const char * result = "skipped for low score";
-	if(current_score < potential_score) {
-		current = potential;
-		current_score = potential_score;
-		result = "new winner";
-	}
-
-	dprintf(D_HOSTNAME, "%s: %s (score %d) %s\n",
-		reason,
-		potential.to_ip_string().Value(),
-		potential_score,
-		result);
-}
-#endif
-
 bool init_local_hostname_impl()
 {
 	bool local_hostname_initialized = false;
@@ -138,74 +120,26 @@ bool init_local_hostname_impl()
 		}
 
 		if(gai_success) {
-			int local_hostname_desireability = 0;
-#ifdef TEST_DNS_TODO
-			int local_ipaddr_desireability = 0;
-			int local_ipv4addr_desireability = 0;
-			int local_ipv6addr_desireability = 0;
-#endif
-			while (addrinfo* info = ai.next()) {
-				// TODO: the only time ai_canonname should be set is the first
-				// record. Why are we testing its desirability?
+			addrinfo* info = ai.next();
+			if (info->ai_canonname) {
 				const char* name = info->ai_canonname;
-				if (!name)
-					continue;
-				condor_sockaddr addr(info->ai_addr);
 
-				int desireability = addr.desirability();
-
-				const char * result = "skipped for low score";
-				if(desireability > local_hostname_desireability) {
-					result = "new winner";
-					dprintf(D_HOSTNAME, "   I like it.\n");
-					local_hostname_desireability = desireability;
-
-					const char* dotpos = strchr(name, '.');
-					if (dotpos) { // consider it as a FQDN
-						local_fqdn = name;
-						local_hostname = local_fqdn.substr(0, dotpos-name);
-					} else {
-						local_hostname = name;
-						local_fqdn = local_hostname;
-						MyString default_domain;
-						if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
-							if (default_domain[0] != '.')
-								local_fqdn += ".";
-							local_fqdn += default_domain;
-						}
+				const char* dotpos = strchr(name, '.');
+				if (dotpos) { // consider it as a FQDN
+					local_fqdn = name;
+					local_hostname = local_fqdn.substr(0, dotpos-name);
+				} else {
+					local_hostname = name;
+					local_fqdn = local_hostname;
+					MyString default_domain;
+					if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
+						if (default_domain[0] != '.')
+							local_fqdn += ".";
+						local_fqdn += default_domain;
 					}
 				}
-				dprintf(D_HOSTNAME, "hostname: %s (score %d) %s\n", name, desireability, result);
+				dprintf(D_HOSTNAME, "hostname: %s\n", name);
 
-#ifdef TEST_DNS_TODO
-				// Resist urge to set local_ip*addr_initialized=true,
-				// We want to repeatedly retest this looking for 
-				// better results.
-				if (!local_ipaddr_initialized) {
-					replace_higher_scoring_addr("IP", 
-						local_ipaddr, local_ipaddr_desireability, 
-						addr, desireability);
-				}
-
-				if (addr.is_ipv4() && !local_ipv4addr_initialized) {
-					replace_higher_scoring_addr("IPv4", 
-						local_ipv4addr, local_ipv4addr_desireability, 
-						addr, desireability);
-				}
-
-				if (addr.is_ipv6() && !local_ipv6addr_initialized) {
-					replace_higher_scoring_addr("IPv6", 
-						local_ipv6addr, local_ipv6addr_desireability, 
-						addr, desireability);
-				}
-#else
-	// Make Fedora quit complaining.
-	if( local_ipv4addr_initialized && local_ipv6addr_initialized && local_fqdn_initialized ) {
-		local_ipv4addr_initialized = false;
-		local_ipv6addr_initialized = false;
-		local_fqdn_initialized = false;
-	}
-#endif
 			}
 		}
 
@@ -264,10 +198,10 @@ MyString get_fqdn_from_hostname(const MyString& hostname) {
 			return ret;
 		}
 
-		while (addrinfo* info = ai.next()) {
-			if (info->ai_canonname) {
-				if (strchr(info->ai_canonname, '.'))
-					return info->ai_canonname;
+		addrinfo *info = ai.next();
+		if (info != NULL && info->ai_canonname != NULL) {
+			if (strchr(info->ai_canonname, '.')) {
+				return info->ai_canonname;
 			}
 		}
 
@@ -329,12 +263,11 @@ int get_fqdn_and_ip_from_hostname(const MyString& hostname,
 			return 0;
 		}
 
-		while (addrinfo* info = ai.next()) {
-			if (info->ai_canonname) {
-				fqdn = info->ai_canonname;
-				addr = condor_sockaddr(info->ai_addr);
-				return 1;
-			}
+		addrinfo *info = ai.next();
+		if (info != NULL && info->ai_canonname != NULL) {
+			fqdn = info->ai_canonname;
+			addr = condor_sockaddr(info->ai_addr);
+			return 1;
 		}
 
 		hostent* h = gethostbyname(hostname.Value());
