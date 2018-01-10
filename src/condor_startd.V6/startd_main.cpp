@@ -88,10 +88,6 @@ int		startd_noclaim_shutdown = 0;
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
 
-bool	compute_avail_stats = false;
-	// should the startd compute slot availability statistics; currently 
-	// false by default
-
 char* Name = NULL;
 
 #define DEFAULT_PID_SNAPSHOT_INTERVAL 15
@@ -574,9 +570,6 @@ init_params( int /* first_time */)
 
 	// a 0 or negative value for the timer interval will disable cleanup reminders entirely
 	cleanup_reminder_timer_interval = param_integer( "STARTD_CLEANUP_REMINDER_TIMER_INTERVAL", 62 );
-
-	compute_avail_stats = false;
-	compute_avail_stats = param_boolean( "STARTD_COMPUTE_AVAIL_STATS", false );
 
 	auto_free_ptr tmp(param("STARTD_NAME"));
 	if (tmp) {

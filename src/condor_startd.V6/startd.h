@@ -58,7 +58,6 @@ extern CondorSystrayNotifier systray_notifier;
 class Resource;
 #include "LoadQueue.h"
 #include "ResAttributes.h"
-#include "AvailStats.h"
 #include "claim.h"
 #include "Starter.h"
 #include "Reqexp.h"
@@ -128,10 +127,6 @@ extern	int		startd_noclaim_shutdown;
     // the plug" and tell the master to shutdown.
 
 extern	char*	Name;			// The startd's name
-
-extern	bool	compute_avail_stats;
-	// should the startd compute slot availability statistics; currently
-	// false by default
 
 extern	int		pid_snapshot_interval;	
     // How often do we take snapshots of the pid families? 
