@@ -924,6 +924,7 @@ void Server::ProcessServiceReq(int             req_id,
 				// the reply.
 				service_reply.server_addr.s_addr = ntohl(server_addr.s_addr);
 				service_reply.port = server_sa.get_port();
+				close(data_conn_sd);
 			} else {
 				service_reply.server_addr.s_addr = 0;
 				service_reply.port = 0;
@@ -936,7 +937,6 @@ void Server::ProcessServiceReq(int             req_id,
 	  		sprintf(log_msg, "STATUS service address: %s:%d", 
 	  			inet_ntoa(server_addr), service_reply.port);
 	  		Log(log_msg);
-			close(data_conn_sd);
 			break;
 
 		case SERVICE_RENAME:
