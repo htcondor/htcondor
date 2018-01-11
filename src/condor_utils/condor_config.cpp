@@ -1176,8 +1176,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		// and non-daemons to do.
 	condor_auth_config( false );
 
-	ConfigConvertDefaultIPToSocketIP();
-
 	//Configure condor_fsync
 	condor_fsync_on = param_boolean("CONDOR_FSYNC", true);
 	if(!condor_fsync_on)

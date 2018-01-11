@@ -30,24 +30,6 @@ extern	const char*	my_ip_string( void );
 class CondorError;
 bool init_network_interfaces( CondorError * errorStack );
 
-// If the specified attribute name is recognized as an attribute used
-// to publish a daemon IP address, this function replaces any
-// reference to the default host IP with the actual connection IP in
-// the attribute's expression string.
-
-// You might consider this a dirty hack (and it is), but of the
-// methods that were considered, this was the one with the lowest
-// maintainance, least overhead, and least likelihood to have
-// unintended side-effects.
-
-void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s);
-
-
-void ConfigConvertDefaultIPToSocketIP();
-
-// This interface to ConvertDefaultIPToSocketIP() takes a std::string
-// and modifies its contents.
-
 /* Find local addresses that match a given NETWORK_INTERFACE
  *
  * Prefers public addresses.  Strongly prefers "up" addresses.
