@@ -2142,7 +2142,7 @@ case CONDOR_getdir:
 	}
 	case CONDOR_getcreds:
 	{
-		dprintf(D_ALWAYS, "ERROR: getcreds not yet implemented\n");
+		dprintf(D_ALWAYS, "ENTERING getcreds syscall\n");
 
 		// read string.  ignored for now, just present for future compatibility.
 		result = ( syscall_sock->code(path) );

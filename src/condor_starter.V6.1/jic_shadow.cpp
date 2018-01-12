@@ -2529,6 +2529,17 @@ JICShadow::initUserCredentials() {
 		return true;
 	}
 
+	if (param_boolean("TOKENS", false) {
+		dprintf(D_ALWAYS, "ZKM: syscall request for %s.\n", user.Value());
+
+		// this needs to be made into a globally unique job ID, or the PID of the starter.
+		MyString cluster_id, proc_id;
+		cluster_id = "1";
+		proc_id = "0";
+		REMOTE_CONDOR_getcreds(cluster_id.Value(), proc_id.Value());
+		return true;
+	}
+
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "ERROR: in initUserCredentials() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
@@ -2588,14 +2599,6 @@ JICShadow::initUserCredentials() {
 	MyString credential;
 	shadow->getUserCredential(user.c_str(), domain.c_str(), credential);
 	dprintf(D_FULLDEBUG, "CREDMON: got cred %s\n", credential.c_str());
-
-	dprintf(D_ALWAYS, "ZKM: syscall request for %s.\n", user.Value());
-
-	// this needs to be made into a globally unique job ID, or the PID of the starter.
-	MyString cluster_id, proc_id;
-	cluster_id = "1";
-	proc_id = "0";
-	REMOTE_CONDOR_getcreds(cluster_id.Value(), proc_id.Value());
 
 	//
 	// We should refactor the below code and that of ZKM_UNIX_STORE_CRED
