@@ -2513,6 +2513,7 @@ JICShadow::initIOProxy( void )
 bool
 JICShadow::initUserCredentials() {
 #ifndef WIN32
+	dprintf(D_ALWAYS, "ENTERING initUserCredentials\n");
 	bool send_credential = false;
 	if( ! job_ad->EvaluateAttrBool( ATTR_JOB_SEND_CREDENTIAL, send_credential ) ) {
 		send_credential = false;
@@ -2529,14 +2530,14 @@ JICShadow::initUserCredentials() {
 		return true;
 	}
 
-	if (param_boolean("TOKENS", false) {
-		dprintf(D_ALWAYS, "ZKM: syscall request for %s.\n", user.Value());
-
+	if (param_boolean("TOKENS", false)) {
 		// this needs to be made into a globally unique job ID, or the PID of the starter.
-		MyString cluster_id, proc_id;
-		cluster_id = "1";
-		proc_id = "0";
-		REMOTE_CONDOR_getcreds(cluster_id.Value(), proc_id.Value());
+		int cluster_id, proc_id;
+		job_ad->LookupInteger("ClusterId", cluster_id);
+		job_ad->LookupInteger("ProcId", proc_id);
+		dprintf(D_ALWAYS, "ZKM: doing syscall request for credentials for job id %i.%i for user %s.\n", cluster_id, proc_id, get_user_loginname());
+
+		REMOTE_CONDOR_getcreds("0","0");
 		return true;
 	}
 
@@ -2565,6 +2566,7 @@ JICShadow::initUserCredentials() {
 	// update it.  if X is negative, we never update it.
 	int fresh_time = param_integer("SEC_CREDENTIAL_REFRESH_INTERVAL", -1);
 
+	dprintf( D_ALWAYS, "About to refreshSandboxCredentials\n");
 	if (rc==0 && fresh_time < 0) {
 		// if the credential cache already exists, we don't even need
 		// to talk to the shadow.  just return success as quickly as
@@ -2612,6 +2614,9 @@ JICShadow::initUserCredentials() {
 	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir, DIR_DELIM_CHAR, user.c_str());
 	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user.c_str());
 	dprintf(D_FULLDEBUG, "CREDMON: writing data to %s\n", tmpfilename);
+
+	dprintf(D_ALWAYS, "CREDMON: obtaining credentials for user %s domain %s from shadow %s\n",
+		 user.c_str(), domain.c_str(), shadow->addr() );
 
 /*
 	// contents of credential are base64 encoded.  decode now just before

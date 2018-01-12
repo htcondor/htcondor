@@ -2226,7 +2226,7 @@ REMOTE_CONDOR_dprintf_stats(char *message)
 // on the wire, for future compatibility, we send a string.  currently
 // this is ignored by the receiver.
 int
-REMOTE_CONDOR_getcreds(const char *cluster_id, const char *proc_id)
+REMOTE_CONDOR_getcreds(const char *, const char *)
 {
 	int result = 0;
 
@@ -2258,10 +2258,15 @@ REMOTE_CONDOR_getcreds(const char *cluster_id, const char *proc_id)
 		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
 		return -1;
 	}
+	MyString pid_s;
+	pid_s.formatstr("%i", getpid());
 	cred_dir_name += DIR_DELIM_CHAR;
-	cred_dir_name += cluster_id;
-	cred_dir_name += '.';
-	cred_dir_name += proc_id;
+	cred_dir_name += pid_s;
+
+	// create dir to hold creds
+	priv_state p = set_root_priv();
+	mkdir(cred_dir_name.Value(), 0700);
+	set_priv(p);
 
 	// driver:  receive int.  -1 == error, 0 == done, 1 == cred classad coming
 	int cmd;
@@ -2306,7 +2311,7 @@ REMOTE_CONDOR_getcreds(const char *cluster_id, const char *proc_id)
 		// caller of condor_base64_decode is responsible for freeing buffer
 		free(rawbuf);
 
-		if (rc != 0) {
+		if (rc != true) {
 			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", full_name.Value());
 			EXCEPT("failure");
 		}

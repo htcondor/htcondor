@@ -2154,9 +2154,13 @@ case CONDOR_getdir:
 		// send response
 		syscall_sock->encode();
 
-		MyString cluster_id, proc_id;
-		pseudo_get_job_attr("ClusterId", cluster_id);
-		pseudo_get_job_attr("ProcId", proc_id);
+		MyString user;
+		int cluster_id, proc_id;
+		ClassAd* ad;
+		pseudo_get_job_ad(ad);
+		ad->LookupInteger("ClusterId", cluster_id);
+		ad->LookupInteger("ProcId", proc_id);
+		ad->LookupString("Owner", user);
 
 		MyString cred_dir_name;
 		if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
@@ -2164,12 +2168,10 @@ case CONDOR_getdir:
 			return -1;
 		}
 		cred_dir_name += DIR_DELIM_CHAR;
-		cred_dir_name += cluster_id;
-		cred_dir_name += '.';
-		cred_dir_name += proc_id;
+		cred_dir_name += user;
 
-		dprintf( D_ALWAYS, "CONDOR_getcreds: sending contents of %s\n", cred_dir_name.Value() );
-		Directory cred_dir(cred_dir_name.Value());
+		dprintf( D_ALWAYS, "CONDOR_getcreds: sending contents of %s for job ID %i.%i\n", cred_dir_name.Value(), cluster_id, proc_id );
+		Directory cred_dir(cred_dir_name.Value(), PRIV_ROOT);
 		const char *fname;
 		bool had_error = false;
 		while((fname = cred_dir.Next())) {
