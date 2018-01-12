@@ -29,10 +29,6 @@
 #include "condor_sinful.h"
 #include "CondorError.h"
 
-static bool shared_port_address_rewriting = false;
-static bool network_interface_matches_all;
-
-
 const char* my_ip_string() {
     static MyString __my_ip_string;
 	// TODO: Picking IPv4 arbitrarily. WARNING: This function
@@ -228,8 +224,6 @@ init_network_interfaces( CondorError * errorStack )
 
 	std::string network_interface;
 	param( network_interface, "NETWORK_INTERFACE" );
-
-	network_interface_matches_all = (network_interface == "*");
 
 	if( enable_ipv4_false && enable_ipv6_false ) {
 		errorStack->pushf( "init_network_interfaces", 1, "ENABLE_IPV4 and ENABLE_IPV6 are both false." );
