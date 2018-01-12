@@ -44,8 +44,6 @@ bool init_local_hostname_impl()
 	MyString test_hostname = local_hostname;
 
 	bool local_ipaddr_initialized = false;
-	bool local_ipv4addr_initialized = false;
-	bool local_ipv6addr_initialized = false;
 
 	MyString network_interface;
 	if (param(network_interface, "NETWORK_INTERFACE")) {
@@ -54,11 +52,9 @@ bool init_local_hostname_impl()
 			local_ipaddr_initialized = true;
 			if(local_ipaddr.is_ipv4()) { 
 				local_ipv4addr = local_ipaddr;
-				local_ipv4addr_initialized = true;
 			}
 			if(local_ipaddr.is_ipv6()) { 
 				local_ipv6addr = local_ipaddr;
-				local_ipv6addr_initialized = true;
 			}
 		}
 	}
@@ -73,21 +69,17 @@ bool init_local_hostname_impl()
 			dprintf(D_ALWAYS, "Unable to identify IP address from interfaces.  None match NETWORK_INTERFACE=%s. Problems are likely.\n", network_interface.Value());
 		}
 		if((!ipv4.empty()) && local_ipv4addr.from_ip_string(ipv4)) {
-			local_ipv4addr_initialized = true;
 			ASSERT(local_ipv4addr.is_ipv4());
 		}
 		if((!ipv6.empty()) && local_ipv6addr.from_ip_string(ipv6)) {
-			local_ipv6addr_initialized = true;
 			ASSERT(local_ipv6addr.is_ipv6());
 		}
 	}
 
-	bool local_fqdn_initialized = false;
 	if (nodns_enabled()) {
 			// condor_gethostname() returns a hostname with
 			// DEFAULT_DOMAIN_NAME. Thus, it is always fqdn
 		local_fqdn = local_hostname;
-		local_fqdn_initialized = true;
 		if (!local_ipaddr_initialized) {
 			local_ipaddr = convert_fake_hostname_to_ipaddr(local_hostname);
 			if (local_ipaddr != condor_sockaddr::null) {
