@@ -31,8 +31,8 @@ _retry causes an exit allowing a rollback to the last checkpoint,
 while _fatal causes a permanent termination.
 */
 
-void _condor_error_retry( const char *format, ... ) CHECK_PRINTF_FORMAT(1,2);
-void _condor_error_fatal( const char *format, ... ) CHECK_PRINTF_FORMAT(1,2);
+void _condor_error_retry( const char *format, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
+void _condor_error_fatal( const char *format, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
 
 typedef enum {
 	CONDOR_WARNING_KIND_ALL,
