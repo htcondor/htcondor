@@ -438,6 +438,7 @@ private:
 	void proxyExpiring();
 
 	bool refreshSandboxCredentials();
+	bool refreshSandboxCredentialsMultiple();
 
 	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
 

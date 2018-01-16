@@ -279,8 +279,8 @@ public:
 	bool writeOutputAdFile( ClassAd* ad );
 	void initOutputAdFile( void );
 
-	void setKRB5CCNAME( const char* path );
-	const char* getKRB5CCNAME( void ) { return job_KRB5CCNAME; };
+	void setCredPath( const char* path );
+	const char* getCredPath( void ) { return job_CredPath; };
 
 		/**
 		   Send a periodic update ClassAd to our controller.  The
@@ -479,7 +479,7 @@ protected:
 	char* job_output_ad_file;
 	bool job_output_ad_is_stdout;
 
-	char* job_KRB5CCNAME;
+	char* job_CredPath;
 	
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;

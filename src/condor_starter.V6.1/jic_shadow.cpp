@@ -2530,16 +2530,15 @@ JICShadow::initUserCredentials() {
 		return true;
 	}
 
-	if (param_boolean("TOKENS", false)) {
-		// this needs to be made into a globally unique job ID, or the PID of the starter.
-		int cluster_id, proc_id;
-		job_ad->LookupInteger("ClusterId", cluster_id);
-		job_ad->LookupInteger("ProcId", proc_id);
-		dprintf(D_ALWAYS, "ZKM: doing syscall request for credentials for job id %i.%i for user %s.\n", cluster_id, proc_id, get_user_loginname());
 
-		REMOTE_CONDOR_getcreds("0","0");
-		return true;
+	// NEW METHOD (skips rest of function)
+	if (param_boolean("TOKENS", false)) {
+		// just call the refresh code, which both fetches from the shadow and updates the sandbox
+		return refreshSandboxCredentialsMultiple();
 	}
+
+
+	// OLD METHOD (used by CERN and DESY)
 
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
@@ -2615,17 +2614,6 @@ JICShadow::initUserCredentials() {
 	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user.c_str());
 	dprintf(D_FULLDEBUG, "CREDMON: writing data to %s\n", tmpfilename);
 
-	dprintf(D_ALWAYS, "CREDMON: obtaining credentials for user %s domain %s from shadow %s\n",
-		 user.c_str(), domain.c_str(), shadow->addr() );
-
-/*
-	// contents of credential are base64 encoded.  decode now just before
-	// they go into the file.
-	int rawlen = -1;
-	std::string tmp_in(credential.c_str());
-	std::vector<BYTE> rawbuf = Base64::zkm_base64_decode(tmp_in);
-	rawlen = rawbuf.size();
-*/
 	int rawlen = -1;
 	unsigned char* rawbuf = NULL;
 	zkm_base64_decode(credential.c_str(), &rawbuf, &rawlen);
@@ -2777,9 +2765,9 @@ JICShadow::refreshSandboxCredentials()
 	memcpy(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t));
 
 	// only need to do this once
-	if(getKRB5CCNAME() == NULL) {
+	if(getCredPath() == NULL) {
 		dprintf(D_ALWAYS, "CERN: configuring job to use KRB5CCNAME %s\n", sandboxccfilename);
-		setKRB5CCNAME(sandboxccfilename);
+		setCredPath(sandboxccfilename);
 	}
 
 	// if we made it here, we succeeded!
@@ -2813,6 +2801,106 @@ resettimer:
 
 	// return boolean value true on success
 	return (rc);
+}
+
+bool
+JICShadow::refreshSandboxCredentialsMultiple()
+{
+	/*
+	  This method is invoked whenever we should fetch fresh credentials
+	  from the shadow and then update them in the job sandbox.
+	*/
+	dprintf(D_ALWAYS, "CREDS: in refreshSandboxCredentialsMultiple()\n");
+
+
+	// do syscall to receive credential wallet
+	REMOTE_CONDOR_getcreds(0,0);
+
+	// setup .condor_creds directory in sandbox (may already exist).
+	MyString cred_dir_name;
+	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
+		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
+		return -1;
+	}
+	MyString pid_s;
+	pid_s.formatstr("%i", getpid());
+	cred_dir_name += DIR_DELIM_CHAR;
+	cred_dir_name += pid_s;
+
+	MyString sandbox_dir_name = Starter->GetWorkingDir();
+	sandbox_dir_name += DIR_DELIM_CHAR;
+	sandbox_dir_name += ".condor_creds";
+
+	// create dir to hold creds
+	dprintf(D_ALWAYS, "CREDS: creating %s\n", sandbox_dir_name.Value(), 0700);
+	priv_state p = set_user_priv();
+	mkdir(sandbox_dir_name.Value(), 0700);
+	set_priv(p);
+
+	// for each file in SEC_CREDENTIAL_DIR, atomically update in sandbox
+	Directory source_dir(cred_dir_name.Value(), PRIV_ROOT);
+
+	const char* filename;
+	while ((filename = source_dir.Next())) {
+
+		dprintf(D_ALWAYS, "CREDS: copying %s from %s to %s\n", filename, cred_dir_name.Value(), sandbox_dir_name.Value());
+		// use dircat() instead
+		MyString src_filename = cred_dir_name;
+		src_filename += DIR_DELIM_CHAR;
+		src_filename += filename;
+
+		// read the file (fourth argument "true" means as_root)
+		unsigned char *buf = 0;
+		size_t len = 0;
+		bool rc = read_secure_file(src_filename.Value(), (void**)(&buf), &len, true);
+		dprintf(D_ALWAYS, "CREDS: reading %s, result %i\n", src_filename.Value(), rc);
+
+		// use dircat() instead
+		MyString dest_filename = sandbox_dir_name;
+		dest_filename += DIR_DELIM_CHAR;
+		dest_filename += filename;
+
+		MyString tmp_filename = dest_filename;
+		tmp_filename += ".tmp";
+
+		// write file as user
+		priv_state p = set_user_priv();
+
+                rc = write_secure_file(tmp_filename.Value(), buf, len, false);
+		dprintf(D_ALWAYS, "CREDS: writing %s, result %i\n", tmp_filename.Value(), rc);
+
+		// move file into place (as user);
+		dprintf(D_ALWAYS, "CREDS: moving %s to %s\n", tmp_filename.Value(), dest_filename.Value());
+		rename(tmp_filename.Value(), dest_filename.Value());
+
+		set_priv(p);
+	}
+
+	// set/reset timer
+	int sec_cred_refresh = param_integer("SEC_CREDENTIAL_REFRESH", 300);
+	if (sec_cred_refresh > 0) {
+		if (m_refresh_sandbox_creds_tid == -1) {
+			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
+				sec_cred_refresh,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple,
+				"refreshSandboxCredentialsMultiple",
+				this );
+		} else {
+			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
+		}
+		dprintf(D_ALWAYS,
+			"CREDS: will refresh credentials again in %i seconds\n", sec_cred_refresh);
+	} else {
+		dprintf(D_ALWAYS, "CREDS: cred refresh is DISABLED.\n");
+	}
+
+	// only need to do this once
+	if(getCredPath() == NULL) {
+		dprintf(D_ALWAYS, "CREDS: setting env _CONDOR_CREDS to %s\n", sandbox_dir_name.Value());
+		setCredPath(sandbox_dir_name.Value());
+	}
+
+	return true;
 }
 #endif  // WIN32
 
