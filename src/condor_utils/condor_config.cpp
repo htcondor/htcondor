@@ -1072,15 +1072,18 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 		// Now, insert any macros defined in the environment.
 	char **my_environ = GetEnviron();
-	for( int i = 0; my_environ[i]; i++ ) {
-		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
-		strcpy( magic_prefix, "_" );
-		strcat( magic_prefix, myDistro->Get() );
-		strcat( magic_prefix, "_" );
-		int prefix_len = (int)strlen( magic_prefix );
 
+		// Build "magic_prefix" with _condor_, or w/e distro we are
+
+	std::string magic_prefix;
+	magic_prefix += "_";
+	magic_prefix += myDistro->Get();
+	magic_prefix += "_";
+	int prefix_len = magic_prefix.size();
+
+	for( int i = 0; my_environ[i]; i++ ) {
 		// proceed only if we see the magic prefix
-		if( strncasecmp( my_environ[i], magic_prefix, prefix_len ) != 0 ) {
+		if( strncasecmp( my_environ[i], magic_prefix.c_str(), prefix_len ) != 0 ) {
 			continue;
 		}
 
