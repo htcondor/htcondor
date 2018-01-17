@@ -33,6 +33,14 @@ The details of each version are described below.
 and \MacroNI{SHARED\_PORT\_ADDRESS\_REWRITING}.
 \Ticket{6525}
 
+\item An IPv6 address can now be specified in the configuration file
+either with or without square brackets in most cases.
+If specifying a port number in the same value, the square brackets are
+required.
+If using a wildcard to specify a range of possible addresses, square
+brackets are not allowed.
+\Ticket{5697}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
