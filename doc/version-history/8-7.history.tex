@@ -41,6 +41,12 @@ If using a wildcard to specify a range of possible addresses, square
 brackets are not allowed.
 \Ticket{5697}
 
+\item Improved support for IPv6 link-local addresses, in particular
+using the correct scope id.
+Using a wildcard or device name in \MacroNI{NETWORK\_INTERFACE} now
+works properly when \MacroNI{NO\_DNS} is set to \Expr{True}.
+\Ticket{6518}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
