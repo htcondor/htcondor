@@ -1645,7 +1645,7 @@ cleanup:
 		(*globus_gsi_proxy_handle_attrs_destroy_ptr)( handle_attrs );
 	}
 	// Error!  Cleanup memory immediately and return.
-	if ( rc && st ) {
+	if ( rc ) {
 		if ( st->m_request_handle ) {
 			(*globus_gsi_proxy_handle_destroy_ptr)( st->m_request_handle );
 		}
