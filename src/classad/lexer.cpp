@@ -258,8 +258,6 @@ PeekToken (TokenValue *lvalp)
 		case LEX_CLOSE_PAREN:
 		case LEX_CLOSE_BRACE:
 		case LEX_BACKSLASH:
-		case LEX_ABSOLUTE_TIME_VALUE:
-		case LEX_RELATIVE_TIME_VALUE:
 			tokenizePunctOperator();
 			break;
 		default:
@@ -971,8 +969,6 @@ strLexToken (int tokenValue)
 		case LEX_OPEN_BRACE: 			 return "LEX_OPEN_BRACE";
 		case LEX_CLOSE_BRACE: 			 return "LEX_CLOSE_BRACE";
 		case LEX_BACKSLASH:              return "LEX_BACKSLASH";
-	    case LEX_ABSOLUTE_TIME_VALUE:    return "LEX_ABSOLUTE_TIME_VALUE";
-	    case LEX_RELATIVE_TIME_VALUE:    return "LEX_RELATIVE_TIME_VALUE";
 
 		default:
 				return "** Unknown **";

@@ -1091,29 +1091,6 @@ parsePrimaryExpression(ExprTree *&tree)
 				val.SetStringValue( s );
 				return( (tree=Literal::MakeLiteral(val)) != NULL );
 			}
-
-		case Lexer::LEX_ABSOLUTE_TIME_VALUE:
-			{
-				Value	val;
-				abstime_t	asecs;
-
-				tv.GetAbsTimeValue( asecs );
-				lexer.ConsumeToken( );
-				val.SetAbsoluteTimeValue( asecs );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
-			}
-
-		case Lexer::LEX_RELATIVE_TIME_VALUE:
-			{
-				Value   val;
-				double  secs;
-
-				tv.GetRelTimeValue( secs );
-				lexer.ConsumeToken( );
-				val.SetRelativeTimeValue( secs );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
-			}
-
 		default:
 			tree = NULL;
 			return false;
