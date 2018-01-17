@@ -220,20 +220,6 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
     SSL_CTX *ctx = NULL;
 	unsigned char session_key[AUTH_SSL_SESSION_KEY_LEN];
 
-    /* This next bit is just to get the fqdn of the host we're communicating
-       with.  One would think that remoteHost would have this, but it doesn't
-       seem to. -Ian
-    */
-    /* After some discussion with Zach, we don't actually do any checking
-       that involves the host name, so whatever...
-    const char *peerHostAddr = getRemoteHost();
-    struct hostent *he = condor_gethostbyname(peerHostAddr);
-    dprintf(D_SECURITY,"Peer addr: '%s'\n", peerHostAddr);
-    const char *peerHostName = get_full_hostname_from_hostent(
-        condor_gethostbyaddr(he->h_addr, sizeof he->h_addr, AF_INET), NULL);
-    dprintf(D_SECURITY,"Got hostname for peer: '%s'\n", peerHostName);
-    */
-
 	// allocate a large buffer for comminications
 	buffer = (char*) malloc( AUTH_SSL_BUF_SIZE );
     

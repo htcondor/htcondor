@@ -116,6 +116,8 @@ bool condor_netaddr::from_net_string(const char* net) {
 				if (maskbit_ == (unsigned int)-1) {
 					return false;
 				}
+			} else {
+				return false;
 			}
 		}
 	} else {
@@ -138,9 +140,7 @@ bool condor_netaddr::from_net_string(const char* net) {
 			// IPv6 literal or asterisk.
 			const char * asterisk = strchr( net, '*' );
 			if( asterisk == NULL ) {
-				struct in6_addr in6a;
-				if( inet_pton( AF_INET6, net, & in6a ) == 1 ) {
-					base_ = condor_sockaddr( in6a );
+				if ( base_.from_ip_string( net ) ) {
 					maskbit_ = 128;
 					return true;
 				} else {

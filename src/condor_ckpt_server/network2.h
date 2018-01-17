@@ -64,14 +64,10 @@
 #include "condor_sockaddr.h"
 
 /* Function Prototypes*/
-//extern "C" {
-//char* GetIPName(struct in_addr machine_IP);
 
 // I_bind binds to given addr and stores the address obtained by
 // getsockname() on socket_desc to addr.
 int I_bind(int socket_desc, condor_sockaddr& addr, int is_well_known);
-
-//char* gethostnamebyaddr(struct in_addr* addr);
 
 int I_socket(void); 
 
@@ -81,7 +77,6 @@ int I_accept(int                 socket_desc,
 			 condor_sockaddr&    addr);
 
 int net_write(int socket_desc, char* buffer, int size);
-//}
 
 
 #endif

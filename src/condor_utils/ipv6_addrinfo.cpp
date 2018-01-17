@@ -36,7 +36,13 @@ addrinfo get_default_hint()
 	// ret.ai_flags = AI_ADDRCONFIG;
 #endif
 	ret.ai_flags |= AI_CANONNAME;
-	ret.ai_family = AF_UNSPEC;
+	if ( param_false( "ENABLE_IPV6" ) ) {
+		ret.ai_family = AF_INET;
+	} else if ( param_false( "ENABLE_IPV4" ) ) {
+		ret.ai_family = AF_INET6;
+	} else {
+		ret.ai_family = AF_UNSPEC;
+	}
 	ret.ai_socktype = SOCK_STREAM;
 	ret.ai_protocol = IPPROTO_TCP;
 	return ret;
@@ -81,11 +87,10 @@ struct shared_context
 addrinfo_iterator::addrinfo_iterator() : cxt_(NULL),
 	current_(NULL)
 {
-	ipv6 = ! param_false( "ENABLE_IPV6" );
 }
 
 addrinfo_iterator::addrinfo_iterator(const addrinfo_iterator& rhs) :
-	cxt_(rhs.cxt_), current_(NULL), ipv6(rhs.ipv6)
+	cxt_(rhs.cxt_), current_(NULL)
 {
 	if (cxt_) cxt_->add_ref();
 }
@@ -163,7 +168,6 @@ addrinfo * deepCopyAndSort( addrinfo * res, bool preferIPv4 ) {
 addrinfo_iterator::addrinfo_iterator(addrinfo* res) : cxt_(new shared_context),
 	current_(NULL)
 {
-	ipv6 = ! param_false( "ENABLE_IPV6" );
 	cxt_->add_ref();
 	cxt_->head = res;
 
@@ -205,7 +209,6 @@ addrinfo_iterator& addrinfo_iterator::operator= (const addrinfo_iterator& rhs)
 	if (cxt_) cxt_->release();
 	cxt_ = rhs.cxt_;
 	cxt_->add_ref();
-	ipv6 = rhs.ipv6;
 
 	current_ = NULL;
 	return *this;
@@ -234,8 +237,7 @@ addrinfo* addrinfo_iterator::next()
 		case AF_INET:
 			return current_;
 		case AF_INET6:
-			if( ipv6 ) { return current_; }
-			// This fall-through is deliberate.
+			return current_;
 		default:
 			//
 			// ai_canonname is only ever non-NULL in the first struct addrinfo
@@ -245,6 +247,10 @@ addrinfo* addrinfo_iterator::next()
 			// more broken for host with IPv6 addresses.)  We can't just
 			// copy the pointer because then it will be double-free()d.
 			//
+			// TODO: Since we no longer filter out IPv6 entries in the
+			// results of getaddrinfo() (we now do so via the hints
+			// parameter), this juggling of ai_canonname is probably no
+			// longer necessary.
 			if( current_ == cxt_->head && cxt_->head->ai_canonname ) {
 				addrinfo * hack = next();
 				if( hack ) {

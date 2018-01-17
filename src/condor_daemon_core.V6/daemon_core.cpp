@@ -1233,6 +1233,11 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		// Sinful in the address file will have TCP_FORWARDING_HOST as its
 		// primary address, and older versions of HTCondor don't ignore
 		// the primary address).
+		//
+		// NOTE: For the primary address in our sinful string, prefer an
+		// IPv4 address, if available. The primary address is only used by
+		// older clients (pre-8.3.x) that don't understand the addrs field
+		// and probably don't have good IPv6 support.
 		char const * addr = sock->get_sinful_public();
 		if(! sa.is_ipv4()) {
 			for( int i = initialCommandSock; i < nSock; ++i ) {
@@ -11047,34 +11052,4 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 		m_ssock = counted_ptr<SafeSock>(new SafeSock);
 	}
 	return true;
-}
-
-int DaemonCore::find_interface_command_port_do_not_use(const condor_sockaddr & addr) {
-
-	// Boldly assuming all entries in dc_socks have relisocks and
-	// that all listen sockets for a given protocol use the same port
-	// As of Sept 2014, I believe these are true.  This function should
-	// go away long before these are violated.
-	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
-		ASSERT(it->has_relisock());
-		condor_sockaddr listen_addr = it->rsock()->my_addr();
-		if(addr.get_protocol() == listen_addr.get_protocol()) {
-			return listen_addr.get_port();
-		}
-	}
-	// No matching listen socket.
-	return 0;
-}
-
-bool DaemonCore::is_command_port_do_not_use(const condor_sockaddr & addr) {
-	// Boldly assuming all entries in dc_socks have relisocks and
-	// that all listen sockets for a given protocol use the same port
-	// As of Sept 2014, I believe these are true.  This function should
-	// go away long before these are violated.
-	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
-		ASSERT(it->has_relisock());
-		condor_sockaddr listen_addr = it->rsock()->my_addr();
-		if(listen_addr == addr) { return true; }
-	}
-	return false;
 }

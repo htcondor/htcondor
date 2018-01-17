@@ -110,6 +110,8 @@ public:
 		// from_sinful() calls gethostbyname to resolve DNS name to IP addr.
 	bool from_sinful(const MyString& ip_string);
 	bool from_sinful(const char* sinful);
+		// The sinful string will fit in a buffer whose size is at least
+		// SINFUL_STRING_BUF_SIZE.
 	MyString to_sinful() const;
 	const char* to_sinful(char* buf, int len) const;
 	MyString to_sinful_wildcard_okay() const;
@@ -127,7 +129,9 @@ public:
 	MyString to_ip_and_port_string() const;
 		// Have I mentioned recently how much I hate life?
 	MyString to_ccb_safe_string();
-		// it it fails on inet_ntop(), returns NULL and given buf
+		// The string will fit in a buffer whose size is as least
+		// IP_STRING_BUF_SIZE.
+		// if it fails on inet_ntop(), returns NULL and given buf
 		// will not be modified.
 		// decorate==true - Add additional decorations appropriate
 		//                  for the protocol. As of 2014 only puts

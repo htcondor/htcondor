@@ -26,6 +26,99 @@
 
 #include <sstream>
 
+/* Split "<host:port?params>" into parts: host, port, and params. If
+   the port or params are not in the string, the result is set to
+   NULL.  Any of the result char** values may be NULL, in which case
+   they are parsed but not set.  The caller is responsible for freeing
+   all result strings.
+*/
+static int
+split_sin( const char *addr, char **host, char **port, char **params )
+{
+	int len;
+
+	if( host ) *host = NULL;
+	if( port ) *port = NULL;
+	if( params ) *params = NULL;
+
+	if( !addr || *addr != '<' ) {
+		return 0;
+	}
+	addr++;
+
+	if (*addr == '[') {
+		addr++;
+		// ipv6 address
+		const char* pos = strchr(addr, ']');
+		if (!pos) {
+			// mis-match bracket
+			return 0;
+		}
+		if ( host ) {
+			*host = (char*)malloc(pos - addr + 1);
+			ASSERT( *host );
+			memcpy(*host, addr, pos - addr);
+			(*host)[pos - addr] = '\0';
+		}
+		addr = pos + 1;
+	} else {
+		// everything else
+		len = strcspn(addr,":?>");
+		if( host ) {
+			*host = (char *)malloc(len+1);
+			ASSERT( *host );
+			memcpy(*host,addr,len);
+			(*host)[len] = '\0';
+		}
+		addr += len;
+	}
+
+	if( *addr == ':' ) {
+		addr++;
+		// len = strspn(addr,"0123456789");
+		// Reimplemented without strspn because strspn causes valgrind
+		// errors on RHEL6.
+		const char * addr_ptr = addr;
+		len = 0;
+		while (*addr_ptr && isdigit(*addr_ptr++)) len++;
+
+		if( port ) {
+			*port = (char *)malloc(len+1);
+			memcpy(*port,addr,len);
+			(*port)[len] = '\0';
+		}
+		addr += len;
+	}
+
+	if( *addr == '?' ) {
+		addr++;
+		len = strcspn(addr,">");
+		if( params ) {
+			*params = (char *)malloc(len+1);
+			memcpy(*params,addr,len);
+			(*params)[len] = '\0';
+		}
+		addr += len;
+	}
+
+	if( addr[0] != '>' || addr[1] != '\0' ) {
+		if( host ) {
+			free( *host );
+			*host = NULL;
+		}
+		if( port ) {
+			free( *port );
+			*port = NULL;
+		}
+		if( params ) {
+			free( *params );
+			*params = NULL;
+		}
+		return 0;
+	}
+	return 1;
+}
+
 static bool
 urlDecode(char const *str,size_t max,std::string &result)
 {
@@ -495,17 +588,15 @@ Sinful::Sinful( char const * sinful ) {
 		} break;
 
 		default: {
-			// If this is a naked IPv6 address, reject, since we can't
-			// reliably tell where the address ends and the port begins.
-			if( hasTwoColonsInHost( sinful ) ) {
-				m_valid = false;
-				return;
-			}
-
 			// Otherwise, it may be an unbracketed original Sinful from
 			// an old implementation of CCB... or from the command line,
 			// or from a config setting.
-			formatstr( m_sinfulString, "<%s>", sinful );
+			// If it's a naked IPv6 address, add square brackets.
+			if ( hasTwoColonsInHost( sinful ) ) {
+				formatstr( m_sinfulString, "<[%s]>", sinful );
+			} else {
+				formatstr( m_sinfulString, "<%s>", sinful );
+			}
 			parseSinfulString();
 		} break;
 	}
