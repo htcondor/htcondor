@@ -3349,6 +3349,7 @@ static const char * evaluate_macro_func (
 		case SPECIAL_MACRO_ID_FILENAME:
 		{
 			const char * mval = lookup_macro(name, macro_set, ctx);
+			if ( ! mval) mval = body;
 			tvalue = NULL;
 
 			auto_free_ptr tmp2;
