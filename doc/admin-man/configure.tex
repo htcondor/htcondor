@@ -2384,11 +2384,7 @@ to use a host name that is not the primary one.
   If \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{True} (the default),
   \MacroNI{NETWORK\_INTERFACE} controls what IP address
   will be advertised as the public address of the daemon.  
-  If multiple network interfaces match the value and
-  \MacroNI{ENABLE\_ADDRESS\_REWRITING} is \Expr{True} (the default),
-  the IP address that is chosen to be advertised will be the one that
-  is used to communicate with the \Condor{collector}.
-  If \MacroNI{ENABLE\_ADDRESS\_REWRITING} is \Expr{False}, the IP address
+  If multiple network interfaces match the value, the IP address
   that is chosen to be advertised will be the one associated with the
   first device (in system-defined order) that is in a public address
   space, or a private address space, or a loopback address, in that
@@ -2487,24 +2483,6 @@ to use a host name that is not the primary one.
   from the forwarding host rather than from the real remote host, so any
   authorization settings that rely on host addresses should be
   considered accordingly.
-
-\label{param:EnableAddressRewriting}
-\item[\Macro{ENABLE\_ADDRESS\_REWRITING}]
-  A boolean value that defaults to \Expr{True}.  When
-  \MacroNI{NETWORK\_INTERFACE} matches only one IP address or
-  \MacroNI{TCP\_FORWARDING\_HOST} is defined or
-  \MacroNI{NET\_REMAP\_ENABLE} is \Expr{True}, this setting has no effect and
-  the behavior is as though it had been set to \Expr{False}.  When \Expr{True},
-  IP addresses published by HTCondor daemons are automatically rewritten to
-  match the IP address of the network interface used to make the
-  publication.  For example, if the \Condor{schedd} advertises itself to
-  two pools via flocking, and the \Condor{collector} for one pool is reached
-  by the \Condor{schedd} through a private network interface, while
-  the \Condor{collector} for the other pool is reached through a different
-  network interface, the IP address published by the \Condor{schedd}
-  daemon will match the address of the respective network interfaces
-  used in the two cases.  The intention is to make it easier for
-  HTCondor daemons to operate in a multi-homed environment.
 
 \label{param:HighPort}
 \item[\Macro{HIGHPORT}]
