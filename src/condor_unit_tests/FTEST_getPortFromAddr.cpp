@@ -18,7 +18,7 @@
  ***************************************************************/
 
 /*
-	This code tests the sin_to_string() function implementation.
+	This code tests the getPortFromAddr() function implementation.
  */
 
 #include "condor_common.h"

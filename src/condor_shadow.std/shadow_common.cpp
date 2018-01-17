@@ -31,6 +31,7 @@
 #include "spooled_job_files.h"
 #include "condor_debug.h"
 #include "internet.h"
+#include "internet_obsolete.h"
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_attributes.h"

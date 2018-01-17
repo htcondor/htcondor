@@ -3812,19 +3812,6 @@ default=1000000
 description=Max Procd Log (size rotation only, no scale suffix)
 tags=procd
 
-[ENABLE_ADDRESS_REWRITING]
-default=true
-version=7.4.3
-type=bool
-tags=daemons
-
-# This was an option "born deprecated"; it allows a single-host HTCondor instance (particularly, the HTCondor-CE) to provide a better dual-stack service by rewriting all ads in the collector.
-[SHARED_PORT_ADDRESS_REWRITING]
-default=false
-version=8.3.4
-type=bool
-customization=devel
-
 [SHADOW_WORKLIFE]
 default=3600
 version=7.5.3

@@ -355,18 +355,6 @@ CondorQuery::~CondorQuery() {}
 const char*
 my_ip_string() {not_impl(); return 0;}
 
-void ConvertDefaultIPToSocketIP(char const *,char const *,char **,Stream& ) {
-	not_impl();
-}
-
-void ConvertDefaultIPToSocketIP(char const *,char **,Stream& ) {
-	not_impl();
-}
-
-void ConvertDefaultIPToSocketIP(char const *,std::string &,Stream&) {
-	not_impl();
-}
-
 #include "Regex.h"
 
 Regex::Regex() {not_impl();}
