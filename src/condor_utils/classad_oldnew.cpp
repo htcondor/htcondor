@@ -1111,8 +1111,12 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 		if ( ! sock->prepare_crypto_for_secret_is_noop() &&
 			compat_classad::ClassAdAttributeIsPrivate(attr->c_str()) )
 		{
-			sock->put(SECRET_MARKER);
-			sock->put_secret(buf.c_str());
+			if (!sock->put(SECRET_MARKER)) {
+				return false;
+			}
+			if (!sock->put_secret(buf.c_str())) {
+				return false;
+			}
 		}
 		else if ( ! sock->put(buf.c_str()) ){
 			return false;
