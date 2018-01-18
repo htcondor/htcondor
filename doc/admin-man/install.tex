@@ -511,10 +511,10 @@ The repositories are named to distinguish stable releases from
 development releases and by Red Hat version number. 
 The 4 repositories are:
 \begin{itemize}
-  \item \File{condor-stable-rhel6.repo}
-  \item \File{condor-stable-rhel7.repo}
-  \item \File{condor-development-rhel6.repo}
-  \item \File{condor-development-rhel7.repo}
+  \item \File{htcondor-stable-rhel6.repo}
+  \item \File{htcondor-stable-rhel7.repo}
+  \item \File{htcondor-development-rhel6.repo}
+  \item \File{htcondor-development-rhel7.repo}
 \end{itemize}
 
 Here is an ordered set of steps that get HTCondor running using the RPM.
@@ -530,7 +530,7 @@ This example is for the stable series, on RHEL 7.
 \footnotesize
 \begin{verbatim}
   cd /etc/yum.repos.d
-  wget http://htcondor.org/yum/repo.d/condor-stable-rhel7.repo
+  wget http://htcondor.org/yum/repo.d/htcondor-stable-rhel7.repo
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;
