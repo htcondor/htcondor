@@ -96,7 +96,11 @@ TransferD::read_files_handler(int /* cmd */, Stream *sock)
 	rsock->decode();
 
 	// soak the request ad from the client about what it wants to transfer
-	getClassAd(rsock, reqad);
+	if (!getClassAd(rsock, reqad)) {
+		rsock->end_of_message();
+		return CLOSE_STREAM;
+	}
+
 	rsock->end_of_message();
 
 	reqad.LookupString(ATTR_TREQ_CAPABILITY, capability);
