@@ -75,6 +75,7 @@
 #include "condor_url.h"
 #include "condor_version.h"
 #include "NegotiationUtils.h"
+#include "param_info.h" // for BinaryLookup
 #include "submit_utils.h"
 //#include "submit_internal.h"
 #define PLUS_ATTRIBS_IN_CLUSTER_AD 1
@@ -712,7 +713,7 @@ const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 	} else if (clusterAd) {
 		// if there is a cluster ad, we NEVER want to use the current working directory
 		// instead we want to treat the saved working directory of submit as the cwd.
-		realcwd = submit_param_mystring("FACTORY.Iwd", "FACTORY.Iwd");
+		realcwd = submit_param_mystring("FACTORY.Iwd", NULL);
 		p_iwd = realcwd.Value();
 	} else {
 		condor_getcwd(realcwd);
@@ -2633,9 +2634,13 @@ int SubmitHash::ComputeIWD(bool check_access /*=true*/)
 #endif
 			{
 				iwd = shortname;
-			} 
+			}
 			else {
-				condor_getcwd( cwd );
+				if (clusterAd) {
+					cwd = submit_param_mystring("FACTORY.Iwd",NULL);
+				} else {
+					condor_getcwd( cwd );
+				}
 				iwd.formatstr( "%s%c%s", cwd.Value(), DIR_DELIM_CHAR, shortname );
 			}
 		} 
@@ -8252,6 +8257,56 @@ const char* SubmitHash::to_string(std::string & out, int flags)
 	return out.c_str();
 }
 
+enum FixupKeyId {
+	idKeyNone=0,
+	idKeyExecutable,
+	idKeyInitialDir,
+};
+
+// struct for a table mapping attribute names to a flag indicating that the attribute
+// must only be in cluster ad or only in proc ad, or can be either.
+//
+typedef struct digest_fixup_key {
+	const char * key;
+	FixupKeyId   id; //
+	// a LessThan operator suitable for inserting into a sorted map or set
+	bool operator<(const struct digest_fixup_key& rhs) const {
+		return strcasecmp(this->key, rhs.key) < 0;
+	}
+} DIGEST_FIXUP_KEY;
+
+// table if submit keywords that require special processing when building a submit digest
+// NOTE: this table MUST be sorted by case-insensitive value of the first field.
+static const DIGEST_FIXUP_KEY aDigestFixupAttrs[] = {
+	                                            // these should end  up sorted case-insenstively
+	{ ATTR_JOB_CMD,          idKeyExecutable }, // "Cmd"
+	{ SUBMIT_KEY_Executable, idKeyExecutable }, // "executable"
+	{ "initial_dir",         idKeyInitialDir }, // "initial_dir" <- special case legacy hack (sigh) note '_' sorts before 'd' OR 'D'
+	{ SUBMIT_KEY_InitialDir, idKeyInitialDir }, // "initialdir"
+	{ ATTR_JOB_IWD,          idKeyInitialDir }, // "Iwd"
+	{ "job_iwd",             idKeyInitialDir }, // "job_iwd"     <- special case legacy hack (sigh)
+};
+
+// while building a submit digest, fixup right hand side for certain key=rhs pairs
+// for now this is mostly used to promote some paths to fully qualified paths.
+void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
+{
+	const DIGEST_FIXUP_KEY* found = NULL;
+	found = BinaryLookup<DIGEST_FIXUP_KEY>(aDigestFixupAttrs, COUNTOF(aDigestFixupAttrs), key, strcasecmp);
+	if ( ! found)
+		return;
+
+	// the Executable and InitialDir should be expanded to a fully qualified path here.
+	if (found->id == idKeyExecutable || found->id == idKeyInitialDir) {
+		if (rhs.empty()) return;
+		const char * path = rhs.c_str();
+		if (strstr(path, "$$(")) return; // don't fixup if there is a pending $$() expansion.
+		if (IsUrl(path)) return; // don't fixup URL paths
+		// Convert to a full path it not already a full path
+		rhs = full_path(path, false);
+	}
+}
+
 const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringList & vars, int /*options*/)
 {
 	int flags = HASHITER_NO_DEFAULTS;
@@ -8288,6 +8343,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 		if (val) {
 			rhs = val;
 			selective_expand_macro(rhs, skip_knobs, SubmitMacroSet, mctx);
+			fixup_rhs_for_digest(key, rhs);
 			out += rhs;
 		}
 		out += "\n";
