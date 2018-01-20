@@ -61,7 +61,8 @@ void
 ClassAdLogProber::setJobQueueName(const char* jqn)
 {
 	assert(jqn);
-	strcpy(job_queue_name, jqn);
+	strncpy(job_queue_name, jqn, PATH_MAX);
+	job_queue_name[PATH_MAX - 1] = '\0';
 }
 
 char*
