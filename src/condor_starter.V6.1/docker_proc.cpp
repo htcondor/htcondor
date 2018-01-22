@@ -353,8 +353,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );
 			return VanillaProc::JobReaper( pid, status );
 		}
-		dprintf( D_FULLDEBUG, "Setting status of Docker job to %d.\n", dockerStatus );
-		status = dockerStatus;
+		status = dockerStatus > 128 ? (dockerStatus - 128) : (dockerStatus << 8);
+		dprintf( D_FULLDEBUG, "Setting status of Docker job to %d.\n", status );
 
 		// TODO: Record final job usage.
 
