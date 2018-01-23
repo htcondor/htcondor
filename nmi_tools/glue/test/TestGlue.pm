@@ -68,6 +68,9 @@ sub setup_test_environment {
 
     my $base_dir = Cwd::getcwd();
 
+    my $test_dir = File::Spec->catdir( $base_dir, "condor_tests" );
+	set_env( "PERLLIB", $test_dir );
+
     if( not is_windows() ) {
         set_env("BASE_DIR", $base_dir);
         set_env("PATH", "$base_dir/nmi_tools/glue/test:$base_dir/condor/bin:$base_dir/condor/sbin:$ENV{PATH}");
