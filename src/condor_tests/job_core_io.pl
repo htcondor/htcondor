@@ -18,14 +18,15 @@
 ##
 ##**************************************************************
 
-use CondorTest;
-use CondorUtils;
-
-#BEGIN {$^W=1}  #warnings enabled
+sub fullchomp {
+	push (@_,$_) if( scalar(@_) == 0);
+	foreach my $arg (@_) { $arg =~ s/[\012\015]+$//; }
+	return;
+}
 
 while( <> )
 {
-	CondorUtils::fullchomp($_);
+	fullchomp($_);
 	print "$_\n";
 }
 
