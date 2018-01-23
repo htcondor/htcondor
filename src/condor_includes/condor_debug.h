@@ -193,6 +193,7 @@ int  _condor_dprintf_is_initialized();
 void _condor_save_dprintf_line_va( int flags, const char* fmt, va_list args );
 void _condor_save_dprintf_line( int flags, const char* fmt, ... );
 void _condor_dprintf_saved_lines( void );
+void condor_except_should_dump_core(int flag);
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
 
