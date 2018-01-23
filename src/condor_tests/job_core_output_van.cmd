@@ -1,5 +1,5 @@
 universe   = vanilla
-executable = job_core_output.pl
+executable = job_core_io.pl
 output = job_core_output_van.out
 error = job_core_output_van.err
 log = job_core_output_van.log
