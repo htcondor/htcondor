@@ -1401,6 +1401,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		"HostSMPSize",
 		"BatchExtraSubmitArgs",
 		"StageCmd",
+		"BatchProject",
+		"BatchRuntime",
 		NULL };		// list must end with a NULL
 
 	submit_ad = new ClassAd;

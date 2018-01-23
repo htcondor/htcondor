@@ -13,4 +13,5 @@ void enable_deprecation_warnings();
 void export_claim();
 void export_startd();
 void export_query_iterator();
+void export_classad();
 

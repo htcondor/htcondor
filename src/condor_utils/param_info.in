@@ -79,6 +79,11 @@ type=int
 default=86400
 type=int
 
+[PREEN_MAX_SCHEDD_CONNECTION_TIME]
+default=20
+type=int
+tags=preen
+
 [DEFAULT_MASTER_SHUTDOWN_SCRIPT]
 default=
 type=path
@@ -750,6 +755,12 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_QUEUE_UPDATE_INTERVAL]
+default=300
+type=int
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_USE_STRICT]
 default=1
 type=int
@@ -902,36 +913,6 @@ default=2308032
 type=int
 tags=accountant
 
-[QUILL_ENABLED]
-default=false
-type=bool
-customization=devel
-tags=q,queue
-
-[QUILL_NAME]
-default=
-type=string
-customization=devel
-tags=q,queue
-
-[QUILL_DB_IP_ADDR]
-default=
-type=string
-customization=devel
-tags=q,queue
-
-[QUILL_DB_NAME]
-default=
-type=string
-customization=devel
-tags=q,queue
-
-[QUILL_DB_QUERY_PASSWORD]
-default=
-type=string
-customization=devel
-tags=q,queue
-
 [REAL_TIME_JOB_SUSPEND_UPDATES]
 default=
 type=string
@@ -1004,46 +985,10 @@ default=0
 type=int
 tags=shadow,baseshadow
 
-[QUILL_MANAGE_VACUUM]
-default=false
-type=bool
-customization=devel
-tags=quill,jobqueuedbmanager
-
-[QUILL_POLLING_PERIOD]
-default=10
-type=int
-customization=devel
-tags=quill,jobqueuedbmanager
-
-[QUILL_HISTORY_DURATION]
-default=180
-type=int
-customization=devel
-tags=quill,jobqueuedbmanager
-
-[QUILL_HISTORY_CLEANING_INTERVAL]
-default=24
-type=int
-customization=devel
-tags=quill,jobqueuedbmanager
-
-[QUILL_SHOULD_REINDEX]
-default=true
-type=bool
-customization=devel
-tags=quill,jobqueuedbmanager
-
 [SCHEDD_NAME]
 default=
 type=string
-tags=quill,jobqueuedbmanager
-
-[QUILL_IS_REMOTELY_QUERYABLE]
-default=true
-type=bool
-customization=devel
-tags=quill,jobqueuedbmanager
+tags=jobqueuedbmanager
 
 [COUNT_HYPERTHREAD_CPUS]
 default=true
@@ -1470,12 +1415,6 @@ tags=daemons
 default=
 type=string
 tags=daemons
-
-[QUILL_USE_SQL_LOG]
-default=false
-type=bool
-customization=devel
-tags=daemon_core
 
 [COLLECTOR_NAME]
 default=My Pool - $(CONDOR_HOST)
@@ -2042,11 +1981,6 @@ default=0
 type=int
 tags=startd,startd_main
 
-[STARTD_COMPUTE_AVAIL_STATS]
-default=false
-type=bool
-tags=startd,startd_main
-
 [STARTD_NAME]
 default=
 type=string
@@ -2066,11 +2000,6 @@ tags=startd,startd_main
 default=
 type=string
 tags=startd,startd_main
-
-[STARTD_MAX_AVAIL_PERIOD_SAMPLES]
-default=100
-type=int
-tags=startd,AvailStats
 
 [STARTD_SHOULD_WRITE_CLAIM_ID_FILE]
 default=true
@@ -2154,34 +2083,10 @@ default=false
 type=bool
 default=false
 
-[QUILL_MAINTAIN_DB_CONN]
-default=true
-type=bool
-customization=devel
-tags=tt,ttmanager
-
-[QUILL_MAINTAIN_SOFT_STATE]
-default=true
-type=bool
-customization=devel
-tags=tt,ttmanager
-
-[QUILL_USE_TEMP_TABLE]
-default=false
-type=bool
-customization=devel
-tags=tt,ttmanager
-
 [WANT_XML_LOG]
 default=false
 type=bool
 tags=tt,ttmanager
-
-[QUILL_DB_USER]
-default=
-type=string
-customization=devel
-tags=tt,jobqueuedbmanager
 
 [SUBMIT_SKIP_FILECHECKS]
 default=true
@@ -2295,18 +2200,6 @@ tags=submit
 default=
 type=string
 tags=submit
-
-[MAX_XML_LOG]
-# XXX Um, how does this default work in terms of the emitted C?
-default=1900000000
-type=long
-tags=file_xml
-
-[QUILL_DB_TYPE]
-default=PGSQL
-type=string
-customization=devel
-tags=jobqueuesnapshot
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
 default=2
@@ -2957,7 +2850,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor
@@ -3022,45 +2915,6 @@ tags=shadow,shadow
 default=
 type=string
 tags=shadow,pseudo_ops
-
-[DBMSMANAGER_NAME]
-default=
-type=string
-tags=dbmsd,DBMSManager
-
-[DATABASE_PURGE_INTERVAL]
-default=
-type=string
-tags=dbmsd,DBMSManager
-
-[DATABASE_REINDEX_INTERVAL]
-default=
-type=string
-tags=dbmsd,DBMSManager
-
-[QUILL_RESOURCE_HISTORY_DURATION]
-default=
-type=string
-customization=devel
-tags=dbmsd,ManagedDatabase
-
-[QUILL_RUN_HISTORY_DURATION]
-default=
-type=string
-customization=devel
-tags=dbmsd,ManagedDatabase
-
-[QUILL_JOB_HISTORY_DURATION]
-default=
-type=string
-customization=devel
-tags=dbmsd,ManagedDatabase
-
-[QUILL_DBSIZE_LIMIT]
-default=
-type=string
-customization=devel
-tags=dbmsd,ManagedDatabase
 
 [JOB_ROUTER_SOURCE_JOB_CONSTRAINT]
 default=
@@ -3702,20 +3556,6 @@ customization=devel
 description=Path to the HTCondor startd daemon binary
 tags=master
 
-[QUILL]
-default=$(SBIN)/condor_quill
-win32_default=$(SBIN)\condor_quill.exe
-type=path
-customization=devel
-tags=master
-
-[DBMSD]
-default=$(SBIN)/condor_dbmsd
-win32_default=$(SBIN)\condor_dbmsd.exe
-type=path
-customization=devel
-tags=master
-
 [CCB_POLLING_TIMESLICE]
 default=0.05
 type=double
@@ -3971,19 +3811,6 @@ tags=rooster
 default=1000000
 description=Max Procd Log (size rotation only, no scale suffix)
 tags=procd
-
-[ENABLE_ADDRESS_REWRITING]
-default=true
-version=7.4.3
-type=bool
-tags=daemons
-
-# This was an option "born deprecated"; it allows a single-host HTCondor instance (particularly, the HTCondor-CE) to provide a better dual-stack service by rewriting all ads in the collector.
-[SHARED_PORT_ADDRESS_REWRITING]
-default=false
-version=8.3.4
-type=bool
-customization=devel
 
 [SHADOW_WORKLIFE]
 default=3600
@@ -4729,11 +4556,17 @@ type=string
 description=Folder in the local filesystem for HTTP public file links to be served from.
 tags=file_transfer
 
-[HTTP_PUBLIC_FILES_USER]
-default=<condor>
+[HTTP_PUBLIC_FILES_ROOT_OWNER]
+default=apache
 type=string
-description=Username to create symlinks as, or token '<condor>' or token '<user>'.
+description=Owner of the user who owns the directory specified by HTTP_PUBLIC_FILES_ROOT_DIR
 tags=file_transfer
+
+[HTTP_PUBLIC_FILES_STALE_AGE]
+default=604800
+type=int
+description=Age (in seconds) after which preen determines this file is stale and removes it
+tags=file_transfer,preen
 
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
 default=10240
@@ -4990,7 +4823,7 @@ review=tlmiller
 tags=schedd
 
 [IS_OWNER]
-default=(START =?= False)
+default=False
 version=8.2.8
 type=string
 description=When a slot should be in Owner state
@@ -5575,6 +5408,7 @@ default : @end
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
+	IS_OWNER=(START =?= False)
 @end
 
 # no-preemption policy, formerly called TESTINGMODE_
@@ -5647,6 +5481,7 @@ default : @end
 	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
 	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
+	IS_OWNER=(START =?= False)
 @end
 
 [$POLICY.LIMIT_JOB_RUNTIMES]
@@ -5775,6 +5610,7 @@ default : @end
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
 	RunBenchmarks=0
+	JAVA_BENCHMARK_TIME=0
 @end
 
 [$ROLE.Execute]
@@ -6089,10 +5925,6 @@ default : @end
 	LeaseManager.PRUNE_INTERVAL
 	LeaseManager.DEBUG_ADS
 	LeaseManager.CLASSAD_LOG
-	QUILL_LOG
-	QUILL_ADDRESS_FILE
-	DBMSD_ARGS
-	DBMSD_LOG
 	STORK
 	STORK_ADDRESS_FILE
 	STORK_LOG_BASE
@@ -6144,8 +5976,8 @@ default : @end
 	MAX_C_GAHP_LOG=1000000
 	MAX_VM_GAHP_LOG=1000000
 	MAX_CREDD_LOG=4000000
-	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
-	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad, OfflineLog
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_classad
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_classad, OfflineLog
 @end
 
 # This table is for platform-specific knobs that fit the rules for $UPGRADE.DISCARDIF above

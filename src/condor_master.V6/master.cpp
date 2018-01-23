@@ -66,14 +66,6 @@ extern DWORD start_as_service();
 extern void terminate(DWORD);
 #endif
 
-typedef void (*SIGNAL_HANDLER)();
-
-// prototypes of library functions
-extern "C"
-{
-	void install_sig_handler( int, SIGNAL_HANDLER );
-}
-
 
 // local function prototypes
 void	init_params();
@@ -110,6 +102,7 @@ int		MasterLockFD;
 int		update_interval;
 int		check_new_exec_interval;
 int		preen_interval;
+int		preen_pid = -1;
 int		new_bin_delay;
 StopStateT new_bin_restart_mode = GRACEFUL;
 char	*MasterName = NULL;
@@ -144,7 +137,7 @@ const char	*default_daemon_list[] = {
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
 "VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, HDFS, "
-"REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER, SHARED_PORT, "
+"REPLICATION, JOB_ROUTER, ROOSTER, SHARED_PORT, "
 "DEFRAG, GANGLIAD, ANNEXD";
 
 // create an object of class daemons.
@@ -159,17 +152,22 @@ public:
 	config()
 	{
 		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
-		int watchdog_secs = sd.GetWatchdogUsecs() / 1e6 / 3;
-		if (watchdog_secs <= 0) { watchdog_secs = 1; }
-		Timeslice ts;
-		ts.setDefaultInterval(watchdog_secs);
-		m_watchdog_timer = daemonCore->Register_Timer(ts, static_cast<TimerHandlercpp>(&SystemdNotifier::status_handler),
-				"systemd status updater", this);
-		if (m_watchdog_timer < 0)
-		{
-			dprintf(D_ALWAYS, "Failed to register systemd update timer.\n");
+		int watchdog_secs = sd.GetWatchdogUsecs();
+		if ( watchdog_secs > 0 ) {
+			watchdog_secs = watchdog_secs / 1e6 / 3;
+			if (watchdog_secs <= 0) { watchdog_secs = 1; }
+			Timeslice ts;
+			ts.setDefaultInterval(watchdog_secs);
+			m_watchdog_timer = daemonCore->Register_Timer(ts,
+					static_cast<TimerHandlercpp>(&SystemdNotifier::status_handler),
+					"systemd status updater", this);
+			if (m_watchdog_timer < 0) {
+				dprintf(D_ALWAYS, "Failed to register systemd update timer.\n");
+			} else {
+				dprintf(D_FULLDEBUG, "Set systemd to be notified once every %d seconds.\n", watchdog_secs);
+			}
 		} else {
-			dprintf(D_FULLDEBUG, "Set systemd to be notified once every %d seconds.\n", watchdog_secs);
+			dprintf(D_FULLDEBUG, "Not setting systemd watchdog timer\n");
 		}
 	}
 
@@ -246,6 +244,59 @@ cleanup_memory( void )
 	}
 }
 
+#ifdef WIN32
+// we can't use execl on Windows (read the docs), and anyway, we don't want to
+// if we are running as a serices because we MUST call our terminate() function to exit
+static void Win32RunShutdownProgram(char * shutdown_program)
+{
+	STARTUPINFO si;
+	ZeroMemory(&si, sizeof(si)); si.cb = sizeof(si);
+
+	HANDLE hLog = INVALID_HANDLE_VALUE;
+
+	// Open a log file for the shutdown programs stdout and stderr
+	std::string shutdown_log;
+	if (param(shutdown_log, "MASTER_SHUTDOWN_LOG") &&  ! shutdown_log.empty()) {
+		SECURITY_ATTRIBUTES sa;
+		ZeroMemory(&sa, sizeof(sa));
+		sa.bInheritHandle = TRUE;
+
+		hLog = CreateFile(shutdown_log.c_str(), FILE_APPEND_DATA,
+			FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (INVALID_HANDLE_VALUE != hLog) { si.hStdError = si.hStdOutput = hLog; }
+
+		si.dwFlags = STARTF_USESTDHANDLES;
+	}
+
+	// create the shutdown program, we create it suspended so that we can log success or failure
+	// and then get a head start to exit before it actually begins running.  That still doesn't
+	// guarantee that we have exited before it starts though...
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&pi, sizeof(pi));
+	priv_state p = set_root_priv( );
+	BOOL exec_status = CreateProcess( NULL, shutdown_program, NULL, NULL, TRUE, DETACHED_PROCESS | CREATE_SUSPENDED, NULL, NULL, &si, &pi );
+	set_priv( p );
+
+	if (INVALID_HANDLE_VALUE != hLog) {
+		formatstr(shutdown_log, "==== Master (pid %d) shutting down. output of shutdown script '%s' (pid %d) follows ====\n",
+			GetCurrentProcessId(), shutdown_program, pi.dwProcessId);
+		DWORD dwWrote;
+		WriteFile(hLog, shutdown_log.c_str(), (DWORD)shutdown_log.size(), &dwWrote, NULL);
+		CloseHandle(hLog);
+	}
+
+	if ( ! exec_status ) {
+		dprintf( D_ALWAYS, "**** CreateProcess(%s) FAILED %d %s\n",
+					shutdown_program, GetLastError(), GetLastErrorString(GetLastError()) );
+	} else {
+		dprintf( D_ALWAYS, "**** CreateProcess(%s) SUCCEEDED pid=%lu\n", shutdown_program, pi.dwProcessId );
+		ResumeThread(pi.hThread); // let the shutdown process start.
+		CloseHandle(pi.hThread);
+		CloseHandle(pi.hProcess);
+	}
+}
+#endif
+
 
 int
 master_exit(int retval)
@@ -265,6 +316,15 @@ master_exit(int retval)
 
 #ifdef WIN32
 	if ( NT_ServiceFlag == TRUE ) {
+		// retval == 2 indicates that we never actually started
+		// so we don't want to invoke the shutdown program in that case.
+		if (retval != 2 && shutdown_program) {
+			dprintf( D_ALWAYS,
+						"**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
+						"condor_master", "condor", "MASTER", GetCurrentProcessId(), shutdown_program );
+			Win32RunShutdownProgram(shutdown_program);
+			shutdown_program = NULL; // in case terminate doesn't kill us, make sure we don't run the shutdown program more than once.
+		}
 		terminate(retval);
 	}
 #endif
@@ -292,6 +352,15 @@ master_exit(int retval)
 
 	// Exit via specified shutdown_program UNLESS retval is 2, which
 	// means the master never started and we are exiting via usage() message.
+#ifdef WIN32
+	if (retval != 2 && shutdown_program) {
+		dprintf( D_ALWAYS,
+					"**** %s (%s_%s) pid %lu RUNNING SHUTDOWN PROGRAM %s\n",
+					"condor_master", "condor", "MASTER", GetCurrentProcessId(), shutdown_program );
+		Win32RunShutdownProgram(shutdown_program);
+		shutdown_program = NULL; // don't let DC_Exit run the shutdown program on Windows.
+	}
+#endif
 	DC_Exit(retval, retval == 2 ? NULL : shutdown_program );
 
 	return 1;	// just to satisfy vc++
@@ -1550,13 +1619,15 @@ NewExecutable(char* file, time_t *tsp)
 void
 run_preen()
 {
-	int		child_pid;
 	char *args=NULL;
 	const char	*preen_base;
 	ArgList arglist;
 	MyString error_msg;
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
+	if ( preen_pid > 0 ) {
+		dprintf( D_ALWAYS, "WARNING: Preen is already running (pid %d)\n", preen_pid );
+	}
 
 	if( FS_Preen == NULL ) {
 		return;
@@ -1570,13 +1641,13 @@ run_preen()
 	}
 	free(args);
 
-	child_pid = daemonCore->Create_Process(
+	preen_pid = daemonCore->Create_Process(
 					FS_Preen,		// program to exec
 					arglist,   		// args
 					PRIV_ROOT,		// privledge level
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
-	dprintf( D_ALWAYS, "Preen pid is %d\n", child_pid );
+	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
 }
 
 
@@ -1728,10 +1799,9 @@ void init_firewall_exceptions() {
 
 	bool add_exception;
 	char *master_image_path, *schedd_image_path, *startd_image_path,
-		 *dbmsd_image_path, *quill_image_path, *dagman_image_path, 
-		 *negotiator_image_path, *collector_image_path, *starter_image_path,
-		 *shadow_image_path, *gridmanager_image_path, *gahp_image_path,
-		 *gahp_worker_image_path, *credd_image_path, 
+		 *dagman_image_path, *negotiator_image_path, *collector_image_path, 
+		 *starter_image_path, *shadow_image_path, *gridmanager_image_path, 
+		 *gahp_image_path, *gahp_worker_image_path, *credd_image_path, 
 		 *vmgahp_image_path, *kbdd_image_path, *hdfs_image_path, *bin_path;
 	const char* dagman_exe = "condor_dagman.exe";
 
@@ -1764,11 +1834,6 @@ void init_firewall_exceptions() {
 
 	schedd_image_path = param("SCHEDD");
 	startd_image_path = param("STARTD");
-
-	// We to also add exceptions for Quill and DBMSD
-
-	quill_image_path = param("QUILL");
-	dbmsd_image_path = param("DBMSD");
 
 	// And add exceptions for all the other daemons, since they very well
 	// may need to open a listen port for mechanisms like CCB, or HTTPS
@@ -1872,22 +1937,6 @@ void init_firewall_exceptions() {
 		}
 	}
 
-	if ( (daemons.FindDaemon("QUILL") != NULL) && quill_image_path ) {
-		if ( !SUCCEEDED(wfh.addTrusted(quill_image_path)) ) {
-			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-				"windows firewall exception list.\n",
-				quill_image_path);
-		}
-	}
-
-	if ( (daemons.FindDaemon("DBMSD") != NULL) && dbmsd_image_path ) {
-		if ( !SUCCEEDED(wfh.addTrusted(dbmsd_image_path)) ) {
-			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-				"windows firewall exception list.\n",
-				dbmsd_image_path);
-		}
-	}
-
 	if ( starter_image_path ) {
 		if ( !SUCCEEDED(wfh.addTrusted(starter_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
@@ -1930,8 +1979,6 @@ void init_firewall_exceptions() {
 	if ( master_image_path ) { free(master_image_path); }
 	if ( schedd_image_path ) { free(schedd_image_path); }
 	if ( startd_image_path ) { free(startd_image_path); }
-	if ( quill_image_path )  { free(quill_image_path); }
-	if ( dbmsd_image_path )  { free(dbmsd_image_path); }
 	if ( dagman_image_path ) { free(dagman_image_path); }
 	if ( negotiator_image_path ) { free(negotiator_image_path); }
 	if ( collector_image_path ) { free(collector_image_path); }

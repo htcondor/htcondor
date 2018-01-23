@@ -357,7 +357,7 @@ bool
 PmUtilLinuxHibernator::Detect ( void )
 {
 	StatWrapper sw( PM_UTIL_CHECK );
-	if ( sw.GetStatus() != 0 ) {
+	if ( sw.GetRc() != 0 ) {
 		return false;
 	}
 

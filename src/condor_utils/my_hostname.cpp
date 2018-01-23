@@ -29,41 +29,12 @@
 #include "condor_sinful.h"
 #include "CondorError.h"
 
-static bool enable_convert_default_IP_to_socket_IP = false;
-static bool shared_port_address_rewriting = false;
-static bool network_interface_matches_all;
-
-
 const char* my_ip_string() {
     static MyString __my_ip_string;
-	// TODO: Picking IPv4 arbitrarily. WARNING: This function
-	// gets called while the configuration file is being loaded,
-	// before we know if IPV4 and/or IPv6 is enabled.  It needs to
-	// return a stable answer, because having it change midway
-	// through parsing the file is a recipe for failure.
+	// TODO: Picking IPv4 arbitrarily.
     __my_ip_string = get_local_ipaddr(CP_IPV4).to_ip_string();
     return __my_ip_string.Value();
 }
-
-//void
-//init_full_hostname()
-//{
-//	char *tmp;
-//
-//	tmp = get_full_hostname( hostname );
-//
-//	if( full_hostname ) {
-//		free( full_hostname );
-//	}
-//	if( tmp ) {
-//			// Found it, use it.
-//		full_hostname = strdup( tmp );
-//		delete [] tmp;
-//	} else {
-//			// Couldn't find it, just use what we've already got.
-//		full_hostname = strdup( hostname );
-//	}
-//}
 
 bool
 network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest)
@@ -214,11 +185,6 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		}
 	}
 
-	if( interfaceCount <= 1 ) {
-		enable_convert_default_IP_to_socket_IP = false;
-		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because NETWORK_INTERFACE does not match multiple IPs.\n");
-	}
-
 	dprintf(D_HOSTNAME,"%s=%s matches %s, choosing IP %s\n",
 			interface_param_name,
 			interface_pattern,
@@ -254,8 +220,6 @@ init_network_interfaces( CondorError * errorStack )
 
 	std::string network_interface;
 	param( network_interface, "NETWORK_INTERFACE" );
-
-	network_interface_matches_all = (network_interface == "*");
 
 	if( enable_ipv4_false && enable_ipv6_false ) {
 		errorStack->pushf( "init_network_interfaces", 1, "ENABLE_IPV4 and ENABLE_IPV6 are both false." );
@@ -318,236 +282,4 @@ init_network_interfaces( CondorError * errorStack )
 	}
 
 	return true;
-}
-
-static bool is_sender_ip_attr(char const *attr_name)
-{
-    if(strcasecmp(attr_name,ATTR_MY_ADDRESS) == 0) return true;
-    if(strcasecmp(attr_name,ATTR_TRANSFER_SOCKET) == 0) return true;
-	size_t attr_name_len = strlen(attr_name);
-    if(attr_name_len >= 6 && strcasecmp(attr_name+attr_name_len-6,"IpAddr") == 0)
-	{
-        return true;
-    }
-    return false;
-}
-
-
-void ConfigConvertDefaultIPToSocketIP()
-{
-		// do not need to call init_ipaddr() since init_ipaddr() has no effect
-		// on this function.
-//	if( ! ipaddr_initialized ) {
-//		init_ipaddr(0);
-//	}
-
-
-	enable_convert_default_IP_to_socket_IP = true;
-
-	/*
-	  When using TCP_FORWARDING_HOST, if we rewrite addresses, we will
-	  insert the IP address of the local IP address in place of
-	  the forwarding IP address.
-	*/
-	char *str = param("TCP_FORWARDING_HOST");
-	if( str && *str ) {
-		enable_convert_default_IP_to_socket_IP = false;
-		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because TCP_FORWARDING_HOST is defined.\n");
-	}
-	free( str );
-
-	if( !param_boolean("ENABLE_ADDRESS_REWRITING",true) ) {
-		enable_convert_default_IP_to_socket_IP = false;
-		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because ENABLE_ADDRESS_REWRITING is false.\n");
-	}
-	shared_port_address_rewriting = param_boolean("SHARED_PORT_ADDRESS_REWRITING", false);
-}
-
-// Only needed for these next two functions;
-// #include should be deleted when ConvertDefaultIPToSocketIP is.
-#include "condor_daemon_core.h"
-
-void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_string, Stream & s )
-{
-	static bool loggedNullDCMessage = false;
-	static bool loggedConfigMessage = false;
-
-	// We can't practically do a conversion if daemonCore isn't present; this
-	// happens in standard universe.  We can't move this test into
-	// ConfigConvertDefaultIPToSocketIP because it gets called before
-	// daemonCore is created.
-	if( daemonCore == NULL ) {
-		if( ! loggedNullDCMessage ) {
-			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: no daemon core.\n" );
-			loggedNullDCMessage = true;
-		}
-		return;
-	}
-
-	if( ! enable_convert_default_IP_to_socket_IP ) {
-		if( ! loggedConfigMessage ) {
-			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: by configuration.\n" );
-			loggedConfigMessage = true;
-		}
-		return;
-	}
-
-	if( ! is_sender_ip_attr( attr_name ) ) {
-		// Reduce log spam.  Since all of our subsequent messages include the
-		// attribute name, we don't have to print a message noting that we
-		// tried to rewrite it.
-		// dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: '%s' is not an attribute which might contain the sender's IP address.\n", attr_name );
-		return;
-	}
-
-	// Skip if Stream doesn't have address associated with it
-	condor_sockaddr connectionSA;
-	if( ! connectionSA.from_ip_string( s.my_ip_str() ) ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to generate socket address from stream's IP string (%s).\n", attr_name, expr_string.c_str(), s.my_ip_str() );
-		return;
-	}
-
-	// Skip if it's not a string literal.
-	if( * ( expr_string.rbegin() ) != '"' ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing closing double quotation mark.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	const char * delimiter = " = \"";
-	size_t delimpos = expr_string.find( delimiter );
-	// Skip if doesn't look like a string
-	if( delimpos == std::string::npos ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing assignment.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	size_t string_start_pos = delimpos + strlen( delimiter );
-	// string_end_pos is one beyond last character of String literal.
-	size_t string_end_pos = expr_string.length() - 1;
-	size_t string_len = string_end_pos - string_start_pos;
-
-	// Skip if it doesn't look like a Sinful
-	if( expr_string[string_start_pos] != '<' ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing opening <.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-	if( expr_string[string_end_pos - 1] != '>' ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing closing >.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	std::string adSinfulString = expr_string.substr( string_start_pos, string_len);
-	const char *cmd_sinful = daemonCore->InfoCommandSinfulString();
-	if ( cmd_sinful == NULL ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: no command port sinful string.\n" );
-		return;
-	}
-	std::string commandPortSinfulString = cmd_sinful;
-
-	Sinful adSinful( adSinfulString.c_str() );
-	condor_sockaddr adSA;
-	adSA.from_sinful( adSinful.getSinful() );
-
-	bool rewrite_port = true;
-	if (commandPortSinfulString == adSinfulString)
-	{
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): clients now choose addresses.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-	else if (shared_port_address_rewriting)
-	{
-		//
-		// Wait a minute -- isn't this only supposed to happen in the collector?
-		//
-		const std::vector<Sinful> &commandSinfuls = daemonCore->InfoCommandSinfulStringsMyself();
-		dprintf(D_NETWORK|D_VERBOSE, "Address rewriting: considering %ld command socket sinfuls.\n", commandSinfuls.size());
-
-		bool acceptableMatch = false;
-		std::vector<Sinful>::const_iterator it;
-		for (it = commandSinfuls.begin(); it!=commandSinfuls.end(); it++)
-		{
-			commandPortSinfulString = it->getSinful();
-			const Sinful &commandPortSinful = *it;
-			// We assume that any sinful on the same shared port server
-			// can also be rewritten.
-			if ((adSinful.getSharedPortID() != NULL) && (strcmp(commandPortSinful.getHost(), adSinful.getHost()) == 0) && (commandPortSinful.getPortNum() == adSinful.getPortNum()))
-			{
-				acceptableMatch = true;
-				break;
-			}
-			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): the address isn't my default address. (Command socket considered: %s, found in ad: %s)\n", attr_name, expr_string.c_str(), commandPortSinfulString.c_str(), adSinfulString.c_str());
-		}
-
-		if (!acceptableMatch)
-		{
-			return;
-		}
-	}
-	else
-	{
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): the address isn't my default address. (Default: %s, found in ad: %s)\n", attr_name, expr_string.c_str(), commandPortSinfulString.c_str(), adSinfulString.c_str());
-		return;
-	}
-
-	//
-	// Although it's never useful to rewrite from a non-loopback to a loop-
-	// back address, if there's more than one loopback address on a machine,
-	// (generally but not always because the machine supports more than one
-	// protocol), it's OK to rewrite from one to the other.
-	//
-	// Doing this is any other situation breaks, among other things,
-	// ssh-to-job.  (In a design hack, the starter sends its external
-	// address to the startd over the job-update socket, as part of every
-	// job update ClassAd.  This causes rewriting to happen, but as the
-	// the startd explicity binds the job-update socket to the loopback
-	// address -- presumambly to ensure that it always works -- we need
-	// to make sure we don't rewrite ATTR_STARTER_IP_ADDR when sending
-	// job updates.  *sigh*)
-	//
-	if( (! adSA.is_loopback()) && connectionSA.is_loopback() ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): outbound interface is loopback but default interface is not.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	if( adSinful.getSharedPortID() != NULL ) {
-		// We're using shared port, so "our" port is actually the
-		// shared port daemon's. We shouldn't be messing with that.
-		// We'll rewrite the host on the bold assumption that shared
-		// port daemon and I both use the same IP addresses.
-		rewrite_port = false;
-	}
-
-	MyString my_sock_ip = connectionSA.to_ip_string( true );
-	adSinful.setHost( my_sock_ip.Value() );
-	if( rewrite_port ) {
-		// connectionSA's port is whatever we happen to be using at the moment;
-		// that will be meaningless if we established the connection.  What we
-		// want is the port someone could contact us on.  Go rummage for one.
-		int port = daemonCore->find_interface_command_port_do_not_use( connectionSA );
-
-		// If port is 0, there is no matching listen socket. There is nothing
-		// useful we can rewrite it do, so just give up and hope the default
-		// is useful to someone.
-		if( port == 0 ) {
-			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): unable to find command port for outbound interface '%s'.\n", attr_name, expr_string.c_str(), s.my_ip_str() );
-			return;
-		}
-
-		adSinful.setPort( port );
-	}
-
-	if( adSinful.getSinful() == adSinfulString ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): socket is using same address as the default one; rewrite would do nothing.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	std::string new_expr = expr_string.substr( 0, string_start_pos );
-	new_expr.append( adSinful.getSinful() );
-	new_expr.append( expr_string.substr( string_end_pos ) );
-
-	expr_string = new_expr;
-
-	dprintf( D_NETWORK, "Address rewriting: Replaced default IP %s with "
-			"connection IP %s in outgoing ClassAd attribute %s.\n",
-			adSinfulString.c_str(), adSinful.getSinful(), attr_name );
 }

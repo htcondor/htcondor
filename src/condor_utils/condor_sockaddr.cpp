@@ -614,7 +614,14 @@ bool condor_sockaddr::is_private_network() const
 		return p10.match(*this) || p172_16.match(*this) || p192_168.match(*this);
 	}
 	else if (is_ipv6()) {
-		return IN6_IS_ADDR_LINKLOCAL(&v6.sin6_addr);
+		static bool initialized = false;
+		static condor_netaddr pfc00;
+		if(!initialized) {
+			pfc00.from_net_string("fc00::/7");
+			initialized = true;
+		}
+
+		return pfc00.match(*this);
 	}
 	else {
 
@@ -738,18 +745,17 @@ bool condor_sockaddr::operator==(const condor_sockaddr& rhs) const
 
 bool condor_sockaddr::is_link_local() const {
 	if (is_ipv4()) {
-		static struct in_addr link_mask;
 		static bool initialized = false;
+		static condor_netaddr p169_254;
 		if(!initialized) {
-			int converted = inet_pton(AF_INET, "169.254.0.0", &link_mask);
-			ASSERT(converted);
+			p169_254.from_net_string("169.254.0.0/16");
 			initialized = true;
 		}
-		return ((uint32_t)v4.sin_addr.s_addr & link_mask.s_addr) == link_mask.s_addr;
+
+		return p169_254.match(*this);
 	} else if (is_ipv6()) {
-		// it begins with fe80
-		return v6.sin6_addr.s6_addr[0] == 0xfe &&
-				v6.sin6_addr.s6_addr[1] == 0x80;
+		// fe80::/10
+		return IN6_IS_ADDR_LINKLOCAL(&v6.sin6_addr);
 	}
 	return false;
 }

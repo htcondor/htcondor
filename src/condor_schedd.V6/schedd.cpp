@@ -73,8 +73,6 @@
 #include "condor_mkstemp.h"
 #include "tdman.h"
 #include "utc_time.h"
-#include "schedd_files.h"
-#include "file_sql.h"
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
 #include "classad_visa.h"
@@ -143,8 +141,6 @@ extern char *DebugLock;
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
-
-extern FILESQL *FILEObj;
 
 // priority records
 extern prio_rec *PrioRec;
@@ -358,7 +354,7 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 {
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	classad::Value val;
-	const char *str;
+	const char *str = NULL;
 	if ( ad && tree && 
 		 EvalExprTree(tree,ad,NULL,val) && val.IsStringValue(str) )
 	{
@@ -683,15 +679,6 @@ Scheduler::Scheduler() :
 	startjobsid = -1;
 	periodicid = -1;
 
-#ifdef HAVE_EXT_POSTGRESQL
-	quill_enabled = FALSE;
-	quill_is_remotely_queryable = 0; //false
-	quill_name = NULL;
-	quill_db_name = NULL;
-	quill_db_ip_addr = NULL;
-	quill_db_query_password = NULL;
-#endif
-
 	checkContactQueue_tid = -1;
 	checkReconnectQueue_tid = -1;
 	num_pending_startd_contacts = 0;
@@ -721,9 +708,6 @@ Scheduler::Scheduler() :
     m_userlog_file_cache_clear_interval = 60;
 
 	jobThrottleNextJobDelay = 0;
-#ifdef HAVE_EXT_POSTGRESQL
-	prevLHF = 0;
-#endif
 
 	JobStartCount = 0;
 	MaxNextJobDelay = 0;
@@ -1490,13 +1474,6 @@ Scheduler::count_jobs()
 	m_adBase->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
 
 	daemonCore->UpdateLocalAd(cad);
-
-		// log classad into sql log so that it can be updated to DB
-#ifdef HAVE_EXT_POSTGRESQL
-	if ( FILEObj ) {
-		FILESQL::daemonAdInsert(cad, "ScheddAd", FILEObj, prevLHF);
-	}
-#endif
 
 #if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
@@ -4201,12 +4178,10 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	MyString owner;
 	MyString domain;
 	MyString iwd;
-	MyString gjid;
 	int use_xml;
 
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
-	GetAttributeString(job_id.cluster, job_id.proc, ATTR_GLOBAL_JOB_ID, gjid);
 
 	for(std::vector<const char*>::iterator p = logfiles.begin();
 			p != logfiles.end(); ++p) {
@@ -4230,7 +4205,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
     }
 
 	if (ULog->initialize(owner.Value(), domain.Value(), logfiles,
-			job_id.cluster, job_id.proc, 0, gjid.Value())) {
+			job_id.cluster, job_id.proc, 0)) {
 		if(logfiles.size() > 1) {
 			InitializeMask(ULog,job_id.cluster, job_id.proc);
 		}
@@ -4244,7 +4219,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 		SpoolDir += DIR_DELIM_CHAR;
 		if ( !strncmp( SpoolDir.c_str(), logfilename.c_str(),
 					SpoolDir.length() ) && ULog->initialize( logfiles,
-					job_id.cluster, job_id.proc, 0, gjid.Value() ) ) {
+					job_id.cluster, job_id.proc, 0 ) ) {
 			if(logfiles.size() > 1) {
 				InitializeMask(ULog,job_id.cluster,job_id.proc);
 			}
@@ -4287,7 +4262,7 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 	if ( job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
 		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
 	}
-	if ( warning != NULL ) {
+	if ( warning != NULL && warning[0] ) {
 		event.submitEventWarnings = strnewp( warning );
 	}
 
@@ -4637,6 +4612,21 @@ Scheduler::WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	}
 	FactoryRemoveEvent event;
 
+	MyString reason;
+	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
+	if ( ! reason.empty()) { event.notes = reason.StrDup(); }
+
+	int code = 0;
+	GetJobFactoryMaterializeMode(cluster, code);
+	switch (code) {
+	case mmInvalid: event.completion = FactoryRemoveEvent::CompletionCode::Error; break;
+	case mmRunning: event.completion = FactoryRemoveEvent::CompletionCode::Incomplete; break;
+	case mmHold: event.completion = FactoryRemoveEvent::CompletionCode::Paused; break;
+	case mmNoMoreItems: event.completion = FactoryRemoveEvent::CompletionCode::Complete; break;
+	}
+	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, event.next_proc_id);
+	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_ROW, event.next_row);
+
 	ULog->setEnableFsync(do_fsync);
 	bool status = ULog->writeEvent(&event, cluster);
 	delete ULog;
@@ -4649,6 +4639,70 @@ Scheduler::WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	}
 	return true;
 }
+
+bool
+Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync )
+{
+	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	ULog->setEnableFsync(do_fsync);
+
+	int code = mmRunning;
+	if ( ! cluster->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, code)) {
+		// can't figure out the pause mode of the factory.
+		return false;
+	}
+
+	// if no reason supplied as an argument, use the one in the cluster ad (if any)
+	std::string reason_buf;
+	if ( ! reason) {
+		cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason_buf);
+		if ( ! reason_buf.empty()) { reason = reason_buf.c_str(); }
+	}
+
+	bool status;
+
+	if (code != mmRunning) {
+		// factory is paused.
+		FactoryPausedEvent event;
+		if (reason) event.setReason(reason);
+		// if the code is mmInvalid, there is no hold code, just use the pause reason code (for now)
+		if (code == mmInvalid) {
+			event.setPauseCode(code);
+		} else if (code == mmHold) {
+			// we expect to get here only when code == mmHold, so use the hold_code as the code value
+			// the reason text will also be the hold reason text.
+			// (the other codes are mmNoMoreItems && mmClusterRemoved, which we don't log)
+			event.setPauseCode(code);
+			event.setHoldCode(hold_code);
+		} else {
+			#if 1 //def DEBUG
+			// in debug mode, always write the pause code
+			event.setPauseCode(code);
+			#endif
+		}
+		status = ULog->writeEvent(&event,cluster);
+	} else {
+		// factory is resumed.
+		FactoryResumedEvent event;
+		if (reason) event.setReason(reason);
+		status = ULog->writeEvent(&event,cluster);
+	}
+
+	delete ULog;
+
+	if (!status) {
+		dprintf( D_ALWAYS, "Unable to log %s event for job %d.%d\n", 
+			(code != mmRunning) ? "ULOG_FACTORY_PAUSED" : "ULOG_FACTORY_RESUMED", 
+			cluster->jid.cluster, cluster->jid.proc );
+		return false;
+	}
+	return true;
+}
+
 
 int
 Scheduler::transferJobFilesReaper(int tid,int exit_status)
@@ -4963,7 +5017,10 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		rsock->decode();
 		answer = -1;
 	}
-	rsock->code(answer);
+	if (!rsock->code(answer)) {
+			dprintf(D_FULLDEBUG,"generalJobFilesWorkerThread(): "
+					"cannot send answer to client\n");
+	}
 	rsock->end_of_message();
 	s->timeout(old_timeout);
 
@@ -5125,7 +5182,9 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case SPOOL_JOB_FILES:
 		case SPOOL_JOB_FILES_WITH_PERMS:
 			for (i=0; i<JobAdsArrayLen; i++) {
-				rsock->code(a_job);
+				if (!rsock->code(a_job)) {
+					dprintf(D_ALWAYS, "spoolJobFiles(): cannot recv job from client\n");
+				}
 					// Only add jobs to our list if the caller has permission 
 					// to do so.
 					// cuz only the owner of a job (or queue super user) 
@@ -5398,7 +5457,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	ASSERT(!SpoolSpace.empty());
 	char *proxy_path = NULL;
 	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
-	if( proxy_path && is_relative_to_cwd(proxy_path) ) {
+	if( proxy_path && !fullpath(proxy_path) ) {
 		MyString iwd;
 		if( jobad->LookupString(ATTR_JOB_IWD,iwd) ) {
 			iwd.formatstr_cat("%c%s",DIR_DELIM_CHAR,proxy_path);
@@ -5599,7 +5658,9 @@ UpdateGSICredContinuation::finish_update(ReliSock *rsock, ReliSock::x509_delegat
 
 		// Send our reply back to the client
 	rsock->encode();
-	rsock->code(reply);
+	if (!rsock->code(reply)) {
+		dprintf(D_ALWAYS, "updateGSICred: failed to reply to client\n");
+	}
 	rsock->end_of_message();
 
 	dprintf( D_AUDIT | D_ALWAYS, *rsock, "Refresh GSI cred for job %d.%d %s\n",
@@ -5620,7 +5681,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	int num_cluster_matches = 0;
 	int new_status = -1;
 	char buf[256];
-	char *reason = NULL;
+	MyString reason;
 	const char *reason_attr_name = NULL;
 	ReliSock* rsock = (ReliSock*)s;
 	bool needs_transaction = true;
@@ -5732,24 +5793,14 @@ Scheduler::actOnJobs(int, Stream* s)
 		return FALSE;
 	}
 		// Grab the reason string if the command ad gave it to us
-	char *tmp = NULL;
-	const char *owner;
 	if( reason_attr_name ) {
-		command_ad.LookupString( reason_attr_name, &tmp );
+		command_ad.LookupString( reason_attr_name, reason );
 	}
-	if( tmp ) {
+	if( ! reason.empty() ) {
 			// patch up the reason they gave us to include who did
 			// it. 
-		owner = rsock->getOwner();
-		int size = strlen(tmp) + strlen(owner) + 14;
-		reason = (char*)malloc( size * sizeof(char) );
-		if( ! reason ) {
-				// Maybe change EXCEPT to print to the audit log with D_AUDIT
-			EXCEPT( "Out of memory!" );
-		}
-		sprintf( reason, "\"%s (by user %s)\"", tmp, owner );
-		free( tmp );
-		tmp = NULL;
+		const char *owner = rsock->getOwner();
+		reason += " (by user "; reason += owner; reason += ")";
 	}
 
 	if( action == JA_HOLD_JOBS ) {
@@ -5779,8 +5830,6 @@ Scheduler::actOnJobs(int, Stream* s)
 	if( tree ) {
 		const char *value = ExprTreeToString( tree );
 		if( ! value ) {
-				// TODO: deal with this kind of error
-			free(reason);
 			return false;
 		}
 
@@ -5849,7 +5898,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	} else {
 		constraint = NULL;
 	}
-	tmp = NULL;
+	char * tmp = NULL;
 	if( command_ad.LookupString(ATTR_ACTION_IDS, &tmp) ) {
 		if( constraint ) {
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs(): "
@@ -5858,7 +5907,6 @@ Scheduler::actOnJobs(int, Stream* s)
 			refuse( s );
 			free( tmp );
 			free( constraint );
-			if( reason ) { free( reason ); }
 			return FALSE;
 		}
 		job_ids.initializeFromString( tmp );
@@ -6099,9 +6147,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			jobs[i].cluster = -1;
 			continue;
 		}
-		if( reason ) {
-			SetAttribute( tmp_id.cluster, tmp_id.proc,
-						  reason_attr_name, reason );
+		if( ! reason.empty() ) {
+			SetAttributeString( tmp_id.cluster, tmp_id.proc,
+						  reason_attr_name, reason.Value() );
 				// TODO: deal w/ failure here, too?
 		}
 		SetAttributeInt( tmp_id.cluster, tmp_id.proc,
@@ -6110,8 +6158,6 @@ Scheduler::actOnJobs(int, Stream* s)
 		results.record( tmp_id, AR_SUCCESS );
 		num_success++;
 	}
-
-	if( reason ) { free( reason ); }
 
 	// With late materialization, we may need to operate on clusters (actually the cluster factory) also
 	//
@@ -6133,24 +6179,26 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		case JA_HOLD_JOBS:
 			if (clusterad->factory) {
-				//PRAGMA_REMIND("TODO: make a proper hold (with reasons) for the job factory")
-				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, 1)) {
+				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmHold) < 0) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+				} else {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
-				} else {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
+
+					SetAttributeString(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason.Value());
 				}
 			}
 			break;
 
 		case JA_RELEASE_JOBS:
 			if (clusterad->factory) {
-				//PRAGMA_REMIND("TODO: make a proper hold (with reasons) for the job factory")
-				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, 0)) {
+				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmRunning) < 0) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+				} else {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
-				} else {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
+
+					DeleteAttribute(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSE_REASON); 
 				}
 			}
 			break;
@@ -6158,17 +6206,22 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
 			if (clusterad->factory) {
-				PauseJobFactory(clusterad->factory, 3);
-				//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
-				ScheduleClusterForDeferredCleanup(tmp_id.cluster);
-				// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
-				results.record( tmp_id, AR_SUCCESS );
-				num_success++;
+				// check to see if we are allowed to pause this factory, but don't actually change it's
+				// pause state, the mmClusterRemoved pause mode is a runtime-only schedd state.
+				if (SetAttribute(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, "3", SetAttribute_QueryOnly) < 0) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+				} else {
+					PauseJobFactory(clusterad->factory, mmClusterRemoved);
+					//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
+					ScheduleClusterForDeferredCleanup(tmp_id.cluster);
+					// we succeeded because we found the cluster, and a Pause 3 will cannot fail.
+					results.record( tmp_id, AR_SUCCESS );
+					num_success++;
+				}
 			}
 			break;
 		}
 	}
-
 
 	ClassAd* response_ad;
 
@@ -6245,7 +6298,9 @@ Scheduler::actOnJobs(int, Stream* s)
 		// since if that CommitTransaction failed, we'd EXCEPT()
 	rsock->encode();
 	int answer = OK;
-	rsock->code( answer );
+	if (!rsock->code( answer )) {
+		dprintf(D_FULLDEBUG, "actOnJobs(): tool hung up on us\n");
+	}
 	rsock->end_of_message();
 
 		// Now that we know the events are logged and commited to
@@ -6256,6 +6311,18 @@ Scheduler::actOnJobs(int, Stream* s)
 			continue;
 		}
 		enqueueActOnJobMyself( jobs[i], action, true );
+	}
+	for( i=0; i<num_cluster_matches; i++ ) {
+		tmp_id = clusters[i];
+		JobQueueCluster * clusterad = GetClusterAd(tmp_id);
+		if ( ! clusterad || ! clusterad->factory)
+			continue;
+		if (action == JA_HOLD_JOBS) {
+			// log the change in pause state
+			setJobFactoryPauseAndLog(clusterad, mmHold, CONDOR_HOLD_CODE_UserRequest, reason.Value());
+		} else if (action == JA_RELEASE_JOBS) {
+			setJobFactoryPauseAndLog(clusterad, mmRunning, CONDOR_HOLD_CODE_UserRequest, reason.Value());
+		}
 	}
 
 		// In case we have removed jobs that were queued to run, scan
@@ -9113,7 +9180,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	PROC_ID* job_id = &srec->job_id;
 
 	Shadow*	shadow_obj = NULL;
-	int		sh_is_dc = FALSE;
+	bool	sh_is_dc = FALSE;
 	char* 	shadow_path = NULL;
 	bool wants_reconnect = false;
 
@@ -9188,14 +9255,12 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		}
 	}
 
-	sh_is_dc = (int)shadow_obj->isDC();
+	sh_is_dc = shadow_obj->isDC();
 	bool sh_reads_file = shadow_obj->provides( ATTR_HAS_JOB_AD_FROM_FILE );
 	shadow_path = strdup( shadow_obj->path() );
 
-	if ( shadow_obj ) {
-		delete( shadow_obj );
-		shadow_obj = NULL;
-	}
+	delete( shadow_obj );
+	shadow_obj = NULL;
 
 #endif /* ! WIN32 */
 
@@ -13223,79 +13288,6 @@ Scheduler::Init()
 
 	RequestClaimTimeout = param_integer("REQUEST_CLAIM_TIMEOUT",60*30);
 
-#ifdef HAVE_EXT_POSTGRESQL
-
-	/* See if QUILL is configured for this schedd */
-	if (param_boolean("QUILL_ENABLED", false) == false) {
-		quill_enabled = FALSE;
-	} else {
-		quill_enabled = TRUE;
-	}
-
-	/* only force definition of these attributes if I have to */
-	if (quill_enabled == TRUE) {
-
-		/* set up whether or not the quill daemon is remotely queryable */
-		if (param_boolean("QUILL_IS_REMOTELY_QUERYABLE", true) == true) {
-			quill_is_remotely_queryable = TRUE;
-		} else {
-			quill_is_remotely_queryable = FALSE;
-		}
-
-		/* set up a required quill_name */
-		tmp = param("QUILL_NAME");
-		if (!tmp) {
-			EXCEPT( "No QUILL_NAME specified in config file" );
-		}
-		if (quill_name != NULL) {
-			free(quill_name);
-			quill_name = NULL;
-		}
-		quill_name = strdup(tmp);
-		free(tmp);
-		tmp = NULL;
-
-		/* set up a required database ip address quill needs to use */
-		tmp = param("QUILL_DB_IP_ADDR");
-		if (!tmp) {
-			EXCEPT( "No QUILL_DB_IP_ADDR specified in config file" );
-		}
-		if (quill_db_ip_addr != NULL) {
-			free(quill_db_ip_addr);
-			quill_db_ip_addr = NULL;
-		}
-		quill_db_ip_addr = strdup(tmp);
-		free(tmp);
-		tmp = NULL;
-
-		/* Set up the name of the required database ip address */
-		tmp = param("QUILL_DB_NAME");
-		if (!tmp) {
-			EXCEPT( "No QUILL_DB_NAME specified in config file" );
-		}
-		if (quill_db_name != NULL) {
-			free(quill_db_name);
-			quill_db_name = NULL;
-		}
-		quill_db_name = strdup(tmp);
-		free(tmp);
-		tmp = NULL;
-
-		/* learn the required password field to access the database */
-		tmp = param("QUILL_DB_QUERY_PASSWORD");
-		if (!tmp) {
-			EXCEPT( "No QUILL_DB_QUERY_PASSWORD specified in config file" );
-		}
-		if (quill_db_query_password != NULL) {
-			free(quill_db_query_password);
-			quill_db_query_password = NULL;
-		}
-		quill_db_query_password = strdup(tmp);
-		free(tmp);
-		tmp = NULL;
-	}
-#endif
-
 	int int_val = param_integer( "JOB_IS_FINISHED_INTERVAL", 0, 0 );
 	job_is_finished_queue.setPeriod( int_val );
 	int_val = param_integer( "JOB_IS_FINISHED_COUNT", 1, 1 );
@@ -13383,31 +13375,6 @@ Scheduler::Init()
 	// Since we don't know how many there are yet, just say 0, it will get
 	// fixed in count_job() -Erik 12/18/2006
 	m_adSchedd->Assign(ATTR_NUM_USERS, 0);
-
-#ifdef HAVE_EXT_POSTGRESQL
-	// Put the quill stuff into the add as well
-	if (quill_enabled == TRUE) {
-		m_adSchedd->Assign( ATTR_QUILL_ENABLED, true ); 
-
-		m_adSchedd->Assign( ATTR_QUILL_NAME, quill_name ); 
-
-		m_adSchedd->Assign( ATTR_QUILL_DB_NAME, quill_db_name ); 
-
-		MyString expr;
-		expr.formatstr( "%s = \"<%s>\"", ATTR_QUILL_DB_IP_ADDR,
-					  quill_db_ip_addr ); 
-		m_adSchedd->Insert( expr.Value() );
-
-		m_adSchedd->Assign( ATTR_QUILL_DB_QUERY_PASSWORD, quill_db_query_password); 
-
-		m_adSchedd->Assign( ATTR_QUILL_IS_REMOTELY_QUERYABLE, 
-					  quill_is_remotely_queryable == TRUE ? true : false );
-
-	} else {
-
-		m_adSchedd->Assign( ATTR_QUILL_ENABLED, false );
-	}
-#endif
 
 	char *collectorHost = NULL;
 	collectorHost  = param("COLLECTOR_HOST");
@@ -14705,7 +14672,9 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 	}
 
 	s->encode();
-	s->code(ret_value);
+	if (!s->code(ret_value)) {
+		dprintf(D_FULLDEBUG, "Unable to send ACK to startd keepalive, startd disconnected\n");
+	}
 	s->end_of_message();
 
 	if (claim_id) free(claim_id);
@@ -15263,7 +15232,9 @@ Scheduler::dumpState(int, Stream* s) {
 	job_ad.Assign( "Mail", Mail );
 	
 	int cmd = 0;
-	s->code( cmd );
+	if (!s->code( cmd )) {
+		dprintf(D_ALWAYS, "Squawk client disconnected from server\n");
+	}
 	s->end_of_message();
 
 	s->encode();
@@ -15866,6 +15837,37 @@ releaseJob( int cluster, int proc, const char* reason,
 	scheduler.needReschedule();
 
 	return result;
+}
+
+bool setJobFactoryPauseAndLog(JobQueueCluster * cad, int pause_mode, int hold_code, const std::string & reason)
+{
+	if ( ! cad) return false;
+
+	cad->Assign(ATTR_JOB_MATERIALIZE_PAUSED, pause_mode);
+	if (reason.empty() || pause_mode == mmRunning) {
+		cad->Delete(ATTR_JOB_MATERIALIZE_PAUSE_REASON);
+	} else {
+		if (strchr(reason.c_str(), '\n')) {
+			// make sure that the reason  has no embedded newlines because if it does,
+			// it will cause the SCHEDD to abort when it rotates the job log.
+			std::string msg(reason);
+			std::replace(msg.begin(), msg.end(), '\n', ' ');
+			std::replace(msg.begin(), msg.end(), '\r', ' ');
+			cad->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, msg);
+		} else {
+			cad->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
+		}
+	}
+
+	if (cad->factory) {
+		// make sure that the factory state is in sync with the pause mode
+		CheckJobFactoryPause(cad->factory, pause_mode);
+	}
+
+	// log the change in pause state
+	const char * reason_ptr = reason.empty() ? NULL : reason.c_str();
+	scheduler.WriteFactoryPauseToUserLog(cad, hold_code, reason_ptr);
+	return true;
 }
 
 // Throttle job starts, with bursts of JobStartCount jobs, every

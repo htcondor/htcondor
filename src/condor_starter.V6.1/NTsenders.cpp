@@ -153,7 +153,8 @@ REMOTE_CONDOR_get_job_info(ClassAd *ad)
 	CurrentSysCall = CONDOR_get_job_info;
 
 	syscall_sock->encode();
-	syscall_sock->code(CurrentSysCall);
+	result = syscall_sock->code(CurrentSysCall);
+	ASSERT( result );
 	result = syscall_sock->end_of_message();
 	ASSERT( result );
 
@@ -2185,12 +2186,6 @@ REMOTE_CONDOR_dprintf_stats(char *message)
 {
 	int rval = -1, result = 0;
 	condor_errno_t terrno;
-
-	const CondorVersionInfo *shadowVer = syscall_sock->get_peer_version();
-	if (!shadowVer->built_since_version(8,5,8)) {
-		dprintf ( D_SYSCALLS, "NOT Doing CONDOR_dprintf_stats, shadow is too old\n" );
-		return 0;
-	}
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_dprintf_stats\n" );
 	

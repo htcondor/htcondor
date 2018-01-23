@@ -245,8 +245,10 @@ public:
 
 
 // from qmgmt_factory.cpp
-class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text); // make a job factory from submit digest text
-class JobFactory * MakeJobFactory(JobQueueCluster * job, const char * submit_file); // make a job factory from an on-disk submit digest
+// make a job factory from submit digest text, used on submit, optional user_ident is who to inpersonate when reading item data file (if any)
+class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
+// make a job factory from an on-disk submit digest - used on schedd restart
+class JobFactory * MakeJobFactory(JobQueueCluster * job, const char * submit_file, bool spooled_submit_file, std::string & errmsg);
 void DestroyJobFactory(JobFactory * factory);
 
 void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
@@ -261,9 +263,17 @@ bool JobFactoryIsComplete(JobQueueCluster * cluster);
 bool JobFactoryIsRunning(JobQueueCluster * cluster);
 bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster);
 // if pause_code < 0, pause is permanent, if >= 3, cluster was removed
-int PauseJobFactory(JobFactory * factory, int pause_code);
-int ResumeJobFactory(JobFactory * factory, int pause_code);
-bool CheckJobFactoryPause(JobFactory * factory, int pause_code); // 0 for resume, 1 for pause, returns true if state changed
+typedef enum {
+	mmInvalid = -1, // some fatal error occurred, such as failing to load the submit digest.
+	mmRunning = 0,
+	mmHold = 1,
+	mmNoMoreItems = 2,
+	mmClusterRemoved = 3
+} MaterializeMode;
+int PauseJobFactory(JobFactory * factory, MaterializeMode pause_code);
+int ResumeJobFactory(JobFactory * factory, MaterializeMode pause_code);
+bool CheckJobFactoryPause(JobFactory * factory, int want_pause); // Make sure factory mode matches the persist mode
+bool GetJobFactoryMaterializeMode(JobQueueCluster * cluster, int & pause_code);
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
 

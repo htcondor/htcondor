@@ -160,9 +160,6 @@ usage( const char *str, int iExitCode )
 		fprintf( stderr, "    -collector\n" );
 		fprintf( stderr, "    -negotiator\n" );
 		fprintf( stderr, "    -kbdd\n" );
-#ifdef HAVE_EXT_POSTGRESQL
-		fprintf( stderr, "    -quill\n" );
-#endif
 	}
 	fprintf( stderr, "\n" );
 
@@ -433,12 +430,6 @@ main( int argc, char *argv[] )
 		case 'v':
 			version();
 			break;
-#ifdef HAVE_EXT_POSTGRESQL
-		case 'q':
-			subsys_check( MyName );
-			dt = DT_QUILL;
-			break;
-#endif
 		case 'h':
 			usage( MyName, 0 );
 			break;
@@ -1267,9 +1258,6 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 		break;
 	case DT_CREDD:
 		adtype = CREDD_AD;
-		break;
-	case DT_QUILL:
-		adtype = QUILL_AD;
 		break;
 	case DT_LEASE_MANAGER:
 		adtype = LEASE_MANAGER_AD;

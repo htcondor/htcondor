@@ -111,6 +111,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print TASKLIST "$BUILD_TESTS_TASK 4h\n";
     print TASKLIST "$NATIVE_TASK 4h\n";
     print TASKLIST "$TAR_TASK 4h\n";
+    print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }    
 else {
@@ -120,10 +121,10 @@ else {
     print TASKLIST "$BUILD_TESTS_TASK 4h\n";
     print TASKLIST "$UNSTRIPPED_TASK 4h\n";
     print TASKLIST "$CHECK_UNSTRIPPED_TASK 4h\n";
-    if (!($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7|x86_64_Ubuntu16)/)) {
+    if (!($ENV{NMI_PLATFORM} =~ /(x86_64_Debian9|RedHat|CentOS|x86_64_Ubuntu16)/)) {
         print TASKLIST "$NATIVE_DEBUG_TASK 4h\n";
     }
-    if (!($ENV{NMI_PLATFORM} =~ /x86_64_Ubuntu16/)) {
+    if (!($ENV{NMI_PLATFORM} =~ /(x86_64_Debian9|x86_64_Ubuntu16)/)) {
         print TASKLIST "$NATIVE_TASK 4h\n";
         print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
     }

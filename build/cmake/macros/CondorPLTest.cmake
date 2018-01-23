@@ -22,6 +22,7 @@ MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
 
 		foreach(test ${_TEST_RUNS})
 			file (APPEND ${TEST_TARGET_DIR}/list_${test} "${_TARGET}\n")
+			APPEND_UNIQUE_VAR(CONDOR_TEST_LIST_TAGS ${test})
 		endforeach(test)
 		
 		# add to all targets 
@@ -29,6 +30,8 @@ MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
 
 		# I'm not certain but it appears that the description files are not gen'd
 		# file ( APPEND ${TEST_TARGET_DIR}/${_TARGET}.desc ${_DESC} )
+
+		APPEND_VAR( CONDOR_PL_TESTS ${_TARGET} )
 
 	endif (BUILD_TESTING)
 

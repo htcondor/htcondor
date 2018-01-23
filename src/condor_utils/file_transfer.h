@@ -287,7 +287,7 @@ class FileTransfer: public Service {
 	void InsertPluginMappings(MyString methods, MyString p);
 	MyString DeterminePluginMethods( CondorError &e, const char* path );
 	int InitializePlugins(CondorError &e);
-	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, const char* proxy_filename = NULL);
+	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
     int OutputFileTransferStats( ClassAd &stats );
 	MyString GetSupportedMethods();
 

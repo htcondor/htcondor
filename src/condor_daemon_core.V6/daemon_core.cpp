@@ -1233,6 +1233,11 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		// Sinful in the address file will have TCP_FORWARDING_HOST as its
 		// primary address, and older versions of HTCondor don't ignore
 		// the primary address).
+		//
+		// NOTE: For the primary address in our sinful string, prefer an
+		// IPv4 address, if available. The primary address is only used by
+		// older clients (pre-8.3.x) that don't understand the addrs field
+		// and probably don't have good IPv6 support.
 		char const * addr = sock->get_sinful_public();
 		if(! sa.is_ipv4()) {
 			for( int i = initialCommandSock; i < nSock; ++i ) {
@@ -4860,6 +4865,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 				// below to determine whether we should send a UNIX
 				// SIGTERM or a DC signal.
 			if ( pid != mypid && target_has_dcpm == FALSE ) {
+				dprintf(D_ALWAYS, "Send_Signal SIGTERM to pid %d using Shutdown_Graceful\n", pid);
 				if( Shutdown_Graceful(pid) ) {
 					msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
 				}
@@ -4985,9 +4991,11 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, destination );
 
 	// now destination process is local, send via UDP; if remote, send via TCP
+	bool is_udp = false;
 	if ( is_local == TRUE && d->hasUDPCommandPort()) {
 		msg->setStreamType(Stream::safe_sock);
 		if( !nonblocking ) msg->setTimeout(3);
+		is_udp = true;
 	}
 	else {
 		msg->setStreamType(Stream::reli_sock);
@@ -4996,6 +5004,8 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	{
 		msg->setSecSessionId(pidinfo->child_session_id);
 	}
+	dprintf(D_FULLDEBUG, "Send_Signal %d to pid %d via %s in %s mode\n", sig, pid, is_udp ? "UDP" : "TCP", nonblocking ? "nonblocking" : "blocking");
+
 	msg->messengerDelivery( true ); // we really are sending this message
 	if( nonblocking ) {
 		d->sendMsg( msg.get() );
@@ -5354,7 +5364,7 @@ void *DaemonCore::GetDataPtr()
 // else FALSE means not inheritable.
 int DaemonCore::SetFDInheritFlag(int fh, int flag)
 {
-	long underlying_handle;
+	intptr_t underlying_handle;
 
 	underlying_handle = _get_osfhandle(fh);
 
@@ -7033,6 +7043,10 @@ int DaemonCore::Create_Process(
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
 			goto wrapup;
 		}
+		KeyCacheEntry *entry = NULL;
+		rc = getSecMan()->session_cache->lookup(session_id_c_str,entry);
+		ASSERT( rc && entry && entry->policy() );
+		entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 		IpVerify* ipv = getSecMan()->getIpVerify();
 		MyString id = CONDOR_CHILD_FQU;
 		ipv->PunchHole(DAEMON, id);
@@ -7148,7 +7162,7 @@ int DaemonCore::Create_Process(
 				else {
 					// we are handing down a C library FD
 					SetFDInheritFlag(std[ii],TRUE);	// set handle inheritable
-					long longTemp = _get_osfhandle(std[ii]);
+					intptr_t longTemp = _get_osfhandle(std[ii]);
 					if (longTemp != -1 ) {
 						valid = TRUE;
 						*std_handles[ii] = (HANDLE)longTemp;
@@ -8934,6 +8948,10 @@ DaemonCore::Inherit( void )
 			{
 				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
 			}
+			KeyCacheEntry *entry = NULL;
+			rc = getSecMan()->session_cache->lookup(claimid.secSessionId(),entry);
+			ASSERT( rc && entry && entry->policy() );
+			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			MyString id;
 			id.formatstr("%s", CONDOR_PARENT_FQU);
@@ -11034,34 +11052,4 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 		m_ssock = counted_ptr<SafeSock>(new SafeSock);
 	}
 	return true;
-}
-
-int DaemonCore::find_interface_command_port_do_not_use(const condor_sockaddr & addr) {
-
-	// Boldly assuming all entries in dc_socks have relisocks and
-	// that all listen sockets for a given protocol use the same port
-	// As of Sept 2014, I believe these are true.  This function should
-	// go away long before these are violated.
-	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
-		ASSERT(it->has_relisock());
-		condor_sockaddr listen_addr = it->rsock()->my_addr();
-		if(addr.get_protocol() == listen_addr.get_protocol()) {
-			return listen_addr.get_port();
-		}
-	}
-	// No matching listen socket.
-	return 0;
-}
-
-bool DaemonCore::is_command_port_do_not_use(const condor_sockaddr & addr) {
-	// Boldly assuming all entries in dc_socks have relisocks and
-	// that all listen sockets for a given protocol use the same port
-	// As of Sept 2014, I believe these are true.  This function should
-	// go away long before these are violated.
-	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
-		ASSERT(it->has_relisock());
-		condor_sockaddr listen_addr = it->rsock()->my_addr();
-		if(listen_addr == addr) { return true; }
-	}
-	return false;
 }

@@ -256,7 +256,6 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             //get buf's c_str in an editable format
             exprString = (char*)malloc(buf.size() + 1);
             strncpy(exprString, buf.c_str(),buf.size() + 1 ); 
-            //ConvertDefaultIPToSocketIP(tmpAttrName.c_str(),&exprString,*sock);
             /*
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
                     compat_classad::ClassAdAttributeIsPrivate(tmpAttrName.c_str())) {

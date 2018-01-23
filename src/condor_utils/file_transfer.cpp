@@ -39,11 +39,12 @@
 #include "globus_utils.h"
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
-#include "file_transfer_db.h"
 #include "mk_cache_links.h"
 #include "subsystem_info.h"
 #include "condor_url.h"
 #include "my_popen.h"
+#include "file_transfer_stats.h"
+#include "utc_time.h"
 #include <list>
 #include <fstream>
 
@@ -749,7 +750,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		// this only has to happen once, and we will only be in this section
 		// of the code once (because the CommandsRegistered flag is static),
 		// initialize the C++ random number generator here as well.
-		set_seed( time(NULL) + (unsigned long)this + (unsigned long)Ad );
+		set_seed( (int)(time(NULL) + (time_t)this + (time_t)Ad) );
 	}
 
 	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf, sizeof(buf)) != 1) {
@@ -1838,6 +1839,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
 	int numFiles = 0;
+	UtcTime utcTime;
 
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
@@ -1998,7 +2000,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			}
 			else if(res) {
 				// legit remap was found
-				if(!is_relative_to_cwd(remap_filename.Value())) {
+				if(fullpath(remap_filename.Value())) {
 					fullname = remap_filename;
 				}
 				else {
@@ -2101,7 +2103,20 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		start = time(NULL);
+		
+		// Setup the FileTransferStats object for this file, which we'll use
+		// to gather per-transfer statistics (different from the other
+		// statistics gathering which only tracks cumulative totals)
+		FileTransferStats thisFileStats;
+		thisFileStats.TransferFileBytes = 0;
+		thisFileStats.TransferFileName = filename.Value();
+		thisFileStats.TransferProtocol = "cedar";
+		thisFileStats.TransferStartTime = utcTime.getTimeDouble();
+		thisFileStats.TransferType = "download";
 
+		// Create a ClassAd we'll use to store stats from a file transfer
+		// plugin, if we end up using one.
+		ClassAd pluginStatsAd;
 
 		if (reply == 999) {
 			// filename already received:
@@ -2200,7 +2215,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 
-			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), LocalProxyName.Value());
+			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
 
 
 		} else if ( reply == 4 ) {
@@ -2291,6 +2306,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		elapsed = time(NULL)-start;
+		thisFileStats.TransferEndTime = utcTime.getTimeDouble();
+		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
 		if( rc < 0 ) {
 			int the_error = errno;
@@ -2395,31 +2412,29 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 		*total_bytes += bytes;
+		thisFileStats.TransferFileBytes += bytes;
+		thisFileStats.TransferTotalBytes += bytes;
 		bytes = 0;
 
 		numFiles++;
 
-#ifdef HAVE_EXT_POSTGRESQL
-	        file_transfer_record record;
-		record.fullname = fullname.Value();
-		record.bytes = bytes;
-		record.elapsed  = elapsed;
-    
-			// Get the name of the daemon calling DoDownload
-		char daemon[16]; daemon[15] = '\0';
-		strncpy(daemon, get_mySubSystem()->getName(), 15);
-		record.daemon = daemon;
+		// Gather a few more statistics
+		thisFileStats.TransferSuccess = download_success;
 
-		record.sockp =s;
-		record.transfer_time = start;
-		record.delegation_method_id = delegation_method;
-		file_transfer_db(&record, &jobAd);
-#else
+		// Merge the file transfer stats we recorded here with the stats 
+		// retrieved from a plugin. If we didn't use a file transfer plugin 
+		// this time, this ClassAd will just be empty.
+		ClassAd thisFileStatsAd;
+		thisFileStats.Publish(thisFileStatsAd);
+		thisFileStatsAd.Update(pluginStatsAd);
+
+		// Write stats to disk
+		OutputFileTransferStats(thisFileStatsAd);
+
 		// Get rid of compiler set-but-not-used warnings on Linux
 		// Hopefully the compiler can just prune out the emitted code.
 		if (delegation_method) {}
 		if (elapsed) {}
-#endif
 	}
 
 	// go back to the state we were in before file transfer
@@ -2870,6 +2885,11 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 {
 	dprintf(D_FULLDEBUG,"entering FileTransfer::UploadThread\n");
 	FileTransfer * myobj = ((upload_info *)arg)->myobj;
+
+	if (s == NULL) {
+		return 0;
+	}
+
 	filesize_t	total_bytes;
 	int status = myobj->DoUpload( &total_bytes, (ReliSock *)s );
 	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
@@ -2997,7 +3017,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			is_url = true;
 			fullname = filename;
 			dprintf(D_FULLDEBUG, "DoUpload: sending %s as URL.\n", filename);
-		} else if( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
+		} else if( !fullpath( filename ) ){
 			// looks like a relative path
 			fullname.formatstr("%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
 		} else {
@@ -3258,9 +3278,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				URL += filename;
 
 				// actually invoke the plugin.  this could block indefinitely.
+				ClassAd pluginStatsAd;
 				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.Value(), URL.Value());
 				dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.Value());
-				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), URL.Value(), LocalProxyName.Value());
+				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), URL.Value(), &pluginStatsAd, LocalProxyName.Value());
 				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.Value(), URL.Value(), rc);
 
 				// report the results:
@@ -4230,7 +4251,7 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 }
 
 
-int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, const char* proxy_filename) {
+int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, ClassAd* plugin_stats, const char* proxy_filename) {
 
 	if (plugin_table == NULL) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", source);
@@ -4318,9 +4339,8 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 	// Capture stdout from the plugin and dump it to the stats file
 	char single_stat[1024];
-	ClassAd plugin_stats;
 	while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
-		if( !plugin_stats.Insert( single_stat ) ) {
+		if( !plugin_stats->Insert( single_stat ) ) {
 			dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", single_stat);
 		}
 	}
@@ -4349,15 +4369,17 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// clean up
 	free(method);
 
-	// Save the statistics we gathered to disk
-	OutputFileTransferStats( plugin_stats );
-
 	// any non-zero exit from plugin indicates error.  this function needs to
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
 
 	if (plugin_status != 0) {
-		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s", plugin_status, plugin.Value());
+		std::string errorMessage;
+		std::string transferUrl;
+		plugin_stats->LookupString("TransferError", errorMessage);
+		plugin_stats->LookupString("TransferUrl", transferUrl);
+		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)", 
+			plugin_status, plugin.Value(), errorMessage.c_str(), transferUrl.c_str());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 
@@ -4382,24 +4404,13 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 		if( stats_file_buf.st_size > 5000000 ) {
 			std::string stats_file_old_path = param( "FILE_TRANSFER_STATS_LOG" );
 			stats_file_old_path += ".old";
-
-			std::ifstream stats_file_old_input( stats_file_path );
-			std::ofstream stats_file_old_output( stats_file_old_path, std::fstream::app );
-
-			std::string line;    
-			while( getline( stats_file_old_input, line ) ) {
-				stats_file_old_output << line << std::endl;
+			// TODO: Add a lock to prevent two starters from rotating the log 
+			// at the same time.
+			if (rotate_file(stats_file_path.c_str(), stats_file_old_path.c_str()) != 0) {
+				dprintf(D_ALWAYS, "FileTransfer failed to rotate %s to %s\n", stats_file_path.c_str(), stats_file_old_path.c_str());
 			}
-
-			stats_file_old_input.close();
-			stats_file_old_output.close();
-
-			// Now delete the original stats file
-			unlink( stats_file_path.c_str() );
-
 		}
 	}
-
 
 	// Add some new job-related statistics that were not available from
 	// the file transfer plugin.
@@ -4416,19 +4427,25 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 	stats.Assign( "JobOwner", owner );
 
 	// Output statistics to file
-	MyString stats_string;    
-	std::ofstream stats_file_output;
-	stats_file_output.open( stats_file_path, std::fstream::app );
-	if( stats_file_output.fail() ) {
-		dprintf( D_ALWAYS, "FILETRANSFER: failed to write statistics file %s with"
+	MyString stats_string;
+	MyString stats_output = "***\n";
+	sPrintAd( stats_string, stats );
+	stats_output += stats_string;
+
+	FILE* stats_file = safe_fopen_wrapper( stats_file_path.c_str(), "a" );
+	if( !stats_file ) {
+		dprintf( D_ALWAYS, "FILETRANSFER: failed to open statistics file %s with"
 			" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
 	}
-	sPrintAd( stats_string, stats );
-	stats_file_output << stats_string.Value() << "***" << std::endl;    
-
-	// All done, cleanup and return
-	stats_file_output.close();
-
+	else {
+		int stats_file_fd = fileno( stats_file );
+		if ( write( stats_file_fd, stats_output.Value(), stats_output.length() ) == -1 ) {
+			dprintf( D_ALWAYS, "FILETRANSFER: failed to write to statistics file %s with"
+				" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
+		}
+		fclose( stats_file );
+	}
+	
 	// back to previous priv state
 	set_priv(saved_priv);
 
@@ -4622,7 +4639,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	}
 
 	std::string full_src_path;
-	if( is_relative_to_cwd( src_path ) ) {
+	if( !fullpath( src_path ) ) {
 		full_src_path = iwd;
 		if( full_src_path.length() > 0 ) {
 			full_src_path += DIR_DELIM_CHAR;
@@ -4810,7 +4827,7 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 	canonicalize_dir_delimiters( buf );
 	path = buf.Value();
 
-	if( !is_relative_to_cwd(path) ) {
+	if( fullpath(path) ) {
 		return false;
 	}
 
@@ -4897,7 +4914,7 @@ GetDelegatedProxyRenewalTime(ClassAd *jobAd)
 bool
 FileTransfer::outputFileIsSpooled(char const *fname) {
 	if(fname) {
-		if( is_relative_to_cwd(fname) ) {
+		if( !fullpath(fname) ) {
 			if( Iwd && SpoolSpace && strcmp(Iwd,SpoolSpace)==0 ) {
 				return true;
 			}

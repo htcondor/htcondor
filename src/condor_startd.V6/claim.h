@@ -179,7 +179,7 @@ public:
 			@param request_ad The ClassAd for the current activation.
 			  If NULL, we reuse the ClassAd already in the claim object.
 		*/
-	void saveJobInfo( ClassAd* request_ad = NULL );
+	void cacheJobInfo(ClassAd* job);
 
 		// Timer functions
 	void start_match_timer();
@@ -206,15 +206,14 @@ public:
     bool        idMatches( const char* id );
 	Client* 	client() 		{return c_client;};
 	Resource* 	rip()			{return c_rip;};
-	ClassAd*	ad() 			{return c_ad;};
+	ClassAd*	ad() 			{return c_jobad;};
 	int			universe()		{return c_universe;};
 	int			cluster()		{return c_cluster;};
 	int			proc()			{return c_proc;};
 	Stream*		requestStream()	{return c_request_stream;};
 	int			getaliveint()	{return c_aliveint;};
 	ClaimState	state()			{return c_state;};
-	float		percentCpuUsage( void );
-	unsigned long	imageSize( void );
+	void		updateUsage(double & percentCpuUsage, long long & imageSize);
 	CODMgr*		getCODMgr( void );
 	bool		hasPendingCmd() {return c_pending_cmd != -1;};
 	bool		hasJobAd();
@@ -230,7 +229,8 @@ public:
 		// Functions that set the values of data
 	void setrank(float therank)	{c_rank=therank;};
 	void setoldrank(float therank) {c_oldrank=therank;};
-	void setad(ClassAd *ad);		// Set our ad to the given pointer
+	// take ownership of the given job ad pointer.
+	void setjobad(ClassAd * ad);
 	void setRequestStream(Stream* stream);	
 	void setaliveint(int alive);
 	void disallowUnretire()     {c_may_unretire=false;}
@@ -243,9 +243,8 @@ public:
 	int activationCount() {return c_activation_count;}
 
 		// starter-related functions
-	int	 spawnStarter( Stream* = NULL );
-	void setStarter( Starter* s );
-	void starterExited( int status );
+	int	 spawnStarter( Starter* starter, ClassAd * job, Stream* = NULL );
+	void starterExited( Starter* starter, int status );
 	bool starterPidMatches( pid_t starter_pid );
 	bool isDeactivating( void );
 	bool isActive( void );
@@ -304,13 +303,13 @@ private:
 	Client 		*c_client;
 	ClaimId 	*c_id;
 	ClaimType	c_type;
-	ClassAd*	c_ad;
-	Starter*	c_starter;
+	ClassAd*	c_jobad;
+	pid_t		c_starter_pid;
 	float		c_rank;
 	float		c_oldrank;
 	int			c_universe;
-	int			c_proc;
 	int			c_cluster;
+	int			c_proc;
 	char*		c_global_job_id;
 	int			c_job_start;
 	int			c_last_pckpt;
@@ -339,6 +338,7 @@ private:
 	int			c_lease_duration; // Duration of our claim/job lease
 	int			c_aliveint;		// Alive interval for this claim
 	bool		c_starter_handles_alives;  // if true, don't send alives when starter running
+	bool		c_startd_sends_alives; // set by param with override by schedd via an attribute in the job.
 
 	char*		c_cod_keyword;	// COD keyword for this claim, if any
 	int			c_has_job_ad;	// Do we have a job ad for the COD claim?
@@ -355,6 +355,9 @@ private:
 	bool        c_schedd_closed_claim;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
 
+	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage
+	double c_cpus_usage;    // CpusUsage from last call to updateUsage
+	long long c_image_size;	// ImageSize from last call to updateUsage
 
 		// Helper methods
 	int  finishReleaseCmd( void );

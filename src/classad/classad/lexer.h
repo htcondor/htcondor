@@ -79,9 +79,7 @@ class Lexer
 			LEX_CLOSE_PAREN,
 			LEX_OPEN_BRACE,
 			LEX_CLOSE_BRACE,
-			LEX_BACKSLASH,
-			LEX_ABSOLUTE_TIME_VALUE,
-			LEX_RELATIVE_TIME_VALUE
+			LEX_BACKSLASH
 		};
 
 		class TokenValue
@@ -94,9 +92,6 @@ class Lexer
 					realValue            = 0.0;
 					boolValue            = false;
 					quotedExpr           = false;
-					relative_secs        = 0;
-					absolute_secs.secs   = 0;
-					absolute_secs.offset = 0;
 				}
 
 				~TokenValue( ) {
@@ -127,14 +122,6 @@ class Lexer
 					quotedExpr = quoted;
 				}
 
-				void SetAbsTimeValue( abstime_t asecs ) {
-					absolute_secs = asecs;
-				}
-
-				void SetRelTimeValue( double rsecs ) {
-					relative_secs = rsecs;
-				}
-
 				TokenType GetTokenType( ) {
 					return tt;
 				}
@@ -160,14 +147,6 @@ class Lexer
 					quoted = quotedExpr;
 				}
 
-				void GetAbsTimeValue( abstime_t& asecs ) {
-					asecs = absolute_secs;
-				}
-
-				void GetRelTimeValue( double& rsecs ) {
-					rsecs = relative_secs;
-				}
-
 				void CopyFrom( TokenValue &tv ) {
 					tt = tv.tt;
 					factor = tv.factor;
@@ -175,8 +154,6 @@ class Lexer
 					realValue = tv.realValue;
 					boolValue = tv.boolValue;
 					quotedExpr = tv.quotedExpr;
-					relative_secs = tv.relative_secs;
-					absolute_secs = tv.absolute_secs;
 					strValue = tv.strValue;
 				}
 					
@@ -188,8 +165,6 @@ class Lexer
 				bool 				boolValue;
 				bool				quotedExpr;
 				std::string			strValue;
-				double				relative_secs;
-				abstime_t           absolute_secs;
 		};
 
 		// ctor/dtor

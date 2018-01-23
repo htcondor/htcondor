@@ -240,7 +240,10 @@ TransferDaemon::push_transfer_requests(void)
 
 		// Let's use the only encapsulation protocol we have at the moment.
 		m_treq_sock->encode();
-		m_treq_sock->code((unsigned char *)encap);
+		if (!m_treq_sock->code((unsigned char *)encap)) {
+			dprintf(D_ALWAYS, "transferd hung up on us, not able to send transfer requests\n");
+			return false;
+		}
 		m_treq_sock->end_of_message();
 
 		// This only puts a small amount of the treq onto the channel. The

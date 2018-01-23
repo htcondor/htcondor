@@ -500,51 +500,49 @@ VanillaProc::StartJob()
 		mount_under_scratch.set(buf.StrDup());
 	}
 	if (mount_under_scratch) {
-		std::string working_dir = Starter->GetWorkingDir();
+		const char* working_dir = Starter->GetWorkingDir();
 
-		if (IsDirectory(working_dir.c_str())) {
+		if (IsDirectory(working_dir)) {
 			StringList mount_list(mount_under_scratch);
 
 			mount_list.rewind();
 			if (!fs_remap) {
 				fs_remap = new FilesystemRemap();
 			}
-			char * next_dir;
+			const char * next_dir;
 			while ( (next_dir=mount_list.next()) ) {
 				if (!*next_dir) {
 					// empty string?
 					mount_list.deleteCurrent();
 					continue;
 				}
-				std::string next_dir_str(next_dir);
 				// Gah, I wish I could throw an exception to clean up these nested if statements.
 				if (IsDirectory(next_dir)) {
-					char * full_dir = dirscat(working_dir, next_dir_str);
+					MyString fulldirbuf;
+					const char * full_dir = dirscat(working_dir, next_dir, fulldirbuf);
 					if (full_dir) {
-						std::string full_dir_str(full_dir);
-						delete [] full_dir; full_dir = NULL;
-						if (!mkdir_and_parents_if_needed( full_dir_str.c_str(), S_IRWXU, PRIV_USER )) {
-							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir_str.c_str());
+						if (!mkdir_and_parents_if_needed( full_dir, S_IRWXU, PRIV_USER )) {
+							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir);
 							delete fs_remap;
 							return FALSE;
 						}
-						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir_str.c_str(), next_dir_str.c_str());
-						if (fs_remap->AddMapping(full_dir_str, next_dir_str)) {
+						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir);
+						if (fs_remap->AddMapping(full_dir, next_dir)) {
 							// FilesystemRemap object prints out an error message for us.
 							delete fs_remap;
 							return FALSE;
 						}
 					} else {
-						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir.c_str(), next_dir_str.c_str());
+						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir, next_dir);
 						delete fs_remap;
 						return FALSE;
 					}
 				} else {
-					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir.c_str(), next_dir, next_dir);
+					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir, next_dir);
 				}
 			}
 		} else {
-			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir.c_str());
+			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir);
 			delete fs_remap;
 			return FALSE;
 		}

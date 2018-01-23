@@ -59,7 +59,7 @@ public:
 
 	void publish( ClassAd* ad, amask_t mask );
 
-	Starter* findStarter( ClassAd* job_ad, ClassAd* mach_ad, 
+	Starter* newStarter( ClassAd* job_ad, ClassAd* mach_ad,
 						  bool &no_starter,
 						  int starter_num = -1); 
 
@@ -67,7 +67,7 @@ public:
 
 private:
 
-	Starter* makeStarter( const char* path );
+	Starter* registerStarter( const char* path );
 
 	SimpleList<Starter*> starters;
 

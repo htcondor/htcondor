@@ -459,6 +459,7 @@ Matchmaker ()
 											 ResourcesInUseByUsersGroup_classad_func );
 	slotWeightStr = 0;
 	m_staticRanks = false;
+	m_dryrun = false;
 }
 
 Matchmaker::
@@ -2167,6 +2168,18 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
     // Current group gets anything remaining after assigning to any children
     // If there are no children (a leaf) then this group gets all the quota
     group->quota = (allow_quota_oversub) ? quota : (quota - chq);
+
+	// However, if we are the root ("<none>") group, the "quota" cannot be configured by the
+	// admin, and the "quota" represents the entire pool.  We calculate the surplus at any node
+	// as the difference between this quota and any demand.  So, if we left the "quota" to be the 
+	// whole pool, we would be double-counting surplus slots.  Therefore, no matter what allow_quota_oversub
+	// is, set the "quota" of the root <none> node (really the limit of usage at exactly this node) 
+	// to be the total size of the pool, minus the sum allocation of all the child nodes under it, recursively.
+
+	if (group->name == "<none>") {
+		group->quota = quota - chq;
+	}
+
     if (group->quota < 0) group->quota = 0;
     dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", group->name.c_str(), group->quota);
 }
@@ -2190,7 +2203,9 @@ double Matchmaker::hgq_fairshare(GroupEntry* group) {
             group->name.c_str(), group->quota, group->allocated, group->requested);
 
     // If this is a leaf group, we're finished: return the surplus
-    if (group->children.empty()) return surplus;
+    if (group->children.empty()) {
+		return surplus;
+	}
 
     // This is an internal group: perform fairshare recursively on children
     for (unsigned long j = 0;  j < group->children.size();  ++j) {
@@ -6527,11 +6542,6 @@ Matchmaker::updateCollector() {
         daemonCore->dc_stats.Publish(*publicAd);
 		daemonCore->monitor_data.ExportData(publicAd);
 
-		if ( FILEObj ) {
-			// log classad into sql log so that it can be updated to DB
-			FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);
-		}
-
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 		NegotiatorPluginManager::Update(*publicAd);
@@ -6573,9 +6583,6 @@ Matchmaker::invalidateNegotiatorAd( void )
 /* CONDORDB functions */
 void Matchmaker::insert_into_rejects(char const *userName, ClassAd& job)
 {
-	if ( !FILEObj ) {
-		return;
-	}
 	int cluster, proc;
 //	char startdname[80];
 	char globaljobid[200];
@@ -6610,14 +6617,9 @@ void Matchmaker::insert_into_rejects(char const *userName, ClassAd& job)
 
 	snprintf(tmp, 512, "GlobalJobId = \"%s\"", globaljobid);
 	tmpClP->Insert(tmp);
-	
-	FILEObj->file_newEvent("Rejects", tmpClP);
 }
 void Matchmaker::insert_into_matches(char const * userName,ClassAd& request, ClassAd& offer)
 {
-	if ( !FILEObj ) {
-		return;
-	}
 	char startdname[80],remote_user[80];
 	char globaljobid[200];
 	float remote_prio;
@@ -6667,8 +6669,6 @@ void Matchmaker::insert_into_matches(char const * userName,ClassAd& request, Cla
 		snprintf(tmp, 512, "remote_priority = %f", remote_prio);
 		tmpClP->Insert(tmp);
 	}
-	
-	FILEObj->file_newEvent("Matches", tmpClP);
 }
 /* This extracts the machine name from the global job ID [user@]machine.name#timestamp#cluster.proc*/
 static int get_scheddname_from_gjid(const char * globaljobid, char * scheddname )

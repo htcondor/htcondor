@@ -20,7 +20,6 @@
 #define _CONDOR_WRITE_USER_LOG_STATE_CPP_H
 
 #include "condor_common.h"
-#include "stat_struct.h"
 #include "stat_wrapper.h"
 
 class WriteUserLogState

@@ -12,6 +12,147 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-7-7}Version 8.7.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.7.7 not yet released.
+%\item HTCondor version 8.7.7 released on Month Date, 2018.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Removed configuration parameters \MacroNI{ENABLE\_ADDRESS\_REWRITING}
+and \MacroNI{SHARED\_PORT\_ADDRESS\_REWRITING}.
+\Ticket{6525}
+
+\item An IPv6 address can now be specified in the configuration file
+either with or without square brackets in most cases.
+If specifying a port number in the same value, the square brackets are
+required.
+If using a wildcard to specify a range of possible addresses, square
+brackets are not allowed.
+\Ticket{5697}
+
+\item Improved support for IPv6 link-local addresses, in particular
+using the correct scope id.
+Using a wildcard or device name in \MacroNI{NETWORK\_INTERFACE} now
+works properly when \MacroNI{NO\_DNS} is set to \Expr{True}.
+\Ticket{6518}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item IPv4 addresses are now ignored when resolving a hostname and
+\MacroNI{ENABLE\_IPV4} is set to \Expr{False}.
+\Ticket{4881}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-7-6}Version 8.7.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.7.6 released on January 4, 2018.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Changed the default value of configuration parameter \MacroNI{IS\_OWNER}
+to \Expr{False}. The previous default value is now set as part of the
+\texttt{use POLICY : Desktop} configuration template.
+\Ticket{6463}
+
+\item You may now use SCHEDD and JOB instead of MY and TARGET in
+\MacroNI{SUBMIT\_REQUIREMENTS} expressions.
+\Ticket{4818}
+
+\item Added cmake build option \MacroNI{WANT\_PYTHON\_WHEELS} and make target
+\Expr{pypi\_staging} to build the framework for Python wheels.
+This option and target
+are not enabled by default and are not likely to work outside of Linux
+environments with a single Python installation.
+\Ticket{6486}
+
+\item Added new job attributes BatchProject and BatchRuntime for grid-type
+batch jobs.
+They specify the project/allocation name and maximum runtime in seconds
+for the job that's submited to the underlying batch system.
+\Ticket{6451}
+
+\item HTCondor now respects \Attr{ATTR\_JOB\_SUCCESS\_EXIT\_CODE} when sending
+job notifications.
+\Ticket{6432}
+
+\item Added some graph metrics (height, width, etc.) to DAGMan's metrics file
+output.
+\Ticket{6470}
+
+\item Removed Quill from HTCondor codebase.
+\Ticket{6496}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item HTCondor now reports all submit warnings, not just the first one.
+\Ticket{6446}
+
+\item The job log will no longer contain empty submit warnings.
+\Ticket{6465}
+
+\item DAGMan previously connected to \Condor{schedd} every time it detected
+an update in its internal state. This is too aggressive for rapidly changing
+DAGs, so we've changed the connection to happen in time intervals defined by
+\MacroNI{DAGMAN\_QUEUE\_UPDATE\_INTERVAL}, by default once every five minutes.
+\Ticket{6464}
+
+\item DAGMan now enforces the \MacroNI{DAGMAN\_MAX\_JOB\_HOLDS} limit by the
+number of held jobs in a cluster at the same time. Previously it counted all
+holds over the lifetime of a cluster, even if only a small number of them are
+active at the same time.
+\Ticket{6492}
+
+\item Fixed a bug where on rare occasions the \File{ShadowLog} would
+become owned by \Login{root}.
+\Ticket{6485}
+
+\item Fixed a bug where using \Condor{qedit}
+to change any of the concurrency limits of a job would have no effect.
+\Ticket{6448}
+
+\item When \MacroNI{copy\_to\_spool} is set to \Expr{True},
+\Condor{submit} now attempts to transfer the job exectuable only once per
+job cluster, instead of once per job.
+\Ticket{6459}
+
+\item Fixed a bug that could result in an incorrect total reported by
+\condor{rm} when the \Opt{-totals} option is used.
+\Ticket{6450}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-7-5}Version 8.7.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -19,8 +160,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.5 not yet released.
-%\item HTCondor version 8.7.5 released on Month Date, 2017.
+\item HTCondor version 8.7.5 released on November 14, 2017.
 
 \end{itemize}
 
@@ -37,7 +177,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Security
+This release of HTCondor fixes a security-related bug described at 
+\URL{http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html}.
+\Ticket{6455}
 
 \end{itemize}
 
@@ -49,8 +192,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.4 not yet released.
-%\item HTCondor version 8.7.4 released on Month Date, 2017.
+\item HTCondor version 8.7.4 released on October 31, 2017.
 
 \end{itemize}
 
@@ -59,8 +201,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added submit warnings.  See section \ref{sec:Schedd-Config-Submit-Warnings}.
-\Ticket{5971}
+\item Added support for late materialization into \Condor{dagman}. DAGs that
+include late materialized jobs now work correctly in both normal and recovery
+conditions.
+\Ticket{6274}
+
+\item We now produce run time statistics in \Condor{dagman}, tracking how
+much time DAGMan spends idle, how much time it spends submitting jobs and
+processing log files. This information could be used to determine why a DAG
+is submitting jobs slowly and how to optimize it. These statistics currently get
+dumped into the .dagman.out file at the end of a DAGs execution.
+\Ticket{6411}
+
+\item Added a new knob to \Condor{dagman}, \MacroNI{DAGMAN\_AGGRESSIVE\_SUBMIT}.
+When set to True, this tells DAGMan to ignore the interval time limit for
+submitting jobs (defined by \MacroNI{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}) and to
+continuously submit jobs until no more are ready, or until it hits a different
+limit.
+\Ticket{6386}
 
 \item Added \Arg{status} command to \Condor{annex}.  This command invokes
 \Condor{status} to display information about annex instances that have
@@ -85,24 +243,53 @@ and the third table will be generated from those ads whose key appeared
 only in \Arg{file}.
 \Ticket{6321}
 
-\item Added support for late materialization into \Condor{dagman}. DAGs that
-include late materialized jobs now work correctly in both normal and recovery 
-conditions.
-\Ticket{6274}
+\item Added \Arg{off} command to \Condor{annex}.  This command invokes
+\Condor{off} \Arg{-annex} appropriately.
+\Ticket{6408}
 
-\item We now produce runtime statistics in \Condor{dagman}, tracking how 
-much time DAGMan spends idle, how much time it spends submitting jobs and
-processing log files. This information could be used to determine why a DAG 
-is submitting jobs slowly and how to optimize it. These statistics currently get 
-dumped into the .dagman.out file at the end of a DAGs execution.
-\Ticket{6411}
+\item Updated \Condor{annex} \Arg{-check-setup} to check collector security
+as well as connectivity.
+\Ticket{6322}
 
-\item Added a new knob to \Condor{dagman}, \MacroNI{DAGMAN\_AGGRESSIVE\_SUBMIT}.
-When set to True, this tells DAGMan to ignore the interval time limit for 
-submitting jobs (defined by \MacroNI{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}) and to 
-continuously submit jobs until no more are ready, or until it hits a different
-limit. 
-\Ticket{6386}
+\item Added submit warnings.  See section \ref{sec:Schedd-Config-Submit-Warnings}.
+\Ticket{5971}
+
+\item \File{openmpiscript} now uses \Condor{chirp} to run Open MPI's execute daemons
+(orted) directly under the \Condor{starter} (instead of using SSH). \File{openmpiscript}
+now also puts information about the number of CPUs in the hostfile given to \File{mpirun}
+and now includes an option for jobs that intend to use hybrid Open MPI+OpenMP.
+\Ticket{6403}
+
+\item The High Availability \Condor{replication} daemon now works on machines
+using mixed IPV6/IPV4 addressing or using the \Condor{shared\_port} daemon.
+\Ticket{6413}
+
+\item When Docker universe starts a job, it no longer uses the docker
+run command line to do so.  Now, it first creates a container with
+docker create, then starts it with docker start.  This allows HTCondor
+to better isolate errors at container creation time, but should not
+result in any user visible changes at run time.  The \File{StarterLog} will
+now always print the docker command line for the start and create,
+and not the run that it used to.
+\Ticket{6377}
+
+\item When docker universe reports memory usage, it now reports the
+RSS (Resident Set Size) of the container, previously it reported
+RSS + page cache size
+\Ticket{6430}
+
+\item Added support for both user and daemon authentication using the MUNGE service.
+\Ticket{6404}
+
+\item Added a new \Opt{-macro} argument to \Condor{config\_val}.  This argument causes
+\Condor{config\_val} to show the results of doing \Expr{\$()} expansion of its arguments
+as if they were the result of a look up rather than the names of configuration variables
+to look up.
+\Ticket{6416}
+
+\item CErequirements for the BLAHP can now be expressed in a simple form
+such as a string or nested ClassAd.
+\Ticket{6133}
 
 \end{itemize}
 
@@ -110,7 +297,18 @@ limit.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug introduced in 8.7.0 where the job attributes RemoteUserCpu
+and RemoteSysCpu where never updated in the history file, or in condor\_q
+output.  The user log would show the correct values.
+\Ticket{6426}
+
+\item The new behavior of the \Opt{-expand} command line argument of \Condor{config\_val} was breaking some
+scripts, so that functionality has been moved and \Opt{-expand} reverted to the pre 8.7.2 behavior.
+\Ticket{6416}
+
+\item Grid type boinc jobs are now considered running when they are reported as
+IN\_PROGRESS.
+\Ticket{6405}
 
 \end{itemize}
 
@@ -142,8 +340,8 @@ release.
 
 \begin{itemize}
 
-\item Changed \Condor{top} tool 
-to monitor the \Condor{schedd} by default, 
+\item Changed \Condor{top} tool
+to monitor the \Condor{schedd} by default,
 to show more useful columns in the default view,
 to better format output when redirected or piped, and
 to optionally take input of two classad files.
@@ -180,9 +378,9 @@ default to a transfer\_history file in the local logs folder.
 \item Fixed some small memory leaks in the HTCondor daemons.
 \Ticket{6361}
 
-\item Fixed a bug that would prevent dollar-dollar expansion from 
-working correctly for parallel universe jobs running on partitionable 
-slots 
+\item Fixed a bug that would prevent dollar-dollar expansion from
+working correctly for parallel universe jobs running on partitionable
+slots.
 \Ticket{6370}
 
 \end{itemize}

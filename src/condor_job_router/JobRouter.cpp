@@ -384,7 +384,10 @@ JobRouter::config() {
 		ParseRoutingEntries( routing_str, PARAM_JOB_ROUTER_ENTRIES, router_defaults_ad, allow_empty_requirements, new_routes );
 	}
 
-	if(!m_enable_job_routing) return;
+	if(!m_enable_job_routing) {
+		delete new_routes;
+		return;
+	}
 
 	SetRoutingTable(new_routes);
 
@@ -1943,9 +1946,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	classad::ClassAd *ad = ad_collection2->GetClassAd(job->dest_key);
 
-	// If ad is not found, this could be because Quill hasn't seen
-	// it yet, in which case this is not a problem.  The following
-	// attempts to ensure this by seeing if enough time has passed
+	// If ad is not found, check if enough time has passed
 	// since we submitted the job.
 
 	if(!ad) {

@@ -345,7 +345,6 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 
 &MoveAllToSaveDirectory();
 
-#CondorTest::KillPersonal($quillconfig);
 print scalar localtime() . "\n";
 
 CondorTest::debug("$coreName test SUCCESS!\n",1);

@@ -64,14 +64,13 @@ StartdNamedClassAd::ShouldMergeInto(ClassAd * merge_into, const char ** pattr_us
 	if ( ! merge_from || ! merge_into)
 		return false;
 
-	// if there is a SlotMergeContraint in the source, then merge into slots for which the
-	// constraint evaluates to true
+	// if there is a SlotMergeContraint in the source, then merge into slots
+	// for which the constraint evaluates to true, and don't merge otherwise.
 	if (merge_from->Lookup(ATTR_SLOT_MERGE_CONSTRAINT)) {
 		int matches = false;
-		if (merge_from->EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_into, matches)) {
-			if (pattr_used) *pattr_used = ATTR_SLOT_MERGE_CONSTRAINT;
-			return matches;
-		}
+		if (pattr_used) *pattr_used = ATTR_SLOT_MERGE_CONSTRAINT;
+		merge_from->EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_into, matches);
+		return matches;
 	}
 
 	// if there is a "Name" or "SlotName" attribute in the source, then merge into slots

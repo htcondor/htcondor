@@ -870,7 +870,11 @@ command_vm_register( Service*, int, Stream* s )
 
 	if( vmapi_register_cmd_handler(raddr, &permission) == TRUE ) {
 		s->encode();
-		s->code(permission);
+		if (!s->code(permission)) {
+			dprintf( D_ALWAYS, "command_vm_register: Can't send permisison\n");
+			free(raddr);
+			return(false);
+		}
 		s->end_of_message();
 	}else{
 		free(raddr);
@@ -1431,7 +1435,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					// We're going to preempt.  Save everything we
 					// need to know into r_pre.
 				rip->r_pre->setRequestStream( stream );
-				rip->r_pre->setad( req_classad );
+				rip->r_pre->setjobad( req_classad );
 				rip->r_pre->loadAccountingInfo();
 				rip->r_pre->setrank( rank );
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
@@ -1511,7 +1515,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// We decided to accept the request, save the schedd's
 		// stream, the rank and the classad of this request.
 	rip->r_cur->setRequestStream( stream );
-	rip->r_cur->setad( req_classad );
+	rip->r_cur->setjobad( req_classad );
 	rip->r_cur->setrank( rank );
 	rip->r_cur->setoldrank( oldrank );
 
@@ -1875,7 +1879,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// figure out what starter they want to use
 	Starter* tmp_starter;
 	bool no_starter = false;
-	tmp_starter = resmgr->starter_mgr.findStarter( req_classad,
+	tmp_starter = resmgr->starter_mgr.newStarter( req_classad,
 												   mach_classad,
 												   no_starter,
 												   starter );
@@ -2016,32 +2020,28 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 #endif	// of ifdef WIN32
 
-		// now that we've gotten this far, we're really going to try
-		// to spawn the starter.  set it in our Claim object.  Once
-		// it's there, we no longer control this memory so we should
-		// clear out our pointer to avoid confusion/problems.
-	rip->r_cur->setStarter( tmp_starter );
+		// update the current rank on this claim
+	float rank = rip->compute_rank( req_classad );
+	rip->r_cur->setrank( rank );
+
+		// Actually spawn the starter.
+		// If the starter successfully spawns then ownership of the
+		// Starter object and the request classad (i.e. the job ad)
+		// will be transferred
+	if ( ! rip->r_cur->spawnStarter(tmp_starter, req_classad, shadow_sock)) {
+			// if Claim::spawnStarter fails, it calls resetClaim()
+		delete req_classad; req_classad = NULL;
+		delete tmp_starter; tmp_starter = NULL;
+		ABORT;
+	}
+	// Once we spawn the starter, we no longer own the request ad
+	req_classad = NULL;
+
+	// keep track of the pointer to the Starter object with a new variable
+	// so we remember that we don't own it anymore.
 	// this variable will be used to know the IP of Starter later.
 	Starter* vm_starter = tmp_starter;
 	tmp_starter = NULL;
-
-		// update the current rank on this claim
-	float rank = rip->compute_rank( req_classad ); 
-	rip->r_cur->setrank( rank );
-
-		// Grab the job ID, so we've got it.  Once we give the
-		// req_classad to the Claim object, we no longer control it. 
-	rip->r_cur->saveJobInfo( req_classad );
-	req_classad = NULL;
-
-		// Actually spawn the starter
-	if( ! rip->r_cur->spawnStarter(shadow_sock) ) {
-			// if Claim::spawnStarter fails, it resets the Claim
-			// object to clear out all the info we just stashed above
-			// with setStarter() and saveJobInfo().  it's safe to just
-			// abort now, and all the state will be happy.
-		ABORT;
-	}
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
 		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad, rip->executeDir()) 
@@ -2349,6 +2349,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		goto cleanup;
 	}
 
+	claim->publish(&reply, A_PUBLIC);
 	if( ! claim->publishStarterAd(&reply) ) {
 		MyString err_msg = "No starter found for ";
 		err_msg += ATTR_GLOBAL_JOB_ID;

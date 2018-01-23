@@ -94,7 +94,9 @@ process_submit_errstack(CondorError *errstack)
         }
         else
         {
+#if (PY_MINOR_VERSION >= 6) || (PY_MAJOR_VERSION > 2)
             PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 0);
+#endif
         }
     }
 }
@@ -743,14 +745,12 @@ struct Schedd {
             q.addAND(constraint.c_str());
 
         StringList attrs_list(NULL, "\n");
-        // Must keep strings alive; StringList does not create an internal copy.
+        // Must keep strings alive; note StringList DOES create an internal copy
         int len_attrs = py_len(attrs);
-        std::vector<std::string> attrs_str; attrs_str.reserve(len_attrs);
         for (int i=0; i<len_attrs; i++)
         {
             std::string attrName = extract<std::string>(attrs[i]);
-            attrs_str.push_back(attrName);
-            attrs_list.append(attrs_str[i].c_str());
+            attrs_list.append(attrName.c_str()); // note append() does strdup
         }
 
         ClassAdList jobs;
@@ -1196,7 +1196,7 @@ struct Schedd {
             boost::shared_ptr<compat_classad::ClassAd> tmp_ad(new compat_classad::ClassAd());
             job_tmp_array.push_back(tmp_ad);
             tmp_ad->CopyFrom(wrapper);
-            job_array[i] = job_tmp_array[i].get();
+            job_array.push_back(job_tmp_array[i].get());
         }
         CondorError errstack;
         bool result;

@@ -539,13 +539,12 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
     return 404;
   } 
   
-  char * full_name = dircat(web_root_realpath,name);
+  MyString full_name;
+  dircat(web_root_realpath,name,full_name);
   char * full_name_realpath = NULL;
-  if (realpath(full_name, buf)) {
+  if (realpath(full_name.c_str(), buf)) {
     full_name_realpath = strdup(buf);
   }
-
-  delete [] full_name;
 
   if (full_name_realpath == NULL) {
     free(web_root_realpath);

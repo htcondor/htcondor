@@ -1340,7 +1340,10 @@ CpuAttributes::compute( amask_t how_much )
 	if( IS_TIMEOUT(how_much) && !IS_SHARED(how_much) ) {
 
 		// Dynamic, non-shared attributes we need to actually compute
-		c_condor_load = rip->compute_condor_load();
+
+		// Update the Cpus and Memory usage values of the starter on the active claim
+		// and compute the condor load average from those numbers.
+		c_condor_load = rip->compute_condor_usage();
 
 			// If the admin is forcing DISK via param, set that here,
 			// else calculate current free disk space for exec partition

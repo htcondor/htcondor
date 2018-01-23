@@ -1,4 +1,4 @@
-/*******char * ipport_to_string(const unsigned int ip, const unsigned short port)********************************************************
+/***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
@@ -18,7 +18,7 @@
  ***************************************************************/
 
 /* This file defines some of the obsolete functions from internet.h
- * Except check point server, it should not be included!
+ * Except for standard universe code, it should not be included!
  */
 
 #ifndef INTERNET_OBSOLETE_H
@@ -28,7 +28,11 @@
 extern "C" {
 #endif
 
-char * ipport_to_string(const unsigned int ip, const unsigned short port);
+/* Binds the given fd to any port on the correct local interface for
+   this machine.   is_outgoing tells it how to param.  Returns 1 if
+   successful, 0 on error. */
+int _condor_local_bind( int is_outgoing, int fd );
+
 struct sockaddr_in * getSockAddr(int sockfd);
 
 #if defined(__cplusplus)

@@ -18,7 +18,7 @@
  ***************************************************************/
 
 /*
-	This code tests the sin_to_string() function implementation.
+	This code tests some of our string manipulation utility functions.
  */
 
 #include "condor_common.h"
@@ -59,7 +59,6 @@ static bool tokenize_empty(void);
 static bool tokenize_empty_delimiter(void);
 
 bool FTEST_stl_string_utils(void) {
-		// beginning junk for getPortFromAddr(() {
 	emit_function("STL string utils");
 	emit_comment("Package of functions/operators to facilitate adoption of std::string");
 	

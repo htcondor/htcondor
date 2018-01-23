@@ -37,7 +37,7 @@ enum exit_value {
 void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 			bool removeCondorJobs = true );
 void main_shutdown_graceful( void );
-void print_status();
+void print_status( bool forceScheddUpdate = false );
 
 class Dagman {
   public:
@@ -95,6 +95,11 @@ class Dagman {
 		// job finished so it can submit the next one. This allows us to
 		// configure that to be much faster with a minimum of 1 second.
 	int m_user_log_scan_interval;
+
+		// How long dagman waits before updating the schedd with its metrics
+		// and statistics. These are not essential updates, so typically we
+		// will want to keep them infrequent to reduce load on the schedd.
+	int schedd_update_interval;
 
 		// "Primary" DAG file -- if we have multiple DAG files this is
 		// the first one.  The lock file name, rescue DAG name, etc., 

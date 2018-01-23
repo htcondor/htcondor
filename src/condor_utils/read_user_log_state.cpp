@@ -428,11 +428,11 @@ int
 ReadUserLogState::StatFile( const char *path, StatStructType &statbuf ) const
 {
 	StatWrapper	statwrap;
-	if ( statwrap.Stat( path, StatWrapper::STATOP_STAT ) ) {
+	if ( statwrap.Stat( path ) ) {
 		return statwrap.GetRc( );
 	}
 
-	statwrap.GetBuf( statbuf );
+	statbuf = *statwrap.GetBuf();
 
 	return 0;
 }
@@ -448,7 +448,7 @@ ReadUserLogState::StatFile( int fd )
 		return statwrap.GetRc( );
 	}
 
-	statwrap.GetBuf( m_stat_buf );
+	m_stat_buf = *statwrap.GetBuf();
 	m_stat_time = time( NULL );
 	m_stat_valid = true;
 	Update();

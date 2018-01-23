@@ -79,19 +79,19 @@ main(int argc, char **argv)
 	if( strcmp(argv[2],"submit") == 0) {
 		//printf("Drop submit events\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
+			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, false);
 			writeSubmitEvent(&log);
 		}
 	} else if( strcmp(argv[2],"execute") == 0) {
 		//printf("Drop execute event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
+			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, false);
 			writeExecuteEvent(&log);
 		}
 	} else if( strcmp(argv[2],"terminated") == 0) {
 		//printf("Drop terminated event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
+			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, false);
 			writeJobTerminatedEvent(&log);
 		}
 	}

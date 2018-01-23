@@ -184,12 +184,15 @@ bool dprintf_to_term_check();
 void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
-void Suicide(void);
+void Suicide(void) GCC_NORETURN;
 void set_debug_flags( const char *strflags, int cat_and_flags );
 void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg ) GCC_NORETURN;
 void _condor_fd_panic( int line, const char *file );
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 int  _condor_dprintf_is_initialized();
+void _condor_save_dprintf_line_va( int flags, const char* fmt, va_list args );
+void _condor_save_dprintf_line( int flags, const char* fmt, ... );
+void _condor_dprintf_saved_lines( void );
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
 
@@ -198,6 +201,16 @@ void dprintf_before_shared_mem_clone( void );
 
 /* must call this after clone(CLONE_VM|CLONE_VFORK) returns */
 void dprintf_after_shared_mem_clone( void );
+
+/* A simple function for writing to the primary daemon log in an
+ * async-safe manner (e.g. from a signal handler).
+ * See safe_async_simple_fwrite_fd() for argument usage.
+ */
+#ifdef _WIN64
+void dprintf_async_safe(char const *msg, ULONG_PTR *args, unsigned int num_args);
+#else
+void dprintf_async_safe( char const *msg, unsigned long *args, unsigned int num_args );
+#endif
 
 void dprintf_dump_stack(void);
 

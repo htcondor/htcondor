@@ -55,13 +55,8 @@ condor_exe(condor_tail "peek.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_version "version.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_wait "wait.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe(condor_history "history.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${POSTGRESQL_FOUND}" OFF)
-condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${POSTGRESQL_FOUND}" OFF)
-
-if (WANT_QUILL AND HAVE_EXT_POSTGRESQL)
-	condor_exe(condor_load_history "load_history.cpp" ${C_BIN} "tt;${CONDOR_TOOL_LIBS};${POSTGRESQL_FOUND}" OFF)
-	condor_exe(condor_dump_history "dump_history.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${POSTGRESQL_FOUND}" OFF)
-endif(WANT_QUILL AND HAVE_EXT_POSTGRESQL)
+condor_exe(condor_history "history.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 

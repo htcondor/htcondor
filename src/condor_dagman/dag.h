@@ -592,7 +592,7 @@ class Dag {
 
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
-	int NumHeldJobProcs() const { return _numHeldJobProcs; }
+	int NumHeldJobProcs();
 
 		/** Print the number of deferrals during the run (caused
 		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
@@ -1065,9 +1065,6 @@ private:
 		// number of idle job procs hits this limit).  Non-negative.  Zero
 		// means unlimited.
     const int _maxIdleJobProcs;
-
-		// The number of DAG job procs currently held.
-	int _numHeldJobProcs;
 
 		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts

@@ -28,18 +28,20 @@ bool
 EventIterator::get_filename(std::string &fname)
 {
     int fd = fileno(m_source);
-    std::stringstream ss;
-    ss << "/proc/self/fd/" << fd;
-    std::string proc_fname = ss.str();
-    std::vector<char> linkname; linkname.reserve(1024);
+
+	char buf[32]; // 17 for /proc/self/fd, 10 for the int, and more to be sure
+	char linkedName[1024];
+
+    sprintf(buf,"/proc/self/fd/%d", fd);
+
     ssize_t link_size;
-    if (-1 == (link_size = readlink(proc_fname.c_str(), &linkname[0], 1023)))
+    if (-1 == (link_size = readlink(buf, linkedName, 1023)))
     {
          return false;
     }
-    linkname[link_size] = '\0';
+    linkedName[link_size] = '\0';
 
-    fname = &linkname[0];
+    fname = linkedName;
     return true;
 }
 
@@ -69,7 +71,8 @@ EventIterator::wait_internal(int timeout_ms)
     clearerr(m_source);
     int fd = fileno(m_source);
     struct stat result;
-    while ((-1 != fstat(fd, &result)) && (result.st_size == m_done))
+	int r = 0;
+    while ((-1 != (r = fstat(fd, &result))) && (result.st_size == m_done))
     {
         struct pollfd fd;
         fd.fd = watch();
@@ -92,11 +95,10 @@ EventIterator::wait_internal(int timeout_ms)
         time_remaining -= step;
         if (time_remaining == 0)
         {
-            errno = 0;
             break;
         }
     }
-    if (errno)
+    if (r == -1)
     {
         THROW_EX(IOError, "Failure when checking file size of event log.");
     }

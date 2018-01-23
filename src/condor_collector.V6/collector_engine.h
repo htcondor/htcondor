@@ -101,9 +101,6 @@ class CollectorEngine : public Service
 
 	CollectorHashTable StartdAds;
 	CollectorHashTable StartdPrivateAds;
-#ifdef HAVE_EXT_POSTGRESQL
-	CollectorHashTable QuillAds;
-#endif /* HAVE_EXT_POSTGRESQL */
 	CollectorHashTable ScheddAds;
 	CollectorHashTable SubmittorAds;
 	CollectorHashTable LicenseAds;

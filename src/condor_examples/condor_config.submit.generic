@@ -542,8 +542,7 @@ QUEUE_SUPER_USERS	= root, condor
 ##  What files should condor_preen leave in the spool directory?
 VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
                           Accountant.log, Accountantnew.log, \
-                          local_univ_execute, .quillwritepassword, \
-						  .pgpass, \
+                          local_univ_execute, .pgpass, \
 			  .schedd_address, .schedd_address.super, .schedd_classad
 
 ##  What files should condor_preen remove from the log directory?

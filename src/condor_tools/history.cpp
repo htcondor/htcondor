@@ -49,12 +49,6 @@
 #include "backward_file_reader.h"
 #include <fcntl.h>  // for O_BINARY
 
-#ifdef HAVE_EXT_POSTGRESQL
-#include "sqlquery.h"
-#include "historysnapshot.h"
-#define NUM_PARAMETERS 3
-#endif /* HAVE_EXT_POSTGRESQL */
-
 void Usage(const char* name, int iExitCode=1);
 
 void Usage(const char* name, int iExitCode) 
@@ -69,9 +63,6 @@ void Usage(const char* name, int iExitCode)
 		"   If neither -file, -local, -userlog, or -name, is specified, then\n"
 		"   the SCHEDD configured by SCHEDD_HOST is queried.  If there\n"
 		"   is no configured SCHEDD (the default) the local history file(s) are read.\n"
-#ifdef HAVE_EXT_POSTGRESQL
-		"\t-dbname <schedd-name>\tRead history data from Quill database\n"
-#endif
 		"\n   and [restriction-list] is one or more of\n"
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
@@ -113,12 +104,6 @@ void Usage(const char* name, int iExitCode)
   exit(iExitCode);
 }
 
-#ifdef HAVE_EXT_POSTGRESQL
-static char * getDBConnStr(char *&quillName, char *&databaseIp, char *&databaseName, char *&queryPassword);
-static bool checkDBconfig();
-static	QueryResult result;
-#endif /* HAVE_EXT_POSTGRESQL */
-
 static void readHistoryRemote(classad::ExprTree *constraintExpr);
 static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
@@ -133,10 +118,6 @@ static int getDisplayWidth();
 //------------------------------------------------------------------------
 
 static CollectorList * Collectors = NULL;
-#ifdef HAVE_EXT_POSTGRESQL
-static	CondorQuery	quillQuery(QUILL_AD);
-static	ClassAdList	quillList;
-#endif
 static  bool longformat=false;
 static  bool diagnostic = false;
 static  bool use_xml=false;
@@ -188,22 +169,6 @@ main(int argc, const char* argv[])
 {
   Collectors = NULL;
 
-#ifdef HAVE_EXT_POSTGRESQL
-  HistorySnapshot *historySnapshot;
-  SQLQuery queryhor;
-  SQLQuery queryver;
-  QuillErrCode st;
-  bool remotequill=false;
-  char *quillName=NULL;
-  AttrList *ad=0;
-  int flag = 1;
-  void **parameters;
-  char *dbconn=NULL;
-  char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
-  bool remoteread = false;
-  const char *completedsince = NULL;
-#endif /* HAVE_EXT_POSTGRESQL */
-
   const char *owner=NULL;
   bool readfromfile = true;
   bool fileisuserlog = false;
@@ -224,12 +189,6 @@ main(int argc, const char* argv[])
   config();
 
   readfromfile = ! param_defined("SCHEDD_HOST");
-
-#ifdef HAVE_EXT_POSTGRESQL
-  parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
-  queryhor.setQuery(HISTORY_ALL_HOR, NULL);
-  queryver.setQuery(HISTORY_ALL_VER, NULL);
-#endif /* HAVE_EXT_POSTGRESQL */
 
   for(i=1; i<argc; i++) {
     if (is_dash_arg_prefix(argv[i],"long",1)) {
@@ -287,44 +246,6 @@ main(int argc, const char* argv[])
         maxAds = atoi(argv[i]);
     }
 
-#ifdef HAVE_EXT_POSTGRESQL
-    else if(is_dash_arg_prefix(argv[i], "dbname",1)) {
-		i++;
-		if (argc <= i) {
-			fprintf( stderr,
-					 "Error: Argument -dbname requires the name of a quilld as a parameter\n" );
-			exit(1);
-		}
-		
-
-/*
-		if( !(quillName = get_daemon_name(argv[i])) ) {
-			fprintf( stderr, "Error: unknown host %s\n",
-					 get_host_part(argv[i]) );
-			printf("\n");
-			print_wrapped_text("Extra Info: The name given with the -dbname "
-							   "should be the name of a condor_quilld process. "
-							   "Normally it is either a hostname, or "
-							   "\"name@hostname\". "
-							   "In either case, the hostname should be the "
-							   "Internet host name, but it appears that it "
-							   "wasn't.",
-							   stderr);
-			exit(1);
-		}
-		sprintf (tmp, "%s == \"%s\"", ATTR_NAME, quillName);      		
-		quillQuery.addORConstraint (tmp);
-
-*/
-		quillName = argv[i];
-
-		sprintf (tmp, "%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
-		quillQuery.addORConstraint (tmp.c_str());
-
-		remotequill = false;
-		readfromfile = false;
-    }
-#endif /* HAVE_EXT_POSTGRESQL */
     else if (is_dash_arg_prefix(argv[i],"file",2)) {
 		if (i+1==argc || JobHistoryFileName) break;
 		i++;
@@ -497,31 +418,16 @@ main(int argc, const char* argv[])
     else if (is_dash_arg_prefix(argv[i],"completedsince",3)) {
 		i++;
 		if (argc <= i) {
-#ifdef HAVE_EXT_POSTGRESQL
-			fprintf(stderr,
-					"Error: Argument -completedsince requires a date and "
-					"optional timestamp as a parameter.\n");
-			fprintf(stderr,
-					"\t\te.g. condor_history -completedsince \"2004-10-19 10:23:54\"\n");
-#else
 			fprintf(stderr, "Error: Argument -completedsince requires another parameter.\n");
-#endif
 			exit(1);
 		}
 		
-#ifdef HAVE_EXT_POSTGRESQL
-		completedsince = argv[i];
-		parameters[0] = strdup(completedsince);
-		queryhor.setQuery(HISTORY_COMPLETEDSINCE_HOR,parameters);
-		queryver.setQuery(HISTORY_COMPLETEDSINCE_VER,parameters);
-#else
 		delete sinceExpr; sinceExpr = NULL;
 		MyString buf; buf.formatstr("CompletionDate <= %s", argv[i]);
 		if (0 != ParseClassAdRvalExpr(buf.c_str(), sinceExpr)) {
 			fprintf( stderr, "Error: '%s' not valid parameter for -completedsince ", argv[i]);
 			exit(1);
 		}
-#endif /* HAVE_EXT_POSTGRESQL */
     }
 
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
@@ -529,22 +435,11 @@ main(int argc, const char* argv[])
 		formatstr (jobconst, "%s == %d && %s == %d", 
 				 ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
 		constraint.addCustomOR(jobconst.c_str());
-		#ifdef HAVE_EXT_POSTGRESQL
-		parameters[0] = &cluster;
-		parameters[1] = &proc;
-		queryhor.setQuery(HISTORY_CLUSTER_PROC_HOR, parameters);
-		queryver.setQuery(HISTORY_CLUSTER_PROC_VER, parameters);
-		#endif /* HAVE_EXT_POSTGRESQL */
     }
     else if (sscanf (argv[i], "%d", &cluster) == 1) {
 		std::string jobconst;
 		formatstr (jobconst, "%s == %d", ATTR_CLUSTER_ID, cluster);
 		constraint.addCustomOR(jobconst.c_str());
-		#ifdef HAVE_EXT_POSTGRESQL
-		parameters[0] = &cluster;
-		queryhor.setQuery(HISTORY_CLUSTER_HOR, parameters);
-		queryver.setQuery(HISTORY_CLUSTER_VER, parameters);
-		#endif /* HAVE_EXT_POSTGRESQL */
     }
     else if (is_dash_arg_prefix(argv[i],"debug",1)) {
           // dprintf to console
@@ -570,9 +465,6 @@ main(int argc, const char* argv[])
         }
         g_name = argv[i];
         readfromfile = false;
-       #ifdef HAVE_EXT_POSTGRESQL
-        remoteread = true;
-       #endif
     }
     else if (is_dash_arg_prefix(argv[i], "pool", 1)) {
         i++;    
@@ -586,9 +478,6 @@ main(int argc, const char* argv[])
         }       
         g_pool = argv[i];
         readfromfile = false;
-       #ifdef HAVE_EXT_POSTGRESQL
-        remoteread = true;
-       #endif
     }
 	else if (argv[i][0] == '-') {
 		fprintf(stderr, "Error: Unknown argument %s\n", argv[i]);
@@ -599,11 +488,6 @@ main(int argc, const char* argv[])
 		owner = argv[i];
 		formatstr(ownerconst, "%s == \"%s\"", ATTR_OWNER, owner);
 		constraint.addCustomOR(ownerconst.c_str());
-#ifdef HAVE_EXT_POSTGRESQL
-		parameters[0] = owner;
-		queryhor.setQuery(HISTORY_OWNER_HOR, parameters);
-		queryver.setQuery(HISTORY_OWNER_VER, parameters);
-#endif /* HAVE_EXT_POSTGRESQL */
     }
   }
   if (i<argc) Usage(argv[0]);
@@ -631,118 +515,6 @@ main(int argc, const char* argv[])
     fprintf( stderr, "Error: Cannot print as both XML and JSON\n" );
     exit( 1 );
   }
-
-#ifdef HAVE_EXT_POSTGRESQL
-	/* This call must happen AFTER config() is called */
-  if (checkDBconfig() == true && !readfromfile) {
-  	readfromfile = false;
-  } else {
-  	readfromfile = true;
-  }
-#endif /* HAVE_EXT_POSTGRESQL */
-
-#ifdef HAVE_EXT_POSTGRESQL
-  if(!readfromfile && !remoteread) {
-	  if(remotequill) {
-		  if (Collectors == NULL) {
-			  Collectors = CollectorList::create();
-			  if(Collectors == NULL ) {
-				  printf("Error: Unable to get list of known collectors\n");
-				  exit(1);
-			  }
-		  }
-		  result = Collectors->query ( quillQuery, quillList );
-		  if(result != Q_OK) {
-			  printf("Fatal Error querying collectors\n");
-			  exit(1);
-		  }
-
-		  if(quillList.MyLength() == 0) {
-			  printf("Error: Unknown quill server %s\n", quillName);
-			  exit(1);
-		  }
-		  
-		  quillList.Open();
-		  while ((ad = quillList.Next())) {
-				  // get the address of the database
-			  dbIpAddr = dbName = queryPassword = NULL;
-			  if (!ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) ||
-				  !ad->LookupString(ATTR_QUILL_DB_NAME, &dbName) ||
-				  !ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, &queryPassword) || 
-				  (ad->LookupBool(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) && !flag)) {
-				  printf("Error: The quill daemon \"%s\" is not set up "
-						 "for database queries\n", 
-						 quillName);
-				  exit(1);
-			  }
-		  }
-	  } else {
-			// they just typed 'condor_history' on the command line and want
-			// to use quill, so get the schedd ad for the local machine if
-			// we can, figure out the name of the schedd and the 
-			// jobqueuebirthdate
-		DaemonAllowLocateFull schedd( DT_SCHEDD, 0, 0 );
-
-        if ( schedd.locate(Daemon::LOCATE_FULL) ) {
-			char *scheddname = quillName;	
-			if (scheddname == NULL) {
-				// none set explictly, look it up in the daemon ad
-				scheddname = schedd.name();
-				ClassAd *daemonAd = schedd.daemonAd();
-				int scheddbirthdate;
-				if(daemonAd) {
-					if(daemonAd->LookupInteger( ATTR_JOB_QUEUE_BIRTHDATE, 	
-								scheddbirthdate) ) {
-						queryhor.setJobqueuebirthdate( (time_t)scheddbirthdate);	
-						queryver.setJobqueuebirthdate( (time_t)scheddbirthdate);	
-					}
-				}
-			} else {
-				queryhor.setJobqueuebirthdate(0);	
-				queryver.setJobqueuebirthdate(0);	
-			}
-			queryhor.setScheddname(scheddname);	
-			queryver.setScheddname(scheddname);	
-			
-		}
-	  }
-	  dbconn = getDBConnStr(quillName,dbIpAddr,dbName,queryPassword);
-	  historySnapshot = new HistorySnapshot(dbconn);
-	  if (!customFormat) {
-		  printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
-			  dbIpAddr, dbName);
-		}		
-
-	  queryhor.prepareQuery();  // create the query strings before sending off to historySnapshot
-	  queryver.prepareQuery();
-	  
-	  st = historySnapshot->sendQuery(&queryhor, &queryver, longformat,
-		false, customFormat, &mask, constraint.c_str());
-
-		  //if there's a failure here and if we're not posing a query on a 
-		  //remote quill daemon, we should instead query the local file
-	  if(st == QUILL_FAILURE) {
-	        printf( "-- Database at %s not reachable\n", dbIpAddr);
-		if(!remotequill) {
-			char *tmp_hist = param("HISTORY");
-			if (!customFormat) {
-				printf( "--Failing over to the history file at %s instead --\n",
-						tmp_hist ? tmp_hist : "(null)" );
-			}
-			if(!tmp_hist) {
-				free(tmp_hist);
-			}
-			readfromfile = true;
-	  	}
-	  }
-		  // query history table
-	  if (historySnapshot->isHistoryEmpty()) {
-		  printf("No historical jobs in the database match your query\n");
-	  }
-	  historySnapshot->release();
-	  delete(historySnapshot);
-  }
-#endif /* HAVE_EXT_POSTGRESQL */
 
   if (writetosocket && streamresults) {
 	compat_classad::ClassAd ad;
@@ -783,13 +555,6 @@ main(int argc, const char* argv[])
 	ReliSock * sock = (ReliSock*)(socks[0]);
 	sock->close();
   }
-#ifdef HAVE_EXT_POSTGRESQL
-  if(parameters) free(parameters);
-  if(dbIpAddr) free(dbIpAddr);
-  if(dbName) free(dbName);
-  if(queryPassword) free(queryPassword);
-  if(dbconn) free(dbconn);
-#endif
   return 0;
 }
 
@@ -962,130 +727,6 @@ static void init_default_custom_format()
 
 	customFormat = TRUE;
 }
-
-//------------------------------------------------------------------------
-
-#ifdef HAVE_EXT_POSTGRESQL
-
-/* this function for checking whether database can be used for 
-   querying in local machine */
-static bool checkDBconfig() {
-	char *tmp;
-
-	if (param_boolean("QUILL_ENABLED", false) == false) {
-		return false;
-	};
-
-	tmp = param("QUILL_NAME");
-	if (!tmp) {
-		return false;
-	}
-	free(tmp);
-
-	tmp = param("QUILL_DB_IP_ADDR");
-	if (!tmp) {
-		return false;
-	}
-	free(tmp);
-
-	tmp = param("QUILL_DB_NAME");
-	if (!tmp) {
-		return false;
-	}
-	free(tmp);
-
-	tmp = param("QUILL_DB_QUERY_PASSWORD");
-	if (!tmp) {
-		return false;
-	}
-	free(tmp);
-
-	return true;
-}
-
-
-static char * getDBConnStr(char *&quillName, 
-						   char *&databaseIp, 
-						   char *&databaseName, 
-						   char *&queryPassword) {
-  char            *host, *port, *dbconn, *ptr_colon;
-  char            *tmpquillname, *tmpdatabaseip, *tmpdatabasename, *tmpquerypassword;
-  int             len, tmp1, tmp2, tmp3;
-
-  if((!quillName && !(tmpquillname = param("QUILL_NAME"))) ||
-     (!databaseIp && !(tmpdatabaseip = param("QUILL_DB_IP_ADDR"))) ||
-     (!databaseName && !(tmpdatabasename = param("QUILL_DB_NAME"))) ||
-     (!queryPassword && !(tmpquerypassword = param("QUILL_DB_QUERY_PASSWORD")))) {
-    fprintf( stderr, "Error: Could not find database related parameter\n");
-    fprintf(stderr, "\n");
-    print_wrapped_text("Extra Info: " 
-                       "The most likely cause for this error "
-                       "is that you have not defined "
-					   "QUILL_NAME/QUILL_DB_IP_ADDR/"
-					   "QUILL_DB_NAME/QUILL_DB_QUERY_PASSWORD "
-                       "in the condor_config file.  You must "
-                       "define this variable in the config file", stderr);
- 
-    exit( 1 );    
-  }
-  
-  if(!quillName) {
-	  quillName = tmpquillname;
-  }
-  if(!databaseIp) {
-	  if(tmpdatabaseip[0] != '<') {
-			  //2 for the two brackets and 1 for the null terminator
-		  databaseIp = (char *) malloc(strlen(tmpdatabaseip)+3);
-		  sprintf(databaseIp, "<%s>", tmpdatabaseip);
-		  free(tmpdatabaseip);
-	  }
-	  else {
-		  databaseIp = tmpdatabaseip;
-	  }
-  }
-  if(!databaseName) {
-	  databaseName = tmpdatabasename;
-  }
-  if(!queryPassword) {
-	  queryPassword = tmpquerypassword;
-  }
-  
-  tmp1 = strlen(databaseName);
-  tmp2 = strlen(queryPassword);
-  len = strlen(databaseIp);
-
-	  //the 6 is for the string "host= " or "port= "
-	  //the rest is a subset of databaseIp so a size of
-	  //databaseIp is more than enough 
-  host = (char *) malloc((len+6) * sizeof(char));
-  port = (char *) malloc((len+6) * sizeof(char));
-  
-	  //here we break up the ipaddress:port string and assign the  
-	  //individual parts to separate string variables host and port
-  ptr_colon = strchr(databaseIp, ':');
-  strcpy(host, "host=");
-  strncat(host,
-          databaseIp+1,
-          ptr_colon - databaseIp-1);
-  strcpy(port, "port=");
-  strcat(port, ptr_colon+1);
-  port[strlen(port)-1] = '\0';
-  
-	  //tmp3 is the size of dbconn - its size is estimated to be
-	  //(2 * len) for the host/port part, tmp1 + tmp2 for the 
-	  //password and dbname part and 1024 as a cautiously 
-	  //overestimated sized buffer
-  tmp3 = (2 * len) + tmp1 + tmp2 + 1024;
-  dbconn = (char *) malloc(tmp3 * sizeof(char));
-  sprintf(dbconn, "%s %s user=quillreader password=%s dbname=%s", 
-		  host, port, queryPassword, databaseName);
-
-  free(host);
-  free(port);
-  return dbconn;
-}
-
-#endif /* HAVE_EXT_POSTGRESQL */
 
 static void printHeader()
 {

@@ -924,6 +924,8 @@ void Server::ProcessServiceReq(int             req_id,
 				// the reply.
 				service_reply.server_addr.s_addr = ntohl(server_addr.s_addr);
 				service_reply.port = server_sa.get_port();
+				close(data_conn_sd);
+				data_conn_sd = -1;
 			} else {
 				service_reply.server_addr.s_addr = 0;
 				service_reply.port = 0;

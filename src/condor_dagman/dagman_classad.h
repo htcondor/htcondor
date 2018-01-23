@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_id.h"
 #include "dag.h"
+#include "dagman_stats.h"
 #include "condor_qmgr.h"
 
 class DCSchedd;
@@ -49,10 +50,11 @@ class DagmanClassad {
 		@param The number of nodes that are unready
 		@param The overall DAG status
 		@param Whether the DAG is in recovery mode
+		@param A ClassAd of DAGMan runtime statistics
 	*/
 	void Update( int total, int done, int pre, int submitted, int post,
 				int ready, int failed, int unready,
-				Dag::dag_status dagStatus, bool recovery );
+				Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A MyString to receive the Owner value.
@@ -100,6 +102,12 @@ class DagmanClassad {
 			@param attrVal The value of the attribute.
 		*/
 	void SetDagAttribute( const char *attrName, const MyString &value );
+
+		/** Set a nested ClassAd attribute in this DAGMan's classad.
+			@param attrName The name of the attribute to set.
+			@param ad The ClassAd to set.
+		*/
+	void SetDagAttribute( const char *attrName, const ClassAd &ad );
 
 		/** Get the specified attribute (string) value from our ClassAd.
 			@param attrName: The name of the attribute.

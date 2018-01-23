@@ -300,15 +300,10 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 	}
 
 		// handle stdin, stdout, and stderr redirection
-	const char* jobstdin_ = dircat(stdio_iwd,"stdin");
-	MyString jobstdin(jobstdin_);
-	const char* jobstdout_ = dircat(stdio_iwd,"stdout");
-	MyString jobstdout(jobstdout_);
-	const char* jobstderr_ = dircat(stdio_iwd,"stderr");
-	MyString jobstderr(jobstderr_);
-	delete [] jobstdin_;
-	delete [] jobstdout_;
-	delete [] jobstderr_;
+	MyString jobstdin, jobstdout, jobstderr;
+	dircat(stdio_iwd,"stdin",jobstdin);
+	dircat(stdio_iwd,"stdout",jobstdout);
+	dircat(stdio_iwd,"stderr",jobstderr);
 	int flags = O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | O_LARGEFILE;
 		// write stdin file is needed
 	{

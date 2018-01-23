@@ -45,62 +45,73 @@
 ///////////////////////////////////////////////////////////////////////////
 
 Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
+	: c_rip(res_ip)
+	, c_client(NULL)
+	, c_id(0)
+	, c_type(claim_type)
+	, c_jobad(NULL)
+	, c_starter_pid(0)
+	, c_rank(0)
+	, c_oldrank(0)
+	, c_universe(-1)
+	, c_cluster(-1)
+	, c_proc(-1)
+	, c_global_job_id(NULL)
+	, c_job_start(-1)
+	, c_last_pckpt(-1)
+	, c_claim_started(0)
+	, c_entered_state(0)
+	, c_job_total_run_time(0)
+	, c_job_total_suspend_time(0)
+	, c_claim_total_run_time(0)
+	, c_claim_total_suspend_time(0)
+	, c_activation_count(0)
+	, c_request_stream(NULL)
+	, c_match_tid(-1)
+	, c_lease_tid(-1)
+	, c_sendalive_tid(-1)
+	, c_alive_inprogress_sock(NULL)
+	, c_lease_duration(lease_duration)
+	, c_aliveint(-1)
+	, c_starter_handles_alives(false)
+	, c_startd_sends_alives(false)
+	, c_cod_keyword(NULL)
+	, c_has_job_ad(0)
+	, c_state(CLAIM_IDLE)
+	, c_last_state(CLAIM_UNCLAIMED)
+	, c_pending_cmd(-1)
+	, c_wants_remove(false)
+	, c_may_unretire(true)
+	, c_retire_peacefully(false)
+	, c_preempt_was_true(false)
+	, c_badput_caused_by_draining(false)
+	, c_badput_caused_by_preemption(false)
+	, c_schedd_closed_claim(false)
+	, c_pledged_machine_max_vacate_time(0)
+	, c_cpus_usage(0)
+	, c_image_size(0)
 {
+	//dprintf(D_ALWAYS | D_BACKTRACE, "constructing claim %p on resource %p\n", this, res_ip);
+
 	c_client = new Client;
 	c_id = new ClaimId( claim_type, res_ip->r_id_str );
 	if( claim_type == CLAIM_OPPORTUNISTIC ) {
 		c_id->dropFile( res_ip->r_id );
 	}
-	c_ad = NULL;
-	c_starter = NULL;
-	c_rank = 0;
-	c_oldrank = 0;
-	c_universe = -1;
-	c_request_stream = NULL;
-	c_match_tid = -1;
-	c_lease_tid = -1;
-	c_sendalive_tid = -1;
-	c_alive_inprogress_sock = NULL;
-	c_aliveint = -1;
-	c_lease_duration = lease_duration;
-	c_cluster = -1;
-	c_proc = -1;
-	c_global_job_id = NULL;
-	c_job_start = -1;
-	c_last_pckpt = -1;
-	setResource( res_ip );
-	c_type = claim_type;
-	c_cod_keyword = NULL;
-	c_has_job_ad = 0;
-	c_pending_cmd = -1;
-	c_wants_remove = false;
-	c_claim_started = 0;
 		// to make purify happy, we want to initialize this to
 		// something.  however, we immediately set it to UNCLAIMED
 		// (which is what it should really be) by using changeState()
 		// so we get all the nice functionality that method provides.
 	c_state = CLAIM_IDLE;
 	changeState( CLAIM_UNCLAIMED );
-	c_job_total_run_time = 0;
-	c_job_total_suspend_time = 0;
-	c_claim_total_run_time = 0;
-	c_claim_total_suspend_time = 0;
-	c_activation_count = 0;
-	c_may_unretire = true;
-	c_retire_peacefully = false;
-	c_preempt_was_true = false;
-	c_badput_caused_by_draining = false;
-	c_badput_caused_by_preemption = false;
-	c_schedd_closed_claim = false;
-
 	c_last_state = CLAIM_UNCLAIMED;
-	c_pledged_machine_max_vacate_time = 0;
-	c_starter_handles_alives = false;
 }
 
 
 Claim::~Claim()
-{	
+{
+	//dprintf(D_ALWAYS | D_BACKTRACE, "deleting claim %p on resource %p\n", this, c_rip);
+
 	if( c_type == CLAIM_COD ) {
 		dprintf( D_FULLDEBUG, "Deleted claim %s (owner '%s')\n", 
 				 c_id->id(), 
@@ -115,9 +126,22 @@ Claim::~Claim()
 		c_alive_inprogress_sock = NULL;
 	}
 
+	// if we were associated with a starter, then we need to check to see if that starter was reaped
+	// before we can delete the job ad.
+	if (c_starter_pid && c_jobad) {
+		Starter * starter = findStarterByPid(c_starter_pid);
+		if (starter && starter->notYetReaped()) {
+			dprintf(D_ALWAYS, "Deleting claim while starter is still alive. The STARTD history for job %d.%d may be incomplete\n", c_cluster, c_proc);
+			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
+			starter->setOrphanedJob(c_jobad);
+			c_jobad = NULL;
+		}
+	}
+
 		// Free up memory that's been allocated
-	if( c_ad ) {
-		delete( c_ad );
+	if (c_jobad) {
+		delete(c_jobad);
+		c_jobad = NULL;
 	}
 	delete( c_id );
 	if( c_client ) {
@@ -125,9 +149,7 @@ Claim::~Claim()
 	}
 		// delete the request stream and do any necessary related cleanup
 	setRequestStream( NULL );
-	if( c_starter ) {
-		delete( c_starter );
-	}
+
 	if( c_global_job_id ) { 
 		free( c_global_job_id );
 	}
@@ -154,7 +176,7 @@ Claim::vacate()
 	}
 
 #if HAVE_JOB_HOOKS
-	if (c_type == CLAIM_FETCH) {
+	if ((c_type == CLAIM_FETCH) && c_has_job_ad) {
 		resmgr->m_hook_mgr->hookEvictClaim(c_rip);
 	}
 #endif /* HAVE_JOB_HOOKS */
@@ -262,17 +284,16 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 		// update ImageSize attribute from procInfo (this is
 		// only for the opportunistic job, not COD)
 	if( isActive() ) {
-		unsigned long imgsize = imageSize();
-		line.formatstr( "%s = %lu", ATTR_IMAGE_SIZE, imgsize );
-		cad->Insert( line.Value() );
+		// put the image size value from the last call to updateUsage into the ad.
+		cad->Assign(ATTR_IMAGE_SIZE, c_image_size);
+		// also the CpusUsage value
+		//cad->Assign("CpusUsage", c_cpus_usage);
+		//PRAGMA_REMIND("put CpusUsage into the standard attributes header file.")
 	}
 
 	// If this claim is for vm universe, update some info about VM
-	if( c_starter ) {
-		pid_t s_pid = c_starter->pid();
-		if( s_pid > 0 ) {
-			resmgr->m_vmuniverse_mgr.publishVMInfo(s_pid, cad, how_much);
-		}
+	if (c_starter_pid > 0) {
+		resmgr->m_vmuniverse_mgr.publishVMInfo(c_starter_pid, cad, how_much);
 	}
 
 	publishStateTimes( cad );
@@ -393,7 +414,8 @@ Claim::publishCOD( ClassAd* cad )
 		}
 	}
 
-	if( c_starter ) {
+	if( c_starter_pid )
+	{
 		if( c_cod_keyword ) {
 			line = codId();
 			line += '_';
@@ -492,7 +514,12 @@ Claim::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
-	c_rip->dprintf_va( flags, fmt, args );
+	if (c_rip) {
+		c_rip->dprintf_va( flags, fmt, args );
+	} else {
+		const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
+		::_condor_dprintf_va( flags, ident, fmt, args );
+	}
 	va_end( args );
 }
 
@@ -678,7 +705,7 @@ Claim::loadAccountingInfo()
 		// so we know who to charge for our services.  If not, we use
 		// the same user that claimed us.
 	char* tmp = NULL;
-	if( ! c_ad->LookupString(ATTR_USER, &tmp) ) {
+	if( ! c_jobad->LookupString(ATTR_USER, &tmp) ) {
 		if( c_type != CLAIM_COD ) { 
 			c_rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in "
 						  "request classad!  Using old value (%s)\n", 
@@ -694,7 +721,7 @@ Claim::loadAccountingInfo()
 
 		// Only stash this if it's in the ad, but don't print anything
 		// if it's not.
-	if( c_ad->LookupString(ATTR_ACCOUNTING_GROUP, &tmp) ) {
+	if( c_jobad->LookupString(ATTR_ACCOUNTING_GROUP, &tmp) ) {
 		c_client->setAccountingGroup( tmp );
 		free( tmp );
 		tmp = NULL;
@@ -702,7 +729,7 @@ Claim::loadAccountingInfo()
 
 	if(!c_client->owner()) {
 			// Only if Owner has never been initialized, load it now.
-		if(c_ad->LookupString(ATTR_OWNER, &tmp)) {
+		if(c_jobad->LookupString(ATTR_OWNER, &tmp)) {
 			c_client->setowner( tmp );
 			free( tmp );
 			tmp = NULL;
@@ -716,7 +743,7 @@ Claim::loadRequestInfo()
 		// Stash the ATTR_CONCURRENCY_LIMITS, necessary to advertise
 		// them if they exist
 	char* limits = NULL;
-	c_ad->EvalString(ATTR_CONCURRENCY_LIMITS, c_rip->r_classad, &limits);
+	c_jobad->EvalString(ATTR_CONCURRENCY_LIMITS, c_rip->r_classad, &limits);
 	if (limits) {
 		c_client->setConcurrencyLimits(limits);
 		free(limits); limits = NULL;
@@ -724,14 +751,14 @@ Claim::loadRequestInfo()
 
     // stash information about what accounting group match was negotiated under
     string strval;
-    if (c_ad->LookupString(ATTR_REMOTE_GROUP, strval)) {
+    if (c_jobad->LookupString(ATTR_REMOTE_GROUP, strval)) {
         c_client->setrmtgrp(strval.c_str());
     }
-    if (c_ad->LookupString(ATTR_REMOTE_NEGOTIATING_GROUP, strval)) {
+    if (c_jobad->LookupString(ATTR_REMOTE_NEGOTIATING_GROUP, strval)) {
         c_client->setneggrp(strval.c_str());
     }
     bool boolval=false;
-    if (c_ad->LookupBool(ATTR_REMOTE_AUTOREGROUP, boolval)) {
+    if (c_jobad->LookupBool(ATTR_REMOTE_AUTOREGROUP, boolval)) {
         c_client->setautorg(boolval);
     }
 }
@@ -743,7 +770,7 @@ Claim::loadStatistics()
 		// them if they exist
 	if ( c_client ) {
 		int numJobPids = 0;
-		c_ad->LookupInteger(ATTR_NUM_PIDS, numJobPids);
+		c_jobad->LookupInteger(ATTR_NUM_PIDS, numJobPids);
 		c_client->setNumPids(numJobPids);
 	}
 }
@@ -761,7 +788,7 @@ Claim::beginActivation( time_t now )
 	if(c_rip->r_classad->LookupExpr(ATTR_MACHINE_MAX_VACATE_TIME)) {
 		if( !c_rip->r_classad->EvalInteger(
 			ATTR_MACHINE_MAX_VACATE_TIME,
-			c_ad,
+			c_jobad,
 			c_pledged_machine_max_vacate_time))
 		{
 			dprintf(D_ALWAYS,"Failed to evaluate %s as an integer.\n",ATTR_MACHINE_MAX_VACATE_TIME);
@@ -779,7 +806,7 @@ Claim::beginActivation( time_t now )
 	}
 
 	int univ;
-	if( c_ad->LookupInteger(ATTR_JOB_UNIVERSE, univ) == 0 ) {
+	if( c_jobad->LookupInteger(ATTR_JOB_UNIVERSE, univ) == 0 ) {
 		univ = CONDOR_UNIVERSE_STANDARD;
 		c_rip->dprintf( D_ALWAYS, "Default universe \"%s\" (%d) "
 						"since not in classad\n",
@@ -794,7 +821,7 @@ Claim::beginActivation( time_t now )
 	int wantCheckpoint = 0;
 	switch( univ ) {
 		case CONDOR_UNIVERSE_VANILLA:
-			c_ad->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
+			c_jobad->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 			if( ! wantCheckpoint ) { break; }
 		case CONDOR_UNIVERSE_VM:
 		case CONDOR_UNIVERSE_STANDARD:
@@ -817,19 +844,10 @@ Claim::setaliveint( int new_alive )
 	c_lease_duration = max_claim_alives_missed * new_alive;
 }
 
-void
-Claim::saveJobInfo( ClassAd* request_ad )
+void Claim::cacheJobInfo( ClassAd* job )
 {
-		// This does not make a copy, so we assume we have control
-		// over the ClassAd once this method has been called.
-		// However, don't clobber our ad if the caller passes NULL.
-	if (request_ad) {
-		setad(request_ad);
-	}
-	ASSERT(c_ad);
-
-	c_ad->LookupInteger( ATTR_CLUSTER_ID, c_cluster );
-	c_ad->LookupInteger( ATTR_PROC_ID, c_proc );
+	job->LookupInteger( ATTR_CLUSTER_ID, c_cluster );
+	job->LookupInteger( ATTR_PROC_ID, c_proc );
 	if( c_cluster >= 0 ) { 
 			// if the cluster is set and the proc isn't, use 0.
 		if( c_proc < 0 ) { 
@@ -840,7 +858,7 @@ Claim::saveJobInfo( ClassAd* request_ad )
 						c_cluster, c_proc );
 	}
 
-	c_ad->LookupString( ATTR_GLOBAL_JOB_ID, &c_global_job_id );
+	job->LookupString( ATTR_GLOBAL_JOB_ID, &c_global_job_id );
 	if( c_global_job_id ) {
 			// only print this if the request specified it...
 		c_rip->dprintf( D_FULLDEBUG, "Remote global job ID is %s\n", 
@@ -849,7 +867,7 @@ Claim::saveJobInfo( ClassAd* request_ad )
 
 		// check for an explicit job lease duration.  if it's not
 		// there, we have to use the old default of 3 * aliveint. :( 
-	if( c_ad->LookupInteger(ATTR_JOB_LEASE_DURATION, c_lease_duration) ) {
+	if( job->LookupInteger(ATTR_JOB_LEASE_DURATION, c_lease_duration) ) {
 		dprintf( D_FULLDEBUG, "%s defined in job ClassAd: %d\n", 
 				 ATTR_JOB_LEASE_DURATION, c_lease_duration );
 		dprintf( D_FULLDEBUG,
@@ -862,6 +880,42 @@ Claim::saveJobInfo( ClassAd* request_ad )
 				 ATTR_JOB_LEASE_DURATION, c_lease_duration,
 				 c_aliveint, max_claim_alives_missed );
 	}
+
+	// Figure out who should sending keep alives
+	std::string value;
+	param( value, "STARTD_SENDS_ALIVES", "peer" );
+	if ( job->LookupBool( ATTR_STARTD_SENDS_ALIVES, c_startd_sends_alives ) ) {
+		// Use value from ad
+	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
+		c_startd_sends_alives = false;
+	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
+		c_startd_sends_alives = true;
+	} else {
+		// No direction from the schedd or config file.
+		c_startd_sends_alives = false;
+	}
+
+	// If startd is sending the alives, look to see if the schedd is requesting
+	// that we let only send alives when there is no starter present (i.e. when
+	// the claim is idle).
+	c_starter_handles_alives = false;  // default to false unless schedd tells us
+	job->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
+}
+
+#if 0 // no-one uses this
+void
+Claim::saveJobInfo( ClassAd* request_ad )
+{
+		// This does not make a copy, so we assume we have control
+		// over the ClassAd once this method has been called.
+		// However, don't clobber our ad if the caller passes NULL.
+	if (request_ad) {
+		setjobad(request_ad);
+	}
+	ASSERT(c_ad);
+
+	cacheJobInfo(c_ad);
+
 		/* 
 		   This resets the timers for us, and also, we should consider
 		   a request to activate a claim (which is what just happened
@@ -869,7 +923,7 @@ Claim::saveJobInfo( ClassAd* request_ad )
 		*/
 	alive();  
 }
-
+#endif
 
 void
 Claim::startLeaseTimer()
@@ -895,30 +949,7 @@ Claim::startLeaseTimer()
 		EXCEPT( "Couldn't register timer (out of memory)." );
 	}
 	
-	// Figure out who's sending 
-	bool startd_sends_alives;
-	std::string value;
-	param( value, "STARTD_SENDS_ALIVES", "peer" );
-	if ( c_ad && c_ad->LookupBool( ATTR_STARTD_SENDS_ALIVES, startd_sends_alives ) ) {
-		// Use value from ad
-	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
-		startd_sends_alives = false;
-	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
-		startd_sends_alives = true;
-	} else {
-		// No direction from the schedd or config file. 
-		startd_sends_alives = false;
-	}
-
-	// If startd is sending the alives, look to see if the schedd is requesting 
-	// that we let only send alives when there is no starter present (i.e. when
-	// the claim is idle).  
-	c_starter_handles_alives = false;  // default to false unless schedd tells us
-	if (c_ad) {
-		c_ad->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
-	}
-
-	if ( startd_sends_alives &&
+	if ( c_startd_sends_alives &&
 		 c_type != CLAIM_COD &&
 		 c_lease_duration > 0 )	// prevent divide by zero
 	{
@@ -1258,7 +1289,7 @@ Claim::hasJobAd() {
 		has_it = true;
 	}
 #if HAVE_JOB_HOOKS
-	else if (c_type == CLAIM_FETCH && c_ad != NULL) {
+	else if (c_type == CLAIM_FETCH && c_jobad != NULL) {
 		has_it = true;
 	}
 #endif /* HAVE_JOB_HOOKS */
@@ -1267,13 +1298,12 @@ Claim::hasJobAd() {
 
 
 // Set our ad to the given pointer
-void
-Claim::setad(ClassAd *cad) 
+void Claim::setjobad(ClassAd *cad)
 {
-	if( c_ad ) {
-		delete( c_ad );
+	if (c_jobad && (c_jobad != cad)) {
+		delete c_jobad;
 	}
-	c_ad = cad;
+	c_jobad = cad;
 }
 
 
@@ -1363,25 +1393,22 @@ Claim::idMatches( const char* req_id )
 }
 
 
-float
-Claim::percentCpuUsage( void )
+void Claim::updateUsage(double & percentCpuUsage, long long & imageSize)
 {
-	if( c_starter ) {
-		return c_starter->percentCpuUsage();
-	} else {
-		return 0.0;
+	percentCpuUsage = 0.0;
+	imageSize = 0;
+	if (c_starter_pid) {
+		Starter *starter = findStarterByPid(c_starter_pid);
+		if ( ! starter) {
+			EXCEPT( "Claim::updateUsage(): Could not find starter object for pid %d", c_starter_pid );
+		}
+		const ProcFamilyUsage & usage = starter->updateUsage();
+		percentCpuUsage = usage.percent_cpu;
+		imageSize = usage.total_image_size;
 	}
-}
-
-
-unsigned long
-Claim::imageSize( void )
-{
-	if( c_starter ) {
-		return c_starter->imageSize();
-	} else {
-		return 0;
-	}
+	// save off the last values so we can use them in the ::publish method
+	c_cpus_usage = percentCpuUsage;
+	c_image_size = imageSize;
 }
 
 
@@ -1394,21 +1421,53 @@ Claim::getCODMgr( void )
 	return c_rip->r_cod_mgr;
 }
 
-int
-Claim::spawnStarter( Stream* s )
+// spawn a starter in the given starter object.
+// on successful spawn, the claim will take ownership of the job classad.
+// job can be NULL in the case where we are doing a delayed spawn because of preemption
+// or when doing fetchwork.  when job is NULL, the c_ad member of this class must not be.
+int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 {
-	int rval;
-	if( ! c_starter ) {
+	if( ! starter ) {
 			// Big error!
 		dprintf( D_ALWAYS, "ERROR! Claim::spawnStarter() called "
 				 "w/o a Starter object! Returning failure\n" );
 		return FALSE;
 	}
 
+	// the starter had better not already have an active process.
+	ASSERT ( ! starter->pid());
+
 	time_t now = time(NULL);
 
-	rval = c_starter->spawn( now, s );
-	if( ! rval ) {
+	// grab job id, etc out of the job ad and write it into the claim.
+	if ( ! job) {
+		// refresh cached values from the ad that we already own.
+		// this happends when the spawn of the starter was delayed
+		// because of preemption
+		ASSERT(c_jobad);
+		cacheJobInfo(c_jobad);
+	} else {
+		// this also caches other values from the ad
+		// but does NOT take ownership of the job ad (we do that after we spawn)
+		cacheJobInfo(job);
+	}
+
+	// HACK!! Starter::spawn reaches back into the claim object to grab values out of the c_ad member
+	// so we have to temporarily set it, even though we have not yet decided to take ownership of the
+	// passed in job (we will only own it if the spawn succeeds)
+	// when job is NULL and c_ad has already been set, then this HACK does nothing.
+	// the code should probably be refactored so that the job ad is an explicit argument to Starter::spawn.
+	ClassAd * old_c_ad = c_jobad;
+	if (job) { c_jobad = job; }
+
+	c_starter_pid = starter->spawn( this, now, s );
+
+	c_jobad = old_c_ad;
+
+	if (c_starter_pid) {
+		if (job) { setjobad(job); } // transfer ownership of the job ad to the claim.
+		alive();
+	} else {
 		resetClaim();
 		return FALSE;
 	}
@@ -1434,20 +1493,7 @@ Claim::spawnStarter( Stream* s )
 
 
 void
-Claim::setStarter( Starter* s )
-{
-	if( s && c_starter ) {
-		EXCEPT( "Claim::setStarter() called with existing starter!" );
-	}
-	c_starter = s;
-	if( s ) {
-		s->setClaim( this );
-	}
-}
-
-
-void
-Claim::starterExited( int status )
+Claim::starterExited( Starter* starter, int status)
 {
 		// Now that the starter is gone, we need to change our state
 	changeState( CLAIM_IDLE );
@@ -1455,7 +1501,11 @@ Claim::starterExited( int status )
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
 		// execute directory, and do any other cleanup. 
-	c_starter->exited(status);
+		// note: null pointer check here is to make coverity happy, not because we think it possible for starter to be null.
+	if (starter) {
+		starter->exited(this, status);
+		delete starter; starter = NULL;
+	}
 
 	if( c_badput_caused_by_draining ) {
 		int badput = (int)getJobTotalRunTime() * c_rip->r_attr->num_cpus();
@@ -1504,7 +1554,7 @@ Claim::starterExited( int status )
 bool
 Claim::starterPidMatches( pid_t starter_pid )
 {
-	if( c_starter && c_starter->pid() == starter_pid ) {
+	if (c_starter_pid && starter_pid == c_starter_pid) {
 		return true;
 	}
 	return false;
@@ -1585,8 +1635,8 @@ Claim::removeClaim( bool graceful )
 			starterKillHard();
 		}
 		dprintf( D_FULLDEBUG, "Removing active claim %s "
-				 "(waiting for starter pid %d to exit)\n", id(), 
-				 c_starter->pid() );
+				 "(waiting for starter pid %d to exit)\n", id(),
+				 c_starter_pid);
 		return false;
 	}
 	dprintf( D_FULLDEBUG, "Removing inactive claim %s\n", id() );
@@ -1599,9 +1649,11 @@ Claim::suspendClaim( void )
 {
 	changeState( CLAIM_SUSPENDED );
 
-	if( c_starter ) {
-		return (bool)c_starter->suspend();
+	Starter* starter = findStarterByPid(c_starter_pid);
+	if (starter) {
+		return (bool)starter->suspend();
 	}
+
 		// if there's no starter, we don't need to do anything, so
 		// it worked...  
 	return true;
@@ -1611,10 +1663,12 @@ Claim::suspendClaim( void )
 bool
 Claim::resumeClaim( void )
 {
-	if( c_starter ) {
+	Starter* starter = findStarterByPid(c_starter_pid);
+	if (starter)  {
 		changeState( CLAIM_RUNNING );
-		return (bool)c_starter->resume();
+		return starter->resume();
 	}
+
 		// if there's no starter, we don't need to do anything, so
 		// it worked...  
 	changeState( CLAIM_IDLE );
@@ -1628,9 +1682,11 @@ Claim::starterKill( int sig )
 {
 		// don't need to work about the state, since we don't use this
 		// method to send any signals that change the claim state...
-	if( c_starter ) {
-		return c_starter->kill( sig );
+	Starter* starter = findStarterByPid(c_starter_pid);
+	if (starter)  {
+		return starter->kill( sig );
 	}
+
 		// if there's no starter, we don't need to kill anything, so
 		// it worked...  
 	return true;
@@ -1640,12 +1696,14 @@ Claim::starterKill( int sig )
 bool
 Claim::starterKillPg( int sig )
 {
-	if( c_starter ) {
+	Starter* starter = findStarterByPid(c_starter_pid);
+	if (starter) {
 			// if we're using KillPg, we're trying to hard-kill the
 			// starter and all its children
 		changeState( CLAIM_KILLING );
-		return c_starter->killpg( sig );
+		return starter->killpg( sig );
 	}
+
 		// if there's no starter, we don't need to kill anything, so
 		// it worked...  
 	return true;
@@ -1655,10 +1713,13 @@ Claim::starterKillPg( int sig )
 bool
 Claim::starterKillSoft( bool state_change )
 {
-	if( c_starter ) {
+	Starter* starter = findStarterByPid(c_starter_pid);
+	if (starter) {
 		changeState( CLAIM_VACATING );
-		return c_starter->killSoft( state_change );
+		int timeout = c_rip ? c_rip->evalMaxVacateTime() : 0;
+		return starter->killSoft( timeout, state_change );
 	}
+
 		// if there's no starter, we don't need to kill anything, so
 		// it worked...  
 	return true;
@@ -1668,10 +1729,13 @@ Claim::starterKillSoft( bool state_change )
 bool
 Claim::starterKillHard( void )
 {
-	if( c_starter ) {
+	Starter* starter = findStarterByPid(c_starter_pid);
+	if (starter) {
 		changeState( CLAIM_KILLING );
-		return c_starter->killHard();
+		int timeout = (universe() == CONDOR_UNIVERSE_VM) ? vm_killing_timeout : killing_timeout;
+		return starter->killHard(timeout);
 	}
+
 		// if there's no starter, we don't need to kill anything, so
 		// it worked...  
 	return true;
@@ -1681,8 +1745,15 @@ Claim::starterKillHard( void )
 void
 Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft )
 {
-	if( c_starter ) {
-		if( c_starter->holdJob(hold_reason,hold_code,hold_subcode,soft) ) {
+	Starter* starter = findStarterByPid(c_starter_pid);
+	if (starter) {
+		int timeout;
+		if (soft) {
+			timeout = c_rip ? c_rip->evalMaxVacateTime() : 0;
+		} else {
+			timeout = (universe() == CONDOR_UNIVERSE_VM) ? vm_killing_timeout : killing_timeout;
+		}
+		if( starter->holdJob(hold_reason,hold_code,hold_subcode,soft,timeout) ) {
 			return;
 		}
 		dprintf(D_ALWAYS,"Starter unable to hold job, so evicting job instead.\n");
@@ -1791,37 +1862,30 @@ Claim::verifyCODAttrs( ClassAd* req )
 
 
 bool
-Claim::publishStarterAd( ClassAd* cad )
+Claim::publishStarterAd(ClassAd *cad)
 {
-	MyString line;
-	
-	if( ! c_starter ) {
+	Starter * starter = NULL;
+	if (c_starter_pid) {
+		starter = findStarterByPid(c_starter_pid);
+	}
+
+	if ( ! starter) {
 		return false;
 	}
 
-	char const* ip_addr = c_starter->getIpAddr();
-	if( ip_addr ) {
-		line = ATTR_STARTER_IP_ADDR;
-		line += "=\"";
-		line += ip_addr;
-		line += '"';
-		cad->Insert( line.Value() );
+	char const* ip_addr = starter->getIpAddr();
+	if (ip_addr) {
+		cad->Assign(ATTR_STARTER_IP_ADDR, ip_addr);
 	}
 
-		// stuff in everything we know about from the Claim object
-	this->publish( cad, A_PUBLIC );
 
 		// stuff in starter-specific attributes, if we have them.
 	StringList ability_list;
-	c_starter->publish( cad, A_STATIC | A_PUBLIC, &ability_list );
+	starter->publish(cad, A_STATIC | A_PUBLIC, &ability_list);
 	char* ability_str = ability_list.print_to_string();
-	if( ability_str ) {
-		line = ATTR_STARTER_ABILITY_LIST;
-		line += "=\"";
-		line += ability_str;
-		line += '"';
-		cad->Insert( line.Value() );
-		free( ability_str );
+	if (ability_str) {
+		cad->Assign(ATTR_STARTER_ABILITY_LIST, ability_str);
+		free(ability_str);
 	}
 
 		// TODO add more goodness to this ClassAd??
@@ -1829,12 +1893,12 @@ Claim::publishStarterAd( ClassAd* cad )
 	return true;
 }
 
-
 bool
 Claim::periodicCheckpoint( void )
 {
-	if( c_starter ) {
-		if( ! c_starter->kill(DC_SIGPCKPT) ) { 
+	Starter * starter = findStarterByPid(c_starter_pid);
+	if (starter) {
+		if( ! starter->kill(DC_SIGPCKPT) ) {
 			return false;
 		}
 	}
@@ -1905,20 +1969,11 @@ int
 Claim::finishReleaseCmd( void )
 {
 	ClassAd reply;
-	MyString line;
 	int rval;
 
-	line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign(ATTR_RESULT, getCAResultString(CA_SUCCESS));
 
-	line = ATTR_LAST_CLAIM_STATE;
-	line += "=\"";
-	line += getClaimStateString( c_last_state );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign(ATTR_LAST_CLAIM_STATE, getClaimStateString(c_last_state));
 	
 		// TODO: hopefully we can put the final job update ad in here,
 		// too. 
@@ -1945,20 +2000,10 @@ int
 Claim::finishDeactivateCmd( void )
 {
 	ClassAd reply;
-	MyString line;
 	int rval;
 
-	line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
-	reply.Insert( line.Value() );
-
-	line = ATTR_LAST_CLAIM_STATE;
-	line += "=\"";
-	line += getClaimStateString( c_last_state );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign(ATTR_RESULT, getCAResultString(CA_SUCCESS));
+	reply.Assign(ATTR_LAST_CLAIM_STATE, getClaimStateString(c_last_state));
 	
 		// TODO: hopefully we can put the final job update ad in here,
 		// too. 
@@ -1985,13 +2030,14 @@ Claim::finishDeactivateCmd( void )
 void
 Claim::resetClaim( void )
 {
-	if( c_starter ) {
-		delete( c_starter );
-		c_starter = NULL;
-	}
-	if( c_ad && c_type == CLAIM_COD ) {
-		delete( c_ad );
-		c_ad = NULL;
+	c_starter_pid = 0;
+	c_image_size = 0;
+	c_cpus_usage = 0;
+
+	if( c_jobad && c_type == CLAIM_COD ) {
+		PRAGMA_REMIND("tj: does the ad leak for non-cod claims?")
+		delete( c_jobad );
+		c_jobad = NULL;
 	}
 	c_universe = -1;
 	c_cluster = -1;
@@ -2071,7 +2117,7 @@ Claim::writeJobAd( int pipe_end )
 	// DC::Write_Pipe for writing to it
 	
 	MyString ad_str;
-	sPrintAd(ad_str, *c_ad);
+	sPrintAd(ad_str, *c_jobad);
 
 	const char* ptr = ad_str.Value();
 	int len = ad_str.Length();
@@ -2464,7 +2510,7 @@ ClaimId::dropFile( int slot_id )
 void
 Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 {
-	ASSERT( c_ad );
+	ASSERT( c_jobad );
 
 	update_ad.ResetExpr();
 	const char *name;
@@ -2482,13 +2528,13 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 			// replace expression in current ad with expression from update ad
 		ExprTree *new_expr = expr->Copy();
 		ASSERT( new_expr );
-		if( !c_ad->Insert( name, new_expr ) ) {
+		if ( ! c_jobad->Insert(name, new_expr)) {
 			delete new_expr;
 		}
 	}
 	loadStatistics();
 	if( IsDebugLevel(D_JOB) ) {
 		dprintf(D_JOB,"Updated job ClassAd:\n");
-		dPrintAd(D_JOB, *c_ad);
+		dPrintAd(D_JOB, *c_jobad);
 	}
 }

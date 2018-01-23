@@ -38,7 +38,6 @@ public:
 protected:
 	shared_context* cxt_;
 	addrinfo* current_;
-	bool ipv6;
 };
 
 // return with AI_ADDRCONFIG

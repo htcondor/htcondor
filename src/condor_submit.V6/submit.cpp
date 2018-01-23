@@ -95,9 +95,6 @@
 #ifndef USE_SUBMIT_UTILS
 #error "condor submit must use submit utils"
 #endif
-// the halting parser doesn't work when Queue statements are in an submit file include : statement
-//#define USE_HALTING_PARSER 1
-
 
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
@@ -106,7 +103,6 @@
 //   either completely case-sensitive (and use MyStringHash()) or
 //   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
 static unsigned int hashFunction( const MyString& );
-#include "file_sql.h"
 
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
@@ -161,6 +157,7 @@ bool	NewExecutable = false;
 int		dash_remote=0;
 int		dash_factory=0;
 int		default_to_factory=0;
+int		create_local_factory_file=1; // create a copy of the submit digest in the current directory
 unsigned int submit_unique_id=1; // hack to make default_to_factory work in test suite for milestone 1 (8.7.1)
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
@@ -221,10 +218,19 @@ bool		DumpFileIsStdout = 0;
 void usage();
 void init_params();
 void reschedule();
-int  read_submit_file( FILE *fp );
+int submit_jobs (
+	FILE * fp,
+	MACRO_SOURCE & source,
+	int as_factory,                  // 0=not factory, 1=must be factory, 2=smart factory (max_materialize), 3=smart factory (all-but-single-proc)
+	List<const char> & append_lines, // lines passed in via -a argument
+	std::string & queue_cmd_line);   // queue statement passed in via -q argument
 void check_umask();
 void setupAuthentication();
 const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
+int allocate_a_cluster();
+void init_vars(SubmitHash & hash, int cluster_id, StringList & vars);
+int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws);
+void cleanup_vars(SubmitHash & hash, StringList & vars);
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 int  SendLastExecutable();
@@ -421,11 +427,24 @@ main( int argc, const char *argv[] )
 				bool needs_file_arg = true;
 				if (pcolon) { 
 					needs_file_arg = false;
-					int opt = atoi(pcolon+1);
-					if (opt > 1) {  DashDryRun =  opt; needs_file_arg = opt < 0x10; }
-					else if (MATCH == strcmp(pcolon+1, "hash")) {
-						DumpSubmitHash = 1;
-						needs_file_arg = true;
+					StringList opts(++pcolon);
+					for (const char * opt = opts.first(); opt; opt = opts.next()) {
+						if (YourString(opt) == "hash") {
+							DumpSubmitHash |= 0x100 | HASHITER_NO_DEFAULTS;
+							needs_file_arg = true;
+						} else if (YourString(opt) == "def") {
+							DumpSubmitHash &= ~HASHITER_NO_DEFAULTS;
+							needs_file_arg = true;
+						} else {
+							int optval = atoi(opt);
+							// if the argument is -dry:<number> and number is > 0x10,
+							// then what we are actually doing triggering the unit tests.
+							if (optval > 1) {  DashDryRun = optval; needs_file_arg = optval < 0x10; }
+							else {
+								fprintf(stderr, "unknown option %s for -dry-run:<opts>\n", opt);
+								exit(1);
+							}
+						}
 					}
 				}
 				if (needs_file_arg) {
@@ -845,13 +864,12 @@ main( int argc, const char *argv[] )
 		}
 	}
 
-	int rval = 0;
 	//  Parse the file and queue the jobs
-	if (dash_factory && has_late_materialize) {
-		rval = submit_factory_job(fp, FileMacroSource, extraLines, queueCommandLine);
-	} else {
-		rval = read_submit_file(fp);
+	int as_factory = 0;
+	if (has_late_materialize) {
+		as_factory = (dash_factory ? 1 : 0) | (default_to_factory ? 2 : 0);
 	}
+	int rval = submit_jobs(fp, FileMacroSource, as_factory, extraLines, queueCommandLine);
 	if( rval < 0 ) {
 		if( ExtraLineNo == 0 ) {
 			fprintf( stderr,
@@ -1285,7 +1303,8 @@ int iterate_queue_foreach(int queue_num, StringList & vars, StringList & items, 
 			}
 		}
 
-		queue_end(vars, false);
+		// make sure vars don't continue to reference the o.items data that we are about to free.
+		cleanup_vars(submit_hash, vars);
 		if (rval < 0)
 			return rval;
 	}
@@ -1293,10 +1312,30 @@ int iterate_queue_foreach(int queue_num, StringList & vars, StringList & items, 
 	return 0;
 }
 
+//PRAGMA_REMIND("TODO: move this into submit_hash?")
+int ParseDashAppendLines(List<const char> &exlines, MACRO_SOURCE& source, MACRO_SET& macro_set)
+{
+	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
+
+	ErrContext.phase = PHASE_DASH_APPEND;
+	ExtraLineNo = 0;
+	exlines.Rewind();
+	const char * exline;
+	while (exlines.Next(exline)) {
+		++ExtraLineNo;
+		int rval = Parse_config_string(source, 1, exline, macro_set, ctx);
+		if (rval < 0)
+			return rval;
+		rval = 0;
+	}
+	ExtraLineNo = 0;
+	return 0;
+}
 
 MyString last_submit_executable;
 MyString last_submit_cmd;
 
+#if 0 // no longer used
 int SpecialSubmitPreQueue(const char* queue_args, bool from_file, MACRO_SOURCE& source, MACRO_SET& macro_set, std::string & errmsg)
 {
 	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
@@ -1305,18 +1344,9 @@ int SpecialSubmitPreQueue(const char* queue_args, bool from_file, MACRO_SOURCE& 
 	GotQueueCommand = true;
 
 	// parse the extra lines before doing $ expansion on the queue line
-	ErrContext.phase = PHASE_DASH_APPEND;
-	ExtraLineNo = 0;
-	extraLines.Rewind();
-	const char * exline;
-	while (extraLines.Next(exline)) {
-		++ExtraLineNo;
-		rval = Parse_config_string(source, 1, exline, macro_set, ctx);
-		if (rval < 0)
-			return rval;
-		rval = 0;
-	}
-	ExtraLineNo = 0;
+	rval = ParseDashAppendLines(extraLines, source, macro_set);
+	if (rval < 0)
+		return rval;
 	ErrContext.phase = PHASE_QUEUE;
 	ErrContext.step = -1;
 
@@ -1362,230 +1392,380 @@ int SpecialSubmitPostQueue()
 	return 0;
 }
 
-// this gets called while parsing the submit file to process lines
-// that don't look like valid key=value pairs.  That *should* only be queue lines for now.
-// return 0 to keep scanning the file, ! 0 to stop scanning. non-zero return values will
-// be passed back out of Parse_macros
-//
-int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, char * line, std::string & errmsg)
-{
-	FILE* fp_submit = (FILE*)pv;
-	int rval = 0;
-	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
+#endif
 
-	// Check to see if this is a queue statement.
-	//
-	const char * queue_args = is_queue_statement(line);
-	if (queue_args) {
+bool CheckForNewExecutable(MACRO_SET& macro_set) {
 
-		rval = SpecialSubmitPreQueue(queue_args, fp_submit!=NULL, source, macro_set, errmsg);
-		if (rval) {
-			return rval;
-		}
+	bool new_exe = false;
 
-		auto_free_ptr expanded_queue_args(expand_macro(queue_args, macro_set, ctx));
-		char * pqargs = expanded_queue_args.ptr();
-		ASSERT(pqargs);
+	// HACK! the queue function uses a global flag to know whether or not to ask for a new cluster
+	// In 8.2 this flag is set whenever the "executable" or "cmd" value is set in the submit file.
+	// As of 8.3, we don't believe this is still necessary, but we are afraid to change it. This
+	// code is *mostly* the same, but will differ in cases where the users is setting cmd or executble
+	// to the *same* value between queue statements. - hopefully this is close enough.
 
-		// set glob expansion options from submit statements.
-		int expand_options = 0;
-		if (submit_hash.submit_param_bool("SubmitWarnEmptyMatches", "submit_warn_empty_matches", true)) {
-			expand_options |= EXPAND_GLOBS_WARN_EMPTY;
-		}
-		if (submit_hash.submit_param_bool("SubmitFailEmptyMatches", "submit_fail_empty_matches", false)) {
-			expand_options |= EXPAND_GLOBS_FAIL_EMPTY;
-		}
-		if (submit_hash.submit_param_bool("SubmitWarnDuplicateMatches", "submit_warn_duplicate_matches", true)) {
-			expand_options |= EXPAND_GLOBS_WARN_DUPS;
-		}
-		if (submit_hash.submit_param_bool("SubmitAllowDuplicateMatches", "submit_allow_duplicate_matches", false)) {
-			expand_options |= EXPAND_GLOBS_ALLOW_DUPS;
-		}
-		char* parm = submit_hash.submit_param("SubmitMatchDirectories", "submit_match_directories");
-		if (parm) {
-			if (MATCH == strcasecmp(parm, "never") || MATCH == strcasecmp(parm, "no") || MATCH == strcasecmp(parm, "false")) {
-				expand_options |= EXPAND_GLOBS_TO_FILES;
-			} else if (MATCH == strcasecmp(parm, "only")) {
-				expand_options |= EXPAND_GLOBS_TO_DIRS;
-			} else if (MATCH == strcasecmp(parm, "yes") || MATCH == strcasecmp(parm, "true")) {
-				// nothing to do.
-			} else {
-				errmsg = parm;
-				errmsg += " is not a valid value for SubmitMatchDirectories";
-				return -1;
-			}
-			free(parm); parm = NULL;
-		}
-
-
-		// skip whitespace before queue arguments (if any)
-		while (isspace(*pqargs)) ++pqargs;
-
-		SubmitForeachArgs o;
-		int queue_modifier = 1;
-		int citems = -1;
-		// parse the queue arguments, handling the count and finding the in,from & matching keywords
-		// on success pqargs will point to to \0 or to just after the keyword.
-		rval = o.parse_queue_args(pqargs);
-		queue_modifier = o.queue_num;
-		if (rval < 0) {
-			errmsg = "invalid Queue statement";
-			return rval;
-		}
-
-		// if no loop variable specified, but a foreach mode is used. use "Item" for the loop variable.
-		if (o.vars.isEmpty() && (o.foreach_mode != foreach_not)) { o.vars.append("Item"); }
-
-		if ( ! o.items_filename.empty()) {
-			if (o.items_filename == "<") {
-				if ( ! fp_submit) {
-					errmsg = "unexpected error while attempting to read queue items from submit file.";
-					return -1;
-				}
-				// read items from submit file until we see the closing brace on a line by itself.
-				bool saw_close_brace = false;
-				int item_list_begin_line = source.line;
-				for(char * line=NULL; ; ) {
-					line = getline_trim(fp_submit, source.line);
-					if ( ! line) break; // null indicates end of file
-					if (line[0] == '#') continue; // skip comments.
-					if (line[0] == ')') { saw_close_brace = true; break; }
-					if (o.foreach_mode == foreach_from) {
-						o.items.append(line);
-					} else {
-						o.items.initializeFromString(line);
-					}
-				}
-				if ( ! saw_close_brace) {
-					formatstr(errmsg, "Reached end of file without finding closing brace ')'"
-						" for Queue command on line %d", item_list_begin_line);
-					return -1;
-				}
-			} else if (o.items_filename == "-") {
-				int lineno = 0;
-				for (char* line=NULL;;) {
-					line = getline_trim(stdin, lineno);
-					if ( ! line) break;
-					if (o.foreach_mode == foreach_from) {
-						o.items.append(line);
-					} else {
-						o.items.initializeFromString(line);
-					}
-				}
-			} else {
-				MACRO_SOURCE ItemsSource;
-				FILE * fp = Open_macro_source(ItemsSource, o.items_filename.Value(), false, macro_set, errmsg);
-				if ( ! fp) {
-					return -1;
-				}
-				for (char* line=NULL;;) {
-					line = getline_trim(fp, ItemsSource.line);
-					if ( ! line) break;
-					o.items.append(line);
-				}
-				rval = Close_macro_source(fp, ItemsSource, macro_set, 0);
-			}
-		}
-
-		switch (o.foreach_mode) {
-		case foreach_in:
-		case foreach_from:
-			// itemlist is already correct
-			// PRAGMA_REMIND("do argument validation here?")
-			citems = o.items.number();
-			break;
-
-		case foreach_matching:
-		case foreach_matching_files:
-		case foreach_matching_dirs:
-		case foreach_matching_any:
-			if (o.foreach_mode == foreach_matching_files) {
-				expand_options &= ~EXPAND_GLOBS_TO_DIRS;
-				expand_options |= EXPAND_GLOBS_TO_FILES;
-			} else if (o.foreach_mode == foreach_matching_dirs) {
-				expand_options &= ~EXPAND_GLOBS_TO_FILES;
-				expand_options |= EXPAND_GLOBS_TO_DIRS;
-			} else if (o.foreach_mode == foreach_matching_any) {
-				expand_options &= ~(EXPAND_GLOBS_TO_FILES|EXPAND_GLOBS_TO_DIRS);
-			}
-			citems = submit_expand_globs(o.items, expand_options, errmsg);
-			if ( ! errmsg.empty()) {
-				fprintf(stderr, "\n%s: %s", citems >= 0 ? "WARNING" : "ERROR", errmsg.c_str());
-				errmsg.clear();
-			}
-			if (citems < 0) return citems;
-			break;
-
-		default:
-		case foreach_not:
-			// to simplify the loop below, set a single empty item into the itemlist.
-			citems = 1;
-			break;
-		}
-
-		if (queue_modifier > 0 && citems > 0) {
-			iterate_queue_foreach(queue_modifier, o.vars, o.items, o.slice);
-		}
-
-		rval = SpecialSubmitPostQueue();
-		if (rval)
-			return rval;
-		return 0; // keep scanning
+	MyString cur_submit_executable(lookup_macro_exact_no_default(SUBMIT_KEY_Executable, macro_set, 0));
+	if (last_submit_executable != cur_submit_executable) {
+		new_exe = true;
+		last_submit_executable = cur_submit_executable;
 	}
-	return -1;
+	MyString cur_submit_cmd(lookup_macro_exact_no_default("cmd", macro_set, 0));
+	if (last_submit_cmd != cur_submit_cmd) {
+		new_exe = true;
+		last_submit_cmd = cur_submit_cmd;
+	}
+
+	return new_exe;
 }
 
-int read_submit_file(FILE * fp)
+int send_cluster_ad(SubmitHash & hash, int ClusterId)
 {
-	ErrContext.phase = PHASE_READ_SUBMIT;
-
-	std::string errmsg;
-  #ifdef USE_HALTING_PARSER
 	int rval = 0;
-	while (rval == 0) {
+
+	// make the cluster ad.
+	//
+	// use make_job_ad for job 0 to populate the cluster ad.
+	const bool is_interactive = false; // for now, interactive jobs don't work
+	const bool dash_remote = false; // for now, remote jobs don't work.
+	void * pv_check_arg = NULL; // future?
+	ClassAd * job = hash.make_job_ad(JOB_ID_KEY(ClusterId,0),
+	                                 0, 0, is_interactive, dash_remote,
+	                                 check_sub_file, pv_check_arg);
+	if ( ! job) {
+		return -1;
+	}
+
+	int JobUniverse = hash.getUniverse();
+	if ( ! JobUniverse) {
+		rval = -1;
+	} else {
+		SendLastExecutable(); // if spooling the exe, send it now.
+		SetSendCredentialInAd( job );
+
+		gClusterAd = new ClassAd(*job);
+		//PRAGMA_REMIND("are there any attributes we should strip from the cluster ad before sending it?")
+		rval = SendClusterAd(gClusterAd);
+		if (rval == 0 || rval == 1) {
+			rval = 0;
+		} else {
+			fprintf( stderr, "\nERROR: Failed to queue job.\n" );
+		}
+	}
+
+	hash.delete_job_ad();
+	job = NULL;
+
+	return rval;
+}
+
+
+int submit_jobs (
+	FILE * fp,
+	MACRO_SOURCE & source,
+	int as_factory,                  // 0=not factory, 1=dash_factory, 2=smart factory (max_materialize), 3=smart factory (all but single-proc)
+	List<const char> & append_lines, // lines passed in via -a argument
+	std::string & queue_cmd_line)    // queue statement passed in via -q argument
+{
+	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
+	std::string errmsg;
+	int rval = -1;
+	const char* token_seps = ", \t";
+	const char* token_ws = " \t";
+
+	// if there is a queue statement from the command line, get ready to parse it.
+	// we will end up actually parsing it only if there is no queue statement in the file.
+	// we make a copy here because parsing the queue line is destructive.
+	auto_free_ptr qcmd;
+	if ( ! queue_cmd_line.empty()) { qcmd.set(strdup(queue_cmd_line.c_str())); }
+
+	MacroStreamYourFile ms(fp, source);
+
+	// set want_factory to 0 or 1 when we know for sure whether it is a factory submit or not.
+	// set need_factory to 1 if we should fail if we cannot submit a factory job.
+	int want_factory = as_factory ? 1 : -1;
+	int need_factory = (as_factory & 1) != 0;
+	long long max_materialize = INT_MAX;
+
+	// there can be multiple queue statements in the file, we need to process them all.
+	for (;;) {
+		if (feof(fp)) { break; }
+
+		ErrContext.phase = PHASE_READ_SUBMIT;
+
 		char * qline = NULL;
-		rval = submit_hash.parse_file_up_to_q_line(fp, FileMacroSource, errmsg, &qline);
-		if (rval || ! qline)
-			break;
-
-		const char * queue_args = is_queue_statement(qline);
-		if ( ! queue_args)
-			break;
-
-		// Do last minute things that happen just before the queue statement
-		// NOTE: it is by design that the ClusterId can only change once per queue statement
-		// even if the queue iteration changes the "cmd". It's important for the job factory
-		// that the cluster does not change.
-		rval = SpecialSubmitPreQueue(queue_args, true, FileMacroSource, submit_hash.macros(), errmsg);
+		rval = submit_hash.parse_up_to_q_line(ms, errmsg, &qline);
 		if (rval)
 			break;
 
+		if ( ! qline && GotQueueCommand) {
+			// after we have seen a queue command, if we parse and get no queue line
+			// then we have hit the end of file. so just break out of the loop.
+			// this is a common and normal way to exit the loop.
+			break;
+		}
+
+		// parse the extra lines before doing $ expansion on the queue line
+		rval = ParseDashAppendLines(append_lines, source, submit_hash.macros());
+		if (rval < 0)
+			break;
+
+		// we'll use the GotQueueCommand flag as a convenient flag for 'this is the first iteration of the loop'
+		if ( ! GotQueueCommand) {
+			// If this turns out to be late materialization, the schedd will need to know what the
+			// current working directory was when we parsed the submit file. so stuff it into the submit hash
+			MyString FactoryIwd;
+			condor_getcwd(FactoryIwd);
+			insert_macro("FACTORY.Iwd", FactoryIwd.c_str(), submit_hash.macros(), DetectedMacro, ctx);
+
+			// the hash should be fully populated now, so we can optimize it for lookups.
+			submit_hash.optimize();
+
+			// Prime the globals we use to detect a change in executable, and force NewExecutable to be true
+			CheckForNewExecutable(submit_hash.macros());
+			NewExecutable = true;
+		} else {
+			NewExecutable = CheckForNewExecutable(submit_hash.macros());
+		}
+
+		// do the dry-run logging of queue arguments
+		if (DashDryRun && DumpSubmitHash) {
+			if ( ! queue_cmd_line.empty()) {
+				auto_free_ptr expanded_queue_args(expand_macro(queue_cmd_line.c_str(), submit_hash.macros(), ctx));
+				char * pqargs = expanded_queue_args.ptr();
+				ASSERT(pqargs);
+				fprintf(stdout, "\n----- -queue command line -----\nSpecified: %s\nExpanded : %s", queue_cmd_line.c_str(), pqargs);
+			}
+			if (qline) {
+				auto_free_ptr expanded_queue_args(expand_macro(qline, submit_hash.macros(), ctx));
+				char * pqargs = expanded_queue_args.ptr();
+				ASSERT(pqargs);
+				fprintf(stdout, "\n----- Queue arguments -----\nSpecified: %s\nExpanded : %s", qline, pqargs);
+			}
+		}
+
+		// setup for parsing the queue args, this can come from either the command line,
+		// or from the submit file, but NOT BOTH.
+		const char * queue_args = NULL;
+		if (qline) {
+			queue_args = is_queue_statement(qline);
+			ErrContext.phase = PHASE_QUEUE;
+			ErrContext.step = -1;
+		} else if (qcmd) {
+			queue_args = is_queue_statement(qcmd);
+			ErrContext.phase = PHASE_QUEUE_ARG;
+			ErrContext.step = -1;
+		}
+		if ( ! queue_args) {
+			errmsg = "no queue statement";
+			rval = -1;
+			break;
+		}
+		GotQueueCommand += 1;
+
+		// check for conflict between queue line and -queue command line
+		if (qline && qcmd) {
+			errmsg = "-queue argument conflicts with queue statement in submit file";
+			rval = -1;
+			break;
+		}
+
+		// expand and parse the queue statement
 		SubmitForeachArgs o;
 		rval = submit_hash.parse_q_args(queue_args, o, errmsg);
 		if (rval)
 			break;
 
-		rval = submit_hash.load_q_foreach_items(fp, FileMacroSource, o, errmsg);
-		if (rval)
-			break;
-
-		rval = iterate_queue_foreach(o.queue_num, o.vars, o.items, o.slice);
-		if (rval)
-			break;
-
-		rval = SpecialSubmitPostQueue();
-		if (rval) {
-			// a return of 1 means stop scanning, but i
-			if (rval == 1) rval = 0;
-			break;
+		// load the foreach data
+		rval = submit_hash.load_inline_q_foreach_items(ms, o, errmsg);
+		if (rval == 1) { // 1 means forech data is external
+			rval = submit_hash.load_external_q_foreach_items(o, errmsg);
 		}
-	}
-  #else
-	int rval = submit_hash.parse_file(fp, FileMacroSource, errmsg, SpecialSubmitParse, fp);
-  #endif
+		if (rval)
+			break;
 
+		// figure out how many items we will be making jobs from taking the slice [::] into account
+		int selected_item_count = o.item_len();
+
+		// if this is the first queue command, and we don't yet know if this is a job factory, decide now.
+		// we do this after we parse the first queue command so that we can use the size of the queue statement
+		// to decide whether this is a factory or not.
+		if (GotQueueCommand == 1) {
+			if (submit_hash.submit_param_long_exists("max_materialize",ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
+				want_factory = 1;
+			} else if (want_factory < 0) {
+				PRAGMA_REMIND("are there other conditions were we promote to factory?")
+				want_factory = 0;
+			}
+		}
+
+		// if this is an empty queue statement, there is nothing to queue...
+		if (selected_item_count == 0 || o.queue_num < 0) {
+			if (feof(fp)) {
+				break;
+			} else {
+				continue;
+			}
+			PRAGMA_REMIND("check if this properly handles empty submit item lists and/or multiple queue lines")
+		}
+
+		int queue_item_opts = 0;
+		if (submit_hash.submit_param_bool("SubmitWarnEmptyFields", "submit_warn_empty_fields", true)) {
+			queue_item_opts |= QUEUE_OPT_WARN_EMPTY_FIELDS;
+		}
+		if (submit_hash.submit_param_bool("SubmitFailEmptyFields", "submit_fail_empty_fields", false)) {
+			queue_item_opts |= QUEUE_OPT_FAIL_EMPTY_FIELDS;
+		}
+
+		// ===== begin talking to schedd here ===
+		if ( ! MyQ) {
+			int rval = queue_connect();
+			if (rval < 0)
+				break;
+
+			if (want_factory && ! MyQ->allows_late_materialize()) {
+				// if factory was required, not just preferred. then we fail the submit
+				if (need_factory) {
+					if (MyQ->has_late_materialize()) {
+						fprintf(stderr, "\nERROR: Late materialization is not allowed by this SCHEDD\n");
+					} else {
+						fprintf(stderr, "\nERROR: The SCHEDD is too old to support late materialization\n");
+					}
+					WarnOnUnusedMacros = false; // no point on checking for unused macros.
+					rval = -1;
+					break;
+				}
+				// otherwise we just fall back to non-factory submit
+				want_factory = 0;
+			}
+		}
+
+		// At this point we really expect to  have a working queue connection (possibly simulated)
+		if ( ! MyQ) { rval = -1; break; }
+
+		// allocate a cluster object if this is the first time through the loop, or if the executable changed.
+		if (NewExecutable || (ClusterId < 0)) {
+			rval = allocate_a_cluster();
+			if (rval < 0)
+				break;
+		}
+
+		if (want_factory) { // factory submit
+
+			// turn the submit hash into a submit digest
+			std::string submit_digest;
+			submit_hash.make_digest(submit_digest, ClusterId, o.vars, 0);
+
+			// convert foreach data into canonical form, writing a new .items file if needed
+			rval = convert_to_foreach_file(submit_hash, o, ClusterId, true);
+			if (rval < 0)
+				break;
+
+			// append the revised queue statement to the submit digest
+			rval = append_queue_statement(submit_digest, o);
+			if (rval < 0)
+				break;
+
+			// write the submit digest to the current working directory.
+			PRAGMA_REMIND("todo: force creation of local factory file if schedd is version < 8.7.3?")
+			MyString factory_path;
+			if (create_local_factory_file) {
+				MyString factory_fn;
+				//PRAGMA_REMIND("tj: remove this hack..")
+				//if (default_to_factory) { // hack to make the test suite work.
+				//	factory_fn.formatstr("condor_submit.%d.%u.digest", ClusterId, submit_unique_id);
+				//} else {
+					factory_fn.formatstr("condor_submit.%d.digest", ClusterId);
+				//}
+				factory_path = submit_hash.full_path(factory_fn.c_str(), false);
+				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), submit_digest.size(), 0644);
+				if (rval < 0)
+					break;
+			}
+
+			// materialize all of the jobs unless the user requests otherwise.
+			// (the admin can also set a limit which is applied at the schedd)
+			int total_procs = (o.queue_num?o.queue_num:1) * o.item_len();
+			if (total_procs > 0) GotNonEmptyQueueCommand = 1;
+			if (max_materialize <= 0) max_materialize = INT_MAX;
+			max_materialize = MIN(max_materialize, total_procs);
+			max_materialize = MAX(max_materialize, 1);
+
+			// send the submit digest to the schedd. the schedd will parse the digest at this point
+			// and return success or failure.
+			rval = MyQ->set_Factory(ClusterId, (int)max_materialize, factory_path.c_str(), submit_digest.c_str());
+			if (rval < 0)
+				break;
+
+			init_vars(submit_hash, ClusterId, o.vars);
+
+			if (DashDryRun && DumpSubmitHash) {
+				fprintf(stdout, "\n----- submit hash at queue begin -----\n");
+				submit_hash.dump(stdout, DumpSubmitHash & 0xF);
+				fprintf(stdout, "-----\n");
+			}
+
+			// stuff foreach data for the first item before we make the cluster ad.
+			char * item = o.items.first();
+			rval = set_vars(submit_hash, o.vars, item, 0, queue_item_opts, token_seps, token_ws);
+			if (rval < 0)
+				break;
+
+			// submit the cluster ad
+			//
+			rval = send_cluster_ad(submit_hash, ClusterId);
+			if (rval < 0)
+				break;
+
+			cleanup_vars(submit_hash, o.vars);
+
+			// tell main what cluster was submitted and how many jobs.
+			set_factory_submit_info(ClusterId, total_procs);
+
+		} else { // non-factory submit
+
+			init_vars(submit_hash, ClusterId, o.vars);
+
+			if (DashDryRun && DumpSubmitHash) {
+				fprintf(stdout, "\n----- submit hash at queue begin -----\n");
+				submit_hash.dump(stdout, DumpSubmitHash & 0xF);
+				fprintf(stdout, "-----\n");
+			}
+
+			char * item = NULL;
+			if (o.items.isEmpty()) {
+				rval = queue_item(o.queue_num, o.vars, item, 0, queue_item_opts, token_seps, token_ws);
+			} else {
+				int citems = o.items.number();
+				o.items.rewind();
+				int item_index = 0;
+				while ((item = o.items.next())) {
+					if (o.slice.selected(item_index, citems)) {
+						rval = queue_item(o.queue_num, o.vars, item, item_index, queue_item_opts, token_seps, token_ws);
+						if (rval < 0)
+							break;
+					}
+					++item_index;
+				}
+			}
+
+			// make sure vars don't continue to reference the o.items data that we are about to free.
+			cleanup_vars(submit_hash, o.vars);
+		}
+
+		// if there was a failure, quit out of this loop.
+		if (rval < 0)
+			break;
+
+		// We allow only a single queue statement for factory submits.
+		if (want_factory)
+			break;
+
+	} // end for(;;)
+
+	// report errors from submit
+	//
 	if( rval < 0 ) {
-		fprintf (stderr, "\nERROR: on Line %d of submit file: %s\n", FileMacroSource.line, errmsg.c_str());
+		fprintf (stderr, "\nERROR: on Line %d of submit file: %s\n", source.line, errmsg.c_str());
 		if (submit_hash.error_stack()) {
 			std::string errstk(submit_hash.error_stack()->getFullText());
 			if ( ! errstk.empty()) {
@@ -1593,25 +1773,10 @@ int read_submit_file(FILE * fp)
 			}
 			submit_hash.error_stack()->clear();
 		}
-	} else {
-		ErrContext.phase = PHASE_QUEUE_ARG;
-
-		// if a -queue command line option was specified, and the submit file did not have a queue statement
-		// then parse the command line argument now (as if it was appended to the submit file)
-		if ( rval == 0 && ! GotQueueCommand && ! queueCommandLine.empty()) {
-			char * line = strdup(queueCommandLine.c_str()); // copy cmdline so we can destructively parse it.
-			ASSERT(line);
-			rval = submit_hash.process_q_line(FileMacroSource, line, errmsg, SpecialSubmitParse, NULL);
-			free(line);
-		}
-		if (rval < 0) {
-			fprintf (stderr, "\nERROR: while processing -queue command line option: %s\n", errmsg.c_str());
-		}
 	}
 
 	return rval;
 }
-
 
 #ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
   // To facilitate processing of job status from the
@@ -1709,69 +1874,31 @@ int queue_connect()
 
 // buffers used while processing the queue statement to inject $(Cluster) and $(Process) into the submit hash table.
 static char ClusterString[20]="1", ProcessString[20]="0", EmptyItemString[] = "";
-MACRO_ITEM* find_submit_item(const char * name) { return submit_hash.lookup_exact(name); }
-#define set_live_submit_variable submit_hash.set_live_submit_variable
-
-int queue_begin(StringList & vars, bool new_cluster)
+void init_vars(SubmitHash & hash, int cluster_id, StringList & vars)
 {
-	if ( ! MyQ)
-		return -1;
+	sprintf(ClusterString, "%d", cluster_id);
+	strcpy(ProcessString, "0");
 
 	// establish live buffers for $(Cluster) and $(Process), and other loop variables
 	// Because the user might already be using these variables, we can only set the explicit ones
 	// unconditionally, the others we must set only when not already set by the user.
-	set_live_submit_variable(SUBMIT_KEY_Cluster, ClusterString);
-	set_live_submit_variable(SUBMIT_KEY_Process, ProcessString);
+	hash.set_live_submit_variable(SUBMIT_KEY_Cluster, ClusterString);
+	hash.set_live_submit_variable(SUBMIT_KEY_Process, ProcessString);
 	
 	vars.rewind();
 	char * var;
-	while ((var = vars.next())) { set_live_submit_variable(var, EmptyItemString, false); }
+	while ((var = vars.next())) { hash.set_live_submit_variable(var, EmptyItemString, false); }
 
 	// optimize the macro set for lookups if we inserted anything.  we expect this to happen only once.
-	submit_hash.optimize();
-
-	if (new_cluster) {
-		// if we have already created the maximum number of clusters, error out now.
-		if (DashMaxClusters > 0 && ClustersCreated >= DashMaxClusters) {
-			fprintf(stderr, "\nERROR: Number of submitted clusters would exceed %d and -single-cluster was specified\n", DashMaxClusters);
-			exit(1);
-		}
-
-		if ((ClusterId = MyQ->get_NewCluster()) < 0) {
-			fprintf(stderr, "\nERROR: Failed to create cluster\n");
-			if ( ClusterId == -2 ) {
-				fprintf(stderr,
-					"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
-			}
-			exit(1);
-		}
-
-		++ClustersCreated;
-
-		delete gClusterAd; gClusterAd = NULL;
-	}
-
-	if (DashDryRun && DumpSubmitHash) {
-		fprintf(stdout, "\n----- submit hash at queue begin -----\n");
-		int flags = (DumpSubmitHash & 8) ? HASHITER_SHOW_DUPS : 0;
-		submit_hash.dump(stdout, flags);
-		fprintf(stdout, "-----\n");
-	}
-
-	return 0;
+	hash.optimize();
 }
 
-// queue N for a single item from the foreach itemlist.
-// if there is no item list (i.e the old Queue N syntax) then item will be NULL.
+// DESTRUCTIVELY! parse 'item' and store the fields into the submit hash as 'live' variables.
 //
-int queue_item(int num, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws)
+int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws)
 {
-	ErrContext.item_index = item_index;
+	int rval = 0;
 
-	if ( ! MyQ)
-		return -1;
-
-	int rval = 0; // default to success (if num == 0 we will return this)
 	bool check_empty = options & (QUEUE_OPT_WARN_EMPTY_FIELDS|QUEUE_OPT_FAIL_EMPTY_FIELDS);
 	bool fail_empty = options & QUEUE_OPT_FAIL_EMPTY_FIELDS;
 
@@ -1790,7 +1917,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		vars.rewind();
 		char * var = vars.next();
 		char * data = item;
-		set_live_submit_variable(var, data, false);
+		hash.set_live_submit_variable(var, data, false);
 
 		// if there is more than a single loop variable, then assign them as well
 		// we do this by destructively null terminating the item for each var
@@ -1803,15 +1930,26 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 				*data++ = 0;
 				// skip leading separators and whitespace
 				while (*data && strchr(ws, *data)) ++data;
-				set_live_submit_variable(var, data, false);
+				hash.set_live_submit_variable(var, data, false);
 			}
+		}
+
+		if (DashDryRun && DumpSubmitHash) {
+			fprintf(stdout, "----- submit hash changes for ItemIndex = %d -----\n", item_index);
+			char * var;
+			vars.rewind();
+			while ((var = vars.next())) {
+				MACRO_ITEM* pitem = hash.lookup_exact(var);
+				fprintf (stdout, "  %s = %s\n", var, pitem ? pitem->raw_value : "");
+			}
+			fprintf(stdout, "-----\n");
 		}
 
 		if (check_empty) {
 			vars.rewind();
 			std::string empties;
 			while ((var = vars.next())) {
-				MACRO_ITEM* pitem = find_submit_item(var);
+				MACRO_ITEM* pitem = hash.lookup_exact(var);
 				if ( ! pitem || (pitem->raw_value != EmptyItemString && 0 == strlen(pitem->raw_value))) {
 					if ( ! empties.empty()) empties += ",";
 					empties += var;
@@ -1824,18 +1962,82 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 				}
 			}
 		}
+
 	}
 
-	if (DashDryRun && DumpSubmitHash) {
-		fprintf(stdout, "----- submit hash changes for ItemIndex = %d -----\n", item_index);
-		char * var;
+	return rval;
+}
+
+void cleanup_vars(SubmitHash & hash, StringList & vars)
+{
+	// set live submit variables to generate reasonable unused-item messages.
+	if ( ! vars.isEmpty())  {
 		vars.rewind();
-		while ((var = vars.next())) {
-			MACRO_ITEM* pitem = find_submit_item(var);
-			fprintf (stdout, "  %s = %s\n", var, pitem ? pitem->raw_value : "");
+		char * var;
+		while ((var = vars.next())) { hash.set_live_submit_variable(var, "<Queue_item>", false); }
+	}
+}
+
+MACRO_ITEM* find_submit_item(const char * name) { return submit_hash.lookup_exact(name); }
+#define set_live_submit_variable submit_hash.set_live_submit_variable
+
+int allocate_a_cluster()
+{
+	// if we have already created the maximum number of clusters, error out now.
+	if (DashMaxClusters > 0 && ClustersCreated >= DashMaxClusters) {
+		fprintf(stderr, "\nERROR: Number of submitted clusters would exceed %d and -single-cluster was specified\n", DashMaxClusters);
+		exit(1);
+	}
+
+	if ((ClusterId = MyQ->get_NewCluster()) < 0) {
+		fprintf(stderr, "\nERROR: Failed to create cluster\n");
+		if ( ClusterId == -2 ) {
+			fprintf(stderr,
+				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
 		}
+		exit(1);
+	}
+
+	++ClustersCreated;
+
+	delete gClusterAd; gClusterAd = NULL;
+	return 0;
+}
+
+
+int queue_begin(StringList & vars, bool new_cluster)
+{
+	if ( ! MyQ)
+		return -1;
+
+	if (new_cluster) {
+		allocate_a_cluster();
+	}
+
+	init_vars(submit_hash, ClusterId, vars);
+
+	if (DashDryRun && DumpSubmitHash) {
+		fprintf(stdout, "\n----- submit hash at queue begin -----\n");
+		submit_hash.dump(stdout, DumpSubmitHash & 0xF);
 		fprintf(stdout, "-----\n");
 	}
+
+	return 0;
+}
+
+// queue N for a single item from the foreach itemlist.
+// if there is no item list (i.e the old Queue N syntax) then item will be NULL.
+//
+int queue_item(int num, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws)
+{
+	ErrContext.item_index = item_index;
+
+	if ( ! MyQ)
+		return -1;
+
+	int rval = set_vars(submit_hash, vars, item, item_index, options, delims, ws);
+	if (rval < 0)
+		return rval;
 
 	/* queue num jobs */
 	for (int ii = 0; ii < num; ++ii) {
@@ -1902,7 +2104,9 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		}
 
 		int JobUniverse = submit_hash.getUniverse();
-		SendLastExecutable(); // if spooling the exe, send it now.
+		if ( ProcId == 0 ) {
+			SendLastExecutable(); // if spooling the exe, send it now.
+		}
 		SetSendCredentialInAd( job );
 		NewExecutable = false;
 		// write job ad to schedd or dump to file, depending on what type MyQ is
@@ -1973,18 +2177,6 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 	return rval;
 }
 
-void queue_end(StringList & vars, bool /*fEof*/)   // called when done processing each Queue statement and at end of submit file
-{
-	// set live submit variables to generate reasonable unused-item messages.
-	if ( ! vars.isEmpty())  {
-		vars.rewind();
-		char * var = vars.next();
-		while (var) {
-			set_live_submit_variable(var, "<Queue_item>", false);
-			var = vars.next();
-		}
-	}
-}
 
 #undef set_live_submit_variable
 

@@ -167,19 +167,6 @@ _condor_bind_all_interfaces( void )
 }
 
 
-struct hostent *
-condor_gethostbyname( const char *name )
-{
-	return gethostbyname( name );
-}
-
-struct hostent *
-condor_gethostbyaddr( const char *addr, SOCKET_LENGTH_TYPE len, int type )
-
-{
-	return gethostbyaddr( addr, len, type );
-}
-
 int
 condor_gethostname( char *name, size_t namelen )
 {

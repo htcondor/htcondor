@@ -66,7 +66,7 @@ DagmanClassad::~DagmanClassad()
 void
 DagmanClassad::Update( int total, int done, int pre, int submitted,
 			int post, int ready, int failed, int unready,
-			Dag::dag_status dagStatus, bool recovery )
+			Dag::dag_status dagStatus, bool recovery, const DagmanStats &stats )
 {
 
 	if ( !_valid ) {
@@ -90,6 +90,11 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	SetDagAttribute( ATTR_DAG_NODES_UNREADY, unready );
 	SetDagAttribute( ATTR_DAG_STATUS, (int)dagStatus );
 	SetDagAttribute( ATTR_DAG_IN_RECOVERY, recovery );
+	
+	// Publish DAGMan stats to a classad, then update those also
+	ClassAd stats_ad;
+	stats.Publish( stats_ad );
+	SetDagAttribute( ATTR_DAG_STATS, stats_ad );
 
 	CloseConnection( queue );
 }
@@ -257,6 +262,18 @@ DagmanClassad::SetDagAttribute( const char *attrName, const MyString &value )
 {
 	if ( SetAttributeString( _dagmanId._cluster, _dagmanId._proc,
 						  attrName, value.Value() ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "WARNING: failed to set attribute %s\n", attrName );
+		check_warning_strictness( DAG_STRICT_3 );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanClassad::SetDagAttribute( const char *attrName, const ClassAd &ad )
+{
+	if ( SetAttributeExpr( _dagmanId._cluster, _dagmanId._proc,
+						  attrName, &ad ) != 0 ) {
 		debug_printf( DEBUG_QUIET,
 					  "WARNING: failed to set attribute %s\n", attrName );
 		check_warning_strictness( DAG_STRICT_3 );

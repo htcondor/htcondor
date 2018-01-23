@@ -76,9 +76,9 @@ std::vector<condor_sockaddr> resolve_hostname_raw(const MyString& hostname);
 
 // NODNS functions
 //
-// IPv6-compliant version of convert_ip_to_hostname and
-// convert_hostname_to_ip.
-MyString convert_ipaddr_to_hostname(const condor_sockaddr& addr);
-condor_sockaddr convert_hostname_to_ipaddr(const MyString& fullname);
+// Construct fake hostnames based on an underlying IP address,
+// avoiding any use of DNS.
+MyString convert_ipaddr_to_fake_hostname(const condor_sockaddr& addr);
+condor_sockaddr convert_fake_hostname_to_ipaddr(const MyString& fullname);
 
 #endif // IPV6_HOSTNAME_H

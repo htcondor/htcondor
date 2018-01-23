@@ -117,7 +117,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 	m_privsep_gid = 0;
 #endif
 
-	initialize (owner, NULL, file, c, p, s, NULL);
+	initialize (owner, NULL, file, c, p, s);
 }
 /* This constructor is just like the constructor below, except
  * that it doesn't take a domain, and it passes NULL for the domain and
@@ -140,7 +140,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 	m_privsep_gid = 0;
 #endif
 
-	initialize (owner, NULL, file, c, p, s, NULL);
+	initialize (owner, NULL, file, c, p, s);
 }
 
 WriteUserLog::WriteUserLog (const char *owner,
@@ -149,8 +149,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 							int c,
 							int p,
 							int s,
-							bool xml,
-							const char *gjid)
+							bool xml)
 {
 	log_file_cache = NULL;
 	Reset();
@@ -162,7 +161,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 	m_privsep_gid = 0;
 #endif
 
-	initialize (owner, domain, file, c, p, s, gjid);
+	initialize (owner, domain, file, c, p, s);
 }
 WriteUserLog::WriteUserLog (const char *owner,
 							const char *domain,
@@ -170,8 +169,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 							int c,
 							int p,
 							int s,
-							bool xml,
-							const char *gjid)
+							bool xml)
 {
 	log_file_cache = NULL;
 	Reset();
@@ -183,7 +181,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 	m_privsep_gid = 0;
 #endif
 
-	initialize (owner, domain, file, c, p, s, gjid);
+	initialize (owner, domain, file, c, p, s);
 }
 
 // Destructor
@@ -204,15 +202,15 @@ WriteUserLog::~WriteUserLog()
 bool
 WriteUserLog::initialize( const char *owner, const char *domain,
 						  const char *file,
-						  int c, int p, int s, const char *gjid )
+						  int c, int p, int s )
 {
 	return initialize(owner,domain,std::vector<const char*>(1,file),
-		c,p,s,gjid);
+		c,p,s);
 }
 bool
 WriteUserLog::initialize( const char *owner, const char *domain,
 						  const std::vector<const char *>& file,
-						  int c, int p, int s, const char *gjid )
+						  int c, int p, int s )
 {
 	priv_state		priv;
 
@@ -228,7 +226,7 @@ WriteUserLog::initialize( const char *owner, const char *domain,
 	priv = set_user_priv();
 
 		// initialize log file
-	bool res = initialize( file, c, p, s, gjid );
+	bool res = initialize( file, c, p, s );
 
 		// get back to whatever UID and GID we started with
 	set_priv(priv);
@@ -237,15 +235,13 @@ WriteUserLog::initialize( const char *owner, const char *domain,
 }
 
 bool
-WriteUserLog::initialize( const char *file, int c, int p, int s,
-						  const char *gjid)
+WriteUserLog::initialize( const char *file, int c, int p, int s )
 {
-	return initialize(std::vector<const char*>(1,file),c,p,s,gjid);
+	return initialize(std::vector<const char*>(1,file),c,p,s);
 }
 
 bool
-WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, int s,
-						  const char *gjid)
+WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, int s)
 {
 		// Save parameter info
 	FreeLocalResources( );
@@ -315,19 +311,19 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
         freeLogs();
 		logs.clear();
 	}
-	return !logs.empty() && internalInitialize( c, p, s, gjid );
+	return !logs.empty() && internalInitialize( c, p, s );
 }
 
 bool
-WriteUserLog::initialize( int c, int p, int s, const char *gjid )
+WriteUserLog::initialize( int c, int p, int s )
 {
 	Configure(false);
-	return internalInitialize( c, p, s, gjid );
+	return internalInitialize( c, p, s );
 }
 
 // Internal-only initializer, invoked by all of the others
 bool
-WriteUserLog::internalInitialize( int c, int p, int s, const char *gjid )
+WriteUserLog::internalInitialize( int c, int p, int s )
 {
 
 	m_cluster = c;
@@ -340,10 +336,6 @@ WriteUserLog::internalInitialize( int c, int p, int s, const char *gjid )
 		priv_state priv = set_condor_priv();
 		openGlobalLog( true );
 		set_priv( priv );
-	}
-
-	if(gjid) {
-		m_gjid = strdup(gjid);
 	}
 
 	m_initialized = true;
@@ -372,7 +364,7 @@ WriteUserLog::Configure( bool force )
 	if ( NULL == m_global_path ) {
 		return true;
 	}
-	m_global_stat = new StatWrapper( m_global_path, StatWrapper::STATOP_NONE );
+	m_global_stat = new StatWrapper( m_global_path );
 	m_global_state = new WriteUserLogState( );
 
 
@@ -461,7 +453,6 @@ WriteUserLog::Reset( void )
 	m_rotation_lock_path = NULL;
 
 	m_use_xml = XML_USERLOG_DEFAULT;
-	m_gjid = NULL;
 
 	m_creator_name = NULL;
 
@@ -612,10 +603,6 @@ WriteUserLog::FreeLocalResources( void )
 {
     freeLogs();
 	logs.clear();
-	if (m_gjid) {
-		free(m_gjid);
-		m_gjid = NULL;
-	}
 	if (m_creator_name) {
 		free( m_creator_name );
 		m_creator_name = NULL;
@@ -1105,7 +1092,7 @@ WriteUserLog::updateGlobalStat( void )
 	if ( (NULL == m_global_stat) || (m_global_stat->Stat()) ) {
 		return false;
 	}
-	if ( NULL == m_global_stat->GetBuf() ) {
+	if ( m_global_stat->IsBufValid() == false ) {
 		return false;
 	}
 	return true;
@@ -1171,7 +1158,7 @@ WriteUserLog::doRotation( const char *path, int &fd,
 			MyString old1( path );
 			old1.formatstr_cat(".%d", i-1 );
 
-			StatWrapper	s( old1, StatWrapper::STATOP_STAT );
+			StatWrapper	s( old1 );
 			if ( 0 == s.GetRc() ) {
 				MyString old2( path );
 				old2.formatstr_cat(".%d", i );
@@ -1428,7 +1415,6 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	event->cluster = m_cluster;
 	event->proc = m_proc;
 	event->subproc = m_subproc;
-	event->setGlobalJobId(m_gjid);
 
 	// write global event
 	//TEMPTEMP -- don't try if we got a global open error

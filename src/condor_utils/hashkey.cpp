@@ -217,30 +217,6 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 	return true;
 }
 
-#ifdef HAVE_EXT_POSTGRESQL
-bool
-makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad )
-{
-
-	// get the name of the quill daemon
-	if ( !adLookup( "Quill", ad, ATTR_NAME, ATTR_MACHINE, hk.name ) ) {
-		return false;
-	}
-	
-	// as in the case of submittor ads (see makeScheddAdHashKey), we
-	// also use the schedd name to construct the hash key for a quill
-	// ad.  this solves the problem of multiple quill daemons on the
-	// same name on the same machine submitting to the same pool
-	// -Ameet Kini <akini@cs.wisc.edu> 8/2005
-	MyString	tmp;
-	if ( adLookup( "Quill", ad, ATTR_SCHEDD_NAME, NULL, tmp, false ) ) {
-		hk.name += tmp;
-	}
-
-	return true;
-}
-#endif /* HAVE_EXT_POSTGRESQL */
-
 bool
 makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 {

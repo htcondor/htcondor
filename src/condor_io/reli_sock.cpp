@@ -1033,33 +1033,22 @@ ReliSock::type() const
 	return Stream::reli_sock; 
 }
 
-char * 
+char *
 ReliSock::serialize() const
 {
-	// here we want to save our state into a buffer
+	MyString state;
 
-	// first, get the state from our parent class
 	char * parent_state = Sock::serialize();
-    // now concatenate our state
-	char * outbuf = new char[50];
-    memset(outbuf, 0, 50);
-	sprintf(outbuf,"%d*%s*",_special_state,_who.to_sinful().Value());
-	strcat(parent_state,outbuf);
-
-    // Serialize crypto stuff
 	char * crypto = serializeCryptoInfo();
-    strcat(parent_state, crypto);
-    strcat(parent_state, "*");
+	char * md = serializeMdInfo();
 
-    // serialize MD info
-    char * md = serializeMdInfo();
-    strcat(parent_state, md);
-    strcat(parent_state, "*");
+	formatstr( state, "%s%d*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().Value(), crypto, md );
 
-	delete []outbuf;
-    delete []crypto;
-    delete []md;
-	return( parent_state );
+	delete[] parent_state;
+	delete[] crypto;
+	delete[] md;
+
+	return state.detach_buffer();
 }
 
 const char *

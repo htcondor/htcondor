@@ -808,7 +808,7 @@ void BaseShadow::initUserLog()
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.c_str());
 	}
 	if( !logfiles.empty()) {
-		if( !uLog.initialize (logfiles, cluster, proc, 0, gjid)) {
+		if( !uLog.initialize (logfiles, cluster, proc, 0)) {
 			MyString hold_reason;
 			hold_reason.formatstr("Failed to initialize user log to %s%s%s",
 				logfilename.c_str(), logfiles.size() == 1 ? "" : " or ",
@@ -1358,7 +1358,7 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 		// hear from the starter, the semantics are about as solid as
 		// we can hope for, but it's a schedd scalability problem.  If
 		// we do a lazy update, there's no additional cost to the
-		// schedd, but it means that condor_q and quill won't see the
+		// schedd, but it means that condor_q won't see the
 		// change for N minutes, and if we happen to crash during that
 		// time, the attribute is never incremented.  However, the
 		// semantics aren't 100% solid, even if we don't update lazy,

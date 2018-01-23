@@ -20,9 +20,7 @@
 #ifndef __CONDOR_ADTYPES_H__
 #define __CONDOR_ADTYPES_H__
 
-#define QUILL_ADTYPE			"Database"
 #define DATABASE_ADTYPE			"Database"
-#define DBMSD_ADTYPE			"DbmsDaemon"
 #define DEFRAG_ADTYPE			"Defrag"
 #define TT_ADTYPE			"TTProcess"
 #define STARTD_ADTYPE			"Machine"
@@ -57,7 +55,6 @@
 enum AdTypes
 {
 	NO_AD = -1,
-	QUILL_AD,
 	STARTD_AD,
 	SCHEDD_AD,
 	MASTER_AD,
@@ -76,7 +73,6 @@ enum AdTypes
 	GENERIC_AD,
 	CREDD_AD,
 	DATABASE_AD,
-	DBMSD_AD,
 	TT_AD,
 	GRID_AD,
 	XFER_SERVICE_AD,

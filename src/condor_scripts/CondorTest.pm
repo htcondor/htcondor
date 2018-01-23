@@ -43,7 +43,7 @@ my $porttool = "";
 
 use base 'Exporter';
 
-our @EXPORT = qw(PrintTimeStamp SetTLOGLevel TLOG timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindHttpPort CleanUpChildren StartWebServer);
+our @EXPORT = qw(PrintTimeStamp SetTLOGLevel TLOG timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir FindHttpPort CleanUpChildren StartWebServer VerifyNumJobsInState);
 
 my %securityoptions =
 (
@@ -1988,7 +1988,7 @@ sub changeDaemonState
 #	Find the array index which contains a particular pattern.
 #
 # 	First used to strip off variant line in output from
-#	condor_q -direct when passed quilld, schedd and rdbms
+#	condor_q -direct when passed schedd
 #	prior to comparing the arrays collected from the output
 #	of each command....
 
@@ -2018,7 +2018,7 @@ sub find_pattern_in_array
 #
 #	We hash each line from an array and verify that each array has the same contents
 # 	by having a value for each key equalling the number of arrays. First used to
-#	compare output from condor_q -direct quilld, schedd and rdbms
+#	compare output from condor_q -direct schedd
 
 sub compare_arrays
 {

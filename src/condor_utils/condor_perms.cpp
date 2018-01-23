@@ -55,7 +55,6 @@ PermString( DCpermission perm )
 	default:
 		return "Unknown";
 	}
-	return "Unknown";
 };
 
 

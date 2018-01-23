@@ -159,16 +159,8 @@ elsif ($taskname eq $NATIVE_TASK || $taskname eq $NATIVE_DEBUG_TASK) {
         print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb($is_debug);
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /ubuntu/i) {
-        print "Detected OS is Ubuntu.  Creating Deb package.\n";
-        $execstr = create_deb($is_debug);
-    }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|centos)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
-        $execstr = create_rpm($is_debug);
-    }
-    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/i) {
-        print "Detected OS is OpenSuSE.  Creating RPM package.\n";
         $execstr = create_rpm($is_debug);
     }
     elsif ($ENV{NMI_PLATFORM} =~ /_win/i) {
@@ -186,12 +178,8 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
         print "Detected OS is Debian.  Validating Deb package.\n";
         $execstr = check_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|centos)/i) {
         print "Detected OS is Red Hat.  Validating RPM package.\n";
-        $execstr = check_rpm();
-    }
-    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/i) {
-        print "Detected OS is OpenSuSE.  Validating RPM package.\n";
         $execstr = check_rpm();
     }
     else {
@@ -206,7 +194,7 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
 	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/cov-analysis-linux64-8.6.0/bin";
-	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
+	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --enable-virtual --security --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
 }
 
 
@@ -236,6 +224,9 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD $VCVER $win64 $buildid";
     } elsif ($taskname eq $BUILD_TESTS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat BLD_TESTS $VCVER $win64 $buildid";
+    } elsif ($taskname eq $TAR_TESTS_TASK) {
+        print "Windows CREATE_TESTS_TAR task\n";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat TAR_TESTS $VCVER $win64 $buildid";
     } elsif ($taskname eq $NATIVE_TASK) {
         print "Windows NATIVE (MSI) task\n";
         $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER $win64 $buildid";
@@ -315,7 +306,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {

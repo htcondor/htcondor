@@ -130,9 +130,8 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
 	{
 		dprintf( D_FULLDEBUG, "Checking dir: %s\n", psDir );
 
-		char *psFullDir = dircat(psDir, strFilename.Value());
-		MyString strFullDir = psFullDir;
-		delete [] psFullDir;
+		MyString strFullDir;
+		dircat(psDir, strFilename.Value(), strFullDir);
 
 		StatInfo info(strFullDir.Value());
 		if( info.Error() == SIGood ) {

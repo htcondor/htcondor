@@ -118,9 +118,6 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_startd_fqu = sock->getFullyQualifiedUser();
 	m_startd_ip_addr = sock->peer_ip_str();
 
-	std::string scheduler_addr_to_send = m_scheduler_addr;
-	ConvertDefaultIPToSocketIP(ATTR_SCHEDD_IP_ADDR,scheduler_addr_to_send,*sock);
-
 		// Insert an attribute in the request ad to inform the
 		// startd that this schedd is capable of understanding 
 		// the newer protocol where the claim response may send
@@ -137,7 +134,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
-	    !sock->put( scheduler_addr_to_send.c_str() ) ||
+	    !sock->put( m_scheduler_addr.c_str() ) ||
 	    !sock->put( m_alive_interval ) ||
 		!this->putExtraClaims(sock))
 	{

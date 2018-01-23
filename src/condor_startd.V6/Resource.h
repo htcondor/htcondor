@@ -26,7 +26,6 @@
 #include "claim.h"
 #include "Reqexp.h"
 #include "LoadQueue.h"
-#include "AvailStats.h"
 #include "cod_mgr.h"
 #include "IdDispenser.h"
 
@@ -155,7 +154,7 @@ public:
 
 		// Load Average related methods
 	float	condor_load( void ) {return r_attr->condor_load();};
-	float	compute_condor_load( void );
+	float	compute_condor_usage( void );
 	float	owner_load( void ) {return r_attr->owner_load();};
 	void	set_owner_load( float val ) {r_attr->set_owner_load(val);};
 	void	compute_cpu_busy( void );
@@ -198,7 +197,7 @@ public:
 	bool	acceptClaimRequest();
 
 		// Called when the starter of one of our claims exits
-	void	starterExited( Claim* cur_claim );	
+	void	starterExited( Claim* cur_claim );
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
@@ -303,7 +302,6 @@ public:
 	int				r_sub_id;	// Sub id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
 	char*			r_pair_name; // Name of the resource paired with this one, NULL is no pair (the default), may contain "#type" during the slot building process
-	AvailStats		r_avail_stats; // computes resource availability stats
 	int             prevLHF;
 	bool 			m_bUserSuspended;
 	bool			r_no_collector_updates;

@@ -135,11 +135,6 @@ ClassAdLogIterator::Next()
 	bool success = true;
 	switch (probe_st)
 	{
-		case INIT_QUILL:
-			//printf("Other.\n");
-			m_parser->setNextOffset(0);
-			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_INIT));
-			return;
 		case COMPRESSED:
 		case PROBE_ERROR:
 			m_parser->setNextOffset(0);
@@ -291,7 +286,6 @@ ClassAdLogReader::Poll() {
 
 	bool success = true;
 	switch(probe_st) {
-	case INIT_QUILL:
 	case COMPRESSED:
 	case PROBE_ERROR:
 		success = BulkLoad();

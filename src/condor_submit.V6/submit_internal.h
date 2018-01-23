@@ -178,11 +178,24 @@ struct SubmitErrContext {
 };
 extern struct SubmitErrContext  ErrContext;
 
+#if 0 // no longer used
 int submit_factory_job (
 	FILE * fp,
 	MACRO_SOURCE & source,            // source that fp refers to
 	List<const char> & extraLines,    // lines passed in via -a argument
 	std::string & queueCommandLine);  // queue statement passed in via -q argument
+#endif
+
+int write_factory_file(const char * filename, const void* data, size_t cb, mode_t access);
+
+// used by refactoring of main submit loop.
+
+// convert the Foreach arguments to a from <file> type of argument, and create the file
+// if the foreach mode is foreach_not, then this function does nothing.
+//
+int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int ClusterId, bool spill_items);
+int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o);
+int SendClusterAd (ClassAd * ad);
 
 
 #endif // _SUBMIT_INTERNAL_H

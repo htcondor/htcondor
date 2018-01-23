@@ -400,6 +400,7 @@ If defined by \Arg{Complete}, the owner will
 be notified when the job terminates.
 If defined by \Arg{Error}, the owner will only be notified
 if the job terminates abnormally,
+(as defined by \Attr{JobSuccessExitCode}, if defined)
 or if the job is placed on hold because of a failure, and not by user request.
 If defined by \Arg{Never} (the default), the owner will not receive e-mail,
 regardless to what happens to the job.

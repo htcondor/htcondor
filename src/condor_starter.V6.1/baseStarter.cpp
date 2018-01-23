@@ -1073,7 +1073,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		size_t size = 0;
 		off_t offset = *it2;
 
-		if (it->size() && ((*it)[0] != DIR_DELIM_CHAR))
+		if ( it->size() && !fullpath(it->c_str()) )
 		{
 			*it = iwd + DIR_DELIM_CHAR + *it;
 		}
@@ -1639,6 +1639,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	}
 	if( !proc->SshStartJob(std,std_fname) ) {
 		dprintf(D_ALWAYS,"Failed to start sshd.\n");
+		delete proc;
 		return FALSE;
 	}
 	m_job_list.Append(proc);
@@ -3655,32 +3656,42 @@ CStarter::removeTempExecuteDir( void )
 	}
 #endif
 
-		// Remove the directory from all possible chroots.
-	pair_strings_vector root_dirs = root_dir_list();
 	bool has_failed = false;
+
+	// since we chdir()'d to the execute directory, we can't
+	// delete it until we get out (at least on WIN32). So lets
+	// just chdir() to EXECUTE so we're sure we can remove it.
+	if (chdir(Execute)) {
+		dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", Execute, strerror(errno));
+	}
+
+	// Remove the directory from all possible chroots.
+	// On Windows, we expect the root_dir_list to have only a single entry - "/"
+	MyString full_exec_dir(Execute);
+	pair_strings_vector root_dirs = root_dir_list();
 	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-		const char *full_execute_dir = dirscat(it->second.c_str(), Execute);
-		if (!full_execute_dir) {
-			continue;
+		if (it->second == "/") {
+			// if the root is /, just use the execute dir.  we do this because dircat doesn't work
+			// correctly on windows when cat'ing  / + c:\condor\execute
+			full_exec_dir = Execute;
+		} else {
+			// for chroots other than the trivial one, cat the chroot to the configured execute dir
+			// we don't expect to ever get here on Windows.
+			// If we do get here on Windows, Find_Named_Entry will just fail to find a match
+			if ( ! dircat(it->second.c_str(), Execute, full_exec_dir)) {
+				continue;
+			}
 		}
-		Directory execute_dir( full_execute_dir, PRIV_ROOT );
+		Directory execute_dir( full_exec_dir.Value(), PRIV_ROOT );
 		if ( execute_dir.Find_Named_Entry( dir_name.Value() ) ) {
 
-			// since we chdir()'d to the execute directory, we can't
-			// delete it until we get out (at least on WIN32). So lets
-			// just chdir() to EXECUTE so we're sure we can remove it. 
-			if (chdir(Execute)) {
-				dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", Execute, strerror(errno));
-			}
-
-			dprintf( D_FULLDEBUG, "Removing %s%c%s\n", Execute,
-					 DIR_DELIM_CHAR, dir_name.Value() );
+			dprintf( D_FULLDEBUG, "Removing %s%c%s\n", full_exec_dir.Value(), DIR_DELIM_CHAR, dir_name.Value() );
 			if (!execute_dir.Remove_Current_File()) {
 				has_failed = true;
 			}
 		}
-		delete [] full_execute_dir;
 	}
+
 	return !has_failed;
 }
 

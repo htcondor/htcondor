@@ -232,7 +232,7 @@ public:
 	// get the size and extent of valid data from the buffer
 	const char * data(int & cb) {
 		if ((ssize_t)cbdata >= 0) {
-			cb = cbdata;
+			cb = (int)cbdata;
 			return ((const char*)ptr) + offset;
 		}
 		return NULL;
@@ -242,7 +242,7 @@ public:
 	int use_data(int cb) {
 		ASSERT(cb >= 0);
 		if ((ssize_t)cbdata >= 0) {
-			cb = MIN(cb, (ssize_t)cbdata);
+			cb = (int)MIN(cb, (ssize_t)cbdata);
 			cbdata -= cb;
 			offset += cb;
 			return cb;

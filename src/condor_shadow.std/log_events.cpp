@@ -97,7 +97,6 @@ extern "C" void
 initializeUserLog ()
 {
 	std::string logfilename,dagmanLogName;
-	MyString gjid;
 	int use_xml;
 	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(JobAd, logfilename) ) {
@@ -109,12 +108,9 @@ initializeUserLog ()
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG,
 			dagmanLogName.c_str());
 	}
-	if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, gjid) != 1) {
-		gjid = "Unknown";
-	}
 	if(!logfiles.empty()) {
 		if ( !ULog.initialize (Proc->owner, NULL, logfiles,
-				Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
+				Proc->id.cluster, Proc->id.proc, 0)) {
 			EXCEPT("Failed to initialize user log!");
 		} else {
 			ULog.setUseXML(JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);

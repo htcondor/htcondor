@@ -8,3 +8,5 @@ Parent NodeA Child NodeB
 Job NodeC job_dagman_classad-node.cmd
 Vars NodeC NODE="$(JOB)"
 Parent NodeB Child NodeC
+
+CONFIG job_dagman_classad.config

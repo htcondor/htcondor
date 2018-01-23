@@ -79,30 +79,30 @@ public:
 	JobFactory(const char * name, int id);
 	~JobFactory();
 
-	enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
+	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
 
 	// load the submit file/digest that was passed in our constructor
-	int LoadDigest(MacroStream & ms, std::string & errmsg);
+	int LoadDigest(MacroStream & ms, ClassAd * user_ident, std::string & errmsg);
 	// load the item data for the given row, and setup the live submit variables for that item.
 	int LoadRowData(int row, std::string * empty_var_names=NULL);
 	// returns true when the row data is not yet loaded, but might be available if you try again later.
 	bool RowDataIsLoading(int row);
 
-	bool IsResumable() { return paused >= Running && paused < ClusterRemoved; }
-	int Pause(PauseCode pause_code) { 
+	bool IsResumable() { return paused >= mmRunning && paused < mmClusterRemoved; }
+	int Pause(MaterializeMode pause_code) {
 		if (IsResumable()) {
 			if (pause_code && (pause_code > paused)) paused = pause_code;
 		}
 		return paused;
 	}
-	int Resume(PauseCode pause_code) {
+	int Resume(MaterializeMode pause_code) {
 		if (IsResumable()) {
-			if (paused && pause_code == paused) paused = Running;
+			if (paused && pause_code == paused) paused = mmRunning;
 		}
 		return paused;
 	}
-	bool IsPaused() { return paused != Running; }
-	bool IsComplete() { return paused > Hold; }
+	bool IsPaused() { return paused != mmRunning; }
+	bool IsComplete() { return paused > mmHold; }
 	const char * Name() { return name ? name : "<empty>"; }
 	int ID() { return ident; }
 	int PauseMode() { return paused; }
@@ -156,7 +156,7 @@ protected:
 	//FILE * fp_digest;
 #endif
 	int          ident;
-	PauseCode    paused; // 0 is not paused, non-zero is pause code.
+	MaterializeMode paused; // 0 is not paused, non-zero is pause code.
 	MACRO_SOURCE source;
 	MyAsyncFileReader reader; // used when there is external foreach data
 	SubmitForeachArgs fea;
@@ -164,8 +164,8 @@ protected:
 	int cached_total_procs;
 
 	// let these functions access internal factory data
-	friend JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text);
-	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename);
+	friend JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
+	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename, bool spooled_submit_file, std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 
 	// we override this so that we can use an async foreach implementation.
@@ -181,7 +181,7 @@ JobFactory::JobFactory(const char * _name, int id)
 	, fp_digestX(NULL)
 #endif
 	, ident(id)
-	, paused(InvalidSubmit)
+	, paused(mmInvalid)
 	, cached_total_procs(-42)
 {
 	memset(&source, 0, sizeof(source));
@@ -228,14 +228,14 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
 // this is the normal case for condor_submit from 8.7.3 onward.
-class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text)
+class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg)
 {
 	JobFactory * factory = new JobFactory(NULL, cluster_id);
 
 	MacroStreamMemoryFile ms(submit_digest_text, -1, factory->source);
 
-	std::string errmsg = "";
-	int rval = factory->LoadDigest(ms, errmsg);
+	errmsg = "";
+	int rval = factory->LoadDigest(ms, user_ident, errmsg);
 	if (rval) {
 		dprintf(D_ALWAYS, "failed to parse submit digest for factory %d : %s\n", cluster_id, errmsg.c_str());
 		delete factory;
@@ -248,34 +248,36 @@ class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_tex
 // Make a job factory for a Job object that exists, this entry point is used when
 // the submit digest is a file on disk - either because condor_submit put it there, or
 // because we are restarting. 
-JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_file)
+JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_file, bool spooled_submit_file, std::string & errmsg)
 {
 
 	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster);
 
 	// Starting the 8.7.3 The digest file may be in the spool directory and owned by condor
 	// or in the user directory and owned by the user (the 8.7.1 model). We will handle
-	// both cases by first trying to open the file as condor, and if that fails, try impersonating
-	// the user.
+	// The caller will tell use which it is, and we will decide whether to inpersonate the user
+	// while opening the submit digest on that basis. 
 	bool restore_priv = false;
 	priv_state priv = PRIV_UNKNOWN;
 
-	FILE* fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
-	// if we can't open the file, try impersonating the user
-	if ( ! fp) {
+	FILE* fp = NULL;
+	if (spooled_submit_file) {
+		fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
+	} else {
 		restore_priv = true;
 		priv = set_user_priv_from_ad(*job);
 		fp = safe_fopen_wrapper_follow(submit_digest_file, "r");
 	}
 
-	std::string errmsg = "";
+	errmsg = "";
 	int rval;
 	if ( ! fp) {
 		formatstr(errmsg, "Failed to open factory submit digest : %s", strerror(errno));
 		rval = errno ? errno : -1;
 	} else {
 		MacroStreamYourFile ms(fp, factory->source);
-		rval = factory->LoadDigest(ms, errmsg);
+		// If we are already impersonating the user, dont pass the job ad to LoadDigest since it only needs it to impersonate the user
+		rval = factory->LoadDigest(ms, restore_priv ? NULL : job, errmsg);
 		fclose(fp);
 		fp = NULL;
 	}
@@ -314,22 +316,22 @@ static int factory_check_sub_file(void*, SubmitHash *, _submit_file_role, const 
 }
 
 
-int  PauseJobFactory(JobFactory * factory, int pause_code)
+int  PauseJobFactory(JobFactory * factory, MaterializeMode pause_code)
 {
 	if ( ! factory)
 		return -1;
 	dprintf(D_ALWAYS, "Pausing job factory %d %s code=%d\n", factory->ID(), factory->Name(), pause_code);
-	JobFactory::PauseCode code = pause_code < 0 ? JobFactory::InvalidSubmit : JobFactory::Hold;
-	if (pause_code >= 3) code = JobFactory::ClusterRemoved;
+	MaterializeMode code = pause_code < 0 ? mmInvalid : mmHold;
+	if (pause_code >= mmNoMoreItems) code = pause_code;
 	return factory->Pause(code);
 }
 
-int  ResumeJobFactory(JobFactory * factory, int pause_code)
+int  ResumeJobFactory(JobFactory * factory, MaterializeMode pause_code)
 {
 	if ( ! factory)
 		return -1;
-	JobFactory::PauseCode code = pause_code < 0 ? JobFactory::InvalidSubmit : JobFactory::Hold;
-	if (pause_code >= 3) code = JobFactory::ClusterRemoved;
+	MaterializeMode code = pause_code < 0 ? mmInvalid : mmHold;
+	if (pause_code >= mmNoMoreItems) code = pause_code;
 	int rval = factory->Resume(code);
 	dprintf(D_ALWAYS, "Attempted to Resume job factory %d %s code=%d resumed=%d\n", factory->ID(), factory->Name(), pause_code, rval==0);
 	return rval;
@@ -351,8 +353,21 @@ bool JobFactoryIsComplete(JobQueueCluster * cad)
 bool JobFactoryIsRunning(JobQueueCluster * cad)
 {
 	if ( ! cad || ! cad->factory) return true;
-	return cad->factory->PauseMode() == JobFactory::Running;
+	return cad->factory->PauseMode() == mmRunning;
 }
+
+bool GetJobFactoryMaterializeMode(JobQueueCluster * cad, int & pause_code)
+{
+	pause_code = 0;
+	if ( ! cad ) return false;
+
+	if ( ! cad->factory) {
+		return cad->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, pause_code);
+	}
+	pause_code = cad->factory->PauseMode();
+	return true;
+}
+
 
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
 {
@@ -375,10 +390,19 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 
 	int paused = factory->IsPaused() ? 1 : 0;
 
-	dprintf(D_MATERIALIZE, "in CheckJobFactoryPause for job factory %d %s want_pause=%d is_paused=%d (%d)\n",
+	dprintf(D_MATERIALIZE | D_VERBOSE, "in CheckJobFactoryPause for job factory %d %s want_pause=%d is_paused=%d (%d)\n",
 			factory->ID(), factory->Name(), want_pause, factory->IsPaused(), factory->PauseMode());
 
-	if (paused == want_pause) {
+	// make sure that the desired mode is a valid one.
+	// Also, we want to disallow setting the mode to  ClusterRemoved using this function.
+	if (want_pause < mmInvalid) want_pause = mmInvalid;
+	else if (want_pause > mmNoMoreItems) want_pause = mmNoMoreItems;
+
+	// If the factory is in the correct meta-mode (either paused or not),
+	// then we won't try and change the actual pause code - we just return true.
+	// As a result of this test, a factory in mmInvalid or mmNoMoreItems state
+	// can't be changed to mmHold or visa versa.
+	if (paused == (want_pause != mmRunning)) {
 		return true;
 	}
 
@@ -387,13 +411,18 @@ bool CheckJobFactoryPause(JobFactory * factory, int want_pause)
 
 	if (want_pause) {
 		// we should only get here if the factory is in running state.
-		return factory->Pause(JobFactory::Hold) != JobFactory::Running;
+		// we pass the pause code through, but it will only change the state if the
+		// new value is > than the old value, so we can change from running -> Hold and Hold -> NoMore but not the other way.
+		return factory->Pause((MaterializeMode)want_pause) != mmRunning;
 	} else {
-		// this will only resume a natural hold, not a failure or end condition pause
-		return factory->Resume(JobFactory::Hold) == JobFactory::Running;
+		// only resume a natural hold, not a failure or end condition pause
+		return factory->Resume(mmHold) == mmRunning;
 	}
 }
 
+// return value is 0 for 'can't materialize now, try later'
+// in which case retry_delay is set to indicate how long later should be
+// retry_delay of 0 means we are done, either because of failure or because we ran out of jobs to materialize.
 int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd, int & retry_delay)
 {
 	retry_delay = 0;
@@ -421,6 +450,11 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	int rval = GetAttributeInt(ClusterAd->jid.cluster, ClusterAd->jid.proc, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, &next_proc_id);
 	if (rval < 0 || next_proc_id < 0) {
 		dprintf(D_ALWAYS, "ERROR - " ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " is not set, aborting materalize for cluster %d\n", ClusterAd->jid.cluster);
+		setJobFactoryPauseAndLog(ClusterAd, mmInvalid, 0,  ATTR_JOB_MATERIALIZE_PAUSED " is undefined");
+		//factory->Pause(mmInvalid);
+		//PRAGMA_REMIND("should this be durable?")
+		//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSED, mmInvalid);
+		//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON,);
 		return rval;
 	}
 
@@ -431,7 +465,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		if (next_proc_id >= step_size) {
 			dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. has_items=%d, next_proc_id=%d, step=%d\n", ClusterAd->jid.cluster, !no_items, next_proc_id, step_size);
 			// we are done
-			factory->Pause(JobFactory::NoMoreItems);
+			factory->Pause(mmNoMoreItems);
 			return 0;
 		}
 	} else {
@@ -442,6 +476,11 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 			if (item_index > 0 && next_proc_id != step_size) {
 				// ATTR_JOB_MATERIALIZE_NEXT_ROW must exist in the cluster ad once we are done with proc 0
 				dprintf(D_ALWAYS, "ERROR - " ATTR_JOB_MATERIALIZE_NEXT_ROW " is not set, aborting materialize for job %d.%d step=%d, row=%d\n", ClusterAd->jid.cluster, next_proc_id, step_size, item_index);
+				setJobFactoryPauseAndLog(ClusterAd, mmInvalid, 0, ATTR_JOB_MATERIALIZE_NEXT_ROW " is undefined");
+				//PRAGMA_REMIND("should this be durable?")
+				//factory->Pause(mmInvalid);
+				//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSED, mmInvalid);
+				//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, ATTR_JOB_MATERIALIZE_NEXT_ROW " is undefined");
 				// we are done
 				return 0;
 			}
@@ -451,7 +490,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	if (item_index < 0) {
 		// we are done
 		dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. JobMaterializeNextRow is %d\n", ClusterAd->jid.cluster, item_index);
-		factory->Pause(JobFactory::NoMoreItems);
+		factory->Pause(mmNoMoreItems);
 		return 0; 
 	}
 	int row  = item_index;
@@ -472,13 +511,20 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	if (row_num < row) {
 		// we are done
 		dprintf(D_MATERIALIZE | D_VERBOSE, "Materialize for cluster %d is done. LoadRowData returned %d for row %d\n", ClusterAd->jid.cluster, row_num, row);
-		factory->Pause(JobFactory::NoMoreItems);
+		factory->Pause(mmNoMoreItems);
 		return 0; 
 	}
 	// report empty vars.. do we still want to do this??
 	if ( ! empty_var_names.empty()) {
 		if (fail_empty) {
-			dprintf(D_ALWAYS, "Failing Materialize of job %d.%d row=%d because %s have empty values\n", jid.cluster, jid.proc, step, empty_var_names.c_str());
+			std::string msg;
+			formatstr(msg, "job %d.%d row=%d : %s have empty values", jid.cluster, jid.proc, step, empty_var_names.c_str());
+			dprintf(D_ALWAYS, "Failing Materialize of %s\n", msg.c_str());
+			chomp(msg);
+			setJobFactoryPauseAndLog(ClusterAd, mmInvalid, 0, msg);
+			//factory->Pause(mmInvalid);
+			//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSED, mmInvalid);
+			//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, msg);
 			return -1;
 		}
 	}
@@ -508,8 +554,14 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	// note that this ia not a transfer of ownership, the factory still owns the job and will delete it
 	const classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, NULL);
 	if ( ! job) {
-		std::string errmsg(factory->error_stack()->getFullText());
-		dprintf(D_ALWAYS, "ERROR: factory->make_job_ad() for %d.%d failed : %s\n", jid.cluster, jid.proc, errmsg.c_str());
+		std::string msg;
+		std::string txt(factory->error_stack()->getFullText()); if (txt.empty()) { txt = ""; }
+		formatstr(msg, "failed to create ClassAd for Job %d.%d : %s", jid.cluster, jid.proc, txt.c_str());
+		dprintf(D_ALWAYS, "ERROR: %s", msg.c_str());
+		setJobFactoryPauseAndLog(ClusterAd, mmHold, CONDOR_HOLD_CODE_Unspecified, msg);
+		//factory->Pause(mmHold);
+		//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSED, mmHold);
+		//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, msg);
 		rval = -1; // failed to instantiate.
 	} else {
 		rval = NewProcFromAd(job, jid.proc, ClusterAd, 0);
@@ -558,7 +610,7 @@ int JobFactory::load_q_foreach_items(
 }
 #endif
 
-int JobFactory::LoadDigest(MacroStream &ms, std::string & errmsg)
+int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & errmsg)
 {
 	char * qline = NULL;
 	int rval = parse_up_to_q_line(ms, errmsg, &qline);
@@ -596,26 +648,38 @@ int JobFactory::LoadDigest(MacroStream &ms, std::string & errmsg)
 				} else if (fea.items_filename == "<" || fea.items_filename == "=") {
 					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.Value());
 				} else {
+					// before opening the item data file, we (may) want to impersonate the user
+					bool restore_priv = false;
+					priv_state priv = PRIV_UNKNOWN;
+					if  (user_ident) {
+						restore_priv = true;
+						priv = set_user_priv_from_ad(*user_ident);
+					}
 					// setup an async reader for the itemdata
 					rval = reader.open(fea.items_filename.c_str());
 					if (rval) {
-						formatstr(errmsg, "could not open item data file '%s', error = %d\n", fea.items_filename.Value(), rval);
+						formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
 					} else {
 						rval = reader.queue_next_read();
 						if (rval) {
-							formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d\n", fea.items_filename.Value(), rval);
+							formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
 						} else {
 							fea.foreach_mode = foreach_from_async;
 						}
 					}
 					// failed to open or start the item reader, so just close it and free the internal buffers.
 					if (rval) { reader.clear(); }
+
+					if (restore_priv) {
+						set_priv(priv);
+						uninit_user_ids();
+					}
 				}
 			}
 		}
 	}
 
-	paused = rval ? InvalidSubmit : Running;
+	paused = rval ? mmInvalid : mmRunning;
 
 	return rval;
 }

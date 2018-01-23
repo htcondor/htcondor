@@ -111,7 +111,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleJobProcs		  (0),
 	_maxIdleJobProcs		  (maxIdleJobProcs),
-	_numHeldJobProcs	  (0),
 	m_retrySubmitFirst	  (retrySubmitFirst),
 	m_retryNodeFirst	  (retryNodeFirst),
 	_condorRmExe		  (condorRmExe),
@@ -272,6 +271,9 @@ Dag::CreateMetrics( const char *primaryDagFile, int rescueDagNum )
 void
 Dag::ReportMetrics( int exitCode )
 {
+	if(_dagStatus != dag_status::DAG_STATUS_CYCLE) {
+		_metrics->GatherGraphMetrics( this );
+	}
 	(void)_metrics->Report( exitCode, _dagStatus );
 }
 
@@ -704,8 +706,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// don't get a released event for that job.  This may not
 			// work exactly right if some procs of a cluster are held
 			// and some are not.  wenger 2010-08-26
-		if ( job->_jobProcsOnHold > 0 && job->Release( event->proc ) ) {
-			_numHeldJobProcs--;
+		if ( job->_jobProcsOnHold > 0 ) {
+			job->Release( event->proc );
 		}
 
 			// Only change the node status, error info,
@@ -1240,8 +1242,7 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 	debug_printf( DEBUG_VERBOSE, "  Hold reason: %s\n", reason );
 
 	if( job->Hold( event->proc ) ) {
-		_numHeldJobProcs++;
-		if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
+		if ( _maxJobHolds > 0 && job->_jobProcsOnHold >= _maxJobHolds ) {
 			debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
 						"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
 						"proc(s) for this node will now be removed\n",
@@ -1259,9 +1260,7 @@ Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 	if ( !job ) {
 		return;
 	}
-	if( job->Release( event->proc ) ) {
-		_numHeldJobProcs--;
-	}
+	job->Release( event->proc );
 }
 
 //---------------------------------------------------------------------------
@@ -1896,7 +1895,7 @@ Dag::PostScriptReaper( Job *job, int status )
 				"Initializing user log writer for %s, (%d.%d.%d)\n",
 				DefaultNodeLog(), event.cluster, event.proc, event.subproc );
 	ulog.initialize( DefaultNodeLog(), event.cluster, event.proc,
-				event.subproc, NULL );
+				event.subproc );
 
 	for(int write_attempts = 0;;++write_attempts) {
 		if( !ulog.writeEvent( &event ) ) {
@@ -3284,6 +3283,19 @@ Dag::CheckAllJobs()
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "All HTCondor job events okay\n");
 	}
+}
+
+//-------------------------------------------------------------------------
+int
+Dag::NumHeldJobProcs()
+{
+	int numHeldProcs = 0;
+	Job* node;
+    ListIterator<Job> iList( _jobs );
+    while( ( node = iList.Next() ) != NULL ) {
+		numHeldProcs += node->_jobProcsOnHold;
+	}
+	return numHeldProcs;
 }
 
 //-------------------------------------------------------------------------

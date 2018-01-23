@@ -88,7 +88,8 @@ static FILE *preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t
 FILE *open_debug_file( int debug_level, const char flags[] );
 
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
-static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
+void _condor_save_dprintf_line_va( int flags, const char* fmt, va_list args );
+void _condor_save_dprintf_line( int flags, const char* fmt, ... );
 void _condor_dprintf_saved_lines( void );
 struct saved_dprintf {
 	int level;
@@ -870,7 +871,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		   initialized until we call dprintf_config().
 		*/
 	if( ! _condor_dprintf_works ) {
-		_condor_save_dprintf_line( cat_and_flags, fmt, args );
+		_condor_save_dprintf_line_va( cat_and_flags, fmt, args );
 		return; 
 	} 
 
@@ -1938,8 +1939,17 @@ mkargv( int* argc, char* argv[], char* line )
 	return( _condor_mkargv(argc, argv, line) );
 }
 
-static void
-_condor_save_dprintf_line( int flags, const char* fmt, va_list args )
+void
+_condor_save_dprintf_line( int flags, const char* fmt, ... )
+{
+	va_list ap;
+	va_start(ap, fmt);
+	_condor_save_dprintf_line_va( flags, fmt, ap );
+	va_end(ap);
+}
+
+void
+_condor_save_dprintf_line_va( int flags, const char* fmt, va_list args )
 {
 	char* buf;
 	struct saved_dprintf* new_node;
@@ -1979,6 +1989,13 @@ _condor_dprintf_saved_lines( void )
 	struct saved_dprintf* next;
 
 	if( ! saved_list ) {
+		return;
+	}
+
+	if( ! _condor_dprintf_works ) {
+		// if this function was called, but there's no place to put
+		// the saved dprintf messages, there's nothing we can do at the
+		// moment so just return.  The messages are still saved.
 		return;
 	}
 
@@ -2059,7 +2076,6 @@ void dprintf_print_daemon_header(void)
 	}
 }
 
-#ifdef HAVE_BACKTRACE
 // a simple function to write strings & ints to a file without allocating any memory.
 // This function is for use in situations (such as during an abort) when we want to log
 // some things to the file but can't safely malloc. if the msg string contains a %
@@ -2069,7 +2085,11 @@ void dprintf_print_daemon_header(void)
 // that args[n] is a null-terminated pointer to a string.  x and X print args[n] as
 // hex. X prints leading zeros and x does not.
 static int
+#ifdef _WIN64
+safe_async_simple_fwrite_fd(int fd, char const *msg, ULONG_PTR *args, unsigned int num_args)
+#else
 safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned long *args,unsigned int num_args)
+#endif
 {
 	unsigned int arg_index;
 	unsigned int digit,arg;
@@ -2123,7 +2143,108 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned long *args,unsigned 
 	}
 	return r;
 }
-#endif // HAVE_BACKTRACE
+
+/* In case we want to write to the log in a signal handler (particularly
+ * for a segfault), we need to be as simple as possible. Calling
+ * malloc() could be fatal, since the heap may be trashed. Therefore,
+ * we dispense with some of the formalities.
+ */
+static int
+safe_async_log_open()
+{
+	int fd;
+
+	if (DprintfBroken || !_condor_dprintf_works || DebugLogs->empty()) {
+			// Note that although this would appear to enable
+			// backtrace printing to stderr before dprintf is
+			// configured, the backtrace sighandler is only installed
+			// when dprintf is configured, so we won't even get here
+			// in that case.  Therefore, most command-line tools need
+			// -debug to enable the backtrace.
+		fd = 2;
+	}
+	else {
+		bool create_log = true;
+#if !defined(WIN32)
+			// set_priv() is unsafe, because it may call into
+			// the password cache, which may call unsafe functions
+			// such as getpwuid() or initgroups() or malloc().
+		uid_t orig_euid = geteuid();
+		gid_t orig_egid = getegid();
+		priv_state orig_priv_state = get_priv_state();
+		bool did_seteuid = false;
+		if( orig_priv_state != PRIV_CONDOR ) {
+			uid_t condor_uid = 0;
+			gid_t condor_gid = 0;
+			if( get_condor_uid_if_inited(condor_uid,condor_gid) ) {
+				did_seteuid = (setegid(condor_gid) == 0)
+				           || (seteuid(condor_uid) == 0);
+			}
+			else if( orig_euid != getuid() || orig_egid != getgid() ) {
+				// To keep things simple, we do not bother trying to
+				// find out the correct condor uid if it is not
+				// already known.  Just use our real user id, which is
+				// probably either the same as our effective id
+				// (no-op) or root.
+
+				did_seteuid = (setegid(getgid()) == 0)
+				           || (seteuid(getuid()) == 0);
+					// Do not open with O_CREAT in this case, so
+					// we don't leave behind a file owned by root,
+					// which could cause the daemon to fail to
+					// restart.  This means we will fail to log
+					// the backtrace if we get here and the log
+					// file does not already exist.
+				create_log = false;
+			}
+		}
+#endif
+
+		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|(create_log ? O_CREAT : 0),0644);
+
+#if !defined(WIN32)
+		if( did_seteuid ) {
+			if (0 != setegid(orig_egid) ||
+			    0 != seteuid(orig_euid)) {
+				// what can we do about this???
+				create_log = false; // do something harmless and pointless so that fedora shuts up.
+			}
+		}
+#endif
+
+		if( fd==-1 ) {
+			fd=2;
+		}
+	}
+	return fd;
+}
+
+static void
+safe_async_log_close(int fd)
+{
+	if ( fd != 2 ) {
+		close( fd );
+	}
+}
+
+/* This function allows code outside of the dprintf() system to write
+ * to the primary daemon log from a signal handler. It avoids any calls
+ * that are not async-safe.
+ * See safe_async_simple_fwrite_fd() for argument usage.
+ */
+#ifdef _WIN64
+void dprintf_async_safe(char const *msg, ULONG_PTR *args, unsigned int num_args)
+#else
+void dprintf_async_safe(char const *msg,unsigned long *args,unsigned int num_args)
+#endif
+{
+	// Use the async-safe logging operations.
+	int fd = safe_async_log_open();
+
+	safe_async_simple_fwrite_fd( fd, msg, args, num_args );
+
+	safe_async_log_close( fd );
+}
 
 
 #ifdef WIN32
@@ -2247,10 +2368,10 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 // WinXP sp3 or later is needed to collect the backtrace.
 static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 {
-	unsigned long args[3];
+	ULONG_PTR args[3];
 	char szModule[MAX_PATH];
 	for (int ix = 0; ix < cFrames; ++ix) {
-#ifdef X86_64
+#if 0 //def _WIN64
 		PRAGMA_REMIND("write win64 backtrace printing.")
 		args[0] = (ULONG_PTR)trace[ix];
 		//void* imageBase;
@@ -2260,8 +2381,8 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 		args[1] = (ULONG_PTR)imageBase;
 		args[2] = args[0] - (ULONG_PTR)imageBase;
 		safe_async_simple_fwrite_fd(fd,"  %X0 %x1 + %2\n",args,3);
-#else // 32bit
-		args[0] = (unsigned long)trace[ix];
+#else // 32bit -- tj/2017 - maybe works for x64 also?
+		args[0] = (ULONG_PTR)trace[ix];
 	#ifdef _DBGHELP_
 		if (backtrace_have_symbols) {
 			DWORD64 displacement = 0;
@@ -2269,8 +2390,8 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 			psym->SizeOfStruct = sizeof(SYMBOL_INFO);
 			psym->MaxNameLen = 1 + (sizeof(szModule) - sizeof(SYMBOL_INFO)) / sizeof(psym->Name[0]);
 			if (SymFromAddr(GetCurrentProcess(), (DWORD64)(ULONG_PTR)trace[ix], &displacement, psym)) {
-				args[1] = (unsigned long)psym->Name;
-				args[2] = args[0] - (unsigned long)psym->Address;
+				args[1] = (ULONG_PTR)psym->Name;
+				args[2] = args[0] - (ULONG_PTR)psym->Address;
 				safe_async_simple_fwrite_fd(fd,"  %X0 %s1 + %2\n",args,3);
 				continue;
 			}
@@ -2280,14 +2401,14 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 		SIZE_T cb = VirtualQuery (trace[ix], &mbi, sizeof(mbi));
 		if (cb == sizeof(mbi) && mbi.AllocationBase > 0) {
 			if (GetModuleFileNameA ((HMODULE)mbi.AllocationBase, szModule, COUNTOF(szModule))) {
-				args[1] = (unsigned long)szModule;
+				args[1] = (ULONG_PTR)szModule;
 				// print only the part after the last path separator.
-				args[1] = (unsigned long)filename_from_path(szModule);
-				args[2] = args[0] - (unsigned long)mbi.AllocationBase;
+				args[1] = (ULONG_PTR)filename_from_path(szModule);
+				args[2] = args[0] - (ULONG_PTR)mbi.AllocationBase;
 				safe_async_simple_fwrite_fd(fd,"  %X0 %s1 + %2\n",args,3);
 			} else {
-				args[1] = (unsigned long)mbi.AllocationBase;
-				args[2] = args[0] - (unsigned long)mbi.AllocationBase;
+				args[1] = (ULONG_PTR)mbi.AllocationBase;
+				args[2] = args[0] - (ULONG_PTR)mbi.AllocationBase;
 				safe_async_simple_fwrite_fd(fd,"  %X0 0x%x1 + %2\n",args,3);
 			}
 		} else {
@@ -2300,43 +2421,24 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 void
 dprintf_dump_stack(void) {
 	int fd;
-	unsigned long args[3];
+	ULONG_PTR args[3];
 	void* trace[50];
 	int cFrames = CaptureStackBackTrace(0, COUNTOF(trace), trace, NULL);
 
-		/* In case we are dumping stack in the segfault handler, we
-		   want this to be as simple as possible.  Calling malloc()
-		   could be fatal, since the heap may be trashed.  Therefore,
-		   we dispense with some of the formalities... */
-
-	if (DprintfBroken || !_condor_dprintf_works || DebugLogs->empty()) {
-			// Note that although this would appear to enable
-			// backtrace printing to stderr before dprintf is
-			// configured, the backtrace sighandler is only installed
-			// when dprintf is configured, so we won't even get here
-			// in that case.  Therefore, most command-line tools need
-			// -debug to enable the backtrace.
-		fd = 2;
-	}
-	else {
-		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|O_CREAT,0644);
-		if( fd==-1 ) {
-			fd=2;
-		}
-	}
+	// We're probably in a signal handler, so use the async-safe logging
+	// operations.
+	fd = safe_async_log_open();
 
 		// sprintf() and other convenient string-handling functions
 		// are not officially async-signal safe, so use a crude replacement
-	args[0] = (unsigned long)GetCurrentProcessId();
-	args[1] = (unsigned long)time(NULL);
-	args[2] = (unsigned long)cFrames;
+	args[0] = (ULONG_PTR)GetCurrentProcessId();
+	args[1] = (ULONG_PTR)time(NULL);
+	args[2] = (ULONG_PTR)cFrames;
 	safe_async_simple_fwrite_fd(fd,"Stack dump for process %0 at timestamp %1 (%2 frames)\n",args,3);
 
 	backtrace_symbols_fd(trace,cFrames,fd);
 
-	if (fd!=2) {
-		close(fd);
-	}
+	safe_async_log_close( fd );
 }
 #else // !HAVE_BACKTRACE
 void
@@ -2411,77 +2513,14 @@ dprintf_wrapup_fork_child( bool /* cloned */ ) {
 
 void
 dprintf_dump_stack(void) {
-	priv_state	orig_priv_state;
-	uid_t orig_euid;
-	uid_t orig_egid;
 	int fd;
 	void *trace[50];
 	int trace_size;
 	unsigned long args[3];
 
-		/* In case we are dumping stack in the segfault handler, we
-		   want this to be as simple as possible.  Calling malloc()
-		   could be fatal, since the heap may be trashed.  Therefore,
-		   we dispense with some of the formalities... */
-
-	if (DprintfBroken || !_condor_dprintf_works || DebugLogs->empty()) {
-			// Note that although this would appear to enable
-			// backtrace printing to stderr before dprintf is
-			// configured, the backtrace sighandler is only installed
-			// when dprintf is configured, so we won't even get here
-			// in that case.  Therefore, most command-line tools need
-			// -debug to enable the backtrace.
-		fd = 2;
-	}
-	else {
-			// set_priv() is unsafe, because it may call into
-			// the password cache, which may call unsafe functions
-			// such as getpwuid() or initgroups() or malloc().
-		orig_euid = geteuid();
-		orig_egid = getegid();
-		orig_priv_state = get_priv_state();
-		bool did_seteuid = false;
-		bool create_log = true;
-		if( orig_priv_state != PRIV_CONDOR ) {
-			uid_t condor_uid = 0;
-			gid_t condor_gid = 0;
-			if( get_condor_uid_if_inited(condor_uid,condor_gid) ) {
-				did_seteuid = (setegid(condor_gid) == 0)
-				           || (seteuid(condor_uid) == 0);
-			}
-			else if( orig_euid != getuid() || orig_egid != getgid() ) {
-				// To keep things simple, we do not bother trying to
-				// find out the correct condor uid if it is not
-				// already known.  Just use our real user id, which is
-				// probably either the same as our effective id
-				// (no-op) or root.
-
-				did_seteuid = (setegid(getgid()) == 0)
-				           || (seteuid(getuid()) == 0);
-					// Do not open with O_CREAT in this case, so
-					// we don't leave behind a file owned by root,
-					// which could cause the daemon to fail to
-					// restart.  This means we will fail to log
-					// the backtrace if we get here and the log
-					// file does not already exist.
-				create_log = false;
-			}
-		}
-
-		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|(create_log ? O_CREAT : 0),0644);
-
-		if( did_seteuid ) {
-			if (0 != setegid(orig_egid) ||
-			    0 != seteuid(orig_euid)) {
-				// what can we do about this???
-				args[0] = 0; // do something harmless and pointless so that fedora shuts up.
-			}
-		}
-
-		if( fd==-1 ) {
-			fd=2;
-		}
-	}
+	// We're probably in a signal handler, so use the async-safe logging
+	// operations.
+	fd = safe_async_log_open();
 
 	trace_size = backtrace(trace,50);
 
@@ -2494,9 +2533,7 @@ dprintf_dump_stack(void) {
 
 	backtrace_symbols_fd(trace,trace_size,fd);
 
-	if (fd!=2) {
-		close(fd);
-	}
+	safe_async_log_close(fd);
 }
 
 #else // ! HAVE_BACKTRACE

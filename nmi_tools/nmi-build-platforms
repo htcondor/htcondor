@@ -3,6 +3,7 @@
 # Officially supported platforms
 x86_64_Debian7
 x86_64_Debian8
+x86_64_Debian9
 x86_64_MacOSX10
 x86_64_RedHat6
 x86_64_RedHat7
@@ -16,9 +17,9 @@ x86_RedHat6
 # Not yet officially supported.
 
 # We want to build all branches on Fedora because it is our "warning check" platform
-x86_64_Fedora24
 x86_64_Fedora25
 
 # We might as well build on CentOS and SL
 x86_64_CentOS7
+x86_CentOS7
 x86_64_SL7

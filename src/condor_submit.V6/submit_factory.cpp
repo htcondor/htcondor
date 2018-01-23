@@ -95,6 +95,8 @@
 const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
 void SetSendCredentialInAd( ClassAd *job_ad ); 
 void set_factory_submit_info(int cluster, int num_procs);
+int ParseDashAppendLines(List<const char> &exlines, MACRO_SOURCE& source, MACRO_SET& macro_set);
+void init_vars(SubmitHash & hash, int cluster_id, StringList & vars);
 
 extern AbstractScheddQ * MyQ;
 extern SubmitHash submit_hash;
@@ -114,26 +116,6 @@ extern int DumpSubmitHash;
 extern int default_to_factory;
 extern unsigned int submit_unique_id; // hack to make default_to_factory work in test suite for milestone 1 (8.7.1)
 
-static char ClusterString[20]="1", ProcessString[20]="0", EmptyItemString[] = "";
-
-static void init_vars(SubmitHash & hash, int cluster_id, StringList & vars)
-{
-	sprintf(ClusterString, "%d", cluster_id);
-	strcpy(ProcessString, "0");
-
-	// establish live buffers for $(Cluster) and $(Process), and other loop variables
-	// Because the user might already be using these variables, we can only set the explicit ones
-	// unconditionally, the others we must set only when not already set by the user.
-	hash.set_live_submit_variable(SUBMIT_KEY_Cluster, ClusterString);
-	hash.set_live_submit_variable(SUBMIT_KEY_Process, ProcessString);
-	
-	vars.rewind();
-	char * var;
-	while ((var = vars.next())) { submit_hash.set_live_submit_variable(var, EmptyItemString, false); }
-
-	// optimize the macro set for lookups if we inserted anything.  we expect this to happen only once.
-	hash.optimize();
-}
 
 int write_factory_file(const char * filename, const void* data, size_t cb, mode_t access)
 {
@@ -323,6 +305,92 @@ int SendClusterAd (ClassAd * ad)
 }
 
 
+// convert a populated foreach item set to a "from <file>" type of foreach, creating the file if needed
+// if the foreach mode is foreach_not, this function does nothing.
+// if there is already an items file and spill_items is false, the items file is converted to a full path
+//
+int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int ClusterId, bool spill_items)
+{
+	int rval = 0;
+
+	// if submit foreach data is not already a disk file, turn it into one.
+	bool make_foreach_file = false;
+	if (spill_items) {
+		PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
+		if (o.items.isEmpty()) {
+			o.foreach_mode = foreach_not;
+		} else {
+			make_foreach_file = true;
+		}
+	} else if (o.foreach_mode == foreach_from) {
+		// if it is a file, make sure the path is fully qualified.
+		MyString foreach_fn = o.items_filename;
+		o.items_filename = hash.full_path(foreach_fn.c_str(), false);
+	}
+
+	// if we are makeing the foreach file, we had to wait until we got the cluster id to do that
+	// so make it now.
+	if (make_foreach_file) {
+		MyString foreach_fn;
+		//PRAGMA_REMIND("tj: REMOVE THIS HACK")
+		if (default_to_factory) { // hack to make the test suite work.
+			foreach_fn.formatstr("condor_submit.%d.%u.items", ClusterId, submit_unique_id);
+		} else {
+			foreach_fn.formatstr("condor_submit.%d.items", ClusterId);
+		}
+		o.items_filename = hash.full_path(foreach_fn.c_str(), false);
+
+		int fd = safe_open_wrapper_follow(o.items_filename.c_str(), O_WRONLY|_O_BINARY|O_CREAT|O_TRUNC|O_APPEND, 0644);
+		if (fd == -1) {
+			dprintf(D_ALWAYS, "ERROR: write_items_file(%s): open() failed: %s (%d)\n", o.items_filename.c_str(), strerror(errno), errno);
+			return -1;
+		}
+
+		std::string line;
+		for (const char * item = o.items.first(); item != NULL; item = o.items.next()) {
+			line = item; line += "\n";
+			size_t cbwrote = write(fd, line.data(), line.size());
+			if (cbwrote != line.size()) {
+				dprintf(D_ALWAYS, "ERROR: write_items_file(%s): write() failed: %s (%d)\n", o.items_filename.c_str(), strerror(errno), errno);
+				rval = -1;
+				break;
+			}
+		}
+
+		close(fd);
+		if (rval < 0)
+			return rval;
+
+		o.foreach_mode = foreach_from;
+	}
+	//PRAGMA_REMIND("add code to check for unused hash entries and fail/warn.")
+	//PRAGMA_REMIND("add code to do partial expansion of the hash values.")
+
+	return rval;
+}
+
+int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o)
+{
+	int rval = 0;
+
+	// append the digest of the queue statement to the submit digest.
+	//
+	submit_digest += "\n";
+	submit_digest += "Queue ";
+	if (o.queue_num) { formatstr_cat(submit_digest, "%d ", o.queue_num); }
+	auto_free_ptr submit_vars(o.vars.print_to_delimed_string(","));
+	if (submit_vars.ptr()) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+	char slice_str[16*3+1];
+	if (o.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
+	if ( ! o.items_filename.empty()) { submit_digest += "from "; submit_digest += o.items_filename.c_str(); }
+	submit_digest += "\n";
+
+	return rval;
+}
+
+
+#if 0 // no longer used.
+
 int submit_factory_job (
 	FILE * fp,
 	MACRO_SOURCE & source,
@@ -345,18 +413,9 @@ int submit_factory_job (
 			break;
 
 		// parse the extra lines before doing $ expansion on the queue line
-		ErrContext.phase = PHASE_DASH_APPEND;
-		ExtraLineNo = 0;
-		extraLines.Rewind();
-		const char * exline;
-		while (extraLines.Next(exline)) {
-			++ExtraLineNo;
-			rval = Parse_config_string(source, 1, exline, submit_hash.macros(), ctx);
-			if (rval < 0)
-				break;
-			rval = 0;
-		}
-		ExtraLineNo = 0;
+		rval = ParseDashAppendLines(extraLines, source, submit_hash.macros());
+		if (rval < 0)
+			break;
 
 		if (qline && qcmd) {
 			errmsg = "-queue argument conflicts with queue statement in submit file";
@@ -377,9 +436,11 @@ int submit_factory_job (
 		if (qline) {
 			queue_args = is_queue_statement(qline);
 			ErrContext.phase = PHASE_QUEUE;
+			ErrContext.step = -1;
 		} else if (qcmd) {
 			queue_args = is_queue_statement(qcmd);
 			ErrContext.phase = PHASE_QUEUE_ARG;
+			ErrContext.step = -1;
 		}
 		if ( ! queue_args) {
 			errmsg = "no queue statement";
@@ -397,7 +458,18 @@ int submit_factory_job (
 
 		bool spill_foreach_data = false; // set to true when we need to convert foreach into foreach from
 		if (o.foreach_mode != foreach_not) {
-			spill_foreach_data = (o.items_filename.empty() || (o.items_filename == "<" || o.items_filename == "-"));
+			spill_foreach_data = (
+				o.items_filename.empty() ||
+				o.items_filename.FindChar('|') > 0 || // is items from a command (or invalid filename)
+				o.items_filename == "<" ||            // is remainder of file. aka 'inline' items
+				o.items_filename == "-"               // is items from stdin
+				);
+
+			// In order to get a correct item count, we have to always spill the foreach data
+			// even when the submit file has a "queue from <file>" command already.
+			if (param_boolean("SUBMIT_ALWAYS_COUNT_ITEMS", true)) {
+				spill_foreach_data = true;
+			}
 
 			MacroStreamYourFile ms(fp, source);
 			rval = submit_hash.load_inline_q_foreach_items(ms, o, errmsg);
@@ -411,6 +483,16 @@ int submit_factory_job (
 				break;
 
 			//PRAGMA_REMIND("add code to check for empty fields and fail/warn ?")
+		}
+
+		// figure out how many items we will be making jobs from.
+		int selected_item_count = 1;
+		if (o.foreach_mode != foreach_not) {
+			selected_item_count = 0;
+			int num_items = o.items.number();
+			for (int row = 0; row < num_items; ++row) {
+				if (o.slice.selected(row, num_items)) { ++selected_item_count; }
+			}
 		}
 
 		// if submit foreach data is not already a disk file, turn it into one.
@@ -428,25 +510,7 @@ int submit_factory_job (
 			o.items_filename = submit_hash.full_path(foreach_fn.c_str(), false);
 		}
 
-
-		// figure out how many items we will be making jobs from.
-		int selected_item_count = 1;
-		if (o.foreach_mode != foreach_not) {
-			selected_item_count = 0;
-			int num_items = o.items.number();
-			for (int row = 0; row < num_items; ++row) {
-				if (o.slice.selected(row, num_items)) { ++selected_item_count; }
-			}
-		}
-
 		if (o.queue_num > 0) {
-
-			if (DashDryRun && DumpSubmitHash) {
-				fprintf(stdout, "\n----- submit hash at queue begin -----\n");
-				int flags = (DumpSubmitHash & 8) ? HASHITER_SHOW_DUPS : 0;
-				submit_hash.dump(stdout, flags);
-				fprintf(stdout, "-----\n");
-			}
 
 			if ( ! MyQ) {
 				int rval = queue_connect();
@@ -464,6 +528,14 @@ int submit_factory_job (
 					break;
 				}
 			}
+
+			if (DashDryRun && DumpSubmitHash) {
+				fprintf(stdout, "\n----- submit hash at queue begin -----\n");
+				int flags = (DumpSubmitHash & 8) ? HASHITER_SHOW_DUPS : 0;
+				submit_hash.dump(stdout, flags);
+				fprintf(stdout, "-----\n");
+			}
+
 
 			if ((ClusterId = MyQ->get_NewCluster()) < 0) {
 				fprintf(stderr, "\nERROR: Failed to create cluster\n");
@@ -516,7 +588,7 @@ int submit_factory_job (
 			//PRAGMA_REMIND("add code to do partial expansion of the hash values.")
 
 			std::string submit_digest;
-			submit_hash.make_digest(submit_digest, ClusterId, o, 0);
+			submit_hash.make_digest(submit_digest, ClusterId, o.vars, 0);
 
 			//PRAGMA_REMIND("add code to check for unused hash entries and fail/warn.")
 
@@ -573,9 +645,9 @@ int submit_factory_job (
 			if ( ! JobUniverse) {
 				break;
 			}
-#ifdef ALLOW_SPOOLED_FACTORY_JOBS
+		#ifdef ALLOW_SPOOLED_FACTORY_JOBS
 			SendLastExecutable(); // if spooling the exe, send it now.
-#endif
+		#endif
 			SetSendCredentialInAd( job );
 
 			gClusterAd = new ClassAd(*job);
@@ -615,3 +687,4 @@ int submit_factory_job (
 	return rval;
 }
 
+#endif

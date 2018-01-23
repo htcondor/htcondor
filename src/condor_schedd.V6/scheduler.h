@@ -577,6 +577,7 @@ class Scheduler : public Service
 	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
 	bool			WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 	int				receive_startd_alive(int cmd, Stream *s);
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions
@@ -1024,17 +1025,6 @@ private:
 	int m_send_reschedule_timer;
 	Timeslice m_negotiate_timeslice;
 
-	// some stuff about Quill that should go into the ad
-#ifdef HAVE_EXT_POSTGRESQL
-	int quill_enabled;
-	int quill_is_remotely_queryable;
-	char *quill_name;
-	char *quill_db_name;
-	char *quill_db_ip_addr;
-	char *quill_db_query_password;
-	int prevLHF;
-#endif
-
 	StringList m_job_machine_attrs;
 	int m_job_machine_attrs_history_length;
 
@@ -1086,6 +1076,7 @@ extern bool releaseJob( int cluster, int proc, const char* reason = NULL,
 					 bool use_transaction = false, 
 					 bool email_user = false, bool email_admin = false,
 					 bool write_to_user_log = true);
+extern bool setJobFactoryPauseAndLog(JobQueueCluster * cluster, int pause_mode, int hold_code, const std::string& reason);
 
 
 /** Hook to call whenever we're going to give a job to a "job

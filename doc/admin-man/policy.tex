@@ -118,8 +118,9 @@ See section~\ref{sec:classad-reference} for specifics on
 how undefined terms are handled in ClassAd expression evaluation. 
 
 A note of caution is in order when modifying the \MacroNI{START} expression to
-reference job ClassAd attributes.  The default \MacroNI{IS\_OWNER}
-expression is a function of the \MacroNI{START} expression
+reference job ClassAd attributes.
+When using the \texttt{POLICY : Desktop} configuration template, the \MacroNI{IS\_OWNER}
+expression is a function of the \MacroNI{START} expression:
 \begin{verbatim}
 START =?= FALSE
 \end{verbatim}
@@ -128,7 +129,7 @@ section~\ref{sec:Owner-State}.  However, the machine locally
 evaluates the \MacroNI{IS\_OWNER} expression to determine if it is
 capable of running jobs for HTCondor.  Any job ClassAd attributes
 appearing in the \MacroNI{START} expression, and hence in the
-\MacroNI{IS\_OWNER} expression are undefined in this context, and may
+\MacroNI{IS\_OWNER} expression, are undefined in this context, and may
 lead to unexpected behavior.  Whenever the \MacroNI{START} expression
 is modified to reference job ClassAd attributes, the
 \MacroNI{IS\_OWNER} expression should also be modified to reference
@@ -788,10 +789,12 @@ the Vacating activity longer than a specified amount of time.
 When the startd is first spawned, the machine it represents enters the
 Owner state. 
 The machine remains in the Owner state while the
-expression \Macro{IS\_OWNER} is TRUE.
-If the \MacroNI{IS\_OWNER} expression is FALSE,
+expression \Macro{IS\_OWNER} evaluates to TRUE.
+If the \MacroNI{IS\_OWNER} expression evaluates to FALSE,
 then the machine transitions to the Unclaimed state.
-The default value for the 
+The default value of \MacroNI{IS\_OWNER} is FALSE, which is intended
+for dedicated resources.
+But when the \texttt{POLICY : Desktop} configuration template is used, the
 \MacroNI{IS\_OWNER} expression is optimized for a shared resource
 \begin{verbatim}
 START =?= FALSE
@@ -807,9 +810,6 @@ occurs and the machine enters the Unclaimed state.
 The \MacroNI{IS\_OWNER} expression is locally evaluated by the machine,
 and should not reference job ClassAd attributes, which would be
 UNDEFINED.
-
-For dedicated resources, the recommended value for the \MacroNI{IS\_OWNER}
-expression is FALSE.
 
 The Owner state represents a resource that is in use by its
 interactive owner (for example, if the keyboard is being used).
@@ -830,8 +830,8 @@ in the Owner State.
 When the \MacroNI{IS\_OWNER} expression is FALSE, the machine goes into
 the Unclaimed State.
 
-Here is an example that assumes that an \MacroNI{IS\_OWNER}
-expression is not present in the configuration.
+Here is an example that assumes that the \texttt{POLICY : Desktop}
+configuration template is in use.
 If the \MacroNI{START} expression is
 \begin{verbatim}
 START = KeyboardIdle > 15 * $(MINUTE) && Owner == "coltrane" 
@@ -872,7 +872,8 @@ that's a drop in the bucket of high-throughput computing.
 
 The machine can only transition to the Unclaimed state from the Owner
 state. It does so when the \MacroNI{IS\_OWNER} expression no longer
-evaluates to FALSE.  By default, that happens when \MacroNI{START} no longer
+evaluates to TRUE.
+With the \texttt{POLICY : Desktop} configuration template, that happens when \MacroNI{START} no longer
 locally evaluates to FALSE.
 
 Whenever the machine is not actively running a job, it will transition
@@ -900,8 +901,9 @@ If the \MacroNI{IS\_OWNER} expression becomes TRUE, then the machine returns
 to the Owner state.
 If the \MacroNI{IS\_OWNER} expression becomes FALSE, then the machine remains
 in the Unclaimed state.
-If the \MacroNI{IS\_OWNER} expression is not present in the configuration files,
-then the default value for the \MacroNI{IS\_OWNER} expression is 
+The default value of \MacroNI{IS\_OWNER} is FALSE (never enter Owner state).
+If the \texttt{POLICY : Desktop} configuration template is used,
+then the \MacroNI{IS\_OWNER} expression is changed to
 \begin{verbatim}
 START =?= FALSE
 \end{verbatim}

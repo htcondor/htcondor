@@ -33,7 +33,6 @@
 #include "internet.h"
 #include "strupr.h"
 #include "condor_netdb.h"
-#include "file_sql.h"
 #include "file_lock.h"
 #include "stat_info.h"
 #include "shared_port_endpoint.h"
@@ -60,6 +59,7 @@ extern int		master_exit(int);
 extern int		update_interval;
 extern int		check_new_exec_interval;
 extern int		preen_interval;
+extern int		preen_pid;
 extern int		new_bin_delay;
 extern StopStateT new_bin_restart_mode;
 extern char*	FS_Preen;
@@ -72,7 +72,6 @@ extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
 extern void		run_preen();
 
-extern FILESQL *FILEObj;
 extern int condor_main_argc;
 extern char **condor_main_argv;
 extern time_t daemon_stop_time;
@@ -2171,6 +2170,7 @@ Daemons::InitParams()
 					// in the master by checking if a daemon we're starting is
 					// both a DC daemon and not in the list of DC daemons.
 					iter->second->isDC = true;
+					break;
 				}
 			}
 		}
@@ -2792,6 +2792,7 @@ void
 Daemons::FinalRestartMaster()
 {
 	int i;
+	const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
 
 	CleanupBeforeRestart();
 
@@ -2823,6 +2824,9 @@ Daemons::FinalRestartMaster()
 			(void)execl(systemshell, "/Q", "/C",
 				command.Value(), 0);
 #endif
+		} else if ( !sd.PrepareForExec() ) {
+			dprintf( D_ALWAYS, "Systemd services in use, exiting to be restarted by systemd\n" );
+			master_exit( 1 );
 		} else {
 			dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
 				 master->process_name);
@@ -2964,6 +2968,16 @@ Daemons::DefaultReaper(int pid, int status)
 		valid_iter->second->Exited( status );
  		delete valid_iter->second;
 		exit_allowed.erase(valid_iter);
+		return TRUE;
+	} else if ( pid == preen_pid ) {
+		if ( WIFSIGNALED( status ) ) {
+			dprintf( D_ALWAYS, "Preen (pid %d) died due to %s\n", preen_pid,
+					 daemonCore->GetExceptionString( status ) );
+		} else {
+			dprintf( D_ALWAYS, "Preen (pid %d) exited with status %d\n",
+					 preen_pid, WEXITSTATUS( status ) );
+		}
+		preen_pid = -1;
 		return TRUE;
 	} else {
 		dprintf( D_ALWAYS, "DefaultReaper unexpectedly called on pid %i, status %i.\n", pid, status);
@@ -3224,11 +3238,6 @@ Daemons::UpdateCollector()
 	MasterPluginManager::Update(ad);
 #endif
 #endif
-
-	if ( FILEObj ) {
-		// log classad into sql log so that it can be updated to DB
-		FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
-	}
 
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );

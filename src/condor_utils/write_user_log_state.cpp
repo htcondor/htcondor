@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "write_user_log_state.h"
 #include "read_user_log.h"
-#include "stat_struct.h"
 #include "stat_wrapper.h"
 
 

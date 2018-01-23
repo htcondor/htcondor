@@ -1072,15 +1072,18 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 		// Now, insert any macros defined in the environment.
 	char **my_environ = GetEnviron();
-	for( int i = 0; my_environ[i]; i++ ) {
-		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
-		strcpy( magic_prefix, "_" );
-		strcat( magic_prefix, myDistro->Get() );
-		strcat( magic_prefix, "_" );
-		int prefix_len = (int)strlen( magic_prefix );
 
+		// Build "magic_prefix" with _condor_, or w/e distro we are
+
+	std::string magic_prefix;
+	magic_prefix += "_";
+	magic_prefix += myDistro->Get();
+	magic_prefix += "_";
+	int prefix_len = magic_prefix.size();
+
+	for( int i = 0; my_environ[i]; i++ ) {
 		// proceed only if we see the magic prefix
-		if( strncasecmp( my_environ[i], magic_prefix, prefix_len ) != 0 ) {
+		if( strncasecmp( my_environ[i], magic_prefix.c_str(), prefix_len ) != 0 ) {
 			continue;
 		}
 
@@ -1128,7 +1131,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		free( config_source );
 	}
 
-	// init_ipaddr and init_full_hostname is now obsolete
 	CondorError errorStack;
 	if(! init_network_interfaces( & errorStack )) {
 		const char * subsysName = get_mySubSystem()->getName();
@@ -1145,11 +1147,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		free( tmp );
 		reset_local_hostname();
 	}
-
-		// Also, we should be safe to process the NETWORK_INTERFACE
-		// parameter at this point, if it's set.
-	//init_ipaddr( TRUE );
-
 
 		// The IPv6 code currently caches some results that depend
 		// on configuration settings such as NETWORK_INTERFACE.
@@ -1181,8 +1178,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		// call with is_daemon=false, since that is fine for both daemons
 		// and non-daemons to do.
 	condor_auth_config( false );
-
-	ConfigConvertDefaultIPToSocketIP();
 
 	//Configure condor_fsync
 	condor_fsync_on = param_boolean("CONDOR_FSYNC", true);
@@ -1505,7 +1500,7 @@ find_user_file(MyString &file_location, const char * basename, bool check_access
 
 	if (can_switch_ids())
 		return false;
-	if ( ! is_relative_to_cwd(basename)) {
+	if ( fullpath(basename)) {
 		file_location = basename;
 	} else {
 #ifdef UNIX

@@ -143,9 +143,6 @@ ClassAdLog<K,AltK,AD>::filter_iterator::operator++(int)
 typedef GenericClassAdCollection<JobQueueKey, const char*,JobQueuePayload> JobQueueType;
 template class ClassAdLog<JobQueueKey,const char*,JobQueuePayload>;
 
-#include "file_sql.h"
-extern FILESQL *FILEObj;
-
 extern char *Spool;
 extern char *Name;
 extern Scheduler scheduler;
@@ -170,7 +167,7 @@ int		do_Q_request(ReliSock *,bool &may_fork);
 void	FindPrioJob(PROC_ID &);
 #endif
 void	DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers);
-int		MaterializeJobs(JobQueueCluster * clusterAd);
+int		MaterializeJobs(JobQueueCluster * clusterAd, int & retry_delay);
 
 static bool qmgmt_was_initialized = false;
 static JobQueueType *JobQueue = 0;
@@ -422,7 +419,7 @@ ClusterCleanup(int cluster_id)
 	// If this cluster has a job factory, write a FactoryRemove log event
 	JobQueueCluster * clusterad = GetClusterAd(cluster_id);
 	if( clusterad ) {
-		if( clusterad->factory ) {
+		if( clusterad->factory || clusterad->Lookup(ATTR_JOB_MATERIALIZE_DIGEST_FILE) ) {
 			scheduler.WriteFactoryRemoveToUserLog( clusterad, false );
 		}
 	}
@@ -524,9 +521,11 @@ JobMaterializeTimerCallback()
 					int cluster_size = cad->ClusterSize();
 					while ((cluster_size + num_materialized) < effective_limit) {
 						int retry_delay = 0; // will be set to non-zero when we should try again later.
-						if (MaterializeNextFactoryJob(cad->factory, cad, retry_delay) == 1) {
+						int rv = MaterializeNextFactoryJob(cad->factory, cad, retry_delay);
+						if (rv == 1) {
 							num_materialized += 1;
 						} else {
+							// either failure, or 'not now' use retry_delay to tell the difference. 0 means stop materializing
 							// for small non-zero values of retry, just leave this entry in the timer list so we end up polling.
 							// larger retry values indicate that the factory is in a resumable pause state
 							// which we will handle using a catMaterializeState transaction trigger rather than
@@ -634,10 +633,16 @@ DeferredClusterCleanupTimerCallback()
 			ASSERT(clusterad->IsCluster());
 			if (clusterad->factory) {
 				dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has job factory, invoking it.\n", cluster_id);
-				int num_materialized = MaterializeJobs(clusterad);
+				int retry_delay = 0;
+				int num_materialized = MaterializeJobs(clusterad, retry_delay);
 				if (num_materialized > 0) {
 					total_new_jobs += num_materialized;
 					do_cleanup = false;
+				} else {
+					// if no jobs materialized, we have to decide if the factory is done, or in a recoverable pause state
+					if (retry_delay > 0) {
+						do_cleanup = false;
+					}
 				}
 				dprintf(D_MATERIALIZE, "cluster %d job factory invoked, %d jobs materialized%s\n", cluster_id, num_materialized, do_cleanup ? ", doing cleanup" : "");
 			}
@@ -687,7 +692,6 @@ IncrementClusterSize(int cluster_num)
 		// We've seen this cluster_num go by before; increment proc count
 		(*numOfProcs)++;
 	}
-	TotalJobsCount++;
 
 		// return the number of procs in this cluster
 	if ( numOfProcs ) {
@@ -1731,6 +1735,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			int num_procs = IncrementClusterSize(cluster_num);
 			clusterad->SetClusterSize(num_procs);
+			TotalJobsCount++;
 		}
 	} // WHILE
 
@@ -1846,8 +1851,9 @@ DestroyJobQueue( void )
 }
 
 
-int MaterializeJobs(JobQueueCluster * clusterad)
+int MaterializeJobs(JobQueueCluster * clusterad, int & retry_delay)
 {
+	retry_delay = 0;
 	if ( ! clusterad->factory)
 		return 0;
 
@@ -1869,10 +1875,11 @@ int MaterializeJobs(JobQueueCluster * clusterad)
 	int num_materialized = 0;
 	int cluster_size = clusterad->ClusterSize();
 	while ((cluster_size + num_materialized) < effective_limit) {
-		int retry_delay = 0;
-		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, retry_delay) == 1) {
+		int retry = 0;
+		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, retry) == 1) {
 			num_materialized += 1;
 		} else {
+			retry_delay = MAX(retry_delay, retry);
 			break;
 		}
 	}
@@ -1895,6 +1902,21 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 
 	if (digest_text && digest_text[0]) {
 
+#if 1
+		ClassAd user_ident_ad;
+		ClassAd * user_ident = NULL;
+		if (Q_SOCK) {
+			// build a ad with the user identity so we can use set_user_priv_from_ad
+			// here just like we would if the cluster ad was available.
+			user_ident_ad.Assign(ATTR_OWNER, Q_SOCK->getOwner());
+			user_ident_ad.Assign(ATTR_NT_DOMAIN, Q_SOCK->getDomain());
+			user_ident = &user_ident_ad;
+		}
+
+		// parse the submit digest and (possibly) open the itemdata file.
+		std::string errmsg;
+		JobFactory * factory = MakeJobFactory(cluster_id, digest_text, user_ident, errmsg);
+#else
 		// we have to switch to user priv before parsing the submit digest because there MAY be an itemdata file.
 		// PRAGMA_REMIND("TODO: move setpriv down into MakeJobFactory so we can skip it if there is no itemdata?")
 		priv_state priv = PRIV_UNKNOWN;
@@ -1909,15 +1931,17 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 		}
 
 		// parse the submit digest and (possibly) open the itemdata file.
-		JobFactory * factory = MakeJobFactory(cluster_id, digest_text);
+		std::string errmsg;
+		JobFactory * factory = MakeJobFactory(cluster_id, digest_text, errmsg);
 
 		if (restore_priv) {
 			set_priv(priv);
 			uninit_user_ids();
 		}
+#endif
 
 		if ( ! factory) {
-			dprintf(D_MATERIALIZE, "Failing remote SetJobFactory %d because MakeJobFactory failed\n", cluster_id);
+			dprintf(D_MATERIALIZE, "Failing remote SetJobFactory %d because MakeJobFactory failed : %s\n", cluster_id, errmsg.c_str());
 			return rval;
 		}
 
@@ -2625,7 +2649,7 @@ NewProc(int cluster_id)
 		return -1;
 	}
 
-	if ( TotalJobsCount >= scheduler.getMaxJobsSubmitted() ) {
+	if ( (TotalJobsCount + jobs_added_this_transaction) >= scheduler.getMaxJobsSubmitted() ) {
 		dprintf(D_ALWAYS,
 			"NewProc(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
 		errno = EINVAL;
@@ -2962,12 +2986,6 @@ int DestroyProc(int cluster_id, int proc_id)
   ScheddPluginManager::Archive(ad);
 #endif
 
-  if ( FILEObj ) {
-	  if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
-		  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
-	  }
-  }
-
   // save job ad to the log
 	bool already_in_transaction = InTransaction();
 	if( !already_in_transaction ) {
@@ -3062,7 +3080,12 @@ int DestroyCluster(int cluster_id, const char* reason)
 	// find the cluster ad and turn off the job factory
 	JobQueueCluster * clusterad = GetClusterAd(cluster_id);
 	if (clusterad && clusterad->factory) {
-		PauseJobFactory(clusterad->factory, 3);
+		// Only the owner can delete a cluster
+		if ( Q_SOCK && !OwnerCheck(clusterad, Q_SOCK->getOwner() )) {
+			errno = EACCES;
+			return -1;
+		}
+		PauseJobFactory(clusterad->factory, mmClusterRemoved);
 	}
 
 	JobQueue->StartIterateAllClassAds();
@@ -3121,12 +3144,6 @@ int DestroyCluster(int cluster_id, const char* reason)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 				ScheddPluginManager::Archive(ad);
 #endif
-
-				if ( FILEObj ) {
-					if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
-						dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
-					}
-		  		}
 
   // save job ad to the log
 
@@ -4187,7 +4204,7 @@ ScheduleJobQueueLogFlush()
 {
 		// Flush the log after a short delay so that we avoid spending
 		// a lot of time waiting for the disk but we also make things
-		// visible to JobRouter and Quill within a maximum delay.
+		// visible to JobRouter within a maximum delay.
 	if( flush_job_queue_log_timer_id == -1 ) {
 		flush_job_queue_log_timer_id = daemonCore->Register_Timer(
 			flush_job_queue_log_delay,
@@ -4750,6 +4767,9 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		JobQueue->CommitTransaction();
 	}
 
+	// Now that we've commited for sure, up the TotalJobsCount
+	TotalJobsCount += jobs_added_this_transaction; 
+
 	// If the commit failed, we should never get here.
 
 	// Now that the transaction has been commited, we need to chain proc
@@ -4795,13 +4815,25 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 							std::string submit_digest;
 							if (clusterad->LookupString(ATTR_JOB_MATERIALIZE_DIGEST_FILE, submit_digest)) {
 								ASSERT( ! clusterad->factory);
-								clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str());
+
+								// we need to let MakeJobFactory know whether the digest has been spooled or not
+								// because it needs to know whether to impersonate the user or not.
+								MyString spooled_filename;
+								GetSpooledSubmitDigestPath(spooled_filename, clusterad->jid.cluster, Spool);
+								bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
+
+								std::string errmsg;
+								clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str(), spooled_digest, errmsg);
+								if ( ! clusterad->factory) {
+									chomp(errmsg);
+									setJobFactoryPauseAndLog(clusterad, mmInvalid, 0, errmsg);
+								}
 							}
 						}
 						if (clusterad->factory) {
 							int paused = 0;
 							if (clusterad->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, paused) && paused) {
-								PauseJobFactory(clusterad->factory, 1);
+								PauseJobFactory(clusterad->factory, (MaterializeMode)paused);
 							} else {
 								ScheduleClusterForJobMaterializeNow(job_id.cluster);
 							}
@@ -4893,7 +4925,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 						if(errorStack && (! errorStack->empty())) {
 							warning = errorStack->getFullText();
 						}
-						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.c_str() );
+						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.empty() ? NULL : warning.c_str() );
 					}
 				}
 
@@ -6383,6 +6415,14 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
+	StatInfo exe_stat( path );
+	if ( exe_stat.Error() == SIGood ) {
+		Q_SOCK->getReliSock()->put(1);
+		Q_SOCK->getReliSock()->end_of_message();
+		free(path);
+		return 0;
+	}
+
 	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
 		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);
 		Q_SOCK->getReliSock()->put(-1);
@@ -6953,18 +6993,38 @@ void load_job_factories()
 
 		submit_digest.clear();
 		if (clusterad->LookupString(ATTR_JOB_MATERIALIZE_DIGEST_FILE, submit_digest)) {
-			clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str());
+
+			// we need to let MakeJobFactory know whether the digest has been spooled or not
+			// because it needs to know whether to impersonate the user or not.
+			MyString spooled_filename;
+			GetSpooledSubmitDigestPath(spooled_filename, clusterad->jid.cluster, Spool);
+			bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
+
+			std::string errmsg;
+			clusterad->factory = MakeJobFactory(clusterad, submit_digest.c_str(), spooled_digest, errmsg);
 			if (clusterad->factory) {
 				++num_loaded;
 			} else {
 				++num_failed;
+				//PRAGMA_REMIND("Should this be a durable state change?")
+				// if the factory failed to load, put it into a non-durable pause mode
+				// a condor_q -factory will show the mmInvalid state, but it doesn't get reflected
+				// in the job queue
+				chomp(errmsg);
+				setJobFactoryPauseAndLog(clusterad, mmInvalid, 0, errmsg);
 			}
 		}
 		if (clusterad->factory) {
 			int paused = 0;
 			if (clusterad->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, paused) && paused) {
-				PauseJobFactory(clusterad->factory, 1);
-				++num_paused;
+				if (paused == mmInvalid && JobFactoryIsRunning(clusterad)) {
+					// if the former pause mode was mmInvalid, but the factory loaded OK on this time
+					// remove the pause since mmInvalid basically means 'factory failed to load'
+					setJobFactoryPauseAndLog(clusterad, mmRunning, 0, NULL);
+				} else {
+					PauseJobFactory(clusterad->factory, (MaterializeMode)paused);
+					++num_paused;
+				}
 			} else {
 				// schedule materialize.
 				ScheduleClusterForJobMaterializeNow(key.cluster);

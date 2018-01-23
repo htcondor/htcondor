@@ -51,6 +51,11 @@
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
 
+#include <iostream>
+#include <map>
+
+using namespace std;
+
 State get_machine_state();
 
 extern void		_condor_set_debug_flags( const char *strflags, int flags );
@@ -86,9 +91,10 @@ void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
 void produce_output();
 bool is_valid_shared_exe( const char *name );
-bool is_ckpt_file( const char *name );
+bool is_ckpt_file_or_submit_digest( const char *name );
 bool is_v2_ckpt( const char *name );
 bool is_v3_ckpt( const char *name );
+bool is_submit_digest( const char *name );
 bool cluster_exists( int );
 bool proc_exists( int, int );
 bool is_myproxy_file( const char *name );
@@ -264,7 +270,7 @@ produce_output()
 }
 
 bool
-check_job_spool_hierarchy( char const *parent, char const *child, StringList &bad_spool_files )
+check_job_spool_hierarchy( char const *parent, char const *child, std::set< std::string > &stale_spool_files )
 {
 	ASSERT( parent );
 	ASSERT( child );
@@ -287,19 +293,20 @@ check_job_spool_hierarchy( char const *parent, char const *child, StringList &ba
 	while( (f=dir.Next()) ) {
 
 			// see if it's a legitimate job spool file/directory
-		if( is_ckpt_file(f) ) {
+		if( is_ckpt_file_or_submit_digest(f) ) {
 			good_file( topdir.c_str(), f );
 			continue;
 		}
 
 		if( IsDirectory(dir.GetFullPath()) && !IsSymlink(dir.GetFullPath()) ) {
-			if( check_job_spool_hierarchy( topdir.c_str(), f, bad_spool_files ) ) {
+			if( check_job_spool_hierarchy( topdir.c_str(), f, stale_spool_files ) ) {
 				good_file( topdir.c_str(), f );
 				continue;
 			}
 		}
 
-		bad_spool_files.append( dir.GetFullPath() );
+		const char* dirPath = dir.GetFullPath();
+		stale_spool_files.insert( dirPath );
 	}
 
 		// By returning true here, we indicate that this directory is
@@ -334,8 +341,11 @@ check_spool_dir()
 	const char  	*f;
     const char      *history, *startd_history;
 	Directory  		dir(Spool, PRIV_ROOT);
-	StringList 		well_known_list, bad_spool_files;
-	Qmgr_connection *qmgr;
+	StringList 		well_known_list;
+	std::set<std::string> stale_spool_files;
+	Qmgr_connection *qmgr = NULL;
+	double			last_connection_time;
+	double			max_connection_time;
 
 	if ( ValidSpoolFiles == NULL ) {
 		dprintf( D_ALWAYS, "Not cleaning spool directory: No VALID_SPOOL_FILES defined\n");
@@ -346,9 +356,12 @@ check_spool_dir()
     history = condor_basename(history); // condor_basename never returns NULL
     history_length = strlen(history);
 
-    startd_history = param("STARTD_HISTORY");
+    startd_history = param("STARTD_HISTORY			// connect to the Q manager in read-only mode.");
    	startd_history = condor_basename(startd_history);
-   	startd_history_length = strlen(startd_history);
+	startd_history_length = strlen(startd_history);
+	   
+	last_connection_time = _condor_debug_get_time_double();
+	max_connection_time = param_integer("PREEN_MAX_SCHEDD_CONNECTION_TIME");
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
 	if (UserValidSpoolFiles) {
@@ -368,22 +381,17 @@ check_spool_dir()
 		// SCHEDD.lock: High availability lock file.  Current
 		// manual recommends putting it in the spool, so avoid it.
 		"SCHEDD.lock",
-		// These are Quill-related files
-		".quillwritepassword",
-		".pgpass",
 		};
 	for (int ix = 0; ix < (int)(sizeof(valid_list)/sizeof(valid_list[0])); ++ix) {
 		if ( ! well_known_list.contains(valid_list[ix])) well_known_list.append(valid_list[ix]);
 	}
 	
-	// connect to the Q manager
-	if (!(qmgr = ConnectQ (0))) {
-		dprintf( D_ALWAYS, "Not cleaning spool directory: Can't contact schedd\n" );
-		return;
-	}
-
-		// Check each file in the directory
+		// Step 1: Check each file in the directory. Look for files that
+		// obviously should be here (job queue logs, shared exes, etc.) and
+		// flag them as good files. Put everything else into stale_spool_files,
+		// which we'll deal with later.
 	while( (f = dir.Next()) ) {
+
 			// see if it's on the list
 		if( well_known_list.contains_withwildcard(f) ) {
 			good_file( Spool, f );
@@ -413,24 +421,12 @@ check_spool_dir()
 			strlen(f) >= startd_history_length &&
 			strncmp(f, startd_history, startd_history_length) == 0) {
 
-            good_file( Spool, f );
-            continue;
+			good_file( Spool, f );
+			continue;
 		}
 
 			// see it it's an in-use shared executable
 		if( is_valid_shared_exe(f) ) {
-			good_file( Spool, f );
-			continue;
-		}
-
-			// see if it's a legitimate checkpoint
-		if( is_ckpt_file(f) ) {
-			good_file( Spool, f );
-			continue;
-		}
-
-			// See if it's a legimate MyProxy password file
-		if ( is_myproxy_file( f ) ) {
 			good_file( Spool, f );
 			continue;
 		}
@@ -442,30 +438,83 @@ check_spool_dir()
 		}
 
 		if( IsDirectory( dir.GetFullPath() ) && !IsSymlink( dir.GetFullPath() ) ) {
-			if( check_job_spool_hierarchy( Spool, f, bad_spool_files ) ) {
+			if( check_job_spool_hierarchy( Spool, f, stale_spool_files ) ) {
 				good_file( Spool, f );
 				continue;
 			}
 		}
 
-			// We think it's bad.  For now, just append it to a
-			// StringList, instead of actually deleting it.  This way,
-			// if DisconnectQ() fails, we can abort and not actually
-			// delete any of these files.  -Derek Wright 3/31/99
-		bad_spool_files.append( f );
+			// We still don't know if this file is good or bad, and we can't
+			// tell without asking the schedd. Add it to our potentially stale
+			// files list, we'll deal with it later.
+		stale_spool_files.insert( f );
 	}
 
-	if( DisconnectQ(qmgr) ) {
-			// We were actually talking to a real queue the whole time
-			// and didn't have any errors.  So, it's now safe to
-			// delete the files we think we can delete.
-		bad_spool_files.rewind();
-		while( (f = bad_spool_files.next()) ) {
-			bad_file( Spool, f, dir );
+		// Step 2: Connect to the schedd, and check if the files in 
+		// stage_spool_files are truly stale. If we find any that are not, 
+		// remove from the list. Also if we stay connected to the schedd for
+		// too long, force a temporary disconnect so it can recover.
+	for( auto i = stale_spool_files.begin(); i != stale_spool_files.end(); ++i ) {
+		
+		std::string spool_file = *i;
+
+		// Establish (or re-establish) schedd connection
+		if ( !qmgr ) {
+			if ( !( qmgr = ConnectQ (0, 0, false) ) ) {
+				dprintf( D_ALWAYS, "Unknown error connecting to job queue. "
+					"Aborting without deleting files.\n" );
+				return;
+			}
+			last_connection_time = _condor_debug_get_time_double();
 		}
-	} else {
-		dprintf( D_ALWAYS, 
-				 "Error disconnecting from job queue, not deleting spool files.\n" );
+
+			// See if it's a legitimate checkpoint.
+		if( is_ckpt_file_or_submit_digest( spool_file.c_str() ) ) {
+			good_file( Spool, spool_file.c_str() );
+			stale_spool_files.erase( spool_file );
+			continue;
+		}
+
+			// See if it's a legimate MyProxy password file.
+		if ( is_myproxy_file( spool_file.c_str() ) ) {
+			good_file( Spool, spool_file.c_str() );
+			stale_spool_files.erase( spool_file );
+			continue;
+		}
+
+			// If the schedd is connected, check how long the connection has
+			// been active. If it has exceeded a maximum connection time 
+			// (defined by PREEN_MAX_SCHEDD_CONNECTION_TIME) then disconnect.
+			// This will give the schedd some time to deal with everything that
+			// happened while it was blocked.
+		if ( qmgr ) {
+			if ( _condor_debug_get_time_double() > 
+							( last_connection_time + max_connection_time ) ) {
+				if ( DisconnectQ( qmgr ) ) {
+					qmgr = NULL;
+				} 
+				else {
+					dprintf( D_ALWAYS, "Error disconnecting from job queue.\n" );
+				}
+			}
+		}
+	}
+
+		// Now disconnect from the schedd for good.
+	if ( qmgr ) {
+		if ( DisconnectQ( qmgr ) ) {
+			qmgr = NULL;
+		} 
+		else {
+			dprintf( D_ALWAYS, "Error disconnecting from job queue.\n" );
+		}
+	}
+
+		// Step 3: Now that we have a final list of stale files, it's time to 
+		// go through and actually flag them all for deletion.
+	for( auto i = stale_spool_files.begin(); i != stale_spool_files.end(); ++i ) {
+		std::string spool_file = *i;
+		bad_file( Spool, spool_file.c_str(), dir );
 	}
 }
 
@@ -491,20 +540,23 @@ is_valid_shared_exe( const char *name )
 
 /*
   Given the name of a file in the spool directory, return true if it's a
-  legitimate checkpoint file, and false otherwise.  If the name starts
-  with "cluster", it should be a V3 style checkpoint.  Otherwise it is
-  either a V2 style checkpoint, or not a checkpoint at all.
+  legitimate checkpoint file or submit digest, and false otherwise.  If the name starts
+  with "cluster", it should be a V3 style checkpoint. If it starts with condor_submit
+  it's a submit digest, Otherwise it is either a V2 style checkpoint, or not a checkpoint at all.
 */
 bool
-is_ckpt_file( const char *name )
+is_ckpt_file_or_submit_digest( const char *name )
 {
-
-	if( strstr(name,"cluster") ) {
-		return is_v3_ckpt( name );
-	} else {
+	if (name[0] == 'c') { // might start with 'cluster' or 'condor_submit'
+		if( name[1] == 'l' ) { // might start with 'cluster'
+			return is_v3_ckpt( name );
+		} else if ( name[1] == 'o' ) { // might start with 'condor_submit'
+			return is_submit_digest( name );
+		}
+	} else if ( name[0] == 'j') { // might start with 'job'
 		return is_v2_ckpt( name );
 	}
-
+	return false;
 }
 
 
@@ -580,6 +632,18 @@ is_v3_ckpt( const char *name )
 }
 
 /*
+  Check whether the given file could be a valid submit digest
+  for a queued late materialization job factory
+*/
+bool
+is_submit_digest( const char *name )
+{
+	int cluster = grab_val( name, "condor_submit." );
+	return cluster_exists( cluster );
+}
+
+
+/*
   Check whether the given file could be a valid MyProxy password file
   for a queued job.
 */
@@ -626,11 +690,12 @@ cluster_exists( int cluster )
 bool
 proc_exists( int cluster, int proc )
 {
-	ClassAd *ad;
+	if (cluster <= 0)
+		return false;
 
-	if ((ad = GetJobAd(cluster,proc)) != NULL) {
-		FreeJobAd(ad);
-		return true;
+	int id = 0;
+	if (GetAttributeInt(cluster, proc, ATTR_CLUSTER_ID, &id) < 0) {
+		return false;
 	}
 
 	return false;
@@ -740,36 +805,64 @@ check_daemon_sock_dir()
 }
 
 /*
-  Scan the webroot directory used for public input files. Remove any links
-  more than a week old, or that do not point to valid files.
+  Scan the webroot directory used for public input files. Look for .access files
+  more than a week old, and remove their respective hard links (same filename
+  minus the .access extension)
 */
 #ifdef HAVE_HTTP_PUBLIC_FILES
 void 
 check_public_files_webroot_dir() 
 {
-    // Make sure that PublicFilesWebrootDir is actually set before proceeding!
-    // If not set, just ignore it and bail out here.
-    if( !PublicFilesWebrootDir ) {
-        return;
-    }
+	// Make sure that PublicFilesWebrootDir is actually set before proceeding!
+	// If not set, just ignore it and bail out here.
+	if( !PublicFilesWebrootDir ) {
+		return;
+	}
 
-    const char	*f;
+	const char *filename;
 	Directory dir(PublicFilesWebrootDir, PRIV_ROOT);
-	std::string fullPath;
+	FileLock *accessFileLock;
+	std::string accessFilePath;
+	std::string hardLinkName;
+	std::string hardLinkPath;
 
-    // Set the stale age for a file to be one week
-    time_t stale_age = 60 * 60 * 24 * 7;
+	// Set the stale age for a file to be one week
+	time_t stale_age = param_integer( "HTTP_PUBLIC_FILES_STALE_AGE", 604800 );
 
-    while( ( f = dir.Next() ) ) {
-        fullPath = PublicFilesWebrootDir;
-        fullPath += DIR_DELIM_CHAR;
-        fullPath += f;
-        if( linked_recently( fullPath.c_str(), stale_age ) ) {
-            good_file( PublicFilesWebrootDir, f );
-        }
-        else {
-            bad_file( PublicFilesWebrootDir, f, dir );
-        }
+	while( ( filename = dir.Next() ) ) {
+		if( strstr( filename, ".access" ) ) {
+			accessFilePath = PublicFilesWebrootDir;
+			accessFilePath += DIR_DELIM_CHAR;
+			accessFilePath += filename;
+			
+			// Try to obtain a lock for the access file. If this fails for any
+			// reason, just bail out and move on.
+			accessFileLock = new FileLock( accessFilePath.c_str(), true, false );
+			if( !accessFileLock->obtain( WRITE_LOCK ) ) {
+				dprintf( D_ALWAYS, "check_public_files_webroot_dir: Failed to "
+					"obtain lock on %s, ignoring file\n", accessFilePath.c_str() );
+				continue;
+			}
+
+			hardLinkPath = accessFilePath.substr( 0, accessFilePath.length()-7 );
+			hardLinkName = hardLinkPath.substr( hardLinkPath.find_last_of( DIR_DELIM_CHAR ) );
+
+			// If the access file is stale, unlink both that and the hard link.
+			if( !linked_recently( accessFilePath.c_str(), stale_age ) ) {
+				// Something is weird here. I'm sending only the filename
+				// of the access file, but the full path of the hard link, and 
+				// it works correctly??
+				bad_file( PublicFilesWebrootDir, filename, dir );
+				bad_file( PublicFilesWebrootDir, hardLinkPath.c_str(), dir );
+			}
+			else {
+				good_file( PublicFilesWebrootDir, filename );
+				good_file( PublicFilesWebrootDir, hardLinkPath.c_str() );
+			}
+
+			// Release the lock before moving on
+			accessFileLock->release();
+		}
 	}
 }
 #endif
@@ -820,16 +913,12 @@ void check_tmp_dir(){
 #if !defined(WIN32)
 	if (!RmFlag) return;
 
-	const char *tmpDir = NULL;
 	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
-				// create a dummy FileLock for TmpPath access
-		FileLock *lock = new FileLock(-1, NULL, NULL);
-		tmpDir = lock->GetTempPath();	
-		delete lock;
-		rec_lock_cleanup(tmpDir, 3);
-		if (tmpDir != NULL)
-			delete []tmpDir;
+		// get temp path for file locking from the FileLock class
+		MyString tmpDir;
+		FileLock::getTempPath(tmpDir);
+		rec_lock_cleanup(tmpDir.Value(), 3);
 	}
   
 #endif	
@@ -946,8 +1035,8 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	MyString	pathname;
 	MyString	buf;
 
-	if( is_relative_to_cwd( name ) ) {
-	pathname.formatstr( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	if( !fullpath( name ) ) {
+		pathname.formatstr( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
 	}
 	else {
 		pathname = name;
