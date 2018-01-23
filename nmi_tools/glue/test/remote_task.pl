@@ -338,7 +338,8 @@ sub ProcessTestRequirements
             }
 
             if($record && $line =~ /CONDOR_TESTREQ_CONFIG/) {
-                $requirements->{testconf} = $conf . "\n";
+                $requirements->{testconf} = "TEST_DIR = ${test_dir}\n";
+                $requirements->{testconf} .= $conf . "\n";
                 $record = 0;
             }
 

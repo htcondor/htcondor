@@ -125,6 +125,9 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id )
 		NamedClassAd		*nad = *iter;
 		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
 		ASSERT( sad );
+
+		if( sad->isResourceMonitor() ) { continue; }
+
 		const char * match_attr = NULL;
 		if ( sad->InSlotList(r_id) && sad->ShouldMergeInto(merged_ad, &match_attr) ) {
 			ClassAd	*ad = nad->GetAd( );
@@ -142,6 +145,72 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id )
 		}
 	}
 
-	// Done
+	//
+	// Because each (this) slot may have more than one custom resource of a
+	// given type (e.g., two GPUs), we need to aggregate, rather than merge,
+	// the resource-specific ads produce by the resource monitor.  We assume
+	// -- and once we fix #6489, will be able to enforce -- that monitors
+	// for different resources will not have the same attribute names, so
+	// we only need single accumulator ad (and don't have to split the
+	// monitor ads by resource type).
+	//
+	ClassAd accumulator;
+	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
+		NamedClassAd		*nad = *iter;
+		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
+		ASSERT( sad );
+
+		if(! sad->isResourceMonitor()) { continue; }
+
+		const char * match_attr = NULL;
+		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( merged_ad, & match_attr ) ) {
+			dprintf( D_FULLDEBUG, "Aggregating ClassAd '%s' for slot %d.\n", sad->GetName(), r_id );
+			sad->AggregateInto( & accumulator );
+			dprintf( D_FULLDEBUG, "Accumulator ad is now:\n" );
+			dPrintAd( D_FULLDEBUG, accumulator );
+		}
+	}
+
+	// We don't filter out the (raw) Uptime* metrics here, because the
+	// starter needs them to compute the (per-job) *Usage metrics.  Instead,
+	// we filter them out in Resource::do_update().
+
+	// FIXME: compute per-slot recent metrics.
+
+	StartdNamedClassAd::Merge( merged_ad, & accumulator );
 	return 0;
+}
+
+void
+StartdNamedClassAdList::reset_monitors( unsigned r_id, ClassAd * forWhom ) {
+	std::list<NamedClassAd *>::iterator iter;
+	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
+		NamedClassAd		*nad = *iter;
+		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
+		ASSERT( sad );
+
+		if(! sad->isResourceMonitor()) { continue; }
+		const char * match_attr = NULL;
+		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( forWhom, & match_attr ) ) {
+			sad->reset_monitor();
+		}
+	}
+
+}
+
+void
+StartdNamedClassAdList::unset_monitors( unsigned r_id, ClassAd * forWhom ) {
+	std::list<NamedClassAd *>::iterator iter;
+	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
+		NamedClassAd		*nad = *iter;
+		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
+		ASSERT( sad );
+
+		if(! sad->isResourceMonitor()) { continue; }
+		const char * match_attr = NULL;
+		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( forWhom, & match_attr ) ) {
+			sad->unset_monitor();
+		}
+	}
+
 }

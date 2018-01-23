@@ -108,10 +108,183 @@ StartdNamedClassAd::ShouldMergeInto(ClassAd * merge_into, const char ** pattr_us
 bool
 StartdNamedClassAd::MergeInto(ClassAd *merge_into)
 {
-	ClassAd * merge_from = this->GetAd();
-	if ( ! merge_into || ! merge_from)
-		return false;
+	return StartdNamedClassAd::Merge( merge_into, this->GetAd() );
+}
 
-	int cMerged = MergeClassAdsIgnoring(merge_into, merge_from, this->dont_merge_attrs);
+bool
+StartdNamedClassAd::isResourceMonitor() {
+	return m_job.isResourceMonitor();
+}
+
+bool
+StartdNamedClassAd::Merge( ClassAd * to, ClassAd * from ) {
+	if ( ! to || ! from ) {
+		return false;
+	}
+
+	int cMerged = MergeClassAdsIgnoring(to, from, dont_merge_attrs);
 	return cMerged > 0;
+}
+
+void
+StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
+	if ( ! to || ! from ) { return; }
+
+	const StartdCronJobParams & params = m_job.Params();
+	for( auto i = from->begin(); i != from->end(); ++i ) {
+		const std::string & name = i->first;
+		ExprTree * expr = i->second;
+
+		StartdCronJobParams::Metric metric;
+		if( params.getMetric( name, metric ) ) {
+			double newValue;
+			classad::Value v;
+			expr->Evaluate( v );
+			if(! v.IsRealValue( newValue )) {
+				dprintf( D_ALWAYS, "Metric %s in job %s is not a real value.  Ignoring, but you probably shouldn't.\n", name.c_str(), params.GetName() );
+				continue;
+			}
+
+			double oldValue;
+			if( to->EvaluateAttrReal( name, oldValue ) ) {
+				dprintf( D_FULLDEBUG, "Aggregate(): %s is %.6f = %.6f %s %.6f\n", name.c_str(), metric(oldValue, newValue), oldValue, metric.c_str(), newValue );
+				to->InsertAttr( name, metric(oldValue, newValue) );
+			} else {
+				dprintf( D_FULLDEBUG, "Aggregate(): %s = %.6f\n", name.c_str(), newValue );
+				to->InsertAttr( name, newValue );
+			}
+
+			// Now that we've aggregate the value, set a resource-specific
+			// LastUpdate* attribute for when we aggregate into a slot ad
+			// with more than one resource.
+			std::string lastUpdateName = "LastUpdate" + name;
+			to->CopyAttribute( lastUpdateName.c_str(), "LastUpdate", from );
+			dprintf( D_FULLDEBUG, "Aggregate(): setting %s\n", lastUpdateName.c_str() );
+		} else {
+			dprintf( D_FULLDEBUG, "Aggregate(): copying '%s'.\n", name.c_str() );
+			ExprTree * copy = expr->Copy();
+			if(! to->Insert( name, copy )) {
+				dprintf( D_ALWAYS, "Failed to copy attribute while aggregating ad.  Ignoring, but you probably shouldn't.\n" );
+			}
+		}
+	}
+
+	// Once we've aggregated the new sample, reset the StartOfJob* values, and
+	// set FirstUpdate*, if this is the first sample since the job started.
+	bool resetStartOfJob = false;
+	if( to->LookupBool( "ResetStartOfJob", resetStartOfJob ) && resetStartOfJob ) {
+		dprintf( D_FULLDEBUG, "Aggregate(): resetting StartOfJob* attributes...\n" );
+
+		for( auto i = to->begin(); i != to->end(); ++i ) {
+			const std::string & name = i->first;
+			if( name.find( "StartOfJob" ) != 0 ) { continue; }
+
+			std::string uptimeName = name.substr( 10 );
+			to->CopyAttribute( name.c_str(), uptimeName.c_str() );
+
+			std::string firstUpdateName = "FirstUpdate" + uptimeName;
+			to->CopyAttribute( firstUpdateName.c_str(), "LastUpdate" );
+		}
+
+		to->Delete( "ResetStartOfJob" );
+
+		dprintf( D_FULLDEBUG, "Aggregate(): aggregated ad is now:\n" );
+		dPrintAd( D_FULLDEBUG, * to );
+	}
+}
+
+void
+StartdNamedClassAd::AggregateFrom(ClassAd *from)
+{
+	if( isResourceMonitor() ) {
+		Aggregate( this->GetAd(), from );
+	} else {
+		ReplaceAd( from );
+	}
+}
+
+bool
+StartdNamedClassAd::AggregateInto(ClassAd *into)
+{
+	if( isResourceMonitor() ) {
+		Aggregate( into, this->GetAd() );
+		return true;
+	} else {
+		return this->GetAd() ? into->CopyFrom( * this->GetAd() ) : true;
+	}
+}
+
+void
+StartdNamedClassAd::reset_monitor() {
+	if(! isResourceMonitor()) {
+		dprintf( D_ALWAYS, "StartdNamedClassAd::reset_monitor(): ignoring request to reset monitor of non-monitor.\n" );
+		return;
+	}
+
+	ClassAd * from = this->GetAd();
+	if( from == NULL ) { return; }
+
+	const StartdCronJobParams & params = m_job.Params();
+	for( auto i = from->begin(); i != from->end(); ++i ) {
+		const std::string & name = i->first;
+		ExprTree * expr = i->second;
+
+		if( params.isMetric( name ) ) {
+			double initialValue;
+			classad::Value v;
+			expr->Evaluate( v );
+			if(! v.IsRealValue( initialValue )) {
+				dprintf( D_ALWAYS, "Metric %s in job %s is not a floating-point value.  Ignoring, but you probably shouldn't.\n", name.c_str(), params.GetName() );
+				continue;
+			}
+
+			std::string jobAttributeName;
+			formatstr( jobAttributeName, "StartOfJob%s", name.c_str() );
+			dprintf( D_ALWAYS, "reset_monitor(): recording %s = %.6f\n", jobAttributeName.c_str(), initialValue );
+			from->InsertAttr( jobAttributeName.c_str(), initialValue );
+			from->InsertAttr( "ResetStartOfJob", true );
+		}
+	}
+}
+
+void
+StartdNamedClassAd::unset_monitor() {
+	if(! isResourceMonitor()) {
+		dprintf( D_ALWAYS, "StartdNamedClassAd::unset_monitor(): ignoring request to reset monitor of non-monitor.\n" );
+		return;
+	}
+
+	ClassAd * from = this->GetAd();
+	if( from == NULL ) { return; }
+
+	const StartdCronJobParams & params = m_job.Params();
+	for( auto i = from->begin(); i != from->end(); ++i ) {
+		std::string name = i->first;
+		ExprTree * expr = i->second;
+
+		if( params.isMetric( name ) ) {
+			double initialValue;
+			classad::Value v;
+			expr->Evaluate( v );
+			if(! v.IsRealValue( initialValue )) {
+				dprintf( D_ALWAYS, "Metric %s in job %s is not a real value.  Ignoring, but you probably shouldn't.\n", name.c_str(), params.GetName() );
+				continue;
+			}
+
+			std::string jobAttributeName;
+			formatstr( jobAttributeName, "StartOfJob%s", name.c_str() );
+			dprintf( D_ALWAYS, "unset_monitor(): removing %s\n", jobAttributeName.c_str() );
+			from->Delete( jobAttributeName );
+
+			std::string firstUpdateName;
+			formatstr( firstUpdateName, "FirstUpdate%s", name.c_str() );
+			dprintf( D_ALWAYS, "unset_monitor(): removing %s\n", firstUpdateName.c_str() );
+			from->Delete( firstUpdateName );
+
+			std::string lastUpdateName;
+			formatstr( lastUpdateName, "LastUpdate%s", name.c_str() );
+			dprintf( D_ALWAYS, "unset_monitor(): removing %s\n", lastUpdateName.c_str() );
+			from->Delete( lastUpdateName );
+		}
+	}
 }

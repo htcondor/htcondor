@@ -1529,6 +1529,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
+		} else if( it->first.rfind( "Usage" ) == it->first.length() - 5 ) {
+			classad::ExprTree *expr_copy = it->second->Copy();
+			jobAd->Insert(it->first, expr_copy);
+			shadow->watchJobAttr(it->first);
 		}
 	}
 

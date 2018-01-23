@@ -1,0 +1,386 @@
+#!/usr/bin/env perl
+#testreq: personal
+
+##**************************************************************
+##
+## Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use strict;
+use warnings;
+use FindBin;
+
+#
+# This is a basic test to determine if Custom Machine Resource monitors are
+# working properly.
+#
+
+use CondorTest;
+use CondorUtils;
+use CondorPersonal;
+
+my $bindir = $FindBin::Bin;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+NUM_CPUS = 16
+
+MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
+
+STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) SQUIDs_MONITOR
+STARTD_CRON_SQUIDs_MONITOR_MODE = periodic
+STARTD_CRON_SQUIDs_MONITOR_PERIOD = 10
+STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE = $(TEST_DIR)/cmr-squid-monitor
+STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs, PEAK:SQUIDsMemory
+
+UPDATE_INTERVAL = 20
+STARTER_UPDATE_INTERVAL = 20
+SHADOW_QUEUE_UPDATE_INTERVAL = 20
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testName = 'cmr_monitor_basic';
+my $testDescription = 'Custom Machine Resources - Monitor Test Basic';
+
+#
+# OK, before we try running a job and checking its SQUIDsUsage, verify that
+# the slots have SQUIDs and that they're being used.
+#
+
+# In `condor_status -af Name AssignedSQUIDs`, we should find sixteen slots,
+# four of which have SQUIDs -- SQUID{0,1,2,3}.
+my $ads = parseMachineAds( "Name", "AssignedSQUIDs" );
+
+my %SQUIDs;
+my $totalCount = 0;
+foreach my $ad (@{$ads}) {
+	++$totalCount;
+	if( $ad->{ "AssignedSQUIDs" } =~ /^(SQUID\d)$/ ) {
+		$SQUIDs{ $1 } = 1;
+	}
+}
+
+if( $totalCount != 16 ) {
+	die( "Failure: Found ${totalCount} slots, was expecting 16.\n" );
+}
+if( scalar(keys %SQUIDs) != 4 ) {
+	die( "Failure: Found " . scalar(keys %SQUIDs) . " SQUIDs, was expecting 4.\n" );
+}
+
+RegisterResult( 1, check_name => "slot-and-SQUIDs-counts",
+				   test_name => $testName );
+
+# In `condor_status -direct ${NAME} -af Name UptimeSQUIDsSeconds`, we should
+# find sixteen slots, four of which have UptimeSQUIDsSeconds.  Those four
+# metrics should have a 5:1:9:4 ratio if everything is working properly; if
+# any metric is 0, the test is a failure.  (The values should also be
+# integer multiples of 5, 1, 9, and 4.)
+my $directAds = parseDirectMachineAds( "AssignedSQUIDs", "UptimeSQUIDsSeconds" );
+
+my $multiplier;
+foreach my $ad (@{$directAds}) {
+	my $value = $ad->{ "UptimeSQUIDsSeconds" };
+	if( $value eq "undefined" ) { next; }
+
+	if( $ad->{ "AssignedSQUIDs" } eq "SQUID1" ) {
+		if( $value % 1 != 0 ) {
+			die( "Failure: SQUID1 has bad uptime '${value}'.\n" );
+		}
+
+		$multiplier = $value;
+	}
+}
+
+# This hash derives from cmr-squid-monitor and has to be changed when it does.
+my %squidIncrements = (
+	"SQUID0" => 5.0,
+	"SQUID1" => 1.0,
+	"SQUID2" => 9.0,
+	"SQUID3" => 4.0
+);
+
+foreach my $ad (@{$directAds}) {
+	my $value = $ad->{ "UptimeSQUIDsSeconds" };
+	if( $value eq "undefined" ) { next; }
+
+	my $SQUID = $ad->{ "AssignedSQUIDs" };
+	my $increment = $squidIncrements{ $SQUID };
+	if(! defined( $increment )) {
+		die( "Failure: Assigned SQUID '" . $ad->{ "AssignedSQUIDs" } . "' invalid.\n" );
+	}
+	if( $value % $increment != 0 || $increment * $multiplier != $value ) {
+		die( "Failure: '${SQUID}' has bad uptime '${value}'.\n" );
+	}
+}
+
+RegisterResult( 1, check_name => "UptimeSQUIDsSeconds",
+				   test_name => $testName );
+
+#
+# Run a job.  Verify that:
+# * the job ad in condor_q contains the correct SQUIDsUsage
+#   (FIXME: is this entailed by either of the tests below?)
+# * the job ad in the history file contains the correct SQUIDsUsage
+# * the user log contains the correct SQUIDsUsage
+#
+
+my $abnormal = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+	TLOG( "Job $ID exited abnormally...\n" );
+
+	die( "Error: Want to see only submit, execute and successful completion\n" );
+};
+
+my $aborted = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+	TLOG( "Job $ID aborted...\n" );
+
+	die( "Error: Want to see only submit, execute and successful completion\n" );
+};
+
+my $held = sub
+{
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+	TLOG( "Job $ID held...\n" );
+
+	die( "Error: Want to see only submit, execute and successful completion\n" );
+};
+
+my %jobIDToSQUIDsMap;
+my $executed = sub
+{
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+
+	my $directAds = parseDirectMachineAds( "JobID", "AssignedSQUIDs" );
+	foreach my $ad (@{$directAds}) {
+		my $jobID = $ad->{ "JobID" };
+		if(! defined($jobID)) { next; }
+		if( $jobID ne $info{ 'cluster' } . "." . $info{ 'job' } ) { next; }
+
+		$jobIDToSQUIDsMap{ $jobID } = $ad->{ "AssignedSQUIDs" };
+		TLOG( "Job $ID started on " . $jobIDToSQUIDsMap{ $jobID } . "...\n" );
+	}
+};
+
+my $submitted = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+	TLOG( "Job $ID submitted...\n" );
+};
+
+my $success = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+	TLOG( "Job $ID succeeded...\n" );
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+	TLOG( "Job $ID evicted without checkpoint...\n" );
+
+	die( "Error: Want to see only submit, execute and successful completion\n" );
+};
+
+my $failure = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+	TLOG( "Job $ID failed...\n" );
+
+	die( "Error: Want to see only submit, execute and successful completion\n" );
+};
+
+my %eventLogUsage;
+my $usage = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+
+	my $inUsage = 0;
+	my @lines = split( "\n", $info{ 'UsageLines' } );
+	for( my $i = 0; $i < scalar(@lines); ++$i ) {
+		my $line = $lines[$i];
+		if( (! $inUsage) && $line =~ /Partitionable Resources :/ ) {
+			$inUsage = 1;
+			next;
+		}
+		if( $inUsage ) {
+			my( $resource, $colon, $usage, $requested, $allocated ) =
+				split( " ", $line );
+
+			if( $resource =~ m/SQUIDs/i ) {
+				TLOG( "Job ${ID} used $usage $resource...\n" );
+				$eventLogUsage{ $ID } = $usage;
+			}
+		}
+	}
+
+	if(! defined( $eventLogUsage{ $ID } )) {
+		die( "Unable to find SQUIDs usage in event log, aborting.\n" );
+	}
+};
+
+Condor::RegisterUsage( $usage );
+CondorTest::RegisterExitedAbnormal( $testName, $abnormal );
+CondorTest::RegisterAbort( $testName, $aborted );
+CondorTest::RegisterHold( $testName, $held );
+CondorTest::RegisterExecute( $testName, $executed );
+CondorTest::RegisterSubmit( $testName, $submitted );
+CondorTest::RegisterExitedSuccess( $testName, $success );
+CondorTest::RegisterEvictedWithoutCheckpoint( $testName, $on_evictedwithoutcheckpoint );
+CondorTest::RegisterExitedFailure( $testName, $failure );
+
+my $submitFileName = "cmr-monitor-basic.cmd";
+if( CondorTest::RunTest( $testName, $submitFileName, 0 ) ) {
+
+	# For each job, check its history file for SQUIDsUsage and see if that
+	# value is sane, given what we know that the monitor is reporting for
+	# each device.
+	foreach my $jobID (keys %jobIDToSQUIDsMap) {
+		my $SQUID = $jobIDToSQUIDsMap{ $jobID };
+		my $increment = $squidIncrements{ $SQUID };
+		if(! defined( $increment )) {
+			die( "Failure: SQUID '${SQUID}' invalid.\n" );
+		}
+
+		my $jobAds = parseHistoryFile( $jobID, "SQUIDsUsage" );
+		if( scalar( @{$jobAds} ) != 1 ) {
+			die( "Did not get exactly one (" . scalar( @{$jobAds} ) . ") job ad for job ID '${jobID}', aborting.\n" );
+		}
+
+		foreach my $ad (@{$jobAds}) {
+			my $value = $ad->{ "SQUIDsUsage" };
+
+			if( $value != $eventLogUsage{ $jobID } ) {
+				die( "Value in event log (" . $eventLogUsage{ $jobID } . ") does not equal value in history file (${value}), aborting.\n" );
+			}
+
+			my $STARTD_CRON_SQUIDs_MONITOR_PERIOD = 10;
+			my $expectedValue = $increment / $STARTD_CRON_SQUIDs_MONITOR_PERIOD;
+			# Because we sleep for sixty seconds in the job, we expect to get
+			# five complete samples of usage over five sampling periods;
+			# however, because we keep time in integer seconds, occasionally
+			# the difference between the first and fifth sample is one second
+			# longer than it "ought" to be... or one second shorter.  *sigh*
+			my $sadnessValue = ($increment * 5) / 51;
+			my $madnessValue = ($increment * 5) / 49;
+			if( $value == $expectedValue || $value == $sadnessValue || $value == $madnessValue ) {
+				RegisterResult( 1, check_name => $SQUID . "-usage", test_name => $testName );
+			} else {
+				RegisterResult( 0, check_name => $SQUID . "-usage", test_name => $testName );
+			}
+		}
+	}
+} else {
+	die( "Error: $testName: CondorTest::RunTest(${submitFileName}) failed\n" );
+}
+
+# Poll the .update.ad file and then check its results.
+%jobIDToSQUIDsMap = ();
+$submitFileName = "cmr-monitor-basic-ad.cmd";
+if( CondorTest::RunTest( $testName, $submitFileName, 0 ) ) {
+	open( my $fh, '<', 'cmr-monitor-basic-ad.out' ) or
+		die( "Error: $testName: could not open 'cmr-monitor-basic-ad.out'\n" );
+
+	my $lineCount = 0;
+	while( my $line = <$fh> ) {
+		++$lineCount;
+		my( $SQUID, $value ) = split( ' ', $line );
+
+		my $increment = $squidIncrements{ $SQUID };
+		if(! defined( $increment )) {
+			die( "Failure: SQUID '${SQUID}' invalid.\n" );
+		}
+
+		# See commentary above.
+		my $STARTD_CRON_SQUIDs_MONITOR_PERIOD = 10;
+		my $expectedValue = $increment / $STARTD_CRON_SQUIDs_MONITOR_PERIOD;
+		my $sadnessValue = ($increment * 5) / 51;
+		my $madnessValue = ($increment * 5) / 49;
+		if( $value == $expectedValue || $value == $sadnessValue || $value == $madnessValue ) {
+			RegisterResult( 1, check_name => $SQUID . "-update.ad-${lineCount}", test_name => $testName );
+		} else {
+			RegisterResult( 0, check_name => $SQUID . "-update.ad-${lineCount}", test_name => $testName );
+		}
+	}
+
+	# Each test job appends four lines to the log.
+	if( $lineCount != 16 ) {
+		die( "Error: $testName: 'cmr-monitor-basic-ad.out' had $lineCount lines, not 16.\n" );
+	}
+} else {
+	die( "Error: $testName: CondorTest::RunTest(${submitFileName}) failed\n" );
+}
+
+exit( 0 );
+
+# -----------------------------------------------------------------------------
+
+sub parseAutoFormatLines {
+	my @lines = @{$_[0]};
+	my @attributes = @{$_[1]};
+
+	my @ads;
+	foreach my $line (@lines) {
+		my %ad;
+		my @values = split( ' ', $line );
+		for( my $i = 0; $i < scalar(@values); ++$i ) {
+			$ad{ $attributes[$i] } = $values[$i];
+		}
+		push( @ads, \%ad );
+	}
+
+	return \@ads;
+}
+
+sub parseMachineAds {
+	my @attributes = @_;
+	my $attributeList = join( " ", @attributes );
+
+	my @lines = ();
+	my $result = runCondorTool( "condor_status -af ${attributeList}", \@lines, 2, { emit_output => 0 } );
+	return parseAutoFormatLines( \@lines, \@attributes );
+}
+
+sub parseDirectMachineAds {
+	my @attributes = @_;
+	my $attributeList = join( " ", @attributes );
+
+	# It's super sad that this is the least-annoying way to do this.
+	my $startdAddressFile = `condor_config_val STARTD_ADDRESS_FILE`;
+	chomp( $startdAddressFile );
+	my $startdAddress = `head -n 1 ${startdAddressFile}`;
+	chomp( $startdAddress );
+
+	my @lines = ();
+	my $result = runCondorTool( "condor_status -direct '${startdAddress}' -af ${attributeList}", \@lines, 2, { emit_output => 0 } );
+	return parseAutoFormatLines( \@lines, \@attributes );
+}
+
+sub parseHistoryFile {
+	my $jobID = shift( @_ );
+	my @attributes = @_;
+	my $attributeList = join( " ", @attributes );
+
+	my @lines = ();
+	my $result = runCondorTool( "condor_history ${jobID} -af ${attributeList}", \@lines, 2, { emit_output => 0 } );
+	return parseAutoFormatLines( \@lines, \@attributes );
+}
+

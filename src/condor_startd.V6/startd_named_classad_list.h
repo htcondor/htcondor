@@ -36,6 +36,9 @@ class StartdNamedClassAdList : public NamedClassAdList
 	int DeleteJob ( StartdCronJob * job );
 	int ClearJob ( StartdCronJob * job );
 	virtual NamedClassAd * New( const char *name, ClassAd *ad = NULL );
+
+	void reset_monitors( unsigned r_id, ClassAd * forWhom );
+	void unset_monitors( unsigned r_id, ClassAd * forWhom );
 };
 
 #endif

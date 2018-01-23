@@ -471,6 +471,7 @@ sub load_test_requirements
 
             if($record && $line =~ /CONDOR_TESTREQ_CONFIG/) {
                 $requirements->{testconf} = $conf . "\n";
+                $requirements->{testconf} .= "TEST_DIR = ${BaseDir}\n";
                 $record = 0;
             }
 

@@ -2569,3 +2569,13 @@ ResMgr::addToDrainingBadput( int badput )
 {
 	total_draining_badput += badput;
 }
+
+void
+ResMgr::adlist_reset_monitors( unsigned r_id, ClassAd * forWhom ) {
+	extra_ads.reset_monitors( r_id, forWhom );
+}
+
+void
+ResMgr::adlist_unset_monitors( unsigned r_id, ClassAd * forWhom ) {
+	extra_ads.unset_monitors( r_id, forWhom );
+}

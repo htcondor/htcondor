@@ -1287,6 +1287,30 @@ Resource::do_update( void )
 #endif
 #endif
 
+		// Modifying the ClassAds we're sending in ResMgr::send_update()
+		// would be evil, so do the collector filtering here.
+	std::vector< std::string > deleteList;
+	for( auto i = public_ad.begin(); i != public_ad.end(); ++i ) {
+		const std::string & name = i->first;
+		//
+		// Arguably, this code here and the code in Resource::publish()
+		// would benefit from a startd-global (?) list of the names of all
+		// custom global resources; that way, we could confirm that this
+		// Uptime* attribute actually corresponded to a custom global
+		// resource and wasn't something from somewhere else (for instance,
+		// some other startd cron job).
+		//
+		if( name.find( "Uptime" ) == 0
+		 || name.find( "StartOfJobUptime" ) == 0
+		 || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
+		 || name.find( "FirstUpdate" ) == 0 ) {
+			deleteList.push_back( name );
+		}
+	}
+	for( auto i = deleteList.begin(); i != deleteList.end(); ++i ) {
+		public_ad.Delete( * i );
+	}
+
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad, true );
@@ -2354,6 +2378,89 @@ Resource::publish( ClassAd* cap, amask_t mask )
 #if defined(ADD_TARGET_SCOPING)
 	cap->AddTargetRefs( TargetJobAttrs, false );
 #endif
+
+	// Don't bother to write an ad to disk that won't include the extras ads.
+	// Also only write the ad to disk when the claim has a ClassAd and the
+	// starter knows where the execute directory is.  Empirically, this set
+	// of conditions also ensures that reset_monitor() has been called, so
+	// the first ad we write will include the StartOfJob* attribute(s).
+	if( IS_PUBLIC(mask) && IS_UPDATE(mask)
+	  && r_cur && r_cur->ad() && r_cur->executeDir() ) {
+		std::string updateAdPath;
+		formatstr( updateAdPath, "%s/dir_%d/.update.ad", r_cur->executeDir(), r_cur->starterPID() );
+		dprintf( D_ALWAYS, "Writing update ad to %s\n", updateAdPath.c_str() );
+
+		FILE * updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "w" );
+		if( updateAdFile ) {
+			// For now, instead of poking around for all the metric names
+			// (or worse, reparsing them from the config file), just assume
+			// that every pair of StartOfJobX and X attributes should result
+			// in an XUsage attribute.  Otherwise, for each defined metric,
+			// replace the corresponding StartOfJob* attribute with our
+			// computation of the corresponding *Usage attribute.
+			std::vector< std::string > deleteList;
+			for( auto i = cap->begin(); i != cap->end(); ++i ) {
+				const std::string & name = i->first;
+				if( name.find( "StartOfJob" ) != 0 ) { continue; }
+
+				std::string usageName;
+				std::string uptimeName = name.substr( 10 );
+				if(! StartdCronJobParams::getResourceNameFromAttributeName( uptimeName, usageName )) { continue; }
+				usageName += "Usage";
+
+				std::string lastUpdateName = "LastUpdate" + uptimeName;
+				std::string firstUpdateName = "FirstUpdate" + uptimeName;
+
+				if( name.rfind( "Seconds" ) == name.length() - 7 ) {
+					// Note that we calculate the usage rate only for full
+					// sample intervals.  This eliminates the imprecision of
+					// the sample interval in which the job started; since we
+					// can't include the usage from the sample interval in
+					// which the job ended, we also don't include the time
+					// the job was running in that interval.  The computation
+					// is thus exact for its time period.
+					std::string usageExpr;
+					formatstr( usageExpr, "(%s - %s)/(%s - %s)",
+						uptimeName.c_str(), name.c_str(),
+						lastUpdateName.c_str(), firstUpdateName.c_str() );
+
+					classad::Value v;
+					if(! cap->EvaluateExpr( usageExpr, v )) { continue; }
+					double usageValue;
+					if(! v.IsRealValue( usageValue )) { continue; }
+					cap->InsertAttr( usageName, usageValue );
+				} else if( name.rfind( "PeakUsage" ) == name.length() - 9 ) {
+					cap->CopyAttribute( usageName.c_str(), name.c_str() );
+				} else {
+					continue;
+				}
+
+				deleteList.push_back( uptimeName );
+				deleteList.push_back( name );
+				deleteList.push_back( lastUpdateName );
+				deleteList.push_back( firstUpdateName );
+			}
+
+
+			// This is inefficient, but not inefficient enough to rewrite
+			// fPrintAd() with a blacklist.
+			classad::References r;
+			sGetAdAttrs( r, * cap, true, NULL );
+			for( auto i = deleteList.begin(); i != deleteList.end(); ++i ) {
+				r.erase( *i );
+			}
+
+			std::string adstring;
+			sPrintAdAttrs( adstring, * cap, r );
+
+			fprintf( updateAdFile, "%s", adstring.c_str() );
+
+			fclose( updateAdFile );
+		} else {
+			dprintf( D_ALWAYS, "Failed to open '%s' for writing update ad: %s (%d).\n",
+				updateAdPath.c_str(), strerror( errno ), errno );
+		}
+	}
 }
 
 void

@@ -96,3 +96,58 @@ StartdCronJobParams::InSlotList( unsigned slot ) const
 	}
 	return false;
 }
+
+double sumOfTwoDoubles( double a, double b ) { return a + b; }
+double maxOfTwoDoubles( double a, double b ) { return a > b ? a : b; }
+
+bool
+StartdCronJobParams::addMetric( const char * metricType, const char * resourceName ) {
+	std::string attributeName;
+
+	if( strncasecmp( "SUM", metricType, 3 ) == 0 ) {
+		formatstr( attributeName, "Uptime%sSeconds", resourceName );
+		metrics.insert( make_pair( attributeName, Metric( sumOfTwoDoubles, "+" ) ) );
+	} else if( strncasecmp( "PEAK", metricType, 4 ) == 0 ) {
+		formatstr( attributeName, "Uptime%sPeakUsage", resourceName );
+		metrics.insert( make_pair( attributeName, Metric( maxOfTwoDoubles, ">" ) ) );
+	} else {
+		return false;
+	}
+	return true;
+}
+
+bool
+StartdCronJobParams::getMetric( const std::string & attributeName, Metric & m ) const {
+	auto i = metrics.find( attributeName );
+	if( i == metrics.end() ) { return false; }
+	m = i->second;
+	return true;
+}
+
+bool
+StartdCronJobParams::isMetric( const std::string & attributeName ) const {
+	return metrics.find( attributeName ) != metrics.end();
+}
+
+bool
+StartdCronJobParams::getResourceNameFromAttributeName( const std::string & attributeName, std::string & resourceName ) {
+	// if( metrics.find( attributeName ) == metrics.end() ) { return false; }
+	if( attributeName.find( "Uptime" ) != 0 ) { return false; }
+
+	std::string rName = attributeName.substr( 6 );
+	size_t eORN = rName.rfind( "Seconds" );
+	if( eORN != std::string::npos ) {
+		if( eORN + 7 != rName.length() ) { return false; }
+		resourceName = rName.substr( 0, eORN );
+		return true;
+	} else {
+		eORN = rName.rfind( "PeakUsage" );
+		if( eORN != std::string::npos ) {
+			if( eORN + 9 != rName.length() ) { return false; }
+			resourceName = rName.substr( 0, eORN );
+			return true;
+		} else {
+			return false;
+		}
+	}
+}

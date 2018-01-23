@@ -66,6 +66,7 @@ my $timer_CLtime = 0;
 my $CLTimedCallbackWait = 0;
 my $SJTimedCallbackWait = 0;
 my $TimedCallbackWait = 0;
+my $UsageCallback;
 my $SubmitCallback;
 my $ExecuteCallback;
 #my $EvictedCallback;
@@ -512,6 +513,12 @@ sub DumpFailedCommand
     }
 }
 
+sub RegisterUsage
+{
+    my $sub = shift || croak "missing argument";
+    $UsageCallback = $sub;
+}
+
 sub RegisterSubmit
 {
     my $sub = shift || croak "missing argument";
@@ -850,10 +857,10 @@ sub Monitor
 		{
 			sleep 2;
 
-		if(defined $CLTimedCallback)
-		{
-			CheckCLTimedCallback();
-		}
+			if(defined $CLTimedCallback)
+			{
+				CheckCLTimedCallback();
+			}
 
 			if(defined $SJTimedCallback)
 			{
@@ -968,7 +975,7 @@ sub Monitor
 
 		    # execute callback if one is registered
 		    &$ExitedCallback( %info )
-			if defined $ExitedCallback;
+				if defined $ExitedCallback;
 
 		    # read next line to see how job terminated
 		    $line = <SUBMIT_LOG>;
@@ -996,76 +1003,102 @@ sub Monitor
 
 		    # terminated successfully
 		    if( $line =~ /^\s+\(1\) Normal termination \(return value 0\)/ )
-		    {
-			# execute callback if one is registered
-			&$ExitedSuccessCallback( %info )
-			    if defined $ExitedSuccessCallback;
-		    }
+			    {
+				# execute callback if one is registered
+				&$ExitedSuccessCallback( %info )
+			    	if defined $ExitedSuccessCallback;
+		    	}
 		    # terminated w/error
 		    elsif( $line =~ 
 			   /^\s+\(1\) Normal termination \(return value (\d+)\)/ )
-		    {
-			$info{'retval'} = $1;
-			# execute callback if one is registered
-			&$ExitedFailureCallback( %info )
-			    if defined $ExitedFailureCallback;
-		    }
+			    {
+				$info{'retval'} = $1;
+				# execute callback if one is registered
+				&$ExitedFailureCallback( %info )
+				    if defined $ExitedFailureCallback;
+			    }
 		    # abnormal termination
 		    elsif( $line =~ /^\s+\(0\) Abnormal termination \(signal (\d+)\)/ )
-		    {
-			monitor_debug( "Loading $1 as info{'signal'}\n" ,1);
-			$info{'signal'} = $1;
-			#print "keys:".join(" ",keys %info)."\n";
+		    	{
+				monitor_debug( "Loading $1 as info{'signal'}\n" ,1);
+				$info{'signal'} = $1;
+				#print "keys:".join(" ",keys %info)."\n";
 
-			monitor_debug( "checking for core file...\n" ,1);
+				monitor_debug( "checking for core file...\n" ,1);
 
-			# read next line to find core file
-			$line = <SUBMIT_LOG>;
-			while( ! defined $line )
-			{
-				sleep 2;
-				if(defined $CLTimedCallback)
-				{
-					CheckCLTimedCallback();
-				}
-
-				if(defined $SJTimedCallback)
-				{
-					CheckSJTimedCallback();
-				}
-
-				if(defined $TimedCallback)
-				{
-					CheckTimedCallback();
-				}
+				# read next line to find core file
 				$line = <SUBMIT_LOG>;
-			}
-		    CondorUtils::fullchomp($line);
-			$linenum++;
+				while( ! defined $line )
+				{
+					sleep 2;
+					if(defined $CLTimedCallback)
+					{
+						CheckCLTimedCallback();
+					}
 
-			if( $line =~ /^\s+\(1\) Corefile in: (.*)/ )
-			{
-			    $info{'core'} = $1;
-			}
-			elsif( $line =~ /^\s+\(0\) No core file/ )
-			{
-			    monitor_debug( "no core file found\n" ,5);
-			    # not sure what to do here with $info{'core'}...
-			}
-			else
-			{
-			    monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno core file message found after abornal termination: continuing...\n", 1);
-			}
-			# execute callback if one is registered
-			&$ExitedAbnormalCallback( %info )
-			    if defined $ExitedAbnormalCallback;
+					if(defined $SJTimedCallback)
+					{
+						CheckSJTimedCallback();
+					}
+
+					if(defined $TimedCallback)
+					{
+						CheckTimedCallback();
+					}
+					$line = <SUBMIT_LOG>;
+				}
+			    CondorUtils::fullchomp($line);
+				$linenum++;
+
+				if( $line =~ /^\s+\(1\) Corefile in: (.*)/ )
+				{
+				    $info{'core'} = $1;
+				}
+				elsif( $line =~ /^\s+\(0\) No core file/ )
+				{
+				    monitor_debug( "no core file found\n" ,5);
+				    # not sure what to do here with $info{'core'}...
+				}
+				else
+				{
+				    monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno core file message found after abornal termination: continuing...\n", 1);
+				}
+				# execute callback if one is registered
+				&$ExitedAbnormalCallback( %info )
+				    if defined $ExitedAbnormalCallback;
 		    }
 		    else
 		    {
-			monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno termination status message found after termination. continuing...\n" , 2);
-			# re-parse line so we don't miss whatever it said
-			goto PARSE;
+				monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno termination status message found after termination. continuing...\n" , 2);
+				# re-parse line so we don't miss whatever it said
+				goto PARSE;
 		    }
+
+			# execute callback if one is registered
+			if( defined( $UsageCallback ) ) {
+				# Find the usage information and stuff it into %info.
+
+				my $usageLines;
+				while( $line ne "...\n" ) {
+				    # read next line to see how job terminated
+				    $line = <SUBMIT_LOG>;
+					while( ! defined $line ) {
+						sleep 2;
+
+						if( defined $CLTimedCallback ) { CheckCLTimedCallback(); }
+						if( defined $SJTimedCallback ) { CheckSJTimedCallback(); }
+						if( defined $TimedCallback ) { CheckTimedCallback(); }
+
+						$line = <SUBMIT_LOG>;
+					}
+					$usageLines .= $line;
+					$linenum++;
+				}
+
+				$info{ 'UsageLines' } = $usageLines;
+				&$UsageCallback( %info );
+			}
+
 		    next LINE;
 		}
 
@@ -1142,8 +1175,6 @@ sub Monitor
 			# execute callback if one is registered
 			    if (defined $ImageUpdatedCallback) {
 					&$ImageUpdatedCallback( %info );
-				} else {
-					print "Saw Image Size Update <$info{'imagesize'}>\n";
 				}
 
 		    next LINE;
@@ -1722,7 +1753,7 @@ sub MultiMonitor
 		    #monitor_debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,1);
 		    next LINE;
 		}
-		
+
 		# 004: job evicted
 		if( $line =~ /^004\s+\(0*(\d+)\.0*(\d+)/ )
 		{
@@ -1798,68 +1829,18 @@ sub MultiMonitor
 		# 005: job terminated
 		if( $line =~ /^005\s+\(0*(\d+)\.0*(\d+)/ )
 		{
-		    $info{'cluster'} = $1;
-		    $info{'job'} = $2;
+			$info{'cluster'} = $1;
+			$info{'job'} = $2;
 
-		    monitor_debug( "Saw job terminated\n" ,2);
+			monitor_debug( "Saw job terminated\n" ,2);
 
-		    # decrement # of queued jobs so we will know when to exit monitor
-		    $num_active_jobs--;
+			# decrement # of queued jobs so we will know when to exit monitor
+			$num_active_jobs--;
 
-		    # execute callback if one is registered
-		    &$ExitedCallback( %info )
-			if defined $ExitedCallback;
-
-		    # read next line to see how job terminated
-		    $line = <SUBMIT_LOG>;
-			while( ! defined $line )
-			{
-				sleep 2;
-				if(defined $CLTimedCallback)
-				{
-					CheckCLTimedCallback();
-				}
-
-				if(defined $SJTimedCallback)
-				{
-					CheckSJTimedCallback();
-				}
-
-				if(defined $TimedCallback)
-				{
-					CheckTimedCallback();
-				}
-				$line = <SUBMIT_LOG>;
-			}
-		    CondorUtils::fullchomp($line);
-		    $linenum++;
-
-		    # terminated successfully
-		    if( $line =~ /^\s+\(1\) Normal termination \(return value 0\)/ )
-		    {
 			# execute callback if one is registered
-			&$ExitedSuccessCallback( %info )
-			    if defined $ExitedSuccessCallback;
-		    }
-		    # terminated w/error
-		    elsif( $line =~ 
-			   /^\s+\(1\) Normal termination \(return value (\d+)\)/ )
-		    {
-			$info{'retval'} = $1;
-			# execute callback if one is registered
-			&$ExitedFailureCallback( %info )
-			    if defined $ExitedFailureCallback;
-		    }
-		    # abnormal termination
-		    elsif( $line =~ /^\s+\(0\) Abnormal termination \(signal (\d+)\)/ )
-		    {
-			monitor_debug( "Loading $1 as info{'signal'}\n" ,1);
-			$info{'signal'} = $1;
-			#print "keys:".join(" ",keys %info)."\n";
+			&$ExitedCallback( %info ) if defined $ExitedCallback;
 
-			monitor_debug( "checking for core file...\n" ,1);
-
-			# read next line to find core file
+			# read next line to see how job terminated
 			$line = <SUBMIT_LOG>;
 			while( ! defined $line )
 			{
@@ -1880,33 +1861,82 @@ sub MultiMonitor
 				}
 				$line = <SUBMIT_LOG>;
 			}
-		    CondorUtils::fullchomp($line);
+			CondorUtils::fullchomp($line);
 			$linenum++;
 
-			if( $line =~ /^\s+\(1\) Corefile in: (.*)/ )
+			# terminated successfully
+			if( $line =~ /^\s+\(1\) Normal termination \(return value 0\)/ )
 			{
-			    $info{'core'} = $1;
+				# execute callback if one is registered
+				&$ExitedSuccessCallback( %info ) if defined $ExitedSuccessCallback;
 			}
-			elsif( $line =~ /^\s+\(0\) No core file/ )
+			# terminated w/error
+			elsif( $line =~
+					/^\s+\(1\) Normal termination \(return value (\d+)\)/ )
 			{
-			    monitor_debug( "no core file found\n" ,5);
-			    # not sure what to do here with $info{'core'}...
+				$info{'retval'} = $1;
+				# execute callback if one is registered
+				&$ExitedFailureCallback( %info ) if defined $ExitedFailureCallback;
+			}
+			# abnormal termination
+			elsif( $line =~ /^\s+\(0\) Abnormal termination \(signal (\d+)\)/ )
+			{
+				monitor_debug( "Loading $1 as info{'signal'}\n" ,1);
+				$info{'signal'} = $1;
+
+				monitor_debug( "checking for core file...\n" ,1);
+
+				# read next line to find core file
+				$line = <SUBMIT_LOG>;
+				while( ! defined $line )
+					{
+					sleep 2;
+					if(defined $CLTimedCallback)
+					{
+						CheckCLTimedCallback();
+					}
+
+					if(defined $SJTimedCallback)
+					{
+						CheckSJTimedCallback();
+					}
+
+					if(defined $TimedCallback)
+					{
+						CheckTimedCallback();
+					}
+					$line = <SUBMIT_LOG>;
+				}
+				CondorUtils::fullchomp($line);
+				$linenum++;
+
+				if( $line =~ /^\s+\(1\) Corefile in: (.*)/ )
+				{
+					$info{'core'} = $1;
+				}
+				elsif( $line =~ /^\s+\(0\) No core file/ )
+				{
+					monitor_debug( "no core file found\n" ,5);
+					# not sure what to do here with $info{'core'}...
+				}
+				else
+				{
+					monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno core file message found after abornal termination: continuing...\n", 1);
+				}
+				# execute callback if one is registered
+				&$ExitedAbnormalCallback( %info ) if defined $ExitedAbnormalCallback;
 			}
 			else
 			{
-			    monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno core file message found after abornal termination: continuing...\n", 1);
+				monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno termination status message found after termination: continuing...\n" , 2);
+				# re-parse line so we don't miss whatever it said
+				goto PARSE;
 			}
+
 			# execute callback if one is registered
-			&$ExitedAbnormalCallback( %info )
-			    if defined $ExitedAbnormalCallback;
-		    }
-		    else
-		    {
-			monitor_debug( "parse error on line $linenum of $info{'log'}:\n\tno termination status message found after termination: continuing...\n" , 2);
-			# re-parse line so we don't miss whatever it said
-			goto PARSE;
-		    }
-		    next LINE;
+			&$UsageCallback( %info ) if defined $UsageCallback;
+
+			next LINE;
 		}
 
 		# 006: Image Size Updated
@@ -1981,8 +2011,6 @@ sub MultiMonitor
 			# execute callback if one is registered
 			    if (defined $ImageUpdatedCallback) {
 					&$ImageUpdatedCallback( %info );
-				} else {
-					print "Saw Image Size Update <$info{'imagesize'}>\n";
 				}
 
 		    next LINE;
