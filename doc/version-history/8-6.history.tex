@@ -50,6 +50,11 @@ The details of each version are described below.
 retry indefinitely when polling for credentials.
 \Ticket{6523}
 
+\item Fixed a bug that could cause scheduler universe jobs, such as 
+	DAGMan processes, to be orphaned in the event the \Condor{master} 
+	dies unexpectedly.
+\Ticket{6539}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
