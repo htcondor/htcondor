@@ -701,7 +701,7 @@ proc_exists( int cluster, int proc )
 		return false;
 	}
 
-	return false;
+	return true;
 }
 
 /*
