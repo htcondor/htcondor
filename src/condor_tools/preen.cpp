@@ -391,7 +391,6 @@ check_spool_dir()
 		// flag them as good files. Put everything else into stale_spool_files,
 		// which we'll deal with later.
 	while( (f = dir.Next()) ) {
-
 			// see if it's on the list
 		if( well_known_list.contains_withwildcard(f) ) {
 			good_file( Spool, f );
@@ -437,13 +436,6 @@ check_spool_dir()
 			continue;
 		}
 
-		if( IsDirectory( dir.GetFullPath() ) && !IsSymlink( dir.GetFullPath() ) ) {
-			if( check_job_spool_hierarchy( Spool, f, stale_spool_files ) ) {
-				good_file( Spool, f );
-				continue;
-			}
-		}
-
 			// We still don't know if this file is good or bad, and we can't
 			// tell without asking the schedd. Add it to our potentially stale
 			// files list, we'll deal with it later.
@@ -480,6 +472,18 @@ check_spool_dir()
 			good_file( Spool, spool_file.c_str() );
 			stale_spool_files.erase( spool_file );
 			continue;
+		}
+
+			// If a directory, check through subdirectories. Because we are not
+			// in the dir.Next() loop anymore, need to create full path manually.
+		MyString spool_file_full_path;
+		dircat( dir.GetDirectoryPath(), spool_file.c_str(), spool_file_full_path );
+		if( IsDirectory( spool_file_full_path.Value() ) && !IsSymlink( spool_file_full_path.Value() ) ) {
+			if( check_job_spool_hierarchy( Spool, spool_file.c_str(), stale_spool_files ) ) {
+				good_file( Spool, spool_file.c_str() );
+				stale_spool_files.erase( spool_file );
+				continue;
+			}
 		}
 
 			// If the schedd is connected, check how long the connection has
@@ -622,7 +626,6 @@ is_v3_ckpt( const char *name )
 	cluster = grab_val( name, "cluster" );
 	proc = grab_val( name, ".proc" );
 	grab_val( name, ".subproc" );
-
 		
 	if( proc < 0 ) {
 		return cluster_exists( cluster );
