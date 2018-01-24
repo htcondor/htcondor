@@ -2388,7 +2388,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	  && r_cur && r_cur->ad() && r_cur->executeDir() ) {
 		std::string updateAdPath;
 		formatstr( updateAdPath, "%s/dir_%d/.update.ad", r_cur->executeDir(), r_cur->starterPID() );
-		dprintf( D_ALWAYS, "Writing update ad to %s\n", updateAdPath.c_str() );
+		dprintf( D_FULLDEBUG, "Writing update ad to %s\n", updateAdPath.c_str() );
 
 		FILE * updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "w" );
 		if( updateAdFile ) {
