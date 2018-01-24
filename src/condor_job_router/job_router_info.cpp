@@ -455,14 +455,8 @@ void Scheduler::poll()  { }
 int  Scheduler::id() { return m_id; }
 
 
-// needed by JobRouter
-unsigned int hashFuncStdString( std::string const & key)
-{
-    return hashFuncChars(key.c_str());
-}
-
 // 
-JobRouterHookMgr::JobRouterHookMgr() : HookClientMgr(), m_warn_cleanup(false), m_warn_update(false), m_warn_translate(false), m_warn_exit(false),NUM_HOOKS(0), UNDEFINED("UNDEFINED"), m_default_hook_keyword(NULL), m_hook_paths(MyStringHash) {}
+JobRouterHookMgr::JobRouterHookMgr() : HookClientMgr(), m_warn_cleanup(false), m_warn_update(false), m_warn_translate(false), m_warn_exit(false),NUM_HOOKS(0), UNDEFINED("UNDEFINED"), m_default_hook_keyword(NULL), m_hook_paths(hashFunction) {}
 JobRouterHookMgr::~JobRouterHookMgr() {};
 bool JobRouterHookMgr::initialize() { reconfig(); return true; /*HookClientMgr::initialize()*/; }
 bool JobRouterHookMgr::reconfig() { m_default_hook_keyword = param("JOB_ROUTER_HOOK_KEYWORD"); return true; }

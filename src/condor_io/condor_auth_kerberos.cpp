@@ -1305,11 +1305,6 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
 
 }
 
-static unsigned int compute_string_hash(const MyString& str)
-{
-	return str.Hash();
-}
-
 int Condor_Auth_Kerberos :: init_realm_mapping()
 {
     int lc = 0;
@@ -1356,7 +1351,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		}
 
 		assert (RealmMap == NULL);
-		RealmMap = new Realm_Map_t(lc, compute_string_hash);
+		RealmMap = new Realm_Map_t(lc, hashFunction);
 		from.rewind();
 		to.rewind();
 		char *f, * t;

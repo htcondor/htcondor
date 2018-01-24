@@ -42,7 +42,7 @@ Env::Env()
 {
 	input_was_v1 = false;
 	_envTable = new HashTable<MyString, MyString>
-		( 127, &MyStringHash, updateDuplicateKeys );
+		( 127, &hashFunction, updateDuplicateKeys );
 	ASSERT( _envTable );
 }
 

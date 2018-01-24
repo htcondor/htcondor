@@ -21,6 +21,7 @@
 #include "condor_common.h"
 
 #include "classad_hashtable.h"
+#include "HashTable.h"
 
 void HashKey::sprint(MyString &s) const
 {
@@ -43,52 +44,10 @@ bool operator==(const HashKey &lhs, const HashKey &rhs)
 
 unsigned int hashFunction(const HashKey &key)
 {
-	unsigned int hash = 0;
-
-	const char *p = key.key;
-	while (*p) {
-		hash = (hash<<5)+hash + (unsigned char)*p;
-		p++;
-	}
-
-	return hash;
+	return hashFunction(key.key);
 }
 
 unsigned int HashKey::hash(const HashKey &key)
 {
-	unsigned int hash = 0;
-
-	const char *p = key.key;
-	while (*p) {
-		hash = (hash<<5)+hash + (unsigned char)*p;
-		p++;
-	}
-
-	return hash;
-}
-
-AttrKey& AttrKey::operator= (const AttrKey& from)
-{
-	if (this->key)
-		free(this->key);
-	this->key = strdup(from.key);
-	return *this;
-}
-
-bool operator==(const AttrKey &lhs, const AttrKey &rhs)
-{
-	return (strcasecmp(lhs.key, rhs.key) == 0);
-}
-
-unsigned int 
-AttrKeyHashFunction (const AttrKey &key)
-{
-	const char *str = key.value();
-	ssize_t i = strlen( str ) - 1;
-	unsigned int hashVal = 0;
-	while (i >= 0) {
-		hashVal += (unsigned int)tolower(str[i]);
-		i--;
-	}
-	return hashVal;
+	return hashFunction(key.key);
 }

@@ -43,7 +43,7 @@
 using namespace soap_schedd;
 
 Job::Job(PROC_ID pro_id):
-	declaredFiles(64, MyStringHash, rejectDuplicateKeys)
+	declaredFiles(64, hashFunction, rejectDuplicateKeys)
 {
 	this->id = pro_id;
 }

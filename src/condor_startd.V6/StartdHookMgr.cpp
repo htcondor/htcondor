@@ -31,7 +31,7 @@ StartdHookMgr::StartdHookMgr()
 	: HookClientMgr(),
 	  NUM_HOOKS(3),
 	  UNDEFINED((char*)1),
-	  m_keyword_hook_paths(MyStringHash)
+	  m_keyword_hook_paths(hashFunction)
 {
 	dprintf( D_FULLDEBUG, "Instantiating a StartdHookMgr\n" );
 }

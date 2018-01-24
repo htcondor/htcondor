@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_open.h"
 #include "condor_debug.h"
+#include "HashTable.h"
 #include "MapFile.h"
 
 #ifdef USE_MAPFILE_V2
@@ -56,7 +57,7 @@
 
 struct hash_yourstring {
 	size_t operator()(const YourString & str) const {
-		return (size_t) YourString::hashFunction(str);
+		return (size_t) hashFunction(str);
 	}
 };
 

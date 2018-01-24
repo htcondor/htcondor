@@ -160,7 +160,7 @@ static QmgmtPeer *Q_SOCK = NULL;
 // Hash table with an entry for every job owner that
 // has existed in the queue since this schedd has been
 // running.  Used by SuperUserAllowedToSetOwnerTo().
-static HashTable<MyString,int> owner_history(MyStringHash);
+static HashTable<MyString,int> owner_history(hashFunction);
 
 int		do_Q_request(ReliSock *,bool &may_fork);
 #if 0 // not used?

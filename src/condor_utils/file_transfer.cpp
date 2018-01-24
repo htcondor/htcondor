@@ -113,18 +113,6 @@ struct download_info {
 	FileTransfer *myobj;
 };
 
-// Hash function for FileCatalogHashTable
-static unsigned int compute_filename_hash(const MyString &key) 
-{
-	return key.Hash();
-}
-
-// Hash function for pid table.
-static unsigned int compute_transkey_hash(const MyString &key) 
-{
-	return key.Hash();
-}
-
 static unsigned int compute_transthread_hash(const int &pid) 
 {
 	return (unsigned int)pid;
@@ -706,7 +694,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 
 	if (!TranskeyTable) {
 		// initialize our hashtable
-		if (!(TranskeyTable = new TranskeyHashTable(7, compute_transkey_hash)))
+		if (!(TranskeyTable = new TranskeyHashTable(7, hashFunction)))
 		{
 			// failed to allocate our hashtable ?!?!
 			return 0;
@@ -4193,7 +4181,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	// big enough that the chains are decent sized. Suppose you might
 	// have 50,000 files. In the case for 997 buckets and even distribution, 
 	// the chains would be ~50 entries long. Good enough.
-	(*catalog) = new FileCatalogHashTable(997, compute_filename_hash);
+	(*catalog) = new FileCatalogHashTable(997, hashFunction);
 
 	/* If we've decided not to use a file catalog, then leave it empty. */
 	if (m_use_file_catalog == false) {
@@ -4488,7 +4476,7 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 	}
 
 	// plugin_table is a member variable
-	plugin_table = new PluginHashTable(7, compute_filename_hash);
+	plugin_table = new PluginHashTable(7, hashFunction);
 
 	StringList plugin_list (plugin_list_string);
 	plugin_list.rewind();

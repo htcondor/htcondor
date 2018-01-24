@@ -57,43 +57,44 @@ hashFuncVoidPtr( void* const & pv )
    return ui;
 }
 
-unsigned int
-hashFuncJobIdStr( char* const & key )
-{
-    unsigned int bkt = 0;
-	int i,j,size;
-    unsigned int multiplier = 1;
-
-    if (key) {
-        size = strlen(key);
-        for (i=0; i < size; i++) {
-            j = size - 1 - i;
-            if (key[j] == '.' ) continue;
-            bkt += (key[j] - '0') * multiplier;
-            multiplier *= 10;
-        }
-    }
-
-    return bkt;
-}
-
 unsigned int 
 hashFuncPROC_ID( const PROC_ID &procID )
 {
 	return ( (procID.cluster+(procID.proc*19)) );
 }
 
-unsigned int
-hashFuncChars( char const *key )
+// Chris Torek's world famous hashing function
+unsigned int hashFunction( char const *key )
 {
     unsigned int i = 0;
-    if(key) for(;*key;key++) {
-        i += *(const unsigned char *)key;
+    if ( key ) {
+		for ( ; *key ; key++ ) {
+			i += (i<<5) + (const unsigned char)*key;
+		}
     }
     return i;
 }
 
-unsigned int hashFuncMyString( const MyString &key )
+unsigned int hashFunction( const std::string &key )
 {
-    return hashFuncChars(key.Value());
+	return hashFunction( key.c_str() );
+}
+
+unsigned int hashFunction( const MyString &key )
+{
+	return hashFunction( key.Value() );
+}
+
+unsigned int hashFunction( const YourString &key )
+{
+	return hashFunction( key.Value() );
+}
+
+unsigned int hashFunction( const YourStringNoCase &key )
+{
+    unsigned int i = 0;
+	for ( const char *p = key.Value(); *p ; p++ ) {
+		i += (i<<5) + (const unsigned char)(*p & ~0x20);
+	}
+    return i;
 }

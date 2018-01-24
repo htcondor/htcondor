@@ -32,7 +32,7 @@
 static void usage(void);
 
 TransferD::TransferD() :
-	m_treqs(200, hashFuncMyString),
+	m_treqs(200, hashFunction),
 	m_client_to_transferd_threads(200, hashFuncLong),
 	m_transferd_to_client_threads(200, hashFuncLong)
 {

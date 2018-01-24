@@ -31,7 +31,7 @@ const int ThrottleByCategory::noThrottleSetting = -1;
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleByCategory() :
-			_throttles( CATEGORY_HASH_SIZE, MyStringHash, rejectDuplicateKeys )
+			_throttles( CATEGORY_HASH_SIZE, hashFunction, rejectDuplicateKeys )
 {
 }
 
@@ -110,7 +110,7 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 		// ThrottleInfo objects because we're re-using the ones
 		// we already have.
 	HashTable<MyString, ThrottleInfo *> tmpThrottles( CATEGORY_HASH_SIZE,
-				MyStringHash, rejectDuplicateKeys );
+				hashFunction, rejectDuplicateKeys );
 
 	_throttles.startIterations();
 	ThrottleInfo	*info;

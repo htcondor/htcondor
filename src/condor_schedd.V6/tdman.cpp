@@ -30,7 +30,7 @@
 #include "basename.h"
 
 TransferDaemon::TransferDaemon(MyString fquser, MyString id, TDMode status) :
-	m_treqs_in_progress(200, hashFuncMyString)
+	m_treqs_in_progress(200, hashFunction)
 {
 	m_fquser = fquser;
 	m_id = id;
@@ -566,9 +566,9 @@ TransferDaemon::call_reaper_callback(long pid, int status, TransferDaemon *td)
 TDMan::TDMan()
 {
 	m_td_table = 
-		new HashTable<MyString, TransferDaemon*>(200, hashFuncMyString);
+		new HashTable<MyString, TransferDaemon*>(200, hashFunction);
 	m_id_table = 
-		new HashTable<MyString, MyString>(200, hashFuncMyString);
+		new HashTable<MyString, MyString>(200, hashFunction);
 	m_td_pid_table = 
 		new HashTable<long, TransferDaemon*>(200, hashFuncLong);
 }

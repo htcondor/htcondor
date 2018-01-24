@@ -343,7 +343,7 @@ void AuditLogJobProxy( const Sock &sock, ClassAd *job_ad )
 
 unsigned int UserIdentity::HashFcn(const UserIdentity & index)
 {
-	return index.m_username.Hash() + index.m_domain.Hash() + index.m_auxid.Hash();
+	return hashFunction(index.m_username) + hashFunction(index.m_domain) + hashFunction(index.m_auxid);
 }
 
 UserIdentity::UserIdentity(const char *user, const char *domainname, 

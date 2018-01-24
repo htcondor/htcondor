@@ -50,8 +50,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	allLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
-	activeLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys)
+	allLogFiles(LOG_INFO_HASH_SIZE, hashFunction, rejectDuplicateKeys),
+	activeLogFiles(LOG_INFO_HASH_SIZE, hashFunction, rejectDuplicateKeys)
 {
 }
 

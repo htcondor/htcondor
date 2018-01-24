@@ -262,7 +262,7 @@ void HashTable<Index,Value>::initialize( unsigned int (*hashF)( const Index &ind
 
   // You MUST specify a hash function.
   // Try hashFuncInt (int), hashFuncUInt (uint), hashFuncJobIdStr (string of "cluster.proc"),
-  // or MyStringHash (MyString)
+  // or hashFunction(<string type>)
   ASSERT(hashfcn != 0);
 
   // if the value for maxLoadFactor is negative or 0, use the default of 50
@@ -951,14 +951,13 @@ unsigned int hashFuncLong( const long& n );
 /// basic hash function for an unpredictable unsigned integer key
 unsigned int hashFuncUInt( const unsigned int& n );
 
-/// hash function for string versions of job id's ("cluster.proc")
-unsigned int hashFuncJobIdStr( char* const & key );
+/// hash functions for a string
+unsigned int hashFunction( char const *key );
+unsigned int hashFunction( const std::string &key );
+unsigned int hashFunction( const MyString &key );
+unsigned int hashFunction( const YourString &key );
 
-/// hash function for char* string
-unsigned int hashFuncChars( char const *key );
-
-/// hash function for Mystring string
-unsigned int hashFuncMyString( const MyString &key );
+unsigned int hashFunction( const YourStringNoCase &key );
 
 /// hash function for a pointer
 unsigned int hashFuncVoidPtr( void* const & pv );

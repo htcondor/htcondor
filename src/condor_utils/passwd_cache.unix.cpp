@@ -30,15 +30,11 @@ IMPORTANT NOTE: Don't dprintf() in here, unless its a fatal error! */
 #include "condor_random_num.h"
 
 
-unsigned int compute_user_hash(const MyString &key) {
-    return key.Hash();
-};
-
 passwd_cache::passwd_cache() {
 
-	uid_table = new UidHashTable(10, compute_user_hash, updateDuplicateKeys);
+	uid_table = new UidHashTable(10, hashFunction, updateDuplicateKeys);
 	group_table = new 
-		GroupHashTable(10, compute_user_hash, updateDuplicateKeys);
+		GroupHashTable(10, hashFunction, updateDuplicateKeys);
 		/* set the number of seconds until a cache entry expires */
 		// Randomize this timer a bit to decrease chances of lots of
 		// processes all pounding on NIS at the same time.

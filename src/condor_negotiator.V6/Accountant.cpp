@@ -71,7 +71,7 @@ GCC_DIAG_OFF(float-equal)
 //------------------------------------------------------------------
 
 Accountant::Accountant():
-	concurrencyLimits(256, MyStringHash, updateDuplicateKeys)
+	concurrencyLimits(256, hashFunction, updateDuplicateKeys)
 {
   MinPriority=0.5;
   AcctLog=NULL;
@@ -994,7 +994,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   MyString CustomerName;
 
 	  // Create a hash table for speedier lookups of Resource ads.
-  HashTable<MyString,ClassAd *> resource_hash(MyStringHash);
+  HashTable<MyString,ClassAd *> resource_hash(hashFunction);
   ResourceList.Open();
   while ((ResourceAd=ResourceList.Next())!=NULL) {
     ResourceName = GetResourceName(ResourceAd);

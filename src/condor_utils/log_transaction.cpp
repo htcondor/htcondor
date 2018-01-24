@@ -26,7 +26,7 @@
 #define TRANSACTION_HASH_LEN 10000
 
 Transaction::Transaction()
-	: op_log(TRANSACTION_HASH_LEN,YourString::hashFunction,rejectDuplicateKeys)
+	: op_log(TRANSACTION_HASH_LEN,hashFunction,rejectDuplicateKeys)
 	, op_log_iterating(NULL)
 	, m_triggers(0)
 	, m_EmptyTransaction(true)

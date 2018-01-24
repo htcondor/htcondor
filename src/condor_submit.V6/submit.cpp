@@ -96,16 +96,16 @@
 #error "condor submit must use submit utils"
 #endif
 
-// TODO: hashFunction() is case-insenstive, but when a MyString is the
+// TODO: hashFunctionNoCase() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
 //   the case-insensitivity of hashFunction() doesn't complish anything.
 //   CheckFilesRead and CheckFilesWrite should be
-//   either completely case-sensitive (and use MyStringHash()) or
+//   either completely case-sensitive (and use hashFunction()) or
 //   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
-static unsigned int hashFunction( const MyString& );
+static unsigned int hashFunctionNoCase( const MyString& );
 
-HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
-HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
+HashTable<MyString,int> CheckFilesRead( 577, hashFunctionNoCase );
+HashTable<MyString,int> CheckFilesWrite( 577, hashFunctionNoCase );
 
 #ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
 #else
@@ -837,7 +837,7 @@ main( int argc, const char *argv[] )
 		}
 		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion
 		submit_hash.insert_submit_filename(cmd_file, FileMacroSource);
-		submit_unique_id = hashFuncChars(cmd_file);
+		submit_unique_id = hashFunction(cmd_file);
 	}
 
 	// in case things go awry ...
@@ -2587,7 +2587,7 @@ int SendJobAd (ClassAd * job, ClassAd * ClusterAd)
 
 // hash function used by the CheckFiles read/write tables
 static unsigned int 
-hashFunction (const MyString &str)
+hashFunctionNoCase (const MyString &str)
 {
 	 int i = str.Length() - 1;
 	 unsigned int hashVal = 0;
