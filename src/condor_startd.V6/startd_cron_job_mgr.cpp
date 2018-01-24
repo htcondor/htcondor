@@ -145,9 +145,8 @@ StartdCronJobMgr::CreateJob( CronJobParams *job_params )
 							attributeName, metricType, jobName );
 			}
 		}
-
-		free( metricString );
 	}
+	if (metricString) free( metricString );
 
 	return new StartdCronJob( params, *this );
 }
