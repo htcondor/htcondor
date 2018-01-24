@@ -2263,9 +2263,15 @@ render_batch_name (std::string & out, AttrList *ad, Formatter & /*fmt*/)
 				&& ad->LookupString(ATTR_DAG_NODE_NAME, out)) {
 		out.insert(0,"NODE: ");
 	} else if (ad->LookupString(ATTR_JOB_CMD, tmp)) {
+	#if 1 // batch jobs by cluster id
+		int cluster = 0;
+		ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+		formatstr(out, "ID: %d", cluster);
+	#else // batch jobs that have a common exe together
 		const char * name = tmp.c_str();
 		if (tmp.length() > 24) { name = condor_basename(name); }
 		formatstr(out, "CMD: %s", name);
+	#endif
 	} else {
 		return false;
 	}
