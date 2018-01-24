@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "MyString.h"
 #include "globus_utils.h"
-#include "classad_hashtable.h"
 #include "file_transfer.h"
 
 #include "basejob.h"

@@ -63,7 +63,6 @@
 #include "globus_utils.h"
 #include "enum_utils.h"
 #include "setenv.h"
-#include "classad_hashtable.h"
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"

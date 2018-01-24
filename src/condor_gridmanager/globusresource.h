@@ -83,7 +83,7 @@ class GlobusResource : public BaseResource
 	void gridMonitorCallback( int state, int errorcode );
 
 	// This should be private, but GlobusJob references it directly for now
-	static HashTable <HashKey, GlobusResource *> ResourcesByName;
+	static HashTable <std::string, GlobusResource *> ResourcesByName;
 
 		// This is the gram job contact string for the grid monitor job.
 	char *monitorGramJobId;

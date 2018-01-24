@@ -52,9 +52,8 @@ bool logGahpIo = true;
 unsigned long logGahpIoSize = 0;
 int gahpResponseTimeout = 20;
 
-HashTable <HashKey, GahpServer *>
-    GahpServer::GahpServersById( HASH_TABLE_SIZE,
-								 hashFunction );
+HashTable <std::string, GahpServer *>
+    GahpServer::GahpServersById( HASH_TABLE_SIZE, hashFunction );
 
 const int GahpServer::m_buffer_size = 4096;
 
@@ -125,11 +124,11 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 		path = GAHPCLIENT_DEFAULT_SERVER_PATH;
 	}
 
-	rc = GahpServersById.lookup( HashKey( id ), server );
+	rc = GahpServersById.lookup( id, server );
 	if ( rc != 0 ) {
 		server = new GahpServer( id, path, args );
 		ASSERT(server);
-		GahpServersById.insert( HashKey( id ), server );
+		GahpServersById.insert( id, server );
 	} else {
 		ASSERT(server);
 	}
@@ -198,7 +197,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 GahpServer::~GahpServer()
 {
 	if ( my_id != NULL ) {
-		GahpServersById.remove( HashKey( my_id ) );
+		GahpServersById.remove( my_id );
 	}
 	if ( m_deleteMeTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( m_deleteMeTid );
@@ -1060,8 +1059,7 @@ GahpServer::Initialize( Proxy *proxy )
 			return false;
 		}
 
-		ProxiesByFilename = new HashTable<HashKey,GahpProxyInfo*>( 500,
-															   &hashFunction );
+		ProxiesByFilename = new HashTable<std::string,GahpProxyInfo*>( 500, hashFunction );
 		ASSERT(ProxiesByFilename);
 	}
 
@@ -1380,8 +1378,7 @@ GahpServer::RegisterProxy( Proxy *proxy )
 		return master_proxy;
 	}
 
-	rc = ProxiesByFilename->lookup( HashKey( proxy->proxy_filename ),
-									gahp_proxy );
+	rc = ProxiesByFilename->lookup( proxy->proxy_filename, gahp_proxy );
 
 	if ( rc != 0 ) {
 		gahp_proxy = new GahpProxyInfo;
@@ -1396,8 +1393,7 @@ GahpServer::RegisterProxy( Proxy *proxy )
 		}
 		gahp_proxy->cached_expiration = gahp_proxy->proxy->expiration_time;
 
-		ProxiesByFilename->insert( HashKey( proxy->proxy_filename ),
-								   gahp_proxy );
+		ProxiesByFilename->insert( proxy->proxy_filename, gahp_proxy );
 	} else {
 		gahp_proxy->num_references++;
 	}
@@ -1422,8 +1418,7 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 		return;
 	}
 
-	rc = ProxiesByFilename->lookup( HashKey( proxy->proxy_filename ),
-									gahp_proxy );
+	rc = ProxiesByFilename->lookup( proxy->proxy_filename, gahp_proxy );
 
 	if ( rc != 0 ) {
 		dprintf( D_ALWAYS, "GahpServer::UnregisterProxy() called with unknown proxy %s\n", proxy->proxy_filename );
@@ -1433,7 +1428,7 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 	gahp_proxy->num_references--;
 
 	if ( gahp_proxy->num_references == 0 ) {
-		ProxiesByFilename->remove( HashKey( gahp_proxy->proxy->proxy_filename ) );
+		ProxiesByFilename->remove( gahp_proxy->proxy->proxy_filename );
 		uncacheProxy( gahp_proxy );
 		ReleaseProxy( gahp_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
 					  this );

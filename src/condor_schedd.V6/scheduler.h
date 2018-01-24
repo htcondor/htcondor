@@ -42,7 +42,6 @@
 #include "HashTable.h"
 #include "string_list.h"
 #include "list.h"
-#include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
 #include "write_user_log.h"
 #include "autocluster.h"
@@ -982,7 +981,7 @@ private:
 
 	void			expand_mpi_procs(StringList *, StringList *);
 
-	HashTable <HashKey, match_rec *> *matches;
+	HashTable <std::string, match_rec *> *matches;
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;

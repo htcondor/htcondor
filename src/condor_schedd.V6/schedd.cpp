@@ -779,7 +779,7 @@ Scheduler::~Scheduler()
 	if (matches) {
 		matches->startIterations();
 		match_rec *rec;
-		HashKey id;
+		std::string id;
 		while (matches->iterate(id, rec) == 1) {
 			delete rec;
 		}
@@ -7416,7 +7416,7 @@ Scheduler::release_claim(int, Stream *sock)
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
 		return;
 	}
-	if( matches->lookup(HashKey(claim_id), mrec) != 0 ) {
+	if( matches->lookup(claim_id, mrec) != 0 ) {
 			// We couldn't find this match in our table, perhaps it's
 			// from a dedicated resource.
 		dedicated_scheduler.DelMrec( claim_id );
@@ -7998,7 +7998,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	match_rec *paired_mrec = NULL;
 	if ( GetAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
 							 paired_claim_id ) >= 0 &&
-			 matches->lookup( HashKey( paired_claim_id ), paired_mrec ) == 0 ) {
+			 matches->lookup( paired_claim_id, paired_mrec ) == 0 ) {
 
 		mrec->m_paired_mrec = paired_mrec;
 		paired_mrec->m_paired_mrec = mrec;
@@ -8384,7 +8384,7 @@ Scheduler::swappedClaims( DCMsgCallback *cb )
 		return;
 	}
 
-	if ( matches->lookup( HashKey( msg->claim_id() ), active_rec ) < 0 ||
+	if ( matches->lookup( msg->claim_id(), active_rec ) < 0 ||
 		 (idle_rec = active_rec->m_paired_mrec) == NULL ) {
 		dprintf( D_FULLDEBUG, "AsyncXfer: Failed to find match_rec's for swapped claims\n" );
 		return;
@@ -13105,19 +13105,19 @@ Scheduler::Init()
 		// on reconfig if MaxJobsRunning changes size, but we don't
 		// have the code for that and it's not too important.
 	if (matches == NULL) {
-	matches = new HashTable <HashKey, match_rec *> ((int)(MaxJobsRunning*1.2),
+		matches = new HashTable <std::string, match_rec *> ((int)(MaxJobsRunning*1.2),
 													hashFunction);
-	matchesByJobID =
-		new HashTable<PROC_ID, match_rec *>((int)(MaxJobsRunning*1.2),
+		matchesByJobID =
+			new HashTable<PROC_ID, match_rec *>((int)(MaxJobsRunning*1.2),
 											hashFuncPROC_ID,
 											rejectDuplicateKeys);
-	shadowsByPid = new HashTable <int, shadow_rec *>((int)(MaxJobsRunning*1.2),
+		shadowsByPid = new HashTable <int, shadow_rec *>((int)(MaxJobsRunning*1.2),
 													  pidHash);
-	shadowsByProcID =
-		new HashTable<PROC_ID, shadow_rec *>((int)(MaxJobsRunning*1.2),
+		shadowsByProcID =
+			new HashTable<PROC_ID, shadow_rec *>((int)(MaxJobsRunning*1.2),
 											 hashFuncPROC_ID);
-	resourcesByProcID = 
-		new HashTable<PROC_ID, ClassAd *>((int)(MaxJobsRunning*1.2),
+		resourcesByProcID =
+			new HashTable<PROC_ID, ClassAd *>((int)(MaxJobsRunning*1.2),
 											 hashFuncPROC_ID,
 											 updateDuplicateKeys);
 	}
@@ -14308,7 +14308,7 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 	} 
 	// spit out a warning and return NULL if we already have this mrec
 	match_rec *tempRec;
-	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
+	if( matches->lookup( id, tempRec ) == 0 ) {
 		char const *pubid = tempRec->publicClaimId();
 		dprintf( D_ALWAYS,
 				 "attempt to add pre-existing match \"%s\" ignored\n",
@@ -14326,7 +14326,7 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 		EXCEPT("Out of memory!");
 	} 
 
-	if( matches->insert( HashKey( id ), rec ) != 0 ) {
+	if( matches->insert( id, rec ) != 0 ) {
 		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", id);
 		delete rec;
 		return NULL;
@@ -14368,8 +14368,7 @@ Scheduler::DelMrec(char const* id)
 		return -1;
 	}
 
-	HashKey key(id);
-	if( matches->lookup(key, rec) != 0 ) {
+	if( matches->lookup(id, rec) != 0 ) {
 			// Couldn't find it, return failure
 		return -1;
 	}
@@ -14427,8 +14426,7 @@ Scheduler::unlinkMrec(match_rec* match)
 	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
 			 match->description(), match->cluster, match->proc ); 
 
-	HashKey key(match->claimId());
-	matches->remove(key);
+	matches->remove(match->claimId());
 
 	PROC_ID jobId;
 	jobId.cluster = match->cluster;

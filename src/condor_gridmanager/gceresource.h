@@ -57,7 +57,7 @@ public:
 
 	~GCEResource();
 
-	static HashTable <HashKey, GCEResource *> ResourcesByName;
+	static HashTable <std::string, GCEResource *> ResourcesByName;
 
 	const char *ResourceType();
 
@@ -73,7 +73,7 @@ public:
 	BatchStatusResult FinishBatchStatus();
 	GahpClient * BatchGahp() { return status_gahp; }
 
-	HashTable< HashKey, GCEJob * > jobsByInstanceID;
+	HashTable< std::string, GCEJob * > jobsByInstanceID;
 
 private:
 	void DoPing(unsigned & ping_delay,

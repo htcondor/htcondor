@@ -54,7 +54,7 @@ public:
 
 	~AzureResource();
 
-	static HashTable <HashKey, AzureResource *> ResourcesByName;
+	static HashTable <std::string, AzureResource *> ResourcesByName;
 
 	const char *ResourceType();
 

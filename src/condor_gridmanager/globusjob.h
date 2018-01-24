@@ -25,7 +25,7 @@
 #include "condor_classad.h"
 #include "MyString.h"
 #include "globus_utils.h"
-#include "classad_hashtable.h"
+#include "HashTable.h"
 
 #include "proxymanager.h"
 #include "basejob.h"
@@ -37,7 +37,7 @@
 class GlobusResource;
 
 class GlobusJob;
-extern HashTable <HashKey, GlobusJob *> JobsByContact;
+extern HashTable <std::string, GlobusJob *> JobsByContact;
 
 char *globusJobId( const char *contact );
 void gramCallbackHandler( void *user_arg, char *job_contact, int state,

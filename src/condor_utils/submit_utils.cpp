@@ -62,7 +62,6 @@
 #include "globus_utils.h" // for 
 #include "enum_utils.h" // for shouldtransferfiles_t
 //#include "setenv.h"
-//#include "classad_hashtable.h"
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"

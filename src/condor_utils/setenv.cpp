@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "classad_hashtable.h"
+#include "HashTable.h"
 
 #include "setenv.h"
 
@@ -41,7 +41,7 @@ extern DLL_IMPORT_MAGIC char **environ;
 #ifndef WIN32
 
 
-HashTable <HashKey, char *> EnvVars( HASH_TABLE_SIZE, hashFunction );
+HashTable <std::string, char *> EnvVars( HASH_TABLE_SIZE, hashFunction );
 
 #endif
 
@@ -78,18 +78,18 @@ int SetEnv( const char *key, const char *value)
 	}
 
 	char *hashed_var=0;
-	if ( EnvVars.lookup( HashKey( key ), hashed_var ) == 0 ) {
+	if ( EnvVars.lookup( key, hashed_var ) == 0 ) {
 			// found old one
 			// remove old one
-		EnvVars.remove( HashKey( key ) );
+		EnvVars.remove( key );
 			// delete old one
 		delete [] hashed_var;
 			// insert new one
-		EnvVars.insert( HashKey( key ), buf );
+		EnvVars.insert( key, buf );
 	} else {
 			// no old one
 			// add new one
-		EnvVars.insert( HashKey( key ), buf );
+		EnvVars.insert( key, buf );
 	}
 #endif
 	return TRUE;
@@ -160,10 +160,10 @@ int UnsetEnv( const char *env_var )
 	}
 
 	char *hashed_var=0;
-	if ( EnvVars.lookup( HashKey( env_var ), hashed_var ) == 0 ) {
+	if ( EnvVars.lookup( env_var, hashed_var ) == 0 ) {
 			// found it
 			// remove it
-		EnvVars.remove( HashKey( env_var ) );
+		EnvVars.remove( env_var );
 			// delete it
 		delete [] hashed_var;
 	}

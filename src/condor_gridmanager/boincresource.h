@@ -72,7 +72,7 @@ class BoincResource : public BaseResource
 	static bool BatchReadyToSubmit( BoincBatch *batch, unsigned *delay = NULL );
 
 	// This should be private, but BoincJob references it directly for now
-	static HashTable <HashKey, BoincResource *> ResourcesByName;
+	static HashTable <std::string, BoincResource *> ResourcesByName;
 
 	char *m_serviceUri;
 	char *m_authenticator;

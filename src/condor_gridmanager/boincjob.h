@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "MyString.h"
-#include "classad_hashtable.h"
 
 #include "basejob.h"
 #include "boincresource.h"

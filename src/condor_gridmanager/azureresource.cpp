@@ -27,7 +27,7 @@
 
 #define HASH_TABLE_SIZE	13
 
-HashTable <HashKey, AzureResource *> 
+HashTable <std::string, AzureResource *>
 AzureResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
 
 const char *AzureResource::HashName( const char *resource_name,
@@ -47,12 +47,12 @@ AzureResource* AzureResource::FindOrCreateResource( const char *resource_name,
 	int rc;
 	AzureResource *resource = NULL;
 
-	rc = ResourcesByName.lookup( HashKey( HashName( resource_name, subscription, auth_file ) ), resource );
+	rc = ResourcesByName.lookup( HashName( resource_name, subscription, auth_file ), resource );
 	if ( rc != 0 ) {
 		resource = new AzureResource( resource_name, subscription, auth_file );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashKey( HashName( resource_name, subscription, auth_file ) ), resource );
+		ResourcesByName.insert( HashName( resource_name, subscription, auth_file ), resource );
 	} else {
 		ASSERT(resource);
 	}
@@ -100,7 +100,7 @@ AzureResource::AzureResource( const char *resource_name,
 
 AzureResource::~AzureResource()
 {
-	ResourcesByName.remove( HashKey( HashName( resourceName, m_subscription, m_auth_file ) ) );
+	ResourcesByName.remove( HashName( resourceName, m_subscription, m_auth_file ) );
 	delete gahp;
 	free( m_auth_file );
 	free( m_subscription );
@@ -223,7 +223,7 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 		formatstr( remote_job_id, "azure %s", vm_name.c_str() );
 
 		BaseJob * tmp = NULL;
-		rc = BaseJob::JobsByRemoteId.lookup( HashKey( remote_job_id.c_str() ), tmp );
+		rc = BaseJob::JobsByRemoteId.lookup( remote_job_id, tmp );
 
 		if( rc == 0 ) {
 			ASSERT( tmp );

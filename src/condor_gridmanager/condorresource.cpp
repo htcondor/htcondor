@@ -29,11 +29,10 @@
 
 #define HASH_TABLE_SIZE			500
 
-HashTable <HashKey, CondorResource *>
-    CondorResource::ResourcesByName( HASH_TABLE_SIZE,
-									 hashFunction );
+HashTable <std::string, CondorResource *>
+    CondorResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
 
-HashTable <HashKey, CondorResource::ScheddPollInfo *>
+HashTable <std::string, CondorResource::ScheddPollInfo *>
     CondorResource::PollInfoByName( 100, hashFunction );
 
 const char *CondorResource::HashName( const char *resource_name,
@@ -56,18 +55,16 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 	int rc;
 	CondorResource *resource = NULL;
 
-	rc = ResourcesByName.lookup( HashKey( HashName( resource_name,
-													pool_name,
-													proxy ? proxy->subject->fqan : NULL ) ),
+	rc = ResourcesByName.lookup( HashName( resource_name, pool_name,
+											proxy ? proxy->subject->fqan : NULL ),
 								 resource );
 	if ( rc != 0 ) {
 		resource = new CondorResource( resource_name, pool_name,
 									   proxy );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashKey( HashName( resource_name,
-												   pool_name,
-												   proxy ? proxy->subject->fqan : NULL ) ),
+		ResourcesByName.insert( HashName( resource_name, pool_name,
+										   proxy ? proxy->subject->fqan : NULL ),
 								resource );
 	} else {
 		ASSERT(resource);
@@ -145,9 +142,7 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 
 CondorResource::~CondorResource()
 {
-	ResourcesByName.remove( HashKey( HashName( resourceName,
-											   poolName,
-											   proxyFQAN ) ) );
+	ResourcesByName.remove( HashName( resourceName, poolName, proxyFQAN ) );
 
 		// Make sure we don't leak a ScheddPollInfo. If there are other
 		// CondorResources that still want to use it, they'll recreate it.
@@ -156,12 +151,10 @@ CondorResource::~CondorResource()
 		// TODO Track how many CondorResources are still using this
 		//   ScheddPollInfo and delete it only if we're the last one.
 	ScheddPollInfo *poll_info = NULL;
-	PollInfoByName.lookup( HashKey( HashName( scheddName, poolName, NULL ) ),
-						   poll_info );
+	PollInfoByName.lookup( HashName( scheddName, poolName, NULL ), poll_info );
 	if ( poll_info && ( poll_info->m_pollActive == false ||
 		 scheddStatusActive == true ) ) {
-		PollInfoByName.remove( HashKey( HashName( scheddName, poolName,
-												  NULL ) ) );
+		PollInfoByName.remove( HashName( scheddName, poolName, NULL ) );
 		delete poll_info;
 	}
 	if ( proxySubject != NULL ) {
@@ -244,8 +237,7 @@ void CondorResource::UnregisterJob( BaseJob *base_job )
 	CondorJob *job = dynamic_cast<CondorJob*>( base_job );
 
 	ScheddPollInfo *poll_info = NULL;
-	PollInfoByName.lookup( HashKey( HashName( scheddName, poolName, NULL ) ),
-						   poll_info );
+	PollInfoByName.lookup( HashName( scheddName, poolName, NULL ), poll_info );
 	if ( poll_info ) {
 		poll_info->m_submittedJobs.Delete( job );
 	}
@@ -290,8 +282,7 @@ void CondorResource::DoScheddPoll()
 		return;
 	}
 
-	PollInfoByName.lookup( HashKey( HashName( scheddName, poolName, NULL ) ),
-						   poll_info );
+	PollInfoByName.lookup( HashName( scheddName, poolName, NULL ), poll_info );
 
 	daemonCore->Reset_Timer( scheddPollTid, TIMER_NEVER );
 
@@ -304,8 +295,7 @@ void CondorResource::DoScheddPoll()
 			poll_info = new ScheddPollInfo;
 			poll_info->m_lastPoll = 0;
 			poll_info->m_pollActive = false;
-			PollInfoByName.insert( HashKey( HashName( scheddName, poolName,
-													  NULL ) ),
+			PollInfoByName.insert( HashName( scheddName, poolName, NULL ),
 								   poll_info );
 		}
 
@@ -404,8 +394,7 @@ void CondorResource::DoScheddPoll()
 				formatstr( job_id_string, "condor %s %s %d.%d", scheddName,
 									   poolName, cluster, proc );
 
-				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.c_str() ),
-													  base_job );
+				rc2 = BaseJob::JobsByRemoteId.lookup( job_id_string, base_job );
 				job = dynamic_cast<CondorJob*>( base_job );
 				if ( rc2 == 0 ) {
 					job->NotifyNewRemoteStatus( status_ads[i] );
@@ -540,8 +529,7 @@ dprintf( D_FULLDEBUG, "*** Lease udpate succeeded!\n" );
 		while ( updated.Next( curr_id ) ) {
 			formatstr( id_str, "condor %s %s %d.%d", scheddName, poolName,
 							curr_id.cluster, curr_id.proc );
-			if ( BaseJob::JobsByRemoteId.lookup( HashKey( id_str.c_str() ),
-												 curr_job ) == 0 ) {
+			if ( BaseJob::JobsByRemoteId.lookup( id_str, curr_job ) == 0 ) {
 				update_succeeded.Append( curr_job->procID );
 			}
 		}
