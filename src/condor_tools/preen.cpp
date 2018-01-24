@@ -417,19 +417,14 @@ check_spool_dir()
 			continue;
 		}
 
-		if( IsDirectory( dir.GetFullPath() ) && !IsSymlink( dir.GetFullPath() ) ) {
-			if( check_job_spool_hierarchy( Spool, f, bad_spool_files ) ) {
-				good_file( Spool, f );
-				continue;
-			}
-		}
-
 			// If none of the previous checks succeeded, we can try a couple
 			// other checks which require an active connection to the schedd. 
 			// Establish a connection (if not already connected). If this fails
 			// for any reason, abort and don't delete any files.
 		if ( !qmgr ) {
 			if ( !( qmgr = ConnectQ (0,0,false) ) ) {
+				dprintf( D_ALWAYS, "Unable to connect to job queue, not "
+						"cleaning spool directory.\n" );
 				return;
 			}
 			last_connection_time = _condor_debug_get_time_double();
@@ -447,6 +442,13 @@ check_spool_dir()
 		if ( is_myproxy_file( f ) ) {
 			good_file( Spool, f );
 			continue;
+		}
+
+		if( IsDirectory( dir.GetFullPath() ) && !IsSymlink( dir.GetFullPath() ) ) {
+			if( check_job_spool_hierarchy( Spool, f, bad_spool_files ) ) {
+				good_file( Spool, f );
+				continue;
+			}
 		}
 
 			// We think it's bad.  For now, just append it to a
