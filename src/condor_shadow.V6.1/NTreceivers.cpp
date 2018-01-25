@@ -2175,6 +2175,12 @@ case CONDOR_getdir:
 		const char *fname;
 		bool had_error = false;
 		while((fname = cred_dir.Next())) {
+			// only send the "use level" creds.
+			const char *last4 = fname + strlen(fname) - 4;
+			if((last4 <= fname) || (0!=strcmp(last4, ".use"))) {
+				dprintf( D_ALWAYS, "CONDOR_getcreds: skipping %s (%s)\n", fname, last4);
+				continue;
+			}
 			MyString fullname = cred_dir_name;
 			fullname += DIR_DELIM_CHAR;
 			fullname += fname;

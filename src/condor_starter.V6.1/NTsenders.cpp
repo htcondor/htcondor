@@ -2292,6 +2292,9 @@ REMOTE_CONDOR_getcreds(const char *, const char *)
 		full_name += DIR_DELIM_CHAR;
 		full_name += fname;
 
+		MyString tmpname = full_name;
+		tmpname += ".tmp";
+
 		// contents of pw are base64 encoded.  decode now just before they go
 		// into the file.
 		int rawlen = -1;
@@ -2306,15 +2309,21 @@ REMOTE_CONDOR_getcreds(const char *, const char *)
 		}
 
 		// write temp file
-		int rc = write_secure_file(full_name.Value(), rawbuf, rawlen, true);
+		dprintf (D_ALWAYS, "Writing data to %s\n", tmpname.Value());
+		int rc = write_secure_file(tmpname.Value(), rawbuf, rawlen, true);
 
 		// caller of condor_base64_decode is responsible for freeing buffer
 		free(rawbuf);
 
 		if (rc != true) {
-			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", full_name.Value());
+			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpname.Value());
 			EXCEPT("failure");
 		}
+
+		dprintf (D_ALWAYS, "Moving %s to %s\n", tmpname.Value(), full_name.Value());
+		priv_state priv = set_root_priv();
+		rename(tmpname.Value(), full_name.Value());
+		set_priv (priv);
 	}
 
 	result = ( syscall_sock->end_of_message() );
