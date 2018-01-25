@@ -5774,6 +5774,10 @@ default : @end
 [$FEATURE.Monitor]
 description=Settings to configure a custom machine resource monitor
 default : @end
+	if ! $(5?)
+		error: use feature : monitor requires five or more arguments
+	endif
+
 	STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) $(1)_MONITOR
 	STARTD_CRON_$(1)_MONITOR_MODE = $(2)
 	STARTD_CRON_$(1)_MONITOR_PERIOD = $(3)

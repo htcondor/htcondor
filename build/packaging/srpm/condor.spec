@@ -1475,6 +1475,7 @@ rm -rf %{buildroot}
 %_sbindir/boinc_gahp
 %endif
 %_libexecdir/condor/condor_gpu_discovery
+%_libexecdir/condor/condor_gpu_utilization
 %_sbindir/condor_vm-gahp-vmware
 %_sbindir/condor_vm_vmware
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics

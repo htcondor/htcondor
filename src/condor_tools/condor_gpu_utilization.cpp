@@ -2,8 +2,21 @@
 #include <sys/select.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
-#include "nvml.h"
+#include <dlfcn.h>
+#include "nvml_stub.h"
+
+typedef nvmlReturn_t (*nvml_void)(void);
+typedef nvmlReturn_t (*nvml_dghbi)(unsigned int, nvmlDevice_t *);
+typedef nvmlReturn_t (*nvml_unsigned_int)(unsigned int *);
+typedef nvmlReturn_t (*nvml_dgs)( nvmlDevice_t, nvmlSamplingType_t, unsigned long long, nvmlValueType_t *, unsigned int *, nvmlSample_t * );
+typedef const char * (*cc_nvml)( nvmlReturn_t );
+
+nvml_dgs nvmlDeviceGetSamples = NULL;
+nvml_unsigned_int nvmlDeviceGetCount = NULL;
+nvml_dghbi nvmlDeviceGetHandleByIndex = NULL;
+cc_nvml nvmlErrorString = NULL;
 
 unsigned debug = 0;
 unsigned reportInterval = 10;
@@ -20,10 +33,9 @@ int compareSamples( const void * vpA, const void * vpB ) {
 	}
 }
 
-// Not sure why this doesn't exist on gpu-3.
-void usleep( unsigned long long microseconds ) {
-	struct timeval to = { 0, microseconds };
-	select( 0, NULL, NULL, NULL, & to );
+void fail() {
+	fprintf( stderr, "Hanging to prevent process churn.\n" );
+	while( 1 ) { sleep( 1204 ); }
 }
 
 nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastSample, unsigned long long * elapsedTime, unsigned maxSampleCount ) {
@@ -73,20 +85,41 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 
 // int main( int argc, char ** argv ) {
 int main() {
+	nvml_void nvmlInit = NULL;
+	nvml_void nvmlShutdown = NULL;
+
+	void * nvml_handle = NULL;
+
+	const char * nvml_library = "libnvidia-ml.so";
+	nvml_handle = dlopen( nvml_library, RTLD_LAZY );
+	if(! nvml_handle) {
+		fprintf( stderr, "Unable to load %s, aborting.\n", nvml_library );
+		fail();
+	}
+	dlerror();
+
+	nvmlInit		           = (nvml_void)dlsym( nvml_handle, "nvmlInit" );
+	nvmlShutdown	           = (nvml_void)dlsym( nvml_handle, "nvmlShutdown" );
+	nvmlDeviceGetSamples       = (nvml_dgs)dlsym( nvml_handle, "nvmlDeviceGetSamples" );
+	nvmlDeviceGetCount         = (nvml_unsigned_int)dlsym( nvml_handle, "nvmlDeviceGetCount" );
+	nvmlDeviceGetHandleByIndex = (nvml_dghbi)dlsym( nvml_handle, "nvmlDeviceGetHandleByIndex" );
+	nvmlErrorString            = (cc_nvml)dlsym( nvml_handle, "nvmlErrorString" );
+
 	nvmlReturn_t r = nvmlInit();
 	if( r != NVML_SUCCESS ) {
 		fprintf( stderr, "nvmlInit() failed, aborting.\n" );
-		return 1;
+		fail();
 	}
 
 	unsigned int deviceCount;
 	r = nvmlDeviceGetCount( &deviceCount );
 	if( r != NVML_SUCCESS ) {
 		fprintf( stderr, "nvmlDeviceGetCount() failed, aborting.\n" );
-		return 1;
+		fail();
 	}
 	if( deviceCount <= 0 ) {
 		fprintf( stderr, "Found 0 or fewer devices, aborting.\n" );
+		fail();
 	}
 
 	nvmlDevice_t devices[deviceCount];
@@ -98,7 +131,7 @@ int main() {
 		r = nvmlDeviceGetHandleByIndex( i, &(devices[i]) );
 		if( r != NVML_SUCCESS ) {
 			fprintf( stderr, "nvmlGetDeviceHandleByIndex(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
-			return 1;
+			fail();
 		}
 
 		lastSamples[i] = 0;
@@ -109,11 +142,11 @@ int main() {
 		r = nvmlDeviceGetSamples( devices[i], NVML_GPU_UTILIZATION_SAMPLES, 0, & sampleValueType, & maxSampleCounts[i], NULL );
 		if( r != NVML_SUCCESS ) {
 			fprintf( stderr, "nvmlDeviceGetSamples(%u) failed while querying for the max sample count (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
-			return 1;
+			fail();
 		}
 		if( sampleValueType != NVML_VALUE_TYPE_UNSIGNED_INT ) {
 			fprintf( stderr, "nvmlDeviceGetSamples(%u) returned an unexpected type (%d) of sample when querying for the max sample count, aborting.\n", i, sampleValueType );
-			return 1;
+			fail();
 		}
 	}
 
@@ -136,7 +169,7 @@ int main() {
 			r = getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i] );
 			if( r != NVML_SUCCESS ) {
 				fprintf( stderr, "getElapsedTimeForDevice(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
-				return 1;
+				fail();
 			}
 
 			if( debug ) {
@@ -149,7 +182,6 @@ int main() {
 
 		if( time( NULL ) - lastReport >= reportInterval ) {
 			for( unsigned i = 0; i < deviceCount; ++i ) {
-				// fprintf( stdout, "SlotMergeConstraint = AssignedGPUs == \"CUDA%u\"\n", i );
 				fprintf( stdout, "SlotMergeConstraint = StringListMember( \"CUDA%u\", AssignedGPUs )\n", i );
 				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1000000.0 );
 				fprintf( stdout, "- GPUsSlot%u\n", i );
@@ -169,5 +201,6 @@ int main() {
 		return 1;
 	}
 
+	dlclose( nvml_handle );
 	return 0;
 }
