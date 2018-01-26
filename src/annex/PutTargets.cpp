@@ -31,7 +31,7 @@ PutTargets::operator() () {
 	input.Assign( "AnnexID", annexID );
 
 	ClassAd * commandAd;
-	commandState->Lookup( HashKey( commandID.c_str() ), commandAd );
+	commandState->Lookup( commandID, commandAd );
 	std::string uploadTo;
 	commandAd->LookupString( "UploadTo", uploadTo );
 	size_t separator = uploadTo.find( '/' );

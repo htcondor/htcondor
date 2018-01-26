@@ -1110,4 +1110,4 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLog
 
 // Force instantiation of the simple form of ClassAdLog, used the the Accountant
 //
-template class ClassAdLog<HashKey,const char*,ClassAd*>;
+template class ClassAdLog<std::string,const char*,ClassAd*>;

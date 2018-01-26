@@ -16,7 +16,7 @@ OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
   targetCapacity(0),
   commandID( cid ), commandState( c ), annexID( aid ) {
   	ClassAd * commandState;
-	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ) {
+	if( c->Lookup( commandID, commandState ) ) {
 		commandState->LookupString( "State_ClientToken", clientToken );
 		commandState->LookupString( "State_BulkRequestID", bulkRequestID );
 
@@ -145,7 +145,7 @@ OnDemandRequest::operator() () {
 		// the information we want (the spot fleet request ID).
 
 		ClassAd * commandAd;
-		commandState->Lookup( HashKey( commandID.c_str() ), commandAd );
+		commandState->Lookup( commandID, commandAd );
 		commandAd->LookupInteger( "State_TryCount", tryCount );
 		if( incrementTryCount ) {
 			++tryCount;

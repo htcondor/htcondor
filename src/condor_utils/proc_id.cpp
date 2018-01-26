@@ -126,6 +126,13 @@ void JOB_ID_KEY::sprint(MyString &s) const
 	s.formatstr("%d.%d", this->cluster, this->proc);
 }
 
+JOB_ID_KEY::operator std::string() const
+{
+	std::string s;
+	formatstr(s, "%d.%d", this->cluster, this->proc);
+	return s;
+}
+
 #ifdef _MSC_VER
 #define rotl32(x,y) _rotl(x,y)
 #define rotl64(x,y) _rotl64(x,y)

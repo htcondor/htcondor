@@ -44,7 +44,6 @@
 
 #include "condor_classad.h"
 #include "log.h"
-#include "classad_hashtable.h"
 #include "log_transaction.h"
 #include "stopwatch.h"
 
@@ -310,14 +309,14 @@ public:
 			ad = NULL;
 			return false;
 		}
-		k.sprint(current_key);
-		key = current_key.Value();
+		current_key = k;
+		key = current_key.c_str();
 		ad = Ad;
 		return true;
 	}
 protected:
 	HashTable<K,AD> & table;
-	MyString current_key; // used during iteration
+	std::string current_key; // used during iteration
 };
 
 
@@ -486,7 +485,7 @@ LogRecord* InstantiateLogEntry(
 
 template <typename K, typename AltK, typename AD>
 ClassAdLog<K,AltK,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,const ConstructLogEntry* maker)
-	: table(CLASSAD_LOG_HASHTABLE_SIZE, K::hash)
+	: table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 	, make_table_entry(maker)
 {
 	log_filename_buf = filename;
@@ -525,7 +524,7 @@ ClassAdLog<K,AltK,AD>::ClassAdLog(const char *filename,int max_historical_logs_a
 
 template <typename K, typename AltK, typename AD>
 ClassAdLog<K,AltK,AD>::ClassAdLog(const ConstructLogEntry* maker)
-	: table(CLASSAD_LOG_HASHTABLE_SIZE, K::hash)
+	: table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 	, make_table_entry(maker)
 {
 	active_transaction = NULL;
@@ -742,8 +741,7 @@ ClassAdLog<K,AltK,AD>::AdExistsInTableOrTransaction(const K& key)
 		return adexists;
 	}
 
-	MyString keystr;
-	key.sprint(keystr);
+	std::string keystr = key;
 
 		// see what is going on in any current transaction
 	for (LogRecord *log = active_transaction->FirstEntry(keystr.c_str()); log;

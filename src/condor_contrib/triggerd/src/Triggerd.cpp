@@ -145,7 +145,7 @@ Triggerd::init()
 {
    std::string trigger_log;
    ClassAd* ad;
-   HashKey key;
+   std::string key;
    uint32_t key_value;
    ReliSock* sock;
    int index;
@@ -256,7 +256,7 @@ Triggerd::init()
    triggerCollection->StartIterateAllClassAds();
    while(true == triggerCollection->IterateAllClassAds(ad, key))
    {
-      key_value = atoll(key.value());
+      key_value = atoll(key.c_str());
       if (triggers.end() == triggers.find(key_value))
       {
          if (STATUS_OK != AddTriggerToCollection(key_value, ad, error_text))

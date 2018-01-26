@@ -139,6 +139,7 @@ typedef struct JOB_ID_KEY {
 	// constructing JOB_ID_KEY(NULL) ends up calling this constructor because there is no single int constructor - ClassAdLog depends on that...
 	JOB_ID_KEY(const char * job_id_str) : cluster(0), proc(0) { if (job_id_str) set(job_id_str); }
 	operator const PROC_ID&() const { return *((const PROC_ID*)this); }
+	operator std::string() const;
 	void sprint(MyString &s) const;
 	bool set(const char * job_id_str) { return StrIsProcId(job_id_str, this->cluster, this->proc, NULL); }
 	static unsigned int hash(const JOB_ID_KEY &);

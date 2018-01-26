@@ -165,7 +165,7 @@ public:
   */
 #if 0 //def COL_USE_NATIVE_KEYS
   bool LookupInTransaction(const K& key, const char *name, char *&val) {
-	MyString str; key.sprint(str);
+	std::string str = key;
 	return 1 == ClassAdLog<K,AltK,AD>::LookupInTransaction(str.c_str(),name,val);
   }
 #else
@@ -198,7 +198,7 @@ public:
   */
 #if 0 ///def COL_USE_NATIVE_KEYS
   bool NewClassAd(const K& key, const char* mytype, const char* targettype) {
-	MyString str; key.sprint(str);
+	std::string str = key;
 	this->AppendLog(new LogNewClassAd(str.c_str(),mytype,targettype, this->GetTableEntryMaker()));
 	return true;
   }
@@ -238,7 +238,7 @@ public:
 	return true;
   }
   bool DestroyClassAd(const K & key) {
-	MyString str; key.sprint(str);
+	std::string str = key;
 	this->AppendLog(new LogDestroyClassAd(str.c_str(), this->GetTableEntryMaker()));
 	return true;
   }
@@ -252,7 +252,7 @@ public:
   */
 #if 0 //def COL_USE_NATIVE_KEYS
   bool SetAttribute(const K& key, const char* name, const char* value, const bool is_dirty=false) {
-	MyString str; key.sprint(str);
+	std::string str = key;
 	this->AppendLog(new LogSetAttribute(str.c_str(),name,value,is_dirty));
 	return true;
   }
@@ -270,7 +270,7 @@ public:
   */
 #if 0 // def COL_USE_NATIVE_KEYS
   bool DeleteAttribute(const K& key, const char* name) {
-	MyString str; key.sprint(str);
+	std::string str = key;
 	this->AppendLog(new LogDeleteAttribute(str.c_str(),name));
 	return true;
   }
@@ -351,6 +351,6 @@ public:
 };
 
 // Declare the old (non-templated) ClassAdCollection as a specialization of this type
-typedef GenericClassAdCollection<HashKey, const char*, ClassAd*> ClassAdCollection;
+typedef GenericClassAdCollection<std::string, const char*, ClassAd*> ClassAdCollection;
 
 #endif

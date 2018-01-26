@@ -15,7 +15,7 @@ BulkRequest::BulkRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
   service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
   commandID( cid ), commandState( c ) {
   	ClassAd * commandState;
-	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ) {
+	if( c->Lookup( commandID, commandState ) ) {
 		commandState->LookupString( "State_ClientToken", client_token );
 		commandState->LookupString( "State_BulkRequestID", bulkRequestID );
 	}
@@ -294,7 +294,7 @@ BulkRequest::operator() () {
 		// the information we want (the spot fleet request ID).
 
 		ClassAd * commandAd;
-		commandState->Lookup( HashKey( commandID.c_str() ), commandAd );
+		commandState->Lookup( commandID, commandAd );
 		commandAd->LookupInteger( "State_TryCount", tryCount );
 		if( incrementTryCount ) {
 			++tryCount;
