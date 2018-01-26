@@ -33,6 +33,8 @@ int compareSamples( const void * vpA, const void * vpB ) {
 	}
 }
 
+void fail() __attribute__((__noreturn__));
+
 void fail() {
 	fprintf( stderr, "Hanging to prevent process churn.\n" );
 	while( 1 ) { sleep( 1204 ); }
@@ -156,7 +158,7 @@ int main() {
 	// the NVML library causes a one-second 99% usage spike on an other-
 	// wise idle GPU.  So we'll ignore as much of that as we easily can.
 	for( unsigned i = 0; i < deviceCount; ++i ) {
-		r = getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i] );
+		getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i] );
 		firstSamples[i] = lastSamples[i];
 		elapsedTimes[i] = 0;
 	}
