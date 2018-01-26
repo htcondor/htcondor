@@ -1242,7 +1242,7 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
 
     std::string cgname;
     int gnum = 0;
-    if (isGroup) {
+    if (isGroup && cgrp) {
         cgname = (cgrp->parent != NULL) ? cgrp->parent->name : cgrp->name;
         gnum = gnmap[cgrp->name];
     } else {
