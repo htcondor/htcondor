@@ -29,6 +29,31 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item HTCondor now reports \Attr{CPUsUsage} for each job.  This attribute is
+like \Attr{MemoryUsage} and \Attr{DiskUsage}, except it is the average number
+of CPUs used by the job.
+\Ticket{6477}
+
+\item The \MacroNI{use feature: GPUs} metaknob now causes HTCondor to report
+\Attr{GPUsUsage} for each job.  This is like \Attr{CPUsUsage}, except it is
+the average number of GPUs used by the job.  This feature only works for
+NVidia GPUs.
+\Ticket{6477}
+
+\item Administrators may now, for each custom machine resource, define a
+custom resource monitor.  Such a script reports the usage(s) of each
+instance of the corresponding machine resource since the last time it
+reported; HTCondor aggregates these reports between resource instances and
+over time to produce a \Attr{<Resource>Usage} attribute, which is like
+\Attr{GPUsUsage}, except for the custom machine resource in question.
+\Ticket{6477}
+
+\item The \Condor{startd} now periodically writes a file to each job's
+sandbox named ``.update.ad''.  This file is a copy of the slot's machine ad,
+but unlike ``.machine.ad'', it is regularly updated.  Jobs may read this
+file to observe their own usage attributes.
+\Ticket{6477}
+
 \item Removed configuration parameters \MacroNI{ENABLE\_ADDRESS\_REWRITING}
 and \MacroNI{SHARED\_PORT\_ADDRESS\_REWRITING}.
 \Ticket{6525}
