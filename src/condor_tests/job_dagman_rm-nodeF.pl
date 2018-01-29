@@ -1,5 +1,6 @@
 #! /usr/bin/env perl
 
+use lib '.';
 use CondorTest;
 use CondorUtils;
 

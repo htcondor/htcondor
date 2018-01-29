@@ -682,6 +682,7 @@ protected:
 
 
 	// private helper functions
+	void fixup_rhs_for_digest(const char * key, std::string & rhs);
 	void push_error(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) CHECK_PRINTF_FORMAT(3,4);
 private:

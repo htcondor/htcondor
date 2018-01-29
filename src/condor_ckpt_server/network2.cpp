@@ -114,9 +114,15 @@ int I_bind(int socket_desc, condor_sockaddr& addr, int is_well_known)
   priv_state old_priv = PRIV_UNKNOWN;
 
   //temp = sizeof(struct sockaddr_in);
-  setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
-  setsockopt(socket_desc, SOL_SOCKET, SO_LINGER,
+  int ret = setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
+  if (ret < 0) {
+      fprintf(stderr, "\nWARNING: Cannot set SO_REUSEADDR on socket %d\n", socket_desc);
+  }
+  ret = setsockopt(socket_desc, SOL_SOCKET, SO_LINGER,
 			 (char*)&linger, sizeof(linger));
+  if (ret < 0) {
+      fprintf(stderr, "\nWARNING: Cannot set SO_LINGER on socket %d\n", socket_desc);
+  }
 
   // remember we did this transformation before calling this function...
   // so undo it here.

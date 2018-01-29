@@ -118,7 +118,18 @@ the set of configuration it incorporates.
 
     Sets configuration based on detection with the \Condor{gpu\_discovery}
     tool, and defines a custom resource using the name \Expr{GPUs}.
-    Supports both OpenCL and CUDA if detected. 
+    Supports both OpenCL and CUDA, if detected.  Automatically includes
+    the \texttt{GPUsMonitor} feature.
+
+    \item \texttt{GPUsMonitor}
+
+    Also adds configuration to report the usage of NVidia GPUs.
+
+    \item \texttt{Monitor( resource\_name, mode, period, executable, metric[, metric]+ )}
+
+    Configures a custom machine resource monitor with the given name, mode,
+    period, executable, and metrics.  See \ref{sec:daemon-classad-hooks}
+    for the definitions of these terms.
 
     \item \texttt{PartitionableSlot( slot\_type\_num [, allocation] )}
 

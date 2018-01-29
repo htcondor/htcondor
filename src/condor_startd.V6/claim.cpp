@@ -110,12 +110,17 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 
 Claim::~Claim()
 {
-	//dprintf(D_ALWAYS | D_BACKTRACE, "deleting claim %p on resource %p\n", this, c_rip);
-
 	if( c_type == CLAIM_COD ) {
-		dprintf( D_FULLDEBUG, "Deleted claim %s (owner '%s')\n", 
-				 c_id->id(), 
-				 c_client->owner() ? c_client->owner() : "unknown" );  
+		dprintf( D_FULLDEBUG, "Deleted claim %s (owner '%s')\n",
+				 c_id->id(),
+				 c_client->owner() ? c_client->owner() : "unknown" );
+	}
+
+	// The resources assigned to this claim must have been freed by now.
+	if( c_rip != NULL && c_rip->r_classad != NULL ) {
+		resmgr->adlist_unset_monitors( c_rip->r_id, c_rip->r_classad );
+	} else {
+		dprintf( D_ALWAYS, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
 	}
 
 		// Cancel any daemonCore events associated with this claim
@@ -287,7 +292,7 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 		// put the image size value from the last call to updateUsage into the ad.
 		cad->Assign(ATTR_IMAGE_SIZE, c_image_size);
 		// also the CpusUsage value
-		//cad->Assign("CpusUsage", c_cpus_usage);
+		cad->Assign("CPUsUsage", c_cpus_usage);
 		//PRAGMA_REMIND("put CpusUsage into the standard attributes header file.")
 	}
 
@@ -830,6 +835,7 @@ Claim::beginActivation( time_t now )
 			break;
 	}
 
+	resmgr->adlist_reset_monitors( c_rip->r_id, c_rip->r_classad );
 	resmgr->startd_stats.total_job_starts += 1;
 }
 
@@ -1407,7 +1413,7 @@ void Claim::updateUsage(double & percentCpuUsage, long long & imageSize)
 		imageSize = usage.total_image_size;
 	}
 	// save off the last values so we can use them in the ::publish method
-	c_cpus_usage = percentCpuUsage;
+	c_cpus_usage = percentCpuUsage / 100;
 	c_image_size = imageSize;
 }
 

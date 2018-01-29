@@ -107,7 +107,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 				rval =  ! ClassAdsAreSame(ad, oldAd, &ignore_list);
 			}
 		}
-		sad->ReplaceAd(ad);
+		sad->AggregateFrom(ad);
 	}
 
 		// now, figure out if we need to update the collector based on

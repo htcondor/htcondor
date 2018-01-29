@@ -5769,6 +5769,28 @@ default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
 	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
+
+	use feature : GPUsMonitor
+@end
+
+[$FEATURE.Monitor]
+description=Settings to configure a custom machine resource monitor
+default : @end
+	if ! $(5?)
+		error: use feature : monitor requires five or more arguments
+	endif
+
+	STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) $(1)_MONITOR
+	STARTD_CRON_$(1)_MONITOR_MODE = $(2)
+	STARTD_CRON_$(1)_MONITOR_PERIOD = $(3)
+	STARTD_CRON_$(1)_MONITOR_EXECUTABLE = $(4)
+	STARTD_CRON_$(1)_MONITOR_METRICS = $(5+)
+@end
+
+[$FEATURE.GPUsMonitor]
+description=Settings to monitor GPU usage
+default : @end
+	use feature : Monitor( GPUs, WaitForExit, 1, $(LIBEXEC)/condor_gpu_utilization, SUM:GPUs )
 @end
 
 [$FEATURE.PartitionableSlot]

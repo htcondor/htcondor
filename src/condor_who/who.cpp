@@ -2381,7 +2381,10 @@ static char * get_daemon_param(const char * addr, const char * param_name)
 
 	ReliSock sock;
 	sock.timeout(20);   // years of research... :)
-	sock.connect(addr);
+	if (!sock.connect(addr)) {
+		fprintf(stderr, "Cannot connect to %s\n", addr);
+		return value;
+	}
 
 	if ( ! dae.startCommand(CONFIG_VAL, &sock, 2)) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't startCommand CONFIG_VAL for %s to %s\n", param_name, addr); }

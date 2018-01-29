@@ -12655,6 +12655,76 @@ on page~\pageref{sec:daemon-classad-hooks}.
   configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
   \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
+\label{param:StartdCronJobMetrics}
+\item[\Macro{STARTD\_CRON\_<JobName>\_METRICS}]
+  A space or comma -separated list.  Each element in the list is a metric
+  type, either \Expr{SUM} or \Expr{PEAK}; a colon; and a metric name.
+
+  An attribute preceded by \Expr{SUM} is a metric which accumulates over
+  time.  The canonical example is seconds of CPU usage.
+
+  An attribute preceded by \Expr{PEAK} is a metric which instead records
+  the largest value reported over the period of use.  The canonical example
+  is megabytes of memory usage.
+
+  A job with \MacroNI{STARTD\_CRON\_<JobName>\_METRICS} set is a custom
+  machine resource monitor (CMRM),  and its output is handled differently
+  than a normal job's.  A CMRM should output one ad per custom machine
+  resource instance and use \Attr{SlotMergeConstraint}s
+  (see \ref{sec:daemon-classad-hooks}) to specify the instance to which
+  it applies.
+
+  The ad corresponding to each custom machine resource instance should have
+  an attribute for each metric named in the configuration.  For SUM metrics,
+  the attribute should be \Attr{Uptime<MetricName>Seconds}; for PEAK metrics,
+  the attribute should be \Attr{<MetricName>PeakUsage}.
+
+  Each value should be the value of the metric since the last time the
+  job reported.  The reported value may therefore go up or down; HTCondor
+  will record either the the sum or the peak value, as appropriate, for
+  % both the duration of the job running in a slot assigned resources of the
+         the duration of the job running in a slot assigned resources of the
+    corresponding type.
+  % corresponding type and the recent past, as defined by FIXME.
+
+  For example, if your custom resources are SQUIDs, and you detected four
+  of them, your monitor might output the following:
+
+\begin{verbatim}
+SlotMergeConstraint = StringListMember( "SQUID0", AssignedSQUIDs )
+UptimeSQUIDsSeconds = 5.0
+SQUIDsMemoryPeakUsage = 50
+- SQUIDsReport0
+SlotMergeConstraint = StringListMember( "SQUID1", AssignedSQUIDs )
+UptimeSQUIDsSeconds = 1.0
+SQUIDsMemoryPeakUsage = 10
+- SQUIDsReport1
+SlotMergeConstraint = StringListMember( "SQUID2", AssignedSQUIDs )
+UptimeSQUIDsSeconds = 9.0
+SQUIDsMemoryPeakUsage = 90
+- SQUIDsReport2
+SlotMergeConstraint = StringListMember( "SQUID3", AssignedSQUIDs )
+UptimeSQUIDsSeconds = 4.0
+UptimeSQUIDsSeconds = 40
+- SQUIDsReport3
+\end{verbatim}
+
+  The names ('SQUIDsSlot0') may be anything, but must be consistent from
+  report to report and the ClassAd for each report must have a distinct
+  name.
+
+  You might specify the monitor in the example above as follows:
+
+\begin{verbatim}
+MACHINE_RESOURCE_INVENTORY_SQUIDs = /usr/local/bin/cmr-squid-discovery
+
+STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) SQUIDs_MONITOR
+STARTD_CRON_SQUIDs_MONITOR_MODE = Periodic
+STARTD_CRON_SQUIDs_MONITOR_PERIOD = 10
+STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE = /usr/local/bin/cmr-squid-monitor
+STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs, PEAK:SQUIDsMemory
+\end{verbatim}
+
 \label{param:StartdCronJobMode}
 \label{param:ScheddCronJobMode}
 \label{param:BenchmarksJobMode}

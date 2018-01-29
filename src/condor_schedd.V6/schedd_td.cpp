@@ -119,7 +119,11 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	//	ATTR_TREQ_HAS_CONSTRAINT
 	//	ATTR_TREQ_CONSTRAINT
 	//	ATTR_TREQ_XFP
-	getClassAd(rsock, reqad);
+
+	if (!getClassAd(rsock, reqad)) {
+			rsock->end_of_message();
+			return CLOSE_STREAM;
+	}
 	rsock->end_of_message();
 
 	if (reqad.LookupBool(ATTR_TREQ_HAS_CONSTRAINT, has_constraint) == 0) {

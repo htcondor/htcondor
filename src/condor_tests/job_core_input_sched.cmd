@@ -1,5 +1,5 @@
 universe   = scheduler
-executable = job_core_input.pl
+executable = job_core_io.pl
 output = job_core_input_sched.out
 error = job_core_input_sched.err
 log = job_core_input_sched.log
