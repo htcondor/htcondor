@@ -60,7 +60,9 @@ email_nonjob_open( const char *email_addr, const char *subject )
 {
 	char *Sendmail = NULL;
 	char *Mailer = NULL;
+#ifdef WIN32
 	char *SmtpServer = NULL;
+#endif
 	char *FromAddress = NULL;
 	char *FinalSubject;
 	char *FinalAddr;
@@ -114,7 +116,9 @@ email_nonjob_open( const char *email_addr, const char *subject )
 				"Trying to email, but CONDOR_ADMIN not specified in config file\n");
 			free(FinalSubject);
 			if (FromAddress) free(FromAddress);
+#ifdef WIN32
 			if (SmtpServer) free(SmtpServer);
+#endif
 			return NULL;
 		}
 	}
@@ -139,7 +143,9 @@ email_nonjob_open( const char *email_addr, const char *subject )
 		dprintf(D_FULLDEBUG, "Trying to email, but address list is empty\n");
 		free(FinalSubject);
 		if (FromAddress) free(FromAddress);
+#ifdef WIN32
 		if (SmtpServer) free(SmtpServer);
+#endif
 		free(FinalAddr);
 		return NULL;
 	}
@@ -152,7 +158,9 @@ email_nonjob_open( const char *email_addr, const char *subject )
 			"Trying to email, but MAIL and SENDMAIL not specified in config file\n");
 		free(FinalSubject);
 		free(FromAddress);
+#ifdef WIN32
 		free(SmtpServer);
+#endif
 		free(FinalAddr);
 		return NULL;
 	}
@@ -186,12 +194,14 @@ email_nonjob_open( const char *email_addr, const char *subject )
 #endif
 			final_args[arg_index++] = FromAddress;
 		}
+#ifdef WIN32
 		if (SmtpServer) {
 			// SmtpServer is only set on windows
 			// condor_mail.exe uses this flag
 			final_args[arg_index++] = "-relay";
 			final_args[arg_index++] = SmtpServer;
 		}
+#endif
 		temp = FinalAddr;
 		for (;;) {
 			while (*temp == '\0') temp++;
@@ -232,7 +242,9 @@ email_nonjob_open( const char *email_addr, const char *subject )
 	free(Mailer);
 	free(FinalSubject);
 	if (FromAddress) free(FromAddress);
+#ifdef WIN32
 	if (SmtpServer) free(SmtpServer);
+#endif
 	free(FinalAddr);
 	free(final_args);
 
