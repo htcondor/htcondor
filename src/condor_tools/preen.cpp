@@ -342,6 +342,7 @@ check_spool_dir()
     const char      *history, *startd_history;
 	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list;
+	std::set<std::string> maybe_stale_spool_files;
 	std::set<std::string> stale_spool_files;
 	Qmgr_connection *qmgr = NULL;
 	double			last_connection_time;
@@ -356,7 +357,7 @@ check_spool_dir()
     history = condor_basename(history); // condor_basename never returns NULL
     history_length = strlen(history);
 
-    startd_history = param("STARTD_HISTORY			// connect to the Q manager in read-only mode.");
+    startd_history = param("STARTD_HISTORY");
    	startd_history = condor_basename(startd_history);
 	startd_history_length = strlen(startd_history);
 	   
@@ -439,14 +440,14 @@ check_spool_dir()
 			// We still don't know if this file is good or bad, and we can't
 			// tell without asking the schedd. Add it to our potentially stale
 			// files list, we'll deal with it later.
-		stale_spool_files.insert( f );
+		maybe_stale_spool_files.insert( f );
 	}
 
 		// Step 2: Connect to the schedd, and check if the files in 
 		// stage_spool_files are truly stale. If we find any that are not, 
 		// remove from the list. Also if we stay connected to the schedd for
 		// too long, force a temporary disconnect so it can recover.
-	for( auto i = stale_spool_files.begin(); i != stale_spool_files.end(); ++i ) {
+	for( auto i = maybe_stale_spool_files.begin(); i != maybe_stale_spool_files.end(); ++i ) {
 		
 		std::string spool_file = *i;
 
@@ -463,14 +464,12 @@ check_spool_dir()
 			// See if it's a legitimate checkpoint.
 		if( is_ckpt_file_or_submit_digest( spool_file.c_str() ) ) {
 			good_file( Spool, spool_file.c_str() );
-			stale_spool_files.erase( spool_file );
 			continue;
 		}
 
 			// See if it's a legimate MyProxy password file.
 		if ( is_myproxy_file( spool_file.c_str() ) ) {
 			good_file( Spool, spool_file.c_str() );
-			stale_spool_files.erase( spool_file );
 			continue;
 		}
 
@@ -481,10 +480,12 @@ check_spool_dir()
 		if( IsDirectory( spool_file_full_path.Value() ) && !IsSymlink( spool_file_full_path.Value() ) ) {
 			if( check_job_spool_hierarchy( Spool, spool_file.c_str(), stale_spool_files ) ) {
 				good_file( Spool, spool_file.c_str() );
-				stale_spool_files.erase( spool_file );
 				continue;
 			}
 		}
+
+			// At this point we know for sure the file is stale
+		stale_spool_files.insert( spool_file );
 
 			// If the schedd is connected, check how long the connection has
 			// been active. If it has exceeded a maximum connection time 
