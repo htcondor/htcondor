@@ -25,6 +25,11 @@
 #include <string.h>
 #include <stdarg.h>
 #include <string>
+#ifdef WIN32
+#ifndef strcasecmp
+#define strcasecmp _stricmp
+#endif
+#endif
 
 class MyString;
 class MyStringSource;

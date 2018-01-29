@@ -19,6 +19,7 @@
 
 #ifndef __TOKENER__
 #define __TOKENER__
+#include "MyString.h"
 
 
 // this is a simple tokenizer class for parsing keywords out of a line of text

@@ -110,6 +110,8 @@
 
 #ifndef LIST_H
 #define LIST_H
+
+#include <cstddef>
 #include "condor_fix_assert.h"
 
 template <class ObjType> class Item;

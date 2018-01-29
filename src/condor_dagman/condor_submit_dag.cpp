@@ -35,6 +35,7 @@
 #include "my_popen.h"
 #include "setenv.h"
 #include "condor_attributes.h"
+#include "dag_tokener.h"
 
 
 #ifdef WIN32
@@ -53,7 +54,7 @@ bool parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
 			const char * const argv[], SubmitDagShallowOptions &shallowOpts);
 int doRecursionNew( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts );
-int parseJobOrDagLine( const char *dagLine, StringList &tokens,
+int parseJobOrDagLine( const char *dagLine, dag_tokener &tokens,
 			const char *fileType, const char *&submitOrDagFile,
 			const char *&directory );
 int setUpOptions( SubmitDagDeepOptions &deepOpts,
@@ -161,7 +162,6 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 	shallowOpts.dagFiles.rewind();
 
 		// Go through all DAG files specified on the command line...
-	StringList submitFiles;
 	const char *dagFile;
 	while ( (dagFile = shallowOpts.dagFiles.next()) ) {
 
@@ -178,7 +178,7 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 			// Find and parse JOB and SUBDAG lines.
 		MyString dagLine;
 		while ( reader.NextLogicalLine( dagLine ) ) {
-			StringList tokens( dagLine.Value(), " \t" );
+			dag_tokener tokens( dagLine.Value() );
 			tokens.rewind();
 			const char *first = tokens.next();
 
@@ -258,7 +258,7 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 	@return 0 if successful, 1 if failed
 */
 int
-parseJobOrDagLine( const char *dagLine, StringList &tokens,
+parseJobOrDagLine( const char *dagLine, dag_tokener &tokens,
 			const char *fileType, const char *&submitOrDagFile,
 			const char *&directory )
 {

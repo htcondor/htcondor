@@ -831,8 +831,8 @@ main( int argc, const char *argv[] )
 		submit_hash.insert_source("<stdin>", FileMacroSource);
 	} else {
 		if( (fp=safe_fopen_wrapper_follow(cmd_file,"r")) == NULL ) {
-			fprintf( stderr, "\nERROR: Failed to open command file (%s)\n",
-						strerror(errno));
+			fprintf( stderr, "\nERROR: Failed to open command file (%s) (%s)\n",
+						cmd_file, strerror(errno));
 			exit(1);
 		}
 		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion

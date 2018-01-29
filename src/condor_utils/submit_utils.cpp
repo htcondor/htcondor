@@ -450,17 +450,6 @@ static char * trim_and_strip_quotes_in_place(char * str)
 	return p;
 }
 
-static int has_whitespace( const char *str)
-{
-	while( *str ) {
-		if( isspace(*str++) ) {
-			return( 1 );
-		}
-	}
-
-	return( 0 );
-}
-
 static void compress_path( MyString &path )
 {
 	char	*src, *dst;
@@ -1474,14 +1463,6 @@ int SubmitHash::SetStdFile( int which_file )
 			ABORT_AND_RETURN( 1 );
 		}
 	}
-	
-	if( has_whitespace(macro_value) ) 
-	{
-		push_error(stderr, "The '%s' takes exactly one argument (%s)\n", 
-				 generic_name, macro_value );
-		free(macro_value);
-		ABORT_AND_RETURN( 1 );
-	}	
 
 	MyString tmp = macro_value;
 	if ( check_and_universalize_path(tmp) != 0 ) {

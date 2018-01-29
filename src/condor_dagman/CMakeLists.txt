@@ -25,7 +25,7 @@ condor_glob(DAGHdrs DAGSrcs "${submitDAG};${metricsReporter}")
 
 condor_exe(condor_dagman "${DAGHdrs};${DAGSrcs}" ${C_BIN} "${CONDOR_LIBS}" ON)
 
-condor_exe(condor_submit_dag "condor_submit_dag.cpp;dagman_multi_dag.cpp;dagman_recursive_submit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_submit_dag "condor_submit_dag.cpp;dagman_multi_dag.cpp;dagman_recursive_submit.cpp;dag_tokener.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 if(NOT WINDOWS AND WITH_CURL)
 condor_exe(condor_dagman_metrics_reporter
