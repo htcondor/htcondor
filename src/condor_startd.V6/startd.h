@@ -58,7 +58,6 @@ extern CondorSystrayNotifier systray_notifier;
 class Resource;
 #include "LoadQueue.h"
 #include "ResAttributes.h"
-#include "AvailStats.h"
 #include "claim.h"
 #include "Starter.h"
 #include "Reqexp.h"
@@ -105,6 +104,9 @@ extern	int		match_timeout;	// How long you're willing to be
 extern	int		killing_timeout;  // How long you're willing to be
 	                              // in preempting/killing before you
 								  // drop the hammer on the starter
+extern	int		vm_killing_timeout;  // How long you're willing to be
+	                              // in preempting/killing before you
+								  // drop the hammer on the starter for VM universe jobs
 extern	int		max_claim_alives_missed;  // how many keepalives can we
 										  // miss until we timeout the
 										  // claim and give up
@@ -125,10 +127,6 @@ extern	int		startd_noclaim_shutdown;
     // the plug" and tell the master to shutdown.
 
 extern	char*	Name;			// The startd's name
-
-extern	bool	compute_avail_stats;
-	// should the startd compute slot availability statistics; currently
-	// false by default
 
 extern	int		pid_snapshot_interval;	
     // How often do we take snapshots of the pid families? 

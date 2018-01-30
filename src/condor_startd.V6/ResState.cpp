@@ -149,9 +149,6 @@ ResState::change( State new_state, Activity new_act )
 		return;
 	}
 
-		// Update resource availability statistics on state changes
-	rip->r_avail_stats.update( r_state, r_act );
-	
 		// Note our current state and activity in the classad
 	this->publish( rip->r_classad, A_ALL );
 

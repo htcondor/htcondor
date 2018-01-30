@@ -184,7 +184,7 @@ bool dprintf_to_term_check();
 void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
-void Suicide(void);
+void Suicide(void) GCC_NORETURN;
 void set_debug_flags( const char *strflags, int cat_and_flags );
 void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg ) GCC_NORETURN;
 void _condor_fd_panic( int line, const char *file );

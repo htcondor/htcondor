@@ -1720,9 +1720,9 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 
 	while (((count = (daemonCore->Read_Pipe(m_gahp_errorfd, &buff, 5000))))>0) {
 
+		buff[count]='\0';
 		char *prev_line = buff;
 		char *newline = buff - 1;
-		buff[count]='\0';
 
 			// Search for each newline in the string we just read and
 			// print out the text between it and the previous newline 

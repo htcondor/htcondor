@@ -556,6 +556,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if(!RAND_bytes(session_key, AUTH_SSL_SESSION_KEY_LEN)) {
             ouch("Couldn't generate session key.\n");
             server_status = AUTH_SSL_QUITTING;
+			free(buffer);
+			return fail;
         }
         //dprintf(D_SECURITY,"Generated session key: '%s'\n", session_key);
 

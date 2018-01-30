@@ -161,7 +161,7 @@ VirshType::Start()
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
 	    vmprintf(D_ALWAYS, "Failed to create libvirt domain: %s\n", (err ? err->message : "No reason found"));
 
-	    if( strstr( err->message, "mage is not in qcow2 format" ) != NULL ) {
+	    if (err && err->message && (strstr(err->message, "image is not in qcow2 format") != NULL)) {
 			m_result_msg = VMGAHP_ERR_BAD_IMAGE;
 		}
 
@@ -1452,7 +1452,7 @@ VirshType::killVMFast(const char* vmname, virConnectPtr libvirt_con)
 	    virErrorPtr err = virConnGetLastError(libvirt_con);
 	    if (err && err->code != VIR_ERR_NO_DOMAIN)
 	      {
-		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", vmname, (err ? err->message : "No reason found"));
+		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", vmname, (err->message ? err->message : "No reason found"));
 		return false;
 	      }
 	    else

@@ -65,3 +65,6 @@
    #define NEXT_FN "next"
 #endif
 
+#ifdef __GNUC__
+extern BOOST_PYTHON_DECL void boost::python::throw_error_already_set() __attribute__((noreturn));
+#endif

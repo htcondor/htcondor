@@ -41,20 +41,40 @@
 #include "glexec_starter.linux.h"
 #endif
 
-Starter::Starter()
-{
-	s_ad = NULL;
-	s_path = NULL;
-	s_is_dc = false;
+// Keep track of living Starters
+std::map<pid_t, Starter*> living_starters;
 
+Starter *findStarterByPid(pid_t pid)
+{
+	if ( ! pid) return NULL;
+	auto found = living_starters.find(pid);
+	if (found != living_starters.end()) {
+		return found->second;
+	}
+	return NULL;
+}
+
+
+
+
+Starter::Starter()
+	: s_ad(NULL)
+	, s_path(NULL)
+	, s_is_dc(false)
+	, s_orphaned_jobad(NULL)
+{
 	initRunData();
 }
 
 
 Starter::Starter( const Starter& s )
 	: Service( s )
+	, s_ad(NULL)
+	, s_path(NULL)
+	, s_is_dc(false)
+	, s_orphaned_jobad(NULL)
 {
-	if( s.s_claim || s.s_pid || s.s_birthdate ||
+	if( s.s_pid || s.s_birthdate ||
 	    s.s_port1 >= 0 || s.s_port2 >= 0 )
 	{
 		EXCEPT( "Trying to copy a Starter object that's already running!" );
@@ -81,19 +101,23 @@ Starter::Starter( const Starter& s )
 void
 Starter::initRunData( void ) 
 {
-	s_claim = NULL;
 	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
 	s_birthdate = 0;
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
+	s_hold_timeout = -1;
 	s_port1 = -1;
 	s_port2 = -1;
 	s_reaper_id = -1;
-
+	s_exit_status = 0;
+	setOrphanedJob(NULL);
+	s_was_reaped = false;
+	s_is_vm_universe = false;
 #if HAVE_BOINC
 	s_is_boinc = false;
 #endif /* HAVE_BOINC */
 	s_job_update_sock = NULL;
+
 
 	m_hold_job_cb = NULL;
 
@@ -104,12 +128,32 @@ Starter::initRunData( void )
 	s_usage.sys_cpu_time = 0;
 	s_usage.total_image_size = 0;
 	s_usage.user_cpu_time = 0;
+	s_vm_cpu_usage = 0; // extra cpu percentage from VM processes
+	s_num_vm_cpus = 1;
+}
+
+// when a claim associated with this starter is destroyed before the starter is reaped
+// it will hand off the job ad so that we can write correct things into the history file
+// when the starter is finally reaped.
+void Starter::setOrphanedJob(ClassAd * job)
+{
+	if (s_orphaned_jobad && (job != s_orphaned_jobad)) {
+		delete s_orphaned_jobad;
+	}
+	s_orphaned_jobad = job;
 }
 
 
 Starter::~Starter()
 {
 	cancelKillTimer();
+	setOrphanedJob(NULL);
+	if (s_pid) {
+		auto found = living_starters.find(s_pid);
+		if (found != living_starters.end()) {
+			living_starters.erase(found);
+		}
+	}
 
 	if (s_path) {
 		delete [] s_path;
@@ -193,12 +237,6 @@ void
 Starter::setIsDC( bool updated_is_dc )
 {
 	s_is_dc = updated_is_dc;
-}
-
-void
-Starter::setClaim( Claim* c )
-{
-	s_claim = c;
 }
 
 
@@ -555,13 +593,13 @@ Starter::reallykill( int signo, int type )
 }
 
 void
-Starter::finalizeExecuteDir()
+Starter::finalizeExecuteDir(Claim * claim)
 {
 		// If setExecuteDir() has already been called (e.g. BOINC), then
 		// do nothing.  Otherwise, choose the execute dir now.
 	if( !executeDir() ) {
-		ASSERT( s_claim && s_claim->rip() );
-		setExecuteDir( s_claim->rip()->executeDir() );
+		ASSERT( claim && claim->rip() );
+		setExecuteDir( claim->rip()->executeDir() );
 	}
 }
 
@@ -577,69 +615,101 @@ Starter::encryptedExecuteDir()
 	return s_encrypted_execute_dir.Length() ? s_encrypted_execute_dir.Value() : NULL;
 }
 
-int 
-Starter::spawn( time_t now, Stream* s )
+// Spawn the starter process that this starter object is managing.
+// the claim is optional and will be NULL for boinc jobs and possibly others.
+//
+// returns: the pid of the created starter process, returns 0 on failure.
+//
+// on success this object is owned by the global living_starters data structure and may be located by calling findStarterByPid()
+// on failure the caller is responsible for deleting this object.
+//
+int Starter::spawn(Claim * claim, time_t now, Stream* s)
 {
 		// if execute dir has not been set, choose one now
-	finalizeExecuteDir();
+	finalizeExecuteDir(claim);
 
-	if (claimType() == CLAIM_COD) {
-		s_pid = execJobPipeStarter();
+	if (claim) {
+		s_is_vm_universe = claim->universe() == CONDOR_UNIVERSE_VM;
+
+		// we will need to know the number of cpus allocated to the hypervisor in order to interpret
+		// the cpu usage numbers, so capture that now.
+		ClassAd * jobAd = claim->ad();
+		if (jobAd) {
+			if ( ! jobAd->LookupInteger(ATTR_JOB_VM_VCPUS, s_num_vm_cpus) &&
+				 ! jobAd->LookupInteger(ATTR_REQUEST_CPUS, s_num_vm_cpus)) {
+				s_num_vm_cpus = 1;
+			}
+		}
+	}
+
+	ClaimType ct = CLAIM_NONE;
+	if (claim) { ct = claim->type(); }
+	if (ct == CLAIM_COD) {
+		s_pid = execJobPipeStarter(claim);
 	}
 #if HAVE_JOB_HOOKS
-	else if (claimType() == CLAIM_FETCH) {
-		s_pid = execJobPipeStarter();
+	else if (ct == CLAIM_FETCH) {
+		s_pid = execJobPipeStarter(claim);
 	}
 #endif /* HAVE_JOB_HOOKS */
 #if HAVE_BOINC
 	else if( isBOINC() ) {
-		s_pid = execBOINCStarter(); 
+		s_pid = execBOINCStarter(claim);
 	}
 #endif /* HAVE_BOINC */
 	else if( is_dc() ) {
-		s_pid = execDCStarter( s ); 
+		s_pid = execDCStarter(claim, s);
 	}
 	else {
 			// Use old icky non-daemoncore starter.
-		s_pid = execOldStarter();
+		ASSERT(claim);
+		s_pid = execOldStarter(claim);
 	}
 
 	if( s_pid == 0 ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
 	} else {
 		s_birthdate = now;
+		living_starters[s_pid] = this;
 	}
 
 	return s_pid;
 }
 
+// called when the starter process is reaped
+// the claim is optional, if it is NULL then EITHER this starter was never
+// associated with a claim (i.e. boinc) or the claim was already deleted
 void
-Starter::exited(int status)
+Starter::exited(Claim * claim, int status) // Claim may be NULL.
 {
-	ClassAd *jobAd = NULL;
-	bool jobAdNeedsFree = true;
+	// remember that we have reaped this starter.
+	s_was_reaped = true;
+	s_exit_status = status;
 
-	if (s_claim && s_claim->ad()) {
+	ClassAd *jobAd = NULL;
+	ClassAd dummyAd; // used then claim is NULL
+
+	if (claim && claim->ad()) {
 		// real jobs in the startd have claims and job ads, boinc and perhaps others won't
-		jobAd = s_claim->ad();
-		jobAdNeedsFree = false;
+		jobAd = claim->ad();
+	} else if (s_orphaned_jobad) {
+		jobAd = s_orphaned_jobad;
 	} else {
-		// Dummy up an ad
+		// Dummy up an ad, assume a boinc type job.
 		int now = (int) time(0);
-		jobAd = new ClassAd();
-		SetMyTypeName(*jobAd, "Job");
-		SetTargetTypeName(*jobAd, "Machine");
-		jobAd->Assign(ATTR_CLUSTER_ID, now);
-		jobAd->Assign(ATTR_PROC_ID, 1);
-		jobAd->Assign(ATTR_OWNER, "boinc");
-		jobAd->Assign(ATTR_Q_DATE, (int)s_birthdate);
-		jobAd->Assign(ATTR_JOB_PRIO, 0);
-		jobAd->Assign(ATTR_IMAGE_SIZE, 0);
-		jobAd->Assign(ATTR_JOB_CMD, "boinc");
+		SetMyTypeName(dummyAd, "Job");
+		SetTargetTypeName(dummyAd, "Machine");
+		dummyAd.Assign(ATTR_CLUSTER_ID, now);
+		dummyAd.Assign(ATTR_PROC_ID, 1);
+		dummyAd.Assign(ATTR_OWNER, "boinc");
+		dummyAd.Assign(ATTR_Q_DATE, (int)s_birthdate);
+		dummyAd.Assign(ATTR_JOB_PRIO, 0);
+		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
+		dummyAd.Assign(ATTR_JOB_CMD, "boinc");
 		MyString gjid;
-		gjid.formatstr("%s#%d#%d#%d", get_local_hostname().Value(), 
-					 now, 1, now);
-		jobAd->Assign(ATTR_GLOBAL_JOB_ID, gjid);
+		gjid.formatstr("%s#%d#%d#%d", get_local_hostname().Value(), now, 1, now);
+		dummyAd.Assign(ATTR_GLOBAL_JOB_ID, gjid);
+		jobAd = &dummyAd;
 	}
 
 	// First, patch up the ad a little bit 
@@ -655,18 +725,14 @@ Starter::exited(int status)
 	jobAd->Assign(ATTR_STARTER_EXIT_STATUS, status);
 	jobAd->Assign(ATTR_JOB_STATUS, jobStatus);
 
-	if (s_claim) {
-		bool badputFromDraining = s_claim->getBadputCausedByDraining();
+	if (claim) {
+		bool badputFromDraining = claim->getBadputCausedByDraining();
 		jobAd->Assign(ATTR_BADPUT_CAUSED_BY_DRAINING, badputFromDraining);
-		bool badputFromPreemption = s_claim->getBadputCausedByPreemption();
+		bool badputFromPreemption = claim->getBadputCausedByPreemption();
 		jobAd->Assign(ATTR_BADPUT_CAUSED_BY_PREEMPTION, badputFromPreemption);
 	}
 	AppendHistory(jobAd);
 	WritePerJobHistoryFile(jobAd, true /* use gjid for filename*/);
-
-	if (jobAdNeedsFree) {
-		delete jobAd;
-	}
 
 		// Make sure our time isn't going to go off.
 	cancelKillTimer();
@@ -692,14 +758,14 @@ Starter::exited(int status)
 
 #if defined(LINUX)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
-		cleanupAfterGlexec();
+		cleanupAfterGlexec(claim);
 	}
 #endif
 }
 
 
 int
-Starter::execJobPipeStarter( void )
+Starter::execJobPipeStarter( Claim* claim )
 {
 	int rval;
 	MyString lock_env;
@@ -707,7 +773,7 @@ Starter::execJobPipeStarter( void )
 	Env env;
 	char* tmp;
 
-	if (s_claim->type() == CLAIM_COD) {
+	if (claim->type() == CLAIM_COD) {
 		tmp = param( "LOCK" );
 		if( ! tmp ) { 
 			tmp = param( "LOG" );
@@ -725,12 +791,12 @@ Starter::execJobPipeStarter( void )
 	}
 
 		// Create an argument list for this starter, based on the claim.
-	s_claim->makeStarterArgs(args);
+	claim->makeStarterArgs(args);
 
 	int* std_fds_p = NULL;
 	int std_fds[3];
 	int pipe_fds[2] = {-1,-1};
-	if( s_claim->hasJobAd() ) {
+	if( claim->hasJobAd() ) {
 		if( ! daemonCore->Create_Pipe(pipe_fds) ) {
 			dprintf( D_ALWAYS, "ERROR: Can't create pipe to pass job ClassAd "
 					 "to starter, aborting\n" );
@@ -745,9 +811,9 @@ Starter::execJobPipeStarter( void )
 		std_fds_p = std_fds;
 	}
 
-	rval = execDCStarter( args, &env, std_fds_p, NULL );
+	rval = execDCStarter( claim, args, &env, std_fds_p, NULL );
 
-	if( s_claim->hasJobAd() ) {
+	if( claim->hasJobAd() ) {
 			// now that the starter has been spawned, we need to do
 			// some things with the pipe:
 
@@ -759,7 +825,7 @@ Starter::execJobPipeStarter( void )
 			// 2) dump out the job ad to the write end, since the
 			// starter is now alive and can read from the pipe.
 
-		s_claim->writeJobAd( pipe_fds[1] );
+		claim->writeJobAd( pipe_fds[1] );
 
 			// Now that all the data is written to the pipe, we can
 			// safely close the other end, too.  
@@ -772,7 +838,7 @@ Starter::execJobPipeStarter( void )
 
 #if HAVE_BOINC
 int
-Starter::execBOINCStarter( void )
+Starter::execBOINCStarter( Claim * claim )
 {
 	ArgList args;
 
@@ -782,13 +848,13 @@ Starter::execBOINCStarter( void )
 	args.AppendArg("boinc");
 	args.AppendArg("-job-keyword");
 	args.AppendArg("boinc");
-	return execDCStarter( args, NULL, NULL, NULL );
+	return execDCStarter( claim, args, NULL, NULL, NULL );
 }
 #endif /* HAVE_BOINC */
 
 
 int
-Starter::execDCStarter( Stream* s )
+Starter::execDCStarter( Claim * claim, Stream* s )
 {
 	ArgList args;
 
@@ -823,7 +889,7 @@ Starter::execDCStarter( Stream* s )
 	}
 
 
-	char* hostname = s_claim->client()->host();
+	char* hostname = claim->client()->host();
 
 	args.AppendArg("condor_starter");
 	args.AppendArg("-f");
@@ -833,26 +899,26 @@ Starter::execDCStarter( Stream* s )
 	if (append != APPEND_NOTHING) {
 		args.AppendArg("-a");
 		switch (append) {
-		case APPEND_CLUSTER: args.AppendArg(s_claim->cluster()); break;
+		case APPEND_CLUSTER: args.AppendArg(claim->cluster()); break;
 
 		case APPEND_JOBID: {
 			MyString jobid;
-			jobid.formatstr("%d.%d", s_claim->cluster(), s_claim->proc());
+			jobid.formatstr("%d.%d", claim->cluster(), claim->proc());
 			args.AppendArg(jobid.c_str());
 		} break;
 
 		default:
-		case APPEND_SLOT: args.AppendArg(s_claim->rip()->r_id_str); break;
+		case APPEND_SLOT: args.AppendArg(claim->rip()->r_id_str); break;
 		}
 	}
 
 	if (slot_arg) {
 		args.AppendArg("-slot-name");
-		args.AppendArg(s_claim->rip()->r_id_str);
+		args.AppendArg(claim->rip()->r_id_str);
 	}
 
 	args.AppendArg(hostname);
-	execDCStarter( args, NULL, NULL, s );
+	execDCStarter( claim, args, NULL, NULL, s );
 
 	return s_pid;
 }
@@ -887,8 +953,26 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		// better than nothing.
 		update_ad.LookupString(ATTR_STARTER_IP_ADDR,m_starter_addr);
 
-		if( s_claim ) {
-			s_claim->receiveJobClassAdUpdate( update_ad );
+		// The update may contain information of VM cpu utitilization because
+		// hypervisors such as libvirt will spawn processes outside
+		// of condor's perview. we want to capture the value here so we can include it in our usage
+		double fPercentCPU=0.0;
+		bool has_vm_cpu = update_ad.LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
+
+		Claim* claim = resmgr->getClaimByPid(s_pid);
+		if( claim ) {
+			claim->receiveJobClassAdUpdate( update_ad );
+
+			ClassAd * jobAd = claim->ad();
+			if (jobAd) {
+				// in case the cpu utilization was modified while being updated.
+				has_vm_cpu = jobAd->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
+			}
+		}
+
+		// we only want to overwrite the member for additional cpu if we got an update for that attribute
+		if (has_vm_cpu) {
+			s_vm_cpu_usage = fPercentCPU;
 		}
 	}
 
@@ -901,9 +985,13 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	return KEEP_STREAM;
 }
 
-int
-Starter::execDCStarter( ArgList const &args, Env const *env, 
-						int* std_fds, Stream* s )
+// most methods of spawing the starter end up here. 
+int Starter::execDCStarter(
+	Claim * claim, // claim is optional and will be NULL for backfill jobs.
+	ArgList const &args,
+	Env const *env,
+	int* std_fds,
+	Stream* s )
 {
 	Stream *inherit_list[] =
 		{ 0 /*ClassAd update stream (assigned below)*/,
@@ -931,8 +1019,8 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 	// If admin desires encrypted exec dir in config, do it
 	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY",false);
 	// Or if user wants encrypted exec in job ad, do it
-	if (!encrypt_execdir && s_claim && s_claim->ad()) {
-		s_claim->ad()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+	if (!encrypt_execdir && claim && claim->ad()) {
+		claim->ad()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
 	}
 	if ( encrypt_execdir ) {
 #ifdef LINUX
@@ -969,8 +1057,8 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		// Build the affinity string to pass to the starter via env
 
 	std::string affinityString;
-	if (s_claim && s_claim->rip() && s_claim->rip()->get_affinity_set()) {
-		std::list<int> *l = s_claim->rip()->get_affinity_set();
+	if (claim && claim->rip() && claim->rip()->get_affinity_set()) {
+		std::list<int> *l = claim->rip()->get_affinity_set();
 		bool needComma = false;
 		for (std::list<int>::iterator it = l->begin(); it != l->end(); it++) {
 			if (needComma) {
@@ -983,13 +1071,13 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 	}
 
 	bool affinityBool = false;
-	if ( ! s_claim || ! s_claim->ad()) {
+	if ( ! claim || ! claim->ad()) {
 		affinityBool = param_boolean("ASSIGN_CPU_AFFINITY", false);
 	} else {
 		auto_free_ptr assign_cpu_affinity(param("ASSIGN_CPU_AFFINITY"));
 		if ( ! assign_cpu_affinity.empty()) {
 			classad::Value value;
-			if (s_claim->ad()->EvaluateExpr(assign_cpu_affinity.ptr(), value)) {
+			if (claim->ad()->EvaluateExpr(assign_cpu_affinity.ptr(), value)) {
 				if ( ! value.IsBooleanValueEquiv(affinityBool)) {
 					// was an expression, but not a bool, so report it and continue
 					EXCEPT("ASSIGN_CPU_AFFINITY does not evaluate to a boolean, it is : %s", ClassAdValueToString(value));
@@ -1020,8 +1108,8 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 	inherit_list[0] = &child_job_update_sock;
 
 	// Pass the machine ad to the starter
-	if (s_claim) 
-		s_claim->writeMachAd( s_job_update_sock );
+	if (claim)
+		claim->writeMachAd( s_job_update_sock );
 
 	if( daemonCore->Register_Socket(
 			s_job_update_sock,
@@ -1041,8 +1129,13 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 	Env glexec_env;
 	int glexec_std_fds[3];
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
+		if ( ! claim) {
+			dprintf(D_ALWAYS, "ERROR: GLEXEC_STARTER is true, so a Starter cannot be created if there is no claim\n");
+			s_pid = 0;
+			return s_pid;
+		}
 		if( ! glexec_starter_prepare( s_path,
-		                              s_claim->client()->proxyFile(),
+		                              claim->client()->proxyFile(),
 		                              args,
 		                              env,
 		                              std_fds,
@@ -1052,7 +1145,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		{
 			// something went wrong; prepareForGlexec will
 			// have already logged it
-			cleanupAfterGlexec();
+			cleanupAfterGlexec(claim);
 			return 0;
 		}
 		final_path = glexec_args.GetArg(0);
@@ -1061,7 +1154,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		std_fds = glexec_std_fds;
 	}
 #endif
-								   
+
 	int reaper_id;
 	if( s_reaper_id > 0 ) {
 		reaper_id = s_reaper_id;
@@ -1098,7 +1191,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		if ( !glexec_starter_handle_env(s_pid) ) {
 			// something went wrong; handleGlexecEnvironment will
 			// have already logged it
-			cleanupAfterGlexec();
+			cleanupAfterGlexec(claim);
 			return 0;
 		}
 	}
@@ -1109,7 +1202,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 
 
 int
-Starter::execOldStarter( void )
+Starter::execOldStarter( Claim * claim )
 {
 #if defined(WIN32) /* THIS IS UNIX SPECIFIC */
 	return 0;
@@ -1135,11 +1228,11 @@ Starter::execOldStarter( void )
 	//
 	ArgList args;
 	args.AppendArg("condor_starter");
-	args.AppendArg(s_claim->client()->host());
+	args.AppendArg(claim->client()->host());
 	args.AppendArg(daemonCore->InfoCommandSinfulString());
 	if (resmgr->is_smp()) {
 		args.AppendArg("-a");
-		args.AppendArg(s_claim->rip()->r_id_str);
+		args.AppendArg(claim->rip()->r_id_str);
 	}
 
 	Env env;
@@ -1226,32 +1319,22 @@ Starter::execOldStarter( void )
 
 #if defined(LINUX)
 void
-Starter::cleanupAfterGlexec()
+Starter::cleanupAfterGlexec(Claim * claim)
 {
 	// remove the copy of the user proxy that we own
 	// (the starter should remove the one glexec created for it)
-	if( s_claim && s_claim->client()->proxyFile() != NULL ) {
-		if ( unlink( s_claim->client()->proxyFile() ) == -1) {
+	if( claim && claim->client()->proxyFile() != NULL ) {
+		if ( unlink( claim->client()->proxyFile() ) == -1) {
 			dprintf( D_ALWAYS,
 			         "error removing temporary proxy %s: %s (%d)\n",
-			         s_claim->client()->proxyFile(),
+			         claim->client()->proxyFile(),
 			         strerror(errno),
 			         errno );
 		}
-		s_claim->client()->setProxyFile(NULL);
+		claim->client()->setProxyFile(NULL);
 	}
 }
 #endif
-
-ClaimType
-Starter::claimType()
-{
-	if( ! s_claim ) {
-		return CLAIM_NONE;
-	}
-	return s_claim->type();
-}
-
 
 bool
 Starter::active()
@@ -1266,17 +1349,18 @@ Starter::dprintf( int flags, const char* fmt, ... )
 	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
 	va_list args;
 	va_start( args, fmt );
-	if( s_claim && s_claim->rip() ) {
-		s_claim->rip()->dprintf_va( flags, fmt, args );
+	if ( ! s_dpf.empty()) {
+		MyString fmt_str( s_dpf );
+		fmt_str += ": ";
+		fmt_str += fmt;
+		::_condor_dprintf_va( flags, ident, fmt_str.c_str(), args );
 	} else {
 		::_condor_dprintf_va( flags, ident, fmt, args );
 	}
 	va_end( args );
 }
 
-
-float
-Starter::percentCpuUsage( void )
+const ProcFamilyUsage & Starter::updateUsage()
 {
 	if (daemonCore->Get_Family_Usage(s_pid, s_usage, true) == FALSE) {
 		EXCEPT( "Starter::percentCpuUsage(): Fatal error getting process "
@@ -1293,22 +1377,9 @@ Starter::percentCpuUsage( void )
 	if ( resmgr ) {
 		resmgr->m_vmuniverse_mgr.getUsageForVM(s_pid, s_usage);
 		
-		// Now try to tack on details posted in the job ad because 
-		// hypervisors such as libvirt will spawn processes outside 
-		// of condor's perview. 
-		float fPercentCPU=0.0;
-		int iNumCPUs=0;
-		ClassAd * jobAd = s_claim->ad();
-		
-		jobAd->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
-		jobAd->LookupInteger(ATTR_JOB_VM_VCPUS, iNumCPUs);
-		if( iNumCPUs == 0 ) {
-			jobAd->LookupInteger( ATTR_REQUEST_CPUS, iNumCPUs );
-		}
-		
-		// computations outside take cores into account.
-		fPercentCPU = fPercentCPU * iNumCPUs;
-		
+		// computations outside take cores into account, so we need to correct for that
+		// using the latest cached values for vm cpu usage and vm num cpus.
+		double fPercentCPU = s_vm_cpu_usage * s_num_vm_cpus;
 		dprintf( D_LOAD, "Starter::percentCpuUsage() adding VM Utilization %f\n",fPercentCPU);
 		
 		s_usage.percent_cpu += fPercentCPU;
@@ -1323,18 +1394,8 @@ Starter::percentCpuUsage( void )
 		        s_usage.percent_cpu );
 	}
 
-	return s_usage.percent_cpu;
+	return s_usage;
 }
-
-unsigned long
-Starter::imageSize( void )
-{
-		// we assume we're only asked for this after we've already
-		// computed % cpu usage and we've already got this info
-		// sitting here...
-	return s_usage.total_image_size;
-}
-
 
 void
 Starter::printInfo( int debug_level )
@@ -1374,7 +1435,7 @@ Starter::getIpAddr( void )
 
 
 bool
-Starter::killHard( void )
+Starter::killHard( int timeout )
 {
 	if( ! active() ) {
 		return true;
@@ -1385,14 +1446,14 @@ Starter::killHard( void )
 		return false;
 	}
 	dprintf(D_FULLDEBUG, "in starter:killHard starting kill timer\n");
-	startKillTimer();	
+	startKillTimer(timeout);
 
 	return true;
 }
 
 
 bool
-Starter::killSoft( bool /*state_change*/ )
+Starter::killSoft( int timeout, bool /*state_change*/ )
 {
 	if( ! active() ) {
 		return true;
@@ -1413,7 +1474,7 @@ Starter::killSoft( bool /*state_change*/ )
 		// the soft-kill signal from condor_vacate_job was then
 		// immune to preemption.
 
-	startSoftkillTimeout();
+	startSoftkillTimeout(timeout);
 
 	return true;
 }
@@ -1448,27 +1509,18 @@ Starter::resume( void )
 
 
 int
-Starter::startKillTimer( void )
+Starter::startKillTimer( int timeout )
 {
 	if( s_kill_tid >= 0 ) {
 			// Timer already started.
 		return TRUE;
 	}
- 
-	int tmp_killing_timeout = killing_timeout;
-	if( s_claim && (s_claim->universe() == CONDOR_UNIVERSE_VM) ) {
-		// For vm universe, we need longer killing_timeout
-		int vm_killing_timeout = param_integer( "VM_KILLING_TIMEOUT", 60);
-		if( killing_timeout < vm_killing_timeout ) {
-			tmp_killing_timeout = vm_killing_timeout;
-		}
-	}
 
 		// Create a periodic timer so that if the kill attempt fails,
 		// we keep trying.
 	s_kill_tid = 
-		daemonCore->Register_Timer( tmp_killing_timeout,
-									std::max(1,tmp_killing_timeout),
+		daemonCore->Register_Timer( timeout,
+									std::max(1,timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {
@@ -1479,17 +1531,14 @@ Starter::startKillTimer( void )
 
 
 int
-Starter::startSoftkillTimeout( void )
+Starter::startSoftkillTimeout( int timeout )
 {
 	if( s_softkill_tid >= 0 ) {
 			// Timer already started.
 		return TRUE;
 	}
 
-	int softkill_timeout = s_claim ? s_claim->rip()->evalMaxVacateTime() : 0;
-	if( softkill_timeout < 0 ) {
-		softkill_timeout = 0;
-	}
+	int softkill_timeout = timeout;
 
 	s_softkill_tid = 
 		daemonCore->Register_Timer( softkill_timeout,
@@ -1560,12 +1609,12 @@ Starter::softkillTimeout( void )
 	s_softkill_tid = -1;
 	if( active() ) {
 		dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
-		killHard();
+		killHard(s_is_vm_universe ? vm_killing_timeout : killing_timeout);
 	}
 }
 
 bool
-Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft)
+Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout)
 {
 	if( !s_is_dc ) {
 		return false;  // this starter does not support putting jobs on hold
@@ -1582,13 +1631,15 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 
 	msg->setCallback( m_hold_job_cb );
 
+	// store the timeout so that the holdJobCallback has access to it.
+	s_hold_timeout = timeout;
 	starter->sendMsg(msg.get());
 
 	if( soft ) {
-		startSoftkillTimeout();
+		startSoftkillTimeout(timeout);
 	}
 	else {
-		startKillTimer();
+		startKillTimer(timeout);
 	}
 
 	return true;
@@ -1603,6 +1654,6 @@ Starter::holdJobCallback(DCMsgCallback *cb)
 	ASSERT( cb->getMessage() );
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
 		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
-		killSoft();
+		killSoft(s_hold_timeout);
 	}
 }

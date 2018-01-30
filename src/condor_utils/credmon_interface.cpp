@@ -187,7 +187,7 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 
 	// now poll repeatedly for existence of watch file
 	int retries = 20;
-	while (retries > 0) {
+	while (retries-- > 0) {
 		if (credmon_poll_continue(user, retries)) {
 			dprintf(D_FULLDEBUG, "CREDMON: SUCCESS: file %s found after %i seconds\n", watchfilename, 20-retries);
 			return true;

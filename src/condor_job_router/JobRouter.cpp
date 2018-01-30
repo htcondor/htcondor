@@ -384,7 +384,10 @@ JobRouter::config() {
 		ParseRoutingEntries( routing_str, PARAM_JOB_ROUTER_ENTRIES, router_defaults_ad, allow_empty_requirements, new_routes );
 	}
 
-	if(!m_enable_job_routing) return;
+	if(!m_enable_job_routing) {
+		delete new_routes;
+		return;
+	}
 
 	SetRoutingTable(new_routes);
 

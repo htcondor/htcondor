@@ -26,21 +26,8 @@
 #include "MyString.h"
 #include "utilfns.h"
 
-/* The macro definition and file was added for debugging purposes */
-
-int putcount =0;
-int getcount = 0;
-
 // initialize static data members
 int Stream::timeout_multiplier = 0;
-
-#if 0
-static int shipcount =0;
-#define NETWORK_TRACE(s) { shipcount++; nwdump << s << "|"; \
-              if(shipcount % 4 == 0) nwdump  << endl; } 
-#endif
-#define NETWORK_TRACE(s) { }
-
 
 #include <math.h>
 #include <string.h>
@@ -58,14 +45,13 @@ static int shipcount =0;
 **	CODE ROUTINES
 */
 
-Stream :: Stream(stream_code c) : 
+Stream :: Stream() : 
 		// I love individual coding style!
 		// You put _ in the front, I put in the
 		// back, very consistent, isn't it?	
 	encrypt_(false),
     crypto_mode_(false),
 	m_crypto_state_before_secret(false),
-    _code(c), 
     _coding(stream_encode),
 	allow_empty_message_flag(FALSE),
 	decrypt_buf(NULL),
@@ -854,17 +840,7 @@ Stream::code(condor_mode_t &m)
 int 
 Stream::put( char	c)
 {
-  getcount =0;
-  NETWORK_TRACE("put char " << c << " c(" << ++putcount << ") ");
-
-	switch(_code){
-		case internal:
-		case external:
-		case ascii:
-			if (put_bytes(&c, 1) != 1) return FALSE;
-			break;
-	}
-
+	if (put_bytes(&c, 1) != 1) return FALSE;
 	return TRUE;
 }
 
@@ -873,17 +849,7 @@ Stream::put( char	c)
 int 
 Stream::put( unsigned char	c)
 {
-  getcount =0;
-  NETWORK_TRACE("put char " << c << " c(" << ++putcount << ") ");
-
-	switch(_code){
-		case internal:
-		case external:
-		case ascii:
-			if (put_bytes(&c, 1) != 1) return FALSE;
-			break;
-	}
-
+	if (put_bytes(&c, 1) != 1) return FALSE;
 	return TRUE;
 }
 
@@ -894,30 +860,13 @@ Stream::put( int		i)
 {
 	int		tmp;
 	char	pad;
-  getcount =0;
-  putcount +=4;
-  NETWORK_TRACE("put int " << i << " c(" << putcount << ") ");
-  //dprintf(D_ALWAYS, "put(int) required\n");
 
-	switch(_code){
-		case internal:
-			if (put_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
-			break;
-
-		case external: {
-			tmp = htonl(i);
-			pad = (i >= 0) ? 0 : 0xff; // sign extend value
-			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
-				if (put_bytes(&pad, 1) != 1) return FALSE;
-			}
-			if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
-			break;
-		}
-
-		case ascii:
-			return FALSE;
+	tmp = htonl(i);
+	pad = (i >= 0) ? 0 : 0xff; // sign extend value
+	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
+		if (put_bytes(&pad, 1) != 1) return FALSE;
 	}
-
+	if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
 	return TRUE;
 }
 
@@ -928,29 +877,13 @@ Stream::put( unsigned int		i)
 {
 	unsigned int		tmp;
 	char				pad;
-  getcount =0;
-  putcount +=4;
-  NETWORK_TRACE("put int " << i << " c(" << putcount << ") ");
 
-	switch(_code){
-		case internal:
-			if (put_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
-			break;
-
-		case external: {
-			tmp = htonl(i);
-			pad = 0;
-			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
-				if (put_bytes(&pad, 1) != 1) return FALSE;
-			}
-			if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
-			break;
-		}
-
-		case ascii:
-			return FALSE;
+	tmp = htonl(i);
+	pad = 0;
+	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
+		if (put_bytes(&pad, 1) != 1) return FALSE;
 	}
-
+	if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
 	return TRUE;
 }
 
@@ -990,71 +923,44 @@ int
 Stream::put( long	l)
 {
 	char	pad;
-  NETWORK_TRACE("put long " << l);
 
-	switch(_code){
-		case internal:
-			if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
-				return put((int)l);
-			} else {
-				if (!hton_is_noop()) { // need to convert to network order
-					l = htonL(l);
-				}
-				if (sizeof(long) < INT_SIZE) {
-					pad = (l >= 0) ? 0 : 0xff; // sign extend value
-					for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
-						if (put_bytes(&pad, 1) != 1) return FALSE;
-					}
-				}
-				if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
+	if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
+		return put((int)l);
+	} else {
+		if (!hton_is_noop()) { // need to convert to network order
+			l = htonL(l);
+		}
+		if (sizeof(long) < INT_SIZE) {
+			pad = (l >= 0) ? 0 : 0xff; // sign extend value
+			for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
+				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
-			break;
-
-		case ascii:
-			return FALSE;
+		}
+		if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
 	}
-
 	return TRUE;
 }
-
 
 
 int 
 Stream::put( unsigned long	l)
 {
 	char	pad;
-  NETWORK_TRACE("put long " << l);
 
-	switch(_code){
-		case internal:
-			if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
-				return put((unsigned int)l);
-			} else {
-				if (!hton_is_noop()) { // need to convert to network order
-					l = htonL(l);
-				}
-				if (sizeof(long) < INT_SIZE) {
-					pad = 0;
-					for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
-						if (put_bytes(&pad, 1) != 1) return FALSE;
-					}
-				}
-				if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
+	if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
+		return put((unsigned int)l);
+	} else {
+		if (!hton_is_noop()) { // need to convert to network order
+			l = htonL(l);
+		}
+		if (sizeof(long) < INT_SIZE) {
+			pad = 0;
+			for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
+				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
-			break;
-
-		case ascii:
-			return FALSE;
+		}
+		if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
 	}
-
 	return TRUE;
 }
 
@@ -1093,34 +999,21 @@ int
 Stream::put( int64_t	l)
 {
 	char	pad;
-  NETWORK_TRACE("put int64_t" << l);
 
-	switch(_code){
-		case internal:
-			if (put_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(int64_t)) || (sizeof(int64_t) > INT_SIZE)) {
-				return put((long)l);
-			} else {
-				if (!hton_is_noop()) { // need to convert to network order
-					l = htonLL(l);
-				}
-				if (sizeof(int64_t) < INT_SIZE) {
-					pad = (l >= 0) ? 0 : 0xff; // sign extend value
-					for (int s=0; s < INT_SIZE-(int)sizeof(int64_t); s++) {
-						if (put_bytes(&pad, 1) != 1) return FALSE;
-					}
-				}
-				if (put_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
+	if ((sizeof(int) == sizeof(int64_t)) || (sizeof(int64_t) > INT_SIZE)) {
+		return put((long)l);
+	} else {
+		if (!hton_is_noop()) { // need to convert to network order
+			l = htonLL(l);
+		}
+		if (sizeof(int64_t) < INT_SIZE) {
+			pad = (l >= 0) ? 0 : 0xff; // sign extend value
+			for (int s=0; s < INT_SIZE-(int)sizeof(int64_t); s++) {
+				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
-			break;
-
-		case ascii:
-			return FALSE;
+		}
+		if (put_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
 	}
-
 	return TRUE;
 }
 
@@ -1129,34 +1022,21 @@ int
 Stream::put( uint64_t	l)
 {
 	char	pad;
-  NETWORK_TRACE("put uint64_t" << l);
 
-	switch(_code){
-		case internal:
-			if (put_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(uint64_t)) || (sizeof(uint64_t) > INT_SIZE)) {
-				return put((unsigned long)l);
-			} else {
-				if (!hton_is_noop()) { // need to convert to network order
-					l = htonLL(l);
-				}
-				if (sizeof(uint64_t) < INT_SIZE) {
-					pad = 0;
-					for (int s=0; s < INT_SIZE-(int)sizeof(uint64_t); s++) {
-						if (put_bytes(&pad, 1) != 1) return FALSE;
-					}
-				}
-				if (put_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
+	if ((sizeof(int) == sizeof(uint64_t)) || (sizeof(uint64_t) > INT_SIZE)) {
+		return put((unsigned long)l);
+	} else {
+		if (!hton_is_noop()) { // need to convert to network order
+			l = htonLL(l);
+		}
+		if (sizeof(uint64_t) < INT_SIZE) {
+			pad = 0;
+			for (int s=0; s < INT_SIZE-(int)sizeof(uint64_t); s++) {
+				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
-			break;
-
-		case ascii:
-			return FALSE;
+		}
+		if (put_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
 	}
-
 	return TRUE;
 }
 #endif
@@ -1165,129 +1045,58 @@ Stream::put( uint64_t	l)
 int 
 Stream::put( short	s)
 {
-  NETWORK_TRACE("put short " << s);
 
-	switch(_code){
-		case internal:
-			if (put_bytes(&s, sizeof(short)) != sizeof(short)) return FALSE;
-			break;
-
-		case external:
-			return put((int)s);
-
-		case ascii:
-			return FALSE;
-	}
-
-	return TRUE;
+	return put((int)s);
 }
-
-
 
 int 
 Stream::put( unsigned short	s)
 {
-  NETWORK_TRACE("put short " << s);
 
-	switch(_code){
-		case internal:
-			if (put_bytes(&s, sizeof(short)) != sizeof(short)) return FALSE;
-			break;
-
-		case external:
-			return put((unsigned int)s);
-
-		case ascii:
-			return FALSE;
-	}
-
-	return TRUE;
+	return put((unsigned int)s);
 }
-
-
 
 int 
 Stream::put( float	f)
 {
-  NETWORK_TRACE("put float " << f);
 
-	switch(_code){
-		case internal:
-			if (put_bytes(&f, sizeof(float)) != sizeof(float)) return FALSE;
-			break;
-
-		case external:
-			return put((double)f);
-
-		case ascii:
-			return FALSE;
-	}
-
-	return TRUE;
+	return put((double)f);
 }
-
-
 
 int 
 Stream::put( double	d)
 {
-  NETWORK_TRACE("put double " << d);
 	int		frac, exp;
+	frac = (int) (frexp(d, &exp) * (double)FRAC_CONST);
+	if (!put(frac)) return FALSE;
+	return put(exp);
 
-
-	switch(_code){
-		case internal:
-			if (put_bytes(&d, sizeof(double)) != sizeof(double)) return FALSE;
-			break;
-
-		case external:
-			frac = (int) (frexp(d, &exp) * (double)FRAC_CONST);
-			if (!put(frac)) return FALSE;
-			return put(exp);
-
-		case ascii:
-			return FALSE;
-	}
-
-	return TRUE;
 }
-
-
 
 int 
 Stream::put( char const *s)
 {
 	int		len;
 
-  NETWORK_TRACE("put string " << s);
 
-	switch(_code){
-		case internal:
-		case external:
-			if (!s){
-                            if (get_encryption()) {
-                                len = 1;
-                                if (put(len) == FALSE) {
-                                    return FALSE;
-                                }
-                            }
-                            if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
+	if (!s){
+		if (get_encryption()) {
+			len = 1;
+			if (put(len) == FALSE) {
+				return FALSE;
 			}
-			else{
-                            len = strlen(s)+1;
-                            if (get_encryption()) {
-                                if (put(len) == FALSE) {
-                                    return FALSE;
-                                }
-                            }
-                            if (put_bytes(s, len) != len) return FALSE;
-			}
-			break;
-
-		case ascii:
-			return FALSE;
+		}
+		if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
 	}
-
+	else{
+		len = strlen(s)+1;
+		if (get_encryption()) {
+			if (put(len) == FALSE) {
+				return FALSE;
+			}
+		}
+		if (put_bytes(s, len) != len) return FALSE;
+	}
 	return TRUE;
 }
 
@@ -1334,89 +1143,52 @@ Stream::get_secret( char *&s )
 int 
 Stream::put( char const *s, int		l)
 {
-    NETWORK_TRACE("put string \"" << s << "\" and int " <<   l);
-
-	switch(_code){
-		case internal:
-		case external:
-			if (!s){
-                            if (get_encryption()) {
-                                int len = 1;
-                                if (put(len) == FALSE) {
-                                    return FALSE;
-                                }
-                            }
-
-                            if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
+	if (!s){
+		if (get_encryption()) {
+			int len = 1;
+			if (put(len) == FALSE) {
+				return FALSE;
 			}
-			else{
-                            if (get_encryption()) {
-                                if (put(l) == FALSE) {
-                                    return FALSE;
-                                }
-                            }
-                            if (put_bytes(s, l) != l) return FALSE;
-			}
-			break;
+		}
 
-		case ascii:
-			return FALSE;
+		if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
 	}
-
+	else{
+		if (get_encryption()) {
+			if (put(l) == FALSE) {
+				return FALSE;
+			}
+		}
+		if (put_bytes(s, l) != l) return FALSE;
+	}
 	return TRUE;
 }
-
-
-
 
 
 /*
 **	GET ROUTINES
 */
 
-
-
 int 
 Stream::get( char	&c)
 {
-   putcount =0;
-
-	switch(_code){
-		case internal:
-		case external:
-		case ascii:
-			if (get_bytes(&c, 1) != 1) {
-                dprintf(D_NETWORK, "Stream::get(char) failed\n");
-                return FALSE;
-            }
-			break;
+	if (get_bytes(&c, 1) != 1) {
+		dprintf(D_NETWORK, "Stream::get(char) failed\n");
+		return FALSE;
 	}
-   NETWORK_TRACE("get char " << c << " c(" << ++getcount << ") ");    
 	return TRUE;
 }
-
-
 
 int 
 Stream::get( unsigned char	&c)
 {
-   putcount =0;
-
-	switch(_code){
-		case internal:
-		case external:
-		case ascii:
-			if (get_bytes(&c, 1) != 1) {
-                dprintf(D_NETWORK, "Stream::get(uchar) failed\n");
-                return FALSE;
-            }
-			break;
+	if (get_bytes(&c, 1) != 1) {
+		dprintf(D_NETWORK, "Stream::get(uchar) failed\n");
+		return FALSE;
 	}
-   NETWORK_TRACE("get char " << c << " c(" << ++getcount << ") ");    
+
 	return TRUE;
 }
-
-
 
 int 
 Stream::get( int		&i)
@@ -1424,49 +1196,29 @@ Stream::get( int		&i)
 	int		tmp;
 	char	pad[INT_SIZE-sizeof(int)], sign;
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&i, sizeof(int)) != sizeof(int)) {
-                dprintf(D_NETWORK, "Stream::get(int) from internal failed\n");
-                return FALSE;
-            }
-			break;
-
-		case external: {
-			if (INT_SIZE > sizeof(int)) { // get overflow bytes
-				if (get_bytes(pad, INT_SIZE-sizeof(int))
-					!= INT_SIZE-sizeof(int)) {
-                    dprintf(D_NETWORK, "Stream::get(int) failed to read padding\n");
-					return FALSE;
-				}
-			}
-			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
-                dprintf(D_NETWORK, "Stream::get(int) failed to read int\n");
-                return FALSE;
-            }
-			i = ntohl(tmp);
-			sign = (i >= 0) ? 0 : 0xff;
-			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
-				if (pad[s] != sign) {
-                    dprintf(D_NETWORK,
-                            "Stream::get(int) incorrect pad received: %x\n",
-                            pad[s]);
-					return FALSE; // overflow
-				}
-			}
-			break;
-		}
-
-		case ascii:
+	if (INT_SIZE > sizeof(int)) { // get overflow bytes
+		if (get_bytes(pad, INT_SIZE-sizeof(int))
+			!= INT_SIZE-sizeof(int)) {
+			dprintf(D_NETWORK, "Stream::get(int) failed to read padding\n");
 			return FALSE;
+		}
 	}
-   putcount =0;
-   getcount += 4;
-   NETWORK_TRACE("get int " << i<< " c(" << getcount << ") ");
+	if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
+		dprintf(D_NETWORK, "Stream::get(int) failed to read int\n");
+		return FALSE;
+	}
+	i = ntohl(tmp);
+	sign = (i >= 0) ? 0 : 0xff;
+	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
+		if (pad[s] != sign) {
+			dprintf(D_NETWORK,
+					"Stream::get(int) incorrect pad received: %x\n",
+					pad[s]);
+			return FALSE; // overflow
+		}
+	}
 	return TRUE;
 }
-
-
 
 int 
 Stream::get( unsigned int	&i)
@@ -1474,48 +1226,29 @@ Stream::get( unsigned int	&i)
 	unsigned int	tmp;
 	char			pad[INT_SIZE-sizeof(int)];
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&i, sizeof(int)) != sizeof(int)) {
-                dprintf(D_NETWORK, "Stream::get(uint) from internal failed\n");
-                return FALSE;
-            }
-			break;
-
-		case external: {
-			if (INT_SIZE > sizeof(int)) { // get overflow bytes
-				if (get_bytes(pad, INT_SIZE-sizeof(int))
-					!= INT_SIZE-sizeof(int)) {
-                    dprintf(D_NETWORK, "Stream::get(uint) failed to read padding\n");
-					return FALSE;
-				}
-			}
-			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
-                dprintf(D_NETWORK, "Stream::get(uint) failed to read int\n");
-                return FALSE;
-            }
-			i = ntohl(tmp);
-			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
-				if (pad[s] != 0) {
-                    dprintf(D_NETWORK,
-                            "Stream::get(uint) incorrect pad received: %x\n",
-                            pad[s]);
-					return FALSE; // overflow
-				}
-			}
-			break;
-		}
-
-		case ascii:
+	if (INT_SIZE > sizeof(int)) { // get overflow bytes
+		if (get_bytes(pad, INT_SIZE-sizeof(int))
+			!= INT_SIZE-sizeof(int)) {
+			dprintf(D_NETWORK, "Stream::get(uint) failed to read padding\n");
 			return FALSE;
+		}
 	}
-   putcount =0;
-   getcount += 4;
-   NETWORK_TRACE("get int " << i<< " c(" << getcount << ") ");
+	if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
+		dprintf(D_NETWORK, "Stream::get(uint) failed to read int\n");
+		return FALSE;
+	}
+	i = ntohl(tmp);
+	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
+		if (pad[s] != 0) {
+			dprintf(D_NETWORK,
+					"Stream::get(uint) incorrect pad received: %x\n",
+					pad[s]);
+			return FALSE; // overflow
+		}
+	}
+
 	return TRUE;
 }
-
-
 
 int 
 Stream::get( long	&l)
@@ -1523,43 +1256,29 @@ Stream::get( long	&l)
 	int		i;
 	char	pad[INT_SIZE-sizeof(long)], sign;
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
-				if (!get(i)) return FALSE;
-				l = (long) i;
-			} else {
-				if (sizeof(long) < INT_SIZE) {
-					if (get_bytes(pad, INT_SIZE-sizeof(long))
-						!= INT_SIZE-sizeof(long)) {
-						return FALSE;
-					}
-				}
-				if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-				if (!hton_is_noop()) { // need to convert to host order
-					l = ntohL(l);
-				}
-				sign = (l >= 0) ? 0 : 0xff;
-				for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
-					if (pad[s] != sign) {
-						return FALSE; // overflow
-					}
-				}
+	if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
+		if (!get(i)) return FALSE;
+		l = (long) i;
+	} else {
+		if (sizeof(long) < INT_SIZE) {
+			if (get_bytes(pad, INT_SIZE-sizeof(long))
+				!= INT_SIZE-sizeof(long)) {
+				return FALSE;
 			}
-			break;
-
-		case ascii:
-			return FALSE;
+		}
+		if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
+		if (!hton_is_noop()) { // need to convert to host order
+			l = ntohL(l);
+		}
+		sign = (l >= 0) ? 0 : 0xff;
+		for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
+			if (pad[s] != sign) {
+				return FALSE; // overflow
+			}
+		}
 	}
-    NETWORK_TRACE("get long " << l);
 	return TRUE;
 }
-
-
 
 int 
 Stream::get( unsigned long	&l)
@@ -1567,38 +1286,26 @@ Stream::get( unsigned long	&l)
 	unsigned int		i;
 	char	pad[INT_SIZE-sizeof(long)];
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
-				if (!get(i)) return FALSE;
-				l = (unsigned long) i;
-			} else {
-				if (sizeof(long) < INT_SIZE) {
-					if (get_bytes(pad, INT_SIZE-sizeof(long))
-						!= INT_SIZE-sizeof(long)) {
-						return FALSE;
-					}
-				}
-				if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-				if (!hton_is_noop()) { // need to convert to host order
-					l = ntohL(l);
-				}
-				for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
-					if (pad[s] != 0) {
-						return FALSE; // overflow
-					}
-				}
+	if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
+		if (!get(i)) return FALSE;
+		l = (unsigned long) i;
+	} else {
+		if (sizeof(long) < INT_SIZE) {
+			if (get_bytes(pad, INT_SIZE-sizeof(long))
+				!= INT_SIZE-sizeof(long)) {
+				return FALSE;
 			}
-			break;
-
-		case ascii:
-			return FALSE;
+		}
+		if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
+		if (!hton_is_noop()) { // need to convert to host order
+			l = ntohL(l);
+		}
+		for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
+			if (pad[s] != 0) {
+				return FALSE; // overflow
+			}
+		}
 	}
-    NETWORK_TRACE("get long " << l);
 	return TRUE;
 }
 
@@ -1609,200 +1316,123 @@ Stream::get( int64_t	&l)
 {
 	int		i;
 	char	sign;
-	// On Windows, INT_SIZE == sizeof(int64_t).
-	// MSVC won't allocate an array of size 0, so just skip it.
-	#ifndef WIN32
+		// On Windows, INT_SIZE == sizeof(int64_t).
+		// MSVC won't allocate an array of size 0, so just skip it.
+#ifndef WIN32
 	char pad[INT_SIZE-sizeof(int64_t)];
-	#endif
+#endif
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(int64_t)) || (sizeof(int64_t) > INT_SIZE)) {
-				if (!get(i)) return FALSE;
-				l = (long) i;
-			} else {
-				#ifndef WIN32
-				if (sizeof(int64_t) < INT_SIZE) {
-					if (get_bytes(pad, INT_SIZE-sizeof(int64_t))
-						!= INT_SIZE-sizeof(int64_t)) {
-						return FALSE;
-					}
-				}
-				#endif
-				if (get_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
-				if (!hton_is_noop()) { // need to convert to host order
-					l = ntohLL(l);
-				}
-				sign = (l >= 0) ? 0 : 0xff;
-				#ifndef WIN32
-				for (int s=0; s < INT_SIZE-(int)sizeof(int64_t); s++) { // overflow?
-					if (pad[s] != sign) {
-						return FALSE; // overflow
-					}
-				}
-				#endif
+	if ((sizeof(int) == sizeof(int64_t)) || (sizeof(int64_t) > INT_SIZE)) {
+		if (!get(i)) return FALSE;
+		l = (long) i;
+	} else {
+#ifndef WIN32
+		if (sizeof(int64_t) < INT_SIZE) {
+			if (get_bytes(pad, INT_SIZE-sizeof(int64_t))
+				!= INT_SIZE-sizeof(int64_t)) {
+				return FALSE;
 			}
-			break;
-
-		case ascii:
-			return FALSE;
+		}
+#endif
+		if (get_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
+		if (!hton_is_noop()) { // need to convert to host order
+			l = ntohLL(l);
+		}
+		sign = (l >= 0) ? 0 : 0xff;
+#ifndef WIN32
+		for (int s=0; s < INT_SIZE-(int)sizeof(int64_t); s++) { // overflow?
+			if (pad[s] != sign) {
+				return FALSE; // overflow
+			}
+		}
+#endif
 	}
-    NETWORK_TRACE("get int64_t " << l);
 	return TRUE;
 }
-
 
 int 
 Stream::get( uint64_t	&l)
 {
 	unsigned int		i;
-	// On Windows, INT_SIZE == sizeof(uint64_t).
-	// MSVC won't allow us to allocate an array of size 0,
-	// so skip it.
-	#ifndef WIN32
+		// On Windows, INT_SIZE == sizeof(uint64_t).
+		// MSVC won't allow us to allocate an array of size 0,
+		// so skip it.
+#ifndef WIN32
 	char	pad[INT_SIZE-sizeof(uint64_t)];
-	#endif
+#endif
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
-			break;
-
-		case external:
-			if ((sizeof(int) == sizeof(uint64_t)) || (sizeof(uint64_t) > INT_SIZE)) {
-				if (!get(i)) return FALSE;
-				l = (uint64_t) i;
-			} else {
-				#ifndef WIN32
-				if (sizeof(uint64_t) < INT_SIZE) {
-					if (get_bytes(pad, INT_SIZE-sizeof(uint64_t))
-						!= INT_SIZE-sizeof(uint64_t)) {
-						return FALSE;
-					}
-				}
-				#endif
-				if (get_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
-				if (!hton_is_noop()) { // need to convert to host order
-					l = ntohLL(l);
-				}
-				#ifndef WIN32
-				for (int s=0; s < INT_SIZE-(int)sizeof(uint64_t); s++) { // overflow?
-					if (pad[s] != 0) {
-						return FALSE; // overflow
-					}
-				}
-				#endif
+	if ((sizeof(int) == sizeof(uint64_t)) || (sizeof(uint64_t) > INT_SIZE)) {
+		if (!get(i)) return FALSE;
+		l = (uint64_t) i;
+	} else {
+#ifndef WIN32
+		if (sizeof(uint64_t) < INT_SIZE) {
+			if (get_bytes(pad, INT_SIZE-sizeof(uint64_t))
+				!= INT_SIZE-sizeof(uint64_t)) {
+				return FALSE;
 			}
-			break;
-
-		case ascii:
-			return FALSE;
+		}
+#endif
+		if (get_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
+		if (!hton_is_noop()) { // need to convert to host order
+			l = ntohLL(l);
+		}
+#ifndef WIN32
+		for (int s=0; s < INT_SIZE-(int)sizeof(uint64_t); s++) { // overflow?
+			if (pad[s] != 0) {
+				return FALSE; // overflow
+			}
+		}
+#endif
 	}
-    NETWORK_TRACE("get uint64_t " << l);
 	return TRUE;
 }
 #endif
-
 
 int 
 Stream::get( short	&s)
 {
 	int		i;
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&s, sizeof(short)) != sizeof(short)) return FALSE;
-			break;
+	if (!get(i)) return FALSE;
+	s = (short) i;
 
-		case external:
-			if (!get(i)) return FALSE;
-			s = (short) i;
-			break;
-
-		case ascii:
-			return FALSE;
-	}
-        NETWORK_TRACE("get short " << s);
 	return TRUE;
 }
-
-
 
 int 
 Stream::get( unsigned short	&s)
 {
 	unsigned int		i;
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&s, sizeof(short)) != sizeof(short)) return FALSE;
-			break;
+	if (!get(i)) return FALSE;
+	s = (unsigned short) i;
 
-		case external:
-			if (!get(i)) return FALSE;
-			s = (unsigned short) i;
-			break;
-
-		case ascii:
-			return FALSE;
-	}
-        NETWORK_TRACE("get short " << s);
 	return TRUE;
 }
-
-
 
 int 
 Stream::get( float	&f)
 {
 	double	d;
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&f, sizeof(float)) != sizeof(float)) return FALSE;
-			break;
+	if (!get(d)) return FALSE;
+	f = (float) d;
 
-		case external:
-			if (!get(d)) return FALSE;
-			f = (float) d;
-			break;
-
-		case ascii:
-			return FALSE;
-	}
-        NETWORK_TRACE("get float " << f);
 	return TRUE;
 }
-
-
 
 int 
 Stream::get( double	&d)
 {
 	int		frac, exp;
 
-	switch(_code){
-		case internal:
-			if (get_bytes(&d, sizeof(double)) != sizeof(double)) return FALSE;
-			break;
+	if (!get(frac)) return FALSE;
+	if (!get(exp)) return FALSE;
+	d = ldexp((((double)frac)/((double)FRAC_CONST)), exp);
 
-		case external:
-			if (!get(frac)) return FALSE;
-			if (!get(exp)) return FALSE;
-			d = ldexp((((double)frac)/((double)FRAC_CONST)), exp);
-			break;
-
-		case ascii:
-			return FALSE;
-	}
-        NETWORK_TRACE("get double " << d);
 	return TRUE;
 }
-
 
 
 /* Get the next string on the stream.  This function sets s to a
@@ -1879,55 +1509,41 @@ Stream::get_string_ptr( char const *&s ) {
     int     len;
 
 	s = NULL;
-	switch(_code){
-		case internal:
-		case external:
-                    // For 6.2 compatibility, we had to put this code back 
-                    if (!get_encryption()) {
-                        if (!peek(c)) return FALSE;
-                        if (c == '\255'){
-                            if (get_bytes(&c, 1) != 1) return FALSE;
-							s = NULL;
-                        }
-                        else{
-                            if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
-							s = (char *)tmp_ptr;
-                        }
-                    }
-                    else { // 6.3 with encryption support
-                        // First, get length
-                        if (get(len) == FALSE) {
-                            return FALSE;
-                        }
-
-						if( !decrypt_buf || decrypt_buf_len < len ) {
-							free( decrypt_buf );
-							decrypt_buf = (char *)malloc(len);
-							ASSERT( decrypt_buf );
-							decrypt_buf_len = len;
-						}
-
-                        if( get_bytes(decrypt_buf, len) != len ) {
-                            return FALSE;
-                        }
-
-                        if( *decrypt_buf == '\255' ) {
-							s = NULL;
-                        }
-                        else {
-							s = decrypt_buf;
-                        }
-                    }
-                    break;
-
-		case ascii:
+		// For 6.2 compatibility, we had to put this code back 
+	if (!get_encryption()) {
+		if (!peek(c)) return FALSE;
+		if (c == '\255'){
+			if (get_bytes(&c, 1) != 1) return FALSE;
+			s = NULL;
+		}
+		else{
+			if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
+			s = (char *)tmp_ptr;
+		}
+	}
+	else { // 6.3 with encryption support
+			// First, get length
+		if (get(len) == FALSE) {
 			return FALSE;
-	}
-	if( s ) {
-		NETWORK_TRACE("get string ptr " << s);
-	}
-	else {
-		NETWORK_TRACE("get string ptr NULL");
+		}
+
+		if( !decrypt_buf || decrypt_buf_len < len ) {
+			free( decrypt_buf );
+			decrypt_buf = (char *)malloc(len);
+			ASSERT( decrypt_buf );
+			decrypt_buf_len = len;
+		}
+
+		if( get_bytes(decrypt_buf, len) != len ) {
+			return FALSE;
+		}
+
+		if( *decrypt_buf == '\255' ) {
+			s = NULL;
+		}
+		else {
+			s = decrypt_buf;
+		}
 	}
 	return TRUE;
 }
@@ -1953,59 +1569,45 @@ Stream::get_string_ptr( char const *&s, int &length ) {
     int     len;
 
 	s = NULL;
-	switch(_code){
-		case internal:
-		case external:
-			// For 6.2 compatibility, we had to put this code back
-			if (!get_encryption()) {
-				if (!peek(c)) return FALSE;
-				if (c == '\255'){
-					if (get_bytes(&c, 1) != 1) return FALSE;
-					s = NULL;
-					length = 0;
-				}
-				else{
-					length = get_ptr(tmp_ptr, '\0');
-					if (length <= 0) return FALSE;
-					s = (char *)tmp_ptr;
-				}
-			}
-			else { // 6.3 with encryption support
-				// First, get length
-				if (get(len) == FALSE) {
-					return FALSE;
-				}
-
-				if( !decrypt_buf || decrypt_buf_len < len ) {
-					free( decrypt_buf );
-					decrypt_buf = (char *)malloc(len);
-					ASSERT( decrypt_buf );
-					decrypt_buf_len = len;
-				}
-
-				if( get_bytes(decrypt_buf, len) != len ) {
-					return FALSE;
-				}
-
-				if( *decrypt_buf == '\255' ) {
-					s = NULL;
-					length = 0;
-				}
-				else {
-					s = decrypt_buf;
-					length = len;
-				}
-			}
-			break;
-
-		case ascii:
+		// For 6.2 compatibility, we had to put this code back
+	if (!get_encryption()) {
+		if (!peek(c)) return FALSE;
+		if (c == '\255'){
+			if (get_bytes(&c, 1) != 1) return FALSE;
+			s = NULL;
+			length = 0;
+		}
+		else{
+			length = get_ptr(tmp_ptr, '\0');
+			if (length <= 0) return FALSE;
+			s = (char *)tmp_ptr;
+		}
+	}
+	else { // 6.3 with encryption support
+			// First, get length
+		if (get(len) == FALSE) {
 			return FALSE;
-	}
-	if( s ) {
-		NETWORK_TRACE("get string ptr " << s);
-	}
-	else {
-		NETWORK_TRACE("get string ptr NULL");
+		}
+
+		if( !decrypt_buf || decrypt_buf_len < len ) {
+			free( decrypt_buf );
+			decrypt_buf = (char *)malloc(len);
+			ASSERT( decrypt_buf );
+			decrypt_buf_len = len;
+		}
+
+		if( get_bytes(decrypt_buf, len) != len ) {
+			return FALSE;
+		}
+
+		if( *decrypt_buf == '\255' ) {
+			s = NULL;
+			length = 0;
+		}
+		else {
+			s = decrypt_buf;
+			length = len;
+		}
 	}
 	return TRUE;
 }

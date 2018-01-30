@@ -1981,11 +1981,6 @@ default=0
 type=int
 tags=startd,startd_main
 
-[STARTD_COMPUTE_AVAIL_STATS]
-default=false
-type=bool
-tags=startd,startd_main
-
 [STARTD_NAME]
 default=
 type=string
@@ -2005,11 +2000,6 @@ tags=startd,startd_main
 default=
 type=string
 tags=startd,startd_main
-
-[STARTD_MAX_AVAIL_PERIOD_SAMPLES]
-default=100
-type=int
-tags=startd,AvailStats
 
 [STARTD_SHOULD_WRITE_CLAIM_ID_FILE]
 default=true
@@ -5633,6 +5623,7 @@ default : @end
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
 	RunBenchmarks=0
+	JAVA_BENCHMARK_TIME=0
 @end
 
 [$ROLE.Execute]

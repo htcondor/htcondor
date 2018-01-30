@@ -1001,9 +1001,16 @@ Using both will be detected and generate an error.
 % status file, jobstate.log file, halt file, etc.)
 
 After submission, the progress of the DAG can be monitored
-by looking at the job event log file(s),
+by looking at the job event log file(s) or
 observing the e-mail that job submission to HTCondor causes,
 or by using \Condor{q} \Arg{-dag}.
+
+Detailed information about a DAG's job progress can be obtained using \Condor{q} 
+\Arg{-l} \Arg{<jobID>}. This information is not updated frequently, however, so
+expect to see stale data. You can increase the frequency of updates by setting
+the \MacroNI{DAGMAN\_QUEUE\_UPDATE\_INTERVAL} configuration macro to a lower 
+number, ie. 5 or 10 seconds. Doing so will increase the workload on the
+\Condor{schedd}, so be cautious about setting it too low.
 
 There is also a large amount of information logged in an extra file.
 The name of this extra file is produced by appending

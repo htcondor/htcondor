@@ -328,20 +328,6 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 
 	update_tid = -1;
 
-		// Set ckpt filename for avail stats here, since this object
-		// knows the resource id, and we need to use a different ckpt
-		// file for each resource.
-	if( compute_avail_stats ) {
-		char *log = param("LOG");
-		if (log) {
-			MyString avail_stats_ckpt_file(log);
-			free(log);
-			tmp.formatstr( "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
-			avail_stats_ckpt_file += tmp;
-			r_avail_stats.checkpoint_filename(avail_stats_ckpt_file);
-		}
-	}
-
 	r_cpu_busy = 0;
 	r_cpu_busy_start_time = 0;
 	r_last_compute_condor_load = resmgr->now();
@@ -1069,7 +1055,7 @@ Resource::leave_preempting_state( void )
 {
 	int tmp;
 
-	r_cur->vacate();	// Send a vacate to the client of the claim
+	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim
 	delete r_cur;
 	r_cur = NULL;
 
@@ -2308,9 +2294,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		r_pre->publishPreemptingClaim( cap, mask );
 	}
 
-		// Put in availability statistics
-	r_avail_stats.publish( cap, mask );
-
 	r_cod_mgr->publish( cap, mask );
 
 	// Publish the supplemental Class Ads
@@ -2566,10 +2549,6 @@ Resource::compute( amask_t mask )
 		// Actually, we'll have the Reqexp object compute too, so that
 		// we get static stuff recomputed on reconfig, etc.
 	r_reqexp->compute( mask );
-
-		// Compute availability statistics
-	r_avail_stats.compute( mask );
-
 }
 
 
@@ -2598,8 +2577,10 @@ Resource::dprintf( int flags, const char* fmt, ... ) const
 }
 
 
+// Update the Cpus and Memory usage values of the starter on the active claim
+// and compute the condor load average from those numbers.
 float
-Resource::compute_condor_load( void )
+Resource::compute_condor_usage( void )
 {
 	float cpu_usage, avg, max, load;
 	int numcpus = resmgr->num_real_cpus();
@@ -2613,12 +2594,21 @@ Resource::compute_condor_load( void )
 		num_since_last = polling_interval;
 	}
 
+	// this will have the cpus usage value that we use for calculating the load average
+	cpu_usage = 0.0;
+
+	if (r_cur) {
+		// update the Cpus and Memory usage numbers of the active claim.
+		// the claim will cache the values returned here and we can fetch them again later.
+		double pctCpu = 0.0;
+		long long imageSize = 0;
+		r_cur->updateUsage(pctCpu, imageSize);
+
 		// we only consider the opportunistic Condor claim for
 		// CondorLoadAvg, not any of the COD claims...
-	if( r_cur && r_cur->isActive() ) {
-		cpu_usage = r_cur->percentCpuUsage();
-	} else {
-		cpu_usage = 0.0;
+		if (r_cur->isActive()) {
+			cpu_usage = (float)pctCpu;
+		}
 	}
 
 	if( IsDebugVerbose( D_LOAD ) ) {
@@ -2843,7 +2833,7 @@ Resource::willingToRun(ClassAd* request_ad)
 			// Since we have a request ad, we can also check its requirements.
 		Starter* tmp_starter;
 		bool no_starter = false;
-		tmp_starter = resmgr->starter_mgr.findStarter(request_ad, r_classad, no_starter );
+		tmp_starter = resmgr->starter_mgr.newStarter(request_ad, r_classad, no_starter );
 		if (!tmp_starter) {
 			req_requirements = 0;
 		}
@@ -2920,7 +2910,7 @@ Resource::createOrUpdateFetchClaim(ClassAd* job_ad, float rank)
 			// We're currently claimed with a fetch claim, and we just
 			// fetched another job. Instead of generating a new Claim,
 			// we just need to update r_cur with the new job ad.
-		r_cur->setad(job_ad);
+		r_cur->setjobad(job_ad);
 		r_cur->setrank(rank);
 	}
 	else {
@@ -2936,7 +2926,7 @@ void
 Resource::createFetchClaim(ClassAd* job_ad, float rank)
 {
 	Claim* new_claim = new Claim(this, CLAIM_FETCH);
-	new_claim->setad(job_ad);
+	new_claim->setjobad(job_ad);
 	new_claim->setrank(rank);
 
 	if (state() == claimed_state) {
@@ -2953,25 +2943,23 @@ Resource::createFetchClaim(ClassAd* job_ad, float rank)
 bool
 Resource::spawnFetchedWork(void)
 {
-        // First, we have to find a Starter that will work.
-    Starter* tmp_starter;
+		// First, we have to find a Starter that will work.
+	Starter* tmp_starter;
 	bool no_starter = false;
-    tmp_starter = resmgr->starter_mgr.findStarter(r_cur->ad(), r_classad, no_starter);
+	tmp_starter = resmgr->starter_mgr.newStarter(r_cur->ad(), r_classad, no_starter);
 	if( ! tmp_starter ) {
 		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Could not find a starter that can run fetched work request, aborting.\n");
 		change_state(owner_state);
 		return false;
 	}
 
-		// Update the claim object with info from this job ClassAd now
-		// that we're actually activating it. By not passing any
-		// argument here, we tell saveJobInfo() to keep the copy of
-		// the ClassAd it already has instead of clobbering it.
-	r_cur->saveJobInfo();
+		// Update the claim object with info from the job classad stored in the Claim object
+		// Then spawn the given starter.
+		// If the starter was spawned, we no longer own the tmp_starter object
+	ASSERT(r_cur->ad() != NULL);
+	if ( ! r_cur->spawnStarter(tmp_starter, NULL)) {
+		delete tmp_starter; tmp_starter = NULL;
 
-	r_cur->setStarter(tmp_starter);
-
-	if (!r_cur->spawnStarter()) {
 		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
 		change_state(owner_state);
 			// spawnStarter() deletes the Claim's starter object on

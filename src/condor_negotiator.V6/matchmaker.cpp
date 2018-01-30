@@ -459,6 +459,7 @@ Matchmaker ()
 											 ResourcesInUseByUsersGroup_classad_func );
 	slotWeightStr = 0;
 	m_staticRanks = false;
+	m_dryrun = false;
 }
 
 Matchmaker::
