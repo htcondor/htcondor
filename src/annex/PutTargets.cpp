@@ -54,7 +54,7 @@ PutTargets::operator() () {
 		formatstr( value, "%d", tryCount );
 		commandState->BeginTransaction();
 		{
-			commandState->SetAttribute( commandID.c_str(), "State_TryCount", value.c_str() );
+			commandState->SetAttribute( commandID, "State_TryCount", value.c_str() );
 		}
 		commandState->CommitTransaction();
 
@@ -77,7 +77,7 @@ PutTargets::operator() () {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 		commandState->BeginTransaction();
 		{
-			commandState->DeleteAttribute( commandID.c_str(), "State_TryCount" );
+			commandState->DeleteAttribute( commandID, "State_TryCount" );
 		}
 		commandState->CommitTransaction();
 		rc = PASS_STREAM;

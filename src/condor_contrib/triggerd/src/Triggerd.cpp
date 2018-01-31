@@ -263,7 +263,7 @@ Triggerd::init()
          {
             dprintf(D_ALWAYS, "Triggerd Error: '%s'.  Removing trigger\n", error_text.c_str());
             int_str << key_value;
-            triggerCollection->DestroyClassAd(int_str.str().c_str());
+            triggerCollection->DestroyClassAd(int_str.str());
          }
       }
    }
@@ -495,7 +495,7 @@ Triggerd::AddTrigger(uint32_t key, ClassAd* ad, std::string& text)
    {
       int_str << key;
       triggerCollection->BeginTransaction();
-      triggerCollection->NewClassAd(int_str.str().c_str(), ad);
+      triggerCollection->NewClassAd(int_str.str(), ad);
       triggerCollection->CommitTransaction();
    }
    dprintf(D_FULLDEBUG, "Triggerd::AddTrigger exited with return value %d\n", ret_val);
@@ -603,7 +603,7 @@ Triggerd::DelTrigger(uint32_t triggerId, std::string& text)
    {
       int_str << triggerId;
       triggerCollection->BeginTransaction();
-      if (false == triggerCollection->DestroyClassAd(int_str.str().c_str()))
+      if (false == triggerCollection->DestroyClassAd(int_str.str()))
       {
          dprintf(D_FULLDEBUG, "Error: Failed to remove trigger from internal memory\n");
          ret_val = STATUS_USER + 4;
@@ -645,7 +645,7 @@ Triggerd::SetTriggerName(uint32_t key, std::string name, std::string& text)
       text += key;
       ret_val = STATUS_USER + 4;
    }
-   else if (false == triggerCollection->SetAttribute(int_str.str().c_str(), ATTR_TRIGGER_NAME, name.c_str()))
+   else if (false == triggerCollection->SetAttribute(int_str.str(), ATTR_TRIGGER_NAME, name.c_str()))
    {
       text = "Failed to set trigger name for id ";
       text += key;
@@ -683,7 +683,7 @@ Triggerd::SetTriggerQuery(uint32_t key, std::string query, std::string& text)
       text += key;
       ret_val = STATUS_USER + 4;
    }
-   else if (false == triggerCollection->SetAttribute(int_str.str().c_str(), ATTR_TRIGGER_QUERY, query.c_str()))
+   else if (false == triggerCollection->SetAttribute(int_str.str(), ATTR_TRIGGER_QUERY, query.c_str()))
    {
       text = "Failed to set trigger query for id ";
       text += key;
@@ -721,7 +721,7 @@ Triggerd::SetTriggerText(uint32_t key, std::string val, std::string& text)
       text += key;
       ret_val = STATUS_USER + 4;
    }
-   else if (false == triggerCollection->SetAttribute(int_str.str().c_str(), ATTR_TRIGGER_TEXT, val.c_str()))
+   else if (false == triggerCollection->SetAttribute(int_str.str(), ATTR_TRIGGER_TEXT, val.c_str()))
    {
       text = "Failed to set trigger text for id ";
       text += key;

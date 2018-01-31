@@ -129,7 +129,13 @@ void JOB_ID_KEY::sprint(MyString &s) const
 JOB_ID_KEY::operator std::string() const
 {
 	std::string s;
-	formatstr(s, "%d.%d", this->cluster, this->proc);
+	if ( proc == -1 ) {
+		// cluster ad key
+		formatstr(s, "0%d.-1", this->cluster);
+	} else {
+		// proc ad key
+		formatstr(s, "%d.%d", this->cluster, this->proc);
+	}
 	return s;
 }
 

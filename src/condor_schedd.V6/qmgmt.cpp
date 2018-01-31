@@ -70,12 +70,12 @@
 
 // Do filtered iteration in a way that is specific to the job queue
 //
-template <typename K, typename AltK, typename AD>
-typename ClassAdLog<K,AltK,AD>::filter_iterator
-ClassAdLog<K,AltK,AD>::filter_iterator::operator++(int)
+template <typename K, typename AD>
+typename ClassAdLog<K,AD>::filter_iterator
+ClassAdLog<K,AD>::filter_iterator::operator++(int)
 {
 	m_found_ad = false;
-	typename ClassAdLog<K,AltK,AD>::filter_iterator cur = *this;
+	typename ClassAdLog<K,AD>::filter_iterator cur = *this;
 	if (m_done) {
 		return cur;
 	}
@@ -140,8 +140,8 @@ ClassAdLog<K,AltK,AD>::filter_iterator::operator++(int)
 }
 
 // force instantiation of the template types needed by the JobQueue
-typedef GenericClassAdCollection<JobQueueKey, const char*,JobQueuePayload> JobQueueType;
-template class ClassAdLog<JobQueueKey,const char*,JobQueuePayload>;
+typedef GenericClassAdCollection<JobQueueKey, JobQueuePayload> JobQueueType;
+template class ClassAdLog<JobQueueKey,JobQueuePayload>;
 
 extern char *Spool;
 extern char *Name;
@@ -1452,7 +1452,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	if (!JobQueue->Lookup(HeaderKey, ad)) {
 		// we failed to find header ad, so create one
-		JobQueue->NewClassAd(HeaderKey.c_str(), JOB_ADTYPE, STARTD_ADTYPE);
+		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE, STARTD_ADTYPE);
 		CreatedAd = true;
 	}
 
@@ -1519,7 +1519,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				dprintf(D_ALWAYS,
 						"Job %s has no %s attribute.  Removing....\n",
 						job_id.c_str(), ATTR_OWNER);
-				JobQueue->DestroyClassAd(job_id.c_str());
+				JobQueue->DestroyClassAd(job_id);
 				continue;
 			}
 
@@ -1533,7 +1533,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				dprintf(D_ALWAYS,
 						"Job %s has no %s attribute.  Removing....\n",
 						job_id.c_str(), ATTR_CLUSTER_ID);
-				JobQueue->DestroyClassAd(job_id.c_str());
+				JobQueue->DestroyClassAd(job_id);
 				continue;
 			}
 
@@ -1541,7 +1541,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				dprintf(D_ALWAYS,
 						"Job %s has invalid cluster number %d.  Removing...\n",
 						job_id.c_str(), cluster);
-				JobQueue->DestroyClassAd(job_id.c_str());
+				JobQueue->DestroyClassAd(job_id);
 				continue;
 			}
 
@@ -1549,7 +1549,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				dprintf(D_ALWAYS,
 						"Job %s has no %s attribute.  Removing....\n",
 						job_id.c_str(), ATTR_PROC_ID);
-				JobQueue->DestroyClassAd(job_id.c_str());
+				JobQueue->DestroyClassAd(job_id);
 				continue;
 			}
 
@@ -1557,7 +1557,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				dprintf( D_ALWAYS,
 						 "Job %s has no %s attribute.  Removing....\n",
 						 job_id.c_str(), ATTR_JOB_UNIVERSE );
-				JobQueue->DestroyClassAd( job_id.c_str() );
+				JobQueue->DestroyClassAd( job_id );
 				continue;
 			}
 
@@ -1566,7 +1566,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				dprintf( D_ALWAYS,
 						 "Job %s has invalid %s = %d.  Removing....\n",
 						 job_id.c_str(), ATTR_JOB_UNIVERSE, universe );
-				JobQueue->DestroyClassAd( job_id.c_str() );
+				JobQueue->DestroyClassAd( job_id );
 				continue;
 			}
 
@@ -1750,7 +1750,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	if ( stored_cluster_num == 0 ) {
 		char tmp[PROC_ID_STR_BUFLEN];
 		snprintf(tmp, sizeof(tmp), "%d", next_cluster_num);
-		JobQueue->SetAttribute(HeaderKey.c_str(), ATTR_NEXT_CLUSTER_NUM, tmp);
+		JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, tmp);
 	} else {
         // This sanity check is not applicable if a maximum cluster value was set,  
         // since in that case wrapped cluster-ids are a valid condition.
@@ -2618,12 +2618,12 @@ NewCluster()
 
 	char cluster_str[PROC_ID_STR_BUFLEN];
 	snprintf(cluster_str, sizeof(cluster_str), "%d", next_cluster_num);
-	JobQueue->SetAttribute(HeaderKey.c_str(), ATTR_NEXT_CLUSTER_NUM, cluster_str);
+	JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 
 	// put a new classad in the transaction log to serve as the cluster ad
 	JobQueueKeyBuf cluster_key;
 	IdToKey(active_cluster_num,-1,cluster_key);
-	JobQueue->NewClassAd(cluster_key.c_str(), JOB_ADTYPE, STARTD_ADTYPE);
+	JobQueue->NewClassAd(cluster_key, JOB_ADTYPE, STARTD_ADTYPE);
 
 	return active_cluster_num;
 }
@@ -2723,7 +2723,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
-	JobQueue->NewClassAd(key.c_str(), JOB_ADTYPE, STARTD_ADTYPE);
+	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
 
 	job_queued_count += 1;
 
@@ -2744,7 +2744,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 		gjid += IntToStr( now );
 	}
 	gjid += "\"";
-	JobQueue->SetAttribute(key.c_str(), ATTR_GLOBAL_JOB_ID, gjid.Value());
+	JobQueue->SetAttribute(key, ATTR_GLOBAL_JOB_ID, gjid.Value());
 
 	return proc_id;
 }
@@ -2959,7 +2959,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	int leave_job_in_q = 0;
 	{
 		ClassAd completeAd(*ad);
-		JobQueue->AddAttrsFromTransaction(key.c_str(),completeAd);
+		JobQueue->AddAttrsFromTransaction(key,completeAd);
 		completeAd.EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
 		if ( leave_job_in_q ) {
 			return DESTROYPROC_SUCCESS_DELAY;
@@ -3402,7 +3402,7 @@ SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int at
 	// lookup job and set attribute
 	JOB_ID_KEY_BUF key;
 	IdToKey(cluster_id,proc_id,key);
-	JobQueue->SetAttribute(key.c_str(), attr_name, buf, flags & SETDIRTY);
+	JobQueue->SetAttribute(key, attr_name, buf, flags & SETDIRTY);
 
 	return 0;
 }
@@ -3425,7 +3425,7 @@ SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, con
 	// lookup job and set attribute to quoted string
 	JOB_ID_KEY_BUF key;
 	IdToKey(cluster_id,proc_id,key);
-	JobQueue->SetAttribute(key.c_str(), attr_name, buf.c_str(), flags & SETDIRTY);
+	JobQueue->SetAttribute(key, attr_name, buf.c_str(), flags & SETDIRTY);
 
 	return 0;
 }
@@ -3438,7 +3438,7 @@ SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const cha
 	// lookup job and set attribute to value
 	JOB_ID_KEY_BUF key;
 	IdToKey(cluster_id,proc_id,key);
-	JobQueue->SetAttribute(key.c_str(), attr_name, attr_value, flags & SETDIRTY);
+	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SETDIRTY);
 
 	return 0;
 }
@@ -3889,7 +3889,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
-			JobQueue->SetAttribute(key.c_str(), raw_attribute.Value(), attr_value, flags & SETDIRTY);
+			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value, flags & SETDIRTY);
 			if( flags & SHOULDLOG ) {
 				char* old_val = NULL;
 				ExprTree *ltree;
@@ -4004,7 +4004,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		old_nondurable_level = JobQueue->IncNondurableCommitLevel();
 	}
 
-	JobQueue->SetAttribute(key.c_str(), attr_name, attr_value, flags & SETDIRTY);
+	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SETDIRTY);
 	if( flags & SHOULDLOG ) {
 		const char* old_val = NULL;
 		if (job) {
@@ -4465,8 +4465,8 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 		JobQueueKeyBuf cluster( job.cluster, -1 );
 
 		ClassAd procAd;
-		JobQueue->AddAttrsFromTransaction( cluster.c_str(), procAd );
-		JobQueue->AddAttrsFromTransaction( it->c_str(), procAd );
+		JobQueue->AddAttrsFromTransaction( cluster, procAd );
+		JobQueue->AddAttrsFromTransaction( job, procAd );
 
 		JobQueueJob *clusterAd = NULL;
 		if (JobQueue->Lookup(cluster, clusterAd)) {
@@ -4542,7 +4542,7 @@ void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
 	for (std::map<int, int>::iterator mit = num_procs.begin(); mit != num_procs.end(); ++mit) {
 		job_id.set(mit->first, -1);
 		sprintf(number, "%d", mit->second);
-		JobQueue->SetAttribute(job_id.c_str(), ATTR_TOTAL_SUBMIT_PROCS, number, false);
+		JobQueue->SetAttribute(job_id, ATTR_TOTAL_SUBMIT_PROCS, number, false);
 	}
 }
 
@@ -5045,7 +5045,7 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 
 	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -5076,7 +5076,7 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 
 	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -5107,7 +5107,7 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 
 	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -5144,7 +5144,7 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 
 	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -5180,7 +5180,7 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -5218,7 +5218,7 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		*val = attr_val;
 		return 1;
 	}
@@ -5261,7 +5261,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	{
 		if(!ClassAdAttributeIsPrivate(name))
 		{
-			if(!JobQueue->LookupInTransaction(key.c_str(), name, val) )
+			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{
 				ExprTree * pTree = expr->Copy();
 				updated_attrs->Insert(name, pTree);
@@ -5288,7 +5288,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	IdToKey(cluster_id,proc_id,key);
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
-		if( ! JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
+		if( ! JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 			errno = ENOENT;
 			return -1;
 		}
@@ -5307,7 +5307,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 		return -1;
 	}
 
-	JobQueue->DeleteAttribute(key.c_str(), attr_name);
+	JobQueue->DeleteAttribute(key, attr_name);
 
 	JobQueueDirty = true;
 

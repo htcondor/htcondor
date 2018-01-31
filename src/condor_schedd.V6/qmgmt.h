@@ -432,7 +432,7 @@ protected:
 // and a type derived from ClassAd for the payload.
 typedef JOB_ID_KEY JobQueueKey;
 typedef JobQueueJob* JobQueuePayload;
-typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueueJob*> JobQueueLogType;
+typedef ClassAdLog<JOB_ID_KEY, JobQueueJob*> JobQueueLogType;
 
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS     0x0001
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);

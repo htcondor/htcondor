@@ -188,7 +188,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 		   MaxAcctLogSize );
 
   if (!AcctLog) {
-    AcctLog=new ClassAdLog<std::string,const char*,ClassAd*>(LogFileName.Value());
+    AcctLog=new ClassAdLog<std::string,ClassAd*>(LogFileName.Value());
     dprintf(D_ACCOUNTANT,"Accountant::Initialize - LogFileName=%s\n",
 					LogFileName.Value());
   }

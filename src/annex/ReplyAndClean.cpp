@@ -73,7 +73,7 @@ ReplyAndClean::operator() () {
 	if(! commandID.empty()) {
 		commandState->BeginTransaction();
 		{
-			commandState->DestroyClassAd( commandID.c_str() );
+			commandState->DestroyClassAd( commandID );
 		}
 		commandState->CommitTransaction();
 	}

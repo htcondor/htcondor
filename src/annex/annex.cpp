@@ -131,7 +131,7 @@ InsertOrUpdateAd( const std::string & id, ClassAd * command,
 		log->DestroyClassAd( id );
 	}
 
-	log->NewClassAd( id.c_str(), command );
+	log->NewClassAd( id, command );
 }
 
 bool
