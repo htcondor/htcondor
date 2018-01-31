@@ -651,11 +651,20 @@ const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buf
 	return temp_buffer.c_str();
 }
 
+// This is the function you probably want to call.
+// It does match analysis of all of the clauses in the given attribute of the request ad
+// against all of the target ads and appends the analysis to the given return_buf.
+// typical use would be
+//    AnalyzeRequirementsForEachTarget(jobAd, ATTR_REQUIREMENTS, attrs, &startdAds[0], startdAds.size(), ...
+// or
+//    ClassAd::References attrs; attrs.insert(ATTR_START);
+//    AnalyzeRequirementsForEachTarget(slotClassAd, ATTR_REQUIREMENTS, attrs, &jobAds[0], jobAds.size(), ...
+//
 void AnalyzeRequirementsForEachTarget(
 	ClassAd *request,
 	const char * attrConstraint, // must be an attribute in the request ad
 	classad::References & inline_attrs, // expand these attrs inline
-	ClassAdList & targets,
+	std::vector<ClassAd *> targets,
 	std::string & return_buf,
 	const anaFormattingOptions & fmt)
 {
@@ -860,7 +869,7 @@ void AnalyzeRequirementsForEachTarget(
 		subs[ix].matches = 0;
 
 		// do short-circuit evaluation of && operations
-		int matches_all = targets.Length();
+		int matches_all = (int)targets.size();
 		int ix_left = subs[ix].ix_left;
 		int ix_right = subs[ix].ix_right;
 		if (ix_left >= 0 && ix_right >= 0 && subs[ix].logic_op) {
@@ -917,8 +926,8 @@ void AnalyzeRequirementsForEachTarget(
 			}
 		}
 
-		targets.Open();
-		while (ClassAd *target = targets.Next()) {
+		for (size_t ixt = 0; ixt < targets.size(); ++ixt) {
+			ClassAd *target = targets[ixt];
 
 			classad::Value eval_result;
 			bool bool_val;
@@ -928,7 +937,6 @@ void AnalyzeRequirementsForEachTarget(
 				subs[ix].matches += 1;
 			}
 		}
-		targets.Close();
 
 		// did the left or right path of a logic op dominate the result?
 		if (ix_left >= 0 && ix_right >= 0 && subs[ix].logic_op) {
