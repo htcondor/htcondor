@@ -69,6 +69,56 @@ static int cleanup_globals(int exit_code); // called on exit to do necessary cle
 
 struct 	PrioEntry { MyString name; float prio; };
 
+#if 1 // cant use unique_ptr<> in a std::map on Rhel6, so for now, use our own class
+
+// this class is a bit like unique_ptr<ClassAd> but works on Rhel6 because it doesn't poison the copy constructor
+// The copy constructor in this class asserts if the pointer being copied is not NULL.
+// also, assignment is has SWAP behavior. This works for our limited use case.
+// This class safe to use in a std::map or std::set when the code to populate the map/set uses the pattern
+//   auto pp = map->insert(std::pair<KEYTYPE, UniqueClassAdPtr>(key,UniqueClassAdPtr())
+//   if ( ! pp.second) {
+//      // insert failed, map[key] already has a value
+//   } else {
+//      // write the ClassAd* pointer into the map entry
+//      pp.first->second.reset(ad);
+//   }
+// This works because the copy constructor is only invoked on instances of the class that hold a null pointer
+class UniqueClassAdPtr {
+	ClassAd * ptr;
+public:
+	UniqueClassAdPtr(ClassAd* p=NULL) : ptr(p) {}
+	~UniqueClassAdPtr() { delete ptr; ptr = NULL; }
+
+	ClassAd* get() const { return ptr; }
+	ClassAd* operator->() const { return ptr; }
+	ClassAd& operator*() const { return *ptr; }
+	operator bool() const { return ptr != NULL; }
+
+	ClassAd* detach() { ClassAd* p = ptr; ptr = NULL; return p; }
+	void reset(ClassAd* p) { if (p != ptr) { delete ptr; } ptr = p; }
+
+	// copy constructor works only when the pointer being copied is NULL
+	UniqueClassAdPtr(const UniqueClassAdPtr& that) : ptr(NULL) { ASSERT(!that.ptr); }
+
+	// move constructor steals the pointer from the input
+	//UniqueClassAdPtr(UniqueClassAdPtr&& that) : ptr(that.detach()) {} // move ptr from that to this
+
+	// assignment operator swaps pointers with the input
+	//friend void swap(UniqueClassAdPtr& first, UniqueClassAdPtr& second) { ClassAd* t=first.ptr; first.ptr = second.ptr; second.ptr = t; }
+	//UniqueClassAdPtr & operator=(UniqueClassAdPtr that) { swap(*this, that); return *this; }
+};
+
+#else
+
+// For fully c++ 11 compilers/runtimes we can just use unique_ptr
+typedef std::unique_ptr<ClassAd> UniqueClassAdPtr;
+
+#endif
+
+typedef std::map< long long, UniqueClassAdPtr > IdToClassaAdMap;
+typedef std::map< std::string, UniqueClassAdPtr > KeyToClassaAdMap;
+
+
 static  int  testing_width = 0;
 static int getDisplayWidth() {
 	if (testing_width <= 0) {
@@ -98,6 +148,7 @@ static int dryFetchQueue(const char * file, StringList & proj, int fetch_opts, i
 
 static void initOutputMask(AttrListPrintMask & pqmask, int qdo_mode, bool wide_mode);
 static void init_standard_summary_mask(ClassAd * summary_ad);
+static bool is_zero_summary(ClassAd * summary_ad);
 bool use_legacy_standard_summary = true;
 //PRAGMA_REMIND("make width of the name column adjust to the display width")
 const int name_column_index = 2;
@@ -107,6 +158,7 @@ bool first_col_is_job_id = false;
 bool has_owner_column = false;
 int  max_name_column_width = 14;
 bool append_time_to_source_label = true;
+bool querying_partial_clusters = false; // set to true when the condor_q query is selective and so the "DONE" column cannot be calculated.
 time_t queue_time = 0; // will be set from the time on the server if possible
 
 double max_mem_used = 0.0; // largest value of MEMORY_USAGE
@@ -325,14 +377,14 @@ static const char	*doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd 
 
 static	void		doSlotRunAnalysis( ClassAd*, JobClusterMap & clusters, Daemon*, int console_width);
 static const char	*doSlotRunAnalysisToBuffer( ClassAd*, JobClusterMap & clusters, int console_width);
-static	void		buildJobClusterMap(ClassAdList & jobs, const char * attr, JobClusterMap & clusters);
+static	void		buildJobClusterMap(IdToClassaAdMap & jobs, const char * attr, JobClusterMap & clusters);
 static	int			better_analyze = false;
 static	bool		reverse_analyze = false;
 static	bool		summarize_anal = false;
 static  bool		summarize_with_owner = true;
 static  int			cOwnersOnCmdline = 0;
 static	const char	*fixSubmittorName( const char*, int );
-static	ClassAdList startdAds;
+static	KeyToClassaAdMap startdAds;
 static	ExprTree	*stdRankCondition;
 static	ExprTree	*preemptRankCondition;
 static	ExprTree	*preemptPrioCondition;
@@ -379,6 +431,10 @@ struct LiveJobCounters {
 	, SchedulerJobsCompleted(0)
 	, SchedulerJobsHeld(0)
   {}
+  bool empty() {
+	return !(JobsIdle || JobsRunning || JobsHeld || JobsRemoved || JobsCompleted || JobsSuspended
+		|| SchedulerJobsIdle || SchedulerJobsRunning || SchedulerJobsHeld || SchedulerJobsRemoved || SchedulerJobsCompleted);
+  }
 };
 
 static const std::string & attrjoin(std::string & buf, const char * prefix, const char * attr) {
@@ -812,7 +868,7 @@ static int cleanup_globals(int exit_code)
 	dprintf_SetExitCode(exit_code);
 
 	// do this to make Valgrind happy.
-	startdAds.Clear();
+	startdAds.clear();
 	scheddList.Clear();
 
 	return exit_code;
@@ -1187,6 +1243,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				exit(1);
 			}
 			user_job_constraint = argv[++i];
+			querying_partial_clusters = true; // we don't know if this constraint will return partial clusters....
 
 			if (Q.addAND (user_job_constraint) != Q_OK) {
 				fprintf (stderr, "Error: Argument %d (%s) is not a valid constraint\n", i, user_job_constraint);
@@ -1527,6 +1584,7 @@ processCommandLineArguments (int argc, const char *argv[])
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
 			dash_run = true;
+			querying_partial_clusters = true;
 			if (show_held) {
 				fprintf( stderr, "-run and -hold/held are incompatible\n" );
 				usage( argv[0] );
@@ -1537,6 +1595,7 @@ processCommandLineArguments (int argc, const char *argv[])
 		if (is_dash_arg_prefix(dash_arg, "hold", 2) || is_dash_arg_prefix(dash_arg, "held", 2)) {
 			Q.add (CQ_STATUS, HELD);
 			show_held = true;
+			querying_partial_clusters = true;
 			if (dash_run) {
 				fprintf( stderr, "-run and -hold/held are incompatible\n" );
 				usage( argv[0] );
@@ -1820,6 +1879,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			// add a constraint to match the jobid.
 			if (it->_proc >= 0) {
 				sprintf(constraint, ATTR_CLUSTER_ID " == %d && " ATTR_PROC_ID " == %d", it->_cluster, it->_proc);
+				querying_partial_clusters = true;
 			} else {
 				sprintf(constraint, ATTR_CLUSTER_ID " == %d", it->_cluster);
 			}
@@ -2262,16 +2322,13 @@ render_batch_name (std::string & out, AttrList *ad, Formatter & /*fmt*/)
 	} else if (ad->LookupExpr(ATTR_DAGMAN_JOB_ID)
 				&& ad->LookupString(ATTR_DAG_NODE_NAME, out)) {
 		out.insert(0,"NODE: ");
+#if 1 // don't batch jobs by exe
+#else // batch jobs that have a common exe together
 	} else if (ad->LookupString(ATTR_JOB_CMD, tmp)) {
-	#if 1 // batch jobs by cluster id
-		int cluster = 0;
-		ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
-		formatstr(out, "ID: %d", cluster);
-	#else // batch jobs that have a common exe together
 		const char * name = tmp.c_str();
 		if (tmp.length() > 24) { name = condor_basename(name); }
 		formatstr(out, "CMD: %s", name);
-	#endif
+#endif
 	} else {
 		return false;
 	}
@@ -3152,15 +3209,18 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 // Given a list of jobs, do analysis for each job and print out the results.
 //
 static bool
-print_jobs_analysis(ClassAdList & jobs, const char * source_label, DaemonAllowLocateFull * pschedd_daemon)
+print_jobs_analysis(IdToClassaAdMap & jobs, const char * source_label, DaemonAllowLocateFull * pschedd_daemon)
 {
 	// note: pschedd_daemon may be NULL.
 
 		// check if job is being analyzed
 	ASSERT( better_analyze );
 
+	int cJobs = (int)jobs.size();
+	int cSlots = (int)startdAds.size();
+
 	// build a job autocluster map
-	if (verbose) { fprintf(stderr, "\nBuilding autocluster map of %d Jobs...", jobs.Length()); }
+	if (verbose) { fprintf(stderr, "\nBuilding autocluster map of %d Jobs...", cJobs); }
 	JobClusterMap job_autoclusters;
 	buildJobClusterMap(jobs, ATTR_AUTO_CLUSTER_ID, job_autoclusters);
 	size_t cNoAuto = job_autoclusters[-1].size();
@@ -3168,14 +3228,19 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, DaemonAllowLo
 	if (verbose) { fprintf(stderr, "%d autoclusters and %d Jobs with no autocluster\n", (int)cAuto, (int)cNoAuto); }
 
 	if (reverse_analyze) { 
-		if (verbose && (startdAds.Length() > 1)) { fprintf(stderr, "Sorting %d Slots...", startdAds.Length()); }
+		if (verbose && (cSlots > 1)) { fprintf(stderr, "Sorting %d Slots...", cSlots); }
 		longest_slot_machine_name = 0;
 		longest_slot_name = 0;
-		if (startdAds.Length() == 1) {
+		if (cSlots == 1) {
 			// if there is a single machine ad, then default to analysis
 			if ( ! analyze_detail_level) analyze_detail_level = detail_analyze_each_sub_expr;
 		} else {
-			startdAds.Sort(SlotSort);
+			// for multiple ads, figure out the width needed to display machine and slot names.
+			for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
+				std::string name;
+				if (it->second->LookupString(ATTR_MACHINE, name)) { longest_slot_machine_name = MAX(longest_slot_machine_name, (int)name.size()); }
+				if (it->second->LookupString(ATTR_NAME, name)) { longest_slot_name = MAX(longest_slot_name, (int)name.size()); }
+			}
 		}
 		//if (verbose) { fprintf(stderr, "Done, longest machine name %d, longest slot name %d\n", longest_slot_machine_name, longest_slot_name); }
 	} else {
@@ -3189,27 +3254,27 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, DaemonAllowLo
 
 	if (reverse_analyze) {
 		int console_width = widescreen ? getDisplayWidth() : 80;
-		if (startdAds.Length() <= 0) {
+		if (cSlots <= 0) {
 			// print something out?
 		} else {
 			bool analStartExpr = /*(better_analyze == 2) || */(analyze_detail_level > 0);
 			if (summarize_anal || ! analStartExpr) {
-				if (jobs.Length() <= 1) {
-					jobs.Open();
-					while (ClassAd *job = jobs.Next()) {
+				if (cJobs <= 1) {
+					// PRAGMA_REMIND("this does the wrong thing if jobs collection is really an autocluster collection")
+					for (auto it = jobs.begin(); it != jobs.end(); ++it) {
+						ClassAd * job = it->second.get();
 						int cluster_id = 0, proc_id = 0;
 						job->LookupInteger(ATTR_CLUSTER_ID, cluster_id);
 						job->LookupInteger(ATTR_PROC_ID, proc_id);
 						printf("%d.%d: Analyzing matches for 1 job\n", cluster_id, proc_id);
 					}
-					jobs.Close();
 				} else {
 					int cNoAutoT = (int)job_autoclusters[-1].size();
 					int cAutoclustersT = (int)job_autoclusters.size()-1; // -1 because [-1] is not actually an autocluster
 					if (verbose) {
-						printf("Analyzing %d jobs in %d autoclusters\n", jobs.Length(), cAutoclustersT+cNoAutoT);
+						printf("Analyzing %d jobs in %d autoclusters\n", cJobs, cAutoclustersT+cNoAutoT);
 					} else {
-						printf("Analyzing matches for %d jobs\n", jobs.Length());
+						printf("Analyzing matches for %d jobs\n", cJobs);
 					}
 				}
 				std::string fmt;
@@ -3221,18 +3286,16 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, DaemonAllowLo
 				printf(fmt.c_str(), "Name", "Type", "Matches Job", "Matches Slot", "Match %");
 				printf(fmt.c_str(), "------------------------", "----", "------------", "------------", "----------");
 			}
-			startdAds.Open();
-			while (ClassAd *slot = startdAds.Next()) {
-				doSlotRunAnalysis(slot, job_autoclusters, pschedd_daemon, console_width);
+			for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
+				doSlotRunAnalysis(it->second.get(), job_autoclusters, pschedd_daemon, console_width);
 			}
-			startdAds.Close();
 		}
 	} else {
 		if (summarize_anal) {
 			if (single_machine) {
-				printf("%s: Analyzing matches for %d slots\n", user_slot_constraint, startdAds.Length());
+				printf("%s: Analyzing matches for %d slots\n", user_slot_constraint, cSlots);
 			} else {
-				printf("Analyzing matches for %d slots\n", startdAds.Length());
+				printf("Analyzing matches for %d slots\n", cSlots);
 			}
 			const char * fmt = "%-13s %12s %12s %11s %11s %10s %9s %s\n";
 			printf(fmt, "",              " Autocluster", "   Matches  ", "  Machine  ", "  Running  ", "  Serving ", "", "");
@@ -3363,13 +3426,72 @@ static void count_job(LiveJobCounters & num, ClassAd *job)
 	}
 }
 
-// callback function for processing a job from the Q query that just adds the 
-// job into a ClassAdList.
-static bool
-AddToClassAdList(void * pv, ClassAd* ad) {
-	ClassAdList * plist = (ClassAdList*)pv;
+union _jobid {
+	struct { int proc; int cluster; };
+	long long id;
+};
+
+static union _jobid sequence_id = { 0, INT_MAX };
+
+// callback function for processing a job from the Q query that just adds the job into a IdToClassaAdMap.
+static bool AddJobToClassAdCollection(void * pv, ClassAd* ad) {
+	IdToClassaAdMap * pmap = (IdToClassaAdMap*)pv;
 	count_job(app.sumy, ad);
-	plist->Insert(ad);
+
+	// default to using the sequence number as the unique id for the ad.
+	union _jobid jobid = sequence_id;
+	sequence_id.proc += 1;
+
+	if (dash_autocluster) {
+		const char * attr_id = ATTR_AUTO_CLUSTER_ID;
+		if (dash_autocluster == CondorQ::fetch_GroupBy) attr_id = "Id";
+		ad->LookupInteger(attr_id, jobid.id);
+	} else {
+		ad->LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
+		if ( ! ad->LookupInteger( ATTR_PROC_ID, jobid.proc )) { jobid.proc = -1; }
+	}
+
+	auto pp = pmap->insert(std::pair<long long, UniqueClassAdPtr>(jobid.id,UniqueClassAdPtr()));
+	if ( ! pp.second) {
+		fprintf( stderr, "Error: Two results with the same ID.\n" );
+		// return true to indicate that the caller still owns the ad.
+		return true;
+	} else {
+		// give the ad pointer to the map, it will now be responsible for freeing it.
+		pp.first->second.reset(ad);
+	}
+
+	return false; // return false to indicate we took ownership of the ad.
+}
+
+static int slot_sequence_id = 0;
+
+// callback function for adding a slot to an IdToClassaAdMap.
+static bool AddSlotToClassAdCollection(void * pv, ClassAd* ad) {
+	KeyToClassaAdMap * pmap = (KeyToClassaAdMap*)pv;
+
+	std::string key;
+	ad->LookupString(ATTR_MACHINE,key);
+	int slot_id = 0;
+	ad->LookupInteger(ATTR_SLOT_ID, slot_id);
+	formatstr_cat(key, "/%03d", slot_id);
+	std::string name;
+	if (ad->LookupString(ATTR_NAME, name)) {
+		key += "/";
+		key += name;
+	}
+	++slot_sequence_id;
+	formatstr_cat(key, "/%010d", slot_sequence_id);
+
+	auto &ptr = (*pmap)[key];
+	if ( ! ptr.get()) {
+		fprintf( stderr, "Error: Two results with the same ID.\n" );
+		// return true to indicate that the caller still owns the ad.
+		return true;
+	} else {
+		ptr.reset(ad);
+	}
+
 	return false; // return false to indicate we took ownership of the ad.
 }
 
@@ -3434,11 +3556,6 @@ static void group_job(JobRowOfData & jrod, ClassAd* job)
 	}
 }
 
-union _jobid {
-	struct { int proc; int cluster; };
-	long long id;
-};
-
 // used to hold a map of unique batch names with the key being the name
 // and the values being the cluster/proc of the first job to use that name.
 // aka. the "batch id"
@@ -3452,8 +3569,12 @@ static long long resolve_job_batch_uid(JobRowOfData & jrod, ClassAd* job)
 	if (job->LookupString(ATTR_JOB_BATCH_NAME, name)) {
 	} else if (job->LookupExpr(ATTR_DAGMAN_JOB_ID) && job->LookupString(ATTR_DAG_NODE_NAME, name)) {
 		name.insert(0, "NODE: ");
+	#if 1
+		// don't batch jobs together by command
+	#else
 	} else if (job->LookupString(ATTR_JOB_CMD, name)) {
 		name.insert(0, "CMD: ");
+	#endif
 	} else {
 		return 0;
 	}
@@ -3500,7 +3621,7 @@ long long resolve_first_use_of_batch_uid(int batch_uid, long long id)
 	}
 }
 
-// if we hold on to the previous ad until the next ad has been parse, we get a large
+// if we hold on to the previous ad until the next ad has been parsed, we get a large
 // speedup in parsing the incoming classads because we get a much better (60% vs 0%)
 // hit rate in the classad cache.
 static struct _cache_optimizer {
@@ -3662,6 +3783,33 @@ void clear_results(ROD_MAP_BY_ID & results, KeyToIdMap & order)
 	results.clear();
 }
 
+// render a long form ad and append it to the given std::string buffer
+static void append_long_ad(std::string & out, CondorClassAdListWriter & writer, ClassAd & ad)
+{
+	size_t start = out.size();
+
+	StringList * proj = (dash_autocluster || app.attrs.isEmpty()) ? NULL : &app.attrs;
+	if (proj && print_attrs_in_hash_order
+		&& (dash_long_format <= ClassAdFileParseType::Parse_long || dash_long_format >= ClassAdFileParseType::Parse_auto)) {
+		// special case for debugging, if we have a projection, but also a request not to sort the attributes
+		// make a special effort to print attributes in hashtable order for -long output.
+		classad::ClassAdUnParser unp;
+		unp.SetOldClassAd( true, true );
+		for (classad::ClassAd::const_iterator itr = ad.begin(); itr != ad.end(); ++itr) {
+			if (proj->contains_anycase(itr->first.c_str())) {
+				out += itr->first.c_str();
+				out += " = ";
+				unp.Unparse(out, itr->second);
+				out += "\n";
+			}
+		}
+		// if we wrote any attributes, append a blank line
+		if (out.size() > start) { out += "\n"; }
+	} else {
+		writer.appendAd(ad, out, proj, print_attrs_in_hash_order);
+	}
+}
+
 static bool
 streaming_print_job(void * pv, ClassAd *job)
 {
@@ -3674,27 +3822,8 @@ streaming_print_job(void * pv, ClassAd *job)
 	if ( ! dash_long) {
 		if (app.prmask.ColCount() > 0) { app.prmask.display(result_text, job); }
 	} else {
-		StringList * proj = (dash_autocluster || app.attrs.isEmpty()) ? NULL : &app.attrs;
-		CondorClassAdListWriter & writer = *(CondorClassAdListWriter*)pv;
 		result_text.clear();
-		if (proj && print_attrs_in_hash_order
-			&& (dash_long_format <= ClassAdFileParseType::Parse_long || dash_long_format >= ClassAdFileParseType::Parse_auto)) {
-			// special case for debugging, if we have a projection, but also a request not to sort the attributes
-			// make a special effort to print attributes in hashtable order for -long output.
-			classad::ClassAdUnParser unp;
-			unp.SetOldClassAd( true, true );
-			for (classad::ClassAd::const_iterator itr = job->begin(); itr != job->end(); ++itr) {
-				if (proj->contains_anycase(itr->first.c_str())) {
-					result_text += itr->first.c_str();
-					result_text += " = ";
-					unp.Unparse(result_text, itr->second);
-					result_text += "\n";
-				}
-			}
-			if ( ! result_text.empty()) { result_text += "\n"; }
-		} else {
-			writer.appendAd(*job, result_text, proj, print_attrs_in_hash_order);
-		}
+		append_long_ad(result_text, *(CondorClassAdListWriter *)pv, *job);
 	}
 	if ( ! result_text.empty()) { fputs(result_text.c_str(), stdout); }
 	return true;
@@ -4032,7 +4161,9 @@ static void reduce_procs(cluster_progress & prog, JobRowOfData & jr)
 				done = materialized_jobs - prog.jobs;
 			}
 			prog.nodes_total += total;
-			prog.nodes_done += done;
+			if ( ! querying_partial_clusters) {
+				prog.nodes_done += done;
+			}
 		} else {
 			prog.unknown_total += 1;
 		}
@@ -4197,7 +4328,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 			if (jr.getString(ixBatchNameCol, name_width)) {
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			} else {
-				tmp.formatstr("Cluster %d", jid.cluster);
+				tmp.formatstr("ID: %d", jid.cluster);
 				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
 				jr.rov.set_col_valid(ixBatchNameCol, true);
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
@@ -4291,7 +4422,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if (dash_profile) { cbBefore = ProcAPI::getBasicUsage(getpid(), &tmBefore); }
 
 	// fetch queue from schedd
-	ClassAdList jobs;  // this will get filled in for -long -json -xml and -analyze
+	IdToClassaAdMap ads;
 	CondorError errstack;
 	ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
 
@@ -4305,9 +4436,8 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	buffer_line_processor pfnProcess = NULL;
 	void *                pvProcess = NULL;
 	if (better_analyze || (dash_long && ! g_stream_results)) {
-		//PRAGMA_REMIND("render classads to text rather than keeping whole ads for long format here...")
-		pfnProcess = AddToClassAdList;
-		pvProcess = &jobs;
+		pfnProcess = AddJobToClassAdCollection;
+		pvProcess = &ads;
 	} else if (g_stream_results) {
 		pfnProcess = streaming_print_job;
 		pvProcess = &writer;
@@ -4365,11 +4495,18 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		return false;
 	}
 
-	// If the query did not return a summary ad, then manufacture one from the totals that we have been keeping as the ads were returned.
-	if ( ! summary_ad) {
+	// Modern schedds will return as summary ad. otherwise we create one from our own totals
+	// in either case, we (sometimes) want to skip printing of the summary ad when there are no jobs
+	// so set a flag now we are refer to later.
+	bool empty_summary = true;
+	if (summary_ad) {
+		empty_summary = is_zero_summary(summary_ad);
+	} else {
+		// fake up a summary ad
 		summary_ad = new ClassAd();
 		summary_ad->Assign(ATTR_MY_TYPE, "Summary");
 		app.sumy.publish(*summary_ad, NULL);
+		empty_summary = app.sumy.empty();
 	}
 
 	// if we streamed, then the results have already been printed out.
@@ -4382,42 +4519,49 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		return true;
 	}
 
+	// at this point we have either a collection of results or a collection of ads
+	int cFullAds = (int)ads.size();
+	int cResults = (int)rod_result_map.size();
+
 	if (dash_profile) {
-		int cJobs = jobs.Length() + (int)rod_result_map.size();
-		profile_print(cbBefore, tmBefore, cJobs);
+		int cAds = cFullAds + (int)rod_result_map.size();
+		profile_print(cbBefore, tmBefore, cAds);
 	} else if (verbose) {
-		fprintf(stderr, " %d ads\n", jobs.Length());
+		fprintf(stderr, " %d ads\n", cFullAds);
 	}
 
 	if (better_analyze) {
-		if (jobs.Length() > 1) {
-			if (verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
-			jobs.Sort(JobSort);
-			if (verbose) { fprintf(stderr, "\n"); }
-		}
 		
 		//PRAGMA_REMIND("TJ: shouldn't this be using scheddAddress instead of scheddName?")
 		DaemonAllowLocateFull schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
 
-		return print_jobs_analysis(jobs, source_label.c_str(), &schedd);
+		return print_jobs_analysis(ads, source_label.c_str(), &schedd);
 	}
 
-	int cResults = (int)rod_result_map.size();
-
-	// at this point we either have a populated jobs list, or a populated rod_result_map
-	// if it's a jobs list, then we want to process the jobs into the rod_result_map
-	// then we want to linkup the nodes and (possibly) rewrite the name columns
-	if (jobs.Length() > 0) {
-		jobs.Open();
-		app.sumy.clear_counters(); // so we don't double count.
-		while(ClassAd *job = jobs.Next()) {
-			if (dash_long) {
-				streaming_print_job(&writer, job);
-			} else {
-				process_job_to_rod_per_ad_map(&rod_result_map, job);
+	if (dash_long) {
+		if (global && empty_summary) {
+			// print nothing for -global when there are no results
+		} else {
+			std::string buf;
+			for (auto it = ads.begin(); it != ads.end(); ++it) {
+				buf.clear();
+				append_long_ad(buf, writer, *it->second);
+				if ( ! buf.empty()) { fputs(buf.c_str(), stdout); }
 			}
 		}
-		jobs.Close();
+		print_full_footer(summary_ad, &writer);
+		writer.writeFooter(stdout, always_write_xml_footer);
+		return true;
+	}
+
+	// at this point we either have a populated ad collection, or a populated rod_result_map
+	// if it's an ad collection, then we want to process the ads into the rod_result_map
+	// then we want to linkup the nodes and (possibly) rewrite the name columns
+	if (cFullAds > 0) {
+		app.sumy.clear_counters(); // so we don't double count. (although since we captured the summary ad already, it probably doesn't matter)
+		for (auto it = ads.begin(); it != ads.end(); ++it) {
+			process_job_to_rod_per_ad_map(&rod_result_map, it->second.get());
+		}
 		cResults = (int)rod_result_map.size();
 	}
 
@@ -4430,8 +4574,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		}
 	}
 
+
 	// we want a header for this schedd if we are not showing the global queue OR if there is any data
-	if ( ! global || cResults > 0 || jobs.Length() > 0) {
+	if ( ! global || cResults > 0 || !empty_summary) {
 		print_full_header(source_label.c_str());
 	}
 
@@ -4442,10 +4587,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// we want to print out a footer if we printed any data, OR if this is not 
 	// a global query, so that the user can see that we did something.
 	//
-	if ( ! global || cResults > 0 || jobs.Length() > 0) {
+	if ( ! global || cResults > 0 || !empty_summary) {
 		print_full_footer(summary_ad, &writer);
 	}
-	if (dash_long) { writer.writeFooter(stdout, always_write_xml_footer); }
 
 	return true;
 }
@@ -4529,7 +4673,9 @@ dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, b
 
 // Read ads from a file in classad format
 static bool
-load_ads_from_file(const char *filename, ClassAdList &classads, CondorClassAdFileParseHelper & parse_helper, ExprTree * constraint)
+iter_ads_from_file(const char *filename,
+	bool (*pfnProcess)(void* pv, ClassAd* ad), void* pvProcess,
+	CondorClassAdFileParseHelper & parse_helper, ExprTree * constraint)
 {
 	FILE* fh;
 	bool close_file = false;
@@ -4552,7 +4698,9 @@ load_ads_from_file(const char *filename, ClassAdList &classads, CondorClassAdFil
 	} else {
 		ClassAd * ad;
 		while ((ad = adIter.next(constraint))) {
-			classads.Insert(ad);
+			if (pfnProcess(pvProcess, ad)) {
+				delete ad; ad = NULL;
+			}
 		}
 	}
 	fh = NULL;
@@ -4580,13 +4728,13 @@ show_file_queue(const char* jobads, const char* userlog)
 	double tmBefore = 0;
 	if (dash_profile) { cbBefore = ProcAPI::getBasicUsage(getpid(), &tmBefore); }
 
-	ClassAdList jobs;
+	IdToClassaAdMap jobs;
 	std::string source_label;
 
 	if (jobads != NULL) {
 		/* get the "q" from the job ads file */
 		CondorQClassAdFileParseHelper jobads_file_parse_helper(jobads_file_format);
-		if ( ! load_ads_from_file(jobads, jobs, jobads_file_parse_helper, constr.Expr())) {
+		if ( ! iter_ads_from_file(jobads, AddJobToClassAdCollection, &jobs, jobads_file_parse_helper, constr.Expr())) {
 			return false;
 		}
 
@@ -4606,7 +4754,7 @@ show_file_queue(const char* jobads, const char* userlog)
 		int cJobIds = constrID.size();
 		if (cJobIds > 0) JobIds = &constrID[0];
 
-		if ( ! userlog_to_classads(userlog, jobs, JobIds, cJobIds, constr.Str())) {
+		if ( ! userlog_to_classads(userlog, AddJobToClassAdCollection, &jobs, JobIds, cJobIds, constr.Expr())) {
 			fprintf(stderr, "\nCan't open user log: %s\n", userlog);
 			return false;
 		}
@@ -4615,18 +4763,17 @@ show_file_queue(const char* jobads, const char* userlog)
 		ASSERT(jobads != NULL || userlog != NULL);
 	}
 
+	int cJobs = (int)jobs.size();
+
 	if (dash_profile) {
-		profile_print(cbBefore, tmBefore, jobs.Length());
+		profile_print(cbBefore, tmBefore, cJobs);
 	} else if (verbose) {
-		fprintf(stderr, " %d ads.\n", jobs.Length());
+		fprintf(stderr, " %d ads.\n", cJobs);
 	}
 
-	if (jobs.Length() > 1) {
-		if (verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
-		jobs.Sort(JobSort);
-
+	if (cJobs > 1) {
 		if (dash_profile) {
-			profile_print(cbBefore, tmBefore, jobs.Length(), false);
+			profile_print(cbBefore, tmBefore, cJobs, false);
 		} else if (verbose) {
 			fprintf(stderr, "\n");
 		}
@@ -4640,29 +4787,18 @@ show_file_queue(const char* jobads, const char* userlog)
 
 	CondorClassAdListWriter writer(dash_long_format);
 
-	// TJ: copied this from the top of init_output_mask
-#if 1
-	
-#else
-	if ( dash_run || dash_goodput || dash_globus || dash_grid )
-		summarize = false;
-	else if ((customHeadFoot&HF_NOSUMMARY) && ! show_held)
-		summarize = false;
-#endif
-
 		// display the jobs from this submittor
-	if( jobs.MyLength() != 0 || !global ) {
+	if( cJobs != 0 || !global ) {
 
 		app.sumy.clear_counters();
-		jobs.Open();
-		while(ClassAd *job = jobs.Next()) {
+		for (auto it = jobs.begin(); it != jobs.end(); ++it) {
+			ClassAd * job = it->second.get();
 			if (dash_long) {
 				streaming_print_job(&writer, job);
 			} else {
 				process_job_to_rod_per_ad_map(&rod_result_map, job);
 			}
 		}
-		jobs.Close();
 
 		ClassAd * summary_ad = new ClassAd();
 		summary_ad->Assign(ATTR_MY_TYPE, "Summary");
@@ -4743,7 +4879,7 @@ setupAnalysis()
 	if (machineads_file != NULL) {
 		ConstraintHolder constr(mconst.empty() ? NULL : mconst.StrDup());
 		CondorClassAdFileParseHelper parse_helper("\n", machineads_file_format);
-		if ( ! load_ads_from_file(machineads_file, startdAds, parse_helper, constr.Expr())) {
+		if ( ! iter_ads_from_file(machineads_file, AddSlotToClassAdCollection, &startdAds, parse_helper, constr.Expr())) {
 			exit (1);
 		}
 	} else {
@@ -4755,7 +4891,7 @@ setupAnalysis()
 				query.addANDConstraint (mconst.c_str());
 			}
 		}
-		rval = Collectors->query (query, startdAds);
+		rval = Collectors->query (query, AddSlotToClassAdCollection, &startdAds);
 		if( rval != Q_OK ) {
 			fprintf( stderr , "Error:  Could not fetch startd ads\n" );
 			exit( 1 );
@@ -4763,9 +4899,9 @@ setupAnalysis()
 	}
 
 	if (dash_profile) {
-		profile_print(cbBefore, tmBefore, startdAds.Length());
+		profile_print(cbBefore, tmBefore, startdAds.size());
 	} else if (verbose) {
-		fprintf(stderr, " %d ads.\n", startdAds.Length());
+		fprintf(stderr, " %d ads.\n", (int)startdAds.size());
 	}
 
 	// fetch user priorities, and propagate the user priority values into the machine ad's
@@ -4807,20 +4943,18 @@ setupAnalysis()
 
 
 		// populate startd ads with remote user prios
-		startdAds.Open();
-		while( ( ad = startdAds.Next() ) ) {
-			if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
-				if( ( index = findSubmittor( remoteUser.c_str() ) ) != -1 ) {
-					sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
-								prioTable[index].prio );
-					ad->Insert( buffer );
+		for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
+			ad = it->second.get();
+			if (ad->LookupString( ATTR_REMOTE_USER , remoteUser)) {
+				if ((index = findSubmittor(remoteUser.c_str())) != -1) {
+					ad->Assign(ATTR_REMOTE_USER_PRIO, prioTable[index].prio);
 				}
 			}
 			#if defined(ADD_TARGET_SCOPING)
-			ad->AddTargetRefs( TargetJobAttrs );
+			ad->AddTargetRefs(TargetJobAttrs);
 			#endif
+
 		}
-		startdAds.Close();
 	}
 	
 
@@ -5142,8 +5276,6 @@ doJobRunAnalysisToBuffer(ClassAd *request, DaemonAllowLocateFull* schedd, anaCou
 	}
 
 
-	startdAds.Open();
-
 	std::string fReqConstraintStr("[");
 	std::string fOffConstraintStr("[");
 	std::string fExhaustedStr("[");
@@ -5152,7 +5284,9 @@ doJobRunAnalysisToBuffer(ClassAd *request, DaemonAllowLocateFull* schedd, anaCou
 	std::string fPreemptReqTestStr("[");
 	std::string fRankCondStr("[");
 
-	while( ( offer = startdAds.Next() ) ) {
+	for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
+		offer = it->second.get();
+
 		// 0.  info from machine
 		ac.totalMachines++;
 		offer->LookupString( ATTR_NAME , buffer, sizeof(buffer) );
@@ -5305,7 +5439,6 @@ doJobRunAnalysisToBuffer(ClassAd *request, DaemonAllowLocateFull* schedd, anaCou
 			continue;
 		}
 	}
-	startdAds.Close();
 
 	if (summarize_anal)
 		return return_buff;
@@ -5434,6 +5567,9 @@ doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *request, int detai
 	char request_id[33];
 	sprintf(request_id, "%d.%03d", jid.cluster, jid.proc);
 
+	int cSlots = (int)startdAds.size();
+
+
 	{
 		// first analyze the Requirements expression against the startd ads.
 		//
@@ -5480,14 +5616,13 @@ doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *request, int detai
 			return_buf += attrib_values;
 			attrib_values = "";
 
-			if (single_machine || startdAds.Length() == 1) { 
-				startdAds.Open(); 
-				while (ClassAd * ptarget = startdAds.Next()) {
+			if (single_machine || cSlots == 1) { 
+				for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
+					ClassAd * ptarget = it->second.get();
 					attrib_values = "\n";
 					AddTargetAttribsToBuffer(trefs, request, ptarget, false, "    ", attrib_values);
 					return_buf += attrib_values;
 				}
-				startdAds.Close();
 			}
 			return_buf += "\n";
 		}
@@ -5500,7 +5635,15 @@ doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *request, int detai
 #endif
 			std::string subexpr_detail;
 			anaFormattingOptions fmt = { widescreen ? getDisplayWidth() : 80, details, "Requirements", "Job", "Slot" };
-			AnalyzeRequirementsForEachTarget(request, ATTR_REQUIREMENTS, inline_attrs, startdAds, subexpr_detail, fmt);
+
+			// the common analyis code wants a vector of startd ads, not a map
+			std::vector<ClassAd*> ads;
+			ads.reserve(startdAds.size());
+			for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
+				ads.push_back(it->second.get());
+			}
+
+			AnalyzeRequirementsForEachTarget(request, ATTR_REQUIREMENTS, inline_attrs, ads, subexpr_detail, fmt);
 			formatstr_cat(return_buf, "The Requirements expression for job %s reduces to these conditions:\n\n", request_id);
 			return_buf += subexpr_detail;
 		}
@@ -5629,7 +5772,7 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, int console_w
 	int cOffConstraint = 0;
 	int cBothMatch = 0;
 
-	ClassAdListDoesNotDeleteAds jobs;
+	std::vector<ClassAd*> jobs;
 	for (JobClusterMap::iterator it = clusters.begin(); it != clusters.end(); ++it) {
 		int cJobsInCluster = (int)it->second.size();
 		if (cJobsInCluster <= 0)
@@ -5644,7 +5787,7 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, int console_w
 		for (int ii = 0; ii < cJobsToEval; ++ii) {
 			ClassAd *job = it->second[ii];
 
-			jobs.Insert(job);
+			jobs.push_back(job);
 			cUniqueJobs += 1;
 
 			#if defined(ADD_TARGET_SCOPING)
@@ -5718,14 +5861,14 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, int console_w
 				strcat(return_buff, attrib_values.c_str());
 				attrib_values = "";
 
-				if (jobs.Length() == 1) {
-					jobs.Open();
-					while(ClassAd *job = jobs.Next()) {
+				if (jobs.size() == 1) {
+					for (size_t ixj = 0; ixj < jobs.size(); ++ixj) {
+						ClassAd * job = jobs[ixj];
+						if ( ! job) continue;
 						attrib_values = "\n";
 						AddTargetAttribsToBuffer(trefs, slot, job, false, "    ", attrib_values);
 						strcat(return_buff, attrib_values.c_str());
 					}
-					jobs.Close();
 				}
 				//strcat(return_buff, "\n");
 				strcat(return_buff, "\nThe Requirements expression for this slot reduces to these conditions:\n\n");
@@ -5738,7 +5881,7 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, int console_w
 		}
 
 		std::string subexpr_detail;
-		AnalyzeRequirementsForEachTarget(slot, ATTR_REQUIREMENTS, inline_attrs, (ClassAdList&)jobs, subexpr_detail, fmt);
+		AnalyzeRequirementsForEachTarget(slot, ATTR_REQUIREMENTS, inline_attrs, jobs, subexpr_detail, fmt);
 		strcat(return_buff, subexpr_detail.c_str());
 
 		//formatstr(subexpr_detail, "%-5.5s %8d\n", "[ALL]", cOffConstraint);
@@ -5765,8 +5908,6 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, int console_w
 				cTotalJobs ? (100.0 * cBothMatch / cTotalJobs) : 0.0);
 	}
 
-	jobs.Clear();
-
 	if (better_analyze) {
 		std::string ana_buffer = "";
 		strcat(return_buff, ana_buffer.c_str());
@@ -5777,12 +5918,12 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, int console_w
 
 
 static	void
-buildJobClusterMap(ClassAdList & jobs, const char * attr, JobClusterMap & autoclusters)
+buildJobClusterMap(IdToClassaAdMap & jobs, const char * attr, JobClusterMap & autoclusters)
 {
 	autoclusters.clear();
 
-	jobs.Open();
-	while(ClassAd *job = jobs.Next()) {
+	for (auto it = jobs.begin(); it != jobs.end(); ++it) {
+		ClassAd * job = it->second.get();
 
 		int acid = -1;
 		if (job->LookupInteger(attr, acid)) {
@@ -5794,7 +5935,6 @@ buildJobClusterMap(ClassAdList & jobs, const char * attr, JobClusterMap & autocl
 		}
 
 	}
-	jobs.Close();
 }
 
 
@@ -6117,6 +6257,26 @@ static int set_print_mask_from_stream(
 	return err;
 }
 
+static bool is_zero_summary(ClassAd * summary_ad) 
+{
+	if (summary_ad) {
+		long long count = 0;
+		if (summary_ad->LookupInteger("Jobs", count) && count)
+			return false;
+		if (summary_ad->LookupInteger("SchedulerJobs", count) && count)
+			return false;
+
+		// if displaying the legacy summary, we don't care about Allusers
+		// because -all will have the same values in the query totals as the Allusers totals
+		if (use_legacy_standard_summary)
+			return true;
+
+		if (summary_ad->LookupInteger("AllusersJobs", count) && count)
+			return false;
+	}
+	return true;
+}
+
 const char * const standard_summary1 = "SELECT\n"
 	"Name PRINTF 'Total for %s:'\n"
 	"Jobs PRINTF '%d jobs;'\n"
@@ -6198,6 +6358,7 @@ static void init_standard_summary_mask(ClassAd * summary_ad)
 	}
 	StringLiteralInputStream stream(sumyformat.c_str());
 	dummySettings.reset();
+	app.sumymask.clearFormats();
 	SetAttrListPrintMaskFromStream(stream, LocalPrintFormatsTable, app.sumymask, dummySettings, dummyGrpBy, NULL, messages);
 
 	// dont' actually want to display headings for the summary lines when using standard_summary2 or standard_summary3

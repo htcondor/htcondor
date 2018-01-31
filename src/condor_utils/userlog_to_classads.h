@@ -27,6 +27,10 @@
 #include "condor_classad.h"
 #include "condor_id.h"
 
-bool userlog_to_classads(const char *filename, ClassAdList &classads, CondorID* JobIds, int cJobIds, const char * constr);
+// scan the userlog, build a set of classads, then hand them one at a time to a processing function which may (or may not)
+// take ownership of them.
+bool userlog_to_classads(const char *filename,
+	bool (*pfnProcess)(void* pv, ClassAd* ad), void* pvProcess,
+	CondorID* JobIds, int cJobIds, ExprTree *constraintExpr);
 
 #endif // _USERLOG_TO_CLASSADS_H_

@@ -879,6 +879,12 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	printFooter();
 }
 
+static bool AddToClassAdList(void* pv, ClassAd* ad) {
+	ClassAdList * plist = (ClassAdList*)pv;
+	plist->Insert(ad);
+	return false; // return false to indicate we took ownership of the ad.
+}
+
 // Read the history from the specified history file, or from all the history files.
 // There are multiple history files because we do rotation. 
 static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
@@ -888,7 +894,7 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
     if (JobHistoryFileName) {
         if (fileisuserlog) {
             ClassAdList jobs;
-            if ( ! userlog_to_classads(JobHistoryFileName, jobs, NULL, 0, constraint)) {
+            if ( ! userlog_to_classads(JobHistoryFileName, AddToClassAdList, &jobs, NULL, 0, constraintExpr)) {
                 fprintf(stderr, "Error: Can't open userlog %s\n", JobHistoryFileName);
                 exit(1);
             }
