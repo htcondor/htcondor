@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 #include "dag_tokener.h"
 #include "tokener.h"
 
