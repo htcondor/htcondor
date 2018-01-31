@@ -38,6 +38,8 @@
 #endif
 #endif
 
+#include "stat_info.h"
+
 #ifndef max
 #define max(x,y) (((x) < (y)) ? (y) : (x))
 #endif
@@ -2386,11 +2388,28 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	// the first ad we write will include the StartOfJob* attribute(s).
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask)
 	  && r_cur && r_cur->ad() && r_cur->executeDir() ) {
-		std::string updateAdPath;
-		formatstr( updateAdPath, "%s/dir_%d/.update.ad", r_cur->executeDir(), r_cur->starterPID() );
-		dprintf( D_FULLDEBUG, "Writing update ad to %s\n", updateAdPath.c_str() );
+		std::string updateAdDir;
+		formatstr( updateAdDir, "%s/dir_%d", r_cur->executeDir(), r_cur->starterPID() );
 
-		FILE * updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "w" );
+		std::string updateAdPath;
+		formatstr( updateAdPath, "%s/.update.ad", updateAdDir.c_str() );
+		dprintf( D_FULLDEBUG, "Will write update ad to %s\n", updateAdPath.c_str() );
+
+#if defined(WINDOWS)
+		{
+			TemporaryPrivSentry p( PRIV_ROOT );
+			FILE * updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "w" );
+		}
+#else
+		FILE * updateAdFile = NULL;
+		StatInfo si( updateAdDir.c_str() );
+		if(! si.Error()) {
+			set_user_ids( si.GetOwner(), si.GetGroup() );
+			TemporaryPrivSentry p( PRIV_USER, true );
+			updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "w" );
+		}
+#endif
+
 		if( updateAdFile ) {
 			// For now, instead of poking around for all the metric names
 			// (or worse, reparsing them from the config file), just assume
@@ -2454,6 +2473,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			sPrintAdAttrs( adstring, * cap, r );
 
 			fprintf( updateAdFile, "%s", adstring.c_str() );
+			// fwrite( updateAdFile, sizeof( char ), strlen( adstring.c_str() ), adstring.c_str() );
 
 			fclose( updateAdFile );
 		} else {

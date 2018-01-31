@@ -1982,7 +1982,11 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		const char * attrName = NULL;
 
 		std::string updateAdPath = ".update.ad";
-		FILE * updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "r" );
+		FILE * updateAdFile = NULL;
+		{
+			TemporaryPrivSentry p( PRIV_USER );
+			updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "r" );
+		}
 		if( updateAdFile ) {
 			int isEOF, error, empty;
 			ClassAd updateAd( updateAdFile, "\n", isEOF, error, empty );
