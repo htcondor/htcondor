@@ -835,9 +835,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     
  cleanup:
     
-    if (creds_) {
-        (*krb5_free_creds_ptr)(krb_context_, creds_);
-    }
+   (*krb5_free_creds_ptr)(krb_context_, creds_);
     
     if (request.data) {
         free(request.data);

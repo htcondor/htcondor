@@ -2395,13 +2395,13 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		formatstr( updateAdPath, "%s/.update.ad", updateAdDir.c_str() );
 		dprintf( D_FULLDEBUG, "Will write update ad to %s\n", updateAdPath.c_str() );
 
+		FILE * updateAdFile = NULL;
 #if defined(WINDOWS)
 		{
 			TemporaryPrivSentry p( PRIV_ROOT );
-			FILE * updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "w" );
+			updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "w" );
 		}
 #else
-		FILE * updateAdFile = NULL;
 		StatInfo si( updateAdDir.c_str() );
 		if(! si.Error()) {
 			set_user_ids( si.GetOwner(), si.GetGroup() );
