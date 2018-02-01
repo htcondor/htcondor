@@ -154,12 +154,18 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 				to->InsertAttr( name, newValue );
 			}
 
-			// Now that we've aggregate the value, set a resource-specific
+			// Now that we've aggregated the value, set a resource-specific
 			// LastUpdate* attribute for when we aggregate into a slot ad
-			// with more than one resource.
+			// with more than one resource type.
 			std::string lastUpdateName = "LastUpdate" + name;
 			to->CopyAttribute( lastUpdateName.c_str(), "LastUpdate", from );
 			dprintf( D_FULLDEBUG, "Aggregate(): setting %s\n", lastUpdateName.c_str() );
+		} else if( name.find( "StartOfJob" ) == 0 ) {
+			// We set the StartOfJob<Resource> attribute below because it has
+			// to start at the aggregated value.  If we copy it here, we'll
+			// overwrite it with the non-aggregated value the next time we
+			// come through here.
+			dprintf( D_FULLDEBUG, "Aggregate(): skipping StartOfJob* attribute '%s'\n", name.c_str() );
 		} else {
 			dprintf( D_FULLDEBUG, "Aggregate(): copying '%s'.\n", name.c_str() );
 			ExprTree * copy = expr->Copy();
@@ -175,15 +181,17 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 	if( to->LookupBool( "ResetStartOfJob", resetStartOfJob ) && resetStartOfJob ) {
 		dprintf( D_FULLDEBUG, "Aggregate(): resetting StartOfJob* attributes...\n" );
 
-		for( auto i = to->begin(); i != to->end(); ++i ) {
+		for( auto i = from->begin(); i != from->end(); ++i ) {
 			const std::string & name = i->first;
 			if( name.find( "StartOfJob" ) != 0 ) { continue; }
 
 			std::string uptimeName = name.substr( 10 );
 			to->CopyAttribute( name.c_str(), uptimeName.c_str() );
+			dprintf( D_FULLDEBUG, "Aggregate(): copied %s to %s\n", uptimeName.c_str(), name.c_str() );
 
 			std::string firstUpdateName = "FirstUpdate" + uptimeName;
 			to->CopyAttribute( firstUpdateName.c_str(), "LastUpdate" );
+			dprintf( D_FULLDEBUG, "Aggregate(): copied %s to %s\n", "LastUpdate", firstUpdateName.c_str() );
 		}
 
 		to->Delete( "ResetStartOfJob" );
