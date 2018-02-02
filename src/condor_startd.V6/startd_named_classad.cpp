@@ -207,7 +207,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 		bool resetStartOfJob = false;
 		if( to->LookupBool( "ResetStartOfJob", resetStartOfJob ) && resetStartOfJob ) {
-			dprintf( D_FULLDEBUG, "AggregateFrom(): resetting StartOfJob* attributes...\n" );
+			// dprintf( D_FULLDEBUG, "AggregateFrom(): resetting StartOfJob* attributes...\n" );
 
 			for( auto i = to->begin(); i != to->end(); ++i ) {
 				const std::string & name = i->first;
@@ -301,17 +301,17 @@ StartdNamedClassAd::unset_monitor() {
 
 			std::string jobAttributeName;
 			formatstr( jobAttributeName, "StartOfJob%s", name.c_str() );
-			dprintf( D_ALWAYS, "unset_monitor(): removing %s\n", jobAttributeName.c_str() );
+			// dprintf( D_FULLDEBUG, "unset_monitor(): removing %s\n", jobAttributeName.c_str() );
 			from->Delete( jobAttributeName );
 
 			std::string firstUpdateName;
 			formatstr( firstUpdateName, "FirstUpdate%s", name.c_str() );
-			dprintf( D_ALWAYS, "unset_monitor(): removing %s\n", firstUpdateName.c_str() );
+			// dprintf( D_FULLDEBUG, "unset_monitor(): removing %s\n", firstUpdateName.c_str() );
 			from->Delete( firstUpdateName );
 
 			std::string lastUpdateName;
 			formatstr( lastUpdateName, "LastUpdate%s", name.c_str() );
-			dprintf( D_ALWAYS, "unset_monitor(): removing %s\n", lastUpdateName.c_str() );
+			// dprintf( D_FULLDEBUG, "unset_monitor(): removing %s\n", lastUpdateName.c_str() );
 			from->Delete( lastUpdateName );
 		}
 	}

@@ -2393,7 +2393,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		std::string updateAdPath;
 		formatstr( updateAdPath, "%s/.update.ad", updateAdDir.c_str() );
-		dprintf( D_FULLDEBUG, "Will write update ad to %s\n", updateAdPath.c_str() );
+		// dprintf( D_FULLDEBUG, "Will write update ad to %s\n", updateAdPath.c_str() );
 
 		FILE * updateAdFile = NULL;
 #if defined(WINDOWS)
