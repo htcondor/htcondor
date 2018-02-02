@@ -909,6 +909,8 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 					puAd->Insert(attr.c_str(), plit);
 				}
 			}
+			attr = "Assigned"; attr += res;
+			puAd->CopyAttribute( attr.c_str(), attr.c_str(), jobAd );
 		}
 		*ppusageAd = puAd;
 	}
