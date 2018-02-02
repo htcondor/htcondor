@@ -164,19 +164,13 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char *
 
 		const char * match_attr = NULL;
 		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( merged_ad, & match_attr ) ) {
-			dprintf( D_FULLDEBUG, "Aggregating ClassAd '%s' for %s.\n", sad->GetName(), r_id_str );
 			sad->AggregateInto( & accumulator );
-			dprintf( D_FULLDEBUG, "Accumulator ad for %s is now:\n", r_id_str );
-			dPrintAd( D_FULLDEBUG, accumulator );
 		}
 	}
 
 	// We don't filter out the (raw) Uptime* metrics here, because the
 	// starter needs them to compute the (per-job) *Usage metrics.  Instead,
 	// we filter them out in Resource::do_update().
-
-	// FIXME: compute per-slot recent metrics.
-
 	StartdNamedClassAd::Merge( merged_ad, & accumulator );
 	return 0;
 }
