@@ -23,7 +23,7 @@
 
 token_cache::token_cache() {
 	current_age = 1;
-	TokenTable = new TokenHashTable(10, hashFunction);
+	TokenTable = new TokenHashTable(10, hashFunction, allowDuplicateKeys);
 }
 
 token_cache::~token_cache() {

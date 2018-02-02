@@ -30,7 +30,7 @@
 #define HASH_TABLE_SIZE			500
 
 HashTable <std::string, NordugridResource *>
-    NordugridResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
+    NordugridResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
 
 const char *NordugridResource::HashName( const char *resource_name,
 										 const char *proxy_subject )

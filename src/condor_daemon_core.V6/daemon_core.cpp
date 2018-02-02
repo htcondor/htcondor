@@ -266,7 +266,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;
-	pidTable = new PidHashTable(PidSize, compute_pid_hash);
+	pidTable = new PidHashTable(PidSize, compute_pid_hash, allowDuplicateKeys);
 	ppid = 0;
 #ifdef WIN32
 	// init the mutex

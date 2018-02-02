@@ -117,11 +117,11 @@ void ViewServer::Init()
 
 	for (int i=0; i<DataSetCount; i++) {
 		for (int j=0; j<HistoryLevels; j++) {
-			DataSet[i][j].AccData=new AccHash(1000,hashFunction);
+			DataSet[i][j].AccData=new AccHash(1000,hashFunction,allowDuplicateKeys);
 		}
 	}
-	GroupHash = new AccHash(100,hashFunction);
-	FileHash = new HashTable< MyString, int >(100,hashFunction);
+	GroupHash = new AccHash(100,hashFunction,allowDuplicateKeys);
+	FileHash = new HashTable< MyString, int >(100,hashFunction,allowDuplicateKeys);
 	OffsetsArray = new ExtArray< ExtOffArray* >(30);
 	TimesArray = new ExtArray< ExtIntArray* >(30);
 

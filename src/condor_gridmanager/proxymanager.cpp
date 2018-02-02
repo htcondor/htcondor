@@ -44,8 +44,8 @@
 #define HASH_TABLE_SIZE			500
 
 
-HashTable <std::string, Proxy *> ProxiesByFilename( HASH_TABLE_SIZE, hashFunction );
-HashTable <std::string, ProxySubject *> SubjectsByName( 50, hashFunction );
+HashTable <std::string, Proxy *> ProxiesByFilename( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+HashTable <std::string, ProxySubject *> SubjectsByName( 50, hashFunction, allowDuplicateKeys );
 
 static bool proxymanager_initialized = false;
 static int CheckProxies_tid = TIMER_UNSET;

@@ -41,7 +41,7 @@ bool GlobusResource::enableGridMonitor = false;
 #define HASH_TABLE_SIZE			500
 
 HashTable <std::string, GlobusResource *>
-    GlobusResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
+    GlobusResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
 
 static unsigned int g_MonitorUID = 0;
 

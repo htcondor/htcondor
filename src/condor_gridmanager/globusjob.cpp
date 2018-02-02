@@ -167,7 +167,7 @@ struct OrphanCallback_t {
 };
 
 
-HashTable <std::string, GlobusJob *> JobsByContact( HASH_TABLE_SIZE, hashFunction );
+HashTable <std::string, GlobusJob *> JobsByContact( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
 
 static List<OrphanCallback_t> OrphanCallbackList;
 

@@ -32,7 +32,7 @@ ScriptQ::ScriptQ( Dag* dag ) :
 	_dag = dag;
 	_numScriptsRunning = 0;
 
-    _scriptPidTable = new HashTable<int,Script*>( 127, &hashFuncInt );
+    _scriptPidTable = new HashTable<int,Script*>( 127, &hashFuncInt, allowDuplicateKeys );
     _waitingQueue = new Queue<Script*>();
 
     if( _scriptPidTable == NULL || _waitingQueue == NULL ) {

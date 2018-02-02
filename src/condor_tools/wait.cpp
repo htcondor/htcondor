@@ -194,7 +194,7 @@ rescue :
 	completed=0;
 	flagged = 0;
 	ReadUserLog log ;
-	HashTable<MyString,MyString> table(127,hashFunction);
+	HashTable<MyString,MyString> table(127,hashFunction,allowDuplicateKeys);
 	
 	if(log.initialize(log_file_name,false,false,true)) {
 		sec_fp = safe_fopen_wrapper_follow(log_file_name, "r", 0644);

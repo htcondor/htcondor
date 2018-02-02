@@ -32,7 +32,7 @@
 
 
 TrackTotals::
-TrackTotals (ppOption m) : allTotals(16, hashFunction)
+TrackTotals (ppOption m) : allTotals(16, hashFunction, allowDuplicateKeys)
 {
 	ppo = m;
 	malformed = 0;

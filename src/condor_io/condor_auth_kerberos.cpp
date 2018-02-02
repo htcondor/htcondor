@@ -1351,7 +1351,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		}
 
 		assert (RealmMap == NULL);
-		RealmMap = new Realm_Map_t(lc, hashFunction);
+		RealmMap = new Realm_Map_t(lc, hashFunction, allowDuplicateKeys);
 		from.rewind();
 		to.rewind();
 		char *f, * t;

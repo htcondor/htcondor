@@ -453,14 +453,14 @@ DedicatedScheduler::DedicatedScheduler()
 
 		// TODO: Be smarter about the sizes of these tables
 	allocations = new HashTable < int, AllocationNode*> 
-		( 199, hashFuncInt );
+		( 199, hashFuncInt, allowDuplicateKeys );
 
 	pending_preemptions = NULL;
 
 	all_matches = new HashTable < std::string, match_rec*>
-		( 199, hashFunction );
+		( 199, hashFunction, allowDuplicateKeys );
 	all_matches_by_id = new HashTable < std::string, match_rec*>
-		( 199, hashFunction );
+		( 199, hashFunction, allowDuplicateKeys );
 
 	num_matches = 0;
 

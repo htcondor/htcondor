@@ -44,9 +44,9 @@ int BaseJob::periodicPolicyEvalTid = TIMER_UNSET;
 int BaseJob::m_checkRemoteStatusTid = TIMER_UNSET;
 
 HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( HASH_TABLE_SIZE,
-													 hashFuncPROC_ID );
+													 hashFuncPROC_ID, allowDuplicateKeys );
 HashTable<std::string, BaseJob *> BaseJob::JobsByRemoteId( HASH_TABLE_SIZE,
-                                                           hashFunction );
+                                                           hashFunction, allowDuplicateKeys );
 
 void BaseJob::BaseJobReconfig()
 {

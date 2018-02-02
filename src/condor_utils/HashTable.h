@@ -149,7 +149,7 @@ class HashTable {
 	// for compatibility reasons
   HashTable( int tableSize,
 			 unsigned int (*hashfcn)( const Index &index ),
-			 duplicateKeyBehavior_t behavior = allowDuplicateKeys );
+			 duplicateKeyBehavior_t behavior );
     // with this constructor, duplicateKeyBehavior_t is ALWAYS set to
     // rejectDuplicateKeys.  To have it work like updateDuplicateKeys,
     // use replace() instead of insert().

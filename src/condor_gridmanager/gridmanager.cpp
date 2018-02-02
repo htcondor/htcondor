@@ -73,9 +73,9 @@ struct VacateRequest {
 };
 
 HashTable <PROC_ID, VacateRequest> pendingScheddVacates( HASH_TABLE_SIZE,
-														 hashFuncPROC_ID );
+														 hashFuncPROC_ID, allowDuplicateKeys );
 HashTable <PROC_ID, VacateRequest> completedScheddVacates( HASH_TABLE_SIZE,
-														   hashFuncPROC_ID );
+														   hashFuncPROC_ID, allowDuplicateKeys );
 
 struct JobStatusRequest {
 	PROC_ID job_id;
@@ -84,9 +84,9 @@ struct JobStatusRequest {
 };
 
 HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( HASH_TABLE_SIZE,
-														hashFuncPROC_ID );
+														hashFuncPROC_ID, allowDuplicateKeys );
 HashTable <PROC_ID, JobStatusRequest> completedJobStatus( HASH_TABLE_SIZE,
-														  hashFuncPROC_ID );
+														  hashFuncPROC_ID, allowDuplicateKeys );
 
 
 SimpleList<int> scheddUpdateNotifications;
@@ -97,7 +97,7 @@ struct ScheddUpdateRequest {
 };
 
 HashTable <PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates( HASH_TABLE_SIZE,
-													 hashFuncPROC_ID );
+																 hashFuncPROC_ID, allowDuplicateKeys );
 bool addJobsSignaled = false;
 bool updateJobsSignaled = false;
 bool checkLeasesSignaled = false;

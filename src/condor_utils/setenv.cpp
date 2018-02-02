@@ -41,7 +41,7 @@ extern DLL_IMPORT_MAGIC char **environ;
 #ifndef WIN32
 
 
-HashTable <std::string, char *> EnvVars( HASH_TABLE_SIZE, hashFunction );
+HashTable <std::string, char *> EnvVars( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
 
 #endif
 

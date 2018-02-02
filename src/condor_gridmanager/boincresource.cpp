@@ -47,7 +47,7 @@ int BoincResource::gahpCallTimeout = 300;	// default value
 #define HASH_TABLE_SIZE			500
 
 HashTable <std::string, BoincResource *>
-    BoincResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
+    BoincResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
 
 enum BatchSubmitStatus {
 	BatchUnsubmitted,

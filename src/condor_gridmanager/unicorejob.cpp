@@ -180,7 +180,7 @@ int UnicoreJob::submitInterval = 300;			// default value
 int UnicoreJob::gahpCallTimeout = 300;			// default value
 
 HashTable<std::string, UnicoreJob *>
-    UnicoreJob::JobsByUnicoreId( HASH_TABLE_SIZE, hashFunction );
+    UnicoreJob::JobsByUnicoreId( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
 
 UnicoreJob::UnicoreJob( ClassAd *classad )
 	: BaseJob( classad )

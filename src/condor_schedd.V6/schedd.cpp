@@ -13106,16 +13106,16 @@ Scheduler::Init()
 		// have the code for that and it's not too important.
 	if (matches == NULL) {
 		matches = new HashTable <std::string, match_rec *> ((int)(MaxJobsRunning*1.2),
-													hashFunction);
+											hashFunction, allowDuplicateKeys);
 		matchesByJobID =
 			new HashTable<PROC_ID, match_rec *>((int)(MaxJobsRunning*1.2),
 											hashFuncPROC_ID,
 											rejectDuplicateKeys);
 		shadowsByPid = new HashTable <int, shadow_rec *>((int)(MaxJobsRunning*1.2),
-													  pidHash);
+														 pidHash, allowDuplicateKeys);
 		shadowsByProcID =
 			new HashTable<PROC_ID, shadow_rec *>((int)(MaxJobsRunning*1.2),
-											 hashFuncPROC_ID);
+												 hashFuncPROC_ID, allowDuplicateKeys);
 		resourcesByProcID =
 			new HashTable<PROC_ID, ClassAd *>((int)(MaxJobsRunning*1.2),
 											 hashFuncPROC_ID,
@@ -13124,7 +13124,7 @@ Scheduler::Init()
 
 	if ( spoolJobFileWorkers == NULL ) {
 		spoolJobFileWorkers = 
-			new HashTable <int, ExtArray<PROC_ID> *>(5, pidHash);
+			new HashTable <int, ExtArray<PROC_ID> *>(5, pidHash, allowDuplicateKeys);
 	}
 
 	char *flock_collector_hosts, *flock_negotiator_hosts;

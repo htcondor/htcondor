@@ -71,7 +71,7 @@ IpVerify::IpVerify()
 		PunchedHoleArray[perm] = NULL;
 	}
 
-	PermHashTable = new PermHashTable_t(797, compute_perm_hash);
+	PermHashTable = new PermHashTable_t(797, compute_perm_hash, allowDuplicateKeys);
 }
 
 
@@ -319,7 +319,7 @@ IpVerify::add_hash_entry(const struct in6_addr & sin6_addr, const char * user, p
         }
 	}
     else {
-        perm = new UserPerm_t(42, hashFunction);
+        perm = new UserPerm_t(42, hashFunction, allowDuplicateKeys);
         if (PermHashTable->insert(sin6_addr, perm) != 0) {
             delete perm;
             return FALSE;
@@ -540,7 +540,7 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
     assert(pentry);
 
 	NetStringList * whichHostList = new NetStringList();
-    UserHash_t * whichUserHash = new UserHash_t(1024, hashFunction);
+    UserHash_t * whichUserHash = new UserHash_t(1024, hashFunction, allowDuplicateKeys);
 
     StringList slist(list);
 	char *entry, * host, * user;

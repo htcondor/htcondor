@@ -592,7 +592,7 @@ CollectorDaemonStatsList::CollectorDaemonStatsList( bool nable,
 	enabled = nable;
 	historySize = history_size;
 	if ( enabled ) {
-		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
+		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction, allowDuplicateKeys );
 	} else {
 		hashTable = NULL;
 	}
@@ -714,7 +714,7 @@ CollectorDaemonStatsList::enable( bool nable )
 	enabled = nable;
 	if ( ( enabled ) && ( ! hashTable ) ) {
 		dprintf( D_ALWAYS, "enable: Creating stats hash table\n" );
-		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
+		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction, allowDuplicateKeys );
 	} else if ( ( ! enabled ) && ( hashTable ) ) {
 		dprintf( D_ALWAYS, "enable: Destroying stats hash table\n" );
 

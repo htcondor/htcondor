@@ -31,7 +31,7 @@ StringSpace (int initial_size)
 	SSStringEnt filler;
 	stringSpace = new HashTable<YourString,int>(
 		(int) (1.25 * initial_size),
-		hashFunction );
+		hashFunction, allowDuplicateKeys );
 
 	// initiliaze the string table
 	filler.inUse     = false;

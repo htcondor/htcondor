@@ -30,10 +30,10 @@
 #define HASH_TABLE_SIZE			500
 
 HashTable <std::string, CondorResource *>
-    CondorResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
+    CondorResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
 
 HashTable <std::string, CondorResource::ScheddPollInfo *>
-    CondorResource::PollInfoByName( 100, hashFunction );
+    CondorResource::PollInfoByName( 100, hashFunction, allowDuplicateKeys );
 
 const char *CondorResource::HashName( const char *resource_name,
 									  const char *pool_name,

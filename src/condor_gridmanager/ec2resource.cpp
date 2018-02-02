@@ -28,7 +28,7 @@
 #define HASH_TABLE_SIZE	500
 
 HashTable <std::string, EC2Resource *>
-	EC2Resource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
+    EC2Resource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
 
 const char * EC2Resource::HashName( const char * resource_name,
 		const char * public_key_file, const char * private_key_file )
