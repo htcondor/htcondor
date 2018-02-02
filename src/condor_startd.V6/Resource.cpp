@@ -2323,7 +2323,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	r_cod_mgr->publish( cap, mask );
 
 	// Publish the supplemental Class Ads
-	resmgr->adlist_publish( r_id, cap, mask );
+	resmgr->adlist_publish( r_id, cap, mask, r_id_str );
 
     // Publish the monitoring information
     daemonCore->dc_stats.Publish(*cap);

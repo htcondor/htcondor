@@ -3778,5 +3778,35 @@ CStarter::WriteAdFiles()
 		}
 	}
 
+	// Correct the bogus Provisioned* attributes in the job ad.
+	ClassAd * jobAd = this->jic->jobClassAd();
+	ClassAd * machineAd = this->jic->machClassAd();
+	if( jobAd && machineAd ) {
+		std::string machineResourcesString;
+		if(machineAd->LookupString( ATTR_MACHINE_RESOURCES, machineResourcesString)) {
+			jobAd->Assign( "ProvisionedResources", machineResourcesString );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to ProvisionedResources\n", ATTR_MACHINE_RESOURCES );
+		} else {
+			machineResourcesString = "CPUs, Disk, Memory";
+		}
+		StringList machineResourcesList( machineResourcesString.c_str() );
+
+		machineResourcesList.rewind();
+		while( const char * resourceName = machineResourcesList.next() ) {
+			std::string provisionedResourceName;
+			formatstr( provisionedResourceName, "%sProvisioned", resourceName );
+			jobAd->CopyAttribute( provisionedResourceName.c_str(), resourceName, machineAd );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName, provisionedResourceName.c_str() );
+
+			std::string assignedResourceName;
+			formatstr( assignedResourceName, "Assigned%s", resourceName );
+			jobAd->CopyAttribute( assignedResourceName.c_str(), assignedResourceName.c_str(), machineAd );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad\n", assignedResourceName.c_str() );
+		}
+
+		dPrintAd( D_FULLDEBUG, * jobAd );
+		jic->periodicJobUpdate( jobAd, true );
+	}
+
 	return ret_val;
 }
