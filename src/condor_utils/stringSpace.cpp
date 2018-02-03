@@ -26,11 +26,10 @@
 template class HashTable<YourString,int>;
 
 StringSpace::
-StringSpace (int initial_size)
+StringSpace ()
 {
 	SSStringEnt filler;
 	stringSpace = new HashTable<YourString,int>(
-		(int) (1.25 * initial_size),
 		hashFunction, allowDuplicateKeys );
 
 	// initiliaze the string table

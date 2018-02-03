@@ -38,10 +38,8 @@ int GlobusResource::monitorDisableLength = DEFAULT_GM_DISABLE_LENGTH;
 int GlobusResource::gahpCallTimeout = 300;	// default value
 bool GlobusResource::enableGridMonitor = false;
 
-#define HASH_TABLE_SIZE			500
-
 HashTable <std::string, GlobusResource *>
-    GlobusResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+    GlobusResource::ResourcesByName( hashFunction, allowDuplicateKeys );
 
 static unsigned int g_MonitorUID = 0;
 

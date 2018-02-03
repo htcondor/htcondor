@@ -355,9 +355,6 @@ struct pidlist {
 };
 typedef struct pidlist * pidlistPTR;
 
-const int PHBUCKETS = 101;  // why 101?  Well...it's slightly greater than
-                            // your average # of processes, and it's prime. 
-
 /** procHashNode is used to hold information in the hashtable.  It is used
     to save the state of certain things that need to be sampled over time.
     For instance, the number of page faults is always given as a number 

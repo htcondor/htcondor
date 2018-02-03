@@ -32,9 +32,9 @@ IMPORTANT NOTE: Don't dprintf() in here, unless its a fatal error! */
 
 passwd_cache::passwd_cache() {
 
-	uid_table = new UidHashTable(10, hashFunction, updateDuplicateKeys);
+	uid_table = new UidHashTable(hashFunction, updateDuplicateKeys);
 	group_table = new 
-		GroupHashTable(10, hashFunction, updateDuplicateKeys);
+		GroupHashTable(hashFunction, updateDuplicateKeys);
 		/* set the number of seconds until a cache entry expires */
 		// Randomize this timer a bit to decrease chances of lots of
 		// processes all pounding on NIS at the same time.

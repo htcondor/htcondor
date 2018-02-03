@@ -495,7 +495,7 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	if (m_mapping == NULL) {
 		// Size of hash table is purposely initialized small to prevent this
 		// from hogging memory.  This will, of course, grow at large sites.
-		m_mapping = new GlobusMappingTable(53, hashFunction, updateDuplicateKeys);
+		m_mapping = new GlobusMappingTable(hashFunction, updateDuplicateKeys);
 	}
 	const char *auth_name_to_map;
 	const char *fqan = getFQAN();

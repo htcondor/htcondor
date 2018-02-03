@@ -102,7 +102,7 @@ bool OTEST_HashTable(void) {
 
 static bool insertlookup_normal() {
 	emit_test("Normal insert() and lookup() of values");
-	table = new HashTable< int, int >(10, intHash);
+	table = new HashTable< int, int >(intHash);
 	int insert_result = table->insert(150, 37);
 	emit_input_header();
 	emit_param("Index", "150");
@@ -435,7 +435,7 @@ static bool test_auto_resize_check_numelems() {
 
 static bool test_auto_resize_timing() {
 	emit_test("How long does it take to add five million entries into the table?");
-	table_two = new HashTable<int, short int>(10, intHash);
+	table_two = new HashTable<int, short int>(intHash);
 	int i;
 	struct timeval time;
 	gettimeofday(&time, NULL);

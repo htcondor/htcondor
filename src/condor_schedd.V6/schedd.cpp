@@ -581,14 +581,11 @@ ContactStartdArgs::~ContactStartdArgs()
 	free( csa_sinful );
 }
 
-	// Years of careful research
-static const int USER_HASH_SIZE = 100;
-
 Scheduler::Scheduler() :
 	OtherPoolStats(stats),
     m_adSchedd(NULL),
     m_adBase(NULL),
-	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
+	GridJobOwners(UserIdentity::HashFcn, updateDuplicateKeys),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
@@ -13105,26 +13102,19 @@ Scheduler::Init()
 		// on reconfig if MaxJobsRunning changes size, but we don't
 		// have the code for that and it's not too important.
 	if (matches == NULL) {
-		matches = new HashTable <std::string, match_rec *> ((int)(MaxJobsRunning*1.2),
-											hashFunction, allowDuplicateKeys);
+		matches = new HashTable <std::string, match_rec *> (hashFunction, allowDuplicateKeys);
 		matchesByJobID =
-			new HashTable<PROC_ID, match_rec *>((int)(MaxJobsRunning*1.2),
-											hashFuncPROC_ID,
-											rejectDuplicateKeys);
-		shadowsByPid = new HashTable <int, shadow_rec *>((int)(MaxJobsRunning*1.2),
-														 pidHash, allowDuplicateKeys);
+			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID, rejectDuplicateKeys);
+		shadowsByPid = new HashTable <int, shadow_rec *>(pidHash, allowDuplicateKeys);
 		shadowsByProcID =
-			new HashTable<PROC_ID, shadow_rec *>((int)(MaxJobsRunning*1.2),
-												 hashFuncPROC_ID, allowDuplicateKeys);
+			new HashTable<PROC_ID, shadow_rec *>(hashFuncPROC_ID, allowDuplicateKeys);
 		resourcesByProcID =
-			new HashTable<PROC_ID, ClassAd *>((int)(MaxJobsRunning*1.2),
-											 hashFuncPROC_ID,
-											 updateDuplicateKeys);
+			new HashTable<PROC_ID, ClassAd *>(hashFuncPROC_ID, updateDuplicateKeys);
 	}
 
 	if ( spoolJobFileWorkers == NULL ) {
 		spoolJobFileWorkers = 
-			new HashTable <int, ExtArray<PROC_ID> *>(5, pidHash, allowDuplicateKeys);
+			new HashTable <int, ExtArray<PROC_ID> *>(pidHash, allowDuplicateKeys);
 	}
 
 	char *flock_collector_hosts, *flock_negotiator_hosts;
@@ -13246,7 +13236,6 @@ Scheduler::Init()
 		//
 	HashTable<PROC_ID, CronTab*> *origCronTabs = this->cronTabs;
 	this->cronTabs = new HashTable<PROC_ID, CronTab*>(
-												(int)( MaxJobsRunning * 1.2 ),
 												hashFuncPROC_ID,
 												updateDuplicateKeys );
 		//

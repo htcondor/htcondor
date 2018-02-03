@@ -388,7 +388,7 @@ Worker::removeRequest(int req_id)
 
 // Functions for IOProcess class
 IOProcess::IOProcess()
-	: m_workers_list(20, &hashFuncInt, allowDuplicateKeys)
+	: m_workers_list(&hashFuncInt, allowDuplicateKeys)
 {
 	m_async_mode = false;
 	m_new_results_signaled = false;

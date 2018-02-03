@@ -31,7 +31,7 @@ struct ProcFamilyDirectContainer {
 };
 
 ProcFamilyDirect::ProcFamilyDirect() :
-	m_table(11, pidHashFunc, allowDuplicateKeys)
+	m_table(pidHashFunc, allowDuplicateKeys)
 {
 }
 

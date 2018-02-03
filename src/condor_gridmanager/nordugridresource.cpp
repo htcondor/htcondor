@@ -27,10 +27,8 @@
 #include "nordugridjob.h"
 #include "gridmanager.h"
 
-#define HASH_TABLE_SIZE			500
-
 HashTable <std::string, NordugridResource *>
-    NordugridResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+    NordugridResource::ResourcesByName( hashFunction, allowDuplicateKeys );
 
 const char *NordugridResource::HashName( const char *resource_name,
 										 const char *proxy_subject )

@@ -481,11 +481,10 @@ LogRecord* InstantiateLogEntry(
 
 // Templated member functions that call the helper functions with the correct arguments.
 //
-#define CLASSAD_LOG_HASHTABLE_SIZE 20000
 
 template <typename K, typename AD>
 ClassAdLog<K,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,const ConstructLogEntry* maker)
-	: table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction, allowDuplicateKeys)
+	: table(hashFunction, allowDuplicateKeys)
 	, make_table_entry(maker)
 {
 	log_filename_buf = filename;
@@ -524,7 +523,7 @@ ClassAdLog<K,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,co
 
 template <typename K, typename AD>
 ClassAdLog<K,AD>::ClassAdLog(const ConstructLogEntry* maker)
-	: table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction, allowDuplicateKeys)
+	: table(hashFunction, allowDuplicateKeys)
 	, make_table_entry(maker)
 {
 	active_transaction = NULL;

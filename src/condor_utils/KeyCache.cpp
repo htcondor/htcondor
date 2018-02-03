@@ -172,13 +172,13 @@ void KeyCacheEntry::delete_storage() {
 
 
 KeyCache::KeyCache() {
-	key_table = new HashTable<MyString, KeyCacheEntry*>(209, hashFunction, rejectDuplicateKeys);
+	key_table = new HashTable<MyString, KeyCacheEntry*>(hashFunction, rejectDuplicateKeys);
 	m_index = new KeyCacheIndex(hashFunction);
 	dprintf ( D_SECURITY, "KEYCACHE: created: %p\n", key_table );
 }
 
 KeyCache::KeyCache(const KeyCache& k) {
-	key_table = new HashTable<MyString, KeyCacheEntry*>(209, hashFunction, rejectDuplicateKeys);
+	key_table = new HashTable<MyString, KeyCacheEntry*>(hashFunction, rejectDuplicateKeys);
 	m_index = new KeyCacheIndex(hashFunction);
 	copy_storage(k);
 }

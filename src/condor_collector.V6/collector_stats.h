@@ -138,7 +138,6 @@ class CollectorDaemonStatsList
   private:
 	bool hashKey( StatsHashKey &key, const char *class_name, ClassAd *ad );
 
-	enum { STATS_TABLE_SIZE = 1024 };
 	StatsHashTable		*hashTable;
 	int				historySize;
 	bool				enabled;

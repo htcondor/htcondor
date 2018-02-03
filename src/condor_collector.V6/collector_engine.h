@@ -90,7 +90,6 @@ class CollectorEngine : public Service
 	bool LookupByAdType(AdTypes, CollectorHashTable *&, HashFunc &);
  
 	// the greater tables
-	enum {GREATER_TABLE_SIZE = 1024};
 
 	/**
 	* TODO<tstclair>: Eval notes and refactor when time permits.
@@ -110,7 +109,6 @@ class CollectorEngine : public Service
 	CollectorHashTable AccountingAds;
 
 	// the lesser tables
-	enum {LESSER_TABLE_SIZE = 32};
 	CollectorHashTable CkptServerAds;
 	CollectorHashTable GatewayAds;
 	CollectorHashTable CollectorAds;

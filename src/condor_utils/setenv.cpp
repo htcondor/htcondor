@@ -36,12 +36,10 @@ extern DLL_IMPORT_MAGIC char **environ;
 // allocated memory. Windows does its own memory management for environment
 // variables, so this hash-table is unnecessary there.
 
-#define HASH_TABLE_SIZE		50
-
 #ifndef WIN32
 
 
-HashTable <std::string, char *> EnvVars( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+HashTable <std::string, char *> EnvVars( hashFunction, allowDuplicateKeys );
 
 #endif
 

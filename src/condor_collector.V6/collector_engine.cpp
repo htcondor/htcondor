@@ -49,23 +49,23 @@ int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 
 CollectorEngine::CollectorEngine (CollectorStats *stats ) :
-	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction, allowDuplicateKeys),
-	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction, allowDuplicateKeys),
-	ScheddAds     (GREATER_TABLE_SIZE, &adNameHashFunction, allowDuplicateKeys),
-	SubmittorAds  (GREATER_TABLE_SIZE, &adNameHashFunction, allowDuplicateKeys),
-	LicenseAds    (GREATER_TABLE_SIZE, &adNameHashFunction, allowDuplicateKeys),
-	MasterAds     (GREATER_TABLE_SIZE, &adNameHashFunction, allowDuplicateKeys),
-	StorageAds    (GREATER_TABLE_SIZE, &adNameHashFunction, allowDuplicateKeys),
-	XferServiceAds(GREATER_TABLE_SIZE, &adNameHashFunction, allowDuplicateKeys),
-	AccountingAds (GREATER_TABLE_SIZE, &adNameHashFunction, allowDuplicateKeys),
-	CkptServerAds (LESSER_TABLE_SIZE , &adNameHashFunction, allowDuplicateKeys),
-	GatewayAds    (LESSER_TABLE_SIZE , &adNameHashFunction, allowDuplicateKeys),
-	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction, allowDuplicateKeys),
-	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction, allowDuplicateKeys),
-	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction, allowDuplicateKeys),
-	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction, allowDuplicateKeys),
-	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction, allowDuplicateKeys),
-	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction, allowDuplicateKeys),
+	StartdAds     (&adNameHashFunction, allowDuplicateKeys),
+	StartdPrivateAds(&adNameHashFunction, allowDuplicateKeys),
+	ScheddAds     (&adNameHashFunction, allowDuplicateKeys),
+	SubmittorAds  (&adNameHashFunction, allowDuplicateKeys),
+	LicenseAds    (&adNameHashFunction, allowDuplicateKeys),
+	MasterAds     (&adNameHashFunction, allowDuplicateKeys),
+	StorageAds    (&adNameHashFunction, allowDuplicateKeys),
+	XferServiceAds(&adNameHashFunction, allowDuplicateKeys),
+	AccountingAds (&adNameHashFunction, allowDuplicateKeys),
+	CkptServerAds (&adNameHashFunction, allowDuplicateKeys),
+	GatewayAds    (&adNameHashFunction, allowDuplicateKeys),
+	CollectorAds  (&adNameHashFunction, allowDuplicateKeys),
+	NegotiatorAds (&adNameHashFunction, allowDuplicateKeys),
+	HadAds        (&adNameHashFunction, allowDuplicateKeys),
+	LeaseManagerAds(&adNameHashFunction, allowDuplicateKeys),
+	GridAds       (&adNameHashFunction, allowDuplicateKeys),
+	GenericAds    (&stringHashFunction, allowDuplicateKeys),
 	__self_ad__(0)
 {
 	clientTimeout = 20;
@@ -326,7 +326,7 @@ CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 	CollectorHashTable *table=0;
 	if (GenericAds.lookup(type, table) == -1) {
 		dprintf(D_ALWAYS, "creating new table for type %s\n", type.Value());
-		table = new CollectorHashTable(LESSER_TABLE_SIZE , &adNameHashFunction, allowDuplicateKeys);
+		table = new CollectorHashTable(&adNameHashFunction, allowDuplicateKeys);
 		if (GenericAds.insert(type, table) == -1) {
 			dprintf(D_ALWAYS,  "error adding new generic hash table\n");
 			delete table;

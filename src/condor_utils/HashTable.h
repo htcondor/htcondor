@@ -145,17 +145,8 @@ class HashTable {
   typedef HashIterator<Index, Value> iterator;
   friend class HashIterator<Index, Value>;
 
-    // the first constructor takes a tableSize that isn't used, it's left in
-	// for compatibility reasons
-  HashTable( int tableSize,
-			 unsigned int (*hashfcn)( const Index &index ),
-			 duplicateKeyBehavior_t behavior );
-    // with this constructor, duplicateKeyBehavior_t is ALWAYS set to
-    // rejectDuplicateKeys.  To have it work like updateDuplicateKeys,
-    // use replace() instead of insert().
-  HashTable( unsigned int (*hashfcn)( const Index &index ));
-  void initialize( unsigned int (*hashfcn)( const Index &index ),
-			 duplicateKeyBehavior_t behavior );
+  HashTable( unsigned int (*hashfcn)( const Index &index ),
+			 duplicateKeyBehavior_t behavior = rejectDuplicateKeys );
   HashTable( const HashTable &copy);
   const HashTable& operator=(const HashTable &copy);
   ~HashTable();
@@ -234,26 +225,8 @@ class HashTable {
 // In the first constructor, tableSz is ignored as it is no longer used, it is
 // left in for compatability reasons.
 template <class Index, class Value>
-HashTable<Index,Value>::HashTable( int /* tableSz */,
-								   unsigned int (*hashF)( const Index &index ),
+HashTable<Index,Value>::HashTable( unsigned int (*hashF)( const Index &index ),
 								   duplicateKeyBehavior_t behavior ) {
-	initialize(hashF, behavior);
-}
-
-template <class Index, class Value>
-HashTable<Index,Value>::HashTable( unsigned int (*hashF)( const Index &index )) {
-	initialize(hashF, rejectDuplicateKeys);
-}
-
-
-
-
-// Construct hash table. Allocate memory for hash table and
-// initialize its elements.
-
-template <class Index, class Value>
-void HashTable<Index,Value>::initialize( unsigned int (*hashF)( const Index &index ),
-								         duplicateKeyBehavior_t behavior ) {
   int i;
 
   hashfcn = hashF;

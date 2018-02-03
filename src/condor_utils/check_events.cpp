@@ -22,12 +22,10 @@
 #include "check_events.h"
 #include "read_multiple_logs.h"
 
-#define JOB_HASH_SIZE 10007 // prime, allow for big DAG...
-
 //-----------------------------------------------------------------------------
 
 CheckEvents::CheckEvents(int allowEventsSetting) :
-		jobHash(JOB_HASH_SIZE, ReadMultipleUserLogs::hashFuncJobID,
+		jobHash(ReadMultipleUserLogs::hashFuncJobID,
 			rejectDuplicateKeys),
 		noSubmitId(-1, 0, 0)
 {

@@ -103,8 +103,8 @@
 //   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
 static unsigned int hashFunctionNoCase( const MyString& );
 
-HashTable<MyString,int> CheckFilesRead( 577, hashFunctionNoCase, allowDuplicateKeys );
-HashTable<MyString,int> CheckFilesWrite( 577, hashFunctionNoCase, allowDuplicateKeys );
+HashTable<MyString,int> CheckFilesRead( hashFunctionNoCase, allowDuplicateKeys );
+HashTable<MyString,int> CheckFilesWrite( hashFunctionNoCase, allowDuplicateKeys );
 
 #ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
 #else

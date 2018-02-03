@@ -46,14 +46,12 @@ using std::string;
 #define GAHP_PREFIX "GAHP:"
 #define GAHP_PREFIX_LEN 5
 
-#define HASH_TABLE_SIZE			50
-
 bool logGahpIo = true;
 unsigned long logGahpIoSize = 0;
 int gahpResponseTimeout = 20;
 
 HashTable <std::string, GahpServer *>
-    GahpServer::GahpServersById( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+    GahpServer::GahpServersById( hashFunction, allowDuplicateKeys );
 
 const int GahpServer::m_buffer_size = 4096;
 
@@ -163,7 +161,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	next_reqid = 1;
 	rotated_reqids = false;
 
-	requestTable = new HashTable<int,GenericGahpClient*>( 300, &hashFuncInt, allowDuplicateKeys );
+	requestTable = new HashTable<int,GenericGahpClient*>( &hashFuncInt, allowDuplicateKeys );
 	ASSERT(requestTable);
 
 	globus_gass_server_url = NULL;
@@ -1059,7 +1057,7 @@ GahpServer::Initialize( Proxy *proxy )
 			return false;
 		}
 
-		ProxiesByFilename = new HashTable<std::string,GahpProxyInfo*>( 500, hashFunction, allowDuplicateKeys );
+		ProxiesByFilename = new HashTable<std::string,GahpProxyInfo*>( hashFunction, allowDuplicateKeys );
 		ASSERT(ProxiesByFilename);
 	}
 

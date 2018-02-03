@@ -81,8 +81,6 @@ static const char *GMStateNames[] = {
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
 
-#define HASH_TABLE_SIZE			500
-
 
 void UnicoreJobInit()
 {
@@ -180,7 +178,7 @@ int UnicoreJob::submitInterval = 300;			// default value
 int UnicoreJob::gahpCallTimeout = 300;			// default value
 
 HashTable<std::string, UnicoreJob *>
-    UnicoreJob::JobsByUnicoreId( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+    UnicoreJob::JobsByUnicoreId( hashFunction, allowDuplicateKeys );
 
 UnicoreJob::UnicoreJob( ClassAd *classad )
 	: BaseJob( classad )

@@ -71,7 +71,7 @@ GCC_DIAG_OFF(float-equal)
 //------------------------------------------------------------------
 
 Accountant::Accountant():
-	concurrencyLimits(256, hashFunction, updateDuplicateKeys)
+	concurrencyLimits(hashFunction, updateDuplicateKeys)
 {
   MinPriority=0.5;
   AcctLog=NULL;

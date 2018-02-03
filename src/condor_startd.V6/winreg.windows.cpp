@@ -888,9 +888,9 @@ static bool init_windows_performance_hashtable()
 	}
 	else if (REG_MULTI_SZ == vtype)
 	{
-		rl.pQueries   = new HashTable<DWORD, WinPerf_QueryResult>(2, DWORDHash, updateDuplicateKeys);
-		rl.pPerfTable = new HashTable<YourStringNoCase, const char *>(4000, hashFunction, allowDuplicateKeys);
-		rl.pNameTable = new HashTable<DWORD, const char *>(4000, DWORDHash, rejectDuplicateKeys);
+		rl.pQueries   = new HashTable<DWORD, WinPerf_QueryResult>(DWORDHash, updateDuplicateKeys);
+		rl.pPerfTable = new HashTable<YourStringNoCase, const char *>(hashFunction, allowDuplicateKeys);
+		rl.pNameTable = new HashTable<DWORD, const char *>(DWORDHash, rejectDuplicateKeys);
 		if (rl.pPerfTable)
 		{
 			char * psz = rl.pszzNames;

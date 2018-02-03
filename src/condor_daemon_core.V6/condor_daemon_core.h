@@ -295,7 +295,7 @@ class DaemonCore : public Service
 	 * Typically these methods are invoked from functions inside 
 	 * of daemon_core_main.C.
 	 */
-    DaemonCore (int PidSize = 0, int ComSize = 0, int SigSize = 0,
+    DaemonCore (int ComSize = 0, int SigSize = 0,
                 int SocSize = 0, int ReapSize = 0, int PipeSize = 0);
     ~DaemonCore();
     void Driver();

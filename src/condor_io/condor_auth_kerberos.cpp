@@ -1307,7 +1307,6 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
 
 int Condor_Auth_Kerberos :: init_realm_mapping()
 {
-    int lc = 0;
     FILE *fd;
     char * buffer;
     char * filename = param( "KERBEROS_MAP_FILE" );
@@ -1337,7 +1336,6 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 				if(token) {
 					to.append(token);
 					from.append(tmpf);
-					lc++;
 				} else {
 					dprintf (D_ALWAYS, "KERBEROS: bad map (%s), no domain after '=': %s\n",
 						filename, buffer);
@@ -1351,7 +1349,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		}
 
 		assert (RealmMap == NULL);
-		RealmMap = new Realm_Map_t(lc, hashFunction, allowDuplicateKeys);
+		RealmMap = new Realm_Map_t(hashFunction, allowDuplicateKeys);
 		from.rewind();
 		to.rewind();
 		char *f, * t;

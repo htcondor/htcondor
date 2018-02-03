@@ -85,8 +85,8 @@ struct HostStatistics {
 
 // explicit template instantiation
 
-HashTable<std::string, JobStatistics *> Stats(1024, hashFunction, allowDuplicateKeys);
-HashTable<std::string, HostStatistics *> HStats(1024, hashFunction, allowDuplicateKeys);
+HashTable<std::string, JobStatistics *> Stats(hashFunction, allowDuplicateKeys);
+HashTable<std::string, HostStatistics *> HStats(hashFunction, allowDuplicateKeys);
 int numJobStats = 0;
 int numHostStats = 0;
 bool totals_only = false;
@@ -371,8 +371,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 	ULogEventOutcome result;
 	ULogEvent *event=NULL;
 	char hash[40];
-	HashTable<std::string, ExecuteEvent *> ExecRecs(1024, hashFunction, allowDuplicateKeys);
-	HashTable<std::string, CheckpointedEvent *> CkptRecs(1024, hashFunction, allowDuplicateKeys);
+	HashTable<std::string, ExecuteEvent *> ExecRecs(hashFunction, allowDuplicateKeys);
+	HashTable<std::string, CheckpointedEvent *> CkptRecs(hashFunction, allowDuplicateKeys);
 	
 	if (ulog.initialize(filename,0,false,true)==false) {
 		fprintf(stderr,

@@ -134,7 +134,7 @@ void ExtraParamInfo::GetInfo(
  ****************************************************************************/
 ExtraParamTable::ExtraParamTable()
 {
-	table = new HashTable<MyString, ExtraParamInfo *>(300, hashFunction,
+	table = new HashTable<MyString, ExtraParamInfo *>(hashFunction,
 													  updateDuplicateKeys);
 	return;
 }

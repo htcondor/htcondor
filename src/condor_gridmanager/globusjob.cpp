@@ -158,8 +158,6 @@ static const char *GMStateNames[] = {
 	} \
 }
 
-#define HASH_TABLE_SIZE			500
-
 struct OrphanCallback_t {
 	char *job_contact;
 	int state;
@@ -167,7 +165,7 @@ struct OrphanCallback_t {
 };
 
 
-HashTable <std::string, GlobusJob *> JobsByContact( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+HashTable <std::string, GlobusJob *> JobsByContact( hashFunction, allowDuplicateKeys );
 
 static List<OrphanCallback_t> OrphanCallbackList;
 

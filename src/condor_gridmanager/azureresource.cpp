@@ -25,10 +25,8 @@
 #include "azureresource.h"
 #include "gridmanager.h"
 
-#define HASH_TABLE_SIZE	13
-
 HashTable <std::string, AzureResource *>
-AzureResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+AzureResource::ResourcesByName( hashFunction, allowDuplicateKeys );
 
 const char *AzureResource::HashName( const char *resource_name,
                                      const char *subscription,

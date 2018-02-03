@@ -25,10 +25,8 @@
 #include "infnbatchresource.h"
 #include "gridmanager.h"
 
-#define HASH_TABLE_SIZE	500
-
 HashTable <std::string, INFNBatchResource *>
-    INFNBatchResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+    INFNBatchResource::ResourcesByName( hashFunction, allowDuplicateKeys );
 
 const char * INFNBatchResource::HashName( const char * batch_type,
 		const char * resource_name )

@@ -1428,7 +1428,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	CheckSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
 	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>(),job_queue_name,max_historical_logs);
-	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash,allowDuplicateKeys);
+	ClusterSizeHashTable = new ClusterSizeHashTable_t(compute_clustersize_hash,allowDuplicateKeys);
 	TotalJobsCount = 0;
 	jobs_added_this_transaction = 0;
 
@@ -7094,15 +7094,8 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 
 		// caller expects PrioRecAutoClusterRejected to be instantiated
 		// (and cleared)
-	int hash_size = TotalJobsCount/4+1000;
-	if( PrioRecAutoClusterRejected &&
-	    PrioRecAutoClusterRejected->getTableSize() < 0.8*hash_size )
-	{
-		delete PrioRecAutoClusterRejected;
-		PrioRecAutoClusterRejected = NULL;
-	}
 	if( ! PrioRecAutoClusterRejected ) {
-		PrioRecAutoClusterRejected = new HashTable<int,int>(hash_size,hashFuncInt,rejectDuplicateKeys);
+		PrioRecAutoClusterRejected = new HashTable<int,int>(hashFuncInt,rejectDuplicateKeys);
 		ASSERT( PrioRecAutoClusterRejected );
 	}
 	else {

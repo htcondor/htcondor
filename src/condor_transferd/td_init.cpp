@@ -32,9 +32,9 @@
 static void usage(void);
 
 TransferD::TransferD() :
-	m_treqs(200, hashFunction, allowDuplicateKeys),
-	m_client_to_transferd_threads(200, hashFuncLong, allowDuplicateKeys),
-	m_transferd_to_client_threads(200, hashFuncLong, allowDuplicateKeys)
+	m_treqs(hashFunction, allowDuplicateKeys),
+	m_client_to_transferd_threads(hashFuncLong, allowDuplicateKeys),
+	m_transferd_to_client_threads(hashFuncLong, allowDuplicateKeys)
 {
 	m_initialized = FALSE;
 	m_update_sock = NULL;

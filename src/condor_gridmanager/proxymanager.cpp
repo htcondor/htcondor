@@ -41,11 +41,9 @@
 
 #include <sstream>
 
-#define HASH_TABLE_SIZE			500
 
-
-HashTable <std::string, Proxy *> ProxiesByFilename( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
-HashTable <std::string, ProxySubject *> SubjectsByName( 50, hashFunction, allowDuplicateKeys );
+HashTable <std::string, Proxy *> ProxiesByFilename( hashFunction, allowDuplicateKeys );
+HashTable <std::string, ProxySubject *> SubjectsByName( hashFunction, allowDuplicateKeys );
 
 static bool proxymanager_initialized = false;
 static int CheckProxies_tid = TIMER_UNSET;

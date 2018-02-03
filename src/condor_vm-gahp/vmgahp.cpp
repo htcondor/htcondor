@@ -106,7 +106,7 @@ unsigned __stdcall pipe_forward_thread(void *)
 #endif
 
 VMGahp::VMGahp(VMGahpConfig* config, const char* iwd)
-	: m_pending_req_table(20, &hashFuncInt, allowDuplicateKeys)
+	: m_pending_req_table(&hashFuncInt, allowDuplicateKeys)
 {
 	m_async_mode = true;
 	m_new_results_signaled = false;

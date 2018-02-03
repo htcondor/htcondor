@@ -389,7 +389,7 @@ Matchmaker ()
 	GotRescheduleCmd=false;
 	job_attr_references = NULL;
 	
-	stashedAds = new AdHash(1000, hashFunction, allowDuplicateKeys);
+	stashedAds = new AdHash(hashFunction, allowDuplicateKeys);
 
 	MatchList = NULL;
 	cachedAutoCluster = -1;
@@ -1479,7 +1479,7 @@ negotiationTime ()
 	accountant.CheckMatches( startdAds );
 
 	if ( !groupQuotasHash ) {
-		groupQuotasHash = new groupQuotasHashType(100,hashFunction,allowDuplicateKeys);
+		groupQuotasHash = new groupQuotasHashType(hashFunction,allowDuplicateKeys);
 		ASSERT(groupQuotasHash);
     }
 

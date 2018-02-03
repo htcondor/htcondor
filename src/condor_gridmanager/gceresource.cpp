@@ -25,10 +25,8 @@
 #include "gceresource.h"
 #include "gridmanager.h"
 
-#define HASH_TABLE_SIZE	13
-
 HashTable <std::string, GCEResource *>
-    GCEResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction, allowDuplicateKeys );
+    GCEResource::ResourcesByName( hashFunction, allowDuplicateKeys );
 
 const char * GCEResource::HashName( const char *resource_name,
 									const char *project,

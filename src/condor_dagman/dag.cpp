@@ -81,8 +81,6 @@ void touch (const char * filename) {
     close (fd);
 }
 
-static const int NODE_HASH_SIZE = 10007; // prime, allow for big DAG...
-
 //---------------------------------------------------------------------------
 Dag::Dag( /* const */ StringList &dagFiles,
 		  const int maxJobsSubmitted,
@@ -97,14 +95,14 @@ Dag::Dag( /* const */ StringList &dagFiles,
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
-	_splices              (200, hashFunction, rejectDuplicateKeys),
+	_splices              (hashFunction, rejectDuplicateKeys),
 	_dagFiles             (dagFiles),
 	_useDagDir            (useDagDir),
 	_final_job (0),
-	_nodeNameHash		  (NODE_HASH_SIZE, hashFunction, rejectDuplicateKeys),
-	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
-	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
-	_noopIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
+	_nodeNameHash		  (hashFunction, rejectDuplicateKeys),
+	_nodeIDHash			  (hashFuncInt, rejectDuplicateKeys),
+	_condorIDHash		  (hashFuncInt, rejectDuplicateKeys),
+	_noopIDHash			  (hashFuncInt, rejectDuplicateKeys),
     _numNodesDone         (0),
     _numNodesFailed       (0),
     _numJobsSubmitted     (0),

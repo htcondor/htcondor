@@ -36,10 +36,6 @@
 #define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
 #endif
 
-#define LOG_HASH_SIZE 37 // prime
-
-#define LOG_INFO_HASH_SIZE 37 // prime
-
 #define DEBUG_LOG_FILES 0 //TEMP
 #if DEBUG_LOG_FILES
 #  define D_LOG_FILES D_ALWAYS
@@ -50,8 +46,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	allLogFiles(LOG_INFO_HASH_SIZE, hashFunction, rejectDuplicateKeys),
-	activeLogFiles(LOG_INFO_HASH_SIZE, hashFunction, rejectDuplicateKeys)
+	allLogFiles(hashFunction, rejectDuplicateKeys),
+	activeLogFiles(hashFunction, rejectDuplicateKeys)
 {
 }
 
