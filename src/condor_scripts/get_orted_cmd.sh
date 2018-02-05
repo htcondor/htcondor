@@ -2,7 +2,7 @@
 
 ##**************************************************************
 ##
-## Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -24,16 +24,11 @@
 # on each execute node and chirps the command back to the spool directory,
 # where it can be fetched by the execute nodes.
 
-# Get the remote spool directory from the job ad
-# (Note: No environment information is passed to this script.)
-_CONDOR_JOB_AD=.job.ad
-_CONDOR_REMOTE_SPOOL_DIR=$(condor_q -jobads $_CONDOR_JOB_AD -af RemoteSpoolDir)
-
 # Get the node from the command-line
-_CONDOR_PROCNO=$1
+NODE=$1
 shift
 
 # Chirp the orted command to spool
 CONDOR_CHIRP=$(condor_config_val libexec)/condor_chirp
-echo "$@" | $CONDOR_CHIRP put -mode cwa -perm 400 - $_CONDOR_REMOTE_SPOOL_DIR/orted_cmd.$_CONDOR_PROCNO
+echo "$@" | $CONDOR_CHIRP put -mode cwa -perm 400 - $_CONDOR_REMOTE_SPOOL_DIR/orted_cmd.$NODE
 

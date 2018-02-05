@@ -2,7 +2,7 @@
 
 ##**************************************************************
 ##
-## Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -24,9 +24,10 @@
 
 # Get a unique filename to store the command
 ORTED_CMD=orted_cmd
-while [ -f $ORTED_CMD ]; do
+while [ -f $_CONDOR_SCRATCH_DIR/$ORTED_CMD ]; do
     ORTED_CMD=x$ORTED_CMD
-done   
+done
+ORTED_CMD=$_CONDOR_SCRATCH_DIR/$ORTED_CMD
 
 # Fetch the orted command from the schedd
 CONDOR_CHIRP=$(condor_config_val libexec)/condor_chirp
@@ -54,10 +55,10 @@ $CONDOR_CHIRP remove $_CONDOR_REMOTE_SPOOL_DIR/orted_cmd.$_CONDOR_PROCNO
 sed -i '$s|--daemonize||' $ORTED_CMD
 
 # Modify the command to put the tmpdir under the scratch directory
-mkdir -p tmp
-sed -i 's|$| --tmpdir '"$(pwd)"'/tmp|' $ORTED_CMD
+mkdir -p $_CONDOR_SCRATCH_DIR/tmp
+sed -i 's|$| --tmpdir '"$_CONDOR_SCRATCH_DIR"'/tmp|' $ORTED_CMD
 
-# Set $HOME to the scratch directory
+# Set $HOME to the current directory
 export HOME=$(pwd)
 
 # Trap SIGTERM and run cleanup

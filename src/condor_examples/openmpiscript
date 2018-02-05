@@ -2,7 +2,7 @@
 
 ##**************************************************************
 ##
-## Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -73,14 +73,14 @@ EXINT=$(condor_config_val OPENMPI_EXCLUDE_NETWORK_INTERFACES)
 # Not having /tmp mounted under scratch may hang mpi jobs.
 _USE_SCRATCH=$(condor_config_val MOUNT_UNDER_SCRATCH)
 if [ -z $_USE_SCRATCH ]; then
-    echo "WARNING: MOUNT_UNDER_SCRATCH not set in condor_config"
+    >&2 echo "WARNING: MOUNT_UNDER_SCRATCH not set in condor_config"
 elif test "${_USE_SCRATCH#*/tmp}" == "$_USE_SCRATCH"; then
-    echo "WARNING: /tmp not included in MOUNT_UNDER_SCRATCH"
+    >&2 echo "WARNING: /tmp not included in MOUNT_UNDER_SCRATCH"
 fi
 
 # If MPDIR is not set, then use a default value
 if [ -z $MPDIR ]; then
-    echo "WARNING: Using default value for \$MPDIR in openmpiscript"
+    >&2 echo "WARNING: Using default value for \$MPDIR in openmpiscript"
     MPDIR=/usr/lib64/openmpi
 fi
 PATH=$MPDIR/bin:.:$PATH
@@ -88,7 +88,7 @@ export PATH
 
 # If EXINT is not set, then use some default values
 if [ -z $EXINT ]; then
-    echo "WARNING: Using default values for \$EXINT in openmpiscript"
+    >&2 echo "WARNING: Using default values for \$EXINT in openmpiscript"
     EXINT="docker0,virbr0"
 fi
 ##
@@ -149,9 +149,10 @@ fi
 ## head node (node 0) setup
 # Build the hostfile
 HOSTFILE=hosts
-while [ -f $HOSTFILE ]; do
+while [ -f $_CONDOR_SCRATCH_DIR/$HOSTFILE ]; do
     HOSTFILE=x$HOSTFILE
 done
+HOSTFILE=$_CONDOR_SCRATCH_DIR/$HOSTFILE
 REQUEST_CPUS=$(condor_q -jobads $_CONDOR_JOB_AD -af RequestCpus)
 
 for node in $(seq 0 $(( $_CONDOR_NPROCS - 1 ))); do
