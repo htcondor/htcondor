@@ -42,7 +42,7 @@ extern "C" {
 unsigned int pidHashFunc( const pid_t& pid );
 
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
-    new HashTable <pid_t, procHashNode *> ( pidHashFunc, allowDuplicateKeys );
+    new HashTable <pid_t, procHashNode *> ( pidHashFunc );
 
 piPTR ProcAPI::allProcInfos = NULL;
 

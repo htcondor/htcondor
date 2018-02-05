@@ -68,7 +68,7 @@ MgmtScheddPlugin::earlyInitialize()
 
 	singleton = new ManagementAgent::Singleton();
 
-	submitterAds = new SubmitterHashTable(hashFunction, allowDuplicateKeys);
+	submitterAds = new SubmitterHashTable(hashFunction);
 
 	ManagementAgent *agent = singleton->getInstance();
 

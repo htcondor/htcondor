@@ -42,7 +42,7 @@
 int CreamResource::gahpCallTimeout = 300;	// default value
 
 HashTable <std::string, CreamResource *>
-    CreamResource::ResourcesByName( hashFunction, allowDuplicateKeys );
+    CreamResource::ResourcesByName( hashFunction );
 
 #define CHECK_DELEGATION_INTERVAL	300
 #define LIFETIME_EXTEND_INTERVAL	300

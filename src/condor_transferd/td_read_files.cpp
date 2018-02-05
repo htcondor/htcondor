@@ -198,7 +198,7 @@ TransferD::read_files_handler(int /* cmd */, Stream *sock)
 
 	// associate the tid with the request so I can deal with it propery in
 	// the reaper
-	m_transferd_to_client_threads.insert(tid, treq);
+	ASSERT( m_transferd_to_client_threads.insert(tid, treq) == 0 );
 
 	// The stream is inherited to the thread, who does the transfer and
 	// finishes the protocol, but in the parent, I'm closing it.

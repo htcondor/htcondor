@@ -26,7 +26,7 @@
 #include "gridmanager.h"
 
 HashTable <std::string, EC2Resource *>
-    EC2Resource::ResourcesByName( hashFunction, allowDuplicateKeys );
+    EC2Resource::ResourcesByName( hashFunction );
 
 const char * EC2Resource::HashName( const char * resource_name,
 		const char * public_key_file, const char * private_key_file )

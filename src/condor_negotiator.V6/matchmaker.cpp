@@ -389,7 +389,7 @@ Matchmaker ()
 	GotRescheduleCmd=false;
 	job_attr_references = NULL;
 	
-	stashedAds = new AdHash(hashFunction, allowDuplicateKeys);
+	stashedAds = new AdHash(hashFunction);
 
 	MatchList = NULL;
 	cachedAutoCluster = -1;

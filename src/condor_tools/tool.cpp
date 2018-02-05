@@ -81,7 +81,7 @@ bool IgnoreMissingDaemon = false;
 
 bool all_good = true;
 
-HashTable<MyString, bool> addresses_sent( hashFunction, allowDuplicateKeys );
+HashTable<MyString, bool> addresses_sent( hashFunction );
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error

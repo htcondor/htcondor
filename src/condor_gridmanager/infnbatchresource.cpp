@@ -26,7 +26,7 @@
 #include "gridmanager.h"
 
 HashTable <std::string, INFNBatchResource *>
-    INFNBatchResource::ResourcesByName( hashFunction, allowDuplicateKeys );
+    INFNBatchResource::ResourcesByName( hashFunction );
 
 const char * INFNBatchResource::HashName( const char * batch_type,
 		const char * resource_name )

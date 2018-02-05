@@ -49,23 +49,23 @@ int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 
 CollectorEngine::CollectorEngine (CollectorStats *stats ) :
-	StartdAds     (&adNameHashFunction, allowDuplicateKeys),
-	StartdPrivateAds(&adNameHashFunction, allowDuplicateKeys),
-	ScheddAds     (&adNameHashFunction, allowDuplicateKeys),
-	SubmittorAds  (&adNameHashFunction, allowDuplicateKeys),
-	LicenseAds    (&adNameHashFunction, allowDuplicateKeys),
-	MasterAds     (&adNameHashFunction, allowDuplicateKeys),
-	StorageAds    (&adNameHashFunction, allowDuplicateKeys),
-	XferServiceAds(&adNameHashFunction, allowDuplicateKeys),
-	AccountingAds (&adNameHashFunction, allowDuplicateKeys),
-	CkptServerAds (&adNameHashFunction, allowDuplicateKeys),
-	GatewayAds    (&adNameHashFunction, allowDuplicateKeys),
-	CollectorAds  (&adNameHashFunction, allowDuplicateKeys),
-	NegotiatorAds (&adNameHashFunction, allowDuplicateKeys),
-	HadAds        (&adNameHashFunction, allowDuplicateKeys),
-	LeaseManagerAds(&adNameHashFunction, allowDuplicateKeys),
-	GridAds       (&adNameHashFunction, allowDuplicateKeys),
-	GenericAds    (&stringHashFunction, allowDuplicateKeys),
+	StartdAds     (&adNameHashFunction),
+	StartdPrivateAds(&adNameHashFunction),
+	ScheddAds     (&adNameHashFunction),
+	SubmittorAds  (&adNameHashFunction),
+	LicenseAds    (&adNameHashFunction),
+	MasterAds     (&adNameHashFunction),
+	StorageAds    (&adNameHashFunction),
+	XferServiceAds(&adNameHashFunction),
+	AccountingAds (&adNameHashFunction),
+	CkptServerAds (&adNameHashFunction),
+	GatewayAds    (&adNameHashFunction),
+	CollectorAds  (&adNameHashFunction),
+	NegotiatorAds (&adNameHashFunction),
+	HadAds        (&adNameHashFunction),
+	LeaseManagerAds(&adNameHashFunction),
+	GridAds       (&adNameHashFunction),
+	GenericAds    (&stringHashFunction),
 	__self_ad__(0)
 {
 	clientTimeout = 20;
@@ -326,7 +326,7 @@ CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 	CollectorHashTable *table=0;
 	if (GenericAds.lookup(type, table) == -1) {
 		dprintf(D_ALWAYS, "creating new table for type %s\n", type.Value());
-		table = new CollectorHashTable(&adNameHashFunction, allowDuplicateKeys);
+		table = new CollectorHashTable(&adNameHashFunction);
 		if (GenericAds.insert(type, table) == -1) {
 			dprintf(D_ALWAYS,  "error adding new generic hash table\n");
 			delete table;

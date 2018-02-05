@@ -26,7 +26,7 @@
 #include "gridmanager.h"
 
 HashTable <std::string, GCEResource *>
-    GCEResource::ResourcesByName( hashFunction, allowDuplicateKeys );
+    GCEResource::ResourcesByName( hashFunction );
 
 const char * GCEResource::HashName( const char *resource_name,
 									const char *project,

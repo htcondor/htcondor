@@ -42,8 +42,8 @@
 #include <sstream>
 
 
-HashTable <std::string, Proxy *> ProxiesByFilename( hashFunction, allowDuplicateKeys );
-HashTable <std::string, ProxySubject *> SubjectsByName( hashFunction, allowDuplicateKeys );
+HashTable <std::string, Proxy *> ProxiesByFilename( hashFunction );
+HashTable <std::string, ProxySubject *> SubjectsByName( hashFunction );
 
 static bool proxymanager_initialized = false;
 static int CheckProxies_tid = TIMER_UNSET;
@@ -289,8 +289,8 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			new_master->num_references = 0;
 			new_master->subject = proxy_subject;
 			SetMasterProxy( new_master, proxy );
-			ProxiesByFilename.insert( new_master->proxy_filename,
-									  new_master );
+			ASSERT( ProxiesByFilename.insert( new_master->proxy_filename,
+			                                  new_master ) == 0 );
 
 			proxy_subject->master_proxy = new_master;
 

@@ -41,7 +41,7 @@ int BaseJob::periodicPolicyEvalTid = TIMER_UNSET;
 
 int BaseJob::m_checkRemoteStatusTid = TIMER_UNSET;
 
-HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( hashFuncPROC_ID, allowDuplicateKeys );
+HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( hashFuncPROC_ID );
 HashTable<std::string, BaseJob *> BaseJob::JobsByRemoteId( hashFunction, allowDuplicateKeys );
 
 void BaseJob::BaseJobReconfig()
@@ -100,7 +100,7 @@ BaseJob::BaseJob( ClassAd *classad )
 	std::string remote_id;
 	jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
 	if ( !remote_id.empty() ) {
-		JobsByRemoteId.insert( remote_id, this );
+		ASSERT( JobsByRemoteId.insert( remote_id, this ) == 0 );
 	}
 
 	condorState = IDLE; // Just in case lookup fails
@@ -440,7 +440,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 		jobAd->Assign( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
 	}
 	if ( !new_job_id.empty() ) {
-		JobsByRemoteId.insert( new_job_id, this );
+		ASSERT( JobsByRemoteId.insert( new_job_id, this ) == 0 );
 		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id.c_str() );
 	} else {
 		// new job id is NULL

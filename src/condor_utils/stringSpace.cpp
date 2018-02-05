@@ -29,8 +29,7 @@ StringSpace::
 StringSpace ()
 {
 	SSStringEnt filler;
-	stringSpace = new HashTable<YourString,int>(
-		hashFunction, allowDuplicateKeys );
+	stringSpace = new HashTable<YourString,int>(hashFunction);
 
 	// initiliaze the string table
 	filler.inUse     = false;

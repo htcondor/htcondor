@@ -422,7 +422,7 @@ main(int argc, char *argv[])
 	char buffer[1024];
 	HashTable<std::string, int>	*slot_counts;
 
-	slot_counts = new HashTable <std::string, int> (hashFunction, allowDuplicateKeys);
+	slot_counts = new HashTable <std::string, int> (hashFunction);
 	myDistro->Init( argc, argv );
 	config();
 

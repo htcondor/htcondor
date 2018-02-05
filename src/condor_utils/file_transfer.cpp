@@ -694,7 +694,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 
 	if (!TranskeyTable) {
 		// initialize our hashtable
-		if (!(TranskeyTable = new TranskeyHashTable(hashFunction, allowDuplicateKeys)))
+		if (!(TranskeyTable = new TranskeyHashTable(hashFunction)))
 		{
 			// failed to allocate our hashtable ?!?!
 			return 0;
@@ -709,7 +709,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 	if (!TransThreadTable) {
 		// initialize our thread hashtable
 		if (!(TransThreadTable =
-			  new TransThreadHashTable(compute_transthread_hash, allowDuplicateKeys))) {
+			  new TransThreadHashTable(compute_transthread_hash))) {
 			// failed to allocate our hashtable ?!?!
 			return 0;
 		}
@@ -4181,7 +4181,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	// big enough that the chains are decent sized. Suppose you might
 	// have 50,000 files. In the case for 997 buckets and even distribution, 
 	// the chains would be ~50 entries long. Good enough.
-	(*catalog) = new FileCatalogHashTable(hashFunction, allowDuplicateKeys);
+	(*catalog) = new FileCatalogHashTable(hashFunction);
 
 	/* If we've decided not to use a file catalog, then leave it empty. */
 	if (m_use_file_catalog == false) {

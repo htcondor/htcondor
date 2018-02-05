@@ -13102,14 +13102,14 @@ Scheduler::Init()
 		// on reconfig if MaxJobsRunning changes size, but we don't
 		// have the code for that and it's not too important.
 	if (matches == NULL) {
-		matches = new HashTable <std::string, match_rec *> (hashFunction, allowDuplicateKeys);
+		matches = new HashTable <std::string, match_rec *> (hashFunction);
 		matchesByJobID =
 			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID, rejectDuplicateKeys);
 		shadowsByPid = new HashTable <int, shadow_rec *>(pidHash, allowDuplicateKeys);
 		shadowsByProcID =
 			new HashTable<PROC_ID, shadow_rec *>(hashFuncPROC_ID, allowDuplicateKeys);
 		resourcesByProcID =
-			new HashTable<PROC_ID, ClassAd *>(hashFuncPROC_ID, updateDuplicateKeys);
+			new HashTable<PROC_ID, ClassAd *>(hashFuncPROC_ID);
 	}
 
 	if ( spoolJobFileWorkers == NULL ) {

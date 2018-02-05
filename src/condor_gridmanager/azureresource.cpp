@@ -26,7 +26,7 @@
 #include "gridmanager.h"
 
 HashTable <std::string, AzureResource *>
-AzureResource::ResourcesByName( hashFunction, allowDuplicateKeys );
+AzureResource::ResourcesByName( hashFunction );
 
 const char *AzureResource::HashName( const char *resource_name,
                                      const char *subscription,

@@ -28,7 +28,7 @@
 #include "gridmanager.h"
 
 HashTable <std::string, NordugridResource *>
-    NordugridResource::ResourcesByName( hashFunction, allowDuplicateKeys );
+    NordugridResource::ResourcesByName( hashFunction );
 
 const char *NordugridResource::HashName( const char *resource_name,
 										 const char *proxy_subject )

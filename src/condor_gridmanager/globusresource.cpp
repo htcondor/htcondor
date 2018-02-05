@@ -39,7 +39,7 @@ int GlobusResource::gahpCallTimeout = 300;	// default value
 bool GlobusResource::enableGridMonitor = false;
 
 HashTable <std::string, GlobusResource *>
-    GlobusResource::ResourcesByName( hashFunction, allowDuplicateKeys );
+    GlobusResource::ResourcesByName( hashFunction );
 
 static unsigned int g_MonitorUID = 0;
 

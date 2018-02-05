@@ -28,10 +28,10 @@
 #include "gridmanager.h"
 
 HashTable <std::string, CondorResource *>
-    CondorResource::ResourcesByName( hashFunction, allowDuplicateKeys );
+    CondorResource::ResourcesByName( hashFunction );
 
 HashTable <std::string, CondorResource::ScheddPollInfo *>
-    CondorResource::PollInfoByName( hashFunction, allowDuplicateKeys );
+    CondorResource::PollInfoByName( hashFunction );
 
 const char *CondorResource::HashName( const char *resource_name,
 									  const char *pool_name,

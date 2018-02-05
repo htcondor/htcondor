@@ -165,7 +165,7 @@ struct OrphanCallback_t {
 };
 
 
-HashTable <std::string, GlobusJob *> JobsByContact( hashFunction, allowDuplicateKeys );
+HashTable <std::string, GlobusJob *> JobsByContact( hashFunction );
 
 static List<OrphanCallback_t> OrphanCallbackList;
 
@@ -2850,7 +2850,7 @@ void GlobusJob::GlobusSetRemoteJobId( const char *job_id, bool is_gt5 )
 		JobsByContact.remove(globusJobId(jobContact));
 	}
 	if ( job_id ) {
-		JobsByContact.insert(globusJobId(job_id), this);
+		ASSERT( JobsByContact.insert(globusJobId(job_id), this) == 0 );
 	}
 
 	free( jobContact );

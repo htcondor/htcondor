@@ -45,7 +45,7 @@ using std::set;
 int BoincResource::gahpCallTimeout = 300;	// default value
 
 HashTable <std::string, BoincResource *>
-    BoincResource::ResourcesByName( hashFunction, allowDuplicateKeys );
+    BoincResource::ResourcesByName( hashFunction );
 
 enum BatchSubmitStatus {
 	BatchUnsubmitted,
