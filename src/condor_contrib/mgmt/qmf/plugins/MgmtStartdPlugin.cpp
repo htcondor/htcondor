@@ -61,7 +61,7 @@ struct MgmtStartdPlugin : public Service, StartdPlugin
 
 		singleton = new ManagementAgent::Singleton();
 
-		startdAds = new SlotHashTable(4096, &adNameHashFunction, allowDuplicateKeys);
+		startdAds = new SlotHashTable(&adNameHashFunction, allowDuplicateKeys);
 
 		ManagementAgent *agent = singleton->getInstance();
 

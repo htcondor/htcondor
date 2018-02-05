@@ -83,13 +83,13 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 
 		singleton = new ManagementAgent::Singleton();
 
-		startdAds = new SlotHashTable(4096, &adNameHashFunction, allowDuplicateKeys);
+		startdAds = new SlotHashTable(&adNameHashFunction, allowDuplicateKeys);
 
-		negotiatorAds = new NegotiatorHashTable(3, &adNameHashFunction, allowDuplicateKeys);
+		negotiatorAds = new NegotiatorHashTable(&adNameHashFunction, allowDuplicateKeys);
 
-		schedulerAds = new SchedulerHashTable(128, &adNameHashFunction, allowDuplicateKeys);
+		schedulerAds = new SchedulerHashTable(&adNameHashFunction, allowDuplicateKeys);
 
-		gridAds = new GridHashTable(4096, &adNameHashFunction, allowDuplicateKeys);
+		gridAds = new GridHashTable(&adNameHashFunction, allowDuplicateKeys);
 
 		ManagementAgent *agent = singleton->getInstance();
 
