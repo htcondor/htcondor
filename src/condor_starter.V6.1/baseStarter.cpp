@@ -3779,14 +3779,13 @@ CStarter::WriteAdFiles()
 	}
 
 	// Correct the bogus Provisioned* attributes in the job ad.
-	ClassAd * jobAd = this->jic->jobClassAd();
 	ClassAd * machineAd = this->jic->machClassAd();
-	if( jobAd && machineAd ) {
+	if( machineAd ) {
 		ClassAd updateAd;
 
 		std::string machineResourcesString;
 		if(machineAd->LookupString( ATTR_MACHINE_RESOURCES, machineResourcesString)) {
-			jobAd->Assign( "ProvisionedResources", machineResourcesString );
+			updateAd.Assign( "ProvisionedResources", machineResourcesString );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to ProvisionedResources\n", ATTR_MACHINE_RESOURCES );
 		} else {
 			machineResourcesString = "CPUs, Disk, Memory";
