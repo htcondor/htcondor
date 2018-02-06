@@ -622,6 +622,20 @@ pseudo_phase( char *phase )
 }
 
 int
+pseudo_get_job_ad( ClassAd* &ad )
+{
+	RemoteResource *remote;
+	if (parallelMasterResource == NULL) {
+		remote = thisRemoteResource;
+	} else {
+		remote = parallelMasterResource;
+	}
+	ad = remote->getJobAd();
+	return 0;
+}
+
+
+int
 pseudo_get_job_attr( const char *name, MyString &expr )
 {
 	RemoteResource *remote;

@@ -84,6 +84,7 @@ extern "C" {
 	int REMOTE_CONDOR_truncate( char *path, int length );
 	int REMOTE_CONDOR_utime( char *path, int actime, int modtime );
 	int REMOTE_CONDOR_dprintf_stats(char *message);
+	int REMOTE_CONDOR_getcreds();
 
     int REMOTE_CONDOR_get_sec_session_info(
 		char const *starter_reconnect_session_info,
