@@ -10,6 +10,7 @@ class DockerProc : public VanillaProc {
 
 		virtual int StartJob();
 		virtual bool JobReaper( int pid, int status );
+		virtual bool ExecReaper( int pid, int status );
 		virtual bool JobExit();
 
 		virtual void Suspend();
@@ -30,17 +31,22 @@ class DockerProc : public VanillaProc {
 		virtual bool PublishUpdateAd( ClassAd * jobAd );
 		virtual void PublishToEnv( Env * env );
 
+		virtual void SetupDockerSsh();
+		virtual int  AcceptSSHClient(Stream *stream);
+
 		virtual int getStats(int tid);
 		static bool Detect();
 		static bool Version( std::string & version );
 
 	private:
 
+		ReliSock listener;
 		std::string containerID;
 		std::string containerName;
 		int updateTid;
 		uint64_t memUsage, netIn, netOut, userCpu, sysCpu;
 		bool waitForCreate;
+		int execReaperId;
 };
 
 #endif /* _CONDOR_DOCKER_PROC_H */

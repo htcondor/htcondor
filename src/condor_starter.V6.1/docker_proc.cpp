@@ -26,6 +26,12 @@
 #include "condor_holdcodes.h"
 #include "docker-api.h"
 #include "condor_daemon_client.h"
+#include "condor_daemon_core.h"
+
+#ifdef HAVE_SCM_RIGHTS_PASSFD
+#include "shared_port_scm_rights.h"
+#include "fdpass.h"
+#endif
 
 extern CStarter *Starter;
 
@@ -175,9 +181,24 @@ int DockerProc::StartJob() {
 	return TRUE;
 }
 
+int execPid;
+ReliSock *ns;
+
+bool
+DockerProc::ExecReaper(int pid, int status) {
+	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d with status %d\n", pid, status);
+	if (pid == execPid) {
+		dprintf(D_ALWAYS, "docker exec pid %d exited\n", pid);
+		delete ns;
+		return 0;
+	} else {
+		dprintf(D_ALWAYS, "docker exec unknown pid %d exited\n", pid);
+	}
+	return true;
+}
 
 bool DockerProc::JobReaper( int pid, int status ) {
-	dprintf( D_FULLDEBUG, "DockerProc::JobReaper()\n" );
+	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d\n", pid );
 
 	if (waitForCreate) {
 		waitForCreate = false;
@@ -213,24 +234,29 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		}
 		}
 
+		{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
-		
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
+		}
 		// Start a timer to poll for job usage updates.
 		updateTid = daemonCore->Register_Timer(2, 
 				20, (TimerHandlercpp)&DockerProc::getStats, 
 					"DockerProc::getStats",this);
 
+		SetupDockerSsh();
+
 		++num_pids; // Used by OsProc::PublishUpdateAd().
 		return false; // don't exit
 	}
 
-	daemonCore->Cancel_Timer(updateTid);
 
 	//
 	// This should mean that the container has terminated.
 	//
 	if( pid == JobPid ) {
+
+		daemonCore->Cancel_Timer(updateTid);
+
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		//
 		// Even running Docker in attached mode, we have a race condition
@@ -360,12 +386,107 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		// We don't have to do any process clean-up, because container.
 		// We'll do the disk clean-up after we've transferred files.
+
+		// This helps to make ssh-to-job more plausible.
+		return VanillaProc::JobReaper( pid, status );
 	}
 
-	// This helps to make ssh-to-job more plausible.
-	return VanillaProc::JobReaper( pid, status );
+	return 0;
 }
 
+void
+DockerProc::SetupDockerSsh() {
+#ifdef LINUX
+	// First, create a unix domain socket that we can listen on
+	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (uds < 0) {
+		dprintf(D_ALWAYS, "Cannot create unix domain socket for docker ssh_to_job\n");
+		return;
+	}
+
+	// stuff the unix domain socket into a reli sock
+	listener.close();
+	listener.assignDomainSocket(uds);
+
+	// and bind it to a filename in the scratch directory
+	struct sockaddr_un pipe_addr;
+	memset(&pipe_addr, 0, sizeof(pipe_addr));
+	pipe_addr.sun_family = AF_UNIX;
+	unsigned pipe_addr_len;
+
+	std::string workingDir = Starter->GetWorkingDir();
+	std::string pipeName = workingDir + "/.docker_sock";	
+
+	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
+	pipe_addr_len = SUN_LEN(&pipe_addr);
+
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	int rc = bind(uds, (struct sockaddr *)&pipe_addr, pipe_addr_len);
+	if (rc < 0) {
+		dprintf(D_ALWAYS, "Cannot bind unix domain socket at %s for docker ssh_to_job: %d\n", pipeName.c_str(), errno);
+		return;
+	}
+	}
+
+	listen(uds, 50);
+	listener._state = Sock::sock_special;
+	listener._special_state = ReliSock::relisock_listen;
+
+	// now register this socket so we get called when connected to
+	int rc;
+	rc = daemonCore->Register_Socket(
+		&listener,
+		"Docker sshd listener",
+		(SocketHandlercpp)&DockerProc::AcceptSSHClient,
+		"DockerProc::AcceptSSHClient",
+		this);
+	ASSERT( rc >= 0 );
+
+	// and a reaper 
+	execReaperId = daemonCore->Register_Reaper("ExecReaper", (ReaperHandlercpp)&DockerProc::ExecReaper,
+		"ExecReaper", this);
+#endif
+	return;
+}
+
+
+int
+DockerProc::AcceptSSHClient(Stream *stream) {
+#ifdef LINUX
+	int fds[3];
+	ns = ((ReliSock*)stream)->accept();
+
+	dprintf(D_ALWAYS, "Accepted new connection from ssh client for docker job\n");
+	fds[0] = fdpass_recv(ns->get_file_desc());
+	fds[1] = fdpass_recv(ns->get_file_desc());
+	fds[2] = fdpass_recv(ns->get_file_desc());
+
+dprintf(D_ALWAYS, "GGT GGT new fds are %d %d %d\n", fds[0], fds[1], fds[2]);
+
+	ArgList args;
+	args.AppendArg("-i");
+
+	Env env;
+	MyString env_errors;
+	if( !Starter->GetJobEnv(JobAd,&env,&env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting DockerProc::exec: %s\n", env_errors.Value());
+		return 0;
+	}
+
+	int rc;
+	{
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	rc = DockerAPI::execInContainer(
+	 containerName, "/bin/bash", args, env,fds,execReaperId,execPid);
+	}
+
+	dprintf(D_ALWAYS, "docker exec returned %d for pid %d\n", rc, execPid);
+
+#endif
+	return KEEP_STREAM;
+}
 
 //
 // JobExit() is called after file transfer.

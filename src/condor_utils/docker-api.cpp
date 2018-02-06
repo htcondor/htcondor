@@ -222,6 +222,51 @@ int DockerAPI::startContainer(
 	return 0;
 }
 
+int 
+DockerAPI::execInContainer( const std::string &containerName,
+			    const std::string &command,
+			    const ArgList     &arguments,
+			    const Env &environment,
+			    int *childFDs,
+			    int reaperid,
+			    int &pid) {
+
+	ArgList execArgs;
+	if ( ! add_docker_arg(execArgs))
+		return -1;
+	execArgs.AppendArg("exec");
+	execArgs.AppendArg("-ti"); 
+
+	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to pass enviroment to docker.\n" );
+		return -8;
+	}
+
+	execArgs.AppendArg(containerName);
+	execArgs.AppendArg(command);
+
+	execArgs.AppendArgsFromArgList(arguments);
+
+
+	MyString displayString;
+	execArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_ALWAYS, "execing: %s\n", displayString.c_str() );
+
+	FamilyInfo fi;
+	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
+	int childPID = daemonCore->Create_Process( execArgs.GetArg(0), execArgs,
+		PRIV_CONDOR_FINAL, reaperid, FALSE, FALSE, NULL, "/",
+		& fi, NULL, childFDs );
+
+	if( childPID == FALSE ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Create_Process() failed to condor exec.\n" );
+		return -1;
+	}
+	pid = childPID;
+
+	return 0;
+}
+
 static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, int original_error_code)
 {
 	int rval = original_error_code;

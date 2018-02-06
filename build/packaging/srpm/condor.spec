@@ -1394,6 +1394,7 @@ rm -rf %{buildroot}
 %_bindir/condor_q
 %_libexecdir/condor/condor_transferer
 %_bindir/condor_cod
+%_bindir/condor_docker_enter
 %_bindir/condor_qedit
 %_bindir/condor_userlog
 %_bindir/condor_release
