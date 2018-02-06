@@ -267,6 +267,8 @@ private:
 };
 
 // this class is the interface that is consumed by classes in this file that are derived from LogRecord
+// The methods return true on success and false on failure.
+// nextIteration() returns false when there are no more items.
 class LoggableClassAdTable {
 public:
 	virtual ~LoggableClassAdTable() {};
@@ -484,7 +486,7 @@ LogRecord* InstantiateLogEntry(
 
 template <typename K, typename AD>
 ClassAdLog<K,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,const ConstructLogEntry* maker)
-	: table(hashFunction, allowDuplicateKeys)
+	: table(hashFunction)
 	, make_table_entry(maker)
 {
 	log_filename_buf = filename;
@@ -523,7 +525,7 @@ ClassAdLog<K,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,co
 
 template <typename K, typename AD>
 ClassAdLog<K,AD>::ClassAdLog(const ConstructLogEntry* maker)
-	: table(hashFunction, allowDuplicateKeys)
+	: table(hashFunction)
 	, make_table_entry(maker)
 {
 	active_transaction = NULL;

@@ -640,6 +640,9 @@ LogNewClassAd::Play(void *data_structure)
 	SetTargetTypeName(*ad, targettype);
 	ad->EnableDirtyTracking();
 	result = table->insert(key, ad) ? 0 : -1;
+	if ( result == -1 ) {
+		ctor.Delete(ad);
+	}
 
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::NewClassAd(key);
