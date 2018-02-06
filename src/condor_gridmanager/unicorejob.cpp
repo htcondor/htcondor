@@ -178,7 +178,7 @@ int UnicoreJob::submitInterval = 300;			// default value
 int UnicoreJob::gahpCallTimeout = 300;			// default value
 
 HashTable<std::string, UnicoreJob *>
-    UnicoreJob::JobsByUnicoreId( hashFunction, allowDuplicateKeys );
+    UnicoreJob::JobsByUnicoreId( hashFunction );
 
 UnicoreJob::UnicoreJob( ClassAd *classad )
 	: BaseJob( classad )
@@ -801,7 +801,7 @@ void UnicoreJob::SetRemoteJobId( const char *job_id )
 		JobsByUnicoreId.remove(jobContact);
 	}
 	if ( job_id ) {
-		JobsByUnicoreId.insert(job_id, this);
+		ASSERT( JobsByUnicoreId.insert(job_id, this) == 0);
 	}
 
 	free( jobContact );

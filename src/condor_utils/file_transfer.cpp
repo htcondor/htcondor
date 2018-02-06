@@ -4476,7 +4476,7 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 	}
 
 	// plugin_table is a member variable
-	plugin_table = new PluginHashTable(hashFunction, allowDuplicateKeys);
+	plugin_table = new PluginHashTable(hashFunction);
 
 	StringList plugin_list (plugin_list_string);
 	plugin_list.rewind();
@@ -4570,7 +4570,9 @@ FileTransfer::InsertPluginMappings(MyString methods, MyString p)
 	method_list.rewind();
 	while((m = method_list.next())) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m, p.Value());
-		plugin_table->insert(m, p);
+		if ( plugin_table->insert(m, p) == -1 ) {
+			dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" already handled by another plugin, ignoring \"%s\"\n", m, p.Value());
+		}
 	}
 }
 

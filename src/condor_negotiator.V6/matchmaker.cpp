@@ -1479,7 +1479,7 @@ negotiationTime ()
 	accountant.CheckMatches( startdAds );
 
 	if ( !groupQuotasHash ) {
-		groupQuotasHash = new groupQuotasHashType(hashFunction,allowDuplicateKeys);
+		groupQuotasHash = new groupQuotasHashType(hashFunction);
 		ASSERT(groupQuotasHash);
     }
 

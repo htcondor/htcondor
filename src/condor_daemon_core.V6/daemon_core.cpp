@@ -263,7 +263,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
     dc_stats.Init(enable_stats); // initilize statistics.
     dc_stats.SetWindowSize(20*60);
 
-	pidTable = new PidHashTable(compute_pid_hash, allowDuplicateKeys);
+	pidTable = new PidHashTable(compute_pid_hash);
 	ppid = 0;
 #ifdef WIN32
 	// init the mutex

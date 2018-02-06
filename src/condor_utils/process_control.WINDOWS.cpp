@@ -187,7 +187,7 @@ typedef HashTable<DWORD, SuspendedThread*> SuspendedProcess;
 // we keep track of all suspended processes via a hash table
 // keyed on process id
 //
-static HashTable<DWORD, SuspendedProcess*> suspended_processes(hash_func, allowDuplicateKeys);
+static HashTable<DWORD, SuspendedProcess*> suspended_processes(hash_func);
 
 bool
 windows_suspend(DWORD pid)
@@ -198,7 +198,7 @@ windows_suspend(DWORD pid)
 	SuspendedProcess* sp;
 	int ret = suspended_processes.lookup(pid, sp);
 	ASSERT(ret == -1);
-	sp = new SuspendedProcess(hash_func, allowDuplicateKeys);
+	sp = new SuspendedProcess(hash_func);
 	ASSERT(sp != NULL);
 	ret = suspended_processes.insert(pid, sp);
 	ASSERT(ret != -1);

@@ -451,16 +451,12 @@ DedicatedScheduler::DedicatedScheduler()
 	sanity_tid = -1;
 	rid = -1;
 
-		// TODO: Be smarter about the sizes of these tables
-	allocations = new HashTable < int, AllocationNode*> 
-		( hashFuncInt, allowDuplicateKeys );
+	allocations = new HashTable < int, AllocationNode*>( hashFuncInt );
 
 	pending_preemptions = NULL;
 
-	all_matches = new HashTable < std::string, match_rec*>
-		( hashFunction, allowDuplicateKeys );
-	all_matches_by_id = new HashTable < std::string, match_rec*>
-		( hashFunction, allowDuplicateKeys );
+	all_matches = new HashTable < std::string, match_rec*>( hashFunction );
+	all_matches_by_id = new HashTable < std::string, match_rec*>( hashFunction );
 
 	num_matches = 0;
 
@@ -1703,8 +1699,8 @@ DedicatedScheduler::sortResources( void )
                     std::map<std::string, match_rec*>::iterator c(pending_matches.find(claim_id));
                     if (c != pending_matches.end()) {
                         dmrec = c->second;
-                        all_matches->insert(resname, dmrec);
-                        all_matches_by_id->insert(claim_id, dmrec);
+                        ASSERT( all_matches->insert(resname, dmrec) == 0 );
+                        ASSERT( all_matches_by_id->insert(claim_id, dmrec) == 0 );
                         dmrec->setStatus(M_CLAIMED);
                         pending_matches.erase(c);
                     } else {
@@ -1808,8 +1804,8 @@ DedicatedScheduler::sortResources( void )
 				serial_resources->Append(resource);
 				char *slot_name = NULL;
 				resource->LookupString(ATTR_NAME, &slot_name);
-				all_matches->insert(slot_name, mr);
-				all_matches_by_id->insert(mr->claimId(), mr);
+				ASSERT( all_matches->insert(slot_name, mr) == 0 );
+				ASSERT( all_matches_by_id->insert(mr->claimId(), mr) == 0 );
 				free(slot_name);
 			}
 		}
@@ -2930,7 +2926,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 		node++;
 	}
 	
-	allocations->insert( cluster, alloc );
+	ASSERT( allocations->insert( cluster, alloc ) == 0 );
 
 		// Show world what we did
 	alloc->display();
@@ -3313,8 +3309,8 @@ DedicatedScheduler::AddMrec(
         pending_matches[claim_id] = mrec;
         pending_claims[mrec->publicClaimId()] = claim_id;
     } else {
-        all_matches->insert(slot_name, mrec);
-        all_matches_by_id->insert(mrec->claimId(), mrec);
+        ASSERT( all_matches->insert(slot_name, mrec) == 0 );
+        ASSERT( all_matches_by_id->insert(mrec->claimId(), mrec) == 0 );
     }
 
 	removeRequest( job_id );
@@ -4229,8 +4225,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 			mrec->setStatus(M_CLAIMED);
 
-			all_matches->insert(host, mrec);
-			all_matches_by_id->insert(mrec->claimId(), mrec);
+			ASSERT( all_matches->insert(host, mrec) == 0 );
+			ASSERT( all_matches_by_id->insert(mrec->claimId(), mrec) == 0 );
 
 			jobsToAllocate.Append(job);
 

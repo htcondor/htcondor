@@ -10830,9 +10830,9 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		numShadows++;
 	}
 	if( new_rec->pid ) {
-		shadowsByPid->insert(new_rec->pid, new_rec);
+		ASSERT( shadowsByPid->insert(new_rec->pid, new_rec) == 0 );
 	}
-	shadowsByProcID->insert(new_rec->job_id, new_rec);
+	ASSERT( shadowsByProcID->insert(new_rec->job_id, new_rec) == 0 );
 
 		// To improve performance and to keep our sanity in case we
 		// get killed in the middle of this operation, do all of these
@@ -10931,7 +10931,7 @@ Scheduler::add_shadow_rec_pid( shadow_rec* new_rec )
 	if( ! new_rec->pid ) {
 		EXCEPT( "add_shadow_rec_pid() called on an srec without a pid!" );
 	}
-	shadowsByPid->insert(new_rec->pid, new_rec);
+	ASSERT( shadowsByPid->insert(new_rec->pid, new_rec) == 0 );
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 			 new_rec->pid, new_rec->job_id.cluster, new_rec->job_id.proc );
 	//scheduler.display_shadow_recs();
@@ -13105,16 +13105,16 @@ Scheduler::Init()
 		matches = new HashTable <std::string, match_rec *> (hashFunction);
 		matchesByJobID =
 			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID, rejectDuplicateKeys);
-		shadowsByPid = new HashTable <int, shadow_rec *>(pidHash, allowDuplicateKeys);
+		shadowsByPid = new HashTable <int, shadow_rec *>(pidHash);
 		shadowsByProcID =
-			new HashTable<PROC_ID, shadow_rec *>(hashFuncPROC_ID, allowDuplicateKeys);
+			new HashTable<PROC_ID, shadow_rec *>(hashFuncPROC_ID);
 		resourcesByProcID =
 			new HashTable<PROC_ID, ClassAd *>(hashFuncPROC_ID);
 	}
 
 	if ( spoolJobFileWorkers == NULL ) {
 		spoolJobFileWorkers = 
-			new HashTable <int, ExtArray<PROC_ID> *>(pidHash, allowDuplicateKeys);
+			new HashTable <int, ExtArray<PROC_ID> *>(pidHash);
 	}
 
 	char *flock_collector_hosts, *flock_negotiator_hosts;
