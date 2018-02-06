@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "dag_tokener.h"
+#include "MyString.h"
 #include "tokener.h"
 
 dag_tokener::dag_tokener(const char * line_in)
