@@ -2226,7 +2226,7 @@ REMOTE_CONDOR_dprintf_stats(char *message)
 // on the wire, for future compatibility, we send a string.  currently
 // this is ignored by the receiver.
 int
-REMOTE_CONDOR_getcreds(const char *, const char *)
+REMOTE_CONDOR_getcreds()
 {
 	int result = 0;
 
@@ -2236,7 +2236,7 @@ REMOTE_CONDOR_getcreds(const char *, const char *)
 		return -1;
 	}
 
-	dprintf ( D_ALWAYS, "Doing CONDOR_getcreds\n" );
+	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_getcreds\n" );
 
 	CurrentSysCall = CONDOR_getcreds;
 	char empty[1] = "";
@@ -2281,8 +2281,8 @@ REMOTE_CONDOR_getcreds(const char *, const char *)
 		ClassAd ad;
 		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
-		dprintf( D_ALWAYS, "CONDOR_getcreds: received ad:\n" );
-		dPrintAd(D_ALWAYS, ad);
+		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad:\n" );
+		dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
 
 		MyString fname, b64;
 		ad.LookupString("Service", fname);
@@ -2309,7 +2309,7 @@ REMOTE_CONDOR_getcreds(const char *, const char *)
 		}
 
 		// write temp file
-		dprintf (D_ALWAYS, "Writing data to %s\n", tmpname.Value());
+		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.Value());
 		int rc = write_secure_file(tmpname.Value(), rawbuf, rawlen, true);
 
 		// caller of condor_base64_decode is responsible for freeing buffer
@@ -2320,7 +2320,7 @@ REMOTE_CONDOR_getcreds(const char *, const char *)
 			EXCEPT("failure");
 		}
 
-		dprintf (D_ALWAYS, "Moving %s to %s\n", tmpname.Value(), full_name.Value());
+		dprintf (D_SECURITY, "Moving %s to %s\n", tmpname.Value(), full_name.Value());
 		priv_state priv = set_root_priv();
 		rename(tmpname.Value(), full_name.Value());
 		set_priv (priv);

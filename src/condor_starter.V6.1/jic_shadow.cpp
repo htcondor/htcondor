@@ -2513,7 +2513,6 @@ JICShadow::initIOProxy( void )
 bool
 JICShadow::initUserCredentials() {
 #ifndef WIN32
-	dprintf(D_ALWAYS, "ENTERING initUserCredentials\n");
 	bool send_credential = false;
 	if( ! job_ad->EvaluateAttrBool( ATTR_JOB_SEND_CREDENTIAL, send_credential ) ) {
 		send_credential = false;
@@ -2565,7 +2564,6 @@ JICShadow::initUserCredentials() {
 	// update it.  if X is negative, we never update it.
 	int fresh_time = param_integer("SEC_CREDENTIAL_REFRESH_INTERVAL", -1);
 
-	dprintf( D_ALWAYS, "About to refreshSandboxCredentials\n");
 	if (rc==0 && fresh_time < 0) {
 		// if the credential cache already exists, we don't even need
 		// to talk to the shadow.  just return success as quickly as
@@ -2814,7 +2812,7 @@ JICShadow::refreshSandboxCredentialsMultiple()
 
 
 	// do syscall to receive credential wallet
-	REMOTE_CONDOR_getcreds(0,0);
+	REMOTE_CONDOR_getcreds();
 
 	// setup .condor_creds directory in sandbox (may already exist).
 	MyString cred_dir_name;
@@ -2832,10 +2830,16 @@ JICShadow::refreshSandboxCredentialsMultiple()
 	sandbox_dir_name += ".condor_creds";
 
 	// create dir to hold creds
-	dprintf(D_ALWAYS, "CREDS: creating %s\n", sandbox_dir_name.Value(), 0700);
+	int rc = 0;
+	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.Value());
 	priv_state p = set_user_priv();
-	mkdir(sandbox_dir_name.Value(), 0700);
+	rc = mkdir(sandbox_dir_name.Value(), 0700);
 	set_priv(p);
+	if(rc != 0) {
+		dprintf(D_SECURITY, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
+		return false;
+	}
+
 
 	// for each file in SEC_CREDENTIAL_DIR, atomically update in sandbox
 	Directory source_dir(cred_dir_name.Value(), PRIV_ROOT);
@@ -2843,7 +2847,7 @@ JICShadow::refreshSandboxCredentialsMultiple()
 	const char* filename;
 	while ((filename = source_dir.Next())) {
 
-		dprintf(D_ALWAYS, "CREDS: copying %s from %s to %s\n", filename, cred_dir_name.Value(), sandbox_dir_name.Value());
+		dprintf(D_SECURITY, "CREDS: copying %s from %s to %s\n", filename, cred_dir_name.Value(), sandbox_dir_name.Value());
 		// use dircat() instead
 		MyString src_filename = cred_dir_name;
 		src_filename += DIR_DELIM_CHAR;
@@ -2853,7 +2857,7 @@ JICShadow::refreshSandboxCredentialsMultiple()
 		unsigned char *buf = 0;
 		size_t len = 0;
 		bool rc = read_secure_file(src_filename.Value(), (void**)(&buf), &len, true);
-		dprintf(D_ALWAYS, "CREDS: reading %s, result %i\n", src_filename.Value(), rc);
+		dprintf(D_SECURITY, "CREDS: reading %s, result %i\n", src_filename.Value(), rc);
 
 		// use dircat() instead
 		MyString dest_filename = sandbox_dir_name;
@@ -2867,11 +2871,11 @@ JICShadow::refreshSandboxCredentialsMultiple()
 		priv_state p = set_user_priv();
 
                 rc = write_secure_file(tmp_filename.Value(), buf, len, false);
-		dprintf(D_ALWAYS, "CREDS: writing %s, result %i\n", tmp_filename.Value(), rc);
+		dprintf(D_SECURITY, "CREDS: writing %s, result %i\n", tmp_filename.Value(), rc);
 
 		// move file into place (as user);
-		dprintf(D_ALWAYS, "CREDS: moving %s to %s\n", tmp_filename.Value(), dest_filename.Value());
-		rename(tmp_filename.Value(), dest_filename.Value());
+		rc = rename(tmp_filename.Value(), dest_filename.Value());
+		dprintf(D_SECURITY, "CREDS: moving %s to %s, result %i\n", tmp_filename.Value(), dest_filename.Value(), (rc==0)?rc:errno);
 
 		set_priv(p);
 	}
@@ -2888,15 +2892,15 @@ JICShadow::refreshSandboxCredentialsMultiple()
 		} else {
 			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
 		}
-		dprintf(D_ALWAYS,
+		dprintf(D_SECURITY,
 			"CREDS: will refresh credentials again in %i seconds\n", sec_cred_refresh);
 	} else {
-		dprintf(D_ALWAYS, "CREDS: cred refresh is DISABLED.\n");
+		dprintf(D_SECURITY, "CREDS: cred refresh is DISABLED.\n");
 	}
 
 	// only need to do this once
 	if(getCredPath() == NULL) {
-		dprintf(D_ALWAYS, "CREDS: setting env _CONDOR_CREDS to %s\n", sandbox_dir_name.Value());
+		dprintf(D_SECURITY, "CREDS: setting env _CONDOR_CREDS to %s\n", sandbox_dir_name.Value());
 		setCredPath(sandbox_dir_name.Value());
 	}
 

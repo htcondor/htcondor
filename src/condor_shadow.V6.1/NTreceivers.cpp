@@ -2142,12 +2142,12 @@ case CONDOR_getdir:
 	}
 	case CONDOR_getcreds:
 	{
-		dprintf(D_ALWAYS, "ENTERING getcreds syscall\n");
+		dprintf(D_SECURITY, "ENTERING getcreds syscall\n");
 
 		// read string.  ignored for now, just present for future compatibility.
 		result = ( syscall_sock->code(path) );
 		ASSERT( result );
-		dprintf( D_ALWAYS, "  path = %s\n", path );
+		dprintf( D_SECURITY|D_FULLDEBUG, "  path = %s\n", path );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
@@ -2170,7 +2170,7 @@ case CONDOR_getdir:
 		cred_dir_name += DIR_DELIM_CHAR;
 		cred_dir_name += user;
 
-		dprintf( D_ALWAYS, "CONDOR_getcreds: sending contents of %s for job ID %i.%i\n", cred_dir_name.Value(), cluster_id, proc_id );
+		dprintf( D_SECURITY, "CONDOR_getcreds: sending contents of %s for job ID %i.%i\n", cred_dir_name.Value(), cluster_id, proc_id );
 		Directory cred_dir(cred_dir_name.Value(), PRIV_ROOT);
 		const char *fname;
 		bool had_error = false;
@@ -2178,14 +2178,14 @@ case CONDOR_getdir:
 			// only send the "use level" creds.
 			const char *last4 = fname + strlen(fname) - 4;
 			if((last4 <= fname) || (0!=strcmp(last4, ".use"))) {
-				dprintf( D_ALWAYS, "CONDOR_getcreds: skipping %s (%s)\n", fname, last4);
+				dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: skipping %s (%s)\n", fname, last4);
 				continue;
 			}
 			MyString fullname = cred_dir_name;
 			fullname += DIR_DELIM_CHAR;
 			fullname += fname;
 
-			dprintf( D_ALWAYS, "CONDOR_getcreds: reading contents of %s\n", fullname.Value() );
+			dprintf( D_SECURITY, "CONDOR_getcreds: reading contents of %s\n", fullname.Value() );
 			// read the file (fourth argument "true" means as_root)
 			unsigned char *buf = 0;
 			size_t len = 0;
@@ -2207,8 +2207,8 @@ case CONDOR_getdir:
 			ASSERT( result );
 			result = ( putClassAd(syscall_sock, ad) );
 			ASSERT( result );
-			dprintf( D_ALWAYS, "CONDOR_getcreds: sent ad:\n" );
-			dPrintAd(D_ALWAYS, ad);
+			dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sent ad:\n" );
+			dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
 		}
 
 		int last_command = 0;
@@ -2217,7 +2217,7 @@ case CONDOR_getdir:
 		}
 
 		// transmit our success or failure
-		dprintf( D_ALWAYS, "CONDOR_getcreds: finishing send with value %i\n", last_command );
+		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: finishing send with value %i\n", last_command );
 
 		result = ( syscall_sock->code(last_command) );
 		ASSERT( result );
