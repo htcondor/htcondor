@@ -249,6 +249,7 @@ public:
 	//
     ///
 	virtual int put_bytes(const void *, int);
+	int put_bytes_after_encryption(const void *, int);
     ///
 	virtual int get_bytes(void *, int);
     ///

@@ -28,6 +28,9 @@
 #include "baseshadow.h"
 #include "remoteresource.h"
 #include "directory.h"
+#include "secure_file.h"
+#include "condor_base64.h"
+
 
 #if defined(Solaris)
 #include <sys/statvfs.h>
@@ -158,6 +161,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_lchown: return "lchown";
         case CONDOR_truncate: return "truncate";
         case CONDOR_utime: return "utime";
+        case CONDOR_getcreds: return "getcreds";
 	}
 	return "unknown";
 }
@@ -2135,6 +2139,93 @@ case CONDOR_getdir:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		return 0;
+	}
+	case CONDOR_getcreds:
+	{
+		dprintf(D_SECURITY, "ENTERING getcreds syscall\n");
+
+		// read string.  ignored for now, just present for future compatibility.
+		result = ( syscall_sock->code(path) );
+		ASSERT( result );
+		dprintf( D_SECURITY|D_FULLDEBUG, "  path = %s\n", path );
+		result = ( syscall_sock->end_of_message() );
+		ASSERT( result );
+
+		// send response
+		syscall_sock->encode();
+
+		MyString user;
+		int cluster_id, proc_id;
+		ClassAd* ad;
+		pseudo_get_job_ad(ad);
+		ad->LookupInteger("ClusterId", cluster_id);
+		ad->LookupInteger("ProcId", proc_id);
+		ad->LookupString("Owner", user);
+
+		MyString cred_dir_name;
+		if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
+			dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
+			return -1;
+		}
+		cred_dir_name += DIR_DELIM_CHAR;
+		cred_dir_name += user;
+
+		dprintf( D_SECURITY, "CONDOR_getcreds: sending contents of %s for job ID %i.%i\n", cred_dir_name.Value(), cluster_id, proc_id );
+		Directory cred_dir(cred_dir_name.Value(), PRIV_ROOT);
+		const char *fname;
+		bool had_error = false;
+		while((fname = cred_dir.Next())) {
+			// only send the "use level" creds.
+			const char *last4 = fname + strlen(fname) - 4;
+			if((last4 <= fname) || (0!=strcmp(last4, ".use"))) {
+				dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: skipping %s (%s)\n", fname, last4);
+				continue;
+			}
+			MyString fullname = cred_dir_name;
+			fullname += DIR_DELIM_CHAR;
+			fullname += fname;
+
+			dprintf( D_SECURITY, "CONDOR_getcreds: reading contents of %s\n", fullname.Value() );
+			// read the file (fourth argument "true" means as_root)
+			unsigned char *buf = 0;
+			size_t len = 0;
+			bool rc = read_secure_file(fullname.Value(), (void**)(&buf), &len, true);
+			if(!rc) {
+				dprintf( D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.Value() );
+				had_error = true;
+				break;
+			}
+			MyString b64 = condor_base64_encode(buf, len);
+			free(buf);
+
+			ClassAd ad;
+			ad.Assign("Service", fname);
+			ad.Assign("Data", b64);
+
+			int more_ads = 1;
+			result = ( syscall_sock->code(more_ads) );
+			ASSERT( result );
+			result = ( putClassAd(syscall_sock, ad) );
+			ASSERT( result );
+			dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sent ad:\n" );
+			dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+		}
+
+		int last_command = 0;
+		if (had_error) {
+			last_command = -1;
+		}
+
+		// transmit our success or failure
+		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: finishing send with value %i\n", last_command );
+
+		result = ( syscall_sock->code(last_command) );
+		ASSERT( result );
+		result = ( syscall_sock->end_of_message() );
+		ASSERT( result );
+
+		// return our success or failure
+		return last_command;
 	}
 
 	default:

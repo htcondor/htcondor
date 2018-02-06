@@ -3202,13 +3202,18 @@ CStarter::PublishToEnv( Env* proc_env )
 		}
 	}
 
+	if(param_boolean("TOKENS", false)) {
+		const char* sandbox_cred_dir = jic->getCredPath();
+		proc_env->SetEnv( "_CONDOR_CREDS", sandbox_cred_dir );
+	} else {
 		// kerberos credential cache (in sandbox)
-	const char* krb5ccname = jic->getKRB5CCNAME();
-	if( krb5ccname && (krb5ccname[0] != '\0') ) {
-		// using env_name as env_value
-		env_name = "FILE:";
-		env_name += krb5ccname;
-		proc_env->SetEnv( "KRB5CCNAME", env_name );
+		const char* krb5ccname = jic->getCredPath();
+		if( krb5ccname && (krb5ccname[0] != '\0') ) {
+			// using env_name as env_value
+			env_name = "FILE:";
+			env_name += krb5ccname;
+			proc_env->SetEnv( "KRB5CCNAME", env_name );
+		}
 	}
 
 		// path to the output ad, if any
@@ -3776,6 +3781,38 @@ CStarter::WriteAdFiles()
 			fPrintAd(fp, *ad, true);
 			fclose(fp);
 		}
+	}
+
+	// Correct the bogus Provisioned* attributes in the job ad.
+	ClassAd * machineAd = this->jic->machClassAd();
+	if( machineAd ) {
+		ClassAd updateAd;
+
+		std::string machineResourcesString;
+		if(machineAd->LookupString( ATTR_MACHINE_RESOURCES, machineResourcesString)) {
+			updateAd.Assign( "ProvisionedResources", machineResourcesString );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to ProvisionedResources\n", ATTR_MACHINE_RESOURCES );
+		} else {
+			machineResourcesString = "CPUs, Disk, Memory";
+		}
+		StringList machineResourcesList( machineResourcesString.c_str() );
+
+		machineResourcesList.rewind();
+		while( const char * resourceName = machineResourcesList.next() ) {
+			std::string provisionedResourceName;
+			formatstr( provisionedResourceName, "%sProvisioned", resourceName );
+			updateAd.CopyAttribute( provisionedResourceName.c_str(), resourceName, machineAd );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName, provisionedResourceName.c_str() );
+
+			std::string assignedResourceName;
+			formatstr( assignedResourceName, "Assigned%s", resourceName );
+			updateAd.CopyAttribute( assignedResourceName.c_str(), assignedResourceName.c_str(), machineAd );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad\n", assignedResourceName.c_str() );
+		}
+
+		dprintf( D_FULLDEBUG, "Updating *Provisioned and Assigned* attributes:\n" );
+		dPrintAd( D_FULLDEBUG, updateAd );
+		jic->periodicJobUpdate( & updateAd, true );
 	}
 
 	return ret_val;

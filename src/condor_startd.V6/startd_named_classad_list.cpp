@@ -118,7 +118,7 @@ StartdNamedClassAdList::Register( StartdNamedClassAd *ad )
 }
 
 int
-StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id )
+StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char * r_id_str )
 {
 	std::list<NamedClassAd *>::iterator iter;
 	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
@@ -133,15 +133,15 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id )
 			ClassAd	*ad = nad->GetAd( );
 			if ( NULL != ad ) {
 				dprintf( D_FULLDEBUG,
-						 "Publishing ClassAd '%s' to slot %d [%s matches]\n",
-						 nad->GetName(), r_id, match_attr ? match_attr : "InSlotList" );
+						 "Publishing ClassAd '%s' to %s [%s matches]\n",
+						 nad->GetName(), r_id_str, match_attr ? match_attr : "InSlotList" );
 				sad->MergeInto(merged_ad);
 			}
 		}
 		else if (match_attr) {
 			dprintf( D_FULLDEBUG,
-						"Rejecting ClassAd '%s' for slot %d [%s does not match]\n",
-						nad->GetName(), r_id, match_attr );
+						"Rejecting ClassAd '%s' for %s [%s does not match]\n",
+						nad->GetName(), r_id_str, match_attr );
 		}
 	}
 
@@ -164,19 +164,13 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id )
 
 		const char * match_attr = NULL;
 		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( merged_ad, & match_attr ) ) {
-			dprintf( D_FULLDEBUG, "Aggregating ClassAd '%s' for slot %d.\n", sad->GetName(), r_id );
 			sad->AggregateInto( & accumulator );
-			dprintf( D_FULLDEBUG, "Accumulator ad is now:\n" );
-			dPrintAd( D_FULLDEBUG, accumulator );
 		}
 	}
 
 	// We don't filter out the (raw) Uptime* metrics here, because the
 	// starter needs them to compute the (per-job) *Usage metrics.  Instead,
 	// we filter them out in Resource::do_update().
-
-	// FIXME: compute per-slot recent metrics.
-
 	StartdNamedClassAd::Merge( merged_ad, & accumulator );
 	return 0;
 }

@@ -147,49 +147,48 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 
 			double oldValue;
 			if( to->EvaluateAttrReal( name, oldValue ) ) {
-				dprintf( D_FULLDEBUG, "Aggregate(): %s is %.6f = %.6f %s %.6f\n", name.c_str(), metric(oldValue, newValue), oldValue, metric.c_str(), newValue );
-				to->InsertAttr( name, metric(oldValue, newValue) );
+				// dprintf( D_FULLDEBUG, "Aggregate(): %s is %.6f = %.6f %s %.6f\n", name.c_str(), metric(oldValue, newValue), oldValue, metric.c_str(), newValue );
+				to->InsertAttr( name, metric( oldValue, newValue ) );
 			} else {
-				dprintf( D_FULLDEBUG, "Aggregate(): %s = %.6f\n", name.c_str(), newValue );
+				// dprintf( D_FULLDEBUG, "Aggregate(): %s = %.6f\n", name.c_str(), newValue );
 				to->InsertAttr( name, newValue );
 			}
 
-			// Now that we've aggregate the value, set a resource-specific
+			// Now that we've aggregated the value, set a resource-specific
 			// LastUpdate* attribute for when we aggregate into a slot ad
-			// with more than one resource.
+			// with more than one resource type.
 			std::string lastUpdateName = "LastUpdate" + name;
 			to->CopyAttribute( lastUpdateName.c_str(), "LastUpdate", from );
-			dprintf( D_FULLDEBUG, "Aggregate(): setting %s\n", lastUpdateName.c_str() );
+			// dprintf( D_FULLDEBUG, "Aggregate(): set %s\n", lastUpdateName.c_str() );
+
+			// We need to aggregate the StartOfJob* values as well, since
+			// the slot ads are regenerate from scratch every time.
+			std::string sojName = "StartOfJob" + name;
+			ExprTree * e = to->Lookup( sojName );
+			if( e == NULL ) {
+				// dprintf( D_FULLDEBUG, "Aggregate(): %s = %.6f\n", sojName.c_str(), newValue );
+				to->CopyAttribute( sojName.c_str(), sojName.c_str(), from );
+			} else {
+				e->Evaluate( v );
+				if( v.IsRealValue( oldValue ) &&
+				  from->EvaluateAttrReal( sojName, newValue ) ) {
+					// dprintf( D_FULLDEBUG, "Aggregate(): %s is %.6f = %.6f %s %.6f\n", sojName.c_str(), metric( oldValue, newValue ), oldValue, metric.c_str(), newValue );
+					to->InsertAttr( sojName, metric( oldValue, newValue ) );
+				}
+			}
+		} else if( name.find( "StartOfJob" ) == 0 ) {
+			// dprintf( D_FULLDEBUG, "Aggregate(): skipping StartOfJob* attribute '%s'\n", name.c_str() );
+		} else if( name == "ResetStartOfJob" ) {
+			// dprintf( D_FULLDEBUG, "Aggregate(): skipping ResetStartOfJob\n", name.c_str() );
+		} else if( name == "SlotMergeConstraint" ) {
+			// dprintf( D_FULLDEBUG, "Aggregate(): skipping SlotMergeConstraintn", name.c_str() );
 		} else {
-			dprintf( D_FULLDEBUG, "Aggregate(): copying '%s'.\n", name.c_str() );
+			// dprintf( D_FULLDEBUG, "Aggregate(): copying '%s'.\n", name.c_str() );
 			ExprTree * copy = expr->Copy();
 			if(! to->Insert( name, copy )) {
 				dprintf( D_ALWAYS, "Failed to copy attribute while aggregating ad.  Ignoring, but you probably shouldn't.\n" );
 			}
 		}
-	}
-
-	// Once we've aggregated the new sample, reset the StartOfJob* values, and
-	// set FirstUpdate*, if this is the first sample since the job started.
-	bool resetStartOfJob = false;
-	if( to->LookupBool( "ResetStartOfJob", resetStartOfJob ) && resetStartOfJob ) {
-		dprintf( D_FULLDEBUG, "Aggregate(): resetting StartOfJob* attributes...\n" );
-
-		for( auto i = to->begin(); i != to->end(); ++i ) {
-			const std::string & name = i->first;
-			if( name.find( "StartOfJob" ) != 0 ) { continue; }
-
-			std::string uptimeName = name.substr( 10 );
-			to->CopyAttribute( name.c_str(), uptimeName.c_str() );
-
-			std::string firstUpdateName = "FirstUpdate" + uptimeName;
-			to->CopyAttribute( firstUpdateName.c_str(), "LastUpdate" );
-		}
-
-		to->Delete( "ResetStartOfJob" );
-
-		dprintf( D_FULLDEBUG, "Aggregate(): aggregated ad is now:\n" );
-		dPrintAd( D_FULLDEBUG, * to );
 	}
 }
 
@@ -197,7 +196,36 @@ void
 StartdNamedClassAd::AggregateFrom(ClassAd *from)
 {
 	if( isResourceMonitor() ) {
-		Aggregate( this->GetAd(), from );
+		ClassAd * to = this->GetAd();
+
+		//
+		// AggregateFrom() is called only from StartdCronJob::Publish(),
+		// which is only called when a new ad arrives from the cron job,
+		// which is the only time we want to reset the start of job
+		// attribute.
+		//
+
+		bool resetStartOfJob = false;
+		if( to->LookupBool( "ResetStartOfJob", resetStartOfJob ) && resetStartOfJob ) {
+			// dprintf( D_FULLDEBUG, "AggregateFrom(): resetting StartOfJob* attributes...\n" );
+
+			for( auto i = to->begin(); i != to->end(); ++i ) {
+				const std::string & name = i->first;
+				if( name.find( "StartOfJob" ) != 0 ) { continue; }
+
+				std::string uptimeName = name.substr( 10 );
+				to->CopyAttribute( name.c_str(), uptimeName.c_str() );
+				// dprintf( D_FULLDEBUG, "AggregateFrom(): copied %s to %s\n", uptimeName.c_str(), name.c_str() );
+
+				std::string firstUpdateName = "FirstUpdate" + uptimeName;
+				to->CopyAttribute( firstUpdateName.c_str(), "LastUpdate" );
+				// dprintf( D_FULLDEBUG, "AggregateFrom(): copied %s to %s\n", "LastUpdate", firstUpdateName.c_str() );
+			}
+
+			to->Delete( "ResetStartOfJob" );
+		}
+
+		Aggregate( to, from );
 	} else {
 		ReplaceAd( from );
 	}
@@ -273,17 +301,17 @@ StartdNamedClassAd::unset_monitor() {
 
 			std::string jobAttributeName;
 			formatstr( jobAttributeName, "StartOfJob%s", name.c_str() );
-			dprintf( D_ALWAYS, "unset_monitor(): removing %s\n", jobAttributeName.c_str() );
+			// dprintf( D_FULLDEBUG, "unset_monitor(): removing %s\n", jobAttributeName.c_str() );
 			from->Delete( jobAttributeName );
 
 			std::string firstUpdateName;
 			formatstr( firstUpdateName, "FirstUpdate%s", name.c_str() );
-			dprintf( D_ALWAYS, "unset_monitor(): removing %s\n", firstUpdateName.c_str() );
+			// dprintf( D_FULLDEBUG, "unset_monitor(): removing %s\n", firstUpdateName.c_str() );
 			from->Delete( firstUpdateName );
 
 			std::string lastUpdateName;
 			formatstr( lastUpdateName, "LastUpdate%s", name.c_str() );
-			dprintf( D_ALWAYS, "unset_monitor(): removing %s\n", lastUpdateName.c_str() );
+			// dprintf( D_FULLDEBUG, "unset_monitor(): removing %s\n", lastUpdateName.c_str() );
 			from->Delete( lastUpdateName );
 		}
 	}

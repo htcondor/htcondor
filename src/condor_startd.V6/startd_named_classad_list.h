@@ -32,7 +32,7 @@ class StartdNamedClassAdList : public NamedClassAdList
 	virtual ~StartdNamedClassAdList( void ) { };
 
 	bool Register( StartdNamedClassAd *ad );
-	int	Publish( ClassAd *ad, unsigned r_id );
+	int	Publish( ClassAd *ad, unsigned r_id, const char * r_id_str = NULL );
 	int DeleteJob ( StartdCronJob * job );
 	int ClearJob ( StartdCronJob * job );
 	virtual NamedClassAd * New( const char *name, ClassAd *ad = NULL );

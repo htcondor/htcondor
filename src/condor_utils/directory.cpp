@@ -407,9 +407,6 @@ Directory::do_remove_dir( const char* path )
 	return false;
 
 #endif /* UNIX vs. WIN32 */
-
-	EXCEPT( "Programmer error: Directory::do_remove_dir() didn't return" );
-	return false;
 }
 
 

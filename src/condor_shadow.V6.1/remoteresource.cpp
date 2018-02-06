@@ -1524,12 +1524,22 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 		// Process all chirp-based updates from the starter.
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
-		if (allowRemoteWriteAttributeAccess(it->first))
-		{
+		size_t offset = -1;
+		if (allowRemoteWriteAttributeAccess(it->first)) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
-		} else if( it->first.rfind( "Usage" ) == it->first.length() - 5 ) {
+		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
+			&& offset == it->first.length() - 5 ) {
+			classad::ExprTree *expr_copy = it->second->Copy();
+			jobAd->Insert(it->first, expr_copy);
+			shadow->watchJobAttr(it->first);
+		} else if( (offset = it->first.rfind( "Provisioned" )) != std::string::npos
+			&& offset == it->first.length() - 11 ) {
+			classad::ExprTree *expr_copy = it->second->Copy();
+			jobAd->Insert(it->first, expr_copy);
+			shadow->watchJobAttr(it->first);
+		} else if( it->first.find( "Assigned" ) == 0 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);

@@ -538,6 +538,7 @@ public:
 	std::string use;
 	std::string req;
 	std::string alloc;
+	std::string assigned;
 };
 
 // function to format the usage ClassAd for the userlog
@@ -568,11 +569,14 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 		} else if (ixu > 0 && 0 == iter->first.substr(ixu).compare("Usage")) {
 			efld = 0;
 			key = iter->first.substr(0,ixu);
-		} 
-		else /*if (useMap[iter->first])*/ { // Allocated
+		} else if( iter->first.find( "Assigned" ) == 0 ) {
+			key = iter->first.substr( 8 ); // size "Assigned" == 8
+			efld = 3;
+		} else /*if (useMap[iter->first])*/ { // Allocated
 			efld = 2;
 			key = iter->first;
 		}
+
 		if (key.size() != 0) {
 			title_case(key); // capitalize it to make it consistent for map lookup.
 			SlotResTermSumy * psumy = useMap[key];
@@ -599,6 +603,9 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 					break;
 				case 2:	// Allocated
 					psumy->alloc = val;
+					break;
+				case 3: // Assigned
+					psumy->assigned = val;
 					break;
 			}
 		} else {
@@ -629,9 +636,9 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	}
 
 	MyString fmt;
-	fmt.formatstr("\tPartitionable Resources : %%%ds %%%ds %%%ds\n", cchUse, cchReq, MAX(cchAlloc,9));
-	formatstr_cat(out, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "");
-	fmt.formatstr("\t   %%-%ds : %%%ds %%%ds %%%ds\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
+	fmt.formatstr("\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n", cchUse, cchReq, MAX(cchAlloc,9));
+	formatstr_cat(out, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "", "Assigned");
+	fmt.formatstr("\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
 	//fputs(fmt.Value(), file);
 	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
 		 it != useMap.end();
@@ -640,7 +647,7 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 		std::string lbl = it->first.c_str(); 
 		if (lbl.compare("Memory") == 0) lbl += " (MB)";
 		else if (lbl.compare("Disk") == 0) lbl += " (KB)";
-		formatstr_cat(out, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
+		formatstr_cat(out, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str(), psumy->assigned.c_str());
 		delete psumy;
 	}
 	//formatstr_cat(out, "\t  *See Section %d.%d in the manual for information about requesting resources\n", 2, 5);

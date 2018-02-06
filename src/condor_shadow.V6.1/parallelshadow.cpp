@@ -742,7 +742,11 @@ ParallelShadow::updateFromStarter(int  /*command*/, Stream *s)
 {
 	ClassAd update_ad;
 	s->decode();
-	getClassAd(s, update_ad);
+	if (!getClassAd(s, update_ad)) {
+		s->end_of_message();
+		dprintf(D_ALWAYS, "ParallelShadow::updateFromStarter could not get Class Ad\n");
+		return FALSE;
+	}
 	s->end_of_message();
 	fix_update_ad(update_ad);
 	return updateFromStarterClassAd(&update_ad);
