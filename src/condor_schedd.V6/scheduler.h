@@ -975,10 +975,6 @@ private:
 	int				is_alive(shadow_rec* srec);
 	shadow_rec*     find_shadow_rec(PROC_ID*);
 	
-#ifdef CARMI_OPS
-	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
-#endif
-
 	void			expand_mpi_procs(StringList *, StringList *);
 
 	HashTable <std::string, match_rec *> *matches;

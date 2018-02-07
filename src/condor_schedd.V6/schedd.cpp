@@ -188,10 +188,6 @@ schedd_runtime_probe WalkJobQ_updateSchedDInterval_runtime;
 int	WallClockCkptInterval = 0;
 int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 
-#ifdef CARMI_OPS
-struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
-#endif
-
 void UpdateJobProxyAttrs( PROC_ID job_id, const ClassAd &proxy_attrs )
 {
 	classad::ClassAdUnParser unparse;
@@ -11663,25 +11659,6 @@ Scheduler::find_shadow_rec(PROC_ID* id)
 		return NULL;
 	return rec;
 }
-
-#ifdef CARMI_OPS
-struct shadow_rec*
-Scheduler::find_shadow_by_cluster( PROC_ID *id )
-{
-	int		my_cluster;
-	shadow_rec	*rec;
-
-	my_cluster = id->cluster;
-
-	shadowsByProcID->startIterations();
-	while (shadowsByProcID->iterate(rec) == 1) {
-		if( my_cluster == rec->job_id.cluster) {
-				return rec;
-		}
-	}
-	return NULL;
-}
-#endif
 
 /*
   If we have an MPI cluster with > 1 proc, the user
