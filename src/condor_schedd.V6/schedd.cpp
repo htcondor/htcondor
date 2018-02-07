@@ -580,7 +580,7 @@ Scheduler::Scheduler() :
 	OtherPoolStats(stats),
     m_adSchedd(NULL),
     m_adBase(NULL),
-	GridJobOwners(UserIdentity::HashFcn, updateDuplicateKeys),
+	GridJobOwners(UserIdentity::HashFcn),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),

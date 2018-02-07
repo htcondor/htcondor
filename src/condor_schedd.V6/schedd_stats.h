@@ -177,7 +177,7 @@ class ScheddOtherStatsMgr {
 public:
    ScheddOtherStatsMgr(ScheddStatistics & stats)
      : config(stats)
-	 , pools(hashFunction, updateDuplicateKeys)
+	 , pools(hashFunction)
    {};
    ~ScheddOtherStatsMgr();
 
