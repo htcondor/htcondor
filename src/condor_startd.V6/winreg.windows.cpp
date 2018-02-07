@@ -850,7 +850,7 @@ static struct {
 	// the performance registry.  We keep that set of strings in pszzNames
 	// and we hash name->index and index->name in two hashtables. 
 	char * pszzNames; // holds all of the strings that the two hash tables refer to.
-	HashTable<YourStringNoCase, const char *> * pPerfTable;
+	std::map<YourStringNoCase, std::vector<const char *>> * pPerfTable;
 	HashTable<DWORD, const char *> * pNameTable;
     HashTable<DWORD, WinPerf_QueryResult> * pQueries;
 } rl = {0};
@@ -889,7 +889,7 @@ static bool init_windows_performance_hashtable()
 	else if (REG_MULTI_SZ == vtype)
 	{
 		rl.pQueries   = new HashTable<DWORD, WinPerf_QueryResult>(DWORDHash, updateDuplicateKeys);
-		rl.pPerfTable = new HashTable<YourStringNoCase, const char *>(hashFunction, allowDuplicateKeys);
+		rl.pPerfTable = new std::map<YourStringNoCase, std::vector<const char *>>();
 		rl.pNameTable = new HashTable<DWORD, const char *>(DWORDHash, rejectDuplicateKeys);
 		if (rl.pPerfTable)
 		{
@@ -899,7 +899,7 @@ static bool init_windows_performance_hashtable()
 				char * pszIndex = psz;
 				char * pszName = psz + lstrlen(psz)+1;
 				if (*pszName) psz = pszName + lstrlen(pszName)+1;
-				rl.pPerfTable->insert(pszName, pszIndex);
+				(*rl.pPerfTable)[pszName].push_back(pszIndex);
 				if (rl.pNameTable)
 				{
 					DWORD ix = atoi(pszIndex);
@@ -1437,11 +1437,11 @@ bool init_WinPerf_Query(
 	else
 	{
 		init_windows_performance_hashtable();  // this is quick if we already init'd
-		const char * pszPerfIndex = NULL;
-		if (rl.pPerfTable && 
-			(rl.pPerfTable->lookup(pszRegKey, pszPerfIndex) >= 0))
+		std::map<YourStringNoCase, std::vector<const char *>>::iterator it;
+		if (rl.pPerfTable &&
+			(it = rl.pPerfTable->find(pszRegKey)) != rl.pPerfTable->end())
 		{
-			query.idKey = atoi(pszPerfIndex);
+			query.idKey = atoi(it->second.back());
 		}
 	}
 
@@ -1453,16 +1453,16 @@ bool init_WinPerf_Query(
 		{
 			init_windows_performance_hashtable();  // this is quick if we already init'd
 			const char * pszCounterIndex = NULL;
-			if (rl.pPerfTable)
+			std::map<YourStringNoCase, std::vector<const char *>>::iterator it;
+			if (rl.pPerfTable &&
+				(it = rl.pPerfTable->find(pszValueName)) != rl.pPerfTable->end())
 			{
 				//if (rl.pPerfTable->lookup(pszValueName, pszCounterIndex) >= 0)
 				//	query.idCounter = atoi(pszCounterIndex);
-				void * cur = NULL, *next = NULL;
 				int ix = 0;
-				while (rl.pPerfTable->getNext(pszValueName, cur, pszCounterIndex, next) >= 0)
+				for (size_t i = 0; i < it->second.size(); i++)
 				{
-					((DWORD*)&query.idCounter)[ix++] = atoi(pszCounterIndex);
-					cur = next;
+					((DWORD*)&query.idCounter)[ix++] = atoi(it->second[i]);
 				}
 				if (query.idAlt[NUM_ELEMENTS(query.idAlt)-1] != 0)
 				{
