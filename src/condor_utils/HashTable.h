@@ -132,7 +132,6 @@ private:
 // various options for what we do when someone tries to insert a new
 // bucket with a key (index) that already exists in the table
 typedef enum {
-	allowDuplicateKeys,   // original (inarguably broken) default behavior
 	rejectDuplicateKeys,
 	updateDuplicateKeys,
 } duplicateKeyBehavior_t;
@@ -152,10 +151,6 @@ class HashTable {
   ~HashTable();
 
   int insert(const Index &index, const Value &value);
-  /*
-  Replace the old value with a new one.  Returns the old value, or NULL if it
-  didn't previously exist.
-  */
   int lookup(const Index &index, Value &value) const;
   int lookup(const Index &index, Value* &value) const;
 	  // returns 0 if exists, -1 otherwise
@@ -201,11 +196,6 @@ class HashTable {
   Resize the hash table to the given size, or a default of the next (2^n)-1.
   */
   void resize_hash_table(int newsize = -1);
-  /*
-  Adds an item, ignoring the possibility of duplicates.  Used in insert() and
-  replace() internally.
-  */
-  int addItem(const Index &index, const Value &value);
 #ifdef DEBUGHASH
   void dump();                                  // dump contents of hash table
 #endif
@@ -357,48 +347,22 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 
   HashBucket<Index, Value> *bucket;
 
-  // if rejectDuplicateKeys is set and a bucket already exists in the
-  // table with this key, return -1
-
-  if ( duplicateKeyBehavior == rejectDuplicateKeys ) {
-	  bucket = ht[idx];
-	  while (bucket) {
-		  if (bucket->index == index) {
-			  // found!  return error because rejectDuplicateKeys is set
-			  return -1;
-		  }
-		  bucket = bucket->next;
-	  }
-  }
-
-  // if updateDuplicateKeys is set and a bucket already exists in the
-  // table with this key, update the bucket's value
-
-  else if( duplicateKeyBehavior == updateDuplicateKeys ) {
-
-    bucket = ht[idx];
-    while( bucket ) {
-      if( bucket->index == index ) {
+  bucket = ht[idx];
+  while( bucket ) {
+    if( bucket->index == index ) {
+      // This key is already in the table, decide what to do about that
+      if ( duplicateKeyBehavior == updateDuplicateKeys ) {
         bucket->value = value;
         return 0;
+      } else {
+        // rejectDuplicateKeys
+        return -1;
       }
-      bucket = bucket->next;
     }
+    bucket = bucket->next;
   }
 
-  addItem(index, value);
-  return 0;
-}
-
-template <class Index, class Value>
-int HashTable<Index,Value>::addItem(const Index &index,const  Value &value) {
-  int idx = (int)(hashfcn(index) % tableSize);
-
-  HashBucket<Index, Value> *bucket;
-
-  // don't worry about whether a bucket already exists with this key,
-  // just go ahead and insert another one...
-
+  // This is a new key, add it
   if (!(bucket = new HashBucket<Index, Value>)) {
     EXCEPT("Insufficient memory");
   }
