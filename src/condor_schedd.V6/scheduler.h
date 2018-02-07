@@ -973,7 +973,6 @@ private:
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
-	shadow_rec*     find_shadow_rec(PROC_ID*);
 	
 	void			expand_mpi_procs(StringList *, StringList *);
 

@@ -165,7 +165,6 @@ void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 void mark_serial_job_running( PROC_ID *job_id );
 int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
-shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool jobPrepNeedsThread( int cluster, int proc );
@@ -9293,7 +9292,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 						"stopping execution of job.\n");
 
 					mark_job_stopped(job_id);
-					if( find_shadow_rec(job_id) ) { 
+					if( FindSrecByProcID(*job_id) ) {
 						// we already added the srec to our tables..
 						delete_shadow_rec( srec );
 						srec = NULL;
@@ -9377,7 +9376,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 	if( ! rval ) {
 		mark_job_stopped(job_id);
-		if( find_shadow_rec(job_id) ) { 
+		if( FindSrecByProcID(*job_id) ) {
 				// we already added the srec to our tables..
 			delete_shadow_rec( srec );
 			srec = NULL;
@@ -11627,7 +11626,7 @@ Scheduler::shadow_prio_recs_consistent()
 	BadProc = -1;
 
 	for( i=0; i<N_PrioRecs; i++ ) {
-		if( (srp=find_shadow_rec(&PrioRec[i].id)) ) {
+		if( (srp=FindSrecByProcID(PrioRec[i].id)) ) {
 			BadCluster = srp->job_id.cluster;
 			BadProc = srp->job_id.proc;
 			universe = srp->universe;
@@ -11644,20 +11643,6 @@ Scheduler::shadow_prio_recs_consistent()
 	}
 	dprintf( D_FULLDEBUG, "Shadow and PrioRec Tables are consistent\n" );
 	return TRUE;
-}
-
-/*
-  Search the shadow record table for a given job id.  Return a pointer
-  to the record if it is found, and NULL otherwise.
-*/
-struct shadow_rec*
-Scheduler::find_shadow_rec(PROC_ID* id)
-{
-	shadow_rec *rec;
-
-	if (shadowsByProcID->lookup(*id, rec) < 0)
-		return NULL;
-	return rec;
 }
 
 /*
