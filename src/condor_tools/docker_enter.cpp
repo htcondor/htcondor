@@ -59,6 +59,10 @@ int main( int argc, char *argv[] )
 
 
 	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (uds < 0) {
+		fprintf(stderr, "Cannot create unix domain socket: errno %d\n", errno);
+		exit(1);
+	}
 
 	struct sockaddr_un pipe_addr;
 	memset(&pipe_addr, 0, sizeof(pipe_addr));
