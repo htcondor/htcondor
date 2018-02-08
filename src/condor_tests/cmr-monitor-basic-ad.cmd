@@ -1,5 +1,5 @@
 executable		= cmr-monitor-basic-ad.pl
-arguments		= 60
+arguments		= 53
 output			= cmr-monitor-basic-ad.out
 error			= cmr-monitor-basic-ad.err
 log				= cmr-monitor-basic-ad.log
