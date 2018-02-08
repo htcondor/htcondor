@@ -570,7 +570,7 @@ public:
     ///
 	int rcv_int(int &val, int end_of_record);
 
-	bool get_encryption() const;
+	bool get_encryption() const {return crypto_mode_;}
         //------------------------------------------
         // PURPOSE: Return encryption mode
         // REQUIRE: None

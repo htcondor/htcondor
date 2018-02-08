@@ -541,6 +541,15 @@ public:
 	std::string assigned;
 };
 
+// return true if the input consts solely of digits
+static bool is_bare_integer(const char * str) {
+	if ( ! str) return false;
+	// skip all leading digits
+	while (isdigit(*str)) ++str;
+	// return true if the next char is \0, false otherwise
+	return !*str;
+}
+
 // function to format the usage ClassAd for the userlog
 // The usage ClassAd should contain attrbutes that match the pattern
 // "<RES>", "Request<RES>", or "<RES>Usage", where <RES> can be
@@ -556,6 +565,7 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	unp.SetOldClassAd( true, true );
 
 	std::map<std::string, SlotResTermSumy*> useMap;
+	int has_fractional_mask = 0;
 
 	for (classad::ClassAd::iterator iter = pusageAd->begin();
 		 iter != pusageAd->end();
@@ -589,7 +599,26 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 				//formatstr_cat(out, "\tfound %x for key %s\n", psumy, key.c_str());
 			}
 			std::string val = "";
-			unp.Unparse(val, iter->second);
+			classad::Value cval;
+			double rval, tval;
+			if (ExprTreeIsLiteral(iter->second, cval) && cval.IsRealValue(rval)) {
+				if (modf(rval,&tval) > 0.0) {
+					// show fractional values only if there actually *are* fractional values
+					// format doubles with %.2f
+					formatstr(val, "%.2f", rval);
+					has_fractional_mask |= 1<<efld;
+				} else {
+				#if 1 
+					formatstr(val, "%lld", (long long)tval);
+				#else // for testing
+					formatstr(val, "%.2f", rval);
+					has_fractional_mask |= 1<<efld;
+				#endif
+				}
+			} else {
+				unp.Unparse(val, iter->second);
+			}
+
 
 			//formatstr_cat(out, "\t%-8s \t= %4s\t(efld%d, key = %s)\n", iter->first.c_str(), val.c_str(), efld, key.c_str());
 
@@ -617,7 +646,7 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	if (useMap.empty())
 		return;
 
-	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0;
+	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0, cchAssigned = 0;
 	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
 		 it != useMap.end();
 		 ++it) {
@@ -628,16 +657,39 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 				unp.Unparse(psumy->alloc, tree);
 			}
 		}
+		// pad out non-fractional values for usage, request and allocation
+		// so that they align with the fractional values.  note that this code will break
+		// if the use/req/or alloc strings are something other than numbers
+		// since we are working with classads, that's possible, but not normal...
+		// if it starts to happen, we would probably have to change the values from strings to classad::value's
+		// and rework the formatting code.
+		if (has_fractional_mask & (1<<0)) { // is there fractional usage reported?
+			if (is_bare_integer(psumy->use.c_str())) { // and the value is an integer?
+				psumy->use += "   "; // pad to align to %.2f
+			}
+		}
+		if (has_fractional_mask & (1<<1)) { // is there fractional request reported?
+			if (is_bare_integer(psumy->req.c_str())) { // and the value is an integer?
+				psumy->req += "   "; // pad to align to %.2f
+			}
+		}
+		if (has_fractional_mask & (1<<2)) { // is there fractional allocation reported?
+			if (is_bare_integer(psumy->alloc.c_str())) { // and the value is an integer?
+				psumy->alloc += "   "; // pad to align to %.2f
+			}
+		}
+
 		//formatstr_cat(out, "\t%s %s %s %s\n", it->first.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
 		cchRes = MAX(cchRes, (int)it->first.size());
 		cchUse = MAX(cchUse, (int)psumy->use.size());
 		cchReq = MAX(cchReq, (int)psumy->req.size());
 		cchAlloc = MAX(cchAlloc, (int)psumy->alloc.size());
+		cchAssigned = MAX(cchAssigned, (int)psumy->assigned.size());
 	}
 
 	MyString fmt;
 	fmt.formatstr("\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n", cchUse, cchReq, MAX(cchAlloc,9));
-	formatstr_cat(out, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "", "Assigned");
+	formatstr_cat(out, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "", cchAssigned ? "Assigned" : "");
 	fmt.formatstr("\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
 	//fputs(fmt.Value(), file);
 	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
@@ -667,6 +719,7 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 	int ixUse = -1;
 	int ixReq = -1;
 	int ixAlloc = -1;
+	int ixAssigned = -1;
 
 	for (;;) {
 		char sz[250];
@@ -719,8 +772,14 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 			ixReq = (int)(psz - pszTbl)+1;     // save right edge of Request
 			while (*psz == ' ') ++psz;         // skip spaces
 			if (*psz) {                        // if there is an "Allocated"
-				while (*psz && *psz != ' ') ++psz; // skip "Allocated"
-				ixAlloc = (int)(psz - pszTbl)+1;
+				char *p = strstr(psz, "Allocated");
+				if (p) {
+					ixAlloc = (int)(p - pszTbl)+9; // save right edge of Allocated
+					p = strstr(p, "Assigned");
+					if (p) { // if there is an "Assigned"
+						ixAssigned = (int)(p - pszTbl); // save *left* edge of assigned (it gets the remaineder of the line)
+					}
+				}
 			}
 		} else if (ixUse > 0) {
 			pszTbl[ixUse] = 0;
@@ -733,6 +792,12 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 			if (ixAlloc > 0) {
 				pszTbl[ixAlloc] = 0;
 				formatstr(exprstr, "%s = %s", pszLbl, &pszTbl[ixReq+1]);
+				puAd->Insert(exprstr.c_str());
+			}
+			if (ixAssigned > 0) {
+				// the remainder of the line is the assigned value
+				formatstr(exprstr, "Assigned%s = %s", pszLbl, &pszTbl[ixAssigned]);
+				//trim(exprstr);
 				puAd->Insert(exprstr.c_str());
 			}
 		}

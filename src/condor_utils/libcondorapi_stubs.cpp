@@ -278,7 +278,6 @@ void Stream::prepare_crypto_for_secret(){not_impl();}
 void Stream::restore_crypto_after_secret(){not_impl();}
 bool Stream::prepare_crypto_for_secret_is_noop() const{not_impl();return true;}
 bool Stream::set_crypto_mode(bool /*enabled*/){not_impl();return false;}
-bool Stream::get_encryption() const{not_impl();return false;}
 int Stream::put_secret( char const * /*s*/ ){not_impl();return 0;}
 int Stream::get_secret( char *& /*s*/ ){not_impl();return 0;}
 int Stream::get_secret( const char *& /*s*/, int & /*len*/ ){not_impl();return 0;}
