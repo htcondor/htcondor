@@ -244,7 +244,7 @@ SharedPortEndpoint::StopListener()
 	}
 
 	if( m_retry_remote_addr_timer != -1 ) {
-		daemonCore->Cancel_Timer( m_retry_remote_addr_timer );
+		if (daemonCore) daemonCore->Cancel_Timer( m_retry_remote_addr_timer );
 		m_retry_remote_addr_timer = -1;
 	}
 #endif
