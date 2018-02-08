@@ -71,7 +71,7 @@ GCC_DIAG_OFF(float-equal)
 //------------------------------------------------------------------
 
 Accountant::Accountant():
-	concurrencyLimits(hashFunction, updateDuplicateKeys)
+	concurrencyLimits(hashFunction)
 {
   MinPriority=0.5;
   AcctLog=NULL;
@@ -1770,7 +1770,7 @@ void Accountant::ClearLimits()
  	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
-		concurrencyLimits.insert(limit, 0);
+		concurrencyLimits.insert(limit, 0, true);
 		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.Value(), count);
 	}
 }
@@ -1784,7 +1784,7 @@ void Accountant::IncrementLimit(const MyString& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) + increment);
+		concurrencyLimits.insert(limit, GetLimit(limit) + increment, true);
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
@@ -1803,7 +1803,7 @@ void Accountant::DecrementLimit(const MyString& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) - increment);
+		concurrencyLimits.insert(limit, GetLimit(limit) - increment, true);
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",

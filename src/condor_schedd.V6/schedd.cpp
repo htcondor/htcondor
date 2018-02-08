@@ -13066,7 +13066,7 @@ Scheduler::Init()
 	if (matches == NULL) {
 		matches = new HashTable <std::string, match_rec *> (hashFunction);
 		matchesByJobID =
-			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID, rejectDuplicateKeys);
+			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID);
 		shadowsByPid = new HashTable <int, shadow_rec *>(pidHash);
 		shadowsByProcID =
 			new HashTable<PROC_ID, shadow_rec *>(hashFuncPROC_ID);
@@ -13198,8 +13198,7 @@ Scheduler::Init()
 		//
 	HashTable<PROC_ID, CronTab*> *origCronTabs = this->cronTabs;
 	this->cronTabs = new HashTable<PROC_ID, CronTab*>(
-												hashFuncPROC_ID,
-												updateDuplicateKeys );
+												hashFuncPROC_ID );
 		//
 		// Now if there was a table from before, we will want
 		// to copy all the proc_id's into our new table. We don't
@@ -16330,7 +16329,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				//
 			valid = cronTab->isValid();
 			if ( valid ) {
-				this->cronTabs->insert( id, cronTab );
+				this->cronTabs->insert( id, cronTab, true );
 			} else {
 				delete cronTab;
 				cronTab = 0;

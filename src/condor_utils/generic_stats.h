@@ -1553,8 +1553,8 @@ int generic_stats_ParseConfigString(
 class StatisticsPool {
 public:
    StatisticsPool()
-      : pub(hashFunction, updateDuplicateKeys)
-      , pool(hashFuncVoidPtr, updateDuplicateKeys)
+      : pub(hashFunction)
+      , pool(hashFuncVoidPtr)
       {
       };
    ~StatisticsPool();

@@ -7095,7 +7095,7 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 		// caller expects PrioRecAutoClusterRejected to be instantiated
 		// (and cleared)
 	if( ! PrioRecAutoClusterRejected ) {
-		PrioRecAutoClusterRejected = new HashTable<int,int>(hashFuncInt,rejectDuplicateKeys);
+		PrioRecAutoClusterRejected = new HashTable<int,int>(hashFuncInt);
 		ASSERT( PrioRecAutoClusterRejected );
 	}
 	else {

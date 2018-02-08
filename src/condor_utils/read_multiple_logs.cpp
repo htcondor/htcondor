@@ -46,8 +46,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	allLogFiles(hashFunction, rejectDuplicateKeys),
-	activeLogFiles(hashFunction, rejectDuplicateKeys)
+	allLogFiles(hashFunction),
+	activeLogFiles(hashFunction)
 {
 }
 

@@ -888,9 +888,9 @@ static bool init_windows_performance_hashtable()
 	}
 	else if (REG_MULTI_SZ == vtype)
 	{
-		rl.pQueries   = new HashTable<DWORD, WinPerf_QueryResult>(DWORDHash, updateDuplicateKeys);
+		rl.pQueries   = new HashTable<DWORD, WinPerf_QueryResult>(DWORDHash);
 		rl.pPerfTable = new std::map<YourStringNoCase, std::vector<const char *>>();
-		rl.pNameTable = new HashTable<DWORD, const char *>(DWORDHash, rejectDuplicateKeys);
+		rl.pNameTable = new HashTable<DWORD, const char *>(DWORDHash);
 		if (rl.pPerfTable)
 		{
 			char * psz = rl.pszzNames;
@@ -1644,7 +1644,7 @@ void update_all_WinPerf_results()
         while (rl.pQueries->iterate(result)) 
         {
             update_windows_performance_result(result);
-            rl.pQueries->insert(result.idObject, result);
+            rl.pQueries->insert(result.idObject, result, true);
         }
     }
 }
@@ -1817,7 +1817,7 @@ AttribValue * add_WinPerf_Query(
 
 		// add this this key to the list of queries
 		WinPerf_QueryResult result = {query.idKey, 0, NULL, NULL};
-		rl.pQueries->insert(query.idKey, result);
+		rl.pQueries->insert(query.idKey, result, true);
         /*
         bool found = false;
         lst_WinPerf.Rewind();

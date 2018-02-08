@@ -25,8 +25,7 @@
 //-----------------------------------------------------------------------------
 
 CheckEvents::CheckEvents(int allowEventsSetting) :
-		jobHash(ReadMultipleUserLogs::hashFuncJobID,
-			rejectDuplicateKeys),
+		jobHash(ReadMultipleUserLogs::hashFuncJobID),
 		noSubmitId(-1, 0, 0)
 {
 	allowEvents = allowEventsSetting;

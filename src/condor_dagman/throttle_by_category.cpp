@@ -29,7 +29,7 @@ const int ThrottleByCategory::noThrottleSetting = -1;
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleByCategory() :
-			_throttles( hashFunction, rejectDuplicateKeys )
+			_throttles( hashFunction )
 {
 }
 
@@ -107,7 +107,7 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 		// new names.  Note that we don't need to delete any
 		// ThrottleInfo objects because we're re-using the ones
 		// we already have.
-	HashTable<MyString, ThrottleInfo *> tmpThrottles( hashFunction, rejectDuplicateKeys );
+	HashTable<MyString, ThrottleInfo *> tmpThrottles( hashFunction );
 
 	_throttles.startIterations();
 	ThrottleInfo	*info;

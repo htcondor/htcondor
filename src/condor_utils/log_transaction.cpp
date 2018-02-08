@@ -24,7 +24,7 @@
 #include "condor_fsync.h"
 
 Transaction::Transaction()
-	: op_log(hashFunction,rejectDuplicateKeys)
+	: op_log(hashFunction)
 	, op_log_iterating(NULL)
 	, m_triggers(0)
 	, m_EmptyTransaction(true)

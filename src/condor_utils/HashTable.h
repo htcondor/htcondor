@@ -129,13 +129,6 @@ private:
 
 // a generic hash table class
 
-// various options for what we do when someone tries to insert a new
-// bucket with a key (index) that already exists in the table
-typedef enum {
-	rejectDuplicateKeys,
-	updateDuplicateKeys,
-} duplicateKeyBehavior_t;
-
 // IMPORTANT NOTE: Index must be a class on which == works.
 
 template <class Index, class Value>
@@ -144,13 +137,12 @@ class HashTable {
   typedef HashIterator<Index, Value> iterator;
   friend class HashIterator<Index, Value>;
 
-  HashTable( unsigned int (*hashfcn)( const Index &index ),
-			 duplicateKeyBehavior_t behavior = rejectDuplicateKeys );
+  HashTable( unsigned int (*hashfcn)( const Index &index ) );
   HashTable( const HashTable &copy);
   const HashTable& operator=(const HashTable &copy);
   ~HashTable();
 
-  int insert(const Index &index, const Value &value);
+  int insert(const Index &index, const Value &value, bool update = false);
   int lookup(const Index &index, Value &value) const;
   int lookup(const Index &index, Value* &value) const;
 	  // returns 0 if exists, -1 otherwise
@@ -205,7 +197,6 @@ class HashTable {
   HashBucket<Index, Value> **ht;                // actual hash table
   unsigned int (*hashfcn)(const Index &index);  // user-provided hash function
   double maxLoadFactor;			// average number of elements per bucket list
-  duplicateKeyBehavior_t duplicateKeyBehavior;        // duplicate key behavior
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
   std::vector<iterator*> activeIterators;
@@ -215,8 +206,7 @@ class HashTable {
 // In the first constructor, tableSz is ignored as it is no longer used, it is
 // left in for compatability reasons.
 template <class Index, class Value>
-HashTable<Index,Value>::HashTable( unsigned int (*hashF)( const Index &index ),
-								   duplicateKeyBehavior_t behavior ) {
+HashTable<Index,Value>::HashTable( unsigned int (*hashF)( const Index &index ) ) {
   int i;
 
   hashfcn = hashF;
@@ -242,7 +232,6 @@ HashTable<Index,Value>::HashTable( unsigned int (*hashF)( const Index &index ),
   currentBucket = -1; // no current bucket
   currentItem = 0; // no current item
   numElems = 0;
-  duplicateKeyBehavior = behavior;
 }
 
 // Copy constructor
@@ -332,16 +321,15 @@ void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
   currentBucket = copy.currentBucket;
   numElems = copy.numElems;
   hashfcn = copy.hashfcn;
-  duplicateKeyBehavior = copy.duplicateKeyBehavior;
   maxLoadFactor = copy.maxLoadFactor;
 }
 
 // Insert entry into hash table mapping Index to Value.
-// Returns 0 if OK, -1 if rejectDuplicateKeys is set (the default for the
-// single-argument constructor) and the item already exists.
+// Returns 0 if OK, -1 if update is false (the default)
+// and the item already exists.
 
 template <class Index, class Value>
-int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
+int HashTable<Index,Value>::insert(const Index &index,const  Value &value, bool update)
 {
   int idx = (int)(hashfcn(index) % tableSize);
 
@@ -351,11 +339,12 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
   while( bucket ) {
     if( bucket->index == index ) {
       // This key is already in the table, decide what to do about that
-      if ( duplicateKeyBehavior == updateDuplicateKeys ) {
+      if ( update ) {
+        //  update the value in the table
         bucket->value = value;
         return 0;
       } else {
-        // rejectDuplicateKeys
+        // reject as a duplicate
         return -1;
       }
     }

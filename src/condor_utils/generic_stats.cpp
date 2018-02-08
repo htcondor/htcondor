@@ -1060,10 +1060,10 @@ void StatisticsPool::InsertProbe (
    FN_STATS_ENTRY_DELETE  fndel) // Destructor
 {
    pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
-   pub.insert(name, item);
+   pub.insert(name, item, true);
 
    poolitem pi = { unit, fOwned, fnadv, fnclr, fnsrm, fndel };
-   pool.insert(probe, pi);
+   pool.insert(probe, pi, true);
 }
 
 void StatisticsPool::InsertPublish (
@@ -1077,7 +1077,7 @@ void StatisticsPool::InsertPublish (
    FN_STATS_ENTRY_UNPUBLISH fnunp) // unpublish method
 {
    pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
-   pub.insert(name, item);
+   pub.insert(name, item, true);
 }
 
 /* tj: IMPLEMENT THIS
