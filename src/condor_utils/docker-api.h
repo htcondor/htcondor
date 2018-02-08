@@ -52,6 +52,14 @@ class DockerAPI {
 						int &pid,
 						int *childFDs,
 						CondorError &error);
+
+		static int execInContainer( const std::string &containerName,
+					    const std::string &command,
+					    const ArgList &arguments,
+					    const Env &environment,
+					    int *childFDs,
+					    int reaperid,
+					    int &pid);
 		/**
 		 * Releases the disk space (but not the image) associated with
 		 * the given container.

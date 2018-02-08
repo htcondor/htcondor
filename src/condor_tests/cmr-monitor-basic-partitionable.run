@@ -26,7 +26,8 @@ use FindBin;
 
 #
 # This is a basic test to determine if Custom Machine Resource monitors are
-# working properly.
+# working properly with partitionable slots.  It also checks, since we may
+# as well, that the monitor() metaknob is functioning properly.
 #
 
 use CondorTest;
@@ -42,26 +43,26 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 NUM_CPUS = 16
 
 MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
-
-STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) SQUIDs_MONITOR
-STARTD_CRON_SQUIDs_MONITOR_MODE = periodic
-STARTD_CRON_SQUIDs_MONITOR_PERIOD = 10
-STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE = $(TEST_DIR)/cmr-squid-monitor
-STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs, PEAK:SQUIDsMemory
+use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor, SUM:SQUIDs, PEAK:SQUIDsMemory )
 
 UPDATE_INTERVAL = 20
 STARTER_UPDATE_INTERVAL = 20
 SHADOW_QUEUE_UPDATE_INTERVAL = 20
+
+NUM_SLOTS = 1
+NUM_SLOTS_TYPE_1 = 1
+SLOT_TYPE_1 = 100%
+SLOT_TYPE_1_PARTITIONABLE = TRUE
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
-my $testName = 'cmr_monitor_basic';
-my $testDescription = 'Custom Machine Resources - Monitor Test Basic';
+my $testName = 'cmr_monitor_basic_partitionable';
+my $testDescription = 'Custom Machine Resources - Monitor Test Basic (Partitionable)';
 
 #
 # Verify the configuration before running the test.
 #
-CustomMachineResource::TestSlotAndSQUIDsCount( 16 );
+CustomMachineResource::TestSlotAndSQUIDsCount( 1 );
 
 #
 # Verify that the monitor's report is being read correctly.

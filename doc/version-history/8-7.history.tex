@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item HTCondor now reports, in the job ad and user log, which custom machine
+resources were assigned to the slot in which the job ran.
+\Ticket{6549}
+
 \item HTCondor now reports \Attr{CPUsUsage} for each job.  This attribute is
 like \Attr{MemoryUsage} and \Attr{DiskUsage}, except it is the average number
 of CPUs used by the job.
@@ -81,6 +85,10 @@ now work with shared file systems (again).
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug where HTCondor would misreport the number of custom
+machine resources (GPUs) allocated to a job in certain cases.
+\Ticket{6549}
 
 \item IPv4 addresses are now ignored when resolving a hostname and
 \MacroNI{ENABLE\_IPV4} is set to \Expr{False}.

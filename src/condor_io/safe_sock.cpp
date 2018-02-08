@@ -408,41 +408,37 @@ int SafeSock::connect(
  */
 int SafeSock::put_bytes(const void *data, int sz)
 {
-	int bytesPut, l_out;
-    unsigned char * dta = 0;
+	int bytesPut;
 
-    //char str[10000];
-    //str[0] = 0;
-    //for(int idx=0; idx<sz; idx++) { sprintf(&str[strlen(str)], "%02x,", ((char *)data)[idx]); }
-    //dprintf(D_NETWORK, "---> cleartext: %s\n", str);
 
     // Check to see if we need to encrypt
     // This works only because putn will actually put all 
     if (get_encryption()) {
+		int l_out;
+		unsigned char * dta = 0;
         if (!wrap((unsigned char *)const_cast<void*>(data), sz, dta , l_out)) { 
             dprintf(D_SECURITY, "Encryption failed\n");
             return -1;  // encryption failed!
         }
-    }
-    else {
-        dta = (unsigned char *) malloc(sz);
-        memcpy(dta, data, sz);
-    }
-    
-    // Now, add to the MAC
-    if (mdChecker_) {
-        mdChecker_->addMD(dta, sz);
-    }
+			// Now, add to the MAC
+		if (mdChecker_) {
+			mdChecker_->addMD(dta, sz);
+		}
 
-    //str[0] = 0;
-    //for(int idx=0; idx<sz; idx++) { sprintf(&str[strlen(str)], "%02x,", dta[idx]); }
-    //dprintf(D_NETWORK, "---> ciphertext: %s\n", str);
+		bytesPut = _outMsg.putn((char *)dta, sz);
+    
+		free(dta);
+		return bytesPut;
 
-    bytesPut = _outMsg.putn((char *)dta, sz);
-    
-    free(dta);
-    
-	return bytesPut;
+    } else {
+			// Now, add to the MAC
+		if (mdChecker_) {
+			mdChecker_->addMD((const unsigned char *)data, sz);
+		}
+
+		bytesPut = _outMsg.putn((const char *)data, sz);
+		return bytesPut;
+	}
 }
 
 
@@ -469,54 +465,55 @@ int SafeSock::get_bytes(void *dta, int size)
 			if ( selector.timed_out() ) {
 				return 0;
 			} else if ( !selector.has_ready() ) {
-					dprintf(D_NETWORK, "select returns %d, recv failed\n",
-							selector.select_retval());
-					return 0;
+				dprintf(D_NETWORK, "select returns %d, recv failed\n",
+						selector.select_retval());
+				return 0;
 			}
 		}
 		(void)handle_incoming_packet();
 	}
 
-	char *tempBuf = (char *)malloc(size);
-    if (!tempBuf) { EXCEPT("malloc failed"); }
 	int readSize, length;
     unsigned char * dec;
 
-	if(_longMsg) {
-        // long message 
-        readSize = _longMsg->getn(tempBuf, size);
-    }
-	else { 
-        // short message
-        readSize = _shortMsg.getn(tempBuf, size);
-    }
+	if (get_encryption()) {
+		if(_longMsg) {
+				// long message 
+			readSize = _longMsg->getn((char *)dta, size);
+		}
+		else { 
+				// short message
+			readSize = _shortMsg.getn((char *)dta, size);
+		}
 
-    //char str[10000];
-    //str[0] = 0;
-    //for(int idx=0; idx<readSize; idx++) { sprintf(&str[strlen(str)], "%02x,", tempBuf[idx]); }
-    //dprintf(D_NETWORK, "<--- ciphertext: %s\n", str);
-
-	if(readSize == size) {
-            if (get_encryption()) {
-                unwrap((unsigned char *) tempBuf, readSize, dec, length);
-                memcpy(dta, dec, readSize);
-                free(dec);
-            }
-            else {
-                memcpy(dta, tempBuf, readSize);
-            }
-
-            //str[0] = 0;
-            //for(int idx=0; idx<size; idx++) { sprintf(&str[strlen(str)], "%02x,", ((char *)dta)[idx]); }
-            //dprintf(D_NETWORK, "<--- cleartext: %s\n", str);
-
-            free(tempBuf);
-            return readSize;
+		if (readSize == size) {
+			unwrap((unsigned char *) dta, readSize, dec, length);
+			memcpy(dta, dec, readSize);
+			free(dec);
+			return readSize;
+		} else {
+			dprintf(D_NETWORK,
+					"SafeSock::get_bytes - failed because bytes read is different from bytes requested\n");
+			return -1;
+		}
 	} else {
-		free(tempBuf);
-        dprintf(D_NETWORK,
-                "SafeSock::get_bytes - failed because bytes read is different from bytes requested\n");
-		return -1;
+			// no encryption
+		if(_longMsg) {
+				// long message 
+			readSize = _longMsg->getn((char *)dta, size);
+		}
+		else { 
+				// short message
+			readSize = _shortMsg.getn((char *)dta, size);
+		}
+
+		if (readSize == size) {
+			return readSize;
+		} else {
+			dprintf(D_NETWORK,
+					"SafeSock::get_bytes - failed because bytes read is different from bytes requested\n");
+			return -1;
+		}
 	}
 }
 

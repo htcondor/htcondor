@@ -1730,13 +1730,6 @@ Stream::set_crypto_mode(bool enabled)
 	return true;
 }
 
-bool 
-Stream::get_encryption() const
-{
-    return (crypto_mode_);
-}
-
-
 char const *
 Stream::peer_description() const {
 	if(m_peer_description_str) {

@@ -90,6 +90,7 @@ public:
 	friend class SecManStartCommand;
 	friend class SharedPortListener;
 	friend class SharedPortEndpoint;
+	friend class DockerProc;
 
 	/*
 	**	Methods

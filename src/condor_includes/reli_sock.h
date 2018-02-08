@@ -56,6 +56,7 @@ class BlockingModeGuard;
 class ReliSock : public Sock {
 	friend class Authentication;
 	friend class BlockingModeGuard;
+	friend class DockerProc;
 
 //	PUBLIC INTERFACE TO RELIABLE SOCKS
 //
