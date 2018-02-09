@@ -314,28 +314,41 @@ sub TestSQUIDsUsage {
 		die( "Error: $testName: CondorTest::RunTest(${submitFileName}) failed\n" );
 	}
 
+	my $clusterID;
+	my $setClusterID = sub {
+		my( $cID ) = @_;
+		$clusterID = $cID;
+	};
+
 	# Poll the .update.ad file and then check its results.
 	%jobIDToSQUIDsMap = ();
 	$submitFileName = "cmr-monitor-basic-ad.cmd";
-	if( CondorTest::RunTest( $testName, $submitFileName, 0 ) ) {
-		open( my $fh, '<', 'cmr-monitor-basic-ad.out' ) or
-			die( "Error: $testName: could not open 'cmr-monitor-basic-ad.out'\n" );
-
+	if( CondorTest::RunTest( $testName, $submitFileName, 0, $setClusterID ) ) {
 		my $lineCount = 0;
-		while( my $line = <$fh> ) {
-			++$lineCount;
-			my( $SQUID, $value ) = split( ' ', $line );
+		my $outputFileBaseName = "cmr-monitor-basic-ad.${clusterID}.";
+		for( my $i = 0; $i < 4; ++$i ) {
+			my $outputFileName = $outputFileBaseName . $i . ".out";
 
-			my $increment = $squidIncrements{ $SQUID };
-			if(! defined( $increment )) {
-				die( "Failure: SQUID '${SQUID}' invalid.\n" );
+			open( my $fh, '<', $outputFileName ) or
+				die( "Error: ${testName}: could not open '${outputFileName}'\n" );
+
+			while( my $line = <$fh> ) {
+				++$lineCount;
+				my( $SQUID, $value ) = split( ' ', $line );
+
+				my $increment = $squidIncrements{ $SQUID };
+				if(! defined( $increment )) {
+					die( "Failure: SQUID '${SQUID}' invalid.\n" );
+				}
+
+				if( checkUsageValue( $increment, $value ) ) {
+					RegisterResult( 1, check_name => $SQUID . "-update.ad-${lineCount}", test_name => $testName );
+				} else {
+					RegisterResult( 0, check_name => $SQUID . "-update.ad-${lineCount}", test_name => $testName );
+				}
 			}
 
-			if( checkUsageValue( $increment, $value ) ) {
-				RegisterResult( 1, check_name => $SQUID . "-update.ad-${lineCount}", test_name => $testName );
-			} else {
-				RegisterResult( 0, check_name => $SQUID . "-update.ad-${lineCount}", test_name => $testName );
-			}
+			close( $fh );
 		}
 
 		# Each test job appends four lines to the log.
