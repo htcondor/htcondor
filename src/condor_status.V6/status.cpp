@@ -40,6 +40,7 @@
 #include "classad_helpers.h"
 #include "prettyPrint.h"
 #include "setflags.h"
+#include "adcluster.h"
 
 #include <vector>
 #include <sstream>
@@ -187,6 +188,11 @@ bool			naturalSort = true;
 
 classad::References projList;
 StringList dashAttributes; // Attributes specifically requested via the -attributes argument
+
+bool       dash_group_by; // the "group-by" command line arguments was specified.
+AdCluster<std::string> ad_groups; // does the actually grouping 
+std::string get_ad_name_string(ClassAd &ad) { std::string name; ad.LookupString(ATTR_NAME, name); return name; }
+
 
 char *			target = NULL;
 bool			print_attrs_in_hash_order = false;
@@ -347,6 +353,13 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 	unsigned int ord = pi->ordinal++;
 	sortSpecs.RenderKey(key, ord, ad);
 	//make_status_key(key, ord, ad);
+
+	if (dash_group_by) {
+		std::string id(key), attrs;
+		int acid = ad_groups.getClusterid(*ad, true, &attrs);
+		for (size_t ix = id.find_first_of("\n",0); ix != std::string::npos; ix = id.find_first_of("\n",ix)) { id.replace(ix,1,"/"); }
+		fprintf(stderr, "ingested '%s', got clusterid=%d attrs=%s\n", id.c_str(), acid, attrs.c_str());
+	}
 
 	// if diagnose flag is passed, unpack the key and ad and print them to the diagnostics file
 	if (pi->hfDiag) {
@@ -1080,6 +1093,14 @@ main (int argc, char *argv[])
 		}
 	}
 
+	if (dash_group_by) {
+		if ( ! dashAttributes.isEmpty()) {
+			ad_groups.setSigAttrs(dashAttributes.print_to_string(), true, true);
+		} else {
+			ad_groups.setSigAttrs("Cpus Memory GPUs IOHeavy START", false, true);
+		}
+		ad_groups.keepAdKeys(get_ad_name_string);
+	}
 
 	// This awful construction is forced on us by our List class
 	// refusing to allow copying or assignment.
@@ -1273,6 +1294,24 @@ main (int argc, char *argv[])
 		if( left_ai.pmap->size() > 0 ) {
 			if(! annexMode) { fprintf( stdout, "The following ads were found only in '%s':\n", leftFileName ); }
 			doMergeOutput( left_ai );
+		}
+	}
+
+	if (dash_group_by) {
+		std::string output;
+		output.reserve(16372);
+		StringList * whitelist = NULL;
+
+		AdAggregationResults<std::string> groups(ad_groups);
+		groups.rewind();
+		ClassAd * ad;
+		while ((ad = groups.next()) != NULL) {
+			output.clear();
+			classad::References attrs;
+			sGetAdAttrs(attrs, *ad, false, whitelist);
+			sPrintAdAttrs(output, *ad, attrs);
+			output += "\n";
+			fputs(output.c_str(), stdout);
 		}
 	}
 
@@ -1848,6 +1887,9 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i],"json", 2)){
 			mainPP.setPPstyle (PP_JSON, i, argv[i]);
 		} else
+		if (is_dash_arg_prefix (argv[i],"group-by", 5)){
+			dash_group_by = true;
+		} else
 		if (is_dash_arg_prefix (argv[i],"attributes", 2)){
 			if( !argv[i+1] ) {
 				fprintf( stderr, "%s: -attributes requires one additional argument\n",
@@ -2225,6 +2267,10 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if (is_dash_arg_prefix (argv[i], "merge", 5)) {
+			++i;
+			continue;
+		}
+		if (is_dash_arg_prefix (argv[i], "group-by", 5)) {
 			++i;
 			continue;
 		}
