@@ -299,7 +299,9 @@ sub TestSQUIDsUsage {
 			foreach my $ad (@{$jobAds}) {
 				my $value = $ad->{ "SQUIDsUsage" };
 
-				if( $value != $eventLogUsage{ $jobID } ) {
+				# The event log's report is rounded for readability.
+				my $elValue = sprintf( "%.2f", $value );
+				if( $elValue != $eventLogUsage{ $jobID } ) {
 					die( "Value in event log (" . $eventLogUsage{ $jobID } . ") does not equal value in history file (${value}), aborting.\n" );
 				}
 
