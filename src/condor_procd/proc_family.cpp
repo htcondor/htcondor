@@ -312,6 +312,7 @@ ProcFamily::freezer_cgroup(const char * state)
 				"(ProcFamily %u) due to process state; signal delivery "
 				"won't be atomic\n", m_cgroup_string.c_str(), m_root_pid);
 			err = -EBUSY;
+			goto ret;
 		} else {
 			dprintf(D_ALWAYS,
 				"Unable to commit freezer change %s for cgroup %s (ProcFamily %u). %u %s\n",
