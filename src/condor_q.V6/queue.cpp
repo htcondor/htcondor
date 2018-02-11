@@ -2343,9 +2343,7 @@ render_globusHostAndJM(std::string & result, AttrList *ad, Formatter & /*fmt*/ )
 		free( grid_type );
 	}
 
-	if ( attr_value ) {
-		free( attr_value );
-	}
+	free( attr_value );
 
 	// done --- pack components into the result string and return
 	formatstr( result, " %-8.8s %-18.18s  ", jm, host );
