@@ -417,7 +417,7 @@ help( const char * argv0 ) {
 		"\t[-aws-on-demand-security-group-ids <group-ID[,groupID]*>]\n"
 		"\t[-aws-on-demand-key-name <key-name>]\n"
 		"\n"
-		"To use a customize an AWS Spot Fleet annex, specify a JSON config file:\n"
+		"To customize an AWS Spot Fleet annex, specify a JSON config file:\n"
 		"\t[-aws-spot-fleet-config-file </full/path/to/config.json>]\n"
 		"\n"
 		"To specify who may use your annex:\n"
