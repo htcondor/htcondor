@@ -41,25 +41,18 @@ const std::string netgroup_detected = "***";
 #endif
 
 // Hash function for Permission hash table
-static unsigned int
+static size_t
 compute_perm_hash(const in6_addr &in_addr)
 {
 		// the hash function copied from MyString::Hash()
 	int Len = sizeof(in6_addr);
 	const unsigned char* Data = (const unsigned char*)&in_addr;
 	int i;
-	unsigned int result = 0;
+	size_t result = 0;
 	for(i = 0; i < Len; i++) {
 		result = (result<<5) + result + Data[i];
 	}
 	return result;
-}
-
-// Hash function for HolePunchTable_t hash tables
-static unsigned int
-compute_host_hash( const MyString & str )
-{
-	return ( str.Hash() );
 }
 
 // == operator for struct in_addr, also needed for hash table template
@@ -78,7 +71,7 @@ IpVerify::IpVerify()
 		PunchedHoleArray[perm] = NULL;
 	}
 
-	PermHashTable = new PermHashTable_t(797, compute_perm_hash);
+	PermHashTable = new PermHashTable_t(compute_perm_hash);
 }
 
 
@@ -326,7 +319,7 @@ IpVerify::add_hash_entry(const struct in6_addr & sin6_addr, const char * user, p
         }
 	}
     else {
-        perm = new UserPerm_t(42, compute_host_hash);
+        perm = new UserPerm_t(hashFunction);
         if (PermHashTable->insert(sin6_addr, perm) != 0) {
             delete perm;
             return FALSE;
@@ -547,7 +540,7 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
     assert(pentry);
 
 	NetStringList * whichHostList = new NetStringList();
-    UserHash_t * whichUserHash = new UserHash_t(1024, compute_host_hash);
+    UserHash_t * whichUserHash = new UserHash_t(hashFunction);
 
     StringList slist(list);
 	char *entry, * host, * user;
@@ -1096,7 +1089,7 @@ IpVerify::PunchHole(DCpermission perm, const MyString& id)
 	int count = 0;
 	if (PunchedHoleArray[perm] == NULL) {
 		PunchedHoleArray[perm] =
-			new HolePunchTable_t(compute_host_hash);
+			new HolePunchTable_t(hashFunction);
 		ASSERT(PunchedHoleArray[perm] != NULL);
 	}
 	else {

@@ -27,11 +27,8 @@
 #include "nordugridjob.h"
 #include "gridmanager.h"
 
-#define HASH_TABLE_SIZE			500
-
-HashTable <HashKey, NordugridResource *>
-    NordugridResource::ResourcesByName( HASH_TABLE_SIZE,
-										hashFunction );
+HashTable <std::string, NordugridResource *>
+    NordugridResource::ResourcesByName( hashFunction );
 
 const char *NordugridResource::HashName( const char *resource_name,
 										 const char *proxy_subject )
@@ -50,15 +47,13 @@ NordugridResource *NordugridResource::FindOrCreateResource( const char * resourc
 	int rc;
 	NordugridResource *resource = NULL;
 
-	rc = ResourcesByName.lookup( HashKey( HashName( resource_name,
-													proxy->subject->fqan ) ),
+	rc = ResourcesByName.lookup( HashName( resource_name, proxy->subject->fqan ),
 								 resource );
 	if ( rc != 0 ) {
 		resource = new NordugridResource( resource_name, proxy );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashKey( HashName( resource_name,
-												   proxy->subject->fqan ) ),
+		ResourcesByName.insert( HashName( resource_name, proxy->subject->fqan ),
 								resource );
 	} else {
 		ASSERT(resource);
@@ -98,7 +93,7 @@ NordugridResource::NordugridResource( const char *resource_name,
 
 NordugridResource::~NordugridResource()
 {
-	ResourcesByName.remove( HashKey( HashName( resourceName, proxyFQAN ) ) );
+	ResourcesByName.remove( HashName( resourceName, proxyFQAN ) );
 	free( proxyFQAN );
 	if ( proxySubject ) {
 		free( proxySubject );
@@ -259,8 +254,7 @@ void NordugridResource::DoJobStatus()
 					id = strrchr( next_job_id, '/' );
 					id = (id != NULL) ? (id + 1) : "";
 					formatstr( key, "nordugrid %s %s", resourceName, id );
-					rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.c_str() ),
-														  base_job );
+					rc2 = BaseJob::JobsByRemoteId.lookup( key, base_job );
 					if ( rc2 == 0 && (job = dynamic_cast<NordugridJob*>(base_job)) ) {
 						job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
 					}

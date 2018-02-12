@@ -640,6 +640,9 @@ LogNewClassAd::Play(void *data_structure)
 	SetTargetTypeName(*ad, targettype);
 	ad->EnableDirtyTracking();
 	result = table->insert(key, ad) ? 0 : -1;
+	if ( result == -1 ) {
+		ctor.Delete(ad);
+	}
 
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::NewClassAd(key);
@@ -1110,4 +1113,4 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLog
 
 // Force instantiation of the simple form of ClassAdLog, used the the Accountant
 //
-template class ClassAdLog<HashKey,const char*,ClassAd*>;
+template class ClassAdLog<std::string,ClassAd*>;

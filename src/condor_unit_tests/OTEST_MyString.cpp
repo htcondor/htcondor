@@ -118,8 +118,6 @@ static bool find_char_last(void);
 static bool find_char_not_found(void);
 static bool find_char_invalid_greater(void);
 static bool find_char_invalid_less(void);
-static bool hash_empty(void);
-static bool hash_non_empty(void);
 static bool find_empty(void);
 static bool find_non_empty(void);
 static bool find_beginning(void);
@@ -219,8 +217,6 @@ static bool your_string_equality_default_constructor(void);
 static bool your_string_assignment_non_empty_empty(void);
 static bool your_string_assignment_empty_non_empty(void);
 static bool your_string_assignment_non_empty(void);
-static bool your_string_hash_function_non_empty(void);
-static bool your_string_hash_function_empty(void);
 static bool test_stl_string_casting(void);
 
 bool OTEST_MyString(void) {
@@ -326,8 +322,6 @@ bool OTEST_MyString(void) {
 	driver.register_function(find_char_not_found);
 	driver.register_function(find_char_invalid_greater);
 	driver.register_function(find_char_invalid_less);
-	driver.register_function(hash_empty);
-	driver.register_function(hash_non_empty);
 	driver.register_function(find_empty);
 	driver.register_function(find_non_empty);
 	driver.register_function(find_beginning);
@@ -427,8 +421,6 @@ bool OTEST_MyString(void) {
 	driver.register_function(your_string_assignment_non_empty_empty);
 	driver.register_function(your_string_assignment_empty_non_empty);
 	driver.register_function(your_string_assignment_non_empty);
-	driver.register_function(your_string_hash_function_non_empty);
-	driver.register_function(your_string_hash_function_empty);
 	driver.register_function(test_stl_string_casting);
 		// run the tests
 	return driver.do_all_functions();
@@ -1962,38 +1954,6 @@ static bool find_char_invalid_less() {
 	emit_output_actual_header();
 	emit_retval("%d", pos);
 	if(pos != -1) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool hash_empty() {
-	emit_test("Test Hash() on an empty MyString.");
-	emit_comment("This test compares the hash function to 0 even though 0 is "
-		" a possible hash function");
-	MyString a;
-	unsigned int hash = a.Hash();
-	emit_output_expected_header();
-	emit_retval("%s", "!= 0");
-	emit_output_actual_header();
-	emit_retval("%d", hash);
-	if(hash != 0) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool hash_non_empty() {
-	emit_test("Test Hash() on a non-empty MyString.");
-	emit_comment("This test compares the hash function to 0 even though 0 is "
-		" a possible hash function");
-	MyString a("foobar");
-	unsigned int hash = a.Hash();
-	emit_output_expected_header();
-	emit_retval("%s", "!= 0");
-	emit_output_actual_header();
-	emit_retval("%d", hash);
-	if(hash == 0) {
 		FAIL;
 	}
 	PASS;
@@ -3818,38 +3778,6 @@ static bool your_string_assignment_non_empty() {
 	emit_output_expected_header();
 	emit_retval("%s", "b");
 	if(!(a == "b")) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool your_string_hash_function_non_empty() {
-	emit_test("Test hashFunction() on a non-empty sensitive string.");
-	YourString a("foo");
-	unsigned int hash = YourString::hashFunction(a);
-	emit_input_header();
-	emit_param("YourString", "%s", "foo");
-	emit_output_expected_header();
-	emit_retval("%s", "!=0");
-	emit_output_actual_header();
-	emit_retval("%d", hash);
-	if(hash == 0) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool your_string_hash_function_empty() {
-	emit_test("Test hashFunction() on an empty sensitive string.");
-	YourString a;
-	unsigned int hash = YourString::hashFunction(a);
-	emit_input_header();
-	emit_param("YourString", "%s", "foo");
-	emit_output_expected_header();
-	emit_retval("%s", "!=0");
-	emit_output_actual_header();
-	emit_retval("%d", hash);
-	if(hash == 0) {
 		FAIL;
 	}
 	PASS;

@@ -63,7 +63,6 @@
 #include "globus_utils.h"
 #include "enum_utils.h"
 #include "setenv.h"
-#include "classad_hashtable.h"
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"
@@ -96,16 +95,8 @@
 #error "condor submit must use submit utils"
 #endif
 
-// TODO: hashFunction() is case-insenstive, but when a MyString is the
-//   hash key, the comparison in HashTable is case-sensitive. Therefore,
-//   the case-insensitivity of hashFunction() doesn't complish anything.
-//   CheckFilesRead and CheckFilesWrite should be
-//   either completely case-sensitive (and use MyStringHash()) or
-//   completely case-insensitive (and use AttrKey and AttrKeyHashFunction).
-static unsigned int hashFunction( const MyString& );
-
-HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
-HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
+std::set<std::string> CheckFilesRead;
+std::set<std::string> CheckFilesWrite;
 
 #ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
 #else
@@ -315,26 +306,24 @@ void TestFilePermissions( char *scheddAddr = NULL )
 	gid_t gid = getgid();
 	uid_t uid = getuid();
 
-	int result, junk;
-	MyString name;
+	int result;
+	std::set<std::string>::iterator name;
 
-	CheckFilesRead.startIterations();
-	while( ( CheckFilesRead.iterate( name, junk ) ) )
+	for ( name = CheckFilesRead.begin(); name != CheckFilesRead.end(); name++ )
 	{
-		result = attempt_access(name.Value(), ACCESS_READ, uid, gid, scheddAddr);
+		result = attempt_access(name->c_str(), ACCESS_READ, uid, gid, scheddAddr);
 		if( result == FALSE ) {
 			fprintf(stderr, "\nWARNING: File %s is not readable by condor.\n", 
-					name.Value());
+					name->c_str());
 		}
 	}
 
-	CheckFilesWrite.startIterations();
-	while( ( CheckFilesWrite.iterate( name, junk ) ) )
+	for ( name = CheckFilesWrite.begin(); name != CheckFilesWrite.end(); name++ )
 	{
-		result = attempt_access(name.Value(), ACCESS_WRITE, uid, gid, scheddAddr );
+		result = attempt_access(name->c_str(), ACCESS_WRITE, uid, gid, scheddAddr );
 		if( result == FALSE ) {
 			fprintf(stderr, "\nWARNING: File %s is not writable by condor.\n",
-					name.Value());
+					name->c_str());
 		}
 	}
 #endif
@@ -837,7 +826,7 @@ main( int argc, const char *argv[] )
 		}
 		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion
 		submit_hash.insert_submit_filename(cmd_file, FileMacroSource);
-		submit_unique_id = hashFuncChars(cmd_file);
+		submit_unique_id = hashFunction(cmd_file);
 	}
 
 	// in case things go awry ...
@@ -1123,6 +1112,10 @@ main( int argc, const char *argv[] )
 // so we can choose to do file checks. 
 int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const char * pathname, int flags)
 {
+	if (pathname == NULL) {
+		fprintf(stderr, "\nERROR: NULL filename\n");
+		return 1;
+	}
 	if (role == SFR_LOG) {
 		if ( !DumpClassAdToFile && !DashDryRun ) {
 			// check that the log is a valid path
@@ -1211,20 +1204,15 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 	}
 
 	// Queue files for testing access if not already queued
-	int junk;
 	if( flags & O_WRONLY )
 	{
-		if ( CheckFilesWrite.lookup(pathname,junk) < 0 ) {
-			// this file not found in our list; add it
-			CheckFilesWrite.insert(pathname,junk);
-		}
+		// add this file to our list; no-op if already there
+		CheckFilesWrite.insert(pathname);
 	}
 	else
 	{
-		if ( CheckFilesRead.lookup(pathname,junk) < 0 ) {
-			// this file not found in our list; add it
-			CheckFilesRead.insert(pathname,junk);
-		}
+		// add this file to our list; no-op if already there
+		CheckFilesRead.insert(pathname);
 	}
 	return 0; // of the check is ok,  nonzero to abort
 }
@@ -2582,21 +2570,6 @@ int SendJobAd (ClassAd * job, ClassAd * ClusterAd)
 	}
 
 	return retval;
-}
-
-
-// hash function used by the CheckFiles read/write tables
-static unsigned int 
-hashFunction (const MyString &str)
-{
-	 int i = str.Length() - 1;
-	 unsigned int hashVal = 0;
-	 while (i >= 0) 
-	 {
-		  hashVal += (unsigned int)tolower(str[i]);
-		  i--;
-	 }
-	 return hashVal;
 }
 
 

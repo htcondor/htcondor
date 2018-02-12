@@ -127,12 +127,11 @@ InsertOrUpdateAd( const std::string & id, ClassAd * command,
 	// already inserted or updated an ad with this id, but this should work
 	// in either case, so let's keep things simple for now.
 	ClassAd * existing = NULL;
-	const char * key = id.c_str();
-	if( log->LookupClassAd( HashKey( key ), existing ) && existing != NULL ) {
-		log->DestroyClassAd( key );
+	if( log->LookupClassAd( id, existing ) && existing != NULL ) {
+		log->DestroyClassAd( id );
 	}
 
-	log->NewClassAd( key, command );
+	log->NewClassAd( id, command );
 }
 
 bool

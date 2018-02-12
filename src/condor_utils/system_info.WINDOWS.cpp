@@ -302,7 +302,7 @@ BOOL INtDll::Init()
 //
 //////////////////////////////////////////////////////////////////////////////////////
 
-unsigned int hashFunction ( const DWORD &key ) {
+size_t hashFunction ( const DWORD &key ) {
 	// just use the process id
 	return key;
 }

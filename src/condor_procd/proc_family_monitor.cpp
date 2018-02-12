@@ -42,8 +42,8 @@ ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
                                      int snapshot_interval,
 									 bool except_if_pid_dies) :
 	m_everybody_else(NULL),
-	m_family_table(11, pidHashFunc, rejectDuplicateKeys),
-	m_member_table(PHBUCKETS, pidHashFunc, rejectDuplicateKeys),
+	m_family_table(pidHashFunc),
+	m_member_table(pidHashFunc),
 	m_except_if_pid_dies(except_if_pid_dies)
 {
 	// the snapshot interval must either be non-negative or -1, which

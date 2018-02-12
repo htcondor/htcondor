@@ -23,10 +23,8 @@
 #include "condor_debug.h"
 #include "condor_fsync.h"
 
-#define TRANSACTION_HASH_LEN 10000
-
 Transaction::Transaction()
-	: op_log(TRANSACTION_HASH_LEN,YourString::hashFunction,rejectDuplicateKeys)
+	: op_log(hashFunction)
 	, op_log_iterating(NULL)
 	, m_triggers(0)
 	, m_EmptyTransaction(true)

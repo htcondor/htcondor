@@ -76,10 +76,9 @@ class StringSpace
 {
   public:
     /**
-     * Constructor. Creates the string space. The initial size of the
-     * hash table in which we store the strings is an optional
-     * parameter */
-	StringSpace (int initial_size=15000);
+     * Constructor. Creates the string space.
+     */
+	StringSpace ();
 
 	/** Destructor. This will explicitly free all the memory associated 
      * with the strings. 

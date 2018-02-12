@@ -46,7 +46,6 @@ static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
 static const int DEFAULT_MAXPIPES = 8;
 static const int DEFAULT_MAXREAPS = 100;
-static const int DEFAULT_PIDBUCKETS = 11;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
@@ -232,14 +231,14 @@ void **curr_regdataptr;
 extern void drop_addr_file( void );
 
 // Hash function for pid table.
-static unsigned int compute_pid_hash(const pid_t &key)
+static size_t compute_pid_hash(const pid_t &key)
 {
-	return (unsigned int)key;
+	return (size_t)key;
 }
 
 // DaemonCore constructor.
 
-DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
+DaemonCore::DaemonCore(int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
 	: comTable(32),
 	sigTable(10),
@@ -250,7 +249,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_advertise_ipv4_first(false)
 {
 
-	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0 || ReapSize < 0)
+	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || ReapSize < 0)
 	{
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
@@ -264,9 +263,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
     dc_stats.Init(enable_stats); // initilize statistics.
     dc_stats.SetWindowSize(20*60);
 
-	if ( PidSize == 0 )
-		PidSize = DEFAULT_PIDBUCKETS;
-	pidTable = new PidHashTable(PidSize, compute_pid_hash);
+	pidTable = new PidHashTable(compute_pid_hash);
 	ppid = 0;
 #ifdef WIN32
 	// init the mutex

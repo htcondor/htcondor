@@ -53,7 +53,6 @@
 #include "match_prefix.h"
 
 #include "extArray.h"
-#include "HashTable.h"
 #include "MyString.h"
 #include "string_list.h"
 #include "which.h"
@@ -65,7 +64,6 @@
 #include "globus_utils.h"
 #include "enum_utils.h"
 #include "setenv.h"
-#include "classad_hashtable.h"
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"

@@ -155,7 +155,7 @@ windows_hard_kill(DWORD pid)
 // stupid hash function for DWORD (need by the hash tables
 // used in the suspend/contiunue code below)
 //
-static unsigned int
+static size_t
 hash_func(const DWORD& n)
 {
 	return n;
@@ -187,7 +187,7 @@ typedef HashTable<DWORD, SuspendedThread*> SuspendedProcess;
 // we keep track of all suspended processes via a hash table
 // keyed on process id
 //
-static HashTable<DWORD, SuspendedProcess*> suspended_processes(11, hash_func);
+static HashTable<DWORD, SuspendedProcess*> suspended_processes(hash_func);
 
 bool
 windows_suspend(DWORD pid)
@@ -198,7 +198,7 @@ windows_suspend(DWORD pid)
 	SuspendedProcess* sp;
 	int ret = suspended_processes.lookup(pid, sp);
 	ASSERT(ret == -1);
-	sp = new SuspendedProcess(11, hash_func);
+	sp = new SuspendedProcess(hash_func);
 	ASSERT(sp != NULL);
 	ret = suspended_processes.insert(pid, sp);
 	ASSERT(ret != -1);

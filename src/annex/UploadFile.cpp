@@ -30,7 +30,7 @@ UploadFile::operator() () {
 
 	int tryCount = 0;
 	ClassAd * commandAd;
-	commandState->Lookup( HashKey( commandID.c_str() ), commandAd );
+	commandState->Lookup( commandID, commandAd );
 	commandAd->LookupInteger( "State_TryCount", tryCount );
 	if( incrementTryCount ) {
 		++tryCount;
@@ -39,7 +39,7 @@ UploadFile::operator() () {
 		formatstr( value, "%d", tryCount );
 		commandState->BeginTransaction();
 		{
-			commandState->SetAttribute( commandID.c_str(), "State_TryCount", value.c_str() );
+			commandState->SetAttribute( commandID, "State_TryCount", value.c_str() );
 		}
 		commandState->CommitTransaction();
 
@@ -63,7 +63,7 @@ UploadFile::operator() () {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 		commandState->BeginTransaction();
 		{
-			commandState->DeleteAttribute( commandID.c_str(), "State_TryCount" );
+			commandState->DeleteAttribute( commandID, "State_TryCount" );
 		}
 		commandState->CommitTransaction();
 		rc = PASS_STREAM;

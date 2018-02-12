@@ -31,19 +31,19 @@
 #include "classad/classadCache.h"
 
 // The hash function to use
-static unsigned int hashFunction (const StatsHashKey &key)
+static size_t hashFunction (const StatsHashKey &key)
 {
-    unsigned int result = 0;
+    size_t result = 0;
 	const char *p;
 
     for (p = key.type.Value(); p && *p;
-	     result = (result<<5) + result + (unsigned int)(*(p++))) { }
+	     result = (result<<5) + result + (size_t)(*(p++))) { }
 
     for (p = key.name.Value(); p && *p;
-	     result = (result<<5) + result + (unsigned int)(*(p++))) { }
+	     result = (result<<5) + result + (size_t)(*(p++))) { }
 
     for (p = key.ip_addr.Value(); p && *p;
-	     result = (result<<5) + result + (unsigned int)(*(p++))) { }
+	     result = (result<<5) + result + (size_t)(*(p++))) { }
 
     return result;
 }
@@ -592,7 +592,7 @@ CollectorDaemonStatsList::CollectorDaemonStatsList( bool nable,
 	enabled = nable;
 	historySize = history_size;
 	if ( enabled ) {
-		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
+		hashTable = new StatsHashTable( &hashFunction );
 	} else {
 		hashTable = NULL;
 	}
@@ -714,7 +714,7 @@ CollectorDaemonStatsList::enable( bool nable )
 	enabled = nable;
 	if ( ( enabled ) && ( ! hashTable ) ) {
 		dprintf( D_ALWAYS, "enable: Creating stats hash table\n" );
-		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
+		hashTable = new StatsHashTable( &hashFunction );
 	} else if ( ( ! enabled ) && ( hashTable ) ) {
 		dprintf( D_ALWAYS, "enable: Destroying stats hash table\n" );
 

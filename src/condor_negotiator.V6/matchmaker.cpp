@@ -389,7 +389,7 @@ Matchmaker ()
 	GotRescheduleCmd=false;
 	job_attr_references = NULL;
 	
-	stashedAds = new AdHash(1000, HashFunc);
+	stashedAds = new AdHash(hashFunction);
 
 	MatchList = NULL;
 	cachedAutoCluster = -1;
@@ -1376,7 +1376,6 @@ negotiationTime ()
 {
 	ClassAdList allAds; //contains ads from collector
 	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
-        //ClaimIdHash claimIds(MyStringHash);
     ClaimIdHash claimIds;
 	std::set<std::string> accountingNames; // set of active submitter names to publish
 	ClassAdListDoesNotDeleteAds submitterAds; // ptrs to submitter ads in allAds
@@ -1480,7 +1479,7 @@ negotiationTime ()
 	accountant.CheckMatches( startdAds );
 
 	if ( !groupQuotasHash ) {
-		groupQuotasHash = new groupQuotasHashType(100,HashFunc);
+		groupQuotasHash = new groupQuotasHashType(hashFunction);
 		ASSERT(groupQuotasHash);
     }
 
@@ -6154,10 +6153,6 @@ reeval(ClassAd *ad)
 		delete(oldAdEntry->oldAd);
 		oldAdEntry->oldAd = new ClassAd(*ad);
 	}
-}
-
-unsigned int Matchmaker::HashFunc(const MyString &Key) {
-	return Key.Hash();
 }
 
 Matchmaker::MatchListType::

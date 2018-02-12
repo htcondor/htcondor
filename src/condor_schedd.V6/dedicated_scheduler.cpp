@@ -451,16 +451,12 @@ DedicatedScheduler::DedicatedScheduler()
 	sanity_tid = -1;
 	rid = -1;
 
-		// TODO: Be smarter about the sizes of these tables
-	allocations = new HashTable < int, AllocationNode*> 
-		( 199, hashFuncInt );
+	allocations = new HashTable < int, AllocationNode*>( hashFuncInt );
 
 	pending_preemptions = NULL;
 
-	all_matches = new HashTable < HashKey, match_rec*>
-		( 199, hashFunction );
-	all_matches_by_id = new HashTable < HashKey, match_rec*>
-		( 199, hashFunction );
+	all_matches = new HashTable < std::string, match_rec*>( hashFunction );
+	all_matches_by_id = new HashTable < std::string, match_rec*>( hashFunction );
 
 	num_matches = 0;
 
@@ -1684,12 +1680,12 @@ DedicatedScheduler::sortResources( void )
 
         // new dynamic slots may also show up here, which need to have their
         // match_rec moved from the pending table into the all_matches table
-        MyString resname;
+        std::string resname;
         res->LookupString(ATTR_NAME, resname);
         if (is_dynamic(res)) {
             match_rec* dmrec = NULL;
-            if (all_matches->lookup(HashKey(resname.Value()), dmrec) < 0) {
-                dprintf(D_FULLDEBUG, "New dynamic slot %s\n", resname.Value());
+            if (all_matches->lookup(resname, dmrec) < 0) {
+                dprintf(D_FULLDEBUG, "New dynamic slot %s\n", resname.c_str());
                 if (!(is_claimed(res) && is_idle(res))) {
 					// Not actually unexpected -- this is a claimed dynamic slot, claimed by a serial job
                     //dprintf(D_ALWAYS, "WARNING: unexpected claim/activity state for new dynamic slot %s -- ignoring this resource\n", resname.Value());
@@ -1703,17 +1699,17 @@ DedicatedScheduler::sortResources( void )
                     std::map<std::string, match_rec*>::iterator c(pending_matches.find(claim_id));
                     if (c != pending_matches.end()) {
                         dmrec = c->second;
-                        all_matches->insert(HashKey(resname.Value()), dmrec);
-                        all_matches_by_id->insert(HashKey(claim_id), dmrec);
+                        ASSERT( all_matches->insert(resname, dmrec) == 0 );
+                        ASSERT( all_matches_by_id->insert(claim_id, dmrec) == 0 );
                         dmrec->setStatus(M_CLAIMED);
                         pending_matches.erase(c);
                     } else {
-                        dprintf(D_ALWAYS, "WARNING: match rec not found for new dynamic slot %s -- ignoring this resource\n", resname.Value());
+                        dprintf(D_ALWAYS, "WARNING: match rec not found for new dynamic slot %s -- ignoring this resource\n", resname.c_str());
                         continue;
                     }
                     pending_claims.erase(f);
                 } else {
-                    dprintf(D_ALWAYS, "WARNING: claim id not found for new dynamic slot %s -- ignoring this resource\n", resname.Value());
+                    dprintf(D_ALWAYS, "WARNING: claim id not found for new dynamic slot %s -- ignoring this resource\n", resname.c_str());
                     continue;
                 }
             }
@@ -1755,7 +1751,7 @@ DedicatedScheduler::sortResources( void )
 					res->AssignExpr(c_name, oexprStr);
 
 					dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from existing match record.\n", 
-						resname.Value(), c_name, oexprStr);
+						resname.c_str(), c_name, oexprStr);
 				}
 			}
 		}
@@ -1793,7 +1789,7 @@ DedicatedScheduler::sortResources( void )
 
 	if (param_boolean("DEDICATED_SCHEDULER_USE_SERIAL_CLAIMS", false)) {
 		match_rec *mr = NULL;
-		HashKey id;
+		std::string id;
 		scheduler.matches->startIterations();
 		while (scheduler.matches->iterate(id, mr) == 1) {
 			if (mr->status == M_CLAIMED) {
@@ -1808,8 +1804,8 @@ DedicatedScheduler::sortResources( void )
 				serial_resources->Append(resource);
 				char *slot_name = NULL;
 				resource->LookupString(ATTR_NAME, &slot_name);
-				all_matches->insert(HashKey(slot_name), mr);
-				all_matches_by_id->insert(HashKey(mr->claimId()), mr);
+				ASSERT( all_matches->insert(slot_name, mr) == 0 );
+				ASSERT( all_matches_by_id->insert(mr->claimId(), mr) == 0 );
 				free(slot_name);
 			}
 		}
@@ -1855,7 +1851,7 @@ DedicatedScheduler::clearResources( void )
 			char *slot_name = NULL;
 			serialMach->LookupString(ATTR_NAME, &slot_name);
 			match_rec *mr = NULL;
-			if (all_matches->lookup(HashKey(slot_name), mr) != 0) {
+			if (all_matches->lookup(slot_name, mr) != 0) {
 				mr->needs_release_claim = false;
 				DelMrec(mr);
 			}
@@ -2930,7 +2926,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 		node++;
 	}
 	
-	allocations->insert( cluster, alloc );
+	ASSERT( allocations->insert( cluster, alloc ) == 0 );
 
 		// Show world what we did
 	alloc->display();
@@ -3283,7 +3279,7 @@ DedicatedScheduler::AddMrec(
 									 match_ad,owner(),remote_pool,true);
 
 	match_rec *existing_mrec;
-	if( all_matches->lookup(HashKey(slot_name), existing_mrec) == 0) {
+	if( all_matches->lookup(slot_name, existing_mrec) == 0) {
 			// Already have this match
 		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, deleting old one\n", slot_name);
 		DelMrec(existing_mrec);
@@ -3313,8 +3309,8 @@ DedicatedScheduler::AddMrec(
         pending_matches[claim_id] = mrec;
         pending_claims[mrec->publicClaimId()] = claim_id;
     } else {
-        all_matches->insert(HashKey(slot_name), mrec);
-        all_matches_by_id->insert(HashKey(mrec->claimId()), mrec);
+        ASSERT( all_matches->insert(slot_name, mrec) == 0 );
+        ASSERT( all_matches_by_id->insert(mrec->claimId(), mrec) == 0 );
     }
 
 	removeRequest( job_id );
@@ -3369,8 +3365,7 @@ DedicatedScheduler::DelMrec( char const* id )
 		return true;
 	}
 		// First, delete it from our table hashed on ClaimId. 
-	HashKey key( id );
-	if( all_matches_by_id->lookup(key, rec) < 0 ) {
+	if( all_matches_by_id->lookup(id, rec) < 0 ) {
 		ClaimIdParser cid(id);
 		dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- " 
 				 "match not deleted (but perhaps it was deleted previously)\n", cid.publicClaimId() );
@@ -3379,7 +3374,7 @@ DedicatedScheduler::DelMrec( char const* id )
 
 	ASSERT( rec->is_dedicated );
 
-	if (all_matches_by_id->remove(key) < 0) {
+	if (all_matches_by_id->remove(id) < 0) {
 		dprintf(D_ALWAYS, "DelMrec::all_matches_by_id->remove < 0\n");	
 	}
 		// Now that we have the mrec again, we have to see if this
@@ -3445,8 +3440,7 @@ DedicatedScheduler::DelMrec( char const* id )
 
 		// Now, we can delete it from the main table hashed on name.
 	rec->my_match_ad->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
-	HashKey key2( name_buf );
-	all_matches->remove(key2);
+	all_matches->remove(name_buf);
 
 		// If this match record is associated with a shadow record,
 		// clear out the match record from that shadow record to avoid
@@ -3851,8 +3845,7 @@ DedicatedScheduler::getMrec( ClassAd* ad, std::string& buf )
 				 "No %s in ClassAd!\n", ATTR_NAME );
 		return NULL;
 	}
-	HashKey key(buf.c_str());
-	if( all_matches->lookup(key, mrec) < 0 ) {
+	if( all_matches->lookup(buf, mrec) < 0 ) {
 		return NULL;
 	}
 	return mrec;
@@ -3904,8 +3897,7 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 					names.rewind();
 					char* machineName;
 					while( (machineName = names.next()) ) {
-						HashKey key(machineName);
-						if( all_matches->lookup(key, mrec) >= 0 ) {
+						if( all_matches->lookup(machineName, mrec) >= 0 ) {
 							mrec->scheduled = true;
 						}
 					}
@@ -4233,8 +4225,8 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 			mrec->setStatus(M_CLAIMED);
 
-			all_matches->insert(HashKey(host), mrec);
-			all_matches_by_id->insert(HashKey(mrec->claimId()), mrec);
+			ASSERT( all_matches->insert(host, mrec) == 0 );
+			ASSERT( all_matches_by_id->insert(mrec->claimId(), mrec) == 0 );
 
 			jobsToAllocate.Append(job);
 

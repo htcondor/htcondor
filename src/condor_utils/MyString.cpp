@@ -566,17 +566,6 @@ MyString::FindChar(int Char, int FirstPos) const
     return tmp-Data;
 }
 
-unsigned int 
-MyString::Hash() const 
-{
-	int i;
-	unsigned int result = 0;
-	for(i = 0; i < Len; i++) {
-		result = (result<<5) + result + (unsigned char)Data[i];
-	}
-	return result;
-}	  
- 
 // returns the index of the first match, or -1 for no match found
 int 
 MyString::find(const char *pszToFind, int iStartPos) const
@@ -1208,18 +1197,6 @@ MyStringTokener::GetNextToken(const char *delim, bool skipBlankTokens)
 
 /*--------------------------------------------------------------------
  *
- * Private
- *
- *--------------------------------------------------------------------*/
-
-unsigned int MyStringHash( const MyString &str )
-{
-	return str.Hash();
-}
-
-
-/*--------------------------------------------------------------------
- *
  * YourString
  *
  *--------------------------------------------------------------------*/
@@ -1247,34 +1224,6 @@ bool YourString::operator<(const YourString &rhs) const {
 	if ( ! m_str) { return rhs.m_str ? true : false; }
 	else if ( ! rhs.m_str) { return false; }
 	return strcmp(m_str, rhs.m_str) < 0;
-}
-unsigned int YourString::hashFunction(const YourString &s) {
-	// hash function for strings
-	// Chris Torek's world famous hashing function
-	unsigned int hash = 0;
-	if (!s.m_str) return 7; // Least random number
-
-	const char *p = s.m_str;
-	while (*p) {
-		hash = (hash<<5)+hash + (unsigned char)*p;
-		p++;
-	}
-
-	return hash;
-}
-unsigned int YourString::hashFunctionNoCase(const YourString &s) {
-	// hash function for strings
-	// Chris Torek's world famous hashing function
-	unsigned int hash = 0;
-	if (!s.m_str) return 7; // Least random number
-
-	const char *p = s.m_str;
-	while (*p) {
-		hash = (hash<<5)+hash + (unsigned char)(*p & ~0x20);
-		p++;
-	}
-
-	return hash;
 }
 
 

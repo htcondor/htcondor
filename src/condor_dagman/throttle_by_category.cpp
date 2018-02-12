@@ -25,13 +25,11 @@
 #include "debug.h"
 #include "MyString.h"
 
-static const int CATEGORY_HASH_SIZE = 101; // prime
-
 const int ThrottleByCategory::noThrottleSetting = -1;
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleByCategory() :
-			_throttles( CATEGORY_HASH_SIZE, MyStringHash, rejectDuplicateKeys )
+			_throttles( hashFunction )
 {
 }
 
@@ -109,8 +107,7 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 		// new names.  Note that we don't need to delete any
 		// ThrottleInfo objects because we're re-using the ones
 		// we already have.
-	HashTable<MyString, ThrottleInfo *> tmpThrottles( CATEGORY_HASH_SIZE,
-				MyStringHash, rejectDuplicateKeys );
+	HashTable<MyString, ThrottleInfo *> tmpThrottles( hashFunction );
 
 	_throttles.startIterations();
 	ThrottleInfo	*info;

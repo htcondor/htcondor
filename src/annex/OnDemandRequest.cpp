@@ -16,7 +16,7 @@ OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
   targetCapacity(0),
   commandID( cid ), commandState( c ), annexID( aid ) {
   	ClassAd * commandState;
-	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ) {
+	if( c->Lookup( commandID, commandState ) ) {
 		commandState->LookupString( "State_ClientToken", clientToken );
 		commandState->LookupString( "State_BulkRequestID", bulkRequestID );
 
@@ -86,19 +86,19 @@ OnDemandRequest::log() {
 	{
 		if(! clientToken.empty()) {
 			std::string quoted; formatstr( quoted, "\"%s\"", clientToken.c_str() );
-			commandState->SetAttribute( commandID.c_str(),
+			commandState->SetAttribute( commandID,
 				"State_ClientToken", quoted.c_str() );
 		} else {
-			commandState->DeleteAttribute( commandID.c_str(),
+			commandState->DeleteAttribute( commandID,
 				"State_ClientToken" );
 		}
 
 		if(! bulkRequestID.empty()) {
 			std::string quoted; formatstr( quoted, "\"%s\"", bulkRequestID.c_str() );
-			commandState->SetAttribute( commandID.c_str(),
+			commandState->SetAttribute( commandID,
 				"State_BulkRequestID", quoted.c_str() );
 		} else {
-			commandState->DeleteAttribute( commandID.c_str(),
+			commandState->DeleteAttribute( commandID,
 				"State_BulkRequestID" );
 		}
 
@@ -110,10 +110,10 @@ OnDemandRequest::log() {
 			char * slString = sl.print_to_delimed_string( "," );
 			std::string quoted; formatstr( quoted, "\"%s\"", slString );
 			free( slString );
-			commandState->SetAttribute( commandID.c_str(),
+			commandState->SetAttribute( commandID,
 				"State_InstanceIDs", quoted.c_str() );
 		} else {
-			commandState->DeleteAttribute( commandID.c_str(),
+			commandState->DeleteAttribute( commandID,
 				"State_InstanceIDs" );
 		}
 	}
@@ -145,7 +145,7 @@ OnDemandRequest::operator() () {
 		// the information we want (the spot fleet request ID).
 
 		ClassAd * commandAd;
-		commandState->Lookup( HashKey( commandID.c_str() ), commandAd );
+		commandState->Lookup( commandID, commandAd );
 		commandAd->LookupInteger( "State_TryCount", tryCount );
 		if( incrementTryCount ) {
 			++tryCount;
@@ -154,7 +154,7 @@ OnDemandRequest::operator() () {
 			formatstr( value, "%d", tryCount );
 			commandState->BeginTransaction();
 			{
-				commandState->SetAttribute( commandID.c_str(), "State_TryCount", value.c_str() );
+				commandState->SetAttribute( commandID, "State_TryCount", value.c_str() );
 			}
 			commandState->CommitTransaction();
 
@@ -216,7 +216,7 @@ OnDemandRequest::operator() () {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 		commandState->BeginTransaction();
 		{
-			commandState->DeleteAttribute( commandID.c_str(), "State_TryCount" );
+			commandState->DeleteAttribute( commandID, "State_TryCount" );
 		}
 		commandState->CommitTransaction();
 		rc = PASS_STREAM;

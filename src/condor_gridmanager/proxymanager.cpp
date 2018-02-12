@@ -24,7 +24,7 @@
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "condor_config.h"
-#include "classad_hashtable.h"
+#include "HashTable.h"
 #include "util_lib_proto.h"
 #include "env.h"
 #include "directory.h"
@@ -41,18 +41,9 @@
 
 #include <sstream>
 
-#define HASH_TABLE_SIZE			500
 
-
-//template class HashTable<HashKey, MyProxyManager *>;
-//template class HashBucket<HashKey, MyProxyManager *>;
-
-HashTable <HashKey, Proxy *> ProxiesByFilename( HASH_TABLE_SIZE,
-												hashFunction );
-HashTable <HashKey, ProxySubject *> SubjectsByName( 50, hashFunction );
-//HashTable <HashKey, MyProxyManager *> MyProxyManagersByPath ( HASH_TABLE_SIZE, hashFunction );
-
-//MyProxyManager myProxyManager;
+HashTable <std::string, Proxy *> ProxiesByFilename( hashFunction );
+HashTable <std::string, ProxySubject *> SubjectsByName( hashFunction );
 
 static bool proxymanager_initialized = false;
 static int CheckProxies_tid = TIMER_UNSET;
@@ -204,7 +195,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		}
 	}
 
-	if ( ProxiesByFilename.lookup( HashKey(proxy_path.c_str()), proxy ) == 0 ) {
+	if ( ProxiesByFilename.lookup( proxy_path, proxy ) == 0 ) {
 		// We already know about this proxy,
 		// use the existing Proxy struct
 		proxy->num_references++;
@@ -276,9 +267,9 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			}
 		}
 
-		ProxiesByFilename.insert(HashKey(proxy_path.c_str()), proxy);
+		ProxiesByFilename.insert(proxy_path, proxy);
 
-		if ( SubjectsByName.lookup( HashKey(fqan), proxy_subject ) != 0 ) {
+		if ( SubjectsByName.lookup( fqan, proxy_subject ) != 0 ) {
 			// We don't know about this proxy subject yet,
 			// create a new ProxySubject and fill it out
 			std::string tmp;
@@ -298,12 +289,12 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			new_master->num_references = 0;
 			new_master->subject = proxy_subject;
 			SetMasterProxy( new_master, proxy );
-			ProxiesByFilename.insert( HashKey(new_master->proxy_filename),
-									  new_master );
+			ASSERT( ProxiesByFilename.insert( new_master->proxy_filename,
+			                                  new_master ) == 0 );
 
 			proxy_subject->master_proxy = new_master;
 
-			SubjectsByName.insert(HashKey(proxy_subject->fqan),
+			SubjectsByName.insert(proxy_subject->fqan,
 								  proxy_subject);
 		}
 
@@ -489,11 +480,11 @@ ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 
 			// TODO shouldn't we be deleting the physical file for the
 			//   master proxy, since we created it?
-			ProxiesByFilename.remove( HashKey(proxy_subject->master_proxy->proxy_filename) );
+			ProxiesByFilename.remove( proxy_subject->master_proxy->proxy_filename );
 			free( proxy_subject->master_proxy->proxy_filename );
 			delete proxy_subject->master_proxy;
 
-			SubjectsByName.remove( HashKey(proxy_subject->fqan) );
+			SubjectsByName.remove( proxy_subject->fqan );
 			free( proxy_subject->subject_name );
 			if ( proxy_subject->email )
 				free( proxy_subject->email );
@@ -547,7 +538,7 @@ void DeleteMyProxyEntry (MyProxyEntry *& myproxy_entry) {
 // Utility function to deep-delete the Proxy data structure
 void DeleteProxy (Proxy *& proxy)
 {
-	ProxiesByFilename.remove( HashKey(proxy->proxy_filename) );
+	ProxiesByFilename.remove( proxy->proxy_filename );
 
 	proxy->subject->proxies.Delete( proxy );
 

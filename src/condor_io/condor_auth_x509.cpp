@@ -52,11 +52,6 @@ HashTable<MyString, MyString> * Condor_Auth_X509::GridMap = 0;
 
 bool Condor_Auth_X509::m_globusActivated = false;
 
-unsigned int hashFuncString( const std::string &key )
-{
-	return hashFuncChars(key.c_str());
-}
-
 Condor_Auth_X509::GlobusMappingTable *Condor_Auth_X509::m_mapping = NULL;
 
 //----------------------------------------------------------------------
@@ -374,7 +369,7 @@ int Condor_Auth_X509::ParseMapFile() {
 		}
 
 		assert (GridMap == NULL);
-		GridMap = new Grid_Map_t(293, MyStringHash);
+		GridMap = new Grid_Map_t(293, hashFunction);
 
 		// parse the file
 		while (buffer = getline(fd)) {
@@ -500,7 +495,7 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	if (m_mapping == NULL) {
 		// Size of hash table is purposely initialized small to prevent this
 		// from hogging memory.  This will, of course, grow at large sites.
-		m_mapping = new GlobusMappingTable(53, hashFuncString, updateDuplicateKeys);
+		m_mapping = new GlobusMappingTable(hashFunction);
 	}
 	const char *auth_name_to_map;
 	const char *fqan = getFQAN();
@@ -524,6 +519,8 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 			else {
 				major_status = GSS_S_FAILURE;
 			}
+		} else {
+			m_mapping->remove(auth_name_to_map);
 		}
 	}
 

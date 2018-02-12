@@ -67,7 +67,7 @@ class CondorResource : public BaseResource
 	char *proxySubject;
 	char *proxyFQAN;
 
-	static HashTable <HashKey, CondorResource *> ResourcesByName;
+	static HashTable <std::string, CondorResource *> ResourcesByName;
 
 		// Used by DoPollSchedd() to share poll results across all
 		// CondorResources of the same remote schedd
@@ -76,7 +76,7 @@ class CondorResource : public BaseResource
 		bool m_pollActive;
 		List<CondorJob> m_submittedJobs;
 	};
-	static HashTable <HashKey, ScheddPollInfo *> PollInfoByName;
+	static HashTable <std::string, ScheddPollInfo *> PollInfoByName;
 
 	const char *GetHashName();
 

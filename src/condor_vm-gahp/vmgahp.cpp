@@ -106,7 +106,7 @@ unsigned __stdcall pipe_forward_thread(void *)
 #endif
 
 VMGahp::VMGahp(VMGahpConfig* config, const char* iwd)
-	: m_pending_req_table(20, &hashFuncInt)
+	: m_pending_req_table(&hashFuncInt)
 {
 	m_async_mode = true;
 	m_new_results_signaled = false;
@@ -287,8 +287,12 @@ VMGahp::addNewRequest(const char *cmd)
 	VMRequest *new_req = new VMRequest(cmd);
 	ASSERT(new_req);
 
-	m_pending_req_table.insert(new_req->m_reqid, new_req);
-	return new_req;
+	if ( m_pending_req_table.insert(new_req->m_reqid, new_req) == 0 ) {
+		return new_req;
+	} else {
+		delete new_req;
+		return NULL;
+	}
 }
 
 void
@@ -603,7 +607,11 @@ VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args)
 	} else {
 		VMRequest *new_req;
 		new_req = addNewRequest(cmd);
-		returnOutputSuccess();
+		if ( new_req ) {
+			returnOutputSuccess();
+		} else {
+			returnOutputError();
+		}
 		return new_req;
 	}
 	return NULL;

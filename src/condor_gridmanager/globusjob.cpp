@@ -158,8 +158,6 @@ static const char *GMStateNames[] = {
 	} \
 }
 
-#define HASH_TABLE_SIZE			500
-
 struct OrphanCallback_t {
 	char *job_contact;
 	int state;
@@ -167,8 +165,7 @@ struct OrphanCallback_t {
 };
 
 
-HashTable <HashKey, GlobusJob *> JobsByContact( HASH_TABLE_SIZE,
-												hashFunction );
+HashTable <std::string, GlobusJob *> JobsByContact( hashFunction );
 
 static List<OrphanCallback_t> OrphanCallbackList;
 
@@ -208,7 +205,7 @@ orphanCallbackHandler()
 	OrphanCallbackList.DeleteCurrent();
 
 	// Find the right job object
-	rc = JobsByContact.lookup( HashKey( globusJobId(orphan->job_contact) ), this_job );
+	rc = JobsByContact.lookup( globusJobId(orphan->job_contact), this_job );
 	if ( rc == 0 && this_job != NULL ) {
 		dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
 				 this_job->procID.cluster, this_job->procID.proc,
@@ -251,7 +248,7 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 	GlobusJob *this_job;
 
 	// Find the right job object
-	rc = JobsByContact.lookup( HashKey( globusJobId(job_contact) ), this_job );
+	rc = JobsByContact.lookup( globusJobId(job_contact), this_job );
 	if ( rc == 0 && this_job != NULL ) {
 		dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
 				 this_job->procID.cluster, this_job->procID.proc, state,
@@ -895,7 +892,7 @@ GlobusJob::~GlobusJob()
 		free( resourceManagerString );
 	}
 	if ( jobContact ) {
-		JobsByContact.remove(HashKey(globusJobId(jobContact)));
+		JobsByContact.remove(globusJobId(jobContact));
 		free( jobContact );
 	}
 	if ( RSL ) {
@@ -2850,10 +2847,10 @@ void GlobusJob::GlobusSetRemoteJobId( const char *job_id, bool is_gt5 )
 		// the current port (from the running jobmanager) or the original
 		// port (from the Grid Monitor).
 	if ( jobContact ) {
-		JobsByContact.remove(HashKey(globusJobId(jobContact)));
+		JobsByContact.remove(globusJobId(jobContact));
 	}
 	if ( job_id ) {
-		JobsByContact.insert(HashKey(globusJobId(job_id)), this);
+		ASSERT( JobsByContact.insert(globusJobId(job_id), this) == 0 );
 	}
 
 	free( jobContact );

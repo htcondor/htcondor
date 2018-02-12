@@ -44,7 +44,6 @@
 
 #include "condor_classad.h"
 #include "log.h"
-#include "classad_hashtable.h"
 #include "log_transaction.h"
 #include "stopwatch.h"
 
@@ -80,7 +79,7 @@ const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
 extern const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
 #endif
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 class ClassAdLog {
 public:
 
@@ -100,7 +99,7 @@ public:
 			int m_options;
 
 		public:
-			filter_iterator(ClassAdLog<K,AltK,AD> &log, const classad::ExprTree *requirements, int timeslice_ms, bool at_end=false)
+			filter_iterator(ClassAdLog<K,AD> &log, const classad::ExprTree *requirements, int timeslice_ms, bool at_end=false)
 				: m_table(&log.table)
 				, m_cur(log.table.begin())
 				, m_found_ad(false)
@@ -185,12 +184,12 @@ public:
 	// returns 1 and sets val if corresponding SetAttribute found
 	// returns 0 if no SetAttribute found
 	// return -1 if DeleteAttribute or DestroyClassAd found
-	int LookupInTransaction(AltK key, const char *name, char *&val);
+	int LookupInTransaction(const K& key, const char *name, char *&val);
 
 	// insert into the given ad any attributes found in the uncommitted transaction
 	// cache that match the key.  return true if any attributes were
 	// added into the ad, false if not.
-	bool AddAttrsFromTransaction(AltK key, ClassAd &ad);
+	bool AddAttrsFromTransaction(const K &key, ClassAd &ad);
 
 	HashTable<K,AD> table;
 
@@ -229,7 +228,7 @@ protected:
 	*/
 	bool setActiveTransaction(Transaction* & transaction);
 
-	int ExamineTransaction(AltK key, const char *name, char *&val, ClassAd* &ad);
+	int ExamineTransaction(const K& key, const char *name, char *&val, ClassAd* &ad);
 
 
 private:
@@ -268,6 +267,8 @@ private:
 };
 
 // this class is the interface that is consumed by classes in this file that are derived from LogRecord
+// The methods return true on success and false on failure.
+// nextIteration() returns false when there are no more items.
 class LoggableClassAdTable {
 public:
 	virtual ~LoggableClassAdTable() {};
@@ -310,14 +311,14 @@ public:
 			ad = NULL;
 			return false;
 		}
-		k.sprint(current_key);
-		key = current_key.Value();
+		current_key = k;
+		key = current_key.c_str();
 		ad = Ad;
 		return true;
 	}
 protected:
 	HashTable<K,AD> & table;
-	MyString current_key; // used during iteration
+	std::string current_key; // used during iteration
 };
 
 
@@ -482,11 +483,10 @@ LogRecord* InstantiateLogEntry(
 
 // Templated member functions that call the helper functions with the correct arguments.
 //
-#define CLASSAD_LOG_HASHTABLE_SIZE 20000
 
-template <typename K, typename AltK, typename AD>
-ClassAdLog<K,AltK,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,const ConstructLogEntry* maker)
-	: table(CLASSAD_LOG_HASHTABLE_SIZE, K::hash)
+template <typename K, typename AD>
+ClassAdLog<K,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,const ConstructLogEntry* maker)
+	: table(hashFunction)
 	, make_table_entry(maker)
 {
 	log_filename_buf = filename;
@@ -523,9 +523,9 @@ ClassAdLog<K,AltK,AD>::ClassAdLog(const char *filename,int max_historical_logs_a
 	}
 }
 
-template <typename K, typename AltK, typename AD>
-ClassAdLog<K,AltK,AD>::ClassAdLog(const ConstructLogEntry* maker)
-	: table(CLASSAD_LOG_HASHTABLE_SIZE, K::hash)
+template <typename K, typename AD>
+ClassAdLog<K,AD>::ClassAdLog(const ConstructLogEntry* maker)
+	: table(hashFunction)
 	, make_table_entry(maker)
 {
 	active_transaction = NULL;
@@ -535,8 +535,8 @@ ClassAdLog<K,AltK,AD>::ClassAdLog(const ConstructLogEntry* maker)
 	historical_sequence_number = 0;
 }
 
-template <typename K, typename AltK, typename AD>
-ClassAdLog<K,AltK,AD>::~ClassAdLog()
+template <typename K, typename AD>
+ClassAdLog<K,AD>::~ClassAdLog()
 {
 	if (active_transaction) delete active_transaction;
 
@@ -559,9 +559,9 @@ ClassAdLog<K,AltK,AD>::~ClassAdLog()
 	}
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 void
-ClassAdLog<K,AltK,AD>::AppendLog(LogRecord *log)
+ClassAdLog<K,AD>::AppendLog(LogRecord *log)
 {
 	if (active_transaction) {
 		if (active_transaction->EmptyTransaction()) {
@@ -585,9 +585,9 @@ ClassAdLog<K,AltK,AD>::AppendLog(LogRecord *log)
 	}
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 void
-ClassAdLog<K,AltK,AD>::FlushLog()
+ClassAdLog<K,AD>::FlushLog()
 {
 	int err = FlushClassAdLog(log_fp, false);
 	if (err) {
@@ -595,9 +595,9 @@ ClassAdLog<K,AltK,AD>::FlushLog()
 	}
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 void
-ClassAdLog<K,AltK,AD>::ForceLog()
+ClassAdLog<K,AD>::ForceLog()
 {
 	// Force log changes to disk.  This involves first flushing
 	// the log from memory buffers, then fsyncing to disk.
@@ -607,16 +607,16 @@ ClassAdLog<K,AltK,AD>::ForceLog()
 	}
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 bool
-ClassAdLog<K,AltK,AD>::SaveHistoricalLogs()
+ClassAdLog<K,AD>::SaveHistoricalLogs()
 {
 	return SaveHistoricalClassAdLogs(logFilename(), max_historical_logs, historical_sequence_number);
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 bool
-ClassAdLog<K,AltK,AD>::TruncLog()
+ClassAdLog<K,AD>::TruncLog()
 {
 	dprintf(D_ALWAYS,"About to rotate ClassAd log %s\n",logFilename());
 
@@ -642,9 +642,9 @@ ClassAdLog<K,AltK,AD>::TruncLog()
 	return rotated;
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 void
-ClassAdLog<K,AltK,AD>::LogState(FILE *fp)
+ClassAdLog<K,AD>::LogState(FILE *fp)
 {
 	MyString errmsg;
 	ClassAdLogTable<K,AD> la(table); // this gives the ability to add & remove table items.
@@ -658,16 +658,16 @@ ClassAdLog<K,AltK,AD>::LogState(FILE *fp)
 }
 
 // Transaction methods
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 int
-ClassAdLog<K,AltK,AD>::IncNondurableCommitLevel()
+ClassAdLog<K,AD>::IncNondurableCommitLevel()
 {
 	return m_nondurable_level++;
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 void
-ClassAdLog<K,AltK,AD>::DecNondurableCommitLevel(int old_level)
+ClassAdLog<K,AD>::DecNondurableCommitLevel(int old_level)
 {
 	if( --m_nondurable_level != old_level ) {
 		EXCEPT("ClassAdLog::DecNondurableCommitLevel(%d) with existing level %d",
@@ -675,17 +675,17 @@ ClassAdLog<K,AltK,AD>::DecNondurableCommitLevel(int old_level)
 	}
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 void
-ClassAdLog<K,AltK,AD>::BeginTransaction()
+ClassAdLog<K,AD>::BeginTransaction()
 {
 	ASSERT(!active_transaction);
 	active_transaction = new Transaction();
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 bool
-ClassAdLog<K,AltK,AD>::AbortTransaction()
+ClassAdLog<K,AD>::AbortTransaction()
 {
 	// Sometimes we do an AbortTransaction() when we don't know if there was
 	// an active transaction.  This is allowed.
@@ -697,9 +697,9 @@ ClassAdLog<K,AltK,AD>::AbortTransaction()
 	return false;
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 void
-ClassAdLog<K,AltK,AD>::CommitTransaction()
+ClassAdLog<K,AD>::CommitTransaction()
 {
 	// Sometimes we do a CommitTransaction() when we don't know if there was
 	// an active transaction.  This is allowed.
@@ -715,18 +715,18 @@ ClassAdLog<K,AltK,AD>::CommitTransaction()
 	active_transaction = NULL;
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 void
-ClassAdLog<K,AltK,AD>::CommitNondurableTransaction()
+ClassAdLog<K,AD>::CommitNondurableTransaction()
 {
 	int old_level = IncNondurableCommitLevel();
 	CommitTransaction();
 	DecNondurableCommitLevel( old_level );
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 bool
-ClassAdLog<K,AltK,AD>::AdExistsInTableOrTransaction(const K& key)
+ClassAdLog<K,AD>::AdExistsInTableOrTransaction(const K& key)
 {
 	bool adexists = false;
 
@@ -742,8 +742,7 @@ ClassAdLog<K,AltK,AD>::AdExistsInTableOrTransaction(const K& key)
 		return adexists;
 	}
 
-	MyString keystr;
-	key.sprint(keystr);
+	std::string keystr = key;
 
 		// see what is going on in any current transaction
 	for (LogRecord *log = active_transaction->FirstEntry(keystr.c_str()); log;
@@ -767,9 +766,9 @@ ClassAdLog<K,AltK,AD>::AdExistsInTableOrTransaction(const K& key)
 }
 
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 int 
-ClassAdLog<K,AltK,AD>::LookupInTransaction(AltK key, const char *name, char *&val)
+ClassAdLog<K,AD>::LookupInTransaction(const K& key, const char *name, char *&val)
 {
 	ClassAd *ad = NULL;
 
@@ -780,26 +779,27 @@ ClassAdLog<K,AltK,AD>::LookupInTransaction(AltK key, const char *name, char *&va
 }
 
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 int
-ClassAdLog<K,AltK,AD>::ExamineTransaction(AltK key, const char *name, char *&val, ClassAd* &ad)
+ClassAdLog<K,AD>::ExamineTransaction(const K& key, const char *name, char *&val, ClassAd* &ad)
 {
 	if (!active_transaction) return 0;
-	return ExamineLogTransaction(active_transaction, this->GetTableEntryMaker(), key, name, val, ad);
+	const std::string keystr = key;
+	return ExamineLogTransaction(active_transaction, this->GetTableEntryMaker(), keystr.c_str(), name, val, ad);
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 Transaction *
-ClassAdLog<K,AltK,AD>::getActiveTransaction()
+ClassAdLog<K,AD>::getActiveTransaction()
 {
 	Transaction *ret_value = active_transaction;
 	active_transaction = NULL;	// it is IMPORTANT that we reset active_tranasction to NULL here!
 	return ret_value;
 }
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 bool
-ClassAdLog<K,AltK,AD>::setActiveTransaction(Transaction* & transaction)
+ClassAdLog<K,AD>::setActiveTransaction(Transaction* & transaction)
 {
 	if ( active_transaction ) {
 		return false;
@@ -812,34 +812,35 @@ ClassAdLog<K,AltK,AD>::setActiveTransaction(Transaction* & transaction)
 	return true;
 }
 
-template <typename K, typename AltK, typename AD>
-int ClassAdLog<K,AltK,AD>::SetTransactionTriggers(int mask)
+template <typename K, typename AD>
+int ClassAdLog<K,AD>::SetTransactionTriggers(int mask)
 {
 	if (!active_transaction) return 0;
 	return active_transaction->SetTriggers(mask);
 }
 
-template <typename K, typename AltK, typename AD>
-int ClassAdLog<K,AltK,AD>::GetTransactionTriggers()
+template <typename K, typename AD>
+int ClassAdLog<K,AD>::GetTransactionTriggers()
 {
 	if (!active_transaction) return 0;
 	return active_transaction->GetTriggers();
 }
 
 
-template <typename K, typename AltK, typename AD>
+template <typename K, typename AD>
 bool
-ClassAdLog<K,AltK,AD>::AddAttrsFromTransaction(AltK key, ClassAd &ad)
+ClassAdLog<K,AD>::AddAttrsFromTransaction(const K& key, ClassAd &ad)
 {
 		// if there is no pending transaction, we're done
 	if (!active_transaction) {
 		return false;
 	}
-	return AddAttrsFromLogTransaction(active_transaction, this->GetTableEntryMaker(), key, ad);
+	const std::string keystr = key;
+	return AddAttrsFromLogTransaction(active_transaction, this->GetTableEntryMaker(), keystr.c_str(), ad);
 }
 
-template <typename K, typename AltK, typename AD>
-void ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( std::list<std::string> &new_keys )
+template <typename K, typename AD>
+void ClassAdLog<K,AD>::ListNewAdsInTransaction( std::list<std::string> &new_keys )
 {
 	if( !active_transaction ) {
 		return;
@@ -848,8 +849,8 @@ void ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( std::list<std::string> &new
 	active_transaction->InTransactionListKeysWithOpType( CondorLogOp_NewClassAd, new_keys );
 }
 
-template <typename K, typename AltK, typename AD>
-bool ClassAdLog<K,AltK,AD>::GetTransactionKeys( std::set<std::string> &keys )
+template <typename K, typename AD>
+bool ClassAdLog<K,AD>::GetTransactionKeys( std::set<std::string> &keys )
 {
 	if ( ! active_transaction) { return false; }
 	active_transaction->KeysInTransaction( keys );

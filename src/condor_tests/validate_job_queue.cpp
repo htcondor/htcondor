@@ -141,10 +141,10 @@ static int validate_queue(const char * filename, int max_logs, bool verbose)
 		}
 	}
 
-	HashKey key;
+	std::string key;
 	JobQueue->StartIterateAllClassAds();
 	while (JobQueue->IterateAllClassAds(ad,key)) {
-		const char *tmp = key.value();
+		const char *tmp = key.c_str();
 		if ( tmp[0] == '0' ) continue;	// skip cluster & header ads
 	}
 

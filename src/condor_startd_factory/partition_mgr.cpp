@@ -30,7 +30,7 @@
 #include "XXX_startd_factory_attrs.h"
 
 PartitionManager::PartitionManager() :
-	m_assigned(2000, hashFuncMyString)
+	m_assigned(2000, hashFunction)
 {
 }
 

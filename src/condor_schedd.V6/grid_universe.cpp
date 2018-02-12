@@ -50,7 +50,7 @@ GridUniverseLogic::GridUniverseLogic()
 	ASSERT( gman_pid_table == NULL );
 
 	// Make our hashtable
-	gman_pid_table = new GmanPidTable_t(10,&MyStringHash);
+	gman_pid_table = new GmanPidTable_t(hashFunction);
 
 	// Register a reaper for this grid managers
 	rid = daemonCore->Register_Reaper("GManager",

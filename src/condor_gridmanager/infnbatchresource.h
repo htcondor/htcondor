@@ -49,7 +49,7 @@ public:
 
 	~INFNBatchResource();
 
-	static HashTable <HashKey, INFNBatchResource *> ResourcesByName;
+	static HashTable <std::string, INFNBatchResource *> ResourcesByName;
 
 	const char *ResourceType();
 

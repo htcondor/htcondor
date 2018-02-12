@@ -49,23 +49,23 @@ int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 
 CollectorEngine::CollectorEngine (CollectorStats *stats ) :
-	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
-	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction),
-	ScheddAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
-	SubmittorAds  (GREATER_TABLE_SIZE, &adNameHashFunction),
-	LicenseAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
-	MasterAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
-	StorageAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
-	XferServiceAds(GREATER_TABLE_SIZE, &adNameHashFunction),
-	AccountingAds (GREATER_TABLE_SIZE, &adNameHashFunction),
-	CkptServerAds (LESSER_TABLE_SIZE , &adNameHashFunction),
-	GatewayAds    (LESSER_TABLE_SIZE , &adNameHashFunction),
-	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
-	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction),
-	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
-	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction),
-	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction),
-	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction),
+	StartdAds     (&adNameHashFunction),
+	StartdPrivateAds(&adNameHashFunction),
+	ScheddAds     (&adNameHashFunction),
+	SubmittorAds  (&adNameHashFunction),
+	LicenseAds    (&adNameHashFunction),
+	MasterAds     (&adNameHashFunction),
+	StorageAds    (&adNameHashFunction),
+	XferServiceAds(&adNameHashFunction),
+	AccountingAds (&adNameHashFunction),
+	CkptServerAds (&adNameHashFunction),
+	GatewayAds    (&adNameHashFunction),
+	CollectorAds  (&adNameHashFunction),
+	NegotiatorAds (&adNameHashFunction),
+	HadAds        (&adNameHashFunction),
+	LeaseManagerAds(&adNameHashFunction),
+	GridAds       (&adNameHashFunction),
+	GenericAds    (&hashFunction),
 	__self_ad__(0)
 {
 	clientTimeout = 20;
@@ -326,7 +326,7 @@ CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 	CollectorHashTable *table=0;
 	if (GenericAds.lookup(type, table) == -1) {
 		dprintf(D_ALWAYS, "creating new table for type %s\n", type.Value());
-		table = new CollectorHashTable(LESSER_TABLE_SIZE , &adNameHashFunction);
+		table = new CollectorHashTable(&adNameHashFunction);
 		if (GenericAds.insert(type, table) == -1) {
 			dprintf(D_ALWAYS,  "error adding new generic hash table\n");
 			delete table;

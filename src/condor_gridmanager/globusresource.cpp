@@ -38,11 +38,8 @@ int GlobusResource::monitorDisableLength = DEFAULT_GM_DISABLE_LENGTH;
 int GlobusResource::gahpCallTimeout = 300;	// default value
 bool GlobusResource::enableGridMonitor = false;
 
-#define HASH_TABLE_SIZE			500
-
-HashTable <HashKey, GlobusResource *>
-    GlobusResource::ResourcesByName( HASH_TABLE_SIZE,
-									 hashFunction );
+HashTable <std::string, GlobusResource *>
+    GlobusResource::ResourcesByName( hashFunction );
 
 static unsigned int g_MonitorUID = 0;
 
@@ -59,7 +56,7 @@ GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
 	const char *hash_name = HashName( canonical_name, proxy->subject->fqan );
 	ASSERT(hash_name);
 
-	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
+	rc = ResourcesByName.lookup( hash_name, resource );
 	if ( rc != 0 ) {
 		resource = new GlobusResource( canonical_name, proxy, is_gt5 );
 		ASSERT(resource);
@@ -67,7 +64,7 @@ GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
 			delete resource;
 			resource = NULL;
 		} else {
-			ResourcesByName.insert( HashKey( hash_name ), resource );
+			ResourcesByName.insert( hash_name, resource );
 		}
 	} else {
 		ASSERT(resource);
@@ -119,7 +116,7 @@ GlobusResource::GlobusResource( const char *resource_name,
 
 GlobusResource::~GlobusResource()
 {
-	ResourcesByName.remove( HashKey( HashName( resourceName, proxyFQAN ) ) );
+	ResourcesByName.remove( HashName( resourceName, proxyFQAN ) );
 	if ( checkMonitorTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( checkMonitorTid );
 	}
@@ -919,7 +916,7 @@ GlobusResource::ReadMonitorJobStatusFile()
 
 			job_count++;
 
-			rc = JobsByContact.lookup( HashKey( globusJobId(contact) ), job );
+			rc = JobsByContact.lookup( globusJobId(contact), job );
 			if ( rc == 0 && job != NULL ) {
 				if ( status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					status=GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT;

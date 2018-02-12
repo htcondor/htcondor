@@ -36,10 +36,6 @@
 #define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
 #endif
 
-#define LOG_HASH_SIZE 37 // prime
-
-#define LOG_INFO_HASH_SIZE 37 // prime
-
 #define DEBUG_LOG_FILES 0 //TEMP
 #if DEBUG_LOG_FILES
 #  define D_LOG_FILES D_ALWAYS
@@ -50,8 +46,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	allLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
-	activeLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys)
+	allLogFiles(hashFunction),
+	activeLogFiles(hashFunction)
 {
 }
 
@@ -572,16 +568,16 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned int
+size_t
 ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 {
-	int		result = (key._cluster * 29) ^ (key._proc * 7) ^ key._subproc;
+	long result = (key._cluster * 29) ^ (key._proc * 7) ^ key._subproc;
 
 		// Make sure we produce a non-negative result (modulus on negative
 		// value may produce a negative result (implementation-dependent).
 	if ( result < 0 ) result = -result;
 
-	return (unsigned int)result;
+	return (size_t)result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

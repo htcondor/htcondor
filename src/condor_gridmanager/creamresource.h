@@ -72,7 +72,7 @@ class CreamResource : public BaseResource
 	int ProxyCallback();
 
 	// This should be private, but CreamJob references it directly for now
-	static HashTable <HashKey, CreamResource *> ResourcesByName;
+	static HashTable <std::string, CreamResource *> ResourcesByName;
 
  private:
 	void DoPing( unsigned& ping_delay, bool& ping_complete,

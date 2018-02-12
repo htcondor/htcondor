@@ -25,7 +25,7 @@
 #include "condor_daemon_core.h"
 #include "gahp_common.h"
 
-#include "classad_hashtable.h"
+#include "HashTable.h"
 #include "globus_utils.h"
 #include "proxymanager.h"
 #include "condor_arglist.h"
@@ -72,7 +72,7 @@ class GahpServer : public Service {
 	static GahpServer *FindOrCreateGahpServer(const char *id,
 											  const char *path,
 											  const ArgList *args = NULL);
-	static HashTable <HashKey, GahpServer *> GahpServersById;
+	static HashTable <std::string, GahpServer *> GahpServersById;
 
 	GahpServer(const char *id, const char *path, const ArgList *args = NULL);
 	~GahpServer();
@@ -241,7 +241,7 @@ class GahpServer : public Service {
 	int proxy_check_tid;
 	bool is_initialized;
 	bool can_cache_proxies;
-	HashTable<HashKey,GahpProxyInfo*> *ProxiesByFilename;
+	HashTable<std::string,GahpProxyInfo*> *ProxiesByFilename;
 }; // end of class GahpServer
 
 class GenericGahpClient : public Service {

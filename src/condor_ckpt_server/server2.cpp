@@ -1027,7 +1027,7 @@ void Server::ProcessServiceReq(int             req_id,
 				key.formatstr("%s/%s/%s", inet_ntoa(shadow_IP), 
 						service_req.owner_name, service_req.file_name);
 				if (CkptClassAds) {
-					CkptClassAds->DestroyClassAd(key.Value());
+					CkptClassAds->DestroyClassAd(key);
 				}
 			}
 			break;

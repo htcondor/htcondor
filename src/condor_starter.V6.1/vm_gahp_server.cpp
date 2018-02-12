@@ -42,7 +42,7 @@ extern CStarter* Starter;
 VMGahpServer::VMGahpServer(const char *vmgahpserver,
                            const char *vmtype,
                            ClassAd* job_ad) :
-	m_request_table(20, &hashFuncInt)
+	m_request_table(&hashFuncInt)
 {
 	m_is_initialized = false;
 	m_is_cleanuped = false;

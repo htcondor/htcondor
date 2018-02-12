@@ -343,7 +343,7 @@ GCEJob::~GCEJob()
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 		if( ! m_instanceId.empty() ) {
-			myResource->jobsByInstanceID.remove( HashKey( m_instanceId.c_str() ) );
+			myResource->jobsByInstanceID.remove( m_instanceId );
 		}
 	}
 	delete gahp;
@@ -959,7 +959,7 @@ void GCEJob::GCESetRemoteJobId( const char *instance_name, const char *instance_
 		formatstr( full_job_id, "gce %s %s", m_serviceUrl.c_str(), instance_name );
 		if ( instance_id && instance_id[0] ) {
 			// We need this to do bulk status queries.
-			myResource->jobsByInstanceID.insert( HashKey( instance_id ), this );
+			myResource->jobsByInstanceID.insert( instance_id, this );
 			formatstr_cat( full_job_id, " %s", instance_id );
 		}
 	}

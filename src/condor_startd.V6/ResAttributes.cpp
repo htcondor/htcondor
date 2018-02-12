@@ -1545,7 +1545,7 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 }
 
 AvailAttributes::AvailAttributes( MachAttributes* map ):
-	m_execute_partitions(500,MyStringHash,updateDuplicateKeys)
+	m_execute_partitions(hashFunction)
 {
 	a_num_cpus = map->num_cpus();
 	a_num_cpus_auto_count = 0;

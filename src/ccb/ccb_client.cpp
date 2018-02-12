@@ -33,7 +33,7 @@ static bool registered_reverse_connect_command = false;
 
 // hash of CCBClients waiting for a reverse connect command
 // indexed by connection id
-static HashTable< MyString,classy_counted_ptr<CCBClient> > waiting_for_reverse_connect(MyStringHash);
+static HashTable< MyString,classy_counted_ptr<CCBClient> > waiting_for_reverse_connect(hashFunction);
 
 
 

@@ -248,7 +248,7 @@ SelfDrainingQueue::resetTimer( void )
 			 "period: %d (id: %d)\n", name, period, tid );
 }
 
-unsigned int
+size_t
 SelfDrainingHashItem::HashFn(SelfDrainingHashItem const &item)
 {
 	return item.m_service->HashFn();

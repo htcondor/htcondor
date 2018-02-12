@@ -54,8 +54,6 @@
 
 #define UPDATE_SCHEDD_DELAY		5
 
-#define HASH_TABLE_SIZE			500
-
 struct JobType
 {
 	char *Name;
@@ -72,10 +70,8 @@ struct VacateRequest {
 	action_result_t result;
 };
 
-HashTable <PROC_ID, VacateRequest> pendingScheddVacates( HASH_TABLE_SIZE,
-														 hashFuncPROC_ID );
-HashTable <PROC_ID, VacateRequest> completedScheddVacates( HASH_TABLE_SIZE,
-														   hashFuncPROC_ID );
+HashTable <PROC_ID, VacateRequest> pendingScheddVacates( hashFuncPROC_ID );
+HashTable <PROC_ID, VacateRequest> completedScheddVacates( hashFuncPROC_ID );
 
 struct JobStatusRequest {
 	PROC_ID job_id;
@@ -83,10 +79,8 @@ struct JobStatusRequest {
 	int job_status;
 };
 
-HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( HASH_TABLE_SIZE,
-														hashFuncPROC_ID );
-HashTable <PROC_ID, JobStatusRequest> completedJobStatus( HASH_TABLE_SIZE,
-														  hashFuncPROC_ID );
+HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( hashFuncPROC_ID );
+HashTable <PROC_ID, JobStatusRequest> completedJobStatus( hashFuncPROC_ID );
 
 
 SimpleList<int> scheddUpdateNotifications;
@@ -96,8 +90,7 @@ struct ScheddUpdateRequest {
 	bool m_notify;
 };
 
-HashTable <PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates( HASH_TABLE_SIZE,
-													 hashFuncPROC_ID );
+HashTable <PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates( hashFuncPROC_ID );
 bool addJobsSignaled = false;
 bool updateJobsSignaled = false;
 bool checkLeasesSignaled = false;

@@ -165,7 +165,6 @@ void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 void mark_serial_job_running( PROC_ID *job_id );
 int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
-shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool jobPrepNeedsThread( int cluster, int proc );
@@ -187,10 +186,6 @@ schedd_runtime_probe WalkJobQ_updateSchedDInterval_runtime;
 
 int	WallClockCkptInterval = 0;
 int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
-
-#ifdef CARMI_OPS
-struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
-#endif
 
 void UpdateJobProxyAttrs( PROC_ID job_id, const ClassAd &proxy_attrs )
 {
@@ -341,9 +336,9 @@ void AuditLogJobProxy( const Sock &sock, ClassAd *job_ad )
 	AuditLogJobProxy( sock, job_id, proxy_file.c_str() );
 }
 
-unsigned int UserIdentity::HashFcn(const UserIdentity & index)
+size_t UserIdentity::HashFcn(const UserIdentity & index)
 {
-	return index.m_username.Hash() + index.m_domain.Hash() + index.m_auxid.Hash();
+	return hashFunction(index.m_username) + hashFunction(index.m_domain) + hashFunction(index.m_auxid);
 }
 
 UserIdentity::UserIdentity(const char *user, const char *domainname, 
@@ -581,14 +576,11 @@ ContactStartdArgs::~ContactStartdArgs()
 	free( csa_sinful );
 }
 
-	// Years of careful research
-static const int USER_HASH_SIZE = 100;
-
 Scheduler::Scheduler() :
 	OtherPoolStats(stats),
     m_adSchedd(NULL),
     m_adBase(NULL),
-	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
+	GridJobOwners(UserIdentity::HashFcn),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
@@ -779,7 +771,7 @@ Scheduler::~Scheduler()
 	if (matches) {
 		matches->startIterations();
 		match_rec *rec;
-		HashKey id;
+		std::string id;
 		while (matches->iterate(id, rec) == 1) {
 			delete rec;
 		}
@@ -6354,7 +6346,7 @@ public:
 		/** These are not actually used, because we are
 		 *  using the all_dups option to SelfDrainingQueue. */
 	virtual int ServiceDataCompare( ServiceData const* other ) const;
-	virtual unsigned int HashFn( ) const;
+	virtual size_t HashFn( ) const;
 };
 
 int
@@ -6371,7 +6363,7 @@ ActOnJobRec::ServiceDataCompare( ServiceData const* other ) const
 	return m_job_id.ServiceDataCompare( &o->m_job_id );
 }
 
-unsigned int
+size_t
 ActOnJobRec::HashFn( ) const
 {
 	return m_job_id.HashFn();
@@ -7416,7 +7408,7 @@ Scheduler::release_claim(int, Stream *sock)
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
 		return;
 	}
-	if( matches->lookup(HashKey(claim_id), mrec) != 0 ) {
+	if( matches->lookup(claim_id, mrec) != 0 ) {
 			// We couldn't find this match in our table, perhaps it's
 			// from a dedicated resource.
 		dedicated_scheduler.DelMrec( claim_id );
@@ -7998,7 +7990,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	match_rec *paired_mrec = NULL;
 	if ( GetAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
 							 paired_claim_id ) >= 0 &&
-			 matches->lookup( HashKey( paired_claim_id ), paired_mrec ) == 0 ) {
+			 matches->lookup( paired_claim_id, paired_mrec ) == 0 ) {
 
 		mrec->m_paired_mrec = paired_mrec;
 		paired_mrec->m_paired_mrec = mrec;
@@ -8384,7 +8376,7 @@ Scheduler::swappedClaims( DCMsgCallback *cb )
 		return;
 	}
 
-	if ( matches->lookup( HashKey( msg->claim_id() ), active_rec ) < 0 ||
+	if ( matches->lookup( msg->claim_id(), active_rec ) < 0 ||
 		 (idle_rec = active_rec->m_paired_mrec) == NULL ) {
 		dprintf( D_FULLDEBUG, "AsyncXfer: Failed to find match_rec's for swapped claims\n" );
 		return;
@@ -9300,7 +9292,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 						"stopping execution of job.\n");
 
 					mark_job_stopped(job_id);
-					if( find_shadow_rec(job_id) ) { 
+					if( FindSrecByProcID(*job_id) ) {
 						// we already added the srec to our tables..
 						delete_shadow_rec( srec );
 						srec = NULL;
@@ -9384,7 +9376,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 	if( ! rval ) {
 		mark_job_stopped(job_id);
-		if( find_shadow_rec(job_id) ) { 
+		if( FindSrecByProcID(*job_id) ) {
 				// we already added the srec to our tables..
 			delete_shadow_rec( srec );
 			srec = NULL;
@@ -10833,9 +10825,9 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		numShadows++;
 	}
 	if( new_rec->pid ) {
-		shadowsByPid->insert(new_rec->pid, new_rec);
+		ASSERT( shadowsByPid->insert(new_rec->pid, new_rec) == 0 );
 	}
-	shadowsByProcID->insert(new_rec->job_id, new_rec);
+	ASSERT( shadowsByProcID->insert(new_rec->job_id, new_rec) == 0 );
 
 		// To improve performance and to keep our sanity in case we
 		// get killed in the middle of this operation, do all of these
@@ -10934,7 +10926,7 @@ Scheduler::add_shadow_rec_pid( shadow_rec* new_rec )
 	if( ! new_rec->pid ) {
 		EXCEPT( "add_shadow_rec_pid() called on an srec without a pid!" );
 	}
-	shadowsByPid->insert(new_rec->pid, new_rec);
+	ASSERT( shadowsByPid->insert(new_rec->pid, new_rec) == 0 );
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 			 new_rec->pid, new_rec->job_id.cluster, new_rec->job_id.proc );
 	//scheduler.display_shadow_recs();
@@ -11634,7 +11626,7 @@ Scheduler::shadow_prio_recs_consistent()
 	BadProc = -1;
 
 	for( i=0; i<N_PrioRecs; i++ ) {
-		if( (srp=find_shadow_rec(&PrioRec[i].id)) ) {
+		if( (srp=FindSrecByProcID(PrioRec[i].id)) ) {
 			BadCluster = srp->job_id.cluster;
 			BadProc = srp->job_id.proc;
 			universe = srp->universe;
@@ -11652,39 +11644,6 @@ Scheduler::shadow_prio_recs_consistent()
 	dprintf( D_FULLDEBUG, "Shadow and PrioRec Tables are consistent\n" );
 	return TRUE;
 }
-
-/*
-  Search the shadow record table for a given job id.  Return a pointer
-  to the record if it is found, and NULL otherwise.
-*/
-struct shadow_rec*
-Scheduler::find_shadow_rec(PROC_ID* id)
-{
-	shadow_rec *rec;
-
-	if (shadowsByProcID->lookup(*id, rec) < 0)
-		return NULL;
-	return rec;
-}
-
-#ifdef CARMI_OPS
-struct shadow_rec*
-Scheduler::find_shadow_by_cluster( PROC_ID *id )
-{
-	int		my_cluster;
-	shadow_rec	*rec;
-
-	my_cluster = id->cluster;
-
-	shadowsByProcID->startIterations();
-	while (shadowsByProcID->iterate(rec) == 1) {
-		if( my_cluster == rec->job_id.cluster) {
-				return rec;
-		}
-	}
-	return NULL;
-}
-#endif
 
 /*
   If we have an MPI cluster with > 1 proc, the user
@@ -12778,7 +12737,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 }
 
 
-unsigned int pidHash(const int &pid)
+size_t pidHash(const int &pid)
 {
 	return pid;
 }
@@ -13105,26 +13064,19 @@ Scheduler::Init()
 		// on reconfig if MaxJobsRunning changes size, but we don't
 		// have the code for that and it's not too important.
 	if (matches == NULL) {
-	matches = new HashTable <HashKey, match_rec *> ((int)(MaxJobsRunning*1.2),
-													hashFunction);
-	matchesByJobID =
-		new HashTable<PROC_ID, match_rec *>((int)(MaxJobsRunning*1.2),
-											hashFuncPROC_ID,
-											rejectDuplicateKeys);
-	shadowsByPid = new HashTable <int, shadow_rec *>((int)(MaxJobsRunning*1.2),
-													  pidHash);
-	shadowsByProcID =
-		new HashTable<PROC_ID, shadow_rec *>((int)(MaxJobsRunning*1.2),
-											 hashFuncPROC_ID);
-	resourcesByProcID = 
-		new HashTable<PROC_ID, ClassAd *>((int)(MaxJobsRunning*1.2),
-											 hashFuncPROC_ID,
-											 updateDuplicateKeys);
+		matches = new HashTable <std::string, match_rec *> (hashFunction);
+		matchesByJobID =
+			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID);
+		shadowsByPid = new HashTable <int, shadow_rec *>(pidHash);
+		shadowsByProcID =
+			new HashTable<PROC_ID, shadow_rec *>(hashFuncPROC_ID);
+		resourcesByProcID =
+			new HashTable<PROC_ID, ClassAd *>(hashFuncPROC_ID);
 	}
 
 	if ( spoolJobFileWorkers == NULL ) {
 		spoolJobFileWorkers = 
-			new HashTable <int, ExtArray<PROC_ID> *>(5, pidHash);
+			new HashTable <int, ExtArray<PROC_ID> *>(pidHash);
 	}
 
 	char *flock_collector_hosts, *flock_negotiator_hosts;
@@ -13246,9 +13198,7 @@ Scheduler::Init()
 		//
 	HashTable<PROC_ID, CronTab*> *origCronTabs = this->cronTabs;
 	this->cronTabs = new HashTable<PROC_ID, CronTab*>(
-												(int)( MaxJobsRunning * 1.2 ),
-												hashFuncPROC_ID,
-												updateDuplicateKeys );
+												hashFuncPROC_ID );
 		//
 		// Now if there was a table from before, we will want
 		// to copy all the proc_id's into our new table. We don't
@@ -14308,7 +14258,7 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 	} 
 	// spit out a warning and return NULL if we already have this mrec
 	match_rec *tempRec;
-	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
+	if( matches->lookup( id, tempRec ) == 0 ) {
 		char const *pubid = tempRec->publicClaimId();
 		dprintf( D_ALWAYS,
 				 "attempt to add pre-existing match \"%s\" ignored\n",
@@ -14326,7 +14276,7 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 		EXCEPT("Out of memory!");
 	} 
 
-	if( matches->insert( HashKey( id ), rec ) != 0 ) {
+	if( matches->insert( id, rec ) != 0 ) {
 		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", id);
 		delete rec;
 		return NULL;
@@ -14368,8 +14318,7 @@ Scheduler::DelMrec(char const* id)
 		return -1;
 	}
 
-	HashKey key(id);
-	if( matches->lookup(key, rec) != 0 ) {
+	if( matches->lookup(id, rec) != 0 ) {
 			// Couldn't find it, return failure
 		return -1;
 	}
@@ -14427,8 +14376,7 @@ Scheduler::unlinkMrec(match_rec* match)
 	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
 			 match->description(), match->cluster, match->proc ); 
 
-	HashKey key(match->claimId());
-	matches->remove(key);
+	matches->remove(match->claimId());
 
 	PROC_ID jobId;
 	jobId.cluster = match->cluster;
@@ -16381,7 +16329,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				//
 			valid = cronTab->isValid();
 			if ( valid ) {
-				this->cronTabs->insert( id, cronTab );
+				this->cronTabs->insert( id, cronTab, true );
 			} else {
 				delete cronTab;
 				cronTab = 0;

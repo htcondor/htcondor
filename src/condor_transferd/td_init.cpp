@@ -32,9 +32,9 @@
 static void usage(void);
 
 TransferD::TransferD() :
-	m_treqs(200, hashFuncMyString),
-	m_client_to_transferd_threads(200, hashFuncLong),
-	m_transferd_to_client_threads(200, hashFuncLong)
+	m_treqs(hashFunction),
+	m_client_to_transferd_threads(hashFuncLong),
+	m_transferd_to_client_threads(hashFuncLong)
 {
 	m_initialized = FALSE;
 	m_update_sock = NULL;

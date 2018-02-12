@@ -25,10 +25,8 @@
 #include "infnbatchresource.h"
 #include "gridmanager.h"
 
-#define HASH_TABLE_SIZE	500
-
-HashTable <HashKey, INFNBatchResource *> 
-	INFNBatchResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
+HashTable <std::string, INFNBatchResource *>
+    INFNBatchResource::ResourcesByName( hashFunction );
 
 const char * INFNBatchResource::HashName( const char * batch_type,
 		const char * resource_name )
@@ -52,12 +50,12 @@ INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_ty
 		resource_name = "";
 	}
 
-	rc = ResourcesByName.lookup( HashKey( HashName( batch_type, resource_name ) ), resource );
+	rc = ResourcesByName.lookup( HashName( batch_type, resource_name ), resource );
 	if ( rc != 0 ) {
 		resource = new INFNBatchResource( batch_type, resource_name );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashKey( HashName( batch_type, resource_name ) ), resource );
+		ResourcesByName.insert( HashName( batch_type, resource_name ), resource );
 	} else {
 		ASSERT(resource);
 	}
@@ -110,7 +108,7 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 
 INFNBatchResource::~INFNBatchResource()
 {
-	ResourcesByName.remove( HashKey( HashName( m_batchType.c_str(), resourceName ) ) );
+	ResourcesByName.remove( HashName( m_batchType.c_str(), resourceName ) );
 	if ( gahp ) delete gahp;
 	delete m_xfer_gahp;
 }

@@ -42,7 +42,6 @@
 #include "HashTable.h"
 #include "string_list.h"
 #include "list.h"
-#include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
 #include "write_user_log.h"
 #include "autocluster.h"
@@ -349,7 +348,7 @@ class UserIdentity {
 		MyString auxid() const { return m_auxid; }
 
 			// For use in HashTables
-		static unsigned int HashFcn(const UserIdentity & index);
+		static size_t HashFcn(const UserIdentity & index);
 	
 	private:
 		MyString m_username;
@@ -974,15 +973,10 @@ private:
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
-	shadow_rec*     find_shadow_rec(PROC_ID*);
 	
-#ifdef CARMI_OPS
-	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
-#endif
-
 	void			expand_mpi_procs(StringList *, StringList *);
 
-	HashTable <HashKey, match_rec *> *matches;
+	HashTable <std::string, match_rec *> *matches;
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;

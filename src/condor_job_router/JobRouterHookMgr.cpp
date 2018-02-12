@@ -43,7 +43,7 @@ JobRouterHookMgr::JobRouterHookMgr()
 	  m_warn_exit(true),
 	  NUM_HOOKS(5),
 	  UNDEFINED("UNDEFINED"),
-	  m_hook_paths(MyStringHash)
+	  m_hook_paths(hashFunction)
 {
 	// JOB_EXIT is an old name for JOB_FINALIZE.
 	// Keep both for anyone still using the old name.

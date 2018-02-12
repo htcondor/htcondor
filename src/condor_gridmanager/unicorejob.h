@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "globus_utils.h"
-#include "classad_hashtable.h"
+#include "HashTable.h"
 
 #include "proxymanager.h"
 #include "basejob.h"
@@ -59,7 +59,7 @@ class UnicoreJob : public BaseJob
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
-	static HashTable<HashKey, UnicoreJob *> JobsByUnicoreId;
+	static HashTable<std::string, UnicoreJob *> JobsByUnicoreId;
 
 	static void UnicoreGahpCallbackHandler( const char *update_ad_string );
 

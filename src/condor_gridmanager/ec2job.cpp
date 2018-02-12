@@ -475,10 +475,10 @@ EC2Job::~EC2Job()
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 		if( ! m_spot_request_id.empty() ) {
-			myResource->spotJobsByRequestID.remove( HashKey( m_spot_request_id.c_str() ) );
+			myResource->spotJobsByRequestID.remove( m_spot_request_id );
 		}
 		if( ! m_remoteJobId.empty() ) {
-			myResource->jobsByInstanceID.remove( HashKey( m_remoteJobId.c_str() ) );
+			myResource->jobsByInstanceID.remove( m_remoteJobId );
 		}
 	}
 
@@ -2053,7 +2053,7 @@ void EC2Job::EC2SetRemoteJobId( const char *client_token, const char *instance_i
 		formatstr( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
 		if ( instance_id && instance_id[0] ) {
 			// We need this to do bulk status queries.
-			myResource->jobsByInstanceID.insert( HashKey( instance_id ), this );
+			myResource->jobsByInstanceID.insert( instance_id, this );
 			formatstr_cat( full_job_id, " %s", instance_id );
 		}
 	}
@@ -2435,13 +2435,13 @@ void EC2Job::SetRequestID( const char * requestID ) {
 			// If the job is forgetting about its request ID, make sure that
 			// the resource does, as well; otherwise, we can have one job
 			// updated by both the dedicated and spot batch status processes.
-			myResource->spotJobsByRequestID.remove( HashKey( m_spot_request_id.c_str() ) );
+			myResource->spotJobsByRequestID.remove( m_spot_request_id );
 		}
 		jobAd->AssignExpr( ATTR_EC2_SPOT_REQUEST_ID, "Undefined" );
 		m_spot_request_id = std::string();
 	} else {
 		jobAd->Assign( ATTR_EC2_SPOT_REQUEST_ID, requestID );
-		myResource->spotJobsByRequestID.insert( HashKey( requestID ), this );
+		myResource->spotJobsByRequestID.insert( requestID, this );
 		m_spot_request_id = requestID;
 	}
 }

@@ -76,7 +76,6 @@
 #include "condor_auth_x509.h"
 #include "setenv.h"
 #include "HashTable.h"
-#include "extra_param_info.h"
 #include "condor_uid.h"
 #include "condor_mkstemp.h"
 #include "basename.h"

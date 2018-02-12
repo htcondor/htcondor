@@ -42,7 +42,7 @@ Env::Env()
 {
 	input_was_v1 = false;
 	_envTable = new HashTable<MyString, MyString>
-		( 127, &MyStringHash, updateDuplicateKeys );
+		( &hashFunction );
 	ASSERT( _envTable );
 }
 
@@ -547,7 +547,7 @@ Env::SetEnv( const MyString & var, const MyString & val )
 	if( var.Length() == 0 ) {
 		return false;
 	}
-	bool ret = (_envTable->insert( var, val ) == 0);
+	bool ret = (_envTable->insert( var, val, true ) == 0);
 	ASSERT( ret );
 #if defined(WIN32)
 	m_sorted_varnames.erase(var.Value());

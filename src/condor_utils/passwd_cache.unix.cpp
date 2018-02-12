@@ -30,15 +30,10 @@ IMPORTANT NOTE: Don't dprintf() in here, unless its a fatal error! */
 #include "condor_random_num.h"
 
 
-unsigned int compute_user_hash(const MyString &key) {
-    return key.Hash();
-};
-
 passwd_cache::passwd_cache() {
 
-	uid_table = new UidHashTable(10, compute_user_hash, updateDuplicateKeys);
-	group_table = new 
-		GroupHashTable(10, compute_user_hash, updateDuplicateKeys);
+	uid_table = new UidHashTable(hashFunction);
+	group_table = new GroupHashTable(hashFunction);
 		/* set the number of seconds until a cache entry expires */
 		// Randomize this timer a bit to decrease chances of lots of
 		// processes all pounding on NIS at the same time.
@@ -177,6 +172,7 @@ passwd_cache::loadConfig() {
 		group_entry *group_cache_entry;
 		if ( group_table->lookup(username, group_cache_entry) < 0 ) {
 			init_group_entry(group_cache_entry);
+			group_table->insert(username, group_cache_entry);
 		}
 
 			/* now get the group list */
@@ -200,7 +196,6 @@ passwd_cache::loadConfig() {
 
 			/* finally, insert info into our cache */
 		group_cache_entry->lastupdated = time(NULL);
-		group_table->insert(username, group_cache_entry);
 	}
 }
 
@@ -235,6 +230,9 @@ bool passwd_cache::cache_groups(const char* user) {
 
 		if ( group_table->lookup(user, group_cache_entry) < 0 ) {
 			init_group_entry(group_cache_entry);
+		} else {
+			// The code below assumes the entry is not in the cache.
+			group_table->remove(user);
 		}
 
 		/* We need to get the primary and supplementary group info, so
@@ -358,13 +356,13 @@ passwd_cache::cache_uid(const struct passwd *pwent) {
 		if ( uid_table->lookup(index.Value(), cache_entry) < 0 ) {
 				/* if we don't already have this entry, create a new one */
 			init_uid_entry(cache_entry);
+			uid_table->insert(index, cache_entry);
 		}
 
 	   	cache_entry->uid = pwent->pw_uid;
 	   	cache_entry->gid = pwent->pw_gid;
 			/* reset lastupdated */
 		cache_entry->lastupdated = time(NULL);
-		uid_table->insert(index, cache_entry);
 		return true;
 	}
 }

@@ -219,9 +219,6 @@ class MyString
 	 */
 	int FindChar(int Char, int FirstPos=0) const;
 
-	/** Calculates a hash function on the string. */
-	unsigned int Hash() const;
-
 	/** Returns the zero-based index of the first character of a
      *  substring, if it is contained within the MyString. Begins
      *  looking at iStartPost.  Returns -1 if pszToFind is not
@@ -479,8 +476,6 @@ protected:
 };
 
 
-unsigned int MyStringHash( const MyString &str );
-
 class YourString {
 protected:
 	const char *m_str;
@@ -512,9 +507,6 @@ public:
 	bool operator <(const std::string & str) const { return operator<(str.c_str()); }
 	bool operator <(const MyString & str) const { return operator<(str.Data); }
 	bool operator <(const YourString &rhs) const;
-
-	static unsigned int hashFunction(const YourString &s);
-	static unsigned int hashFunctionNoCase(const YourString &s);
 };
 
 class YourStringNoCase : public YourString {
@@ -538,8 +530,6 @@ public:
 	bool operator <(const std::string & str) const { return operator<(str.c_str()); }
 	bool operator <(const MyString & str) const { return operator<(str.Data); }
 	bool operator <(const YourStringNoCase &rhs) const { return operator<(rhs.m_str); }
-
-	static unsigned int hashFunction(const YourStringNoCase &s) { return YourString::hashFunctionNoCase(s); }
 };
 
 

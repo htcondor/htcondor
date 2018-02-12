@@ -32,7 +32,7 @@ ScriptQ::ScriptQ( Dag* dag ) :
 	_dag = dag;
 	_numScriptsRunning = 0;
 
-    _scriptPidTable = new HashTable<int,Script*>( 127, &hashFuncInt );
+    _scriptPidTable = new HashTable<int,Script*>( &hashFuncInt );
     _waitingQueue = new Queue<Script*>();
 
     if( _scriptPidTable == NULL || _waitingQueue == NULL ) {
@@ -100,7 +100,7 @@ ScriptQ::Run( Script *script )
 	if( int pid = script->BackgroundRun( _scriptReaperId,
 				_dag->_dagStatus, _dag->NumNodesFailed() ) ) {
 		_numScriptsRunning++;
-		_scriptPidTable->insert( pid, script );
+		ASSERT( _scriptPidTable->insert( pid, script ) == 0 );
 		debug_printf( DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid,
 					  script->_cmd );
 		return 1;

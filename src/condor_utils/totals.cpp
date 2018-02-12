@@ -32,7 +32,7 @@
 
 
 TrackTotals::
-TrackTotals (ppOption m) : allTotals(16, MyStringHash)
+TrackTotals (ppOption m) : allTotals(hashFunction)
 {
 	ppo = m;
 	malformed = 0;

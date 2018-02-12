@@ -15,7 +15,7 @@ BulkRequest::BulkRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
   service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
   commandID( cid ), commandState( c ) {
   	ClassAd * commandState;
-	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ) {
+	if( c->Lookup( commandID, commandState ) ) {
 		commandState->LookupString( "State_ClientToken", client_token );
 		commandState->LookupString( "State_BulkRequestID", bulkRequestID );
 	}
@@ -255,19 +255,19 @@ BulkRequest::log() {
 	{
 		if(! client_token.empty()) {
 			std::string quoted; formatstr( quoted, "\"%s\"", client_token.c_str() );
-			commandState->SetAttribute( commandID.c_str(),
+			commandState->SetAttribute( commandID,
 				"State_ClientToken", quoted.c_str() );
 		} else {
-			commandState->DeleteAttribute( commandID.c_str(),
+			commandState->DeleteAttribute( commandID,
 				"State_ClientToken" );
 		}
 
 		if(! bulkRequestID.empty()) {
 			std::string quoted; formatstr( quoted, "\"%s\"", bulkRequestID.c_str() );
-			commandState->SetAttribute( commandID.c_str(),
+			commandState->SetAttribute( commandID,
 				"State_BulkRequestID", quoted.c_str() );
 		} else {
-			commandState->DeleteAttribute( commandID.c_str(),
+			commandState->DeleteAttribute( commandID,
 				"State_BulkRequestID" );
 		}
 	}
@@ -294,7 +294,7 @@ BulkRequest::operator() () {
 		// the information we want (the spot fleet request ID).
 
 		ClassAd * commandAd;
-		commandState->Lookup( HashKey( commandID.c_str() ), commandAd );
+		commandState->Lookup( commandID, commandAd );
 		commandAd->LookupInteger( "State_TryCount", tryCount );
 		if( incrementTryCount ) {
 			++tryCount;
@@ -303,7 +303,7 @@ BulkRequest::operator() () {
 			formatstr( value, "%d", tryCount );
 			commandState->BeginTransaction();
 			{
-				commandState->SetAttribute( commandID.c_str(), "State_TryCount", value.c_str() );
+				commandState->SetAttribute( commandID, "State_TryCount", value.c_str() );
 			}
 			commandState->CommitTransaction();
 
@@ -342,7 +342,7 @@ BulkRequest::operator() () {
 		reply->Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 		commandState->BeginTransaction();
 		{
-			commandState->DeleteAttribute( commandID.c_str(), "State_TryCount" );
+			commandState->DeleteAttribute( commandID, "State_TryCount" );
 		}
 		commandState->CommitTransaction();
 		rc = PASS_STREAM;

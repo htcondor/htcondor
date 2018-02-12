@@ -274,7 +274,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 		// These two lines are deliberate BS; see comment in 'ReplyAndClean.cpp'.
 		ClassAd * dummy = NULL;
-		commandState->Lookup( HashKey( "dummy" ), dummy );
+		commandState->Lookup( "dummy", dummy );
 
 		// Verify the existence of the specified function before starting any
 		// instances.  Otherwise, the lease may not fire.

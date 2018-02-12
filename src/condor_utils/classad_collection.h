@@ -39,19 +39,18 @@
 // The GenericClassAdCollection is a thin wrapper around the ClassAdLog class
 // It provides helper functions and a layer of abstraction.
 // It does not provide (or rather, it *no longer* provides) any collection management
-// At present either K or AltK *must* be of type (const char *), or various things to not compile
 
-template <typename K, typename AltK, typename AD>
-class GenericClassAdCollection : private ClassAdLog<K, AltK, AD> {
+template <typename K, typename AD>
+class GenericClassAdCollection : private ClassAdLog<K, AD> {
 
 public:
 
-  typename ClassAdLog<K,AltK,AD>::filter_iterator GetFilteredIterator(const classad::ExprTree &requirements, int timeslice_ms) {
-    typename ClassAdLog<K,AltK,AD>::filter_iterator it(*this, &requirements, timeslice_ms);
+  typename ClassAdLog<K,AD>::filter_iterator GetFilteredIterator(const classad::ExprTree &requirements, int timeslice_ms) {
+    typename ClassAdLog<K,AD>::filter_iterator it(*this, &requirements, timeslice_ms);
     return it;
   }
-  typename ClassAdLog<K,AltK,AD>::filter_iterator GetIteratorEnd() {
-    typename ClassAdLog<K,AltK,AD>::filter_iterator it(*this, NULL, 0, true);
+  typename ClassAdLog<K,AD>::filter_iterator GetIteratorEnd() {
+    typename ClassAdLog<K,AD>::filter_iterator it(*this, NULL, 0, true);
     return it;
   }
 
@@ -66,7 +65,7 @@ public:
     @return nothing
   */
   GenericClassAdCollection(const ConstructLogEntry * pctor)
-	: ClassAdLog<K,AltK,AD>(pctor)
+	: ClassAdLog<K,AD>(pctor)
   {
   }
 
@@ -76,7 +75,7 @@ public:
     @return nothing
   */
   GenericClassAdCollection(const ConstructLogEntry * pctor,const char* filename,int max_historical_logs=0)
-	: ClassAdLog<K,AltK,AD>(filename,max_historical_logs,pctor)
+	: ClassAdLog<K,AD>(filename,max_historical_logs,pctor)
   {
   }
 
@@ -98,63 +97,63 @@ public:
   /** Begin a transaction
     @return nothing
   */
-  void BeginTransaction() { ClassAdLog<K,AltK,AD>::BeginTransaction(); }
+  void BeginTransaction() { ClassAdLog<K,AD>::BeginTransaction(); }
 
   /** Commit a transaction
     @return nothing
   */
-  void CommitTransaction() { ClassAdLog<K,AltK,AD>::CommitTransaction(); }
+  void CommitTransaction() { ClassAdLog<K,AD>::CommitTransaction(); }
 
   /** Commit a transaction without forcing a sync to disk
     @return nothing
   */
-  void CommitNondurableTransaction() { ClassAdLog<K,AltK,AD>::CommitNondurableTransaction(); }
+  void CommitNondurableTransaction() { ClassAdLog<K,AD>::CommitNondurableTransaction(); }
 
   /** Abort a transaction
     @return true if a transaction aborted, false if no transaction active
   */
-  bool AbortTransaction() { return ClassAdLog<K,AltK,AD>::AbortTransaction(); }
+  bool AbortTransaction() { return ClassAdLog<K,AD>::AbortTransaction(); }
 
-  bool InTransaction() { return ClassAdLog<K,AltK,AD>::InTransaction(); }
+  bool InTransaction() { return ClassAdLog<K,AD>::InTransaction(); }
 
   /** Get a list of all new keys created in this transaction
 	  @param new_keys List object to populate
    */
   void ListNewAdsInTransaction( std::list<std::string> &new_keys ) {
-	return ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( new_keys );
+	return ClassAdLog<K,AD>::ListNewAdsInTransaction( new_keys );
   }
 
   bool GetTransactionKeys( std::set<std::string> &keys ) {
-	return ClassAdLog<K,AltK,AD>::GetTransactionKeys( keys );
+	return ClassAdLog<K,AD>::GetTransactionKeys( keys );
   }
 
-  int SetTransactionTriggers(int mask) { return ClassAdLog<K,AltK,AD>::SetTransactionTriggers(mask); }
-  int GetTransactionTriggers() { return ClassAdLog<K,AltK,AD>::GetTransactionTriggers(); }
+  int SetTransactionTriggers(int mask) { return ClassAdLog<K,AD>::SetTransactionTriggers(mask); }
+  int GetTransactionTriggers() { return ClassAdLog<K,AD>::GetTransactionTriggers(); }
 
 	  // increase non-durable commit level
 	  // if > 0, begin non-durable commits
 	  // return old level
-  int IncNondurableCommitLevel() { return ClassAdLog<K,AltK,AD>::IncNondurableCommitLevel(); }
+  int IncNondurableCommitLevel() { return ClassAdLog<K,AD>::IncNondurableCommitLevel(); }
 	  // decrease non-durable commit level and verify that it
 	  // matches old_level
 	  // if == 0, resume durable commits
-  void DecNondurableCommitLevel(int old_level ) { ClassAdLog<K,AltK,AD>::DecNondurableCommitLevel( old_level ); }
+  void DecNondurableCommitLevel(int old_level ) { ClassAdLog<K,AD>::DecNondurableCommitLevel( old_level ); }
 
 		// Flush the log output buffer (but do not fsync).
 		// This is useful if non-durable events have been recently logged.
 		// Flushing will allow other processes that read the log to see
 		// the events that might otherwise hang around in the output buffer
 		// for a long time.
-  void FlushLog() { ClassAdLog<K,AltK,AD>::FlushLog(); }
+  void FlushLog() { ClassAdLog<K,AD>::FlushLog(); }
 
   		// Force the log output buffer to non-volatile storage (disk).  
 		// This means doing both a flush and fsync.
-  void ForceLog() { ClassAdLog<K,AltK,AD>::ForceLog(); }
+  void ForceLog() { ClassAdLog<K,AD>::ForceLog(); }
 
   ///
-  Transaction* getActiveTransaction() { return ClassAdLog<K,AltK,AD>::getActiveTransaction(); }
+  Transaction* getActiveTransaction() { return ClassAdLog<K,AD>::getActiveTransaction(); }
   ///
-  bool setActiveTransaction(Transaction* & transaction) { return ClassAdLog<K,AltK,AD>::setActiveTransaction(transaction); }
+  bool setActiveTransaction(Transaction* & transaction) { return ClassAdLog<K,AD>::setActiveTransaction(transaction); }
 
 
   /** Lookup an attribute's value in the current transaction. 
@@ -163,25 +162,18 @@ public:
       @param val the value of the attrinute (output parameter).
       @return true on success, false otherwise.
   */
-#if 0 //def COL_USE_NATIVE_KEYS
-  bool LookupInTransaction(const K& key, const char *name, char *&val) {
-	MyString str; key.sprint(str);
-	return 1 == ClassAdLog<K,AltK,AD>::LookupInTransaction(str.c_str(),name,val);
-  }
-#else
-  bool LookupInTransaction(AltK key, const char *name, char *&val) { return (ClassAdLog<K,AltK,AD>::LookupInTransaction(key,name,val)==1); }
-#endif
+  bool LookupInTransaction(const K& key, const char *name, char *&val) { return (ClassAdLog<K,AD>::LookupInTransaction(key,name,val)==1); }
   
   /** Truncate the log file by creating a new "checkpoint" of the repository
     @return true on success; false if log could not be rotated (in which
 	case we are continuing to use the old log file)
   */
-  bool TruncLog() { return ClassAdLog<K,AltK,AD>::TruncLog(); }
+  bool TruncLog() { return ClassAdLog<K,AD>::TruncLog(); }
 
-  void SetMaxHistoricalLogs(int max) { ClassAdLog<K,AltK,AD>::SetMaxHistoricalLogs(max); }
-  int GetMaxHistoricalLogs() { return ClassAdLog<K,AltK,AD>::GetMaxHistoricalLogs(); }
+  void SetMaxHistoricalLogs(int max) { ClassAdLog<K,AD>::SetMaxHistoricalLogs(max); }
+  int GetMaxHistoricalLogs() { return ClassAdLog<K,AD>::GetMaxHistoricalLogs(); }
 
-  time_t GetOrigLogBirthdate() { return ClassAdLog<K,AltK,AD>::GetOrigLogBirthdate(); }
+  time_t GetOrigLogBirthdate() { return ClassAdLog<K,AD>::GetOrigLogBirthdate(); }
 
   //@}
   //------------------------------------------------------------------------
@@ -196,18 +188,11 @@ public:
       @param targettype The class-ad's TargetType attribute value.
       @return true on success, false otherwise.
   */
-#if 0 ///def COL_USE_NATIVE_KEYS
   bool NewClassAd(const K& key, const char* mytype, const char* targettype) {
-	MyString str; key.sprint(str);
+	const std::string str = key;
 	this->AppendLog(new LogNewClassAd(str.c_str(),mytype,targettype, this->GetTableEntryMaker()));
 	return true;
   }
-#else
-  bool NewClassAd(AltK key, const char* mytype, const char* targettype) {
-	this->AppendLog(new LogNewClassAd(key,mytype,targettype, this->GetTableEntryMaker()));
-	return true;
-  }
-#endif
 
 
   /** Insert a new class-ad with the specified key.
@@ -216,14 +201,15 @@ public:
       @param ad The class-ad to copy into the repository.
       @return true on success, false otherwise.
   */
-  bool NewClassAd(AltK key, AD ad) {
-	LogRecord* log = new LogNewClassAd(key,GetMyTypeName(*ad),GetTargetTypeName(*ad), this->GetTableEntryMaker());
+  bool NewClassAd(K key, AD ad) {
+	const std::string str = key;
+	LogRecord* log = new LogNewClassAd(str.c_str(),GetMyTypeName(*ad),GetTargetTypeName(*ad), this->GetTableEntryMaker());
 	this->AppendLog(log);
 	const char *name;
 	ExprTree* expr;
 	ad->ResetExpr();
 	while (ad->NextExpr(name, expr)) {
-		log = new LogSetAttribute(key,name,ExprTreeToString(expr));
+		log = new LogSetAttribute(str.c_str(),name,ExprTreeToString(expr));
 		this->AppendLog(log);
 	}
 	return true;
@@ -233,12 +219,8 @@ public:
       @param key The class-ad's key.
       @return true on success, false otherwise.
   */
-  bool DestroyClassAd(AltK key) {
-	this->AppendLog(new LogDestroyClassAd(key, this->GetTableEntryMaker()));
-	return true;
-  }
   bool DestroyClassAd(const K & key) {
-	MyString str; key.sprint(str);
+	const std::string str = key;
 	this->AppendLog(new LogDestroyClassAd(str.c_str(), this->GetTableEntryMaker()));
 	return true;
   }
@@ -250,36 +232,22 @@ public:
       @param is_dirty the parameter should be marked dirty in the classad.
       @return true on success, false otherwise.
   */
-#if 0 //def COL_USE_NATIVE_KEYS
   bool SetAttribute(const K& key, const char* name, const char* value, const bool is_dirty=false) {
-	MyString str; key.sprint(str);
+	const std::string str = key;
 	this->AppendLog(new LogSetAttribute(str.c_str(),name,value,is_dirty));
 	return true;
   }
-#else
-  bool SetAttribute(AltK key, const char* name, const char* value, const bool is_dirty=false) {
-	this->AppendLog(new LogSetAttribute(key,name,value,is_dirty));
-	return true;
-  }
-#endif
 
   /** Delete an attribute in a class-ad.
       @param key The class-ad's key.
       @param name the name of the attribute.
       @return true on success, false otherwise.
   */
-#if 0 // def COL_USE_NATIVE_KEYS
   bool DeleteAttribute(const K& key, const char* name) {
-	MyString str; key.sprint(str);
+	const std::string str = key;
 	this->AppendLog(new LogDeleteAttribute(str.c_str(),name));
 	return true;
   }
-#else
-  bool DeleteAttribute(AltK key, const char* name) {
-	this->AppendLog(new LogDeleteAttribute(key,name));
-	return true;
-  }
-#endif
 
   /** Clear all parameter dirty bits in a class-ad.
       @param key The class-ad's key.
@@ -314,7 +282,7 @@ public:
   bool Iterate(AD & Ad)         { return this->table.iterate(Ad) == 1; }
   bool Iterate(K& key, AD& Ad)  { return this->table.iterate(key,Ad) == 1; }
 
-  bool AddAttrsFromTransaction(AltK key, ClassAd & ad) { return ClassAdLog<K,AltK,AD>::AddAttrsFromTransaction(key,ad); }
+  bool AddAttrsFromTransaction(const K& key, ClassAd & ad) { return ClassAdLog<K,AD>::AddAttrsFromTransaction(key,ad); }
   
   /** Start iterations on all class-ads in the repository.
       @return nothing.
@@ -351,6 +319,6 @@ public:
 };
 
 // Declare the old (non-templated) ClassAdCollection as a specialization of this type
-typedef GenericClassAdCollection<HashKey, const char*, ClassAd*> ClassAdCollection;
+typedef GenericClassAdCollection<std::string, ClassAd*> ClassAdCollection;
 
 #endif

@@ -30,7 +30,7 @@
 #include "basename.h"
 
 TransferDaemon::TransferDaemon(MyString fquser, MyString id, TDMode status) :
-	m_treqs_in_progress(200, hashFuncMyString)
+	m_treqs_in_progress(hashFunction)
 {
 	m_fquser = fquser;
 	m_id = id;
@@ -296,7 +296,7 @@ TransferDaemon::push_transfer_requests(void)
 			// move it from the original enqueue list to the in progress hash
 			// keyed by its capability
 			m_treqs.DeleteCurrent();
-			m_treqs_in_progress.insert(treq->get_capability(), treq);
+			ASSERT(m_treqs_in_progress.insert(treq->get_capability(), treq) == 0);
 
 		} else {
 			dprintf(D_ALWAYS, "Transferd said request was invalid.\n");
@@ -566,11 +566,11 @@ TransferDaemon::call_reaper_callback(long pid, int status, TransferDaemon *td)
 TDMan::TDMan()
 {
 	m_td_table = 
-		new HashTable<MyString, TransferDaemon*>(200, hashFuncMyString);
+		new HashTable<MyString, TransferDaemon*>(hashFunction);
 	m_id_table = 
-		new HashTable<MyString, MyString>(200, hashFuncMyString);
+		new HashTable<MyString, MyString>(hashFunction);
 	m_td_pid_table = 
-		new HashTable<long, TransferDaemon*>(200, hashFuncLong);
+		new HashTable<long, TransferDaemon*>(hashFuncLong);
 }
 
 TDMan::~TDMan()

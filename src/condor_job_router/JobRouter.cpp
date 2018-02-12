@@ -62,7 +62,7 @@ const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
 JobRouter::JobRouter(bool as_tool)
-	: m_jobs(5000,hashFuncStdString,rejectDuplicateKeys)
+	: m_jobs(hashFunction)
 	, m_schedd2_name(NULL)
 	, m_schedd2_pool(NULL)
 	, m_schedd1_name(NULL)
@@ -243,7 +243,7 @@ JobRouter::config() {
 	}
 
 
-	RoutingTable *new_routes = new RoutingTable(200,hashFuncStdString,rejectDuplicateKeys);
+	RoutingTable *new_routes = new RoutingTable(hashFunction);
 
 	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
 
@@ -924,7 +924,7 @@ JobRouter::DeallocateRoutingTable(RoutingTable *routes) {
 
 RoutingTable *
 JobRouter::AllocateRoutingTable() {
-	return new RoutingTable(200,hashFuncStdString,rejectDuplicateKeys);
+	return new RoutingTable(hashFunction);
 }
 
 void
@@ -1250,7 +1250,7 @@ JobRouter::GetCandidateJobs() {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	JobRoute *route;
 
-	HashTable<std::string,std::string> constraint_list(200,hashFuncStdString,rejectDuplicateKeys);
+	HashTable<std::string,std::string> constraint_list(hashFunction);
 	std::string umbrella_constraint;
 
 	std::string dbuf("JobRouter: Checking for candidate jobs. routing table is:\n"

@@ -44,8 +44,7 @@ class AdNameHashKey
 };
 
 // the hash functions
-unsigned int adNameHashFunction (const AdNameHashKey &);
-unsigned int stringHashFunction (const MyString &);
+size_t adNameHashFunction (const AdNameHashKey &);
 
 // type for the hash tables ...
 typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;

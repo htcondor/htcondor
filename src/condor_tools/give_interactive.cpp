@@ -34,7 +34,6 @@
 #include "daemon.h"
 #include "extArray.h"
 #include "HashTable.h"
-#include "classad_hashtable.h"
 #include "MyString.h"
 #include "basename.h"
 #include "condor_distribution.h"
@@ -421,9 +420,9 @@ main(int argc, char *argv[])
 	int i;
 	int iExitUsageCode=1;
 	char buffer[1024];
-	HashTable<HashKey, int>	*slot_counts;
+	HashTable<std::string, int>	*slot_counts;
 
-	slot_counts = new HashTable <HashKey, int> (25, hashFunction); 
+	slot_counts = new HashTable <std::string, int> (hashFunction);
 	myDistro->Init( argc, argv );
 	config();
 
@@ -542,7 +541,7 @@ main(int argc, char *argv[])
 	
 
 	// find best machines and display them
-	char	remoteHost[MAXHOSTNAMELEN];
+	std::string remoteHost;
 	for ( i = 0; i < NumMachinesWanted; i++ ) {
 		
 		offer = giveBestMachine(requestAd,startdAds,priority);
@@ -556,11 +555,9 @@ main(int argc, char *argv[])
 
 		// If we want the entire machine, and not just a slot...
 		if(WantMachineNames) {
-			if (offer->LookupString (ATTR_MACHINE, remoteHost, sizeof(remoteHost)) ) {
+			if (offer->LookupString (ATTR_MACHINE, remoteHost) ) {
 				int slot_count;
 				int slot_count_thus_far;
-
-				HashKey key(remoteHost);
 
 				// How many slots are on that machine?
 				if (!offer->LookupInteger(ATTR_TOTAL_SLOTS, slot_count)) {
@@ -576,10 +573,10 @@ main(int argc, char *argv[])
 
 				slot_count_thus_far = 0;
 				// Keep track of what we've seen in a hashtable
-				if(!slot_counts->lookup(key, slot_count_thus_far)) {
+				if(!slot_counts->lookup(remoteHost, slot_count_thus_far)) {
 					//printf("DEBUG: Already seen a %s %d times\n",
-					//		 remoteHost, slot_count_thus_far);
-					slot_counts->remove(key);
+					//		 remoteHost.c_str(), slot_count_thus_far);
+					slot_counts->remove(remoteHost);
 				}			
 
 				// If we don't have enough slots to complete the set,
@@ -588,9 +585,9 @@ main(int argc, char *argv[])
 				// FIXME(?) This would probably blow up with bogus ads 
 				// (ie duplicate ads, but I dunno if those can happen)
 				if(++slot_count_thus_far < slot_count) {
-					//printf("DEBUG: Adding %s with %d\n", remoteHost, 
+					//printf("DEBUG: Adding %s with %d\n", remoteHost.c_str(),
 					//		slot_count_thus_far);
-					slot_counts->insert(key, slot_count_thus_far);
+					slot_counts->insert(remoteHost, slot_count_thus_far);
 					startdAds.Delete(offer);
 					i--;
 					continue;
@@ -599,14 +596,14 @@ main(int argc, char *argv[])
 		} //end if(WantMachineNames) 
 
 		// here we found a machine; spit out the name to stdout
-		remoteHost[0] = '\0';
+		remoteHost = "";
 		if(WantMachineNames)
-			offer->LookupString(ATTR_MACHINE, remoteHost, sizeof(remoteHost));
+			offer->LookupString(ATTR_MACHINE, remoteHost);
 		else
-			offer->LookupString(ATTR_NAME, remoteHost, sizeof(remoteHost));
+			offer->LookupString(ATTR_NAME, remoteHost);
 
 		if ( remoteHost[0] ) {
-			printf("%s\n", remoteHost);
+			printf("%s\n", remoteHost.c_str());
 		}
 
 		// remote this startd ad from our list 

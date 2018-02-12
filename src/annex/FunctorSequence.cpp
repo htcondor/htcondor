@@ -13,13 +13,13 @@ FunctorSequence::FunctorSequence( const std::vector< Functor * > & s,
   sequence( s ), last( l ), current( 0 ), rollingBack( false ),
   commandState( c ), commandID( cid ), scratchpad( sp ) {
 	ClassAd * commandState;
-	if( c->Lookup( HashKey( commandID.c_str() ), commandState ) ){
+	if( c->Lookup( commandID, commandState ) ){
 		commandState->LookupBool( "State_FS_rollingBack", rollingBack );
 		commandState->LookupInteger( "State_FS_current", current );
 	}
 
 	std::string hk = commandID + "-scratchpad";
-	c->Lookup( HashKey( hk.c_str() ), scratchpad );
+	c->Lookup( hk, scratchpad );
 }
 
 void
@@ -37,16 +37,16 @@ FunctorSequence::log() {
 	commandState->BeginTransaction();
 	{
 		std::string currentString; formatstr( currentString, "%d", current );
-		commandState->SetAttribute( commandID.c_str(),
+		commandState->SetAttribute( commandID,
 			"State_FS_current", currentString.c_str() );
 
 		std::string rollingBackString = rollingBack ? "true" : "false";
-		commandState->SetAttribute( commandID.c_str(),
+		commandState->SetAttribute( commandID,
 			"State_FS_rollingBack", rollingBackString.c_str() );
 
 		// Should I call InsertOrUpdateAd() (from annexd.cpp)?
 		std::string hk = commandID + "-scratchpad";
-		commandState->NewClassAd( hk.c_str(), scratchpad );
+		commandState->NewClassAd( hk, scratchpad );
 	}
 	commandState->CommitTransaction();
 }
@@ -62,7 +62,7 @@ FunctorSequence::deleteFunctors() {
 	commandState->BeginTransaction();
 	{
 		std::string hk = commandID + "-scratchpad";
-		commandState->DestroyClassAd( hk.c_str() );
+		commandState->DestroyClassAd( hk );
 	}
 	commandState->CommitTransaction();
 }

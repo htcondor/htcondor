@@ -169,7 +169,7 @@ void Rooster::poll()
 	startdAds.Open();
 	int num_woken = 0;
 	ClassAd *startd_ad;
-	HashTable<MyString,bool> machines_done(MyStringHash);
+	HashTable<MyString,bool> machines_done(hashFunction);
 	while( (startd_ad=startdAds.Next()) ) {
 		MyString machine;
 		MyString name;

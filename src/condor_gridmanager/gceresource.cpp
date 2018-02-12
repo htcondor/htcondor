@@ -25,10 +25,8 @@
 #include "gceresource.h"
 #include "gridmanager.h"
 
-#define HASH_TABLE_SIZE	13
-
-HashTable <HashKey, GCEResource *> 
-	GCEResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
+HashTable <std::string, GCEResource *>
+    GCEResource::ResourcesByName( hashFunction );
 
 const char * GCEResource::HashName( const char *resource_name,
 									const char *project,
@@ -49,12 +47,12 @@ GCEResource* GCEResource::FindOrCreateResource( const char *resource_name,
 	int rc;
 	GCEResource *resource = NULL;
 
-	rc = ResourcesByName.lookup( HashKey( HashName( resource_name, project, zone, auth_file ) ), resource );
+	rc = ResourcesByName.lookup( HashName( resource_name, project, zone, auth_file ), resource );
 	if ( rc != 0 ) {
 		resource = new GCEResource( resource_name, project, zone, auth_file );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashKey( HashName( resource_name, project, zone, auth_file ) ), resource );
+		ResourcesByName.insert( HashName( resource_name, project, zone, auth_file ), resource );
 	} else {
 		ASSERT(resource);
 	}
@@ -107,7 +105,7 @@ GCEResource::GCEResource( const char *resource_name,
 
 GCEResource::~GCEResource()
 {
-	ResourcesByName.remove( HashKey( HashName( resourceName, m_project, m_zone, m_auth_file ) ) );
+	ResourcesByName.remove( HashName( resourceName, m_project, m_zone, m_auth_file ) );
 	delete gahp;
 	free( m_auth_file );
 	free( m_project );
@@ -239,7 +237,7 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 				   instance_name.c_str(), instance_id.c_str() );
 
 		BaseJob * tmp = NULL;
-		rc = BaseJob::JobsByRemoteId.lookup( HashKey( remote_job_id.c_str() ), tmp );
+		rc = BaseJob::JobsByRemoteId.lookup( remote_job_id, tmp );
 
 		if( rc == 0 ) {
 			ASSERT( tmp );
@@ -263,7 +261,7 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 				   instance_name.c_str() );
 
 		tmp = NULL;
-		rc = BaseJob::JobsByRemoteId.lookup( HashKey( remote_job_id.c_str() ), tmp );
+		rc = BaseJob::JobsByRemoteId.lookup( remote_job_id, tmp );
 
 		if( rc == 0 ) {
 			ASSERT( tmp );

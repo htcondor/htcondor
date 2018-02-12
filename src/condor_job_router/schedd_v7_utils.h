@@ -23,9 +23,6 @@
 
 #include <string>
 
-/// hash function for std::string
-unsigned int hashFuncStdString(std::string const & key);
-
 
 #if 0 /* Not currently needed. */
 

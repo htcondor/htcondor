@@ -71,7 +71,7 @@ GCC_DIAG_OFF(float-equal)
 //------------------------------------------------------------------
 
 Accountant::Accountant():
-	concurrencyLimits(256, MyStringHash, updateDuplicateKeys)
+	concurrencyLimits(hashFunction)
 {
   MinPriority=0.5;
   AcctLog=NULL;
@@ -188,7 +188,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 		   MaxAcctLogSize );
 
   if (!AcctLog) {
-    AcctLog=new ClassAdLog<HashKey,const char*,ClassAd*>(LogFileName.Value());
+    AcctLog=new ClassAdLog<std::string,ClassAd*>(LogFileName.Value());
     dprintf(D_ACCOUNTANT,"Accountant::Initialize - LogFileName=%s\n",
 					LogFileName.Value());
   }
@@ -201,7 +201,7 @@ void Accountant::Initialize(GroupEntry* root_group)
   // if at startup, do a sanity check to make certain number of resource
   // records for a user and what the user record says jives
   if ( first_time ) {
-	  HashKey HK;
+	  std::string HK;
 	  ClassAd* ad;
 	  StringList users;
 	  int resources_used, resources_used_really;
@@ -218,7 +218,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 		// first find all the users
 	  AcctLog->table.startIterations();
 	  while (AcctLog->table.iterate(HK,ad)) {
-		char const *key = HK.value();
+		char const *key = HK.c_str();
 			// skip records that are not customer records...
 		if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 		char const *thisUser = &(key[CustomerRecord.Length()]);
@@ -475,13 +475,13 @@ void Accountant::ResetAllUsage()
 {
   dprintf(D_ACCOUNTANT,"Accountant::ResetAllUsage\n");
   time_t T=time(0);
-  HashKey HK;
+  std::string HK;
   ClassAd* ad;
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-	char const *key = HK.value();
-    if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
+	char const *key = HK.c_str();
+	if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 	AcctLog->BeginTransaction();
     SetAttributeFloat(key,AccumulatedUsageAttr,0);
     SetAttributeFloat(key,WeightedAccumulatedUsageAttr,0);
@@ -798,11 +798,11 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 
 void Accountant::DisplayLog()
 {
-  HashKey HK;
+  std::string HK;
   ClassAd* ad;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    printf("------------------------------------------------\nkey = %s\n",HK.value());
+    printf("------------------------------------------------\nkey = %s\n",HK.c_str());
     fPrintAd(stdout, *ad);
   }
 }
@@ -813,12 +813,12 @@ void Accountant::DisplayLog()
 
 void Accountant::DisplayMatches()
 {
-  HashKey HK;
+  std::string HK;
   ClassAd* ad;
   MyString ResourceName;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-	char const *key = HK.value();
+	char const *key = HK.c_str();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
     MyString RemoteUser;
@@ -851,7 +851,7 @@ void Accountant::UpdatePriorities()
 
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%d\n",AgingFactor,TimePassed);
 
-  HashKey HK;
+  std::string HK;
   ClassAd* ad;
   float Priority, OldPrio, PriorityFactor;
   int UnchargedTime;
@@ -871,7 +871,7 @@ void Accountant::UpdatePriorities()
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    char const *key = HK.value();
+    char const *key = HK.c_str();
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 
     // lookup values in the ad
@@ -988,13 +988,13 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   dprintf(D_ACCOUNTANT,"(Accountant) Checking Matches\n");
 
   ClassAd* ResourceAd;
-  HashKey HK;
+  std::string HK;
   ClassAd* ad;
   MyString ResourceName;
   MyString CustomerName;
 
 	  // Create a hash table for speedier lookups of Resource ads.
-  HashTable<MyString,ClassAd *> resource_hash(MyStringHash);
+  HashTable<MyString,ClassAd *> resource_hash(hashFunction);
   ResourceList.Open();
   while ((ResourceAd=ResourceList.Next())!=NULL) {
     ResourceName = GetResourceName(ResourceAd);
@@ -1009,7 +1009,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   // Remove matches that were broken
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    char const *key = HK.value();
+    char const *key = HK.c_str();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
     if( resource_hash.lookup(ResourceName,ResourceAd) < 0 ) {
@@ -1046,7 +1046,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 AttrList* Accountant::ReportState(const MyString& CustomerName) {
     dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
-    HashKey HK;
+    std::string HK;
     ClassAd* ResourceAd;
     int StartTime;
 
@@ -1060,7 +1060,7 @@ AttrList* Accountant::ReportState(const MyString& CustomerName) {
     int ResourceNum=1;
     AcctLog->table.startIterations();
     while (AcctLog->table.iterate(HK,ResourceAd)) {
-        if (strncmp(ResourceRecord.Value(), HK.value(), ResourceRecord.Length())) continue;
+        if (strncmp(ResourceRecord.Value(), HK.c_str(), ResourceRecord.Length())) continue;
 
         MyString rname;
         if (ResourceAd->LookupString(RemoteUserAttr, rname)==0) continue;
@@ -1073,7 +1073,7 @@ AttrList* Accountant::ReportState(const MyString& CustomerName) {
             if (CustomerName != rname) continue;
 
             MyString tmp;
-            tmp.formatstr("Name%d = \"%s\"", ResourceNum, HK.value()+ResourceRecord.Length());
+            tmp.formatstr("Name%d = \"%s\"", ResourceNum, HK.c_str()+ResourceRecord.Length());
             ad->Insert(tmp.Value());
 
             if (ResourceAd->LookupInteger(StartTimeAttr,StartTime)==0) StartTime=0;
@@ -1099,11 +1099,11 @@ void Accountant::CheckResources(const string& CustomerName, int& NumResources, f
     // This is a defunct group:
     if (isGroup && (cgrp != CustomerName)) return;
 
-    HashKey HK;
+    std::string HK;
     ClassAd* ResourceAd;
     AcctLog->table.startIterations();
     while (AcctLog->table.iterate(HK, ResourceAd)) {
-        if (strncmp(ResourceRecord.Value(), HK.value(), ResourceRecord.Length())) continue;
+        if (strncmp(ResourceRecord.Value(), HK.c_str(), ResourceRecord.Length())) continue;
 
         string rname;
         if (ResourceAd->LookupString(RemoteUserAttr, rname) == 0) continue;
@@ -1150,12 +1150,12 @@ ClassAd* Accountant::ReportState(bool rollup) {
     // attributes up the group hierarchy
     ReportGroups(hgq_root_group, ad, rollup, gnmap);
 
-    HashKey HK;
+    std::string HK;
     ClassAd* CustomerAd = NULL;
     AcctLog->table.startIterations();
     while (AcctLog->table.iterate(HK,CustomerAd)) {
-        if (strncmp(CustomerRecord.Value(), HK.value(), CustomerRecord.Length())) continue;
-        MyString CustomerName = HK.value()+CustomerRecord.Length();
+        if (strncmp(CustomerRecord.Value(), HK.c_str(), CustomerRecord.Length())) continue;
+        MyString CustomerName = HK.c_str()+CustomerRecord.Length();
 
         bool isGroup=false;
         GroupEntry* cgrp = GetAssignedGroup(CustomerName, isGroup);
@@ -1232,7 +1232,7 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
 
     ClassAd* CustomerAd = NULL;
     MyString HK(CustomerRecord + CustomerName);
-    if (AcctLog->table.lookup(HashKey(HK.Value()), CustomerAd) == -1) {
+    if (AcctLog->table.lookup(HK.Value(), CustomerAd) == -1) {
         dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist", HK.Value());
         return;
     } 
@@ -1528,7 +1528,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
 ClassAd* Accountant::GetClassAd(const MyString& Key)
 {
   ClassAd* ad=NULL;
-  AcctLog->table.lookup(HashKey(Key.Value()),ad);
+  AcctLog->table.lookup(Key.Value(),ad);
   return ad;
 }
 
@@ -1539,7 +1539,7 @@ ClassAd* Accountant::GetClassAd(const MyString& Key)
 bool Accountant::DeleteClassAd(const MyString& Key)
 {
   ClassAd* ad=NULL;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) 
+  if (AcctLog->table.lookup(Key.Value(),ad)==-1)
 	  return false;
 
   LogDestroyClassAd* log=new LogDestroyClassAd(Key.Value());
@@ -1604,7 +1604,7 @@ void Accountant::SetAttributeString(const MyString& Key, const MyString& AttrNam
 bool Accountant::GetAttributeInt(const MyString& Key, const MyString& AttrName, int& AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) return false;
+  if (AcctLog->table.lookup(Key.Value(),ad)==-1) return false;
   if (ad->LookupInteger(AttrName.Value(),AttrValue)==0) return false;
   return true;
 }
@@ -1616,7 +1616,7 @@ bool Accountant::GetAttributeInt(const MyString& Key, const MyString& AttrName, 
 bool Accountant::GetAttributeFloat(const MyString& Key, const MyString& AttrName, float& AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) return false;
+  if (AcctLog->table.lookup(Key.Value(),ad)==-1) return false;
   if (ad->LookupFloat(AttrName.Value(),AttrValue)==0) return false;
   return true;
 }
@@ -1628,7 +1628,7 @@ bool Accountant::GetAttributeFloat(const MyString& Key, const MyString& AttrName
 bool Accountant::GetAttributeString(const MyString& Key, const MyString& AttrName, MyString& AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) return false;
+  if (AcctLog->table.lookup(Key.Value(),ad)==-1) return false;
 
   if (ad->LookupString(AttrName.Value(),AttrValue)==0) return false;
   return true;
@@ -1770,7 +1770,7 @@ void Accountant::ClearLimits()
  	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
-		concurrencyLimits.insert(limit, 0);
+		concurrencyLimits.insert(limit, 0, true);
 		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.Value(), count);
 	}
 }
@@ -1784,7 +1784,7 @@ void Accountant::IncrementLimit(const MyString& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) + increment);
+		concurrencyLimits.insert(limit, GetLimit(limit) + increment, true);
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
@@ -1803,7 +1803,7 @@ void Accountant::DecrementLimit(const MyString& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) - increment);
+		concurrencyLimits.insert(limit, GetLimit(limit) - increment, true);
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",

@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "read_user_log.h"
 #include "format_time.h"
-#include "classad_hashtable.h"
+#include "HashTable.h"
 #include "internet.h"
 #include "condor_distribution.h"
 #include "condor_sockaddr.h"
@@ -85,8 +85,8 @@ struct HostStatistics {
 
 // explicit template instantiation
 
-HashTable<HashKey, JobStatistics *> Stats(1024, hashFunction);
-HashTable<HashKey, HostStatistics *> HStats(1024, hashFunction);
+HashTable<std::string, JobStatistics *> Stats(hashFunction);
+HashTable<std::string, HostStatistics *> HStats(hashFunction);
 int numJobStats = 0;
 int numHostStats = 0;
 bool totals_only = false;
@@ -300,12 +300,11 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 	}
 
 	sprintf(hash, "%d.%d", cluster, proc);
-	HashKey jobkey(hash);
 
 	JobStatistics *js;
-	if (Stats.lookup(jobkey, js) < 0) {
+	if (Stats.lookup(hash, js) < 0) {
 		js = new JobStatistics(cluster, proc);
-		Stats.insert(jobkey, js);
+		Stats.insert(hash, js);
 		numJobStats++;
 	}
 	js->allocations++;
@@ -325,8 +324,7 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 		}
 	}
 	HostStatistics *hs;
-	HashKey hostkey(ip_addr);
-	if (HStats.lookup(hostkey, hs) < 0) {
+	if (HStats.lookup(ip_addr, hs) < 0) {
 		condor_sockaddr addr;
 		const char* hostname = NULL;
 		MyString hostname_str;
@@ -339,7 +337,7 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 			hostname = ip_addr;
 		}
 		hs = new HostStatistics(hostname);
-		HStats.insert(hostkey, hs);
+		HStats.insert(ip_addr, hs);
 		numHostStats++;
 	}
 	hs->allocations++;
@@ -373,8 +371,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 	ULogEventOutcome result;
 	ULogEvent *event=NULL;
 	char hash[40];
-	HashTable<HashKey, ExecuteEvent *> ExecRecs(1024, hashFunction);
-	HashTable<HashKey, CheckpointedEvent *> CkptRecs(1024, hashFunction);
+	HashTable<std::string, ExecuteEvent *> ExecRecs(hashFunction);
+	HashTable<std::string, CheckpointedEvent *> CkptRecs(hashFunction);
 	
 	if (ulog.initialize(filename,0,false,true)==false) {
 		fprintf(stderr,
@@ -392,10 +390,9 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				break;
 			case ULOG_EXECUTE: {
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
-				HashKey key(hash);
 				// check if we already have an execute event for this job
 				ExecuteEvent *execEvent;
-				if (ExecRecs.lookup(key, execEvent) >= 0) {
+				if (ExecRecs.lookup(hash, execEvent) >= 0) {
 					// This means we found two execute events for the
 					// job not separated by an evict or terminate
 					// event.  Which one should we throw out?  If the
@@ -417,7 +414,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 						delete event;
 						break;
 					}
-					if (ExecRecs.remove(key) < 0) {
+					if (ExecRecs.remove(hash) < 0) {
 						if (debug_mode) {
 							fprintf(stderr, "internal error: hashtable remove "
 									"failed for exec event %s!\n", hash);
@@ -432,16 +429,15 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					}
 					delete execEvent;
 				}
-				ExecRecs.insert(key, (ExecuteEvent *)event);
+				ExecRecs.insert(hash, (ExecuteEvent *)event);
 				break;
 			}
 			case ULOG_CHECKPOINTED: {
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
-				HashKey key(hash);
 				// remove any previous ckpt events for this job
 				CheckpointedEvent *ckptEvent;
-				if (CkptRecs.lookup(key, ckptEvent) >= 0) {
-					if (CkptRecs.remove(key) < 0) {
+				if (CkptRecs.lookup(hash, ckptEvent) >= 0) {
+					if (CkptRecs.remove(hash) < 0) {
 						if (debug_mode) {
 							fprintf(stderr, "internal error: hashtable remove "
 									"failed for ckpt event %s!\n", hash);
@@ -451,15 +447,14 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					}
 					delete ckptEvent;
 				}
-				CkptRecs.insert(HashKey(hash), (CheckpointedEvent *)event);
+				CkptRecs.insert(hash, (CheckpointedEvent *)event);
 				break;
 			}
 			case ULOG_JOB_EVICTED: {
 				ExecuteEvent *execEvent;
 				JobEvictedEvent *evictEvent = (JobEvictedEvent *)event;
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
-				HashKey key(hash);
-				if (ExecRecs.lookup(key, execEvent) < 0) {
+				if (ExecRecs.lookup(hash, execEvent) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
 								"internal error: can't find execute event for "
@@ -468,7 +463,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					delete event;
 					break;
 				}
-				if (ExecRecs.remove(key) < 0) {
+				if (ExecRecs.remove(hash) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
 								"internal error: hashtable remove failed for "
@@ -487,7 +482,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 						evictEvent->run_remote_rusage.ru_stime.tv_sec;
 				} else {
 					CheckpointedEvent *ckptEvent;
-					if (CkptRecs.lookup(key, ckptEvent) >= 0) {
+					if (CkptRecs.lookup(hash, ckptEvent) >= 0) {
 						ckpt_time = ckptEvent->GetEventclock();
 						cpu_usage =
 							ckptEvent->run_remote_rusage.ru_utime.tv_sec +
@@ -511,8 +506,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				JobTerminatedEvent *terminateEvent =
 					(JobTerminatedEvent *)event;
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
-				HashKey key(hash);
-				if (ExecRecs.lookup(key, execEvent) < 0) {
+				if (ExecRecs.lookup(hash, execEvent) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
 								"internal error: can't find execute event for "
@@ -521,7 +515,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					delete event;
 					break;
 				}
-				if (ExecRecs.remove(key) < 0) {
+				if (ExecRecs.remove(hash) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
 								"internal error: hashtable remove failed "
@@ -555,8 +549,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 			case ULOG_SHADOW_EXCEPTION: {
 				ExecuteEvent *execEvent;
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
-				HashKey key(hash);
-				if (ExecRecs.lookup(key, execEvent) < 0) {
+				if (ExecRecs.lookup(hash, execEvent) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
 								"internal error: can't find execute event for "
@@ -565,7 +558,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					delete event;
 					break;
 				}
-				if (ExecRecs.remove(key) < 0) {
+				if (ExecRecs.remove(hash) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
 								"internal error: hashtable remove failed for "
@@ -579,7 +572,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				end_time = event->GetEventclock();
 				int cpu_usage = 0;
 				CheckpointedEvent *ckptEvent;
-				if (CkptRecs.lookup(key, ckptEvent) >= 0) {
+				if (CkptRecs.lookup(hash, ckptEvent) >= 0) {
 					ckpt_time = ckptEvent->GetEventclock();
 					cpu_usage = ckptEvent->run_remote_rusage.ru_utime.tv_sec +
 						ckptEvent->run_remote_rusage.ru_stime.tv_sec;

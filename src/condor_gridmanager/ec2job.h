@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "classad_hashtable.h"
 
 #include "basejob.h"
 #include "ec2resource.h"

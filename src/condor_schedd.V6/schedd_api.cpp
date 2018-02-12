@@ -43,7 +43,7 @@
 using namespace soap_schedd;
 
 Job::Job(PROC_ID pro_id):
-	declaredFiles(64, MyStringHash, rejectDuplicateKeys)
+	declaredFiles(hashFunction)
 {
 	this->id = pro_id;
 }
@@ -550,7 +550,7 @@ Job::get_file(const MyString &name,
 
 
 ScheddTransactionManager::ScheddTransactionManager():
-	transactions(16, hashFuncInt, rejectDuplicateKeys)
+	transactions(hashFuncInt)
 {
 }
 
@@ -604,7 +604,7 @@ ScheddTransactionManager::destroyTransaction(int id)
 
 
 ScheddTransaction::ScheddTransaction(const char *trans_owner):
-	jobs(32, hashFuncPROC_ID, rejectDuplicateKeys)
+	jobs(hashFuncPROC_ID)
 {
 	this->owner = trans_owner ? strdup(trans_owner) : NULL;
 	duration = 0;
