@@ -52,7 +52,7 @@ typedef enum {
 class ClassAdFileParseHelper;
 
 extern classad::References ClassAdPrivateAttrs;
-bool ClassAdAttributeIsPrivate( char const *name );
+bool ClassAdAttributeIsPrivate( const std::string &name );
 
 typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
 

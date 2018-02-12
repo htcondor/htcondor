@@ -1890,8 +1890,9 @@ int CondorClassAdListWriter::writeFooter(FILE* out, bool xml_always_write_header
 	return 0;
 }
 
+
 bool
-ClassAdAttributeIsPrivate( char const *name )
+ClassAdAttributeIsPrivate( const std::string &name )
 {
 	return ClassAdPrivateAttrs.find( name ) != ClassAdPrivateAttrs.end();
 }

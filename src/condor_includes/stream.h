@@ -367,7 +367,7 @@ public:
 	int put(double);
 	int put(char const *);
 	int put(const MyString &);
-	int put(const std::string &);
+	int put(const std::string &str) {return this->put(str.c_str(), 1 + str.length());}
 	int put(char const *, int);
 
 

@@ -1106,12 +1106,6 @@ Stream::put( const MyString &s)
 	return put( s.Value() );
 }
 
-int 
-Stream::put( const std::string &s)
-{
-	return put( s.c_str() );
-}
-
 int
 Stream::put_secret( char const *s )
 {

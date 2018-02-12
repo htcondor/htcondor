@@ -653,7 +653,7 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
 			std::string const &attr = itor->first;
 
             if(!exclude_private ||
-			   !compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
+			   !compat_classad::ClassAdAttributeIsPrivate(attr))
             {
                 numExprs++;
             }
@@ -692,7 +692,7 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
 
-            if(exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr.c_str())){
+            if(exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr)){
                 continue;
             }
 
@@ -701,13 +701,13 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
             unp.Unparse( buf, expr );
 
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
-				compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
+				compat_classad::ClassAdAttributeIsPrivate(attr))
 			{
                 sock->put(SECRET_MARKER);
 
                 sock->put_secret(buf.c_str());
             }
-            else if (!sock->put(buf.c_str()) ){
+            else if (!sock->put(buf) ){
                 return false;
             }
         }
@@ -742,14 +742,14 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
         if (!ad.EvaluateAttrString(ATTR_MY_TYPE,buf)) {
             buf="";
         }
-        if (!sock->put(buf.c_str())) {
+        if (!sock->put(buf)) {
             return false;
         }
 
         if (!ad.EvaluateAttrString(ATTR_TARGET_TYPE,buf)) {
             buf="";
         }
-        if (!sock->put(buf.c_str())) {
+        if (!sock->put(buf)) {
             return false;
         }
     }
@@ -804,9 +804,9 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
 			{
                 sock->put(SECRET_MARKER);
 
-                sock->put_secret(buf.c_str());
+                sock->put_secret(buf);
             }
-            else if (!sock->put(buf.c_str()) ){
+            else if (!sock->put(buf) ){
                 return false;
             }
 		}
@@ -1023,7 +1023,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
 
-			if(exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr.c_str())){
+			if(exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr)){
 				continue;
 			}
 
@@ -1040,13 +1040,13 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			unp.Unparse( buf, expr );
 
 			if( ! sock->prepare_crypto_for_secret_is_noop() &&
-				compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
+				compat_classad::ClassAdAttributeIsPrivate(attr))
 			{
 				sock->put(SECRET_MARKER);
 
 				sock->put_secret(buf.c_str());
 			}
-			else if (!sock->put(buf.c_str()) ){
+			else if (!sock->put(buf) ){
 				return false;
 			}
 		}
@@ -1065,7 +1065,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 
 	classad::References blacklist;
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
-		if ( ! ad.Lookup(*attr) || (exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr->c_str()))) {
+		if ( ! ad.Lookup(*attr) || (exclude_private && compat_classad::ClassAdAttributeIsPrivate(*attr))) {
 			blacklist.insert(*attr);
 		}
 	}
@@ -1104,7 +1104,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 		unp.Unparse( buf, expr );
 
 		if ( ! sock->prepare_crypto_for_secret_is_noop() &&
-			compat_classad::ClassAdAttributeIsPrivate(attr->c_str()) )
+			compat_classad::ClassAdAttributeIsPrivate(*attr))
 		{
 			if (!sock->put(SECRET_MARKER)) {
 				return false;
@@ -1113,7 +1113,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 				return false;
 			}
 		}
-		else if ( ! sock->put(buf.c_str()) ){
+		else if ( ! sock->put(buf)){
 			return false;
 		}
 	}
