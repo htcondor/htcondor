@@ -147,8 +147,6 @@ class HashTable {
   int lookup(const Index &index, Value* &value) const;
 	  // returns 0 if exists, -1 otherwise
   int exists(const Index &index) const;
-  int getNext(const Index &index, void *current, Value &value,
-	      void *&next) const;
   int remove(const Index &index);  
   int getNumElements( ) const { return numElems; }
   int getTableSize( ) const { return tableSize; }
@@ -456,44 +454,6 @@ int HashTable<Index,Value>::exists(const Index &index) const
          << " vs. " << *(long *)index << endl;
 #endif
     if (bucket->index == index) {
-      return 0;
-    }
-    bucket = bucket->next;
-  }
-
-#ifdef DEBUGHASH
-  dump();
-#endif
-
-  return -1;
-}
-
-// A function which allows duplicate Indices to be retrieved
-// iteratively. The first match is returned in next if current
-// is NULL. Upon subsequent calls, caller should set
-// current = next before calling again. If Index not found,
-// returns -1.
-/*	This function doesn't appear to be used the the Condor sources,
-	no unit test written.
-*/
-template <class Index, class Value>
-int HashTable<Index,Value>::getNext(const Index &index, void *current,
-				    Value &value, void *&next) const
-{
-  HashBucket<Index, Value> *bucket;
-
-  if (!current) {
-    int idx = (int)(hashfcn(index) % tableSize);
-    bucket = ht[idx];
-  } else {
-    bucket = (HashBucket<Index, Value> *)current;
-    bucket = bucket->next;
-  }
-
-  while(bucket) {
-    if (bucket->index == index) {
-      value = bucket->value;
-      next = bucket;
       return 0;
     }
     bucket = bucket->next;
