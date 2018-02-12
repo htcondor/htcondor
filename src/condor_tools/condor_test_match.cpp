@@ -25,7 +25,7 @@
 #include "HashTable.h"
 #include "condor_attributes.h"
 
-static unsigned int ClassAdPtrHash(ClassAd * const &ptr);
+static size_t ClassAdPtrHash(ClassAd * const &ptr);
 
 static void usage() {
 	fprintf(stderr,"USAGE: condor_match_test [OPTIONS] [command]\n");
@@ -192,14 +192,10 @@ int main(int argc,char *argv[]) {
 }
 
 
-unsigned int ClassAdPtrHash(ClassAd * const &ptr) {
+size_t ClassAdPtrHash(ClassAd * const &ptr) {
 	intptr_t i = (intptr_t)ptr;
 
-#if (SIZEOF_VOIDPTR > 4)
-	return (unsigned int)( i ^ (i>>32) );
-#else
-	return (unsigned int) i;
-#endif
+	return (size_t) i;
 }
 
 MatchTest::MatchTest():

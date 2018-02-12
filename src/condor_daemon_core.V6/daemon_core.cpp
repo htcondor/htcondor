@@ -231,9 +231,9 @@ void **curr_regdataptr;
 extern void drop_addr_file( void );
 
 // Hash function for pid table.
-static unsigned int compute_pid_hash(const pid_t &key)
+static size_t compute_pid_hash(const pid_t &key)
 {
-	return (unsigned int)key;
+	return (size_t)key;
 }
 
 // DaemonCore constructor.

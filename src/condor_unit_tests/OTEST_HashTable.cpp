@@ -35,7 +35,7 @@ static HashTable< int, short int >* table_two;
 
 // function prototypes
 	// helper functions
-static unsigned int intHash(const int &myInt);
+static size_t intHash(const int &myInt);
 static int isOdd(int num);
 static bool cleanup(void);
 
@@ -525,7 +525,7 @@ static bool cleanup() {
 
 /* simple hash function for testing purposes */
 /* I'm not using hashFuncInt so that I can predict collisions */
-static unsigned int intHash(const int &myInt) {
+static size_t intHash(const int &myInt) {
 	return myInt;
 }
 

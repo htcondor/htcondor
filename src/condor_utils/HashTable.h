@@ -137,7 +137,7 @@ class HashTable {
   typedef HashIterator<Index, Value> iterator;
   friend class HashIterator<Index, Value>;
 
-  HashTable( unsigned int (*hashfcn)( const Index &index ) );
+  HashTable( size_t (*hashfcn)( const Index &index ) );
   HashTable( const HashTable &copy);
   const HashTable& operator=(const HashTable &copy);
   ~HashTable();
@@ -193,7 +193,7 @@ class HashTable {
   int tableSize;                                // size of hash table
   int numElems; // number of elements in the hashtable
   HashBucket<Index, Value> **ht;                // actual hash table
-  unsigned int (*hashfcn)(const Index &index);  // user-provided hash function
+  size_t (*hashfcn)(const Index &index);  // user-provided hash function
   double maxLoadFactor;			// average number of elements per bucket list
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
@@ -204,7 +204,7 @@ class HashTable {
 // In the first constructor, tableSz is ignored as it is no longer used, it is
 // left in for compatability reasons.
 template <class Index, class Value>
-HashTable<Index,Value>::HashTable( unsigned int (*hashF)( const Index &index ) ) {
+HashTable<Index,Value>::HashTable( size_t (*hashF)( const Index &index ) ) {
   int i;
 
   hashfcn = hashF;
@@ -329,7 +329,7 @@ void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
 template <class Index, class Value>
 int HashTable<Index,Value>::insert(const Index &index,const  Value &value, bool update)
 {
-  int idx = (int)(hashfcn(index) % tableSize);
+  size_t idx = hashfcn(index) % tableSize;
 
   HashBucket<Index, Value> *bucket;
 
@@ -381,7 +381,7 @@ int HashTable<Index,Value>::lookup(const Index &index, Value &value) const
 	return -1;
   }
 
-  int idx = (int)(hashfcn(index) % tableSize);
+  size_t idx = hashfcn(index) % tableSize;
 
   HashBucket<Index, Value> *bucket = ht[idx];
   while(bucket) {
@@ -413,7 +413,7 @@ int HashTable<Index,Value>::lookup(const Index &index, Value* &value ) const
 	return -1;
   }
 
-  int idx = (int)(hashfcn(index) % tableSize);
+  size_t idx = hashfcn(index) % tableSize;
 
   HashBucket<Index, Value> *bucket = ht[idx];
   while(bucket) {
@@ -445,7 +445,7 @@ int HashTable<Index,Value>::exists(const Index &index) const
 	return -1;
   }
 
-  int idx = (int)(hashfcn(index) % tableSize);
+  size_t idx = hashfcn(index) % tableSize;
 
   HashBucket<Index, Value> *bucket = ht[idx];
   while(bucket) {
@@ -472,7 +472,7 @@ int HashTable<Index,Value>::exists(const Index &index) const
 template <class Index, class Value>
 int HashTable<Index,Value>::remove(const Index &index)
 {
-  	int idx = (int)(hashfcn(index) % tableSize);
+  	size_t idx = hashfcn(index) % tableSize;
 
   	HashBucket<Index, Value> *bucket = ht[idx];
   	HashBucket<Index, Value> *prevBuc = ht[idx];
@@ -791,7 +791,7 @@ void HashTable<Index, Value>::resize_hash_table(int newsize) {
 	HashBucket<Index, Value> *cur= NULL;
 	for( i=0; i<tableSize; i++ ) {
 		for( cur=ht[i]; cur; cur=temp ) {
-			int idx = (int)(hashfcn(cur->index) % newsize);
+			size_t idx = hashfcn(cur->index) % newsize;
 				// put it at htcopy[idx]
 				// if htcopy[idx] wasn't NULL then put whatever was there as its next value...
 				// if it was NULL then set current->next to NULL, so I guess just copy the value no matter what
@@ -829,23 +829,23 @@ void HashTable<Index,Value>::dump()
 #endif // DEBUGHASH
 
 /// basic hash function for an unpredictable integer key
-unsigned int hashFuncInt( const int& n );
+size_t hashFuncInt( const int& n );
 
 /// basic hash function for an unpredictable integer key
-unsigned int hashFuncLong( const long& n );
+size_t hashFuncLong( const long& n );
 
 /// basic hash function for an unpredictable unsigned integer key
-unsigned int hashFuncUInt( const unsigned int& n );
+size_t hashFuncUInt( const unsigned int& n );
 
 /// hash functions for a string
-unsigned int hashFunction( char const *key );
-unsigned int hashFunction( const std::string &key );
-unsigned int hashFunction( const MyString &key );
-unsigned int hashFunction( const YourString &key );
+size_t hashFunction( char const *key );
+size_t hashFunction( const std::string &key );
+size_t hashFunction( const MyString &key );
+size_t hashFunction( const YourString &key );
 
-unsigned int hashFunction( const YourStringNoCase &key );
+size_t hashFunction( const YourStringNoCase &key );
 
 /// hash function for a pointer
-unsigned int hashFuncVoidPtr( void* const & pv );
+size_t hashFuncVoidPtr( void* const & pv );
 
 #endif // HASH_H

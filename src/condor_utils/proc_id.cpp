@@ -207,9 +207,9 @@ unsigned int inline MurmurHash32x2_nofinal(unsigned int u1, unsigned int u2) {
 int job_hash_algorithm = JOB_HASH_ALGOR;
 
 #if JOB_HASH_ALGOR == 0
-inline unsigned int hashkey_compat_hash(const char * p)
+inline size_t hashkey_compat_hash(const char * p)
 {
-	unsigned int hash = 0;
+	size_t hash = 0;
 
 	while (*p) {
 		hash = (hash<<5) + hash + (unsigned char)*p++;
@@ -219,7 +219,7 @@ inline unsigned int hashkey_compat_hash(const char * p)
 }
 #endif
 
-unsigned int JOB_ID_KEY::hash(const JOB_ID_KEY &key)
+size_t JOB_ID_KEY::hash(const JOB_ID_KEY &key)
 {
 #if JOB_HASH_ALGOR == 0
 	char buf[PROC_ID_STR_BUFLEN];
@@ -237,7 +237,7 @@ unsigned int JOB_ID_KEY::hash(const JOB_ID_KEY &key)
 }
 
 
-unsigned int hashFunction(const JOB_ID_KEY &key)
+size_t hashFunction(const JOB_ID_KEY &key)
 {
 #if JOB_HASH_ALGOR == 0
 	char buf[PROC_ID_STR_BUFLEN];

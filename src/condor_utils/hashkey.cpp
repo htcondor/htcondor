@@ -43,26 +43,12 @@ bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
     return (  ( lhs.name == rhs.name ) && ( lhs.ip_addr == rhs.ip_addr ) );
 }
 
-static int sumOverString(const MyString &str)
+size_t adNameHashFunction (const AdNameHashKey &key)
 {
-	int sum = 0;
-	for (const char *p = str.Value(); p && *p; p++) {
-		sum += *p;
-	}
-	return sum;
-}
+    size_t bkt = 0;
 
-unsigned int stringHashFunction (const MyString &str)
-{
-	return sumOverString(str);
-}
-
-unsigned int adNameHashFunction (const AdNameHashKey &key)
-{
-    unsigned int bkt = 0;
-
-    bkt += sumOverString(key.name);
-    bkt += sumOverString(key.ip_addr);
+    bkt += hashFunction(key.name);
+    bkt += hashFunction(key.ip_addr);
 
     return bkt;
 }

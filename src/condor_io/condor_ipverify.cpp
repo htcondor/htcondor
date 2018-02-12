@@ -41,14 +41,14 @@ const std::string netgroup_detected = "***";
 #endif
 
 // Hash function for Permission hash table
-static unsigned int
+static size_t
 compute_perm_hash(const in6_addr &in_addr)
 {
 		// the hash function copied from MyString::Hash()
 	int Len = sizeof(in6_addr);
 	const unsigned char* Data = (const unsigned char*)&in_addr;
 	int i;
-	unsigned int result = 0;
+	size_t result = 0;
 	for(i = 0; i < Len; i++) {
 		result = (result<<5) + result + Data[i];
 	}

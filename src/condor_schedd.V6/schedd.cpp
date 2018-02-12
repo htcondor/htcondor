@@ -336,7 +336,7 @@ void AuditLogJobProxy( const Sock &sock, ClassAd *job_ad )
 	AuditLogJobProxy( sock, job_id, proxy_file.c_str() );
 }
 
-unsigned int UserIdentity::HashFcn(const UserIdentity & index)
+size_t UserIdentity::HashFcn(const UserIdentity & index)
 {
 	return hashFunction(index.m_username) + hashFunction(index.m_domain) + hashFunction(index.m_auxid);
 }
@@ -6346,7 +6346,7 @@ public:
 		/** These are not actually used, because we are
 		 *  using the all_dups option to SelfDrainingQueue. */
 	virtual int ServiceDataCompare( ServiceData const* other ) const;
-	virtual unsigned int HashFn( ) const;
+	virtual size_t HashFn( ) const;
 };
 
 int
@@ -6363,7 +6363,7 @@ ActOnJobRec::ServiceDataCompare( ServiceData const* other ) const
 	return m_job_id.ServiceDataCompare( &o->m_job_id );
 }
 
-unsigned int
+size_t
 ActOnJobRec::HashFn( ) const
 {
 	return m_job_id.HashFn();
@@ -12737,7 +12737,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 }
 
 
-unsigned int pidHash(const int &pid)
+size_t pidHash(const int &pid)
 {
 	return pid;
 }

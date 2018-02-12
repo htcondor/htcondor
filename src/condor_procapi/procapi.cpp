@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 
-unsigned int pidHashFunc( const pid_t& pid );
+size_t pidHashFunc( const pid_t& pid );
 
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
     new HashTable <pid_t, procHashNode *> ( pidHashFunc );
@@ -3010,7 +3010,7 @@ ProcAPI::deallocAllProcInfos() {
 	allProcInfos = NULL;
 }
 
-unsigned int
+size_t
 pidHashFunc( const pid_t& pid ) {
 	return pid;   
 }

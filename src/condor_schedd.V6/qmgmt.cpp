@@ -218,9 +218,6 @@ ForkWork schedd_forker;
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
-static inline unsigned int compute_clustersize_hash(const int &key) {
-	return key;
-}
 typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 static int TotalJobsCount = 0;
@@ -1428,7 +1425,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	CheckSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
 	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>(),job_queue_name,max_historical_logs);
-	ClusterSizeHashTable = new ClusterSizeHashTable_t(compute_clustersize_hash);
+	ClusterSizeHashTable = new ClusterSizeHashTable_t(hashFuncInt);
 	TotalJobsCount = 0;
 	jobs_added_this_transaction = 0;
 

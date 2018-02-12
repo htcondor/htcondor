@@ -602,7 +602,7 @@ static unsigned int torekHash(const YourInsensitiveString &s) {
 }
 #endif
 
-static unsigned int
+static size_t
 DWORDHash( const DWORD & n )
 {
 	return n;

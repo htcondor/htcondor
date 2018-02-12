@@ -568,16 +568,16 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned int
+size_t
 ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 {
-	int		result = (key._cluster * 29) ^ (key._proc * 7) ^ key._subproc;
+	long result = (key._cluster * 29) ^ (key._proc * 7) ^ key._subproc;
 
 		// Make sure we produce a non-negative result (modulus on negative
 		// value may produce a negative result (implementation-dependent).
 	if ( result < 0 ) result = -result;
 
-	return (unsigned int)result;
+	return (size_t)result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

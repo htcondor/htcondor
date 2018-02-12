@@ -77,15 +77,15 @@ static unsigned int reverse_bits(unsigned int x) {
 	return y;
 }
 
-unsigned int
+size_t
 CondorID::HashFn() const
 {
 		// Put the most variable (low) bits of _cluster and _proc
 		// at opposite ends of the hash integer so they are unlikely
 		// to overlap.  Put the low bits of _subproc near the center.
-	unsigned int a = _cluster;
-	unsigned int b = _proc;
-	unsigned int c = _subproc;
+	size_t a = _cluster;
+	size_t b = _proc;
+	size_t c = _subproc;
 	c = (c<<16) + (c>>(sizeof(unsigned int)*8-16));
 	return a + reverse_bits(b) + c;
 }

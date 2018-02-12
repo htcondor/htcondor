@@ -155,7 +155,7 @@ windows_hard_kill(DWORD pid)
 // stupid hash function for DWORD (need by the hash tables
 // used in the suspend/contiunue code below)
 //
-static unsigned int
+static size_t
 hash_func(const DWORD& n)
 {
 	return n;

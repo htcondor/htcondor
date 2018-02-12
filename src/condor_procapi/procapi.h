@@ -393,7 +393,7 @@ struct procHashNode {
  *  HashTable of processes. Other code may want to use it for their
  *  own pid-keyed HashTables. The condor_procd does.
  */
-unsigned int pidHashFunc ( const pid_t& pid );
+size_t pidHashFunc ( const pid_t& pid );
 
 /** The ProcAPI class returns information about running processes.  It is
     possible to get information for:
@@ -698,7 +698,6 @@ private:
   /* Using condor's HashTable template class.  I'm storing a procHashNode, 
      hashed on a pid. */
   static HashTable <pid_t, procHashNode *> *procHash;
-  friend unsigned int pidHashFunc ( const pid_t& pid );
 
   // private data structures:
   static piPTR allProcInfos; // this will be a linked list of 

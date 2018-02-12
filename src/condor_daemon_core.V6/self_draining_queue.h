@@ -54,7 +54,7 @@ class SelfDrainingHashItem {
 	bool operator == (const SelfDrainingHashItem &other) const {
 		return m_service->ServiceDataCompare(other.m_service)==0;
 	}
-	static unsigned int HashFn(SelfDrainingHashItem const &);
+	static size_t HashFn(SelfDrainingHashItem const &);
 };
 
 class SelfDrainingQueue : public Service

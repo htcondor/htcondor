@@ -113,11 +113,6 @@ struct download_info {
 	FileTransfer *myobj;
 };
 
-static unsigned int compute_transthread_hash(const int &pid) 
-{
-	return (unsigned int)pid;
-}
-
 FileTransfer::FileTransfer()
 {
 	TransferFilePermissions = false;
@@ -709,7 +704,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 	if (!TransThreadTable) {
 		// initialize our thread hashtable
 		if (!(TransThreadTable =
-			  new TransThreadHashTable(compute_transthread_hash))) {
+			  new TransThreadHashTable(hashFuncInt))) {
 			// failed to allocate our hashtable ?!?!
 			return 0;
 		}

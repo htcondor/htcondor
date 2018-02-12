@@ -29,7 +29,7 @@
 #include <sys/epoll.h>
 #endif
 
-static unsigned int
+static size_t
 ccbid_hash(const CCBID &ccbid) {
 	return ccbid;
 }

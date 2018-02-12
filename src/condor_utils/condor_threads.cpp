@@ -464,14 +464,14 @@ WorkerThread::set_status(thread_status_t newstatus)
 }
 
 
-unsigned int
+size_t
 ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & mythread)
 {
 	// For a nice distribution, break it up into unsigned int 
 	// sized chunks and add together.  This is because on Linux and 
 	// Win32, it is prolly the size of an unsigned int.  So on these
 	// two platforms we will get a very nice distribution -vs- byte adding.
-	unsigned int hash = 0;
+	size_t hash = 0;
 
 	union {
 		pthread_t thread;
@@ -995,7 +995,7 @@ WorkerThread::set_status(thread_status_t newstatus)
 	status_ = newstatus;
 }
 
-unsigned int
+size_t
 ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & /*mythread*/)
 {
 	return 1;

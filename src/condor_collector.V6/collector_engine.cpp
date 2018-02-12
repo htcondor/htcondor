@@ -65,7 +65,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	HadAds        (&adNameHashFunction),
 	LeaseManagerAds(&adNameHashFunction),
 	GridAds       (&adNameHashFunction),
-	GenericAds    (&stringHashFunction),
+	GenericAds    (&hashFunction),
 	__self_ad__(0)
 {
 	clientTimeout = 20;

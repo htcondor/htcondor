@@ -348,7 +348,7 @@ class UserIdentity {
 		MyString auxid() const { return m_auxid; }
 
 			// For use in HashTables
-		static unsigned int HashFcn(const UserIdentity & index);
+		static size_t HashFcn(const UserIdentity & index);
 	
 	private:
 		MyString m_username;
