@@ -402,11 +402,22 @@ public:
 	}
 	virtual bool insert(const char * key, ClassAd * ad) {
 		JOB_ID_KEY k(key);
+		bool new_ad = false;
 		JobQueueJob * Ad = dynamic_cast<JobQueueJob*>(ad);
-		// if the incoming ad is really a ClassAd and not a JobQueueJob, then make a new object and delete the incoming ad.
-		if ( ! Ad) { Ad = new JobQueueJob(); Ad->Update(*ad); delete ad; }
+		// if the incoming ad is really a ClassAd and not a JobQueueJob, then make a new object.
+		if ( ! Ad) { Ad = new JobQueueJob(); Ad->Update(*ad); new_ad = true; }
 		Ad->SetDirtyTracking(true);
 		int iret = table.insert(k, Ad);
+		// If we made a new ad, we must now delete one of them.
+		// On success, delete the original ad.
+		// On failure, delete the new ad (our caller will delete the original one).
+		if ( new_ad ) {
+			if ( iret >= 0 ) {
+				delete ad;
+			} else {
+				delete Ad;
+			}
+		}
 		return iret >= 0;
 	}
 	virtual void startIterations() { table.startIterations(); } // begin iterations
