@@ -229,12 +229,13 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				if (r < 0) {
 					dprintf(D_ALWAYS, "Cannot read docker error file on docker create container. Errno %d\n", errno);
 				} else {
+					buf[r] = '\0';
 					int buflen = strlen(buf);
 					for (int i = 0; i < buflen; i++) {
 						if (buf[i] == '\n') buf[i] = ' ';
 					}
-					buf[r] = '\0';
 				}
+				close(fd);
 			} else {
 				dprintf(D_ALWAYS, "Cannot open docker_stderror\n");
 			}
