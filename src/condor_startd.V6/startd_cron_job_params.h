@@ -52,8 +52,11 @@ class StartdCronJobParams : public ClassAdCronJobParams
 	bool isMetric( const std::string & attributeName ) const;
 	bool addMetric( const char * metricType, const char * resourceName );
 	bool getMetric( const std::string & attributeName, Metric & m ) const;
-	static bool getResourceNameFromAttributeName( const std::string & attributeName, std::string & resourceName );
 	bool isResourceMonitor( void ) const { return metrics.size() > 0; }
+
+	static bool getResourceNameFromAttributeName( const std::string & attributeName, std::string & resourceName );
+	static bool attributeIsSumMetric( const std::string & attributeName );
+	static bool attributeIsPeakMetric( const std::string & attributeName );
 
   private:
   	Metrics metrics;

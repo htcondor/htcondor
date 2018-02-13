@@ -155,6 +155,7 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char *
 	// monitor ads by resource type).
 	//
 	ClassAd accumulator;
+	// dprintf( D_FULLDEBUG, "Generating usage for %s...\n", r_id_str );
 	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
 		NamedClassAd		*nad = *iter;
 		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
@@ -163,10 +164,21 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char *
 		if(! sad->isResourceMonitor()) { continue; }
 
 		const char * match_attr = NULL;
+		// dprintf( D_FULLDEBUG, "... adding %s...\n", sad->GetName() );
 		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( merged_ad, & match_attr ) ) {
 			sad->AggregateInto( & accumulator );
 		}
 	}
+	// dprintf( D_FULLDEBUG, "... done generating usage report for %s.\n", r_id_str );
+
+#if 0
+	classad::Value v, w;
+	double usmpu = -1, smu = -1;
+	accumulator.EvaluateAttr( "UptimeSQUIDsMemoryPeakUsage", v ) && v.IsNumber( usmpu );
+	accumulator.EvaluateAttr( "SQUIDsMemoryUsage", w ) && w.IsNumber( smu );
+	dprintf( D_FULLDEBUG, "%s UptimeSQUIDsMemoryPeakUsage = %.2f SQUIDsMemoryUsage = %.2f\n",
+		r_id_str, usmpu, smu );
+#endif
 
 	// We don't filter out the (raw) Uptime* metrics here, because the
 	// starter needs them to compute the (per-job) *Usage metrics.  Instead,

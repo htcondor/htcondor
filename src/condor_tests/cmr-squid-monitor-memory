@@ -1,0 +1,36 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use POSIX;
+
+sub printFirstLine {
+	my( $index ) = @_;
+	print( 'SlotMergeConstraint = StringListMember( "SQUID' . $index . '", AssignedSQUIDs )' . "\n" );
+}
+
+sub printLastLine {
+	my( $index ) = @_;
+	print( "- SQUIDsSlot${index}\n" );
+}
+
+sub printUsageLine {
+	my( $index, $usage ) = @_;
+	print( "UptimeSQUIDsMemoryPeakUsage = ${usage}\n" );
+}
+
+my $positionInSequence = floor( (time() % 60) / 10 );
+my %sequences = (	0 => [ 5, 5, 9, 1, 4, 4 ],
+					1 => [ 4, 4, 9, 1, 5, 5 ],
+					2 => [ 5, 5, 1, 9, 4, 4 ],
+					3 => [ 4, 4, 1, 9, 5, 5 ]
+				);
+
+for( my $i = 0; $i < 4; ++$i ) {
+	printFirstLine( $i );
+	printUsageLine( $i, (($i + 1) * 10) * $sequences{ $i }->[ $positionInSequence ] );
+	printLastLine( $i );
+}
+
+exit( 0 );

@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -130,24 +130,60 @@ StartdCronJobParams::isMetric( const std::string & attributeName ) const {
 }
 
 bool
-StartdCronJobParams::getResourceNameFromAttributeName( const std::string & attributeName, std::string & resourceName ) {
-	// if( metrics.find( attributeName ) == metrics.end() ) { return false; }
+splitAttributeName( const std::string & attributeName,
+					      std::string & resourceName,
+					      std::string & suffix ) {
 	if( attributeName.find( "Uptime" ) != 0 ) { return false; }
-
 	std::string rName = attributeName.substr( 6 );
-	size_t eORN = rName.rfind( "Seconds" );
+
+	size_t eORN;
+	std::string suffixCandidate;
+
+	suffixCandidate = "Seconds";
+	eORN = rName.rfind( suffixCandidate );
 	if( eORN != std::string::npos ) {
-		if( eORN + 7 != rName.length() ) { return false; }
+		if( eORN + suffixCandidate.length() != rName.length() ) { return false; }
 		resourceName = rName.substr( 0, eORN );
+		suffix = suffixCandidate;
 		return true;
-	} else {
-		eORN = rName.rfind( "PeakUsage" );
-		if( eORN != std::string::npos ) {
-			if( eORN + 9 != rName.length() ) { return false; }
-			resourceName = rName.substr( 0, eORN );
-			return true;
-		} else {
-			return false;
-		}
 	}
+
+	suffixCandidate = "PeakUsage";
+	eORN = rName.rfind( "PeakUsage" );
+
+	if( eORN != std::string::npos ) {
+		if( eORN + suffixCandidate.length() != rName.length() ) { return false; }
+		resourceName = rName.substr( 0, eORN );
+		suffix = suffixCandidate;
+		return true;
+	}
+
+	return false;
+}
+
+bool
+StartdCronJobParams::getResourceNameFromAttributeName( const std::string & attributeName, std::string & resourceName ) {
+	std::string suffix;
+	if( splitAttributeName( attributeName, resourceName, suffix ) ) {
+		return true;
+	}
+	return false;
+}
+
+bool
+StartdCronJobParams::attributeIsSumMetric( const std::string & attributeName ) {
+	std::string resourceName, suffix;
+	if( splitAttributeName( attributeName, resourceName, suffix ) ) {
+		if( suffix == "Seconds" ) { return true; }
+	}
+	return false;
+}
+
+bool
+StartdCronJobParams::attributeIsPeakMetric( const std::string & attributeName ) {
+	std::string resourceName, suffix;
+	if( splitAttributeName( attributeName, resourceName, suffix ) ) {
+		if( suffix == "PeakUsage" ) { return true; }
+	}
+	return false;
 }

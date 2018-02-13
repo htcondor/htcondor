@@ -2411,26 +2411,21 @@ Resource::publish( ClassAd* cap, amask_t mask )
 #endif
 
 		if( updateAdFile ) {
-			// For now, instead of poking around for all the metric names
-			// (or worse, reparsing them from the config file), just assume
-			// that every pair of StartOfJobX and X attributes should result
-			// in an XUsage attribute.  Otherwise, for each defined metric,
-			// replace the corresponding StartOfJob* attribute with our
-			// computation of the corresponding *Usage attribute.
 			std::vector< std::string > deleteList;
 			for( auto i = cap->begin(); i != cap->end(); ++i ) {
 				const std::string & name = i->first;
-				if( name.find( "StartOfJob" ) != 0 ) { continue; }
 
-				std::string usageName;
-				std::string uptimeName = name.substr( 10 );
-				if(! StartdCronJobParams::getResourceNameFromAttributeName( uptimeName, usageName )) { continue; }
-				usageName += "Usage";
+				// Compute the SUM metrics' *Usage values.  The PEAK metrics
+				// have already inserted their *Usage values into the ad.
+				if( name.find( "StartOfJob" ) == 0 ) {
+					std::string usageName;
+					std::string uptimeName = name.substr( 10 );
+					if(! StartdCronJobParams::getResourceNameFromAttributeName( uptimeName, usageName )) { continue; }
+					usageName += "Usage";
 
-				std::string lastUpdateName = "LastUpdate" + uptimeName;
-				std::string firstUpdateName = "FirstUpdate" + uptimeName;
+					std::string lastUpdateName = "LastUpdate" + uptimeName;
+					std::string firstUpdateName = "FirstUpdate" + uptimeName;
 
-				if( name.rfind( "Seconds" ) == name.length() - 7 ) {
 					// Note that we calculate the usage rate only for full
 					// sample intervals.  This eliminates the imprecision of
 					// the sample interval in which the job started; since we
@@ -2446,20 +2441,15 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					classad::Value v;
 					if(! cap->EvaluateExpr( usageExpr, v )) { continue; }
 					double usageValue;
-					if(! v.IsRealValue( usageValue )) { continue; }
+					if(! v.IsNumber( usageValue )) { continue; }
 					cap->InsertAttr( usageName, usageValue );
-				} else if( name.rfind( "PeakUsage" ) == name.length() - 9 ) {
-					cap->CopyAttribute( usageName.c_str(), name.c_str() );
-				} else {
-					continue;
+
+					deleteList.push_back( uptimeName );
+					deleteList.push_back( name );
+					deleteList.push_back( lastUpdateName );
+					deleteList.push_back( firstUpdateName );
 				}
-
-				deleteList.push_back( uptimeName );
-				deleteList.push_back( name );
-				deleteList.push_back( lastUpdateName );
-				deleteList.push_back( firstUpdateName );
 			}
-
 
 			// This is inefficient, but not inefficient enough to rewrite
 			// fPrintAd() with a blacklist.
