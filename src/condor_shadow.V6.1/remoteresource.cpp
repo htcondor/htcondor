@@ -2751,7 +2751,7 @@ RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 	{
 		auto i = m_delayed_update_prefixes.begin();
 		for( ; i !=  m_delayed_update_prefixes.end(); ++i ) {
-			if( name.find( * i ) == 0 ) {
+			if( starts_with_ignore_case( name, * i ) ) {
 				response = true;
 				break;
 			}
