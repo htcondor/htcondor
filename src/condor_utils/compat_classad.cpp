@@ -2547,7 +2547,7 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				 !ClassAdAttributeIsPrivate( itr->first ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
 				output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
@@ -2561,7 +2561,7 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			 !ClassAdAttributeIsPrivate( itr->first ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
 			output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
@@ -2596,7 +2596,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			 !ClassAdAttributeIsPrivate( itr->first ) ) {
 			attrs.insert(itr->first);
 		}
 	}
@@ -2611,7 +2611,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				 !ClassAdAttributeIsPrivate( itr->first ) ) {
 				attrs.insert(itr->first);
 			}
 		}

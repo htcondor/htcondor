@@ -976,7 +976,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			std::string const &attr = itor->first;
 
 			if(!exclude_private ||
-				!compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
+				!compat_classad::ClassAdAttributeIsPrivate(attr))
 			{
 				if(excludeTypes)
 				{
