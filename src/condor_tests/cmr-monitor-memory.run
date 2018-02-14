@@ -1,5 +1,4 @@
 #!/usr/bin/env perl
-#testreq: personal
 
 ##**************************************************************
 ##
@@ -24,8 +23,8 @@ use strict;
 use warnings;
 
 #
-# This is a basic test to determine if Custom Machine Resource monitors are
-# working properly.
+# This is a basic test to determine if the PEAK metrics of Custom Machine
+# Resource monitors are working properly.
 #
 
 use CondorTest;
@@ -39,35 +38,29 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 NUM_CPUS = 16
 
 MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
+use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor, SUM:SQUIDs, PEAK:SQUIDsMemory )
 
-STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) SQUIDs_MONITOR
-STARTD_CRON_SQUIDs_MONITOR_MODE = periodic
-STARTD_CRON_SQUIDs_MONITOR_PERIOD = 10
-STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE = $(TEST_DIR)/cmr-squid-monitor
-STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs, PEAK:SQUIDsMemory
-
-SCHEDD_CLUSTER_INITIAL_VALUE = 1000
-
-UPDATE_INTERVAL = 20
-STARTER_UPDATE_INTERVAL = 20
-SHADOW_QUEUE_UPDATE_INTERVAL = 20
+SCHEDD_CLUSTER_INITIAL_VALUE = 3000
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
-my $testName = 'cmr_monitor_basic';
-my $testDescription = 'Custom Machine Resources - Monitor Test Basic';
+my $testName = 'cmr_monitor_memory';
+my $testDescription = 'Custom Machine Resources - Monitor Test Memory';
 
 #
 # Verify the configuration before running the test.
 #
-CustomMachineResource::TestSlotAndSQUIDsCount( 16, $testName );
+CustomMachineResource::TestSlotAndSQUIDsCount( 16 );
 
 #
-# Verify that the monitor's report is being read correctly.
+# We don't verify that the monitor's report is being read correctly, because
+# the cmr-monitor-basic* tests already have; that code doesn't know anything
+# about metric types, so it can't misbehave on that basis.  Additionally, it
+# will quickly become clear, given the usage patterns produce by
+# cmr-squid-monitor-memory, if there are any problems reading the values.
 #
-CustomMachineResource::TestUptimeSQUIDsSeconds( $testName );
 
 #
-# Verify that we're computing the usage correctly.
+# Verify that we're computing the peak usage correctly.
 #
-exit( CustomMachineResource::TestSQUIDsUsage( $testName ) );
+exit( CustomMachineResource::TestSQUIDsMemoryUsage( $testName ) );

@@ -152,32 +152,45 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 				to->InsertAttr( name, newValue );
 			}
 
-			// Per-job attributes are aggregated differently, because they're
-			// computed differently (see Resource::publish()).  Per-job SUM
-			// metrics use the global sum (that we just computed) and the
-			// global sum as it was at the start of the job, which is the
-			// corresponding StartOfJob* attribute.  The latter we need to
-			// recompute every time because the slot ads are regenerated from
-			// scratch every time.
+			//
+			// In addition to aggregating the (global) Uptime* statistics,
+			// we need to aggregate the per-job statistics for SUM and PEAK
+			// metrics, which call their per-job attributes different things
+			// because they're computed differently.
+			//
+			// Per-job SUM metrics are computed when we write the slot's
+			// update ad (in Resource::Publish()), using the aggregate of the
+			// StartOfJob* attributes (which record the metric as of the job's
+			// first sample).  Because the slot ads are regenerated from
+			// scrach every time, we need to recompute the StartOfJob*
+			// aggregates every time.
+			//
+			// Per-job PEAK metrics are computed each time we receive a new
+			// sample (in AggregateFrom()), but for the same reason as for
+			// SUM metrics, we have to recompute the aggregate PEAK of each
+			// resource instance again every time.
+			//
+
+			std::string perJobAttributeName;
 			if( StartdCronJobParams::attributeIsSumMetric( name ) ) {
-				std::string sojName = "StartOfJob" + name;
-				ExprTree * e = to->Lookup( sojName );
-				if( e == NULL ) {
-					to->CopyAttribute( sojName.c_str(), sojName.c_str(), from );
-				} else {
-					e->Evaluate( v );
-					if( v.IsNumber( oldValue ) &&
-					  from->EvaluateAttrNumber( sojName, newValue ) ) {
-						to->InsertAttr( sojName, metric( oldValue, newValue ) );
-					}
-				}
+				perJobAttributeName = "StartOfJob" + name;
 			} else if( StartdCronJobParams::attributeIsPeakMetric( name ) ) {
-				// Per-job PEAK metrics, have to be computed every time a
-				// new value arrives, that is, in AggregateFrom().  When
-				// we're computing an aggregate-of-aggregates in
-				// AggregateInto(), FIXME.
+				if(! StartdCronJobParams::getResourceNameFromAttributeName( name, perJobAttributeName )) { continue; }
+				perJobAttributeName += "Usage";
 			} else {
 				dprintf( D_ALWAYS, "Found metric '%s' of unknown type.  Ignoring, but you probably shouldn't.\n", name.c_str() );
+				continue;
+			}
+
+			expr = to->Lookup( perJobAttributeName );
+			if( expr == NULL ) {
+				to->CopyAttribute( perJobAttributeName.c_str(), perJobAttributeName.c_str(), from );
+			} else {
+				classad::Value v;
+				if( v.IsNumber( oldValue ) &&
+				  from->EvaluateAttrNumber( perJobAttributeName, newValue ) ) {
+					to->InsertAttr( perJobAttributeName, metric( oldValue, newValue ) );
+				}
 			}
 
 			// Record for each resource when we last updated it.
@@ -391,7 +404,7 @@ StartdNamedClassAd::unset_monitor() {
 			from->Delete( usageName );
 
 			std::string lastUsageUpdateName;
-			formatstr( lastUsageUpdateName, "LastUpdate%s", usagename.c_str() );
+			formatstr( lastUsageUpdateName, "LastUpdate%s", usageName.c_str() );
 			from->Delete( lastUsageUpdateName );
 		}
 	}

@@ -4,6 +4,9 @@ package CustomMachineResource;
 # our @ISA = qw( Exporter );
 # our @EXPORT = qw( ... );
 
+use strict;
+use warnings;
+
 use CondorTest;
 
 #
@@ -21,7 +24,7 @@ our %squidIncrements = (
 # Verify that the configuration resulted in what we expect.
 #
 sub TestSlotAndSQUIDsCount {
-	my( $expectedCount ) = @_;
+	my( $expectedCount, $testName ) = @_;
 
 	my $ads = parseMachineAds( "Name", "AssignedSQUIDs" );
 
@@ -54,6 +57,8 @@ sub TestSlotAndSQUIDsCount {
 # Verify that the individual UptimeSQUIDsSeconds are being reported properly.
 #
 sub TestUptimeSQUIDsSeconds {
+	my( $testName ) = @_;
+
 	my $directAds = parseDirectMachineAds( "AssignedSQUIDs", "UptimeSQUIDsSeconds" );
 
 	my $multiplier = undef;
@@ -415,6 +420,113 @@ sub parseHistoryFile {
 	my @lines = ();
 	my $result = CondorTest::runCondorTool( "condor_history ${jobID} -af ${attributeList}", \@lines, 2, { emit_output => 0 } );
 	return parseAutoFormatLines( \@lines, \@attributes );
+}
+
+# -----------------------------------------------------------------------------
+
+#
+# This hash is from cmr-squid-monitor-memory and has to be changed when it does.
+#
+my %squidSequences = (
+	"SQUID0" => [ 51, 51, 91, 11, 41, 41 ],
+	"SQUID1" => [ 42, 42, 92, 12, 52, 52 ],
+	"SQUID2" => [ 53, 53, 13, 93, 43, 43 ],
+	"SQUID3" => [ 44, 44, 14, 94, 54, 54 ]
+);
+
+sub sequencesMatch {
+	my( $s, $o, $p ) = @_;
+	if( scalar( @{$s} ) != scalar( @{$p} ) ) { return 0; }
+
+	for( my $i = 0; $i < scalar( @{$s} ); ++$i ) {
+		# print( '$s->[' . $i . '] != $p->[' . ($i + $o) % scalar( @{$p} ) . ']' . "\n" );
+		if( $s->[$i] != $p->[ ($i + $o) % scalar( @{$p} ) ] ) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+sub max {
+	my( $a, $b ) = @_;
+	if( $a > $b ) { return $a; } else { return $b; }
+}
+
+sub peaksMatchValues {
+	my( $peaks, $offset, $values ) = @_;
+
+	my $expectedPeaks->[0] = $values->[0];
+	for( my $i = 1; $i < scalar( @{$values} ); ++$i ) {
+		$expectedPeaks->[$i] = max( $expectedPeaks->[$i - 1], $values->[$i] );
+	}
+}
+
+sub TestSQUIDsMemoryUsage {
+	my( $testName ) = @_;
+
+	# The user log doesn't report SQUIDs*Usage, only SQUIDsUsage.
+	# Condor::RegisterUsage( ... );
+	CondorTest::RegisterExitedAbnormal( $testName, $abnormal );
+	CondorTest::RegisterAbort( $testName, $aborted );
+	CondorTest::RegisterHold( $testName, $held );
+	CondorTest::RegisterExecute( $testName, $executed );
+	CondorTest::RegisterSubmit( $testName, $submitted );
+	CondorTest::RegisterExitedSuccess( $testName, $success );
+	CondorTest::RegisterEvictedWithoutCheckpoint( $testName, $on_evictedwithoutcheckpoint );
+	CondorTest::RegisterExitedFailure( $testName, $failure );
+
+	my $clusterID;
+	my $setClusterID = sub {
+		my( $cID ) = @_;
+		$clusterID = $cID;
+	};
+
+	my $submitFileName = "cmr-monitor-memory-ad.cmd";
+	if( CondorTest::RunTest( $testName, $submitFileName, 0, $setClusterID ) ) {
+		my $lineCount = 0;
+		my $outputFileBaseName = "cmr-monitor-memory-ad.${clusterID}.";
+		for( my $i = 0; $i < 4; ++$i ) {
+			my $outputFileName = $outputFileBaseName . $i . ".out";
+
+			open( my $fh, '<', $outputFileName ) or
+				die( "Error: ${testName}: could not open '${outputFileName}'\n" );
+
+			my $sequence = [];
+			my $firstSQUID = undef;
+			while( my $line = <$fh> ) {
+				++$lineCount;
+				my( $SQUID, $value ) = split( ' ', $line );
+
+				if(! defined( $firstSQUID )) {
+					$firstSQUID = $SQUID;
+				} else {
+					if( $SQUID ne $firstSQUID ) {
+						die( "SQUIDs switched mid-job, aborting.\n" );
+					}
+				}
+
+				push( @{$sequence}, $value );
+			}
+
+			my $properSequence = $squidSequences{ $firstSQUID };
+			my $offset = 0;
+			for( ; $properSequence->[$offset] != $sequence->[0]; ++$offset ) { ; }
+			if( peaksMatchValues( $sequence, $offset, $properSequence ) ) {
+				RegisterResult( 1, check_name => $firstSQUID . "-sequence", test_name => $testName );
+			} elsif( $offset == 0 && peaksMatchValues( $sequence, $offset + 1, $properSequence ) ) {
+				RegisterResult( 1, check_name => $firstSQUID . "-sequence", test_name => $testName );
+			} elsif( $offset == 4 && peaksMatchValues( $sequence, $offset + 1, $properSequence ) ) {
+				RegisterResult( 1, check_name => $firstSQUID . "-sequence", test_name => $testName );
+			} else {
+				RegisterResult( 0, check_name => $firstSQUID . "-sequence", test_name => $testName );
+			}
+
+			close( $fh );
+		}
+	} else {
+		die( "Error: $testName: CondorTest::RunTest(${submitFileName}) failed\n" );
+	}
 }
 
 1;

@@ -22,7 +22,6 @@
 
 use strict;
 use warnings;
-use FindBin;
 
 #
 # This is a basic test to determine if Custom Machine Resource monitors are
@@ -35,8 +34,6 @@ use CondorUtils;
 use CondorPersonal;
 
 use CustomMachineResource;
-
-my $bindir = $FindBin::Bin;
 
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
