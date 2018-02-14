@@ -224,8 +224,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			std::string fileName = Starter->GetWorkingDir();
 			fileName += "/docker_stderror";
 			int fd = open(fileName.c_str(), O_RDONLY, 0000);
-			if (fd > 0) {
-				int r = read(fd, buf, 512);
+			if (fd >= 0) {
+				int r = read(fd, buf, 511);
 				if (r < 0) {
 					dprintf(D_ALWAYS, "Cannot read docker error file on docker create container. Errno %d\n", errno);
 				} else {
