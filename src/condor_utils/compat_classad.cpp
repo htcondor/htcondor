@@ -3312,6 +3312,39 @@ _GetReferences(classad::ExprTree *tree,
 
 // the freestanding functions 
 
+void TrimReferenceNames( classad::References &ref_set, bool external )
+{
+	classad::References new_set;
+	classad::References::iterator it;
+	for ( it = ref_set.begin(); it != ref_set.end(); it++ ) {
+		const char *name = it->c_str();
+		if ( external ) {
+			if ( strncasecmp( name, "target.", 7 ) == 0 ) {
+				name += 7;
+			} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
+				name += 6;
+			} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
+				name += 6;
+			} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
+				name += 7;
+			} else if ( name[0] == '.' ) {
+				name += 1;
+			}
+		} else {
+			if ( name[0] == '.' ) {
+				name += 1;
+			}
+		}
+		const char *end = strchr( name, '.' );
+		if ( end ) {
+			new_set.insert( std::string( name, end-name ) );
+		} else {
+			new_set.insert( name );
+		}
+	}
+	ref_set.swap( new_set );
+}
+
 classad::ExprTree *
 AddExplicitTargetRefs(classad::ExprTree *tree,
 						std::set < std::string, classad::CaseIgnLTStr > & definedAttrs) 
