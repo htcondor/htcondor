@@ -699,6 +699,20 @@ bool SplitLongFormAttrValue(const char * line, std::string &attr, const char* &r
 	// returns true on successful insertion
 bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_cache);
 
+bool GetReferences( const char* attr, const classad::ClassAd &ad,
+                    classad::References *internal_refs,
+                    classad::References *external_refs );
+
+bool GetExprReferences( const char* expr, const classad::ClassAd &ad,
+                        classad::References *internal_refs,
+                        classad::References *external_refs );
+
+bool GetExprReferences( const classad::ExprTree * expr, const classad::ClassAd &ad,
+                        classad::References *internal_refs,
+                        classad::References *external_refs );
+
+void TrimReferenceNames( classad::References &ref_set, bool external = false );
+
 
 typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;

@@ -2752,6 +2752,10 @@ type=string
 description=Constrain Negotiator Query for Startd Ads
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_JOB_CONSTRAINT]
+default=
+type=string
+
 [GROUP_AUTOREGROUP]
 default=false
 type=bool
