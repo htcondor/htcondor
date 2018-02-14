@@ -7144,6 +7144,7 @@ Scheduler::negotiate(int command, Stream* s)
 	int consider_jobprio_max = INT_MAX;
 	ClassAd negotiate_ad;
 	MyString submitter_tag;
+	ExprTree *neg_constraint = NULL;
 	s->decode();
 	if( command == NEGOTIATE ) {
 		if( !getClassAd( s, negotiate_ad ) ) {
@@ -7169,6 +7170,7 @@ Scheduler::negotiate(int command, Stream* s)
 			// jobprio_min and jobprio_max are optional
 		negotiate_ad.LookupInteger("JOBPRIO_MIN",consider_jobprio_min);
 		negotiate_ad.LookupInteger("JOBPRIO_MAX",consider_jobprio_max);
+		neg_constraint = negotiate_ad.Lookup(ATTR_NEGOTIATOR_JOB_CONSTRAINT);
 	}
 	else {
 			// old NEGOTIATE_WITH_SIGATTRS protocol
@@ -7344,6 +7346,7 @@ Scheduler::negotiate(int command, Stream* s)
 	ResourceRequestList *resource_requests = new ResourceRequestList;
 	ResourceRequestCluster *cluster = NULL;
 	int next_cluster = 0;
+	int skipped_auto_cluster = -1;
 
 	for(job_index = 0; job_index < N_PrioRecs && !skip_negotiation; job_index++) {
 		prio_rec *prec = &PrioRec[job_index];
@@ -7372,8 +7375,19 @@ Scheduler::negotiate(int command, Stream* s)
 			auto_cluster_id = prec->auto_cluster_id;
 		}
 
+		if ( auto_cluster_id == skipped_auto_cluster ) {
+			continue;
+		}
+
 		if( !cluster || cluster->getAutoClusterId() != auto_cluster_id )
 		{
+			if ( neg_constraint ) {
+				JobQueueJob* job_ad = GetJobAd( prec->id );
+				if ( job_ad == NULL || EvalBool( job_ad, neg_constraint ) == false ) {
+					skipped_auto_cluster = auto_cluster_id;
+					continue;
+				}
+			}
 			cluster = new ResourceRequestCluster( auto_cluster_id );
 			resource_requests->push_back( cluster );
 		}

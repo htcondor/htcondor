@@ -874,6 +874,9 @@ reinitialize ()
         free (tmp);
 	}
 
+	m_JobConstraintStr.clear();
+	param(m_JobConstraintStr, "NEGOTIATOR_JOB_CONSTRAINT");
+
 	num_negotiation_cycle_stats = param_integer("NEGOTIATION_CYCLE_STATS_LENGTH",3,0,MAX_NEGOTIATION_CYCLE_STATS);
 	ASSERT( num_negotiation_cycle_stats <= MAX_NEGOTIATION_CYCLE_STATS );
 
@@ -1253,6 +1256,11 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 	if (sample_startd_ad) {
 		delete sample_startd_ad;
 		sample_startd_ad = NULL;
+	}
+	if ( !m_JobConstraintStr.empty() ) {
+		ClassAd empty_ad;
+		empty_ad.GetExprReferences(m_JobConstraintStr.c_str(), NULL,
+		                           &external_references);
 	}
 		// Always get rid of the follow attrs:
 		//    CurrentTime - for obvious reasons
@@ -4346,6 +4354,11 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			dprintf (D_ALWAYS | D_MATCH,
 				"    USE_GLOBAL_JOB_PRIOS limit to jobprios between %d and %d\n",
 				jmin, jmax);
+		}
+		// Tell the schedd we're only interested in some of its jobs
+		if ( !m_JobConstraintStr.empty() ) {
+			negotiate_ad.AssignExpr(ATTR_NEGOTIATOR_JOB_CONSTRAINT,
+			                        m_JobConstraintStr.c_str());
 		}
 		// Tell the schedd what sigificant attributes we found in the startd ads
 		negotiate_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, job_attr_references ? job_attr_references : "");
