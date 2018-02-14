@@ -1074,7 +1074,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 		if ( ! param_boolean("STARTD_SEND_READY_AFTER_FIRST_UPDATE", true)) return res;
 
 		// send a DC_SET_READY message to the master to indicate the STARTD is ready to go
-		std::string master_sinful(daemonCore->InfoCommandSinfulString(-2));
+		MyString master_sinful(daemonCore->InfoCommandSinfulString(-2));
 		if ( ! master_sinful.empty()) {
 			dprintf( D_ALWAYS, "Sending DC_SET_READY message to master %s\n", master_sinful.c_str());
 			ClassAd readyAd;
