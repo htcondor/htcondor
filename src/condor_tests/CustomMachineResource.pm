@@ -434,13 +434,16 @@ my %squidSequences = (
 	"SQUID3" => [ 44, 44, 14, 94, 54, 54 ]
 );
 
-sub sequencesMatch {
-	my( $s, $o, $p ) = @_;
-	if( scalar( @{$s} ) != scalar( @{$p} ) ) { return 0; }
+sub peaksAreAsExpected {
+	my( $peaks, $expected ) = @_;
 
-	for( my $i = 0; $i < scalar( @{$s} ); ++$i ) {
-		# print( '$s->[' . $i . '] != $p->[' . ($i + $o) % scalar( @{$p} ) . ']' . "\n" );
-		if( $s->[$i] != $p->[ ($i + $o) % scalar( @{$p} ) ] ) {
+	if( scalar( @{$peaks} ) < scalar( @{$expected} ) ) {
+		print( "Too few peaks (" . scalar( @{$peaks} ) . ") for number of expected values (" . scalar( @{$expected} ) . ").\n" );
+		return 0;
+	}
+
+	for( my $i = 0; $i < scalar( @{$expected} ); ++$i ) {
+		if( $peaks->[$i] != $expected->[$i] ) {
 			return 0;
 		}
 	}
@@ -456,10 +459,25 @@ sub max {
 sub peaksMatchValues {
 	my( $peaks, $offset, $values ) = @_;
 
-	my $expectedPeaks->[0] = $values->[0];
-	for( my $i = 1; $i < scalar( @{$values} ); ++$i ) {
-		$expectedPeaks->[$i] = max( $expectedPeaks->[$i - 1], $values->[$i] );
+	if( scalar( @{$peaks} ) < scalar( @{$values} ) ) {
+		print( "Too few peaks (" . scalar( @{$peaks} ) . ") for number of given values (" . scalar( @{$values} ) . ").\n" );
+		return 0;
 	}
+
+	my $size = scalar( @{$values} );
+	my $expectedPeaks->[ 0 ] = $values->[$offset];
+	for( my $i = 1; $i < $size; ++$i ) {
+		$expectedPeaks->[ $i ] = max(
+			$expectedPeaks->[ $i - 1 ],
+			$values->[ ($offset + $i) % $size ]
+		);
+	}
+
+	print( "Found peaks: " . join( " ", @{$peaks} ) . "\n" );
+	print( "Found values (with offset $offset): " . join( " ", @{$values} ) . "\n" );
+	print( "Computed expected peaks: " . join( " ", @{$expectedPeaks} ) . "\n" );
+
+	return peaksAreAsExpected( $peaks, $expectedPeaks );
 }
 
 sub TestSQUIDsMemoryUsage {
@@ -497,6 +515,7 @@ sub TestSQUIDsMemoryUsage {
 			while( my $line = <$fh> ) {
 				++$lineCount;
 				my( $SQUID, $value ) = split( ' ', $line );
+				if( $value eq "undefined" ) { next; }
 
 				if(! defined( $firstSQUID )) {
 					$firstSQUID = $SQUID;

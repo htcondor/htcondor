@@ -352,8 +352,13 @@ StartdNamedClassAd::reset_monitor() {
 				std::string usageName;
 				if(! StartdCronJobParams::getResourceNameFromAttributeName( name, usageName )) { continue; }
 				usageName += "Usage";
-				// dprintf( D_FULLDEBUG, "StartdNamedClassAd::reset_monitor(): deleting %s\n", usageName.c_str() );
-				from->Delete( usageName );
+				// If we just delete usageName, when Resource::refresh_ad()
+				// (probably wrongly) reuses its ClassAd member variable,
+				// the value from the last time we updated the slot ad will
+				// persist.  Instead, make sure that the persistent resource
+				// instance ad we're modifying here will stomp on tha value
+				// by instead setting usageName to undefined explicitly.
+				from->AssignExpr( usageName.c_str(), "undefined" );
 			} else {
 				dprintf( D_ALWAYS, "Found metric '%s' of unknown type.  Ignoring, but you probably shouldn't.\n", name.c_str() );
 			}
