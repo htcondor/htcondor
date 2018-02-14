@@ -3310,8 +3310,87 @@ _GetReferences(classad::ExprTree *tree,
 }
 
 
-
 // the freestanding functions 
+
+bool
+GetReferences( const char* attr, const classad::ClassAd &ad,
+               classad::References *internal_refs,
+               classad::References *external_refs )
+{
+	ExprTree *tree;
+
+	tree = ad.Lookup( attr );
+	if ( tree != NULL ) {
+		return GetExprReferences( tree, ad, internal_refs, external_refs );
+	} else {
+		return false;
+	}
+}
+
+bool
+GetExprReferences( const char* expr, const classad::ClassAd &ad,
+                   classad::References *internal_refs,
+                   classad::References *external_refs )
+{
+	bool rv = false;
+	classad::ClassAdParser par;
+	classad::ExprTree *tree = NULL;
+	par.SetOldClassAd( true );
+
+	if ( !par.ParseExpression( expr, tree, true ) ) {
+		return false;
+	}
+
+	rv = GetExprReferences( tree, ad, internal_refs, external_refs );
+
+	delete tree;
+
+	return rv;
+}
+
+bool
+GetExprReferences( const classad::ExprTree *tree, const classad::ClassAd &ad,
+                   classad::References *internal_refs,
+                   classad::References *external_refs )
+{
+	if ( tree == NULL ) {
+		return false;
+	}
+
+	classad::References ext_refs_set;
+	classad::References int_refs_set;
+	classad::References::iterator set_itr;
+
+	bool ok = true;
+	if( external_refs && !ad.GetExternalReferences(tree, ext_refs_set, true) ) {
+		ok = false;
+	}
+	if( internal_refs && !ad.GetInternalReferences(tree, int_refs_set, true) ) {
+		ok = false;
+	}
+	if( !ok ) {
+		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
+		dPrintAd(D_FULLDEBUG, ad);
+		dprintf(D_FULLDEBUG,"End of offending ad.\n");
+		return false;
+	}
+
+		// We first process the references and save results in
+		// final_*_refs_set.  The processing may hit duplicates that
+		// are referred to xand then copy from there to the caller's
+		// StringLists.  This scales better than trying to remove
+		// duplicates while inserting into the StringList.
+
+	if ( external_refs ) {
+		TrimReferenceNames( ext_refs_set, true );
+		external_refs->insert( ext_refs_set.begin(), ext_refs_set.end() );
+	}
+	if ( internal_refs ) {
+		TrimReferenceNames( int_refs_set, false );
+		internal_refs->insert( int_refs_set.begin(), int_refs_set.end() );
+	}
+	return true;
+}
 
 void TrimReferenceNames( classad::References &ref_set, bool external )
 {
