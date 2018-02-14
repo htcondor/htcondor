@@ -3233,7 +3233,8 @@ static void AppendReference( StringList &reflist, char const *name )
 				// but inserting an empty attribute name would make it
 				// harder to understand what is going on, so it seems
 				// better to insert 'one'.
-			end = strchr(end,'.');
+			name++;
+			end = strchr(name,'.');
 		}
 
 		buf.append(name,end-name);
