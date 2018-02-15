@@ -71,6 +71,8 @@ static bool test_get_references_complex_true_internal(void);
 static bool test_get_references_complex_true_external(void);
 static bool test_get_references_complex_false_internal(void);
 static bool test_get_references_complex_false_external(void);
+static bool test_reference_name_trimming_internal(void);
+static bool test_reference_name_trimming_external(void);
 static bool test_next_dirty_expr_clear(void);
 static bool test_next_dirty_expr_insert(void);
 static bool test_next_dirty_expr_insert_two_calls(void);
@@ -340,6 +342,8 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_get_references_complex_true_external);
 	driver.register_function(test_get_references_complex_false_internal);
 	driver.register_function(test_get_references_complex_false_external);
+	driver.register_function(test_reference_name_trimming_internal);
+	driver.register_function(test_reference_name_trimming_external);
 	driver.register_function(test_next_dirty_expr_clear);
 	driver.register_function(test_next_dirty_expr_insert);
 	driver.register_function(test_next_dirty_expr_insert_two_calls);
@@ -1396,20 +1400,20 @@ static bool test_expr_tree_to_string_big() {
 
 static bool test_get_references_simple_true_internal() {
 	emit_test("Test that GetReferences() puts the references of the classad "
-		"into the StringList for internal references.");
+		"into the set for internal references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && foo(X, XX)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	StringList* internal_references = new StringList;
-	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", internal_references, 
-		external_references);
+	classad::References internal_references;
+	classad::References external_references;
+	GetReferences("Requirements", classad, &internal_references,
+		&external_references);
 	bool expect = true;
-	bool result = internal_references->contains("Memory") &&
-		internal_references->contains("Disk");
+	bool result = internal_references.count("Memory") &&
+		internal_references.count("Disk");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "Requirements");
@@ -1421,30 +1425,28 @@ static bool test_get_references_simple_true_internal() {
 	emit_output_actual_header();
 	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
-		delete internal_references; delete external_references;
 		FAIL;
 	}
-	delete internal_references; delete external_references;
 	PASS;
 }
 
 static bool test_get_references_simple_true_external() {
 	emit_test("Test that GetReferences() puts the references of the classad "
-		"into the StringList for external references.");
+		"into the set for external references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && foo(X, XX)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	StringList* internal_references = new StringList;
-	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", internal_references, 
-		external_references);
+	classad::References internal_references;
+	classad::References external_references;
+	GetReferences("Requirements", classad, &internal_references,
+		&external_references);
 	bool expect = true;
-	bool result = external_references->contains("ImageSize") &&
-		external_references->contains("AvailableDisk") &&
-		external_references->contains("XX");
+	bool result = external_references.count("ImageSize") &&
+		external_references.count("AvailableDisk") &&
+		external_references.count("XX");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "Requirements");
@@ -1456,16 +1458,14 @@ static bool test_get_references_simple_true_external() {
 	emit_output_actual_header();
 	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
-		delete internal_references; delete external_references;
 		FAIL;
 	}
-	delete internal_references; delete external_references;
 	PASS;
 }
 
 static bool test_get_references_simple_false_internal() {
 	emit_test("Test that GetReferences() doesn't put the references of the "
-		"classad into the incorrect references StringList for internal "
+		"classad into the incorrect references set for internal "
 		"references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
@@ -1473,14 +1473,14 @@ static bool test_get_references_simple_false_internal() {
 		"Disk)) && foo(X, XX)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	StringList* internal_references = new StringList;
-	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", internal_references, 
-		external_references);
+	classad::References internal_references;
+	classad::References external_references;
+	GetReferences("Requirements", classad, &internal_references,
+		&external_references);
 	bool expect = false;
-	bool result = internal_references->contains("ImageSize") &&
-		internal_references->contains("AvailableDisk") &&
-		internal_references->contains("Linux");
+	bool result = internal_references.count("ImageSize") &&
+		internal_references.count("AvailableDisk") &&
+		internal_references.count("Linux");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "Requirements");
@@ -1492,16 +1492,14 @@ static bool test_get_references_simple_false_internal() {
 	emit_output_actual_header();
 	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
-		delete internal_references; delete external_references;
 		FAIL;
 	}
-	delete internal_references; delete external_references;
 	PASS;
 }
 
 static bool test_get_references_simple_false_external() {
 	emit_test("Test that GetReferences() doesn't put the references of the "
-		"classad into the incorrect references StringList for external "
+		"classad into the incorrect references set for external "
 		"references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
@@ -1509,15 +1507,15 @@ static bool test_get_references_simple_false_external() {
 		"Disk)) && foo(X, XX)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	StringList* internal_references = new StringList;
-	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", internal_references, 
-		external_references);
+	classad::References internal_references;
+	classad::References external_references;
+	GetReferences("Requirements", classad, &internal_references,
+		&external_references);
 	bool expect = false;
-	bool result = external_references->contains("Memory") &&
-		external_references->contains("Disk") &&
-		external_references->contains("Linux") &&
-		external_references->contains("X");
+	bool result = external_references.count("Memory") &&
+		external_references.count("Disk") &&
+		external_references.count("Linux") &&
+		external_references.count("X");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "Requirements");
@@ -1529,33 +1527,31 @@ static bool test_get_references_simple_false_external() {
 	emit_output_actual_header();
 	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
-		delete internal_references; delete external_references;
 		FAIL;
 	}
-	delete internal_references; delete external_references;
 	PASS;
 }
 
 static bool test_get_references_complex_true_internal() {
 	emit_test("Test that GetReferences() puts the references of the classad "
-		"into the StringList for internal references.");
+		"into the set for internal references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tFoo = Bar\n\t\tBar = True\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
 		"Disk)) && func(X, XX) && My.Foo";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	StringList* internal_references = new StringList;
-	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", internal_references, 
-		external_references);
+	classad::References internal_references;
+	classad::References external_references;
+	GetReferences("Requirements", classad, &internal_references,
+		&external_references);
 	bool expect = true;
-	bool result = internal_references->contains("Memory") &&
-		internal_references->contains("Disk") &&
-		internal_references->contains("Foo") &&
-		internal_references->contains("Bar") &&
-		internal_references->contains("X") &&
-		internal_references->number() == 5;
+	bool result = internal_references.count("Memory") &&
+		internal_references.count("Disk") &&
+		internal_references.count("Foo") &&
+		internal_references.count("Bar") &&
+		internal_references.count("X") &&
+		internal_references.size() == 5;
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "Requirements");
@@ -1567,31 +1563,29 @@ static bool test_get_references_complex_true_internal() {
 	emit_output_actual_header();
 	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
-		delete internal_references; delete external_references;
 		FAIL;
 	}
-	delete internal_references; delete external_references;
 	PASS;
 }
 
 static bool test_get_references_complex_true_external() {
 	emit_test("Test that GetReferences() puts the references of the classad "
-		"into the StringList for external references.");
+		"into the set for external references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux\n\t\t"
 		"Requirements = ((TARGET.ImageSize > Memory) && (AvailableDisk > Disk) "
 		"&& (TARGET.AvailableDisk > Memory) && (TARGET.ImageSize > Disk)) "
 	    "&& foo(TARGET.X, TARGET.XX)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	StringList* internal_references = new StringList;
-	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", internal_references, 
-		external_references);
+	classad::References internal_references;
+	classad::References external_references;
+	GetReferences("Requirements", classad, &internal_references,
+		&external_references);
 	bool expect = true;
-	bool result = external_references->contains("ImageSize") &&
-		external_references->contains("AvailableDisk") &&
-		external_references->contains("X") &&
-		external_references->contains("XX");
+	bool result = external_references.count("ImageSize") &&
+		external_references.count("AvailableDisk") &&
+		external_references.count("X") &&
+		external_references.count("XX");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "Requirements");
@@ -1603,16 +1597,14 @@ static bool test_get_references_complex_true_external() {
 	emit_output_actual_header();
 	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
-		delete internal_references; delete external_references;
 		FAIL;
 	}
-	delete internal_references; delete external_references;
 	PASS;
 }
 
 static bool test_get_references_complex_false_internal() {
 	emit_test("Test that GetReferences() doesn't put the references of the "
-		"classad into the incorrect references StringList for internal "
+		"classad into the incorrect references set for internal "
 		"references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
@@ -1620,14 +1612,14 @@ static bool test_get_references_complex_false_internal() {
 		"Disk)) && foo(X, XX)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	StringList* internal_references = new StringList;
-	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", internal_references, 
-		external_references);
+	classad::References internal_references;
+	classad::References external_references;
+	GetReferences("Requirements", classad, &internal_references,
+		&external_references);
 	bool expect = false;
-	bool result = internal_references->contains("ImageSize") &&
-		internal_references->contains("AvailableDisk") &&
-		internal_references->contains("Linux");
+	bool result = internal_references.count("ImageSize") &&
+		internal_references.count("AvailableDisk") &&
+		internal_references.count("Linux");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "Requirements");
@@ -1639,16 +1631,14 @@ static bool test_get_references_complex_false_internal() {
 	emit_output_actual_header();
 	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
-		delete internal_references; delete external_references;
 		FAIL;
 	}
-	delete internal_references; delete external_references;
 	PASS;
 }
 
 static bool test_get_references_complex_false_external() {
 	emit_test("Test that GetReferences() doesn't put the references of the "
-		"classad into the incorrect references StringList for external "
+		"classad into the incorrect references set for external "
 		"references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
 		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
@@ -1656,14 +1646,14 @@ static bool test_get_references_complex_false_external() {
 		"Disk)) && foo(X, XX)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	StringList* internal_references = new StringList;
-	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", internal_references, 
-		external_references);
+	classad::References internal_references;
+	classad::References external_references;
+	GetReferences("Requirements", classad, &internal_references,
+		&external_references);
 	bool expect = false;
-	bool result = external_references->contains("Memory") &&
-		external_references->contains("Disk") &&
-		external_references->contains("Linux");
+	bool result = external_references.count("Memory") &&
+		external_references.count("Disk") &&
+		external_references.count("Linux");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "Requirements");
@@ -1675,10 +1665,100 @@ static bool test_get_references_complex_false_external() {
 	emit_output_actual_header();
 	emit_param("Contains References", "%s", tfstr(result));
 	if(result != expect) {
-		delete internal_references; delete external_references;
 		FAIL;
 	}
-	delete internal_references; delete external_references;
+	PASS;
+}
+
+static bool test_reference_name_trimming_internal() {
+	emit_test("Test that TrimReferenceNames() edits the full names "
+		"of internal references properly.");
+	classad::References initial_set;
+	classad::References result_set;
+	classad::References expect_set;
+	initial_set.insert("Name");
+	initial_set.insert("TARGET.Rank");
+	initial_set.insert(".Disk");
+	initial_set.insert("Parent.Child");
+	initial_set.insert(".left.Outer.Inner");
+	result_set = initial_set;
+	expect_set.insert("Name");
+	expect_set.insert("TARGET");
+	expect_set.insert("Disk");
+	expect_set.insert("Parent");
+	expect_set.insert("left");
+	TrimReferenceNames(result_set, false);
+	std::string initial_str;
+	std::string expect_str;
+	std::string result_str;
+	classad::References::iterator it;
+	for ( it = initial_set.begin(); it != initial_set.end(); it++ ) {
+		initial_str += *it;
+		initial_str += " ";
+	}
+	for ( it = expect_set.begin(); it != expect_set.end(); it++ ) {
+		expect_str += *it;
+		expect_str += " ";
+	}
+	for ( it = result_set.begin(); it != result_set.end(); it++ ) {
+		result_str += *it;
+		result_str += " ";
+	}
+	emit_input_header();
+	emit_param("References", "%s", initial_str.c_str());
+	emit_output_expected_header();
+	emit_param("References", "%s", expect_str.c_str());
+	emit_output_actual_header();
+	emit_param("References", "%s", result_str.c_str());
+	if(result_set != expect_set) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_reference_name_trimming_external() {
+	emit_test("Test that TrimReferenceNames() edits the full names "
+		"of external references properly.");
+	classad::References initial_set;
+	classad::References result_set;
+	classad::References expect_set;
+	initial_set.insert("Name");
+	initial_set.insert("TARGET.Rank");
+	initial_set.insert(".Disk");
+	initial_set.insert("Parent.Child");
+	initial_set.insert(".left.Outer.Inner");
+	result_set = initial_set;
+	expect_set.insert("Name");
+	expect_set.insert("Rank");
+	expect_set.insert("Disk");
+	expect_set.insert("Parent");
+	expect_set.insert("Outer");
+	TrimReferenceNames(result_set, true);
+	std::string initial_str;
+	std::string expect_str;
+	std::string result_str;
+	classad::References::iterator it;
+	for ( it = initial_set.begin(); it != initial_set.end(); it++ ) {
+		initial_str += *it;
+		initial_str += " ";
+	}
+	for ( it = expect_set.begin(); it != expect_set.end(); it++ ) {
+		expect_str += *it;
+		expect_str += " ";
+	}
+	for ( it = result_set.begin(); it != result_set.end(); it++ ) {
+		result_str += *it;
+		result_str += " ";
+	}
+	emit_input_header();
+	emit_param("References", "%s", initial_str.c_str());
+	emit_output_expected_header();
+	emit_param("References", "%s", expect_str.c_str());
+	emit_output_actual_header();
+	emit_param("References", "%s", result_str.c_str());
+	if(result_set != expect_set) {
+		FAIL;
+	}
 	PASS;
 }
 

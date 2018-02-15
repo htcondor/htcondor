@@ -735,16 +735,6 @@ static int cleanup_globals(int exit_code)
 	return exit_code;
 }
 
-#if 0 // no longer used
-// append all variable references made by expression to references list
-static bool
-GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
-{
-	ClassAd ad;
-	return ad.GetExprReferences(expression,NULL,&references);
-}
-#endif
-
 static int
 parse_analyze_detail(const char * pch, int current_details)
 {

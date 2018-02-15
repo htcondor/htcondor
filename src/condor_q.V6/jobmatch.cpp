@@ -1280,7 +1280,7 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 		if (showJobAttrs) {
 			std::string attrib_values;
 			formatstr(attrib_values, "Job %s defines the following attributes:\n\n", request_id);
-			StringList trefs;
+			classad::References trefs;
 			AddReferencedAttribsToBuffer(request, ATTR_REQUIREMENTS, inline_attrs, trefs, rawReferencedValues, "    ", attrib_values);
 			return_buf += attrib_values;
 			attrib_values = "";
@@ -1523,7 +1523,7 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 			if (showSlotAttrs) {
 				std::string attrib_values = "";
 				attrib_values = "This slot defines the following attributes:\n\n";
-				StringList trefs;
+				classad::References trefs;
 				AddReferencedAttribsToBuffer(slot, ATTR_REQUIREMENTS, inline_attrs, trefs, rawReferencedValues, "    ", attrib_values);
 				strcat(return_buff, attrib_values.c_str());
 				attrib_values = "";

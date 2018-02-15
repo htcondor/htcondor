@@ -4307,10 +4307,10 @@ int SubmitHash::SetJobRetries()
 		bool valid_retry_until = (0 == ParseClassAdRvalExpr(retry_until.c_str(), tree));
 		if (valid_retry_until && tree) {
 			ClassAd tmp;
-			StringList refs;
-			tmp.GetExprReferences(retry_until.c_str(), &refs, &refs);
+			classad::References refs;
+			GetExprReferences(retry_until.c_str(), tmp, &refs, &refs);
 			long long futility_code;
-			if (refs.isEmpty() && string_is_long_param(retry_until.c_str(), futility_code)) {
+			if (refs.empty() && string_is_long_param(retry_until.c_str(), futility_code)) {
 				if (futility_code < INT_MIN || futility_code > INT_MAX) {
 					valid_retry_until = false;
 				} else {
@@ -5497,8 +5497,8 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 	}
 
 	ClassAd req_ad;
-	StringList job_refs;      // job attrs referenced by requirements
-	StringList machine_refs;  // machine attrs referenced by requirements
+	classad::References job_refs;      // job attrs referenced by requirements
+	classad::References machine_refs;  // machine attrs referenced by requirements
 
 		// Insert dummy values for attributes of the job to which we
 		// want to detect references.  Otherwise, unqualified references
@@ -5506,49 +5506,49 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
 	req_ad.Assign(ATTR_CKPT_ARCH,"");
 
-	req_ad.GetExprReferences(answer.Value(),&job_refs,&machine_refs);
+	GetExprReferences(answer.Value(),req_ad,&job_refs,&machine_refs);
 
-	checks_arch = IsDockerJob || machine_refs.contains_anycase( ATTR_ARCH );
-	checks_opsys = IsDockerJob || machine_refs.contains_anycase( ATTR_OPSYS ) ||
-		machine_refs.contains_anycase( ATTR_OPSYS_AND_VER ) ||
-		machine_refs.contains_anycase( ATTR_OPSYS_LONG_NAME ) ||
-		machine_refs.contains_anycase( ATTR_OPSYS_SHORT_NAME ) ||
-		machine_refs.contains_anycase( ATTR_OPSYS_NAME ) ||
-		machine_refs.contains_anycase( ATTR_OPSYS_LEGACY );
-	checks_disk =  machine_refs.contains_anycase( ATTR_DISK );
-	checks_cpus =   machine_refs.contains_anycase( ATTR_CPUS );
-	checks_tdp =  machine_refs.contains_anycase( ATTR_HAS_TDP );
-	checks_encrypt_exec_dir = machine_refs.contains_anycase( ATTR_ENCRYPT_EXECUTE_DIRECTORY );
+	checks_arch = IsDockerJob || machine_refs.count( ATTR_ARCH );
+	checks_opsys = IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
+		machine_refs.count( ATTR_OPSYS_AND_VER ) ||
+		machine_refs.count( ATTR_OPSYS_LONG_NAME ) ||
+		machine_refs.count( ATTR_OPSYS_SHORT_NAME ) ||
+		machine_refs.count( ATTR_OPSYS_NAME ) ||
+		machine_refs.count( ATTR_OPSYS_LEGACY );
+	checks_disk =  machine_refs.count( ATTR_DISK );
+	checks_cpus =   machine_refs.count( ATTR_CPUS );
+	checks_tdp =  machine_refs.count( ATTR_HAS_TDP );
+	checks_encrypt_exec_dir = machine_refs.count( ATTR_ENCRYPT_EXECUTE_DIRECTORY );
 #if defined(WIN32)
-	checks_credd = machine_refs.contains_anycase( ATTR_LOCAL_CREDD );
+	checks_credd = machine_refs.count( ATTR_LOCAL_CREDD );
 #endif
 
 	if( JobUniverse == CONDOR_UNIVERSE_STANDARD ) {
-		checks_ckpt_arch = job_refs.contains_anycase( ATTR_CKPT_ARCH );
+		checks_ckpt_arch = job_refs.count( ATTR_CKPT_ARCH );
 	}
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		checks_mpi = machine_refs.contains_anycase( ATTR_HAS_MPI );
+		checks_mpi = machine_refs.count( ATTR_HAS_MPI );
 	}
 	if( mightTransfer(JobUniverse) ) { 
 		switch( should_transfer ) {
 		case STF_IF_NEEDED:
 		case STF_NO:
-			checks_fsdomain = machine_refs.contains_anycase(
+			checks_fsdomain = machine_refs.count(
 										  ATTR_FILE_SYSTEM_DOMAIN ); 
 			break;
 		case STF_YES:
-			checks_file_transfer = machine_refs.contains_anycase(
+			checks_file_transfer = machine_refs.count(
 											   ATTR_HAS_FILE_TRANSFER );
-			checks_file_transfer_plugin_methods = machine_refs.contains_anycase(
+			checks_file_transfer_plugin_methods = machine_refs.count(
 											   ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS );
-			checks_per_file_encryption = machine_refs.contains_anycase(
+			checks_per_file_encryption = machine_refs.count(
 										   ATTR_HAS_PER_FILE_ENCRYPTION );
 			break;
 		}
 	}
 
-	checks_mem = machine_refs.contains_anycase(ATTR_MEMORY);
-	//checks_reqmem = job_refs.contains_anycase(ATTR_REQUEST_MEMORY);
+	checks_mem = machine_refs.count(ATTR_MEMORY);
+	//checks_reqmem = job_refs.count(ATTR_REQUEST_MEMORY);
 
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
 		if( answer[0] ) {
@@ -5567,7 +5567,7 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 		}
 		// add HasVM to requirements
 		bool checks_vm = false;
-		checks_vm = machine_refs.contains_anycase( ATTR_HAS_VM );
+		checks_vm = machine_refs.count( ATTR_HAS_VM );
 		if( !checks_vm ) {
 			answer += "&& (TARGET.";
 			answer += ATTR_HAS_VM;
@@ -5575,7 +5575,7 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 		}
 		// add vm_type to requirements
 		bool checks_vmtype = false;
-		checks_vmtype = machine_refs.contains_anycase( ATTR_VM_TYPE);
+		checks_vmtype = machine_refs.count( ATTR_VM_TYPE);
 		if( !checks_vmtype ) {
 			answer += " && (TARGET.";
 			answer += ATTR_VM_TYPE;
@@ -5585,7 +5585,7 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 		}
 		// check if the number of executable VM is more than 0
 		bool checks_avail = false;
-		checks_avail = machine_refs.contains_anycase(ATTR_VM_AVAIL_NUM);
+		checks_avail = machine_refs.count(ATTR_VM_AVAIL_NUM);
 		if( !checks_avail ) {
 			answer += " && (TARGET.";
 			answer += ATTR_VM_AVAIL_NUM;
@@ -5905,8 +5905,8 @@ int SubmitHash::SetVMRequirements(bool VMCheckpoint, bool VMNetworking, MyString
 	vmanswer += ")";
 
 	ClassAd req_ad;
-	StringList job_refs;      // job attrs referenced by requirements
-	StringList machine_refs;  // machine attrs referenced by requirements
+	classad::References job_refs;      // job attrs referenced by requirements
+	classad::References machine_refs;  // machine attrs referenced by requirements
 
 		// Insert dummy values for attributes of the job to which we
 		// want to detect references.  Otherwise, unqualified references
@@ -5914,14 +5914,14 @@ int SubmitHash::SetVMRequirements(bool VMCheckpoint, bool VMNetworking, MyString
 	req_ad.Assign(ATTR_CKPT_ARCH,"");
 	req_ad.Assign(ATTR_VM_CKPT_MAC,"");
 
-	req_ad.GetExprReferences(vmanswer.Value(),&job_refs,&machine_refs);
+	GetExprReferences(vmanswer.Value(),req_ad,&job_refs,&machine_refs);
 
 	// check file system domain
 	if( vm_need_fsdomain ) {
 		// some files don't use file transfer.
 		// so we need the same file system domain
 		bool checks_fsdomain = false;
-		checks_fsdomain = machine_refs.contains_anycase( ATTR_FILE_SYSTEM_DOMAIN ); 
+		checks_fsdomain = machine_refs.count( ATTR_FILE_SYSTEM_DOMAIN );
 
 		if( !checks_fsdomain ) {
 			vmanswer += " && (TARGET.";
@@ -5961,7 +5961,7 @@ int SubmitHash::SetVMRequirements(bool VMCheckpoint, bool VMNetworking, MyString
 
 	// add vm_memory to requirements
 	bool checks_vmmemory = false;
-	checks_vmmemory = machine_refs.contains_anycase(ATTR_VM_MEMORY);
+	checks_vmmemory = machine_refs.count(ATTR_VM_MEMORY);
 	if( !checks_vmmemory ) {
 		vmanswer += " && (TARGET.";
 		vmanswer += ATTR_VM_MEMORY;
@@ -5972,7 +5972,7 @@ int SubmitHash::SetVMRequirements(bool VMCheckpoint, bool VMNetworking, MyString
 
 	if( VMHardwareVT ) {
 		bool checks_hardware_vt = false;
-		checks_hardware_vt = machine_refs.contains_anycase(ATTR_VM_HARDWARE_VT);
+		checks_hardware_vt = machine_refs.count(ATTR_VM_HARDWARE_VT);
 
 		if( !checks_hardware_vt ) {
 			// add hardware vt to requirements
@@ -5984,7 +5984,7 @@ int SubmitHash::SetVMRequirements(bool VMCheckpoint, bool VMNetworking, MyString
 
 	if( VMNetworking ) {
 		bool checks_vmnetworking = false;
-		checks_vmnetworking = machine_refs.contains_anycase(ATTR_VM_NETWORKING);
+		checks_vmnetworking = machine_refs.count(ATTR_VM_NETWORKING);
 
 		if( !checks_vmnetworking ) {
 			// add vm_networking to requirements
@@ -6007,8 +6007,8 @@ int SubmitHash::SetVMRequirements(bool VMCheckpoint, bool VMNetworking, MyString
 	if( VMCheckpoint ) {
 		bool checks_ckpt_arch = false;
 		bool checks_vm_ckpt_mac = false;
-		checks_ckpt_arch = job_refs.contains_anycase( ATTR_CKPT_ARCH );
-		checks_vm_ckpt_mac = job_refs.contains_anycase( ATTR_VM_CKPT_MAC );
+		checks_ckpt_arch = job_refs.count( ATTR_CKPT_ARCH );
+		checks_vm_ckpt_mac = job_refs.count( ATTR_VM_CKPT_MAC );
 
 		if( !checks_ckpt_arch ) {
 			// VM checkpoint files created on AMD 

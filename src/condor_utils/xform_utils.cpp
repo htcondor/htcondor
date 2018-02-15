@@ -1899,9 +1899,8 @@ int ConvertJobRouterRouteToXForm (
 				unparser.Unparse(rhs, tree);
 				if ( ! rhs.empty()) {
 
-					StringList myrefs;
-					StringList target;
-					route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+					classad::References myrefs;
+					GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 					if (atrid == atr_REQUESTMEMORY || 
 						atrid == atr_REQUESTCPUS || atrid == atr_REMOTE_NODENUMBER || atrid == atr_REMOTE_SMPGRANULARITY ||
 						atrid == atr_ONEXITHOLD || atrid == atr_ONEXITHOLDREASON || atrid == atr_ONEXITHOLDSUBCODE ||
@@ -1910,25 +1909,17 @@ int ConvertJobRouterRouteToXForm (
 						ExprTree * def_tree = base_route_ad.Lookup(it->first);
 						bool is_def_expr = (def_tree && *tree == *def_tree);
 
-						/*
-						target.create_union(myrefs, true);
-						target.remove("null");
-						target.remove("InputRSL.maxMemory");
-						target.remove("InputRSL.xcount");
-						target.remove("InputRSL.queue");
-						target.remove("InputRSL");
-						*/
 						if (!(options & XForm_ConvertJobRouter_Fix_EvalSet)) {
 							// experimental flattening....
-							if ( ! myrefs.isEmpty()) {
+							if ( ! myrefs.empty()) {
 								rhs.clear();
 								unparse_special(unparser, rhs, route_ad, tree, atr_f_MyTarget | atr_f_Flatten);
 
-								myrefs.clearAll();
-								route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+								myrefs.clear();
+								GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 							}
 							evalset_cmds[attr] = rhs;
-							for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+							evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 						} else if (atrid == atr_REQUESTMEMORY && is_def_expr) {
 							//has_def_RequestMemory = true;
 							set_cmds[attr] = "$(maxMemory:2000)";
@@ -1945,27 +1936,27 @@ int ConvertJobRouterRouteToXForm (
 							set_cmds[attr] = "$Fq(queue)";
 						} else {
 							// experimental flattening....
-							if ( ! myrefs.isEmpty()) {
+							if ( ! myrefs.empty()) {
 								rhs.clear();
 								unparse_special(unparser, rhs, route_ad, tree, atr_f_MyTarget | atr_f_Flatten);
 
-								myrefs.clearAll();
-								route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+								myrefs.clear();
+								GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 							}
 							evalset_cmds[attr] = rhs;
-							for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+							evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 						}
 					} else {
 						// experimental flattening....
-						if ( ! myrefs.isEmpty()) {
+						if ( ! myrefs.empty()) {
 							rhs.clear();
 							unparse_special(unparser, rhs, route_ad, tree, atr_f_MyTarget | atr_f_Flatten);
 
-							myrefs.clearAll();
-							route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+							myrefs.clear();
+							GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 						}
 						evalset_cmds[attr] = rhs;
-						for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+						evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 					}
 				}
 			}
