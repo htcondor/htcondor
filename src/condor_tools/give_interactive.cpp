@@ -321,7 +321,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 static void
 fetchSubmittorPrios()
 {
-	AttrList	al;
+	ClassAd	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
   	float 	sub_priority;

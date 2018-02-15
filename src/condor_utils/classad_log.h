@@ -732,8 +732,7 @@ ClassAdLog<K,AD>::AdExistsInTableOrTransaction(const K& key)
 
 		// first see if it exists in the "commited" hashtable
 	AD ad = NULL;
-	table.lookup(key, ad);
-	if ( ad ) {
+	if ( table.lookup(key, ad) >= 0 && ad ) {
 		adexists = true;
 	}
 

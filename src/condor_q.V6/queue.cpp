@@ -80,7 +80,7 @@ typedef bool (* buffer_line_processor)(void*, ClassAd *);
 
 static 	void usage (const char *, int other=0);
 enum { usage_Universe=1, usage_JobStatus=2, usage_AllOther=0xFF };
-static bool render_job_status_char(std::string & result, AttrList*ad, Formatter &);
+static bool render_job_status_char(std::string & result, ClassAd*ad, Formatter &);
 
 // functions to fetch job ads and print them out
 //
@@ -189,9 +189,9 @@ static	ClassAdList	scheddList;
 static  ClassAdAnalyzer analyzer;
 #endif
 
-static bool render_owner(std::string & out, AttrList*, Formatter &);
-static bool render_dag_owner(std::string & out, AttrList*, Formatter &);
-static bool render_batch_name(std::string & out, AttrList*, Formatter &);
+static bool render_owner(std::string & out, ClassAd*, Formatter &);
+static bool render_dag_owner(std::string & out, ClassAd*, Formatter &);
+static bool render_batch_name(std::string & out, ClassAd*, Formatter &);
 
 
 // the condor q strategy will be to ingest ads and print them into MyRowOfValues structures
@@ -734,16 +734,6 @@ static int cleanup_globals(int exit_code)
 
 	return exit_code;
 }
-
-#if 0 // no longer used
-// append all variable references made by expression to references list
-static bool
-GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
-{
-	ClassAd ad;
-	return ad.GetExprReferences(expression,NULL,&references);
-}
-#endif
 
 static int
 parse_analyze_detail(const char * pch, int current_details)
@@ -1829,7 +1819,7 @@ job_time(double cpu_time,ClassAd *ad)
 
 
 static bool
-render_remote_host (std::string & result, AttrList *ad, Formatter &)
+render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 {
 	//static char host_result[MAXHOSTNAMELEN];
 	//static char unknownHost [] = "[????????????????]";
@@ -1862,7 +1852,7 @@ render_remote_host (std::string & result, AttrList *ad, Formatter &)
 }
 
 static bool
-render_cpu_time (double & cputime, AttrList *ad, Formatter &)
+render_cpu_time (double & cputime, ClassAd *ad, Formatter &)
 {
 	if ( ! ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU, NULL, cputime))
 		return false;
@@ -1873,7 +1863,7 @@ render_cpu_time (double & cputime, AttrList *ad, Formatter &)
 }
 
 static bool
-render_memory_usage(double & mem_used_mb, AttrList *ad, Formatter &)
+render_memory_usage(double & mem_used_mb, ClassAd *ad, Formatter &)
 {
 	long long  image_size;
 	long long memory_usage;
@@ -1937,7 +1927,7 @@ format_readable_bytes(const classad::Value &val, Formatter &)
 }
 
 static bool
-render_job_description(std::string & out, AttrList *ad, Formatter &)
+render_job_description(std::string & out, ClassAd *ad, Formatter &)
 {
 	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, out))
 		return false;
@@ -1967,7 +1957,7 @@ format_job_universe(long long job_universe, Formatter &)
 }
 
 static bool
-render_job_id(std::string & result, AttrList* ad, Formatter &)
+render_job_id(std::string & result, ClassAd* ad, Formatter &)
 {
 	static char str[PROC_ID_STR_BUFLEN];
 	int cluster_id=0, proc_id=0;
@@ -1995,7 +1985,7 @@ format_job_status_raw(long long job_status, Formatter &)
 }
 
 static bool
-render_job_status_char(std::string & result, AttrList*ad, Formatter &)
+render_job_status_char(std::string & result, ClassAd*ad, Formatter &)
 {
 	int job_status;
 	if ( ! ad->LookupInteger(ATTR_JOB_STATUS, job_status))
@@ -2047,7 +2037,7 @@ render_job_status_char(std::string & result, AttrList*ad, Formatter &)
 }
 
 static bool
-render_goodput (double & goodput_time, AttrList *ad, Formatter & /*fmt*/)
+render_goodput (double & goodput_time, ClassAd *ad, Formatter & /*fmt*/)
 {
 	int job_status;
 	if ( ! ad->LookupInteger(ATTR_JOB_STATUS, job_status))
@@ -2074,7 +2064,7 @@ render_goodput (double & goodput_time, AttrList *ad, Formatter & /*fmt*/)
 }
 
 static bool
-render_mbps (double & mbps, AttrList *ad, Formatter & /*fmt*/)
+render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/)
 {
 	double bytes_sent;
 	if ( ! ad->EvalFloat(ATTR_BYTES_SENT, NULL, bytes_sent))
@@ -2098,7 +2088,7 @@ render_mbps (double & mbps, AttrList *ad, Formatter & /*fmt*/)
 }
 
 static bool
-render_cpu_util (double & cputime, AttrList *ad, Formatter & /*fmt*/)
+render_cpu_util (double & cputime, ClassAd *ad, Formatter & /*fmt*/)
 {
 	if ( ! ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU, NULL, cputime))
 		return false;
@@ -2115,7 +2105,7 @@ render_cpu_util (double & cputime, AttrList *ad, Formatter & /*fmt*/)
 }
 
 static bool
-render_buffer_io_misc (std::string & misc, AttrList *ad, Formatter & /*fmt*/)
+render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/)
 {
 	misc.clear();
 
@@ -2158,7 +2148,7 @@ render_buffer_io_misc (std::string & misc, AttrList *ad, Formatter & /*fmt*/)
 
 
 static bool
-render_owner(std::string & out, AttrList *ad, Formatter & /*fmt*/)
+render_owner(std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 {
 	if ( ! ad->LookupString(ATTR_OWNER, out))
 		return false;
@@ -2175,7 +2165,7 @@ render_owner(std::string & out, AttrList *ad, Formatter & /*fmt*/)
 }
 
 static bool
-render_dag_owner (std::string & out, AttrList *ad, Formatter & fmt)
+render_dag_owner (std::string & out, ClassAd *ad, Formatter & fmt)
 {
 	if (dash_dag && ad->LookupExpr(ATTR_DAGMAN_JOB_ID)) {
 		if (ad->LookupString(ATTR_DAG_NODE_NAME, out)) {
@@ -2189,7 +2179,7 @@ render_dag_owner (std::string & out, AttrList *ad, Formatter & fmt)
 }
 
 static bool
-render_batch_name (std::string & out, AttrList *ad, Formatter & /*fmt*/)
+render_batch_name (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 {
 	const bool fold_dagman_sibs = dash_batch && (dash_batch & 2); // hack -batch:2 gives experimental behaviour
 
@@ -2221,7 +2211,7 @@ render_batch_name (std::string & out, AttrList *ad, Formatter & /*fmt*/)
 
 
 static bool
-render_globusStatus(std::string & result, AttrList * ad, Formatter & /*fmt*/ )
+render_globusStatus(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 {
 	int globusStatus;
 	if ( ! ad->LookupInteger(ATTR_GLOBUS_STATUS, globusStatus))
@@ -2262,7 +2252,7 @@ render_globusStatus(std::string & result, AttrList * ad, Formatter & /*fmt*/ )
 // always be present and be a string. We then ignore that attribute
 // and examine GlobusResource and GridResource.
 static bool
-render_globusHostAndJM(std::string & result, AttrList *ad, Formatter & /*fmt*/ )
+render_globusHostAndJM(std::string & result, ClassAd *ad, Formatter & /*fmt*/ )
 {
 	//static char result_format[64];
 	char	host[80] = "[?????]";
@@ -2351,7 +2341,7 @@ render_globusHostAndJM(std::string & result, AttrList *ad, Formatter & /*fmt*/ )
 }
 
 static bool
-render_gridStatus( std::string & result, AttrList * ad, Formatter & fmt )
+render_gridStatus( std::string & result, ClassAd * ad, Formatter & fmt )
 {
 	if (ad->LookupString(ATTR_GRID_JOB_STATUS, result)) {
 		return true;
@@ -2387,7 +2377,7 @@ render_gridStatus( std::string & result, AttrList * ad, Formatter & fmt )
 
 #if 0 // not currently used, disabled to shut up fedora.
 static const char *
-format_gridType( int , AttrList * ad )
+format_gridType( int , ClassAd * ad )
 {
 	static char result[64];
 	char grid_res[64];
@@ -2408,7 +2398,7 @@ format_gridType( int , AttrList * ad )
 #endif
 
 static bool
-render_gridResource(std::string & result, AttrList * ad, Formatter & /*fmt*/ )
+render_gridResource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 {
 	std::string grid_type;
 	std::string str;
@@ -2474,7 +2464,7 @@ render_gridResource(std::string & result, AttrList * ad, Formatter & /*fmt*/ )
 }
 
 static bool
-render_gridJobId(std::string & jid, AttrList *ad, Formatter & /*fmt*/ )
+render_gridJobId(std::string & jid, ClassAd *ad, Formatter & /*fmt*/ )
 {
 	std::string str;
 	std::string host;

@@ -384,18 +384,6 @@ class ClassAd : public classad::ClassAd
      */
     void ChainCollapse();
 
-    void GetReferences(const char* attr,
-                StringList *internal_refs,
-                StringList *external_refs) const;
-
-    bool GetExprReferences(const char* expr,
-                StringList *internal_refs,
-                StringList *external_refs) const;
-
-    bool GetExprReferences(ExprTree * expr,
-                StringList *internal_refs,
-                StringList *external_refs) const;
-
 	static void Reconfig();
 	static bool m_initConfig;
 	static bool m_strictEvaluation;
@@ -417,10 +405,6 @@ class ClassAd : public classad::ClassAd
 
     classad::DirtyAttrList::iterator m_dirtyItr;
     bool m_dirtyItrInit;
-
-	void _GetReferences(classad::ExprTree *tree,
-						StringList *internal_refs,
-						StringList *external_refs) const;
 
 	// poison Assign of ExprTree* type for public users
 	// otherwise the compiler will resolve against the bool overload 
@@ -714,7 +698,6 @@ bool GetExprReferences( const classad::ExprTree * expr, const classad::ClassAd &
 void TrimReferenceNames( classad::References &ref_set, bool external = false );
 
 
-typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;
 
 } // namespace compat_classad

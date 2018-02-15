@@ -134,9 +134,6 @@ extern "C"
  
 //----------------------------------------------------------------
 
-void
-computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringList &expanded_projection);
-
 void CollectorDaemon::Init()
 {
 	dprintf(D_ALWAYS, "In CollectorDaemon::Init()\n");
@@ -1392,11 +1389,11 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 
 	// if ATTR_ABSENT is not alrady referenced in the query.
 	if ( filterAbsentAds ) {	// filterAbsentAds is true if ABSENT_REQUIREMENTS defined
-		StringList machine_refs;  // machine attrs referenced by requirements
+		classad::References machine_refs;  // machine attrs referenced by requirements
 		bool checks_absent = false;
 
-		query->GetReferences(ATTR_REQUIREMENTS,NULL,&machine_refs);
-		checks_absent = machine_refs.contains_anycase( ATTR_ABSENT );
+		GetReferences(ATTR_REQUIREMENTS,*query,NULL,&machine_refs);
+		checks_absent = machine_refs.count( ATTR_ABSENT );
 		if (!checks_absent) {
 			MyString modified_filter;
 			modified_filter.formatstr("(%s) && (%s =!= True)",
@@ -2361,25 +2358,3 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 	return 0;
 }
 
-	// Given a full ad, and a StringList of expressions, compute
-	// the list of all attributes those exressions depend on.
-
-	// So, if the projection is passed in "foo", and foo is an expression
-	// that expands to bar, we return bar
-	
-void
-computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringList &expanded_projection) {
-    projectionList->Rewind();
-
-		// For each expression in the list...
-	MyString attr;
-	while (projectionList->Next(attr)) {
-
-			// Get the indirect attributes
-		if( !full_ad->GetExprReferences(attr.Value(), &expanded_projection, NULL) ) {
-			dprintf(D_FULLDEBUG,
-				"computeProjection failed to parse "
-				"requested ClassAd expression: %s\n",attr.Value());
-		}
-	}
-}

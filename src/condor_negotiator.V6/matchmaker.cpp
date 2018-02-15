@@ -59,7 +59,7 @@
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
 // is forced to be extern.)
 
-static int comparisonFunction (AttrList *, AttrList *, void *);
+static int comparisonFunction (ClassAd *, ClassAd *, void *);
 #include "matchmaker.h"
 
 
@@ -74,7 +74,7 @@ enum { MM_ERROR, MM_DONE, MM_RESUME };
 // possible outcomes of a matchmaking attempt
 enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
-typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
+typedef int (*lessThanFunc)(ClassAd*, ClassAd*, void*);
 
 char const *RESOURCES_IN_USE_BY_USER_FN_NAME = "ResourcesInUseByUser";
 char const *RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME = "ResourcesInUseByUsersGroup";
@@ -1102,7 +1102,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 
 	// get the priority
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
-	AttrList* ad=accountant.ReportState();
+	ClassAd* ad=accountant.ReportState();
 	
 	if (!putClassAd(strm, *ad, PUT_CLASSAD_NO_TYPES) ||
 	    !strm->end_of_message())
@@ -1128,7 +1128,7 @@ GET_PRIORITY_ROLLUP_commandHandler(int, Stream *strm) {
 
     // get the priority
     dprintf(D_ALWAYS, "Getting state information from the accountant\n");
-    AttrList* ad = accountant.ReportState(true);
+    ClassAd* ad = accountant.ReportState(true);
 
     if (!putClassAd(strm, *ad, PUT_CLASSAD_NO_TYPES) ||
         !strm->end_of_message()) {
@@ -1159,7 +1159,7 @@ GET_RESLIST_commandHandler (int, Stream *strm)
     dprintf(D_ALWAYS, "Getting resource list of %s\n", submitter.c_str());
 
 	// get the priority
-	AttrList* ad=accountant.ReportState(submitter);
+	ClassAd* ad=accountant.ReportState(submitter);
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
 	if (!putClassAd(strm, *ad, PUT_CLASSAD_NO_TYPES) ||
@@ -3239,7 +3239,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 }
 
 static int
-comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
+comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 {
 	Matchmaker* mm = (Matchmaker*)m;
 
