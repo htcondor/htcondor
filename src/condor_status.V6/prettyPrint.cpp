@@ -48,18 +48,18 @@ void printJSON       	(ClassAd &, bool first_ad, classad::References * attrs=NUL
 void printNewClassad	(ClassAd &, bool first_ad, classad::References * attrs=NULL);
 void printCustom    	(ClassAd *);
 
-static bool renderActivityTime(long long & atime, AttrList* , Formatter &);
-static bool renderActivityCode(std::string & str, AttrList* , Formatter &);
-static bool renderDueDate(long long & atime, AttrList* , Formatter &);
-static bool renderElapsedTime(long long & etime, AttrList* , Formatter &);
-static bool renderVersion(std::string & str, AttrList*, Formatter & fmt);
-static bool renderCondorPlatform(std::string & str, AttrList*, Formatter & fmt);
-static bool renderPlatform(std::string & str, AttrList*, Formatter & fmt);
+static bool renderActivityTime(long long & atime, ClassAd* , Formatter &);
+static bool renderActivityCode(std::string & str, ClassAd* , Formatter &);
+static bool renderDueDate(long long & atime, ClassAd* , Formatter &);
+static bool renderElapsedTime(long long & etime, ClassAd* , Formatter &);
+static bool renderVersion(std::string & str, ClassAd*, Formatter & fmt);
+static bool renderCondorPlatform(std::string & str, ClassAd*, Formatter & fmt);
+static bool renderPlatform(std::string & str, ClassAd*, Formatter & fmt);
 static const char* formatVersion(const char * condorver, Formatter &);
 static const char *formatRealTime( long long , Formatter &);
 static const char *formatRealDate( long long , Formatter &);
 static const char *formatLoadAvg (double, Formatter &);
-static bool renderStringsFromList( classad::Value &, AttrList*, Formatter & );
+static bool renderStringsFromList( classad::Value &, ClassAd*, Formatter & );
 
 static const char *
 format_readable_mb(const classad::Value &val, Formatter &)
@@ -443,7 +443,7 @@ extractStringsFromList( const classad::Value & value, Formatter &, std::string &
 	return prettyList.c_str();
 }
 
-bool renderStringsFromList( classad::Value & value, AttrList*, Formatter & fmt )
+bool renderStringsFromList( classad::Value & value, ClassAd*, Formatter & fmt )
 {
 	if( ! value.IsListValue() ) {
 		return false;
@@ -502,7 +502,7 @@ extractUniqueStrings( const classad::Value & value, Formatter &, std::string &li
 	return list_out.c_str();
 }
 
-bool renderUniqueStrings( classad::Value & value, AttrList*, Formatter & fmt )
+bool renderUniqueStrings( classad::Value & value, ClassAd*, Formatter & fmt )
 {
 	if( ! value.IsListValue() ) {
 		return false;
@@ -1385,7 +1385,7 @@ formatLoadAvg (double fl, Formatter &)
 }
 
 static bool
-renderActivityTime (long long & atime, AttrList *al, Formatter &)
+renderActivityTime (long long & atime, ClassAd *al, Formatter &)
 {
 	long long now = 0;
 	if (al->LookupInteger(ATTR_MY_CURRENT_TIME, now)
@@ -1413,7 +1413,7 @@ const char* digest_state_and_activity(char * sa, State st, Activity ac)
 }
 
 static bool
-renderActivityCode (std::string & act, AttrList *al, Formatter &)
+renderActivityCode (std::string & act, ClassAd *al, Formatter &)
 {
 
 	char sa[4] = "  ";
@@ -1443,7 +1443,7 @@ renderActivityCode (std::string & act, AttrList *al, Formatter &)
 }
 
 static bool
-renderDueDate (long long & dt, AttrList *al, Formatter &)
+renderDueDate (long long & dt, ClassAd *al, Formatter &)
 {
 	long long now;
 	if (al->LookupInteger(ATTR_LAST_HEARD_FROM , now)) {
@@ -1454,7 +1454,7 @@ renderDueDate (long long & dt, AttrList *al, Formatter &)
 }
 
 static bool
-renderElapsedTime (long long & tm, AttrList *al , Formatter &)
+renderElapsedTime (long long & tm, ClassAd *al , Formatter &)
 {
 	long long now;
 	if (al->LookupInteger(ATTR_LAST_HEARD_FROM, now)) {
@@ -1514,7 +1514,7 @@ formatVersion(const char * condorver, Formatter & fmt)
 	return ret;
 }
 
-static bool renderVersion(std::string & str, AttrList*, Formatter & fmt)
+static bool renderVersion(std::string & str, ClassAd*, Formatter & fmt)
 {
 	if ( ! str.empty()) {
 		str = formatVersion(str.c_str(), fmt);
@@ -1524,7 +1524,7 @@ static bool renderVersion(std::string & str, AttrList*, Formatter & fmt)
 }
 
 // reduce CondorPlatform attribute to a more useful string
-static bool renderCondorPlatform(std::string & str, AttrList*, Formatter & /*fmt*/)
+static bool renderCondorPlatform(std::string & str, ClassAd*, Formatter & /*fmt*/)
 {
 	if ( ! str.empty()) {
 		size_t ix = str.find_first_of(' ');
@@ -1545,7 +1545,7 @@ static bool renderCondorPlatform(std::string & str, AttrList*, Formatter & /*fmt
 }
 
 bool platform_includes_arch = true;
-bool renderPlatformName(std::string & str, AttrList* al)
+bool renderPlatformName(std::string & str, ClassAd* al)
 {
 	std::string opsys, arch;
 	bool got_name = false;
@@ -1569,7 +1569,7 @@ bool renderPlatformName(std::string & str, AttrList* al)
 	return false;
 }
 // render Arch, OpSys, OpSysAndVer and OpSysShortName into a NMI style platform string
-static bool renderPlatform(std::string & str, AttrList* al, Formatter & /*fmt*/)
+static bool renderPlatform(std::string & str, ClassAd* al, Formatter & /*fmt*/)
 {
 	return renderPlatformName(str, al);
 }

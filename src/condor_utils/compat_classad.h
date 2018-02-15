@@ -698,7 +698,6 @@ bool GetExprReferences( const classad::ExprTree * expr, const classad::ClassAd &
 void TrimReferenceNames( classad::References &ref_set, bool external = false );
 
 
-typedef ClassAd AttrList;
 typedef classad::ExprTree ExprTree;
 
 } // namespace compat_classad

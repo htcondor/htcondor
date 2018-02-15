@@ -90,10 +90,10 @@ public:
 
   double GetLimit(const MyString& limit);
   double GetLimitMax(const MyString& limit);
-  void ReportLimits(AttrList *attrList);
+  void ReportLimits(ClassAd *attrList);
 
   ClassAd* ReportState(bool rollup = false);
-  AttrList* ReportState(const MyString& CustomerName);
+  ClassAd* ReportState(const MyString& CustomerName);
 
   void CheckResources(const string& CustomerName, int& NumResources, float& NumResourcesRW);
 

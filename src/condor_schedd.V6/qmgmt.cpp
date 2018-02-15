@@ -4670,7 +4670,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 			}
 		}
 
-		for (AttrList::const_iterator attr_it = x509_attrs->begin(); attr_it != x509_attrs->end(); ++attr_it)
+		for (ClassAd::const_iterator attr_it = x509_attrs->begin(); attr_it != x509_attrs->end(); ++attr_it)
 		{
 			std::string attr_value_buf;
 			unparse.Unparse(attr_value_buf, attr_it->second);

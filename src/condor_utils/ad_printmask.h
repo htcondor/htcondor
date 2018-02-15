@@ -57,12 +57,12 @@ enum {
 typedef const char *(*IntCustomFormat)(long long, struct Formatter &);
 typedef const char *(*FloatCustomFormat)(double, struct Formatter &);
 typedef const char *(*StringCustomFormat)(const char*, struct Formatter &);
-//typedef const char *(*AlwaysCustomFormat)(AttrList*,struct Formatter &);
+//typedef const char *(*AlwaysCustomFormat)(ClassAd*,struct Formatter &);
 typedef const char *(*ValueCustomFormat)(const classad::Value & value, struct Formatter &);
-typedef bool (*StringCustomRender)(std::string & str, AttrList*, struct Formatter &);
-typedef bool (*IntCustomRender)(long long & lval, AttrList*, struct Formatter &);
-typedef bool (*FloatCustomRender)(double & dval, AttrList*, struct Formatter &);
-typedef bool (*ValueCustomRender)(classad::Value & value, AttrList*, struct Formatter &);
+typedef bool (*StringCustomRender)(std::string & str, ClassAd*, struct Formatter &);
+typedef bool (*IntCustomRender)(long long & lval, ClassAd*, struct Formatter &);
+typedef bool (*FloatCustomRender)(double & dval, ClassAd*, struct Formatter &);
+typedef bool (*ValueCustomRender)(classad::Value & value, ClassAd*, struct Formatter &);
 
 class CustomFormatFn {
 public:
@@ -161,17 +161,17 @@ class AttrListPrintMask
 	int walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const char * head), void* pv, const List<const char> * pheadings=NULL) const;
 
 	// display functions
-	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *
-	int   display (FILE *, AttrListList *, AttrList *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
-	int   display (std::string & out, AttrList *, AttrList *target=NULL ); // append to string out. return number of chars added
+	int   display (FILE *, ClassAd *, ClassAd *target=NULL);		// output to FILE *
+	int   display (FILE *, ClassAdList *, ClassAd *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
+	int   display (std::string & out, ClassAd *, ClassAd *target=NULL ); // append to string out. return number of chars added
 #ifdef ALLOW_ROD_PRINTMASK
-	int   render (MyRowOfData & row, AttrList *, AttrList *target=NULL ); // render columns to text and add to MyRowOfData, returns number of cols
+	int   render (MyRowOfData & row, ClassAd *, ClassAd *target=NULL ); // render columns to text and add to MyRowOfData, returns number of cols
 	int   display (std::string & out, MyRowOfData & row); // append to string out. return number of chars added
 #endif
-	int   render (MyRowOfValues & row, AttrList *, AttrList *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
+	int   render (MyRowOfValues & row, ClassAd *, ClassAd *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
 	int   display (std::string & out, MyRowOfValues & row); // append to string out. return number of chars added
-	int   calc_widths(AttrList *, AttrList *target=NULL );          // set column widths
-	int   calc_widths(AttrListList *, AttrList *target=NULL);
+	int   calc_widths(ClassAd *, ClassAd *target=NULL );          // set column widths
+	int   calc_widths(ClassAdList *, ClassAd *target=NULL);
 	int   display_Headings(FILE *, List<const char> & headings);
 	char *display_Headings(const char * pszzHead);
 	char *display_Headings(List<const char> & headings);

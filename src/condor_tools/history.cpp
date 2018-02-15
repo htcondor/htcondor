@@ -568,7 +568,7 @@ static int getDisplayWidth() {
 }
 
 static bool
-render_hist_runtime (std::string & out, AttrList * ad, Formatter & /*fmt*/)
+render_hist_runtime (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 {
 	double utime;
 	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
@@ -659,7 +659,7 @@ format_job_universe(long long job_universe, Formatter &)
 }
 
 static bool
-render_job_id(std::string & val, AttrList * ad, Formatter & /*fmt*/)
+render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
 	int clusterId, procId;
 	if( ! ad->EvalInteger(ATTR_CLUSTER_ID,NULL,clusterId)) clusterId = 0;
@@ -669,7 +669,7 @@ render_job_id(std::string & val, AttrList * ad, Formatter & /*fmt*/)
 }
 
 static bool
-render_job_cmd_and_args(std::string & val, AttrList * ad, Formatter & /*fmt*/)
+render_job_cmd_and_args(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
 {
 	if ( ! ad->EvalString(ATTR_JOB_CMD, NULL, val))
 		return false;

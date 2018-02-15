@@ -327,7 +327,7 @@ void setupUserpriosForAnalysis(DCCollector* pool, const char *userprios_file)
 
 int fetchSubmittorPriosFromNegotiator(DCCollector* pool, ExtArray<PrioEntry> & prios)
 {
-	AttrList	al;
+	ClassAd	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
   	float 	priority;

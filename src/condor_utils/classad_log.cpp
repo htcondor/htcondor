@@ -531,7 +531,7 @@ bool WriteClassAdLogState(
 
 			// Unchain the ad -- we just want to write out this ads exprs,
 			// not all the exprs in the chained ad as well.
-		AttrList *chain = dynamic_cast<AttrList*>(ad->GetChainedParentAd());
+		classad::ClassAd *chain = ad->GetChainedParentAd();
 		ad->Unchain();
 		ad->ResetName();
 		attr_name = ad->NextNameOriginal();

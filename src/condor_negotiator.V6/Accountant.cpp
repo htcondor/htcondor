@@ -1043,14 +1043,14 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 // Report the list of Matches for a customer
 //------------------------------------------------------------------
 
-AttrList* Accountant::ReportState(const MyString& CustomerName) {
+ClassAd* Accountant::ReportState(const MyString& CustomerName) {
     dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
     std::string HK;
     ClassAd* ResourceAd;
     int StartTime;
 
-    AttrList* ad = new AttrList();
+    ClassAd* ad = new ClassAd();
 
     bool isGroup=false;
     string cgrp = GetAssignedGroup(CustomerName.Value(), isGroup)->name;
@@ -1747,7 +1747,7 @@ void Accountant::DumpLimits()
 	}
 }
 
-void Accountant::ReportLimits(AttrList *attrList)
+void Accountant::ReportLimits(ClassAd *attrList)
 {
 	MyString limit;
  	double count;

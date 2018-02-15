@@ -317,7 +317,7 @@ class Matchmaker : public Service
 		void insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal );
 		void reeval( ClassAd *ad );
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
-		friend int comparisonFunction (AttrList *, AttrList *,
+		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
 		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, string &dslot_claims);
 

@@ -322,7 +322,7 @@ format_int_runtime (long long utime, Formatter & /*fmt*/)
 
 // print out static or dynamic slot id.
 static bool
-render_slot_id (std::string & out, AttrList * ad, Formatter & /*fmt*/)
+render_slot_id (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 {
 	int slotid;
 	if ( ! ad->LookupInteger(ATTR_SLOT_ID, slotid))
@@ -1667,7 +1667,7 @@ main( int argc, char *argv[] )
 		}
 
 
-		// extern int mySortFunc(AttrList*,AttrList*,void*);
+		// extern int mySortFunc(ClassAd*,ClassAd*,void*);
 		// result.Sort((SortFunctionType)mySortFunc);
 
 		if (App.show_full_ads) {

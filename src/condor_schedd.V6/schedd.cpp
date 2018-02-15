@@ -192,7 +192,7 @@ void UpdateJobProxyAttrs( PROC_ID job_id, const ClassAd &proxy_attrs )
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
 
-	for (AttrList::const_iterator attr_it = proxy_attrs.begin(); attr_it != proxy_attrs.end(); ++attr_it)
+	for (ClassAd::const_iterator attr_it = proxy_attrs.begin(); attr_it != proxy_attrs.end(); ++attr_it)
 	{
 		std::string attr_value_buf;
 		unparse.Unparse(attr_value_buf, attr_it->second);
