@@ -99,7 +99,7 @@ sub TestUptimeSQUIDsSeconds {
 
 
 #
-# Testing callbacks.
+# Callbacks for testing.
 #
 
 my $abnormal = sub {
@@ -333,7 +333,7 @@ sub TestSQUIDsUsage {
 	if( CondorTest::RunTest( $testName, $submitFileName, 0, $setClusterID ) ) {
 		my $lineCount = 0;
 		my $outputFileBaseName = "cmr-monitor-basic-ad.${clusterID}.";
-		for( my $i = 0; $i < 4; ++$i ) {
+		for( my $i = 0; $i < 8; ++$i ) {
 			my $outputFileName = $outputFileBaseName . $i . ".out";
 
 			open( my $fh, '<', $outputFileName ) or
@@ -359,7 +359,7 @@ sub TestSQUIDsUsage {
 		}
 
 		# Each test job appends four lines to the log.
-		if( $lineCount != 16 ) {
+		if( $lineCount != 32 ) {
 			die( "Error: $testName: 'cmr-monitor-basic-ad.out' had $lineCount lines, not 16.\n" );
 		}
 	} else {
@@ -483,8 +483,6 @@ sub peaksMatchValues {
 sub TestSQUIDsMemoryUsage {
 	my( $testName ) = @_;
 
-	# The user log doesn't report SQUIDs*Usage, only SQUIDsUsage.
-	# Condor::RegisterUsage( ... );
 	CondorTest::RegisterExitedAbnormal( $testName, $abnormal );
 	CondorTest::RegisterAbort( $testName, $aborted );
 	CondorTest::RegisterHold( $testName, $held );
@@ -504,7 +502,7 @@ sub TestSQUIDsMemoryUsage {
 	if( CondorTest::RunTest( $testName, $submitFileName, 0, $setClusterID ) ) {
 		my $lineCount = 0;
 		my $outputFileBaseName = "cmr-monitor-memory-ad.${clusterID}.";
-		for( my $i = 0; $i < 4; ++$i ) {
+		for( my $i = 0; $i < 8; ++$i ) {
 			my $outputFileName = $outputFileBaseName . $i . ".out";
 
 			open( my $fh, '<', $outputFileName ) or

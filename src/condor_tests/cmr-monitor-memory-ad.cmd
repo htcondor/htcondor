@@ -5,4 +5,4 @@ error			= cmr-monitor-memory-ad.$(Cluster).$(Process).err
 log				= cmr-monitor-memory-ad.log
 Request_SQUIDs	= 1
 
-queue 4
+queue 8
