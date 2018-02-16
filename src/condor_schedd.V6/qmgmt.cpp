@@ -57,6 +57,7 @@
 #include "nullfile.h"
 #include "condor_url.h"
 #include "classad/classadCache.h"
+#include "classad_helpers.h"
 #include <param_info.h>
 
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -459,6 +460,44 @@ int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
 	return 0;
 }
 
+#ifdef USE_MATERIALIZE_POLICY
+inline bool HasMaterializePolicy(JobQueueCluster * cad)
+{
+	if ( ! cad || ! cad->factory) return false;
+	PRAGMA_REMIND("tj: add a proper check for existence of a materialization policy here.")
+	return true;
+#else
+inline bool HasMaterializePolicy(JobQueueCluster * /*cad*/)
+{
+	return false;
+}
+#endif
+
+#ifdef USE_MATERIALIZE_POLICY
+bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int & retry_delay)
+{
+	ClassAd iad;
+	cad->PopulateInfoAd(iad, false);
+
+	PRAGMA_REMIND("tj: replace this fake materialization policy with a real one.")
+
+	classad::ExprTree * expr = NULL;
+	ParseClassAdRvalExpr("JobsIdle < 4", expr);
+	if (expr) {
+		bool rv = EvalBool(&iad, expr);
+		delete expr;
+		if (rv) return true;
+	}
+	retry_delay = 20; // don't bother to retry by polling, wait for a job to change state instead.
+	return false;
+}
+#else
+bool CheckMaterializePolicyExpression(JobQueueCluster * /*cad*/, int & /*retry_delay*/)
+{
+	return true;
+}
+#endif
+
 // This timer is after when we create a job factory, change the pause state of one or more job factories, or
 // remove a job that is part of a cluster with a job factory. What we want to do here
 // is either materialize a new job in that cluster, queue up a read of itemdata for the job factory
@@ -518,7 +557,10 @@ JobMaterializeTimerCallback()
 					int cluster_size = cad->ClusterSize();
 					while ((cluster_size + num_materialized) < effective_limit) {
 						int retry_delay = 0; // will be set to non-zero when we should try again later.
-						int rv = MaterializeNextFactoryJob(cad->factory, cad, retry_delay);
+						int rv = 0;
+						if (CheckMaterializePolicyExpression(cad, retry_delay)) {
+							rv = MaterializeNextFactoryJob(cad->factory, cad, retry_delay);
+						}
 						if (rv == 1) {
 							num_materialized += 1;
 						} else {
@@ -1873,6 +1915,10 @@ int MaterializeJobs(JobQueueCluster * clusterad, int & retry_delay)
 	int cluster_size = clusterad->ClusterSize();
 	while ((cluster_size + num_materialized) < effective_limit) {
 		int retry = 0;
+		if ( ! CheckMaterializePolicyExpression(clusterad, retry)) {
+			retry_delay = retry;
+			break;
+		}
 		if (MaterializeNextFactoryJob(clusterad->factory, clusterad, retry) == 1) {
 			num_materialized += 1;
 		} else {
@@ -2810,6 +2856,15 @@ int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * Cl
 	unparser.SetOldClassAd( true, true );
 	std::string buffer;
 
+	// the EditedClusterAttrs attribute of the cluster ad is the list of attibutes where the value in the cluster ad
+	// should win over the value in the proc ad because the cluster ad was edited after submit time.
+	// we do this so that "condor_qedit <clusterid>" will affect ALL jobs in that cluster, not just those that have
+	// already been materialized.
+	classad::References clusterAttrs;
+	if (ClusterAd->LookupString(ATTR_EDITED_CLUSTER_ATTRS, buffer)) {
+		add_attrs_from_string_tokens(clusterAttrs, buffer);
+	}
+
 	for (auto it = ad->begin(); it != ad->end(); ++it) {
 		const std::string & attr = it->first;
 		const ExprTree * tree = it->second;
@@ -2823,6 +2878,8 @@ int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * Cl
 		int forced = IsForcedProcAttribute(attr.c_str());
 		if (forced) {
 			send_it = forced > 0;
+		} else if (clusterAttrs.find(attr) != clusterAttrs.end()) {
+			send_it = false; // this is a forced cluster attribute
 		} else {
 			// If we aren't going to unconditionally send it, when we check if the value
 			// matches the value in the cluster ad.
@@ -3244,8 +3301,12 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad,key)) {
 		JobQueueJob * job = static_cast<JobQueueJob*>(ad);
-		// ignore header and cluster ads.
-		if (job->IsHeader() || job->IsCluster())
+		// ignore header and ads.
+		if (job->IsHeader())
+			continue;
+
+		// ignore cluster ads unless the PostSubmitClusterChange flag is set.
+		if (job->IsCluster() && ! (flags & SetAttribute_PostSubmitClusterChange))
 			continue;
 
 		if (EvalBool(ad, constraint.Expr())) {
@@ -3254,7 +3315,6 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 				had_error = 1;
 				terrno = errno;
 			}
-			FreeJobAd(ad);	// a no-op on the server side
 		}
 	}
 
@@ -3322,6 +3382,7 @@ enum {
 	catNewMaterialize = 0x0080,  // attributes that control the job factory
 	catMaterializeState = 0x0100, // change in state of job factory
 	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE_SpoolingInput
+	catPostSubmitClusterChange = 0x400, // a cluster ad was changed after submit time which calls for special processing in commit transaction
 	catCallbackTrigger = 0x1000, // indicates that a callback should happen on commit of this attribute
 	catCallbackNow = 0x20000,    // indicates that a callback should happen when setAttribute is called
 };
@@ -3854,9 +3915,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		return 0;
 	}
 
-	// give the autocluster code a chance to invalidate (or rebuild)
-	// based on the changed attribute.
 	if (job) {
+		// if modifying a cluster ad, and the PostSubmitClusterChange flag was passed to SetAttribute
+		// then force a PostSubmitClusterChange tansaction trigger.
+		if (job->IsCluster() && (flags & SetAttribute_PostSubmitClusterChange)) {
+			attr_category |= (catCallbackTrigger | catPostSubmitClusterChange);
+		}
+
+		// give the autocluster code a chance to invalidate (or rebuild)
+		// based on the changed attribute.
 		scheduler.autocluster.preSetAttribute(*job, attr_name, attr_value, flags);
 	}
 
@@ -4101,7 +4168,12 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job->Status(), -1);
 				IncrementLiveJobCounter(scheduler.liveJobCounts, universe, job_status, 1);
 
-				if (job->Cluster()) { job->Cluster()->JobStatusChanged(job->Status(), job_status); }
+				if (job->Cluster()) {
+					job->Cluster()->JobStatusChanged(job->Status(), job_status);
+					// if there is a materialization policy for this cluster, force the MaterializeState trigger
+					// we do this so that a change of state for a job (idle -> running) can trigger new materialization
+					if (HasMaterializePolicy(job->Cluster())) { triggers |= catMaterializeState; }
+				}
 				job->SetStatus(job_status);
 			}
 		}
@@ -4506,6 +4578,7 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 	return 0;
 }
 
+
 // Call this just before committing a submit transaction, it will figure out
 // the number of procs in each new cluster and add the ATTR_TOTAL_SUBMIT_PROCS attribute to the commit.
 //
@@ -4543,6 +4616,63 @@ void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
 	}
 }
 
+// Call this just before committing a submit transaction, it will figure out
+// the number of procs in each new cluster and add the ATTR_TOTAL_SUBMIT_PROCS attribute to the commit.
+//
+void AddClusterEditedAttributes(std::set<std::string> & ad_keys)
+{
+	std::map<JobQueueKey, std::string> to_add; // things we want add to the current transaction
+
+	// examine the current transaction, and add any attributes set or deleted in the cluster ad(s)
+	// to the EditedClusterAttrs attribute for that cluster.
+	// in this loop we build up a map of clusters an the new value for EditedClusterAttrs
+	// then AFTER we have examined the whole transaction,
+	// we add records to set new values for EditedClusterAttrs if needed
+	JobQueueKey job_id;
+	for(auto it = ad_keys.begin(); it != ad_keys.end(); it++ ) {
+		job_id.set(it->c_str());
+		if (job_id.proc >= 0) continue; // skip keys for jobs, we want cluster keys only
+
+		JobQueueJob *job;
+		if ( ! JobQueue->Lookup(job_id, job)) continue; // skip keys for which the cluster is still uncommitted
+
+		if ( ! job || ! job->IsCluster()) continue; // just a safety check, we don't expect this to fire.
+		JobQueueCluster *cad = static_cast<JobQueueCluster*>(job);
+
+		// get the attrs modified in this transaction
+		classad::References attrs;
+		if (JobQueue->AddAttrNamesFromTransaction(job_id, attrs)) {
+			// if the transaction already contains a SetAttribute or DeleteAttribute
+			// of ATTR_EDITED_CLUSTER_ATTRS just skip this cluster without merging new attributes
+			// we do this so that when you qedit EditedClusterAttrs, the value passed to qedit wins.
+			if (attrs.find(ATTR_EDITED_CLUSTER_ATTRS) != attrs.end()) {
+				cad->dirty_flags |= JQJ_CACHE_DIRTY_CLUSTERATTRS; // ATTR_EDITED_CLUSTER_ATTRS changed explictly by user
+				continue;
+			}
+
+			// merge in the current set from ATTR_EDITED_CLUSTER_ATTRS
+			std::string cur_list, new_list;
+			if (cad->LookupString(ATTR_EDITED_CLUSTER_ATTRS, cur_list)) {
+				add_attrs_from_string_tokens(attrs, cur_list);
+			}
+			// check to see if there are any changes. if there are, put the new value into
+			// the map of things to add to this transaction
+			print_attrs(new_list, false, attrs, ",");
+			if (new_list != cur_list) {
+				// wrap quotes around the attribute list
+				new_list.insert(0, "\"");
+				new_list += "\"";
+				to_add[job_id] = new_list;
+				cad->dirty_flags |= JQJ_CACHE_DIRTY_CLUSTERATTRS; // ATTR_EDITED_CLUSTER_ATTRS will be changed soon.
+			}
+		}
+	}
+
+	// add the new values for ATTR_EDITED_CLUSTER_ATTRS to the current transaction.
+	for (auto it = to_add.begin(); it != to_add.end(); ++it) {
+		SetAttribute(it->first.cluster, it->first.proc, ATTR_EDITED_CLUSTER_ATTRS, it->second.c_str(), 0);
+	}
+}
 
 bool
 ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
@@ -4754,6 +4884,13 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 	if (triggers) {
 		JobQueue->GetTransactionKeys(ad_keys);
+
+		// before we commit the transaction, if there were changes to a cluster ad
+		// update the EditedClusterAttrs for that cluster
+		if (triggers & catPostSubmitClusterChange) {
+			triggers &= ~catPostSubmitClusterChange;
+			AddClusterEditedAttributes(ad_keys);
+		}
 	}
 
 	if(! durable) {

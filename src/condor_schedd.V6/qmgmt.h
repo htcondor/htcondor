@@ -95,6 +95,7 @@ class QmgmtPeer {
 
 #define JQJ_CACHE_DIRTY_JOBOBJ        0x00001 // set when an attribute cached in the JobQueueJob that doesn't have it's own flag has changed
 #define JQJ_CACHE_DIRTY_SUBMITTERDATA 0x00002 // set when an attribute that affects the submitter name is changed
+#define JQJ_CACHE_DIRTY_CLUSTERATTRS  0x00004 // set then ATTR_EDITED_CLUSTER_ATTRS changes, used only in the cluster ad.
 
 class JobFactory;
 class JobQueueCluster;
@@ -256,6 +257,11 @@ void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
 // returns 1 if a job was materialized, 0 if factory was paused or complete or itemdata is not yet available
 // returns < 0 on error.  if return is 0, retry_delay is set to non-zero to indicate the retrying later might yield success
 int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, int & retry_delay);
+
+// returns true if there is no materialize policy expression, or if the expression evalues to true
+// returns false if there is an expression and it evaluates to false. When false is returned, retry_delay is set
+// a value of > 0 for retry_delay indicates that trying again later might give a different answer.
+bool CheckMaterializePolicyExpression(JobQueueCluster * cluster, int & retry_delay);
 
 int PostCommitJobFactoryProc(JobQueueCluster * cluster, JobQueueJob * job);
 bool CanMaterializeJobs(JobQueueCluster * cluster); // reutrns true if cluster has a non-paused, non-complete factory
