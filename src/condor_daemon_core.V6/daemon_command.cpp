@@ -123,7 +123,6 @@ int DaemonCommandProtocol::doProtocol()
 
 	if( m_sock ) {
 		if( m_sock->deadline_expired() ) {
-			MyString msg;
 			dprintf(D_ALWAYS,"DaemonCommandProtocol: deadline for security handshake with %s has expired.\n",
 					m_sock->peer_description());
 
@@ -135,7 +134,6 @@ int DaemonCommandProtocol::doProtocol()
 			what_next = WaitForSocketData();
 		}
 		else if( m_is_tcp && !m_sock->is_connected()) {
-			MyString msg;
 			dprintf(D_ALWAYS,"DaemonCommandProtocol: TCP connection to %s failed.\n",
 					m_sock->peer_description());
 
@@ -689,9 +687,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 			dPrintAd (D_SECURITY, m_auth_info);
 		}
 
-		MyString peer_version;
+		std::string peer_version;
 		if( m_auth_info.LookupString( ATTR_SEC_REMOTE_VERSION, peer_version ) ) {
-			CondorVersionInfo ver_info( peer_version.Value() );
+			CondorVersionInfo ver_info( peer_version.c_str() );
 			m_sock->set_peer_version( &ver_info );
 		}
 
@@ -721,7 +719,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					(m_is_tcp) ? "TCP" : "UDP",
 					m_auth_cmd,
 					"UNREGISTERED COMMAND!",
-					m_user.Value(),
+					m_user.c_str(),
 					m_sock->peer_description());
 
 			m_result = FALSE;
@@ -923,12 +921,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// generate a new session
 
 					// generate a unique ID.
-					MyString tmpStr;
-					tmpStr.formatstr( "%s:%i:%i:%i", 
+					std::string tmpStr;
+					formatstr( tmpStr, "%s:%i:%i:%i",
 									get_local_hostname().Value(), daemonCore->mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (m_sid == NULL);
-					m_sid = strdup(tmpStr.Value());
+					m_sid = strdup(tmpStr.c_str());
 
 					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
 
@@ -1376,8 +1374,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 						m_req,
 						m_comTable[m_cmd_index].command_descrip,
 						(m_is_tcp) ? "TCP" : "UDP",
-						!m_user.IsEmpty() ? " from " : "",
-						m_user.Value(),
+						!m_user.empty() ? " from " : "",
+						m_user.c_str(),
 						m_sock->peer_description(),
 						PermString(m_comTable[m_cmd_index].perm));
 
@@ -1396,8 +1394,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 		// When re-using security sessions, need to set the socket's
 		// authenticated user name from the value stored in the cached
 		// session.
-		if( m_user.Length() && !m_sock->isAuthenticated() ) {
-			m_sock->setFullyQualifiedUser(m_user.Value());
+		if( m_user.size() && !m_sock->isAuthenticated() ) {
+			m_sock->setFullyQualifiedUser(m_user.c_str());
 		}
 
 		// grab the user from the socket
@@ -1408,8 +1406,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			}
 		}
 
-		MyString command_desc;
-		command_desc.formatstr("command %d (%s)",m_req,m_comTable[m_cmd_index].command_descrip);
+		std::string command_desc;
+		formatstr(command_desc,"command %d (%s)",m_req,m_comTable[m_cmd_index].command_descrip);
 
 		// this is the final decision on m_perm.  this is what matters.
 		if( m_comTable[m_cmd_index].force_authentication &&
@@ -1424,10 +1422,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 		}
 		else {
 			m_perm = daemonCore->Verify(
-						  command_desc.Value(),
+						  command_desc.c_str(),
 						  m_comTable[m_cmd_index].perm,
 						  m_sock->peer_addr(),
-						  m_user.Value() );
+						  m_user.c_str() );
 		}
 
 	} else {

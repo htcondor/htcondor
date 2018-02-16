@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "subsystem_info.h"
 #include "condor_config.h"
 #include "condor_email.h"
@@ -49,10 +48,10 @@ DaemonKeepAlive::reconfig(void)
 	// Setup a timer to send child keepalives to our parent, if we have
 	// a daemon core parent.
 	if ( daemonCore->ppid && m_want_send_child_alive ) {
-		MyString buf;
+		std::string buf;
 		int old_max_hang_time_raw = max_hang_time_raw;
-		buf.formatstr("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
-		max_hang_time_raw = param_integer(buf.Value(),param_integer("NOT_RESPONDING_TIMEOUT",3600,1),1);
+		formatstr(buf,"%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
+		max_hang_time_raw = param_integer(buf.c_str(),param_integer("NOT_RESPONDING_TIMEOUT",3600,1),1);
 
 		if( max_hang_time_raw != old_max_hang_time_raw || send_child_alive_timer == -1 ) {
 			max_hang_time = max_hang_time_raw + timer_fuzz(max_hang_time_raw);
@@ -139,7 +138,7 @@ DaemonKeepAlive::ScanForHungChildren()
 int 
 DaemonKeepAlive::SendAliveToParent()
 {
-	MyString parent_sinful_string_buf;
+	std::string parent_sinful_string_buf;
 	char const *parent_sinful_string;
 	char const *tmp;
 	int ret_val;
@@ -186,7 +185,7 @@ DaemonKeepAlive::SendAliveToParent()
 			// copy the result from InfoCommandSinfulString,
 			// because the pointer we got back is a static buffer
 		parent_sinful_string_buf = tmp;
-		parent_sinful_string = parent_sinful_string_buf.Value();
+		parent_sinful_string = parent_sinful_string_buf.c_str();
 	} else {
 		dprintf(D_FULLDEBUG,"DaemonKeepAlive: No parent_sinful_string. "
 			"SendAliveToParent() failed.\n");

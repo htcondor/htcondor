@@ -70,7 +70,7 @@ private:
 	int	m_result;
 	int m_perm;
 	int m_allow_empty;
-	MyString m_user;
+	std::string m_user;
 	ClassAd *m_policy;
 	ClassAd m_auth_info;
 	KeyInfo *m_key;
