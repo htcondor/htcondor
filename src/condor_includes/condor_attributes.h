@@ -104,6 +104,7 @@
 #define ATTR_CLUSTER_ID  "ClusterId"
 #define ATTR_AUTO_CLUSTER_ID  "AutoClusterId"
 #define ATTR_AUTO_CLUSTER_ATTRS  "AutoClusterAttrs"
+#define ATTR_EDITED_CLUSTER_ATTRS "EditedClusterAttrs"
 #define ATTR_COMPLETION_DATE  "CompletionDate"
 #define ATTR_MATCHED_CONCURRENCY_LIMITS  "MatchedConcurrencyLimits"
 #define ATTR_MATCHED_PSG  "Matched_PSG"
