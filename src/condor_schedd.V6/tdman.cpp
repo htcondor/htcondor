@@ -909,7 +909,10 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	// This is the initial registration ad from the transferd:
 	//	ATTR_TD_SINFUL
 	//	ATTR_TD_ID
-	getClassAd(rsock, regad);
+	if (!getClassAd(rsock, regad)) {
+		dprintf(D_ALWAYS, "Remote side hung up on transferd\n");
+		return CLOSE_STREAM;
+	}
 	rsock->end_of_message();
 	regad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
 	regad.LookupString(ATTR_TREQ_TD_ID, td_id);
