@@ -4381,7 +4381,7 @@ description=Determines if job creates their own namespace
 tags=starter
 
 [CHIRP_DELAYED_UPDATE_PREFIX]
-default=Chirp*
+default=Chirp
 version=8.1.0
 type=string
 is_macro=true

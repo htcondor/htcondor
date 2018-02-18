@@ -11571,7 +11571,11 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 			} // SWITCH
 				// if we're here, we really preempted it, so
 				// decrement n so we let this count towards our goal.
-			n--;
+				// However, do not decrement n if we are going to ExitWhenDone - this
+				// will ensure that ALL entries are preempted, not just the first n entries.
+			if( ! ExitWhenDone ) {
+				n--;
+			}
 		} // IF
 	} // WHILE
 

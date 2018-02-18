@@ -1220,7 +1220,8 @@ ClassAd* Accountant::ReportState(bool rollup) {
     ad->Assign("NumSubmittors", EntryNum-1);
 
     // include concurrency limit information
-    ReportLimits(ad);
+	// Why do we need this?  Nothing looks at it.
+    //ReportLimits(ad);
 
     return ad;
 }
