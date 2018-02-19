@@ -79,7 +79,7 @@ void AddReferencedAttribsToBuffer(
 	ClassAd * request,
 	const char * expr_string, // expression string or attribute name
 	classad::References & hidden_refs, // don't print these even if they appear in the trefs list
-	StringList & trefs, // out, returns target refs
+	classad::References & trefs, // out, returns target refs
 	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false
 	const char * pindent,
 	std::string & return_buf);
@@ -114,7 +114,7 @@ private:
 };
 
 void AddTargetAttribsToBuffer(
-	StringList & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
+	classad::References & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
 	ClassAd * request,
 	ClassAd * target,
 	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false

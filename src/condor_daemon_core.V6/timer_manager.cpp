@@ -566,34 +566,34 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 		else
 			ptmp = "NULL";
 
-		MyString slice_desc;
+		std::string slice_desc;
 		if( !timer_ptr->timeslice ) {
-			slice_desc.formatstr("period = %d, ", timer_ptr->period);
+			formatstr(slice_desc, "period = %d, ", timer_ptr->period);
 		}
 		else {
-			slice_desc.formatstr_cat("timeslice = %.3g, ",
+			formatstr_cat(slice_desc, "timeslice = %.3g, ",
 								   timer_ptr->timeslice->getTimeslice());
 			if( !IS_ZERO(timer_ptr->timeslice->getDefaultInterval()) ) {
-				slice_desc.formatstr_cat("period = %.1f, ",
+				formatstr_cat(slice_desc, "period = %.1f, ",
 								   timer_ptr->timeslice->getDefaultInterval());
 			}
 			if( !IS_ZERO(timer_ptr->timeslice->getInitialInterval()) ) {
-				slice_desc.formatstr_cat("initial period = %.1f, ",
+				formatstr_cat(slice_desc, "initial period = %.1f, ",
 								   timer_ptr->timeslice->getInitialInterval());
 			}
 			if( !IS_ZERO(timer_ptr->timeslice->getMinInterval()) ) {
-				slice_desc.formatstr_cat("min period = %.1f, ",
+				formatstr_cat(slice_desc, "min period = %.1f, ",
 								   timer_ptr->timeslice->getMinInterval());
 			}
 			if( !IS_ZERO(timer_ptr->timeslice->getMaxInterval()) ) {
-				slice_desc.formatstr_cat("max period = %.1f, ",
+				formatstr_cat(slice_desc, "max period = %.1f, ",
 								   timer_ptr->timeslice->getMaxInterval());
 			}
 		}
 		dprintf(flag, 
 				"%sid = %d, when = %ld, %shandler_descrip=<%s>\n", 
 				indent, timer_ptr->id, (long)timer_ptr->when, 
-				slice_desc.Value(),ptmp);
+				slice_desc.c_str(),ptmp);
 	}
 	dprintf(flag, "\n");
 }

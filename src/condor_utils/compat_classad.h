@@ -384,18 +384,6 @@ class ClassAd : public classad::ClassAd
      */
     void ChainCollapse();
 
-    void GetReferences(const char* attr,
-                StringList *internal_refs,
-                StringList *external_refs) const;
-
-    bool GetExprReferences(const char* expr,
-                StringList *internal_refs,
-                StringList *external_refs) const;
-
-    bool GetExprReferences(ExprTree * expr,
-                StringList *internal_refs,
-                StringList *external_refs) const;
-
 	static void Reconfig();
 	static bool m_initConfig;
 	static bool m_strictEvaluation;
@@ -417,10 +405,6 @@ class ClassAd : public classad::ClassAd
 
     classad::DirtyAttrList::iterator m_dirtyItr;
     bool m_dirtyItrInit;
-
-	void _GetReferences(classad::ExprTree *tree,
-						StringList *internal_refs,
-						StringList *external_refs) const;
 
 	// poison Assign of ExprTree* type for public users
 	// otherwise the compiler will resolve against the bool overload 
@@ -699,8 +683,21 @@ bool SplitLongFormAttrValue(const char * line, std::string &attr, const char* &r
 	// returns true on successful insertion
 bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_cache);
 
+bool GetReferences( const char* attr, const classad::ClassAd &ad,
+                    classad::References *internal_refs,
+                    classad::References *external_refs );
 
-typedef ClassAd AttrList;
+bool GetExprReferences( const char* expr, const classad::ClassAd &ad,
+                        classad::References *internal_refs,
+                        classad::References *external_refs );
+
+bool GetExprReferences( const classad::ExprTree * expr, const classad::ClassAd &ad,
+                        classad::References *internal_refs,
+                        classad::References *external_refs );
+
+void TrimReferenceNames( classad::References &ref_set, bool external = false );
+
+
 typedef classad::ExprTree ExprTree;
 
 } // namespace compat_classad

@@ -108,11 +108,11 @@ struct LineRec {
 
 static int CalcTime(int,int,int);
 static void usage(const char* name);
-static void ProcessInfo(AttrList* ad,std::vector<AttrList> &accountingAds, bool GroupRollup,bool HierFlag);
-static int CountElem(AttrList* ad);
-static void CollectInfo(int numElem, AttrList* ad, std::vector<AttrList> & accountingAds, LineRec* LR, bool GroupRollup);
+static void ProcessInfo(ClassAd* ad,std::vector<ClassAd> &accountingAds, bool GroupRollup,bool HierFlag);
+static int CountElem(ClassAd* ad);
+static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> & accountingAds, LineRec* LR, bool GroupRollup);
 static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag);
-static void PrintResList(AttrList* ad);
+static void PrintResList(ClassAd* ad);
 
 //-----------------------------------------------------------------
 
@@ -246,15 +246,22 @@ struct LineRecLT {
     }
 };
 
-void ConvertLegacyUserprioAdToAdList(AttrList &ad, std::vector<AttrList> & prios)
+void ConvertLegacyUserprioAdToAdList(ClassAd &ad, std::vector<ClassAd> & prios)
 {
 	std::string attr;
 	int id;
 
-	for (AttrList::iterator next = ad.begin(); next != ad.end(); /*++next*/) {
-		AttrList::iterator it = next++; // advance iterator now, in case we want to remove it
+	for (ClassAd::iterator next = ad.begin(); next != ad.end(); /*++next*/) {
+		ClassAd::iterator it = next++; // advance iterator now, in case we want to remove it
 		const char * pattr = it->first.c_str();
 		const char * p = pattr;
+
+		// ConcurrencyLimits are also in this ad, and could end in a number.  Skip those
+		// Newer negotiators (post 8.6.10) don't send this anymore
+
+		if (strstr(pattr, "ConcurrencyLimit_") == pattr) {
+			continue;
+		}
 
 		// parse attribute nameNNN, looking for trailing NNN
 		// and set attr to name, and id to NNN.  
@@ -294,13 +301,13 @@ void ConvertLegacyUserprioAdToAdList(AttrList &ad, std::vector<AttrList> & prios
 
 static void PrintModularAds(
 	FILE *    out,
-	AttrList* ad,
-	std::vector<AttrList> accountingAds, // if ad is NULL, values are here
+	ClassAd* ad,
+	std::vector<ClassAd> accountingAds, // if ad is NULL, values are here
 	bool      customFormat,
 	AttrListPrintMask & print_mask,
 	GenericQuery constraint)
 {
-	std::vector<AttrList> prioAds;
+	std::vector<ClassAd> prioAds;
 
 	// if ad is not-null, we're passed in the ads in the old format in ad
 	if (ad != 0) {
@@ -851,7 +858,7 @@ main(int argc, const char* argv[])
 
     // get reply
     sock->decode();
-    AttrList* ad=new AttrList();
+    ClassAd* ad=new ClassAd();
     if (!getClassAdNoTypes(sock, *ad) ||
         !sock->end_of_message()) {
       fprintf( stderr, "failed to get classad from negotiator\n" );
@@ -874,7 +881,7 @@ main(int argc, const char* argv[])
       exit(1);
     }
 
-    AttrList* ad=new AttrList();
+    ClassAd* ad=new ClassAd();
     bool is_eof = false; 
     int error = 0;
 	if ( ! ad->InsertFromFile(file, is_eof, error) && error) {
@@ -899,22 +906,22 @@ main(int argc, const char* argv[])
 
     if (LongFlag || customFormat) {
        if ( ! LegacyAdFormat || customFormat) {
-		  std::vector<AttrList> empty;
+		  std::vector<ClassAd> empty;
           PrintModularAds(stdout, ad, empty, customFormat, print_mask, constraint);
        } else {
           fPrintAd(stdout, *ad);
        }
     }
     else {
-		std::vector<AttrList> empty;
+		std::vector<ClassAd> empty;
 		ProcessInfo(ad,empty,GroupRollup,HierFlag);
 	}
 
   }
   else {  // Get prios not from file, but from collector or negotiator
 
-	AttrList *ad = NULL;
-	std::vector<AttrList> accountingAds;
+	ClassAd *ad = NULL;
+	std::vector<ClassAd> accountingAds;
 
 	DCCollector c((pool.length() > 0) ? pool.c_str() : 0);
 	c.locate();
@@ -960,7 +967,7 @@ main(int argc, const char* argv[])
 
 	    // get reply
 		sock->decode();
-		ad=new AttrList();
+		ad=new ClassAd();
 		if (!getClassAdNoTypes(sock, *ad) ||
    	     !sock->end_of_message()) {
 			fprintf( stderr, "failed to get classad from negotiator\n" );
@@ -994,7 +1001,7 @@ main(int argc, const char* argv[])
 					// if we have the ad in the vector-of-ads format, print them
 					// out like we do with condor_history, newline separated
 					// and without the numbered attr names.  Different, but more useful
-				for (std::vector<AttrList>::iterator it = accountingAds.begin();
+				for (std::vector<ClassAd>::iterator it = accountingAds.begin();
 						it != accountingAds.end();
 						it++) {
 					fPrintAd(stdout, *it);
@@ -1013,7 +1020,7 @@ main(int argc, const char* argv[])
 
 //-----------------------------------------------------------------
 
-static void ProcessInfo(AttrList* ad, std::vector<AttrList> &accountingAds, bool GroupRollup,bool HierFlag)
+static void ProcessInfo(ClassAd* ad, std::vector<ClassAd> &accountingAds, bool GroupRollup,bool HierFlag)
 {
   int NumElem = 0;
 
@@ -1082,7 +1089,7 @@ static void ProcessInfo(AttrList* ad, std::vector<AttrList> &accountingAds, bool
 
 //-----------------------------------------------------------------
 
-static int CountElem(AttrList* ad)
+static int CountElem(ClassAd* ad)
 {
 	int numSubmittors;
 	if( ad->LookupInteger( "NumSubmittors", numSubmittors ) ) 
@@ -1096,7 +1103,7 @@ static int CountElem(AttrList* ad)
 
 //-----------------------------------------------------------------
 
-static void CollectInfo(int numElem, AttrList* ad, std::vector<AttrList> &accountingAds, LineRec* LR, bool GroupRollup)
+static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accountingAds, LineRec* LR, bool GroupRollup)
 {
   char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42], attrRequested[32];
   char  attrLastUsage[32];
@@ -1791,7 +1798,7 @@ static void usage(const char* name) {
 
 //-----------------------------------------------------------------
 
-static void PrintResList(AttrList* ad)
+static void PrintResList(ClassAd* ad)
 {
   // fPrintAd(stdout, *ad);
 

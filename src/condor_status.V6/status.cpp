@@ -2140,16 +2140,14 @@ secondPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
 			mainPP.pm.registerFormatF (argv[i+1], argv[i+2], FormatOptionNoTruncate);
 
-			StringList attributes;
+			classad::References attributes;
 			ClassAd ad;
-			if(!ad.GetExprReferences(argv[i+2],NULL,&attributes)){
+			if(!GetExprReferences(argv[i+2],ad,NULL,&attributes)){
 				fprintf( stderr, "Error:  Parse error of: %s\n", argv[i+2]);
 				exit(1);
 			}
 
-			for (const char * attr = attributes.first(); attr; attr = attributes.next()) {
-				projList.insert(attr);
-			}
+			projList.insert(attributes.begin(), attributes.end());
 
 			if (diagnose) {
 				printf ("Arg %d --- register format [%s] for [%s]\n",
@@ -2198,16 +2196,13 @@ secondPass (int argc, char *argv[])
 			while (argv[i+1] && *(argv[i+1]) != '-') {
 				++i;
 				ClassAd ad;
-				StringList attributes;
-				if(!ad.GetExprReferences(argv[i],NULL,&attributes)){
+				classad::References attributes;
+				if(!GetExprReferences(argv[i],ad,NULL,&attributes)){
 					fprintf( stderr, "Error:  Parse error of: %s\n", argv[i]);
 					exit(1);
 				}
 
-				//PRAGMA_REMIND("fix to use more set-based GetExprReferences")
-				for (const char * attr = attributes.first(); attr; attr = attributes.next()) {
-					projList.insert(attr);
-				}
+				projList.insert(attributes.begin(), attributes.end());
 
 				MyString lbl = "";
 				int wid = 0;

@@ -110,6 +110,15 @@ SecManWrapper::ping(object locate_obj, object command_obj)
             ml.release();
             THROW_EX(RuntimeError, "Failed to get security session information from remote daemon.");
         }
+        // Replace addr with the sinful string that ReliSock has associated with the socket,
+        // since this is what the SecMan object will do, and we need to do the same thing
+        // for the SecMan::command_map lookups to succeed below.  Note that
+        // get_connect_addr() may return a different sinful string than was used to
+        // create the socket, due to processing of things like private network interfaces.
+        addr = sock->get_connect_addr();
+        // Don't leak sock!
+        delete sock;
+        sock = NULL;
         ml.release();
 
         MyString cmd_map_ent;

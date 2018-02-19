@@ -194,6 +194,7 @@ main(int argc, const char *argv[])
 	bool transaction_aborted = false;
 	bool only_my_jobs = true;
 	bool bare_arg_must_identify_jobs = true;
+	bool has_arbitrary_constraint = false;
 	int dash_diagnostic = 0;
 	StringList job_list; // list of job ids (or mixed job & cluster id's to modify)
 	std::map<std::string, std::string> kvp_list; // Classad of attr=value pairs to set
@@ -278,6 +279,7 @@ main(int argc, const char *argv[])
 			delete expr;
 			gquery.addCustomAND(argv[ixarg]);
 			bare_arg_must_identify_jobs = false;
+			has_arbitrary_constraint = true;
 		}
 		else
 		if (is_dash_arg_prefix(parg, "owner", 1)) {
@@ -420,11 +422,13 @@ main(int argc, const char *argv[])
 
 	// cook jobid strings into either a set of job ids, or more constraints
 	bool have_cluster_id = false;
+	bool can_do_cluster_edits = ! has_arbitrary_constraint; // if the gquery as things other than Owner== or Job== constraints, we cannot safely do cluster edits.
 	std::set<JOB_ID_KEY> jobids;
 	for (const char * jobid = job_list.first(); jobid; jobid = job_list.next()) {
 		JOB_ID_KEY jid(jobid);
 		jobids.insert(jid);
 		if (jid.proc < 0) { have_cluster_id = true; }
+		else              { can_do_cluster_edits = false; }
 	}
 
 	// if we have a set of full job id's we can optimize the query, but only if we don't also have a constraint.
@@ -480,6 +484,7 @@ main(int argc, const char *argv[])
 			fprintf(stdout, "QEDIT BY CONSTRAINT : %s\n", constraint.c_str());
 		}
 		fprintf(stdout, "ONLY_MY_JOBS = %s\n", only_my_jobs ? "true" : "false");
+		fprintf(stdout, "CAN_DO_CLUSTER_EDITS = %s\n", can_do_cluster_edits ? "true" : "false");
 		for (std::map<std::string, std::string>::iterator it = kvp_list.begin(); it != kvp_list.end(); ++it) {
 			const char * attr = it->first.c_str();
 			const char * value = it->second.c_str();
@@ -575,6 +580,16 @@ main(int argc, const char *argv[])
 		exit(1);
 	}
 
+	// now that we know the schedd version. decide whether we can do cluster edits or not.
+	if ( ! schedd.version()) {
+		can_do_cluster_edits = false;
+	} else {
+		CondorVersionInfo v(schedd.version());
+		if ( ! v.built_since_version(8,7,7)) {
+			can_do_cluster_edits = false;  // schedd side support for cluster edits added in 8.7.7
+		}
+	}
+
 #ifdef NEW_ARG_PARSING
 	// TODO: do the transaction
 	int match_count = 0;
@@ -595,6 +610,7 @@ main(int argc, const char *argv[])
 			goto bail;
 		}
 	}
+	if (can_do_cluster_edits) setflags |= SetAttribute_PostSubmitClusterChange;
 
 	for (std::map<std::string, std::string>::iterator it = kvp_list.begin(); it != kvp_list.end(); ++it) {
 		const char * attr = it->first.c_str();

@@ -671,6 +671,7 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
 		return false;
 	}
     
+    bool crypto_is_noop = sock->prepare_crypto_for_secret_is_noop();
     for(int pass = 0; pass < 2; pass++){
         if(pass == 0) {
             /* need to copy the chained attrs first, so if
@@ -700,7 +701,7 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
             buf += " = ";
             unp.Unparse( buf, expr );
 
-            if( ! sock->prepare_crypto_for_secret_is_noop() &&
+            if( ! crypto_is_noop &&
 				compat_classad::ClassAdAttributeIsPrivate(attr))
 			{
                 sock->put(SECRET_MARKER);
@@ -976,7 +977,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			std::string const &attr = itor->first;
 
 			if(!exclude_private ||
-				!compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
+				!compat_classad::ClassAdAttributeIsPrivate(attr))
 			{
 				if(excludeTypes)
 				{
@@ -1019,6 +1020,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			itor_end = ad.end();
 		}
 
+		bool crypto_is_noop = sock->prepare_crypto_for_secret_is_noop();
 		for(;itor != itor_end; itor++) {
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
@@ -1039,7 +1041,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			buf += " = ";
 			unp.Unparse( buf, expr );
 
-			if( ! sock->prepare_crypto_for_secret_is_noop() &&
+			if( ! crypto_is_noop &&
 				compat_classad::ClassAdAttributeIsPrivate(attr))
 			{
 				sock->put(SECRET_MARKER);
@@ -1093,6 +1095,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 	}
 
 	std::string buf;
+	bool crypto_is_noop =  sock->prepare_crypto_for_secret_is_noop();
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
 
 		if (blacklist.find(*attr) != blacklist.end())
@@ -1103,7 +1106,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 		buf += " = ";
 		unp.Unparse( buf, expr );
 
-		if ( ! sock->prepare_crypto_for_secret_is_noop() &&
+		if ( ! crypto_is_noop &&
 			compat_classad::ClassAdAttributeIsPrivate(*attr))
 		{
 			if (!sock->put(SECRET_MARKER)) {

@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where the \Condor{shadow} could accidentally kill itself
+by not checking it it was attempting to change immutable attributes.
+\Ticket{6557}
+
 \item Fixed a bug that could cause the \Condor{collector} to exit with an 
 		assertion error under certain (rare) conditions when it has no
 		outgoing connectivity to the Internet.
@@ -49,6 +53,11 @@ The details of each version are described below.
 \item Fixed a bug that would cause any daemons interfacing with the CREDMON to
 retry indefinitely when polling for credentials.
 \Ticket{6523}
+
+\item Fixed a bug that could cause scheduler universe jobs, such as 
+	DAGMan processes, to be orphaned in the event the \Condor{master} 
+	dies unexpectedly.
+\Ticket{6539}
 
 \end{itemize}
 

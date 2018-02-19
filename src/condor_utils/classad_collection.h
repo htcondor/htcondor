@@ -283,7 +283,8 @@ public:
   bool Iterate(K& key, AD& Ad)  { return this->table.iterate(key,Ad) == 1; }
 
   bool AddAttrsFromTransaction(const K& key, ClassAd & ad) { return ClassAdLog<K,AD>::AddAttrsFromTransaction(key,ad); }
-  
+  bool AddAttrNamesFromTransaction(const K& key, classad::References & attrs) { return ClassAdLog<K,AD>::AddAttrNamesFromTransaction(key,attrs); }
+
   /** Start iterations on all class-ads in the repository.
       @return nothing.
   */

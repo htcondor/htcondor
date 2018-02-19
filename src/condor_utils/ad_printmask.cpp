@@ -157,7 +157,7 @@ clearPrefixes (void)
 #if 0  // future
 
 int AttrListPrintMask::
-calc_widths(AttrList * al, AttrList *target /*=NULL*/ )
+calc_widths(ClassAd * al, ClassAd *target /*=NULL*/ )
 {
 	Formatter *fmt;
 	char 	*attr, *alt;
@@ -398,7 +398,7 @@ display_Headings (FILE *file, List<const char> & headings) {
 }
 
 int AttrListPrintMask::
-display (FILE *file, AttrList *al, AttrList *target /* =NULL */)
+display (FILE *file, ClassAd *al, ClassAd *target /* =NULL */)
 {
 	std::string temp;
 	display(temp, al, target);
@@ -731,7 +731,7 @@ static const t * format_value(MyString & str, const t* & val, printf_fmt_t fmt_t
 //
 
 int AttrListPrintMask::
-render (MyRowOfData & retval, AttrList *al, AttrList *target /* = NULL */)
+render (MyRowOfData & retval, ClassAd *al, ClassAd *target /* = NULL */)
 {
 	Formatter *fmt;
 	char 	*attr;
@@ -1224,7 +1224,7 @@ display (std::string & out, MyRowOfData & rod)
 }
 
 int AttrListPrintMask::
-display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
+display (std::string & out, ClassAd *al, ClassAd *target /* = NULL */)
 {
 	int columns = formats.Length();
 	MyRowOfData rod;
@@ -1291,7 +1291,7 @@ static int calc_column_width(Formatter *fmt, classad::Value * pval)
 //
 //
 int AttrListPrintMask::
-render (MyRowOfValues & rov, AttrList *al, AttrList *target /* = NULL */)
+render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 {
 	Formatter *fmt;
 	char 	*attr;
@@ -1648,7 +1648,7 @@ display (std::string & out, MyRowOfValues & rov)
 #ifdef ALLOW_ROD_PRINTMASK
 #else
 int AttrListPrintMask::
-display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
+display (std::string & out, ClassAd *al, ClassAd *target /* = NULL */)
 {
 	int columns = formats.Length();
 	MyRowOfValues rov;
@@ -1662,7 +1662,7 @@ display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 
 // returns a new char * that is your responsibility to delete.
 int AttrListPrintMask::
-display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
+display (std::string & out, ClassAd *al, ClassAd *target /* = NULL */)
 {
 	Formatter *fmt;
 	char 	*attr;
@@ -2115,13 +2115,13 @@ dump(std::string & out, const CustomFormatFnTable * pFnTable, List<const char> *
 }
 
 int AttrListPrintMask::
-display (FILE *file, AttrListList *list, AttrList *target /* = NULL */, List<const char> * pheadings /* = NULL */)
+display (FILE *file, ClassAdList *list, ClassAd *target /* = NULL */, List<const char> * pheadings /* = NULL */)
 {
 	int retval = 1;
 
 	list->Open();
 
-	AttrList *al = (AttrList *) list->Next();
+	ClassAd *al = list->Next();
 
 	if (al && pheadings) {
 		// render the first line to a string so the column widths update
@@ -2134,7 +2134,7 @@ display (FILE *file, AttrListList *list, AttrList *target /* = NULL */, List<con
 		if( !display (file, al, target) ) {
 			retval = 0;
 		}
-		al = (AttrList *) list->Next();
+		al = list->Next();
 	}
     list->Close ();
 

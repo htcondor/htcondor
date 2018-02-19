@@ -27,7 +27,7 @@
 
 //------------------------------------------------------------------------
 
-void displayJobShort(AttrList* ad);
+void displayJobShort(ClassAd* ad);
 void short_header(void);
 static void short_print(int,int,const char*,int,int,int,int,int,int,const char *);
 static void shorten (char *, int);
@@ -41,7 +41,7 @@ static char encode_status( int status );
 //------------------------------------------------------------------------
 
 void
-displayJobShort(AttrList* ad)
+displayJobShort(ClassAd* ad)
 {
     int cluster, proc, date, status, prio, image_size, memory_usage, CompDate;
     float utime;

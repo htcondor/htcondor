@@ -7,11 +7,16 @@
 \index{Web Service API}
 
 HTCondor's Web Service (WS) API provides a way for application developers
-to interact with HTCondor, without needing to utilize
-HTCondor's command-line tools.
+familiar with SOAP web service interfaces to interact directly with HTCondor.
+
+New code written from scratch may prefer to use the Python bindings.  The
+HTCondor SOAP bindings may become unsupported and removed in future versions
+of HTCondor.
+
 In keeping with the HTCondor philosophy of reliability and fault-tolerance,
 this API is designed to provide a simple and powerful way
 to interact with HTCondor.
+
 HTCondor daemons understand and implement
 the SOAP (Simple Object Access Protocol) XML API
 to provide a web service interface for HTCondor job submission

@@ -884,43 +884,41 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	if(param_boolean("TOKENS", false)) {
 		char* cthook = param("SEC_CREDD_TOKEN_HOOK");
 		if (!cthook) {
-			dprintf(D_ALWAYS, "CREDS: no SEC_CREDD_TOKEN_HOOK\n");
-			return false;
+			dprintf(D_ALWAYS, "CREDS: no SEC_CREDD_TOKEN_HOOK... skipping\n");
+		} else {
+			MyString credd_token_hook = cthook;
+			free(cthook);
+
+			// run it with the full path to "top" cred as an argument
+			char* scd = param("SEC_CREDENTIAL_DIRECTORY");
+			if (!scd) {
+				dprintf(D_ALWAYS, "CREDS: no SEC_CREDENTIAL_DIRECTORY\n");
+				return false;
+			}
+			MyString cred_filename;
+			cred_filename.formatstr("%s/%s/%s", scd, sock->getOwner(), "scitokens.top");
+			free(scd);
+
+			ArgList hook_args;
+			hook_args.AppendArg(credd_token_hook.Value());
+			hook_args.AppendArg(cred_filename.Value());
+
+			dprintf(D_ALWAYS, "CREDS: invoking %s %s as root\n", credd_token_hook.Value(), cred_filename.Value());
+			priv_state priv = set_root_priv();
+
+			// need to use Create_Process and make this non-blocking
+			int rc = my_system(hook_args);
+
+			set_priv(priv);
+			if (rc) {
+				// fail
+				dprintf(D_ALWAYS, "CREDS: invoking %s %s failed with %i.\n", credd_token_hook.Value(), cred_filename.Value(), rc);
+				return FALSE;
+			}
+
+			// success
+			dprintf(D_ALWAYS, "CREDS: success converting %s\n", cred_filename.Value());
 		}
-		MyString credd_token_hook = cthook;
-		free(cthook);
-
-		// run it with the full path to "top" cred as an argument
-		char* scd = param("SEC_CREDENTIAL_DIRECTORY");
-		if (!scd) {
-			dprintf(D_ALWAYS, "CREDS: no SEC_CREDENTIAL_DIRECTORY\n");
-			return false;
-		}
-		MyString cred_filename;
-		cred_filename.formatstr("%s/%s/%s", scd, sock->getOwner(), "scitokens.top");
-		free(scd);
-
-		ArgList hook_args;
-		hook_args.AppendArg(credd_token_hook.Value());
-		hook_args.AppendArg(cred_filename.Value());
-
-		dprintf(D_ALWAYS, "CREDS: invoking %s %s as root\n", credd_token_hook.Value(), cred_filename.Value());
-		priv_state priv = set_root_priv();
-
-		// need to use Create_Process and make this non-blocking
-		int rc = my_system(hook_args);
-
-		set_priv(priv);
-		if (rc) {
-			// fail
-			dprintf(D_ALWAYS, "CREDS: invoking %s %s failed with %i.\n", credd_token_hook.Value(), cred_filename.Value(), rc);
-			return FALSE;
-		}
-
-		// success
-		dprintf(D_ALWAYS, "CREDS: success converting %s\n", cred_filename.Value());
-		answer = TRUE;
-		cred_modified = false;
 	}
 
 	// we only need to signal CREDMON if the file was just written.  if it

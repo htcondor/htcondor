@@ -2088,9 +2088,8 @@ int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const 
 				unparser.Unparse(rhs, tree);
 				if ( ! rhs.empty()) {
 
-					StringList myrefs;
-					StringList target;
-					route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+					classad::References myrefs;
+					GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 					if (atrid == atr_REQUESTMEMORY || 
 						atrid == atr_REQUESTCPUS || atrid == atr_REMOTE_NODENUMBER || atrid == atr_REMOTE_SMPGRANULARITY ||
 						atrid == atr_ONEXITHOLD || atrid == atr_ONEXITHOLDREASON || atrid == atr_ONEXITHOLDSUBCODE ||
@@ -2098,15 +2097,6 @@ int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const 
 
 						ExprTree * def_tree = default_route_ad.Lookup(it->first);
 						bool is_def_expr = (def_tree && *tree == *def_tree);
-
-						/*
-						target.create_union(myrefs, true);
-						target.remove("null");
-						target.remove("InputRSL.maxMemory");
-						target.remove("InputRSL.xcount");
-						target.remove("InputRSL.queue");
-						target.remove("InputRSL");
-						*/
 
 						if (atrid == atr_REQUESTMEMORY && is_def_expr) {
 							//has_def_RequestMemory = true;
@@ -2124,11 +2114,11 @@ int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const 
 							set_cmds[attr] = "$Fq(queue)";
 						} else {
 							evalset_cmds[attr] = rhs;
-							for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+							evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 						}
 					} else {
 						evalset_cmds[attr] = rhs;
-						for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+						evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 					}
 				}
 			}

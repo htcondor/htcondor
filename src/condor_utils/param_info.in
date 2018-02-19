@@ -2752,6 +2752,10 @@ type=string
 description=Constrain Negotiator Query for Startd Ads
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_JOB_CONSTRAINT]
+default=
+type=string
+
 [GROUP_AUTOREGROUP]
 default=false
 type=bool
@@ -4377,7 +4381,7 @@ description=Determines if job creates their own namespace
 tags=starter
 
 [CHIRP_DELAYED_UPDATE_PREFIX]
-default=Chirp*
+default=Chirp
 version=8.1.0
 type=string
 is_macro=true

@@ -415,12 +415,12 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
 
-	std::string prefix;
-	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP*");
-	m_delayed_update_prefix.initializeFromString(prefix.c_str());
+	param_and_insert_attrs("CHIRP_DELAYED_UPDATE_PREFIX", m_delayed_update_prefixes);
 
-	param_and_insert_attrs("PROTECTED_JOB_ATTRS", m_protected_attrs);
-	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", m_protected_attrs);
+	param_and_insert_attrs("PROTECTED_JOB_ATTRS", m_unsettable_attrs);
+	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", m_unsettable_attrs);
+	param_and_insert_attrs("IMMUTABLE_JOB_ATTRS", m_unsettable_attrs);
+	param_and_insert_attrs("SYSTEM_IMMUTABLE_JOB_ATTRS", m_unsettable_attrs);
 }
 
 
@@ -2756,7 +2756,13 @@ RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 	bool response = m_want_chirp || m_want_remote_updates;
 	if (!response && m_want_delayed)
 	{
-		response = m_delayed_update_prefix.contains_anycase_withwildcard(name.c_str());
+		auto i = m_delayed_update_prefixes.begin();
+		for( ; i !=  m_delayed_update_prefixes.end(); ++i ) {
+			if( starts_with_ignore_case( name, * i ) ) {
+				response = true;
+				break;
+			}
+		}
 	}
 
 	// Since this function is called to see if a user job is allowed to update
@@ -2764,7 +2770,7 @@ RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 	// protected attributes. We do this here because the schedd may allow it to happen 
 	// since the shadow will likely be connected as a queue super user with access
 	// to modify protected attributes.
-	if (response && m_protected_attrs.find(name) != m_protected_attrs.end()) {
+	if (response && m_unsettable_attrs.find(name) != m_unsettable_attrs.end()) {
 		response = false;
 	}
 

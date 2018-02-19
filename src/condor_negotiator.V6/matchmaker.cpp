@@ -59,7 +59,7 @@
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
 // is forced to be extern.)
 
-static int comparisonFunction (AttrList *, AttrList *, void *);
+static int comparisonFunction (ClassAd *, ClassAd *, void *);
 #include "matchmaker.h"
 
 
@@ -74,7 +74,7 @@ enum { MM_ERROR, MM_DONE, MM_RESUME };
 // possible outcomes of a matchmaking attempt
 enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
-typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
+typedef int (*lessThanFunc)(ClassAd*, ClassAd*, void*);
 
 char const *RESOURCES_IN_USE_BY_USER_FN_NAME = "ResourcesInUseByUser";
 char const *RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME = "ResourcesInUseByUsersGroup";
@@ -874,6 +874,9 @@ reinitialize ()
         free (tmp);
 	}
 
+	m_JobConstraintStr.clear();
+	param(m_JobConstraintStr, "NEGOTIATOR_JOB_CONSTRAINT");
+
 	num_negotiation_cycle_stats = param_integer("NEGOTIATION_CYCLE_STATS_LENGTH",3,0,MAX_NEGOTIATION_CYCLE_STATS);
 	ASSERT( num_negotiation_cycle_stats <= MAX_NEGOTIATION_CYCLE_STATS );
 
@@ -1099,7 +1102,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 
 	// get the priority
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
-	AttrList* ad=accountant.ReportState();
+	ClassAd* ad=accountant.ReportState();
 	
 	if (!putClassAd(strm, *ad, PUT_CLASSAD_NO_TYPES) ||
 	    !strm->end_of_message())
@@ -1125,7 +1128,7 @@ GET_PRIORITY_ROLLUP_commandHandler(int, Stream *strm) {
 
     // get the priority
     dprintf(D_ALWAYS, "Getting state information from the accountant\n");
-    AttrList* ad = accountant.ReportState(true);
+    ClassAd* ad = accountant.ReportState(true);
 
     if (!putClassAd(strm, *ad, PUT_CLASSAD_NO_TYPES) ||
         !strm->end_of_message()) {
@@ -1156,7 +1159,7 @@ GET_RESLIST_commandHandler (int, Stream *strm)
     dprintf(D_ALWAYS, "Getting resource list of %s\n", submitter.c_str());
 
 	// get the priority
-	AttrList* ad=accountant.ReportState(submitter);
+	ClassAd* ad=accountant.ReportState(submitter);
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
 	if (!putClassAd(strm, *ad, PUT_CLASSAD_NO_TYPES) ||
@@ -1180,31 +1183,24 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 	char *result = NULL;
 
 	// Figure out list of all external attribute references in all startd ads
+	//
+	// When getting references across many ads, it's faster to call the
+	// base ClassAd method GetExternalReferences(), building up a merged
+	// set of full reference names and then call TrimReferenceNames()
+	// on that.
 	dprintf(D_FULLDEBUG,"Entering compute_significant_attrs()\n");
 	ClassAd *startd_ad = NULL;
 	ClassAd *sample_startd_ad = NULL;
 	startdAds.Open ();
-	StringList external_references;	// this is what we want to compute. 
+	classad::References external_references;
 	while ((startd_ad = startdAds.Next ())) { // iterate through all startd ads
 		if ( !sample_startd_ad ) {
 			sample_startd_ad = new ClassAd(*startd_ad);
 		}
-			// Make a stringlist of all attribute names in this startd ad.
-		StringList AttrsToExpand;
-		startd_ad->ResetName();
-		const char *attr_name = startd_ad->NextNameOriginal();
-		while ( attr_name ) {
-			AttrsToExpand.append(attr_name);
-			attr_name = startd_ad->NextNameOriginal();
+		classad::ClassAd::iterator attr_it;
+		for ( attr_it = startd_ad->begin(); attr_it != startd_ad->end(); attr_it++ ) {
+			startd_ad->GetExternalReferences( attr_it->second, external_references, true );
 		}
-			// Get list of external references for all attributes.  Note that 
-			// it is _not_ sufficient to just get references via requirements
-			// and rank.  Don't understand why? Ask Todd <tannenba@cs.wisc.edu>
-		AttrsToExpand.rewind();
-		while ( (attr_name = AttrsToExpand.next()) ) {
-			startd_ad->GetReferences(attr_name,NULL,
-					&external_references);
-		}	// while attr_name
 	}	// while startd_ad
 
 	// Now add external attributes references from negotiator policy exprs; at
@@ -1246,28 +1242,53 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 	if ( tmp && PreemptionReq ) {	// add references from preemption_requirements
 		const char* preempt_req_name = "preempt_req__";	// any name will do
 		sample_startd_ad->AssignExpr(preempt_req_name,tmp);
-		sample_startd_ad->GetReferences(preempt_req_name,NULL,
-					&external_references);
+		ExprTree *expr = sample_startd_ad->Lookup(preempt_req_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
 	}
 	free(tmp);
 	if (sample_startd_ad) {
 		delete sample_startd_ad;
 		sample_startd_ad = NULL;
 	}
+
+	// We also need to include references in NEGOTIATOR_JOB_CONSTRAINT
+	if ( !m_JobConstraintStr.empty() ) {
+		ClassAd empty_ad;
+		empty_ad.AssignExpr("__JobConstraint",m_JobConstraintStr.c_str());
+		ExprTree *expr = empty_ad.Lookup("__JobConstraint");
+		if ( expr ) {
+			empty_ad.GetExternalReferences(expr,external_references,true);
+		}
+	}
+
+	// Simplify the attribute references
+	TrimReferenceNames( external_references, true );
+
 		// Always get rid of the follow attrs:
 		//    CurrentTime - for obvious reasons
 		//    RemoteUserPrio - not needed since we negotiate per user
 		//    SubmittorPrio - not needed since we negotiate per user
-	external_references.remove_anycase(ATTR_CURRENT_TIME);
-	external_references.remove_anycase(ATTR_REMOTE_USER_PRIO);
-	external_references.remove_anycase(ATTR_REMOTE_USER_RESOURCES_IN_USE);
-	external_references.remove_anycase(ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
-	external_references.remove_anycase(ATTR_SUBMITTOR_PRIO);
-	external_references.remove_anycase(ATTR_SUBMITTER_USER_PRIO);
-	external_references.remove_anycase(ATTR_SUBMITTER_USER_RESOURCES_IN_USE);
-	external_references.remove_anycase(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE);
-		// Note: print_to_string mallocs memory on the heap
-	result = external_references.print_to_string();
+	external_references.erase(ATTR_CURRENT_TIME);
+	external_references.erase(ATTR_REMOTE_USER_PRIO);
+	external_references.erase(ATTR_REMOTE_USER_RESOURCES_IN_USE);
+	external_references.erase(ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
+	external_references.erase(ATTR_SUBMITTOR_PRIO);
+	external_references.erase(ATTR_SUBMITTER_USER_PRIO);
+	external_references.erase(ATTR_SUBMITTER_USER_RESOURCES_IN_USE);
+	external_references.erase(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE);
+
+	classad::References::iterator it;
+	std::string list_str;
+	for ( it = external_references.begin(); it != external_references.end(); it++ ) {
+		if ( !list_str.empty() ) {
+			list_str += ',';
+		}
+		list_str += *it;
+	}
+
+	result = strdup( list_str.c_str() );
 	dprintf(D_FULLDEBUG,"Leaving compute_significant_attrs() - result=%s\n",
 					result ? result : "(none)" );
 	return result;
@@ -3218,7 +3239,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 }
 
 static int
-comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
+comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 {
 	Matchmaker* mm = (Matchmaker*)m;
 
@@ -4346,6 +4367,11 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 			dprintf (D_ALWAYS | D_MATCH,
 				"    USE_GLOBAL_JOB_PRIOS limit to jobprios between %d and %d\n",
 				jmin, jmax);
+		}
+		// Tell the schedd we're only interested in some of its jobs
+		if ( !m_JobConstraintStr.empty() ) {
+			negotiate_ad.AssignExpr(ATTR_NEGOTIATOR_JOB_CONSTRAINT,
+			                        m_JobConstraintStr.c_str());
 		}
 		// Tell the schedd what sigificant attributes we found in the startd ads
 		negotiate_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, job_attr_references ? job_attr_references : "");

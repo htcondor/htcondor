@@ -95,6 +95,7 @@ class QmgmtPeer {
 
 #define JQJ_CACHE_DIRTY_JOBOBJ        0x00001 // set when an attribute cached in the JobQueueJob that doesn't have it's own flag has changed
 #define JQJ_CACHE_DIRTY_SUBMITTERDATA 0x00002 // set when an attribute that affects the submitter name is changed
+#define JQJ_CACHE_DIRTY_CLUSTERATTRS  0x00004 // set then ATTR_EDITED_CLUSTER_ATTRS changes, used only in the cluster ad.
 
 class JobFactory;
 class JobQueueCluster;
@@ -257,6 +258,11 @@ void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
 // returns < 0 on error.  if return is 0, retry_delay is set to non-zero to indicate the retrying later might yield success
 int MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * cluster, int & retry_delay);
 
+// returns true if there is no materialize policy expression, or if the expression evalues to true
+// returns false if there is an expression and it evaluates to false. When false is returned, retry_delay is set
+// a value of > 0 for retry_delay indicates that trying again later might give a different answer.
+bool CheckMaterializePolicyExpression(JobQueueCluster * cluster, int & retry_delay);
+
 int PostCommitJobFactoryProc(JobQueueCluster * cluster, JobQueueJob * job);
 bool CanMaterializeJobs(JobQueueCluster * cluster); // reutrns true if cluster has a non-paused, non-complete factory
 bool JobFactoryIsComplete(JobQueueCluster * cluster);
@@ -402,11 +408,22 @@ public:
 	}
 	virtual bool insert(const char * key, ClassAd * ad) {
 		JOB_ID_KEY k(key);
+		bool new_ad = false;
 		JobQueueJob * Ad = dynamic_cast<JobQueueJob*>(ad);
-		// if the incoming ad is really a ClassAd and not a JobQueueJob, then make a new object and delete the incoming ad.
-		if ( ! Ad) { Ad = new JobQueueJob(); Ad->Update(*ad); delete ad; }
+		// if the incoming ad is really a ClassAd and not a JobQueueJob, then make a new object.
+		if ( ! Ad) { Ad = new JobQueueJob(); Ad->Update(*ad); new_ad = true; }
 		Ad->SetDirtyTracking(true);
 		int iret = table.insert(k, Ad);
+		// If we made a new ad, we must now delete one of them.
+		// On success, delete the original ad.
+		// On failure, delete the new ad (our caller will delete the original one).
+		if ( new_ad ) {
+			if ( iret >= 0 ) {
+				delete ad;
+			} else {
+				delete Ad;
+			}
+		}
 		return iret >= 0;
 	}
 	virtual void startIterations() { table.startIterations(); } // begin iterations

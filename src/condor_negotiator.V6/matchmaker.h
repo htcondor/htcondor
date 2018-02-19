@@ -317,7 +317,7 @@ class Matchmaker : public Service
 		void insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal );
 		void reeval( ClassAd *ad );
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
-		friend int comparisonFunction (AttrList *, AttrList *,
+		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
 		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, string &dslot_claims);
 
@@ -378,6 +378,8 @@ class Matchmaker : public Service
         ExprTree *SlotPoolsizeConstraint;   // Filter machineAds by this
                                          // constraint before calculating quotas
                                          // formerly DynQuotaMachConstraint Added for CDF.
+
+		std::string m_JobConstraintStr;
 
 		bool m_staticRanks;
 

@@ -191,6 +191,11 @@ public:
 	// added into the ad, false if not.
 	bool AddAttrsFromTransaction(const K &key, ClassAd &ad);
 
+	// insert into the given set any attribute names found in the uncommitted transaction
+	// cache that match the key.  return true if any attributes were
+	// added into the set, false if not.
+	bool AddAttrNamesFromTransaction(const K &key, classad::References & attrs);
+
 	HashTable<K,AD> table;
 
 	// user-replacable helper class for creating and destroying values for the hashtable
@@ -475,6 +480,11 @@ bool AddAttrsFromLogTransaction(
 	const char * key,
 	ClassAd &ad);
 
+bool AddAttrNamesFromLogTransaction(
+	Transaction* active_transaction,
+	const char * key,
+	classad::References & attrs); // out, attribute names are added when the transaction refers to them for the given key
+
 LogRecord* InstantiateLogEntry(
 	FILE* fp,
 	unsigned long recnum,
@@ -732,8 +742,7 @@ ClassAdLog<K,AD>::AdExistsInTableOrTransaction(const K& key)
 
 		// first see if it exists in the "commited" hashtable
 	AD ad = NULL;
-	table.lookup(key, ad);
-	if ( ad ) {
+	if ( table.lookup(key, ad) >= 0 && ad ) {
 		adexists = true;
 	}
 
@@ -838,6 +847,19 @@ ClassAdLog<K,AD>::AddAttrsFromTransaction(const K& key, ClassAd &ad)
 	const std::string keystr = key;
 	return AddAttrsFromLogTransaction(active_transaction, this->GetTableEntryMaker(), keystr.c_str(), ad);
 }
+
+template <typename K, typename AD>
+bool
+ClassAdLog<K,AD>::AddAttrNamesFromTransaction(const K &key, classad::References & attrs)
+{
+		// if there is no pending transaction, we're done
+	if (!active_transaction) {
+		return false;
+	}
+	const std::string keystr = key;
+	return AddAttrNamesFromLogTransaction(active_transaction, keystr.c_str(), attrs);
+}
+
 
 template <typename K, typename AD>
 void ClassAdLog<K,AD>::ListNewAdsInTransaction( std::list<std::string> &new_keys )

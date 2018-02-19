@@ -2547,7 +2547,7 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				 !ClassAdAttributeIsPrivate( itr->first ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
 				output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
@@ -2561,7 +2561,7 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			 !ClassAdAttributeIsPrivate( itr->first ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
 			output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
@@ -2596,7 +2596,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			 !ClassAdAttributeIsPrivate( itr->first ) ) {
 			attrs.insert(itr->first);
 		}
 	}
@@ -2611,7 +2611,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				 !ClassAdAttributeIsPrivate( itr->first ) ) {
 				attrs.insert(itr->first);
 			}
 		}
@@ -3175,83 +3175,52 @@ void ClassAd::ChainCollapse()
     }
 }
 
-void ClassAd::
-GetReferences(const char* attr,
-                StringList *internal_refs,
-                StringList *external_refs) const
-{
-    ExprTree *tree;
 
-    tree = Lookup(attr);
-    if(tree != NULL)
-    {
-		_GetReferences( tree, internal_refs, external_refs );
-    }
+// the freestanding functions 
+
+bool
+GetReferences( const char* attr, const classad::ClassAd &ad,
+               classad::References *internal_refs,
+               classad::References *external_refs )
+{
+	ExprTree *tree;
+
+	tree = ad.Lookup( attr );
+	if ( tree != NULL ) {
+		return GetExprReferences( tree, ad, internal_refs, external_refs );
+	} else {
+		return false;
+	}
 }
 
-bool ClassAd::
-GetExprReferences(const char* expr,
-				  StringList *internal_refs,
-				  StringList *external_refs) const
+bool
+GetExprReferences( const char* expr, const classad::ClassAd &ad,
+                   classad::References *internal_refs,
+                   classad::References *external_refs )
 {
+	bool rv = false;
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
 	par.SetOldClassAd( true );
 
-    if ( !par.ParseExpression( expr, tree, true ) ) {
-        return false;
-    }
+	if ( !par.ParseExpression( expr, tree, true ) ) {
+		return false;
+	}
 
-	_GetReferences( tree, internal_refs, external_refs );
+	rv = GetExprReferences( tree, ad, internal_refs, external_refs );
 
 	delete tree;
 
-	return true;
+	return rv;
 }
 
-bool ClassAd::
-GetExprReferences(classad::ExprTree *tree,
-				  StringList *internal_refs,
-				  StringList *external_refs) const
-{
-	_GetReferences( tree, internal_refs, external_refs );
-	return true;
-}
-
-static void AppendReference( StringList &reflist, char const *name )
-{
-	char const *end = strchr(name,'.');
-	std::string buf;
-	if( end ) {
-			// if attribute reference is of form 'one.two.three...'
-			// only insert 'one' in the list of references
-
-		if( end == name ) {
-				// If reference is of form '.one.two.three...'
-				// only insert 'one'.  This is unlikely to be correct,
-				// because the root scope is likely to be the MatchClassAd,
-				// but inserting an empty attribute name would make it
-				// harder to understand what is going on, so it seems
-				// better to insert 'one'.
-			end = strchr(end,'.');
-		}
-
-		buf.append(name,end-name);
-		name = buf.c_str();
-	}
-
-	if( !reflist.contains_anycase(name) ) {
-		reflist.append(name);
-	}
-}
-
-void ClassAd::
-_GetReferences(classad::ExprTree *tree,
-			   StringList *internal_refs,
-			   StringList *external_refs) const
+bool
+GetExprReferences( const classad::ExprTree *tree, const classad::ClassAd &ad,
+                   classad::References *internal_refs,
+                   classad::References *external_refs )
 {
 	if ( tree == NULL ) {
-		return;
+		return false;
 	}
 
 	classad::References ext_refs_set;
@@ -3259,16 +3228,17 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References::iterator set_itr;
 
 	bool ok = true;
-	if( external_refs && !GetExternalReferences(tree, ext_refs_set, true) ) {
+	if( external_refs && !ad.GetExternalReferences(tree, ext_refs_set, true) ) {
 		ok = false;
 	}
-	if( internal_refs && !GetInternalReferences(tree, int_refs_set, true) ) {
+	if( internal_refs && !ad.GetInternalReferences(tree, int_refs_set, true) ) {
 		ok = false;
 	}
 	if( !ok ) {
 		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
-		dPrintAd(D_FULLDEBUG, *this);
+		dPrintAd(D_FULLDEBUG, ad);
 		dprintf(D_FULLDEBUG,"End of offending ad.\n");
+		return false;
 	}
 
 		// We first process the references and save results in
@@ -3278,39 +3248,48 @@ _GetReferences(classad::ExprTree *tree,
 		// duplicates while inserting into the StringList.
 
 	if ( external_refs ) {
-		for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
-			  set_itr++ ) {
-			const char *name = set_itr->c_str();
-			// Check for references to things in the MatchClassAd
-			// and do the right thing.  This does not cover all
-			// possible ways of referencing things in the match ad,
-			// but it covers the ones users are expected to use
-			// and the ones expected from OptimizeAdForMatchmaking.
-			if ( strncasecmp( name, "target.", 7 ) == 0 ) {
-				AppendReference( *external_refs, &set_itr->c_str()[7] );
-			} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
-				AppendReference( *external_refs, &set_itr->c_str()[6] );
-			} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
-				AppendReference( *external_refs, &set_itr->c_str()[6] );
-			} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
-				AppendReference( *external_refs, &set_itr->c_str()[7] );
-			} else {
-				AppendReference( *external_refs, set_itr->c_str() );
-			}
-		}
+		TrimReferenceNames( ext_refs_set, true );
+		external_refs->insert( ext_refs_set.begin(), ext_refs_set.end() );
 	}
-
 	if ( internal_refs ) {
-		for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
-			  set_itr++ ) {
-			AppendReference( *internal_refs, set_itr->c_str() );
-		}
+		TrimReferenceNames( int_refs_set, false );
+		internal_refs->insert( int_refs_set.begin(), int_refs_set.end() );
 	}
+	return true;
 }
 
-
-
-// the freestanding functions 
+void TrimReferenceNames( classad::References &ref_set, bool external )
+{
+	classad::References new_set;
+	classad::References::iterator it;
+	for ( it = ref_set.begin(); it != ref_set.end(); it++ ) {
+		const char *name = it->c_str();
+		if ( external ) {
+			if ( strncasecmp( name, "target.", 7 ) == 0 ) {
+				name += 7;
+			} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
+				name += 6;
+			} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
+				name += 6;
+			} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
+				name += 7;
+			} else if ( name[0] == '.' ) {
+				name += 1;
+			}
+		} else {
+			if ( name[0] == '.' ) {
+				name += 1;
+			}
+		}
+		const char *end = strchr( name, '.' );
+		if ( end ) {
+			new_set.insert( std::string( name, end-name ) );
+		} else {
+			new_set.insert( name );
+		}
+	}
+	ref_set.swap( new_set );
+}
 
 classad::ExprTree *
 AddExplicitTargetRefs(classad::ExprTree *tree,

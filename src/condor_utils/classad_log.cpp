@@ -367,6 +367,42 @@ bool TruncateClassAdLog(
 }
 
 
+bool AddAttrNamesFromLogTransaction(
+	Transaction* active_transaction,
+	const char * key,
+	classad::References & attrs) // out, attribute names are added when the transaction refers to them for the given key
+{
+	if ( !key ) {
+		return false;
+	}
+
+		// if there is no pending transaction, we're done
+	if (!active_transaction) {
+		return false;
+	}
+
+	int found = 0;
+
+	for (LogRecord *log = active_transaction->FirstEntry(key); log;
+		 log = active_transaction->NextEntry()) {
+		switch (log->get_op_type()) {
+		case CondorLogOp_SetAttribute: {
+			char const *lname = ((LogSetAttribute *)log)->get_name();
+			attrs.insert(lname);
+			++found;
+			break;
+			}
+		case CondorLogOp_DeleteAttribute: {
+			char const *lname = ((LogDeleteAttribute *)log)->get_name();
+			attrs.insert(lname);
+			++found;
+			break;
+			}
+		}
+	}
+	return found > 0;
+}
+
 
 int ExamineLogTransaction(
 	Transaction* active_transaction,
@@ -531,7 +567,7 @@ bool WriteClassAdLogState(
 
 			// Unchain the ad -- we just want to write out this ads exprs,
 			// not all the exprs in the chained ad as well.
-		AttrList *chain = dynamic_cast<AttrList*>(ad->GetChainedParentAd());
+		classad::ClassAd *chain = ad->GetChainedParentAd();
 		ad->Unchain();
 		ad->ResetName();
 		attr_name = ad->NextNameOriginal();

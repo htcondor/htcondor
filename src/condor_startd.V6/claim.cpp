@@ -886,26 +886,6 @@ void Claim::cacheJobInfo( ClassAd* job )
 				 ATTR_JOB_LEASE_DURATION, c_lease_duration,
 				 c_aliveint, max_claim_alives_missed );
 	}
-
-	// Figure out who should sending keep alives
-	std::string value;
-	param( value, "STARTD_SENDS_ALIVES", "peer" );
-	if ( job->LookupBool( ATTR_STARTD_SENDS_ALIVES, c_startd_sends_alives ) ) {
-		// Use value from ad
-	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
-		c_startd_sends_alives = false;
-	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
-		c_startd_sends_alives = true;
-	} else {
-		// No direction from the schedd or config file.
-		c_startd_sends_alives = false;
-	}
-
-	// If startd is sending the alives, look to see if the schedd is requesting
-	// that we let only send alives when there is no starter present (i.e. when
-	// the claim is idle).
-	c_starter_handles_alives = false;  // default to false unless schedd tells us
-	job->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
 }
 
 #if 0 // no-one uses this
@@ -954,7 +934,33 @@ Claim::startLeaseTimer()
 	if( c_lease_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
 	}
-	
+
+	// Figure out who should sending keep alives
+	// note that the job-ad lookups MUST be here rather than in cacheJobInfo
+	// because the  job ad we get from the shadow at activation time doesn't have
+	// the necessary attributes - they are only in the job ad we get from the schedd at claim time
+	// see #6568 for more details.
+	std::string value;
+	param( value, "STARTD_SENDS_ALIVES", "peer" );
+	if ( c_jobad && c_jobad->LookupBool( ATTR_STARTD_SENDS_ALIVES, c_startd_sends_alives ) ) {
+		// Use value from ad
+	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
+		c_startd_sends_alives = false;
+	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
+		c_startd_sends_alives = true;
+	} else {
+		// No direction from the schedd or config file.
+		c_startd_sends_alives = false;
+	}
+
+	// If startd is sending the alives, look to see if the schedd is requesting
+	// that we let only send alives when there is no starter present (i.e. when
+	// the claim is idle).
+	c_starter_handles_alives = false;  // default to false unless schedd tells us
+	if (c_jobad) {
+		c_jobad->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
+	}
+
 	if ( c_startd_sends_alives &&
 		 c_type != CLAIM_COD &&
 		 c_lease_duration > 0 )	// prevent divide by zero

@@ -148,8 +148,17 @@ int DockerProc::StartJob() {
 	recoveryAd.Assign("DockerContainerName", containerName.c_str());
 	Starter->WriteRecoveryFile(&recoveryAd);
 
-	int childFDs[3] = { 0, 0, 0 }; // GGT Fix!
+	int childFDs[3] = { 0, 0, 0 }; 
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	std::string workingDir = Starter->GetWorkingDir();
+	//std::string DockerOutputFile = workingDir + "/docker_stdout";
+	std::string DockerErrorFile  = workingDir + "/docker_stderror";
 
+	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	}
+	  
 	  // Ulog the execute event
 	Starter->jic->notifyJobPreSpawn();
 
@@ -198,9 +207,48 @@ DockerProc::ExecReaper(int pid, int status) {
 }
 
 bool DockerProc::JobReaper( int pid, int status ) {
-	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d\n", pid );
+	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d status is %d wait_for_Create is %d\n", pid, status, waitForCreate);
 
 	if (waitForCreate) {
+		// When we get here, the docker create container has exited
+
+		if (status != 0) {
+			// Error creating container.  Perhaps invalid image
+			std::string message;
+
+			char buf[512];
+			buf[0] = '\0';
+
+			{
+			TemporaryPrivSentry sentry(PRIV_USER);
+			std::string fileName = Starter->GetWorkingDir();
+			fileName += "/docker_stderror";
+			int fd = open(fileName.c_str(), O_RDONLY, 0000);
+			if (fd >= 0) {
+				int r = read(fd, buf, 511);
+				if (r < 0) {
+					dprintf(D_ALWAYS, "Cannot read docker error file on docker create container. Errno %d\n", errno);
+				} else {
+					buf[r] = '\0';
+					int buflen = strlen(buf);
+					for (int i = 0; i < buflen; i++) {
+						if (buf[i] == '\n') buf[i] = ' ';
+					}
+				}
+				close(fd);
+			} else {
+				dprintf(D_ALWAYS, "Cannot open docker_stderror\n");
+			}
+			}
+			message = buf;
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
+			{
+			TemporaryPrivSentry sentry(PRIV_USER);
+			unlink("docker_stderror");
+			}
+			return VanillaProc::JobReaper( pid, status );
+		}
+
 		waitForCreate = false;
 		dprintf(D_FULLDEBUG, "DockerProc::JobReaper docker create (pid %d) exited with status %d\n", pid, status);
 		
@@ -302,11 +350,14 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				imageName = "Unknown"; // shouldn't ever happen
 			}
 
+			/*
 			std::string message;
-			formatstr(message, "Cannot start container: invalid image name: %s", imageName.c_str());
+			formatstr(message, "Cannot start container\n");
 
 			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
 			return VanillaProc::JobReaper( pid, status );
+			*/
+			EXCEPT("Cannot inspect exited container");
 		}
 
 		if( ! dockerAd.LookupBool( "Running", running ) ) {

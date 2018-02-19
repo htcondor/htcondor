@@ -1043,14 +1043,14 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 // Report the list of Matches for a customer
 //------------------------------------------------------------------
 
-AttrList* Accountant::ReportState(const MyString& CustomerName) {
+ClassAd* Accountant::ReportState(const MyString& CustomerName) {
     dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
     std::string HK;
     ClassAd* ResourceAd;
     int StartTime;
 
-    AttrList* ad = new AttrList();
+    ClassAd* ad = new ClassAd();
 
     bool isGroup=false;
     string cgrp = GetAssignedGroup(CustomerName.Value(), isGroup)->name;
@@ -1220,7 +1220,8 @@ ClassAd* Accountant::ReportState(bool rollup) {
     ad->Assign("NumSubmittors", EntryNum-1);
 
     // include concurrency limit information
-    ReportLimits(ad);
+	// Why do we need this?  Nothing looks at it.
+    //ReportLimits(ad);
 
     return ad;
 }
@@ -1747,7 +1748,7 @@ void Accountant::DumpLimits()
 	}
 }
 
-void Accountant::ReportLimits(AttrList *attrList)
+void Accountant::ReportLimits(ClassAd *attrList)
 {
 	MyString limit;
  	double count;
