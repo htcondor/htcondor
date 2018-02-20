@@ -24,12 +24,18 @@ use CondorPersonal;
 use strict;
 use warnings;
 
+# NOTES: this test will fail if does not run in an environment where it gets to control
+#        the condor configuration.  It *may* erroneously succeed if run with a StartdLog
+#        that has events that predate this test.
+# 
+
+# request that a personal HTCondor be started before the test, and that it have
+# the following appended to its config file.
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
-
   NUM_CPUS = 1
+  # turn on D_PROTOCOL So that keep alives are logged.
   STARTD_DEBUG = $(STARTD_DEBUG) D_CAT D_PROTOCOL:1
-
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
@@ -48,17 +54,14 @@ my @basesubmit = "
 	notification = never
 	";
 
+# create the submit file
 open(SF,">$submitfile") or die "Failed to open '$submitfile' : $!\n";
 print SF @basesubmit;
 print SF "queue\n";
 close(SF);
 
-# truly const variables in perl
-sub IDLE{1};
-sub HELD{5};
-sub RUNNING{2};
-
-
+# callbacks for the log reader while the job is running.
+#
 my $executed = sub
 {
 	my %args = @_;
@@ -111,19 +114,24 @@ CondorTest::RegisterExitedSuccess($testname, $exited);
 
 TLOG("Submitting $submitfile to test job_lease_duration and lease renewal\n");
 
+# first run a job and make sure that it finishes even though the job duration (60 seconds)
+# is longer than the lease_duration (20 seconds)
+#
 my $res = CondorTest::RunTest($testname, $submitfile, 0);
 if ($was_evicted) { $res = 0; } # eviction is a failure.
 CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'job was not evicted');
 
-# check to see if there was a renewal of the lease
+# Then check to see if there was a renewal of the lease by scanning the startd log
+#
 my $startd_log = `condor_config_val STARTD_LOG`;
 TLOG("checking $startd_log for evidence that the lease was renewed\n");
 
-$res = 1;
+$res = 0; # assume failure
 open(FH,"<$startd_log") or die "Failed to open '$startd_log' : $!\n";
 while (<FH>) {
 	if ($_ =~ /Keep alive/) {
 		print $_;
+		$res = 1; # success, saw a keepalive message
 	}
 }
 close(FH);
