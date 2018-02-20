@@ -38,7 +38,7 @@
 
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
-static const char * _globus_error_message = NULL;
+static std::string _globus_error_message;
 
 #if defined(HAVE_EXT_GLOBUS)
 
@@ -211,17 +211,14 @@ GlobusJobStatusName( int status )
 const char *
 x509_error_string( void )
 {
-	return _globus_error_message;
+	return _globus_error_message.c_str();
 }
 
 static
 void
 set_error_string( const char *message )
 {
-	if ( _globus_error_message ) {
-		free( const_cast<char *>(_globus_error_message) );
-	}
-	_globus_error_message = strdup( message );
+	_globus_error_message = message;
 }
 
 /* Activate the globus gsi modules for use by functions in this file.
@@ -248,9 +245,7 @@ activate_globus_gsi( void )
 
 	if ( Condor_Auth_SSL::Initialize() == false ) {
 		// Error in the dlopen/sym calls for libssl, return failure.
-		std::string buf;
-		formatstr( buf, "Failed to open SSL library" );
-		set_error_string( buf.c_str() );
+		_globus_error_message = "Failed to open SSL library";
 		activation_failed = true;
 		return -1;
 	}
@@ -333,9 +328,7 @@ activate_globus_gsi( void )
 		 ) {
 			 // Error in the dlopen/sym calls, return failure.
 		const char *err = dlerror();
-		std::string buf;
-		formatstr( buf, "Failed to open GSI libraries: %s", err ? err : "Unknown error" );
-		set_error_string( buf.c_str() );
+		formatstr( _globus_error_message, "Failed to open GSI libraries: %s", err ? err : "Unknown error" );
 		activation_failed = true;
 		return -1;
 	}
