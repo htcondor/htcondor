@@ -952,7 +952,10 @@ static long findLastDelimiter(FILE *fd, const char *filename)
     struct stat st;
   
     // Get file size
-    stat(filename, &st);
+    if (stat(filename, &st) < 0) {
+			printf( "\t*** Error: Can't stat history file %s: errno %d\n", filename, errno);
+			exit(1);
+	}
   
     found = false;
     i = 0;
@@ -960,7 +963,10 @@ static long findLastDelimiter(FILE *fd, const char *filename)
         // 200 is arbitrary, but it works well in practice
         seekOffset = st.st_size - (++i * 200); 
 	
-        fseek(fd, seekOffset, SEEK_SET);
+        if (fseek(fd, seekOffset, SEEK_SET) < 0) {
+			printf( "\t*** Error: Can't seek inside history file: errno %d\n", errno);
+			exit(1);
+		}
         
         while (1) {
             if (buf.readLine(fd) == false) 
@@ -1124,11 +1130,17 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             if (offset == -1) { // Unable to match constraint
                 break;
             } else if (offset != 0) {
-                fseek(LogFile, offset, SEEK_SET);
+                if (fseek(LogFile, offset, SEEK_SET) < 0) {
+					printf( "\t*** Error: Can't seek inside history file: errno %d\n", errno);
+					exit(1);
+				}
                 buf.readLine(LogFile); // Read one line to skip delimiter and adjust to actual offset of ad
             } else { // Offset set to 0
                 BOF = true;
-                fseek(LogFile, offset, SEEK_SET);
+                if (fseek(LogFile, offset, SEEK_SET) < 0) {
+					printf( "\t*** Error: Can't seek inside history file: errno %d\n", errno);
+					exit(1);
+				}
             }
         }
       
