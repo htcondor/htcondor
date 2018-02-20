@@ -862,7 +862,8 @@ int relisock_gsi_put(void *arg,  void *buf, size_t size)
     
     //if successful, send the data
     if ( stat ) {
-        if ( !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
+        // don't call code_bytes() on a zero-length buffer
+        if ( size != 0 && !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
             dprintf( D_ALWAYS, "failure sending data (%lu bytes) over sock\n",(unsigned long)size);
         }
     }

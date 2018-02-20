@@ -1275,6 +1275,8 @@ x509_send_delegation( const char *source_file,
 	int idx = 0;
 	globus_gsi_cert_utils_cert_type_t cert_type;
 	int is_limited;
+	bool did_recv = false;
+	bool did_send = false;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return -1;
@@ -1301,7 +1303,8 @@ x509_send_delegation( const char *source_file,
 		goto cleanup;
 	}
 
-	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 ) {
+	did_recv = true;
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 || buffer == NULL ) {
 		rc = -1;
 		_globus_error_message = "Failed to receive delegation request";
 		error_line = __LINE__;
@@ -1460,6 +1463,7 @@ x509_send_delegation( const char *source_file,
 		goto cleanup;
 	}
 
+	did_send = true;
 	if ( send_data_func( send_data_ptr, buffer, buffer_len ) != 0 ) {
 		rc = -1;
 		_globus_error_message = "Failed to send delegated proxy";
@@ -1474,6 +1478,12 @@ x509_send_delegation( const char *source_file,
 		}
 	}
 
+	if ( !did_recv ) {
+		recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len );
+	}
+	if ( !did_send ) {
+		send_data_func( send_data_ptr, NULL, 0 );
+	}
 	if ( bio ) {
 		BIO_free( bio );
 	}
@@ -1537,6 +1547,7 @@ x509_receive_delegation( const char *destination_file,
 	char *buffer = NULL;
 	size_t buffer_len = 0;
 	BIO *bio = NULL;
+	bool did_send = false;
 
 	if ( activate_globus_gsi() != 0 ) {
 		if ( st->m_dest ) { free(st->m_dest); }
@@ -1637,6 +1648,7 @@ x509_receive_delegation( const char *destination_file,
 	BIO_free( bio );
 	bio = NULL;
 
+	did_send = true;
 	if ( send_data_func( send_data_ptr, buffer, buffer_len ) != 0 ) {
 		rc = -1;
 		_globus_error_message = "Failed to send delegation request";
@@ -1654,6 +1666,9 @@ cleanup:
 		}
 	}
 
+	if ( !did_send ) {
+		send_data_func( send_data_ptr, NULL, 0 );
+	}
 	if ( bio ) {
 		BIO_free( bio );
 	}
@@ -1711,7 +1726,7 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
 	size_t buffer_len = 0;
 	BIO *bio = NULL;
 
-	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 ) {
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 || buffer == NULL ) {
 		rc = -1;
 		_globus_error_message = "Failed to receive delegated proxy";
 		error_line = __LINE__;
