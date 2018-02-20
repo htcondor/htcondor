@@ -1,0 +1,133 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use CondorPersonal;
+use strict;
+use warnings;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+
+  NUM_CPUS = 1
+  STARTD_DEBUG = $(STARTD_DEBUG) D_CAT D_PROTOCOL:1
+
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testname = "job_core_lease_duration";
+my $was_evicted = 0;
+
+my $pid = $$;
+my $submitfile = "$testname$pid.sub";
+
+my @basesubmit = "
+	universe = vanilla
+	executable = x_sleep.pl
+	arguments = 60
+	job_lease_duration = 20
+	log = $submitfile.log
+	notification = never
+	";
+
+open(SF,">$submitfile") or die "Failed to open '$submitfile' : $!\n";
+print SF @basesubmit;
+print SF "queue\n";
+close(SF);
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+
+my $executed = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	TLOG "OK: Job $cluster began executing\n";
+	return 0;
+};
+
+my $submitted = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	TLOG "OK: Job $cluster was submitted\n";
+	return 0;
+};
+
+my $exited = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	TLOG "OK: Job $cluster exited\n";
+	return 0;
+};
+
+my $evicted = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	TLOG ("FAIL: job $cluster was evicted, most likely because the job lease was not renewed.\n");
+
+    my @argarray = @_;
+    for(my $i = 0; $i <= $#argarray; ++$i){
+		TLOG "[evicted] argarray[$i]=$argarray[$i]\n";
+	}
+
+	$was_evicted = 1;
+
+	my @toolout;
+	CondorTest::runCondorTool("condor_rm $cluster",\@toolout,2,{emit_output=>1});
+};
+
+CondorTest::RegisterSubmit($testname, $submitted);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterEvictedWithRequeue($testname, $evicted);
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $evicted);
+CondorTest::RegisterExited($testname, $exited);
+CondorTest::RegisterExitedSuccess($testname, $exited);
+
+TLOG("Submitting $submitfile to test job_lease_duration and lease renewal\n");
+
+my $res = CondorTest::RunTest($testname, $submitfile, 0);
+if ($was_evicted) { $res = 0; } # eviction is a failure.
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'job was not evicted');
+
+# check to see if there was a renewal of the lease
+my $startd_log = `condor_config_val STARTD_LOG`;
+TLOG("checking $startd_log for evidence that the lease was renewed\n");
+
+$res = 1;
+open(FH,"<$startd_log") or die "Failed to open '$startd_log' : $!\n";
+while (<FH>) {
+	if ($_ =~ /Keep alive/) {
+		print $_;
+	}
+}
+close(FH);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'saw keep alive');
+
+CondorTest::EndTest();
+

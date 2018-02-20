@@ -98,6 +98,7 @@ job_core_input_sched: personal
 job_core_input_van: personal
 job_core_killsignal_sched: personal
 job_core_leaveinqueue_van: personal
+job_core_lease_duration: personal
 job_core_macros-dollardollar_van: personal
 job_core_macros_sched: personal
 job_core_onexithold_local: personal
