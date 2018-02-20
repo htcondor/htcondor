@@ -2310,7 +2310,7 @@ REMOTE_CONDOR_getcreds()
 
 		// write temp file
 		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.Value());
-		int rc = write_secure_file(tmpname.Value(), rawbuf, rawlen, true);
+		bool rc = write_secure_file(tmpname.Value(), rawbuf, rawlen, true);
 
 		// caller of condor_base64_decode is responsible for freeing buffer
 		free(rawbuf);
