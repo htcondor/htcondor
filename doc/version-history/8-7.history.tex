@@ -80,6 +80,11 @@ works properly when \MacroNI{NO\_DNS} is set to \Expr{True}.
 now work with shared file systems (again).
 \Ticket{6556}
 
+\item Python bindings installed via pip on a system without a
+HTCondor install (i.e. without a \File{condor\_config} present)
+will use a ``null'' config and print a warning.
+\Ticket{6515}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
