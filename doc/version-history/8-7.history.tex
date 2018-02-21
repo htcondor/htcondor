@@ -85,6 +85,11 @@ HTCondor install (i.e. without a \File{condor\_config} present)
 will use a ``null'' config and print a warning.
 \Ticket{6515}
 
+\item The new configuration parameter \MacroNI{NEGOTIATOR\_JOB\_CONSTRAINT}
+defines an expression which constrains which job ads are considered for
+matchmaking by the \Condor{negotiator}.
+\Ticket{6250}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
