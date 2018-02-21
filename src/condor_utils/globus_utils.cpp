@@ -225,6 +225,7 @@ set_error_string( const char *message )
 	_globus_error_message = message;
 }
 
+#if defined(HAVE_EXT_GLOBUS)
 static
 bool
 set_error_string( globus_result_t result )
@@ -238,6 +239,7 @@ set_error_string( globus_result_t result )
 	}
 	return false;
 }
+#endif
 
 /* Activate the globus gsi modules for use by functions in this file.
  * Returns zero if the modules were successfully activated. Returns -1 if
@@ -1257,8 +1259,7 @@ x509_send_delegation( const char *source_file,
 	(void) send_data_func;
 	(void) send_data_ptr;
 
-	_globus_error_message =
-		strdup( NOT_SUPPORTED_MSG );
+	_globus_error_message = NOT_SUPPORTED_MSG;
 	return -1;
 
 #else
@@ -1532,8 +1533,7 @@ x509_receive_delegation( const char *destination_file,
 	(void) send_data_func;			// Quiet compiler warnings
 	(void) send_data_ptr;			// Quiet compiler warnings
 	(void) state_ptr;			// Quiet compiler warnings
-	_globus_error_message =
-		strdup( NOT_SUPPORTED_MSG );
+	_globus_error_message = NOT_SUPPORTED_MSG;
 	return -1;
 
 #else
@@ -1712,8 +1712,7 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
 	(void) recv_data_func;			// Quiet compiler warnings
 	(void) recv_data_ptr;			// Quiet compiler warnings
 	(void) state_ptr_raw;			// Quiet compiler warnings
-	_globus_error_message =
-		strdup( NOT_SUPPORTED_MSG );
+	_globus_error_message = NOT_SUPPORTED_MSG;
 	return -1;
 
 #else
