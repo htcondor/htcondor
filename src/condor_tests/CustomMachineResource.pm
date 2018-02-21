@@ -360,7 +360,7 @@ sub TestSQUIDsUsage {
 
 		# Each test job appends four lines to the log.
 		if( $lineCount != 32 ) {
-			die( "Error: $testName: 'cmr-monitor-basic-ad.out' had $lineCount lines, not 16.\n" );
+			die( "Error: $testName: 'cmr-monitor-basic-ad.out' had $lineCount lines, not 32.\n" );
 		}
 	} else {
 		die( "Error: $testName: CondorTest::RunTest(${submitFileName}) failed\n" );

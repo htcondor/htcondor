@@ -38,34 +38,34 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 NUM_CPUS = 16
 
 MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
-use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor-memory, PEAK:SQUIDsMemory )
+use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor-both, SUM:SQUIDs, PEAK:SQUIDsMemory )
 
-SCHEDD_CLUSTER_INITIAL_VALUE = 4000
+SCHEDD_CLUSTER_INITIAL_VALUE = 5000
 
 UPDATE_INTERVAL = 20
 STARTER_UPDATE_INTERVAL = 20
 SHADOW_QUEUE_UPDATE_INTERVAL = 20
 
-use feature : PartitionableSlot( 1 )
-
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
-my $testName = 'cmr_monitor_memory';
-my $testDescription = 'Custom Machine Resources - Monitor Test Memory';
+my $testName = 'cmr_monitor_both';
+my $testDescription = 'Custom Machine Resources - Monitor Test Usage & Memory';
 
 #
 # Verify the configuration before running the test.
 #
-CustomMachineResource::TestSlotAndSQUIDsCount( 1, $testName );
+CustomMachineResource::TestSlotAndSQUIDsCount( 16, $testName );
 
 #
-# We don't verify that the monitor's report is being read correctly, because
-# the cmr-monitor-basic* tests already have; that code doesn't know anything
-# about metric types, so it can't misbehave on that basis.  Additionally, it
-# will quickly become clear, given the usage patterns produce by
-# cmr-squid-monitor-memory, if there are any problems reading the values.
+# Verify that the monitor's report is being read correctly.
 #
+CustomMachineResource::TestUptimeSQUIDsSeconds( $testName );
+
+#
+# Verify that we're computing the usage correctly.
+#
+CustomMachineResource::TestSQUIDsUsage( $testName );
 
 #
 # Verify that we're computing the peak usage correctly.

@@ -498,8 +498,15 @@ if (BUILD_TESTING)
 
 	if(LINUX)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "core;quick;full")
+
 		condor_pl_test(cmr-monitor-basic "custom machine resource monitors" "core;quick;full")
 		condor_pl_test(cmr-monitor-basic-partitionable "custom machine resource monitors - partitionable" "core;quick;full")
+
+		condor_pl_test(cmr-monitor-memory "custom machine resource monitors (memory)" "core;quick;full")
+		condor_pl_test(cmr-monitor-memory-partitionable "custom machine resource monitors (memory) - partitionable" "core;quick;full")
+
+		condor_pl_test(cmr-monitor-both "custom machine resource monitors (both)" "core;quick;full")
+		condor_pl_test(cmr-monitor-both-partitionable "custom machine resource monitors (both) - partitionable" "core;quick;full")
 	endif ( LINUX )
 
 	condor_pl_test(job_concurrency_limitsS "Check concurrency" "core;quick;full")

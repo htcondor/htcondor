@@ -38,9 +38,14 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 NUM_CPUS = 16
 
 MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
-use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor, SUM:SQUIDs, PEAK:SQUIDsMemory )
+use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor-memory, PEAK:SQUIDsMemory )
 
 SCHEDD_CLUSTER_INITIAL_VALUE = 3000
+
+UPDATE_INTERVAL = 20
+STARTER_UPDATE_INTERVAL = 20
+SHADOW_QUEUE_UPDATE_INTERVAL = 20
+
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
@@ -50,7 +55,7 @@ my $testDescription = 'Custom Machine Resources - Monitor Test Memory';
 #
 # Verify the configuration before running the test.
 #
-CustomMachineResource::TestSlotAndSQUIDsCount( 16 );
+CustomMachineResource::TestSlotAndSQUIDsCount( 16, $testName );
 
 #
 # We don't verify that the monitor's report is being read correctly, because
