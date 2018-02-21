@@ -785,7 +785,10 @@ int VanillaProc::pidNameSpaceReaper( int status ) {
 	if (fscanf(f, "ExecFailed") > 0) {
 		EXCEPT("Starter configured to use PID NAMESPACES, but execing the job failed");
 	}
-	fseek(f, 0, SEEK_SET);
+	if (fseek(f, 0, SEEK_SET) < 0) {
+		dprintf(D_ALWAYS, "JobReaper: condor_pid_ns_init couldn't seek back to beginning of file\n");
+	}
+
 	if (fscanf(f, "Exited: %d", &status) > 0) {
 		dprintf(D_FULLDEBUG, "Real job exit code of %d read from wrapper output file\n", status);
 	}
