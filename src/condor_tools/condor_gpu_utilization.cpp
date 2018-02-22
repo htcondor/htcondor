@@ -11,11 +11,13 @@ typedef nvmlReturn_t (*nvml_void)(void);
 typedef nvmlReturn_t (*nvml_dghbi)(unsigned int, nvmlDevice_t *);
 typedef nvmlReturn_t (*nvml_unsigned_int)(unsigned int *);
 typedef nvmlReturn_t (*nvml_dgs)( nvmlDevice_t, nvmlSamplingType_t, unsigned long long, nvmlValueType_t *, unsigned int *, nvmlSample_t * );
+typedef nvmlReturn_t (*nvml_dm)( nvmlDevice_t, nvmlMemory_t * );
 typedef const char * (*cc_nvml)( nvmlReturn_t );
 
 nvml_dgs nvmlDeviceGetSamples = NULL;
 nvml_unsigned_int nvmlDeviceGetCount = NULL;
 nvml_dghbi nvmlDeviceGetHandleByIndex = NULL;
+nvml_dm nvmlDeviceGetMemoryInfo = NULL;
 cc_nvml nvmlErrorString = NULL;
 
 unsigned debug = 0;
@@ -37,7 +39,7 @@ void fail() __attribute__((__noreturn__));
 
 void fail() {
 	fprintf( stderr, "Hanging to prevent process churn.\n" );
-	while( 1 ) { sleep( 1204 ); }
+	while( 1 ) { sleep( 1024 ); }
 }
 
 nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastSample, unsigned long long * elapsedTime, unsigned maxSampleCount ) {
@@ -100,10 +102,11 @@ int main() {
 	}
 	dlerror();
 
-	nvmlInit		           = (nvml_void)dlsym( nvml_handle, "nvmlInit" );
-	nvmlShutdown	           = (nvml_void)dlsym( nvml_handle, "nvmlShutdown" );
-	nvmlDeviceGetSamples       = (nvml_dgs)dlsym( nvml_handle, "nvmlDeviceGetSamples" );
+	nvmlInit                   = (nvml_void)dlsym( nvml_handle, "nvmlInit" );
+	nvmlShutdown               = (nvml_void)dlsym( nvml_handle, "nvmlShutdown" );
 	nvmlDeviceGetCount         = (nvml_unsigned_int)dlsym( nvml_handle, "nvmlDeviceGetCount" );
+	nvmlDeviceGetSamples       = (nvml_dgs)dlsym( nvml_handle, "nvmlDeviceGetSamples" );
+	nvmlDeviceGetMemoryInfo    = (nvml_dm)dlsym( nvml_handle, "nvmlDeviceGetMemoryInfo" );
 	nvmlDeviceGetHandleByIndex = (nvml_dghbi)dlsym( nvml_handle, "nvmlDeviceGetHandleByIndex" );
 	nvmlErrorString            = (cc_nvml)dlsym( nvml_handle, "nvmlErrorString" );
 
@@ -126,6 +129,7 @@ int main() {
 
 	nvmlDevice_t devices[deviceCount];
 	unsigned maxSampleCounts[deviceCount];
+	unsigned long long memoryUsage[deviceCount];
 	unsigned long long lastSamples[deviceCount];
 	unsigned long long firstSamples[deviceCount];
 	unsigned long long elapsedTimes[deviceCount];
@@ -150,6 +154,8 @@ int main() {
 			fprintf( stderr, "nvmlDeviceGetSamples(%u) returned an unexpected type (%d) of sample when querying for the max sample count, aborting.\n", i, sampleValueType );
 			fail();
 		}
+
+		memoryUsage[i] = 0;
 	}
 
 	// We deliberately ignore the first set of samples.  Partly, I think we
@@ -180,18 +186,26 @@ int main() {
 					(unsigned)(((double)elapsedTimes[i]) / (lastSamples[i] - firstSamples[i]) * 100)
 				);
 			}
+
+			nvmlMemory_t mi = { 0, 0, 0 };
+			r = nvmlDeviceGetMemoryInfo( devices[i], &mi );
+			if( mi.used > memoryUsage[i] ) {
+				memoryUsage[i] = mi.used;
+			}
 		}
 
 		if( time( NULL ) - lastReport >= reportInterval ) {
 			for( unsigned i = 0; i < deviceCount; ++i ) {
 				fprintf( stdout, "SlotMergeConstraint = StringListMember( \"CUDA%u\", AssignedGPUs )\n", i );
 				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1000000.0 );
+				fprintf( stdout, "UptimeGPUsMemoryPeakUsage = %llu\n", (memoryUsage[i] + (1024 * 1024) -1) / (1024 * 1024) );
 				fprintf( stdout, "- GPUsSlot%u\n", i );
 				fflush( stdout );
 
 				// Report only the usage for each reporting period.
 				elapsedTimes[i] = 0;
 				firstSamples[i] = lastSamples[i];
+				memoryUsage[i] = 0;
 			}
 			lastReport = time( NULL );
 		}

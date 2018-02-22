@@ -198,3 +198,9 @@ typedef struct nvmlSample_st
     nvmlValue_t sampleValue;        //!< Sample Value
 } nvmlSample_t;
 
+// Memory info
+typedef struct nvmlMemory_t {
+	unsigned long long free;
+	unsigned long long total;
+	unsigned long long used;
+} nvmlMemory_t;
