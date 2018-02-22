@@ -213,20 +213,6 @@ CondorQuery (AdTypes qType)
 		command = QUERY_STORAGE_ADS;
 		break;
 
-	  case XFER_SERVICE_AD:
-		query.setNumStringCats (0);
-		query.setNumIntegerCats(0);
-		query.setNumFloatCats  (0);
-		command = QUERY_XFER_SERVICE_ADS;
-		break;
-
-	  case LEASE_MANAGER_AD:
-		query.setNumStringCats (0);
-		query.setNumIntegerCats(0);
-		query.setNumFloatCats  (0);
-		command = QUERY_LEASE_MANAGER_ADS;
-		break;
-
 	  case CREDD_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -569,14 +555,6 @@ getQueryAd (ClassAd &queryAd)
 			SetTargetTypeName (queryAd, GENERIC_ADTYPE);
 		}
 		break;
-
-      case XFER_SERVICE_AD:
-        SetTargetTypeName (queryAd, XFER_SERVICE_ADTYPE);
-        break;
-
-      case LEASE_MANAGER_AD:
-        SetTargetTypeName (queryAd, LEASE_MANAGER_ADTYPE);
-        break;
 
 	  case ANY_AD:
 		SetTargetTypeName (queryAd, ANY_ADTYPE);

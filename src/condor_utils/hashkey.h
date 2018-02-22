@@ -61,8 +61,6 @@ bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeAccountingAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeHadAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeXferServiceAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeLeaseManagerAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeGridAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *);
 

@@ -1259,9 +1259,6 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 	case DT_CREDD:
 		adtype = CREDD_AD;
 		break;
-	case DT_LEASE_MANAGER:
-		adtype = LEASE_MANAGER_AD;
-		break;
 	case DT_GENERIC:
 		adtype = GENERIC_AD;
 		break;

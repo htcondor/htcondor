@@ -38,8 +38,8 @@
 #define ACCOUNTING_ADTYPE			"Accounting"
 #define NEGOTIATOR_ADTYPE		"Negotiator"
 #define HAD_ADTYPE			"HAD"
-#define XFER_SERVICE_ADTYPE		"XferService"
-#define LEASE_MANAGER_ADTYPE		"LeaseManager"
+#define XFER_SERVICE_ADTYPE		"XferService"		/* No longer used */
+#define LEASE_MANAGER_ADTYPE		"LeaseManager"	/* No longer used */
 #define CREDD_ADTYPE			"CredD"
 #define ANY_ADTYPE			"Any"
 #define GENERIC_ADTYPE			"Generic"
@@ -75,8 +75,8 @@ enum AdTypes
 	DATABASE_AD,
 	TT_AD,
 	GRID_AD,
-	XFER_SERVICE_AD,
-	LEASE_MANAGER_AD,
+	XFER_SERVICE_AD,	// placeholder: this type no longer used
+	LEASE_MANAGER_AD,	// placeholder: this type no longer used
 	DEFRAG_AD,
 	ACCOUNTING_AD,
 	// This should *ALWAYS* be at the end of this list

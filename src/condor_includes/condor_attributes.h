@@ -993,9 +993,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_WAITPID_STATUS  "WaitpidStatus"
 #define ATTR_TERMINATION_REASON  "TerminationReason"
 
-// Lease Manager
-#define ATTR_LEASE_MANAGER_IP_ADDR  "LeaseManagerIpAddr"
-
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
 #define MANAGED_EXTERNAL  "External"

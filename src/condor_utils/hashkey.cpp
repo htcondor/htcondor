@@ -363,20 +363,6 @@ makeGenericAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 	return adLookup( "Generic", ad, ATTR_NAME, NULL, hk.name );
 }
 
-bool
-makeXferServiceAdHashKey (AdNameHashKey &hk, ClassAd *ad)
-{
-	return makeNegotiatorAdHashKey( hk, ad );
-}
-
-
-bool
-makeLeaseManagerAdHashKey (AdNameHashKey &hk, ClassAd *ad)
-{
-	return makeNegotiatorAdHashKey( hk, ad );
-}
-
-
 
 // utility function:  parse the string "<aaa.bbb.ccc.ddd:pppp>"
 //  Extracts the ip address portion ("aaa.bbb.ccc.ddd")

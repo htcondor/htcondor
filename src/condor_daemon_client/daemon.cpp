@@ -146,9 +146,6 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_CREDD:
 		_subsys = strnewp( "CREDD" );
 		break;
-	case DT_LEASE_MANAGER:
-		_subsys = strnewp( "LEASE_MANAGER" );
-		break;
 	case DT_GENERIC:
 		_subsys = strnewp( "GENERIC" );
 		break;
@@ -1035,10 +1032,6 @@ Daemon::locate( Daemon::LocateType method )
 		setSubsystem( "TRANSFERD" );
 		rval = getDaemonInfo( ANY_AD, true, method );
 		break;
-	case DT_LEASE_MANAGER:
-		setSubsystem( "LEASEMANAGER" );
-		rval = getDaemonInfo( LEASE_MANAGER_AD, true, method );
-		break;
 	case DT_HAD:
 		setSubsystem( "HAD" );
 		rval = getDaemonInfo( HAD_AD, true, method );
@@ -1235,7 +1228,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			}
 			delete [] my_name;
 		}
-	} else if ( ( _type != DT_NEGOTIATOR ) && ( _type != DT_LEASE_MANAGER ) ) {
+	} else if ( _type != DT_NEGOTIATOR ) {
 			// We were passed neither a name nor an address, so use
 			// the local daemon, unless we're NEGOTIATOR, in which case
 			// we'll still query the collector even if we don't have the 
@@ -1308,7 +1301,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 				query.setLocationLookup(_name);
 			}
 		} else {
-			if ( ( _type != DT_NEGOTIATOR ) && ( _type != DT_LEASE_MANAGER) ) {
+			if ( _type != DT_NEGOTIATOR ) {
 					// If we're not querying for negotiator
 					//    (which there's only one of)
 					// and we don't have the name

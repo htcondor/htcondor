@@ -105,7 +105,6 @@ class CollectorEngine : public Service
 	CollectorHashTable LicenseAds;
 	CollectorHashTable MasterAds;
 	CollectorHashTable StorageAds;
-	CollectorHashTable XferServiceAds;
 	CollectorHashTable AccountingAds;
 
 	// the lesser tables
@@ -114,7 +113,6 @@ class CollectorEngine : public Service
 	CollectorHashTable CollectorAds;
 	CollectorHashTable NegotiatorAds;
 	CollectorHashTable HadAds;
-	CollectorHashTable LeaseManagerAds;
 	CollectorHashTable GridAds;
 	
 	// table for "generic" ad types

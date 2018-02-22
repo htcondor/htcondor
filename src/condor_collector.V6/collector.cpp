@@ -190,10 +190,6 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_HAD_ADS,"QUERY_HAD_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_CommandWithPayload(QUERY_XFER_SERVICE_ADS,"QUERY_XFER_SERVICE_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_CommandWithPayload(QUERY_LEASE_MANAGER_ADS,"QUERY_LEASE_MANAGER_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_ANY_ADS,"QUERY_ANY_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
     daemonCore->Register_CommandWithPayload(QUERY_GRID_ADS,"QUERY_GRID_ADS",
@@ -235,12 +231,6 @@ void CollectorDaemon::Init()
 	daemonCore->Register_CommandWithPayload(INVALIDATE_ADS_GENERIC,
 		"INVALIDATE_ADS_GENERIC", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_CommandWithPayload(INVALIDATE_XFER_SERVICE_ADS,
-		"INVALIDATE_XFER_ENDPOINT_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_CommandWithPayload(INVALIDATE_LEASE_MANAGER_ADS,
-		"INVALIDATE_LEASE_MANAGER_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
     daemonCore->Register_CommandWithPayload(INVALIDATE_GRID_ADS,
         "INVALIDATE_GRID_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
@@ -267,10 +257,6 @@ void CollectorDaemon::Init()
 	daemonCore->Register_CommandWithPayload(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(UPDATE_HAD_AD,"UPDATE_HAD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_CommandWithPayload(UPDATE_XFER_SERVICE_AD,"UPDATE_XFER_SERVICE_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_CommandWithPayload(UPDATE_LEASE_MANAGER_AD,"UPDATE_LEASE_MANAGER_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
 		(CommandHandler)receive_update,"receive_update", NULL, DAEMON);
@@ -883,16 +869,6 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = HAD_AD;
 		break;
 
-	  case QUERY_XFER_SERVICE_ADS:
-		dprintf (D_FULLDEBUG,"Got QUERY_XFER_SERVICE_ADS\n");
-		whichAds = XFER_SERVICE_AD;
-		break;
-
-	  case QUERY_LEASE_MANAGER_ADS:
-		dprintf (D_FULLDEBUG,"Got QUERY_LEASE_MANAGER_ADS\n");
-		whichAds = LEASE_MANAGER_AD;
-		break;
-
 	  case QUERY_GENERIC_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_GENERIC_ADS\n");
 		whichAds = GENERIC_AD;
@@ -992,16 +968,6 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	  case INVALIDATE_HAD_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_HAD_ADS\n");
 		whichAds = HAD_AD;
-		break;
-
-	  case INVALIDATE_XFER_SERVICE_ADS:
-		dprintf (D_ALWAYS, "Got INVALIDATE_XFER_SERVICE_ADS\n");
-		whichAds = XFER_SERVICE_AD;
-		break;
-
-	  case INVALIDATE_LEASE_MANAGER_ADS:
-		dprintf (D_ALWAYS, "Got INVALIDATE_LEASE_MANAGER_ADS\n");
-		whichAds = LEASE_MANAGER_AD;
 		break;
 
 	  case INVALIDATE_STORAGE_ADS:

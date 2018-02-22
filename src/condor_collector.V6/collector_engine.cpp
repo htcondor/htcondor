@@ -56,14 +56,12 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	LicenseAds    (&adNameHashFunction),
 	MasterAds     (&adNameHashFunction),
 	StorageAds    (&adNameHashFunction),
-	XferServiceAds(&adNameHashFunction),
 	AccountingAds (&adNameHashFunction),
 	CkptServerAds (&adNameHashFunction),
 	GatewayAds    (&adNameHashFunction),
 	CollectorAds  (&adNameHashFunction),
 	NegotiatorAds (&adNameHashFunction),
 	HadAds        (&adNameHashFunction),
-	LeaseManagerAds(&adNameHashFunction),
 	GridAds       (&adNameHashFunction),
 	GenericAds    (&hashFunction),
 	__self_ad__(0)
@@ -98,8 +96,6 @@ CollectorEngine::
 	killHashTable (CollectorAds);
 	killHashTable (NegotiatorAds);
 	killHashTable (HadAds);
-	killHashTable (XferServiceAds);
-	killHashTable (LeaseManagerAds);
 	killHashTable (GridAds);
 	GenericAds.walk(killGenericHashTable);
 
@@ -293,8 +289,6 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			NegotiatorAds.walk(scanFunction) &&
 			HadAds.walk(scanFunction) &&
 			GridAds.walk(scanFunction) &&
-			XferServiceAds.walk(scanFunction) &&
-			LeaseManagerAds.walk(scanFunction) &&
 			walkGenericTables(scanFunction);
 	}
 
@@ -838,39 +832,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		  break;
 	  }
 
-	  case UPDATE_XFER_SERVICE_AD:
-		if (!makeXferServiceAdHashKey (hk, clientAd))
-		{
-			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
-			insert = -3;
-			retVal = 0;
-			break;
-		}
-		hashString.Build( hk );
-		retVal=updateClassAd (XferServiceAds, "XferServiceAd  ",
-							  "XferService",
-							  clientAd, hk, hashString, insert, from );
-		break;
-
-	  case UPDATE_LEASE_MANAGER_AD:
-		if (!makeLeaseManagerAdHashKey (hk, clientAd))
-		{
-			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
-			insert = -3;
-			retVal = 0;
-			break;
-		}
-		hashString.Build( hk );
-			// first, purge all the existing LeaseManager ads, since we
-			// want to enforce that *ONLY* 1 manager is in the
-			// collector any given time.
-		purgeHashTable( LeaseManagerAds );
-		retVal=updateClassAd (LeaseManagerAds, "LeaseManagerAd  ",
-							  "LeaseManager",
-							  clientAd, hk, hashString, insert, from );
-		break;
-
-
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
@@ -880,8 +841,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	  case QUERY_COLLECTOR_ADS:
   	  case QUERY_NEGOTIATOR_ADS:
   	  case QUERY_HAD_ADS:
-  	  case QUERY_XFER_SERVICE_ADS:
-  	  case QUERY_LEASE_MANAGER_ADS:
 	  case QUERY_GENERIC_ADS:
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
@@ -891,8 +850,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	  case INVALIDATE_COLLECTOR_ADS:
 	  case INVALIDATE_NEGOTIATOR_ADS:
 	  case INVALIDATE_HAD_ADS:
-	  case INVALIDATE_XFER_SERVICE_ADS:
-	  case INVALIDATE_LEASE_MANAGER_ADS:
 	  case INVALIDATE_ADS_GENERIC:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
@@ -1232,12 +1189,6 @@ housekeeper()
     dprintf (D_ALWAYS, "\tCleaning GridAds ...\n");
 	cleanHashTable (GridAds, now, makeGridAdHashKey);
 
-	dprintf (D_ALWAYS, "\tCleaning XferServiceAds ...\n");
-	cleanHashTable (XferServiceAds, now, makeXferServiceAdHashKey);
-
-	dprintf (D_ALWAYS, "\tCleaning LeaseManagerAds ...\n");
-	cleanHashTable (LeaseManagerAds, now, makeLeaseManagerAdHashKey);
-
 	dprintf (D_ALWAYS, "\tCleaning Generic Ads ...\n");
 	CollectorHashTable *cht;
 	GenericAds.startIterations();
@@ -1367,14 +1318,6 @@ CollectorEngine::LookupByAdType(AdTypes adType,
         case GRID_AD:
 			table = &GridAds;
 			func = makeGridAdHashKey;
-			break;
-		case XFER_SERVICE_AD:
-			table = &XferServiceAds;
-			func = makeXferServiceAdHashKey;
-			break;
-		case LEASE_MANAGER_AD:
-			table = &LeaseManagerAds;
-			func = makeLeaseManagerAdHashKey;
 			break;
 		default:
 			return false;
