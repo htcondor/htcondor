@@ -1541,6 +1541,42 @@ sub Monitor
 
 		    next LINE;
 		}
+		# 035: Factory submitted
+		elsif( $line =~ 
+			/^035\s+\(0*(\d+)\.\-01.*<([^>]+)>/ )
+		{
+		    $info{'cluster'} = $1;
+			$info{'job'} = "-1";
+		    $info{'host'} = $2;
+		    $info{'sinful'} = "<$2>";
+
+		    monitor_debug( "Saw factory $cluster submitted\n" ,2);
+		    $submit_info{'cluster'} = $1; # squirrel it away for TimedWait
+
+		    $saw_submit = 1;
+		    # increment # of queued jobs so we will know when to exit monitor
+		    $num_active_jobs++;
+
+		    # execute callback if one is registered
+		    &$SubmitCallback( %info )
+			if defined $SubmitCallback;
+
+		}
+		# 036 (10794.-01.000) 02/20 15:20:43 Factory removed
+		elsif( $line =~ /^036\s+\(0*(\d+)\.\-01\./ )
+		{
+		    $info{'cluster'} = $1;
+			$info{'job'} = "-1";
+
+		    monitor_debug( "Saw factory $cluster removed\n" ,2);
+
+			# decrement job count so monitor can exit.
+		    $num_active_jobs--;
+
+		    # execute callback if one is registered
+		    &$ExitedCallback( %info )
+			if defined $ExitedCallback;
+		}
 		# 009: job aborted by user
 		elsif( $line =~ 
 			/^009\s+\((\d+)\.(\d+).*$/ )
