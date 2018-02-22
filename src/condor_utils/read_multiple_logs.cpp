@@ -385,7 +385,14 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 	MyString strToReturn;
 	strToReturn.reserve_at_least(iLength);
 
-	fseek(pFile, 0, SEEK_SET);
+	if (fseek(pFile, 0, SEEK_SET) < 0) {
+		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
+				"fseek(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				errno, strerror(errno) );
+		fclose(pFile);
+		return "";
+	}
+
 	char *psBuf = new char[iLength+1];
 		/*  We now clear the buffer to ensure there will be a NULL at the
 			end of our buffer after the fread().  Why no just do
