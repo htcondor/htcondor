@@ -2504,15 +2504,6 @@ int SendJobAd (ClassAd * job, ClassAd * ClusterAd)
 		}
 	}
 
-#if defined(ADD_TARGET_SCOPING)
-	if ( JobUniverse == CONDOR_UNIVERSE_SCHEDULER ||
-		 JobUniverse == CONDOR_UNIVERSE_LOCAL ) {
-		job->AddTargetRefs( TargetScheddAttrs, false );
-	} else {
-		job->AddTargetRefs( TargetMachineAttrs, false );
-	}
-#endif
-
 	job->ResetExpr();
 	while( job->NextExpr(lhstr, tree) ) {
 		rhstr = ExprTreeToString( tree );

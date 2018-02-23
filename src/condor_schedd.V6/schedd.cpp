@@ -1838,10 +1838,6 @@ int Scheduler::command_query_ads(int, Stream* stream)
 		return FALSE;
 	}
 
-#if defined(ADD_TARGET_SCOPING)
-	AddExplicitTargetRefs( queryAd );
-#endif
-
 		// Construct a list of all our ClassAds. we pass queryAd 
 		// through so that if there is a STATISTICS_TO_PUBLISH attribute
 		// it can be used to control the verbosity of statistics
@@ -13008,14 +13004,8 @@ Scheduler::Init()
 	}
 	tmp = param( "START_LOCAL_UNIVERSE" );
 	if ( tmp && ParseClassAdRvalExpr( tmp, tmp_expr ) == 0 ) {
-#if defined (ADD_TARGET_SCOPING)
-		ExprTree *tmp_expr2 = AddTargetRefs( tmp_expr, TargetJobAttrs );
-		this->StartLocalUniverse = strdup( ExprTreeToString( tmp_expr2 ) );
-		delete tmp_expr2;
-#else
 		this->StartLocalUniverse = tmp;
 		tmp = NULL;
-#endif
 		delete tmp_expr;
 	} else {
 		// Default Expression
@@ -13036,14 +13026,8 @@ Scheduler::Init()
 	}
 	tmp = param( "START_SCHEDULER_UNIVERSE" );
 	if ( tmp && ParseClassAdRvalExpr( tmp, tmp_expr ) == 0 ) {
-#if defined (ADD_TARGET_SCOPING)
-		ExprTree *tmp_expr2 = AddTargetRefs( tmp_expr, TargetJobAttrs );
-		this->StartSchedulerUniverse = strdup( ExprTreeToString( tmp_expr2 ) );
-		delete tmp_expr2;
-#else
 		this->StartSchedulerUniverse = tmp;
 		tmp = NULL;
-#endif
 		delete tmp_expr;
 	} else {
 		// Default Expression

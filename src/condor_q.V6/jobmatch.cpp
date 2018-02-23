@@ -257,11 +257,6 @@ int setupAnalysis(
 				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
 			exit( 1 );
 		}
-#if defined(ADD_TARGET_SCOPING)
-		ExprTree *tmp_expr = AddTargetRefs( preemptionReq, TargetJobAttrs );
-		delete preemptionReq;
-		preemptionReq = tmp_expr;
-#endif
 		free( preq );
 	}
 
@@ -318,9 +313,6 @@ void setupUserpriosForAnalysis(DCCollector* pool, const char *userprios_file)
 				ad->Assign(ATTR_REMOTE_USER_PRIO, prioTable[index].prio);
 			}
 		}
-		#if defined(ADD_TARGET_SCOPING)
-		ad->AddTargetRefs(TargetJobAttrs);
-		#endif
 	}
 }
 
@@ -765,10 +757,6 @@ bool doJobRunAnalysis (
 	job_status = "";
 
 	ac.clear();
-
-#if defined(ADD_TARGET_SCOPING)
-	request->AddTargetRefs( TargetMachineAttrs );
-#endif
 
 	if ( ! request->LookupString(ATTR_OWNER , owner)) {
 		job_status = "Nothing here.";
@@ -1415,10 +1403,6 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 
 	return_buff[0] = 0;
 
-#if defined(ADD_TARGET_SCOPING)
-	slot->AddTargetRefs(TargetJobAttrs);
-#endif
-
 	std::string slotname = "";
 	slot->LookupString(ATTR_NAME , slotname);
 
@@ -1456,10 +1440,6 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 
 			jobs.push_back(job);
 			cUniqueJobs += 1;
-
-			#if defined(ADD_TARGET_SCOPING)
-			job->AddTargetRefs(TargetMachineAttrs);
-			#endif
 
 			// 2. Offer satisfied?
 			bool offer_match = IsAHalfMatch(slot, job);

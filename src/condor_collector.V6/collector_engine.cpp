@@ -534,9 +534,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	{
 	  case UPDATE_STARTD_AD:
 	  case UPDATE_STARTD_AD_WITH_ACK:
-#if defined(ADD_TARGET_SCOPING)
-		  clientAd->AddTargetRefs( TargetJobAttrs );
-#endif
 		if ( repeatStartdAds > 0 ) {
 			clientAdToRepeat = new ClassAd(*clientAd);
 		}
@@ -632,9 +629,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		break;
 
 	  case MERGE_STARTD_AD:
-#if defined(ADD_TARGET_SCOPING)
-		  clientAd->AddTargetRefs( TargetJobAttrs );
-#endif
 		if (!makeStartdAdHashKey (hk, clientAd))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");

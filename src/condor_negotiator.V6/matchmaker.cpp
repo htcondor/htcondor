@@ -659,13 +659,6 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
-#if defined(ADD_TARGET_SCOPING)
-		if(PreemptionReq){
-			ExprTree *tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
-			delete PreemptionReq;
-			PreemptionReq = tmp_expr;
-		}
-#endif
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", tmp);
 		free( tmp );
 		tmp = NULL;
@@ -682,13 +675,6 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS_PSLOT expression: %s",
 					tmp);
 		}
-#if defined(ADD_TARGET_SCOPING)
-		if(PreemptionReqPslot){
-			ExprTree *tmp_expr = AddTargetRefs( PreemptionReqPslot, TargetJobAttrs );
-			delete PreemptionReqPslot;
-			PreemptionReqPslot = tmp_expr;
-		}
-#endif
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS_PSLOT = %s\n", tmp);
 		free( tmp );
 		tmp = NULL;
@@ -754,13 +740,6 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_RANK expression: %s", tmp);
 		}
 	}
-#if defined(ADD_TARGET_SCOPING)
-		if(PreemptionRank){
-			tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
-			delete PreemptionRank;
-		}
-		PreemptionRank = tmp_expr;
-#endif
 
 	dprintf (D_ALWAYS,"PREEMPTION_RANK = %s\n", (tmp?tmp:"None"));
 
@@ -773,13 +752,6 @@ reinitialize ()
 		if( ParseClassAdRvalExpr(tmp, NegotiatorPreJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
-#if defined(ADD_TARGET_SCOPING)
-		if(NegotiatorPreJobRank){
-			tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
-			delete NegotiatorPreJobRank;
-		}
-		NegotiatorPreJobRank = tmp_expr;
-#endif
 	}
 
 	dprintf (D_ALWAYS,"NEGOTIATOR_PRE_JOB_RANK = %s\n", (tmp?tmp:"None"));
@@ -793,13 +765,6 @@ reinitialize ()
 		if( ParseClassAdRvalExpr(tmp, NegotiatorPostJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
-#if defined(ADD_TARGET_SCOPING)
-		if(NegotiatorPostJobRank){
-			tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
-			delete NegotiatorPostJobRank;
-		}
-		NegotiatorPostJobRank = tmp_expr;
-#endif
 	}
 
 	dprintf (D_ALWAYS,"NEGOTIATOR_POST_JOB_RANK = %s\n", (tmp?tmp:"None"));
@@ -3564,10 +3529,6 @@ obtainAdsFromCollector (
 				continue;
 			}
 
-#if defined(ADD_TARGET_SCOPING)
-			ad->AddTargetRefs( TargetJobAttrs );
-#endif
-
 			// Next, let's transform the ad. The first thing we might
 			// do is replace the Requirements attribute with whatever
 			// we find in NegotiatorRequirements
@@ -4543,10 +4504,6 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 	
 
         negotiation_cycle_stats[0]->num_jobs_considered += 1;
-
-#if defined(ADD_TARGET_SCOPING)
-		request.AddTargetRefs( TargetMachineAttrs );
-#endif
 
         // information regarding the negotiating group context:
         string negGroupName = (groupName != NULL) ? groupName : hgq_root_group->name.c_str();

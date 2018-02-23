@@ -243,10 +243,6 @@ VMRegister::requestHostClassAds(void)
 	adList.Rewind();
 	ad = adList.Next();
 
-#if defined(ADD_TARGET_SCOPING)
-	ad->AddTargetRefs( TargetJobAttrs );
-#endif
-
 	// Get each Attribute from the classAd
 	// added "HOST_" in front of each Attribute name
 	const char *name;

@@ -2540,17 +2540,6 @@ DedicatedScheduler::computeSchedule( void )
 			int nodes;
 			int proc;
 
-#if defined(ADD_TARGET_SCOPING)
-			ExprTree *tmp_expr;
-			tmp_expr = AddTargetRefs( preemption_req, TargetJobAttrs );
-			delete preemption_req;
-			preemption_req = tmp_expr;
-
-			tmp_expr = AddTargetRefs( preemption_rank, TargetJobAttrs );
-			delete preemption_rank;
-			preemption_rank = tmp_expr;
-#endif
-
 			if (nodes_per_proc) {
 				delete [] nodes_per_proc;
 			}

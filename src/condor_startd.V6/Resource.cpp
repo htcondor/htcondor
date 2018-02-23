@@ -2377,10 +2377,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
         }
     }
 
-#if defined(ADD_TARGET_SCOPING)
-	cap->AddTargetRefs( TargetJobAttrs, false );
-#endif
-
 	// Don't bother to write an ad to disk that won't include the extras ads.
 	// Also only write the ad to disk when the claim has a ClassAd and the
 	// starter knows where the execute directory is.  Empirically, this set

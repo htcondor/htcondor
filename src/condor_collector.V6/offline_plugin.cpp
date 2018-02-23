@@ -93,13 +93,6 @@ OfflineCollectorPlugin::configure ()
 			EXCEPT ("Error parsing ABSENT_REQUIREMENTS expression: %s",
 					tmp);
 		}
-#if defined(ADD_TARGET_SCOPING)
-		if(AbsentReq){
-			ExprTree *tmp_expr = AddTargetRefs( AbsentReq, TargetMachineAttrs );
-			delete AbsentReq;
-			AbsentReq = tmp_expr;
-		}
-#endif
 		dprintf (D_ALWAYS,"ABSENT_REQUIREMENTS = %s\n", tmp);
 		free( tmp );
 		tmp = NULL;

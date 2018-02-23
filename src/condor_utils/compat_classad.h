@@ -43,12 +43,6 @@ class MapFile; // forward ref
 namespace compat_classad {
 
 
-typedef enum {
-	TargetMachineAttrs,
-	TargetJobAttrs,
-	TargetScheddAttrs
-} TargetAdType;
-
 class ClassAdFileParseHelper;
 
 extern classad::References ClassAdPrivateAttrs;
@@ -347,8 +341,6 @@ class ClassAd : public classad::ClassAd
 	void ResetName();
 	const char *NextNameOriginal();
 
-	void AddTargetRefs( TargetAdType target_type, bool do_version_check = true );
-
 	bool NextExpr( const char *&name, ExprTree *&value );
 
     /** Gets the next dirty expression tree
@@ -641,30 +633,6 @@ classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
                                       const std::string &target_alias = "" );
 void releaseTheMatchAd();
 
-
-// Modify all expressions in the given ad, such that if they refer
-// to attributes that are not in the current classad and they are not
-// scoped, then they are renamed "target.attribute"
-void AddExplicitTargetRefs( classad::ClassAd &ad );
-
-// Return a new ExprTree identical to the given one, except that for any
-// attributes referred to which are not scoped and don't appear in the
-// given set are renamed "target.attribute".
-classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *,
-						std::set < std::string, classad::CaseIgnLTStr > & );
-						
-// Modify all expressions in the given ad, removing the "target" scope
-// from all attributes references.
-void RemoveExplicitTargetRefs( classad::ClassAd &ad );
-
-// Return a new ExprTree identical to the given one, but removing any
-// "target" scope from all attribute references.
-// For example, Target.Foo will become Foo.
-classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree * );
-
-
-classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
-								  TargetAdType target_type );
 
 const char *ConvertEscapingOldToNew( const char *str );
 

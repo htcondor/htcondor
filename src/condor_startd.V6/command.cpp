@@ -793,10 +793,6 @@ command_query_ads( Service*, int, Stream* stream)
 		return FALSE;
 	}
 
-#if defined(ADD_TARGET_SCOPING)
-	AddExplicitTargetRefs( queryAd );
-#endif
-
    MyString stats_config;
    int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
    queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
@@ -1247,10 +1243,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd\n" );
 		ABORT;
 	}
-
-#if defined(ADD_TARGET_SCOPING)
-	req_classad->AddTargetRefs( TargetMachineAttrs );
-#endif
 
 		// Try now to read the schedd addr and aline interval.
 		// Do _not_ abort if we fail, since older (pre v6.1.11) schedds do 
@@ -1811,10 +1803,6 @@ activate_claim( Resource* rip, Stream* stream )
 		rip->dprintf( D_ALWAYS, "Can't receive end_of_message() from shadow.\n" );
 		ABORT;
 	}
-
-#if defined(ADD_TARGET_SCOPING)
-	req_classad->AddTargetRefs( TargetMachineAttrs );
-#endif
 
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
 
@@ -2428,10 +2416,6 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 	} else {
 		cmd = getCmdFromReliSock( rsock, &ad, false );
 	}
-
-#if defined(ADD_TARGET_SCOPING)
-	ad.AddTargetRefs( TargetMachineAttrs );
-#endif
 
 		// since we really care about the command string for a lot of
 		// things, let's just grab it out of the classad once right

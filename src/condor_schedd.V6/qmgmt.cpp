@@ -854,21 +854,6 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		}
 	}
 
-		// CRUST
-		// Convert expressions to have properl TARGET scoping when
-		// referring to machine attributes. The switch from old to new
-		// ClassAds happened around 7.5.1.
-		// At some future point in time, this code should be removed
-		// (no earlier than the 7.7 series).
-#if defined(ADD_TARGET_SCOPING)
-	if ( universe == CONDOR_UNIVERSE_SCHEDULER ||
-		 universe == CONDOR_UNIVERSE_LOCAL ) {
-		job_ad->AddTargetRefs( TargetScheddAttrs );
-	} else {
-		job_ad->AddTargetRefs( TargetMachineAttrs );
-	}
-#endif
-
 		// CRUFT
 		// Starting in 6.7.11, ATTR_JOB_MANAGED changed from a boolean
 		// to a string.
@@ -3293,8 +3278,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 			errno = EINVAL;
 			return -1;
 		}
-		constraint.set(tree); // so tree will get freed if RemoveExplicitTargetRefs copies it.
-		constraint.set(compat_classad::RemoveExplicitTargetRefs(tree));
+		constraint.set(tree);
 	}
 
 	// loop through the job queue, setting attribute on jobs that match
@@ -3891,23 +3875,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			JobQueue->SetTransactionTriggers(catSpoolingHold);
 		}
 	}
-
-#if defined(ADD_TARGET_SCOPING)
-/* Disable AddTargetRefs() for now
-	else if (attr_category & catTargetScope) {
-		// Check Requirements and Rank for proper TARGET scoping of
-		// machine attributes.
-		ExprTree *tree = NULL;
-		if ( ParseClassAdRvalExpr( attr_value, tree ) == 0 ) {
-			ExprTree *tree2 = AddTargetRefs( tree, TargetMachineAttrs );
-			new_value = ExprTreeToString( tree2 );
-			attr_value = new_value.Value();
-			delete tree;
-			delete tree2;
-		}
-	}
-*/
-#endif
 
 	// All of the checking and validation is done, if we are only querying whether we
 	// can change the value, then return now with success.
