@@ -244,8 +244,6 @@ class ExprTree
 		static void (*user_debug_function)(const char *);
 };
 
-std::ostream& operator<<(std::ostream &os, const ExprTree *expr);
-
 } // classad
 
 #include "classad/literals.h"

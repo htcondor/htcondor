@@ -370,17 +370,6 @@ SetRootScope( )
     return;
 }
 
-ostream& operator<<(ostream &stream, const ExprTree *expr)
-{
-	ClassAdUnParser unparser;
-	string      string_representation;
-
-	unparser.Unparse(string_representation, expr);
-	stream << string_representation;
-	
-	return stream;
-}
-
 bool operator==(const ExprTree &tree1, const ExprTree &tree2)
 {
     return tree1.SameAs(&tree2);
