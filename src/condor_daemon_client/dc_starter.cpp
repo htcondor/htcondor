@@ -610,9 +610,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 	}
 	if (file_count != remote_file_count)
 	{
-		std::stringstream ss;
-		ss << "Received " << file_count << " files, but remote side thought it sent " << remote_file_count << " files";
-		error_msg = ss.str();
+		formatstr(error_msg, "Received %ld files, but remote side thought it sent %ld files\n", file_count, remote_file_count);
 		return false;
 	}
 	if ((total_files != file_count) && !error_msg.size())

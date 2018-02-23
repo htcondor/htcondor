@@ -21,6 +21,8 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
+#include <sstream>
+
 #include "openstackCommands.h"
 #include "openstackgahp_common.h"
 #include "thread_control.h"

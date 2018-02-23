@@ -34,6 +34,7 @@
 #include "get_daemon_name.h"
 #include <algorithm>
 #include <iterator>
+#include <sstream>
 #include "defrag.h"
 
 

@@ -47,6 +47,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 #include <deque>
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)

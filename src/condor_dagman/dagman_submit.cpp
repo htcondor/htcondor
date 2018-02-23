@@ -24,6 +24,8 @@
 #include "util_lib_proto.h"
 #include "my_popen.h"
 
+#include <sstream>
+
 //
 // Local DAGMan includes
 //

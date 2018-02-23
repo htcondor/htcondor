@@ -69,6 +69,8 @@
 # include <time.h>
 #endif
 
+#include <sstream>
+
 // define this to have D_TIMESTAMP|D_SUB_SECOND be microseconds rather than milliseconds
 // this is useful mostly when trying to put log entries from multiple daemons on the same
 // machine in order

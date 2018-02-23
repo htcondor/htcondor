@@ -44,6 +44,8 @@
 #include "classad_oldnew.h"
 #include "singularity.h"
 
+#include <sstream>
+
 extern CStarter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 

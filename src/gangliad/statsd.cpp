@@ -27,6 +27,7 @@
 
 #include <memory>
 #include <fstream>
+#include <sstream>
 
 #define ATTR_REGEX  "Regex"
 #define ATTR_VERBOSITY "Verbosity"

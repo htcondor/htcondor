@@ -3487,7 +3487,6 @@ int SubmitHash::SetGridParams()
 	}
 	hash_iter_delete(&it);
 
-	std::stringstream ss;
 	char *tagName;
 	tagNames.rewind();
 	while ((tagName = tagNames.next())) {

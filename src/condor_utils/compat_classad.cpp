@@ -30,6 +30,8 @@
 #include "condor_arglist.h"
 #define CLASSAD_USER_MAP_RETURNS_STRINGLIST 1
 
+#include <sstream>
+
 class MapFile;
 extern int reconfig_user_maps();
 extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);

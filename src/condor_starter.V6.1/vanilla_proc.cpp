@@ -40,6 +40,8 @@
 #include "singularity.h"
 #include "starter_util.h"
 
+#include <sstream>
+
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
 #endif

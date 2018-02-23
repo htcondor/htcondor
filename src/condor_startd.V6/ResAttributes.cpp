@@ -26,6 +26,7 @@
 
 #include <set>
 #include <algorithm>
+#include <sstream>
 
 #ifdef WIN32
 #include "winreg.windows.h"

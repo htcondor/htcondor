@@ -37,6 +37,8 @@
 
 #include "result.h"
 
+#include <sstream>
+
 /// The analyzer object
 class ClassAdAnalyzer
 {
