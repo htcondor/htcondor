@@ -34,23 +34,6 @@
 
 #include "log.h"
 #include "stl_string_utils.h"
-#include <sstream>
-
-
-// Returns true iff (s) casts to <T>, and all of (s) is consumed,
-// i.e. if (s) is an exact representation of a value of <T>, no more and
-// no less.
-/*
-template<typename T>
-bool lex_cast(const std::string& s, T& v) {
-    std::stringstream ss(s);
-    ss >> v;
-    if ( !ss.eof() ) {
-        ss >> std::ws;
-    }
-    return ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit));
-}
-*/
 
 bool valid_record_optype(int optype) {
     switch (optype) {

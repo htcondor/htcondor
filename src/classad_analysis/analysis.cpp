@@ -28,7 +28,6 @@
 #include "extArray.h"
 #include "condor_classad.h"
 
-#include <iostream>
 #include <sstream>
 
 using namespace std;

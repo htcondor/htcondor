@@ -51,7 +51,6 @@
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
 
-#include <iostream>
 #include <map>
 
 using namespace std;

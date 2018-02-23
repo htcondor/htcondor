@@ -45,16 +45,13 @@
 #include "setenv.h"
 
 #include <vector>
-#include <sstream>
 #include <map>
-#include <iostream>
 
 #include "backward_file_reader.h"
 
 using std::vector;
 using std::map;
 using std::string;
-using std::stringstream;
 
 // stuff that we can scrape from the log directory about various daemons.
 //

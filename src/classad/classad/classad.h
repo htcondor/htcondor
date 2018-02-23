@@ -25,7 +25,6 @@
 #include <set>
 #include <map>
 #include <vector>
-#include <sstream>
 #include "classad/classad_stl.h"
 #include "classad/exprTree.h"
 
