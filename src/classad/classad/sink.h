@@ -90,7 +90,7 @@ class ClassAdUnParser
 		virtual void UnparseAux( std::string &buffer, std::vector<ExprTree*>& );
 
 		// to unparse attribute names (quoted & unquoted attributes)
-		virtual void UnparseAux( std::string &buffer, std::string identifier);
+		virtual void UnparseAux( std::string &buffer, const std::string &identifier);
 
 		// table of string representation of operators
 		static const char *opString[];

@@ -530,7 +530,7 @@ UnparseAux( string &buffer, vector<ExprTree*>& exprs )
  * it's unparsed either as a quoted attribute or non-quoted attribute 
  */
 void ClassAdUnParser::
-UnparseAux( string &buffer, string identifier )
+UnparseAux( string &buffer, const string &identifier )
 {
 	Value  val;
 	string idstr;
