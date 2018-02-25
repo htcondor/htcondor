@@ -2512,6 +2512,30 @@ This hierarchy of splice names assures unique names associated with all nodes.
 \begin{figure}
 \centering
 \includegraphics{user-man/splice-simple}
+%% Someday we can use tikz for diagrams instead of random
+%% external programs which generate bitmaps.
+
+%% \begin{tikzpicture}[->, auto, node distance = 18ex]
+%% \tikzset{>=latex}
+%% \usetikzlibrary{shapes.geometric}
+%% \tikzstyle{Job} = [shape =  ellipse, ultra  thick, minimum width=12ex, draw]
+%% \tikzstyle{Edge} = [, ultra thick]
+
+%% \node[Job] (X) {X};
+%% \node[Job] (DiamondA) [below of = X] {Diamond+A};
+%% \node[Job] (DiamondB) [below left of = DiamondA] {Diamond + B};
+%% \node[Job] (DiamondC) [below right of = DiamondA] {Diamond+C};
+%% \node[Job] (DiamondD) [below left of = DiamondC] {Diamond+D};
+%% \node[Job] (Y) [below of = DiamondD] {Y};
+
+%% \path[Edge] (X) edge(DiamondA);
+%% \path[Edge] (DiamondA) edge (DiamondB);
+%% \path[Edge] (DiamondA) edge (DiamondC);
+%% \path[Edge] (DiamondB) edge (DiamondD);
+%% \path[Edge] (DiamondC) edge (DiamondD);
+%% \path[Edge] (DiamondD) edge (Y);
+
+%% \end{tikzpicture}
 \caption{\label{fig:dagman-splice-simple} The diamond-shaped DAG spliced between two nodes.}
 \end{figure}
 
@@ -2558,6 +2582,30 @@ new graph, even when the same DAG input file is specified.
 \begin{figure}
 \centering
 \includegraphics{user-man/splice-X}
+%% \begin{tikzpicture}[->, auto, node distance = 16ex]
+%% \tikzset{>=latex}
+%% \usetikzlibrary{shapes.geometric}
+%% \tikzstyle{Job} = [shape =  ellipse, ultra  thick, minimum width=12ex, draw]
+%% \tikzstyle{Edge} = [, ultra thick]
+
+%% \node[Job] (A) {A};
+%% \node[Job] (B) [right of = A] {B};
+%% \node[Job] (C) [right of = B] {C};
+%% \node[Job] (D) [below of = B] {D};
+%% \node[Job] (F) [below of = D] {F};
+%% \node[Job] (E) [left of = F] {E};
+%% \node[Job] (G) [right of = F] {G};
+
+
+%% \path[Edge] (A) edge(D);
+%% \path[Edge] (B) edge (D);
+%% \path[Edge] (C) edge (D);
+%% \path[Edge] (D) edge (E);
+%% \path[Edge] (D) edge (F);
+%% \path[Edge] (D) edge (G);
+
+%% \end{tikzpicture}
+
 \caption{\label{fig:dagman-splice-X} The X-shaped DAG.}
 \end{figure}
 
@@ -2595,6 +2643,52 @@ Figure~\ref{fig:dagman-splice-s1} illustrates the resulting DAG.
 \begin{figure}
 \centering
 \includegraphics{user-man/splice-s1}
+
+%% \begin{tikzpicture}[->, auto, node distance = 16ex]
+%% \tikzset{>=latex}
+%% \usetikzlibrary{shapes.geometric}
+%% \tikzstyle{Job} = [shape =  ellipse, thick, minimum width=8ex, draw]
+%% \tikzstyle{Edge} = [,  thick]
+
+%% \node[Job] (A) {A};
+%% \node[Job] (X1B) [below of = A] {X1+B};
+%% \node[Job] (X1A) [left of = X1B] {X1+A};
+%% \node[Job] (X1C) [right of = X1B] {X1+C};
+%% \node[Job] (X1D) [below of = X1B] {X1+D};
+%% \node[Job] (X1F) [below of = X1D] {X1+F};
+%% \node[Job] (X1E) [left of = X1F] {X1+E};
+%% \node[Job] (X1G) [right of = X1F] {X1+G};
+%% \node[Job] (X2A) [below of = X1E] {X2+A};
+%% \node[Job] (X2B) [below of = X1F] {X2+B};
+%% \node[Job] (X2C) [below of = X1G] {X2+C};
+%% \node[Job] (X2D) [below of = X2B] {X2+D};
+%% \node[Job] (X2F) [below of = X2D] {X2+F};
+%% \node[Job] (X2E) [left of = X2F] {X2+E};
+%% \node[Job] (X2G) [right of = X2F] {X2+G};
+%% \node[Job] (B) [below of = X2F] {B};
+
+%% \foreach \n in {X1A, X1B, X1C}	{
+%% 	\path[Edge] (A) edge(\n);
+%% 	\path[Edge] (\n) edge(X1D);
+%% }
+%% \foreach \dst in {X1E, X1F, X1G} {
+%% 	\path[Edge] (X1D) edge(\dst);
+%% }
+%% \foreach \src in {X1E, X1F, X1G}	{
+%% 	\foreach \dst in {X2A, X2B, X2C} {
+%% 		\path[Edge] (\src) edge(\dst);
+%% 	}
+%% }	
+%% \foreach \src in {X2A, X2B, X2C}	{
+%% 	\path[Edge] (\src) edge(X2D);
+%% }
+
+%% \foreach \n in {X2E, X2F, X2G} {
+%% 	\path[Edge] (X2D) edge (\n);
+%% 	\path[Edge] (\n) edge (B);
+%% }
+%% \end{tikzpicture}
+
 \caption{\label{fig:dagman-splice-s1} The DAG described by \File{s1.dag}.}
 \end{figure}
 
@@ -2639,6 +2733,89 @@ S3 not having any dependencies associated with it in this top level DAG.
 \begin{figure}
 \centering
 \includegraphics{user-man/splice-complex}
+%%\begin{tikzpicture}[->, auto, node distance = 18ex]
+%%\tikzset{>=latex}
+%%\usetikzlibrary{shapes.geometric}
+%%\tikzstyle{Job} = [shape =  ellipse, thick, minimum width=8ex, draw]
+%%\begin{tikzpicture}[->, auto, node distance = 18ex]
+%%\tikzset{>=latex}
+%%\usetikzlibrary{shapes.geometric}
+%%\tikzstyle{Job} = [shape =  ellipse, thick, minimum width=8ex, draw]
+%%\tikzstyle{Edge} = [,thick]
+%%
+%%\node[Job] (A) {A};
+%%\node[] (ND) [below of = A] {};
+%%\node[Job] (B) [ left of= ND] {B};
+%%\node[Job] (C) [ right of= ND] {C};
+%%\node[Job] (D) [below of= ND] {D};
+%%\node[Job] (S2B) [below of = D] {S2 + B};
+%%\node[Job] (S2A) [left of = S2B] {S2 + A};
+%%\node[Job] (S2C) [right of = S2B] {S2 + C};
+%%\node[Job] (S2D) [below of = S2B] {S2 + D};
+%%\node[Job] (S2F) [below of = S2D] {S2 + F};
+%%\node[Job] (S2E) [left of = S2F] {S2 + E};
+%%\node[Job] (S2G) [right of = S2F] {S2 + G};
+%%
+%%\path[Edge] (A) edge(B);
+%%\path[Edge] (A) edge(C);
+%%
+%%\path[Edge] (B) edge(D);
+%%\path[Edge] (C) edge(D);
+%%
+%%\foreach \n in {S2A, S2B, S2C} {
+%%	\path[Edge] (D) edge (\n);
+%%	\path[Edge] (\n) edge (S2D);
+%%}
+%%
+%%\foreach \n in {S2E, S2F, S2G} {
+%%	\path[Edge] (S2D) edge (\n);
+%%}
+%%\end{tikzpicture}
+%%\begin{tikzpicture}[->, auto, node distance = 18ex]
+%%\tikzset{>=latex}
+%%\usetikzlibrary{shapes.geometric}
+%%\tikzstyle{Job} = [shape =  ellipse, thick, minimum width=8ex, draw]
+%%\tikzstyle{Edge} = [,thick]
+%%
+%%\node[Job] (S3A){S3+A};
+%%\node[Job] (S3X1B) [below of = S3A] {S3+X1+B};
+%%\node[Job] (S3X1A) [left of = S3X1B] {S3+X1+A};
+%%\node[Job] (S3X1C) [right of = S3X1B] {S3+X1+C};
+%%\node[Job] (S3X1D) [below of = S3X1B] {S3+X1+D};
+%%\node[Job] (S3X1F) [below of = S3X1D] {S3+X1+F};
+%%\node[Job] (S3X1E) [left of = S3X1F] {S3+X1+E};
+%%\node[Job] (S3X1G) [right of = S3X1F] {S3+X1+G};
+%%\node[Job] (S3X2A) [below of = S3X1E] {S3+X2+A};
+%%\node[Job] (S3X2B) [below of = S3X1F] {S3+X2+B};
+%%\node[Job] (S3X2C) [below of = S3X1G] {S3+X2+C};
+%%\node[Job] (S3X2D) [below of = S3X2B] {S3+X2+D};
+%%\node[Job] (S3X2F) [below of = S3X2D] {S3+X2+F};
+%%\node[Job] (S3X2E) [left of = S3X2F] {S3+X2+E};
+%%\node[Job] (S3X2G) [right of = S3X2F] {S3+X2+G};
+%%\node[Job] (S3B) [below of = S3X2F] {S3+B};
+%%
+%%\foreach \n in {S3X1A, S3X1B,S3X1C}	{
+%%	\path[Edge] (S3A) edge(\n);
+%%	\path[Edge] (\n) edge(S3X1D);
+%%}
+%%\foreach \dst in {S3X1E, S3X1F,S3X1G} {
+%%	\path[Edge] (S3X1D) edge(\dst);
+%%}
+%%\foreach \src in {S3X1E, S3X1F, S3X1G}	{
+%%	\foreach \dst in {S3X2A, S3X2B, S3X2C} {
+%%		\path[Edge] (\src) edge(\dst);
+%%	}
+%%}	
+%%\foreach \src in {S3X2A, S3X2B,S3X2C}	{
+%%	\path[Edge] (\src) edge(S3X2D);
+%%}
+%%
+%%\foreach \n in {S3X2E, S3X2F,S3X2G} {
+%%	\path[Edge] (S3X2D) edge (\n);
+%%	\path[Edge] (\n) edge (S3B);
+%%}
+%%\end{tikzpicture}
+%%
 \caption{\label{fig:dagman-splice-complex} The complex splice example DAG.}
 \end{figure}
 
@@ -3000,6 +3177,70 @@ A diagram of the above example:
 \centering
 \includegraphics{user-man/dagman-connect}
 \caption{\label{fig:dagman-connect}Diagram of the splice connect example}
+%%\begin{tikzpicture}[->, node distance =18ex]
+%%\tikzset{>=latex}
+%%\usetikzlibrary{shapes.geometric}
+%%\tikzstyle{Job} = [shape =  circle, thick, minimum width=8ex, draw]
+%%\tikzstyle{Pin} = [shape = rectangle, thick, draw, fill, minimum width=1ex, minimum height= 4ex]
+%%\tikzstyle{Edge} = [,thick]
+%%\node[Job] (A1) {A1}; \path(A1) ++(-3, -2) node {Splice A};
+%%\node[] (ND) [right of = A1] {};
+%%\node[Job] (A2) [right of = ND] {A2};
+%%\node[Pin] (PO1) [below of = A1] {}; \path (PO1) ++(.75,.2) node {po1}; 
+%%\node[Pin] (PO2) [below of = A2] {}; \path (PO2) ++(.75,.2) node {po2};
+%%\path[Edge] (A1) edge(PO1);
+%%\path[Edge] (A2) edge(PO2);
+%%
+%%\draw(-4,-2.8) rectangle(10,2);
+%%
+%%\node[Pin] (PI1) [below of = PO1] {};  \path (PI1) ++(.75,-.2) node {pi1};
+%%\node[Pin] (PI2) [below of = PO2] {};  \path (PI2) ++(.75,-.2) node {pi2};
+%%\path[Edge] (PO1) edge (PI1);
+%%\path[Edge] (PO2) edge (PI2);
+%%
+%%\node[Job] (B1) [below left of = PI1] {B1}; \path(B1) ++(-1, -2) node {Splice B};
+%%\node[Job] (B2) [below right of = PI1] {B2};
+%%\node[Job] (B3) [below left of = PI2] {B3};
+%%\node[Job] (B4) [below right of = PI2] {B4};
+%%
+%%\path[Edge] (PI1) edge (B1);
+%%\path[Edge] (PI1) edge (B2);
+%%\path[Edge] (PI2) edge (B3);
+%%\path[Edge] (PI2) edge (B4);
+%%
+%%\node[Pin] (BPO1) [below of = B1] {};  \path (BPO1) ++(.75,.2) node {po1};
+%%\node[Pin] (BPO2) [below of = B2] {};  \path (BPO2) ++(.75,.2) node {po2};
+%%\node[Pin] (BPO3) [below of = B3] {};  \path (BPO3) ++(.75,.2) node {po3};
+%%\node[Pin] (BPO4) [below of = B4] {};  \path (BPO4) ++(.75,.2) node {po4};
+%%
+%%\draw(-4,-10.1) rectangle(10,-5.4);
+%%
+%%\path[Edge] (B1) edge (BPO1);
+%%\path[Edge] (B2) edge (BPO2);
+%%\path[Edge] (B3) edge (BPO3);
+%%\path[Edge] (B4) edge (BPO4);
+%%
+%%\node[Pin] (BPI1) [below of = BPO1] {};  \path (BPI1) ++(-.75,-.2) node {pi1}; 
+%%\node[Pin] (BPI2) [below of = BPO2] {};  \path (BPI2) ++(.75,-.2) node {pi2};
+%%\node[Pin] (BPI3) [below of = BPO3] {};  \path (BPI3) ++(.75,-.2) node {pi3};
+%%\node[Pin] (BPI4) [below of = BPO4] {};  \path (BPI4) ++(.75,-.2) node {pi4};
+%%
+%%\path[Edge] (BPO1) edge (BPI1);
+%%\path[Edge] (BPO2) edge (BPI2);
+%%\path[Edge] (BPO3) edge (BPI3);
+%%\path[Edge] (BPO4) edge (BPI4);
+%%
+%%\draw(-4,-16.1) rectangle(10,-12.8);
+%%
+%%\node[Job] (C) [below right of = BPI2, xshift=-1cm] {C};  \path(C) ++(-6, -1) node {Splice C};
+%%
+%%\foreach \n in {BPI1, BPI2, BPI3, BPI4} {
+%%	\path[Edge] (\n) edge(C);
+%%}
+%%
+%%
+%%\end{tikzpicture}
+
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
