@@ -403,6 +403,58 @@ the states and the possible transitions between the states.
 \begin{figure}[hbt]
 \centering
 \includegraphics{admin-man/states}
+%%  \begin{tikzpicture}[->, auto, node distance=18ex]
+%%   \tikzset{>=latex}
+%%   \tikzstyle{State} = [shape = rectangle, rounded corners=3pt,ultra thick, draw, minimum width=6ex] 
+%%   \tikzstyle{Edge} = [, ultra thick]
+%%    \large
+%%   
+%%           \node[State] (Owner)					{Owner};
+%%           \node[State] (Unclaimed) [right of = Owner] 		{Unclaimed};
+%%           \node[State] (Matched)   [right of = Unclaimed] 	{Matched};
+%%           \node[State] (Drained) [below left of = Unclaimed]	{Drained};
+%%           \node[State] (Backfill)  [below right of = Matched]		{Backfill};
+%%                
+%%           \node[State] (Claimed) [above right of = Matched] {Claimed};
+%%           \node[State] (Preempting) [above left of = Unclaimed] {Preempting};
+%%           
+%%           \node[shape=circle, dashed, draw] (Start) [above left of = Owner] {Start};
+%%           
+%%           \path[Edge] (Start) edge (Owner); 
+%%           
+%%           \path[Edge] (Owner.south east) edge[bend right] (Unclaimed.west); 
+%%           \path[Edge] (Unclaimed.west) edge[bend right]  (Owner.east);
+%%           
+%%           %% Automatically placing these makes them overlap 
+%%           \path(Owner) ++(1.3,-.2) node {A};
+%%           \path(Unclaimed) ++(-1.5, .5) node {B};
+%%                  
+%%           
+%%           \path[Edge] (Unclaimed) edge  node {C} (Matched);
+%%           \path[Edge] (Unclaimed) edge node {D} (Claimed.south west);
+%%           \path[Edge] (Unclaimed) edge node {E} (Backfill);
+%%            \path[Edge] (Unclaimed) edge node {P} (Drained);
+%%         
+%%           \path[Edge] (Matched) edge [bend right] node {F} (Owner);
+%%
+%%           \path[Edge] (Matched) edge node {G} (Claimed);
+%%           
+%%           \path[Edge] (Claimed) edge [bend right] node {H} (Preempting);
+%%           
+%%           \path[Edge] (Preempting) edge node {I} (Claimed);
+%%           \path[Edge] (Preempting) edge[bend right] node {J} (Owner);
+%%           
+%%           \path[Edge] (Backfill) edge[bend left] node {K} (Owner.south east);
+%%           \path[Edge] (Backfill) edge[bend right] node {L} (Matched);
+%%           \path[Edge] (Backfill) edge [bend right] node {M} (Claimed);
+%%           
+%%           \path[Edge] (Owner) edge[bend right] node {N} (Drained.west);
+%%	\path[Edge] (Drained) edge[bend right] node {O} (Owner);
+%%           
+%%           
+%%           
+%%   \end{tikzpicture}
+   
 \caption{\label{fig:machine-states}Machine States}
 \end{figure}
 
