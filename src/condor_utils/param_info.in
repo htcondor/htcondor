@@ -4133,8 +4133,8 @@ description=Expression to set MemoryUsage
 tags=starter
 
 [MEMORY_USAGE_METRIC_VM]
-default=VM_Memory
-version=7.7.6
+default=((ImageSize+1023)/1024)
+version=8.6.10
 type=string
 customization=expert
 description=MemoryUsage metric for VM Universe jobs
