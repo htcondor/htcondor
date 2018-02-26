@@ -142,11 +142,11 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 
 		/// This structure stores the shared key and its derivatives.
 	struct sk_buf {
-		volatile char *shared_key;          // The shared key.  
-		int len;                            // Of the shared key.
-		volatile unsigned char *ka;         // K
+		char *shared_key;          // The shared key.
+		int len;                   // Of the shared key.
+		unsigned char *ka;         // K
 		int ka_len;
-		volatile unsigned char *kb;         // K'
+		unsigned char *kb;         // K'
 		int kb_len;
 	};
 
@@ -162,8 +162,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		/** Lookup a shared key based on the correspondent's
 			information.  
 		*/
-	volatile char* fetchPassword(const char* nameA,
-								 const char* nameB);
+	char* fetchPassword(const char* nameA,
+	                    const char* nameB);
 
 		/** Return a malloc-ed string "user@domain" that represents who we
 		 	are.
@@ -255,10 +255,6 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	int server_receive_two(int *server_status, struct msg_t_buf *t_client);
 		/** Both sides call this when complete to set the session key. */
 	bool set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk);
-		/** See Secure Programming Cookbook for C/C++.  Secure zeroize
-			for memory containing keys. 
-		*/
-	volatile void *spc_memset(volatile void *dst, int c, size_t len);
 		//void print_binary(volatile unsigned char *buf, int len);
 		//
 
