@@ -900,7 +900,7 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 	{
 		ClassAd * pAd=0;
 		// try to create a hk from the query ad if it is possible.
-		if ( (*makeKey) (hk, const_cast<ClassAd*>(&c_query)) ) {
+		if ( (*makeKey) (hk, &c_query) ) {
 			if( query_contains_hash_key ) {
 				*query_contains_hash_key = true;
 			}
@@ -925,7 +925,7 @@ int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * query
     CollectorHashTable * hTable;
     if( LookupByAdType( adType, hTable, hFunc ) ) {
         AdNameHashKey hKey;
-        if( (* hFunc)( hKey, const_cast< ClassAd * >( & query ) ) ) {
+        if( (* hFunc)( hKey, & query ) ) {
             if( queryContainsHashKey ) { * queryContainsHashKey = true; }
 
             ClassAd * cAd = NULL;

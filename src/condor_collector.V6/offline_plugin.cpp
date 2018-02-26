@@ -151,7 +151,7 @@ OfflineCollectorPlugin::makeOfflineKey(
 	AdNameHashKey hashKey;
 	if ( !makeStartdAdHashKey (
 		hashKey,
-		const_cast<ClassAd*>( &ad ) ) ) {
+		&ad ) ) {
 
 		dprintf (
 			D_FULLDEBUG,

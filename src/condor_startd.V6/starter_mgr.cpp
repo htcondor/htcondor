@@ -221,8 +221,8 @@ StarterMgr::registerStarter( const char* path )
 {
 	Starter* new_starter;
 	FILE* fp;
-	char *args[] = { const_cast<char*>(path),
-					 const_cast<char*>("-classad"),
+	const char *args[] = { path,
+					 "-classad",
 					 NULL };
 	char buf[1024];
 

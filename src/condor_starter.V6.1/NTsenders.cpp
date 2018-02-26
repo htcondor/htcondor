@@ -2185,7 +2185,7 @@ REMOTE_CONDOR_utime(char *path, int actime, int modtime)
 }
 
 int
-REMOTE_CONDOR_dprintf_stats(char *message) 
+REMOTE_CONDOR_dprintf_stats(const char *message)
 {
 	int rval = -1, result = 0;
 	condor_errno_t terrno;
@@ -2197,7 +2197,7 @@ REMOTE_CONDOR_dprintf_stats(char *message)
 	syscall_sock->encode();
 	result = ( syscall_sock->code(CurrentSysCall) );
 	ON_ERROR_RETURN( result );
-	result = ( syscall_sock->code(message));
+	result = ( syscall_sock->put(message));
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
