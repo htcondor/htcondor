@@ -52,10 +52,10 @@ class Condor_MD_MAC {
     // RETURNS: object *this
     //------------------------------------------
 
-    static unsigned char * computeOnce(unsigned char * buffer, unsigned long length);
-    static unsigned char * computeOnce(unsigned char * buffer, unsigned long length, KeyInfo * key);
-    static bool verifyMD(unsigned char * md, unsigned char * buffer, unsigned long length);
-    static bool verifyMD(unsigned char * md, unsigned char * buffer, unsigned long length, KeyInfo * key);
+    static unsigned char * computeOnce(const unsigned char * buffer, unsigned long length);
+    static unsigned char * computeOnce(const unsigned char * buffer, unsigned long length, KeyInfo * key);
+    static bool verifyMD(const unsigned char * md, const unsigned char * buffer, unsigned long length);
+    static bool verifyMD(const unsigned char * md, const unsigned char * buffer, unsigned long length, KeyInfo * key);
     //------------------------------------------
     // PURPOSE: Compute the MAC/MD in one step
     // REQUIRE: the buffer to be checksumed
@@ -86,7 +86,7 @@ class Condor_MD_MAC {
     // RETURNS: CheckSUM
     //------------------------------------------
 
-    bool verifyMD(unsigned char * md);
+    bool verifyMD(const unsigned char * md);
     //------------------------------------------
     // PURPOSE: Once you finished adding all the
     //          buffers by using addMultiple call

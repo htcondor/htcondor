@@ -121,7 +121,7 @@ Condor_Auth_Passwd::fetchLogin()
 }
 
 bool
-Condor_Auth_Passwd::setupCrypto(unsigned char* key, const int keylen)
+Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 {
 		// get rid of any old crypto object
 	if ( m_crypto ) delete m_crypto;
@@ -139,14 +139,14 @@ Condor_Auth_Passwd::setupCrypto(unsigned char* key, const int keylen)
 }
 
 bool
-Condor_Auth_Passwd::encrypt(unsigned char* input, 
+Condor_Auth_Passwd::encrypt(const unsigned char* input,
 					int input_len, unsigned char* & output, int& output_len)
 {
 	return encrypt_or_decrypt(true,input,input_len,output,output_len);
 }
 
 bool
-Condor_Auth_Passwd::decrypt(unsigned char* input, int input_len, 
+Condor_Auth_Passwd::decrypt(const unsigned char* input, int input_len,
 							unsigned char* & output, int& output_len)
 {
 	return encrypt_or_decrypt(false,input,input_len,output,output_len);
@@ -154,7 +154,7 @@ Condor_Auth_Passwd::decrypt(unsigned char* input, int input_len,
 
 bool
 Condor_Auth_Passwd::encrypt_or_decrypt(bool want_encrypt, 
-									   unsigned char* input, 
+									   const unsigned char* input,
 									   int input_len, 
 									   unsigned char* &output, 
 									   int &output_len)
@@ -201,13 +201,13 @@ Condor_Auth_Passwd::encrypt_or_decrypt(bool want_encrypt,
 }
 
 int 
-Condor_Auth_Passwd::wrap(char *   input, 
+Condor_Auth_Passwd::wrap(const char *   input,
 						 int      input_len, 
 						 char*&   output, 
 						 int&     output_len)
 {
 	bool result;
-	unsigned char* in = (unsigned char*)input;
+	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	dprintf(D_SECURITY, "In Condor_Auth_Passwd::wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
@@ -218,13 +218,13 @@ Condor_Auth_Passwd::wrap(char *   input,
 }
 
 int 
-Condor_Auth_Passwd::unwrap(char *   input, 
+Condor_Auth_Passwd::unwrap(const char *   input,
 						   int      input_len, 
 						   char*&   output, 
 						   int&     output_len)
 {
 	bool result;
-	unsigned char* in = (unsigned char*)input;
+	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
 	dprintf(D_SECURITY, "In Condor_Auth_Passwd::unwrap.\n");

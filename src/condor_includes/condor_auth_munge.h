@@ -53,7 +53,7 @@ public:
 	// RETURNS: 1 -- true; 0 -- false
 	//------------------------------------------
 
-	int wrap(char* input, int input_len, char*& output, int& output_len);
+	int wrap(const char* input, int input_len, char*& output, int& output_len);
 	//------------------------------------------
 	// PURPOSE: Encrypt the input buffer into an output buffer.  The output
 	//          buffer must be dealloated by the caller with free().
@@ -61,7 +61,7 @@ public:
 	// RETURNS: 1 -- success; 0 -- failure
 	//------------------------------------------
 
-	int unwrap(char* input, int input_len, char*& output, int& output_len);
+	int unwrap(const char* input, int input_len, char*& output, int& output_len);
 	//------------------------------------------
 	// PURPOSE: Decrypt the input buffer into an output buffer.  The output
 	//          buffer must be dealloated by the caller with free().
@@ -74,16 +74,16 @@ private:
 	Condor_Crypt_3des* m_crypto;
 
 	// Produce the shared key object from raw key material.
-	bool setupCrypto(unsigned char* key, const int keylen);
+	bool setupCrypto(const unsigned char* key, const int keylen);
 
 	// Encrypt data using the session key.  Called by wrap.
-	bool encrypt(unsigned char* input, int input_len, unsigned char* &output, int &output_len);
+	bool encrypt(const unsigned char* input, int input_len, unsigned char* &output, int &output_len);
 
 	// Decrypt data based on the session key.  Called by unwrap.
-	bool decrypt(unsigned char* input, int input_len, unsigned char* &output, int &output_len);
+	bool decrypt(const unsigned char* input, int input_len, unsigned char* &output, int &output_len);
 
 	// Decrypt or encrypt based on first argument.
-	bool encrypt_or_decrypt(bool want_encrypt, unsigned char *input, int input_len, unsigned char* &output, int &output_len);
+	bool encrypt_or_decrypt(bool want_encrypt, const unsigned char *input, int input_len, unsigned char* &output, int &output_len);
 
 };
 

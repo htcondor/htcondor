@@ -144,7 +144,7 @@ public:
 	int accept(ReliSock *);
 
     ///
-	int put_line_raw( char *buffer );
+	int put_line_raw( const char *buffer );
     ///
 	int get_line_raw( char *buffer, int max_length );
     ///
@@ -152,7 +152,7 @@ public:
     ///
 	int get_bytes_raw( char *buffer, int length );
     ///
-	int put_bytes_nobuffer(char *buf, int length, int send_size=1);
+	int put_bytes_nobuffer(const char *buf, int length, int send_size=1);
     ///
 	int get_bytes_nobuffer(char *buffer, int max_length, int receive_size=1);
 

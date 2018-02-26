@@ -94,7 +94,7 @@ class Condor_Auth_Base {
     //          by derived class such as Kerberos
     //------------------------------------------
 
-    virtual int wrap(char*  input, 
+    virtual int wrap(const char*  input,
                      int    input_len, 
                      char*& output,
                      int&   output_len);
@@ -107,7 +107,7 @@ class Condor_Auth_Base {
     //          May need more code later on
     //------------------------------------------
     
-    virtual int unwrap(char*  input, 
+    virtual int unwrap(const char*  input,
                        int    input_len, 
                        char*& output, 
                        int&   output_len);

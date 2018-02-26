@@ -58,12 +58,12 @@ class Condor_Auth_SSPI : public Condor_Auth_Base {
     // RETURNS: 1 -- true; 0 -- false
     //------------------------------------------
 
-	int wrap(	char *   input, 
+	int wrap(	const char *   input,
 				int      input_len, 
 				char* &  output, 
 				int &    output_len);
 
-	int unwrap(	char *   input, 
+	int unwrap(	const char *   input,
 				int      input_len, 
 				char* &  output, 
 				int &    output_len);

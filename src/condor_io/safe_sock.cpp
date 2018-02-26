@@ -416,7 +416,7 @@ int SafeSock::put_bytes(const void *data, int sz)
     if (get_encryption()) {
 		int l_out;
 		unsigned char * dta = 0;
-        if (!wrap((unsigned char *)const_cast<void*>(data), sz, dta , l_out)) { 
+        if (!wrap((const unsigned char *)data, sz, dta , l_out)) {
             dprintf(D_SECURITY, "Encryption failed\n");
             return -1;  // encryption failed!
         }

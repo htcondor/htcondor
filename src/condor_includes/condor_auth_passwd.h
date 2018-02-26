@@ -104,13 +104,13 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		buffer must be dealloated by the caller with free().
 		@returns 1 on success, 0 on failure
 	*/
-    int wrap(char* input, int input_len, char*& output, int& output_len);
+    int wrap(const char* input, int input_len, char*& output, int& output_len);
 
 	/** Decrypt the input buffer into an output buffer.  The output
 		buffer must be dealloated by the caller with free().
 		@returns 1 on success, 0 on failure
 	*/    
-    int unwrap(char* input, int input_len, char*& output, int& output_len);
+    int unwrap(const char* input, int input_len, char*& output, int& output_len);
 
 
  private:
@@ -157,7 +157,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 
 		/** Produce the shared key object from raw key material.
 		 */
-	bool setupCrypto(unsigned char* key, const int keylen);
+	bool setupCrypto(const unsigned char* key, const int keylen);
 
 		/** Lookup a shared key based on the correspondent's
 			information.  
@@ -172,14 +172,14 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 
 		/** Encrypt data using the session key.  Called by wrap. 
 		 */
-	bool encrypt(unsigned char *  input, 
+	bool encrypt(const unsigned char *  input,
                  int              input_len, 
                  unsigned char *& output, 
                  int&             output_len);
 	
 		/* Decrypt data based on the session key.  Called by unwrap.
 		 */
-	bool decrypt(unsigned char *  input, 
+	bool decrypt(const unsigned char *  input,
                  int              input_len, 
                  unsigned char *& output, 
                  int&             output_len);
@@ -187,7 +187,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		/** Decrypt or encrypt based on first argument. 
 		 */
 	bool encrypt_or_decrypt(bool want_encrypt,
-							unsigned char *  input,
+							const unsigned char *  input,
 							int              input_len,
 							unsigned char *& output,
 							int&             output_len);

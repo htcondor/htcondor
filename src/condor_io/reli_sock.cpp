@@ -280,7 +280,7 @@ ReliSock::connect( char	const *host, int port, bool non_blocking_flag )
 }
 
 int 
-ReliSock::put_line_raw( char *buffer )
+ReliSock::put_line_raw( const char *buffer )
 {
 	int result;
 	int length = strlen(buffer);
@@ -324,16 +324,16 @@ ReliSock::get_bytes_raw( char *buffer, int length )
 }
 
 int 
-ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
+ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 {
 	int i, result, l_out;
 	int pagesize = 65536;  // Optimize large writes to be page sized.
-	char * cur;
+	const char * cur;
 	unsigned char * buf = NULL;
         
 	// First, encrypt the data if necessary
 	if (get_encryption()) {
-		if (!wrap((unsigned char *) buffer, length,  buf , l_out)) { 
+		if (!wrap((const unsigned char *) buffer, length,  buf , l_out)) {
 			dprintf(D_SECURITY, "Encryption failed\n");
 			goto error;
 		}
@@ -591,7 +591,7 @@ ReliSock::put_bytes(const void *data, int sz)
         if (get_encryption()) {
         	unsigned char * dta = NULL;
 			int l_out;
-            if (!wrap((unsigned char *)const_cast<void*>(data), sz, dta , l_out)) { 
+            if (!wrap((const unsigned char *)(data), sz, dta , l_out)) {
                 dprintf(D_SECURITY, "Encryption failed\n");
 				if (dta != NULL)
 				{

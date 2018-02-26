@@ -2964,7 +2964,7 @@ Sock::isAuthenticated() const
 }
 
 bool 
-Sock::wrap(unsigned char* d_in,int l_in, 
+Sock::wrap(const unsigned char* d_in,int l_in,
                     unsigned char*& d_out,int& l_out)
 {    
     bool coded = false;
@@ -2977,7 +2977,7 @@ Sock::wrap(unsigned char* d_in,int l_in,
 }
 
 bool 
-Sock::unwrap(unsigned char* d_in,int l_in,
+Sock::unwrap(const unsigned char* d_in,int l_in,
                       unsigned char*& d_out, int& l_out)
 {
     bool coded = false;

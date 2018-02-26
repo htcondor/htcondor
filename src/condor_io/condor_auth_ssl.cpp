@@ -657,14 +657,14 @@ Condor_Auth_SSL::setup_crypto(unsigned char* key, const int keylen)
 }
 
 bool
-Condor_Auth_SSL::encrypt(unsigned char* input, 
+Condor_Auth_SSL::encrypt(const unsigned char* input,
 					int input_len, unsigned char* & output, int& output_len)
 {
 	return encrypt_or_decrypt(true,input,input_len,output,output_len);
 }
 
 bool
-Condor_Auth_SSL::decrypt(unsigned char* input, int input_len, 
+Condor_Auth_SSL::decrypt(const unsigned char* input, int input_len,
 							unsigned char* & output, int& output_len)
 {
 	return encrypt_or_decrypt(false,input,input_len,output,output_len);
@@ -672,7 +672,7 @@ Condor_Auth_SSL::decrypt(unsigned char* input, int input_len,
 
 bool
 Condor_Auth_SSL::encrypt_or_decrypt(bool want_encrypt, 
-									   unsigned char* input, 
+									   const unsigned char* input,
 									   int input_len, 
 									   unsigned char* &output, 
 									   int &output_len)
@@ -719,13 +719,13 @@ Condor_Auth_SSL::encrypt_or_decrypt(bool want_encrypt,
 }
 
 int 
-Condor_Auth_SSL::wrap(char *   input, 
+Condor_Auth_SSL::wrap(const char *   input,
 						 int      input_len, 
 						 char*&   output, 
 						 int&     output_len)
 {
 	bool result;
-	unsigned char* in = (unsigned char*)input;
+	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	dprintf(D_SECURITY, "In wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
@@ -736,13 +736,13 @@ Condor_Auth_SSL::wrap(char *   input,
 }
 
 int 
-Condor_Auth_SSL::unwrap(char *   input, 
+Condor_Auth_SSL::unwrap(const char *   input,
 						   int      input_len, 
 						   char*&   output, 
 						   int&     output_len)
 {
 	bool result;
-	unsigned char* in = (unsigned char*)input;
+	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
 	dprintf(D_SECURITY, "In unwrap.\n");

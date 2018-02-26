@@ -399,7 +399,7 @@ Condor_Auth_Kerberos::doServerReceiveClientSuccessCode(CondorError* /*errstack*/
 }
 
 
-int Condor_Auth_Kerberos :: wrap(char*  input, 
+int Condor_Auth_Kerberos :: wrap(const char*  input,
                                  int    input_len, 
                                  char*& output, 
                                  int&   output_len)
@@ -419,7 +419,7 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
 	}
 
     // Make the input buffer
-    in_data.data = input;
+    in_data.data = const_cast<char*>(input);
     in_data.length = input_len;
 
     // Make the output buffer
@@ -475,7 +475,7 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     return TRUE;
 }
 
-int Condor_Auth_Kerberos :: unwrap(char*  input, 
+int Condor_Auth_Kerberos :: unwrap(const char*  input,
                                    int    /* input_len */, 
                                    char*& output, 
                                    int& output_len)
@@ -500,7 +500,7 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
     enc_data.ciphertext.length = ntohl(tmp);
     index += sizeof(enc_data.ciphertext.length);
 
-    enc_data.ciphertext.data = input + index;
+    enc_data.ciphertext.data = const_cast<char*>(input) + index;
 
 	// DEBUG
 	dprintf (D_FULLDEBUG, "KERBEROS: input.enctype (%i) and session.enctype (%i)\n",

@@ -211,7 +211,7 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
     return( status );
 }
 
-int Condor_Auth_X509 :: wrap(char*  data_in, 
+int Condor_Auth_X509 :: wrap(const char*  data_in,
                              int    length_in, 
                              char*& data_out, 
                              int&   length_out)
@@ -245,7 +245,7 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
     return (major_status == GSS_S_COMPLETE);
 }
     
-int Condor_Auth_X509 :: unwrap(char*  data_in, 
+int Condor_Auth_X509 :: unwrap(const char*  data_in,
                                int    length_in, 
                                char*& data_out, 
                                int&   length_out)

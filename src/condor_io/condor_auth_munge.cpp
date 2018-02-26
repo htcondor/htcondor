@@ -199,7 +199,7 @@ int Condor_Auth_MUNGE :: isValid() const
 }
 
 bool
-Condor_Auth_MUNGE::setupCrypto(unsigned char* key, const int keylen)
+Condor_Auth_MUNGE::setupCrypto(const unsigned char* key, const int keylen)
 {
 	// get rid of any old crypto object
 	if ( m_crypto ) delete m_crypto;
@@ -217,19 +217,19 @@ Condor_Auth_MUNGE::setupCrypto(unsigned char* key, const int keylen)
 }
 
 bool
-Condor_Auth_MUNGE::encrypt(unsigned char* input, int input_len, unsigned char* &output, int &output_len)
+Condor_Auth_MUNGE::encrypt(const unsigned char* input, int input_len, unsigned char* &output, int &output_len)
 {
 	return encrypt_or_decrypt(true,input,input_len,output,output_len);
 }
 
 bool
-Condor_Auth_MUNGE::decrypt(unsigned char* input, int input_len, unsigned char* &output, int &output_len)
+Condor_Auth_MUNGE::decrypt(const unsigned char* input, int input_len, unsigned char* &output, int &output_len)
 {
 	return encrypt_or_decrypt(false,input,input_len,output,output_len);
 }
 
 bool
-Condor_Auth_MUNGE::encrypt_or_decrypt(bool want_encrypt, unsigned char* input, int input_len, unsigned char* &output, int &output_len)
+Condor_Auth_MUNGE::encrypt_or_decrypt(bool want_encrypt, const unsigned char* input, int input_len, unsigned char* &output, int &output_len)
 {
 	bool result;
 
@@ -274,10 +274,10 @@ Condor_Auth_MUNGE::encrypt_or_decrypt(bool want_encrypt, unsigned char* input, i
 }
 
 int
-Condor_Auth_MUNGE::wrap(char *input, int input_len, char* &output, int &output_len)
+Condor_Auth_MUNGE::wrap(const char *input, int input_len, char* &output, int &output_len)
 {
 	bool result;
-	unsigned char* in = (unsigned char*)input;
+	unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	dprintf(D_SECURITY, "In Condor_Auth_MUNGE::wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
@@ -288,10 +288,10 @@ Condor_Auth_MUNGE::wrap(char *input, int input_len, char* &output, int &output_l
 }
 
 int
-Condor_Auth_MUNGE::unwrap(char *input, int input_len, char* &output, int &output_len)
+Condor_Auth_MUNGE::unwrap(const char *input, int input_len, char* &output, int &output_len)
 {
 	bool result;
-	unsigned char* in = (unsigned char*)input;
+	unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 
 	dprintf(D_SECURITY, "In Condor_Auth_MUNGE::unwrap.\n");

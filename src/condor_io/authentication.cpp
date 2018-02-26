@@ -964,7 +964,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
             protocol  = (int) key->getProtocol();
             duration  = key->getDuration();
 
-            if (!authenticator_->wrap((char *)const_cast<unsigned char*>(key->getKeyData()), keyLength, encryptedKey, outputLen))
+            if (!authenticator_->wrap((const char *)key->getKeyData(), keyLength, encryptedKey, outputLen))
 			{
 				// failed to wrap key.
 				return 0;

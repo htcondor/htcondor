@@ -246,7 +246,7 @@ public:
         // RETURNS: true -- success; false -- failure
         //------------------------------------------
 
-        bool wrap(unsigned char* input, int input_len, 
+        bool wrap(const unsigned char* input, int input_len,
                   unsigned char*& output, int& outputlen);
         //------------------------------------------
         // PURPOSE: encrypt some data
@@ -255,7 +255,7 @@ public:
         // RETURNS: TRUE -- success, FALSE -- failure
         //------------------------------------------
 
-        bool unwrap(unsigned char* input, int input_len, 
+        bool unwrap(const unsigned char* input, int input_len,
                     unsigned char*& output, int& outputlen);
         //------------------------------------------
         // PURPOSE: decrypt some data
