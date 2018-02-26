@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug which mischaracterized the \Attr{MemoryUsage} of VM
+universe jobs.  This should allow VM universe jobs to run when
+\MacroNI{feature : Hold\_If\_Memory\_Exceeded} is enabled.
+\Ticket{6577}
+
 \item Fixed a bug where the \Condor{shadow} could accidentally kill itself
 by not checking it it was attempting to change immutable attributes.
 \Ticket{6557}
