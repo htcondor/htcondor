@@ -90,6 +90,16 @@ defines an expression which constrains which job ads are considered for
 matchmaking by the \Condor{negotiator}.
 \Ticket{6250}
 
+\item Added a new tokenizer to \Condor{dagman}, allowing file paths in DAG input
+files to include spaces if they are surrounded by quotes. 
+\Ticket{6389}
+
+\item Allowed spaces in file paths for regular \Condor{submit} files.
+Previously, adding whitespace to a file path would result in an error claiming
+certain attributes could only take exactly one argument. Now, whitespace is 
+treated as part of the path.
+\Ticket{6389}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
