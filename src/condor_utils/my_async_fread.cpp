@@ -88,7 +88,8 @@ int MyAsyncFileReader::open (const char * filename, bool buffer_whole_file /*=fa
 	error = 0;
 
 #ifdef USE_WIN32_ASYNC_IO
-	fd = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+	DWORD ovFlag = not_async ? 0 : FILE_FLAG_OVERLAPPED;
+	fd = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, ovFlag | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
 	if (fd == INVALID_HANDLE_VALUE) {
 		error = GetLastError();
 		fd = FILE_DESCR_NOT_SET;
@@ -205,7 +206,13 @@ int MyAsyncFileReader::queue_next_read()
 	ab.ovl.Offset = li.LowPart;
 	ab.ovl.OffsetHigh = li.HighPart;
 	ab.ovl.hEvent = NULL;
-	if (ReadFile(fd, ab.aio_buf, (DWORD)ab.aio_nbytes, &cbRead, &ab.ovl)) {
+	bool read_ok;
+	if (not_async) {
+		read_ok = ReadFile(fd, ab.aio_buf, (DWORD)ab.aio_nbytes, &cbRead, NULL);
+	} else {
+		read_ok = ReadFile(fd, ab.aio_buf, (DWORD)ab.aio_nbytes, &cbRead, &ab.ovl);
+	}
+	if (read_ok) {
 		// read completed synchronously, so 'unqueue' the read
 		// and also handle end-of-file detection.
 		nextbuf.set_valid_data(0, cbRead);
@@ -214,6 +221,11 @@ int MyAsyncFileReader::queue_next_read()
 		// not queued anymore
 		ab.aio_buf = NULL;
 		ab.aio_nbytes = 0;
+
+		// if the primary read buffer is empty, promote this new data to the primary buffer
+		if (buf.idle()) {
+			buf.swap(nextbuf);
+		}
 	} else {
 		DWORD dw = GetLastError();
 		if (dw == ERROR_IO_PENDING) {
@@ -335,7 +347,7 @@ int MyAsyncFileReader::check_for_read_completion()
 			ASSERT (nextbuf.getbuf(cballoc) == ab.aio_buf && (ssize_t)cballoc >= cbread)
 			nextbuf.set_valid_data(0, cbread);
 
-			// the ab buffer is no longer queued, so clear out it's pointer and size.
+			// the ab buffer is no longer queued, so clear out its pointer and size.
 			ab.aio_buf = 0;
 			ab.aio_nbytes = 0;
 

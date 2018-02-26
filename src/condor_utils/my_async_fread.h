@@ -299,6 +299,7 @@ protected:
 	int    error;   // error code from reading, if any
 	int    status; // last status return from aio_error, used for debugging.
 	bool   whole_file; // true when the whole file will fit into the buffers (normally into a single buffer)
+	bool   not_async; // do synchronous reads
 	bool   got_eof; // set to true when eof was read
 	int    total_reads;   // number of aio_read/ReadFile calls
 	int    total_inprogress; // number of times aio_error/GetOverlappedResult returned EINPROGRESS
@@ -326,6 +327,7 @@ public:
 		, error(NOT_INTIALIZED)
 		, status(NOT_INTIALIZED)
 		, whole_file(false)
+		, not_async(false)
 		, got_eof(false)
 		, total_reads(0)
 		, total_inprogress(0)
@@ -336,6 +338,9 @@ public:
 	// prepare class for destruction or re-use, closes the file and
 	// rewinds any input buffers, but does not free all of them.
 	void clear();
+
+	// set sync
+	bool set_sync(bool sync) { bool ret = not_async; not_async = sync; return ret; }
 
 	// open a file for non-blocking io
 	// returns 0 if file is opened

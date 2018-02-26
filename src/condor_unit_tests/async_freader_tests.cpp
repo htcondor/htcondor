@@ -26,6 +26,12 @@
 #define EXCEPT(msg,...) {}
 #include "my_async_fread.h"
 
+#ifdef WIN32
+#undef sleep
+#define sleep(x) SleepEx(x*1000,TRUE)
+#endif
+
+
 int num_tests = 0;
 int tests_failed = 0;
 int total_fail_count = 0;
@@ -33,6 +39,7 @@ int step_fail_count = 0;
 time_t test_begin_time = 0;
 bool verbose = false;
 bool diagnostic = false;
+bool do_sync_io = false;
 
 typedef struct _diagnostic_data {
 	int cstatus_success;
@@ -96,7 +103,7 @@ DIAGNOSTIC_DATA diag;
 #define CHECK_EQUAL(value,result)     REQUIRE((value) == (result))
 #define CHECK_EQUAL_INT(value,result) REQUIRE_EQUAL(value,result,int,"%d")
 #define CHECK_TEST_TIMEOUT(sec) if ((time(NULL) - test_begin_time) >= (sec)) { REQUIRE((time(NULL) - test_begin_time) >= (sec)); break; }
-
+#define CHECK_SYNC(r) if (do_sync_io) { REQUIRE(r.set_sync(true) == false); }
 
 BEGIN_TEST_CASE(default_constructor) {
 	MyAsyncFileReader reader;
@@ -115,6 +122,7 @@ BEGIN_TEST_CASE(10_lines) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_10_lines.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -147,6 +155,7 @@ BEGIN_TEST_CASE(no_newlines) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_no_newlines.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -179,6 +188,7 @@ BEGIN_TEST_CASE(no_data) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_no_data.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -211,6 +221,7 @@ BEGIN_TEST_CASE(1byte) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1byte.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -244,6 +255,7 @@ BEGIN_TEST_CASE(2bytes) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_2bytes.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -278,6 +290,7 @@ BEGIN_TEST_CASE(1Kilobyte) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1Kilobyte.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -310,6 +323,7 @@ BEGIN_TEST_CASE(2000_lines) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_2000_lines.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -339,6 +353,7 @@ BEGIN_TEST_CASE(2000_lines_again) {
 	MyString str;
 	MyAsyncFileReader reader;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_2000_lines.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -371,6 +386,7 @@ BEGIN_TEST_CASE(300000_bytes) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_300000_bytes.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -401,6 +417,7 @@ BEGIN_TEST_CASE(1Megabyte) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1Megabyte.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -431,6 +448,7 @@ BEGIN_TEST_CASE(1Megabyte_whole_file) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1Megabyte.data", true), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -473,6 +491,7 @@ BEGIN_TEST_CASE(1Megabyte_no_final_newline) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1Megabyte_no_final_newline.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -504,6 +523,7 @@ BEGIN_TEST_CASE(30Megabytes) {
 	int c1, c2;
 	MyString str;
 
+	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_30Megabytes.data"), 0);
 	CHECK_EQUAL_INT(reader.queue_next_read(), 0);
 
@@ -1124,6 +1144,10 @@ int main(int argc, const char * argv[])
 		else
 		if (YourString(argv[ixarg]) == "-diagnostic") {
 			diagnostic = verbose = true;
+		}
+		else
+		if (YourString(argv[ixarg]) == "-sync") {
+			do_sync_io = true;
 		}
 		else
 		{

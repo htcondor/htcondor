@@ -38,8 +38,13 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
   SCHEDD_ALLOW_LATE_MATERIALIZE = true
   # turn on special logging of late materialization
   SCHEDD_MATERIALIZE_LOG = $(LOG)/MaterializeLog
+  #ENABLE_ASYNC_LATE_MATERIALIZE_ITEM_DATA = true
 CONDOR_TESTREQ_CONFIG
 #endtestreq
+
+# dump the environment.
+TLOG "the environment\n";
+foreach my $key (keys %ENV) { print "\t$key = $ENV{$key}\n"; }
 
 my $testname = "job_late_materialization";
 my $was_evicted = 0;

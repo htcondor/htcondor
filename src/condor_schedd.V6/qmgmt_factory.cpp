@@ -610,6 +610,22 @@ int JobFactory::load_q_foreach_items(
 }
 #endif
 
+#ifdef WIN32
+// make a restart pref for whether or not to use overlapped (async) IO on Windows
+// we do this because exec-14 in the batlab always gets 'stuck' without errors
+// if we enable overlapped io, we don't understand why, so we add a pref to control this behavior (sigh)
+static bool EnableOverlappedIO() {
+	static bool inited = false;
+	static bool can_do = true;
+	if ( ! inited) {
+		//hack! Win7 (exec-14 in the batlab) always fails the OVERLAPPED reads so turn off async by default until we can figure out what is going on.
+		//bool can_do = (sysapi_opsys_major_version() > 601); // enable async it on Win10 and Win8 but not Win7
+		can_do = param_boolean("ENABLE_ASYNC_LATE_MATERIALIZE_ITEM_DATA", true);
+	}
+	return can_do;
+}
+#endif
+
 int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & errmsg)
 {
 	char * qline = NULL;
@@ -655,6 +671,12 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & 
 						restore_priv = true;
 						priv = set_user_priv_from_ad(*user_ident);
 					}
+					#ifdef WIN32
+					// on Windows, make the use of async io a pref since it doesn't work on all platforms (sigh)
+					bool can_overlap = EnableOverlappedIO();
+					reader.set_sync( ! can_overlap);
+					#endif
+
 					// setup an async reader for the itemdata
 					rval = reader.open(fea.items_filename.c_str());
 					if (rval) {

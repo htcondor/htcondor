@@ -28,12 +28,29 @@ use CondorUtils;
 my $testname = "unit_test_async_fread";
 my $cmd = 'async_freader_tests';
 if (CondorUtils::is_windows()) { $cmd .= ".exe"; }
-my $args = '-v';
 my $success = 0;
+
+# tj:8.7.7. we test in async mode only on linux (sync mode is not yet supported)
+# we test sync mode on windows, and also async mode, but only on Win10
+# We do this because exec-14 (Win7) is known to fail async mode for for some mysterious reason (works on Win7 on TJ's desktop machine)
+#
+my $platform = $ENV{NMI_PLATFORM};
+my $test_sync = 0;
+my $test_async = 1;
+if ((defined $platform) && ($platform =~ /Windows/)) {
+	$test_sync = 1;
+	$test_async = 0;
+	if ($platform =~ /Windows10/) { $test_async = 1; }
+}
+
 
 TLOG "Generating test data files\n";
 my @lines = `$cmd -generate-test-files`;
 
+# run the test binary
+# 
+my $args = '-v';
+if ($test_sync) { $args .= ' -sync'; }
 TLOG "Running $cmd $args\n";
 
 open(ELOG,"$cmd $args 2>&1 |") || die "Could not run: $cmd $args: $!\n";
@@ -48,6 +65,31 @@ print "\n";
 TLOG "exitcode = $exitcode\n";
 $success = $exitcode == 0;
 
-CondorTest::RegisterResult($success, "test_name", $testname);
+CondorTest::RegisterResult($success, test_name=>$testname, check_name=>'async freader in sync mode');
+
+# if both sync and async are to be tested, we already did sync, now test async
+# we do it in this way because the async test is more likely to abort than the sync test is.
+if ($test_sync && $test_async) {
+
+	# async mode
+	#
+	$args = "-v";
+	TLOG "Running $cmd $args\n";
+
+	open(ELOG,"$cmd $args 2>&1 |") || die "Could not run: $cmd $args: $!\n";
+	while(<ELOG>) {
+		print $_;
+	}
+	close(ELOG);
+	$exitcode = $?;
+
+	print "\n";
+	TLOG "exitcode = $exitcode\n";
+	$success = $exitcode == 0;
+
+
+	CondorTest::RegisterResult($success, test_name=>$testname, check_name=>'async freader');
+}
+
 CondorTest::EndTest();
 
