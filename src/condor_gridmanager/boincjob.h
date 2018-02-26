@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "MyString.h"
+#include "classad_hashtable.h"
 
 #include "basejob.h"
 #include "boincresource.h"
@@ -54,6 +55,7 @@ class BoincJob : public BaseJob
 						  bool &transfer_all,
 						  GahpClient::BoincOutputFiles &outputs );
 	std::string GetAppName();
+	std::string GetVar(const char *str);
 	ArgList *GetArgs();
 	void GetInputFilenames( std::vector<std::pair<std::string, std::string> > &files );
 

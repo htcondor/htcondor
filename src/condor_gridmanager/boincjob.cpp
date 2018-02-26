@@ -934,6 +934,13 @@ std::string BoincJob::GetAppName()
 	return name;
 }
 
+std::string BoincJob::GetVar(const char * str)
+{
+        std::string var = "";
+        jobAd->LookupString( str, var );
+        return var;
+}
+
 ArgList *BoincJob::GetArgs()
 {
 	ArgList *args = new ArgList();
