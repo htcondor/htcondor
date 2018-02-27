@@ -29,7 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When reporting \Attr{GPUsUsage}, HTCondor now also reports
+\Attr{GPUsMemoryUsage}.  This is like \Attr{MemoryUsage}, except it is
+the peak amount of GPU memory used by the job.  This feature only works
+for NVidia GPUs.
+\Ticket{6544}
 
 \end{itemize}
 
