@@ -8313,6 +8313,15 @@ These macros affect the \Condor{negotiator}.
   \Condor{collector} by the \Condor{negotiator} during a negotiation
   cycle.
 
+\label{param:NegotiatorJobConstraint}
+\item[\Macro{NEGOTIATOR\_JOB\_CONSTRAINT}]
+  An expression which constrains which job ClassAds are considered for
+  matchmaking by the \Condor{negotiator}.
+  This parameter is read by the \Condor{negotiator} and sent to the
+  \Condor{schedd} for evaluation.
+  \Condor{schedd}s older than version 8.7.7 will ignore this expression
+  and so will continue to send all jobs to the \Condor{negotiator}.
+
 \label{param:NegotiatorTrimShutdownThreshold}
 \item[\Macro{NEGOTIATOR\_TRIM\_SHUTDOWN\_THRESHOLD}] 
   This setting is not likely to be customized, except perhaps within 
