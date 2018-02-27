@@ -405,7 +405,7 @@ CronJob::Reaper( int exitPid, int exitStatus )
 	case CRON_TERM_SENT:
 	case CRON_KILL_SENT:
 		m_in_shutdown = false;
-		
+		//@fallthrough@
 	default:
 		SetState( CRON_IDLE );			// Note that it's dead
 

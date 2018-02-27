@@ -3278,11 +3278,11 @@ bool
 ShadowExceptionEvent::formatBody( std::string &out )
 {
 	if (FILEObj) {
-		char messagestr[512];
+		char messagestr[BUFSIZ+18];
 		ClassAd tmpCl1, tmpCl2;
 		MyString tmp = "";
 
-		snprintf(messagestr, 512, "Shadow exception: %s", message);
+		snprintf(messagestr, BUFSIZ+18, "Shadow exception: %s", message);
 		messagestr[COUNTOF(messagestr)-1] = 0;
 
 		// remove the new line in the end if any

@@ -236,6 +236,7 @@ addrinfo* addrinfo_iterator::next()
 		case AF_INET6:
 			if( ipv6 ) { return current_; }
 			// This fall-through is deliberate.
+			//@fallthrough@
 		default:
 			//
 			// ai_canonname is only ever non-NULL in the first struct addrinfo
