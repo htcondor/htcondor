@@ -6173,6 +6173,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			if (clusterad->factory) {
 				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmHold) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
+					// if we failed to set the pause attribute, take this cluster out of the list so we don't try
+					// and actually pause the factory
+					clusters[i].cluster = -1;
 				} else {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
@@ -6186,6 +6189,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			if (clusterad->factory) {
 				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmRunning) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
+					// if we failed to set the pause attribute, take this cluster out of the list so we don't try
+					// and actually pause the factory
+					clusters[i].cluster = -1;
 				} else {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
@@ -6202,6 +6208,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// pause state, the mmClusterRemoved pause mode is a runtime-only schedd state.
 				if (SetAttribute(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, "3", SetAttribute_QueryOnly) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
+					clusters[i].cluster = -1;
 				} else {
 					PauseJobFactory(clusterad->factory, mmClusterRemoved);
 					//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
@@ -6306,6 +6313,8 @@ Scheduler::actOnJobs(int, Stream* s)
 	}
 	for( i=0; i<num_cluster_matches; i++ ) {
 		tmp_id = clusters[i];
+		if (tmp_id.cluster < 0) // skip entries for which the attempt to set the pause attribute failed.
+			continue;
 		JobQueueCluster * clusterad = GetClusterAd(tmp_id);
 		if ( ! clusterad || ! clusterad->factory)
 			continue;
