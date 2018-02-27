@@ -59,9 +59,8 @@ by not checking it it was attempting to change immutable attributes.
 retry indefinitely when polling for credentials.
 \Ticket{6523}
 
-\item Fixed a bug that could cause scheduler universe jobs, such as 
-	DAGMan processes, to be orphaned in the event the \Condor{master} 
-	dies unexpectedly.
+\item Improved the systemd configuration to clean up HTCondor processes
+on shutdown in the event that the \Condor{master} fails to do so.
 \Ticket{6539}
 
 \item Fixed a bug that caused \Condor{preen} to crash before it finished
