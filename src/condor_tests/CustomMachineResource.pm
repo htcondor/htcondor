@@ -418,7 +418,12 @@ sub parseHistoryFile {
 	my $attributeList = join( " ", @attributes );
 
 	my @lines = ();
-	my $result = CondorTest::runCondorTool( "condor_history ${jobID} -af ${attributeList}", \@lines, 2, { emit_output => 0 } );
+	# my $result = CondorTest::runCondorTool( "condor_history ${jobID} -af ${attributeList}", \@lines, 2, { emit_output => 0 } );
+	# There's an arbitrarily-long delay between when the job-terminated event
+	# show up in the event log (and we think the job finishes) and when it
+	# shows up in the history file.  Instead of dealing with that race, submit
+	# the job with LeaveJobInQueue = true and run condor_q instead.
+	my $result = CondorTest::runCondorTool( "condor_q ${jobID} -af ${attributeList}", \@lines, 2, { emit_output => 0 } );
 	return parseAutoFormatLines( \@lines, \@attributes );
 }
 
