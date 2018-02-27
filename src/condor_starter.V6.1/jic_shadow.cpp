@@ -496,7 +496,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		full_stats += stats;
 		
 		if (shadow_version && shadow_version->built_since_version(8, 5, 8)) {
-			REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+			REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
 		}
 		set_priv(saved_priv);
 
@@ -2403,7 +2403,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		ASSERT( !shadowDisconnected() );
 
 		if (shadow_version && shadow_version->built_since_version(8, 5, 8)) {
-			REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+			REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
 		}
 
 			// If we transferred the executable, make sure it

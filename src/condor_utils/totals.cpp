@@ -118,7 +118,7 @@ displayTotals (FILE *file, int keyLength)
 
 		
 	// sort the keys (insertion sort) so we display totals in sorted order
-	const char **keys = new const char* [allTotals.getNumElements()];
+	char **keys = new char* [allTotals.getNumElements()];
 	ASSERT(keys);
 	allTotals.startIterations();
 	for (k = 0; k < allTotals.getNumElements(); k++) // for each key
@@ -152,7 +152,7 @@ displayTotals (FILE *file, int keyLength)
 	{
 		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
 		allTotals.lookup(MyString(keys[k]), ct);
-		free((void *)const_cast<char*>(keys[k]));
+		free(keys[k]);
 		ct->displayInfo(file);
 		had_tot_keys = true;
 	}

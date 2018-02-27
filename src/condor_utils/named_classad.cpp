@@ -37,7 +37,7 @@ NamedClassAd::NamedClassAd( const char *name, ClassAd *ad )
 // Destructor
 NamedClassAd::~NamedClassAd( void )
 {
-	free( const_cast<char *>(m_name) );
+	free( m_name );
 	delete m_classad;
 }
 

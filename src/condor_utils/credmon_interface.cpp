@@ -109,7 +109,7 @@ bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal) {
 
 	// this will be the filename we poll for
 	char watchfilename[PATH_MAX];
-	if (credmon_fill_watchfile_name(const_cast<char*>(watchfilename), user) == false) {
+	if (credmon_fill_watchfile_name(watchfilename, user) == false) {
 		return false;
 	}
 

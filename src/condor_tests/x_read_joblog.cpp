@@ -135,8 +135,8 @@ int main(int argc, char* argv[])
 	char found = 0;
 	char evicted = 0;
 	char aborted = 0;
-    char* hostmachine = NULL;
-	char* extractptr = NULL;
+    const char* hostmachine = NULL;
+	const char* extractptr = NULL;
 	char* placeptr = NULL;
 	char machinedotaddr[256];
 
@@ -202,7 +202,7 @@ int main(int argc, char* argv[])
 					case ULOG_EXECUTE:
 						//printf("Job executed\n");
 						//returnval = ((ExecuteEvent*)e)->return_value;
-						extractptr = hostmachine = const_cast<char *> ( ((ExecuteEvent*)e)->getExecuteHost());
+						extractptr = hostmachine = ((ExecuteEvent*)e)->getExecuteHost();
 						placeptr =  machinedotaddr;
 						while(*extractptr != ':')
 						{

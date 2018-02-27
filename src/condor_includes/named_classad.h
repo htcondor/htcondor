@@ -37,7 +37,7 @@ class NamedClassAd
 	bool operator == ( const char *other ) const;
 
   private:
-	const char	*m_name;
+	char	*m_name;
 	ClassAd		*m_classad;
 };
 

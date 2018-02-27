@@ -163,7 +163,7 @@ getIpAddr( const char *ad_type,
 // functions to make the hashkeys ...
 // make hashkeys from the obtained ad
 bool
-makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeStartdAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 
 	// get the name of the startd;
@@ -204,7 +204,7 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 }
 
 bool
-makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeScheddAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 
 	// get the name of the schedd
@@ -236,7 +236,7 @@ makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 
 
 bool
-makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeLicenseAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 
 	// get the name of the license
@@ -254,7 +254,7 @@ makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 
 
 bool
-makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeMasterAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 	hk.ip_addr = "";
 	return adLookup( "Master", ad, ATTR_NAME, ATTR_MACHINE, hk.name );
@@ -262,28 +262,28 @@ makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 
 
 bool
-makeCkptSrvrAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeCkptSrvrAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "CheckpointServer", ad, ATTR_MACHINE, NULL, hk.name );
 }
 
 bool
-makeCollectorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeCollectorAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "Collector", ad, ATTR_NAME, ATTR_MACHINE, hk.name );
 }
 
 bool
-makeStorageAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeStorageAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "Storage", ad, ATTR_NAME, NULL, hk.name );
 }
 
 bool
-makeAccountingAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeAccountingAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	if ( !adLookup( "Accounting", ad, ATTR_NAME, NULL, hk.name ) ) {
@@ -302,7 +302,7 @@ makeAccountingAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 
 
 bool
-makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeNegotiatorAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "Negotiator",  ad, ATTR_NAME, NULL, hk.name );
@@ -310,14 +310,14 @@ makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 
 
 bool
-makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeHadAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "HAD", ad, ATTR_NAME, NULL, hk.name );
 }
 
 bool
-makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeGridAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
     MyString tmp;
     
@@ -357,7 +357,7 @@ makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 // (e.g. this wouldn't work for submitter ads - see code for
 // makeScheddAdHashKey above)
 bool
-makeGenericAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeGenericAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 	hk.ip_addr = "";
 	return adLookup( "Generic", ad, ATTR_NAME, NULL, hk.name );
