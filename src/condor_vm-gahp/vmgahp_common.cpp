@@ -852,6 +852,7 @@ makeErrorMessage(const char* err_string)
 				case '\r':
 				case '\n':
 					buffer += '\\';
+					//@fallthrough@
 				default:
 					buffer += err_string[i];
 			}

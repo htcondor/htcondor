@@ -1620,6 +1620,7 @@ enqueue_result (int req_id, const char ** results, const int argc)
 				case '\r':
 				case '\n':
 					*buffer += '\\';
+					//@fallthrough@
 				default:
 					*buffer += results[i][j];
 				}
