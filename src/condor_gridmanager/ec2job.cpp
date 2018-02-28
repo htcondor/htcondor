@@ -2238,6 +2238,7 @@ void EC2Job::associate_n_attach()
 		case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
 			if ((condorState == REMOVED) || (condorState == HELD))
 				gmState = GM_DELETE;
+			//@fallthrough@
 		default:
 			if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 			dprintf(D_ALWAYS,
@@ -2269,6 +2270,7 @@ void EC2Job::associate_n_attach()
 			case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
 				if ( (condorState == REMOVED) || (condorState == HELD) )
 					gmState = GM_DELETE;
+				//@fallthrough@
 			default:
 				if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 				dprintf(D_ALWAYS,
@@ -2314,6 +2316,7 @@ void EC2Job::associate_n_attach()
 				case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
 					if ( (condorState == REMOVED) || (condorState == HELD) )
 						gmState = GM_DELETE;
+					//@fallthrough@
 				default:
 					if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 					bcontinue=false;
