@@ -440,11 +440,6 @@ void INFNBatchJob::doEvaluateState()
 		case GM_START: {
 			// This state is the real start of the state machine, after
 			// one-time initialization has been taken care of.
-			// If we think there's a running jobmanager
-			// out there, we try to register for callbacks (in GM_REGISTER).
-			// The one way jobs can end up back in this state is if we
-			// attempt a restart of a jobmanager only to be told that the
-			// old jobmanager process is still alive.
 			errorString = "";
 			if ( condorState == COMPLETED ) {
 				gmState = GM_DONE_COMMIT;
@@ -511,6 +506,13 @@ void INFNBatchJob::doEvaluateState()
 			// Once RequestSubmit() is called at least once, you must
 			// CancelRequest() once you're done with the request call
 			if ( myResource->RequestSubmit( this ) == false ) {
+				break;
+			}
+
+			// Can't break in the middle of a transfer, because we need
+			// to clean up any files we've started to move.
+			if ( (condorState == REMOVED || condorState == HELD) && gahpAd == NULL ) {
+				gmState = GM_CLEAR_REQUEST;
 				break;
 			}
 
@@ -597,12 +599,10 @@ void INFNBatchJob::doEvaluateState()
 
 			// Can't break in the middle of a submit, because the job will
 			// end up running if the submit succeeds
-			/*
-			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_UNSUBMITTED;
+			if ( (condorState == REMOVED || condorState == HELD) && gahpAd == NULL ) {
+				gmState = GM_DELETE_SANDBOX;
 				break;
 			}
-			*/
 			char *job_id_string = NULL;
 
 			if ( gahpAd == NULL ) {
