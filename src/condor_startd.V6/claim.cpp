@@ -795,6 +795,7 @@ Claim::beginActivation( time_t now )
 		case CONDOR_UNIVERSE_VANILLA:
 			c_ad->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 			if( ! wantCheckpoint ) { break; }
+			//@fallthrough@
 		case CONDOR_UNIVERSE_VM:
 		case CONDOR_UNIVERSE_STANDARD:
 			c_last_pckpt = (int)now;

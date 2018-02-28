@@ -444,7 +444,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 
 	case REJECTED:
 		m_reject_reason = "Unknown reason";
-
+		//@fallthrough@
 	case REJECTED_WITH_REASON: {
 		// To support resource request lists, the
 		// reject reason may end with "...|autocluster|cluster.proc|"

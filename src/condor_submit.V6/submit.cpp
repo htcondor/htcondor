@@ -2505,6 +2505,7 @@ SetExecutable()
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		} //Purposely fall through if use_condor_mpi_universe is true
+		//@fallthrough@
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_SCHEDULER:

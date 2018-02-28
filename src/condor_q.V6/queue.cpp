@@ -3434,7 +3434,7 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * psch
 			for (int ii = 0; ii < cJobsToEval; ++ii) {
 				ClassAd *job = it->second[ii];
 				if (summarize_anal) {
-					char achJobId[16], achAutocluster[16], achRunning[16];
+					char achJobId[22], achAutocluster[33], achRunning[22];
 					int cluster_id = 0, proc_id = 0;
 					job->LookupInteger(ATTR_CLUSTER_ID, cluster_id);
 					job->LookupInteger(ATTR_PROC_ID, proc_id);
