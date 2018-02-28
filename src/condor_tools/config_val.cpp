@@ -1713,11 +1713,13 @@ SetRemoteParam( Daemon* target, const char* param_value, ModeType mt )
 	switch (mt) {
 	case CONDOR_SET:
 		set = true;
+		//@fallthrough@
 	case CONDOR_UNSET:
 		cmd = DC_CONFIG_PERSIST;
 		break;
 	case CONDOR_RUNTIME_SET:
 		set = true;
+		//@fallthrough@
 	case CONDOR_RUNTIME_UNSET:
 		cmd = DC_CONFIG_RUNTIME;
 		break;
