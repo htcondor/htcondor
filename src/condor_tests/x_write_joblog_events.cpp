@@ -150,6 +150,7 @@ int writeExecuteEvent(WriteUserLog *log)
 int writeJobTerminatedEvent(WriteUserLog *log)
 {
 	struct rusage ru;
+	memset( &ru, 0, sizeof( struct rusage ) );
 
 	JobTerminatedEvent jobterminated;
 	jobterminated.normal = true;
