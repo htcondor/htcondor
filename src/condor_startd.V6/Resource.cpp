@@ -1079,6 +1079,7 @@ Resource::leave_preempting_state( void )
 			// Else, fall through, no break.
 		set_destination_state( owner_state );
 		dest = owner_state;	// So change_state() below will be correct.
+		//@fallthrough@
 	case owner_state:
 	case delete_state:
 		remove_pre();

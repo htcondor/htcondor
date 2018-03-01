@@ -5541,9 +5541,11 @@ description=Preempt jobs that use more memory than in slot
 default : @end
   #
   # If the startd sees the memory usage of the job exceed the
-  # memory in the slot, preempt the job immediately ignoring any retirement time.
+  # memory in the slot, preempt the job immediately ignoring
+  # any retirement time.  VM universe jobs can't go over their
+  # memory allocations, so we ignore them.
   #
-  MEMORY_EXCEEDED = (MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
+  MEMORY_EXCEEDED = (JobUniverse != 13 && MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
   use POLICY : PREEMPT_IF(MEMORY_EXCEEDED)
 @end
 
@@ -5551,10 +5553,12 @@ default : @end
 description=Hold jobs that use more memory than in slot
 default : @end
   #
-  # If the startd preempted a job because memory usage exceeded the amount
-  # of memory in the slot, put the job on hold.
+  # If the startd preempted a job because memory usage exceeded
+  # the amount of memory in the slot, put the job on hold.  VM
+  # universe jobs can't go over their memory allocations, so
+  # we ignore them.
   #
-  MEMORY_EXCEEDED = (MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
+  MEMORY_EXCEEDED = (JobUniverse != 13 MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
   HOLD_REASON_MEMORY_EXCEEDED = memory usage exceeded request_memory
   use POLICY : WANT_HOLD_IF( MEMORY_EXCEEDED, $(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(HOLD_REASON_MEMORY_EXCEEDED) )
 @end
@@ -5593,9 +5597,9 @@ default : @end
     error : use POLICY : WANT_HOLD_IF requires 3 arguments: policy_variable, subcode, reason_text
   endif
   if defined WANT_HOLD
-    WANT_HOLD = $($(1)) || $(WANT_HOLD)
+    WANT_HOLD = (JobUniverse != 1 && $($(1))) || $(WANT_HOLD)
   else
-    WANT_HOLD = $($(1))
+    WANT_HOLD = (JobUniverse != 1 && $($(1)))
   endif
   WANT_HOLD_SUBCODE = ifThenElse($($(1)), $(2) , $(WANT_HOLD_SUBCODE:UNDEFINED))
   WANT_HOLD_REASON = ifThenElse($($(1)), "$(3+)", $(WANT_HOLD_REASON:UNDEFINED))
@@ -5604,6 +5608,7 @@ usage : @end
   set a variable with the trigger expression, then pass the variable name, a subcode, and reason text as arguments:
   MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > Memory)
   use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory)
+  note that standard universe jobs can not be put on hold this way.
 @end
 
 

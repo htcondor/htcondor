@@ -41,9 +41,25 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where \MacroNI{policy:\ want\_hold\_if} would always
+evict standard universe jobs instead of putting them on hold.  Instead,
+this policy now ignores standard universe jobs entirely.  This means
+that the metaknobs \MacroNI{policy:\ hold\_if\_memory\_exceeded} and
+\MacroNI{policy:\ hold\_if\_cpus\_exceeded} will also ignore
+standard universe jobs entirely (instead of its previous bad behavior
+of of letting standard universe jobs use more than their requested
+memory until the first time they were evicted, whereafter each restart
+would be immediately evicted).
+\Ticket{6583}
+
+\item The metaknob \MacroNI{policy:\ hold\_if\_memory\_exceeded} and
+\MacroNI{policy:\ preempt\_if\_memory\_exceeded} now ignore VM universe
+jobs.  These jobs can't exceed their requested memory.
+\Ticket{6583}
+
 \item Fixed a bug which mischaracterized the \Attr{MemoryUsage} of VM
 universe jobs.  This should allow VM universe jobs to run when
-\MacroNI{feature : Hold\_If\_Memory\_Exceeded} is enabled.
+\MacroNI{feature:\ Hold\_If\_Memory\_Exceeded} is enabled.
 \Ticket{6577}
 
 \item Fixed a bug where the \Condor{shadow} could accidentally kill itself
@@ -66,6 +82,10 @@ on shutdown in the event that the \Condor{master} fails to do so.
 \item Fixed a bug that caused \Condor{preen} to crash before it finished
 cleaning the spool directory (leaving unwanted files behind)
 \Ticket{6521}
+
+\item Fixed a bug that prevented grid-type batch jobs from being removed
+after an attempt to submit to the underlying batch system failed.
+\Ticket{6586}
 
 \end{itemize}
 
