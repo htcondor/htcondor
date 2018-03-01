@@ -87,6 +87,16 @@ cleaning the spool directory (leaving unwanted files behind)
 after an attempt to submit to the underlying batch system failed.
 \Ticket{6586}
 
+\item Fixed a bug in python plugin support for the \Condor{collector} that would result
+in the \Condor{collector} switching from writing from the CollectorLog to writing to
+the ToolLog after a reconfig.
+\Ticket{6588}
+
+\item Fixed a bug in the \verb@$F()@ macro expansion in submit and configuration files
+that would cause a crash if the argument to the macro was a file literal rather than
+a variable name.
+\Ticket{6531}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -25,6 +25,9 @@
 
 static SubsystemInfo *mySubSystem = NULL;
 
+// returns true if subsystem has been initialized
+SubsystemInfo* has_mySubSystem() { return mySubSystem; }
+
 SubsystemInfo* get_mySubSystem()
 {
 	if ( mySubSystem == NULL ) {

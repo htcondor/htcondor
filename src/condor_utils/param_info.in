@@ -4134,7 +4134,7 @@ tags=starter
 
 [MEMORY_USAGE_METRIC_VM]
 default=((ImageSize+1023)/1024)
-version=8.6.10
+version=7.7.6
 type=string
 customization=expert
 description=MemoryUsage metric for VM Universe jobs
@@ -5558,7 +5558,7 @@ default : @end
   # universe jobs can't go over their memory allocations, so
   # we ignore them.
   #
-  MEMORY_EXCEEDED = (JobUniverse != 13 MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
+  MEMORY_EXCEEDED = (JobUniverse != 13 && MemoryUsage =!= UNDEFINED && MemoryUsage > Memory)
   HOLD_REASON_MEMORY_EXCEEDED = memory usage exceeded request_memory
   use POLICY : WANT_HOLD_IF( MEMORY_EXCEEDED, $(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(HOLD_REASON_MEMORY_EXCEEDED) )
 @end

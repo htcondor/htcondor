@@ -199,6 +199,7 @@ class SubsystemInfo
 	SubsystemClass setClass ( const SubsystemInfoLookup * );
 };
 
+SubsystemInfo* has_mySubSystem(); // returns true if subsystem has been initialized
 SubsystemInfo* get_mySubSystem();
 void set_mySubSystem( const char *subsystem_name,
 					  SubsystemType _type = SUBSYSTEM_TYPE_AUTO );
