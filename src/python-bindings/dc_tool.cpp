@@ -327,6 +327,6 @@ export_dc_tool()
         ":param msg: String message to log.\n")
         ;
 
-    set_subsystem("TOOL", SUBSYSTEM_TYPE_TOOL);
+    if ( ! has_mySubSystem()) { set_mySubSystem("TOOL", SUBSYSTEM_TYPE_TOOL); }
     dprintf_pause_buffering();
 }
