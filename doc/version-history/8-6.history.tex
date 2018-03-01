@@ -92,6 +92,11 @@ in the \Condor{collector} switching from writing from the CollectorLog to writin
 the ToolLog after a reconfig.
 \Ticket{6588}
 
+\item Fixed a bug in the \verb@$F()@ macro expansion in submit and configuration files
+that would cause a crash if the argument to the macro was a file literal rather than
+a variable name.
+\Ticket{6531}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
