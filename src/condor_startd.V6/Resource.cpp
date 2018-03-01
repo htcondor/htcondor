@@ -2388,22 +2388,23 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		std::string updateAdDir;
 		formatstr( updateAdDir, "%s/dir_%d", r_cur->executeDir(), r_cur->starterPID() );
 
-		std::string updateAdPath;
-		formatstr( updateAdPath, "%s/.update.ad", updateAdDir.c_str() );
-		// dprintf( D_FULLDEBUG, "Will write update ad to %s\n", updateAdPath.c_str() );
+		// Write to a temporary file first and then rename it
+		// to ensure atomic updates.
+		std::string updateAdTmpPath;
+		formatstr( updateAdTmpPath, "%s/.update.ad.tmp", updateAdDir.c_str() );
 
 		FILE * updateAdFile = NULL;
 #if defined(WINDOWS)
 		{
 			TemporaryPrivSentry p( PRIV_ROOT );
-			updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "w" );
+			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
 		}
 #else
 		StatInfo si( updateAdDir.c_str() );
 		if(! si.Error()) {
 			set_user_ids( si.GetOwner(), si.GetGroup() );
 			TemporaryPrivSentry p( PRIV_USER, true );
-			updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "w" );
+			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
 		}
 #endif
 
@@ -2463,9 +2464,28 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// fwrite( updateAdFile, sizeof( char ), strlen( adstring.c_str() ), adstring.c_str() );
 
 			fclose( updateAdFile );
+
+
+			// Rename the temporary.
+			std::string updateAdPath;
+			formatstr( updateAdPath, "%s/.update.ad", updateAdDir.c_str() );
+
+#if defined(WINDOWS)
+			{
+				TemporaryPrivSentry p( PRIV_ROOT );
+				rename( updateAdTmpPath.c_str(), updateAdPath.c_str() );
+			}
+#else
+			StatInfo si( updateAdDir.c_str() );
+			if(! si.Error()) {
+				set_user_ids( si.GetOwner(), si.GetGroup() );
+				TemporaryPrivSentry p( PRIV_USER, true );
+				rename( updateAdTmpPath.c_str(), updateAdPath.c_str() );
+			}
+#endif
 		} else {
 			dprintf( D_ALWAYS, "Failed to open '%s' for writing update ad: %s (%d).\n",
-				updateAdPath.c_str(), strerror( errno ), errno );
+				updateAdTmpPath.c_str(), strerror( errno ), errno );
 		}
 	}
 }
