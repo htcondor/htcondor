@@ -6,26 +6,11 @@
 # % define uw_build 1
 # % define std_univ 1
 
-# Things for F15 or later
-%if 0%{?fedora} >= 16
-# NOTE: HTCondor+gsoap doesn't work yet on F15; ticket not yet upstream AFAIK.  BB
-%define gsoap 0
-%define aviary 1
-%ifarch %{ix86} x86_64
-# mongodb supports only x86/x86_64
-%define plumage 1
-%else
-%define plumage 0
-%endif
-%define systemd 1
-%define cgroups 1
-%else
 %define gsoap 1
 %define aviary 0
 %define plumage 0
 %define systemd 0
 %define cgroups 0
-%endif
 
 %if 0%{?rhel} >= 6
 %define cgroups 1
@@ -34,9 +19,9 @@
 %define systemd 1
 %endif
 
-# default to uw_build if neither fedora nor osg is enabled
+# default to uw_build if neither osg nor fedora is enabled
 %if %undefined uw_build
-%if 0%{?fedora} || 0%{?osg} || 0%{?hcc}
+%if 0%{?osg} || 0%{?hcc}
 %define uw_build 0
 %else
 %define uw_build 1

@@ -146,6 +146,7 @@ main( int argc, char *argv[] )
 			  case 'd':
                 dprintf_set_tool_debug("TOOL", 0);
 				break;
+
 			  case 'v':
 				VerboseFlag = true;
 				break;

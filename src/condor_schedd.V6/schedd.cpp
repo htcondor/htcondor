@@ -11580,11 +11580,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 			} // SWITCH
 				// if we're here, we really preempted it, so
 				// decrement n so we let this count towards our goal.
-				// However, do not decrement n if we are going to ExitWhenDone - this
-				// will ensure that ALL entries are preempted, not just the first n entries.
-			if( ! ExitWhenDone ) {
-				n--;
-			}
+			n--;
 		} // IF
 	} // WHILE
 
@@ -12123,8 +12119,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			this->swap_space_exhausted();
 			stats.JobsShadowNoMemory += 1;
 			OTHER.JobsShadowNoMemory += 1;
-
 			// Fall through...
+			//@fallthrough@
 		case JOB_EXEC_FAILED:
 				//
 				// The calling function will make sure that
@@ -12189,7 +12185,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			stats.JobsShouldRemove += 1;
 			OTHER.JobsShouldRemove += 1;
 				// no break, fall through and do the action
-
+				//@fallthrough@
 		case JOB_NO_CKPT_FILE:
 		case JOB_KILLED:
 				// If the job isn't being HELD, we'll remove it
@@ -12210,6 +12206,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			stats.JobsExitedAndClaimClosing += 1;
 			OTHER.JobsExitedAndClaimClosing += 1;
 			// no break, fall through
+			//@fallthrough@
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
 			stats.JobsExitedNormally += 1;
@@ -12218,6 +12215,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			OTHER.JobsCompleted += 1;
 			is_goodput = true;
 			// no break, fall through and do the action
+			//@fallthrough@
 		case JOB_COREDUMPED:
 			if (JOB_COREDUMPED == exit_code) {
 				stats.JobsCoredumped += 1;
@@ -12263,7 +12261,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 							job_id.cluster, job_id.proc );
 		}
 				// no break, fall through and do the action
-
+				//@fallthrough@
 		case JOB_SHOULD_HOLD: {
 				// Regardless of the state that the job currently
 				// is in, we'll put it on HOLD
@@ -12308,7 +12306,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			OTHER.JobsDebugLogError += 1;
 			// We don't want to break, we want to fall through 
 			// and treat this like a shadow exception for now.
-
+			//@fallthrough@
 		case JOB_EXCEPTION:
 			if ( exit_code == JOB_EXCEPTION ){
 				dprintf( D_ALWAYS,
@@ -12317,7 +12315,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			}
 			// We don't want to break, we want to fall through 
 			// and treat this like a shadow exception for now.
-
+			//@fallthrough@
 		default:
 				//
 				// The default case is now a shadow exception in case ANYTHING
@@ -12671,6 +12669,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 					 job_id->cluster, job_id->proc ); 
 		}
 			// No break, fall through and do the deed...
+			//@fallthrough@
 	case COMPLETED:
 		DestroyProc( job_id->cluster, job_id->proc );
 		break;

@@ -270,6 +270,9 @@ the set of configuration it incorporates.
 	specifying \MacroNI{HOLD\_REASON\_CPU\_EXCEEDED} and
 	\MacroNI{HOLD\_SUBCODE\_CPU\_EXCEEDED} respectively.
 
+	Standard universe jobs can't be held by startd policy expressions,
+	so this metaknob automatically ignores them.
+
 	\item \texttt{Preempt\_If\_Memory\_Exceeded}
 
 	If the startd observes the memory usage of the job exceed
@@ -288,6 +291,9 @@ the set of configuration it incorporates.
 	specifying \MacroNI{HOLD\_REASON\_MEMORY\_EXCEEDED} and
 	\MacroNI{HOLD\_SUBCODE\_MEMORY\_EXCEEDED} respectively.
 
+	Standard universe jobs can't be held by startd policy expressions,
+	so this metaknob automatically ignores them.
+
 	\item \texttt{Preempt\_If( policy\_variable )}
 
 	Preempt jobs according to the specified policy.
@@ -304,6 +310,9 @@ the set of configuration it incorporates.
 	is prepended to the existing expression; otherwise
 	\MacroNI{WANT\_HOLD} is simply set to the value of the
 	texttt{policy\_variable} macro.
+
+	Standard universe jobs can't be held by startd policy expressions,
+	so this metaknob automatically ignores them.
 
 	See an example here: ~\ref{sec:Config-Template-Examples}.
 

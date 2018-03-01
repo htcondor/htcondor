@@ -78,6 +78,7 @@ int main(int argc, char **argv)
         case ULOG_UNK_ERROR:
 			logsMissing = true;
 			// Fall through
+			//@fallthrough@
         case ULOG_NO_EVENT:
 
 			printf( "Log outcome: %s\n", ULogEventOutcomeNames[outcome] );

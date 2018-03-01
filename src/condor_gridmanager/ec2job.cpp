@@ -2246,6 +2246,7 @@ void EC2Job::associate_n_attach()
 			if ((condorState == REMOVED) || (condorState == HELD))
 				gmState = GM_DELETE;
 			// Fall through...
+			//@fallthrough@
 		default:
 			if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 			dprintf(D_ALWAYS,
@@ -2278,6 +2279,7 @@ void EC2Job::associate_n_attach()
 				if ( (condorState == REMOVED) || (condorState == HELD) )
 					gmState = GM_DELETE;
 				// Fall through...
+				//@fallthrough@
 			default:
 				if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 				dprintf(D_ALWAYS,
@@ -2324,6 +2326,7 @@ void EC2Job::associate_n_attach()
 					if ( (condorState == REMOVED) || (condorState == HELD) )
 						gmState = GM_DELETE;
 					// Fall through...
+					//@fallthrough@
 				default:
 					if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 					bcontinue=false;

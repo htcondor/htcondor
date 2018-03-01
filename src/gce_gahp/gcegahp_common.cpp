@@ -379,6 +379,7 @@ create_output_string (int req_id, const char ** results, const int argc)
 				case '\n':
 					buffer += '\\';
 					// Fall through...
+					//@fallthrough@
 				default:
 					buffer += results[i][j];
 				}

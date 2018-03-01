@@ -712,6 +712,7 @@ static expr_character_t Characterize_config_if_expression(const char * expr, boo
 				if (matches_literal_ignore_case(begin, "defined"))
 					return CIFT_IFDEF; // identify bare defined to insure a reasonable error message
 			}
+			//@fallthrough@
 		case ct_alpha|ct_digit:
 		case ct_alpha|ct_digit|ct_float:
 		case ct_alpha|ct_ident:

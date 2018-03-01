@@ -74,6 +74,7 @@ Not( BoolValue bv, BoolValue &result )
 	case FALSE_VALUE:	{ result = TRUE_VALUE; break; }		// !F = T
 	case UNDEFINED_VALUE:									// !U = U
 	case ERROR_VALUE:	{ result = bv; }						// !E = E
+				//@fallthrough@
 	default: { return false; }
 	}
 	return true;

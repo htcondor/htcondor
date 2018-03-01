@@ -271,19 +271,19 @@ int ViewServer::HandleQuery(Stream* sock, int command, int FromDate, int ToDate,
 	// Find out which data set type
 
 	switch(command) {
-		case QUERY_HIST_STARTD_LIST:			ListFlag=1; // fall through...
+		case QUERY_HIST_STARTD_LIST:			ListFlag=1; //@fallthrough@
 		case QUERY_HIST_STARTD:					DataSetIdx=StartdData;
 												break;
-		case QUERY_HIST_SUBMITTOR_LIST: 		ListFlag=1; // fall through...
+		case QUERY_HIST_SUBMITTOR_LIST: 		ListFlag=1; //@fallthrough@
 		case QUERY_HIST_SUBMITTOR:				DataSetIdx=SubmittorData;
 												break;
-		case QUERY_HIST_SUBMITTORGROUPS_LIST:	ListFlag=1; // fall through...
+		case QUERY_HIST_SUBMITTORGROUPS_LIST:	ListFlag=1; //@fallthrough@
 		case QUERY_HIST_SUBMITTORGROUPS:		DataSetIdx=SubmittorGroupsData;
 												break;
-		case QUERY_HIST_GROUPS_LIST:			ListFlag=1; // fall through...
+		case QUERY_HIST_GROUPS_LIST:			ListFlag=1; //@fallthrough@
 		case QUERY_HIST_GROUPS:					DataSetIdx=GroupsData;
 												break;
-		case QUERY_HIST_CKPTSRVR_LIST:			ListFlag=1; // fall through...
+		case QUERY_HIST_CKPTSRVR_LIST:			ListFlag=1; //@fallthrough@
 		case QUERY_HIST_CKPTSRVR:				DataSetIdx=CkptData;
 												break;
 	}
