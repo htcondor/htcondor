@@ -133,9 +133,9 @@ check_parent( )
 	if ( daemonCore->Is_Pid_Alive( daemonCore->getppid() ) == FALSE ) {
 		// our parent is gone!
 		dprintf(D_ALWAYS,
-			"Our parent process (pid %d) went away; shutting down\n",
+			"Our parent process (pid %d) went away; shutting down fast\n",
 			daemonCore->getppid());
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT ); // SIGQUIT means shutdown fast
 	}
 }
 #endif
@@ -2595,8 +2595,11 @@ int dc_main( int argc, char** argv )
 
 #ifndef WIN32
 		// This timer checks if our parent is dead; if so, we shutdown.
-		// We only do this on Unix; on NT we watch our parent via a different mechanism.
-		// Also note: we do not want the master to exibit this behavior!
+		// Note: we do not want the master to exibit this behavior!
+		// We only do this on Unix; on NT we watch our parent via passing our
+		// parent pid into the pidwatcher thread, then shutting down the NT child
+		// in DaemonCore::HandleProcessExit().
+		//
 	if ( ! get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
 		daemonCore->Register_Timer( 15, 120, 
 				check_parent, "check_parent" );

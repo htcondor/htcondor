@@ -7520,17 +7520,22 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		// past we did this fixup during the negotiation cycle, but now that
 		// we can get matches directly back from the startd, we need to do it
 		// here as well.
-	if ( (jobAd && mrec && mrec->my_match_ad) && 
-		!ScheddNegotiate::fixupPartitionableSlot(jobAd,mrec->my_match_ad) )
+	if ( jobAd && mrec && mrec->my_match_ad )
 	{
+		if ( !ScheddNegotiate::fixupPartitionableSlot(jobAd,mrec->my_match_ad) ) {
 			// The job classad does not have required attributes (such as 
 			// requested memory) to enable the startd to create a dynamic slot.
 			// Since this claim request is simply going to fail, lets throw
 			// this match away now (seems like we could do something better?) - 
 			// while it is not ideal to throw away the match in this instance,
 			// it is consistent with what we current do during negotiation.
-		DelMrec ( mrec );
-		return;
+			DelMrec ( mrec );
+			return;
+		}
+		// The slot ad has just been modified to look like a dynamic slot.
+		// We need to re-optimize the requirements expression to pick up
+		// the modified resource values.
+		OptimizeMachineAdForMatchmaking( mrec->my_match_ad );
 	}
 
     // some attributes coming out of negotiator's matching process that need to
@@ -14237,6 +14242,10 @@ Scheduler::sendReschedule()
 void
 Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 {
+	// We may be re-optimizing this ad after mutating it.
+	// Undo any previous optimization first.
+	classad::MatchClassAd::UnoptimizeAdForMatchmaking( ad );
+
 		// The machine ad will be passed as the RIGHT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.
