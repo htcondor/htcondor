@@ -240,7 +240,7 @@ TransferDaemon::push_transfer_requests(void)
 
 		// Let's use the only encapsulation protocol we have at the moment.
 		m_treq_sock->encode();
-		if (!m_treq_sock->code((unsigned char *)encap)) {
+		if (!m_treq_sock->put(encap)) {
 			dprintf(D_ALWAYS, "transferd hung up on us, not able to send transfer requests\n");
 			return false;
 		}

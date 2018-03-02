@@ -384,10 +384,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 
 		// Send our version if using the new command
 	if ( use_new_command ) {
-			// Need to use a named variable, else the wrong version of	
-			// code() is called.
-		char *my_version = strdup( CondorVersion() );
-		if ( !rsock.code(my_version) ) {
+		if ( !rsock.put( CondorVersion() ) ) {
 			dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
 					"Can't send version string to the schedd\n");
 			if ( errstack ) {
@@ -395,16 +392,12 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 								CEDAR_ERR_PUT_FAILED,
 								"Can't send version string to the schedd" );
 			}
-			free( my_version );
 			return false;
 		}
-		free( my_version );
 	}
 
 		// Send the constraint
-	char * nc_constraint = strdup( constraint );	// de-const
-	if ( !rsock.code(nc_constraint) ) {
-		free( nc_constraint );
+	if ( !rsock.put(constraint) ) {
 		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
 				"Can't send JobAdsArrayLen to the schedd\n");
 		if ( errstack ) {
@@ -414,7 +407,6 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		}
 		return false;
 	}
-	free( nc_constraint );
 
 	if ( !rsock.end_of_message() ) {
 		std::string errmsg;
@@ -1000,10 +992,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 		// Send our version if using the new command
 	if ( use_new_command ) {
-			// Need to use a named variable, else the wrong version of	
-			// code() is called.
-		char *my_version = strdup( CondorVersion() );
-		if ( !rsock.code(my_version) ) {
+		if ( !rsock.put( CondorVersion() ) ) {
 			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 					"Can't send version string to the schedd\n");
 			if ( errstack ) {
@@ -1011,10 +1000,8 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 								CEDAR_ERR_PUT_FAILED,
 								"Can't send version string to the schedd" );
 			}
-			free( my_version );
 			return false;
 		}
-		free( my_version );
 	}
 
 		// Send the number of jobs

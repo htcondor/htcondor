@@ -329,16 +329,13 @@ int
 command_give_state( Service*, int, Stream* stream ) 
 {
 	int rval = TRUE;
-	char* tmp;
 	dprintf( D_FULLDEBUG, "command_give_state() called.\n" );
 	stream->encode();
-	tmp = strdup( state_to_string(resmgr->state()) );
-	if ( ! stream->code( tmp ) ||
+	if ( ! stream->put( state_to_string(resmgr->state()) ) ||
 		 ! stream->end_of_message() ) {
 		dprintf( D_FULLDEBUG, "command_give_state(): failed to send state\n" );
 		rval = FALSE;
 	}
-	free( tmp );
 	return rval;
 }
 

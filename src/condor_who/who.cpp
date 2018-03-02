@@ -2356,9 +2356,6 @@ static bool get_daemon_ready(const char * addr, const char * requirements, time_
 static char * get_daemon_param(const char * addr, const char * param_name)
 {
 	char * value = NULL;
-	// sock.code needs write access to the string for some reason...
-	auto_free_ptr tmp_param_name(strdup(param_name));
-	ASSERT(tmp_param_name);
 
 	Daemon dae(DT_ANY, addr, addr);
 
@@ -2378,8 +2375,7 @@ static char * get_daemon_param(const char * addr, const char * param_name)
 	sock.encode();
 	//if (App.diagnostic) { printf("Querying %s for $(%s) param\n", addr, param_name); }
 
-	char * name_copy = tmp_param_name.ptr();
-	if ( ! sock.code(name_copy)) {
+	if ( ! sock.put(param_name)) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't send CONFIG_VAL for %s to %s\n", param_name, addr); }
 	} else if ( ! sock.end_of_message()) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't send end of message to %s\n", addr); }

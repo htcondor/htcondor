@@ -1487,7 +1487,7 @@ GetRemoteParamRaw(
 	s.encode();
 
 	if (diagnostic) fprintf(stderr, "sending %s\n", param_name);
-	if ( ! s.code(const_cast<char*&>(param_name))) {
+	if ( ! s.put(param_name)) {
 		fprintf(stderr, "Can't send request (%s)\n", param_name);
 		return NULL;
 	}

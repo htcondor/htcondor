@@ -1543,19 +1543,12 @@ VMProc::reportErrorToStartd()
 	}
 
 	// Send pid of this starter
-	MyString s_pid = IntToStr( (int)daemonCore->getpid() );
-
-	char *buffer = strdup(s_pid.Value());
-	ASSERT(buffer);
-
-	ssock.code(buffer);
+	ssock.put( IntToStr( (int)daemonCore->getpid() ) );
 
 	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
-		free(buffer);
 		return false;
 	}
-	free(buffer);
 
 	sleep(1);
 	return true;
@@ -1595,25 +1588,15 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 	}
 
 	// Send the pid of this starter
-	MyString s_pid = IntToStr( (int)daemonCore->getpid() );
-
-	char *starter_pid = strdup(s_pid.Value());
-	ASSERT(starter_pid);
-	ssock.code(starter_pid);
+	ssock.put( IntToStr( (int)daemonCore->getpid() ) );
 
 	// Send vm info 
-	char *vm_value = strdup(value);
-	ASSERT(vm_value);
-	ssock.code(vm_value);
+	ssock.put(value);
 
 	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
-		free(starter_pid);
-		free(vm_value);
 		return false;
 	}
-	free(starter_pid);
-	free(vm_value);
 
 	sleep(1);
 	return true;

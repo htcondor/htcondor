@@ -546,7 +546,7 @@ GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
 			errno = terrno;
 			return rval;
 		}
-		neg_on_error( qmgmt_sock->code(value) );
+		neg_on_error( qmgmt_sock->code(*value) );
 		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
@@ -575,7 +575,7 @@ GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value 
 			errno = terrno;
 			return rval;
 		}
-		neg_on_error( qmgmt_sock->code(value) );
+		neg_on_error( qmgmt_sock->code(*value) );
 		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;

@@ -53,7 +53,6 @@ DCCredd::storeCredential (Credential * cred,
 	bool rtnVal = false;
 	ReliSock *rsock = NULL;
 	void *data = NULL;
-	char * classad_str = NULL;
 	classad::ClassAd * classad = NULL;
 	int rc = 0;
 	int size=0;
@@ -80,13 +79,12 @@ DCCredd::storeCredential (Credential * cred,
 		// so we unparse it into a string
 	classad = cred->GetMetadata();
 	unparser.Unparse(adbuffer,classad);
-	classad_str = strdup(adbuffer.c_str());
 
 		// Retrieve credential data
 	cred->GetData (data, size);	
 
 		// Send the metadata and data
-	if (! rsock->code (classad_str) ) {
+	if (! rsock->code (adbuffer) ) {
 		condor_error.pushf ("DC_CREDD", 3,
 				"Communication error, send credential metadata: %s",
 				strerror(errno) );
@@ -117,7 +115,6 @@ DCCredd::storeCredential (Credential * cred,
 EXIT:
 	if ( rsock ) delete rsock;
 	if ( data ) free (data);
-	if ( classad_str ) free (classad_str);
 	if ( classad ) delete classad;
 	return rtnVal;
 }
@@ -153,9 +150,7 @@ DCCredd::getCredentialData (const char * cred_name,
 		// Prepare to send request
 	rsock.encode();
 
-	char * _cred_name=strdup(cred_name); // de-const... fucking lame
-	rsock.code (_cred_name);
-	free (_cred_name);
+	rsock.put (cred_name);
 
 	rsock.decode();
 
@@ -243,7 +238,6 @@ DCCredd::removeCredential (const char * cred_name,
 
 	bool rtnVal = false;
 	ReliSock *rsock = NULL;
-	char * _cred_name = NULL;
 	int rc=0;
 
 	rsock = (ReliSock *)startCommand(
@@ -259,8 +253,7 @@ DCCredd::removeCredential (const char * cred_name,
 
 	rsock->encode();
 
-	_cred_name=strdup(cred_name); // de-const... fucking lame
-	if ( ! rsock->code (_cred_name) ) {
+	if ( ! rsock->put (cred_name) ) {
 		condor_error.pushf ( "DC_CREDD", 3, "Error sending credential name: %s",
 				strerror(errno) );
 		goto EXIT;
@@ -287,6 +280,5 @@ DCCredd::removeCredential (const char * cred_name,
 	rtnVal = rc;
 EXIT:
 	if ( rsock ) delete rsock;
-	if ( _cred_name ) free ( _cred_name );
 	return rtnVal;
 }

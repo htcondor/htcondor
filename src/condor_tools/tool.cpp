@@ -1518,7 +1518,6 @@ doCommand( Daemon* d )
 			continue;
 		}
 
-		char	*psubsys = const_cast<char *>(subsys);
 		switch(real_cmd) {
 		case VACATE_CLAIM:
 			if( is_per_claim_startd_cmd ) {
@@ -1577,7 +1576,7 @@ doCommand( Daemon* d )
 			if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
-			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
+			if( !sock.put( subsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 							cmdToStr(my_cmd), d->idStr() );
 				all_good = false;
@@ -1591,7 +1590,7 @@ doCommand( Daemon* d )
 			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
-			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
+			if( !sock.put( subsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 						 cmdToStr(my_cmd), d->idStr() );
 				all_good = false;
@@ -1645,11 +1644,10 @@ doCommand( Daemon* d )
 			break;
 		case SET_SHUTDOWN_PROGRAM:
 		{
-			char	*pexec = const_cast<char *>(exec_program); 
 			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
-			if( !sock.code( pexec ) || !sock.end_of_message() ) {
+			if( !sock.put( exec_program ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 						 cmdToStr(my_cmd), d->idStr() );
 				all_good = false;
