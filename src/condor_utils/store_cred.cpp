@@ -1127,7 +1127,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	username += domain;	
 
 	// do the real work
-	if (pw) {
+	if (pw && *pw) {
 		size_t pwlen = strlen(pw)+1;
 		result = store_cred_service(username.Value(), pw, pwlen, ADD_MODE, cred_modified);
 		SecureZeroMemory(pw, strlen(pw));

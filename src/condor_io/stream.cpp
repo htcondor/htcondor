@@ -359,6 +359,33 @@ Stream::code( char	*&s)
 }
 
 
+/* Works like code(char *&), but the receiver will get a NULL
+ * pointer if the sender provides one.
+ *
+ * DO NOT USE THIS FUNCTION!
+ * Used by the standard universe and the CONFIG_VAL command.
+ * This is legacy code that should not be used anywhere else.
+ */
+int 
+Stream::code_nullstr(char *&s)
+{
+	switch(_coding){
+		case stream_encode:
+			return put_nullstr(s);
+		case stream_decode:
+			return get_nullstr(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code_nullstr(char *&s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code_nullstr(char *&s)'s _coding is illegal!");
+			break;
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+
 int 
 Stream::code( MyString	&s)
 {
@@ -1078,6 +1105,32 @@ Stream::put( char const *s)
 {
 	int		len;
 
+	// Treat NULL like a zero-length string.
+	if (!s){
+		s = "";
+	}
+
+	len = strlen(s)+1;
+	if (get_encryption()) {
+		if (put(len) == FALSE) {
+			return FALSE;
+		}
+	}
+	if (put_bytes(s, len) != len) return FALSE;
+	return TRUE;
+}
+
+/* Works like put(const char *), but the receiver will get a NULL
+ * pointer if the sender provides one.
+ *
+ * DO NOT USE THIS FUNCTION!
+ * Used by the standard universe and the CONFIG_VAL command.
+ * This is legacy code that should not be used anywhere else.
+ */
+int 
+Stream::put_nullstr( char const *s)
+{
+	int		len;
 
 	if (!s){
 		if (get_encryption()) {
@@ -1137,24 +1190,18 @@ Stream::get_secret( char *&s )
 int 
 Stream::put( char const *s, int		l)
 {
+	// Treat NULL like a zero-length string.
 	if (!s){
-		if (get_encryption()) {
-			int len = 1;
-			if (put(len) == FALSE) {
-				return FALSE;
-			}
-		}
+		s = "";
+		l = 1;
+	}
 
-		if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
-	}
-	else{
-		if (get_encryption()) {
-			if (put(l) == FALSE) {
-				return FALSE;
-			}
+	if (get_encryption()) {
+		if (put(l) == FALSE) {
+			return FALSE;
 		}
-		if (put_bytes(s, l) != l) return FALSE;
 	}
+	if (put_bytes(s, l) != l) return FALSE;
 	return TRUE;
 }
 
@@ -1430,7 +1477,7 @@ Stream::get( double	&d)
 
 
 /* Get the next string on the stream.  This function sets s to a
- * freshly mallocated string, or NULL.  The caller should free s.
+ * freshly mallocated string.  The caller should free s.
  * When a message has not been received, its behaviour is dependent on
  * the current value of 'timeout', which can be set by
  * 'timeout(int)'. If 'timeout' is 0, it blocks until a message is
@@ -1440,6 +1487,44 @@ Stream::get( double	&d)
  */
 int 
 Stream::get( char	*&s)
+{
+	char const *ptr = NULL;
+
+		// This function used to be defined with two different calling
+		// semantics.  One was where s != NULL, in which case the
+		// string was copied into the memory pointed to by s, with no
+		// bounds checking.  This latter case is no longer allowed.
+	ASSERT( s == NULL );
+
+	int result = get_string_ptr(ptr);
+	if( result == TRUE ) {
+		if( ptr ) {
+			s = strdup(ptr);
+		}
+		else {
+			s = strdup("");
+		}
+	}
+	else {
+		s = NULL;
+	}
+	return result;
+}
+
+/* Get the next string on the stream.  This function sets s to a
+ * freshly mallocated string, or NULL.  The caller should free s.
+ * When a message has not been received, its behaviour is dependent on
+ * the current value of 'timeout', which can be set by
+ * 'timeout(int)'. If 'timeout' is 0, it blocks until a message is
+ * ready at the port, otherwise, it returns FALSE after waiting that
+ * amount of time.
+ *
+ * DO NOT USE THIS FUNCTION!
+ * Used by the standard universe and the CONFIG_VAL command.
+ * This is legacy code that should not be used anywhere else.
+ */
+int 
+Stream::get_nullstr(char *&s)
 {
 	char const *ptr = NULL;
 

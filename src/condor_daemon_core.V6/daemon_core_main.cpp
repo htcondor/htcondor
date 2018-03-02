@@ -1448,7 +1448,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n",
 					 param_name );
 			// send a NULL to indicate undefined. (val is NULL here)
-			if( ! stream->code(const_cast<char*&>(val)) ) {
+			if( ! stream->put_nullstr(val) ) {
 				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 				retval = FALSE;
 			}
@@ -1457,7 +1457,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
 
 			if (val) { tmp = expand_param(val, local_name, subsys, 0); } else { tmp = NULL; }
-			if( ! stream->code(tmp) ) {
+			if( ! stream->code_nullstr(tmp) ) {
 				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 				retval = FALSE;
 			}
@@ -1473,7 +1473,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 			if ( ! stream->code(value)) {
 				dprintf( D_ALWAYS, "Can't send filename reply for DC_CONFIG_VAL\n" );
 			}
-			if ( ! stream->code(const_cast<char*&>(def_val))) {
+			if ( ! stream->put_nullstr(def_val)) {
 				dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
 			}
 			if (pmet->ref_count) { value.formatstr("%d / %d", pmet->use_count, pmet->ref_count);

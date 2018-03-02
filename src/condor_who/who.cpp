@@ -2385,7 +2385,7 @@ static char * get_daemon_param(const char * addr, const char * param_name)
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't send end of message to %s\n", addr); }
 	} else {
 		sock.decode();
-		if ( ! sock.code(value)) {
+		if ( ! sock.code_nullstr(value)) {
 			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive reply from %s\n", addr); }
 		} else if( ! sock.end_of_message()) {
 			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive end of message from %s\n", addr); }

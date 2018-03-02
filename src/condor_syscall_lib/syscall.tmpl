@@ -249,8 +249,8 @@ circumstances:
 			to run the starter and vanilla jobs.
  */
 
-#define SEND_PATH(name) in code(name)
-#define GET_PATH(name) out code(name)
+#define SEND_PATH(name) in code_nullstr(name)
+#define GET_PATH(name) out code_nullstr(name)
 #define ALLOC_PATH(name) null_alloc(name)
 
 /* Does EXTRACT mean static or dynamic? */
@@ -977,7 +977,7 @@ They are not needed for remote I/O or for the condor daemons.
 	*/
 #	if !defined(SWITCH)
 		int getlogin( char *&loginbuf ) : pseudo {
-			out code( loginbuf );
+			out code_nullstr( loginbuf );
 			null_alloc ( loginbuf );
 		}  
 #	endif /* not SWITCH */
@@ -1202,7 +1202,7 @@ they should be built in the special "clipped" version.
 #	endif
 
 	int report_error( char *msg ) : pseudo {
-		in code( msg );
+		in code_nullstr( msg );
 		null_alloc(msg);
 	}
 
@@ -1284,23 +1284,23 @@ they should be built in the special "clipped" version.
 
 	int get_job_attr( const char *attrname, char *&expr ) : pseudo
 	{
-		in code(attrname);
+		in code_nullstr(attrname);
 		null_alloc(attrname);
-		out code(expr);
+		out code_nullstr(expr);
 		null_alloc(expr);
 	}
 
 	int set_job_attr( const char *attrname, const char *expr ) : pseudo
 	{
-		in code(attrname);
+		in code_nullstr(attrname);
 		null_alloc(attrname);
-		in code(expr);
+		in code_nullstr(expr);
 		null_alloc(expr);
 	}
 
 	int constrain( const char *expr ) : pseudo
 	{
-		in code(expr);
+		in code_nullstr(expr);
 		null_alloc(expr);
 	}
 

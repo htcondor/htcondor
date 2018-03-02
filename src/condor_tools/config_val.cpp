@@ -1432,7 +1432,7 @@ GetRemoteParam( Daemon* target, char* param_name )
 	}
 
 	s.decode();
-	if( !s.code(val) ) {
+	if( !s.code_nullstr(val) ) {
 		fprintf( stderr, "Can't receive reply from %s on %s %s\n",
 				 daemonString(dt), name, addr );
 		return NULL;
@@ -1497,7 +1497,7 @@ GetRemoteParamRaw(
 	}
 
 	s.decode();
-	if ( ! s.code(val)) {
+	if ( ! s.code_nullstr(val)) {
 		fprintf(stderr, "Can't receive reply from %s on %s %s\n", daemonString(dt), name ? name : "", addr );
 		return NULL;
 	}

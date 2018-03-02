@@ -217,6 +217,13 @@ public:
 	int code(std::string &);
     ///
 	int code(char *&, int &);
+	///
+	// DO NOT USE THIS FUNCTION!
+	// Works like code(char *&), but the receiver will get a NULL
+	// pointer if the sender provides one.
+	// Used by the standard universe and the CONFIG_VAL command.
+	// This is legacy code that should not be used anywhere else.
+	int code_nullstr(char *&);
     ///
 	int code_bytes(void *, int);
     ///
@@ -370,6 +377,13 @@ public:
 	int put(const std::string &str) {return this->put(str.c_str(), 1 + str.length());}
 	int put(char const *, int);
 
+	// DO NOT USE THIS FUNCTION!
+	// Works like put(const char *), but the receiver will get a NULL
+	// pointer if the sender provides one.
+	// Used by the standard universe and the CONFIG_VAL command.
+	// This is legacy code that should not be used anywhere else.
+	int put_nullstr(char const *);
+
 
 	//	get operations
 	//
@@ -392,8 +406,8 @@ public:
 	int get(MyString &);
 	int get(std::string &);
 
-		// This function assigns the argument to a freshly mallocated string
-		// or NULL.  The caller should free the string.
+		// This function assigns the argument to a freshly mallocated string.
+		// The caller should free the string.
 		// NOTE: arg MUST be NULL when this function is called.
 	int get(char *&);
 
@@ -402,6 +416,13 @@ public:
 		// specified maximum length, this function returns FALSE and
 		// inserts a truncated (and terminated) string into the buffer.
 	int get(char *, int);
+
+		// DO NOT USE THIS FUNCTION!
+		// Works like get(char *&), but the receiver will get a NULL
+		// pointer if the sender provides one.
+		// Used by the standard universe and the CONFIG_VAL command.
+		// This is legacy code that should not be used anywhere else.
+	int get_nullstr(char *&);
 
 		// Points argument to a buffer containing the string at the
 		// current read position in the stream or NULL.  The buffer is

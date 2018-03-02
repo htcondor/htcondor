@@ -102,7 +102,7 @@ REMOTE_CONDOR_send_a_file(char *local, char *remote, mode_t mode)
 	syscall_sock->encode();
 	assert( syscall_sock->code(CurrentSysCall) );
 	assert( syscall_sock->code(mode) );
-	assert( syscall_sock->code(remote) );
+	assert( syscall_sock->code_nullstr(remote) );
 	assert( syscall_sock->end_of_message() );
 
 		/* Grab the result of the remote open */
@@ -205,7 +205,7 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 		/* Send over the file name */
 	syscall_sock->encode();
 	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->code(remote) );
+	assert( syscall_sock->code_nullstr(remote) );
 	assert( syscall_sock->end_of_message() );
 
 		/* Grab the result of the remote open */
