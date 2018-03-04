@@ -135,6 +135,21 @@ certain attributes could only take exactly one argument. Now, whitespace is
 treated as part of the path.
 \Ticket{6389}
 
+\item The \Condor{startd} will now keep trying to delete a job sandbox until it succeeds.
+The retries are attempted with an exponential backoff in frequency.
+\Ticket{6500}
+
+\item \Condor{q} will no longer batch jobs with different cluster ids together unless they
+have the same JobBatchName attribute or are in the same DAG.
+\Ticket{6532}
+
+\item \Condor{q} will now sort jobs by job id when the \Opt{-long} argument is used.
+\Ticket{6287}
+
+\item a new option \Opt{-unmatchable} was added to \Condor{q} that causes \Condor{q} to show
+only jobs that will not match any of the avilable slots.
+\Ticket{6529}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -148,6 +163,16 @@ machine resources (GPUs) allocated to a job in certain cases.
 \item IPv4 addresses are now ignored when resolving a hostname and
 \MacroNI{ENABLE\_IPV4} is set to \Expr{False}.
 \Ticket{4881}
+
+\item Fixed a race condition in the \Condor{startd} that could result in skipping the
+code that makes sure that a job sandbox was deleted in the event that the \Condor{starter} did
+not delete it.
+\Ticket{6524}
+
+\item Fixed a bug in \Condor{q} when both the \Opt{-tot} and \Opt{-global} options were used, that would
+result in no output when querying a \Condor{schedd} running version 8.7 or later.
+\Ticket{6494}
+
 
 \end{itemize}
 

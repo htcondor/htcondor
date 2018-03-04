@@ -259,7 +259,7 @@ different queries when using the \texttt{poll()} module function.
 
 \\ \hline
 
-\texttt{history( (object) requirements, (list) projection, (int) match )}
+\texttt{history( (object) requirements, (list) projection, (int) match, (object) since )}
 
 Request history records from the \Condor{schedd} daemon.
 Returns an iterator to a set of ClassAds representing completed jobs.
@@ -273,6 +273,13 @@ that are to be included for each job.
 The empty list causes all attributes to be included.
 
 Parameter \texttt{match} is an integer cap on the number of jobs to include. 
+
+Parameter \texttt{since} is an optional argument that indicates when to stop iterating. 
+It can either be an \texttt{ExprTree}, an integer or a string.
+If the parameter is a string, then it is first parsed as a cluster id and then a full job id, if it does
+not parse as one of these, it is assumed to be an expression and is parsed as such.  If the parameter is
+an integer, then it is treated as a cluster id.
+The first job that matches it will not be returned, and iteration will cease.
 \\ \hline
 
 \texttt{submit( ad, count = 1, spool = false, ad\_results = None )}

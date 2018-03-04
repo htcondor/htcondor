@@ -331,6 +331,8 @@ restriction options may be supplied.  Each restriction may be one of:
 	\item \Bold{\Arg{owner}}, which matches all jobs owned by the specified owner;
 	\item \Bold{\OptArg{-constraint}{expression}}, which matches all jobs that
 		satisfy the specified ClassAd expression;
+	\item \Bold{\OptArg{-unmatchable}{expression}}, which matches all jobs that do not match
+		any slot that would be considered by \OptArg{-better-analyze};
 	\item \Opt{-allusers}, which overrides the default
 		restriction of only matching jobs submitted by the
 		current user.
@@ -577,7 +579,9 @@ restriction.
     many resources are available to run the requested jobs.
     This option
     is never meaningful for Scheduler universe jobs and only meaningful
-    for grid universe jobs doing matchmaking.
+    for grid universe jobs doing matchmaking. When this option is used in
+    conjunction with the \Opt{-unmatchable} option, The output will be a list
+    of job ids that don't match any of the available slots.
     \Opt{<qual>} is a comma separated list containing one or more of
 
     \textbf{priority} to consider user priority during the analysis

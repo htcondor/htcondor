@@ -655,6 +655,7 @@ Includes all the files necessary to support running standard universe jobs.
 %package small-shadow
 Summary: 32-bit condor_shadow binary
 Group: Applications/System
+Requires: %name-external-libs%{?_isa} = %version-%release
 
 %description small-shadow
 Provides the 32-bit condor_shadow_s, which has a smaller private
