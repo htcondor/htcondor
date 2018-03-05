@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where the \Condor{starter} would crash when talking
+to a shadow running a condor version older than 8.5 and match authentication
+was enabled.
+\Ticket{6520}
+
 \item Fixed a bug where \MacroNI{policy:\ want\_hold\_if} would always
 evict standard universe jobs instead of putting them on hold.  Instead,
 this policy now ignores standard universe jobs entirely.  This means
