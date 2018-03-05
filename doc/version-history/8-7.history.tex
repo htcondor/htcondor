@@ -39,6 +39,10 @@ to 20% faster than previously.
 resources were assigned to the slot in which the job ran.
 \Ticket{6549}
 
+\item Removed the deprecated AvailStats attribute from the machine ad. This
+was being computing incorrectly, and apparently never used.
+\Ticket{6526}
+
 \item HTCondor now reports \Attr{CPUsUsage} for each job.  This attribute is
 like \Attr{MemoryUsage} and \Attr{DiskUsage}, except it is the average number
 of CPUs used by the job.
