@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Condor{ssh\_to\_job} now works with Docker Universe, the interactive
+shell is started inside the container.  This assume that there is a shell
+executable inside the container, but not necessarily an sshd.
+\Ticket{6558}
+
 \item Allow a parallel universe job with parallel scheduling group to
 select a new parallel scheduling group when held and released.
 \Ticket{6516}
