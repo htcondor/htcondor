@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where if an administrator configured a Concurrency Limit
+whose name ended in a number, \Condor{userprio} -allusers would show
+additional bogus user entries.
+\Ticket{6542}
+
 \item Fixed a bug where the \Condor{starter} would crash when talking
 to a shadow running a condor version older than 8.5 and match authentication
 was enabled.
