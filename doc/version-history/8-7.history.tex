@@ -131,6 +131,10 @@ only jobs that will not match any of the avilable slots.
 
 \begin{itemize}
 
+\item Fixed a bug where Docker universe jobs that exited via a signal
+did not properly report the signal.
+\Ticket{6538}
+
 \item Fixed a bug where HTCondor would misreport the number of custom
 machine resources (GPUs) allocated to a job in certain cases.
 \Ticket{6549}
