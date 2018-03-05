@@ -2312,7 +2312,8 @@ render_globusHostAndJM(std::string & result, ClassAd *ad, Formatter & /*fmt*/ )
 			if ( tmp ) {
 				*tmp = '\0';
 				if ( tmp[1] != '\0' ) {
-					strcpy( jm, &tmp[1] );
+					strncpy( jm, &tmp[1], sizeof(jm));
+					jm[sizeof(jm) - 1] = '\0';
 				}
 			}
 
