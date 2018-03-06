@@ -2479,8 +2479,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			StatInfo si( updateAdDir.c_str() );
 			if(! si.Error()) {
 				set_user_ids( si.GetOwner(), si.GetGroup() );
-				TemporaryPrivSentry p( PRIV_USER, true );
-				rename( updateAdTmpPath.c_str(), updateAdPath.c_str() );
+				TemporaryPrivSentry p(PRIV_USER, true);
+				if (rename(updateAdTmpPath.c_str(), updateAdPath.c_str()) < 0) {
+					dprintf(D_ALWAYS, "Failed to rename update ad from  %s to %s\n", updateAdTmpPath.c_str(), updateAdPath.c_str());
+				}
 			}
 #endif
 		} else {
