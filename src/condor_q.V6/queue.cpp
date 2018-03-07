@@ -494,7 +494,7 @@ int main (int argc, const char **argv)
 	ClassAd		*ad;
 	bool		first;
 	char		*scheddName=NULL;
-	char		scheddMachine[64];
+	std::string		scheddMachine;
 	int		useFastScheddQuery = 0;
 	char		*tmp;
 	int         retval = 0;
@@ -571,9 +571,9 @@ int main (int argc, const char **argv)
 				scheddName = strdup("Unknown");
 			}
 			if( (tmp = schedd.fullHostname()) ) {
-				sprintf( scheddMachine, "%s", tmp );
+				scheddMachine = tmp;
 			} else {
-				sprintf( scheddMachine, "Unknown" );
+				scheddMachine = "Unknown";
 			}
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
@@ -681,7 +681,7 @@ int main (int argc, const char **argv)
 		*/
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				ad->LookupString(ATTR_NAME, &scheddName) &&
-				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine))
+				ad->LookupString(ATTR_MACHINE, scheddMachine)
 				)
 			)
 		{
