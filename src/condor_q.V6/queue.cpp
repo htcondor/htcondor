@@ -585,7 +585,7 @@ int main (int argc, const char **argv)
 				}
 			}
 
-			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
+			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
 			/* Hopefully I got the queue from the schedd... */
 			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 		} 
@@ -700,7 +700,7 @@ int main (int argc, const char **argv)
 		} else {
 			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 		}
-		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
+		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
 	}
 
 	// close list
