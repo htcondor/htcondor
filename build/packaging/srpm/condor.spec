@@ -1022,6 +1022,12 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
 rm -rf %{buildroot}/%{_sysconfdir}/init.d
 
+# Temporarily turn off python for Fedora
+%if 0%{?fedora}
+rm -f %{buildroot}/%{_bindir}/condor_top
+rm -f %{buildroot}/%{_mandir}/man1/condor_top.1.gz
+%endif
+
 %if %systemd
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_tmpfilesdir}
