@@ -17,7 +17,6 @@ x86_RedHat6
 # Not yet officially supported.
 
 # We want to build all branches on Fedora because it is our "warning check" platform
-x86_64_Fedora25
 x86_64_Fedora27
 
 # We might as well build on CentOS and SL
