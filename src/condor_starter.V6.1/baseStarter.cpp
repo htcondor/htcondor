@@ -1578,9 +1578,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	argarray = NULL;
 
 
-	ClassAd *sshd_ad = new ClassAd;
-	sshd_ad->CopyAttribute(ATTR_REMOTE_USER,jobad);
-	sshd_ad->CopyAttribute(ATTR_JOB_RUNAS_OWNER,jobad);
+	ClassAd *sshd_ad = new ClassAd(*jobad);
 	sshd_ad->Assign(ATTR_JOB_CMD,sshd.Value());
 	CondorVersionInfo ver_info;
 	if( !sshd_arglist.InsertArgsIntoClassAd(sshd_ad,&ver_info,&error_msg) ) {

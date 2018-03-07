@@ -16,6 +16,38 @@ New features will be added in the 8.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-6-11}Version 8.6.11}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.6.11 not yet released.
+%\item HTCondor version 8.6.11 released on Month Date, 2018.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug where \Condor{submit} -i would enter the wrong singularity
+container.
+\Ticket{6595}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-6-10}Version 8.6.10}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -40,6 +72,20 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that would cause \Condor{q} to crash if the hostname
+was longer than 64 bytes.
+\Ticket{6594}
+
+\item Fixed a bug where if an administrator configured a Concurrency Limit
+whose name ended in a number, \Condor{userprio} -allusers would show
+additional bogus user entries.
+\Ticket{6542}
+
+\item Fixed a bug where the \Condor{starter} would crash when talking
+to a shadow running a condor version older than 8.5 and match authentication
+was enabled.
+\Ticket{6520}
 
 \item Fixed a bug where \MacroNI{policy:\ want\_hold\_if} would always
 evict standard universe jobs instead of putting them on hold.  Instead,
