@@ -1241,6 +1241,7 @@ annex_main( int argc, char ** argv ) {
 			commandArguments.Assign( "UploadTo", tarballTarget ); }
 
 			// Deliberate fall-through to common code.
+            //@fallthrough@
 
 		case ct_update_annex:
 			// Set AnnexType and LeaseFunctionARN.
