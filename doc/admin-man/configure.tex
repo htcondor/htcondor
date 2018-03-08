@@ -12686,7 +12686,7 @@ on page~\pageref{sec:daemon-classad-hooks}.
   The ad corresponding to each custom machine resource instance should have
   an attribute for each metric named in the configuration.  For SUM metrics,
   the attribute should be \Attr{Uptime<MetricName>Seconds}; for PEAK metrics,
-  the attribute should be \Attr{<MetricName>PeakUsage}.
+  the attribute should be \Attr{Uptime<MetricName>PeakUsage}.
 
   Each value should be the value of the metric since the last time the
   job reported.  The reported value may therefore go up or down; HTCondor
@@ -12702,23 +12702,23 @@ on page~\pageref{sec:daemon-classad-hooks}.
 \begin{verbatim}
 SlotMergeConstraint = StringListMember( "SQUID0", AssignedSQUIDs )
 UptimeSQUIDsSeconds = 5.0
-SQUIDsMemoryPeakUsage = 50
+UptimeSQUIDsMemoryPeakUsage = 50
 - SQUIDsReport0
 SlotMergeConstraint = StringListMember( "SQUID1", AssignedSQUIDs )
 UptimeSQUIDsSeconds = 1.0
-SQUIDsMemoryPeakUsage = 10
+UptimeSQUIDsMemoryPeakUsage = 10
 - SQUIDsReport1
 SlotMergeConstraint = StringListMember( "SQUID2", AssignedSQUIDs )
 UptimeSQUIDsSeconds = 9.0
-SQUIDsMemoryPeakUsage = 90
+UptimeSQUIDsMemoryPeakUsage = 90
 - SQUIDsReport2
 SlotMergeConstraint = StringListMember( "SQUID3", AssignedSQUIDs )
 UptimeSQUIDsSeconds = 4.0
-UptimeSQUIDsSeconds = 40
+UptimeSQUIDsMemoryPeakUsage = 40
 - SQUIDsReport3
 \end{verbatim}
 
-  The names ('SQUIDsSlot0') may be anything, but must be consistent from
+  The names ('SQUIDsReport0') may be anything, but must be consistent from
   report to report and the ClassAd for each report must have a distinct
   name.
 
