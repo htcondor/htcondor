@@ -188,7 +188,7 @@ int main() {
 			}
 
 			nvmlMemory_t mi = { 0, 0, 0 };
-			r = nvmlDeviceGetMemoryInfo( devices[i], &mi );
+			nvmlDeviceGetMemoryInfo( devices[i], &mi );
 			if( mi.used > memoryUsage[i] ) {
 				memoryUsage[i] = mi.used;
 			}
