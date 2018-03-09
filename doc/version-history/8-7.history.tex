@@ -137,9 +137,12 @@ have the same JobBatchName attribute or are in the same DAG.
 \item \Condor{q} will now sort jobs by job id when the \Opt{-long} argument is used.
 \Ticket{6287}
 
-\item a new option \Opt{-unmatchable} was added to \Condor{q} that causes \Condor{q} to show
+\item A new option \Opt{-unmatchable} was added to \Condor{q} that causes \Condor{q} to show
 only jobs that will not match any of the avilable slots.
 \Ticket{6529}
+
+\item Release a 32-bit \Condor{shadow} for Enterprise Linux 7 platforms.
+\Ticket{6495}
 
 \item Added basic support for a "Credential Management" subsystem which will
 eventually be used to support interaction with OAuth services (like SciTokens,
