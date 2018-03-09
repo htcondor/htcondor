@@ -102,11 +102,6 @@ int main()
 				mySock.code(charString);
 				cout << "str: " << charString << endl;
 
-				cout << "Type any key continue: ";
-				cin >> cont;
-				mySock.code(charString, len);
-				cout << "str[" << len << "] " << charString << endl;
-
 				mySock.end_of_message();
 			}
 			break;
@@ -151,10 +146,6 @@ int main()
 				cout << "Type double: ";
 				cin >> d;
 				mySock.code(d);
-
-				cout << "Type string: ";
-				cin >> charString;
-				mySock.code(charString);
 
 				cout << "Type string: ";
 				cin >> charString;
