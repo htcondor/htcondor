@@ -5,4 +5,7 @@ error			= cmr-monitor-basic-ad.$(Cluster).$(Process).err
 log				= cmr-monitor-basic-ad.log
 Request_SQUIDs	= 1
 
+# See comment in CustomMachineResource.pm, in parseHistoryFile().
+LeaveJobInQueue = true
+
 queue 8

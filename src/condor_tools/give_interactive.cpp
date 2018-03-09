@@ -474,6 +474,7 @@ main(int argc, char *argv[])
 			case 'h': 
 			      iExitUsageCode = 0;
 				  // Fall through to...
+			      //@fallthrough@
 			default:
 				usage(condor_basename(argv[0]), iExitUsageCode);
 			}		

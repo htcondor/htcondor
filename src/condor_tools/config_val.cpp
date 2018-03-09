@@ -1749,12 +1749,14 @@ SetRemoteParam( Daemon* target, const char* param_value, ModeType mt )
 	case CONDOR_SET:
 		set = true;
 		// Fall through...
+		//@fallthrough@
 	case CONDOR_UNSET:
 		cmd = DC_CONFIG_PERSIST;
 		break;
 	case CONDOR_RUNTIME_SET:
 		set = true;
 		// Fall through...
+		//@fallthrough@
 	case CONDOR_RUNTIME_UNSET:
 		cmd = DC_CONFIG_RUNTIME;
 		break;

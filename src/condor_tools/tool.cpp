@@ -1893,6 +1893,7 @@ handleSquawk( char *line, char *addr ) {
 			return TRUE;
 		}
 			/* Generic help falls thru to here: */
+			//@fallthrough@
 	default:
 		printf( "Valid commands are \"help\", \"signal\", \"command\"," );
 		printf( "\"reconnect\",\n\"dump\" (state into a ClassAd) and" );

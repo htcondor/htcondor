@@ -6169,6 +6169,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			if (clusterad->factory) {
 				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmHold) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
+					// if we failed to set the pause attribute, take this cluster out of the list so we don't try
+					// and actually pause the factory
+					clusters[i].cluster = -1;
 				} else {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
@@ -6182,6 +6185,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			if (clusterad->factory) {
 				if (SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmRunning) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
+					// if we failed to set the pause attribute, take this cluster out of the list so we don't try
+					// and actually pause the factory
+					clusters[i].cluster = -1;
 				} else {
 					results.record( tmp_id, AR_SUCCESS );
 					num_success++;
@@ -6198,6 +6204,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// pause state, the mmClusterRemoved pause mode is a runtime-only schedd state.
 				if (SetAttribute(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, "3", SetAttribute_QueryOnly) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
+					clusters[i].cluster = -1;
 				} else {
 					PauseJobFactory(clusterad->factory, mmClusterRemoved);
 					//PRAGMA_REMIND("TODO: can we remove the cluster now rather than just pausing the factory and scheduling the removal?")
@@ -6302,6 +6309,8 @@ Scheduler::actOnJobs(int, Stream* s)
 	}
 	for( i=0; i<num_cluster_matches; i++ ) {
 		tmp_id = clusters[i];
+		if (tmp_id.cluster < 0) // skip entries for which the attempt to set the pause attribute failed.
+			continue;
 		JobQueueCluster * clusterad = GetClusterAd(tmp_id);
 		if ( ! clusterad || ! clusterad->factory)
 			continue;
@@ -7511,17 +7520,22 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		// past we did this fixup during the negotiation cycle, but now that
 		// we can get matches directly back from the startd, we need to do it
 		// here as well.
-	if ( (jobAd && mrec && mrec->my_match_ad) && 
-		!ScheddNegotiate::fixupPartitionableSlot(jobAd,mrec->my_match_ad) )
+	if ( jobAd && mrec && mrec->my_match_ad )
 	{
+		if ( !ScheddNegotiate::fixupPartitionableSlot(jobAd,mrec->my_match_ad) ) {
 			// The job classad does not have required attributes (such as 
 			// requested memory) to enable the startd to create a dynamic slot.
 			// Since this claim request is simply going to fail, lets throw
 			// this match away now (seems like we could do something better?) - 
 			// while it is not ideal to throw away the match in this instance,
 			// it is consistent with what we current do during negotiation.
-		DelMrec ( mrec );
-		return;
+			DelMrec ( mrec );
+			return;
+		}
+		// The slot ad has just been modified to look like a dynamic slot.
+		// We need to re-optimize the requirements expression to pick up
+		// the modified resource values.
+		OptimizeMachineAdForMatchmaking( mrec->my_match_ad );
 	}
 
     // some attributes coming out of negotiator's matching process that need to
@@ -11567,11 +11581,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 			} // SWITCH
 				// if we're here, we really preempted it, so
 				// decrement n so we let this count towards our goal.
-				// However, do not decrement n if we are going to ExitWhenDone - this
-				// will ensure that ALL entries are preempted, not just the first n entries.
-			if( ! ExitWhenDone ) {
-				n--;
-			}
+			n--;
 		} // IF
 	} // WHILE
 
@@ -12110,8 +12120,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			this->swap_space_exhausted();
 			stats.JobsShadowNoMemory += 1;
 			OTHER.JobsShadowNoMemory += 1;
-
 			// Fall through...
+			//@fallthrough@
 		case JOB_EXEC_FAILED:
 				//
 				// The calling function will make sure that
@@ -12176,7 +12186,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			stats.JobsShouldRemove += 1;
 			OTHER.JobsShouldRemove += 1;
 				// no break, fall through and do the action
-
+				//@fallthrough@
 		case JOB_NO_CKPT_FILE:
 		case JOB_KILLED:
 				// If the job isn't being HELD, we'll remove it
@@ -12197,6 +12207,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			stats.JobsExitedAndClaimClosing += 1;
 			OTHER.JobsExitedAndClaimClosing += 1;
 			// no break, fall through
+			//@fallthrough@
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
 			stats.JobsExitedNormally += 1;
@@ -12205,6 +12216,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			OTHER.JobsCompleted += 1;
 			is_goodput = true;
 			// no break, fall through and do the action
+			//@fallthrough@
 		case JOB_COREDUMPED:
 			if (JOB_COREDUMPED == exit_code) {
 				stats.JobsCoredumped += 1;
@@ -12250,7 +12262,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 							job_id.cluster, job_id.proc );
 		}
 				// no break, fall through and do the action
-
+				//@fallthrough@
 		case JOB_SHOULD_HOLD: {
 				// Regardless of the state that the job currently
 				// is in, we'll put it on HOLD
@@ -12295,7 +12307,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			OTHER.JobsDebugLogError += 1;
 			// We don't want to break, we want to fall through 
 			// and treat this like a shadow exception for now.
-
+			//@fallthrough@
 		case JOB_EXCEPTION:
 			if ( exit_code == JOB_EXCEPTION ){
 				dprintf( D_ALWAYS,
@@ -12304,7 +12316,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			}
 			// We don't want to break, we want to fall through 
 			// and treat this like a shadow exception for now.
-
+			//@fallthrough@
 		default:
 				//
 				// The default case is now a shadow exception in case ANYTHING
@@ -12658,6 +12670,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 					 job_id->cluster, job_id->proc ); 
 		}
 			// No break, fall through and do the deed...
+			//@fallthrough@
 	case COMPLETED:
 		DestroyProc( job_id->cluster, job_id->proc );
 		break;
@@ -14229,6 +14242,10 @@ Scheduler::sendReschedule()
 void
 Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 {
+	// We may be re-optimizing this ad after mutating it.
+	// Undo any previous optimization first.
+	classad::MatchClassAd::UnoptimizeAdForMatchmaking( ad );
+
 		// The machine ad will be passed as the RIGHT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.

@@ -9713,13 +9713,14 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	delete pidentry;
 
 	// Finally, some hard-coded logic.  If the pid that exited was our parent,
-	// then shutdown gracefully.
-	// TODO: should also set a timer and do a fast/hard kill later on!
+	// then shutdown fast.  This is where we notice our parent going away on
+	// Windows; on Linux, we notice via the check_parent() timer handler.
+	// TODO: should also set a timer and do a hard kill later on!
 	if (pid == ppid) {
 		dprintf(D_ALWAYS,
-				"Our Parent process (pid %lu) exited; shutting down\n",
+				"Our parent process (pid %lu) exited; shutting down fast\n",
 				(unsigned long)pid);
-		Send_Signal(mypid,SIGTERM);	// SIGTERM means shutdown graceful
+		Send_Signal(mypid,SIGQUIT);	// SIGQUIT means shutdown fast
 	}
 
 	return TRUE;

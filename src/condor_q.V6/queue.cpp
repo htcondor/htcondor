@@ -494,7 +494,7 @@ int main (int argc, const char **argv)
 	ClassAd		*ad;
 	bool		first;
 	char		*scheddName=NULL;
-	char		scheddMachine[64];
+	std::string		scheddMachine;
 	int		useFastScheddQuery = 0;
 	char		*tmp;
 	int         retval = 0;
@@ -571,9 +571,9 @@ int main (int argc, const char **argv)
 				scheddName = strdup("Unknown");
 			}
 			if( (tmp = schedd.fullHostname()) ) {
-				sprintf( scheddMachine, "%s", tmp );
+				scheddMachine = tmp;
 			} else {
-				sprintf( scheddMachine, "Unknown" );
+				scheddMachine = "Unknown";
 			}
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
@@ -585,7 +585,7 @@ int main (int argc, const char **argv)
 				}
 			}
 
-			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
+			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
 			/* Hopefully I got the queue from the schedd... */
 			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 		} 
@@ -681,7 +681,7 @@ int main (int argc, const char **argv)
 		*/
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				ad->LookupString(ATTR_NAME, &scheddName) &&
-				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine))
+				ad->LookupString(ATTR_MACHINE, scheddMachine)
 				)
 			)
 		{
@@ -700,7 +700,7 @@ int main (int argc, const char **argv)
 		} else {
 			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 		}
-		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
+		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
 	}
 
 	// close list
@@ -2312,7 +2312,8 @@ render_globusHostAndJM(std::string & result, ClassAd *ad, Formatter & /*fmt*/ )
 			if ( tmp ) {
 				*tmp = '\0';
 				if ( tmp[1] != '\0' ) {
-					strcpy( jm, &tmp[1] );
+					strncpy( jm, &tmp[1], sizeof(jm));
+					jm[sizeof(jm) - 1] = '\0';
 				}
 			}
 
