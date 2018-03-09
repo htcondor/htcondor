@@ -605,13 +605,13 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 	}
 
 	filesize_t size = sb.GetBuf()->st_size;
-	nlink_t num_hard_links = sb.GetBuf()->st_nlink;
+	int num_hard_links = sb.GetBuf()->st_nlink;
 	ReadUserLog::FileStatus status;
 
 	// If there are no hard links to the file, it has been overwritten or 
 	// deleted. Send back an error.
 	if ( num_hard_links < 1 ) {
-		dprintf( D_ALWAYS, "Error: log file %s has been overwritten or deleted. "
+		dprintf( D_ALWAYS, "ERROR: log file %s has been overwritten or deleted. "
 			"Aborting.\n", m_cur_path.Value() );
 		return ReadUserLog::LOG_STATUS_ERROR;
 	}
