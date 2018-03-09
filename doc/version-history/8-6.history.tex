@@ -55,6 +55,10 @@ to a shadow running a condor version older than 8.5 and match authentication
 was enabled.
 \Ticket{6520}
 
+\item Fixed a bug in Python API \Prog{htcondor.Secman().ping()} method which
+would sometimes result in a RunTimeError exception.
+\Ticket{6562}
+
 \item Fixed a bug where \MacroNI{policy:\ want\_hold\_if} would always
 evict standard universe jobs instead of putting them on hold.  Instead,
 this policy now ignores standard universe jobs entirely.  This means
