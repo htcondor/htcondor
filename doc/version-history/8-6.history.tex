@@ -41,12 +41,27 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused \Condor{preen} to crash before it finished
+cleaning the spool directory and leave a core file of its own in the log
+directory.
+This problem occurred on submit nodes that had running jobs when
+\Condor{preen} was invoked.
+\Ticket{6521}
+
+\item Improved the systemd configuration to clean up HTCondor processes
+on shutdown in the event that the \Condor{master} fails to do so.
+\Ticket{6539}
+
+\item HTCondor daemons will do fast shutdown whenever their parent process
+exits unexpectedly.
+\Ticket{6539}
+
 \item Fixed a bug that would cause \Condor{q} to crash if the hostname
 was longer than 64 bytes.
 \Ticket{6594}
 
 \item Fixed a bug where if an administrator configured a Concurrency Limit
-whose name ended in a number, \Condor{userprio} -allusers would show
+whose name ended in a number, \Condor{userprio} \Opt{-allusers} would show
 additional bogus user entries.
 \Ticket{6542}
 
@@ -54,6 +69,10 @@ additional bogus user entries.
 to a shadow running a condor version older than 8.5 and match authentication
 was enabled.
 \Ticket{6520}
+
+\item Fixed a bug in Python API \Prog{htcondor.Secman().ping()} method which
+would sometimes result in a RunTimeError exception.
+\Ticket{6562}
 
 \item Fixed a bug where \MacroNI{policy:\ want\_hold\_if} would always
 evict standard universe jobs instead of putting them on hold.  Instead,
@@ -77,25 +96,17 @@ universe jobs.  This should allow VM universe jobs to run when
 \Ticket{6577}
 
 \item Fixed a bug where the \Condor{shadow} could accidentally kill itself
-by not checking it it was attempting to change immutable attributes.
+by not checking if it was attempting to change immutable attributes.
 \Ticket{6557}
 
 \item Fixed a bug that could cause the \Condor{collector} to exit with an 
-		assertion error under certain (rare) conditions when it has no
-		outgoing connectivity to the Internet.
+assertion error under certain (rare) conditions when it has no
+outgoing connectivity to the Internet.
 \Ticket{6511}
 
 \item Fixed a bug that would cause any daemons interfacing with the CREDMON to
 retry indefinitely when polling for credentials.
 \Ticket{6523}
-
-\item Improved the systemd configuration to clean up HTCondor processes
-on shutdown in the event that the \Condor{master} fails to do so.
-\Ticket{6539}
-
-\item Fixed a bug that caused \Condor{preen} to crash before it finished
-cleaning the spool directory (leaving unwanted files behind)
-\Ticket{6521}
 
 \item Fixed a bug that prevented grid-type batch jobs from being removed
 after an attempt to submit to the underlying batch system failed.
