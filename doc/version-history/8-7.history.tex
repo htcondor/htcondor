@@ -34,15 +34,20 @@ shell is started inside the container.  This assume that there is a shell
 executable inside the container, but not necessarily an sshd.
 \Ticket{6558}
 
+\item Improved error messages in the job log for Docker universe jobs
+that do not start.
+\Ticket{6567}
+
+\item Release a 32-bit \Condor{shadow} for Enterprise Linux 7 platforms.
+\Ticket{6495}
+
+\item OpenMPI jobs launched in the parallel universe via \File{openmpiscript}
+now work with shared file systems (again).
+\Ticket{6556}
+
 \item Allow a parallel universe job with parallel scheduling group to
 select a new parallel scheduling group when held and released.
 \Ticket{6516}
-
-\item Improve the performance of reading and writing classads to the network.
-The performance of reading classads from UDP is particularly improved, up
-to 20% faster than previously.
-\Ticket{6555}
-\Ticket{6561}
 
 \item Allow p-slot preemption to work with parallel universe.
 \Ticket{6517}
@@ -50,10 +55,6 @@ to 20% faster than previously.
 \item HTCondor now reports, in the job ad and user log, which custom machine
 resources were assigned to the slot in which the job ran.
 \Ticket{6549}
-
-\item Removed the deprecated AvailStats attribute from the machine ad. This
-was being computing incorrectly, and apparently never used.
-\Ticket{6526}
 
 \item HTCondor now reports \Attr{CPUsUsage} for each job.  This attribute is
 like \Attr{MemoryUsage} and \Attr{DiskUsage}, except it is the average number
@@ -65,10 +66,6 @@ of CPUs used by the job.
 the average number of GPUs used by the job.  This feature only works for
 NVidia GPUs.
 \Ticket{6477}
-
-\item Improved error messages in the job log for docker universe jobs
-that do not start.
-\Ticket{6567}
 
 \item Administrators may now, for each custom machine resource, define a
 custom resource monitor.  Such a script reports the usage(s) of each
@@ -84,9 +81,9 @@ but unlike ``.machine.ad'', it is regularly updated.  Jobs may read this
 file to observe their own usage attributes.
 \Ticket{6477}
 
-\item Removed configuration parameters \MacroNI{ENABLE\_ADDRESS\_REWRITING}
-and \MacroNI{SHARED\_PORT\_ADDRESS\_REWRITING}.
-\Ticket{6525}
+\item A new option \Opt{-unmatchable} was added to \Condor{q} that causes \Condor{q} to show
+only jobs that will not match any of the avilable slots.
+\Ticket{6529}
 
 \item An IPv6 address can now be specified in the configuration file
 either with or without square brackets in most cases.
@@ -101,10 +98,6 @@ using the correct scope id.
 Using a wildcard or device name in \MacroNI{NETWORK\_INTERFACE} now
 works properly when \MacroNI{NO\_DNS} is set to \Expr{True}.
 \Ticket{6518}
-
-\item Open MPI jobs launched in the parallel universe via \File{openmpiscript}
-now work with shared file systems (again).
-\Ticket{6556}
 
 \item Python bindings installed via pip on a system without a
 HTCondor install (i.e. without a \File{condor\_config} present)
@@ -137,12 +130,25 @@ have the same JobBatchName attribute or are in the same DAG.
 \item \Condor{q} will now sort jobs by job id when the \Opt{-long} argument is used.
 \Ticket{6287}
 
-\item A new option \Opt{-unmatchable} was added to \Condor{q} that causes \Condor{q} to show
-only jobs that will not match any of the avilable slots.
-\Ticket{6529}
+\item Improve the performance of reading and writing classads to the network.
+The performance of reading classads from UDP is particularly improved, up
+to 20\% faster than previously.
+\Ticket{6555}
+\Ticket{6561}
 
-\item Release a 32-bit \Condor{shadow} for Enterprise Linux 7 platforms.
-\Ticket{6495}
+\item Several minor performance improvements.
+\Ticket{6550}
+\Ticket{6551}
+\Ticket{6565}
+\Ticket{6566}
+
+\item Removed configuration parameters \MacroNI{ENABLE\_ADDRESS\_REWRITING}
+and \MacroNI{SHARED\_PORT\_ADDRESS\_REWRITING}.
+\Ticket{6525}
+
+\item Removed the deprecated AvailStats attribute from the machine ad. This
+was being computing incorrectly, and apparently never used.
+\Ticket{6526}
 
 \item Added basic support for a "Credential Management" subsystem which will
 eventually be used to support interaction with OAuth services (like SciTokens,
@@ -717,7 +723,7 @@ client like condor\_status.  See section\~ref{param:CollectorQueryMaxWorktime}.
 \Ticket{6192}
 
 \item Added several new statistics on collector query performance into the Collector
-ClassAd, including \AdAttr{ActiveQueryWorkers}, \AdAttr{ActiveQueryWokersPeak},
+ClassAd, including \AdAttr{ActiveQueryWorkers}, \AdAttr{ActiveQueryWorkersPeak},
 \AdAttr{PendingQueries}, \AdAttr{PendingQueriesPeak}, \AdAttr{DroppedQueries},
 and \AdAttr{RecentDroppedQueries}.  See section\~ref{sec:Collector-ClassAd-Attributes}.
 \Ticket{6192}
