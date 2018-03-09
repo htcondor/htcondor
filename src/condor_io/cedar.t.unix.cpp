@@ -40,7 +40,7 @@ int main()
 	int op, result;
 
 	char c, cont, *charString;
-	int integer, len;
+	int integer;
 	long lint;
 	short sint;
 	float f;
