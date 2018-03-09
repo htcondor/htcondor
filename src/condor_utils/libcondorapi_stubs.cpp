@@ -241,7 +241,6 @@ Stream::~Stream(){};
 	int Stream::code(float &){ return not_impl(); }
 	int Stream::code(double &){ return not_impl(); }
 	int Stream::code(char *&){ return not_impl(); }
-	int Stream::code(char *&, int &){ return not_impl(); }
 	int Stream::code_bytes(void *, int ){ return not_impl(); }
 	int Stream::code_bytes_bool(void *, int ){ return not_impl(); }
 	int Stream::code(PROC_ID &){ return not_impl(); }
