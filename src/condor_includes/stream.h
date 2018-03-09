@@ -215,8 +215,6 @@ public:
 	int code(MyString &);
     ///
 	int code(std::string &);
-    ///
-	int code(char *&, int &);
 	///
 	// DO NOT USE THIS FUNCTION!
 	// Works like code(char *&), but the receiver will get a NULL
@@ -375,6 +373,8 @@ public:
 	int put(char const *);
 	int put(const MyString &);
 	int put(const std::string &str) {return this->put(str.c_str(), 1 + str.length());}
+	// The second argument is the length of the string, including the
+	// NUL terminator.
 	int put(char const *, int);
 
 	// DO NOT USE THIS FUNCTION!
@@ -428,12 +428,14 @@ public:
 		// current read position in the stream or NULL.  The buffer is
 		// ONLY valid until the next function call on this stream.
 		// Caller should NOT free the buffer or modify its contents.
+		// The length returned in argument len includes the NUL terminator.
 	int get_string_ptr( char const *&s );
 	int get_string_ptr( const char *&s, int &len );
 
 		// This is just like get(char const *&), but it calls
 		// prepare_crypto_for_secret() before and
 		// restore_crypto_after_secret() after.
+		// The length returned in argument len includes the NUL terminator.
 	int get_secret( char *&s );
 	int get_secret( const char *&s, int &len );
 

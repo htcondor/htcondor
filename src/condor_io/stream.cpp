@@ -427,26 +427,6 @@ Stream::code( std::string	&s)
 
 
 int 
-Stream::code( char	*&s, int		&len)
-{
-	switch(_coding){
-		case stream_encode:
-			return put(s, len);
-		case stream_decode:
-			return get(s, len);
-		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(char *&s, int &len) has unknown direction!");
-			break;
-		default:
-			EXCEPT("ERROR: Stream::code(char *&s, int &len)'s _coding is illegal!");
-			break;
-	}
-
-	return FALSE;	/* will never get here	*/
-}
-
-
-int 
 Stream::code_bytes_bool(void *p, int l)
 {
 	if( code_bytes( p, l ) < 0 ) {
@@ -1187,6 +1167,7 @@ Stream::get_secret( char *&s )
 	return retval;
 }
 
+// The arugment l is the length of the string s, including the NUL terminator.
 int 
 Stream::put( char const *s, int		l)
 {
@@ -1563,15 +1544,17 @@ Stream::get( char	*s, int		l)
 
 	ASSERT( s != NULL && l > 0 );
 
-	int result = get_string_ptr(ptr);
+	// len includes the NUL terminator
+	int len = 0;
+	int result = get_string_ptr(ptr, len);
 	if( result != TRUE || !ptr ) {
 		ptr = "";
+		len = 1;
 	}
 
-	int len = strlen(ptr);
-	if( len + 1 > l ) {
+	if( len > l ) {
 		strncpy(s,ptr,l-1);
-		s[l] = '\0';
+		s[l-1] = '\0';
 		result = FALSE;
 	}
 	else {

@@ -279,8 +279,12 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 				dprintf(D_FULLDEBUG, "getClassAd Failed to read encrypted ClassAd expression.\n");
 				break;
 			}
+			// cb includes the terminating NUL character.
+			// TODO This strlen() should be unnecessary. Once we're confident
+			//   that is form of get_secret() isn't buggy, the strlen()
+			//   and size check should be removed.
 			int cch = strlen(strptr);
-			if (cch != cb) {
+			if (cch != cb-1) {
 				dprintf(D_FULLDEBUG, "getClassAd get_secret returned %d for string with 0 at %d\n", cb, cch);
 			}
 		}
