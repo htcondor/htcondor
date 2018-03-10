@@ -41,17 +41,6 @@ that do not start.
 \item Release a 32-bit \Condor{shadow} for Enterprise Linux 7 platforms.
 \Ticket{6495}
 
-\item OpenMPI jobs launched in the parallel universe via \File{openmpiscript}
-now work with shared file systems (again).
-\Ticket{6556}
-
-\item Allow a parallel universe job with parallel scheduling group to
-select a new parallel scheduling group when held and released.
-\Ticket{6516}
-
-\item Allow p-slot preemption to work with parallel universe.
-\Ticket{6517}
-
 \item HTCondor now reports, in the job ad and user log, which custom machine
 resources were assigned to the slot in which the job ran.
 \Ticket{6549}
@@ -84,6 +73,17 @@ file to observe their own usage attributes.
 \item A new option \Opt{-unmatchable} was added to \Condor{q} that causes \Condor{q} to show
 only jobs that will not match any of the avilable slots.
 \Ticket{6529}
+
+\item OpenMPI jobs launched in the parallel universe via \File{openmpiscript}
+now work with shared file systems (again).
+\Ticket{6556}
+
+\item Allow a parallel universe job with parallel scheduling group to
+select a new parallel scheduling group when held and released.
+\Ticket{6516}
+
+\item Allow p-slot preemption to work with parallel universe.
+\Ticket{6517}
 
 \item An IPv6 address can now be specified in the configuration file
 either with or without square brackets in most cases.
