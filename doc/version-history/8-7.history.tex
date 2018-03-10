@@ -53,7 +53,7 @@ of CPUs used by the job.
 \item The \MacroNI{use feature: GPUs} metaknob now causes HTCondor to report
 \Attr{GPUsUsage} for each job.  This is like \Attr{CPUsUsage}, except it is
 the average number of GPUs used by the job.  This feature only works for
-NVidia GPUs.
+NVIDIA GPUs.
 \Ticket{6477}
 
 \item Administrators may now, for each custom machine resource, define a
@@ -71,7 +71,7 @@ file to observe their own usage attributes.
 \Ticket{6477}
 
 \item A new option \Opt{-unmatchable} was added to \Condor{q} that causes \Condor{q} to show
-only jobs that will not match any of the avilable slots.
+only jobs that will not match any of the available slots.
 \Ticket{6529}
 
 \item OpenMPI jobs launched in the parallel universe via \File{openmpiscript}
@@ -89,13 +89,13 @@ select a new parallel scheduling group when held and released.
 either with or without square brackets in most cases.
 If specifying a port number in the same value, the square brackets are
 required.
-If using a wildcard to specify a range of possible addresses, square
+If using a wild card to specify a range of possible addresses, square
 brackets are not allowed.
 \Ticket{5697}
 
 \item Improved support for IPv6 link-local addresses, in particular
 using the correct scope id.
-Using a wildcard or device name in \MacroNI{NETWORK\_INTERFACE} now
+Using a wild card or device name in \MacroNI{NETWORK\_INTERFACE} now
 works properly when \MacroNI{NO\_DNS} is set to \Expr{True}.
 \Ticket{6518}
 
@@ -120,7 +120,7 @@ treated as part of the path.
 \Ticket{6389}
 
 \item The \Condor{startd} will now keep trying to delete a job sandbox until it succeeds.
-The retries are attempted with an exponential backoff in frequency.
+The retries are attempted with an exponential back off in frequency.
 \Ticket{6500}
 
 \item \Condor{q} will no longer batch jobs with different cluster ids together unless they
@@ -130,8 +130,8 @@ have the same JobBatchName attribute or are in the same DAG.
 \item \Condor{q} will now sort jobs by job id when the \Opt{-long} argument is used.
 \Ticket{6287}
 
-\item Improve the performance of reading and writing classads to the network.
-The performance of reading classads from UDP is particularly improved, up
+\item Improve the performance of reading and writing ClassAds to the network.
+The performance of reading ClassAds from UDP is particularly improved, up
 to 20\% faster than previously.
 \Ticket{6555}
 \Ticket{6561}
@@ -474,7 +474,7 @@ release.
 to monitor the \Condor{schedd} by default,
 to show more useful columns in the default view,
 to better format output when redirected or piped, and
-to optionally take input of two classad files.
+to optionally take input of two ClassAd files.
 \Ticket{6352}
 
 \item Changed how \Expr{auto} works for \MacroNI{ENABLE\_IPV4} and
