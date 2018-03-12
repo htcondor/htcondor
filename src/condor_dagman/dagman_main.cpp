@@ -1631,6 +1631,7 @@ void condor_event_timer () {
 	// Check log status for growth or errors
 	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus();
 	if( log_status == ReadUserLog::LOG_STATUS_GROWN ) {
+		logProcessCycleStartTime = dagman._utcTime.getTimeDouble();
 		if( dagman.dag->ProcessLogEvents() == false ) {
 			debug_printf( DEBUG_NORMAL,
 						"ProcessLogEvents() returned false\n" );
