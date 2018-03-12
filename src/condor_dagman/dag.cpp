@@ -220,7 +220,6 @@ Dag::~Dag()
 	if ( _condorLogRdr.activeLogFileCount() > 0 ) {
 		(void) UnmonitorLogFile();
 	}
-
 		// remember kids, delete is safe *even* if ptr == NULL...
 
     // delete all jobs in _jobs
@@ -411,16 +410,10 @@ Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 }
 
 //-------------------------------------------------------------------------
-bool
-Dag::DetectCondorLogGrowth () {
+ReadUserLog::FileStatus
+Dag::GetCondorLogStatus () {
 
-	if( CondorLogFileCount() <= 0 ) {
-		return false;
-	}
-
-	bool growth = _condorLogRdr.detectLogGrowth();
-    debug_printf( DEBUG_DEBUG_4, "%s\n",
-				  growth ? "Log GREW!" : "No log growth..." );
+	ReadUserLog::FileStatus status = _condorLogRdr.GetLogStatus();
 
 		//
 		// Print the nodes we're waiting for if the time threshold
@@ -430,7 +423,7 @@ Dag::DetectCondorLogGrowth () {
 	time_t		currentTime;
 	time( &currentTime );
 
-	if ( growth ) _lastEventTime = currentTime;
+	if ( status == ReadUserLog::LOG_STATUS_GROWN ) _lastEventTime = currentTime;
 	time_t		elapsedEventTime = currentTime - _lastEventTime;
 	time_t		elapsedPrintTime = currentTime - _lastPendingNodePrintTime;
 
@@ -443,7 +436,7 @@ Dag::DetectCondorLogGrowth () {
 		_lastPendingNodePrintTime = currentTime;
 	}
 
-    return growth;
+    return status;
 }
 
 //-------------------------------------------------------------------------

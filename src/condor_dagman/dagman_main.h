@@ -37,6 +37,7 @@ enum exit_value {
 void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 			bool removeCondorJobs = true );
 void main_shutdown_graceful( void );
+void main_shutdown_logerror( void );
 void print_status( bool forceScheddUpdate = false );
 
 class Dagman {

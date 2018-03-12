@@ -43,6 +43,8 @@
 #  define D_LOG_FILES D_FULLDEBUG
 #endif
 
+using namespace std;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
@@ -148,26 +150,33 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool
-ReadMultipleUserLogs::detectLogGrowth()
+ReadUserLog::FileStatus
+ReadMultipleUserLogs::GetLogStatus()
 {
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::detectLogGrowth()\n" );
-
-	bool grew = false;
-
-	    // Note: we must go through the whole loop even after we find a
-		// log that grew, so we have the right log lengths for next time.
-		// wenger 2003-04-11.
-		// Note that reading an event does not update the known log size.
-	activeLogFiles.startIterations();
 	LogFileMonitor *monitor;
+	ReadUserLog::FileStatus status = ReadUserLog::LOG_STATUS_NOCHANGE;
+
+	// Iterate over all the log files and check their statuses.
+	activeLogFiles.startIterations();
 	while ( activeLogFiles.iterate( monitor ) ) {
-	    if ( LogGrew( monitor ) ) {
-		    grew = true;
+		ReadUserLog::FileStatus fs = monitor->readUserLog->CheckFileStatus();
+		// If a log files has grown, we want to return ReadUserLog::LOG_STATUS_GROWN
+		// Do not exit the loop early, since checking the file status also
+		// updates the internal member variable tracking the size of the file
+		if ( fs == ReadUserLog::LOG_STATUS_GROWN ) {
+			status = fs;
+		}
+		// If a log files is in error, we want to return ReadUserLog::LOG_STATUS_ERROR
+		// We can exit early here, because we're just going to abort.
+		else if ( fs == ReadUserLog::LOG_STATUS_ERROR ) {
+			status = fs;
+			dprintf( D_ALWAYS, "MultiLogFiles: detected error, cleaning up all log monitors\n" );
+			cleanup();
+			break;
 		}
 	}
 
-    return grew;
+    return status;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -230,30 +239,6 @@ ReadMultipleUserLogs::cleanup()
 		delete monitor;
 	}
 	allLogFiles.clear();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-bool
-ReadMultipleUserLogs::LogGrew( LogFileMonitor *monitor )
-{
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::LogGrew(%s)\n",
-				monitor->logFile.Value() );
-
-	ReadUserLog::FileStatus fs = monitor->readUserLog->CheckFileStatus();
-
-	if ( ReadUserLog::LOG_STATUS_ERROR == fs ) {
-		dprintf( D_FULLDEBUG,
-				 "ReadMultipleUserLogs error: can't stat "
-				 "condor log (%s): %s\n",
-				 monitor->logFile.Value(), strerror( errno ) );
-		return false;
-	}
-	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs: %s\n",
-			 grew ? "log GREW!" : "no log growth..." );
-
-	return grew;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

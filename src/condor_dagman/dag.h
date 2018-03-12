@@ -182,10 +182,8 @@ class Dag {
 	*/
 	void RunWaitingScripts();
   
-    /** Blocks until the HTCondor Log file grows.
-        @return true: log file grew, false: timeout or shrinkage
-    */
-    bool DetectCondorLogGrowth();
+    // Get the current status of the condor log file
+	ReadUserLog::FileStatus	GetCondorLogStatus();
 
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.

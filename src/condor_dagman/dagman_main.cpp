@@ -517,6 +517,16 @@ void main_shutdown_graceful() {
 	DC_Exit( EXIT_RESTART );
 }
 
+// Special case shutdown when the log file gets corrupted
+void main_shutdown_logerror() {
+	print_status();
+	dagman.dag->DumpNodeStatus( true, false );
+	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_ABORT );
+	if (dagman.dag) dagman.dag->ReportMetrics( EXIT_ABORT );
+	dagman.CleanUp();
+	DC_Exit( EXIT_ABORT );
+}
+
 void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 			bool removeCondorJobs ) {
 		// Avoid possible infinite recursion if you hit a fatal error
@@ -1618,9 +1628,9 @@ void condor_event_timer () {
 				  	justSubmitted, justSubmitted == 1 ? "" : "s" );
 	}
 
-	// If the log has grown
-	if( dagman.dag->DetectCondorLogGrowth() ) {
-		logProcessCycleStartTime = dagman._utcTime.getTimeDouble();
+	// Check log status for growth or errors
+	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus();
+	if( log_status == ReadUserLog::LOG_STATUS_GROWN ) {
 		if( dagman.dag->ProcessLogEvents() == false ) {
 			debug_printf( DEBUG_NORMAL,
 						"ProcessLogEvents() returned false\n" );
@@ -1630,6 +1640,13 @@ void condor_event_timer () {
 		}
 		logProcessCycleEndTime = dagman._utcTime.getTimeDouble();
 		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
+	}
+	else if( log_status == ReadUserLog::LOG_STATUS_ERROR ) {
+		debug_printf( DEBUG_NORMAL, "DAGMan exiting due to error in log file\n" );
+		dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+		dagman.dag->_dagStatus = Dag::DAG_STATUS_ERROR;
+		main_shutdown_logerror();
+		return;
 	}
 
     // print status if anything's changed (or we're in a high debug level)

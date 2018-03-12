@@ -165,10 +165,13 @@ public:
     	*/
     ULogEventOutcome readEvent (ULogEvent * & event);
 
-	    /** Returns true iff any of the logs we're monitoring grew since
-		    the last time this method was called.
+		/** Returns a status code for the set of all log files currently being
+			monitored (typically only a single file).
+			If any of the files has grown, return ReadUserLog::LOG_STATUS_GROWN
+			If any of the files is in error state, return ReadUserLog::LOG_STATUS_ERROR
+			Otherwise, return ReadUserLog::LOG_STATUS_NOCHANGE
 		 */
-	bool detectLogGrowth();
+	ReadUserLog::FileStatus GetLogStatus();
 
 		/** Returns the total number of user logs this object "knows
 			about".
@@ -272,16 +275,6 @@ private:
 	// For instantiation in programs that use this class.
 #define MULTI_LOG_HASH_INSTANCE template class \
 		HashTable<MyString, ReadMultipleUserLogs::LogFileMonitor *>
-
-		/** Returns true iff the given log grew since the last time
-		    we called this method on it.
-		    @param The LogFileMonitor object to test.
-			@param The filename this corresponds to (for error messages
-				only).
-		    @return True iff the log grew.
-
-		 */
-	static bool LogGrew( LogFileMonitor *monitor );
 
 		/**
 		 * Read an event from a log monitor.
