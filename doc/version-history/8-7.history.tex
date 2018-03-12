@@ -20,7 +20,7 @@ The details of each version are described below.
 \begin{itemize}
 
 \item HTCondor version 8.7.7 not yet released.
-%\item HTCondor version 8.7.7 released on Month Date, 2018.
+%\item HTCondor version 8.7.7 released on March 13, 2018.
 
 \end{itemize}
 
@@ -85,6 +85,18 @@ select a new parallel scheduling group when held and released.
 \item Allow p-slot preemption to work with parallel universe.
 \Ticket{6517}
 
+\item Added the ability in \Condor{dagman} to specify submit files with spaces
+in their path names. Paths that include spaces must be wrapped in quotes
+(i.e. JOB A "/path to/job.sub").
+\Ticket{6389}
+
+\item Added the ability in \Condor{submit} to specify executable, error and
+output files with spaces in their paths. Previously, adding whitespace to these
+fields would result in an error claiming certain attributes could only take
+exactly one argument. Now, whitespace is
+treated as part of the path.
+\Ticket{6389}
+
 \item An IPv6 address can now be specified in the configuration file
 either with or without square brackets in most cases.
 If specifying a port number in the same value, the square brackets are
@@ -108,18 +120,6 @@ will use a ``null'' config and print a warning.
 defines an expression which constrains which job ads are considered for
 matchmaking by the \Condor{negotiator}.
 \Ticket{6250}
-
-\item Added the ability in \Condor{dagman} to specify submit files with spaces 
-in their path names. Paths that include spaces must be wrapped in quotes 
-(i.e. JOB A "/path to/job.sub").
-\Ticket{6389}
-
-\item Added the ability in \Condor{submit} to specify executable, error and 
-output files with spaces in their paths. Previously, adding whitespace to these 
-fields would result in an error claiming certain attributes could only take 
-exactly one argument. Now, whitespace is 
-treated as part of the path.
-\Ticket{6389}
 
 \item The \Condor{startd} will now keep trying to delete a job sandbox until it succeeds.
 The retries are attempted with an exponential back off in frequency.
