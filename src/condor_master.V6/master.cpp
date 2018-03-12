@@ -600,8 +600,12 @@ main_init( int argc, char* argv[] )
 			}
 #endif /* defined EDQUOT */
 
-			EXCEPT("Failed DISCARD_SESSION_KEYRING_ON_STARTUP=True errno=%d",
-					saved_errno);
+			if (saved_errno == EPERM) {
+				dprintf(D_ALWAYS, "Permission denied error during DISCARD_SESSION_KEYRING_ON_STARTUP, continuing anyway\n");
+			} else {
+				EXCEPT("Failed DISCARD_SESSION_KEYRING_ON_STARTUP=True errno=%d",
+						saved_errno);
+			}
 		}
 	}
 #endif /* defined LINUX */
