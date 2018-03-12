@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug when running inside a docker container that would prevent
+the master from started unless DISCARD\_SESSION\_KEYRING\_ON\_STARTUP was set to
+false.
+\Ticket{6602}
+
 \item Fixed a bug where \Condor{submit} -i would enter the wrong singularity
 container.
 \Ticket{6595}
