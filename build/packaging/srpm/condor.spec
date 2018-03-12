@@ -1915,6 +1915,11 @@ fi
 %endif
 
 %changelog
+* Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.10-1
+- Fixed a problem where condor_preen would crash on an active submit node
+- Improved systemd configuration to clean up processes if the master crashes
+- Fixed several other minor problems
+
 * Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.9-1
 - Fixed a bug where some Accounting Groups could get too much surplus quota
 - Fixed a Python binding bug where some queries could corrupt memory
