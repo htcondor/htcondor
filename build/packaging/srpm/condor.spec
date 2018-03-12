@@ -1966,6 +1966,11 @@ fi
 %endif
 
 %changelog
+* Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.10-1
+- Fixed a problem where condor_preen would crash on an active submit node
+- Improved systemd configuration to clean up processes if the master crashes
+- Fixed several other minor problems
+
 * Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.6-1
 - Machines won't enter "Owner" state unless using the Desktop policy
 - One can use SCHEDD and JOB instead of MY and TARGET in SUBMIT_REQUIREMENTS
