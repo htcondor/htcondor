@@ -1966,6 +1966,20 @@ fi
 %endif
 
 %changelog
+* Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.7-1
+- condor_ssh_to_job now works with Docker Universe jobs
+- A 32-bit condor_shadow is available for Enterprise Linux 7 systems
+- Tracks and reports custom resources, e.g. GPUs, in the job ad and user log
+- condor_q -unmatchable reports jobs that will not match any slots
+- Several updates to the parallel universe
+- Spaces are now allowed in input, output, and error paths in submit files
+- In DAG files, spaces are now allowed in submit file paths
+
+* Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.10-1
+- Fixed a problem where condor_preen would crash on an active submit node
+- Improved systemd configuration to clean up processes if the master crashes
+- Fixed several other minor problems
+
 * Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.6-1
 - Machines won't enter "Owner" state unless using the Desktop policy
 - One can use SCHEDD and JOB instead of MY and TARGET in SUBMIT_REQUIREMENTS
