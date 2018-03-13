@@ -1251,11 +1251,6 @@ ReliSock::authenticate(const char* methods, CondorError* errstack, int auth_time
 
 bool
 ReliSock::connect_socketpair_impl( ReliSock & sock, condor_protocol proto, bool isLoopback ) {
-	if( ! bind( proto, false, 0, isLoopback ) ) {
-		dprintf( D_ALWAYS, "connect_socketpair(): failed to bind() this.\n" );
-		return false;
-	}
-
 	ReliSock tmp;
 	if( ! tmp.bind( proto, false, 0, isLoopback ) ) {
 		dprintf( D_ALWAYS, "connect_socketpair(): failed to bind() that.\n" );
@@ -1267,11 +1262,17 @@ ReliSock::connect_socketpair_impl( ReliSock & sock, condor_protocol proto, bool 
 		return false;
 	}
 
+	if( ! bind( proto, false, 0, isLoopback ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to bind() this.\n" );
+		return false;
+	}
+
 	if( !connect( tmp.my_ip_str(), tmp.get_port() ) ) {
 		dprintf( D_ALWAYS, "connect_socketpair(): failed to connect() to that.\n" );
 		return false;
 	}
 
+	tmp.timeout( 1 );
 	if( ! tmp.accept( sock ) ) {
 		dprintf( D_ALWAYS, "connect_socketpair(): failed to accept() that.\n" );
 		return false;
