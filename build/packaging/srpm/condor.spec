@@ -55,7 +55,7 @@
 %define qmf 0
 
 %if 0%{?fedora}
-%define blahp 0
+%define blahp 1
 %define cream 0
 # a handful of std universe files don't seem to get built in fedora...
 %define std_univ 0
@@ -598,6 +598,8 @@ host as the DedicatedScheduler.
 %endif
 
 
+# Temporarily turn off python for Fedora
+%if ! 0%{?fedora}
 #######################
 %package python
 Summary: Python bindings for HTCondor.
@@ -619,6 +621,7 @@ Provides: htcondor.so
 %description python
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
+%endif
 
 
 #######################
@@ -692,7 +695,10 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
+# Temporarily turn off python for Fedora
+%if ! 0%{?fedora}
 Requires: %name-python = %version-%release
+%endif
 Requires: %name-bosco = %version-%release
 %if %std_univ
 Requires: %name-std-universe = %version-%release
@@ -1021,10 +1027,13 @@ install -m 0755 src/condor_scripts/CondorPersonal.pm %{buildroot}%{_datadir}/con
 install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
 
+# Temporarily turn off python for Fedora
+%if ! 0%{?fedora}
 # Install python-binding libs
 mkdir -p %{buildroot}%{python_sitearch}
 install -m 0755 src/python-bindings/{classad,htcondor}.so %{buildroot}%{python_sitearch}
 install -m 0755 src/python-bindings/libpyclassad*.so %{buildroot}%{_libdir}
+%endif
 
 # we must place the config examples in builddir so %doc can find them
 mv %{buildroot}/etc/examples %_builddir/%name-%tarball_version
@@ -1268,7 +1277,10 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+# Temporarily turn off python for Fedora
+%if ! 0%{?fedora}
 %_libexecdir/condor/libcollector_python_plugin.so
+%endif
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
@@ -1650,12 +1662,15 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/20dedicated_scheduler_condor.config
 %endif
 
+# Temporarily turn off python for Fedora
+%if ! 0%{?fedora}
 %files python
 %defattr(-,root,root,-)
 %_libdir/libpyclassad*.so
 %_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad.so
 %{python_sitearch}/htcondor.so
+%endif
 
 %files bosco
 %defattr(-,root,root,-)
@@ -1900,6 +1915,11 @@ fi
 %endif
 
 %changelog
+* Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.10-1
+- Fixed a problem where condor_preen would crash on an active submit node
+- Improved systemd configuration to clean up processes if the master crashes
+- Fixed several other minor problems
+
 * Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.9-1
 - Fixed a bug where some Accounting Groups could get too much surplus quota
 - Fixed a Python binding bug where some queries could corrupt memory
