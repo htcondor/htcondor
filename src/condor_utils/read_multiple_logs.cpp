@@ -157,6 +157,8 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 ReadUserLog::FileStatus
 ReadMultipleUserLogs::GetLogStatus()
 {
+	dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::GetLogStatus()\n" );
+
 	LogFileMonitor *monitor;
 	ReadUserLog::FileStatus status = ReadUserLog::LOG_STATUS_NOCHANGE;
 
@@ -170,9 +172,10 @@ ReadMultipleUserLogs::GetLogStatus()
 		if ( fs == ReadUserLog::LOG_STATUS_GROWN ) {
 			status = fs;
 		}
-		// If a log files is in error, we want to return ReadUserLog::LOG_STATUS_ERROR
+		// If a log file has shrunk or is in error, we want to return the
+		// correct status code.
 		// We can exit early here, because we're just going to abort.
-		else if ( fs == ReadUserLog::LOG_STATUS_ERROR ) {
+		else if ( fs == ReadUserLog::LOG_STATUS_ERROR || fs == ReadUserLog::LOG_STATUS_SHRUNK ) {
 			status = fs;
 			dprintf( D_ALWAYS, "MultiLogFiles: detected error, cleaning up all log monitors\n" );
 			cleanup();

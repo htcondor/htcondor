@@ -611,7 +611,7 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 	// If there are no hard links to the file, it has been overwritten or 
 	// deleted. Send back an error.
 	if ( num_hard_links < 1 ) {
-		dprintf( D_ALWAYS, "ERROR: log file %s has been overwritten or deleted. "
+		dprintf( D_ALWAYS, "ERROR: log file %s has been deleted. "
 			"Aborting.\n", m_cur_path.Value() );
 		return ReadUserLog::LOG_STATUS_ERROR;
 	}
@@ -634,6 +634,8 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 	}
 	else {
 		status = ReadUserLog::LOG_STATUS_SHRUNK;
+		dprintf( D_ALWAYS, "ERROR: log file %s has shrunk, probably due to being"
+			" overwritten. Aborting.\n", m_cur_path.Value() );
 	}
 	m_status_size = size;
 	Update();
