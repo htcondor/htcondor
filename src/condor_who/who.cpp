@@ -2315,7 +2315,10 @@ static bool get_daemon_ready(const char * addr, const char * requirements, time_
 
 	ReliSock sock;
 	sock.timeout(sec_to_wait + 2); // wait 2 seconds longer than the requested timeout.
-	sock.connect(addr);
+	if (!sock.connect(addr)) {
+		fprintf(stderr, "cannot connect to %s\n", addr);
+		return false;
+	}
 
 	if ( ! dae.startCommand(DC_QUERY_READY, &sock, sec_to_wait + 2)) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't startCommand DC_QUERY_READY to %s\n", addr); }
