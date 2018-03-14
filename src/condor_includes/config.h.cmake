@@ -510,6 +510,9 @@
 /* Define to 1 if 'f_basetype' is member of 'struct statvfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATVFS_F_BASETYPE 1
 
+/* Define to 1 if you have the <sys/capability.h> header file. (USED)*/
+#cmakedefine HAVE_SYS_CAPABILITY_H 1
+
 /* Define to 1 if you have the <sys/mount.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_MOUNT_H 1
 

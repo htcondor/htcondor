@@ -38,6 +38,7 @@
 #include "cgroup_limits.h"
 #include "selector.h"
 #include "singularity.h"
+#include "has_sysadmin_cap.h"
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -349,7 +350,7 @@ VanillaProc::StartJob()
 		 *  local universe and cgroups can be properly worked
 		 *  out. -matt 7 nov '12
 		 */
-	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length() && can_switch_ids()) {
+	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length() && can_switch_ids() && has_sysadmin_cap()) {
 		MyString cgroup_uniq;
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
