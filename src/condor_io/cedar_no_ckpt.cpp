@@ -946,7 +946,7 @@ int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 				dprintf(D_FULLDEBUG,"Bypassing connection to shared port server, because its address is not yet established; passing socket directly to %s.\n",host);
 			}
 
-			// do_shared_port_local_connect() calls create_socketpair(), which
+			// do_shared_port_local_connect() calls connect_socketpair(), which
 			// normally uses loopback addresses.  However, the loopback address
 			// may not be in the ALLOW list.  Instead, we need to use the
 			// address we would use to contact the shared port daemon.
