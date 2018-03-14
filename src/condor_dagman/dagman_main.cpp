@@ -1614,6 +1614,17 @@ void condor_event_timer () {
 
 	dagman.dag->RunWaitingScripts();
 
+	// Before submitting ready jobs, check the user log for errors or shrinking.
+	// If either happens, this is really really bad! Bail out immediately.
+	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus();
+	if( log_status == ReadUserLog::LOG_STATUS_ERROR || log_status == ReadUserLog::LOG_STATUS_SHRUNK ) {
+		debug_printf( DEBUG_NORMAL, "DAGMan exiting due to error in log file\n" );
+		dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+		dagman.dag->_dagStatus = Dag::DAG_STATUS_ERROR;
+		main_shutdown_logerror();
+		return;
+	}
+
 	int justSubmitted;
 	debug_printf( DEBUG_DEBUG_1, "Starting submit cycle\n" );
 	submitCycleStartTime = dagman._utcTime.getTimeDouble();
@@ -1628,8 +1639,7 @@ void condor_event_timer () {
 				  	justSubmitted, justSubmitted == 1 ? "" : "s" );
 	}
 
-	// Check log status for growth or errors
-	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus();
+	// Check log status for growth. If it grew, process log events.
 	if( log_status == ReadUserLog::LOG_STATUS_GROWN ) {
 		logProcessCycleStartTime = dagman._utcTime.getTimeDouble();
 		if( dagman.dag->ProcessLogEvents() == false ) {
@@ -1641,13 +1651,6 @@ void condor_event_timer () {
 		}
 		logProcessCycleEndTime = dagman._utcTime.getTimeDouble();
 		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
-	}
-	else if( log_status == ReadUserLog::LOG_STATUS_ERROR ) {
-		debug_printf( DEBUG_NORMAL, "DAGMan exiting due to error in log file\n" );
-		dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-		dagman.dag->_dagStatus = Dag::DAG_STATUS_ERROR;
-		main_shutdown_logerror();
-		return;
 	}
 
     // print status if anything's changed (or we're in a high debug level)
