@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where \MacroNI{STARTD\_CRON\_JOBLIST} was not ignoring
+duplicate entries.
+\Ticket{6604}
+
 \item Fixed a bug when running inside a docker container that would prevent
 the master from started unless DISCARD\_SESSION\_KEYRING\_ON\_STARTUP was set to
 false.

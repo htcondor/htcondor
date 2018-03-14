@@ -318,7 +318,13 @@ CronJobMgr::ParseJobList( const char *job_list_string )
 			 job_list_string );
 
 	// Break it into a string list
-	StringList	job_list( job_list_string );
+	StringList job_list;
+	StringTokenIterator it( job_list_string );
+	for( const char * item = it.first(); item; item = it.next() ) {
+		if( job_list.contains_anycase( item ) ) { continue; }
+		job_list.insert( item );
+	}
+
 	job_list.rewind( );
 
 	// Parse out the job names
