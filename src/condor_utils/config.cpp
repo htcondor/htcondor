@@ -1225,7 +1225,7 @@ void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char*
 
 	if (this->errors) {
 		const char * subsys = (this->options & CONFIG_OPT_SUBMIT_SYNTAX) ? "Submit" : "Config";
-		this->errors->push(subsys, code, message);
+		this->errors->push(subsys, code, message ? message : "null");
 	} else {
 		if (message) {
 			fprintf(fh, "%s", message);
