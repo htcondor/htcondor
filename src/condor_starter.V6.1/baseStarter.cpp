@@ -3214,10 +3214,14 @@ CStarter::PublishToEnv( Env* proc_env )
 		// and others) look at OMP_NUM_THREADS
 		// to determine how many threads to spawn.  Force this to
 		// Cpus, to encourage jobs to stay within the number
-		// of requested cpu cores.
+		// of requested cpu cores.  But trust the user, if it has
+		// already been set in the job.
 
 	ClassAd * mach = jic->machClassAd();
-	if (mach) {
+	MyString jobNumThreads;
+
+	proc_env->GetEnv("OMP_NUM_THREADS", jobNumThreads);
+	if (mach && (jobNumThreads.Length() == 0)) {
 		int cpus = 0;
 		if (mach->LookupInteger(ATTR_CPUS, cpus)) {
 			if (cpus > 0) {
