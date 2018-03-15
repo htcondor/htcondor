@@ -48,6 +48,7 @@
                <RegistryValue Type="multiString" Name="DependOnService" Value="Dhcp" />
              </RegistryKey>
              <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]bin\"/>
+             <Environment Id="CondorLibPython" Action="set" Name="PYTHONPATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]lib\python;[INSTALLDIR]bin"/>
            </Component>
             <Component Id="CondorKBDDReg" Guid="3C40071C-6DB9-43AD-8058-920623026740">
               <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Run">
