@@ -490,11 +490,14 @@ JICShadow::transferOutput( bool &transient_failure )
 		m_ft_rval = filetrans->UploadFiles( true, final_transfer );
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
+
 		const char *stats = m_ft_info.tcp_stats.c_str();
-		std::string full_stats = "(peer stats from starter): ";
-		full_stats += stats;
+		if (strlen(stats) != 0) {
+			std::string full_stats = "(peer stats from starter): ";
+			full_stats += stats;
 		
-		REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+			REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+		}
 		set_priv(saved_priv);
 
 		if( m_ft_rval ) {
@@ -2364,12 +2367,14 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 			EXCEPT( "Failed to transfer files" );
 		}
 		const char *stats = m_ft_info.tcp_stats.c_str();
-		std::string full_stats = "(peer stats from starter): ";
-		full_stats += stats;
+		if (strlen(stats) != 0) {
+			std::string full_stats = "(peer stats from starter): ";
+			full_stats += stats;
 
-		ASSERT( !shadowDisconnected() );
+			ASSERT( !shadowDisconnected() );
 
-		REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+			REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+		}
 
 			// If we transferred the executable, make sure it
 			// has its execute bit set.

@@ -56,6 +56,15 @@ false.
 container.
 \Ticket{6595}
 
+\item DAGMan did not previously check the user log file (which it depends on for
+coordination with the schedd) for corruption. Now, it checks if the user log 
+file gets overwritten or deleted, and if so, exits immediately with an error.
+\Ticket{6579}
+
+\item Fixed a bug in the ReadUserLog class where it failed to detect if a file
+file gets overwitten.
+\Ticket{6582}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
