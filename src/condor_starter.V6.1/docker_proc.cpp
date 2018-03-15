@@ -513,8 +513,6 @@ DockerProc::AcceptSSHClient(Stream *stream) {
 	fds[1] = fdpass_recv(ns->get_file_desc());
 	fds[2] = fdpass_recv(ns->get_file_desc());
 
-dprintf(D_ALWAYS, "GGT GGT new fds are %d %d %d\n", fds[0], fds[1], fds[2]);
-
 	ArgList args;
 	args.AppendArg("-i");
 
