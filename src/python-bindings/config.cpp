@@ -603,7 +603,33 @@ std::string CondorVersionWrapper() { return CondorVersion(); }
 std::string CondorPlatformWrapper() { return CondorPlatform(); }
 
 //BOOST_PYTHON_FUNCTION_OVERLOADS(config_overloads, config, 0, 3);
-void configWrapper() { config(); }
+void configWrapper() {
+#ifdef WIN32
+	// On Windows, there are two sets of environment variables: Win32 and C runtime.
+	// When a python program sets environment variables, they only
+	// go into the Win32 set.  The HTCondor config routines only examine the
+	// C runtime set.  What a mess, there is only so much we can do until
+	// this is "fixed" in Python - see https://bugs.python.org/issue16633
+	// In the meantime we attempt to workaround this by scanning the Win32
+	// environment for variables on interest to HTCondor's config(), and
+	// copying them into the C runtime environment.
+	char *env_str = GetEnvironmentStrings();
+	const char *ptr = env_str;
+	while ( *ptr != '\0' ) {
+		if (strncasecmp("CONDOR_CONFIG=",ptr,14)==0 ||
+			strncasecmp("_CONDOR_",ptr,8)==0)
+		{
+			_putenv(ptr);
+		}
+		ptr += strlen(ptr) + 1;
+	}
+	if (env_str) {
+		FreeEnvironmentStrings(env_str);
+		env_str = NULL;
+	}
+#endif
+	config();
+}
 
 void export_config()
 {

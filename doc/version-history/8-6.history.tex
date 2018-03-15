@@ -56,6 +56,11 @@ false.
 container.
 \Ticket{6595}
 
+\item Fixed a bug specific to the HTCondor Python bindings on Windows, where
+the call htcondor.reload\_config() would fail to see 
+environment variable changes made by the Python program.
+\Ticket{6610}
+
 \item DAGMan did not previously check the user log file (which it depends on for
 coordination with the schedd) for corruption. Now, it checks if the user log 
 file gets overwritten or deleted, and if so, exits immediately with an error.
