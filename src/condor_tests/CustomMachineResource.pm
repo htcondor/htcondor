@@ -12,11 +12,26 @@ use CondorTest;
 #
 # This hash derives from cmr-squid-monitor and has to be changed when it does.
 #
-our %squidIncrements = (
+my %squidIncrements = (
 	"SQUID0" => 5.0,
 	"SQUID1" => 1.0,
 	"SQUID2" => 9.0,
 	"SQUID3" => 4.0
+);
+
+#
+# This hash derives from cmr-tako-monitor and has to be changed when it does.
+#
+my %takoIncrements = (
+	"TAKO0"	=> 500,
+	"TAKO1"	=> 100,
+	"TAKO2"	=> 900,
+	"TAKO3"	=> 400
+);
+
+my %increments = (
+	"SQUID"	=> \%squidIncrements,
+	"TAKO" 	=> \%takoIncrements
 );
 
 
@@ -25,17 +40,22 @@ our %squidIncrements = (
 #
 sub TestSlotAndSQUIDsCount {
 	my( $expectedCount, $testName ) = @_;
+	TestSlotAndResourceCount( $expectedCount, $testName, "SQUID" );
+}
 
-	my $ads = parseMachineAds( "Name", "AssignedSQUIDs" );
+sub TestSlotAndResourceCount {
+	my( $expectedCount, $testName, $resourceName ) = @_;
 
-	my %SQUIDs;
+	my $ads = parseMachineAds( "Name", "Assigned${resourceName}s" );
+
+	my %RESOURCEs;
 	my $totalCount = 0;
 	foreach my $ad (@{$ads}) {
 		++$totalCount;
-		my $assignedSQUIDs = $ad->{ "AssignedSQUIDs" };
-		foreach my $SQUID (split( /[, ]+/, $assignedSQUIDs )) {
-			if( $SQUID =~ /^(SQUID\d)$/ ) {
-				$SQUIDs{ $SQUID } = 1;
+		my $assignedRESOURCEs = $ad->{ "Assigned${resourceName}s" };
+		foreach my $RESOURCE (split( /[, ]+/, $assignedRESOURCEs )) {
+			if( $RESOURCE =~ /^(${resourceName}\d)$/ ) {
+				$RESOURCEs{ $RESOURCE } = 1;
 			}
 		}
 	}
@@ -44,11 +64,11 @@ sub TestSlotAndSQUIDsCount {
 		die( "Failure: Found ${totalCount} slots, was expecting $expectedCount.\n" );
 	}
 
-	if( scalar(keys %SQUIDs) != 4 ) {
-		die( "Failure: Found " . scalar(keys %SQUIDs) . " SQUIDs, was expecting 4.\n" );
+	if( scalar(keys %RESOURCEs) != 4 ) {
+		die( "Failure: Found " . scalar(keys %RESOURCEs) . " ${resourceName}s, was expecting 4.\n" );
 	}
 
-	RegisterResult( 1, check_name => "slot-and-SQUIDs-counts",
+	RegisterResult( 1, check_name => "slot-and-${resourceName}s-counts",
 					   test_name => $testName );
 }
 
@@ -58,29 +78,35 @@ sub TestSlotAndSQUIDsCount {
 #
 sub TestUptimeSQUIDsSeconds {
 	my( $testName ) = @_;
+	TestUptimeResourceSeconds( $testName, "SQUID" );
+}
 
-	my $directAds = parseDirectMachineAds( "AssignedSQUIDs", "UptimeSQUIDsSeconds" );
+sub TestUptimeResourceSeconds {
+	my( $testName, $resourceName ) = @_;
+
+	my $directAds = parseDirectMachineAds( "Assigned${resourceName}s", "Uptime${resourceName}sSeconds" );
 
 	my $multiplier = undef;
 	foreach my $ad (@{$directAds}) {
-		my $value = $ad->{ "UptimeSQUIDsSeconds" };
+		my $value = $ad->{ "Uptime${resourceName}sSeconds" };
 		if( $value eq "undefined" ) { next; }
 
 		my $total = 0;
-		my $assignedSQUIDs = $ad->{ "AssignedSQUIDs" };
-		foreach my $SQUID (split( /[, ]+/, $assignedSQUIDs )) {
-			my $increment = $squidIncrements{ $SQUID };
+		my $assignedRESOURCEs = $ad->{ "Assigned${resourceName}s" };
+		foreach my $RESOURCE (split( /[, ]+/, $assignedRESOURCEs )) {
+			# my $increment = $RESOURCEIncrements{ $RESOURCE };
+			my $increment = $increments{ $resourceName }->{ $RESOURCE };
 
 			if(! defined( $increment )) {
-				die( "Failure: Assigned SQUID '" . $ad->{ "AssignedSQUIDs" } . "' invalid.\n" );
+				die( "Failure: Assigned ${resourceName} '" . $ad->{ "Assigned${resourceName}s" } . "' invalid.\n" );
 			}
 
-			$total += $squidIncrements{ $SQUID };
+			$total += $increment;
 		}
 
-		# print( "UptimeSQIDsSeconds ${value} % totalIncrement ${total}\n" );
+		# print( "UptimeSQUIDsSeconds ${value} % totalIncrement ${total}\n" );
 		if( $value % $total != 0 ) {
-			die( "Failure: '${assignedSQUIDs}' has bad uptime '${value}'.\n" );
+			die( "Failure: '${assignedRESOURCEs}' has bad uptime '${value}'.\n" );
 		}
 
 		if(! defined( $multiplier )) {
@@ -88,12 +114,12 @@ sub TestUptimeSQUIDsSeconds {
 			# print( "Inferring sample count = ${multiplier}.\n" );
 		} else {
 			if( $value / $total != $multiplier ) {
-				die( "Failure: '${assignedSQUIDs}' has a different sample count (" . $value / $total . " != " . $multiplier . ").\n" );
+				die( "Failure: '${assignedRESOURCEs}' has a different sample count (" . $value / $total . " != " . $multiplier . ").\n" );
 			}
 		}
 	}
 
-	RegisterResult( 1, check_name => "UptimeSQUIDsSeconds",
+	RegisterResult( 1, check_name => "Uptime${resourceName}sSeconds",
 					   test_name => $testName );
 }
 
@@ -127,20 +153,21 @@ my $held = sub
 	die( "Error: Want to see only submit, execute and successful completion\n" );
 };
 
-my %jobIDToSQUIDsMap;
+my %jobIDToRESOURCEsMap;
+my $callbackResourceName;
 my $executed = sub
 {
 	my %info = @_;
 	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
 
-	my $directAds = parseDirectMachineAds( "JobID", "AssignedSQUIDs" );
+	my $directAds = parseDirectMachineAds( "JobID", "Assigned${callbackResourceName}s" );
 	foreach my $ad (@{$directAds}) {
 		my $jobID = $ad->{ "JobID" };
 		if(! defined($jobID)) { next; }
 		if( $jobID ne $info{ 'cluster' } . "." . $info{ 'job' } ) { next; }
 
-		$jobIDToSQUIDsMap{ $jobID } = $ad->{ "AssignedSQUIDs" };
-		TLOG( "Job $ID started on " . $jobIDToSQUIDsMap{ $jobID } . "...\n" );
+		$jobIDToRESOURCEsMap{ $jobID } = $ad->{ "Assigned${callbackResourceName}s" };
+		TLOG( "Job $ID started on " . $jobIDToRESOURCEsMap{ $jobID } . "...\n" );
 	}
 };
 
@@ -189,7 +216,7 @@ my $usage = sub {
 			my( $resource, $colon, $usage, $requested, $allocated ) =
 				split( " ", $line );
 
-			if( $resource =~ m/SQUIDs/i ) {
+			if( $resource =~ m/${callbackResourceName}s/i ) {
 				TLOG( "Job ${ID} used $usage $resource...\n" );
 				$eventLogUsage{ $ID } = $usage;
 			}
@@ -197,7 +224,7 @@ my $usage = sub {
 	}
 
 	if(! defined( $eventLogUsage{ $ID } )) {
-		die( "Unable to find SQUIDs usage in event log, aborting.\n" );
+		die( "Unable to find ${callbackResourceName}s usage in event log, aborting.\n" );
 	}
 };
 
@@ -240,8 +267,8 @@ sub checkUsageValue {
 	# value should be, and check against that, instead.
 	#
 
-	my $STARTD_CRON_SQUIDs_MONITOR_PERIOD = 10;
-	my $expectedValue = $increment / $STARTD_CRON_SQUIDs_MONITOR_PERIOD;
+	my $STARTD_CRON_MONITOR_PERIOD = 10;
+	my $expectedValue = $increment / $STARTD_CRON_MONITOR_PERIOD;
 	my $sadnessValue = ($increment * 5) / 51;
 	my $madnessValue = ($increment * 5) / 49;
 
@@ -272,7 +299,13 @@ sub checkUsageValue {
 
 sub TestSQUIDsUsage {
 	my( $testName ) = @_;
+	return TestResourceUsage( $testName, "SQUID" );
+}
 
+sub TestResourceUsage {
+	my( $testName, $resourceName ) = @_;
+
+	$callbackResourceName = $resourceName;
 	Condor::RegisterUsage( $usage );
 	CondorTest::RegisterExitedAbnormal( $testName, $abnormal );
 	CondorTest::RegisterAbort( $testName, $aborted );
@@ -283,26 +316,27 @@ sub TestSQUIDsUsage {
 	CondorTest::RegisterEvictedWithoutCheckpoint( $testName, $on_evictedwithoutcheckpoint );
 	CondorTest::RegisterExitedFailure( $testName, $failure );
 
+	%jobIDToRESOURCEsMap = ();
 	my $submitFileName = "cmr-monitor-basic.cmd";
 	if( CondorTest::RunTest( $testName, $submitFileName, 0 ) ) {
 
 		# For each job, check its history file for SQUIDsUsage and see if that
 		# value is sane, given what we know that the monitor is reporting for
 		# each device.
-		foreach my $jobID (keys %jobIDToSQUIDsMap) {
-			my $SQUID = $jobIDToSQUIDsMap{ $jobID };
-			my $increment = $squidIncrements{ $SQUID };
+		foreach my $jobID (keys %jobIDToRESOURCEsMap) {
+			my $RESOURCE = $jobIDToRESOURCEsMap{ $jobID };
+			my $increment = $increments{ $resourceName }->{ $RESOURCE };
 			if(! defined( $increment )) {
-				die( "Failure: SQUID '${SQUID}' invalid.\n" );
+				die( "Failure: resource '${RESOURCE}' invalid.\n" );
 			}
 
-			my $jobAds = parseHistoryFile( $jobID, "SQUIDsUsage" );
+			my $jobAds = parseHistoryFile( $jobID, "${resourceName}sUsage" );
 			if( scalar( @{$jobAds} ) != 1 ) {
 				die( "Did not get exactly one (" . scalar( @{$jobAds} ) . ") job ad for job ID '${jobID}', aborting.\n" );
 			}
 
 			foreach my $ad (@{$jobAds}) {
-				my $value = $ad->{ "SQUIDsUsage" };
+				my $value = $ad->{ "${resourceName}sUsage" };
 
 				# The event log's report is rounded for readability.
 				my $elValue = sprintf( "%.2f", $value );
@@ -311,14 +345,14 @@ sub TestSQUIDsUsage {
 				}
 
 				if( checkUsageValue( $increment, $value ) ) {
-					RegisterResult( 1, check_name => $SQUID . "-usage", test_name => $testName );
+					RegisterResult( 1, check_name => $RESOURCE . "-usage", test_name => $testName );
 				} else {
-					RegisterResult( 0, check_name => $SQUID . "-usage", test_name => $testName );
+					RegisterResult( 0, check_name => $RESOURCE . "-usage", test_name => $testName );
 				}
 			}
 		}
 	} else {
-		die( "Error: $testName: CondorTest::RunTest(${submitFileName}) failed\n" );
+		die( "Error: $testName: CondorTest::RunTest(cmr-monitor-basic) failed\n" );
 	}
 
 	my $clusterID;
@@ -328,9 +362,19 @@ sub TestSQUIDsUsage {
 	};
 
 	# Poll the .update.ad file and then check its results.
-	%jobIDToSQUIDsMap = ();
-	$submitFileName = "cmr-monitor-basic-ad.cmd";
-	if( CondorTest::RunTest( $testName, $submitFileName, 0, $setClusterID ) ) {
+	%jobIDToRESOURCEsMap = ();
+	my %submitFileHash = (
+		executable	=> 'cmr-monitor-basic-ad.pl',
+		arguments	=> "53 ${resourceName}",
+		output		=> 'cmr-monitor-basic-ad.$(Cluster).$(Process).out',
+		error		=> 'cmr-monitor-basic-ad.$(Cluster).$(Process).err',
+		log			=> 'cmr-monitor-basic-ad.log',
+
+		"request_${resourceName}s"	=> '1',
+		LeaveJobInQueue				=> 'true',
+		_queue						=> '8'
+	);
+	if( CondorTest::RunTest2( name => $testName, submit_hash => \%submitFileHash, want_checkpoint => 0, callback => $setClusterID ) ) {
 		my $lineCount = 0;
 		my $outputFileBaseName = "cmr-monitor-basic-ad.${clusterID}.";
 		for( my $i = 0; $i < 8; ++$i ) {
@@ -341,17 +385,17 @@ sub TestSQUIDsUsage {
 
 			while( my $line = <$fh> ) {
 				++$lineCount;
-				my( $SQUID, $value ) = split( ' ', $line );
+				my( $RESOURCE, $value ) = split( ' ', $line );
 
-				my $increment = $squidIncrements{ $SQUID };
+				my $increment = $increments{ $resourceName }->{ $RESOURCE };
 				if(! defined( $increment )) {
-					die( "Failure: SQUID '${SQUID}' invalid.\n" );
+					die( "Failure: ${resourceName} '${RESOURCE}' invalid.\n" );
 				}
 
 				if( checkUsageValue( $increment, $value ) ) {
-					RegisterResult( 1, check_name => $SQUID . "-update.ad-${lineCount}", test_name => $testName );
+					RegisterResult( 1, check_name => $RESOURCE . "-update.ad-${lineCount}", test_name => $testName );
 				} else {
-					RegisterResult( 0, check_name => $SQUID . "-update.ad-${lineCount}", test_name => $testName );
+					RegisterResult( 0, check_name => $RESOURCE . "-update.ad-${lineCount}", test_name => $testName );
 				}
 			}
 
@@ -363,7 +407,7 @@ sub TestSQUIDsUsage {
 			die( "Error: $testName: 'cmr-monitor-basic-ad.out' had $lineCount lines, not 32.\n" );
 		}
 	} else {
-		die( "Error: $testName: CondorTest::RunTest(${submitFileName}) failed\n" );
+		die( "Error: $testName: CondorTest::RunTest(cmr-monitor-basic-ad) failed\n" );
 	}
 
 	return 0;
@@ -439,6 +483,21 @@ my %squidSequences = (
 	"SQUID3" => [ 44, 44, 14, 94, 54, 54 ]
 );
 
+#
+# This hash is from cmr-tako-monitor and has to be changed when it does.
+#
+my %takoSequences = (
+	"TAKO0" => [ 5100, 5100, 9100, 1100, 4100, 4100 ],
+	"TAKO1" => [ 4200, 4200, 9200, 1200, 5200, 5200 ],
+	"TAKO2" => [ 5300, 5300, 1300, 9300, 4300, 4300 ],
+	"TAKO3" => [ 4400, 4400, 1400, 9400, 5400, 5400 ]
+);
+
+my %sequences = (
+	"SQUID"	=> \%squidSequences,
+	"TAKO" => \%takoSequences
+);
+
 sub peaksAreAsExpected {
 	my( $peaks, $expected ) = @_;
 
@@ -487,7 +546,13 @@ sub peaksMatchValues {
 
 sub TestSQUIDsMemoryUsage {
 	my( $testName ) = @_;
+	return TestResourceMemoryUsage( $testName, "SQUID" );
+}
 
+sub TestResourceMemoryUsage {
+	my( $testName, $resourceName ) = @_;
+
+	$callbackResourceName = $resourceName;
 	CondorTest::RegisterExitedAbnormal( $testName, $abnormal );
 	CondorTest::RegisterAbort( $testName, $aborted );
 	CondorTest::RegisterHold( $testName, $held );
@@ -503,8 +568,19 @@ sub TestSQUIDsMemoryUsage {
 		$clusterID = $cID;
 	};
 
-	my $submitFileName = "cmr-monitor-memory-ad.cmd";
-	if( CondorTest::RunTest( $testName, $submitFileName, 0, $setClusterID ) ) {
+	%jobIDToRESOURCEsMap = ();
+	my %submitFileHash = (
+		executable	=> 'cmr-monitor-memory-ad.pl',
+		arguments	=> "71 ${resourceName}",
+		output		=> 'cmr-monitor-memory-ad.$(Cluster).$(Process).out',
+		error		=> 'cmr-monitor-memory-ad.$(Cluster).$(Process).err',
+		log			=> 'cmr-monitor-memory-ad.log',
+
+		"request_${resourceName}s"	=> '1',
+		LeaveJobInQueue				=> 'true',
+		_queue						=> '8'
+	);
+	if( CondorTest::RunTest2( name => $testName, submit_hash => \%submitFileHash, want_checkpoint => 0, callback => $setClusterID ) ) {
 		my $lineCount = 0;
 		my $outputFileBaseName = "cmr-monitor-memory-ad.${clusterID}.";
 		for( my $i = 0; $i < 8; ++$i ) {
@@ -514,40 +590,46 @@ sub TestSQUIDsMemoryUsage {
 				die( "Error: ${testName}: could not open '${outputFileName}'\n" );
 
 			my $sequence = [];
-			my $firstSQUID = undef;
+			my $firstRESOURCE = undef;
 			while( my $line = <$fh> ) {
 				++$lineCount;
-				my( $SQUID, $value ) = split( ' ', $line );
+				my( $RESOURCE, $value ) = split( ' ', $line );
 				if( $value eq "undefined" ) { next; }
 
-				if(! defined( $firstSQUID )) {
-					$firstSQUID = $SQUID;
+				if(! defined( $firstRESOURCE )) {
+					$firstRESOURCE = $RESOURCE;
 				} else {
-					if( $SQUID ne $firstSQUID ) {
-						die( "SQUIDs switched mid-job, aborting.\n" );
+					if( $RESOURCE ne $firstRESOURCE ) {
+						die( "Resources switched mid-job, aborting.\n" );
 					}
 				}
 
 				push( @{$sequence}, $value );
 			}
 
-			my $properSequence = $squidSequences{ $firstSQUID };
+			my $properSequence = $sequences{ $resourceName }->{ $firstRESOURCE };
+
 			my $offset = 0;
-			for( ; $properSequence->[$offset] != $sequence->[0]; ++$offset ) { ; }
+			for( ; $properSequence->[$offset] != $sequence->[0]; ++$offset ) {
+				if( $offset >= scalar(@{$sequence}) ) {
+					die( "Failed to find offset of '" . join( " ", @{$sequence} ) . "' in '" . join( " ", @{$properSequence} ) . "', aborting.\n" );
+				}
+			}
+
 			if( peaksMatchValues( $sequence, $offset, $properSequence ) ) {
-				RegisterResult( 1, check_name => $firstSQUID . "-sequence", test_name => $testName );
+				RegisterResult( 1, check_name => $firstRESOURCE . "-sequence-${i}", test_name => $testName );
 			} elsif( $offset == 0 && peaksMatchValues( $sequence, $offset + 1, $properSequence ) ) {
-				RegisterResult( 1, check_name => $firstSQUID . "-sequence", test_name => $testName );
+				RegisterResult( 1, check_name => $firstRESOURCE . "-sequence-${i}", test_name => $testName );
 			} elsif( $offset == 4 && peaksMatchValues( $sequence, $offset + 1, $properSequence ) ) {
-				RegisterResult( 1, check_name => $firstSQUID . "-sequence", test_name => $testName );
+				RegisterResult( 1, check_name => $firstRESOURCE . "-sequence-${i}", test_name => $testName );
 			} else {
-				RegisterResult( 0, check_name => $firstSQUID . "-sequence", test_name => $testName );
+				RegisterResult( 0, check_name => $firstRESOURCE . "-sequence-${i}", test_name => $testName );
 			}
 
 			close( $fh );
 		}
 	} else {
-		die( "Error: $testName: CondorTest::RunTest(${submitFileName}) failed\n" );
+		die( "Error: $testName: CondorTest::RunTest(cmr-monitor-memory) failed\n" );
 	}
 }
 

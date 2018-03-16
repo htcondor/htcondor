@@ -58,19 +58,25 @@ my $testDescription = 'Custom Machine Resources - Monitor Test Many';
 #
 # Verify the configuration before running the test.
 #
-CustomMachineResource::TestSlotAndSQUIDsCount( 16, $testName );
+CustomMachineResource::TestSlotAndResourceCount( 16, $testName, "SQUID" );
+CustomMachineResource::TestSlotAndResourceCount( 16, $testName, "TAKO" );
 
 #
 # Verify that the monitor's report is being read correctly.
 #
-CustomMachineResource::TestUptimeSQUIDsSeconds( $testName );
+CustomMachineResource::TestUptimeResourceSeconds( $testName, "SQUID" );
+CustomMachineResource::TestUptimeResourceSeconds( $testName, "TAKO" );
 
 #
 # Verify that we're computing the usage correctly.
 #
-CustomMachineResource::TestSQUIDsUsage( $testName );
+CustomMachineResource::TestResourceUsage( $testName, "SQUID" );
+CustomMachineResource::TestResourceUsage( $testName, "TAKO" );
 
 #
 # Verify that we're computing the peak usage correctly.
 #
-exit( CustomMachineResource::TestSQUIDsMemoryUsage( $testName ) );
+CustomMachineResource::TestResourceMemoryUsage( $testName, "SQUID" );
+CustomMachineResource::TestResourceMemoryUsage( $testName, "TAKO" );
+
+exit( 0 );
