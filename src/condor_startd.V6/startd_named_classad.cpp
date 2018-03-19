@@ -147,8 +147,10 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 
 			double oldValue;
 			if( to->EvaluateAttrNumber( name, oldValue ) ) {
+				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f %s %f\n", to, from, name.c_str(), oldValue, metric.c_str(), newValue );
 				to->InsertAttr( name, metric( oldValue, newValue ) );
 			} else {
+				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f\n", to, from, name.c_str(), newValue );
 				to->InsertAttr( name, newValue );
 			}
 
@@ -184,11 +186,14 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 
 			expr = to->Lookup( perJobAttributeName );
 			if( expr == NULL ) {
+				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f\n", to, from, perJobAttributeName.c_str(), oldValue );
 				to->CopyAttribute( perJobAttributeName.c_str(), perJobAttributeName.c_str(), from );
 			} else {
 				classad::Value v;
+				expr->Evaluate( v );
 				if( v.IsNumber( oldValue ) &&
 				  from->EvaluateAttrNumber( perJobAttributeName, newValue ) ) {
+					// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f %s %f\n", to, from, perJobAttributeName.c_str(), oldValue, metric.c_str(), newValue );
 					to->InsertAttr( perJobAttributeName, metric( oldValue, newValue ) );
 				}
 			}
