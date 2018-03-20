@@ -510,6 +510,9 @@ if (BUILD_TESTING)
 
 		condor_pl_test(cmr-monitor-many "custom machine resource monitors (many)" "core;quick;full")
 		condor_pl_test(cmr-monitor-many-partitionable "custom machine resource monitors (many) - partitionable" "core;quick;full")
+
+		condor_pl_test(cmr-monitor-many-instances "custom machine resource monitors (many, many instances)" "core;quick;full")
+		condor_pl_test(cmr-monitor-many-instances-partitionable "custom machine resource monitors (many, many instances) - partitionable" "core;quick;full")
 	endif ( LINUX )
 
 	condor_pl_test(job_concurrency_limitsS "Check concurrency" "core;quick;full")

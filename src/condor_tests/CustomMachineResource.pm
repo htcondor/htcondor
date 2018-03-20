@@ -303,7 +303,7 @@ sub TestSQUIDsUsage {
 }
 
 sub TestResourceUsage {
-	my( $testName, $resourceName ) = @_;
+	my( $testName, $resourceName, $submitFileFragment ) = @_;
 
 	$callbackResourceName = $resourceName;
 	Condor::RegisterUsage( $usage );
@@ -317,17 +317,40 @@ sub TestResourceUsage {
 	CondorTest::RegisterExitedFailure( $testName, $failure );
 
 	%jobIDToRESOURCEsMap = ();
-	my $submitFileName = "cmr-monitor-basic.cmd";
-	if( CondorTest::RunTest( $testName, $submitFileName, 0 ) ) {
+	my %submitFileHash = (
+		executable		=> 'x_sleep.pl',
+		arguments		=> '53',
+		output			=> 'cmr-monitor-basic.$(Cluster).$(Process).out',
+		error			=> 'cmr-monitor-basic.$(Cluster).$(Process).err',
+		log				=> 'cmr-monitor-basic.log',
 
-		# For each job, check its history file for SQUIDsUsage and see if that
-		# value is sane, given what we know that the monitor is reporting for
-		# each device.
+		"request_${resourceName}s"		=> '1',
+		LeaveJobInQueue					=> 'true',
+		_queue							=> '4'
+	);
+
+	if( defined( $submitFileFragment ) ) {
+		foreach my $key (keys %${submitFileFragment}) {
+			$submitFileHash{ $key } = $submitFileFragment->{ $key };
+		}
+	}
+
+	if( CondorTest::RunTest2( name => $testName, submit_hash => \%submitFileHash, want_checkpoint => 0 ) ) {
+
+		# For each job, check its history file for <Resource>Usage and see if
+		# that value is sane, given what we know that the monitor is reporting
+		# for each device.
 		foreach my $jobID (keys %jobIDToRESOURCEsMap) {
-			my $RESOURCE = $jobIDToRESOURCEsMap{ $jobID };
-			my $increment = $increments{ $resourceName }->{ $RESOURCE };
-			if(! defined( $increment )) {
-				die( "Failure: resource '${RESOURCE}' invalid.\n" );
+			my $totalIncrement = 0;
+			my $assignedResources = $jobIDToRESOURCEsMap{ $jobID };
+			foreach my $resource (split( /[, ]+/, $assignedResources )) {
+				my $increment = $increments{ $resourceName }->{ $resource };
+
+				if(! defined( $increment )) {
+					die( "Failure: resource '${resource}' invalid.\n" );
+				}
+
+				$totalIncrement += $increment;
 			}
 
 			my $jobAds = parseHistoryFile( $jobID, "${resourceName}sUsage" );
@@ -344,10 +367,10 @@ sub TestResourceUsage {
 					die( "Value in event log (" . $eventLogUsage{ $jobID } . ") does not equal value in history file (${value}), aborting.\n" );
 				}
 
-				if( checkUsageValue( $increment, $value ) ) {
-					RegisterResult( 1, check_name => $RESOURCE . "-usage", test_name => $testName );
+				if( checkUsageValue( $totalIncrement, $value ) ) {
+					RegisterResult( 1, check_name => $assignedResources . "-usage", test_name => $testName );
 				} else {
-					RegisterResult( 0, check_name => $RESOURCE . "-usage", test_name => $testName );
+					RegisterResult( 0, check_name => $assignedResources . "-usage", test_name => $testName );
 				}
 			}
 		}
@@ -363,7 +386,7 @@ sub TestResourceUsage {
 
 	# Poll the .update.ad file and then check its results.
 	%jobIDToRESOURCEsMap = ();
-	my %submitFileHash = (
+	%submitFileHash = (
 		executable	=> 'cmr-monitor-basic-ad.pl',
 		arguments	=> "53 ${resourceName}",
 		output		=> 'cmr-monitor-basic-ad.$(Cluster).$(Process).out',
@@ -374,6 +397,13 @@ sub TestResourceUsage {
 		LeaveJobInQueue				=> 'true',
 		_queue						=> '8'
 	);
+
+	if( defined( $submitFileFragment ) ) {
+		foreach my $key (keys %${submitFileFragment}) {
+			$submitFileHash{ $key } = $submitFileFragment->{ $key };
+		}
+	}
+
 	if( CondorTest::RunTest2( name => $testName, submit_hash => \%submitFileHash, want_checkpoint => 0, callback => $setClusterID ) ) {
 		my $lineCount = 0;
 		my $outputFileBaseName = "cmr-monitor-basic-ad.${clusterID}.";
@@ -387,12 +417,18 @@ sub TestResourceUsage {
 				++$lineCount;
 				my( $RESOURCE, $value ) = split( ' ', $line );
 
-				my $increment = $increments{ $resourceName }->{ $RESOURCE };
-				if(! defined( $increment )) {
-					die( "Failure: ${resourceName} '${RESOURCE}' invalid.\n" );
+				my $totalIncrement = 0;
+				foreach my $resource (split( /[, ]+/, $RESOURCE )) {
+					my $increment = $increments{ $resourceName }->{ $resource };
+
+					if(! defined( $increment )) {
+						die( "Failure: resource '${resource}' invalid.\n" );
+					}
+
+					$totalIncrement += $increment;
 				}
 
-				if( checkUsageValue( $increment, $value ) ) {
+				if( checkUsageValue( $totalIncrement, $value ) ) {
 					RegisterResult( 1, check_name => $RESOURCE . "-update.ad-${lineCount}", test_name => $testName );
 				} else {
 					RegisterResult( 0, check_name => $RESOURCE . "-update.ad-${lineCount}", test_name => $testName );
@@ -515,6 +551,11 @@ sub peaksAreAsExpected {
 	return 1;
 }
 
+sub min {
+	my( $a, $b ) = @_;
+	if( $a < $b ) { return $a; } else { return $b; }
+}
+
 sub max {
 	my( $a, $b ) = @_;
 	if( $a > $b ) { return $a; } else { return $b; }
@@ -550,7 +591,7 @@ sub TestSQUIDsMemoryUsage {
 }
 
 sub TestResourceMemoryUsage {
-	my( $testName, $resourceName ) = @_;
+	my( $testName, $resourceName, $submitFileFragment ) = @_;
 
 	$callbackResourceName = $resourceName;
 	CondorTest::RegisterExitedAbnormal( $testName, $abnormal );
@@ -580,6 +621,13 @@ sub TestResourceMemoryUsage {
 		LeaveJobInQueue				=> 'true',
 		_queue						=> '8'
 	);
+
+	if( defined( $submitFileFragment ) ) {
+		foreach my $key (keys %${submitFileFragment}) {
+			$submitFileHash{ $key } = $submitFileFragment->{ $key };
+		}
+	}
+
 	if( CondorTest::RunTest2( name => $testName, submit_hash => \%submitFileHash, want_checkpoint => 0, callback => $setClusterID ) ) {
 		my $lineCount = 0;
 		my $outputFileBaseName = "cmr-monitor-memory-ad.${clusterID}.";
@@ -608,12 +656,31 @@ sub TestResourceMemoryUsage {
 			}
 
 			my $properSequence = $sequences{ $resourceName }->{ $firstRESOURCE };
+			if(! defined( $properSequence )) {
+				print( "Did not find sequence for '$firstRESOURCE', constructing...\n" );
+				my @ps;
+				foreach my $resource (split( /[, ]+/, $firstRESOURCE )) {
+					my $partialSequence = $sequences{ $resourceName }->{ $resource };
+					print( "Found sequence '" . join( " ", @{$partialSequence} ) . "'\n" );
+					if(! defined( $properSequence )) {
+						@ps = @{$partialSequence};
+					} else {
+						for( my $i = 0; $i < scalar(@{$partialSequence}); ++$i ) {
+							$ps[$i] = max( $properSequence->[$i], $partialSequence->[$i] );
+						}
+					}
+				}
+				$properSequence = \@ps;
+				print( "Constructed sequence '" . join( " ", @{$properSequence} ) . "' for '$firstRESOURCE'.\n" );
+			}
 
 			my $offset = 0;
-			for( ; $properSequence->[$offset] != $sequence->[0]; ++$offset ) {
-				if( $offset >= scalar(@{$sequence}) ) {
-					die( "Failed to find offset of '" . join( " ", @{$sequence} ) . "' in '" . join( " ", @{$properSequence} ) . "', aborting.\n" );
-				}
+			my $length = min( scalar( @{$properSequence} ), scalar( @{$sequence} ) );
+			for( ; $offset < $length; ++$offset ) {
+				if( $properSequence->[$offset] == $sequence->[0] ) { last; }
+			}
+			if( $offset == $length ) {
+				die( "Failed to find offset of '" . join( " ", @{$sequence} ) . "' in '" . join( " ", @{$properSequence} ) . "', aborting.\n" );
 			}
 
 			if( peaksMatchValues( $sequence, $offset, $properSequence ) ) {

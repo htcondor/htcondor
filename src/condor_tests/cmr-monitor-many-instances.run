@@ -35,7 +35,7 @@ use CustomMachineResource;
 
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
-NUM_CPUS = 16
+NUM_CPUS = 4
 
 MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
 use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor-both, SUM:SQUIDs, PEAK:SQUIDsMemory )
@@ -43,27 +43,27 @@ use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor-both,
 MACHINE_RESOURCE_INVENTORY_TAKOs = $(TEST_DIR)/cmr-tako-discovery
 use feature : monitor( TAKOs, Periodic, 10, $(TEST_DIR)/cmr-tako-monitor, SUM:TAKOs, PEAK:TAKOsMemory )
 
-SCHEDD_CLUSTER_INITIAL_VALUE = 8000
+SCHEDD_CLUSTER_INITIAL_VALUE = 9000
+
+NUM_SLOTS = 2
+NUM_SLOTS_TYPE_1 = 2
+SLOT_TYPE_1 = SQUIDs=2 TAKOs=2 CPUs=2
 
 UPDATE_INTERVAL = 20
 STARTER_UPDATE_INTERVAL = 20
 SHADOW_QUEUE_UPDATE_INTERVAL = 20
 
-NUM_SLOTS = 1
-NUM_SLOTS_TYPE_1 = 1
-SLOT_TYPE_1 = 100%
-SLOT_TYPE_1_PARTITIONABLE = TRUE
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
-my $testName = 'cmr_monitor_many';
-my $testDescription = 'Custom Machine Resources - Monitor Test Many';
+my $testName = 'cmr_monitor_many_instances';
+my $testDescription = 'Custom Machine Resources - Monitor Test Many, Multiple Instances';
 
 #
 # Verify the configuration before running the test.
 #
-CustomMachineResource::TestSlotAndResourceCount( 1, $testName, "SQUID" );
-CustomMachineResource::TestSlotAndResourceCount( 1, $testName, "TAKO" );
+CustomMachineResource::TestSlotAndResourceCount( 2, $testName, "SQUID" );
+CustomMachineResource::TestSlotAndResourceCount( 2, $testName, "TAKO" );
 
 #
 # Verify that the monitor's report is being read correctly.
@@ -72,25 +72,15 @@ CustomMachineResource::TestUptimeResourceSeconds( $testName, "SQUID" );
 CustomMachineResource::TestUptimeResourceSeconds( $testName, "TAKO" );
 
 #
-# With partitionable slots, we have the job request the resource
-# configuration we want to test.
-#
-my %submitFileFragment = (
-	request_SQUIDs	=> '1',
-	request_TAKOS	=> '1'
-);
-
-#
 # Verify that we're computing the usage correctly.
 #
-CustomMachineResource::TestResourceUsage( $testName, "SQUID", \%submitFileFragment );
-CustomMachineResource::TestResourceUsage( $testName, "TAKO", \%submitFileFragment  );
+CustomMachineResource::TestResourceUsage( $testName, "SQUID" );
+CustomMachineResource::TestResourceUsage( $testName, "TAKO" );
 
 #
 # Verify that we're computing the peak usage correctly.
 #
-CustomMachineResource::TestResourceMemoryUsage( $testName, "SQUID", \%submitFileFragment );
-CustomMachineResource::TestResourceMemoryUsage( $testName, "TAKO", \%submitFileFragment );
+CustomMachineResource::TestResourceMemoryUsage( $testName, "SQUID" );
+CustomMachineResource::TestResourceMemoryUsage( $testName, "TAKO" );
 
 exit( 0 );
-
