@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -83,24 +82,19 @@ my @nodesOutputRegex = (
 	"-01\.000(.*)Factory submitted",
 	"000\.000(.*)Job submitted",
 	"001\.000(.*)Job submitted",
-	# After two jobs are submitted, we should see a terminate event before any
-	# more submit events.
 	"Job terminated",
 	"002\.000(.*)Job submitted",
-	"003\.000(.*)Job submitted",
-	# Continue keeping an eye out for terminate events. We should see enough to
-	# guarantee that jobs are not getting materialized all at once, however
-	# beyond this we can't tell when they will appear.
+	# From this point until the end of NodeA, there is no guaranteed ordering of 
+	# events. Our main focus is to make sure that not all jobs are getting
+	# submitted at once. We only need to look for every other submit event, and 
+	# make sure they are being interspersed with terminate events.
 	# Is there a better way to do this?
 	"Job terminated",
 	"004\.000(.*)Job submitted",
-	"005\.000(.*)Job submitted",
 	"Job terminated",
 	"006\.000(.*)Job submitted",
-	"007\.000(.*)Job submitted",
 	"Job terminated",
 	"008\.000(.*)Job submitted",
-	"009\.000(.*)Job submitted",
 	"Job terminated",
 	"-01\.000(.*)Factory removed",
 	# Now we move on to the NodeB jobs. The second factory should not get 
@@ -110,7 +104,6 @@ my @nodesOutputRegex = (
 	"001\.000(.*)Job submitted",
 	"Job terminated",
 	"002\.000(.*)Job submitted",
-	"003\.000(.*)Job submitted",
 	"Job terminated",
 	"004\.000(.*)Job submitted",
 	"Job terminated",
