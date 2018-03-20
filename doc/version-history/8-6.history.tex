@@ -70,6 +70,10 @@ file gets overwritten or deleted, and if so, exits immediately with an error.
 file gets overwitten.
 \Ticket{6582}
 
+\item Fixed a bug where \Condor{submit} would not add needed file transfer plugins to the
+Requirements expression when should\_transfer\_files was IF\_NEEDED, which is the default.
+\Ticket{4692}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
