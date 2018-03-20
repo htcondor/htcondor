@@ -141,7 +141,7 @@ class Matchmaker : public Service
 		bool getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, float& groupUsage);
 
 		void forwardAccountingData(std::set<std::string> &names);
-		void forwardGroupAccounting(DCCollector &collector, GroupEntry *ge);
+		void forwardGroupAccounting(CollectorList *cl, GroupEntry *ge);
 
 		void calculateRanks(ClassAd &request, ClassAd *offer, PreemptState candidatePreemptState, double &candidateRankValue, double &candidatePreJobRankValue, double &candidatePostJobRankValue, double &candidatePreemptRankValue);
 
