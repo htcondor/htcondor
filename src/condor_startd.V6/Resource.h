@@ -213,6 +213,7 @@ public:
 	void	refresh_classad( amask_t mask );	
 	void	reconfig( void );
 	void	publish_slot_config_overrides(ClassAd * cad);
+	void	init_total_disk(const Resource * pslot);
 
 	void	update( void );		// Schedule to update the central manager.
 	void		do_update( void );			// Actually update the CM

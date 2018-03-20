@@ -3230,6 +3230,16 @@ Resource::swap_claims(Resource* ripa, Resource* ripb)
 }
 
 
+void Resource::init_total_disk(const Resource * pslot)
+{
+	if ( ! pslot)
+		return;
+	// no need to do this if we are constantly recomputing free disk space
+	if (param_boolean("STARTD_RECOMPUTE_DISK_FREE", false))
+		return;
+
+	r_attr->init_total_disk(pslot->r_attr);
+}
 
 Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
 {
@@ -3448,6 +3458,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			return NULL;
 		}
 
+			// set dslot total disk from pslot total disk (if appropriate)
+		new_rip->init_total_disk(rip);
 
 			// Initialize the rest of the Resource
 		new_rip->compute( A_ALL );

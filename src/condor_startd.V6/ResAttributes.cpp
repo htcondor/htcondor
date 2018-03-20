@@ -1345,9 +1345,8 @@ CpuAttributes::compute( amask_t how_much )
 			// If the admin is forcing DISK via param, set that here,
 			// else calculate current free disk space for exec partition
 		long long temp_disk = -1;
-		char *disk_as_str = param("DISK");
+		auto_free_ptr disk_as_str(param("DISK"));
 		if (disk_as_str && string_is_long_param(disk_as_str, temp_disk)) {
-			free(disk_as_str);
 			c_total_disk = temp_disk;
 		} else {
 			// only calculate total_disk once
