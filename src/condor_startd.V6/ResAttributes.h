@@ -363,6 +363,11 @@ public:
     const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
     const MachAttributes* get_mach_attr() { return map; }
 
+	void init_total_disk(const CpuAttributes* r_attr) {
+		if (r_attr && (r_attr->c_execute_partition_id == c_execute_partition_id)) {
+			c_total_disk = r_attr->c_total_disk;
+		}
+	}
 	static void swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags);
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);

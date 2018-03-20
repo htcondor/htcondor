@@ -74,6 +74,11 @@ file gets overwitten.
 Requirements expression when should\_transfer\_files was IF\_NEEDED, which is the default.
 \Ticket{4692}
 
+\item Fixed a bug where the configuration paramter \Macro{STARTD\_RECOMPUTE\_DISK\_FREE} was
+not honored when creating a dynamic slot from a partitionable slot, which would sometimes result
+in the dynamic slot being provisioned with not enough disk space and then failing to match the job.
+\Ticket{6614}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
