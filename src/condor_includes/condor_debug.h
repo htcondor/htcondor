@@ -323,6 +323,10 @@ void dprintf_wrapup_fork_child( bool cloned = false );
 
 bool debug_open_fds(std::map<int,bool> &open_fds);
 
+// fetch a monotonic timer intended for measuring the time spent
+// doing various things.  this timer can NOT be counted on to
+// be a normal timestamp.  The seconds value might be epoch time
+// or it might be uptime depending on which system clock is used.
 extern double _condor_debug_get_time_double();
 
 class _condor_runtime

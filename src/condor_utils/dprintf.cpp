@@ -241,7 +241,7 @@ int InDBX = 0;
 
 // fetch a monotonic timer intended for measuring the time spent
 // doing various things.  this timer can NOT be counted on to
-// track wall clock time.  The seconds value might be epoch time
+// be a normal timestamp.  The seconds value might be epoch time
 // or it might be uptime depending on which system clock is used.
 double _condor_debug_get_time_double()
 {
