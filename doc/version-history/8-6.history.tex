@@ -37,6 +37,11 @@ The details of each version are described below.
 HTCondor python bindings libraries into the PYTHONPATH environment variable.
 \Ticket{6607}
 
+\item If the user sets the environment variable OMP\_NUM\_THREADS to some value
+in the submit file, trust the user, and do not overwrite this environment
+variable when the job runs to the actual number of provisioned cpus.
+\Ticket{6606}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
