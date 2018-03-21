@@ -84,13 +84,13 @@ my %submitFileFragment = (
 #
 # Verify that we're computing the usage correctly.
 #
-CustomMachineResource::TestResourceUsage( $testName, "SQUID", \%submitFileFragment );
-CustomMachineResource::TestResourceUsage( $testName, "TAKO", \%submitFileFragment );
+CustomMachineResource::TestResourceUsage( $testName, "SQUID", \%submitFileFragment, 2 );
+CustomMachineResource::TestResourceUsage( $testName, "TAKO", \%submitFileFragment, 2 );
 
 #
 # Verify that we're computing the peak usage correctly.
 #
-CustomMachineResource::TestResourceMemoryUsage( $testName, "SQUID", \%submitFileFragment );
-CustomMachineResource::TestResourceMemoryUsage( $testName, "TAKO", \%submitFileFragment );
+CustomMachineResource::TestResourceMemoryUsage( $testName, "SQUID", \%submitFileFragment, 2 );
+CustomMachineResource::TestResourceMemoryUsage( $testName, "TAKO", \%submitFileFragment, 2 );
 
 exit( 0 );

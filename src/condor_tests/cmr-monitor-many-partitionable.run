@@ -77,7 +77,7 @@ CustomMachineResource::TestUptimeResourceSeconds( $testName, "TAKO" );
 #
 my %submitFileFragment = (
 	request_SQUIDs	=> '1',
-	request_TAKOS	=> '1'
+	request_TAKOs	=> '1'
 );
 
 #

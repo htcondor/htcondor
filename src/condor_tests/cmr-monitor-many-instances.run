@@ -74,13 +74,13 @@ CustomMachineResource::TestUptimeResourceSeconds( $testName, "TAKO" );
 #
 # Verify that we're computing the usage correctly.
 #
-CustomMachineResource::TestResourceUsage( $testName, "SQUID" );
-CustomMachineResource::TestResourceUsage( $testName, "TAKO" );
+CustomMachineResource::TestResourceUsage( $testName, "SQUID", undef, 2 );
+CustomMachineResource::TestResourceUsage( $testName, "TAKO", undef, 2 );
 
 #
 # Verify that we're computing the peak usage correctly.
 #
-CustomMachineResource::TestResourceMemoryUsage( $testName, "SQUID" );
-CustomMachineResource::TestResourceMemoryUsage( $testName, "TAKO" );
+CustomMachineResource::TestResourceMemoryUsage( $testName, "SQUID", undef, 2 );
+CustomMachineResource::TestResourceMemoryUsage( $testName, "TAKO", undef, 2 );
 
 exit( 0 );

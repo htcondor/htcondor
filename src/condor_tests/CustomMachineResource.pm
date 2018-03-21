@@ -302,8 +302,16 @@ sub TestSQUIDsUsage {
 	return TestResourceUsage( $testName, "SQUID" );
 }
 
+# Instead of implementing $qf (for Queueing Factor) here and in
+# TestResourceMemoryUsage(), we could also replace $resourceName and
+# $submitFileFragment by instead accepting a hash of resource names
+# mapped to request counts and computing $qf and $submitFileFragment
+# to match; we could save even more time when running tests by
+# arranging for the job to report on multiple resource usages
+# (thus only having to call this function and TestResourceMemoryUsage()
+# once each).
 sub TestResourceUsage {
-	my( $testName, $resourceName, $submitFileFragment ) = @_;
+	my( $testName, $resourceName, $submitFileFragment, $qf ) = @_;
 
 	$callbackResourceName = $resourceName;
 	Condor::RegisterUsage( $usage );
@@ -334,6 +342,9 @@ sub TestResourceUsage {
 			$submitFileHash{ $key } = $submitFileFragment->{ $key };
 		}
 	}
+
+	if(! defined( $qf )) { $qf = 1; }
+	$submitFileHash{ _queue } = $submitFileHash{ _queue  } / $qf;
 
 	if( CondorTest::RunTest2( name => $testName, submit_hash => \%submitFileHash, want_checkpoint => 0 ) ) {
 
@@ -404,10 +415,14 @@ sub TestResourceUsage {
 		}
 	}
 
+	if( defined( $qf ) ) {
+		$submitFileHash{ _queue } = $submitFileHash{ _queue  } / $qf;
+	}
+
 	if( CondorTest::RunTest2( name => $testName, submit_hash => \%submitFileHash, want_checkpoint => 0, callback => $setClusterID ) ) {
 		my $lineCount = 0;
 		my $outputFileBaseName = "cmr-monitor-basic-ad.${clusterID}.";
-		for( my $i = 0; $i < 8; ++$i ) {
+		for( my $i = 0; $i < (8 / $qf); ++$i ) {
 			my $outputFileName = $outputFileBaseName . $i . ".out";
 
 			open( my $fh, '<', $outputFileName ) or
@@ -439,7 +454,7 @@ sub TestResourceUsage {
 		}
 
 		# Each test job appends four lines to the log.
-		if( $lineCount != 32 ) {
+		if( $lineCount != (32 / $qf) ) {
 			die( "Error: $testName: 'cmr-monitor-basic-ad.out' had $lineCount lines, not 32.\n" );
 		}
 	} else {
@@ -591,7 +606,7 @@ sub TestSQUIDsMemoryUsage {
 }
 
 sub TestResourceMemoryUsage {
-	my( $testName, $resourceName, $submitFileFragment ) = @_;
+	my( $testName, $resourceName, $submitFileFragment, $qf ) = @_;
 
 	$callbackResourceName = $resourceName;
 	CondorTest::RegisterExitedAbnormal( $testName, $abnormal );
@@ -628,10 +643,14 @@ sub TestResourceMemoryUsage {
 		}
 	}
 
+	if( defined( $qf ) ) {
+		$submitFileHash{ _queue } = $submitFileHash{ _queue  } / $qf;
+	}
+
 	if( CondorTest::RunTest2( name => $testName, submit_hash => \%submitFileHash, want_checkpoint => 0, callback => $setClusterID ) ) {
 		my $lineCount = 0;
 		my $outputFileBaseName = "cmr-monitor-memory-ad.${clusterID}.";
-		for( my $i = 0; $i < 8; ++$i ) {
+		for( my $i = 0; $i < (8 / $qf); ++$i ) {
 			my $outputFileName = $outputFileBaseName . $i . ".out";
 
 			open( my $fh, '<', $outputFileName ) or
