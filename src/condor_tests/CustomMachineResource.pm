@@ -415,9 +415,8 @@ sub TestResourceUsage {
 		}
 	}
 
-	if( defined( $qf ) ) {
-		$submitFileHash{ _queue } = $submitFileHash{ _queue  } / $qf;
-	}
+	if(! defined( $qf )) { $qf = 1; }
+	$submitFileHash{ _queue } = $submitFileHash{ _queue  } / $qf;
 
 	if( CondorTest::RunTest2( name => $testName, submit_hash => \%submitFileHash, want_checkpoint => 0, callback => $setClusterID ) ) {
 		my $lineCount = 0;
