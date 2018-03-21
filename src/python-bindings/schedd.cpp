@@ -757,6 +757,7 @@ struct Schedd {
 
         list retval;
         int fetchResult;
+        CondorError errstack;
         {
         query_process_helper helper;
         helper.callable = callback;
@@ -784,8 +785,13 @@ struct Schedd {
             PyErr_SetString(PyExc_RuntimeError, "Parse error in constraint.");
             throw_error_already_set();
             break;
+        case Q_UNSUPPORTED_OPTION_ERROR:
+            PyErr_SetString(PyExc_RuntimeError, "Query fetch option unsupported by this schedd.");
+            throw_error_already_set();
+			break;
         default:
-            PyErr_SetString(PyExc_IOError, "Failed to fetch ads from schedd.");
+			std::string errmsg = "Failed to fetch ads from schedd, errmsg=" + errstack.getFullText();
+			PyErr_SetString(PyExc_IOError, errmsg.c_str());
             throw_error_already_set();
             break;
         }
