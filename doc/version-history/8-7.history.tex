@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If HTCondor is started with \MacroNI{CUDA\_VISIBLE\_DEVICES} set
+in the environment, it will report on those devices with the specified
+indices, instead of the indices of that subset.
+\Ticket{6584}
+
 \item When reporting \Attr{GPUsUsage}, HTCondor now also reports
 \Attr{GPUsMemoryUsage}.  This is like \Attr{MemoryUsage}, except it is
 the peak amount of GPU memory used by the job.  This feature only works
