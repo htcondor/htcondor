@@ -4677,7 +4677,8 @@ int SubmitHash::SetExecutable()
 	}
 
 #if 1
-	if (FnCheckFile) {
+		// docker jobs can have empty executables or bogus ones
+	if (FnCheckFile && !IsDockerJob) {
 		int rval = FnCheckFile(CheckFileArg, this, role, ename, (transfer_it ? 1 : 0));
 		if (rval) { ABORT_AND_RETURN( rval ); }
 	}
@@ -5442,7 +5443,6 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 	bool	checks_credd = false;
 #endif
 	char	*ptr;
-	MyString ft_clause;
 
 	if( strlen(orig) ) {
 		answer.formatstr( "(%s)", orig );
@@ -5529,21 +5529,10 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 		checks_mpi = machine_refs.count( ATTR_HAS_MPI );
 	}
 	if( mightTransfer(JobUniverse) ) { 
-		switch( should_transfer ) {
-		case STF_IF_NEEDED:
-		case STF_NO:
-			checks_fsdomain = machine_refs.count(
-										  ATTR_FILE_SYSTEM_DOMAIN ); 
-			break;
-		case STF_YES:
-			checks_file_transfer = machine_refs.count(
-											   ATTR_HAS_FILE_TRANSFER );
-			checks_file_transfer_plugin_methods = machine_refs.count(
-											   ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS );
-			checks_per_file_encryption = machine_refs.count(
-										   ATTR_HAS_PER_FILE_ENCRYPTION );
-			break;
-		}
+		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
+		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER);
+		checks_file_transfer_plugin_methods = machine_refs.count(ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS);
+		checks_per_file_encryption = machine_refs.count(ATTR_HAS_PER_FILE_ENCRYPTION);
 	}
 
 	checks_mem = machine_refs.count(ATTR_MEMORY);
@@ -5729,88 +5718,62 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 			   supports file transfer, or that we're in the same file
 			   system domain.
 			*/
+		const char * domain_check = "(TARGET." ATTR_FILE_SYSTEM_DOMAIN " == MY." ATTR_FILE_SYSTEM_DOMAIN ")";
+		const char * xfer_check = "TARGET." ATTR_HAS_FILE_TRANSFER;
+		if (!checks_per_file_encryption && NeedsPerFileEncryption) {
+			xfer_check = "TARGET." ATTR_HAS_FILE_TRANSFER " && TARGET." ATTR_HAS_PER_FILE_ENCRYPTION;
+		}
 
-		switch( should_transfer ) {
-		case STF_NO:
+		if ( should_transfer == STF_NO) {
 				// no file transfer used.  if there's nothing about
 				// the FileSystemDomain yet, tack on a clause for
 				// that. 
 			if( ! checks_fsdomain ) {
-				answer += " && (TARGET.";
-				answer += ATTR_FILE_SYSTEM_DOMAIN;
-				answer += " == MY.";
-				answer += ATTR_FILE_SYSTEM_DOMAIN;
-				answer += ")";
-			} 
-			break;
-			
-		case STF_YES:
-				// we're definitely going to use file transfer.  
-			if( ! checks_file_transfer ) {
-				answer += " && (TARGET.";
-				answer += ATTR_HAS_FILE_TRANSFER;
-				if (!checks_per_file_encryption && NeedsPerFileEncryption) {
-					answer += " && TARGET.";
-					answer += ATTR_HAS_PER_FILE_ENCRYPTION;
-				}
+				answer += " && " ;
+				answer += domain_check;
+			}
+		} else if ( ! checks_file_transfer) {
 
-				if( (!checks_file_transfer_plugin_methods) ) {
-					// check input
-					char* file_list = submit_param( SUBMIT_KEY_TransferInputFiles, "TransferInputFiles" );
-					char* tmp_ptr;
-					if(file_list) {
-						StringList files(file_list, ",");
-						files.rewind();
-						while ( (tmp_ptr=files.next()) ) {
-							if (IsUrl(tmp_ptr)){
-								MyString plugintype = getURLType(tmp_ptr);
-								answer += " && stringListMember(\"";
-								answer += plugintype;
-								answer += "\",HasFileTransferPluginMethods)";
-							}
-						}
-						free(file_list);
-					}
+			const char * join_op = " && (";
+			const char * close_op = ")";
+			if ( should_transfer == STF_IF_NEEDED && ! checks_fsdomain ) {
+				answer += join_op;
+				answer += domain_check;
+				join_op = " || (";
+				close_op = "))";
+			}
 
-					// check output
-					tmp_ptr = submit_param( SUBMIT_KEY_OutputDestination, "OutputDestination" );
-					if (tmp_ptr) {
-						if (IsUrl(tmp_ptr)){
-							MyString plugintype = getURLType(tmp_ptr);
-							answer += " && stringListMember(\"";
-							answer += plugintype;
-							answer += "\",HasFileTransferPluginMethods)";
-						}
-						free (tmp_ptr);
+			answer += join_op;
+			answer += xfer_check;
+
+			if (( ! checks_file_transfer_plugin_methods)) {
+				classad::References methods;
+				// check input
+				auto_free_ptr file_list(submit_param(SUBMIT_KEY_TransferInputFiles, "TransferInputFiles"));
+				if (file_list) {
+					StringList files(file_list.ptr(), ",");
+					for (const char * file = files.first(); file; file = files.next()) {
+						if (IsUrl(file)){ methods.insert(getURLType(file)); }
 					}
 				}
 
-				// close of the file transfer requirements
-				answer += ")";
-			}
-			break;
-			
-		case STF_IF_NEEDED:
-				// we may or may not use file transfer, so require
-				// either the same FS domain OR the ability to file
-				// transfer.  if the user already refered to fs
-				// domain, but explictly turned on IF_NEEDED, assume
-				// they know what they're doing. 
-			if( ! checks_fsdomain ) {
-				ft_clause = " && ((TARGET.";
-				ft_clause += ATTR_HAS_FILE_TRANSFER;
-				if (NeedsPerFileEncryption) {
-					ft_clause += " && TARGET.";
-					ft_clause += ATTR_HAS_PER_FILE_ENCRYPTION;
+				// check output (only a single file this time)
+				file_list.set(submit_param(SUBMIT_KEY_OutputDestination, "OutputDestination"));
+				if (file_list) {
+					if (IsUrl(file_list)){
+						methods.insert(getURLType(file_list));
+					}
 				}
-				ft_clause += ") || (TARGET.";
-				ft_clause += ATTR_FILE_SYSTEM_DOMAIN;
-				ft_clause += " == MY.";
-				ft_clause += ATTR_FILE_SYSTEM_DOMAIN;
-				ft_clause += "))";
-				answer += ft_clause.Value();
+
+				for (auto it = methods.begin(); it != methods.end(); ++it) {
+					answer += " && stringListIMember(\"";
+					answer += *it;
+					answer += "\",TARGET.HasFileTransferPluginMethods)";
+				}
 			}
-			break;
+
+			// close of the file transfer requirements
+			answer += close_op;
 		}
 	}
 

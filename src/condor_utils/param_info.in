@@ -2801,6 +2801,11 @@ default=false
 type=bool
 tags=negotiator,matchmaker
 
+[COLLECTOR_HOST_FOR_NEGOTIATOR]
+default=$(FULL_HOSTNAME)
+type=string
+tags=negotiator
+
 [RECEIVE_MSGS_DURATION]
 default=250
 type=int

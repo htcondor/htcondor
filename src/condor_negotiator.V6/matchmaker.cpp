@@ -2547,7 +2547,12 @@ void
 Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 		std::set<std::string>::iterator it;
 		
-		DCCollector collector;
+		//DCCollector collector;
+		CollectorList *cl = daemonCore->getCollectorList();
+		if (cl == NULL) {
+			dprintf(D_ALWAYS, "Not updating collector with accounting information, as no collector are found\n");
+			return;
+		}
 	
 		dprintf(D_FULLDEBUG, "Updating collector with accounting information\n");
 			// for all of the names of active submitters
@@ -2588,22 +2593,23 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				// will be zero.  Don't include those submitters.
 
 				if (updateAd.LookupInteger("ResourcesUsed", resUsed)) {
-					collector.sendUpdate(UPDATE_ACCOUNTING_AD, &updateAd, seq, NULL, false);
+					cl->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
 				}
 			}
 		}
-		forwardGroupAccounting(collector, hgq_root_group);
+		forwardGroupAccounting(cl, hgq_root_group);
 		dprintf(D_FULLDEBUG, "Done Updating collector with accounting information\n");
 }
 
 void 
-Matchmaker::forwardGroupAccounting(DCCollector &collector, GroupEntry* group) {
+Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 
 	ClassAd accountingAd;
 	accountingAd.Assign("MyType", "Accounting");
 	SetMyTypeName(accountingAd, "Accounting");
 	SetTargetTypeName(accountingAd, "none");
 	accountingAd.Assign(ATTR_LAST_UPDATE, accountant.GetLastUpdateTime());
+	accountingAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 
 
     MyString CustomerName = group->name;
@@ -2680,11 +2686,11 @@ Matchmaker::forwardGroupAccounting(DCCollector &collector, GroupEntry* group) {
     
 	// And send the ad to the collector
 	DCCollectorAdSequences seq; // Don't need them, interface requires them
-	collector.sendUpdate(UPDATE_ACCOUNTING_AD, &accountingAd, seq, NULL, false);
+	cl->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
 
     // Populate group's children recursively, if it has any
     for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-        forwardGroupAccounting(collector, *j);
+        forwardGroupAccounting(cl, *j);
     }
 }
 

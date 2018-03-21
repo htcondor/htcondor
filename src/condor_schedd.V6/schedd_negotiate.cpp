@@ -304,6 +304,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		// won't mangle it a second time.
 		match_ad->Assign(ATTR_SLOT_DYNAMIC, true);
 		match_ad->Assign(ATTR_SLOT_PARTITIONABLE,false);
+		match_ad->Assign(ATTR_SLOT_TYPE, "Dynamic");
 		dprintf(D_FULLDEBUG,
 				"Partitionable slot %s adjusted for job %d.%d: "
 				"cpus = %d, memory = %d, disk = %d\n",
