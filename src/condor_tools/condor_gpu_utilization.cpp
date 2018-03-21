@@ -188,7 +188,11 @@ int main() {
 			}
 
 			nvmlMemory_t mi = { 0, 0, 0 };
-			nvmlDeviceGetMemoryInfo( devices[i], &mi );
+			r = nvmlDeviceGetMemoryInfo( devices[i], &mi );
+			if( r != NVML_SUCCESS ) {
+				fprintf( stderr, "getDeviceGetMemoryInfo(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
+				fail();
+			}
 			if( mi.used > memoryUsage[i] ) {
 				memoryUsage[i] = mi.used;
 			}

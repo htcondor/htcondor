@@ -24,21 +24,12 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <list>
+#include <algorithm>
 
 #include <time.h>
 #include <stdarg.h> // for va_start
 
-#if 0 
-// can't use these on linux without pulling in ALL of condor_utils - ssl, crypto, etc. 
-// so for now, just copy the bits we want inline.
-#include <match_prefix.h>
-#include <stl_string_utils.h>
-#endif
-
-
-// we don't want to use the actual cuda headers because we want to build on machines where they are not installed.
-//#include <cuda_runtime_api.h>
-//#include "nvml.h"
 #include "cuda_header_doc.h"
 #include "opencl_header_doc.h"
 #include "nvml_stub.h"
@@ -52,10 +43,10 @@
 #define CUDACALL __stdcall
 #else
 #include <dlfcn.h>
-#define CUDACALL 
+#define CUDACALL
 #endif
 
-#ifdef WIN32 
+#ifdef WIN32
 // to simplfy the dynamic loading of .so/.dll, make a Windows function
 // for looking up a symbol that looks like the equivalent *nix function.
 static void* dlsym(void* hlib, const char * symbol) {
@@ -72,8 +63,8 @@ int ConvertSMVer2Cores(int major, int minor)
         int Cores;
 	} sSMtoCores;
 
-    sSMtoCores nGpuArchCoresPerSM[] = 
-    { 
+    sSMtoCores nGpuArchCoresPerSM[] =
+    {
         { 0x10,  8 }, // Tesla Generation (SM 1.0) G80 class
         { 0x11,  8 }, // Tesla Generation (SM 1.1) G8x class
         { 0x12,  8 }, // Tesla Generation (SM 1.2) G9x class
@@ -82,6 +73,14 @@ int ConvertSMVer2Cores(int major, int minor)
         { 0x21, 48 }, // Fermi Generation (SM 2.1) GF10x class
         { 0x30, 192}, // Kepler Generation (SM 3.0) GK10x class
         { 0x35, 192}, // Kepler Generation (SM 3.5) GK11x class
+        // From the CUDA 8.0 header:
+        { 0x37, 192}, // Kepler Generation (SM 3.7) GK21x class
+        { 0x50, 128}, // Maxwell Generation (SM 5.0) GM10x class
+        { 0x52, 128}, // Maxwell Generation (SM 5.2) GM20x class
+        { 0x53, 128}, // Maxwell Generation (SM 5.3) GM20x class
+        { 0x60, 64 }, // Pascal Generation (SM 6.0) GP100 class
+        { 0x61, 128}, // Pascal Generation (SM 6.1) GP10x class
+        { 0x62, 128}, // Pascal Generation (SM 6.2) GP10x class
         {   -1, -1 }
     };
 
@@ -233,7 +232,7 @@ cudaError_t CUDACALL sim_cudaGetDeviceCount(int* pdevs) {
 	} else {
 		*pdevs = aSimConfig[sim_index].deviceCount;
 	}
-	return cudaSuccess; 
+	return cudaSuccess;
 }
 cudaError_t CUDACALL sim_cudaDriverGetVersion(int* pver) {
 	if (sim_index < 0 || sim_index > sim_index_max)
@@ -657,7 +656,8 @@ main( int argc, const char** argv)
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
 	//int opt_rdp = 0;
-	int opt_dev = -1;   // -1 means all devs, otherwise print info only for this dev
+	bool opt_filter = false;
+	std::list<int> dwl; // Device White List
 	int opt_nvcuda = 0; // use nvcuda rather than cudarl
 	int opt_opencl = 0; // prefer opencl detection
 	int opt_cuda_only = 0; // require cuda detection
@@ -720,13 +720,34 @@ main( int argc, const char** argv)
 				}
 			}
 		}
+		else if (is_dash_arg_prefix(argv[i], "device-list", 11)) {
+			if ( ! argv[i+1] || '-' == *argv[i+1]) {
+				fprintf (stderr, "Error: -device-list requires an argument\n");
+				usage(stderr, argv[0]);
+				return 1;
+			}
+			char * tokenizer = strdup( argv[++i] );
+			if( tokenizer == NULL ) {
+				fprintf( stderr, "Error: -device-list argument too long\n" );
+				return 1;
+			}
+			char * next = strtok( tokenizer, "," );
+			for( ; next != NULL; next = strtok( NULL, "," ) ) {
+				dwl.push_back( atoi( next ) );
+			}
+			free( tokenizer );
+		}
 		else if (is_dash_arg_prefix(argv[i], "device", 3)) {
 			if ( ! argv[i+1] || '-' == *argv[i+1]) {
 				fprintf (stderr, "Error: -device requires an argument\n");
 				usage(stderr, argv[0]);
 				return 1;
 			}
-			opt_dev = atoi(argv[++i]);
+			dwl.push_back( atoi(argv[++i]) );
+		}
+		else if (is_dash_arg_prefix(argv[i], "filter", 3)) {
+			unsetenv( "CUDA_VISIBLE_DEVICES" );
+			opt_filter = true;
 		}
 		else if (is_dash_arg_colon_prefix(argv[i], "simulate", &pcolon, 3)) {
 			opt_simulate = 1;
@@ -996,24 +1017,31 @@ main( int argc, const char** argv)
 	// print out info about detected GPU resources
 	//
 	std::string detected_gpus;
+	int filteredDeviceCount = 0;
 	for (dev = 0; dev < deviceCount; dev++) {
+		if( opt_filter && (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
+			continue;
+		}
+
 		char prefix[100];
 		sprintf(prefix,"%s%d",opt_pre,dev);
 		dev_props[prefix].clear(); // this has the side effect of creating the KVP for prefix.
 		if ( ! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += prefix;
+		++filteredDeviceCount;
 	}
+
 	if ( ! opt_cron) {
 		fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
 	}
 	if (opt_config) {
-		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, deviceCount);
+		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, filteredDeviceCount);
 	}
 
 	// print out static and/or dynamic info about detected GPU resources
 	for (dev = 0; dev < deviceCount; dev++) {
 
-		if (opt_dev >= 0 && (opt_dev != dev)) {
+		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
 		}
 
@@ -1152,7 +1180,7 @@ main( int argc, const char** argv)
 
 	for (dev = 0; dev < deviceCount; dev++) {
 
-		if (opt_dev >= 0 && (opt_dev != dev)) {
+		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
 		}
 
