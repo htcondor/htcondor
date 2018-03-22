@@ -1488,10 +1488,10 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	if ( transobject->Info.success ) {
 		if ( transobject->Info.type == DownloadFilesType ) {
-			transobject->downloadEndTime = _condor_debug_get_time_double();
+			transobject->downloadEndTime = UtcTime::getTimeDouble();
 
 		} else if ( transobject->Info.type == UploadFilesType ) {
-			transobject->uploadEndTime = _condor_debug_get_time_double();
+			transobject->uploadEndTime = UtcTime::getTimeDouble();
 
 		}
 	}
@@ -1750,7 +1750,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
 
-		downloadStartTime = _condor_debug_get_time_double();
+		downloadStartTime = UtcTime::getTimeDouble();
 
 	}
 	
@@ -1831,7 +1831,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
 
-	downloadStartTime = _condor_debug_get_time_double();
+	downloadStartTime = UtcTime::getTimeDouble();
 
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
@@ -2494,7 +2494,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	}
 
-	downloadEndTime = _condor_debug_get_time_double();
+	downloadEndTime = UtcTime::getTimeDouble();
 
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
@@ -2917,7 +2917,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number;
 
-	uploadStartTime = _condor_debug_get_time_double();
+	uploadStartTime = UtcTime::getTimeDouble();
 
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
@@ -3466,7 +3466,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			first_failed_line_number);
 	} 
 
-	uploadEndTime = _condor_debug_get_time_double();
+	uploadEndTime = UtcTime::getTimeDouble();
 
 	upload_success = true;
 	return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
