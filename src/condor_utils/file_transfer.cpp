@@ -172,6 +172,7 @@ FileTransfer::FileTransfer()
 	m_sec_session_id = NULL;
 	I_support_filetransfer_plugins = false;
 	plugin_table = NULL;
+	multifile_plugins_enabled = false;
 	MaxUploadBytes = -1;  // no limit by default
 	MaxDownloadBytes = -1;
 }
@@ -1806,7 +1807,7 @@ FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
 int
 FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 {
-	int rc;
+	int rc = 0;
 	int reply = 0;
 	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes=0;
@@ -1822,6 +1823,15 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	time_t start, elapsed;
 	int numFiles = 0;
 	UtcTime utcTime;
+	ClassAd pluginStatsAd;
+	
+	// Variable for deferred transfers, used to transfer multiple files at once
+	// by certain filte transfer plugins. These need to be scoped to the full
+	// function.
+	bool isDeferredTransfer = false;
+	classad::ClassAdUnParser unparser;
+	std::map<std::string, std::string> deferredTransfers;
+	std::unique_ptr<classad::ClassAd> thisTransfer( new classad::ClassAd() );
 
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
@@ -1881,6 +1891,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		SpooledJobFiles::createJobSpoolDirectory(&jobAd,desired_priv_state);
 	}
 
+	// Start the main download loop. Read reply codes + filenames off a
+	// socket wire, s, then handle downloads according to the reply code.
 	for (;;) {
 		if( !s->code(reply) ) {
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
@@ -2094,6 +2106,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// plugin, if we end up using one.
 		ClassAd pluginStatsAd;
 
+		// Until we are told otherwise, assume this file transfer will not be
+		// deferred until the end of the loop.
+		isDeferredTransfer = false;
+
 		if (reply == 999) {
 			// filename already received:
 			// .  verify that it is the same as FileName attribute in following classad
@@ -2189,9 +2205,23 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-			dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
+			// Determine which plugin to invoke, and whether it supports multiple
+			// file transfer.
+			MyString plugin_path = DetermineFileTransferPlugin( errstack, URL.Value(), fullname.Value() );
+			bool plugin_multifile_support = plugins_multifile_support.find( plugin_path )->second;
 
-			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
+			// Check if we support 3rd party plugins that accept multiple
+			// files as input
+			if( !multifile_plugins_enabled ) {
+				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
+
+				rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
+			}
+			else {
+				// If this plugin supports multiple files, do not send the file
+				// right now! Instead, add it to a deferred list, which we'll deal
+				// with after the main download loop.
+			}
 
 
 		} else if ( reply == 4 ) {
@@ -2405,12 +2435,32 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		thisFileStatsAd.Update(pluginStatsAd);
 
 		// Write stats to disk
-		OutputFileTransferStats(thisFileStatsAd);
+		if( !isDeferredTransfer ) {
+			OutputFileTransferStats(thisFileStatsAd);
+		}
 
 		// Get rid of compiler set-but-not-used warnings on Linux
 		// Hopefully the compiler can just prune out the emitted code.
 		if (delegation_method) {}
 		if (elapsed) {}
+	}
+	// End of the main download loop
+
+	// Now that we've completed the main file transfer loop, it's time to 
+	// transfer all files that needed a third party plugin. Iterate over the list
+	// of deferred transfers, and invoke each set with the appopriate plugin.
+	for ( std::map<std::string, std::string>::iterator it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
+		rc = InvokeMultipleFileTransferPlugin( errstack, it->first, it->second, 
+			LocalProxyName.Value() );
+		if ( rc != 0 ) {
+			dprintf( D_ALWAYS, "FILETRANSFER: Multiple file transfer failed: %s\n",
+				errstack.getFullText().c_str() );
+			download_success = false;
+			hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+			hold_subcode = rc;
+			try_again = false;
+			error_buf.formatstr( errstack.getFullText().c_str() );
+		}
 	}
 
 	// go back to the state we were in before file transfer
@@ -4226,6 +4276,56 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 	m_sec_session_id = session_id ? strdup(session_id) : NULL;
 }
 
+// Determines the third-party plugin needed for a file transfer.
+// Looks at both source and destination to determine which one contains a URL,
+// then extracts the method (ie. http, ftp) and uses it to lookup plugin.
+MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
+	
+	char *URL = NULL;
+	MyString plugin;
+	
+	// First, check the destination to see if it looks like a URL.  
+	// If not, source must be the URL.
+	if( IsUrl( dest ) ) {
+		URL = const_cast<char*>(dest);
+		dprintf( D_FULLDEBUG, "FILETRANSFER: using destination to determine "
+			"plugin type: %s\n", dest );
+	} 
+	else {
+		URL = const_cast<char*>(source);
+		dprintf( D_FULLDEBUG, "FILETRANSFER: using source to determine "
+			"plugin type: %s\n", source );
+	}
+
+	// Find the type of transfer
+	const char* colon = strchr( URL, ':' );
+
+	if ( !colon ) {
+		// In theory, this should never happen -- the sending side should only
+		// send URLs after having checked this. However, trust but verify.
+		error.pushf( "FILETRANSFER", 1, "Specified URL does not contain a "
+			"':' (%s)", URL );
+		return NULL;
+	}
+
+	// Extract the protocol/method
+	char* method = ( char* ) malloc( 1 + ( colon-URL ) );
+	ASSERT( method );
+	strncpy( method, URL, ( colon-URL ) );
+	method[( colon-URL )] = '\0';
+
+	// Hashtable returns zero if found.
+	if ( plugin_table->lookup( (MyString) method, plugin ) ) {
+		// no plugin for this type!!!
+		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method );
+		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method );
+		free( method );
+		return NULL;
+	}
+
+	return plugin;
+}
+
 
 int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, ClassAd* plugin_stats, const char* proxy_filename) {
 
@@ -4362,6 +4462,136 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	return 0;
 }
 
+// [FileTransfer::InvokeMultipleFileTransferPlugin]
+// Similar to FileTransfer::InvokeFileTransferPlugin, modified to transfer 
+// 	multiple files in a single plugin invocation.
+// Returns 0 on success, error code >= 1 on failure.
+int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, 
+			std::string plugin_path, std::string transfer_files_string, 
+			const char* proxy_filename ) {
+
+	ArgList plugin_args;
+	CondorClassAdFileIterator adFileIter;
+	FILE* input_file;
+	FILE* output_file;
+	std::string input_filename;
+	std::string output_filename;
+	std::string plugin_name;
+
+	if ( plugin_table == NULL ) {
+		dprintf( D_FULLDEBUG, "FILETRANSFER: No plugin table defined! "
+				"(requesting multi-file transfer)\n" );
+		e.pushf( "FILETRANSFER", 1, "No plugin table defined (requesting "
+				"multi-file transfer)" );
+		return GET_FILE_PLUGIN_FAILED;
+	}
+
+	// Prepare environment for the plugin
+	Env plugin_env;
+	plugin_env.Import();
+
+	// Add x509UserProxy if it's defined
+	if ( proxy_filename && *proxy_filename ) {
+		plugin_env.SetEnv( "X509_USER_PROXY",proxy_filename );
+		dprintf( D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n",
+				proxy_filename );
+	}
+
+	// Determine if we want to run the plugin with root priv (if available).
+	// If so, drop_privs should be false.  the default is to drop privs.
+	bool drop_privs = !param_boolean( "RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false );
+
+	// Lookup the initial working directory
+	char buf[ATTRLIST_MAX_EXPRESSION];
+	if ( jobAd.LookupString( ATTR_JOB_IWD, buf, sizeof( buf ) ) != 1) {
+		dprintf( D_FULLDEBUG, "FileTransfer::InvokeMultipleFileTransferPlugin: "
+					"Job Ad did not have an IWD! Aborting.\n" );
+			return 1;
+	}
+	std::string iwd = strdup( buf );
+
+	// Create an input file for the plugin.
+	// Input file consists of the transfer_files_string data (list of classads)
+	// which we'll save to a temporary file in the working directory.
+	plugin_name = plugin_path.substr( plugin_path.find_last_of("/\\") + 1 );
+	input_filename = iwd + "/." + plugin_name + ".in";
+	input_file = safe_fopen_wrapper( input_filename.c_str(), "w" );
+	fputs( transfer_files_string.c_str(), input_file );
+	fclose( input_file );
+
+	// Prepare args for the plugin
+	output_filename = iwd + "/." + plugin_name + ".out";	
+	plugin_args.AppendArg( plugin_path.c_str() );
+	plugin_args.AppendArg( "-infile" );
+	plugin_args.AppendArg( input_filename.c_str() );
+	plugin_args.AppendArg( "-outfile" );
+	plugin_args.AppendArg( output_filename.c_str() );
+
+	// Invoke the plugin
+	dprintf( D_FULLDEBUG, "FILETRANSFER: invoking: %s \n", plugin_path.c_str() );
+	FILE* plugin_pipe = my_popen( plugin_args, "r", FALSE, &plugin_env, drop_privs );
+	int plugin_status = my_pclose( plugin_pipe );
+	dprintf ( D_ALWAYS, "FILETRANSFER: plugin returned %i (%s)\n", 
+		plugin_status, strerror( plugin_status ) );
+
+	// there is a unique issue when invoking plugins as root where shared
+	// libraries defined as relative to $ORIGIN in the RUNPATH will not
+	// be loaded for security reasons.  in this case the dynamic loader
+	// exits with 127 before even calling main() in the plugin.
+	//
+	// if we suspect this is the case, let's print a hint since it's
+	// otherwise very difficult to understand what is happening and why
+	// this failed.
+	if ( !drop_privs && plugin_status == 32512 ) {
+		dprintf (D_ALWAYS, "FILETRANSFER: ERROR!  You are invoking plugins as root because "
+			"you have RUN_FILETRANSFER_PLUGINS_WITH_ROOT set to TRUE.  However, some of "
+			"the shared libraries in your plugin are likely paths that are relative to "
+			"$ORIGIN, and then dynamic library loader refuses to load those for security "
+			"reasons.  Run 'ldd' on your plugin and move needed libraries to a system "
+			"location controlled by root. Good luck!\n");
+	}
+
+	// Output stats regardless of success or failure
+	output_file = safe_fopen_wrapper( output_filename.c_str(), "r" );
+	if ( output_file == NULL ) {
+		fprintf( stderr, "FILETRANSFER: Unable to open curl_plugin output file "
+			"%s.\n", input_filename.c_str() );
+		return -1;
+	}
+	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
+		fprintf( stderr, "FILETRANSFER: Failed to iterate over file transfer output.\n" );
+		return -1;
+	} 
+	else {
+		// Iterate over the classads in the file, and output each one
+		// to our transfer_history log file.
+		ClassAd this_file_stats_ad;
+		while ( adFileIter.next( this_file_stats_ad ) > 0 ) {
+
+			OutputFileTransferStats( this_file_stats_ad );
+			
+			// If this classad represents a failed transfer, produce an error
+			bool transfer_success;
+			this_file_stats_ad.LookupBool( "TransferSuccess", transfer_success );
+			if ( !transfer_success ) {
+				std::string error_message;
+				std::string transfer_url;
+				this_file_stats_ad.LookupString( "TransferError", error_message );
+				this_file_stats_ad.LookupString( "TransferUrl", transfer_url );
+				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)", 
+					plugin_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
+			}
+		}
+	}
+	fclose(output_file);
+
+	if ( plugin_status != 0 ) {
+		return GET_FILE_PLUGIN_FAILED;
+	}
+
+	return 0;
+}
+
 int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 
 	// this log is meant to be kept in the condor LOG directory, so switch to
@@ -4461,6 +4691,15 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 	if (!plugin_list_string) {
 		I_support_filetransfer_plugins = false;
 		return 0;
+	}
+
+	// See if multifile transfer plugins are enabled
+	if (param_boolean("ENABLE_MULTIFILE_TRANSFER_PLUGINS", true)) {
+		dprintf(D_ALWAYS, "MRC FILETRANSFER: multifile transfer plugins are enabled!\n");
+		multifile_plugins_enabled = true;
+	}
+	else {
+		dprintf(D_ALWAYS, "MRC FILETRANSFER: multifile transfer plugins are disabled\n");
 	}
 
 	// plugin_table is a member variable
