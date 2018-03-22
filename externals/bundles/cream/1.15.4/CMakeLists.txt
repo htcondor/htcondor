@@ -240,7 +240,7 @@ if ( WITH_CREAM )
 			BUILD_IN_SOURCE 1
 			#--install Step ----------
 			INSTALL_DIR ${CREAM_INSTALL_LOC}
-			INSTALL_COMMAND ln -s . ${CREAM_INSTALL_LOC}/usr &&
+			INSTALL_COMMAND ln -s -f . ${CREAM_INSTALL_LOC}/usr &&
 				make install && touch ${CREAM_INSTALL_LOC}/done
 				)
 
