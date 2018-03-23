@@ -753,20 +753,30 @@ struct Schedd {
             attrs_list.append(attrName.c_str()); // note append() does strdup
         }
 
-        ClassAdList jobs;
-
         list retval;
         int fetchResult;
+        CondorError errstack;
         {
         query_process_helper helper;
         helper.callable = callback;
         helper.output_list = retval;
         void *helper_ptr = static_cast<void *>(&helper);
+        ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
+        ClassAd ** p_summary_ad = NULL;
+        if ( fetch_opts == CondorQ::fetch_SummaryOnly ) {  // only get the summary ad if option says so
+            p_summary_ad = &summary_ad;
+        }
+
 
         {
             condor::ModuleLock ml;
             helper.ml = &ml;
-            fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, true, NULL, NULL);
+            fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, 2, &errstack, p_summary_ad);
+			if (summary_ad) {
+				query_process_callback(helper_ptr,summary_ad);
+				delete summary_ad;
+				summary_ad = NULL;
+			}
         }
         }
 
@@ -784,8 +794,13 @@ struct Schedd {
             PyErr_SetString(PyExc_RuntimeError, "Parse error in constraint.");
             throw_error_already_set();
             break;
+        case Q_UNSUPPORTED_OPTION_ERROR:
+            PyErr_SetString(PyExc_RuntimeError, "Query fetch option unsupported by this schedd.");
+            throw_error_already_set();
+			break;
         default:
-            PyErr_SetString(PyExc_IOError, "Failed to fetch ads from schedd.");
+			std::string errmsg = "Failed to fetch ads from schedd, errmsg=" + errstack.getFullText();
+			PyErr_SetString(PyExc_IOError, errmsg.c_str());
             throw_error_already_set();
             break;
         }
@@ -2081,6 +2096,9 @@ void export_schedd()
     enum_<CondorQ::QueryFetchOpts>("QueryOpts")
         .value("Default", CondorQ::fetch_Jobs)
         .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
+        .value("GroupBy", CondorQ::fetch_GroupBy)
+        .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
+        .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
         ;
 
     enum_<BlockingMode>("BlockingMode")
