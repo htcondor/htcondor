@@ -4547,6 +4547,11 @@ default=false
 type=bool
 description=Whether to invoke file transfer plugins as user or as root
 
+[ENABLE_MULTIFILE_TRANSFER_PLUGINS]
+default=false
+type=bool
+description=Enable file transfer plugins that support multiple files as input
+
 [ENABLE_HTTP_PUBLIC_FILES]
 default=false
 type=bool

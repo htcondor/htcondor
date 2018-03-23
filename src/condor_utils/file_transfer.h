@@ -285,7 +285,7 @@ class FileTransfer: public Service {
 	void setTransferQueueContactInfo(char const *contact);
 
 	void InsertPluginMappings(MyString methods, MyString p);
-	MyString DeterminePluginMethods( CondorError &e, const char* path );
+	void SetPluginMappings( CondorError &e, const char* path );
 	int InitializePlugins(CondorError &e);
 	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);

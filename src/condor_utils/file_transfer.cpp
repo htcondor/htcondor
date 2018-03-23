@@ -1824,7 +1824,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int numFiles = 0;
 	UtcTime utcTime;
 	ClassAd pluginStatsAd;
-	
+
 	// Variable for deferred transfers, used to transfer multiple files at once
 	// by certain filte transfer plugins. These need to be scoped to the full
 	// function.
@@ -2208,21 +2208,41 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			// Determine which plugin to invoke, and whether it supports multiple
 			// file transfer.
 			MyString plugin_path = DetermineFileTransferPlugin( errstack, URL.Value(), fullname.Value() );
-			bool plugin_multifile_support = plugins_multifile_support.find( plugin_path )->second;
+			bool this_plugin_supports_multifile = false;
+			if( plugins_multifile_support.find( plugin_path ) != plugins_multifile_support.end() ) {
+				this_plugin_supports_multifile = plugins_multifile_support[plugin_path];
+			}
 
-			// Check if we support 3rd party plugins that accept multiple
-			// files as input
-			if( !multifile_plugins_enabled ) {
+			// Check if both:
+			// a) multifile plugins are enabled
+			// b) this particular plugin supports multifile transfer
+			if( multifile_plugins_enabled && this_plugin_supports_multifile ) {
+				// Do not send the file right now! 
+				// Instead, add it to a deferred list, which we'll deal with 
+				// after the main download loop.
+				dprintf( D_FULLDEBUG, "DoDownload: deferring transfer of URL %s "
+					" until end of download loop.\n", URL.Value() );
+				thisTransfer->Clear();
+				thisTransfer->InsertAttr( "Url", URL );
+				thisTransfer->InsertAttr( "DownloadFileName", fullname );
+				std::string thisTransferString;
+				unparser.Unparse( thisTransferString, thisTransfer.get() );
+
+				// Add this result to our deferred transfers map.
+				if ( deferredTransfers.find( plugin_path ) == deferredTransfers.end() ) {
+					deferredTransfers.insert( std::pair<std::string, std::string>( plugin_path, thisTransferString ) );
+				} 
+				else {
+					deferredTransfers[plugin_path] += thisTransferString;
+				}
+
+				isDeferredTransfer = true;
+			}
+			else {
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 
 				rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
 			}
-			else {
-				// If this plugin supports multiple files, do not send the file
-				// right now! Instead, add it to a deferred list, which we'll deal
-				// with after the main download loop.
-			}
-
 
 		} else if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
@@ -4280,17 +4300,17 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 // Looks at both source and destination to determine which one contains a URL,
 // then extracts the method (ie. http, ftp) and uses it to lookup plugin.
 MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
-	
+
 	char *URL = NULL;
 	MyString plugin;
-	
-	// First, check the destination to see if it looks like a URL.  
+
+	// First, check the destination to see if it looks like a URL.
 	// If not, source must be the URL.
 	if( IsUrl( dest ) ) {
 		URL = const_cast<char*>(dest);
 		dprintf( D_FULLDEBUG, "FILETRANSFER: using destination to determine "
 			"plugin type: %s\n", dest );
-	} 
+	}
 	else {
 		URL = const_cast<char*>(source);
 		dprintf( D_FULLDEBUG, "FILETRANSFER: using source to determine "
@@ -4462,9 +4482,8 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	return 0;
 }
 
-// [FileTransfer::InvokeMultipleFileTransferPlugin]
 // Similar to FileTransfer::InvokeFileTransferPlugin, modified to transfer 
-// 	multiple files in a single plugin invocation.
+// multiple files in a single plugin invocation.
 // Returns 0 on success, error code >= 1 on failure.
 int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, 
 			std::string plugin_path, std::string transfer_files_string, 
@@ -4520,7 +4539,7 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	fclose( input_file );
 
 	// Prepare args for the plugin
-	output_filename = iwd + "/." + plugin_name + ".out";	
+	output_filename = iwd + "/." + plugin_name + ".out";
 	plugin_args.AppendArg( plugin_path.c_str() );
 	plugin_args.AppendArg( "-infile" );
 	plugin_args.AppendArg( input_filename.c_str() );
@@ -4561,7 +4580,7 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
 		fprintf( stderr, "FILETRANSFER: Failed to iterate over file transfer output.\n" );
 		return -1;
-	} 
+	}
 	else {
 		// Iterate over the classads in the file, and output each one
 		// to our transfer_history log file.
@@ -4569,7 +4588,7 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		while ( adFileIter.next( this_file_stats_ad ) > 0 ) {
 
 			OutputFileTransferStats( this_file_stats_ad );
-			
+
 			// If this classad represents a failed transfer, produce an error
 			bool transfer_success;
 			this_file_stats_ad.LookupBool( "TransferSuccess", transfer_success );
@@ -4695,11 +4714,7 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 
 	// See if multifile transfer plugins are enabled
 	if (param_boolean("ENABLE_MULTIFILE_TRANSFER_PLUGINS", true)) {
-		dprintf(D_ALWAYS, "MRC FILETRANSFER: multifile transfer plugins are enabled!\n");
 		multifile_plugins_enabled = true;
-	}
-	else {
-		dprintf(D_ALWAYS, "MRC FILETRANSFER: multifile transfer plugins are disabled\n");
 	}
 
 	// plugin_table is a member variable
@@ -4711,14 +4726,16 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 	char *p;
 	while ((p = plugin_list.next())) {
 		// TODO: plugin must be an absolute path (win and unix)
-
-		MyString methods = DeterminePluginMethods(e, p);
+		SetPluginMappings( e, p );
+		
+		// Now verify that the plugin supports at least one transfer method.
+		MyString methods = GetSupportedMethods();
 		if (!methods.IsEmpty()) {
 			// we support at least one plugin type
 			I_support_filetransfer_plugins = true;
-			InsertPluginMappings(methods, p);
 		} else {
 			dprintf(D_ALWAYS, "FILETRANSFER: failed to add plugin \"%s\" because: %s\n", p, e.getFullText().c_str());
+			e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring", p);
 		}
 	}
 
@@ -4727,8 +4744,8 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 }
 
 
-MyString
-FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
+void
+FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 {
     FILE* fp;
     const char *args[] = { path, "-classad", NULL};
@@ -4741,7 +4758,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
     if( ! fp ) {
         dprintf( D_ALWAYS, "FILETRANSFER: Failed to execute %s, ignoring\n", path );
 		e.pushf("FILETRANSFER", 1, "Failed to execute %s, ignoring", path );
-        return "";
+        return;
     }
     ClassAd* ad = new ClassAd;
     bool read_something = false;
@@ -4753,7 +4770,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
             delete( ad );
             pclose( fp );
 			e.pushf("FILETRANSFER", 1, "Received invalid input '%s', ignoring", buf );
-            return "";
+            return;
         }
     }
     my_pclose( fp );
@@ -4763,7 +4780,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
                  path );
         delete( ad );
 		e.pushf("FILETRANSFER", 1, "\"%s -classad\" did not produce any output, ignoring", path );
-        return "";
+        return;
     }
 
 	// TODO: verify that plugin type is FileTransfer
@@ -4771,19 +4788,19 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 
 	// extract the info we care about
 	char* methods = NULL;
+	bool this_plugin_supports_multifile = NULL;
 	if (ad->LookupString( "SupportedMethods", &methods)) {
 		// free the memory, return a MyString
 		MyString m = methods;
 		free(methods);
-        delete( ad );
-		return m;
+		InsertPluginMappings( m, path );
+	}
+	if ( ad->LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
+		plugins_multifile_support[path] = this_plugin_supports_multifile;
 	}
 
-	dprintf(D_ALWAYS, "FILETRANSFER output of \"%s -classad\" does not contain SupportedMethods, ignoring plugin\n", path );
-	e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring", path );
-
 	delete( ad );
-	return "";
+	return;
 }
 
 
