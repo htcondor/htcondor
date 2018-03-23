@@ -683,6 +683,7 @@ sub RunTest
 #                based on the contents of this hash reference.
 #                See below for details
 # want_checkpoint => If true (1), you want a checkpoint.
+# callback => 
 #
 # One and only one of submit_file, submit_body, or submit_hash is MANDATORY.
 #
@@ -762,14 +763,15 @@ END
 			}
 			WriteFileOrDie('executable', $TEST_SCRIPTS{$exe});
 			$choices{'executable'} = 'executable';
-			my $queue = $choices{'_queue'};
-			delete $choices{'_queue'};
-			$submit_body = '';
-			foreach my $k (sort keys %choices) {
-				$submit_body .= "$k = $choices{$k}\n";
-			}
-			$submit_body .= "queue $queue\n";
 		}
+
+		my $queue = $choices{'_queue'};
+		delete $choices{'_queue'};
+		$submit_body = '';
+		foreach my $k (sort keys %choices) {
+			$submit_body .= "$k = $choices{$k}\n";
+		}
+		$submit_body .= "queue $queue\n";
 	}
 	if(defined $submit_body) {
 		$submit_file = "$name.cmd";
@@ -784,6 +786,9 @@ END
 	}
 
 	my $undead = undef;
+	if( defined $args{ callback } ) {
+		$undead = $args{ callback };
+	}
 	return DoTest($name, $submit_file, $want_checkpoint, $undead, $args{dagman_args});
 }
  

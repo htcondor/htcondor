@@ -626,7 +626,7 @@ the ClassAd library and HTCondor from python
 #######################
 %package bosco
 Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
-Url: http://bosco.opensciencegrid.org
+Url: https://osg-bosco.github.io/docs/
 Group: Applications/System
 Requires: python >= 2.2
 Requires: %name = %version-%release

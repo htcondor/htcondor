@@ -3486,7 +3486,7 @@ obtainAdsFromCollector (
 
 	if (!ConsiderPreemption) {
 		const char *projectionString =
-			"ifThenElse(State == \"Claimed\",\"Name State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements SlotWeight ConcurrencyLimits\",\"\") ";
+			"ifThenElse(State == \"Claimed\",\"Name MyType State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements SlotWeight ConcurrencyLimits\",\"\") ";
 		publicQuery.setDesiredAttrsExpr(projectionString);
 
 		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
