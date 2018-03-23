@@ -19,6 +19,7 @@ s3upload : .upload $(S3TARGETS)
 $(S3TARGETS) : .upload/% : %
 	@aws s3 cp $< s3://condor-annex/$(notdir $<)
 	@aws s3 cp $< s3://condor-annex-us-east-1/$(notdir $<)
+	@aws s3 cp $< s3://condor-annex-us-east-2/$(notdir $<)
 	@aws s3 cp $< s3://condor-annex-us-west-1/$(notdir $<)
 	@aws s3 cp $< s3://condor-annex-us-west-2/$(notdir $<)
 	@mkdir -p $(dir $@)
