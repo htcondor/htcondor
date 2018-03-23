@@ -142,11 +142,11 @@ protected:
 	bool m_use_script_to_create_config;
 
 	vm_status m_status;
-	UtcTime m_start_time;
-	UtcTime m_stop_time;
+	time_t m_start_time;
+	time_t m_stop_time;
 	float m_cpu_time;
 
-	UtcTime m_last_status_time;
+	time_t m_last_status_time;
 	MyString m_last_status_result;
 	int m_vcpus;
 	MyString m_vm_job_mac;

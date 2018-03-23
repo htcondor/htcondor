@@ -349,8 +349,7 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 double
 DagmanMetrics::GetTime()
 {
-	UtcTime curTime( true );
-	return curTime.combined();
+	return condor_gettimestamp_double();
 }
 
 //---------------------------------------------------------------------------

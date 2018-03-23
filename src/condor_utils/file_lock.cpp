@@ -624,10 +624,10 @@ FileLock::obtain( LOCK_TYPE t )
 	                t, saved_errno, strerror(saved_errno) );
 	}
 	else {
-		UtcTime	now( true );
+		double now = condor_gettimestamp_double();
 		dprintf( D_FULLDEBUG,
 				 "FileLock::obtain(%d) - @%.6f lock on %s now %s\n",
-				 t, now.combined(), m_path, getStateString(t) );
+				 t, now, m_path, getStateString(t) );
 	}
 	return status == 0;
 }

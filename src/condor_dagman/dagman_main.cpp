@@ -1553,7 +1553,7 @@ print_status( bool forceScheddUpdate ) {
 	// Set up a static double to track the last schedd update time. On the first
 	// iteration we'll set it to the current time. On subsequent iterations it 
 	// will only be updated when we call a schedd update.
-	double currentTime = dagman._utcTime.getTimeDouble();
+	double currentTime = condor_gettimestamp_double();
 	static double scheddLastUpdateTime = 0.0;
 	if ( scheddLastUpdateTime <= 0.0 ) {
 		scheddLastUpdateTime = currentTime;
@@ -1606,7 +1606,7 @@ void condor_event_timer () {
 	double submitCycleEndTime;
 
 	// Gather some statistics
-	eventTimerStartTime = dagman._utcTime.getTimeDouble();
+	eventTimerStartTime = condor_gettimestamp_double();
 	if(eventTimerEndTime > 0) {
 		dagman._dagmanStats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime);
 	}
@@ -1627,9 +1627,9 @@ void condor_event_timer () {
 
 	int justSubmitted;
 	debug_printf( DEBUG_DEBUG_1, "Starting submit cycle\n" );
-	submitCycleStartTime = dagman._utcTime.getTimeDouble();
+	submitCycleStartTime = condor_gettimestamp_double();
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
-	submitCycleEndTime = dagman._utcTime.getTimeDouble();
+	submitCycleEndTime = condor_gettimestamp_double();
 	dagman._dagmanStats.SubmitCycleTime.Add(submitCycleEndTime - submitCycleStartTime);
 	debug_printf( DEBUG_DEBUG_1, "Finished submit cycle\n" );
 	if( justSubmitted ) {
@@ -1641,7 +1641,7 @@ void condor_event_timer () {
 
 	// Check log status for growth. If it grew, process log events.
 	if( log_status == ReadUserLog::LOG_STATUS_GROWN ) {
-		logProcessCycleStartTime = dagman._utcTime.getTimeDouble();
+		logProcessCycleStartTime = condor_gettimestamp_double();
 		if( dagman.dag->ProcessLogEvents() == false ) {
 			debug_printf( DEBUG_NORMAL,
 						"ProcessLogEvents() returned false\n" );
@@ -1649,7 +1649,7 @@ void condor_event_timer () {
 			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return;
 		}
-		logProcessCycleEndTime = dagman._utcTime.getTimeDouble();
+		logProcessCycleEndTime = condor_gettimestamp_double();
 		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
 	}
 
@@ -1777,7 +1777,7 @@ void condor_event_timer () {
 	}
 	
 	// Statistics gathering
-	eventTimerEndTime = dagman._utcTime.getTimeDouble();
+	eventTimerEndTime = condor_gettimestamp_double();
 	dagman._dagmanStats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
 
 }

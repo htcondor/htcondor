@@ -28,7 +28,6 @@ main( int argc, char **argv ) {
     int rval = -1;
     int diagnostic = 0;
     MyString stats_string;
-    UtcTime time;
 
     // Point the global curl_stats pointer to our local object
     ft_stats = &stats;
@@ -66,7 +65,7 @@ main( int argc, char **argv ) {
 
     // Initialize the stats structure
     init_stats( argv );
-    stats.TransferStartTime = time.getTimeDouble();
+    stats.TransferStartTime = condor_gettimestamp_double();
 
     // Enter the loop that will attempt/retry the curl request
     for(;;) {
@@ -101,7 +100,7 @@ main( int argc, char **argv ) {
         }
     }
 
-    stats.TransferEndTime = time.getTimeDouble();
+    stats.TransferEndTime = condor_gettimestamp_double();
 
     // If the transfer was successful, output the statistics to stdout
     if( rval != -1 ) {
