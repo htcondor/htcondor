@@ -2469,17 +2469,19 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	// Now that we've completed the main file transfer loop, it's time to 
 	// transfer all files that needed a third party plugin. Iterate over the list
 	// of deferred transfers, and invoke each set with the appopriate plugin.
-	for ( std::map<std::string, std::string>::iterator it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
-		rc = InvokeMultipleFileTransferPlugin( errstack, it->first, it->second, 
-			LocalProxyName.Value() );
-		if ( rc != 0 ) {
-			dprintf( D_ALWAYS, "FILETRANSFER: Multiple file transfer failed: %s\n",
-				errstack.getFullText().c_str() );
-			download_success = false;
-			hold_code = CONDOR_HOLD_CODE_DownloadFileError;
-			hold_subcode = rc;
-			try_again = false;
-			error_buf.formatstr( errstack.getFullText().c_str() );
+	if ( hold_code == 0 ) {
+		for ( auto it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
+			rc = InvokeMultipleFileTransferPlugin( errstack, it->first, it->second, 
+				LocalProxyName.Value() );
+			if ( rc != 0 ) {
+				dprintf( D_ALWAYS, "FILETRANSFER: Multiple file transfer failed: %s\n",
+					errstack.getFullText().c_str() );
+				download_success = false;
+				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_subcode = rc;
+				try_again = false;
+				error_buf.formatstr( errstack.getFullText().c_str() );
+			}
 		}
 	}
 
