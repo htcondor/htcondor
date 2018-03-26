@@ -2159,14 +2159,6 @@ void ClassAd::ClearAllDirtyFlags(void)
 	return;
 }
 
-void ClassAd::MarkAttributeDirty(const string &name)
-{
-	if (do_dirty_tracking) {
-		dirtyAttrList.insert(name);
-	}
-	return;
-}
-
 void ClassAd::MarkAttributeClean(const string &name)
 {
 	if (do_dirty_tracking) {

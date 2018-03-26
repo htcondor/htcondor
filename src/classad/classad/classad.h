@@ -710,7 +710,11 @@ class ClassAd : public ExprTree
         /** Mark a particular attribute as dirty
          * @param name The attribute name
          */
-		void        MarkAttributeDirty(const std::string &name);
+
+		void        MarkAttributeDirty(const std::string &name) {
+			if (do_dirty_tracking) dirtyAttrList.insert(name);
+		}
+
         /** Mark a particular attribute as not dirty 
          * @param name The attribute name
          */
