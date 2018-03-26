@@ -668,7 +668,7 @@ int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
 int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Stream* sock)
 {
 	int return_status = TRUE;
-	UtcTime begin(true);
+	double begin = condor_gettimestamp_double();
 	List<ClassAd> results;
 
 	// Pull out relavent state from query_entry
@@ -683,7 +683,8 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		process_query_public (whichAds, cad, &results);
 	}
 
-	UtcTime end_write, end_query(true);
+	double end_query = condor_gettimestamp_double();
+	double end_write = 0.0;
 
 	// send the results via cedar			
 	sock->timeout(QueryTimeout); // set up a network timeout of a longer duration
@@ -779,14 +780,14 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		dprintf (D_ALWAYS, "Error flushing CEDAR socket\n");
 	}
 
-	end_write.getTime();
+	end_write = condor_gettimestamp_double();
 
 	dprintf (D_ALWAYS,
 			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}\n",
 			 __numAds__,
 			 __failed__,
-			 end_query.difference(begin),
-			 end_write.difference(end_query),
+			 end_query - begin,
+			 end_write - end_query,
 			 AdTypeToString(whichAds),
 			 ExprTreeToString(__filter__),
 			 is_locate,
