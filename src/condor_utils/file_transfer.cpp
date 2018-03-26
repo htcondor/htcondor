@@ -2205,40 +2205,41 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-			// Determine which plugin to invoke, and whether it supports multiple
-			// file transfer.
-			MyString plugin_path = DetermineFileTransferPlugin( errstack, URL.Value(), fullname.Value() );
-			bool this_plugin_supports_multifile = false;
-			if( plugins_multifile_support.find( plugin_path ) != plugins_multifile_support.end() ) {
-				this_plugin_supports_multifile = plugins_multifile_support[plugin_path];
-			}
-
-			// Check if both:
-			// a) multifile plugins are enabled
-			// b) this particular plugin supports multifile transfer
-			if( multifile_plugins_enabled && this_plugin_supports_multifile ) {
-				// Do not send the file right now! 
-				// Instead, add it to a deferred list, which we'll deal with 
-				// after the main download loop.
-				dprintf( D_FULLDEBUG, "DoDownload: deferring transfer of URL %s "
-					" until end of download loop.\n", URL.Value() );
-				thisTransfer->Clear();
-				thisTransfer->InsertAttr( "Url", URL );
-				thisTransfer->InsertAttr( "DownloadFileName", fullname );
-				std::string thisTransferString;
-				unparser.Unparse( thisTransferString, thisTransfer.get() );
-
-				// Add this result to our deferred transfers map.
-				if ( deferredTransfers.find( plugin_path ) == deferredTransfers.end() ) {
-					deferredTransfers.insert( std::pair<std::string, std::string>( plugin_path, thisTransferString ) );
-				} 
-				else {
-					deferredTransfers[plugin_path] += thisTransferString;
+			if( multifile_plugins_enabled ) {
+				
+				// Determine which plugin to invoke, and whether it supports multiple
+				// file transfer.
+				MyString pluginPath = DetermineFileTransferPlugin( errstack, URL.Value(), fullname.Value() );
+				bool thisPluginSupportsMultifile = false;
+				if( plugins_multifile_support.find( pluginPath ) != plugins_multifile_support.end() ) {
+					thisPluginSupportsMultifile = plugins_multifile_support[pluginPath];
 				}
 
-				isDeferredTransfer = true;
+				if( thisPluginSupportsMultifile ) {
+					// Do not send the file right now! 
+					// Instead, add it to a deferred list, which we'll deal with 
+					// after the main download loop.
+					dprintf( D_FULLDEBUG, "DoDownload: deferring transfer of URL %s "
+						" until end of download loop.\n", URL.Value() );
+					thisTransfer->Clear();
+					thisTransfer->InsertAttr( "Url", URL );
+					thisTransfer->InsertAttr( "DownloadFileName", fullname );
+					std::string thisTransferString;
+					unparser.Unparse( thisTransferString, thisTransfer.get() );
+
+					// Add this result to our deferred transfers map.
+					if ( deferredTransfers.find( pluginPath ) == deferredTransfers.end() ) {
+						deferredTransfers.insert( std::pair<std::string, std::string>( pluginPath, thisTransferString ) );
+					} 
+					else {
+						deferredTransfers[pluginPath] += thisTransferString;
+					}
+
+					isDeferredTransfer = true;
+				}
 			}
-			else {
+
+			if( !isDeferredTransfer ) {
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 
 				rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
@@ -4320,28 +4321,13 @@ MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const ch
 	}
 
 	// Find the type of transfer
-	const char* colon = strchr( URL, ':' );
-
-	if ( !colon ) {
-		// In theory, this should never happen -- the sending side should only
-		// send URLs after having checked this. However, trust but verify.
-		error.pushf( "FILETRANSFER", 1, "Specified URL does not contain a "
-			"':' (%s)", URL );
-		return NULL;
-	}
-
-	// Extract the protocol/method
-	char* method = ( char* ) malloc( 1 + ( colon-URL ) );
-	ASSERT( method );
-	strncpy( method, URL, ( colon-URL ) );
-	method[( colon-URL )] = '\0';
+	MyString method = getURLType( URL );
 
 	// Hashtable returns zero if found.
-	if ( plugin_table->lookup( (MyString) method, plugin ) ) {
+	if ( plugin_table->lookup( method, plugin ) ) {
 		// no plugin for this type!!!
-		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method );
-		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method );
-		free( method );
+		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.Value() );
+		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.Value() );
 		return NULL;
 	}
 
@@ -4523,13 +4509,12 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	bool drop_privs = !param_boolean( "RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false );
 
 	// Lookup the initial working directory
-	char buf[ATTRLIST_MAX_EXPRESSION];
-	if ( jobAd.LookupString( ATTR_JOB_IWD, buf, sizeof( buf ) ) != 1) {
-		dprintf( D_FULLDEBUG, "FileTransfer::InvokeMultipleFileTransferPlugin: "
+	std::string iwd;
+	if ( jobAd.LookupString( ATTR_JOB_IWD, iwd ) != 1) {
+		dprintf( D_FULLDEBUG, "FileTransfer::IqnvokeMultipleFileTransferPlugin: "
 					"Job Ad did not have an IWD! Aborting.\n" );
-			return 1;
+		return 1;
 	}
-	std::string iwd = strdup( buf );
 
 	// Create an input file for the plugin.
 	// Input file consists of the transfer_files_string data (list of classads)
