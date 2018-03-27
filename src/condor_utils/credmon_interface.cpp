@@ -155,7 +155,10 @@ bool credmon_poll_continue(const char* user, int retry) {
 
 	struct stat junk_buf;
 
+	// stat the file as root
+	priv_state priv = set_root_priv();
 	int rc = stat(watchfilename, &junk_buf);
+	set_priv(priv);
 	if (rc==-1) {
 		dprintf(D_FULLDEBUG, "CREDMON: warning, got errno %i, waiting for %s to appear (retry: %i)\n", errno, watchfilename, retry);
 		// DON'T BLOCK!  Just say we didn't find it and let the caller decide what to do.
