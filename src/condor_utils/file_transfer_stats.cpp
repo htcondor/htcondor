@@ -37,38 +37,38 @@ void FileTransferStats::Init() {
 	TransferFileBytes = 0;
 }
 
-void FileTransferStats::Publish(ClassAd &ad) const {
+void FileTransferStats::Publish(classad::ClassAd &ad) const {
     
     // The following statistics appear in every ad
-    ad.Assign("ConnectionTimeSeconds", ConnectionTimeSeconds);
-    ad.Assign("TransferEndTime", TransferEndTime);
-    ad.Assign("TransferFileBytes", TransferFileBytes);
-    ad.Assign("TransferStartTime", TransferStartTime);
-    ad.Assign("TransferSuccess", TransferSuccess);
-    ad.Assign("TransferTotalBytes", TransferTotalBytes);
+    ad.InsertAttr("ConnectionTimeSeconds", ConnectionTimeSeconds);
+    ad.InsertAttr("TransferEndTime", TransferEndTime);
+    ad.InsertAttr("TransferFileBytes", TransferFileBytes);
+    ad.InsertAttr("TransferStartTime", TransferStartTime);
+    ad.InsertAttr("TransferSuccess", TransferSuccess);
+    ad.InsertAttr("TransferTotalBytes", TransferTotalBytes);
 
     // The following statistics only appear if they have a value set
     if (!HttpCacheHitOrMiss.empty())
-        ad.Assign("HttpCacheHitOrMiss", HttpCacheHitOrMiss);
+        ad.InsertAttr("HttpCacheHitOrMiss", HttpCacheHitOrMiss);
     if (!HttpCacheHost.empty())
-        ad.Assign("HttpCacheHost", HttpCacheHost);
+        ad.InsertAttr("HttpCacheHost", HttpCacheHost);
     if (!TransferError.empty())
-        ad.Assign("TransferError", TransferError);
+        ad.InsertAttr("TransferError", TransferError);
     if (!TransferFileName.empty())
-        ad.Assign("TransferFileName", TransferFileName);
+        ad.InsertAttr("TransferFileName", TransferFileName);
     if (!TransferHostName.empty())
-        ad.Assign("TransferHostName", TransferHostName);
+        ad.InsertAttr("TransferHostName", TransferHostName);
     if (!TransferLocalMachineName.empty())
-        ad.Assign("TransferLocalMachineName", TransferLocalMachineName);
+        ad.InsertAttr("TransferLocalMachineName", TransferLocalMachineName);
     if (!TransferProtocol.empty())
-        ad.Assign("TransferProtocol", TransferProtocol);
+        ad.InsertAttr("TransferProtocol", TransferProtocol);
     if (TransferReturnCode > 0) 
-        ad.Assign("TransferReturnCode", TransferReturnCode);
+        ad.InsertAttr("TransferReturnCode", TransferReturnCode);
     if (TransferTries > 0) 
-        ad.Assign("TransferTries", TransferTries);
+        ad.InsertAttr("TransferTries", TransferTries);
     if (!TransferType.empty())
-        ad.Assign("TransferType", TransferType);
+        ad.InsertAttr("TransferType", TransferType);
     if (!TransferUrl.empty())
-        ad.Assign("TransferUrl", TransferUrl);     
+        ad.InsertAttr("TransferUrl", TransferUrl);     
     
 }
