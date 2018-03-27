@@ -3544,18 +3544,18 @@ ResponsibleForPeriodicExprs( JobQueueJob *jobad, int & status )
 		return 1;
 	} else {
 		switch(status) {
-			case HELD:
 			case IDLE:
-			case COMPLETED:
 				return 1;
+			case HELD:
+			case COMPLETED:
 			case REMOVED:
 				if ( jobad->jid.cluster > 0 && jobad->jid.proc > -1 && 
 					 scheduler.FindSrecByProcID(jobad->jid) )
 				{
-						// job removed, but shadow still exists
+						// job removed/completed/held, but shadow still exists
 					return 0;
 				} else {
-						// job removed, and shadow is gone
+						// job removed/completed/held, and shadow is gone
 					return 1;
 				}
 			default:
