@@ -88,7 +88,7 @@ bool credmon_fill_watchfile_name(char* watchfilename, const char* user) {
 			username[255] = 0;
 		}
 		if(param_boolean("TOKENS", false)) {
-			sprintf(watchfilename, "%s%c%s.use", cred_dir.ptr(), DIR_DELIM_CHAR, username);
+			sprintf(watchfilename, "%s%c%s%cscitokens.use", cred_dir.ptr(), DIR_DELIM_CHAR, username, DIR_DELIM_CHAR);
 		} else {
 			sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 		}
