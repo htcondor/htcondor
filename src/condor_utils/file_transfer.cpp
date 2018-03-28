@@ -4511,7 +4511,7 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// Lookup the initial working directory
 	std::string iwd;
 	if ( jobAd.LookupString( ATTR_JOB_IWD, iwd ) != 1) {
-		dprintf( D_FULLDEBUG, "FileTransfer::IqnvokeMultipleFileTransferPlugin: "
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 					"Job Ad did not have an IWD! Aborting.\n" );
 		return 1;
 	}
@@ -4536,9 +4536,21 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// Invoke the plugin
 	dprintf( D_FULLDEBUG, "FILETRANSFER: invoking: %s \n", plugin_path.c_str() );
 	FILE* plugin_pipe = my_popen( plugin_args, "r", FALSE, &plugin_env, drop_privs );
+	if( !plugin_pipe ) {
+		dprintf ( D_ALWAYS, "FILETRANSFER: failed to invoke multifile transfer "
+			"plugin %s, aborting\n", plugin_path.c_str() );
+		return GET_FILE_PLUGIN_FAILED;
+	}
 	int plugin_status = my_pclose( plugin_pipe );
-	dprintf ( D_ALWAYS, "FILETRANSFER: plugin returned %i (%s)\n", 
-		plugin_status, strerror( plugin_status ) );
+	if( plugin_status >= 0 ) {
+		dprintf ( D_ALWAYS, "FILETRANSFER: plugin returned %i (%s)\n", 
+			plugin_status, strerror( plugin_status ) );
+	}
+	else {
+		dprintf ( D_ALWAYS, "FILETRANSFER: plugin returned a negative status "
+			"code (%d). Something is very wrong, aborting.\n", plugin_status );
+		return GET_FILE_PLUGIN_FAILED;
+	}
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -4560,13 +4572,13 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// Output stats regardless of success or failure
 	output_file = safe_fopen_wrapper( output_filename.c_str(), "r" );
 	if ( output_file == NULL ) {
-		fprintf( stderr, "FILETRANSFER: Unable to open curl_plugin output file "
+		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open curl_plugin output file "
 			"%s.\n", input_filename.c_str() );
-		return -1;
+		return GET_FILE_PLUGIN_FAILED;
 	}
 	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
-		fprintf( stderr, "FILETRANSFER: Failed to iterate over file transfer output.\n" );
-		return -1;
+		dprintf( D_ALWAYS, "FILETRANSFER: Failed to iterate over file transfer output.\n" );
+		return GET_FILE_PLUGIN_FAILED;
 	}
 	else {
 		// Iterate over the classads in the file, and output each one
