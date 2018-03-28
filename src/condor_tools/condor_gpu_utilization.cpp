@@ -88,25 +88,15 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 	return NVML_SUCCESS;
 }
 
-int main( int argc, char ** argv ) {
+int main() {
 	nvml_void nvmlInit = NULL;
 	nvml_void nvmlShutdown = NULL;
 
+	// The actual filtering is done by the startd on the basis
+	// of the SlotMergeConstraint we set for each ad we emit.
+	unsetenv( "CUDA_VISIBLE_DEVICES" );
+
 	void * nvml_handle = NULL;
-
-	for( int i = 1; i < argc; ++i ) {
-		char * arg = argv[i];
-
-		if( strcmp( arg, "-filter" ) == 0 ) {
-			// The actual filtering is done by the startd on the basis
-			// of the SlotMergeConstraint we set for each ad we emit.
-			unsetenv( "CUDA_VISIBLE_DEVICES" );
-		} else {
-			fprintf( stderr, "Usage: %s [-filter]\n", argv[0] );
-			return 1;
-		}
-	}
-
 	const char * nvml_library = "libnvidia-ml.so";
 	nvml_handle = dlopen( nvml_library, RTLD_LAZY );
 	if(! nvml_handle) {

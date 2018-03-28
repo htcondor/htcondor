@@ -639,6 +639,20 @@ cudaError_t CUDACALL ocl_GetDeviceCount(int * pcount) {
 
 void usage(FILE* output, const char* argv0);
 
+bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
+	char * tokenizer = strdup( list );
+	if( tokenizer == NULL ) {
+		fprintf( stderr, "Error: device list too long\n" );
+		return false;
+	}
+	char * next = strtok( tokenizer, "," );
+	for( ; next != NULL; next = strtok( NULL, "," ) ) {
+		dwl.push_back( atoi( next ) );
+	}
+	free( tokenizer );
+	return true;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
@@ -656,7 +670,6 @@ main( int argc, const char** argv)
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
 	//int opt_rdp = 0;
-	bool opt_filter = false;
 	std::list<int> dwl; // Device White List
 	int opt_nvcuda = 0; // use nvcuda rather than cudarl
 	int opt_opencl = 0; // prefer opencl detection
@@ -667,6 +680,26 @@ main( int argc, const char** argv)
 	const char * pcolon;
 	int i;
     int dev;
+
+	//
+	// When run with CUDA_VISIBLE_DEVICES set, only report the visible
+	// devices, but do so with the machine-level device indices.  The
+	// easiest way to do the latter is by unsetting CUDA_VISIBLE_DEVICES.
+	//
+	char * cvd = getenv( "CUDA_VISIBLE_DEVICES" );
+	if( cvd != NULL ) {
+		if(! addToDeviceWhiteList( cvd, dwl )) { return 1; }
+	}
+	unsetenv( "CUDA_VISIBLE_DEVICES" );
+
+	// Ditto for GPU_DEVICE_ORDINAL.  If we ever handle dissimilar GPUs
+	// properly (right now, the negotiator can't tell them apart), we'll
+	// have to change this program to filter for specific types of GPUs.
+	char * gdo = getenv( "GPU_DEVICE_ORDINAL" );
+	if( gdo != NULL ) {
+		if(! addToDeviceWhiteList( gdo, dwl )) { return 1; }
+	}
+	unsetenv( "GPU_DEVICE_ORDINAL" );
 
 	for (i=1; i<argc && argv[i]; i++) {
 		if (is_dash_arg_prefix(argv[i], "help", 1)) {
@@ -720,23 +753,6 @@ main( int argc, const char** argv)
 				}
 			}
 		}
-		else if (is_dash_arg_prefix(argv[i], "device-list", 11)) {
-			if ( ! argv[i+1] || '-' == *argv[i+1]) {
-				fprintf (stderr, "Error: -device-list requires an argument\n");
-				usage(stderr, argv[0]);
-				return 1;
-			}
-			char * tokenizer = strdup( argv[++i] );
-			if( tokenizer == NULL ) {
-				fprintf( stderr, "Error: -device-list argument too long\n" );
-				return 1;
-			}
-			char * next = strtok( tokenizer, "," );
-			for( ; next != NULL; next = strtok( NULL, "," ) ) {
-				dwl.push_back( atoi( next ) );
-			}
-			free( tokenizer );
-		}
 		else if (is_dash_arg_prefix(argv[i], "device", 3)) {
 			if ( ! argv[i+1] || '-' == *argv[i+1]) {
 				fprintf (stderr, "Error: -device requires an argument\n");
@@ -744,10 +760,6 @@ main( int argc, const char** argv)
 				return 1;
 			}
 			dwl.push_back( atoi(argv[++i]) );
-		}
-		else if (is_dash_arg_prefix(argv[i], "filter", 3)) {
-			unsetenv( "CUDA_VISIBLE_DEVICES" );
-			opt_filter = true;
 		}
 		else if (is_dash_arg_colon_prefix(argv[i], "simulate", &pcolon, 3)) {
 			opt_simulate = 1;
@@ -1019,7 +1031,7 @@ main( int argc, const char** argv)
 	std::string detected_gpus;
 	int filteredDeviceCount = 0;
 	for (dev = 0; dev < deviceCount; dev++) {
-		if( opt_filter && (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
+		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
 		}
 

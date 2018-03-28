@@ -29,9 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item If HTCondor is started with \MacroNI{CUDA\_VISIBLE\_DEVICES} set
-in the environment, it will report on those devices with the specified
-indices, instead of the indices of that subset.
+\item If HTCondor will no longer mangle \Expr{CUDA\_VISIBLE\_DEVICES} or
+\Expr{GPU\_DEVICE\_ORDINAL} if those environment variables are set when
+it starts up.  As a result, HTCondor will report GPU usage with the
+original device index (rather than starting over at 0).
 \Ticket{6584}
 
 \item When reporting \Attr{GPUsUsage}, HTCondor now also reports
