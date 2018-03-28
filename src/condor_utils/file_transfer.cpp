@@ -4431,7 +4431,7 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 	// Close the plugin
 	int plugin_status = my_pclose(plugin_pipe);
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin.Value(), plugin_status);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -4543,12 +4543,13 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	int plugin_status = my_pclose( plugin_pipe );
 	if( plugin_status >= 0 ) {
-		dprintf ( D_ALWAYS, "FILETRANSFER: plugin returned %i (%s)\n", 
-			plugin_status, strerror( plugin_status ) );
+		dprintf ( D_ALWAYS, "FILETRANSFER: plugin %s returned %i (%s)\n", 
+			plugin_path.c_str(), plugin_status, strerror( plugin_status ) );
 	}
 	else {
-		dprintf ( D_ALWAYS, "FILETRANSFER: plugin returned a negative status "
-			"code (%d). Something is very wrong, aborting.\n", plugin_status );
+		dprintf ( D_ALWAYS, "FILETRANSFER: plugin %s returned a negative status "
+			"code (%d). Something is very wrong, aborting.\n", plugin_path.c_str(), 
+			plugin_status );
 		return GET_FILE_PLUGIN_FAILED;
 	}
 
@@ -4788,14 +4789,19 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 	// extract the info we care about
 	char* methods = NULL;
 	bool this_plugin_supports_multifile = NULL;
-	if (ad->LookupString( "SupportedMethods", &methods)) {
-		// free the memory, return a MyString
-		MyString m = methods;
-		free(methods);
-		InsertPluginMappings( m, path );
-	}
 	if ( ad->LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
 		plugins_multifile_support[path] = this_plugin_supports_multifile;
+	}
+	
+	// Before adding mappings, make sure that if multifile plugins are disabled,
+	// this is not a multifile plugin.
+	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
+		if (ad->LookupString( "SupportedMethods", &methods)) {
+			// free the memory, return a MyString
+			MyString m = methods;
+			free(methods);
+			InsertPluginMappings( m, path );
+		}
 	}
 
 	delete( ad );
@@ -4813,8 +4819,8 @@ FileTransfer::InsertPluginMappings(MyString methods, MyString p)
 	method_list.rewind();
 	while((m = method_list.next())) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m, p.Value());
-		if ( plugin_table->insert(m, p) == -1 ) {
-			dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" already handled by another plugin, ignoring \"%s\"\n", m, p.Value());
+		if ( plugin_table->insert(m, p, true) != 0 ) {
+			dprintf(D_FULLDEBUG, "FILETRANSFER: error adding protocol \"%s\" to plugin table, ignoring\n", m);
 		}
 	}
 }
