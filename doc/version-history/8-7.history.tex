@@ -41,6 +41,14 @@ for NVidia GPUs.
 
 \begin{itemize}
 
+\item Fixed a bug where the \Condor{starter} would fail with an error
+after a docker job exits.
+\Ticket{6623}
+
+\item Fixed a bug where \Condor{userprio} would always show zero resources
+in use when NEGOTIATOR\_CONSIDER\_PREEMPTION=false was set.
+\Ticket{6621}
+
 \item Fixed a bug where ``.update.ad'' was not being updated atomically.
 \Ticket{6591}
 

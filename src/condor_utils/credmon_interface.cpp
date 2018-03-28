@@ -88,7 +88,7 @@ bool credmon_fill_watchfile_name(char* watchfilename, const char* user) {
 			username[255] = 0;
 		}
 		if(param_boolean("TOKENS", false)) {
-			sprintf(watchfilename, "%s%c%s.use", cred_dir.ptr(), DIR_DELIM_CHAR, username);
+			sprintf(watchfilename, "%s%c%s%cscitokens.use", cred_dir.ptr(), DIR_DELIM_CHAR, username, DIR_DELIM_CHAR);
 		} else {
 			sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 		}
@@ -155,7 +155,10 @@ bool credmon_poll_continue(const char* user, int retry) {
 
 	struct stat junk_buf;
 
+	// stat the file as root
+	priv_state priv = set_root_priv();
 	int rc = stat(watchfilename, &junk_buf);
+	set_priv(priv);
 	if (rc==-1) {
 		dprintf(D_FULLDEBUG, "CREDMON: warning, got errno %i, waiting for %s to appear (retry: %i)\n", errno, watchfilename, retry);
 		// DON'T BLOCK!  Just say we didn't find it and let the caller decide what to do.
