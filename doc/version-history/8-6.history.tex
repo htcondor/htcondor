@@ -92,6 +92,12 @@ in the dynamic slot being provisioned with not enough disk space and then failin
 the wrong value in the history file.
 \Ticket{6626}
 
+\item When using configuration parameter \MacroNI{SINGULARITY\_TARGET\_DIR}
+to mount the job scratch directory into the Singularity container,
+update the \Env{X509\_USER\_PROXY} environment variable to point to the
+proxy file's location inside the container.
+\Ticket{6625}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
