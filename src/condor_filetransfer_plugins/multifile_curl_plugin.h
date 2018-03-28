@@ -19,10 +19,9 @@ class MultiFileCurlPlugin {
     MultiFileCurlPlugin( int diagnostic );
     ~MultiFileCurlPlugin();
     
-    int Initialize();
+    int InitializeCurl();
     int DownloadFile( const char* url, const char* local_file_name );
     int DownloadMultipleFiles( string input_filename );
-    int UploadFile( const char* url, const char* local_file_name );
     int ServerSupportsResume( const char* url );
     static size_t HeaderCallback( char* buffer, size_t size, size_t nitems );
     static size_t FtpWriteCallback( void* buffer, size_t size, size_t nmemb, void* stream );

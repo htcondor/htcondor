@@ -13,8 +13,7 @@ MultiFileCurlPlugin::MultiFileCurlPlugin( int diagnostic ) :
     _handle ( NULL ),
     _diagnostic ( diagnostic ),
     _all_files_stats ( "" ) 
-{
-}
+{}
 
 MultiFileCurlPlugin::~MultiFileCurlPlugin() {
     curl_easy_cleanup( _handle );
@@ -22,7 +21,7 @@ MultiFileCurlPlugin::~MultiFileCurlPlugin() {
 }
 
 int
-MultiFileCurlPlugin::Initialize() {
+MultiFileCurlPlugin::InitializeCurl() {
     // Initialize win32 + SSL socket libraries.
     // Do not initialize these separately! Doing so causes https:// transfers
     // to segfault.
@@ -278,100 +277,6 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
     return rval;
 }
 
-int 
-MultiFileCurlPlugin::UploadFile( const char* url, const char* local_file_name ) {
-
-    char error_buffer[CURL_ERROR_SIZE];
-    double bytes_uploaded; 
-    double transfer_connection_time;
-    double transfer_total_time;
-    FILE *file = NULL;
-    long return_code;
-    int rval = -1;
-
-    // Output transfer: file -> URL
-    int close_input = 1;
-    int content_length = 0;
-    struct stat file_info;
-
-    if ( !strcmp( url, "-" ) ) {
-        fprintf( stderr, "ERROR: must provide a filename for curl_plugin uploads\n" ); 
-        exit(1);
-    } 
-
-    // Verify that the specified file exists, and check its content length 
-    file = fopen( url, "r" );
-    if( !file ) {
-        fprintf( stderr, "ERROR: File %s could not be opened\n", url );
-        exit(1);
-    }
-    if( fstat( fileno( file ), &file_info ) == -1 ) {
-        fprintf( stderr, "ERROR: fstat failed to read file %s\n", url );
-        exit(1);
-    }
-    content_length = file_info.st_size;
-    close_input = 1;
-    if ( _diagnostic ) { 
-        fprintf( stderr, "sending %s to %s\n", url, local_file_name ); 
-    }
-
-    // Set curl upload options
-    curl_easy_setopt( _handle, CURLOPT_URL, url );
-    curl_easy_setopt( _handle, CURLOPT_UPLOAD, 1 );
-    curl_easy_setopt( _handle, CURLOPT_READDATA, file );
-    curl_easy_setopt( _handle, CURLOPT_FOLLOWLOCATION, -1 );
-    curl_easy_setopt( _handle, CURLOPT_INFILESIZE_LARGE, 
-                                    (curl_off_t) content_length );
-    curl_easy_setopt( _handle, CURLOPT_FAILONERROR, 1 );
-    if( _diagnostic ) {
-        curl_easy_setopt( _handle, CURLOPT_VERBOSE, 1 );
-    }
-
-    // Does curl protect against redirect loops otherwise?  It's
-    // unclear how to tune this constant.
-    // curl_easy_setopt(_handle, CURLOPT_MAXREDIRS, 1000);
-
-    // Gather some statistics
-    _this_file_stats->TransferType = "upload";
-    _this_file_stats->TransferTries += 1;
-
-    // Perform the curl request
-    rval = curl_easy_perform( _handle );
-
-    // Gather more statistics
-    curl_easy_getinfo( _handle, CURLINFO_SIZE_UPLOAD, &bytes_uploaded );
-    curl_easy_getinfo( _handle, CURLINFO_CONNECT_TIME, &transfer_connection_time );
-    curl_easy_getinfo( _handle, CURLINFO_TOTAL_TIME, &transfer_total_time );
-    curl_easy_getinfo( _handle, CURLINFO_RESPONSE_CODE, &return_code );
-
-    _this_file_stats->TransferTotalBytes += ( long ) bytes_uploaded;
-    _this_file_stats->ConnectionTimeSeconds += transfer_total_time - transfer_connection_time;
-    _this_file_stats->TransferReturnCode = return_code;
-
-    if( rval == CURLE_OK ) {
-        _this_file_stats->TransferSuccess = true;    
-        _this_file_stats->TransferError = "";
-        _this_file_stats->TransferFileBytes = ftell( file );
-    }
-    else {
-        _this_file_stats->TransferSuccess = false;
-        _this_file_stats->TransferError = error_buffer;
-    }
-
-    // Error handling and cleanup
-    if ( _diagnostic && rval ) {
-        fprintf( stderr, "curl_easy_perform returned CURLcode %d: %s\n",
-                rval, curl_easy_strerror( ( CURLcode )rval ) );
-    }
-    if ( close_input ) {
-        fclose( file ); 
-        file = NULL;
-    }
-
-    // 0 on success, error code >= 1 on failure
-    return rval;
-}
-
 /*
     Check if this server supports resume requests using the HTTP "Range" header
     by sending a Range request and checking the return code. Code 206 means
@@ -558,7 +463,7 @@ main( int argc, char **argv ) {
 
     // Instantiate a MultiFileCurlPlugin object and handle the request
     MultiFileCurlPlugin curl_plugin( diagnostic );
-    if( curl_plugin.Initialize() != 0 ) {
+    if( curl_plugin.InitializeCurl() != 0 ) {
         fprintf( stderr, "ERROR: curl_plugin failed to initialize. Aborting.\n" );
         return 1;
     }
