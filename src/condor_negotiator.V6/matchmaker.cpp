@@ -2624,6 +2624,10 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
     bool isGroup=false;
     GroupEntry* cgrp = accountant.GetAssignedGroup(CustomerName, isGroup);
 
+	if (!cgrp) {
+        return;
+	}
+
     std::string cgname;
     if (isGroup) {
         cgname = (cgrp->parent != NULL) ? cgrp->parent->name : cgrp->name;
