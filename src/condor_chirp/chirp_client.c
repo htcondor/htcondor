@@ -1077,6 +1077,12 @@ tcp_connect( const char *host, int port )
 		return INVALID_SOCKET;
 	}
 
+	int one = 1;
+	int r = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	if (r < 0) {
+		fprintf(stderr, "Warning: error %d settting SO_REUSEADDR\n", errno);
+	}
+
 	success = connect( fd, (struct sockaddr*)&sa.storage, result->ai_addrlen );
 	freeaddrinfo(result);
 	if(success == SOCKET_ERROR) {
