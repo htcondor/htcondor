@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <dlfcn.h>
 #include "nvml_stub.h"
@@ -87,13 +88,15 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 	return NVML_SUCCESS;
 }
 
-// int main( int argc, char ** argv ) {
 int main() {
 	nvml_void nvmlInit = NULL;
 	nvml_void nvmlShutdown = NULL;
 
-	void * nvml_handle = NULL;
+	// The actual filtering is done by the startd on the basis
+	// of the SlotMergeConstraint we set for each ad we emit.
+	unsetenv( "CUDA_VISIBLE_DEVICES" );
 
+	void * nvml_handle = NULL;
 	const char * nvml_library = "libnvidia-ml.so";
 	nvml_handle = dlopen( nvml_library, RTLD_LAZY );
 	if(! nvml_handle) {
@@ -188,7 +191,11 @@ int main() {
 			}
 
 			nvmlMemory_t mi = { 0, 0, 0 };
-			nvmlDeviceGetMemoryInfo( devices[i], &mi );
+			r = nvmlDeviceGetMemoryInfo( devices[i], &mi );
+			if( r != NVML_SUCCESS ) {
+				fprintf( stderr, "getDeviceGetMemoryInfo(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
+				fail();
+			}
 			if( mi.used > memoryUsage[i] ) {
 				memoryUsage[i] = mi.used;
 			}
