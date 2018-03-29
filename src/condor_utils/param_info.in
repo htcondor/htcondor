@@ -3535,7 +3535,7 @@ type=string
 tags=annex
 
 [ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1)
+default = $(ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
 type=string
 tags=annex
 
@@ -3546,6 +3546,11 @@ tags=annex
 
 [ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1]
 default = ami-35b13223
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-c405dfb9
 type=string
 tags=annex
 
