@@ -1034,6 +1034,9 @@ tcp_connect( const char *host, int port )
 	int success;
 	SOCKET fd;
 	struct addrinfo hint;
+	int one = 1;
+	int r = 0;
+
 	union {
 		struct sockaddr_in6 v6;
 		struct sockaddr_in v4;
@@ -1075,6 +1078,11 @@ tcp_connect( const char *host, int port )
 	if(fd == INVALID_SOCKET) {
 		freeaddrinfo(result);
 		return INVALID_SOCKET;
+	}
+
+	r = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	if (r < 0) {
+		fprintf(stderr, "Warning: error %d settting SO_REUSEADDR\n", errno);
 	}
 
 	success = connect( fd, (struct sockaddr*)&sa.storage, result->ai_addrlen );
