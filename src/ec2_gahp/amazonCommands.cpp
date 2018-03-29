@@ -233,7 +233,7 @@ class Throttle {
         void sleepIfNecessary() {
             if( this->isValid() ) {
                 int rv;
-#if defined(HAVE_CLOCK_GETTIME)
+#if defined(HAVE_CLOCK_NANOSLEEP)
                 do {
                     rv = clock_nanosleep( type, TIMER_ABSTIME, & when, NULL );
                 } while( rv == EINTR );

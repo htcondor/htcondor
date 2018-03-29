@@ -1168,7 +1168,7 @@ VMwareType::Start()
 	}
 
 	setVMStatus(VM_RUNNING);
-	m_start_time.getTime();
+	m_start_time = time(NULL);
     //m_cpu_time = 0;
 	return true;
 }
@@ -1296,7 +1296,7 @@ VMwareType::Shutdown()
 	
 	m_vm_pid = 0;
 	setVMStatus(VM_STOPPED);
-	m_stop_time.getTime();
+	m_stop_time = time(NULL);
 	return true;
 }
 
@@ -1517,11 +1517,9 @@ VMwareType::Status()
 	// We will not execute status again.
 	// Maybe this case may happen when it took long time 
 	// to execute the last status.
-	UtcTime cur_time;
 	long diff_seconds = 0;
 
-	cur_time.getTime();
-	diff_seconds = cur_time.seconds() - m_last_status_time.seconds();
+	diff_seconds = time(NULL) - m_last_status_time;
 
 	if( (diff_seconds < 10) && !m_last_status_result.IsEmpty() ) {
 		m_result_msg = m_last_status_result;
@@ -1687,7 +1685,7 @@ VMwareType::Status()
 		m_result_msg += "Stopped";
 		if( getVMStatus() != VM_STOPPED ) {
 			setVMStatus(VM_STOPPED);
-			m_stop_time.getTime();
+			m_stop_time = time(NULL);
 		}
 		return true;
 	}else {

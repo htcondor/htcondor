@@ -1489,10 +1489,10 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	if ( transobject->Info.success ) {
 		if ( transobject->Info.type == DownloadFilesType ) {
-			transobject->downloadEndTime = UtcTime::getTimeDouble();
+			transobject->downloadEndTime = condor_gettimestamp_double();
 
 		} else if ( transobject->Info.type == UploadFilesType ) {
-			transobject->uploadEndTime = UtcTime::getTimeDouble();
+			transobject->uploadEndTime = condor_gettimestamp_double();
 
 		}
 	}
@@ -1751,7 +1751,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
 
-		downloadStartTime = UtcTime::getTimeDouble();
+		downloadStartTime = condor_gettimestamp_double();
 
 	}
 	
@@ -1822,7 +1822,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
 	int numFiles = 0;
-	UtcTime utcTime;
 	ClassAd pluginStatsAd;
 
 	// Variable for deferred transfers, used to transfer multiple files at once
@@ -1841,7 +1840,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
 
-	downloadStartTime = UtcTime::getTimeDouble();
+	downloadStartTime = condor_gettimestamp_double();
 
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
@@ -2099,7 +2098,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		thisFileStats.TransferFileBytes = 0;
 		thisFileStats.TransferFileName = filename.Value();
 		thisFileStats.TransferProtocol = "cedar";
-		thisFileStats.TransferStartTime = utcTime.getTimeDouble();
+		thisFileStats.TransferStartTime = condor_gettimestamp_double();
 		thisFileStats.TransferType = "download";
 
 		// Create a ClassAd we'll use to store stats from a file transfer
@@ -2333,7 +2332,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		elapsed = time(NULL)-start;
-		thisFileStats.TransferEndTime = utcTime.getTimeDouble();
+		thisFileStats.TransferEndTime = condor_gettimestamp_double();
 		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
 		if( rc < 0 ) {
@@ -2567,7 +2566,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	}
 
-	downloadEndTime = UtcTime::getTimeDouble();
+	downloadEndTime = condor_gettimestamp_double();
 
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
@@ -2990,7 +2989,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number;
 
-	uploadStartTime = UtcTime::getTimeDouble();
+	uploadStartTime = condor_gettimestamp_double();
 
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
@@ -3539,7 +3538,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			first_failed_line_number);
 	} 
 
-	uploadEndTime = UtcTime::getTimeDouble();
+	uploadEndTime = condor_gettimestamp_double();
 
 	upload_success = true;
 	return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,

@@ -237,11 +237,10 @@ main_init(int argc, char* argv[])
 		// Make a backup of the job queue?
 	if ( param_boolean_crufty("SCHEDD_BACKUP_SPOOL", false) ) {
 			MyString hostname;
-			UtcTime now(true);
 			hostname = get_local_hostname();
 			MyString		job_queue_backup;
 			job_queue_backup.formatstr( "%s/job_queue.bak.%s.%ld",
-									  Spool, hostname.Value(), now.seconds() );
+			                            Spool, hostname.Value(), (long)time(NULL) );
 			if ( copy_file( job_queue_name.Value(), job_queue_backup.Value() ) ) {
 				dprintf( D_ALWAYS, "Failed to backup spool to '%s'\n",
 						 job_queue_backup.Value() );

@@ -724,6 +724,7 @@ annex_main( int argc, char ** argv ) {
 	const char * sfrConfigFile = NULL;
 	const char * annexName = NULL;
 	const char * configDir = NULL;
+	const char * region = NULL;
 	const char * serviceURL = NULL;
 	const char * eventsURL = NULL;
 	const char * lambdaURL = NULL;
@@ -779,6 +780,31 @@ annex_main( int argc, char ** argv ) {
 			theCommand = ct_condor_off;
 			subCommandIndex = i;
 			break;
+		} else if( is_dash_arg_prefix( argv[i], "aws-region", 10 ) ) {
+			++i;
+			if( i < argc && argv[i] != NULL ) {
+				region = argv[i];
+				std::string buffer;
+
+				formatstr( buffer, "https://ec2.%s.amazonaws.com", region );
+				serviceURL = strdup( buffer.c_str() );
+				assert( serviceURL != NULL );
+
+				formatstr( buffer, "https://s3.%s.amazonaws.com", region );
+				s3URL = strdup( buffer.c_str() );
+				assert( s3URL != NULL );
+
+				formatstr( buffer, "https://events.%s.amazonaws.com", region );
+				eventsURL = strdup( buffer.c_str() );
+				assert( eventsURL != NULL );
+
+				formatstr( buffer, "https://lambda.%s.amazonaws.com", region );
+				lambdaURL = strdup( buffer.c_str() );
+				assert( lambdaURL != NULL );
+			} else {
+				fprintf( stderr, "%s: -aws-region requires an argument.\n", argv[0] );
+				return 1;
+			}
 		} else if( is_dash_arg_prefix( argv[i], "aws-ec2-url", 11 ) ) {
 			++i;
 			if( i < argc && argv[i] != NULL ) {
@@ -1144,20 +1170,26 @@ annex_main( int argc, char ** argv ) {
 		commandArguments.Assign( "SecretKeyFile", secretKeyFile );
 	}
 
+	std::string sURLy;
 	if( serviceURL != NULL ) {
+		sURLy = serviceURL;
 		commandArguments.Assign( "ServiceURL", serviceURL );
+		if( region ) { free( const_cast<char *>(serviceURL) ); }
 	}
 
 	if( eventsURL != NULL ) {
 		commandArguments.Assign( "EventsURL", eventsURL );
+		if( region ) { free( const_cast<char *>(eventsURL) ); }
 	}
 
 	if( lambdaURL != NULL ) {
 		commandArguments.Assign( "LambdaURL", lambdaURL );
+		if( region ) { free( const_cast<char *>(lambdaURL) ); }
 	}
 
 	if( s3URL != NULL ) {
 		commandArguments.Assign( "S3URL", s3URL );
+		if( region ) { free( const_cast<char *>(s3URL) ); }
 	}
 
 	if( leaseDuration == 0 ) {
@@ -1307,17 +1339,17 @@ annex_main( int argc, char ** argv ) {
 			return condor_off( annexName, argc, argv, subCommandIndex );
 
 		case ct_condor_status:
-			return condor_status( annexName, serviceURL,
+			return condor_status( annexName, sURLy.c_str(),
 				argc, argv, subCommandIndex );
 
 		case ct_status:
-			return status( annexName, wantClassAds, serviceURL );
+			return status( annexName, wantClassAds, sURLy.c_str() );
 
 		case ct_setup:
 			return setup(	argc >= 2 ? argv[2] : NULL,
 							argc >= 3 ? argv[3] : NULL,
 							argc >= 4 ? argv[4] : NULL,
-							serviceURL );
+							sURLy.c_str() );
 
 		case ct_check_setup:
 			return check_setup();

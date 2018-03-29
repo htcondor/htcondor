@@ -57,6 +57,9 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 	m_cpu_time = 0;
 	m_delete_working_files = false;
 	m_vcpus = 1;
+	m_start_time = 0;
+	m_stop_time = 0;
+	m_last_status_time = 0;
 
 	if ( privsep_enabled() ) {
 		m_file_owner = PRIV_CONDOR;
@@ -253,7 +256,7 @@ VMType::setVMStatus(vm_status status)
 void 
 VMType::setLastStatus(const char *result_msg)
 {
-	m_last_status_time.getTime();
+	m_last_status_time = time(NULL);
 	m_last_status_result = result_msg;
 }
 

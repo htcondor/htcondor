@@ -67,7 +67,7 @@ fetchAndExtract() {
     cd /etc/condor
     url=s3://$(echo ${1} | sed -e's/^arn:aws:s3::://')
     url=$(echo $url | sed -e's/\*/'${annexID}'/')
-    if aws s3 cp ${url} . >& /dev/null; then
+    if aws --region ${region} s3 cp ${url} . >& /dev/null; then
         file=`basename ${url}`
         echo "# Fetched '${file}' from '${url}'."
         tarfile=`echo ${file} | awk '/.tar.gz$/{print $1}'`

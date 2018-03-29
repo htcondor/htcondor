@@ -128,7 +128,7 @@ VirshType::Start()
 			vmprintf(D_ALWAYS, "Succeeded to restart with checkpointed files\n");
 
 			// Here we manually update timestamp of all writable disk files
-			m_start_time.getTime();
+			m_start_time = time(NULL);
 			return true;
 		}else {
 			// Failed to restart with checkpointed files
@@ -175,7 +175,7 @@ VirshType::Start()
 	set_priv(priv);
 
 	setVMStatus(VM_RUNNING);
-	m_start_time.getTime();
+	m_start_time = time(NULL);
 	m_cpu_time = 0;
 
 	// Here we manually update timestamp of all writable disk files
@@ -263,7 +263,7 @@ VirshType::Shutdown()
 	}
 
 	setVMStatus(VM_STOPPED);
-	m_stop_time.getTime();
+	m_stop_time = time(NULL);
 	return true;
 }
 
@@ -663,7 +663,7 @@ VirshType::Status()
 					}
 					if(getVMStatus() != VM_STOPPED) {
 						setVMStatus(VM_STOPPED);
-						m_stop_time.getTime();
+						m_stop_time = time(NULL);
 					}
 					m_result_msg += "Stopped";
 					return true;
@@ -679,7 +679,7 @@ VirshType::Status()
 						}
 						if(getVMStatus() != VM_STOPPED) {
 							setVMStatus(VM_STOPPED);
-							m_stop_time.getTime();
+							m_stop_time = time(NULL);
 						}
 						m_result_msg += "Stopped";
 						return true;
@@ -771,7 +771,7 @@ VirshType::Status()
 	    if(getVMStatus() != VM_STOPPED)
 	      {
 		setVMStatus(VM_STOPPED);
-		m_stop_time.getTime();
+		m_stop_time = time(NULL);
 	      }
 	    m_result_msg += "Stopped";
 	    virDomainFree(dom);
