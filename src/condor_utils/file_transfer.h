@@ -285,9 +285,11 @@ class FileTransfer: public Service {
 	void setTransferQueueContactInfo(char const *contact);
 
 	void InsertPluginMappings(MyString methods, MyString p);
-	MyString DeterminePluginMethods( CondorError &e, const char* path );
+	void SetPluginMappings( CondorError &e, const char* path );
 	int InitializePlugins(CondorError &e);
+	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
+	int InvokeMultipleFileTransferPlugin(CondorError &e, std::string plugin_path, std::string transfer_files_string, const char* proxy_filename);
     int OutputFileTransferStats( ClassAd &stats );
 	MyString GetSupportedMethods();
 
@@ -404,7 +406,9 @@ class FileTransfer: public Service {
 	bool ClientCallbackWantsStatusUpdates;
 	FileTransferInfo Info;
 	PluginHashTable* plugin_table;
+	std::map<MyString, bool> plugins_multifile_support;
 	bool I_support_filetransfer_plugins;
+	bool multifile_plugins_enabled;
 #ifdef WIN32
 	perm* perm_obj;
 #endif		

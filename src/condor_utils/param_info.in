@@ -3535,7 +3535,7 @@ type=string
 tags=annex
 
 [ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1)
+default = $(ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
 type=string
 tags=annex
 
@@ -3546,6 +3546,11 @@ tags=annex
 
 [ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1]
 default = ami-35b13223
+type=string
+tags=annex
+
+[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-c405dfb9
 type=string
 tags=annex
 
@@ -4546,6 +4551,11 @@ tags=schedd
 default=false
 type=bool
 description=Whether to invoke file transfer plugins as user or as root
+
+[ENABLE_MULTIFILE_TRANSFER_PLUGINS]
+default=false
+type=bool
+description=Enable file transfer plugins that support multiple files as input
 
 [ENABLE_HTTP_PUBLIC_FILES]
 default=false

@@ -87,7 +87,11 @@ static bool handleFTL(int error) {
 
 DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1), memUsage(0), netIn(0), netOut(0), userCpu(0), sysCpu(0), waitForCreate(false), execReaperId(-1) { }
 
-DockerProc::~DockerProc() { }
+DockerProc::~DockerProc() { 
+	if ( daemonCore && daemonCore->SocketIsRegistered(&listener)) {
+		daemonCore->Cancel_Socket(&listener);
+	}
+}
 
 int DockerProc::StartJob() {
 	std::string imageID;

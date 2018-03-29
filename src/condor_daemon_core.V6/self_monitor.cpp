@@ -99,16 +99,18 @@ void SelfMonitorData::CollectData(void)
 
     dprintf(D_FULLDEBUG, "Getting monitoring info for pid %d\n", getpid());
 
-    ProcAPI::getProcInfo(getpid(), my_process_info, status);
+    int r = ProcAPI::getProcInfo(getpid(), my_process_info, status);
 
-    if (my_process_info != NULL) {
+    if ((r == PROCAPI_SUCCESS) && (my_process_info != NULL)) {
         cpu_usage  = my_process_info->cpuusage;
         image_size = my_process_info->imgsize;
         rs_size    = my_process_info->rssize;
         user_time  = my_process_info->user_time;
         sys_time   = my_process_info->sys_time;
         age        = my_process_info->age;
+	}
 
+	if (my_process_info != NULL) {
         delete my_process_info;
     }
 

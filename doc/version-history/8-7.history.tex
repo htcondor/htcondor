@@ -29,6 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If HTCondor will no longer mangle \Expr{CUDA\_VISIBLE\_DEVICES} or
+\Expr{GPU\_DEVICE\_ORDINAL} if those environment variables are set when
+it starts up.  As a result, HTCondor will report GPU usage with the
+original device index (rather than starting over at 0).
+\Ticket{6584}
+
 \item When reporting \Attr{GPUsUsage}, HTCondor now also reports
 \Attr{GPUsMemoryUsage}.  This is like \Attr{MemoryUsage}, except it is
 the peak amount of GPU memory used by the job.  This feature only works
@@ -40,6 +46,14 @@ for NVidia GPUs.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug where the \Condor{starter} would fail with an error
+after a docker job exits.
+\Ticket{6623}
+
+\item Fixed a bug where \Condor{userprio} would always show zero resources
+in use when NEGOTIATOR\_CONSIDER\_PREEMPTION=false was set.
+\Ticket{6621}
 
 \item Fixed a bug where ``.update.ad'' was not being updated atomically.
 \Ticket{6591}

@@ -8,6 +8,7 @@
 #include "condor_config.h"
 #include "my_popen.h"
 #include "CondorError.h"
+#include "basename.h"
 
 using namespace htcondor;
 
@@ -209,6 +210,13 @@ Singularity::setup(ClassAd &machineAd,
 		job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
 		job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
 		job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
+		MyString proxy_file;
+		if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
+		     strncmp( execute_dir.c_str(), proxy_file.Value(),
+                      execute_dir.length() ) == 0 ) {
+			std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.Value() );
+			job_env.SetEnv( "X509_USER_PROXY", new_proxy.c_str() );
+		}
 	}
 	args.InsertArg(bind_spec.c_str(), 0);
 	args.InsertArg("-B", 0);
