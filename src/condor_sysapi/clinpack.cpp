@@ -56,7 +56,7 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 #endif
 
 #include "utc_time.h"
-#define dtime()	UtcTime::getTimeDouble()
+#define dtime()	condor_gettimestamp_double()
 
 #ifdef SP
 #define REAL float
@@ -1072,13 +1072,13 @@ kflops_raw( void )
 	// For faster machines, run with more loops.
 	loops = (int) floor( 0.9999 + (QUICK_RUNS * quick_kflops * LOOP_CONST) );
 # if(ENABLE_TIMING)
-	double t1 = UtcTime::getTimeDouble( );
+	double t1 = condor_gettimestamp_double( );
 # endif
 
 	kflops = clinpack_kflops( loops );
 
 # if(ENABLE_TIMING)
-	double t2 = UtcTime::getTimeDouble( );
+	double t2 = condor_gettimestamp_double( );
 	printf( "quick=%d, loops=%d, time=%0.3fs\n",
 			quick_kflops, loops, t2-t1 );
 # endif

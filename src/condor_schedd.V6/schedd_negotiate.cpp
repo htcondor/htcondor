@@ -285,6 +285,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		result = false;
 	}
 
+	disk = 1;
 	if (job_ad->EvalInteger(ATTR_REQUEST_DISK, match_ad, disk)) {
 		float total_disk = disk;
 		match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
@@ -295,6 +296,26 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		dprintf(D_ALWAYS, "No disk request in job %d.%d, skipping match to partitionable slot %s\n", job_id.cluster, job_id.proc, slot_name);
 		result = false;
 	}
+
+	std::string res_list_str;
+	match_ad->LookupString( ATTR_MACHINE_RESOURCES, res_list_str );
+
+	StringList res_list( res_list_str.c_str() );
+	res_list.rewind();
+	while ( char* res = res_list.next() ) {
+		if ( strcasecmp( res, "cpus" ) == 0 ||
+		     strcasecmp( res, "memory" ) == 0 ||
+		     strcasecmp( res, "disk" ) == 0 ||
+		     strcasecmp( res, "swap" ) == 0 )
+		{
+			continue;
+		}
+		std::string req_str;
+		int req_val = 0;
+		formatstr( req_str, "%s%s", ATTR_REQUEST_PREFIX, res );
+		job_ad->LookupInteger( req_str.c_str(), req_val );
+		match_ad->Assign( res, req_val );
+    }
 
 	if( result ) {
 		// If successful, remove attribute claiming this slot is partitionable

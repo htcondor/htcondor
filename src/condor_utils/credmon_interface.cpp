@@ -359,39 +359,39 @@ void process_cred_mark_dir(const char *src) {
 
 	Directory cred_dir(cred_dir_name.ptr(), PRIV_ROOT);
 
-	dprintf (D_ALWAYS, "ZKM: CRED_DIR: %s, MARK: %s\n", cred_dir_name.ptr(), src );
+	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, MARK: %s\n", cred_dir_name.ptr(), src );
 	if ( cred_dir.Find_Named_Entry( src ) ) {
 		// it's possible that there are two users named "marky" and
 		// "marky.mark".  make sure the marky.mark file is NOT a
 		// directory, otherwise we'll delete poor marky's creds.
 		if (cred_dir.IsDirectory()) {
-			dprintf( D_ALWAYS, "Skipping DIRECTORY \"%s\" in %s\n", src, cred_dir_name.ptr());
+			dprintf( D_ALWAYS, "SKIPPING DIRECTORY \"%s\" in %s\n", src, cred_dir_name.ptr());
 			return;
 		}
 	} else {
-		dprintf( D_ALWAYS, "Couldn't find dir \"%s\" in %s\n", src, cred_dir_name.ptr());
+		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", src, cred_dir_name.ptr());
 		return;
 	}
 
 	// delete the mark file (now that we're sure it's not a directory)
 	dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, src );
 	if (!cred_dir.Remove_Current_File()) {
-		dprintf( D_ALWAYS, "ERROR REMOVING %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, src );
+		dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, src );
 		return;
 	}
 
 	// delete the user's dir
 	MyString username = src;
 	username = username.substr(0, username.Length()-5);
-	dprintf (D_ALWAYS, "ZKM: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name.ptr(), username.Value());
+	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name.ptr(), username.Value());
 	if ( cred_dir.Find_Named_Entry( username.Value() ) ) {
 		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, username.Value() );
 		if (!cred_dir.Remove_Current_File()) {
-			dprintf( D_ALWAYS, "ERROR REMOVING %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, username.Value() );
+			dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, username.Value() );
 			return;
 		}
 	} else {
-		dprintf( D_ALWAYS, "Couldn't find dir \"%s\" in %s\n", username.Value(), cred_dir_name.ptr());
+		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", username.Value(), cred_dir_name.ptr());
 		return;
 	}
 }

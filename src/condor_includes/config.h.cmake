@@ -351,6 +351,9 @@
 #cmakedefine HAVE_CLOCK_MONOTONIC_RAW 1
 #cmakedefine HAVE_CLOCK_REALTIME_COARSE 1
 
+/* Define to 1 if you have the 'clock_nanosleep' function. (USED)*/
+#cmakedefine HAVE_CLOCK_NANOSLEEP 1
+
 /* are we using the GNU linker (USED) */
 #cmakedefine HAVE_GNU_LD 1
 

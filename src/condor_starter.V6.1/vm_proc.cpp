@@ -1367,7 +1367,7 @@ VMProc::CkptDone(bool success)
 		// File uploading succeeded
 		// update checkpoint counter and last ckpt timestamp
 		m_vm_ckpt_count++;
-		m_vm_last_ckpt_time.getTime();
+		m_vm_last_ckpt_time = time(NULL);
 	}
 
 	if( m_is_vacate_ckpt ) {

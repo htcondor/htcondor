@@ -21,12 +21,26 @@
 #if !defined(_CONDOR_UTC_TIME_H)
 #define _CONDOR_UTC_TIME_H
 
+#if defined(WIN32)
+# include <winsock2.h>
+#else
+# include <sys/time.h>
+#endif
 
 /** The UtcTime class is a C++ representation of the current UTC time.
 	It's a portable way to get finer granularity than seconds (we
 	provide microseconds).  It also provides a method to compare
 	two UtcTime objects and get the difference between them.
 */
+
+void condor_gettimestamp( struct timeval &tv );
+
+inline
+double condor_gettimestamp_double() {
+	struct timeval tv;
+	condor_gettimestamp( tv );
+	return ( tv.tv_sec + ( tv.tv_usec * 0.000001 ) );
+}
 
 class UtcTime
 {
@@ -39,14 +53,14 @@ public:
 	void getTime( void );
 
 		/// Return the last computed epoch time in seconds
-	long seconds( void ) const { return sec; };
+	long seconds( void ) const { return m_tv.tv_sec; };
 
 		/// Return mircosecond field of the last computed epoch time
-	long microseconds( void ) const { return usec; };
+	long microseconds( void ) const { return m_tv.tv_usec; };
 
 		// Return the last computed time as a floating point combination
 		// of seconds and microseconds
-	double combined( void ) const { return( sec + (usec * 0.000001) ); };
+	double combined( void ) const { return( m_tv.tv_sec + (m_tv.tv_usec * 0.000001) ); };
 
 		/** How much time elapsed between the two times.  This method
 			subtracts the time of the other UtcTime object we're
@@ -60,20 +74,19 @@ public:
 	double difference( const UtcTime &other_time ) const;
 
 	long difference_usec( const UtcTime &other_time ) {
-		long diff = usec - other_time.usec;
-		long sec_diff = sec - other_time.sec;
+		long diff = m_tv.tv_usec - other_time.m_tv.tv_usec;
+		long sec_diff = m_tv.tv_sec - other_time.m_tv.tv_sec;
 		if( sec_diff ) {
 			diff += sec_diff*1000000;
 		}
 		return diff;
 	}
 
-	static double getTimeDouble( void );
+	static double getTimeDouble( void ) { return condor_gettimestamp_double(); }
 
 private:
 
-	long sec;
-	long usec;
+	struct timeval m_tv;
 };
 
 bool operator==(const UtcTime &lhs, const UtcTime &rhs);

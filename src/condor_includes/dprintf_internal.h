@@ -31,11 +31,15 @@ typedef _Longlong int64_t;
 #include <stdint.h>
 #endif
 #include <ctime>
+#if defined(WIN32)
+# include <winsock2.h>
+#else
+# include <sys/time.h>
+#endif
 
 struct DebugFileInfo;
 typedef struct DebugHeaderInfo {
-   time_t clock_now;
-   int    microseconds; // fractions of a second within the current second (will be 0 unless D_SUB_SECOND is specified)
+   struct timeval tv;
    struct tm * tm;
    DPF_IDENT  ident; // caller supplied identity, used by D_AUDIT
    int        backtrace_id;  // per-process unique identifier for this backtrace
