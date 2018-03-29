@@ -690,7 +690,11 @@ main( int argc, const char** argv)
 	if( cvd != NULL ) {
 		if(! addToDeviceWhiteList( cvd, dwl )) { return 1; }
 	}
+#if defined(WINDOWS)
+	putenv( "CUDA_VISIBLE_DEVICES=" );
+#else
 	unsetenv( "CUDA_VISIBLE_DEVICES" );
+#endif
 
 	// Ditto for GPU_DEVICE_ORDINAL.  If we ever handle dissimilar GPUs
 	// properly (right now, the negotiator can't tell them apart), we'll
@@ -699,7 +703,11 @@ main( int argc, const char** argv)
 	if( gdo != NULL ) {
 		if(! addToDeviceWhiteList( gdo, dwl )) { return 1; }
 	}
+#if defined( WINDOWS)
+	putenv( "GPU_DEVICE_ORDINAL=" );
+#else
 	unsetenv( "GPU_DEVICE_ORDINAL" );
+#endif
 
 	for (i=1; i<argc && argv[i]; i++) {
 		if (is_dash_arg_prefix(argv[i], "help", 1)) {
