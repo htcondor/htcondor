@@ -94,7 +94,11 @@ int main() {
 
 	// The actual filtering is done by the startd on the basis
 	// of the SlotMergeConstraint we set for each ad we emit.
+#if defined(WINDOWS)
+	putenv( "CUDA_VISIBLE_DEVICES=" );
+#else
 	unsetenv( "CUDA_VISIBLE_DEVICES" );
+#endif
 
 	void * nvml_handle = NULL;
 	const char * nvml_library = "libnvidia-ml.so";
