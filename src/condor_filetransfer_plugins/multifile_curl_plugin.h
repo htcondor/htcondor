@@ -13,12 +13,12 @@ struct transfer_request {
 static FileTransferStats* _global_ft_stats;
 
 class MultiFileCurlPlugin {
-  
+
   public:
- 
+
     MultiFileCurlPlugin( int diagnostic );
     ~MultiFileCurlPlugin();
-    
+
     int InitializeCurl();
     int DownloadFile( const char* url, const char* local_file_name );
     int DownloadMultipleFiles( string input_filename );

@@ -4,13 +4,13 @@
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
-## 
+##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
 ## may not use this file except in compliance with the License.  You may
 ## obtain a copy of the License at
-## 
+##
 ##	http://www.apache.org/licenses/LICENSE-2.0
-## 
+##
 ## Unless required by applicable law or agreed to in writing, software
 ## distributed under the License is distributed on an "AS IS" BASIS,
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -144,12 +144,12 @@ sub cleanupAndExit {
 sub startTestWebServer {
 	my $urlFile = shift;
 	TLOG "Starting test web server with URL file: $urlFile\n";
-	
+
 	# Windows
-	if ($^O eq 'MSWin32') { 
-		
+	if ($^O eq 'MSWin32') {
+
 		require Win32::Process;
-		
+
 		# Figure out location of the python binary
 		my @myPython = `where python*.exe`;
 		if(not(@myPython)) {
@@ -159,9 +159,9 @@ sub startTestWebServer {
 		fullchomp($pythonBinary);
 
 		# Launch the web server process
-		Win32::Process::Create($childProcess, $pythonBinary, 
-						"$pythonBinary curl_plugin_test_http_server.py $urlFile", 0, 0, ".") 
-						|| confess "Could not spawn child: $!";
+		Win32::Process::Create($childProcess, $pythonBinary,
+			"$pythonBinary curl_plugin_test_http_server.py $urlFile", 0, 0, ".")
+			|| confess "Could not spawn child: $!";
 		$childPid = $childProcess->GetProcessID();
 	}
 	# Unix

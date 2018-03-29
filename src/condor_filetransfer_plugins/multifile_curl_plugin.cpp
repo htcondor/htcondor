@@ -12,7 +12,7 @@ using namespace std;
 MultiFileCurlPlugin::MultiFileCurlPlugin( int diagnostic ) :
     _handle ( NULL ),
     _diagnostic ( diagnostic ),
-    _all_files_stats ( "" ) 
+    _all_files_stats ( "" )
 {}
 
 MultiFileCurlPlugin::~MultiFileCurlPlugin() {
@@ -37,10 +37,10 @@ MultiFileCurlPlugin::InitializeCurl() {
 
 int 
 MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name ) {
-    
+
     char error_buffer[CURL_ERROR_SIZE];
     char partial_range[20];
-    double bytes_downloaded;    
+    double bytes_downloaded;
     double transfer_connection_time;
     double transfer_total_time;
     FILE *file = NULL;
@@ -57,7 +57,7 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name 
         if ( _diagnostic ) { 
             fprintf( stderr, "Fetching %s to stdout\n", url ); 
         }
-    } 
+    }
     else {
         file = partial_file ? fopen( local_file_name, "a+" ) : fopen( local_file_name, "w" ); 
         close_output = 1;
@@ -92,7 +92,7 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name 
         // think that's a big deal.
         // * Let's keep it set to 1 for now.
         curl_easy_setopt( _handle, CURLOPT_FAILONERROR, 1 );
-        
+
         if( _diagnostic ) {
             curl_easy_setopt( _handle, CURLOPT_VERBOSE, 1 );
         }
@@ -110,7 +110,7 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name 
         // Does curl protect against redirect loops otherwise?  It's
         // unclear how to tune this constant.
         // curl_easy_setopt(_handle, CURLOPT_MAXREDIRS, 1000);
-        
+
         // Update some statistics
         _this_file_stats->TransferType = "download";
         _this_file_stats->TransferTries += 1;
@@ -176,7 +176,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
     int retry_count;
     int rval = 0;
     UtcTime time;
-    
+
     // Read input file containing data about files we want to transfer. Input
     // data is formatted as a series of classads, each with an arbitrary number
     // of inputs.
@@ -186,11 +186,11 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
             input_filename.c_str() );
         return 1;
     }
-    
+
     if( !adFileIter.begin( input_file, false, CondorClassAdFileParseHelper::Parse_new )) {
-		fprintf( stderr, "Failed to start parsing classad input.\n" );
-		return 1;
-    } 
+        fprintf( stderr, "Failed to start parsing classad input.\n" );
+        return 1;
+    }
     else {
         // Iterate over the classads in the file, and insert each one into our
         // requested_files map, with the key: url, value: additional details 
@@ -200,7 +200,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
         string url;
         transfer_request request_details;
         std::pair< string, transfer_request > this_request;
-        
+
         while ( adFileIter.next( transfer_file_ad ) > 0 ) {
             transfer_file_ad.EvaluateAttrString( "DownloadFileName", local_file_name );
             transfer_file_ad.EvaluateAttrString( "Url", url );
@@ -229,28 +229,28 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
 
         // Enter the loop that will attempt/retry the curl request
         for ( ;; ) {
-    
+
             // The sleep function is defined differently in Windows and Linux
             #ifdef WIN32
                 Sleep( ( retry_count++ ) * 1000 );
             #else
                 sleep( retry_count++ );
             #endif
-            
+
             rval = DownloadFile( url.c_str(), local_file_name.c_str() );
 
             // If curl request is successful, break out of the loop
-            if( rval == CURLE_OK ) {    
+            if( rval == CURLE_OK ) {
                 break;
             }
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
             else if( retry_count <= MAX_RETRY_ATTEMPTS && 
                                     ( rval == CURLE_COULDNT_CONNECT ||
-                                        rval == CURLE_PARTIAL_FILE || 
-                                        rval == CURLE_READ_ERROR || 
-                                        rval == CURLE_OPERATION_TIMEDOUT || 
-                                        rval == CURLE_SEND_ERROR || 
+                                        rval == CURLE_PARTIAL_FILE ||
+                                        rval == CURLE_READ_ERROR ||
+                                        rval == CURLE_OPERATION_TIMEDOUT ||
+                                        rval == CURLE_SEND_ERROR ||
                                         rval == CURLE_RECV_ERROR ) ) {
                 continue;
             }
@@ -259,7 +259,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
                 break;
             }
         }
-        
+
         _this_file_stats->TransferEndTime = time.getTimeDouble();
 
         // Regardless of success/failure, update the stats
@@ -269,7 +269,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
         delete _this_file_stats;
         stats_ad.Clear();
         stats_string = "";
-        
+
         // If the transfer did fail, break out of the loop immediately
         if ( rval > 0 ) break;
     }
@@ -313,13 +313,13 @@ MultiFileCurlPlugin::ServerSupportsResume( const char* url ) {
         }
     }
 
-    // If we've gotten this far the server does not support resume. Clear the 
+    // If we've gotten this far the server does not support resume. Clear the
     // HTTP "Range" header and return false.
     curl_easy_setopt( _handle, CURLOPT_RANGE, NULL );
-    return 0;    
+    return 0;
 }
 
-void 
+void
 MultiFileCurlPlugin::InitializeStats( string request_url ) {
 
     char* url = strdup( request_url.c_str() );
@@ -369,7 +369,7 @@ MultiFileCurlPlugin::InitializeStats( string request_url ) {
     freeaddrinfo( info );
 }
 
-size_t 
+size_t
 MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems ) {
     const char* delimiters = " \r\n";
     size_t numBytes = nitems * size;
@@ -398,16 +398,16 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems ) 
     return numBytes;
 }
 
-size_t 
+size_t
 MultiFileCurlPlugin::FtpWriteCallback( void* buffer, size_t size, size_t nmemb, void* stream ) {
     FILE* outfile = ( FILE* ) stream;
     return fwrite( buffer, size, nmemb, outfile); 
 }
 
 
-int 
+int
 main( int argc, char **argv ) {
- 
+
     bool valid_inputs = true;
     FILE* output_file;
     int diagnostic = 0;
@@ -467,7 +467,7 @@ main( int argc, char **argv ) {
         fprintf( stderr, "ERROR: curl_plugin failed to initialize. Aborting.\n" );
         return 1;
     }
-    
+
     // Do the transfer(s)
     rval = curl_plugin.DownloadMultipleFiles( input_filename );
 
