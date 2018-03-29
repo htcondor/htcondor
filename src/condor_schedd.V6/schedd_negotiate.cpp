@@ -273,6 +273,26 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		result = false;
 	}
 
+	std::string res_list_str;
+	match_ad->LookupString( ATTR_MACHINE_RESOURCES, res_list_str );
+
+	StringList res_list( res_list_str.c_str() );
+	res_list.rewind();
+	while ( char* res = res_list.next() ) {
+		if ( strcasecmp( res, "cpus" ) == 0 ||
+		     strcasecmp( res, "memory" ) == 0 ||
+		     strcasecmp( res, "disk" ) == 0 ||
+		     strcasecmp( res, "swap" ) == 0 )
+		{
+			continue;
+		}
+		std::string req_str;
+		int req_val = 0;
+		formatstr( req_str, "%s%s", ATTR_REQUEST_PREFIX, res );
+		job_ad->LookupInteger( req_str.c_str(), req_val );
+		match_ad->Assign( res, req_val );
+    }
+
 	if( result ) {
 		// If successful, remove attribute claiming this slot is partitionable
 		// and instead mark it as dynamic. This is what the startd does. Plus,
