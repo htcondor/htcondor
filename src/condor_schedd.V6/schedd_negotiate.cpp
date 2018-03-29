@@ -262,6 +262,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		result = false;
 	}
 
+	disk = 1;
 	if (job_ad->EvalInteger(ATTR_REQUEST_DISK, match_ad, disk)) {
 		float total_disk = disk;
 		match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
