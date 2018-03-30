@@ -1162,6 +1162,21 @@ annex_main( int argc, char ** argv ) {
 	}
 
 	if( region ) {
+		char * safeRegion = strdup(region);
+		assert( safeRegion != NULL );
+		for( unsigned i = 0; i < strlen( region ); ++i ) {
+			if( ('a' <= region[i] && region[i] <= 'z') ||
+			    ('A' <= region[i] && region[i] <= 'Z') ||
+			    ('0' <= region[i] && region[i] <= '9') ||
+			    strchr( "_./", region[i] ) != NULL )
+			{
+				continue;
+			} else {
+				safeRegion[i] = '_';
+			}
+		}
+		get_mySubSystem()->setLocalName( safeRegion );
+
 		std::string buffer;
 
 		formatstr( buffer, "https://ec2.%s.amazonaws.com", region );

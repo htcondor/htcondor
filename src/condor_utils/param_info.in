@@ -3494,6 +3494,11 @@ default=900
 type=long
 tags=annex
 
+[ANNEX_DEFAULT_AWS_REGION]
+default=us-east-1
+type=string
+tags=annex
+
 [ANNEX_DEFAULT_EC2_URL]
 default = https://ec2.us-east-1.amazonaws.com
 type=string
