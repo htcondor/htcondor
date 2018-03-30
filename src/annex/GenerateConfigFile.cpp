@@ -97,8 +97,16 @@ GenerateConfigFile::operator() () {
 	std::string keyPath;
 	scratchpad->LookupString( "KeyPath", keyPath );
 	if(! keyPath.empty()) {
+		std::string newKeyPath = keyPath;
+		size_t idx = keyPath.rfind( ".pem" );
+		if( idx != std::string::npos ) {
+			newKeyPath.insert( idx, region );
+			newKeyPath.insert( idx, "." );
+			rename( keyPath.c_str(), newKeyPath.c_str() );
+		}
+
 		fprintf( configFile, "# For debugging:\n" );
-		fprintf( configFile, "# ssh -i %s ec2-user@<address>\n", keyPath.c_str() );
+		fprintf( configFile, "# ssh -i %s ec2-user@<address>\n", newKeyPath.c_str() );
 	}
 
 	fprintf( configFile, "\n" );
