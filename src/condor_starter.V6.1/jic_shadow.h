@@ -137,7 +137,7 @@ public:
    			completely cleaned up.  We don't care, since we just wait
 			for the shadow to tell the startd to tell us to go away. 
 		*/
-	void allJobsGone( void ) {};
+	void allJobsGone( void );
 
 		/** The starter has been asked to shutdown fast.  Disable file
 			transfer, since we don't want that on fast shutdowns.

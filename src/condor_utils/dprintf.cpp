@@ -360,9 +360,9 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 		} else {
 			if (hdr_flags & D_SUB_SECOND) {
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), info.tv.tv_usec );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), (int)info.tv.tv_usec );
 				#else
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), (info.tv.tv_usec+500)/1000 );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), (int)(info.tv.tv_usec+500)/1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s ", formatTimeHeader(info.tm));

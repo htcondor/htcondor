@@ -3494,6 +3494,11 @@ default=900
 type=long
 tags=annex
 
+[ANNEX_DEFAULT_AWS_REGION]
+default=us-east-1
+type=string
+tags=annex
+
 [ANNEX_DEFAULT_EC2_URL]
 default = https://ec2.us-east-1.amazonaws.com
 type=string
@@ -3534,23 +3539,43 @@ default = m4.large
 type=string
 tags=annex
 
-[ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
 type=string
 tags=annex
 
-[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_0]
-default = ami-206ab336
-type=string
-tags=annex
-
-[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1]
-default = ami-35b13223
-type=string
-tags=annex
-
-[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
 default = ami-c405dfb9
+type=string
+tags=annex
+
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-8cba8be9
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-593e2f39
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-b4871dcc
 type=string
 tags=annex
 

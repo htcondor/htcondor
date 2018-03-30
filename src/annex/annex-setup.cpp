@@ -189,7 +189,7 @@ setup_usage() {
 }
 
 int
-setup( const char * pukf, const char * prkf, const char * cloudFormationURL, const char * serviceURL ) {
+setup( const char * region, const char * pukf, const char * prkf, const char * cloudFormationURL, const char * serviceURL ) {
 	std::string publicKeyFile, privateKeyFile;
 	if( pukf != NULL && prkf != NULL ) {
 		publicKeyFile = pukf;
@@ -227,8 +227,6 @@ setup( const char * pukf, const char * prkf, const char * cloudFormationURL, con
 
 	std::string cfURL = cloudFormationURL ? cloudFormationURL : "";
 	if( cfURL.empty() ) {
-		// FIXME: At some point, the argument to 'setup' should be the region,
-		// not the CloudFormation URL.
 		param( cfURL, "ANNEX_DEFAULT_CF_URL" );
 	}
 	if( cfURL.empty() ) {
@@ -323,7 +321,7 @@ setup( const char * pukf, const char * prkf, const char * cloudFormationURL, con
 		ec2URL, publicKeyFile, privateKeyFile,
 		commandState, commandID );
 
-	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, scratchpad );
+	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, region, scratchpad );
 
 	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Setup successful.", scratchpad,
 		replyStream, commandState, commandID );

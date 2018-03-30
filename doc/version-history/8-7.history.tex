@@ -74,6 +74,10 @@ in use when NEGOTIATOR\_CONSIDER\_PREEMPTION=false was set.
 \item Fixed a bug where ``.update.ad'' was not being updated atomically.
 \Ticket{6591}
 
+\item Fixed a bug that could cause a machine slot to become stuck in the
+Claimed/Busy state after a job completes.
+\Ticket{6597}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

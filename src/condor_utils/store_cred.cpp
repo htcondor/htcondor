@@ -74,6 +74,9 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	strncpy(username, user, (at-user));
 	username[at-user] = 0;
 
+	// remove mark on update for "mark and sweep"
+	credmon_clear_mark(username);
+
 	// create dir for user's creds
 	MyString user_cred_dir;
 	user_cred_dir.formatstr("%s%c%s", cred_dir, DIR_DELIM_CHAR, username);
