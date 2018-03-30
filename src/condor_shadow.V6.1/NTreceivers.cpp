@@ -195,8 +195,12 @@ do_REMOTE_syscall()
             syscall number because the starter went away
             because we *asked* it to go away. Don't be shocked
             and surprised if the startd/starter actually did
-            what we asked when we deactivated the claim */
-       if ( thisRemoteResource->wasClaimDeactivated() ) {
+            what we asked when we deactivated the claim.
+            Or the starter went away by itself after telling us
+            it's ready to do so (via a job_exit syscall). */
+       if ( thisRemoteResource->wasClaimDeactivated() ||
+            thisRemoteResource->gotJobExit() ) {
+		   dprintf(D_FULLDEBUG,"JEF socket closed, wasClaimDeactivated=%d jobJobExit=%d\n",thisRemoteResource->wasClaimDeactivated(),thisRemoteResource->gotJobExit());
            return -1;
        }
 
