@@ -7,7 +7,7 @@
 
 \SynProg{\Condor{annex}} \Opt{-help}
 
-\SynProg{\Condor{annex}} \OptArg{-setup}{[/full/path/to/access/key/file [/full/path/to/secret/key/file]]}
+\SynProg{\Condor{annex}} \oOptArg{-aws-region}{<region>} \OptArg{-setup}{[/full/path/to/access/key/file [/full/path/to/secret/key/file]]}
 
 \SynProg{\Condor{annex}} \oOpt{-aws-on-demand}
   \OptArg{-annex-name}{<name of the annex>}
@@ -104,6 +104,8 @@ for use by experts.
 		{Configure the annex so that anyone in the pool may use the annex.}
 
 %% AWS-SPECIFIC OPTIONS
+	\OptItem {\OptArg{-aws-region}{region}}
+		{Specify the region in which to create the annex.}
 	\OptItem {\OptArg{-aws-user-data}{user-data}}
 		{Set the instance user data to \Arg{user-data}.}
 	\OptItem {\OptArg{-aws-user-data-file}{/full/path/to/file}}
