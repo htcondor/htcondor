@@ -784,23 +784,6 @@ annex_main( int argc, char ** argv ) {
 			++i;
 			if( i < argc && argv[i] != NULL ) {
 				region = argv[i];
-				std::string buffer;
-
-				formatstr( buffer, "https://ec2.%s.amazonaws.com", region );
-				serviceURL = strdup( buffer.c_str() );
-				assert( serviceURL != NULL );
-
-				formatstr( buffer, "https://s3.%s.amazonaws.com", region );
-				s3URL = strdup( buffer.c_str() );
-				assert( s3URL != NULL );
-
-				formatstr( buffer, "https://events.%s.amazonaws.com", region );
-				eventsURL = strdup( buffer.c_str() );
-				assert( eventsURL != NULL );
-
-				formatstr( buffer, "https://lambda.%s.amazonaws.com", region );
-				lambdaURL = strdup( buffer.c_str() );
-				assert( lambdaURL != NULL );
 			} else {
 				fprintf( stderr, "%s: -aws-region requires an argument.\n", argv[0] );
 				return 1;
@@ -1168,6 +1151,34 @@ annex_main( int argc, char ** argv ) {
 
 	if( secretKeyFile != NULL ) {
 		commandArguments.Assign( "SecretKeyFile", secretKeyFile );
+	}
+
+	std::string defaultRegion;
+	if(! region) {
+		param( defaultRegion, "ANNEX_DEFAULT_AWS_REGION" );
+		if(! defaultRegion.empty()) {
+			region = defaultRegion.c_str();
+		}
+	}
+
+	if( region ) {
+		std::string buffer;
+
+		formatstr( buffer, "https://ec2.%s.amazonaws.com", region );
+		serviceURL = strdup( buffer.c_str() );
+		assert( serviceURL != NULL );
+
+		formatstr( buffer, "https://s3.%s.amazonaws.com", region );
+		s3URL = strdup( buffer.c_str() );
+		assert( s3URL != NULL );
+
+		formatstr( buffer, "https://events.%s.amazonaws.com", region );
+		eventsURL = strdup( buffer.c_str() );
+		assert( eventsURL != NULL );
+
+		formatstr( buffer, "https://lambda.%s.amazonaws.com", region );
+		lambdaURL = strdup( buffer.c_str() );
+		assert( lambdaURL != NULL );
 	}
 
 	std::string sURLy;
