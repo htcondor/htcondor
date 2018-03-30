@@ -29,7 +29,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item If HTCondor will no longer mangle \Expr{CUDA\_VISIBLE\_DEVICES} or
+\item \Condor{annex} may now be setup in multiple regions simultaneously.
+Use the \Opt{-aws-region} flag with \Opt{-setup} to add new regions.  Use the
+\Opt{-aws-region} flag with other \Condor{annex} commands to choose which
+region to operate in.  You may change the default region by setting
+\MacroNI{ANNEX\_DEFAULT\_AWS\_REGION}.
+\Ticket{6632}
+
+\item Added default AMIs for all four US regions to simplify using
+\Condor{annex} in those regions.
+\Ticket{6633}
+
+\item HTCondor will no longer mangle \Expr{CUDA\_VISIBLE\_DEVICES} or
 \Expr{GPU\_DEVICE\_ORDINAL} if those environment variables are set when
 it starts up.  As a result, HTCondor will report GPU usage with the
 original device index (rather than starting over at 0).
@@ -46,6 +57,11 @@ for NVidia GPUs.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug where \Condor{annex} would fail with a malformed
+authorization header when using AWS resources in a region other than
+\Expr{us-east-1}.
+\Ticket{6629}
 
 \item Fixed a bug where the \Condor{starter} would fail with an error
 after a docker job exits.
