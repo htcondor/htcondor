@@ -200,7 +200,6 @@ do_REMOTE_syscall()
             it's ready to do so (via a job_exit syscall). */
        if ( thisRemoteResource->wasClaimDeactivated() ||
             thisRemoteResource->gotJobExit() ) {
-		   dprintf(D_FULLDEBUG,"JEF socket closed, wasClaimDeactivated=%d jobJobExit=%d\n",thisRemoteResource->wasClaimDeactivated(),thisRemoteResource->gotJobExit());
            return -1;
        }
 
