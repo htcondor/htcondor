@@ -1494,8 +1494,13 @@ int
 ResMgr::start_sweep_timer( void )
 {
 	// only sweep if we have a cred dir
-	char* p = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr p(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!p) {
+		return TRUE;
+	}
+
+	// only sweep if not in TOKENS mode
+	if (!param_boolean("TOKENS", false)) {
 		return TRUE;
 	}
 
