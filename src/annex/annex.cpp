@@ -731,6 +731,7 @@ annex_main( int argc, char ** argv ) {
 	const char * s3URL = NULL;
 	const char * publicKeyFile = NULL;
 	const char * secretKeyFile = NULL;
+	const char * cloudFormationURL = NULL;
 	const char * sfrLeaseFunctionARN = NULL;
 	const char * odiLeaseFunctionARN = NULL;
 	const char * odiInstanceType = NULL;
@@ -1121,6 +1122,9 @@ annex_main( int argc, char ** argv ) {
 			theCommand = ct_check_setup;
 		} else if( is_dash_arg_prefix( argv[i], "setup", 5 ) ) {
 			theCommand = ct_setup;
+			++i; if( i < argc ) { publicKeyFile = argv[i]; }
+			++i; if( i < argc ) { secretKeyFile = argv[i]; }
+			++i; if( i < argc ) { cloudFormationURL = argv[i]; }
 		} else if( is_dash_arg_prefix( argv[i], "status", 6 ) ) {
 			theCommand = ct_status;
 		} else if( is_dash_arg_prefix( argv[i], "classads", 7 ) ) {
@@ -1371,11 +1375,16 @@ annex_main( int argc, char ** argv ) {
 		case ct_status:
 			return status( annexName, wantClassAds, sURLy.c_str() );
 
-		case ct_setup:
-			return setup(	argc >= 2 ? argv[2] : NULL,
-							argc >= 3 ? argv[3] : NULL,
-							argc >= 4 ? argv[4] : NULL,
-							sURLy.c_str() );
+		case ct_setup: {
+			std::string cfURL;
+			if( cloudFormationURL != NULL ) {
+				cfURL = cloudFormationURL;
+			} else {
+				formatstr( cfURL, "https://cloudformation.%s.amazonaws.com", region );
+			}
+
+			return setup( region, publicKeyFile, secretKeyFile, cfURL.c_str(), sURLy.c_str() );
+		}
 
 		case ct_check_setup:
 			return check_setup();
