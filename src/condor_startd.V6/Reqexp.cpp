@@ -48,6 +48,7 @@ Reqexp::Reqexp( Resource* res_ip )
 	rstate = ORIG_REQ;
 	m_origvalidckptpltfrm = NULL;
 	m_within_resource_limits_expr = NULL;
+	drainingStartExpr = NULL;
 }
 
 
@@ -255,6 +256,7 @@ Reqexp::~Reqexp()
 	if( origstart ) free( origstart );
 	if( m_origvalidckptpltfrm ) free( m_origvalidckptpltfrm );
 	if( m_within_resource_limits_expr ) free( m_within_resource_limits_expr );
+	if( drainingStartExpr ) { delete drainingStartExpr; }
 }
 
 
@@ -287,9 +289,8 @@ Reqexp::restore()
 	return false;
 }
 
-
 void
-Reqexp::unavail() 
+Reqexp::unavail( ExprTree * start_expr )
 {
 	if( rip->isSuspendedForCOD() ) {
 		if( rstate != COD_REQ ) {
@@ -299,6 +300,14 @@ Reqexp::unavail()
 		return;
 	}
 	rstate = UNAVAIL_REQ;
+
+	if( start_expr ) {
+		// The original start_expr is part of a ClassAd that came off the
+		// wire, so we need to make our own copy.
+		drainingStartExpr = start_expr->Copy();
+	} else {
+		drainingStartExpr = NULL;
+	}
 	publish( rip->r_classad, A_PUBLIC );
 }
 
@@ -321,8 +330,24 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 		}
 		break;
 	case UNAVAIL_REQ:
-		tmp.formatstr( "%s = False", ATTR_REQUIREMENTS );
-		ca->Insert( tmp.Value() );
+		if(! drainingStartExpr) {
+			tmp.formatstr( "%s = False", ATTR_REQUIREMENTS );
+			ca->Insert( tmp.Value() );
+		} else {
+			ca->Insert( ATTR_START, drainingStartExpr );
+
+			// Copied from ORIG_REQ, above; I assume there's a good
+			// reason for the apparently-unnecessary copies.  It'd
+			// be a little ugly to share the code between the cases.
+			tmp.formatstr( "%s", origreqexp );
+			ca->Insert( tmp.Value() );
+			tmp.formatstr( "%s", m_origvalidckptpltfrm );
+			ca->Insert( tmp.Value() );
+			if( Resource::STANDARD_SLOT != rip->get_feature() ) {
+				ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
+								m_within_resource_limits_expr );
+			}
+		}
 		break;
 	case COD_REQ:
 		tmp.formatstr( "%s = True", ATTR_RUNNING_COD_JOB );

@@ -2272,9 +2272,13 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 	}
 }
 
+ExprTree * globalDrainingStartExpr = NULL;
+
 bool
-ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,std::string &new_request_id,std::string &error_msg,int &error_code)
+ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code)
 {
+	// For now, let's assume that that you never want to change the start
+	// expression while draining.
 	if( draining ) {
 		new_request_id = "";
 		error_msg = "Draining already in progress.";
@@ -2343,6 +2347,8 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 		dprintf(D_ALWAYS,"Initiating quick draining.\n");
 		draining_is_graceful = false;
 		walk(&Resource::setBadputCausedByDraining);
+		// We can't pass start_expr through walk(), unfortunately.
+		globalDrainingStartExpr = start_expr;
 		walk(&Resource::releaseAllClaims);
 	}
 	else if( how_fast > DRAIN_QUICK ) { // DRAIN_FAST

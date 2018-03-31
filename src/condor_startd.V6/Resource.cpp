@@ -693,6 +693,8 @@ Resource::killAllClaims( void )
 	shutdownAllClaims( false );
 }
 
+extern ExprTree * globalDrainingStartExpr;
+
 void
 Resource::shutdownAllClaims( bool graceful, bool reversible )
 {
@@ -716,7 +718,7 @@ Resource::shutdownAllClaims( bool graceful, bool reversible )
 
 			// Tell the negotiator not to match any new jobs to this slot,
 			// since they would just be rejected by the startd anyway.
-		r_reqexp->unavail();
+		r_reqexp->unavail( globalDrainingStartExpr );
 		update();
 	}
 }
