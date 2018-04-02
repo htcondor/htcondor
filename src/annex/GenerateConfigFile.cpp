@@ -94,6 +94,8 @@ GenerateConfigFile::operator() () {
 		}
 	}
 
+	if (safeRegion) free(safeRegion);
+
 	std::string keyPath;
 	scratchpad->LookupString( "KeyPath", keyPath );
 	if(! keyPath.empty()) {
