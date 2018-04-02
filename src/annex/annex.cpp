@@ -1169,8 +1169,8 @@ annex_main( int argc, char ** argv ) {
 	}
 
 	if( region ) {
-		char * safeRegion = strdup(region);
-		assert( safeRegion != NULL );
+		char *safeRegion(strdup(region));
+
 		for( unsigned i = 0; i < strlen( region ); ++i ) {
 			if( ('a' <= region[i] && region[i] <= 'z') ||
 			    ('A' <= region[i] && region[i] <= 'Z') ||
@@ -1183,6 +1183,7 @@ annex_main( int argc, char ** argv ) {
 			}
 		}
 		get_mySubSystem()->setLocalName( safeRegion );
+		free(safeRegion);
 
 		std::string buffer;
 
