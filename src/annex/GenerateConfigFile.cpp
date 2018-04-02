@@ -101,10 +101,11 @@ GenerateConfigFile::operator() () {
 	if(! keyPath.empty()) {
 		std::string newKeyPath = keyPath;
 		size_t idx = keyPath.rfind( ".pem" );
-		if( idx != std::string::npos ) {
+		if( idx != std::string::npos && region != NULL ) {
 			newKeyPath.insert( idx, region );
 			newKeyPath.insert( idx, "." );
-			rename( keyPath.c_str(), newKeyPath.c_str() );
+			// We don't actually care if this succeeds.
+			(void)rename( keyPath.c_str(), newKeyPath.c_str() );
 		}
 
 		fprintf( configFile, "# For debugging:\n" );
