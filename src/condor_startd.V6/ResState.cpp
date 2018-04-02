@@ -661,6 +661,7 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 	return FALSE;
 }
 
+extern ExprTree * globalDrainingStartExpr;
 
 int
 ResState::enter_action( State s, Activity a,
@@ -868,9 +869,10 @@ ResState::enter_action( State s, Activity a,
 		break;
 
 	case drained_state:
-		rip->r_reqexp->unavail();
+		rip->r_reqexp->unavail( globalDrainingStartExpr );
 		break;
-	default: 
+
+	default:
 		EXCEPT("Unknown state in ResState::enter_action");
 	}
 	return FALSE;

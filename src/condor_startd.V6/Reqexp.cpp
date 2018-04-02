@@ -331,18 +331,14 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 		break;
 	case UNAVAIL_REQ:
 		if(! drainingStartExpr) {
-			tmp.formatstr( "%s = False", ATTR_REQUIREMENTS );
-			ca->Insert( tmp.Value() );
+			ca->AssignExpr( ATTR_REQUIREMENTS, "False" );
 		} else {
-			ca->Insert( ATTR_START, drainingStartExpr );
+			// Insert()ing an ExprTree transfers ownership for some reason.
+			ExprTree * sacrifice = drainingStartExpr->Copy();
+			ca->Insert( ATTR_START, sacrifice );
 
-			// Copied from ORIG_REQ, above; I assume there's a good
-			// reason for the apparently-unnecessary copies.  It'd
-			// be a little ugly to share the code between the cases.
-			tmp.formatstr( "%s", origreqexp );
-			ca->Insert( tmp.Value() );
-			tmp.formatstr( "%s", m_origvalidckptpltfrm );
-			ca->Insert( tmp.Value() );
+			ca->Insert( origreqexp );
+			ca->Insert( m_origvalidckptpltfrm );
 			if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 				ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
 								m_within_resource_limits_expr );

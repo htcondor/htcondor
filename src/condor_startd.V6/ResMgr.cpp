@@ -2340,6 +2340,13 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 			// they will finish within their retirement time, so do
 			// not call setBadputCausedByDraining() yet
 
+		// Even if we could pass start_expr through walk(), it turns out,
+		// beceause ResState::enter_action() calls unavail() as well, we
+		// really do need to keep the global.  To that end, we /want/ to
+		// assign the NULL value here if that's what we got, so that we
+		// do the right thing if we drain without a START expression after
+		// draining with one.
+		globalDrainingStartExpr = start_expr;
 		walk(&Resource::releaseAllClaimsReversibly);
 	}
 	else if( how_fast <= DRAIN_QUICK ) {
@@ -2347,8 +2354,6 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 		dprintf(D_ALWAYS,"Initiating quick draining.\n");
 		draining_is_graceful = false;
 		walk(&Resource::setBadputCausedByDraining);
-		// We can't pass start_expr through walk(), unfortunately.
-		globalDrainingStartExpr = start_expr;
 		walk(&Resource::releaseAllClaims);
 	}
 	else if( how_fast > DRAIN_QUICK ) { // DRAIN_FAST
