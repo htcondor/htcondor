@@ -172,19 +172,17 @@ setup_usage() {
 	fprintf( stdout,
 		"\n"
 		"To do the one-time setup for an AWS account:\n"
-		"\tcondor_annex -setup\n"
+		"\tcondor_annex [options] -setup\n"
 		"\n"
-		"To specify the files for the access (public) key and secret (private) keys:\n"
-		"\tcondor_annex -setup\n"
+		"To specify the files for the access (public) key and secret (private) keys\n"
+		"[or, for experts, the CloudFormation URL]:\n"
+		"\tcondor_annex [options] -setup\n"
 		"\t\t<path/to/access-key-file>\n"
 		"\t\t<path/to/private-key-file>\n"
+		"\t\t[<https://cloudformation.<region>.amazonaws.com/]\n"
 		"\n"
-		"Expert mode (to specify the region, you must specify the key paths):\n"
-		"\tcondor_annex -aws-ec2-url https://ec2.<region>.amazonaws.com\n"
-		"\t\t-setup <path/to/access-key-file>\n"
-		"\t\t<path/to/private-key-file>\n"
-		"\t\t<https://cloudformation.<region>.amazonaws.com/>\n"
-		"\n"
+		"For how to specify a region, and other options:\n"
+		"\tcondor_annex -help\n"
 	);
 }
 
