@@ -51,7 +51,7 @@ DCCollector::init( bool needs_reconfig )
 	use_tcp = true;
 	use_nonblocking_update = true;
 	update_destination = NULL;
-	m_blacklist_monitor_query_started = { 0, 0 };
+	timerclear( &m_blacklist_monitor_query_started );
 
 	if (bootTime == 0) {
 		bootTime = time( NULL );

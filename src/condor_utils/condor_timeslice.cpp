@@ -38,7 +38,7 @@ Timeslice::Timeslice() {
 		m_next_start_time = 0;
 		m_never_ran_before = true;
 		m_expedite_next_run = true;
-		m_start_time = { 0, 0 };
+		timerclear( &m_start_time );
 	}
 
 void 
@@ -109,7 +109,7 @@ void
 Timeslice::reset() 
 {
 	m_last_duration = 0;
-	m_start_time = { 0, 0 };
+	timerclear( &m_start_time );
 	m_never_ran_before = true;
 	m_expedite_next_run = false;
 	updateNextStartTime();

@@ -55,8 +55,8 @@ UserProc::initialize( void )
 	m_dedicated_account = NULL;
 	m_deleteJobAd = false;
 	job_universe = 0;  // we'll fill in a real value if we can...
-	job_start_time = { 0, 0 };
-	job_exit_time = { 0, 0 };
+	timerclear( &job_start_time );
+	timerclear( &job_exit_time );
 	int i;
 	for(i=0;i<3;i++) {
 		m_pre_defined_std_fds[i] = -1;

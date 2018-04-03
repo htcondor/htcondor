@@ -81,7 +81,7 @@ DaemonCommandProtocol::DaemonCommandProtocol( Stream * sock, bool is_command_soc
 	m_sec_man = daemonCore->getSecMan();
 
 	condor_gettimestamp( m_handle_req_start_time );
-	m_async_waiting_start_time = { 0, 0 };
+	timerclear( &m_async_waiting_start_time );
 
 	ASSERT(m_sock);
 

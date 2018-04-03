@@ -141,7 +141,7 @@ DCTransferQueue::Init()
 	m_xfer_queue_pending = false;
 	m_xfer_queue_go_ahead = false;
 
-	m_last_report = { 0, 0 };
+	timerclear( &m_last_report );
 	m_next_report = 0;
 	m_report_interval = 0;
 	m_recent_bytes_sent = 0;
