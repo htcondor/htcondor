@@ -48,7 +48,6 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name 
     int rval = -1;
     static int partial_file = 0;
     static long partial_bytes = 0;
-    UtcTime time;
 
     int close_output = 1;
     if ( !strcmp( local_file_name, "-" ) ) {
@@ -175,7 +174,6 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
     string stats_string;
     int retry_count;
     int rval = 0;
-    UtcTime time;
 
     // Read input file containing data about files we want to transfer. Input
     // data is formatted as a series of classads, each with an arbitrary number
@@ -221,7 +219,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
         // Initialize the stats structure for this transfer.
         _this_file_stats = new FileTransferStats();
         InitializeStats( url );
-        _this_file_stats->TransferStartTime = time.getTimeDouble();
+        _this_file_stats->TransferStartTime = condor_gettimestamp_double();
 
         // Point the global static pointer to the _this_file_stats class member.
         // This allows us to access it from static callback functions.
@@ -260,7 +258,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
             }
         }
 
-        _this_file_stats->TransferEndTime = time.getTimeDouble();
+        _this_file_stats->TransferEndTime = condor_gettimestamp_double();
 
         // Regardless of success/failure, update the stats
         _this_file_stats->Publish( stats_ad );
