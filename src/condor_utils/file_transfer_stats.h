@@ -59,8 +59,7 @@
 
 		
 		void Init();
-		void Publish(ClassAd & ad) const;
-		void Publish(ClassAd & ad, char* attr) const;
+		void Publish(classad::ClassAd & ad) const;
 		 
 	 private:
 		

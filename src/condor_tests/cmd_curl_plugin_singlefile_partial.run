@@ -1,0 +1,208 @@
+#! /usr/bin/env perl
+#testreq: personal
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##	http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This is a very basic test of curl_plugin to show that it works
+## corretly in certain success and failure conditions. 
+##
+##**************************************************************
+
+use Carp;
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+use Cwd;
+use ConfigTools;
+use POSIX;
+
+use warnings;
+use strict;
+
+my $childPid;
+my $childProcess;
+my $localDir = cwd();
+my $partialNoRangeSize;
+my $partialSize;
+my $returnCode;
+my $testName = "cmd_curl_plugin_singlefile_partial";
+my $submitFile = $testName . ".sub";
+my $urlFile = $testName . ".url";
+
+
+# Start the http server then wait a few seconds
+startTestWebServer($urlFile);
+sleep(5);
+
+# Read in the address of the http server from file
+open FILE, "$localDir/$urlFile";
+my $url = <FILE>;
+close FILE;
+TLOG "Retrieved URL for the test web server: $url\n";
+
+# Create the submit file
+my @basesubmit = "
+	universe = vanilla
+	executable = cmd_curl_plugin_singlefile_partial.pl
+	output = $testName.out
+	arguments = 1
+	log = $submitFile.log
+	transfer_input_files = http://$url/partial
+	should_transfer_files = YES
+	";
+open(SF,">$submitFile") or die "Failed to open '$submitFile' : $!\n";
+print SF @basesubmit;
+print SF "queue\n";
+close(SF);
+
+# Callbacks for the log reader while the job is running.
+
+my $executed = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	TLOG "OK: Job $cluster began executing\n";
+	return 0;
+};
+
+my $submitted = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	TLOG "OK: Job $cluster was submitted\n";
+	return 0;
+};
+
+my $exitedSuccess = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	TLOG "OK: Job $cluster exited\n";
+	return 0;
+};
+
+my $exitedFailure = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	TLOG "ERROR: Job $cluster failed\n";
+	cleanupAndExit(1);
+};
+
+my $shadowException = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	TLOG "ERROR: Job $cluster failed with a shadow exception\n";
+	cleanupAndExit(1);
+};
+
+CondorTest::RegisterSubmit($testName, $submitted);
+CondorTest::RegisterExecute($testName, $executed);
+CondorTest::RegisterExitedSuccess($testName, $exitedSuccess);
+CondorTest::RegisterExitedFailure($testName, $exitedFailure);
+CondorTest::RegisterShadow($testName, $shadowException);
+
+TLOG("Submitting $submitFile to test a basic curl_plugin transfer\n");
+
+# Run the test. If it fails, one of the handlers will catch. Otherwise it will
+# cleanup and exit with a success code (1).
+CondorTest::RunTest($testName, $submitFile, 0);
+
+
+cleanupAndExit(0);
+
+
+sub cleanupAndExit {
+	my $returnCode = shift;
+	unlink "$localDir/$submitFile";
+	unlink "$localDir/$submitFile.log";
+	stopTestWebServer();
+	TLOG "Exiting with return code $returnCode\n";
+	CondorTest::RegisterResult($returnCode, test_name=>"cmd_curl_plugin_singlefile_partial", check_name=>'curl_plugin single file partial success');
+	exit($returnCode);
+}
+
+# This sub is based off http://www.perlmonks.org/?node_id=663081
+sub startTestWebServer {
+	my $urlFile = shift;
+	TLOG "Starting test web server with URL file: $urlFile\n";
+	# Windows
+	if ($^O eq 'MSWin32') {
+
+		require Win32::Process;
+
+		# Figure out location of the python binary
+		my @myPython = `where python*.exe`;
+		if(not(@myPython)) {
+			TLOG "Python is required but not available. Expect test failure.\n";
+		}
+		my $pythonBinary = $myPython[0];
+		fullchomp($pythonBinary);
+
+		# Launch the web server process
+		Win32::Process::Create($childProcess, $pythonBinary, 
+			"$pythonBinary curl_plugin_test_http_server.py $urlFile", 0, 0, ".")
+			|| confess "Could not spawn child: $!";
+		$childPid = $childProcess->GetProcessID();
+	}
+	# Unix
+	else {
+		$SIG{CHLD} = 'IGNORE';
+		$childPid = fork();
+		unless (defined $childPid) {
+			confess "Could not spawn child (Unix): $!";
+		}
+		if ($childPid == 0 ) { # child
+			setsid or warn "setsid cannot start a new session: $!";
+			local $| = 1;
+			unless (exec("python curl_plugin_test_http_server.py $urlFile")) {
+				confess "Could not start child: python: $!";
+				CORE::exit(0);
+			}
+		}
+		# parent
+		$SIG{CHLD} = 'DEFAULT';
+	}
+	# Catch early child exit, e.g. if program path is incorrect
+	TLOG "Checking for early child exit...\n";
+	sleep(1.0);
+	POSIX::waitpid(-1, POSIX::WNOHANG()); # clean up any defunct child process
+	if (kill(0, $childPid)) {
+		TLOG "Started web server with child process id $childPid\n";
+	}
+	else {
+		TLOG "Web server child process exited quickly: python: process $childPid";
+	}
+}
+
+# This sub is based off http://www.perlmonks.org/?node_id=663081
+sub stopTestWebServer {
+	# Windows
+	if ($^O eq 'MSWin32') {
+		Win32::Process::KillProcess($childPid,0);
+	}
+	# Unix
+	else {
+		kill 9, $childPid || warn "could not kill process $childPid: $!";
+	}
+	TLOG "Stopped web server child process id $childPid\n";
+}

@@ -30,8 +30,10 @@ dprint( "(TSTCLAIR)-> Deal with Java deps and FT HOOK PLUGINS also what is up wi
 if (CURL_FOUND)
   if (WINDOWS)
     condor_exe( curl_plugin "curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
+    condor_exe( multifile_curl_plugin "multifile_curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
   else ()
     condor_exe( curl_plugin "curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
+    condor_exe( multifile_curl_plugin "multifile_curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
   endif ()
 endif()
 
