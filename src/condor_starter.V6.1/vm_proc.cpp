@@ -697,7 +697,7 @@ VMProc::StartJob()
 			"VMProc::CheckStatus", this);
 
 	// Set job_start_time in user_proc.h
-	job_start_time.getTime();
+	condor_gettimestamp( job_start_time );
 	dprintf( D_ALWAYS, "StartJob for VM succeeded\n");
 
 	// If we do manage to launch, clear the FTL attributes.

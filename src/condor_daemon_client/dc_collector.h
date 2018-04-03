@@ -133,7 +133,7 @@ private:
 
 	char* update_destination;
 
-	UtcTime m_blacklist_monitor_query_started;
+	struct timeval m_blacklist_monitor_query_started;
 	static std::map< std::string, Timeslice > blacklist;
 
 	Timeslice &getBlacklistTimeslice();

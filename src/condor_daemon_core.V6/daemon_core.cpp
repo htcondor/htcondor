@@ -4210,12 +4210,12 @@ struct CallCommandHandlerInfo {
 		m_deadline(deadline),
 		m_time_spent_on_sec(time_spent_on_sec)
 	{
-		m_start_time.getTime();
+		condor_gettimestamp( m_start_time );
 	}
 	int m_req;
 	time_t m_deadline;
 	float m_time_spent_on_sec;
-	UtcTime m_start_time;
+	struct timeval m_start_time;
 };
 
 int
@@ -4228,9 +4228,9 @@ DaemonCore::HandleReqPayloadReady(Stream *stream)
 	int req = callback_info->m_req;
 	time_t orig_deadline = callback_info->m_deadline;
 	float time_spent_on_sec = callback_info->m_time_spent_on_sec;
-	UtcTime now;
-	now.getTime();
-	float time_waiting_for_payload = now.difference(callback_info->m_start_time);
+	struct timeval now;
+	condor_gettimestamp( now );
+	float time_waiting_for_payload = timersub_double( now, callback_info->m_start_time );
 
 	delete callback_info;
 
