@@ -4059,6 +4059,11 @@ default=((time() - LastPeriodicCheckpoint)/60.0) > (180.0 + $RANDOM_INTEGER(-30,
 type=string
 tags=startd
 
+[DEFRAG_DRAINING_START_EXPR]
+default=FALSE
+type=string
+tags=defrag
+
 [DEFRAG_REQUIREMENTS]
 default=PartitionableSlot && Offline=!=True
 type=string
