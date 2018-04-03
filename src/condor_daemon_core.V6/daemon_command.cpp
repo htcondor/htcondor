@@ -80,7 +80,8 @@ DaemonCommandProtocol::DaemonCommandProtocol( Stream * sock, bool is_command_soc
 
 	m_sec_man = daemonCore->getSecMan();
 
-	m_handle_req_start_time.getTime();
+	condor_gettimestamp( m_handle_req_start_time );
+	timerclear( &m_async_waiting_start_time );
 
 	ASSERT(m_sock);
 
@@ -217,7 +218,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		// SocketCallback is called.
 	incRefCount();
 
-	m_async_waiting_start_time.getTime();
+	condor_gettimestamp( m_async_waiting_start_time );
 
 	return CommandProtocolInProgress;
 }
@@ -228,9 +229,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 int
 DaemonCommandProtocol::SocketCallback( Stream *stream )
 {
-	UtcTime async_waiting_stop_time;
-	async_waiting_stop_time.getTime();
-	m_async_waiting_time += async_waiting_stop_time.difference(&m_async_waiting_start_time);
+	struct timeval async_waiting_stop_time;
+	condor_gettimestamp( async_waiting_stop_time );
+	m_async_waiting_time += timersub_double( async_waiting_stop_time, m_async_waiting_start_time );
 
 	daemonCore->Cancel_Socket( stream, m_prev_sock_ent );
 	m_prev_sock_ent = NULL;
@@ -1676,8 +1677,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);
 
-		UtcTime handler_start_time(true);
-		double sec_time = handler_start_time.difference(&m_handle_req_start_time);
+		struct timeval handler_start_time;
+		condor_gettimestamp( handler_start_time );
+		double sec_time = timersub_double( handler_start_time, m_handle_req_start_time );
 		sec_time -= m_async_waiting_time;
 
 		if( m_sock_had_no_deadline ) {

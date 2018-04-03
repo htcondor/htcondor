@@ -38,6 +38,7 @@ Timeslice::Timeslice() {
 		m_next_start_time = 0;
 		m_never_ran_before = true;
 		m_expedite_next_run = true;
+		timerclear( &m_start_time );
 	}
 
 void 
@@ -77,15 +78,15 @@ Timeslice::setInitialInterval(double initial_interval)
 void 
 Timeslice::setFinishTimeNow() 
 {
-	UtcTime finish_time;
-	finish_time.getTime();
+	struct timeval finish_time;
+	condor_gettimestamp( finish_time );
 	processEvent( m_start_time, finish_time );
 }
 void
-Timeslice::processEvent(UtcTime start,UtcTime finish)
+Timeslice::processEvent(struct timeval start, struct timeval finish)
 {
 	m_start_time = start;
-	double duration = finish.difference(&start);
+	double duration = timersub_double(finish, start);
 	m_last_duration = duration;
 	if( m_never_ran_before ) {
 		m_avg_duration = m_last_duration;
@@ -108,7 +109,7 @@ void
 Timeslice::reset() 
 {
 	m_last_duration = 0;
-	m_start_time = UtcTime();
+	timerclear( &m_start_time );
 	m_never_ran_before = true;
 	m_expedite_next_run = false;
 	updateNextStartTime();
@@ -127,7 +128,7 @@ Timeslice::updateNextStartTime()
 		// this may be adjusted below by min interval and max timeslice
 		delay = 0;
 	}
-	if( m_start_time.seconds() == 0 ) {
+	if( m_start_time.tv_sec == 0 ) {
 			// there is no previous start time (because this is
 			// the first time) so pretend that we just ran, and
 			// ignore timeslice delay
@@ -161,7 +162,7 @@ Timeslice::updateNextStartTime()
 	if( delay > 0.5 || delay < 0.0 ) {
 		m_next_start_time = (time_t)floor(
 	      delay +
-		  m_start_time.combined() +
+		  m_start_time.tv_sec + (m_start_time.tv_usec / 1000000.0) +
 	      0.5 /*round to nearest integer*/ );
 	}
 	else {
@@ -189,8 +190,8 @@ Timeslice::updateNextStartTime()
 			// k = 1-sqrt(2d)
 
 		double cutoff = 1.0 - sqrt(2.0*delay);
-		m_next_start_time = (time_t)m_start_time.seconds();
-		if( m_start_time.microseconds()/1000000.0 > cutoff ) {
+		m_next_start_time = (time_t)m_start_time.tv_sec;
+		if( m_start_time.tv_usec/1000000.0 > cutoff ) {
 			m_next_start_time++;
 		}
 	}

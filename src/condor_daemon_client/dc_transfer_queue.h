@@ -135,7 +135,7 @@ public:
 	std::string m_xfer_rejected_reason;
 
 		// i/o statistics
-	UtcTime m_last_report;
+	struct timeval m_last_report;
 	time_t m_next_report;
 	unsigned m_report_interval;
 	unsigned m_recent_bytes_sent;

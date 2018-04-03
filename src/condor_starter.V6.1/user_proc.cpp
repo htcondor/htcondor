@@ -55,6 +55,8 @@ UserProc::initialize( void )
 	m_dedicated_account = NULL;
 	m_deleteJobAd = false;
 	job_universe = 0;  // we'll fill in a real value if we can...
+	timerclear( &job_start_time );
+	timerclear( &job_exit_time );
 	int i;
 	for(i=0;i<3;i++) {
 		m_pre_defined_std_fds[i] = -1;
@@ -148,7 +150,7 @@ UserProc::JobReaper(int pid, int status)
 	if (JobPid == pid) {
 		m_proc_exited = true;
 		exit_status = status;
-		job_exit_time.getTime();
+		condor_gettimestamp( job_exit_time );
 	}
 	return m_proc_exited;
 }
@@ -167,17 +169,17 @@ UserProc::PublishUpdateAd( ClassAd* ad )
 		ad->Insert( buf );
 	}
 
-	if( job_start_time.seconds() > 0 ) {
+	if( job_start_time.tv_sec > 0 ) {
 		sprintf( buf, "%s%s=%ld", name ? name : "", ATTR_JOB_START_DATE,
-				 job_start_time.seconds() );
+				 (long)job_start_time.tv_sec );
 		ad->Insert( buf );
 	}
 
 	if (m_proc_exited) {
 
-		if( job_exit_time.seconds() > 0 ) {
+		if( job_exit_time.tv_sec > 0 ) {
 			sprintf( buf, "%s%s=%f", name ? name : "", ATTR_JOB_DURATION, 
-					 job_exit_time.difference(&job_start_time) );
+					 timersub_double( job_exit_time, job_start_time ) );
 			ad->Insert( buf );
 		}
 

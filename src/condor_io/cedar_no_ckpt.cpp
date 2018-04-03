@@ -171,9 +171,9 @@ ReliSock::get_file( filesize_t *size, int fd,
 
 	// Now, read it all in & save it
 	while( total < bytes_to_receive ) {
-		UtcTime t1,t2;
+		struct timeval t1,t2;
 		if( xfer_q ) {
-			t1.getTime();
+			condor_gettimestamp(t1);
 		}
 
 		int	iosize =
@@ -181,8 +181,8 @@ ReliSock::get_file( filesize_t *size, int fd,
 		int	nbytes = get_bytes_nobuffer( buf, iosize, 0 );
 
 		if( xfer_q ) {
-			t2.getTime();
-			xfer_q->AddUsecNetRead(t2.difference_usec(t1));
+			condor_gettimestamp(t2);
+			xfer_q->AddUsecNetRead(timersub_usec(t2, t1));
 		}
 
 		if ( nbytes <= 0 ) {
@@ -236,11 +236,11 @@ ReliSock::get_file( filesize_t *size, int fd,
 			}
 		}
 		if( xfer_q ) {
-			t1.getTime();
+			condor_gettimestamp(t1);
 				// reuse t2 above as start time for file write
-			xfer_q->AddUsecFileWrite(t1.difference_usec(t2));
+			xfer_q->AddUsecFileWrite(timersub_usec(t1, t2));
 			xfer_q->AddBytesReceived(written);
-			xfer_q->ConsiderSendingReport(t1.seconds());
+			xfer_q->ConsiderSendingReport(t1.tv_sec);
 		}
 
 		total += written;
@@ -444,19 +444,19 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 				return -1;
 			}
 
-			UtcTime t1;
-			t1.getTime();
+			struct timeval t1;
+			condor_gettimestamp(t1);
 
 			// Now transmit file using special optimized Winsock call
 			bool transmit_success = TransmitFile(_sock,(HANDLE)_get_osfhandle(fd),bytes_to_send,0,NULL,NULL,0) != FALSE;
 
 			if( xfer_q ) {
-				UtcTime t2;
-				t2.getTime();
+				struct timeval t2;
+				condor_gettimestamp(t2);
 					// We don't know how much of the time was spent reading
 					// from disk vs. writing to the network, so we just report
 					// it all as network i/o time.
-				xfer_q->AddUsecNetWrite(t2.difference_usec(t1));
+				xfer_q->AddUsecNetWrite(timersub_usec(t2, t1));
 			}
 
 			if( !transmit_success ) {
@@ -482,18 +482,18 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 		// Note that on Win32, we use this method as well if encryption 
 		// is required.
 		while (total < bytes_to_send) {
-			UtcTime t1;
-			UtcTime t2;
+			struct timeval t1;
+			struct timeval t2;
 			if( xfer_q ) {
-				t1.getTime();
+				condor_gettimestamp(t1);
 			}
 
 			// Be very careful about where the cast to size_t happens; see gt#4150
 			nrd = ::read(fd, buf, (size_t)((bytes_to_send-total) < (int)sizeof(buf) ? bytes_to_send-total : sizeof(buf)));
 
 			if( xfer_q ) {
-				t2.getTime();
-				xfer_q->AddUsecFileRead(t2.difference_usec(t1));
+				condor_gettimestamp(t2);
+				xfer_q->AddUsecFileRead(timersub_usec(t2, t1));
 			}
 
 			if( nrd <= 0) {
@@ -513,10 +513,10 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 			if( xfer_q ) {
 					// reuse t2 from above to mark the start of the
 					// network op and t1 to mark the end
-				t1.getTime();
-				xfer_q->AddUsecNetWrite(t1.difference_usec(t2));
+				condor_gettimestamp(t1);
+				xfer_q->AddUsecNetWrite(timersub_usec(t1, t2));
 				xfer_q->AddBytesSent(nbytes);
-				xfer_q->ConsiderSendingReport(t1.seconds());
+				xfer_q->ConsiderSendingReport(t1.tv_sec);
 			}
 			total += nbytes;
 		}
