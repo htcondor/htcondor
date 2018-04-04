@@ -191,7 +191,7 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 	return out.c_str();
 }
 
-Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
+Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent ) : m_acceptedWhileDraining( false )
 {
 	MyString tmp;
 	const char* tmpName;
@@ -2227,7 +2227,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
             cap->Assign(ATTR_SLOT_TYPE, "Static");
 			break; // Do nothing
 		}
-	}		
+	}
 
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
 			// If we're claimed or preempting, handle anything listed
@@ -2375,6 +2375,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
             }
         }
     }
+
+	cap->InsertAttr( "AcceptedWhileDraining", m_acceptedWhileDraining );
 
 	// Don't bother to write an ad to disk that won't include the extras ads.
 	// Also only write the ad to disk when the claim has a ClassAd and the
@@ -3716,3 +3718,4 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 	
 	return;
 }
+

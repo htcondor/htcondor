@@ -33,6 +33,11 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[MAX_DRAINING_ACTIVATION_DELAY]
+default=20
+description=When draining, how many seconds should a claimed slot wait to be activated?  Draining will be extended by this delay..
+tag=startd
+
 [ENABLE_KERNEL_TUNING]
 default=true
 type=bool

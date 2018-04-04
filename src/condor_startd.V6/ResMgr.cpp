@@ -2346,7 +2346,7 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 		// assign the NULL value here if that's what we got, so that we
 		// do the right thing if we drain without a START expression after
 		// draining with one.
-		globalDrainingStartExpr = start_expr;
+		globalDrainingStartExpr = start_expr->Copy();
 		walk(&Resource::releaseAllClaimsReversibly);
 	}
 	else if( how_fast <= DRAIN_QUICK ) {

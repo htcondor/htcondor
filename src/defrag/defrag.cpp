@@ -146,8 +146,8 @@ void Defrag::config()
 	ASSERT( param(m_defrag_requirements,"DEFRAG_REQUIREMENTS") );
 	validateExpr( m_defrag_requirements.c_str(), "DEFRAG_REQUIREMENTS" );
 
-	ASSERT( param( m_start_expr, "DEFRAG_DRAINING_START_EXPR" ) );
-	validateExpr( m_start_expr.c_str(), "DEFRAG_DRAINING_START_EXPR" );
+	ASSERT( param( m_draining_start_expr, "DEFRAG_DRAINING_START_EXPR" ) );
+	validateExpr( m_draining_start_expr.c_str(), "DEFRAG_DRAINING_START_EXPR" );
 
 	ASSERT( param(m_whole_machine_expr,"DEFRAG_WHOLE_MACHINE_EXPR") );
 	validateExpr( m_whole_machine_expr.c_str(), "DEFRAG_WHOLE_MACHINE_EXPR" );
@@ -818,7 +818,7 @@ Defrag::drain(const ClassAd &startd_ad)
 
 	std::string request_id;
 	bool resume_on_completion = true;
-	bool rval = startd.drainJobs( m_draining_schedule, resume_on_completion, draining_check_expr.c_str(), m_start_expr.c_str(), request_id );
+	bool rval = startd.drainJobs( m_draining_schedule, resume_on_completion, draining_check_expr.c_str(), m_draining_start_expr.c_str(), request_id );
 	if( !rval ) {
 		dprintf(D_ALWAYS,"Failed to send request to drain %s: %s\n",startd.name(),startd.error());
 		m_stats.DrainFailures += 1;

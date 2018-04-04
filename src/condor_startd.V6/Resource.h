@@ -335,13 +335,15 @@ public:
 	static bool swap_claims(Resource* ripa, Resource* ripb);
 
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
+
+	void setAcceptedWhileDraining() { if( isDraining() ) { m_acceptedWhileDraining = true; } }
 private:
 	ResourceFeature m_resource_feature;
 
 	Resource*	m_parent;
 
 	// Only partitionable slots have children
-	
+
     struct ResourceLess {
         bool operator()(Resource *lhs, Resource *rhs) const {
             return strcmp(lhs->r_name, rhs->r_name) < 0;
@@ -383,6 +385,8 @@ private:
 #endif /* HAVE_JOB_HOOKS */
 
 	std::list<int> m_affinity_mask;
+
+	bool	m_acceptedWhileDraining;
 };
 
 

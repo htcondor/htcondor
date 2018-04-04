@@ -259,6 +259,7 @@ Reqexp::~Reqexp()
 	if( drainingStartExpr ) { delete drainingStartExpr; }
 }
 
+extern ExprTree * globalDrainingStartExpr;
 
 bool
 Reqexp::restore()
@@ -276,7 +277,7 @@ Reqexp::restore()
 	}
 	if( resmgr->isShuttingDown() || rip->isDraining() ) {
 		if( rstate != UNAVAIL_REQ ) {
-			unavail();
+			unavail( rip->isDraining() ? globalDrainingStartExpr : NULL );
 			return true;
 		}
 		return false;
@@ -302,8 +303,6 @@ Reqexp::unavail( ExprTree * start_expr )
 	rstate = UNAVAIL_REQ;
 
 	if( start_expr ) {
-		// The original start_expr is part of a ClassAd that came off the
-		// wire, so we need to make our own copy.
 		drainingStartExpr = start_expr->Copy();
 	} else {
 		drainingStartExpr = NULL;

@@ -343,7 +343,8 @@ ResState::eval( void )
 			change( preempting_state );
 			return TRUE; // XXX: change TRUE
 		}
-		if( (r_act == idle_act) && rip->isDraining() ) {
+		if( (r_act == idle_act) && rip->isDraining() &&
+				! rip->r_cur->waitingForActivation() ) {
 			dprintf( D_ALWAYS, "State change: idle claim shutting down due to draining of this slot\n" );
 			change( preempting_state );
 			return TRUE;
@@ -665,7 +666,7 @@ extern ExprTree * globalDrainingStartExpr;
 
 int
 ResState::enter_action( State s, Activity a,
-						bool statechange, bool ) 
+						bool statechange, bool )
 {
 #ifdef WIN32
 	if (a == busy_act)

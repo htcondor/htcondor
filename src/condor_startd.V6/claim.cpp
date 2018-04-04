@@ -836,6 +836,7 @@ Claim::beginActivation( time_t now )
 			break;
 	}
 
+	c_rip->setAcceptedWhileDraining();
 	resmgr->adlist_reset_monitors( c_rip->r_id, c_rip->r_classad );
 	resmgr->startd_stats.total_job_starts += 1;
 }
@@ -2550,4 +2551,10 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 		dprintf(D_JOB,"Updated job ClassAd:\n");
 		dPrintAd(D_JOB, *c_jobad);
 	}
+}
+
+bool
+Claim::waitingForActivation() {
+	time_t maxDrainingActivationDelay = param_integer( "MAX_DRAINING_ACTIVATION_DELAY", 20 );
+	return getClaimAge() < maxDrainingActivationDelay;
 }

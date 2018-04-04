@@ -305,6 +305,8 @@ public:
 
 	void setResource( Resource* _rip ) { c_rip = _rip; };
 
+	bool waitingForActivation();
+
 private:
 	Resource	*c_rip;
 	Client 		*c_client;
