@@ -303,6 +303,43 @@ gid_t get_my_gid() { return 999999; }
 int set_file_owner_ids( uid_t uid, gid_t gid ) { return FALSE; }
 void uninit_file_owner_ids() {}
 
+DWORD Logon32Type()
+{
+	static DWORD logon32_type = 0; // 0 is undefined, default is LOGON32_LOGON_INTERACTIVE, but LOGON32_LOGON_NETWORK is allowed.
+	if ( ! logon32_type) {
+		logon32_type = 1; // default to INTERACTIVE/NETWORK (i.e. try both)
+		auto_free_ptr logon(param("WINDOWS_LOGON32_TYPE"));
+		if (logon) {
+			if (YourStringNoCase("AUTO") == logon) {
+				logon32_type = 1;
+			} else if (YourStringNoCase("NETWORK") == logon) {
+				logon32_type = LOGON32_LOGON_NETWORK;
+			} else if (YourStringNoCase("INTERACTIVE") == logon) {
+				logon32_type = LOGON32_LOGON_INTERACTIVE;
+			} else if (YourStringNoCase("BATCH") == logon) {
+				logon32_type = LOGON32_LOGON_BATCH;
+			} else if (YourStringNoCase("SERVICE") == logon) {
+				logon32_type = LOGON32_LOGON_SERVICE;
+			}
+		}
+	}
+	return logon32_type;
+}
+const char * Logon32TypeName(DWORD logon)
+{
+	static const char * const names[] = {
+		"undefined (INTERACTIVE/NETWORK)", // 0
+		"auto (INTERACTIVE/NETWORK)",   // 1
+		"LOGON_INTERACTIVE", // 2 LOGON32_LOGON_INTERACTIVE
+		"LOGON_NETWORK",     // 3 LOGON32_LOGON_NETWORK
+		"LOGON_BATCH",       // 4 LOGON32_LOGON_BATCH
+		"LOGON_SERVICE",     // 5 LOGON32_LOGON_SERVICE
+	};
+	if (logon < 0 || logon > COUNTOF(names)) {
+		return "invalid";
+	}
+	return names[logon];
+}
 
 // Cover our getuid...
 uid_t getuid() { return get_my_uid(); }
@@ -481,22 +518,50 @@ init_user_ids(const char username[], const char domain[])
 			delete[](w_pw);
 			w_pw = NULL;
 
+			DWORD l32type = Logon32Type();
+			bool retry_with_network = false;
+			if (l32type < LOGON32_LOGON_INTERACTIVE) { // try both INTERACTIVE and NETWORK?
+				l32type = LOGON32_LOGON_INTERACTIVE;
+				retry_with_network = true;
+			}
+
 			// now that we got a password, see if it is good.
 			retval = LogonUser(
 				user,						// user name
 				dom,						// domain or server - local for now
 				pw,							// password
-				LOGON32_LOGON_INTERACTIVE,	// type of logon operation. 
-											// LOGON_BATCH doesn't seem to work right here.
+				l32type,					// type of logon operation.
 				LOGON32_PROVIDER_DEFAULT,	// logon provider
 				&CurrUserHandle				// receive tokens handle
-			);
+				);
 			
 			if ( !retval ) {
-				dprintf(D_FULLDEBUG,"Locally stored credential for %s@%s is stale\n",
-					user,dom);
+				DWORD err = GetLastError();
+				dprintf(D_FULLDEBUG,"Locally stored credential for %s@%s is invalid for %s. NTStatus=%d : %s\n",
+					user,dom, Logon32TypeName(l32type), err, GetLastErrorString(err));
 				// Set handle to NULL to make certain we recall LogonUser again below
-				CurrUserHandle = NULL;	
+				CurrUserHandle = NULL;
+
+				if ((err == ERROR_LOGON_TYPE_NOT_GRANTED) && retry_with_network) {
+					l32type = LOGON32_LOGON_NETWORK;
+					retval = LogonUser(
+						user,						// user name
+						dom,						// domain or server - local for now
+						pw,							// password
+						l32type,					// type of logon operation.
+						LOGON32_PROVIDER_DEFAULT,	// logon provider
+						&CurrUserHandle				// receive tokens handle
+						);
+					if ( ! retval) {
+						err = GetLastError();
+						dprintf(D_FULLDEBUG,"Locally stored credential for %s@%s is also invalid for %s. NTStatus=%d : %s\n",
+							user,dom, Logon32TypeName(l32type), err, GetLastErrorString(err));
+						// Set handle to NULL to make certain we recall LogonUser again below
+						CurrUserHandle = NULL;
+					} else {
+						got_password = true;	// so we don't bother going to a credd
+					}
+				}
 			} else {
 				got_password = true;	// so we don't bother going to a credd
 			}
@@ -508,7 +573,6 @@ init_user_ids(const char username[], const char domain[])
 
 		char *credd_host = param("CREDD_HOST");
 		if (credd_host && got_password==false) {
-#if 1
            got_password = get_password_from_credd(
               credd_host,
               username,
@@ -516,34 +580,6 @@ init_user_ids(const char username[], const char domain[])
               pw,
               sizeof(pw));
            got_password_from_credd = got_password;
-#else
-			dprintf(D_FULLDEBUG, "trying to fetch password from credd: %s\n", credd_host);
-			Daemon credd(DT_CREDD);
-			Sock * credd_sock = credd.startCommand(CREDD_GET_PASSWD,Stream::reli_sock,10);
-			if ( credd_sock ) {
-				credd_sock->set_crypto_mode(true);
-				credd_sock->put((char*)username);	// send user
-				credd_sock->put((char*)domain);		// send domain
-				credd_sock->end_of_message();
-				credd_sock->decode();
-				pw[0] = '\0';
-				int my_stupid_sizeof_int_for_damn_cedar = sizeof(pw);
-				char *my_buffer = pw;
-				if ( credd_sock->code(my_buffer,my_stupid_sizeof_int_for_damn_cedar) && pw[0] ) {
-					got_password = true;
-					got_password_from_credd = true;
-				} else {
-					dprintf(D_FULLDEBUG,
-							"credd (%s) did not have info for %s@%s\n",
-							credd_host, username,domain);
-				}
-				delete credd_sock;
-				credd_sock = NULL;
-			} else {
-				dprintf(D_FULLDEBUG,"Failed to contact credd %s: %s\n",
-					credd_host,credd.error() ? credd.error() : "");
-			}
-#endif
 		}
 		if (credd_host) free(credd_host);
 
@@ -554,6 +590,13 @@ init_user_ids(const char username[], const char domain[])
 		} else {
 			dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
 
+			DWORD l32type = Logon32Type();
+			bool retry_with_network = false;
+			if (l32type < LOGON32_LOGON_INTERACTIVE) { // try both INTERACTIVE and NETWORK?
+				l32type = LOGON32_LOGON_INTERACTIVE;
+				retry_with_network = true;
+			}
+
 			// If we have not yet called LogonUser, then CurrUserHandle is NULL,
 			// and we need to call it here.
 			if ( CurrUserHandle == NULL ) {
@@ -561,18 +604,36 @@ init_user_ids(const char username[], const char domain[])
 					user,						// user name
 					dom,						// domain or server - local for now
 					pw,							// password
-					LOGON32_LOGON_INTERACTIVE,	// type of logon operation. 
-												// LOGON_BATCH doesn't seem to work right here.
+					l32type,					// type of logon operation.
 					LOGON32_PROVIDER_DEFAULT,	// logon provider
 					&CurrUserHandle				// receive tokens handle
 				);
+				if ( ! retval && retry_with_network && GetLastError() == ERROR_LOGON_TYPE_NOT_GRANTED) {
+					DWORD err = GetLastError();
+					l32type = LOGON32_LOGON_NETWORK;
+					retval = LogonUser(
+						user,						// user name
+						dom,						// domain or server - local for now
+						pw,							// password
+						l32type,					// type of logon operation.
+						LOGON32_PROVIDER_DEFAULT,	// logon provider
+						&CurrUserHandle				// receive tokens handle
+					);
+					if ( ! retval) {
+						DWORD err2 = GetLastError();
+						dprintf(D_FULLDEBUG,"init_user_ids: LogonUser(%s) failed with NT Status %d : %s\n\n",
+							Logon32TypeName(l32type), err2, GetLastErrorString(err2));
+
+						// put previous error and logon type back so that we get the correct error message below
+						l32type = LOGON32_LOGON_INTERACTIVE;
+						SetLastError(err);
+					}
+				}
 			} else {
 				// we already have a good user handle from calling LogonUser to check to
 				// see if our stashed credential was stale or not, so set retval to success
 				retval = 1;	// LogonUser returns nonzero value on success
 			}
-
-			dprintf(D_FULLDEBUG, "LogonUser completed.\n");
 
 			if (UserLoginName) {
 				free(UserLoginName);
@@ -586,13 +647,15 @@ init_user_ids(const char username[], const char domain[])
 			UserDomainName = strdup(domain);
 
 			if ( !retval ) {
-				dprintf(D_ALWAYS, "init_user_ids: LogonUser failed with NT Status %ld\n", 
-					GetLastError());
+				DWORD err = GetLastError();
+				dprintf(D_ALWAYS, "init_user_ids: %s@%s LogonUser(%s) failed with NT Status %d : %s\n",
+					user, dom, Logon32TypeName(l32type), err, GetLastErrorString(err));
 				retval =  0;	// return of 0 means FAILURE
 			} else {
+				dprintf(D_FULLDEBUG, "LogonUser completed.\n");
+
 				// stash the new token in our cache
-				cached_tokens.storeToken(UserLoginName, UserDomainName,
-					   	CurrUserHandle);
+				cached_tokens.storeToken(UserLoginName, UserDomainName, CurrUserHandle);
 				UserIdsInited = true;
 
 				// if we got the password from the credd, and the admin wants passwords stashed
