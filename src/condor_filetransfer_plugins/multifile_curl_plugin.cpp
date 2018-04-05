@@ -364,6 +364,7 @@ MultiFileCurlPlugin::InitializeStats( string request_url ) {
     }
 
     // Cleanup and exit
+    free( url );
     freeaddrinfo( info );
 }
 
