@@ -3230,6 +3230,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 			int mode = QDO_JobNormal;
 			if (show_held) {
 				mode = QDO_JobHold;
+				wide_mode = true;
 			} else if (dash_batch) {
 				mode = QDO_Progress;
 			} else if (dash_dag) {
@@ -4009,11 +4010,11 @@ static int fnFixupWidthCallback(void* pv, int index, Formatter * fmt, const char
 	char * pf = const_cast<char*>(fmt->printfFmt);
 	if (index == 0) {
 		if (p->cluster_width > 4 && p->cluster_width <= 9) {
-			if (pf && pf[1] == '4') { pf[1] = '0' + p->cluster_width; fmt->width = p->cluster_width+1; }
+			if (pf && pf[1] >= '4' && pf[1] <= '9') { pf[1] = '0' + p->cluster_width; fmt->width = p->cluster_width+1; }
 		}
 	} else if (index == 1) {
 		if (p->proc_width > 3 && p->proc_width <= 9) {
-			if (pf && pf[2] == '3') { pf[2] = '0' + p->proc_width; fmt->width = p->proc_width; }
+			if (pf && pf[2] >= '3' && pf[2] <= '9') { pf[2] = '0' + p->proc_width; fmt->width = p->proc_width; }
 		}
 	} else if (index == name_column_index) { // owner
 		fmt->width = MAX(fmt->width, p->name_width);
