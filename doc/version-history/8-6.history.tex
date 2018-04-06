@@ -48,6 +48,11 @@ variable when the job runs to the actual number of provisioned cpus.
 
 \begin{itemize}
 
+\item Fixed bugs in \Condor{q} where the \Opt{-global} option would sometimes
+truncate the job cluster id and the \Opt{-hold} option would truncate the hold reason.
+\Ticket{6634}
+\Ticket{6641}
+
 \item Fixed a bug where \MacroNI{STARTD\_CRON\_JOBLIST} was not ignoring
 duplicate entries.
 \Ticket{6604}
