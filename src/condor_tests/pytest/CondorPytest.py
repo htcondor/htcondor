@@ -13,7 +13,7 @@ class CondorPytest(object):
         self._name = name
 
 
-    def RunTest(self, submit_filename):
+    def RunTest(self, submit_args):
 
         success = False
 
@@ -31,24 +31,18 @@ class CondorPytest(object):
         # MRC: Can we do this using python bindings? Or do we need to use condor_who?
         time.sleep(5)
 
-        # Translate the submit file to classad format
-        ad_filename = self._name + ".ad"
-        self.GenerateAdFile(submit_filename, ad_filename)
-
-        schedd = htcondor.Schedd()
-        ad = classad.parseOne(open(ad_filename))
-        print("ad = " + str(ad))
-        result_ads = []
-
-        # Submit the test
+        # Submit the test defined by submit_args
         CondorUtils.Debug("Submitting the test job...")
+        schedd = htcondor.Schedd()
+        submit = htcondor.Submit(submit_args)
         try:
-            cluster = schedd.submit(ad, 1, False, result_ads)
+            with schedd.transaction() as txn:
+                cluster = submit.queue(txn)
         except:
-            CondorUtils.Debug("Failed to submit job")
+            print("Job submission failed for an unknown error")
             personal.ShutdownCondor()
             return False
-            
+                
         CondorUtils.Debug("Test job running on cluster " + str(cluster))
 
         # Wait until test has finished running by watching the job status
@@ -72,27 +66,6 @@ class CondorPytest(object):
         personal.ShutdownCondor()
 
         return success
-
-    # Takes a submit file and generates a classad file that schedd.submit()
-    # will accept. We use condor_submit -dump, then parse the file to make sure
-    # all expressions are in double quotes.
-    def GenerateAdFile(self, submit_filename, ad_filename):
-        os.system("condor_submit -dump " + ad_filename + " " + submit_filename)
-        """
-        with open(ad_filename) as f:
-            ad_contents = f.readlines()
-        ad_file = open(ad_filename, "w")
-        for line in ad_contents:
-            line = line.strip("\n")
-            attr = line[:line.find("=")]
-            value = line[line.find("=")+1:]
-            if len(value) > 0: 
-                if value[0] != "\"":
-                    value = value.replace("\"", "'")
-                    value = "\"" + value + "\""
-                ad_file.write(attr + "=" + value + "\n")
-        ad_file.close()
-        """
 
 
 
