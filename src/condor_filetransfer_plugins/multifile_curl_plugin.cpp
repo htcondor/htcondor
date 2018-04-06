@@ -11,6 +11,7 @@ using namespace std;
 
 MultiFileCurlPlugin::MultiFileCurlPlugin( int diagnostic ) :
     _handle ( NULL ),
+    _this_file_stats ( NULL ),
     _diagnostic ( diagnostic ),
     _all_files_stats ( "" )
 {}
