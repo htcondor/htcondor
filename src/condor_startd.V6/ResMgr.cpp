@@ -2346,7 +2346,7 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 		// assign the NULL value here if that's what we got, so that we
 		// do the right thing if we drain without a START expression after
 		// draining with one.
-		globalDrainingStartExpr = start_expr->Copy();
+		globalDrainingStartExpr = start_expr ? start_expr->Copy() : NULL;
 		walk(&Resource::releaseAllClaimsReversibly);
 	}
 	else if( how_fast <= DRAIN_QUICK ) {
@@ -2590,4 +2590,28 @@ ResMgr::adlist_reset_monitors( unsigned r_id, ClassAd * forWhom ) {
 void
 ResMgr::adlist_unset_monitors( unsigned r_id, ClassAd * forWhom ) {
 	extra_ads.unset_monitors( r_id, forWhom );
+}
+
+void
+ResMgr::checkForDrainCompletion() {
+	if( ! resources ) { return; }
+
+	bool allAcceptedWhileDraining = true;
+	for( int i = 0; i < nresources; ++i ) {
+		if(! resources[i]->wasAcceptedWhileDraining()) {
+			// Not sure how COD and draining are supposed to interact, but
+			// the partitionable slot is never accepted-while-draining,
+			// nor claimed, nor should it block drain from completing.
+			if(! resources[i]->hasAnyClaim()) { continue; }
+			allAcceptedWhileDraining = false;
+		}
+	}
+	if(! allAcceptedWhileDraining) { return; }
+
+	dprintf( D_ALWAYS, "Initiating final draining (all original jobs complete).\n" );
+	// This (auto-reversibly) sets START to false when we release all claims.
+	globalDrainingStartExpr = NULL;
+	// FIXME: autoreversibly set MJRT to 0.
+	// FIXME: invalidate all claim IDs (maybe automagically whenever the above happens)
+	walk( & Resource::releaseAllClaimsReversibly );
 }

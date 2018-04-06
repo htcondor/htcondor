@@ -723,11 +723,18 @@ ResState::enter_action( State s, Activity a,
 		else if (a == busy_act) {
 			resmgr->start_poll_timer();
 
-			if( rip->inRetirement() ) {
+			if( rip->inRetirement() && !rip->wasAcceptedWhileDraining() ) {
 
 				// We have returned to a busy state (e.g. from
 				// suspension) and there is a preempting claim or we
 				// are in irreversible retirement, so retire.
+
+				// inRetirement() is actually hasPreemptingClaim() || !mayUnretire(),
+				// where we can't unretire if we're draining.  Otherwise,
+				// the drain command would start us retiring and we'd
+				// immediately unretire.  However, if this job was accepted
+				// while we were draining, we don't want to start retiring
+				// it until the last of the "original" jobs has finished.
 
 				change( retiring_act );
 				return TRUE; // XXX: change TRUE

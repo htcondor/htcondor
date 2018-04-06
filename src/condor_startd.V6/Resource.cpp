@@ -910,6 +910,16 @@ Resource::starterExited( Claim* cur_claim )
 		return;
 	}
 
+	// Somewhere before the end of this function, this Resource gets
+	// delete()d, or at least partially over-written.  (I'm leaning
+	// towards deleted, because this Resource isn't in the ResMgr's
+	// Resource list when we check at the end of this function.)
+	// So decide now if we need to check if we're done draining.
+	bool shouldCheckForDrainCompletion = false;
+	if(isDraining() && !m_acceptedWhileDraining) {
+		shouldCheckForDrainCompletion = true;
+	}
+
 		// let our ResState object know the starter exited, so it can
 		// deal with destination state stuff...  we'll eventually need
 		// to move more of the code from below here into the
@@ -945,6 +955,10 @@ Resource::starterExited( Claim* cur_claim )
 				 state_to_string(s) );
 		change_state( owner_state );
 		break;
+	}
+
+	if( shouldCheckForDrainCompletion ) {
+		resmgr->checkForDrainCompletion();
 	}
 }
 

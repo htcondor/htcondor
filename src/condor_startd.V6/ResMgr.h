@@ -309,6 +309,8 @@ public:
 	bool typeNumCmp( int* a, int* b );
 
 	void calculateAffinityMask(Resource *rip);
+
+	void checkForDrainCompletion();
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects

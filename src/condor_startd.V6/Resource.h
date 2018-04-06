@@ -116,8 +116,7 @@ public:
 
         void	setBadputCausedByPreemption() { if( r_cur ) r_cur->setBadputCausedByPreemption();}
         bool	getBadputCausedByPreemption() { return r_cur->getBadputCausedByPreemption();}
-        
-	
+
         // Enable/Disable claims for hibernation
     void    disable ();
     void    enable ();
@@ -336,7 +335,8 @@ public:
 
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
 
-	void setAcceptedWhileDraining() { if( isDraining() ) { m_acceptedWhileDraining = true; } }
+	bool wasAcceptedWhileDraining() const { return m_acceptedWhileDraining; }
+	void setAcceptedWhileDraining() { m_acceptedWhileDraining = isDraining(); }
 private:
 	ResourceFeature m_resource_feature;
 
