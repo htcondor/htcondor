@@ -3729,7 +3729,13 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 	}
 	attrValue += "}";
 	cap->AssignExpr(attrName.c_str(), attrValue.c_str());
-	
+
 	return;
 }
 
+void
+Resource::invalidateAllClaimIDs() {
+	if( r_pre ) { r_pre->invalidateID(); }
+	if( r_pre_pre ) { r_pre_pre->invalidateID(); }
+	if( r_cur ) { r_cur->invalidateID(); }
+}

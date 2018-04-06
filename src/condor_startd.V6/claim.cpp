@@ -2558,3 +2558,10 @@ Claim::waitingForActivation() {
 	time_t maxDrainingActivationDelay = param_integer( "MAX_DRAINING_ACTIVATION_DELAY", 20 );
 	return getClaimAge() < maxDrainingActivationDelay;
 }
+
+void
+Claim::invalidateID() {
+	dprintf( D_ALWAYS, "TLM: Claim::invalidateID()\n" );
+	delete c_id;
+	c_id = new ClaimId( type(), c_rip->r_id_str );
+}

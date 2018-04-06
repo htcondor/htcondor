@@ -2611,7 +2611,11 @@ ResMgr::checkForDrainCompletion() {
 	dprintf( D_ALWAYS, "Initiating final draining (all original jobs complete).\n" );
 	// This (auto-reversibly) sets START to false when we release all claims.
 	globalDrainingStartExpr = NULL;
+	// Invalidate all claim IDs.  This prevents the schedd from claiming
+	// resources that were negotiated before draining finished.
+	walk( &Resource::invalidateAllClaimIDs );
 	// FIXME: autoreversibly set MJRT to 0.
-	// FIXME: invalidate all claim IDs (maybe automagically whenever the above happens)
+	// ...
+	// Initiate final draining.
 	walk( & Resource::releaseAllClaimsReversibly );
 }

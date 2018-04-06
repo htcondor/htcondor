@@ -103,6 +103,7 @@ public:
 		// Remove the given claim from this Resource
 	void	removeClaim( Claim* );
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
+	void	invalidateAllClaimIDs();
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
 		// reversible: if true, claim may unretire
