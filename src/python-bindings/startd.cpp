@@ -63,7 +63,8 @@ struct Startd
         std::string request_id;
 
         DCStartd startd(m_addr.c_str());
-        bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr.c_str(), request_id);
+        // FIXME: allow python bindings to specify START expression.
+        bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr.c_str(), NULL, request_id);
         if (!rval) {THROW_EX(RuntimeError, "Startd failed to begin draining jobs.");}
         return request_id;
     }
