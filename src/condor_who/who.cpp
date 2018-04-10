@@ -2487,7 +2487,9 @@ static bool ping_a_daemon(std::string addr, std::string /*name*/)
 
 	ReliSock sock;
 	sock.timeout(20);   // years of research... :)
-	sock.connect(addr.c_str());
+	if (!sock.connect(addr.c_str())) {
+		return false;
+	}
 	dae.startCommand(DC_NOP, &sock, 20);
 	success = sock.end_of_message();
 	sock.close();
