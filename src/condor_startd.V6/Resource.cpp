@@ -2391,6 +2391,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
     }
 
 	cap->InsertAttr( "AcceptedWhileDraining", m_acceptedWhileDraining );
+	if( resmgr->getMaxJobRetirementTimeOverride() >= 0 ) {
+		cap->InsertAttr( ATTR_MAX_JOB_RETIREMENT_TIME, resmgr->getMaxJobRetirementTimeOverride() );
+	}
 
 	// Don't bother to write an ad to disk that won't include the extras ads.
 	// Also only write the ad to disk when the claim has a ClassAd and the

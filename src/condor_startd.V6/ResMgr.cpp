@@ -33,7 +33,7 @@
 
 #include "strcasestr.h"
 
-ResMgr::ResMgr() : extras_classad( NULL )
+ResMgr::ResMgr() : extras_classad( NULL ), max_job_retirement_time_override(-1)
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -2614,8 +2614,10 @@ ResMgr::checkForDrainCompletion() {
 	// Invalidate all claim IDs.  This prevents the schedd from claiming
 	// resources that were negotiated before draining finished.
 	walk( &Resource::invalidateAllClaimIDs );
-	// FIXME: autoreversibly set MJRT to 0.
-	// ...
+	// Set MAXJOBRETIREMENTTIME to 0.  This will be reset in ResState::eval()
+	// when draining completes.
+	this->max_job_retirement_time_override = 0;
+	walk( & Resource::refresh_classad, A_PUBLIC );
 	// Initiate final draining.
 	walk( & Resource::releaseAllClaimsReversibly );
 }

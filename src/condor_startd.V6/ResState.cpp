@@ -550,6 +550,7 @@ ResState::eval( void )
 		}
 		if( r_act == retiring_act ) {
 			if( resmgr->drainingIsComplete( rip ) ) {
+				resmgr->resetMaxJobRetirementTime();
 				dprintf(D_ALWAYS,"State change: draining is complete.\n");
 				change( drained_state, idle_act );
 				return TRUE;

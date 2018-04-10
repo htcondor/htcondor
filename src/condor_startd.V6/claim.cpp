@@ -2561,7 +2561,6 @@ Claim::waitingForActivation() {
 
 void
 Claim::invalidateID() {
-	dprintf( D_ALWAYS, "TLM: Claim::invalidateID()\n" );
 	delete c_id;
 	c_id = new ClaimId( type(), c_rip->r_id_str );
 }

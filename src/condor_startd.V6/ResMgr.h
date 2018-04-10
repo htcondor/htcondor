@@ -311,6 +311,9 @@ public:
 	void calculateAffinityMask(Resource *rip);
 
 	void checkForDrainCompletion();
+	int getMaxJobRetirementTimeOverride() { return max_job_retirement_time_override; }
+	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -390,6 +393,7 @@ private:
 	int expected_quick_draining_badput;
 	int total_draining_badput;
 	int total_draining_unclaimed;
+	int max_job_retirement_time_override;
 };
 
 
