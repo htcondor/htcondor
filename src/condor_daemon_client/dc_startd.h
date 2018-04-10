@@ -198,7 +198,8 @@ public:
 		// call error() to get a descriptive error message
 		// how_fast: DRAIN_GRACEFUL, DRAIN_QUICK, DRAIN_FAST
 		// check_expr: optional expression that must be true for all slots to be drained or request fails
-	bool drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,std::string &request_id);
+		// start_expr: optional, specifies START expression to use while draining
+	bool drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,char const *start_expr,std::string &request_id);
 
 		// request_id: the draining request id
 		// returns: true/false on success/failure

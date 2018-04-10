@@ -1237,7 +1237,7 @@ bool DCClaimIdMsg::readMsg( DCMessenger *, Sock *sock )
 }
 
 bool
-DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,std::string &request_id)
+DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,char const *start_expr,std::string &request_id)
 {
 	std::string error_msg;
 	ClassAd request_ad;
@@ -1252,6 +1252,9 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 	request_ad.Assign(ATTR_RESUME_ON_COMPLETION,resume_on_completion);
 	if( check_expr ) {
 		request_ad.AssignExpr(ATTR_CHECK_EXPR,check_expr);
+	}
+	if( start_expr ) {
+		request_ad.AssignExpr(ATTR_START_EXPR,start_expr);
 	}
 
 	if( !putClassAd(sock, request_ad) || !sock->end_of_message() ) {

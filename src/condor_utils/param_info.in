@@ -33,6 +33,11 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[MAX_DRAINING_ACTIVATION_DELAY]
+default=20
+description=When draining, how many seconds should a claimed slot wait to be activated?  Draining will be extended by this delay..
+tag=startd
+
 [ENABLE_KERNEL_TUNING]
 default=true
 type=bool
@@ -4058,6 +4063,11 @@ tags=startd
 default=((time() - LastPeriodicCheckpoint)/60.0) > (180.0 + $RANDOM_INTEGER(-30,30,1))
 type=string
 tags=startd
+
+[DEFRAG_DRAINING_START_EXPR]
+default=FALSE
+type=string
+tags=defrag
 
 [DEFRAG_REQUIREMENTS]
 default=PartitionableSlot && Offline=!=True

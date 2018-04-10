@@ -295,7 +295,7 @@ public:
 	bool considerResumingAfterDraining();
 
 		// how_fast: DRAIN_GRACEFUL, DRAIN_QUICK, DRAIN_FAST
-	bool startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,std::string &new_request_id,std::string &error_msg,int &error_code);
+	bool startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code);
 
 	bool cancelDraining(std::string request_id,std::string &error_msg,int &error_code);
 
@@ -309,6 +309,11 @@ public:
 	bool typeNumCmp( int* a, int* b );
 
 	void calculateAffinityMask(Resource *rip);
+
+	void checkForDrainCompletion();
+	int getMaxJobRetirementTimeOverride() { return max_job_retirement_time_override; }
+	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -388,6 +393,7 @@ private:
 	int expected_quick_draining_badput;
 	int total_draining_badput;
 	int total_draining_unclaimed;
+	int max_job_retirement_time_override;
 };
 
 

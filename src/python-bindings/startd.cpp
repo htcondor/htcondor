@@ -44,7 +44,7 @@ struct Startd
     }
 
     std::string
-    drain_jobs(int how_fast=DRAIN_GRACEFUL, bool resume_on_completion=false, boost::python::object check_obj=boost::python::object(""))
+    drain_jobs(int how_fast=DRAIN_GRACEFUL, bool resume_on_completion=false, boost::python::object check_obj=boost::python::object(""), boost::python::object start_obj = boost::python::object() )
     {
         std::string check_expr;
         boost::python::extract<std::string> expr_extract(check_obj);
@@ -59,11 +59,20 @@ struct Startd
             printer.Unparse(check_expr, expr.get());
         }
 
-        //boost::python::string retval;
+		std::string start_expr;
+		boost::python::extract<std::string> start_extract( start_obj );
+		if( start_extract.check() ) {
+			start_expr = start_extract();
+		} else {
+			classad::ClassAdUnParser printer;
+			classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(start_obj));
+			printer.Unparse( start_expr, expr.get());
+		}
+
         std::string request_id;
 
         DCStartd startd(m_addr.c_str());
-        bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr.c_str(), request_id);
+        bool rval = startd.drainJobs(how_fast, resume_on_completion, check_expr.c_str(), start_expr.c_str(), request_id);
         if (!rval) {THROW_EX(RuntimeError, "Startd failed to begin draining jobs.");}
         return request_id;
     }
@@ -117,12 +126,14 @@ export_startd()
         .def("drainJobs", &Startd::drain_jobs, "Drain jobs from a startd.",
             ":param drain_type: Type of drain to perform (Fast, Graceful or Quick); must be from DrainTypes enum."
             ":param resume_on_completion: If true, startd will exit the draining state when draining completes.\n"
-            ":param check: An optional check expression that must be true for all slots for draining to begin; defaults to 'true'\n"
+            ":param constraint: An optional check expression that must be true for all slots for draining to begin; defaults to 'true'\n"
+            ":param start_expr: An optional expression that will be used as the START expression while draining; defaults to FALSE.\n"
             ":return: a drain request id that can be used to cancel draining.",
                (SELFARG
                 boost::python::arg("drain_type")=DRAIN_GRACEFUL,
                 boost::python::arg("resume_on_completion")=false,
-                boost::python::arg("constraint")="true"
+                boost::python::arg("constraint")="true",
+                boost::python::arg("start_expr")="false"
                )
             )
 
