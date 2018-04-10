@@ -184,14 +184,14 @@ FileTransfer::~FileTransfer()
 				"active transfer.  Cancelling transfer.\n");
 		abortActiveTransfer();
 	}
-	if (TransferPipe[0] >= 0) {
+	if (daemonCore && (TransferPipe[0] >= 0)) {
 		if( registered_xfer_pipe ) {
 			registered_xfer_pipe = false;
 			daemonCore->Cancel_Pipe(TransferPipe[0]);
 		}
 		daemonCore->Close_Pipe(TransferPipe[0]);
 	}
-	if (TransferPipe[1] >= 0) daemonCore->Close_Pipe(TransferPipe[1]);
+	if (daemonCore && (TransferPipe[1] >= 0)) daemonCore->Close_Pipe(TransferPipe[1]);
 	if (Iwd) free(Iwd);
 	if (ExecFile) free(ExecFile);
 	if (UserLogFile) free(UserLogFile);
