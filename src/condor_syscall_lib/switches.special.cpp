@@ -61,7 +61,7 @@ int _libc_FORK(...);
 int SYSCONF(...);
 int SYSCALL(...);
 int _FORK_sys(...);
-void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
+void update_rusage( struct rusage *ru1, struct rusage *ru2 );
 
 #if defined(LINUX)
 int _condor_xstat(int version, const char *path, struct stat *buf);
