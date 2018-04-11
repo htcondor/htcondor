@@ -20,6 +20,7 @@ StandardOutput=syslog
 NotifyAccess=main
 KillSignal=SIGQUIT
 LimitNOFILE=16384
+TasksMax=16384
 
 [Install]
 WantedBy=multi-user.target
