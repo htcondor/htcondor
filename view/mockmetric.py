@@ -6,7 +6,7 @@ import enum
 import random
 import argparse
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union, Iterable, List
 
 
 class StrEnum(str, enum.Enum):
@@ -130,7 +130,7 @@ class MachineRecord:
         return j
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description = 'Generate mock data for HTCondor View',
     )
@@ -191,20 +191,25 @@ def parse_args():
     return parser.parse_args()
 
 
-def normalize_output_path(path):
+def normalize_output_path(path: Union[Path, str]) -> Path:
     return Path(path).with_suffix('.json')
 
 
-def ensure_parents_exist(path):
+def ensure_parents_exist(path: Path):
     path.parent.mkdir(parents = True, exist_ok = True)
 
 
-def flatten_list_of_lists(list_of_lists):
+def flatten_list_of_lists(list_of_lists: List[List]):
     """Flatten one level of nesting."""
     return itertools.chain.from_iterable(list_of_lists)
 
 
-def write_json_output(records, output_path, compressed = False, indent = 2, flatten = False):
+def write_json_output(
+    records: Iterable[Union[SubmitterRecord, MachineRecord]],
+    output_path: Path,
+    compressed: bool = False,
+    indent: int = 2,
+    flatten: bool = False):
     """
 
     Parameters
@@ -271,7 +276,7 @@ def main():
             for _ in range(args.number)
         ]
     else:
-        print('Err: unknown option for WHICH')
+        raise RuntimeError('unknown option for WHICH')
 
     output_path = normalize_output_path(args.output)
     write_json_output(
