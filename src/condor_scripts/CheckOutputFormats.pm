@@ -1349,33 +1349,33 @@ sub find_real_heading {
 		$real_heading = '-batch';
 	# if there are three command arguments, one has to be -nobatch andone has to be -wide
 	} elsif (defined $command_arg && $command_arg =~ /(.+)\s+(.+)\s+(.+)/){
-		if ($1 ne '-wide' && $1 ne '-nobatch'){
+		if (substr($1,0,5) ne '-wide' && $1 ne '-nobatch'){
 			$real_heading = $1;
 		}
-		if ($2 ne '-wide' && $2 ne '-nobatch'){
+		if (substr($2,0,5) ne '-wide' && $2 ne '-nobatch'){
 			$real_heading = $2;
 		}	
-		if ($3 ne '-wide' && $3 ne '-nobatch'){
+		if (substr($3,0,5) ne '-wide' && $3 ne '-nobatch'){
 			$real_heading = $3;
 		}
 	# if there are two command arguments, one can be -wide or -nobatch
 	} elsif (defined $command_arg && $command_arg =~ /(.+)\s+(.+)/){
-		if (('-nobatch' eq $1 || '-nobatch' eq $2) && ('-wide' eq $1 || '-wide' eq $2)){
+		if (('-nobatch' eq $1 || '-nobatch' eq $2) && ('-wide' eq substr($1,0,5) || '-wide' eq substr($2,0,5))){
 			$real_heading = '-nobatch';
 		} elsif ($1 eq '-nobatch'){
 			$real_heading = $2;
 		} elsif ($2 eq '-nobatch'){
 			$real_heading = $1;
-		} elsif ($1 eq '-wide' && $2 ne '-dag' && $2 ne '-run'){
+		} elsif (substr($1,0,5) eq '-wide' && $2 ne '-dag' && $2 ne '-run'){
 			$real_heading = $2;
-		} elsif ($2 eq '-wide' && $1 ne '-dag' && $1 ne '-run'){
+		} elsif (substr($2,0,5) eq '-wide' && $1 ne '-dag' && $1 ne '-run'){
 			$real_heading = $1;
 		} else {
 			$real_heading = '-batch';
 		}	
 	# one command argument, -dag and -run same with -batch
 	} elsif (defined $command_arg){
-		if ($command_arg eq '-wide' || $command_arg eq '-run' || $command_arg eq '-dag'){
+		if (substr($command_arg,0,5) eq '-wide' || $command_arg eq '-run' || $command_arg eq '-dag'){
 			$real_heading = '-batch';
 		} else {
 			$real_heading = $command_arg;

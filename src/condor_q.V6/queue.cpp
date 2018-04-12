@@ -144,6 +144,7 @@ static int parse_format_args(int argc, const char * argv[], AttrListPrintMask & 
 static 	int dash_long = 0, dash_tot = 0, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
 static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
 static  int dash_factory = 0; // if non zero, bits are options, 1=cluster-ads-only, 2=late-materialize-only
+static  int dash_wide = 0; // -wide argument was used
 static ClassAdFileParseType::ParseType dash_long_format = ClassAdFileParseType::Parse_auto;
 static bool print_attrs_in_hash_order = false;
 static bool auto_standard_summary = false; // print standard summary
@@ -830,7 +831,8 @@ processCommandLineArguments (int argc, const char *argv[])
 		const char* dash_arg = argv[i];
 
 		if (is_dash_arg_colon_prefix (dash_arg, "wide", &pcolon, 1)) {
-			widescreen = true;
+			widescreen = true; // display in wide mode
+			dash_wide = true; // remember that there was a -wide argument
 			if (pcolon) {
 				testing_width = atoi(++pcolon);
 				// TODO: fix this...
@@ -1311,7 +1313,8 @@ processCommandLineArguments (int argc, const char *argv[])
 				continue;
 			}
 			qdo_mode = QDO_PrintFormat | QDO_Custom;
-			if ( ! widescreen) app.prmask.SetOverallWidth(getDisplayWidth()-1);
+			bool no_width = widescreen || ( ! dash_wide && (getConsoleWindowSize() < 0));
+			if ( ! no_width) app.prmask.SetOverallWidth(getDisplayWidth()-1);
 			++i;
 			if (set_print_mask_from_stream(app.prmask, argv[i], true, app.attrs, app.sumymask) < 0) {
 				fprintf(stderr, "Error: invalid select file %s\n", argv[i]);
@@ -1722,10 +1725,13 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "run", "goodput", "globus", "grid", "grid:ec2", "hold", "io", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
+		const char * const amo[] = { "", "normal", "run", "goodput", "globus", "grid", "grid:ec2", "hold", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
+		// if the user did not specify -wide or -wide:<num>, and the width of the screen cannot be
+		// determined (because we are writing to a pipe or file), then don't truncate the output to fit the screen
+		if ( ! dash_wide && (getConsoleWindowSize() < 0)) widescreen = true;
 		initOutputMask(app.prmask, qdo_mode, widescreen);
 	} else {
 		// handle flags that just set a constraint when used with a formatting option, but
@@ -3383,10 +3389,25 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 	return true; // true means caller can delete the job, we are done with it.
 }
 
+static void trim_whitespace_before_newline(std::string & buf)
+{
+	if (buf.empty()) return;
+	std::string::reverse_iterator it = buf.rbegin();
+	if (*it != '\n') return;
+	std::string::reverse_iterator end = ++it;
+	size_t num = 0;
+	for (it = end; it != buf.rend(); ++it) {
+		if ( ! isspace(*it)) break;
+		++num;
+	}
+	if (num) buf.erase(it.base(), end.base());
+}
+
 static void print_a_result(std::string & buf, JobRowOfData & jrod)
 {
 	buf.clear();
 	app.prmask.display(buf, jrod.rov);
+	if (widescreen) trim_whitespace_before_newline(buf);
 	printf("%s", buf.c_str());
 	jrod.flags |= JROD_PRINTED; // for debugging, keep track of what we already printed.
 }

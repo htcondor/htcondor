@@ -352,7 +352,7 @@ if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_ar
 ##############################################################################
 ########################### test -nobatch -dag ###############################
 ##############################################################################
-$command_arg = '-nobatch -dag';
+$command_arg = '-nobatch -dag -wide:80';
 $ClusterId = 100;
 $pid = $$;
 $arguments = 600;
@@ -395,9 +395,9 @@ $cnt_num{0} -= 3; $cnt_num{2} -= 3;
 %user_batch = %{$user_batch_ref};
 
 if (check_heading($command_arg,\%data) && check_data(\@fields,\%Attr,$command_arg,\%cluster_batch,\%user_batch)){
-	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num),check_name => '-nobatch -dag',test_name=>$testname);
+	RegisterResult(check_summary($command_arg,\@summary,\%cnt_num), check_name=>$command_arg, test_name=>$testname);
 } else {
-	RegisterResult(0,check_name => '-nobatch -dag', test_name => $testname);
+	RegisterResult(0, check_name=>$command_arg, test_name=>$testname);
 }
 
 
