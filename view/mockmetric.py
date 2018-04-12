@@ -1,4 +1,4 @@
-#!usr/bin/env python
+#!usr/bin/env python3
 import datetime
 import itertools
 import json
@@ -46,29 +46,27 @@ class SubmitterRecord:
         self.jobs = jobs
 
     def to_json(self):
-        j_base = {}
+        j_base = {
+            self.NAME_KEY: self.name,
+            self.MACHINE_KEY: self.machine,
+        }
         if self.date is not None:
             j_base[self.DATE_KEY] = datetime.datetime.strftime(self.date, '%Y-%m-%dT%H:%M:%S')
-        # j_base.update({
-        #     self.NAME_KEY: self.name,
-        #     self.MACHINE_KEY: self.machine,
-        # })
-        j_base[self.NAME_KEY] = self.name
-        j_base[self.MACHINE_KEY] = self.machine
 
-        j = [{self.JOB_STATUS_KEY: job_status, self.COUNT_KEY: num_jobs, **j_base} for job_status, num_jobs in self.jobs.items()]
+        j = [{self.JOB_STATUS_KEY: job_status, self.COUNT_KEY: num_jobs, **j_base}
+             for job_status, num_jobs in self.jobs.items()]
 
         return j
 
     def to_json_compact(self):
-        j = {}
-        if self.date is not None:
-            j[self.DATE_KEY] = datetime.datetime.strftime(self.date, '%Y-%m-%dT%H:%M:%S')
-        j.update({
+        j = {
             self.NAME_KEY: self.name,
             self.MACHINE_KEY: self.machine,
             self.JOBS_KEY: {status: count for status, count in self.jobs.items()},
-        })
+        }
+
+        if self.date is not None:
+            j[self.DATE_KEY] = datetime.datetime.strftime(self.date, '%Y-%m-%dT%H:%M:%S')
 
         return j
 
@@ -135,6 +133,12 @@ class MachineRecord:
 def parse_args():
     parser = argparse.ArgumentParser(
         description = 'Generate mock data for HTCondor View',
+    )
+    parser.add_argument(
+        'which',
+        action = 'store',
+        type = str,
+        help = 'which type of data to generate: s|submitters or m|machines'
     )
     parser.add_argument(
         'output',
@@ -237,7 +241,9 @@ def main():
     if args.compact_submitters:
         SubmitterRecord.to_json = SubmitterRecord.to_json_compact
 
-    if args.submitters:
+    generate_submitters = args.which.lower() in ('s', 'submitters')
+    generate_machines = args.which.lower() in ('m', 'machines')
+    if generate_submitters:
         records = [
             SubmitterRecord(
                 date = datetime.datetime.utcnow() if args.dated else None,
@@ -251,7 +257,7 @@ def main():
             )
             for name in random.sample(NAMES, k = args.number)
         ]
-    else:
+    elif generate_machines:
         records = [
             MachineRecord(
                 date = datetime.datetime.utcnow() if args.dated else None,
@@ -264,6 +270,8 @@ def main():
             )
             for _ in range(args.number)
         ]
+    else:
+        print('Err: unknown option for WHICH')
 
     output_path = normalize_output_path(args.output)
     write_json_output(
@@ -271,7 +279,7 @@ def main():
         output_path,
         indent = args.indent,
         compressed = args.compressed,
-        flatten = args.submitters and not args.compact_submitters,
+        flatten = generate_submitters and not args.compact_submitters,
     )
 
 
