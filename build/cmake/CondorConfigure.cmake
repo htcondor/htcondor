@@ -813,8 +813,6 @@ endif()
 
 if (WINDOWS)
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
-
   if(NOT (MSVC_VERSION LESS 1900))
     if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
       set(BOOST_DOWNLOAD_WIN boost-1.64.0-VC15-Win64.tar.gz)
@@ -860,7 +858,6 @@ else ()
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
