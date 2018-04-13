@@ -433,8 +433,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	}
 #endif
 
-	soap = NULL;
-
 	localAdFile = NULL;
 
 	m_collector_list = NULL;
@@ -3607,7 +3605,6 @@ void DaemonCore::Driver()
 			time_t now = time(NULL);
 
 			bool recheck_status = false;
-			//bool call_soap_handler = false;
 
 			// If a command came in on the super-user command socket, then
 			// set a flag so in the loop below we only schedule command callbacks
