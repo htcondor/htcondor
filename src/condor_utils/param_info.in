@@ -5175,6 +5175,11 @@ win32_default=NUL
 default=$(EC2_GAHP)
 type=path
 
+[AZURE_GAHP]
+default=$(SBIN)/AzureGAHPServer
+win32_default=$(SBIN)\AzureGAHPServer.py
+type=path
+
 [CREDD]
 default=$(SBIN)/condor_credd
 win32_default=$(SBIN)\condor_credd.exe
