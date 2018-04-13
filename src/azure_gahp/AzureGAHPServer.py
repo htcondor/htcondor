@@ -3,8 +3,6 @@ import platform
 
 import AzureGAHPLib
 
-double_line_break = "{}"
-
 class GahpMinParamsCountBuilder():
     def __init__(self):
         self.create_keyvault = 8
@@ -101,10 +99,10 @@ while(True):
     input_command = input_command_params[0]
     if(input_command.upper() == cmds.commands):
         all_commands = vars(cmds)
-        sys.stdout.write("{} ".format(s_alphabet))
+        sys.stdout.write("{}".format(s_alphabet))
         for command in all_commands.values():
-            sys.stdout.write("{} ".format(command))
-        sys.stdout.write("{}".format(double_line_break))
+            sys.stdout.write(" {}".format(command))
+        sys.stdout.write("{}".format(AzureGAHPLib.double_line_break))
         continue
     elif(input_command.upper() == cmds.version):
         print("{} {}".format(s_alphabet, version))
