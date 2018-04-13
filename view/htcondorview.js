@@ -915,7 +915,7 @@ HTCondorViewRanged.prototype.add_date_pickers = function (root_id) {
             }
             test_input_e.remove();
             HTCondorViewRanged.has_native_date = true;
-            native_date = true;
+            let native_date = true;
         }
         catch (e) {
             // Something went wrong. We don't care what, just fallback to whatever the browser provides.
@@ -974,8 +974,8 @@ HTCondorViewRanged.prototype.change_view = function () {
     //this.htcondor_view = null;
 
     var duration = $("#" + this.dst_id + ' .data-duration input[type="radio"]:checked').val();
-
     var options = {};
+    let key;
     for (key in this.options) {
         options[key] = this.options[key];
     }
