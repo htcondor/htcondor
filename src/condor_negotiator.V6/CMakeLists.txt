@@ -24,7 +24,7 @@ if (NOT WIN_EXEC_NODE_ONLY)
 	endif(UNIX)
 
 	condor_daemon( negotiator "${negotiatorRmvElements}"
-	"${CONDOR_LIBS};${CONDOR_QMF}" "${C_SBIN}" OFF )
+	"${CONDOR_LIBS};${CONDOR_QMF}" "${C_SBIN}" )
 
 	condor_exe_test( test_protocol_matching
 		"protocol-test.cpp;matchmaker.cpp;Accountant.cpp;matchmaker_negotiate.cpp"

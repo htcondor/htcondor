@@ -24,6 +24,6 @@ condor_glob( Hdrs Srcs "${RmvSrcs}" )
 
 condor_static_lib( condorPigeon "${Hdrs};${Srcs}" ) 
 condor_exe( declareQueues "declare_queues.cpp" "${C_SBIN}" "condorPigeon;condorapi;${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND}" OFF )
-condor_daemon( pigeon  "${RmvSrcs}" "condorPigeon;${CONDOR_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND}" "${C_SBIN}" ON)
+condor_daemon( pigeon  "${RmvSrcs}" "condorPigeon;${CONDOR_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND}" "${C_SBIN}")
 
 endif(LINUX)

@@ -25,9 +25,6 @@
 // //////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
-#ifdef HAVE_EXT_GSOAP
-#include "soap_core.h"
-#endif
 #include "authentication.h"
 #include "reli_sock.h"
 #include "condor_daemon_core.h"
@@ -48,10 +45,6 @@ static int ZZZ_always_increase() {
 const std::string DaemonCommandProtocol::WaitForSocketDataString = "DaemonCommandProtocol::WaitForSocketData";
 
 DaemonCommandProtocol::DaemonCommandProtocol( Stream * sock, bool is_command_sock, bool isSharedPortLoopback ) :
-#ifdef HAVE_EXT_GSOAP
-	m_is_http_post(false),
-	m_is_http_get(false),
-#endif
 	m_isSharedPortLoopback( isSharedPortLoopback ),
 	m_nonblocking(!is_command_sock), // cannot re-register command sockets for non-blocking read
 	m_delete_sock(!is_command_sock), // must not delete registered command sockets
@@ -515,66 +508,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
-#ifdef HAVE_EXT_GSOAP
-	if ( strstr(tmpbuf,"GET") ) {
-		if ( param_boolean("USE_SHARED_PORT", true) ) {
-			dprintf(D_ALWAYS, "Received HTTP GET connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_description());
-		}
-		else if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
-			// mini-web server requires READ authorization.
-			if ( daemonCore->Verify("HTTP GET", READ,m_sock->peer_addr(),NULL) ) {
-				m_is_http_get = true;
-			}
-		} else {
-			dprintf(D_ALWAYS,"Received HTTP GET connection from %s -- "
-							 "DENIED because ENABLE_WEB_SERVER=FALSE\n",
-							 m_sock->peer_description());
-		}
-	} else {
-		if ( strstr(tmpbuf,"POST") ) {
-			if ( param_boolean("USE_SHARED_PORT", true) ) {
-				dprintf(D_ALWAYS, "Received HTTP POST connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_description());
-			}
-			else if ( param_boolean("ENABLE_SOAP",false) ) {
-				// SOAP requires SOAP authorization.
-				if ( daemonCore->Verify("HTTP POST",SOAP_PERM,m_sock->peer_addr(),NULL) ) {
-					m_is_http_post = true;
-				}
-			} else {
-				dprintf(D_ALWAYS,"Received HTTP POST connection from %s -- "
-							 "DENIED because ENABLE_SOAP=FALSE\n",
-							 m_sock->peer_description());
-			}
-		}
-	}
-	if ( m_is_http_post || m_is_http_get )
-	{
-		struct soap *cursoap;
-
-			// Socket appears to be HTTP, so deal with it.
-		dprintf(D_ALWAYS, "Received HTTP %s connection from %s\n",
-			m_is_http_get ? "GET" : "POST",
-			m_sock->peer_description() );
-
-
-		ASSERT( daemonCore->soap );
-		cursoap = dc_soap_accept(m_sock, daemonCore->soap);
-
-			// Now, process the Soap RPC request and dispatch it
-		dprintf(D_ALWAYS,"About to serve HTTP request...\n");
-		dc_soap_serve(cursoap);
-		dc_soap_free(cursoap);
-		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
-
-			// gsoap already closed the socket.  so set the socket in
-			// the underlying CEDAR object to INVALID_SOCKET, so
-			// CEDAR won't close it again when we delete the object.
-		m_sock->invalidateSock();
-
-		m_result = TRUE;
-		return CommandProtocolFinished;
-	}
-#endif // HAVE_EXT_GSOAP
 
 		// This was not a soap request; next, see if we have a special command
 		// handler for unknown command integers.

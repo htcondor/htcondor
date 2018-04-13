@@ -55,11 +55,6 @@ private:
 
 	Sock   *m_sock;
 
-#ifdef HAVE_EXT_GSOAP
-	bool m_is_http_post;
-	bool m_is_http_get;
-#endif
-
 	bool m_isSharedPortLoopback;
 	bool m_nonblocking;
 	bool m_delete_sock;

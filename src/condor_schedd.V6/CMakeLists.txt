@@ -25,19 +25,12 @@ file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
 if (NOT WIN_EXEC_NODE_ONLY)
 	if ( DLOPEN_SECURITY_LIBS )
 		condor_daemon( schedd "${scheddRmvElements}"
-			"${CONDOR_LIBS};${GSOAP_FOUND};${CONDOR_QMF};${LIBSSL_FOUND};${ZLIB_FOUND}" "${C_SBIN}" ON)
+			"${CONDOR_LIBS};${GSOAP_FOUND};${CONDOR_QMF};${LIBSSL_FOUND};${ZLIB_FOUND}" "${C_SBIN}")
 	else()
 		condor_daemon( schedd "${scheddRmvElements}"
-			"${CONDOR_LIBS};${GSOAP_FOUND};${CONDOR_QMF};${ZLIB_FOUND}" "${C_SBIN}" ON)
+			"${CONDOR_LIBS};${GSOAP_FOUND};${CONDOR_QMF};${ZLIB_FOUND}" "${C_SBIN}")
 	endif()
 
-	if (HAVE_EXT_GSOAP)
-		install (FILES ${CMAKE_CURRENT_BINARY_DIR}/condorSchedd.wsdl DESTINATION ${C_LIB}/webservice)
-		if (UNIX)
-			set_source_files_properties(schedd_api.cpp PROPERTIES COMPILE_FLAGS -Wno-shadow)
-		endif(UNIX)
-
-	endif(HAVE_EXT_GSOAP)
 	condor_exe(condor_history_helper "history_helper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
 
 endif(NOT WIN_EXEC_NODE_ONLY)

@@ -28,9 +28,6 @@ BEGIN_C_DECLS
 /*
 Warning: These symbols must stay in sync
 with the strings in condor_universe.c
-
-Please also sync condor__UniverseType in 
-src/condor_schedd.V6/gsoap_schedd_types.h
 */
 
 #define CONDOR_UNIVERSE_MIN       0  /* A placeholder, not a universe */

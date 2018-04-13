@@ -3093,7 +3093,7 @@ tags=schedd,shadow_mgr
 [SOAP_LEAVE_IN_QUEUE]
 default=
 type=string
-tags=schedd,soap_scheddStub
+tags=schedd
 
 [SHADOW]
 default=$(SBIN)/condor_shadow

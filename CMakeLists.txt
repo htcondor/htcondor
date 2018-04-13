@@ -73,7 +73,6 @@ list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake/macros;${CONDOR_S
 include (dprint) # set debug module 1st to all spewing in other modules if needed
 include (AppendVar)
 include (CommandTarget)
-include (gSOAPGen)
 include (CloneInstall)
 include (FindMultiple)
 include (FindSoName)

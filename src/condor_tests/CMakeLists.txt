@@ -759,9 +759,4 @@ if (BUILD_TESTING)
 	condor_pl_test(job_starter_script-A "Test starter pre and post scripts" "core;quick;full;quicknolink")
   #condor_pl_test(condor_urlfetch_test "Tests tool condor_urlfetch" "framework;quick;full")
 
-	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
-		#condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
-	endif()
-
-
 endif(BUILD_TESTING)
