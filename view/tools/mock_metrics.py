@@ -1,4 +1,5 @@
 #!usr/bin/env python3
+
 import datetime
 import itertools
 import json
@@ -7,6 +8,8 @@ import random
 import argparse
 from pathlib import Path
 from typing import Dict, Union, Iterable, List
+
+THIS_DIR = Path(__file__).absolute().parent
 
 
 class StrEnum(str, enum.Enum):
@@ -209,7 +212,8 @@ def write_json_output(
     output_path: Path,
     compressed: bool = False,
     indent: int = 2,
-    flatten: bool = False):
+    flatten: bool = False,
+):
     """
 
     Parameters
@@ -234,11 +238,11 @@ def write_json_output(
 def main():
     args = parse_args()
 
-    with open('mockmetric_data/names.txt') as f:
+    with (THIS_DIR / 'fake_names' / 'users.txt').open(mode = 'r') as f:
         NAMES = f.readlines()
     NAMES = [name.strip() + '@chtc.wisc.edu' for name in NAMES]
 
-    with open('mockmetric_data/machines.txt') as f:
+    with (THIS_DIR / 'fake_names' / 'machines.txt').open(mode = 'r') as f:
         MACHINES = f.readlines()
     MACHINES = [f'{machine.strip()}.wisc.edu' for machine in MACHINES]
     MACHINES = random.sample(MACHINES, k = args.machines)
@@ -262,6 +266,8 @@ def main():
             )
             for name in random.sample(NAMES, k = args.number)
         ]
+
+        which_was_created = 'submitter'
     elif generate_machines:
         records = [
             MachineRecord(
@@ -275,6 +281,8 @@ def main():
             )
             for _ in range(args.number)
         ]
+
+        which_was_created = 'machine'
     else:
         raise RuntimeError('unknown option for WHICH')
 
@@ -286,6 +294,8 @@ def main():
         compressed = args.compressed,
         flatten = generate_submitters and not args.compact_submitters,
     )
+
+    print(f'Created mock {which_was_created} data at {output_path.absolute()}')
 
 
 if __name__ == '__main__':
