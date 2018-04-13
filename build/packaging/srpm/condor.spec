@@ -1456,6 +1456,7 @@ rm -rf %{buildroot}
 %_sbindir/grid_monitor.sh
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp
+%_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
 %if %uw_build
 %_sbindir/boinc_gahp
