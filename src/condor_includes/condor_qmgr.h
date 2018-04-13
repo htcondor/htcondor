@@ -128,6 +128,12 @@ int SetJobFactory(int cluster_id, int qnum, const char * factory_filename, const
 // either factory filename or factory text may be null, but not both.
 int SetMaterializeData(int cluster_id, int itemnum, const char * foreach_filename, const char * foreach_text);
 
+// send a cluster ad or proc ad as a series of SetAttribute calls.
+// this function does a *shallow* iterate of the given ad, ignoring attributes in the chained parent ad (if any)
+// since the chained parent attributes should be sent only once, and using a different key.
+// To use this function to sent the cluster ad, pass a key with -1 as the proc id, and pass the cluster ad as the ad argument.
+int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags, CondorError *errstack=NULL, const char * who=NULL);
+
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value should be a valid ClassAd value (strings
 	should be surrounded by quotes).

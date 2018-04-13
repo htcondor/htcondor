@@ -376,6 +376,9 @@ class ClassAd : public classad::ClassAd
      */
     void ChainCollapse();
 
+	// returns 0 if not attr found, 1 if attr is in ad, 2 if in parent ad, 3 if in both ad and parent ad
+	int AttrChainDepth(const std::string & attr);
+
 	static void Reconfig();
 	static bool m_initConfig;
 	static bool m_strictEvaluation;

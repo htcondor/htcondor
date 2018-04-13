@@ -664,7 +664,13 @@ class ClassAd : public ExprTree
 		/** If there is a chained parent remove redundant entries.
 		 */
 		int 		PruneChildAd();
-		
+
+		/** If there is a chained parent remove this attribute from the child ad only
+		 *  if there is no chained parent ad, this function does nothing - you should use the Delete method in that case
+		 * @param if_child_matches, remove the attribute only if value in the child ad matches the value in the chained parent ad
+		 */
+		bool 		PruneChildAttr(const std::string & attrName, bool if_child_matches=true);
+
         /** If we are chained to a parent ad, remove the chain. 
          */
 		void		Unchain(void);

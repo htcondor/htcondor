@@ -3123,6 +3123,16 @@ void ClassAd::ChainCollapse()
 }
 
 
+int ClassAd::AttrChainDepth(const std::string & attr)
+{
+	int result = 0;
+	if (LookupIgnoreChain(attr)) { result |= 1; }
+	classad::ClassAd *parent = GetChainedParentAd();
+	if (parent && parent->Lookup(attr)) { result |= 2; }
+	return result;
+}
+
+
 // the freestanding functions 
 
 bool

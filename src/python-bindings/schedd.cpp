@@ -420,6 +420,8 @@ public:
     void disconnect();
     bool connected() const {return m_connected;}
     bool transaction() const {return m_transaction;}
+    int  clusterId() const {return m_cluster_id;}
+    int  newCluster();
     void reschedule();
     std::string owner() const;
     std::string schedd_version();
@@ -430,6 +432,7 @@ public:
 private:
     bool m_connected;
     bool m_transaction;
+    int  m_cluster_id; // non-zero when there is a submit transaction and newCluster has been called already
     SetAttributeFlags_t m_flags;
     Schedd& m_schedd;
 };
@@ -1563,7 +1566,7 @@ private:
 };
 
 ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttributeFlags_t flags, bool continue_txn)
-     : m_connected(false), m_transaction(false), m_flags(flags), m_schedd(schedd)
+     : m_connected(false), m_transaction(false), m_cluster_id(0), m_flags(flags), m_schedd(schedd)
 {
     if (schedd.m_connection)
     {
@@ -1594,12 +1597,20 @@ ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttribut
     m_transaction = transaction;
 }
 
+int
+ConnectionSentry::newCluster()
+{
+    condor::ModuleLock ml;
+    m_cluster_id = NewCluster();
+    return m_cluster_id;
+}
 
 void
 ConnectionSentry::reschedule()
 {
     m_schedd.reschedule();
 }
+
 
 std::string
 ConnectionSentry::owner() const
@@ -1959,7 +1970,7 @@ public:
             keep_results = true;
         }
 
-		// Before calling init_cluster_ad(), we should invoke methods to tell
+		// Before calling init_base_ad(), we should invoke methods to tell
 		// the submit code if we want file checks, and to tell the version of the
 		// remote schedd.  If for some reason we do not have a the remote
 		// schedd version, assume it is running the same version we are (this is
@@ -1972,88 +1983,115 @@ public:
 			m_hash.setScheddVersion(CondorVersion());
 		}
 
-        if (m_hash.init_cluster_ad(time(NULL), txn->owner().c_str()))
-        {
-            process_submit_errstack(m_hash.error_stack());
-            THROW_EX(RuntimeError, "Failed to create a cluster ad");
-        }
-        process_submit_errstack(m_hash.error_stack());
+		bool factory_submit = false;
+		long long max_materialize = INT_MAX;
+		int cluster = txn->clusterId();
 
-        bool failed_copy = false;
-        ClassAd addl_ad;
-        std::stringstream ss;
-        HASHITER it = hash_iter_begin(const_cast<Submit *>(this)->m_hash.macros(), HASHITER_NO_DEFAULTS);
-        while (!hash_iter_done(it) && !failed_copy)
-        {
-            const char *key = hash_iter_key(it);
-            if (key && (*key == '+'))
-            {
-                ss.str("");
-                ss.clear();
-                ss << (key + 1) << " = " << hash_iter_value(it) << "\n";
-                failed_copy = !addl_ad.Insert(ss.str());
-            }
-            hash_iter_next(it);
-        }
-        hash_iter_delete(&it);
-        if (failed_copy)
-        {
-            THROW_EX(ValueError, "Failed to create a copy of attributes");
-        }
+		// if this is not the first queue statement of this transaction, (or if we need to get a new cluster)
+		// we have some once-per-cluster initialization to do.
+		if ( ! m_hash.base_job_was_initialized() || cluster <= 0 || m_hash.getClusterId() != cluster) {
 
-        int cluster;
-        {
-            condor::ModuleLock ml;
-            cluster = NewCluster();
-        }
-        if (cluster < 0)
-        {
-            THROW_EX(RuntimeError, "Failed to create new cluster.");
-        }
-        for (int idx=0; idx<count; idx++)
-        {
-            int procid;
-            {
-                condor::ModuleLock ml;
-                procid = NewProc(cluster);
-            }
-            if (procid < 0)
-            {
-                THROW_EX(RuntimeError, "Failed to create new proc ID.");
-            }
-            JOB_ID_KEY jid(cluster, procid);
-            ClassAd *proc_ad = m_hash.make_job_ad(jid, 0, idx, false, false, NULL, NULL);
-            process_submit_errstack(m_hash.error_stack());
-            if (!proc_ad)
-            {
-                THROW_EX(RuntimeError, "Failed to create new job ad");
-            }
-            proc_ad->InsertAttr(ATTR_CLUSTER_ID, cluster);
-            proc_ad->InsertAttr(ATTR_PROC_ID, procid);
+			if (m_hash.init_base_ad(time(NULL), txn->owner().c_str())) {
+				process_submit_errstack(m_hash.error_stack());
+				THROW_EX(RuntimeError, "Failed to create a cluster ad");
+			}
+			process_submit_errstack(m_hash.error_stack());
 
-            if (!proc_ad->Update(addl_ad))
-            {
-                THROW_EX(ValueError, "Failed to copy extra attributes")
-            }
+			// check to see if a factory submit was desired, and if the schedd supports it
+			//
+			if (m_hash.submit_param_long_exists("max_materialize",ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
+				// PRAGMA_REMIND("move this into the schedd object?")
+				ClassAd capabilities;
+				GetScheddCapabilites(0, capabilities);
+				bool allows_late = false;
+				if (capabilities.LookupBool("LateMaterialize", allows_late) && allows_late) {
+					factory_submit = true;
+				}
+			}
 
-            classad::ClassAdUnParser unparser;
-            unparser.SetOldClassAd( true );
-            for (classad::ClassAd::const_iterator it = proc_ad->begin(); it != proc_ad->end(); it++)
-            {
-                std::string rhs;
-                unparser.Unparse(rhs, it->second);
-                if (-1 == SetAttribute(cluster, procid, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck))
-                {
-                    THROW_EX(ValueError, it->first.c_str());
-                }
-            }
-            if (keep_results)
-            {
-                boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
-                results_ad->CopyFromChain(*proc_ad);
-                ad_results.attr("append")(results_ad);
-            }
-        }
+			cluster = txn->newCluster();
+			if (cluster < 0) {
+				THROW_EX(RuntimeError, "Failed to create new cluster.");
+			}
+
+			if (factory_submit) {
+				// turn the submit hash into a submit digest
+				SubmitForeachArgs fea;
+				std::string submit_digest;
+				m_hash.make_digest(submit_digest, cluster, fea.vars, 0);
+
+				// append the queue statement
+				// PRAGMA_REMIND("fix this when python submit supports foreach, maybe make this common with condor_submit")
+				submit_digest += "\n";
+				submit_digest += "Queue ";
+				if (fea.queue_num) { formatstr_cat(submit_digest, "%d ", count); }
+				submit_digest += "\n";
+
+				// materialize all of the jobs unless the user requests otherwise.
+				// (the admin can also set a limit which is applied at the schedd)
+				max_materialize = MIN(max_materialize, count);
+				max_materialize = MAX(max_materialize, 1);
+
+				// send the submit digest to the schedd. the schedd will parse the digest at this point
+				// and return success or failure.
+				if (SetJobFactory(cluster, (int)max_materialize, NULL, submit_digest.c_str()) < 0) {
+					THROW_EX(RuntimeError, "Failed to send job factory for max_materilize.");
+				}
+			}
+		}
+
+		for (int idx=0; idx<count; idx++)
+		{
+			int procid = -99;
+			if (factory_submit) {
+				procid = 0;
+			} else {
+				condor::ModuleLock ml;
+				procid = NewProc(cluster);
+			}
+			if (procid < 0) {
+				THROW_EX(RuntimeError, "Failed to create new proc ID.");
+			}
+
+			JOB_ID_KEY jid(cluster, procid);
+			ClassAd *proc_ad = m_hash.make_job_ad(jid, 0, idx, false, false, NULL, NULL);
+			process_submit_errstack(m_hash.error_stack());
+			if (!proc_ad) {
+				THROW_EX(RuntimeError, "Failed to create new job ad");
+			}
+
+			// before sending procid 0, also send the cluster ad.
+			int rval = 0;
+			if ((procid == 0) || factory_submit) {
+				classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
+				if (clusterad) {
+					rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+				}
+			}
+			// send the proc ad
+			if ((rval >= 0) && ! factory_submit) {
+				rval = SendJobAttributes(jid, *proc_ad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+			}
+			process_submit_errstack(m_hash.error_stack());
+			if (rval < 0) {
+				THROW_EX(ValueError, "Failed to create send job attributes");
+			}
+
+			if (keep_results) {
+				boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
+				results_ad->CopyFromChain(*proc_ad);
+				ad_results.attr("append")(results_ad);
+			}
+
+			// For factory submits, we don't actually loop over the queue number
+			// and we want a new cluster (i.e. factory) for each queue statement.
+			if (factory_submit) {
+				// force re-initialization if this hash is used again.
+				m_hash.reset();
+				break;
+			}
+		}
+
 
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {

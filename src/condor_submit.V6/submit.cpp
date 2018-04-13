@@ -75,6 +75,8 @@
 #include "condor_version.h"
 #include "NegotiationUtils.h"
 #include <submit_utils.h>
+#include <param_info.h> // for BinaryLookup
+
 //uncomment this to have condor_submit use the new for 8.5 submit_utils classes
 #define USE_SUBMIT_UTILS 1
 #include "submit_internal.h"
@@ -102,7 +104,6 @@ std::set<std::string> CheckFilesWrite;
 #else
 StringList NoClusterCheckAttrs;
 #endif
-ClassAd *gClusterAd = NULL;
 
 time_t submit_time = 0;
 
@@ -225,14 +226,13 @@ void cleanup_vars(SubmitHash & hash, StringList & vars);
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 int  SendLastExecutable();
-int  SendJobAd (ClassAd * job, ClassAd * ClusterAd);
+static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
 int  DoUnitTests(int options);
 
 char *owner = NULL;
 char *myproxy_password = NULL;
 
 int  SendJobCredential();
-void SetSendCredentialInAd( ClassAd *job_ad );
 
 extern DLL_IMPORT_MAGIC char **environ;
 
@@ -753,6 +753,9 @@ main( int argc, const char *argv[] )
 			if ( store_cred_result == SUCCESS ||
 							store_cred_result == FAILURE_NOT_SUPPORTED) {
 				cred_is_stored = true;
+			} else if (DashDryRun && (store_cred_result == FAILURE)) {
+				// if we can't contact the schedd, just keep going.
+				cred_is_stored = true;
 			}
 		}
 		if (!cred_is_stored) {
@@ -826,7 +829,7 @@ main( int argc, const char *argv[] )
 		}
 		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion
 		submit_hash.insert_submit_filename(cmd_file, FileMacroSource);
-		submit_unique_id = hashFunction(cmd_file);
+		submit_unique_id = hashFunction(cmd_file); // hack to make default_to_factory work in test suite
 	}
 
 	// in case things go awry ...
@@ -837,7 +840,7 @@ main( int argc, const char *argv[] )
 	submit_hash.setFakeFileCreationChecks(DashDryRun);
 	submit_hash.setScheddVersion(MySchedd ? MySchedd->version() : CondorVersion());
 	if (myproxy_password) submit_hash.setMyProxyPassword(myproxy_password);
-	submit_hash.init_cluster_ad(get_submit_time(), owner);
+	submit_hash.init_base_ad(get_submit_time(), owner);
 
 	if ( !DumpClassAdToFile ) {
 		if ( ! SubmitFromStdin && ! terse) {
@@ -1423,16 +1426,18 @@ int send_cluster_ad(SubmitHash & hash, int ClusterId)
 		return -1;
 	}
 
+	classad::ClassAd * clusterAd = job->GetChainedParentAd();
+	if ( ! clusterAd) {
+		fprintf( stderr, "\nERROR: no cluster ad.\n" );
+		return -1;
+	}
+
 	int JobUniverse = hash.getUniverse();
 	if ( ! JobUniverse) {
 		rval = -1;
 	} else {
 		SendLastExecutable(); // if spooling the exe, send it now.
-		SetSendCredentialInAd( job );
-
-		gClusterAd = new ClassAd(*job);
-		//PRAGMA_REMIND("are there any attributes we should strip from the cluster ad before sending it?")
-		rval = SendClusterAd(gClusterAd);
+		rval = MySendJobAttributes(JOB_ID_KEY(ClusterId,-1), *clusterAd, setattrflags);
 		if (rval == 0 || rval == 1) {
 			rval = 0;
 		} else {
@@ -1988,7 +1993,6 @@ int allocate_a_cluster()
 
 	++ClustersCreated;
 
-	delete gClusterAd; gClusterAd = NULL;
 	return 0;
 }
 
@@ -2079,12 +2083,9 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		// we move this outside the above, otherwise it appears that we have 
 		// received no queue command (or several, if there were multiple ones)
 		GotNonEmptyQueueCommand = 1;
+		JOB_ID_KEY jid(ClusterId,ProcId);
 
-		ClassAd * job = submit_hash.make_job_ad(
-			JOB_ID_KEY(ClusterId,ProcId),
-			item_index, ii,
-			dash_interactive, dash_remote,
-			check_sub_file, NULL);
+		ClassAd * job = submit_hash.make_job_ad(jid, item_index, ii, dash_interactive, dash_remote, check_sub_file, NULL);
 		if ( ! job) {
 			print_errstack(stderr, submit_hash.error_stack());
 			DoCleanup(0,0,NULL);
@@ -2092,13 +2093,22 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		}
 
 		int JobUniverse = submit_hash.getUniverse();
+		rval = 0;
 		if ( ProcId == 0 ) {
 			SendLastExecutable(); // if spooling the exe, send it now.
+
+			// before sending proc0 ad, send the cluster ad
+			classad::ClassAd * cad = job->GetChainedParentAd();
+			if (cad) {
+				rval = MySendJobAttributes(JOB_ID_KEY(jid.cluster, -1), *cad, setattrflags);
+			}
 		}
-		SetSendCredentialInAd( job );
 		NewExecutable = false;
-		// write job ad to schedd or dump to file, depending on what type MyQ is
-		rval = SendJobAd(job, gClusterAd);
+
+		// now send the proc ad
+		if (rval >= 0) {
+			rval = MySendJobAttributes(jid, *job, setattrflags);
+		}
 		switch( rval ) {
 		case 0:			/* Success */
 		case 1:
@@ -2131,13 +2141,6 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 		if (JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
 			SubmitInfo[CurrentSubmitInfo].lastjob = 0;
-		}
-
-		if ( ! gClusterAd) {
-			gClusterAd = new ClassAd(*job);
-			for (size_t ii = 0; ii < COUNTOF(no_cluster_attrs); ++ii) {
-				gClusterAd->Delete(no_cluster_attrs[ii]);
-			}
 		}
 
 		// If spooling entire job "sandbox" to the schedd, then we need to keep
@@ -2391,19 +2394,12 @@ int SendJobCredential()
 
 	sent_credential_to_credd = true;
 
+	// force this to be written into the job, by using set_arg_variable
+	// it is also available to the submit file parser itself (i.e. can be used in If statements)
+	submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
+
 	return 0;
 }
-
-void SetSendCredentialInAd( ClassAd *job_ad )
-{
-	if (!sent_credential_to_credd) {
-		return;
-	}
-
-	// add it to the job ad (starter needs to know this value)
-	job_ad->Assign( ATTR_JOB_SEND_CREDENTIAL, true );
-}
-
 
 int SendLastExecutable()
 {
@@ -2481,82 +2477,131 @@ int SendLastExecutable()
 }
 
 
-int SendJobAd (ClassAd * job, ClassAd * ClusterAd)
+// hack! for 8.7.8 testing.
+int attr_chain_depth = 0;
+
+// struct for a table mapping attribute names to a flag indicating that the attribute
+// must only be in cluster ad or only in proc ad, or can be either.
+//
+typedef struct attr_force_pair {
+	const char * key;
+	int          forced; // -1=forced cluster, 0=not forced, 1=forced proc
+	// a LessThan operator suitable for inserting into a sorted map or set
+	bool operator<(const struct attr_force_pair& rhs) const {
+		return strcasecmp(this->key, rhs.key) < 0;
+	}
+} ATTR_FORCE_PAIR;
+
+// table defineing attributes that must be in either cluster ad or proc ad
+// force value of 1 is proc ad, -1 is cluster ad, 2 is proc ad, and sent first, -2 is cluster ad and sent first
+// NOTE: this table MUST be sorted by case-insensitive attribute name
+#define FILL(attr,force) { attr, force }
+static const ATTR_FORCE_PAIR aForcedSetAttrs[] = {
+	FILL(ATTR_CLUSTER_ID,         -2), // forced into cluster ad
+	FILL(ATTR_JOB_STATUS,         2),  // forced into proc ad (because job counters don't work unless this is set to IDLE/HELD on startup)
+	FILL(ATTR_JOB_UNIVERSE,       -1), // forced into cluster ad
+	FILL(ATTR_OWNER,              -1), // forced into cluster ad
+	FILL(ATTR_PROC_ID,            2),  // forced into proc ad
+};
+#undef FILL
+
+// returns non-zero attribute id and optional category flags for attributes
+// that require special handling during SetAttribute.
+static int IsForcedProcAttribute(const char *attr)
 {
-	ExprTree *tree = NULL;
-	const char *lhstr, *rhstr;
-	int  retval = 0;
-	int myprocid = ProcId;
+	const ATTR_FORCE_PAIR* found = NULL;
+	found = BinaryLookup<ATTR_FORCE_PAIR>(
+		aForcedSetAttrs,
+		COUNTOF(aForcedSetAttrs),
+		attr, strcasecmp);
+	if (found) {
+		return found->forced;
+	}
+	return 0;
+}
 
-	if ( ProcId > 0 ) {
-		MyQ->set_AttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags);
+
+// we have our own private implementation of SendAdAttributes because we use the abstract schedd queue (for -dry and -dump)
+static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags)
+{
+	classad::ClassAdUnParser unparser;
+	unparser.SetOldClassAd( true, true );
+	std::string rhs; rhs.reserve(120);
+
+	MyString keybuf;
+	key.sprint(keybuf);
+	const char * keystr = keybuf.c_str();
+
+	int retval = 0;
+	bool is_cluster = key.proc < 0;
+
+	// first try and send the cluster id or proc id
+	if (is_cluster) {
+		if (MyQ->set_AttributeInt (key.cluster, -1, ATTR_CLUSTER_ID, key.cluster, saflags) == -1) {
+			if (saflags & SetAttribute_NoAck) {
+				fprintf( stderr, "\nERROR: Failed submission for job %s - aborting entire submit\n", keystr);
+			} else {
+				fprintf( stderr, "\nERROR: Failed to set " ATTR_CLUSTER_ID "=%d for job %s (%d)\n", key.cluster, keystr, errno);
+			}
+			return -1;
+		}
 	} else {
-		myprocid = -1;		// means this is a cluster ad
-		if( MyQ->set_AttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId, setattrflags) == -1 ) {
-			if( setattrflags & SetAttribute_NoAck ) {
-				fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
-					ClusterId, ProcId);
+		if (MyQ->set_AttributeInt (key.cluster, key.proc, ATTR_PROC_ID, key.proc, saflags) == -1) {
+			if (saflags & SetAttribute_NoAck) {
+				fprintf( stderr, "\nERROR: Failed submission for job %s - aborting entire submit\n", keystr);
 			} else {
-				fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n",
-					ATTR_CLUSTER_ID, ClusterId, ClusterId, ProcId, errno);
+				fprintf( stderr, "\nERROR: Failed to set " ATTR_PROC_ID "=%d for job %s (%d)\n", key.proc, keystr, errno);
+			}
+			return -1;
+		}
+
+		// For now, we make sure to set the JobStatus attribute in the proc ad, note that we may actually be
+		// fetching this from a chained parent ad.  this is the ONLY attribute that we want to pick up
+		// out of the chained parent and push into the child.
+		// we force this into the proc ad because the code in the schedd that calculates per-cluster
+		// and per-owner totals by state doesn't work if this attribute is missing in the proc ads.
+		int status = IDLE;
+		if ( ! ad.EvaluateAttrInt(ATTR_JOB_STATUS, status)) { status = IDLE; }
+		if (MyQ->set_AttributeInt (key.cluster, key.proc, ATTR_JOB_STATUS, status, saflags) == -1) {
+			if (saflags & SetAttribute_NoAck) {
+				fprintf( stderr, "\nERROR: Failed submission for job %s - aborting entire submit\n", keystr);
+			} else {
+				fprintf( stderr, "\nERROR: Failed to set " ATTR_JOB_STATUS "=%d for job %s (%d)\n", status, keystr, errno);
 			}
 			return -1;
 		}
 	}
 
-	job->ResetExpr();
-	while( job->NextExpr(lhstr, tree) ) {
-		rhstr = ExprTreeToString( tree );
-		if( !lhstr || !rhstr ) { 
-			fprintf( stderr, "\nERROR: Null attribute name or value for job %d.%d\n",
-					 ClusterId, ProcId );
+	// (shallow) iterate the attributes in this ad and send them to the schedd
+	//
+	for (auto it = ad.begin(); it != ad.end(); ++it) {
+		const char * attr = it->first.c_str();
+
+		// skip attributes that are forced into the other sort of ad, or have already been sent.
+		int forced = IsForcedProcAttribute(attr);
+		if (forced) {
+			// skip attributes not forced into the cluster ad and not already sent
+			if (is_cluster && (forced != -1)) continue;
+			// skip attributes not forced into the proc ad and not already sent
+			if ( ! is_cluster && (forced != 1)) continue;
+		}
+
+		if ( ! it->second) {
+			fprintf(stderr, "\nERROR: Null attribute name or value for job %s\n", keystr);
 			retval = -1;
-		} else {
-			int tmpProcId = myprocid;
-			// IsNoClusterAttr tells us that an attribute should always be in the proc ad
-			bool force_proc = IsNoClusterAttr(lhstr);
-			if ( ProcId > 0 ) {
-				// For all but the first proc, check each attribute against the value in the cluster ad.
-				// If the values match, don't add the attribute to this proc ad
-				if ( ! force_proc) {
-					ExprTree *cluster_tree = ClusterAd->LookupExpr( lhstr );
-					if ( cluster_tree && *tree == *cluster_tree ) {
-						continue;
-					}
-				}
-			} else {
-				if (force_proc) {
-					myprocid = ProcId;
-				}
-			}
-
-			if( MyQ->set_Attribute(ClusterId, myprocid, lhstr, rhstr, setattrflags) == -1 ) {
-				if( setattrflags & SetAttribute_NoAck ) {
-					fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
-						ClusterId, ProcId);
-				} else {
-					fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n",
-						 lhstr, rhstr, ClusterId, ProcId, errno );
-				}
-				retval = -1;
-			}
-			myprocid = tmpProcId;
+			break;
 		}
-		if(retval == -1) {
-			return -1;
-		}
-	}
+		rhs.clear();
+		unparser.Unparse(rhs, it->second);
 
-	if ( ProcId == 0 ) {
-		if( MyQ->set_AttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags) == -1 ) {
-			if( setattrflags & SetAttribute_NoAck ) {
-				fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
-					ClusterId, ProcId);
+		if (MyQ->set_Attribute(key.cluster, key.proc, attr, rhs.c_str(), saflags) == -1) {
+			if (saflags & SetAttribute_NoAck) {
+				fprintf( stderr, "\nERROR: Failed submission for job %s - aborting entire submit\n", keystr);
 			} else {
-				fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n",
-					 ATTR_PROC_ID, ProcId, ClusterId, ProcId, errno );
+				fprintf( stderr, "\nERROR: Failed to set %s=%s for job %s (%d)\n", attr, rhs.c_str(), keystr, errno );
 			}
-			return -1;
+			retval = -1;
+			break;
 		}
 	}
 
