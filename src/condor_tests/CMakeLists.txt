@@ -454,6 +454,7 @@ if (BUILD_TESTING)
 	endif()
 	condor_pl_test(cmd_drain "condor_drain" "core;quick;full;quicknolink")
 	condor_pl_test(defrag "condor_defrag" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_drain_scavenging "condor_drain -start" "core;quick;full;quicknolink")
 
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full")
