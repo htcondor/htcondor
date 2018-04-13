@@ -68,11 +68,6 @@ src/condor_collector.V6/condor.xsd
 src/condor_collector.V6/condorCollector.nsmap
 src/condor_collector.V6/condorCollector.wsdl
 src/condor_collector.V6/condor_collector
-src/condor_collector.V6/soap_collectorC.cpp
-src/condor_collector.V6/soap_collectorH.h
-src/condor_collector.V6/soap_collectorServer.cpp
-src/condor_collector.V6/soap_collectorStub.h
-src/condor_collector.V6/soap_collectorcondorCollectorObject.h
 src/condor_collector.V6/tests/_collector_tester
 src/condor_credd/condor_credd
 src/condor_dagman/condor_dagman
@@ -112,11 +107,6 @@ src/condor_schedd.V6/condor.xsd
 src/condor_schedd.V6/condorSchedd.nsmap
 src/condor_schedd.V6/condorSchedd.wsdl
 src/condor_schedd.V6/condor_schedd
-src/condor_schedd.V6/soap_scheddC.cpp
-src/condor_schedd.V6/soap_scheddH.h
-src/condor_schedd.V6/soap_scheddServer.cpp
-src/condor_schedd.V6/soap_scheddStub.h
-src/condor_schedd.V6/soap_scheddcondorScheddObject.h
 src/condor_schedd.V6/temp_diff.patch
 src/condor_shadow.V6.1/condor_shadow
 src/condor_shadow.std/condor_shadow.std
