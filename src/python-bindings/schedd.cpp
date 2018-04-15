@@ -1984,7 +1984,7 @@ public:
 		}
 
 		bool factory_submit = false;
-		long long max_materialize = INT_MAX;
+		long long max_materialize = INT_MAX, max_idle = INT_MAX;
 		int cluster = txn->clusterId();
 
 		// if this is not the first queue statement of this transaction, (or if we need to get a new cluster)
@@ -1999,13 +1999,21 @@ public:
 
 			// check to see if a factory submit was desired, and if the schedd supports it
 			//
-			if (m_hash.submit_param_long_exists("max_materialize",ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
+			if (m_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit,ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
+				factory_submit = true;
+			} else if (m_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
+				max_materialize = INT_MAX;
+				factory_submit = true;
+			}
+			if (factory_submit) {
 				// PRAGMA_REMIND("move this into the schedd object?")
 				ClassAd capabilities;
 				GetScheddCapabilites(0, capabilities);
 				bool allows_late = false;
 				if (capabilities.LookupBool("LateMaterialize", allows_late) && allows_late) {
 					factory_submit = true;
+				} else {
+					factory_submit = false; // sorry, no can do.
 				}
 			}
 

@@ -232,6 +232,7 @@ public:
 	// has been started but the transaction has not yet been committed.
 	int ClusterSize() { return cluster_size; }
 	int SetClusterSize(int _cluster_size) { cluster_size = _cluster_size; return cluster_size; }
+	int getNumNotRunning() { return num_idle + num_held; }
 
 	bool HasAttachedJobs() { return ! qe.empty(); }
 	void AttachJob(JobQueueJob * job);

@@ -5266,6 +5266,7 @@ int SubmitHash::SetSimpleJobExprs()
 		{ATTR_NEXT_JOB_START_DELAY, SUBMIT_KEY_NextJobStartDelay, ATTR_NEXT_JOB_START_DELAY, NULL, false},
 		{ATTR_JOB_KEEP_CLAIM_IDLE, "KeepClaimIdle", "keep_claim_idle", NULL, false},
 		{ATTR_JOB_AD_INFORMATION_ATTRS, "JobAdInformationAttrs", "job_ad_information_attrs", NULL, true},
+		{ATTR_JOB_MATERIALIZE_MAX_IDLE, SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, NULL, false},
 		{NULL,NULL,NULL,NULL,false}
 	};
 

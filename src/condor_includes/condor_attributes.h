@@ -297,6 +297,8 @@
 #define ATTR_JOB_MATERIALIZE_DIGEST_FILE  "JobMaterializeDigestFile"
 #define ATTR_JOB_MATERIALIZE_ITEMS_FILE   "JobMaterializeItemsFile"
 #define ATTR_JOB_MATERIALIZE_LIMIT        "JobMaterializeLimit"
+#define ATTR_JOB_MATERIALIZE_MAX_IDLE     "JobMaterializeMaxIdle"     // actually max not-running just like dagman
+#define ATTR_JOB_MATERIALIZE_CONSTRAINT   "JobMaterializeConstraint"  // expression that constraints/limits materialization
 #define ATTR_JOB_MATERIALIZE_NEXT_PROC_ID "JobMaterializeNextProcId"
 #define ATTR_JOB_MATERIALIZE_NEXT_ROW     "JobMaterializeNextRow"
 #define ATTR_JOB_MATERIALIZE_STEP_SIZE    "JobMaterializeStepSize"

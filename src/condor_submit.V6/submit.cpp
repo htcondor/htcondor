@@ -1478,6 +1478,7 @@ int submit_jobs (
 	int want_factory = as_factory ? 1 : -1;
 	int need_factory = (as_factory & 1) != 0;
 	long long max_materialize = INT_MAX;
+	long long max_idle = INT_MAX;
 
 	// there can be multiple queue statements in the file, we need to process them all.
 	for (;;) {
@@ -1583,10 +1584,13 @@ int submit_jobs (
 		// we do this after we parse the first queue command so that we can use the size of the queue statement
 		// to decide whether this is a factory or not.
 		if (GotQueueCommand == 1) {
-			if (submit_hash.submit_param_long_exists("max_materialize",ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
+			if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
+				want_factory = 1;
+			} else if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
+				max_materialize = INT_MAX; // no max materialize specified, so set it to number of jobs
 				want_factory = 1;
 			} else if (want_factory < 0) {
-				PRAGMA_REMIND("are there other conditions were we promote to factory?")
+				//PRAGMA_REMIND("are there other conditions were we promote to factory?")
 				want_factory = 0;
 			}
 		}
@@ -1598,7 +1602,7 @@ int submit_jobs (
 			} else {
 				continue;
 			}
-			PRAGMA_REMIND("check if this properly handles empty submit item lists and/or multiple queue lines")
+			//PRAGMA_REMIND("check if this properly handles empty submit item lists and/or multiple queue lines")
 		}
 
 		int queue_item_opts = 0;
@@ -1659,7 +1663,7 @@ int submit_jobs (
 				break;
 
 			// write the submit digest to the current working directory.
-			PRAGMA_REMIND("todo: force creation of local factory file if schedd is version < 8.7.3?")
+			//PRAGMA_REMIND("todo: force creation of local factory file if schedd is version < 8.7.3?")
 			MyString factory_path;
 			if (create_local_factory_file) {
 				MyString factory_fn;
