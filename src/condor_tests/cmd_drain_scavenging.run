@@ -27,6 +27,7 @@ use Cwd;
 use CondorTest;
 use CondorUtils;
 use CustomMachineResource;
+use Check::CondorLog;
 
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
@@ -66,9 +67,6 @@ my $testDescription = 'Test scavenging.';
 #	* that after the startd is drained, cancelling the draining results
 #	  in the original START expression being advertised (and used).
 #
-# FIXME: setting MaxJobRetirementTime to 0 when evicting the scavengers is
-# rather important, so we need to make sure that it happens.
-#
 
 #
 # To do the validation, we submit five jobs (which have durations which should
@@ -96,6 +94,10 @@ my $jobContents = '#!/usr/bin/env perl
 
 use strict;
 use warnings;
+
+# Ignore SIGTERM and force a hard-kill to test if MaxJobRetirementTime is
+# being altered appropriately.
+$SIG{"TERM"} = "IGNORE";
 
 my $killFile = $ARGV[0];
 my $maxSleep = $ARGV[1];
@@ -353,6 +355,9 @@ my $evicted = sub {
 		}
 		print( "... machine fully drained.\n" );
 
+		print( "Checking MaxJobRetirementTime and MaxMachineVacateTime...\n" );
+		checkTiming();
+
 		print( "Cancelling draining state...\n" );
 		runCommandCarefully( undef, "condor_drain -cancel ${hostName}" );
 
@@ -401,4 +406,74 @@ sub touch {
 	my $rv = open( my $fh, ">", $filename );
 	close( $fh );
 	return $rv;
+}
+
+sub checkTiming {
+	#
+	# We're looking for the following sequence with the following time deltas:
+	#
+	# 04/15/18 14:46:54 Initiating final draining (all original jobs complete).
+	# 04/15/18 14:46:54 slot1_1: Changing activity: Busy -> Retiring
+	# 04/15/18 14:46:54 slot1_1: State change: claim retirement ended/expired
+	# 04/15/18 14:46:54 slot1_1: Changing state and activity: Claimed/Retiring -> Preempting/Vacating
+	# 04/15/18 14:46:59 slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.
+	#
+
+	my $logFileName = `condor_config_val STARTD_LOG`;
+	CondorUtils::fullchomp( $logFileName );
+
+	open( LOG, "<", $logFileName ) || die( "Unable to open STARTD_LOG '${logFileName}', aborting.\n" );
+
+	my $state = 0;
+	my $finalDrainStartTime = undef;
+	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)';
+	while( my $line = <LOG> ) {
+		if( $state == 0 && $line =~ /^${secondsMatch} Initiating final draining \(all original jobs complete\).$/ ) {
+			$finalDrainStartTime = $1;
+			$state = 1;
+			next;
+		}
+
+		if( $state == 1 && $line =~ /^${secondsMatch} slot1_1: Changing activity: Busy -> Retiring$/ ) {
+			if( $finalDrainStartTime != $1 ) {
+				die( "slot1_1 did not start retiring immediately, aborting.\n" );
+			} else {
+				$state = 2;
+				next;
+			}
+		}
+
+		if( $state == 2 && $line =~ /^${secondsMatch} slot1_1: State change: claim retirement ended\/expired$/ ) {
+			if( $finalDrainStartTime != $1 ) {
+				die( "MaxJobRetirementTime was not 0, aborting.\n" );
+			} else {
+				$state = 3;
+				next;
+			}
+		}
+
+		if( $state == 3 && $line =~ /^${secondsMatch} slot1_1: Changing state and activity: Claimed\/Retiring -> Preempting\/Vacating$/ ) {
+			if( $finalDrainStartTime != $1 ) {
+				die( "slot1_1 did not immediately switch from retiring to preempting.\n" );
+			} else {
+				$state = 4;
+				next;
+			}
+		}
+
+		if( $state == 4 && $line =~ /^${secondsMatch} slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
+			if( (($finalDrainStartTime + 5) % 60) != $1 ) {
+				die( "MaxMachineVacateTime was not 5.\n" );
+			} else {
+				$state = 5;
+				next;
+			}
+		}
+	}
+
+	if( $state != 5 ) {
+		die( "Did not find all necessary state changes in log, aborting.\n" );
+	} else {
+		print( "... MaxJobRetirementTime and MaxMachineVacateTime OK.\n" );
+	}
 }

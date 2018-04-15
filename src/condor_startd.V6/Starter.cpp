@@ -1608,7 +1608,12 @@ Starter::softkillTimeout( void )
 {
 	s_softkill_tid = -1;
 	if( active() ) {
-		dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
+		Claim * c = resmgr->getClaimByPid( pid() );
+		if( c && c->rip() && c->rip()->r_id_str ) {
+			dprintf( D_ALWAYS, "%s: max vacate time expired.  Escalating to a fast shutdown of the job.\n",  c->rip()->r_id_str );
+		} else {
+			dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
+		}
 		killHard(s_is_vm_universe ? vm_killing_timeout : killing_timeout);
 	}
 }
