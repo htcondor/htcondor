@@ -701,6 +701,13 @@ Resource::shutdownAllClaims( bool graceful, bool reversible )
 	// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
 
+	// The original code sequence here looked moronic.  This one isn't
+	// much better, but here's why we're doing it: void_kill_claim() delete()s
+	// _this_ if it's a dynamic slot, so we can't call _any_ member function
+	// after we call void_kill_claim().  I don't know if that applies to
+	// void_retire_claim(), but the original code implied that it did.
+	bool safe = Resource::DYNAMIC_SLOT != get_feature();
+
 	// shutdown our own claims
 	if( graceful ) {
 		void_retire_claim(reversible);
@@ -708,13 +715,10 @@ Resource::shutdownAllClaims( bool graceful, bool reversible )
 		void_kill_claim();
 	}
 
-	// mark ourselves unavailable
-	r_reqexp->unavail( globalDrainingStartExpr );
-
-	// Apparently, when shutting down, dynamic slots delete themselves
-	// and thus can't send updates.  Seems harmless not to do this,
-	// even when draining.
-	if( Resource::DYNAMIC_SLOT != get_feature() ) {
+	// if we haven't deleted ourselves, mark ourselves unavailable and
+	// update the collector.
+	if( safe ) {
+		r_reqexp->unavail( globalDrainingStartExpr );
 		update();
 	}
 }
