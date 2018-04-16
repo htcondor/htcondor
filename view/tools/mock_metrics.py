@@ -301,7 +301,7 @@ def flatten_list_of_lists(list_of_lists: List[List]):
     return itertools.chain.from_iterable(list_of_lists)
 
 
-def write_json_output(
+def write_records_to_json(
     records: Iterable[Union[SubmitterRecord, SlotRecord]],
     output_path: Path,
     compressed: bool = False,
@@ -341,10 +341,14 @@ def write_json_output_by_timespan_and_interval(
     total_records = 0
     total_files = 0
     total_filesize = 0
+    earliest_date_and_interval_stamps_by_timespan = collections.defaultdict(list)
     for (timespan, interval_number), records in records_by_timespan_and_interval_number.items():
-        path = Path(f'{which}.{timespan}.{records[-1].date.strftime(timespan.format)}.json')
+        interval_stamp = records[-1].date.strftime(timespan.format)
+        earliest_date_and_interval_stamps_by_timespan[timespan].append((records[-1].date, interval_stamp))
+
+        path = Path(f'{which}.{timespan}.{interval_stamp}.json')
         print(f'\rWriting {path}'.ljust(TEXT_WIDTH), end = '')
-        write_json_output(
+        write_records_to_json(
             records,
             path,
             compressed = compressed,
@@ -357,6 +361,16 @@ def write_json_output_by_timespan_and_interval(
         total_filesize += path.stat().st_size
 
     print(f'\rWrote JSON: {total_files} files with {total_records} records, totalling {bytes_to_str(total_filesize)}'.ljust(TEXT_WIDTH))
+
+    oldest = {}
+    for timespan, earliest_date_and_interval_stamp in earliest_date_and_interval_stamps_by_timespan.items():
+        oldest[timespan] = min(earliest_date_and_interval_stamp, key = lambda x: x[0])[1]
+
+    oldest_file = Path(f'{which}.oldest.json')
+    with oldest_file.open(mode = 'w') as f:
+        json.dump(oldest, f, indent = 4)
+
+    print(f'Wrote information on oldest available records to {oldest_file}')
 
 
 def bytes_to_str(num: Union[float, int]) -> str:

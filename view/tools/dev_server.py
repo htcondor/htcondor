@@ -28,6 +28,6 @@ if __name__ == '__main__':
 
     with socketserver.TCPServer(('127.0.0.1', args.port), HANDLER) as httpd:
         print('DO NOT USE IN PRODUCTION')
-        print(f'Serving HTCondor View at localhost:{args.port}')
+        print(f'Serving HTCondor View at http://localhost:{args.port}')
         print('ctrl-C to exit...')
         httpd.serve_forever()
