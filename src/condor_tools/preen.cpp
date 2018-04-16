@@ -51,6 +51,9 @@
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
 
+#include <array>
+#include <memory>
+
 State get_machine_state();
 
 extern void		_condor_set_debug_flags( const char *strflags, int flags );
@@ -789,17 +792,15 @@ check_log_dir()
 	// Because std::map sorts alphabetically by key, and the timestamp is the
 	// key, the last 10 entries in the map are the most recent.
 	for( auto ps = processCoreFiles.begin(); ps != processCoreFiles.end(); ++ps ) {
-		if( ps->second.size() > coreFilesPerProcess ) {
-			unsigned int index = 0;
-			for( auto core = ps->second.begin(); core != ps->second.end(); ++core ) {
-				if( index < ( ps->second.size() - coreFilesPerProcess ) ) {
-					bad_file( Log, core->second.c_str(), dir );
-				}
-				else {
-					good_file( Log, core->second.c_str() );
-				}
-				index++;
+		unsigned int index = 0;
+		for( auto core = ps->second.begin(); core != ps->second.end(); ++core ) {
+			if( ( ps->second.size() > coreFilesPerProcess ) && ( index < ( ps->second.size() - coreFilesPerProcess ) ) ) {
+				bad_file( Log, core->second.c_str(), dir );
 			}
+			else {
+				good_file( Log, core->second.c_str() );
+			}
+			index++;
 		}
 	}
 }
@@ -1089,18 +1090,21 @@ get_corefile_process( const char* corefile, const char* dir ) {
 	std::string process = "";
 
 	// Assemble the "file /path/to/corefile" system command and call it
-	char cmd[strlen( corefile ) + strlen( dir ) + 10];
-	sprintf( cmd, "file %s%c%s", dir, DIR_DELIM_CHAR, corefile );
+	std::string cmd = "file ";
+	cmd += dir;
+	cmd += DIR_DELIM_CHAR;
+	cmd += corefile;
+
 	std::array<char, 128> buffer;
 	std::string cmd_output;
-	std::shared_ptr<FILE> pipe( popen( cmd, "r" ), pclose );
+	std::shared_ptr<FILE> process_pipe( popen( cmd.c_str(), "r" ), pclose );
 
 	// Run the file command and capture output. 
 	// On any error, return an empty string.
-	if ( !pipe )
+	if ( !process_pipe )
 		return "";
-	while ( !feof( pipe.get() ) ) {
-		if ( fgets( buffer.data(), 128, pipe.get() ) != nullptr ) {
+	while ( !feof( process_pipe.get() ) ) {
+		if ( fgets( buffer.data(), 128, process_pipe.get() ) != NULL ) {
 			cmd_output += buffer.data();
 		}
 	}
