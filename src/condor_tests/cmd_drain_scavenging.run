@@ -426,7 +426,7 @@ sub checkTiming {
 
 	my $state = 0;
 	my $finalDrainStartTime = undef;
-	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)';
+	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)?';
 	while( my $line = <LOG> ) {
 		if( $state == 0 && $line =~ /^${secondsMatch} Initiating final draining \(all original jobs complete\).$/ ) {
 			$finalDrainStartTime = $1;
@@ -472,7 +472,7 @@ sub checkTiming {
 	}
 
 	if( $state != 5 ) {
-		die( "Did not find all necessary state changes in log, aborting.\n" );
+		die( "Did not find all necessary state changes (got to " . $state . " out of 5) in log, aborting.\n" );
 	} else {
 		print( "... MaxJobRetirementTime and MaxMachineVacateTime OK.\n" );
 	}
