@@ -253,13 +253,8 @@ int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAt
 
 		if (SetAttribute(key.cluster, key.proc, attr, rhs.c_str(), saflags) == -1) {
 			if (errstack) {
-				if (saflags & SetAttribute_NoAck) {
-					errstack->pushf(who, SCHEDD_ERR_SET_ATTRIBUTE_FAILED,
-						"job %d.%d failed to set %s=%s (%d)", key.cluster, key.proc, attr, rhs.c_str(), errno);
-				} else {
-					errstack->pushf(who, SCHEDD_ERR_SET_ATTRIBUTE_FAILED,
-						"job %d.%d failed to set %s=%s (%d)", key.cluster, key.proc, attr, rhs.c_str(), errno);
-				}
+				errstack->pushf(who, SCHEDD_ERR_SET_ATTRIBUTE_FAILED,
+					"job %d.%d failed to set %s=%s (%d)", key.cluster, key.proc, attr, rhs.c_str(), errno);
 			}
 			retval = -1;
 			break;
