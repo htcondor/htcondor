@@ -230,6 +230,13 @@ if (BUILD_TESTING)
 	condor_pl_test (lib_meta_knob  "Test meta knobs" "core;quick;full;quicknolink")
 	condor_pl_test (lib_include_cmd_config  "Test meta knobs" "core;quick;full;quicknolink")
 
+	# an example of a test writen in python rather than in perl
+	condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
+	if (WITH_PYTHON_BINDINGS)
+		# an example test that depends on python bindings
+		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
+	endif()
+
 	if(WITH_GANGLIA)
           condor_pl_test(gangliad "Basic test of condor_gangliad." "core;quick;full;quicknolink")
         endif()

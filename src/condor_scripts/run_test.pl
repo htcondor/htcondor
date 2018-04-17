@@ -112,15 +112,15 @@ STDOUT->autoflush();   # disable command buffering of stdout
 STDERR->autoflush();   # disable command buffering of stderr
 my $isXML = 0;  # are we running tests with XML output
 
-# remove . from path
-CleanFromPath(".");
-# yet add in base dir of all tests and compiler directories
-$ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
-# add 64 bit  location for java
-#if($iswindows == 1) {
-#    $ENV{PATH} = $ENV{PATH} . ":/cygdrive/c/windows/sysnative:c:\\windows\\sysnative";
-#}
-#
+if ($iswindows) {
+    # yet add in base dir of all tests and compiler directories
+    $ENV{PATH} = $ENV{PATH} . ";" . $BaseDir;
+} else {
+    # remove . from path
+    CleanFromPath(".");
+    # yet add in base dir of all tests and compiler directories
+    $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
+}
 # the args:
 my @testlist;
 
@@ -331,22 +331,35 @@ sub DoChild
 
     my $needs = load_test_requirements($testname);
     if(exists($needs->{personal})) {
-        print "batch_test $$: $testname requires a running HTCondor, checking...\n";
+        print "run_test $$: $testname requires a running HTCondor, checking...\n";
         print "\tCONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
         my @whodata = `condor_who -quick 2>&1`;
         my $alive = "false";
-        foreach (@whodata) {
-            next if ($_ =~ /^\s*$/);
-            next if ($_ =~ /^Daemon|^----/);
-            debug($_, 6);
-            if ($_ =~ /^IsReady = (\S+)/) { $alive = $1; }
+        my $not_alive_reason = "Condor not running";
+        if (exists($needs->{testconf})) {
+            $not_alive_reason = "Test requires custom config";
+        } else {
+            foreach (@whodata) {
+                next if ($_ =~ /^\s*$/);
+                next if ($_ =~ /^Daemon|^----/);
+                debug($_, 6);
+                if ($_ =~ /^IsReady = (\S+)/) { $alive = $1; }
+                }
+            $alive = trim($alive);
         }
-        $alive = trim($alive);
         if($alive eq "false") {
-            print "\tCondor Not running, Staring one Now\n";
+            print "\t$not_alive_reason, Starting new personal HTCondor now\n";
             print " @whodata\n";
             StartTestPersonal($testname, $needs->{testconf});
         }
+    }
+
+    my $perl = "perl";
+    if (exists($needs->{python})) {
+        print "run_test $$: $testname is python, checking python bindings\n";
+        SetupPythonPath();
+        print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
+        $perl = "python";
     }
 
     my $test_starttime = time();
@@ -399,10 +412,10 @@ sub DoChild
         my $dtm = ""; if (defined $ENV{TIMED_CMD_DEBUG_WAIT}) {$dtm = ":$ENV{TIMED_CMD_DEBUG_WAIT}";}
         my $verb = ($hush == 0) ? "" : "-v";
         my $timeout = "-t 12M";
-        $res = system("timed_cmd.exe -jgd$dtm $verb -o $test_program_out $timeout perl $test_program");
+        $res = system("timed_cmd.exe -jgd$dtm $verb -o $test_program_out $timeout $perl $test_program");
     } else {
-        if( $hush == 0 ) { debug( "Child Starting: perl $test_program > $test_program_out\n",6); }
-        $res = system("perl $test_program > $test_program_out 2>&1");
+        if( $hush == 0 ) { debug( "Child Starting: $perl $test_program > $test_program_out\n",6); }
+        $res = system("$perl $test_program > $test_program_out 2>&1");
     }
 
     my $newlog =  $piddir . "/" . $log;
@@ -457,6 +470,11 @@ sub load_test_requirements
                     $requirement =~ s/\s+$//;
                     $requirements->{ $requirement } = 1;
                 }
+            }
+
+            if($line =~ /^\#\!/) {
+                if ($line =~ /python/) { $requirements->{python} = 1; }
+                next;
             }
 
             if($line =~ /<<CONDOR_TESTREQ_CONFIG/) {
@@ -534,6 +552,41 @@ sub StopTestPersonal {
     my $exit_status = 0;
     $exit_status = CondorTest::EndTest("no_exit");
     return($exit_status);
+}
+
+sub SetupPythonPath {
+    my $reldir = `condor_config_val release_dir`; chomp $reldir;
+    my $pathsep = ':';
+    my $relpy = "$reldir/lib/python";
+    if ($iswindows) { $relpy = "$reldir\\lib\\python"; $pathsep = ';'; }
+
+    # debug code, show what is in release dir and lib and lib/python
+    # on windows, also interrogate the bitness of the python bindings
+    if ($iswindows) {
+        system("dir $reldir");
+        system("dir $reldir\\lib");
+        system("dir $relpy");
+        system("dumpbin -headers $relpy\\classad.pyd");
+        system("dumpbin -imports $relpy\\classad.pyd");
+    } else {
+        system("ls -l $reldir");
+        system("ls -l $reldir/lib");
+        print "contents of $relpy:\n";
+        system("ls -l $relpy");
+    }
+
+    my $pythonpath = "";
+    if (exists($ENV{PYTHONPATH})) {
+        $pythonpath = $ENV{PYTHONPATH};
+        print "\texisting PYTHONPATH=$pythonpath\n";
+        if (index($reldir,$pythonpath) != -1) {
+            print "\tadding $relpy to PYTHONPATH\n";
+            $ENV{PYTHONPATH} = "$relpy$pathsep$pythonpath";
+        }
+    } else {
+        print "\tsetting PYTHONPATH to $relpy\n";
+        $ENV{PYTHONPATH} = $relpy;
+    }
 }
 
 1;
