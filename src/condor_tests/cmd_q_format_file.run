@@ -185,7 +185,7 @@ for my $i (1..8){if (!($Attr{$i-1}{DiskUsage} =~ /$fields[2][$i]/)){$result = 0;
 for my $i (1..8){if (!($Attr{$i-1}{NumShadowStarts} =~ /$fields[3][$i]/)){$result = 0; last;}}
 for my $i (1..8){if (!(unquote($Attr{$i-1}{WhenToTransferOutput}) =~ /$fields[4][$i]/)){$result = 0; last;}}
 
-RegisterResult((check_pr(\%data,$option) && $result),check_name => $option, test_name=>$testname);
+RegisterResult($result,check_name => $option, test_name=>$testname);
 
 ######################################################
 $option = "where2";
