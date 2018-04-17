@@ -48,6 +48,10 @@ variable when the job runs to the actual number of provisioned cpus.
 
 \begin{itemize}
 
+\item Fixed a bug that caused TCP port exhaustion when running a large
+number of instances of the \Condor{chirp\_client} program.
+\Ticket{6627}
+
 \item Fixed a bug that prevented Docker universe jobs with no
 executable listed in the submit file from running.
 \Ticket{6612}
