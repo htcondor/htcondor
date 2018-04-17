@@ -257,6 +257,7 @@ my $execute = sub {
 
 		print( "Killing the last long-running job...\n" );
 		touch( $killFile . ".${clusterID}.2" );
+		print( "Waiting for job completion notice...\n" );
 		$testingPhase = 3;
 	} elsif( $testingPhase == 4 ) {
 		if( $info{ 'job' } != 4 ) {
@@ -355,8 +356,19 @@ my $evicted = sub {
 		}
 		print( "... machine fully drained.\n" );
 
+		my $logFileName = `condor_config_val STARTD_LOG`;
+		CondorUtils::fullchomp( $logFileName );
 		print( "Checking MaxJobRetirementTime and MaxMachineVacateTime...\n" );
-		checkTiming();
+		for( my $delay = 0; $delay <= 20; ++$delay ) {
+			if( $delay == 20 ) {
+				die( "... did not find all necessary state changes in log, aborting.\n" );
+			}
+
+			if( checkTiming( $logFileName ) ) { last; }
+
+			sleep( 1 );
+		}
+		print( "... MaxJobRetirementTime and MaxMachineVacateTime OK.\n" );
 
 		print( "Cancelling draining state...\n" );
 		runCommandCarefully( undef, "condor_drain -cancel ${hostName}" );
@@ -409,6 +421,8 @@ sub touch {
 }
 
 sub checkTiming {
+	my( $logFileName ) = @_;
+
 	#
 	# We're looking for the following sequence with the following time deltas:
 	#
@@ -419,16 +433,15 @@ sub checkTiming {
 	# 04/15/18 14:46:59 slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.
 	#
 
-	my $logFileName = `condor_config_val STARTD_LOG`;
-	CondorUtils::fullchomp( $logFileName );
-
 	open( LOG, "<", $logFileName ) || die( "Unable to open STARTD_LOG '${logFileName}', aborting.\n" );
 
 	my $state = 0;
 	my $finalDrainStartTime = undef;
-	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)?';
+	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)?( \(.*\))?';
 	while( my $line = <LOG> ) {
-		if( $state == 0 && $line =~ /^${secondsMatch} Initiating final draining \(all original jobs complete\).$/ ) {
+		CondorUtils::fullchomp( $line );
+
+		if( $state == 0 && $line =~ /^${secondsMatch} Initiating final draining \(all original jobs complete\)\.$/ ) {
 			$finalDrainStartTime = $1;
 			$state = 1;
 			next;
@@ -462,7 +475,8 @@ sub checkTiming {
 		}
 
 		if( $state == 4 && $line =~ /^${secondsMatch} slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
-			if( (($finalDrainStartTime + 5) % 60) != $1 ) {
+			# Especially with sub-second reporting, allow the startd some time to work.
+			if( (($finalDrainStartTime + 5) % 60) != $1 && (($finalDrainStartTime + 6) % 60) != $1 ) {
 				die( "MaxMachineVacateTime was not 5.\n" );
 			} else {
 				$state = 5;
@@ -470,10 +484,7 @@ sub checkTiming {
 			}
 		}
 	}
+	close( LOG );
 
-	if( $state != 5 ) {
-		die( "Did not find all necessary state changes (got to " . $state . " out of 5) in log, aborting.\n" );
-	} else {
-		print( "... MaxJobRetirementTime and MaxMachineVacateTime OK.\n" );
-	}
+	return ($state == 5);
 }
