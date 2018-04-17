@@ -1414,8 +1414,6 @@ class DaemonCore : public Service
 	void RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
 	void UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
 	
-	MapFile * mapfile;
-  	
     SelfMonitorData monitor_data;
 
 	char 	*localAdFile;
