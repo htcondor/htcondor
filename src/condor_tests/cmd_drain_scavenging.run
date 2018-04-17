@@ -437,7 +437,7 @@ sub checkTiming {
 
 	my $state = 0;
 	my $finalDrainStartTime = undef;
-	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)? \(.*\)';
+	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)?( \(.*\))?';
 	while( my $line = <LOG> ) {
 		CondorUtils::fullchomp( $line );
 
