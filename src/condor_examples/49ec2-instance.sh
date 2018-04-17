@@ -80,9 +80,30 @@ if [ "${annexID}" == "${clientToken}" ]; then
 		getSpotFleetRequestID
 	done
 
-	clientToken=$(aws ec2 --region ${region} describe-spot-fleet-requests \
-		--spot-fleet-request-id ${sfrID} \
-		| grep \"ClientToken\" | sed -e's/\", *$//' | sed -e's/.*"//')
+        #
+        # If you launch as few as 100 instances at a time, it's possible to
+        # exceed AWS' rate limit on describe-spot-fleet-requests.
+        #
+        totalSlept=0
+        while true; do
+            toSleep=$((RANDOM%10))
+            sleep $toSleep
+            totalSlept=$((totalSlelpt+toSleep))
+            aws ec2 --region ${region} describe-spot-fleet-requests \
+                --spot-fleet-request-id ${sfrID} > /tmp/out 2> /tmp/err
+            if [ grep RequestLimitExceeded /tmp/err &> /dev/null ]; then
+                if [ $totalSlept -ge 300 ]; then
+                    shutdown -h now
+                else
+                    continue
+                fi
+            else
+                clientToken=`grep \"ClientToken\" /tmp/out | sed -e's/\", *$//' | sed -e's/.*"//'`
+                break
+            fi
+        done
+        rm /tmp/err /tmp/out
+
 	annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
 fi
 
@@ -96,7 +117,7 @@ function fetchAndExtract() {
 	cd /etc/condor
 	url=s3://$(echo ${1} | sed -e's/^arn:aws:s3::://')
 	url=$(echo $url | sed -e's/\*/'${annexID}'/')
-	if aws s3 cp ${url} . >& /dev/null; then
+	if aws --region ${region} s3 cp ${url} . >& /dev/null; then
 		file=`basename ${url}`
 		echo "# Fetched '${file}' from '${url}'."
 		tarfile=`echo ${file} | awk '/.tar.gz$/{print $1}'`
