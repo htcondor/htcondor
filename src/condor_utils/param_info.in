@@ -3550,7 +3550,7 @@ type=string
 tags=annex
 
 [us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
-default = ami-c405dfb9
+default = ami-0582916cc08a1d81e
 type=string
 tags=annex
 
@@ -3560,7 +3560,7 @@ type=string
 tags=annex
 
 [us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
-default = ami-8cba8be9
+default = ami-0f61cdd6883793833
 type=string
 tags=annex
 
@@ -3570,7 +3570,7 @@ type=string
 tags=annex
 
 [us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
-default = ami-593e2f39
+default = ami-084d3d008e3740806
 type=string
 tags=annex
 
@@ -3580,7 +3580,7 @@ type=string
 tags=annex
 
 [us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
-default = ami-b4871dcc
+default = ami-00daecb4d3b8f077f
 type=string
 tags=annex
 
