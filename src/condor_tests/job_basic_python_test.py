@@ -10,7 +10,7 @@ def main():
 
     # Setup submit arguments
     submit_args = {
-        "executable":   "/bin/echo",
+        "executable":   "x_echostring.pl",
         "output":       "job_basic_python_test.out",
         "error":        "job_basic_python_test.err",
         "arguments":    "\"Basic Python test submission, cluster $(cluster)\""

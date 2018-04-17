@@ -12,9 +12,10 @@ class CondorPersonal(object):
 
     def __init__(self, name):
         self._name = name
-        self._env_dir = name + ".env"
-        self._env_path = os.getcwd() + "/" + self._env_dir
-        CondorUtils.Debug("CondorPersonal initialized under path: " + self._env_path)
+        self._local_dir = name + ".local"
+        self._local_path = os.getcwd() + "/" + self._local_dir
+        self._local_config = self._local_path + "/condor_config.local"
+        CondorUtils.Debug("CondorPersonal initialized under path: " + self._local_path)
 
     def StartCondor(self):
 
@@ -36,41 +37,50 @@ class CondorPersonal(object):
 
 
     def ShutdownCondor(self):
-        os.system("kill " + str(self._master_pid))
-
+        os.system("condor_off -master")
 
     # Sets up local configuration options we'll use to stand up the personal Condor instance.
     def SetupEnvironment(self):
 
-        os.system("mkdir -p " + self._env_dir)
-        os.system("mkdir -p " + self._env_dir + "/execute")
-        os.system("mkdir -p " + self._env_dir + "/log")
-        os.system("mkdir -p " + self._env_dir + "/lock")
-        os.system("mkdir -p " + self._env_dir + "/run")
-        os.system("mkdir -p " + self._env_dir + "/spool")
-        
+        self.MakedirsIgnoreExist(self._local_dir)
+        self.MakedirsIgnoreExist(self._local_dir + "/execute")
+        self.MakedirsIgnoreExist(self._local_dir + "/log")
+        self.MakedirsIgnoreExist(self._local_dir + "/lock")
+        self.MakedirsIgnoreExist(self._local_dir + "/run")
+        self.MakedirsIgnoreExist(self._local_dir + "/spool")
+
         self.RemoveIgnoreMissing(htcondor.param["MASTER_ADDRESS_FILE"])
         self.RemoveIgnoreMissing(htcondor.param["COLLECTOR_ADDRESS_FILE"])
         self.RemoveIgnoreMissing(htcondor.param["SCHEDD_ADDRESS_FILE"])
 
-        # MRC: Why does this work without setting the collector to a different port?
-        #os.environ["_condor_COLLECTOR_PORT"] = "9718"
-        os.environ["_condor_LOCAL_DIR"] = self._env_path
-        os.environ["_condor_EXECUTE"] =  '$(LOCAL_DIR)/execute'
-        os.environ["_condor_LOG"] =  '$(LOCAL_DIR)/log'
-        os.environ["_condor_LOCK"] = '$(LOCAL_DIR)/lock'
-        os.environ["_condor_RUN"] = '$(LOCAL_DIR)/run'
-        os.environ["_condor_SPOOL"] = '$(LOCAL_DIR)/spool'
+        # Create a config file in this test's local directory based on existing
+        # config settings
+        os.system("condor_config_val -write:up " + self._local_config)
 
-        # MRC: We don't need to make a condor_config file AND set OS environment variables.
-        # Should probably remove this, unless it's more useful than OS variables?
-        config = "COLLECTOR_PORT = 9718\n"
-        config_file = open(self._env_dir + "/condor_config", "w")
+        # Add whatever internal testing config values we need
+        config = "LOCAL_DIR = " + self._local_path + "\n"
+        config += "EXECUTE = $(LOCAL_DIR)/execute\n"
+        config += "LOCK = $(LOCAL_DIR)/lock\n"
+        config += "RUN = $(LOCAL_DIR)/run\n"
+        config += "SPOOL = $(LOCAL_DIR)/spool\n"
+        config += "COLLECTOR_HOST = $(CONDOR_HOST):0\n"
+        config_file = open(self._local_config, "a")
         config_file.write(config)
         config_file.close()
+        os.environ["CONDOR_CONFIG"] = self._local_config
 
         # MRC: What does this function actually do?
         htcondor.reload_config()
+
+    def MakedirsIgnoreExist(self, directory):
+        try:
+            CondorUtils.Debug("Making directory " + str(directory))
+            os.makedirs(directory)
+        except:
+            exctype, oe = sys.exc_info()[:2]
+            if not issubclass(exctype, OSError): raise
+            if oe.errno != errno.EEXIST:
+                raise
 
     def RemoveIgnoreMissing(self, file):
         try:
