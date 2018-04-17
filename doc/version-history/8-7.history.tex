@@ -58,6 +58,13 @@ for NVidia GPUs.
 
 \begin{itemize}
 
+\item When running in a HAD setup, there is a configuration parameter,
+\Macro{COLLECTOR\_HOST\_FOR\_NEGOTIATOR} which tells the active negotiator
+which collector to prefer.  Previously, this parameter had no default,
+so the negotiator might arbitrarily chose a far-away collector.  Now
+this knob defaults to the local collector in a HAD setup.
+\Ticket{6616}
+
 \item Fixed a bug when running in a configuration with more than one
 \Condor{collector}, the \Condor{negotiator} would only send the
 accounting ads to one of them.  The result of this bug is that the
