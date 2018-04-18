@@ -11,22 +11,31 @@
 
 \Description
 
-\Condor{gpu\_discovery} runs discovery software to determine
-the host's GPU capabilities,
-which are output as ClassAd attributes.
+\Condor{gpu\_discovery} outputs ClassAd attributes corresponding to a
+host's GPU capabilities.  It can presently report CUDA and OpenCL
+devices; which type(s) of device(s) it reports is determined by which
+libraries, if any, it can find when it runs; this reflects what GPU jobs
+will find on that host when they run.  (Note that some HTCondor
+configuration settings may cause the environment to differ between jobs
+and the HTCondor daemons in ways that change library discovery.)
+
+If \Expr{CUDA\_VISIBLE\_DEVICES} or \Expr{GPU\_DEVICE\_ORDINAL} is set
+in the environment when \Condor{gpu\_discovery} is run, it will report
+only devices present in the those lists.
 
 This tool is not available for MAC OS platforms.
 
 With no command line options, the single ClassAd attribute
 \Attr{DetectedGPUs} is printed.
 If the value is 0, no GPUs were detected.
-If one or more GPUS were detected, the value is 
+If one or more GPUS were detected, the value is
 a string, presented as a comma and space separated list of the GPUs discovered,
 where each is given a name further used as the \Arg{prefix string} in other
 attribute names.
-Where there is more than one GPU of a particular type, 
+Where there is more than one GPU of a particular type,
 the \Arg{prefix string} includes an integer value numbering the device;
-these integer values monotonically increase from 0. 
+these integer values monotonically increase from 0 (unless otherwise
+specified in the environment; see above).
 For example, a discovery of two GPUs may output
 \begin{verbatim}
 DetectedGPUs="CUDA0, CUDA1"
@@ -40,35 +49,32 @@ attribute names.
     Print usage information and exit.
   }
   \OptItem{\Opt{-properties}} {
-    In addition to the \Attr{DetectedGPUs} attribute, display 
-    standard CUDA attributes.
-    Each of these attribute names will have a \Arg{prefix string}
+    In addition to the \Attr{DetectedGPUs} attribute, display
+    some of the attributes of the GPUs.
+    Each of these attributes will have a \Arg{prefix string}
     at the beginning of its name.
-    For a host with more than one of the same GPU type,
-    those attribute values that are the same across all of the GPUs
-    will not have an integer value in the \Arg{prefix string}.
-    The attributes are
-    \Attr{Capability}, \Attr{DeviceName}, \Attr{DriverVersion}, 
+    The displayed CUDA attributes are
+    \Attr{Capability}, \Attr{DeviceName}, \Attr{DriverVersion},
     \Attr{ECCEnabled}, \Attr{GlobalMemoryMb}, and \Attr{RuntimeVersion}.
-    The displayed standard Open CL attributes are
+    The displayed Open CL attributes are
     \Attr{DeviceName}, \Attr{ECCEnabled}, \Attr{OpenCLVersion}, and
     \Attr{GlobalMemoryMb}.
   }
   \OptItem{\Opt{-extra}} {
-    Display the additional attributes of
+    Display more attributes of the GPUs.
     Each of these attribute names will have a \Arg{prefix string}
     at the beginning of its name.
-    \Attr{ClockMhz}, \Attr{ComputeUnits}, and \Attr{CoresPerCU}
-    for a CUDA device,
-    and
-    \Attr{ClockMhz} and \Attr{ComputeUnits} for an OCL device.
+    The additional CUDA attributes are
+    \Attr{ClockMhz}, \Attr{ComputeUnits}, and \Attr{CoresPerCU}.
+    The additional Open CL attributes are
+    \Attr{ClockMhz} and \Attr{ComputeUnits}.
   }
   \OptItem{\Opt{-dynamic}} {
-    Display attributes of NVIDIA devices that change values as the GPU 
+    Display attributes of NVIDIA devices that change values as the GPU
     is working.
     Each of these attribute names will have a \Arg{prefix string}
     at the beginning of its name.
-    These are \Attr{FanSpeedPct}, \Attr{BoardTempC}, \Attr{DieTempC}, 
+    These are \Attr{FanSpeedPct}, \Attr{BoardTempC}, \Attr{DieTempC},
     \Attr{EccErrorsSingleBit}, and \Attr{EccErrorsDoubleBit}.
   }
   \OptItem{\Opt{-mixed}} {
@@ -77,14 +83,16 @@ attribute names.
     so always include the integer value in the \Arg{prefix string}.
   }
   \OptItem{\OptArg{-device}{<N>}}{
-    Display properties only for GPU device \Arg{<N>}, 
+    Display properties only for GPU device \Arg{<N>},
     where \Arg{<N>} is the integer value defined for the \Arg{prefix string}.
-    Note that the attribute names in this output will \emph{not} contain the 
-    value for \Arg{<N>}.
+    This option may be specified more than once; additional \Arg{<N>} are
+    listed along with the first.  This option adds to the devices(s)
+    specified by the environment variables \Expr{CUDA\_VISIBLE\_DEVICES}
+    and \Expr{GPU\_DEVICE\_ORDINAL}, if any.
   }
   \OptItem{\OptArg{-tag}{string}}{
     Set the resource tag portion of the intended machine ClassAd attribute
-    \Attr{Detected<ResourceTag>} to be \Arg{string}. 
+    \Attr{Detected<ResourceTag>} to be \Arg{string}.
     If this option is not specified, the resource tag is \AdStr{GPUs},
     resulting in attribute name \Attr{DetectedGPUs}.
   }
@@ -112,7 +120,7 @@ attribute names.
     CUDA run time.
   }
   \OptItem{\Opt{-config}} {
-    Output in the syntax of 
+    Output in the syntax of
     HTCondor configuration, instead of ClassAd language.
     An additional attribute is produced \Attr{NUM\_DETECTED\_GPUs} which
     is set to the number of GPUs detected.

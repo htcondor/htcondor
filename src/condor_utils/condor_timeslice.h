@@ -71,14 +71,14 @@ class Timeslice {
 	double getInitialInterval() const { return m_initial_interval; }
 	void setInitialInterval(double initial_interval);
 
-	void setStartTimeNow() { m_start_time.getTime(); }
-	const UtcTime &getStartTime() const { return m_start_time; }
+	void setStartTimeNow() { condor_gettimestamp( m_start_time ); }
+	const struct timeval &getStartTime() const { return m_start_time; }
 
 	void setFinishTimeNow();
 
 		// instead of calling startFinishTimeNow() followed by setFinishTimeNow(),
 		// processEvent() can be passed the start and stop times
-	void processEvent(UtcTime start,UtcTime finish);
+	void processEvent(struct timeval start, struct timeval finish);
 
 	void reset();
 
@@ -102,7 +102,7 @@ class Timeslice {
 	double m_max_interval;     // maximum delay between runs
 	double m_default_interval; // default delay between runs
 	double m_initial_interval; // delay before first run
-	UtcTime m_start_time;      // when we last started running
+	struct timeval m_start_time; // when we last started running
 	double m_last_duration;    // how long it took to run last time
 	double m_avg_duration;     // moving average duration
 	time_t m_next_start_time;  // utc second number when to run next time

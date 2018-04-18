@@ -95,22 +95,35 @@
 #define CLIPPED 1
 #endif
 
+/* Disable gcc warnings about floating point comparisons */
+GCC_DIAG_OFF(float-equal)
+
 #define ABORT_AND_RETURN(v) abort_code=v; return abort_code
 #define RETURN_IF_ABORT() if (abort_code) return abort_code
 
 #define exit(n)  poison_exit(n)
 
+// When this class is wrapped around a classad that has a chained parent ad
+// inserts and assignments will check to see if the value being assigned
+// is the same as the value in the chained parent, and if so will NOT do
+// the assigment, but let the parents value show through.
+//
+// This has the effect of leaving the ad containing only the differences from the parent
+//
+// Thus if this class is wrapped around a job ad chained to a cluster ad, the job ad
+// will contain only those values that should be sent to the procAd in the schedd.
 class DeltaClassAd
 {
 public:
 	DeltaClassAd(ClassAd & _ad) : ad(_ad) {}
 	virtual ~DeltaClassAd() {};
 
-	bool Insert(const std::string & attr, ExprTree * tree) { return ad.Insert(attr, tree); }
-	bool Assign(const char* attr, bool val) { return ad.Assign(attr, val); }
-	bool Assign(const char* attr, double val) { return ad.Assign(attr, val); }
-	bool Assign(const char* attr, long long val) { return ad.Assign(attr, val); }
-	bool Assign(const char* attr, const char * val) { return ad.Assign(attr, val); }
+	bool Insert(const std::string & attr, ExprTree * tree);
+	bool Assign(const char* attr, bool val);
+	bool Assign(const char* attr, double val);
+	bool Assign(const char* attr, long long val);
+	bool Assign(const char* attr, const char * val);
+
 	ExprTree * LookupExpr(const char * attr) { return ad.LookupExpr(attr); }
 	ExprTree * Lookup(const std::string & attr) { return ad.Lookup(attr); }
 	int LookupString(const char * attr, MyString & val) { return ad.LookupString(attr, val); }
@@ -119,7 +132,105 @@ public:
 
 protected:
 	ClassAd& ad;
+
+	ExprTree * HasParentTree(const std::string & attr, classad::ExprTree::NodeKind kind);
+	const classad::Value * HasParentValue(const std::string & attr, classad::Value::ValueType vt);
 };
+
+// returns the expr tree from the parent ad if it is of the given node kind.
+// otherwise returns NULL.
+ExprTree * DeltaClassAd::HasParentTree(const std::string & attr, classad::ExprTree::NodeKind kind)
+{
+	classad::ClassAd * parent = ad.GetChainedParentAd();
+	if (parent) {
+		ExprTree * expr = parent->Lookup(attr);
+		if (expr) {
+			expr = SkipExprEnvelope(expr);
+			if (kind == expr->GetKind()) {
+				return expr;
+			}
+		}
+	}
+	return NULL;
+}
+
+// returns a pointer to the value from the parent ad if the parent ad has a Literal node
+// of the given value type.
+const classad::Value * DeltaClassAd::HasParentValue(const std::string & attr, classad::Value::ValueType vt)
+{
+	ExprTree * expr = HasParentTree(attr, ExprTree::NodeKind::LITERAL_NODE);
+	if ( ! expr)
+		return NULL;
+	classad::Value::NumberFactor f;
+	const classad::Value * pval = &dynamic_cast<classad::Literal*>(expr)->getValue(f);
+	if (pval->GetType() != vt)
+		return NULL;
+	return pval;
+}
+
+bool DeltaClassAd::Insert(const std::string & attr, ExprTree * tree)
+{
+	ExprTree * t2 = HasParentTree(attr, tree->GetKind());
+	if (t2 && tree->SameAs(t2)) {
+		delete tree;
+		ad.PruneChildAttr(attr, false);
+		return true;
+	}
+	return ad.Insert(attr, tree);
+}
+
+bool DeltaClassAd::Assign(const char* attr, bool val)
+{
+	bool bval = ! val;
+	const classad::Value * pval = HasParentValue(attr, classad::Value::BOOLEAN_VALUE);
+	if (pval && pval->IsBooleanValue(bval) && (val == bval)) {
+		ad.PruneChildAttr(attr, false);
+		return true;
+	}
+	return ad.Assign(attr, val);
+}
+
+bool DeltaClassAd::Assign(const char* attr, double val)
+{
+	double dval = -val;
+	const classad::Value * pval = HasParentValue(attr, classad::Value::REAL_VALUE);
+	if (pval && pval->IsRealValue(dval) && (val == dval)) {
+		ad.PruneChildAttr(attr, false);
+		return true;
+	}
+	return ad.Assign(attr, val);
+}
+
+bool DeltaClassAd::Assign(const char* attr, long long val)
+{
+	long long ival = -val;
+	const classad::Value * pval = HasParentValue(attr, classad::Value::INTEGER_VALUE);
+	if (pval && pval->IsIntegerValue(ival) && (val == ival)) {
+		ad.PruneChildAttr(attr, false);
+		return true;
+	}
+	return ad.Assign(attr, val);
+}
+
+bool DeltaClassAd::Assign(const char* attr, const char * val)
+{
+	if ( ! val) {
+		const classad::Value * pval = HasParentValue(attr, classad::Value::UNDEFINED_VALUE);
+		if (pval) {
+			ad.PruneChildAttr(attr, false);
+			return true;
+		}
+	} else {
+		const char * cstr = NULL;
+		const classad::Value * pval = HasParentValue(attr, classad::Value::STRING_VALUE);
+		if (pval && pval->IsStringValue(cstr) && cstr && (MATCH == strcmp(cstr, val))) {
+			ad.PruneChildAttr(attr, false);
+			return true;
+		}
+	}
+	return ad.Assign(attr, val);
+}
+
 
 bool SubmitHash::AssignJobVal(const char * attr, bool val) { return job->Assign(attr, val); }
 bool SubmitHash::AssignJobVal(const char * attr, double val) { return job->Assign(attr, val); }
@@ -326,6 +437,7 @@ SubmitHash::SubmitHash()
 	, abort_code(0)
 	, abort_macro_name(NULL)
 	, abort_raw_macro_val(NULL)
+	, base_job_is_cluster_ad(false)
 	, DisableFileChecks(true)
 	, FakeFileCreationChecks(false)
 	, IsInteractiveJob(false)
@@ -2201,13 +2313,6 @@ int SubmitHash::SetJobStatus()
 	bool hold = submit_param_bool( SUBMIT_KEY_Hold, NULL, false );
 	MyString buffer;
 
-#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
-#else
-	// we will be inserting "JobStatus = <something>" into the jobad, but we DON'T
-	// want that to be written into the cluster ad, it must always go into the proc ad.
-	SetNoClusterAttr(ATTR_JOB_STATUS);
-#endif
-
 	if (hold) {
 		if ( IsRemoteJob ) {
 			push_error(stderr, "Cannot set '%s' to 'true' when using -remote or -spool\n", 
@@ -3001,32 +3106,38 @@ int SubmitHash::SetForcedAttributes()
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
-		const char *my_name = hash_iter_key(it);
-		if ( ! starts_with_ignore_case(my_name, "MY.")) continue;
-		const char * name = my_name+sizeof("MY.")-1;
+		const char *name = hash_iter_key(it);
+		const char *raw_value = hash_iter_value(it);
+		// submit will never generate +attr entries, but the python bindings can
+		// so treat them the same as the canonical MY.attr entries
+		if (*name == '+') {
+			++name;
+		} else if (starts_with_ignore_case(name, "MY.")) {
+			name += sizeof("MY.")-1;
+		} else {
+			continue;
+		}
 
-		char * value = submit_param(my_name); // lookup and expand macros.
-	#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+		char * value = NULL;
+		if (raw_value && raw_value[0]) {
+			value = expand_macro(raw_value);
+		}
 		buffer.formatstr( "%s = %s", name, (value && value[0]) ? value : "undefined" );
 		InsertJobExpr(buffer);
 		RETURN_IF_ABORT();
-	#else
-		if (value && value[0]) {
-			buffer.formatstr( "%s = %s", name, value);
 
-			// Call InserJobExpr with checkcluster set to false.
-			// This will result in forced attributes always going
-			// into the proc ad, not the cluster ad.  This allows
-			// us to easily remove attributes with the "-" command.
-			InsertJobExpr(buffer);
-			SetNoClusterAttr(name);
-		} else {
-			job->Delete( name );
-		}
-	#endif
 		if (value) free(value);
 	}
 	hash_iter_delete(&it);
+
+	// force clusterid and procid attributes.
+	// we force the clusterid only for the proc=0 ad and the cluster ad (proc=-1)
+	// for other jobs, the clusterid should be picked up by chaining with the cluster ad.
+	if (jid.proc < 0) {
+		AssignJobVal(ATTR_CLUSTER_ID, jid.cluster);
+	} else {
+		AssignJobVal(ATTR_PROC_ID, jid.proc);
+	}
 	return 0;
 }
 
@@ -5155,6 +5266,7 @@ int SubmitHash::SetSimpleJobExprs()
 		{ATTR_NEXT_JOB_START_DELAY, SUBMIT_KEY_NextJobStartDelay, ATTR_NEXT_JOB_START_DELAY, NULL, false},
 		{ATTR_JOB_KEEP_CLAIM_IDLE, "KeepClaimIdle", "keep_claim_idle", NULL, false},
 		{ATTR_JOB_AD_INFORMATION_ATTRS, "JobAdInformationAttrs", "job_ad_information_attrs", NULL, true},
+		{ATTR_JOB_MATERIALIZE_MAX_IDLE, SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, NULL, false},
 		{NULL,NULL,NULL,NULL,false}
 	};
 
@@ -5443,7 +5555,6 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 	bool	checks_credd = false;
 #endif
 	char	*ptr;
-	MyString ft_clause;
 
 	if( strlen(orig) ) {
 		answer.formatstr( "(%s)", orig );
@@ -5530,21 +5641,10 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 		checks_mpi = machine_refs.count( ATTR_HAS_MPI );
 	}
 	if( mightTransfer(JobUniverse) ) { 
-		switch( should_transfer ) {
-		case STF_IF_NEEDED:
-		case STF_NO:
-			checks_fsdomain = machine_refs.count(
-										  ATTR_FILE_SYSTEM_DOMAIN ); 
-			break;
-		case STF_YES:
-			checks_file_transfer = machine_refs.count(
-											   ATTR_HAS_FILE_TRANSFER );
-			checks_file_transfer_plugin_methods = machine_refs.count(
-											   ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS );
-			checks_per_file_encryption = machine_refs.count(
-										   ATTR_HAS_PER_FILE_ENCRYPTION );
-			break;
-		}
+		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
+		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER);
+		checks_file_transfer_plugin_methods = machine_refs.count(ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS);
+		checks_per_file_encryption = machine_refs.count(ATTR_HAS_PER_FILE_ENCRYPTION);
 	}
 
 	checks_mem = machine_refs.count(ATTR_MEMORY);
@@ -5730,88 +5830,62 @@ bool SubmitHash::check_requirements( char const *orig, MyString &answer )
 			   supports file transfer, or that we're in the same file
 			   system domain.
 			*/
+		const char * domain_check = "(TARGET." ATTR_FILE_SYSTEM_DOMAIN " == MY." ATTR_FILE_SYSTEM_DOMAIN ")";
+		const char * xfer_check = "TARGET." ATTR_HAS_FILE_TRANSFER;
+		if (!checks_per_file_encryption && NeedsPerFileEncryption) {
+			xfer_check = "TARGET." ATTR_HAS_FILE_TRANSFER " && TARGET." ATTR_HAS_PER_FILE_ENCRYPTION;
+		}
 
-		switch( should_transfer ) {
-		case STF_NO:
+		if ( should_transfer == STF_NO) {
 				// no file transfer used.  if there's nothing about
 				// the FileSystemDomain yet, tack on a clause for
 				// that. 
 			if( ! checks_fsdomain ) {
-				answer += " && (TARGET.";
-				answer += ATTR_FILE_SYSTEM_DOMAIN;
-				answer += " == MY.";
-				answer += ATTR_FILE_SYSTEM_DOMAIN;
-				answer += ")";
-			} 
-			break;
-			
-		case STF_YES:
-				// we're definitely going to use file transfer.  
-			if( ! checks_file_transfer ) {
-				answer += " && (TARGET.";
-				answer += ATTR_HAS_FILE_TRANSFER;
-				if (!checks_per_file_encryption && NeedsPerFileEncryption) {
-					answer += " && TARGET.";
-					answer += ATTR_HAS_PER_FILE_ENCRYPTION;
-				}
+				answer += " && " ;
+				answer += domain_check;
+			}
+		} else if ( ! checks_file_transfer) {
 
-				if( (!checks_file_transfer_plugin_methods) ) {
-					// check input
-					char* file_list = submit_param( SUBMIT_KEY_TransferInputFiles, "TransferInputFiles" );
-					char* tmp_ptr;
-					if(file_list) {
-						StringList files(file_list, ",");
-						files.rewind();
-						while ( (tmp_ptr=files.next()) ) {
-							if (IsUrl(tmp_ptr)){
-								MyString plugintype = getURLType(tmp_ptr);
-								answer += " && stringListMember(\"";
-								answer += plugintype;
-								answer += "\",HasFileTransferPluginMethods)";
-							}
-						}
-						free(file_list);
-					}
+			const char * join_op = " && (";
+			const char * close_op = ")";
+			if ( should_transfer == STF_IF_NEEDED && ! checks_fsdomain ) {
+				answer += join_op;
+				answer += domain_check;
+				join_op = " || (";
+				close_op = "))";
+			}
 
-					// check output
-					tmp_ptr = submit_param( SUBMIT_KEY_OutputDestination, "OutputDestination" );
-					if (tmp_ptr) {
-						if (IsUrl(tmp_ptr)){
-							MyString plugintype = getURLType(tmp_ptr);
-							answer += " && stringListMember(\"";
-							answer += plugintype;
-							answer += "\",HasFileTransferPluginMethods)";
-						}
-						free (tmp_ptr);
+			answer += join_op;
+			answer += xfer_check;
+
+			if (( ! checks_file_transfer_plugin_methods)) {
+				classad::References methods;
+				// check input
+				auto_free_ptr file_list(submit_param(SUBMIT_KEY_TransferInputFiles, "TransferInputFiles"));
+				if (file_list) {
+					StringList files(file_list.ptr(), ",");
+					for (const char * file = files.first(); file; file = files.next()) {
+						if (IsUrl(file)){ methods.insert(getURLType(file)); }
 					}
 				}
 
-				// close of the file transfer requirements
-				answer += ")";
-			}
-			break;
-			
-		case STF_IF_NEEDED:
-				// we may or may not use file transfer, so require
-				// either the same FS domain OR the ability to file
-				// transfer.  if the user already refered to fs
-				// domain, but explictly turned on IF_NEEDED, assume
-				// they know what they're doing. 
-			if( ! checks_fsdomain ) {
-				ft_clause = " && ((TARGET.";
-				ft_clause += ATTR_HAS_FILE_TRANSFER;
-				if (NeedsPerFileEncryption) {
-					ft_clause += " && TARGET.";
-					ft_clause += ATTR_HAS_PER_FILE_ENCRYPTION;
+				// check output (only a single file this time)
+				file_list.set(submit_param(SUBMIT_KEY_OutputDestination, "OutputDestination"));
+				if (file_list) {
+					if (IsUrl(file_list)){
+						methods.insert(getURLType(file_list));
+					}
 				}
-				ft_clause += ") || (TARGET.";
-				ft_clause += ATTR_FILE_SYSTEM_DOMAIN;
-				ft_clause += " == MY.";
-				ft_clause += ATTR_FILE_SYSTEM_DOMAIN;
-				ft_clause += "))";
-				answer += ft_clause.Value();
+
+				for (auto it = methods.begin(); it != methods.end(); ++it) {
+					answer += " && stringListIMember(\"";
+					answer += *it;
+					answer += "\",TARGET.HasFileTransferPluginMethods)";
+				}
 			}
-			break;
+
+			// close of the file transfer requirements
+			answer += close_op;
 		}
 	}
 
@@ -7208,6 +7282,11 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	delete procAd;
 	procAd = NULL;
 
+	if ( ! ad) {
+		this->clusterAd = NULL;
+		return 0;
+	}
+
 	MACRO_EVAL_CONTEXT ctx = mctx; mctx.use_mask = 0;
 	ad->LookupString (ATTR_OWNER, submit_owner);
 	ad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
@@ -7224,7 +7303,7 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 	return 0;
 }
 
-int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
+int SubmitHash::init_base_ad(time_t submit_time_in, const char * owner)
 {
 	MyString buffer;
 	ASSERT(owner);
@@ -7232,6 +7311,8 @@ int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
 
 	delete job; job = NULL;
 	delete procAd; procAd = NULL;
+	baseJob.Clear();
+	base_job_is_cluster_ad = false;
 
 	// set up types of the ad
 	SetMyTypeName (baseJob, JOB_ADTYPE);
@@ -7344,6 +7425,45 @@ int SubmitHash::init_cluster_ad(time_t submit_time_in, const char * owner)
 	return abort_code;
 }
 
+// after calling make_job_ad for the Procid==0 ad, pass the returned job ad to this function
+// to fold the job attributes into the base ad, thereby creating an internal clusterad (owned by the SubmitHash)
+// The passed in job ad will be striped down to a proc0 ad and chained to the internal clusterad
+// it is an error to pass any ad other than the most recent ad returned by make_job_ad()
+// After calling this method, subsequent calls to make_job_ad() will produce a job ad that
+// is chained to the cluster ad
+// This function does nothing if the SubmitHash is using a foreign clusterad (i.e. you called set_cluster_ad())
+//
+bool SubmitHash::fold_job_into_base_ad(ClassAd * jobad)
+{
+	// its only valid to call this function if not using a foreign clusterad
+	// and if the job passed in is the same as the job we just returned from make_job_ad()
+	if (clusterAd || ! jobad) {
+		return false;
+	}
+
+	jobad->ChainToAd(NULL); // make sure that there is not currently a chained parent
+	int procid = -1;
+	if ( ! jobad->LookupInteger(ATTR_PROC_ID, procid) || procid < 0) {
+		return false;
+	}
+
+	// move all of the attributes from the job to the parent.
+	baseJob.Update(*jobad);
+
+	// put the proc id back into the (now empty) jobad
+	jobad->Clear();
+	jobad->Assign(ATTR_PROC_ID, procid);
+
+	// make sure that the base job has no procid assigment.
+	baseJob.Delete(ATTR_PROC_ID);
+	base_job_is_cluster_ad = true;
+
+	// chain the job to the base clusterad
+	jobad->ChainToAd(&baseJob);
+	return true;
+}
+
+
 ClassAd* SubmitHash::make_job_ad (
 	JOB_ID_KEY job_id, // ClusterId and ProcId
 	int item_index, // Row or ItemIndex
@@ -7397,18 +7517,16 @@ ClassAd* SubmitHash::make_job_ad (
 		strcpy(LiveNodeString, "#MpInOdE#");
 	}
 
-#if 1
 	if (clusterAd) {
 		procAd = new ClassAd();
 		procAd->ChainToAd(clusterAd);
+	} else if ((jid.proc > 0) && base_job_is_cluster_ad) {
+		procAd = new ClassAd();
+		procAd->ChainToAd(&baseJob);
 	} else {
 		procAd = new ClassAd(baseJob);
 	}
 	job = new DeltaClassAd(*procAd);
-#else
-	ClassAd * baseAd = clusterAd ? clusterAd : &baseJob;
-	job = new ClassAd(baseJob);
-#endif
 
 #if !defined(WIN32)
 	SetRootDir(!clusterAd);	// must be called very early
@@ -7519,6 +7637,16 @@ ClassAd* SubmitHash::make_job_ad (
 		job = NULL;
 		delete procAd;
 		procAd = NULL;
+	} else if (procAd) {
+		if (procAd->GetChainedParentAd()) {
+			#if 0 // the delta ad does this so we don't need to
+			// remove duplicate attributes between procad and chained parent
+			procAd->PruneChildAd();
+			#endif
+		} else if ( ! clusterAd && ! base_job_is_cluster_ad) {
+			// promote the procad to a clusterad
+			fold_job_into_base_ad(procAd);
+		}
 	}
 	return procAd;
 }

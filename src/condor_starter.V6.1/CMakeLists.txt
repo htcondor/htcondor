@@ -24,7 +24,7 @@ if (UNIX)
 set_source_files_properties(jic_shadow.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
 endif(UNIX)
 
-condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
+condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}")
 
 if (HAVE_EXT_GLOBUS)
 	clone_install( condor_starter "${C_SBIN}" "condor_gridshell" "${C_SBIN}" )

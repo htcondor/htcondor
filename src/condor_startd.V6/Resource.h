@@ -103,6 +103,7 @@ public:
 		// Remove the given claim from this Resource
 	void	removeClaim( Claim* );
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
+	void	invalidateAllClaimIDs();
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
 		// reversible: if true, claim may unretire
@@ -116,8 +117,7 @@ public:
 
         void	setBadputCausedByPreemption() { if( r_cur ) r_cur->setBadputCausedByPreemption();}
         bool	getBadputCausedByPreemption() { return r_cur->getBadputCausedByPreemption();}
-        
-	
+
         // Enable/Disable claims for hibernation
     void    disable ();
     void    enable ();
@@ -212,6 +212,7 @@ public:
 	void	refresh_classad( amask_t mask );	
 	void	reconfig( void );
 	void	publish_slot_config_overrides(ClassAd * cad);
+	void	init_total_disk(const Resource * pslot);
 
 	void	update( void );		// Schedule to update the central manager.
 	void		do_update( void );			// Actually update the CM
@@ -334,13 +335,16 @@ public:
 	static bool swap_claims(Resource* ripa, Resource* ripb);
 
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
+
+	bool wasAcceptedWhileDraining() const { return m_acceptedWhileDraining; }
+	void setAcceptedWhileDraining() { m_acceptedWhileDraining = isDraining(); }
 private:
 	ResourceFeature m_resource_feature;
 
 	Resource*	m_parent;
 
 	// Only partitionable slots have children
-	
+
     struct ResourceLess {
         bool operator()(Resource *lhs, Resource *rhs) const {
             return strcmp(lhs->r_name, rhs->r_name) < 0;
@@ -382,6 +386,8 @@ private:
 #endif /* HAVE_JOB_HOOKS */
 
 	std::list<int> m_affinity_mask;
+
+	bool	m_acceptedWhileDraining;
 };
 
 

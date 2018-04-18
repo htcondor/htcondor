@@ -104,11 +104,7 @@ endif(NOT WINDOWS)
 condor_exe(condor_stats "stats.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 if( WINDOWS )
-	if(NOT (MSVC_VERSION LESS 1700))
-		condor_exe(condor_setup "condor_setup.c;soap_setupStub.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-	else()
-		condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-	endif()
+	condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 	condor_exe(condor_set_acls "condor_set_acls.c" ${C_BIN} "" OFF)
 endif()
 

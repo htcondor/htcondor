@@ -51,6 +51,7 @@ DCCollector::init( bool needs_reconfig )
 	use_tcp = true;
 	use_nonblocking_update = true;
 	update_destination = NULL;
+	timerclear( &m_blacklist_monitor_query_started );
 
 	if (bootTime == 0) {
 		bootTime = time( NULL );
@@ -664,7 +665,7 @@ DCCollector::isBlacklisted() {
 
 void
 DCCollector::blacklistMonitorQueryStarted() {
-	m_blacklist_monitor_query_started.getTime();
+	condor_gettimestamp( m_blacklist_monitor_query_started );
 }
 
 void
@@ -674,8 +675,8 @@ DCCollector::blacklistMonitorQueryFinished( bool success ) {
 		blacklisted.reset();
 	}
 	else {
-		UtcTime finished;
-		finished.getTime();
+		struct timeval finished;
+		condor_gettimestamp( finished );
 		blacklisted.processEvent(m_blacklist_monitor_query_started,finished);
 
 		unsigned int delta = blacklisted.getTimeToNextRun();

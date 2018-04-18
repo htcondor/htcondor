@@ -172,24 +172,22 @@ setup_usage() {
 	fprintf( stdout,
 		"\n"
 		"To do the one-time setup for an AWS account:\n"
-		"\tcondor_annex -setup\n"
+		"\tcondor_annex [options] -setup\n"
 		"\n"
-		"To specify the files for the access (public) key and secret (private) keys:\n"
-		"\tcondor_annex -setup\n"
+		"To specify the files for the access (public) key and secret (private) keys\n"
+		"[or, for experts, the CloudFormation URL]:\n"
+		"\tcondor_annex [options] -setup\n"
 		"\t\t<path/to/access-key-file>\n"
 		"\t\t<path/to/private-key-file>\n"
+		"\t\t[<https://cloudformation.<region>.amazonaws.com/]\n"
 		"\n"
-		"Expert mode (to specify the region, you must specify the key paths):\n"
-		"\tcondor_annex -aws-ec2-url https://ec2.<region>.amazonaws.com\n"
-		"\t\t-setup <path/to/access-key-file>\n"
-		"\t\t<path/to/private-key-file>\n"
-		"\t\t<https://cloudformation.<region>.amazonaws.com/>\n"
-		"\n"
+		"For how to specify a region, and other options:\n"
+		"\tcondor_annex -help\n"
 	);
 }
 
 int
-setup( const char * pukf, const char * prkf, const char * cloudFormationURL, const char * serviceURL ) {
+setup( const char * region, const char * pukf, const char * prkf, const char * cloudFormationURL, const char * serviceURL ) {
 	std::string publicKeyFile, privateKeyFile;
 	if( pukf != NULL && prkf != NULL ) {
 		publicKeyFile = pukf;
@@ -227,8 +225,6 @@ setup( const char * pukf, const char * prkf, const char * cloudFormationURL, con
 
 	std::string cfURL = cloudFormationURL ? cloudFormationURL : "";
 	if( cfURL.empty() ) {
-		// FIXME: At some point, the argument to 'setup' should be the region,
-		// not the CloudFormation URL.
 		param( cfURL, "ANNEX_DEFAULT_CF_URL" );
 	}
 	if( cfURL.empty() ) {
@@ -323,7 +319,7 @@ setup( const char * pukf, const char * prkf, const char * cloudFormationURL, con
 		ec2URL, publicKeyFile, privateKeyFile,
 		commandState, commandID );
 
-	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, scratchpad );
+	GenerateConfigFile * gcf = new GenerateConfigFile( cfGahp, region, scratchpad );
 
 	SetupReply * sr = new SetupReply( reply, cfGahp, ec2Gahp, "Setup successful.", scratchpad,
 		replyStream, commandState, commandID );

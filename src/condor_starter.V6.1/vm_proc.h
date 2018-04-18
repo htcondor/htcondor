@@ -141,7 +141,7 @@ class VMProc : public OsProc
 		// Number of checkpointing executed during current running
 		int m_vm_ckpt_count;
 		// Time at which the job last performed a successful checkpoint.
-		UtcTime m_vm_last_ckpt_time;
+		time_t m_vm_last_ckpt_time;
 
 
 		/* 

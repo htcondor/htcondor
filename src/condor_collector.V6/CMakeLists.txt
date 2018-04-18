@@ -31,17 +31,12 @@ if (NOT WIN_EXEC_NODE_ONLY)
 		condor_daemon ( collector
 			"${collectorRmvElements};${CollectorLibSrcs}"
 			"${CONDOR_LIBS};${GSOAP_FOUND};${LIBSSL_FOUND};${ZLIB_FOUND};${CONDOR_QMF};collectorlib"
-			${C_SBIN}
-			ON )
+			${C_SBIN} )
 	else()
 		condor_daemon ( collector
 					"${collectorRmvElements};${CollectorLibSrcs}"
 					"${CONDOR_LIBS};${GSOAP_FOUND};${ZLIB_FOUND};${CONDOR_QMF};collectorlib"
-					${C_SBIN}
-					ON )
+					${C_SBIN} )
 	endif()
-	if (HAVE_EXT_GSOAP)
-		install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condorCollector.wsdl DESTINATION ${C_LIB}/webservice )
-	endif(HAVE_EXT_GSOAP)
 
 endif(NOT WIN_EXEC_NODE_ONLY)

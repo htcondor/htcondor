@@ -230,6 +230,13 @@ if (BUILD_TESTING)
 	condor_pl_test (lib_meta_knob  "Test meta knobs" "core;quick;full;quicknolink")
 	condor_pl_test (lib_include_cmd_config  "Test meta knobs" "core;quick;full;quicknolink")
 
+	# an example of a test writen in python rather than in perl
+	condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
+	if (WITH_PYTHON_BINDINGS)
+		# an example test that depends on python bindings
+		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
+	endif()
+
 	if(WITH_GANGLIA)
           condor_pl_test(gangliad "Basic test of condor_gangliad." "core;quick;full;quicknolink")
         endif()
@@ -444,13 +451,17 @@ if (BUILD_TESTING)
 	condor_pl_test(docker_simulator_test "docker_simulator_test" "core;quick;full;quicknolink")
 	condor_pl_test(map_user_to_groups_metaknob_test "map_user_to_groups_metaknob_test" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_submit-factory "condor_submit -factory" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_curl_plugin "Success and failure scenarios for curl_plugin" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_curl_plugin_singlefile_success "Successful curl_plugin single file download" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_curl_plugin_singlefile_failure "Failed curl_plugin single file download" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_curl_plugin_singlefile_partial "Successful curl_plugin single file download with partial retry" "core;quick;full;quicknolink")
+
 
 	if (LINUX)
 		condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
 	endif()
 	condor_pl_test(cmd_drain "condor_drain" "core;quick;full;quicknolink")
 	condor_pl_test(defrag "condor_defrag" "core;quick;full;quicknolink")
+	condor_pl_test(cmd_drain_scavenging "condor_drain -start" "core;quick;full;quicknolink")
 
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full")
@@ -507,6 +518,12 @@ if (BUILD_TESTING)
 
 		condor_pl_test(cmr-monitor-both "custom machine resource monitors (both)" "core;quick;full")
 		condor_pl_test(cmr-monitor-both-partitionable "custom machine resource monitors (both) - partitionable" "core;quick;full")
+
+		condor_pl_test(cmr-monitor-many "custom machine resource monitors (many)" "core;quick;full")
+		condor_pl_test(cmr-monitor-many-partitionable "custom machine resource monitors (many) - partitionable" "core;quick;full")
+
+		condor_pl_test(cmr-monitor-many-instances "custom machine resource monitors (many, many instances)" "core;quick;full")
+		condor_pl_test(cmr-monitor-many-instances-partitionable "custom machine resource monitors (many, many instances) - partitionable" "core;quick;full")
 	endif ( LINUX )
 
 	condor_pl_test(job_concurrency_limitsS "Check concurrency" "core;quick;full")
@@ -749,10 +766,5 @@ if (BUILD_TESTING)
 	condor_pl_test(job_cp_cclim_acctgrp_basic_van "Test Consumption Policies with cc-limits and acct-groups" "core;quick;full;quicknolink")
 	condor_pl_test(job_starter_script-A "Test starter pre and post scripts" "core;quick;full;quicknolink")
   #condor_pl_test(condor_urlfetch_test "Tests tool condor_urlfetch" "framework;quick;full")
-
-	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
-		#condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
-	endif()
-
 
 endif(BUILD_TESTING)

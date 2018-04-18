@@ -523,11 +523,13 @@ countres:
 		}
 	}
 #ifndef WIN32
-	if (ResCount == 0) {
-		dprintf(D_FULLDEBUG, "CREDMON: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
-		credmon_mark_creds_for_sweeping(curuser.c_str());
-	} else {
-		dprintf(D_FULLDEBUG, "CREDMON: user %s still running %i jobs\n", curuser.c_str(), ResCount);
+	if(!param_boolean("TOKENS", false)) {
+		if (ResCount == 0) {
+			dprintf(D_FULLDEBUG, "CREDMON: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
+			credmon_mark_creds_for_sweeping(curuser.c_str());
+		} else {
+			dprintf(D_FULLDEBUG, "CREDMON: user %s still running %i jobs\n", curuser.c_str(), ResCount);
+		}
 	}
 #endif //WIN32
 
@@ -2583,11 +2585,12 @@ command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 	ad.LookupBool(ATTR_RESUME_ON_COMPLETION,resume_on_completion);
 
 	ExprTree *check_expr = ad.LookupExpr( ATTR_CHECK_EXPR );
+	ExprTree *start_expr = ad.LookupExpr( ATTR_START_EXPR );
 
 	std::string new_request_id;
 	std::string error_msg;
 	int error_code = 0;
-	bool ok = resmgr->startDraining(how_fast,resume_on_completion,check_expr,new_request_id,error_msg,error_code);
+	bool ok = resmgr->startDraining(how_fast,resume_on_completion,check_expr,start_expr,new_request_id,error_msg,error_code);
 	if( !ok ) {
 		dprintf(D_ALWAYS,"Failed to start draining, error code %d: %s\n",error_code,error_msg.c_str());
 	}

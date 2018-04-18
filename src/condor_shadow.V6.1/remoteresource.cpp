@@ -408,6 +408,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	lease_duration = -1;
 	already_killed_graceful = false;
 	already_killed_fast = false;
+	m_got_job_exit = false;
 	m_want_chirp = false;
 	m_want_streaming_io = false;
 	m_attempt_shutdown_tid = -1;
@@ -1900,6 +1901,8 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 {
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
 	setExitReason( reason_for_exit );
+
+	m_got_job_exit = true;
 
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1;

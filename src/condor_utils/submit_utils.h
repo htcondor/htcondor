@@ -278,6 +278,9 @@
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
 #define SUBMIT_KEY_JobMaxVacateTime "job_max_vacate_time"
 
+#define SUBMIT_KEY_JobMaterializeLimit "max_materialize"
+#define SUBMIT_KEY_JobMaterializeMaxIdle "materialize_max_idle"
+
 #define SUBMIT_KEY_REMOTE_PREFIX "Remote_"
 
 #if !defined(WIN32)
@@ -475,12 +478,36 @@ public:
 	// make sure that value is not changed for the lifetime of possible macro substitution.
 	void set_live_submit_variable(const char* name, const char* live_value, bool force_used=true);
 
-	// establishes default attibutes that are independent of submit file
+	// establishes default job attibutes that are independent of submit file (i.e. SUBMIT_ATTRS, etc)
 	// call once before parsing the submit file and/or calling make_job_ad.
-	int init_cluster_ad(time_t _submit_time, const char * owner); // returns 0 on success
+	int init_base_ad(time_t _submit_time, const char * owner); // returns 0 on success
 
-	// establish default attributes using a foreign ad rather than by calling init_cluster_ad above
+	// establish default attributes using a foreign ad rather than by calling init_base_ad above
+	// used by late materialization when the 'base' ad is the cluster ad in the job queue.
+	// note that this is NOT an ownership transfer of the ad, and the caller is responsible for
+	// making sure that the ad is not deleted until after this class is destroyed or set_cluster_ad(NULL)
+	// is called.
+	// after this method is called, make_job_ad() will return job ads that are chained to the given cluster ad.
+	// call this method with NULL to detach the foreign cluster ad from the SubmitHash
 	int set_cluster_ad(ClassAd * ad);
+
+	// after calling make_job_ad for the Procid==0 ad, pass the returned job ad to this function
+	// to fold the job attributes into the base ad, thereby creating an internal clusterad (owned by the SubmitHash)
+	// The passed in job ad will be striped down to a proc0 ad and chained to the internal clusterad
+	// it is an error to pass any ad other than the most recent ad returned by make_job_ad()
+	// After calling this method, subsequent calls to make_job_ad() will produce a job ad that
+	// is chained to the cluster ad
+	// This function does nothing if the SubmitHash is using a foreign clusterad (i.e. you called set_cluster_ad())
+	bool fold_job_into_base_ad(ClassAd * job);
+
+	// If we have an initialized cluster ad, return it
+	ClassAd * get_cluster_ad() {
+		if (clusterAd) return clusterAd;
+		else if (base_job_is_cluster_ad) return &baseJob;
+		return NULL;
+	}
+
+	bool base_job_was_initialized() { return baseJob.size() > 0; }
 
 	// fills out a job ad for the input job_id.
 	// while the job ad is created, the check_file callback will be called one for each file
@@ -495,6 +522,16 @@ public:
 
 	// delete the last job ClassAd returned by make_job_ad (if any)
 	void delete_job_ad();
+
+	// forget variables used by make_job_ad that tie this submit hash to a specific submission
+	// used by the python bindings since the submithash has longer life than a single transaction/submission
+	void reset() {
+		delete_job_ad();
+		baseJob.Clear();
+		jid.cluster = 0; jid.proc = 0;
+		clusterAd = NULL;
+		base_job_is_cluster_ad = false;
+	}
 
 	int InsertJobExpr (const char *expr, const char * source_label=NULL);
 	int InsertJobExpr (const MyString &expr);
@@ -520,6 +557,7 @@ public:
 	int getUniverse()  { return JobUniverse; }
 	int getClusterId() { return jid.cluster; }
 	int getProcId()    { return jid.proc; }
+	time_t getSubmitTime() { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
 	const char * getScheddVersion() { return ScheddVersion.Value(); }
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
@@ -539,6 +577,9 @@ protected:
 	int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
 	const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
 	const char * abort_raw_macro_val;
+
+	// keep track of whether we have turned the baseJob into a cluster ad yet
+	bool base_job_is_cluster_ad;
 
 	// options set externally (by command line arguments?)
 	bool DisableFileChecks; // file checks disabled by config, not submit file

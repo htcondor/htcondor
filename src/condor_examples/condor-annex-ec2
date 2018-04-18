@@ -67,7 +67,7 @@ fetchAndExtract() {
     cd /etc/condor
     url=s3://$(echo ${1} | sed -e's/^arn:aws:s3::://')
     url=$(echo $url | sed -e's/\*/'${annexID}'/')
-    if aws s3 cp ${url} . >& /dev/null; then
+    if aws --region ${region} s3 cp ${url} . >& /dev/null; then
         file=`basename ${url}`
         echo "# Fetched '${file}' from '${url}'."
         tarfile=`echo ${file} | awk '/.tar.gz$/{print $1}'`
@@ -83,13 +83,15 @@ fetchAndExtract() {
 start() {
     echo -n $"Configuring HTCondor to be an EC2 annex: "
 
-    # If we were installed but for some reason aren't running on EC2, do nothing.
+    # Acquire the public IP and instance ID of this from the metadata server.
     EC2InstanceID=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id)
+    EC2PublicIP=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+
+    # If we were installed but for some reason aren't running on EC2, do nothing.
     if [ "${EC2InstanceID}"x == x ]; then
         echo "not running on EC2, aborting."
         return 1
     fi
-    EC2PublicIP=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 
     # Set values expected by HTCondor when running on EC2.
     echo "EC2PublicIP = ${EC2PublicIP}" >> /etc/condor/config.d/49ec2-instance.config
@@ -130,9 +132,30 @@ start() {
         done
         echo -n "OK "
 
-        clientToken=$(aws ec2 --region ${region} describe-spot-fleet-requests \
-            --spot-fleet-request-id ${sfrID} \
-            | grep \"ClientToken\" | sed -e's/\", *$//' | sed -e's/.*"//')
+        #
+        # If you launch as few as 100 instances at a time, it's possible to
+        # exceed AWS' rate limit on describe-spot-fleet-requests.
+        #
+        totalSlept=0
+        while true; do
+            toSleep=$((RANDOM%10))
+            sleep $toSleep
+            totalSlept=$((totalSlelpt+toSleep))
+            aws ec2 --region ${region} describe-spot-fleet-requests \
+                --spot-fleet-request-id ${sfrID} > /tmp/out 2> /tmp/err
+            if [ grep RequestLimitExceeded /tmp/err &> /dev/null ]; then
+                if [ $totalSlept -ge 300 ]; then
+                    shutdown -h now
+                else
+                    continue
+                fi
+            else
+                clientToken=`grep \"ClientToken\" /tmp/out | sed -e's/\", *$//' | sed -e's/.*"//'`
+                break
+            fi
+        done
+        rm /tmp/err /tmp/out
+
         annexID=$(echo ${clientToken} | sed -r -e's/_[^_]*//')
     fi
 
@@ -222,8 +245,14 @@ start() {
     done
 ) >> /etc/condor/config.d/49ec2-instance.config
 
-    echo "failed!"
-    return 1
+    RVAL=$?
+    if [ $RVAL -ne 0 ]; then
+    	echo "failed!"
+    else
+    	echo "done."
+    fi
+
+    return $RVAL
 }
 
 case "$1" in

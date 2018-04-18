@@ -1,0 +1,490 @@
+#!/usr/bin/env perl
+
+##**************************************************************
+##
+## Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use strict;
+use warnings;
+
+use Cwd;
+
+use CondorTest;
+use CondorUtils;
+use CustomMachineResource;
+use Check::CondorLog;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+use feature : PartitionableSlot
+NEGOTIATOR_INTERVAL = 5
+MaxJobRetirementTime = 120
+MachineMaxVacateTime = 5
+NUM_CPUS = 3
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testName = 'cmd_drain_scavenging';
+my $testDescription = 'Test scavenging.';
+
+#
+# This test validates the new scavenging functionality of the drain state.
+# In particular, that:
+#
+#	* the new START expression is advertised;
+#	* the new START expression is effective, that is, some jobs will start
+#	  and others will not while the startd is draining;
+#	* the condor_drain -start option is working;
+#	* that when the last of the 'original' jobs exit, all the scavengers
+#	  are preempted
+#	* after the startd is drained, cancelling the draining results
+#	  in effective change to the START expression;
+#	* AcceptedWhileDraining is correct.
+#
+# It does NOT, but should, validate the following:
+#	* the condor_defrag daemon's knob to set the START expression;
+#	* that when the last of the 'original' jobs exit, the startd sets
+#	  MaxJobRetirementTime, but not MaxMachineVacateTime to 0;
+#	* that when the last of the 'original' jobs exit, the startd invalidates
+#	  all claim IDs;
+#	* that when the draining is cancelled, MaxJobRetirementTime returns
+#	  to original value (both advertised and effective);
+#	* that after the startd is drained, cancelling the draining results
+#	  in the original START expression being advertised (and used).
+#
+
+#
+# To do the validation, we submit five jobs (which have durations which should
+# never matter): the first three don't mention MaxJobRetirementTime at all,
+# the fourth sets it to zero, and the fifth to nonzero.  This is so that
+# the fourth and fifth jobs will look start (or not start) only on the basis
+# of the (recommended) START expression we use when we begin draining.
+#
+# After the first three jobs have started, we'll begin draining with a START
+# expression of 'TARGET.MaxJobRetirementTime == 0'.  Then we'll verify that
+# the slots have all changed state & activity, and that the new START
+# expression is being advertised.  Then we'll terminate two of the original
+# jobs and call condor_reschedule.
+#
+# One and only one should match; we'll wait for it to actually start.  Then
+# we'll verify the new slot's state & activity.  Then we'll terminate the
+# last original job and verify that the running job is evicted.  When it is,
+# we'll wait until the machine is fully drained.  Then we'll cancel the
+# draining, and then wait for the last job to start, at which point we'll
+# terminate it and declare the test a success.
+#
+
+my $jobFile = cwd() . '/condition-sleep.pl';
+my $jobContents = '#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+# Ignore SIGTERM and force a hard-kill to test if MaxJobRetirementTime is
+# being altered appropriately.
+$SIG{"TERM"} = "IGNORE";
+
+my $killFile = $ARGV[0];
+my $maxSleep = $ARGV[1];
+
+for( my $i = 0; $i < $maxSleep; ++$i ) {
+	if( -e $killFile ) { exit( 0 ); }
+	sleep( 1 );
+}
+
+exit( 0 );
+';
+CondorTest::WriteFileOrDie( $jobFile, $jobContents );
+chmod( 0755, $jobFile ) || die( "Failed to make ${jobFile} executable, aborting.\n" );
+
+my $killFile = cwd() . "/killfile";
+my $submitBody = "
+
+executable				= ${jobFile}
+transfer_executable		= false
+should_transfer_files	= true
+universe				= vanilla
+arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 3600
+
+log						= cmd_drain_scavenging.log
+
+queue 3
+
+arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
+MaxJobRetirementTime	= 0
+
+queue 1
+
+arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
+MaxJobRetirementTime	= 60
+
+queue 1
+
+";
+
+my $clusterID;
+my $setClusterID = sub {
+	my( $cID ) = @_;
+	$clusterID = $cID;
+};
+
+my $hostName = `condor_config_val full_hostname`;
+CondorUtils::fullchomp( $hostName );
+
+my $testingPhase = 0;
+my $longJobsRunningCount = 0;
+my $execute = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+
+	if( $info{ 'cluster' } != $clusterID ) {
+		die( "Found stale test job or log file, aborting.\n" );
+	}
+
+	if( $testingPhase == 0 ) {
+		if( 0 <= $info{ 'job' } && $info{ 'job' } <= 2 ) {
+			++$longJobsRunningCount;
+		} else {
+			die( "Job ${ID} executed before it should have.\n" );
+		}
+
+		if( $longJobsRunningCount > 3 ) {
+			die( "Original jobs started more than three times.\n" );
+		} elsif( $longJobsRunningCount < 3 ) {
+			return;
+		}
+
+		print( "All three original jobs have started.  Waiting for startd to notice...\n" );
+		for( my $delay = 0; $delay <= 20; ++$delay ) {
+			if( $delay == 20 ) {
+				die( "Startd failed to notice in twenty seconds, aborting.\n" ); 
+			}
+
+			sleep( 1 );
+
+			my $ads = CustomMachineResource::parseMachineAds( qw(Name State Activity Start AcceptedWhileDraining) );
+			if( scalar(@{$ads}) == 4 ) {
+				last;
+			}
+		}
+		print( "... startd noticed.\n" );
+
+		print( "Beginning draining...\n" );
+		runCommandCarefully( undef, qw( condor_drain -start ),
+			'TARGET.MaxJobRetirementTime == 0', $hostName );
+
+		print( "Verifying state changes...\n" );
+		for( my $delay = 0; $delay <= 20; ++$delay ) {
+			if( $delay == 20 ) {
+				die( "State failed to change by twenty seconds after draining, aborting.\n" ); 
+			}
+
+			sleep( 1 );
+
+			my $ads = CustomMachineResource::parseMachineAds( qw(Name State Activity Start AcceptedWhileDraining) );
+			if( scalar(@{$ads}) != 4 ) {
+				print( "Found unexpected number of ads: " . scalar(@{$ads}) . ", will retry.\n" );
+				next;
+			}
+
+			my $stateChanged = 1;
+			foreach my $ad (@{$ads}) {
+				if( $ad->{ "Name" } =~ /^slot1@/ ) { next; }
+				print( "Considering '" . $ad->{ "Name" } . "'...\n" );
+				if(! $ad->{ "State" } =~ /^Claimed$/i) { print( "Found unexpected state '" . $ad->{ "State" } . "', will retry.\n" ); $stateChanged = 0; last; }
+				if(! $ad->{ "Activity" } =~ /^Retiring$/i) { print( "Found unexpected activity '" . $ad->{ "Activity" } . "', will retry.\n" ); $stateChanged = 0; last; }
+				if(! $ad->{ "Start" } =~ /TARGET\.MaxJobRetirementTime == 0/i) { print( "Found unexpected START '" . $ad->{ "Start" } . "', will retry.\n" ); $stateChanged = 0; last; }
+				if(! $ad->{ "AcceptedWhileDraining" } =~ /^False$/i) { print( "Found unexpected AcceptedWhileDraining '" . $ad->{ "AcceptedWhileDraining" } . "', will retry.\n" ); $stateChanged = 0; last; }
+			}
+			if( $stateChanged == 1 ) { last; }
+		}
+		print( "... state changed successfully.\n" );
+
+		print( "Killing two of the long-running jobs...\n" );
+		touch( $killFile . ".${clusterID}.0" );
+		touch( $killFile . ".${clusterID}.1" );
+		$testingPhase = 1;
+	} elsif( $testingPhase == 2 ) {
+		if( $info{ 'job' } != 3 ) {
+			die( "Job ${ID} executed during testing phase 2, aborting.\n" );
+		}
+
+		print( "Scavenger job started.  Verifying state changes...\n" );
+		for( my $delay = 0; $delay <= 20; ++$delay ) {
+			if( $delay == 20 ) {
+				die( "State failed to change by twenty seconds after draining, aborting.\n" ); 
+			}
+
+			sleep( 1 );
+
+			my $ads = CustomMachineResource::parseMachineAds( qw(Name State Activity Start AcceptedWhileDraining) );
+			if( scalar(@{$ads}) != 3 ) {
+				print( "Found unexpected number of ads: " . scalar(@{$ads}) . ", will retry.\n" );
+				next;
+			}
+
+			my $stateChanged = 0;
+			foreach my $ad (@{$ads}) {
+				if( $ad->{ "Name" } =~ /^slot1@/ ) { next; }
+				print( "Considering '" . $ad->{ "Name" } . "'...\n" );
+
+				if(		$ad->{ "State" } =~ /^Claimed$/i &&
+						$ad->{ "Activity" } =~ /^Busy$/i &&
+						$ad->{ "AcceptedWhileDraining" } =~ /^True$/i ) {
+					$stateChanged = 1;
+					last;
+				}
+			}
+
+			if( $stateChanged ) { last; }
+		}
+		print( "... state changed successfully.\n" );
+
+		print( "Killing the last long-running job...\n" );
+		touch( $killFile . ".${clusterID}.2" );
+		print( "Waiting for job completion notice...\n" );
+		$testingPhase = 3;
+	} elsif( $testingPhase == 4 ) {
+		if( $info{ 'job' } != 4 ) {
+			die( "Job ${ID} executed during testing phase 4, aborting.\n" );
+		}
+
+		print( "Killing last job...\n" );
+		touch( $killFile . ".${clusterID}.4" );
+		$testingPhase = 5;
+	} else {
+		die( "execute() called unexpectedly in testing phase ${testingPhase}, aborting.\n" );
+	}
+};
+
+my $longJobsSucceededCount = 0;
+my $success = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+
+	if( $info{ 'cluster' } != $clusterID ) {
+		die( "Found stale test job or log file, aborting.\n" );
+	}
+
+	if( $testingPhase == 1 ) {
+
+		if( 0 <= $info{ 'job' } && $info{ 'job' } <= 1 ) {
+			++$longJobsSucceededCount;
+		} else {
+			die( "Job ${ID} succeeded before it should have.\n" );
+		}
+
+		if( $longJobsSucceededCount > 2 ) {
+			die( "Original jobs started more than twice times.\n" );
+		} elsif( $longJobsSucceededCount < 2 ) {
+			return;
+		}
+
+		print( "Two original jobs have succeeded, calling condor_reschedule...\n" );
+		runCommandCarefully( undef, 'condor_reschedule' );
+
+		print( "Waiting for scavenger job to start...\n" );
+		$testingPhase = 2;
+	} elsif( $testingPhase == 3 || $testingPhase == 4 ) {
+		# We /should/ get the succeeded event before the eviction event,
+		# but it's OK if they happen in the other order.
+		if( $info{ 'job' } != 2 ) {
+			die( "Job ${ID} succeeded during testing phase 3 or 4, aborting.\n" );
+		}
+	} elsif( $testingPhase == 5 ) {
+		if( $info{ 'job' } != 4 ) {
+			die( "Job ${ID} succeeded during testing phase 5, aborting.\n" );
+		}
+
+		RegisterResult( 1, check_name => 'normal/drain/scavenge/drained/normal cycle', test_name => $testName );
+	} else {
+		die( "success() called unexpectedly in testing phase ${testingPhase}, aborting.\n" );
+	}
+};
+
+my $evicted = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+
+	if( $info{ 'cluster' } != $clusterID ) {
+		die( "Found stale test job or log file, aborting.\n" );
+	}
+
+	if( $testingPhase == 3 ) {
+		if( $info{ 'job' } != 3 ) {
+			die( "Job ${ID} evicted, aborting.\n" );
+		}
+
+		print( "Waiting for machine to fully drain...\n" );
+		for( my $delay = 0; $delay <= 20; ++$delay ) {
+			if( $delay == 20 ) {
+				die( "State failed to change by twenty seconds after draining, aborting.\n" ); 
+			}
+
+			sleep( 1 );
+
+			my $ads = CustomMachineResource::parseMachineAds( qw(Name State Activity Start AcceptedWhileDraining) );
+			if( scalar(@{$ads}) != 1 ) {
+				print( "Found unexpected number of ads: " . scalar(@{$ads}) . ", will retry.\n" );
+				next;
+			}
+
+			my $drained = 0;
+			foreach my $ad (@{$ads}) {
+				if(		$ad->{ 'State' } =~ /^Drained$/i &&
+						$ad->{ 'Activity' } =~ /^Idle$/i &&
+						$ad->{ 'AcceptedWhileDraining' } =~ /^False$/i ) {
+					$drained = 1;
+				}
+			}
+			if( $drained ) { last; }
+		}
+		print( "... machine fully drained.\n" );
+
+		my $logFileName = `condor_config_val STARTD_LOG`;
+		CondorUtils::fullchomp( $logFileName );
+		print( "Checking MaxJobRetirementTime and MaxMachineVacateTime...\n" );
+		for( my $delay = 0; $delay <= 20; ++$delay ) {
+			if( $delay == 20 ) {
+				die( "... did not find all necessary state changes in log, aborting.\n" );
+			}
+
+			if( checkTiming( $logFileName ) ) { last; }
+
+			sleep( 1 );
+		}
+		print( "... MaxJobRetirementTime and MaxMachineVacateTime OK.\n" );
+
+		print( "Cancelling draining state...\n" );
+		runCommandCarefully( undef, "condor_drain -cancel ${hostName}" );
+
+		print( "Removing evicted job...\n" );
+		runCommandCarefully( undef, 'condor_rm', $ID );
+
+		print( "Calling condor_reschedule...\n" );
+		runCommandCarefully( undef, 'condor_reschedule' );
+
+		print( "Waiting for last job to start...\n" );
+		$testingPhase = 4;
+	} else {
+		die( "evicted() called unexpectedly in testing phase ${testingPhase}, aborting.\n" );
+	}
+};
+
+my $aborted = sub {
+	my %info = @_;
+	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
+
+	if( $info{ 'cluster' } != $clusterID ) {
+		die( "Found stale test job or log file, aborting.\n" );
+	}
+
+	if( $testingPhase == 4 ) {
+		if( $info{ 'job' } != 3 ) {
+			die( "Job ${ID} evicted, aborting.\n" );
+		}
+	} else {
+		die( "aborted() called unexpectedly in testing phase ${testingPhase}, aborting.\n" );
+	}
+};
+
+CondorTest::RegisterExecute( $testName, $execute );
+CondorTest::RegisterExitedSuccess( $testName, $success );
+CondorTest::RegisterEvictedWithoutCheckpoint( $testName, $evicted );
+CondorTest::RegisterAbort( $testName, $aborted );
+CondorTest::RunTest2( name => $testName, want_checkpoint => 0,
+	submit_body => $submitBody, callback => $setClusterID );
+
+exit( 0 );
+
+sub touch {
+	my( $filename ) = @_;
+
+	my $rv = open( my $fh, ">", $filename );
+	close( $fh );
+	return $rv;
+}
+
+sub checkTiming {
+	my( $logFileName ) = @_;
+
+	#
+	# We're looking for the following sequence with the following time deltas:
+	#
+	# 04/15/18 14:46:54 Initiating final draining (all original jobs complete).
+	# 04/15/18 14:46:54 slot1_1: Changing activity: Busy -> Retiring
+	# 04/15/18 14:46:54 slot1_1: State change: claim retirement ended/expired
+	# 04/15/18 14:46:54 slot1_1: Changing state and activity: Claimed/Retiring -> Preempting/Vacating
+	# 04/15/18 14:46:59 slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.
+	#
+
+	open( LOG, "<", $logFileName ) || die( "Unable to open STARTD_LOG '${logFileName}', aborting.\n" );
+
+	my $state = 0;
+	my $finalDrainStartTime = undef;
+	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)?( \(.*\))?';
+	while( my $line = <LOG> ) {
+		CondorUtils::fullchomp( $line );
+
+		if( $state == 0 && $line =~ /^${secondsMatch} Initiating final draining \(all original jobs complete\)\.$/ ) {
+			$finalDrainStartTime = $1;
+			$state = 1;
+			next;
+		}
+
+		if( $state == 1 && $line =~ /^${secondsMatch} slot1_1: Changing activity: Busy -> Retiring$/ ) {
+			if( $finalDrainStartTime != $1 ) {
+				die( "slot1_1 did not start retiring immediately, aborting.\n" );
+			} else {
+				$state = 2;
+				next;
+			}
+		}
+
+		if( $state == 2 && $line =~ /^${secondsMatch} slot1_1: State change: claim retirement ended\/expired$/ ) {
+			if( $finalDrainStartTime != $1 ) {
+				die( "MaxJobRetirementTime was not 0, aborting.\n" );
+			} else {
+				$state = 3;
+				next;
+			}
+		}
+
+		if( $state == 3 && $line =~ /^${secondsMatch} slot1_1: Changing state and activity: Claimed\/Retiring -> Preempting\/Vacating$/ ) {
+			if( $finalDrainStartTime != $1 ) {
+				die( "slot1_1 did not immediately switch from retiring to preempting.\n" );
+			} else {
+				$state = 4;
+				next;
+			}
+		}
+
+		if( $state == 4 && $line =~ /^${secondsMatch} slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
+			# Especially with sub-second reporting, allow the startd some time to work.
+			if( (($finalDrainStartTime + 5) % 60) != $1 && (($finalDrainStartTime + 6) % 60) != $1 ) {
+				die( "MaxMachineVacateTime was not 5.\n" );
+			} else {
+				$state = 5;
+				next;
+			}
+		}
+	}
+	close( LOG );
+
+	return ($state == 5);
+}

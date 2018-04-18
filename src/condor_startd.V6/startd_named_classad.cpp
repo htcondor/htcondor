@@ -147,8 +147,10 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 
 			double oldValue;
 			if( to->EvaluateAttrNumber( name, oldValue ) ) {
+				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f %s %f\n", to, from, name.c_str(), oldValue, metric.c_str(), newValue );
 				to->InsertAttr( name, metric( oldValue, newValue ) );
 			} else {
+				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f\n", to, from, name.c_str(), newValue );
 				to->InsertAttr( name, newValue );
 			}
 
@@ -184,11 +186,14 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 
 			expr = to->Lookup( perJobAttributeName );
 			if( expr == NULL ) {
+				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f\n", to, from, perJobAttributeName.c_str(), oldValue );
 				to->CopyAttribute( perJobAttributeName.c_str(), perJobAttributeName.c_str(), from );
 			} else {
 				classad::Value v;
+				expr->Evaluate( v );
 				if( v.IsNumber( oldValue ) &&
 				  from->EvaluateAttrNumber( perJobAttributeName, newValue ) ) {
+					// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f %s %f\n", to, from, perJobAttributeName.c_str(), oldValue, metric.c_str(), newValue );
 					to->InsertAttr( perJobAttributeName, metric( oldValue, newValue ) );
 				}
 			}
@@ -281,12 +286,12 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 				if(! to->Lookup( usageName )) {
 					to->InsertAttr( usageName, sampleValue );
-					// dprintf( D_FULLDEBUG, "First %s sample for current job set to %.2f\n", GetName(), sampleValue );
+					// dprintf( D_ALWAYS, "First %s sample for current job set to %.2f\n", GetName(), sampleValue );
 				} else {
 					double currentUsage;
 					to->EvaluateAttrNumber( usageName, currentUsage );
 					to->InsertAttr( usageName, metric( sampleValue, currentUsage ) );
-					// dprintf( D_FULLDEBUG, "%s sample was %.2f, current job peak now %.2f\n", GetName(), sampleValue, metric( sampleValue, currentUsage ) );
+					// dprintf( D_ALWAYS, "%s sample was %.2f, current job peak now %.2f\n", GetName(), sampleValue, metric( sampleValue, currentUsage ) );
 				}
 
 				// Record for each resource when we last updated it.
@@ -356,7 +361,7 @@ StartdNamedClassAd::reset_monitor() {
 				// (probably wrongly) reuses its ClassAd member variable,
 				// the value from the last time we updated the slot ad will
 				// persist.  Instead, make sure that the persistent resource
-				// instance ad we're modifying here will stomp on tha value
+				// instance ad we're modifying here will stomp on the value
 				// by instead setting usageName to undefined explicitly.
 				from->AssignExpr( usageName.c_str(), "undefined" );
 			} else {

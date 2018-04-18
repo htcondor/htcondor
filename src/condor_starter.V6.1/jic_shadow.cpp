@@ -593,6 +593,15 @@ JICShadow::transferOutputMopUp(void)
 
 
 void
+JICShadow::allJobsGone( void )
+{
+	if ( shadow_version && shadow_version->built_since_version(8,7,8) ) {
+		dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
+		Starter->StarterExit( Starter->GetShutdownExitCode() );
+	}
+}
+
+void
 JICShadow::gotShutdownFast( void )
 {
 		// Despite what the user wants, do not transfer back any files 
@@ -2891,6 +2900,23 @@ JICShadow::refreshSandboxCredentialsMultiple()
 	*/
 	dprintf(D_ALWAYS, "CREDS: in refreshSandboxCredentialsMultiple()\n");
 
+	// set/reset timer
+	int sec_cred_refresh = param_integer("SEC_CREDENTIAL_REFRESH", 300);
+	if (sec_cred_refresh > 0) {
+		if (m_refresh_sandbox_creds_tid == -1) {
+			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
+				sec_cred_refresh,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple,
+				"refreshSandboxCredentialsMultiple",
+				this );
+		} else {
+			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
+		}
+		dprintf(D_SECURITY,
+			"CREDS: will refresh credentials again in %i seconds\n", sec_cred_refresh);
+	} else {
+		dprintf(D_SECURITY, "CREDS: cred refresh is DISABLED.\n");
+	}
 
 	// do syscall to receive credential wallet
 	REMOTE_CONDOR_getcreds();
@@ -2917,10 +2943,11 @@ JICShadow::refreshSandboxCredentialsMultiple()
 	rc = mkdir(sandbox_dir_name.Value(), 0700);
 	set_priv(p);
 	if(rc != 0) {
-		dprintf(D_SECURITY, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
-		return false;
+		if(errno != 17) {
+			dprintf(D_SECURITY, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
+			return false;
+		}
 	}
-
 
 	// for each file in SEC_CREDENTIAL_DIR, atomically update in sandbox
 	Directory source_dir(cred_dir_name.Value(), PRIV_ROOT);
@@ -2959,24 +2986,6 @@ JICShadow::refreshSandboxCredentialsMultiple()
 		dprintf(D_SECURITY, "CREDS: moving %s to %s, result %i\n", tmp_filename.Value(), dest_filename.Value(), (rc==0)?rc:errno);
 
 		set_priv(p);
-	}
-
-	// set/reset timer
-	int sec_cred_refresh = param_integer("SEC_CREDENTIAL_REFRESH", 300);
-	if (sec_cred_refresh > 0) {
-		if (m_refresh_sandbox_creds_tid == -1) {
-			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
-				sec_cred_refresh,
-				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple,
-				"refreshSandboxCredentialsMultiple",
-				this );
-		} else {
-			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
-		}
-		dprintf(D_SECURITY,
-			"CREDS: will refresh credentials again in %i seconds\n", sec_cred_refresh);
-	} else {
-		dprintf(D_SECURITY, "CREDS: cred refresh is DISABLED.\n");
 	}
 
 	// only need to do this once

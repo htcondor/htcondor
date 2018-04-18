@@ -43,7 +43,7 @@ int hardlink_or_copy_file(const char *old_filename, const char *new_filename);
 void detach ( void );
 
 // only for standard uni shadow
-void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
+void update_rusage( struct rusage *ru1, struct rusage *ru2 );
 
 #if defined(__cplusplus)
 }		/* End of extern "C" declaration */

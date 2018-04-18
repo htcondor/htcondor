@@ -233,7 +233,7 @@ class Throttle {
         void sleepIfNecessary() {
             if( this->isValid() ) {
                 int rv;
-#if defined(HAVE_CLOCK_GETTIME)
+#if defined(HAVE_CLOCK_NANOSLEEP)
                 do {
                     rv = clock_nanosleep( type, TIMER_ABSTIME, & when, NULL );
                 } while( rv == EINTR );
@@ -963,7 +963,9 @@ bool AmazonRequest::SendS3Request( const std::string & payload ) {
 	// by default for "PUT", which we really don't want.
 	headers[ "Transfer-Encoding" ] = "";
 	service = "s3";
-	region = "us-east-1";
+	if( region.empty() ) {
+		region = "us-east-1";
+	}
 	return sendV4Request( payload, true );
 }
 
@@ -4169,6 +4171,12 @@ bool AmazonS3Upload::workerFunction(char **argv, int argc, std::string &result_s
 	uploadRequest.accessKeyFile = argv[3];
 	uploadRequest.secretKeyFile = argv[4];
 	uploadRequest.path = argv[7];
+
+	// If we can, set the region based on the host.
+	size_t secondDot = host.find( ".", 2 + 1 );
+	if( host.find( "s3." ) == 0 ) {
+		uploadRequest.region = host.substr( 3, secondDot - 2 - 1 );
+	}
 
 	// Send the request.
 	if( ! uploadRequest.SendRequest() ) {

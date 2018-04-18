@@ -191,7 +191,7 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 	return out.c_str();
 }
 
-Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
+Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent ) : m_acceptedWhileDraining( false )
 {
 	MyString tmp;
 	const char* tmpName;
@@ -693,30 +693,32 @@ Resource::killAllClaims( void )
 	shutdownAllClaims( false );
 }
 
+extern ExprTree * globalDrainingStartExpr;
+
 void
 Resource::shutdownAllClaims( bool graceful, bool reversible )
 {
-		// shutdown the COD claims
+	// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
 
-	if( Resource::DYNAMIC_SLOT == get_feature() ) {
-		if( graceful ) {
-			void_retire_claim(reversible);
-		} else {
-			void_kill_claim();
-		}
+	// The original code sequence here looked moronic.  This one isn't
+	// much better, but here's why we're doing it: void_kill_claim() delete()s
+	// _this_ if it's a dynamic slot, so we can't call _any_ member function
+	// after we call void_kill_claim().  I don't know if that applies to
+	// void_retire_claim(), but the original code implied that it did.
+	bool safe = Resource::DYNAMIC_SLOT != get_feature();
 
-		// We have deleted ourself and can't send any updates.
+	// shutdown our own claims
+	if( graceful ) {
+		void_retire_claim(reversible);
 	} else {
-		if( graceful ) {
-			void_retire_claim(reversible);
-		} else {
-			void_kill_claim();
-		}
+		void_kill_claim();
+	}
 
-			// Tell the negotiator not to match any new jobs to this slot,
-			// since they would just be rejected by the startd anyway.
-		r_reqexp->unavail();
+	// if we haven't deleted ourselves, mark ourselves unavailable and
+	// update the collector.
+	if( safe ) {
+		r_reqexp->unavail( globalDrainingStartExpr );
 		update();
 	}
 }
@@ -912,6 +914,16 @@ Resource::starterExited( Claim* cur_claim )
 		return;
 	}
 
+	// Somewhere before the end of this function, this Resource gets
+	// delete()d, or at least partially over-written.  (I'm leaning
+	// towards deleted, because this Resource isn't in the ResMgr's
+	// Resource list when we check at the end of this function.)
+	// So decide now if we need to check if we're done draining.
+	bool shouldCheckForDrainCompletion = false;
+	if(isDraining() && !m_acceptedWhileDraining) {
+		shouldCheckForDrainCompletion = true;
+	}
+
 		// let our ResState object know the starter exited, so it can
 		// deal with destination state stuff...  we'll eventually need
 		// to move more of the code from below here into the
@@ -947,6 +959,10 @@ Resource::starterExited( Claim* cur_claim )
 				 state_to_string(s) );
 		change_state( owner_state );
 		break;
+	}
+
+	if( shouldCheckForDrainCompletion ) {
+		resmgr->checkForDrainCompletion();
 	}
 }
 
@@ -2229,7 +2245,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
             cap->Assign(ATTR_SLOT_TYPE, "Static");
 			break; // Do nothing
 		}
-	}		
+	}
 
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
 			// If we're claimed or preempting, handle anything listed
@@ -2377,6 +2393,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
             }
         }
     }
+
+	cap->InsertAttr( "AcceptedWhileDraining", m_acceptedWhileDraining );
+	if( resmgr->getMaxJobRetirementTimeOverride() >= 0 ) {
+		cap->InsertAttr( ATTR_MAX_JOB_RETIREMENT_TIME, resmgr->getMaxJobRetirementTimeOverride() );
+	}
 
 	// Don't bother to write an ad to disk that won't include the extras ads.
 	// Also only write the ad to disk when the claim has a ClassAd and the
@@ -3345,6 +3366,16 @@ Resource::swap_claims(Resource* ripa, Resource* ripb)
 }
 
 
+void Resource::init_total_disk(const Resource * pslot)
+{
+	if ( ! pslot)
+		return;
+	// no need to do this if we are constantly recomputing free disk space
+	if (param_boolean("STARTD_RECOMPUTE_DISK_FREE", false))
+		return;
+
+	r_attr->init_total_disk(pslot->r_attr);
+}
 
 Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
 {
@@ -3563,6 +3594,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			return NULL;
 		}
 
+			// set dslot total disk from pslot total disk (if appropriate)
+		new_rip->init_total_disk(rip);
 
 			// Initialize the rest of the Resource
 		new_rip->compute( A_ALL );
@@ -3703,6 +3736,13 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 	}
 	attrValue += "}";
 	cap->AssignExpr(attrName.c_str(), attrValue.c_str());
-	
+
 	return;
+}
+
+void
+Resource::invalidateAllClaimIDs() {
+	if( r_pre ) { r_pre->invalidateID(); }
+	if( r_pre_pre ) { r_pre_pre->invalidateID(); }
+	if( r_cur ) { r_cur->invalidateID(); }
 }

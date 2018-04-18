@@ -1,34 +1,10 @@
 # This is a linker script for Linux
-# This prevents the condor daemons from exporting gsoap symbols.
-#
-# Note we globally export dc_soap_*.  This is because no-op
-# stubs are available as weak symbols in libcondor_utils.  So,
-# without global strong symbols in this daemon, libcondor_utils will
-# prefer the ones that do not function.
+# This prevents the condor daemons from exporting certain symbols.
 #
 condor_daemon {
   # Note the C++ mangling here.
   global:
-        _Z14dc_soap_acceptP4SockPK4soap;
-        _Z13dc_soap_serveP4soap;
-        _Z12dc_soap_freeP4soap;
-        _Z12dc_soap_initRP4soap;
-        soap_putheader;
-        soap_serializeheader;
-        soap_faultstring;
-        soap_faultsubcode;
-        soap_faultcode;
-        soap_getheader;
-        soap_getfault;
         namespaces;
-        soap_faultdetail;
-        soap_putfault;
-        soap_serializefault;
-        soap_check_faultdetail;
-        soap_markelement;
-        soap_check_faultsubcode;
-        soap_getelement;
-        soap_putelement;
         # The schedd provides GetJobAd() if you build your plugin into the
         # binary, but otherwise libcondor_utils provides a version that
         # assumes you've configured the qmgmt client.  This exports the

@@ -74,6 +74,8 @@ VMProc::VMProc(ClassAd *jobAd) : OsProc(jobAd)
 	m_vm_max_memory = 0;
 	m_vm_memory = 0;
 
+	m_vm_last_ckpt_time = 0;
+
 	//Find the interval of sending vm status command to vmgahp server
 	m_vmstatus_interval = param_integer( "VM_STATUS_INTERVAL", 
 			VM_DEFAULT_STATUS_INTERVAL);
@@ -695,7 +697,7 @@ VMProc::StartJob()
 			"VMProc::CheckStatus", this);
 
 	// Set job_start_time in user_proc.h
-	job_start_time.getTime();
+	condor_gettimestamp( job_start_time );
 	dprintf( D_ALWAYS, "StartJob for VM succeeded\n");
 
 	// If we do manage to launch, clear the FTL attributes.
@@ -1367,7 +1369,7 @@ VMProc::CkptDone(bool success)
 		// File uploading succeeded
 		// update checkpoint counter and last ckpt timestamp
 		m_vm_ckpt_count++;
-		m_vm_last_ckpt_time.getTime();
+		m_vm_last_ckpt_time = time(NULL);
 	}
 
 	if( m_is_vacate_ckpt ) {

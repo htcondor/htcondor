@@ -69,6 +69,8 @@
 #include <grp.h>
 #endif
 
+#define USE_MATERIALIZE_POLICY
+
 // Do filtered iteration in a way that is specific to the job queue
 //
 template <typename K, typename AD>
@@ -464,8 +466,16 @@ int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
 inline bool HasMaterializePolicy(JobQueueCluster * cad)
 {
 	if ( ! cad || ! cad->factory) return false;
-	PRAGMA_REMIND("tj: add a proper check for existence of a materialization policy here.")
-	return true;
+	if (cad->Lookup(ATTR_JOB_MATERIALIZE_MAX_IDLE)) {
+		return true;
+	}
+#if 0 // future
+	if (cad->Lookup(ATTR_JOB_MATERIALIZE_CONSTRAINT)) {
+		return true;
+	}
+#endif
+	return false;
+}
 #else
 inline bool HasMaterializePolicy(JobQueueCluster * /*cad*/)
 {
@@ -476,20 +486,35 @@ inline bool HasMaterializePolicy(JobQueueCluster * /*cad*/)
 #ifdef USE_MATERIALIZE_POLICY
 bool CheckMaterializePolicyExpression(JobQueueCluster * cad, int & retry_delay)
 {
-	ClassAd iad;
-	cad->PopulateInfoAd(iad, false);
-
-	PRAGMA_REMIND("tj: replace this fake materialization policy with a real one.")
-
-	classad::ExprTree * expr = NULL;
-	ParseClassAdRvalExpr("JobsIdle < 4", expr);
-	if (expr) {
-		bool rv = EvalBool(&iad, expr);
-		delete expr;
-		if (rv) return true;
+	long long max_idle = -1;
+	if (cad->LookupInteger(ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle) && max_idle >= 0) {
+		if (cad->getNumNotRunning() < max_idle) {
+			return true;
+		} else {
+			retry_delay = 20; // don't bother to retry by polling, wait for a job to change state instead.
+			return false;
+		}
 	}
+
+#if 0 // future
+	if (cad->Lookup(ATTR_JOB_MATERIALIZE_CONSTRAINT)) {
+
+		ClassAd iad;
+		cad->PopulateInfoAd(iad, false);
+
+		classad::ExprTree * expr = NULL;
+		ParseClassAdRvalExpr("JobsIdle < 4", expr);
+		if (expr) {
+			bool rv = EvalBool(&iad, expr);
+			delete expr;
+			if (rv) return true;
+		}
+	}
+
 	retry_delay = 20; // don't bother to retry by polling, wait for a job to change state instead.
 	return false;
+#endif
+	return true;
 }
 #else
 bool CheckMaterializePolicyExpression(JobQueueCluster * /*cad*/, int & /*retry_delay*/)
@@ -3346,9 +3371,11 @@ enum {
 	idATTR_REQUIREMENTS,
 	idATTR_NUM_JOB_RECONNECTS,
 	idATTR_JOB_NOOP,
-	idATTR_JOB_MATERIALIZE_ITEMS_FILE,
+	idATTR_JOB_MATERIALIZE_CONSTRAINT,
 	idATTR_JOB_MATERIALIZE_DIGEST_FILE,
+	idATTR_JOB_MATERIALIZE_ITEMS_FILE,
 	idATTR_JOB_MATERIALIZE_LIMIT,
+	idATTR_JOB_MATERIALIZE_MAX_IDLE,
 	idATTR_JOB_MATERIALIZE_PAUSED,
 	idATTR_HOLD_REASON,
 	idATTR_HOLD_REASON_CODE,
@@ -3397,9 +3424,11 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_HOLD_REASON,        0), // used to detect submit of jobs with the magic 'hold for spooling' hold code
 	FILL(ATTR_HOLD_REASON_CODE,   0), // used to detect submit of jobs with the magic 'hold for spooling' hold code
 	FILL(ATTR_JOB_NOOP,           catDirtyPrioRec),
+	FILL(ATTR_JOB_MATERIALIZE_CONSTRAINT, catNewMaterialize | catCallbackTrigger),
 	FILL(ATTR_JOB_MATERIALIZE_DIGEST_FILE, catNewMaterialize | catCallbackTrigger),
 	FILL(ATTR_JOB_MATERIALIZE_ITEMS_FILE, catNewMaterialize | catCallbackTrigger),
 	FILL(ATTR_JOB_MATERIALIZE_LIMIT, catMaterializeState | catCallbackTrigger),
+	FILL(ATTR_JOB_MATERIALIZE_MAX_IDLE, catMaterializeState | catCallbackTrigger),
 	FILL(ATTR_JOB_MATERIALIZE_PAUSED, catMaterializeState | catCallbackTrigger),
 	FILL(ATTR_JOB_PRIO,           catDirtyPrioRec),
 	FILL(ATTR_JOB_STATUS,         catStatus | catCallbackTrigger),

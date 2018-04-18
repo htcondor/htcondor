@@ -58,14 +58,4 @@
     //@Include: stringSpace.h
   //@}
 
-
-  /** @name UtcTime API 
-      <hr> 
-      The UtcTime API allows you to get the current UTC time with
-      better grainularity than a second on all our platforms.
-  */
-  //@{
-    //@Include: utc_time.h
-  //@}
-
 //@}

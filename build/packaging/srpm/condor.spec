@@ -6,7 +6,6 @@
 # % define uw_build 1
 # % define std_univ 1
 
-%define gsoap 1
 %define aviary 0
 %define plumage 0
 %define systemd 0
@@ -43,8 +42,6 @@
 %if %uw_build
 %define debug 1
 %define verbose 1
-%define gsoap 0
-%else
 %endif
 
 # define these to 1 if you want to include externals in source rpm
@@ -295,10 +292,6 @@ BuildRequires: voms-devel
 %endif
 BuildRequires: libtool-ltdl-devel
 
-%if %gsoap
-BuildRequires: gsoap-devel >= 2.7.12-1
-%endif
-
 %if %aviary
 BuildRequires: wso2-wsf-cpp-devel >= 2.1.0-4
 BuildRequires: wso2-axis2-devel >= 2.1.0-4
@@ -357,10 +350,6 @@ Requires: ecryptfs-utils
 
 %if %blahp && ! %uw_build
 Requires: blahp >= 1.16.1
-%endif
-
-%if %gsoap
-Requires: gsoap >= 2.7.12
 %endif
 
 %if %uw_build
@@ -626,7 +615,7 @@ the ClassAd library and HTCondor from python
 #######################
 %package bosco
 Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
-Url: http://bosco.opensciencegrid.org
+Url: https://osg-bosco.github.io/docs/
 Group: Applications/System
 Requires: python >= 2.2
 Requires: %name = %version-%release
@@ -839,11 +828,7 @@ cmake \
 %endif
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
-%if %gsoap
-       -DWITH_GSOAP:BOOL=TRUE \
-%else
        -DWITH_GSOAP:BOOL=FALSE \
-%endif
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
        -DWANT_LEASE_MANAGER:BOOL=FALSE \
@@ -1255,11 +1240,6 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/condor/config.d/
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
-%if %gsoap || %uw_build
-%dir %_datadir/condor/webservice/
-%_datadir/condor/webservice/condorCollector.wsdl
-%_datadir/condor/webservice/condorSchedd.wsdl
-%endif
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
 %_libdir/libcondorapi.so
@@ -1313,6 +1293,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_mips
 %_libexecdir/condor/data_plugin
 %_libexecdir/condor/curl_plugin
+%_libexecdir/condor/multifile_curl_plugin
 %_libexecdir/condor/condor_shared_port
 %_libexecdir/condor/condor_glexec_wrapper
 %_libexecdir/condor/glexec_starter_setup.sh
@@ -1475,6 +1456,7 @@ rm -rf %{buildroot}
 %_sbindir/grid_monitor.sh
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp
+%_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
 %if %uw_build
 %_sbindir/boinc_gahp

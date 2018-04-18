@@ -2104,6 +2104,29 @@ void ClassAd::ChainToAd(ClassAd *new_chain_parent_ad)
 	return;
 }
 
+bool ClassAd::PruneChildAttr(const std::string & attrName, bool if_child_matches /*=true*/)
+{
+	if ( ! chained_parent_ad)
+		return false;
+
+	AttrList::iterator itr = attrList.find(attrName);
+	if (itr == attrList.end())
+		return false;
+
+	bool prune_it = true;
+	if (if_child_matches) {
+		ExprTree * tree = chained_parent_ad->Lookup(itr->first);
+		prune_it = (tree && tree->SameAs(itr->second));
+	}
+
+	if (prune_it) {
+		delete itr->second;
+		attrList.erase(itr);
+		return true;
+	}
+	return false;
+}
+
 int ClassAd::PruneChildAd()
 {
 	int iRet =0;
@@ -2156,14 +2179,6 @@ const ClassAd *ClassAd::GetChainedParentAd(void) const
 void ClassAd::ClearAllDirtyFlags(void)
 { 
 	dirtyAttrList.clear();
-	return;
-}
-
-void ClassAd::MarkAttributeDirty(const string &name)
-{
-	if (do_dirty_tracking) {
-		dirtyAttrList.insert(name);
-	}
 	return;
 }
 

@@ -248,9 +248,6 @@ class Dagman {
 
 		// Dagman statistics
 	DagmanStats _dagmanStats;
-
-		// UTC time tracker
-	UtcTime _utcTime;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

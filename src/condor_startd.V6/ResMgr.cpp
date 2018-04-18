@@ -33,7 +33,7 @@
 
 #include "strcasestr.h"
 
-ResMgr::ResMgr() : extras_classad( NULL )
+ResMgr::ResMgr() : extras_classad( NULL ), max_job_retirement_time_override(-1)
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -1494,8 +1494,13 @@ int
 ResMgr::start_sweep_timer( void )
 {
 	// only sweep if we have a cred dir
-	char* p = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr p(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!p) {
+		return TRUE;
+	}
+
+	// only sweep if not in TOKENS mode
+	if (!param_boolean("TOKENS", false)) {
 		return TRUE;
 	}
 
@@ -2267,9 +2272,13 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 	}
 }
 
+ExprTree * globalDrainingStartExpr = NULL;
+
 bool
-ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,std::string &new_request_id,std::string &error_msg,int &error_code)
+ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code)
 {
+	// For now, let's assume that that you never want to change the start
+	// expression while draining.
 	if( draining ) {
 		new_request_id = "";
 		error_msg = "Draining already in progress.";
@@ -2331,6 +2340,13 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 			// they will finish within their retirement time, so do
 			// not call setBadputCausedByDraining() yet
 
+		// Even if we could pass start_expr through walk(), it turns out,
+		// beceause ResState::enter_action() calls unavail() as well, we
+		// really do need to keep the global.  To that end, we /want/ to
+		// assign the NULL value here if that's what we got, so that we
+		// do the right thing if we drain without a START expression after
+		// draining with one.
+		globalDrainingStartExpr = start_expr ? start_expr->Copy() : NULL;
 		walk(&Resource::releaseAllClaimsReversibly);
 	}
 	else if( how_fast <= DRAIN_QUICK ) {
@@ -2574,4 +2590,34 @@ ResMgr::adlist_reset_monitors( unsigned r_id, ClassAd * forWhom ) {
 void
 ResMgr::adlist_unset_monitors( unsigned r_id, ClassAd * forWhom ) {
 	extra_ads.unset_monitors( r_id, forWhom );
+}
+
+void
+ResMgr::checkForDrainCompletion() {
+	if( ! resources ) { return; }
+
+	bool allAcceptedWhileDraining = true;
+	for( int i = 0; i < nresources; ++i ) {
+		if(! resources[i]->wasAcceptedWhileDraining()) {
+			// Not sure how COD and draining are supposed to interact, but
+			// the partitionable slot is never accepted-while-draining,
+			// nor claimed, nor should it block drain from completing.
+			if(! resources[i]->hasAnyClaim()) { continue; }
+			allAcceptedWhileDraining = false;
+		}
+	}
+	if(! allAcceptedWhileDraining) { return; }
+
+	dprintf( D_ALWAYS, "Initiating final draining (all original jobs complete).\n" );
+	// This (auto-reversibly) sets START to false when we release all claims.
+	globalDrainingStartExpr = NULL;
+	// Invalidate all claim IDs.  This prevents the schedd from claiming
+	// resources that were negotiated before draining finished.
+	walk( &Resource::invalidateAllClaimIDs );
+	// Set MAXJOBRETIREMENTTIME to 0.  This will be reset in ResState::eval()
+	// when draining completes.
+	this->max_job_retirement_time_override = 0;
+	walk( & Resource::refresh_classad, A_PUBLIC );
+	// Initiate final draining.
+	walk( & Resource::releaseAllClaimsReversibly );
 }

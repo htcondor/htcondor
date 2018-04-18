@@ -25,9 +25,6 @@
 // //////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
-#ifdef HAVE_EXT_GSOAP
-#include "soap_core.h"
-#endif
 
 #include "condor_socket_types.h"
 
@@ -324,10 +321,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	memset(&blankSockEnt,'\0',sizeof(SockEnt));
 	sockTable->fill(blankSockEnt);
 
-#ifdef HAVE_EXT_GSOAP
-	soap_ssl_sock = -1;
-#endif
-
 	// See the comment in the header.  This can't be a reconfigure setting
 	// because everybody's sinfuls are derived from the shared port's sinful
 	// (when shared port is enabled, which it is by default), and the shared
@@ -419,12 +412,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 
 	peaceful_shutdown = false;
 
-#ifdef HAVE_EXT_GSOAP
-#ifdef HAVE_EXT_OPENSSL
-	mapfile =  NULL;
-#endif
-#endif
-
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
 #ifndef WIN32
@@ -445,8 +432,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
         }
 	}
 #endif
-
-	soap = NULL;
 
 	localAdFile = NULL;
 
@@ -586,13 +571,6 @@ DaemonCore::~DaemonCore()
 	if (_cookie_data_old) {
 		free(_cookie_data_old);
 	}
-
-#ifdef HAVE_EXT_GSOAP
-	if( soap ) {
-		dc_soap_free(soap);
-		soap = NULL;
-	}
-#endif
 
 	if(localAdFile) {
 		free(localAdFile);
@@ -3056,59 +3034,6 @@ DaemonCore::reconfig(void) {
 
 	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
 
-#ifdef HAVE_EXT_GSOAP
-	if( param_boolean("ENABLE_SOAP",false) ||
-		param_boolean("ENABLE_WEB_SERVER",false) )
-	{
-		// tstclair: reconfigure the soap object
-		if( soap ) {
-			dc_soap_free(soap);
-			soap = NULL;
-		}
-
-		dc_soap_init(soap);
-		
-	}
-	else {
-		// Do not have to deallocate soap if it was enabled and has
-		// now been disabled.  Access to it will be disallowed, even
-		// though the structure is still allocated.
-	}
-#endif
-#ifdef HAVE_EXT_GSOAP
-#ifdef HAVE_EXT_OPENSSL
-	MyString subsys = MyString(get_mySubSystem()->getName());
-	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
-
-	if (enable_soap_ssl) {
-		if (mapfile) {
-			delete mapfile; mapfile = NULL;
-		}
-		mapfile = new MapFile;
-		char * credential_mapfile;
-		if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
-			EXCEPT("DaemonCore: No CERTIFICATE_MAPFILE defined, "
-				   "unable to identify users, required by ENABLE_SOAP_SSL");
-		}
-		char * user_mapfile;
-		if (NULL == (user_mapfile = param("USER_MAPFILE"))) {
-			EXCEPT("DaemonCore: No USER_MAPFILE defined, "
-				   "unable to identify users, required by ENABLE_SOAP_SSL");
-		}
-		bool assume_hash = param_boolean("CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS", false);
-		int line;
-		if (0 != (line = mapfile->ParseCanonicalizationFile(credential_mapfile, assume_hash))) {
-			EXCEPT("DaemonCore: Error parsing CERTIFICATE_MAPFILE at line %d",
-				   line);
-		}
-		if (0 != (line = mapfile->ParseUsermapFile(user_mapfile))) {
-			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
-		}
-	}
-#endif // HAVE_EXT_OPENSSL
-#endif // HAVE_EXT_GSOAP
-
-
 		// FAKE_CREATE_THREAD is an undocumented config knob which turns
 		// Create_Thread() into a simple function call in the main process,
 		// rather than a thread/fork.
@@ -3680,7 +3605,6 @@ void DaemonCore::Driver()
 			time_t now = time(NULL);
 
 			bool recheck_status = false;
-			//bool call_soap_handler = false;
 
 			// If a command came in on the super-user command socket, then
 			// set a flag so in the loop below we only schedule command callbacks
@@ -4210,12 +4134,12 @@ struct CallCommandHandlerInfo {
 		m_deadline(deadline),
 		m_time_spent_on_sec(time_spent_on_sec)
 	{
-		m_start_time.getTime();
+		condor_gettimestamp( m_start_time );
 	}
 	int m_req;
 	time_t m_deadline;
 	float m_time_spent_on_sec;
-	UtcTime m_start_time;
+	struct timeval m_start_time;
 };
 
 int
@@ -4228,9 +4152,9 @@ DaemonCore::HandleReqPayloadReady(Stream *stream)
 	int req = callback_info->m_req;
 	time_t orig_deadline = callback_info->m_deadline;
 	float time_spent_on_sec = callback_info->m_time_spent_on_sec;
-	UtcTime now;
-	now.getTime();
-	float time_waiting_for_payload = now.difference(callback_info->m_start_time);
+	struct timeval now;
+	condor_gettimestamp( now );
+	float time_waiting_for_payload = timersub_double( now, callback_info->m_start_time );
 
 	delete callback_info;
 

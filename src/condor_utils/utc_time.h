@@ -21,62 +21,45 @@
 #if !defined(_CONDOR_UTC_TIME_H)
 #define _CONDOR_UTC_TIME_H
 
+#if defined(WIN32)
+# include <winsock2.h>
+#else
+# include <sys/time.h>
+#endif
 
-/** The UtcTime class is a C++ representation of the current UTC time.
-	It's a portable way to get finer granularity than seconds (we
-	provide microseconds).  It also provides a method to compare
-	two UtcTime objects and get the difference between them.
-*/
 
-class UtcTime
-{
-public:
+void condor_gettimestamp( struct timeval &tv );
 
-		/// Default constructor, does not compute current time by default
-	UtcTime( bool get_time = false );
+inline
+double condor_gettimestamp_double() {
+	struct timeval tv;
+	condor_gettimestamp( tv );
+	return ( tv.tv_sec + ( tv.tv_usec * 0.000001 ) );
+}
 
-		/// Sample the current time
-	void getTime( void );
-
-		/// Return the last computed epoch time in seconds
-	long seconds( void ) const { return sec; };
-
-		/// Return mircosecond field of the last computed epoch time
-	long microseconds( void ) const { return usec; };
-
-		// Return the last computed time as a floating point combination
-		// of seconds and microseconds
-	double combined( void ) const { return( sec + (usec * 0.000001) ); };
-
-		/** How much time elapsed between the two times.  This method
-			subtracts the time of the other UtcTime object we're
-			passed from the value in this current object.
-			@param other_time Another UtcTime class to compare against
-			@return The elapsed time between the two, represented as a
-			double precision float, with both seconds and micro
-			seconds in the same number.
-		 */
-	double difference( const UtcTime* other_time ) const;
-	double difference( const UtcTime &other_time ) const;
-
-	long difference_usec( const UtcTime &other_time ) {
-		long diff = usec - other_time.usec;
-		long sec_diff = sec - other_time.sec;
-		if( sec_diff ) {
-			diff += sec_diff*1000000;
-		}
-		return diff;
+/* These functions work like the timersub() function.
+ * They subtract the time value in b from the time value in a and return
+ * the result.
+ * For timersub_usec(), the result is expressed in microseconds.
+ * For timersub_double(), the result is expressed in seconds represented
+ * as a double.
+ */
+inline
+long timersub_usec( const struct timeval &a, const struct timeval &b ) {
+	long diff = a.tv_usec - b.tv_usec;
+	long sec_diff = a.tv_sec - b.tv_sec;
+	if( sec_diff ) {
+		diff += sec_diff*1000000;
 	}
+	return diff;
+}
 
-	static double getTimeDouble( void );
-
-private:
-
-	long sec;
-	long usec;
-};
-
-bool operator==(const UtcTime &lhs, const UtcTime &rhs);
+inline
+double timersub_double( const struct timeval &a, const struct timeval &b ) {
+	double usec_diff = a.tv_usec - b.tv_usec;
+	double sec_diff = a.tv_sec - b.tv_sec;
+	return sec_diff + (usec_diff / 1000000.0);
+}
 
 #endif /* _CONDOR_UTC_TIME_H */
 

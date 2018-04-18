@@ -9,8 +9,8 @@
 
 class GenerateConfigFile : public Functor {
 	public:
-		GenerateConfigFile( EC2GahpClient * g, ClassAd * s ) :
-			gahp( g ), scratchpad(s) { }
+		GenerateConfigFile( EC2GahpClient * g, const char * r, ClassAd * s ) :
+			gahp(g), region(r), scratchpad(s) { }
 		virtual ~GenerateConfigFile() { }
 
 		virtual int operator() ();
@@ -18,6 +18,7 @@ class GenerateConfigFile : public Functor {
 
 	private:
 		EC2GahpClient * gahp;
+		const char * region;
 		ClassAd * scratchpad;
 };
 

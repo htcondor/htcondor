@@ -321,7 +321,7 @@ ToolDaemonProc::StartJob()
 	} else {
 		dprintf( D_ALWAYS, "Create_Process succeeded, pid=%d\n", JobPid );
 
-		job_start_time.getTime();
+		condor_gettimestamp( job_start_time );
 
 		return TRUE;
 	}

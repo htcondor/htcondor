@@ -55,11 +55,6 @@ private:
 
 	Sock   *m_sock;
 
-#ifdef HAVE_EXT_GSOAP
-	bool m_is_http_post;
-	bool m_is_http_get;
-#endif
-
 	bool m_isSharedPortLoopback;
 	bool m_nonblocking;
 	bool m_delete_sock;
@@ -77,8 +72,8 @@ private:
 	char    *m_sid;
 	void *m_prev_sock_ent;
 
-	UtcTime m_handle_req_start_time;
-	UtcTime m_async_waiting_start_time;
+	struct timeval m_handle_req_start_time;
+	struct timeval m_async_waiting_start_time;
 	float m_async_waiting_time;
 	SecMan *m_sec_man;
 	ExtArray<DaemonCore::CommandEnt> &m_comTable;

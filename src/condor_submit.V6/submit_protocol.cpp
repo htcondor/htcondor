@@ -234,11 +234,14 @@ int SimScheddQ::get_Capabilities(ClassAd & caps) {
 	return GetScheddCapabilites(0, caps);
 }
 
+// hack for 8.7.8 testing
+extern int attr_chain_depth;
 
 int SimScheddQ::set_Attribute(int cluster_id, int proc_id, const char *attr, const char *value, SetAttributeFlags_t /*flags*/) {
 	ASSERT(cluster_id == cluster);
 	ASSERT(proc_id == proc || proc_id == -1);
 	if (fp) {
+		if (attr_chain_depth) fprintf(fp, "%d", attr_chain_depth-1);
 		if (log_all_communication) fprintf(fp, "::set(%d,%d) ", cluster_id, proc_id);
 		fprintf(fp, "%s=%s\n", attr, value);
 	}
@@ -257,9 +260,12 @@ int SimScheddQ::set_AttributeInt(int cluster_id, int proc_id, const char *attr, 
 int SimScheddQ::set_Factory(int cluster_id, int qnum, const char * filename, const char * text) {
 	ASSERT(cluster_id == cluster);
 	if (fp) {
-		if (log_all_communication) fprintf(fp, "::setFactory(%d,%d,%s,%s) ", cluster_id, qnum, filename?filename:"NULL", text?"<text>":"NULL");
-		//PRAGMA_REMIND("print the submit digest")
-		//fprintf(fp, "%s=%d\n", attr, value);
+		if (log_all_communication) {
+			fprintf(fp, "::setFactory(%d,%d,%s,%s) ", cluster_id, qnum, filename?filename:"NULL", text?"<text>":"NULL");
+			if (text) { fprintf(fp, "factory_text=%s\n", text); }
+			else if (filename) { fprintf(fp, "factory_file=%s\n", filename); }
+			else { fprintf(fp, "\n"); }
+		}
 	}
 	return 0;
 }
@@ -267,9 +273,12 @@ int SimScheddQ::set_Factory(int cluster_id, int qnum, const char * filename, con
 int SimScheddQ::set_Foreach(int cluster_id, int itemnum, const char * filename, const char * text) {
 	ASSERT(cluster_id == cluster);
 	if (fp) {
-		if (log_all_communication) fprintf(fp, "::setForeach(%d,%d,%s,%s) ", cluster_id, itemnum, filename?filename:"NULL", text?"<items>":"NULL");
-		//PRAGMA_REMIND("print the foreach data")
-		//fprintf(fp, "%s=%d\n", attr, value);
+		if (log_all_communication) {
+			fprintf(fp, "::setForeach(%d,%d,%s,%s) ", cluster_id, itemnum, filename?filename:"NULL", text?"<items>":"NULL");
+			if (text) { fprintf(fp, "foreach_text=%s\n", text); }
+			else if (filename) { fprintf(fp, "foreach_file=%s\n", filename); }
+			else { fprintf(fp, "\n"); }
+		}
 	}
 	return 0;
 }

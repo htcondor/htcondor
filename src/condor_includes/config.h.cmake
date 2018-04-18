@@ -282,9 +282,6 @@
 /* Do we have the globus external (USED)*/
 #cmakedefine HAVE_EXT_GLOBUS 1
 
-/* Do we have the gsoap external (USED)*/
-#cmakedefine HAVE_EXT_GSOAP 1
-
 /* Do we have the krb5 external (USED)*/
 #cmakedefine HAVE_EXT_KRB5 1
 
@@ -350,6 +347,9 @@
 /* Define to 1 if 'clock_gettime' function and CLOCK_MONOTONIC_RAW defined. (USED)*/
 #cmakedefine HAVE_CLOCK_MONOTONIC_RAW 1
 #cmakedefine HAVE_CLOCK_REALTIME_COARSE 1
+
+/* Define to 1 if you have the 'clock_nanosleep' function. (USED)*/
+#cmakedefine HAVE_CLOCK_NANOSLEEP 1
 
 /* are we using the GNU linker (USED) */
 #cmakedefine HAVE_GNU_LD 1

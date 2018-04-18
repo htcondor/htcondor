@@ -33,6 +33,11 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[MAX_DRAINING_ACTIVATION_DELAY]
+default=20
+description=When draining, how many seconds should a claimed slot wait to be activated?  Draining will be extended by this delay..
+tag=startd
+
 [ENABLE_KERNEL_TUNING]
 default=true
 type=bool
@@ -2801,6 +2806,11 @@ default=false
 type=bool
 tags=negotiator,matchmaker
 
+[COLLECTOR_HOST_FOR_NEGOTIATOR]
+default=$(FULL_HOSTNAME)
+type=string
+tags=negotiator
+
 [RECEIVE_MSGS_DURATION]
 default=250
 type=int
@@ -3083,7 +3093,7 @@ tags=schedd,shadow_mgr
 [SOAP_LEAVE_IN_QUEUE]
 default=
 type=string
-tags=schedd,soap_scheddStub
+tags=schedd
 
 [SHADOW]
 default=$(SBIN)/condor_shadow
@@ -3489,6 +3499,11 @@ default=900
 type=long
 tags=annex
 
+[ANNEX_DEFAULT_AWS_REGION]
+default=us-east-1
+type=string
+tags=annex
+
 [ANNEX_DEFAULT_EC2_URL]
 default = https://ec2.us-east-1.amazonaws.com
 type=string
@@ -3529,18 +3544,43 @@ default = m4.large
 type=string
 tags=annex
 
-[ANNEX_DEFAULT_ODI_IMAGE_ID]
-default = $(ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1)
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
 type=string
 tags=annex
 
-[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_0]
-default = ami-206ab336
+[us_east_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-0582916cc08a1d81e
 type=string
 tags=annex
 
-[ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_1]
-default = ami-35b13223
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[us_east_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-0f61cdd6883793833
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[us_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-084d3d008e3740806
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-00daecb4d3b8f077f
 type=string
 tags=annex
 
@@ -4023,6 +4063,11 @@ tags=startd
 default=((time() - LastPeriodicCheckpoint)/60.0) > (180.0 + $RANDOM_INTEGER(-30,30,1))
 type=string
 tags=startd
+
+[DEFRAG_DRAINING_START_EXPR]
+default=FALSE
+type=string
+tags=defrag
 
 [DEFRAG_REQUIREMENTS]
 default=PartitionableSlot && Offline=!=True
@@ -4541,6 +4586,11 @@ tags=schedd
 default=false
 type=bool
 description=Whether to invoke file transfer plugins as user or as root
+
+[ENABLE_MULTIFILE_TRANSFER_PLUGINS]
+default=false
+type=bool
+description=Enable file transfer plugins that support multiple files as input
 
 [ENABLE_HTTP_PUBLIC_FILES]
 default=false
@@ -5123,6 +5173,11 @@ win32_default=NUL
 
 [ANNEX_GAHP]
 default=$(EC2_GAHP)
+type=path
+
+[AZURE_GAHP]
+default=$(SBIN)/AzureGAHPServer
+win32_default=$(SBIN)\AzureGAHPServer.py
 type=path
 
 [CREDD]

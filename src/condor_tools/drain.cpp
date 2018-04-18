@@ -50,6 +50,7 @@ int how_fast = DRAIN_GRACEFUL;
 bool resume_on_completion = false;
 char *cancel_request_id = NULL;
 char *draining_check_expr = NULL;
+char *draining_start_expr = NULL;
 int dash_verbose = 0;
 
 // pass the exit code through dprintf_SetExitCode so that it knows
@@ -91,7 +92,7 @@ main( int argc, char *argv[] )
 
 	if( cmd == DRAIN_JOBS ) {
 		std::string request_id;
-		rval = startd.drainJobs( how_fast, resume_on_completion, draining_check_expr, request_id );
+		rval = startd.drainJobs( how_fast, resume_on_completion, draining_check_expr, draining_start_expr, request_id );
 		if( rval ) {
 			printf("Sent request to drain %s\n",startd.name());
 			if (dash_verbose && ! request_id.empty()) { printf("\tRequest id: %s\n", request_id.c_str()); }
@@ -210,6 +211,13 @@ parseArgv( int argc, char* argv[] )
 			}
 			draining_check_expr = strdup(argv[++i]);
 		}
+		else if( is_dash_arg_prefix( argv[i], "start", 5 ) ) {
+			if( i+1 >= argc ) another(argv[i]);
+			if (draining_start_expr) {
+				free(draining_start_expr);
+			}
+			draining_start_expr = strdup(argv[++i]);
+		}
 		else if( argv[i][0] != '-' ) {
 			break;
 		}
@@ -256,5 +264,6 @@ usage( const char *str )
 	fprintf( stderr, "-resume-on-completion    When done draining, resume normal operation.\n" );
 	fprintf( stderr, "-request-id <id>  Specific request id to cancel (optional).\n" );
 	fprintf( stderr, "-check <expr>     Must be true for all slots to be drained or request is aborted.\n" );
+	fprintf( stderr, "-start <expr>     Change START expression to this while draining.\n" );
 	exit( 1 );
 }

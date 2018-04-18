@@ -16,9 +16,9 @@
  # 
  ############################################################### 
 
-file( GLOB DCRmvElements soap_daemon_core* condor_softkill*)
+file( GLOB DCRmvElements condor_softkill*)
 
-condor_glob( DCHeaderFiles DCSourceFiles "${DCRmvElements};soap_core.cpp;mimetypes.cpp" )
+condor_glob( DCHeaderFiles DCSourceFiles "${DCRmvElements};mimetypes.cpp" )
 
 set( DAEMON_CORE_UTIL_SRCS "${DCHeaderFiles};${DCSourceFiles}" PARENT_SCOPE )
 
