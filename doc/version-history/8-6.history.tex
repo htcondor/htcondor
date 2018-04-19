@@ -123,6 +123,11 @@ ad when the \Condor{schedd} is selecting the next job to run on a an
 idle claimed dynamic slot.
 \Ticket{6611}
 
+\item Fixed a bug where \Condor{submit} with the \Opt{-spool} or
+\Opt{-remote} option would fail when there were no input files to
+transfer.
+\Ticket{6655}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
