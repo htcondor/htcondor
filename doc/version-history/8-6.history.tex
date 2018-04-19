@@ -33,6 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Corrected a bug which could cause the shared port daemon to hang if
+it had been restarted, HTCondor had been configured with an allowable
+port range, and that port range had filled up.
+\Ticket{6596}
+
 \item The MSI installer for Windows now appends the directory needed to use the
 HTCondor python bindings libraries into the PYTHONPATH environment variable.
 \Ticket{6607}
