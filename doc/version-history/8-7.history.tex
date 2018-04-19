@@ -29,10 +29,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a problem where, when starting enough \Condor{annex} instances
-simultaneously, some (approximately 1 in 100) instances would neither join
-the pool nor terminate themselves.
-\Ticket{6638}
+\item Added the machine attribute \Attr{AcceptedWhileDraining}
+(see page~\pageref{acceptedwhiledraining-machine-attribute}),
+configuration macro \Macro{DEFRAG\_DRAINING\_START\_EXPR}
+(see page~\pageref{param:DefragDrainingStartExpr}),
+and command-line option \Opt{-start} to \Condor{drain}
+(see page~\pageref{man-condor-drain})
+to support running jobs on draining resources.  See
+section \ref{sec:SMP-defrag} for details.
+\Ticket{6628}
 
 \item \Condor{annex} may now be setup in multiple regions simultaneously.
 Use the \Opt{-aws-region} flag with \Opt{-setup} to add new regions.  Use the
@@ -62,6 +67,11 @@ for NVidia GPUs.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a problem where, when starting enough \Condor{annex} instances
+simultaneously, some (approximately 1 in 100) instances would neither join
+the pool nor terminate themselves.
+\Ticket{6638}
 
 \item When running in a HAD setup, there is a configuration parameter,
 \Macro{COLLECTOR\_HOST\_FOR\_NEGOTIATOR} which tells the active negotiator
