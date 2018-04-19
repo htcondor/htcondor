@@ -239,7 +239,28 @@ Singularity::setup(ClassAd &machineAd,
 	args.GetArgsStringForDisplay(&args_string, 1);
 	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.Value(), args_string.Value());
 
+	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;
 }
 
+static bool
+envToList(void *list, const MyString &Name, const MyString & /*value*/) {
+	std::list<std::string> *slist = (std::list<std::string> *)list;
+	slist->push_back(std::string(Name));
+	return true;
+}
 
+bool 
+Singularity::convertEnv(Env *job_env) {
+	std::list<std::string> envNames;
+	job_env->Walk(envToList, (void *)&envNames);
+	std::list<std::string>::iterator it;
+	for (it = envNames.begin(); it != envNames.end(); it++) {
+		std::string name = *it;
+		MyString value;
+		job_env->GetEnv(name.c_str(), value);
+		std::string new_name = "SINGULARITYENV_" + name;
+		job_env->SetEnv(new_name.c_str(), value);
+	}
+	return true;
+}

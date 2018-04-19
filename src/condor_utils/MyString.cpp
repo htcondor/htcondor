@@ -72,8 +72,7 @@ MyString::~MyString()
 	init(); // for safety -- errors if you try to re-use this object
 }
 
-
-MyString::operator std::string()
+MyString::operator std::string() const
 {
     std::string r = this->Value();
     return r;
