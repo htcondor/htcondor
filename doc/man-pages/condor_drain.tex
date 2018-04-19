@@ -13,6 +13,7 @@
 \oOpt{-graceful \Bar -quick \Bar -fast}
 \oOpt{-resume-on-completion}
 \oOptArg{-check}{expr}
+\oOptArg{-start}{expr}
 \Arg{machine-name }
 
 \SynProg{\Condor{drain}}
@@ -26,8 +27,8 @@
 
 \Condor{drain} is an administrative command used to control the draining
 of all slots on an execute machine.  
-When a machine is draining, 
-it will not accept any new jobs.  
+When a machine is draining, it will not accept any new jobs
+unless the \Opt{-start} expression specifies otherwise.
 Which machine to drain is specified by the argument \Arg{machine-name},
 and will be the same as the machine ClassAd attribute \Attr{Machine}. 
 
@@ -57,6 +58,15 @@ with no chance to gracefully shut down or produce a checkpoint.
 
 \end{description}
 
+If you specify \Opt{-graceful}, you may also specify \Opt{-start}.  On a
+gracefully-draining machine, some jobs may finish retiring before others.
+By default, the resources used by the newly-retired jobs do not become
+available for use by other jobs until the machine exits the draining state
+(see below).  The \Opt{-start} expression you supply replaces the draining
+machine's normal \MacroNI{START} expression for the duration of the draining
+state, potentially making those resources available.  See section
+\ref{sec:SMP-defrag} for more information.
+
 Once draining is complete, the machine will enter the Drained/Idle
 state.  To resume normal operation (negotiation) at that time 
 or any previous time during draining,
@@ -84,6 +94,8 @@ facilitating de-fragmentation and whole machine negotiation.
     be claimed.}
   \OptItem{\OptArg{-check}{expr}}{Abort draining,
     if \Expr{expr} is not true for all slots to be drained.}
+  \OptItem{\OptArg{-start}{expr}}{The \MacroNI{START} expression to use
+    while the machine is draining.}
   \OptItem{\Opt{-cancel}}{Cancel a prior draining request,
     to permit the \Condor{negotiator} to use the machine again.}
   \OptItem{\OptArg{-request-id}{id}}{Specify a specific draining request 

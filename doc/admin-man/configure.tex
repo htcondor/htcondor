@@ -12970,6 +12970,17 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   \MacroNI{DEFRAG\_DRAINING\_MACHINES\_PER\_HOUR} is rounded to the nearest
   whole number of machines on a per day basis.
 
+\label{param:DefragDrainingStartExpr}
+\item[\Macro{DEFRAG\_DRAINING\_START\_EXPR}] A ClassAd expression that
+  replaces the machine's \Macro{START} expression while it's draining.
+  Slots which accepted a job after the machine begain draining set the
+  machine ad attribute \Attr{AcceptedWhileDraining} to \Expr{true}.
+  When the last job which was not accepted while draining exits, all
+  other jobs are immediately evicted with a \Attr{MaxJobRetirementTime}
+  of 0; job vacate times are still respected.  While the jobs which were
+  accepted while draining are vacating, the \Macro{START} expression is
+  \Expr{false}.
+
 \label{param:DefragRequirements}
 \item[\Macro{DEFRAG\_REQUIREMENTS}] An expression that specifies which
   machines to drain.  The default is 
