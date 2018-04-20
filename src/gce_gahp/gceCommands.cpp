@@ -430,14 +430,13 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 }
 
 // Repeatedly calls GCP for operation status until the operation
-// is completed.  Returns an failure result string if not successful
-// or a success result if successful
-string verifyRequest(string &serviceUrl, int requestID,
-					string auth_file, bool require_instance_id)
+// is completed. On failure, stores an appropriate message in
+// err_msg and returns false. On success, stores targetId value in
+// instance_id (if non-NULL) and returns true.
+bool verifyRequest( const string &serviceUrl, const string &auth_file,
+					string &err_msg, string *instance_id = NULL )
 {
 	string status;
-	string instance_id;
-	string err_msg;
 	bool in_err = false;
 	do {
 
@@ -451,17 +450,13 @@ string verifyRequest(string &serviceUrl, int requestID,
 		op_request.serviceURL = serviceUrl;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, op_request.accessToken,
-							  op_request.errorMessage ) ) {
-			return create_failure_result( requestID,
-												   op_request.errorMessage.c_str() );
+		if ( !GetAccessToken( auth_file, op_request.accessToken, err_msg ) ) {
+			return false;
 		}
 
 		if ( !op_request.SendRequest() ) {
-			// TODO Fix construction of error message
-			return create_failure_result( requestID,
-								op_request.errorMessage.c_str(),
-								op_request.errorCode.c_str() );
+			err_msg = op_request.errorMessage;
+			return false;
 		}
 
 		int nesting = 0;
@@ -477,27 +472,17 @@ string verifyRequest(string &serviceUrl, int requestID,
 				in_err = false;
 			} else if ( key == "message" && in_err ) {
 				err_msg = value;
-			} else if ( key == "targetId" ) {
-				instance_id = value;
+			} else if ( key == "targetId" && instance_id ) {
+				*instance_id = value;
 			}
 		}
 	} while ( status != "DONE" );
 
 	if ( !err_msg.empty() ) {
-		return create_failure_result( requestID, err_msg.c_str() );
+		return false;
 	}
 
-	if ( require_instance_id ) {
-		if ( instance_id.empty() ) {
-			return create_failure_result( requestID,
-								"Completed instance insert has no id" );
-		}
-		StringList reply;
-		reply.append( instance_id.c_str() );
-		return create_success_result( requestID, &reply );
-    } else {
-		return create_success_result( requestID, NULL );
-	}
+	return true;
 }
 
 
@@ -1528,12 +1513,16 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	}
 
 	// Wait for instance template to be created
+	string err_msg;
 	string opUrl = argv[2];
 	opUrl += "/projects/";
 	opUrl += argv[4];
 	opUrl += "/global/operations/";
 	opUrl += op_name;
-	result_string = verifyRequest(opUrl, requestID, auth_file, false);
+	if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+		return true;
+	}
 
 	// Now construct managed instance group
 	GceRequest group_request;
@@ -1594,7 +1583,11 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	opUrl += argv[5];
 	opUrl += "/operations/";
 	opUrl += op_name;
-	result_string = verifyRequest(opUrl, requestID, auth_file, false);
+	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+		result_string = create_success_result( requestID, NULL );
+	} else {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+	}
 
 	return true;
 }
@@ -1647,6 +1640,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	int nesting = 0;
 	const char *pos = group_request.resultString.c_str();
 	string opUrl = argv[2];
+	string err_msg;
 
 	if ( !group_request.SendRequest() ) {
 		if (group_request.errorCode.find("404") != std::string::npos) {
@@ -1669,14 +1663,17 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 			}
 		}
 
-		// Wait for group template to be deleted
+		// Wait for instance group manager to be deleted
 		opUrl += "/projects/";
 		opUrl += argv[4];
 		opUrl += "/zones/";
 		opUrl += argv[5];
 		opUrl += "/operations/";
 		opUrl += op_name;
-		result_string = verifyRequest(opUrl, requestID, auth_file, false);
+		if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+			result_string = create_failure_result( requestID, err_msg.c_str() );
+			return true;
+		}
 	}
 
 	// Fill in required attributes & parameters.
@@ -1721,6 +1718,10 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	opUrl += argv[4];
 	opUrl += "/global/operations/";
 	opUrl += op_name;
-	result_string = verifyRequest(opUrl, requestID, auth_file, false);
+	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+		result_string = create_success_result( requestID, NULL );
+	} else {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+	}
 	return true;
 }
