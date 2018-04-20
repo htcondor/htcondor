@@ -10,6 +10,7 @@ import random
 import argparse
 import collections
 import shutil
+import sys
 from copy import copy, deepcopy
 from pathlib import Path
 from typing import Dict, Union, Iterable, List, Tuple, Callable, Any
@@ -18,20 +19,23 @@ Number = Union[float, int]
 
 THIS_DIR = Path(__file__).absolute().parent
 
-with (THIS_DIR / 'fake_names' / 'users.txt').open(mode = 'r') as f:
-    NAMES = f.readlines()
+with (THIS_DIR / 'fake_names' / 'users.txt').open(mode = 'r') as name_file:
+    NAMES = name_file.readlines()
 NAMES = [name.strip() + '@chtc.wisc.edu' for name in NAMES]
 
-with (THIS_DIR / 'fake_names' / 'machines.txt').open(mode = 'r') as f:
-    MACHINES = f.readlines()
+with (THIS_DIR / 'fake_names' / 'machines.txt').open(mode = 'r') as machine_file:
+    MACHINES = machine_file.readlines()
 MACHINES = [f'{machine.strip()}.wisc.edu' for machine in MACHINES]
 
 TEXT_WIDTH = shutil.get_terminal_size((80, 20)).columns
 
 
 class StrEnum(str, enum.Enum):
-    def __repr__(self):
+    def __str__(self):
         return self.value
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}.{self.value}'
 
 
 class RecordType(StrEnum):
@@ -96,13 +100,16 @@ TIMESPAN_TO_INTERVALS_TO_KEEP = {
 # a function that, given the current and previous dates, determines if it's time to roll the file over
 TIMESPAN_TO_DETERMINE_BREAKPOINT = {
     TimeSpan.DAILY: lambda current, previous: current.day != previous.day,
-    TimeSpan.WEEKLY: lambda current, previous: current.isocalendar()[1] != previous.isocalendar()[1],
+    TimeSpan.WEEKLY: lambda current, previous: current.isocalendar()[1] != previous.isocalendar()[1],  # break on ISO weeks
     TimeSpan.MONTHLY: lambda current, previous: current.month != previous.month,
 }
 
 
 class Record:
     DATE_KEY = 'Date'
+
+    def to_json(self):
+        raise NotImplementedError
 
 
 class JobStatus(StrEnum):
@@ -213,7 +220,24 @@ def gcd_timedeltas(a: datetime.timedelta, b: datetime.timedelta):
     return a
 
 
-def make_timespan_data(record_data, make_record: Callable, now: datetime.datetime):
+def make_timespan_data(record_data, make_record: Callable, now: datetime.datetime) -> Dict[Tuple[TimeSpan, int], List[Record]]:
+    """
+    Return a dictionary mapping TimeSpans and interval numbers to lists of records.
+
+    Parameters
+    ----------
+    record_data
+        Base data for the records at each date (names, etc.).
+    make_record
+        The function to use to make a record.
+    now
+        The current time (i.e., the time to work backwards from).
+
+    Returns
+    -------
+    records_by_span_and_interval_number
+        A dictionary mapping TimeSpans and interval numbers to lists of records
+    """
     # find the earliest date that we'll need
     earliest_dates = []
     for timespan in TimeSpan:
@@ -334,7 +358,7 @@ def write_output_by_timespan_and_interval(
     total_files = 0
     total_filesize = 0
     earliest_date_and_interval_stamps_by_timespan = collections.defaultdict(list)
-    for (timespan, interval_number), records in records_by_timespan_and_interval_number.items():
+    for (timespan, interval_number), records in sorted(records_by_timespan_and_interval_number.items()):
         interval_stamp = records[-1].date.strftime(timespan.format)
         earliest_date_and_interval_stamps_by_timespan[timespan].append((records[-1].date, interval_stamp))
 
@@ -358,9 +382,9 @@ def write_output_by_timespan_and_interval(
     for timespan, earliest_date_and_interval_stamp in earliest_date_and_interval_stamps_by_timespan.items():
         oldest[timespan] = min(earliest_date_and_interval_stamp, key = lambda x: x[0])[1]
 
-    oldest_file = Path(f'{record_type}.oldest.json')
-    with oldest_file.open(mode = 'w') as f:
-        json.dump(oldest, f, indent = 2)
+    oldest_file = Path(f'{record_type}s.oldest.json')
+    with oldest_file.open(mode = 'w') as file:
+        json.dump(oldest, file, indent = 2)
 
     print(f'Wrote information on oldest available records to {oldest_file}')
 
@@ -381,28 +405,30 @@ def generate_submitters(args):
     names_and_machines = tuple(zip(names, random.choices(machines, k = len(names))))
     records_by_timespan_and_interval_number = make_timespan_data(names_and_machines, make_submitter_record, now = args.now)
 
-    write_output_by_timespan_and_interval(
-        records_by_timespan_and_interval_number,
-        record_type = args.record_type,
-        output_dir = args.output,
-        compressed = args.compressed,
-        indent = args.indent,
-        flatten = True,
-    )
+    if not args.dry:
+        write_output_by_timespan_and_interval(
+            records_by_timespan_and_interval_number,
+            record_type = args.record_type,
+            output_dir = args.output,
+            compressed = args.compressed,
+            indent = args.indent,
+            flatten = True,
+        )
 
 
 def generate_slots(args):
     data = tuple(range(args.number))
     records_by_timespan_and_interval_number = make_timespan_data(data, make_slot_record, now = args.now)
 
-    write_output_by_timespan_and_interval(
-        records_by_timespan_and_interval_number,
-        record_type = args.record_type,
-        output_dir = args.output,
-        compressed = args.compressed,
-        indent = args.indent,
-        flatten = False,
-    )
+    if not args.dry:
+        write_output_by_timespan_and_interval(
+            records_by_timespan_and_interval_number,
+            record_type = args.record_type,
+            output_dir = args.output,
+            compressed = args.compressed,
+            indent = args.indent,
+            flatten = False,
+        )
 
 
 def parse_args() -> argparse.Namespace:
@@ -413,22 +439,17 @@ def parse_args() -> argparse.Namespace:
         'record_type',
         action = 'store',
         type = str,
-        choices = tuple(repr(r) for r in RecordType),
+        choices = tuple(str(r) for r in RecordType),
         help = 'which type of record to generate',
     )
-    parser.add_argument(
-        '-o', '--output',
-        action = 'store',
-        type = str,
-        default = os.getcwd(),
-        help = 'the path to the output dir',
-    )
+
+    # CUSTOMIZE RECORD DATA
     parser.add_argument(
         '-n', '--number',
         action = 'store',
         type = int,
         default = 100,
-        help = 'the number of record sources per date',
+        help = 'the number of record producers (submitters, slots, etc.) per date',
     )
     parser.add_argument(
         '-m', '--machines',
@@ -437,6 +458,8 @@ def parse_args() -> argparse.Namespace:
         default = 10,
         help = 'the number of unique machine names',
     )
+
+    # OUTPUT FORMATTING
     parser.add_argument(
         '-c', '--compressed',
         action = 'store_true',
@@ -449,17 +472,43 @@ def parse_args() -> argparse.Namespace:
         default = 2,
         help = 'the indentation of the output JSON',
     )
+
+    # MANIPULATING OUTPUT FILE STRUCTURE
     parser.add_argument(
         '--now',
         action = 'store',
         type = str,
         help = 'the date to think of as now (YYYY-MM-DD)',
     )
+    parser.add_argument(
+        '-k', '--keep',
+        action = 'store',
+        type = str,
+        help = 'timespan to intervals to keep in the form: daily=5,monthly=10 OR "daily = 5, monthly = 10"'
+    )
+
+    # OUTPUT CONTROL
+    parser.add_argument(
+        '-o', '--output',
+        action = 'store',
+        type = str,
+        default = os.getcwd(),
+        help = 'the path to the output dir',
+    )
+    parser.add_argument(
+        '-d', '--dry',
+        action = 'store_true',
+        help = 'if passed, do not write output'
+    )
+
+    # ADDITIONAL PARSING
 
     args = parser.parse_args()
 
     args.record_type = RecordType(args.record_type)
+
     args.output = Path(args.output).absolute()
+
     try:
         args.now = datetime.datetime.strptime(args.now, '%Y-%m-%d')
     except TypeError:
@@ -468,14 +517,45 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+def update_intervals_to_keep(args):
+    updates = {}
+    if args.keep is None:
+        return
+
+    for specifier in args.keep.replace(';', ',').split(','):
+        interval, _, num_to_keep = specifier.strip().partition('=')
+
+        interval = interval.strip()
+        if interval not in TIMESPAN_TO_INTERVALS_TO_KEEP:
+            abort(f'invalid timespan specifier: {repr(interval)}')
+
+        num_to_keep = num_to_keep.strip()
+        try:
+            num_to_keep = int(num_to_keep)
+        except ValueError:
+            abort(f'invalid number of intervals to keep: {repr(num_to_keep)}')
+
+        updates[interval] = num_to_keep
+
+    TIMESPAN_TO_INTERVALS_TO_KEEP.update(updates)
+
+
 RECORD_TYPE_TO_GENERATOR = {
     RecordType.SUBMITTER: generate_submitters,
     RecordType.SLOT: generate_slots,
 }
 
 
+def abort(message: str):
+    """Abort the script with an error message."""
+    print(f'ERROR: {message}')
+    sys.exit(1)
+
+
 def main():
     args = parse_args()
+
+    update_intervals_to_keep(args)
 
     print(f'Mocking records for {args.number} {args.record_type}s ending at {args.now}, placing output in {args.output}')
     RECORD_TYPE_TO_GENERATOR[args.record_type](args)
