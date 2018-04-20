@@ -12,7 +12,9 @@ import collections
 import shutil
 from copy import copy, deepcopy
 from pathlib import Path
-from typing import Dict, Union, Iterable, List
+from typing import Dict, Union, Iterable, List, Tuple, Callable, Any
+
+Number = Union[float, int]
 
 THIS_DIR = Path(__file__).absolute().parent
 
@@ -30,6 +32,11 @@ TEXT_WIDTH = shutil.get_terminal_size((80, 20)).columns
 class StrEnum(str, enum.Enum):
     def __repr__(self):
         return self.value
+
+
+class RecordType(StrEnum):
+    SUBMITTER = 'submitter'
+    SLOT = 'slot'
 
 
 class TimeSpan(StrEnum):
@@ -94,6 +101,10 @@ TIMESPAN_TO_DETERMINE_BREAKPOINT = {
 }
 
 
+class Record:
+    DATE_KEY = 'Date'
+
+
 class JobStatus(StrEnum):
     UNEXPANDED = 'Unexpanded'
     IDLE = 'Idle'
@@ -104,9 +115,8 @@ class JobStatus(StrEnum):
     SUBMISSION_ERROR = 'Submission_err'
 
 
-class SubmitterRecord:
+class SubmitterRecord(Record):
     NAME_KEY = 'Name'
-    DATE_KEY = 'Date'
     MACHINE_KEY = 'Machine'
     JOBS_KEY = 'Jobs'
     JOB_STATUS_KEY = 'JobStatus'
@@ -154,8 +164,7 @@ class SlotActivity(StrEnum):
     BUSY = 'Busy'
 
 
-class SlotRecord:
-    DATE_KEY = 'Date'
+class SlotRecord(Record):
     SLOT_TYPE_KEY = 'SlotType'
     ARCH_KEY = 'Arch'
     OPSYS_KEY = 'OpSys'
@@ -198,31 +207,13 @@ class SlotRecord:
         return j
 
 
-def wiggle_jobs(jobs, fraction = .1):
-    jobs = deepcopy(jobs)
-
-    pool = 0
-    for status, count in jobs.items():
-        remove = random.randint(0, int(count * fraction))
-        jobs[status] -= remove
-        pool += remove
-
-    status = tuple(jobs.keys())
-    while pool > 0:
-        add_back_in = random.randint(0, pool)
-        jobs[random.choice(status)] += add_back_in
-        pool -= add_back_in
-
-    return jobs
-
-
-def gcd_timedeltas(a, b):
+def gcd_timedeltas(a: datetime.timedelta, b: datetime.timedelta):
     while b != datetime.timedelta():
         (a, b) = (b, a % b)
     return a
 
 
-def make_timespan_data(record_data, make_record, now):
+def make_timespan_data(record_data, make_record: Callable, now: datetime.datetime):
     # find the earliest date that we'll need
     earliest_dates = []
     for timespan in TimeSpan:
@@ -267,7 +258,7 @@ def make_timespan_data(record_data, make_record, now):
     return records_by_span_and_interval_number
 
 
-def make_submitter_record(date, name_and_machine):
+def make_submitter_record(date: datetime.datetime, name_and_machine: Tuple[str, str]):
     return SubmitterRecord(
         date = date,
         name = name_and_machine[0],
@@ -280,7 +271,7 @@ def make_submitter_record(date, name_and_machine):
     )
 
 
-def make_slot_record(date, *args):
+def make_slot_record(date: datetime.datetime, *args):
     return SlotRecord(
         date = date,
         slot_type = random.choice(tuple(SlotType)),
@@ -296,13 +287,13 @@ def ensure_parents_exist(path: Path):
     path.parent.mkdir(parents = True, exist_ok = True)
 
 
-def flatten_list_of_lists(list_of_lists: List[List]):
+def flatten_list_of_lists(list_of_lists: List[List[Any]]):
     """Flatten one level of nesting."""
     return itertools.chain.from_iterable(list_of_lists)
 
 
 def write_records_to_json(
-    records: Iterable[Union[SubmitterRecord, SlotRecord]],
+    records: Iterable[Record],
     output_path: Path,
     compressed: bool = False,
     indent: int = 2,
@@ -329,13 +320,14 @@ def write_records_to_json(
         json.dump(j, f, indent = indent if not compressed else None, separators = (', ', ': ') if not compressed else (',', ':'))
 
 
-def write_json_output_by_timespan_and_interval(
-    records_by_timespan_and_interval_number,
+def write_output_by_timespan_and_interval(
+    records_by_timespan_and_interval_number: Dict[Tuple[TimeSpan, int], Iterable[Record]],
     *,
-    which,
-    compressed,
-    indent,
-    flatten,
+    record_type: RecordType,
+    output_dir: Union[str, Path],
+    compressed: bool,
+    indent: bool,
+    flatten: bool,
 ):
     print('Writing JSON...'.ljust(TEXT_WIDTH))
     total_records = 0
@@ -346,7 +338,7 @@ def write_json_output_by_timespan_and_interval(
         interval_stamp = records[-1].date.strftime(timespan.format)
         earliest_date_and_interval_stamps_by_timespan[timespan].append((records[-1].date, interval_stamp))
 
-        path = Path(f'{which}.{timespan}.{interval_stamp}.json')
+        path = Path(output_dir) / Path(f'{record_type}s.{timespan}.{interval_stamp}.json')
         print(f'\rWriting {path}'.ljust(TEXT_WIDTH), end = '')
         write_records_to_json(
             records,
@@ -366,19 +358,20 @@ def write_json_output_by_timespan_and_interval(
     for timespan, earliest_date_and_interval_stamp in earliest_date_and_interval_stamps_by_timespan.items():
         oldest[timespan] = min(earliest_date_and_interval_stamp, key = lambda x: x[0])[1]
 
-    oldest_file = Path(f'{which}.oldest.json')
+    oldest_file = Path(f'{record_type}.oldest.json')
     with oldest_file.open(mode = 'w') as f:
-        json.dump(oldest, f, indent = 4)
+        json.dump(oldest, f, indent = 2)
 
     print(f'Wrote information on oldest available records to {oldest_file}')
 
 
-def bytes_to_str(num: Union[float, int]) -> str:
+def bytes_to_str(num_bytes: Number) -> str:
     """Return a number of bytes as a human-readable string."""
-    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
-        if num < 1024.0:
-            return "%3.1f %s" % (num, x)
-        num /= 1024.0
+    for unit in ('bytes', 'KB', 'MB', 'GB'):
+        if num_bytes < 1024:
+            return f'{num_bytes:.1f} {unit}'
+        num_bytes /= 1024
+    return f'{num_bytes:.1f} TB'
 
 
 def generate_submitters(args):
@@ -388,9 +381,10 @@ def generate_submitters(args):
     names_and_machines = tuple(zip(names, random.choices(machines, k = len(names))))
     records_by_timespan_and_interval_number = make_timespan_data(names_and_machines, make_submitter_record, now = args.now)
 
-    write_json_output_by_timespan_and_interval(
+    write_output_by_timespan_and_interval(
         records_by_timespan_and_interval_number,
-        which = args.which,
+        record_type = args.record_type,
+        output_dir = args.output,
         compressed = args.compressed,
         indent = args.indent,
         flatten = True,
@@ -401,9 +395,10 @@ def generate_slots(args):
     data = tuple(range(args.number))
     records_by_timespan_and_interval_number = make_timespan_data(data, make_slot_record, now = args.now)
 
-    write_json_output_by_timespan_and_interval(
+    write_output_by_timespan_and_interval(
         records_by_timespan_and_interval_number,
-        which = args.which,
+        record_type = args.record_type,
+        output_dir = args.output,
         compressed = args.compressed,
         indent = args.indent,
         flatten = False,
@@ -415,11 +410,11 @@ def parse_args() -> argparse.Namespace:
         description = 'Generate mock metric data for HTCondor View',
     )
     parser.add_argument(
-        'which',
+        'record_type',
         action = 'store',
         type = str,
-        choices = {'submitters', 'slots', },
-        help = 'which type of data to generate: submitters or slots',
+        choices = tuple(repr(r) for r in RecordType),
+        help = 'which type of record to generate',
     )
     parser.add_argument(
         '-o', '--output',
@@ -433,7 +428,7 @@ def parse_args() -> argparse.Namespace:
         action = 'store',
         type = int,
         default = 100,
-        help = 'the number of submitters or slots to create',
+        help = 'the number of record sources per date',
     )
     parser.add_argument(
         '-m', '--machines',
@@ -461,21 +456,29 @@ def parse_args() -> argparse.Namespace:
         help = 'the date to think of as now (YYYY-MM-DD)',
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
 
-
-def main():
-    args = parse_args()
+    args.record_type = RecordType(args.record_type)
+    args.output = Path(args.output).absolute()
     try:
         args.now = datetime.datetime.strptime(args.now, '%Y-%m-%d')
     except TypeError:
         args.now = datetime.datetime.utcnow()
 
-    print(f'Mocking records for {args.number} {args.which} ending at {args.now}, placing output in {args.output}')
-    if args.which == 'submitters':
-        generate_submitters(args)
-    elif args.which == 'slots':
-        generate_slots(args)
+    return args
+
+
+RECORD_TYPE_TO_GENERATOR = {
+    RecordType.SUBMITTER: generate_submitters,
+    RecordType.SLOT: generate_slots,
+}
+
+
+def main():
+    args = parse_args()
+
+    print(f'Mocking records for {args.number} {args.record_type}s ending at {args.now}, placing output in {args.output}')
+    RECORD_TYPE_TO_GENERATOR[args.record_type](args)
 
 
 if __name__ == '__main__':
