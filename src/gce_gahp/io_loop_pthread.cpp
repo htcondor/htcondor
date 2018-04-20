@@ -95,6 +95,12 @@ registerAllGceCommands(void)
 	registerGceGahpCommand(GCE_COMMAND_INSTANCE_LIST,
 			GceInstanceList::ioCheck, GceInstanceList::workerFunction);
 
+	registerGceGahpCommand(GCE_COMMAND_GROUP_INSERT,
+			GceGroupInsert::ioCheck, GceGroupInsert::workerFunction);
+
+	registerGceGahpCommand(GCE_COMMAND_GROUP_DELETE,
+			GceGroupDelete::ioCheck, GceGroupDelete::workerFunction);
+
 	return true;
 }
 

@@ -27,6 +27,8 @@
 #define GCE_COMMAND_INSTANCE_INSERT		"GCE_INSTANCE_INSERT"
 #define GCE_COMMAND_INSTANCE_DELETE		"GCE_INSTANCE_DELETE"
 #define GCE_COMMAND_INSTANCE_LIST		"GCE_INSTANCE_LIST"
+#define GCE_COMMAND_GROUP_INSERT		"GCE_GROUP_INSERT"
+#define GCE_COMMAND_GROUP_DELETE		"GCE_GROUP_DELETE"
 
 #define GENERAL_GAHP_ERROR_CODE             "GAHPERROR"
 #define GENERAL_GAHP_ERROR_MSG              "GAHP_ERROR"
@@ -90,5 +92,25 @@ class GceInstanceList : public GceRequest {
 	static bool ioCheck( char **argv, int argc );
 	static bool workerFunction( char **argv, int argc, std::string &result_string );
 };
+
+class GceGroupInsert : public GceRequest {
+ public:
+	GceGroupInsert();
+	virtual ~GceGroupInsert();
+
+	static bool ioCheck( char **argv, int argc );
+	static bool workerFunction( char **argv, int argc, std::string &result_string );
+};
+
+class GceGroupDelete : public GceRequest {
+ public:
+	GceGroupDelete();
+	virtual ~GceGroupDelete();
+
+	static bool ioCheck( char **argv, int argc );
+	static bool workerFunction( char **argv, int argc, std::string &result_string );
+};
+
+
 
 #endif
