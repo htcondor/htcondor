@@ -112,8 +112,6 @@ static const char *GMStateNames[] = {
 #	define file_contains contains
 #endif
 
-#define NORDUGRID_LOG_DIR ".nordugrid_log"
-
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
