@@ -43,13 +43,271 @@ helps to ensure proper attribution.
 
 \subsection{Basic Usage}
 
-A quick-start guide with basic usage information is kept on our Wiki:
-
+%% A quick-start guide with basic usage information is kept on our Wiki:
+%%
 %% This Wiki page should be frozen and migrated into the manual for
 %% the stable release (v8.8.0); ideally, this would also be a reasonable
 %% thing to do for the next development series (v8.9) as well.
+%%
+%% \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstancesEightSevenFour}.
 
-\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstancesEightSevenFour}.
+This section assumes you're logged into a Linux machine an that you've
+already configured \Condor{annex}.  If you haven't, see
+section~\ref{sec:clouds-annex-first-time}.
+
+All the terminal commands (shown in a box on a grey background) and file edits
+(shown in on a box on a green background) in this section take place on the
+Linux machine.  In this section, we follow the common convention that
+the commands you type are preceded by by `\$' to distinguish them from any
+expected output; don't copy that part of each of the following lines.
+(Lines which end in a `\textbackslash' continue on the following line; be
+sure to copy both lines.  Don't copy the `\textbackslash' itself.)
+
+\subsubsection{What You'll Need to Know}
+
+To create a HTCondor annex with on-demand instances, you'll need to know two
+things:
+
+\begin{enumerate}
+\item A name for it.  ``MyFirstAnnex'' is a fine name for your first annex.
+\item How many instances you want.  For your first annex, when you're checking to make sure things work, you may only want one instance.
+\end{enumerate}
+
+\subsection{Start an Annex}
+
+Entering the following command will start an annex named ``MyFirstAnnex'' with
+one instance.  \Condor{annex} will print out what it's going to do, and then
+ask you if that's OK.  You must type `yes' (and hit enter) at the prompt to
+start an annex; if you do not, \Condor{annex} will print out instructions
+about how to change whatever you may not like about what it said it was going
+to do, and then exit.
+
+\terminal{%
+\$ condor\_annex -count 1 -annex-name MyFirstAnnex \\
+Will request 1 m4.large on-demand instance for 0.83 hours.  Each instance will \\
+terminate after being idle for 0.25 hours. \\
+Is that OK?  (Type 'yes' or 'no'): yes \\
+Starting annex... \\
+Annex started.  Its identity with the cloud provider is \\
+'TestAnnex0\_f2923fd1-3cad-47f3-8e19-fff9988ddacf'.  It will take about three \\
+minutes for the new machines to join the pool.
+}
+
+You won't need to know the annex's identity with the cloud provider unless
+something goes wrong.
+
+Before starting the annex, \Condor{annex} will check to make sure that the
+instances will be able to contact your pool.  Contact the Linux machine's
+administrator if \Condor{annex} reports a problem with this step.
+
+\subsubsection{Instance Types}
+
+Each instance type provides a different number (and/or type) of CPU cores,
+amount of RAM, local storage, and the like.  We recommend starting with
+`m4.large', which has 2 CPU cores and 8 GiB of RAM, but you can see the
+complete list of instance types at the following URL:
+
+\url{https://aws.amazon.com/ec2/instance-types/}
+
+As noted in the example output above, you can specify an instance type with
+the \texttt{-aws-on-demand-instance-type} flag.
+
+\subsubsection{Leases}
+
+By default, \Condor{annex} arranges for your annex's instances to be terminated
+after \texttt{0.83} hours (50 minutes) have passed.  Once it's in place, this
+lease doesn't depend on the Linux machine, but it's only checked every five
+minutes, so give your deadlines a lot of cushion to make you don't get charged
+for an extra hour.  The lease is intended to help you conserve money by
+preventing the annex instances from accidentally running forever.  As noted in
+the example output above, you can specify a lease duration (in decimal hours)
+with the \texttt{-duration} flag.
+
+If you need to adjust the lease for a particular annex, you may do so by
+specifying an annex name and a duration, but not a count.  When you do so,
+the new duration is set starting at the current time.  For example, if you'd
+like ``MyFirstAnnex'' to expire eight hours from now:
+
+\terminal{%
+\$ condor\_annex -annex-name MyFirstAnnex -duration 8 \\
+Lease updated.
+}
+
+\subsubsection{Idle Time}
+
+By default, \Condor{annex} will configure your annex's instances to terminate
+themselves after being idle for \texttt{0.25} hours (fifteen minutes).  This
+is intended to help you conserve money in case of problems or an extended
+shortage of work.  As noted in the example output above, you can specify a max
+idle time (in decimal hours) with the \texttt{-idle} flag.  \Condor{annex}
+considers an instance idle if it's unclaimed (see
+section~\ref{state:unclaimed} for a definition), so it won't get tricked by
+jobs with long quiescent periods.
+
+\subsubsection{Multiple Annexes}
+
+You may have up to fifty (or fewer, depending what else you're doing with your
+AWS account) differently-named annexes running at the same time.  Running
+\Condor{annex} again with the same annex name before stopping that annex will
+both add instances to it and change its duration.  Only instances which start
+up after an invocation of \Condor{annex} will respect that invocation's max
+idle time.  That may include instances still starting up from your previous
+(first) invocation of \Condor{annex}, so be sure your instances have all
+joined the pool before running \Condor{annex} again with the same annex name
+if you're changing the max idle time.  Each invocation of \condor{annex}
+requests a fixed number of instances of a given type; you may specify either
+or both with each invocation, but neither will change either about the
+previous request.
+
+\subsection{Monitor your Annex}
+
+You can find out if that instance has successfully joined the pool in the
+following way:
+
+{\obeyspaces\terminal{%
+\$ condor\_annex status \\
+Name                               OpSys      Arch   State     Activity     Loa \\
+\\
+slot1@ip-172-31-48-84.ec2.internal LINUX      X86\_64 Unclaimed Benchmarking  0. \\
+slot2@ip-172-31-48-84.ec2.internal LINUX      X86\_64 Unclaimed Idle          0. \\
+\\
+\hphantom{xxxxxxxxxxxxxxx}Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain \\
+\\
+\hphantom{xx}X86\_64/LINUX     2     0       0         2       0          0        0      0 \\
+\hphantom{xxxxxxxxx}Total     2     0       0         2       0          0        0      0
+}}
+
+This example shows that the annex instance you requested has joined your pool.
+(The default annex image configures one static slot for each CPU it finds on
+start-up.)
+
+You may instead use \Condor{status}:
+
+{\obeyspaces\terminal{%
+\$ condor\_status -annex MyFirstAnnex \\
+slot1@ip-172-31-48-84.ec2.internal  LINUX     X86\_64 Unclaimed Idle 0.640 3767 \\
+slot2@ip-172-31-48-84.ec2.internal  LINUX     X86\_64 Unclaimed Idle 0.640 3767 \\
+\\
+\hphantom{xxxxxxxxxxxxxx} Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain \\
+\hphantom{xx}X86\_64/LINUX     2     0       0         2       0          0        0      0 \\
+\hphantom{xxxxxxxxx}Total     2     0       0         2       0          0        0      0
+}}
+
+You can also get a report about the instances which have not joined your pool:
+
+{\obeyspaces\terminal{%
+\$ condor\_annex -annex MyFirstAnnex -status \\
+STATE          COUNT \\
+pending            1 \\
+TOTAL              1
+\\
+Instances not in the pool, grouped by state: \\
+pending i-06928b26786dc7e6e
+}}
+
+\subsubsection{Multiple Annexes}
+
+The following command reports on all annex instance which have joined the pool,
+regardless of which annex they're from:
+
+{\obeyspaces\terminal{%
+\$ condor\_status -annex \\
+slot1@ip-172-31-48-84.ec2.internal  LINUX     X86\_64 Unclaimed Idle 0.640 3767 \\
+slot2@ip-172-31-48-84.ec2.internal  LINUX     X86\_64 Unclaimed Idle 0.640 3767 \\
+slot1@ip-111-48-85-13.ec2.internal  LINUX     X86\_64 Unclaimed Idle 0.640 3767 \\
+slot2@ip-111-48-85-13.ec2.internal  LINUX     X86\_64 Unclaimed Idle 0.640 3767 \\
+\\
+\hphantom{xxxxxxxxxxxxxxx}Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain \\
+\hphantom{xx}X86\_64/LINUX     4     0       0         4       0          0        0      0 \\
+\hphantom{xxxxxxxxx}Total     4     0       0         4       0          0        0      0
+}}
+
+The following command reports about instance which have not joined the pool,
+regardless of which annex they're from:
+
+{\obeyspaces\terminal{%
+\$ condor\_annex -status \\
+NAME                        TOTAL running \\
+NamelessTestA                   2       2 \\
+NamelessTestB                   3       3 \\
+NamelessTestC                   1       1 \\
+\\
+NAME                        STATUS  INSTANCES... \\
+NamelessTestA               running i-075af9ccb40efb162 i-0bc5e90066ed62dd8 \\
+NamelessTestB               running i-02e69e85197f249c2 i-0385f59f482ae6a2e \\ i-06191feb755963edd \\
+NamelessTestC               running i-09da89d40cde1f212
+}}
+
+The ellipsis in the last column (\texttt{INSTANCES...}) is to indicate that
+it's a very wide column and may wrap (as it will for NamelessTestB on an
+80-column terminal), not that it has been truncated.
+
+The following command combines these two reports:
+
+{\obeyspaces\terminal{%
+\$ condor\_annex status \\
+Name                               OpSys      Arch   State     Activity     Loa \\
+\\
+slot1@ip-172-31-48-84.ec2.internal LINUX      X86\_64 Unclaimed Benchmarking  0. \\
+slot2@ip-172-31-48-84.ec2.internal LINUX      X86\_64 Unclaimed Idle          0. \\
+\\
+\hphantom{xxxxxxxxxxxxxxx}Total Owner Claimed Unclaimed Matched Preempting Backfill  Drain \\
+\\
+\hphantom{xx}X86\_64/LINUX     2     0       0         2       0          0        0      0 \\
+\hphantom{xxxxxxxxx}Total     2     0       0         2       0          0        0      0 \\
+\\
+Instance ID         not in Annex  Status  Reason (if known) \\
+i-075af9ccb40efb162 NamelessTestA running - \\
+i-0bc5e90066ed62dd8 NamelessTestA running - \\
+i-02e69e85197f249c2 NamelessTestB running - \\
+i-0385f59f482ae6a2e NamelessTestB running - \\
+i-06191feb755963edd NamelessTestB running - \\
+i-09da89d40cde1f212 NamelessTestC running -
+}}
+
+\subsection{Run a Job}
+
+Starting in v8.7.1, the default behaviour for an annex instance is to run only
+jobs submitted by the user who ran the \Condor{annex} command.  If you'd
+like to allow other users to run jobs, list them (separated by commas; be sure
+to include yourself) as arguments to the \texttt{-owner} flag when you start
+the instance.  If you're creating an annex for general use, use the
+\texttt{-no-owner} flag to run jobs from anyone.
+
+Also starting in v8.7.1, the default behaviour for an annex instance is to run
+only jobs which have the \texttt{MayUseAWS} attribute set (to true).  To
+submit a job with \texttt{MayUseAWS} set to true, add
+\texttt{+MayUseAWS = TRUE} to the submit file somewhere before the
+\texttt{queue} command.  To allow an existing job to run in the annex,
+use \texttt{condor\_q\_edit}.  For instance, if you'd like cluster 1234 to run
+on AWS:
+
+\terminal{%
+\$ condor\_qedit 1234 "MayUseAWS = TRUE" \\
+Set attribute "MayUseAWS" for 21 matching jobs.
+}
+
+\subsection{Stop an Annex}
+
+The following command shuts HTCondor off on each instance in the annex; if
+you're using the default annex image, doing so causes each instance to shut
+itself down.
+
+\terminal{%
+\$ condor\_off -annex MyFirstAnnex \\
+Sent "Kill-Daemon" command for "master" to master ip-172-31-48-84.ec2.internal
+}
+
+\subsubsection{Multiple Annexes}
+
+The following command turns off all annex instances in your pool, regardless
+of which annex they're from:
+
+\terminal{%
+\$ condor\_off -annex \\
+Sent "Kill-Daemon" command for "master" to master ip-172-31-48-84.ec2.internal \\
+Sent "Kill-Daemon" command for "master" to master ip-111-48-85-13.ec2.internal
+}
 
 \subsection{Using Different or Multiple AWS Regions}
 
@@ -224,7 +482,7 @@ a developer.
 This guide assumes that you already have an AWS account, as well as a log-in
 account on a Linux machine with a public address and a system administrator
 who's willing to open a port for you.  All the terminal commands (shown in a
-box on a grey background) and file edits (shown in on a box on a green
+box on a grey background) and file edits (shown in a box on a green
 background) take place on the Linux machine.  You can perform the web-based
 steps from wherever is convenient, although it will save you some copying if
 you can run a browser on the Linux machine.
@@ -261,7 +519,7 @@ Then do the following; note that in this box, like other terminal boxes,
 the commands you type are preceded by by `\$' to distinguish them from any
 expected output, so don't copy that part of each of the following lines.
 (Lines which end in a `\textbackslash' continue on the following line; be
-sure to copy both lines.  It's OK to copy the `\textbackslash' itself.)
+sure to copy both lines.  Don't copy the `\textbackslash' itself.)
 
 \terminal{%
 \$ mkdir \textasciitilde{}/condor-8.7.8; cd \textasciitilde{}/condor-8.7.8; mkdir local \\
