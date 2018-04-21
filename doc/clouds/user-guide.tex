@@ -23,17 +23,10 @@ Submitters, however, will have to set up their own personal HTCondor pool,
 so that \Condor{annex} has a pool to join, and then work with their pool
 administrator if they want to move their existing jobs to their new pool.
 Otherwise, jobs will have to be manually divided (removed from one and
-resubmitted to the other) between the pools.  For instructions on creating a
-personal condor pool, configuring \Condor{annex} to use a particular AWS
+resubmitted to the other) between the pools.  For instructions on creating
+a personal HTCondor pool, configuring \Condor{annex} to use a particular AWS
 account, and then setting up that account for use with \Condor{annex}, see
-
-%% This Wiki page should be frozen and migrated into the manual for
-%% the stable release (v8.8.0); ideally, this would also be a reasonable
-%% thing to do for the next development series (v8.9) as well.
-%%
-%% Be sure to include condor_{off,status} -annex when you do.
-
-\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UsingCondorAnnexForTheFirstTimeEightSevenFour}.
+section~\ref{sec:clouds-annex-first-time}.
 
 Starting in v8.7.1, \Condor{annex} will check for inbound access to the
 collector (usually port 9618) before starting an annex (it does not
@@ -224,3 +217,305 @@ a developer.
 
 %% Developers should but don't have an option to set the connectivity-checking
 %% Lambda function's name (or ARN).
+
+\section{Using \Condor{annex} for the First Time}
+\label{sec:clouds-annex-first-time}
+
+This guide assumes that you already have an AWS account, as well as a log-in
+account on a Linux machine with a public address and a system administrator
+who's willing to open a port for you.  All the terminal commands (shown in a
+box on a grey background) and file edits (shown in on a box on a green
+background) take place on the Linux machine.  You can perform the web-based
+steps from wherever is convenient, although it will save you some copying if
+you can run a browser on the Linux machine.
+
+Before using \Condor{annex} for the first time, you'll have to do three things:
+
+\begin{enumerate}
+\item install a personal HTCondor
+\item prepare your AWS account
+\item configure \Condor{annex}
+\end{enumerate}
+
+Instructions for each follow.
+
+\subsection{Install a Personal HTCondor}
+
+We recommend that you install a personal HTCondor to make use of \Condor{annex};
+it's simpler to configure that way.  These instructions assume version 8.7.8
+of HTCondor, but should work the 8.8.x series as well; change `8.7.8' in
+the instructions wherever it appears.
+
+These instructions assume that it's OK to create a directory named
+\texttt{condor-8.7.8} in your home directory; adjust them accordingly if you
+want to install HTCondor somewhere else.
+
+Start by downloading (from
+\url{https://research.cs.wisc.edu/htcondor/downloads/}) the 8.7.8 release from
+the ``tarballs'' section that matches your Linux version.  (If you don't know
+your Linux version, ask your system administrator.)  These instructions assume
+that the file you downloaded is located in your home directory on the Linux
+machine, so copy it there if necessary.
+
+Then do the following; note that in this box, like other terminal boxes,
+the commands you type are preceded by by `\$' to distinguish them from any
+expected output, so don't copy that part of each of the following lines.
+(Lines which end in a `\textbackslash' continue on the following line; be
+sure to copy both lines.  It's OK to copy the `\textbackslash' itself.)
+
+\terminal{%
+\$ mkdir \textasciitilde{}/condor-8.7.8; cd \textasciitilde{}/condor-8.7.8; mkdir local \\
+\$ tar -z -x -f \textasciitilde{}/condor-8.7.8-*-stripped.tar.gz \\
+\$ ./condor-8.7.8-*-stripped/condor\_install --local-dir `pwd`/local \textbackslash \\
+\hphantom{\$ ./}--make-personal-condor \\
+\$ .\ ./condor.sh \\
+\$ condor\_master
+}
+
+\subsubsection{Testing}
+\label{sec:clouds-user-guide-testing}
+
+Give HTCondor a few seconds to spin up and the try a few commands to make sure
+the basics are working.  Your output will vary depending on the time of day,
+the name of your Linux machine, and its core count, but it should generally be
+pretty similar to the following.
+
+% LaTeX typsets lines with a leading hyphen without the usual padding, which
+% causes that line's characters not to align vertically.  We'll just elide
+% the dash at the beginning of the second line so it looks right.
+%
+% Note that we've got the trailing % on all of these so we can have the
+% first line of the [file|term]inal start in the first column of this file.
+{\obeyspaces\terminal{%
+\$ condor\_q \\
+\hphantom{xx} Schedd: submit-3.batlab.org : <127.0.0.1:12815?... @ 02/03/17 13:57:35 \\
+OWNER    BATCH\_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB\_IDS \\
+\\
+0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended \\
+\$ condor\_status -any \\
+MyType             TargetType         Name \\
+\\
+Negotiator         None               NEGOTIATOR \\
+Collector          None               Personal Condor at 127.0.0.1@submit-3 \\
+Machine            Job                slot1@submit-3.batlab.org \\
+Machine            Job                slot2@submit-3.batlab.org \\
+Machine            Job                slot3@submit-3.batlab.org \\
+Machine            Job                slot4@submit-3.batlab.org \\
+Machine            Job                slot5@submit-3.batlab.org \\
+Machine            Job                slot6@submit-3.batlab.org \\
+Machine            Job                slot7@submit-3.batlab.org \\
+Machine            Job                slot8@submit-3.batlab.org \\
+Scheduler          None               submit-3.batlab.org \\
+DaemonMaster       None               submit-3.batlab.org \\
+Accounting         none               <none>
+}}
+
+You should also try to submit a job; create the following file.  (We'll
+refer to the contents in the second green box by the \emph{emphasized name}
+in the first green box in later commands.)
+
+\fileinal{\textasciitilde{}/condor-annex/sleep.submit}{%
+executable = /bin/sleep \\
+arguments = 600 \\
+queue
+}
+
+and submit it:
+
+\terminal{%
+\$ condor\_submit \textasciitilde{}/condor-annex/sleep.submit \\
+Submitting job(s). \\
+1 job(s) submitted to cluster 1. \\
+\$ condor\_reschedule
+}
+
+After a little while:
+
+{\obeyspaces\terminal{%
+\$ condor\_q \\
+\\
+\\
+\hphantom{xx} Schedd: submit-3.batlab.org : <127.0.0.1:12815?... @ 02/03/17 13:57:35 \\
+OWNER    BATCH\_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB\_IDS \\
+tlmiller CMD: /bin/sleep   2/3  13:56      \_      1      \_      1 3.0 \\
+\\
+1 jobs; 0 completed, 0 removed, 0 idle, 1 running, 0 held, 0 suspended
+}}
+
+\subsubsection{Configure Public Interface}
+
+The default personal HTCondor uses the ``loopback'' interface, which basically
+just means it won't talk to anyone other than itself.  For \Condor{annex} to
+work, your personal HTCondor needs to use the Linux machine's public interface.
+In most cases, that's as simple as adding the following lines:
+
+\fileinal{\textasciitilde{}/condor-8.7.8/local/condor\_config.local}{%
+NETWORK\_INTERFACE = * \\
+CONDOR\_HOST = \$(FULL\_HOSTNAME)
+}
+
+Restart HTCondor to force the changes to take effect:
+
+\terminal{%
+\$ condor\_restart \\
+Sent "Restart" command to local master
+}
+
+To verify that this change worked, repeat the steps under section
+\ref{sec:clouds-user-guide-testing}, and then proceed onto the next section.
+
+\subsubsection{Configure a Pool Password}
+
+In this section, you'll configure your personal HTCondor to use a pool
+password.  This is a simple but effective method of securing HTCondor's
+communications to AWS.
+
+Add the following lines:
+
+\fileinal{\textasciitilde{}/condor-8.7.8/local/condor\_config.local}{%
+SEC\_PASSWORD\_FILE = \$(LOCAL\_DIR)/condor\_pool\_password \\
+SEC\_DAEMON\_INTEGRITY = REQUIRED \\
+SEC\_DAEMON\_AUTHENTICATION = REQUIRED \\
+SEC\_DAEMON\_AUTHENTICATION\_METHODS = PASSWORD \\
+SEC\_NEGOTIATOR\_INTEGRITY = REQUIRED \\
+SEC\_NEGOTIATOR\_AUTHENTICATION = REQUIRED \\
+SEC\_NEGOTIATOR\_AUTHENTICATION\_METHODS = PASSWORD \\
+SEC\_CLIENT\_AUTHENTICATION\_METHODS = FS, PASSWORD \\
+ALLOW\_DAEMON = condor\_pool@*
+}
+
+You also need to run the following command, which prompts you to enter a
+password:
+
+\terminal{%
+\$ condor\_store\_cred -c add -f `condor\_config\_val SEC\_PASSWORD\_FILE` \\
+Enter password:
+}
+
+Enter a password.
+
+\subsubsection{Tell HTCondor about the Open Port}
+
+By default, HTCondor will use port 9618.  If the Linux machine doesn't already
+have HTCondor installed, and the admin is willing to open that port, then you
+don't have to do anything.  Otherwise, you'll need to add a line like the
+following, replacing `9618' with whatever port the administrator opened for you.
+
+\fileinal{\textasciitilde{}/condor-8.7.8/local/condor\_config.local}{%
+COLLECTOR\_HOST = \$(FULL\_HOSTNAME):9618
+}
+
+\subsubsection{Activate the New Configuration}
+
+Force HTCondor to read the new configuration by restarting it:
+
+\terminal{%
+\$ condor\_restart
+}
+
+\subsection{Prepare your AWS account}
+
+The \Condor{annex} tool now includes a \texttt{-setup} command which will
+prepare your AWS account.
+
+\subsubsection{Obtaining an Access Key}
+
+In order to use AWS, \Condor{annex} needs a pair of security tokens (like a
+user name and password).  Like a user name, the ``access key'' is (more or
+less) public information; the corresponding ``secret key'' is like a password
+and must be kept a secret.  To help keep both halves secret,
+\Condor{annex} (and HTCondor) are never told these keys directly; instead, you
+tell HTCondor which file to look in to find each one.
+
+Create those two files now; we'll tell you how to fill them in shortly.  By
+convention, these files exist in your \texttt{\textasciitilde{}/.condor}
+directory, which is where the \texttt{-setup} command will store the rest of
+the data it needs.
+
+\terminal{%
+\$ mkdir \textasciitilde{}/.condor \\
+\$ cd \textasciitilde{}/.condor \\
+\$ touch publicKeyFile privateKeyFile \\
+\$ chmod 600 publicKeyFile privateKeyFile
+}
+
+The last command ensures that only you can read or write to those files.
+
+To donwload a new pair of security tokens for \Condor{annex} to use, go to
+the IAM console at the following URL and log in if you need to:
+
+\url{https://console.aws.amazon.com/iam/home?region=us-east-1#/users}
+
+The following instructions assume you are logged in as a user
+with the privilege to create new users.  (The `root' user for any account has
+this privilege; other accounts may as well.)
+
+\begin{enumerate}
+\item Click the ``Add User'' button.
+\item Enter name in the \textbf{User name} box; ``annex-user'' is a fine choice.
+\item Click the check box labelled ``Programmatic access''.
+\item Click the button labelled ``Next: Permissions''.
+\item Select ``Attach existing policies directly''.
+\item Type ``AdministratorAccess'' in the box labelled ``Filter''.
+\item Click the check box on the single line that will appear below (labelled ``AdministratorAccess'').
+\item Click the ``Next: review'' button (you may need to scroll down).
+\item Click the ``Create user'' button.
+\item From the line labelled ``annex-user'', copy the value in the column labelled ``Access key ID'' to the file \texttt{publicKeyFile}.
+\item On the line labelled ``annex-user'', click the ``Show'' link in the column labelled ``Secret access key''; copy the revealed value to the file \texttt{privateKeyFile}.
+\item Hit the ``Close'' button.
+\end{enumerate}
+
+The `annex-user' now has full privileges to your account.  We're working on
+creating a CloudFormation template that will create a user with only the
+privileges \Condor{annex} actually needs.
+
+\subsection{Configure \Condor{annex}}
+
+The following command will setup your AWS account.  It will create a number
+of persistent components, none of which will cost you anything to keep around.
+These components can take quite some time to create; \Condor{annex} checks
+each for completion every ten seconds and prints an additional dot (past the
+first three) when it does so, to let you know that everything's still working.
+
+\terminal{%
+\$ condor\_annex -setup \\
+Creating configuration bucket (this takes less than a minute)....... complete. \\
+Creating Lambda functions (this takes about a minute)........ complete. \\
+Creating instance profile (this takes about two minutes)................... complete. \\
+Creating security group (this takes less than a minute)..... complete. \\
+Setup successful.
+}
+
+\subsubsection{Checking the Setup}
+
+You can verify at this point (or any later time) that the setup procedure
+completed successfully by running the following command.
+
+\terminal{%
+\$ condor\_annex -check-setup \\
+Checking for configuration bucket... OK. \\
+Checking for Lambda functions... OK. \\
+Checking for instance profile... OK. \\
+Checking for security group... OK.
+}
+
+You're ready to run \Condor{annex}!
+
+\subsubsection{Undoing the Setup Command}
+
+There is not as yet a way to undo the setup command automatically, but it
+won't cost you anything extra to leave your account setup for \Condor{annex}
+indefinitely.  If, however, you want to be tidy, you may delete the components
+setup created by going to the CloudFormation console at the following URL
+and deleting the entries whose names begin with `HTCondorAnnex-':
+
+\url{https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active}
+
+The setup procedure also creates an SSH key pair which may be useful
+for debugging; the private key was stored in
+\texttt{\textasciitilde{}/.condor/HTCondorAnnex-KeyPair.pem}.  To remove the
+corresponding public key from your AWS account, go to the key pair console
+at the following URL and delete the `HTCondorAnnex-KeyPair' key:
+
+\url{https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName}
+
