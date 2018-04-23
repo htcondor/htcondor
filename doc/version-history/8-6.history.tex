@@ -33,6 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Corrected a bug which could cause the shared port daemon to hang if
+it had been restarted, HTCondor had been configured with an allowable
+port range, and that port range had filled up.
+\Ticket{6596}
+
 \item The MSI installer for Windows now appends the directory needed to use the
 HTCondor python bindings libraries into the PYTHONPATH environment variable.
 \Ticket{6607}
@@ -47,6 +52,17 @@ variable when the job runs to the actual number of provisioned cpus.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that caused TCP port exhaustion when running a large
+number of instances of the \Condor{chirp\_client} program.
+\Ticket{6627}
+
+\item Fixed a bug that prevented Docker universe jobs with no
+executable listed in the submit file from running.
+\Ticket{6612}
+
+\item Fixed a bug that caused corruption of the XferStatsLog.
+\Ticket{6608}
 
 \item Fixed bugs in \Condor{q} where the \Opt{-global} option would sometimes
 truncate the job cluster id and the \Opt{-hold} option would truncate the hold reason.
@@ -111,6 +127,11 @@ selecting the next job to run on an idle claimed dynamic slot.
 ad when the \Condor{schedd} is selecting the next job to run on a an
 idle claimed dynamic slot.
 \Ticket{6611}
+
+\item Fixed a bug where \Condor{submit} with the \Opt{-spool} or
+\Opt{-remote} option would fail when there were no input files to
+transfer.
+\Ticket{6655}
 
 \end{itemize}
 
