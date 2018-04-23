@@ -197,7 +197,7 @@
 % This one is 2em wider, and fits 80 characters.
 \newcommand{\terminal}[1]{\begin{list}{}{\setlength{\leftmargin}{-1em}\setlength{\rightmargin}{-1em}}\item\fcolorbox{terminalborder}{terminalcolor}{\parbox{\dimexpr\textwidth-2\fboxsep+2em\relax}{\texttt{#1}}}\end{list}}
 
-\definecolor{filenamecolor}{RGB}{238,255,238}  % #EFE
-\definecolor{filebodycolor}{RGB}{221,238,221}  % #DED
+\definecolor{filenamecolor}{RGB}{238,255,238}  % #DFD
+\definecolor{filebodycolor}{RGB}{205,238,205}  % #CEC
 \definecolor{fileborder}{RGB}{102,102,102}     % #666
 \newcommand{\fileinal}[2]{\begin{samepage}\begin{list}{}{\setlength{\leftmargin}{-1em}\setlength{\rightmargin}{-1em}}\item\colorbox{filenamecolor}{\parbox{\dimexpr\textwidth-2\fboxsep+2em\relax}{\emph{\texttt{#1}}}} \fcolorbox{fileborder}{filebodycolor}{\parbox{\dimexpr\textwidth-2\fboxsep+2em\relax}{\texttt{#2}}}\end{list}\end{samepage}}
