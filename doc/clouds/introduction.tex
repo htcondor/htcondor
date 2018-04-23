@@ -5,8 +5,8 @@ which rent computational resources over the Internet at short notice and
 charge in small increments (by the minute or the hour).  In 2016, the four
 largest such services\footnote{That is, ``infrastructure-as-a-service''
 providers.} were (in alphabetical order) Amazon Web Services (`AWS'),
-(Microsoft) Azure, Google Cloud Platform (`GCP'), and (IBM) SoftLayer; in
-verson 8.7.2, the \Condor{annex} tool supports only AWS.  AWS can start
+(Microsoft) Azure, Google Cloud Platform (`GCP'), and (IBM) SoftLayer; as of
+version 8.7.8, the \Condor{annex} tool supports only AWS.  AWS can start
 booting a new virtual machine as quickly as a few seconds after the request;
 barring hardware failure, you will be able to continue renting that VM until
 you stop paying the hourly charge.  The other cloud services are broadly
@@ -42,7 +42,7 @@ work by that deadline.
 
 Cloud services may offer (virtual) hardware in configurations unavailable in
 the local pool, or in quantities that it would be prohibitively expensive to
-provide on an on-going basis.  Examples in 2017 may include GPU-based
+provide on an on-going basis.  Examples (from 2017) may include GPU-based
 computation, or computations requiring a terabyte of main memory.  A cloud
 service may also offer fast and cloud-local storage for shared data, which
 may have substantial performance benefits for some workflows.  Some cloud
