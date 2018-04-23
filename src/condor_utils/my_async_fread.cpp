@@ -488,7 +488,7 @@ bool MyStringAioSource::readLine(MyString & str, bool append /* = false*/)
 			if (str.Capacity() < cbtot) { str.reserve_at_least(cbtot); }
 			str.set(p1, MIN(c1, len));
 		}
-		if (len > c1) {
+		if (p2 && (len > c1)) {
 			str.append(p2, len-c1);
 		}
 		aio.consume_data(len);
