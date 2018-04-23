@@ -3705,7 +3705,9 @@ obtainAdsFromCollector (
 
             // This will avoid some wasted effort in negotiation looping
             if (requested <= 0) {
-                dprintf(D_FULLDEBUG, "Ignoring submitter %s with no requested jobs\n", subname.Value());
+                dprintf(D_FULLDEBUG,
+					"Ignoring submitter %s from schedd at %s with no requested jobs\n",
+					subname.Value(), schedd_addr.c_str());
                 continue;
             }
 

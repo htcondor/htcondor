@@ -1344,6 +1344,7 @@ annex_main( int argc, char ** argv ) {
 		dumpParam( "ANNEX_PROVISIONING_DELAY", 5 * 60 );
 		dumpParam( "COLLECTOR_HOST" );
 		dumpParam( "USER_CONFIG_FILE" );
+		dumpParam( "ANNEX_DEFAULT_AWS_REGION" );
 		dumpParam( "ANNEX_DEFAULT_EC2_URL" );
 		dumpParam( "ANNEX_DEFAULT_CWE_URL" );
 		dumpParam( "ANNEX_DEFAULT_LAMBDA_URL" );
