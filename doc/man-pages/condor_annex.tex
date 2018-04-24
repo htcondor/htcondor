@@ -26,7 +26,7 @@
   \OptArg{-duration}{hours}
 
 \SynProg{\Condor{annex}}
-  \OptArg{-annex-name}{<name of the annex>}
+  \oOptArg{-annex-name}{<name of the annex>}
   \Opt{-status}
   \oOpt{-classad}
 
@@ -37,7 +37,7 @@
 \Description
 
 \Condor{annex} adds clouds resources to the pool.  (``The pool'' is determined
-in the usual manner for HTCondor daemons and tools.)  Version 8.7.2 supports
+in the usual manner for HTCondor daemons and tools.)  This version supports
 only Amazon Web Services (`AWS').  To add ``on-demand'' instances, use
 the third form listed above; to add ``spot'' instances, use the fourth.  For an
 explanation of terms, consult either the HTCondor manual
@@ -57,7 +57,8 @@ particular annex are not currently in the pool, invoke \Condor{annex}
 with the \Opt{-status} flag and the \Opt{-annex-name} option (the sixth
 form listed above).  The output of this command is intended to be
 human-readable; specifying the \Opt{-classad} flag will produce the
-same information in ClassAd format.
+same information in ClassAd format.  If you omit \Opt{-annex-name},
+information for all annexes will be returned.
 
 Starting in 8.7.3, you may instead invoke \Condor{annex} with \Opt{status}
 as a command argument (the eighth form listed above).  This will cause \Condor{annex} to use \Condor{status}
@@ -143,10 +144,10 @@ for use by experts.
 
 \GenRem
 
-As of v8.7.1, only AWS is supported.  The AMI configured by setup runs
-HTCondor v8.6.0 on Amazon Linux 2016.09, and the default instance type
-is ``m4.large''.  The default AMI has the appropriate software for AWS'
-``p2'' family of GPU instance types.
+Currently, only AWS is supported.  The AMI configured by setup runs
+HTCondor v8.6.10 on Amazon Linux 2016.09, and the default instance type
+is ``m4.large''.  The default AMI has the appropriate drivers for AWS'
+GPU instance types.
 
 \Examples
 
