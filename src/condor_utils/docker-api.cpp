@@ -158,27 +158,6 @@ int DockerAPI::createContainer(
 	char *user_name = 0;
 
 	if (pcache()->get_user_name(uid, user_name)) {
-		pcache()->cache_uid(user_name);
-		pcache()->cache_groups(user_name);
-
-		int num = pcache()->num_groups(user_name);
-		if (num > 0) {
-			gid_t groups[num];
-			pcache()->get_groups(user_name, num, groups);
-			for (int i = 0; i < num; i++) {
-				runArgs.AppendArg("--group-add");
-				std::string suppGroup;
-				formatstr(suppGroup, "%d", groups[i]);
-				runArgs.AppendArg(suppGroup);
-			}
-		}
-		free(user_name);
-	}
-
-	// Now the supplemental groups, if any exist
-	char *user_name = 0;
-
-	if (pcache()->get_user_name(uid, user_name)) {
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		{ // These need to be run as root
 		pcache()->cache_uid(user_name);
