@@ -154,6 +154,7 @@ int DockerAPI::createContainer(
 	formatstr(uidgidarg, "%d:%d", uid, gid);
 	runArgs.AppendArg(uidgidarg);
 
+#ifndef WIN32
 	// Now the supplemental groups, if any exist
 	char *user_name = 0;
 
@@ -177,6 +178,7 @@ int DockerAPI::createContainer(
 		}
 		free(user_name);
 	}
+#endif
 
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );
