@@ -7447,12 +7447,18 @@ bool SubmitHash::fold_job_into_base_ad(ClassAd * jobad)
 		return false;
 	}
 
+	// grab the status from the jobad, this attribute is also one we want to force into the procad
+	// although unlike the procid, it's ok if it is also in the cluster ad
+	int status = IDLE;
+	bool has_status = jobad->LookupInteger(ATTR_JOB_STATUS, status);
+
 	// move all of the attributes from the job to the parent.
 	baseJob.Update(*jobad);
 
-	// put the proc id back into the (now empty) jobad
+	// put the proc id (and possibly status) back into the (now empty) jobad
 	jobad->Clear();
 	jobad->Assign(ATTR_PROC_ID, procid);
+	if (has_status) jobad->Assign(ATTR_JOB_STATUS, status);
 
 	// make sure that the base job has no procid assigment.
 	baseJob.Delete(ATTR_PROC_ID);
@@ -7643,6 +7649,11 @@ ClassAd* SubmitHash::make_job_ad (
 			// remove duplicate attributes between procad and chained parent
 			procAd->PruneChildAd();
 			#endif
+			// we need to make sure that that job status is in the proc ad
+			// because the job counters by status in the schedd depends on this.
+			if ( ! procAd->LookupIgnoreChain(ATTR_JOB_STATUS)) {
+				ClassAd::CopyAttribute(ATTR_JOB_STATUS, *procAd, ATTR_JOB_STATUS, *procAd->GetChainedParentAd());
+			}
 		} else if ( ! clusterAd && ! base_job_is_cluster_ad) {
 			// promote the procad to a clusterad
 			fold_job_into_base_ad(procAd);
