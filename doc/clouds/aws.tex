@@ -25,11 +25,11 @@ must therefore determine which Spot Fleet started it, and then obtain that
 Spot Fleet's client token.  A Spot Fleet will tag an instance with the
 Spot Fleet's identity after the instance starts up.  This usually only
 takes a few minutes, but the default image waits for up to 50 minutes,
-since you're already committed to the first hour anyway.
+since you're already paying for the first hour anyway.
 
 \subsubsection{Secure Transport}
 
-At this point, the instance knows its Annex's name.  This allows the
+At this point, the instance knows its annex's name.  This allows the
 instance to construct the name of the tarball it should download
 ({\tt config-AnnexName.tar.gz}), but does not tell it from where a file
 with that name should be downloaded.
