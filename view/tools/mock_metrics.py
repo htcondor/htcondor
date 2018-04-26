@@ -13,7 +13,7 @@ import shutil
 import sys
 from copy import copy, deepcopy
 from pathlib import Path
-from typing import Dict, Union, Iterable, List, Tuple, Callable, Any
+from typing import Dict, Union, Iterable, List, Tuple, Callable, Any, Collection
 
 Number = Union[float, int]
 
@@ -345,7 +345,7 @@ def write_records_to_json(
 
 
 def write_output_by_timespan_and_interval(
-    records_by_timespan_and_interval_number: Dict[Tuple[TimeSpan, int], Iterable[Record]],
+    records_by_timespan_and_interval_number: Dict[Tuple[TimeSpan, int], Collection[Record]],
     *,
     record_type: RecordType,
     output_dir: Union[str, Path],
@@ -357,6 +357,23 @@ def write_output_by_timespan_and_interval(
     total_records = 0
     total_files = 0
     total_filesize = 0
+
+    current_daily_records = records_by_timespan_and_interval_number[TimeSpan.DAILY, 0]
+    now_date = current_daily_records[0].date
+    now_records = [r for r in current_daily_records if r.date == now_date]
+    path = Path(output_dir) / Path(f'{record_type}s.now.json')
+    print(f'\rWriting {path}'.ljust(TEXT_WIDTH), end = '')
+    write_records_to_json(
+        now_records,
+        path,
+        compressed = compressed,
+        indent = indent,
+        flatten = flatten,
+    )
+    total_files += 1
+    total_records += len(now_records)
+    total_filesize += path.stat().st_size
+
     earliest_date_and_interval_stamps_by_timespan = collections.defaultdict(list)
     for (timespan, interval_number), records in sorted(records_by_timespan_and_interval_number.items()):
         interval_stamp = records[-1].date.strftime(timespan.format)
