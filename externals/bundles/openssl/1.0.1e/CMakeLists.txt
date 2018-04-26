@@ -90,7 +90,7 @@ if (WITH_OPENSSL)
 		# several functions that globus and voms use.
 		# Soon, we should resolve those issues so that we can get
 		# away from using the crusty old version.
-		if ( DARWIN AND ${TEST_VER} MATCHES "10.1[3-9]" )
+		if ( DARWIN AND "${TEST_VER}" MATCHES "10.1[3-9]" )
 			set( LIBSSL_FOUND "/usr/lib/libssl.0.9.8.dylib" )
 			set( LIBCRYPTO_FOUND "/usr/lib/libcrypto.0.9.8.dylib" )
 		else()
