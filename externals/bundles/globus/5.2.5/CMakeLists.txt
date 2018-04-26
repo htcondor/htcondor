@@ -110,12 +110,8 @@ if (WITH_GLOBUS)
 				cp -a ${LIBTOOL_INSTALL_LOC}/lib/libltdl.a ${GLOBUS_INSTALL_LOC}/lib &&
 				cp -a ${LIBTOOL_INSTALL_LOC}/lib/libltdl.dylib ${GLOBUS_INSTALL_LOC}/lib &&
 				cp -a ${LIBTOOL_INSTALL_LOC}/lib/libltdl.la ${GLOBUS_INSTALL_LOC}/lib &&
-				cp -a ${DARWIN_OPENSSL_LIB_DIR}/libcrypto.0.9.7.dylib ${GLOBUS_INSTALL_LOC}/lib &&
-				cp -a ${DARWIN_OPENSSL_LIB_DIR}/libcrypto.0.9.8.dylib ${GLOBUS_INSTALL_LOC}/lib &&
-				cp -a ${DARWIN_OPENSSL_LIB_DIR}/libcrypto.dylib ${GLOBUS_INSTALL_LOC}/lib &&
-				cp -a ${DARWIN_OPENSSL_LIB_DIR}/libssl.0.9.7.dylib ${GLOBUS_INSTALL_LOC}/lib &&
-				cp -a ${DARWIN_OPENSSL_LIB_DIR}/libssl.0.9.8.dylib ${GLOBUS_INSTALL_LOC}/lib &&
-				cp -a ${DARWIN_OPENSSL_LIB_DIR}/libssl.dylib ${GLOBUS_INSTALL_LOC}/lib )
+				ln -s ${DARWIN_OPENSSL_LIB_DIR}/libcrypto.dylib ${GLOBUS_INSTALL_LOC}/lib &&
+				ln -s ${DARWIN_OPENSSL_LIB_DIR}/libssl.dylib ${GLOBUS_INSTALL_LOC}/lib )
 		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
