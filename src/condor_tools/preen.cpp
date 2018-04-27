@@ -50,6 +50,7 @@
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
+#include "my_popen.h"
 
 #include <array>
 #include <memory>
@@ -96,7 +97,7 @@ bool proc_exists( int, int );
 bool is_myproxy_file( const char *name );
 bool is_ccb_file( const char *name );
 bool touched_recently(char const *fname,time_t delta);
-std::string get_corefile_process( const char* corefile, const char* dir );
+std::string get_corefile_program( const char* corefile, const char* dir );
 
 /*
   Tell folks how to use this program.
@@ -743,58 +744,65 @@ check_log_dir()
 	Directory dir(Log, PRIV_ROOT);
 	int coreFileMaxSize = param_integer("PREEN_COREFILE_MAX_SIZE", 10000000);
 	int coreFileStaleAge = param_integer("PREEN_COREFILE_STAGE_AGE", 5184000);
-	unsigned int coreFilesPerProcess = param_integer("PREEN_COREFILES_PER_PROCESS", 10);
+	unsigned int coreFilesPerProgram = param_integer("PREEN_COREFILES_PER_PROCESS", 10);
 	StringList invalid;
-	std::map<std::string, std::map<int, std::string>> processCoreFiles;
+	std::map<std::string, std::map<int, std::string>> programCoreFiles;
 
 	invalid.initializeFromString (InvalidLogFiles ? InvalidLogFiles : "");
 
 	while( (f = dir.Next()) ) {
 		if( invalid.contains(f) ) {
 			bad_file( Log, f, dir );
-		} else {
-			// Check if this is a core file
-			const char* coreFile = strstr( f, "core." );
-			if ( coreFile ) {
-				StatInfo statinfo( Log, f );
-				if( statinfo.Error() == 0 ) {
-					// If this core file is stale, flag it for removal
-					if( abs((int)( time(NULL) - statinfo.GetModifyTime() )) > coreFileStaleAge ) {
-						bad_file( Log, f, dir );
+		}
+		#ifndef WIN32
+			else {
+				// Check if this is a core file
+				const char* coreFile = strstr( f, "core." );
+				if ( coreFile ) {
+					StatInfo statinfo( Log, f );
+					if( statinfo.Error() == 0 ) {
+						// If this core file is stal	e, flag it for removal
+						if( abs((int)( time(NULL) - statinfo.GetModifyTime() )) > coreFileStaleAge ) {
+							bad_file( Log, f, dir );
+							continue;
+						}
+						// If this core file exceeds a certain size, flag for removal
+						if( statinfo.GetFileSize() > coreFileMaxSize ) {
+							bad_file( Log, f, dir );
+							continue;
+						}
+					}
+					// If we couldn't stat the file, ignore it and move on
+					else {
 						continue;
 					}
-					// If this core file exceeds a certain size, flag for removal
-					if( statinfo.GetFileSize() > coreFileMaxSize ) {
-						bad_file( Log, f, dir );
-						continue;
-					}
-				}
-				// If we couldn't stat the file, ignore it and move on
-				else {
-					continue;
-				}
 
-				// Add this core file plus its timestamp to a data structure linking it to its process
-				std::string process = get_corefile_process( f, dir.GetDirectoryPath() );
-				if( process != "" ) {
-					processCoreFiles[process].insert( std::make_pair( statinfo.GetModifyTime(), std::string( f ) ) );
+					// Add this core file plus its timestamp to a data structure linking it to its process
+					std::string program = get_corefile_program( f, dir.GetDirectoryPath() );
+					if( program != "" ) {
+						programCoreFiles[program].insert( std::make_pair( statinfo.GetModifyTime(), std::string( f ) ) );
+					}
+				}
+				// If not a core file, assume it's good
+				else {
+					good_file( Log, f );
 				}
 			}
-			// If not a core file, assume it's good
+		#else
 			else {
 				good_file( Log, f );
 			}
-		}
+		#endif
 	}
 
 	// Now iterate over the processes we tracked core files for.
 	// Keep the 10 most recent core files for each, remove anything older.
 	// Because std::map sorts alphabetically by key, and the timestamp is the
 	// key, the last 10 entries in the map are the most recent.
-	for( auto ps = processCoreFiles.begin(); ps != processCoreFiles.end(); ++ps ) {
+	for( auto ps = programCoreFiles.begin(); ps != programCoreFiles.end(); ++ps ) {
 		unsigned int index = 0;
 		for( auto core = ps->second.begin(); core != ps->second.end(); ++core ) {
-			if( ( ps->second.size() > coreFilesPerProcess ) && ( index < ( ps->second.size() - coreFilesPerProcess ) ) ) {
+			if( ( ps->second.size() > coreFilesPerProgram ) && ( index < ( ps->second.size() - coreFilesPerProgram ) ) ) {
 				bad_file( Log, core->second.c_str(), dir );
 			}
 			else {
@@ -1084,42 +1092,55 @@ touched_recently(char const *fname,time_t delta)
 	return true;
 }
 
+// Use the 'file' command to determine which program created a core file.
+// If anything goes wrong in here, return an empty string.
+// Only supported for Linux. Windows will always return an empty string.
 std::string
-get_corefile_process( const char* corefile, const char* dir ) {
+get_corefile_program( const char* corefile, const char* dir ) {
 
-	std::string process = "";
+	std::string program = "";
 
-	// Assemble the "file /path/to/corefile" system command and call it
-	std::string cmd = "file ";
-	cmd += dir;
-	cmd += DIR_DELIM_CHAR;
-	cmd += corefile;
+	#ifndef WIN32
+		// Assemble the "file /path/to/corefile" system command and call it
+		std::string corepath = dir;
+		corepath += DIR_DELIM_CHAR;
+		corepath += corefile;
 
-	std::array<char, 128> buffer;
-	std::string cmd_output;
-	std::shared_ptr<FILE> process_pipe( popen( cmd.c_str(), "r" ), pclose );
+		// Prepare arguments
+		ArgList args;
+		args.AppendArg("file");
+		args.AppendArg(corepath);
 
-	// Run the file command and capture output. 
-	// On any error, return an empty string.
-	if ( !process_pipe )
-		return "";
-	while ( !feof( process_pipe.get() ) ) {
-		if ( fgets( buffer.data(), 128, process_pipe.get() ) != NULL ) {
-			cmd_output += buffer.data();
+		std::array<char, 128> buffer;
+		std::string cmd_output;
+		std::shared_ptr<FILE> process_pipe( my_popen( args, "r", 0 ), my_pclose );
+
+		// Run the file command and capture output.
+		// On any error, return an empty string.
+		if ( !process_pipe )
+			return "";
+		while ( !feof( process_pipe.get() ) ) {
+			if ( fgets( buffer.data(), 128, process_pipe.get() ) != NULL ) {
+				cmd_output += buffer.data();
+			}
 		}
-	}
 
-	// Parse the output, look for the "execfn:" token
-	std::istringstream is( cmd_output );
-	std::string token;
-	while( getline( is, token, ' ' ) ) {
-		if( token == "execfn:" ) {
-			// Next token is the process binary that we want
-			getline( is, process, ' ' );
-			process = process.substr( 1, process.find_last_of( "'" )-1 );
-			break;
+		// Parse the output, look for the "execfn:" token
+		std::istringstream is( cmd_output );
+		std::string token;
+		while( getline( is, token, ' ' ) ) {
+			if( token == "execfn:" ) {
+				// Next token is the program binary that we want
+				// If the output here is malformed in any way, just bail out
+				// and return an empty string.
+				getline( is, token, ' ' );
+				if( token.find_last_of( "'" ) != std::string::npos ) {
+					program = token.substr( 1, token.find_last_of( "'" )-1 );
+				}
+				break;
+			}
 		}
-	}
+	#endif
 
-	return process;
+	return program;
 }
