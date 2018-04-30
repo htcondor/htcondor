@@ -42,10 +42,6 @@
 
 #include "user_job_policy.h"
 
-#if defined(AIX31) || defined(AIX32)
-#include "syscall.aix.h"
-#endif
-
 #include "condor_debug.h"
 #include "fileno.h"
 #include "exit.h"
