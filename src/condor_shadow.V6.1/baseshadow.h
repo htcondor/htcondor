@@ -223,6 +223,11 @@ class BaseShadow : public Service
 			universe-specific code before we exit.
 		*/
 	void evictJob( int reason );
+		/** It's possible to the shadow to initiate eviction, and in
+			some cases that means we need to wait around for the starter
+			to tell us what happened.
+		*/
+	virtual void exitAfterEvictingJob( int reason ) { DC_Exit( reason ); }
 
 		/** The total number of bytes sent over the network on
 			behalf of this job.
@@ -492,7 +497,6 @@ class BaseShadow : public Service
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );
 	BaseShadow& operator = ( const BaseShadow& );
-
 };
 
 extern void dumpClassad( const char*, ClassAd*, int );

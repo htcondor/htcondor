@@ -436,8 +436,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
 
-	// finally, exit and tell the schedd what to do
-	DC_Exit( JOB_SHOULD_HOLD );
+	exitAfterEvictingJob( JOB_SHOULD_HOLD );
 }
 
 void
@@ -514,9 +513,8 @@ void BaseShadow::removeJobPre( const char* reason )
 void BaseShadow::removeJob( const char* reason )
 {
 	this->removeJobPre(reason);
-	
-	// does not return.
-	DC_Exit( JOB_SHOULD_REMOVE );
+
+	exitAfterEvictingJob( JOB_SHOULD_REMOVE );
 }
 
 void
@@ -741,8 +739,7 @@ BaseShadow::evictJob( int reason )
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
-		// does not return.
-	DC_Exit( reason );
+	exitAfterEvictingJob( reason );
 }
 
 
@@ -773,8 +770,7 @@ BaseShadow::requeueJob( const char* reason )
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
-		// does not return.
-	DC_Exit( JOB_SHOULD_REQUEUE );
+	exitAfterEvictingJob( JOB_SHOULD_REQUEUE );
 }
 
 

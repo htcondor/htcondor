@@ -166,6 +166,10 @@ class UniShadow : public BaseShadow
 	 */
 	virtual int JobResume(int sig);
 
+	virtual void exitAfterEvictingJob( int reason );
+
+	int exitLeaseHandler( void );
+
  protected:
 
 	virtual void logReconnectedEvent( void );
@@ -174,12 +178,9 @@ class UniShadow : public BaseShadow
 
  private:
 	RemoteResource *remRes;
+	int delayedExitReason;
 
 	void requestJobRemoval();
 };
 
 #endif
-
-
-
-
