@@ -129,6 +129,10 @@ class BaseShadow : public Service
 			@param reason The reason the job exited (JOB_BLAH_BLAH)
 		 */
 	virtual void shutDown( int reason );
+		/** Forces the starter to shutdown fast as well.<p>
+			@param reason The reason the job exited (JOB_BLAH_BLAH)
+		 */
+	virtual void shutDownFast( int reason );
 
 		/** Graceful shutdown method.  This is virtual so each kind of
 			shadow can do the right thing.

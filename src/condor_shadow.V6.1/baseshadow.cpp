@@ -322,6 +322,12 @@ int BaseShadow::cdToIwd() {
 
 
 void
+BaseShadow::shutDownFast( int reason ) {
+	m_force_fast_starter_shutdown = true;
+	shutDown( reason );
+}
+
+void
 BaseShadow::shutDown( int reason ) 
 {
 		// exit now if there is no job ad
