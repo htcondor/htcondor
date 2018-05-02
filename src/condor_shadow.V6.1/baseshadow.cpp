@@ -436,7 +436,12 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
 
-	exitAfterEvictingJob( JOB_SHOULD_HOLD );
+	// Doing this neither prevents scary network-level error messages in
+	// the starter log, nor actually works: if the shadow doesn't exit
+	// here it exits later with a different error code that causes the job
+	// to be rescheduled.
+	// exitAfterEvictingJob( JOB_SHOULD_HOLD );
+	DC_Exit( JOB_SHOULD_HOLD );
 }
 
 void
