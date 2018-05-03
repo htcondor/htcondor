@@ -35,35 +35,10 @@ int main( int argc, char ** argv ) {
 		return 1;
 	}
 
-	// hack, hack, hack; should be a method on DCSchedd, if we cared.
-	ReliSock sock;
-	CondorError errorStack;
-	schedd.connectSock( & sock, 20, & errorStack );
-	schedd.startCommand( REASSIGN_SLOT, & sock, 20, & errorStack );
-	schedd.forceAuthentication( & sock, & errorStack );
-
-	ClassAd request;
-	request.Assign( "Victim" ATTR_CLUSTER_ID, vid.cluster );
-	request.Assign( "Victim" ATTR_PROC_ID, vid.proc );
-	request.Assign( "Beneficiary" ATTR_CLUSTER_ID, bid.cluster );
-	request.Assign( "Beneficiary" ATTR_PROC_ID, bid.proc );
-
-	sock.encode();
-	putClassAd( & sock, request );
-	sock.end_of_message();
-
 	ClassAd reply;
-
-	sock.decode();
-	getClassAd( & sock, reply );
-	sock.end_of_message();
-
-	bool result;
-	reply.LookupBool( ATTR_RESULT, result );
-	if(! result) {
-		std::string errorString;
-		reply.LookupString( ATTR_ERROR_STRING, errorString );
-		fprintf( stderr, "%s\n", errorString.c_str() );
+	std::string errorMessage;
+	if(! schedd.reassignSlot( vid, bid, reply, errorMessage )) {
+		fprintf( stderr, "Unable to reassign slot: %s.\n", errorMessage.c_str() );
 		return 1;
 	}
 

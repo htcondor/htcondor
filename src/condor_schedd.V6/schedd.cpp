@@ -17156,6 +17156,8 @@ void handleReassignSlotError( Sock * sock, const char * msg ) {
 	reply.Assign( ATTR_ERROR_STRING, msg );
 	if( ! putClassAd( sock, reply ) || ! sock->end_of_message() ) {
 		dprintf( D_ALWAYS, "REASSIGN_SLOT: failed to send error response.\n" );
+	} else {
+		dprintf( D_ALWAYS, "REASSIGN_SLOT: %s.\n", msg );
 	}
 }
 
@@ -17187,27 +17189,28 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 	  ! request.LookupInteger( "Victim" ATTR_PROC_ID, vid.proc ) ||
 	  ! request.LookupInteger( "Beneficiary" ATTR_CLUSTER_ID, bid.cluster ) ||
 	  ! request.LookupInteger( "Beneficiary" ATTR_PROC_ID, bid.proc ) ) {
-		handleReassignSlotError( sock, "REASSIGN_SLOT: Missing job ID(s)" );
+		handleReassignSlotError( sock, "Missing job ID(s)" );
 		return FALSE;
 	}
+	dprintf( D_COMMAND, "REASSIGN_SLOT: from %d.%d to %d.%d\n", vid.cluster, vid.proc, bid.cluster, bid.proc );
 
 	ClassAd * vAd = GetJobAd( vid.cluster, vid.proc );
 	if(! vAd) {
-		handleReassignSlotError( sock, "REASSIGN_SLOT: no such job (victim)" );
+		handleReassignSlotError( sock, "no such job (victim)" );
 		return FALSE;
 	}
 	if(! OwnerCheck2( vAd, sock->getOwner() )) {
-		handleReassignSlotError( sock, "REASSIGN_SLOT: you do not own the victim" );
+		handleReassignSlotError( sock, "you do not own the victim" );
 		return FALSE;
 	}
 
 	ClassAd * bAd = GetJobAd( bid.cluster, bid.proc );
 	if(! bAd) {
-		handleReassignSlotError( sock, "REASSIGN_SLOT: no such job (beneficiary)" );
+		handleReassignSlotError( sock, "no such job (beneficiary)" );
 		return FALSE;
 	}
 	if(! OwnerCheck2( bAd, sock->getOwner() )) {
-		handleReassignSlotError( sock, "REASSIGN_SLOT: you do not own the beneficiary" );
+		handleReassignSlotError( sock, "you do not own the beneficiary" );
 		return FALSE;
 	}
 
@@ -17217,7 +17220,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 	vAd->LookupInteger( ATTR_JOB_UNIVERSE, vju );
 	bAd->LookupInteger( ATTR_JOB_UNIVERSE, bju );
 	if( vju != CONDOR_UNIVERSE_VANILLA || bju != CONDOR_UNIVERSE_VANILLA ) {
-		handleReassignSlotError( sock, "REASSIGN_SLOT: both jobs must be in the vanilla universe" );
+		handleReassignSlotError( sock, "both jobs must be in the vanilla universe" );
 		return FALSE;
 	}
 
@@ -17226,7 +17229,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 	bAd->LookupInteger( ATTR_JOB_STATUS, bStatus );
 	// FIXME?: according to actOnJobs(), vStatus could also be TRANSFERRING_OUTPUT.
 	if( vStatus != RUNNING || bStatus != IDLE ) {
-		handleReassignSlotError( sock, "REASSIGN_SLOT: the victim must be running and the beneficiary idle" );
+		handleReassignSlotError( sock, "the victim must be running and the beneficiary idle" );
 		return FALSE;
 	}
 
@@ -17237,7 +17240,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 
 	match_rec * match = FindMrecByJobID( vid );
 	if(! match) {
-		handleReassignSlotError( sock, "maybe an internal error?" );
+		handleReassignSlotError( sock, "no match for that job ID" );
 	 	return FALSE;
 	}
 	match->m_next_job = bid;
@@ -17254,7 +17257,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 	ClassAd reply;
 	reply.Assign( ATTR_RESULT, true );
 	if( ! putClassAd( sock, reply ) || ! sock->end_of_message() ) {
-		dprintf( D_ALWAYS, "REASSIGN_SLOT: failed to send success response.\n" );
+		dprintf( D_ALWAYS, "failed to send success response.\n" );
 	}
 	return TRUE;
 }

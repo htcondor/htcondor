@@ -276,6 +276,17 @@ public:
 	ClassAd* clearDirtyAttrs( StringList* ids, CondorError * errstack,
 						action_result_type_t result_type = AR_TOTALS );
 
+	/** Vacate the victim and schedule the beneficiary on its slot.  Hard-
+		kills the job.  The caller must authenticate as a queue user or
+		the owner of both jobs; the victim must be running and the beneficiary
+		must be idle.  Returns true iff it received a valid reply.
+			@param victim The job to vacate.
+			@param beneficiary The job the schedule on the vacated slot.
+			@param reply The reply from the schedd (unchanged if none).
+			@param errorMessage The error message (unchanged if none).
+		*/
+	bool reassignSlot( PROC_ID victim, PROC_ID beneficiary, ClassAd & reply, std::string & errorMessage );
+
 		/** Get starter connection info for a running job.
 			@param jobid What job to act on
 			@param subproc For parallel jobs, which one (-1 if not specified)

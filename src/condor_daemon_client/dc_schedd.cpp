@@ -1969,3 +1969,74 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 
 	return true;
 }
+
+bool
+DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string & errorMessage ) {
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "DCSchedd::reassignSlot( %d.%d, %d.%d ) making connection to %s\n",
+			vid.cluster, vid.proc, bid.cluster, bid.proc,
+			_addr ? _addr : "NULL");
+	}
+
+	ReliSock sock;
+	CondorError errorStack;
+
+	if(! connectSock( & sock, 20, & errorStack )) {
+		errorMessage = "failed to connect to schedd";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+	if(! startCommand( REASSIGN_SLOT, & sock, 20, & errorStack )) {
+		errorMessage = "failed to start command";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+	if(! forceAuthentication( & sock, & errorStack )) {
+		errorMessage = "failed to authenticate";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+
+	ClassAd request;
+	request.Assign( "Victim" ATTR_CLUSTER_ID, vid.cluster );
+	request.Assign( "Victim" ATTR_PROC_ID, vid.proc );
+	request.Assign( "Beneficiary" ATTR_CLUSTER_ID, bid.cluster );
+	request.Assign( "Beneficiary" ATTR_PROC_ID, bid.proc );
+
+	sock.encode();
+	if(! putClassAd( & sock, request )) {
+		errorMessage = "failed to send command payload";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+	if(! sock.end_of_message()) {
+		errorMessage = "failed to send command payload terminator";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+
+	sock.decode();
+	if(! getClassAd( & sock, reply )) {
+		errorMessage = "failed to receive payload";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+	if(! sock.end_of_message()) {
+		errorMessage = "failed to receive command payload terminator";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+
+	bool result;
+	reply.LookupBool( ATTR_RESULT, result );
+	if(! result) {
+		reply.LookupString( ATTR_ERROR_STRING, errorMessage );
+		if( errorMessage.empty() ) {
+			errorMessage = "unspecified schedd error";
+		}
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+
+	return true;
+}
