@@ -36,7 +36,7 @@
 #endif
 
 // Symbols from libssl
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 static long (*SSL_CTX_ctrl_ptr)(SSL_CTX *, int, long, void *) = NULL;
 #endif
 static void (*SSL_CTX_free_ptr)(SSL_CTX *) = NULL;
@@ -57,7 +57,7 @@ static void (*SSL_free_ptr)(SSL *) = NULL;
 static int (*SSL_get_error_ptr)(const SSL *, int) = NULL;
 static X509 *(*SSL_get_peer_certificate_ptr)(const SSL *) = NULL;
 static long (*SSL_get_verify_result_ptr)(const SSL *) = NULL;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 static int (*SSL_library_init_ptr)() = NULL;
 static void (*SSL_load_error_strings_ptr)() = NULL;
 #else
@@ -87,7 +87,7 @@ Condor_Auth_SSL :: ~Condor_Auth_SSL()
 {
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
     ERR_remove_state( 0 );
-#elif OPENSSL_VERSION_NUMBER < 0x10100000L
+#elif OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
     ERR_remove_thread_state( 0 );
 #endif
 	if(m_crypto) delete(m_crypto);
@@ -109,7 +109,7 @@ bool Condor_Auth_SSL::Initialize()
 		Condor_Auth_Kerberos::Initialize() == false ||
 #endif
 		 (dl_hdl = dlopen(LIBSSL_SO, RTLD_LAZY)) == NULL ||
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||
 #endif
 		 !(SSL_CTX_free_ptr = (void (*)(SSL_CTX *))dlsym(dl_hdl, "SSL_CTX_free")) ||
@@ -130,7 +130,7 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_get_error_ptr = (int (*)(const SSL *, int))dlsym(dl_hdl, "SSL_get_error")) ||
 		 !(SSL_get_peer_certificate_ptr = (X509 *(*)(const SSL *))dlsym(dl_hdl, "SSL_get_peer_certificate")) ||
 		 !(SSL_get_verify_result_ptr = (long (*)(const SSL *))dlsym(dl_hdl, "SSL_get_verify_result")) ||
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_library_init_ptr = (int (*)())dlsym(dl_hdl, "SSL_library_init")) ||
 		 !(SSL_load_error_strings_ptr = (void (*)())dlsym(dl_hdl, "SSL_load_error_strings")) ||
 #else
@@ -142,7 +142,7 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
 		 !(SSL_method_ptr = (SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
-#elif OPENSSL_VERSION_NUMBER < 0x10100000L
+#elif OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
 #else
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "TLS_method"))
@@ -162,7 +162,7 @@ bool Condor_Auth_SSL::Initialize()
 		m_initSuccess = true;
 	}
 #else
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	SSL_CTX_ctrl_ptr = SSL_CTX_ctrl;
 #endif
 	SSL_CTX_free_ptr = SSL_CTX_free;
@@ -179,7 +179,7 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_get_error_ptr = SSL_get_error;
 	SSL_get_peer_certificate_ptr = SSL_get_peer_certificate;
 	SSL_get_verify_result_ptr = SSL_get_verify_result;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	SSL_library_init_ptr = SSL_library_init;
 	SSL_load_error_strings_ptr = SSL_load_error_strings;
 #else
@@ -766,7 +766,7 @@ Condor_Auth_SSL::unwrap(const char *   input,
 
 int Condor_Auth_SSL :: init_OpenSSL(void)
 {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
     if (!(*SSL_library_init_ptr)()) {
         return AUTH_SSL_ERROR;
     }
@@ -1152,7 +1152,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		goto setup_server_ctx_err;
 	}
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	// disable SSLv2.  it has vulnerabilities.
 	//SSL_CTX_set_options( ctx, SSL_OP_NO_SSLv2 );
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv2, NULL );
@@ -1176,7 +1176,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		// TODO where's this?
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
     (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
     //SSL_CTX_set_options( ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2 );
     (*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_ALL|SSL_OP_NO_SSLv2, NULL );
 #endif
