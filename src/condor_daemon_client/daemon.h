@@ -803,12 +803,14 @@ protected:
 		*/
 	bool checkAddr( void );
 
+public:
 		/**
            Helper method for commands to see if we've already
            authenticated this socket, and if not, to try to do so.
 		*/
     bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
 
+protected:
 		/**
 		   Internal function used by public versions of startCommand().
 		   It may be either blocking or nonblocking, depending on the
