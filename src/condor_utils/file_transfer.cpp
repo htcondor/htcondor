@@ -1891,12 +1891,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	}
 
 		/*
-		  if we want to change priv states but haven't done so
-		  yet, set it now.  we only need to do this once since
-		  we're no longer doing any hard-coded insanity with
-		  PRIV_CONDOR and everything can either be done in our
-		  existing priv state (want_priv_change == FALSE) or in
-		  the priv state we were told to use... Derek, 2005-04-21
+		  If we want to change priv states, do it now.
+		  Even if we don't transfer any files, we write a commit
+		  file at the end.
 		*/
 	if( want_priv_change ) {
 		saved_priv = set_priv( desired_priv_state );

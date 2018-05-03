@@ -89,6 +89,24 @@ default=20
 type=int
 tags=preen
 
+[PREEN_COREFILE_MAX_SIZE]
+default=50000000
+type=int
+description=Maximum size allowed for coredump files. Anything bigger gets erased. Default 50Mb.
+tags=preen
+
+[PREEN_COREFILE_STALE_AGE]
+default=5184000
+type=int
+description=Age in seconds of a coredump file deemed stale. Default 60 days.
+tags=preen
+
+[PREEN_COREFILES_PER_PROCESS]
+default=10
+type=int
+description=Number of recent core dump files to retain per process.
+tags=preen
+
 [DEFAULT_MASTER_SHUTDOWN_SCRIPT]
 default=
 type=path
