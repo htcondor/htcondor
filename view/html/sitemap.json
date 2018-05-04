@@ -1,0 +1,17 @@
+{
+  "Overview": "index.html",
+  "Submitters": {
+    "Job Status": "job_status.html"
+  },
+  "Slots": {
+
+  },
+  "Operations": {
+    "CPU and Memory": "cpu_and_memory.html"
+  },
+  "#fullscreen": "fullscreen.html",
+  "#edit": "edit.html",
+  "#syntax": "syntax.html",
+  "#glossary": "glossary.html",
+  "#customization": "customization.html"
+}

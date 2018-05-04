@@ -122,17 +122,21 @@ class JobStatus(StrEnum):
     SUBMISSION_ERROR = 'Submission_err'
 
 
+def fmt_date(date: datetime.datetime) -> str:
+    return datetime.datetime.strftime(date, '%Y-%m-%dT%H:%M:%S')
+
+
 class SubmitterRecord(Record):
     NAME_KEY = 'Name'
     MACHINE_KEY = 'Machine'
-    JOBS_KEY = 'Jobs'
-    JOB_STATUS_KEY = 'JobStatus'
-    COUNT_KEY = 'Count'
+    JOBS_RUNNING_KEY = 'JobsRunning'
+    JOBS_IDLE_KEY = 'JobsIdle'
+    JOBS_HELD_KEY = 'JobsHeld'
 
     def __init__(
         self,
         *,
-        date: datetime.datetime = None,
+        date: datetime.datetime,
         name: str,
         machine: str,
         jobs: Dict[JobStatus, int],
@@ -143,17 +147,14 @@ class SubmitterRecord(Record):
         self.jobs = jobs
 
     def to_json(self):
-        j_base = {
+        return {
+            self.DATE_KEY: fmt_date(self.date),
             self.NAME_KEY: self.name,
             self.MACHINE_KEY: self.machine,
+            self.JOBS_RUNNING_KEY: self.jobs[JobStatus.RUNNING],
+            self.JOBS_IDLE_KEY: self.jobs[JobStatus.IDLE],
+            self.JOBS_HELD_KEY: self.jobs[JobStatus.HELD],
         }
-        if self.date is not None:
-            j_base[self.DATE_KEY] = datetime.datetime.strftime(self.date, '%Y-%m-%dT%H:%M:%S')
-
-        j = [{self.JOB_STATUS_KEY: job_status, self.COUNT_KEY: num_jobs, **j_base}
-             for job_status, num_jobs in self.jobs.items()]
-
-        return j
 
 
 class SlotType(StrEnum):
@@ -178,17 +179,21 @@ class SlotRecord(Record):
     STATE_KEY = 'State'
     ACTIVITY_KEY = 'Activity'
     CPUS_KEY = 'Cpus'
+    REMOTE_USER_KEY = 'RemoteUser'
+    MEMORY_KEY = 'Memory'
 
     def __init__(
         self,
         *,
-        date: datetime.datetime = None,
+        date: datetime.datetime,
         slot_type: SlotType,
         architecture: str,
         operating_system: str,
         state: SlotState,
         activity: SlotActivity,
         cpus: int,
+        memory: int,
+        remote_user: str,
     ):
         self.date = date
         self.slot_type = slot_type
@@ -197,21 +202,21 @@ class SlotRecord(Record):
         self.state = state
         self.activity = activity
         self.cpus = cpus
+        self.memory = memory
+        self.remote_user = remote_user
 
     def to_json(self):
-        j = {
+        return {
+            self.DATE_KEY: fmt_date(self.date),
             self.SLOT_TYPE_KEY: self.slot_type,
             self.ARCH_KEY: self.arch,
             self.OPSYS_KEY: self.op_sys,
             self.STATE_KEY: self.state,
             self.ACTIVITY_KEY: self.activity,
             self.CPUS_KEY: self.cpus,
+            self.MEMORY_KEY: self.memory,
+            self.REMOTE_USER_KEY: self.remote_user,
         }
-
-        if self.date is not None:
-            j[self.DATE_KEY] = datetime.datetime.strftime(self.date, '%Y-%m-%dT%H:%M:%S')
-
-        return j
 
 
 def gcd_timedeltas(a: datetime.timedelta, b: datetime.timedelta):
@@ -295,7 +300,7 @@ def make_submitter_record(date: datetime.datetime, name_and_machine: Tuple[str, 
     )
 
 
-def make_slot_record(date: datetime.datetime, *args):
+def make_slot_record(date: datetime.datetime, remote_user: str):
     return SlotRecord(
         date = date,
         slot_type = random.choice(tuple(SlotType)),
@@ -304,6 +309,8 @@ def make_slot_record(date: datetime.datetime, *args):
         state = random.choice(tuple(SlotState)),
         activity = random.choice(tuple(SlotActivity)),
         cpus = random.randint(0, 8),
+        memory = random.randint(100, 2000),
+        remote_user = remote_user,
     )
 
 
@@ -311,17 +318,11 @@ def ensure_parents_exist(path: Path):
     path.parent.mkdir(parents = True, exist_ok = True)
 
 
-def flatten_list_of_lists(list_of_lists: List[List[Any]]):
-    """Flatten one level of nesting."""
-    return itertools.chain.from_iterable(list_of_lists)
-
-
 def write_records_to_json(
     records: Iterable[Record],
     output_path: Path,
-    compressed: bool = False,
+    compact: bool = False,
     indent: int = 2,
-    flatten: bool = False,
 ):
     """
 
@@ -329,19 +330,15 @@ def write_records_to_json(
     ----------
     records
     output_path
-    compressed
+    compact
         If ``False``, "pretty-print" the JSON by adding indentation.
     indent
-        The indentation to use if ``compressed`` is ``False``.
-    flatten
-        If each individual record was turned into a list of JSON objects, make this ``True`` to flatten them into a single list.
+        The indentation to use if ``compact`` is ``False``.
     """
     ensure_parents_exist(output_path)
     j = [record.to_json() for record in records]
-    if flatten:
-        j = list(flatten_list_of_lists(j))
     with output_path.open(mode = 'w') as f:
-        json.dump(j, f, indent = indent if not compressed else None, separators = (', ', ': ') if not compressed else (',', ':'))
+        json.dump(j, f, indent = indent if not compact else None, separators = (', ', ': ') if not compact else (',', ':'))
 
 
 def write_output_by_timespan_and_interval(
@@ -349,9 +346,8 @@ def write_output_by_timespan_and_interval(
     *,
     record_type: RecordType,
     output_dir: Union[str, Path],
-    compressed: bool,
+    compact: bool,
     indent: bool,
-    flatten: bool,
 ):
     print('Writing JSON...'.ljust(TEXT_WIDTH))
     total_records = 0
@@ -366,9 +362,8 @@ def write_output_by_timespan_and_interval(
     write_records_to_json(
         now_records,
         path,
-        compressed = compressed,
+        compact = compact,
         indent = indent,
-        flatten = flatten,
     )
     total_files += 1
     total_records += len(now_records)
@@ -384,9 +379,8 @@ def write_output_by_timespan_and_interval(
         write_records_to_json(
             records,
             path,
-            compressed = compressed,
+            compact = compact,
             indent = indent,
-            flatten = flatten,
         )
 
         total_files += 1
@@ -399,7 +393,7 @@ def write_output_by_timespan_and_interval(
     for timespan, earliest_date_and_interval_stamp in earliest_date_and_interval_stamps_by_timespan.items():
         oldest[timespan] = min(earliest_date_and_interval_stamp, key = lambda x: x[0])[1]
 
-    oldest_file = Path(f'{record_type}s.oldest.json')
+    oldest_file = Path(output_dir) / f'{record_type}s.oldest.json'
     with oldest_file.open(mode = 'w') as file:
         json.dump(oldest, file, indent = 2)
 
@@ -427,24 +421,22 @@ def generate_submitters(args):
             records_by_timespan_and_interval_number,
             record_type = args.record_type,
             output_dir = args.output,
-            compressed = args.compressed,
+            compact = args.compact,
             indent = args.indent,
-            flatten = True,
         )
 
 
 def generate_slots(args):
-    data = tuple(range(args.number))
-    records_by_timespan_and_interval_number = make_timespan_data(data, make_slot_record, now = args.now)
+    names = random.sample(NAMES, k = args.number)
+    records_by_timespan_and_interval_number = make_timespan_data(names, make_slot_record, now = args.now)
 
     if not args.dry:
         write_output_by_timespan_and_interval(
             records_by_timespan_and_interval_number,
             record_type = args.record_type,
             output_dir = args.output,
-            compressed = args.compressed,
+            compact = args.compact,
             indent = args.indent,
-            flatten = False,
         )
 
 
@@ -478,9 +470,9 @@ def parse_args() -> argparse.Namespace:
 
     # OUTPUT FORMATTING
     parser.add_argument(
-        '-c', '--compressed',
+        '-c', '--compact',
         action = 'store_true',
-        help = 'if passed, compress the output JSON',
+        help = 'if passed, compactify the output JSON',
     )
     parser.add_argument(
         '-i', '--indent',

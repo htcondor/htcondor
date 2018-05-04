@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}
+HTCondOverView
+{% endblock title %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <script>
+                    HTCondorView.simple("url={{ base }}data/submitters.now.json&title=Total Jobs&group=JobsRunning,JobsIdle,JobsHeld&chart=pie");
+                </script>
+            </div>
+            <div class="col">
+                <script>
+                    HTCondorView.simple("url={{ base }}data/slots.now.json&title=Machine State&order=State&group=State;Cpus&chart=pie");
+                </script>
+            </div>
+            <div class="col">
+                <script>
+                    HTCondorView.simple("url={{ base }}data/submitters.now.json&title=Submit Points&order=Machine&pivot=Machine;;JobsRunning&chart=pie");
+                </script>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col" id="simple-paired">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "simple-paired",
+                        title: "Total Jobs",
+                        data_url: "{{ base }}data/submitters..json",
+                        graph_query: "order=Date&pivot=Date;;JobsRunning,JobsIdle,JobsHeld&chart=stacked&rename=JobsRunning=Running&rename=JobsIdle=Idle&rename=JobsHeld=Held",
+                        {#table_query: "order=Date&pivot=Name;JobsRunning,JobsIdle,JobsHeld;",#}
+                        select_tuple: ["Name"]
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}

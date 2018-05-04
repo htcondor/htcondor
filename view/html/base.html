@@ -1,0 +1,189 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}HTCondorView{% endblock title %}</title>
+    <base href="{{ base }}">
+
+    {% block stylesheets %}
+        <link rel="stylesheet"
+              href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+        <link rel="stylesheet"
+              href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+              integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+              crossorigin="anonymous">
+        <link rel="stylesheet" href="static/htcondor.css"/>
+        <link rel="stylesheet" href="static/htcondorview.css"/>
+    {% endblock stylesheets %}
+
+    {% block js %}
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+                integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+                crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+                integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+                crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+                integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+                crossorigin="anonymous"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dygraph/1.1.0/dygraph-combined.js"></script>
+        <script src="https://www.google.com/jsapi"></script>
+        <script>
+            google.load("visualization", "1.0", {
+                packages: ["table", "corechart", "treemap", "annotatedtimeline"]
+            });
+        </script>
+        <script src="static/htcondorview.js"></script>
+    {% endblock js %}
+
+    <style>
+        /*.HTCondorViewSimplez {*/
+        /*display: inline-block;*/
+        /*width: 300px;*/
+        /*height: 200px;*/
+        /*}*/
+
+        /*div.simple {*/
+        /*text-align: center;*/
+        /*}*/
+
+        ul.radio-tabs {
+            display: inline;
+            margin: 0;
+            padding: 0;
+        }
+
+        ul.radio-tabs li {
+            display: inline-block;
+        }
+
+        ul.radio-tabs li input[type="radio"] {
+            display: none;
+        }
+
+        ul.radio-tabs li label {
+            display: block;
+            border: 1px solid black;
+            background: #ededed;
+            padding: .1em .8em;
+            cursor: pointer;
+        }
+
+        ul.radio-tabs li:first-child label {
+            border-top-left-radius: .6em;
+            border-bottom-left-radius: 0.6em;
+        }
+
+        ul.radio-tabs li:last-child label {
+            border-top-right-radius: 0.6em;
+            border-bottom-right-radius: 0.6em;
+        }
+
+        ul.radio-tabs li input[type="radio"]:checked + label {
+            background: white;
+            cursor: inherit;
+        }
+
+        /*#simple-paired .graph .vizchart {*/
+        /*height: 300px;*/
+        /*}*/
+
+        /*#html-paired .graph .vizchart {*/
+        /*height: 400px;*/
+        /*}*/
+
+        /*h1 {*/
+        /*margin-bottom: 0;*/
+        /*}*/
+
+        {% block style %}
+        {% endblock style %}
+    </style>
+</head>
+<body>
+{% block navbar %}
+    <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-left" href="">
+                <img src="static/navbar_logo.svg">
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto">
+                    {% for name, link in linkmap.items() %}
+                        {% if link is string %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ link }}">{{ name }}</a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="{{ name }}" role="button"
+                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    {% filter title %}{{ name }}{% endfilter %}
+                                </a>
+
+                                <div class="dropdown-menu" aria-labelledby="{{ name }}">
+                                    {% for subname, sublink in link.items() %}
+                                        <a class="dropdown-item" href="{{ sublink }}">{{ subname }}</a>
+                                    {% endfor %}
+                                </div>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock navbar %}
+
+{% block body %}
+{% endblock body %}
+
+<!-- vizlog is where errors will go. -->
+<div id="vizlog"></div>
+
+{% block footer %}
+    <footer class="htcv-footer">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col">
+                    <ul>
+                        <li>
+                            <a href="glossary.html">Glossary</a>
+                        </li>
+                        <li>
+                            <a href="syntax.html">Query Syntax</a>
+                        </li>
+                        <li>
+                            <a href="customization.html">Customization</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <ul>
+                        <li>
+                            <a href="http://research.cs.wisc.edu/htcondor/">HTCondor</a>
+                        </li>
+                        <li>
+                            <a href="http://chtc.cs.wisc.edu/">CHTC</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <a href="http://research.cs.wisc.edu/htcondor/">
+                        <img src="static/footer_logo.svg" height="50px">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+{% endblock footer %}
+
+</body>
+</html>

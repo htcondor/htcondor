@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col" id="running_jobs">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "running_jobs",
+                        title: "Running Jobs by Submitter",
+                        data_url: "{{ base }}data/submitters..json",
+                        graph_query: "order=Date&pivot=Date;Name;JobsRunning&chart=stacked",
+                        select_tuple: ["Name"]
+                    });
+                </script>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col" id="idle_jobs">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "idle_jobs",
+                        title: "Idle Jobs by Submitter",
+                        data_url: "{{ base }}data/submitters..json",
+                        graph_query: "order=Date&pivot=Date;Name;JobsIdle&chart=stacked",
+                        select_tuple: ["Name"]
+                    });
+                </script>
+            </div>
+            <div class="col" id="held_jobs">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "held_jobs",
+                        title: "Held Jobs by Submitter",
+                        data_url: "{{ base }}data/submitters..json",
+                        graph_query: "order=Date&pivot=Date;Name;JobsHeld&chart=stacked",
+                        select_tuple: ["Name"]
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}
