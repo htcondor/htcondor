@@ -5,6 +5,7 @@ sudo: false
 
 before_install:
   - curl http://t2.unl.edu/store/sources/condor-prefix.tar.gz | tar zxv
+  - sudo apt-get install gfortran
 
-script: CMAKE_INCLUDE_PATH=$PWD/condor-prefix/usr/include CMAKE_LIBRARY_PATH=$PWD/condor-prefix/usr/lib64 ./configure_uw -DWITH_LIBCGROUP:BOOL=OFF -DWITH_CREAM:BOOL=OFF  && make
+script: CMAKE_INCLUDE_PATH=$PWD/condor-prefix/usr/include CMAKE_LIBRARY_PATH=$PWD/condor-prefix/usr/lib64 ./configure_uw -D_VERBOSE:BOOL=OFF -DWITH_LIBCGROUP:BOOL=OFF -DWITH_CREAM:BOOL=OFF  && make
 
