@@ -62,6 +62,17 @@ the peak amount of GPU memory used by the job.  This feature only works
 for NVidia GPUs.
 \Ticket{6544}
 
+\item Improved error messages when delegation of an X.509 proxy fails.
+\Ticket{6575}
+
+\item Condor{q} will no longer limit the width of the output to 80 columns when it
+outputs to a file or pipe.
+\Ticket{6643}
+
+\item Submission of jobs via the Python bindings Submit class will now attempt to put all
+ jobs submitted in a single transaction under the same ClusterId.
+ \Ticket{6649}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

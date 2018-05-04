@@ -781,6 +781,7 @@ export CMAKE_PREFIX_PATH=/usr
 cmake \
        -DBUILDID:STRING=%condor_build_id \
        -DUW_BUILD:BOOL=TRUE \
+       -DCONDOR_RPMBUILD:BOOL=TRUE \
 %if ! %std_univ
        -DCLIPPED:BOOL=TRUE \
 %endif
