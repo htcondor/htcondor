@@ -4540,8 +4540,7 @@ int SubmitHash::SetExecutable()
 	}
 
 #if 1
-		// docker jobs can have empty executables or bogus ones
-	if (FnCheckFile && !IsDockerJob) {
+	if (FnCheckFile) {
 		int rval = FnCheckFile(CheckFileArg, this, role, ename, (transfer_it ? 1 : 0));
 		if (rval) { ABORT_AND_RETURN( rval ); }
 	}
