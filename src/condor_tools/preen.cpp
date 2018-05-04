@@ -56,6 +56,7 @@
 #include <memory>
 
 #include <map>
+#include <sstream>
 
 using namespace std;
 
