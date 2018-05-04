@@ -5091,6 +5091,20 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 		ParallelIsAMatch(&request, par_candidates, par_matches, num_threads, false);
 	}
 
+	// Map slot names to slot Classads, used by pslotMultiMatch() to
+	// quickly find a given dslot ad.
+	slotNameToAdMapType slotNameToAdMap;
+	if (allow_pslot_preemption)  {
+		ClassAd *ad;
+		std::string name;
+		startdAds.Open();
+		while ((ad=startdAds.Next())) {
+			if (ad->LookupString(ATTR_NAME,name)) {
+				slotNameToAdMap[name] = ad;
+			}
+		}
+	}
+
 	// scan the offer ads
 	startdAds.Open ();
 	std::string machineAddr;
@@ -5160,8 +5174,8 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 		if (!is_a_match && ConsiderPreemption) {
 			bool jobWantsMultiMatch = false;
 			request.LookupBool(ATTR_WANT_PSLOT_PREEMPTION, jobWantsMultiMatch);
-			if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) && jobWantsMultiMatch) {
-				is_a_match = pslotMultiMatch(&request, candidate, preemptPrio, candidateDslotClaims);
+			if (allow_pslot_preemption && jobWantsMultiMatch) {
+				is_a_match = pslotMultiMatch(&request, candidate, preemptPrio, slotNameToAdMap, candidateDslotClaims);
 				pslotRankMatch = is_a_match;
 			}
 		}
@@ -6820,7 +6834,7 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	// job with preempted resources from a dynamic slot.
 	// Only consider startd RANK for now.
 bool
-Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, string &dslot_claims) {
+Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, const slotNameToAdMapType &slotNameToAdMap, string &dslot_claims) {
 	bool isPartitionable = false;
 
 	machine->LookupBool(ATTR_SLOT_PARTITIONABLE, isPartitionable);
@@ -6929,19 +6943,32 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 				continue;
 			}
 
-				// Insert the index of the dslot we are considering
-				// for preemption requirements use
-			mutatedMachine.Assign("CandidateSlot", dSlot);
+			// See if PREEMPTION_REQUIREMENTS holds when evaluated in the context
+			// of the dslot we are considering and the job
 
-				// if PreemptionRequirementsPslot evals to true, below 
+				// First fetch the dslot ad we are considering
+			std::string dslotName;
+			ClassAd * dslotCandidateAd = nullptr;
+			if ( !dslotLookupString( machine, ATTR_NAME, dSlot, dslotName ) ) {
+				// couldn't parse or evaluate, give up on this dslot
+				continue;
+			} else {
+				// using the dslotName, find the dslot ad in our map
+				auto it = slotNameToAdMap.find(dslotName);
+				if (it == slotNameToAdMap.end()) {
+					// dslot ad not found ???, give up on this dslot
+					continue;
+				} else {
+					dslotCandidateAd = it->second;
+				}
+			}
+
+				// if PreemptionRequirements evals to true, below
 				// will be true
 			result.SetBooleanValue(false);
 
-				// Evalute preemption req pslot into result
-			EvalExprTree(PreemptionReqPslot, &mutatedMachine,job,result);
-
-				// and undo it for the next time
-			mutatedMachine.Delete("CandidateSlot");
+				// Evalute preemption req into result
+			EvalExprTree(PreemptionReq,dslotCandidateAd,job,result);
 
 			bool shouldPreempt = false;
 			if (!result.IsBooleanValue(shouldPreempt) || (shouldPreempt == false)) {

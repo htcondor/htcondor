@@ -319,7 +319,9 @@ class Matchmaker : public Service
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
 		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
-		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, string &dslot_claims);
+
+		typedef std::map<std::string, ClassAd *> slotNameToAdMapType;
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, const slotNameToAdMapType &slotNameToAdMap, string &dslot_claims);
 
 		/** trimStartdAds will throw out startd ads have no business being 
 			visible to the matchmaking engine, but were fetched from the 
