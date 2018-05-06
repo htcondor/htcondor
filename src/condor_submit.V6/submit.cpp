@@ -1115,7 +1115,7 @@ main( int argc, const char *argv[] )
 // so we can choose to do file checks. 
 int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const char * pathname, int flags)
 {
-	if (pathname == NULL) {
+	if ((pathname == NULL) && (role != SFR_PSEUDO_EXECUTABLE)) {
 		fprintf(stderr, "\nERROR: NULL filename\n");
 		return 1;
 	}
@@ -1162,6 +1162,8 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 
 		const char * ename = pathname;
 		bool transfer_it = (flags & 1) != 0;
+
+		if (!ename) transfer_it = false;
 
 		LastExecutable = ename;
 		SpoolLastExecutable = false;

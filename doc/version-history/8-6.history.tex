@@ -53,13 +53,14 @@ variable when the job runs to the actual number of provisioned cpus.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented HTCondor from running jobs if 
+HTCondor was started within a Docker container, or more generally,
+with a root user id, but without CAP\_SYSADMIN.
+\Ticket{6603}
+
 \item Fixed a bug that caused TCP port exhaustion when running a large
 number of instances of the \Condor{chirp\_client} program.
 \Ticket{6627}
-
-\item Fixed a bug that prevented Docker universe jobs with no
-executable listed in the submit file from running.
-\Ticket{6612}
 
 \item Fixed a bug that caused corruption of the XferStatsLog.
 \Ticket{6608}
@@ -132,6 +133,15 @@ idle claimed dynamic slot.
 \Opt{-remote} option would fail when there were no input files to
 transfer.
 \Ticket{6655}
+
+\item Fixed a bug that could cause the \Condor{gridmanager} to falsely
+believe that grid-type boinc jobs were submitted to the BOINC server.
+\Ticket{6669}
+
+\item Fixed a bug that could cause the HOLD column to be missing from \Condor{q}
+output when the \Opt{-global} option was used.
+\Ticket{6661}
+
 
 \end{itemize}
 

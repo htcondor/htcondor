@@ -3916,7 +3916,7 @@ static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, 
 		p->batch_name_width = wid; // return the actual width
 		fmt->width = -wid;
 	} else if (index == 6) { // held
-		if ( ! p->any_held) {
+		if ( ! p->any_held && ! global) {
 			fmt->options |= FormatOptionHideMe;
 		}
 	}
