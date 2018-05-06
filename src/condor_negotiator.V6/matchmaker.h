@@ -321,7 +321,9 @@ class Matchmaker : public Service
 										void *);
 
 		typedef std::map<std::string, ClassAd *> slotNameToAdMapType;
-		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, const slotNameToAdMapType &slotNameToAdMap, string &dslot_claims);
+		std::vector<std::pair<ClassAd*,ClassAd*> > unmutatedSlotAds;
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, const slotNameToAdMapType &slotNameToAdMap, 
+			bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState);
 
 		/** trimStartdAds will throw out startd ads have no business being 
 			visible to the matchmaking engine, but were fetched from the 
