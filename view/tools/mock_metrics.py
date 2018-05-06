@@ -15,8 +15,6 @@ from copy import copy, deepcopy
 from pathlib import Path
 from typing import Dict, Union, Iterable, List, Tuple, Callable, Any, Collection
 
-Number = Union[float, int]
-
 THIS_DIR = Path(__file__).absolute().parent
 
 with (THIS_DIR / 'fake_names' / 'users.txt').open(mode = 'r') as name_file:
@@ -400,7 +398,7 @@ def write_output_by_timespan_and_interval(
     print(f'Wrote information on oldest available records to {oldest_file}')
 
 
-def bytes_to_str(num_bytes: Number) -> str:
+def bytes_to_str(num_bytes: int) -> str:
     """Return a number of bytes as a human-readable string."""
     for unit in ('bytes', 'KB', 'MB', 'GB'):
         if num_bytes < 1024:

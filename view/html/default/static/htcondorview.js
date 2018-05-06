@@ -516,13 +516,13 @@ HTCondorView.prototype.table_select_handler = function (evnt, table, data) {
 HTCondorView.prototype.html_for_graph = function () {
     "use strict";
     return "" +
-           "<div class='vizstatus'>\n" +
-           "  <div class='statustext'></div>\n" +
-           "  <div class='statussub'></div>\n" +
-           "</div>\n" +
-           "<div class='vizraw'></div>\n" +
-           "<div class='vizchart'></div>\n" +
-           "<div class='vizlog'></div>\n";
+        "<div class='vizstatus'>\n" +
+        "  <div class='statustext'></div>\n" +
+        "  <div class='statussub'></div>\n" +
+        "</div>\n" +
+        "<div class='vizraw'></div>\n" +
+        "<div class='vizchart'></div>\n" +
+        "<div class='vizlog'></div>\n";
 };
 
 HTCondorView.prototype.starting_elements = function (options) {
@@ -555,19 +555,19 @@ HTCondorView.prototype.starting_elements = function (options) {
 
 
     var ret = "" +
-              '<div class="htcondorview">\n' +
-              "<div id='" + this.graph_id + "' class='graph'>\n" +
-              editmenu(this.graph_fullscreen_id, this.graph_edit_id, this.graph_download_id) +
-              this.html_for_graph() + "\n" +
-              "</div>\n";
+        '<div class="htcondorview">\n' +
+        "<div id='" + this.graph_id + "' class='graph'>\n" +
+        editmenu(this.graph_fullscreen_id, this.graph_edit_id, this.graph_download_id) +
+        this.html_for_graph() + "\n" +
+        "</div>\n";
     if (has_table) {
         ret += "<div id='" + this.total_table_id + "' class='table'>\n" +
-               this.html_for_graph() + "\n" +
-               "</div>\n";
+            this.html_for_graph() + "\n" +
+            "</div>\n";
         ret += "<div id='" + this.table_id + "' class='table'>\n" +
-               editmenu(this.table_fullscreen_id, this.table_edit_id, this.table_download_id) +
-               this.html_for_graph() + "\n" +
-               "</div>\n";
+            editmenu(this.table_fullscreen_id, this.table_edit_id, this.table_download_id) +
+            this.html_for_graph() + "\n" +
+            "</div>\n";
     }
     ret += "</div>\n";
 
@@ -1046,25 +1046,25 @@ HTCondorViewRanged.prototype.html_tabs = function () {
 
     this.graph_id = this.new_graph_id();
     return "" +
-           "<div class='htcondorviewranged'>\n" +
-           "<div class='tabs'>\n" +
-           "<ul class='radio-tabs data-duration'>\n" +
-           "<li>" + html_radio("data-duration", "data-duration-day-" + id_dd, "day", "Day", "checked") + "\n" +
-           "<li>" + html_radio("data-duration", "data-duration-week-" + id_dw, "week", "Week") + "\n" +
-           "<li>" + html_radio("data-duration", "data-duration-month-" + id_dm, "month", "Month") + "\n" +
-           "<li>" + html_radio("data-duration", "data-duration-custom-" + id_dc, "custom", "Custom") + "\n" +
-           "</ul>\n" +
-           "</div>\n" +
-           '<div class="range" id="' + this.id_range + '">\n' +
-           HTCondorView.input_date('start_date', this.id_start_date) + "\n" +
-           HTCondorView.input_time('start_time', this.id_start_time) + "\n" +
-           'through\n' +
-           HTCondorView.input_date('end_date', this.id_end_date) + "\n" +
-           HTCondorView.input_time('end_time', this.id_end_time) + "\n" +
-           "<button class='update_range'>Update chart</button>\n" +
-           '</div>\n' +
-           '<div id="' + this.graph_id + '"></div>\n' +
-           '</div>\n';
+        "<div class='htcondorviewranged'>\n" +
+        "<div class='tabs'>\n" +
+        "<ul class='radio-tabs data-duration'>\n" +
+        "<li>" + html_radio("data-duration", "data-duration-day-" + id_dd, "day", "Day", "checked") + "\n" +
+        "<li>" + html_radio("data-duration", "data-duration-week-" + id_dw, "week", "Week") + "\n" +
+        "<li>" + html_radio("data-duration", "data-duration-month-" + id_dm, "month", "Month") + "\n" +
+        "<li>" + html_radio("data-duration", "data-duration-custom-" + id_dc, "custom", "Custom") + "\n" +
+        "</ul>\n" +
+        "</div>\n" +
+        '<div class="range" id="' + this.id_range + '">\n' +
+        HTCondorView.input_date('start_date', this.id_start_date) + "\n" +
+        HTCondorView.input_time('start_time', this.id_start_time) + "\n" +
+        'through\n' +
+        HTCondorView.input_date('end_date', this.id_end_date) + "\n" +
+        HTCondorView.input_time('end_time', this.id_end_time) + "\n" +
+        "<button class='update_range'>Update chart</button>\n" +
+        '</div>\n' +
+        '<div id="' + this.graph_id + '"></div>\n' +
+        '</div>\n';
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1222,6 +1222,7 @@ function AfterqueryObj(options) {
     this.colormap = {};
     this.next_color = 0;
 }
+
 AfterqueryObj.prototype.elid = function (id) {
     if (this.root_id) {
 
@@ -1346,7 +1347,7 @@ AfterqueryObj.dataToGvizTable = function (grid, options) {
                 var urlresult = AfterqueryObj.looksLikeUrl(cell);
                 if (urlresult) {
                     cell = '<a href="' + encodeURI(urlresult[0]) + '">' +
-                           AfterqueryObj.htmlEscape(urlresult[1]) + '</a>';
+                        AfterqueryObj.htmlEscape(urlresult[1]) + '</a>';
                 }
                 else {
                     cell = AfterqueryObj.htmlEscape(cell);
@@ -1416,7 +1417,7 @@ AfterqueryObj.dataToGvizTable = function (grid, options) {
                 }
                 else {
                     throw new Error("unknown intensify= mode '" +
-                                    options.intensify + "'");
+                        options.intensify + "'");
                 }
                 AfterqueryObj.log('coli=' + coli + ' mn=' + mn + ' mx=' + mx);
                 formatter.addGradientRange(mn - 1, 0, null, '#f88', '#fff');
@@ -1462,9 +1463,9 @@ AfterqueryObj.guessTypes = function (data) {
                 impossible[coli] |= CANT_NUM;
             }
             if (!(cell == 0 || cell == 1 ||
-                  cell == 'true' || cell == 'false' ||
-                  cell == true || cell == false ||
-                  cell == 'True' || cell == 'False')) {
+                cell == 'true' || cell == 'false' ||
+                cell == true || cell == false ||
+                cell == 'True' || cell == 'False')) {
                 impossible[coli] |= CANT_BOOL;
             }
         }
@@ -1569,8 +1570,8 @@ AfterqueryObj.dateToStr = function (d) {
         return '';
     }
     return (d.getFullYear() + '-' +
-            AfterqueryObj.zpad(d.getMonth() + 1, 2) + '-' +
-            AfterqueryObj.zpad(d.getDate(), 2));
+        AfterqueryObj.zpad(d.getMonth() + 1, 2) + '-' +
+        AfterqueryObj.zpad(d.getDate(), 2));
 };
 
 
@@ -1580,10 +1581,10 @@ AfterqueryObj.dateTimeToStr = function (d) {
     }
     var msec = d.getMilliseconds();
     return (AfterqueryObj.dateToStr(d) + ' ' +
-            AfterqueryObj.zpad(d.getHours(), 2) + ':' +
-            AfterqueryObj.zpad(d.getMinutes(), 2) + ':' +
-            AfterqueryObj.zpad(d.getSeconds(), 2) +
-            (msec ? ('.' + AfterqueryObj.zpad(msec, 3)) : ''));
+        AfterqueryObj.zpad(d.getHours(), 2) + ':' +
+        AfterqueryObj.zpad(d.getMinutes(), 2) + ':' +
+        AfterqueryObj.zpad(d.getSeconds(), 2) +
+        (msec ? ('.' + AfterqueryObj.zpad(msec, 3)) : ''));
 };
 
 
@@ -1907,7 +1908,7 @@ AfterqueryObj.prototype.pivotBy = function (ingrid, rowkeys, colkeys, valkeys) {
                     // name of the old value column in the new column names; it's
                     // just clutter.
                     var name = valkeys.length > 1 ?
-                               xcolkey.join(' ') : colkey.join(' ');
+                        xcolkey.join(' ') : colkey.join(' ');
                     var colnum = rowkeys.length + colkeys.length + parseInt(coli);
                     colkey_outcols[xcolkey] = outgrid.headers.length;
                     valuecols[xcolkey] = colnum;
@@ -2241,7 +2242,7 @@ AfterqueryObj.prototype.filterBy = function (ingrid, key, op, values) {
             wantvals.push(parseFloat(values[valuei]));
         }
         else if (ingrid.types[keycol] === AfterqueryObj.T_DATE ||
-                 ingrid.types[keycol] === AfterqueryObj.T_DATETIME) {
+            ingrid.types[keycol] === AfterqueryObj.T_DATETIME) {
             wantvals.push(AfterqueryObj.dateTimeToStr(AfterqueryObj.myParseDate(values[valuei])));
         }
         else {
@@ -2301,7 +2302,7 @@ AfterqueryObj.prototype.trySplitOne = function (argval, splitstr) {
     var pos = argval.indexOf(splitstr);
     if (pos >= 0) {
         return [argval.substr(0, pos).trim(),
-                argval.substr(pos + splitstr.length).trim()];
+            argval.substr(pos + splitstr.length).trim()];
     }
     else {
 
@@ -2345,8 +2346,8 @@ AfterqueryObj.prototype.queryBy = function (ingrid, words) {
                     break;
                 }
                 else if ((word[0] == '!' || word[0] == '-') &&
-                         (cell != null &&
-                         cell.toString().indexOf(word.substr(1)) >= 0)) {
+                    (cell != null &&
+                        cell.toString().indexOf(word.substr(1)) >= 0)) {
                     skipped = 1;
                     break;
                 }
@@ -2666,6 +2667,26 @@ AfterqueryObj.prototype.doLimit = function (ingrid, limit) {
     }
 };
 
+AfterqueryObj.prototype.doTranspose = function (ingrid, column_names) {
+    column_names = column_names.split(',');
+
+    let outgrid = {headers: column_names, data: [], types: []};
+
+    outgrid.types.push(AfterqueryObj.T_STRING);
+    for (let h of ingrid.headers) {
+        outgrid.data.push([h]);
+    }
+
+    for (let row of ingrid.data) {
+        outgrid.types.push(AfterqueryObj.T_NUM);
+        for (let i = 0; i < row.length; i++) {
+            outgrid.data[i].push(row[i]);
+        }
+    }
+
+    return outgrid
+};
+
 
 AfterqueryObj.prototype.limitDecimalPrecision = function (grid) {
     for (var rowi in grid.data) {
@@ -2939,7 +2960,7 @@ AfterqueryObj.prototype.gridFromData = function (rawdata) {
         headers = [];
         for (var headeri in rawdata.table.cols) {
             headers.push(rawdata.table.cols[headeri].label ||
-                         rawdata.table.cols[headeri].id);
+                rawdata.table.cols[headeri].id);
         }
         data = [];
         for (var rowi in rawdata.table.rows) {
@@ -3013,7 +3034,7 @@ AfterqueryObj.prototype.runqueue = function (queue, ingrid, done, showstatus, wr
             var text = el[0], func = el[1];
             if (showstatus) {
                 showstatus('Running step ' + (+i + 1) + ' of ' +
-                           queue.length + '...',
+                    queue.length + '...',
                     text);
             }
             setTimeout(function () {
@@ -3146,6 +3167,11 @@ AfterqueryObj.prototype.addTransforms = function (queue, args) {
                 return that.doYSpread(g, a);
             }, argval);
         }
+        else if (argkey == 'transpose') {
+            transform(function (g, a) {
+                return that.doTranspose(g, a);
+            }, argval);
+        }
     }
 };
 
@@ -3214,8 +3240,8 @@ AfterqueryObj.prototype.createTracesChart = function (grid, el, colsPerChart) {
             // output data must be x,[min,val,max]
             for (var rowi = 0; rowi < grid.data.length; rowi++) {
                 var datacol = [grid.data[rowi][coli + 1],
-                               grid.data[rowi][coli + 0],
-                               grid.data[rowi][coli + 2]];
+                    grid.data[rowi][coli + 0],
+                    grid.data[rowi][coli + 2]];
                 if (rowi == 0 ||
                     rowi == grid.data.length - 1 ||
                     datacol[0] != null ||
@@ -3521,12 +3547,12 @@ AfterqueryObj.prototype.finishQueue = function (queue, args, done) {
         var after_each = function (grid, stepi, nsteps, text, msec_time) {
             AfterqueryObj.vizstep++;
             $(that.elid('vizlog')).append('<div class="vizstep" id="step' + AfterqueryObj.vizstep + '">' +
-                                          '  <div class="text"></div>' +
-                                          '  <div class="grid"></div>' +
-                                          '</div>');
+                '  <div class="text"></div>' +
+                '  <div class="grid"></div>' +
+                '</div>');
             $('#step' + AfterqueryObj.vizstep + ' .text').text('Step ' + stepi +
-                                                               ' (' + msec_time + 'ms):  ' +
-                                                               text);
+                ' (' + msec_time + 'ms):  ' +
+                text);
             var viewel = $('#step' + AfterqueryObj.vizstep + ' .grid');
             if (prevdata != grid.data) {
                 var t = new google.visualization.Table(viewel[0]);
@@ -3566,10 +3592,10 @@ AfterqueryObj.prototype.gotError = function (state) {
     var msg = "<p>Unable to load any data files.</p>\n<table>";
     for (var i = 0; i < state.failure.length; i++) {
         msg += "<tr>" +
-               "<td><a href='" + encodeURI(state.failure[i].url) + "'>" +
-               encodeURI(state.failure[i].url) + "</a></td>" +
-               "<td>" + AfterqueryObj.htmlEscape(state.failure[i].status) + "</td>" +
-               "</tr>\n";
+            "<td><a href='" + encodeURI(state.failure[i].url) + "'>" +
+            encodeURI(state.failure[i].url) + "</a></td>" +
+            "<td>" + AfterqueryObj.htmlEscape(state.failure[i].status) + "</td>" +
+            "</tr>\n";
     }
     if (state.failure.length == 0) {
         msg += "<tr><td>>No errors were logged.</td></tr>>\n";
@@ -3742,11 +3768,11 @@ AfterqueryObj.prototype.getUrlData_jsonp = function (state, success_func, error_
             if (plus) {
                 plus += '&response_type=token';
                 plus += '&state=' +
-                        encodeURIComponent(
+                    encodeURIComponent(
                         'url=' + encodeURIComponent(url) +
                         '&continue=' + encodeURIComponent(window.top.location));
                 plus += '&redirect_uri=' +
-                        encodeURIComponent(window.location.origin + '/oauth2callback');
+                    encodeURIComponent(window.location.origin + '/oauth2callback');
                 var want_url;
                 if (oauth2_url.indexOf('?') >= 0) {
                     want_url = oauth2_url + '&' + plus;
@@ -3757,16 +3783,16 @@ AfterqueryObj.prototype.getUrlData_jsonp = function (state, success_func, error_
                 AfterqueryObj.log('oauth2 redirect:', want_url);
                 that.checkUrlSafety(want_url);
                 document.write('Click here to ' +
-                               '<a target="_top" ' +
-                               '  href="' + want_url +
-                               '">authorize the data source</a>.');
+                    '<a target="_top" ' +
+                    '  href="' + want_url +
+                    '">authorize the data source</a>.');
             }
             else {
                 AfterqueryObj.log('no oauth2 service known for host', hostpart);
                 document.write("Data source requires authorization, but I don't " +
-                               'know how to oauth2 authorize urls from <b>' +
-                               encodeURI(hostpart) +
-                               '</b> - sorry.');
+                    'know how to oauth2 authorize urls from <b>' +
+                    encodeURI(hostpart) +
+                    '</b> - sorry.');
             }
             // needing oauth2 is "success" in that we know what's going on
             successfunc_called = true;
@@ -4044,21 +4070,21 @@ var HeatGrid = function (el) {
         }
         else if (ofs < 0) {
             return [frac(zerocolor[0], mincolor[0], -ofs / 2),
-                    frac(zerocolor[1], mincolor[1], -ofs / 2),
-                    frac(zerocolor[2], mincolor[2], -ofs / 2)];
+                frac(zerocolor[1], mincolor[1], -ofs / 2),
+                frac(zerocolor[2], mincolor[2], -ofs / 2)];
         }
         else if (ofs > 0) {
             return [frac(zerocolor[0], maxcolor[0], ofs / 2),
-                    frac(zerocolor[1], maxcolor[1], ofs / 2),
-                    frac(zerocolor[2], maxcolor[2], ofs / 2)];
+                frac(zerocolor[1], maxcolor[1], ofs / 2),
+                frac(zerocolor[2], maxcolor[2], ofs / 2)];
         }
     };
 
     this.draw = function (grid) {
         console.debug('heatgrid.draw', grid);
         this.el.html('<div id="heatgrid" tabindex=0><canvas></canvas>' +
-                     '<div id="heatgrid-popover"></div>' +
-                     '<div id="heatgrid-highlight"></div></div>');
+            '<div id="heatgrid-popover"></div>' +
+            '<div id="heatgrid-highlight"></div></div>');
         var heatgrid = this.el.find('#heatgrid');
         heatgrid.css({
             position: 'relative',
