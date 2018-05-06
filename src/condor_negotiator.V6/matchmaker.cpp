@@ -371,7 +371,6 @@ Matchmaker ()
 
 	AccountantHost  = NULL;
 	PreemptionReq = NULL;
-	PreemptionReqPslot = NULL;
 	PreemptionRank = NULL;
 	NegotiatorPreJobRank = NULL;
 	NegotiatorPostJobRank = NULL;
@@ -470,7 +469,6 @@ Matchmaker::
 	delete rankCondStd;
 	delete rankCondPrioPreempt;
 	delete PreemptionReq;
-	delete PreemptionReqPslot;
 	delete PreemptionRank;
 	delete NegotiatorPreJobRank;
 	delete NegotiatorPostJobRank;
@@ -661,25 +659,6 @@ reinitialize ()
 		tmp = NULL;
 	} else {
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = None\n");
-	}
-
-	// get PreemptionReqPslot expression
-	if (PreemptionReqPslot) delete PreemptionReqPslot;
-	PreemptionReqPslot = NULL;
-	tmp = param("PREEMPTION_REQUIREMENTS_PSLOT");
-	if( tmp ) {
-		if( ParseClassAdRvalExpr(tmp, PreemptionReqPslot) ) {
-			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS_PSLOT expression: %s",
-					tmp);
-		}
-		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS_PSLOT = %s\n", tmp);
-		free( tmp );
-		tmp = NULL;
-	} else if ( PreemptionReq ) {
-		PreemptionReqPslot = PreemptionReq->Copy();
-		dprintf( D_ALWAYS, "PREEMPTION_REQUIREMENTS_PSLOT = <PREEMPTION_REQUIREMENTS>\n" );
-	} else {
-		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS_PSLOT = None\n");
 	}
 
 	NegotiatorMatchExprNames.clearAll();
@@ -6961,11 +6940,6 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 
 			// If only considering startd rank, ignore this slot, cause ranks are equal.
 			if (only_startd_rank) {
-				continue;
-			}
-
-			// If not preemptionreq pslot for this slot, punt
-			if (!PreemptionReqPslot) {
 				continue;
 			}
 
