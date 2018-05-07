@@ -6994,8 +6994,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine,
 
 		// Now, check if it is a match
 
+		// Since we modified the machine resource counts, we need to
+		// unoptimize the machine ad, in case the original values were
+		// propagated into the requirments or rank expressions.
+		// TODO Should decide if/when to reoptimize the ad.
 		classad::MatchClassAd::UnoptimizeAdForMatchmaking(machine);
-		classad::MatchClassAd::UnoptimizeAdForMatchmaking(job);
 
 		if (IsAMatch(machine, job)) {
 			dprintf(D_FULLDEBUG, "Matched pslot %s by %s preempting %d dynamic slots\n", 
