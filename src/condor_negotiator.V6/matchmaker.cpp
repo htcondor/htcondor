@@ -1344,6 +1344,7 @@ negotiationTime ()
 	ClassAdListDoesNotDeleteAds submitterAds; // ptrs to submitter ads in allAds
 
 	ranksMap.clear();
+	m_slotNameToAdMap.clear();
 
 	/**
 		Check if we just finished a cycle less than NEGOTIATOR_CYCLE_DELAY 
@@ -3748,6 +3749,19 @@ obtainAdsFromCollector (
 		}
 	}
 
+	// Map slot names to slot Classads, used by pslotMultiMatch() to
+	// quickly find a given dslot ad.
+	if (param_boolean("ALLOW_PSLOT_PREEMPTION", false))  {
+		ClassAd *ad;
+		std::string name;
+		startdAds.Open();
+		while ((ad=startdAds.Next())) {
+			if (ad->LookupString(ATTR_NAME,name)) {
+				m_slotNameToAdMap[name] = ad;
+			}
+		}
+	}
+
 	MakeClaimIdHash(startdPvtAdList,claimIds);
 
 	dprintf(D_ALWAYS, "Got ads: %d public and %lu private\n",
@@ -5070,20 +5084,6 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 		ParallelIsAMatch(&request, par_candidates, par_matches, num_threads, false);
 	}
 
-	// Map slot names to slot Classads, used by pslotMultiMatch() to
-	// quickly find a given dslot ad.
-	slotNameToAdMapType slotNameToAdMap;
-	if (allow_pslot_preemption)  {
-		ClassAd *ad;
-		std::string name;
-		startdAds.Open();
-		while ((ad=startdAds.Next())) {
-			if (ad->LookupString(ATTR_NAME,name)) {
-				slotNameToAdMap[name] = ad;
-			}
-		}
-	}
-
 	// scan the offer ads
 	startdAds.Open ();
 	std::string machineAddr;
@@ -5157,7 +5157,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 			if (allow_pslot_preemption && jobWantsMultiMatch) {
 				// Note: after call to pslotMultiMatch(), iff is_a_match == True,
 				// then candidatePreemptState will be updated as well as candidateDslotClaims
-				is_a_match = pslotMultiMatch(&request, candidate, slotNameToAdMap,
+				is_a_match = pslotMultiMatch(&request, candidate,
 					only_for_startdrank, candidateDslotClaims, candidatePreemptState);
 			}
 		}
@@ -6803,7 +6803,7 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	// job with preempted resources from a dynamic slot.
 	// Only consider startd RANK for now.
 bool
-Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const slotNameToAdMapType &slotNameToAdMap,
+Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine,
                             bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState)
 {
 	bool isPartitionable = false;
@@ -6927,8 +6927,8 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const slotNameToAdMa
 				continue;
 			} else {
 				// using the dslotName, find the dslot ad in our map
-				auto it = slotNameToAdMap.find(dslotName);
-				if (it == slotNameToAdMap.end()) {
+				auto it = m_slotNameToAdMap.find(dslotName);
+				if (it == m_slotNameToAdMap.end()) {
 					// dslot ad not found ???, give up on this dslot
 					continue;
 				} else {
@@ -6994,8 +6994,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const slotNameToAdMa
 
 		// Now, check if it is a match
 
+		// Since we modified the machine resource counts, we need to
+		// unoptimize the machine ad, in case the original values were
+		// propagated into the requirments or rank expressions.
+		// TODO Should decide if/when to reoptimize the ad.
 		classad::MatchClassAd::UnoptimizeAdForMatchmaking(machine);
-		classad::MatchClassAd::UnoptimizeAdForMatchmaking(job);
 
 		if (IsAMatch(machine, job)) {
 			dprintf(D_FULLDEBUG, "Matched pslot %s by %s preempting %d dynamic slots\n", 
@@ -7014,13 +7017,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const slotNameToAdMa
 				child_claims[ranks[child].first] = "";
 			}
 
-			// If we preempted due to user priority, put a bogus RemoteUser attribute into the pslot
+			// Put a bogus RemoteUser attribute into the pslot
 			// ad so all the legacy policy statements (like NEGOTIATOR_PRE_JOB_RANK) understand that
 			// this match is causing preemption.  This bogus RemoteUser attribute will be reset to UNDEFINED
 			// when we restore the backupAd info when we call DeleteMatchList().
-			if (candidatePreemptState == PRIO_PREEMPTION) {
-				machine->Assign(ATTR_REMOTE_USER,"various_dSlot_users");
-			}
+			machine->Assign(ATTR_REMOTE_USER,"various_dSlot_users");
 
 			// Stash away all the attributes we mutated in the slot ad so we can restore it
 			// when/if we purge the match list in DeleteMatchList().
