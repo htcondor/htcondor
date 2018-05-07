@@ -320,9 +320,10 @@ class Matchmaker : public Service
 		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
 
-		typedef std::map<std::string, ClassAd *> slotNameToAdMapType;
 		std::vector<std::pair<ClassAd*,ClassAd*> > unmutatedSlotAds;
-		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, const slotNameToAdMapType &slotNameToAdMap, 
+		std::map<std::string, ClassAd *> m_slotNameToAdMap;
+
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine,
 			bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState);
 
 		/** trimStartdAds will throw out startd ads have no business being 
