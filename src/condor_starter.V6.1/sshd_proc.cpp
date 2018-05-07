@@ -29,7 +29,6 @@ extern CStarter *Starter;
 SSHDProc::SSHDProc(ClassAd* job_ad, bool delete_ad) : VanillaProc(job_ad)
 {
 	m_deleteJobAd = delete_ad;
-	uses_cgroups = false;
 }
 
 int
