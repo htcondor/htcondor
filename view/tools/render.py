@@ -114,6 +114,7 @@ def build(args, sitemap):
             f.write(
                 template.render(
                     linkmap = linkmap,
+                    current_page = v,
                     base = args.base,
                 )
             )

@@ -836,7 +836,7 @@ HTCondorViewDateFiles.prototype.get_files = function (start, end) {
                 return d.getUTCISOYearMonthDay();
             }
         );
-        console.log("  daily:", retfiles);
+        // console.log("  daily:", retfiles);
         return retfiles;
     }
 
@@ -849,7 +849,7 @@ HTCondorViewDateFiles.prototype.get_files = function (start, end) {
                 return d.getUTCISOWeekDate();
             }
         );
-        console.log("  weekly:", retfiles);
+        // console.log("  weekly:", retfiles);
         return retfiles;
     }
 
@@ -859,7 +859,7 @@ HTCondorViewDateFiles.prototype.get_files = function (start, end) {
             return d.getUTCISOYearMonth();
         }
     );
-    console.log("  monthly:", retfiles);
+    // console.log("  monthly:", retfiles);
     return retfiles;
 };
 
@@ -3846,7 +3846,7 @@ AfterqueryObj.prototype.getUrlData_jsonp = function (state, success_func, error_
 
         var postscript = iframe.contentDocument.createElement('script');
         postscript.async = false;
-        postscript.src = 'postscript.js';
+        postscript.src = 'static/postscript.js';
         iframe.contentDocument.body.appendChild(postscript);
     };
     document.body.appendChild(iframe);

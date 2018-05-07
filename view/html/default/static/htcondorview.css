@@ -12,7 +12,7 @@ nav {
 }
 
 body {
-    margin-bottom: 70px;
+    margin-bottom: 100px;
 }
 
 html {
@@ -20,23 +20,9 @@ html {
     min-height: 100%;
 }
 
-.htcv-footer {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    padding: 10px;
-    background-color: #f5f5f5;
-}
-
-.htcv-footer ul {
-    list-style-type: none;
-}
-
 .htcv-sidenav {
-    position: fixed;
     height: 80vh;
-    max-height: inherit;
-    overflow: auto;
+    overflow-y: auto;
     margin-top: 20px;
 }
 
@@ -45,11 +31,11 @@ html {
 }
 
 .htcv-sidenav ul.lvl1 {
-    padding-left: 0;
+    padding-left: 0em;
 }
 
 .htcv-sidenav ul.lvl2 {
-    padding-left: 2em;
+    padding-left: 1.5em;
 }
 
 .htcondorview div.editmenu {

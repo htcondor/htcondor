@@ -8,9 +8,11 @@
   "Operations": {
     "CPU and Memory": "cpu_and_memory.html"
   },
+  "Help": {
+    "Query Syntax": "syntax.html",
+    "Glossary": "glossary.html",
+    "Customization": "customization.html"
+  },
   "#fullscreen": "fullscreen.html",
-  "#edit": "edit.html",
-  "#syntax": "syntax.html",
-  "#glossary": "glossary.html",
-  "#customization": "customization.html"
+  "#edit": "edit.html"
 }

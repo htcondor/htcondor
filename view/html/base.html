@@ -7,11 +7,11 @@
 
     {% block stylesheets %}
         <link rel="stylesheet"
-                href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+              href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
         <link rel="stylesheet"
-                href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
-                integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
-                crossorigin="anonymous">
+              href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+              integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+              crossorigin="anonymous">
         <link rel="stylesheet" href="static/htcondor.css"/>
         <link rel="stylesheet" href="static/htcondorview.css"/>
     {% endblock stylesheets %}
@@ -98,9 +98,10 @@
         /*margin-bottom: 0;*/
         /*}*/
 
-        {% block style %}
-        {% endblock style %}
+        {% block style %}{% endblock style %}
     </style>
+
+    {% block head %}{% endblock head %}
 </head>
 <body>
 {% block navbar %}
@@ -148,42 +149,6 @@
 <!-- vizlog is where errors will go. -->
 <div id="vizlog"></div>
 
-{% block footer %}
-    <footer class="htcv-footer">
-        <div class="container">
-            <div class="row text-center">
-                <div class="col">
-                    <ul>
-                        <li>
-                            <a href="glossary.html">Glossary</a>
-                        </li>
-                        <li>
-                            <a href="syntax.html">Query Syntax</a>
-                        </li>
-                        <li>
-                            <a href="customization.html">Customization</a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="col">
-                    <ul>
-                        <li>
-                            <a href="http://research.cs.wisc.edu/htcondor/">HTCondor</a>
-                        </li>
-                        <li>
-                            <a href="http://chtc.cs.wisc.edu/">CHTC</a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="col">
-                    <a href="http://research.cs.wisc.edu/htcondor/">
-                        <img src="static/footer_logo.svg" height="50px">
-                    </a>
-                </div>
-            </div>
-        </div>
-    </footer>
-{% endblock footer %}
 
 </body>
 </html>
