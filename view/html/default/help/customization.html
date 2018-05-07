@@ -20,6 +20,19 @@
 
                 <h2 id="simple-modifications">Simple Modifications</h2>
 
+                <p>
+                    There are a few simple customizations that don't require re-rendering HTCondor View's HTML.
+                    <b>Because you aren't modifying the underlying HTML templates, these modifications are not permanent.</b>
+                </p>
+
+                <h2 id="logo-swap">Logo Swap</h2>
+
+                <p>
+                    The first is to switch out the logo which appears in the top left corner of each page, on the navbar.
+                    To do so, simply replace <code>view/static/navbar_logo.svg</code> with your own SVG logo.
+                </p>
+
+
                 <h2 id="html-generation">HTML Generation</h2>
 
                 <p>
@@ -89,6 +102,11 @@
                 <ul class="lvl1">
                     <li>
                         <a href="{{ current_page }}#simple-modifications">Simple Modifications</a>
+                        <ul class="lvl2">
+                            <li>
+                                <a href="{{ current_page }}#logo-swap">Logo Swap</a>
+                            </li>
+                        </ul>
                     </li>
                     <li>
                         <a href="{{ current_page }}#html-generation">HTML Generation</a>

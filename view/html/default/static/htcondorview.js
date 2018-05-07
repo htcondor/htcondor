@@ -944,6 +944,7 @@ HTCondorViewRanged.prototype.initialize = function () {
     var new_html = this.html_tabs();
     container.html(new_html);
     this.add_date_pickers(this.dst_id);
+    console.log(new_html);
 
 
     this.options.dst_id = this.graph_id;
@@ -951,6 +952,8 @@ HTCondorViewRanged.prototype.initialize = function () {
     $('#' + this.id_range).hide();
 
     // Initialize tabs
+    var selector = '#' + this.dst_id + ' ul.tabs li';
+    console.log("selector", selector);
     $('#' + this.dst_id + ' ul.tabs li').click(function () {
         $('#' + this.dst_id + ' ul.tabs li').removeClass('current');
         $(this).addClass('current');
@@ -972,6 +975,8 @@ HTCondorViewRanged.prototype.change_view = function () {
     // Purge everything.
     //$("#"+this.graph_id).empty();
     //this.htcondor_view = null;
+
+    console.log("change view");
 
     var duration = $("#" + this.dst_id + ' .data-duration input[type="radio"]:checked').val();
     var options = {};

@@ -5,25 +5,27 @@
 {% endblock title %}
 
 {% block style %}
-    body {
-    margin: 0;
-    }
+    <style>
+        body {
+            margin: 0;
+        }
 
-    #thechart {
-    z-index: -1;
-    }
+        #thechart {
+            z-index: -1;
+        }
 
-    html, body {
-    height: 100%;
-    }
+        html, body {
+            height: 100%;
+        }
 
-    h1 {
-    margin-bottom: 0;
-    }
+        h1 {
+            margin-bottom: 0;
+        }
 
-    #thechart, #thechart .htcondorview, #thechart .htcondorview .graph, #thechart .htcondorview .graph .vizchart {
-    height: 99%;
-    }
+        #thechart, #thechart .htcondorview, #thechart .htcondorview .graph, #thechart .htcondorview .graph .vizchart {
+            height: 99%;
+        }
+    </style>
 {% endblock style %}
 
 {% block navbar %}

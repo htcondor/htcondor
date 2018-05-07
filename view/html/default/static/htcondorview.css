@@ -170,3 +170,51 @@ body .htcondorview div:hover > div.editmenu {
 .htcondorviewranged div.range {
     text-align: center;
 }
+
+div .tabs {
+    position: relative;
+    z-index: 100;
+}
+
+div .range {
+    position: relative;
+    z-index: 100;
+}
+
+ul.radio-tabs {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    z-index: 1000;
+}
+
+ul.radio-tabs li {
+    display: inline-block;
+}
+
+ul.radio-tabs li input[type="radio"] {
+    display: none;
+}
+
+ul.radio-tabs li label {
+    display: block;
+    border: 1px solid black;
+    background: #ededed;
+    padding: .1em .8em;
+    cursor: pointer;
+}
+
+ul.radio-tabs li:first-child label {
+    border-top-left-radius: .6em;
+    border-bottom-left-radius: 0.6em;
+}
+
+ul.radio-tabs li:last-child label {
+    border-top-right-radius: 0.6em;
+    border-bottom-right-radius: 0.6em;
+}
+
+ul.radio-tabs li input[type="radio"]:checked + label {
+    background: white;
+    cursor: inherit;
+}
