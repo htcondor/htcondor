@@ -7014,13 +7014,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const slotNameToAdMa
 				child_claims[ranks[child].first] = "";
 			}
 
-			// If we preempted due to user priority, put a bogus RemoteUser attribute into the pslot
+			// Put a bogus RemoteUser attribute into the pslot
 			// ad so all the legacy policy statements (like NEGOTIATOR_PRE_JOB_RANK) understand that
 			// this match is causing preemption.  This bogus RemoteUser attribute will be reset to UNDEFINED
 			// when we restore the backupAd info when we call DeleteMatchList().
-			if (candidatePreemptState == PRIO_PREEMPTION) {
-				machine->Assign(ATTR_REMOTE_USER,"various_dSlot_users");
-			}
+			machine->Assign(ATTR_REMOTE_USER,"various_dSlot_users");
 
 			// Stash away all the attributes we mutated in the slot ad so we can restore it
 			// when/if we purge the match list in DeleteMatchList().
