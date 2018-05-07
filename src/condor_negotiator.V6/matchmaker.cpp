@@ -5157,7 +5157,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 			if (allow_pslot_preemption && jobWantsMultiMatch) {
 				// Note: after call to pslotMultiMatch(), iff is_a_match == True,
 				// then candidatePreemptState will be updated as well as candidateDslotClaims
-				is_a_match = pslotMultiMatch(&request, candidate, preemptPrio, slotNameToAdMap,
+				is_a_match = pslotMultiMatch(&request, candidate, slotNameToAdMap,
 					only_for_startdrank, candidateDslotClaims, candidatePreemptState);
 			}
 		}
@@ -5246,35 +5246,6 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
-			} else if( accountant.GetPriority(remoteUser) >= preemptPrio +
-				PriorityDelta ) {
-					// RemoteUser on machine has *worse* priority than request
-					// so we can preempt this machine *but* we need to check
-					// on two things first
-				candidatePreemptState = PRIO_PREEMPTION;
-					// (1) we need to make sure that PreemptionReq's hold (i.e.,
-					// if the PreemptionReq expression isn't true, dont preempt)
-				if (PreemptionReq && 
-					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
-					  result.IsBooleanValue(val) && val) ) {
-					rejPreemptForPolicy++;
-					dprintf(D_MACHINE,
-							"PREEMPTION_REQUIREMENTS prevents job %d.%d from claiming %s.\n",
-							cluster_id, proc_id, machine_name.Value());
-					continue;
-				}
-					// (2) we need to make sure that the machine ranks the job
-					// at least as well as the one it is currently running 
-					// (i.e., rankCondPrioPreempt holds)
-				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
-					 result.IsBooleanValue(val) && val ) ) {
-						// machine doesn't like this job as much -- find another
-					rejPreemptForRank++;
-					dprintf(D_MACHINE,
-							"Job %d.%d has lower startd rank than existing job on %s.\n",
-							cluster_id, proc_id, machine_name.Value());
-					continue;
-				}
 			} else {
 					// don't have better priority *and* offer doesn't prefer
 					// request --- find another machine
@@ -6832,7 +6803,7 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	// job with preempted resources from a dynamic slot.
 	// Only consider startd RANK for now.
 bool
-Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, const slotNameToAdMapType &slotNameToAdMap,
+Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const slotNameToAdMapType &slotNameToAdMap,
                             bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState)
 {
 	bool isPartitionable = false;
@@ -6943,19 +6914,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 				continue;
 			}
 
-			// Find the RemoteOwner for this dslot, via pslot's childremoteOwner list
-			std::string remoteOwner;
 			classad::Value result;
-			if ( !dslotLookupString( machine, ATTR_REMOTE_OWNER, dSlot, remoteOwner ) ) {
-				// couldn't parse or evaluate, give up on this dslot
-				continue;
-			}
-		
-			if (accountant.GetPriority(remoteOwner) < preemptPrio + PriorityDelta) {
-				// this slot's user prio is better than preempter.  
-				// (and ranks are equal). Don't consider preempting it
-				continue;
-			}
 
 			// See if PREEMPTION_REQUIREMENTS holds when evaluated in the context
 			// of the dslot we are considering and the job
