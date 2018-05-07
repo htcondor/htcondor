@@ -322,6 +322,12 @@ int BaseShadow::cdToIwd() {
 
 
 void
+BaseShadow::shutDownFast( int reason ) {
+	m_force_fast_starter_shutdown = true;
+	shutDown( reason );
+}
+
+void
 BaseShadow::shutDown( int reason ) 
 {
 		// exit now if there is no job ad
@@ -430,7 +436,11 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
 
-	// finally, exit and tell the schedd what to do
+	// Doing this neither prevents scary network-level error messages in
+	// the starter log, nor actually works: if the shadow doesn't exit
+	// here it exits later with a different error code that causes the job
+	// to be rescheduled.
+	// exitAfterEvictingJob( JOB_SHOULD_HOLD );
 	DC_Exit( JOB_SHOULD_HOLD );
 }
 
@@ -508,9 +518,8 @@ void BaseShadow::removeJobPre( const char* reason )
 void BaseShadow::removeJob( const char* reason )
 {
 	this->removeJobPre(reason);
-	
-	// does not return.
-	DC_Exit( JOB_SHOULD_REMOVE );
+
+	exitAfterEvictingJob( JOB_SHOULD_REMOVE );
 }
 
 void
@@ -735,8 +744,7 @@ BaseShadow::evictJob( int reason )
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
-		// does not return.
-	DC_Exit( reason );
+	exitAfterEvictingJob( reason );
 }
 
 
@@ -767,8 +775,7 @@ BaseShadow::requeueJob( const char* reason )
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
-		// does not return.
-	DC_Exit( JOB_SHOULD_REQUEUE );
+	exitAfterEvictingJob( JOB_SHOULD_REQUEUE );
 }
 
 

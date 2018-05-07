@@ -29,6 +29,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Condor{submit} -i jobs now track their resource usage as normal jobs
+do
+\Ticket{6590}
+
+\item Added the machine attribute \Attr{AcceptedWhileDraining}
+(see page~\pageref{acceptedwhiledraining-machine-attribute}),
+configuration macro \Macro{DEFRAG\_DRAINING\_START\_EXPR}
+(see page~\pageref{param:DefragDrainingStartExpr}),
+and command-line option \Opt{-start} to \Condor{drain}
+(see page~\pageref{man-condor-drain})
+to support running jobs on draining resources.  See
+section \ref{sec:SMP-defrag} for details.
+\Ticket{6628}
+
 \item \Condor{annex} may now be setup in multiple regions simultaneously.
 Use the \Opt{-aws-region} flag with \Opt{-setup} to add new regions.  Use the
 \Opt{-aws-region} flag with other \Condor{annex} commands to choose which
@@ -52,11 +66,27 @@ the peak amount of GPU memory used by the job.  This feature only works
 for NVidia GPUs.
 \Ticket{6544}
 
+\item Improved error messages when delegation of an X.509 proxy fails.
+\Ticket{6575}
+
+\item Condor{q} will no longer limit the width of the output to 80 columns when it
+outputs to a file or pipe.
+\Ticket{6643}
+
+\item Submission of jobs via the Python bindings Submit class will now attempt to put all
+ jobs submitted in a single transaction under the same ClusterId.
+ \Ticket{6649}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a problem where, when starting enough \Condor{annex} instances
+simultaneously, some (approximately 1 in 100) instances would neither join
+the pool nor terminate themselves.
+\Ticket{6638}
 
 \item When running in a HAD setup, there is a configuration parameter,
 \Macro{COLLECTOR\_HOST\_FOR\_NEGOTIATOR} which tells the active negotiator
@@ -102,8 +132,7 @@ Claimed/Busy state after a job completes.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.7 not yet released.
-%\item HTCondor version 8.7.7 released on March 13, 2018.
+\item HTCondor version 8.7.7 released on March 13, 2018.
 
 \end{itemize}
 

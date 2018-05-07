@@ -429,6 +429,62 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 	}
 }
 
+// Repeatedly calls GCP for operation status until the operation
+// is completed. On failure, stores an appropriate message in
+// err_msg and returns false. On success, stores targetId value in
+// instance_id (if non-NULL) and returns true.
+bool verifyRequest( const string &serviceUrl, const string &auth_file,
+					string &err_msg, string *instance_id = NULL )
+{
+	string status;
+	bool in_err = false;
+	do {
+
+		// Give the operation some time to complete.
+		// TODO Is there a better way to do this?
+		gce_gahp_release_big_mutex();
+		sleep( 5 );
+		gce_gahp_grab_big_mutex();
+
+		GceRequest op_request;
+		op_request.serviceURL = serviceUrl;
+		op_request.requestMethod = "GET";
+
+		if ( !GetAccessToken( auth_file, op_request.accessToken, err_msg ) ) {
+			return false;
+		}
+
+		if ( !op_request.SendRequest() ) {
+			err_msg = op_request.errorMessage;
+			return false;
+		}
+
+		int nesting = 0;
+		string key;
+		string value;
+		const char *pos = op_request.resultString.c_str();
+		while ( ParseJSONLine( pos, key, value, nesting ) ) {
+			if ( key == "status" ) {
+				status = value;
+			} else if ( key == "error" ) {
+				in_err = true;
+			} else if ( key == "warnings" ) {
+				in_err = false;
+			} else if ( key == "message" && in_err ) {
+				err_msg = value;
+			} else if ( key == "targetId" && instance_id ) {
+				*instance_id = value;
+			}
+		}
+	} while ( status != "DONE" );
+
+	if ( !err_msg.empty() ) {
+		return false;
+	}
+
+	return true;
+}
+
 
 //
 // "This function gets called by libcurl as soon as there is data received
@@ -1051,7 +1107,7 @@ GceInstanceDelete::GceInstanceDelete() { }
 
 GceInstanceDelete::~GceInstanceDelete() { }
 
-// Expecting:GCE_INSTACE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>
+// Expecting:GCE_INSTANCE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>
 bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_DELETE" ) == 0 );
 
@@ -1283,4 +1339,389 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 			return true;
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------
+
+GceGroupInsert::GceGroupInsert() { }
+
+GceGroupInsert::~GceGroupInsert() { }
+
+// Expecting GCE_GROUP_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
+//     <group_name> <machine_type> <image> <metadata> <metadata_file>
+//     <preemptible> <json_file> <count> <duration_hours>
+
+bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string) {
+	assert( strcasecmp( argv[0], "GCE_GROUP_INSERT" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_number_args( argc, 15 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 15, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	GceGroupInsert insert_request;
+	insert_request.serviceURL = argv[2];
+	insert_request.serviceURL += "/projects/";
+	insert_request.serviceURL += argv[4];
+	insert_request.serviceURL += "/global/instanceTemplates";
+	insert_request.requestMethod = "POST";
+
+	std::map<string, string> metadata;
+	if ( strcasecmp( argv[9], NULLSTRING ) ) {
+		string key;
+		string value;
+		const char *pos = argv[9];
+		while ( ParseMetadataLine( pos, key, value, ',' ) ) {
+			metadata[key] = value;
+		}
+	}
+	if ( strcasecmp( argv[10], NULLSTRING ) ) {
+		string file_contents;
+		if ( !readShortFile( argv[10], file_contents ) ) {
+			result_string = create_failure_result( requestID, "Failed to open metadata file" );
+			return true;
+		}
+		string key;
+		string value;
+		const char *pos = file_contents.c_str();
+		while( ParseMetadataLine( pos, key, value, '\n' ) ) {
+			metadata[key] = value;
+		}
+	}
+	string json_file_contents;
+	if ( strcasecmp( argv[12], NULLSTRING ) ) {
+		if ( !readShortFile( argv[12], json_file_contents ) ) {
+			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
+			return true;
+		}
+	}
+
+	insert_request.requestBody = "{\n";
+	insert_request.requestBody += " \"name\": \"";
+	insert_request.requestBody += argv[6];
+	insert_request.requestBody += "-template\",\n";
+	insert_request.requestBody += "  \"properties\": \n";
+	insert_request.requestBody += "  {\n";
+	insert_request.requestBody += "   \"machineType\": \"";
+	insert_request.requestBody += argv[7];
+	insert_request.requestBody += "\",\n";
+	insert_request.requestBody += "    \"scheduling\":\n";
+	insert_request.requestBody += "    {\n";
+	insert_request.requestBody += "      \"preemptible\": ";
+	insert_request.requestBody += argv[11];
+	insert_request.requestBody += "\n    },\n";
+	insert_request.requestBody += "   \"disks\": [\n  {\n";
+	insert_request.requestBody += "     \"boot\": true,\n";
+	insert_request.requestBody += "     \"autoDelete\": true,\n";
+	insert_request.requestBody += "     \"initializeParams\": {\n";
+	insert_request.requestBody += "      \"sourceImage\": \"";
+	insert_request.requestBody += argv[8];
+	insert_request.requestBody += "\"\n";
+	insert_request.requestBody += "   }\n  }\n ],\n";
+	if ( !metadata.empty() ) {
+		insert_request.requestBody += " \"metadata\": {\n";
+		insert_request.requestBody += "  \"items\": [\n";
+
+		for ( map<string, string>::const_iterator itr = metadata.begin(); itr != metadata.end(); itr++ ) {
+			if ( itr != metadata.begin() ) {
+				insert_request.requestBody += ",\n";
+			}
+			insert_request.requestBody += "   {\n    \"key\": \"";
+			insert_request.requestBody += itr->first;
+			insert_request.requestBody += "\",\n";
+			insert_request.requestBody += "    \"value\": \"";
+			insert_request.requestBody += escapeJSONString( itr->second.c_str() );
+			insert_request.requestBody += "\"\n   }";
+		}
+
+		insert_request.requestBody += "\n  ]\n";
+		insert_request.requestBody += " },\n";
+	}
+	insert_request.requestBody += " \"networkInterfaces\": [\n  {\n";
+	insert_request.requestBody += "   \"network\": \"";
+	insert_request.requestBody += argv[2];
+	insert_request.requestBody += "/projects/";
+	insert_request.requestBody += argv[4];
+	insert_request.requestBody += "/global/networks/default\",\n";
+	insert_request.requestBody += "   \"accessConfigs\": [\n    {\n";
+	insert_request.requestBody += "     \"name\": \"External NAT\",\n";
+	insert_request.requestBody += "     \"type\": \"ONE_TO_ONE_NAT\"\n";
+	insert_request.requestBody += "    }\n   ]\n";
+	insert_request.requestBody += "  }\n ]";
+	insert_request.requestBody += "}\n}\n";
+
+	if ( !json_file_contents.empty() ) {
+		classad::ClassAd instance_ad;
+		classad::ClassAd custom_ad;
+		classad::ClassAdJsonParser parser;
+		classad::ClassAdJsonUnParser unparser;
+		string wrap_custom_attrs = "{" + json_file_contents + "}";
+
+		if ( !parser.ParseClassAd( insert_request.requestBody, instance_ad, true ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse instance description" );
+			return true;
+		}
+
+		if ( !parser.ParseClassAd( wrap_custom_attrs, custom_ad, true ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse custom attributes" );
+			return true;
+		}
+
+		instance_ad.Update( custom_ad );
+
+		insert_request.requestBody.clear();
+		unparser.Unparse( insert_request.requestBody, &instance_ad );
+	}
+
+	string auth_file = argv[3];
+	if ( !GetAccessToken( auth_file, insert_request.accessToken,
+						  insert_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   insert_request.errorMessage.c_str() );
+		return true;
+	}
+
+	// Send the request.
+	if( ! insert_request.SendRequest() ) {
+		dprintf( D_ALWAYS, "Error is '%s'\n", insert_request.errorMessage.c_str() );
+		// TODO Fix construction of error message
+		result_string = create_failure_result( requestID,
+							insert_request.errorMessage.c_str(),
+							insert_request.errorCode.c_str() );
+		return true;
+	}
+
+	string op_name;
+	string key;
+	string value;
+	int nesting = 0;
+
+	const char *pos = insert_request.resultString.c_str();
+	while( ParseJSONLine( pos, key, value, nesting ) ) {
+		if ( key == "name" ) {
+			op_name = value;
+			break;
+		}
+	}
+
+	// Wait for instance template to be created
+	string err_msg;
+	string opUrl = argv[2];
+	opUrl += "/projects/";
+	opUrl += argv[4];
+	opUrl += "/global/operations/";
+	opUrl += op_name;
+	if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+		return true;
+	}
+
+	// Now construct managed instance group
+	GceRequest group_request;
+	group_request.serviceURL = argv[2];
+	group_request.serviceURL += "/projects/";
+	group_request.serviceURL += argv[4];
+	group_request.serviceURL += "/zones/";
+	group_request.serviceURL += argv[5];
+	group_request.serviceURL += "/instanceGroupManagers";
+	group_request.requestMethod = "POST";
+	group_request.requestBody = "{\n";
+	group_request.requestBody += " \"name\": \"";
+	group_request.requestBody += argv[6];
+	group_request.requestBody += "-group\",\n";
+	group_request.requestBody += " \"instanceTemplate\": \"";
+	group_request.requestBody += "/projects/";
+	group_request.requestBody += argv[4];
+	group_request.requestBody += "/global/instanceTemplates/";
+	group_request.requestBody += argv[6];
+	group_request.requestBody += "-template\",\n";
+	group_request.requestBody += " \"baseInstanceName\": \"";
+	group_request.requestBody += argv[6];
+	group_request.requestBody += "-instance\",\n";
+	group_request.requestBody += " \"targetSize\": \"";
+	group_request.requestBody += argv[13];
+	group_request.requestBody += "\"\n";
+	group_request.requestBody += "}\n";
+
+
+	if ( !GetAccessToken( auth_file, group_request.accessToken,
+						  group_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   group_request.errorMessage.c_str() );
+		return true;
+	}
+
+	if ( !group_request.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+							group_request.errorMessage.c_str(),
+							group_request.errorCode.c_str() );
+		return true;
+	}
+
+	nesting = 0;
+	pos = group_request.resultString.c_str();
+	while( ParseJSONLine( pos, key, value, nesting ) ) {
+		if ( key == "name" ) {
+			op_name = value;
+			break;
+		}
+	}
+
+	// Wait for group template to be created
+	opUrl = argv[2];
+	opUrl += "/projects/";
+	opUrl += argv[4];
+	opUrl += "/zones/";
+	opUrl += argv[5];
+	opUrl += "/operations/";
+	opUrl += op_name;
+	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+		result_string = create_success_result( requestID, NULL );
+	} else {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+	}
+
+	return true;
+}
+
+
+// ---------------------------------------------------------------------------
+
+GceGroupDelete::GceGroupDelete() { }
+
+GceGroupDelete::~GceGroupDelete() { }
+
+// Expecting GCE_GROUP_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <group_name>
+
+bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string) {
+	assert( strcasecmp( argv[0], "GCE_GROUP_DELETE" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_number_args( argc, 7 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 7, argv[0] );
+		return false;
+	}
+
+	// Now construct managed instance group
+	GceRequest group_request;
+	group_request.serviceURL = argv[2];
+	group_request.serviceURL += "/projects/";
+	group_request.serviceURL += argv[4];
+	group_request.serviceURL += "/zones/";
+	group_request.serviceURL += argv[5];
+	group_request.serviceURL += "/instanceGroupManagers/";
+	group_request.serviceURL += argv[6];
+	group_request.serviceURL += "-group";
+	group_request.requestMethod = "DELETE";
+
+	string auth_file = argv[3];
+	if ( !GetAccessToken( auth_file, group_request.accessToken,
+						  group_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   group_request.errorMessage.c_str() );
+		return true;
+	}
+
+	string op_name;
+	string key;
+	string value;
+	int nesting = 0;
+	const char *pos = group_request.resultString.c_str();
+	string opUrl = argv[2];
+	string err_msg;
+
+	if ( !group_request.SendRequest() ) {
+		if (group_request.errorCode.find("404") != std::string::npos) {
+		    dprintf( D_ALWAYS, "Got 404, group manager already deleted, continuing\n");
+			// Continue if group manager delete not found
+			// Attempt to delete instance template
+		} else {
+			// Other responses indicate some other critical failure
+			result_string = create_failure_result( requestID,
+							group_request.errorMessage.c_str(),
+							group_request.errorCode.c_str() );
+			return true;
+		}
+	} else {
+
+		while( ParseJSONLine( pos, key, value, nesting ) ) {
+			if ( key == "name" ) {
+				op_name = value;
+				break;
+			}
+		}
+
+		// Wait for instance group manager to be deleted
+		opUrl += "/projects/";
+		opUrl += argv[4];
+		opUrl += "/zones/";
+		opUrl += argv[5];
+		opUrl += "/operations/";
+		opUrl += op_name;
+		if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+			result_string = create_failure_result( requestID, err_msg.c_str() );
+			return true;
+		}
+	}
+
+	// Fill in required attributes & parameters.
+	GceGroupDelete delete_request;
+	delete_request.serviceURL = argv[2];
+	delete_request.serviceURL += "/projects/";
+	delete_request.serviceURL += argv[4];
+	delete_request.serviceURL += "/global/instanceTemplates/";
+	delete_request.serviceURL += argv[6];
+	delete_request.serviceURL += "-template";
+	delete_request.requestMethod = "DELETE";
+
+	if ( !GetAccessToken( auth_file, delete_request.accessToken,
+						  delete_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   delete_request.errorMessage.c_str() );
+		return true;
+	}
+
+	// Send the request.
+	if( ! delete_request.SendRequest() ) {
+		dprintf( D_ALWAYS, "Error is '%s'\n", delete_request.errorMessage.c_str() );
+		// TODO Fix construction of error message
+		result_string = create_failure_result( requestID,
+							delete_request.errorMessage.c_str(),
+							delete_request.errorCode.c_str() );
+		return true;
+	}
+
+	nesting = 0;
+	pos = delete_request.resultString.c_str();
+	while( ParseJSONLine( pos, key, value, nesting ) ) {
+		if ( key == "name" ) {
+			op_name = value;
+			break;
+		}
+	}
+
+	// Wait for instance template to be deleted
+	opUrl = argv[2];
+	opUrl += "/projects/";
+	opUrl += argv[4];
+	opUrl += "/global/operations/";
+	opUrl += op_name;
+	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+		result_string = create_success_result( requestID, NULL );
+	} else {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+	}
+	return true;
 }

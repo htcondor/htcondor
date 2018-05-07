@@ -1890,6 +1890,15 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		SpooledJobFiles::createJobSpoolDirectory(&jobAd,desired_priv_state);
 	}
 
+		/*
+		  If we want to change priv states, do it now.
+		  Even if we don't transfer any files, we write a commit
+		  file at the end.
+		*/
+	if( want_priv_change ) {
+		saved_priv = set_priv( desired_priv_state );
+	}
+
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
 	for (;;) {
@@ -1926,18 +1935,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( !s->code(filename) ) {
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
-		}
-
-			/*
-			  if we want to change priv states but haven't done so
-			  yet, set it now.  we only need to do this once since
-			  we're no longer doing any hard-coded insanity with
-			  PRIV_CONDOR and everything can either be done in our
-			  existing priv state (want_priv_change == FALSE) or in
-			  the priv state we were told to use... Derek, 2005-04-21
-			*/
-		if( want_priv_change && saved_priv == PRIV_UNKNOWN ) {
-			saved_priv = set_priv( desired_priv_state );
 		}
 
 			// This check must come after we have called set_priv()
@@ -3001,10 +2998,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	// record the state it was in when we started... the "default" state
 	bool socket_default_crypto = s->get_encryption();
-
-	if( want_priv_change && saved_priv == PRIV_UNKNOWN ) {
-		saved_priv = set_priv( desired_priv_state );
-	}
 
 	FileTransferList filelist;
 	ExpandFileTransferList( FilesToSend, filelist );

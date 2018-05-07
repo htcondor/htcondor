@@ -20,9 +20,7 @@
 #ifndef _CONDOR_SYSCALLS_H
 #define _CONDOR_SYSCALLS_H
 
-#if defined( AIX )
-#	include "syscall.aix.h"
-#elif defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
+#if defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
 #	include <sys/syscall.h>
 #elif defined(WIN32)
 #else

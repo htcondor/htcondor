@@ -196,7 +196,6 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	enteredCurrentUnicoreState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
-	submitFailureCode = 0;
 	submitAd = NULL;
 	newRemoteStatusAd = NULL;
 	gahp = NULL;

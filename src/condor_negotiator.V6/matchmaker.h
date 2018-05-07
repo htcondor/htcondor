@@ -319,7 +319,11 @@ class Matchmaker : public Service
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
 		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
-		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, string &dslot_claims);
+
+		typedef std::map<std::string, ClassAd *> slotNameToAdMapType;
+		std::vector<std::pair<ClassAd*,ClassAd*> > unmutatedSlotAds;
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, const slotNameToAdMapType &slotNameToAdMap, 
+			bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState);
 
 		/** trimStartdAds will throw out startd ads have no business being 
 			visible to the matchmaking engine, but were fetched from the 
@@ -359,7 +363,6 @@ class Matchmaker : public Service
 		int  MaxTimePerSpin;        // How long per pie spin
 		int  MaxTimePerSchedd;		// How long to talk to any one schedd
 		ExprTree *PreemptionReq;	// only preempt if true
-		ExprTree *PreemptionReqPslot;	// only preempt pslots if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 		bool preemption_req_unstable;
 		bool preemption_rank_unstable;

@@ -313,7 +313,7 @@ void XFormHash::push_warning(FILE * fh, const char* format, ... ) //CHECK_PRINTF
 	va_end(ap);
 
 	if (LocalMacroSet.errors) {
-		LocalMacroSet.errors->push("XForm", 0, message);
+		LocalMacroSet.errors->push("XForm", 0, message ? message : "");
 	} else {
 		fprintf(fh, "\nWARNING: %s", message ? message : "");
 	}

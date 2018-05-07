@@ -371,7 +371,6 @@ Matchmaker ()
 
 	AccountantHost  = NULL;
 	PreemptionReq = NULL;
-	PreemptionReqPslot = NULL;
 	PreemptionRank = NULL;
 	NegotiatorPreJobRank = NULL;
 	NegotiatorPostJobRank = NULL;
@@ -470,7 +469,6 @@ Matchmaker::
 	delete rankCondStd;
 	delete rankCondPrioPreempt;
 	delete PreemptionReq;
-	delete PreemptionReqPslot;
 	delete PreemptionRank;
 	delete NegotiatorPreJobRank;
 	delete NegotiatorPostJobRank;
@@ -661,25 +659,6 @@ reinitialize ()
 		tmp = NULL;
 	} else {
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = None\n");
-	}
-
-	// get PreemptionReqPslot expression
-	if (PreemptionReqPslot) delete PreemptionReqPslot;
-	PreemptionReqPslot = NULL;
-	tmp = param("PREEMPTION_REQUIREMENTS_PSLOT");
-	if( tmp ) {
-		if( ParseClassAdRvalExpr(tmp, PreemptionReqPslot) ) {
-			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS_PSLOT expression: %s",
-					tmp);
-		}
-		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS_PSLOT = %s\n", tmp);
-		free( tmp );
-		tmp = NULL;
-	} else if ( PreemptionReq ) {
-		PreemptionReqPslot = PreemptionReq->Copy();
-		dprintf( D_ALWAYS, "PREEMPTION_REQUIREMENTS_PSLOT = <PREEMPTION_REQUIREMENTS>\n" );
-	} else {
-		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS_PSLOT = None\n");
 	}
 
 	NegotiatorMatchExprNames.clearAll();
@@ -3705,7 +3684,9 @@ obtainAdsFromCollector (
 
             // This will avoid some wasted effort in negotiation looping
             if (requested <= 0) {
-                dprintf(D_FULLDEBUG, "Ignoring submitter %s with no requested jobs\n", subname.Value());
+                dprintf(D_FULLDEBUG,
+					"Ignoring submitter %s from schedd at %s with no requested jobs\n",
+					subname.Value(), schedd_addr.c_str());
                 continue;
             }
 
@@ -5089,6 +5070,20 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 		ParallelIsAMatch(&request, par_candidates, par_matches, num_threads, false);
 	}
 
+	// Map slot names to slot Classads, used by pslotMultiMatch() to
+	// quickly find a given dslot ad.
+	slotNameToAdMapType slotNameToAdMap;
+	if (allow_pslot_preemption)  {
+		ClassAd *ad;
+		std::string name;
+		startdAds.Open();
+		while ((ad=startdAds.Next())) {
+			if (ad->LookupString(ATTR_NAME,name)) {
+				slotNameToAdMap[name] = ad;
+			}
+		}
+	}
+
 	// scan the offer ads
 	startdAds.Open ();
 	std::string machineAddr;
@@ -5153,14 +5148,17 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
             cp_restore_requested(request, consumption);
         }
 
+		candidatePreemptState = NO_PREEMPTION;
+
 		candidateDslotClaims.clear();
-		bool pslotRankMatch = false;
 		if (!is_a_match && ConsiderPreemption) {
 			bool jobWantsMultiMatch = false;
 			request.LookupBool(ATTR_WANT_PSLOT_PREEMPTION, jobWantsMultiMatch);
-			if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) && jobWantsMultiMatch) {
-				is_a_match = pslotMultiMatch(&request, candidate, preemptPrio, candidateDslotClaims);
-				pslotRankMatch = is_a_match;
+			if (allow_pslot_preemption && jobWantsMultiMatch) {
+				// Note: after call to pslotMultiMatch(), iff is_a_match == True,
+				// then candidatePreemptState will be updated as well as candidateDslotClaims
+				is_a_match = pslotMultiMatch(&request, candidate, slotNameToAdMap,
+					only_for_startdrank, candidateDslotClaims, candidatePreemptState);
 			}
 		}
 
@@ -5182,8 +5180,6 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 			continue;
 		}
 
-		candidatePreemptState = NO_PREEMPTION;
-
 		remoteUser.clear();
 			// If there is already a preempting user, we need to preempt that user.
 			// Otherwise, we need to preempt the user who is running the job.
@@ -5200,12 +5196,16 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 		}
 
 		// if only_for_startdrank flag is true, check if the offer strictly
-		// prefers this request.  Since this is the only case we care about
+		// prefers this request (if we have not already done so, such as in
+		// pslotMultimatch).  Since this is the only case we care about
 		// when the only_for_startdrank flag is set, if the offer does 
 		// not prefer it, just continue with the next offer ad....  we can
 		// skip all the below logic about preempt for user-priority, etc.
-		if ( only_for_startdrank ) {
-			if ( remoteUser.empty() && (!pslotRankMatch)) {
+		if ( only_for_startdrank && 
+			 candidatePreemptState == NO_PREEMPTION  // have we not already considered preemption?
+		   ) 
+		{
+			if ( remoteUser.empty() ) {
 					// offer does not have a remote user, thus we cannot eval
 					// startd rank yet because it does not make sense (the
 					// startd has nothing to compare against).  
@@ -5232,45 +5232,20 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 			candidatePreemptState = RANK_PREEMPTION;
 		}
 
-		// if there is a remote user, consider preemption ....
+		// If there is a remote user, consider preemption if we have not already
+		// done so (such as in pslotMultiMatch).
 		// Note: we skip this if only_for_startdrank is true since we already
 		//       tested above for the only condition we care about.
-		if ( (!remoteUser.empty()) &&
-			 (!only_for_startdrank) ) {
+		if ( (!remoteUser.empty()) &&      // is there a remote user?
+			 (!only_for_startdrank) && 
+			 (candidatePreemptState == NO_PREEMPTION) // have we not already considered preemption?
+		   )
+		{
 			if( EvalExprTree(rankCondStd, candidate, &request, result) && 
 				result.IsBooleanValue(val) && val ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
-			} else if( accountant.GetPriority(remoteUser) >= preemptPrio +
-				PriorityDelta ) {
-					// RemoteUser on machine has *worse* priority than request
-					// so we can preempt this machine *but* we need to check
-					// on two things first
-				candidatePreemptState = PRIO_PREEMPTION;
-					// (1) we need to make sure that PreemptionReq's hold (i.e.,
-					// if the PreemptionReq expression isn't true, dont preempt)
-				if (PreemptionReq && 
-					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
-					  result.IsBooleanValue(val) && val) ) {
-					rejPreemptForPolicy++;
-					dprintf(D_MACHINE,
-							"PREEMPTION_REQUIREMENTS prevents job %d.%d from claiming %s.\n",
-							cluster_id, proc_id, machine_name.Value());
-					continue;
-				}
-					// (2) we need to make sure that the machine ranks the job
-					// at least as well as the one it is currently running 
-					// (i.e., rankCondPrioPreempt holds)
-				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
-					 result.IsBooleanValue(val) && val ) ) {
-						// machine doesn't like this job as much -- find another
-					rejPreemptForRank++;
-					dprintf(D_MACHINE,
-							"Job %d.%d has lower startd rank than existing job on %s.\n",
-							cluster_id, proc_id, machine_name.Value());
-					continue;
-				}
 			} else {
 					// don't have better priority *and* offer doesn't prefer
 					// request --- find another machine
@@ -6384,6 +6359,7 @@ add_candidate(ClassAd * candidate,
 
 void Matchmaker::DeleteMatchList()
 {
+	// Delete our MatchList
 	if( MatchList ) {
 		delete MatchList;
 		MatchList = NULL;
@@ -6397,6 +6373,15 @@ void Matchmaker::DeleteMatchList()
 		free(cachedAddr);
 		cachedAddr = NULL;
 	}
+
+	// And anytime we clear out our MatchList, we also want to restore
+	// any pslot ads that got mutated as part of pslot preemption back to their
+	// original state (i.e. restore them back to how we got them from the collector).
+	for (auto i = unmutatedSlotAds.begin(); i != unmutatedSlotAds.end(); i++) {
+		(i->first)->Update(*(i->second));  // restore backup ad (i.second) attrs into machine ad (i.first)
+		delete i->second;  // deallocate backup ad (i.second)
+	}
+	unmutatedSlotAds.clear();
 }
 
 int Matchmaker::MatchListType::
@@ -6818,8 +6803,11 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	// job with preempted resources from a dynamic slot.
 	// Only consider startd RANK for now.
 bool
-Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, string &dslot_claims) {
+Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const slotNameToAdMapType &slotNameToAdMap,
+                            bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState)
+{
 	bool isPartitionable = false;
+	PreemptState saved_candidatePreemptState = candidatePreemptState;
 
 	machine->LookupBool(ATTR_SLOT_PARTITIONABLE, isPartitionable);
 
@@ -6878,11 +6866,13 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 		ranks.push_back( std::pair<int, double>(i, currentRank) );
 	}
 
+		// Early opt-out -- if no dslots are eligible for matching, bail out now
+	if ( ranks.size() == 0 ) {
+		return false;
+	}
+
 		// Sort all dslots by their current rank
 	std::sort(ranks.begin(), ranks.end(), rankPairCompare);
-
-		// For all ranks less than the current job, in ascending order...
-	ClassAd mutatedMachine(*machine); // make a copy to mutate
 
 	std::list<std::string> attrs;
 	std::string attrs_str;
@@ -6899,6 +6889,17 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 		attrs.push_back("disk");
 	}
 
+		// Backup all the attributes in the machine ad we may end up mutating
+	ExprTree* expr;
+	ClassAd* backupAd = new ClassAd();
+	for (auto it = attrs.begin(); it != attrs.end(); it++) {
+		if ( (expr = machine->Lookup(*it)) ) {
+			expr = expr->Copy();
+			backupAd->Insert(*it,expr);
+		}
+	}
+	backupAd->AssignExpr(ATTR_REMOTE_USER,"UNDEFINED");
+
 		// In rank order, see if by preempting one more dslot would cause pslot to match
 	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second <= newRank; slot++) {
 		int dSlot = ranks[slot].first; // dslot index in childXXX list
@@ -6908,38 +6909,39 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 			// 2) preemption requirements match
 		if (ranks[slot].second == newRank) {
 
-			// If not preemptionreq pslot for this slot, punt
-			if (!PreemptionReqPslot) {
+			// If only considering startd rank, ignore this slot, cause ranks are equal.
+			if (only_startd_rank) {
 				continue;
 			}
 
-			// Find the RemoteOwner for this dslot, via pslot's childremoteOwner list
-			std::string remoteOwner;
 			classad::Value result;
-			if ( !dslotLookupString( machine, ATTR_REMOTE_OWNER, dSlot, remoteOwner ) ) {
+
+			// See if PREEMPTION_REQUIREMENTS holds when evaluated in the context
+			// of the dslot we are considering and the job
+
+				// First fetch the dslot ad we are considering
+			std::string dslotName;
+			ClassAd * dslotCandidateAd = NULL;
+			if ( !dslotLookupString( machine, ATTR_NAME, dSlot, dslotName ) ) {
 				// couldn't parse or evaluate, give up on this dslot
 				continue;
-			}
-		
-			if (accountant.GetPriority(remoteOwner) < preemptPrio + PriorityDelta) {
-				// this slot's user prio is better than preempter.  
-				// (and ranks are equal). Don't consider preempting it
-				continue;
+			} else {
+				// using the dslotName, find the dslot ad in our map
+				auto it = slotNameToAdMap.find(dslotName);
+				if (it == slotNameToAdMap.end()) {
+					// dslot ad not found ???, give up on this dslot
+					continue;
+				} else {
+					dslotCandidateAd = it->second;
+				}
 			}
 
-				// Insert the index of the dslot we are considering
-				// for preemption requirements use
-			mutatedMachine.Assign("CandidateSlot", dSlot);
-
-				// if PreemptionRequirementsPslot evals to true, below 
+				// if PreemptionRequirements evals to true, below
 				// will be true
 			result.SetBooleanValue(false);
 
-				// Evalute preemption req pslot into result
-			EvalExprTree(PreemptionReqPslot, &mutatedMachine,job,result);
-
-				// and undo it for the next time
-			mutatedMachine.Delete("CandidateSlot");
+				// Evalute preemption req into result
+			EvalExprTree(PreemptionReq,dslotCandidateAd,job,result);
 
 			bool shouldPreempt = false;
 			if (!result.IsBooleanValue(shouldPreempt) || (shouldPreempt == false)) {
@@ -6947,9 +6949,21 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 				continue;
 			}
 			
-			// Finally, if we made it here, this slot is a candidate for preemption,
-			// fall through and try to merge its resources into the pslot to match
-			// and preempt this one.		
+			// Finally, if we made it here, this dslot is a candidate for prio preemption,
+			// fall through and try to merge its resources into the pslot to see
+			// if it is enough for a match.
+			candidatePreemptState = PRIO_PREEMPTION;
+
+		} else {
+
+			// Finally, if we made it here, this dslot is a candidate for startd rank preemption,
+			// fall through and try to merge its resources into the pslot to see
+			// if it is enough for a match.
+			// Note that if candidatePreemptState was already set to PRIO_PREMPTION, it meant
+			// some other dslot required prio preemption to use, so keep that value.
+			if ( candidatePreemptState != PRIO_PREEMPTION ) {
+				candidatePreemptState = RANK_PREEMPTION;
+			}
 
 		}
 
@@ -6958,7 +6972,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 			double b4 = 0.0;
 			double realValue = 0.0;
 
-			if (mutatedMachine.LookupFloat((*it).c_str(), b4)) {
+			if (machine->LookupFloat((*it).c_str(), b4)) {
 					// The value exists in the parent
 				b4 = floor(b4);
 				classad::Value result;
@@ -6968,10 +6982,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 
 				int intValue;
 				if (result.IsIntegerValue(intValue)) {
-					mutatedMachine.Assign((*it).c_str(), (int) (b4 + intValue));
+					machine->Assign((*it).c_str(), (int) (b4 + intValue));
 				} else if (result.IsRealValue(realValue)) {
-					mutatedMachine.Assign((*it).c_str(), (b4 + realValue));
+					machine->Assign((*it).c_str(), (b4 + realValue));
 				} else {
+					// TODO: deal with slot resources that are not ints or reals, e.g. non-fungibles
 					dprintf(D_ALWAYS, "Lookup of %s failed to evalute to integer or real\n", (*it).c_str());	
 				}
 			}
@@ -6979,11 +6994,14 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 
 		// Now, check if it is a match
 
-		classad::MatchClassAd::UnoptimizeAdForMatchmaking(&mutatedMachine);
+		classad::MatchClassAd::UnoptimizeAdForMatchmaking(machine);
 		classad::MatchClassAd::UnoptimizeAdForMatchmaking(job);
 
-		if (IsAMatch(&mutatedMachine, job)) {
-			dprintf(D_FULLDEBUG, "Matched pslot by rank preempting %d dynamic slots\n", slot + 1);
+		if (IsAMatch(machine, job)) {
+			dprintf(D_FULLDEBUG, "Matched pslot %s by %s preempting %d dynamic slots\n", 
+				name.c_str(),
+				candidatePreemptState == PRIO_PREEMPTION ? "priority" : "startd rank",
+				slot + 1);
 			dslot_claims.clear();
 
 			for (unsigned int child = 0; child < slot + 1; child++) {
@@ -6996,10 +7014,31 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 				child_claims[ranks[child].first] = "";
 			}
 
+			// If we preempted due to user priority, put a bogus RemoteUser attribute into the pslot
+			// ad so all the legacy policy statements (like NEGOTIATOR_PRE_JOB_RANK) understand that
+			// this match is causing preemption.  This bogus RemoteUser attribute will be reset to UNDEFINED
+			// when we restore the backupAd info when we call DeleteMatchList().
+			if (candidatePreemptState == PRIO_PREEMPTION) {
+				machine->Assign(ATTR_REMOTE_USER,"various_dSlot_users");
+			}
+
+			// Stash away all the attributes we mutated in the slot ad so we can restore it
+			// when/if we purge the match list in DeleteMatchList().
+			unmutatedSlotAds.push_back( std::pair<ClassAd*, ClassAd*>(machine, backupAd) );
+
+			// Note we do not want to delete backupAd when returning here, since we handed off this
+			// pointer to unmutatedSlotAds above; it will be deleted in DeleteMatchList().
 			return true;
 		} 
 	}
 
+	// If we made it here, we failed to match this pSlot.  So restore the pslot ad back to
+	// its original state before we mutated it, delete our backupAd after using it, 
+	// restore original value of candidatePreemptState (cuz we should only modify this if
+	// we are returning true), and return false.
+	machine->Update(*backupAd);
+	delete backupAd;
+	candidatePreemptState = saved_candidatePreemptState;
 	return false;
 }
 

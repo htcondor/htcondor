@@ -68,7 +68,7 @@ class MyString
     //@}
 
     /** Casting operator to std::string */
-    operator std::string();
+    operator std::string() const;
 
 	// ----------------------------------------
 	//               Accessors

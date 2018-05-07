@@ -29,11 +29,10 @@
 
 extern "C" char* d_format_time(double);
 
-UniShadow::UniShadow() {
+UniShadow::UniShadow() : delayedExitReason( -1 ) {
 		// pass RemoteResource ourself, so it knows where to go if
 		// it has to call something like shutDown().
 	remRes = new RemoteResource( this );
-	
 }
 
 UniShadow::~UniShadow() {
@@ -531,4 +530,32 @@ UniShadow::getMachineName( MyString &machineName )
 		}
 	}
 	return false;
+}
+
+void
+UniShadow::exitAfterEvictingJob( int reason ) {
+	// Don't exit unless the starter has signalled it's done, or until
+	// twenty seconds after we'd otherwise have exited.  This should
+	// reduce the number of scary-looking error messages from the network
+	// layer in both the shadow and the starter logs.
+	//
+	// This function should be called in BaseShadow functions which call
+	// cleanUp() and then DC_Exit() before returning to the event loop.  It's
+	// not called from UniShadow::cleanUp() because a bunch of those functions
+	// do important-looking things between calling cleanUp() and calling
+	// DC_Exit().
+	if( remRes->gotJobExit() ) {
+		DC_Exit( reason );
+	} else {
+		this->delayedExitReason = reason;
+		daemonCore->Register_Timer( 20, 0,
+				(TimerHandlercpp)&UniShadow::exitLeaseHandler,
+				"exit lease handler", this );
+	}
+}
+
+int
+UniShadow::exitLeaseHandler() {
+	DC_Exit( delayedExitReason );
+	return TRUE;
 }

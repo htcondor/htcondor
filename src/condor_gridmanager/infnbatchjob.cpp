@@ -87,12 +87,6 @@ static const char *GMStateNames[] = {
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
 
-#define LOG_GLOBUS_ERROR(func,error) \
-    dprintf(D_ALWAYS, \
-		"(%d.%d) gmState %s, remoteState %d: %s returned error %d\n", \
-        procID.cluster,procID.proc,GMStateNames[gmState],remoteState, \
-        func,error)
-
 void INFNBatchJobInit()
 {
 }

@@ -71,7 +71,6 @@ class UnicoreJob : public BaseJob
 	time_t enteredCurrentUnicoreState;
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
-	int submitFailureCode;
 	ClassAd *newRemoteStatusAd;
 
 	GahpClient *gahp;
