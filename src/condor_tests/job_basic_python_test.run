@@ -18,8 +18,9 @@ def main():
 
     # Now instantiate a new test and send it the submit args
     test = CondorPytest("job_basic_python_test")
-    result = test.RunTest(submit_args)
-    CondorUtils.Debug("Test returned result: " + str(result))
+    result = test.RunJob(submit_args)
+    CondorUtils.TLog("Test returned result: " + str(result))
+    sys.exit(result)
 
 if __name__ == "__main__":
     main()
