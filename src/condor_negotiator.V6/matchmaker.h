@@ -468,9 +468,8 @@ class Matchmaker : public Service
 		public:
 			ClassAdList_DeleteAdsAndMatchList(Matchmaker * const p) : 
 				pMatchmaker(p) {};
-			~ClassAdList_DeleteAdsAndMatchList() {
+			virtual ~ClassAdList_DeleteAdsAndMatchList() {
 				pMatchmaker->DeleteMatchList();
-				ClassAdList::~ClassAdList();
 			};
 		private:
 			Matchmaker * const pMatchmaker;
