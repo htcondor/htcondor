@@ -88,6 +88,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 
 	transfer_at_vacate = false;
 	wants_file_transfer = false;
+	wants_x509_proxy = false;
 	job_cleanup_disconnected = false;
 	syscall_sock_registered  = false;
 	syscall_sock_lost_tid = -1;
@@ -1814,6 +1815,7 @@ JICShadow::proxyExpiring()
 bool
 JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 {
+	dprintf(D_ALWAYS, "MRC [JICShadow::updateX509Proxy] called, cmd=%d\n", cmd);
 	if( ! usingFileTransfer() ) {
 		s->encode();
 		int i = 2; // == success, but please don't call any more.
@@ -2386,6 +2388,10 @@ JICShadow::beginFileTransfer( void )
 			EXCEPT( "Could not initiate file transfer" );
 		}
 		return true;
+	}
+		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
+	else if ( wants_x509_proxy ) {
+		
 	}
 		// no transfer wanted or started, so return false
 	return false;
