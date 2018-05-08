@@ -1117,7 +1117,7 @@ bool is_crlf_shebang(const char *path)
 {
 	char buf[128];     // BINPRM_BUF_SIZE from <linux/binfmts.h>; also:
 	bool ret = false;  // execve(2) says the max #! line length is 127
-	FILE *fp = fopen(path, "r");
+	FILE *fp = safe_fopen_no_create(path, "rb");
 
 	if (!fp) {
 		// can't open, don't worry about it
