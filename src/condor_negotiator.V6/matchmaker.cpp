@@ -5157,7 +5157,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 			if (allow_pslot_preemption && jobWantsMultiMatch) {
 				// Note: after call to pslotMultiMatch(), iff is_a_match == True,
 				// then candidatePreemptState will be updated as well as candidateDslotClaims
-				is_a_match = pslotMultiMatch(&request, candidate,
+				is_a_match = pslotMultiMatch(&request, candidate,submitterName,
 					only_for_startdrank, candidateDslotClaims, candidatePreemptState);
 			}
 		}
@@ -5185,7 +5185,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 			// Otherwise, we need to preempt the user who is running the job.
 
 			// But don't bother with all these lookups if preemption is disabled.
-		if (ConsiderPreemption) {
+		if (ConsiderPreemption && (candidatePreemptState == NO_PREEMPTION)) {
 			if (!candidate->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser)) {
 				if (!candidate->LookupString(ATTR_PREEMPTING_USER, remoteUser)) {
 					if (!candidate->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)) {
@@ -5246,16 +5246,40 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
-			} else {
-					// don't have better priority *and* offer doesn't prefer
-					// request --- find another machine
-				if (remoteUser != submitterName) {
-						// only set rejPreemptForPrio if we aren't trying to
-						// preempt one of our own jobs!
-					rejPreemptForPrio++;
+			} else if (remoteUser != submitterName) {
+					// RemoteUser is not the same as the submitting user (or is the
+					// same user, but submitting into different groups), so 
+					// perhaps we can preempt this machine *but* we need to check
+					// on two things first
+				candidatePreemptState = PRIO_PREEMPTION;
+					// (1) we need to make sure that PreemptionReq's hold (i.e.,
+					// if the PreemptionReq expression isn't true, dont preempt)
+				if (PreemptionReq && 
+					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
+					  result.IsBooleanValue(val) && val) ) {
+					rejPreemptForPolicy++;
+					dprintf(D_MACHINE,
+							"PREEMPTION_REQUIREMENTS prevents job %d.%d from claiming %s.\n",
+							cluster_id, proc_id, machine_name.Value());
+					continue;
 				}
+					// (2) we need to make sure that the machine ranks the job
+					// at least as well as the one it is currently running 
+					// (i.e., rankCondPrioPreempt holds)
+				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
+					 result.IsBooleanValue(val) && val ) ) {
+						// machine doesn't like this job as much -- find another
+					rejPreemptForRank++;
+					dprintf(D_MACHINE,
+							"Job %d.%d has lower startd rank than existing job on %s.\n",
+							cluster_id, proc_id, machine_name.Value());
+					continue;
+				}
+			} else {
+					// slot is being used by the same user as the job submitter *and* offer doesn't prefer
+					// request --- find another machine
 				dprintf(D_MACHINE,
-						"Job %d.%d has insufficient priority to preempt existing job on %s.\n",
+						"Job %d.%d is from the same user as the existing job on %s and is not preferred by startd rank\n",
 						cluster_id, proc_id, machine_name.Value());
 				continue;
 			}
@@ -6803,7 +6827,7 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	// job with preempted resources from a dynamic slot.
 	// Only consider startd RANK for now.
 bool
-Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine,
+Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitterName,
                             bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState)
 {
 	bool isPartitionable = false;
@@ -6914,8 +6938,6 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine,
 				continue;
 			}
 
-			classad::Value result;
-
 			// See if PREEMPTION_REQUIREMENTS holds when evaluated in the context
 			// of the dslot we are considering and the job
 
@@ -6936,8 +6958,24 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine,
 				}
 			}
 
+				// Figure out the full remoteUser (including any group names).  If it is the 
+				// same as the submitterName, then ignore this slot.
+			std::string remoteUser;
+			if (!dslotCandidateAd->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser)) {
+				if (!dslotCandidateAd->LookupString(ATTR_PREEMPTING_USER, remoteUser)) {
+					if (!dslotCandidateAd->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)) {
+						dslotCandidateAd->LookupString(ATTR_REMOTE_USER, remoteUser);
+					}
+				}
+			}
+			if ( remoteUser == submitterName ) {
+				continue;
+			}
+
+
 				// if PreemptionRequirements evals to true, below
 				// will be true
+			classad::Value result;
 			result.SetBooleanValue(false);
 
 				// Evalute preemption req into result
