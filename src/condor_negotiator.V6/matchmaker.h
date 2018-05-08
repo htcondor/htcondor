@@ -457,6 +457,25 @@ class Matchmaker : public Service
 			ClassAd *ad;
 		};
 
+		/** This class is just like ClassAdList, expept that it will
+		    also invoke Matchmaker::DeleteMatchList in the destructor.
+			We want this because DeleteMatchList will dereference pointers
+			to ads in this ClassAdList, so this must hapen before the
+			ads are deleted.
+		*/
+		class ClassAdList_DeleteAdsAndMatchList: public ClassAdList
+		{
+		public:
+			ClassAdList_DeleteAdsAndMatchList(Matchmaker * const p) : 
+				pMatchmaker(p) {};
+			~ClassAdList_DeleteAdsAndMatchList() {
+				pMatchmaker->DeleteMatchList();
+				ClassAdList::~ClassAdList();
+			};
+		private:
+			Matchmaker * const pMatchmaker;
+		};
+
 		void DeleteMatchList();
 
 		// List of matches.

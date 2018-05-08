@@ -1337,7 +1337,7 @@ int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* cons
 void Matchmaker::
 negotiationTime ()
 {
-	ClassAdList allAds; //contains ads from collector
+	ClassAdList_DeleteAdsAndMatchList allAds(this); //contains ads from collector
 	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
     ClaimIdHash claimIds;
 	std::set<std::string> accountingNames; // set of active submitter names to publish
