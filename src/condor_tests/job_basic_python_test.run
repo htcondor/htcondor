@@ -3,24 +3,41 @@
 import os
 import sys
 
-from pytest.CondorPytest import CondorPytest
-from pytest.CondorUtils import CondorUtils
+from pytest.CondorJob import CondorJob
+from pytest.CondorTest import CondorTest
+from pytest.PersonalCondor import PersonalCondor
+
 
 def main():
 
-    # Setup submit arguments
-    submit_args = {
+    # Stand up a PersonalCondor
+    personal_condor = PersonalCondor("job_basic_python_test")
+    start_success = personal_condor.Start()
+    if start_success is False:
+        CondorTest.TLog("Failed to start the PersonalCondor environment. Exiting.")
+        sys.exit(JOB_FAILURE)
+    else:
+        CondorTest.TLog("PersonalCondor environment started successfully!")
+
+    # Setup a new test job
+    job_args = {
         "executable":   "x_echostring.pl",
         "output":       "job_basic_python_test.out",
         "error":        "job_basic_python_test.err",
         "arguments":    "\"Basic Python test submission, cluster $(cluster)\""
     }
+    test_job = CondorJob(job_args)
 
-    # Now instantiate a new test and send it the submit args
-    test = CondorPytest("job_basic_python_test")
-    result = test.RunJob(submit_args)
-    CondorUtils.TLog("Test returned result: " + str(result))
+    # Run the test job
+    result = test_job.Run()
+    CondorTest.TLog("Test returned result: " + str(result))
+
+    # Assume that PersonalCondor will shut down by itself if we don't explicitly call it?
+    #personal_condor.Stop()
+
+    # All done
     sys.exit(result)
+
 
 if __name__ == "__main__":
     main()
