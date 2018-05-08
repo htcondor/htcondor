@@ -156,6 +156,7 @@ char* RunAsOwnerCredD = NULL;
 #endif
 char * batch_name_line = NULL;
 bool sent_credential_to_credd = false;
+bool allow_crlf_script = false;
 
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
@@ -634,6 +635,8 @@ main( int argc, const char *argv[] )
 				query_credential = false;
 			} else if (is_dash_arg_prefix(ptr[0], "force-mpi-universe", 7)) {
 				use_condor_mpi_universe = true;
+			} else if (is_dash_arg_prefix(ptr[0], "allow-crlf-script", 7)) {
+				allow_crlf_script = true;
 			} else if (is_dash_arg_prefix(ptr[0], "help")) {
 				usage();
 				exit( 0 );
@@ -1208,12 +1211,14 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 				return 1; // abort
 			}
 
-#if !defined(WIN32)
 			if (is_crlf_shebang(ename)) {
-				fprintf( stderr, "\nERROR: Executable file %s is a script with CRLF (DOS/Win) line endings\n", ename );
-				return 1; // abort
+				fprintf( stderr, "\n%s: Executable file %s is a script with CRLF (DOS/Win) line endings\n",
+					allow_crlf_script ? "WARNING" : "ERROR", ename );
+				if (!allow_crlf_script) {
+					fprintf( stderr, "Run with -allow-crlf-script if this is really what you want\n");
+					return 1; // abort
+				}
 			}
-#endif
 
 			if (role == SFR_EXECUTABLE) {
 				bool param_exists;
@@ -2230,6 +2235,7 @@ usage()
 	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	//fprintf( stderr, "\t-force-mpi-universe\tAllow submission of obsolete MPI universe\n );
+	fprintf( stderr, "\t-allow-crlf-script\tAllow submitting #! executable script with DOS/CRLF line endings\n" );
 	fprintf( stderr, "\t-dump <filename>\tWrite job ClassAds to <filename> instead of\n"
 					 "\t                \tsubmitting to a schedd.\n" );
 #if !defined(WIN32)
