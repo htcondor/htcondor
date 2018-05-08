@@ -323,7 +323,7 @@ class Matchmaker : public Service
 		std::vector<std::pair<ClassAd*,ClassAd*> > unmutatedSlotAds;
 		std::map<std::string, ClassAd *> m_slotNameToAdMap;
 
-		bool pslotMultiMatch(ClassAd *job, ClassAd *machine,
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, const char* submitterName,
 			bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState);
 
 		/** trimStartdAds will throw out startd ads have no business being 
