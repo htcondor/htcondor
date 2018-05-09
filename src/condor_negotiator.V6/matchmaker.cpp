@@ -7035,11 +7035,9 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		// Since we modified the machine resource counts, we need to
 		// unoptimize the machine ad, in case the original values were
 		// propagated into the requirments or rank expressions.
-		// We also need to Unoptimize the job ad, though I'm not sure why now
 		classad::MatchClassAd::UnoptimizeAdForMatchmaking(machine);
-		classad::MatchClassAd::UnoptimizeAdForMatchmaking(job);
 
-		if (IsAMatch(machine, job)) {
+		if (IsAMatch(job, machine)) {
 			dprintf(D_FULLDEBUG, "Matched pslot %s by %s preempting %d dynamic slots\n", 
 				name.c_str(),
 				candidatePreemptState == PRIO_PREEMPTION ? "priority" : "startd rank",
