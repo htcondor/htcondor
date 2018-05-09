@@ -2477,7 +2477,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
 				hold_subcode = rc;
 				try_again = false;
-				error_buf.formatstr( errstack.getFullText().c_str() );
+				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
 			}
 		}
 	}

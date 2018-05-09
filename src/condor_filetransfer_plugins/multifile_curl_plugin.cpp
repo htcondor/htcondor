@@ -478,7 +478,7 @@ main( int argc, char **argv ) {
             fprintf( stderr, "Unable to open curl_plugin output file: %s\n", output_filename.c_str() );
             return 1;
         }
-        fprintf( output_file, curl_plugin.GetStats().c_str() );
+        fprintf( output_file, "%s", curl_plugin.GetStats().c_str() );
         fclose( output_file );
     }
     else {
