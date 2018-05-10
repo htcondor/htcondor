@@ -83,6 +83,7 @@ function HTCondorView(id, url, graph_args, options) {
             title: args.get("title"),
             data_url: args.get("url"),
             graph_query: "",
+            help: args.get("help"),
         };
 
         for (var argi in args.all) {
@@ -944,8 +945,6 @@ HTCondorViewRanged.prototype.initialize = function () {
     var new_html = this.html_tabs();
     container.html(new_html);
     this.add_date_pickers(this.dst_id);
-    console.log(new_html);
-
 
     this.options.dst_id = this.graph_id;
 
@@ -953,7 +952,6 @@ HTCondorViewRanged.prototype.initialize = function () {
 
     // Initialize tabs
     var selector = '#' + this.dst_id + ' ul.tabs li';
-    console.log("selector", selector);
     $('#' + this.dst_id + ' ul.tabs li').click(function () {
         $('#' + this.dst_id + ' ul.tabs li').removeClass('current');
         $(this).addClass('current');
@@ -967,7 +965,6 @@ HTCondorViewRanged.prototype.initialize = function () {
     });
 
     this.change_view();
-
 };
 
 
@@ -975,8 +972,6 @@ HTCondorViewRanged.prototype.change_view = function () {
     // Purge everything.
     //$("#"+this.graph_id).empty();
     //this.htcondor_view = null;
-
-    console.log("change view");
 
     var duration = $("#" + this.dst_id + ' .data-duration input[type="radio"]:checked').val();
     var options = {};
@@ -3330,7 +3325,7 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
     var more_options = more_options_in;
     var trace = args.get('trace');
     var chartops = args.get('chart');
-    var t, datatable, resizeTimer;
+    var chart, datatable, resizeTimer;
     var options = {};
     var intensify = args.get('intensify');
     if (intensify == '') {
@@ -3351,24 +3346,25 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 var kv = that.trySplitOne(chartbits[charti], '=');
                 options[kv[0]] = kv[1];
             }
+            console.log('options', options);
             grid = that.limitDecimalPrecision(grid);
 
             // Scan and add all args not for afterquery to GViz options.
             that.scanGVizChartOptions(args, options);
 
             if (charttype == 'stackedarea' || charttype == 'stacked') {
-                t = new google.visualization.AreaChart(el);
+                chart = new google.visualization.AreaChart(el);
                 options.isStacked = true;
                 options.explorer = {};
             }
             else if (charttype == 'column') {
-                t = new google.visualization.ColumnChart(el);
+                chart = new google.visualization.ColumnChart(el);
             }
             else if (charttype == 'bar') {
-                t = new google.visualization.BarChart(el);
+                chart = new google.visualization.BarChart(el);
             }
             else if (charttype == 'line') {
-                t = new google.visualization.LineChart(el);
+                chart = new google.visualization.LineChart(el);
             }
             else if (charttype == 'spark') {
                 // sparkline chart: get rid of everything but the data series.
@@ -3386,10 +3382,10 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 options.theme = 'maximized';
                 options.legend = {};
                 options.legend.position = 'none';
-                t = new google.visualization.LineChart(el);
+                chart = new google.visualization.LineChart(el);
             }
             else if (charttype == 'pie') {
-                t = new google.visualization.PieChart(el);
+                chart = new google.visualization.PieChart(el);
             }
             else if (charttype == 'tree') {
                 if (grid.headers[0] == '_tree') {
@@ -3399,27 +3395,27 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 that.maybeSet(options, 'maxDepth', 3);
                 that.maybeSet(options, 'maxPostDepth', 1);
                 that.maybeSet(options, 'showScale', 1);
-                t = new google.visualization.TreeMap(el);
+                chart = new google.visualization.TreeMap(el);
             }
             else if (charttype == 'candle' || charttype == 'candlestick') {
-                t = new google.visualization.CandlestickChart(el);
+                chart = new google.visualization.CandlestickChart(el);
             }
             else if (charttype == 'timeline') {
-                t = new google.visualization.AnnotatedTimeLine(el);
+                chart = new google.visualization.AnnotatedTimeLine(el);
             }
             else if (charttype == 'dygraph' || charttype == 'dygraph+errors') {
-                t = new Dygraph.GVizChart(el);
+                chart = new Dygraph.GVizChart(el);
                 that.maybeSet(options, 'showRoller', true);
                 if (charttype == 'dygraph+errors') {
                     options.errorBars = true;
                 }
             }
             else if (charttype == 'traces' || charttype == 'traces+minmax') {
-                t = that.createTracesChart(grid, el,
+                chart = that.createTracesChart(grid, el,
                     charttype == 'traces+minmax' ? 3 : 1);
             }
             else if (charttype == 'heatgrid') {
-                t = new HeatGrid(el);
+                chart = new HeatGrid(el);
             }
             else {
                 throw new Error('unknown chart type "' + charttype + '"');
@@ -3428,7 +3424,7 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
             gridoptions.bool_to_num = true;
         }
         else {
-            t = new google.visualization.Table(el);
+            chart = new google.visualization.Table(el);
             gridoptions.allowHtml = true;
             options.allowHtml = true;
         }
@@ -3466,8 +3462,43 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 }
             }
         }
+
+        // TODO(jtk): hook into chart name here
+        google.visualization.events.addListener(chart, 'ready', function () {
+            let chartTitle = $("text").filter(`:contains("${options.title}")`)[0];
+            console.log("options", options);
+            console.log("more options", more_options);
+            console.log(chartTitle);
+            $(chartTitle).text("");
+
+            const svg = $('svg')[0];
+            console.log('svg', svg);
+            svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+            svg.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+
+            const svgNS = svg.namespaceURI;
+
+            const helpLink = document.createElementNS(svgNS, 'a');
+            $(helpLink).attr('href', 'https://developer.mozilla.org/en-US/docs/SVG');
+            $(helpLink).attr('target', '_blank');
+            $(helpLink).attr('text-anchor', 'start');
+            $(helpLink).attr('x', '85');
+            $(helpLink).attr('y', '23.2');
+            $(helpLink).text('NEW TEXT');
+            $(chartTitle).append(helpLink);
+
+            // getting close!
+
+            // $(chartTitle).parent.addtext("" +
+            //     options.title +
+            //     "<a href=\"https://developer.mozilla.org/en-US/docs/SVG\"\n target=\"_blank\">\n" +
+            //     "    <text>SVG on MDN</text>\n" +
+            //     "</a>");
+        });
+
         done(grid);
     });
+
 
     this.enqueue(queue, chartops ? 'chart=' + chartops : 'view',
         function (grid, done) {
@@ -3479,10 +3510,10 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                         $(el).height(window.innerHeight);
                         options.height = window.innerHeight;
                     }
-                    t.draw(datatable, options);
+                    chart.draw(datatable, options);
                     if (has_more_opts && more_options.select_handler !== undefined) {
-                        google.visualization.events.addListener(t, 'select', function (e) {
-                            more_options.select_handler(e, t, datatable);
+                        google.visualization.events.addListener(chart, 'select', function (e) {
+                            more_options.select_handler(e, chart, datatable);
                         });
                     }
                 };
