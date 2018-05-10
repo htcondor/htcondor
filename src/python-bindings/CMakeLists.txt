@@ -58,7 +58,7 @@ if(WINDOWS)
             set_target_properties(classad_python_user PROPERTIES SUFFIX ".pyd" )
             install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 
-            add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
+            add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
             target_link_libraries( htcondor pyclassad condor_utils
               optimized ${PYTHON_LIBRARY_BOOST_ONE} debug ${PYTHON_LIBRARY_BOOST_ONE_D}
               optimized ${PYTHON_LIBRARY_BOOST_TWO} debug ${PYTHON_LIBRARY_BOOST_TWO_D}

@@ -3,7 +3,6 @@
 // re-definition warnings.
 #include "python_bindings_common.h"
 
-#include <poll.h>
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -14,20 +13,60 @@
 
 #include <memory>
 
+#ifdef WINDOWS
+#else
+#include <poll.h>
+#endif
+
+#include <boost/version.hpp>
+
 #include "old_boost.h"
 #include "event.h"
 #include "inotify_sentry.h"
 
 
-EventIterator::EventIterator(FILE *source, bool is_xml)
-  : m_blocking(false), m_is_xml(is_xml), m_step(1000), m_done(0), m_source(source), m_reader(new ReadUserLog(source, is_xml))
+EventIterator::EventIterator(FILE *source, bool is_xml, bool owns_fd)
+  : m_blocking(false)
+  , m_is_xml(is_xml)
+  , m_owns_fd(owns_fd)
+  , m_step(1000)
+  , m_done(0)
+  , m_source(source)
+  , m_reader(new ReadUserLog(source, is_xml, false))
 {}
 
+// copy construction is swap of ownership
+EventIterator::EventIterator(const EventIterator& that)
+	: m_blocking(that.m_blocking)
+	, m_is_xml(that.m_is_xml)
+	, m_owns_fd(that.m_owns_fd)
+	, m_step(that.m_step)
+	, m_done(that.m_done)
+	, m_source(that.m_source)
+	, m_reader(new ReadUserLog(that.m_source, that.m_is_xml, false))
+{
+	// take ownership of the file source so it doesn't get closed then that is destroyed.
+	const_cast<EventIterator&>(that).m_owns_fd = false;
+}
+
+EventIterator::~EventIterator()
+{
+	if (m_owns_fd) {
+		//m_reader->CloseLogFile();
+		if (m_source) { fclose(m_source); }
+	}
+	m_source = NULL;
+}
 
 bool
 EventIterator::get_filename(std::string &fname)
 {
     int fd = fileno(m_source);
+#ifdef WINDOWS
+	//BY_HANDLE_FILE_INFORMATION bhfi;
+	//GetFileInformationByHandle((HANDLE)_get_osfhandle(fd), &bhfi);
+	return false;
+#else
 
 	char buf[32]; // 17 for /proc/self/fd, 10 for the int, and more to be sure
 	char linkedName[1024];
@@ -43,6 +82,7 @@ EventIterator::get_filename(std::string &fname)
 
     fname = linkedName;
     return true;
+#endif
 }
 
 
@@ -74,9 +114,14 @@ EventIterator::wait_internal(int timeout_ms)
 	int r = 0;
     while ((-1 != (r = fstat(fd, &result))) && (result.st_size == m_done))
     {
+#ifdef WIN32
+        struct { int fd; } fd;
+        fd.fd = -1;
+#else
         struct pollfd fd;
         fd.fd = watch();
         fd.events = POLLIN;
+#endif
         Py_BEGIN_ALLOW_THREADS
         if (time_remaining > -1 && time_remaining < 1000) {step = time_remaining;}
         if (fd.fd == -1)
@@ -85,7 +130,10 @@ EventIterator::wait_internal(int timeout_ms)
         }
         else
         {
+#ifdef WIN32
+#else
             ::poll(&fd, 1, step);
+#endif
         }
         Py_END_ALLOW_THREADS
         if (PyErr_CheckSignals() == -1)
@@ -120,6 +168,10 @@ EventIterator::useInotify()
 int
 EventIterator::watch()
 {
+#ifdef WIN32
+	//THROW_EX(RuntimeError, "watch() not availble on Windows");
+	return -1;
+#else
     if (!m_watch.get())
     {
         std::string fname;
@@ -130,6 +182,7 @@ EventIterator::watch()
         else {return -1;}
     }
     return m_watch->watch();
+#endif
 }
 
 
@@ -230,16 +283,28 @@ EventIterator::next()
     return output;
 }
 
-EventIterator
-readEventsFile(FILE * file, bool is_xml)
+boost::shared_ptr<EventIterator>
+readEventsFile(boost::python::object input, bool is_xml)
 {
-    return EventIterator(file, is_xml);
+	FILE * file = NULL;
+	bool close_file = false; // true when we want EventIterator to close the file
+
+    boost::python::extract<std::string> input_as_string(input);
+	if (input_as_string.check()) {
+		file = safe_fopen_no_create_follow(input_as_string().c_str(), "r");
+		close_file = true;
+	} else {
+		file = boost::python::extract<FILE*>(input);
+		close_file = false;
+	}
+	boost::shared_ptr<EventIterator> result(new EventIterator(file, is_xml, close_file));
+	return result;
 }
 
-EventIterator
-readEventsFile2(FILE *file)
+boost::shared_ptr<EventIterator>
+readEventsFile2(boost::python::object input)
 {
-    return readEventsFile(file);
+    return readEventsFile(input);
 }
 
 struct CondorLockFile
@@ -376,5 +441,7 @@ void export_event_reader()
         ":param input: A file pointer.\n"
         ":param is_xml: Set to true if the log file is XML-formatted (defaults to false).\n"
         ":return: A iterator which produces ClassAd objects.");
+
+    boost::python::register_ptr_to_python< boost::shared_ptr<EventIterator> >();
 }
 
