@@ -1950,9 +1950,9 @@ fi
 
 %changelog
 * Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-1
-- HTCondor can start new jobs on machines that are draining
+- HTCondor can run preemptable jobs on machines that are draining
 - The condor annex can easily use multiple regions simultaneously
-- HTCondor now respects the CUDA_VISIBLE_DEVICES environment variable
+- HTCondor now uses CUDA_VISIBLE_DEVICES to tell which GPU devices to manage
 - HTCondor now reports GPU memory utilization
 
 * Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.11-1
