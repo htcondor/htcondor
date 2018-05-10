@@ -42,7 +42,7 @@ file syntax.  See \URL{http://www.cs.wisc.edu/condor/classad/}.
 %%%%%%%%%%%%%%%%%%%
 \item[dap\_type = transfer;]
 % only "transfer" for now
-%\item[dap\_type = \lt{}reserve \Bar\ release \Bar\ transfer \Bar\ stage \Bar\ remove \gt{}]
+%\item[dap\_type = \lt{}reserve \Bar{}\ release \Bar{}\ transfer \Bar{}\ stage \Bar{}\ remove \gt{}]
 \index{Stork submit commands!dap\_type}
 Required command identifying that there will be
 a transfer from source to destination.
@@ -154,7 +154,7 @@ using relative paths.  All local file paths passed to Stork must be valid on
 the Stork server host.
 \SubmitCmd{log} file paths should not use NFS file systems.
 
-\item[log\_xml = "True"; \Bar\ "False";]
+\item[log\_xml = "True"; \Bar{}\ "False";]
 If \SubmitCmd{log\_xml} is true, 
 then the log file will be written in ClassAd XML. If it isn't
 specified, XML is not used. Note that it's an XML fragment, and is

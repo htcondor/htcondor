@@ -4,34 +4,34 @@
 
 %% Every single tool should implement these
 \newcommand{\ToolArgsBase}{
-\oOptnm{-help $|$ -version}
+\oOptnm{-help \Bar{} -version}
 }
 
 %% for checkpoint, off, on, reconfig, reschedule, restart, set_shutdown,
 %% and vacate
 \newcommand{\ToolWhere}{
-\oOptArg{-pool}{centralmanagerhostname\Lbr:portnumber\Rbr} 
-\Lbr \OptArg{-name}{hostname} $|$ \Arg{hostname} $|$
-\OptArg{-addr}{"\SinfulAny"} $|$  \Arg{"\SinfulAny"} $|$ 
-\OptArg{-constraint}{expression} $|$ \Optnm{-all} \Rbr
+\oOptArg{-pool}{centralmanagerhostname\Lbr{}:portnumber\Rbr{}}
+\Lbr{} \OptArg{-name}{hostname} \Bar{} \Arg{hostname} \Bar{}
+\OptArg{-addr}{"\SinfulAny"} \Bar{} \Arg{"\SinfulAny"} \Bar{}
+\OptArg{-constraint}{expression} \Bar{} \Optnm{-all} \Rbr{}
 }
 %%%% Was:
 %%%%\Optnm{-pool centralmanagerhostname[:portnumber]}\\
-%%%%\Optnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Optnm{\Dots} \oOptnm{ $|$ -all} \\
+%%%%\Optnm{-name hostname \Bar{} hostname \Bar{} -addr "\SinfulAny" \Bar{} "\SinfulAny" } \Optnm{\Dots{}} \oOptnm{ \Bar{} -all} \\
 
 %% Alternative to locate the machines with which you want to mess.
 %% Used by _transfer_data, _rm, _hold, and _release.
 \newcommand{\ToolLocate}{
-\Lbr \OptArg{-pool}{centralmanagerhostname\Lbr:portnumber\Rbr}
-$|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
+\Lbr{} \OptArg{-pool}{centralmanagerhostname\Lbr{}:portnumber\Rbr{}}
+\Bar{} \OptArg{-name}{scheddname} \Rbr{} \Bar{} \oOptArg{-addr}{"\SinfulAny"}
 }
 %%%% Was:
 %%%%\oOptnm{-pool centralmanagerhostname\oOptnm{:portnumber}}
-%%%%\oOptnm{-name hostname $|$ -addr "\SinfulAny" }
+%%%%\oOptnm{-name hostname \Bar{} -addr "\SinfulAny" }
 
 %% Specification of the jobs with which you want to mess.
 \newcommand{\ToolJobs}{
-\Argnm{ cluster\Dots $|$ cluster.process\Dots $|$ user\Dots } 
+\Argnm{ cluster\Dots{} \Bar{} cluster.process\Dots{} \Bar{} user\Dots{} }
 }
 
 %% Specification of the jobs with which you want to mess.
