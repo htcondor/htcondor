@@ -6,18 +6,21 @@ import sys
 from pytest.CondorJob import CondorJob
 from pytest.CondorTest import CondorTest
 from pytest.PersonalCondor import PersonalCondor
+from pytest.Utils import Utils
 
 
 def main():
 
+    # Create a new test. If we don't specify a name, take the file name.
+    test = CondorTest("job_basic_python_test")
+
     # Stand up a PersonalCondor
-    personal_condor = PersonalCondor("job_basic_python_test")
-    start_success = personal_condor.Start()
+    start_success = test.StartPersonalCondor()
     if start_success is False:
-        CondorTest.TLog("Failed to start the PersonalCondor environment. Exiting.")
+        Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
         sys.exit(JOB_FAILURE)
     else:
-        CondorTest.TLog("PersonalCondor environment started successfully!")
+        Utils.TLog("PersonalCondor environment started successfully!")
 
     # Setup a new test job
     job_args = {
@@ -28,15 +31,12 @@ def main():
     }
     test_job = CondorJob(job_args)
 
-    # Run the test job
-    result = test_job.Run()
-    CondorTest.TLog("Test returned result: " + str(result))
+    # Submit the test job
+    result = test.SubmitJob(test_job)
+    Utils.TLog("Test returned result: " + str(result))
 
     # Assume that PersonalCondor will shut down by itself if we don't explicitly call it?
-    #personal_condor.Stop()
-
-    # All done
-    sys.exit(result)
+    test.End()
 
 
 if __name__ == "__main__":
