@@ -19,8 +19,8 @@ TimeoutStopSec=150seconds
 StandardOutput=syslog
 NotifyAccess=main
 KillSignal=SIGQUIT
-LimitNOFILE=infinity
-TasksMax=infinity
+LimitNOFILE=32767
+TasksMax=32767
 
 [Install]
 WantedBy=multi-user.target

@@ -444,6 +444,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	  case UPDATE_HAD_AD:
 	  case UPDATE_AD_GENERIC:
       case UPDATE_GRID_AD:
+	  case UPDATE_ACCOUNTING_AD:
 		  break;
 	default:
 		dprintf(D_ALWAYS,

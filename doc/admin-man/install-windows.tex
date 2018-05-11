@@ -454,7 +454,7 @@ The following is a brief explanation of each property
 as it applies to unattended installations:
 
 \begin{description}
-\item [NEWPOOL = \lt{} Y \Bar\ N \gt{}]
+\item [NEWPOOL = \lt{} Y \Bar{}\ N \gt{}]
 determines whether the installer will create a new pool with the target
 machine as the central manager.
 
@@ -462,7 +462,7 @@ machine as the central manager.
 sets the name of the pool, if a new pool is to be created. Possible values
 are either the name or the empty string \verb@""@.
 
-\item [RUNJOBS = \lt{} N \Bar\ A \Bar\ I \Bar\ C \gt{}]
+\item [RUNJOBS = \lt{} N \Bar{}\ A \Bar{}\ I \Bar{}\ C \gt{}]
 determines when HTCondor will run jobs. This can be set to:
 \begin{itemize}
 \item Never run jobs (N)
@@ -472,14 +472,14 @@ determines when HTCondor will run jobs. This can be set to:
 usage is low (C)
 \end{itemize}
 
-\item [VACATEJOBS = \lt{} Y \Bar\ N \gt{}]
+\item [VACATEJOBS = \lt{} Y \Bar{}\ N \gt{}]
 determines what HTCondor should do when it has to stop the execution of
 a user job. When set to Y, HTCondor will vacate the job and start
 it somewhere else if possible. When set to N, HTCondor will merely
 suspend the job in memory and wait for the machine to become available
 again. 
 
-\item[SUBMITJOBS  = \lt{} Y \Bar\ N \gt{}]
+\item[SUBMITJOBS  = \lt{} Y \Bar{}\ N \gt{}]
 will cause the installer to configure the machine as a submit
 node when set to Y. 
 
@@ -530,7 +530,7 @@ machine.
 an integer value that defines the number of VMs that can be run in parallel
 on the target machine.
 
-\item [VMNETWORKING = \lt{} N \Bar\ A \Bar\ B \Bar\ C \gt{}]
+\item [VMNETWORKING = \lt{} N \Bar{}\ A \Bar{}\ B \Bar{}\ C \gt{}]
 determines if VM Universe can use networking. This can be set to:
 \begin{itemize}
 \item None (N)
@@ -539,7 +539,7 @@ determines if VM Universe can use networking. This can be set to:
 \item NAT and Bridged (C)
 \end{itemize}
 
-\item [USEVMUNIVERSE = \lt{} Y \Bar\ N \gt{}]
+\item [USEVMUNIVERSE = \lt{} Y \Bar{}\ N \gt{}]
 will cause the installer to enable VM Universe jobs on the target machine.
 
 \item[LOCALCONFIG]
