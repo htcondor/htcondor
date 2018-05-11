@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.11 not yet released.
-%\item HTCondor version 8.6.11 released on Month Date, 2018.
+\item HTCondor version 8.6.11 released on May 10, 2018.
 
 \end{itemize}
 
@@ -33,18 +32,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Corrected a bug which could cause the shared port daemon to hang if
-it had been restarted, HTCondor had been configured with an allowable
-port range, and that port range had filled up.
-\Ticket{6596}
-
 \item The MSI installer for Windows now appends the directory needed to use the
-HTCondor python bindings libraries into the PYTHONPATH environment variable.
+HTCondor python bindings libraries into the \Env{PYTHONPATH} environment variable.
 \Ticket{6607}
 
-\item If the user sets the environment variable OMP\_NUM\_THREADS to some value
+\item If the user sets the environment variable \Env{OMP\_NUM\_THREADS} to some value
 in the submit file, trust the user, and do not overwrite this environment
-variable when the job runs to the actual number of provisioned cpus.
+variable to the actual number of provisioned CPUs when the job runs.
 \Ticket{6606}
 
 \end{itemize}
@@ -53,14 +47,32 @@ variable when the job runs to the actual number of provisioned cpus.
 
 \begin{itemize}
 
-\item Fixed a bug that prevented HTCondor from running jobs if 
-HTCondor was started within a Docker container, or more generally,
-with a root user id, but without CAP\_SYSADMIN.
-\Ticket{6603}
+\item Fixed a bug where \Condor{submit} \Opt{-i} would enter the wrong Singularity
+container.
+\Ticket{6595}
+
+\item When using configuration parameter \MacroNI{SINGULARITY\_TARGET\_DIR}
+to mount the job scratch directory into the Singularity container,
+update the \Env{X509\_USER\_PROXY} environment variable to point to the
+proxy file's location inside the container.
+\Ticket{6625}
+
+\item Corrected a bug which could cause the shared port daemon to hang if
+it had been restarted, HTCondor had been configured with an allowable
+port range, and that port range had filled up.
+\Ticket{6596}
 
 \item Fixed a bug that caused TCP port exhaustion when running a large
 number of instances of the \Condor{chirp\_client} program.
 \Ticket{6627}
+
+\item \Condor{submit} \Opt{-i} jobs now track their resource usage as normal jobs do.
+\Ticket{6590}
+
+\item Fixed a bug that prevented HTCondor from running jobs if
+HTCondor was started within a Docker container, or more generally,
+with a root user id, but without \Env{CAP\_SYSADMIN}.
+\Ticket{6603}
 
 \item Fixed a bug that caused corruption of the XferStatsLog.
 \Ticket{6608}
@@ -75,13 +87,9 @@ duplicate entries.
 \Ticket{6604}
 
 \item Fixed a bug when running inside a docker container that would prevent
-the master from started unless DISCARD\_SESSION\_KEYRING\_ON\_STARTUP was set to
+the master from started unless \Env{DISCARD\_SESSION\_KEYRING\_ON\_STARTUP} was set to
 false.
 \Ticket{6602}
-
-\item Fixed a bug where \Condor{submit} -i would enter the wrong singularity
-container.
-\Ticket{6595}
 
 \item Fixed a bug specific to the HTCondor Python bindings on Windows, where
 the call htcondor.reload\_config() would fail to see 
@@ -89,19 +97,19 @@ environment variable changes made by the Python program.
 \Ticket{6610}
 
 \item DAGMan did not previously check the user log file (which it depends on for
-coordination with the schedd) for corruption. Now, it checks if the user log 
-file gets overwritten or deleted, and if so, exits immediately with an error.
+coordination with the \Condor{schedd}) for corruption. Now, it checks to see if the user log
+file has been overwritten or deleted, and if so, exits immediately with an error.
 \Ticket{6579}
 
 \item Fixed a bug in the ReadUserLog class where it failed to detect if a file
-file gets overwitten.
+file has been overwritten.
 \Ticket{6582}
 
 \item Fixed a bug where \Condor{submit} would not add needed file transfer plugins to the
-Requirements expression when should\_transfer\_files was IF\_NEEDED, which is the default.
+Requirements expression when should\_transfer\_files was \MacroNI{IF\_NEEDED}, which is the default.
 \Ticket{4692}
 
-\item Fixed a bug where the configuration paramter \Macro{STARTD\_RECOMPUTE\_DISK\_FREE} was
+\item Fixed a bug where the configuration parameter \MacroNI{STARTD\_RECOMPUTE\_DISK\_FREE} was
 not honored when creating a dynamic slot from a partitionable slot, which would sometimes result
 in the dynamic slot being provisioned with not enough disk space and then failing to match the job.
 \Ticket{6614}
@@ -113,12 +121,6 @@ in the dynamic slot being provisioned with not enough disk space and then failin
 \item Fixed a bug that could cause \Attr{RemoteWallClockTime} to have
 the wrong value in the history file.
 \Ticket{6626}
-
-\item When using configuration parameter \MacroNI{SINGULARITY\_TARGET\_DIR}
-to mount the job scratch directory into the Singularity container,
-update the \Env{X509\_USER\_PROXY} environment variable to point to the
-proxy file's location inside the container.
-\Ticket{6625}
 
 \item The \Condor{schedd} now considers custom machine resources when
 selecting the next job to run on an idle claimed dynamic slot.
@@ -142,6 +144,23 @@ believe that grid-type boinc jobs were submitted to the BOINC server.
 output when the \Opt{-global} option was used.
 \Ticket{6661}
 
+\item Fixed a bug that caused the \Condor{collector} to reject
+accounting ads when configuration parameter
+\MacroNI{COLLECTOR\_REQUIREMENTS} is in use.
+\Ticket{6673}
+
+\item Updated the systemd configuration to set the \Env{TasksMax} and \Env{LimitNOFile}
+to unlimited. Under some versions of systemd, the \Env{TasksMax} defaults to 512,
+which is too small for a busy submit host.
+\Ticket{6645}
+
+\item Reduced the \Env{RPATH} in RPM builds to just the needed directories.
+Previously, the tarball \Env{RPATH} was used.
+\Ticket{6662}
+
+\item On the Windows platform, the HTCondor daemons will attempt a \Env{NETWORK}
+login to impersonate a user if the \Env{INTERACTIVE} login fails.
+\Ticket{6640}
 
 \end{itemize}
 

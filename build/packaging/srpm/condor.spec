@@ -1916,6 +1916,12 @@ fi
 %endif
 
 %changelog
+* Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.11-1
+- Can now do an interactive submit of a Singularity job
+- Shared port daemon is more resilient when starved for TCP ports
+- The Windows installer configures the environment for the Python bindings
+- Fixed several other minor problems
+
 * Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.10-1
 - Fixed a problem where condor_preen would crash on an active submit node
 - Improved systemd configuration to clean up processes if the master crashes
