@@ -83,7 +83,7 @@ function HTCondorView(id, url, graph_args, options) {
             title: args.get("title"),
             data_url: args.get("url"),
             graph_query: "",
-            help: args.get("help"),
+            help_url: args.get("help_url"),
         };
 
         for (var argi in args.all) {
@@ -138,7 +138,6 @@ HTCondorView.prototype.initialize = function (options) {
         options = {};
     }
 
-
     var id = options.dst_id;
     var graph_args = options.graph_query;
     var table_args = options.table_query;
@@ -159,6 +158,7 @@ HTCondorView.prototype.initialize = function (options) {
     this.original_title = options.title;
     this.title = options.title;
     this.url = options.data_url;
+    this.help_url = options.help_url;
 
     var container = $('#' + id);
     if (container.length === 0) {
@@ -369,6 +369,9 @@ HTCondorView.prototype.promise_render_viz = function (viz, args) {
     if (args.url) {
         query_bits.push("url=" + args.url);
     }
+    if (args.help_url) {
+        query_bits.push("help_url=" + args.help_url);
+    }
     if (args.query_args) {
         query_bits.push(args.query_args);
     }
@@ -410,6 +413,7 @@ HTCondorView.prototype.load_and_render = function (graphargs, tableargs) {
     var table_id = this.table_id;
     var total_table_id = this.total_table_id;
     var url = this.url;
+    const help_url = this.help_url;
     var title = this.title;
 
     if (graphargs) {
@@ -417,6 +421,7 @@ HTCondorView.prototype.load_and_render = function (graphargs, tableargs) {
             return that.promise_render_viz(that.aq_graph, {
                 id: graph_id,
                 url: url,
+                help_url: help_url,
                 title: title,
                 query_args: graphargs,
                 data: data
@@ -3346,7 +3351,6 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 var kv = that.trySplitOne(chartbits[charti], '=');
                 options[kv[0]] = kv[1];
             }
-            console.log('options', options);
             grid = that.limitDecimalPrecision(grid);
 
             // Scan and add all args not for afterquery to GViz options.
@@ -3463,37 +3467,15 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
             }
         }
 
-        // TODO(jtk): hook into chart name here
+        // this adds a callback that adds a "help" link to the chart title if help_url is given in the options
         google.visualization.events.addListener(chart, 'ready', function () {
-            let chartTitle = $("text").filter(`:contains("${options.title}")`)[0];
-            console.log("options", options);
-            console.log("more options", more_options);
-            console.log(chartTitle);
-            $(chartTitle).text("");
-
-            const svg = $('svg')[0];
-            console.log('svg', svg);
-            svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-            svg.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
-
-            const svgNS = svg.namespaceURI;
-
-            const helpLink = document.createElementNS(svgNS, 'a');
-            $(helpLink).attr('href', 'https://developer.mozilla.org/en-US/docs/SVG');
-            $(helpLink).attr('target', '_blank');
-            $(helpLink).attr('text-anchor', 'start');
-            $(helpLink).attr('x', '85');
-            $(helpLink).attr('y', '23.2');
-            $(helpLink).text('NEW TEXT');
-            $(chartTitle).append(helpLink);
-
-            // getting close!
-
-            // $(chartTitle).parent.addtext("" +
-            //     options.title +
-            //     "<a href=\"https://developer.mozilla.org/en-US/docs/SVG\"\n target=\"_blank\">\n" +
-            //     "    <text>SVG on MDN</text>\n" +
-            //     "</a>");
+            const help_url = args.get('help_url');
+            if (!(help_url === undefined || help_url === null)) {
+                let chartTitle = $("text").filter(`:contains("${options.title}")`)[0];
+                $(chartTitle).html(`${options.title} [<a fill="blue" target="_blank" xlink:href="${help_url}">?</a>]`);
+                const parent = $(chartTitle).parent()[0];
+                $(parent).append($(chartTitle).detach());
+            }
         });
 
         done(grid);

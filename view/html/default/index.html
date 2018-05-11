@@ -18,17 +18,18 @@
         <div class="row">
             <div class="col">
                 <script>
-                    HTCondorView.simple("url={{ base }}data/submitters.now.json&title=Fraction of Jobs per Status&pivot=;;JobsRunning,JobsIdle,JobsHeld&rename=JobsRunning=Running&rename=JobsIdle=Idle&rename=JobsHeld=Held&transpose=JobStatus,Count&chart=pie");
+                    HTCondorView.simple("url={{ base }}data/submitters.now.json&help_url={{ base }}help/glossary.html#fraction-of-jobs-per-status&title=Fraction of Jobs per Status&pivot=;;JobsRunning,JobsIdle,JobsHeld&rename=JobsRunning=Running&rename=JobsIdle=Idle&rename=JobsHeld=Held&transpose=JobStatus,Count&chart=pie");
                 </script>
             </div>
             <div class="col">
                 <script>
-                    HTCondorView.simple("url={{ base }}data/slots.now.json&title=Fraction of Slots per Status&order=State&group=State;Cpus&chart=pie");
+                    HTCondorView.simple("url={{ base }}data/slots.now.json&help_url={{ base }}help/glossary.html#fraction-of-slots-per-status&title=Fraction of Slots per Status&order=State&group=State;Cpus&chart=pie");
                 </script>
             </div>
             <div class="col">
                 <script>
-                    HTCondorView.simple("url={{ base }}data/submitters.now.json&title=Fraction of Jobs per Submit Point&order=Machine&pivot=Machine;;JobsRunning&chart=pie");
+                    {#HTCondorView.simple("url={{ base }}data/submitters.now.json&title=Fraction of Jobs per Submit Point&order=Machine&pivot=Machine;;JobsRunning&chart=pie");#}
+                    HTCondorView.simple("url={{ base }}data/submitters.now.json&help_url={{ base }}help/glossary.html#fraction-of-jobs-per-submit-point&title=Fraction of Jobs per Submit Point&order=Machine&pivot=Machine;;JobsRunning&chart=pie");
                 </script>
             </div>
         </div>
@@ -38,6 +39,7 @@
                     new HTCondorViewRanged({
                         dst_id: "total-jobs",
                         title: "Jobs over Time by Status",
+                        help_url: "{{ base }}help/glossary.html#jobs-over-time-by-status",
                         data_url: "{{ base }}data/submitters..json",
                         graph_query: "order=Date&pivot=Date;;JobsRunning,JobsIdle,JobsHeld&chart=stacked&rename=JobsRunning=Running&rename=JobsIdle=Idle&rename=JobsHeld=Held",
                         table_query: "order=Date&group=Name;avg(JobsRunning),avg(JobsIdle),avg(JobsHeld)&rename=avgJobsRunning=Running (avg.)&rename=avgJobsIdle=Idle (avg.)&rename=avgJobsHeld=Held (avg.)",
