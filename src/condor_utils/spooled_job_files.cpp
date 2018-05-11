@@ -107,6 +107,17 @@ void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir /*=
 	path.formatstr("%s%c%d%ccondor_submit.%d.digest", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
 }
 
+void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir /*= NULL*/ )
+{
+	auto_free_ptr spooldir;
+	if ( ! dir) {
+		spooldir.set(param("SPOOL"));
+		dir = spooldir;
+	}
+
+	path.formatstr("%s%c%d%ccondor_submit.%d.items", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
+}
+
 void
 GetJobExecutable( const classad::ClassAd *job_ad, std::string &executable )
 {

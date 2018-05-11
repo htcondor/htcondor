@@ -163,9 +163,58 @@ int ActualScheddQ::set_Factory(int cluster, int qnum, const char * filename, con
 	return SetJobFactory(cluster, qnum, filename, text);
 }
 
+static int send_row(void* pv, std::string & rowdata) {
+	SubmitForeachArgs &fea = *((SubmitForeachArgs *)pv);
+
+	rowdata.clear();
+	char *str = fea.items.next();
+	if ( ! str)
+		return 0;
+
+	// check to see if the data is already using the ASCII 'unit separator' character
+	// if not, then we want to split and re-assemble multi field data using US as the separator
+	bool got_US = strchr(str, '\x1F') != NULL;
+
+	// we only need to split and re-assemble the field data if there are multiple fields
+	if (fea.vars.number() > 1 && ! got_US) {
+		auto_free_ptr tmp(strdup(str));
+		std::vector<const char *> splits;
+		if (fea.split_item(tmp.ptr(), splits) <= 0)
+			return -1;
+		for (auto it = splits.begin(); it != splits.end(); ++it) {
+			if ( ! rowdata.empty()) rowdata += "\x1F";
+			rowdata += *it;
+		}
+	} else {
+		rowdata = str;
+	}
+	// terminate the data with a newline if it does not already have one.
+	size_t cch = rowdata.size();
+	if ( ! cch || rowdata[cch-1] != '\n') { rowdata += "\n"; }
+
+	return 1;
+}
+
+int ActualScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
+{
+	if (o.items.number() > 0) {
+		int row_count = 0;
+		o.items.rewind();
+		int rval = SendMaterializeData(cluster_id, 0, send_row, &o, o.items_filename, &row_count);
+		if (rval) return rval;
+		if (row_count != o.items.number()) {
+			fprintf(stderr, "\nERROR: schedd returned row_count=%d after spooling %d items\n", row_count, o.items.number());
+			return -1;
+		}
+	}
+	return 0;
+}
+
+/*
 int ActualScheddQ::set_Foreach(int cluster, int itemnum, const char * filename, const char * text) {
 	return SetMaterializeData(cluster, itemnum, filename, text);
 }
+*/
 
 int ActualScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) { return SendSpoolFileIfNeeded(ad); }
 int ActualScheddQ::send_SpoolFile(char const *filename) { return SendSpoolFile(filename); }
@@ -257,6 +306,7 @@ int SimScheddQ::set_AttributeInt(int cluster_id, int proc_id, const char *attr, 
 	return 0;
 }
 
+
 int SimScheddQ::set_Factory(int cluster_id, int qnum, const char * filename, const char * text) {
 	ASSERT(cluster_id == cluster);
 	if (fp) {
@@ -270,18 +320,18 @@ int SimScheddQ::set_Factory(int cluster_id, int qnum, const char * filename, con
 	return 0;
 }
 
-int SimScheddQ::set_Foreach(int cluster_id, int itemnum, const char * filename, const char * text) {
+
+int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
+{
 	ASSERT(cluster_id == cluster);
-	if (fp) {
+	if (o.items.number() > 0) {
 		if (log_all_communication) {
-			fprintf(fp, "::setForeach(%d,%d,%s,%s) ", cluster_id, itemnum, filename?filename:"NULL", text?"<items>":"NULL");
-			if (text) { fprintf(fp, "foreach_text=%s\n", text); }
-			else if (filename) { fprintf(fp, "foreach_file=%s\n", filename); }
-			else { fprintf(fp, "\n"); }
+			fprintf(fp, "::sendItemdata(%d) %d items", cluster_id, o.items.number());
 		}
 	}
 	return 0;
 }
+
 
 int SimScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) {
 	if (fp) {

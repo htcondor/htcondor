@@ -1059,6 +1059,13 @@ void SubmitHash::set_live_submit_variable( const char *name, const char *live_va
 	}
 }
 
+void SubmitHash::unset_live_submit_variable(const char *name)
+{
+	MACRO_ITEM* pitem = find_macro_item(name, NULL, SubmitMacroSet);
+	if (pitem) { pitem->raw_value = UnsetString; }
+}
+
+
 void SubmitHash::set_submit_param_used( const char *name ) 
 {
 	increment_macro_use_count(name, SubmitMacroSet);
@@ -7562,7 +7569,7 @@ ClassAd* SubmitHash::make_job_ad (
 
     // really a command, needs to happen before any calls to check_open
 	JobDisableFileChecks = submit_param_bool("skip_filechecks", NULL, false);
-	PRAGMA_REMIND("TODO: several bits of grid code are ignoring JobDisableFileChecks and bypassing FnCheckFile, check to see if that is kosher.")
+	//PRAGMA_REMIND("TODO: several bits of grid code are ignoring JobDisableFileChecks and bypassing FnCheckFile, check to see if that is kosher.")
 
 	SetUserLog();
 	SetUserLogXML();
@@ -7668,7 +7675,7 @@ void SubmitHash::insert_source(const char * filename, MACRO_SOURCE & source)
 
 // Check to see if this is a queue statement, if it is, return a pointer to the queue arguments.
 // 
-static const char * is_queue_statement(const char * line)
+const char * SubmitHash::is_queue_statement(const char * line)
 {
 	const int cchQueue = sizeof("queue")-1;
 	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
@@ -8018,6 +8025,99 @@ int SubmitForeachArgs::parse_queue_args (
 }
 
 
+// destructively split the item, inserting \0 to terminate and trim and returning a vector of pointers to start of each value
+int SubmitForeachArgs::split_item(char* item, std::vector<const char*> & values)
+{
+	values.clear();
+	values.reserve(vars.number());
+	if ( ! item) return 0;
+
+	const char* token_seps = ", \t";
+	const char* token_ws = " \t";
+
+	char * var = vars.first();
+	char * data = item;
+
+	// skip leading separators and whitespace
+	while (*data == ' ' || *data == '\t') ++data;
+	values.push_back(data);
+
+	// check for the use of US as a field separator
+	// if we find one, then use that instead of the default token separator
+	// In this case US is the only field separator, but we still want to trim
+	// whitespace both before and after the values.  we do this because the submit hash
+	// essentially assumes that all values have been pre-trimmed of whitespace
+	// also, just be helpful, we also trim trailing \r\n from the data, although
+	// for most use cases of this function, the caller will have already trimmed those.
+	char * pus = strchr(data, '\x1F');
+	if (pus) {
+		for (;;) {
+			*pus = 0;
+			// trim token separator and also trailing whitespace
+			char * endp = pus-1;
+			while (endp >= data && (*endp == ' ' || *endp == '\t')) *endp-- = 0;
+			if ( ! var) break;
+
+			// advance to the next field and skip leading whitespace
+			data = pus+1;
+			while (*data == ' ' || *data == '\t') ++data;
+			pus = strchr(data, '\x1F');
+			var = vars.next();
+			if (var) {
+				values.push_back(data);
+			}
+			if ( ! pus) {
+				// last field, check for trailing whitespace and \r\n 
+				pus = data + strlen(data);
+				if (pus > data && pus[-1] == '\n') --pus;
+				if (pus > data && pus[-1] == '\r') --pus;
+				if (pus == data) {
+					// we ran out of fields!
+					// we ran out of fields! use terminating null for all of the remaining fields
+					while ((var = vars.next())) { values.push_back(data); }
+				}
+			}
+		}
+		return (int)values.size();
+	}
+
+	// if we get to here US was not the field separator, so use token_seps instead.
+
+	// if there is more than a single loop variable, then assign them as well
+	// we do this by destructively null terminating the item for each var
+	// the last var gets all of the remaining item text (if any)
+	while ((var = vars.next())) {
+		// scan for next token separator
+		while (*data && ! strchr(token_seps, *data)) ++data;
+		// null terminate the previous token and advance to the start of the next token.
+		if (*data) {
+			*data++ = 0;
+			// skip leading separators and whitespace
+			while (*data && strchr(token_ws, *data)) ++data;
+			values.push_back(data);
+		}
+	}
+
+	return (int)values.size();
+}
+
+// destructively split the item, inserting \0 to terminate and trim
+// populates a map with a key->value pair for each value. and returns the number of values
+int SubmitForeachArgs::split_item(char* item, NOCASE_STRING_MAP & values)
+{
+	values.clear();
+	if ( ! item) return 0;
+
+	std::vector<const char*> splits;
+	split_item(item, splits);
+
+	int ix = 0;
+	for (const char * key = vars.first(); key != NULL; key = vars.next()) {
+		values[key] = splits[ix++];
+	}
+	return (int)values.size();
+}
+
 // parse the arguments after the Queue statement and populate a SubmitForeachArgs
 // as much as possible without globbing or reading any files.
 // if queue_args is "", then that is interpreted as Queue 1 just like condor_submit
@@ -8115,7 +8215,8 @@ int SubmitHash::load_inline_q_foreach_items (
 // finish populating the items in a SubmitForeachArgs by reading files and/or globbing.
 //
 int SubmitHash::load_external_q_foreach_items (
-	SubmitForeachArgs & o,                 // OUT: options & items from parsing the queue args
+	SubmitForeachArgs & o,                 // IN,OUT: options & items from parsing the queue args
+	bool allow_stdin,                      // IN: allow items to be read from stdin.
 	std::string & errmsg)                  // OUT: error message if return value is not 0
 {
 	// if no loop variable specified, but a foreach mode is used. use "Item" for the loop variable.
@@ -8155,6 +8256,10 @@ int SubmitHash::load_external_q_foreach_items (
 		if (o.items_filename == "<") {
 			// items should have been loaded already by a call to load_inline_q_foreach_items
 		} else if (o.items_filename == "-") {
+			if ( ! allow_stdin) {
+				errmsg = "QUEUE FROM - (read from stdin) is not allowed in this context";
+				return -1;
+			}
 			int lineno = 0;
 			for (char* line=NULL;;) {
 				line = getline_trim(stdin, lineno);
@@ -8255,7 +8360,7 @@ struct _parse_up_to_q_callback_args { char * line; int source_id; };
 static int parse_q_callback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*macro_set*/, char * line, std::string & errmsg)
 {
 	struct _parse_up_to_q_callback_args * pargs = (struct _parse_up_to_q_callback_args *)pv;
-	char * queue_args = const_cast<char*>(is_queue_statement(line));
+	char * queue_args = const_cast<char*>(SubmitHash::is_queue_statement(line));
 	if ( ! queue_args) {
 		// not actually a queue line, so stop parsing and return error
 		pargs->line = line;

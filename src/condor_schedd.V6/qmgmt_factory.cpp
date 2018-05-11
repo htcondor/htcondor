@@ -164,7 +164,10 @@ protected:
 	int cached_total_procs;
 
 	// let these functions access internal factory data
-	friend JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
+	friend bool LoadJobFactoryDigest(JobFactory* factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
+	friend int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::string & remainder);
+	friend bool TakeJobFactoryItemdata(JobFactory *factory, void * itemdata, int itemdata_size);
+	friend int JobFactoryRowCount(JobFactory * factory);
 	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename, bool spooled_submit_file, std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 
@@ -226,23 +229,58 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 	return false;
 }
 
+class JobFactory * NewJobFactory(int cluster_id)
+{
+	return new JobFactory(NULL, cluster_id);
+}
+
 // Make a job factory for a job object that has been submitted, but not yet committed.
 // this is the normal case for condor_submit from 8.7.3 onward.
-class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg)
+bool LoadJobFactoryDigest(JobFactory * factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg)
 {
-	JobFactory * factory = new JobFactory(NULL, cluster_id);
-
 	MacroStreamMemoryFile ms(submit_digest_text, -1, factory->source);
 
 	errmsg = "";
 	int rval = factory->LoadDigest(ms, user_ident, errmsg);
 	if (rval) {
-		dprintf(D_ALWAYS, "failed to parse submit digest for factory %d : %s\n", cluster_id, errmsg.c_str());
-		delete factory;
-		factory = NULL;
+		dprintf(D_ALWAYS, "failed to parse submit digest for factory %d : %s\n", factory->getClusterId(), errmsg.c_str());
+		return false;
 	}
 
-	return factory;
+	return true;
+}
+
+#if 0 // not currently used
+bool TakeJobFactoryItemdata(JobFactory *factory, void * itemdata, int itemdata_size)
+{
+	return factory->reader.take_data(itemdata, itemdata_size) == 0;
+}
+#endif
+
+// append a buffer of row data into job factories row data, the last item in the buffer may be incomplete
+// in which case it should be returned in the remainder string - which will be prefixed to the first
+// item the next time this function is called.
+int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::string & remainder)
+{
+	size_t off = 0;
+	for (size_t ix = off; ix < cbbuf; ++ix) {
+		if (buf[ix] == '\n') {
+			remainder.append(buf+off, ix-off);
+			factory->fea.items.append(remainder.data(), remainder.size());
+			remainder.clear();
+			off = ix+1;
+		}
+	}
+	if (off < cbbuf) {
+		remainder.append(buf+off, cbbuf - off);
+	}
+	return 0;
+}
+
+int JobFactoryRowCount(JobFactory * factory)
+{
+	if ( ! factory) return 0;
+	return factory->fea.items.number();
 }
 
 // Make a job factory for a Job object that exists, this entry point is used when
@@ -254,7 +292,7 @@ JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_fil
 	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster);
 
 	// Starting the 8.7.3 The digest file may be in the spool directory and owned by condor
-	// or in the user directory and owned by the user (the 8.7.1 model). We will handle
+	// or in the user directory and owned by the user (the 8.7.1 model).
 	// The caller will tell use which it is, and we will decide whether to inpersonate the user
 	// while opening the submit digest on that basis. 
 	bool restore_priv = false;
@@ -276,8 +314,16 @@ JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_fil
 		rval = errno ? errno : -1;
 	} else {
 		MacroStreamYourFile ms(fp, factory->source);
+	#if 1
+		// Starting with 8.7.9, don't pass the job ad to LoadDigest, because it will use that
+		// to impersonate the user while loading the itemdata.
+		// An 8.7.9 condor_submit will put the itemdata into SPOOL, so we would only impersonate
+		// if the condor_submit was 8.7.5 thru 8.7.8 (and not remote). we choose not to support that case.
+		rval = factory->LoadDigest(ms, NULL, errmsg);
+	#else
 		// If we are already impersonating the user, dont pass the job ad to LoadDigest since it only needs it to impersonate the user
 		rval = factory->LoadDigest(ms, restore_priv ? NULL : job, errmsg);
+	#endif
 		fclose(fp);
 		fp = NULL;
 	}
@@ -586,6 +632,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 	return 1; // successful instantiation.
 }
 
+#if 0 // this is obsolete
 // Check to see if this is a queue statement, if it is, return a pointer to the queue arguments.
 // 
 static const char * is_queue_statement(const char * line)
@@ -599,7 +646,6 @@ static const char * is_queue_statement(const char * line)
 	return NULL;
 }
 
-#if 0 // this is obsolete
 int JobFactory::load_q_foreach_items(
 	FILE* fp_submit, MACRO_SOURCE& source, // IN: submit file and source information, used only if the items are inline.
 	SubmitForeachArgs & o,                 // OUT: options & items from parsing the queue args
@@ -661,8 +707,12 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & 
 					rval = -1;
 				} else if (fea.items_filename.empty()) {
 					// this is ok?
-				} else if (fea.items_filename == "<" || fea.items_filename == "=") {
+				} else if (fea.items_filename == "<" || fea.items_filename == "-") {
 					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.Value());
+				} else if (reader.eof_was_read()) {
+					// the reader was primed with itemdata sent over the wire...
+				} else if (fea.items.number() > 0) {
+					// we populated the itemdata already
 				} else {
 					// before opening the item data file, we (may) want to impersonate the user
 					bool restore_priv = false;
@@ -780,18 +830,50 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 	char * data = item;
 	set_live_submit_variable(var, data, false);
 
-	// if there is more than a single loop variable, then assign them as well
-	// we do this by destructively null terminating the item for each var
-	// the last var gets all of the remaining item text (if any)
-	while ((var = fea.vars.next())) {
-		// scan for next token separator
-		while (*data && ! strchr(token_seps, *data)) ++data;
-		// null terminate the previous token and advance to the start of the next token.
-		if (*data) {
-			*data++ = 0;
-			// skip leading separators and whitespace
-			while (*data && strchr(token_ws, *data)) ++data;
-			set_live_submit_variable(var, data, false);
+	// check for the use of US as a field separator
+	// if we find one, then use that instead of the default token separator
+	char * pus = strchr(data, '\x1F');
+	if (pus) {
+		for (;;) {
+			*pus = 0;
+			// trim token separator and also trailing whitespace
+			char * endp = pus-1;
+			while (endp >= data && (*endp == ' ' || *endp == '\t')) *endp-- = 0;
+			if ( ! var) break;
+
+			// advance to the next field and skip leading whitespace
+			data = pus+1;
+			while (*data == ' ' || *data == '\t') ++data;
+			pus = strchr(data, '\x1F');
+			var = fea.vars.next();
+			if (var) {
+				set_live_submit_variable(var, data, false);
+			}
+			if ( ! pus) {
+				// last field, check for trailing whitespace and \r\n 
+				pus = data + strlen(data);
+				if (pus > data && pus[-1] == '\n') --pus;
+				if (pus > data && pus[-1] == '\r') --pus;
+				if (pus == data) {
+					// we ran out of fields! use terminating null for all of the remaining fields
+					while ((var = fea.vars.next())) { set_live_submit_variable(var, data, false); }
+				}
+			}
+		}
+	} else {
+		// if there is more than a single loop variable, then assign them as well
+		// we do this by destructively null terminating the item for each var
+		// the last var gets all of the remaining item text (if any)
+		while ((var = fea.vars.next())) {
+			// scan for next token separator
+			while (*data && ! strchr(token_seps, *data)) ++data;
+			// null terminate the previous token and advance to the start of the next token.
+			if (*data) {
+				*data++ = 0;
+				// skip leading separators and whitespace
+				while (*data && strchr(token_ws, *data)) ++data;
+				set_live_submit_variable(var, data, false);
+			}
 		}
 	}
 
