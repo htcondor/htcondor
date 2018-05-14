@@ -264,10 +264,6 @@ range=1,
 type=int
 restart=true
 
-[SOAP_SSL_PORT]
-default=0
-type=int
-
 [CONDOR_CREDENTIAL_DIR]
 default=/tmp
 type=string
@@ -1196,20 +1192,6 @@ type=int
 description=Max seconds system clock can skip without a restart
 tags=daemon_core
 
-[ENABLE_SOAP_SSL]
-default=false
-type=bool
-tags=daemon_core,soap_core
-
-[SOAP_SSL_SERVER_KEYFILE]
-default=
-type=string
-
-[SOAP_SSL_SERVER_KEYFILE_PASSWORD]
-default=96hoursofmattslife
-type=string
-tags=daemon_core,soap_core
-
 [SOAP_SSL_CA_FILE]
 default=
 type=string
@@ -1229,11 +1211,6 @@ tags=daemon_core,soap_core
 default=false
 type=bool
 tags=daemon_core
-
-[WEB_ROOT_DIR]
-default=
-type=string
-tags=daemon_core,soap_core
 
 [PID_SNAPSHOT_INTERVAL]
 default=15
@@ -1295,16 +1272,6 @@ tags=daemon_core
 
 [SEC_INVALIDATE_SESSIONS_VIA_TCP]
 default=true
-type=bool
-tags=daemon_core
-
-[ENABLE_SOAP]
-default=false
-type=bool
-tags=daemon_core
-
-[ENABLE_WEB_SERVER]
-default=false
 type=bool
 tags=daemon_core
 
@@ -3107,11 +3074,6 @@ default=SHADOW, SHADOW_STANDARD
 win32_default=SHADOW
 type=string
 tags=schedd,shadow_mgr
-
-[SOAP_LEAVE_IN_QUEUE]
-default=
-type=string
-tags=schedd
 
 [SHADOW]
 default=$(SBIN)/condor_shadow

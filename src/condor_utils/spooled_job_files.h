@@ -49,11 +49,6 @@ public:
 		 */
 	static bool createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state );
 
-		/* Like createJobSpoolDirectory, but just create the directories
-		 * as condor and do not chown them.
-		 */
-	static bool createJobSpoolDirectory_PRIV_CONDOR(int cluster, int proc, bool is_standard_universe );
-
 		/* Like createJobSpoolDirectory, but just create the .swap directory.
 		 * Assumes the other (parent) directories have already been created.
 		 */
