@@ -9,10 +9,8 @@
                     new HTCondorViewRanged({
                         dst_id: "cpu",
                         title: "Total CPUs in Use",
-                        help: "{{ base }}help/glossary.html",
                         data_url: "data/slots..json",
                         graph_query: "order=Date&group=Date;Cpus&rename=Cpus=CPUs&chart=line",
-                        select_tuple: ["Name"],
                     });
                 </script>
             </div>
@@ -26,10 +24,20 @@
                         title: "Total Memory in Use",
                         data_url: "data/slots..json",
                         graph_query: "order=Date&group=Date;Memory&rename=Memory=Memory (MB)&chart=line",
-                        select_tuple: ["Name"]
                     });
                 </script>
             </div>
+        </div>
+
+        <div class="col" id="cpu-by-submitter">
+            <script>
+                new HTCondorViewRanged({
+                    dst_id: "cpu-by-submitter",
+                    title: "CPUs In Use by Submitter",
+                    data_url: "data/slots..json",
+                    graph_query: "order=Date&pivot=Date;RemoteUser;Cpus&chart=stacked",
+                });
+            </script>
         </div>
     </div>
 

@@ -1,7 +1,8 @@
 {
   "Overview": "index.html",
   "Submitters": {
-    "Job Status": "job_status.html"
+    "Job Status": "job_status.html",
+    "CPU Hours": "cpu-hours.html"
   },
   "Slots": {
   },

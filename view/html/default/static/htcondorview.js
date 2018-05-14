@@ -2673,7 +2673,7 @@ AfterqueryObj.prototype.doLimit = function (ingrid, limit) {
 };
 
 AfterqueryObj.prototype.doTranspose = function (ingrid, column_names) {
-    column_names = column_names.split(',');
+    column_names = column_names.split(",");
 
     let outgrid = {headers: column_names, data: [], types: []};
 
@@ -2689,7 +2689,43 @@ AfterqueryObj.prototype.doTranspose = function (ingrid, column_names) {
         }
     }
 
-    return outgrid
+    return outgrid;
+};
+
+AfterqueryObj.prototype.doCumulativeIntegral = function (ingrid) {
+    // this is a very crude algorithm, but it's simple
+
+    console.log("ingrid", ingrid);
+
+    let outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
+
+
+    const firstDate = ingrid.data[0][0];
+    outgrid.data.push(new Array(ingrid.data[0].length).fill(0));
+    outgrid.data[0][0] = firstDate;
+
+    console.log('outgrid', outgrid);
+
+    let currentDate;
+    let previousDate = firstDate;
+    let timeDifference;
+    let previousRow = outgrid.data[0];
+    let newRow;
+    for (let inRow of ingrid.data.slice(1)) {
+        currentDate = inRow[0];
+        timeDifference = (currentDate.getTime() - previousDate.getTime()) / 3600000;  // milliseconds per hour
+        newRow = [currentDate];
+        for (let i = 1; i < inRow.length; i++) {
+            newRow.push(previousRow[i] + (inRow[i] * timeDifference));
+        }
+
+        outgrid.data.push(newRow);
+
+        previousRow = newRow;
+        previousDate = currentDate;
+    }
+
+    return outgrid;
 };
 
 
@@ -3175,6 +3211,11 @@ AfterqueryObj.prototype.addTransforms = function (queue, args) {
         else if (argkey == 'transpose') {
             transform(function (g, a) {
                 return that.doTranspose(g, a);
+            }, argval);
+        }
+        else if (argkey == 'cumulative_integral') {
+            transform(function (g, a) {
+                return that.doCumulativeIntegral(g, a);
             }, argval);
         }
     }

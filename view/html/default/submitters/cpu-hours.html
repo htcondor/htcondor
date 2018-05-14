@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col" id="cpu-hours">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "cpu-hours",
+                        title: "Cumulative CPU-Hours per Submitter during Timespan",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&pivot=Date;RemoteUser;Cpus&cumulative_integral&chart=stacked",
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}
