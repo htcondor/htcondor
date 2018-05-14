@@ -445,13 +445,8 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	  case UPDATE_AD_GENERIC:
       case UPDATE_GRID_AD:
 	  case UPDATE_ACCOUNTING_AD:
+	  default:
 		  break;
-	default:
-		dprintf(D_ALWAYS,
-				"ERROR: Unexpected command %d from %s in ValidateClassAd()\n",
-				command,
-				sock->get_sinful_peer());
-		return false;
 	}
 
 	if(ipattr) {
