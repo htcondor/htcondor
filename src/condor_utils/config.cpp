@@ -1451,6 +1451,7 @@ Parse_macros(
 				name = NULL;
 				goto cleanup;
 			}
+			continue; // for warnings, we just keep parsing
 		} else if (is_include) {
 			// check for keywords after "include" and before the :
 			// these keywords will modify the behavior of include

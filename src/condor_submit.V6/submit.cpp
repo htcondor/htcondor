@@ -1096,6 +1096,32 @@ void TestFilePermissions( char *scheddAddr = NULL )
 #endif
 }
 
+static bool fnStoreWarning(void * pv, int code, const char * /*subsys*/, const char * message) {
+	List<const char> & warns = *(List<const char> *)pv;
+	if (message && ! code) {
+		warns.InsertHead(message);
+	}
+	return 1;
+}
+
+void print_submit_parse_warnings()
+{
+#ifdef USE_SUBMIT_UTILS
+		PRAGMA_REMIND("need to print submit parse warnings here.")
+#else
+	if (SubmitMacroSet.errors && ! SubmitMacroSet.errors->empty()) {
+		// put the warnings into a list so that we can print them int the order they were added (sigh)
+		List<const char> warns;
+		SubmitMacroSet.errors->walk(fnStoreWarning, &warns);
+		const char * msg;
+		warns.Rewind();
+		while ((msg = warns.Next())) { fprintf(stderr, "WARNING: %s", msg); }
+		SubmitMacroSet.errors->clear();
+	}
+#endif
+}
+
+
 #ifdef USE_SUBMIT_UTILS
 #else
 void
@@ -1922,6 +1948,9 @@ main( int argc, const char *argv[] )
 	delete ClusterAd;
 #endif
 	delete MySchedd;
+
+	// look for warnings from parsing the submit file.
+	print_submit_parse_warnings();
 
 	/*	print all of the parameters that were not actually expanded/used 
 		in the submit file. but not if we never queued any jobs. since
