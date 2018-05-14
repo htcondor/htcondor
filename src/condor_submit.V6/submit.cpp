@@ -329,6 +329,27 @@ void TestFilePermissions( char *scheddAddr = NULL )
 #endif
 }
 
+static bool fnStoreWarning(void * pv, int code, const char * /*subsys*/, const char * message) {
+	List<const char> & warns = *(List<const char> *)pv;
+	if (message && ! code) {
+		warns.InsertHead(message);
+	}
+	return 1;
+}
+
+void print_submit_parse_warnings(FILE* out, CondorError *errstack)
+{
+	if (errstack && ! errstack->empty()) {
+		// put the warnings into a list so that we can print them int the order they were added (sigh)
+		List<const char> warns;
+		errstack->walk(fnStoreWarning, &warns);
+		const char * msg;
+		warns.Rewind();
+		while ((msg = warns.Next())) { fprintf(out, "WARNING: %s", msg); }
+		errstack->clear();
+	}
+}
+
 void print_errstack(FILE* out, CondorError *errstack)
 {
 	if ( ! errstack)
@@ -1212,6 +1233,9 @@ main( int argc, const char *argv[] )
 	}
 	submit_hash.delete_job_ad();
 	delete MySchedd;
+
+	// look for warnings from parsing the submit file.
+	print_submit_parse_warnings(stderr, submit_hash.error_stack());
 
 	/*	print all of the parameters that were not actually expanded/used 
 		in the submit file. but not if we never queued any jobs. since
