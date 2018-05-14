@@ -3695,7 +3695,7 @@ AfterqueryObj.prototype.wrap = function (func) {
                 $('.vizstep').show();
             }
             that.err(e);
-            that.err("<p><a href='/help'>here's the documentation</a>");
+            that.err("<p><a href='help/syntax.html'>here's the documentation</a>");
             throw e;
         }
     };
