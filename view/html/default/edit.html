@@ -19,7 +19,6 @@
                     Data source: <input type="text" id="data_url" name="data_url" value="DATA">
                     <span class="help">
                         <a href="#" target="_blank" id="view_data_url_link">view</a>
-                        <a target="_blank" href="json.html">file format</a>
                     </span>
                     <br>
                     Date range:
@@ -36,10 +35,10 @@
                 <div id="vizlog"></div>
 
                 <script>
-                    var urlTool;
+                    let urlTool;
 
-                    var id_start_date = HTCondorView.prototype.new_graph_id();
-                    var id_end_date = HTCondorView.prototype.new_graph_id();
+                    const id_start_date = HTCondorView.prototype.new_graph_id();
+                    const id_end_date = HTCondorView.prototype.new_graph_id();
                     $(document).ready(function () {
 
                         initialize_from_url();
@@ -66,21 +65,21 @@
                     });
 
                     function initialize_from_url() {
-                        var args = AfterqueryObj.parseArgs(window.location.search);
+                        let args = AfterqueryObj.parseArgs(window.location.search);
                         $("#title").val(args.get("title"));
                         $("#data_url").val(args.get("data_url"));
 
                         $("#date_start").val(args.get("date_start"));
                         $("#date_end").val(args.get("date_end"));
 
-                        var graph_query_url = args.get("graph_query");
-                        var gqargs = AfterqueryObj.parseArgs(graph_query_url);
-                        var graph_query = "";
-                        var i;
+                        let graph_query_url = args.get("graph_query");
+                        let gqargs = AfterqueryObj.parseArgs(graph_query_url);
+                        let graph_query = "";
+                        let i;
                         for (i = 0; i < gqargs.all.length; i++) {
-                            var pair = gqargs.all[i];
-                            var key = pair[0];
-                            var value = pair[1];
+                            let pair = gqargs.all[i];
+                            let key = pair[0];
+                            let value = pair[1];
                             if (key !== "" && value !== "") {
                                 graph_query += key + "=" + value + "\n";
                             }
@@ -91,18 +90,18 @@
 
                     function update_graph() {
 
-                        var title = $("#title").val();
-                        var data_url = $("#data_url").val();
-                        var graph_query = $("#graph_query").val();
+                        const title = $("#title").val();
+                        const data_url = $("#data_url").val();
+                        const graph_query = $("#graph_query").val();
                         if ((!data_url) || !graph_query) {
                             $("#thechart").html("<h1>No graph requested</h1>\n" +
                                 "<p>At the least a data_url and graph_query argument are required.\n");
                             return;
                         }
 
-                        var graph_query_url = build_graph_query_url(graph_query);
+                        const graph_query_url = build_graph_query_url(graph_query);
 
-                        var args = {
+                        const args = {
                             dst_id: "thechart",
                             title: title,
                             data_url: data_url,
@@ -122,13 +121,13 @@
                     // Take newline separated query and turn into URI escaped version with
                     // arguments specified like a GET query.
                     function build_graph_query_url(graph_query) {
-                        var graph_query_url = "";
-                        var gqlines = graph_query.split("\n");
-                        var i;
-                        var idx;
-                        var key;
-                        var value;
-                        var tmp;
+                        let graph_query_url = "";
+                        const gqlines = graph_query.split("\n");
+                        let i;
+                        let idx;
+                        let key;
+                        let value;
+                        let tmp;
                         for (i = 0; i < gqlines.length; i++) {
                             tmp = gqlines[i].trim();
                             if (tmp.length !== 0) {
@@ -151,19 +150,19 @@
                     }
 
                     function update_url() {
-                        var title = $("#title").val();
-                        var data_url = $("#data_url").val();
-                        var graph_query = $("#graph_query").val();
-                        var graph_query_url = build_graph_query_url(graph_query);
+                        const title = $("#title").val();
+                        const data_url = $("#data_url").val();
+                        const graph_query = $("#graph_query").val();
+                        const graph_query_url = build_graph_query_url(graph_query);
 
                         urlTool.href = window.location.href;
-                        var search = "?" +
+                        const search = "?" +
                             "title=" + encodeURIComponent(title) + "&" +
                             "data_url=" + encodeURIComponent(data_url) + "&" +
                             "data_url=" + encodeURIComponent(data_url) + "&" +
                             "graph_query=" + encodeURIComponent(graph_query_url);
                         urlTool.search = search;
-                        var url = urlTool.href;
+                        const url = urlTool.href;
                         history.pushState(null, null, url);
                     }
 

@@ -7,17 +7,26 @@
     visibility: hidden;
 }
 
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    font-family: "Helvetica Neue", Helvetica, sans-serif;
+    line-height: 1.5em;
+    margin-bottom: 100px;
+}
+
 nav {
     margin-bottom: 10px;
 }
 
-body {
-    margin-bottom: 100px;
-}
-
-html {
-    position: relative;
-    min-height: 100%;
+h1 {
+    font-family: "HelveticaNeue-Light", "HelveticaNeueLight", "Helvetica Neue Light", "Helvetica Neue", sans-serif;
+    font-weight: 300;
+    text-align: center;
+    font-size: 250%;
 }
 
 .htcv-sidenav {

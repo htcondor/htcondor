@@ -68,16 +68,16 @@ has_fullscreen_link: true/false - Optional. Defaults to true. If false (and exac
 
 function HTCondorView(id, url, graph_args, options) {
     "use strict";
-    var that = this;
+    const that = this;
 
-    var options_obj;
-    if (typeof(id) === 'object') {
+    let options_obj;
+    if (typeof(id) === "object") {
         options_obj = id;
 
     }
     else {
         // This is a (hopefully) a raw afterquery query.
-        var args = AfterqueryObj.parseArgs(url);
+        const args = AfterqueryObj.parseArgs(url);
         options_obj = {
             dst_id: id,
             title: args.get("title"),
@@ -86,18 +86,18 @@ function HTCondorView(id, url, graph_args, options) {
             help_url: args.get("help_url"),
         };
 
-        for (var argi in args.all) {
-            var arg = args.all[argi];
-            var key = arg[0];
+        for (let argi in args.all) {
+            const arg = args.all[argi];
+            const key = arg[0];
             if (key.length && key !== "title" && key !== "url") {
-                var val = arg[1];
+                const val = arg[1];
                 options_obj.graph_query += encodeURIComponent(key) + "=" + encodeURIComponent(val) + "&";
             }
         }
     }
 
-    var ready_datefiles;
-    if (options_obj.data_url.search(/\.\./) != -1) {
+    let ready_datefiles;
+    if (options_obj.data_url.search(/\.\./) !== -1) {
         this.datefiles = new HTCondorViewDateFiles(options_obj.data_url);
         ready_datefiles = this.datefiles.promise();
         ready_datefiles.fail(function () {
@@ -109,7 +109,7 @@ function HTCondorView(id, url, graph_args, options) {
         ready_datefiles.resolve();
     }
 
-    var ready_document = $.Deferred();
+    const ready_document = $.Deferred();
     $(document).ready(function () {
         ready_document.resolve();
     });
@@ -122,11 +122,11 @@ function HTCondorView(id, url, graph_args, options) {
 
 HTCondorView.simple = function (query, thisclass) {
     "use strict";
-    var newid = HTCondorView.prototype.new_graph_id();
+    const newid = HTCondorView.prototype.new_graph_id();
     if (thisclass === null || thisclass === undefined) {
         thisclass = "HTCondorViewSimple";
     }
-    var tag = '<div id="' + newid + '" class="' + thisclass + '"></div>';
+    const tag = "<div id=\"" + newid + "\" class=\"" + thisclass + "\"></div>";
     document.write(tag);
     return new HTCondorView(newid, query);
 };
@@ -134,17 +134,17 @@ HTCondorView.simple = function (query, thisclass) {
 HTCondorView.prototype.initialize = function (options) {
     "use strict";
 
-    if (typeof(options) !== 'object') {
+    if (typeof(options) !== "object") {
         options = {};
     }
 
-    var id = options.dst_id;
-    var graph_args = options.graph_query;
-    var table_args = options.table_query;
-    var select_tuple = options.select_tuple;
-    this.urlTool = document.createElement('a');
-    var that = this;
-    var i;
+    const id = options.dst_id;
+    let graph_args = options.graph_query;
+    let table_args = options.table_query;
+    const select_tuple = options.select_tuple;
+    this.urlTool = document.createElement("a");
+    const that = this;
+    let i;
 
     this.date_start = options.date_start;
     this.date_end = options.date_end;
@@ -160,20 +160,20 @@ HTCondorView.prototype.initialize = function (options) {
     this.url = options.data_url;
     this.help_url = options.help_url;
 
-    var container = $('#' + id);
+    const container = $("#" + id);
     if (container.length === 0) {
-        console.log('HTCondor View is not able to intialize. There is no element with an ID of "' + id + '".');
+        console.log("HTCondor View is not able to intialize. There is no element with an ID of \"" + id + "\".");
         return false;
     }
     container.empty();
 
-    var has_fullscreen_link = true;
+    let has_fullscreen_link = true;
     if (options.has_fullscreen_link === false) {
         has_fullscreen_link = false;
     }
-    var starting_elements = this.starting_elements({
+    const starting_elements = this.starting_elements({
         has_table: !!table_args,
-        has_fullscreen_link: has_fullscreen_link
+        has_fullscreen_link: has_fullscreen_link,
     });
 
     this.aq_table = new AfterqueryObj({root_id: this.table_id});
@@ -181,23 +181,23 @@ HTCondorView.prototype.initialize = function (options) {
     this.aq_graph = new AfterqueryObj({root_id: this.graph_id});
 
     container.append(starting_elements);
-    this.graph_fullscreen_link = $('#' + this.graph_fullscreen_id);
-    this.graph_edit_link = $('#' + this.graph_edit_id);
+    this.graph_fullscreen_link = $("#" + this.graph_fullscreen_id);
+    this.graph_edit_link = $("#" + this.graph_edit_id);
 
-    this.table_fullscreen_link = $('#' + this.table_fullscreen_id);
-    this.table_edit_link = $('#' + this.table_edit_id);
+    this.table_fullscreen_link = $("#" + this.table_fullscreen_id);
+    this.table_edit_link = $("#" + this.table_edit_id);
 
-    $('#' + this.table_download_id).click(function (ev) {
+    $("#" + this.table_download_id).click(function (ev) {
         that.download_csv(that.data, that.current_tableargs);
         ev.preventDefault();
     });
 
-    $('#' + this.graph_download_id).click(function (ev) {
+    $("#" + this.graph_download_id).click(function (ev) {
         that.download_csv(that.data, that.current_graphargs);
         ev.preventDefault();
     });
 
-    var date_filter = '';
+    let date_filter = "";
 
     if (this.date_start) {
         console.log(this.date_start, "-", this.date_end);
@@ -230,14 +230,13 @@ HTCondorView.next_graph_id = 0;
 HTCondorView.prototype.new_graph_id = function () {
     "use strict";
     HTCondorView.next_graph_id++;
-    var new_id = "htcondorview-private-" + HTCondorView.next_graph_id;
-    return new_id;
+    return "htcondorview-private-" + HTCondorView.next_graph_id;
 };
 
 HTCondorView.prototype.set_graph_query = function (graph_query) {
     "use strict";
     this.current_graphargs = graph_query;
-    var search = '?';
+    let search = "?";
     if (this.title) {
         search += "title=" + encodeURIComponent(this.title) + "&";
     }
@@ -250,29 +249,29 @@ HTCondorView.prototype.set_graph_query = function (graph_query) {
     }
     search += "graph_query=" + encodeURIComponent(this.current_graphargs) + "&";
     if (this.graph_fullscreen_link) {
-        this.graph_fullscreen_link.attr('href', "fullscreen.html" + search);
+        this.graph_fullscreen_link.attr("href", "fullscreen.html" + search);
     }
 
     if (this.graph_edit_link) {
-        this.graph_edit_link.attr('href', "edit.html" + search);
+        this.graph_edit_link.attr("href", "edit.html" + search);
     }
 };
 
 HTCondorView.prototype.set_table_query = function (table_query) {
     "use strict";
     this.current_tableargs = table_query;
-    var search = '?';
+    let search = "?";
     if (this.title) {
         search += "title=" + encodeURIComponent(this.title) + "&";
     }
     search += "data_url=" + encodeURIComponent(this.url) + "&";
     search += "graph_query=" + encodeURIComponent(this.current_tableargs) + "&";
     if (this.table_fullscreen_link) {
-        this.table_fullscreen_link.attr('href', "fullscreen.html" + search);
+        this.table_fullscreen_link.attr("href", "fullscreen.html" + search);
     }
 
     if (this.table_edit_link) {
-        this.table_edit_link.attr('href', "edit.html" + search);
+        this.table_edit_link.attr("href", "edit.html" + search);
     }
 };
 
@@ -291,14 +290,14 @@ HTCondorView.prototype.toggle_edit = function (btn, controls) {
 HTCondorView.prototype.replace_search_arg = function (oldurl, newkey, newval) {
     "use strict";
     this.urlTool.href = oldurl;
-    var oldsearch = this.urlTool.search;
-    var args = AfterqueryObj.parseArgs(oldsearch);
-    var newsearch = "?";
-    for (var argi in args.all) {
-        var arg = args.all[argi];
-        var key = arg[0];
-        if (key.length && key != newkey) {
-            var val = arg[1];
+    const oldsearch = this.urlTool.search;
+    const args = AfterqueryObj.parseArgs(oldsearch);
+    let newsearch = "?";
+    for (let argi in args.all) {
+        const arg = args.all[argi];
+        const key = arg[0];
+        if (key.length && key !== newkey) {
+            const val = arg[1];
             newsearch += encodeURIComponent(key) + "=" + encodeURIComponent(val) + "&";
         }
     }
@@ -311,8 +310,8 @@ HTCondorView.prototype.replace_search_arg = function (oldurl, newkey, newval) {
 
 HTCondorView.prototype.total_table_args = function (headers, select_tuble) {
     "use strict";
-    var fields = [];
-    var i;
+    const fields = [];
+    let i;
     for (i = 0; i < headers.length; i++) {
         if (!this.select_tuple[headers[i]]) {
             fields.push(headers[i]);
@@ -326,26 +325,26 @@ HTCondorView.prototype.total_table_args = function (headers, select_tuble) {
 // with a header of "", type of T_STRING, and all values of "TOTAL".
 HTCondorView.prototype.add_total_field = function (grid) {
     "use strict";
-    grid.headers.unshift('');
+    grid.headers.unshift("");
     grid.types.unshift(AfterqueryObj.T_STRING);
-    var i;
+    let i;
     for (i = 0; i < grid.data.length; i++) {
-        grid.data[i].unshift('TOTAL');
+        grid.data[i].unshift("TOTAL");
     }
     return grid;
 };
 
 HTCondorView.prototype.aq_load = function (url, start, end) {
-    var def = $.Deferred();
-    var that = this;
+    const def = $.Deferred();
+    const that = this;
 
-    var files = [url];
+    let files = [url];
 
     if (start) {
         files = this.datefiles.get_files(start, end);
     }
 
-    var query = "url=" + files.join("&url=");
+    const query = "url=" + files.join("&url=");
 
     if (query === this.data_id) {
         def.resolve(this.data);
@@ -363,9 +362,9 @@ HTCondorView.prototype.aq_load = function (url, start, end) {
 
 HTCondorView.prototype.promise_render_viz = function (viz, args) {
     "use strict";
-    var def = $.Deferred();
-    $('#' + args.id + ' .vizchart').empty();
-    var query_bits = [];
+    const def = $.Deferred();
+    $("#" + args.id + " .vizchart").empty();
+    const query_bits = [];
     if (args.url) {
         query_bits.push("url=" + args.url);
     }
@@ -378,14 +377,14 @@ HTCondorView.prototype.promise_render_viz = function (viz, args) {
     if (args.title) {
         query_bits.push("&title=" + encodeURIComponent(args.title));
     }
-    var options = {
-        num_pattern: '#,##0.0',
-        disable_height: true
+    const options = {
+        num_pattern: "#,##0.0",
+        disable_height: true,
     };
     if (args.select_handler) {
         options.select_handler = args.select_handler;
     }
-    var query = query_bits.join("&");
+    const query = query_bits.join("&");
     viz.render(query, args.data, function (data) {
         def.resolve(data);
     }, options);
@@ -394,8 +393,8 @@ HTCondorView.prototype.promise_render_viz = function (viz, args) {
 
 HTCondorView.prototype.callback_transform_total_table = function (tableargs, data) {
     "use strict";
-    var def = $.Deferred();
-    var query = this.total_table_args(data.headers, tableargs, this.select_tuple);
+    const def = $.Deferred();
+    const query = this.total_table_args(data.headers, tableargs, this.select_tuple);
     this.aq_total_table.load_post_transform(query, data, function (d) {
         def.resolve(d);
     });
@@ -404,17 +403,17 @@ HTCondorView.prototype.callback_transform_total_table = function (tableargs, dat
 
 HTCondorView.prototype.load_and_render = function (graphargs, tableargs) {
     "use strict";
-    var that = this;
+    const that = this;
 
-    var promise_data_loaded = this.aq_load(that.url, that.date_start, that.date_end);
-    var promise;
+    const promise_data_loaded = this.aq_load(that.url, that.date_start, that.date_end);
+    let promise;
 
-    var graph_id = this.graph_id;
-    var table_id = this.table_id;
-    var total_table_id = this.total_table_id;
-    var url = this.url;
+    const graph_id = this.graph_id;
+    const table_id = this.table_id;
+    const total_table_id = this.total_table_id;
+    const url = this.url;
     const help_url = this.help_url;
-    var title = this.title;
+    const title = this.title;
 
     if (graphargs) {
         promise_data_loaded.then(function (data) {
@@ -424,7 +423,7 @@ HTCondorView.prototype.load_and_render = function (graphargs, tableargs) {
                 help_url: help_url,
                 title: title,
                 query_args: graphargs,
-                data: data
+                data: data,
             });
         });
     }
@@ -438,7 +437,7 @@ HTCondorView.prototype.load_and_render = function (graphargs, tableargs) {
                 select_handler: function (e, t, d) {
                     that.table_select_handler(e, t, d);
                 },
-                data: data
+                data: data,
             });
         });
         promise = promise
@@ -455,7 +454,7 @@ HTCondorView.prototype.load_and_render = function (graphargs, tableargs) {
                     select_handler: function (e, t, d) {
                         that.total_table_select_handler(e, t, d);
                     },
-                    data: data
+                    data: data,
                 });
             });
     }
@@ -463,7 +462,7 @@ HTCondorView.prototype.load_and_render = function (graphargs, tableargs) {
 
 HTCondorView.prototype.total_table_select_handler = function (evnt, table, data) {
     "use strict";
-    var selection = table.getSelection();
+    let selection = table.getSelection();
     if (!selection) {
         return;
     }
@@ -482,7 +481,7 @@ HTCondorView.prototype.total_table_select_handler = function (evnt, table, data)
 
 HTCondorView.prototype.table_select_handler = function (evnt, table, data) {
     "use strict";
-    var selection = table.getSelection();
+    let selection = table.getSelection();
     if (!selection) {
         return;
     }
@@ -493,18 +492,18 @@ HTCondorView.prototype.table_select_handler = function (evnt, table, data) {
 
     this.table_obj = table;
 
-    var col;
-    var filter = "";
+    let col;
+    let filter = "";
 
-    var row = selection[0].row;
+    const row = selection[0].row;
 
     this.title = this.original_title + " for ";
-    var first_tuple = true;
+    let first_tuple = true;
 
     for (col = 0; col < data.getNumberOfColumns(); col++) {
-        var label = data.getColumnLabel(col);
+        const label = data.getColumnLabel(col);
         if (this.select_tuple[label]) {
-            var value = data.getValue(row, col);
+            const value = data.getValue(row, col);
             filter += "filter=" + label + "=" + value + "&";
             if (!first_tuple) {
                 this.title += "/";
@@ -534,8 +533,8 @@ HTCondorView.prototype.html_for_graph = function () {
 HTCondorView.prototype.starting_elements = function (options) {
     "use strict";
 
-    var has_table = options.has_table;
-    var has_fullscreen_link = options.has_fullscreen_link;
+    const has_table = options.has_table;
+    const has_fullscreen_link = options.has_fullscreen_link;
 
     this.graph_id = this.new_graph_id();
     this.table_id = this.new_graph_id();
@@ -549,7 +548,7 @@ HTCondorView.prototype.starting_elements = function (options) {
     this.table_download_id = this.new_graph_id();
 
     function editmenu(fullscreen_id, edit_id, download_id) {
-        var ret = "<div class='editmenu'>\n";
+        let ret = "<div class='editmenu'>\n";
         if (has_fullscreen_link) {
             ret += "<a href='#' id='" + fullscreen_id + "' class=\"editlink\">full screen</a><br>\n";
         }
@@ -560,26 +559,24 @@ HTCondorView.prototype.starting_elements = function (options) {
     }
 
 
-    var ret = "" +
-        '<div class="htcondorview">\n' +
-        "<div id='" + this.graph_id + "' class='graph'>\n" +
-        editmenu(this.graph_fullscreen_id, this.graph_edit_id, this.graph_download_id) +
-        this.html_for_graph() + "\n" +
-        "</div>\n";
+    let ret = `<div class="htcondorview">
+<div id='${this.graph_id}' class='graph'>
+${editmenu(this.graph_fullscreen_id, this.graph_edit_id, this.graph_download_id)}${this.html_for_graph()}
+</div>
+`;
     if (has_table) {
-        ret += "<div id='" + this.total_table_id + "' class='table'>\n" +
-            this.html_for_graph() + "\n" +
-            "</div>\n";
-        ret += "<div id='" + this.table_id + "' class='table'>\n" +
-            editmenu(this.table_fullscreen_id, this.table_edit_id, this.table_download_id) +
-            this.html_for_graph() + "\n" +
-            "</div>\n";
+        ret += `<div id='${this.total_table_id}' class='table'>
+${this.html_for_graph()}
+</div>
+`;
+        ret += `<div id='${this.table_id}' class='table'>
+${editmenu(this.table_fullscreen_id, this.table_edit_id, this.table_download_id)}${this.html_for_graph()}
+</div>
+`;
     }
     ret += "</div>\n";
 
-    var element = $(ret);
-
-    return element;
+    return $(ret);
 };
 
 
@@ -588,24 +585,24 @@ HTCondorView.prototype.afterquerydata_to_csv = function (dt) {
 
     function csv_escape(instr) {
         instr = "" + instr;
-        if ((instr.indexOf('"') == -1) &&
-            (instr.indexOf(',') == -1) &&
-            (instr.charAt[0] != ' ') &&
-            (instr.charAt[0] != "\t") &&
-            (instr.charAt[instr.length - 1] != " ") &&
-            (instr.charAt[instr.length - 1] != "\t")) {
+        if ((instr.indexOf("\"") === -1) &&
+            (instr.indexOf(",") === -1) &&
+            (instr.charAt[0] !== " ") &&
+            (instr.charAt[0] !== "\t") &&
+            (instr.charAt[instr.length - 1] !== " ") &&
+            (instr.charAt[instr.length - 1] !== "\t")) {
             // No escaping necessary
             return instr;
         }
-        instr = instr.replace(/"/g, '""');
-        return '"' + instr + '"';
+        instr = instr.replace(/"/g, "\"\"");
+        return "\"" + instr + "\"";
     }
 
-    var ret = '';
-    var columns = dt.headers.length;
-    var rows = dt.data.length;
+    let ret = "";
+    const columns = dt.headers.length;
+    const rows = dt.data.length;
 
-    var col;
+    let col;
 
     for (col = 0; col < columns; col++) {
         if (col > 0) {
@@ -615,14 +612,14 @@ HTCondorView.prototype.afterquerydata_to_csv = function (dt) {
     }
     ret += "\n";
 
-    for (var row = 0; row < rows; row++) {
+    for (let row = 0; row < rows; row++) {
         for (col = 0; col < columns; col++) {
             if (col > 0) {
                 ret += ",";
             }
-            var val = dt.data[row][col];
-            if (typeof(val) === 'number' && isNaN(val)) {
-                val = '';
+            let val = dt.data[row][col];
+            if (typeof(val) === "number" && isNaN(val)) {
+                val = "";
             }
             ret += csv_escape(val);
         }
@@ -634,7 +631,7 @@ HTCondorView.prototype.afterquerydata_to_csv = function (dt) {
 
 HTCondorView.prototype.download_data = function (filename, type, data) {
     "use strict";
-    var link = document.createElement('a');
+    const link = document.createElement("a");
     link.download = filename;
     link.href = "data:" + type + ";charset=utf-8," + encodeURIComponent(data);
     document.body.appendChild(link);
@@ -644,9 +641,9 @@ HTCondorView.prototype.download_data = function (filename, type, data) {
 
 HTCondorView.prototype.download_csv = function (data, query) {
     "use strict";
-    var that = this;
-    var handle_csv = function () {
-        var csv = that.afterquerydata_to_csv(that.csv_source_data.value);
+    const that = this;
+    const handle_csv = function () {
+        const csv = that.afterquerydata_to_csv(that.csv_source_data.value);
         that.csv_source_data = undefined;
         that.download_data("HTCondor-View-Data.csv", "text/csv", csv);
     };
@@ -655,11 +652,11 @@ HTCondorView.prototype.download_csv = function (data, query) {
 
 
 HTCondorView.input_date = function (name, id) {
-    return '<input type="date" placeholder="YYYY-MM-DD" title="Use YYYY-MM-DD format.\rFor example, use 2015-06-01 for June 1, 2015" pattern="\\d\\d\\d\\d-\\d\\d?-\\d\\d?" class="range_input datepicker" name="' + name + '" id="' + id + '">';
+    return "<input type=\"date\" placeholder=\"YYYY-MM-DD\" title=\"Use YYYY-MM-DD format.\rFor example, use 2015-06-01 for June 1, 2015\" pattern=\"\\d\\d\\d\\d-\\d\\d?-\\d\\d?\" class=\"range_input datepicker\" name=\"" + name + "\" id=\"" + id + "\">";
 };
 
 HTCondorView.input_time = function (name, id) {
-    return '<input type="time" placeholder="HH:MM" title="Use HH:MM format.\rFor example, use 13:00 for 1:00 PM" pattern="\\d+:\\d\\d(:\\d\\d(\\.\\d\\d\\d)?)?\\s*([aApP][mM])?" class="range_input" name="' + name + '" id="' + id + '">';
+    return "<input type=\"time\" placeholder=\"HH:MM\" title=\"Use HH:MM format.\rFor example, use 13:00 for 1:00 PM\" pattern=\"\\d+:\\d\\d(:\\d\\d(\\.\\d\\d\\d)?)?\\s*([aApP][mM])?\" class=\"range_input\" name=\"" + name + "\" id=\"" + id + "\">";
 };
 
 
@@ -694,15 +691,15 @@ function HTCondorViewDateFiles(base_url, ready_func, fail_func) {
         this.my_promise.fail(fail_func);
     }
 
-    var oldest_url = HTCondorViewDateFiles.expand(base_url, "oldest");
-    var that = this;
-    $.ajax(oldest_url, {dataType: 'json'}).then(
+    const oldest_url = HTCondorViewDateFiles.expand(base_url, "oldest");
+    const that = this;
+    $.ajax(oldest_url, {dataType: "json"}).then(
         function (data) {
             that.oldest_loaded(data);
         },
         function (j, t, e) {
             that.failed_load(j, t, e);
-        }
+        },
     );
 }
 
@@ -723,11 +720,11 @@ HTCondorViewDateFiles.expand = function (base_url, content) {
 
 HTCondorViewDateFiles.prototype.oldest_loaded = function (oldest) {
     this.oldest = {};
-    var keys = Object.keys(oldest);
-    var key;
-    var val;
-    var dateval;
-    for (var i = 0; i < keys.length; i++) {
+    const keys = Object.keys(oldest);
+    let key;
+    let val;
+    let dateval;
+    for (let i = 0; i < keys.length; i++) {
         key = keys[i];
         val = oldest[key];
         dateval = Date.parseMore(val);
@@ -756,9 +753,9 @@ HTCondorViewDateFiles.truncate_to_day = function (dateobj) {
 HTCondorViewDateFiles.truncate_to_week = function (dateobj) {
     // TODO: There is probably a faster solution, but it may
     // be complex.
-    var w = dateobj.getUTCISOWeekDate();
-    var r = Date.parseMore(w);
-    var tmp = r.getUTCISOWeekDate();
+    const w = dateobj.getUTCISOWeekDate();
+    const r = Date.parseMore(w);
+    const tmp = r.getUTCISOWeekDate();
     //console.log("        ", dateobj,"->", w, "->", r, "(",tmp,")");
     return r;
 };
@@ -771,7 +768,7 @@ HTCondorViewDateFiles.truncate_to_month = function (dateobj) {
 HTCondorViewDateFiles.prototype.get_files_aide = function (label, start, end, step, truncater, formatter) {
     //console.log("    ", start, end, step, truncater, formatter);
     //console.log("  start", start);
-    var now = truncater(start);
+    const now = truncater(start);
     //console.log("  trunc", now);
     //console.log("    end", end, "+",step,"- 1");
     end.setTime(end.getTime() + step - 1);
@@ -779,8 +776,8 @@ HTCondorViewDateFiles.prototype.get_files_aide = function (label, start, end, st
     end = truncater(end);
     //console.log("  trunc", end);
 
-    var retfiles = [];
-    var stamp;
+    const retfiles = [];
+    let stamp;
 
     while (now.getTime() < end.getTime()) {
         //console.log("    ", now, end);
@@ -790,10 +787,10 @@ HTCondorViewDateFiles.prototype.get_files_aide = function (label, start, end, st
         //console.log("       ", now, end);
     }
 
-    var ret_urls = [];
-    for (var i = 0; i < retfiles.length; i++) {
-        var insert = label + "." + retfiles[i];
-        var expanded = HTCondorViewDateFiles.expand(this.base_url, insert);
+    const ret_urls = [];
+    for (let i = 0; i < retfiles.length; i++) {
+        const insert = label + "." + retfiles[i];
+        const expanded = HTCondorViewDateFiles.expand(this.base_url, insert);
         ret_urls.push(expanded);
     }
 
@@ -813,17 +810,17 @@ HTCondorViewDateFiles.prototype.get_files = function (start, end) {
 
     //console.log("considering", start, "to", end);
 
-    var day = 1000 * 60 * 60 * 24;
-    var week = day * 7;
-    var month = day * 31;
+    const day = 1000 * 60 * 60 * 24;
+    const week = day * 7;
+    const month = day * 31;
 
-    var delta = end.getTime() - start.getTime();
+    const delta = end.getTime() - start.getTime();
 
-    var stamp;
-    var retfiles = [];
+    let stamp;
+    let retfiles = [];
 
 
-    var now;
+    let now;
 
     // We choose the smallest interval that covers the time period
     // and is at least as long as the time period.
@@ -840,7 +837,7 @@ HTCondorViewDateFiles.prototype.get_files = function (start, end) {
             HTCondorViewDateFiles.truncate_to_day,
             function (d) {
                 return d.getUTCISOYearMonthDay();
-            }
+            },
         );
         // console.log("  daily:", retfiles);
         return retfiles;
@@ -853,7 +850,7 @@ HTCondorViewDateFiles.prototype.get_files = function (start, end) {
             HTCondorViewDateFiles.truncate_to_week,
             function (d) {
                 return d.getUTCISOWeekDate();
-            }
+            },
         );
         // console.log("  weekly:", retfiles);
         return retfiles;
@@ -863,7 +860,7 @@ HTCondorViewDateFiles.prototype.get_files = function (start, end) {
         HTCondorViewDateFiles.truncate_to_month,
         function (d) {
             return d.getUTCISOYearMonth();
-        }
+        },
     );
     // console.log("  monthly:", retfiles);
     return retfiles;
@@ -883,7 +880,7 @@ replaced with the interval and start date as appropriate.  Data must have a
 
 function HTCondorViewRanged(options) {
     "use strict";
-    var that = this;
+    const that = this;
     this.options = options;
     $(document).ready(function () {
         that.initialize();
@@ -906,11 +903,11 @@ HTCondorViewRanged.prototype.add_date_pickers = function (root_id) {
         HTCondorViewRanged.has_native_date = false;
         try {
             // This test is based on the design from inputtypes.js in Modernizr, released under an MIT license. This is a reimplementation. If we every need more Modernizr tests, we should probably just use the real library.
-            var test_input_e = $('<input>');
+            const test_input_e = $("<input>");
             test_input_e.hide();
-            $('body').append(test_input_e);
-            test_input_e.attr('type', 'date');
-            if (test_input_e.attr('type') === 'text') {
+            $("body").append(test_input_e);
+            test_input_e.attr("type", "date");
+            if (test_input_e.attr("type") === "text") {
                 test_input_e.remove();
                 throw "input type='date' is not supported";
             }
@@ -929,43 +926,43 @@ HTCondorViewRanged.prototype.add_date_pickers = function (root_id) {
     }
     if (!HTCondorViewRanged.has_native_date) {
         // We clear the style so autoSize can work.
-        $('#' + root_id + ' .datepicker').removeClass("range_input");
+        $("#" + root_id + " .datepicker").removeClass("range_input");
         // TODO: we could set minDate/maxDate to the range of data we know we have.
-        $('#' + root_id + ' .datepicker').datepicker({
-            dateFormat: 'yy-mm-dd',
-            autoSize: true
+        $("#" + root_id + " .datepicker").datepicker({
+            dateFormat: "yy-mm-dd",
+            autoSize: true,
         });
     }
 };
 
 HTCondorViewRanged.prototype.initialize = function () {
     "use strict";
-    var that = this;
+    const that = this;
     this.dst_id = this.options.dst_id;
-    var container = $('#' + this.dst_id);
+    const container = $("#" + this.dst_id);
     if (container.length === 0) {
-        console.log('HTCondorViewRanged is not able to intialize. There is no element with an ID of "' + this.dst_id + '".');
+        console.log("HTCondorViewRanged is not able to intialize. There is no element with an ID of \"" + this.dst_id + "\".");
         return;
     }
-    var new_html = this.html_tabs();
+    const new_html = this.html_tabs();
     container.html(new_html);
     this.add_date_pickers(this.dst_id);
 
     this.options.dst_id = this.graph_id;
 
-    $('#' + this.id_range).hide();
+    $("#" + this.id_range).hide();
 
     // Initialize tabs
-    var selector = '#' + this.dst_id + ' ul.tabs li';
-    $('#' + this.dst_id + ' ul.tabs li').click(function () {
-        $('#' + this.dst_id + ' ul.tabs li').removeClass('current');
-        $(this).addClass('current');
+    const selector = "#" + this.dst_id + " ul.tabs li";
+    $("#" + this.dst_id + " ul.tabs li").click(function () {
+        $("#" + this.dst_id + " ul.tabs li").removeClass("current");
+        $(this).addClass("current");
     });
-    $('#' + this.dst_id + ' ul.radio-tabs input').change(function () {
+    $("#" + this.dst_id + " ul.radio-tabs input").change(function () {
         that.change_view();
     });
 
-    $('#' + this.dst_id + ' button.update_range').click(function () {
+    $("#" + this.dst_id + " button.update_range").click(function () {
         that.change_view();
     });
 
@@ -978,40 +975,40 @@ HTCondorViewRanged.prototype.change_view = function () {
     //$("#"+this.graph_id).empty();
     //this.htcondor_view = null;
 
-    var duration = $("#" + this.dst_id + ' .data-duration input[type="radio"]:checked').val();
-    var options = {};
+    const duration = $("#" + this.dst_id + " .data-duration input[type=\"radio\"]:checked").val();
+    const options = {};
     let key;
     for (key in this.options) {
         options[key] = this.options[key];
     }
-    var now = new Date(Date.now());
-    var start = new Date(Date.now());
+    const now = new Date(Date.now());
+    const start = new Date(Date.now());
     if (duration === "day") {
         start.setTime(start.getTime() - 1000 * 60 * 60 * 24);
         options.date_start = start;
         options.date_end = now;
-        $('#' + this.id_range).hide();
+        $("#" + this.id_range).hide();
     }
     else if (duration === "week") {
         start.setTime(start.getTime() - 1000 * 60 * 60 * 24 * 7);
         options.date_start = start;
         options.date_end = now;
-        $('#' + this.id_range).hide();
+        $("#" + this.id_range).hide();
     }
     else if (duration === "month") {
         start.setTime(start.getTime() - 1000 * 60 * 60 * 24 * 31);
         options.date_start = start;
         options.date_end = now;
-        $('#' + this.id_range).hide();
+        $("#" + this.id_range).hide();
     }
     else if (duration === "custom") {
-        $('#' + this.id_range).show();
+        $("#" + this.id_range).show();
         options.date_start = Date.parseDateTime(
-            $('#' + this.id_start_date).val(),
-            $('#' + this.id_start_time).val());
+            $("#" + this.id_start_date).val(),
+            $("#" + this.id_start_time).val());
         options.date_end = Date.parseDateTime(
-            $('#' + this.id_end_date).val(),
-            $('#' + this.id_end_time).val());
+            $("#" + this.id_end_date).val(),
+            $("#" + this.id_end_time).val());
         console.log(options.date_start, options.date_end);
         if (!options.date_start || (!options.date_end)) {
             //console.log("unparsable");
@@ -1028,10 +1025,10 @@ HTCondorViewRanged.prototype.change_view = function () {
 
 HTCondorViewRanged.prototype.html_tabs = function () {
     // We need to ensure the IDs are all unique.
-    var id_dd = this.new_graph_id();
-    var id_dw = this.new_graph_id();
-    var id_dm = this.new_graph_id();
-    var id_dc = this.new_graph_id();
+    const id_dd = this.new_graph_id();
+    const id_dw = this.new_graph_id();
+    const id_dm = this.new_graph_id();
+    const id_dc = this.new_graph_id();
     this.id_start_date = this.new_graph_id();
     this.id_start_time = this.new_graph_id();
     this.id_end_date = this.new_graph_id();
@@ -1050,26 +1047,26 @@ HTCondorViewRanged.prototype.html_tabs = function () {
     }
 
     this.graph_id = this.new_graph_id();
-    return "" +
-        "<div class='htcondorviewranged'>\n" +
-        "<div class='tabs'>\n" +
-        "<ul class='radio-tabs data-duration'>\n" +
-        "<li>" + html_radio("data-duration", "data-duration-day-" + id_dd, "day", "Day", "checked") + "\n" +
-        "<li>" + html_radio("data-duration", "data-duration-week-" + id_dw, "week", "Week") + "\n" +
-        "<li>" + html_radio("data-duration", "data-duration-month-" + id_dm, "month", "Month") + "\n" +
-        "<li>" + html_radio("data-duration", "data-duration-custom-" + id_dc, "custom", "Custom") + "\n" +
-        "</ul>\n" +
-        "</div>\n" +
-        '<div class="range" id="' + this.id_range + '">\n' +
-        HTCondorView.input_date('start_date', this.id_start_date) + "\n" +
-        HTCondorView.input_time('start_time', this.id_start_time) + "\n" +
-        'through\n' +
-        HTCondorView.input_date('end_date', this.id_end_date) + "\n" +
-        HTCondorView.input_time('end_time', this.id_end_time) + "\n" +
-        "<button class='update_range'>Update chart</button>\n" +
-        '</div>\n' +
-        '<div id="' + this.graph_id + '"></div>\n' +
-        '</div>\n';
+    return `<div class='htcondorviewranged'>
+<div class='tabs'>
+<ul class='radio-tabs data-duration'>
+<li>${html_radio("data-duration", "data-duration-day-" + id_dd, "day", "Day", "checked")}
+<li>${html_radio("data-duration", "data-duration-week-" + id_dw, "week", "Week")}
+<li>${html_radio("data-duration", "data-duration-month-" + id_dm, "month", "Month")}
+<li>${html_radio("data-duration", "data-duration-custom-" + id_dc, "custom", "Custom")}
+</ul>
+</div>
+<div class="range" id="${this.id_range}">
+${HTCondorView.input_date("start_date", this.id_start_date)}
+${HTCondorView.input_time("start_time", this.id_start_time)}
+through
+${HTCondorView.input_date("end_date", this.id_end_date)}
+${HTCondorView.input_time("end_time", this.id_end_time)}
+<button class='update_range'>Update chart</button>
+</div>
+<div id="${this.graph_id}"></div>
+</div>
+`;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1084,12 +1081,12 @@ Released and used under the MIT license.
 // Get ISO 8601 week number for a date.
 Date.prototype.getUTCWeek = function () {
     "use strict";
-    var target = new Date(this.valueOf());
-    var dayNr = (this.getUTCDay() + 6) % 7;
+    const target = new Date(this.valueOf());
+    const dayNr = (this.getUTCDay() + 6) % 7;
     target.setUTCDate(target.getUTCDate() - dayNr + 3);
-    var firstThursday = target.valueOf();
+    const firstThursday = target.valueOf();
     target.setUTCMonth(0, 1);
-    if (target.getUTCDay() != 4) {
+    if (target.getUTCDay() !== 4) {
         target.setUTCMonth(0, 1 + ((4 - target.getUTCDay()) + 7) % 7);
     }
     return 1 + Math.ceil((firstThursday - target) / 604800000);
@@ -1098,7 +1095,7 @@ Date.prototype.getUTCWeek = function () {
 // Get ISO 8601 year, assuming we're using week numbers.
 Date.prototype.getUTCWeekYear = function () {
     "use strict";
-    var target = new Date(this.valueOf());
+    const target = new Date(this.valueOf());
     target.setUTCDate(target.getUTCDate() - ((this.getUTCDay() + 6) % 7) + 3);
     return target.getUTCFullYear();
 };
@@ -1106,24 +1103,24 @@ Date.prototype.getUTCWeekYear = function () {
 // Get ISO 8610 year and week in form "2016-W01"
 Date.prototype.getUTCISOWeekDate = function () {
     "use strict";
-    var week = this.getUTCWeek();
+    let week = this.getUTCWeek();
     week = ("0" + week).slice(-2); // Zero pad.
-    var year = this.getUTCWeekYear();
+    const year = this.getUTCWeekYear();
     return year + "-W" + week;
 };
 
 Date.prototype.getUTCISOYearMonth = function () {
     "use strict";
-    var year = this.getUTCFullYear();
-    var month = this.getUTCMonth() + 1;
+    const year = this.getUTCFullYear();
+    let month = this.getUTCMonth() + 1;
     month = ("0" + month).slice(-2); // Zero pad.
     return year + "-" + month;
 };
 
 Date.prototype.getUTCISOYearMonthDay = function () {
     "use strict";
-    var yearmonth = this.getUTCISOYearMonth();
-    var day = this.getUTCDate();
+    const yearmonth = this.getUTCISOYearMonth();
+    let day = this.getUTCDate();
     day = ("0" + day).slice(-2); // Zero pad.
     return yearmonth + "-" + day;
 };
@@ -1132,59 +1129,59 @@ Date.prototype.getUTCISOYearMonthDay = function () {
 // Week dates will return midnight on the Monday morning of that week.
 Date.parseMore = function (str) {
     "use strict";
-    var fields = /^(\d\d\d\d)-W(\d\d)$/.exec(str);
+    let fields = /^(\d\d\d\d)-W(\d\d)$/.exec(str);
     if ((!fields) || fields.length !== 3) {
         return new Date(Date.parse(str));
     }
-    var year = Number(fields[1]);
-    var week = Number(fields[2]);
+    const year = Number(fields[1]);
+    const week = Number(fields[2]);
 
     // Based on http://stackoverflow.com/a/19375264/16672
-    var d = new Date(Date.UTC(year, 0, 1));
-    var week_in_ms = 1000 * 60 * 60 * 24 * 7;
+    const d = new Date(Date.UTC(year, 0, 1));
+    const week_in_ms = 1000 * 60 * 60 * 24 * 7;
     d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    d.setTime(d.getTime() + week_in_ms * (week + (year == d.getUTCFullYear() ? -1 : 0)));
+    d.setTime(d.getTime() + week_in_ms * (week + (year === d.getUTCFullYear() ? -1 : 0)));
     d.setUTCDate(d.getUTCDate() - 3);
     return d;
 };
 
 Date.parseDateTime = function (date, time) {
-    var RE_DATE = /(\d\d\d\d)[-\/](\d+)[-\/](\d+)/;
+    const RE_DATE = /(\d\d\d\d)[-\/](\d+)[-\/](\d+)/;
 
-    var hits = RE_DATE.exec(date);
+    let hits = RE_DATE.exec(date);
     if (!hits) {
         return;
     }
-    var yyyy = parseInt(hits[1]);
-    var mm = parseInt(hits[2]);
-    var dd = parseInt(hits[3]);
+    const yyyy = parseInt(hits[1]);
+    const mm = parseInt(hits[2]);
+    const dd = parseInt(hits[3]);
 
     if (!time) {
         time = "00:00";
     }
-    var RE_TIME = /(\d+):(\d\d)(?::(\d\d)(?:\.(\d\d\d))?)?\s*([AP][M])?/i;
+    const RE_TIME = /(\d+):(\d\d)(?::(\d\d)(?:\.(\d\d\d))?)?\s*([AP][M])?/i;
     hits = RE_TIME.exec(time);
     if (!hits) {
         return;
     }
-    var hour = parseInt(hits[1]);
-    var min = parseInt(hits[2]);
-    var sec = parseInt(hits[3]) || 0;
-    var millisec = parseInt(hits[4]) || 0;
-    var ampm = hits[5];
+    let hour = parseInt(hits[1]);
+    const min = parseInt(hits[2]);
+    const sec = parseInt(hits[3]) || 0;
+    const millisec = parseInt(hits[4]) || 0;
+    const ampm = hits[5];
 
     console.log("hour", hour, ampm);
     if (ampm) {
         if (ampm.match(/PM/i) && hour < 12) {
             hour += 12;
         }
-        else if (ampm.match(/AM/i) && hour == 12) {
+        else if (ampm.match(/AM/i) && hour === 12) {
             hour -= 12;
         }
     }
     console.log("hour", hour, ampm);
 
-    var ret_date = new Date(yyyy, mm - 1, dd, hour, min, sec, millisec);
+    const ret_date = new Date(yyyy, mm - 1, dd, hour, min, sec, millisec);
     if (isNaN(ret_date.getTime())) {
         return;
     }
@@ -1215,7 +1212,7 @@ AfterqueryObj is a library for processing data and rendering graphs.
  * Center for High Throughput Computing, University of Wisconsin - Madison.
  * Licensed under the Apache License, Version 2.0.
  */
-'use strict';
+"use strict";
 
 function AfterqueryObj(options) {
     if (options === null || options === undefined) {
@@ -1237,26 +1234,26 @@ AfterqueryObj.prototype.elid = function (id) {
 };
 
 AfterqueryObj.prototype.err = function (s) {
-    $(this.elid("vizlog")).append('\n' + s);
+    $(this.elid("vizlog")).append("\n" + s);
 };
 
 
 AfterqueryObj.prototype.showstatus = function (s, s2) {
-    $(this.elid('statustext')).html(s);
-    $(this.elid('statussub')).text(s2 || '');
+    $(this.elid("statustext")).html(s);
+    $(this.elid("statussub")).text(s2 || "");
     if (s || s2) {
-        AfterqueryObj.log('status message:', s, s2);
-        $(this.elid('vizstatus')).show();
+        AfterqueryObj.log("status message:", s, s2);
+        $(this.elid("vizstatus")).show();
     }
     else {
-        $(this.elid('vizstatus')).hide();
+        $(this.elid("vizstatus")).hide();
     }
 };
 
 AfterqueryObj.log = function () {
     if (0) {
-        var args = ["render.js:"];
-        for (var i = 0; i < arguments.length; i++) {
+        const args = ["render.js:"];
+        for (let i = 0; i < arguments.length; i++) {
             args.push(arguments[i]);
         }
         console.log.apply(console, args);
@@ -1264,42 +1261,42 @@ AfterqueryObj.log = function () {
 };
 
 AfterqueryObj.parseArgs = function (query) {
-    var kvlist;
+    let kvlist;
     if (query.join) {
         // user provided an array of 'key=value' strings
         kvlist = query;
     }
     else {
         // assume user provided a single string
-        if (query[0] == '?' || query[0] == '#') {
+        if (query[0] === "?" || query[0] === "#") {
             query = query.substr(1);
         }
-        kvlist = query.split('&');
+        kvlist = query.split("&");
     }
-    var out = {};
-    var outlist = [];
-    for (var i in kvlist) {
-        var kv = kvlist[i].split('=');
-        var key = decodeURIComponent(kv.shift());
-        var value = decodeURIComponent(kv.join('='));
+    const out = {};
+    const outlist = [];
+    for (let i in kvlist) {
+        const kv = kvlist[i].split("=");
+        const key = decodeURIComponent(kv.shift());
+        const value = decodeURIComponent(kv.join("="));
         out[key] = value;
         outlist.push([key, value]);
     }
-    AfterqueryObj.log('query args:', out);
-    AfterqueryObj.log('query arglist:', outlist);
+    AfterqueryObj.log("query args:", out);
+    AfterqueryObj.log("query arglist:", outlist);
     return {
         get: function (key) {
             return out[key];
         },
-        all: outlist
+        all: outlist,
     };
 };
 
 
 AfterqueryObj.looksLikeUrl = function (s) {
-    var IS_URL_RE = RegExp('^(http|https)://');
-    var url, label;
-    var pos = (s || '').lastIndexOf('|');
+    const IS_URL_RE = RegExp("^(http|https)://");
+    let url, label;
+    const pos = (s || "").lastIndexOf("|");
     if (pos >= 0) {
         url = s.substr(0, pos);
         label = s.substr(pos + 1);
@@ -1318,50 +1315,53 @@ AfterqueryObj.looksLikeUrl = function (s) {
 
 
 AfterqueryObj.htmlEscape = function (s) {
-    if (s == undefined) {
+    if (s === undefined) {
         return s;
     }
-    return s.replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>\n');
+    return s.replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>\n");
 };
 
 
 AfterqueryObj.dataToGvizTable = function (grid, options) {
+    let cell;
+    let rowi;
+    let coli;
     if (!options) {
         options = {};
     }
-    var is_html = options.allowHtml;
-    var headers = grid.headers, data = grid.data, types = grid.types;
-    var dheaders = [];
-    for (var i in headers) {
+    const is_html = options.allowHtml;
+    const headers = grid.headers, data = grid.data, types = grid.types;
+    const dheaders = [];
+    for (let i in headers) {
         dheaders.push({
             id: headers[i],
             label: headers[i],
-            type: (types[i] != AfterqueryObj.T_BOOL || !options.bool_to_num) ? types[i] : AfterqueryObj.T_NUM
+            type: (types[i] !== AfterqueryObj.T_BOOL || !options.bool_to_num) ? types[i] : AfterqueryObj.T_NUM,
         });
     }
-    var ddata = [];
-    for (var rowi in data) {
-        var row = [];
-        for (var coli in data[rowi]) {
-            var cell = data[rowi][coli];
+    const ddata = [];
+    for (rowi in data) {
+        const row = [];
+        for (coli in data[rowi]) {
+            cell = data[rowi][coli];
             if (is_html && types[coli] === AfterqueryObj.T_STRING) {
                 cell = cell.toString();
-                var urlresult = AfterqueryObj.looksLikeUrl(cell);
+                const urlresult = AfterqueryObj.looksLikeUrl(cell);
                 if (urlresult) {
-                    cell = '<a href="' + encodeURI(urlresult[0]) + '">' +
-                        AfterqueryObj.htmlEscape(urlresult[1]) + '</a>';
+                    cell = "<a href=\"" + encodeURI(urlresult[0]) + "\">" +
+                        AfterqueryObj.htmlEscape(urlresult[1]) + "</a>";
                 }
                 else {
                     cell = AfterqueryObj.htmlEscape(cell);
                 }
             }
-            var col = {v: cell};
+            const col = {v: cell};
             if (options.show_only_lastseg && col.v && col.v.split) {
-                var lastseg = col.v.split('|').pop();
-                if (lastseg != col.v) {
+                const lastseg = col.v.split("|").pop();
+                if (lastseg !== col.v) {
                     col.f = lastseg;
                 }
             }
@@ -1369,20 +1369,20 @@ AfterqueryObj.dataToGvizTable = function (grid, options) {
         }
         ddata.push({c: row});
     }
-    var datatable = new google.visualization.DataTable({
+    const datatable = new google.visualization.DataTable({
         cols: dheaders,
-        rows: ddata
+        rows: ddata,
     });
     if (options.intensify) {
-        var minval, maxval;
-        var rowmin = [], rowmax = [];
-        var colmin = [], colmax = [];
-        for (var coli in grid.types) {
+        let minval, maxval;
+        const rowmin = [], rowmax = [];
+        const colmin = [], colmax = [];
+        for (coli in grid.types) {
             if (grid.types[coli] !== AfterqueryObj.T_NUM) {
                 continue;
             }
-            for (var rowi in grid.data) {
-                var cell = grid.data[rowi][coli];
+            for (rowi in grid.data) {
+                cell = grid.data[rowi][coli];
                 if (cell < (minval || 0)) {
                     minval = cell;
                 }
@@ -1404,29 +1404,29 @@ AfterqueryObj.dataToGvizTable = function (grid, options) {
             }
         }
 
-        for (var coli in grid.types) {
-            if (grid.types[coli] == AfterqueryObj.T_NUM) {
-                var formatter = new google.visualization.ColorFormat();
-                var mn, mx;
-                if (options.intensify == 'xy') {
+        for (coli in grid.types) {
+            if (grid.types[coli] === AfterqueryObj.T_NUM) {
+                const formatter = new google.visualization.ColorFormat();
+                let mn, mx;
+                if (options.intensify === "xy") {
                     mn = minval;
                     mx = maxval;
                 }
-                else if (options.intensify == 'y') {
+                else if (options.intensify === "y") {
                     AfterqueryObj.log(colmin, colmax);
                     mn = colmin[coli];
                     mx = colmax[coli];
                 }
-                else if (options.intensify == 'x') {
-                    throw new Error('sorry, intensify=x not supported yet');
+                else if (options.intensify === "x") {
+                    throw new Error("sorry, intensify=x not supported yet");
                 }
                 else {
                     throw new Error("unknown intensify= mode '" +
                         options.intensify + "'");
                 }
-                AfterqueryObj.log('coli=' + coli + ' mn=' + mn + ' mx=' + mx);
-                formatter.addGradientRange(mn - 1, 0, null, '#f88', '#fff');
-                formatter.addGradientRange(0, mx + 1, null, '#fff', '#88f');
+                AfterqueryObj.log("coli=" + coli + " mn=" + mn + " mx=" + mx);
+                formatter.addGradientRange(mn - 1, 0, null, "#f88", "#fff");
+                formatter.addGradientRange(0, mx + 1, null, "#fff", "#88f");
                 formatter.format(datatable, parseInt(coli));
             }
         }
@@ -1435,50 +1435,51 @@ AfterqueryObj.dataToGvizTable = function (grid, options) {
 };
 
 
-AfterqueryObj.T_NUM = 'number';
-AfterqueryObj.T_DATE = 'date';
-AfterqueryObj.T_DATETIME = 'datetime';
-AfterqueryObj.T_BOOL = 'boolean';
-AfterqueryObj.T_STRING = 'string';
+AfterqueryObj.T_NUM = "number";
+AfterqueryObj.T_DATE = "date";
+AfterqueryObj.T_DATETIME = "datetime";
+AfterqueryObj.T_BOOL = "boolean";
+AfterqueryObj.T_STRING = "string";
 
 
 AfterqueryObj.guessTypes = function (data) {
-    var CANT_NUM = 1;
-    var CANT_BOOL = 2;
-    var CANT_DATE = 4;
-    var CANT_DATETIME = 8;
-    var impossible = [];
-    for (var rowi in data) {
-        var row = data[rowi];
-        for (var coli in row) {
+    let coli;
+    const CANT_NUM = 1;
+    const CANT_BOOL = 2;
+    const CANT_DATE = 4;
+    const CANT_DATETIME = 8;
+    const impossible = [];
+    for (let rowi in data) {
+        const row = data[rowi];
+        for (coli in row) {
             impossible[coli] |= 0;
-            var cell = row[coli];
-            if (cell == '' || cell == null) {
+            const cell = row[coli];
+            if (cell === "" || cell == null) {
                 continue;
             }
-            var d = AfterqueryObj.myParseDate(cell);
+            const d = AfterqueryObj.myParseDate(cell);
             if (isNaN(d)) {
                 impossible[coli] |= CANT_DATE | CANT_DATETIME;
             }
             else if (d.getHours() || d.getMinutes() || d.getSeconds()) {
                 impossible[coli] |= CANT_DATE; // has time, so isn't a pure date
             }
-            var f = cell * 1;
+            const f = cell * 1;
             if (isNaN(f)) {
                 impossible[coli] |= CANT_NUM;
             }
-            if (!(cell == 0 || cell == 1 ||
-                cell == 'true' || cell == 'false' ||
-                cell == true || cell == false ||
-                cell == 'True' || cell == 'False')) {
+            if (!(cell === 0 || cell === 1 ||
+                cell === "true" || cell === "false" ||
+                cell === true || cell === false ||
+                cell === "True" || cell === "False")) {
                 impossible[coli] |= CANT_BOOL;
             }
         }
     }
-    AfterqueryObj.log('guessTypes impossibility list:', impossible);
-    var types = [];
-    for (var coli in impossible) {
-        var imp = impossible[coli];
+    AfterqueryObj.log("guessTypes impossibility list:", impossible);
+    const types = [];
+    for (coli in impossible) {
+        const imp = impossible[coli];
         if (!(imp & CANT_BOOL)) {
             types[coli] = AfterqueryObj.T_BOOL;
         }
@@ -1506,14 +1507,14 @@ AfterqueryObj.myParseDate = function (s) {
     // This gets a little hairy because so many things are optional.
     // We could try to support two-digit years or dd-mm-yyyy formats, but
     // those create parser ambiguities, so let's avoid it.
-    var DATE_RE1 = RegExp(
-        '^(\\d{1,4})[-/](\\d{1,2})(?:[-/](\\d{1,4})' +
-        '(?:[T\\s](\\d{1,2}):(\\d\\d)(?::(\\d\\d)(?:\\.(\\d+))?)?)?)?' +
-        '(?:Z| \\w\\w\\w)?$');
+    const DATE_RE1 = RegExp(
+        "^(\\d{1,4})[-/](\\d{1,2})(?:[-/](\\d{1,4})" +
+        "(?:[T\\s](\\d{1,2}):(\\d\\d)(?::(\\d\\d)(?:\\.(\\d+))?)?)?)?" +
+        "(?:Z| \\w\\w\\w)?$");
     // Some people (gviz, for example) provide "json" files where dates
     // look like javascript Date() object declarations, eg.
     // Date(2014,0,1,2,3,4)
-    var DATE_RE2 = /^Date\(([\d,]+)\)$/;
+    const DATE_RE2 = /^Date\(([\d,]+)\)$/;
     if (s == null) {
         return s;
     }
@@ -1522,9 +1523,9 @@ AfterqueryObj.myParseDate = function (s) {
     }
 
     // Try gviz-style Date(...) format first
-    var g = DATE_RE2.exec(s);
+    let g = DATE_RE2.exec(s);
     if (g) {
-        g = (',' + g[1]).split(',');
+        g = ("," + g[1]).split(",");
         if (g.length >= 3) {
             g[2]++;  // date objects start at month=0, for some reason
         }
@@ -1546,9 +1547,9 @@ AfterqueryObj.myParseDate = function (s) {
         if (g[7]) {
             // parse milliseconds
             while (g[7].length < 3) {
-                g[7] = g[7] + '0';
+                g[7] = g[7] + "0";
             }
-            for (var i = g[7].length; i > 3; i--) {
+            for (let i = g[7].length; i > 3; i--) {
                 g[7] /= 10.0;
             }
             g[7] = Math.round(g[7], 0);
@@ -1562,9 +1563,9 @@ AfterqueryObj.myParseDate = function (s) {
 
 
 AfterqueryObj.zpad = function (n, width) {
-    var s = '' + n;
+    let s = "" + n;
     while (s.length < width) {
-        s = '0' + s;
+        s = "0" + s;
     }
     return s;
 };
@@ -1572,39 +1573,40 @@ AfterqueryObj.zpad = function (n, width) {
 
 AfterqueryObj.dateToStr = function (d) {
     if (!d) {
-        return '';
+        return "";
     }
-    return (d.getFullYear() + '-' +
-        AfterqueryObj.zpad(d.getMonth() + 1, 2) + '-' +
+    return (d.getFullYear() + "-" +
+        AfterqueryObj.zpad(d.getMonth() + 1, 2) + "-" +
         AfterqueryObj.zpad(d.getDate(), 2));
 };
 
 
 AfterqueryObj.dateTimeToStr = function (d) {
     if (!d) {
-        return '';
+        return "";
     }
-    var msec = d.getMilliseconds();
-    return (AfterqueryObj.dateToStr(d) + ' ' +
-        AfterqueryObj.zpad(d.getHours(), 2) + ':' +
-        AfterqueryObj.zpad(d.getMinutes(), 2) + ':' +
+    const msec = d.getMilliseconds();
+    return (AfterqueryObj.dateToStr(d) + " " +
+        AfterqueryObj.zpad(d.getHours(), 2) + ":" +
+        AfterqueryObj.zpad(d.getMinutes(), 2) + ":" +
         AfterqueryObj.zpad(d.getSeconds(), 2) +
-        (msec ? ('.' + AfterqueryObj.zpad(msec, 3)) : ''));
+        (msec ? ("." + AfterqueryObj.zpad(msec, 3)) : ""));
 };
 
 
 AfterqueryObj.prototype.convertTypes = function (data, types) {
-    for (var coli in types) {
-        var type = types[coli];
+    let rowi;
+    for (let coli in types) {
+        const type = types[coli];
         if (type === AfterqueryObj.T_DATE || type === AfterqueryObj.T_DATETIME) {
-            for (var rowi in data) {
+            for (rowi in data) {
                 data[rowi][coli] = AfterqueryObj.myParseDate(data[rowi][coli]);
             }
         }
         else if (type === AfterqueryObj.T_NUM || type === AfterqueryObj.T_BOOL) {
-            for (var rowi in data) {
-                var v = data[rowi][coli];
-                if (v != null && v != '') {
+            for (rowi in data) {
+                const v = data[rowi][coli];
+                if (v != null && v !== "") {
                     data[rowi][coli] = v * 1;
                 }
             }
@@ -1614,9 +1616,9 @@ AfterqueryObj.prototype.convertTypes = function (data, types) {
 
 
 AfterqueryObj.prototype.colNameToColNum = function (grid, colname) {
-    var keycol = (colname == '*') ? 0 : grid.headers.indexOf(colname);
+    const keycol = (colname === "*") ? 0 : grid.headers.indexOf(colname);
     if (keycol < 0) {
-        throw new Error('unknown column name "' + colname + '"');
+        throw new Error("unknown column name \"" + colname + "\"");
     }
     return keycol;
 };
@@ -1625,7 +1627,7 @@ AfterqueryObj.prototype.colNameToColNum = function (grid, colname) {
 AfterqueryObj.prototype.FUNC_RE = /^(\w+)\((.*)\)$/;
 
 AfterqueryObj.prototype.keyToColNum = function (grid, key) {
-    var g = this.FUNC_RE.exec(key);
+    const g = this.FUNC_RE.exec(key);
     if (g) {
         return this.colNameToColNum(grid, g[2]);
     }
@@ -1636,10 +1638,10 @@ AfterqueryObj.prototype.keyToColNum = function (grid, key) {
 
 
 AfterqueryObj.prototype._groupByLoop = function (ingrid, keys, initval, addcols_func, putvalues_func) {
-    var outgrid = {headers: [], data: [], types: []};
-    var keycols = [];
+    const outgrid = {headers: [], data: [], types: []};
+    const keycols = [];
     for (var keyi in keys) {
-        var colnum = this.keyToColNum(ingrid, keys[keyi]);
+        const colnum = this.keyToColNum(ingrid, keys[keyi]);
         keycols.push(colnum);
         outgrid.headers.push(ingrid.headers[colnum]);
         outgrid.types.push(ingrid.types[colnum]);
@@ -1647,20 +1649,20 @@ AfterqueryObj.prototype._groupByLoop = function (ingrid, keys, initval, addcols_
 
     addcols_func(outgrid);
 
-    var out = {};
-    for (var rowi in ingrid.data) {
-        var row = ingrid.data[rowi];
-        var key = [];
-        for (var kcoli in keycols) {
+    const out = {};
+    for (let rowi in ingrid.data) {
+        const row = ingrid.data[rowi];
+        const key = [];
+        for (let kcoli in keycols) {
             key.push(row[keycols[kcoli]]);
         }
-        var orow = out[key];
+        let orow = out[key];
         if (!orow) {
             orow = [];
             for (var keyi in keys) {
                 orow[keyi] = row[keycols[keyi]];
             }
-            for (var i = keys.length; i < outgrid.headers.length; i++) {
+            for (let i = keys.length; i < outgrid.headers.length; i++) {
                 orow[i] = initval;
             }
             out[key] = orow;
@@ -1683,20 +1685,20 @@ AfterqueryObj.prototype.agg_funcs = {
     },
 
     only: function (l) {
-        if (l.length == 1) {
+        if (l.length === 1) {
             return l[0];
         }
         else if (l.length < 1) {
             return null;
         }
         else {
-            throw new Error('cell has more than one value: only(' + l + ')');
+            throw new Error("cell has more than one value: only(" + l + ")");
         }
     },
 
     min: function (l) {
-        var out = null;
-        for (var i in l) {
+        let out = null;
+        for (let i in l) {
             if (out == null || l[i] < out) {
                 out = l[i];
             }
@@ -1705,8 +1707,8 @@ AfterqueryObj.prototype.agg_funcs = {
     },
 
     max: function (l) {
-        var out = null;
-        for (var i in l) {
+        let out = null;
+        for (let i in l) {
             if (out == null || l[i] > out) {
                 out = l[i];
             }
@@ -1715,7 +1717,7 @@ AfterqueryObj.prototype.agg_funcs = {
     },
 
     cat: function (l) {
-        return l.join(' ');
+        return l.join(" ");
     },
 
     count: function (l) {
@@ -1723,9 +1725,9 @@ AfterqueryObj.prototype.agg_funcs = {
     },
 
     count_nz: function (l) {
-        var acc = 0;
-        for (var i in l) {
-            if (l[i] != null && l[i] != 0) {
+        let acc = 0;
+        for (let i in l) {
+            if (l[i] != null && l[i] !== 0) {
                 acc++;
             }
         }
@@ -1733,11 +1735,11 @@ AfterqueryObj.prototype.agg_funcs = {
     },
 
     count_distinct: function (l) {
-        var a = {};
+        const a = {};
         for (var i in l) {
             a[l[i]] = 1;
         }
-        var acc = 0;
+        let acc = 0;
         for (var i in a) {
             acc += 1;
         }
@@ -1745,11 +1747,11 @@ AfterqueryObj.prototype.agg_funcs = {
     },
 
     sum: function (l) {
-        var acc;
+        let acc;
         if (l.length) {
             acc = 0;
         }
-        for (var i in l) {
+        for (let i in l) {
             acc += parseFloat(l[i]) || 0;
         }
         return acc;
@@ -1761,9 +1763,9 @@ AfterqueryObj.prototype.agg_funcs = {
 
     // also works for non-numeric values, as long as they're sortable
     median: function (l) {
-        var comparator = function (a, b) {
-            a = a || '0'; // ensure consistent ordering given NaN and undefined
-            b = b || '0';
+        const comparator = function (a, b) {
+            a = a || "0"; // ensure consistent ordering given NaN and undefined
+            b = b || "0";
             if (a < b) {
                 return -1;
             }
@@ -1784,10 +1786,10 @@ AfterqueryObj.prototype.agg_funcs = {
     },
 
     stddev: function (l) {
-        var avg = AfterqueryObj.prototype.agg_funcs.avg(l);
-        var sumsq = 0.0;
-        for (var i in l) {
-            var d = parseFloat(l[i]) - avg;
+        const avg = AfterqueryObj.prototype.agg_funcs.avg(l);
+        let sumsq = 0.0;
+        for (let i in l) {
+            const d = parseFloat(l[i]) - avg;
             if (d) {
                 sumsq += d * d;
             }
@@ -1795,14 +1797,14 @@ AfterqueryObj.prototype.agg_funcs = {
         return Math.sqrt(sumsq);
     },
     color: function (l, aqo) {
-        for (var i in l) {
-            var v = l[i];
+        for (let i in l) {
+            const v = l[i];
             if (!(v in aqo.colormap)) {
                 aqo.colormap[v] = ++aqo.next_color;
             }
             return aqo.colormap[v];
         }
-    }
+    },
 };
 AfterqueryObj.prototype.agg_funcs.count.return_type = AfterqueryObj.T_NUM;
 AfterqueryObj.prototype.agg_funcs.count_nz.return_type = AfterqueryObj.T_NUM;
@@ -1815,18 +1817,19 @@ AfterqueryObj.prototype.agg_funcs.color.return_type = AfterqueryObj.T_NUM;
 
 
 AfterqueryObj.prototype.groupBy = function (ingrid, keys, values) {
-    // add one value column for every column listed in values.
-    var that = this;
-    var valuecols = [];
-    var valuefuncs = [];
-    var addcols_func = function (outgrid) {
-        for (var valuei in values) {
-            var g = that.FUNC_RE.exec(values[valuei]);
-            var field, func;
+    let func;
+// add one value column for every column listed in values.
+    const that = this;
+    const valuecols = [];
+    const valuefuncs = [];
+    const addcols_func = function (outgrid) {
+        for (let valuei in values) {
+            const g = that.FUNC_RE.exec(values[valuei]);
+            let field, func;
             if (g) {
                 func = that.agg_funcs[g[1]];
                 if (!func) {
-                    throw new Error('unknown aggregation function "' + g[1] + '"');
+                    throw new Error("unknown aggregation function \"" + g[1] + "\"");
                 }
                 field = g[2];
             }
@@ -1834,7 +1837,7 @@ AfterqueryObj.prototype.groupBy = function (ingrid, keys, values) {
                 func = null;
                 field = values[valuei];
             }
-            var colnum = that.keyToColNum(ingrid, field);
+            const colnum = that.keyToColNum(ingrid, field);
             if (!func) {
                 if (ingrid.types[colnum] === AfterqueryObj.T_NUM ||
                     ingrid.types[colnum] === AfterqueryObj.T_BOOL) {
@@ -1847,10 +1850,10 @@ AfterqueryObj.prototype.groupBy = function (ingrid, keys, values) {
             valuecols.push(colnum);
             valuefuncs.push(func);
             if (g) {
-                outgrid.headers.push(field == '*' ? '_count' : g[1] + ingrid.headers[colnum]);
+                outgrid.headers.push(field === "*" ? "_count" : g[1] + ingrid.headers[colnum]);
             }
             else {
-                outgrid.headers.push(field == '*' ? '_count' : ingrid.headers[colnum]);
+                outgrid.headers.push(field === "*" ? "_count" : ingrid.headers[colnum]);
             }
             outgrid.types.push(func.return_type || ingrid.types[colnum]);
         }
@@ -1858,11 +1861,11 @@ AfterqueryObj.prototype.groupBy = function (ingrid, keys, values) {
 
     // by default, we do a count(*) operation for non-numeric value
     // columns, and sum(*) otherwise.
-    var putvalues_func = function (outgrid, key, orow, row) {
-        for (var valuei in values) {
-            var incoli = valuecols[valuei];
-            var outcoli = key.length + parseInt(valuei);
-            var cell = row[incoli];
+    const putvalues_func = function (outgrid, key, orow, row) {
+        for (let valuei in values) {
+            const incoli = valuecols[valuei];
+            const outcoli = key.length + parseInt(valuei);
+            const cell = row[incoli];
             if (!orow[outcoli]) {
                 orow[outcoli] = [];
             }
@@ -1872,14 +1875,14 @@ AfterqueryObj.prototype.groupBy = function (ingrid, keys, values) {
         }
     };
 
-    var outgrid = this._groupByLoop(ingrid, keys, 0,
+    const outgrid = this._groupByLoop(ingrid, keys, 0,
         addcols_func, putvalues_func);
 
-    for (var rowi in outgrid.data) {
-        var row = outgrid.data[rowi];
-        for (var valuei in values) {
-            var outcoli = keys.length + parseInt(valuei);
-            var func = valuefuncs[valuei];
+    for (let rowi in outgrid.data) {
+        let row = outgrid.data[rowi];
+        for (let valuei in values) {
+            const outcoli = keys.length + parseInt(valuei);
+            func = valuefuncs[valuei];
             row[outcoli] = func(row[outcoli], this);
         }
     }
@@ -1891,30 +1894,32 @@ AfterqueryObj.prototype.groupBy = function (ingrid, keys, values) {
 AfterqueryObj.prototype.pivotBy = function (ingrid, rowkeys, colkeys, valkeys) {
     // We generate a list of value columns based on all the unique combinations
     // of (values in colkeys)*(column names in valkeys)
-    var that = this;
-    var valuecols = {};
-    var colkey_outcols = {};
-    var colkey_incols = [];
-    for (var coli in colkeys) {
+    const that = this;
+    const valuecols = {};
+    const colkey_outcols = {};
+    const colkey_incols = [];
+    for (let coli in colkeys) {
         colkey_incols.push(this.keyToColNum(ingrid, colkeys[coli]));
     }
-    var addcols_func = function (outgrid) {
-        for (var rowi in ingrid.data) {
-            var row = ingrid.data[rowi];
-            var colkey = [];
-            for (var coli in colkey_incols) {
-                var colnum = colkey_incols[coli];
+    const addcols_func = function (outgrid) {
+        let colnum;
+        for (let rowi in ingrid.data) {
+            let coli;
+            const row = ingrid.data[rowi];
+            const colkey = [];
+            for (coli in colkey_incols) {
+                colnum = colkey_incols[coli];
                 colkey.push(that.stringifiedCol(row[colnum], ingrid.types[colnum]));
             }
-            for (var coli in valkeys) {
-                var xcolkey = colkey.concat([valkeys[coli]]);
+            for (coli in valkeys) {
+                const xcolkey = colkey.concat([valkeys[coli]]);
                 if (!(xcolkey in colkey_outcols)) {
                     // if there's only one valkey (the common case), don't include the
                     // name of the old value column in the new column names; it's
                     // just clutter.
-                    var name = valkeys.length > 1 ?
-                        xcolkey.join(' ') : colkey.join(' ');
-                    var colnum = rowkeys.length + colkeys.length + parseInt(coli);
+                    const name = valkeys.length > 1 ?
+                        xcolkey.join(" ") : colkey.join(" ");
+                    colnum = rowkeys.length + colkeys.length + parseInt(coli);
                     colkey_outcols[xcolkey] = outgrid.headers.length;
                     valuecols[xcolkey] = colnum;
                     outgrid.headers.push(name);
@@ -1922,24 +1927,24 @@ AfterqueryObj.prototype.pivotBy = function (ingrid, rowkeys, colkeys, valkeys) {
                 }
             }
         }
-        AfterqueryObj.log('pivot colkey_outcols', colkey_outcols);
-        AfterqueryObj.log('pivot valuecols:', valuecols);
+        AfterqueryObj.log("pivot colkey_outcols", colkey_outcols);
+        AfterqueryObj.log("pivot valuecols:", valuecols);
     };
 
     // by the time pivotBy is called, we're guaranteed that there's only one
     // row with a given (rowkeys+colkeys) key, so there is only one value
     // for each value cell.  Thus we don't need to worry about count/sum here;
     // we just assign the values directly as we see them.
-    var putvalues_func = function (outgrid, rowkey, orow, row) {
-        var colkey = [];
+    const putvalues_func = function (outgrid, rowkey, orow, row) {
+        const colkey = [];
         for (var coli in colkey_incols) {
-            var colnum = colkey_incols[coli];
+            const colnum = colkey_incols[coli];
             colkey.push(that.stringifiedCol(row[colnum], ingrid.types[colnum]));
         }
         for (var coli in valkeys) {
-            var xcolkey = colkey.concat([valkeys[coli]]);
-            var outcolnum = colkey_outcols[xcolkey];
-            var valuecol = valuecols[xcolkey];
+            const xcolkey = colkey.concat([valkeys[coli]]);
+            const outcolnum = colkey_outcols[xcolkey];
+            const valuecol = valuecols[xcolkey];
             orow[outcolnum] = row[valuecol];
         }
     };
@@ -1951,20 +1956,20 @@ AfterqueryObj.prototype.pivotBy = function (ingrid, rowkeys, colkeys, valkeys) {
 
 AfterqueryObj.prototype.stringifiedCol = function (value, typ) {
     if (typ === AfterqueryObj.T_DATE) {
-        return AfterqueryObj.dateToStr(value) || '';
+        return AfterqueryObj.dateToStr(value) || "";
     }
     else if (typ === AfterqueryObj.T_DATETIME) {
-        return AfterqueryObj.dateTimeToStr(value) || '';
+        return AfterqueryObj.dateTimeToStr(value) || "";
     }
     else {
-        return (value + '') || '(none)';
+        return (value + "") || "(none)";
     }
 };
 
 
 AfterqueryObj.prototype.stringifiedCols = function (row, types) {
-    var out = [];
-    for (var coli in types) {
+    const out = [];
+    for (let coli in types) {
         out.push(this.stringifiedCol(row[coli], types[coli]));
     }
     return out;
@@ -1972,17 +1977,17 @@ AfterqueryObj.prototype.stringifiedCols = function (row, types) {
 
 
 AfterqueryObj.prototype.treeJoinKeys = function (ingrid, nkeys) {
-    var outgrid = {
-        headers: ['_tree'].concat(ingrid.headers.slice(nkeys)),
+    const outgrid = {
+        headers: ["_tree"].concat(ingrid.headers.slice(nkeys)),
         types: [AfterqueryObj.T_STRING].concat(ingrid.types.slice(nkeys)),
-        data: []
+        data: [],
     };
 
-    for (var rowi in ingrid.data) {
-        var row = ingrid.data[rowi];
-        var key = row.slice(0, nkeys);
-        var newkey = this.stringifiedCols(row.slice(0, nkeys),
-            ingrid.types.slice(0, nkeys)).join('|');
+    for (let rowi in ingrid.data) {
+        const row = ingrid.data[rowi];
+        const key = row.slice(0, nkeys);
+        const newkey = this.stringifiedCols(row.slice(0, nkeys),
+            ingrid.types.slice(0, nkeys)).join("|");
         outgrid.data.push([newkey].concat(row.slice(nkeys)));
     }
     return outgrid;
@@ -1990,32 +1995,35 @@ AfterqueryObj.prototype.treeJoinKeys = function (ingrid, nkeys) {
 
 
 AfterqueryObj.prototype.finishTree = function (ingrid, keys) {
+    let treekey;
+    let keycol;
+    let keyi;
     if (keys.length < 1) {
-        keys = ['_tree'];
+        keys = ["_tree"];
     }
-    var outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
-    var keycols = [];
-    for (var keyi in keys) {
+    const outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
+    const keycols = [];
+    for (keyi in keys) {
         keycols.push(this.keyToColNum(ingrid, keys[keyi]));
     }
 
-    var seen = {};
-    var needed = {};
-    for (var rowi in ingrid.data) {
-        var row = ingrid.data[rowi];
-        var key = [];
-        for (var keyi in keycols) {
-            var keycol = keycols[keyi];
+    const seen = {};
+    const needed = {};
+    for (let rowi in ingrid.data) {
+        const row = ingrid.data[rowi];
+        const key = [];
+        for (keyi in keycols) {
+            keycol = keycols[keyi];
             key.push(row[keycol]);
         }
         seen[key] = 1;
         delete needed[key];
         outgrid.data.push(row);
 
-        var treekey = key.pop().split('|');
+        treekey = key.pop().split("|");
         while (treekey.length > 0) {
             treekey.pop();
-            var pkey = key.concat([treekey.join('|')]);
+            const pkey = key.concat([treekey.join("|")]);
             if (pkey in needed || pkey in seen) {
                 break;
             }
@@ -2023,16 +2031,16 @@ AfterqueryObj.prototype.finishTree = function (ingrid, keys) {
         }
     }
 
-    var treecol = keycols.pop();
-    for (var needkey in needed) {
-        var treekey = needed[needkey][0];
-        var inrow = needed[needkey][1];
-        var outrow = [];
-        for (var keycoli in keycols) {
-            var keycol = keycols[keycoli];
+    const treecol = keycols.pop();
+    for (let needkey in needed) {
+        treekey = needed[needkey][0];
+        const inrow = needed[needkey][1];
+        const outrow = [];
+        for (let keycoli in keycols) {
+            keycol = keycols[keycoli];
             outrow[keycol] = inrow[keycol];
         }
-        outrow[treecol] = treekey.join('|');
+        outrow[treecol] = treekey.join("|");
         outgrid.data.push(outrow);
     }
 
@@ -2042,15 +2050,15 @@ AfterqueryObj.prototype.finishTree = function (ingrid, keys) {
 
 AfterqueryObj.prototype.invertTree = function (ingrid, key) {
     if (!key) {
-        key = '_tree';
+        key = "_tree";
     }
-    var keycol = this.keyToColNum(ingrid, key);
-    var outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
-    for (var rowi in ingrid.data) {
-        var row = ingrid.data[rowi];
-        var cell = row[keycol];
-        var outrow = row.slice();
-        outrow[keycol] = cell.split('|').reverse().join('|');
+    const keycol = this.keyToColNum(ingrid, key);
+    const outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
+    for (let rowi in ingrid.data) {
+        const row = ingrid.data[rowi];
+        const cell = row[keycol];
+        const outrow = row.slice();
+        outrow[keycol] = cell.split("|").reverse().join("|");
         outgrid.data.push(outrow);
     }
     return outgrid;
@@ -2059,35 +2067,35 @@ AfterqueryObj.prototype.invertTree = function (ingrid, key) {
 
 AfterqueryObj.prototype.crackTree = function (ingrid, key) {
     if (!key) {
-        key = '_tree';
+        key = "_tree";
     }
-    var keycol = this.keyToColNum(ingrid, key);
-    var outgrid = {
+    const keycol = this.keyToColNum(ingrid, key);
+    const outgrid = {
         headers:
             [].concat(ingrid.headers.slice(0, keycol),
-                ['_id', '_parent'],
+                ["_id", "_parent"],
                 ingrid.headers.slice(keycol + 1)),
         data: [],
         types:
             [].concat(ingrid.types.slice(0, keycol),
                 [AfterqueryObj.T_STRING, AfterqueryObj.T_STRING],
-                ingrid.types.slice(keycol + 1))
+                ingrid.types.slice(keycol + 1)),
     };
 
-    for (var rowi in ingrid.data) {
-        var row = ingrid.data[rowi];
-        var key = row[keycol];
-        var pkey;
+    for (let rowi in ingrid.data) {
+        const row = ingrid.data[rowi];
+        key = row[keycol];
+        let pkey;
         if (!key) {
-            key = 'ALL';
-            pkey = '';
+            key = "ALL";
+            pkey = "";
         }
         else {
-            var keylist = key.split('|');
+            const keylist = key.split("|");
             keylist.pop();
-            pkey = keylist.join('|');
+            pkey = keylist.join("|");
             if (!pkey) {
-                pkey = 'ALL';
+                pkey = "ALL";
             }
         }
         outgrid.data.push([].concat(row.slice(0, keycol),
@@ -2107,13 +2115,13 @@ AfterqueryObj.prototype.splitNoEmpty = function (s, splitter) {
 
 
 AfterqueryObj.prototype.keysOtherThan = function (grid, keys) {
-    var out = [];
-    var keynames = [];
-    for (var keyi in keys) {
+    const out = [];
+    const keynames = [];
+    for (let keyi in keys) {
         // this converts func(x) notation to just 'x'
         keynames.push(grid.headers[this.keyToColNum(grid, keys[keyi])]);
     }
-    for (var coli in grid.headers) {
+    for (let coli in grid.headers) {
         if (keynames.indexOf(grid.headers[coli]) < 0) {
             out.push(grid.headers[coli]);
         }
@@ -2123,18 +2131,18 @@ AfterqueryObj.prototype.keysOtherThan = function (grid, keys) {
 
 
 AfterqueryObj.prototype.doGroupBy = function (grid, argval) {
-    AfterqueryObj.log('groupBy:', argval);
-    var parts = argval.split(';', 2);
-    var keys = this.splitNoEmpty(parts[0], ',');
-    var values;
+    AfterqueryObj.log("groupBy:", argval);
+    const parts = argval.split(";", 2);
+    const keys = this.splitNoEmpty(parts[0], ",");
+    let values;
     if (parts.length >= 2) {
         // if there's a ';' separator, the names after it are the desired
         // value columns (and that list may be empty).
-        var tmpvalues = this.splitNoEmpty(parts[1], ',');
+        const tmpvalues = this.splitNoEmpty(parts[1], ",");
         values = [];
-        for (var tmpi in tmpvalues) {
-            var tmpval = tmpvalues[tmpi];
-            if (tmpval == '*') {
+        for (let tmpi in tmpvalues) {
+            const tmpval = tmpvalues[tmpi];
+            if (tmpval === "*") {
                 values = values.concat(this.keysOtherThan(grid, keys.concat(values)));
             }
             else {
@@ -2147,78 +2155,78 @@ AfterqueryObj.prototype.doGroupBy = function (grid, argval) {
         // remaining non-key columns as values.
         values = this.keysOtherThan(grid, keys);
     }
-    AfterqueryObj.log('grouping by', keys, values);
+    AfterqueryObj.log("grouping by", keys, values);
     grid = this.groupBy(grid, keys, values);
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.doTreeGroupBy = function (grid, argval) {
-    AfterqueryObj.log('treeGroupBy:', argval);
-    var parts = argval.split(';', 2);
-    var keys = this.splitNoEmpty(parts[0], ',');
-    var values;
+    AfterqueryObj.log("treeGroupBy:", argval);
+    const parts = argval.split(";", 2);
+    const keys = this.splitNoEmpty(parts[0], ",");
+    let values;
     if (parts.length >= 2) {
         // if there's a ';' separator, the names after it are the desired
         // value columns (and that list may be empty).
-        values = this.splitNoEmpty(parts[1], ',');
+        values = this.splitNoEmpty(parts[1], ",");
     }
     else {
         // if there is no ';' at all, the default is to just pull in all the
         // remaining non-key columns as values.
         values = this.keysOtherThan(grid, keys);
     }
-    AfterqueryObj.log('treegrouping by', keys, values);
+    AfterqueryObj.log("treegrouping by", keys, values);
     grid = this.groupBy(grid, keys, values);
     grid = this.treeJoinKeys(grid, keys.length);
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.doFinishTree = function (grid, argval) {
-    AfterqueryObj.log('finishTree:', argval);
-    var keys = this.splitNoEmpty(argval, ',');
-    AfterqueryObj.log('finishtree with keys', keys);
+    AfterqueryObj.log("finishTree:", argval);
+    const keys = this.splitNoEmpty(argval, ",");
+    AfterqueryObj.log("finishtree with keys", keys);
     grid = this.finishTree(grid, keys);
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.doInvertTree = function (grid, argval) {
-    AfterqueryObj.log('invertTree:', argval);
-    var keys = this.splitNoEmpty(argval, ',');
-    AfterqueryObj.log('invertTree with key', keys[0]);
+    AfterqueryObj.log("invertTree:", argval);
+    const keys = this.splitNoEmpty(argval, ",");
+    AfterqueryObj.log("invertTree with key", keys[0]);
     grid = this.invertTree(grid, keys[0]);
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.doCrackTree = function (grid, argval) {
-    AfterqueryObj.log('crackTree:', argval);
-    var keys = this.splitNoEmpty(argval, ',');
-    AfterqueryObj.log('cracktree with key', keys[0]);
+    AfterqueryObj.log("crackTree:", argval);
+    const keys = this.splitNoEmpty(argval, ",");
+    AfterqueryObj.log("cracktree with key", keys[0]);
     grid = this.crackTree(grid, keys[0]);
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.doPivotBy = function (grid, argval) {
-    AfterqueryObj.log('pivotBy:', argval);
+    AfterqueryObj.log("pivotBy:", argval);
 
     // the parts are rowkeys;colkeys;values
-    var parts = argval.split(';', 3);
-    var rowkeys = this.splitNoEmpty(parts[0], ',');
-    var colkeys = this.splitNoEmpty(parts[1], ',');
-    var values;
+    const parts = argval.split(";", 3);
+    const rowkeys = this.splitNoEmpty(parts[0], ",");
+    const colkeys = this.splitNoEmpty(parts[1], ",");
+    let values;
     if (parts.length >= 3) {
         // if there's a second ';' separator, the names after it are the desired
         // value columns.
-        values = this.splitNoEmpty(parts[2], ',');
+        values = this.splitNoEmpty(parts[2], ",");
     }
     else {
         // if there is no second ';' at all, the default is to just pull
@@ -2229,7 +2237,7 @@ AfterqueryObj.prototype.doPivotBy = function (grid, argval) {
     // first group by the rowkeys+colkeys, so there is only one row for each
     // unique rowkeys+colkeys combination.
     grid = this.groupBy(grid, rowkeys.concat(colkeys), values);
-    AfterqueryObj.log('tmpgrid:', grid);
+    AfterqueryObj.log("tmpgrid:", grid);
 
     // now actually do the pivot.
     grid = this.pivotBy(grid, rowkeys, colkeys, values);
@@ -2239,10 +2247,11 @@ AfterqueryObj.prototype.doPivotBy = function (grid, argval) {
 
 
 AfterqueryObj.prototype.filterBy = function (ingrid, key, op, values) {
-    var outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
-    var keycol = this.keyToColNum(ingrid, key);
-    var wantvals = [];
-    for (var valuei in values) {
+    let valuei;
+    const outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
+    const keycol = this.keyToColNum(ingrid, key);
+    const wantvals = [];
+    for (valuei in values) {
         if (ingrid.types[keycol] === AfterqueryObj.T_NUM) {
             wantvals.push(parseFloat(values[valuei]));
         }
@@ -2255,40 +2264,40 @@ AfterqueryObj.prototype.filterBy = function (ingrid, key, op, values) {
         }
     }
 
-    for (var rowi in ingrid.data) {
-        var row = ingrid.data[rowi];
-        var cell = row[keycol];
-        if (cell == undefined) {
+    for (let rowi in ingrid.data) {
+        const row = ingrid.data[rowi];
+        let cell = row[keycol];
+        if (cell === undefined) {
             cell = null;
         }
-        var keytype = ingrid.types[keycol];
-        if (keytype == AfterqueryObj.T_DATE || keytype == AfterqueryObj.T_DATETIME) {
+        const keytype = ingrid.types[keycol];
+        if (keytype === AfterqueryObj.T_DATE || keytype === AfterqueryObj.T_DATETIME) {
             cell = AfterqueryObj.dateTimeToStr(cell);
         }
-        var found = 0;
-        for (var valuei in wantvals) {
-            if (op == '=' && cell == wantvals[valuei]) {
+        let found = 0;
+        for (valuei in wantvals) {
+            if (op === "=" && cell === wantvals[valuei]) {
                 found = 1;
             }
-            else if (op == '==' && cell == wantvals[valuei]) {
+            else if (op === "==" && cell === wantvals[valuei]) {
                 found = 1;
             }
-            else if (op == '>=' && cell >= wantvals[valuei]) {
+            else if (op === ">=" && cell >= wantvals[valuei]) {
                 found = 1;
             }
-            else if (op == '<=' && cell <= wantvals[valuei]) {
+            else if (op === "<=" && cell <= wantvals[valuei]) {
                 found = 1;
             }
-            else if (op == '>' && cell > wantvals[valuei]) {
+            else if (op === ">" && cell > wantvals[valuei]) {
                 found = 1;
             }
-            else if (op == '<' && cell < wantvals[valuei]) {
+            else if (op === "<" && cell < wantvals[valuei]) {
                 found = 1;
             }
-            else if (op == '!=' && cell != wantvals[valuei]) {
+            else if (op === "!=" && cell !== wantvals[valuei]) {
                 found = 1;
             }
-            else if (op == '<>' && cell != wantvals[valuei]) {
+            else if (op === "<>" && cell !== wantvals[valuei]) {
                 found = 1;
             }
             if (found) {
@@ -2304,7 +2313,7 @@ AfterqueryObj.prototype.filterBy = function (ingrid, key, op, values) {
 
 
 AfterqueryObj.prototype.trySplitOne = function (argval, splitstr) {
-    var pos = argval.indexOf(splitstr);
+    const pos = argval.indexOf(splitstr);
     if (pos >= 0) {
         return [argval.substr(0, pos).trim(),
             argval.substr(pos + splitstr.length).trim()];
@@ -2316,41 +2325,40 @@ AfterqueryObj.prototype.trySplitOne = function (argval, splitstr) {
 
 
 AfterqueryObj.prototype.doFilterBy = function (grid, argval) {
-    AfterqueryObj.log('filterBy:', argval);
-    var ops = ['>=', '<=', '==', '!=', '<>', '>', '<', '='];
-    var parts;
-    for (var opi in ops) {
-        var op = ops[opi];
+    AfterqueryObj.log("filterBy:", argval);
+    const ops = [">=", "<=", "==", "!=", "<>", ">", "<", "="];
+    let parts;
+    for (let opi in ops) {
+        const op = ops[opi];
         if ((parts = this.trySplitOne(argval, op))) {
-            var matches = parts[1].split(',');
-            AfterqueryObj.log('filterBy parsed:', parts[0], op, matches);
+            const matches = parts[1].split(",");
+            AfterqueryObj.log("filterBy parsed:", parts[0], op, matches);
             grid = this.filterBy(grid, parts[0], op, matches);
-            AfterqueryObj.log('grid:', grid);
+            AfterqueryObj.log("grid:", grid);
             return grid;
         }
     }
-    throw new Error('unknown filter operation in "' + argval + '"');
-    return grid;
+    throw new Error("unknown filter operation in \"" + argval + "\"");
 };
 
 
 AfterqueryObj.prototype.queryBy = function (ingrid, words) {
-    var outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
-    for (var rowi in ingrid.data) {
-        var row = ingrid.data[rowi];
-        var found = 0, skipped = 0;
-        for (var wordi in words) {
-            var word = words[wordi];
-            if (word[0] == '!' || word[0] == '-') {
+    const outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
+    for (let rowi in ingrid.data) {
+        const row = ingrid.data[rowi];
+        let found = 0, skipped = 0;
+        for (let wordi in words) {
+            const word = words[wordi];
+            if (word[0] === "!" || word[0] === "-") {
                 found = 1;
             }
-            for (var coli in row) {
-                var cell = row[coli];
+            for (let coli in row) {
+                const cell = row[coli];
                 if (cell != null && cell.toString().indexOf(word) >= 0) {
                     found = 1;
                     break;
                 }
-                else if ((word[0] == '!' || word[0] == '-') &&
+                else if ((word[0] === "!" || word[0] === "-") &&
                     (cell != null &&
                         cell.toString().indexOf(word.substr(1)) >= 0)) {
                     skipped = 1;
@@ -2370,46 +2378,48 @@ AfterqueryObj.prototype.queryBy = function (ingrid, words) {
 
 
 AfterqueryObj.prototype.doQueryBy = function (grid, argval) {
-    AfterqueryObj.log('queryBy:', argval);
-    grid = this.queryBy(grid, argval.split(','));
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("queryBy:", argval);
+    grid = this.queryBy(grid, argval.split(","));
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.deltaBy = function (ingrid, keys) {
-    var outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
-    for (var rowi = 0; rowi < ingrid.data.length; rowi++) {
-        var row = ingrid.data[rowi];
+    let row;
+    let rowi;
+    let keyi;
+    const outgrid = {headers: ingrid.headers, data: [], types: ingrid.types};
+    for (rowi = 0; rowi < ingrid.data.length; rowi++) {
+        row = ingrid.data[rowi];
         outgrid.data.push(row);
     }
 
-    var keycols = [];
-    for (var keyi in keys) {
-        var key = keys[keyi];
+    const keycols = [];
+    for (keyi in keys) {
+        const key = keys[keyi];
         keycols.push(this.keyToColNum(ingrid, key));
     }
 
     if (outgrid.data.length < 2) {
         return outgrid;
     }
-    for (var keyi in keycols) {
-        var keycol = keycols[keyi];
+    for (keyi in keycols) {
+        const keycol = keycols[keyi];
 
-        var prev_val = undefined;
-        for (var rowi = 1; rowi < outgrid.data.length; rowi++) {
-            var row = outgrid.data[rowi];
-            var val = row[keycol];
-            if (val == undefined) {
+        let prev_val = undefined;
+        for (rowi = 1; rowi < outgrid.data.length; rowi++) {
+            row = outgrid.data[rowi];
+            const val = row[keycol];
+            if (val === undefined) {
 
             }
             else if (outgrid.types[keycol] === AfterqueryObj.T_NUM) {
-                if (prev_val != undefined) {
+                if (prev_val !== undefined) {
                     if (val > prev_val) {
-                        var new_val = val - prev_val;
-                        outgrid.data[rowi][keycol] = new_val;
+                        outgrid.data[rowi][keycol] = val - prev_val;
                     }
-                    else if (val == prev_val) {
+                    else if (val === prev_val) {
                         outgrid.data[rowi][keycol] = undefined;
                     }
                 }
@@ -2423,32 +2433,32 @@ AfterqueryObj.prototype.deltaBy = function (ingrid, keys) {
 
 
 AfterqueryObj.prototype.doDeltaBy = function (grid, argval) {
-    AfterqueryObj.log('deltaBy:', argval);
-    grid = this.deltaBy(grid, argval.split(','));
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("deltaBy:", argval);
+    grid = this.deltaBy(grid, argval.split(","));
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.unselectBy = function (ingrid, keys) {
-    var outgrid = {headers: [], data: [], types: []};
-    var keycols = {};
-    for (var keyi in keys) {
-        var key = keys[keyi];
-        var col = this.keyToColNum(ingrid, key);
+    const outgrid = {headers: [], data: [], types: []};
+    const keycols = {};
+    for (let keyi in keys) {
+        const key = keys[keyi];
+        const col = this.keyToColNum(ingrid, key);
         keycols[col] = true;
     }
 
-    for (var headi = 0; headi < ingrid.headers.length; headi++) {
+    for (let headi = 0; headi < ingrid.headers.length; headi++) {
         if (!(headi in keycols)) {
             outgrid.headers.push(ingrid.headers[headi]);
             outgrid.types.push(ingrid.types[headi]);
         }
     }
-    for (var rowi = 0; rowi < ingrid.data.length; rowi++) {
-        var row = ingrid.data[rowi];
-        var newrow = [];
-        for (var coli = 0; coli < row.length; coli++) {
+    for (let rowi = 0; rowi < ingrid.data.length; rowi++) {
+        const row = ingrid.data[rowi];
+        const newrow = [];
+        for (let coli = 0; coli < row.length; coli++) {
             if (!(coli in keycols)) {
                 newrow.push(row[coli]);
             }
@@ -2461,36 +2471,36 @@ AfterqueryObj.prototype.unselectBy = function (ingrid, keys) {
 
 
 AfterqueryObj.prototype.doUnselectBy = function (grid, argval) {
-    AfterqueryObj.log('unselectBy:', argval);
-    grid = this.unselectBy(grid, argval.split(','));
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("unselectBy:", argval);
+    grid = this.unselectBy(grid, argval.split(","));
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.orderBy = function (grid, keys) {
-    var that = this;
-    var keycols = [];
-    for (var keyi in keys) {
-        var key = keys[keyi];
-        var invert = 1;
-        if (key[0] == '-') {
+    const that = this;
+    const keycols = [];
+    for (let keyi in keys) {
+        let key = keys[keyi];
+        let invert = 1;
+        if (key[0] === "-") {
             invert = -1;
             key = key.substr(1);
         }
         keycols.push([this.keyToColNum(grid, key), invert]);
     }
-    AfterqueryObj.log('sort keycols', keycols);
-    var comparator = function (a, b) {
-        for (var keyi in keycols) {
-            var keycol = keycols[keyi][0], invert = keycols[keyi][1];
-            var av = a[keycol], bv = b[keycol];
+    AfterqueryObj.log("sort keycols", keycols);
+    const comparator = function (a, b) {
+        for (let keyi in keycols) {
+            const keycol = keycols[keyi][0], invert = keycols[keyi][1];
+            let av = a[keycol], bv = b[keycol];
             if (grid.types[keycol] === AfterqueryObj.T_NUM) {
                 av = parseFloat(av);
                 bv = parseFloat(bv);
             }
-            av = av || '0'; // ensure consistent ordering given NaN and undefined
-            bv = bv || '0';
+            av = av || "0"; // ensure consistent ordering given NaN and undefined
+            bv = bv || "0";
             if (av < bv) {
                 return -1 * invert;
             }
@@ -2500,33 +2510,33 @@ AfterqueryObj.prototype.orderBy = function (grid, keys) {
         }
         return 0;
     };
-    var outdata = grid.data.concat();
+    const outdata = grid.data.concat();
     outdata.sort(comparator);
     return {headers: grid.headers, data: outdata, types: grid.types};
 };
 
 
 AfterqueryObj.prototype.doOrderBy = function (grid, argval) {
-    AfterqueryObj.log('orderBy:', argval);
-    grid = this.orderBy(grid, argval.split(','));
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("orderBy:", argval);
+    grid = this.orderBy(grid, argval.split(","));
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.extractRegexp = function (grid, colname, regexp) {
-    var r = RegExp(regexp);
-    var colnum = this.keyToColNum(grid, colname);
-    var typ = grid.types[colnum];
+    const r = RegExp(regexp);
+    const colnum = this.keyToColNum(grid, colname);
+    const typ = grid.types[colnum];
     grid.types[colnum] = AfterqueryObj.T_STRING;
-    for (var rowi in grid.data) {
-        var row = grid.data[rowi];
-        var match = r.exec(this.stringifiedCol(row[colnum], typ));
+    for (let rowi in grid.data) {
+        const row = grid.data[rowi];
+        const match = r.exec(this.stringifiedCol(row[colnum], typ));
         if (match) {
-            row[colnum] = match.slice(1).join('');
+            row[colnum] = match.slice(1).join("");
         }
         else {
-            row[colnum] = '';
+            row[colnum] = "";
         }
     }
     return grid;
@@ -2534,32 +2544,32 @@ AfterqueryObj.prototype.extractRegexp = function (grid, colname, regexp) {
 
 
 AfterqueryObj.prototype.doExtractRegexp = function (grid, argval) {
-    AfterqueryObj.log('extractRegexp:', argval);
-    var parts = this.trySplitOne(argval, '=');
-    var colname = parts[0], regexp = parts[1];
-    if (regexp.indexOf('(') < 0) {
-        throw new Error('extract_regexp should have at least one (regex group)');
+    AfterqueryObj.log("extractRegexp:", argval);
+    const parts = this.trySplitOne(argval, "=");
+    const colname = parts[0], regexp = parts[1];
+    if (regexp.indexOf("(") < 0) {
+        throw new Error("extract_regexp should have at least one (regex group)");
     }
     grid = this.extractRegexp(grid, colname, regexp);
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.quantize = function (grid, colname, quants) {
-    var colnum = this.keyToColNum(grid, colname);
-    if (quants.length == 0) {
-        throw new Error('quantize needs a bin size or list of edges');
+    const colnum = this.keyToColNum(grid, colname);
+    if (quants.length === 0) {
+        throw new Error("quantize needs a bin size or list of edges");
     }
-    else if (quants.length == 1) {
+    else if (quants.length === 1) {
         // they specified a bin size
-        var binsize = quants[0] * 1;
+        const binsize = quants[0] * 1;
         if (binsize <= 0) {
-            throw new Error('quantize: bin size ' + binsize + ' must be > 0');
+            throw new Error("quantize: bin size " + binsize + " must be > 0");
         }
         for (var rowi in grid.data) {
             var row = grid.data[rowi];
-            var binnum = Math.floor(row[colnum] / binsize);
+            const binnum = Math.floor(row[colnum] / binsize);
             row[colnum] = binnum * binsize;
         }
     }
@@ -2567,22 +2577,22 @@ AfterqueryObj.prototype.quantize = function (grid, colname, quants) {
         // they specified the actual bin edges
         for (var rowi in grid.data) {
             var row = grid.data[rowi];
-            var val = row[colnum];
-            var out = undefined;
-            for (var quanti in quants) {
+            const val = row[colnum];
+            let out = undefined;
+            for (let quanti in quants) {
                 if (val * 1 < quants[quanti] * 1) {
-                    if (quanti == 0) {
-                        out = '<' + quants[0];
+                    if (quanti === 0) {
+                        out = "<" + quants[0];
                         break;
                     }
                     else {
-                        out = quants[quanti - 1] + '-' + quants[quanti];
+                        out = quants[quanti - 1] + "-" + quants[quanti];
                         break;
                     }
                 }
             }
             if (!out) {
-                out = quants[quants.length - 1] + '+';
+                out = quants[quants.length - 1] + "+";
             }
             row[colnum] = out;
         }
@@ -2592,45 +2602,45 @@ AfterqueryObj.prototype.quantize = function (grid, colname, quants) {
 
 
 AfterqueryObj.prototype.doQuantize = function (grid, argval) {
-    AfterqueryObj.log('quantize:', argval);
-    var parts = this.trySplitOne(argval, '=');
-    var colname = parts[0], quants = parts[1].split(',');
+    AfterqueryObj.log("quantize:", argval);
+    const parts = this.trySplitOne(argval, "=");
+    const colname = parts[0], quants = parts[1].split(",");
     grid = this.quantize(grid, colname, quants);
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 AfterqueryObj.prototype.doRename = function (ingrid, argval) {
-    AfterqueryObj.log('rename:', argval);
-    var parts = this.trySplitOne(argval, '=');
-    var src = parts[0];
-    var dst = parts[1];
-    var grid = {
+    AfterqueryObj.log("rename:", argval);
+    const parts = this.trySplitOne(argval, "=");
+    const src = parts[0];
+    const dst = parts[1];
+    const grid = {
         data: ingrid.data,
         types: ingrid.types,
         headers: [],
     };
-    var i;
-    var done = false;
+    let i;
+    let done = false;
     for (i = 0; i < ingrid.headers.length; i++) {
-        var header = ingrid.headers[i];
+        let header = ingrid.headers[i];
         if ((!done) && (header === src)) {
             header = dst;
             done = true;
         }
         grid.headers.push(header);
     }
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
 
 AfterqueryObj.prototype.yspread = function (grid) {
-    for (var rowi in grid.data) {
-        var row = grid.data[rowi];
-        var total = 0;
+    for (let rowi in grid.data) {
+        const row = grid.data[rowi];
+        let total = 0;
         for (var coli in row) {
-            if (grid.types[coli] == AfterqueryObj.T_NUM && row[coli]) {
+            if (grid.types[coli] === AfterqueryObj.T_NUM && row[coli]) {
                 total += Math.abs(row[coli] * 1);
             }
         }
@@ -2638,7 +2648,7 @@ AfterqueryObj.prototype.yspread = function (grid) {
             total = 1;
         }
         for (var coli in row) {
-            if (grid.types[coli] == AfterqueryObj.T_NUM && row[coli]) {
+            if (grid.types[coli] === AfterqueryObj.T_NUM && row[coli]) {
                 row[coli] = row[coli] * 1 / total;
             }
         }
@@ -2648,12 +2658,12 @@ AfterqueryObj.prototype.yspread = function (grid) {
 
 
 AfterqueryObj.prototype.doYSpread = function (grid, argval) {
-    AfterqueryObj.log('yspread:', argval);
+    AfterqueryObj.log("yspread:", argval);
     if (argval) {
-        throw new Error('yspread: no argument expected');
+        throw new Error("yspread: no argument expected");
     }
     grid = this.yspread(grid);
-    AfterqueryObj.log('grid:', grid);
+    AfterqueryObj.log("grid:", grid);
     return grid;
 };
 
@@ -2664,7 +2674,7 @@ AfterqueryObj.prototype.doLimit = function (ingrid, limit) {
         return {
             headers: ingrid.headers,
             data: ingrid.data.slice(0, limit),
-            types: ingrid.types
+            types: ingrid.types,
         };
     }
     else {
@@ -2704,7 +2714,7 @@ AfterqueryObj.prototype.doCumulativeIntegral = function (ingrid) {
     outgrid.data.push(new Array(ingrid.data[0].length).fill(0));
     outgrid.data[0][0] = firstDate;
 
-    console.log('outgrid', outgrid);
+    console.log("outgrid", outgrid);
 
     let currentDate;
     let previousDate = firstDate;
@@ -2730,10 +2740,10 @@ AfterqueryObj.prototype.doCumulativeIntegral = function (ingrid) {
 
 
 AfterqueryObj.prototype.limitDecimalPrecision = function (grid) {
-    for (var rowi in grid.data) {
-        var row = grid.data[rowi];
-        for (var coli in row) {
-            var cell = row[coli];
+    for (let rowi in grid.data) {
+        const row = grid.data[rowi];
+        for (let coli in row) {
+            let cell = row[coli];
             if (cell === +cell) {
                 row[coli] = parseFloat(cell.toPrecision(15));
             }
@@ -2744,13 +2754,13 @@ AfterqueryObj.prototype.limitDecimalPrecision = function (grid) {
 
 
 AfterqueryObj.prototype.fillNullsWithZero = function (grid) {
-    for (var rowi in grid.data) {
-        var row = grid.data[rowi];
-        for (var coli in row) {
-            if (grid.types[coli] === AfterqueryObj.T_NUM && row[coli] == undefined) {
+    for (let rowi in grid.data) {
+        const row = grid.data[rowi];
+        for (let coli in row) {
+            if (grid.types[coli] === AfterqueryObj.T_NUM && row[coli] === undefined) {
                 row[coli] = 0;
             }
-            if (grid.types[coli] === AfterqueryObj.T_STRING && row[coli] == undefined) {
+            if (grid.types[coli] === AfterqueryObj.T_STRING && row[coli] === undefined) {
                 row[coli] = "_undefined_";
             }
         }
@@ -2770,7 +2780,7 @@ AfterqueryObj.prototype.isArray = function (v) {
 
 
 AfterqueryObj.prototype.isObject = function (v) {
-    return typeof(v) === 'object';
+    return typeof(v) === "object";
 };
 
 
@@ -2780,7 +2790,7 @@ AfterqueryObj.prototype.isDate = function (v) {
 
 
 AfterqueryObj.prototype.isScalar = function (v) {
-    return v == undefined || this.isString(v) || !this.isObject(v) || this.isDate(v);
+    return v === undefined || this.isString(v) || !this.isObject(v) || this.isDate(v);
 };
 
 
@@ -2788,13 +2798,13 @@ AfterqueryObj.prototype.check2d = function (rawdata) {
     if (!this.isArray(rawdata)) {
         return false;
     }
-    for (var rowi = 0; rowi < rawdata.length && rowi < 5; rowi++) {
-        var row = rawdata[rowi];
+    for (let rowi = 0; rowi < rawdata.length && rowi < 5; rowi++) {
+        const row = rawdata[rowi];
         if (!this.isArray(row)) {
             return false;
         }
-        for (var coli = 0; coli < row.length; coli++) {
-            var col = row[coli];
+        for (let coli = 0; coli < row.length; coli++) {
+            const col = row[coli];
             if (!this.isScalar(col)) {
                 return false;
             }
@@ -2805,7 +2815,7 @@ AfterqueryObj.prototype.check2d = function (rawdata) {
 
 
 AfterqueryObj.prototype._copyObj = function (out, v) {
-    for (var key in v) {
+    for (let key in v) {
         out[key] = v[key];
     }
     return out;
@@ -2819,16 +2829,16 @@ AfterqueryObj.prototype.copyObj = function (v) {
 
 AfterqueryObj.prototype.multiplyLists = function (out, l1, l2) {
     if (l1 === undefined) {
-        throw new Error('l1 undefined');
+        throw new Error("l1 undefined");
     }
     if (l2 === undefined) {
-        throw new Error('l2 undefined');
+        throw new Error("l2 undefined");
     }
-    for (var l1i in l1) {
-        var r1 = l1[l1i];
-        for (var l2i in l2) {
-            var r2 = l2[l2i];
-            var o = this.copyObj(r1);
+    for (let l1i in l1) {
+        const r1 = l1[l1i];
+        for (let l2i in l2) {
+            const r2 = l2[l2i];
+            const o = this.copyObj(r1);
             this._copyObj(o, r2);
             out.push(o);
         }
@@ -2838,10 +2848,10 @@ AfterqueryObj.prototype.multiplyLists = function (out, l1, l2) {
 
 
 AfterqueryObj.prototype.flattenDict = function (headers, coldict, rowtmp, d) {
-    var out = [];
-    var lists = [];
-    for (var key in d) {
-        var value = d[key];
+    const out = [];
+    const lists = [];
+    for (let key in d) {
+        const value = d[key];
         if (this.isScalar(value)) {
             if (coldict[key] === undefined) {
                 coldict[key] = headers.length;
@@ -2858,9 +2868,9 @@ AfterqueryObj.prototype.flattenDict = function (headers, coldict, rowtmp, d) {
     }
 
     // now multiply all the lists together
-    var tmp1 = [{}];
+    let tmp1 = [{}];
     while (lists.length) {
-        var tmp2 = [];
+        const tmp2 = [];
         this.multiplyLists(tmp2, tmp1, lists.shift());
         tmp1 = tmp2;
     }
@@ -2872,33 +2882,33 @@ AfterqueryObj.prototype.flattenDict = function (headers, coldict, rowtmp, d) {
 
 
 AfterqueryObj.prototype.flattenList = function (headers, coldict, rows) {
-    var out = [];
-    for (var rowi in rows) {
-        var row = rows[rowi];
-        var rowtmp = {};
-        var sublist = this.flattenDict(headers, coldict, rowtmp, row);
+    const out = [];
+    for (let rowi in rows) {
+        const row = rows[rowi];
+        const rowtmp = {};
+        const sublist = this.flattenDict(headers, coldict, rowtmp, row);
         this.multiplyLists(out, [rowtmp], sublist);
     }
     return out;
 };
 
 AfterqueryObj.mergeGrids = function (a, b) {
-    var b_colnum;
-    var b_header;
-    var a_colnum;
-    var row;
-    var i;
+    let b_colnum;
+    let b_header;
+    let a_colnum;
+    let row;
+    let i;
 
-    var out = {
+    const out = {
         headers: a.headers.slice(0),
         types: a.types.slice(0),
-        data: a.data
+        data: a.data,
     };
 
-    var b_new_cols = [];
+    const b_new_cols = [];
 
     // Stub in space for new data.
-    var newrow = new Array(a.headers.length);
+    const newrow = new Array(a.headers.length);
     for (i = 0; i < a.headers.length; i++) {
         switch (a.types[i]) {
             case AfterqueryObj.T_NUM:
@@ -2914,13 +2924,13 @@ AfterqueryObj.mergeGrids = function (a, b) {
                 newrow[i] = NaN;
                 break;
             case AfterqueryObj.T_STRING:
-                newrow[i] = '';
+                newrow[i] = "";
                 break;
             default:
                 newrow[i] = null;
         }
     }
-    var newrows = new Array(b.data.length);
+    const newrows = new Array(b.data.length);
     for (row = 0; row < b.data.length; row++) {
         newrows[row] = newrow.slice(0);
     }
@@ -2929,7 +2939,7 @@ AfterqueryObj.mergeGrids = function (a, b) {
     for (b_colnum = 0; b_colnum < b.headers.length; b_colnum++) {
         b_header = b.headers[b_colnum];
         a_colnum = a.headers.indexOf(b_header);
-        if (a_colnum < 0 || b.types[b_colnum] != a.types[a_colnum]) {
+        if (a_colnum < 0 || b.types[b_colnum] !== a.types[a_colnum]) {
             // Can't merge. Next column.
             b_new_cols.push(b_colnum);
             continue;
@@ -2959,9 +2969,9 @@ AfterqueryObj.prototype.gridFromManyData = function (rawdata) {
         return {headers: [], data: [], types: []};
     }
 
-    var grid = this.gridFromData(rawdata[0]);
-    var newgrid;
-    var i;
+    let grid = this.gridFromData(rawdata[0]);
+    let newgrid;
+    let i;
     for (i = 1; i < rawdata.length; i++) {
         newgrid = this.gridFromData(rawdata[i]);
         grid = AfterqueryObj.mergeGrids(grid, newgrid);
@@ -2971,14 +2981,16 @@ AfterqueryObj.prototype.gridFromManyData = function (rawdata) {
 
 
 AfterqueryObj.prototype.gridFromData = function (rawdata) {
+    let rowi;
+    let row;
     if (rawdata && rawdata.headers && rawdata.data && rawdata.types) {
         // already in grid format
         return rawdata;
     }
 
-    var headers, data, types;
+    let headers, data, types;
 
-    var err;
+    let err;
     if (rawdata.errors && rawdata.errors.length) {
         err = rawdata.errors[0];
     }
@@ -2986,30 +2998,30 @@ AfterqueryObj.prototype.gridFromData = function (rawdata) {
         err = rawdata.error;
     }
     if (err) {
-        var msglist = [];
+        const msglist = [];
         if (err.message) {
             msglist.push(err.message);
         }
         if (err.detailed_message) {
             msglist.push(err.detailed_message);
         }
-        throw new Error('Data provider returned an error: ' + msglist.join(': '));
+        throw new Error("Data provider returned an error: " + msglist.join(": "));
     }
 
     if (rawdata.table) {
         // gviz format
         headers = [];
-        for (var headeri in rawdata.table.cols) {
+        for (let headeri in rawdata.table.cols) {
             headers.push(rawdata.table.cols[headeri].label ||
                 rawdata.table.cols[headeri].id);
         }
         data = [];
-        for (var rowi in rawdata.table.rows) {
-            var row = rawdata.table.rows[rowi];
-            var orow = [];
+        for (rowi in rawdata.table.rows) {
+            row = rawdata.table.rows[rowi];
+            const orow = [];
             for (var coli in row.c) {
                 var col = row.c[coli];
-                var g;
+                let g;
                 if (!col) {
                     orow.push(null);
                 }
@@ -3041,13 +3053,13 @@ AfterqueryObj.prototype.gridFromData = function (rawdata) {
         // pairs.  A list contains a set of lists or dicts, which corresponds
         // to another "dimension" of the cube.  To flatten it, we have to
         // replicate the row once for each element in the list.
-        var coldict = {};
+        const coldict = {};
         headers = [];
-        var rowdicts = this.flattenList(headers, coldict, rawdata);
+        const rowdicts = this.flattenList(headers, coldict, rawdata);
         data = [];
-        for (var rowi in rowdicts) {
-            var rowdict = rowdicts[rowi];
-            var row = [];
+        for (rowi in rowdicts) {
+            const rowdict = rowdicts[rowi];
+            row = [];
             for (var coli in headers) {
                 row.push(rowdict[headers[coli]]);
             }
@@ -3069,20 +3081,20 @@ AfterqueryObj.prototype.enqueue = function (queue, stepname, func) {
 
 
 AfterqueryObj.prototype.runqueue = function (queue, ingrid, done, showstatus, wrap_each, after_each) {
-    var step = function (i) {
+    const step = function (i) {
         if (i < queue.length) {
-            var el = queue[i];
-            var text = el[0], func = el[1];
+            const el = queue[i];
+            const text = el[0], func = el[1];
             if (showstatus) {
-                showstatus('Running step ' + (+i + 1) + ' of ' +
-                    queue.length + '...',
+                showstatus("Running step " + (+i + 1) + " of " +
+                    queue.length + "...",
                     text);
             }
             setTimeout(function () {
-                var start = Date.now();
-                var wfunc = wrap_each ? wrap_each(func) : func;
+                const start = Date.now();
+                const wfunc = wrap_each ? wrap_each(func) : func;
                 wfunc(ingrid, function (outgrid) {
-                    var end = Date.now();
+                    const end = Date.now();
                     if (after_each) {
                         after_each(outgrid, i + 1, queue.length, text, end - start);
                     }
@@ -3093,7 +3105,7 @@ AfterqueryObj.prototype.runqueue = function (queue, ingrid, done, showstatus, wr
         }
         else {
             if (showstatus) {
-                showstatus('');
+                showstatus("");
             }
             if (done) {
                 done(ingrid);
@@ -3112,108 +3124,108 @@ AfterqueryObj.prototype.maybeSet = function (dict, key, value) {
 
 
 AfterqueryObj.prototype.addTransforms = function (queue, args) {
-    var that = this;
-    var trace = args.get('trace');
+    const that = this;
+    const trace = args.get("trace");
     var argi;
 
     // helper function for synchronous transformations (ie. ones that return
     // the output grid rather than calling a callback)
-    var transform = function (f, arg) {
-        that.enqueue(queue, args.all[argi][0] + '=' + args.all[argi][1],
+    const transform = function (f, arg) {
+        that.enqueue(queue, args.all[argi][0] + "=" + args.all[argi][1],
             function (ingrid, done) {
-                var outgrid = f(ingrid, arg);
+                const outgrid = f(ingrid, arg);
                 done(outgrid);
             });
     };
 
     for (var argi in args.all) {
-        var argkey = args.all[argi][0], argval = args.all[argi][1];
-        if (argkey == 'group') {
+        const argkey = args.all[argi][0], argval = args.all[argi][1];
+        if (argkey === "group") {
             transform(function (g, a) {
                 return that.doGroupBy(g, a);
             }, argval);
         }
-        else if (argkey == 'treegroup') {
+        else if (argkey === "treegroup") {
             transform(function (g, a) {
                 return that.doTreeGroupBy(g, a);
             }, argval);
         }
-        else if (argkey == 'finishtree') {
+        else if (argkey === "finishtree") {
             transform(function (g, a) {
                 return that.doFinishTree(g, a);
             }, argval);
         }
-        else if (argkey == 'inverttree') {
+        else if (argkey === "inverttree") {
             transform(function (g, a) {
                 return that.doInvertTree(g, a);
             }, argval);
         }
-        else if (argkey == 'cracktree') {
+        else if (argkey === "cracktree") {
             transform(function (g, a) {
                 return that.doCrackTree(g, a);
             }, argval);
         }
-        else if (argkey == 'pivot') {
+        else if (argkey === "pivot") {
             transform(function (g, a) {
                 return that.doPivotBy(g, a);
             }, argval);
         }
-        else if (argkey == 'filter') {
+        else if (argkey === "filter") {
             transform(function (g, a) {
                 return that.doFilterBy(g, a);
             }, argval);
         }
-        else if (argkey == 'q') {
+        else if (argkey === "q") {
             transform(function (g, a) {
                 return that.doQueryBy(g, a);
             }, argval);
         }
-        else if (argkey == 'limit') {
+        else if (argkey === "limit") {
             transform(function (g, a) {
                 return that.doLimit(g, a);
             }, argval);
         }
-        else if (argkey == 'delta') {
+        else if (argkey === "delta") {
             transform(function (g, a) {
                 return that.doDeltaBy(g, a);
             }, argval);
         }
-        else if (argkey == 'unselect') {
+        else if (argkey === "unselect") {
             transform(function (g, a) {
                 return that.doUnselectBy(g, a);
             }, argval);
         }
-        else if (argkey == 'order') {
+        else if (argkey === "order") {
             transform(function (g, a) {
                 return that.doOrderBy(g, a);
             }, argval);
         }
-        else if (argkey == 'extract_regexp') {
+        else if (argkey === "extract_regexp") {
             transform(function (g, a) {
                 return that.doExtractRegexp(g, a);
             }, argval);
         }
-        else if (argkey == 'quantize') {
+        else if (argkey === "quantize") {
             transform(function (g, a) {
                 return that.doQuantize(g, a);
             }, argval);
         }
-        else if (argkey == 'rename') {
+        else if (argkey === "rename") {
             transform(function (g, a) {
                 return that.doRename(g, a);
             }, argval);
         }
-        else if (argkey == 'yspread') {
+        else if (argkey === "yspread") {
             transform(function (g, a) {
                 return that.doYSpread(g, a);
             }, argval);
         }
-        else if (argkey == 'transpose') {
+        else if (argkey === "transpose") {
             transform(function (g, a) {
                 return that.doTranspose(g, a);
             }, argval);
         }
-        else if (argkey == 'cumulative_integral') {
+        else if (argkey === "cumulative_integral") {
             transform(function (g, a) {
                 return that.doCumulativeIntegral(g, a);
             }, argval);
@@ -3234,18 +3246,19 @@ AfterqueryObj.prototype.dyIndexFromX = function (dychart, x) {
 
 
 AfterqueryObj.prototype.createTracesChart = function (grid, el, colsPerChart) {
-    var that = this;
-    var charts = [];
-    var xlines = [];
+    let rowi;
+    const that = this;
+    const charts = [];
+    const xlines = [];
 
-    var n = (grid.headers.length - 1) / colsPerChart;
-    $(el).css('overflow', 'scroll');
-    var tab = $('<table class="dy-table" style="width:100%;"/>');
+    const n = (grid.headers.length - 1) / colsPerChart;
+    $(el).css("overflow", "scroll");
+    const tab = $("<table class=\"dy-table\" style=\"width:100%;\"/>");
     $(el).append(tab);
 
-    var zooming = false;
-    for (var i = 0; i < n; i++) {
-        var dyoptions = {
+    let zooming = false;
+    for (let i = 0; i < n; i++) {
+        const dyoptions = {
             connectSeparatedPoints: false,
             drawYAxis: true,
             drawXAxis: false,
@@ -3260,36 +3273,36 @@ AfterqueryObj.prototype.createTracesChart = function (grid, el, colsPerChart) {
                     return;
                 }
                 zooming = true;
-                var range = [x1, x2];
-                for (var charti = 0; charti < charts.length; charti++) {
+                const range = [x1, x2];
+                for (let charti = 0; charti < charts.length; charti++) {
                     charts[charti].updateOptions({dateWindow: range});
                 }
                 zooming = false;
-            }
+            },
         };
-        var coli = 1 + (i * colsPerChart);
-        var row = $('<tr>');
-        var labelcol = $('<td>').text(grid.headers[coli]);
-        var col = $('<td style="width:100%">');
+        const coli = 1 + (i * colsPerChart);
+        const row = $("<tr>");
+        const labelcol = $("<td>").text(grid.headers[coli]);
+        const col = $("<td style=\"width:100%\">");
         $(tab).append(row);
         $(row).append(labelcol);
         $(row).append(col);
-        var odd = (i % 2) ? 'odd' : 'even';
-        var sub = $('<div class="dy-chart dy-chart-' + odd + '"/>')[0];
-        $(sub).css('position', 'relative');
+        const odd = (i % 2) ? "odd" : "even";
+        const sub = $("<div class=\"dy-chart dy-chart-" + odd + "\"/>")[0];
+        $(sub).css("position", "relative");
         $(col).append(sub);
-        dyoptions.labels = [grid.headers[0], 'value'];
+        dyoptions.labels = [grid.headers[0], "value"];
 
-        var data = [];
-        if (colsPerChart == 3) {
+        const data = [];
+        if (colsPerChart === 3) {
             // input data is x,val,min,max
             // output data must be x,[min,val,max]
-            for (var rowi = 0; rowi < grid.data.length; rowi++) {
-                var datacol = [grid.data[rowi][coli + 1],
+            for (rowi = 0; rowi < grid.data.length; rowi++) {
+                const datacol = [grid.data[rowi][coli + 1],
                     grid.data[rowi][coli + 0],
                     grid.data[rowi][coli + 2]];
-                if (rowi == 0 ||
-                    rowi == grid.data.length - 1 ||
+                if (rowi === 0 ||
+                    rowi === grid.data.length - 1 ||
                     datacol[0] != null ||
                     datacol[1] != null ||
                     datacol[2] != null) {
@@ -3298,38 +3311,38 @@ AfterqueryObj.prototype.createTracesChart = function (grid, el, colsPerChart) {
             }
         }
         else {
-            for (var rowi = 0; rowi < grid.data.length; rowi++) {
-                if (rowi == 0 ||
-                    rowi == grid.data.length - 1 ||
+            for (rowi = 0; rowi < grid.data.length; rowi++) {
+                if (rowi === 0 ||
+                    rowi === grid.data.length - 1 ||
                     grid.data[rowi][coli] != null) {
                     data.push([grid.data[rowi][0], grid.data[rowi][coli]]);
                 }
             }
         }
 
-        if (i == n - 1) {
-            $(sub).css('height', '140px');
+        if (i === n - 1) {
+            $(sub).css("height", "140px");
             dyoptions.drawXAxis = true;
         }
         else {
-            $(sub).css('height', '120px');
+            $(sub).css("height", "120px");
         }
 
-        var xline = $('<div class="dy-line dy-xline" />')[0];
-        var yline = $('<div class="dy-line dy-yline" />')[0];
-        var inHighlighter = false;
-        var declareCallback = function (data, xline, yline) {
+        const xline = $("<div class=\"dy-line dy-xline\" />")[0];
+        const yline = $("<div class=\"dy-line dy-yline\" />")[0];
+        let inHighlighter = false;
+        const declareCallback = function (data, xline, yline) {
             return function (graph, series, canvas, x, y, color, size, idx) {
-                $(xline).css('left', x - 1 + 'px');
-                $(yline).css('top', y - 1 + 'px');
+                $(xline).css("left", x - 1 + "px");
+                $(yline).css("top", y - 1 + "px");
 
                 // also move the highlight in all other charts
                 if (inHighlighter) {
                     return;
                 }
                 inHighlighter = true;
-                for (var charti = 0; charti < charts.length; charti++) {
-                    var otheridx = that.dyIndexFromX(charts[charti], data[idx][0]);
+                for (let charti = 0; charti < charts.length; charti++) {
+                    const otheridx = that.dyIndexFromX(charts[charti], data[idx][0]);
                     charts[charti].setSelection(otheridx);
                 }
                 inHighlighter = false;
@@ -3337,59 +3350,59 @@ AfterqueryObj.prototype.createTracesChart = function (grid, el, colsPerChart) {
         };
         dyoptions.drawHighlightPointCallback = declareCallback(data,
             xline, yline);
-        if (colsPerChart == 3) {
+        if (colsPerChart === 3) {
             dyoptions.customBars = true;
         }
         else {
             dyoptions.customBars = false;
         }
 
-        var chart = new Dygraph(sub, data, dyoptions);
+        const chart = new Dygraph(sub, data, dyoptions);
         $(sub).append(xline, yline);
         charts.push(chart);
     }
 
     return {
         draw: function (table, options) {
-        }
+        },
     };
 };
 
 
 AfterqueryObj.NaNToZeroFormatter = function (dt, col) {
-    for (var row = 0; row < dt.getNumberOfRows(); row++) {
+    for (let row = 0; row < dt.getNumberOfRows(); row++) {
         if (isNaN(dt.getValue(row, col))) {
             dt.setValue(row, col, 0);
-            dt.setFormattedValue(row, col, '');
+            dt.setFormattedValue(row, col, "");
         }
     }
 };
 
 AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
-    var that = this;
-    var has_more_opts = more_options_in !== undefined;
-    var more_options = more_options_in;
-    var trace = args.get('trace');
-    var chartops = args.get('chart');
-    var chart, datatable, resizeTimer;
-    var options = {};
-    var intensify = args.get('intensify');
-    if (intensify == '') {
-        intensify = 'xy';
+    const that = this;
+    const has_more_opts = more_options_in !== undefined;
+    const more_options = more_options_in;
+    const trace = args.get("trace");
+    const chartops = args.get("chart");
+    let chart, datatable, resizeTimer;
+    const options = {};
+    let intensify = args.get("intensify");
+    if (intensify === "") {
+        intensify = "xy";
     }
-    var gridoptions = {
-        intensify: intensify
+    const gridoptions = {
+        intensify: intensify,
     };
-    var el = $(this.elid("vizchart"))[0];
+    const el = $(this.elid("vizchart"))[0];
 
-    this.enqueue(queue, 'gentable', function (grid, done) {
+    this.enqueue(queue, "gentable", function (grid, done) {
         // Some charts react badly to missing values, so fill them in.
         grid = that.fillNullsWithZero(grid);
         if (chartops) {
-            var chartbits = chartops.split(',');
+            const chartbits = chartops.split(",");
             var charttype = chartbits.shift();
-            for (var charti in chartbits) {
-                var kv = that.trySplitOne(chartbits[charti], '=');
+            for (let charti in chartbits) {
+                const kv = that.trySplitOne(chartbits[charti], "=");
                 options[kv[0]] = kv[1];
             }
             grid = that.limitDecimalPrecision(grid);
@@ -3397,73 +3410,73 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
             // Scan and add all args not for afterquery to GViz options.
             that.scanGVizChartOptions(args, options);
 
-            if (charttype == 'stackedarea' || charttype == 'stacked') {
+            if (charttype === "stackedarea" || charttype === "stacked") {
                 chart = new google.visualization.AreaChart(el);
                 options.isStacked = true;
                 options.explorer = {};
             }
-            else if (charttype == 'column') {
+            else if (charttype === "column") {
                 chart = new google.visualization.ColumnChart(el);
             }
-            else if (charttype == 'bar') {
+            else if (charttype === "bar") {
                 chart = new google.visualization.BarChart(el);
             }
-            else if (charttype == 'line') {
+            else if (charttype === "line") {
                 chart = new google.visualization.LineChart(el);
             }
-            else if (charttype == 'spark') {
+            else if (charttype === "spark") {
                 // sparkline chart: get rid of everything but the data series.
                 // Looks best when small.
                 options.hAxis = {};
-                options.hAxis.baselineColor = 'none';
-                options.hAxis.textPosition = 'none';
+                options.hAxis.baselineColor = "none";
+                options.hAxis.textPosition = "none";
                 options.hAxis.gridlines = {};
-                options.hAxis.gridlines.color = 'none';
+                options.hAxis.gridlines.color = "none";
                 options.vAxis = {};
-                options.vAxis.baselineColor = 'none';
-                options.vAxis.textPosition = 'none';
+                options.vAxis.baselineColor = "none";
+                options.vAxis.textPosition = "none";
                 options.vAxis.gridlines = {};
-                options.vAxis.gridlines.color = 'none';
-                options.theme = 'maximized';
+                options.vAxis.gridlines.color = "none";
+                options.theme = "maximized";
                 options.legend = {};
-                options.legend.position = 'none';
+                options.legend.position = "none";
                 chart = new google.visualization.LineChart(el);
             }
-            else if (charttype == 'pie') {
+            else if (charttype === "pie") {
                 chart = new google.visualization.PieChart(el);
             }
-            else if (charttype == 'tree') {
-                if (grid.headers[0] == '_tree') {
-                    grid = that.finishTree(grid, ['_tree']);
-                    grid = that.crackTree(grid, '_tree');
+            else if (charttype === "tree") {
+                if (grid.headers[0] === "_tree") {
+                    grid = that.finishTree(grid, ["_tree"]);
+                    grid = that.crackTree(grid, "_tree");
                 }
-                that.maybeSet(options, 'maxDepth', 3);
-                that.maybeSet(options, 'maxPostDepth', 1);
-                that.maybeSet(options, 'showScale', 1);
+                that.maybeSet(options, "maxDepth", 3);
+                that.maybeSet(options, "maxPostDepth", 1);
+                that.maybeSet(options, "showScale", 1);
                 chart = new google.visualization.TreeMap(el);
             }
-            else if (charttype == 'candle' || charttype == 'candlestick') {
+            else if (charttype === "candle" || charttype === "candlestick") {
                 chart = new google.visualization.CandlestickChart(el);
             }
-            else if (charttype == 'timeline') {
+            else if (charttype === "timeline") {
                 chart = new google.visualization.AnnotatedTimeLine(el);
             }
-            else if (charttype == 'dygraph' || charttype == 'dygraph+errors') {
+            else if (charttype === "dygraph" || charttype === "dygraph+errors") {
                 chart = new Dygraph.GVizChart(el);
-                that.maybeSet(options, 'showRoller', true);
-                if (charttype == 'dygraph+errors') {
+                that.maybeSet(options, "showRoller", true);
+                if (charttype === "dygraph+errors") {
                     options.errorBars = true;
                 }
             }
-            else if (charttype == 'traces' || charttype == 'traces+minmax') {
+            else if (charttype === "traces" || charttype === "traces+minmax") {
                 chart = that.createTracesChart(grid, el,
-                    charttype == 'traces+minmax' ? 3 : 1);
+                    charttype === "traces+minmax" ? 3 : 1);
             }
-            else if (charttype == 'heatgrid') {
+            else if (charttype === "heatgrid") {
                 chart = new HeatGrid(el);
             }
             else {
-                throw new Error('unknown chart type "' + charttype + '"');
+                throw new Error("unknown chart type \"" + charttype + "\"");
             }
             gridoptions.show_only_lastseg = true;
             gridoptions.bool_to_num = true;
@@ -3474,21 +3487,21 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
             options.allowHtml = true;
         }
 
-        if (charttype == 'heatgrid' ||
-            charttype == 'traces' ||
-            charttype == 'traces+minmax') {
+        if (charttype === "heatgrid" ||
+            charttype === "traces" ||
+            charttype === "traces+minmax") {
             datatable = grid;
         }
         else {
             datatable = AfterqueryObj.dataToGvizTable(grid, gridoptions);
 
-            var dateformat = new google.visualization.DateFormat({
-                pattern: 'yyyy-MM-dd'
+            const dateformat = new google.visualization.DateFormat({
+                pattern: "yyyy-MM-dd",
             });
-            var datetimeformat = new google.visualization.DateFormat({
-                pattern: 'yyyy-MM-dd HH:mm:ss'
+            const datetimeformat = new google.visualization.DateFormat({
+                pattern: "yyyy-MM-dd HH:mm:ss",
             });
-            for (var coli = 0; coli < grid.types.length; coli++) {
+            for (let coli = 0; coli < grid.types.length; coli++) {
                 if (grid.types[coli] === AfterqueryObj.T_DATE) {
                     dateformat.format(datatable, coli);
                 }
@@ -3498,8 +3511,8 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 else if (grid.types[coli] === AfterqueryObj.T_NUM) {
                     if (has_more_opts &&
                         more_options.num_pattern !== undefined) {
-                        var numformat = new google.visualization.NumberFormat({
-                            pattern: more_options.num_pattern
+                        const numformat = new google.visualization.NumberFormat({
+                            pattern: more_options.num_pattern,
                         });
                         numformat.format(datatable, coli);
                         AfterqueryObj.NaNToZeroFormatter(datatable, coli);
@@ -3509,8 +3522,8 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
         }
 
         // this adds a callback that adds a "help" link to the chart title if help_url is given in the options
-        google.visualization.events.addListener(chart, 'ready', function () {
-            const help_url = args.get('help_url');
+        google.visualization.events.addListener(chart, "ready", function () {
+            const help_url = args.get("help_url");
             if (!(help_url === undefined || help_url === null)) {
                 let chartTitle = $("text").filter(`:contains("${options.title}")`)[0];
                 $(chartTitle).html(`${options.title} [<a fill="blue" target="_blank" xlink:href="${help_url}">?</a>]`);
@@ -3523,11 +3536,11 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
     });
 
 
-    this.enqueue(queue, chartops ? 'chart=' + chartops : 'view',
+    this.enqueue(queue, chartops ? "chart=" + chartops : "view",
         function (grid, done) {
             if (grid.data.length) {
-                var doRender = function () {
-                    var wantwidth = trace ? $(el).innerWidth - 40 : $(el).innerWidth;
+                const doRender = function () {
+                    const wantwidth = trace ? $(el).innerWidth - 40 : $(el).innerWidth;
                     $(el).width(wantwidth);
                     if (!has_more_opts || !more_options.disable_height) {
                         $(el).height(window.innerHeight);
@@ -3535,7 +3548,7 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                     }
                     chart.draw(datatable, options);
                     if (has_more_opts && more_options.select_handler !== undefined) {
-                        google.visualization.events.addListener(chart, 'select', function (e) {
+                        google.visualization.events.addListener(chart, "select", function (e) {
                             more_options.select_handler(e, chart, datatable);
                         });
                     }
@@ -3547,7 +3560,7 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 });
             }
             else {
-                el.innerHTML = 'Empty dataset.';
+                el.innerHTML = "Empty dataset.";
             }
             done(grid);
         });
@@ -3555,40 +3568,40 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
 
 AfterqueryObj.prototype.scanGVizChartOptions = function (args, options) {
     // Parse args to be sent to GViz.
-    var allArgs = args['all'];
-    for (var i in allArgs) {
-        var key = allArgs[i][0];
+    const allArgs = args["all"];
+    for (let i in allArgs) {
+        const key = allArgs[i][0];
         // Ignore params sent for afterquery.
-        if (key == 'trace'
-            || key == 'url'
-            || key == 'chart'
-            || key == 'editlink'
-            || key == 'intensify'
-            || key == 'order'
-            || key == 'group'
-            || key == 'limit'
-            || key == 'filter'
-            || key == 'q'
-            || key == 'pivot'
-            || key == 'treegroup'
-            || key == 'extract_regexp') {
+        if (key === "trace"
+            || key === "url"
+            || key === "chart"
+            || key === "editlink"
+            || key === "intensify"
+            || key === "order"
+            || key === "group"
+            || key === "limit"
+            || key === "filter"
+            || key === "q"
+            || key === "pivot"
+            || key === "treegroup"
+            || key === "extract_regexp") {
             continue;
         }
         // Add params for GViz API into options object.
         this.addGVizChartOption(options, key, allArgs[i][1]);
     }
-    AfterqueryObj.log('Options sent to GViz');
+    AfterqueryObj.log("Options sent to GViz");
     AfterqueryObj.log(options);
 };
 
 AfterqueryObj.prototype.addGVizChartOption = function (options, key, value) {
-    if (key.indexOf('.') > -1) {
-        var subObjects = key.split('.');
+    if (key.indexOf(".") > -1) {
+        const subObjects = key.split(".");
         if (!options[subObjects[0]]) {
             options[subObjects[0]] = {};
         }
         this.addGVizChartOption(options[subObjects[0]],
-            key.substring(key.indexOf('.') + 1), value);
+            key.substring(key.indexOf(".") + 1), value);
     }
     else {
         options[key] = value;
@@ -3599,35 +3612,35 @@ AfterqueryObj.prototype.addGVizChartOption = function (options, key, value) {
 AfterqueryObj.vizstep = 0;
 
 AfterqueryObj.prototype.finishQueue = function (queue, args, done) {
-    var that = this;
-    var trace = args.get('trace');
+    const that = this;
+    const trace = args.get("trace");
     if (trace) {
-        var prevdata;
-        var after_each = function (grid, stepi, nsteps, text, msec_time) {
+        let prevdata;
+        const after_each = function (grid, stepi, nsteps, text, msec_time) {
             AfterqueryObj.vizstep++;
-            $(that.elid('vizlog')).append('<div class="vizstep" id="step' + AfterqueryObj.vizstep + '">' +
-                '  <div class="text"></div>' +
-                '  <div class="grid"></div>' +
-                '</div>');
-            $('#step' + AfterqueryObj.vizstep + ' .text').text('Step ' + stepi +
-                ' (' + msec_time + 'ms):  ' +
+            $(that.elid("vizlog")).append("<div class=\"vizstep\" id=\"step" + AfterqueryObj.vizstep + "\">" +
+                "  <div class=\"text\"></div>" +
+                "  <div class=\"grid\"></div>" +
+                "</div>");
+            $("#step" + AfterqueryObj.vizstep + " .text").text("Step " + stepi +
+                " (" + msec_time + "ms):  " +
                 text);
-            var viewel = $('#step' + AfterqueryObj.vizstep + ' .grid');
-            if (prevdata != grid.data) {
-                var t = new google.visualization.Table(viewel[0]);
-                var datatable = AfterqueryObj.dataToGvizTable({
+            const viewel = $("#step" + AfterqueryObj.vizstep + " .grid");
+            if (prevdata !== grid.data) {
+                const t = new google.visualization.Table(viewel[0]);
+                const datatable = AfterqueryObj.dataToGvizTable({
                     headers: grid.headers,
                     data: grid.data.slice(0, 1000),
-                    types: grid.types
+                    types: grid.types,
                 });
                 t.draw(datatable);
                 prevdata = grid.data;
             }
             else {
-                viewel.text('(unchanged)');
+                viewel.text("(unchanged)");
             }
-            if (stepi == nsteps) {
-                $('.vizstep').show();
+            if (stepi === nsteps) {
+                $(".vizstep").show();
             }
         };
         this.runqueue(queue, null, done, function (s, s2) {
@@ -3647,22 +3660,22 @@ AfterqueryObj.prototype.finishQueue = function (queue, args, done) {
 
 
 AfterqueryObj.prototype.gotError = function (state) {
-    this.showstatus('');
-    var msg = "<p>Unable to load any data files.</p>\n<table>";
-    for (var i = 0; i < state.failure.length; i++) {
+    this.showstatus("");
+    let msg = "<p>Unable to load any data files.</p>\n<table>";
+    for (let i = 0; i < state.failure.length; i++) {
         msg += "<tr>" +
             "<td><a href='" + encodeURI(state.failure[i].url) + "'>" +
             encodeURI(state.failure[i].url) + "</a></td>" +
             "<td>" + AfterqueryObj.htmlEscape(state.failure[i].status) + "</td>" +
             "</tr>\n";
     }
-    if (state.failure.length == 0) {
+    if (state.failure.length === 0) {
         msg += "<tr><td>>No errors were logged.</td></tr>>\n";
     }
     msg += "</table>";
 
-    $(this.elid('vizraw')).html(msg);
-    var msg_txt = $(this.elid('vizraw')).text();
+    $(this.elid("vizraw")).html(msg);
+    const msg_txt = $(this.elid("vizraw")).text();
     throw new Error(msg_txt);
 };
 
@@ -3677,22 +3690,22 @@ AfterqueryObj.prototype.argsToArray = function (args) {
 
 AfterqueryObj.prototype.wrap = function (func) {
     // pre_args is the arguments as passed at wrap() time
-    var that = this;
-    var pre_args = this.argsToArray(arguments).slice(1);
-    var f = function () {
+    const that = this;
+    const pre_args = this.argsToArray(arguments).slice(1);
+    const f = function () {
         try {
             // post_args is the arguments as passed when calling f()
-            var post_args = that.argsToArray(arguments);
+            const post_args = that.argsToArray(arguments);
             return func.apply(null, pre_args.concat(post_args));
         }
         catch (e) {
-            $(that.elid('vizchart')).hide();
-            $(that.elid('vizstatus')).css('position', 'relative');
+            $(that.elid("vizchart")).hide();
+            $(that.elid("vizstatus")).css("position", "relative");
             if (that.rootid) {
-                $("#" + that.rootid + ' .vizstep').show();
+                $("#" + that.rootid + " .vizstep").show();
             }
             else {
-                $('.vizstep').show();
+                $(".vizstep").show();
             }
             that.err(e);
             that.err("<p><a href='help/syntax.html'>here's the documentation</a>");
@@ -3704,8 +3717,8 @@ AfterqueryObj.prototype.wrap = function (func) {
 
 
 AfterqueryObj.prototype.urlMinusPath = function (url) {
-    var URL_RE = RegExp('^((\\w+:)?(//[^/]*)?)');
-    var g = URL_RE.exec(url);
+    const URL_RE = RegExp("^((\\w+:)?(//[^/]*)?)");
+    const g = URL_RE.exec(url);
     if (g && g[1]) {
         return g[1];
     }
@@ -3717,37 +3730,37 @@ AfterqueryObj.prototype.urlMinusPath = function (url) {
 
 AfterqueryObj.prototype.checkUrlSafety = function (url) {
     if (/[<>"''"]/.exec(url)) {
-        throw new Error('unsafe url detected. encoded=' + encodedURI(url));
+        throw new Error("unsafe url detected. encoded=" + encodedURI(url));
     }
 };
 
 
 AfterqueryObj.prototype.extendDataUrl = function (url) {
     // some services expect callback=, some expect jsonp=, so supply both
-    var plus = 'callback=jsonp&jsonp=jsonp';
-    var hostpart = this.urlMinusPath(url);
-    var auth;
+    let plus = "callback=jsonp&jsonp=jsonp";
+    const hostpart = this.urlMinusPath(url);
+    let auth;
     if ((/\/\//.exec(url))) {
         // No "//"? Probably a local file, and this operation
         // is doomed.
-        auth = this.localStorage[['auth', hostpart]];
+        auth = this.localStorage[["auth", hostpart]];
     }
     if (auth) {
-        plus += '&auth=' + encodeURIComponent(auth);
+        plus += "&auth=" + encodeURIComponent(auth);
     }
 
-    if (url.indexOf('?') >= 0) {
-        return url + '&' + plus;
+    if (url.indexOf("?") >= 0) {
+        return url + "&" + plus;
     }
     else {
-        return url + '?' + plus;
+        return url + "?" + plus;
     }
 };
 
 
 AfterqueryObj.prototype.extractJsonFromJsonp = function (text, success_func) {
-    var data = text.trim();
-    var start = data.indexOf('jsonp(');
+    let data = text.trim();
+    const start = data.indexOf("jsonp(");
     if (start >= 0) {
         data = data.substr(start + 6, data.length - start - 6 - 2);
         data = data.trim();
@@ -3756,7 +3769,7 @@ AfterqueryObj.prototype.extractJsonFromJsonp = function (text, success_func) {
     // Drop spurious trailing comma.
     // Likely in programmatically generated data where a comma is
     // appended to every record.
-    if (data[data.length - 1] === ',') {
+    if (data[data.length - 1] === ",") {
         data = data.slice(0, -1);
     }
 
@@ -3764,7 +3777,7 @@ AfterqueryObj.prototype.extractJsonFromJsonp = function (text, success_func) {
     // Likely in programmatically generated data where new data is
     // regularly appended.  Maintaining the framing "[" "]" is a
     // nuisance, so it doesn't get done.
-    if (data.charAt(0) !== '[') {
+    if (data.charAt(0) !== "[") {
         data = "[" + data + "]";
     }
 
@@ -3774,38 +3787,38 @@ AfterqueryObj.prototype.extractJsonFromJsonp = function (text, success_func) {
 
 
 AfterqueryObj.prototype.getUrlData_xhr = function (state, success_func, error_func) {
-    var that = this;
+    const that = this;
     jQuery.support.cors = true;
     jQuery.ajax(state.todo[0], {
-            headers: {'X-DataSource-Auth': 'a'},
+            headers: {"X-DataSource-Auth": "a"},
             xhrFields: {withCredentials: true},
-            dataType: 'text',
+            dataType: "text",
             success: function (text) {
                 that.extractJsonFromJsonp(text, function (grid) {
                         that.getUrlDataSuccess(grid, state, success_func, error_func);
-                    }
+                    },
                 );
             },
             error: function (jqXHR, textStatus, errorThrown) {
                 AfterqueryObj.log("XHR failed:", state.todo[0], textStatus, errorThrown, "Trying JSON.");
                 that.getUrlData_jsonp(state, success_func, error_func);
-            }
-        }
+            },
+        },
     );
 };
 
 
 AfterqueryObj.prototype.getUrlData_jsonp = function (state, success_func, error_func) {
-    var that = this;
-    var url = state.todo[0];
-    var iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
+    const that = this;
+    const url = state.todo[0];
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
 
     iframe.onload = function () {
-        var failfunc_called;
-        var successfunc_called;
-        var real_success_func = function (data) {
-            AfterqueryObj.log('calling success_func');
+        let failfunc_called;
+        let successfunc_called;
+        const real_success_func = function (data) {
+            AfterqueryObj.log("calling success_func");
             that.getUrlDataSuccess(data, state, success_func, error_func);
             successfunc_called = true;
         };
@@ -3815,43 +3828,43 @@ AfterqueryObj.prototype.getUrlData_jsonp = function (state, success_func, error_
 
         // a callback the jsonp can execute if oauth2 authentication is needed
         iframe.contentWindow.tryOAuth2 = function (oauth2_url) {
-            var hostpart = that.urlMinusPath(oauth2_url);
-            var oauth_appends = {
-                'https://accounts.google.com':
-                    'client_id=41470923181.apps.googleusercontent.com'
+            const hostpart = that.urlMinusPath(oauth2_url);
+            const oauth_appends = {
+                "https://accounts.google.com":
+                    "client_id=41470923181.apps.googleusercontent.com",
                 // (If you register afterquery with any other API providers, add the
                 //  app ids here.  app client_id fields are not secret in oauth2;
                 //  there's a client_secret, but it's not needed in pure javascript.)
             };
-            var plus = [oauth_appends[hostpart]];
+            let plus = [oauth_appends[hostpart]];
             if (plus) {
-                plus += '&response_type=token';
-                plus += '&state=' +
+                plus += "&response_type=token";
+                plus += "&state=" +
                     encodeURIComponent(
-                        'url=' + encodeURIComponent(url) +
-                        '&continue=' + encodeURIComponent(window.top.location));
-                plus += '&redirect_uri=' +
-                    encodeURIComponent(window.location.origin + '/oauth2callback');
-                var want_url;
-                if (oauth2_url.indexOf('?') >= 0) {
-                    want_url = oauth2_url + '&' + plus;
+                        "url=" + encodeURIComponent(url) +
+                        "&continue=" + encodeURIComponent(window.top.location));
+                plus += "&redirect_uri=" +
+                    encodeURIComponent(window.location.origin + "/oauth2callback");
+                let want_url;
+                if (oauth2_url.indexOf("?") >= 0) {
+                    want_url = oauth2_url + "&" + plus;
                 }
                 else {
-                    want_url = oauth2_url + '?' + plus;
+                    want_url = oauth2_url + "?" + plus;
                 }
-                AfterqueryObj.log('oauth2 redirect:', want_url);
+                AfterqueryObj.log("oauth2 redirect:", want_url);
                 that.checkUrlSafety(want_url);
-                document.write('Click here to ' +
-                    '<a target="_top" ' +
-                    '  href="' + want_url +
-                    '">authorize the data source</a>.');
+                document.write("Click here to " +
+                    "<a target=\"_top\" " +
+                    "  href=\"" + want_url +
+                    "\">authorize the data source</a>.");
             }
             else {
-                AfterqueryObj.log('no oauth2 service known for host', hostpart);
+                AfterqueryObj.log("no oauth2 service known for host", hostpart);
                 document.write("Data source requires authorization, but I don't " +
-                    'know how to oauth2 authorize urls from <b>' +
+                    "know how to oauth2 authorize urls from <b>" +
                     encodeURI(hostpart) +
-                    '</b> - sorry.');
+                    "</b> - sorry.");
             }
             // needing oauth2 is "success" in that we know what's going on
             successfunc_called = true;
@@ -3862,13 +3875,13 @@ AfterqueryObj.prototype.getUrlData_jsonp = function (state, success_func, error_
         iframe.contentWindow.google = {
             visualization: {
                 Query: {
-                    setResponse: real_success_func
-                }
-            }
+                    setResponse: real_success_func,
+                },
+            },
         };
 
         iframe.contentWindow.onerror = function (message, xurl, lineno) {
-            that.err(message + ' url=' + xurl + ' line=' + lineno);
+            that.err(message + " url=" + xurl + " line=" + lineno);
             if (!failfunc_called) {
                 that.getUrlDataFailure("Error loading data; check javascript console for details. " + message + " url=" + xurl + " line=" + lineno, "", state, success_func, error_func);
                 failfunc_called = true;
@@ -3877,7 +3890,7 @@ AfterqueryObj.prototype.getUrlData_jsonp = function (state, success_func, error_
 
         iframe.contentWindow.onpostscript = function () {
             if (successfunc_called) {
-                AfterqueryObj.log('json load was successful.');
+                AfterqueryObj.log("json load was successful.");
             }
             else {
                 if (!failfunc_called) {
@@ -3898,22 +3911,22 @@ AfterqueryObj.prototype.getUrlData_jsonp = function (state, success_func, error_
         //TODO(apenwarr): at that time, make this script.async=1
         //  ...and run postscript from there.
 
-        var script = iframe.contentDocument.createElement('script');
+        const script = iframe.contentDocument.createElement("script");
         script.async = false;
         script.src = url;
         iframe.contentDocument.body.appendChild(script);
 
-        var postscript = iframe.contentDocument.createElement('script');
+        const postscript = iframe.contentDocument.createElement("script");
         postscript.async = false;
-        postscript.src = 'static/postscript.js';
+        postscript.src = "static/postscript.js";
         iframe.contentDocument.body.appendChild(postscript);
     };
     document.body.appendChild(iframe);
 };
 
 AfterqueryObj.prototype.getUrlDataSuccess = function (data, state, success_func, error_func) {
-    var that = this;
-    var url = state.todo.shift();
+    const that = this;
+    const url = state.todo.shift();
     state.success.push(url);
     state.rawdata.push(data);
     setTimeout(function () {
@@ -3922,8 +3935,8 @@ AfterqueryObj.prototype.getUrlDataSuccess = function (data, state, success_func,
 };
 
 AfterqueryObj.prototype.getUrlDataFailure = function (textStatus, errorThrown, state, success_func, error_func) {
-    var that = this;
-    var url = state.todo.shift();
+    const that = this;
+    const url = state.todo.shift();
     state.failure.push({url: url, status: textStatus + " " + errorThrown});
     setTimeout(function () {
         that.getUrlData(state, success_func, error_func);
@@ -3945,27 +3958,27 @@ AfterqueryObj.prototype.getUrlData = function (state, success_func, error_func) 
         return;
     }
 
-    var url = state.todo[0];
-    this.showstatus('Loading <a href="' + encodeURI(url) + '">data</a>...');
+    const url = state.todo[0];
+    this.showstatus("Loading <a href=\"" + encodeURI(url) + "\">data</a>...");
 
-    var that = this;
-    AfterqueryObj.log('fetching data url:', url);
+    const that = this;
+    AfterqueryObj.log("fetching data url:", url);
     this.getUrlData_xhr(state, success_func, error_func);
 };
 
 
 AfterqueryObj.prototype.addUrlGetters = function (queue, args, startdata) {
-    var that = this;
-    var i;
-    var urls;
+    const that = this;
+    let i;
+    let urls;
     var url;
     if (!startdata) {
         urls = [];
         for (i = 0; i < args.all.length; i++) {
-            var key = args.all[i][0];
-            if (key === 'url') {
+            const key = args.all[i][0];
+            if (key === "url") {
                 var url = args.all[i][1];
-                if (url.indexOf('//') == 0) {
+                if (url.indexOf("//") === 0) {
                     url = window.location.protocol + url;
                 }
                 url = this.extendDataUrl(url);
@@ -3974,50 +3987,50 @@ AfterqueryObj.prototype.addUrlGetters = function (queue, args, startdata) {
         }
         //console.debug("Original data URLs:", urls);
         if (urls.length === 0) {
-            throw new Error('Missing url= in query parameter');
+            throw new Error("Missing url= in query parameter");
         }
 
-        var state = {
+        const state = {
             todo: urls,
             success: [],
             failure: [],
             rawdata: [],
         };
 
-        this.enqueue(queue, 'get data', function (_, done) {
+        this.enqueue(queue, "get data", function (_, done) {
             that.getUrlData(state, that.wrap(done), function (s) {
                 that.gotError(s);
             });
         });
     }
     else {
-        this.enqueue(queue, 'init data', function (_, done) {
+        this.enqueue(queue, "init data", function (_, done) {
             done([startdata]);
         });
     }
 
-    this.enqueue(queue, 'parse', function (rawdata, done) {
-        AfterqueryObj.log('rawdata:', rawdata);
-        var outgrid = that.gridFromManyData(rawdata);
-        AfterqueryObj.log('grid:', outgrid);
+    this.enqueue(queue, "parse", function (rawdata, done) {
+        AfterqueryObj.log("rawdata:", rawdata);
+        const outgrid = that.gridFromManyData(rawdata);
+        AfterqueryObj.log("grid:", outgrid);
         done(outgrid);
     });
 };
 
 
 AfterqueryObj.prototype.addKeepData = function (queue, args) {
-    var box = {};
-    this.enqueue(queue, 'keep', function (grid, done) {
+    const box = {};
+    this.enqueue(queue, "keep", function (grid, done) {
             box.value = grid;
             done(grid);
-        }
+        },
     );
     return box;
 };
 
 AfterqueryObj.prototype.exec = function (query, startdata, done) {
-    var args = AfterqueryObj.parseArgs(query);
-    var queue = [];
+    const args = AfterqueryObj.parseArgs(query);
+    const queue = [];
     this.addUrlGetters(queue, args, startdata);
     this.addTransforms(queue, args);
     this.runqueue(queue, startdata, done);
@@ -4025,13 +4038,13 @@ AfterqueryObj.prototype.exec = function (query, startdata, done) {
 
 
 AfterqueryObj.prototype.render = function (query, startdata, done, more_options) {
-    var args = AfterqueryObj.parseArgs(query);
-    var editlink = args.get('editlink');
-    if (editlink == 0) {
-        $(thid.elid('editmenu')).hide();
+    const args = AfterqueryObj.parseArgs(query);
+    const editlink = args.get("editlink");
+    if (editlink === 0) {
+        $(thid.elid("editmenu")).hide();
     }
 
-    var queue = [];
+    const queue = [];
     this.addUrlGetters(queue, args, startdata);
     this.addTransforms(queue, args);
     this.addRenderers(queue, args, more_options);
@@ -4042,10 +4055,10 @@ AfterqueryObj.prototype.render = function (query, startdata, done, more_options)
 /* Runs get getter (url=X), then returns it. Useful for
    caching. */
 AfterqueryObj.prototype.load = function (query, startdata, done) {
-    var args = AfterqueryObj.parseArgs(query);
-    var queue = [];
+    const args = AfterqueryObj.parseArgs(query);
+    const queue = [];
     this.addUrlGetters(queue, args, startdata);
-    var results = this.addKeepData(queue, args);
+    const results = this.addKeepData(queue, args);
     this.finishQueue(queue, args, done);
     return results;
 };
@@ -4053,11 +4066,11 @@ AfterqueryObj.prototype.load = function (query, startdata, done) {
 /* Runs all of the data transforms, then returns it. Useful
    for creating a version to hand to some other system. */
 AfterqueryObj.prototype.load_post_transform = function (query, startdata, done) {
-    var args = AfterqueryObj.parseArgs(query);
-    var queue = [];
+    const args = AfterqueryObj.parseArgs(query);
+    const queue = [];
     this.addUrlGetters(queue, args, startdata);
     this.addTransforms(queue, args);
-    var results = this.addKeepData(queue, args);
+    const results = this.addKeepData(queue, args);
     this.finishQueue(queue, args, done);
     return results;
 };
@@ -4065,7 +4078,7 @@ AfterqueryObj.prototype.load_post_transform = function (query, startdata, done) 
 
 // v8shell compatibility
 try {
-    var c = window.console;
+    const c = window.console;
     AfterqueryObj.console_debug = c.debug;
 }
 catch (ReferenceError) {
@@ -4087,9 +4100,9 @@ catch (ReferenceError) {
 
 
 // Original Afterquery interface.
-var afterquery = {};
+const afterquery = {};
 afterquery.render = function (query, startdata, done) {
-    var aq = new AfterqueryObj();
+    const aq = new AfterqueryObj();
     aq.render(query, startdata, done);
 };
 
@@ -4113,18 +4126,18 @@ heatgrid.js: Renders a heat grid.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict';
+"use strict";
 
 var HeatGrid = function (el) {
     this.el = $(el);
 
-    var frac = function (minval, maxval, fraction) {
+    const frac = function (minval, maxval, fraction) {
         return minval + fraction * (maxval - minval);
     };
 
-    var gradient = function (mincolor, zerocolor, maxcolor,
-                             ofs) {
-        if (ofs == 0) {
+    const gradient = function (mincolor, zerocolor, maxcolor,
+                               ofs) {
+        if (ofs === 0) {
             return zerocolor;
         }
         else if (ofs < 0) {
@@ -4140,57 +4153,57 @@ var HeatGrid = function (el) {
     };
 
     this.draw = function (grid) {
-        console.debug('heatgrid.draw', grid);
-        this.el.html('<div id="heatgrid" tabindex=0><canvas></canvas>' +
-            '<div id="heatgrid-popover"></div>' +
-            '<div id="heatgrid-highlight"></div></div>');
-        var heatgrid = this.el.find('#heatgrid');
+        console.debug("heatgrid.draw", grid);
+        this.el.html("<div id=\"heatgrid\" tabindex=0><canvas></canvas>" +
+            "<div id=\"heatgrid-popover\"></div>" +
+            "<div id=\"heatgrid-highlight\"></div></div>");
+        const heatgrid = this.el.find("#heatgrid");
         heatgrid.css({
-            position: 'relative',
-            overflow: 'scroll',
-            width: '100%',
-            height: '100%'
+            position: "relative",
+            overflow: "scroll",
+            width: "100%",
+            height: "100%",
         });
-        var popover = this.el.find('#heatgrid-popover');
+        const popover = this.el.find("#heatgrid-popover");
         popover.css({
-            position: 'absolute',
-            background: '#aaa',
-            border: '1px dotted black',
-            'white-space': 'pre'
+            position: "absolute",
+            background: "#aaa",
+            border: "1px dotted black",
+            "white-space": "pre",
         });
-        var highlight = this.el.find('#heatgrid-highlight');
+        const highlight = this.el.find("#heatgrid-highlight");
         highlight.css({
-            position: 'absolute',
+            position: "absolute",
             //background: 'rgba(255,192,192,16)',
-            width: '3px',
-            height: '3px',
-            margin: '0',
-            padding: '0',
-            border: '1px solid red'
+            width: "3px",
+            height: "3px",
+            margin: "0",
+            padding: "0",
+            border: "1px solid red",
         });
-        var canvas = this.el.find('canvas');
-        var xmult = parseInt(1000 / grid.headers.length);
+        const canvas = this.el.find("canvas");
+        let xmult = parseInt(1000 / grid.headers.length);
         if (xmult < 1) {
             xmult = 1;
         }
-        var xsize = grid.headers.length * xmult;
-        var ysize = grid.data.length;
-        var vysize = ysize < 400 ? 400 : ysize;
+        const xsize = grid.headers.length * xmult;
+        const ysize = grid.data.length;
+        const vysize = ysize < 400 ? 400 : ysize;
         canvas.attr({width: xsize, height: ysize});
         canvas.css({
-            background: '#fff',
-            width: '100%',
-            height: vysize
+            background: "#fff",
+            width: "100%",
+            height: vysize,
         });
-        console.debug('heatgrid canvas size is: x y =', xsize, ysize);
-        var ctx = canvas[0].getContext('2d');
+        console.debug("heatgrid canvas size is: x y =", xsize, ysize);
+        const ctx = canvas[0].getContext("2d");
 
         if (!grid.data.length || !grid.data[0].length) {
             return;
         }
 
-        var lastPos = {x: 0, y: 0};
-        var movefunc = function (x, y) {
+        const lastPos = {x: 0, y: 0};
+        const movefunc = function (x, y) {
             if (x >= grid.headers.length) {
                 x = grid.headers.length - 1;
             }
@@ -4205,9 +4218,9 @@ var HeatGrid = function (el) {
             }
             lastPos.x = x;
             lastPos.y = y;
-            var info = [];
-            for (var i = 0; i < grid.headers.length; i++) {
-                if (grid.types[i] != 'number') {
+            const info = [];
+            for (let i = 0; i < grid.headers.length; i++) {
+                if (grid.types[i] !== "number") {
                     info.push(grid.data[y][i]);
                 }
                 else {
@@ -4215,58 +4228,58 @@ var HeatGrid = function (el) {
                 }
             }
             info.push(grid.headers[x]);
-            info.push('value=' + grid.data[y][x]);
+            info.push("value=" + grid.data[y][x]);
 
-            var psize_x = canvas.width() / grid.headers.length;
-            var psize_y = canvas.height() / grid.data.length;
-            var cx = x * psize_x;
-            var cy = y * psize_y;
+            const psize_x = canvas.width() / grid.headers.length;
+            const psize_y = canvas.height() / grid.data.length;
+            const cx = x * psize_x;
+            const cy = y * psize_y;
             highlight.css({left: cx, top: cy});
             if (cx < canvas.width() / 2) {
                 popover.css({
                     left: cx + 30,
-                    right: 'auto'
+                    right: "auto",
                 });
             }
             else {
                 popover.css({
-                    left: 'auto',
-                    right: heatgrid[0].clientWidth - cx + 10
+                    left: "auto",
+                    right: heatgrid[0].clientWidth - cx + 10,
                 });
             }
             if (cy < canvas.height() / 2) {
                 popover.css({
                     top: cy + 10,
-                    bottom: 'auto'
+                    bottom: "auto",
                 });
             }
             else {
                 popover.css({
-                    top: 'auto',
-                    bottom: heatgrid[0].clientHeight - cy + 10
+                    top: "auto",
+                    bottom: heatgrid[0].clientHeight - cy + 10,
                 });
             }
-            popover.text(info.join('\n'));
+            popover.text(info.join("\n"));
         };
         heatgrid.mousemove(function (ev) {
-            var pos = canvas.position();
-            var offX = ev.pageX - pos.left - 1;
-            var offY = ev.pageY - pos.top - 1;
-            var x = parseInt(offX / canvas.width() * grid.headers.length);
-            var y = parseInt(offY / canvas.height() * grid.data.length);
+            const pos = canvas.position();
+            const offX = ev.pageX - pos.left - 1;
+            const offY = ev.pageY - pos.top - 1;
+            const x = parseInt(offX / canvas.width() * grid.headers.length);
+            const y = parseInt(offY / canvas.height() * grid.data.length);
             movefunc(x, y);
         });
         heatgrid.keydown(function (ev) {
-            if (ev.which == 38) { // up
+            if (ev.which === 38) { // up
                 movefunc(lastPos.x, lastPos.y - 1);
             }
-            else if (ev.which == 40) { // down
+            else if (ev.which === 40) { // down
                 movefunc(lastPos.x, lastPos.y + 1);
             }
-            else if (ev.which == 37) { // left
+            else if (ev.which === 37) { // left
                 movefunc(lastPos.x - 1, lastPos.y);
             }
-            else if (ev.which == 39) { // right
+            else if (ev.which === 39) { // right
                 movefunc(lastPos.x + 1, lastPos.y);
             }
             else {
@@ -4283,10 +4296,10 @@ var HeatGrid = function (el) {
             popover.show();
         });
 
-        var total = 0, count = 0;
+        let total = 0, count = 0;
         for (var y = 0; y < grid.data.length; y++) {
             for (var x = 0; x < grid.data[y].length; x++) {
-                if (grid.types[x] != 'number') {
+                if (grid.types[x] !== "number") {
                     continue;
                 }
                 var cell = parseFloat(grid.data[y][x]);
@@ -4296,12 +4309,12 @@ var HeatGrid = function (el) {
                 }
             }
         }
-        var avg = total / count;
+        const avg = total / count;
 
-        var tdiff = 0;
+        let tdiff = 0;
         for (var y = 0; y < grid.data.length; y++) {
             for (var x = 0; x < grid.data[y].length; x++) {
-                if (grid.types[x] != 'number') {
+                if (grid.types[x] !== "number") {
                     continue;
                 }
                 var cell = parseFloat(grid.data[y][x]);
@@ -4310,27 +4323,27 @@ var HeatGrid = function (el) {
                 }
             }
         }
-        var stddev = Math.sqrt(tdiff / count);
-        console.debug('total,count,mean,stddev = ', total, count, avg, stddev);
+        const stddev = Math.sqrt(tdiff / count);
+        console.debug("total,count,mean,stddev = ", total, count, avg, stddev);
 
-        var img = ctx.createImageData(xsize, ysize);
+        const img = ctx.createImageData(xsize, ysize);
         for (var y = 0; y < grid.data.length; y++) {
             for (var x = 0; x < grid.data[y].length; x++) {
-                if (grid.types[x] != 'number') {
+                if (grid.types[x] !== "number") {
                     continue;
                 }
                 var cell = parseFloat(grid.data[y][x]);
                 if (isNaN(cell)) {
                     continue;
                 }
-                var ofs = stddev ? (cell - avg) / stddev : 3;
-                var color = gradient([192, 192, 192],
+                const ofs = stddev ? (cell - avg) / stddev : 3;
+                let color = gradient([192, 192, 192],
                     [192, 192, 255],
                     [0, 0, 255], ofs);
                 if (!color) {
                     continue;
                 }
-                var pix = (y * xsize + x * xmult) * 4;
+                let pix = (y * xsize + x * xmult) * 4;
                 for (var i = 0; i < xmult; i++) {
                     img.data[pix + 0] = color[0];
                     img.data[pix + 1] = color[1];
