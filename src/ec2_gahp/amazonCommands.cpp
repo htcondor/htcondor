@@ -1231,14 +1231,14 @@ bool AmazonRequest::sendPreparedRequest(
     }
 
     if( CAPath.empty() ) {
-        char * soap_ssl_ca_dir = getenv( "SOAP_SSL_CA_DIR" );
+        char * soap_ssl_ca_dir = getenv( "GAHP_SSL_CADIR" );
         if( soap_ssl_ca_dir != NULL ) {
             CAPath = soap_ssl_ca_dir;
         }
     }
 
     if( CAFile.empty() ) {
-        char * soap_ssl_ca_file = getenv( "SOAP_SSL_CA_FILE" );
+        char * soap_ssl_ca_file = getenv( "GAHP_SSL_CAFILE" );
         if( soap_ssl_ca_file != NULL ) {
             CAFile = soap_ssl_ca_file;
         }

@@ -9236,6 +9236,18 @@ These macros affect the \Condor{gridmanager}.
   The necessary Glite software is included with HTCondor,
   and is required for grid-type batch jobs.
 
+\label{param:GahpSSLCADir}
+\item[\Macro{GAHP\_SSL\_CADIR}]
+  The path to a directory that may contain the
+  certificates (each in its own file) for multiple trusted CAs
+  to be used by GAHP servers when authenticating with remote services.
+
+\label{param:GahpSSLCAFile}
+\item[\Macro{GAHP\_SSL\_CAFILE}]
+  The path and file name of
+  a file containing one or more trusted CA's certificates
+  to be used by GAHP servers when authenticating with remote services.
+
 \label{param:CondorGAHP}
 \item[\Macro{CONDOR\_GAHP}]
   The complete path and file name of the HTCondor GAHP executable.
@@ -11860,7 +11872,6 @@ Configuration File Macros Affecting APIs}
   When SOAP over SSL is enabled, this parameter or
   \Macro{SOAP\_SSL\_CA\_DIR} must be set.
   There is no default value.
-  The EC2 GAHP may use this file to specify a trusted CA.
 
 \label{param:SoapSSLCaDir}
 \item[\Macro{SOAP\_SSL\_CA\_DIR}]
@@ -11871,7 +11882,6 @@ Configuration File Macros Affecting APIs}
   When SOAP over SSL is enabled, this variable or the variable
   \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
   There is no default value.
-  The EC2 GAHP may use this directory in the specification a trusted CA.
 
 \label{param:SoapSSLDhFile}
 \item[\Macro{SOAP\_SSL\_DH\_FILE}]

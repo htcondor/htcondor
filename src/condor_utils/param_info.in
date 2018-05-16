@@ -5160,6 +5160,14 @@ default=$(SBIN)/AzureGAHPServer
 win32_default=$(SBIN)\AzureGAHPServer.py
 type=path
 
+[GAHP_SSL_CAFILE]
+default=
+type=path
+
+[GAHP_SSL_CADIR]
+default=
+type=path
+
 [CREDD]
 default=$(SBIN)/condor_credd
 win32_default=$(SBIN)\condor_credd.exe
