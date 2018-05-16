@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:platform-windows}Microsoft Windows}
+\section{Microsoft Windows}\label{sec:platform-windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{platform-specific information!Windows|(}
 
@@ -557,19 +557,11 @@ the \Condor{startd} will clean up when HTCondor is restarted.
 \subsection{Security Considerations in HTCondor for Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% WRT the backslash character, extra spaces are added before it
-% as viewed from the html generated.
-%   Karen has tried
-%         \File{C:$\backslash$WINNT}
-%         \File{C:\Bs WINNT}
-% and neither works.
-
 On the execute machine (by default), the user job is run using the
 access token of an account dynamically created by HTCondor which has
 bare-bones access rights and privileges.  For instance, if your
 machines are configured so that only Administrators have write access
 to
-%\File{C:\Bs WINNT},
 \verb@C:\WINNT@, then certainly no HTCondor job run on that machine
 would be able to write anything there.  The only files the job should
 be able to access on the execute machine are files accessible by the
@@ -582,7 +574,6 @@ the user is able to do on the execute machine it runs on.
 On the submit machine, HTCondor impersonates the submitting user, therefore
 the File Transfer mechanism has the same access rights as the submitting
 user.  For example, say only Administrators can write to
-%\File{C:\Bs WINNT}
 \verb@C:\WINNT@
 on the submit machine,
 and a user gives the following to \Condor{submit} :

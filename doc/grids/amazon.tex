@@ -332,7 +332,7 @@ checking these in the following order:
 \begin{enumerate}
 \item The environment variable \Env{X509\_CERT\_FILE},
   set when the \Condor{master} starts up.
-\item The HTCondor configuration variable \Macro{SOAP\_SSL\_CA\_FILE}.
+\item The HTCondor configuration variable \Macro{GAHP\_SSL\_CAFILE}.
 \end{enumerate}
 
 The EC2 GAHP supplies no default value, if it does not find a CA file.
@@ -344,7 +344,7 @@ variables it finds first, checking in the following order:
 \item The HTCondor configuration variable \Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR}.
 \item The environment variable \Env{X509\_CERT\_DIR},
   set when the \Condor{master} starts up.
-\item The HTCondor configuration variable \Macro{SOAP\_SSL\_CA\_DIR}.
+\item The HTCondor configuration variable \Macro{GAHP\_SSL\_CADIR}.
 \end{enumerate}
 
 The EC2 GAHP supplies no default value, if it does not find a CA directory.

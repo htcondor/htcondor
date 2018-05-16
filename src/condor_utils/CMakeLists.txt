@@ -24,11 +24,11 @@ condor_exe( condor_sinful "sinful-tool.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 if(WINDOWS)
   file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* dprintf_syslog*
   testingd.cpp sinful-tool.cpp
-  soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
+  test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
 else()
   file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
   testingd.cpp sinful-tool.cpp
-  soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
+  test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
 endif()
 
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
@@ -71,12 +71,6 @@ if (DARWIN)
 	set_source_files_properties(../condor_io/condor_crypt.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 	set_source_files_properties(../condor_io/condor_crypt_3des.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 	set_source_files_properties(../condor_io/condor_crypt_blowfish.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
-endif()
-
-#On windows we add the cpp file into the build 
-if (GSOAP_SRC)
-	set_source_files_properties(${GSOAP_SRC} PROPERTIES GENERATED TRUE)
-	list(APPEND EXTRA_SRCS ${GSOAP_SRC} )
 endif()
 
 condor_shared_lib( condor_utils "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )

@@ -26,12 +26,9 @@ mkdir -p ${STAGING_DIR}
 # Stage the PDF.
 cp ref.pdf ${STAGING_DIR}/condor-${VERSION_STRING}-Manual.pdf
 
-# Patch the HTML.  We do this to a temporary so that we don't patch the user's
-# HTML more than once.  (Patching may not be necessary with htlatex.)
-cp -a ref.html condor-${VERSION_STRING}-Manual; sync
-cd condor-${VERSION_STRING}-Manual
-perl -p -i -e's,\<HEAD\>,<HEAD>\n<link rel="canonical" href="http://research.cs.wisc.edu/htcondor/manual/current/$ARGV">\n,' condor_*.html
-cd ..
+# Link in the index.html page and move manual into versioned directory
+ln ref.html/ref.html ref.html/index.html
+mv ref.html condor-${VERSION_STRING}-Manual
 
 # Create HTML tarballs for download.
 tar -z -c -f condor-${VERSION_STRING}-Manual.tar.gz condor-${VERSION_STRING}-Manual

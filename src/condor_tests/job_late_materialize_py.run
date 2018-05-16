@@ -1,0 +1,178 @@
+#! /usr/bin/env python
+##**************************************************************
+##
+## Copyright (C) 2018, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+import os
+import time
+import classad
+import htcondor
+
+# request a  personal condor with late materialization enabled
+#testreq: personal
+append_config = """
+#<<CONDOR_TESTREQ_CONFIG;
+  NUM_CPUS = 6
+  NUM_SLOTS = 6
+  SCHEDD_ALLOW_LATE_MATERIALIZE = true
+  # turn on special logging of late materialization
+  SCHEDD_MATERIALIZE_LOG = $(LOG)/MaterializeLog
+  #ENABLE_ASYNC_LATE_MATERIALIZE_ITEM_DATA = true
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+"""
+
+from pytest.CondorJob import CondorJob
+from pytest.CondorTest import CondorTest
+from pytest.PersonalCondor import PersonalCondor
+from pytest.Utils import Utils
+
+testname = os.path.basename(__file__)[:-3]
+
+# dump the environment.
+Utils.TLog("the environment")
+for e in os.environ: Utils.Log(e + " = " + os.getenv(e))
+
+sub = htcondor.Submit("""
+	universe = vanilla
+	executable = x_sleep.pl
+	arguments = 10
+	notification = never
+	max_materialize = 4
+	queue 10
+	""")
+
+logfile = testname + '.log'
+sub['log'] = logfile
+
+schedd = htcondor.Schedd()
+with schedd.transaction() as txn:
+	cluster = sub.queue(txn)
+
+total_factories = 0
+total_materialized = 0
+total_exited = 0
+total_running = 0
+num_materialized = 0
+num_running = 0
+num_idle = 0
+peak_materialized = 0
+peak_running = 0
+peak_idle = 0
+
+def wait_for_cluster_removal(id, logfile, timeout):
+
+	start_time = time.time()
+	end_time = start_time + timeout
+
+	global total_factories
+	global total_materialized
+	global total_exited
+	global total_running
+	global num_materialized
+	global num_running
+	global num_idle
+	global peak_materialized
+	global peak_running
+	global peak_idle
+
+	events = htcondor.read_events(logfile)
+	while 1:
+		try:
+			if (time.time() > end_time) :
+				return 1
+				break
+
+			# get an event, waiting up to 100 millisec
+			# if no event loop back to try again until the timeout expires
+			ad = events.poll(100)
+			if ad is None : continue
+
+			#print ad
+
+			# ignore events that are not in the cluster of interest
+			if ad['Cluster'] != cluster : continue
+
+			#print "oh cluster my cluster"
+			#print ad
+
+			if ad['MyType'] == 'FactoryRemoveEvent' :
+				#print "my cluster is gone"
+				total_factories -= 1
+
+				print ' results for cluster {0}'.format(cluster)
+				print ''
+				print '          now peak total'
+				print 'running  {0:4d} {1:4d} {2:5d}'.format(num_running, peak_running, total_running)
+				print 'idle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized)
+				print 'factory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1)
+				break
+
+			elif ad['MyType'] == 'FactorySubmitEvent' :
+				#print "there is my cluster"
+				total_factories += 1
+				continue
+
+			elif ad['MyType'] == 'SubmitEvent' :
+				#print "there is my job"
+				total_materialized += 1
+				num_materialized += 1
+				num_idle += 1
+				if total_materialized > peak_materialized : peak_materialized = total_materialized
+				if num_idle > peak_idle : peak_idle = num_idle
+				continue
+
+			elif ad['MyType'] == 'ExecuteEvent' :
+				total_running += 1
+				num_running += 1
+				num_idle -= 1
+				if num_running > peak_running : peak_running = num_running
+				#print "my job is running! ", num_running
+				continue
+
+			elif ad['MyType'] == 'JobTerminatedEvent' :
+				print "there goes my job"
+				num_running -= 1
+				if ad['TerminatedNormally'] == 'true' : num_materialized -= 1
+				continue
+
+		except StopIteration:
+			break;
+
+	return 0
+
+#end wait_for_cluster_removal
+
+Utils.TLog("wait up to 5 min for jobs to materialize, run and exit")
+timed_out = wait_for_cluster_removal(cluster, logfile, 5*60)
+if timed_out : 
+	Utils.TLog("Timed out waiting for cluster remove event")
+	exit(1)
+
+Utils.TLog("cluster completed, checking results:")
+if peak_materialized != sub['max_materialize'] : 
+	Utils.Log("FAILURE: peak_materialized({0}) != max_materialize({1})".format(peak_materialized, sub['max_materialize']))
+elif total_materialized != 10 : 
+	Utils.Log("FAILURE: total_materialized({0}) != queue ({1})".format(total_materialized, 10))
+elif total_exited != 10 : 
+	Utils.Log("FAILURE: total_exited({0}) != queue ({1})".format(total_exited, 10))
+else :
+	Utils.Log("OK: all checks passed")
+
+exit(0)
+

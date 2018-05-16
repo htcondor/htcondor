@@ -8,7 +8,7 @@ Wants=condor.service
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/libexec/condor/condor-annex-ec2 start
-TimeoutSec=infinity
+TimeoutSec=0
 
 [Install]
 WantedBy=multi-user.target

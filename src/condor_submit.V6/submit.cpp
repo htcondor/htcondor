@@ -149,7 +149,7 @@ bool	NewExecutable = false;
 int		dash_remote=0;
 int		dash_factory=0;
 int		default_to_factory=0;
-int		create_local_factory_file=1; // create a copy of the submit digest in the current directory
+int		create_local_factory_file=0; // create a copy of the submit digest in the current directory
 unsigned int submit_unique_id=1; // hack to make default_to_factory work in test suite for milestone 1 (8.7.1)
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
@@ -329,6 +329,27 @@ void TestFilePermissions( char *scheddAddr = NULL )
 #endif
 }
 
+static bool fnStoreWarning(void * pv, int code, const char * /*subsys*/, const char * message) {
+	List<const char> & warns = *(List<const char> *)pv;
+	if (message && ! code) {
+		warns.InsertHead(message);
+	}
+	return 1;
+}
+
+void print_submit_parse_warnings(FILE* out, CondorError *errstack)
+{
+	if (errstack && ! errstack->empty()) {
+		// put the warnings into a list so that we can print them int the order they were added (sigh)
+		List<const char> warns;
+		errstack->walk(fnStoreWarning, &warns);
+		const char * msg;
+		warns.Rewind();
+		while ((msg = warns.Next())) { fprintf(out, "WARNING: %s", msg); }
+		errstack->clear();
+	}
+}
+
 void print_errstack(FILE* out, CondorError *errstack)
 {
 	if ( ! errstack)
@@ -345,6 +366,171 @@ void print_errstack(FILE* out, CondorError *errstack)
 		}
 	}
 }
+
+#if 0 // moved to submit_utils
+struct SubmitStepFromQArgs {
+
+	SubmitStepFromQArgs(SubmitHash & h)
+		: m_hash(h)
+		, m_jidInit(0,0)
+		, m_nextProcId(0)
+		, m_step_size(0)
+		, m_done(false)
+	{} // this needs to be cheap because Submit.queue() will always invoke it, even if there is no foreach data
+
+	~SubmitStepFromQArgs() {
+		// disconnnect the hashtable from our livevars pointers
+		unset_live_vars();
+	}
+
+	bool has_items() { return m_fea.items.number() > 0; }
+	bool done() { return m_done; }
+
+#if 0
+	// populate the foreach data from the given queue arguments.
+	void begin(const JOB_ID_KEY & id, const char * qargs, MacroStream & ms) {
+		m_jidInit = id;
+		m_nextProcId = id.proc;
+		m_fea.clear();
+		auto_free_ptr expanded_qargs(m_hash.expand_macro(qargs ? qargs : ""));
+		if (expanded_qargs) {
+			if (m_fea.parse_queue_args(expanded_qargs.ptr()) < 0)
+		}
+		m_step_size = m_fea.queue_num ? m_fea.queue_num : 1;
+		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+			m_hash.set_live_submit_variable(key, "", false);
+		}
+		m_hash.optimize();
+		m_hash.load_inline_q_foreach_items(ms, m_fea, errmsg);
+	}
+#endif
+
+	// returns < 0 on error
+	// returns 0 if done iterating
+	// returns 2 for first iteration
+	// returns 1 for subsequent iterations
+	int next(JOB_ID_KEY & jid, int & item_index, int & step)
+	{
+		if (m_done) return 0;
+
+		int iter_index = (m_nextProcId - m_jidInit.proc);
+
+		jid.cluster = m_jidInit.cluster;
+		jid.proc = m_nextProcId;
+		item_index = iter_index / m_step_size;
+		step = iter_index % m_step_size;
+
+		if (0 == step) { // have we started a new row?
+			if (next_rowdata()) {
+				set_live_vars();
+			} else {
+				// if no next row, then we are done iterating, unless it is the FIRST iteration
+				// in which case we want to pretend there is a single empty item called "Item"
+				if (0 == iter_index) {
+					m_hash.set_live_submit_variable("Item", "", false);
+				} else {
+					m_done = true;
+					return 0;
+				}
+			}
+		}
+
+		++m_nextProcId;
+		return (0 == iter_index) ? 2 : 1;
+	}
+
+	StringList & vars() { return m_fea.vars; }
+
+	// 
+	void set_live_vars()
+	{
+		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+			auto str = m_livevars.find(key);
+			if (str != m_livevars.end()) {
+				m_hash.set_live_submit_variable(key, str->second.c_str(), false);
+			} else {
+				m_hash.unset_live_submit_variable(key);
+			}
+		}
+	}
+
+	void unset_live_vars()
+	{
+		// set the pointers of the 'live' variables to the unset string (i.e. "")
+		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+			m_hash.unset_live_submit_variable(key);
+		}
+	}
+
+	// load the next rowdata into livevars
+	// but not into the SubmitHash
+	int next_rowdata()
+	{
+		auto_free_ptr data(m_fea.items.pop());
+		if ( ! data) {
+			return 0;
+		}
+
+		// split the data in the reqired number of fields
+		// then store that field data into the m_livevars set
+		// NOTE: we don't use the SubmitForeachArgs::split_item method that takes a NOCASE_STRING_MAP
+		// because it clears the map first, and that is only safe to do after we unset_live_vars()
+		std::vector<const char*> splits;
+		m_fea.split_item(data.ptr(), splits);
+		int ix = 0;
+		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+			m_livevars[key] = splits[ix++];
+		}
+		return 1;
+	}
+
+	// return all of the live value data as a single 'line' using the given item separator and line terminator
+	int get_rowdata(std::string & line, const char * sep, const char * eol)
+	{
+		// so that the separator and line terminators can be \0, we make the size strlen()
+		// unless the first character is \0, then the size is 1
+		int cchSep = sep ? (sep[0] ? strlen(sep) : 1) : 0;
+		int cchEol = eol ? (eol[0] ? strlen(eol) : 1) : 0;
+		line.clear();
+		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+			if ( ! line.empty() && sep) line.append(sep, cchSep);
+			auto str = m_livevars.find(key);
+			if (str != m_livevars.end() && ! str->second.empty()) {
+				line += str->second;
+			}
+		}
+		if (eol && ! line.empty()) line.append(eol, cchEol);
+		return (int)line.size();
+	}
+
+	// this is called repeatedly when we are sending rowdata to the schedd
+	static int send_row(void* pv, std::string & rowdata) {
+		SubmitStepFromQArgs *sii = (SubmitStepFromQArgs*)pv;
+
+		rowdata.clear();
+		if (sii->done())
+			return 0;
+
+		// Split and write into the string using US (0x1f) a field separator and LF as record terminator
+		if ( ! sii->get_rowdata(rowdata, "\x1F", "\n"))
+			return 0;
+
+		int rval = sii->next_rowdata();
+		if (rval < 0) { return rval; }
+		if (rval == 0) { sii->m_done = true; } // so subsequent iterations will return 0
+		return 1;
+	}
+
+
+	SubmitHash & m_hash;         // the (externally owned) submit hash we are updating as we iterate
+	JOB_ID_KEY m_jidInit;
+	SubmitForeachArgs m_fea;
+	NOCASE_STRING_MAP m_livevars; // holds live data for active vars
+	int  m_nextProcId;
+	int  m_step_size;
+	bool m_done;
+};
+#endif
 
 int
 main( int argc, const char *argv[] )
@@ -1048,6 +1234,9 @@ main( int argc, const char *argv[] )
 	submit_hash.delete_job_ad();
 	delete MySchedd;
 
+	// look for warnings from parsing the submit file.
+	print_submit_parse_warnings(stderr, submit_hash.error_stack());
+
 	/*	print all of the parameters that were not actually expanded/used 
 		in the submit file. but not if we never queued any jobs. since
 		there would be a ton of false positives in that case.
@@ -1574,7 +1763,7 @@ int submit_jobs (
 		// load the foreach data
 		rval = submit_hash.load_inline_q_foreach_items(ms, o, errmsg);
 		if (rval == 1) { // 1 means forech data is external
-			rval = submit_hash.load_external_q_foreach_items(o, errmsg);
+			rval = submit_hash.load_external_q_foreach_items(o, true, errmsg);
 		}
 		if (rval)
 			break;
@@ -1654,10 +1843,16 @@ int submit_jobs (
 			std::string submit_digest;
 			submit_hash.make_digest(submit_digest, ClusterId, o.vars, 0);
 
+		#if 1
+			rval = MyQ->send_Itemdata(ClusterId, o);
+			if (rval < 0)
+				break;
+		#else
 			// convert foreach data into canonical form, writing a new .items file if needed
 			rval = convert_to_foreach_file(submit_hash, o, ClusterId, true);
 			if (rval < 0)
 				break;
+		#endif
 
 			// append the revised queue statement to the submit digest
 			rval = append_queue_statement(submit_digest, o);

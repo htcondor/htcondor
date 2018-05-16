@@ -829,7 +829,6 @@ cmake \
 %endif
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
-       -DWITH_GSOAP:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
        -DWANT_LEASE_MANAGER:BOOL=FALSE \
@@ -1949,6 +1948,18 @@ fi
 %endif
 
 %changelog
+* Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-1
+- HTCondor can run preemptable jobs on machines that are draining
+- The condor annex can easily use multiple regions simultaneously
+- HTCondor now uses CUDA_VISIBLE_DEVICES to tell which GPU devices to manage
+- HTCondor now reports GPU memory utilization
+
+* Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.11-1
+- Can now do an interactive submit of a Singularity job
+- Shared port daemon is more resilient when starved for TCP ports
+- The Windows installer configures the environment for the Python bindings
+- Fixed several other minor problems
+
 * Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.7-1
 - condor_ssh_to_job now works with Docker Universe jobs
 - A 32-bit condor_shadow is available for Enterprise Linux 7 systems

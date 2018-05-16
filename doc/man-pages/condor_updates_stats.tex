@@ -5,15 +5,15 @@
 \index{condor\_updates\_stats command}
 
 \Synopsis \SynProg{\Condor{updates\_stats}}
-[\verb@--@\textbf{help} $|$ \verb@-@\textbf{h}] $|$ [\verb@--@\textbf{version}]
+[\verb@--@\textbf{help} \Bar{} \verb@-@\textbf{h}] \Bar{} [\verb@--@\textbf{version}]
 
 \SynProg{\Condor{updates\_stats}}
-[\verb@--@\textbf{long} $|$ \verb@-@\textbf{l}]
+[\verb@--@\textbf{long} \Bar{} \verb@-@\textbf{l}]
 [\verb@--@\textbf{history=\lt{}min\gt{}-\lt{}max\gt{}}]
 [\verb@--@\textbf{interval=\lt{}seconds\gt{}}]
 [\verb@--@\textbf{notime}]
 [\verb@--@\textbf{time}]
-[\verb@--@\textbf{summary} $|$ \verb@-@\textbf{s}]
+[\verb@--@\textbf{summary} \Bar{} \verb@-@\textbf{s}]
 
 % 2 hyphens in a row, without any spaces inbetween poses a problem
 % for LaTeX.  Things tried, without success.
@@ -75,9 +75,9 @@ configurable on a per-source basis by configuration variable
     When both minimum and maximum are specified, the range
     to be displayed includes the endpoints as well as all
     values in between.
-    If no $=$ sign is given, command-line parsing fails,
+    If no \eq{} sign is given, command-line parsing fails,
     and usage information is displayed.
-    If an  $=$ sign is given, with no minimum or maximum values,
+    If an  \eq{} sign is given, with no minimum or maximum values,
     the default of the entire history is displayed.}
   \OptItem{\Opt{---interval=\lt{}seconds\gt{}}} {The assumed update
     interval, in seconds.
