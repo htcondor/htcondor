@@ -2,12 +2,14 @@
   "Overview": "index.html",
   "Submitters": {
     "Job Status": "job_status.html",
-    "CPU Hours": "cpu-hours.html"
+    "Cluster Usage": "cluster_usage.html"
   },
   "Slots": {
+    "Multicore Utilization": "multicore_utilization.html"
   },
   "Operations": {
-    "CPU and Memory": "cpu_and_memory.html"
+    "CPU and Memory": "cpu_and_memory.html",
+    "Memory Efficiency": "memory_efficiency.html"
   },
   "Help": {
     "Query Syntax": "syntax.html",

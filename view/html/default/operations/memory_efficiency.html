@@ -4,13 +4,14 @@
 
     <div class="container">
         <div class="row">
-            <div class="col" id="cpu-hours">
+            <div class="col" id="memory-by-cpu-count">
                 <script>
                     new HTCondorViewRanged({
-                        dst_id: "cpu-hours",
-                        title: "Cumulative CPU-Hours per Submitter during Timespan",
+                        dst_id: "memory-by-cpu-count",
+                        title: "Memory by CPU Count",
+                        help_url: "{{ base }}help/glossary.html#memory-by-cpu-count",
                         data_url: "data/slots..json",
-                        graph_query: "order=Date&pivot=Date;RemoteUser;Cpus&cumulative_integral&chart=stacked",
+                        graph_query: "order=Date&pivot=Date;Cpus;Memory&chart=stacked",
                     });
                 </script>
             </div>

@@ -30,46 +30,80 @@
 
                 <dt id="fraction-of-jobs-per-status">Fraction of Jobs per Status</dt>
                 <dd>
-                    lorem ipsum
+                    This pie chart shows the fraction of the number of total jobs in each status at the most recent metric timestamp.
                 </dd>
 
                 <dt id="fraction-of-slots-per-status">Fraction of Slots per Status</dt>
                 <dd>
-                    lorem ipsum
+                    This pie chart shows the fraction of the number of total slots in each status at the most recent metric timestamp.
                 </dd>
 
                 <dt id="fraction-of-jobs-per-submit-point">Fraction of Jobs per Submit Point</dt>
                 <dd>
-                    lorem ipsum
+                    This pie chart shows the fraction of the number of total jobs submitted from each unique submit point at the most recent metric timestamp.
                 </dd>
 
                 <dt id="jobs-over-time-by-status">Jobs over Time by Status</dt>
                 <dd>
+                    This stacked line chart shows how the number of jobs with each status changes over time.
+                </dd>
+
+                <dt id="cumulative-cpu-hours-per-submitter">Cumulative CPU-Hours per Submitter</dt>
+                <dd>
                     lorem ipsum
                 </dd>
+
+                <dt id="[status]-jobs-by-submitter">[Running/Idle/Held] Jobs by Submitter</dt>
+                <dd>
+                    These stacked line charts show the number of jobs of each kind of status submitted by each user.
+                </dd>
+
+                <dt id="number-of-slots-by-cpu-count">Number of Slots by CPU Count</dt>
+                <dd>
+                    lorem ipsum
+                </dd>
+
+                <dt id="memory-by-cpu-count">Memory by CPU Count</dt>
+                <dd>
+                    lorem ipsum
+                </dd>
+
+                <dt id="total-cpus-in-use">Total CPUs in Use</dt>
+                <dd>
+                    lorem ipsum
+                </dd>
+
+                <dt id="total-memory-in-use">Total Memory in Use</dt>
+                <dd>
+                    lorem ipsum
+                </dd>
+
+                <dt id="cpus-in-use-by-submitter">CPUs in Use by Submitter</dt>
+                <dd>
+                    lorem ipsum
+                </dd>
+
+                <dt id="memory-in-use-by-submitter">Memory in Use by Submitter</dt>
+                <dd>
+                    lorem ipsum
+                </dd>
+
 
                 <h2 id="job-statuses">Job Statuses</h2>
 
                 <dt id="job-statuses-running">Running</dt>
                 <dd>
-
+                    The job is running on an execute node.
                 </dd>
 
                 <dt id="job-statuses-idle">Idle</dt>
                 <dd>
-
+                    The job is waiting to run on an execute node.
                 </dd>
 
                 <dt id="job-statuses-held">Held</dt>
                 <dd>
-
-                </dd>
-
-                <h2 id="daemons">HTCondor Daemons</h2>
-
-                <dt id="daemons-schedd">Scheduler / schedd</dt>
-                <dd>
-
+                    Something has gone wrong with the job and it will not be executed until the hold is removed.
                 </dd>
             </div>
 
@@ -90,8 +124,33 @@
                             <li>
                                 <a href="{{ current_page }}#jobs-over-time-by-status">Jobs over Time by Status</a>
                             </li>
+                            <li>
+                                <a href="{{ current_page }}#cumulative-cpu-hours-per-submitter">Cumulative CPU-Hours per Submitter</a>
+                            </li>
+                            <li>
+                                <a href="{{ current_page }}#[status]-jobs-by-submitter">[Running/Idle/Held] Jobs by Submitter</a>
+                            </li>
+                            <li>
+                                <a href="{{ current_page }}#number-of-slots-by-cpu-count">Number of Slots by CPU Count</a>
+                            </li>
+                            <li>
+                                <a href="{{ current_page }}#memory-by-cpu-count">Memory by CPU Count</a>
+                            </li>
+                            <li>
+                                <a href="{{ current_page }}#total-cpus-in-use">Total CPUs in Use</a>
+                            </li>
+                            <li>
+                                <a href="{{ current_page }}#total-memory-in-use">Total Memory in Use</a>
+                            </li>
+                            <li>
+                                <a href="{{ current_page }}#cpus-in-use-by-submitter">CPUs in Use by Submitter</a>
+                            </li>
+                            <li>
+                                <a href="{{ current_page }}#memory-in-use-by-submitter">Memory in Use by Submitter</a>
+                            </li>
                         </ul>
                     </li>
+
                     <li>
                         <a href="{{ current_page }}#job-statuses">Job Statuses</a>
                         <ul class="lvl2">

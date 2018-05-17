@@ -9,6 +9,7 @@
                     new HTCondorViewRanged({
                         dst_id: "running_jobs",
                         title: "Running Jobs by Submitter",
+                        help_url: "{{ base }}help/glossary.html#[status]-jobs-by-submitter",
                         data_url: "{{ base }}data/submitters..json",
                         graph_query: "order=Date&pivot=Date;Name;JobsRunning&chart=stacked",
                         select_tuple: ["Name"]
@@ -23,17 +24,20 @@
                     new HTCondorViewRanged({
                         dst_id: "idle_jobs",
                         title: "Idle Jobs by Submitter",
+                        help_url: "{{ base }}help/glossary.html#[status]-jobs-by-submitter",
                         data_url: "{{ base }}data/submitters..json",
                         graph_query: "order=Date&pivot=Date;Name;JobsIdle&chart=stacked",
                         select_tuple: ["Name"]
                     });
                 </script>
             </div>
+
             <div class="col" id="held_jobs">
                 <script>
                     new HTCondorViewRanged({
                         dst_id: "held_jobs",
                         title: "Held Jobs by Submitter",
+                        help_url: "{{ base }}help/glossary.html#[status]-jobs-by-submitter",
                         data_url: "{{ base }}data/submitters..json",
                         graph_query: "order=Date&pivot=Date;Name;JobsHeld&chart=stacked",
                         select_tuple: ["Name"]

@@ -9,19 +9,19 @@
                     new HTCondorViewRanged({
                         dst_id: "cpu",
                         title: "Total CPUs in Use",
+                        help_url: "{{ base }}help/glossary.html#total-cpus-in-use",
                         data_url: "data/slots..json",
                         graph_query: "order=Date&group=Date;Cpus&rename=Cpus=CPUs&chart=line",
                     });
                 </script>
             </div>
-        </div>
 
-        <div class="row">
             <div class="col" id="memory">
                 <script>
                     new HTCondorViewRanged({
                         dst_id: "memory",
                         title: "Total Memory in Use",
+                        help_url: "{{ base }}help/glossary.html#total-memory-in-use",
                         data_url: "data/slots..json",
                         graph_query: "order=Date&group=Date;Memory&rename=Memory=Memory (MB)&chart=line",
                     });
@@ -29,15 +29,34 @@
             </div>
         </div>
 
-        <div class="col" id="cpu-by-submitter">
-            <script>
-                new HTCondorViewRanged({
-                    dst_id: "cpu-by-submitter",
-                    title: "CPUs In Use by Submitter",
-                    data_url: "data/slots..json",
-                    graph_query: "order=Date&pivot=Date;RemoteUser;Cpus&chart=stacked",
-                });
-            </script>
+        <div class="row">
+            <div class="col" id="cpu-by-submitter">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "cpu-by-submitter",
+                        title: "CPUs in Use by Submitter",
+                        help_url: "{{ base }}help/glossary.html#cpus-in-use-by-submitter",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&pivot=Date;RemoteUser;Cpus&chart=stacked",
+                        table_query: "order=Date&group=RemoteUser;avg(Cpus)",
+                        select_tuple: ["RemoteUser"],
+                    });
+                </script>
+            </div>
+
+            <div class="col" id="memory-by-submitter">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "memory-by-submitter",
+                        title: "Memory in Use by Submitter",
+                        help_url: "{{ base }}help/glossary.html#memory-in-use-by-submitter",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&pivot=Date;RemoteUser;Memory&chart=stacked",
+                        table_query: "order=Date&group=RemoteUser;avg(Memory)",
+                        select_tuple: ["RemoteUser"],
+                    });
+                </script>
+            </div>
         </div>
     </div>
 

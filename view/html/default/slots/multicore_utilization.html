@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col" id="slots-by-cpu-count">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "slots-by-cpu-count",
+                        title: "Number of Slots by CPU Count",
+                        help_url: "{{ base }}help/glossary.html#number-of-slots-by-cpu-count",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&pivot=Date;Cpus;RemoteUser&chart=stacked",
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}

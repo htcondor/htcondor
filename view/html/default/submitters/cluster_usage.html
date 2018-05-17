@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col" id="cpu-hours">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "cpu-hours",
+                        title: "Cumulative CPU-Hours per Submitter",
+                        help_url: "{{ base }}help/glossary.html#cumulative-cpu-hours-per-submitter",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&pivot=Date;RemoteUser;Cpus&cumulative_integral&chart=stacked",
+                        {#table_query: "order=Date&pivot=Date;RemoteUser;Cpus&cumulative_integral&pivot=RemoteUser;last(Cpus)",#}
+                        {#select_tuple: ["RemoteUser"],#}
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}
