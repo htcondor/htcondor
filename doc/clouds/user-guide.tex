@@ -43,14 +43,6 @@ helps to ensure proper attribution.
 
 \subsection{Basic Usage}
 
-%% A quick-start guide with basic usage information is kept on our Wiki:
-%%
-%% This Wiki page should be frozen and migrated into the manual for
-%% the stable release (v8.8.0); ideally, this would also be a reasonable
-%% thing to do for the next development series (v8.9) as well.
-%%
-%% \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToUseCondorAnnexWithOnDemandInstancesEightSevenFour}.
-
 This section assumes you're logged into a Linux machine an that you've
 already configured \Condor{annex}.  If you haven't, see
 section~\ref{sec:clouds-annex-first-time}.
@@ -536,8 +528,8 @@ sure to copy both lines.  Don't copy the `\textbackslash' itself.)
 \terminal{%
 \$ mkdir \textasciitilde{}/condor-8.7.8; cd \textasciitilde{}/condor-8.7.8; mkdir local \\
 \$ tar -z -x -f \textasciitilde{}/condor-8.7.8-*-stripped.tar.gz \\
-\$ ./condor-8.7.8-*-stripped/condor\_install --local-dir `pwd`/local \textbackslash \\
-\hphantom{\$ ./}--make-personal-condor \\
+\$ ./condor-8.7.8-*-stripped/condor\_install -{}-local-dir \`{}pwd\`{}/local \textbackslash \\
+\hphantom{\$ ./}-{}-make-personal-condor \\
 \$ .\ ./condor.sh \\
 \$ condor\_master
 }
@@ -658,7 +650,7 @@ You also need to run the following command, which prompts you to enter a
 password:
 
 \terminal{%
-\$ condor\_store\_cred -c add -f `condor\_config\_val SEC\_PASSWORD\_FILE` \\
+\$ condor\_store\_cred -c add -f \`{}condor\_config\_val SEC\_PASSWORD\_FILE\`{} \\
 Enter password:
 }
 
