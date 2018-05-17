@@ -28,16 +28,6 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added the machine attribute \Attr{AcceptedWhileDraining}
-(see page~\pageref{acceptedwhiledraining-machine-attribute}),
-configuration macro \Macro{DEFRAG\_DRAINING\_START\_EXPR}
-(see page~\pageref{param:DefragDrainingStartExpr}),
-and command-line option \Opt{-start} to \Condor{drain}
-(see page~\pageref{man-condor-drain})
-to support running jobs on draining resources.  See
-section \ref{sec:SMP-defrag} for details.
-\Ticket{6628}
-
 \item \Condor{annex} may now be setup in multiple regions simultaneously.
 Use the \Opt{-aws-region} flag with \Opt{-setup} to add new regions.  Use the
 \Opt{-aws-region} flag with other \Condor{annex} commands to choose which
