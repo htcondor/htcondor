@@ -24,8 +24,6 @@
 #include <vector>
 #include "exprTree.h"
 
-#define REFACTOR_FACTOR // factor actually stored in the value class, but exposed only through literal class
-
 namespace classad {
 
 typedef std::vector<ExprTree*> ArgumentList;
@@ -47,10 +45,6 @@ class Literal : public ExprTree
 			: ExprTree(lit.parentScope)
 #endif
 			, value(lit.value)
-		#ifdef REFACTOR_FACTOR
-		#else
-			, factor(lit.factor)
-		#endif
 			{}
 
 		/// Assignment operator
@@ -170,10 +164,6 @@ class Literal : public ExprTree
 		void CopyFrom(const Literal &lit) {
 			ExprTree::CopyFrom(lit);
 			value.CopyFrom(lit.value);
-		#ifdef REFACTOR_FACTOR
-		#else
-			factor = lit.factor;
-		#endif
 		}
 
 		/** Factory method to construct a Literal
@@ -192,36 +182,24 @@ class Literal : public ExprTree
 		 */
 		void GetComponents( Value& v, Value::NumberFactor &f ) const {
 			v = value;
-		#ifdef REFACTOR_FACTOR
 			// TJ: This is wrong, but necessary to preserve the fiction that factor lives in Literal.
 			v.factor = Value::NO_FACTOR;
 			f = value.factor;
-		#else
-			f = factor;
-		#endif
 		}
 
 		const Value& getValue(Value::NumberFactor &f) const {
-		#ifdef REFACTOR_FACTOR
 			// TJ: This is wrong, but necessary to preserve the fiction that factor lives in Literal.
 			f = value.factor;
-		#else
-			f = factor;
-		#endif
 			return value;
 		}
 
 		/** Get the encapsulated value (with the factor applied)
 		 * 	@param v The value encapsulated by the literal
 		 */
-#ifdef REFACTOR_FACTOR
 		void GetValue( Value& val ) const {
 			val.CopyFrom( value );
 			val.ApplyFactor();
 		}
-#else
-		void GetValue( Value& v ) const;
-#endif
 		
 		/** Special case fetch of the c_str() within a literal string
 		 *  to avoid copying it into a new literal
@@ -242,11 +220,7 @@ class Literal : public ExprTree
 #endif
 	protected:
 		/// Constructor
-#ifdef REFACTOR_FACTOR
 		Literal () {}
-#else
-		Literal () : factor(Value::NO_FACTOR) {}
-#endif
 		static void setError(int err, const char *msg=NULL);
 
   	private:
@@ -262,10 +236,6 @@ class Literal : public ExprTree
 
 		// literal specific information
 		Value value;
-#ifdef REFACTOR_FACTOR
-#else
-		Value::NumberFactor	factor;
-#endif
 };
 
 } // classad

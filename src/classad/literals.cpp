@@ -395,38 +395,10 @@ MakeLiteral( const Value& val, Value::NumberFactor f )
 	}
 	lit->value.CopyFrom( val );
 	if( !val.IsIntegerValue() && !val.IsRealValue() ) f = Value::NO_FACTOR;
-#ifdef REFACTOR_FACTOR
 	lit->value.factor = f;
-#else
-	lit->factor = f;
-#endif
 
 	return lit;
 }
-
-#ifdef REFACTOR_FACTOR
-// hoisted to header file
-#else
-
-void Literal::
-GetValue( Value &val ) const 
-{
-	val.CopyFrom( value );
-	long long	i;
-	double	r;
-
-	// if integer or real, multiply by the factor
-	if (val.IsIntegerValue(i)) {
-		if( factor != Value::NO_FACTOR ) {
-			val.SetRealValue( ((double)i)*Value::ScaleFactor[factor] );
-		}
-	} else if (val.IsRealValue(r)) {
-		if( factor != Value::NO_FACTOR ) {
-			val.SetRealValue (r*Value::ScaleFactor[factor]);
-		}
-	}
-}
-#endif
 
 bool Literal::
 SameAs(const ExprTree *tree) const
@@ -442,13 +414,8 @@ SameAs(const ExprTree *tree) const
         const Literal *other_literal;
         
         other_literal = (const Literal *) pSelfTree;
-#ifdef REFACTOR_FACTOR
         is_same = (   value.factor == other_literal->value.factor
                    && value.SameAs(other_literal->value));
-#else
-        is_same = (   factor == other_literal->factor
-                   && value.SameAs(other_literal->value));
-#endif
     }
     return is_same;
 }
@@ -464,24 +431,7 @@ bool Literal::
 _Evaluate (EvalState &, Value &val) const
 {
 	val.CopyFrom( value );
-
-#ifdef REFACTOR_FACTOR
 	val.ApplyFactor();
-#else
-	long long	i;
-	double	r;
-
-	// if integer or real, multiply by the factor
-	if (val.IsIntegerValue(i)) {
-		if( factor != Value::NO_FACTOR ) {
-			val.SetRealValue( ((double)i)*Value::ScaleFactor[factor] );
-		} else {
-			val.SetIntegerValue(i);
-		}
-	} else if (val.IsRealValue(r)) {
-		val.SetRealValue (r*Value::ScaleFactor[factor]);
-	}
-#endif
 	return( true );
 }
 

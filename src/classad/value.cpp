@@ -36,7 +36,6 @@ const double Value::ScaleFactor[] = {
 	1024.0*1024.0*1024.0*1024.0	// Terra
 };
 
-#ifdef REFACTOR_FACTOR
 void Value::ApplyFactor()
 {
 	if (factor == NO_FACTOR) return;
@@ -58,7 +57,6 @@ void Value::ApplyFactor()
 	realValue = r * ScaleFactor[factor];
 	factor = NO_FACTOR;
 }
-#endif
 
 void Value::
 _Clear()
@@ -85,9 +83,7 @@ _Clear()
 	}
 
 	classadValue = NULL; // this clears the entire union
-#ifdef REFACTOR_FACTOR
 	factor = NO_FACTOR;
-#endif
 }
 
 
@@ -196,9 +192,7 @@ CopyFrom( const Value &val )
 
 	_Clear();
 	valueType = val.valueType;
-#ifdef REFACTOR_FACTOR
 	factor = val.factor;
-#endif
 
 	switch (val.valueType) {
 		case STRING_VALUE:
