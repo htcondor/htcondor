@@ -114,9 +114,7 @@ void SetOldClassAdSemantics(bool enable)
 ClassAd::
 ClassAd ()
 {
-#if defined(SCOPE_REFACTOR)
 	parentScope = NULL;
-#endif
 	EnableDirtyTracking();
 	chained_parent_ad = NULL;
 	alternateScope = NULL;
@@ -159,9 +157,7 @@ CopyFrom( const ClassAd &ad )
 		ExprTree::CopyFrom(ad);
 		chained_parent_ad = ad.chained_parent_ad;
 		alternateScope = ad.alternateScope;
-#if defined(SCOPE_REFACTOR)
 		parentScope = ad.parentScope;
-#endif
 		
 		this->do_dirty_tracking = false;
 		for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
@@ -853,17 +849,11 @@ DeepRemove( ExprTree *scopeExpr, const string &name )
 
 
 void ClassAd::
-#if defined(SCOPE_REFACTOR)
 _SetParentScope( const ClassAd *scope )
-#else
-_SetParentScope( const ClassAd* )
-#endif
 {
-	// already set by base class for this node; we shouldn't propagate 
+	// We shouldn't propagate
 	// the call to sub-expressions because this is a new scope
-#if defined(SCOPE_REFACTOR)
 	parentScope = scope;
-#endif
 }
 
 

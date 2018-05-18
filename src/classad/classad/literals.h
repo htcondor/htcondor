@@ -39,11 +39,7 @@ class Literal : public ExprTree
 
 		/// Copy constructor
 		Literal(const Literal &lit)
-#if defined(SCOPE_REFACTOR)
 			: ExprTree()
-#else
-			: ExprTree(lit.parentScope)
-#endif
 			, value(lit.value)
 			{}
 
@@ -215,9 +211,8 @@ class Literal : public ExprTree
 
         friend bool operator==(Literal &literal1, Literal &literal2);
 
-#if defined(SCOPE_REFACTOR)
 		virtual const ClassAd *GetParentScope( ) const { return NULL; }
-#endif
+
 	protected:
 		/// Constructor
 		Literal () {}

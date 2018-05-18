@@ -192,19 +192,14 @@ class Operation : public ExprTree
 
         friend bool operator==(const Operation &op1, const Operation &op2);
 
-#if defined(SCOPE_REFACTOR)
 		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
-#endif
+
 	protected:
 		/// Constructor
 #ifdef TJ_REFACTOR
 		Operation ();
 #else
-#if defined(SCOPE_REFACTOR)
 		Operation() : parentScope(NULL) {};
-#else
-		Operation() {};
-#endif
 #endif
 
   	private:
@@ -250,9 +245,8 @@ class Operation : public ExprTree
 		static void compareAbsoluteTimes(OpKind, Value&, Value&, Value&);
 		static void compareRelativeTimes(OpKind, Value&, Value&, Value&);
 
-#if defined(SCOPE_REFACTOR)
 		const ClassAd *parentScope;
-#endif
+
 		// operation specific information
 #ifdef TJ_REFACTOR
 		OpKind		operation;

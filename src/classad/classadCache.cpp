@@ -468,10 +468,6 @@ ExprTree * CachedExprEnvelope::Copy( ) const
 	
 	// duplicate as little data as possible.
 	pRet->m_pLetter = this->m_pLetter;
-#if defined(SCOPE_REFACTOR)
-#else
-	pRet->parentScope = this->parentScope;
-#endif
 	
 	return ( pRet );
 }
