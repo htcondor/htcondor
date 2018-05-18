@@ -197,13 +197,10 @@ class ExprTree
 
   	private: 
 		friend class Operation;
-#ifdef TJ_REFACTOR
-#else
 		friend class Operation1;
 		friend class Operation2;
 		friend class Operation3;
 		friend class OperationParens;
-#endif
 		friend class AttributeReference;
 		friend class FunctionCall;
 		friend class FunctionTable;
