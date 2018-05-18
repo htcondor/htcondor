@@ -188,13 +188,6 @@ a \DCPerm{READ} or both a
    The \DCPerm{ADMINISTRATOR} level of access implies both
    \DCPerm{READ} and \DCPerm{WRITE} access.
 
-\item[\DCPerm{SOAP}] \label{sec-level-soap} This
-   access level is required for the authorization of any party that will 
-   use the Web Services (SOAP) interface to HTCondor.
-   It is not a general access level to be used with the variety
-   of configuration variables for authentication, encryption,
-   and integrity checks.
-
 \item[\DCPerm{CONFIG}] \label{sec-level-config} This access level is
    required to modify a daemon's configuration using
    the \Condor{config\_val} command.
@@ -1841,8 +1834,6 @@ A complete list of the authorization macros:
 \index{configuration macro!\texttt{ALLOW\_WRITE}}
 \index{ALLOW\_ADMINISTRATOR macro@\texttt{ALLOW\_ADMINISTRATOR} macro}
 \index{configuration macro!\texttt{ALLOW\_ADMINISTRATOR}}
-\index{ALLOW\_SOAP macro@\texttt{ALLOW\_SOAP} macro}
-\index{configuration macro!\texttt{ALLOW\_SOAP}}
 \index{ALLOW\_CONFIG macro@\texttt{ALLOW\_CONFIG} macro}
 \index{configuration macro!\texttt{ALLOW\_CONFIG}}
 \index{ALLOW\_DAEMON macro@\texttt{ALLOW\_DAEMON} macro}
@@ -1857,8 +1848,6 @@ A complete list of the authorization macros:
 \index{configuration macro!\texttt{DENY\_WRITE}}
 \index{DENY\_ADMINISTRATOR macro@\texttt{DENY\_ADMINISTRATOR} macro}
 \index{configuration macro!\texttt{DENY\_ADMINISTRATOR}}
-\index{DENY\_SOAP macro@\texttt{DENY\_SOAP} macro}
-\index{configuration macro!\texttt{DENY\_SOAP}}
 \index{DENY\_CONFIG macro@\texttt{DENY\_CONFIG} macro}
 \index{configuration macro!\texttt{DENY\_CONFIG}}
 \index{DENY\_DAEMON macro@\texttt{DENY\_DAEMON} macro}
@@ -1872,14 +1861,12 @@ A complete list of the authorization macros:
     ALLOW_WRITE
     ALLOW_ADMINISTRATOR
     ALLOW_CONFIG
-    ALLOW_SOAP
     ALLOW_OWNER
     ALLOW_NEGOTIATOR
     ALLOW_DAEMON
     DENY_READ
     DENY_WRITE
     DENY_ADMINISTRATOR
-    DENY_SOAP
     DENY_CONFIG
     DENY_OWNER
     DENY_NEGOTIATOR
