@@ -243,11 +243,15 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				break;
 #endif
 
-#ifdef HAVE_EXT_OPENSSL  // 3DES is the prequisite for passwd auth
+#ifdef HAVE_EXT_OPENSSL  // 3DES is the prerequisite for passwd auth
 			case CAUTH_PASSWORD:
-				m_auth = new Condor_Auth_Passwd(mySock);
+				m_auth = new Condor_Auth_Passwd(mySock, 1);
 				m_method_name = "PASSWORD";
 				break;
+                        case CAUTH_PASSWORD2:
+                                m_auth = new Condor_Auth_Passwd(mySock, 2);
+                                m_method_name = "PASSWORD2";
+                                break;
 #endif
  
 #if defined(WIN32)

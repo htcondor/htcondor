@@ -36,8 +36,8 @@
 
 #include "condor_auth_passwd.h"
 
-Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock)
-    : Condor_Auth_Base(sock, CAUTH_PASSWORD)
+Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
+    : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_PASSWORD2)
 {
 	m_crypto = NULL;
 }
