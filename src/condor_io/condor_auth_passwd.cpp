@@ -224,7 +224,7 @@ Condor_Auth_Passwd::fetchLogin()
 	//
 	// If we are a client of the password v2 protocol, we may have a derived password.
 	std::string derived_keyfilename;
-	if (m_version == 2 && mySock_->isClient() && param(derived_keyfilename, "SEC_PASSWD_DERIVED_KEYFILE")) {
+	if (m_version == 2 && mySock_->isClient() && param(derived_keyfilename, "SEC_PASSWORD_DERIVED_KEYFILE")) {
 		FILE *keyfile_fp = fopen(derived_keyfilename.c_str(), "r");
 		if (!keyfile_fp) {
 			dprintf(D_ALWAYS, "Failed to open derived key file %s (%s, errno=%d).",

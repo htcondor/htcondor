@@ -2443,6 +2443,12 @@ default=
 type=string
 tags=store_cred
 
+[SEC_PASSWORD_DERIVED_KEYFILE]
+default=
+description=File containing derived key matter for password auth.
+type=string
+tags=condor_auth_passwd
+
 [EMAIL_DOMAIN]
 default=
 type=string
