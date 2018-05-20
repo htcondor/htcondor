@@ -33,6 +33,9 @@
 #include "my_username.h"
 #include "MyString.h"
 #include "condor_config.h"
+#include "classad/source.h"
+#include "condor_attributes.h"
+#include "condor_base64.h"
 
 #include "condor_auth_passwd.h"
 
@@ -144,13 +147,20 @@ static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
 Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_PASSWORD2),
     m_crypto(NULL),
-    m_version(version)
+    m_version(version),
+    m_k(NULL),
+    m_k_prime(NULL),
+    m_k_len(0),
+    m_k_prime_len(0),
+    m_keyfile_timestamp(0)
 {
 }
 
 Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
 {
     if(m_crypto) delete(m_crypto);
+	if (m_k) free(m_k);
+	if (m_k_prime) free(m_k_prime);
 }
 
 char *
@@ -211,6 +221,54 @@ char *
 Condor_Auth_Passwd::fetchLogin()
 {
 	// return malloc-ed string "user@domain" that represents who we are.
+	//
+	// If we are a client of the password v2 protocol, we may have a derived password.
+	std::string derived_keyfilename;
+	if (m_version == 2 && mySock_->isClient() && param(derived_keyfilename, "SEC_PASSWD_DERIVED_KEYFILE")) {
+		FILE *keyfile_fp = fopen(derived_keyfilename.c_str(), "r");
+		if (!keyfile_fp) {
+			dprintf(D_ALWAYS, "Failed to open derived key file %s (%s, errno=%d).",
+				derived_keyfilename.c_str(), strerror(errno), errno);
+			return NULL;
+		}
+		classad::ClassAdParser parser;
+		classad::ClassAd *ad = parser.ParseClassAd(keyfile_fp, true);
+		fclose(keyfile_fp);
+		if (!ad) {
+			return NULL;
+		}
+		std::string username;
+		long long timestamp;
+		std::string k_encoded;
+		std::string k_prime_encoded;
+		if (!ad->EvaluateAttrString(ATTR_SEC_USER, username) ||
+			!ad->EvaluateAttrInt(ATTR_SERVER_TIME, timestamp) ||
+			!ad->EvaluateAttrString("K", k_encoded) ||
+			!ad->EvaluateAttrString("K_prime", k_prime_encoded))
+		{
+			dprintf(D_ALWAYS, "Missing keys from derived key file");
+			delete ad;
+			return NULL;
+		}
+		delete ad;
+		ad = NULL;
+
+		m_k_len = 0;
+		free(m_k); m_k = NULL;
+		int k_len, k_prime_len;
+		condor_base64_decode(k_encoded.c_str(), &m_k, &k_len);
+		m_k_len = k_len;
+		m_k_prime_len = 0;
+		free(m_k_prime); m_k_prime = NULL;
+		condor_base64_decode(k_prime_encoded.c_str(), &m_k_prime, &k_prime_len);
+		m_k_prime_len = k_prime_len;
+
+		if (!m_k || !m_k_prime) {
+			return NULL;
+		}
+		m_keyfile_timestamp = timestamp;
+		return strdup(username.c_str());
+	}
 
 	MyString login;
 	
@@ -1089,6 +1147,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// learns my name.
 		dprintf(D_SECURITY, "PW: getting name.\n");
 		m_t_client.a = fetchLogin();
+		m_t_client.a_time = m_keyfile_timestamp;
 
 			// We complete the entire protocol even if there's an
 			// error, but there's no point trying to actually do any
@@ -1127,10 +1186,18 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 			// Now that we've received the server's name, we can go
 			// ahead and setup the keys.
 		if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
-			m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
-			dprintf(D_SECURITY, "PW: Client setting keys.\n");
-			if(!setup_shared_keys(&m_sk, m_version == 1 ? 0 : m_t_client.a_time)) {
-				m_client_status = AUTH_PW_ERROR;
+			// If we have a pre-derived key, use that.
+			if (m_k && m_k_prime) {
+				m_sk.ka = m_k; m_k = NULL;
+				m_sk.ka_len = m_k_len; m_k_len = 0;
+				m_sk.kb = m_k_prime; m_k_prime = NULL;
+				m_sk.kb_len = m_k_prime_len; m_k_prime_len = 0;
+			} else {
+				m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
+				dprintf(D_SECURITY, "PW: Client setting keys.\n");
+				if(!setup_shared_keys(&m_sk, m_t_client.a_time)) {
+					m_client_status = AUTH_PW_ERROR;
+				}
 			}
 		}
 
@@ -1262,7 +1329,7 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 		m_t_server.b = fetchLogin();
 		dprintf(D_SECURITY, "PW: Server fetching password.\n");
 		m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
-		if(!setup_shared_keys(&m_sk, m_version == 1 ? 0 : m_t_client.a_time)) {
+		if(!setup_shared_keys(&m_sk, m_t_client.a_time)) {
 			m_server_status = AUTH_PW_ERROR;
 		} else {
 			dprintf(D_SECURITY, "PW: Server generating rb.\n");

@@ -303,6 +303,13 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		// was non-existent.
 	int m_version;
 
+		// Derived key, loaded from the client's optional identity file.
+	unsigned char *m_k;
+	unsigned char *m_k_prime;
+	size_t m_k_len;
+	size_t m_k_prime_len;
+	time_t m_keyfile_timestamp;
+
 	CondorAuthPasswordState m_state;
 };
 
