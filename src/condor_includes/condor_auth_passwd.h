@@ -66,7 +66,7 @@
 	authentication.  kdfK' is a pseudorandom permutation or keyed
 	one-way function used for key derivation.
 
-	2. Protocol messages.  Define  T = (B, A, t, rA, rB).
+	2. Protocol messages.  Define  T = (B, A, rA, rB).
 		A -> B : A, t, rA 			(1)
 		A <- B : T, hK(T) 			(2)
 		A -> B : (A, rB), hK(A, rB)		(3)

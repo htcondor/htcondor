@@ -356,7 +356,7 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, uint64_t init_time)
 		//
 		// If the init_time is non-zero, then we include the timestamp
 		// in network-order
-    size_t key_size = AUTH_PW_KEY_LEN + (init_time ? sizeof(init_time) : 0);
+    size_t key_size = AUTH_PW_KEY_LEN + (m_version == 1 ? 0 : sizeof(init_time));
     unsigned char *seed_ka = (unsigned char *)malloc(key_size);
     unsigned char *seed_kb = (unsigned char *)malloc(key_size);
     
@@ -382,7 +382,7 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, uint64_t init_time)
     setup_seed(seed_ka, seed_kb);
 
 		// Copy the time seed into the key.
-	if (init_time) {
+	if (m_version == 2) {
 		uint64_t network_encode = internal_htonll(init_time);
 		memcpy(seed_ka + AUTH_PW_KEY_LEN, reinterpret_cast<char *>(&network_encode), sizeof(network_encode));
 	}
@@ -1917,9 +1917,11 @@ int Condor_Auth_Passwd::client_send_one(int client_status, msg_t_buf *t_client)
 			client_status, send_a_len, send_a, send_b_len);
 
 	mySock_->encode();
+	uint64_t init_time = t_client->a_time;
 	if( !mySock_->code(client_status)
 		|| !mySock_->code(send_a_len)
 		|| !mySock_->code(send_a)
+		|| !(m_version == 1 || !mySock_->code(init_time))
 		|| !mySock_->code(send_b_len)
 		|| !(send_b_len == mySock_->put_bytes(send_b, send_b_len))
 		|| !(mySock_->end_of_message())) {
@@ -1938,6 +1940,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	int a_len         = 0;
 	unsigned char *ra = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
 	int ra_len        = 0;
+	uint64_t init_time;
 
 	if(!ra) {
 		dprintf(D_SECURITY, "Malloc error 6.\n");
@@ -1950,6 +1953,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	if( !mySock_->code(client_status)
 		|| !mySock_->code(a_len)
 		|| !mySock_->code(a) 
+		|| !(m_version == 1 || !mySock_->code(init_time))
 		|| !mySock_->code(ra_len)
 		|| !(ra_len <= AUTH_PW_KEY_LEN)
 		|| !(ra_len == mySock_->get_bytes(ra, ra_len))
@@ -1973,6 +1977,7 @@ int Condor_Auth_Passwd::server_receive_one(int *server_status,
 	if(client_status == AUTH_PW_A_OK && *server_status == AUTH_PW_A_OK) {
 		t_client->a = a;
 		t_client->ra = ra;
+		t_client->a_time = init_time;
 		return client_status;
 	}
  server_receive_one_abort:
