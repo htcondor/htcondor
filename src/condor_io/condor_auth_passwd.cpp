@@ -55,6 +55,92 @@ static uint64_t internal_htonll(uint64_t value)
 }
 
 
+// HKDF_Extract and HKDF_Expand functions taken from OpenSSL 1.1.0 implementation.
+// Licensed under the OpenSSL license.
+//
+// These implementations should be removed once OpenSSL 1.1.0 is available on all
+// platforms.
+#ifndef EVP_PKEY_HKDF
+static unsigned char *HKDF_Extract(const EVP_MD *evp_md,
+                                   const unsigned char *salt, size_t salt_len,
+                                   const unsigned char *key, size_t key_len,
+                                   unsigned char *prk, size_t *prk_len)
+{
+    unsigned int tmp_len;
+
+    if (!HMAC(evp_md, salt, salt_len, key, key_len, prk, &tmp_len))
+        return NULL;
+
+    *prk_len = tmp_len;
+    return prk;
+}
+
+
+static unsigned char *HKDF_Expand(const EVP_MD *evp_md,
+                                  const unsigned char *prk, size_t prk_len,
+                                  const unsigned char *info, size_t info_len,
+                                  unsigned char *okm, size_t okm_len)
+{
+    HMAC_CTX hmac;
+
+    unsigned int i;
+
+    unsigned char prev[EVP_MAX_MD_SIZE];
+
+    size_t done_len = 0, dig_len = EVP_MD_size(evp_md);
+
+    size_t n = okm_len / dig_len;
+    if (okm_len % dig_len)
+        n++;
+
+    if (n > 255 || okm == NULL)
+        return NULL;
+
+    HMAC_CTX_init(&hmac);
+
+    if (!HMAC_Init_ex(&hmac, prk, prk_len, evp_md, NULL))
+        goto err;
+
+    for (i = 1; i <= n; i++) {
+        size_t copy_len;
+        const unsigned char ctr = i;
+
+        if (i > 1) {
+            if (!HMAC_Init_ex(&hmac, NULL, 0, NULL, NULL))
+                goto err;
+
+            if (!HMAC_Update(&hmac, prev, dig_len))
+                goto err;
+        }
+
+        if (!HMAC_Update(&hmac, info, info_len))
+            goto err;
+
+        if (!HMAC_Update(&hmac, &ctr, 1))
+            goto err;
+
+        if (!HMAC_Final(&hmac, prev, NULL))
+            goto err;
+
+        copy_len = (done_len + dig_len > okm_len) ?
+                       okm_len - done_len :
+                       dig_len;
+
+        memcpy(okm + done_len, prev, copy_len);
+
+        done_len += copy_len;
+    }
+
+    HMAC_CTX_cleanup(&hmac);
+    return okm;
+
+ err:
+    HMAC_CTX_cleanup(&hmac);
+    return NULL;
+}
+#endif
+
+
 Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
     : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_PASSWORD2),
     m_crypto(NULL),
@@ -276,11 +362,11 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, uint64_t init_time)
     
 		// These are the keys K and K' referred to in the AKEP2
 		// description.
-    unsigned char *ka = (unsigned char *)malloc(EVP_MAX_MD_SIZE);
-    unsigned char *kb = (unsigned char *)malloc(EVP_MAX_MD_SIZE);
+    unsigned char *ka = (unsigned char *)malloc(key_strength_bytes());
+    unsigned char *kb = (unsigned char *)malloc(key_strength_bytes());
 
-    unsigned int ka_len = 0;
-    unsigned int kb_len = 0;
+    unsigned int ka_len = key_strength_bytes();
+    unsigned int kb_len = key_strength_bytes();
 
 		// If any are NULL, free the others...
     if( !seed_ka || !seed_kb || !ka || !kb ) {
@@ -304,13 +390,32 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, uint64_t init_time)
     sk->len = strlen(sk->shared_key);
 
 		// Generate the shared keys K and K'
-    hmac((unsigned char *)sk->shared_key, sk->len,
-		 seed_ka, key_size,
-		 ka, &ka_len );
+	if (m_version == 1) {
+		hmac((unsigned char *)sk->shared_key, sk->len,
+			 seed_ka, key_size,
+			 ka, &ka_len );
 
-    hmac((unsigned char *)sk->shared_key, sk->len,
-		 seed_kb, key_size,
-		 kb, &kb_len );
+		hmac((unsigned char *)sk->shared_key, sk->len,
+			 seed_kb, key_size,
+			 kb, &kb_len );
+	} else {
+		if (!hkdf((unsigned char *)sk->shared_key, sk->len,
+			seed_ka, key_size,
+			(const unsigned char *)"master ka", 9,
+			ka, AUTH_PW_KEY_STRENGTH) ||
+		!hkdf((unsigned char *)sk->shared_key, sk->len,
+			seed_kb, key_size,
+			(const unsigned char *)"master kb", 9,
+			kb, AUTH_PW_KEY_STRENGTH))
+		{
+			free(seed_ka);
+			free(seed_kb);
+			free(ka);
+			free(kb);
+			dprintf(D_SECURITY, "Can't authenticate: HKDF error.\n");
+			return false;
+		}
+	}
 
 	free(seed_ka);
 	free(seed_kb);
@@ -848,6 +953,43 @@ Condor_Auth_Passwd::hmac(unsigned char *sk, int sk_len,
 		// TODO: when stronger hashing functions are available, they
 		// should be substituted.
     HMAC(EVP_sha1(), key, key_len, sk, sk_len, result, result_len);
+}
+
+int
+Condor_Auth_Passwd::hkdf(const unsigned char *sk, size_t sk_len,
+	const unsigned char *salt, size_t salt_len,
+	const unsigned char *info, size_t info_len,
+	unsigned char *result, size_t result_len)
+{
+#ifdef EVP_PKEY_HKDF
+	EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+	if (EVP_PKEY_derive_init(pctx) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_sha256() <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt, salt_len) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set1_hkdf_key(pctx, sk, sk_len) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_add1_hkdf_info(pctx, info, info_len) <= 0) {goto fail;}
+	if (EVP_PKEY_derive, pctx, result, &result_len) <= 0) {goto fail;}
+	EVP_PKEY_CTX_free(pctx);
+	return 0;
+
+fail:
+	EVP_PKEY_CTX_free(pctx);
+	return -1;
+#else
+	// Implementation taken from OpenSSL 1.1.0; see license note at the definition
+	// of extract / expand above.
+	unsigned char prk[EVP_MAX_MD_SIZE];
+	unsigned char *ret;
+	size_t prk_len;
+
+	if (!HKDF_Extract(EVP_sha256(), salt, salt_len, sk, sk_len, prk, &prk_len))
+		return -1;
+
+	ret = HKDF_Expand(EVP_sha256(), prk, prk_len, info, info_len, result, result_len);
+	OPENSSL_cleanse(prk, sizeof(prk));
+
+	return ret ? 0 : -1;
+#endif
 }
 
 void
@@ -1851,8 +1993,8 @@ int Condor_Auth_Passwd :: isValid() const
 bool
 Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 {
-	unsigned char *key = (unsigned char *)malloc(EVP_MAX_MD_SIZE);
-	unsigned int key_len = 0;
+	unsigned char *key = (unsigned char *)malloc(key_strength_bytes());
+	unsigned int key_len = key_strength_bytes();
 	
 	dprintf(D_SECURITY, "Setting session key.\n");
 
@@ -1863,16 +2005,27 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 		return false;
 	}
 	
-	memset(key, 0, EVP_MAX_MD_SIZE);
+	memset(key, 0, key_strength_bytes());
 
 		// get rid of any old crypto object
 	if ( m_crypto ) delete m_crypto;
 	m_crypto = NULL;
 
 		// Calculate W based on K'
-	hmac( t_buf->rb, AUTH_PW_KEY_LEN,
-		  sk->kb, sk->kb_len,
-		  key, &key_len );
+	if (m_version == 1) {
+		hmac( t_buf->rb, AUTH_PW_KEY_LEN,
+			  sk->kb, sk->kb_len,
+			  key, &key_len );
+	} else {
+		if (!hkdf( t_buf->rb, AUTH_PW_KEY_LEN,
+			(const unsigned char *)"session key", 11,
+			(const unsigned char *)"htcondor", 8,
+			key, key_strength_bytes()))
+		{
+			free(key);
+			return false;
+		}
+	}
 
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
 		// Fill the key structure.
@@ -1885,5 +2038,14 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 }
 
 
+int
+Condor_Auth_Passwd::key_strength_bytes()
+{
+	if (m_version == 1) {
+		return EVP_MAX_MD_SIZE;
+	} else {
+		return AUTH_PW_KEY_STRENGTH;
+	}
+}
 
 #endif	// of if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)

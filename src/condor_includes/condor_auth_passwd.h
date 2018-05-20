@@ -30,6 +30,8 @@
 
 
 #define AUTH_PW_KEY_LEN 256
+// Symmetric key strength, in bytes.  Only used in V2
+#define AUTH_PW_KEY_STRENGTH (256/8)
 #define AUTH_PW_MAX_NAME_LEN 1024
 
 #define AUTH_PW_ERROR          -1
@@ -224,6 +226,13 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	void hmac(unsigned char *sk, int sk_len,
 			  unsigned char *key, int key_len,
 			  unsigned char *result, unsigned int *result_len);
+
+		/** Simple wrapper around the OpenSSL HKDF function. */
+	int hkdf(const unsigned char *sk, size_t sk_len,
+		const unsigned char *salt, size_t salt_len,
+		const unsigned char *label, size_t label_len,
+		unsigned char *result, size_t result_len);
+
 		/** Fill the structure with NULLS. */
 	void init_sk(struct sk_buf *sk);
 		/** Free the elements of the structure, explicitly zeroing key
@@ -268,8 +277,9 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	int server_receive_two(int *server_status, struct msg_t_buf *t_client);
 		/** Both sides call this when complete to set the session key. */
 	bool set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk);
-		//void print_binary(volatile unsigned char *buf, int len);
-		//
+
+		/** Desired key strength for symmetric keys. */
+	int key_strength_bytes();
 
 		// state machine drivers
 	CondorAuthPasswordRetval doServerRec1(CondorError* errstack, bool non_blocking);
