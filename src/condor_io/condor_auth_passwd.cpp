@@ -36,10 +36,30 @@
 
 #include "condor_auth_passwd.h"
 
-Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
-    : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_PASSWORD2)
+
+// Approach taken from https://stackoverflow.com/questions/3022552; code
+// is licensed under the MIT license.
+static uint64_t internal_htonll(uint64_t value)
 {
-	m_crypto = NULL;
+	// The answer is 42
+	static const int num = 42;
+
+	// Check the endianness
+	if (*reinterpret_cast<const char*>(&num) == num) {
+		const uint32_t high_part = htonl(static_cast<uint32_t>(value >> 32));
+		const uint32_t low_part = htonl(static_cast<uint32_t>(value & 0xFFFFFFFFLL));
+		return (static_cast<uint64_t>(low_part) << 32) | high_part;
+	} else {
+		return value;
+	}
+}
+
+
+Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
+    : Condor_Auth_Base(sock, version == 1 ? CAUTH_PASSWORD : CAUTH_PASSWORD2),
+    m_crypto(NULL),
+    m_version(version)
+{
 }
 
 Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
@@ -236,7 +256,7 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 }
 
 bool
-Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk) 
+Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, uint64_t init_time)
 {
 	if ( sk->shared_key == NULL ) {
 		return false;
@@ -247,8 +267,12 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk)
 		// keys K and K' (referred to here as ka and kb,
 		// respectively).  We derive these ka and kb by hmacing the
 		// shared key with these two seed keys.
-    unsigned char *seed_ka = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
-    unsigned char *seed_kb = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
+		//
+		// If the init_time is non-zero, then we include the timestamp
+		// in network-order
+    size_t key_size = AUTH_PW_KEY_LEN + (init_time ? sizeof(init_time) : 0);
+    unsigned char *seed_ka = (unsigned char *)malloc(key_size);
+    unsigned char *seed_kb = (unsigned char *)malloc(key_size);
     
 		// These are the keys K and K' referred to in the AKEP2
 		// description.
@@ -271,15 +295,21 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk)
 		// Fill in the data for the seed keys.
     setup_seed(seed_ka, seed_kb);
 
+		// Copy the time seed into the key.
+	if (init_time) {
+		uint64_t network_encode = internal_htonll(init_time);
+		memcpy(seed_ka + AUTH_PW_KEY_LEN, reinterpret_cast<char *>(&network_encode), sizeof(network_encode));
+	}
+
     sk->len = strlen(sk->shared_key);
 
 		// Generate the shared keys K and K'
     hmac((unsigned char *)sk->shared_key, sk->len,
-		 seed_ka, AUTH_PW_KEY_LEN, 
+		 seed_ka, key_size,
 		 ka, &ka_len );
 
     hmac((unsigned char *)sk->shared_key, sk->len,
-		 seed_kb, AUTH_PW_KEY_LEN, 
+		 seed_kb, key_size,
 		 kb, &kb_len );
 
 	free(seed_ka);
@@ -855,6 +885,7 @@ void
 Condor_Auth_Passwd::init_t_buf(struct msg_t_buf *t) 
 {
 	t->a           = NULL;
+	t->a_time      = 0;
 	t->b           = NULL;
 	t->ra          = NULL;
 	t->rb          = NULL;
@@ -956,7 +987,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 		if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
 			m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
 			dprintf(D_SECURITY, "PW: Client setting keys.\n");
-			if(!setup_shared_keys(&m_sk)) {
+			if(!setup_shared_keys(&m_sk, m_version == 1 ? 0 : m_t_client.a_time)) {
 				m_client_status = AUTH_PW_ERROR;
 			}
 		}
@@ -1089,7 +1120,7 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 		m_t_server.b = fetchLogin();
 		dprintf(D_SECURITY, "PW: Server fetching password.\n");
 		m_sk.shared_key = fetchPassword(m_t_client.a, m_t_server.b);
-		if(!setup_shared_keys(&m_sk)) {
+		if(!setup_shared_keys(&m_sk, m_version == 1 ? 0 : m_t_client.a_time)) {
 			m_server_status = AUTH_PW_ERROR;
 		} else {
 			dprintf(D_SECURITY, "PW: Server generating rb.\n");

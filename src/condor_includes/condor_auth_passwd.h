@@ -207,9 +207,12 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 			independent."  We derive these keys from the shared key by
 			hmacing it with two different keys.  This relies on the
 			difficulty of calculating the input to an hmac given its
-			output, even when the key is known. 
+			output, even when the key is known.
+
+			Note that in protocol v2, the symmetric keys are derived
+			from both the compile-time seed and the handshake timestamp.
 		*/
-	bool setup_shared_keys(struct sk_buf *sk);
+	bool setup_shared_keys(struct sk_buf *sk, uint64_t init_time);
 
 		/** The "seed" consists of the two keys used to hmac the
 			shared key.  Each byte in the seed keys is specified in
