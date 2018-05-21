@@ -1293,6 +1293,7 @@ JICShadow::initJobInfo( void )
 	if (!JobInfoCommunicator::initJobInfo()) return false;
 
 	char *orig_job_iwd;
+	MyString x509userproxy;
 
 	if( ! job_ad ) {
 		EXCEPT( "JICShadow::initJobInfo() called with NULL job ad!" );
@@ -1331,6 +1332,14 @@ JICShadow::initJobInfo( void )
 		dprintf( D_ALWAYS, "Error in JICShadow::initJobInfo(): "
 				 "Can't find %s in job ad\n", ATTR_CLUSTER_ID );
 		return false;
+	}
+
+	if( job_ad->LookupString(ATTR_X509_USER_PROXY, x509userproxy) ) {
+		wants_x509_proxy = true;
+	}
+	else {
+		dprintf( D_ALWAYS, "Job doesn't specify x509userproxy, assuming not "
+				 "needed\n" );
 	}
 
 	if( ! job_ad->LookupInteger(ATTR_PROC_ID, job_proc) ) { 
@@ -1815,7 +1824,6 @@ JICShadow::proxyExpiring()
 bool
 JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 {
-	dprintf(D_ALWAYS, "MRC [JICShadow::updateX509Proxy] called, cmd=%d\n", cmd);
 	if( ! usingFileTransfer() ) {
 		s->encode();
 		int i = 2; // == success, but please don't call any more.
@@ -2351,7 +2359,6 @@ JICShadow::job_lease_expired()
 bool
 JICShadow::beginFileTransfer( void )
 {
-
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		// Only rename the executable if it is transferred.
@@ -2392,6 +2399,31 @@ JICShadow::beginFileTransfer( void )
 		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
 	else if ( wants_x509_proxy ) {
 		
+		// Get initial working directory
+		MyString iwd;
+		job_ad->LookupString( ATTR_JOB_IWD, iwd );
+
+		// Get source path to proxy file on the submit machine
+		MyString proxy_source_path;
+		job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_source_path );
+
+		// Determine the bare filename of the proxy file, without the path
+		MyString proxy_filename = proxy_source_path;
+		while( proxy_filename.FindChar( '/' ) != -1 ) {
+			proxy_filename = proxy_filename.substr( proxy_filename.FindChar( '/' ) + 1, proxy_filename.Length() );
+		}
+
+		// Combine the IWD and proxy filename to get the destination proxy path
+		MyString proxy_dest_path = iwd;
+		proxy_dest_path += "/";
+		proxy_dest_path += proxy_filename;
+
+		// Get the expiration timestamp of the proxy file
+		int proxy_expiration;
+		job_ad->LookupInteger( ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
+
+		// Do RPC call to get delegated proxy
+		REMOTE_CONDOR_get_delegated_proxy( (char*)proxy_source_path.Value(), (char*)proxy_dest_path.Value(), proxy_expiration );
 	}
 		// no transfer wanted or started, so return false
 	return false;

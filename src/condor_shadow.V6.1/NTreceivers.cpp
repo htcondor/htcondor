@@ -2234,90 +2234,44 @@ case CONDOR_getdir:
 
 	case CONDOR_get_delegated_proxy:
 	{
-		dprintf(D_SECURITY, "ENTERING CONDOR_get_delegated_proxy syscall\n");
+		dprintf( D_SECURITY, "ENTERING CONDOR_get_delegated_proxy syscall\n" );
+
+		char* proxy_source_path;
+		time_t proxy_expiration;
 
 		// Read in the path to the proxy file
-		result = ( syscall_sock->code( path ) );
+		result = ( syscall_sock->code( proxy_source_path ) );
 		ASSERT( result );
-		dprintf( D_SECURITY|D_FULLDEBUG, "  path = %s\n", path );
+		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: proxy_source_path = %s\n", proxy_source_path );
+
+		// Read in the proxy expiration time
+		result = ( syscall_sock->code( proxy_expiration ) );
+		ASSERT( result );
+		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: proxy_expiration = %lu\n", proxy_expiration );
+
+		// Wait for the end_of_message signal
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
-		// send response
+		// Send response acknolwedging proxy file path
 		syscall_sock->encode();
 
-		MyString user;
-		int cluster_id, proc_id;
-		ClassAd* ad;
-		pseudo_get_job_ad(ad);
-		ad->LookupInteger("ClusterId", cluster_id);
-		ad->LookupInteger("ProcId", proc_id);
-		ad->LookupString("Owner", user);
+		// Wait until we know the starter is waiting for the proxy, then delegate it
+		filesize_t bytes;
+		int rc = syscall_sock->put_x509_delegation( &bytes, proxy_source_path, proxy_expiration, NULL );
+		dprintf( D_FULLDEBUG, "CONDOR_get_delegated_proxy: put_x509_delegation() returned %d\n", rc );
 
-		MyString cred_dir_name;
-		if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
-			dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
-			return -1;
-		}
-		cred_dir_name += DIR_DELIM_CHAR;
-		cred_dir_name += user;
+		// Record success or failure
+		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: finishing send with value %i\n", rc );
 
-		dprintf( D_SECURITY, "CONDOR_getcreds: sending contents of %s for job ID %i.%i\n", cred_dir_name.Value(), cluster_id, proc_id );
-		Directory cred_dir(cred_dir_name.Value(), PRIV_ROOT);
-		const char *fname;
-		bool had_error = false;
-		while((fname = cred_dir.Next())) {
-			// only send the "use level" creds.
-			const char *last4 = fname + strlen(fname) - 4;
-			if((last4 <= fname) || (0!=strcmp(last4, ".use"))) {
-				dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: skipping %s (%s)\n", fname, last4);
-				continue;
-			}
-			MyString fullname = cred_dir_name;
-			fullname += DIR_DELIM_CHAR;
-			fullname += fname;
-
-			dprintf( D_SECURITY, "CONDOR_getcreds: reading contents of %s\n", fullname.Value() );
-			// read the file (fourth argument "true" means as_root)
-			unsigned char *buf = 0;
-			size_t len = 0;
-			bool rc = read_secure_file(fullname.Value(), (void**)(&buf), &len, true);
-			if(!rc) {
-				dprintf( D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.Value() );
-				had_error = true;
-				break;
-			}
-			MyString b64 = condor_base64_encode(buf, len);
-			free(buf);
-
-			ClassAd ad;
-			ad.Assign("Service", fname);
-			ad.Assign("Data", b64);
-
-			int more_ads = 1;
-			result = ( syscall_sock->code(more_ads) );
-			ASSERT( result );
-			result = ( putClassAd(syscall_sock, ad) );
-			ASSERT( result );
-			dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sent ad:\n" );
-			dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
-		}
-
-		int last_command = 0;
-		if (had_error) {
-			last_command = -1;
-		}
-
-		// transmit our success or failure
-		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: finishing send with value %i\n", last_command );
-
-		result = ( syscall_sock->code(last_command) );
+		// Now send the put_x509_delegation() return code and end_of_message
+		result = ( syscall_sock->code( rc ) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
-		// return our success or failure
-		return last_command;
+		// Return our success or failure
+		return rc;
 	}
 
 	default:
