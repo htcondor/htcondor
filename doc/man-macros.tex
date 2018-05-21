@@ -1,11 +1,11 @@
 %  Environment for a manual entry
-%
-\newenvironment{ManPage}[3]{% #1-Name, #2-Section, #3-Short description
-  \newpage
-  \section{#1} #3
+% #1 - section, #2 - label, #3 - number, #2 - description
+\newenvironment{ManPage}[4]{%
+\newpage
+\section{#1}\label{#2} #4
 }{
-  \subsection*{Author} \AuthorNotice
-  \subsection*{Copyright} \CopyrightNotice
+\subsection*{Author} \AuthorNotice
+\subsection*{Copyright} \CopyrightNotice
 }
 
 %
