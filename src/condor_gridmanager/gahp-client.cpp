@@ -822,22 +822,21 @@ GahpServer::Startup()
 	}
 
 	// For amazon ec2 ca authentication
-	tmp_char = param("SOAP_SSL_CA_FILE");
+	tmp_char = param("GAHP_SSL_CAFILE");
 	if( tmp_char ) {
+		// CRUFT: the SOAP value was used before 8.7.9
 		newenv.SetEnv( "SOAP_SSL_CA_FILE", tmp_char );
+		newenv.SetEnv( "GAHP_SSL_CAFILE", tmp_char );
 		free( tmp_char );
 	}
 
 	// For amazon ec2 ca authentication
-	tmp_char = param("SOAP_SSL_CA_DIR");
+	tmp_char = param("GAHP_SSL_CADIR");
 	if( tmp_char ) {
+		// CRUFT: the SOAP value was used before 8.7.9
 		newenv.SetEnv( "SOAP_SSL_CA_DIR", tmp_char );
+		newenv.SetEnv( "GAHP_SSL_CADIR", tmp_char );
 		free( tmp_char );
-	}
-
-	// For amazon ec2 ca authentication
-	if ( param_boolean( "SOAP_SSL_SKIP_HOST_CHECK", false ) ) {
-		newenv.SetEnv( "SOAP_SSL_SKIP_HOST_CHECK", "True" );
 	}
 
 		// Now register a reaper, if we haven't already done so.

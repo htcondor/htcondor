@@ -9,7 +9,9 @@ class EventIterator
 {
 public:
 
-    EventIterator(FILE * fp, bool is_xml);
+    EventIterator(FILE * fp, bool is_xml, bool owns_fd);
+    EventIterator(const EventIterator& that);
+    ~EventIterator();
 
     inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
 
@@ -29,8 +31,12 @@ private:
     bool get_filename(std::string &);
     void reset_to(off_t location);
 
+	// don't allow assignment or copy construction
+	EventIterator & operator=(EventIterator that);
+
     bool m_blocking;
     bool m_is_xml;
+    bool m_owns_fd;
     int m_step;
     off_t m_done;
     FILE * m_source;
@@ -38,7 +44,7 @@ private:
     boost::shared_ptr<InotifySentry> m_watch;
 };
 
-EventIterator readEventsFile(FILE * file, bool is_xml=false);
+boost::shared_ptr<EventIterator> readEventsFile(boost::python::object input, bool is_xml=false);
 
 #endif
 

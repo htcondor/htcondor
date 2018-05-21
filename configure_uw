@@ -27,4 +27,4 @@ if [ `uname` = "Darwin" ] ; then
   export CC
   export CXX
 fi
-cmake -DUW_BUILD:BOOL=TRUE -D_VERBOSE:BOOL=TRUE -DBUILDID:STRING=UW_development -DCMAKE_INSTALL_PREFIX:PATH=${PWD}/release_dir "$@"
+cmake -DUW_BUILD:BOOL=TRUE -D_VERBOSE:BOOL=TRUE -DBUILDID:STRING=UW_development -DCMAKE_INSTALL_PREFIX:PATH=${PWD}/release_dir -DCMAKE_EXPORT_COMPILE_COMMANDS=YES "$@"

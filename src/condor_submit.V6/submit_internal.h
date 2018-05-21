@@ -87,7 +87,8 @@ public:
 	virtual bool has_late_materialize() = 0;
 	virtual bool allows_late_materialize() = 0;
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text) = 0;
-	virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text) = 0;
+	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o) = 0;
+	//virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text) = 0;
 protected:
 	AbstractScheddQ() {}
 };
@@ -117,7 +118,8 @@ public:
 	virtual bool has_late_materialize(); // version check for late materialize
 	virtual bool allows_late_materialize(); // capabilities check ffor late materialize enabled.
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
-	virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text);
+	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
+	//virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text);
 
 	bool Connect(DCSchedd & MySchedd, CondorError & errstack);
 private:
@@ -147,7 +149,7 @@ public:
 	virtual bool has_late_materialize() { return true; }
 	virtual bool allows_late_materialize() { return true; }
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
-	virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text);
+	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
 
 	bool Connect(FILE* fp, bool close_on_disconnect, bool log_all);
 private:

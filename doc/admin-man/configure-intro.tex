@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Configuring-HTCondor-Intro}Introduction to Configuration}
+\section{Introduction to Configuration}\label{sec:Configuring-HTCondor-Intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{HTCondor!configuration-intro}
@@ -437,7 +437,7 @@ line continuations.
 A comment is any line beginning with a pound character (\verb@#@).
 A continuation is any entry that continues across multiples lines.
 Line continuation is accomplished by placing the backslash
-character (\Bs) at the end of any line to be continued onto another.
+character (\verb@/@) at the end of any line to be continued onto another.
 Valid examples of line continuation are
 \begin{verbatim}
   START = (KeyboardIdle > 15 * $(MINUTE)) && \
@@ -513,7 +513,7 @@ JOB\_ROUTER\_DEFAULTS value.
 
 Instead of reading from a file,
 HTCondor can run a program to obtain configuration macros.
-The vertical bar character (\Bar) as the last character defining
+The vertical bar character (\Bar{}) as the last character defining
 a file name provides the syntax necessary to tell 
 HTCondor to run a program.
 This syntax may only be used in the definition of

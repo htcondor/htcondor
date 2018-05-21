@@ -29,7 +29,6 @@ extern CStarter *Starter;
 SSHDProc::SSHDProc(ClassAd* job_ad, bool delete_ad) : VanillaProc(job_ad)
 {
 	m_deleteJobAd = delete_ad;
-	uses_cgroups = false;
 }
 
 int
@@ -54,7 +53,10 @@ SSHDProc::PublishUpdateAd( ClassAd* ad)
 {
 	dprintf( D_FULLDEBUG, "In SSHDProc::PublishUpdateAd()\n" );
 
-	if (uses_cgroups) return VanillaProc::PublishUpdateAd(ad);
+	bool interactive = false;
+	JobAd->LookupBool("InteractiveJob", interactive);
+
+	if (interactive) return VanillaProc::PublishUpdateAd(ad);
 	return true;
 }
 

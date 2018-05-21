@@ -60,7 +60,7 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace=0, bool compact=true);
 // owner, universe, and cmd are the only attributes that require an
 // explicit value. If NULL is passed for owner, the attribute is explicitly
 // set to Undefined, which tells the schedd to fill in the attribute. This
-// feature is only used by the soap interface currently.
+// feature is only used by the python bindings currently.
 // The caller is responible for calling 'delete' on the returned ClassAd.
 ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd );
 

@@ -86,7 +86,6 @@ my @minimal_build_configure_args =
 	 '-DWITH_CREAM:BOOL'		 => 'OFF',
 	 '-DWITH_DRMAA:BOOL'		 => 'OFF',
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
-	 '-DWITH_GSOAP:BOOL'		 => 'OFF',
 	 '-DWITH_HADOOP:BOOL'		 => 'OFF',
 	 '-DWITH_LIBVIRT:BOOL'		 => 'OFF',
 	 '-DWITH_LIBXML2:BOOL'		 => 'OFF',
@@ -570,10 +569,8 @@ our %submit_info = (
 			# we can use ssh_to_job on solaris if we use the proper kerberose
 			# this is OK since we build kerberose only for batlab.
 			'configure_args' => { @default_build_configure_args,
-								  '-DWITH_GSOAP:BOOL' => 'OFF', 
 								  '-DWITH_CURL:BOOL' => 'OFF',
 								  #'-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
-								  #'-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
 			},
 			'prereqs'	=> [],
 			'xtests'	=> undef,
@@ -679,7 +676,6 @@ our %submit_info = (
 	'x86_64_OpenSUSE11'				=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
 								  '-DWITH_CURL:BOOL' => 'ON',
 								  '-DWITH_LIBVIRT:BOOL' => 'ON',
 								  '-DWITH_LIBXML2:BOOL' => 'ON',
@@ -706,7 +702,6 @@ our %submit_info = (
 	'x86_FreeBSD7'		=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
 				'-DWITH_CURL:BOOL=OFF' => undef,
 				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
@@ -730,7 +725,6 @@ our %submit_info = (
 	'x86_FreeBSD8'			=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
 				'-DWITH_CURL:BOOL=OFF' => undef,
 				'-DWITH_LIBVIRT:BOOL=OFF' => undef,

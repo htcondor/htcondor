@@ -5,7 +5,7 @@
 %%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:History-8-7}Development Release Series 8.7}
+\section{Development Release Series 8.7}\label{sec:History-8-7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is the development release series of HTCondor.
@@ -19,8 +19,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.8 not yet released.
-%\item HTCondor version 8.7.8 released on Month Date, 2018.
+\item HTCondor version 8.7.8 released on May 10, 2018.
 
 \end{itemize}
 
@@ -59,8 +58,25 @@ original device index (rather than starting over at 0).
 \item When reporting \Attr{GPUsUsage}, HTCondor now also reports
 \Attr{GPUsMemoryUsage}.  This is like \Attr{MemoryUsage}, except it is
 the peak amount of GPU memory used by the job.  This feature only works
-for NVidia GPUs.
+for nVidia GPUs.
 \Ticket{6544}
+
+\item Improved error messages when delegation of an X.509 proxy fails.
+\Ticket{6575}
+
+\item \Condor{q} will no longer limit the width of the output to 80 columns when it
+outputs to a file or pipe.
+\Ticket{6643}
+
+\item Submission of jobs via the Python bindings Submit class will now attempt to put all
+jobs submitted in a single transaction under the same ClusterId.
+\Ticket{6649}
+
+\item Added support for \Condor{schedd} option in the Python bindings.
+\Ticket{6619}
+
+\item Eliminated SOAP support.
+\Ticket{6648}
 
 \end{itemize}
 
@@ -91,6 +107,10 @@ was run.
 authorization header when using AWS resources in a region other than
 \Expr{us-east-1}.
 \Ticket{6629}
+
+\item Fixed a bug that prevented Docker universe jobs with no
+executable listed in the submit file from running.
+\Ticket{6612}
 
 \item Fixed a bug where the \Condor{starter} would fail with an error
 after a docker job exits.
@@ -150,7 +170,7 @@ of CPUs used by the job.
 \item The \MacroNI{use feature: GPUs} metaknob now causes HTCondor to report
 \Attr{GPUsUsage} for each job.  This is like \Attr{CPUsUsage}, except it is
 the average number of GPUs used by the job.  This feature only works for
-NVIDIA GPUs.
+nVIDIA GPUs.
 \Ticket{6477}
 
 \item Administrators may now, for each custom machine resource, define a

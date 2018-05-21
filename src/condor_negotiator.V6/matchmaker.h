@@ -319,7 +319,12 @@ class Matchmaker : public Service
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
 		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
-		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, string &dslot_claims);
+
+		std::vector<std::pair<ClassAd*,ClassAd*> > unmutatedSlotAds;
+		std::map<std::string, ClassAd *> m_slotNameToAdMap;
+
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, const char* submitterName,
+			bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState);
 
 		/** trimStartdAds will throw out startd ads have no business being 
 			visible to the matchmaking engine, but were fetched from the 
@@ -359,7 +364,6 @@ class Matchmaker : public Service
 		int  MaxTimePerSpin;        // How long per pie spin
 		int  MaxTimePerSchedd;		// How long to talk to any one schedd
 		ExprTree *PreemptionReq;	// only preempt if true
-		ExprTree *PreemptionReqPslot;	// only preempt pslots if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 		bool preemption_req_unstable;
 		bool preemption_rank_unstable;
@@ -451,6 +455,24 @@ class Matchmaker : public Service
 			PreemptState	PreemptStateValue;
 			MyString			DslotClaims;
 			ClassAd *ad;
+		};
+
+		/** This class is just like ClassAdList, expept that it will
+		    also invoke Matchmaker::DeleteMatchList in the destructor.
+			We want this because DeleteMatchList will dereference pointers
+			to ads in this ClassAdList, so this must hapen before the
+			ads are deleted.
+		*/
+		class ClassAdList_DeleteAdsAndMatchList: public ClassAdList
+		{
+		public:
+			ClassAdList_DeleteAdsAndMatchList(Matchmaker * const p) : 
+				pMatchmaker(p) {};
+			virtual ~ClassAdList_DeleteAdsAndMatchList() {
+				pMatchmaker->DeleteMatchList();
+			};
+		private:
+			Matchmaker * const pMatchmaker;
 		};
 
 		void DeleteMatchList();

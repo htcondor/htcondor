@@ -117,6 +117,9 @@ endif()
 #option used to enable/disable make package for rpm/deb with different install paths
 option(CONDOR_PACKAGE_BUILD "Enables a package build" OFF)
 
+#option used to control RPATH when using rpmbuild directly
+option(CONDOR_RPMBUILD "Whether rpmbuild is being used to build HTCondor" OFF)
+
 # 1st set the location of the install targets, these are the defaults for
 set( C_BIN			bin)
 set( C_LIB			lib)
@@ -161,13 +164,9 @@ set ( CPACK_GENERATOR "TGZ" )
 if ( ${OS_NAME} STREQUAL "LINUX" )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
 	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
-		if ( ${SYSTEM_NAME} MATCHES "rhel3" )
-			message (FATAL_ERROR "ERROR: RHEL3 is EOL you are trying to build new packages on a deprecated platform")
-		else()
-			set( CONDOR_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
-			set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
-			set( PYTHON_RPATH "$ORIGIN/../:/lib:/usr/lib:$ORIGIN/../condor" )
-		endif()
+		set( CONDOR_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
+		set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
+		set( PYTHON_RPATH "$ORIGIN/../:/lib:/usr/lib:$ORIGIN/../condor" )
 	else()
 		set( CONDOR_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
 		set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
@@ -175,6 +174,17 @@ if ( ${OS_NAME} STREQUAL "LINUX" )
 	endif()
 elseif( ${OS_NAME} STREQUAL "DARWIN" )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
+endif()
+
+# Use the limited RPATH when building directly with RPM
+if ( CONDOR_RPMBUILD )
+	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
+	    set( CONDOR_RPATH "/usr/lib:/usr/lib/condor" )
+	    set( PYTHON_RPATH "/usr/lib/condor" )
+	else()
+	    set( CONDOR_RPATH "/usr/lib64:/usr/lib64/condor" )
+	    set( PYTHON_RPATH "/usr/lib64/condor" )
+	endif ()
 endif()
 
 #this needs to be evaluated in order due to WIN collision.

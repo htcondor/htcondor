@@ -102,13 +102,20 @@ private:
     std::string m_addr;
 };
 
+// declare a formal enum so that python doesn't think all ints are DrainTypes (sigh)
+enum DrainTypes {
+	DrainFast=DRAIN_FAST,
+	DrainGraceful=DRAIN_GRACEFUL,
+	DrainQuick=DRAIN_QUICK,
+};
+
 void
 export_startd()
 {
-    boost::python::enum_<int>("DrainTypes")
-        .value("Fast", DRAIN_FAST)
-        .value("Graceful", DRAIN_GRACEFUL)
-        .value("Quick", DRAIN_QUICK)
+    boost::python::enum_<DrainTypes>("DrainTypes")
+        .value("Fast", (DrainTypes)DRAIN_FAST)
+        .value("Graceful", (DrainTypes)DRAIN_GRACEFUL)
+        .value("Quick", (DrainTypes)DRAIN_QUICK)
         ;
 
 #if BOOST_VERSION >= 103400

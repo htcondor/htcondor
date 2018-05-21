@@ -1,4 +1,4 @@
-
+\section{\Condor{shadow} Exit Codes}
 \index{exit codes!of condor\_shadow}
 When a \Condor{shadow} daemon exits, 
 the \Condor{shadow} exit code is recorded in the \Condor{schedd} log,
@@ -13,9 +13,9 @@ Shadow pid XXXXX for job XX.X reports job exit reason 100.
 \end{verbatim}
 where the exit code is the value 100.
 Table~\ref{table:shadow-exit-codes} lists these codes.
-% shadow error codes
-\begin{center}
+
 \begin{table}[ht]
+\centering
 \caption{\label{table:shadow-exit-codes}\Condor{shadow} Exit Codes}
 \begin{tabular}{|c|l|l|} \hline
 \emph{Value} & \emph{Error Name} & \emph{Description} \\ \hline \hline
@@ -45,17 +45,16 @@ Table~\ref{table:shadow-exit-codes} lists these codes.
     &                         & is not accepting any more jobs on this claim \\  \hline
 \end{tabular}
 \end{table}
-\end{center}
-
-%\afterpage{\clearpage}
-
+%
+\clearpage
+\section{Job Event Log Codes}
 \index{log files!event codes for jobs}
 Table~\ref{table:user-log-event-codes} lists codes that appear as 
 the first field within a job event log file.
 See more detailed descriptions of these values in
 section~\ref{sec:job-log-events}.
-\begin{center}
 \begin{table}[ht]
+\centering
 \caption{\label{table:user-log-event-codes}Event Codes in a Job Event Log}
 \begin{tabular}{|l|c|} \hline
 \emph{Event Code} & \emph{Description}   \\ \hline \hline
@@ -69,38 +68,38 @@ section~\ref{sec:job-log-events}.
 007   &   Shadow exception  \\ \hline
 008   &   Generic  \\ \hline
 009   &   Job aborted  \\ \hline
-010  &   Job suspended  \\ \hline
-011  &   Job unsuspended  \\ \hline
-012  &   Job held  \\ \hline
-013  &   Job released  \\ \hline
-014  &   Node execute  \\ \hline
-015  &   Node terminated  \\ \hline
-016  &   Post script terminated  \\ \hline
-017  &   Globus submit (no longer used)  \\ \hline
-018  &   Globus submit failed  \\ \hline
-019  &   Globus resource up (no longer used)  \\ \hline
-020  &   Globus resource down (no longer used)  \\ \hline
-021  &   Remote error  \\ \hline
-022  &   Job disconnected  \\ \hline
-023  &   Job reconnected  \\ \hline
-024  &   Job reconnect failed  \\ \hline
-025  &   Grid resource up \\ \hline
-026  &   Grid resource down \\ \hline
-027  &   Grid submit \\ \hline
-028  &   Job ClassAd attribute values added to event log  \\ \hline
-029  &   Job status unknown \\ \hline
-030  &   Job status known \\ \hline
-031  &   Grid job stage in \\ \hline
-032  &   Grid job stage out \\ \hline
-033  &   Job ClassAd attribute update \\ \hline
-034  &   DAGMan PRE\_SKIP defined \\ \hline
+010   &   Job suspended  \\ \hline
+011   &   Job unsuspended  \\ \hline
+012   &   Job held  \\ \hline
+013   &   Job released  \\ \hline
+014   &   Node execute  \\ \hline
+015   &   Node terminated  \\ \hline
+016   &   Post script terminated  \\ \hline
+017   &   Globus submit (no longer used)  \\ \hline
+018   &   Globus submit failed  \\ \hline
+019   &   Globus resource up (no longer used)  \\ \hline
+020   &   Globus resource down (no longer used)  \\ \hline
+021   &   Remote error  \\ \hline
+022   &   Job disconnected  \\ \hline
+023   &   Job reconnected  \\ \hline
+024   &   Job reconnect failed  \\ \hline
+025   &   Grid resource up \\ \hline
+026   &   Grid resource down \\ \hline
+027   &   Grid submit \\ \hline
+028   &   Job ClassAd attribute values added to event log  \\ \hline
+029   &   Job status unknown \\ \hline
+030   &   Job status known \\ \hline
+031   &   Grid job stage in \\ \hline
+032   &   Grid job stage out \\ \hline
+033   &   Job ClassAd attribute update \\ \hline
+034   &   DAGMan PRE\_SKIP defined \\ \hline
 \end{tabular}
 \end{table}
-\end{center}
-
-
-\begin{center}
+%
+\clearpage
+\section{Well-known Port Numbers}
 \begin{table}[ht]
+\centering
 \caption{\label{well-known-port-numbers}Well-Known Port Numbers}
 \begin{tabular}{|l|c|} \hline
 \emph{Server} & \emph{Port Number}   \\ \hline \hline
@@ -111,11 +110,11 @@ gridftp               &   2811  \\ \hline
 GT4 web services      &   8443  \\ \hline
 \end{tabular}
 \end{table}
-\end{center}
-
-
-\begin{center}
+%
+\clearpage
+\section{DaemonCore Command Numbers}
 \begin{table}[ht]
+\centering
 \caption{\label{daemoncore-commands}DaemonCore Commands}
 \begin{tabular}{|l|c|} \hline
 \emph{Number} & \emph{Name}   \\ \hline \hline
@@ -140,11 +139,11 @@ GT4 web services      &   8443  \\ \hline
 60018  &   DC\_PURGE\_LOG                  \\ \hline
 \end{tabular}
 \end{table}
-\end{center}
-
-
-\begin{center}
+%
+\clearpage
+\section{DaemonCore Daemon Exit Codes}
 \begin{table}[ht]
+\centering
 \caption{\label{daemon-exit-codes}DaemonCore Daemon Exit Codes}
 \begin{tabular}{|l|c|} \hline
 \emph{Exit Code} & \emph{Description}   \\ \hline \hline
@@ -152,4 +151,3 @@ GT4 web services      &   8443  \\ \hline
 99    & \Macro{DAEMON\_SHUTDOWN} evaluated to \Expr{True}      \\ \hline
 \end{tabular}
 \end{table}
-\end{center}

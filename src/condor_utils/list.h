@@ -152,6 +152,8 @@ public:
 
 	ObjType *   Head ( void );
     bool        Head (ObjType   & obj);
+	ObjType *   PopHead();
+
 
 	bool	AtEnd() const;
 	void	DeleteCurrent();
@@ -512,6 +514,28 @@ List<ObjType>::Head()
 	return dummy->next->obj;
 }
 
+/*
+  Remove and return the first item in the list
+  the list is empty.  This does *NOT* effect the "current" position of
+  the list unless the item being removed is the current position. in that case
+  the current position *advances* (this is different from what DeleteCurrent does)
+*/
+template <class ObjType>
+ObjType *
+List<ObjType>::PopHead()
+{
+	if( IsEmpty() ) {
+		return 0;
+	}
+
+	ObjType *rval = dummy->next->obj;
+	Item<ObjType> *tmp = dummy->next;
+	if( tmp == current ) {
+		current = current->next;
+	}
+	RemoveItem( tmp );
+	return rval;
+}
 
 /*
   Return true if the scan pointer is at the end of the list or the list
