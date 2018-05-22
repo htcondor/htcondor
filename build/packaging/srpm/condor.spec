@@ -1949,7 +1949,7 @@ fi
 %endif
 
 %changelog
-* Tue May 22 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-1
+* Tue May 22 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-2
 - Reinstate man pages
 - Drop centos from dist tag in 32-bit Enterprise Linux 7 RPMs
 
