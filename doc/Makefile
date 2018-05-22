@@ -78,6 +78,7 @@ just-man-pages : just-man-pages.tex
 		makeman/makeman -v -i $$thisfile -s 1; \
 	done
 	@makeman/makeman -v -i just-man-pages/condor_dagman_metrics_repor.html -s 1
+	@mv just-man-pages/condor_dagman_metrics_repor.1 just-man-pages/condor_dagman_metrics_reporter.1
 	@rm -fr man
 	@mkdir man
 	@mkdir man/man1
