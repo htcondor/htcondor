@@ -73,12 +73,10 @@ ref.html : ref.tex condor-macros.4ht ref.cfg $(FIGURES)
 just-man-pages : just-man-pages.tex
 	@cd makeman ; make clean && make makeman
 	@latex2html -split 4 -link 2 -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
-	@for html in $(MANPAGES); do \
-		thisfile=just-man-pages/$$html; \
-		makeman/makeman -v -i $$thisfile -s 1; \
+	@cd just-man-pages; for html in $(MANPAGES); do \
+		../makeman/makeman -v -i $${html} -s 1; \
 	done
-	@makeman/makeman -v -i just-man-pages/condor_dagman_metrics_repor.html -s 1
-	@mv just-man-pages/condor_dagman_metrics_repor.1 just-man-pages/condor_dagman_metrics_reporter.1
+	@cd just-man-pages; mv condor_dagman_metrics_repor.html condor_dagman_metrics_reporter.html; ../makeman/makeman -v -i condor_dagman_metrics_reporter.html -s 1
 	@rm -fr man
 	@mkdir man
 	@mkdir man/man1
