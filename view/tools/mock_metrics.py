@@ -289,23 +289,27 @@ def make_timespan_data(record_data, make_record: Callable, now: datetime.datetim
     return records_by_span_and_interval_number
 
 
+def foo(name):
+    return len(name.split('@')[0])
+
+
 def make_submitter_record(date: datetime.datetime, name_and_machine: Tuple[str, str]):
+    name, machine = name_and_machine
     return SubmitterRecord(
         date = date,
-        name = name_and_machine[0],
-        machine = name_and_machine[1],
+        name = name,
+        machine = machine,
         jobs = {
-            JobStatus.IDLE: int(random.gauss(100, 50)),
-            JobStatus.RUNNING: int(random.gauss(30, 10)),
-            JobStatus.HELD: int(abs(random.gauss(0, 5))),
+            JobStatus.IDLE: int(abs(random.gauss(50 * foo(name), 5 * foo(name)))),
+            JobStatus.RUNNING: int(abs(random.gauss(20 * foo(name), 3 * foo(name)))),
+            JobStatus.HELD: int(abs(random.gauss(0, 3 * foo(name)))),
         },
     )
 
 
 def make_slot_record(date: datetime.datetime, remote_user: str):
-    memory = random.gauss(1000, 200)
-    memory_usage = random.triangular(.3, .8, mode = .6) * memory
-    print(memory, memory_usage, (memory - memory_usage) / memory)
+    memory = random.gauss(250 * foo(remote_user), 200)
+    memory_usage = min(random.gauss(.15 * foo(remote_user), .03 * foo(remote_user)), 1) * memory
     return SlotRecord(
         date = date,
         slot_type = random.choice(tuple(SlotType)),

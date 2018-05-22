@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block style %}
+    <style>
+        .graph .vizchart {
+            height: 30vh;
+        }
+    </style>
+{% endblock style %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col" id="memory-efficiency">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "memory-efficiency",
+                        title: "Memory Efficiency",
+                        help_url: "{{ base }}help/glossary.html#memory-by-cpu-count",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&sub=Memory,MemoryUsage,MemoryUnused&group=Date;MemoryUsage,MemoryUnused&rename=MemoryUsage=Used&rename=MemoryUnused=Unused&chart=stacked",
+                    });
+                </script>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col" id="fractional-unused-memory">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "fractional-unused-memory",
+                        title: "Fraction of Memory Unused",
+                        help_url: "{{ base }}help/glossary.html#memory-by-cpu-count",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&sub=Memory,MemoryUsage,MemoryUnused&group=Date;MemoryUnused,Memory&div=MemoryUnused,Memory,MemoryUnusedFraction&group=Date;MemoryUnusedFraction&chart=line",
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}

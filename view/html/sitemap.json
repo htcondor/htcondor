@@ -10,7 +10,8 @@
   },
   "Slots": {
     "CPU and Memory Utilization": "cpu_and_memory_utilization.html",
-    "Multicore Utilization": "multicore_utilization.html"
+    "Memory Efficiency": "memory_efficiency.html",
+    "Multicore CPU Utilization": "multicore_cpu_utilization.html"
   },
   "Operations": {
     "Total CPU and Memory": "total_cpu_and_memory.html"
