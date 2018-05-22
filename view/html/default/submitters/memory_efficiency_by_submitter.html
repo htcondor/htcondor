@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block style %}
+    <style>
+        .graph .vizchart {
+            height: 40vh;
+        }
+    </style>
+{% endblock style %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col" id="unused-memory-by-submitter">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "unused-memory-by-submitter",
+                        title: "Unused Memory by Submitter",
+                        help_url: "{{ base }}help/glossary.html#memory-by-cpu-count",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&sub=Memory,MemoryUsage,MemoryUnused&pivot=Date;RemoteUser;MemoryUnused&chart=stacked",
+                        table_query: "sub=Memory,MemoryUsage,MemoryUnused&group=Date,RemoteUser;MemoryUnused&group=RemoteUser;min(MemoryUnused),avg(MemoryUnused),max(MemoryUnused)",
+                        select_tuple: ["RemoteUser"],
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}

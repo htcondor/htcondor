@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block style %}
+    <style>
+        .graph .vizchart {
+            height: 40vh;
+        }
+    </style>
+{% endblock style %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col" id="memory-by-submitter">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "memory-by-submitter",
+                        title: "Memory in Use by Submitter",
+                        help_url: "{{ base }}help/glossary.html#memory-in-use-by-submitter",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&pivot=Date;RemoteUser;Memory&chart=stacked",
+                        table_query: "order=Date&group=Date,RemoteUser;Memory&group=RemoteUser;min(Memory),avg(Memory),max(Memory)",
+                        select_tuple: ["RemoteUser"],
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}

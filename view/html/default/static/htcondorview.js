@@ -2739,6 +2739,46 @@ AfterqueryObj.prototype.doCumulativeIntegral = function (ingrid) {
 };
 
 
+AfterqueryObj.prototype.doArithmetic = function (ingrid, column_names, operation) {
+    column_names = column_names.split(",");
+    const col_a = column_names[0];
+    const col_b = column_names[1];
+    const col_target = column_names[2];
+
+    const col_a_index = ingrid.headers.indexOf(col_a);
+    const col_b_index = ingrid.headers.indexOf(col_b);
+
+    console.log(col_a, col_b);
+    console.log(col_a_index, col_b_index);
+
+    let outgrid = {headers: ingrid.headers.concat([col_target]), data: ingrid.data, types: ingrid.types.concat([ingrid.types[col_a_index]])};
+
+    for (let row of outgrid.data) {
+        row.push(operation(row[col_a_index], row[col_b_index]));
+    }
+
+    console.log(outgrid);
+
+    return outgrid;
+};
+
+AfterqueryObj.prototype.doAdd = function(ingrid, column_names) {
+    return AfterqueryObj.prototype.doArithmetic(ingrid, column_names, function (a, b) {return a + b;});
+};
+
+AfterqueryObj.prototype.doSubtract = function(ingrid, column_names) {
+    return AfterqueryObj.prototype.doArithmetic(ingrid, column_names, function (a, b) {return a - b;});
+};
+
+AfterqueryObj.prototype.doMultiply = function(ingrid, column_names) {
+    return AfterqueryObj.prototype.doArithmetic(ingrid, column_names, function (a, b) {return a * b;});
+};
+
+AfterqueryObj.prototype.doDivide = function(ingrid, column_names) {
+    return AfterqueryObj.prototype.doArithmetic(ingrid, column_names, function (a, b) {return a / b;});
+};
+
+
 AfterqueryObj.prototype.limitDecimalPrecision = function (grid) {
     for (let rowi in grid.data) {
         const row = grid.data[rowi];
@@ -3228,6 +3268,26 @@ AfterqueryObj.prototype.addTransforms = function (queue, args) {
         else if (argkey === "cumulative_integral") {
             transform(function (g, a) {
                 return that.doCumulativeIntegral(g, a);
+            }, argval);
+        }
+        else if (argkey === "add") {
+            transform(function (g, a) {
+                return that.doAdd(g, a);
+            }, argval);
+        }
+        else if (argkey === "sub") {
+            transform(function (g, a) {
+                return that.doSubtract(g, a);
+            }, argval);
+        }
+        else if (argkey === "mult") {
+            transform(function (g, a) {
+                return that.doMultiply(g, a);
+            }, argval);
+        }
+        else if (argkey === "div") {
+            transform(function (g, a) {
+                return that.doDivide(g, a);
             }, argval);
         }
     }

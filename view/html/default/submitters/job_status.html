@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 
+{% block style %}
+    <style>
+        .graph .vizchart {
+            height: 30vh;
+        }
+    </style>
+{% endblock style %}
+
 {% block body %}
 
     <div class="container">
@@ -31,7 +39,9 @@
                     });
                 </script>
             </div>
+        </div>
 
+        <div class="row">
             <div class="col" id="held_jobs">
                 <script>
                     new HTCondorViewRanged({

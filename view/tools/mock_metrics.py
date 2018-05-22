@@ -177,8 +177,9 @@ class SlotRecord(Record):
     STATE_KEY = 'State'
     ACTIVITY_KEY = 'Activity'
     CPUS_KEY = 'Cpus'
-    REMOTE_USER_KEY = 'RemoteUser'
     MEMORY_KEY = 'Memory'
+    MEMORY_USAGE_KEY = 'MemoryUsage'
+    REMOTE_USER_KEY = 'RemoteUser'
 
     def __init__(
         self,
@@ -190,7 +191,8 @@ class SlotRecord(Record):
         state: SlotState,
         activity: SlotActivity,
         cpus: int,
-        memory: int,
+        memory: float,
+        memory_usage: float,
         remote_user: str,
     ):
         self.date = date
@@ -201,6 +203,7 @@ class SlotRecord(Record):
         self.activity = activity
         self.cpus = cpus
         self.memory = memory
+        self.memory_usage = memory_usage
         self.remote_user = remote_user
 
     def to_json(self):
@@ -213,6 +216,7 @@ class SlotRecord(Record):
             self.ACTIVITY_KEY: self.activity,
             self.CPUS_KEY: self.cpus,
             self.MEMORY_KEY: self.memory,
+            self.MEMORY_USAGE_KEY: self.memory_usage,
             self.REMOTE_USER_KEY: self.remote_user,
         }
 
@@ -291,14 +295,17 @@ def make_submitter_record(date: datetime.datetime, name_and_machine: Tuple[str, 
         name = name_and_machine[0],
         machine = name_and_machine[1],
         jobs = {
-            JobStatus.IDLE: random.randint(80, 120),
-            JobStatus.RUNNING: random.randint(30, 50),
-            JobStatus.HELD: random.randint(0, 10),
+            JobStatus.IDLE: int(random.gauss(100, 50)),
+            JobStatus.RUNNING: int(random.gauss(30, 10)),
+            JobStatus.HELD: int(abs(random.gauss(0, 5))),
         },
     )
 
 
 def make_slot_record(date: datetime.datetime, remote_user: str):
+    memory = random.gauss(1000, 200)
+    memory_usage = random.triangular(.3, .8, mode = .6) * memory
+    print(memory, memory_usage, (memory - memory_usage) / memory)
     return SlotRecord(
         date = date,
         slot_type = random.choice(tuple(SlotType)),
@@ -306,8 +313,9 @@ def make_slot_record(date: datetime.datetime, remote_user: str):
         operating_system = 'LINUX',
         state = random.choice(tuple(SlotState)),
         activity = random.choice(tuple(SlotActivity)),
-        cpus = random.randint(0, 8),
-        memory = random.randint(100, 2000),
+        cpus = random.choice((1, 1, 1, 1, 2, 2, 4, 8)),
+        memory = memory,
+        memory_usage = memory_usage,
         remote_user = remote_user,
     )
 
@@ -425,7 +433,7 @@ def generate_submitters(args):
 
 
 def generate_slots(args):
-    names = random.sample(NAMES, k = args.number)
+    names = random.sample(NAMES, k = args.number) * 10
     records_by_timespan_and_interval_number = make_timespan_data(names, make_slot_record, now = args.now)
 
     if not args.dry:

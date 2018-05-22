@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}
+    CPU Utilization
+{% endblock title %}
+
+
+{% block style %}
+    <style>
+        .graph .vizchart {
+            height: 35vh;
+        }
+    </style>
+{% endblock style %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col" id="cpu-utilization">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "cpu-utilization",
+                        title: "CPU Utilization",
+                        {#help_url: "{{ base }}help/glossary.html#number--slots-by-cpu-count",#}
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&pivot=Date;State;Cpus&chart=stacked",
+                    });
+                </script>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col" id="memory-utilization">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "memory-utilization",
+                        title: "Memory Utilization",
+                        {#help_url: "{{ base }}help/glossary.html#number--slots-by-cpu-count",#}
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&pivot=Date;State;Memory&chart=stacked",
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}

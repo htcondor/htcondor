@@ -2,14 +2,18 @@
   "Overview": "index.html",
   "Submitters": {
     "Job Status": "job_status.html",
-    "Cluster Usage": "cluster_usage.html"
+    "Cluster Usage": "cluster_usage.html",
+    "CPU Utilization by Submitter": "cpu_utilization_by_submitter.html",
+    "Memory Utilization by Submitter": "memory_utilization_by_submitter.html",
+    "Memory Efficiency by Submitter": "memory_efficiency_by_submitter.html",
+    "Fractional Memory Efficiency by Submitter": "fractional_memory_efficiency_by_submitter.html"
   },
   "Slots": {
+    "CPU and Memory Utilization": "cpu_and_memory_utilization.html",
     "Multicore Utilization": "multicore_utilization.html"
   },
   "Operations": {
-    "CPU and Memory": "cpu_and_memory.html",
-    "Memory Efficiency": "memory_efficiency.html"
+    "Total CPU and Memory": "total_cpu_and_memory.html"
   },
   "Help": {
     "Query Syntax": "syntax.html",

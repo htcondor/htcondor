@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col" id="cpu">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "cpu",
+                        title: "Total CPUs in Use",
+                        help_url: "{{ base }}help/glossary.html#total-cpus-in-use",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&group=Date;Cpus&rename=Cpus=CPUs&chart=line",
+                    });
+                </script>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col" id="memory">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "memory",
+                        title: "Total Memory in Use",
+                        help_url: "{{ base }}help/glossary.html#total-memory-in-use",
+                        data_url: "data/slots..json",
+                        graph_query: "order=Date&group=Date;Memory&rename=Memory=Memory (MB)&chart=line",
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}
