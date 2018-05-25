@@ -50,6 +50,8 @@
 
 #include <algorithm>
 
+#pragma GCC diagnostic ignored "-Wcast-qual"
+
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
 extern const char* JOB_AD_FILENAME;
@@ -2422,8 +2424,12 @@ JICShadow::beginFileTransfer( void )
 		int proxy_expiration;
 		job_ad->LookupInteger( ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
 
-		// Do RPC call to get delegated proxy
-		REMOTE_CONDOR_get_delegated_proxy( (char*)proxy_source_path.Value(), (char*)proxy_dest_path.Value(), proxy_expiration );
+		// Do RPC call to get delegated proxy.
+		char* proxy_source_path_strdup = strdup( proxy_source_path.Value() );
+		char* proxy_dest_path_strdup = strdup( proxy_dest_path.Value() );
+		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path_strdup, proxy_dest_path_strdup, proxy_expiration );
+		free( proxy_source_path_strdup );
+		free( proxy_dest_path_strdup );
 	}
 		// no transfer wanted or started, so return false
 	return false;
