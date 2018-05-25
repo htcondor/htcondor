@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{ Python Bindings}\label{API-Python}
+\section{Python Bindings}\label{API-Python}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{API!Python bindings}
 \index{Python bindings}
@@ -1039,7 +1039,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> len(results)
 3812
 >>> results[0]
-[ Name = "slot1@red-d20n35"; MyType = "Machine"; TargetType = "Job"; CurrentTime = time() ]
+[ Name = "slot1@red-d20n35"; MyType = "Machine"; TargetType = "Job" ]
 >>> scheddAd = coll.locate(htcondor.DaemonTypes.Schedd, "red-gw1.unl.edu")
 >>> scheddAd["ScheddIpAddr"]
 '<129.93.239.132:53020>'
@@ -1048,7 +1048,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> len(results)
 63
 >>> results[0]
-[ MyType = "Job"; TargetType = "Machine"; ServerTime = 1356722353; ClusterId = 674143; ProcId = 0; CurrentTime = time() ]
+[ MyType = "Job"; TargetType = "Machine"; ServerTime = 1356722353; ClusterId = 674143; ProcId = 0 ]
 >>> htcondor.param["COLLECTOR_HOST"]
 'hcc-briantest.unl.edu'
 >>> schedd = htcondor.Schedd() # Defaults to the local schedd.
