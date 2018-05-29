@@ -10,12 +10,14 @@ from pytest.Utils import Utils
 
 
 def submit_callback():
-    Utils.TLog("Submit callback called!\n")
+    Utils.TLog("Custom submit callback called!\n")
 
 def success_callback():
+    Utils.TLog("Custom success callback called, exiting with status 0\n")
     sys.exit(0)
 
 def failure_callback():
+    Utils.TLog("Custom failure callback called, exiting with status 1\n")
     sys.exit(1)
 
 

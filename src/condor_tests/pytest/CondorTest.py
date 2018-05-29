@@ -27,12 +27,16 @@ class CondorTest(object):
         self.End()
 
 
-    def _success_callback_fn(self):
-        sys.exit(0)
-
-
     def _failure_callback_fn(self):
-        sys.exit(1)
+        Utils.TLog("Default CondorTest failure callback invoked")
+
+
+    def _submit_callback_fn(self):
+        Utils.TLog("Default CondorTest submit callback invoked")
+
+
+    def _success_callback_fn(self):
+        Utils.TLog("Default CondorTest success callback invoked")
 
 
     # @return: -1 if error, or the numeric key >=0 of this PersonalCondor instance if success
