@@ -923,7 +923,7 @@ if [ -n "$resource_list" ]; then
 #			pmem=*) pmem_value=${resource_type#*=}
 #				printf "RequestMemory = $pmem_value\n" >> $submit_file;;
 			procs=*) procs_value=${resource_type#*=}
-				printf "requst_cpus = $procs_value\n" >> $submit_file;;
+				printf "request_cpus = $procs_value\n" >> $submit_file;;
 # More potential support for MPI commands/parallel universe.
 #				printf "machine_count = $procs_value\n" >> $submit_file
 #				if [ "$procs_value" -gt 1 ]; then
