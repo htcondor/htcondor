@@ -288,6 +288,7 @@ our %submit_info = (
 								  '-DCLIPPED:BOOL' => 'OFF',
 								  '-DWITH_CREAM:BOOL' => 'OFF',
 								  '-DWITH_BOINC:BOOL' => 'OFF',
+								  '-DPYTHON_VERSION' => '2.7',
 			},
 			'prereqs'	=> [ ],
 			'xtests'	=>	undef,
@@ -556,6 +557,22 @@ our %submit_info = (
 	'x86_64_fedora_24'				=> 'x86_64_Fedora',
 	'x86_64_fedora_25'				=> 'x86_64_Fedora',
 	'x86_64_fedora_27'				=> 'x86_64_Fedora',
+
+	'x86_64_Fedora27'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+								'-DPYTHON_VERSION' => '2.7',
+			},
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
 
 	##########################################################################
 	# Platform Solaris 11 on x86_64

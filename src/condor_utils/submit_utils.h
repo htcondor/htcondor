@@ -799,7 +799,7 @@ struct SubmitStepFromQArgs {
 		m_jidInit = id;
 		m_nextProcId = id.proc;
 		m_fea.clear(); m_fea.queue_num = count;
-		m_step_size = count;
+		m_step_size = m_fea.queue_num ? m_fea.queue_num : 1;
 		m_hash.set_live_submit_variable("Item", "", true);
 		m_hash.optimize();
 	}

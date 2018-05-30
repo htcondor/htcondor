@@ -1315,7 +1315,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_config_val.1.gz
 %_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
-%_mandir/man1/condor_dagman_metrics_repor.1.gz
+%_mandir/man1/condor_dagman_metrics_reporter.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
 %_mandir/man1/condor_findhost.1.gz
 %_mandir/man1/condor_gpu_discovery.1.gz
@@ -1344,7 +1344,9 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%if ! 0%{?fedora}
 %_mandir/man1/condor_top.1.gz
+%endif
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz

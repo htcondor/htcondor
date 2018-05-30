@@ -9,6 +9,16 @@ from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
 
 
+def submit_callback():
+    Utils.TLog("Submit callback called!\n")
+
+def success_callback():
+    sys.exit(0)
+
+def failure_callback():
+    sys.exit(1)
+
+
 def main():
 
     # Create a new test. If we don't specify a name, take the file name.
@@ -27,9 +37,14 @@ def main():
         "executable":   "x_echostring.pl",
         "output":       "job_basic_python_test.out",
         "error":        "job_basic_python_test.err",
-        "arguments":    "\"Basic Python test submission, cluster $(cluster)\""
+        "arguments":    "\"Basic Python pytest submission, cluster $(cluster)\""
     }
     test_job = CondorJob(job_args)
+
+    # Register handlers
+    test.RegisterSubmit(submit_callback)
+    test.RegisterSuccess(success_callback)
+    test.RegisterFailure(failure_callback)
 
     # Submit the test job
     result = test.SubmitJob(test_job)
