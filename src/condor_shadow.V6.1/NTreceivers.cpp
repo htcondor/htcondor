@@ -161,8 +161,8 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_lchown: return "lchown";
         case CONDOR_truncate: return "truncate";
         case CONDOR_utime: return "utime";
-		case CONDOR_getcreds: return "getcreds";
-		case CONDOR_get_delegated_proxy: return "get_delegated_proxy";
+        case CONDOR_getcreds: return "getcreds";
+        case CONDOR_get_delegated_proxy: return "get_delegated_proxy";
 	}
 	return "unknown";
 }
@@ -2237,14 +2237,15 @@ case CONDOR_getdir:
 		dprintf( D_SECURITY, "ENTERING CONDOR_get_delegated_proxy syscall\n" );
 
 		char* proxy_source_path;
+		filesize_t bytes;
 		time_t proxy_expiration;
 
-		// Read in the path to the proxy file
+		// Read path to proxy file
 		result = ( syscall_sock->code( proxy_source_path ) );
 		ASSERT( result );
 		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: proxy_source_path = %s\n", proxy_source_path );
 
-		// Read in the proxy expiration time
+		// Read proxy expiration time
 		result = ( syscall_sock->code( proxy_expiration ) );
 		ASSERT( result );
 		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: proxy_expiration = %lu\n", proxy_expiration );
@@ -2253,25 +2254,15 @@ case CONDOR_getdir:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
-		// Send response acknolwedging proxy file path
+		// Switch to send/write mode and call the globus x509 delegation
 		syscall_sock->encode();
+		int put_x509_rc = syscall_sock->put_x509_delegation( &bytes, proxy_source_path, proxy_expiration, NULL );
+		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: finishing send with value %i\n", put_x509_rc );
 
-		// Wait until we know the starter is waiting for the proxy, then delegate it
-		filesize_t bytes;
-		int rc = syscall_sock->put_x509_delegation( &bytes, proxy_source_path, proxy_expiration, NULL );
-		dprintf( D_FULLDEBUG, "CONDOR_get_delegated_proxy: put_x509_delegation() returned %d\n", rc );
-
-		// Record success or failure
-		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: finishing send with value %i\n", rc );
-
-		// Now send the put_x509_delegation() return code and end_of_message
-		result = ( syscall_sock->code( rc ) );
-		ASSERT( result );
+		// End of message and return
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
-
-		// Return our success or failure
-		return rc;
+		return put_x509_rc;
 	}
 
 	default:

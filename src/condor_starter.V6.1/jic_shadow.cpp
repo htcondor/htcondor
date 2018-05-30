@@ -50,8 +50,6 @@
 
 #include <algorithm>
 
-#pragma GCC diagnostic ignored "-Wcast-qual"
-
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
 extern const char* JOB_AD_FILENAME;
@@ -2361,6 +2359,7 @@ JICShadow::job_lease_expired()
 bool
 JICShadow::beginFileTransfer( void )
 {
+
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		// Only rename the executable if it is transferred.
@@ -2401,30 +2400,30 @@ JICShadow::beginFileTransfer( void )
 		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
 	else if ( wants_x509_proxy ) {
 		
-		// Get initial working directory
+			// Get initial working directory
 		MyString iwd;
 		job_ad->LookupString( ATTR_JOB_IWD, iwd );
 
-		// Get source path to proxy file on the submit machine
+			// Get source path to proxy file on the submit machine
 		MyString proxy_source_path;
 		job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_source_path );
 
-		// Determine the bare filename of the proxy file, without the path
+			// Get proxy expiration timestamp
+		int proxy_expiration;
+		job_ad->LookupInteger( ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
+
+			// Parse proxy filename
 		MyString proxy_filename = proxy_source_path;
 		while( proxy_filename.FindChar( '/' ) != -1 ) {
 			proxy_filename = proxy_filename.substr( proxy_filename.FindChar( '/' ) + 1, proxy_filename.Length() );
 		}
 
-		// Combine the IWD and proxy filename to get the destination proxy path
+			// Combine IWD and proxy filename to get destination proxy path on execute machine
 		MyString proxy_dest_path = iwd;
-		proxy_dest_path += "/";
+		proxy_dest_path += DIR_DELIM_CHAR;
 		proxy_dest_path += proxy_filename;
 
-		// Get the expiration timestamp of the proxy file
-		int proxy_expiration;
-		job_ad->LookupInteger( ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
-
-		// Do RPC call to get delegated proxy.
+			// Do RPC call to get delegated proxy.
 		char* proxy_source_path_strdup = strdup( proxy_source_path.Value() );
 		char* proxy_dest_path_strdup = strdup( proxy_dest_path.Value() );
 		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path_strdup, proxy_dest_path_strdup, proxy_expiration );
