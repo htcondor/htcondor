@@ -2334,111 +2334,49 @@ REMOTE_CONDOR_getcreds()
 }
 
 int
-REMOTE_CONDOR_get_delegated_proxy()
+REMOTE_CONDOR_get_delegated_proxy( char* proxy_source_path, char* proxy_dest_path, time_t proxy_expiration )
 {
 	int result = 0;
-
-	if(!(syscall_sock->get_encryption())) {
-		dprintf ( D_ALWAYS, "ERROR: Can't do CONDOR_getcreds, syscall_sock not encrypted\n" );
-		// fail
-		return -1;
-	}
-
-	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_getcreds\n" );
+	dprintf( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_get_delegated_proxy\n" );
 
 	CurrentSysCall = CONDOR_get_delegated_proxy;
-	char empty[1] = "";
-	char* empty_ptr = empty;
 
+	// Send message telling receiver we are requesting a delegated proxy
 	syscall_sock->encode();
-	result = ( syscall_sock->code(CurrentSysCall) );
+	result = ( syscall_sock->code( CurrentSysCall ) );
 	ON_ERROR_RETURN( result );
-	result = ( syscall_sock->code(empty_ptr) );
+
+	// Send the proxy path
+	result = ( syscall_sock->code( proxy_source_path ) );
 	ON_ERROR_RETURN( result );
+
+	// Send the proxy expiration time
+	result = ( syscall_sock->code( proxy_expiration ) );
+	ON_ERROR_RETURN( result );
+
+	// Now we're done sending our request, so send an end_of_message.
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
 
-	// send response
+	// Shift into decode() mode and then wait for a response
 	syscall_sock->decode();
+	MyString delegated_proxy;
 
-	MyString cred_dir_name;
-	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
-		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
-		return -1;
-	}
-	MyString pid_s;
-	pid_s.formatstr("%i", getpid());
-	cred_dir_name += DIR_DELIM_CHAR;
-	cred_dir_name += pid_s;
+	// Now wait for the delegated x509 proxy
+	int rc = ( syscall_sock->get_x509_delegation( proxy_dest_path, false, NULL ) == ReliSock::delegation_ok ) ? 0 : -1;
+	dprintf( D_FULLDEBUG, "CONDOR_get_delegated_proxy: get_x509_delegation() returned %d\n", rc );
 
-	// create dir to hold creds
-	priv_state p = set_root_priv();
-	mkdir(cred_dir_name.Value(), 0700);
-	set_priv(p);
+	// Read in the proxy expiration time
+	int rpc_rc;
+	result = ( syscall_sock->code( rpc_rc ) );
+	ASSERT( result );
 
-	// driver:  receive int.  -1 == error, 0 == done, 1 == cred classad coming
-	int cmd;
-	for(;;) {
-		result = ( syscall_sock->code(cmd) );
-		ON_ERROR_RETURN( result );
-		if( cmd <= 0 ) {
-			// no more creds to receive, or error
-			break;
-		}
-
-		ClassAd ad;
-		result = ( getClassAd(syscall_sock, ad) );
-		ASSERT( result );
-		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad:\n" );
-		dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
-
-		MyString fname, b64;
-		ad.LookupString("Service", fname);
-		ad.LookupString("Data", b64);
-
-		MyString full_name = cred_dir_name;
-		full_name += DIR_DELIM_CHAR;
-		full_name += fname;
-
-		MyString tmpname = full_name;
-		tmpname += ".tmp";
-
-		// contents of pw are base64 encoded.  decode now just before they go
-		// into the file.
-		int rawlen = -1;
-		unsigned char* rawbuf = NULL;
-		zkm_base64_decode(b64.Value(), &rawbuf, &rawlen);
-
-		if (rawlen <= 0) {
-			dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
-			free(rawbuf);
-			EXCEPT("failure");
-			return false;
-		}
-
-		// write temp file
-		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.Value());
-		bool rc = write_secure_file(tmpname.Value(), rawbuf, rawlen, true);
-
-		// caller of condor_base64_decode is responsible for freeing buffer
-		free(rawbuf);
-
-		if (rc != true) {
-			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpname.Value());
-			EXCEPT("failure");
-		}
-
-		dprintf (D_SECURITY, "Moving %s to %s\n", tmpname.Value(), full_name.Value());
-		priv_state priv = set_root_priv();
-		rename(tmpname.Value(), full_name.Value());
-		set_priv (priv);
-	}
-
+	// Wait for the end_of_message signal
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
 
-	// return status
-	return cmd;
+	// Return status
+	return rc;
 }
 
 
