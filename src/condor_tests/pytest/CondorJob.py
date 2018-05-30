@@ -19,7 +19,7 @@ class CondorJob(object):
     def Submit(self, wait=True):
 
         # Submit the job defined by submit_args
-        Utils.TLog("Running job with arguments: " + str(self._job_args))
+        Utils.TLog("Submitting job with arguments: " + str(self._job_args))
         schedd = htcondor.Schedd()
         submit = htcondor.Submit(self._job_args)
         try:
@@ -37,6 +37,7 @@ class CondorJob(object):
 
         # If we got this far, we assume the job succeeded.
         return JOB_SUCCESS
+
 
     def WaitForFinish(self, timeout=240):
 

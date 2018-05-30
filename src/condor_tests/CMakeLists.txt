@@ -235,7 +235,7 @@ if (BUILD_TESTING)
 	if (WITH_PYTHON_BINDINGS)
 		# an example test that depends on python bindings
 		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
-		# condor_pl_test (job_basic_python_test "Basic python bindings test with pytest suite" "core;quick;full;quicknolink")
+		condor_pl_test (job_basic_python_test "Basic python bindings test with pytest suite" "core;quick;full;quicknolink")
 	endif()
 
 	if(WITH_GANGLIA)

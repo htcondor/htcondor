@@ -9,6 +9,9 @@ import time
 from PersonalCondor import PersonalCondor
 from Utils import Utils
 
+JOB_SUCCESS = 0
+JOB_FAILURE = 1
+
 TEST_SUCCESS = 0
 TEST_FAILURE = 1
 
@@ -19,8 +22,18 @@ class CondorTest(object):
         self._name = name
         self._personal_condors = dict()
 
+
     def __del__(self):
         self.End()
+
+
+    def _success_callback_fn(self):
+        sys.exit(0)
+
+
+    def _failure_callback_fn(self):
+        sys.exit(1)
+
 
     # @return: -1 if error, or the numeric key >=0 of this PersonalCondor instance if success
     def StartPersonalCondor(self):
@@ -31,7 +44,11 @@ class CondorTest(object):
         self._personal_condors[0] = personal
         return 0
 
+
     def SubmitJob(self, job, wait=True, key=0):
+
+        self._submit_callback_fn()
+        
         # If no PersonalCondor objects are registered to this test, submit to system condor
         if len(self._personal_condors) == 0:
             job.Submit(wait)
@@ -45,7 +62,24 @@ class CondorTest(object):
         # value, update CONDOR_CONFIG to point to the specific instance, then submit the test
         elif len(self._personal_condors) > 1:
             self._personal_condors[key].SetCondorConfig()
-            job.Submit(wait)
+            result = job.Submit(wait)
+            if result == JOB_SUCESS:
+                self._success_callback_fn()
+            elif result == JOB_FAILURE:
+                self._failure_callback_fn()
+            
+
+
+    def RegisterSubmit(self, _submit_callback_fn):
+        self._submit_callback_fn = _submit_callback_fn
+
+
+    def RegisterSuccess(self, _success_callback_fn):
+        self._success_callback_fn = _success_callback_fn
+
+
+    def RegisterFailure(self, _failure_callback_fn):
+        self._failure_callback_fn = _failure_callback_fn
 
 
     def End(self):
