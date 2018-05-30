@@ -125,9 +125,10 @@ JobTransforms::initAndReconfig()
 			// in that way without macro expanding at this time.
 			const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 };
 			StringList statements( raw_transform_text, "\n\r" );
-			if ( (rval=xfm->open(statements, ArgumentMacro)) < 0 ) {
-				dprintf( D_ALWAYS, "JOB_TRANSFORM_%s macro stream malformed, ignoring. (err=%d)\n",
-					name, rval );
+			std::string errmsg = "";
+			if ( (rval=xfm->open(statements, ArgumentMacro, errmsg)) < 0 ) {
+				dprintf( D_ALWAYS, "JOB_TRANSFORM_%s macro stream malformed, ignoring. (err=%d) %s\n",
+					name, rval, errmsg.c_str() );
 				continue;
 			}
 		}
