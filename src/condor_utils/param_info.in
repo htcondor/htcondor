@@ -5900,6 +5900,23 @@ default = use FEATURE : ContinuousCronHook(STARTD_CRON, $(0))
 description=Configure a SCHEDD Cron continuous Hook, args: tag, exe [, hook_args]
 default = use FEATURE : ContinuousCronHook(SCHEDD_CRON, $(0))
 
+[$FEATURE.ChildCollector]
+description=One child node of a Collector tree, args:(id [,port])
+default: @end
+   COLLECTOR$(1)=$(COLLECTOR)
+   if $(2?)
+      COLLECTOR$(1)_ARGS= -p $(2)
+   else
+      COLLECTOR$(1)_ARGS= -sock collector$(1)
+   endif
+   COLLECTOR$(1).COLLECTOR_NAME=collector$(1)
+   COLLECTOR$(1).CONDOR_VIEW_HOST=$(TOP_COLLECTOR_HOST)
+   DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
+   # change TOP_COLLECTOR_HOST to point all of the child collectors at a different top-level collector
+   TOP_COLLECTOR_HOST=$(COLLECTOR_HOST)
+@end
+
+
 ##
 ## Experimental meta knobs
 ##
