@@ -24,4 +24,3 @@ set(SAFE_OPEN_SRC ${SAFE_OPEN_SRC} PARENT_SCOPE)
 
 message ( STATUS "safe_open done")
 message ( STATUS ${SAFE_OPEN_SRC})
-message(STATUS ${GSOAP_SRC})

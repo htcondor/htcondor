@@ -24,6 +24,10 @@ use warnings;
 
 use Cwd;
 
+#
+# This file has an almost-exact copy in cmd_drain_scavenging_vacation.  Sorry.
+#
+
 use CondorTest;
 use CondorUtils;
 use CustomMachineResource;

@@ -1,6 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:classad-reference}
-HTCondor's ClassAd Mechanism}
+\section{HTCondor's ClassAd Mechanism}\label{sec:classad-reference}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd|(}
 
@@ -149,8 +148,8 @@ and with the \Opt{-constraint} option to command-line tools.
 
 New ClassAds have no \Attr{CurrentTime} attribute.
 If needed, use the \Procedure{time} function instead.
-In order to mimic Old ClassAd semantics in this HTCondor version 7.5.1 release,
-all ClassAds have an explicit \Attr{CurrentTime} attribute,
+In order to mimic Old ClassAd semantics in current versions of HTCondor,
+all ClassAds have an implicit \Attr{CurrentTime} attribute,
 with a value of \Procedure{time}.
 
 In current versions of HTCondor, 
@@ -679,8 +678,7 @@ Optional parameters are given within square brackets.
 
   \index{ClassAd functions!time()}
   \item[\Code{Integer time()}]
-    Returns the current coordinated universal time, which is the same
-    as the ClassAd attribute \Attr{CurrentTime}.
+    Returns the current coordinated universal time.
     This is the time, in seconds, since midnight of January 1, 1970.
 
   \index{ClassAd functions!formatTime()}
@@ -689,7 +687,7 @@ Optional parameters are given within square brackets.
     Returns a formatted string that is a representation of \Expr{time}.
     The argument \Expr{time} is interpreted as coordinated universal time in
     seconds, since midnight of January 1, 1970. If not specified,
-    \Expr{time} will default to the value of attribute \Attr{CurrentTime}.
+    \Expr{time} will default to the current time.
 		
     The argument \Expr{format} is interpreted similarly to the format
     argument of the ANSI C strftime function. It consists of arbitrary text

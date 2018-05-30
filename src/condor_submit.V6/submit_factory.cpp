@@ -474,7 +474,7 @@ int submit_factory_job (
 			if (rval == 1) {
 				rval = 0; // having external foreach data is not an error (yet)
 				if (spill_foreach_data) {
-					rval = submit_hash.load_external_q_foreach_items(o, errmsg);
+					rval = submit_hash.load_external_q_foreach_items(o, false, errmsg);
 				}
 			}
 			if (rval)

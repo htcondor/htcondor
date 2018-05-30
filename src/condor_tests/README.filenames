@@ -21,12 +21,11 @@ Each test name is of them form:
 
 Where:
 
-type = job | lib | cmd | soap
+type = job | lib | cmd | fetch
 
    job: any tests submitted as a condor job to a personal condor pool
    lib: unit tests against a library in the code (e.g., classads, userlog)
    cmd: execution tests of our command-line tools
-   soap: tests of (or via) the SOAP API
    fetch: tests which get their own work like work-fetch and boinc
 
 subsys = high-level part of condor being tested

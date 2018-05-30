@@ -2389,8 +2389,10 @@ int main(int /*argc*/, char ** /*argv*/)
 		//create & detach worker threads
 	for (i = 0; i < worker_cnt; i++){
 		
-		pthread_create(&threads[i], NULL, worker_main, NULL);
-		pthread_detach(threads[i]);
+		int result = pthread_create(&threads[i], NULL, worker_main, NULL);
+		if (result == 0) {
+			pthread_detach(threads[i]);
+		}
 	}
 	
 	while (1) {

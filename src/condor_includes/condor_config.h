@@ -543,6 +543,20 @@ BEGIN_C_DECLS
 		virtual MACRO_SOURCE& source() { return *src; }
 		void set(const char* _fp, ssize_t _cb, size_t _ix, MACRO_SOURCE& _src) { ls.init(_fp, _cb, _ix); src = &_src; }
 		void reset() { ls.clear(); src = NULL; }
+		// return a pointer to the part of the memory buffer that has not yet been read
+		// the buffer must be null terminated, so this can be used as a string.
+		const char * remainder(size_t & cb) {
+			if ( ! ls.at_eof()) {
+				cb = ls.cb - ls.ix;
+				return ls.str+ls.ix;
+			} else {
+				cb = 0;
+				return NULL;
+			}
+		}
+		// save and restore the 'have read up to' position
+		void save_pos(size_t & saved_ix, int & saved_line) { saved_ix = ls.ix; saved_line = src ? src->line : 0; }
+		void rewind_to(size_t saved_ix, int saved_line) { ls.ix = saved_ix; if (src) src->line = saved_line; }
 
 		// this class allows for template expansion of getline_implementation
 		class LineSource {

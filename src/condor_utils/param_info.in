@@ -89,6 +89,24 @@ default=20
 type=int
 tags=preen
 
+[PREEN_COREFILE_MAX_SIZE]
+default=50000000
+type=int
+description=Maximum size allowed for coredump files. Anything bigger gets erased. Default 50Mb.
+tags=preen
+
+[PREEN_COREFILE_STALE_AGE]
+default=5184000
+type=int
+description=Age in seconds of a coredump file deemed stale. Default 60 days.
+tags=preen
+
+[PREEN_COREFILES_PER_PROCESS]
+default=10
+type=int
+description=Number of recent core dump files to retain per process.
+tags=preen
+
 [DEFAULT_MASTER_SHUTDOWN_SCRIPT]
 default=
 type=path
@@ -245,10 +263,6 @@ default=500
 range=1,
 type=int
 restart=true
-
-[SOAP_SSL_PORT]
-default=0
-type=int
 
 [CONDOR_CREDENTIAL_DIR]
 default=/tmp
@@ -1178,45 +1192,6 @@ type=int
 description=Max seconds system clock can skip without a restart
 tags=daemon_core
 
-[ENABLE_SOAP_SSL]
-default=false
-type=bool
-tags=daemon_core,soap_core
-
-[SOAP_SSL_SERVER_KEYFILE]
-default=
-type=string
-
-[SOAP_SSL_SERVER_KEYFILE_PASSWORD]
-default=96hoursofmattslife
-type=string
-tags=daemon_core,soap_core
-
-[SOAP_SSL_CA_FILE]
-default=
-type=string
-tags=daemon_core,soap_core
-
-[SOAP_SSL_CA_DIR]
-default=
-type=string
-tags=daemon_core,soap_core
-
-[SOAP_SSL_DH_FILE]
-default=
-type=string
-tags=daemon_core,soap_core
-
-[SOAP_SSL_SKIP_HOST_CHECK]
-default=false
-type=bool
-tags=daemon_core
-
-[WEB_ROOT_DIR]
-default=
-type=string
-tags=daemon_core,soap_core
-
 [PID_SNAPSHOT_INTERVAL]
 default=15
 type=int
@@ -1277,16 +1252,6 @@ tags=daemon_core
 
 [SEC_INVALIDATE_SESSIONS_VIA_TCP]
 default=true
-type=bool
-tags=daemon_core
-
-[ENABLE_SOAP]
-default=false
-type=bool
-tags=daemon_core
-
-[ENABLE_WEB_SERVER]
-default=false
 type=bool
 tags=daemon_core
 
@@ -3089,11 +3054,6 @@ default=SHADOW, SHADOW_STANDARD
 win32_default=SHADOW
 type=string
 tags=schedd,shadow_mgr
-
-[SOAP_LEAVE_IN_QUEUE]
-default=
-type=string
-tags=schedd
 
 [SHADOW]
 default=$(SBIN)/condor_shadow
@@ -5180,6 +5140,14 @@ default=$(SBIN)/AzureGAHPServer
 win32_default=$(SBIN)\AzureGAHPServer.py
 type=path
 
+[GAHP_SSL_CAFILE]
+default=
+type=path
+
+[GAHP_SSL_CADIR]
+default=
+type=path
+
 [CREDD]
 default=$(SBIN)/condor_credd
 win32_default=$(SBIN)\condor_credd.exe
@@ -5931,6 +5899,23 @@ default = use FEATURE : ContinuousCronHook(STARTD_CRON, $(0))
 [$FEATURE.ScheddCronContinuous]
 description=Configure a SCHEDD Cron continuous Hook, args: tag, exe [, hook_args]
 default = use FEATURE : ContinuousCronHook(SCHEDD_CRON, $(0))
+
+[$FEATURE.ChildCollector]
+description=One child node of a Collector tree, args:(id [,port])
+default: @end
+   COLLECTOR$(1)=$(COLLECTOR)
+   if $(2?)
+      COLLECTOR$(1)_ARGS= -p $(2)
+   else
+      COLLECTOR$(1)_ARGS= -sock collector$(1)
+   endif
+   COLLECTOR$(1).COLLECTOR_NAME=collector$(1)
+   COLLECTOR$(1).CONDOR_VIEW_HOST=$(TOP_COLLECTOR_HOST)
+   DAEMON_LIST=$(DAEMON_LIST) COLLECTOR$(1)
+   # change TOP_COLLECTOR_HOST to point all of the child collectors at a different top-level collector
+   TOP_COLLECTOR_HOST=$(COLLECTOR_HOST)
+@end
+
 
 ##
 ## Experimental meta knobs

@@ -49,11 +49,6 @@ public:
 		 */
 	static bool createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state );
 
-		/* Like createJobSpoolDirectory, but just create the directories
-		 * as condor and do not chown them.
-		 */
-	static bool createJobSpoolDirectory_PRIV_CONDOR(int cluster, int proc, bool is_standard_universe );
-
 		/* Like createJobSpoolDirectory, but just create the .swap directory.
 		 * Assumes the other (parent) directories have already been created.
 		 */
@@ -116,9 +111,15 @@ char *GetSpooledExecutablePath( int cluster, const char *dir = NULL );
  * the job submit digest should reside if the submitter spooled it
  * If the SPOOL directory argument is NULL, then the SPOOL parameter
  * will be looked up.
- * The buffer returned must be deallocated with free().
  */
 void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir = NULL );
+
+/* Given a job cluster id and SPOOL directory, return the path where
+ * the job submit digest QUEUE from itemdata file should reside if the submitter spooled it
+ * If the SPOOL directory argument is NULL, then the SPOOL parameter
+ * will be looked up.
+ */
+void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir = NULL );
 
 /* Given a job ad, determine where the job's executable resides.
  * If the filename given by gen_ckpt_name(SPOOL,cluster,ICKPT,0) exists,

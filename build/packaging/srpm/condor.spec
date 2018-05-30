@@ -781,6 +781,7 @@ export CMAKE_PREFIX_PATH=/usr
 cmake \
        -DBUILDID:STRING=%condor_build_id \
        -DUW_BUILD:BOOL=TRUE \
+       -DCONDOR_RPMBUILD:BOOL=TRUE \
 %if ! %std_univ
        -DCLIPPED:BOOL=TRUE \
 %endif
@@ -828,7 +829,6 @@ cmake \
 %endif
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
-       -DWITH_GSOAP:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
        -DWANT_LEASE_MANAGER:BOOL=FALSE \
@@ -1344,7 +1344,9 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%if ! 0%{?fedora}
 %_mandir/man1/condor_top.1.gz
+%endif
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
@@ -1948,6 +1950,21 @@ fi
 %endif
 
 %changelog
+* Tue May 22 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-2
+- Reinstate man pages
+- Drop centos from dist tag in 32-bit Enterprise Linux 7 RPMs
+
+* Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-1
+- The condor annex can easily use multiple regions simultaneously
+- HTCondor now uses CUDA_VISIBLE_DEVICES to tell which GPU devices to manage
+- HTCondor now reports GPU memory utilization
+
+* Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.11-1
+- Can now do an interactive submit of a Singularity job
+- Shared port daemon is more resilient when starved for TCP ports
+- The Windows installer configures the environment for the Python bindings
+- Fixed several other minor problems
+
 * Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.7-1
 - condor_ssh_to_job now works with Docker Universe jobs
 - A 32-bit condor_shadow is available for Enterprise Linux 7 systems

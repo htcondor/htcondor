@@ -59,9 +59,6 @@ foreach $thing (@everything) {
 		} elsif($thing =~ /^initd$/) {
 			system("rm -rf $thing");
 			print "Removed:$thing\n";
-		} elsif($thing =~ /^soaptests$/) {
-			system("rm -rf $thing");
-			print "Removed:$thing\n";
 		}
 	} else {
 		if($thing =~ /^\d+$/) {

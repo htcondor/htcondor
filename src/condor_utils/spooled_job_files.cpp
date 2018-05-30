@@ -107,6 +107,17 @@ void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir /*=
 	path.formatstr("%s%c%d%ccondor_submit.%d.digest", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
 }
 
+void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir /*= NULL*/ )
+{
+	auto_free_ptr spooldir;
+	if ( ! dir) {
+		spooldir.set(param("SPOOL"));
+		dir = spooldir;
+	}
+
+	path.formatstr("%s%c%d%ccondor_submit.%d.items", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
+}
+
 void
 GetJobExecutable( const classad::ClassAd *job_ad, std::string &executable )
 {
@@ -142,13 +153,8 @@ SpooledJobFiles::_getJobSpoolPath(int cluster, int proc, const classad::ClassAd 
 	std::string spool_base;
 	std::string alt_spool_param;
 	ExprTree *alt_spool_expr = NULL;
-	bool no_alt_spool = false;
-	if ( job_ad ) {
-		job_ad->EvaluateAttrBool( ATTR_SOAP_JOB, no_alt_spool );
-	} else {
-		no_alt_spool = true;
-	}
-	if ( param( alt_spool_param, "ALTERNATE_JOB_SPOOL" ) && !no_alt_spool ) {
+
+	if ( job_ad && param( alt_spool_param, "ALTERNATE_JOB_SPOOL" ) ) {
 		classad::Value alt_spool_val;
 		if ( ParseClassAdRvalExpr(alt_spool_param.c_str(), alt_spool_expr) == 0 ) {
 			if ( job_ad->EvaluateExpr( alt_spool_expr, alt_spool_val ) ) {
@@ -347,23 +353,6 @@ SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_sta
 	}
 
 	return true;
-}
-
-bool
-SpooledJobFiles::createJobSpoolDirectory_PRIV_CONDOR(int cluster, int proc, bool is_standard_universe )
-{
-	classad::ClassAd dummy_ad;
-	dummy_ad.InsertAttr(ATTR_CLUSTER_ID,cluster);
-	dummy_ad.InsertAttr(ATTR_PROC_ID,proc);
-
-		// All that matters about the job universe is whether it is
-		// standard universe or not.
-	int dummy_universe = is_standard_universe ?
-		CONDOR_UNIVERSE_STANDARD : CONDOR_UNIVERSE_VANILLA;
-
-	dummy_ad.InsertAttr(ATTR_JOB_UNIVERSE,dummy_universe);
-
-	return createJobSpoolDirectory(&dummy_ad,PRIV_CONDOR);
 }
 
 bool

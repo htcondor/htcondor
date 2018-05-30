@@ -23,13 +23,8 @@ condor_selective_glob("qmgmt_send_stubs*;qmgr_lib_support*;qmgr_job_updater*;his
 file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
 
 if (NOT WIN_EXEC_NODE_ONLY)
-	if ( DLOPEN_SECURITY_LIBS )
-		condor_daemon( schedd "${scheddRmvElements}"
-			"${CONDOR_LIBS};${GSOAP_FOUND};${CONDOR_QMF};${LIBSSL_FOUND};${ZLIB_FOUND}" "${C_SBIN}")
-	else()
-		condor_daemon( schedd "${scheddRmvElements}"
-			"${CONDOR_LIBS};${GSOAP_FOUND};${CONDOR_QMF};${ZLIB_FOUND}" "${C_SBIN}")
-	endif()
+	condor_daemon( schedd "${scheddRmvElements}"
+		"${CONDOR_LIBS};${CONDOR_QMF};${ZLIB_FOUND}" "${C_SBIN}")
 
 	condor_exe(condor_history_helper "history_helper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
 
