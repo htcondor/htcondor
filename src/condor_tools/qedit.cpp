@@ -492,7 +492,7 @@ main(int argc, const char *argv[])
 			int prot = IsProtectedAttribute(attr);
 			if ( ! prot && (blankline(attr) || !IsValidAttrName(attr))) { prot = -1; }
 			if (prot) {
-				fprintf(stdout, "  ERROR: %s attribute\n", getProtectedTypeString(prot));
+				fprintf(stdout, "  %s: %s attribute\n", (prot==PROTECTED_ATTR) ? "WARNING" : "ERROR", getProtectedTypeString(prot));
 			}
 			ExprTree * expr = NULL;
 			if (blankline(value) || ! IsValidAttrValue(value) || 0 != ParseClassAdRvalExpr(value, expr)) {
@@ -509,7 +509,8 @@ main(int argc, const char *argv[])
 		for (std::map<std::string, std::string>::iterator it = kvp_list.begin(); it != kvp_list.end(); ++it) {
 			const char * attr = it->first.c_str();
 			int prot = IsProtectedAttribute(attr);
-			if (prot) {
+			// allow attempts to edit protected attributes because of queue superusers. see gt6647
+			if (prot && (prot != PROTECTED_ATTR)) {
 				fprintf(stderr, "Update of %s attribute \"%s\" is not allowed.\n", getProtectedTypeString(prot), attr);
 				transaction_aborted = true;
 			}
