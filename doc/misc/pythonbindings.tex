@@ -23,7 +23,7 @@ command line tools.
 % It looks wrong in the html version.
 \textbf{\texttt{htcondor} module functions:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{platform( )}
 
 Returns the platform of HTCondor this module is running on.
@@ -149,7 +149,7 @@ which returns a list of all ads available without blocking.
 
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{The module object, \texttt{param}}, is
@@ -158,7 +158,7 @@ in the current HTCondor configuration.
 
 \textbf{The \texttt{Schedd} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( classad )}
 
@@ -384,12 +384,12 @@ Finally, \texttt{ScheddNegotiate} has a \texttt{sendClaim} method for sending cl
 back to the remote schedd based on a given resource request.
 
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{The \texttt{Submit} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( (dict)input = None )}
 
@@ -458,13 +458,13 @@ Copy the contents of a given Submit object into the current object.
 Parameter \texttt{submit} is the Submit object to copy.
 
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
 \textbf{The \texttt{Collector} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( pool = None )}
 
@@ -550,12 +550,12 @@ Optional parameter \texttt{statistics} is a list of statistics attributes
 to include, if they exist for the specified daemon.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{The \texttt{Negotiator} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( (ClassAd)ad = None ) }
 
@@ -637,12 +637,12 @@ Set the accumulated usage of a specified user.
 Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
 Parameter \texttt{usage} is the usage to be set for the user.
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{The \texttt{Startd} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( (ClassAd)ad = None ) }
 
@@ -683,7 +683,7 @@ to cancel; if not specified, all draining requests for this startd
 are canceled.
 
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
@@ -700,7 +700,7 @@ then all future commands will fail with strange connection errors.
 This is the only mechanism to invalidate in-memory sessions.
 
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( )}
 
@@ -733,7 +733,7 @@ try; if not given, \texttt{DC\_NOP} will be used.
 
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 The \texttt{Param} class provides a dictionary-like interface
@@ -741,7 +741,7 @@ to the current configuration.
 
 \textbf{The \texttt{Param} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{\_\_getitem\_\_( (str)attr )}
 
 Returns the configuration for variable \texttt{attr}
@@ -799,7 +799,7 @@ Updates the current configuration to match the one in object
 \texttt{source}.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 The \texttt{RemoteParam} class provides a dictionary-like interface
@@ -807,7 +807,7 @@ to the configuration of daemons.
 
 \textbf{The \texttt{RemoteParam} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{\_\_getitem\_\_( (str)attr )}
 
 Returns the configuration for variable \texttt{attr}
@@ -879,7 +879,7 @@ Rebuilds the dictionary corresponding to the current
 configuration of the daemon.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 The \texttt{Claim} class provides access to HTCondor's
@@ -887,7 +887,7 @@ Compute-On-Demand facilities.
 
 \textbf{The \texttt{Claim} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( classad )}
 
@@ -947,12 +947,12 @@ claim for future use.
 \texttt{delegateGSIProxy()}
 Send an x509 proxy credential to an activated claim.
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{Module enums:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{AdTypes}
 
@@ -1018,7 +1018,7 @@ Values may be
 \texttt{NoHeader}.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1123,7 +1123,7 @@ and the object can take lists, dictionaries, and ClassAds as values.
 
 \textbf{\texttt{classad} module functions:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{parseOne( input, parser=Auto )}
 
 Parse the entire \texttt{input} into a single ClassAd.
@@ -1217,13 +1217,13 @@ for more information about loadable libraries for ClassAd functions.
 
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
 \textbf{Standard Python object methods for the \Expr{ClassAd} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( str )}
 
@@ -1243,13 +1243,13 @@ with square brackets and semicolons.
 For example, \Expr{[ Foo = "bar"; ]} may be returned.
 
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
 \textbf{The \texttt{classad} object has the following dictionary-like methods:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{items( )}
 
 Returns an iterator of tuples. Each item returned by the iterator 
@@ -1309,13 +1309,13 @@ Updates the ClassAd with the key/value pairs of the given object.
 Returns nothing.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
 \textbf{Additional methods:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{eval( attr )}
 
 Evaluate the value given a ClassAd attribute \texttt{attr}.
@@ -1405,7 +1405,7 @@ an internal reference is any attribute in the expression which is
 found in the \texttt{ClassAd}.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
@@ -1419,7 +1419,7 @@ produce an error until it is evaluated with a call to \texttt{bool()} or the
 
 \textbf{\texttt{ExprTree} class methods:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{\_\_init\_\_( str )}
 
 Parse the string \texttt{str} to create an \texttt{ExprTree}.
@@ -1441,12 +1441,12 @@ Converts expression to a float (evaluating as necessary).
 Evaluate the expression and return as a ClassAd value, 
 typically a Python object.
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{Module enums:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{Parser}
 
@@ -1458,7 +1458,7 @@ or \texttt{New}.
 
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
