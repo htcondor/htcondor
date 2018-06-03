@@ -36,9 +36,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a problem where \Condor{annex}'s setup routine would write a
-configuration for a bogus region rather than the default one if no region
-had been specified on the command line.
+\item Fixed a problem where a \Condor{vacate\_job}, when passed the
+\Opt{-fast} flag, would leave the corresponding slot stuck in
+``Preempting/Vacation'' state until the job lease expired.
+\Ticket{6663}
+
+\item Fixed a problem where \Condor{annex}'s setup routine, if no region
+had been specified on the command line, would write a configuration for a
+bogus region rather than the default one.
 \Ticket{6666}
 
 \end{itemize}
