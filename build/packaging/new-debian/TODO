@@ -1,0 +1,12 @@
+* debconf templates should mention format things: comma-separated list, ...
+* debconf: think about switching away from combinatorial setup to a few
+  hand-polished config scenarios
+* Allow for configurable UID/GID
+* Security: ALLOW_ADVERTISE_SCHEDD
+* Have a test suite that can run at package build time
+* Think about an rcondor package (see src/condor_contrib/rcondor)
+* Enable building the Python bindings. Aug 2015 compatibility issues with
+  current BOOST Python in Debian
+* htcondor: package-installs-into-obsolete-dir etc/bash_completion.d/ :
+  ^etc/bash_completion.d/ -> usr/share/bash-completion
+  This is configured in this way by condor upstream

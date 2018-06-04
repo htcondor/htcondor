@@ -1,0 +1,130 @@
+DESCRIPTION
+-----------
+
+This directory contains a means by which a simple job is submitted into
+Condor under DMTCP. The purpose of this code is to test the initial
+wrapping of DMTCP into Condor via Condor's pre-built mechanisms. It is
+also used to test DMTCP across a wide variety of Linux machines which
+have different kernel/libc/etc revisions.
+
+See the INSTRUCTIONS section after the manifest and explanation of the
+files.
+
+This code is under the Apache V2.0 License. It was written by
+Peter Keller <psilord@cs.wisc.edu>, a member of the Condor Team.
+Inqueries about the DMTCP/Condor integration software should be sent to
+condor-admin@cs.wisc.edu.
+
+DMTCP
+-----
+
+Get the latest stable release of DMTCP (1.2.0 or later) from here:
+http://dmtcp.sourceforge.net/downloads.html
+
+Compile and install it somewhere. You don't have to be root.
+
+File: Makefile
+--------------
+
+The Makefile contains 5 targets: all submit foo analyze clean
+all - run target foo
+submit - submit job.sub into Condor
+foo - make the C test executable
+analyze - after a run is completed, produce a report about what happened.
+clean - make the system ready for a resubmit but you have to condor_rm yourself
+refresh - Copy needed libraries and binaries from dmtcp installation to here.
+
+NOTE!!!
+
+Fix DMTCP_BIN and DMTCP_LIB in the Makefile to point to your installed
+DMTCP binaries and libraries. THIS IS REQUIRED!
+
+File: foo.c
+-----------
+
+This is a C program which will copy its stdin to a file, then iterate
+a count into the file for X seconds. The command line arguments are
+a single integer which represents the number of seconds and lines of
+counting output the program is supposed to perform. In the Condor job,
+the stdin is the foo.c file itself. This is the main test job.
+
+File: job.sub
+-------------
+
+This is the Condor job description file. The actual job being submitted is
+shim_dmtcp, which is called with a pile of arguments including the name of the
+actual job to run.
+
+The important sections of this file are:
+    1. The arguments line, see the description in the file.
+    2. The environment line, in order to get DMTCP output in the right place.
+    3. The kill_sig, which tells shim_dmtcp when to checkpoint.
+    4. The file transfer lines, which move all of the required DMTCP files
+        in addition to the job executable, and any files the job may require
+        to the execute machine. The intermediate/checkpoint files made by
+        DMTCP are transferred to and from Condor's spool directory and 
+        controlled by the ON_EVICT_OR_EXIT setting.
+    5. The stdout/stderr is handled in that there is a specification for the
+        shim_dmtcp script as defined in the job.sub in addition to files being
+        specified as arguments to shim_dmtcp which represent the stdout/stderr
+        files of the wrapped job running under DMTCP.
+
+File: out.template
+------------------
+
+This represents the output of the foo program for a correct run given the
+arguments supplied in the shim_dmtcp script. The make analyze phase uses
+this to check if the output of a job was correct.
+
+File: analyze_log
+-----------------
+
+This is a simple program to select lines of interest from a shim_dmtcp stdout
+file.
+
+File: shim_dmtcp
+----------------
+
+This is the real job submitted into Condor by job.sub and the means by which
+DMTCP wraps a job.
+
+The main part of this script is to handle initial starts, checkpointing,
+and restarts of the wrapped job in addition to starting the dmtcp
+coordinator process for exclusive use by the wrapped job. Determination of
+a restart or an initial start is based upon the presence of the checkpoint
+file written by the coordinator. When a checkpoint signal arrives from
+Condor, the checkpoint() function is called which ultimately exits after
+the checkpoint is effected.
+
+The WARNING section in the file is to close an fd that is leaked from Condor
+to the job. Normally, this doesn't affect anything, but in the case of DMTCP
+it does since DMTCP doesn't know how to restore it.
+
+The script is fairly well commented.
+
+-----------------------------------------------------------------------------
+
+INSTRUCTIONS
+------------
+
+0. Build and install DMTCP somewhere.
+
+    Find DMTCP at:
+        http://dmtcp.sourceforge.net/
+
+1. Fix the Makefile DMTCP_LIB and DMTCP_BIN paths to point to the installation
+of DMTCP.
+
+2. An initial make should copy the dmtcp binaries and libraries over
+and compile foo.c into the executable.
+
+3. A condor_submit of job.sub should put the single test job into Condor.
+
+4. You can use the Requirements expression to control the set of machines
+upon which the job will be tested. If there is suspected instability in 
+DMTCP, try running it on a homogenous set of machines and do your testing
+there.
+
+5. Once the test job works, you can edit job.sub, following the directions
+in that file, to change it to use your job.
+
