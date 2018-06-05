@@ -600,7 +600,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 int
 FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
-	string remap_fname;
+	std::string remap_fname;
 
 	dprintf(D_FULLDEBUG,"Entering FileTransfer::InitDownloadFilenameRemaps\n");
 
@@ -616,9 +616,9 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	// user job log file with a directory component, add a remap.
 	// Otherwise, the user log will end up in the iwd, which is wrong.
 	if (IsClient() && Ad->LookupString(ATTR_ULOG_FILE, remap_fname) &&
-		remap_fname.find(DIR_DELIM_CHAR) != string::npos) {
+		remap_fname.find(DIR_DELIM_CHAR) != std::string::npos) {
 
-		string full_name;
+		std::string full_name;
 		if (fullpath(remap_fname.c_str())) {
 			full_name = remap_fname;
 		} else {
