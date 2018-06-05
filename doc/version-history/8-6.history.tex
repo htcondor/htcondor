@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug causing the shared port daemon to crash immediately when
+built and run on Fedora 28.
+\Ticket{6696}
+
 \item Fixed a bug where a job transform with an invalid Requirements expression would not log an
 error, and would match all jobs as if Requirements had not been specified.
 \Ticket{6671}
