@@ -53,6 +53,11 @@ error, and would match all jobs as if Requirements had not been specified.
 when the user had the right to change them.
 \Ticket{6674}
 
+\item Fixed a bug where \Condor{transfer\_data} always wrote the job
+user log in the initialdir, even if the original submit file specified
+a different directory.
+\Ticket{6695}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
