@@ -1,4 +1,3 @@
-debian/dmtcp/shim_dmtcp usr/lib/condor/
 debian/tmp/etc/* etc/
 debian/tmp/usr/bin/* usr/bin/
 debian/tmp/usr/lib/condor/*.so usr/lib/

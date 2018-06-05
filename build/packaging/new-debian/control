@@ -63,7 +63,7 @@ Depends: adduser,
          ${perl:Depends},
          ${python:Depends},
          ${shlibs:Depends}
-Recommends: dmtcp, ecryptfs-utils
+Recommends: ecryptfs-utils
 Suggests: docker.io,
           coop-computing-tools,
           singularity-container,

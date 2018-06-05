@@ -3,7 +3,7 @@ HTCondor for Debian
 
 The documentation for HTCondor can be found on the World Wide Web at:
 
-http://www.cs.wisc.edu/htcondor/manual
+http://htcondor.org/manual
 
 At that web site, you will find both an on-line version of manual and
 directions for downloading your own copy in a variety of formats.
@@ -12,10 +12,8 @@ directions for downloading your own copy in a variety of formats.
 Package upgrades
 ----------------
 
-When the HTCondor package is upgraded it will restart the HTCondor daemons. If
-this happens on the central manager it will result in jobs being killed on
-execute nodes. To avoid this, it is best to gracefully shutdown the HTCondor
-pool before upgrading. The Debian package does not perform a graceful shutdown
+When the HTCondor package is upgraded it will restart the HTCondor daemons.
+The Debian package does not perform a graceful shutdown
 on upgrades, because there is a variety of possible procedures, where
 subjective appropriateness depends on the configuration and utilization of a
 particular HTCondor pool. Please see this page for more information on graceful
@@ -24,39 +22,3 @@ shutdowns:
   https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToShutDownCondor
 
 
-Checkpoint/Migration support
-----------------------------
-
-At this point HTCondor's standard universe is not supported by this package.
-
-However, the Debian package comes with built-in support for
-checkpoint/migration of vanilla universe jobs with DMTCP. This is useful for
-migrating running jobs between machines of a HTCondor pool without having to
-relink the respective binaries with HTCondor's standard universe LIBC wrapper.
-The main advantage of DMTCP over HTCondor's native mechanism is that it also
-works for scripts (interpreter sessions like Python), and closed-source systems
-(e.g. Matlab). The necessary shim script (a wrapper around the actual job
-executable) is available at /usr/lib/condor/shim_dmtcp. The htcondor-doc
-package comes with example submit files for self-compiled executables and
-system-wide installed software.  A submit configuration for a job with
-on-demand snapshotting on a Debian cluster could look like this:
-
-  # DMTCP checkpointing related boilerplate (should be applicable in most cases)
-  universe = vanilla
-  executable = /usr/lib/condor/shim_dmtcp
-  should_transfer_files = YES
-  when_to_transfer_output = ON_EXIT_OR_EVICT
-  kill_sig = 2
-  output = $(CLUSTER).$(PROCESS).shimout
-  error = $(CLUSTER).$(PROCESS).shimerr
-  log = $(CLUSTER).$(PROCESS).log
-  dmtcp_args = --log $(CLUSTER).$(PROCESS).shimlog --stdout $(CLUSTER).$(PROCESS).out --stderr $(CLUSTER).$(PROCESS).err
-  dmtcp_env = DMTCP_TMPDIR=./;JALIB_STDERR_PATH=/dev/null;DMTCP_PREFIX_ID=$(CLUSTER)_$(PROCESS)
-
-  # job-specific setup, uses arguments and environment defined above
-  arguments = $(dmtcp_args) some_command some_arg1 some_arg2
-  environment = $(dmtcp_env)
-
-  queue 1
-
- -- Michael Hanke <mih@debian.org>  Tue, 31 Dez 2013 11:42:01 +0200
