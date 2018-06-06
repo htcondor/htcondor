@@ -1,0 +1,4 @@
+debian/tmp/usr/share/doc/condor/etc/examples/* usr/share/doc/htcondor/examples/etc/
+debian/tmp/usr/share/doc/condor/examples/* usr/share/doc/htcondor/examples/
+debian/tmp/usr/share/doc/condor/NOTICE.txt usr/share/doc/htcondor/
+doc/build/html usr/share/doc/htcondor/
