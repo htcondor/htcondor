@@ -63,7 +63,7 @@ override_dh_python2:
 	dh_python2 $@ --no-guessing-versions
 
 override_dh_shlibdeps:
-	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib/
+	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib/ --dpkg-shlibdeps-params=--ignore-missing-info
 
 
 doc/build:

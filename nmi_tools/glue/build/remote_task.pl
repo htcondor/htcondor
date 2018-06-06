@@ -330,5 +330,10 @@ sub check_deb {
     my $debs;
     for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
     if ( ! defined $debs) { $debs = "*.deb"; }
-    return "dpkg-deb -I $debs";
+    if ($ENV{NMI_PLATFORM} =~ /(Debian9|Ubuntu16|Ubuntu18)/) {
+        return "lintian $debs";
+    } else {
+        # Only works with a single deb
+        return "dpkg-deb -I $debs";
+    }
 }
