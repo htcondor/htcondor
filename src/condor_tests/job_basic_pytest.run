@@ -10,33 +10,35 @@ from pytest.Utils import Utils
 
 
 def submit_callback():
-    Utils.TLog("Submit callback called!\n")
+    Utils.TLog("Custom submit callback called!")
 
 def success_callback():
+    Utils.TLog("Custom success callback called, exiting with status 0")
     sys.exit(0)
 
 def failure_callback():
+    Utils.TLog("Custom failure callback called, exiting with status 1")
     sys.exit(1)
 
 
 def main():
 
     # Create a new test. If we don't specify a name, take the file name.
-    test = CondorTest("job_basic_python_test")
+    test = CondorTest("job_basic_pytest")
 
     # Stand up a PersonalCondor
-    start_success = test.StartPersonalCondor()
-    if start_success is False:
+    personal_handle = test.StartPersonalCondor()
+    if personal_handle is -1:
         Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
-        sys.exit(JOB_FAILURE)
+        sys.exit(1)
     else:
-        Utils.TLog("PersonalCondor environment started successfully!")
+        Utils.TLog("PersonalCondor environment started successfully with handle " + str(personal_handle))
 
     # Setup a new test job
     job_args = {
         "executable":   "x_echostring.pl",
-        "output":       "job_basic_python_test.out",
-        "error":        "job_basic_python_test.err",
+        "output":       "job_basic_pytest.out",
+        "error":        "job_basic_pytest.err",
         "arguments":    "\"Basic Python pytest submission, cluster $(cluster)\""
     }
     test_job = CondorJob(job_args)

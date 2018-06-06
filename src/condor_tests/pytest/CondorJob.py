@@ -33,9 +33,10 @@ class CondorJob(object):
 
         # Wait until job has finished running?
         if wait is True:
-            self.WaitForFinish()
+            submit_result = self.WaitForFinish()
+            return submit_result
 
-        # If we got this far, we assume the job succeeded.
+        # If we didn't wait for finish, return success for now
         return JOB_SUCCESS
 
 
@@ -54,3 +55,6 @@ class CondorJob(object):
                     Utils.TLog("Job was placed on hold. Aborting.")
                     return JOB_FAILURE
             time.sleep(1)
+        
+        # If we got this far, we assume the job finished correctly
+        return JOB_SUCCESS
