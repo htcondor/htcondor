@@ -41,7 +41,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug where a job transform with an invalid Requirements expression would not log an
+error, and would match all jobs as if Requirements had not been specified.
+\Ticket{6671}
+
+\item Fixed a bug where \Condor{qedit} would not allow attempts to change protected attributes even
+when the user had the right to change them.
+\Ticket{6674}
 
 \end{itemize}
 

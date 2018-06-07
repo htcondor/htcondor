@@ -2416,9 +2416,18 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 
 	int longest_retirement_remaining = 0;
 	for( int i = 0; i < nresources; i++ ) {
-		int retirement_remaining = resources[i]->evalRetirementRemaining();
-		if( retirement_remaining > longest_retirement_remaining ) {
-			longest_retirement_remaining = retirement_remaining;
+		// The max job retirement time of jobs accepted while draining is
+		// implicitly zero.  Otherwise, we'd need to record the result of
+		// this computation at the instant we entered draining state and
+		// set a timer to vacate all slots at that point.  This would
+		// probably be more efficient, but would be a small semantic change,
+		// because jobs would no longer be able to voluntarily reduce their
+		// max job retirement time after retirement began.
+		if(! resources[i]->wasAcceptedWhileDraining()) {
+			int retirement_remaining = resources[i]->evalRetirementRemaining();
+			if( retirement_remaining > longest_retirement_remaining ) {
+				longest_retirement_remaining = retirement_remaining;
+			}
 		}
 	}
 	return longest_retirement_remaining;

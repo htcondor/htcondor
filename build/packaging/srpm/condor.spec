@@ -1344,7 +1344,9 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%if ! 0%{?fedora}
 %_mandir/man1/condor_top.1.gz
+%endif
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
@@ -1948,8 +1950,11 @@ fi
 %endif
 
 %changelog
+* Tue May 22 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-2
+- Reinstate man pages
+- Drop centos from dist tag in 32-bit Enterprise Linux 7 RPMs
+
 * Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-1
-- HTCondor can run preemptable jobs on machines that are draining
 - The condor annex can easily use multiple regions simultaneously
 - HTCondor now uses CUDA_VISIBLE_DEVICES to tell which GPU devices to manage
 - HTCondor now reports GPU memory utilization

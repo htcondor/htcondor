@@ -22,11 +22,14 @@
 use strict;
 use warnings;
 
-use Cwd;
+#
+# This file is an almost-exact copy of cmd_drain_scavenging.  Sorry.
+# Modifying the original to conditionally execute this copy wasn't hard,
+# but the test suite gets /really/ cranky if you do that (since it
+# depends on the text of the runfile for certain things).
+#
 
-#
-# This file has an almost-exact copy in cmd_drain_scavenging_vacation.  Sorry.
-#
+use Cwd;
 
 use CondorTest;
 use CondorUtils;
@@ -37,15 +40,15 @@ use Check::CondorLog;
 my $config = <<CONDOR_TESTREQ_CONFIG;
 use feature : PartitionableSlot
 NEGOTIATOR_INTERVAL = 5
-MaxJobRetirementTime = 120
+MaxJobRetirementTime = 3600
 MachineMaxVacateTime = 5
 NUM_CPUS = 3
 STARTD_DEBUG = D_FULLDEBUG D_SUB_SECOND
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
-my $testName = 'cmd_drain_scavenging';
-my $testDescription = 'Test scavenging.';
+my $testName = 'cmd_drain_scavenging_vacation';
+my $testDescription = 'Test scavenging with an original job that ages out of retirement.';
 
 #
 # This test validates the new scavenging functionality of the drain state.
@@ -81,17 +84,21 @@ my $testDescription = 'Test scavenging.';
 # of the (recommended) START expression we use when we begin draining.
 #
 # After the first three jobs have started, we'll begin draining with a START
-# expression of 'TARGET.MaxJobRetirementTime == 0'.  Then we'll verify that
+# expression of 'TARGET.IsInterruptible'.  Then we'll verify that
 # the slots have all changed state & activity, and that the new START
 # expression is being advertised.  Then we'll terminate two of the original
 # jobs and call condor_reschedule.
 #
 # One and only one should match; we'll wait for it to actually start.  Then
-# we'll verify the new slot's state & activity.  Then we'll terminate the
-# last original job and verify that the running job is evicted.  When it is,
-# we'll wait until the machine is fully drained.  Then we'll cancel the
-# draining, and then wait for the last job to start, at which point we'll
-# terminate it and declare the test a success.
+# we'll verify the new slot's state & activity.  Then we wait for the last
+# original job to be vacated for exceeding its max job retirement time.  Note
+# that the scavenger job must have a retirement time exceeding that of the
+# original job's to test this properly.  In the setup suggested by
+# cmd_drain_scavenging, that will always be true (because the job must
+# have an MJRT of 0), but in production (e.g., CHTC) that's not so.
+#
+# If run against an unpatched startd, this test will fail when the scavenger
+# job unexpectedly succeeds (before the last original job is evicted).
 #
 
 my $jobFile = cwd() . '/condition-sleep.pl';
@@ -117,25 +124,29 @@ exit( 0 );
 CondorTest::WriteFileOrDie( $jobFile, $jobContents );
 chmod( 0755, $jobFile ) || die( "Failed to make ${jobFile} executable, aborting.\n" );
 
-my $killFile = cwd() . "/killfile";
+my $killFile = cwd() . "/killfile-cdsv";
 my $submitBody = "
 
 executable				= ${jobFile}
 transfer_executable		= false
 should_transfer_files	= true
 universe				= vanilla
-arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 3600
 
-log						= cmd_drain_scavenging.log
+arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 3600
+MaxJobRetirementTime	= 60
+
+log						= cmd_drain_scavenging_vacation.log
 
 queue 3
 
 arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
-MaxJobRetirementTime	= 0
++IsInterruptible		= true
+MaxJobRetirementTime	= 3600
 
 queue 1
 
 arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
++IsInterruptible		= false
 MaxJobRetirementTime	= 60
 
 queue 1
@@ -191,7 +202,7 @@ my $execute = sub {
 
 		print( "Beginning draining...\n" );
 		runCommandCarefully( undef, qw( condor_drain -start ),
-			'TARGET.MaxJobRetirementTime == 0', $hostName );
+			'TARGET.IsInterruptible == TRUE', $hostName );
 
 		print( "Verifying state changes...\n" );
 		for( my $delay = 0; $delay <= 20; ++$delay ) {
@@ -213,7 +224,7 @@ my $execute = sub {
 				print( "Considering '" . $ad->{ "Name" } . "'...\n" );
 				if(! $ad->{ "State" } =~ /^Claimed$/i) { print( "Found unexpected state '" . $ad->{ "State" } . "', will retry.\n" ); $stateChanged = 0; last; }
 				if(! $ad->{ "Activity" } =~ /^Retiring$/i) { print( "Found unexpected activity '" . $ad->{ "Activity" } . "', will retry.\n" ); $stateChanged = 0; last; }
-				if(! $ad->{ "Start" } =~ /TARGET\.MaxJobRetirementTime == 0/i) { print( "Found unexpected START '" . $ad->{ "Start" } . "', will retry.\n" ); $stateChanged = 0; last; }
+				if(! $ad->{ "Start" } =~ /TARGET\.IsInterruptible == TRUE/i) { print( "Found unexpected START '" . $ad->{ "Start" } . "', will retry.\n" ); $stateChanged = 0; last; }
 				if(! $ad->{ "AcceptedWhileDraining" } =~ /^False$/i) { print( "Found unexpected AcceptedWhileDraining '" . $ad->{ "AcceptedWhileDraining" } . "', will retry.\n" ); $stateChanged = 0; last; }
 			}
 			if( $stateChanged == 1 ) { last; }
@@ -260,8 +271,17 @@ my $execute = sub {
 		}
 		print( "... state changed successfully.\n" );
 
-		print( "Killing the last long-running job...\n" );
-		touch( $killFile . ".${clusterID}.2" );
+
+		print( "Waiting for the last long-running job to exceed its retirement time...\n" );
+		sleep( 60 + 5 );
+		for( my $i = 0; $i < 55; $i += 5 ) {
+			sleep( 5 );
+			my @output;
+			runCondorToolCarefully( \@output, 2, { emit_output => 0 },
+				undef, 'condor_q', "${clusterID}.2", '-af', 'Cluster' );
+			if( (! defined($output[0])) || $output[0] eq "" ) { last; }
+		}
+
 		print( "Waiting for job completion notice...\n" );
 		$testingPhase = 3;
 	} elsif( $testingPhase == 4 ) {
@@ -305,7 +325,7 @@ my $success = sub {
 
 		print( "Waiting for scavenger job to start...\n" );
 		$testingPhase = 2;
-	} elsif( $testingPhase == 3 || $testingPhase == 4 ) {
+	} elsif( $testingPhase == 4 ) {
 		# We /should/ get the succeeded event before the eviction event,
 		# but it's OK if they happen in the other order.
 		if( $info{ 'job' } != 2 ) {
@@ -331,7 +351,7 @@ my $evicted = sub {
 	}
 
 	if( $testingPhase == 3 ) {
-		if( $info{ 'job' } != 3 ) {
+		if( $info{ 'job' } != 2 && $info{ 'job' } != 3 ) {
 			die( "Job ${ID} evicted, aborting.\n" );
 		}
 
@@ -361,24 +381,15 @@ my $evicted = sub {
 		}
 		print( "... machine fully drained.\n" );
 
-		my $logFileName = `condor_config_val STARTD_LOG`;
-		CondorUtils::fullchomp( $logFileName );
-		print( "Checking MaxJobRetirementTime and MaxMachineVacateTime...\n" );
-		for( my $delay = 0; $delay <= 20; ++$delay ) {
-			if( $delay == 20 ) {
-				die( "... did not find all necessary state changes in log, aborting.\n" );
-			}
-
-			if( checkTiming( $logFileName ) ) { last; }
-
-			sleep( 1 );
-		}
-		print( "... MaxJobRetirementTime and MaxMachineVacateTime OK.\n" );
+		# I'm not veryfing MaxJobRetirementTime and MaxMachineVacateTime
+		# because the sequence of events when the last 'original' job is
+		# evicted is very different.  Basically, if the last 'original'
+		# job gets evicted at all, it's good enough for this test.
 
 		print( "Cancelling draining state...\n" );
 		runCommandCarefully( undef, "condor_drain -cancel ${hostName}" );
 
-		print( "Removing evicted job...\n" );
+		print( "Removing evicted job ${ID}...\n" );
 		runCommandCarefully( undef, 'condor_rm', $ID );
 
 		print( "Calling condor_reschedule...\n" );
@@ -386,6 +397,13 @@ my $evicted = sub {
 
 		print( "Waiting for last job to start...\n" );
 		$testingPhase = 4;
+	} elsif( $testingPhase == 4 ) {
+		if( $info{ 'job' } != 2 && $info{ 'job' } != 3 ) {
+			die( "Job ${ID} evicted, aborting.\n" );
+		}
+
+		print( "Removing evicted job ${ID}...\n" );
+		runCommandCarefully( undef, 'condor_rm', $ID );
 	} else {
 		die( "evicted() called unexpectedly in testing phase ${testingPhase}, aborting.\n" );
 	}
@@ -400,8 +418,8 @@ my $aborted = sub {
 	}
 
 	if( $testingPhase == 4 ) {
-		if( $info{ 'job' } != 3 ) {
-			die( "Job ${ID} evicted, aborting.\n" );
+		if( $info{ 'job' } != 3 && $info{ 'job' } != 2 ) {
+			die( "Job ${ID} aborted, aborting.\n" );
 		}
 	} else {
 		die( "aborted() called unexpectedly in testing phase ${testingPhase}, aborting.\n" );
@@ -423,73 +441,4 @@ sub touch {
 	my $rv = open( my $fh, ">", $filename );
 	close( $fh );
 	return $rv;
-}
-
-sub checkTiming {
-	my( $logFileName ) = @_;
-
-	#
-	# We're looking for the following sequence with the following time deltas:
-	#
-	# 04/15/18 14:46:54 Initiating final draining (all original jobs complete).
-	# 04/15/18 14:46:54 slot1_1: Changing activity: Busy -> Retiring
-	# 04/15/18 14:46:54 slot1_1: State change: claim retirement ended/expired
-	# 04/15/18 14:46:54 slot1_1: Changing state and activity: Claimed/Retiring -> Preempting/Vacating
-	# 04/15/18 14:46:59 slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.
-	#
-
-	open( LOG, "<", $logFileName ) || die( "Unable to open STARTD_LOG '${logFileName}', aborting.\n" );
-
-	my $state = 0;
-	my $finalDrainStartTime = undef;
-	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)?( \(.*\))?';
-	while( my $line = <LOG> ) {
-		CondorUtils::fullchomp( $line );
-
-		if( $state == 0 && $line =~ /^${secondsMatch} Initiating final draining \(all original jobs complete\)\.$/ ) {
-			$finalDrainStartTime = $1;
-			$state = 1;
-			next;
-		}
-
-		if( $state == 1 && $line =~ /^${secondsMatch} slot1_1: Changing activity: Busy -> Retiring$/ ) {
-			if( $finalDrainStartTime != $1 ) {
-				die( "slot1_1 did not start retiring immediately, aborting.\n" );
-			} else {
-				$state = 2;
-				next;
-			}
-		}
-
-		if( $state == 2 && $line =~ /^${secondsMatch} slot1_1: State change: claim retirement ended\/expired$/ ) {
-			if( $finalDrainStartTime != $1 ) {
-				die( "MaxJobRetirementTime was not 0, aborting.\n" );
-			} else {
-				$state = 3;
-				next;
-			}
-		}
-
-		if( $state == 3 && $line =~ /^${secondsMatch} slot1_1: Changing state and activity: Claimed\/Retiring -> Preempting\/Vacating$/ ) {
-			if( $finalDrainStartTime != $1 ) {
-				die( "slot1_1 did not immediately switch from retiring to preempting.\n" );
-			} else {
-				$state = 4;
-				next;
-			}
-		}
-
-		if( $state == 4 && $line =~ /^${secondsMatch} slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
-			# Especially with sub-second reporting, allow the startd some time to work.
-			if( (($finalDrainStartTime + 5) % 60) != $1 && (($finalDrainStartTime + 6) % 60) != $1 ) {
-				die( "MaxMachineVacateTime was not 5.\n" );
-			} else {
-				$state = 5;
-				next;
-			}
-		}
-	}
-	close( LOG );
-
-	return ($state == 5);
 }

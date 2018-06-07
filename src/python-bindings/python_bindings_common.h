@@ -26,6 +26,8 @@
   #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
     // boost is full of these, gcc 4.8 treats them as warnings.
     #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+    #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    #pragma GCC diagnostic ignored "-Wcast-qual"
   #endif
 #endif
 

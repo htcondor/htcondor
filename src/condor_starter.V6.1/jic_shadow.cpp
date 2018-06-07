@@ -467,6 +467,8 @@ JICShadow::transferOutput( bool &transient_failure )
 		filetrans->addFileToExceptionList(JOB_AD_FILENAME);
 		filetrans->addFileToExceptionList(MACHINE_AD_FILENAME);
 		filetrans->addFileToExceptionList(".docker_sock");
+		filetrans->addFileToExceptionList(".docker_stdout");
+		filetrans->addFileToExceptionList(".docker_stderr");
 		filetrans->addFileToExceptionList(".update.ad");
 		filetrans->addFileToExceptionList(".update.ad.tmp");
 		if (m_wrote_chirp_config) {

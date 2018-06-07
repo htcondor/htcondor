@@ -48,7 +48,7 @@ class PersonalCondor(object):
         # Wait until we're sure all daemons have started
         self._is_ready = self.WaitForReadyDaemons()
         if self._is_ready is False:
-            Utils.TLog("Condor daemons did not enter reaedy state. Exiting.")
+            Utils.TLog("Condor daemons did not enter ready state. Exiting.")
             return False
 
         Utils.TLog("Started a new personal condor with condor_master pid " + str(self._master_p.pid))
@@ -73,10 +73,6 @@ class PersonalCondor(object):
         Utils.MakedirsIgnoreExist(self._run_path)
         Utils.MakedirsIgnoreExist(self._spool_path)
 
-        Utils.RemoveIgnoreMissing(htcondor.param["MASTER_ADDRESS_FILE"])
-        Utils.RemoveIgnoreMissing(htcondor.param["COLLECTOR_ADDRESS_FILE"])
-        Utils.RemoveIgnoreMissing(htcondor.param["SCHEDD_ADDRESS_FILE"])
-
         # Create a config file in this test's local directory based on existing
         # config settings
         os.system("condor_config_val -write:up " + self._local_config)
@@ -88,15 +84,24 @@ class PersonalCondor(object):
         config += "RUN = " + self._run_path + "\n"
         config += "SPOOL = " + self._spool_path + "\n"
         config += "COLLECTOR_HOST = $(CONDOR_HOST):0\n"
-        
+        config += "MASTER_ADDRESS_FILE = $(LOG)/.master_address\n"
+        config += "COLLECTION_ADDRESS_FILE = $(LOG)/.collector_address\n"
+        config += "SCHEDD_ADDRESS_FILE = $(SPOOL)/.schedd_address\n"
+
         config_file = open(self._local_config, "a")
         config_file.write(config)
         config_file.close()
         
+        # Set CONDOR_CONFIG to apply the changes we just wrote to file
         self.SetCondorConfig()
 
         # MRC: What does this function actually do?
         htcondor.reload_config()
+
+        # Now that we have our config setup, delete any old files potentially left over
+        Utils.RemoveIgnoreMissing(htcondor.param["MASTER_ADDRESS_FILE"])
+        Utils.RemoveIgnoreMissing(htcondor.param["COLLECTOR_ADDRESS_FILE"])
+        Utils.RemoveIgnoreMissing(htcondor.param["SCHEDD_ADDRESS_FILE"])
 
 
     def SetCondorConfig(self):

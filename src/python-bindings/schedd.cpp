@@ -2023,7 +2023,7 @@ private:
 };
 
 ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttributeFlags_t flags, bool continue_txn)
-     : m_connected(false), m_transaction(false), m_queried_capabilities(false), m_cluster_id(0), m_flags(flags), m_schedd(schedd)
+     : m_connected(false), m_transaction(false), m_queried_capabilities(false), m_cluster_id(0), m_proc_id(-1), m_flags(flags), m_schedd(schedd)
 {
     if (schedd.m_connection)
     {

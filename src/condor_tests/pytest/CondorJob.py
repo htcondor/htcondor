@@ -19,7 +19,7 @@ class CondorJob(object):
     def Submit(self, wait=True):
 
         # Submit the job defined by submit_args
-        Utils.TLog("Running job with arguments: " + str(self._job_args))
+        Utils.TLog("Submitting job with arguments: " + str(self._job_args))
         schedd = htcondor.Schedd()
         submit = htcondor.Submit(self._job_args)
         try:
@@ -33,10 +33,12 @@ class CondorJob(object):
 
         # Wait until job has finished running?
         if wait is True:
-            self.WaitForFinish()
+            submit_result = self.WaitForFinish()
+            return submit_result
 
-        # If we got this far, we assume the job succeeded.
+        # If we didn't wait for finish, return success for now
         return JOB_SUCCESS
+
 
     def WaitForFinish(self, timeout=240):
 
@@ -53,3 +55,6 @@ class CondorJob(object):
                     Utils.TLog("Job was placed on hold. Aborting.")
                     return JOB_FAILURE
             time.sleep(1)
+        
+        # If we got this far, we assume the job finished correctly
+        return JOB_SUCCESS

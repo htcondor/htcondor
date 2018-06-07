@@ -696,7 +696,7 @@ int MacroStreamXFormSource::setUniverse(const char * uni) {
 	return universe;
 }
 
-int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSource)
+int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSource, std::string & errmsg)
 {
 	for (const char *line = lines.first(); line; line = lines.next()) {
 		const char * p;
@@ -705,7 +705,12 @@ int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSo
 			if ( ! tmp.empty()) name = tmp;
 			lines.deleteCurrent();
 		} else if (NULL != (p = is_xform_statement(line, "requirements"))) {
-			setRequirements(p);
+			int err = 0;
+			setRequirements(p, err);
+			if (err < 0) {
+				formatstr(errmsg, "invalid REQUIREMENTS : %s", p);
+				return err;
+			}
 			lines.deleteCurrent();
 		} else if (NULL != (p = is_xform_statement(line, "universe"))) {
 			setUniverse(p);
@@ -729,7 +734,7 @@ int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSo
 	return lines.number();
 }
 
-int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource)
+int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource, std::string & errmsg)
 {
 	StringList lines;
 
@@ -775,7 +780,7 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource)
 		}
 	}
 
-	return open(lines, FileSource);
+	return open(lines, FileSource, errmsg);
 }
 
 const char * MacroStreamXFormSource::getFormattedText(std::string & buf, const char *prefix /*=""*/, bool include_comments /*=false*/)
@@ -813,10 +818,10 @@ const char * MacroStreamXFormSource::getFormattedText(std::string & buf, const c
 	return buf.c_str();
 }
 
-classad::ExprTree* MacroStreamXFormSource::setRequirements(const char * require)
+classad::ExprTree* MacroStreamXFormSource::setRequirements(const char * require, int & err)
 {
 	requirements.set(require ? strdup(require) : NULL);
-	return requirements.Expr();
+	return requirements.Expr(&err);
 }
 
 bool MacroStreamXFormSource::matches(ClassAd * candidate_ad)
@@ -2143,7 +2148,8 @@ int XFormLoadFromJobRouterRoute (
 	StringList statements;
 	int rval = ConvertJobRouterRouteToXForm(statements, xform.getName(), routing_string, offset, base_route_ad, options);
 	if (rval == 1) {
-		xform.open(statements, ArgumentMacro);
+		std::string errmsg;
+		xform.open(statements, ArgumentMacro, errmsg);
 	}
 	return rval;
 }
