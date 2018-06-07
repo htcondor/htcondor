@@ -29,6 +29,7 @@
 #include "stat_wrapper.h"
 #include <curl/curl.h>
 #include "thread_control.h"
+#include <sqlite3.h>
 
 using std::string;
 using std::map;
@@ -235,7 +236,11 @@ void AddInstanceToResult( vector<string> &result, string &id,
 
 struct AuthInfo {
 	string m_auth_file;
+	string m_account;
 	string m_access_token;
+	string m_client_id;
+	string m_client_secret;
+	string m_refresh_token;
 	time_t m_expiration;
 	time_t m_last_attempt;
 	pthread_cond_t m_cond;
@@ -254,9 +259,7 @@ map<string, AuthInfo> authTable;
 
 // Obtain a refresh token from Google's OAuth 2.0 service using the
 // provided credentials.
-bool TryAuthRefresh( const string &client_id, const string &client_secret,
-					 const string &refresh_token, string &access_token,
-					 int &expires_in, string &err_msg )
+bool TryAuthRefresh( AuthInfo &auth_info )
 {
 	// Fill in required attributes & parameters.
 	GceRequest request;
@@ -266,16 +269,16 @@ bool TryAuthRefresh( const string &client_id, const string &client_secret,
 
 	// TODO Do we need any newlines in this body?
 	request.requestBody = "client_id=";
-	request.requestBody += client_id;
+	request.requestBody += auth_info.m_client_id;
 	request.requestBody += "&client_secret=";
-	request.requestBody += client_secret;
+	request.requestBody += auth_info.m_client_secret;
 	request.requestBody += "&refresh_token=";
-	request.requestBody += refresh_token;
+	request.requestBody += auth_info.m_refresh_token;
 	request.requestBody += "&grant_type=refresh_token";
 
 	// Send the request.
 	if( ! request.SendRequest() ) {
-		err_msg = request.errorMessage;
+		auth_info.m_err_msg = request.errorMessage;
 		return false;
 	}
 
@@ -296,18 +299,242 @@ bool TryAuthRefresh( const string &client_id, const string &client_secret,
 	}
 
 	if ( my_access_token.empty() ) {
-		err_msg = "No access_token in server response";
+		auth_info.m_err_msg = "No access_token in server response";
 		return false;
 	}
 	if ( my_expires_in == 0 ) {
-		err_msg = "No expiration in server_response";
+		auth_info.m_err_msg = "No expiration in server_response";
 		return false;
 	}
 
-	access_token = my_access_token;
-	expires_in = my_expires_in;
+	auth_info.m_access_token = my_access_token;
+	auth_info.m_expiration = my_expires_in + time(NULL);
 
 	return true;
+}
+
+bool ReadCredData( AuthInfo &auth_info, const classad::ClassAd &cred_ad )
+{
+	// TODO check for consistent set of attributes present?
+	string token_expiry;
+	cred_ad.EvaluateAttrString("access_token", auth_info.m_access_token);
+	cred_ad.EvaluateAttrString("refresh_token", auth_info.m_refresh_token);
+	cred_ad.EvaluateAttrString("client_id", auth_info.m_client_id);
+	cred_ad.EvaluateAttrString("client_secret", auth_info.m_client_secret);
+	cred_ad.EvaluateAttrString("token_expiry", token_expiry);
+	if ( ! token_expiry.empty() ) {
+		struct tm expiration_tm;
+		if ( strptime(token_expiry.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
+			auth_info.m_expiration = timegm(&expiration_tm);
+		}
+	}
+	return true;
+}
+
+int SqliteCredFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
+{
+	AuthInfo *auth_info = (AuthInfo *)auth_ptr;
+	if ( argc < 2 || strcmp( col_name[1], "value" ) ) {
+		auth_info->m_err_msg = "Bad schema in credentials DB";
+		return 0;
+	}
+	classad::ClassAdJsonParser parser;
+	classad::ClassAd cred_ad;
+	if ( ! parser.ParseClassAd(argv[1], cred_ad, true) ) {
+		auth_info->m_err_msg = "Invalid JSON data";
+		return 0;
+	}
+	// If the user didn't specify an account, remember which one we got.
+	// This is important if we need to look in the access_tokens db.
+	if ( auth_info->m_account.empty() ) {
+		auth_info->m_account = argv[0];
+	}
+	// Clear the not-found error message set before the query.
+	auth_info->m_err_msg.clear();
+	// If ReadCredData() fails, it'll set auth_info->m_err_msg.
+	// No need to take any further action here.
+	ReadCredData( *auth_info, cred_ad );
+	return 0;
+}
+
+int SqliteAccessFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
+{
+	AuthInfo *auth_info = (AuthInfo *)auth_ptr;
+	if ( argc < 4 || strcmp( col_name[1], "access_token" ) ||
+		 strcmp( col_name[2], "token_expiry" ) ) {
+		auth_info->m_err_msg = "Bad schema in access_token DB";
+		return 0;
+	}
+	// Clear the not-found error message set before the query.
+	auth_info->m_err_msg.clear();
+
+	auth_info->m_access_token = argv[1];
+	// Parse token expiry time in (UTC) format
+	// "2016-07-27T18:44:12Z"
+	struct tm expiration_tm;
+	if ( strptime(argv[2], "%Y-%m-%d %T", &expiration_tm ) != NULL) {
+		auth_info->m_expiration = timegm(&expiration_tm);
+	}
+	return 0;
+}
+
+#define CRED_FILE_SUCCESS       0
+#define CRED_FILE_FAILURE       1
+#define CRED_FILE_BAD_FORMAT    2
+
+int ReadCredFileSqlite( AuthInfo &auth_info )
+{
+	sqlite3 *db;
+	char *db_err_msg;
+	int rc;
+	char *query_stmt;
+
+	if ( auth_info.m_account.empty() ) {
+		rc = asprintf(&query_stmt, "select * from credentials limit 1;");
+	} else {
+		rc = asprintf(&query_stmt, "select * from credentials where account_id = \"%s\";", auth_info.m_account.c_str());
+	}
+	assert(rc >= 0);
+
+	rc = sqlite3_open_v2(auth_info.m_auth_file.c_str(), &db, SQLITE_OPEN_READONLY, NULL);
+	if ( rc ) {
+		formatstr(auth_info.m_err_msg, "Failed to open credentials file: %s",
+		          sqlite3_errmsg(db));
+		sqlite3_close(db);
+		free(query_stmt);
+		return CRED_FILE_FAILURE;
+	}
+	auth_info.m_err_msg = "Account not found in credentials db";
+	rc = sqlite3_exec(db, query_stmt, SqliteCredFileCB, &auth_info, &db_err_msg);
+	free(query_stmt);
+	query_stmt = NULL;
+	if ( rc != SQLITE_OK ) {
+		formatstr(auth_info.m_err_msg, "Failed to query credentials db: %s",
+		          db_err_msg);
+		sqlite3_free(db_err_msg);
+		sqlite3_close(db);
+		return (rc == SQLITE_NOTADB) ? CRED_FILE_BAD_FORMAT : CRED_FILE_FAILURE;
+	}
+	sqlite3_close(db);
+
+	if ( ! auth_info.m_err_msg.empty() ) {
+		return CRED_FILE_FAILURE;
+	}
+	if ( ! auth_info.m_refresh_token.empty() ) {
+		return CRED_FILE_SUCCESS;
+	}
+	// If there's no refresh token, then we're dealing with a service
+	// account. We need to read the accompanying access_tokens.db file.
+	if ( auth_info.m_account.empty() ) {
+		rc = asprintf(&query_stmt, "select * from access_tokens limit 1;");
+	} else {
+		rc = asprintf(&query_stmt, "select * from access_tokens where account_id = \"%s\";", auth_info.m_account.c_str());
+	}
+	assert(rc >= 0);
+
+	string access_tokens_file;
+	size_t slash_pos = auth_info.m_auth_file.find_last_of('/');
+	if ( slash_pos != string::npos ) {
+		access_tokens_file = auth_info.m_auth_file.substr( 0, slash_pos );
+		access_tokens_file += "/";
+	}
+	access_tokens_file += "access_tokens.db";
+	rc = sqlite3_open_v2(access_tokens_file.c_str(), &db, SQLITE_OPEN_READONLY, NULL);
+	if ( rc ) {
+		formatstr(auth_info.m_err_msg, "Failed to open access_tokens file: %s",
+		          sqlite3_errmsg(db));
+		sqlite3_close(db);
+		free(query_stmt);
+		return CRED_FILE_FAILURE;
+	}
+	auth_info.m_err_msg = "Account not found in access_tokens db";
+	rc = sqlite3_exec(db, query_stmt, SqliteAccessFileCB, &auth_info, &db_err_msg);
+	free(query_stmt);
+	query_stmt = NULL;
+	if ( rc != SQLITE_OK ) {
+		formatstr(auth_info.m_err_msg, "Failed to query access_tokens db: %s",
+		          db_err_msg);
+		sqlite3_free(db_err_msg);
+		sqlite3_close(db);
+		return CRED_FILE_FAILURE;
+	}
+	sqlite3_close(db);
+	if ( ! auth_info.m_err_msg.empty() ) {
+		return CRED_FILE_FAILURE;
+	}
+	return CRED_FILE_SUCCESS;
+}
+
+int ReadCredFileJson( AuthInfo &auth_info )
+{
+	// TODO parse the full JSON data and select the right account
+	//   if auth_info.m_account isn't empty.
+	string auth_file_contents;
+	string client_id;
+	string client_secret;
+	string refresh_token;
+	string access_token;
+	string key;
+	string value;
+	int nesting = 0;
+	int expires_in = 0;
+	long int expiration_timestamp = 0;
+	const char *pos;
+	if ( !readShortFile( auth_info.m_auth_file, auth_file_contents ) ) {
+		auth_info.m_err_msg = "Failed to read auth file";
+		return CRED_FILE_BAD_FORMAT;
+	}
+
+	pos = auth_file_contents.c_str();
+	while ( ParseJSONLine( pos, key, value, nesting ) ) {
+		if ( key == "refresh_token" ) {
+			refresh_token = value;
+		} else if ( key == "client_id" ) {
+			client_id = value;
+		} else if ( key == "client_secret" ) {
+			client_secret = value;
+		} else if ( key == "access_token" ) {
+			access_token = value;
+		} else if ( key == "expires_in" ) {
+			expires_in = atoi(value.c_str());
+		} else if ( key == "token_expiry") {
+			// Parse token expiry time in (UTC) format
+			// ""2016-07-27T18:44:12Z"
+			struct tm expiration_tm;
+			if ( strptime(value.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
+				expiration_timestamp = timegm(&expiration_tm);
+			}
+		}
+	}
+	if ( refresh_token.empty() ) {
+		if ( expiration_timestamp > 0 ) {
+			expires_in = expiration_timestamp - time(NULL);
+		}
+		if ( access_token.empty() ) {
+			auth_info.m_err_msg = "Failed to find refresh_token or access_token in auth file";
+			return false;
+		}
+		if ( expires_in <= 0 ) {
+			auth_info.m_err_msg = "Access_token is expired, please re-login.";
+			return CRED_FILE_FAILURE;
+		}
+		auth_info.m_access_token = access_token;
+		auth_info.m_expiration = time(NULL) + expires_in;
+		return CRED_FILE_FAILURE;
+	}
+	if ( client_id.empty() ) {
+		auth_info.m_err_msg = "Failed to find client_id in auth file";
+		return CRED_FILE_FAILURE;
+	}
+	if ( client_secret.empty() ) {
+		auth_info.m_err_msg = "Failed to find client_secret in auth file";
+		return CRED_FILE_FAILURE;
+	}
+
+	auth_info.m_client_id = client_id;
+	auth_info.m_client_secret = client_secret;
+	auth_info.m_refresh_token = refresh_token;
+	return CRED_FILE_SUCCESS;
 }
 
 // Given a file containing OAuth 2.0 credentials, return an access
@@ -322,10 +549,11 @@ bool TryAuthRefresh( const string &client_id, const string &client_secret,
 // The results are cached (in authTable map), so that the OAuth service
 // is only contacted when necessary (the first time we see a file and
 // when the access token is about to expire).
-bool GetAccessToken( const string &auth_file, string &access_token,
-					 string &err_msg)
+bool GetAccessToken( const string &auth_file, const string &account,
+                     string &access_token, string &err_msg)
 {
-	AuthInfo &auth_entry = authTable[auth_file];
+	// TODO Support default auth_file
+	AuthInfo &auth_entry = authTable[auth_file + "#" + account];
 
 	while ( auth_entry.m_refreshing ) {
 		pthread_cond_wait( &auth_entry.m_cond, &global_big_mutex );
@@ -339,79 +567,44 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 
 	if ( auth_entry.m_auth_file.empty() ) {
 		auth_entry.m_auth_file = auth_file;
+		auth_entry.m_account = account;
 	}
 
 	if ( auth_entry.m_expiration < time(NULL) + (5 * 60) ) {
+		int rc;
 		auth_entry.m_refreshing = true;
+
+		// We either don't have an access token or we have one that's
+		// about to expire. Try to get a shiny new one.
+
+		if ( auth_entry.m_err_msg.empty() && ! auth_entry.m_refresh_token.empty() ) {
+			if ( TryAuthRefresh( auth_entry ) ) {
+				goto done;
+			}
+		}
+
+		// Refresh failed or not possible (no refresh token).
+		// Try to read our credentials from the file(s).
 		auth_entry.m_err_msg.clear();
 
-		string auth_file_contents;
-		string client_id;
-		string client_secret;
-		string refresh_token;
-		string access_token;
-		string key;
-		string value;
-		int nesting = 0;
-		int expires_in = 0;
-		long int expiration_timestamp = 0;
-		const char *pos;
-		if ( !readShortFile( auth_file, auth_file_contents ) ) {
-			auth_entry.m_err_msg = "Failed to read auth file";
+		// First try reading the credentials file in the new sql format.
+		// If it doesn't look like an sql file, try again using the old
+		// json text format.
+		rc = ReadCredFileSqlite( auth_entry );
+		if ( rc == CRED_FILE_BAD_FORMAT ) {
+			rc = ReadCredFileJson( auth_entry );
+		}
+		if ( rc != CRED_FILE_SUCCESS ) {
+			// auth_entry.m_err_msg set by the read functions on any error
 			goto done;
 		}
 
-		pos = auth_file_contents.c_str();
-		while ( ParseJSONLine( pos, key, value, nesting ) ) {
-			if ( key == "refresh_token" ) {
-				refresh_token = value;
-			} else if ( key == "client_id" ) {
-				client_id = value;
-			} else if ( key == "client_secret" ) {
-				client_secret = value;
-			} else if ( key == "access_token" ) {
-				access_token = value;
-			} else if ( key == "expires_in" ) {
-				expires_in = atoi(value.c_str());
-			} else if ( key == "token_expiry") {
-				// Parse token expiry time in (UTC) format
-				// ""2016-07-27T18:44:12Z"
-				struct tm expiration_tm;
-				if ( strptime(value.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
-					expiration_timestamp = timegm(&expiration_tm);
-				}
-			}
-		}
-		if ( refresh_token.empty() ) {
-			if ( expiration_timestamp > 0 ) {
-				expires_in = expiration_timestamp - time(NULL);
-			}
-			if ( access_token.empty() ) {
-				auth_entry.m_err_msg = "Failed to find refresh_token or access_token in auth file";
-				goto done;
-			}
-			if ( expires_in <= 0 ) {
-				auth_entry.m_err_msg = "Access_token is expired, please re-login.";
-				goto done;
-			}
-			auth_entry.m_access_token = access_token;
-			auth_entry.m_expiration = time(NULL) + expires_in;
-			goto done;
-		}
-		if ( client_id.empty() ) {
-			auth_entry.m_err_msg = "Failed to find client_id in auth file";
-			goto done;
-		}
-		if ( client_secret.empty() ) {
-			auth_entry.m_err_msg = "Failed to find client_secret in auth file";
+		if ( auth_entry.m_refresh_token.empty() ) {
+			// This is a service credential, should already have an access token
 			goto done;
 		}
 
-		if ( TryAuthRefresh( client_id, client_secret, refresh_token,
-							 auth_entry.m_access_token, expires_in,
-							 auth_entry.m_err_msg ) ) {
-			auth_entry.m_expiration = time(NULL) + expires_in;
-		}
+		TryAuthRefresh( auth_entry );
 
 	done:
 		auth_entry.m_last_attempt = time(NULL);
@@ -450,7 +643,7 @@ bool verifyRequest( const string &serviceUrl, const string &auth_file,
 		op_request.serviceURL = serviceUrl;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, op_request.accessToken, err_msg ) ) {
+		if ( !GetAccessToken( auth_file, "", op_request.accessToken, err_msg ) ) {
 			return false;
 		}
 
@@ -840,7 +1033,7 @@ bool GcePing::workerFunction(char **argv, int argc, string &result_string) {
 	ping_request.requestMethod = "GET";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, ping_request.accessToken,
+	if ( !GetAccessToken( auth_file, "", ping_request.accessToken,
 						  ping_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   ping_request.errorMessage.c_str() );
@@ -1001,7 +1194,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	}
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, insert_request.accessToken,
+	if ( !GetAccessToken( auth_file, "", insert_request.accessToken,
 						  insert_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   insert_request.errorMessage.c_str() );
@@ -1052,7 +1245,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, op_request.accessToken,
+		if ( !GetAccessToken( auth_file, "", op_request.accessToken,
 							  op_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   op_request.errorMessage.c_str() );
@@ -1133,7 +1326,7 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 	delete_request.requestMethod = "DELETE";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, delete_request.accessToken,
+	if ( !GetAccessToken( auth_file, "", delete_request.accessToken,
 						  delete_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   delete_request.errorMessage.c_str() );
@@ -1183,7 +1376,7 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, op_request.accessToken,
+		if ( !GetAccessToken( auth_file, "", op_request.accessToken,
 							  op_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   op_request.errorMessage.c_str() );
@@ -1264,7 +1457,7 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		list_request.requestMethod = "GET";
 
 		string auth_file = argv[3];
-		if ( !GetAccessToken( auth_file, list_request.accessToken,
+		if ( !GetAccessToken( auth_file, "", list_request.accessToken,
 							  list_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   list_request.errorMessage.c_str() );
@@ -1482,7 +1675,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	}
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, insert_request.accessToken,
+	if ( !GetAccessToken( auth_file, "", insert_request.accessToken,
 						  insert_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   insert_request.errorMessage.c_str() );
@@ -1552,7 +1745,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	group_request.requestBody += "}\n";
 
 
-	if ( !GetAccessToken( auth_file, group_request.accessToken,
+	if ( !GetAccessToken( auth_file, "", group_request.accessToken,
 						  group_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   group_request.errorMessage.c_str() );
@@ -1627,7 +1820,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	group_request.requestMethod = "DELETE";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, group_request.accessToken,
+	if ( !GetAccessToken( auth_file, "", group_request.accessToken,
 						  group_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   group_request.errorMessage.c_str() );
@@ -1686,7 +1879,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	delete_request.serviceURL += "-template";
 	delete_request.requestMethod = "DELETE";
 
-	if ( !GetAccessToken( auth_file, delete_request.accessToken,
+	if ( !GetAccessToken( auth_file, "", delete_request.accessToken,
 						  delete_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   delete_request.errorMessage.c_str() );
