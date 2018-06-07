@@ -1168,7 +1168,7 @@ gc_image(const std::string & image) {
   std::list<std::string> images;
   std::string imageFilename;
   
-  int cache_size = param_integer("DOCKER_IMAGE_CACHE_SIZE", 20);
+  int cache_size = param_integer("DOCKER_IMAGE_CACHE_SIZE", 8);
   cache_size--;
   if (cache_size < 0) cache_size = 0;
 
@@ -1198,6 +1198,8 @@ gc_image(const std::string & image) {
 
       if (strlen(existingImage) > 1) {
 	existingImage[strlen(existingImage) - 1] = '\0'; // remove newline
+      } else {
+	continue; // zero length image name, skip		
       }
       std::string tmp(existingImage);
       //
@@ -1206,7 +1208,7 @@ gc_image(const std::string & image) {
 	images.push_back(tmp);
       }
     }
-    fclose(f);
+  fclose(f);
   }
 
   dprintf(D_ALWAYS, "Found %lu entries in docker image cache.\n", images.size());
