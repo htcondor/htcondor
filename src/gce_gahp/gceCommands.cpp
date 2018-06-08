@@ -315,18 +315,49 @@ bool TryAuthRefresh( AuthInfo &auth_info )
 
 bool ReadCredData( AuthInfo &auth_info, const classad::ClassAd &cred_ad )
 {
-	// TODO check for consistent set of attributes present?
+	string access_token;
+	string refresh_token;
+	string client_id;
+	string client_secret;
 	string token_expiry;
-	cred_ad.EvaluateAttrString("access_token", auth_info.m_access_token);
-	cred_ad.EvaluateAttrString("refresh_token", auth_info.m_refresh_token);
-	cred_ad.EvaluateAttrString("client_id", auth_info.m_client_id);
-	cred_ad.EvaluateAttrString("client_secret", auth_info.m_client_secret);
+	time_t expiration = 0;
+	cred_ad.EvaluateAttrString("access_token", access_token);
+	cred_ad.EvaluateAttrString("refresh_token", refresh_token);
+	cred_ad.EvaluateAttrString("client_id", client_id);
+	cred_ad.EvaluateAttrString("client_secret", client_secret);
 	cred_ad.EvaluateAttrString("token_expiry", token_expiry);
 	if ( ! token_expiry.empty() ) {
 		struct tm expiration_tm;
 		if ( strptime(token_expiry.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
-			auth_info.m_expiration = timegm(&expiration_tm);
+			expiration = timegm(&expiration_tm);
 		}
+	}
+
+	if ( refresh_token.empty() ) {
+		// This is a service credential
+		if ( access_token.empty() ) {
+			auth_info.m_err_msg = "Failed to find refresh_token or access_token in credentials file";
+			return false;
+		}
+		if ( expiration < time(NULL) ) {
+			auth_info.m_err_msg = "Access_token is expired, please re-login";
+			return false;
+		}
+		auth_info.m_access_token = access_token;
+		auth_info.m_expiration = expiration;
+	} else {
+		// This is a user credential
+		if ( client_id.empty() ) {
+			auth_info.m_err_msg = "Failed to find client_id in credentials file";
+			return false;
+		}
+		if ( client_secret.empty() ) {
+			auth_info.m_err_msg = "Failed to find client_secret in credentials file";
+			return false;
+		}
+		auth_info.m_refresh_token = refresh_token;
+		auth_info.m_client_id = client_id;
+		auth_info.m_client_secret = client_secret;
 	}
 	return true;
 }
@@ -467,74 +498,57 @@ int ReadCredFileSqlite( AuthInfo &auth_info )
 
 int ReadCredFileJson( AuthInfo &auth_info )
 {
-	// TODO parse the full JSON data and select the right account
-	//   if auth_info.m_account isn't empty.
-	string auth_file_contents;
-	string client_id;
-	string client_secret;
-	string refresh_token;
-	string access_token;
-	string key;
-	string value;
-	int nesting = 0;
-	int expires_in = 0;
-	long int expiration_timestamp = 0;
-	const char *pos;
-	if ( !readShortFile( auth_info.m_auth_file, auth_file_contents ) ) {
-		auth_info.m_err_msg = "Failed to read auth file";
+	auth_info.m_err_msg.clear();
+	FILE *fp = safe_fopen_wrapper_follow(auth_info.m_auth_file.c_str(), "r");
+	if ( fp == NULL ) {
+		auth_info.m_err_msg = "Failed to open credentials file";
+		return CRED_FILE_FAILURE;
+	}
+	classad::ClassAdJsonParser parser;
+	classad::ClassAd file_ad;
+	if ( ! parser.ParseClassAd(fp, file_ad, true) ) {
+		auth_info.m_err_msg = "Invalid JSON data";
+		fclose(fp);
 		return CRED_FILE_BAD_FORMAT;
 	}
-
-	pos = auth_file_contents.c_str();
-	while ( ParseJSONLine( pos, key, value, nesting ) ) {
-		if ( key == "refresh_token" ) {
-			refresh_token = value;
-		} else if ( key == "client_id" ) {
-			client_id = value;
-		} else if ( key == "client_secret" ) {
-			client_secret = value;
-		} else if ( key == "access_token" ) {
-			access_token = value;
-		} else if ( key == "expires_in" ) {
-			expires_in = atoi(value.c_str());
-		} else if ( key == "token_expiry") {
-			// Parse token expiry time in (UTC) format
-			// ""2016-07-27T18:44:12Z"
-			struct tm expiration_tm;
-			if ( strptime(value.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
-				expiration_timestamp = timegm(&expiration_tm);
+	fclose(fp);
+	classad::ExprTree *tree;
+	tree = file_ad.Lookup("data");
+	if ( tree == NULL || tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
+		auth_info.m_err_msg = "Invalid JSON data";
+		return CRED_FILE_FAILURE;
+	}
+	std::vector<ExprTree*> cred_list;
+	((classad::ExprList*)tree)->GetComponents(cred_list);
+	for ( std::vector<ExprTree*>::iterator itr = cred_list.begin(); itr != cred_list.end(); itr++ ) {
+		if ( (*itr)->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+			continue;
+		}
+		classad::ClassAd *acct_ad = (classad::ClassAd*)(*itr);
+		classad::Value val;
+		string account_id;
+		if ( !acct_ad->EvaluateExpr("key.account", val) || !val.IsStringValue(account_id) ) {
+			continue;
+		}
+		if ( !auth_info.m_account.empty() ) {
+			if ( account_id != auth_info.m_account ) {
+				continue;
 			}
 		}
-	}
-	if ( refresh_token.empty() ) {
-		if ( expiration_timestamp > 0 ) {
-			expires_in = expiration_timestamp - time(NULL);
+		classad::ExprTree *cred_expr;
+		cred_expr = acct_ad->Lookup("credential");
+		if ( cred_expr == NULL || cred_expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+			continue;
 		}
-		if ( access_token.empty() ) {
-			auth_info.m_err_msg = "Failed to find refresh_token or access_token in auth file";
-			return false;
+		if ( ReadCredData(auth_info, *(classad::ClassAd*)cred_expr ) ) {
+			auth_info.m_account = account_id;
+			return CRED_FILE_SUCCESS;
 		}
-		if ( expires_in <= 0 ) {
-			auth_info.m_err_msg = "Access_token is expired, please re-login.";
-			return CRED_FILE_FAILURE;
-		}
-		auth_info.m_access_token = access_token;
-		auth_info.m_expiration = time(NULL) + expires_in;
-		return CRED_FILE_FAILURE;
 	}
-	if ( client_id.empty() ) {
-		auth_info.m_err_msg = "Failed to find client_id in auth file";
-		return CRED_FILE_FAILURE;
+	if ( auth_info.m_err_msg.empty() ) {
+		auth_info.m_err_msg = "Account not found in credentials file";
 	}
-	if ( client_secret.empty() ) {
-		auth_info.m_err_msg = "Failed to find client_secret in auth file";
-		return CRED_FILE_FAILURE;
-	}
-
-	auth_info.m_client_id = client_id;
-	auth_info.m_client_secret = client_secret;
-	auth_info.m_refresh_token = refresh_token;
-	return CRED_FILE_SUCCESS;
+	return CRED_FILE_FAILURE;
 }
 
 // Given a file containing OAuth 2.0 credentials, return an access
@@ -553,7 +567,8 @@ bool GetAccessToken( const string &auth_file, const string &account,
                      string &access_token, string &err_msg)
 {
 	// TODO Support default auth_file
-	AuthInfo &auth_entry = authTable[auth_file + "#" + account];
+	string map_key = auth_file + "#" + account;
+	AuthInfo &auth_entry = authTable[map_key];
 
 	while ( auth_entry.m_refreshing ) {
 		pthread_cond_wait( &auth_entry.m_cond, &global_big_mutex );
