@@ -1,0 +1,3 @@
+version=3
+opts="uversionmangle=s/_/./g,dversionmangle=s/~dfsg.*//,filenamemangle=s/.*\/V(\d)_(\d)_(\d).*/condor-$1.$2.$3\.tar\.gz/" \
+  http://github.com/htcondor/htcondor/tags .*archive/V(\d[\d_]+).tar.gz

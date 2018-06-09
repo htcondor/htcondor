@@ -1,0 +1,7 @@
+--- a/src/condor_shadow.V6.1/CMakeLists.txt
++++ b/src/condor_shadow.V6.1/CMakeLists.txt
+@@ -27,3 +27,4 @@
+ endif(NOT PROPER AND LINUX)
+ condor_daemon( shadow "${shadowRmvElements}" "${CONDOR_LIBS_FOR_SHADOW}" "${C_SBIN}" OFF )
+ 
++TARGET_LINK_LIBRARIES(condor_shadow dl)
