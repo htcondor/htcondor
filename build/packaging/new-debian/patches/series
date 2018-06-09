@@ -13,5 +13,4 @@ as-needed-libs-ftbfs.patch
 qsub_sentinel_robustness
 raspbian_detection
 fix_bashisms
-fix_linker_script
 notice_file

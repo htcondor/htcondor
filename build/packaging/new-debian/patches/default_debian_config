@@ -8,10 +8,10 @@ Bug-Debian: http://bugs.debian.org/769100
 Author: Michael Hanke <mih@debian.org>
 
 diff --git a/src/condor_utils/param_info.in b/src/condor_utils/param_info.in
-index ce0741c403..ce7c893881 100644
+index b04e410506..9f7f373c5f 100644
 --- a/src/condor_utils/param_info.in
 +++ b/src/condor_utils/param_info.in
-@@ -42,7 +42,7 @@ default=$(LOG)/KernelTuning.log
+@@ -47,7 +47,7 @@ default=$(LOG)/KernelTuning.log
  type=path
  
  [LINUX_KERNEL_TUNING_SCRIPT]
@@ -20,7 +20,7 @@ index ce0741c403..ce7c893881 100644
  type=path
  
  [COLLECTOR_ENVIRONMENT]
-@@ -813,7 +813,7 @@ default=$(RELEASE_DIR)/include
+@@ -859,7 +859,7 @@ default=$(RELEASE_DIR)/include
  type=path
  
  [ETC]
@@ -29,7 +29,7 @@ index ce0741c403..ce7c893881 100644
  type=path
  
  [XAUTHORITY_USERS]
-@@ -858,7 +858,7 @@ type=int
+@@ -904,7 +904,7 @@ type=int
  tags=accountant
  
  [SPOOL]
@@ -38,8 +38,8 @@ index ce0741c403..ce7c893881 100644
  type=path
  tags=schedd,accountant
  
-@@ -1442,7 +1442,7 @@ customization=devel
- tags=daemon_core
+@@ -1422,7 +1422,7 @@ type=string
+ tags=daemons
  
  [COLLECTOR_NAME]
 -default=My Pool - $(CONDOR_HOST)
@@ -47,7 +47,7 @@ index ce0741c403..ce7c893881 100644
  type=string
  usage=the UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.
  tags=collector
-@@ -1468,7 +1468,7 @@ type=int
+@@ -1448,7 +1448,7 @@ type=int
  tags=collector
  
  [CONDOR_ADMIN]
@@ -56,7 +56,7 @@ index ce0741c403..ce7c893881 100644
  type=string
  customization=normal
  description=HTCondor sends email to this address on pool failure
-@@ -1799,7 +1799,7 @@ tags=MAIL,
+@@ -1774,7 +1774,7 @@ tags=MAIL,
  
  [MAIL]
  # default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
@@ -65,7 +65,7 @@ index ce0741c403..ce7c893881 100644
  win32_default=$(BIN)\condor_mail.exe
  type=path
  tags=MAIL,
-@@ -2351,7 +2351,7 @@ type=bool
+@@ -2280,7 +2280,7 @@ type=bool
  tags=condor_config
  
  [REQUIRE_LOCAL_CONFIG_FILE]
@@ -74,7 +74,7 @@ index ce0741c403..ce7c893881 100644
  win32_default=false
  type=bool
  tags=condor_config
-@@ -2678,7 +2678,7 @@ type=string
+@@ -2607,7 +2607,7 @@ type=string
  tags=starter,StarterHookMgr
  
  [JAVA_BENCHMARK_TIME]
@@ -83,7 +83,7 @@ index ce0741c403..ce7c893881 100644
  type=int
  usage=If this time is zero or undefined, no Java benchmarks will be run.
  tags=starter,java_detect
-@@ -4312,7 +4312,7 @@ description=Classad expression used to set virtual memory rlimit for job
+@@ -4310,7 +4310,7 @@ description=Classad expression used to set virtual memory rlimit for job
  tags=starter
  
  [INTERACTIVE_SUBMIT_FILE]
@@ -92,7 +92,7 @@ index ce0741c403..ce7c893881 100644
  version=7.9.0
  type=string
  description=Location of default submit file for condor_submit -i
-@@ -4482,7 +4482,7 @@ description=Ganglia Library Search Path
+@@ -4480,7 +4480,7 @@ description=Ganglia Library Search Path
  tags=condor_config
  
  [GANGLIA_LIB64_PATH]
@@ -101,7 +101,7 @@ index ce0741c403..ce7c893881 100644
  type=string
  description=Ganglia 64-bit Library Search Path
  tags=condor_config
-@@ -5139,7 +5139,7 @@ type=path
+@@ -5193,7 +5193,7 @@ type=path
  default=9620
  
  [CRED_STORE_DIR]
@@ -111,7 +111,7 @@ index ce0741c403..ce7c893881 100644
  [CREDD_ARGS]
  default=-p $(CREDD_PORT) -f
 diff --git a/src/condor_examples/condor_config.generic.debian.patch b/src/condor_examples/condor_config.generic.debian.patch
-index 716edbe07c..7016c6e14e 100644
+index 716edbe07c..967e029189 100644
 --- a/src/condor_examples/condor_config.generic.debian.patch
 +++ b/src/condor_examples/condor_config.generic.debian.patch
 @@ -31,7 +31,7 @@
@@ -147,7 +147,7 @@ index 716edbe07c..7016c6e14e 100644
 ++ALLOW_WRITE = $(CONDOR_HOST) $(IP_ADDRESS) 127.*
 ++ALLOW_NEGOTIATOR = $(CONDOR_HOST) $(IP_ADDRESS) 127.*
 diff --git a/src/condor_examples/condor.service b/src/condor_examples/condor.service
-index c2844481eb..6f3886d6bf 100644
+index 3bab7c73f7..acd282072b 100644
 --- a/src/condor_examples/condor.service
 +++ b/src/condor_examples/condor.service
 @@ -1,7 +1,7 @@
