@@ -1,0 +1,740 @@
+condor (8.6.11) unstable; urgency=medium
+
+  * Nightly build
+
+ -- Tim Theisen <tim@exec-23.batlab.org>  Thu, 31 May 2018 15:01:37 -0500
+
+condor (8.6.8~dfsg.1-2) unstable; urgency=medium
+
+  * Disable GSOAP (Closes: #890007) (GSOAP will be dropped from HTCondor soon)
+  * Package Apache NOTICE file (fix up lintian error)
+
+ -- Tim Theisen <tim@exec-23.batlab.org>  Mon, 19 Mar 2018 18:28:58 -0500
+
+condor (8.6.8~dfsg.1-1) unstable; urgency=medium
+
+  [ Tim Theisen ]
+  * New upstream stable release (update to latest 8.6 stable series).
+    - Support for singularity containers.
+    - Jobs can now be submitted to the Slurm batch scheduling system via the
+      new slurm type in the grid universe.
+    - Fixes an issue where a user can cause the condor_schedd to crash by
+      submitting a job designed for that purpose (CVE-2017-16816).
+  * Bump SO version of libclassad from 7 to 8.
+
+  [ Michael Hanke ]
+  * Drop transitional packages (Condor -> HTCondor). Thanks to Holger Levsen
+    for pointing this out (Closes: #878376).
+  * Package was falsely suggesting "docker" instead of "docker.io".
+  * More robust default "Personal Condor" configuration (should not break in
+    IPv6 scenarios).
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 16 Nov 2017 15:48:05 -0600
+
+condor (8.4.11~dfsg.1-3) unstable; urgency=medium
+
+  * Get rid of lintian errors (eliminate RPATH, dh_python build dependency)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 04 Oct 2017 15:33:23 -0500
+
+condor (8.4.11~dfsg.1-2) unstable; urgency=medium
+
+  * List additional global symbols for new gsoap version(Closes: #868905).
+    Thanks to Michael Hudson-Doyle <michael.hudson@canonical.com>
+  * Add build conflict to prevent pulling in cream on raspian.
+    Thanks to Peter Green <plugwash@p10link.net>
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 18 Aug 2017 22:39:59 -0500
+
+condor (8.4.11~dfsg.1-1) unstable; urgency=medium
+
+  * New upstream bugfix release.
+    - Various bugfixes for a number of HTCondor subsystems
+      http://research.cs.wisc.edu/htcondor/manual/v8.4.11/10_3Stable_Release.html
+  * Add Tim Theisen as a maintainer.
+  * Remove Brian Lin as a maintainer.
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 25 Jan 2017 09:45:20 -0600
+
+condor (8.4.9~dfsg.1-2) unstable; urgency=medium
+
+  * Add patch to fix FTBFS due to -fPIE being default now. Thanks
+    to Adrian Bunk <bunk@stusta.de> for the patch (Closes: #837402).
+  * Disable VOMS support for now to workaround VOMS not being ready for
+    OpenSSL 1.1.0 (Closes: #828269). To be re-enabled once #844877
+    was addressed.
+  * Add upstream patch for OpenSSL 1.1 compatibility (to be released with
+    8.4.10).
+
+ -- Michael Hanke <mih@debian.org>  Sun, 27 Nov 2016 08:45:09 +0100
+
+condor (8.4.9~dfsg.1-1) unstable; urgency=medium
+
+  * New upstream bugfix release.
+    - Updated systemd service configuration.
+    - Various bugfixes for a number of HTCondor subsystems
+      http://research.cs.wisc.edu/htcondor/manual/v8.4.9/10_3Stable_Release.html
+  * Refreshed patches.
+  * Adjusted install setup for tmpfile.d configuration after upstream source
+    reorganization.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 14 Oct 2016 13:39:15 +0200
+
+condor (8.4.8~dfsg.1-1) unstable; urgency=medium
+
+  * New upstream release (skipped several, more help wanted!)
+    - Clarified license of doc/makeman/hard-test.html -- same as
+      main HTCondor license (Closes: #822404)
+  * Bumped Standards version to 3.9.8, no changes necessary.
+  * Add Debconf template translation:
+    - Brazilian Portuguese -- courtesy of Adriano Rafael Gomes
+      <adrianorg@arg.eti.br>.
+      (Closes: #816945)
+  * Prevent failure when creating arch-independent packages only.
+    Patch is courtesy of Santiago Vila <sanvila@unex.es> (Closes: #809112)
+
+ -- Michael Hanke <mih@debian.org>  Fri, 19 Aug 2016 10:14:12 +0200
+
+condor (8.4.2~dfsg.1-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Simplified configuration to hold or preempt jobs that exceed resource
+      claims.
+    - Fix FTBFS on non-amd64 64bit platforms (Closes: #804386).
+    - Various other bug fixes.
+  * Install tmpfiles configuration for systemd to prevent service start
+    failure due to missing /var/run/condor.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 11 Dec 2015 20:30:35 +0100
+
+condor (8.4.0~dfsg.1-1) unstable; urgency=medium
+
+  * First upstream in new 8.4 stable series. Updates:
+    - leaner resource footprint for up to 200k simultaneous jobs in a
+      single pool
+    - run Docker containers as jobs
+    - configurable encryption of execution directories
+    - support for simultaneous IPv4 and IPv6 connections
+    - adminstrator can establish requirements that must be satisfied in order
+      for a job to be queued
+    - new default shared port (if used) is 9618, instead of the previous
+      random default
+    - automatic tuning of certain kernel parameters for improved scalability
+      enabled by default (see LINUX_KERNEL_TUNING_SCRIPT).
+  * Install systemd service file.
+  * Install default submit configuration for interactive jobs in
+    /etc/condor/interactive.sub and set default configuration for
+    INTERACTIVE_SUBMIT_FILE accordingly.
+  * Tighten versioned dependency on libclassad package -- observed missing
+    symbols, despite unchanged SO version.
+  * Install documentation under /usr/share/doc/htcondor (no longer just
+    'condor').
+  * Add docker as suggested package, due to the addition of the
+    DockerUniverse.
+  * Recommend package 'ecryptfs-utils': when installed HTCondor can be
+    instructed to encrypt job EXECUTE directories on a system-wide, or
+    per-job basis.
+  * Install linux-kernel-tuning script as a config file into /etc/condor.
+  * Update patch to avoid non-literal string processing without format
+    strings [-Werror=format-security].
+  * Build with Virtual Organization Membership Service support. Added
+    voms-dev as a build-dependency.
+  * Add a watch file.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 15 Sep 2015 07:32:31 +0200
+
+condor (8.2.9~dfsg.1-1) unstable; urgency=medium
+
+  * New upstream bugfix release closing >25 tickets.
+    - "Smaller" partitionable slots are now merged to allow for a "bigger"
+      job to match (needs ALLOW_PSLOT_PREEMPTION=True; default behavior
+      unchanged).
+    - Fix LaTeX documentation sources to work with the most recent TeTeX
+      (Closes: #790865). Thanks to Martin Michlmayr for the report and a
+      patch.
+  * Remove package section disparity (devel -> libdevel).
+
+ -- Michael Hanke <mih@debian.org>  Mon, 17 Aug 2015 08:35:31 +0200
+
+condor (8.2.8~dfsg.1-1) unstable; urgency=medium
+
+  * New upstream bugfix release.
+    - Updated for latest gsoap release (Closes: #784778)
+    - Numerous additional bug fixes.
+  * Minimize patch for default configuration to match upstream
+    adjustments.
+  * Add patch to fix a few bashisms (Closes: #772232). Thanks to
+    Raphael Geissert for the report.
+  * Add a patch adding raspbian to OS detection code (Closes: #780517).
+    Thanks to Peter Michael Green for the patch.
+  * Bumped Standards-version to 3.9.6; no changes necessary.
+
+ -- Michael Hanke <mih@debian.org>  Sat, 16 May 2015 10:32:41 +0200
+
+condor (8.2.3~dfsg.1-6) unstable; urgency=medium
+
+  [Alex Waite]
+  * Upstream security fix: Authenticated users could execute arbitrary code as
+    the condor user due to a bug in the way the condor daemon sent email
+    notifications (CVE-2014-8126). (Closes: #775276)
+
+ -- Michael Hanke <mih@debian.org>  Fri, 16 Jan 2015 18:59:12 +0100
+
+condor (8.2.3~dfsg.1-5) unstable; urgency=medium
+
+  * Fix wrong default SPOOL location introduced with 8.2.3~dfsg.1-4. Whenever
+    not overwritten by an explicit SPOOL setting, this version relocated
+    SPOOL to /var/lib/condor/lib. Consequently, existing job and usage logs
+    where inaccessible by HTcondor. This update reverts this unintentional
+    change and sets SPOOL explicitly to /var/spool/condor again.
+    (Closes: #772170)
+
+ -- Michael Hanke <mih@debian.org>  Fri, 05 Dec 2014 20:32:17 +0100
+
+condor (8.2.3~dfsg.1-4) unstable; urgency=medium
+
+  * Adjust mechanism to apply the default Debian configuration to cope with
+    the removal of the monolithic configuration file in the 8.2.x series.
+    The default configuration is now applied as a patch to the table of
+    parameters in the HTCondor sources (Closes: #769100).
+    The report of leaving behind an unowned directory is merely a symptom of
+    this bug.
+  * Adjust default configuration to make HTCondor work with Debian's
+    ganglia (also see Ticket #4709). Thanks to Alex Waite for the fix.
+  * Add Debconf template translation:
+    - Dutch -- courtesy of Frans Spiesschaert <Frans.Spiesschaert@yucom.be>.
+      (Closes: #766067)
+
+ -- Michael Hanke <mih@debian.org>  Sat, 29 Nov 2014 09:57:27 +0100
+
+condor (8.2.3~dfsg.1-3) unstable; urgency=medium
+
+  * Modify the DMTCP shim script to work with the 2.x series of DMTCP.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 17 Oct 2014 20:43:10 +0200
+
+condor (8.2.3~dfsg.1-2) unstable; urgency=medium
+
+  * Add transitional dummy packages to enable seamless upgrades from the
+    "condor*" packages in wheezy. Apparently, the provides/replaces/conflicts
+    triplet doesn't work with apt or aptitude in jessie.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 07 Oct 2014 13:33:55 +0200
+
+condor (8.2.3~dfsg.1-1) unstable; urgency=medium
+
+  * Add patch to prevent FTBFS when built with --as-needed (Closes: #758923).
+    Thanks to Artur Rona.
+  * Add 'provides: condor*' statements to debian/control to ensure a smooth
+    upgrade path.
+  * Move upstream meta data: debian/upstream -> debian/upstream/metadata
+  * Added patch to increase the robustness of the sentinel job submitted by
+    condor_qsub (Closes: #692388). Thanks to Philip Chase for the patch.
+
+ -- Michael Hanke <mih@debian.org>  Sat, 04 Oct 2014 14:59:29 +0200
+
+condor (8.2.1~dfsg.1-1) unstable; urgency=medium
+
+  * New upstream release in the 8.2 stable series.
+    - Skipped 8.2.0 due to a security issue.
+    - Includes various new features from the former 8.1 development series,
+      such as improved support for partitionable slots, and interactive
+      sessions.
+  * Enabled CGROUPS support (new build-dependency libcgroups-dev).
+  * Enabled condor_kbdd for machines where Condor harvests idle time
+    (new build-dependency libx11-dev).
+  * Bump SO version of libclassad from 5 to 7.
+  * Bumped Standards-version to 3.9.5; no changes necessary.
+  * Drop build-dependency on obsolete python-support.
+  * Drop alternative build-dependency on obselete java-compiler.
+  * Symlink condor_ssh_to_job_sshd_config_template to /usr/lib/condor
+    where Condor expects it to make interactive sessions work out of the box.
+
+ -- Michael Hanke <mih@debian.org>  Sun, 13 Jul 2014 12:03:32 +0200
+
+condor (8.0.6~dfsg.1-1) unstable; urgency=medium
+
+  * New upstream maintenance release for the 8.0 series. Changelog excerpt:
+    - HTCondor now forces proxies that it delegates to be a minimum of
+      1024 bits. (Ticket #4168).
+    - Fixed a bug in the condor_schedd which would cause it to crash when
+      running remotely submitted parallel universe jobs. (Ticket #4163).
+    - Fixed a crash of the condor_shadow, triggered when a disconnect from
+      the condor_starter occurs just as the job terminates. (Ticket #4127).
+    - Fixed a bug that caused condor_submit_dag to crash on very large DAG
+      input files, such as those larger than 2 Gbytes (Ticket #4171).
+  * Drop patch for schedd crash-prevention (Ticket #38936) -- contained in new
+    release.
+  * Add missing libkrb5-dev packages to the build-depends. Thanks to Hideki
+    Yamane for the fix (Closes: #747794).
+  * Update patch for missing getpid and getppid syscalls on alpha. Thanks to
+    Michael Cree (Closes: #736689).
+  * Disable Python bindings again -- they do not build nicely for all
+    supported Python versions right now.
+  * Update java build-dependencies to use default-jdk as first option. Thanks
+    lintian.
+
+ -- Michael Hanke <mih@debian.org>  Sun, 25 May 2014 16:15:55 +0200
+
+condor (8.0.5~dfsg.1-1) unstable; urgency=low
+
+  [ Michael Hanke ]
+  * Acknowledge NMU, thanks Mattias Ellert.
+  * New upstream version (Closes: #714364). This is the first packaged
+    version of an 8.x release with many improvements and fixes.
+  * Rename all relevant binary packages to reflect the new upstream name
+    HTCondor. The source package name is kept as 'condor'.
+  * Bump debhelper compat level to 9 to enabled hardening and python helper
+    support.
+  * Enable Python bindings (only for the default Python version for now).
+    New build-dependencies libboost-python-dev, python-support and python-dev
+    added.
+  * Enable automatic updating of autotools infrastructure via dh_autoreconf.
+    New build-dependencies dh-autoreconf and autotools-dev added.
+  * Fix for CVE-2013-4255 is contained since 8.0.3 (Closes: #721693).
+  * Remove Debian-specific condor_qsub script which has been integrated
+    upstream and is now shipped in an improved form.
+  * Add patch to source LSB init function in Condor's init script.
+  * Add patch to replace sprintf wrapper call without a format string argument
+    with the corresponding non-formating function call.
+  * Add upstream patch to prevent schedd crash (Ticket #38936).
+
+  [ Brian Lin ]
+  * Add Debconf template translations:
+    - Japanese -- courtesy of victory <victory.deb@gmail.com>.
+      (Closes: #718923)
+  * Add patch campus_factory_syntax to fix a syntax error the campus_factory
+    script.
+  * Bumped Standards-version to 3.9.4; no changes necessary.
+  * Add new dependency on libboost-test-dev.
+  * Disable installation of obsolete Perl modules.
+  * Fix DEP5 syntax error in debian/copyright.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 31 Dec 2013 10:22:08 +0100
+
+condor (7.8.8~dfsg.1-2.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Adapt to multiarch globus installation (Closes: #731246).
+
+ -- Mattias Ellert <mattias.ellert@fysast.uu.se>  Mon, 16 Dec 2013 16:40:36 +0100
+
+condor (7.8.8~dfsg.1-2) unstable; urgency=low
+
+  * Fix corrupted Russian and French debconf template translations.
+    Thanks to David Prévot for the fixes (Closes: #671510, #673138).
+
+ -- Michael Hanke <mih@debian.org>  Sun, 21 Jul 2013 09:23:43 +0200
+
+condor (7.8.8~dfsg.1-1) unstable; urgency=low
+
+  [ Brian Lin ]
+  * New upstream bug fix release.
+    - Fixed a bug in condor_advertise that could cause failure to publish
+    ClassAds to condor_collector daemons other than the first one in the list of
+    condor_collector daemons (Ticket #3404).
+    - Fixed a bug that could cause HTCondor daemons to abort on condor_reconfig
+    when the value of configuration variable STATISTICS_WINDOW_SECONDS was
+    reduced. (Ticket #3443).
+    - If condor_shared_port was using a dynamic port and the condor_master was
+    using the shared port, then if condor_shared_port died, all subsequent
+    attempts to restart it on a different port failed. (Ticket #3478).
+    - Reduced the likelihood of a problem that caused the condor_master to
+    restart some of its children after a recent reconfiguration, because the
+    condor_master incorrectly concluded that the children were hung. (Ticket
+    #3510)
+    - Now installs the condor_kbdd daemon.
+    - Does no longer provide condor_glidein
+    - Fix a number of bashisms (Closes: #690640)
+  * Added patch to automatically retry glexec operations if they exit with an
+    error code likely caused by a transient error (Ticket 2415).
+
+  [ Michael Hanke ]
+  * Add Brian Lin as a maintainer.
+  * Adjust code to determine Condor's upstream version in debian/rules'
+    get-orig-source target.
+  * Add citation information in debian/upstream. Thanks to Andreas Tille.
+  * Add explicit note to README.Debian that the standard universe is not
+    supported at this point (Closes: #717357).
+
+ -- Michael Hanke <mih@debian.org>  Sat, 20 Jul 2013 12:51:53 +0200
+
+condor (7.8.7~dfsg.1-1) experimental; urgency=low
+
+  * New upstream bug fix release.
+    - Fixed a bug wherein running the condor_suspend command on a scheduler
+      universe job would cause the schedd to crash (Ticket 3259).
+    - Jobs that were submitted with condor_submit -spool and failed during
+      submission were left indefinitely in the queue in the Hold state
+      (Ticket 3200).
+    - When using privilege separation, jobs would be put on hold after
+      they finished running if the working directory contained links to
+      files that were not globally readable (Ticket 2904).
+    - condor_master would sometimes crash on reconfiguration when the
+      High Availability configuration had changed (Ticket 3292).
+  * Condor is now officially called HTCondor. The Debian package will keep the
+    name 'condor' for now and change when switching to the 7.9 or 8.0 series.
+
+ -- Michael Hanke <mih@debian.org>  Thu, 10 Jan 2013 16:47:47 +0100
+
+condor (7.8.6~dfsg.1-1) experimental; urgency=low
+
+  * New upstream bug fix release (skipped 7.8.5).
+    - Avoid rare crashes of condor_schedd in association with jobs that have
+      'noop_job = true' (Ticket 3156).
+    - Fix condor_startd crash when failing to match a partitionable slot after
+      the application of configuration variables of the MODIFY_REQUEST_EXPR_
+      category (Ticket 3260).
+    - Prevent removal of scheduler universe jobs from the job queue when they
+      should have been requeued, according to policy. This caused condor_dagman
+      jobs to fail to restart. This bug exists in all Condor versions 7.8.0
+      through 7.8.4. Upon upgrading from these Condor versions, users will need
+      to intervene in order to restart their dagman jobs (Ticket 3207).
+
+ -- Michael Hanke <mih@debian.org>  Tue, 06 Nov 2012 08:22:29 +0100
+
+condor (7.8.4~dfsg.1-1) experimental; urgency=low
+
+  * New upstream bug fix release (missed 7.8.3). This release addresses four
+    security-related issues, as well as numerous other bug fixes
+    (Closes: #688210):
+    - Security Item: Some code that was no longer used was removed. The presence
+      of this code could expose information which would allow an attacker to
+      control another user's job. (CVE-2012-3493)
+    - Security Item: Some code that was no longer used was removed. The presence
+      of this code could have lead to a Denial-of-Service attack which would
+      allow an attacker to remove another user's idle job. (CVE-2012-3491)
+    - Security Item: Filesystem (FS) authentication was improved to check the
+      UNIX permissions of the directory used for authentication. Without this,
+      an attacker may have been able to impersonate another submitter on the
+      same submit machine. (CVE-2012-3492)
+    - Security Item: Although not user-visible, there were multiple updates to
+      remove places in the code where potential buffer overruns could occur,
+      thus removing potential attacks. None were known to be exploitable.
+    - Security Item: Although not user-visible, there were updates to the code
+      to improve error checking of system calls, removing some potential
+      security threats. None were known to be exploitable.
+    - The full changelog listing numerous additional bugs is available at
+      http://research.cs.wisc.edu/condor/manual/v7.8/9_3Stable_Release.html
+  * Added patch to fix a FTBFS on alpha, due to missing getpid syscall.
+    Courtesy of Michael Cree <mcree@orcon.net.nz> (Closes: #685892).
+
+ -- Michael Hanke <mih@debian.org>  Fri, 21 Sep 2012 20:56:32 +0200
+
+condor (7.8.2~dfsg.1-2) experimental; urgency=low
+
+  * Make postinst script more robust against missing config variables (Closes:
+    #684667). Patch is courtesy of Tim Cartwright.
+  * Disable Condor's file transfer mechanism for jobs submitted via
+    condor_qsub, because a shared filesystem is assumed for these jobs
+    (Closes: #684879).
+  * This time really remove dangling symlink /usr/sbin/condor -> ../bin/condor.
+    This file no longer exists (Closes: #678425).
+  * Support deployment scenario where the administrative 'condor' user is not
+    a local system user, but is shared (e.g. through LDAP) by all machines in a
+    Condor pool (see installation manual section 3.2). The condor package will
+    accept to run under an existing non-system user account named 'condor',
+    but only when that account is locked, i.e. not login is possible
+    (Closes: #684463).
+
+ -- Michael Hanke <mih@debian.org>  Sun, 12 Aug 2012 19:20:35 +0200
+
+condor (7.8.2~dfsg.1-1) unstable; urgency=high
+
+  * Upstream security release. Prevent an attacker who is manipulating
+    reverse-DNS entries and is able to connect to a Condor daemon to gain
+    access to a Condor pool that is using DNS/hostname host-based authentication
+    (only). CVE-2012-3416
+
+ -- Michael Hanke <mih@debian.org>  Thu, 16 Aug 2012 08:32:49 +0200
+
+condor (7.8.1~dfsg.1-2) unstable; urgency=low
+
+  * Remove dangling symlink /usr/sbin/condor -> ../bin/condor. This file no
+    longer exists (Closes: #678425).
+  * Add Debconf template translations:
+    - Czech -- courtesy of Martin Å Ãn <martin.sin@zshk.cz>
+      (Closes: #678952)
+    - Spanish -- courtesy of Fernando C. Estrada <fcestrada@fcestrada.com>
+      (Closes: #680201)
+  * Only issue 'condor_restart' command in postinst, when condor_master is
+    actually running. If that is not the case, for example when daemon
+    startup is prevented by system policy, package installation would fail
+    otherwise. Thanks to Andreas Beckmann for the report. (Closes: #681144)
+
+ -- Michael Hanke <mih@debian.org>  Thu, 21 Jun 2012 18:40:11 +0200
+
+condor (7.8.1~dfsg.1-1) unstable; urgency=low
+
+  * New upstream bugfix release:
+    - Fixed a bug in the condor init script that would cause
+      the init script to hang if condor wasn't running (Ticket 2872)
+    - Fixed a bug that caused Parallel Universe jobs using Parallel
+      Scheduling Groups to occasionally stay idle even when there were
+      available machines to run them (Ticket 3017)
+    - Fixed a bug that caused the Condor GridManager to crash when
+      attempting to submit jobs to a local PBS/LSF/SGI cluster
+      (Ticket 3014)
+    - Fixed a bug in the handling of local universe jobs which caused
+      the Condor SCHEDD to log a spurious ERROR message every time a local
+      universe job exited, and then further caused the statistics for local
+      universe jobs to be incorrectly computed (Ticket 3008)
+    - Fixed a bug when Condor runs under the PrivSep model, in which if a job
+      created a hard link from one file to another, Condor was unable to
+      transfer the files back to the submit side, and the job was put on hold.
+      (Ticket 2987)
+    - When configuration variables MaxJobRetirementTime or MachineMaxVacateTime
+      were very large, estimates of machine draining badput and completion time
+      were sometimes nonsensical because of integer overflow (Ticket 3001)
+    - Fixed a bug where per-job sub-directories and their contents in the
+      SPOOL directory would not be removed when the associated job left the
+      queue (Ticket 2942). Closes: #663031
+  * Updated Swedish Debconf translation (Closes: #676943).
+
+ -- Michael Hanke <mih@debian.org>  Wed, 06 Jun 2012 10:39:35 +0200
+
+condor (7.8.0~dfsg.1-2) unstable; urgency=low
+
+  * Actually include the Russian, Italian, and Polish translations.
+  * Add Debconf template translations:
+    - Swedish -- courtesy of Martin Bagge <brother@bsnet.se>
+      (Closes: #673877)
+    - French -- courtesy of Steve Petruzzello <dlist@bluewin.ch>
+      (Closes: #673138)
+    - Portuguese -- courtesy of Pedro Ribeiro <p.m42.ribeiro@gmail.com>
+      (Closes: #674943)
+  * Add explicit dependency on Python (for condor_router_history).
+  * Remove word duplication from package description.
+  * Fix typos in debian/copyright.
+
+ -- Michael Hanke <mih@debian.org>  Mon, 04 Jun 2012 08:49:07 +0200
+
+condor (7.8.0~dfsg.1-1) unstable; urgency=low
+
+  * New upstream release (Closes: #670304). This is the first release of the
+    new 7.8 stable series. Patches introduced to prevent FTBFS on mips, ia64
+    and s390x are merged/obsolete.
+  * Add Debconf template translations (Closes: #670487):
+    - German -- courtesy of Erik Pfannenstein <epfannenstein@gmx.de>
+      (Closes: #671394)
+    - Russian -- courtesy of Yuri Kozlov <yuray@komyakino.ru>
+      (Closes: #671510)
+    - Italian -- courtesy of Beatrice Torracca <beatricet@libero.it>
+      (Closes: #671641)
+    - Polish -- courtesy of Michał Kułach <michalkulach@gmail.com>
+      (Closes: #671547)
+
+ -- Michael Hanke <mih@debian.org>  Wed, 09 May 2012 11:35:19 +0200
+
+condor (7.7.6~dfsg.1-3) experimental; urgency=low
+
+  * Temporarily drop cgroups dependency and, consequently, support for cgroups
+    in Condor. The cgroups package is not in the condition to migrate into
+    wheezy, hence blocking Condor's migration as well. cgroups maintainer
+    suggests to drop this dependency for now.
+    http://lists.debian.org/debian-devel/2012/04/msg00617.html
+  * Improved Debconf templates after review by debian-l10n-english. Thanks
+    to Justin B. Rye and Christian Perrier.
+  * Add Debconf template translations:
+    - Danish -- courtesy of Joe Dalton (Closes: #671090).
+
+ -- Michael Hanke <mih@debian.org>  Wed, 02 May 2012 08:13:55 +0200
+
+condor (7.7.6~dfsg.1-2) unstable; urgency=low
+
+  * Add upstream patch to address FTBFS on ia64 and s390x (Closes: #670393).
+
+ -- Michael Hanke <mih@debian.org>  Wed, 25 Apr 2012 18:18:08 +0200
+
+condor (7.7.6~dfsg.1-1) unstable; urgency=low
+
+  * New upstream development release. Last one before the 7.8 stable series.
+  * Majority of patches has been merged upstream or have been made obsolete.
+  * Stop supporting alternative LOCAL_DIR settings via Debconf. In addition
+    the pre/postrm scripts no longer support non-standard (aka /var) LOCAL_DIR
+    settings. This was done to be able to keep runtime data (logs, etc.) when
+    the package gets removed, but not purged (Closes: #668088). Previously the
+    package relied on Condor's own configuration facilities to deduce LOCAL_DIR,
+    which is impossible to perform in 'postrm'.
+  * Do not remove the condor user during package purge (Closes: #667533).
+    Along the lines of the discussion in #621833 the user is kept in a locked
+    state (condor user has login disabled by default).
+  * Simplify logic of adding the condor system user in maintainer scripts.
+  * Change daemon restart behavior on package upgrade -- confirmed with
+    upstream. Condor is now kept running during package upgrade (was
+    unconditionally stopped in prerm before). Upon finishing installtion of
+    the new version, Condor is just started (if not already running) and a
+    'condor_restart' command is issued. Before a complete stop-start cycle was
+    performed. The new behavior should allow for a more graceful upgrade of
+    Condor pools, by safely shutting down all running jobs and jobs submitted
+    from the localhost.
+  * Add patch to allow building on MIPS. Rename variable name 'mips' to
+    'mips_' to avoid name clash (Closes: #669689).
+  * Fix a bug in the debconf script that caused the default start policy
+    setting for a personal Condor installation to have no effect, i.e. it
+    would not run jobs regardless of machine activity by default.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 24 Apr 2012 20:15:31 +0200
+
+condor (7.7.5~dfsg.1-2) experimental; urgency=low
+
+  * New primary Debian maintainer contact is Condor upstream. Previous
+    maintainer remains uploader.
+  * Guard against failure due to missing directories in pre-removal script
+    (Closes: #662739). Thanks to Andreas Beckmann for detecting the bug.
+  * Fix DMTCP integration for version 1.2.4 and later -- file location tests
+    became invalid.
+  * Set default DMTCP snapshotting interval to zero -- no regular snapshotting,
+    but on-demand snapshots on vacate command. In addition the shim script now
+    honors DMTCP_CHECKPOINT_INTERVAL.
+  * Call dmtcp_command with option --quiet in shim_dmtcp to achieve more
+    readable logs, by suppressing DMTCP's license and author boilerplate
+    output.
+  * Added patch to ignore PIDs from a stale PID file when trying to stop
+    condor. This could otherwise prevent package removal/upgrade
+    (Closes: #663033). The patch has been forwarded upstream.
+  * Cherry-pick upstream patch that let's Condor build on all Debian-derived
+    distributions identically. This patch allows the unmodified Debian package
+    to build on Ubuntu.
+  * Cherry-pick upstream patch to bump the libclassad SO version from 2 to 3
+    -- fixed an overlooked and somewhat hidden change of API. Should now be
+    stable for the 7.8 series. Also changed associated package name and
+    dependencies accordingly.
+  * Let DMTCP perform a blocking checkpointing operation, to avoid Condor
+    killing DMTCP before a checkpoint file is written completely
+    (Closes: #663078).
+  * Make an attempt to let shim_dmtcp remove DMTCP checkpoint output files
+    from a job's EXEC_DIR upon job termination. This is experimental.
+  * Improve README.Debian regarding DMTCP checkpointing setup.
+  * Bumped Standards-version to 3.9.3; no changes necessary.
+  * Added homepage and VCS information to control file.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 09 Mar 2012 13:20:25 +0100
+
+condor (7.7.5~dfsg.1-1) UNRELEASED; urgency=low
+
+  * New upstream release. Feature freeze for upcoming 7.8 stable series.
+    - better statistics for monitoring a Condor pool,
+    - better support for absent ads in the collector
+    - fast claiming of partitionable slots
+    - support for some newer Linux kernel features to better support process
+      isolation.
+  * Remove 'disable_java_gt4X' patch -- corresponding upstream code has been
+    removed.
+  * Remove 'debian_dynamic_run' patch -- merged upstream.
+
+ -- Michael Hanke <mih@debian.org>  Thu, 01 Mar 2012 08:47:40 +0100
+
+condor (7.7.4+git3-gd7ce75b~dfsg.1-1) experimental; urgency=low
+
+  * Initial upload to Debian experimental (Closes: #233482).
+    After acceptance into Debian an upload to unstable is expected to happen
+    once a build-time test suite is operational.
+  * Drop NeuroDebian team as maintainer, upstream will eventually become the
+    primary maintainer, with Michael Hanke being the uploader for the time
+    being.
+  * Merge commits from 7.7.4 maintenance branch.
+  * Enable GSOAP support.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 24 Feb 2012 08:37:32 +0100
+
+condor (7.7.4-2) UNRELEASED; urgency=low
+
+  * Forcing runtime dependency on libcgroup1 (>= 0.37~), as otherwise Condor's
+    procd refuses to start.
+  * Fix problem in the Debconf setup that caused the initially provided
+    settings to be overwritten during installation on a clean system (without
+    and existing Condor installation).
+  * Modify condor_qsub to always execute submitted scripts via the configured
+    shell and not directly (expecting them to be executable). The seems to be
+    the behavior of SGE's qsub.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 17 Jan 2012 14:01:27 +0100
+
+condor (7.7.4-1) UNRELEASED; urgency=low
+
+  * New upstream release. RPATH setup now officially supported.
+  * Added emulator for SGE-style qsub calls (condor_qsub; incl. manpage).
+  * Update DMCTP shim script to version 0.4.
+  * Added dependency to libdate-manip-perl for condor_gather_info.
+  * Remove patch to disable scimark in favor of proper configuration default.
+
+
+ -- Michael Hanke <mih@debian.org>  Thu, 22 Dec 2011 16:19:00 +0100
+
+condor (7.7.1+git837-g37b7fa3-1) UNRELEASED; urgency=low
+
+  * New upstream code. Support for dynamic linking against system
+    libraries. Condor's internal libs have been merged into a single
+    library.
+  * Fix build-deps on BOOST.
+  * Bumped Standards-version to 3.9.2; no changes necessary.
+  * Build using embedded classad library -- upstream will (or did) stop
+    releasing it separately. libclassad binary packages are now built from
+    the Condor source package.
+  * Drop shared library, sysapi and postgres patches -- merged or obsolete.
+  * Adjust rules for now included doc source code.
+  * Add sanity checks into maintainer script to avoid creating bogus
+    directories and installation errors. Thanks to Mats Rynge for reporting.
+  * Add Python as runtime dependency.
+  * Add patch to make condor_run work with Condor's new file transfer
+    behavior. Courtesy of Jaime Frey.
+  * Stop building a PDF version of the manual (takes long, and segfaults
+    ghostscript at the moment). Keep HTML version.
+  * Add patch to provide a sane default configuration for ssh_to_job and
+    install condor_ssh_to_job_sshd_config_template as a conffile in
+    /etc/condor/.
+  * Added condor-dev package, containing headers files and static versions of
+    Condor libraries.
+  * Add build-dep on libldap-dev to ensure nordugrid_gahp being built.
+  * Added DMTCP integration for snapshotting of vanilla universe jobs.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 11 Oct 2011 08:42:35 +0200
+
+condor (7.6.1-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+  * Adjust shared library patch.
+
+ -- Michael Hanke <mih@debian.org>  Sat, 04 Jun 2011 20:36:29 -0400
+
+condor (7.6.0-1) UNRELEASED; urgency=low
+
+  * New upstream stable release.
+  * Adjusted patches.
+  * Added missing debhelper dependencies.
+  * Added missing sysv-style init script symlinks.
+  * Fixed various typos.
+  * Prevent local classad header files from being used, in favor of
+    system-wide libclassad installations.
+
+ -- Michael Hanke <mih@debian.org>  Mon, 18 Apr 2011 22:07:08 -0400
+
+condor (7.5.5+git995-ga9a0d2a-1) UNRELEASED; urgency=low
+
+  * New upstream code from V7.6 branch. Updated various patches, removed some
+    merged ones.
+  * No longer compile the 'contrib' parts -- upstream recommended it due to
+    lack of stability.
+  * Added patch to create /var/run/condor upon daemon startup with proper
+    permissions. That helps to conform to the FHS that declares /var/run as
+    volatile and to be cleaned upon boot. Moreover, some systems have /var/run
+    mounted as tmpfs.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 15 Mar 2011 16:37:56 -0400
+
+condor (7.5.4+git567-gb10f6b4-2) UNRELEASED; urgency=low
+
+  * Applied patch to allow adding submit specs in condor_run calls. Thanks to
+    Matthew Farrellee <matt@redhat.com>.
+  * Improved configuration for a "Personal Condor". Bind network traffic to
+    the loopback interface. Better documentation in the generated
+    configuration file.
+
+ -- Michael Hanke <mih@debian.org>  Thu, 06 Jan 2011 17:28:59 -0500
+
+condor (7.5.4+git567-gb10f6b4-1) UNRELEASED; urgency=low
+
+  * Initial packaging.
+
+ -- Michael Hanke <mih@debian.org>  Sun, 26 Dec 2010 10:10:19 -0500
