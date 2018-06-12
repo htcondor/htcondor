@@ -12,6 +12,43 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-7-9}Version 8.7.9}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.7.9 was released on FIXME.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a problem where a \Condor{vacate\_job}, when passed the
+\Opt{-fast} flag, would leave the corresponding slot stuck in
+``Preempting/Vacation'' state until the job lease expired.
+\Ticket{6663}
+
+\item Fixed a problem where \Condor{annex}'s setup routine, if no region
+had been specified on the command line, would write a configuration for a
+bogus region rather than the default one.
+\Ticket{6666}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-7-8}Version 8.7.8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -62,7 +99,7 @@ outputs to a file or pipe.
 jobs submitted in a single transaction under the same ClusterId.
 \Ticket{6649}
 
-\item Added support for \Condor{schedd} option in the Python bindings.
+\item Added support for \Condor{schedd} query options in the Python bindings.
 \Ticket{6619}
 
 \item Eliminated SOAP support.

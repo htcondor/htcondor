@@ -85,8 +85,8 @@ public:
 	//   < 0 = error, outmsg is error message
 	//   > 0 = number of statements in MacroStreamCharSource, outmsg is TRANSFORM statement or empty
 	// 
-	int load(FILE* fp, MACRO_SOURCE & source);
-	int open(StringList & statements, const MACRO_SOURCE & source);
+	int load(FILE* fp, MACRO_SOURCE & source, std::string & errmsg);
+	int open(StringList & statements, const MACRO_SOURCE & source, std::string & errmsg);
 	//bool open(const char * src_string, const MACRO_SOURCE & source); // this is the base class method...
 
 	bool matches(ClassAd * candidate_ad);
@@ -98,7 +98,7 @@ public:
 	int setUniverse(const char * uni);
 
 	classad::ExprTree* getRequirements() { return requirements.Expr(); }
-	classad::ExprTree* setRequirements(const char * require);
+	classad::ExprTree* setRequirements(const char * require, int & err);
 	const char * getRequirementsStr() { return requirements.c_str(); }
 
 	// these are used only when the source has an iterating TRANSFORM command

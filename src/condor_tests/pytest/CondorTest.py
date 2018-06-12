@@ -27,12 +27,16 @@ class CondorTest(object):
         self.End()
 
 
-    def _success_callback_fn(self):
-        sys.exit(0)
-
-
     def _failure_callback_fn(self):
-        sys.exit(1)
+        Utils.TLog("Default CondorTest failure callback invoked")
+
+
+    def _submit_callback_fn(self):
+        Utils.TLog("Default CondorTest submit callback invoked")
+
+
+    def _success_callback_fn(self):
+        Utils.TLog("Default CondorTest success callback invoked")
 
 
     # @return: -1 if error, or the numeric key >=0 of this PersonalCondor instance if success
@@ -48,26 +52,30 @@ class CondorTest(object):
     def SubmitJob(self, job, wait=True, key=0):
 
         self._submit_callback_fn()
+
+        result = JOB_FAILURE
         
         # If no PersonalCondor objects are registered to this test, submit to system condor
         if len(self._personal_condors) == 0:
-            job.Submit(wait)
+            result = job.Submit(wait)
         # If a single PersonalCondor object is registered, update the system CONDOR_CONFIG 
         # to point to that object's condor_config.local, then submit the test
         elif len(self._personal_condors) == 1:
             for key, personal in self._personal_condors.items():
                 personal.SetCondorConfig()
-                job.Submit(wait)
+                result = job.Submit(wait)
         # If multiple PersonalCondor objects are registered, check the user-supplied key
         # value, update CONDOR_CONFIG to point to the specific instance, then submit the test
         elif len(self._personal_condors) > 1:
             self._personal_condors[key].SetCondorConfig()
             result = job.Submit(wait)
-            if result == JOB_SUCESS:
-                self._success_callback_fn()
-            elif result == JOB_FAILURE:
-                self._failure_callback_fn()
-            
+
+        # Invoke the appropriate callback function
+        Utils.TLog("Submit returned result = " + str(result))
+        if result == JOB_SUCCESS:
+            self._success_callback_fn()
+        elif result == JOB_FAILURE:
+            self._failure_callback_fn()
 
 
     def RegisterSubmit(self, _submit_callback_fn):

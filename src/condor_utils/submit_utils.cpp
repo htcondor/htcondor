@@ -65,7 +65,6 @@
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"
-#include "dc_transferd.h"  // for StdoutRemapName
 //#include "condor_ftp.h"
 #include "condor_crontab.h"
 //#include <scheduler.h>

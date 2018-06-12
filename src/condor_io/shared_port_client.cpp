@@ -651,10 +651,10 @@ SharedPortState::HandleFD(Stream *&s)
 		// cmsghdr(s) to set it to the sum of CMSG_LEN() across all cmsghdrs.
 
 	struct msghdr msg;
-	std::vector<char> buf; buf.reserve(CMSG_SPACE(sizeof(int)));
+	char buf[CMSG_SPACE(sizeof(int))];
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
-	msg.msg_control = &buf[0];
+	msg.msg_control = buf;
 	msg.msg_controllen = CMSG_SPACE(sizeof(int));
 	msg.msg_flags = 0;
 
