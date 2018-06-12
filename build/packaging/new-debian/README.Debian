@@ -1,0 +1,24 @@
+HTCondor for Debian
+===================
+
+The documentation for HTCondor can be found on the World Wide Web at:
+
+http://htcondor.org/manual
+
+At that web site, you will find both an on-line version of manual and
+directions for downloading your own copy in a variety of formats.
+
+
+Package upgrades
+----------------
+
+When the HTCondor package is upgraded it will restart the HTCondor daemons.
+The Debian package does not perform a graceful shutdown
+on upgrades, because there is a variety of possible procedures, where
+subjective appropriateness depends on the configuration and utilization of a
+particular HTCondor pool. Please see this page for more information on graceful
+shutdowns:
+
+  https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToShutDownCondor
+
+

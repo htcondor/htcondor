@@ -25,8 +25,6 @@
 #include "classad/util.h"
 #include "classad/classad_stl.h"
 
-#define REFACTOR_FACTOR	// factor actually stored in the value class, but exposed only through literal class
-
 namespace classad {
 
 class Literal;
@@ -72,18 +70,14 @@ class Value
 		Value()
 			: classadValue(NULL)
 			, valueType(UNDEFINED_VALUE)
-		#ifdef REFACTOR_FACTOR
 			, factor(NO_FACTOR)
-		#endif
 		{}
 
 		/// Copy Constructor
 		Value(const Value &value)
 			: classadValue(NULL)
 			, valueType(UNDEFINED_VALUE)
-		#ifdef REFACTOR_FACTOR
 			, factor(NO_FACTOR)
-		#endif
 		{
 			CopyFrom(value);
 			return;
@@ -105,9 +99,7 @@ class Value
 			if (valueType & VALUE_OWNS_POINTER) { _Clear(); }
 			classadValue = NULL; // This clears the entire union.
 			valueType 	= UNDEFINED_VALUE;
-		#ifdef REFACTOR_FACTOR
 			factor = NO_FACTOR;
-		#endif
 		}
 
 		/** Copies the value of another value object.
@@ -383,10 +375,8 @@ class Value
 		};
 
 		ValueType 		valueType;	// the type of the value
-#ifdef REFACTOR_FACTOR
 		NumberFactor	factor;		// the type of the value
 		void ApplyFactor();
-#endif
 };
 
 bool convertValueToRealValue(const Value value, Value &realValue);

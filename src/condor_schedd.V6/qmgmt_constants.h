@@ -54,4 +54,5 @@
 #define CONDOR_SetAllowProtectedAttrChanges 10035
 #define CONDOR_GetCapabilities      10036 /* tj */
 #define CONDOR_SetJobFactory        10037 /* tj */
-#define CONDOR_SetMaterializeData   10038 /* tj */
+#define CONDOR_SetMaterializeData   10038 /* tj - abandoned */
+#define CONDOR_SendMaterializeData  10039 /* tj */

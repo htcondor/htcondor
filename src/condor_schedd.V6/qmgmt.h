@@ -247,8 +247,14 @@ public:
 
 
 // from qmgmt_factory.cpp
+// make an empty job factory
+class JobFactory * NewJobFactory(int cluster_id);
 // make a job factory from submit digest text, used on submit, optional user_ident is who to inpersonate when reading item data file (if any)
-class JobFactory * MakeJobFactory(int cluster_id, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
+bool LoadJobFactoryDigest(JobFactory *factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
+// attach submitted itemdata to a job factory that is pending submit.
+//bool TakeJobFactoryItemdata(JobFactory *factory, void * itemdata, int itemdata_size);
+int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::string & remainder);
+int JobFactoryRowCount(JobFactory * factory);
 // make a job factory from an on-disk submit digest - used on schedd restart
 class JobFactory * MakeJobFactory(JobQueueCluster * job, const char * submit_file, bool spooled_submit_file, std::string & errmsg);
 void DestroyJobFactory(JobFactory * factory);
@@ -286,6 +292,7 @@ void ScheduleClusterForDeferredCleanup(int cluster_id);
 
 // called by qmgmt_recievers to handle the SetJobFactory RPC call
 int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * digest_text);
+int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & filename, int& row_count, int &terrno);
 
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();

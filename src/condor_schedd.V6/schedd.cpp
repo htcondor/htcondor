@@ -1455,11 +1455,6 @@ Scheduler::count_jobs()
 	daemonCore->monitor_data.ExportData(cad);
 	extra_ads.Publish( cad );
 
-	if ( param_boolean("ENABLE_SOAP", false) ) {
-			// If we can support the SOAP API let's let the world know!
-		cad->Assign(ATTR_HAS_SOAP_API, true);
-	}
-
 	// can't do this at init time, the job_queue_log doesn't exist at that time.
 	int job_queue_birthdate = (int)GetOriginalJobQueueBirthdate();
 	cad->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);

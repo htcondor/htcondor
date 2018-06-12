@@ -434,8 +434,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	case CONDOR_SetJobFactory:
 	case CONDOR_SetMaterializeData:
 	{
-		const char * tag = (request_num == CONDOR_SetMaterializeData) ? "materialize" : "factory";
-
 		int cluster_id, num;
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -443,38 +441,28 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		dprintf( D_SYSCALLS, "	num = %d\n", num );
 		char * filename = NULL;
 		assert( syscall_sock->code(filename) );
-		dprintf( D_SYSCALLS, "	%s_filename = %s\n", tag, filename ? filename : "NULL" );
+		dprintf( D_SYSCALLS, "	factory_filename = %s\n", filename ? filename : "NULL" );
 		char * text = NULL;
 		assert( syscall_sock->code(text) );
-		if (text) { dprintf( D_SYSCALLS, "	%s_text = %s\n", tag, text ); }
+		if (text) { dprintf( D_SYSCALLS, "	factory_text = %s\n", text ); }
 		assert( syscall_sock->end_of_message() );
 
 			// this is only valid during submission of a cluster
 		int terrno = 0;
 		if (cluster_id != active_cluster_num) {
 			rval = -1;
+		} else if (request_num == CONDOR_SetMaterializeData) {
+			// obsolete, don't do anything with this RPC
 		} else {
 			errno = 0;
 			SetAttributeFlags_t flags = 0;
-
-			const char * attr = (request_num == CONDOR_SetJobFactory) ? ATTR_JOB_MATERIALIZE_LIMIT : ATTR_JOB_MATERIALIZE_NEXT_ROW;
-			rval = SetAttributeInt( cluster_id, -1, attr, num, flags );
+			rval = SetAttributeInt( cluster_id, -1, ATTR_JOB_MATERIALIZE_LIMIT, num, flags );
 			if (rval >= 0) {
-				if (request_num == CONDOR_SetJobFactory) {
-					rval = QmgmtHandleSetJobFactory(cluster_id, filename, text);
-					if (rval == 0) {
-						//PRAGMA_REMIND("FUTURE: allow first proc id to be > 0 ?")
-						const int first_proc_id = 0;
-						rval = SetAttributeInt(cluster_id, -1, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, first_proc_id, flags);
-					}
-				} else {
-					attr = (request_num == CONDOR_SetJobFactory) ? ATTR_JOB_MATERIALIZE_DIGEST_FILE : ATTR_JOB_MATERIALIZE_ITEMS_FILE;
-					if (filename && filename[0]) {
-						rval = SetAttributeString( cluster_id, -1, attr, filename, flags );
-					} else {
-						// if no filename, text must be non-empty
-						//PRAGMA_REMIND("TODO: handle factory/foreach data passed in socket.")
-					}
+				rval = QmgmtHandleSetJobFactory(cluster_id, filename, text);
+				if (rval == 0) {
+					//PRAGMA_REMIND("FUTURE: allow first proc id to be > 0 ?")
+					const int first_proc_id = 0;
+					rval = SetAttributeInt(cluster_id, -1, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, first_proc_id, flags);
 				}
 			}
 			terrno = errno;
@@ -486,6 +474,40 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		// send a status reply
 		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );
+		return 0;
+	} break;
+
+	case CONDOR_SendMaterializeData:
+	{
+		int cluster_id, flags, row_count = 0;
+		assert( syscall_sock->code(cluster_id) );
+		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
+		assert( syscall_sock->code(flags) );
+		dprintf( D_SYSCALLS, "	flags = 0x%x\n", flags );
+
+		int terrno = 0;
+		MyString filename; // set to the filename that the data was spooled to.
+		if (cluster_id != active_cluster_num) {
+			return -1;
+		}
+
+		rval = QmgmtHandleSendMaterializeData(cluster_id, syscall_sock, filename, row_count, terrno);
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d, filename = %s\n", rval, terrno, filename.empty() ? "NULL" : filename.c_str() );
+		if (rval < 0) {
+			errno = terrno;
+			return rval;
+		}
+		assert( syscall_sock->end_of_message() );
+
+		// send a status reply and also the name of the file we wrote the itemdata to
+		syscall_sock->encode();
+		assert( syscall_sock->code(filename) );
+		assert( syscall_sock->code(row_count) );
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );

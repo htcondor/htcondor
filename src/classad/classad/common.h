@@ -103,10 +103,6 @@
 #define SAL_assume(expr)
 #endif // WIN32
 
-// Move parentScope out of ExprTree and into all child classes other
-// than Literal.
-#define SCOPE_REFACTOR
-
 #include "classad/debug.h"
 
 #ifdef __cplusplus

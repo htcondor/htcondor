@@ -510,6 +510,7 @@ main( int argc, const char *argv[] )
 
 	// read the transform rules into the MacroStreamXFormSource
 	int rval = 0;
+	std::string errmsg = "";
 	MacroStreamXFormSource ms;
 	if (rules.empty()) {
 		fprintf(stderr, "ERROR : no transform rules file specified.\n");
@@ -526,7 +527,7 @@ main( int argc, const char *argv[] )
 #else
 		insert_source("<stdin>", LocalMacroSet, FileMacroSource);
 #endif
-		rval = ms.load(stdin, FileMacroSource);
+		rval = ms.load(stdin, FileMacroSource, errmsg);
 	} else {
 		FILE *file = safe_fopen_wrapper_follow(rules[0], "r");
 		if (file == NULL) {
@@ -539,7 +540,7 @@ main( int argc, const char *argv[] )
 		insert_source(rules[0], LocalMacroSet, FileMacroSource);
 		RulesFileMacroDef.psz = const_cast<char*>(rules[0]);
 #endif
-		rval = ms.load(file, FileMacroSource);
+		rval = ms.load(file, FileMacroSource, errmsg);
 		if (rval < 0 || ! ms.close_when_done(true)) {
 			fclose(file);
 		}

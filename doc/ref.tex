@@ -1,21 +1,21 @@
 \documentclass[titlepage,oneside,bookmarks,bookmarksnumbered,plainpages=false,pdfpagelabels]{book}
+\usepackage{tikz}
+\usepackage[section]{placeins}
+\usepackage{appendix}
 \usepackage{longtable}
-\usepackage{html}
+\usepackage{hyperref}
+\usepackage{ifpdf}
 
-%begin{latexonly}
-\input{font.pdf.tex}
-%end{latexonly}
+\ifpdf
+\usepackage{times}
+\fi
 
-%
-%  For use with latex2html
-%
-\usepackage{html}
 \usepackage{graphicx}
 \usepackage{makeidx}
 \usepackage{upquote}
 \usepackage[T1]{fontenc}
 \usepackage{microtype}
-
+\usepackage{longtable}
 
 %
 %  Set the size of the margins and text area
@@ -29,34 +29,28 @@
 \setlength{\marginparwidth}{1in}
 \setlength{\marginparsep}{0in}
 \setlength{\footskip}{0.75in}
-\newcommand{\ResetParaSpacing}{\setlength{\parskip}{.8em}}
-\ResetParaSpacing
+\setlength{\parskip}{.8em}
 
 %
 %  Let the figures take up more than half of the page
 %
-
-%begin{latexonly}
-\input{figuresizing.pdf.tex}
-%end{latexonly}
+\ifpdf
+\renewcommand\floatpagefraction{.9}
+\renewcommand\topfraction{.9}
+\renewcommand\bottomfraction{.9}
+\renewcommand\textfraction{.1}
+\fi
 
 % Allow multiline labels.
+\ifpdf
 \usepackage{enumitem}
 \setlist{style=unboxed}
+\fi
 
 %
 %  Bring in HTCondor macros
 %
-\input{condor-macros.tex}
-
-\begin{htmlonly}
-\input{fontsize.html.tex}
-\end{htmlonly}
-
-%begin{latexonly}
-\input{fontsize.pdf.tex}
-%end{latexonly}
-
+\usepackage{condor-macros}
 \input{man-macros.tex}
 
 % hyphenation of our terms
@@ -65,12 +59,12 @@
 %
 %  Fix the headers and footers
 %
-\latex{
-	\usepackage{fancyhdr}
-	\pagestyle{fancy}
-	\fancyhf{}
-	\renewcommand{\sectionmark}[1]{\markright{\thesection.\ #1}}
-	\renewcommand{\subsectionmark}[1]{\markright{\thesubsection.\ #1}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\sectionmark}[1]{\markright{\thesection.\ #1}}
+\renewcommand{\subsectionmark}[1]{\markright{\thesubsection.\ #1}}
+
 \if@twoside
 	\fancyhead[LE,RO]{\thepage}
 	\fancyhead[RE]{\leftmark}
@@ -80,13 +74,10 @@
 	\fancyhead[L]{\rightmark}
 \fi
 
-	\fancyfoot[C]{HTCondor \VersionNotice\ Manual}
-	\renewcommand{\headrulewidth}{0.4pt}
-	\renewcommand{\footrulewidth}{0.4pt}
-	\addtolength{\headwidth}{\oddsidemargin}
-
-}
-
+\fancyfoot[C]{HTCondor \VersionNotice\ Manual}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\addtolength{\headwidth}{\oddsidemargin}
 
 % generate index
 \makeindex
@@ -166,43 +157,46 @@
 \label{Version-History}
 \input{version-history/history.tex}
 
+% Turn off section numbering.
+\newcounter{original}
+\setcounter{original}{\value{secnumdepth}}
+\setcounter{secnumdepth}{0}
+
+\begingroup
 \chapter{Command Reference Manual (man pages)}
+\setlength{\parindent}{0em}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\renewcommand{\subsectionmark}[1]{\markright{#1}}
 \label{sec:command-reference}
 \input{man-pages/man.tex}
+\endgroup
 
+% Turn on section numbering.
+\setcounter{secnumdepth}{\theoriginal}
 
-%
-%  The fancy header package gets confused (stuck inserting the last man page's
-%  command name in the header) after the man pages, so reset the header
-%  and footer style.
-%
-\if@twoside
-	\fancyhead[LE,RO]{\thepage}
-	\fancyhead[RE]{\leftmark}
-	\fancyhead[LO]{\rightmark}
-\else
-	\fancyhead[R]{\thepage}
-	\fancyhead[L]{\rightmark}
-\fi
-\fancyfoot[C]{HTCondor \VersionNotice\ Reference Manual}
-
+\appendix
 
 % an appendix for all the various kinds and ClassAd attributes
-\chapter{Appendix A:  ClassAd Attributes}
+\chapter{ClassAd Attributes}
 \label{sec:ClassAd-Attributes}
 \input{misc/attributes.tex}
+
 % an appendix for tables of values, like error numbers
-\chapter{Appendix B:  Codes and Other Needed Values}
+\chapter{Codes and Other Needed Values}
 \label{sec:Magic-Numbers}
 \input{misc/numbers.tex}
 
-
-% the index goes at the end of the documentation
+% Turns off chapter numbering entirely.
 \backmatter
-% Fix the TOC link.
+
+\ifpdf
+% Required for the TOC link produced below to actually end up on the right page.
 \phantomsection
+% Force the index to have line in the table of contents; this may not be 
+% necessary if we fix the manpage madness.
 \addcontentsline{toc}{chapter}{Index}
-\label{index}
+\fi
+
 \printindex
 
 \end{document}

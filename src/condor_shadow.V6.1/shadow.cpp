@@ -544,14 +544,24 @@ UniShadow::exitAfterEvictingJob( int reason ) {
 	// not called from UniShadow::cleanUp() because a bunch of those functions
 	// do important-looking things between calling cleanUp() and calling
 	// DC_Exit().
-	if( remRes->gotJobExit() ) {
+	if( remRes->gotJobExit() || remRes->getClaimSock() == NULL ) {
 		DC_Exit( reason );
 	} else {
 		this->delayedExitReason = reason;
+		remRes->setExitReason( reason );
 		daemonCore->Register_Timer( 20, 0,
 				(TimerHandlercpp)&UniShadow::exitLeaseHandler,
 				"exit lease handler", this );
 	}
+}
+
+bool
+UniShadow::exitDelayed( int &reason ) {
+	if ( delayedExitReason != -1 ) {
+		reason = delayedExitReason;
+		return true;
+	}
+	return false;
 }
 
 int

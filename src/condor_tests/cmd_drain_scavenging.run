@@ -24,6 +24,10 @@ use warnings;
 
 use Cwd;
 
+#
+# This file has an almost-exact copy in cmd_drain_scavenging_vacation.  Sorry.
+#
+
 use CondorTest;
 use CondorUtils;
 use CustomMachineResource;
@@ -36,6 +40,7 @@ NEGOTIATOR_INTERVAL = 5
 MaxJobRetirementTime = 120
 MachineMaxVacateTime = 5
 NUM_CPUS = 3
+STARTD_DEBUG = D_FULLDEBUG D_SUB_SECOND
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
@@ -290,7 +295,7 @@ my $success = sub {
 		}
 
 		if( $longJobsSucceededCount > 2 ) {
-			die( "Original jobs started more than twice times.\n" );
+			die( "Original jobs started more than two times.\n" );
 		} elsif( $longJobsSucceededCount < 2 ) {
 			return;
 		}

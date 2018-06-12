@@ -124,10 +124,8 @@ else {
     if (!($ENV{NMI_PLATFORM} =~ /(x86_64_Debian9|RedHat|CentOS|Fedora|x86_64_Ubuntu16)/)) {
         print TASKLIST "$NATIVE_DEBUG_TASK 4h\n";
     }
-    if (!($ENV{NMI_PLATFORM} =~ /(x86_64_Debian9|x86_64_Ubuntu16)/)) {
-        print TASKLIST "$NATIVE_TASK 4h\n";
-        print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
-    }
+    print TASKLIST "$NATIVE_TASK 4h\n";
+    print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
     print TASKLIST "$TAR_TASK 4h\n";
     print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$CHECK_TAR_TASK 4h\n";

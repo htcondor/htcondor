@@ -755,9 +755,8 @@ class ClassAd : public ExprTree
 		 */
 		ClassAd *alternateScope;
 
-#if defined(SCOPE_REFACTOR)
 		virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
-#endif
+
   	private:
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
@@ -790,9 +789,7 @@ class ClassAd : public ExprTree
 		DirtyAttrList dirtyAttrList;
 		bool          do_dirty_tracking;
 		ClassAd       *chained_parent_ad;
-#if defined(SCOPE_REFACTOR)
 		const ClassAd *parentScope;
-#endif
 };
 
 } // classad

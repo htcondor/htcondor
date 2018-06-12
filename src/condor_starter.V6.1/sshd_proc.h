@@ -42,8 +42,7 @@ public:
 	virtual char const *getArgv0();
 
 	virtual bool SupportsPIDNamespace() { return false;}
-	virtual std::string CgroupSuffix() { uses_cgroups = true ; return "/sshd";}
-	bool uses_cgroups;
+	virtual std::string CgroupSuffix() { return "/sshd";}
 };
 
 #endif

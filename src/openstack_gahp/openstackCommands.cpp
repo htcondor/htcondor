@@ -770,12 +770,12 @@ bool NovaRequest::sendRequest() {
 
 	ca_dir = getenv( "X509_CERT_DIR" );
 	if ( ca_dir == NULL ) {
-		ca_dir = getenv( "SOAP_SSL_CA_DIR" );
+		ca_dir = getenv( "GAHP_SSL_CADIR" );
 	}
 
 	ca_file = getenv( "X509_CERT_FILE" );
 	if ( ca_file == NULL ) {
-		ca_file = getenv( "SOAP_SSL_CA_FILE" );
+		ca_file = getenv( "GAHP_SSL_CAFILE" );
 	}
 
 	if( ca_dir ) {

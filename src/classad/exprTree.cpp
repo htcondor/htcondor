@@ -192,10 +192,6 @@ Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 void ExprTree::
 SetParentScope( const ClassAd* scope ) 
 {
-#if defined(SCOPE_REFACTOR)
-#else
-	parentScope = scope;
-#endif
 	_SetParentScope( scope );
 }
 
@@ -205,18 +201,8 @@ Evaluate( Value& val ) const
 {
 	EvalState 	state;
 
-#if defined(SCOPE_REFACTOR)
 	state.SetScopes( GetParentScope() );
 	return( Evaluate( state, val ) );
-#else
-	if (parentScope == NULL) {
-		val.SetErrorValue();
-		return false;
-	} else {
-		state.SetScopes( parentScope );
-		return( Evaluate( state, val ) );
-	}
-#endif
 }
 
 
@@ -225,11 +211,7 @@ Evaluate( Value& val, ExprTree*& sig ) const
 {
 	EvalState 	state;
 
-#if defined(SCOPE_REFACTOR)
 	state.SetScopes( GetParentScope() );
-#else
-	state.SetScopes( parentScope );
-#endif
 	return( Evaluate( state, val, sig  ) );
 }
 
@@ -239,11 +221,7 @@ Flatten( Value& val, ExprTree *&tree ) const
 {
 	EvalState state;
 
-#if defined(SCOPE_REFACTOR)
 	state.SetScopes( GetParentScope() );
-#else
-	state.SetScopes( parentScope );
-#endif
 	return( Flatten( state, val, tree ) );
 }
 

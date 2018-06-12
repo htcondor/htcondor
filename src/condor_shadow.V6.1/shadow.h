@@ -167,6 +167,7 @@ class UniShadow : public BaseShadow
 	virtual int JobResume(int sig);
 
 	virtual void exitAfterEvictingJob( int reason );
+	virtual bool exitDelayed( int &reason );
 
 	int exitLeaseHandler( void );
 

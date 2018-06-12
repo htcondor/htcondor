@@ -716,6 +716,15 @@ BaseShadow::evictJob( int reason )
 {
 	MyString from_where;
 	MyString machine;
+
+	// If we previously delayed exiting to let the starter wrap up, then
+	// immediately try exiting now. None of the cleanup below here is
+	// appropriate in that case.
+	if ( exitDelayed( reason ) ) {
+		exitAfterEvictingJob( reason );
+		return;
+	}
+
 	if( getMachineName(machine) ) {
 		from_where.formatstr(" from %s",machine.Value());
 	}

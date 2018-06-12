@@ -1940,12 +1940,144 @@ int MaterializeJobs(JobQueueCluster * clusterad, int & retry_delay)
 	return num_materialized;
 }
 
-// called by qmgmt_recievers to handle the SetJobFactory RPC call
+static int OpenSpoolFactoryFile(int cluster_id, const char * filename, int &fd, const char * tag, int &terrno)
+{
+	fd = -1;
+
+	terrno = 0;
+	std::string parent,junk;
+	if (filename_split(filename,parent,junk)) {
+			// Create directory hierarchy within spool directory.
+			// All sub-dirs in hierarchy are owned by condor.
+		if( !mkdir_and_parents_if_needed(parent.c_str(),0755,PRIV_CONDOR) ) {
+			terrno = errno;
+			dprintf(D_ALWAYS,
+				"Failed %s %d because create parent spool directory of '%s' failed, errno = %d (%s)\n",
+					tag, cluster_id, parent.c_str(), errno, strerror(errno));
+			return -1;
+		}
+	}
+
+	int flags = O_WRONLY | _O_BINARY | _O_SEQUENTIAL | O_LARGEFILE | O_CREAT | O_TRUNC;
+
+	fd = safe_open_wrapper_follow( filename, flags, 0644 );
+	if (fd < 0) {
+		terrno = errno;
+		dprintf(D_ALWAYS, "Failing %s %d because creat of '%s' failed, errno = %d (%s)\n",
+			tag, cluster_id, filename, errno, strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+// handle the CONDOR_SendMaterializeData RPC
+// this function reads materialize item data from the sock,  writes it to SPOOL with into a file
+// whose name is based on the cluster id, it then returns the filename and the number of lines that it recieved
+// the materialize itemdata is *also* stored in the submit pending JobFactory so we don't have to read it from the
+// spool file on initial submit.
+// 
+int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & spooled_filename, int &row_count, int &terrno)
+{
+	int rval = -1;
+	SetAttributeFlags_t flags = 0;
+	spooled_filename.clear();
+	row_count = 0;
+	terrno = 0;
+
+	// check to see if the schedd is permitting late materialization
+	if ( ! scheduler.getAllowLateMaterialize()) {
+		terrno = EPERM;
+		dprintf(D_MATERIALIZE, "Failing remote SetMaterializeData %d because SCHEDD_ALLOW_LATE_MATERIALIZE is false\n", cluster_id);
+		return -1;
+	}
+
+	if ( ! sock) {
+		terrno = EINVAL;
+		dprintf(D_MATERIALIZE, "Failing remote SetMaterializeData %d because no socket was supplied\n", cluster_id);
+		return -1;
+	}
+
+	JobFactory * factory = NULL;
+	JobFactory*& pending = JobFactoriesSubmitPending[cluster_id];
+	if (pending) {
+		factory = pending;
+	} else {
+		// parse the submit digest and (possibly) open the itemdata file.
+		factory = NewJobFactory(cluster_id);
+	}
+
+	if ( ! factory) {
+		terrno = ENOMEM;
+		dprintf(D_MATERIALIZE, "Failing remote SendMaterializeData %d because NewFactory failed\n", cluster_id);
+		return -1;
+	}
+
+	// If the submit digest parsed correctly, we need to write it to spool so we can re-load if the schedd is restarted
+	//
+	GetSpooledMaterializeDataPath(spooled_filename, cluster_id, Spool);
+	const char * filename = spooled_filename.c_str();
+
+	terrno = 0;
+	int fd;
+	rval = OpenSpoolFactoryFile(cluster_id, filename, fd, "SendMaterializeData", terrno);
+	if (rval == 0) {
+		std::string remainder; // holds the fragment of a line that straddles buffers
+		const size_t cbbuf = 0x10000; // 64kbuffer
+		size_t cbread = 0;
+		char buf[cbbuf];
+		while ((cbread = sock->get_bytes(buf, cbbuf)) > 0) {
+			size_t cbwrote = write(fd, buf, cbread);
+			if (cbwrote != cbread) {
+				terrno = errno;
+				dprintf(D_ALWAYS, "Failing remote SendMaterializeData %d because write to '%s' failed, errno = %d (%s)\n",
+					cluster_id, filename, errno, strerror(errno));
+				rval = -1;
+				break;
+			}
+			rval = AppendRowsToJobFactory(factory, buf, cbread, remainder);
+			if (rval < 0) {
+				terrno = EINVAL;
+				break;
+			}
+		}
+		if (close(fd)!=0) {
+			if ( ! terrno) { terrno = errno; }
+			dprintf(D_ALWAYS, "SendMaterializeData %d close failed, errno = %d (%s)\n", cluster_id, errno, strerror(errno));
+			rval = -1;
+		}
+		if (rval < 0) {
+			if (unlink(filename) < 0) {
+				dprintf(D_FULLDEBUG, "SendMaterializeData %d failed to unlink file '%s' errno = %d (%s)\n", cluster_id, filename, errno, strerror(errno));
+			}
+		}
+	}
+
+	if (rval < 0) {
+		dprintf(D_MATERIALIZE, "Failing remote SendMaterializeData %d because spooling of data failed : %d - %s\n", cluster_id, terrno, strerror(terrno));
+	} else {
+		rval = SetAttributeString( cluster_id, -1, ATTR_JOB_MATERIALIZE_ITEMS_FILE, filename, flags );
+	}
+
+	// if we failed, destroy the pending job factory and remove it from the pending list.
+	if (rval < 0) {
+		DestroyJobFactory(factory); factory = NULL;
+		auto found = JobFactoriesSubmitPending.find(cluster_id);
+		if (found != JobFactoriesSubmitPending.end()) JobFactoriesSubmitPending.erase(found);
+	} else {
+		row_count = JobFactoryRowCount(factory);
+	}
+	return rval;
+}
+
+// handle the CONDOR_SetJobFactory RPC
+// This function writes the submit digest_text into SPOOL in a file whose name is based on the cluster id
+// the filename argument is not used (it was used during 8.7 development, but abandoned in favor of spooling the digest)
 int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * digest_text)
 {
 	int rval = -1;
 	SetAttributeFlags_t flags = 0;
-	MyString spooled_filename;
+	std::string errmsg;
 
 	// check to see if the schedd is permitting late materialization 
 	if ( ! scheduler.getAllowLateMaterialize()) {
@@ -1955,9 +2087,9 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 
 	if (digest_text && digest_text[0]) {
 
-#if 1
-		ClassAd user_ident_ad;
 		ClassAd * user_ident = NULL;
+	#if 0 // in 8.7.9 we no longer impersonate the user while loading the digest because the itemdata (if any) will be in SPOOL
+		ClassAd user_ident_ad;
 		if (Q_SOCK) {
 			// build a ad with the user identity so we can use set_user_priv_from_ad
 			// here just like we would if the cluster ad was available.
@@ -1965,125 +2097,77 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 			user_ident_ad.Assign(ATTR_NT_DOMAIN, Q_SOCK->getDomain());
 			user_ident = &user_ident_ad;
 		}
+	#endif
 
-		// parse the submit digest and (possibly) open the itemdata file.
-		std::string errmsg;
-		JobFactory * factory = MakeJobFactory(cluster_id, digest_text, user_ident, errmsg);
-#else
-		// we have to switch to user priv before parsing the submit digest because there MAY be an itemdata file.
-		// PRAGMA_REMIND("TODO: move setpriv down into MakeJobFactory so we can skip it if there is no itemdata?")
-		priv_state priv = PRIV_UNKNOWN;
-		bool restore_priv = false;
-		if (Q_SOCK) {
-			if ( ! init_user_ids(Q_SOCK->getOwner(), Q_SOCK->getDomain())) {
-				errno = EACCES;
-				return rval;
+		JobFactory * factory = NULL;
+		JobFactory*& pending = JobFactoriesSubmitPending[cluster_id];
+		if (pending) {
+			factory = pending;
+		} else {
+			// parse the submit digest and (possibly) open the itemdata file.
+			factory = NewJobFactory(cluster_id);
+			pending = factory;
+		}
+
+		if (factory) {
+			rval = 0;
+			if ( ! LoadJobFactoryDigest(factory, digest_text, user_ident, errmsg)) {
+				rval = -1;
 			}
-			set_user_priv();
-			restore_priv = true;
-		}
-
-		// parse the submit digest and (possibly) open the itemdata file.
-		std::string errmsg;
-		JobFactory * factory = MakeJobFactory(cluster_id, digest_text, errmsg);
-
-		if (restore_priv) {
-			set_priv(priv);
-			uninit_user_ids();
-		}
-#endif
-
-		if ( ! factory) {
-			dprintf(D_MATERIALIZE, "Failing remote SetJobFactory %d because MakeJobFactory failed : %s\n", cluster_id, errmsg.c_str());
-			return rval;
-		}
-
-		// If the submit digest parsed correctly, we need to write it to spool so we can re-load if the schedd is restarted
-		//
-		GetSpooledSubmitDigestPath(spooled_filename, cluster_id, Spool);
-		filename = spooled_filename.c_str();
-
-		int saved_errno = 0;
-		errno = 0;
-		std::string parent,junk;
-		if (filename_split(filename,parent,junk)) {
-				// Create directory hierarchy within spool directory.
-				// All sub-dirs in hierarchy are owned by condor.
-			if( !mkdir_and_parents_if_needed(parent.c_str(),0755,PRIV_CONDOR) ) {
-				saved_errno = errno;
-				dprintf(D_ALWAYS,
-					"Failed SetJobFactory %d because create parent spool directory of '%s' failed, errno = %d (%s)\n",
-						cluster_id, parent.c_str(), errno, strerror(errno));
-				DestroyJobFactory(factory); factory = NULL;
-				errno = saved_errno;
-				return -1;
-			}
-		}
-
-		// Save the submit digest text to the spool directory.
-		int fd;
-		//int result;
-		int flags = O_WRONLY | _O_BINARY | _O_SEQUENTIAL | O_LARGEFILE | O_CREAT | O_TRUNC;
-
-		fd = safe_open_wrapper_follow( filename, flags, 0644 );
-		if (fd < 0) {
-			saved_errno = errno;
-			dprintf(D_ALWAYS, "Failing SetJobFactory %d because creat of '%s' failed, errno = %d (%s)\n",
-				cluster_id, filename, errno, strerror(errno));
-			DestroyJobFactory(factory); factory = NULL;
-			errno = saved_errno;
-			return -1;
-		}
-
-		rval = 0;
-		size_t cb = strlen(digest_text);
-		size_t cbwrote = write(fd, digest_text, cb);
-		if (cbwrote != cb) {
-			saved_errno = errno;
-			dprintf(D_ALWAYS, "Failing SetJobFactory %d because write to '%s' failed, errno = %d (%s)\n",
-				cluster_id, filename, errno, strerror(errno));
-			rval = -1;
-		}
-
-		if (close(fd)!=0) {
-			saved_errno = errno;
-			dprintf(D_ALWAYS, "SetJobFactory %d close failed, errno = %d (%s)\n", cluster_id, errno, strerror(errno));
-			rval = -1;
 		}
 
 		if (rval < 0) {
-			if (unlink(filename) < 0) {
-				dprintf(D_FULLDEBUG, "SetJobFactory %d failed to unlink file '%s' errno = %d (%s)\n", cluster_id, filename, errno, strerror(errno));
-			}
-			DestroyJobFactory(factory); factory = NULL;
-			errno = saved_errno;
-			return rval;
-		}
-
-		// to be extra careful, make sure that we don't have a factory pointer for that cluster already.
-		// if we do have one, delete the factory we just loaded and fail. this could only happen if
-		// condor_submit or the python bindings invoked the set_job_factory rpc twice in a row for the same
-		// cluster.  it's unlikely, but if they did we would end up leaking memory...
-		JobFactory*& pending = JobFactoriesSubmitPending[cluster_id];
-		if (pending) {
-			dprintf(D_ALWAYS, "Failing SetJobFactory %d because factory has already been set!\n", cluster_id);
-			DestroyJobFactory(factory); factory = NULL;
-			rval = -1;
-			return rval;
+			dprintf(D_MATERIALIZE, "Failing remote SetJobFactory %d because MakeJobFactory failed : %s\n", cluster_id, errmsg.c_str());
 		} else {
-			// ok, there wasn't a factory already, so save off the one we just created.
-			// the commit of this submit will find it and attach it to the cluster object.
-			pending = factory;
+
+			// If the submit digest parsed correctly, we need to write it to spool so we can re-load if the schedd is restarted
+			//
+			MyString spooled_filename;
+			GetSpooledSubmitDigestPath(spooled_filename, cluster_id, Spool);
+			const char * filename = spooled_filename.c_str();
+
+			int terrno = 0;
+			int fd;
+			rval = OpenSpoolFactoryFile(cluster_id, filename, fd, "SetJobFactory", terrno);
+			if (0 == rval) {
+				size_t cbtext = strlen(digest_text);
+				size_t cbwrote = write(fd, digest_text, cbtext);
+				if (cbwrote != cbtext) {
+					terrno = errno;
+					dprintf(D_ALWAYS, "Failing remote SetJobFactory %d because write to '%s' failed, errno = %d (%s)\n",
+						cluster_id, filename, errno, strerror(errno));
+					rval = -1;
+				}
+				if (close(fd)!=0) {
+					if ( ! terrno) { terrno = errno; }
+					dprintf(D_ALWAYS, "SetJobFactory %d close failed, errno = %d (%s)\n", cluster_id, errno, strerror(errno));
+					rval = -1;
+				}
+				if (rval < 0) {
+					if (unlink(filename) < 0) {
+						dprintf(D_FULLDEBUG, "SetJobFactory %d failed to unlink file '%s' errno = %d (%s)\n", cluster_id, filename, errno, strerror(errno));
+					}
+				}
+			}
+			if (rval < 0) {
+				errno = terrno;
+			} else {
+				rval = SetAttributeString( cluster_id, -1, ATTR_JOB_MATERIALIZE_DIGEST_FILE, filename, flags );
+			}
 		}
+
+		// if we failed, destroy the pending job factory and remove it from the pending list.
+		if (rval < 0) {
+			if (factory) { DestroyJobFactory(factory); factory = NULL; }
+			auto found = JobFactoriesSubmitPending.find(cluster_id);
+			if (found != JobFactoriesSubmitPending.end()) JobFactoriesSubmitPending.erase(found);
+		}
+	} else if (filename && filename[0]) {
+		// we no longer support this form of factory submit.
+		errno = EINVAL;
+		return -1;
 	}
 
-	//const char *attr = ATTR_JOB_MATERIALIZE_DIGEST_FILE;
-	if (filename && filename[0]) {
-		rval = SetAttributeString( cluster_id, -1, ATTR_JOB_MATERIALIZE_DIGEST_FILE, filename, flags );
-	} else {
-		rval = -1;
-		dprintf(D_ALWAYS, "Failing SetJobFactory %d because factory filename is empty\n", cluster_id);
-	}
 	return rval;
 }
 

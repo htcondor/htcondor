@@ -84,8 +84,19 @@ if (WITH_OPENSSL)
 			endif()
 		endif()
 
-		find_library( LIBSSL_FOUND "ssl" )
-		find_library( LIBCRYPTO_FOUND "crypto" )
+		# On macOS 10.13 and above, we have to use the older 0.9.8
+		# version of openssl.
+		# The default version is libressl 2.2.7, which removes
+		# several functions that globus and voms use.
+		# Soon, we should resolve those issues so that we can get
+		# away from using the crusty old version.
+		if ( DARWIN AND "${TEST_VER}" MATCHES "10.1[3-9]" )
+			set( LIBSSL_FOUND "/usr/lib/libssl.0.9.8.dylib" )
+			set( LIBCRYPTO_FOUND "/usr/lib/libcrypto.0.9.8.dylib" )
+		else()
+			find_library( LIBSSL_FOUND "ssl" )
+			find_library( LIBCRYPTO_FOUND "crypto" )
+		endif()
 		set( OPENSSL_FOUND "${LIBSSL_FOUND};${LIBCRYPTO_FOUND}" )
 
 		if( DLOPEN_SECURITY_LIBS )

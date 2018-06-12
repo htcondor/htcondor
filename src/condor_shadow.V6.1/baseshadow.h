@@ -228,6 +228,7 @@ class BaseShadow : public Service
 			to tell us what happened.
 		*/
 	virtual void exitAfterEvictingJob( int reason ) { DC_Exit( reason ); }
+	virtual bool exitDelayed( int & /*reason*/ ) { return false; }
 
 		/** The total number of bytes sent over the network on
 			behalf of this job.
