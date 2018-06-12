@@ -2236,18 +2236,31 @@ case CONDOR_getdir:
 	{
 		dprintf( D_SECURITY, "ENTERING CONDOR_get_delegated_proxy syscall\n" );
 
-		char* proxy_source_path;
+		char* rpc_proxy_source_path;
+		ClassAd* job_ad;
 		filesize_t bytes;
+		std::string job_ad_proxy_source_path;
+		time_t job_ad_proxy_expiration;
+		time_t rpc_proxy_expiration;
 		time_t proxy_expiration;
 
-		// Read path to proxy file
-		result = ( syscall_sock->code( proxy_source_path ) );
-		ASSERT( result );
-		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: proxy_source_path = %s\n", proxy_source_path );
+		pseudo_get_job_ad( job_ad );
 
-		// Read proxy expiration time
-		result = ( syscall_sock->code( proxy_expiration ) );
+		// Read proxy file location from the job ad
+		job_ad->LookupString( ATTR_X509_USER_PROXY, job_ad_proxy_source_path );
+		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: job_ad_proxy_source_path = %s\n", job_ad_proxy_source_path.c_str() );
+
+		// Read path to proxy file via RPC, but ignore it for now
+		// TODO: Compare this to the path read in from the job ad. Return failure if they are different.
+		result = ( syscall_sock->code( rpc_proxy_source_path ) );
 		ASSERT( result );
+
+		// Proxy expiration time is the lesser value of: expiration time passed 
+		// via the RPC call, and the time returned from the job ad
+		result = ( syscall_sock->code( rpc_proxy_expiration ) );
+		ASSERT( result );
+		job_ad_proxy_expiration = GetDesiredDelegatedJobCredentialExpiration( job_ad );
+		proxy_expiration = ( job_ad_proxy_expiration < rpc_proxy_expiration ) ? job_ad_proxy_expiration : rpc_proxy_expiration;
 		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: proxy_expiration = %lu\n", proxy_expiration );
 
 		// Wait for the end_of_message signal
@@ -2256,12 +2269,13 @@ case CONDOR_getdir:
 
 		// Switch to send/write mode and call the globus x509 delegation
 		syscall_sock->encode();
-		int put_x509_rc = syscall_sock->put_x509_delegation( &bytes, proxy_source_path, proxy_expiration, NULL );
+		int put_x509_rc = syscall_sock->put_x509_delegation( &bytes, job_ad_proxy_source_path.c_str(), proxy_expiration, NULL );
 		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_get_delegated_proxy: finishing send with value %i\n", put_x509_rc );
 
-		// End of message and return
+		// End of message, cleanup and return
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
+		free( rpc_proxy_source_path );
 		return put_x509_rc;
 	}
 

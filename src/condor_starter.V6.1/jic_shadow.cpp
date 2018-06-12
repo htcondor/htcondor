@@ -1338,7 +1338,7 @@ JICShadow::initJobInfo( void )
 		wants_x509_proxy = true;
 	}
 	else {
-		dprintf( D_ALWAYS, "Job doesn't specify x509userproxy, assuming not "
+		dprintf( D_FULLDEBUG, "Job doesn't specify x509userproxy, assuming not "
 				 "needed\n" );
 	}
 
@@ -2400,35 +2400,30 @@ JICShadow::beginFileTransfer( void )
 		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
 	else if ( wants_x509_proxy ) {
 		
-			// Get initial working directory
-		MyString iwd;
-		job_ad->LookupString( ATTR_JOB_IWD, iwd );
+			// Get scratch directory path
+		const char* scratch_dir = Starter->GetWorkingDir();
 
 			// Get source path to proxy file on the submit machine
 		MyString proxy_source_path;
 		job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_source_path );
 
-			// Get proxy expiration timestamp
+			// Get proxy expiration timestamp from the job ad
 		int proxy_expiration;
 		job_ad->LookupInteger( ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
 
 			// Parse proxy filename
-		MyString proxy_filename = proxy_source_path;
-		while( proxy_filename.FindChar( '/' ) != -1 ) {
-			proxy_filename = proxy_filename.substr( proxy_filename.FindChar( '/' ) + 1, proxy_filename.Length() );
-		}
+		MyString proxy_filename = condor_basename( proxy_source_path.Value() );
 
-			// Combine IWD and proxy filename to get destination proxy path on execute machine
-		MyString proxy_dest_path = iwd;
+			// Combine scratch dir and proxy filename to get destination proxy path on execute machine
+		MyString proxy_dest_path = scratch_dir;
 		proxy_dest_path += DIR_DELIM_CHAR;
 		proxy_dest_path += proxy_filename;
 
 			// Do RPC call to get delegated proxy.
-		char* proxy_source_path_strdup = strdup( proxy_source_path.Value() );
-		char* proxy_dest_path_strdup = strdup( proxy_dest_path.Value() );
-		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path_strdup, proxy_dest_path_strdup, proxy_expiration );
-		free( proxy_source_path_strdup );
-		free( proxy_dest_path_strdup );
+		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.Value(), proxy_dest_path.Value(), proxy_expiration );
+
+			// Update job ad with location of proxy
+		job_ad->Assign( ATTR_X509_USER_PROXY, proxy_dest_path.Value() );
 	}
 		// no transfer wanted or started, so return false
 	return false;

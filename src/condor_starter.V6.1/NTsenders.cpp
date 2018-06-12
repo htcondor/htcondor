@@ -2334,7 +2334,7 @@ REMOTE_CONDOR_getcreds()
 }
 
 int
-REMOTE_CONDOR_get_delegated_proxy( char* proxy_source_path, char* proxy_dest_path, time_t proxy_expiration )
+REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* proxy_dest_path, time_t proxy_expiration )
 {
 	int result = 0;
 	dprintf( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_get_delegated_proxy\n" );
@@ -2347,11 +2347,11 @@ REMOTE_CONDOR_get_delegated_proxy( char* proxy_source_path, char* proxy_dest_pat
 	ON_ERROR_RETURN( result );
 
 	// Send proxy path
-	result = ( syscall_sock->code( proxy_source_path ) );
+	result = ( syscall_sock->put( proxy_source_path ) );
 	ON_ERROR_RETURN( result );
 
 	// Send proxy expiration time
-	result = ( syscall_sock->code( proxy_expiration ) );
+	result = ( syscall_sock->put( proxy_expiration ) );
 	ON_ERROR_RETURN( result );
 
 	// Now we're done sending our request, so send an end_of_message.
