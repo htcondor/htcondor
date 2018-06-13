@@ -17236,7 +17236,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 	match_rec * match = FindMrecByJobID( vid );
 	if(! match) {
 		handleReassignSlotError( sock, "no match for that job ID" );
-	 	return FALSE;
+		return FALSE;
 	}
 	match->m_next_job = bid;
 

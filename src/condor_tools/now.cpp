@@ -5,7 +5,7 @@
 #include "dc_schedd.h"
 
 int usage( const char * self ) {
-	fprintf( stderr, "usage: %s <from-job> <to-job>\n", self );
+	fprintf( stderr, "usage: %s <to-job> <from-job>\n", self );
 	return 1;
 }
 
@@ -15,14 +15,14 @@ int main( int argc, char ** argv ) {
 	char * endptr;
 	PROC_ID vid, bid;
 
-	vid.cluster = strtol( argv[1], & endptr, 10 );
-	if( endptr == argv[1] ) { return usage( argv[0] ); }
+	vid.cluster = strtol( argv[2], & endptr, 10 );
+	if( endptr == argv[2] ) { return usage( argv[0] ); }
 	if( endptr[0] == '\0' ) { vid.proc = 0; }
 	else if( endptr[0] == '.' ) { vid.proc = strtol( ++endptr, NULL, 10 ); }
 	else { return usage( argv[0] ); }
 
-	bid.cluster = strtol( argv[2], & endptr, 10 );
-	if( endptr == argv[2] ) { return usage( argv[0] ); }
+	bid.cluster = strtol( argv[1], & endptr, 10 );
+	if( endptr == argv[1] ) { return usage( argv[0] ); }
 	if( endptr[0] == '\0' ) { bid.proc = 0; }
 	else if( endptr[0] == '.' ) { bid.proc = strtol( ++endptr, NULL, 10 ); }
 	else{ return usage( argv[0] ); }
