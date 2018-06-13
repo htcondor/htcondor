@@ -6,13 +6,16 @@
 
 int usage( const char * self ) {
 	fprintf( stderr,
-"Usage: %s [-name <scheduler> [-pool <central-manager]] <beneficiary> <victim>\n"
+"Usage: %s [-name <scheduler> [-pool <central-manager]] [-debug]\n"
+"       %*s <beneficiary> <victim>\n"
 "   or: %s -help\n",
-		self, self );
+		self, (int)strlen( self ), "", self );
 	return 1;
 }
 
 int main( int argc, char ** argv ) {
+	config();
+
 	if( argc < 3 ) {
 		return usage( argv[0] );
 	}
@@ -28,6 +31,8 @@ int main( int argc, char ** argv ) {
 			++i; if( i < argc ) { pool = argv[i]; } else { return usage( argv[0] ); }
 		} else if( strcmp( argv[i], "-name" ) == 0 ) {
 			++i; if( i < argc ) { name = argv[i]; } else { return usage( argv[0] ); }
+		} else if( strcmp( argv[i], "-debug" ) == 0 ) {
+			dprintf_set_tool_debug( "TOOL", 0 );
 		} else {
 			break;
 		}
@@ -49,8 +54,6 @@ int main( int argc, char ** argv ) {
 	else { return usage( argv[0] ); }
 	++i;
 
-
-	config();
 
 	DCSchedd schedd( name, pool );
 	if( schedd.locate() == false ) {
