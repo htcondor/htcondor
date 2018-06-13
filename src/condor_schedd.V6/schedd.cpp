@@ -8527,8 +8527,17 @@ Scheduler::StartJob(match_rec *rec)
 
 		// This is the case we want to try and start a job.
 	if( rec->m_next_job.isValid() ) {
+		// Choose 'the next job' as the one to try to start.
 		id = rec->m_next_job;
+
+		// Only try to start it once.
 		rec->m_next_job.invalidate();
+
+		// The rest of the code assumes that the job we're trying to start
+		// on a claim is already recorded in the match record; see how
+		// FindRunnableJobForClaim() doesn't return a job ID.  This function
+		// also updates the matchesByJobID hashtable.
+		SetMrecJobID( rec, id );
 	} else {
 		id.cluster = rec->cluster;
 		id.proc = rec->proc;
