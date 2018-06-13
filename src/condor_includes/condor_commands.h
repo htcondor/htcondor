@@ -180,6 +180,8 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define QUERY_JOB_ADS_WITH_AUTH (SCHED_VERS+119) // Same as QUERY_JOB_ADS but requires authentication
 #define FETCH_PROXY_DELEGATION (SCHED_VERS+120)
 
+#define REASSIGN_SLOT (SCHED_VERS+121) // Given two job IDs, deactivate the victim job's claim and reactivate it running the beneficiary job.
+
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
 #define DRAIN_QUICK 10

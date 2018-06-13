@@ -8,6 +8,7 @@ import io
 import classad
 
 package_name = "htcondor"
+ver_append = ""
 long_description = open("README.rst", "r").read()
 
 package_data = {}
@@ -28,7 +29,7 @@ class BinaryDistribution(Distribution):
 
 
 setup(name=package_name,
-      version=classad.version(),
+      version=classad.version() + ver_append,
       url='http://htcondor.org/',
       license='ASL 2.0',
       description='HTCondor Python bindings',

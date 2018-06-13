@@ -140,10 +140,11 @@ int		MyPid;
 int		LogPipe;
 int		ImageSize;
 
-GENERIC_PROC GenProc;
 #if defined(NEW_PROC)
+	PROC	GenProc;
 	PROC	*Proc = (PROC *)&GenProc;
 #else
+	V2_PROC	GenProc;
 	V2_PROC	*Proc = (V2_PROC *)&GenProc;
 #endif
 

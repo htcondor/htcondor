@@ -8526,8 +8526,22 @@ Scheduler::StartJob(match_rec *rec)
 	}
 
 		// This is the case we want to try and start a job.
-	id.cluster = rec->cluster;
-	id.proc = rec->proc; 
+	if( rec->m_next_job.isValid() ) {
+		// Choose 'the next job' as the one to try to start.
+		id = rec->m_next_job;
+
+		// Only try to start it once.
+		rec->m_next_job.invalidate();
+
+		// The rest of the code assumes that the job we're trying to start
+		// on a claim is already recorded in the match record; see how
+		// FindRunnableJobForClaim() doesn't return a job ID.  This function
+		// also updates the matchesByJobID hashtable.
+		SetMrecJobID( rec, id );
+	} else {
+		id.cluster = rec->cluster;
+		id.proc = rec->proc;
+	}
 #ifdef USE_VANILLA_START
 	const char * reason = "job was removed";
 	JobQueueJob * job = GetJobAd(id);
@@ -8539,7 +8553,7 @@ Scheduler::StartJob(match_rec *rec)
 #else
 	if(!Runnable(&id)) {
 #endif
-			// find the job in the cluster with the highest priority
+			// find the job with the highest priority
 		id.proc = -1;
 		if( !FindRunnableJobForClaim(rec) ) {
 			return;
@@ -12136,7 +12150,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// JOB_NOT_CKPTED, so we're safe.
 		case JOB_NOT_STARTED:
 			if( srec != NULL && !srec->removed && srec->match ) {
-				DelMrec(srec->match);
+				if(! srec->match->m_next_job.isValid()) {
+					DelMrec(srec->match);
+				}
 			}
             switch (exit_code) {
                case JOB_CKPTED:
@@ -13708,6 +13724,10 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
         						  (CommandHandlercpp)&Scheduler::receive_startd_invalidate,
 								  "receive_startd_invalidate",this,ADVERTISE_STARTD_PERM);
+
+	daemonCore->Register_CommandWithPayload( REASSIGN_SLOT, "REASSIGN_SLOT",
+			(CommandHandlercpp)&Scheduler::reassign_slot_handler,
+			"reassign_slot_handler", this, WRITE);
 
 
 	 // reaper
@@ -17129,4 +17149,119 @@ Scheduler::WriteRestartReport()
 	daemonCore->Register_Timer( 60,
 						(TimerHandlercpp)&Scheduler::WriteRestartReport,
 						"Scheduler::WriteRestartReport", this );
+}
+
+
+void handleReassignSlotError( Sock * sock, const char * msg ) {
+	dprintf( D_ALWAYS, * sock, "%s\n", msg );
+
+	ClassAd reply;
+	reply.Assign( ATTR_RESULT, false );
+	reply.Assign( ATTR_ERROR_STRING, msg );
+	if( ! putClassAd( sock, reply ) || ! sock->end_of_message() ) {
+		dprintf( D_ALWAYS, "REASSIGN_SLOT: failed to send error response.\n" );
+	} else {
+		dprintf( D_ALWAYS, "REASSIGN_SLOT: %s.\n", msg );
+	}
+}
+
+int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
+	ASSERT( cmd == REASSIGN_SLOT );
+	Sock * sock = reinterpret_cast<Sock *>(s);
+
+	// Force authentication.  Only their owner can reassign a claim from
+	// one job to another.
+	if(! sock->triedAuthentication()) {
+		CondorError errorStack;
+		if(! SecMan::authenticate_sock( sock, WRITE, & errorStack ) ||
+		  ! sock->getFullyQualifiedUser() ) {
+			dprintf( D_ALWAYS, "REASSIGN_SLOT: authentication failed: %s\n",
+				errorStack.getFullText().c_str() );
+			return FALSE;
+		}
+	}
+
+	ClassAd request;
+	if( ! getClassAd( s, request ) || ! s->end_of_message() ) {
+		dprintf( D_ALWAYS, "REASSIGN_SLOT: Failed to receive request ClassAd\n" );
+		return FALSE;
+	}
+
+	PROC_ID vid; // victim job's job ID.
+	PROC_ID bid; // beneficiary job's job ID.
+	if( ! request.LookupInteger( "Victim" ATTR_CLUSTER_ID, vid.cluster ) ||
+	  ! request.LookupInteger( "Victim" ATTR_PROC_ID, vid.proc ) ||
+	  ! request.LookupInteger( "Beneficiary" ATTR_CLUSTER_ID, bid.cluster ) ||
+	  ! request.LookupInteger( "Beneficiary" ATTR_PROC_ID, bid.proc ) ) {
+		handleReassignSlotError( sock, "Missing job ID(s)" );
+		return FALSE;
+	}
+	dprintf( D_COMMAND, "REASSIGN_SLOT: from %d.%d to %d.%d\n", vid.cluster, vid.proc, bid.cluster, bid.proc );
+
+	ClassAd * vAd = GetJobAd( vid.cluster, vid.proc );
+	if(! vAd) {
+		handleReassignSlotError( sock, "no such job (victim)" );
+		return FALSE;
+	}
+	if(! OwnerCheck2( vAd, sock->getOwner() )) {
+		handleReassignSlotError( sock, "you do not own the victim" );
+		return FALSE;
+	}
+
+	ClassAd * bAd = GetJobAd( bid.cluster, bid.proc );
+	if(! bAd) {
+		handleReassignSlotError( sock, "no such job (beneficiary)" );
+		return FALSE;
+	}
+	if(! OwnerCheck2( bAd, sock->getOwner() )) {
+		handleReassignSlotError( sock, "you do not own the beneficiary" );
+		return FALSE;
+	}
+
+	// FIXME: Throttling.
+
+	int vju, bju;
+	vAd->LookupInteger( ATTR_JOB_UNIVERSE, vju );
+	bAd->LookupInteger( ATTR_JOB_UNIVERSE, bju );
+	if( vju != CONDOR_UNIVERSE_VANILLA || bju != CONDOR_UNIVERSE_VANILLA ) {
+		handleReassignSlotError( sock, "both jobs must be in the vanilla universe" );
+		return FALSE;
+	}
+
+	int vStatus, bStatus;
+	vAd->LookupInteger( ATTR_JOB_STATUS, vStatus );
+	bAd->LookupInteger( ATTR_JOB_STATUS, bStatus );
+	// FIXME?: according to actOnJobs(), vStatus could also be TRANSFERRING_OUTPUT.
+	if( vStatus != RUNNING || bStatus != IDLE ) {
+		handleReassignSlotError( sock, "the victim must be running and the beneficiary idle" );
+		return FALSE;
+	}
+
+	// It's safe to deactivate the victim's claim.  First, record that the
+	// victim's claim's next job will be the beneficiary; this will cause
+	// beneficiary to be scheduled when the shadow either looks for new work
+	// (RecycleShadow()) or terminates (child_exit()).
+
+	match_rec * match = FindMrecByJobID( vid );
+	if(! match) {
+		handleReassignSlotError( sock, "no match for that job ID" );
+		return FALSE;
+	}
+	match->m_next_job = bid;
+
+#if defined(REASSIGN_SLOT_USES_SEND_VACATE)
+	send_vacate( match, DEACTIVATE_CLAIM );
+#else
+	// This requires GT#6663 to function properly.
+	enqueueActOnJobMyself( vid, JA_VACATE_FAST_JOBS, true );
+#endif
+
+	// We could return KEEP_STREAM and block the client until we'd actually
+	// started the beneficiary job, but we can skip that for now.
+	ClassAd reply;
+	reply.Assign( ATTR_RESULT, true );
+	if( ! putClassAd( sock, reply ) || ! sock->end_of_message() ) {
+		dprintf( D_ALWAYS, "failed to send success response.\n" );
+	}
+	return TRUE;
 }

@@ -47,6 +47,11 @@ typedef struct PROC_ID {
 		if ( ! job_id_str) { cluster =  proc = 0; return false; }
 		return StrIsProcId(job_id_str, this->cluster, this->proc, NULL);
 	}
+
+	PROC_ID() : cluster( -1 ), proc( -1 ) {}
+	PROC_ID( int c, int p ) : cluster(c), proc(p) {}
+	bool isValid() { return cluster != -1 && proc != -1; }
+	void invalidate() { cluster = -1; proc = -1; }
 #endif
 } PROC_ID;
 

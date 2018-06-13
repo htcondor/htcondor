@@ -316,6 +316,8 @@ class match_rec: public ClaimIdParser
 	char const *description() {
 		return m_description.Value();
 	}
+
+	PROC_ID m_next_job;
 };
 
 class UserIdentity {
@@ -1000,6 +1002,9 @@ private:
 		// (e.g. condor_ssh_to_job)
 	int get_job_connect_info_handler(int, Stream* s);
 	int get_job_connect_info_handler_implementation(int, Stream* s);
+
+		// Given two job IDs, start the first job on the second job's resource.
+	int reassign_slot_handler( int cmd, Stream * s );
 
 		// Mark a job as clean
 	int clear_dirty_job_attrs_handler(int, Stream *stream);
