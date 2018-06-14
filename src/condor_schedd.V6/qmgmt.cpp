@@ -3928,7 +3928,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	} else if (attr_id == idATTR_NUM_JOB_RECONNECTS) {
 		int curr_cnt = 0;
 		int new_cnt = (int)strtol( attr_value, NULL, 10 );
-		PROC_ID job_id = { cluster_id, proc_id };
+		PROC_ID job_id( cluster_id, proc_id );
 		shadow_rec *srec = scheduler.FindSrecByProcID(job_id);
 		GetAttributeInt( cluster_id, proc_id, ATTR_NUM_JOB_RECONNECTS, &curr_cnt );
 		if ( srec && srec->is_reconnect && !srec->reconnect_succeeded &&
@@ -5559,7 +5559,7 @@ MarkJobClean(const char* job_id_str)
 void
 MarkJobClean(int cluster_id, int proc_id)
 {
-	PROC_ID key = {cluster_id, proc_id};
+	PROC_ID key( cluster_id, proc_id );
 	MarkJobClean(key);
 }
 
