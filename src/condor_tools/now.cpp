@@ -7,7 +7,7 @@
 int usage( const char * self ) {
 	fprintf( stderr,
 "Usage: %s [-name <scheduler> [-pool <central-manager]] [-debug]\n"
-"       %*s <job-to-run-now> <job-to-preempt>\n"
+"       %*s <job-to-run-now> <job-to-vacate>\n"
 "   or: %s -help\n",
 		self, (int)strlen( self ), "", self );
 	return 1;

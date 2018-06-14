@@ -1372,7 +1372,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_rmdir.1.gz
 %_mandir/man1/condor_tail.1.gz
 %_mandir/man1/condor_who.1.gz
-# %_mandir/man1/condor_now.1.gz
+%_mandir/man1/condor_now.1.gz
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who

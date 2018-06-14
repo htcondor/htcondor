@@ -62,14 +62,14 @@ the definition of \Macro{DEFRAG\_DRAINING\_START\_EXPR} (
 information which may influence your choice of \MacroNI{START} expressions.
 \Ticket{6664}
 
-\item Added a new tool, \Condor{now}, which tries to run the specified
-job \emph{now}.  You specify two jobs that you own from the same schedd:
-the now-job and the job to preempt.  The latter is immediately preempted
-(without retirement); after the preempted job is done vacating, if the
-schedd still has the claim to the preempted job's slot, it will immediately
-start the  now-job there.  The now-job must be idle and the preempt-job
-must be running.  If you're a queue super-user, the jobs must still have
-the same owner, but it doesn't have to be you.
+\item Added a new tool, \Condor{now}, which tries to run the specified job
+\emph{now}.  You specify two jobs that you own from the same schedd: the
+now-job and the vacate-job.  The latter is immediately vacated; after the
+vacated job terminates, if the schedd still has the claim to the vacated job's
+slot (and it usually will), the schedd will immediately start the now-job on
+that slot.  The now-job must be idle and the vacate-job must be running.  If
+you're a queue super-user, the jobs must have the same owner, but that owner
+doesn't have to be you.
 \Ticket{6659}
 
 \end{itemize}
