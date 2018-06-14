@@ -157,11 +157,6 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_GCE_AUTH_FILE, m_authFile );
 	jobAd->LookupString( ATTR_GCE_ACCOUNT, m_account );
 
-	if ( m_authFile.empty() ) {
-		error_string = "Auth file not defined";
-		goto error_exit;
-	}
-
 	// Check for failure injections.
 	m_failure_injection = getenv( "GM_FAILURE_INJECTION" );
 	if( m_failure_injection == NULL ) { m_failure_injection = ""; }

@@ -3686,9 +3686,6 @@ int SubmitHash::SetGridParams()
 		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_AUTH_FILE, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( gridType == "gce" ) {
-		push_error(stderr, "GCE jobs require a \"%s\" parameter\n", SUBMIT_KEY_GceAuthFile );
-		ABORT_AND_RETURN( 1 );
 	}
 
 	if ( (tmp = submit_param( SUBMIT_KEY_GceAccount, ATTR_GCE_ACCOUNT )) ) {
