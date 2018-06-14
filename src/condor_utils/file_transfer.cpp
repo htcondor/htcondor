@@ -601,6 +601,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 int
 FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	std::string remap_fname;
+	std::string ulog_fname;
 
 	dprintf(D_FULLDEBUG,"Entering FileTransfer::InitDownloadFilenameRemaps\n");
 
@@ -615,16 +616,16 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	// If a client is receiving spooled output files which include a
 	// user job log file with a directory component, add a remap.
 	// Otherwise, the user log will end up in the iwd, which is wrong.
-	if (IsClient() && Ad->LookupString(ATTR_ULOG_FILE, remap_fname) &&
-		remap_fname.find(DIR_DELIM_CHAR) != std::string::npos) {
+	if (IsClient() && Ad->LookupString(ATTR_ULOG_FILE, ulog_fname) &&
+		ulog_fname.find(DIR_DELIM_CHAR) != std::string::npos) {
 
 		std::string full_name;
-		if (fullpath(remap_fname.c_str())) {
-			full_name = remap_fname;
+		if (fullpath(ulog_fname.c_str())) {
+			full_name = ulog_fname;
 		} else {
 			Ad->LookupString(ATTR_JOB_IWD, full_name);
 			full_name += DIR_DELIM_CHAR;
-			full_name += remap_fname;
+			full_name += ulog_fname;
 		}
 		AddDownloadFilenameRemap(condor_basename(full_name.c_str()), full_name.c_str());
 	}
