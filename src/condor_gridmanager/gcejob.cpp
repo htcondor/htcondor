@@ -155,6 +155,7 @@ GCEJob::GCEJob( ClassAd *classad ) :
 
 	// check the auth_file
 	jobAd->LookupString( ATTR_GCE_AUTH_FILE, m_authFile );
+	jobAd->LookupString( ATTR_GCE_ACCOUNT, m_account );
 
 	if ( m_authFile.empty() ) {
 		error_string = "Auth file not defined";
@@ -277,7 +278,8 @@ GCEJob::GCEJob( ClassAd *classad ) :
 		GCEResource::FindOrCreateResource( m_serviceUrl.c_str(),
 										   m_project.c_str(),
 										   m_zone.c_str(),
-										   m_authFile.c_str() );
+										   m_authFile.c_str(),
+										   m_account.c_str() );
 	myResource->RegisterJob( this );
 
 	value.clear();
@@ -523,6 +525,7 @@ void GCEJob::doEvaluateState()
 					// gce_instance_insert() will check the input arguments
 					rc = gahp->gce_instance_insert( m_serviceUrl,
 													m_authFile,
+													m_account,
 													m_project,
 													m_zone,
 													m_instanceName,
@@ -795,6 +798,7 @@ void GCEJob::doEvaluateState()
 
 				rc = gahp->gce_instance_delete( m_serviceUrl,
 												m_authFile,
+												m_account,
 												m_project,
 												m_zone,
 												m_instanceName );

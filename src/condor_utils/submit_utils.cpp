@@ -3691,6 +3691,12 @@ int SubmitHash::SetGridParams()
 		ABORT_AND_RETURN( 1 );
 	}
 
+	if ( (tmp = submit_param( SUBMIT_KEY_GceAccount, ATTR_GCE_ACCOUNT )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_ACCOUNT, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	}
+
 	if ( (tmp = submit_param( SUBMIT_KEY_GceImage, ATTR_GCE_IMAGE )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_IMAGE, tmp );
 		InsertJobExpr( buffer.Value() );
