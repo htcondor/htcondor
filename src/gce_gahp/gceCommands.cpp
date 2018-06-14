@@ -562,6 +562,27 @@ int ReadCredFileJson( AuthInfo &auth_info )
 	return CRED_FILE_FAILURE;
 }
 
+bool FindDefaultCredentialsFile( string &cred_file )
+{
+	struct passwd *pw;
+	if ( (pw = getpwuid(getuid())) == NULL ) {
+		return false;
+	}
+	string test_cred_file = pw->pw_dir;
+	test_cred_file += "/.config/gcloud/credentials.db";
+	if ( access(test_cred_file.c_str(), R_OK) == 0 ) {
+		cred_file = test_cred_file;
+		return true;
+	}
+	test_cred_file = pw->pw_dir;
+	test_cred_file += "/.config/gcloud/credentials";
+	if ( access(test_cred_file.c_str(), R_OK) == 0 ) {
+		cred_file = test_cred_file;
+		return true;
+	}
+	return false;
+}
+
 // Given a file containing OAuth 2.0 credentials, return an access
 // token that can be used to perform GCE requests.
 // If true is returned, then result contains the access token.
@@ -574,10 +595,18 @@ int ReadCredFileJson( AuthInfo &auth_info )
 // The results are cached (in authTable map), so that the OAuth service
 // is only contacted when necessary (the first time we see a file and
 // when the access token is about to expire).
-bool GetAccessToken( const string &auth_file, const string &account_in,
+bool GetAccessToken( const string &auth_file_in, const string &account_in,
                      string &access_token, string &err_msg)
 {
-	// TODO Support default auth_file
+	// If we get an empty or 'NULL' filename, look for the file in the
+	// default location used by the gcloud client tools.
+	string auth_file;
+	if ( !auth_file_in.empty() && strcasecmp( auth_file_in.c_str(), NULLSTRING ) != 0 ) {
+		auth_file = auth_file_in;
+	} else if ( FindDefaultCredentialsFile( auth_file ) == false ) {
+		err_msg = "Failed to find default credentials file";
+		return false;
+	}
 
 	// If we get an account name of NULL, treat it like an empty string,
 	// which means use any account.
