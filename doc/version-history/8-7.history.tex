@@ -28,7 +28,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added a new tool, \Condor{now}, which tries to run the specified
+job \emph{now}.  You specify two jobs that you own (or which have the
+same owner, if you are a queue super-user) from the same schedd: the now-job
+and the preempt-job.  The former is immediately preempted (without retirement);
+after the preempt-job is done vacating, if the schedd still holds the claim
+to the preempt-job's slot, it will immediately start the now-job.
+\Ticket{6659}
 
 \end{itemize}
 
@@ -38,7 +44,7 @@ The details of each version are described below.
 
 \item Fixed a problem where a \Condor{vacate\_job}, when passed the
 \Opt{-fast} flag, would leave the corresponding slot stuck in
-``Preempting/Vacation'' state until the job lease expired.
+``Preempting/Vacating'' state until the job lease expired.
 \Ticket{6663}
 
 \item Fixed a problem where \Condor{annex}'s setup routine, if no region
