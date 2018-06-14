@@ -254,11 +254,11 @@ struct AuthInfo {
 };
 
 // A table of Google OAuth 2.0 credentials, keyed on the filename the
-// credentials were read from.
+// credentials were read from and which account the credentials are for.
 map<string, AuthInfo> authTable;
 
-// Obtain a refresh token from Google's OAuth 2.0 service using the
-// provided credentials.
+// Obtain an access token from Google's OAuth 2.0 service using the
+// provided credentials (refresh token and client secret).
 bool TryAuthRefresh( AuthInfo &auth_info )
 {
 	// Fill in required attributes & parameters.
@@ -409,10 +409,18 @@ int SqliteAccessFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
 	return 0;
 }
 
+// These are return values for ReadCredFileSqlite() and ReadCredFileJson().
+// CRED_FILE_SUCCESS: The requested credentials were successfully read.
+// CRED_FILE_FAILURE: The requested credentials could not be obtained.
+// CRED_FILE_BAD_FORMAT: The file was not the correct format. The caller
+//    could retry reading in a different format.
 #define CRED_FILE_SUCCESS       0
 #define CRED_FILE_FAILURE       1
 #define CRED_FILE_BAD_FORMAT    2
 
+// Read a gcloud credentials file in the new SQL format and extract
+// credentials for the given account. If no account is specified, one
+// is picked arbitrarily.
 int ReadCredFileSqlite( AuthInfo &auth_info )
 {
 	sqlite3 *db;
@@ -496,6 +504,9 @@ int ReadCredFileSqlite( AuthInfo &auth_info )
 	return CRED_FILE_SUCCESS;
 }
 
+// Read a gcloud credentials file in the old JSON format and extract
+// credentials for the given account. If no account is specified, one
+// is picked arbitrarily.
 int ReadCredFileJson( AuthInfo &auth_info )
 {
 	auth_info.m_err_msg.clear();
