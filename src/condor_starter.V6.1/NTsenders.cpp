@@ -2333,5 +2333,41 @@ REMOTE_CONDOR_getcreds()
 	return cmd;
 }
 
+int
+REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* proxy_dest_path, time_t proxy_expiration )
+{
+	int result = 0;
+	dprintf( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_get_delegated_proxy\n" );
+
+	CurrentSysCall = CONDOR_get_delegated_proxy;
+
+	// Send message telling receiver we are requesting a delegated proxy
+	syscall_sock->encode();
+	result = ( syscall_sock->code( CurrentSysCall ) );
+	ON_ERROR_RETURN( result );
+
+	// Send proxy path
+	result = ( syscall_sock->put( proxy_source_path ) );
+	ON_ERROR_RETURN( result );
+
+	// Send proxy expiration time
+	result = ( syscall_sock->put( proxy_expiration ) );
+	ON_ERROR_RETURN( result );
+
+	// Now we're done sending our request, so send an end_of_message.
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+
+	// Switch to receive/read mode and wait for delegated x509 proxy
+	syscall_sock->decode();
+	int get_x509_rc = ( syscall_sock->get_x509_delegation( proxy_dest_path, false, NULL ) == ReliSock::delegation_ok ) ? 0 : -1;
+	dprintf( D_FULLDEBUG, "CONDOR_get_delegated_proxy: get_x509_delegation() returned %d\n", get_x509_rc );
+
+	// Wait for end_of_message and return
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+	return get_x509_rc;
+}
+
 
 } // extern "C"

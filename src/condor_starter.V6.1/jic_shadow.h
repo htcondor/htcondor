@@ -483,6 +483,7 @@ private:
 	bool transfer_at_vacate;
 
 	bool wants_file_transfer;
+	bool wants_x509_proxy;
 
 	char* uid_domain;
 	char* fs_domain;
