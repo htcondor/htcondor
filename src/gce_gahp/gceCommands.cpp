@@ -563,11 +563,19 @@ int ReadCredFileJson( AuthInfo &auth_info )
 // The results are cached (in authTable map), so that the OAuth service
 // is only contacted when necessary (the first time we see a file and
 // when the access token is about to expire).
-bool GetAccessToken( const string &auth_file, const string &account,
+bool GetAccessToken( const string &auth_file, const string &account_in,
                      string &access_token, string &err_msg)
 {
 	// TODO Support default auth_file
-	string map_key = auth_file + "#" + account;
+
+	// If we get an account name of NULL, treat it like an empty string,
+	// which means use any account.
+	string map_key;
+	string account;
+	if ( strcasecmp( account_in.c_str(), NULLSTRING ) != 0 ) {
+		account = account_in;
+	}
+	map_key = auth_file + "#" + account;
 	AuthInfo &auth_entry = authTable[map_key];
 
 	while ( auth_entry.m_refreshing ) {
@@ -1023,17 +1031,17 @@ GcePing::GcePing() { }
 
 GcePing::~GcePing() { }
 
-// Expecting:GCE_PING <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_PING <req_id> <serviceurl> <authfile> <account> <project> <zone>
 bool GcePing::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_PING" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 6 ) ) {
+	if( ! verify_number_args( argc, 7 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 6, argv[0] );
+				 argc, 7, argv[0] );
 		return false;
 	}
 
@@ -1041,14 +1049,14 @@ bool GcePing::workerFunction(char **argv, int argc, string &result_string) {
 	GcePing ping_request;
 	ping_request.serviceURL = argv[2];
 	ping_request.serviceURL += "/projects/";
-	ping_request.serviceURL += argv[4];
-	ping_request.serviceURL += "/zones/";
 	ping_request.serviceURL += argv[5];
+	ping_request.serviceURL += "/zones/";
+	ping_request.serviceURL += argv[6];
 	ping_request.serviceURL += "/instances";
 	ping_request.requestMethod = "GET";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, "", ping_request.accessToken,
+	if ( !GetAccessToken( auth_file, argv[4], ping_request.accessToken,
 						  ping_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   ping_request.errorMessage.c_str() );
@@ -1075,7 +1083,7 @@ GceInstanceInsert::GceInstanceInsert() { }
 
 GceInstanceInsert::~GceInstanceInsert() { }
 
-// Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <account> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
 //     <preemptible> <json_file>
 bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_string) {
@@ -1084,10 +1092,10 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 13 ) ) {
+	if( ! verify_number_args( argc, 14 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 13, argv[0] );
+				 argc, 14, argv[0] );
 		return false;
 	}
 
@@ -1095,24 +1103,24 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	GceInstanceInsert insert_request;
 	insert_request.serviceURL = argv[2];
 	insert_request.serviceURL += "/projects/";
-	insert_request.serviceURL += argv[4];
-	insert_request.serviceURL += "/zones/";
 	insert_request.serviceURL += argv[5];
+	insert_request.serviceURL += "/zones/";
+	insert_request.serviceURL += argv[6];
 	insert_request.serviceURL += "/instances";
 	insert_request.requestMethod = "POST";
 
 	std::map<string, string> metadata;
-	if ( strcasecmp( argv[9], NULLSTRING ) ) {
+	if ( strcasecmp( argv[10], NULLSTRING ) ) {
 		string key;
 		string value;
-		const char *pos = argv[9];
+		const char *pos = argv[10];
 		while ( ParseMetadataLine( pos, key, value, ',' ) ) {
 			metadata[key] = value;
 		}
 	}
-	if ( strcasecmp( argv[10], NULLSTRING ) ) {
+	if ( strcasecmp( argv[11], NULLSTRING ) ) {
 		string file_contents;
-		if ( !readShortFile( argv[10], file_contents ) ) {
+		if ( !readShortFile( argv[11], file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open metadata file" );
 			return true;
 		}
@@ -1124,8 +1132,8 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		}
 	}
 	string json_file_contents;
-	if ( strcasecmp( argv[12], NULLSTRING ) ) {
-		if ( !readShortFile( argv[12], json_file_contents ) ) {
+	if ( strcasecmp( argv[13], NULLSTRING ) ) {
+		if ( !readShortFile( argv[13], json_file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
 			return true;
 		}
@@ -1133,22 +1141,22 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 
 	insert_request.requestBody = "{\n";
 	insert_request.requestBody += " \"machineType\": \"";
-	insert_request.requestBody += argv[7];
+	insert_request.requestBody += argv[8];
 	insert_request.requestBody += "\",\n";
 	insert_request.requestBody += " \"name\": \"";
-	insert_request.requestBody += argv[6];
+	insert_request.requestBody += argv[7];
 	insert_request.requestBody += "\",\n";
 	insert_request.requestBody += "  \"scheduling\":\n";
 	insert_request.requestBody += "  {\n";
 	insert_request.requestBody += "    \"preemptible\": ";
-	insert_request.requestBody += argv[11];
+	insert_request.requestBody += argv[12];
 	insert_request.requestBody += "\n  },\n";
 	insert_request.requestBody += " \"disks\": [\n  {\n";
 	insert_request.requestBody += "   \"boot\": true,\n";
 	insert_request.requestBody += "   \"autoDelete\": true,\n";
 	insert_request.requestBody += "   \"initializeParams\": {\n";
 	insert_request.requestBody += "    \"sourceImage\": \"";
-	insert_request.requestBody += argv[8];
+	insert_request.requestBody += argv[9];
 	insert_request.requestBody += "\"\n";
 	insert_request.requestBody += "   }\n  }\n ],\n";
 	if ( !metadata.empty() ) {
@@ -1174,7 +1182,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "   \"network\": \"";
 	insert_request.requestBody += argv[2];
 	insert_request.requestBody += "/projects/";
-	insert_request.requestBody += argv[4];
+	insert_request.requestBody += argv[5];
 	insert_request.requestBody += "/global/networks/default\",\n";
 	insert_request.requestBody += "   \"accessConfigs\": [\n    {\n";
 	insert_request.requestBody += "     \"name\": \"External NAT\",\n";
@@ -1209,7 +1217,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	}
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, "", insert_request.accessToken,
+	if ( !GetAccessToken( auth_file, argv[4], insert_request.accessToken,
 						  insert_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   insert_request.errorMessage.c_str() );
@@ -1253,9 +1261,9 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		GceRequest op_request;
 		op_request.serviceURL = argv[2];
 		op_request.serviceURL += "/projects/";
-		op_request.serviceURL += argv[4];
-		op_request.serviceURL += "/zones/";
 		op_request.serviceURL += argv[5];
+		op_request.serviceURL += "/zones/";
+		op_request.serviceURL += argv[6];
 		op_request.serviceURL += "/operations/";
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
@@ -1315,17 +1323,17 @@ GceInstanceDelete::GceInstanceDelete() { }
 
 GceInstanceDelete::~GceInstanceDelete() { }
 
-// Expecting:GCE_INSTANCE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>
+// Expecting:GCE_INSTANCE_DELETE <req_id> <serviceurl> <authfile> <account> <project> <zone> <instance_name>
 bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_DELETE" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 7 ) ) {
+	if( ! verify_number_args( argc, 8 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 6, argv[0] );
+				 argc, 8, argv[0] );
 		return false;
 	}
 
@@ -1333,15 +1341,15 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 	GceInstanceDelete delete_request;
 	delete_request.serviceURL = argv[2];
 	delete_request.serviceURL += "/projects/";
-	delete_request.serviceURL += argv[4];
-	delete_request.serviceURL += "/zones/";
 	delete_request.serviceURL += argv[5];
-	delete_request.serviceURL += "/instances/";
+	delete_request.serviceURL += "/zones/";
 	delete_request.serviceURL += argv[6];
+	delete_request.serviceURL += "/instances/";
+	delete_request.serviceURL += argv[7];
 	delete_request.requestMethod = "DELETE";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, "", delete_request.accessToken,
+	if ( !GetAccessToken( auth_file, argv[4], delete_request.accessToken,
 						  delete_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   delete_request.errorMessage.c_str() );
@@ -1384,9 +1392,9 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 		GceRequest op_request;
 		op_request.serviceURL = argv[2];
 		op_request.serviceURL += "/projects/";
-		op_request.serviceURL += argv[4];
-		op_request.serviceURL += "/zones/";
 		op_request.serviceURL += argv[5];
+		op_request.serviceURL += "/zones/";
+		op_request.serviceURL += argv[6];
 		op_request.serviceURL += "/operations/";
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
@@ -1437,7 +1445,7 @@ GceInstanceList::GceInstanceList() { }
 
 GceInstanceList::~GceInstanceList() { }
 
-// Expecting:GCE_INSTANCE_LIST <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_INSTANCE_LIST <req_id> <serviceurl> <authfile> <account> <project> <zone>
 bool GceInstanceList::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_LIST" ) == 0 );
 
@@ -1446,10 +1454,10 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 	vector<string> results;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 6 ) ) {
+	if( ! verify_number_args( argc, 7 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 6, argv[0] );
+				 argc, 7, argv[0] );
 		return false;
 	}
 
@@ -1458,9 +1466,9 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		GceInstanceList list_request;
 		list_request.serviceURL = argv[2];
 		list_request.serviceURL += "/projects/";
-		list_request.serviceURL += argv[4];
-		list_request.serviceURL += "/zones/";
 		list_request.serviceURL += argv[5];
+		list_request.serviceURL += "/zones/";
+		list_request.serviceURL += argv[6];
 		list_request.serviceURL += "/instances";
 		if (!next_page_token.empty() ) {
 			dprintf( D_ALWAYS, "Requesting page token %s\n", next_page_token.c_str() );
@@ -1472,7 +1480,7 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		list_request.requestMethod = "GET";
 
 		string auth_file = argv[3];
-		if ( !GetAccessToken( auth_file, "", list_request.accessToken,
+		if ( !GetAccessToken( auth_file, argv[4], list_request.accessToken,
 							  list_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   list_request.errorMessage.c_str() );
@@ -1555,7 +1563,7 @@ GceGroupInsert::GceGroupInsert() { }
 
 GceGroupInsert::~GceGroupInsert() { }
 
-// Expecting GCE_GROUP_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting GCE_GROUP_INSERT <req_id> <serviceurl> <authfile> <account> <project> <zone>
 //     <group_name> <machine_type> <image> <metadata> <metadata_file>
 //     <preemptible> <json_file> <count> <duration_hours>
 
@@ -1565,10 +1573,10 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 15 ) ) {
+	if( ! verify_number_args( argc, 16 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 15, argv[0] );
+				 argc, 16, argv[0] );
 		return false;
 	}
 
@@ -1576,22 +1584,22 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	GceGroupInsert insert_request;
 	insert_request.serviceURL = argv[2];
 	insert_request.serviceURL += "/projects/";
-	insert_request.serviceURL += argv[4];
+	insert_request.serviceURL += argv[5];
 	insert_request.serviceURL += "/global/instanceTemplates";
 	insert_request.requestMethod = "POST";
 
 	std::map<string, string> metadata;
-	if ( strcasecmp( argv[9], NULLSTRING ) ) {
+	if ( strcasecmp( argv[10], NULLSTRING ) ) {
 		string key;
 		string value;
-		const char *pos = argv[9];
+		const char *pos = argv[10];
 		while ( ParseMetadataLine( pos, key, value, ',' ) ) {
 			metadata[key] = value;
 		}
 	}
-	if ( strcasecmp( argv[10], NULLSTRING ) ) {
+	if ( strcasecmp( argv[11], NULLSTRING ) ) {
 		string file_contents;
-		if ( !readShortFile( argv[10], file_contents ) ) {
+		if ( !readShortFile( argv[11], file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open metadata file" );
 			return true;
 		}
@@ -1603,8 +1611,8 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 		}
 	}
 	string json_file_contents;
-	if ( strcasecmp( argv[12], NULLSTRING ) ) {
-		if ( !readShortFile( argv[12], json_file_contents ) ) {
+	if ( strcasecmp( argv[13], NULLSTRING ) ) {
+		if ( !readShortFile( argv[13], json_file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
 			return true;
 		}
@@ -1612,24 +1620,24 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 
 	insert_request.requestBody = "{\n";
 	insert_request.requestBody += " \"name\": \"";
-	insert_request.requestBody += argv[6];
+	insert_request.requestBody += argv[7];
 	insert_request.requestBody += "-template\",\n";
 	insert_request.requestBody += "  \"properties\": \n";
 	insert_request.requestBody += "  {\n";
 	insert_request.requestBody += "   \"machineType\": \"";
-	insert_request.requestBody += argv[7];
+	insert_request.requestBody += argv[8];
 	insert_request.requestBody += "\",\n";
 	insert_request.requestBody += "    \"scheduling\":\n";
 	insert_request.requestBody += "    {\n";
 	insert_request.requestBody += "      \"preemptible\": ";
-	insert_request.requestBody += argv[11];
+	insert_request.requestBody += argv[12];
 	insert_request.requestBody += "\n    },\n";
 	insert_request.requestBody += "   \"disks\": [\n  {\n";
 	insert_request.requestBody += "     \"boot\": true,\n";
 	insert_request.requestBody += "     \"autoDelete\": true,\n";
 	insert_request.requestBody += "     \"initializeParams\": {\n";
 	insert_request.requestBody += "      \"sourceImage\": \"";
-	insert_request.requestBody += argv[8];
+	insert_request.requestBody += argv[9];
 	insert_request.requestBody += "\"\n";
 	insert_request.requestBody += "   }\n  }\n ],\n";
 	if ( !metadata.empty() ) {
@@ -1655,7 +1663,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	insert_request.requestBody += "   \"network\": \"";
 	insert_request.requestBody += argv[2];
 	insert_request.requestBody += "/projects/";
-	insert_request.requestBody += argv[4];
+	insert_request.requestBody += argv[5];
 	insert_request.requestBody += "/global/networks/default\",\n";
 	insert_request.requestBody += "   \"accessConfigs\": [\n    {\n";
 	insert_request.requestBody += "     \"name\": \"External NAT\",\n";
@@ -1690,7 +1698,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	}
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, "", insert_request.accessToken,
+	if ( !GetAccessToken( auth_file, argv[4], insert_request.accessToken,
 						  insert_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   insert_request.errorMessage.c_str() );
@@ -1724,7 +1732,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	string err_msg;
 	string opUrl = argv[2];
 	opUrl += "/projects/";
-	opUrl += argv[4];
+	opUrl += argv[5];
 	opUrl += "/global/operations/";
 	opUrl += op_name;
 	if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
@@ -1736,26 +1744,26 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	GceRequest group_request;
 	group_request.serviceURL = argv[2];
 	group_request.serviceURL += "/projects/";
-	group_request.serviceURL += argv[4];
-	group_request.serviceURL += "/zones/";
 	group_request.serviceURL += argv[5];
+	group_request.serviceURL += "/zones/";
+	group_request.serviceURL += argv[6];
 	group_request.serviceURL += "/instanceGroupManagers";
 	group_request.requestMethod = "POST";
 	group_request.requestBody = "{\n";
 	group_request.requestBody += " \"name\": \"";
-	group_request.requestBody += argv[6];
+	group_request.requestBody += argv[7];
 	group_request.requestBody += "-group\",\n";
 	group_request.requestBody += " \"instanceTemplate\": \"";
 	group_request.requestBody += "/projects/";
-	group_request.requestBody += argv[4];
+	group_request.requestBody += argv[5];
 	group_request.requestBody += "/global/instanceTemplates/";
-	group_request.requestBody += argv[6];
+	group_request.requestBody += argv[7];
 	group_request.requestBody += "-template\",\n";
 	group_request.requestBody += " \"baseInstanceName\": \"";
-	group_request.requestBody += argv[6];
+	group_request.requestBody += argv[7];
 	group_request.requestBody += "-instance\",\n";
 	group_request.requestBody += " \"targetSize\": \"";
-	group_request.requestBody += argv[13];
+	group_request.requestBody += argv[14];
 	group_request.requestBody += "\"\n";
 	group_request.requestBody += "}\n";
 
@@ -1786,9 +1794,9 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	// Wait for group template to be created
 	opUrl = argv[2];
 	opUrl += "/projects/";
-	opUrl += argv[4];
-	opUrl += "/zones/";
 	opUrl += argv[5];
+	opUrl += "/zones/";
+	opUrl += argv[6];
 	opUrl += "/operations/";
 	opUrl += op_name;
 	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
@@ -1807,7 +1815,7 @@ GceGroupDelete::GceGroupDelete() { }
 
 GceGroupDelete::~GceGroupDelete() { }
 
-// Expecting GCE_GROUP_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <group_name>
+// Expecting GCE_GROUP_DELETE <req_id> <serviceurl> <authfile> <account> <project> <zone> <group_name>
 
 bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_GROUP_DELETE" ) == 0 );
@@ -1815,10 +1823,10 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 7 ) ) {
+	if( ! verify_number_args( argc, 8 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 7, argv[0] );
+				 argc, 8, argv[0] );
 		return false;
 	}
 
@@ -1826,16 +1834,16 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	GceRequest group_request;
 	group_request.serviceURL = argv[2];
 	group_request.serviceURL += "/projects/";
-	group_request.serviceURL += argv[4];
-	group_request.serviceURL += "/zones/";
 	group_request.serviceURL += argv[5];
-	group_request.serviceURL += "/instanceGroupManagers/";
+	group_request.serviceURL += "/zones/";
 	group_request.serviceURL += argv[6];
+	group_request.serviceURL += "/instanceGroupManagers/";
+	group_request.serviceURL += argv[7];
 	group_request.serviceURL += "-group";
 	group_request.requestMethod = "DELETE";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, "", group_request.accessToken,
+	if ( !GetAccessToken( auth_file, argv[4], group_request.accessToken,
 						  group_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   group_request.errorMessage.c_str() );
@@ -1873,9 +1881,9 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 
 		// Wait for instance group manager to be deleted
 		opUrl += "/projects/";
-		opUrl += argv[4];
-		opUrl += "/zones/";
 		opUrl += argv[5];
+		opUrl += "/zones/";
+		opUrl += argv[6];
 		opUrl += "/operations/";
 		opUrl += op_name;
 		if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
@@ -1888,9 +1896,9 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	GceGroupDelete delete_request;
 	delete_request.serviceURL = argv[2];
 	delete_request.serviceURL += "/projects/";
-	delete_request.serviceURL += argv[4];
+	delete_request.serviceURL += argv[5];
 	delete_request.serviceURL += "/global/instanceTemplates/";
-	delete_request.serviceURL += argv[6];
+	delete_request.serviceURL += argv[7];
 	delete_request.serviceURL += "-template";
 	delete_request.requestMethod = "DELETE";
 
@@ -1923,7 +1931,7 @@ bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string
 	// Wait for instance template to be deleted
 	opUrl = argv[2];
 	opUrl += "/projects/";
-	opUrl += argv[4];
+	opUrl += argv[5];
 	opUrl += "/global/operations/";
 	opUrl += op_name;
 	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
