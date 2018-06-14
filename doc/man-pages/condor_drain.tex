@@ -94,7 +94,8 @@ facilitating de-fragmentation and whole machine negotiation.
   \OptItem{\OptArg{-check}{expr}}{Abort draining,
     if \Expr{expr} is not true for all slots to be drained.}
   \OptItem{\OptArg{-start}{expr}}{The \MacroNI{START} expression to use
-    while the machine is draining.}
+    while the machine is draining.  You can't reference the machine's
+    existing \MacroNI{START} expression.}
   \OptItem{\Opt{-cancel}}{Cancel a prior draining request,
     to permit the \Condor{negotiator} to use the machine again.}
   \OptItem{\OptArg{-request-id}{id}}{Specify a specific draining request 

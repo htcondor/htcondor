@@ -12869,8 +12869,12 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   When the last job which was not accepted while draining exits, all
   other jobs are immediately evicted with a \Attr{MaxJobRetirementTime}
   of 0; job vacate times are still respected.  While the jobs which were
-  accepted while draining are vacating, the \Macro{START} expression is
-  \Expr{false}.
+  accepted while draining are vacating, the \MacroNI{START} expression is
+  \Expr{false}.  Using \Expr{\$(START)} in this expression is usually
+  a mistake: it will be replaced by the defrag daemon's \MacroNI{START}
+  expression, \emph{not} the value of the target machine's \MacroNI{START}
+  expression (and especially not the value of its \MacroNI{START} expression
+  at the time draining begins).
 
 \label{param:DefragRequirements}
 \item[\Macro{DEFRAG\_REQUIREMENTS}] An expression that specifies which
