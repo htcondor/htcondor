@@ -1042,6 +1042,9 @@ SafeSock::recvQueueDepth(int port) {
 		}
 	}
 	fclose(f);
+#else
+	// Shut the compiler up
+	(void)port;
 #endif
 	return depth;
 }

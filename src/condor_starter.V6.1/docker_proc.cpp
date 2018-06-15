@@ -501,6 +501,9 @@ DockerProc::SetupDockerSsh() {
 	// and a reaper 
 	execReaperId = daemonCore->Register_Reaper("ExecReaper", (ReaperHandlercpp)&DockerProc::ExecReaper,
 		"ExecReaper", this);
+#else
+	// Shut the compiler up
+	(void)execReaperId;
 #endif
 	return;
 }
@@ -537,6 +540,9 @@ DockerProc::AcceptSSHClient(Stream *stream) {
 
 	dprintf(D_ALWAYS, "docker exec returned %d for pid %d\n", rc, execPid);
 
+#else
+	// Shut the compiler up
+	(void)stream;
 #endif
 	return KEEP_STREAM;
 }

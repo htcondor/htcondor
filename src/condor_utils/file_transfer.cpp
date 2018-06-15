@@ -4795,7 +4795,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 
 	// extract the info we care about
 	char* methods = NULL;
-	bool this_plugin_supports_multifile = NULL;
+	bool this_plugin_supports_multifile = false;
 	if ( ad->LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
 		plugins_multifile_support[path] = this_plugin_supports_multifile;
 	}

@@ -451,8 +451,11 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		int terrno = 0;
 		if (cluster_id != active_cluster_num) {
 			rval = -1;
+			terrno = EPERM;
 		} else if (request_num == CONDOR_SetMaterializeData) {
 			// obsolete, don't do anything with this RPC
+			rval = -1;
+			terrno = EPERM;
 		} else {
 			errno = 0;
 			SetAttributeFlags_t flags = 0;

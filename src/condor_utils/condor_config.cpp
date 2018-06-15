@@ -138,7 +138,7 @@ static MACRO_SET ConfigMacroSet = {
 	/* CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULT | */ 0,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults, NULL };
 const MACRO_SOURCE DetectedMacro = { true,  false, 0, -2, -1, -2 };
-const MACRO_SOURCE DefaultMacro  = { true,  false, 1, -2, -1, -2 };
+//const MACRO_SOURCE DefaultMacro  = { true,  false, 1, -2, -1, -2 };
 const MACRO_SOURCE EnvMacro      = { false, false, 2, -2, -1, -2 };
 const MACRO_SOURCE WireMacro     = { false, false, 3, -2, -1, -2 };
 

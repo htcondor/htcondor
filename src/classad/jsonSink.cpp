@@ -148,6 +148,8 @@ Unparse( string &buffer, const Value &val )
 			Unparse( buffer, el );
 			return;
 		}
+		default:
+			break;
 	}
 }
 

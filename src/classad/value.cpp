@@ -409,6 +409,8 @@ SameAs(const Value &otherValue) const
         case Value::STRING_VALUE:
             is_same = (*strValue == *otherValue.strValue);
             break;
+		default:
+			break;
         }
     }
     return is_same;
@@ -458,6 +460,8 @@ ostream& operator<<(ostream &stream, Value &value)
 	}
 	case Value::STRING_VALUE:
 		stream << *value.strValue;
+		break;
+	default:
 		break;
 	}
 

@@ -128,6 +128,8 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 			case Value::SLIST_VALUE:
 				result += "SLIST\n";
 				break;
+			default:
+				break;
 		}
 		debug_print(result.c_str());
 }

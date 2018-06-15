@@ -2428,6 +2428,7 @@ ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	case Value::ABSOLUTE_TIME_VALUE:
 	case Value::RELATIVE_TIME_VALUE:
 	case Value::NULL_VALUE:
+	default:
 		result.SetErrorValue();
 		return( true );
 	}

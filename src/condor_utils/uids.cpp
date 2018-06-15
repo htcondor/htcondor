@@ -299,8 +299,8 @@ static int should_use_keyring_sessions() {
 }
 #endif
 
-static int keyring_session_creation_timeout() {
 #ifdef LINUX
+static int keyring_session_creation_timeout() {
 	static int KeyringSessionCreationTimeout = 0;
 	static int DidParamForKeyringSessionCreationTimeout = FALSE;
 
@@ -309,10 +309,8 @@ static int keyring_session_creation_timeout() {
 		DidParamForKeyringSessionCreationTimeout = true;
 	}
 	return KeyringSessionCreationTimeout;
-#else
-	return 0;
-#endif
 }
+#endif
 
 
 /* End Common Bits */

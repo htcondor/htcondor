@@ -268,6 +268,8 @@ Unparse(
 			UnparseAux(buffer, exprs, indent);
 			break;
 		}
+		default:
+			break;
 	}
 }
 

@@ -5004,6 +5004,7 @@ static bool is_zero_summary(ClassAd * summary_ad)
 	return true;
 }
 
+/*
 const char * const standard_summary1 = "SELECT\n"
 	"Name PRINTF 'Total for %s:'\n"
 	"Jobs PRINTF '%d jobs;'\n"
@@ -5014,6 +5015,7 @@ const char * const standard_summary1 = "SELECT\n"
 	"Held PRINTF '%d held,'\n"
 	"Suspended PRINTF '%d suspended'\n"
 ;
+*/
 
 const char * const standard_summary2 = "SELECT\n"
 	"Jobs PRINTF 'Total for query: %d jobs;'\n"

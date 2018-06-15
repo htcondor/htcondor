@@ -254,6 +254,8 @@ Unparse( string &buffer, const Value &val )
 			UnparseAux( buffer, exprs );
 			return;
 		}
+		default:
+			break;
 	}
 }
 
