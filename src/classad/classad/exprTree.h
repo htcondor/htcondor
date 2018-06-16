@@ -33,6 +33,11 @@ class ExprTree;
 class ClassAd;
 class MatchClassAd;
 
+#ifdef TJ_PICKLE
+class ExprStream;
+class ExprStreamMaker;
+#endif
+
 class EvalState {
 	public:
 		EvalState( );
@@ -113,6 +118,11 @@ class ExprTree
 		 	@return The parent scope of the expression.
 		*/
 		virtual const ClassAd *GetParentScope( ) const = 0;
+
+#ifdef TJ_PICKLE
+		static ExprTree * Make(ExprStream & stm, bool nullable=false, int*err=NULL);
+		unsigned int Pickle(ExprStreamMaker & stm, bool compact) const;
+#endif
 
 		/** Makes a deep copy of the expression tree
 		 * 	@return A deep copy of the expression, or NULL on failure.

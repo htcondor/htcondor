@@ -34,6 +34,7 @@ extern int exprHash( const ExprTree* const&, int );
 
 static const int MAX_CLASSAD_RECURSION = 1000;
 
+
 void (*ExprTree::user_debug_function)(const char *) = 0;
 
 /* static */ void 

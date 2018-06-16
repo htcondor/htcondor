@@ -111,6 +111,127 @@ void SetOldClassAdSemantics(bool enable)
 	}
 }
 
+#ifdef TJ_PICKLE
+
+void ExprStreamMaker::grow(unsigned int min_size /*=100*/)
+{
+	unsigned int new_size = ((cbAlloc*2) < min_size) ? min_size : cbAlloc*2;
+	unsigned char * p = (unsigned char*)malloc(new_size);
+	if (base && p && off) { memcpy(p, base, off); }
+	if (base) free(base);
+	base = p;
+	cbAlloc = new_size;
+}
+
+void ExprStreamMaker::putBytes(const unsigned char * p, unsigned int size)
+{
+	if ( ! size) return;
+	if (off+size > cbAlloc) grow(off+size);
+	memcpy(base+off, p, size);
+	off += size;
+}
+
+// put string size followed by string
+void ExprStreamMaker::putString(const std::string & str)
+{
+	unsigned int len = str.length();
+	putInteger(len);
+	if (len) { putBytes(str.data(), len); }
+}
+
+void ExprStreamMaker::putSmallString(const std::string & str)
+{
+	unsigned int len = str.length();
+	if (len > 255) len = 255;
+	putByte(len);
+	if (len) { putBytes(str.data(), len); }
+}
+
+
+unsigned int ExprStreamMaker::putNullableExpr(ExprTree* tree, bool compact)
+{
+#if 1
+	if (tree) {
+		return tree->Pickle(*this, compact);
+	} else {
+		putByte(ExprStream::NullTree);
+		return 1;
+	}
+#else
+	unsigned int cbexpr = 0;
+	if (tree) {
+		ExprStreamMaker::Mark mk = mark(sizeof(cbexpr));
+		cbexpr = tree->Pickle(*this, compact);
+		updateAt(mk, cbexpr);
+	} else { 
+		cbexpr = 1;
+		putInteger(cbexpr);
+		putByte(ExprStream::NullTree);
+	}
+#endif
+}
+
+unsigned int ExprStreamMaker::putPair(AttrList::const_iterator itr, bool compact)
+{
+	unsigned int len = itr->first.length();
+	if (compact && (len < 255)) {
+		putByte(ExprStream::SmallPair);
+		putSmallString(itr->first);
+	} else {
+		// write the attribute name
+		putByte(ExprStream::PairBase);
+		putString(itr->first);
+	}
+	return putNullableExpr(itr->second, compact);
+}
+
+
+bool ExprStream::readNullableExpr(ExprTree* & tree)
+{
+#if 1
+	int err = 0;
+	ExprTree * t2 = ExprTree::Make(*this, true, &err);
+	if (err) {
+		delete t2;
+		return false;
+	}
+	tree = t2;
+	return true;
+#else
+	ExprStream stm2;
+	if ( ! readStream(stm2))
+		return false;
+	int err = 0;
+	ExprTree* t2 = ExprTree::Make(stm2, true, &err);
+	if (err || ! stm2.empty()) {
+		delete t2;
+		return false;
+	}
+	tree = t2;
+	return true;
+#endif
+}
+
+bool ExprStream::skipComments()
+{
+	unsigned char ct = 0;
+	while (peekByte(ct) && (ct == ExprStream::Comment || ct == ExprStream::BigComment)) {
+		readByte(ct);
+		if (ct == ExprStream::Comment) {
+			if ( ! skipSmall()) return false;
+		} else if (ct == ExprStream::BigComment) {
+			if ( ! skipStream()) return false;
+		} else {
+			return false;
+		}
+	}
+	return true;
+}
+
+
+
+#endif
+
 ClassAd::
 ClassAd ()
 {
@@ -266,6 +387,228 @@ Clear( )
 	}
 	attrList.clear( );
 }
+
+#ifdef TJ_PICKLE
+
+/*static*/ ExprTree * ExprTree::Make(ExprStream & stm, bool nullable, int*err)
+{
+	ExprTree * tree = NULL;
+	ClassAd::NodeKind kind;
+	if (err) *err = 0;
+
+	unsigned char kinder = 0;
+	if ( ! stm.peekByte(kinder)) {
+		if (err) *err = 1;
+		goto bail;
+	}
+	if (nullable && (kinder==ExprStream::NullTree)) {
+		return NULL;
+	}
+
+	if (kinder >= ExprStream::TreeBase) {
+		kind = (ClassAd::NodeKind)((kinder & ~0x08) - ExprStream::TreeBase);
+		if (kinder < ExprStream::Call) { stm.readByte(kinder); }
+	} else if (kinder >= ExprStream::AttrBase) {
+		kind = ClassAd::ATTRREF_NODE;
+	} else if (kinder >= ExprStream::OpBase) {
+		kind = ClassAd::OP_NODE;
+	} else if (kinder >= ExprStream::LitBase) {
+		kind = ClassAd::LITERAL_NODE;
+	} else {
+		goto bail;
+	}
+
+	switch (kind) {
+	case ClassAd::LITERAL_NODE:   tree = Literal::Make(stm); break;
+	case ClassAd::ATTRREF_NODE:   tree = AttributeReference::Make(stm); break;
+	case ClassAd::OP_NODE:        tree = Operation::Make(stm); break;
+	case ClassAd::FN_CALL_NODE:   tree = FunctionCall::Make(stm); break;
+	case ClassAd::CLASSAD_NODE:   tree = ClassAd::Make(stm); break;
+	case ClassAd::EXPR_LIST_NODE: tree = ExprList::Make(stm); break;
+	default: break;
+	}
+
+	if ( ! tree) goto bail;
+
+	return tree;
+bail:
+	if (err) *err = -1;
+	return NULL;
+}
+
+unsigned int ExprTree::Pickle(ExprStreamMaker & stm, bool compact) const
+{
+	const ExprTree * tree = this;
+	NodeKind kind = tree->GetKind();
+	while (kind == EXPR_ENVELOPE) {
+		ExprTree * t2 = reinterpret_cast<CachedExprEnvelope*>(const_cast<ExprTree*>(tree))->get();
+		if ( ! t2 || (t2 == tree)) return 0;
+		tree = t2;
+		kind = tree->GetKind();
+	}
+#if 1
+	unsigned int cb = 0;
+	switch (kind) {
+	case LITERAL_NODE: return reinterpret_cast<const Literal*>(tree)->Pickle(stm, compact);
+	case ATTRREF_NODE: return reinterpret_cast<const AttributeReference *>(tree)->Pickle(stm, compact);
+	case OP_NODE:      return reinterpret_cast<const Operation *>(tree)->Pickle(stm, compact);
+	case FN_CALL_NODE: return reinterpret_cast<const FunctionCall *>(tree)->Pickle(stm, compact);
+	case CLASSAD_NODE: return reinterpret_cast<const ClassAd *>(tree)->Pickle(stm, compact, NULL);
+	case EXPR_LIST_NODE: return reinterpret_cast<const ExprList *>(tree)->Pickle(stm, compact);
+	default:
+		break;
+	}
+#else
+	if ( ! compact) {
+		stm.putByte(ExprStream::TreeBase + (unsigned char)kind);
+		cb = 1;
+	}
+	switch (kind) {
+	case LITERAL_NODE: return reinterpret_cast<const Literal*>(tree)->Pickle(stm, true) + cb;
+	case ATTRREF_NODE: return reinterpret_cast<const AttributeReference *>(tree)->Pickle(stm, compact) + cb;
+	case OP_NODE:      return reinterpret_cast<const Operation *>(tree)->Pickle(stm) + cb;
+	case FN_CALL_NODE: return reinterpret_cast<const FunctionCall *>(tree)->Pickle(stm) + cb;
+	case CLASSAD_NODE: return reinterpret_cast<const ClassAd *>(tree)->Pickle(stm) + cb;
+	case EXPR_LIST_NODE: return reinterpret_cast<const ExprList *>(tree)->Pickle(stm) + cb;
+	default:
+		break;
+	}
+#endif
+	return cb;
+}
+
+
+/* these are the members...
+	AttrList	  attrList;
+	DirtyAttrList dirtyAttrList;
+	bool          do_dirty_tracking;
+	ClassAd       *chained_parent_ad;
+#if defined(SCOPE_REFACTOR)
+	const ClassAd *parentScope;
+#endif
+*/
+
+/*static*/ ClassAd* ClassAd::Make(ExprStream & stm, std::string * label)
+{
+	ClassAd * cad = new ClassAd();
+	unsigned char ct = 0;
+	if (stm.peekByte(ct) && ct == ExprStream::ClassAd) {
+		stm.readByte(ct);
+		if (label) {
+			if ( ! stm.readString(*label)) { goto bail; }
+		} else {
+			if ( ! stm.skipStream()) { goto bail; }
+		}
+		ExprStream stm2;
+		if ( ! stm.readStream(stm2)) { goto bail; }
+		stm2.skipComments();
+		if ( ! cad->Update(stm2)) { goto bail; }
+	} else {
+		stm.skipComments();
+		if ( ! cad->Update(stm)) { goto bail; }
+	}
+	return cad;
+
+bail:
+	delete cad;
+	return NULL;
+}
+
+bool ClassAd::Update(ExprStream & stm)
+{
+	unsigned int attr_count = 0;
+	std::string attr;
+	ExprStream::Mark mk = stm.mark();
+
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct)) { goto bail; }
+	if (ct == ExprStream::Hash) {
+		unsigned char count = 0;
+		if ( ! stm.readByte(count)) { goto bail; }
+		attr_count = count;
+	} else if (ct == ExprStream::BigHash) {
+		if ( ! stm.readInteger(attr_count)) { goto bail; }
+	} else  {
+		goto bail;
+	}
+
+	attrList.reserve(attr_count+5);
+	for (unsigned int ix = 0; ix < attr_count; ++ix) {
+		ExprTree * tree = NULL;
+		if ( ! stm.readByte(ct)) { goto bail; }
+
+		if (ct == ExprStream::SmallPair) {
+			if ( ! stm.readSmallString(attr)) { goto bail; }
+		} else if (ct == ExprStream::PairBase) {
+			if ( ! stm.readString(attr)) { goto bail; }
+		} else if (ct == ExprStream::Comment) {
+			if ( ! stm.skipSmall()) { goto bail; }
+			--ix; // this doesn't count as an attribute
+		} else if (ct == ExprStream::BigComment) {
+			if ( ! stm.skipStream()) { goto bail; }
+			--ix; // this doesn't count as an attribute
+		} else {
+			goto bail;
+		}
+		if ( ! stm.readNullableExpr(tree)) {
+			goto bail;
+		}
+		Insert(attr, tree);
+	}
+
+	return true;
+bail:
+	stm.unwind(mk);
+	return false;
+}
+
+unsigned int ClassAd::Pickle(ExprStreamMaker & stm, bool compact, References * whitelist) const
+{
+	ExprStreamMaker::Mark mkBegin = stm.mark();
+
+	ExprStreamMaker::Mark mkCount;
+	unsigned int max_attrs = attrList.size();
+	if (max_attrs > 255) {
+		stm.putByte(ExprStream::BigHash);
+		mkCount = stm.mark(max_attrs);
+	} else {
+		stm.putByte(ExprStream::Hash);
+		mkCount = stm.mark((unsigned char)max_attrs);
+	}
+
+	unsigned int attr_count = 0;
+	for (auto itr = attrList.begin(); itr != attrList.end(); ++itr) {
+		if (whitelist && (whitelist->find(itr->first) == whitelist->end())) continue;
+		stm.putPair(itr, compact);
+		++attr_count;
+	}
+
+	if (max_attrs > 255) {
+		stm.updateAt(mkCount, attr_count);
+	} else {
+		stm.updateAt(mkCount, (unsigned char)attr_count);
+	}
+
+	return stm.added(mkBegin);
+}
+
+unsigned int ClassAd::Pickle(ExprStreamMaker & stm, const std::string & label, References * whitelist, bool flatten) const
+{
+	ExprStreamMaker::Mark mkBegin = stm.mark();
+	stm.putByte(ExprStream::ClassAd);
+	stm.putString(label);
+	unsigned int size = 0;
+	ExprStreamMaker::Mark mkSize = stm.mark(size);
+	if (chained_parent_ad) {
+	} else {
+		Pickle(stm, true, whitelist);
+	}
+	size = stm.added(mkSize) - sizeof(size);
+	stm.updateAt(mkSize, size);
+	return stm.added(mkBegin);
+}
+
+#endif
 
 void ClassAd::
 GetComponents( vector< pair< string, ExprTree* > > &attrs ) const

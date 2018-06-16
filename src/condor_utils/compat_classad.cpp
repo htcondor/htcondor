@@ -1529,6 +1529,36 @@ int CondorClassAdFileParseHelper::NewParser(ClassAd & ad, FILE* file, bool & det
 	return rval;
 }
 
+#ifdef TJ_PICKLE
+/*static*/ ClassAd* ClassAd::Make(classad::ExprStream & stm, std::string * label /*=NULL*/)
+{
+{
+	ClassAd * cad = new ClassAd();
+	unsigned char ct = 0;
+	if (stm.peekByte(ct) && ct == classad::ExprStream::ClassAd) {
+		stm.readByte(ct);
+		if (label) {
+			if ( ! stm.readString(*label)) { goto bail; }
+		} else {
+			if ( ! stm.skipStream()) { goto bail; }
+		}
+		classad::ExprStream stm2;
+		if ( ! stm.readStream(stm2)) { goto bail; }
+		stm2.skipComments();
+		if ( ! cad->Update(stm2)) { goto bail; }
+	} else {
+		stm.skipComments();
+		if ( ! cad->Update(stm)) { goto bail; }
+	}
+	return cad;
+
+bail:
+	delete cad;
+	return NULL;
+}
+}
+#endif
+
 
 // returns number of attributes added to the ad
 int ClassAd::

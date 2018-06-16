@@ -77,6 +77,11 @@ class FunctionCall : public ExprTree
 	static FunctionCall *MakeFunctionCall( const std::string &fnName, 
 										   std::vector<ExprTree*> &argList );
 	
+#ifdef TJ_PICKLE
+	static FunctionCall *Make(ExprStream & stm);
+	unsigned int Pickle(ExprStreamMaker & stm, bool compact) const;
+#endif
+
 	/** Deconstructor to get the components of a function call
 	 * 	@param fnName	The name of the function being called
 	 * 	@param argList  The argument list

@@ -186,6 +186,58 @@ MakeExprList( const vector<ExprTree*> &exprs )
     return el;
 }
 
+#ifdef TJ_PICKLE
+
+/*static*/ ExprList * ExprList::Make(ExprStream & stm)
+{
+	ExprList * lst = new ExprList();
+	ExprStream::Mark mk = stm.mark();
+	unsigned int expr_count = 0;
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct)) { goto bail; }
+	if (ct == ExprStream::List) {
+		unsigned char count = 0;
+		if ( ! stm.readByte(count)) { goto bail; }
+		expr_count = count;
+	} else if (ct == ExprStream::BigList) {
+		if ( ! stm.readInteger(expr_count)) { goto bail; }
+	} else {
+		goto bail;
+	}
+
+	lst->exprList.resize(expr_count);
+	for (unsigned int ix = 0; ix < expr_count; ++ix) {
+		if ( ! stm.readNullableExpr(lst->exprList[ix]))
+			goto bail;
+	}
+	
+	return lst;
+bail:
+	delete lst;
+	stm.unwind(mk);
+	return NULL;
+}
+
+unsigned int ExprList::Pickle(ExprStreamMaker & stm, bool compact) const
+{
+	ExprStreamMaker::Mark mkBegin = stm.mark();
+
+	unsigned int expr_count = exprList.size();
+	if (expr_count > 255) {
+		stm.putByte(ExprStream::BigList);
+		stm.putInteger(expr_count);
+	} else {
+		stm.putByte(ExprStream::List);
+		stm.putByte((unsigned char)expr_count);
+	}
+	for (auto itr = exprList.begin(); itr != exprList.end(); ++itr) {
+		stm.putNullableExpr(*itr, compact);
+	}
+
+	return stm.added(mkBegin);
+}
+#endif
+
 void ExprList::
 GetComponents( vector<ExprTree*> &exprs ) const
 {

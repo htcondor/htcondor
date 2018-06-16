@@ -53,6 +53,11 @@ class AttributeReference : public ExprTree
     	static AttributeReference *MakeAttributeReference(ExprTree *expr, 
 					const std::string &attrName, bool absolute=false);
 
+#ifdef TJ_PICKLE
+		static AttributeReference* Make(ExprStream & stm);
+		unsigned int Pickle(ExprStreamMaker & stm, bool compact) const;
+#endif
+
 		/** Deconstructor to get the components of an attribute reference
 		 * 	@param expr The expression part of the reference (NULL for
 		 * 		absolute or simple references)

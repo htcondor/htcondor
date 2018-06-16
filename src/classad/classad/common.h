@@ -103,6 +103,10 @@
 #define SAL_assume(expr)
 #endif // WIN32
 
+// add methods for binary persist/de-persist (i.e. Pickle and Make)
+//
+#define TJ_PICKLE
+
 #include "classad/debug.h"
 
 #ifdef __cplusplus

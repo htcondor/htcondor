@@ -25,6 +25,11 @@
 
 namespace classad {
 
+#ifdef TJ_PICKLE
+class ExprStream;
+class ExprStreamMaker;
+#endif
+
 class ExprListIterator;
 
 /// Represents a list of expressions, like {1, 2, 3}
@@ -58,6 +63,11 @@ class ExprList : public ExprTree
 		void GetComponents( std::vector<ExprTree*>& list) const;
 
 		virtual ExprTree* Copy( ) const;
+
+#ifdef TJ_PICKLE
+		static ExprList * Make(ExprStream & stm);
+		unsigned int Pickle(ExprStreamMaker & stm, bool compact) const;
+#endif
 
         bool CopyFrom(const ExprList &other_list);
 

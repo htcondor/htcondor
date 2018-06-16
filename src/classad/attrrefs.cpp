@@ -472,4 +472,67 @@ MakeAttributeReference(ExprTree *tree, const string &attrStr, bool absolut)
 	return( new AttributeReference( tree, attrStr, absolut ) );
 }
 
+#ifdef TJ_PICKLE
+
+AttributeReference* AttributeReference::Make(ExprStream & stm)
+{
+	const unsigned char expr_mask = (ExprStream::ExprAttr & ~ExprStream::AttrBase);
+	const unsigned char abs_mask = (ExprStream::AbsAttr & ~ExprStream::AttrBase);
+	const unsigned char small_mask = (ExprStream::SmallAttr & ~ExprStream::AttrBase);
+	const unsigned char valid_mask = (ExprStream::SmallAttr | ExprStream::AbsAttr | ExprStream::ExprAttr);
+
+	AttributeReference * ar = NULL;
+
+	unsigned char flags = 0xFF;
+	if ( ! stm.readByte(flags) || (flags & ~valid_mask) != 0) {
+		goto bail;
+	}
+	ar = new AttributeReference();
+	ar->absolute = (flags & abs_mask) != 0;
+	if (flags & small_mask) {
+		if ( ! stm.readSmallString(ar->attributeStr)) {
+			goto bail;
+		}
+	} else {
+		if ( ! stm.readString(ar->attributeStr)) {
+			goto bail;
+		}
+	}
+	if (flags & expr_mask) {
+		ar->expr = ExprTree::Make(stm);
+		if ( ! ar->expr) goto bail;
+	}
+	return ar;
+
+bail:
+	if (ar) delete ar;
+	return NULL;
+}
+
+unsigned int AttributeReference::Pickle(ExprStreamMaker & stm, bool compact) const
+{
+	ExprStreamMaker::Mark mk = stm.mark();
+	const unsigned char small_mask = (ExprStream::SmallAttr & ~ExprStream::AttrBase);
+	unsigned int len = attributeStr.length();
+	unsigned char ct = ExprStream::AttrBase;
+	if (compact && (len < 256)) ct = ExprStream::SmallAttr;
+
+	// note if the expr is not null, then absolute MUST be false. 
+	if (expr) ct |= ExprStream::ExprAttr;
+	else if (absolute) ct |= ExprStream::AbsAttr;
+
+	stm.putByte(ct);
+	if (ct & small_mask) { // if Small
+		stm.putByte((unsigned char)len);
+		stm.putBytes(attributeStr.data(), len);
+	} else {
+		stm.putString(attributeStr);
+	}
+	if (expr) { expr->Pickle(stm, compact); }
+	return stm.added(mk);
+}
+
+#endif
+
+
 } // classad

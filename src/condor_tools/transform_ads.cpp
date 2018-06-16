@@ -68,7 +68,9 @@ static struct _testing_options {
 	int repeat_count;
 	bool no_output;
 	bool enabled;
-} testing = {0, false, false};
+	bool buffer_all_input;
+	bool use_classad_cache;
+} testing = {0, false, false, false, false};
 
 class CondorQClassAdFileParseHelper;
 class MacroStreamXFormSource;
@@ -132,6 +134,8 @@ bool LoadJobRouterDefaultsAd(ClassAd & ad);
 #else
 void write_output_epilog(FILE* outfile, ClassAdFileParseType::ParseType out_format, int cNonEmptyOutputAds);
 #endif
+
+int DumpAds(input_file & input, const char * constraint, FILE* outfile);
 
 #if 0
 char * local_param( const char* name, const char* alt_name );
@@ -334,6 +338,7 @@ main( int argc, const char *argv[] )
 	ClassAdFileParseType::ParseType def_ads_format = UNSPECIFIED_PARSE_TYPE;
 	std::vector<input_file> inputs;
 	std::vector<const char *> rules;
+	bool dash_no_rules = false;
 	const char *job_match_constraint = NULL;
 
 #ifdef USE_XFORM_UTILS
@@ -379,6 +384,8 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "debug", 2)) {
 				// dprintf to console
 				dprintf_set_tool_debug("TOOL", 0);
+			} else if (is_dash_arg_prefix(ptr[0], "norules", 3)) {
+				dash_no_rules = true;
 			} else if (is_dash_arg_prefix(ptr[0], "rules", 1)) {
 				const char * pfilearg = ptr[1];
 				if ( ! pfilearg || (*pfilearg == '-' && (MATCH != strcmp(pfilearg,"-"))) ) {
@@ -396,7 +403,11 @@ main( int argc, const char *argv[] )
 				++ixArg; ++ptr;
 				ClassAdFileParseType::ParseType in_format = def_ads_format;
 				if (pcolon) {
-					in_format = parseAdsFileFormat(pcolon, in_format);
+					if (is_arg_prefix(pcolon+1, "binary", 3)) {
+						in_format = (ClassAdFileParseType::ParseType)99;
+					} else {
+						in_format = parseAdsFileFormat(pcolon+1, in_format);
+					}
 				}
 				inputs.push_back(input_file(pfilearg, in_format));
 			} else if (is_dash_arg_colon_prefix(ptr[0], "out", &pcolon, 1)) {
@@ -414,6 +425,8 @@ main( int argc, const char *argv[] )
 					for (const char * opt = opts.first(); opt; opt = opts.next()) {
 						if (YourString(opt) == "nosort") {
 							DashOutAttrsInHashOrder = true;
+						} else if (is_arg_prefix(opt, "binary", 3)) {
+							out_format = (ClassAdFileParseType::ParseType)99;
 						} else {
 							out_format = parseAdsFileFormat(opt, out_format);
 						}
@@ -455,6 +468,10 @@ main( int argc, const char *argv[] )
 							testing.repeat_count = (pcolon) ? atoi(++pcolon) : 100;
 						} else if (is_arg_prefix(opt, "nooutput", 5)) {
 							testing.no_output = true;
+						} else if (is_arg_prefix(opt, "inbuf", 5)) {
+							testing.buffer_all_input = true;
+						} else if (is_arg_prefix(opt, "cache", 5)) {
+							testing.use_classad_cache = true;
 						}
 					}
 				}
@@ -513,9 +530,11 @@ main( int argc, const char *argv[] )
 	std::string errmsg = "";
 	MacroStreamXFormSource ms;
 	if (rules.empty()) {
-		fprintf(stderr, "ERROR : no transform rules file specified.\n");
-		Usage(stderr);
-		exit(1);
+		if ( ! dash_no_rules) {
+			fprintf(stderr, "ERROR : no transform rules file specified.\n");
+			Usage(stderr);
+			exit(1);
+		}
 	} else if (rules.size() > 1) {
 		// TODO: allow multiple rules files?
 		fprintf(stderr, "ERROR : too many transform rules file specified.\n");
@@ -565,12 +584,28 @@ main( int argc, const char *argv[] )
 	FILE* outfile = stdout;
 	bool  close_outfile = false;
 	if (DashOutName && ! (YourString(DashOutName) == "-")) {
-		outfile = safe_fopen_wrapper_follow(DashOutName,"w");
+		outfile = safe_fopen_wrapper_follow(DashOutName, "w");
 		if ( ! outfile) {
 			fprintf( stderr, "ERROR: Failed to open output file (%s)\n", strerror(errno));
 			exit(1);
 		}
 		close_outfile = true;
+	}
+
+	// special case for testing binary ad persistence.
+	if (dash_no_rules || (DashOutFormat == (ClassAdFileParseType::ParseType)99)) {
+
+		for (size_t ixInput = 0; ixInput < inputs.size(); ++ixInput) {
+			// use default parse format if input file still has an unspecifed one.
+			if (inputs[ixInput].parse_format == UNSPECIFIED_PARSE_TYPE) { inputs[ixInput].parse_format = def_ads_format; }
+			rval = DumpAds(inputs[ixInput], job_match_constraint, outfile);
+		}
+
+		if (close_outfile) {
+			fclose(outfile);
+			outfile = NULL;
+		}
+		return rval;
 	}
 
 	// if no default parse format has been specified for the input files, choose auto
@@ -1837,6 +1872,201 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 	return true;
 }
 #endif
+
+static char * read_file_into_buffer(FILE * file, int & size)
+{
+	// Get size of file, allocate buffer
+	struct stat stat_buf;
+	if (fstat(fileno(file), &stat_buf) == -1) {
+		return NULL;
+	}
+
+	size = stat_buf.st_size;
+	char *buf = ((char*)malloc(size+1));
+	if ( ! buf) {
+		return NULL;
+	}
+	int num_read = fread(buf, 1, size, file);
+	if (num_read < 0) {
+		free(buf);
+		buf = NULL;
+	}
+	buf[size] = 0; // force a null termination in case we end up text parsing.
+	return buf;
+}
+
+int DumpAds(input_file & input, const char * constr, FILE* outfile)
+{
+	int rval = 0;
+
+	classad::ExprTree * constraint = NULL;
+	if (constr) {
+		if (ParseClassAdRvalExpr(constr, constraint, 0)) {
+			fprintf (stderr, "Error parsing constraint expression: %s", constr);
+			return -1;
+		}
+	}
+
+	FILE* file;
+	bool close_file = false;
+	if (MATCH == strcmp(input.filename, "-")) {
+		file = stdin;
+		close_file = false;
+	} else {
+		file = safe_fopen_wrapper_follow(input.filename, "rb");
+		if (file == NULL) {
+			fprintf(stderr, "Can't open file of ClassAds: %s\n", input.filename);
+			return false;
+		}
+		close_file = true;
+	}
+
+	classad::ExprStreamMaker maker;
+	CondorClassAdListWriter * writ = NULL;
+	if (DashOutFormat != (ClassAdFileParseType::ParseType)99) {
+		writ = new CondorClassAdListWriter(DashOutFormat);
+	} else {
+		maker.grow(16384);
+	#ifdef WIN32
+		// we don't want 0x0A bytes to be changed to \r\n, so put the file in binary mode
+		setmode(fileno(outfile),O_BINARY);
+	#endif
+	}
+
+	if (input.parse_format == (ClassAdFileParseType::ParseType)99) {
+		int size = 0;
+		char * buf = read_file_into_buffer(file, size);
+		if ( ! buf) {
+			rval = -1;
+			if (close_file) { fclose(file); file = NULL; }
+		} else {
+			auto_free_ptr tmp(buf);
+			classad::ExprStream stm(buf, size);
+			ClassAd* ad;
+			stm.skipComments();
+			while ((ad = ClassAd::Make(stm))) {
+
+				if (writ) {
+					if ( ! testing.no_output) { rval = writ->writeAd(*ad, outfile, NULL, DashOutAttrsInHashOrder); }
+				} else {
+					ad->Pickle(maker, "libel", NULL, false);
+					if ( ! testing.no_output) { fwrite(maker.data(), maker.size(), 1, outfile); }
+					maker.clear();
+				}
+
+				delete ad;
+				if (rval < 0)
+					break;
+				stm.skipComments();
+			}
+		}
+
+	} else if (testing.buffer_all_input && (ClassAdFileParseType::ParseType::Parse_long == input.parse_format)) {
+		// read all of the input data into memory before parsing.
+		int size = 0;
+		char * buf = read_file_into_buffer(file, size);
+		if ( ! buf) {
+			rval = -1;
+			if (close_file) { fclose(file); file = NULL; }
+		} else {
+			std::string attr; attr.reserve(100); // hoist out of loop for use by InsertLongFormAttrValue
+			bool end_of_ad = false;
+			buf[size] = 0; // null terminate
+			MyStringCharSource src(buf);
+			MyString line;
+			ClassAd * ad = NULL;
+			for (;;) {
+				if ( ! src.readLine(line, false)) {
+					if (src.isEof()) {
+						// last ad
+						end_of_ad = true;
+					} else {
+						// error
+					}
+					break;
+				}
+
+				// blank lines are ad delimiters
+				if ( ! end_of_ad) {
+					const char * p = line.c_str();
+					while (*p && isspace(*p)) ++p;
+					end_of_ad = ( ! *p || *p == '\n');
+				}
+				if (end_of_ad) {
+					// process the ad
+					if (ad) {
+						if (writ) {
+							if ( ! testing.no_output) { rval = writ->writeAd(*ad, outfile, NULL, DashOutAttrsInHashOrder); }
+						} else {
+							ad->Pickle(maker, "loble", NULL, false);
+							if ( ! testing.no_output) { fwrite(maker.data(), maker.size(), 1, outfile); }
+							maker.clear();
+						}
+
+						delete ad; ad = NULL;
+					}
+					if (src.isEof()) { break; }
+					end_of_ad = false;
+					continue;
+				} else {
+
+					int ee = 1;
+					// default is to skip blank lines and comment lines
+					for (int ix = 0; ix < line.size(); ++ix) {
+						if (line[ix] == '#' || line[ix] == '\n') {
+							ee = 0; // skip blank line or comment
+							break;
+						}
+						// ignore leading whitespace.
+						if (line[ix] == ' ' || line[ix] == '\t') {
+							continue;
+						}
+						ee = 1; // 1 is parse
+						break;
+					}
+					if (ee == 0) // comment or blank line, skip it and read the next
+						continue;
+				}
+
+				if ( ! ad) { ad = new ClassAd(); }
+				if (testing.use_classad_cache) {
+					const char * rhs = NULL;
+					if (SplitLongFormAttrValue(line.c_str(), attr, rhs)) {
+						ad->InsertViaCache(attr, rhs);
+					} else {
+						break;
+					}
+				} else {
+					ad->Insert(line.c_str());
+				}
+			}
+		}
+
+	} else {
+
+		CondorClassAdFileIterator adIter;
+		if ( ! adIter.begin(file, close_file, input.parse_format)) {
+			rval = -1; // unexpected error.
+			if (close_file) { fclose(file); file = NULL; }
+		} else {
+			ClassAd * ad;
+			while ((ad = adIter.next(constraint))) {
+				if (writ) {
+					if ( ! testing.no_output) { rval = writ->writeAd(*ad, outfile, NULL, DashOutAttrsInHashOrder); }
+				} else {
+					ad->Pickle(maker, "label", NULL, false);
+					if ( ! testing.no_output) { fwrite(maker.data(), maker.size(), 1, outfile); }
+					maker.clear();
+				}
+
+				delete ad;
+				if (rval < 0)
+					break;
+			}
+		}
+	}
+	return rval;
+}
 
 
 #ifdef USE_XFORM_UTILS

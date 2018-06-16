@@ -56,6 +56,239 @@ bool ClassAdGetExpressionCaching();
 extern bool _useOldClassAdSemantics;
 void SetOldClassAdSemantics(bool enable);
 
+#ifdef TJ_PICKLE
+
+class ExprStream
+{
+	const unsigned char * base;
+	unsigned int    cb;
+	unsigned int    off;
+public:
+	ExprStream() : base(NULL), cb(0), off(0) {}
+	ExprStream(const unsigned char * ptr, unsigned int size) : base(ptr), cb(size), off(0) {}
+	ExprStream(const char * ptr, unsigned int size) : base((const unsigned char*)ptr), cb(size), off(0) {}
+	ExprStream(const ExprStream & that) : base(that.base), cb(that.cb), off(that.off) {}
+
+	enum {
+		LitBase  = 0x80, // Literal/Value types, there are 11 base value types
+		ByteValBase  = 0x90, // compact representation of common values, followed by 0, 1, 2, or 4 byte value.
+		ByteValNull  = ByteValBase, // 
+		ByteValError = ByteValBase | 0x01,
+		ByteValUndef = ByteValBase | 0x02,
+		ByteValFalse = ByteValBase | 0x04,
+		ByteValTrue  = ByteValBase | 0x05,
+		ByteValZero  = ByteValBase | 0x06,
+		ByteValOne   = ByteValBase | 0x07,
+		SmallInt     = ByteValBase | 0x08, // 8=byte, 9=int16, a=int32
+		SmallFloat   = ByteValBase | 0x0c, // c=byte, d=int16, e=int32
+		SmallString  = ByteValBase | 0x0f, // 1 byte count, followed by string value
+
+		OpBase   = 0xA0, // Operation, there are 28 op codes so 0xA0 to 0xBB are used
+
+		Comment  = 0xC0,   // a small, length prefixed string that exists within the ExprStream, but is skipped when parsing ads
+		BigComment = 0xC1, // also a string, but with a 32 bit length
+		ClassAd  = 0xCA,   // a top level classad (a nested ad would one of Hash or BigHash below)
+						   // top level ads have overall size field and a label field useful for scanning quickly
+
+		AttrBase = 0xE0, // AttributeReference, bits 0 & 1 encode absolute flag and presence of expression
+		AbsAttr  = AttrBase | 0x01, // AttributeReference absolute=true, expr=null.  i.e. .foo     (this is very uncommon)
+		ExprAttr = AttrBase | 0x02, // AttributeReference absolute=false, expr=<expression>.  i.e.  [ A=10; B=12; ].A
+		SmallAttr = AttrBase | 0x04, // simple attr of < 256 bytes
+		//TwoAttr  = ExprAttr | SmallAttr, // AttributeReference compact representation of MY.Name
+
+		PairBase = 0xE8 | 0x02, // attr=expr pair
+		SmallPair = PairBase | 0x04, // attr=expr where key is < 256 bytes in size.
+
+		// if token > TreeBase, then what follows is an expr tree.
+		// for Literal,AttributReferences and Operations, compact representation above is preferred.
+		TreeBase = 0xF0,            // 
+		LitTree  = TreeBase,        // LITERAL_NODE, used only when not using LitBase or ByteValBase above
+		AttrTree = TreeBase | 0x01, // ATTRREF_NODE
+		OpTree   = TreeBase | 0x02, // OP_NODE
+		Call     = TreeBase | 0x03, // FN_CALL with < 256 arguments and function name < 256 bytes
+		Hash     = TreeBase | 0x04, // ClassAd with < 256 attributes
+		List     = TreeBase | 0x05, // ExprList with < 256 items
+		BigCall  = Call | 0x08,     // FN_CALL with function name > 255 characters or > 255 arguments
+		BigHash  = Call | 0x08,     // ClassAd with > 255 items
+		BigList  = List | 0x08,     // ExprList with > 255 items
+		NullTree = 0xFF,            // use to store a NULL rather than an expression (this is not the same as NULL_VALUE)
+	};
+
+	class Mark {
+		unsigned int m;
+		Mark() : m(0) {}
+		Mark(unsigned int o) : m(o) {}
+		Mark &operator=(const Mark & that) { m = that.m; return *this; }
+		friend class ExprStream;
+	};
+
+	Mark mark() const {
+		Mark mk(off);
+		return mk;
+	}
+	void unwind(const Mark & mk) {
+		if (mk.m <= cb) off = mk.m;
+	}
+
+	bool empty() const { return cb == 0 || off >= cb; }
+	bool hasBytes(unsigned int cch) const {
+		if ( ! base) return false;
+		return (off+cch) <= cb;
+	}
+
+	bool peekByte(unsigned char & b) const {
+		if (off >= cb)
+			return false;
+		b = base[off];
+		return true;
+	}
+
+	bool readByte(unsigned char & b) {
+		if (off >= cb)
+			return false;
+		b = base[off];
+		++off;
+		return true;
+	}
+
+	const char* readChars(unsigned int cch, std::string * attr = NULL) {
+		if ( ! hasBytes(cch)) return NULL;
+		const char * p = (const char *)(base+off);
+		if (attr) { attr->assign(p, cch); }
+		off += cch;
+		return p;
+	}
+
+	const unsigned char *readBytes(unsigned int size, ExprStream * stm = NULL) {
+		if ( ! hasBytes(size)) return NULL;
+		const unsigned char * p = base+off;
+		if (stm) { stm->base = p; stm->off = 0; stm->cb = size; }
+		off += size;
+		return p;
+	}
+
+	//const unsigned char * ptr(unsigned int size) const { return hasBytes(size) ? (base+off) : NULL; }
+	//const char * char_ptr(unsigned int cch) const { return (const char *)ptr(cch); }
+
+	template <typename T>
+	bool readInteger(T & val) {
+		if ( ! hasBytes(sizeof(val)))
+			return false;
+		//PRAGMA_REMIND("do network byte order here?")
+		val = *(T *)(const_cast<unsigned char *>(base)+off);
+		off += sizeof(val);
+		return true;
+	}
+
+	bool readString(std::string & str) {
+		unsigned int cch = 0;
+		if ( ! readInteger(cch))
+			return false;
+		return readChars(cch, &str);
+	}
+
+	bool readSmallString(std::string & str) {
+		unsigned char cch = 0;
+		if ( ! readByte(cch))
+			return false;
+		return readChars(cch, &str);
+	}
+
+	bool readStream(ExprStream & stm) {
+		unsigned int cbs = 0;
+		if ( ! readInteger(cbs))
+			return false;
+		return readBytes(cbs, &stm);
+	}
+
+	bool readNullableExpr(ExprTree* & tree);
+
+	bool skipStream() {
+		unsigned int cbs = 0;
+		if ( ! readInteger(cbs))
+			return false;
+		return readBytes(cbs, NULL);
+	}
+	bool skipSmall() {
+		unsigned char cbs = 0;
+		if ( ! readByte(cbs))
+			return false;
+		return readBytes(cbs, NULL);
+	}
+	bool skipComments();
+
+};
+
+class ExprStreamMaker
+{
+	unsigned char * base;
+	unsigned int    cbAlloc;
+	unsigned int    off;
+
+public:
+
+	ExprStreamMaker() : base(NULL), cbAlloc(0), off(0) {}
+	~ExprStreamMaker() {
+		if (base) free(base);
+		base = NULL; cbAlloc = 0; off = 0;
+	}
+
+	class Mark {
+		unsigned int off;
+		unsigned int siz;
+		Mark() : off(0), siz(0) {}
+		Mark(unsigned int o, unsigned int s) : off(o), siz(s) {}
+		Mark &operator=(const Mark & that) { off = that.off; siz = that.siz; return *this; }
+		friend class ExprStreamMaker;
+		friend class ClassAd;
+	};
+
+	unsigned char * data() { return base; }
+	unsigned int size() { return off; }
+
+	Mark mark() const { return Mark(off, 0); }
+	unsigned int added(Mark & mk) const { return off - mk.off; }
+
+	template <typename T> Mark mark(T s) {
+		if (off+s > cbAlloc) grow();
+		Mark mk(off, sizeof(s));
+		off += sizeof(s);
+		return mk;
+	}
+
+	template <typename T> void updateAt(const Mark& mk, T val) {
+		if (mk.off+sizeof(T) < off && mk.siz >= sizeof(T)) {
+			*(T*)(base+mk.off) = val;
+		}
+	}
+
+	void grow(unsigned int min_size=100);
+	void clear() { off = 0; }
+
+	template <typename T> void putInteger(T val) {
+		if (off + sizeof(T) > cbAlloc) grow();
+		*(T*)(base+off) = val;
+		off += sizeof(val);
+	}
+
+	void putByte(unsigned char b) {
+		if (off+1 > cbAlloc) grow();
+		base[off] = b;
+		++off;
+	}
+
+	void putBytes(const unsigned char * p, unsigned int size);
+	void putBytes(const char * p, unsigned int size) { putBytes((const unsigned char*)p, size); }
+
+	void putString(const std::string & str); // put int32 string size followed by string
+	void putSmallString(const std::string & str); // put byte string size followed by string
+	unsigned int putNullableExpr(ExprTree* tree, bool compact); // put expression size followed by expression
+
+	unsigned int putPair(AttrList::const_iterator itr, bool compact);
+};
+
+#endif
+
 /// The ClassAd object represents a parsed %ClassAd.
 class ClassAd : public ExprTree
 {
@@ -110,6 +343,14 @@ class ClassAd : public ExprTree
 		bool Insert( const std::string& attrName, ExprTree *& pRef, bool cache=true);
 		bool Insert( const std::string& attrName, ClassAd *& expr, bool cache=true );
 		bool Insert( const std::string& serialized_nvp);
+#endif
+
+#ifdef TJ_PICKLE
+		static ClassAd* Make(ExprStream & stm, std::string * label=NULL);
+		bool Update(ExprStream & stm);
+		unsigned int Pickle(ExprStreamMaker & stm, bool compact, References * whitelist) const;
+		// for writing top level classads
+		unsigned int Pickle(ExprStreamMaker & stm, const std::string & label, References * whitelist, bool flatten) const;
 #endif
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is

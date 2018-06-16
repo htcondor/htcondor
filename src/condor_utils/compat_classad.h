@@ -103,6 +103,10 @@ class ClassAd : public classad::ClassAd
 		/** A constructor that reads old ClassAds from a FILE */
 	ClassAd(FILE*,const char*delim,int&isEOF,int&error,int&empty);	// Constructor, read from file.
 
+#ifdef TJ_PICKLE
+	static ClassAd* Make(classad::ExprStream & stm, std::string * label=NULL);
+#endif
+
 		/* helper for constructor that reads from file 
 		 * returns number of attributes added, 0 if none, -1 if parse error
 		 */

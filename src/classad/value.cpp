@@ -86,6 +86,307 @@ _Clear()
 	factor = NO_FACTOR;
 }
 
+#ifdef TJ_PICKLE
+
+bool UpdateClassad(classad::ClassAd & ad, ExprStream & stm)
+{
+	return ad.Update(stm);
+}
+
+bool Value::Set(ExprStream & stm)
+{
+	if (valueType & VALUE_OWNS_POINTER) { _Clear(); }
+
+	ExprStream::Mark mk = stm.mark();
+	unsigned char t = 0;
+	if ( ! stm.readByte(t) || t < ExprStream::LitBase || t > ExprStream::SmallString) {
+		goto bail;
+	}
+
+	// check for compact representations
+	if (t >= ExprStream::ByteValBase) {
+		bool success = true;
+		// do compact representations
+		if (t == ExprStream::SmallString) {
+			unsigned char cch = 0;
+			if ( ! stm.readByte(cch) || ! stm.hasBytes(cch)) {
+				goto bail;
+			}
+			valueType = STRING_VALUE;
+			strValue = new string(stm.readChars(cch), cch);
+			success = true;
+		} else if (t >= ExprStream::SmallInt) {
+			bool is_float = (t&4) != 0;
+			int ival = 0;
+			switch (t&3) {
+			case 0: {
+				signed char ival8;
+				if ( ! stm.readInteger(ival8)) goto bail;
+				ival = ival8;
+				} break;
+			case 1: {
+				signed short ival16;
+				if ( ! stm.readInteger(ival16)) goto bail;
+				ival = ival16;
+				} break;
+			case 2: {
+				if ( ! stm.readInteger(ival)) goto bail;
+				} break;
+			}
+			if (is_float) {
+				valueType = REAL_VALUE;
+				realValue = ival;
+			} else {
+				valueType = INTEGER_VALUE;
+				integerValue = ival;
+			}
+			success = true;
+		} else {
+			switch (t) {
+			case ExprStream::ByteValNull:  valueType = NULL_VALUE; integerValue = 0; break;
+			case ExprStream::ByteValError: valueType = ERROR_VALUE; integerValue = 0; break;
+			case ExprStream::ByteValUndef: valueType = UNDEFINED_VALUE; integerValue = 0; break;
+			case ExprStream::ByteValFalse: valueType = BOOLEAN_VALUE; booleanValue = false; break;
+			case ExprStream::ByteValTrue:  valueType = BOOLEAN_VALUE; booleanValue = true; break;
+			case ExprStream::ByteValZero:  valueType = INTEGER_VALUE; integerValue = 0; break;
+			case ExprStream::ByteValOne:   valueType = INTEGER_VALUE; integerValue = 1; break;
+			default: success = false; break;
+			}
+		}
+		if (success) { factor = NO_FACTOR; }
+		return success;
+	}
+
+	t -= ExprStream::LitBase;
+	valueType = t ? (ValueType)(1<<(t-1)) : NULL_VALUE;
+	factor = NO_FACTOR;
+	switch (valueType) {
+	case BOOLEAN_VALUE:
+		if ( ! stm.readByte(t) || t > 1) {
+			goto bail;
+		}
+		booleanValue = t ? true : false;
+		break;
+
+	case INTEGER_VALUE:
+	case REAL_VALUE:
+	case RELATIVE_TIME_VALUE:
+		if ( ! stm.readInteger(integerValue) || ! stm.readByte(t) || t > NumberFactor::T_FACTOR) {
+			goto bail;
+		}
+		factor = (NumberFactor)t;
+		break;
+
+	case ABSOLUTE_TIME_VALUE: {
+			abstime_t tm;
+			if ( ! stm.readInteger(tm.secs) || ! stm.readInteger(tm.offset)) {
+				goto bail;
+			}
+			absTimeValueSecs = new abstime_t();
+			*absTimeValueSecs = tm;
+		} break;
+
+	case STRING_VALUE: {
+			unsigned int cch = INT_MAX;
+			if ( ! stm.readInteger(cch) || ! stm.hasBytes(cch)) {
+				goto bail;
+			}
+			strValue = new string(stm.readChars(cch), cch);
+		} break;
+
+	case CLASSAD_VALUE: {
+			ExprStream stm2;
+			if ( ! stm.readStream(stm2)) {
+				goto bail;
+			}
+			classadValue = new ClassAd();
+			if ( ! UpdateClassad(*classadValue, stm2)) {
+				goto bail;
+			}
+		} break;
+
+	case LIST_VALUE:
+	case SLIST_VALUE: {
+			ExprStream stm2;
+			if ( ! stm.readStream(stm2)) {
+				goto bail;
+			}
+			ExprList *lst = ExprList::Make(stm2);
+			if ( ! lst)
+				goto bail;
+			if (valueType == SLIST_VALUE) {
+				slistValue = new  classad_shared_ptr<ExprList>(lst);
+			} else {
+				listValue = lst;
+			}
+		} break;
+
+	default:
+		// nothing more to read from the stream.
+		break;
+	}
+
+	return true;
+bail:
+	_Clear();
+	stm.unwind(mk);
+	return false;
+}
+
+
+
+unsigned int Value::Pickle(ExprStreamMaker & stm, bool compact) const
+{
+	ExprStreamMaker::Mark mk = stm.mark();
+
+	// handle the compact cases
+	if (compact && (valueType & (NULL_VALUE|ERROR_VALUE|UNDEFINED_VALUE|BOOLEAN_VALUE|INTEGER_VALUE|REAL_VALUE|STRING_VALUE))) {
+		if (valueType == STRING_VALUE) {
+			size_t len = 0;
+			if (strValue) len = strValue->length();
+			if (len < 255) {
+				unsigned char cch = 0;
+				stm.putByte(ExprStream::SmallString);
+				stm.putByte((unsigned char)len);
+				if (len) stm.putBytes(strValue->data(), len);
+				return stm.added(mk);
+			}
+		} else {
+
+			int ival = 0;
+			unsigned char ct = 0;
+
+			switch (valueType) {
+			case NULL_VALUE:      ct = ExprStream::ByteValNull; break;
+			case ERROR_VALUE:	  ct = ExprStream::ByteValError; break;
+			case UNDEFINED_VALUE: ct = ExprStream::ByteValUndef; break;
+			case BOOLEAN_VALUE:   ct = booleanValue ? ExprStream::ByteValTrue : ExprStream::ByteValFalse; break;
+			case INTEGER_VALUE:
+				if (integerValue == 0) {
+					ct = ExprStream::ByteValZero;
+				} else if (integerValue == 1) {
+					ct = ExprStream::ByteValOne;
+				} else {
+					ival = (int)integerValue;
+					if (ival == integerValue) { ct = ExprStream::SmallInt; }
+				}
+				break;
+			case REAL_VALUE:
+				ival = (int)realValue;
+				if (ival == realValue) { ct = ExprStream::SmallFloat; }
+				break;
+			}
+
+			// if a compact type, write it now, otherwise fall through to do non-compact
+			if (ct) {
+				if (ct < ExprStream::SmallInt) {
+					stm.putByte(ct);
+				} else {
+					signed char ival8 = (signed char)ival;
+					signed short int ival16 = (signed short int)ival;
+					if (ival8 == ival) {
+						stm.putByte(ct);
+						stm.putInteger(ival8);
+					} else if (ival16 == ival) {
+						stm.putByte(ct+1);
+						stm.putInteger(ival16);
+					} else {
+						stm.putByte(ct+2);
+						stm.putInteger(ival);
+					}
+				}
+				return stm.added(mk);
+			}
+		}
+	}
+
+	//unsigned char t = 0;
+	switch (valueType) {
+		case NULL_VALUE:
+			stm.putByte(ExprStream::LitBase + 0);
+			break;
+
+		case ERROR_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+0);
+			break;
+
+		case UNDEFINED_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+1);
+			break;
+
+		case BOOLEAN_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+2);
+			stm.putByte(booleanValue ? 0 : 1);
+			break;
+
+		case INTEGER_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+3);
+			stm.putInteger(integerValue);
+			stm.putByte((unsigned char)factor);
+			break;
+
+		case REAL_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+4);
+			stm.putInteger(integerValue);
+			stm.putByte((unsigned char)factor);
+			break;
+
+		case RELATIVE_TIME_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+5);
+			stm.putInteger(integerValue);
+			stm.putByte((unsigned char)factor);
+			break;
+
+		case ABSOLUTE_TIME_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+6);
+			stm.putInteger(absTimeValueSecs->secs);
+			stm.putInteger(absTimeValueSecs->offset);
+			break;
+
+		case STRING_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+7);
+			{
+				unsigned int cch = 0;
+				if (strValue) { cch = (unsigned int)strValue->size(); }
+				stm.putInteger(cch);
+				if (cch) { stm.putBytes(strValue->data(), cch); }
+			}
+			break;
+
+		case CLASSAD_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+8);
+			{
+				unsigned int cb = 0;
+				ExprStreamMaker::Mark mkSize = stm.mark(sizeof(cb));
+				cb = classadValue->Pickle(stm, compact, NULL);
+				stm.updateAt(mkSize, cb);
+			}
+			break;
+
+		case LIST_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+9);
+			{
+				unsigned int cb = 0;
+				ExprStreamMaker::Mark mkSize = stm.mark(sizeof(cb));
+				cb = listValue->Pickle(stm, compact);
+				stm.updateAt(mkSize, cb);
+			}
+			break;
+
+		case SLIST_VALUE:
+			stm.putByte(ExprStream::LitBase + 1+10);
+			{
+				unsigned int cb = 0;
+				ExprStreamMaker::Mark mkSize = stm.mark(sizeof(cb));
+				cb = listValue->Pickle(stm, compact);
+				stm.updateAt(mkSize, cb);
+			}
+			break;
+	}
+
+	return stm.added(mk);
+}
+#endif
 
 bool Value::
 IsNumber (int &i) const

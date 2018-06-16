@@ -141,6 +141,18 @@ class Literal : public ExprTree
 			return lit;
 		}
 
+#ifdef TJ_PICKLE
+		static Literal * Make(ExprStream & stm) {
+			Literal* lit = new Literal();
+			if (lit) {
+				if ( ! lit->value.Set(stm)) { delete lit; lit = NULL; }
+			}
+			return lit;
+		}
+		bool Set(ExprStream & stm) { return value.Set(stm); }
+		unsigned int Pickle(ExprStreamMaker & stm, bool compact) const { return value.Pickle(stm, compact); }
+#endif
+
 		/// optimized value replacers
 		void SetBool(bool val) { value.SetBooleanValue(val); }
 		void SetReal(double val) { value.SetRealValue(val); }

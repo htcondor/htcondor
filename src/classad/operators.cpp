@@ -1768,6 +1768,75 @@ MakeOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
 	return( opnode );
 }
 
+#ifdef TJ_PICKLE
+
+// op stream is
+// BYTE : OpKind + 0xA
+// STREAM : tree1
+// if ! unary op
+//    STREAM : tree2
+//    if trinary op
+//       STREAM : tree3
+//    endif
+// endif
+//
+
+/*static*/ Operation * Operation::Make(ExprStream & stm)
+{
+	int err = 0;
+	ExprTree * e1=NULL, *e2=NULL, *e3=NULL;
+	unsigned char tag = 0;
+	if ( ! stm.readByte(tag) || tag < (__FIRST_OP__ + ExprStream::OpBase) || tag > (__LAST_OP__ + ExprStream::OpBase)) {
+		return NULL;
+	}
+	OpKind op = (OpKind)(tag - ExprStream::OpBase);
+	e1 = ExprTree::Make(stm, true, &err);
+	if (err) goto bail;
+	if (op == PARENTHESES_OP) {
+		return new OperationParens(e1);
+	} else if (op == UNARY_PLUS_OP || op == UNARY_MINUS_OP || op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP) {
+		return new Operation1(op, e1);
+	} else {
+		// for the ternary op, e2 will be NULL if using the A?:B form
+		e2 = ExprTree::Make(stm, true, &err);
+		if (err) goto bail;
+		if (op == TERNARY_OP) {
+			e3 = ExprTree::Make(stm, true &err);
+			if (err) goto bail;
+			return new Operation3(e1, e2, e3);
+		}
+		return new Operation2(op, e1, e2);
+	}
+
+bail:
+	if (e1) delete e1;
+	if (e2) delete e2;
+	if (e3) delete e3;
+	return NULL;
+}
+
+unsigned int Operation::Pickle(ExprStreamMaker & stm, bool compact) const
+{
+	ExprStreamMaker::Mark mk = stm.mark();
+	OpKind op = __NO_OP__;
+	ExprTree * e1 = NULL, *e2 = NULL, *e3 = NULL;
+	GetComponents(op, e1, e2, e3);
+	stm.putByte((unsigned char)(op + ExprStream::OpBase));
+	stm.putNullableExpr(e1, compact);
+	if (op == PARENTHESES_OP || op == UNARY_PLUS_OP || op == UNARY_MINUS_OP || op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP) {
+		// these are unary ops
+	} else {
+		stm.putNullableExpr(e2, compact);
+		if (op == TERNARY_OP) {
+			stm.putNullableExpr(e3, compact);
+		}
+	}
+
+	return stm.added(mk);
+}
+
+#endif // TJ_PICKLE
+
 
 void Operation::
 GetComponents( OpKind &op, ExprTree *&e1, ExprTree *&e2, ExprTree *&e3 ) const

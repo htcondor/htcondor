@@ -31,6 +31,11 @@ class Literal;
 class ExprList;
 class ClassAd;
 
+#ifdef TJ_PICKLE
+class ExprStream;
+class ExprStreamMaker;
+#endif
+
 /// Represents the result of an evaluation.
 class Value 
 {
@@ -101,6 +106,11 @@ class Value
 			valueType 	= UNDEFINED_VALUE;
 			factor = NO_FACTOR;
 		}
+
+#ifdef TJ_PICKLE
+		bool Set(ExprStream & stm);
+		unsigned int Pickle(ExprStreamMaker & stm, bool compact) const;
+#endif
 
 		/** Copies the value of another value object.
 			@param v The value copied from.

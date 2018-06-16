@@ -452,6 +452,75 @@ MakeFunctionCall( const string &str, vector<ExprTree*> &args )
 	return( fc );
 }
 
+#ifdef TJ_PICKLE
+
+FunctionCall * FunctionCall::Make(ExprStream & stm)
+{
+	ExprStream stm2;
+	FunctionCall *fc = new FunctionCall;
+	if ( ! fc) return NULL;
+
+	unsigned int argc = 0;
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct)) { goto bail; }
+
+	if (ct == ExprStream::Call) {
+		unsigned char count = 0;
+		if ( ! stm.readSmallString(fc->functionName) || ! stm.readByte(count)) { goto bail; }
+		argc = count;
+	} else if (ct == ExprStream::BigCall) {
+		if ( ! stm.readString(fc->functionName) || ! stm.readInteger(argc)) { goto bail; }
+	} else {
+		goto bail;
+	}
+
+	fc->arguments.resize(argc);
+	for (unsigned int ii = 0; ii < argc; ++ii) {
+		if ( ! stm.readNullableExpr(fc->arguments[ii]))
+			goto bail;
+	}
+
+	// fill in function
+	{
+		FuncTable &functionTable = getFunctionTable();
+		FuncTable::iterator found = functionTable.find(fc->functionName);
+		if (found != functionTable.end( )) {
+			fc->function = (ClassAdFunc)found->second;
+		} else {
+			fc->function = NULL;
+		}
+	}
+
+	return fc;
+bail:
+	delete fc;
+	return NULL;
+}
+
+unsigned int FunctionCall::Pickle(ExprStreamMaker & stm, bool compact) const
+{
+	ExprStreamMaker::Mark mk = stm.mark();
+
+	unsigned int len = functionName.length();
+	unsigned int argc = arguments.size();
+	if (len > 255 || argc > 255) {
+		stm.putByte(ExprStream::BigCall);
+		stm.putString(functionName);
+		stm.putInteger(argc);
+	} else {
+		stm.putByte(ExprStream::Call);
+		stm.putSmallString(functionName);
+		stm.putByte((unsigned char)argc);
+	}
+
+	for (unsigned int ii = 0; ii < argc; ++ii) {
+		stm.putNullableExpr(arguments[ii], compact);
+	}
+	return stm.added(mk);
+}
+
+#endif
+
 
 void FunctionCall::
 GetComponents( string &fn, vector<ExprTree*> &args ) const
