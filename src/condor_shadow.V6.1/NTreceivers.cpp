@@ -2236,7 +2236,7 @@ case CONDOR_getdir:
 	{
 		dprintf( D_SECURITY, "ENTERING CONDOR_get_delegated_proxy syscall\n" );
 
-		char* rpc_proxy_source_path;
+		std::string rpc_proxy_source_path;
 		ClassAd* job_ad;
 		filesize_t bytes;
 		std::string job_ad_proxy_source_path;
@@ -2275,7 +2275,6 @@ case CONDOR_getdir:
 		// End of message, cleanup and return
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
-		free( rpc_proxy_source_path );
 		return put_x509_rc;
 	}
 
