@@ -2409,9 +2409,8 @@ JICShadow::beginFileTransfer( void )
 		MyString proxy_source_path;
 		job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_source_path );
 
-			// Get proxy expiration timestamp from the job ad
-		int proxy_expiration;
-		job_ad->LookupInteger( ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
+			// Get proxy expiration timestamp
+		time_t proxy_expiration = GetDesiredDelegatedJobCredentialExpiration( job_ad );
 
 			// Parse proxy filename
 		MyString proxy_filename = condor_basename( proxy_source_path.Value() );
