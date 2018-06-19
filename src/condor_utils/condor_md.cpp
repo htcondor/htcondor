@@ -24,13 +24,13 @@
 #include "condor_debug.h"
 
 #ifdef HAVE_EXT_OPENSSL
-#include <openssl/md5.h>
+#include <openssl/sha.h>
 #endif
 
 class MD_Context {
 public:
 #ifdef HAVE_EXT_OPENSSL
-    MD5_CTX          md5_;     // MD5 context
+    SHA256_CTX          sha256_;     // SHA256 context
 #endif
 };
 
@@ -58,7 +58,7 @@ Condor_MD_MAC :: ~Condor_MD_MAC()
 void Condor_MD_MAC :: init()
 {
 #ifdef HAVE_EXT_OPENSSL
-    MD5_Init(&(context_->md5_));
+    SHA256_Init(&(context_->sha256_));
     
     if (key_) {
         addMD(key_->getKeyData(), key_->getKeyLength());
@@ -71,7 +71,7 @@ unsigned char * Condor_MD_MAC::computeOnce(unsigned char * buffer, unsigned long
 #ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
 
-    return MD5(buffer, (unsigned long) length, md);
+    return SHA256(buffer, (unsigned long) length, md);
 #else
     return NULL;
 #endif
@@ -83,15 +83,15 @@ unsigned char * Condor_MD_MAC::computeOnce(unsigned char * buffer,
 {
 #ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
-    MD5_CTX  context;
+    SHA256_CTX  context;
 
-    MD5_Init(&context);
+    SHA256_Init(&context);
 
-    MD5_Update(&context, key->getKeyData(), key->getKeyLength());
+    SHA256_Update(&context, key->getKeyData(), key->getKeyLength());
 
-    MD5_Update(&context, buffer, length);
+    SHA256_Update(&context, buffer, length);
 
-    MD5_Final(md, &context);
+    SHA256_Final(md, &context);
 
     return md;
 #else
@@ -131,7 +131,7 @@ bool Condor_MD_MAC::verifyMD(unsigned char * md,
 void Condor_MD_MAC::addMD(const unsigned char * buffer, unsigned long length)
 {
 #ifdef HAVE_EXT_OPENSSL
-   MD5_Update(&(context_->md5_), buffer, length); 
+   SHA256_Update(&(context_->sha256_), buffer, length);
 #endif
 }
 
@@ -157,7 +157,7 @@ bool Condor_MD_MAC::addMDFile(const char * filePathName)
 	bool ok = true;
 	ssize_t count = read(fd, buffer, 1024*1024); 
 	while( count > 0) {
-		MD5_Update(&(context_->md5_), buffer, count); 
+		SHA256_Update(&(context_->sha256_), buffer, count);
 		memset(buffer, 0, 1024*1024);
 		count = read(fd, buffer, 1024*1024); 
 	}
@@ -182,7 +182,7 @@ unsigned char * Condor_MD_MAC::computeMD()
 #ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
     
-    MD5_Final(md, &(context_->md5_));
+    SHA256_Final(md, &(context_->sha256_));
 
     init(); // reinitialize for the next round
 

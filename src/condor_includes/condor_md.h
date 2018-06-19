@@ -21,7 +21,7 @@
 #ifndef CONDOR_MESSAGE_DIGEST_MAC
 #define CONDOR_MESSAGE_DIGEST_MAC
 
-static const int MAC_SIZE = 16;
+static const int MAC_SIZE = 32;
 
 #include "CryptKey.h"
 //----------------------------------------------------------------------
