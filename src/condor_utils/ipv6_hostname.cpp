@@ -86,11 +86,8 @@ bool init_local_hostname_impl()
 				local_ipaddr_initialized = true;
 			}
 		}
-	}
-
-	addrinfo_iterator ai;
-
-	if( ! nodns_enabled() ) {
+	} else if (!local_hostname_initialized) {
+		addrinfo_iterator ai;
 		const int MAX_TRIES = 20;
 		const int SLEEP_DUR = 3;
 		bool gai_success = false;
@@ -114,28 +111,26 @@ bool init_local_hostname_impl()
 		if(gai_success) {
 			addrinfo* info = ai.next();
 			if (info->ai_canonname) {
-				const char* name = info->ai_canonname;
-
-				const char* dotpos = strchr(name, '.');
-				if (dotpos) { // consider it as a FQDN
-					local_fqdn = name;
-					local_hostname = local_fqdn.substr(0, dotpos-name);
-				} else {
-					local_hostname = name;
-					local_fqdn = local_hostname;
-					MyString default_domain;
-					if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
-						if (default_domain[0] != '.')
-							local_fqdn += ".";
-						local_fqdn += default_domain;
-					}
-				}
-				dprintf(D_HOSTNAME, "hostname: %s\n", name);
-
+				local_hostname = info->ai_canonname;
 			}
 		}
 
 	}
+
+	int dotpos = local_hostname.FindChar('.');
+	if (dotpos >= 0) { // consider it as a FQDN
+		local_fqdn = local_hostname;
+		local_hostname.truncate(dotpos);
+	} else {
+		local_fqdn = local_hostname;
+		MyString default_domain;
+		if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
+			if (default_domain[0] != '.')
+				local_fqdn += ".";
+			local_fqdn += default_domain;
+		}
+	}
+	dprintf(D_HOSTNAME, "hostname: %s\n", local_fqdn.Value());
 
 	return true;
 }
