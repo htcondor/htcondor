@@ -6,17 +6,11 @@ if [ $? != 0 ] ; then
     echo "Please source the bosco_setenv script first."
 fi
 
-if [ `uname` = Darwin ] ; then
-    MD5SUM=md5
-else
-    MD5SUM=md5sum
-fi
-
 
 # Generate the password file, if it doesn't already exist 
 bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE`
 if [ ! -e $bosco_passwd_file ]; then
-    random_string=`echo $RANDOM | $MD5SUM | awk '{print $1}'`
+    random_string=`echo $RANDOM`
     condor_store_cred -p $random_string -f $bosco_passwd_file
 
     # Change the ownership of the normal passwdfile to the user in CONDOR_IDS
