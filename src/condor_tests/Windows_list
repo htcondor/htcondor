@@ -91,7 +91,7 @@ job_core_basic_par
 win_core_macros-dollardollar_van
 job_dagman_unlessexit
 job_filexfer_limitback_van
-job_filexfer_md5-remote_van
+job_filexfer_sha256-remote_van
 job_filexfer_output-withvacate_van
 job_filexfer_output_van
 job_filexfer_streamout_van

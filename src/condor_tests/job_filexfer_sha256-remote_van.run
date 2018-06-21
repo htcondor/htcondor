@@ -106,13 +106,9 @@ sub CreateSha256Data {
 
 	my $outnameSHA256 = $filenm . "sha256";
 
-	open(DATA,"<$filenm") || die "Can't open input file $!\n";
 	open(SHA256,">$outnameSHA256") || die "Can't open SHA256 output file $!\n";
 	my $datasha256 = Digest::SHA->new(256);
-
-	$datasha256->addfile(DATA);
-	close(DATA);
-
+	$datasha256->addfile($filenm);
 
 	my $hexsha256 = $datasha256->hexdigest;
 
