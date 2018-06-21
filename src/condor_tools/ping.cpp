@@ -95,7 +95,7 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 	if (strcasecmp(val.Value(), "no") == 0) {
 		printf("no integrity");
 	} else {
-		printf("MD5");
+		printf("SHA");
 	}
 
 	printf(", and ");
@@ -156,7 +156,7 @@ void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, Cl
 	if (strcasecmp(val.Value(), "no") == 0) {
 		printf("Integrity:                   none\n");
 	} else {
-		printf("Integrity:                   MD5\n");
+		printf("Integrity:                   SHA\n");
 	}
 
 	ad->LookupString("authentication", val);
@@ -217,7 +217,7 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 	if (strcasecmp(val.Value(), "no") == 0) {
 		val = "none";
 	} else {
-		val = "MD5";
+		val = "SHA";
 	}
 	printf("%10s", val.Value());
 
