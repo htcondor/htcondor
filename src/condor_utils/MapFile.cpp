@@ -447,7 +447,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 		offset = 0;
 		offset = ParseField(input_line, offset, method);
 #ifdef USE_MAPFILE_V2
-		if (method.Length() > 0 && method[0] == '#') continue; // ignore comment lines
+		if (method.Length() == 0 || method[0] == '#') continue; // ignore blank and comment lines
 		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
 		offset = ParseField(input_line, offset, principal, assume_hash ? &regex_opts : NULL);
 #else
@@ -556,7 +556,7 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 #ifdef USE_MAPFILE_V2
 		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
 		offset = ParseField(input_line, offset, canonicalization, assume_hash ? &regex_opts : NULL);
-		if (canonicalization.Length() > 0 && canonicalization[0] == '#') continue; // ignore comment lines
+		if (canonicalization.Length() == 0 || canonicalization[0] == '#') continue; // ignore blank and comment lines
 #else
 		offset = ParseField(input_line, offset, canonicalization);
 #endif
