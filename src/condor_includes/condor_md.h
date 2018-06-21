@@ -27,7 +27,7 @@ static const int MAC_SIZE = 32;
 //----------------------------------------------------------------------
 // This class provides services for message digest (MD) and/or
 // message authentication code (MAC) services. The code uses
-// MD5 as the basis to provide these services.
+// SHA256 as the basis to provide these services.
 //----------------------------------------------------------------------
 class MD_Context;
 
@@ -64,9 +64,9 @@ class Condor_MD_MAC {
     
     void addMD(const unsigned char * buffer, unsigned long length);
 
-	// Add the contents of a file to the MD5 checksum. It handles opening
+	// Add the contents of a file to the SHA checksum. It handles opening
 	// the file, reading it in (in chunks of 1 meg), and adding it to the
-	// md5 object. returns true on success, false if an error occurs
+	// SHA object. returns true on success, false if an error occurs
 
     bool addMDFile(const char * path);
     //------------------------------------------
@@ -100,7 +100,7 @@ class Condor_MD_MAC {
 
  private:
     
-    void init();       // initialize/reinitialize MD5
+    void init();       // initialize/reinitialize SHA
 
     MD_Context *     context_;
     KeyInfo      *   key_;

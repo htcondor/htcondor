@@ -69,15 +69,15 @@ make_hash_filename(const std::string& owner, const std::string& hash)
 std::string
 ickpt_share_get_hash(ClassAd& ad)
 {
-	// for now, we only pay attention to the executable's MD5
+	// for now, we only pay attention to the executable's SHA
 	//
-	MyString md5;
-	if (!ad.LookupString(ATTR_JOB_CMD_MD5, md5)) {
+	MyString hash;
+	if (!ad.LookupString(ATTR_JOB_CMD_SHA, hash)) {
 		return "";
 	}
-	return escape_for_filename(ATTR_JOB_CMD_MD5) +
+	return escape_for_filename(ATTR_JOB_CMD_SHA) +
 	       "-" +
-	       escape_for_filename(md5.Value());
+	       escape_for_filename(hash.Value());
 }
 
 bool

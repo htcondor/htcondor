@@ -576,7 +576,7 @@ ReliSock::peek_end_of_message()
 	return false;
 }
 
-const char * ReliSock :: isIncomingDataMD5ed()
+const char * ReliSock :: isIncomingDataHashed()
 {
     return NULL;    // For now
 }
@@ -584,7 +584,7 @@ const char * ReliSock :: isIncomingDataMD5ed()
 int 
 ReliSock::put_bytes(const void *data, int sz)
 {
-	int		tw=0, header_size = isOutgoing_MD5_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
+	int		tw=0, header_size = isOutgoing_Hash_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
 	int		nw, l_out;
         unsigned char * dta = NULL;
 

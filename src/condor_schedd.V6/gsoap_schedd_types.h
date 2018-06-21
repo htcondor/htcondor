@@ -23,7 +23,7 @@ typedef xsd__string condor__Requirement;
 
 enum condor__HashType {
   NOHASH,
-  MD5HASH
+  SHAHASH
 };
 
 enum condor__UniverseType {
