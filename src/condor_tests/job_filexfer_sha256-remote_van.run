@@ -22,25 +22,25 @@ use CondorTest;
 use Check::SimpleJob;
 use File::Copy;
 use File::Path;
-use Digest::MD5;
+use Digest::SHA;
 
 my $stats = 0;
 
-$testname = "job_filexfer_md5-remote_van";
+$testname = "job_filexfer_sha256-remote_van";
 
 $success = sub {
 	CondorTest::debug("Transfer job worked..... need to chack data file.\n",1);
-	TestMd5Data("data", "backdata");
+	TestSha256Data("data", "backdata");
 	if($stats != 0)
 	{
-		die "Test of MD5 data failed\n";
+		die "Test of SHA256 data failed\n";
 	}
 };
 
 if( ! -e "data")
 {
 	CondorTest::debug("Making data file\n",1);
-	CreateMd5Data(200,"data");
+	CreateSha256Data(200,"data");
 }
 else
 {
@@ -50,9 +50,9 @@ else
 CondorTest::debug("Data file created, submitting job\n",1);
 
 SimpleJob::RunCheck(
-    runthis=>"job_filexfer_md5-remote.pl",
+    runthis=>"job_filexfer_sha256-remote.pl",
     duration=>"backdata",
-    transfer_input_files=>"data,datamd5",
+    transfer_input_files=>"data,dataSHA256",
     should_transfer_files=>"YES",
     when_to_transfer_output=>"ON_EXIT",
     on_success=>$success,
@@ -69,7 +69,7 @@ if( $result != 0 )
 CondorTest::debug("$testname SUCCESS\n",1);
 exit(0);
 
-sub CreateMd5Data {
+sub CreateSha256Data {
 
 	my $megs = shift;
 	my $filenm = shift;
@@ -104,53 +104,53 @@ sub CreateMd5Data {
 
 	close(DATA);
 
-	my $outnamemd5 = $filenm . "md5";
+	my $outnameSHA256 = $filenm . "sha256";
 
 	open(DATA,"<$filenm") || die "Can't open input file $!\n";
-	open(MD5,">$outnamemd5") || die "Can't open MD5 output file $!\n";
-	my $datamd5 = Digest::MD5->new;
+	open(SHA256,">$outnameSHA256") || die "Can't open SHA256 output file $!\n";
+	my $datasha256 = Digest::SHA->new(256);
 
-	$datamd5->addfile(DATA);
+	$datasha256->addfile(DATA);
 	close(DATA);
 
 
-	my $hexmd5 = $datamd5->hexdigest;
+	my $hexsha256 = $datasha256->hexdigest;
 
-	print MD5 "$hexmd5\n";
-	close(MD5);
+	print SHA256 "$hexsha256\n";
+	close(SHA256);
 
 }
 
-sub TestMd5Data {
+sub TestSha256Data {
 	my $oldfile = shift;
 	my $newfile = shift;
 
-	my $oldmd5file = $oldfile . "md5";
-	my $oldmd5;
-	open(ORIGMD5,"<$oldmd5file") || die "Can't open md5 checksum file $!\n";
-	while(<ORIGMD5>)
+	my $oldsha256file = $oldfile . "sha256";
+	my $oldsha256;
+	open(ORIGSHA256,"<$oldsha256file") || die "Can't open sha256 checksum file $!\n";
+	while(<ORIGSHA256>)
 	{
 	    CondorUtils::fullchomp($_);
-	    $oldmd5 = $_;
+	    $oldsha256 = $_;
 	}
-	close(ORIGMD5);
-	CondorTest::debug("Old MD5 = $oldmd5\n",1);
+	close(ORIGSHA256);
+	CondorTest::debug("Old SHA256 = $oldsha256\n",1);
 
-	my $newmd5file = $newfile . "md5";
-	my $datamd5 = Digest::MD5->new;
+	my $newSHA256file = $newfile . "SHA256";
+	my $dataSHA256 = Digest::SHA256->new;
 
-	open(MD5,">$newmd5file") || die "Can't open MD5 output file $!\n";
+	open(SHA256,">$newSHA256file") || die "Can't open SHA256 output file $!\n";
 	open(DATA,"<$newfile") || die "Trying to open data file\n" ;
-	$datamd5->addfile(DATA);
+	$dataSHA256->addfile(DATA);
 	close(DATA);
 
 
-	my $hexmd5 = $datamd5->hexdigest;
+	my $hexSHA256 = $dataSHA256->hexdigest;
 
-	print MD5 "$hexmd5\n";
-	close(MD5);
+	print SHA256 "$hexSHA256\n";
+	close(SHA256);
 
-	if($oldmd5 eq $hexmd5)
+	if($oldsha256 eq $hexSHA256)
 	{
 		CondorTest::debug("Check some of $oldfile and $newfile match!\n",1);
 		#verbose_system("touch WORKED");
