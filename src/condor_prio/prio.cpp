@@ -57,7 +57,7 @@ void
 usage()
 {
 	fprintf( stderr, "Usage: %s [{+|-}priority ] [-p priority] ", MyName );
-	fprintf( stderr, "[ -a ] [-n schedd_name] [ -pool pool_name ] [user | cluster | cluster.proc] ...\n");
+	fprintf( stderr, "[ -a ] [-n schedd_name] [ -pool pool_name ] [user | cluster | cluster.proc | -a] ...\n");
 	exit( 1 );
 }
 
