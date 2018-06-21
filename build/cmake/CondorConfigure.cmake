@@ -783,7 +783,7 @@ endif()
 
 #####################################
 # Do we want to link in libssl and kerberos or dlopen() them at runtime?
-if (LINUX AND NOT PROPER)
+if (LINUX AND NOT PROPER AND NOT WANT_PYTHON_WHEELS)
 	set( DLOPEN_SECURITY_LIBS TRUE )
 endif()
 
@@ -953,7 +953,7 @@ endif()
 
 #####################################
 # Do we want to link in the GSI libraries or dlopen() them at runtime?
-if (HAVE_EXT_GLOBUS AND LINUX AND NOT PROPER)
+if (HAVE_EXT_GLOBUS AND LINUX AND NOT PROPER AND NOT WANT_PYTHON_WHEELS)
 	set( DLOPEN_GSI_LIBS TRUE )
 endif()
 
