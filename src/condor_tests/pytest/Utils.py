@@ -45,3 +45,10 @@ class Utils(object):
             if not issubclass(exctype, OSError): raise
             if oe.errno != errno.ENOENT:
                 raise
+
+
+    @staticmethod
+    def IsWindows():
+        if os.name == 'nt':
+            return True
+        return False

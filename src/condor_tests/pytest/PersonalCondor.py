@@ -7,14 +7,13 @@ import sys
 import time
 
 from Utils import Utils
-from Utils import Utils
-
 
 class PersonalCondor(object):
 
 
     def __init__(self, name):
         self._name = name
+        self._master_process = None
         self._is_ready = False
         self._local_dir = name + ".local"
         self._local_path = os.getcwd() + "/" + self._local_dir
@@ -35,15 +34,16 @@ class PersonalCondor(object):
     def Start(self):
 
         try:
-            p = subprocess.Popen(["condor_master", "-f &"])
-            if p < 0:
-                Utils.TLog("Child was terminated by signal: " + str(p))
+            process = subprocess.Popen(["condor_master", "-f &"])
+            if process < 0:
+                Utils.TLog("Child was terminated by signal: " + str(process))
                 return False
         except OSError as e:
             Utils.TLog("Execution of condor_master failed: " + e)
             return False
 
-        self._master_p = p
+        self._master_process = process
+        Utils.TLog("Started a new condor_master pid " + str(self._master_process.pid))
 
         # Wait until we're sure all daemons have started
         self._is_ready = self.WaitForReadyDaemons()
@@ -51,15 +51,17 @@ class PersonalCondor(object):
             Utils.TLog("Condor daemons did not enter ready state. Exiting.")
             return False
 
-        Utils.TLog("Started a new personal condor with condor_master pid " + str(self._master_p.pid))
+        Utils.TLog("Condor daemons are active and ready for jobs")
 
         return True
 
 
     def Stop(self):
-        if self._is_ready is True:
+        if self._master_process is not None:
             Utils.TLog("Shutting down PersonalCondor with condor_off -master")
             os.system("condor_off -master")
+            self._master_process = None
+        if self._is_ready is True:
             self._is_ready = False
 
 
@@ -85,8 +87,10 @@ class PersonalCondor(object):
         config += "SPOOL = " + self._spool_path + "\n"
         config += "COLLECTOR_HOST = $(CONDOR_HOST):0\n"
         config += "MASTER_ADDRESS_FILE = $(LOG)/.master_address\n"
-        config += "COLLECTION_ADDRESS_FILE = $(LOG)/.collector_address\n"
+        config += "COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address\n"
         config += "SCHEDD_ADDRESS_FILE = $(SPOOL)/.schedd_address\n"
+        if Utils.IsWindows() is True:
+            config += "PROCD_ADDRESS = " + str(htcondor.param["PROCD_ADDRESS"]) + str(os.getpid()) + "\n"
 
         config_file = open(self._local_config, "a")
         config_file.write(config)

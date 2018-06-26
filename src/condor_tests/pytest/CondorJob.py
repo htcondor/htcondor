@@ -48,7 +48,7 @@ class CondorJob(object):
             Utils.TLog("Ads = " + str(ads))
             # When the job is complete, ads will be empty
             if len(ads) == 0:
-                break
+                return JOB_SUCCESS
             else:
                 status = ads[0]["JobStatus"]
                 if status == 5:
@@ -56,5 +56,6 @@ class CondorJob(object):
                     return JOB_FAILURE
             time.sleep(1)
         
-        # If we got this far, we assume the job finished correctly
-        return JOB_SUCCESS
+        # If we got this far, we hit the timeout and job did not complete
+        Utils.TLog("Job failed to complete with timeout = " + str(timeout))
+        return JOB_FAILURE
