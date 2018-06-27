@@ -21,9 +21,7 @@
 #define __COLLECTOR_ENGINE_H__
 
 #include "condor_classad.h"
-#include "condor_daemon_core.h"
 
-#include "condor_collector.h"
 #include "collector_stats.h"
 #include "hashkey.h"
 

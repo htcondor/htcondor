@@ -26,11 +26,6 @@ extern "C" void event_mgr (void);
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_network.h"
-#include "condor_io.h"
-#include "internet.h"
-#include "my_hostname.h"
-#include "condor_email.h"
 
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"

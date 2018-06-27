@@ -26,7 +26,6 @@
 #include "extArray.h"
 #include "internet.h"
 #include "collector_stats.h"
-#include "collector_engine.h"
 #include "condor_config.h"
 #include "classad/classadCache.h"
 
