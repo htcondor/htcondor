@@ -1206,7 +1206,7 @@ else(MSVC)
 	if ( NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" )
 		check_c_compiler_flag(-rdynamic c_rdynamic)
 		if (c_rdynamic)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
 		endif(c_rdynamic)
 	endif()
 
