@@ -1164,26 +1164,6 @@ VMProc::ShutdownGraceful()
 	is_checkpointed = false;
 	requested_exit = true;
 
-	// destroy vmgahp server
-	if( m_vmgahp->cleanup() == false ) {
-		//daemonCore->Send_Signal(JobPid, SIGKILL);
-		daemonCore->Kill_Family(JobPid);
-
-		// To make sure that the process dealing with a VM exits,
-		killProcessForVM();
-	}
-
-	// final cleanup.. 
-	cleanup();
-
-	// Because we already performed checkpoint, 
-	// we don't need to keep files in the working directory.
-	// So file transfer will not be called again.
-	if( delete_working_files ) {
-		Directory working_dir( Starter->GetWorkingDir(), PRIV_USER );
-		working_dir.Remove_Entire_Directory();
-	}
-
 	return false;	// return false says shutdown is pending	
 }
 
