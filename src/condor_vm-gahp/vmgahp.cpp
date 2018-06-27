@@ -944,7 +944,8 @@ VMGahp::executeStatus(VMRequest *req)
 	if(vm == NULL) {
 		req->m_has_result = true;
 		req->m_is_success = true;
-		req->m_result = "Stopped";
+		req->m_result = VMGAHP_STATUS_COMMAND_STATUS;
+		req->m_result += "=Stopped";
 		return;
 	}else {
 		int result = vm->Status();
