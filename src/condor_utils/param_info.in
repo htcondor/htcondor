@@ -4650,14 +4650,6 @@ customization=devel
 description=Path to condor helper executable used by remote condor_history
 tags=schedd
 
-[OLD.HISTORY_HELPER]
-default=$(LIBEXEC)/condor_history_helper
-win32_default=$(LIBEXEC)\condor_history_helper.exe
-type=path
-customization=devel
-description=Path to old history_helper executable
-tags=schedd
-
 [HISTORY_HELPER_MAX_HISTORY]
 default=10000
 range=0,
