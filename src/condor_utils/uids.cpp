@@ -154,7 +154,7 @@ static const struct {
       {SID_REVISION, 2, SECURITY_NT_AUTHORITY, {SECURITY_BUILTIN_DOMAIN_RID}}, DOMAIN_ALIAS_RID_ADMINS,
       {SID_REVISION, 2, SECURITY_NT_AUTHORITY, {SECURITY_BUILTIN_DOMAIN_RID}}, DOMAIN_ALIAS_RID_USERS,
    };
-#pragma pack(pop, 1)
+#pragma pack(pop)
 
 // return a copy of the SID of the owner of the current process
 //
