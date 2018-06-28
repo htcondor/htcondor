@@ -1132,8 +1132,6 @@ VMProc::ShutdownGraceful()
 		return true;
 	}
 
-	bool delete_working_files = true;
-
 	if( m_vm_checkpoint ) {
 		// We need to do checkpoint before vacating.
 		// The reason we call checkpoint explicitly here
@@ -1150,7 +1148,6 @@ VMProc::ShutdownGraceful()
 			// This means the checkpoint succeeded but file transfer failed.
 			// We will not delete files in the working directory so that
 			// file transfer will be retried
-			delete_working_files = false;
 			dprintf(D_ALWAYS, "Vacating checkpoint succeeded but "
 					"file transfer failed\n");
 		}
