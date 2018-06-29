@@ -613,11 +613,13 @@ class GahpClient : public GenericGahpClient {
 
 		int gce_ping( const std::string &service_url,
 					  const std::string &auth_file,
+					  const std::string &account,
 					  const std::string &project,
 					  const std::string &zone );
 
 		int gce_instance_insert( const std::string &service_url,
 								 const std::string &auth_file,
+								 const std::string &account,
 								 const std::string &project,
 								 const std::string &zone,
 								 const std::string &instance_name,
@@ -631,12 +633,14 @@ class GahpClient : public GenericGahpClient {
 
 		int gce_instance_delete( std::string service_url,
 								 const std::string &auth_file,
+								 const std::string &account,
 								 const std::string &project,
 								 const std::string &zone,
 								 const std::string &instance_name );
 
 		int gce_instance_list( const std::string &service_url,
 							   const std::string &auth_file,
+							   const std::string &account,
 							   const std::string &project,
 							   const std::string &zone,
 							   StringList &instance_ids,

@@ -23,23 +23,24 @@
 #include "gcegahp_common.h"
 #include "gceCommands.h"
 
-// Expecting:GCE_PING <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_PING <req_id> <serviceurl> <authfile> <account> <project> <zone>
 bool GcePing::ioCheck(char **argv, int argc)
 {
-	return verify_number_args(argc, 6) &&
+	return verify_number_args(argc, 7) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
 		verify_string_name(argv[4]) &&
-		verify_string_name(argv[5]);
+		verify_string_name(argv[5]) &&
+		verify_string_name(argv[6]);
 }
 
-// Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <account> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
 //     <preemptible> <json_file>
 bool GceInstanceInsert::ioCheck(char **argv, int argc)
 {
-	return verify_number_args(argc, 13) &&
+	return verify_number_args(argc, 14) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
@@ -51,11 +52,25 @@ bool GceInstanceInsert::ioCheck(char **argv, int argc)
 		verify_string_name(argv[9]) &&
 		verify_string_name(argv[10]) &&
 		verify_string_name(argv[11]) &&
-		verify_string_name(argv[12]);
+		verify_string_name(argv[12]) &&
+		verify_string_name(argv[13]);
 }
 
-// Expecting:GCE_INSTANCE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>
+// Expecting:GCE_INSTANCE_DELETE <req_id> <serviceurl> <authfile> <account> <project> <zone> <instance_name>
 bool GceInstanceDelete::ioCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 8) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]) &&
+		verify_string_name(argv[4]) &&
+		verify_string_name(argv[5]) &&
+		verify_string_name(argv[6]) &&
+		verify_string_name(argv[7]);
+}
+
+// Expecting:GCE_INSTANCE_LIST <req_id> <serviceurl> <authfile> <account> <project> <zone>
+bool GceInstanceList::ioCheck(char **argv, int argc)
 {
 	return verify_number_args(argc, 7) &&
 		verify_request_id(argv[1]) &&
@@ -66,23 +81,12 @@ bool GceInstanceDelete::ioCheck(char **argv, int argc)
 		verify_string_name(argv[6]);
 }
 
-// Expecting:GCE_INSTANCE_LIST <req_id> <serviceurl> <authfile> <project> <zone>
-bool GceInstanceList::ioCheck(char **argv, int argc)
-{
-	return verify_number_args(argc, 6) &&
-		verify_request_id(argv[1]) &&
-		verify_string_name(argv[2]) &&
-		verify_string_name(argv[3]) &&
-		verify_string_name(argv[4]) &&
-		verify_string_name(argv[5]);
-}
-
-// Expecting:GCE_GROUP_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_GROUP_INSERT <req_id> <serviceurl> <authfile> <account> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
 //     <preemptible> <json_file> <count> <duration_hours>
 bool GceGroupInsert::ioCheck(char **argv, int argc)
 {
-	return verify_number_args(argc, 15) &&
+	return verify_number_args(argc, 16) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
@@ -96,18 +100,20 @@ bool GceGroupInsert::ioCheck(char **argv, int argc)
 		verify_string_name(argv[11]) &&
 		verify_string_name(argv[12]) &&
 		verify_string_name(argv[13]) &&
-		verify_string_name(argv[14]);
+		verify_string_name(argv[14]) &&
+		verify_string_name(argv[15]);
 }
 
-// Expecting:GCE_GROUP_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>
+// Expecting:GCE_GROUP_DELETE <req_id> <serviceurl> <authfile> <account> <project> <zone> <instance_name>
 bool GceGroupDelete::ioCheck(char **argv, int argc)
 {
-	return verify_number_args(argc, 7) &&
+	return verify_number_args(argc, 8) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
 		verify_string_name(argv[4]) &&
 		verify_string_name(argv[5]) &&
-		verify_string_name(argv[6]);
+		verify_string_name(argv[6]) &&
+		verify_string_name(argv[7]);
 }
 

@@ -289,6 +289,8 @@ if( NOT WINDOWS)
 	else()
 		message (STATUS "MUNGE (optional) was NOT found")
         endif()
+	check_include_files("sqlite3.h" HAVE_SQLITE3_H)
+	find_library( SQLITE3_LIB "sqlite3" )
 
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)

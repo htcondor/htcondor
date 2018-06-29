@@ -17,7 +17,14 @@
  # 
  ############################################################### 
 
-if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_PTHREADS )
+if( NOT WINDOWS )
+
+	if ( NOT SQLITE3_LIB )
+		message(FATAL_ERROR "gce_gahp requires sqlite3 library")
+	endif()
+	if ( NOT HAVE_SQLITE3_H )
+		message(FATAL_ERROR "gce_gahp requires sqlite3 header")
+	endif()
 
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -26,7 +33,7 @@ if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_PTHREADS )
 
 	condor_exe( gce_gahp
 		"${HeaderFiles};${SourceFiles}" ${C_SBIN}
-		"${CONDOR_TOOL_LIBS};${CURL_FOUND}"
+		"${CONDOR_TOOL_LIBS};${CURL_FOUND};${SQLITE3_LIB}"
 		OFF )
 
 endif()
