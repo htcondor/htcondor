@@ -62,6 +62,14 @@ a different directory.
 an error message.
 \Ticket{6672}
 
+\item Fixed a bug that prevented the \Condor{starter} from determining
+the status of a VM that has previously been shut down.
+\Ticket{6704}
+
+\item Updated the systemd configuration to prevent the rare escape of a job
+from its cgroup.
+\Ticket{6708}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
