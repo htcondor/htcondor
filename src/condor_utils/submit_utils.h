@@ -259,6 +259,7 @@
 // GCE Parameters
 //
 #define SUBMIT_KEY_GceImage "gce_image"
+#define SUBMIT_KEY_GceAccount "gce_account"
 #define SUBMIT_KEY_GceAuthFile "gce_auth_file"
 #define SUBMIT_KEY_GceMachineType "gce_machine_type"
 #define SUBMIT_KEY_GceMetadata "gce_metadata"

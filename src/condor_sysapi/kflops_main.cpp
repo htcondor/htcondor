@@ -19,7 +19,6 @@
 
 #include "condor_common.h"
 #include "sysapi.h"
-#include <math.h>
 
 extern "C" {
 	int sysapi_kflops_raw(void);

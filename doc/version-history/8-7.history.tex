@@ -19,7 +19,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.9 was released on FIXME.
+\item HTCondor version 8.7.9 not yet released.
+%\item HTCondor version 8.7.9 released on Month Date, 2018.
 
 \end{itemize}
 
@@ -91,6 +92,10 @@ but do not use the file transfer mechanism.
 had been specified on the command line, would write a configuration for a
 bogus region rather than the default one.
 \Ticket{6666}
+
+\item The \Condor{history\_helper} program was removed. \Condor{history} is
+now used by the \Condor{schedd} to help with remote history queries.
+\Ticket{6247}
 
 \end{itemize}
 

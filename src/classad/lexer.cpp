@@ -481,6 +481,9 @@ tokenizeAlphaHead (void)
 	mark( );
 	while (isalpha (ch)) {
 		wind ();
+		// in Visual Studio 2017 x64 isalpha returns 258 when ch==EOF
+		// which could make this an infinite loop if we don't test for EOF explicitly here.
+		if (ch == EOF) break;
 	}
 
 	if (isdigit (ch) || ch == '_') {
@@ -488,6 +491,9 @@ tokenizeAlphaHead (void)
 		wind ();
 		while (isalnum (ch) || ch == '_') {
 			wind ();
+			// in Visual Studio 2017 x64 isalpha returns 258 when ch==EOF
+			// which could make this an infinite loop if we don't test for EOF explicitly here.
+			if (ch == EOF) break;
 		}
 		cut ();
 

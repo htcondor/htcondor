@@ -1132,8 +1132,6 @@ VMProc::ShutdownGraceful()
 		return true;
 	}
 
-	bool delete_working_files = true;
-
 	if( m_vm_checkpoint ) {
 		// We need to do checkpoint before vacating.
 		// The reason we call checkpoint explicitly here
@@ -1150,7 +1148,6 @@ VMProc::ShutdownGraceful()
 			// This means the checkpoint succeeded but file transfer failed.
 			// We will not delete files in the working directory so that
 			// file transfer will be retried
-			delete_working_files = false;
 			dprintf(D_ALWAYS, "Vacating checkpoint succeeded but "
 					"file transfer failed\n");
 		}
@@ -1163,26 +1160,6 @@ VMProc::ShutdownGraceful()
 	m_is_soft_suspended = false;
 	is_checkpointed = false;
 	requested_exit = true;
-
-	// destroy vmgahp server
-	if( m_vmgahp->cleanup() == false ) {
-		//daemonCore->Send_Signal(JobPid, SIGKILL);
-		daemonCore->Kill_Family(JobPid);
-
-		// To make sure that the process dealing with a VM exits,
-		killProcessForVM();
-	}
-
-	// final cleanup.. 
-	cleanup();
-
-	// Because we already performed checkpoint, 
-	// we don't need to keep files in the working directory.
-	// So file transfer will not be called again.
-	if( delete_working_files ) {
-		Directory working_dir( Starter->GetWorkingDir(), PRIV_USER );
-		working_dir.Remove_Entire_Directory();
-	}
 
 	return false;	// return false says shutdown is pending	
 }

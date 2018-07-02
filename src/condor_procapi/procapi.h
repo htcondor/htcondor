@@ -33,12 +33,7 @@
 
 #ifndef WIN32 // all the below is for UNIX
 
-#include <strings.h>       // sprintf, atol
 #include <dirent.h>        // get /proc entries (directory stuff)
-#include <ctype.h>         // isdigit
-#include <errno.h>         // for perror
-#include <fcntl.h>         // open()
-#include <unistd.h>        // getpagesize()
 #include <sys/types.h>     // various types needed.
 #include <time.h>          // use of time() for process age. 
 

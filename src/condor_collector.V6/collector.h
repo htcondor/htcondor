@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "condor_classad.h"
-#include "condor_commands.h"
 #include "totals.h"
 #include "forkwork.h"
 

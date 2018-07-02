@@ -26,8 +26,6 @@ if (NOT WIN_EXEC_NODE_ONLY)
 	condor_daemon( schedd "${scheddRmvElements}"
 		"${CONDOR_LIBS};${CONDOR_QMF};${ZLIB_FOUND}" "${C_SBIN}")
 
-	condor_exe(condor_history_helper "history_helper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
-
 endif(NOT WIN_EXEC_NODE_ONLY)
 
 set( QMGMT_UTIL_SRCS "${qmgmtElements};${CMAKE_CURRENT_SOURCE_DIR}/qmgmt_common.cpp" PARENT_SCOPE )

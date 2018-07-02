@@ -19,15 +19,9 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_status.h"
-#include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_network.h"
-#include "internet.h"
-#include "condor_io.h"
 #include "condor_attributes.h"
 #include "condor_email.h"
-#include "condor_query.h"
 
 #include "condor_daemon_core.h"
 #include "status_types.h"
@@ -35,10 +29,8 @@
 
 #include "condor_collector.h"
 #include "collector_engine.h"
-#include "HashTable.h"
 #include "hashkey.h"
 
-#include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_universe.h"
 #include "ipv6_hostname.h"

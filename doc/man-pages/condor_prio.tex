@@ -6,12 +6,12 @@
 \Synopsis \SynProg{\Condor{prio}}
 \OptArg{-p}{priority} \Bar{} \OptArg{+}{value} \Bar{} \OptArg{-}{value}
 \oOptArg{-n}{schedd\_name}
-\Arg{cluster \Bar{} cluster.process \Bar{} username \Bar{} -a}
+\Arg{cluster \Bar{} cluster.process \Bar{} username \Bar{} \Opt{-a}}
 
 \SynProg{\Condor{prio}}
 \OptArg{-p}{priority} \Bar{} \OptArg{+}{value} \Bar{} \OptArg{-}{value}
 \Lbr \OptArg{-pool}{pool\_name}  \OptArg{-n}{schedd\_name} \Rbr
-\Arg{cluster \Bar{} cluster.process \Bar{} username \Bar{} -a}
+\Arg{cluster \Bar{} cluster.process \Bar{} username \Bar{} \Opt{-a}}
 
 \Description
 
@@ -24,7 +24,7 @@ If described by \Arg{cluster},
 given \Attr{ClusterId} job ClassAd attribute.
 If \Arg{username} is specified, \Condor{prio} attempts to change priority
 of all jobs belonging to that user.
-For \Arg{-a}, \Condor{prio} attempts to change priority of
+For \Opt{-a}, \Condor{prio} attempts to change priority of
 all jobs in the queue.
 
 The user must set a new priority with the \Opt{-p} option,

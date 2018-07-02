@@ -2358,16 +2358,16 @@ limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkHostname}
 \item[\Macro{NETWORK\_HOSTNAME}]
-The host name to use,
-overriding the value returned by
-\Procedure{gethostname}, which will be invoked by default
-to query the operating system to obtain the host name of the local machine. 
+The name HTCondor should use as the host name of the local machine,
+overriding the value returned by \Procedure{gethostname}.
 Among other things, the host name is used to identify daemons in
 an HTCondor pool, via the \Attr{Machine} and \Attr{Name} attributes of 
 daemon ClassAds.
 This variable can be used when a machine has multiple network interfaces
 with different host names, 
 to use a host name that is not the primary one.
+It should be set to a fully-qualified host name that will resolve to
+an IP address of the local machine.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]

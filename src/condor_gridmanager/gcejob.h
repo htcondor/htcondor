@@ -90,6 +90,7 @@ private:
 	std::string m_project;
 	std::string m_zone;
 	std::string m_authFile;
+	std::string m_account;
 	std::string m_image;
 	std::string m_metadata;
 	std::string m_metadataFile;

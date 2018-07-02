@@ -21,8 +21,7 @@
 #include "condor_common.h"
 #include "token_cache.h"
 
-token_cache::token_cache() {
-	current_age = 1;
+token_cache::token_cache() : TokenTable(NULL), current_age(1), dummy(0) {
 	TokenTable = new TokenHashTable(hashFunction);
 }
 

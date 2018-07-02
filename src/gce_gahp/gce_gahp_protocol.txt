@@ -536,6 +536,8 @@
     * cred-file     = the full path to a file containing a valid set of
                       Google OAuth credentials in the JSON format used
                       by Google's gcutil command-line client program
+    * account       = if the credentials file has data for multiple
+                      accounts, which account should be used
     * project       = the GCE project to be used
     * zone          = the GCE zone to be used
 
@@ -582,7 +584,8 @@
     + Request Line:
 
         GCE_PING <SP> <request-ID> <SP> <service-URL>
-            <SP> <cred-file> <SP> <project> <SP> <zone> <CRLF>
+            <SP> <cred-file> <SP> <account> <SP> <project>
+            <SP> <zone> <CRLF>
 
     -----------------------------------------------
 
@@ -593,7 +596,7 @@
     + Request Line:
 
         GCE_INSTANCE_INSERT <SP> <request-ID> <SP> <service-URL>
-            <SP> <cred-file> <SP> <project> <SP> <zone>
+            <SP> <cred-file> <SP> <account> <SP> <project> <SP> <zone>
             <SP> <instance-name> <SP> <machine-type>
             <SP> <image> <SP> <metadata> <SP> <metadata-file>
             <SP> <preemptible> <SP> <json-file> <CRLF>
@@ -636,7 +639,7 @@
     + Request Line:
 
         GCE_INSTANCE_DELETE <SP> <request-ID> <SP> <service-URL>
-            <SP> <cred-file> <SP> <project> <SP> <zone>
+            <SP> <cred-file> <SP> <account> <SP> <project> <SP> <zone>
             <SP> <instance-ID> <CRLF>
 
         The following attribute is required.
@@ -654,7 +657,8 @@
     + Request Line:
 
         GCE_INSTANCE_LIST <SP> <request-ID> <SP> <service-URL>
-            <SP> <cred-file> <SP> <project> <SP> <zone> <CRLF>
+            <SP> <cred-file> <SP> <account> <SP> <project>
+            <SP> <zone> <CRLF>
 
     + Result Line:
 

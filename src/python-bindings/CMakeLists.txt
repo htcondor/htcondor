@@ -184,9 +184,6 @@ else()
 
     # more targets are built if we plan on building wheels
     if ( WANT_PYTHON_WHEELS )
-      if ( DARWIN )
-	message(WARNING "On MacOS, the framework for the Python wheels will be built, but the libraries contained within will not be correctly linked")
-      endif()
       
       # first, check if building in source
       set( PYPI_BUILD_DIR "${CMAKE_BINARY_DIR}/build/packaging/pypi" )
@@ -206,28 +203,36 @@ else()
 	add_custom_command( TARGET pypi_classad_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/classad/__init__.py ${PYPI_BUILD_DIR}/classad/__init__.py )
 	add_custom_command( TARGET pypi_htcondor_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/htcondor/__init__.py ${PYPI_BUILD_DIR}/htcondor/__init__.py )
       endif()
-      
-      # next, copy over libpyclassad, unless on Linux
+
+      # the pyclassad library and the classad and htcondor modules should not link libpython
+      # instead, the user's python interpreter will look for any such missing symbols
       if ( DARWIN )
-	set( PYPI_PYCLASSAD_LIB ${PYPI_BUILD_DIR}/htcondor/condor_libs/lib${PYCLASSAD_LIB_NAME}.dylib )
-	add_custom_command( OUTPUT ${PYPI_PYCLASSAD_LIB} DEPENDS pyclassad COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/lib${PYCLASSAD_LIB_NAME}.dylib ${PYPI_PYCLASSAD_LIB} )
-	set( PYPI_PYCLASSAD pyclassad )
-      else() # if on Linux, build libpyclassad *not* linked against libpython
-	add_library( _pyclassad SHARED classad.cpp classad_wrapper.h exprtree_wrapper.h )
-	add_dependencies( _pyclassad pypi_lib_dir )
-	target_link_libraries( _pyclassad ${CLASSADS_FOUND} -l${PYTHON_BOOST_LIB} )
-	set_target_properties( _pyclassad PROPERTIES PREFIX "lib" OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
-	set_target_properties( _pyclassad PROPERTIES SUFFIX ".so" )
-	set_target_properties( _pyclassad PROPERTIES COMPILE_FLAGS "-fPIC" )
-	set_target_properties( _pyclassad PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYPI_BUILD_DIR}/htcondor/condor_libs" )
-	set_target_properties( _pyclassad PROPERTIES INSTALL_RPATH "$ORIGIN" )
-	set( PYPI_PYCLASSAD _pyclassad )
+	# in macOS, use "-undefined dynamic_lookup" in place of "-lpython" or "-framework Python" (i.e. ${PYTHON_LIBRARIES})
+	set( NOLINK_PYTHON_LIB "-undefined dynamic_lookup" )
+      else()
+	# in Linux, simply omit "-lpython" (i.e. ${PYTHON_LIBRARIES}) to get the same behavior
+	set( NOLILNK_PYTHON_LIB "" )
       endif()
+	
+      # build libpyclassad *not* linked against libpython
+      add_library( _pyclassad SHARED classad.cpp classad_wrapper.h exprtree_wrapper.h )
+      add_dependencies( _pyclassad pypi_lib_dir )
+      target_link_libraries( _pyclassad ${CLASSADS_FOUND} -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
+      if ( DARWIN )
+	set_target_properties( _pyclassad PROPERTIES SUFFIX ".dylib" )
+	set_target_properties( _pyclassad PROPERTIES INSTALL_NAME_DIR "${PYPI_BUILD_DIR}/htcondor/condor_libs" )
+      else()
+	set_target_properties( _pyclassad PROPERTIES SUFFIX ".so" )
+      endif()
+      set_target_properties( _pyclassad PROPERTIES PREFIX "lib" OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
+      set_target_properties( _pyclassad PROPERTIES COMPILE_FLAGS "-fPIC" )
+      set_target_properties( _pyclassad PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYPI_BUILD_DIR}/htcondor/condor_libs" )
+      set_target_properties( _pyclassad PROPERTIES INSTALL_RPATH "$ORIGIN" )
       
       # next, build the classad module *not* linked against libpython
       add_library( _classad_module SHARED _classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
       add_dependencies( _classad_module pypi_classad_dir )
-      target_link_libraries( _classad_module ${PYPI_PYCLASSAD} -l${PYTHON_BOOST_LIB} )
+      target_link_libraries( _classad_module _pyclassad -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       set_target_properties( _classad_module PROPERTIES PREFIX "" OUTPUT_NAME "_classad" )
       set_target_properties( _classad_module PROPERTIES SUFFIX ".so" )
       set_target_properties( _classad_module PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYPI_BUILD_DIR}/classad" )
@@ -236,7 +241,7 @@ else()
       # finally, build the htcondor module *not* linked against libpython
       add_library( _htcondor SHARED _htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp log_reader.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
       add_dependencies( _htcondor pypi_htcondor_dir )
-      target_link_libraries( _htcondor ${PYPI_PYCLASSAD} condor_utils -l${PYTHON_BOOST_LIB} )
+      target_link_libraries( _htcondor _pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       set_target_properties( _htcondor PROPERTIES PREFIX "" )
       set_target_properties( _htcondor PROPERTIES SUFFIX ".so" )
       set_target_properties( _htcondor PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYPI_BUILD_DIR}/htcondor" )

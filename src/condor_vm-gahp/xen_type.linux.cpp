@@ -257,9 +257,11 @@ VirshType::Shutdown()
 			    killVM();
 		    }
 		  }
-		// Now we don't need working files any more
-		m_delete_working_files = true;
-		m_is_checkpointed = false;
+		if ( m_vm_no_output_vm  ) {
+			// Now we don't need working files any more
+			m_delete_working_files = true;
+			m_is_checkpointed = false;
+		}
 	}
 
 	setVMStatus(VM_STOPPED);
