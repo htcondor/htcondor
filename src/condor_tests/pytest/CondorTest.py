@@ -27,15 +27,15 @@ class CondorTest(object):
         self.End()
 
 
-    def _failure_callback_fn(self):
+    def FailureCallback(self):
         Utils.TLog("Default CondorTest failure callback invoked")
 
 
-    def _submit_callback_fn(self):
+    def SubmitCallback(self):
         Utils.TLog("Default CondorTest submit callback invoked")
 
 
-    def _success_callback_fn(self):
+    def SuccessCallback(self):
         Utils.TLog("Default CondorTest success callback invoked")
 
 
@@ -51,7 +51,7 @@ class CondorTest(object):
 
     def SubmitJob(self, job, wait=True, key=0):
 
-        self._submit_callback_fn()
+        self.SubmitCallback()
 
         result = JOB_FAILURE
         
@@ -73,21 +73,21 @@ class CondorTest(object):
         # Invoke the appropriate callback function
         Utils.TLog("Submit returned result = " + str(result))
         if result == JOB_SUCCESS:
-            self._success_callback_fn()
+            self.SuccessCallback()
         elif result == JOB_FAILURE:
-            self._failure_callback_fn()
+            self.FailureCallback()
 
 
-    def RegisterSubmit(self, _submit_callback_fn):
-        self._submit_callback_fn = _submit_callback_fn
+    def RegisterSubmit(self, submit_callback_fn):
+        self.SubmitCallback = submit_callback_fn
 
 
-    def RegisterSuccess(self, _success_callback_fn):
-        self._success_callback_fn = _success_callback_fn
+    def RegisterSuccess(self, success_callback_fn):
+        self.SuccessCallback = success_callback_fn
 
 
-    def RegisterFailure(self, _failure_callback_fn):
-        self._failure_callback_fn = _failure_callback_fn
+    def RegisterFailure(self, failure_callback_fn):
+        self.FailureCallback = failure_callback_fn
 
 
     def End(self):

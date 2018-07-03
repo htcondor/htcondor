@@ -40,8 +40,6 @@ class StoppableHTTPServer(BaseHTTPServer.HTTPServer):
 
     def start(self):
         thread.start_new_thread(self.serve, ())
-        server_address = self.socket.getsockname()
-        Utils.TLog("HTTP server started at " + str(server_address[0]) + ":" + str(server_address[1]))
 
     def stop(self):
         self.run = False
@@ -54,13 +52,18 @@ class StoppableHTTPServer(BaseHTTPServer.HTTPServer):
 class HTTPServer():
 
     def __init__(self):
-        self._httpd = StoppableHTTPServer(("127.0.0.1", 8080), StoppableHTTPServerHandler)
+        self._httpd = StoppableHTTPServer(("127.0.0.1", 0), StoppableHTTPServerHandler)
+        server_address = self._httpd.socket.getsockname()
+        self._host_address = server_address[0]
+        self._port = server_address[1]
 
-    def start(self):
+    def Start(self):
         self._httpd.start()
+        Utils.TLog("HTTP server started at " + str(self._host_address) + ":" + str(self._port))
 
-    def stop(self):
+    def Stop(self):
+        Utils.TLog("HTTP server shutting down")
         self._httpd.stop()
 
-    def register_url(self, url, callback):
-        StoppableHTTPServerHandler.urls[url] = callback
+    def RegisterUrlHandler(self, url, handler):
+        StoppableHTTPServerHandler.urls[url] = handler
