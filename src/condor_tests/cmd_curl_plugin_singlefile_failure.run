@@ -47,7 +47,6 @@ def main():
         "executable":               "cmd_curl_plugin_singlefile_failure.py",
         "output":                   "cmd_curl_plugin_singlefile_failure.out",
         "error":                    "cmd_curl_plugin_singlefile_failure.err",
-        "arguments":                "\"Basic Python pytest submission, cluster $(cluster)\"",
         "transfer_input_files":     servererror_url,
         "should_transfer_files":    "YES"
     }
