@@ -430,6 +430,7 @@ main( int argc, char **argv ) {
     }
     // If not, iterate over command-line arguments and set variables appropriately
     else {
+        fprintf( stderr, "MRC: multifile_curl_plugin invoked\n" );
         for( int i = 1; i < argc; i ++ ) {
             if ( strcmp( argv[i], "-infile" ) == 0 ) {
                 if ( i < ( argc - 1 ) ) {
