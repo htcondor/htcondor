@@ -18,8 +18,9 @@ TEST_FAILURE = 1
 
 class CondorTest(object):
 
-    def __init__(self, name):
+    def __init__(self, name, params=None):
         self._name = name
+        self._params = params
         self._personal_condors = dict()
 
 
@@ -41,7 +42,7 @@ class CondorTest(object):
 
     # @return: -1 if error, or the numeric key >=0 of this PersonalCondor instance if success
     def StartPersonalCondor(self):
-        personal = PersonalCondor(self._name)
+        personal = PersonalCondor(self._name, self._params)
         success = personal.Start()
         if success is not True:
             return -1

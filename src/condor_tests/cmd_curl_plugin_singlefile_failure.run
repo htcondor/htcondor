@@ -44,7 +44,8 @@ def main():
 
     # Setup a new test job
     job_args = {
-        "executable":               "cmd_curl_plugin_singlefile_failure.py",
+        "executable":               "x_echostring.pl",
+        "arguments":                "This test is designed to fail, should not be seeing this",
         "output":                   "cmd_curl_plugin_singlefile_failure.out",
         "error":                    "cmd_curl_plugin_singlefile_failure.err",
         "transfer_input_files":     servererror_url,
