@@ -69,6 +69,6 @@ dpkg-buildpackage -uc -us
 
 cd ..
 
-mv condor_* htcondor* libclassad* "$dest_dir"
+mv *.changes *.dsc *.debian.tar.xz *.orig.tar.gz *.deb "$dest_dir"
 ls -lh "$dest_dir"
 
