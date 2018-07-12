@@ -285,6 +285,7 @@ if( NOT WINDOWS)
 	if( MUNGE_LIB AND MUNGE_H)
 		set (HAVE_EXT_MUNGE 1)
 		set (MUNGE_FOUND ${MUNGE_LIB})
+		find_so_name( LIBMUNGE_SO ${MUNGE_FOUND} )
 		message (STATUS "MUNGE (optional) was found")
 	else()
 		message (STATUS "MUNGE (optional) was NOT found")
@@ -787,6 +788,9 @@ endif()
 # Do we want to link in libssl and kerberos or dlopen() them at runtime?
 if (LINUX AND NOT PROPER AND NOT WANT_PYTHON_WHEELS)
 	set( DLOPEN_SECURITY_LIBS TRUE )
+endif()
+if( DLOPEN_SECURITY_LIBS )
+	set( MUNGE_FOUND "" )
 endif()
 
 ################################################################################
