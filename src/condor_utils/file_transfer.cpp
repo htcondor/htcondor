@@ -4542,7 +4542,7 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	plugin_args.AppendArg( output_filename.c_str() );
 
 	// Invoke the plugin
-	dprintf( D_FULLDEBUG, "FILETRANSFER: invoking: %s \n", plugin_path.c_str() );
+	dprintf( D_ALWAYS, "FILETRANSFER: invoking: %s \n", plugin_path.c_str() );
 	FILE* plugin_pipe = my_popen( plugin_args, "r", FALSE, &plugin_env, drop_privs );
 	if( !plugin_pipe ) {
 		dprintf ( D_ALWAYS, "FILETRANSFER: failed to invoke multifile transfer "

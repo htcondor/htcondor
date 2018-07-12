@@ -434,7 +434,7 @@ if( NOT WINDOWS)
 
 		# Some versions of Clang require an additional C++11 flag, as the default stdlib
 		# is from an old GCC version.
-		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+		if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 		endif()
 

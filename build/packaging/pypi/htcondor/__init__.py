@@ -8,7 +8,7 @@ if 'CONDOR_CONFIG' in os.environ:
     pass
 
 # if condor_config does not exist on Linux, use /dev/null
-elif platform.system() == 'Linux':
+elif platform.system() in ['Linux', 'Darwin']:
 
     condor_config_paths = [
         '/etc/condor/condor_config',

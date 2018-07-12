@@ -11,8 +11,9 @@ from Utils import Utils
 class PersonalCondor(object):
 
 
-    def __init__(self, name):
+    def __init__(self, name, params=None):
         self._name = name
+        self._params = params
         self._master_process = None
         self._is_ready = False
         self._local_dir = name + ".local"
@@ -23,7 +24,7 @@ class PersonalCondor(object):
         self._log_path = self._local_path + "/log"
         self._run_path = self._local_path + "/run"
         self._spool_path = self._local_path + "/spool"
-        self.SetupLocalEnvironment()
+        self.SetupLocalEnvironment(self._params)
         Utils.TLog("CondorPersonal initialized with path: " + self._local_path)
 
 
@@ -66,7 +67,7 @@ class PersonalCondor(object):
 
 
     # Sets up local system environment we'll use to stand up the PersonalCondor instance.
-    def SetupLocalEnvironment(self):
+    def SetupLocalEnvironment(self, params=None):
 
         Utils.MakedirsIgnoreExist(self._local_dir)
         Utils.MakedirsIgnoreExist(self._execute_path)
@@ -91,6 +92,11 @@ class PersonalCondor(object):
         config += "SCHEDD_ADDRESS_FILE = $(SPOOL)/.schedd_address\n"
         if Utils.IsWindows() is True:
             config += "PROCD_ADDRESS = " + str(htcondor.param["PROCD_ADDRESS"]) + str(os.getpid()) + "\n"
+
+        # Add any custom params
+        if params is not None:
+            for key in params:
+                config += key + " = " + params[key] + "\n"
 
         config_file = open(self._local_config, "a")
         config_file.write(config)
