@@ -4585,21 +4585,21 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 					if (rejForNetworkShare) {
 						diagnostic_message = "network share exceeded";
 					} else if (rejForConcurrencyLimit) {
-						std::stringstream ss;
+						std::string ss;
 						std::set<std::string>::const_iterator it = rejectedConcurrencyLimits.begin();
 						while (true) {
-							ss << *it;
+							ss +=  *it;
 							it++;
 							if (it == rejectedConcurrencyLimits.end()) {break;}
-							else {ss << ", ";}
+							else {ss += ", ";}
 						}
-						diagnostic_message = "concurrency limit " + ss.str() + " reached";
+						diagnostic_message = std::string("concurrency limit ") + ss + " reached";
 					} else if (rejPreemptForPolicy) {
 						diagnostic_message =
 							"PREEMPTION_REQUIREMENTS == False";
 					} else if (rejPreemptForPrio) {
 						diagnostic_message = "insufficient priority";
-					} else if (rejForSubmitterLimit && !ignore_schedd_limit) {
+					} else if (rejForSubmitterLimit) {
                         diagnostic_message = "submitter limit exceeded";
 					} else {
 						diagnostic_message = "no match found";
