@@ -1749,7 +1749,7 @@ negotiationTime ()
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
                     // if allocating surplus, use allocated, otherwise just use the group's quota directly
-                    double target = (accept_surplus) ? group->allocated : group->quota;
+                    double target = std::max(group->allocated, group->quota);
 
                     double delta = std::max(0.0, target - group->usage);
                     // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
