@@ -131,7 +131,7 @@ my $ccKey = "check-connectivity-${VERSION}.zip";
 		DependsOn => "LeaseFunctionRole",
 		Properties => {
 			Role => { "Fn::GetAtt" => [ "LeaseFunctionRole", "Arn" ] },
-			Runtime => "nodejs4.3",
+			Runtime => "nodejs8.10",
 			Timeout => 60,
 			Handler => "sfr-lease.handler",
 			Code => {
@@ -146,7 +146,7 @@ my $ccKey = "check-connectivity-${VERSION}.zip";
 		DependsOn => "LeaseFunctionRole",
 		Properties => {
 			Role => { "Fn::GetAtt" => [ "LeaseFunctionRole", "Arn" ] },
-			Runtime => "nodejs4.3",
+			Runtime => "nodejs8.10",
 			Timeout => 60,
 			Handler => "odi-lease.handler",
 			Code => {
