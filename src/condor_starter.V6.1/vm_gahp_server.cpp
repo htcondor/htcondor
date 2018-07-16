@@ -28,7 +28,6 @@
 #include "condor_daemon_core.h"
 #include "MyString.h"
 #include "gahp_common.h"
-#include "condor_string.h"
 #include "strupr.h"
 #include "my_popen.h"
 #include "condor_environ.h"

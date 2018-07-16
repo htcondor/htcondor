@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_daemon_core.h"
-#include "condor_string.h"
 #include "subsystem_info.h"
 #include "basename.h"
 #include "setenv.h"

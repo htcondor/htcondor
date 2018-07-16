@@ -29,7 +29,6 @@
 #include "extArray.h"
 #include "sig_install.h"
 #include "string_list.h"
-#include "condor_string.h"   // for strnewp()
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "print_wrapped_text.h"
 #include "error_utils.h"

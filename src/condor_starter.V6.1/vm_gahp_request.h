@@ -25,7 +25,6 @@
 #include "condor_daemon_core.h"
 #include "gahp_common.h"
 #include "MyString.h"
-#include "condor_string.h"
 #include "condor_arglist.h"
 #include "vm_proc.h"
 #include "vm_gahp_server.h"

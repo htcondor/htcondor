@@ -24,7 +24,6 @@
 #include "condor_debug.h"
 #include "Queue.h"
 #include "HashTable.h"
-#include "condor_string.h"	// for strnewp()
 #include "dc_service.h"		// for class Service
 #include "subsystem_info.h"
 

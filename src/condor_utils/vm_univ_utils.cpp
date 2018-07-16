@@ -25,7 +25,6 @@
 #include "basename.h"
 #include "MyString.h"
 #include "string_list.h"
-#include "condor_string.h"
 #include "directory.h"
 #include "condor_attributes.h"
 #include "setenv.h"

@@ -28,7 +28,6 @@
 #include "util_lib_proto.h"
 #include "gahp_common.h"
 #include "env.h"
-#include "condor_string.h"
 #include "condor_claimid_parser.h"
 #include "authentication.h"
 #include "condor_version.h"

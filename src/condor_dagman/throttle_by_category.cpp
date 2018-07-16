@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_string.h"  /* for strnewp() */
 #include "throttle_by_category.h"
 #include "dagman_main.h"
 #include "debug.h"

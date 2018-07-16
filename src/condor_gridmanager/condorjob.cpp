@@ -22,7 +22,7 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
+#include "basename.h"
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "daemon.h"

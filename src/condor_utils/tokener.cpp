@@ -21,7 +21,6 @@
 #include "ad_printmask.h"
 #include "Regex.h"
 #include "tokener.h"
-#include "condor_string.h"	// for getline
 #include <string>
 
 // collapse a c++ escapes in-place in a std::string

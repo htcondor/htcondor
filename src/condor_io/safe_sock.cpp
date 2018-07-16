@@ -28,7 +28,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_socket_types.h"
-#include "condor_string.h"
+#include "condor_config.h"
 #include "condor_netdb.h"
 #include "selector.h"
 #include "condor_sockfunc.h"

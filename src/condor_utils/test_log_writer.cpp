@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "subsystem_info.h"
 #include "condor_random_num.h"
-#include "condor_string.h"
 #include "simple_arg.h"
 #include "stat_wrapper.h"
 #include "read_user_log.h"

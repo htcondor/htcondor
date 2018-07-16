@@ -41,7 +41,6 @@
 #include "condor_query.h"
 #include "condor_adtypes.h"
 #include "condor_state.h"
-#include "condor_string.h"
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "proc.h"

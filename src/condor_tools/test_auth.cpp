@@ -32,7 +32,6 @@
 #include "condor_uid.h"
 #include "match_prefix.h"
 #include "string_list.h"
-#include "condor_string.h"
 #include "get_daemon_name.h"
 #include "daemon.h"
 #include "dc_collector.h"

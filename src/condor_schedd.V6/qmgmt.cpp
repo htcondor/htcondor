@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "qmgmt.h"
 #include "condor_qmgr.h"
-#include "log.h"
 #include "classad_collection.h"
 #include "prio_rec.h"
 #include "condor_attributes.h"
@@ -44,8 +43,6 @@
 #include "condor_classad.h"
 #include "condor_ver_info.h"
 #include "condor_string.h" // for strnewp, etc.
-#include "utc_time.h"
-#include "condor_crontab.h"
 #include "forkwork.h"
 #include "condor_open.h"
 #include "ickpt_share.h"
@@ -56,7 +53,6 @@
 #include "condor_holdcodes.h"
 #include "nullfile.h"
 #include "condor_url.h"
-#include "classad/classadCache.h"
 #include "classad_helpers.h"
 #include <param_info.h>
 

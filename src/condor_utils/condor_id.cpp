@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_id.h"
-#include "condor_string.h"
 
 
 int compare(int a, int b) {

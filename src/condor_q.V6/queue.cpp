@@ -26,7 +26,7 @@
 #include "condor_query.h"
 #include "condor_q.h"
 #include "condor_io.h"
-#include "condor_string.h"
+#include "condor_arglist.h"
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "get_daemon_name.h"

@@ -26,7 +26,6 @@
 ************************************************************************/
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_string.h" 
 #include "condor_sys_types.h"
 #include "condor_config.h"
 #include "dprintf_internal.h"

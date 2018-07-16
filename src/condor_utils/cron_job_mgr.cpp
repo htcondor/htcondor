@@ -24,7 +24,6 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "simplelist.h"
 #include "condor_cron_job_list.h"
 #include "condor_cron_job_mgr.h"

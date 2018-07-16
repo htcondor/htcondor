@@ -20,7 +20,7 @@
 
 #if !defined(SKIP_AUTHENTICATION) && !defined(WIN32)
 #include "condor_auth_fs.h"
-#include "condor_string.h"
+#include "condor_config.h"
 #include "condor_environ.h"
 #include "CondorError.h"
 #include "condor_mkstemp.h"
