@@ -26,7 +26,6 @@
 #include "condor_environ.h"
 
 #include "authentication.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "my_hostname.h"

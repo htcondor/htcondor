@@ -28,7 +28,6 @@
 #include "gahp_common.h"
 #include "HashTable.h"
 #include "MyString.h"
-#include "condor_string.h"
 #include "condor_arglist.h"
 #include "vm_gahp_request.h"
 

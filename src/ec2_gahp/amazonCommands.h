@@ -21,7 +21,6 @@
 #define AMAZON_COMMANDS_H
 
 #include "condor_common.h"
-#include "condor_string.h"
 #include "MyString.h"
 #include "string_list.h"
 

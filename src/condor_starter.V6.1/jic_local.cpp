@@ -27,7 +27,6 @@
 
 #include "my_hostname.h"
 #include "internet.h"
-#include "condor_string.h"  // for strnewp
 #include "condor_attributes.h"
 #include "classad_command_util.h"
 #include "directory.h"

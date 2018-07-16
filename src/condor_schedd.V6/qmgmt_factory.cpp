@@ -19,58 +19,22 @@
 
 
 #include "condor_common.h"
-#include "condor_io.h"
-#include "string_list.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_daemon_core.h"
 
-#include "basename.h"
 #include "qmgmt.h"
 #include "condor_qmgr.h"
-#include "log.h"
-#include "classad_collection.h"
-#include "prio_rec.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
-#include "condor_adtypes.h"
-#include "spooled_job_files.h"
 #include "scheduler.h"	// for shadow_rec definition
-#include "dedicated_scheduler.h"
-#include "condor_email.h"
-#include "condor_universe.h"
-#include "globus_utils.h"
-#include "env.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
-#include "condor_string.h" // for strnewp, etc.
-#include "utc_time.h"
-#include "condor_crontab.h"
-#include "forkwork.h"
 #include "condor_open.h"
-#include "ickpt_share.h"
-#include "classadHistory.h"
-#include "directory.h"
-#include "filename_tools.h"
-#include "spool_version.h"
 #include "condor_holdcodes.h"
-#include "nullfile.h"
-#include "condor_url.h"
-#include "classad/classadCache.h"
-#include <param_info.h>
 #include "condor_version.h"
 #include "submit_utils.h"
 #include "set_user_priv_from_ad.h"
 #include "my_async_fread.h"
-
-#if defined(HAVE_DLOPEN) || defined(WIN32)
-#include "ScheddPlugin.h"
-#endif
-
-#if defined(HAVE_GETGRNAM)
-#include <sys/types.h>
-#include <grp.h>
-#endif
 
 
 class JobFactory : public SubmitHash {

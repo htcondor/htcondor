@@ -21,7 +21,7 @@
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 
 #include "condor_config.h"
-#include "condor_string.h"
+#include "basename.h"
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"

@@ -32,7 +32,6 @@
 #include "dc_startd.h"
 #include "daemon_types.h"
 #include "dc_collector.h"
-#include "condor_string.h"  // for strlwr() and friends
 #include "get_daemon_name.h"
 #include "condor_netdb.h"
 #include "condor_claimid_parser.h"

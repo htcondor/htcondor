@@ -25,7 +25,6 @@
 #include "condor_open.h"
 
 #include "daemon.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "condor_query.h"

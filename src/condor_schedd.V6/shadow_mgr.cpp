@@ -23,7 +23,7 @@
 #include "simplelist.h"
 #include "string_list.h"
 #include "condor_attributes.h"
-#include "condor_string.h"
+#include "condor_config.h"
 #include "classad_merge.h"
 #include "my_popen.h"
 

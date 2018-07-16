@@ -22,7 +22,7 @@
 #include "mpi_master_proc.h"
 #include "NTsenders.h"
 #include "condor_attributes.h"
-#include "condor_string.h"  // for strnewp
+#include "condor_config.h"
 #include "ipv6_hostname.h"
 #include "env.h"
 

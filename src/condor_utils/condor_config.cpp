@@ -58,7 +58,6 @@
 #include "condor_syscall_mode.h"
 #include "pool_allocator.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"

@@ -22,7 +22,6 @@
 #include <limits.h>
 #include <string.h>
 #include "condor_debug.h"
-#include "condor_string.h"
 #include "condor_daemon_core.h"
 #include "condor_cron_job.h"
 #include "condor_cron_job_io.h"

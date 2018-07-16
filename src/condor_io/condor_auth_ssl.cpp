@@ -24,7 +24,7 @@
 #define ouch(x) dprintf(D_SECURITY,"SSL Auth: %s",x)
 #include "authentication.h"
 #include "condor_auth_ssl.h"
-#include "condor_string.h"
+#include "condor_config.h"
 #include "condor_environ.h"
 #include "CondorError.h"
 #include "openssl/rand.h"

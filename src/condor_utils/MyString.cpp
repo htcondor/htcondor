@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "MyString.h"
 #include "condor_snutils.h"
-#include "condor_string.h"
+#include "condor_debug.h"
 #include "condor_random_num.h"
 #include "strupr.h"
 #include "simplelist.h"
