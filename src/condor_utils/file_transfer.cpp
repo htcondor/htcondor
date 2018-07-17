@@ -30,7 +30,6 @@
 #include "directory.h"
 #include "condor_config.h"
 #include "spooled_job_files.h"
-#include "condor_string.h"
 #include "util_lib_proto.h"
 #include "daemon.h"
 #include "daemon_types.h"
@@ -207,7 +206,7 @@ FileTransfer::~FileTransfer()
 	if (DontEncryptOutputFiles) delete DontEncryptOutputFiles;
 	if (OutputDestination) delete OutputDestination;
 	if (IntermediateFiles) delete IntermediateFiles;
-	if (SpooledIntermediateFiles) delete SpooledIntermediateFiles;
+	if (SpooledIntermediateFiles) free(SpooledIntermediateFiles);
 	// Note: do _not_ delete FileToSend!  It points to OutputFile or Intermediate.
 	if (last_download_catalog) {
 		// iterate through and delete entries
@@ -869,7 +868,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 				ATTR_TRANSFER_INTERMEDIATE_FILES,
 				dynamic_buf ? dynamic_buf : "(none)");
 		if ( dynamic_buf ) {
-			SpooledIntermediateFiles = strnewp(dynamic_buf);
+			SpooledIntermediateFiles = strdup(dynamic_buf);
 			free(dynamic_buf);
 			dynamic_buf = NULL;
 		}

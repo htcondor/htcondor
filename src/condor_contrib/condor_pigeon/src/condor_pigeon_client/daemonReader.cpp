@@ -28,7 +28,7 @@
 
 char *getHostname(char *givenHost) {
   if (givenHost == NULL) {
-  		char *res = strnewp(get_local_fqdn().Value());
+  		char *res = strdup(get_local_fqdn().Value());
   		return res;	
   } else {
   	return givenHost;

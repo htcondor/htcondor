@@ -30,7 +30,6 @@
 
 #include "XInterface.unix.h"
 #include "condor_config.h"
-#include "condor_string.h"
 //#include <paths.h>
 #if USES_UTMPX  /* SGI IRIX 62/65 */
 #	include <utmpx.h>
@@ -183,7 +182,7 @@ XInterface::~XInterface()
 
 	if ( logged_on_users ) {
 		for (int foo =0; foo <= logged_on_users->getlast(); foo++) {
-			delete[] (*logged_on_users)[foo];
+			free((*logged_on_users)[foo]);
 		}
 		delete logged_on_users;
 	}
@@ -199,7 +198,7 @@ XInterface::ReadUtmp() {
 
 	if ( logged_on_users ) {
 		for (int foo =0; foo <= logged_on_users->getlast(); foo++) {
-			delete[] (*logged_on_users)[foo];
+			free((*logged_on_users)[foo]);
 		}
 		delete logged_on_users;
 	}
@@ -234,7 +233,7 @@ XInterface::ReadUtmp() {
 				dprintf(D_FULLDEBUG, "User %s is logged in.\n",
 					utmp_entry.ut_user );
 				(*logged_on_users)[logged_on_users->getlast()+1] =
-					strnewp( utmp_entry.ut_user );
+					strdup( utmp_entry.ut_user );
 			}
 		}
 	}

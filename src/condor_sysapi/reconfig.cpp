@@ -33,7 +33,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
@@ -132,10 +131,10 @@ sysapi_reconfig(void)
 		while( (devname = _sysapi_console_devices->next()) ) {
 		  if( strncmp( devname, striptxt, striplen ) == 0 &&
 		      strlen( devname ) > striplen ) {
-		    char *tmpname = strnewp( devname );
+		    char *tmpname = strdup( devname );
 		    _sysapi_console_devices->deleteCurrent();
 		    _sysapi_console_devices->insert( tmpname + striplen );
-		    delete[] tmpname;
+		    free( tmpname );
 		  }
 		}
 	}

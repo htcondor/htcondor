@@ -21,7 +21,6 @@
 #include "ad_printmask.h"
 #include "escapes.h"
 #include "MyString.h"
-#include "condor_string.h"
 #include "printf_format.h"
 #include "format_time.h"
 
@@ -365,7 +364,7 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 		retval += row_suffix;
 
 	// Convert return MyString to new char *.
-	return strnewp(retval.Value() );
+	return strdup(retval.Value() );
 }
 
 char * AttrListPrintMask::
@@ -391,7 +390,7 @@ display_Headings (FILE *file, List<const char> & headings) {
 	char * head = display_Headings(headings);
 	if (head) {
 		fputs(head, file);
-		delete [] head;
+		free(head);
 		return 0;
 	}
 	return 1;

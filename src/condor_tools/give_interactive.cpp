@@ -29,7 +29,6 @@
 #include "condor_classad.h"
 #include "condor_classad.h"
 #include "condor_adtypes.h"
-#include "condor_string.h"
 #include "condor_uid.h"
 #include "daemon.h"
 #include "extArray.h"
@@ -285,7 +284,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 
 #ifdef WIN32
 	// put the NT domain into the ad as well
-	char *ntdomain = strnewp(get_condor_username());
+	char *ntdomain = strdup(get_condor_username());
 	if (ntdomain) {
 		char *slash = strchr(ntdomain,'/');
 		if ( slash ) {
@@ -298,7 +297,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 				requestAd.Assign(ATTR_NT_DOMAIN, ntdomain);
 			}
 		}
-		delete [] ntdomain;
+		free(ntdomain);
 	}
 #endif
 		
