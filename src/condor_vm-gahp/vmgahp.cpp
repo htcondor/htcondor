@@ -25,7 +25,6 @@
 #include "env.h"
 #include "condor_environ.h"
 #include "condor_daemon_core.h"
-#include "condor_string.h"
 #include "MyString.h"
 #include "condor_attributes.h"
 #include "condor_vm_universe_types.h"

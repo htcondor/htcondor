@@ -21,7 +21,6 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_network.h"
-#include "condor_string.h"
 #include "spooled_job_files.h"
 #include "subsystem_info.h"
 #include "env.h"
@@ -778,13 +777,13 @@ main( int argc, const char *argv[] )
 					exit(1);
 				}
 				if( PoolName ) {
-					delete [] PoolName;
+					free(PoolName);
 				}
 					// TODO We should try to resolve the name to a full
 					//   hostname, but get_full_hostname() doesn't like
 					//   seeing ":<port>" at the end, which is valid for a
 					//   collector name.
-				PoolName = strnewp( *ptr );
+				PoolName = strdup( *ptr );
 			} else if (is_dash_arg_prefix(ptr[0], "stm", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -stm requires another argument\n",

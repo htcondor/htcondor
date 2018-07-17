@@ -23,7 +23,7 @@ install ( FILES Condor.pm CondorUtils.pm CondorTest.pm CondorPersonal.pm DESTINA
 if (NOT WINDOWS)
 
     install ( FILES condor_run DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-    install ( FILES condor_updates_stats condor_init DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    install ( FILES condor_updates_stats DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( FILES condor_gather_info DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( FILES condor_pool_job_report DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 

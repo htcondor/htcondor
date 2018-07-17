@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "starter_common.h"
 #include "condor_debug.h"
-#include "condor_string.h"
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "condor_file_info.h"

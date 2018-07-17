@@ -59,7 +59,7 @@ public:
 		@param The name of the jobstate.log file to write to.
 	*/
 	void SetLogFile(const char *jobstateLogFile ) {
-				_jobstateLogFile = strnewp( jobstateLogFile ); }
+				_jobstateLogFile = strdup( jobstateLogFile ); }
 
 	/** Get the jobstate.log file.
 		@return The jobstate.log file we're writing to.

@@ -1432,7 +1432,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
-%_sbindir/condor_init
 %_sbindir/condor_master
 %_sbindir/condor_negotiator
 %_sbindir/condor_off

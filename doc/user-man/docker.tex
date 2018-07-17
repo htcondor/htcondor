@@ -41,6 +41,28 @@ directories from the host machine to be volume mounted, and thus visible
 inside the container.  See the docker section of the administrator's manual
 for details.
 
+In Docker universe (as well as vanilla), HTCondor never allows a containerized 
+process to run as root inside the container, it always runs as a non-root user.
+It will run as the same non-root user that a vanilla job will. If a 
+Docker Universe job fails in an obscure way, but runs fine in a docker
+container on a desktop, try running the job as a non-root user on the desktop
+to try to duplicate the problem.
+
+HTCondor creates a per-job scratch directory on the execute machine, transfers 
+any input files to that directory, bind-mounts that directory to a directory 
+of the same name inside the container, and sets the IWD of the contained job 
+to that directory.  The assumption is that the job will look in the cwd for 
+input files, and drop output files in the same directory.  In docker 
+terms, we docker run with the -v /some\_scratch\_directory 
+-w /some\_scratch\_directory --user non-root-user command line options 
+(along with many others). 
+
+The executable file can come from one of two places:  either from within
+the container's image, or it can be a script transfered from the submit
+machine to the scratch directory of the execute machine.  To specify the
+former, use an absolute path (starting with a /) for the executable.  For
+the latter, use a relative path.
+
 Therefore,
 the submit description file should contain the submit command
 \begin{verbatim}

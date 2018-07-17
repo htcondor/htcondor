@@ -22,7 +22,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_cron_param.h"
-#include "condor_string.h"
 
 CronParamBase::CronParamBase( const char &base )
 		: m_base( base )

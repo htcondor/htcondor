@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 
 #include "env.h"
@@ -492,7 +491,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 	}
 
 	// make a copy of nameValueExpr for modifying
-	expr = strnewp( nameValueExpr );
+	expr = strdup( nameValueExpr );
 	ASSERT( expr );
 
 	// find the delimiter
@@ -502,7 +501,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 		// This environment entry is an unexpanded $$() macro.
 		// We just want to keep it in the environment verbatim.
 		SetEnv(expr,NO_ENVIRONMENT_VALUE);
-		delete[] expr;
+		free(expr);
 		return true;
 	}
 
@@ -520,7 +519,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 			}
 			AddErrorMessage(msg.Value(),error_msg);
 		}
-		delete[] expr;
+		free(expr);
 		return false;
 	}
 
@@ -529,7 +528,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 
 	// do the deed
 	retval = SetEnv( expr, delim + 1 );
-	delete[] expr;
+	free(expr);
 	return retval;
 }
 

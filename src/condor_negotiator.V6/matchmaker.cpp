@@ -32,7 +32,6 @@
 #include "dc_startd.h"
 #include "daemon_types.h"
 #include "dc_collector.h"
-#include "condor_string.h"  // for strlwr() and friends
 #include "get_daemon_name.h"
 #include "condor_netdb.h"
 #include "condor_claimid_parser.h"
@@ -1749,7 +1748,7 @@ negotiationTime ()
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
                     // if allocating surplus, use allocated, otherwise just use the group's quota directly
-                    double target = (accept_surplus) ? group->allocated : group->quota;
+                    double target = std::max(group->allocated, group->quota);
 
                     double delta = std::max(0.0, target - group->usage);
                     // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
@@ -4585,21 +4584,21 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 					if (rejForNetworkShare) {
 						diagnostic_message = "network share exceeded";
 					} else if (rejForConcurrencyLimit) {
-						std::stringstream ss;
+						std::string ss;
 						std::set<std::string>::const_iterator it = rejectedConcurrencyLimits.begin();
 						while (true) {
-							ss << *it;
+							ss +=  *it;
 							it++;
 							if (it == rejectedConcurrencyLimits.end()) {break;}
-							else {ss << ", ";}
+							else {ss += ", ";}
 						}
-						diagnostic_message = "concurrency limit " + ss.str() + " reached";
+						diagnostic_message = std::string("concurrency limit ") + ss + " reached";
 					} else if (rejPreemptForPolicy) {
 						diagnostic_message =
 							"PREEMPTION_REQUIREMENTS == False";
 					} else if (rejPreemptForPrio) {
 						diagnostic_message = "insufficient priority";
-					} else if (rejForSubmitterLimit && !ignore_schedd_limit) {
+					} else if (rejForSubmitterLimit) {
                         diagnostic_message = "submitter limit exceeded";
 					} else {
 						diagnostic_message = "no match found";
@@ -5609,7 +5608,6 @@ Warning: scheddAddr may not be the actual address we'll use to contact the
 schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
-MSC_DISABLE_WARNING(6262) // warning: Function uses 60K of stack
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
@@ -5622,7 +5620,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char accountingGroup[256];
 	char remoteOwner[256];
     MyString startdName;
-	SafeSock startdSock;
 	bool send_failed;
 	int want_claiming = -1;
 	ExprTree *savedRequirements;
@@ -5845,7 +5842,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 			 offline ? " (offline)" : "");
 	return MM_GOOD_MATCH;
 }
-MSC_RESTORE_WARNING(6262) // warning: Function uses 60K of stack
 
 void
 Matchmaker::calculateSubmitterLimit(

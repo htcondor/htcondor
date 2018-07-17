@@ -1533,6 +1533,7 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 			result_string = create_failure_result( requestID,
 								list_request.errorMessage.c_str(),
 								list_request.errorCode.c_str() );
+			return true;
 		} else {
 			string next_id;
 			string next_name;

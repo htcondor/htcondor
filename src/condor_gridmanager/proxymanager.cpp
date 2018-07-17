@@ -35,9 +35,7 @@
 #include "globus_utils.h"
 
 #include "proxymanager.h"
-//#include "myproxy_manager.h"
 #include "gridmanager.h"
-#include "condor_string.h"
 
 #include <sstream>
 

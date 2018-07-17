@@ -30,7 +30,8 @@
 #include "ipv6_hostname.h"
 #include "internet.h"
 #include "basename.h"
-#include "condor_string.h"  // for strnewp
+#include "condor_config.h"
+#include "util_lib_proto.h"
 #include "condor_attributes.h"
 #include "condor_commands.h"
 #include "command_strings.h"

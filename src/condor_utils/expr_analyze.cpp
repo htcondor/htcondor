@@ -22,7 +22,6 @@
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "MyString.h"
 #include "string_list.h"

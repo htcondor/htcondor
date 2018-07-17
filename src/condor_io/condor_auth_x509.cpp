@@ -25,7 +25,6 @@
 #include "condor_auth_x509.h"
 #include "authentication.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "CondorError.h"
 #include "setenv.h"
 #include "globus_utils.h"

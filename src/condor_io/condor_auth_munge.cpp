@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <munge.h>
 #include "condor_auth_munge.h"
-#include "condor_string.h"
 #include "condor_environ.h"
 #include "CondorError.h"
 #include "condor_mkstemp.h"

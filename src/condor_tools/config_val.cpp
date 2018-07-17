@@ -504,7 +504,6 @@ main( int argc, const char* argv[] )
 {
 	char	*value = NULL, *tmp = NULL;
 	const char * pcolon;
-	const char *host = NULL;
 	const char *name_arg = NULL; // raw argument from -name (before get_daemon_name lookup)
 	const char *addr = NULL;
 	const char *name = NULL;     // cooked -name argument after get_daemon_name lookup
@@ -589,9 +588,7 @@ main( int argc, const char* argv[] )
 
 		// if we get here, the arg begins with "-",
 		const char * arg = argv[i]+1;
-		if (is_arg_prefix(arg, "host", 1)) { // as of 8/27/2013 -host is a secret option used by condor_init
-			host = use_next_arg("host", argv, i);
-		} else if (is_arg_prefix(arg, "name", 1)) {
+		if (is_arg_prefix(arg, "name", 1)) {
 			name_arg = use_next_arg("name", argv, i);
 		} else if (is_arg_prefix(arg, "address", 1)) {
 			addr = use_next_arg("address", argv, i);
@@ -770,7 +767,7 @@ main( int argc, const char* argv[] )
 				tmp = opts.next(); if (tmp) profile_iter = atoi(tmp);
 			}
 		} else {
-			fprintf(stderr, "%s is not valid argument\n", argv[i]);
+			fprintf(stderr, "%s is not a valid argument\n", argv[i]);
 			usage();
 		}
 	}
@@ -814,7 +811,7 @@ main( int argc, const char* argv[] )
 	if (write_config || stats_with_defaults) {
 		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
 	}
-	config_host(host, config_options);
+	config_host(NULL, config_options);
 	validate_config(false, 0); // validate, but do not abort.
 	if (print_config_sources) {
 		PrintConfigSources();
@@ -827,7 +824,7 @@ main( int argc, const char* argv[] )
 
 		extern const char * simulated_local_config;
 		simulated_local_config = reconfig_source;
-		config_host(host, config_options);
+		config_host(NULL, config_options);
 		if (print_config_sources) {
 			fprintf(stdout, "Reconfig with %s appended\n", reconfig_source);
 			PrintConfigSources();
