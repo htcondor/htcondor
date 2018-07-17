@@ -13,6 +13,7 @@ JOB_FAILURE = 1
 class CondorJob(object):
 
     def __init__(self, job_args):
+        self._cluster_id = None
         self._job_args = job_args
 
 
@@ -36,8 +37,8 @@ class CondorJob(object):
             submit_result = self.WaitForFinish()
             return submit_result
 
-        # If we didn't wait for finish, return success for now
-        return JOB_SUCCESS
+        # If we didn't wait for finish, return None
+        return None
 
 
     def WaitForFinish(self, timeout=240):

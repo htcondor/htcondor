@@ -52,10 +52,8 @@ class CondorTest(object):
 
     def SubmitJob(self, job, wait=True, key=0):
 
-        self.SubmitCallback()
+        result = None
 
-        result = JOB_FAILURE
-        
         # If no PersonalCondor objects are registered to this test, submit to system condor
         if len(self._personal_condors) == 0:
             result = job.Submit(wait)
@@ -71,16 +69,22 @@ class CondorTest(object):
             self._personal_condors[key].SetCondorConfig()
             result = job.Submit(wait)
 
-        # Invoke the appropriate callback function
-        Utils.TLog("Submit returned result = " + str(result))
-        if result == JOB_SUCCESS:
-            self.SuccessCallback()
-        elif result == JOB_FAILURE:
-            self.FailureCallback()
+        self.SubmitCallback()
+
+        # If we waited the job to finish, invoke the appropriate callback function
+        if wait is True:
+            Utils.TLog("Submit returned result = " + str(result))
+            if result == JOB_SUCCESS:
+                self.SuccessCallback()
+            elif result == JOB_FAILURE:
+                self.FailureCallback()
+        # Bug: if we don't wait, how do we invoke the callbacks?
 
 
     def RegisterSubmit(self, submit_callback_fn):
         self.SubmitCallback = submit_callback_fn
+        Utils.TLog("RegisterSubmit called, about to invoke submit_callback_fn")
+        submit_callback_fn()
 
 
     def RegisterSuccess(self, success_callback_fn):

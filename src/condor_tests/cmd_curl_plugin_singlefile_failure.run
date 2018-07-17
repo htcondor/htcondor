@@ -9,7 +9,6 @@ from pytest.HTTPServer import HTTPServer
 from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
 
-
 def SuccessCallback():
     Utils.TLog("Job ran successfully but was supposed to go on hold. Test failed.")
     sys.exit(1)
