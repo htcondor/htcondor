@@ -246,7 +246,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		// we need this before we instantiate the Reqexp object...
 	if (SlotType::type_param_boolean(cap, "PARTITIONABLE", false)) {
 		set_feature( PARTITIONABLE_SLOT );
-		m_id_dispenser = new IdDispenser( 3, 1 );
+		m_id_dispenser = new IdDispenser( 1 );
 	} else {
 		set_feature( STANDARD_SLOT );
 	}

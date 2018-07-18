@@ -470,7 +470,7 @@ ResMgr::init_resources( void )
 	if( ! num_res ) {
 			// We're not configured to advertise any nodes.
 		resources = NULL;
-		id_disp = new IdDispenser( num_cpus(), 1 );
+		id_disp = new IdDispenser( 1 );
 		return;
 	}
 
@@ -489,7 +489,7 @@ ResMgr::init_resources( void )
 	}
 
 		// We can now seed our IdDispenser with the right slot id.
-	id_disp = new IdDispenser( num_cpus(), i+1 );
+	id_disp = new IdDispenser( i+1 );
 
 		// Finally, we can free up the space of the new_cpu_attrs
 		// array itself, now that all the objects it was holding that
