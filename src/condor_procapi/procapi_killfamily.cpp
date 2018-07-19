@@ -498,7 +498,7 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	return PROCAPI_SUCCESS;
 #else
 	// Win32 version
-	ExtArray<pid_t> pids(256);
+	std::vector<pid_t> pids;
 	int num_pids;
 	int index_pidFamily = 0;
 	int index_familyHandles = 0;
@@ -522,7 +522,7 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	num_pids = ntSysInfo.GetPIDs(pids);
 
 	// loop through pids comparing process owner
-	for (int s=0; s<num_pids; s++) {
+	for (size_t s=0; s<pids.size(); s++) {
 
 		// find owner for pid pids[s]
 		
