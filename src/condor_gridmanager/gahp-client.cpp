@@ -3024,7 +3024,7 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command, buf, deleg_proxy, low_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -3105,7 +3105,7 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -3173,7 +3173,7 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -3758,7 +3758,7 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 
 		// If we made it here, command is pending.
