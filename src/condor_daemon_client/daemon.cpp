@@ -90,16 +90,16 @@ Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool )
 	_type = tType;
 
 	if( tPool ) {
-		_pool = strnewp( tPool );
+		_pool = strdup( tPool );
 	} else {
 		_pool = NULL;
 	}
 
 	if( tName && tName[0] ) {
 		if( is_valid_sinful(tName) ) {
-			New_addr( strnewp(tName) );
+			New_addr( strdup(tName) );
 		} else {
-			_name = strnewp( tName );
+			_name = strdup( tName );
 		}
 	} 
 	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "  
@@ -125,31 +125,31 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 
 	switch( _type ) {
 	case DT_MASTER:
-		_subsys = strnewp( "MASTER" );
+		_subsys = strdup( "MASTER" );
 		break;
 	case DT_STARTD:
-		_subsys = strnewp( "STARTD" );
+		_subsys = strdup( "STARTD" );
 		break;
 	case DT_SCHEDD:
-		_subsys = strnewp( "SCHEDD" );
+		_subsys = strdup( "SCHEDD" );
 		break;
 	case DT_CLUSTER:
-		_subsys = strnewp( "CLUSTERD" );
+		_subsys = strdup( "CLUSTERD" );
 		break;
 	case DT_COLLECTOR:
-		_subsys = strnewp( "COLLECTOR" );
+		_subsys = strdup( "COLLECTOR" );
 		break;
 	case DT_NEGOTIATOR:
-		_subsys = strnewp( "NEGOTIATOR" );
+		_subsys = strdup( "NEGOTIATOR" );
 		break;
 	case DT_CREDD:
-		_subsys = strnewp( "CREDD" );
+		_subsys = strdup( "CREDD" );
 		break;
 	case DT_GENERIC:
-		_subsys = strnewp( "GENERIC" );
+		_subsys = strdup( "GENERIC" );
 		break;
 	case DT_HAD:
-		_subsys = strnewp( "HAD" );
+		_subsys = strdup( "HAD" );
 		break;
 	default:
 		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
@@ -157,7 +157,7 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	}
 
 	if( tPool ) {
-		_pool = strnewp( tPool );
+		_pool = strdup( tPool );
 	} else {
 		_pool = NULL;
 	}
@@ -202,37 +202,34 @@ Daemon::operator=(const Daemon &copy)
 void
 Daemon::deepCopy( const Daemon &copy )
 {
-		// NOTE: strnewp(NULL) returns NULL, and doesn't seg fault,
-		// which is exactly what we want everywhere in this method.
-
-	New_name( strnewp(copy._name) );
-	New_alias( strnewp(copy._alias) );
-	New_hostname( strnewp(copy._hostname) );
-	New_full_hostname( strnewp(copy._full_hostname) );
-	New_addr( strnewp(copy._addr) );
-	New_version( strnewp(copy._version) );
-	New_platform( strnewp(copy._platform) );
-	New_pool( strnewp(copy._pool) );
+	New_name( copy._name ? strdup(copy._name) : NULL );
+	New_alias( copy._alias ? strdup(copy._alias) : NULL );
+	New_hostname( copy._hostname ? strdup(copy._hostname) : NULL );
+	New_full_hostname( copy._full_hostname ? strdup(copy._full_hostname) : NULL );
+	New_addr( copy._addr ? strdup(copy._addr) : NULL );
+	New_version( copy._version ? strdup(copy._version) : NULL );
+	New_platform( copy._platform ? strdup(copy._platform) : NULL );
+	New_pool( copy._pool ? strdup(copy._pool) : NULL );
 
 	if( copy._error ) {
 		newError( copy._error_code, copy._error );
 	} else {
 		if( _error ) { 
-			delete [] _error;
+			free(_error);
 			_error = NULL;
 		}
 		_error_code = copy._error_code;
 	}
 
 	if( _id_str ) {
-		delete [] _id_str;
+		free(_id_str);
 	}
-	_id_str = strnewp( copy._id_str );
+	_id_str = copy._id_str ? strdup( copy._id_str ) : NULL;
 
 	if( _subsys ) {
-		delete [] _subsys;
+		free(_subsys);
 	}
-	_subsys = strnewp( copy._subsys );
+	_subsys = copy._subsys ? strdup( copy._subsys ) : NULL;
 
 	_port = copy._port;
 	_type = copy._type;
@@ -262,18 +259,18 @@ Daemon::~Daemon()
 		display( D_HOSTNAME );
 		dprintf( D_HOSTNAME, " --- End of Daemon object info ---\n" );
 	}
-	if( _name ) delete [] _name;
-	if( _alias ) delete [] _alias;
-	if( _pool ) delete [] _pool;
-	if( _addr ) delete [] _addr;
-	if( _error ) delete [] _error;
-	if( _id_str ) delete [] _id_str;
-	if( _subsys ) delete [] _subsys;
-	if( _hostname ) delete [] _hostname;
-	if( _full_hostname ) delete [] _full_hostname;
-	if( _version ) delete [] _version;
-	if( _platform ) { delete [] _platform; }
-	if( _cmd_str ) { delete [] _cmd_str; }
+	if( _name ) free(_name);
+	if( _alias ) free(_alias);
+	if( _pool ) free(_pool);
+	if( _addr ) free(_addr);
+	if( _error ) free(_error);
+	if( _id_str ) free(_id_str);
+	if( _subsys ) free(_subsys);
+	if( _hostname ) free(_hostname);
+	if( _full_hostname ) free(_full_hostname);
+	if( _version ) free(_version);
+	if( _platform ) { free(_platform); }
+	if( _cmd_str ) { free(_cmd_str); }
 	if( m_daemon_ad_ptr) { delete m_daemon_ad_ptr; }
 }
 
@@ -397,7 +394,7 @@ Daemon::idStr( void )
 	} else {
 		return "unknown daemon";
 	}
-	_id_str = strnewp( buf.c_str() );
+	_id_str = strdup( buf.c_str() );
 	return _id_str;
 }
 
@@ -1076,9 +1073,9 @@ bool
 Daemon::setSubsystem( const char* subsys )
 {
 	if( _subsys ) {
-		delete [] _subsys;
+		free(_subsys);
 	}
-	_subsys = strnewp( subsys );
+	_subsys = subsys ? strdup( subsys ) : NULL;
 
 	return true;
 }
@@ -1110,7 +1107,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		char *specified_host = param( buf.c_str() );
 		if ( specified_host ) {
 				// Found an entry.  Use this name.
-			_name = strnewp( specified_host );
+			_name = strdup( specified_host );
 			dprintf( D_HOSTNAME, 
 					 "No name given, but %s defined to \"%s\"\n",
 					 buf.c_str(), specified_host );
@@ -1141,7 +1138,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 
 		if(host && hostaddr.from_ip_string(host) ) {
 			buf = generate_sinful(host, _port);
-			New_addr( strnewp(buf.c_str()) );
+			New_addr( strdup(buf.c_str()) );
 			dprintf( D_HOSTNAME,
 					"Host info \"%s\" is an IP address\n", host );
 		} else {
@@ -1167,11 +1164,11 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			buf = generate_sinful(hostaddr.to_ip_string().Value(), _port);
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.c_str() );
 			if (fqdn.Length() > 0)
-				New_full_hostname(strnewp(fqdn.Value()));
+				New_full_hostname(strdup(fqdn.Value()));
 			if( host ) {
-				New_alias( strnewp(host) );
+				New_alias( strdup(host) );
 			}
-			New_addr( strnewp(buf.c_str()) );
+			New_addr( strdup(buf.c_str()) );
 		}
 
 		if (host) free( host );
@@ -1197,13 +1194,13 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// if it worked, we've now got the proper values for the
 			// name (and the full hostname, since that's just the
 			// "host part" of the "name"...
-		New_alias( strnewp(get_host_part( _name )) );
-		New_name( strnewp(tmp) );
+		New_alias( strdup(get_host_part( _name )) );
+		New_name( strdup(tmp) );
 		free( tmp );
 		dprintf( D_HOSTNAME, "Using \"%s\" for name in Daemon object\n",
 				 tmp );
 			// now, grab the fullhost from the name we just made...
-		tmp = strnewp( get_host_part(_name) ); 
+		tmp = strdup( get_host_part(_name) ); 
 		dprintf( D_HOSTNAME,
 				 "Using \"%s\" for full hostname in Daemon object\n", tmp );
 		New_full_hostname( tmp );
@@ -1226,7 +1223,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 						 _name );
 				_is_local = true;
 			}
-			delete [] my_name;
+			free(my_name);
 		}
 	} else if ( _type != DT_NEGOTIATOR ) {
 			// We were passed neither a name nor an address, so use
@@ -1235,7 +1232,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
             // name
 		_is_local = true;
 		New_name( localName() );
-		New_full_hostname( strnewp(get_local_fqdn().Value()) );
+		New_full_hostname( strdup(get_local_fqdn().Value()) );
 		dprintf( D_HOSTNAME, "Neither name nor addr specified, using local "
 				 "values - name: \"%s\", full host: \"%s\"\n", 
 				 _name, _full_hostname );
@@ -1384,9 +1381,9 @@ Daemon::getCmInfo( const char* subsys )
 		// For CM daemons, the "pool" and "name" should be the same
 		// thing.  See if either is set, and if so, use it for both.  
 	if( _name && ! _pool ) {
-		New_pool( strnewp(_name) );
+		New_pool( strdup(_name) );
 	} else if ( ! _name && _pool ) {
-		New_name( strnewp(_pool) );
+		New_name( strdup(_pool) );
 	} else if ( _name && _pool ) {
 		if( strcmp(_name, _pool) ) {
 				// They're different, this is bad.
@@ -1431,8 +1428,8 @@ Daemon::getCmInfo( const char* subsys )
 				// everything else (port, hostname, etc), will be
 				// initialized and set correctly by our caller based
 				// on the fullname and the address.
-			New_name( strnewp(get_local_fqdn().Value()) );
-			New_full_hostname( strnewp(get_local_fqdn().Value()) );
+			New_name( strdup(get_local_fqdn().Value()) );
+			New_full_hostname( strdup(get_local_fqdn().Value()) );
 			free( host );
 			return true;
 		}
@@ -1488,8 +1485,8 @@ Daemon::findCmDaemon( const char* cm_name )
 	if( _port == 0 && readAddressFile(_subsys) ) {
 		dprintf( D_HOSTNAME, "Port 0 specified in name, "
 				 "IP/port found in address file\n" );
-		New_name( strnewp(get_local_fqdn().Value()) );
-		New_full_hostname( strnewp(get_local_fqdn().Value()) );
+		New_name( strdup(get_local_fqdn().Value()) );
+		New_full_hostname( strdup(get_local_fqdn().Value()) );
 		return true;
 	}
 
@@ -1497,7 +1494,7 @@ Daemon::findCmDaemon( const char* cm_name )
 		// file, so we should store the string we used (as is) in
 		// _name, so that we can get to it later if we need it.
 	if( ! _name ) {
-		New_name( strnewp(cm_name) );
+		New_name( strdup(cm_name) );
 	}
 
 		// Now that we've got the port, grab the hostname for the rest
@@ -1521,7 +1518,7 @@ Daemon::findCmDaemon( const char* cm_name )
 
 
 	if( saddr.from_ip_string(host) ) {
-		New_addr( strnewp( sinful.getSinful() ) );
+		New_addr( sinful.getSinful() ? strdup( sinful.getSinful() ) : NULL );
 		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
@@ -1546,16 +1543,16 @@ Daemon::findCmDaemon( const char* cm_name )
 		sinful.setHost(saddr.to_ip_string().Value());
 		dprintf( D_HOSTNAME, "Found IP address and port %s\n",
 				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
-		New_full_hostname(strnewp(fqdn.Value()));
+		New_full_hostname(strdup(fqdn.Value()));
 		if( host ) {
-			New_alias( strnewp(host) );
+			New_alias( strdup(host) );
 		}
-		New_addr( strnewp( sinful.getSinful() ) );
+		New_addr( strdup( sinful.getSinful() ) );
 	}
 
 		// If the pool was set, we want to use _name for that, too. 
 	if( _pool ) {
-		New_pool( strnewp(_name) );
+		New_pool( strdup(_name) );
 	}
 
 	free( host );
@@ -1618,7 +1615,7 @@ Daemon::initHostname( void )
 		return false;
 	}
 
-	char* tmp = strnewp(fqdn.Value());
+	char* tmp = strdup(fqdn.Value());
 	New_full_hostname( tmp );
 	initHostnameFromFull();
 	return true;
@@ -1636,13 +1633,13 @@ Daemon::initHostnameFromFull( void )
 		// if we have _full_hostname we just want to trim off the
 		// domain the same way for _hostname.
 	if( _full_hostname ) {
-		copy = strnewp( _full_hostname );
+		copy = strdup( _full_hostname );
 		tmp = strchr( copy, '.' );
 		if( tmp ) {
 			*tmp = '\0';
 		}
-		New_hostname( strnewp(copy) );
-		delete [] copy;
+		New_hostname( strdup(copy) );
+		free( copy );
 		return true; 
 	}
 	return false;
@@ -1682,7 +1679,7 @@ Daemon::initVersion( void )
 			char ver[128];
 			CondorVersionInfo vi;
 			vi.get_version_from_file(exe_file, ver, 128);
-			New_version( strnewp(ver) );
+			New_version( strdup(ver) );
 			dprintf( D_HOSTNAME, "Found version string \"%s\" "
 					 "in local binary (%s)\n", ver, exe_file );
 			free( exe_file );
@@ -1732,9 +1729,9 @@ void
 Daemon::newError( CAResult err_code, const char* str )
 {
 	if( _error ) {
-		delete [] _error;
+		free(_error);
 	}
-	_error = strnewp( str );
+	_error = str ? strdup( str ) : NULL;
 	_error_code = err_code;
 }
 
@@ -1746,12 +1743,10 @@ Daemon::localName( void )
 	sprintf( buf, "%s_NAME", daemonString(_type) );
 	tmp = param( buf );
 	if( tmp ) {
-		char *tmp2 = build_valid_daemon_name( tmp );
+		my_name = build_valid_daemon_name( tmp );
 		free( tmp );
-		my_name = strnewp( tmp2 );
-		free( tmp2 );
 	} else {
-		my_name = strnewp( get_local_fqdn().Value() );
+		my_name = strdup( get_local_fqdn().Value() );
 	}
 	return my_name;
 }
@@ -1818,7 +1813,7 @@ Daemon::readAddressFile( const char* subsys )
 	if( is_valid_sinful(buf.Value()) ) {
 		dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
 				 "%s address file\n", buf.Value(), use_superuser ? "superuser" : "local" );
-		New_addr( strnewp(buf.Value()) );
+		New_addr( strdup(buf.Value()) );
 		rval = true;
 	}
 
@@ -1827,13 +1822,13 @@ Daemon::readAddressFile( const char* subsys )
 	if( buf.readLine(addr_fp) ) {
 			// chop off the newline
 		buf.chomp();
-		New_version( strnewp(buf.Value()) );
+		New_version( strdup(buf.Value()) );
 		dprintf( D_HOSTNAME,
 				 "Found version string \"%s\" in address file\n",
 				 buf.Value() );
 		if( buf.readLine(addr_fp) ) {
 			buf.chomp();
-			New_platform( strnewp(buf.Value()) );
+			New_platform( strdup(buf.Value()) );
 			dprintf( D_HOSTNAME,
 					 "Found platform string \"%s\" in address file\n",
 					 buf.Value() );
@@ -1916,12 +1911,12 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 		// construct the IP_ADDR attribute
 	formatstr( buf, "%sIpAddr", _subsys );
 	if ( ad->LookupString( buf.c_str(), buf2 ) ) {
-		New_addr( strnewp( buf2.c_str() ) );
+		New_addr( strdup( buf2.c_str() ) );
 		found_addr = true;
 		addr_attr_name = buf;
 	}
 	else if ( ad->LookupString( ATTR_MY_ADDRESS, buf2 ) ) {
-		New_addr( strnewp( buf2.c_str() ) );
+		New_addr( strdup( buf2.c_str() ) );
 		found_addr = true;
 		addr_attr_name = ATTR_MY_ADDRESS;
 	}
@@ -1985,9 +1980,9 @@ Daemon::initStringFromAd( const ClassAd* ad, const char* attrname, char** value 
 		return false;
 	}
 	if( *value ) {
-		delete [] *value;
+		free( *value );
 	}
-	*value = strnewp(tmp);
+	*value = strdup(tmp);
 	dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"\n",
 			 attrname, tmp );
 	free( tmp );
@@ -2006,7 +2001,7 @@ char*
 Daemon::New_full_hostname( char* str )
 {
 	if( _full_hostname ) {
-		delete [] _full_hostname;
+		free(_full_hostname);
 	} 
 	_full_hostname = str;
 	return str;
@@ -2017,7 +2012,7 @@ char*
 Daemon::New_hostname( char* str )
 {
 	if( _hostname ) {
-		delete [] _hostname;
+		free(_hostname);
 	} 
 	_hostname = str;
 	return str;
@@ -2028,7 +2023,7 @@ void
 Daemon::New_addr( char* str )
 {
 	if( _addr ) {
-		delete [] _addr;
+		free(_addr);
 	} 
 	_addr = str;
 
@@ -2050,16 +2045,16 @@ Daemon::New_addr( char* str )
 							formatstr(buf,"<%s>",priv_addr);
 							priv_addr = buf.c_str();
 						}
-						delete [] _addr;
-						_addr = strnewp( priv_addr );
+						free(_addr);
+						_addr = strdup( priv_addr );
 						sinful = Sinful( _addr );
 					}
 					else {
 						// no private address was specified, so use public
 						// address with CCB disabled
 						sinful.setCCBContact(NULL);
-						delete [] _addr;
-						_addr = strnewp( sinful.getSinful() );
+						free(_addr);
+						_addr = strdup( sinful.getSinful() );
 					}
 				}
 				free( our_network_name );
@@ -2069,8 +2064,8 @@ Daemon::New_addr( char* str )
 				// it is not so noisy in logs and such.
 				sinful.setPrivateAddr(NULL);
 				sinful.setPrivateNetworkName(NULL);
-				delete [] _addr;
-				_addr = strnewp( sinful.getSinful() );
+				free(_addr);
+				_addr = strdup( sinful.getSinful() );
 				dprintf( D_HOSTNAME, "Private network name not matched.\n");
 			}
 		}
@@ -2098,8 +2093,8 @@ Daemon::New_addr( char* str )
 			if( !_full_hostname || (strcmp(_alias,_full_hostname)!=0 && (strncmp(_alias,_full_hostname,len)!=0 || _full_hostname[len]!='.')) )
 			{
 				sinful.setAlias(_alias);
-				delete [] _addr;
-				_addr = strnewp( sinful.getSinful() );
+				free(_addr);
+				_addr = strdup( sinful.getSinful() );
 			}
 		}
 	}
@@ -2120,7 +2115,7 @@ char*
 Daemon::New_version ( char* ver )
 {
 	if( _version ) {
-		delete [] _version;
+		free(_version);
 	} 
 	_version = ver;
 	return ver;
@@ -2130,7 +2125,7 @@ char*
 Daemon::New_platform ( char* plat )
 {
 	if( _platform ) {
-		delete [] _platform;
+		free(_platform);
 	} 
 	_platform = plat;
 	return plat;
@@ -2141,7 +2136,7 @@ char*
 Daemon::New_name( char* str )
 {
 	if( _name ) {
-		delete [] _name;
+		free( _name );
 	} 
 	_name = str;
 	return str;
@@ -2151,7 +2146,7 @@ const char*
 Daemon::New_alias( char *str )
 {
 	if( _alias ) {
-		delete [] _alias;
+		free(_alias);
 	}
 	_alias = str;
 	return str;
@@ -2161,7 +2156,7 @@ char*
 Daemon::New_pool( char* str )
 {
 	if( _pool ) {
-		delete [] _pool;
+		free(_pool);
 	} 
 	_pool = str;
 	return str;
@@ -2197,10 +2192,10 @@ Daemon::checkAddr( void )
 		}
 			// clear out some things that would confuse locate()
 		_tried_locate = false;
-		delete [] _addr;
+		free(_addr);
 		_addr = NULL;
 		if( _is_local ) {
-			delete [] _name;
+			free( _name );
 			_name = NULL;
 		}
 		locate();
@@ -2234,11 +2229,11 @@ void
 Daemon::setCmdStr( const char* cmd )
 {
 	if( _cmd_str ) { 
-		delete [] _cmd_str;
+		free(_cmd_str);
 		_cmd_str = NULL;
 	}
 	if( cmd ) {
-		_cmd_str = strnewp( cmd );
+		_cmd_str = strdup( cmd );
 	}
 }
 

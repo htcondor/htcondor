@@ -66,7 +66,7 @@ DCStarter::initFromClassAd( ClassAd* ad )
 		return false;
 	} else {
 		if( is_valid_sinful(tmp) ) {
-			New_addr( strnewp(tmp) );
+			New_addr( strdup(tmp) );
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
@@ -78,7 +78,7 @@ DCStarter::initFromClassAd( ClassAd* ad )
 	}
 
 	if( ad->LookupString(ATTR_VERSION, &tmp) ) {
-		New_version( strnewp(tmp) );
+		New_version( strdup(tmp) );
 		free( tmp );
 		tmp = NULL;
 	}

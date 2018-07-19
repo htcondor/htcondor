@@ -38,7 +38,7 @@ DCShadow::DCShadow( const char* tName ) : Daemon( DT_SHADOW, tName, NULL )
 			// We must have been given a sinful string instead of a hostname.
 			// Just use the sinful string in place of a hostname, contrary
 			// to the default behavior in Daemon::Daemon().
-		_name = strnewp(_addr);
+		_name = strdup(_addr);
 	}
 }
 
@@ -73,7 +73,7 @@ DCShadow::initFromClassAd( ClassAd* ad )
 		return false;
 	} else {
 		if( is_valid_sinful(tmp) ) {
-			New_addr( strnewp(tmp) );
+			New_addr( strdup(tmp) );
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
@@ -85,7 +85,7 @@ DCShadow::initFromClassAd( ClassAd* ad )
 	}
 
 	if( ad->LookupString(ATTR_SHADOW_VERSION, &tmp) ) {
-		New_version( strnewp(tmp) );
+		New_version( strdup(tmp) );
 		free( tmp );
 		tmp = NULL;
 	}
