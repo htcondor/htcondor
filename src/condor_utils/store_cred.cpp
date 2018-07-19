@@ -1450,7 +1450,7 @@ char*
 get_password() {
 	char *buf;
 	
-	buf = new char[MAX_PASSWORD_LENGTH + 1];
+	buf = (char *)malloc(MAX_PASSWORD_LENGTH + 1);
 	
 	if (! buf) { fprintf(stderr, "Out of Memory!\n\n"); return NULL; }
 	

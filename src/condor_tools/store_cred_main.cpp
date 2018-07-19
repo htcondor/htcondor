@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
 			printf("\n");
 		}
 		else {
-			pw = strnewp(options.pw);
+			pw = strdup(options.pw);
 			SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH + 1);
 		}
 		result = write_password_file(options.password_file, pw);
@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
 					printf("\n\n");
 				} else {
 					// got the passwd from the command line.
-					pw = strnewp(options.pw);
+					pw = strdup(options.pw);
 					SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
 				}
 			}
@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
 				}
 				if (pw) {
 					SecureZeroMemory(pw, strlen(pw));
-					delete[] pw;
+					free(pw);
 				}
 			}
 			break;

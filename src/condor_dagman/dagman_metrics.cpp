@@ -74,7 +74,7 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_graphNumEdges( 0 ),
 	_graphNumVertices( 0 )
 {
-	_primaryDagFile = strnewp(primaryDagFile);
+	_primaryDagFile = strdup(primaryDagFile);
 
 	_rescueDagNum = rescueDagNum;
 
@@ -136,7 +136,7 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 //---------------------------------------------------------------------------
 DagmanMetrics::~DagmanMetrics()
 {
-	delete[] _primaryDagFile;
+	free(_primaryDagFile);
 }
 
 //---------------------------------------------------------------------------

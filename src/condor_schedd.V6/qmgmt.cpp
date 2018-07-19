@@ -42,7 +42,6 @@
 #include "env.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
-#include "condor_string.h" // for strnewp, etc.
 #include "forkwork.h"
 #include "condor_open.h"
 #include "ickpt_share.h"
@@ -944,9 +943,9 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 	ASSERT(owner == NULL);
 
 	if ( o ) {
-		fquser = strnewp(o);
+		fquser = strdup(o);
 			// owner is just fquser that stops at the first '@' 
-		owner = strnewp(o);
+		owner = strdup(o);
 		char *atsign = strchr(owner,'@');
 		if (atsign) {
 			*atsign = '\0';
@@ -954,7 +953,7 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 	}
 
 	addr = raddr;
-	myendpoint = strnewp(addr.to_ip_string().Value());
+	myendpoint = strdup(addr.to_ip_string().Value());
 
 	return true;
 }
@@ -972,11 +971,11 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 bool
 QmgmtPeer::setEffectiveOwner(char const *o)
 {
-	delete [] owner;
+	free(owner);
 	owner = NULL;
 
 	if ( o ) {
-		owner = strnewp(o);
+		owner = strdup(o);
 	}
 	return true;
 }
@@ -985,15 +984,15 @@ void
 QmgmtPeer::unset()
 {
 	if (owner) {
-		delete [] owner;
+		free(owner);
 		owner = NULL;
 	}
 	if (fquser) {
-		delete fquser;
+		free(fquser);
 		fquser = NULL;
 	}
 	if (myendpoint) {
-		delete [] myendpoint;
+		free(myendpoint);
 		myendpoint = NULL;
 	}
 	if (sock) sock=NULL;	// note: do NOT delete sock!!!!!

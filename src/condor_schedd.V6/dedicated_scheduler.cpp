@@ -102,19 +102,15 @@ AllocationNode::~AllocationNode()
 	}
 	delete jobs;
 	delete matches;
-	if( claim_id ) {
-		delete [] claim_id;
-	}
+	free(claim_id);
 }
 
 
 void
 AllocationNode::setClaimId( const char* new_id )
 {
-	if( claim_id ) {
-		delete [] claim_id;
-	}
-	claim_id = strnewp( new_id );
+	free(claim_id);
+	claim_id = strdup( new_id );
 }
 
 
@@ -481,8 +477,8 @@ DedicatedScheduler::~DedicatedScheduler()
 	if (unclaimed_resources) {delete unclaimed_resources;}
 	if (busy_resources) { delete busy_resources;}
 
-	if( ds_owner ) { delete [] ds_owner; }
-	if( ds_name ) { delete [] ds_name; }
+	if( ds_owner ) { free(ds_owner); }
+	if( ds_name ) { free(ds_name); }
 
 	if( shadow_obj ) {
 		delete shadow_obj;
@@ -533,7 +529,7 @@ DedicatedScheduler::initialize( void )
 	if( ! Name ) {
 		EXCEPT( "DedicatedScheduler::initialize(): Name is NULL" ); 
 	}
-	tmpname = strnewp( Name );
+	tmpname = strdup( Name );
 	if( (tmp = strchr(tmpname, '@')) ) {
 			// There's an '@', so use everything in front of it to
 			// uniquely identify this dedicated scheduler on this
@@ -546,11 +542,11 @@ DedicatedScheduler::initialize( void )
 			// simple string...
 		snprintf( buf, 256, "DedicatedScheduler" );
 	}
-	delete [] tmpname;
-	ds_owner = strnewp( buf );
+	free( tmpname );
+	ds_owner = strdup( buf );
 
 	snprintf( buf, 256, "DedicatedScheduler@%s", Name );
-	ds_name = strnewp( buf );
+	ds_name = strdup( buf );
 
 		// Call our reconfig() method, since any config file stuff we
 		// care about should be read at start-up, too.

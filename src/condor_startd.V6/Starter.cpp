@@ -87,7 +87,7 @@ Starter::Starter( const Starter& s )
 	}
 
 	if( s.s_path ) {
-		s_path = strnewp( s.s_path );
+		s_path = strdup( s.s_path );
 	} else {
 		s_path = NULL;
 	}
@@ -156,7 +156,7 @@ Starter::~Starter()
 	}
 
 	if (s_path) {
-		delete [] s_path;
+		free(s_path);
 	}
 	if( s_ad ) {
 		delete( s_ad );
@@ -228,9 +228,9 @@ void
 Starter::setPath( const char* updated_path )
 {
 	if( s_path ) {
-		delete [] s_path;
+		free(s_path);
 	}
-	s_path = strnewp( updated_path );
+	s_path = strdup( updated_path );
 }
 
 void
