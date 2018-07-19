@@ -248,7 +248,7 @@ init_classad()
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
 	ad->Assign(ATTR_NAME, default_name);
-	delete [] default_name;
+	free(default_name);
 
 	ad->Assign(ATTR_MY_ADDRESS, my_ip_string());
 

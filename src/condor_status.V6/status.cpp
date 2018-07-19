@@ -2338,7 +2338,7 @@ secondPass (int argc, char *argv[])
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);
 			}
-			delete [] daemonname;
+			free(daemonname);
 			daemonname = NULL;
 		} else if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
 			if (diagnose) { printf ("[%s]\n", argv[i+1]); }

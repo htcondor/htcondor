@@ -1198,7 +1198,8 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// name (and the full hostname, since that's just the
 			// "host part" of the "name"...
 		New_alias( strnewp(get_host_part( _name )) );
-		New_name( tmp );
+		New_name( strnewp(tmp) );
+		free( tmp );
 		dprintf( D_HOSTNAME, "Using \"%s\" for name in Daemon object\n",
 				 tmp );
 			// now, grab the fullhost from the name we just made...
@@ -1745,8 +1746,10 @@ Daemon::localName( void )
 	sprintf( buf, "%s_NAME", daemonString(_type) );
 	tmp = param( buf );
 	if( tmp ) {
-		my_name = build_valid_daemon_name( tmp );
+		char *tmp2 = build_valid_daemon_name( tmp );
 		free( tmp );
+		my_name = strnewp( tmp2 );
+		free( tmp2 );
 	} else {
 		my_name = strnewp( get_local_fqdn().Value() );
 	}

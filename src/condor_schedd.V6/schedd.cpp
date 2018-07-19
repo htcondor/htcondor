@@ -12842,7 +12842,7 @@ Scheduler::Init()
 
 	if( schedd_name_in_config ) {
 		tmp = param( "SCHEDD_NAME" );
-		delete [] Name;
+		free( Name );
 		Name = build_valid_daemon_name( tmp );
 		free( tmp );
 	} else {

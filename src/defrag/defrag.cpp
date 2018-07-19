@@ -856,7 +856,7 @@ Defrag::publish(ClassAd *ad)
 	char *valid_name = build_valid_daemon_name(m_defrag_name.c_str());
 	ASSERT( valid_name );
 	m_daemon_name = valid_name;
-	delete [] valid_name;
+	free(valid_name);
 
 	SetMyTypeName(*ad, "Defrag");
 	SetTargetTypeName(*ad, "");

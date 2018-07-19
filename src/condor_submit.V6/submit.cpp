@@ -662,7 +662,7 @@ main( int argc, const char *argv[] )
 					exit(1);
 				}
 				if( ScheddName ) {
-					delete [] ScheddName;
+					free(ScheddName);
 				}
 				if( !(ScheddName = get_daemon_name(*ptr)) ) {
 					fprintf( stderr, "%s: unknown host %s\n",
@@ -677,7 +677,7 @@ main( int argc, const char *argv[] )
 					exit(1);
 				}
 				if( ScheddName ) {
-					delete [] ScheddName;
+					free(ScheddName);
 				}
 				if( !(ScheddName = get_daemon_name(*ptr)) ) {
 					fprintf( stderr, "%s: unknown host %s\n",

@@ -104,11 +104,8 @@ CredDaemon::reconfig()
 	}
 	m_name = param("CREDD_HOST");
 	if (m_name == NULL) {
-		char* tmp = default_daemon_name();
-		ASSERT(tmp != NULL);
-		m_name = strdup(tmp);
+		m_name = default_daemon_name();
 		ASSERT(m_name != NULL);
-		delete[] tmp;
 	}
 	if(m_name == NULL) {
 		EXCEPT("default_daemon_name() returned NULL");

@@ -1061,7 +1061,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName,StringList & unresolved_names
 			} else {
 				names.append( *argv );
 			}
-			delete [] daemonname;
+			free( daemonname );
 			daemonname = NULL;
 			break;
 		}
@@ -1979,11 +1979,11 @@ doSquawkReconnect( char *addr ) {
 	}
 	if( ! d.locate(Daemon::LOCATE_FOR_LOOKUP) ) {
 		printf ( "Failed to contact daemon.\n" );
-		delete [] hostname;
+		free( hostname );
 		return FALSE;
 	}
 	strcpy ( addr, d.addr() );
-	delete [] hostname;
+	free( hostname );
 	
 	return TRUE;	
 }

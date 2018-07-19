@@ -268,7 +268,7 @@ int main(int argc, char *argv[]) {
 
 cleanup:			
 	if (options.daemonname) {
-		delete[] options.daemonname;
+		free(options.daemonname);
 	}
 	if (daemon) {
 		delete daemon;
