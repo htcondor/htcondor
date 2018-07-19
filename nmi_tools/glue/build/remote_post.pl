@@ -182,6 +182,9 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 }
 else {
     system("mv *.tar.gz *.rpm *.deb $pub_dir");
+    if (glob("*.changes")) {
+        system("mv *.changes *.dsc *.debian.tar.xz $pub_dir");
+    }
     system("cmake -E md5sum $pub_dir/* md5s.txt");
 }
 

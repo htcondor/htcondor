@@ -136,13 +136,6 @@ print "------------------------- ENV DUMP ------------------------\n";
 print "Configure args: " . join(' ', @ARGV) . "\n";
 
 ######################################################################
-# Save source tree for native redhat RPM builds
-######################################################################
-if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS|Fedora|Debian9|Ubuntu16)/) {
-    system("cd $CloneDir && tar cfz $ENV{TMP}/condor.tar.gz *");
-}
-
-######################################################################
 # Determine the right cmake to use. Either the one on the machine is
 # sufficient, or we download and build one. Either way, we know the
 # absolute path to cmake.
@@ -188,7 +181,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 ######################################################################
 # figure out if we have java
 ######################################################################
-if ($ENV{NMI_PLATFORM} = ~ /_win/i) {
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     my $javaver = `reg QUERY "HKLM\\Software\\JavaSoft\\Java Runtime Environment"`;
 	#print "check for java runtime returned $javaver\n";
     # look for "CurrentVersion    REG_SZ    n.m"
