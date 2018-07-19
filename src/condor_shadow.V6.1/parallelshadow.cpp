@@ -211,7 +211,7 @@ ParallelShadow::getResources( void )
 
 		// Now that we sent this, free the memory that was allocated
 		// with getClaimId() above
-	delete [] claim_id;
+	free( claim_id );
 	claim_id = NULL;
 
 	if( ! sock->end_of_message() ) {
@@ -635,7 +635,7 @@ ParallelShadow::shutDownLogic( int& exitReason ) {
 		dprintf( D_FULLDEBUG, "Resource %s...%13s %d\n", res,
 				 rrStateToString(r->getResourceState()), 
 				 r->getExitReason() );
-		delete [] res;
+		free( res );
 		switch ( r->getResourceState() )
 		{
 			case RR_PENDING_DEATH:
@@ -1026,7 +1026,7 @@ ParallelShadow::logReconnectedEvent( void )
 	char* starter = NULL;
 	remRes->getStarterAddress( starter );
 	event.setStarterAddr( starter );
-	delete [] starter;
+	free( starter );
 	starter = NULL;
 
 */
