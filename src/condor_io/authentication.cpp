@@ -1029,6 +1029,15 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
 			method_bitmask &= ~CAUTH_GSI;
 		}
+#if defined(HAVE_EXT_MUNGE)
+		if ( (method_bitmask & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )
+#else
+		if (method_bitmask & CAUTH_MUNGE)
+#endif
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding Munge: %s\n", "Initialization failed");
+			method_bitmask &= ~CAUTH_MUNGE;
+		}
         dprintf ( D_SECURITY, "HANDSHAKE: sending (methods == %i) to server\n", method_bitmask);
         if ( !mySock->code( method_bitmask ) || !mySock->end_of_message() ) {
             return -1;
@@ -1084,6 +1093,15 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 		dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
 		client_methods &= ~CAUTH_GSI;
 		shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	}
+#if defined(HAVE_EXT_MUNGE)
+	if ( (shouldUseMethod & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )
+#else
+	if (shouldUseMethod & CAUTH_MUNGE)
+#endif
+	{
+		dprintf (D_SECURITY, "HANDSHAKE: excluding Munge: %s\n", "Initialization failed");
+		shouldUseMethod &= ~CAUTH_MUNGE;
 	}
 
 	dprintf ( D_SECURITY, "HANDSHAKE: i picked (method == %i)\n", shouldUseMethod);
