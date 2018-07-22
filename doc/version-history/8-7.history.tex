@@ -113,6 +113,22 @@ doesn't have to be you.
 but do not use the file transfer mechanism.
 \Ticket{6587}
 
+\item VM universe jobs are now given time to shutdown after a power-off
+signal when they are evicted gracefully.
+\Ticket{6705}
+
+\item The \MacroNI{NETWORK\_HOSTNAME} configuration parameter can now be
+set to a fully-qualified hostname that's an alias of one of the machine's
+interfaces.
+\Ticket{6702}
+
+\item Added configuration parameters \MacroNI{GAHP\_SS​L\_CADIR} and
+\MacroNI{GAHP\_SS​L\_CAFILE} to specify trusted CAs when authenticating
+EC2 and GCE servers.
+This used by be controlled by \MacroNI{SOAP\_SS​L\_CA\_DIR} and
+\MacroNI{SOAP\_SS​L\_CAFILE}, which have been removed.
+\Ticket{6684}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

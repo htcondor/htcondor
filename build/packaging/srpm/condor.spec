@@ -234,6 +234,7 @@ BuildRequires: openldap-devel
 BuildRequires: python-devel
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
+BuildRequires: sqlite-devel
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
@@ -1010,7 +1011,7 @@ rm -rf %{buildroot}/%{_sysconfdir}/init.d
 # Temporarily turn off python for Fedora
 %if 0%{?fedora}
 rm -f %{buildroot}/%{_bindir}/condor_top
-rm -f %{buildroot}/%{_mandir}/man1/condor_top.1.gz
+rm -f %{buildroot}/%{_mandir}/man1/condor_top.1
 %endif
 
 %if %systemd
