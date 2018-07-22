@@ -289,6 +289,7 @@ BuildRequires: globus-callout-devel
 BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
+BuildRequires: munge-devel
 BuildRequires: voms-devel
 %endif
 BuildRequires: libtool-ltdl-devel
