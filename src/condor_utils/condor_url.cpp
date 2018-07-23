@@ -27,7 +27,7 @@ const char* IsUrl( const char *url )
 		return NULL;
 	}
 	const char *ptr = url;
-	while ( isalpha( *ptr ) ) {
+	while ( isalnum( *ptr ) ) {
 		ptr++;
 	}
 	if ( ptr != url && ptr[0] == ':' && ptr[1] == '/' && ptr[2] == '/' ) {
