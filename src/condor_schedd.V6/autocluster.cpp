@@ -93,18 +93,15 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 	if (significant_attrs && ! next_id_exhausted && (MATCH == strcasecmp(new_sig_attrs,significant_attrs))) {
 		if (free_input_attrs) {
 			free(const_cast<char*>(new_sig_attrs));
-			new_sig_attrs = NULL;
 		}
 		return false;
 	}
 
 	//PRAGMA_REMIND("tj: is it worth checking to see if the significant attrs only changed order?")
 
-	const char * free_attrs = NULL;
-
 	if (replace_attrs || ! significant_attrs) {
 		// Create significant_attrs from new_sig_attrs
-		free_attrs = significant_attrs; // remember to free this later
+		free(const_cast<char*>(significant_attrs));
 		if (free_input_attrs) {
 			significant_attrs = new_sig_attrs;
 		} else {
@@ -119,15 +116,13 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 		StringList new_attrs(new_sig_attrs);
 		sig_attrs_changed = attrs.create_union(new_attrs,true);
 		if (sig_attrs_changed) {
-			free_attrs = significant_attrs; // free this later
+			free(const_cast<char*>(significant_attrs));
 			significant_attrs = attrs.print_to_string();
-		} else if (free_input_attrs) {
-			free_attrs = new_sig_attrs; // free this later
+		}
+		if (free_input_attrs) {
+			free(const_cast<char*>(new_sig_attrs));
 		}
 	}
-
-	// free whatever list of attrs we don't need anymore
-	if (free_attrs) { free(const_cast<char*>(free_attrs)); free_attrs = NULL; }
 
 	// the SIGNIFICANT_ATTRIBUTES setting changed, purge our
 	// state.
