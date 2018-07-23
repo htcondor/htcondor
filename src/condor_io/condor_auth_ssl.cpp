@@ -258,6 +258,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         server_status = client_share_status( client_status );
         if( server_status != AUTH_SSL_A_OK || client_status != AUTH_SSL_A_OK ) {
             ouch( "SSL Authentication fails, terminating\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -341,6 +343,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             if( client_status == AUTH_SSL_QUITTING
                 || server_status == AUTH_SSL_QUITTING ) {
                 ouch( "SSL Authentication failed\n" );
+				(*SSL_CTX_free_ptr)(ctx);
+				(*SSL_free_ptr)(ssl);
 				free(buffer);
                 return fail;
             }
@@ -362,6 +366,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( client_status == AUTH_SSL_QUITTING
             || server_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -422,6 +428,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed at session key exchange.\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -450,6 +458,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( client_status != AUTH_SSL_A_OK
             || server_status != AUTH_SSL_A_OK ) {
             ouch( "SSL Authentication fails, terminating\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -530,6 +540,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             if( client_status == AUTH_SSL_QUITTING
                 || server_status == AUTH_SSL_QUITTING ) {
                 ouch( "SSL Authentication failed\n" );
+				(*SSL_CTX_free_ptr)(ctx);
+				(*SSL_free_ptr)(ssl);
 				free(buffer);
                 return fail;
             }
@@ -550,6 +562,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -617,6 +631,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed at key exchange.\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
