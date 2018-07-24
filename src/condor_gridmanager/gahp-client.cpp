@@ -2726,9 +2726,9 @@ GahpServer::poll()
 {
 	Gahp_Args* result = NULL;
 	int num_results = 0;
-	int i, result_reqid;
+	int result_reqid;
 	GenericGahpClient* entry;
-	ExtArray<Gahp_Args*> result_lines;
+	std::vector<Gahp_Args*> result_lines;
 
 	m_in_results = true;
 
@@ -2752,16 +2752,17 @@ GahpServer::poll()
 		return;
 	}
 	num_results = atoi(result->argv[1]);
+	ASSERT(num_results >= 0);
 
 		// Now store each result line in an array.
-	for (i=0; i < num_results; i++) {
+	for (size_t i=0; i < (size_t)num_results; i++) {
 			// Allocate a result buffer if we don't already have one
 		if ( !result ) {
 			result = new Gahp_Args;
 			ASSERT(result);
 		}
 		read_argv(result);
-		result_lines[i] = result;
+		result_lines.push_back(result);
 		result = NULL;
 	}
 
@@ -2783,7 +2784,7 @@ GahpServer::poll()
 
 		// Now for each stored request line,
 		// lookup the request id in our hash table and stash the result.
-	for (i=0; i < num_results; i++) {
+	for (size_t i=0; i < result_lines.size(); i++) {
 		if ( result ) delete result;
 		result = result_lines[i];
 
