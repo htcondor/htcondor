@@ -210,26 +210,26 @@ HibernatorBase::stringToSleepState ( char const *name )
 bool
 HibernatorBase::maskToStates(
 	unsigned			   mask,
-	ExtArray<SLEEP_STATE> &_states )
+	std::vector<SLEEP_STATE> &_states )
 {
-	_states.truncate(-1);
+	_states.clear();
 	unsigned bit;
 	for ( bit = (unsigned)S1;
 		  bit <= (unsigned)S5;
 		  bit <<= 1 ) {
 		if ( bit & mask ) {
-			_states.add( (SLEEP_STATE)bit );
+			_states.push_back( (SLEEP_STATE)bit );
 		}
 	}
 	return true;
 }
 
 bool
-HibernatorBase::statesToString( const ExtArray<SLEEP_STATE> &_states,
+HibernatorBase::statesToString( const std::vector<SLEEP_STATE> &_states,
 								MyString &str )
 {
 	str = "";
-	for( int i = 0;  i <= _states.getlast();  i++ ) {
+	for( size_t i = 0;  i < _states.size();  i++ ) {
 		if ( i ) {
 			str += ",";
 		}
@@ -241,7 +241,7 @@ HibernatorBase::statesToString( const ExtArray<SLEEP_STATE> &_states,
 bool
 HibernatorBase::maskToString( unsigned mask, MyString &str )
 {
-	ExtArray<SLEEP_STATE>	_states;
+	std::vector<SLEEP_STATE>	_states;
 	if( !maskToStates( mask, _states ) ) {
 		return false;
 	}
@@ -250,27 +250,27 @@ HibernatorBase::maskToString( unsigned mask, MyString &str )
 
 bool
 HibernatorBase::stringToStates( const char *str,
-								ExtArray<SLEEP_STATE> &_states )
+								std::vector<SLEEP_STATE> &_states )
 {
-	_states.truncate(-1);
+	_states.clear();
 	StringList	strlist( str );
 	strlist.rewind();
 	const char	*name;
 	int			n = 0;
 	while( (name = strlist.next()) != NULL ) {
 		SLEEP_STATE state = stringToSleepState( name );
-		_states.add( state );
+		_states.push_back( state );
 		n++;
 	}
 	return (n >= 1);
 }
 
 bool
-HibernatorBase::statesToMask( const ExtArray<SLEEP_STATE> &_states,
+HibernatorBase::statesToMask( const std::vector<SLEEP_STATE> &_states,
 							  unsigned &mask )
 {
 	mask = 0x0;
-	for( int i = 0;  i <= _states.getlast();  i++ ) {
+	for( size_t i = 0;  i < _states.size();  i++ ) {
 		mask |= _states[i];
 	}
 	return true;
@@ -282,7 +282,7 @@ HibernatorBase::stringToMask( const char *str,
 {
 	mask = 0x0;
 
-	ExtArray<SLEEP_STATE> _states;
+	std::vector<SLEEP_STATE> _states;
 	if( !stringToStates( str, _states ) ) {
 		return false;
 	}
