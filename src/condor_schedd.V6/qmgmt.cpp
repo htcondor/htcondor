@@ -1980,6 +1980,7 @@ int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & s
 	spooled_filename.clear();
 	row_count = 0;
 	terrno = 0;
+	bool delete_factory = false;
 
 	// check to see if the schedd is permitting late materialization
 	if ( ! scheduler.getAllowLateMaterialize()) {
@@ -2001,6 +2002,12 @@ int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & s
 	} else {
 		// parse the submit digest and (possibly) open the itemdata file.
 		factory = NewJobFactory(cluster_id);
+		// TODO Put the new JobFactory object into JobFactoriesSubmitPending
+		//   and don't delete it (see end of function) once we're
+		//   confident that the code to read the item data from the
+		//   network into memory works.  - jfrey 2018-07-23
+		//pending = factory;
+		delete_factory = true;
 	}
 
 	if ( ! factory) {
@@ -2062,6 +2069,13 @@ int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & s
 		if (found != JobFactoriesSubmitPending.end()) JobFactoriesSubmitPending.erase(found);
 	} else {
 		row_count = JobFactoryRowCount(factory);
+	}
+	// TODO Put the new JobFactory object into JobFactoriesSubmitPending
+	//   (see code above) and don't delete it once we're
+	//   confident that the code to read the item data from the
+	//   network into memory works.  - jfrey 2018-07-23
+	if (delete_factory) {
+		delete factory;
 	}
 	return rval;
 }
