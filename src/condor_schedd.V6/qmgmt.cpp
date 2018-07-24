@@ -2074,8 +2074,8 @@ int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & s
 	//   (see code above) and don't delete it once we're
 	//   confident that the code to read the item data from the
 	//   network into memory works.  - jfrey 2018-07-23
-	if (delete_factory) {
-		delete factory;
+	if (delete_factory && factory) {
+		DestroyJobFactory(factory);
 	}
 	return rval;
 }
