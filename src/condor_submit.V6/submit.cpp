@@ -49,7 +49,6 @@
 #include "daemon.h"
 #include "match_prefix.h"
 
-#include "extArray.h"
 #include "HashTable.h"
 #include "MyString.h"
 #include "string_list.h"
@@ -274,21 +273,19 @@ struct SubmitRec {
 	int lastjob;
 };
 
-ExtArray <SubmitRec> SubmitInfo(10);
-int CurrentSubmitInfo = -1;
+std::vector <SubmitRec> SubmitInfo;
 
-ExtArray <ClassAd*> JobAdsArray(100);
-int JobAdsArrayLen = 0;
-int JobAdsArrayLastClusterIndex = 0;
+std::vector <ClassAd*> JobAdsArray;
+size_t JobAdsArrayLastClusterIndex = 0;
 
 // called by the factory submit to fill out the data structures that
 // we use to print out the standard messages on complection.
 void set_factory_submit_info(int cluster, int num_procs)
 {
-	CurrentSubmitInfo++;
-	SubmitInfo[CurrentSubmitInfo].cluster = cluster;
-	SubmitInfo[CurrentSubmitInfo].firstjob = 0;
-	SubmitInfo[CurrentSubmitInfo].lastjob = num_procs-1;
+	SubmitInfo.push_back(SubmitRec());
+	SubmitInfo.back().cluster = cluster;
+	SubmitInfo.back().firstjob = 0;
+	SubmitInfo.back().lastjob = num_procs-1;
 }
 
 void TestFilePermissions( char *scheddAddr = NULL )
@@ -538,7 +535,6 @@ main( int argc, const char *argv[] )
 	const char **ptr;
 	const char *pcolon = NULL;
 	const char *cmd_file = NULL;
-	int i;
 	MyString method;
 
 	setbuf( stdout, NULL );
@@ -1097,10 +1093,10 @@ main( int argc, const char *argv[] )
 
 	if ( ! verbose && ! DumpFileIsStdout) {
 		if (terse) {
-			int ixFirst = 0;
-			for (int ix = 0; ix <= CurrentSubmitInfo; ++ix) {
+			size_t ixFirst = 0;
+			for (size_t ix = 0; ix < SubmitInfo.size(); ++ix) {
 				// fprintf(stderr, "\t%d.%d - %d\n", SubmitInfo[ix].cluster, SubmitInfo[ix].firstjob, SubmitInfo[ix].lastjob);
-				if ((ix == CurrentSubmitInfo) || SubmitInfo[ix].cluster != SubmitInfo[ix+1].cluster) {
+				if ((ix == (SubmitInfo.size()-1)) || SubmitInfo[ix].cluster != SubmitInfo[ix+1].cluster) {
 					if (SubmitInfo[ixFirst].cluster >= 0) {
 						fprintf(stdout, "%d.%d - %d.%d\n", 
 							SubmitInfo[ixFirst].cluster, SubmitInfo[ixFirst].firstjob,
@@ -1111,15 +1107,15 @@ main( int argc, const char *argv[] )
 			}
 		} else {
 			int this_cluster = -1, job_count=0;
-			for (i=0; i <= CurrentSubmitInfo; i++) {
-				if (SubmitInfo[i].cluster != this_cluster) {
+			for (size_t ix=0; ix < SubmitInfo.size(); ix++) {
+				if (SubmitInfo[ix].cluster != this_cluster) {
 					if (this_cluster != -1) {
 						fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
 						job_count = 0;
 					}
-					this_cluster = SubmitInfo[i].cluster;
+					this_cluster = SubmitInfo[ix].cluster;
 				}
-				job_count += SubmitInfo[i].lastjob - SubmitInfo[i].firstjob + 1;
+				job_count += SubmitInfo[ix].lastjob - SubmitInfo[ix].firstjob + 1;
 			}
 			if (this_cluster != -1) {
 				fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
@@ -1139,15 +1135,15 @@ main( int argc, const char *argv[] )
 	// we don't want to spool jobs if we are simply writing the ClassAds to 
 	// a file, so we just skip this block entirely if we are doing this...
 	if ( !DumpClassAdToFile ) {
-		if ( dash_remote && JobAdsArrayLen > 0 ) {
+		if ( dash_remote && JobAdsArray.size() > 0 ) {
 			bool result;
 			CondorError errstack;
 
 			switch(STMethod) {
 				case STM_USE_SCHEDD_ONLY:
 					// perhaps check for proper schedd version here?
-					result = MySchedd->spoolJobFiles( JobAdsArrayLen,
-											  JobAdsArray.getarray(),
+					result = MySchedd->spoolJobFiles( JobAdsArray.size(),
+											  JobAdsArray.data(),
 											  &errstack );
 					if ( !result ) {
 						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
@@ -1160,7 +1156,7 @@ main( int argc, const char *argv[] )
 					{ // start block
 
 					fprintf(stdout,
-						"Locating a Sandbox for %d jobs.\n",JobAdsArrayLen);
+							"Locating a Sandbox for %lu jobs.\n",JobAdsArray.size());
 					MyString td_sinful;
 					MyString td_capability;
 					ClassAd respad;
@@ -1168,8 +1164,8 @@ main( int argc, const char *argv[] )
 					MyString reason;
 
 					result = MySchedd->requestSandboxLocation( FTPD_UPLOAD, 
-												JobAdsArrayLen,
-												JobAdsArray.getarray(), FTP_CFTP,
+												JobAdsArray.size(),
+												JobAdsArray.data(), FTP_CFTP,
 												&respad, &errstack );
 					if ( !result ) {
 						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
@@ -1193,13 +1189,13 @@ main( int argc, const char *argv[] )
 					dprintf(D_ALWAYS, "Got td: %s, cap: %s\n", td_sinful.Value(),
 						td_capability.Value());
 
-					fprintf(stdout,"Spooling data files for %d jobs.\n",
-						JobAdsArrayLen);
+					fprintf(stdout,"Spooling data files for %lu jobs.\n",
+						JobAdsArray.size());
 
 					DCTransferD dctd(td_sinful.Value());
 
-					result = dctd.upload_job_files( JobAdsArrayLen,
-											  JobAdsArray.getarray(),
+					result = dctd.upload_job_files( JobAdsArray.size(),
+											  JobAdsArray.data(),
 											  &respad, &errstack );
 					if ( !result ) {
 						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
@@ -1227,8 +1223,8 @@ main( int argc, const char *argv[] )
 	}
 
 	// Deallocate some memory just to keep Purify happy
-	for (i=0;i<JobAdsArrayLen;i++) {
-		delete JobAdsArray[i];
+	for (size_t idx=0;idx<JobAdsArray.size();idx++) {
+		delete JobAdsArray[idx];
 	}
 	submit_hash.delete_job_ad();
 	delete MySchedd;
@@ -2327,12 +2323,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			fprintf(stdout, ".");
 		}
 
-		if (CurrentSubmitInfo == -1 || SubmitInfo[CurrentSubmitInfo].cluster != ClusterId) {
-			CurrentSubmitInfo++;
-			SubmitInfo[CurrentSubmitInfo].cluster = ClusterId;
-			SubmitInfo[CurrentSubmitInfo].firstjob = ProcId;
+		if (SubmitInfo.size() == 0 || SubmitInfo.back().cluster != ClusterId) {
+			SubmitInfo.push_back(SubmitRec());
+			SubmitInfo.back().cluster = ClusterId;
+			SubmitInfo.back().firstjob = ProcId;
 		}
-		SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
+		SubmitInfo.back().lastjob = ProcId;
 
 		// SubmitInfo[x].lastjob controls how many submit events we
 		// see in the user log.  For parallel jobs, we only want
@@ -2340,7 +2336,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		// Procs are in that it.  Setting lastjob to zero makes this so.
 
 		if (JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
-			SubmitInfo[CurrentSubmitInfo].lastjob = 0;
+			SubmitInfo.back().lastjob = 0;
 		}
 
 		// If spooling entire job "sandbox" to the schedd, then we need to keep
@@ -2350,12 +2346,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			tmp->Assign(ATTR_CLUSTER_ID, ClusterId);
 			tmp->Assign(ATTR_PROC_ID, ProcId);
 			if (0 == ProcId) {
-				JobAdsArrayLastClusterIndex = JobAdsArrayLen;
+				JobAdsArrayLastClusterIndex = JobAdsArray.size();
 			} else {
 				// proc ad to cluster ad (if there is one)
 				tmp->ChainToAd(JobAdsArray[JobAdsArrayLastClusterIndex]);
 			}
-			JobAdsArray[ JobAdsArrayLen++ ] = tmp;
+			JobAdsArray.push_back(tmp);
 			return true;
 		}
 
