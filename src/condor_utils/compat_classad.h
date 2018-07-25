@@ -73,6 +73,14 @@ int sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private
 	*/
 int sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
 
+	/** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
+		This version if the classad function prints the attributes in sorted order and allows for an optional
+		indent character to be printed at the start of each line.  This makes it ideal for use with dprintf()
+		@param output The std::string to write into
+		@return std::string.c_str()
+	*/
+const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent = NULL, StringList *attr_white_list = NULL, bool exclude_private = false);
+
 	/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
 		@param attrs the set of attrs to insert into. This is set is NOT cleared first.
 		@return TRUE
@@ -83,8 +91,8 @@ int sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool ex
 		@param output The std::string to write into
 		@return TRUE
 	*/
-int sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References & attrs );
-int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References & attrs );
+int sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References & attrs, const char * indent=NULL );
+int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References & attrs);
 
 class ClassAd : public classad::ClassAd
 {

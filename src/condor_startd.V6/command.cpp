@@ -1812,14 +1812,14 @@ activate_claim( Resource* rip, Stream* stream )
 	resmgr->compute( A_TIMEOUT | A_UPDATE );
 
 		// Possibly print out the ads we just got to the logs.
-	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
 	if( IsDebugLevel( D_JOB ) ) {
-		dPrintAd( D_JOB, *req_classad );
+		std::string adbuf;
+		rip->dprintf( D_JOB, "REQ_CLASSAD:\n%s", formatAd(adbuf, *req_classad, "\t") );
 	}
-	  
-	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
+
 	if( IsDebugLevel( D_MACHINE ) ) {
-		dPrintAd( D_MACHINE, *mach_classad );
+		std::string adbuf;
+		rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n%s", formatAd(adbuf, *mach_classad, "\t") );
 	}
 
 		// See if machine and job meet each other's requirements, if

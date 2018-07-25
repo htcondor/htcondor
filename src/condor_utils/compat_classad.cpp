@@ -2655,7 +2655,7 @@ sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::Refe
 	Note: this function and its sister the outputs to MyString do not call each other for reasons of efficiency...
 */
 int
-sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs )
+sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs, const char * indent /*=NULL*/ )
 {
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
@@ -2664,6 +2664,7 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 	for (it = attrs.begin(); it != attrs.end(); ++it) {
 		const ExprTree * tree = ad.Lookup(*it); // use Lookup rather than find in case we have a parent ad.
 		if (tree) {
+			if (indent) output += indent;
 			output += *it;
 			output += " = ";
 			unp.Unparse( output, tree );
@@ -2673,6 +2674,24 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 
 	return TRUE;
 }
+
+/** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
+	This version if the classad function prints the attributes in sorted order and allows for an optional
+	indent character to be printed at the start of each line. A terminating \n is guaranteed, even if the
+	incoming ad is empty. This makes it ideal for use with dprintf() like this
+	     if (IsDebugLevel(D_JOB)) { dprintf(D_JOB, "Job ad:\n%s", formatAd(buf, ad, "\t")); }
+	@param output The std::string to write into
+	@return std::string.c_str()
+*/
+const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, StringList *attr_white_list /*= NULL*/, bool exclude_private /*= false*/)
+{
+	classad::References attrs;
+	sGetAdAttrs(attrs, ad, exclude_private, attr_white_list);
+	sPrintAdAttrs(buffer, ad, attrs, indent);
+	if (buffer.empty() || (buffer[buffer.size()-1] != '\n')) { buffer += "\n"; }
+	return buffer.c_str();
+}
+
 
 // Taken from the old classad's function. Got rid of incorrect documentation. 
 ////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 

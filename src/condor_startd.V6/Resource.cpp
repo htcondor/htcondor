@@ -3027,12 +3027,12 @@ Resource::willingToRun(ClassAd* request_ad)
 
 			// Possibly print out the ads we just got to the logs.
 		if (IsDebugLevel(D_JOB)) {
-			dprintf(D_JOB, "REQ_CLASSAD:\n");
-			dPrintAd(D_JOB, *request_ad);
+			std::string adbuf;
+			dprintf(D_JOB, "REQ_CLASSAD:\n%s", formatAd(adbuf, *request_ad, "\t"));
 		}
 		if (IsDebugLevel(D_MACHINE)) {
-			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
-			dPrintAd(D_MACHINE, *r_classad);
+			std::string adbuf;
+			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n%s", formatAd(adbuf, *r_classad, "\t"));
 		}
 	}
 	else {

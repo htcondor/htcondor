@@ -137,6 +137,13 @@ Claim::~Claim()
 		Starter * starter = findStarterByPid(c_starter_pid);
 		if (starter && starter->notYetReaped()) {
 			dprintf(D_ALWAYS, "Deleting claim while starter is still alive. The STARTD history for job %d.%d may be incomplete\n", c_cluster, c_proc);
+
+			// update stat for JobBusyTime
+			if (c_job_start > 0) {
+				double busyTime = condor_gettimestamp_double() - c_job_start;
+				resmgr->startd_stats.job_busy_time += busyTime;
+			}
+
 			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
 			starter->setOrphanedJob(c_jobad);
 			c_jobad = NULL;
@@ -277,8 +284,8 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 	}
 
 	if( c_job_start > 0 ) {
-		line.formatstr( "%s=%d", ATTR_JOB_START, c_job_start );
-		cad->Insert( line.Value() );
+		// The "JobStart" attribute is traditionally an integer, so we truncate the time to an int for this assignment.
+		cad->Assign(ATTR_JOB_START, (time_t)c_job_start);
 	}
 
 	if( c_last_pckpt > 0 ) {
@@ -448,9 +455,7 @@ Claim::publishCOD( ClassAd* cad )
 			line = codId();
 			line += '_';
 			line += ATTR_JOB_START;
-			line += '=';
-			line += IntToStr( c_job_start );
-			cad->Insert( line.Value() );
+			cad->Assign( line.Value(), (time_t)c_job_start );
 		}	
 	}
 }
@@ -781,13 +786,13 @@ Claim::loadStatistics()
 }
 
 void
-Claim::beginActivation( time_t now )
+Claim::beginActivation( double now )
 {
 	loadAccountingInfo();
 
 	c_activation_count += 1;
 
-	c_job_start = (int)now;
+	c_job_start = now;
 
 	c_pledged_machine_max_vacate_time = 0;
 	if(c_rip->r_classad->LookupExpr(ATTR_MACHINE_MAX_VACATE_TIME)) {
@@ -1451,7 +1456,7 @@ int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 	// the starter had better not already have an active process.
 	ASSERT ( ! starter->pid());
 
-	time_t now = time(NULL);
+	double now = condor_gettimestamp_double();
 
 	// grab job id, etc out of the job ad and write it into the claim.
 	if ( ! job) {
@@ -1466,6 +1471,10 @@ int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 		cacheJobInfo(job);
 	}
 
+	MyString prefix;
+	formatstr(prefix, "%s[%d.%d]", c_rip->r_id_str, c_cluster, c_proc);
+	starter->set_dprintf_prefix(prefix.c_str());
+
 	// HACK!! Starter::spawn reaches back into the claim object to grab values out of the c_ad member
 	// so we have to temporarily set it, even though we have not yet decided to take ownership of the
 	// passed in job (we will only own it if the spawn succeeds)
@@ -1474,7 +1483,7 @@ int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 	ClassAd * old_c_ad = c_jobad;
 	if (job) { c_jobad = job; }
 
-	c_starter_pid = starter->spawn( this, now, s );
+	c_starter_pid = starter->spawn( this, (time_t)now, s );
 
 	c_jobad = old_c_ad;
 
@@ -1519,6 +1528,12 @@ Claim::starterExited( Starter* starter, int status)
 	if (starter) {
 		starter->exited(this, status);
 		delete starter; starter = NULL;
+	}
+
+	// update stat for JobBusyTime
+	if (c_job_start > 0) {
+		double busyTime = condor_gettimestamp_double() - c_job_start;
+		resmgr->startd_stats.job_busy_time += busyTime;
 	}
 
 	if( c_badput_caused_by_draining ) {
@@ -2049,7 +2064,6 @@ Claim::resetClaim( void )
 	c_cpus_usage = 0;
 
 	if( c_jobad && c_type == CLAIM_COD ) {
-		PRAGMA_REMIND("tj: does the ad leak for non-cod claims?")
 		delete( c_jobad );
 		c_jobad = NULL;
 	}
@@ -2151,8 +2165,12 @@ Claim::writeJobAd( int pipe_end )
 bool
 Claim::writeMachAd( Stream* stream )
 {
-	dprintf(D_FULLDEBUG | D_JOB, "Sending Machine Ad to Starter\n");
-	dPrintAd(D_JOB, *c_rip->r_classad);
+	if (IsDebugLevel(D_MACHINE)) {
+		std::string adbuf;
+		dprintf(D_MACHINE, "Sending Machine Ad to Starter :\n%s", formatAd(adbuf, *c_rip->r_classad, "\t"));
+	} else {
+		dprintf(D_FULLDEBUG, "Sending Machine Ad to Starter\n");
+	}
 	if (!putClassAd(stream, *c_rip->r_classad) || !stream->end_of_message()) {
 		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
 		return false;
@@ -2522,7 +2540,7 @@ ClaimId::dropFile( int slot_id )
 }
 
 void
-Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
+Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 {
 	ASSERT( c_jobad );
 
@@ -2547,9 +2565,17 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 		}
 	}
 	loadStatistics();
-	if( IsDebugLevel(D_JOB) ) {
-		dprintf(D_JOB,"Updated job ClassAd:\n");
-		dPrintAd(D_JOB, *c_jobad);
+	if( IsDebugVerbose(D_JOB) ) {
+		std::string adbuf;
+		dprintf(D_JOB | D_VERBOSE,"Updated job ClassAd:\n%s", formatAd(adbuf, *c_jobad, "\t"));
+	}
+
+	if (final_update) {
+		double duration = 0.0;
+		if ( ! c_jobad->LookupFloat(ATTR_JOB_DURATION, duration)) {
+			duration = 0.0;
+		}
+		resmgr->startd_stats.job_duration += duration;
 	}
 }
 

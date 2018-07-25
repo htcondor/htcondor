@@ -277,6 +277,82 @@ this feature can still be disabled via the BIOS or software.
 If BIOS or the operating system have disabled this feature, 
 the \Condor{startd} sets this boolean attribute to \Expr{False}.
 %
+\index{ClassAd machine attribute!JobBusyTimeAvg}
+\item[\AdAttr{JobBusyTimeAvg}:] The Average lifetime of all jobs, including transfer time. This is determined by
+measuring the lifetime of each \Condor{starter} that has exited. This attribute will be
+undefined until the first time a \Condor{starter} has exited.
+%
+\index{ClassAd machine attribute!JobBusyTimeCount}
+\item[\AdAttr{JobBusyTimeCount}:] The total number of of jobs used to calulate the \AdAttr{JobBusyTimeAvg}
+attribute.  This is also the the total number times a \Condor{starter} has
+exited.
+%
+\index{ClassAd machine attribute!JobBusyTimeMax}
+\item[\AdAttr{JobBusyTimeMax}:] The Maximum lifetime of all jobs, including transfer time. This is determined by
+measuring the lifetime of each \Condor{starter}s that has exited. This attribute will be
+undefined until the first time a \Condor{starter} has exited.
+%
+\index{ClassAd machine attribute!JobBusyTimeMin}
+\item[\AdAttr{JobBusyTimeMin}:] The Minimum lifetime of all jobs, including transfer time. This is determined by
+measuring the lifetime of each \Condor{starter} that has exited. This attribute will be
+undefined until the first time a \Condor{starter} has exited.
+%
+\index{ClassAd machine attribute!RecentJobBusyTimeAvg}
+\item[\AdAttr{RecentJobBusyTimeAvg}:] The Average lifetime of all jobs that have exited in the last 20 minutes, including transfer time.
+This is determined by measuring the lifetime of each \Condor{starter} that has exited in the last 20 minutes. This attribute will be
+undefined if no \Condor{starter} has exited in the last 20 minutes.
+%
+\index{ClassAd machine attribute!RecentJobBusyTimeCount}
+\item[\AdAttr{RecentJobBusyTimeCount}:] The total number of jobs used to calulate the \AdAttr{RecentJobBusyTimeAvg}
+attribute.  This is also the the total number times a \Condor{starter} has
+exited in the last 20 minutes.
+%
+\index{ClassAd machine attribute!RecentJobBusyTimeMax}
+\item[\AdAttr{RecentJobBusyTimeMax}:] The Maximum lifetime of all jobs that have exited in the last 20 minutes, including transfer time. This is determined by
+measuring the lifetime of each \Condor{starter}s that has exited in the last 20 minutes.  This attribute will be
+undefined if no \Condor{starter} has exited in the last 20 minutes.
+%
+\index{ClassAd machine attribute!RecentJobBusyTimeMin}
+\item[\AdAttr{RecentJobBusyTimeMin}:] The Minimum lifetime of all jobs, including transfer time. This is determined by
+measuring the lifetime of each \Condor{starter} that has exited.  This attribute will be
+undefined if no \Condor{starter} has exited in the last 20 minutes.
+%
+%
+\index{ClassAd machine attribute!JobDurationAvg}
+\item[\AdAttr{JobDurationAvg}:] The Average lifetime time of all jobs, not including time spent transferring files. This attribute will be
+undefined until the first time a job exits.  Jobs that never start (because they fail to transfer input, for instance) will not be included
+in the average.
+%
+\index{ClassAd machine attribute!JobDurationCount}
+\item[\AdAttr{JobDurationCount}:] The total number of of jobs used to calulate the \AdAttr{JobDurationAvg}
+attribute.  This is also the the total number times a job has exited. Jobs that never start (because input transfer fails, for instance)
+are not included in the count.
+%
+\index{ClassAd machine attribute!JobDurationMax}
+\item[\AdAttr{JobDurationMax}:] The lifetime of the longest lived job that has exited. This attribute will be
+undefined until the first time a job exits.
+%
+\index{ClassAd machine attribute!JobDurationMin}
+\item[\AdAttr{JobDurationMin}:] The lifetime of the shortest lived job that has exited. This attribute will be
+undefined until the first time a job exits.
+%
+\index{ClassAd machine attribute!RecentJobDurationAvg}
+\item[\AdAttr{RecentJobDurationAvg}:] The Average lifetime time of all jobs, not including time spent transferring files,
+that have exited in the last 20 minutes.
+This attribute will be undefined if no job has exited in the last 20 minutes.
+%
+\index{ClassAd machine attribute!RecentJobDurationCount}
+\item[\AdAttr{RecentJobDurationCount}:] The total number of jobs used to calulate the \AdAttr{RecentJobDurationAvg}
+attribute.  This is the total number of jobs that began execution and have exited in the last 20 minutes.
+%
+\index{ClassAd machine attribute!RecentJobDurationMax}
+\item[\AdAttr{RecentJobDurationMax}:] The lifetime of the longest lived job that has exited in the last 20 minutes. This attribute will be
+undefined if no job has exited in the last 20 minutes.
+%
+\index{ClassAd machine attribute!RecentJobDurationMin}
+\item[\AdAttr{RecentJobDurationMin}:] The lifetime of the shortest lived job that has exited in the last 20 minutes. This attribute will be
+undefined if no job has exited in the last 20 minutes.
+%
 \index{ClassAd machine attribute!JobPreemptions}
 \item[\AdAttr{JobPreemptions}:] The total number of times
 a running job has been preempted on this machine.  
