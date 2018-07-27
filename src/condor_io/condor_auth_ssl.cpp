@@ -352,6 +352,16 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( client_status == AUTH_SSL_QUITTING
             || server_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			// Read and ignore the session key from the server.
+			// Then tell it we're bailing, if it still thinks
+			// everything is ok.
+			int dummy;
+			if (AUTH_SSL_ERROR == receive_message(server_status, dummy, buffer)) {
+				server_status = AUTH_SSL_QUITTING;
+			}
+			if (server_status != AUTH_SSL_QUITTING) {
+				send_message(AUTH_SSL_QUITTING, buffer, 0);
+			}
 			(*SSL_CTX_free_ptr)(ctx);
 			(*SSL_free_ptr)(ssl);
 			free(buffer);
@@ -548,6 +558,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			// Tell the client that we're bailing
+			send_message(AUTH_SSL_QUITTING, buffer, 0);
 			(*SSL_CTX_free_ptr)(ctx);
 			(*SSL_free_ptr)(ssl);
 			free(buffer);
@@ -556,6 +568,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if(!RAND_bytes(session_key, AUTH_SSL_SESSION_KEY_LEN)) {
             ouch("Couldn't generate session key.\n");
             server_status = AUTH_SSL_QUITTING;
+			// Tell the client that we're bailing
+			send_message(AUTH_SSL_QUITTING, buffer, 0);
 			(*SSL_CTX_free_ptr)(ctx);
 			(*SSL_free_ptr)(ssl);
 			free(buffer);
