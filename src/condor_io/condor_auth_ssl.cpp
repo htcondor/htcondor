@@ -239,7 +239,11 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         }
         if( !(ssl = (*SSL_new_ptr)( ctx )) ) {
             ouch( "Error creating SSL context\n" );
+            BIO_free( conn_in );
+            BIO_free( conn_out );
             client_status = AUTH_SSL_ERROR;
+        } else {
+            (*SSL_set_bio_ptr)( ssl, conn_in, conn_out );
         }
         server_status = client_share_status( client_status );
         if( server_status != AUTH_SSL_A_OK || client_status != AUTH_SSL_A_OK ) {
@@ -249,8 +253,6 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
 			free(buffer);
             return fail;
         }
-
-        (*SSL_set_bio_ptr)( ssl, conn_in, conn_out );
 
         done = 0;
         round_ctr = 0;
@@ -448,7 +450,12 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         }
         if (!(ssl = (*SSL_new_ptr)(ctx))) {
             ouch("Error creating SSL context\n");
+            BIO_free( conn_in );
+            BIO_free( conn_out );
             server_status = AUTH_SSL_ERROR;
+        } else {
+            // SSL_set_accept_state(ssl); // Do I really have to do this?
+            (*SSL_set_bio_ptr)(ssl, conn_in, conn_out);
         }
         client_status = server_share_status( server_status );
         if( client_status != AUTH_SSL_A_OK
@@ -460,9 +467,6 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             return fail;
         }
   
-        // SSL_set_accept_state(ssl); // Do I really have to do this?
-        (*SSL_set_bio_ptr)(ssl, conn_in, conn_out);
-
         done = 0;
         round_ctr = 0;
         while( !done ) {
