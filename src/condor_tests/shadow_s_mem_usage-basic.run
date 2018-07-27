@@ -69,7 +69,7 @@ my %memory_data64 = (
 # for X86 shadows
 my %memory_data32 = (
 	"redhat5" => "348",
-	"redhat6" => "368",
+	"redhat6" => "388",
 	"sl6"     => "348",
 );
 
