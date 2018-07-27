@@ -122,12 +122,16 @@ set to a fully-qualified hostname that's an alias of one of the machine's
 interfaces.
 \Ticket{6702}
 
-\item Added configuration parameters \MacroNI{GAHP\_SS​L\_CADIR} and
-\MacroNI{GAHP\_SS​L\_CAFILE} to specify trusted CAs when authenticating
+\item Added configuration parameters \MacroNI{GAHP\_SSL\_CADIR} and
+\MacroNI{GAHP\_SSL\_CAFILE} to specify trusted CAs when authenticating
 EC2 and GCE servers.
-This used by be controlled by \MacroNI{SOAP\_SS​L\_CA\_DIR} and
-\MacroNI{SOAP\_SS​L\_CAFILE}, which have been removed.
+This used by be controlled by \MacroNI{SOAP\_SSL\_CA\_DIR} and
+\MacroNI{SOAP\_SSL\_CAFILE}, which have been removed.
 \Ticket{6684}
+
+\item HTCondor can now read the new credentials file format used by
+the Goggle Cloud Platform command-line tools.
+\Ticket{6657}
 
 \end{itemize}
 
