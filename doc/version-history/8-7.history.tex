@@ -113,6 +113,10 @@ the Goggle Cloud Platform command-line tools.
 
 \begin{itemize}
 
+\item Fixed a bug where an ill-formed startd docker image cache file
+could cause the starter to crash starting docker universe jobs.
+\Ticket{6699}
+
 \item Fixed a bug that would prevent environment variables defined in a job
 submit file from appearing in jobs running in Singularity containers using
 Singularity version 2.4 and greater.
