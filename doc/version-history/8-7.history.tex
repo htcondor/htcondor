@@ -109,6 +109,11 @@ the Goggle Cloud Platform command-line tools.
 
 \begin{itemize}
 
+\item Fixed a bug that would prevent environment variables defined in a job
+submit file from appearing in jobs running in Singularity containers using
+Singularity version 2.4 and greater.
+\Ticket{6656}
+
 \item Fixed a problem where a \Condor{vacate\_job}, when passed the
 \Opt{-fast} flag, would leave the corresponding slot stuck in
 ``Preempting/Vacating'' state until the job lease expired.
