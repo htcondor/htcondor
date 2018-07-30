@@ -69,6 +69,10 @@ the definition of \Macro{DEFRAG\_DRAINING\_START\_EXPR} (
 information which may influence your choice of \MacroNI{START} expressions.
 \Ticket{6664}
 
+\item Docker universe jobs now run with the supplemental group ids of the
+running user, not just the primary group.
+\Ticket{6658}
+
 \item Added a new tool, \Condor{now}, which tries to run the specified job
 \emph{now}.  You specify two jobs that you own from the same schedd: the
 now-job and the vacate-job.  The latter is immediately vacated; after the
