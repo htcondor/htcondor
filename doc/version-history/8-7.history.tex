@@ -99,6 +99,10 @@ the definition of \Macro{DEFRAG\_DRAINING\_START\_EXPR} (
 information which may influence your choice of \MacroNI{START} expressions.
 \Ticket{6664}
 
+\item Docker universe jobs now run with the supplemental group ids of the
+running user, not just the primary group.
+\Ticket{6658}
+
 \item Added a new tool, \Condor{now}, which tries to run the specified job
 \emph{now}.  You specify two jobs that you own from the same schedd: the
 now-job and the vacate-job.  The latter is immediately vacated; after the
@@ -138,6 +142,15 @@ the Goggle Cloud Platform command-line tools.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug where an ill-formed startd docker image cache file
+could cause the starter to crash starting docker universe jobs.
+\Ticket{6699}
+
+\item Fixed a bug that would prevent environment variables defined in a job
+submit file from appearing in jobs running in Singularity containers using
+Singularity version 2.4 and greater.
+\Ticket{6656}
 
 \item Fixed a problem where a \Condor{vacate\_job}, when passed the
 \Opt{-fast} flag, would leave the corresponding slot stuck in
