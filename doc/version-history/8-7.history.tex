@@ -83,6 +83,11 @@ you're a queue super-user, the jobs must have the same owner, but that owner
 doesn't have to be you.
 \Ticket{6659}
 
+\item The HTCondor Python bindings Submit class can now be initialized from an existing
+\Condor{submit} file including the QUEUE statement.  Python bindings Submit
+class also can now submit a job for each step of a Python iterator.
+\Ticket{6679}
+
 \item Added proxy delegation for vanilla universe jobs that define a X509 proxy
 but do not use the file transfer mechanism.
 \Ticket{6587}
