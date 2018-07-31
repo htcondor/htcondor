@@ -92,6 +92,9 @@ ineffective.  This has been a problem since v8.6.
 
 \begin{itemize}
 
+\item Fix a bug in the \Condor{qsub} wrapper that prevented users from requesting more
+than one cpu core.
+\Ticket{6693}
 \item Fixed a bug causing the shared port daemon to crash immediately when
 built and run on Fedora 28.
 \Ticket{6696}
@@ -131,6 +134,13 @@ the subsequent queue statement to be reported as invalid.
 
 \item Fixed a memory leak when SSL authentication fails.
 \Ticket{6717}
+
+\item Fixed a bug in \Condor{preen} where it did not clean up core dump files.
+It now erases all core files that exceed a certain size (defined by 
+\MacroNI{PREEN\_COREFILE\_MAX\_SIZE}), a certain age (defined by 
+\MacroNI{PREEN\_COREFILE\_STALE\_AGE}) or a maximum number of core files per
+process (defined by \MacroNI{PREEN\_COREFILES\_PER\_PROCESS}).
+\Ticket{6540}
 
 \end{itemize}
 
