@@ -68,15 +68,13 @@ cp -pr build/packaging/new-debian debian
 dch --newversion "$condor_version-$condor_release" \
 "Support for Debian 9, Ubuntu 16, and Ubuntu 18"
 dch --newversion "$condor_version-$condor_release" \
-"Fixed a memory leak that occurred when SSL authentication fails"
+"Improved Python bindings to support the full range of submit functionality"
 dch --newversion "$condor_version-$condor_release" \
-"Fixed a bug where invalid transform REQUIREMENTS caused a Job to match"
+"Allows VMs to shutdown when the job is being gracefully evicted"
 dch --newversion "$condor_version-$condor_release" \
-"Fixed a bug to allow a queue super user to edit protected attributes"
+"Can now specify a host name alias (CNAME) for NETWORK_HOSTNAME"
 dch --newversion "$condor_version-$condor_release" \
-"Fixed a problem setting the job environment in the Singularity container"
-dch --newversion "$condor_version-$condor_release" \
-"Fixed several other minor problems"
+"Added the ability to run a job immediately by replacing a running job"
 
 dch --release --distribution $dist ignored
 

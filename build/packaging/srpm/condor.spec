@@ -1952,6 +1952,13 @@ fi
 %endif
 
 %changelog
+* Wed Aug 01 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.9-1
+- Support for Debian 9, Ubuntu 16, and Ubuntu 18
+- Improved Python bindings to support the full range of submit functionality
+- Allows VMs to shutdown when the job is being gracefully evicted
+- Can now specify a host name alias (CNAME) for NETWORK_HOSTNAME
+- Added the ability to run a job immediately by replacing a running job
+
 * Wed Aug 01 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.12-1
 - Support for Debian 9, Ubuntu 16, and Ubuntu 18
 - Fixed a memory leak that occurred when SSL authentication fails
