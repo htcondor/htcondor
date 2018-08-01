@@ -43,7 +43,9 @@ tar xfpz condor_${condor_version}.orig.tar.gz
 cd condor-${condor_version}
 
 # Update condor_version for pre-release build
-condor_release="0.$condor_build_id"
+#condor_release="0.$condor_build_id"
+# Update condor_version for final build
+condor_release="1"
 
 if $(grep -qi stretch /etc/os-release); then
     dist='stretch'
@@ -58,8 +60,25 @@ echo "Distribution is $dist"
 
 # copy srpm files from condor sources into the SOURCES directory
 cp -pr build/packaging/new-debian debian
-#cat build/packaging/new-debian/changelog >> debian/changelog
-dch --distribution $dist --newversion "$condor_version-$condor_release" "Nightly build"
+
+# Nightly build changelog
+#dch --distribution $dist --newversion "$condor_version-$condor_release" "Nightly build"
+
+# Final release changelog
+dch --newversion "$condor_version-$condor_release" \
+"Support for Debian 9, Ubuntu 16, and Ubuntu 18"
+dch --newversion "$condor_version-$condor_release" \
+"Fixed a memory leak that occurred when SSL authentication fails"
+dch --newversion "$condor_version-$condor_release" \
+"Fixed a bug where invalid transform REQUIREMENTS caused a Job to match"
+dch --newversion "$condor_version-$condor_release" \
+"Fixed a bug to allow a queue super user to edit protected attributes"
+dch --newversion "$condor_version-$condor_release" \
+"Fixed a problem setting the job environment in the Singularity container"
+dch --newversion "$condor_version-$condor_release" \
+"Fixed several other minor problems"
+
+dch --release --distribution $dist ignored
 
 dpkg-buildpackage -uc -us
 

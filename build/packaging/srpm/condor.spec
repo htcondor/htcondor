@@ -1952,6 +1952,14 @@ fi
 %endif
 
 %changelog
+* Wed Aug 01 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.12-1
+- Support for Debian 9, Ubuntu 16, and Ubuntu 18
+- Fixed a memory leak that occurred when SSL authentication fails
+- Fixed a bug where invalid transform REQUIREMENTS caused a Job to match
+- Fixed a bug to allow a queue super user to edit protected attributes
+- Fixed a problem setting the job environment in the Singularity container
+- Fixed several other minor problems
+
 * Tue May 22 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-2
 - Reinstate man pages
 - Drop centos from dist tag in 32-bit Enterprise Linux 7 RPMs
