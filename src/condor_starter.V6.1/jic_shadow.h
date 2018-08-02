@@ -480,7 +480,9 @@ private:
 	char *m_reconnect_sec_session;
 
 	/// if true, transfer files at vacate time (in addtion to job exit)
+	// but only if we get to the point of starting the job
 	bool transfer_at_vacate;
+	bool m_job_setup_done;
 
 	bool wants_file_transfer;
 	bool wants_x509_proxy;
