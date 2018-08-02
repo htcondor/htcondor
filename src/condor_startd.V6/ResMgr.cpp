@@ -150,7 +150,6 @@ ResMgr::~ResMgr()
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
-	delete m_attr;
 
 #if HAVE_BACKFILL
 	if( m_backfill_mgr ) {
@@ -193,6 +192,7 @@ ResMgr::~ResMgr()
 	if( new_type_nums ) {
 		delete [] new_type_nums;
 	}
+	delete m_attr;
 }
 
 
