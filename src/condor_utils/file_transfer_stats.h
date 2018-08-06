@@ -26,8 +26,6 @@
  #include "extArray.h"
  #include "generic_stats.h"
  
- using namespace std;
-
  class FileTransferStats
  {
 	 public:
@@ -45,15 +43,15 @@
 		long TransferTotalBytes;
 		long TransferTries;
 		
-		string HttpCacheHitOrMiss;
-		string HttpCacheHost;
-		string TransferError;
-		string TransferFileName;
-		string TransferHostName;
-		string TransferLocalMachineName;
-		string TransferProtocol;
-		string TransferType;
-		string TransferUrl;
+		std::string HttpCacheHitOrMiss;
+		std::string HttpCacheHost;
+		std::string TransferError;
+		std::string TransferFileName;
+		std::string TransferHostName;
+		std::string TransferLocalMachineName;
+		std::string TransferProtocol;
+		std::string TransferType;
+		std::string TransferUrl;
 		
 		StatisticsPool Pool;
 
