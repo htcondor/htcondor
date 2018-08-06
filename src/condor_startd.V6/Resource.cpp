@@ -1769,7 +1769,10 @@ Resource::evalRetirementRemaining()
 		          MaxJobRetirementTime)) {
 			MaxJobRetirementTime = 0;
 		}
-		if(r_cur->getRetirePeacefully()) {
+		// GT#6701: Allow job policy to be effective even during peaceful
+		// retirement (e.g., just because I'm turning the machine off
+		// doesn't mean you get to use too much RAM).
+		if(MaxJobRetirementTime != 0 && r_cur->getRetirePeacefully()) {
 			// Override startd's MaxJobRetirementTime setting.
 			// Make it infinite.
 			MaxJobRetirementTime = INT_MAX;
@@ -1803,23 +1806,48 @@ Resource::evalRetirementRemaining()
 bool
 Resource::retirementExpired()
 {
-	//This function evaulates to true if the job has run longer than
-	//its maximum alloted graceful retirement time.
+	//
+	// GT#6697: Allow job policy to be effective while draining.  Only
+	// attempt to synchronize retirement if an individual job's computed
+	// retirement is <= 0 and that job either (a) was accepted while
+	// draining or (b) matches the new START expression (that is, is
+	// interruptible).  This design intends to allow job policy to work
+	// without churning backfill jobs (by letting them run as long as the
+	// machine is waiting for non-interruptible jobs to run).
+	//
+	// Problem: when the slot transitions from Owner to Claimed/Idle,
+	// ResState::eval() checks to see if the slot is in retirement and
+	// if it is, if the retirement has expired.  We end up claiming it has
+	// because, of course, idle slots don't need any retirement time. This
+	// didn't used to happen because retirementExpired() didn't used to
+	// respect MJRTs of 0 for individual slots -- instead, if wer were in
+	// retirement, the largest inividual retirement would be returned.
+	//
+	// So, during retirement, if we're Claimed/Idle, return the coordinated
+	// draining time instead of anything else.
+	//
 
-	int retirement_remaining;
+	int retirement_remaining = evalRetirementRemaining();
+	if( isDraining() && r_state->state() == claimed_state && r_state->activity() == idle_act ) {
+		retirement_remaining = resmgr->gracefulDrainingTimeRemaining( this ) ;
+	} else if( isDraining() && retirement_remaining > 0 ) {
+		int jobMatches = false;
+		ClassAd * machineAd = r_classad;
+		ClassAd * jobAd = r_cur->ad();
+		if( machineAd != NULL && jobAd != NULL ) {
+			// Assumes EvalBool() doesn't modify its output argument on failure.
+			machineAd->EvalBool( ATTR_START, jobAd, jobMatches );
+		}
 
-		// if we are draining, coordinate the eviction of all the
-		// slots to try to reduce idle time
-	if( isDraining() ) {
-		retirement_remaining = resmgr->gracefulDrainingTimeRemaining(this);
+		if( jobMatches || wasAcceptedWhileDraining() ) {
+			retirement_remaining = resmgr->gracefulDrainingTimeRemaining( this ) ;
+		}
 	}
-	else {
-		retirement_remaining = evalRetirementRemaining();
-	}
 
-	if ( retirement_remaining <= 0 ) {
+	if( retirement_remaining <= 0 ) {
 		return true;
 	}
+
 	int max_vacate_time = evalMaxVacateTime();
 	if( max_vacate_time >= retirement_remaining ) {
 			// the goal is to begin evicting the job before the end of
