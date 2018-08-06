@@ -2741,14 +2741,10 @@ void
 Resource::dprintf_va( int flags, const char* fmt, va_list args ) const
 {
 	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
-	if( resmgr->is_smp() ) {
-		MyString fmt_str( r_id_str );
-		fmt_str += ": ";
-		fmt_str += fmt;
-		::_condor_dprintf_va( flags, ident, fmt_str.Value(), args );
-	} else {
-		::_condor_dprintf_va( flags, ident, fmt, args );
-	}
+	std::string fmt_str( r_id_str );
+	fmt_str += ": ";
+	fmt_str += fmt;
+	::_condor_dprintf_va( flags, ident, fmt_str.c_str(), args );
 }
 
 
@@ -3055,12 +3051,12 @@ Resource::willingToRun(ClassAd* request_ad)
 
 			// Possibly print out the ads we just got to the logs.
 		if (IsDebugLevel(D_JOB)) {
-			dprintf(D_JOB, "REQ_CLASSAD:\n");
-			dPrintAd(D_JOB, *request_ad);
+			std::string adbuf;
+			dprintf(D_JOB, "REQ_CLASSAD:\n%s", formatAd(adbuf, *request_ad, "\t"));
 		}
 		if (IsDebugLevel(D_MACHINE)) {
-			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
-			dPrintAd(D_MACHINE, *r_classad);
+			std::string adbuf;
+			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n%s", formatAd(adbuf, *r_classad, "\t"));
 		}
 	}
 	else {

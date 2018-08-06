@@ -939,11 +939,16 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
 	{
+		dprintf(D_JOB, "Could not read update job ClassAd update from starter, assuming final_update\n");
 		final_update = 1;
 	}
 	else {
-		dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
-		dPrintAd( D_JOB, update_ad );
+		if (IsDebugLevel(D_JOB)) {
+			std::string adbuf;
+			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
+		} else {
+			dprintf(D_FULLDEBUG, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
+		}
 
 		// In addition to new info about the job, the starter also
 		// inserts contact info for itself (important for CCB and
@@ -961,7 +966,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 
 		Claim* claim = resmgr->getClaimByPid(s_pid);
 		if( claim ) {
-			claim->receiveJobClassAdUpdate( update_ad );
+			claim->receiveJobClassAdUpdate(update_ad, final_update);
 
 			ClassAd * jobAd = claim->ad();
 			if (jobAd) {
@@ -1608,12 +1613,7 @@ Starter::softkillTimeout( void )
 {
 	s_softkill_tid = -1;
 	if( active() ) {
-		Claim * c = resmgr->getClaimByPid( pid() );
-		if( c && c->rip() && c->rip()->r_id_str ) {
-			dprintf( D_ALWAYS, "%s: max vacate time expired.  Escalating to a fast shutdown of the job.\n",  c->rip()->r_id_str );
-		} else {
-			dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
-		}
+		dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
 		killHard(s_is_vm_universe ? vm_killing_timeout : killing_timeout);
 	}
 }

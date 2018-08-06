@@ -1172,6 +1172,7 @@ const int ProbeDetailMode_Normal  = (0<<2); // show all 6 fields Count, Sum, Avg
 const int ProbeDetailMode_Tot     = (1<<2); // show Sum as integer value without tag
 const int ProbeDetailMode_Brief   = (2<<2); // show Avg without tag, Min, Max
 const int ProbeDetailMode_RT_SUM  = (3<<2); // show runtime fields, Sum=Runtime, Count published without tag
+const int ProbeDetailMode_CAMM    = (4<<2); // show 4 fields. Count, Avg, Min, Max
 
 // --------------------------------------------------------------------
 //  statistcs probe for histogram data.

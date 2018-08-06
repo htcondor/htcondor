@@ -297,7 +297,7 @@ public:
  		*/
 	bool writeMachAd( Stream *stream );
 
-	void receiveJobClassAdUpdate( ClassAd &update_ad );
+	void receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update );
 
 		// registered callback for premature closure of connection from
 		// schedd requesting this claim
@@ -321,7 +321,7 @@ private:
 	int			c_cluster;
 	int			c_proc;
 	char*		c_global_job_id;
-	int			c_job_start;
+	double		c_job_start; // unix timestamp, or -1 if there is no time.
 	int			c_last_pckpt;
 	time_t      c_claim_started;
 	time_t		c_entered_state;
@@ -385,7 +385,7 @@ private:
 		   request and store it in this Claim object, along with any
 		   attributes that care about the time the job was spawned. 
 		*/
-	void beginActivation( time_t now ); 
+	void beginActivation( double now );
 
 	void makeCODStarterArgs( ArgList &args );
 #if HAVE_JOB_HOOKS

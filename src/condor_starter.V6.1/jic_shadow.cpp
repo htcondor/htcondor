@@ -88,6 +88,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	fs_domain = NULL;
 
 	transfer_at_vacate = false;
+	m_job_setup_done = false;
 	wants_file_transfer = false;
 	wants_x509_proxy = false;
 	job_cleanup_disconnected = false;
@@ -436,7 +437,8 @@ JICShadow::transferOutput( bool &transient_failure )
 		// finished.  may as well do this in the foreground,
 		// since we do not want to be interrupted by anything
 		// short of a hardkill. 
-	if( filetrans && ((requested_exit == false) || transfer_at_vacate) ) {
+		// Don't transfer if we haven't started the job.
+	if( filetrans && m_job_setup_done && ((requested_exit == false) || transfer_at_vacate) ) {
 
 		if ( shadowDisconnected() ) {
 				// trigger retransfer on reconnect
@@ -783,6 +785,8 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 void
 JICShadow::notifyJobPreSpawn( void )
 {
+	m_job_setup_done = true;
+
 			// Notify the shadow we're about to exec.
 	REMOTE_CONDOR_begin_execution();
 
