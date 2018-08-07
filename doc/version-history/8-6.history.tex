@@ -41,7 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug in the python bindings that would leak one or more ClassAds each time
+the submit or submitMany methods of the schedd class were called without passing an explict list to
+return the result ClassAds.
+\Ticket{6729}
 
 \end{itemize}
 
