@@ -11,23 +11,15 @@ from pytest.HTTPServer import HTTPServer
 from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
 
+job_cluster_id = None
+
 def SuccessCallback():
-    Utils.TLog("Job successful as expected. Now checking for correct log contents.")
-    multifile_curl_plugin_invokes = 0
-    with open(htcondor.param["STARTER_LOG"]) as starter_log:
-        starter_log_content = starter_log.readlines()
-    for line in starter_log_content:
-        if "invoking" in line and "multifile_curl_plugin" in line:
-            multifile_curl_plugin_invokes += 1
-    if multifile_curl_plugin_invokes != 1:
-        Utils.TLog("Wrong number of multifile_curl_plugin invocations, test failed.")
-        sys.exit(TEST_FAILURE)
-    Utils.TLog("Correct number of multifile_curl_plugin invocations, test succeeded.")
-    sys.exit(SUCCESS)
+    Utils.TLog("Job succeeded unexpectedly when it was supposed to go on hold. Test failed.")
+    sys.exit(TEST_FAILURE)
 
 def FailureCallback():
-    Utils.TLog("Job failed unexpectedly. Test failed.")
-    sys.exit(TEST_FAILURE)
+    Utils.TLog("Job went on hold as expected. Test passed")
+    sys.exit(SUCCESS)
 
 def HttpSuccessUrlHandler(request):
     request.protocol_version = "HTTP/1.1"
@@ -35,6 +27,10 @@ def HttpSuccessUrlHandler(request):
     request.send_header("Content-type", "text/html")
     request.end_headers()
     request.wfile.write("<html>Great success!</html>")
+
+def HttpServerErrorUrlHandler(request):
+    request.protocol_version = "HTTP/1.1"
+    request.send_response(500)
 
 
 def main():
@@ -45,15 +41,17 @@ def main():
         "FILETRANSFER_PLUGINS":                 "$(LIBEXEC)/multifile_curl_plugin",
         "STARTER_LOG_NAME_APPEND":              "false"
     }
-    test = CondorTest("cmd_curl_plugin_multifile_success", test_params)
+    test = CondorTest("cmd_curl_plugin_multifile_failure", test_params)
 
     # Start a HTTP server
     httpd = HTTPServer()
     httpd.Start()
 
-    # Register three separate URLs to successfully serve a small file
+    # Register three separate URLs
+    # Two are supposed to successfully serve a small file
+    # One is supposed to generate a 500 server error and cause the job to go on hold
     httpd.RegisterUrlHandler("/file1", HttpSuccessUrlHandler)
-    httpd.RegisterUrlHandler("/file2", HttpSuccessUrlHandler)
+    httpd.RegisterUrlHandler("/file2", HttpServerErrorUrlHandler)
     httpd.RegisterUrlHandler("/file3", HttpSuccessUrlHandler)
     file1_url = "http://127.0.0.1:" + str(httpd._port) + "/file1"
     file2_url = "http://127.0.0.1:" + str(httpd._port) + "/file2"
@@ -69,26 +67,26 @@ def main():
 
     # Setup a new test job
     job_args = {
-        "executable":               "cmd_curl_plugin_multifile_success.py",
-        "arguments":                "Testing multifile_curl_plugin success",
-        "output":                   "cmd_curl_plugin_multifile_success.out",
+        "executable":               "x_echostring.pl",
+        "arguments":                "Testing multifile_curl_plugin failure",
+        "output":                   "cmd_curl_plugin_multifile_failure.out",
         "transfer_input_files":     file1_url + ", " + file2_url + ", " + file3_url,
         "should_transfer_files":    "YES"
     }
     test_job = CondorJob(job_args)
 
-    # Register handlers
+    # Register success and failure handlers.
     test_job.RegisterSuccess(SuccessCallback)
     test_job.RegisterFailure(FailureCallback)
 
     # Submit the test job
-    test_job.Submit()
-    result = test_job.WaitForFinish()
-    Utils.TLog("Test returned result: " + str(result))
+    result = test_job.Submit()
+    job_cluster_id = test_job._cluster_id
+    test_job.WaitForFinish()
 
-    # The success/failure callbacks handle the sys.exit() calls
-    # All our testing infrastructure will shut down via destructors
-    # Nothing left to do at this point.
+    # If the success callback did not trigger, then so far so good.
+    # Now we need to make sure none of the files actually downloaded.
+
 
 
 if __name__ == "__main__":

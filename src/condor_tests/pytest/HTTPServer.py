@@ -2,6 +2,7 @@ import SimpleHTTPServer, BaseHTTPServer
 import socket
 import thread
 
+from Globals import *
 from Utils import Utils
 
 class StoppableHTTPServerHandler(BaseHTTPServer.BaseHTTPRequestHandler):
