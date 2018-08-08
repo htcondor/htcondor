@@ -37,7 +37,6 @@ static const char* daemon_names[] = {
 	"starter",
 	"credd",
 	"stork",
-	"quill",
 	"transferd",
 	"lease_manager",
 	"had",

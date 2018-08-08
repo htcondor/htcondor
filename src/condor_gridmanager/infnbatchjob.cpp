@@ -22,7 +22,8 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
+#include "condor_string.h"
+#include "basename.h"
 #include "condor_daemon_core.h"
 #include "condor_config.h"
 #include "nullfile.h"
@@ -54,6 +55,7 @@
 #define GM_TRANSFER_INPUT		15
 #define GM_TRANSFER_OUTPUT		16
 #define GM_DELETE_SANDBOX		17
+#define GM_TRANSFER_PROXY		18
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -74,6 +76,7 @@ static const char *GMStateNames[] = {
 	"GM_TRANSFER_INPUT",
 	"GM_TRANSFER_OUTPUT",
 	"GM_DELETE_SANDBOX",
+	"GM_TRANSFER_PROXY",
 };
 
 #define JOB_STATE_UNKNOWN				-1
@@ -84,12 +87,6 @@ static const char *GMStateNames[] = {
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
-
-#define LOG_GLOBUS_ERROR(func,error) \
-    dprintf(D_ALWAYS, \
-		"(%d.%d) gmState %s, remoteState %d: %s returned error %d\n", \
-        procID.cluster,procID.proc,GMStateNames[gmState],remoteState, \
-        func,error)
 
 void INFNBatchJobInit()
 {
@@ -673,10 +670,9 @@ void INFNBatchJob::doEvaluateState()
 				errorString = "Job removed from batch queue manually";
 				SetRemoteJobId( NULL );
 				gmState = GM_HOLD;
-			} else if ( !myResource->GahpIsRemote() && jobProxy &&
+			} else if ( jobProxy && myResource->GahpCanRefreshProxy() &&
 						remoteProxyExpireTime < jobProxy->expiration_time ) {
-				// The ft-gahp doesn't support forwarding a refreshed proxy
-					gmState = GM_REFRESH_PROXY;
+					gmState = GM_TRANSFER_PROXY;
 			} else {
 				if ( lastPollTime < enteredCurrentGmState ) {
 					lastPollTime = enteredCurrentGmState;
@@ -727,6 +723,79 @@ void INFNBatchJob::doEvaluateState()
 			lastPollTime = time(NULL);
 			gmState = GM_SUBMITTED;
 			} break;
+		case GM_TRANSFER_PROXY: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_SUBMITTED;
+			} else if ( !myResource->GahpIsRemote() ) {
+				gmState = GM_REFRESH_PROXY;
+			} else {
+				// We should never end up here if we don't have a
+				// proxy already!
+				if( ! jobProxy ) {
+					EXCEPT( "(%d.%d) Requested to refresh proxy, but no proxy present. ", procID.cluster,procID.proc);
+				}
+
+				if ( m_sandboxPath.empty() ) {
+					m_xfer_gahp->blah_get_sandbox_path( remoteSandboxId,
+														m_sandboxPath );
+				}
+				if ( m_sandboxPath.empty() ) {
+					dprintf( D_ALWAYS,
+							 "(%d.%d) blah_get_sandbox_path() failed: %s\n",
+							 procID.cluster, procID.proc, m_xfer_gahp->getErrorString() );
+					errorString = m_xfer_gahp->getErrorString();
+					gmState = GM_HOLD;
+					break;
+				}
+				if ( gahpAd == NULL ) {
+					gahpAd = buildTransferAd();
+				}
+				if ( gahpAd == NULL ) {
+					gmState = GM_HOLD;
+					break;
+				}
+
+				m_xferId = remoteSandboxId;
+				gahpAd->Assign( ATTR_TRANSFER_KEY, m_xferId );
+				FetchProxyList[m_xferId] = this;
+
+				// If available, use SSH tunnel for file transfer connections.
+				// Take our sinful string and replace the IP:port with
+				// the one that should be used on the remote side for
+				// tunneling.
+				if ( m_xfer_gahp->getSshForwardPort() ) {
+					std::string new_addr;
+					// TODO We're ignoring IPv6 for now.
+					Sinful our_sinful(daemonCore->InfoCommandSinfulString());
+					condor_sockaddr local_addr;
+					our_sinful.setHost("127.0.0.1");
+					our_sinful.setPort(m_xfer_gahp->getSshForwardPort());
+					our_sinful.clearAddrs();
+					local_addr.set_ipv4();
+					local_addr.set_loopback();
+					local_addr.set_port(m_xfer_gahp->getSshForwardPort());
+					our_sinful.addAddrToAddrs(local_addr);
+					new_addr = our_sinful.getSinful();
+					gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
+				}
+
+				rc = m_xfer_gahp->blah_download_proxy( remoteSandboxId, gahpAd );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				if ( rc != GLOBUS_SUCCESS ) {
+					// unhandled error
+					dprintf( D_ALWAYS,
+							 "(%d.%d) blah_download_proxy() failed: %s\n",
+							 procID.cluster, procID.proc, m_xfer_gahp->getErrorString() );
+					errorString = m_xfer_gahp->getErrorString();
+					gmState = GM_CANCEL;
+					break;
+				}
+				gmState = GM_REFRESH_PROXY;
+			}
+		} break;
 		case GM_REFRESH_PROXY: {
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_SUBMITTED;
@@ -737,8 +806,14 @@ void INFNBatchJob::doEvaluateState()
 					EXCEPT( "(%d.%d) Requested to refresh proxy, but no proxy present. ", procID.cluster,procID.proc);
 				}
 
+				std::string proxy_path = jobProxy->proxy_filename;
+				if ( myResource->GahpIsRemote() ) {
+					proxy_path = m_sandboxPath.c_str();
+					proxy_path += DIR_DELIM_CHAR;
+					proxy_path += condor_basename( jobProxy->proxy_filename );
+				}
 				rc = gahp->blah_job_refresh_proxy( remoteJobId,
-												   jobProxy->proxy_filename );
+												   proxy_path.c_str() );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1149,6 +1224,10 @@ void INFNBatchJob::doEvaluateState()
 				delete m_filetrans;
 				m_filetrans = NULL;
 			}
+			if ( !m_xferId.empty() ) {
+				FetchProxyList.erase( m_xferId );
+				m_xferId.clear();
+			}
 		}
 
 	} while ( reevaluate_state );
@@ -1273,7 +1352,7 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
 			ExprTree * pTree =  new_expr->Copy();
-			jobAd->Insert( attrs_to_copy[index], pTree, false );
+			jobAd->Insert( attrs_to_copy[index], pTree );
 		}
 	}
 
@@ -1292,6 +1371,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	std::string expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
+	classad::Value cereq_val;
 
 	int index;
 	const char *attrs_to_copy[] = {
@@ -1309,7 +1389,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		ATTR_JOB_IWD,
 		ATTR_GRID_RESOURCE,
 		ATTR_REQUEST_MEMORY,
-		"CERequirements",
 		"NodeNumber",
 		"HostNumber",
 		"SMPGranularity",
@@ -1317,6 +1396,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		"HostSMPSize",
 		"BatchExtraSubmitArgs",
 		"StageCmd",
+		"BatchProject",
+		"BatchRuntime",
 		NULL };		// list must end with a NULL
 
 	submit_ad = new ClassAd;
@@ -1325,7 +1406,70 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	while ( attrs_to_copy[++index] != NULL ) {
 		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
 			ExprTree * pTree = next_expr->Copy();
-			submit_ad->Insert( attrs_to_copy[index], pTree, false );
+			submit_ad->Insert( attrs_to_copy[index], pTree );
+		}
+	}
+
+	if ( jobAd->EvaluateAttr( ATTR_CE_REQUIREMENTS, cereq_val ) ) {
+		classad::ClassAd *cereq_ad;
+		std::string cereq_str;
+
+		if ( cereq_val.IsClassAdValue( cereq_ad ) ) {
+
+			// CERequirements is a nested ad. Build the goofy blahp
+			// expression from the names and values of the nested ad.
+			ExprTree *new_cereq = NULL;
+			for ( classad::ClassAd::iterator next_attr = cereq_ad->begin();
+				  next_attr != cereq_ad->end(); next_attr++ ) {
+				classad::Value val;
+				next_attr->second->Evaluate( val );
+				classad::Literal *new_literal = classad::Literal::MakeLiteral( val );
+				if ( new_literal == NULL ) {
+					continue;
+				}
+				classad::AttributeReference *new_ref = classad::AttributeReference::MakeAttributeReference( NULL, next_attr->first, false );
+				classad::Operation *new_op = classad::Operation::MakeOperation( classad::Operation::EQUAL_OP, new_ref, new_literal );
+				if ( new_cereq == NULL ) {
+					new_cereq = new_op;
+				} else {
+					new_cereq = classad::Operation::MakeOperation( classad::Operation::LOGICAL_AND_OP, new_cereq, new_op );
+				}
+			}
+			submit_ad->Insert( ATTR_CE_REQUIREMENTS, new_cereq );
+
+		} else if ( cereq_val.IsStringValue( cereq_str ) ) {
+
+			// CERequirements is string. Split on comma/space and lookup
+			// the resulting names in the job ad to build the goofy
+			// blahp expression.
+			StringList attr_list( cereq_str.c_str() );
+			ExprTree *new_cereq = NULL;
+			const char *next_attr = NULL;
+			attr_list.rewind();
+			while ( (next_attr = attr_list.next()) ) {
+				classad::Value val;
+				jobAd->EvaluateAttr( next_attr, val );
+				classad::Literal *new_literal = classad::Literal::MakeLiteral( val );
+				if ( new_literal == NULL ) {
+					continue;
+				}
+				classad::AttributeReference *new_ref = classad::AttributeReference::MakeAttributeReference( NULL, next_attr, false );
+				classad::Operation *new_op = classad::Operation::MakeOperation( classad::Operation::EQUAL_OP, new_ref, new_literal );
+				if ( new_cereq == NULL ) {
+					new_cereq = new_op;
+				} else {
+					new_cereq = classad::Operation::MakeOperation( classad::Operation::LOGICAL_AND_OP, new_cereq, new_op );
+				}
+			}
+			submit_ad->Insert( ATTR_CE_REQUIREMENTS, new_cereq );
+
+		} else if ( (next_expr = jobAd->LookupExpr( ATTR_CE_REQUIREMENTS )) ) {
+
+			// CERequirements is neither a ClassAd nor a string.
+			// Forward the unevaluated expression to the blahp.
+			ExprTree * pTree = next_expr->Copy();
+			submit_ad->Insert( ATTR_CE_REQUIREMENTS, pTree );
+
 		}
 	}
 
@@ -1421,7 +1565,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 			}
 
 			ExprTree * pTree = next_expr->Copy();
-			submit_ad->Insert( attr_name, pTree, false );
+			submit_ad->Insert( attr_name, pTree );
 		}
 	}
 

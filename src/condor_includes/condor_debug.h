@@ -21,17 +21,6 @@
 #ifndef CONDOR_DEBUG_H
 #define CONDOR_DEBUG_H
 
-// Write a line to the audit log, if configured. Always insert the
-// connection id from the relevant Sock object.
-// TODO This declaration may need to be moved elsewhere
-// TODO Do we like this name?
-// TODO Once we have a connection id in Sock, use that
-#if defined(WIN32)
-#  define audit_log(df, sock, fmt, ...) dprintf(D_AUDIT | D_IDENT | df, (DPF_IDENT)((sock)->get_timeout_raw()), fmt, __VA_ARGS__)
-#else
-#  define audit_log(df, sock, fmt, ...) dprintf(D_AUDIT | D_IDENT | df, (DPF_IDENT)((sock)->get_timeout_raw()), fmt, ##__VA_ARGS__)
-#endif
-
 /*
 **	Definitions for category and flags to pass to dprintf
 **  Note: this is a little confusing, since the flags specify both
@@ -75,7 +64,7 @@ enum {
    D_AUDIT, // messages for the audit log
    D_TEST,  // messages with this category are parsed by various tests.
    D_STATS,
-   D_UNUSED30,
+   D_MATERIALIZE,
    D_BUG,   // messages that indicate the daemon is going down.
 
    // NOTE: can't go beyond 31 categories so long as DebugOutputChoice is just an unsigned int.
@@ -195,12 +184,16 @@ bool dprintf_to_term_check();
 void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
-void Suicide(void);
+void Suicide(void) GCC_NORETURN;
 void set_debug_flags( const char *strflags, int cat_and_flags );
 void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg ) GCC_NORETURN;
 void _condor_fd_panic( int line, const char *file );
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 int  _condor_dprintf_is_initialized();
+void _condor_save_dprintf_line_va( int flags, const char* fmt, va_list args );
+void _condor_save_dprintf_line( int flags, const char* fmt, ... );
+void _condor_dprintf_saved_lines( void );
+void condor_except_should_dump_core(int flag);
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
 
@@ -312,6 +305,14 @@ public:
 	bool print_on_exit;
 };
 
+// get (and reset) dprintf runtime statistics (if they are enabled)
+bool _condor_dprintf_runtime (
+	double & disabled_runtime,
+	long & disabled_count,
+	double & enabled_runtime,
+	long & enabled_count,
+	bool clear);
+
 /* must call this upon entering child of fork() if child calls dprintf */
 void dprintf_init_fork_child( bool cloned = false );
 
@@ -325,7 +326,8 @@ bool debug_open_fds(std::map<int,bool> &open_fds);
 
 // fetch a monotonic timer intended for measuring the time spent
 // doing various things.  this timer can NOT be counted on to
-// be a normal timestamp.  The seconds value might be epoch time
+// be a normal timestamp! use double condor_gettimestamp_double() for that..
+// The seconds value might be epoch time
 // or it might be uptime depending on which system clock is used.
 extern double _condor_debug_get_time_double();
 

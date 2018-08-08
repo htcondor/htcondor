@@ -28,7 +28,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_socket_types.h"
-#include "condor_string.h"
+#include "condor_config.h"
 #include "condor_netdb.h"
 #include "selector.h"
 #include "condor_sockfunc.h"
@@ -284,7 +284,7 @@ SafeSock::peek_end_of_message()
 
 MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 const char *
-SafeSock::my_ip_str()
+SafeSock::my_ip_str() const
 {
 	//
 	// FIXME: Do we still need to create and destroy a socket every time?
@@ -408,41 +408,37 @@ int SafeSock::connect(
  */
 int SafeSock::put_bytes(const void *data, int sz)
 {
-	int bytesPut, l_out;
-    unsigned char * dta = 0;
+	int bytesPut;
 
-    //char str[10000];
-    //str[0] = 0;
-    //for(int idx=0; idx<sz; idx++) { sprintf(&str[strlen(str)], "%02x,", ((char *)data)[idx]); }
-    //dprintf(D_NETWORK, "---> cleartext: %s\n", str);
 
     // Check to see if we need to encrypt
     // This works only because putn will actually put all 
     if (get_encryption()) {
-        if (!wrap((unsigned char *)const_cast<void*>(data), sz, dta , l_out)) { 
+		int l_out;
+		unsigned char * dta = 0;
+        if (!wrap((const unsigned char *)data, sz, dta , l_out)) {
             dprintf(D_SECURITY, "Encryption failed\n");
             return -1;  // encryption failed!
         }
-    }
-    else {
-        dta = (unsigned char *) malloc(sz);
-        memcpy(dta, data, sz);
-    }
-    
-    // Now, add to the MAC
-    if (mdChecker_) {
-        mdChecker_->addMD(dta, sz);
-    }
+			// Now, add to the MAC
+		if (mdChecker_) {
+			mdChecker_->addMD(dta, sz);
+		}
 
-    //str[0] = 0;
-    //for(int idx=0; idx<sz; idx++) { sprintf(&str[strlen(str)], "%02x,", dta[idx]); }
-    //dprintf(D_NETWORK, "---> ciphertext: %s\n", str);
+		bytesPut = _outMsg.putn((char *)dta, sz);
+    
+		free(dta);
+		return bytesPut;
 
-    bytesPut = _outMsg.putn((char *)dta, sz);
-    
-    free(dta);
-    
-	return bytesPut;
+    } else {
+			// Now, add to the MAC
+		if (mdChecker_) {
+			mdChecker_->addMD((const unsigned char *)data, sz);
+		}
+
+		bytesPut = _outMsg.putn((const char *)data, sz);
+		return bytesPut;
+	}
 }
 
 
@@ -469,54 +465,55 @@ int SafeSock::get_bytes(void *dta, int size)
 			if ( selector.timed_out() ) {
 				return 0;
 			} else if ( !selector.has_ready() ) {
-					dprintf(D_NETWORK, "select returns %d, recv failed\n",
-							selector.select_retval());
-					return 0;
+				dprintf(D_NETWORK, "select returns %d, recv failed\n",
+						selector.select_retval());
+				return 0;
 			}
 		}
 		(void)handle_incoming_packet();
 	}
 
-	char *tempBuf = (char *)malloc(size);
-    if (!tempBuf) { EXCEPT("malloc failed"); }
 	int readSize, length;
     unsigned char * dec;
 
-	if(_longMsg) {
-        // long message 
-        readSize = _longMsg->getn(tempBuf, size);
-    }
-	else { 
-        // short message
-        readSize = _shortMsg.getn(tempBuf, size);
-    }
+	if (get_encryption()) {
+		if(_longMsg) {
+				// long message 
+			readSize = _longMsg->getn((char *)dta, size);
+		}
+		else { 
+				// short message
+			readSize = _shortMsg.getn((char *)dta, size);
+		}
 
-    //char str[10000];
-    //str[0] = 0;
-    //for(int idx=0; idx<readSize; idx++) { sprintf(&str[strlen(str)], "%02x,", tempBuf[idx]); }
-    //dprintf(D_NETWORK, "<--- ciphertext: %s\n", str);
-
-	if(readSize == size) {
-            if (get_encryption()) {
-                unwrap((unsigned char *) tempBuf, readSize, dec, length);
-                memcpy(dta, dec, readSize);
-                free(dec);
-            }
-            else {
-                memcpy(dta, tempBuf, readSize);
-            }
-
-            //str[0] = 0;
-            //for(int idx=0; idx<size; idx++) { sprintf(&str[strlen(str)], "%02x,", ((char *)dta)[idx]); }
-            //dprintf(D_NETWORK, "<--- cleartext: %s\n", str);
-
-            free(tempBuf);
-            return readSize;
+		if (readSize == size) {
+			unwrap((unsigned char *) dta, readSize, dec, length);
+			memcpy(dta, dec, readSize);
+			free(dec);
+			return readSize;
+		} else {
+			dprintf(D_NETWORK,
+					"SafeSock::get_bytes - failed because bytes read is different from bytes requested\n");
+			return -1;
+		}
 	} else {
-		free(tempBuf);
-        dprintf(D_NETWORK,
-                "SafeSock::get_bytes - failed because bytes read is different from bytes requested\n");
-		return -1;
+			// no encryption
+		if(_longMsg) {
+				// long message 
+			readSize = _longMsg->getn((char *)dta, size);
+		}
+		else { 
+				// short message
+			readSize = _shortMsg.getn((char *)dta, size);
+		}
+
+		if (readSize == size) {
+			return readSize;
+		} else {
+			dprintf(D_NETWORK,
+					"SafeSock::get_bytes - failed because bytes read is different from bytes requested\n");
+			return -1;
+		}
 	}
 }
 
@@ -658,14 +655,10 @@ int SafeSock::handle_incoming_packet()
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
 	}
-    char str[50];
-    sprintf(str, "%s", sock_to_string(_sock));
-    dprintf( D_NETWORK, "RECV %d bytes at %s from %s\n",
-			 received, str, _who.to_sinful().Value());
-    //char temp_str[10000];
-    //temp_str[0] = 0;
-    //for (int i=0; i<received; i++) { sprintf(&temp_str[strlen(temp_str)], "%02x,", _shortMsg.dataGram[i]); }
-    //dprintf(D_NETWORK, "<---packet [%d bytes]: %s\n", received, temp_str);
+
+	if (IsDebugLevel(D_NETWORK))
+    	dprintf( D_NETWORK, "RECV %d bytes at %s from %s\n",
+			 received, sock_to_string(_sock), _who.to_sinful().Value());
 
 	length = received;
     _shortMsg.reset(); // To be sure
@@ -1004,4 +997,54 @@ SafeSock::sendTargetSharedPortID()
 bool
 SafeSock::msgReady() {
 	return _msgReady;
+}
+
+/* static */ int
+SafeSock::recvQueueDepth(int port) {
+	int depth = 0;
+#ifdef LINUX
+	FILE *f = NULL;
+
+	f = fopen("/proc/net/udp", "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "Cannot open /proc/net/udp, no UDP statistics will be available\n");
+		return 0;
+	}
+	// /proc/net/udp entries look like
+	//   sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops             
+	// 1: 00000000:9C7E 00000000:0000 07 00000000:00000000 00:00000000 00000000 28297        0 570473 2 ffff8803b781fc00 0     
+
+	// skip first line, it is a header
+	char skipLine[256];
+	if (fgets(skipLine, sizeof(skipLine), f) == NULL) {
+		fclose(f);
+		return 0;
+	};
+
+	int sl = 0;
+	int localAddr = 0;
+	int localPort = 0;
+	int remoteAddr = 0;
+	int remotePort = 0;
+	int status = 0;
+	int tx_queue = 0;
+	int queueDepth = 0;
+	while (fscanf(f, "%d: %x:%x %x:%x %x %x:%x\n", &sl, &localAddr, &localPort, &remoteAddr, &remotePort, &status, &tx_queue, &queueDepth) > 1) {
+
+		if (localPort == port) {
+			depth = queueDepth;
+		}
+		// skip to beginning of next line
+		if (fgets(skipLine, sizeof(skipLine), f) == NULL) {
+			dprintf(D_ALWAYS, "Error skipping to end of in /proc/net/udp\n");
+			fclose(f);
+			return -1;
+		}
+	}
+	fclose(f);
+#else
+	// Shut the compiler up
+	(void)port;
+#endif
+	return depth;
 }

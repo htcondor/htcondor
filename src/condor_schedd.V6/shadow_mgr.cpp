@@ -23,7 +23,7 @@
 #include "simplelist.h"
 #include "string_list.h"
 #include "condor_attributes.h"
-#include "condor_string.h"
+#include "condor_config.h"
 #include "classad_merge.h"
 #include "my_popen.h"
 
@@ -268,7 +268,7 @@ ShadowMgr::makeShadow( const char* path )
 {
 	Shadow* new_shadow;
 	FILE* fp;
-	const char *args[] = {const_cast<char*>(path), "-classad", NULL};
+	const char *args[] = {path, "-classad", NULL};
 	char buf[1024];
 
 		// first, try to execute the given path with a "-classad"

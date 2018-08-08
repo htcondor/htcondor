@@ -70,13 +70,13 @@ public:
 	int timeout(int sec);
 
 	/// peer's IP address, string verison (e.g. "128.105.101.17")
-	const char* peer_ip_str();
+	const char* peer_ip_str() const;
 
 	/// local socket address
-	condor_sockaddr my_addr();
+	condor_sockaddr my_addr() const;
 
 	// remote socket address
-	condor_sockaddr peer_addr();
+	condor_sockaddr peer_addr() const;
 
  private:
 
@@ -90,12 +90,12 @@ public:
     void addr_changed();
 
 	/// sinful address of peer in form of "<a.b.c.d:pppp>"
-	char * get_sinful_peer();
+	char * get_sinful_peer() const;
 
 	/// sinful address of peer, suitable for passing to dprintf() (never NULL)
-	virtual char const *default_peer_description();
+	virtual char const *default_peer_description() const;
 
-	virtual bool canEncrypt();
+	virtual bool canEncrypt() const;
 
     int setsockopt(int, int, const char*, int); 
 
@@ -138,9 +138,9 @@ public:
 	int				_timeout;
 	condor_sockaddr			 _who;	// endpoint of "connection"
 
-	char _peer_ip_buf[IP_STRING_BUF_SIZE];	
+	mutable char _peer_ip_buf[IP_STRING_BUF_SIZE];
 
-	char _sinful_peer_buf[SINFUL_STRING_BUF_SIZE];
+	mutable char _sinful_peer_buf[SINFUL_STRING_BUF_SIZE];
 
  private:
 
@@ -148,13 +148,13 @@ public:
 	 * unimplemented stubs to make inheritance from Stream possible
 	 */
 
-	int bytes_available_to_read();
-	bool peer_is_local();
+	int bytes_available_to_read() const;
+	bool peer_is_local() const;
 	const char * serialize(const char *);
 	char * serialize() const;
 	Stream *CloneStream();
-	stream_type type();
-	const char* my_ip_str();
+	stream_type type() const;
+	const char* my_ip_str() const;
 };
 
 #endif /* SOCK_H */

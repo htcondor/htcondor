@@ -28,7 +28,7 @@
 
 char *getHostname(char *givenHost) {
   if (givenHost == NULL) {
-  		char *res = strnewp(get_local_fqdn().Value());
+  		char *res = strdup(get_local_fqdn().Value());
   		return res;	
   } else {
   	return givenHost;
@@ -43,9 +43,9 @@ char* getQpidPort(char *hName){
   MyString daemonHost = "pigeon@";
 
   daemonHost += hName;
-  Daemon dObj(DT_GENERIC, daemonHost.Value(), NULL);
+  DaemonAllowLocateFull dObj(DT_GENERIC, daemonHost.Value(), NULL);
   dObj.setSubsystem("PIGEON");
-  bool flag = dObj.locate();
+  bool flag = dObj.locate(Daemon::LOCATE_FULL);
   if(!flag){
   	fprintf(stderr, "Problem locating daemon object: %s \n", dObj.error());
     return NULL;

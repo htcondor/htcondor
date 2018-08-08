@@ -28,12 +28,14 @@ namespace classad {
 ExprList::
 ExprList()
 {
+	parentScope = NULL;
 	return;
 }
 
 ExprList::
 ExprList(const vector<ExprTree*>& exprs)
 {
+	parentScope = NULL;
     CopyList(exprs);
 	return;
 }
@@ -93,6 +95,8 @@ CopyFrom(const ExprList &other_list)
     success = true;
 
     ExprTree::CopyFrom(other_list);
+
+	parentScope = other_list.parentScope;
 
 	vector<ExprTree*>::const_iterator itr;
 	for( itr = other_list.exprList.begin( ); itr != other_list.exprList.end( ); itr++ ) {
@@ -160,6 +164,8 @@ bool operator==(ExprList &list1, ExprList &list2)
 void ExprList::
 _SetParentScope( const ClassAd *parent )
 {
+	parentScope = parent;
+
 	vector<ExprTree*>::iterator	itr;
 	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
 		(*itr)->SetParentScope( parent );

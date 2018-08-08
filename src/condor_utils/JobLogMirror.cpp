@@ -83,6 +83,12 @@ JobLogMirror::config() {
 }
 
 void
+JobLogMirror::poll()
+{
+	TimerHandler_JobLogPolling();
+}
+
+void
 JobLogMirror::TimerHandler_JobLogPolling() {
 	dprintf(D_FULLDEBUG, "TimerHandler_JobLogPolling() called\n");
 	ASSERT(job_log_reader.Poll() != POLL_ERROR);

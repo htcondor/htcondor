@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+#
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -184,7 +185,7 @@ for my $i (1..8){if (!($Attr{$i-1}{DiskUsage} =~ /$fields[2][$i]/)){$result = 0;
 for my $i (1..8){if (!($Attr{$i-1}{NumShadowStarts} =~ /$fields[3][$i]/)){$result = 0; last;}}
 for my $i (1..8){if (!(unquote($Attr{$i-1}{WhenToTransferOutput}) =~ /$fields[4][$i]/)){$result = 0; last;}}
 
-RegisterResult((check_pr(\%data,$option) && $result),check_name => $option, test_name=>$testname);
+RegisterResult($result,check_name => $option, test_name=>$testname);
 
 ######################################################
 $option = "where2";
@@ -241,7 +242,8 @@ RegisterResult(check_pr(\%data,$option),check_name => $option, test_name => $tes
 $option = "ifthenelse";
 $format_file = "$option.cpf";
 $format_content = 
-"IfThenElse(Progress=!=undefined,Progress,0.0)  AS V1 PRINTF %5.1f
+"SELECT
+IfThenElse(Progress=!=undefined,Progress,0.0)  AS V1 PRINTF %5.1f
 IfThenElse(Owner isnt undefined,Owner,\"admin\") AS V2 WIDTH 20";
 open(FH,">$format_file") || print "FAILED opening file $format_file\n";
 print FH $format_content;
@@ -257,13 +259,21 @@ RegisterResult(check_pr(\%data,$option,\%Attr),check_name => $option, test_name 
 
 ########################################################
 $option = "config -nobatch";
-my $path_to_file = `condor_config_val LOCAL_CONFIG_FILE`;
-$path_to_file =~ s/\n//;
-print "path to file is $path_to_file\n";
-my $path_to_dir = `condor_config_val LOCAL_DIR`;
-$path_to_dir =~ s/\n//;
-print "path to dir is $path_to_dir\n";
-open (FHOUT, ">>$path_to_file");
+my $local_config = `condor_config_val LOCAL_CONFIG_FILE`;
+$local_config =~ s/\n//;
+print "local config file is $local_config\n";
+
+my $local_dir = `condor_config_val LOCAL_DIR`;
+$local_dir =~ s/\n//;
+my $extra_config = "$local_dir/$testname.cfg";
+open (FHOUT, ">>$local_config");
+print FHOUT "include ifexist : $extra_config\n";
+close FHOUT;
+
+print "LOCAL_DIR is $local_dir\n";
+print "Creating temporary extra config file: '$extra_config'\n";
+
+open (FHOUT, ">$extra_config");
 print FHOUT "Q_DEFAULT_PRINT_FORMAT_FILE=q_totals.cpf\n";
 print FHOUT "Q_DEFAULT_RUN_PRINT_FORMAT_FILE=normal.cpf\n";
 print FHOUT "Q_DEFAULT_HOLD_PRINT_FORMAT_FILE=q_totals.cpf\n";
@@ -290,15 +300,19 @@ $result = $result && check_heading("-nobatch",\%data);
 my $ads_file = write_ads(\%Attr,$testname);
 my @summary1 = `condor_q -job $ads_file -nobatch`;
 my @summary2 = `condor_q -job $ads_file -hold`; 
-@summary1 = split / /, $summary1[1];
-$result = $result && check_summary('have_sum',\@summary1,\%cnt_num) && ($summary2[1] eq "4 jobs; 0 completed, 0 removed, 0 idle, 0 running, 4 held, 0 suspended\n");
+my $totline = $summary1[1];
+print "totline is: $totline";
+$totline =~ s/^[^:]+:\s+//;
+print "totline is now: $totline";
+@summary1 = split / /, $totline;
+$result = $result && check_summary('have_sum',\@summary1,\%cnt_num) && ($summary2[1] =~ /4 jobs; 0 completed, 0 removed, 0 idle, 0 running, 4 held, 0 suspended/);
 
 RegisterResult($result,check_name=>$option, test_name=>$testname);
 
 ############################################################
 $option = "config -batch_is_default=false";
 
-open (FHOUT, ">>$path_to_file");
+open (FHOUT, ">$extra_config");
 print FHOUT "CONDOR_Q_DASH_BATCH_IS_DEFAULT=false\n";
 print FHOUT "Q_DEFAULT_PRINT_FORMAT_FILE=q_totals.cpf\n";
 print FHOUT "Q_DEFAULT_RUN_PRINT_FORMAT_FILE=normal.cpf\n";
@@ -324,11 +338,17 @@ $result = $result && check_heading("-nobatch",\%data);
 $ads_file = write_ads(\%Attr,$testname);
 @summary1 = `condor_q -job $ads_file`;
 @summary2 = `condor_q -job $ads_file -hold`; 
-@summary1 = split / /, $summary1[1];
-$result = $result && check_summary('have_sum',\@summary1,\%cnt_num) && ($summary2[1] eq "4 jobs; 0 completed, 0 removed, 0 idle, 0 running, 4 held, 0 suspended\n");
+$totline = $summary1[1];
+print "totline is: $totline";
+$totline =~ s/^[^:]+:\s+//;
+print "totline is now: $totline";
+@summary1 = split / /, $totline;
+$result = $result && check_summary('have_sum',\@summary1,\%cnt_num) && ($summary2[1] =~ /4 jobs; 0 completed, 0 removed, 0 idle, 0 running, 4 held, 0 suspended/);
 
 RegisterResult($result,check_name=>$option, test_name=>$testname);
 
+print "deleting extra config file '$extra_config'\n";
+unlink ($extra_config);
 
 CondorTest::EndTest();
 exit(0);

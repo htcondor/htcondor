@@ -96,7 +96,7 @@ startdClaimIdFile( int slot_id )
 
 	if( slot_id ) {
 		filename += ".slot";
-		filename += slot_id;
+		filename += IntToStr( slot_id );
 	}			
 	return strdup( filename.Value() );
 }
@@ -127,7 +127,10 @@ my_timezone(int isdst)
 	int answer;
 	char c = '+';
 
-	answer = -1 * (timezone / 3600);	// note: timezone is global
+	long tzv = -6 * 3600;
+	_get_timezone(&tzv);
+
+	answer = -1 * (tzv / 3600);	// note: timezone is global
 	if ( answer < 0 ) {
 		c = '-';
 		answer *= -1;

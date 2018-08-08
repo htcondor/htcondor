@@ -164,9 +164,6 @@
 /* Define if enabling NeST (USED)*/
 #cmakedefine WANT_NEST 1
 
-/* Define if enabling Quill (USED)*/
-#cmakedefine WANT_QUILL 1
-
 /* Define to 1 to support invoking hooks throughout the workflow of a job (USED)*/
 #cmakedefine HAVE_JOB_HOOKS 1
 
@@ -181,6 +178,9 @@
 
 /* Define to 1 to support condor_shared_port(s) passing fds (USED)*/
 #cmakedefine HAVE_SCM_RIGHTS_PASSFD 1
+
+/* Define to 1 to support public input file transfer over HTTP */
+#cmakedefine HAVE_HTTP_PUBLIC_FILES 1
 
 /* Define if doing a clipped build (USED)*/
 #cmakedefine CLIPPED 1
@@ -280,11 +280,11 @@
 /* Do we have the globus external (USED)*/
 #cmakedefine HAVE_EXT_GLOBUS 1
 
-/* Do we have the gsoap external (USED)*/
-#cmakedefine HAVE_EXT_GSOAP 1
-
 /* Do we have the krb5 external (USED)*/
 #cmakedefine HAVE_EXT_KRB5 1
+
+/* Do we have the munge external (USED)*/
+#cmakedefine HAVE_EXT_MUNGE 1
 
 /* Do we have the openssl external (USED)*/
 #cmakedefine HAVE_EXT_OPENSSL 1
@@ -325,9 +325,6 @@
 ///* Do we have the pcre external*/
 #cmakedefine HAVE_EXT_PCRE
 
-///* Do we have the postgresql external*/
-#cmakedefine HAVE_EXT_POSTGRESQL
-
 ///* Do we have the libcgroup external */
 #cmakedefine HAVE_EXT_LIBCGROUP
 
@@ -348,6 +345,9 @@
 /* Define to 1 if 'clock_gettime' function and CLOCK_MONOTONIC_RAW defined. (USED)*/
 #cmakedefine HAVE_CLOCK_MONOTONIC_RAW 1
 #cmakedefine HAVE_CLOCK_REALTIME_COARSE 1
+
+/* Define to 1 if you have the 'clock_nanosleep' function. (USED)*/
+#cmakedefine HAVE_CLOCK_NANOSLEEP 1
 
 /* are we using the GNU linker (USED) */
 #cmakedefine HAVE_GNU_LD 1
@@ -659,6 +659,7 @@
 #cmakedefine LIBKRB5_SO "${LIBKRB5_SO}"
 #cmakedefine LIBGSSAPI_KRB5_SO "${LIBGSSAPI_KRB5_SO}"
 #cmakedefine LIBSSL_SO "${LIBSSL_SO}"
+#cmakedefine LIBMUNGE_SO "${LIBMUNGE_SO}"
 #cmakedefine LIBLTDL_SO "${LIBLTDL_SO}"
 #cmakedefine LIBGLOBUS_COMMON_SO "${LIBGLOBUS_COMMON_SO}"
 #cmakedefine LIBGLOBUS_CALLOUT_SO "${LIBGLOBUS_CALLOUT_SO}"

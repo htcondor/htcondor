@@ -27,6 +27,7 @@
 
 #include <memory>
 #include <fstream>
+#include <sstream>
 
 #define ATTR_REGEX  "Regex"
 #define ATTR_VERBOSITY "Verbosity"
@@ -751,7 +752,7 @@ StatsD::publishMetrics()
 {
 	dprintf(D_ALWAYS,"Starting update...\n");
 
-    double start_time = UtcTime::getTimeDouble();
+    double start_time = condor_gettimestamp_double();
 
     m_stats_time_till_pub -= m_stats_heartbeat_interval;
 
@@ -826,7 +827,7 @@ StatsD::publishMetrics()
     sendHeartbeats();
 
     // Did we take longer than a heartbeat period?
-    int heartbeats_missed = (int)(UtcTime::getTimeDouble() - start_time) /
+    int heartbeats_missed = (int)(condor_gettimestamp_double() - start_time) /
                             m_stats_heartbeat_interval;
     if (heartbeats_missed) {
         dprintf(D_ALWAYS, "Skipping %d heartbeats\n", heartbeats_missed);

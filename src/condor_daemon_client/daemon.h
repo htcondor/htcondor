@@ -83,6 +83,9 @@ template <class p> class counted_ptr; // Forward declaration
   we can add the code to support it in one place, instead of peppered
   throughout the entire source tree.  */
 class Daemon: public ClassyCountedPtr {
+
+	friend class DaemonAllowLocateFull;
+
 public:
 		/** Constructor.  Takes the type of the daemon you want
 		  (basically, the subsystem, though we use a daemon_t enum.
@@ -125,10 +128,13 @@ public:
 		  well-known addresses, DNS lookups, whatever it takes.  If
 		  this fails, you can call error() to get a string describing
 		  what went wrong.
+		  LocateType method defaults to LOCATE_FOR_LOOKUP; if
+		  you really need LOCATE_FULL (not likely), you will want
+		  to use the DaemonAllowLocateFull subclass.
 		  @return Success or failure of getting all the info.
 		*/
 	enum LocateType {LOCATE_FULL, LOCATE_FOR_LOOKUP};
-	virtual bool locate( LocateType method=LOCATE_FULL );
+	virtual bool locate( LocateType method=LOCATE_FOR_LOOKUP );
 
 		/** Return the error string.  If there's ever a problem
 		  enountered in the Daemon object, this will start returning a
@@ -233,14 +239,6 @@ public:
 		  "local" means for the different types of daemons.
 		  */
 	bool isLocal( void )			{ return _is_local; }
-
-		/** Return the classad for this daemon. We may not have the
-			ad, if we found the daemon from the config file or the 
-			address file, or it doesn't have a classad. 
-			The caller must copy the classad it gets back!
-		  */
-	ClassAd *daemonAd() { return m_daemon_ad_ptr; }
-
 
 		/** Returns a descriptive string for error messages.  This has
 		  all the logic about printing out an appropriate string to
@@ -563,9 +561,14 @@ public:
 		 **/
 	void rewindCmList();
 
+		/*
+		 * Contact another daemon and get its instance ID, which is a
+		 * random number generated once in the first response to this query.
+		 */
+	bool getInstanceID( std::string & instanceID );
+
 protected:
 	// Data members
-
 	char* _name;
 	char* _hostname;
 	char* _full_hostname;
@@ -586,7 +589,6 @@ protected:
 	bool _tried_init_hostname;
 	bool _tried_init_version;
 	bool _is_configured; 
-	ClassAd *m_daemon_ad_ptr;
 	SecMan _sec_man;
 	StringList daemon_list;
 
@@ -828,6 +830,49 @@ protected:
 		*/
 	friend struct StartCommandConnectCallback;
 	friend class DCMessenger;
+
+	
+private:
+
+	// Note: we want to keep the m_daemon_ad_ptr data member private!
+	// Not even protected is good enough, because we don't want to expose
+	// this data member to child classes like DCSchedd. If someone wants access
+	// to the full classad, they must use the friend class DaemonAllowLocateFull.
+	// This way we can assume all calls to locate() are LOCATE_FOR_LOOKUP,
+	// and folks who try to do something different will get a compile-time error
+	// unless they use DaemonAllowLocateFull::locate().
+
+	ClassAd *m_daemon_ad_ptr;
+
+};
+
+/** This helper class is derived from the Daemon class; it allows
+    the caller to invoke method daemonAd() to get the complete ad
+	if invoked with locate(Daemon::LOCATE_FULL).
+*/
+class DaemonAllowLocateFull: public Daemon {
+public:
+
+	DaemonAllowLocateFull( daemon_t type, const char* name = NULL,
+				const char* pool = NULL );
+
+	DaemonAllowLocateFull( const ClassAd* ad, daemon_t type, const char* pool );
+
+
+	DaemonAllowLocateFull( const DaemonAllowLocateFull &copy );
+
+	DaemonAllowLocateFull& operator = ( const DaemonAllowLocateFull& );
+
+	bool locate( Daemon::LocateType method  );
+
+		/** Return the classad for this daemon. We may not have the
+			ad, if we found the daemon from the config file or the 
+			address file, or it doesn't have a classad. So the caller
+			should be prepared for this method to return NULL.
+			The caller must copy the classad it gets back!
+		  */
+	ClassAd *daemonAd() { locate(LOCATE_FULL); return m_daemon_ad_ptr; }
+
 };
 
 // Prototype to get sinful string.

@@ -128,29 +128,10 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 			case Value::SLIST_VALUE:
 				result += "SLIST\n";
 				break;
+			default:
+				break;
 		}
 		debug_print(result.c_str());
-}
-
-ExprTree::
-ExprTree ()
-{
-	parentScope = NULL;
-}
-
-
-ExprTree::
-~ExprTree()
-{
-}
-
-void ExprTree::
-CopyFrom(const ExprTree &tree)
-{
-    if (this != &tree) {
-        parentScope = tree.parentScope;
-    }
-    return;
 }
 
 bool ExprTree::
@@ -213,7 +194,6 @@ Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 void ExprTree::
 SetParentScope( const ClassAd* scope ) 
 {
-	parentScope = scope;
 	_SetParentScope( scope );
 }
 
@@ -223,13 +203,8 @@ Evaluate( Value& val ) const
 {
 	EvalState 	state;
 
-	if (parentScope == NULL) {
-		val.SetErrorValue();
-		return false;
-	} else {
-		state.SetScopes( parentScope );
-		return( Evaluate( state, val ) );
-	}
+	state.SetScopes( GetParentScope() );
+	return( Evaluate( state, val ) );
 }
 
 
@@ -238,7 +213,7 @@ Evaluate( Value& val, ExprTree*& sig ) const
 {
 	EvalState 	state;
 
-	state.SetScopes( parentScope );
+	state.SetScopes( GetParentScope() );
 	return( Evaluate( state, val, sig  ) );
 }
 
@@ -248,7 +223,7 @@ Flatten( Value& val, ExprTree *&tree ) const
 {
 	EvalState state;
 
-	state.SetScopes( parentScope );
+	state.SetScopes( GetParentScope() );
 	return( Flatten( state, val, tree ) );
 }
 
@@ -373,17 +348,6 @@ SetRootScope( )
         rootAd = prevScope;
     }
     return;
-}
-
-ostream& operator<<(ostream &stream, const ExprTree *expr)
-{
-	ClassAdUnParser unparser;
-	string      string_representation;
-
-	unparser.Unparse(string_representation, expr);
-	stream << string_representation;
-	
-	return stream;
 }
 
 bool operator==(const ExprTree &tree1, const ExprTree &tree2)

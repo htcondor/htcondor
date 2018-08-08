@@ -56,6 +56,7 @@ class BlockingModeGuard;
 class ReliSock : public Sock {
 	friend class Authentication;
 	friend class BlockingModeGuard;
+	friend class DockerProc;
 
 //	PUBLIC INTERFACE TO RELIABLE SOCKS
 //
@@ -143,7 +144,7 @@ public:
 	int accept(ReliSock *);
 
     ///
-	int put_line_raw( char *buffer );
+	int put_line_raw( const char *buffer );
     ///
 	int get_line_raw( char *buffer, int max_length );
     ///
@@ -151,7 +152,7 @@ public:
     ///
 	int get_bytes_raw( char *buffer, int length );
     ///
-	int put_bytes_nobuffer(char *buf, int length, int send_size=1);
+	int put_bytes_nobuffer(const char *buf, int length, int send_size=1);
     ///
 	int get_bytes_nobuffer(char *buffer, int max_length, int receive_size=1);
 
@@ -243,12 +244,13 @@ public:
 	*/
 
     ///
-	virtual stream_type type();
+	virtual stream_type type() const;
 
 	//	byte operations
 	//
     ///
 	virtual int put_bytes(const void *, int);
+	int put_bytes_after_encryption(const void *, int);
     ///
 	virtual int get_bytes(void *, int);
     ///
@@ -263,7 +265,7 @@ public:
     ///
 	int authenticate_continue( CondorError* errstack, bool non_blocking, char **method_used );
     ///
-	int isClient() { return is_client; };
+	int isClient() const { return is_client; };
 
 	// Normally, the side of the connection that called connect() is
 	// the client.  The opposite is true for a reversed connection.
@@ -275,7 +277,7 @@ public:
 	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
 	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}
 
-	bool is_closed() {return rcv_msg.m_closed;}
+	bool is_closed() const {return rcv_msg.m_closed;}
 
 	// serialize and deserialize
 	const char * serialize(const char *);	// restore state from buffer

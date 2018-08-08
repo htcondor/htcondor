@@ -1,4 +1,4 @@
-\begin{ManPage}{\label{man-condor-hold}\Condor{hold}}{1}
+\begin{ManPage}{\Condor{hold}}{man-condor-hold}{1}
 {put jobs in the queue into the hold state}
 \index{HTCondor commands!condor\_hold}
 \index{condor\_hold command}
@@ -12,7 +12,7 @@
 \oOptArg{-subcode}{number}
 \ToolLocate 
 \ToolJobs
-$|$ \OptArg{-constraint}{expression} \Dots 
+\Bar{} \OptArg{-constraint}{expression} \Dots
 
 \SynProg{\Condor{hold}}
 \ToolDebugOption
@@ -61,7 +61,7 @@ allowing a checkpoint to be produced first.
     marks).
     Note that quotation marks must be escaped with the
     backslash characters for most shells.  }
-  \OptItem{\Arg{-all}}{Hold all the jobs in the queue}
+  \OptItem{\Opt{-all}}{Hold all the jobs in the queue}
 
 \end{Options}
 

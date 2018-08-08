@@ -624,10 +624,10 @@ FileLock::obtain( LOCK_TYPE t )
 	                t, saved_errno, strerror(saved_errno) );
 	}
 	else {
-		UtcTime	now( true );
+		double now = condor_gettimestamp_double();
 		dprintf( D_FULLDEBUG,
 				 "FileLock::obtain(%d) - @%.6f lock on %s now %s\n",
-				 t, now.combined(), m_path, getStateString(t) );
+				 t, now, m_path, getStateString(t) );
 	}
 	return status == 0;
 }
@@ -689,19 +689,18 @@ FileLock::updateLockTimestamp(void)
 }
 
 
-// create a temporary lock path
-// return value must be freed via delete[] by caller.
-char * 
-FileLock::GetTempPath() 
+// create a temporary lock path name into supplied buffer.
+const char *
+FileLock::getTempPath(MyString & pathbuf)
 {
 	const char *suffix = "";
-	char *result = NULL;
+	const char *result = NULL;
 	char *path = param("LOCAL_DISK_LOCK_DIR");
 	if (!path) {
 		path = temp_dir_path();
 		suffix = "condorLocks";
 	}
-	result = dirscat(path, suffix);
+	result = dirscat(path, suffix, pathbuf);
 	free(path);
 
 	return result;
@@ -710,7 +709,8 @@ FileLock::GetTempPath()
 char *
 FileLock::CreateHashName(const char *orig, bool useDefault)
 {
-	char *path = GetTempPath();
+	MyString pathbuf;
+	const char *path = getTempPath(pathbuf);
 	unsigned long hash = 0;
 	char *temp_filename;
 	int c;
@@ -747,7 +747,6 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 #endif
 		sprintf(dest, "%s", path  );
 	delete []temp_filename; 
-	delete []path;
 	for (int i = 0 ; i < 4; i+=2 ) {
 		snprintf(dest+strlen(dest), 3, "%s", hashVal+i);
 		snprintf(dest+strlen(dest), 2, "%c", DIR_DELIM_CHAR);

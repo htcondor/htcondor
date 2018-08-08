@@ -60,7 +60,7 @@ void Condor_Crypt_3des:: resetState()
      num_=0;
 }
 
-bool Condor_Crypt_3des :: encrypt(unsigned char *  input, 
+bool Condor_Crypt_3des :: encrypt(const unsigned char *  input,
                                   int              input_len, 
                                   unsigned char *& output, 
                                   int&             output_len)
@@ -84,7 +84,7 @@ bool Condor_Crypt_3des :: encrypt(unsigned char *  input,
 #endif
 }
 
-bool Condor_Crypt_3des :: decrypt(unsigned char *  input, 
+bool Condor_Crypt_3des :: decrypt(const unsigned char *  input,
                                   int              input_len, 
                                   unsigned char *& output, 
                                   int&             output_len)
@@ -111,6 +111,9 @@ bool Condor_Crypt_3des :: decrypt(unsigned char *  input,
 
 Condor_Crypt_3des :: Condor_Crypt_3des()
 {
+	memset(&keySchedule1_.ks,0,sizeof(keySchedule1_));
+	memset(&keySchedule2_.ks,0,sizeof(keySchedule2_));
+	memset(&keySchedule3_.ks,0,sizeof(keySchedule3_));
 	resetState();
 }
 

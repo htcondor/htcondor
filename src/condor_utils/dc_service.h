@@ -96,7 +96,7 @@ public:
 	virtual int ServiceDataCompare( ServiceData const* other ) const = 0;
 
 		/** For use with SelfDrainingQueue. */
-	virtual unsigned int HashFn( ) const = 0;
+	virtual size_t HashFn( ) const = 0;
 
 protected:
     ServiceData() {}

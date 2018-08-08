@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
@@ -852,6 +851,7 @@ makeErrorMessage(const char* err_string)
 				case '\r':
 				case '\n':
 					buffer += '\\';
+					// Fall through...
 					//@fallthrough@
 				default:
 					buffer += err_string[i];

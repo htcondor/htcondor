@@ -198,17 +198,17 @@ int		dispose_all();
 */
 #if defined(INSERT_TABLES)
 NAME_VALUE	StateFuncArray[] = {
-	{ (unsigned long)init,			"init()"			},
-	{ (unsigned long)get_proc,		"get_proc()"		},
-	{ (unsigned long)get_exec,		"get_exec()"		},
-	{ (unsigned long)terminate_all,	"terminate_all()"	},
-	{ (unsigned long)asynch_wait,	"asynch_wait()"	},
-	{ (unsigned long)supervise_all,	"supervise_all()"	},
-	{ (unsigned long)proc_exit,		"proc_exit()"		},
-	{ (unsigned long)send_core,		"send_core()"		},
-	{ (unsigned long)dispose_all,	"dispose_all()"		},
+	{ (long)init,			"init()"			},
+	{ (long)get_proc,		"get_proc()"		},
+	{ (long)get_exec,		"get_exec()"		},
+	{ (long)terminate_all,	"terminate_all()"	},
+	{ (long)asynch_wait,	"asynch_wait()"	},
+	{ (long)supervise_all,	"supervise_all()"	},
+	{ (long)proc_exit,		"proc_exit()"		},
+	{ (long)send_core,		"send_core()"		},
+	{ (long)dispose_all,	"dispose_all()"		},
 #if defined(LINK_PVM)
-    { (unsigned long)read_pvm_msg,	"read_pvm_msg()"	},
+    { (long)read_pvm_msg,	"read_pvm_msg()"	},
 #endif
 	{ -1,					""					}
 };
@@ -249,24 +249,24 @@ int make_runnable();		// Make ckpt'ed process runnable again
 */
 #if defined(INSERT_TABLES)
 NAME_VALUE	TransFuncArray[] = {
-	{ (unsigned long)susp_all,			"susp_all"			},
-	{ (unsigned long)periodic_ckpt_all,			"periodic_ckpt_all"			},
-	{ (unsigned long)test_connection,			"test_connection"			},
-	{ (unsigned long)req_die,				"req_die"			},
-	{ (unsigned long)req_vacate,			"req_vacate"		},
-	{ (unsigned long)spawn_all,			"spawn_all"			},
-	{ (unsigned long)stop_all,			"stop_all"			},
-	{ (unsigned long)susp_ckpt_timer,		"susp_ckpt_timer"	},
-	{ (unsigned long)reaper,				"reaper"			},
-	{ (unsigned long)set_quit,			"set_quit"			},
-	{ (unsigned long)susp_self,			"susp_self"			},
-	{ (unsigned long)cleanup,				"cleanup"			},
-	{ (unsigned long)dispose_one,			"dispose_one"		},
-	{ (unsigned long)update_cpu,			"update_cpu"		},
+	{ (long)susp_all,			"susp_all"			},
+	{ (long)periodic_ckpt_all,			"periodic_ckpt_all"			},
+	{ (long)test_connection,			"test_connection"			},
+	{ (long)req_die,				"req_die"			},
+	{ (long)req_vacate,			"req_vacate"		},
+	{ (long)spawn_all,			"spawn_all"			},
+	{ (long)stop_all,			"stop_all"			},
+	{ (long)susp_ckpt_timer,		"susp_ckpt_timer"	},
+	{ (long)reaper,				"reaper"			},
+	{ (long)set_quit,			"set_quit"			},
+	{ (long)susp_self,			"susp_self"			},
+	{ (long)cleanup,				"cleanup"			},
+	{ (long)dispose_one,			"dispose_one"		},
+	{ (long)update_cpu,			"update_cpu"		},
 #if defined(LINK_PVM)
-    { (unsigned long)pvm_reaper,			"pvm_reaper"		},
+    { (long)pvm_reaper,			"pvm_reaper"		},
 #endif
-    { (unsigned long)make_runnable,			"make_runnable"		},
+    { (long)make_runnable,			"make_runnable"		},
 	{ -1,						""					}
 };
 NameTable TransFuncNames( TransFuncArray );

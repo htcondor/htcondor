@@ -46,12 +46,12 @@ class Condor_Crypt_3des : public Condor_Crypt_Base {
 
     void resetState();
 
-    bool encrypt(unsigned char *  input, 
+    bool encrypt(const unsigned char *  input,
                  int              input_len, 
                  unsigned char *& output, 
                  int&             output_len);
 
-    bool decrypt(unsigned char *  input, 
+    bool decrypt(const unsigned char *  input,
                  int              input_len, 
                  unsigned char *& output, 
                  int&             output_len);

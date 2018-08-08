@@ -25,7 +25,6 @@
 #include "classad/util.h"
 #include "classad/classad_stl.h"
 
-
 namespace classad {
 
 class Literal;
@@ -49,7 +48,8 @@ class Value
 		/** A string value */ 					STRING_VALUE        = 1<<7,
 		/** A classad value */ 					CLASSAD_VALUE       = 1<<8,
 		/** A list value (not owned here)*/	            LIST_VALUE 			= 1<<9,
-		/** A list value (owned via shared_ptr)*/     	SLIST_VALUE 		= 1<<10
+		/** A list value (owned via shared_ptr)*/     	SLIST_VALUE 		= 1<<10,
+		/** Mask of types that need _Clear*/ VALUE_OWNS_POINTER = ABSOLUTE_TIME_VALUE | STRING_VALUE | SLIST_VALUE,
 		};
 
 			/// Number factors
@@ -67,19 +67,40 @@ class Value
 		static const double ScaleFactor[];
 
 		/// Constructor
-		Value();
+		Value()
+			: classadValue(NULL)
+			, valueType(UNDEFINED_VALUE)
+			, factor(NO_FACTOR)
+		{}
 
-        /// Copy Constructor
-        Value(const Value &value);
+		/// Copy Constructor
+		Value(const Value &value)
+			: classadValue(NULL)
+			, valueType(UNDEFINED_VALUE)
+			, factor(NO_FACTOR)
+		{
+			CopyFrom(value);
+			return;
+		}
 
 		/// Destructor
-		~Value();
+		~Value() { _Clear(); }
 
-        /// Assignment operator
-        Value& operator=(const Value &value);
+		/// Assignment operator
+		Value& operator=(const Value &value) {
+			if (this != &value) {
+				CopyFrom(value);
+			}
+			return *this;
+		}
 
 		/** Discards the previous value and sets the value to UNDEFINED */
-		void Clear (void);
+		void Clear (void) {
+			if (valueType & VALUE_OWNS_POINTER) { _Clear(); }
+			classadValue = NULL; // This clears the entire union.
+			valueType 	= UNDEFINED_VALUE;
+			factor = NO_FACTOR;
+		}
 
 		/** Copies the value of another value object.
 			@param v The value copied from.
@@ -140,6 +161,7 @@ class Value
 			@param str The string value.
 		*/
 		void SetStringValue( const char *str );
+		void SetStringValue( const char *str, size_t cch );
 
 		/** Sets an absolute time value in seconds since the UNIX epoch, & the 
             time zone it's measured in.
@@ -340,9 +362,6 @@ class Value
 		friend class ClassAd;
 		friend class ExprTree;
 
-		ValueType 		valueType;		// the type of the value
-
-
 		union {
 			bool			booleanValue;
 			long long		integerValue;
@@ -354,6 +373,10 @@ class Value
 			abstime_t		*absTimeValueSecs;
 			std::string		*strValue;
 		};
+
+		ValueType 		valueType;	// the type of the value
+		NumberFactor	factor;		// the type of the value
+		void ApplyFactor();
 };
 
 bool convertValueToRealValue(const Value value, Value &realValue);

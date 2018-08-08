@@ -149,9 +149,6 @@ ResState::change( State new_state, Activity new_act )
 		return;
 	}
 
-		// Update resource availability statistics on state changes
-	rip->r_avail_stats.update( r_state, r_act );
-	
 		// Note our current state and activity in the classad
 	this->publish( rip->r_classad, A_ALL );
 
@@ -346,7 +343,8 @@ ResState::eval( void )
 			change( preempting_state );
 			return TRUE; // XXX: change TRUE
 		}
-		if( (r_act == idle_act) && rip->isDraining() ) {
+		if( (r_act == idle_act) && rip->isDraining() &&
+				! rip->r_cur->waitingForActivation() ) {
 			dprintf( D_ALWAYS, "State change: idle claim shutting down due to draining of this slot\n" );
 			change( preempting_state );
 			return TRUE;
@@ -552,6 +550,7 @@ ResState::eval( void )
 		}
 		if( r_act == retiring_act ) {
 			if( resmgr->drainingIsComplete( rip ) ) {
+				resmgr->resetMaxJobRetirementTime();
 				dprintf(D_ALWAYS,"State change: draining is complete.\n");
 				change( drained_state, idle_act );
 				return TRUE;
@@ -664,10 +663,11 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 	return FALSE;
 }
 
+extern ExprTree * globalDrainingStartExpr;
 
 int
 ResState::enter_action( State s, Activity a,
-						bool statechange, bool ) 
+						bool statechange, bool )
 {
 #ifdef WIN32
 	if (a == busy_act)
@@ -724,11 +724,18 @@ ResState::enter_action( State s, Activity a,
 		else if (a == busy_act) {
 			resmgr->start_poll_timer();
 
-			if( rip->inRetirement() ) {
+			if( rip->inRetirement() && !rip->wasAcceptedWhileDraining() ) {
 
 				// We have returned to a busy state (e.g. from
 				// suspension) and there is a preempting claim or we
 				// are in irreversible retirement, so retire.
+
+				// inRetirement() is actually hasPreemptingClaim() || !mayUnretire(),
+				// where we can't unretire if we're draining.  Otherwise,
+				// the drain command would start us retiring and we'd
+				// immediately unretire.  However, if this job was accepted
+				// while we were draining, we don't want to start retiring
+				// it until the last of the "original" jobs has finished.
 
 				change( retiring_act );
 				return TRUE; // XXX: change TRUE
@@ -871,9 +878,10 @@ ResState::enter_action( State s, Activity a,
 		break;
 
 	case drained_state:
-		rip->r_reqexp->unavail();
+		rip->r_reqexp->unavail( globalDrainingStartExpr );
 		break;
-	default: 
+
+	default:
 		EXCEPT("Unknown state in ResState::enter_action");
 	}
 	return FALSE;

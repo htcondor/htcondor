@@ -1,4 +1,4 @@
-\begin{ManPage}{\label{man-condor-analyze}\Condor{analyze}}{1}
+\begin{ManPage}{\Condor{analyze}}{man-condor-analyze}{1}
 {Display information about jobs in queue}
 
 \index{Condor commands!condor\_analyze}
@@ -15,13 +15,13 @@
 \oOpt{-long}
 \oOpt{-run}
 \oOpt{-expert}
-\oArg{\{cluster $|$ cluster.process $|$ owner $|$
+\oArg{\{cluster \Bar{} cluster.process \Bar{} owner \Bar{}
   \OptArg{-constraint}{expression} \Dots \} }
 
 \Description
 
 \Condor{analyze} displays analysis information about jobs in the
-Condor job queue.  on a per machine basis.
+Condor job queue on a per machine basis.
 By default, \Condor{analyze} queries the local job queue,
 but this behavior may be modified.
 
@@ -32,9 +32,9 @@ but this behavior may be modified.
        of the given job submitter.}
     \OptItem{\Opt{-help}}{Prints a short help screen and exits.}
     \OptItem{\OptArg{-name}{name}}{Restricts the analysis to jobs in the
-       queue of given host name's \Condor{schedd} daemon.}
+       queue of the given host's \Condor{schedd} daemon.}
     \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}{Analyzes
-       jobs in a specific pool by giving the central manager's host name
+       jobs in a specific pool given by the central manager's host name
        and an optional port number.
        The default is given by the value of the \Macro{COLLECTOR\_HOST}
        macro as specified in the configuration file.}

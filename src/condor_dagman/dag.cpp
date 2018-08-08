@@ -81,8 +81,6 @@ void touch (const char * filename) {
     close (fd);
 }
 
-static const int NODE_HASH_SIZE = 10007; // prime, allow for big DAG...
-
 //---------------------------------------------------------------------------
 Dag::Dag( /* const */ StringList &dagFiles,
 		  const int maxJobsSubmitted,
@@ -97,21 +95,20 @@ Dag::Dag( /* const */ StringList &dagFiles,
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	MAX_SIGNAL			  (64),
-	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
+	_splices              (hashFunction),
 	_dagFiles             (dagFiles),
 	_useDagDir            (useDagDir),
 	_final_job (0),
-	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
-	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
-	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
-	_noopIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
+	_nodeNameHash		  (hashFunction),
+	_nodeIDHash			  (hashFuncInt),
+	_condorIDHash		  (hashFuncInt),
+	_noopIDHash			  (hashFuncInt),
     _numNodesDone         (0),
     _numNodesFailed       (0),
     _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleJobProcs		  (0),
 	_maxIdleJobProcs		  (maxIdleJobProcs),
-	_numHeldJobProcs	  (0),
 	m_retrySubmitFirst	  (retrySubmitFirst),
 	m_retryNodeFirst	  (retryNodeFirst),
 	_condorRmExe		  (condorRmExe),
@@ -271,6 +268,9 @@ Dag::CreateMetrics( const char *primaryDagFile, int rescueDagNum )
 void
 Dag::ReportMetrics( int exitCode )
 {
+	if(_dagStatus != dag_status::DAG_STATUS_CYCLE) {
+		_metrics->GatherGraphMetrics( this );
+	}
 	(void)_metrics->Report( exitCode, _dagStatus );
 }
 
@@ -647,6 +647,14 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				// _jobstateLog.WriteJobSuccessOrFailure( job );
 				break;
 
+			case ULOG_FACTORY_SUBMIT:
+				ProcessFactorySubmitEvent(job);
+				break;
+
+			case ULOG_FACTORY_REMOVE:
+				ProcessFactoryRemoveEvent(job, recovery);
+				break;
+
 			case ULOG_CHECKPOINTED:
 			case ULOG_IMAGE_SIZE:
 			case ULOG_NODE_EXECUTE:
@@ -689,8 +697,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// don't get a released event for that job.  This may not
 			// work exactly right if some procs of a cluster are held
 			// and some are not.  wenger 2010-08-26
-		if ( job->_jobProcsOnHold > 0 && job->Release( event->proc ) ) {
-			_numHeldJobProcs--;
+		if ( job->_jobProcsOnHold > 0 ) {
+			job->Release( event->proc );
 		}
 
 			// Only change the node status, error info,
@@ -700,11 +708,15 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			job->TerminateFailure();
 			job->error_text.formatstr (
 				  "HTCondor reported %s event for job proc (%d.%d.%d)",
-				  ULogEventNumberNames[event->eventNumber],
+				  event->eventName(),
 				  event->cluster, event->proc, event->subproc );
 			job->retval = DAG_ERROR_CONDOR_JOB_ABORTED;
+			
+			// It seems like we should be checking _numSubmittedProcs here, but
+			// that breaks a test in Windows. Keep an eye on this in case we
+			// have trouble recovering from aborted jobs using late materialization.
 			if ( job->_queuedNodeJobProcs > 0 ) {
-			  // once one job proc fails, remove the whole cluster
+				// once one job proc fails, remove the whole cluster
 				RemoveBatchJob( job );
 			}
 			if ( job->_scriptPost != NULL) {
@@ -721,8 +733,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
-	if( job ) {
 
+	if( job ) {
 		DecrementProcCount( job );
 
 		const JobTerminatedEvent * termEvent =
@@ -858,7 +870,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// being used to parse a splice.
 	ASSERT ( _isSplice == false );
 
-	if ( job->_queuedNodeJobProcs == 0 ) {
+	if ( job->_queuedNodeJobProcs == 0 && !job->is_factory  ) {
 			// Log job success or failure if necessary.
 		_jobstateLog.WriteJobSuccessOrFailure( job );
 	}
@@ -890,9 +902,12 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 		return;
 	}
 
-	if ( job->_queuedNodeJobProcs == 0 ) {
+	// If this is *not* a factory job, and no more procs are outstanding, start
+	// shutting things down now.
+	// Factory jobs get shut down in ProcessFactoryRemoveEvent().
+	if ( job->_queuedNodeJobProcs == 0 && !job->is_factory ) {
 			// All procs for this job are done.
-		debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
+			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 				job->GetJobName() );
 
 			// if a POST script is specified for the job, run it
@@ -915,7 +930,6 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 void
 Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
-
 	if( job ) {
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
@@ -1080,6 +1094,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		//
 	if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 		job->_queuedNodeJobProcs++;
+		job->_numSubmittedProcs++;
 	}
 
 		// Note:  in non-recovery mode, we increment _numJobsSubmitted
@@ -1088,7 +1103,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 				// Only increment the submitted job count on
 				// the *first* proc of a job.
-			if( job->_queuedNodeJobProcs == 1 ) {
+			if( job->_numSubmittedProcs == 1 ) {
 				UpdateJobCounts( job, 1 );
 			}
 		}
@@ -1097,38 +1112,40 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		return;
 	}
 
-		// if we only have one log, compare
-		// the order of submit events in the
-		// log to the order in which we
-		// submitted the jobs -- but if we
-		// have >1 userlog we can't count on
-		// any order, so we can't sanity-check
-		// in this way
+		// If we only have one log, compare the order of submit events in the
+		// log to the order in which we submitted the jobs -- but if we
+		// have >1 userlog we can't count on any order, so we can't sanity-check
+		// in this way.
+		// What happens if we have more than one log? Will the DAG run
+		// correctly without hitting this code block?
+	if ( TotalLogFileCount() == 1 ) {
 
-	if ( TotalLogFileCount() == 1 && job->_queuedNodeJobProcs == 1 ) {
+			// Only perform sanity check on the first proc in a job cluster.
+		if( job->_numSubmittedProcs == 1 ) {
 
-			// as a sanity check, compare the job from the
-			// submit event to the job we expected to see from
-			// our submit queue
- 		Job* expectedJob = NULL;
-		if ( _submitQ->dequeue( expectedJob ) == -1 ) {
-			debug_printf( DEBUG_QUIET,
+				// as a sanity check, compare the job from the
+				// submit event to the job we expected to see from
+				// our submit queue
+			Job* expectedJob = NULL;
+			if ( _submitQ->dequeue( expectedJob ) == -1 ) {
+				debug_printf( DEBUG_QUIET,
 						"Unrecognized submit event (for job "
 						"\"%s\") found in log (none expected)\n",
 						job->GetJobName() );
-			return;
-		} else if ( job != expectedJob ) {
-			ASSERT( expectedJob != NULL );
-			debug_printf( DEBUG_QUIET,
+				return;
+			} 
+			else if ( job != expectedJob ) {
+				ASSERT( expectedJob != NULL );
+				debug_printf( DEBUG_QUIET,
 						"Unexpected submit event (for job "
 						"\"%s\") found in log; job \"%s\" "
 						"was expected.\n",
 						job->GetJobName(),
 						expectedJob->GetJobName() );
 				// put expectedJob back onto submit queue
-			_submitQ->enqueue( expectedJob );
-
-			return;
+				_submitQ->enqueue( expectedJob );
+				return;
+			}
 		}
 	}
 
@@ -1216,8 +1233,7 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 	debug_printf( DEBUG_VERBOSE, "  Hold reason: %s\n", reason );
 
 	if( job->Hold( event->proc ) ) {
-		_numHeldJobProcs++;
-		if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
+		if ( _maxJobHolds > 0 && job->_jobProcsOnHold >= _maxJobHolds ) {
 			debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
 						"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
 						"proc(s) for this node will now be removed\n",
@@ -1235,9 +1251,61 @@ Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 	if ( !job ) {
 		return;
 	}
-	if( job->Release( event->proc ) ) {
-		_numHeldJobProcs--;
+	job->Release( event->proc );
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessFactorySubmitEvent(Job *job) {
+
+	if ( !job ) {
+		return;
 	}
+	job->is_factory = true;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessFactoryRemoveEvent(Job *job, bool recovery) {
+
+	if ( !job ) {
+		return;
+	}
+
+	// Make sure the job is a factory, and has no more queued procs. 
+	// Otherwise something is wrong.
+	if ( job->_queuedNodeJobProcs == 0 && job->is_factory ) {
+		// All procs for this job are done.
+		debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
+			job->GetJobName() );
+		// If a post script is defined for this job, that will run after we
+		// receive the FactoryRemove event. In that case, run the post script
+		// now and don't call TerminateJob(); that will get called later by
+		// ProcessPostTermEvent().
+		if( job->_scriptPost != NULL ) {
+			if ( recovery ) {
+				job->SetStatus( Job::STATUS_POSTRUN );
+				_postRunNodeCount++;
+			} else {
+				(void)RunPostScript( job, _alwaysRunPost, 0 );
+			}
+		} else if( job->GetStatus() != Job::STATUS_ERROR ) {
+			// no POST script was specified, so update DAG with
+			// node's successful completion if the node succeeded.
+			TerminateJob( job, recovery );
+		}
+	}
+	else {
+		debug_printf(DEBUG_NORMAL, "ERROR: ProcessFactoryRemoveEvent() called"
+			" for job %s although %d procs still queued.\n", 
+			job->GetJobName(), job->_queuedNodeJobProcs);
+	}
+
+	// Cleanup the job and write succcess/failure to the log. 
+	// For non-factory jobs, this is done in DecrementProcCount
+	_jobstateLog.WriteJobSuccessOrFailure( job );
+	UpdateJobCounts( job, -1 );
+	job->Cleanup();
 }
 
 //---------------------------------------------------------------------------
@@ -1248,7 +1316,7 @@ Job * Dag::FindNodeByName (const char * jobName) const {
 
 	Job *	job = NULL;
 	if ( _nodeNameHash.lookup(jobName, job) != 0 ) {
-    	debug_printf( DEBUG_VERBOSE, "ERROR: job %s not found!\n", jobName);
+		debug_printf( DEBUG_VERBOSE, "ERROR: job %s not found!\n", jobName);
 		job = NULL;
 	}
 
@@ -1489,7 +1557,6 @@ int
 Dag::SubmitReadyJobs(const Dagman &dm)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag::SubmitReadyJobs()\n" );
-
 	time_t cycleStart = time( NULL );
 
 		// Jobs deferred by category throttles.
@@ -1560,14 +1627,18 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			break; // break out of while loop
 		}
 
-			// Check whether this submit cycle is taking too long.
-		time_t now = time( NULL );
-		time_t elapsed = now - cycleStart;
-		if ( elapsed > dm.m_user_log_scan_interval ) {
-       		debug_printf( DEBUG_QUIET,
-						"Warning: Submit cycle elapsed time (%d s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
-						(int)elapsed, dm.m_user_log_scan_interval );
-			break; // break out of while loop
+			// Check whether this submit cycle is taking too long (only if we
+			// are not in aggressive submit mode)
+		if( !dm.aggressive_submit ) {
+			time_t now = time( NULL );
+			time_t elapsed = now - cycleStart;
+			if ( elapsed > dm.m_user_log_scan_interval ) {
+				debug_printf( DEBUG_QUIET,
+					"Warning: Submit cycle elapsed time (%d s) has exceeded "
+					"log scan interval (%d s); bailing out of submit loop\n",
+					(int)elapsed, dm.m_user_log_scan_interval );
+				break; // break out of while loop
+			}
 		}
 
 			// remove & submit first job from ready queue
@@ -1600,7 +1671,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 
 				// Note:  I'm not sure why we don't just use the default
 				// constructor here.  wenger 2015-09-25
-    		CondorID condorID( 0, 0, 0 );
+			CondorID condorID( 0, 0, 0 );
 			submit_result_t submit_result = SubmitNodeJob( dm, job, condorID );
 	
 				// Note: if instead of switch here so we can use break
@@ -1815,7 +1886,7 @@ Dag::PostScriptReaper( Job *job, int status )
 				"Initializing user log writer for %s, (%d.%d.%d)\n",
 				DefaultNodeLog(), event.cluster, event.proc, event.subproc );
 	ulog.initialize( DefaultNodeLog(), event.cluster, event.proc,
-				event.subproc, NULL );
+				event.subproc );
 
 	for(int write_attempts = 0;;++write_attempts) {
 		if( !ulog.writeEvent( &event ) ) {
@@ -2472,6 +2543,7 @@ Dag::RestartNode( Job *node, bool recovery )
     }
 	node->SetStatus( Job::STATUS_READY );
 	node->retries++;
+	node->_numSubmittedProcs = 0;
 	ASSERT( node->GetRetries() <= node->GetRetryMax() );
 	if( node->_scriptPre ) {
 		// undo PRE script completion
@@ -3205,6 +3277,19 @@ Dag::CheckAllJobs()
 }
 
 //-------------------------------------------------------------------------
+int
+Dag::NumHeldJobProcs()
+{
+	int numHeldProcs = 0;
+	Job* node;
+    ListIterator<Job> iList( _jobs );
+    while( ( node = iList.Next() ) != NULL ) {
+		numHeldProcs += node->_jobProcsOnHold;
+	}
+	return numHeldProcs;
+}
+
+//-------------------------------------------------------------------------
 void
 Dag::PrintDeferrals( debug_level_t level, bool force ) const
 {
@@ -3490,7 +3575,6 @@ bool Dag::Add( Job& job )
 {
 	int insertResult = _nodeNameHash.insert( job.GetJobName(), &job );
 	ASSERT( insertResult == 0 );
-
 	insertResult = _nodeIDHash.insert( job.GetJobID(), &job );
 	ASSERT( insertResult == 0 );
 
@@ -3687,7 +3771,8 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		//	
 		// 1) it's the submit event for a node we just submitted, and
 		// we don't yet know the job ID; in this case, we look up the
-		// node name in the event body.
+		// node name in the event body. Alternately if we are in recovery
+		// mode we don't yet know the job ID.
 		//
 		// 2) it's the POST script terminated event for a job whose
 		// submission attempts all failed, leaving it with no valid
@@ -3698,6 +3783,9 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		// DAGMan, and can/should be ignored (we return NULL).
 		//
 		// 4) it's a pre skip event, which is handled similarly to
+		// a submit event.
+		//
+		// 5) it's a factory submit event, which is handled similarly to
 		// a submit event.
 	if( event->eventNumber == ULOG_SUBMIT ) {
 		const SubmitEvent* submit_event = (const SubmitEvent*)event;
@@ -3778,6 +3866,46 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 			debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
 						"in skip event notes: <%s>\n",
 						skip_event->skipEventLogNotes );
+		}
+		return node;
+	}
+
+	if( event->eventNumber == ULOG_FACTORY_SUBMIT ) {
+		const FactorySubmitEvent* factory_submit_event = (const FactorySubmitEvent*)event;
+		if ( factory_submit_event->submitEventLogNotes ) {
+			char nodeName[1024] = "";
+			if ( sscanf( factory_submit_event->submitEventLogNotes,
+						 "DAG Node: %1023s", nodeName ) == 1 ) {
+				node = FindNodeByName( nodeName );
+				if( node ) {
+					submitEventIsSane = SanityCheckSubmitEvent( condorID,
+								node );
+					node->SetCondorID( condorID );
+
+						// Insert this node into the CondorID->node hash
+						// table if we don't already have it (e.g., recovery
+						// mode).  (In "normal" mode we should have already
+						// inserted it when we did the condor_submit.)
+					Job *tmpNode = NULL;
+					bool isNoop = JobIsNoop( condorID );
+					ASSERT( isNoop == node->GetNoop() );
+					int id = GetIndexID( condorID );
+					HashTable<int, Job *> *ht =
+								GetEventIDHash( isNoop );
+					if ( ht->lookup(id, tmpNode) != 0 ) {
+							// Node not found.
+						int insertResult = ht->insert( id, node );
+						ASSERT( insertResult == 0 );
+					} else {
+							// Node was found.
+						ASSERT( tmpNode == node );
+					}
+				}
+			} else {
+				debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
+							"in factory submit event notes: <%s>\n",
+							factory_submit_event->submitEventLogNotes );
+			}
 		}
 		return node;
 	}
@@ -4022,7 +4150,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 
     // append node to the submit queue so we can match it with its
     // submit event once the latter appears in the HTCondor job log
-    if( _submitQ->enqueue( node ) == -1 ) {
+	if( _submitQ->enqueue( node ) == -1 ) {
 		debug_printf( DEBUG_QUIET, "ERROR: _submitQ->enqueue() failed!\n" );
 	}
 
@@ -4038,7 +4166,6 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
         // with what we see in the userlog later as a sanity-check
         // (note: this sanity-check is not possible during recovery,
         // since we won't have seen the submit command stdout...)
-
 	node->SetCondorID( condorID );
 	ASSERT( JobIsNoop( node->GetID() ) == node->GetNoop() );
 	int id = GetIndexID( node->GetID() );
@@ -4126,7 +4253,7 @@ Dag::DecrementProcCount( Job *node )
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
-	if( node->_queuedNodeJobProcs == 0 ) {
+	if( !node->is_factory && node->_queuedNodeJobProcs == 0 ) {
 		UpdateJobCounts( node, -1 );
 		node->Cleanup();
 	}
@@ -4286,7 +4413,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	int last = parentName.Length() - 1;
 	ASSERT( last >= 0 );
 	if ( parentName[last] == '+' ) {
-		parentName.setChar( last, '\0' );
+		parentName.truncate( last );
 	}
 
 	MyString childName = childSplice->_spliceScope;
@@ -4294,7 +4421,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	last = childName.Length() - 1;
 	ASSERT( last >= 0 );
 	if ( childName[last] == '+' ) {
-		childName.setChar( last, '\0' );
+		childName.truncate( last );
 	}
 
 		// Make sure the parent and child splices have pin_ins/pin_outs

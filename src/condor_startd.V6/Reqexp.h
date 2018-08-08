@@ -36,8 +36,10 @@ public:
 	Reqexp( Resource* rip );
 	~Reqexp();
 
-	bool	restore();		// Restore the original requirements
-	void	unavail();		// Set requirements to False
+	// Restore the original requirements
+	bool	restore();
+	// Set requirements to False, or the indicated start expr, if any.
+	void	unavail( ExprTree * start_expr = NULL );
 
 	void 	publish( ClassAd*, amask_t );
 	void	compute( amask_t );
@@ -50,6 +52,8 @@ private:
 	char*			m_origvalidckptpltfrm;
 	char*			m_within_resource_limits_expr;
 	reqexp_state	rstate;
+
+	ExprTree *		drainingStartExpr;
 
 		// override param by slot_type
 	char * param(const char * name);

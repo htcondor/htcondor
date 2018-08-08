@@ -22,7 +22,8 @@
 
 #include "compat_classad.h"
 
-int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos = NULL);
+// parse str into attr=expression, returning the attr and the expression and true on success
+bool ParseLongFormAttrValue(const char*str, std::string &attr, classad::ExprTree*& tree, int*pos = NULL);
 
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos = NULL);
 
@@ -49,6 +50,9 @@ typedef std::map<std::string, std::string, classad::CaseIgnLTStr> NOCASE_STRING_
 // if mapping["TARGET"] = "", it will remove target prefixes.
 int RewriteAttrRefs(classad::ExprTree * expr, const NOCASE_STRING_MAP & mapping);
 
+// add attribute references to attrs when they are of the given scope. for example when scope is "MY"
+// and the expression contains MY.Foo, the Foo is added to attrs.
+int GetAttrRefsOfScope(classad::ExprTree * expr, classad::References &attrs, const std::string &scope);
 
 classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree);
 classad::ExprTree * SkipExprParens(classad::ExprTree * tree);
@@ -66,7 +70,9 @@ bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree);
 bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
 
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
-				  compat_classad::ClassAd *target, classad::Value &result );
+				  compat_classad::ClassAd *target, classad::Value &result,
+				  const std::string & sourceAlias = "",
+				  const std::string & targetAlias = "" );
 
 //ad2 treated as candidate to match against ad1, so we want to find a match for ad1
 bool IsAMatch( compat_classad::ClassAd *ad1, compat_classad::ClassAd *ad2 );

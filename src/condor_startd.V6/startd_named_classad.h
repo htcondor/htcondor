@@ -36,7 +36,16 @@ class StartdNamedClassAd : public NamedClassAd
 	bool ShouldMergeInto(ClassAd * merge_into, const char ** pattr_used);
 	bool MergeInto(ClassAd *merge_to);
 
+	void AggregateFrom(ClassAd *aggregateFrom);
+	bool AggregateInto(ClassAd *aggregateInfo);
+	bool isResourceMonitor();
+	static bool Merge( ClassAd * to, ClassAd * from );
+	void reset_monitor();
+	void unset_monitor();
+
   private:
+	void Aggregate( ClassAd * to, ClassAd * from );
+
 	static AttrNameSet dont_merge_attrs;
 	StartdCronJob	&m_job;
 };

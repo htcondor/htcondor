@@ -151,8 +151,8 @@ protected:
 	int rm_kill_sig;
 	int hold_kill_sig;
 
-	UtcTime job_start_time;
-	UtcTime job_exit_time;
+	struct timeval job_start_time;
+	struct timeval job_exit_time;
 
 	virtual int outputOpenFlags() { return O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | O_LARGEFILE; }
 	virtual int streamingOpenFlags( bool isOutput ) { return isOutput ? O_CREAT | O_TRUNC | O_WRONLY : O_RDONLY; }

@@ -34,7 +34,7 @@ class KeyInfo {
     // Default constructor
     //------------------------------------------
 
-    KeyInfo(unsigned char * keyData,
+    KeyInfo(const unsigned char * keyData,
             int             keyDataLen,
             Protocol        protocol = CONDOR_NO_PROTOCOL,
             int             duration = 0);
@@ -87,7 +87,7 @@ class KeyInfo {
 	unsigned char * getPaddedKeyData(int len) const;
 
  private:
-    void init(unsigned char * keyData, int keyDataLen);
+    void init(const unsigned char * keyData, int keyDataLen);
 
     unsigned char * keyData_;
     int             keyDataLen_;

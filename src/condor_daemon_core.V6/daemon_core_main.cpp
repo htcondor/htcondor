@@ -45,9 +45,6 @@
 #include <sys/prctl.h>
 #endif
 
-#include "file_sql.h"
-#include "file_xml.h"
-
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
 #include "classad/classadCache.h"
@@ -99,11 +96,6 @@ time_t daemon_stop_time;
 
 /* ODBC object */
 //extern ODBC *DBObj;
-
-/* FILESQL object */
-extern FILESQL *FILEObj;
-/* FILEXML object */
-extern FILEXML *XMLObj;
 
 #ifdef WIN32
 int line_where_service_stopped = 0;
@@ -255,15 +247,6 @@ DC_Exit( int status, const char *shutdown_program )
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
 	clean_files();
-
-	if(FILEObj) {
-		delete FILEObj;
-		FILEObj = NULL;
-	}
-	if(XMLObj) {
-		delete XMLObj;
-		XMLObj = NULL;
-	}
 
 #ifdef LINUX
 		// Remove any keys stored in the kernel (for ecryptfs)
@@ -1060,7 +1043,9 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 		default:
 			dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: I don't know about log type %d!\n",type);
 			result = DC_FETCH_LOG_RESULT_BAD_TYPE;
-			stream->code(result);
+			if (!stream->code(result)) {
+				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
+			}
 			stream->end_of_message();
 			free(name);
 			return FALSE;
@@ -1088,7 +1073,9 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 	if(!filename) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: no parameter named %s\n",pname);
 		result = DC_FETCH_LOG_RESULT_NO_NAME;
-		stream->code(result);
+		if (stream->code(result)) {
+				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
+		}
 		stream->end_of_message();
         free(pname);
         free(name);
@@ -1110,7 +1097,9 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 	if(fd<0) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
-		stream->code(result);
+		if (!stream->code(result)) {
+				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
+		}
 		stream->end_of_message();
         free(filename);
         free(pname);
@@ -1119,7 +1108,9 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 	}
 
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
-	stream->code(result);
+	if (!stream->code(result)) {
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log: client hung up before we could send result back\n");
+	}
 
 	filesize_t size;
 	stream->put_file(&size, fd);
@@ -1157,13 +1148,17 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 
 	if (!historyFiles) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
-		stream->code(result);
+		if (!stream->code(result)) {
+				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
+		}
 		stream->end_of_message();
 		return FALSE;
 	}
 
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
-	stream->code(result);
+	if (!stream->code(result)) {
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history: client hung up before we could send result back\n");
+	}
 
 	for (int f = 0; f < numHistoryFiles; f++) {
 		filesize_t size;
@@ -1184,7 +1179,9 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 	char *dirName = param("STARTD.PER_JOB_HISTORY_DIR"); 
 	if (!dirName) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: no parameter named PER_JOB\n");
-		stream->code(result);
+		if (!stream->code(result)) {
+				dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: and the remote side hung up\n");
+		}
 		stream->end_of_message();
 		return FALSE;
 	}
@@ -1194,7 +1191,10 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 	int one=1;
 	int zero=0;
 	while ((filename = d.Next())) {
-		stream->code(one); // more data
+		if (!stream->code(one)) { // more data
+			dprintf(D_ALWAYS, "fetch_log_history_dir: client disconnected\n");
+			break;
+		}
 		stream->put(filename);
 		MyString fullPath(dirName);
 		fullPath += "/";
@@ -1209,7 +1209,10 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 
 	free(dirName);
 
-	stream->code(zero); // no more data
+
+	if (!stream->code(zero)) { // no more data
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: client hung up before we could send result back\n");
+	}
 	stream->end_of_message();
 	return 0;
 }
@@ -1219,7 +1222,9 @@ handle_fetch_log_history_purge(ReliSock *s) {
 
 	int result = 0;
 	time_t cutoff = 0;
-	s->code(cutoff);
+	if (!s->code(cutoff)) {
+		dprintf(D_ALWAYS, "fetch_log_history_purge: client disconnect\n");
+	}
 	s->end_of_message();
 
 	s->encode();
@@ -1227,7 +1232,9 @@ handle_fetch_log_history_purge(ReliSock *s) {
 	char *dirName = param("STARTD.PER_JOB_HISTORY_DIR"); 
 	if (!dirName) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: no parameter named PER_JOB\n");
-		s->code(result);
+		if (!s->code(result)) {
+				dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: and the remote side hung up\n");
+		}
 		s->end_of_message();
 		return FALSE;
 	}
@@ -1244,11 +1251,44 @@ handle_fetch_log_history_purge(ReliSock *s) {
 
     free(dirName);
 
-    s->code(result); // no more data
+    if (!s->code(result)) { // no more data
+		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history_purge: client hung up before we could send result back\n");
+	}
     s->end_of_message();
     return 0;
 }
 
+int
+handle_dc_query_instance( Service*, int, Stream* stream)
+{
+	if( !stream->end_of_message() ) {
+		dprintf( D_FULLDEBUG, "handle_dc_query_instance: failed to read end of message\n");
+		return FALSE;
+	}
+
+	// the first caller causes us to make a random instance id
+	// all subsequent queries will get the same instance id.
+	static char * instance_id = NULL;
+	const int instance_length = 16;
+	if ( ! instance_id) {
+		unsigned char * bytes = Condor_Crypt_Base::randomKey(instance_length/2);
+		ASSERT(bytes);
+		MyString tmp; tmp.reserve_at_least(instance_length+1);
+		for (int ii = 0; ii < instance_length/2; ++ii) {
+			tmp.formatstr_cat("%02x", bytes[ii]);
+		}
+		instance_id = tmp.StrDup();
+		free(bytes);
+	}
+
+	stream->encode();
+	if ( ! stream->put_bytes(instance_id, instance_length) ||
+		 ! stream->end_of_message()) {
+		dprintf( D_FULLDEBUG, "handle_dc_query_instance: failed to send instance value\n");
+	}
+
+	return TRUE;
+}
 
 int
 handle_nop( Service*, int, Stream* stream)
@@ -1319,7 +1359,9 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 			if ( ! re.compile(restr, &pszMsg, &err, PCRE_CASELESS)) {
 				dprintf( D_ALWAYS, "Can't compile regex for DC_CONFIG_VAL ?names query\n" );
 				MyString errmsg; errmsg.formatstr("!error:regex:%d: %s", err, pszMsg ? pszMsg : "");
-				stream->code(errmsg);
+				if (!stream->code(errmsg)) {
+						dprintf( D_ALWAYS, "and remote side disconnected from use\n" );
+				}
 				retval = FALSE;
 			} else {
 				std::vector<std::string> names;
@@ -1406,7 +1448,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n",
 					 param_name );
 			// send a NULL to indicate undefined. (val is NULL here)
-			if( ! stream->code(const_cast<char*&>(val)) ) {
+			if( ! stream->put_nullstr(val) ) {
 				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 				retval = FALSE;
 			}
@@ -1415,7 +1457,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
 
 			if (val) { tmp = expand_param(val, local_name, subsys, 0); } else { tmp = NULL; }
-			if( ! stream->code(tmp) ) {
+			if( ! stream->code_nullstr(tmp) ) {
 				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 				retval = FALSE;
 			}
@@ -1431,7 +1473,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 			if ( ! stream->code(value)) {
 				dprintf( D_ALWAYS, "Can't send filename reply for DC_CONFIG_VAL\n" );
 			}
-			if ( ! stream->code(const_cast<char*&>(def_val))) {
+			if ( ! stream->put_nullstr(def_val)) {
 				dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
 			}
 			if (pmet->ref_count) { value.formatstr("%d / %d", pmet->use_count, pmet->ref_count);
@@ -1509,7 +1551,7 @@ handle_config( Service *, int cmd, Stream *stream )
 		dprintf( D_ALWAYS, "handle_config: failed to read end of message\n");
 		return FALSE;
 	}
-	bool is_meta = admin && admin[0] == '$';
+	bool is_meta = admin[0] == '$';
 	if( config && config[0] ) {
 		#if 0 // tj: we've decide to just fail the assign instead of 'fixing' it. //def WARN_COLON_FOR_PARAM_ASSIGN
 		// for backward compat with older senders, change first : to = before we do the assignment.
@@ -2707,7 +2749,14 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
 								  (CommandHandler)handle_invalidate_key,
 								  "handle_invalidate_key()", 0, ALLOW );
-								  
+
+		// DC_QUERY_INSTANCE is for determining if you are talking to the correct instance of a daemon.
+		// There is no need for security here, the use case is a lambda function in AWS which won't have
+		// authorization to do anything else.
+	daemonCore->Register_Command( DC_QUERY_INSTANCE, "DC_QUERY_INSTANCE",
+								  (CommandHandler)handle_dc_query_instance,
+								  "handle_dc_query_instance()", 0, ALLOW );
+
 		//
 		// The time offset command is used to figure out what
 		// the range of the clock skew is between the daemon code and another
@@ -2740,14 +2789,6 @@ int dc_main( int argc, char** argv )
 
 	// create a database connection object
 	//DBObj = createConnection();
-
-	// create a sql log object. We always have one defined, but 
-	// if quill is not enabled we never write data to the logfile
-	bool use_sql_log = param_boolean( "QUILL_USE_SQL_LOG", false );
-
-	FILEObj = FILESQL::createInstance(use_sql_log); 
-    // create an xml log object
-    XMLObj = FILEXML::createInstanceXML();
 
 	InstallOutOfMemoryHandler();
 

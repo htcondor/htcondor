@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "MyString.h"
 #include "globus_utils.h"
-#include "classad_hashtable.h"
 
 #include "basejob.h"
 #include "condorresource.h"
@@ -74,7 +73,6 @@ class CondorJob : public BaseJob
 	time_t lastSubmitAttempt;
 	time_t lastRemoveAttempt;
 	int numSubmitAttempts;
-	int submitFailureCode;
 	char *remoteScheddName;
 	char *remotePoolName;
 	PROC_ID remoteJobId;

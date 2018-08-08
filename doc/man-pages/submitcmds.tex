@@ -208,7 +208,7 @@ environment specification.  Each environment entry remains of the form
 \end{verbatim}
 Under Unix, list multiple environment entries by separating them with
 a semicolon (;).  Under Windows, separate multiple entries with a
-vertical bar (\Bar).  There is no way to insert a literal semicolon
+vertical bar (\Bar{}).  There is no way to insert a literal semicolon
 under Unix or a literal vertical bar under Windows.  Note that spaces
 are accepted, but rarely desired, characters within parameter names
 and values, because they are treated as literal characters, not
@@ -258,10 +258,9 @@ If not specified, error messages are ignored
 for submission to a Windows machine.
 More than one job should not use the same error file, since
 this will cause one job to overwrite the errors of another.
-The error file and the output file should not be the same file
-as the outputs will overwrite each other or be lost.
-For grid universe jobs, \SubmitCmd{error} may be a URL that the Globus
-tool \Prog{globus\_url\_copy} understands.
+If HTCondor detects that the error and output files for a job are
+the same, it will run the job such that the output and error data
+is merged.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -295,7 +294,7 @@ argument must be a compiled \File{.class} file.
 
 \index{submit commands!getenv}
 \label{man-condor-submit-getenv}
-\item[getenv = \lt{}True \Bar\ False\gt{}] 
+\item[getenv = \lt{}True \Bar{} False\gt{}] 
 If \SubmitCmdNI{getenv} is set to
 \index{environment variables!copying current environment}
 \Expr{True}, then \Condor{submit} will copy all of the user's current
@@ -372,7 +371,7 @@ on the submit machine.
 
 \index{submit commands!log\_xml}
 \label{man-condor-submit-log-xml}
-\item[log\_xml = \lt{}True \Bar\ False\gt{}]
+\item[log\_xml = \lt{}True \Bar{} False\gt{}]
 If \SubmitCmd{log\_xml} is \Expr{True}, 
 then the job event log file will be written in ClassAd XML.
 If not specified, XML is not used.
@@ -391,7 +390,7 @@ this option in the same way.
 \index{notification!e-mail related to a job}
 \index{submit commands!notification}
 \label{man-condor-submit-notification}
-\item[notification = \lt{}Always \Bar\ Complete \Bar\ Error \Bar\ Never\gt{}]
+\item[notification = \lt{}Always \Bar{} Complete \Bar{} Error \Bar{} Never\gt{}]
 Owners of HTCondor jobs are notified by
 e-mail when certain events occur.
 If defined by \Arg{Always}, the owner will be notified
@@ -400,6 +399,7 @@ If defined by \Arg{Complete}, the owner will
 be notified when the job terminates.
 If defined by \Arg{Error}, the owner will only be notified
 if the job terminates abnormally,
+(as defined by \Attr{JobSuccessExitCode}, if defined)
 or if the job is placed on hold because of a failure, and not by user request.
 If defined by \Arg{Never} (the default), the owner will not receive e-mail,
 regardless to what happens to the job.
@@ -449,10 +449,9 @@ for submission to a Windows machine.
 Multiple jobs should not use the same output
 file, since this will cause one job to overwrite the output of
 another.
-The output file and the error file should not be the same file
-as the outputs will overwrite each other or be lost.
-For grid universe jobs, \SubmitCmd{output} may be a URL that the Globus
-tool \Prog{globus\_url\_copy} understands.
+If HTCondor detects that the error and output files for a job are
+the same, it will run the job such that the output and error data
+is merged.
 
 Note that if a program explicitly opens and writes to a file,
 that file should \emph{not} be specified as the \SubmitCmd{output} file.
@@ -526,9 +525,8 @@ one submit description file.
 
 \index{submit commands!universe}
 \label{man-condor-submit-universe}
-\item[universe = \lt{}vanilla \Bar\ standard \Bar\ scheduler
-\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm \Bar\ parallel \Bar\ docker\gt{}]
-%%\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm\gt{}]
+\item[universe = \lt{}vanilla \Bar{} standard \Bar{} scheduler
+\Bar{} local \Bar{} grid \Bar{} java \Bar{} vm \Bar{} parallel \Bar{} docker\gt{}]
 Specifies which HTCondor universe to use when running this job.  The HTCondor
 universe specifies an HTCondor execution environment.
 
@@ -726,11 +724,11 @@ submit machine.  In other words: unless you request otherwise,
 HTCondor will give your
 job machines with the same architecture and operating system version as
 the machine running \Condor{submit}.
-        \item Cpus $>=$ RequestCpus, if the job ClassAd attribute
+        \item Cpus \gte{} RequestCpus, if the job ClassAd attribute
 \Attr{RequestCpus} is defined.
-        \item Disk $>=$ RequestDisk, if the job ClassAd attribute
+        \item Disk \gte{} RequestDisk, if the job ClassAd attribute
 \Attr{RequestDisk} is defined.
-Otherwise, Disk $>=$ DiskUsage is appended to the requirements.
+Otherwise, Disk \gte{} DiskUsage is appended to the requirements.
 The \AdAttr{DiskUsage} attribute is initialized to the size of the
 executable plus the size of any files specified in a
 \SubmitCmd{transfer\_input\_files} command.
@@ -742,7 +740,7 @@ total disk space required by the job in kilobytes.
 HTCondor automatically updates the \AdAttr{DiskUsage} attribute
 approximately every 20 minutes while the job runs with the
 amount of space being used by the job on the execute machine.
-        \item Memory $>=$ RequestMemory, if the job ClassAd attribute
+        \item Memory \gte{} RequestMemory, if the job ClassAd attribute
 \Attr{RequestMemory} is defined.
         \item If Universe is set to Vanilla, FileSystemDomain is set equal to
 the submit machine's FileSystemDomain.
@@ -805,7 +803,7 @@ A single wild card character (\Expr{*}) may be used in each file name.
 
 \index{submit commands!encrypt\_execute\_directory}
 \label{man-condor-submit-encrypt-execute-directory}
-\item[encrypt\_execute\_directory = \lt{}True \Bar\ False\gt{}]
+\item[encrypt\_execute\_directory = \lt{}True \Bar{} False\gt{}]
 Defaults to \Expr{False}. If set to \Expr{True}, 
 HTCondor will encrypt the contents of
 the remote scratch directory of the machine where the job is executed.
@@ -929,7 +927,7 @@ The HTCondor Administrator's manual has full details.
 \index{submit commands!should\_transfer\_files}
 \index{file transfer mechanism!submit command should\_transfer\_files}
 \label{man-condor-submit-should-transfer-files}
-\item[should\_transfer\_files = \lt{}YES \Bar\ NO \Bar\ IF\_NEEDED \gt{}] 
+\item[should\_transfer\_files = \lt{}YES \Bar{} NO \Bar{} IF\_NEEDED \gt{}] 
 The \SubmitCmd{should\_transfer\_files} setting is used to define if HTCondor
 should transfer files to and from the remote machine where the job
 runs.
@@ -959,7 +957,7 @@ for jobs submitted to the grid universe.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!skip\_filechecks}
 \label{man-condor-submit-skip-filechecks}
-\item[skip\_filechecks = \lt{}True \Bar\ False\gt{}]
+\item[skip\_filechecks = \lt{}True \Bar{} False\gt{}]
 When \Expr{True},
 file permission checks for the submitted job are disabled.
 When \Expr{False}, file permissions are checked; this is the behavior
@@ -976,7 +974,7 @@ such as a log file defined by \SubmitCmd{log} and output files defined with
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!stream\_error}
 \label{man-condor-submit-stream-error}
-\item[stream\_error = \lt{}True \Bar\ False\gt{}]
+\item[stream\_error = \lt{}True \Bar{} False\gt{}]
 If \Expr{True}, then \File{stderr} is streamed back to
 the machine from which the job was submitted.
 If \Expr{False}, \File{stderr} is stored locally
@@ -995,7 +993,7 @@ ignored on Windows machines.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!stream\_input}
 \label{man-condor-submit-stream-input}
-\item[stream\_input = \lt{}True \Bar\ False\gt{}]
+\item[stream\_input = \lt{}True \Bar{} False\gt{}]
 If \Expr{True}, then \File{stdin} is streamed from the
 machine on which the job was submitted.
 The default value is \Expr{False}.
@@ -1013,7 +1011,7 @@ ignored on Windows machines.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!stream\_output}
 \label{man-condor-submit-stream-output}
-\item[stream\_output = \lt{}True \Bar\ False\gt{}]
+\item[stream\_output = \lt{}True \Bar{} False\gt{}]
 If \Expr{True}, then \File{stdout} is streamed back to
 the machine from which the job was submitted.
 If \Expr{False}, \File{stdout} is stored locally
@@ -1033,7 +1031,7 @@ ignored on Windows machines.
 
 \index{submit commands!transfer\_executable}
 \label{man-condor-submit-transfer-executable}
-\item[transfer\_executable = \lt{}True \Bar\ False\gt{}]
+\item[transfer\_executable = \lt{}True \Bar{} False\gt{}]
 This command is applicable to jobs submitted to the grid
 and vanilla universes.
 If \SubmitCmdNI{transfer\_executable} is set to
@@ -1160,7 +1158,7 @@ Transfer of symbolic links to directories is not currently supported.
 
 \index{submit commands!transfer\_output\_remaps}
 \label{man-condor-submit-transfer-output-remaps}
-\item[transfer\_output\_remaps $=$ \lt{} `` name $=$ newname ; name2 $=$ newname2 ... ''\gt{} ]
+\item[transfer\_output\_remaps \eq{} \lt{} `` name \eq{} newname ; name2 \eq{} newname2 ... ''\gt{} ]
 This specifies the name (and optionally path) to use when downloading output
 files from the completed job.  Normally, output files are transferred back
 to the initial working directory with the same name they had in the execution
@@ -1182,7 +1180,7 @@ You cannot specify directories to be remapped.
 
 \index{submit commands!when\_to\_transfer\_output}
 \label{man-condor-submit-when-to-transfer-output}
-\item[when\_to\_transfer\_output = \lt{} ON\_EXIT \Bar\ ON\_EXIT\_OR\_EVICT \gt{}] 
+\item[when\_to\_transfer\_output = \lt{} ON\_EXIT \Bar{} ON\_EXIT\_OR\_EVICT \gt{}] 
 
 Setting \SubmitCmd{when\_to\_transfer\_output} equal to \Arg{ON\_EXIT} will
 cause HTCondor to transfer the job's output files back to the submitting
@@ -1273,7 +1271,7 @@ this limitation.
 
 \index{submit commands!hold}
 \label{man-condor-submit-hold}
-\item[hold = \lt{}True \Bar\ False\gt{}] 
+\item[hold = \lt{}True \Bar{} False\gt{}] 
 If \SubmitCmdNI{hold} is set to
 \Expr{True}, then the submitted job will be placed into the Hold state.
 Jobs in the Hold state will not run until released by \Condor{release}.
@@ -1589,7 +1587,7 @@ and \MacroNI{PERIODIC\_EXPR\_TIMESLICE} configuration macros.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!allow\_startup\_script}
 \label{condor-submit-allow-startup-script}
-\item[allow\_startup\_script = \lt{}True \Bar\ False\gt{}]
+\item[allow\_startup\_script = \lt{}True \Bar{} False\gt{}]
 If True, a standard universe job will execute a script
 instead of submitting the job,
 and the consistency check to see if the executable has
@@ -1653,9 +1651,9 @@ This option only applies to standard-universe jobs.
 \label{condor-submit-buffer-files}
 \label{condor-submit-buffer-size}
 \label{condor-submit-buffer-block-size}
-\item[buffer\_files $=$ \lt{} `` name $=$ (size,block-size) ; name2 $=$ (size,block-size) ... '' \gt{} ]
-\item[buffer\_size $=$ \lt{}bytes-in-buffer\gt{}]
-\item[buffer\_block\_size $=$ \lt{}bytes-in-block\gt{}]
+\item[buffer\_files \eq{} \lt{} `` name \eq{} (size,block-size) ; name2 \eq{} (size,block-size) ... '' \gt{} ]
+\item[buffer\_size \eq{} \lt{}bytes-in-buffer\gt{}]
+\item[buffer\_block\_size \eq{} \lt{}bytes-in-block\gt{}]
 HTCondor keeps a buffer of recently-used data for each file a job accesses.
 This buffer is used both to cache commonly-used data and to consolidate small
 reads and writes into larger operations that get better throughput.
@@ -1704,7 +1702,7 @@ HTCondor will automatically compress them (if writing) or decompress them (if re
 The compress format is the same as used by GNU gzip.
 
 The files given in this list may be simple file names or complete paths and may
-include $*$ as a wild card.  For example, this list causes the file /tmp/data.gz,
+include \Star{} as a wild card.  For example, this list causes the file /tmp/data.gz,
 any file named event.gz, and any file ending in .gzip to be automatically
 compressed or decompressed as needed:
 
@@ -1741,7 +1739,7 @@ This option only applies to standard universe jobs.
 
 \index{submit commands!file\_remaps}
 \label{condor-submit-file-remaps}
-\item[file\_remaps $=$ \lt{} `` name $=$ newname ; name2 $=$ newname2 ... ''\gt{} ]
+\item[file\_remaps \eq{} \lt{} `` name \eq{} newname ; name2 \eq{} newname2 ... ''\gt{} ]
 
 Directs HTCondor to use a new file name in place of an old one.  \Arg{name}
 describes a file name that your job may attempt to open, and \Arg{newname}
@@ -1812,7 +1810,7 @@ This option only applies to standard universe jobs.
 
 \index{submit commands!want\_remote\_io}
 \label{condor-submit-want-remote-io}
-\item[want\_remote\_io = \lt{}True \Bar\ False\gt{}]
+\item[want\_remote\_io = \lt{}True \Bar{} False\gt{}]
 This option controls how a file is opened and manipulated in a standard
 universe job.
 If this option is true, which is the default, then the \Condor{shadow}
@@ -2123,7 +2121,7 @@ change the case.
 
 \index{submit commands!WantNameTag}
 \label{condor-submit-want-name-tag}
-\item[WantNameTag = \lt{}True \Bar\ False\gt{}]
+\item[WantNameTag = \lt{}True \Bar{} False\gt{}]
 For grid type \SubmitCmdNI{ec2} jobs,
 a job may request that its 'name' tag be (not) set by HTCondor.  If the job
 does not otherwise specify any tags, not setting its name tag will eliminate
@@ -2260,7 +2258,7 @@ so, the pairs are separated by the newline character.
 
 \index{submit commands!gce\_preemptible}
 \label{condor-submit-gce-preemptible}
-\item[gce\_preemptible = \lt{}True \Bar\ False\gt{}]
+\item[gce\_preemptible = \lt{}True \Bar{} False\gt{}]
 For grid type \SubmitCmdNI{gce} jobs,
 specifies whether the virtual machine instance should be preemptible.
 The default is for the instance to not be preemptible.
@@ -2522,7 +2520,7 @@ and the type of grid system is \SubmitCmdNI{nordugrid}.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!transfer\_error}
 \label{condor-submit-transfer-error}
-\item[transfer\_error = \lt{}True \Bar\ False\gt{}]
+\item[transfer\_error = \lt{}True \Bar{} False\gt{}]
 For jobs submitted to the grid universe only.
 If \Expr{True}, then the error output (from \File{stderr}) from the job
 is transferred from the remote machine back to the submit machine.
@@ -2539,7 +2537,7 @@ The default value is \Expr{True}.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!transfer\_input}
 \label{condor-submit-transfer-input}
-\item[transfer\_input = \lt{}True \Bar\ False\gt{}]
+\item[transfer\_input = \lt{}True \Bar{} False\gt{}]
 For jobs submitted to the grid universe only.
 If \Expr{True}, then the job input (\File{stdin}) is transferred
 from the machine where the job was submitted to the remote machine.
@@ -2558,7 +2556,7 @@ see \SubmitCmd{transfer\_input\_files}.
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!transfer\_output}
 \label{condor-submit-transfer-output}
-\item[transfer\_output = \lt{}True \Bar\ False\gt{}]
+\item[transfer\_output = \lt{}True \Bar{} False\gt{}]
 For jobs submitted to the grid universe only.
 If \Expr{True}, then the output (from \File{stdout}) from the job
 is transferred from the remote machine back to the submit machine.
@@ -2579,7 +2577,7 @@ see \SubmitCmd{transfer\_output\_files}.
 
 \index{submit commands!use\_x509userproxy}
 \label{condor-submit-use-x509userproxy}
-\item[use\_x509userproxy = \lt{}True \Bar\ False\gt{}]
+\item[use\_x509userproxy = \lt{}True \Bar{} False\gt{}]
 Set this command to \Expr{True} to indicate that the job requires an
 X.509 user proxy.
 If \SubmitCmdNI{x509userproxy} is set, then that file is used for the proxy.
@@ -2741,7 +2739,7 @@ vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 
 \index{submit commands!vm\_checkpoint}
 \label{condor-submit-vm-checkpoint}
-\item[vm\_checkpoint = \lt{}True \Bar\ False\gt{}]
+\item[vm\_checkpoint = \lt{}True \Bar{} False\gt{}]
 A boolean value specifying whether or not to take checkpoints.
 If not specified, the default value is \Expr{False}.
 In the current implementation, setting both
@@ -2778,7 +2776,7 @@ requires.
 
 \index{submit commands!vm\_networking}
 \label{condor-submit-vm-networking}
-\item[vm\_networking = \lt{}True \Bar\ False\gt{}]
+\item[vm\_networking = \lt{}True \Bar{} False\gt{}]
 Specifies whether to use networking or not.
 In the current implementation, setting both
 \SubmitCmd{vm\_checkpoint} and \SubmitCmd{vm\_networking}
@@ -2793,7 +2791,7 @@ to another machine.
 
 \index{submit commands!vm\_networking\_type}
 \label{condor-submit-vm-networking-type}
-\item[vm\_networking\_type = \lt{}nat \Bar\ bridge \gt{}]
+\item[vm\_networking\_type = \lt{}nat \Bar{} bridge \gt{}]
 When \SubmitCmd{vm\_networking} is \Expr{True},
 this definition augments the job's requirements to match
 only machines with the specified networking.
@@ -2805,7 +2803,7 @@ If not specified, then either networking type matches.
 
 \index{submit commands!vm\_no\_output\_vm}
 \label{condor-submit-vm-no-output-vm}
-\item[vm\_no\_output\_vm = \lt{}True \Bar\ False\gt{}]
+\item[vm\_no\_output\_vm = \lt{}True \Bar{} False\gt{}]
 When \Expr{True}, prevents HTCondor from transferring output
 files back to the machine from which the vm universe job
 was submitted.
@@ -2817,7 +2815,7 @@ If not specified, the default value is \Expr{False}.
 
 \index{submit commands!vm\_type}
 \label{condor-submit-vm-type}
-\item[vm\_type = \lt{}vmware \Bar\ xen \Bar\ kvm\gt{}]
+\item[vm\_type = \lt{}vmware \Bar{} xen \Bar{} kvm\gt{}]
 Specifies the underlying virtual machine software that this
 job expects.
 
@@ -2840,7 +2838,7 @@ are to be listed using \SubmitCmd{transfer\_input\_files}.
 
 \index{submit commands!vmware\_should\_transfer\_files}
 \label{condor-submit-vmware-should-transfer-files}
-\item[vmware\_should\_transfer\_files = \lt{}True \Bar\ False\gt{}]
+\item[vmware\_should\_transfer\_files = \lt{}True \Bar{} False\gt{}]
 Specifies whether HTCondor will transfer VMware-specific files 
 located as specified by \SubmitCmd{vmware\_dir} to
 the execute machine (\Expr{True}) or rely on access through 
@@ -2855,7 +2853,7 @@ job will not be submitted.
 
 \index{submit commands!vmware\_snapshot\_disk}
 \label{condor-submit-vmware-snapshot-disk}
-\item[vmware\_snapshot\_disk = \lt{}True \Bar\ False\gt{}]
+\item[vmware\_snapshot\_disk = \lt{}True \Bar{} False\gt{}]
 When \Expr{True}, causes HTCondor to utilize
 a VMware snapshot disk for new or modified files.
 If not specified, the default value is \Expr{True}.
@@ -2880,7 +2878,7 @@ should just be the simple file name (no path information).
 
 \index{submit commands!xen\_kernel}
 \label{condor-submit-xen-kernel}
-\item[xen\_kernel = \lt{}included \Bar\  path-to-kernel\gt{}]
+\item[xen\_kernel = \lt{}included \Bar{} path-to-kernel\gt{}]
 A value of \SubmitCmd{included} specifies that the kernel is
 included in the disk file.
 If not one of these values, then the value is a path and
@@ -3000,7 +2998,7 @@ After evaluation, the list sets \SubmitCmdNI{concurrency\_limits}.
 
 \index{submit commands!copy\_to\_spool}
 \label{condor-submit-copy-to-spool}
-\item[copy\_to\_spool = \lt{}True \Bar\ False\gt{}]
+\item[copy\_to\_spool = \lt{}True \Bar{} False\gt{}]
 If \SubmitCmd{copy\_to\_spool} is \Expr{True},
 then \Condor{submit} copies the executable to the local spool 
 directory before running it on a remote host. 
@@ -3378,7 +3376,7 @@ the job is the smallest of this value and the configuration variable
 
 \index{submit commands!load\_profile}
 \label{condor-submit-load-profile}
-\item[load\_profile = \lt{}True \Bar\ False\gt{}]
+\item[load\_profile = \lt{}True \Bar{} False\gt{}]
 When \Expr{True}, loads the account profile of the dedicated run account for
 Windows jobs.
 May not be used with \SubmitCmd{run\_as\_owner}.
@@ -3495,7 +3493,7 @@ specify this in the requirements and/or rank expressions.
 
 \index{submit commands!nice\_user}
 \label{man-condor-submit-nice-user}
-\item[nice\_user = \lt{}True \Bar\ False\gt{}] Normally, when a machine
+\item[nice\_user = \lt{}True \Bar{} False\gt{}] Normally, when a machine
 becomes available to HTCondor, HTCondor decides which job to run based upon
 user and job priorities. Setting \SubmitCmdNI{nice\_user} equal to \Expr{True}
 tells HTCondor not to use your regular user priority, but that this job
@@ -3580,7 +3578,7 @@ directory.
 
 \index{submit commands!run\_as\_owner}
 \label{man-condor-submit-run-as-owner}
-\item[run\_as\_owner = \lt{}True \Bar\ False\gt{}]
+\item[run\_as\_owner = \lt{}True \Bar{} False\gt{}]
 A boolean value that causes the job to be run under the login of 
 the submitter,
 if supported by the joint configuration of the submit and execute machines.
@@ -3636,161 +3634,6 @@ See ~\pageref{sec:Job-ClassAd-Attributes} for a list of HTCondor job
 attributes.
 
 \end{description} 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Starter pre and post scripts}
-\emph{PRE AND POST SCRIPTS IMPLEMENTED WITH SPECIALLY-NAMED ATTRIBUTES}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{description} 
-
-%%%%%%%%%%%%%%%%%%%
-%% +PreCmd
-%%%%%%%%%%%%%%%%%%%
-
-\label{man-condor-submit-prescript}
-\index{submit commands!+PreCmd}
-\item[+PreCmd = \texttt{"}\lt{}executable\gt{}\texttt{"}]
-A vanilla universe job may specify that a script is to be run 
-on the execute machine before the job, and this is called a prescript.
-Definition of this specifically-named attribute causes the script,
-identified by path and file name, to be executed. 
-The prescript could prepare or initialize the job.
-Note that this definition of a prescript is different from the PRE script 
-described in DAGMan.
-The prescript is not automatically transferred with the job,
-as the main executable is, 
-so it must be entered into the \SubmitCmd{transfer\_input\_files} list,
-when file transfer is enabled.
-
-%%%%%%%%%%%%%%%%%%%
-%% +PreArgs
-%%%%%%%%%%%%%%%%%%%
-\label{man-condor-submit-preargs}
-\index{submit commands!+PreArgs}
-\item[+PreArgs = \texttt{"}\lt{}argument\_list\gt{}\texttt{"}]
-Defines command line arguments for the prescript, 
-presuming the Old argument syntax.
-
-%%%%%%%%%%%%%%%%%%%
-%% +PreArguments
-%%%%%%%%%%%%%%%%%%%
-\label{man-condor-submit-prearguments}
-\index{submit commands!+PreArguments}
-\item[+PreArguments = \texttt{"}\lt{}argument\_list\gt{}\texttt{"}]
-Defines command line arguments for the prescript, 
-presuming the New argument syntax.
-An exception to the syntax is that double
-quotes must be escaped with a backslash instead of another double
-quote. 
-
-Note that if both +PreArgs and +PreArguments are specified, the
-+PreArguments value is used and the +PreArgs value is ignored.
-
-%%%%%%%%%%%%%%%%%%%
-%% +PreEnv
-%%%%%%%%%%%%%%%%%%%
-\label{man-condor-submit-preenv}
-\index{submit commands!+PreEnv}
-\item[+PreEnv = \texttt{"}\lt{}environment\_vars\gt{}\texttt{"}]
-Defines the environment for the prescript,
-presuming the Old environment syntax.
-
-%%%%%%%%%%%%%%%%%%%
-%% +PreEnvironment
-%%%%%%%%%%%%%%%%%%%
-\label{man-condor-submit-preenvironment}
-\index{submit commands!+PreEnvironment}
-\item[+PreEnvironment = \texttt{"}\lt{}environment\_vars\gt{}\texttt{"}]
-Defines the environment for the prescript,
-presuming the New environment syntax.
-
-Note that if both +PreEnv and +PreEnvironment are specified, the
-+PreEnvironment value is used and the +PreEnv value is ignored.
-
-%%%%%%%%%%%%%%%%%%%
-%% +PostCmd
-%%%%%%%%%%%%%%%%%%%
-
-\label{man-condor-submit-postscript}
-\index{submit commands!+PostCmd}
-\item[+PostCmd = \texttt{"}\lt{}executable\gt{}\texttt{"}]
-A vanilla universe job may specify that a script is to be run 
-on the execute machine after the job exits, and this is called a postscript.
-Definition of this specifically-named attribute causes the script,
-identified by path and file name, to be executed. 
-The postscript is run if the job exits, but not if the job is evicted.
-Note that this definition of a postscript is different from the POST script 
-described in DAGMan.
-The postscript is not automatically transferred with the job,
-as the main executable is, 
-so it must be entered into the \SubmitCmd{transfer\_input\_files} list,
-when file transfer is enabled.
-
-%%%%%%%%%%%%%%%%%%%
-%% +PostArgs
-%%%%%%%%%%%%%%%%%%%
-\label{man-condor-submit-postargs}
-\index{submit commands!+PostArgs}
-\item[+PostArgs = \texttt{"}\lt{}argument\_list\gt{}\texttt{"}]
-Defines command line arguments for the postscript, 
-presuming the Old argument syntax.
-
-%%%%%%%%%%%%%%%%%%%
-%% +PostArguments
-%%%%%%%%%%%%%%%%%%%
-\label{man-condor-submit-postarguments}
-\index{submit commands!+PostArguments}
-\item[+PostArguments = \texttt{"}\lt{}argument\_list\gt{}\texttt{"}]
-Defines command line arguments for the postscript, 
-presuming the New argument syntax.
-An exception to the syntax is that double
-quotes must be escaped with a backslash instead of another double
-quote mark.
-
-Note that if both +PostArgs and +PostArguments are specified, the
-+PostArguments value is used and the +PostArgs value is ignored.
-
-%%%%%%%%%%%%%%%%%%%
-%% +PostEnv
-%%%%%%%%%%%%%%%%%%%
-\label{man-condor-submit-postenv}
-\index{submit commands!+PostEnv}
-\item[+PostEnv = \texttt{"}\lt{}environment\_vars\gt{}\texttt{"}]
-Defines the environment for the postscript,
-presuming the Old environment syntax.
-
-%%%%%%%%%%%%%%%%%%%
-%% +PostEnvironment
-%%%%%%%%%%%%%%%%%%%
-\label{man-condor-submit-postenvironment}
-\index{submit commands!+PostEnvironment}
-\item[+PostEnvironment = \texttt{"}\lt{}environment\_vars\gt{}\texttt{"}]
-Defines the environment for the postscript,
-presuming the New environment syntax.
-
-Note that if both +PostEnv and +PostEnvironment are specified, the
-+PostEnvironment value is used and the +PostEnv value is ignored.
-
-\end{description} 
-
-If any of the prescript or postscript values are not enclosed
-in double quotes, they are silently ignored.
-
-Below is an example of the use of starter pre and post scripts:
-
-\begin{verbatim}
-+PreCmd		= "my_pre"
-+PreArgs	= "pre\"arg1 prea'rg2"
-+PreEnv		= "one=1;two=\"2\""
-+PostCmd	= "my_post"
-+PostArguments	= "post\"arg1 'post''ar g2'"
-+PostEnvironment	= "one=1 two=\"2\""
-\end{verbatim}
-
-For this example \Attr{PreArgs} generates a first argument of
-\verb@pre"a1"@ and a second argument of \verb@pre'a2@.
-\Attr{PostArguments} generates a first argument of
-\verb@post"a1@ and a second argument of \verb@post'a 2@.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \emph{MACROS AND COMMENTS}

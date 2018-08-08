@@ -28,7 +28,6 @@
 #include "util_lib_proto.h"
 #include "gahp_common.h"
 #include "env.h"
-#include "condor_string.h"
 #include "condor_claimid_parser.h"
 #include "authentication.h"
 #include "condor_version.h"
@@ -46,15 +45,12 @@ using std::string;
 #define GAHP_PREFIX "GAHP:"
 #define GAHP_PREFIX_LEN 5
 
-#define HASH_TABLE_SIZE			50
-
 bool logGahpIo = true;
 unsigned long logGahpIoSize = 0;
 int gahpResponseTimeout = 20;
 
-HashTable <HashKey, GahpServer *>
-    GahpServer::GahpServersById( HASH_TABLE_SIZE,
-								 hashFunction );
+HashTable <std::string, GahpServer *>
+    GahpServer::GahpServersById( hashFunction );
 
 const int GahpServer::m_buffer_size = 4096;
 
@@ -125,11 +121,11 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 		path = GAHPCLIENT_DEFAULT_SERVER_PATH;
 	}
 
-	rc = GahpServersById.lookup( HashKey( id ), server );
+	rc = GahpServersById.lookup( id, server );
 	if ( rc != 0 ) {
 		server = new GahpServer( id, path, args );
 		ASSERT(server);
-		GahpServersById.insert( HashKey( id ), server );
+		GahpServersById.insert( id, server );
 	} else {
 		ASSERT(server);
 	}
@@ -164,7 +160,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	next_reqid = 1;
 	rotated_reqids = false;
 
-	requestTable = new HashTable<int,GenericGahpClient*>( 300, &hashFuncInt );
+	requestTable = new HashTable<int,GenericGahpClient*>( &hashFuncInt );
 	ASSERT(requestTable);
 
 	globus_gass_server_url = NULL;
@@ -198,7 +194,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 GahpServer::~GahpServer()
 {
 	if ( my_id != NULL ) {
-		GahpServersById.remove( HashKey( my_id ) );
+		GahpServersById.remove( my_id );
 	}
 	if ( m_deleteMeTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( m_deleteMeTid );
@@ -825,22 +821,21 @@ GahpServer::Startup()
 	}
 
 	// For amazon ec2 ca authentication
-	tmp_char = param("SOAP_SSL_CA_FILE");
+	tmp_char = param("GAHP_SSL_CAFILE");
 	if( tmp_char ) {
+		// CRUFT: the SOAP value was used before 8.7.9
 		newenv.SetEnv( "SOAP_SSL_CA_FILE", tmp_char );
+		newenv.SetEnv( "GAHP_SSL_CAFILE", tmp_char );
 		free( tmp_char );
 	}
 
 	// For amazon ec2 ca authentication
-	tmp_char = param("SOAP_SSL_CA_DIR");
+	tmp_char = param("GAHP_SSL_CADIR");
 	if( tmp_char ) {
+		// CRUFT: the SOAP value was used before 8.7.9
 		newenv.SetEnv( "SOAP_SSL_CA_DIR", tmp_char );
+		newenv.SetEnv( "GAHP_SSL_CADIR", tmp_char );
 		free( tmp_char );
-	}
-
-	// For amazon ec2 ca authentication
-	if ( param_boolean( "SOAP_SSL_SKIP_HOST_CHECK", false ) ) {
-		newenv.SetEnv( "SOAP_SSL_SKIP_HOST_CHECK", "True" );
 	}
 
 		// Now register a reaper, if we haven't already done so.
@@ -1060,8 +1055,7 @@ GahpServer::Initialize( Proxy *proxy )
 			return false;
 		}
 
-		ProxiesByFilename = new HashTable<HashKey,GahpProxyInfo*>( 500,
-															   &hashFunction );
+		ProxiesByFilename = new HashTable<std::string,GahpProxyInfo*>( hashFunction );
 		ASSERT(ProxiesByFilename);
 	}
 
@@ -1380,8 +1374,7 @@ GahpServer::RegisterProxy( Proxy *proxy )
 		return master_proxy;
 	}
 
-	rc = ProxiesByFilename->lookup( HashKey( proxy->proxy_filename ),
-									gahp_proxy );
+	rc = ProxiesByFilename->lookup( proxy->proxy_filename, gahp_proxy );
 
 	if ( rc != 0 ) {
 		gahp_proxy = new GahpProxyInfo;
@@ -1396,8 +1389,7 @@ GahpServer::RegisterProxy( Proxy *proxy )
 		}
 		gahp_proxy->cached_expiration = gahp_proxy->proxy->expiration_time;
 
-		ProxiesByFilename->insert( HashKey( proxy->proxy_filename ),
-								   gahp_proxy );
+		ProxiesByFilename->insert( proxy->proxy_filename, gahp_proxy );
 	} else {
 		gahp_proxy->num_references++;
 	}
@@ -1422,8 +1414,7 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 		return;
 	}
 
-	rc = ProxiesByFilename->lookup( HashKey( proxy->proxy_filename ),
-									gahp_proxy );
+	rc = ProxiesByFilename->lookup( proxy->proxy_filename, gahp_proxy );
 
 	if ( rc != 0 ) {
 		dprintf( D_ALWAYS, "GahpServer::UnregisterProxy() called with unknown proxy %s\n", proxy->proxy_filename );
@@ -1433,7 +1424,7 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 	gahp_proxy->num_references--;
 
 	if ( gahp_proxy->num_references == 0 ) {
-		ProxiesByFilename->remove( HashKey( gahp_proxy->proxy->proxy_filename ) );
+		ProxiesByFilename->remove( gahp_proxy->proxy->proxy_filename );
 		uncacheProxy( gahp_proxy );
 		ReleaseProxy( gahp_proxy->proxy, (TimerHandlercpp)&GahpServer::ProxyCallback,
 					  this );
@@ -1720,9 +1711,9 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 
 	while (((count = (daemonCore->Read_Pipe(m_gahp_errorfd, &buff, 5000))))>0) {
 
+		buff[count]='\0';
 		char *prev_line = buff;
 		char *newline = buff - 1;
-		buff[count]='\0';
 
 			// Search for each newline in the string we just read and
 			// print out the text between it and the previous newline 
@@ -3033,7 +3024,7 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command, buf, deleg_proxy, low_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -3114,7 +3105,7 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -3182,7 +3173,7 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -3767,7 +3758,7 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command, buf, deleg_proxy, high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -4219,6 +4210,73 @@ GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 }
 
 int
+GahpClient::blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad)
+{
+	static const char* command = "DOWNLOAD_PROXY";
+
+	std::string ad_string;
+
+		// Check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if ( !job_ad ) {
+		ad_string = NULLSTRING;
+	} else {
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
+	}
+	std::string reqline;
+	formatstr( reqline, "%s", escapeGahpString( sandbox_id ) );
+	formatstr_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc;
+		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
 GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 {
 	static const char* command = "DESTROY_SANDBOX";
@@ -4283,6 +4341,47 @@ GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 
 		// If we made it here, command is still pending...
 	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+bool
+GahpClient::blah_get_sandbox_path( const char *sandbox_id,
+								   std::string &sandbox_path )
+{
+	static const char *command = "GET_SANDBOX_PATH";
+
+		// Check if this command is supported
+	if  ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return false;
+	}
+
+	if ( sandbox_id == NULL ) {
+		return false;
+	}
+
+	std::string buf;
+	int x = formatstr( buf, "%s %s", command, escapeGahpString( sandbox_id ) );
+	ASSERT( x > 0 );
+	server->write_line( buf.c_str() );
+
+	Gahp_Args result;
+	server->read_argv(result);
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
+		if ( result.argc > 1 ) {
+			error_string = result.argv[1];
+		} else {
+			error_string = "Unspecified error";
+		}
+		return false;
+	}
+	if ( result.argc != 2 ) {
+		EXCEPT( "Bad %s Result", command );
+	}
+	if ( strcasecmp ( result.argv[1], NULLSTRING ) ) {
+		sandbox_path = result.argv[1];
+	} else {
+		sandbox_path = "";
+	}
+	return true;
 }
 
 int
@@ -6185,6 +6284,7 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 
 int GahpClient::gce_ping( const std::string &service_url,
 						  const std::string &auth_file,
+						  const std::string &account,
 						  const std::string &project,
 						  const std::string &zone )
 {
@@ -6194,7 +6294,9 @@ int GahpClient::gce_ping( const std::string &service_url,
 	std::string reqline;
 	reqline += escapeGahpString( service_url );
 	reqline += " ";
-	reqline += escapeGahpString( auth_file );
+	reqline += escapeGahpString( auth_file.empty() ? NULLSTRING : auth_file.c_str() );
+	reqline += " ";
+	reqline += escapeGahpString( account.empty() ? NULLSTRING : account.c_str() );
 	reqline += " ";
 	reqline += escapeGahpString( project );
 	reqline += " ";
@@ -6243,6 +6345,7 @@ int GahpClient::gce_ping( const std::string &service_url,
 
 int GahpClient::gce_instance_insert( const std::string &service_url,
 									 const std::string &auth_file,
+									 const std::string &account,
 									 const std::string &project,
 									 const std::string &zone,
 									 const std::string &instance_name,
@@ -6260,7 +6363,9 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 	std::string reqline;
 	reqline += escapeGahpString( service_url );
 	reqline += " ";
-	reqline += escapeGahpString( auth_file );
+	reqline += escapeGahpString( auth_file.empty() ? NULLSTRING : auth_file.c_str() );
+	reqline += " ";
+	reqline += escapeGahpString( account.empty() ? NULLSTRING : account.c_str() );
 	reqline += " ";
 	reqline += escapeGahpString( project );
 	reqline += " ";
@@ -6328,6 +6433,7 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 
 int GahpClient::gce_instance_delete( std::string service_url,
 									 const std::string &auth_file,
+									 const std::string &account,
 									 const std::string &project,
 									 const std::string &zone,
 									 const std::string &instance_name )
@@ -6338,7 +6444,9 @@ int GahpClient::gce_instance_delete( std::string service_url,
 	std::string reqline;
 	reqline += escapeGahpString( service_url );
 	reqline += " ";
-	reqline += escapeGahpString( auth_file );
+	reqline += escapeGahpString( auth_file.empty() ? NULLSTRING : auth_file.c_str() );
+	reqline += " ";
+	reqline += escapeGahpString( account.empty() ? NULLSTRING : account.c_str() );
 	reqline += " ";
 	reqline += escapeGahpString( project );
 	reqline += " ";
@@ -6389,6 +6497,7 @@ int GahpClient::gce_instance_delete( std::string service_url,
 
 int GahpClient::gce_instance_list( const std::string &service_url,
 								   const std::string &auth_file,
+								   const std::string &account,
 								   const std::string &project,
 								   const std::string &zone,
 								   StringList &instance_ids,
@@ -6402,7 +6511,9 @@ int GahpClient::gce_instance_list( const std::string &service_url,
 	std::string reqline;
 	reqline += escapeGahpString( service_url );
 	reqline += " ";
-	reqline += escapeGahpString( auth_file );
+	reqline += escapeGahpString( auth_file.empty() ? NULLSTRING : auth_file.c_str() );
+	reqline += " ";
+	reqline += escapeGahpString( account.empty() ? NULLSTRING : account.c_str() );
 	reqline += " ";
 	reqline += escapeGahpString( project );
 	reqline += " ";
@@ -6445,6 +6556,249 @@ int GahpClient::gce_instance_list( const std::string &service_url,
 				instance_names.append( result->argv[3 + 4*i + 1] );
 				statuses.append( result->argv[3 + 4*i + 2] );
 				status_msgs.append( result->argv[3 + 4*i + 3] );
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+int GahpClient::azure_ping( const std::string &auth_file,
+		                    const std::string &subscription )
+{
+	static const char* command = "AZURE_PING";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( subscription );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::azure_vm_create( const std::string &auth_file,
+                                 const std::string &subscription,
+                                 StringList &vm_params, std::string &vm_id,
+                                 std::string &ip_address )
+{
+	static const char* command = "AZURE_VM_CREATE";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( subscription );
+
+	const char *next_param;
+	vm_params.rewind();
+	while ( (next_param = vm_params.next()) ) {
+		reqline += " ";
+		reqline += escapeGahpString( next_param );
+	}
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			if ( result->argc != 4 ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			vm_id = result->argv[2];
+			if ( strcmp( result->argv[3], NULLSTRING ) != 0 ) {
+				ip_address = result->argv[3];
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::azure_vm_delete( const std::string &auth_file,
+		                         const std::string &subscription,
+		                         const std::string &vm_name )
+{
+	static const char* command = "AZURE_VM_DELETE";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( subscription );
+	reqline += " ";
+	reqline += escapeGahpString( vm_name );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::azure_vm_list( const std::string &auth_file,
+                               const std::string &subscription,
+		                       StringList &vm_names,
+		                       StringList &vm_statuses )
+{
+	static const char* command = "AZURE_VM_LIST";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( subscription );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			if ( result->argc < 3 ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			int cnt = atoi( result->argv[2] );
+			if ( cnt < 0 || result->argc != 3 + 2 * cnt ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			for ( int i = 0; i < cnt; i++ ) {
+				vm_names.append( result->argv[3 + 2*i] );
+				vm_statuses.append( result->argv[3 + 2*i + 1] );
 			}
 		}
 

@@ -48,6 +48,7 @@ Reqexp::Reqexp( Resource* res_ip )
 	rstate = ORIG_REQ;
 	m_origvalidckptpltfrm = NULL;
 	m_within_resource_limits_expr = NULL;
+	drainingStartExpr = NULL;
 }
 
 
@@ -255,8 +256,10 @@ Reqexp::~Reqexp()
 	if( origstart ) free( origstart );
 	if( m_origvalidckptpltfrm ) free( m_origvalidckptpltfrm );
 	if( m_within_resource_limits_expr ) free( m_within_resource_limits_expr );
+	if( drainingStartExpr ) { delete drainingStartExpr; }
 }
 
+extern ExprTree * globalDrainingStartExpr;
 
 bool
 Reqexp::restore()
@@ -274,7 +277,7 @@ Reqexp::restore()
 	}
 	if( resmgr->isShuttingDown() || rip->isDraining() ) {
 		if( rstate != UNAVAIL_REQ ) {
-			unavail();
+			unavail( rip->isDraining() ? globalDrainingStartExpr : NULL );
 			return true;
 		}
 		return false;
@@ -287,9 +290,8 @@ Reqexp::restore()
 	return false;
 }
 
-
 void
-Reqexp::unavail() 
+Reqexp::unavail( ExprTree * start_expr )
 {
 	if( rip->isSuspendedForCOD() ) {
 		if( rstate != COD_REQ ) {
@@ -299,6 +301,12 @@ Reqexp::unavail()
 		return;
 	}
 	rstate = UNAVAIL_REQ;
+
+	if( start_expr ) {
+		drainingStartExpr = start_expr->Copy();
+	} else {
+		drainingStartExpr = NULL;
+	}
 	publish( rip->r_classad, A_PUBLIC );
 }
 
@@ -321,8 +329,20 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 		}
 		break;
 	case UNAVAIL_REQ:
-		tmp.formatstr( "%s = False", ATTR_REQUIREMENTS );
-		ca->Insert( tmp.Value() );
+		if(! drainingStartExpr) {
+			ca->AssignExpr( ATTR_REQUIREMENTS, "False" );
+		} else {
+			// Insert()ing an ExprTree transfers ownership for some reason.
+			ExprTree * sacrifice = drainingStartExpr->Copy();
+			ca->Insert( ATTR_START, sacrifice );
+
+			ca->Insert( origreqexp );
+			ca->Insert( m_origvalidckptpltfrm );
+			if( Resource::STANDARD_SLOT != rip->get_feature() ) {
+				ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
+								m_within_resource_limits_expr );
+			}
+		}
 		break;
 	case COD_REQ:
 		tmp.formatstr( "%s = True", ATTR_RUNNING_COD_JOB );

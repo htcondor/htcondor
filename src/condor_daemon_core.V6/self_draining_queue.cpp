@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "self_draining_queue.h"
 
 
@@ -35,9 +34,9 @@ SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int per )
 	} else {
 		name = strdup( "(unnamed)" );
 	}
-	MyString t_name;
-	t_name.formatstr( "SelfDrainingQueue::timerHandler[%s]", name );
-	timer_name = strdup( t_name.Value() );
+	std::string t_name;
+	formatstr( t_name, "SelfDrainingQueue::timerHandler[%s]", name );
+	timer_name = strdup( t_name.c_str() );
 
 	handler_fn = NULL;
 	handlercpp_fn = NULL;
@@ -248,7 +247,7 @@ SelfDrainingQueue::resetTimer( void )
 			 "period: %d (id: %d)\n", name, period, tid );
 }
 
-unsigned int
+size_t
 SelfDrainingHashItem::HashFn(SelfDrainingHashItem const &item)
 {
 	return item.m_service->HashFn();

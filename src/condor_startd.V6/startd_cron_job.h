@@ -36,8 +36,10 @@ class StartdCronJob: public ClassAdCronJob
 		return static_cast<StartdCronJobParams &>(*m_params);
 	};
 
+	bool isResourceMonitor() { return Params().isResourceMonitor(); }
+
   private:
-	int Publish( const char *name, const char * sep_args, ClassAd *ad );
+	virtual int Publish( const char *name, const char * sep_args, ClassAd *ad );
 };
 
 #endif /* _STARTD_CRON_JOB_H */

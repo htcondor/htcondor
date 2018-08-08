@@ -53,7 +53,7 @@ class NordugridResource : public BaseResource
 	char *proxyFQAN;
 	GahpClient *gahp;
 
-	static HashTable <HashKey, NordugridResource *> ResourcesByName;
+	static HashTable <std::string, NordugridResource *> ResourcesByName;
 
  private:
 	void DoPing( unsigned& ping_delay, bool& ping_complete,

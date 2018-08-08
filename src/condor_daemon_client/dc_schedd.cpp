@@ -384,10 +384,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 
 		// Send our version if using the new command
 	if ( use_new_command ) {
-			// Need to use a named variable, else the wrong version of	
-			// code() is called.
-		char *my_version = strdup( CondorVersion() );
-		if ( !rsock.code(my_version) ) {
+		if ( !rsock.put( CondorVersion() ) ) {
 			dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
 					"Can't send version string to the schedd\n");
 			if ( errstack ) {
@@ -395,16 +392,12 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 								CEDAR_ERR_PUT_FAILED,
 								"Can't send version string to the schedd" );
 			}
-			free( my_version );
 			return false;
 		}
-		free( my_version );
 	}
 
 		// Send the constraint
-	char * nc_constraint = strdup( constraint );	// de-const
-	if ( !rsock.code(nc_constraint) ) {
-		free( nc_constraint );
+	if ( !rsock.put(constraint) ) {
 		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
 				"Can't send JobAdsArrayLen to the schedd\n");
 		if ( errstack ) {
@@ -414,7 +407,6 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		}
 		return false;
 	}
-	free( nc_constraint );
 
 	if ( !rsock.end_of_message() ) {
 		std::string errmsg;
@@ -494,7 +486,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 				new_attr_name++;
 					// insert attribute
 				pTree = tree->Copy();
-				job.Insert(new_attr_name, pTree, false);
+				job.Insert(new_attr_name, pTree);
 			}
 		}	// while next expr
 
@@ -1000,10 +992,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 		// Send our version if using the new command
 	if ( use_new_command ) {
-			// Need to use a named variable, else the wrong version of	
-			// code() is called.
-		char *my_version = strdup( CondorVersion() );
-		if ( !rsock.code(my_version) ) {
+		if ( !rsock.put( CondorVersion() ) ) {
 			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 					"Can't send version string to the schedd\n");
 			if ( errstack ) {
@@ -1011,10 +1000,8 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 								CEDAR_ERR_PUT_FAILED,
 								"Can't send version string to the schedd" );
 			}
-			free( my_version );
 			return false;
 		}
-		free( my_version );
 	}
 
 		// Send the number of jobs
@@ -1539,9 +1526,12 @@ JobActionResults::record( PROC_ID job_id, action_result_t result )
 	}
 
 	if( result_type == AR_LONG ) {
-			// Put it directly in our ad
-		sprintf( buf, "job_%d_%d = %d", job_id.cluster, job_id.proc,
-				 (int)result );
+		// Put it directly in our ad
+		if (job_id.proc < 0) {
+			sprintf( buf, "cluster_%d = %d", job_id.cluster, (int)result );
+		} else {
+			sprintf( buf, "job_%d_%d = %d", job_id.cluster, job_id.proc, (int)result );
+		}
 		result_ad->Insert( buf );
 		return;
 	}
@@ -1975,6 +1965,77 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 			*new_job_ad = NULL;
 			return false;
 		}
+	}
+
+	return true;
+}
+
+bool
+DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string & errorMessage ) {
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "DCSchedd::reassignSlot( %d.%d, %d.%d ) making connection to %s\n",
+			vid.cluster, vid.proc, bid.cluster, bid.proc,
+			_addr ? _addr : "NULL");
+	}
+
+	ReliSock sock;
+	CondorError errorStack;
+
+	if(! connectSock( & sock, 20, & errorStack )) {
+		errorMessage = "failed to connect to schedd";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+	if(! startCommand( REASSIGN_SLOT, & sock, 20, & errorStack )) {
+		errorMessage = "failed to start command";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+	if(! forceAuthentication( & sock, & errorStack )) {
+		errorMessage = "failed to authenticate";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+
+	ClassAd request;
+	request.Assign( "Victim" ATTR_CLUSTER_ID, vid.cluster );
+	request.Assign( "Victim" ATTR_PROC_ID, vid.proc );
+	request.Assign( "Beneficiary" ATTR_CLUSTER_ID, bid.cluster );
+	request.Assign( "Beneficiary" ATTR_PROC_ID, bid.proc );
+
+	sock.encode();
+	if(! putClassAd( & sock, request )) {
+		errorMessage = "failed to send command payload";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+	if(! sock.end_of_message()) {
+		errorMessage = "failed to send command payload terminator";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+
+	sock.decode();
+	if(! getClassAd( & sock, reply )) {
+		errorMessage = "failed to receive payload";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+	if(! sock.end_of_message()) {
+		errorMessage = "failed to receive command payload terminator";
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
+	}
+
+	bool result;
+	reply.LookupBool( ATTR_RESULT, result );
+	if(! result) {
+		reply.LookupString( ATTR_ERROR_STRING, errorMessage );
+		if( errorMessage.empty() ) {
+			errorMessage = "unspecified schedd error";
+		}
+		dprintf( D_ALWAYS, "DCSchedd::reassignSlot(): %s.\n", errorMessage.c_str() );
+		return false;
 	}
 
 	return true;

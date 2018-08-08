@@ -78,7 +78,7 @@ public:
 
 	/****** HELPER METHODS *********/
 	static ThreadStartFunc_t threadStart(void *);
-	static unsigned int hashFuncThreadInfo(const ThreadInfo & mythread);
+	static size_t hashFuncThreadInfo(const ThreadInfo & mythread);
 	static const WorkerThreadPtr_t get_main_thread_ptr();
 	void remove_tid(int tid);
 	static void mutex_biglock_lock();

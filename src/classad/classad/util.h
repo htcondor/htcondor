@@ -56,6 +56,9 @@ long timezone_offset( time_t clock, bool no_dst = false );
 void convert_escapes(std::string &text, bool &validStr); 
 void convert_escapes_json(std::string &text, bool &validStr, bool &quotedExpr);
 
+// appends a formatted long int to a std:::string -- much faster than sprintf
+void append_long(std::string &s, long long l);
+
 void getLocalTime(time_t *now, struct tm *localtm);
 void getGMTime(time_t *now, struct tm *localtm);
 

@@ -29,7 +29,28 @@ enum AllocStatus { A_NEW, A_RUNNING, A_DYING };
 enum NegotiationResult { NR_MATCHED, NR_REJECTED, NR_END_NEGOTIATE, 
 						 NR_LIMIT_REACHED, NR_ERROR };
 
-class CAList : public List<ClassAd> {};
+class CAList {
+public:
+	CAList() {};
+
+	// Instead of deriving from List, have-a list internally instead
+	// allows us to controll access and replace List with std::list
+
+	void Rewind() { l.Rewind();}
+	ClassAd *Next() {return l.Next();}
+	ClassAd *Head() {return l.Head();}
+
+	int Number() { return l.Number();}
+	int Length() { return l.Length();}
+
+	bool Delete(ClassAd *ad) {return l.Delete(ad);}
+	void DeleteCurrent() {l.DeleteCurrent();}
+
+	void Append(ClassAd *ad) {l.Append(ad);}
+	void Insert(ClassAd *ad) {l.Insert(ad);}
+private:
+	List<ClassAd> l;
+};
 
 class MRecArray : public ExtArray<match_rec*> {};
 
@@ -319,7 +340,7 @@ class DedicatedScheduler : public Service {
 		// Print out all our pending resource requests.
 	void displayResourceRequests( void );
 
-	void printSatisfaction( int cluster, CAList* idle, CAList* limbo,
+	void printSatisfaction( int cluster, CAList* idle, CAList *serial, CAList* limbo,
 							CAList* unclaimed, CAList* busy );
 
 	void sortResources( void );
@@ -396,10 +417,11 @@ class DedicatedScheduler : public Service {
 		// All resources, sorted by the time they'll next be available 
 		//AvailTimeList*			avail_time_list;	
 
-		// 	These four lists are the heart of the data structures for
+		// 	These five lists are the heart of the data structures for
 		// the dedicated scheduler: We prefer to schedule jobs from
 		// the idle_resources list, but if that's not possible, we
-		// then go to the limbo, then unclaimed list, to kick off
+		// then go to the limbo, then (if configured, claimed/idle 
+		// matches from the serial schedd), then unclaimed list, to kick off
 		// vanilla jobs.  If we still can't satisfy, then go to the
 		// busy list, and preempt those.
 
@@ -409,6 +431,10 @@ class DedicatedScheduler : public Service {
 																	   
 		// All resources that are idle and claimed by the ded sched
 	ResList*		idle_resources;
+
+		// All resources claimed/idle in the *serial* schedd that
+		// we could steal
+	ResList*		serial_resources;
 
 		// All resources that might be dedicated to us that aren't
 		// currently claimed by us -- they are probably running
@@ -430,14 +456,14 @@ class DedicatedScheduler : public Service {
 	CAList *pending_preemptions;
 
 		// hashed on resource name, each claim we have
-	HashTable <HashKey, match_rec*>* all_matches;
+	HashTable <std::string, match_rec*>* all_matches;
 
 		// hashed on ClaimId, each claim we have.  only store
 		// pointers in here into the real match records we store in
 		// all_matches.  This is needed for some functions that only
 		// know the ClaimId (like DelMrec(), since vacate_service()
 		// is only given a ClaimId to identify the lost claim).
-	HashTable <HashKey, match_rec*>* all_matches_by_id;
+	HashTable <std::string, match_rec*>* all_matches_by_id;
 
 		// Queue for resource requests we need to negotiate for. 
 	std::list<PROC_ID> resource_requests;

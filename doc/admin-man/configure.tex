@@ -1,11 +1,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Configuring-HTCondor-Macros}Configuration Macros}
+\section{Configuration Macros}\label{sec:Configuring-HTCondor-Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{HTCondor!configuration-macros}
 \index{configuration: macros}
 
-The section contains a list of the individual configuraton macros
+The section contains a list of the individual configuration macros
 for HTCondor.  Before attempting to set up HTCondor configuration,
 you should probably read the introduction to configuration section
 (~\ref{sec:Configuring-HTCondor-Intro}) and possibly the configuration
@@ -1075,15 +1075,23 @@ the default \\ \hline
 \item[\Macro{ENABLE\_IPV4}]
   A boolean with the additional special value of \Expr{auto}.  If true,
   HTCondor will use IPv4 if available, and fail otherwise.  If false,
-  HTCondor will not use IPv4.  If \Expr{auto}, HTCondor will use IPv4
-  if it can find an interface with an IPv4 address; this is the default.
+  HTCondor will not use IPv4.  If \Expr{auto}, which is the default,
+  HTCondor will use IPv4 if it can find an interface with an IPv4 address,
+  and that address is (a) public or private, or (b) no interface's
+  IPv6 address is public or private.  If HTCondor finds more than one address
+  of each protocol, only the most public address is considered for that
+  protocol.
 
 \label{param:EnableIPv6}
 \item[\Macro{ENABLE\_IPV6}]
   A boolean with the additional special value of \Expr{auto}.  If true,
   HTCondor will use IPv6 if available, and fail otherwise.  If false,
-  HTCondor will not use IPv6.  If \Expr{auto}, HTCondor will use IPv6
-  if it can find an interface with an IPv6 address; this is the default.
+  HTCondor will not use IPv6.  If \Expr{auto}, which is the default,
+  HTCondor will use IPv6 if it can find an interface with an IPv6 address,
+  and that address is (a) public or private, or (b) no interface's
+  IPv4 address is public or private.  If HTCondor finds more than one address
+  of each protocol, only the most public address is considered for that
+  protocol.
 
 \label{param:PreferIPv4}
 \item[\Macro{PREFER\_IPV4}]
@@ -1232,7 +1240,6 @@ of the subsystem corresponding to the daemon.
  
 \label{param:MaxDefaultLog}
 \item[\Macro{MAX\_DEFAULT\_LOG}]
-\begin{description} 
   Controls the maximum size in bytes or amount of time that any log
   not explicitly specified using  \Macro{MAX\_<SUBSYS>\_LOG}
   will be allowed to grow.
@@ -1260,7 +1267,6 @@ of the subsystem corresponding to the daemon.
   \item{\Expr{Hr} for hours}
   \item{\Expr{Day} for days}
   \item{\Expr{Wk} for weeks}
-\end{description} 
 
 \label{param:MaxNumSubsysLog}
 \item[\Macro{MAX\_NUM\_<SUBSYS>\_LOG}]
@@ -1618,7 +1624,7 @@ of the subsystem corresponding to the daemon.
     including messages for the negotiation of a socket 
     authentication mechanism, the management of a session key cache.
     and messages about the authentication process itself.  See
-    section~\ref{sec:Security-Config} for more information about
+    section~\ref{sec:Security-Model} for more information about
     secure communication configuration.
 
   \label{dflag:procfamily}
@@ -2352,16 +2358,16 @@ limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkHostname}
 \item[\Macro{NETWORK\_HOSTNAME}]
-The host name to use,
-overriding the value returned by
-\Procedure{gethostname}, which will be invoked by default
-to query the operating system to obtain the host name of the local machine. 
+The name HTCondor should use as the host name of the local machine,
+overriding the value returned by \Procedure{gethostname}.
 Among other things, the host name is used to identify daemons in
 an HTCondor pool, via the \Attr{Machine} and \Attr{Name} attributes of 
 daemon ClassAds.
 This variable can be used when a machine has multiple network interfaces
 with different host names, 
 to use a host name that is not the primary one.
+It should be set to a fully-qualified host name that will resolve to
+an IP address of the local machine.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
@@ -2378,11 +2384,7 @@ to use a host name that is not the primary one.
   If \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{True} (the default),
   \MacroNI{NETWORK\_INTERFACE} controls what IP address
   will be advertised as the public address of the daemon.  
-  If multiple network interfaces match the value and
-  \MacroNI{ENABLE\_ADDRESS\_REWRITING} is \Expr{True} (the default),
-  the IP address that is chosen to be advertised will be the one that
-  is used to communicate with the \Condor{collector}.
-  If \MacroNI{ENABLE\_ADDRESS\_REWRITING} is \Expr{False}, the IP address
+  If multiple network interfaces match the value, the IP address
   that is chosen to be advertised will be the one associated with the
   first device (in system-defined order) that is in a public address
   space, or a private address space, or a loopback address, in that
@@ -2481,24 +2483,6 @@ to use a host name that is not the primary one.
   from the forwarding host rather than from the real remote host, so any
   authorization settings that rely on host addresses should be
   considered accordingly.
-
-\label{param:EnableAddressRewriting}
-\item[\Macro{ENABLE\_ADDRESS\_REWRITING}]
-  A boolean value that defaults to \Expr{True}.  When
-  \MacroNI{NETWORK\_INTERFACE} matches only one IP address or
-  \MacroNI{TCP\_FORWARDING\_HOST} is defined or
-  \MacroNI{NET\_REMAP\_ENABLE} is \Expr{True}, this setting has no effect and
-  the behavior is as though it had been set to \Expr{False}.  When \Expr{True},
-  IP addresses published by HTCondor daemons are automatically rewritten to
-  match the IP address of the network interface used to make the
-  publication.  For example, if the \Condor{schedd} advertises itself to
-  two pools via flocking, and the \Condor{collector} for one pool is reached
-  by the \Condor{schedd} through a private network interface, while
-  the \Condor{collector} for the other pool is reached through a different
-  network interface, the IP address published by the \Condor{schedd}
-  daemon will match the address of the respective network interfaces
-  used in the two cases.  The intention is to make it easier for
-  HTCondor daemons to operate in a multi-homed environment.
 
 \label{param:HighPort}
 \item[\Macro{HIGHPORT}]
@@ -2895,7 +2879,7 @@ Tracking process family by login "cndrusr1"
   \MacroNI{SLOT<N>\_USER}).  Therefore, when the job exits, all processes
   running under the same account will be killed.
 
-\label{param:FilesystemDomain}
+%\label{param:FilesystemDomain}
 \item[\Macro{FILESYSTEM\_DOMAIN}]
   An arbitrary string that is used to decide if
   the two machines, a submit machine and an execute machine,
@@ -3943,13 +3927,12 @@ WANT_HOLD_REASON = \
 
 \label{param:IsOwner}
 \item[\Macro{IS\_OWNER}]
-  A boolean expression that defaults to being defined as
-\begin{verbatim}
-        IS_OWNER = (START =?= FALSE)
-\end{verbatim}
-  Used to describe the state of the machine with respect to its use
-  by its owner.
-  Job ClassAd attributes are not used in defining \MacroNI{IS\_OWNER},
+  A boolean expression that determines when a machine ad should enter
+  the \Expr{Owner} state.
+  While in the \Expr{Owner} state, the machine ad will not be matched to
+  any jobs.
+  The default value is \Expr{False} (never enter \Expr{Owner} state).
+  Job ClassAd attributes should not be used in defining \MacroNI{IS\_OWNER},
   as they would be \Expr{Undefined}.
 
 \label{param:StartdHistory}
@@ -4435,7 +4418,7 @@ WANT_HOLD_REASON = \
 
   \Bold{Note that the \MacroNI{MOUNT\_UNDER\_SCRATCH} mounts do not
   take place until the PreCmd of the job, if any, completes.}
-  (See~\ref{man-condor-submit-prescript} for information on PreCmd.)
+  (See~\ref{PreCmd} for information on PreCmd.)
 
   Also note that, if \MacroNI{MOUNT\_UNDER\_SCRATCH} is defined, it
   must either be a string or an expression that evaluates to a
@@ -4892,18 +4875,6 @@ CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
 \end{verbatim}
   Custom resources have no default consumption policy.
 
-%% WTF?
-%%\label{param:SlotWeight}
-%%\item[\Macro{SlotWeight}]
-%%  This may be used to give a slot greater weight when
-%%  calculating usage, computing fair shares, and enforcing group
-%%  quotas.  For example, claiming a slot with \Expr{SlotWeight = 2} is
-%%  equivalent to claiming two \Expr{SlotWeight = 1} slots.  The default
-%%  value is \AdAttr{Cpus}, the number of CPUs associated with the slot,
-%%  which is 1 unless specially configured.  Any expression referring to
-%%  attributes of the slot ClassAd and evaluating to a positive floating
-%%  point number is valid.
-
 \label{param:SlotWeight}
 \item[\Macro{SLOT\_WEIGHT}]
   An expression that specifies a slot's weight, used as a multiplier
@@ -5167,58 +5138,7 @@ Power Management for more details.
 
 \end{description}
 
-The following macros control the optional computation of resource
-availability statistics in the \Condor{startd}.
-
 \begin{description}
-
-\label{param:StartdComputeAvailStats}
-\item[\Macro{STARTD\_COMPUTE\_AVAIL\_STATS}]
-  A boolean value that determines if the \Condor{startd} computes resource
-  availability statistics.  The default is \Expr{False}.
-
-  If \Macro{STARTD\_COMPUTE\_AVAIL\_STATS} is \Expr{True}, 
-  the \Condor{startd} will
-  define the following ClassAd attributes for resources:
-
-  \begin{description}
-  \item[\AdAttr{AvailTime}]
-  \index{ClassAd machine attribute!AvailTime}
-    The proportion of the time (between 0.0 and 1.0)
-    that this resource has been in a state other than Owner.
-  \item[\AdAttr{LastAvailInterval}]
-  \index{ClassAd machine attribute!LastAvailInterval}
-    The duration in seconds of the last period between Owner states.
-  \end{description}
-
-  The following attributes will also be included if the resource is
-  not in the Owner state:
-
-  \begin{description}
-  \item[\AdAttr{AvailSince}]
-  \index{ClassAd machine attribute!AvailSince}
-    The time at which the resource last left the
-    Owner state.  Measured in the number of seconds since the
-    epoch (00:00:00 UTC, Jan 1, 1970).
-  \item[\AdAttr{AvailTimeEstimate}]
-  \index{ClassAd machine attribute!AvailTimeEstimate}
-    Based on past history, an estimate
-    of how long the current period between Owner states will last.
-  \end{description}
-
-\label{param:StartdAvailConfidence}
-\item[\Macro{STARTD\_AVAIL\_CONFIDENCE}]
-  A floating point number representing the confidence level of the
-  \Condor{startd} daemon's \Attr{AvailTime} estimate.
-  By default, the estimate is based on
-  the 80th percentile of past values, so the value is initially set to 0.8.
-
-\label{param:StartdMaxAvailPeriodSamples}
-\item[\Macro{STARTD\_MAX\_AVAIL\_PERIOD\_SAMPLES}]
-  An integer that limits the number of samples of past available
-  intervals stored by the \Condor{startd} to limit memory and disk consumption.
-  Each sample requires 4 bytes of memory and approximately 10 bytes of
-  disk space.
 
 \label{param:Docker}
 \item[\Macro{DOCKER}]
@@ -5694,6 +5614,12 @@ MAX_JOBS_RUNNING	= \
   The default value is \Expr{True}. A value of \Expr{False} in either \Condor{q} or
   the \Condor{schedd} will result in the old behavior of querying all jobs.
 
+\label{param:CondorQShowOldSummary}
+\item[\Macro{CONDOR\_Q\_SHOW\_OLD\_SUMMARY}]
+  A boolean value that, when \Expr{True},
+  causes \Condor{q} to show the old single line summary totals. When \Expr{False}
+  \Condor{q} will show the new multi-line summary totals.
+
 \label{param:ScheddInterval}
 \item[\Macro{SCHEDD\_INTERVAL}]
   This macro determines the maximum interval for both how often the
@@ -6038,10 +5964,6 @@ MAX_JOBS_RUNNING	= \
   See the description of \MacroNI{MASTER\_NAME} in
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
   for defaults and composition of valid HTCondor daemon names.
-  Also, note that if the \MacroNI{MASTER\_NAME} setting is defined for
-  the \Condor{master} that spawned a given \Condor{schedd}, that name
-  will take precedence over whatever is defined in
-  \MacroNI{SCHEDD\_NAME}. 
 
 \label{param:ScheddAttrs}
 \item[\Macro{SCHEDD\_ATTRS}]
@@ -6619,8 +6541,10 @@ SYSTEM_PERIODIC_REMOVE = \
 \item[\Macro{SUBMIT\_REQUIREMENT\_<Name>}]
   A boolean expression 
   evaluated in the context of the \Condor{schedd} daemon ClassAd,
-  which is the \Expr{MY.} name space and the job ClassAd, 
-  which is the \Expr{TARGET.} name space.
+  which is the \Expr{SCHEDD.} or
+  \Expr{MY.} name space and the job ClassAd, 
+  which is the \Expr{JOB.} or
+  \Expr{TARGET.} name space.
   When \Expr{False}, it causes the \Condor{schedd} to reject 
   the submission of the job or cluster of jobs. 
   \MacroNI{<Name>} corresponds to a name listed in 
@@ -6691,6 +6615,16 @@ SYSTEM_PERIODIC_REMOVE = \
   A predefined comma and/or space separated list of attributes that can only
   be altered by the queue super-user, once they have committed values.
   The hard-code value is empty.
+
+\label{param:AlternateJobSpool}
+\item[\Macro{ALTERNATE\_JOB\_SPOOL}]
+  A ClassAd expression evaluated in the context of the job ad.
+  If the result is a string, the value is used an an alternate spool
+  directory under which the job's files will be stored.
+  This alternate directory must already exist and have the same
+  file ownership and permissions as the main \MacroNI{SPOOL} directory.
+  Care must be taken that the value won't change during the lifetime
+  of each job.
 
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -7369,6 +7303,12 @@ Configuration File Entries}
   and not by user request. 
   If \Expr{NEVER}, the owner will not receive email. 
 
+\label{param:JobDefaultLeaseDuration}
+\item[\Macro{JOB\_DEFAULT\_LEASE\_DURATION}]
+  The default value for the \SubmitCmd{job\_lease\_duration} submit command
+  when the submit file does not specify a value. The default
+  value is 2400, which is 40 minutes.
+
 \label{param:JobDefaultRequestMemory}
 \item[\Macro{JOB\_DEFAULT\_REQUESTMEMORY}]
   The amount of memory in MiB to acquire for a job, 
@@ -7509,7 +7449,9 @@ do not specify their own with:
   \SubmitCmd{output} or \SubmitCmd{transfer\_output\_files}.
   This can significantly decrease the amount of time required to submit
   a large group of jobs.
-  The default value is \Expr{False}.
+  For standard universe, the setting is ignored and file checks are
+  always performed.
+  The default value is \Expr{True}.
 
 \label{param:WarnOnUnusedSubmitFileMacros}
 \item[\Macro{WARN\_ON\_UNUSED\_SUBMIT\_FILE\_MACROS}]
@@ -7947,15 +7889,69 @@ These macros affect the \Condor{collector}.
 
 \label{param:CollectorQueryWorkers}
 \item[\Macro{COLLECTOR\_QUERY\_WORKERS}]
-  This variable sets the maximum
-  number of worker processes that the \Condor{collector} can have.  
-  When receiving a query request, 
-  the Unix \Condor{collector} will \Procedure{fork} a new
+  This macro sets the maximum
+  number of child worker processes that the \Condor{collector} can have, and
+  defaults to a value of 4 on Linux and MacOS platforms. 
+  When receiving a large query request, 
+  the  \Condor{collector} may \Procedure{fork} a new
   process to handle the query, freeing the main process to handle
-  other requests.  When the number of outstanding worker processes
-  reaches this maximum, the request is handled by the main process.
-  This variable is ignored on Windows, and its default value is zero.
-  The default configuration, however, has a value of 2.
+  other requests.  Each forked child process will consume memory, potentially
+  up to 50\% or more of the memory consumed by the parent collector process.
+  To limit the amount of memory consumed on the central manager to 
+  handle incoming queries, the default value for this macro is 4.
+  When the number of outstanding worker processes
+  reaches the maximum specified by this macro, 
+  any additional incoming query requests will be queued and serviced
+  after an existing child worker completes. 
+  Note that on Windows platforms, this macro has a value of zero and cannot
+  be changed.
+
+\label{param:CollectorQueryWorkersReserveForHighPrio}
+\item[\Macro{COLLECTOR\_QUERY\_WORKERS\_RESERVE\_FOR\_HIGH\_PRIO}]
+  This macro defines the number of \Macro{COLLECTOR\_QUERY\_WORKERS} slots will
+  be held in reserve to only service high priority query requests.  Currently,
+  high priority queries are defined as those coming from the
+  \Condor{negotiator} during the course of matchmaking, or via a ``condor\_sos
+  condor\_status'' command.  The idea here is the critical operation of
+  matchmaking machines to jobs will take precedence over user condor\_status
+  invocations.  Defaults to a value of 1.  The maximum allowable value for this
+  macro is equal to \Macro{COLLECTOR\_QUERY\_WORKERS} minus 1.
+
+\label{param:CollectorQueryWorkersPending}
+\item[\Macro{COLLECTOR\_QUERY\_WORKERS\_PENDING}]
+  This macro sets the maximum of collector pending query requests that can
+  be queued waiting for child workers to exit.  Queries that would exceed
+  this maximum are immediately aborted.  When a forked child worker exits,
+  a pending query will be pulled from the queue for service.
+  Note the collector will confirm that the client has not closed the TCP socket
+  (because it was tired of waiting) before going through all the work of
+  actually forking a child and starting to service the query.  Defaults to a
+  value of 50.
+
+\label{param:CollectorQueryMaxWorktime}
+\item[\Macro{COLLECTOR\_QUERY\_MAX\_WORKTIME}]
+  This macro defines the maximum amount of time in seconds that a query has to
+  complete before it is aborted.  Queries that wait in the pending queue longer
+  than this period of time will be aborted before forking. Queries that have
+  already forked will also abort after the worktime has expired - this protects
+  against clients on a very slow network connection. If set to 0, then there is
+  no timeout. The default is 0.
+
+\label{param:HandleQueryInProcPolicy}
+\item[\Macro{HANDLE\_QUERY\_IN\_PROC\_POLICY}]
+  This variable sets the policy for which queries the \Condor{collector} should handle
+  in process rather than by forking a worker. It should be set to one of the following values
+  \begin{itemize}
+  \item \MacroNI{always} Handle all queries in process
+  \item \MacroNI{never}  Handle all queries using fork workers
+  \item \MacroNI{small\_table} Handle only queries of small tables in process
+  \item \MacroNI{small\_query} Handle only small queries in process
+  \item \MacroNI{small\_table\_and\_query} Handle only small queries on small tables in process
+  \item \MacroNI{small\_table\_or\_query} Handle small queries or small tables in process
+  \end{itemize}
+  A small table is any table of ClassAds in the collector other than Master,Startd,Generic and Any ads.
+  A small query is a locate query, or any query with both a projection and a result limit that is smaller than 10.
+  The default value is \MacroNI{small\_table\_or\_query}.
 
 \label{param:CollectorDebug}
 \item[\Macro{COLLECTOR\_DEBUG}]
@@ -8057,7 +8053,21 @@ Configuration File Entries}
 
 These macros affect the \Condor{negotiator}.
 \begin{description}
-  
+
+\label{param:NegotiatorName}
+\item[\Macro{NEGOTIATOR\_NAME}]
+  Used to give an alternative value to the \Attr{Name} attribute
+  in the \Condor{negotiator}'s ClassAd and the \Attr{NegotiatorName}
+  attribute of its accounting ClassAds.
+  This configuration macro is useful in the situation
+  where there are two \Condor{negotiator} daemons running on one machine,
+  and both report to the same \Condor{collector}.
+  Different names will distinguish the two daemons.
+
+  See the description of \MacroNI{MASTER\_NAME} in
+  section~\ref{param:MasterName} on page~\pageref{param:MasterName}
+  for defaults and composition of valid HTCondor daemon names.
+
 \label{param:NegotiatorInterval}
 \item[\Macro{NEGOTIATOR\_INTERVAL}]
   Sets how often the \Condor{negotiator} starts a negotiation cycle.
@@ -8161,7 +8171,7 @@ These macros affect the \Condor{negotiator}.
   Caching open sockets makes the negotiation
   protocol more efficient by eliminating the need for socket
   connection establishment for each negotiation cycle.  The default is
-  currently 16.  To be effective, this parameter should be set to a
+  currently 500.  To be effective, this parameter should be set to a
   value greater than the number of \Condor{schedd}s submitting jobs to the
   negotiator at any time.  If you lower this number, you must run
   \Condor{restart} and not just \Condor{reconfig} for the change to
@@ -8302,6 +8312,15 @@ These macros affect the \Condor{negotiator}.
   An expression which constrains which machine ClassAds are fetched from the
   \Condor{collector} by the \Condor{negotiator} during a negotiation
   cycle.
+
+\label{param:NegotiatorJobConstraint}
+\item[\Macro{NEGOTIATOR\_JOB\_CONSTRAINT}]
+  An expression which constrains which job ClassAds are considered for
+  matchmaking by the \Condor{negotiator}.
+  This parameter is read by the \Condor{negotiator} and sent to the
+  \Condor{schedd} for evaluation.
+  \Condor{schedd}s older than version 8.7.7 will ignore this expression
+  and so will continue to send all jobs to the \Condor{negotiator}.
 
 \label{param:NegotiatorTrimShutdownThreshold}
 \item[\Macro{NEGOTIATOR\_TRIM\_SHUTDOWN\_THRESHOLD}] 
@@ -9217,6 +9236,18 @@ These macros affect the \Condor{gridmanager}.
   The necessary Glite software is included with HTCondor,
   and is required for grid-type batch jobs.
 
+\label{param:GahpSSLCADir}
+\item[\Macro{GAHP\_SSL\_CADIR}]
+  The path to a directory that may contain the
+  certificates (each in its own file) for multiple trusted CAs
+  to be used by GAHP servers when authenticating with remote services.
+
+\label{param:GahpSSLCAFile}
+\item[\Macro{GAHP\_SSL\_CAFILE}]
+  The path and file name of
+  a file containing one or more trusted CA's certificates
+  to be used by GAHP servers when authenticating with remote services.
+
 \label{param:CondorGAHP}
 \item[\Macro{CONDOR\_GAHP}]
   The complete path and file name of the HTCondor GAHP executable.
@@ -9527,6 +9558,15 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   The Condor pool (\Condor{collector} address) of the \Condor{schedd}
   to which the routed copy of the jobs are submitted.
   If not specified, defaults to the local pool.
+
+\label{param:JobRouterRoundRobinSelection}
+\item[\Macro{JOB\_ROUTER\_ROUND\_ROBIN\_SELECTION}]
+  A boolean value that controls which route is chosen for a candidate
+  job that matches multiple routes.
+  When set to \Expr{False}, the default, the first matching route is
+  awlays selected.
+  When set to \Expr{True}, the Job Router attempts to distribute jobs
+  across all matching routes, round robin style.
 
 \end{description}
 
@@ -11744,127 +11784,6 @@ via \Prog{MyProxy}, available from
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:API-Config-File-Entries}
-Configuration File Macros Affecting APIs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{description}
-
-\label{param:EnableSoap}
-\item[\Macro{ENABLE\_SOAP}]
-  A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, HTCondor daemons will respond to HTTP PUT commands
-  as if they were SOAP calls. When \Expr{False},
-  all HTTP PUT commands are denied.
-
-\label{param:EnableWebServer}
-\item[\Macro{ENABLE\_WEB\_SERVER}]
-  A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, HTCondor daemons will respond to HTTP GET commands,
-  and send the static files sitting in the subdirectory defined
-  by the configuration variable \MacroNI{WEB\_ROOT\_DIR}.
-  In addition, web commands are considered a READ command,
-  so the client will be checked by host-based security.
-
-\label{param:SoapLeaveInQueue}
-\item[\Macro{SOAP\_LEAVE\_IN\_QUEUE}]
-  A boolean expression that when \Expr{True},
-  causes a job in the completed state to remain in the queue,
-  instead of being removed based on the completion of file transfer.
-  If provided, this expression will be logically ANDed with the
-  default behavior of leaving the job in the queue until \Expr{FilesRetrieved}
-  becomes \Expr{True}.
-
-\label{param:WebRootDir}
-\item[\Macro{WEB\_ROOT\_DIR}]
-  A complete path to the directory containing all the files served
-  by the web server.
-
-\label{param:SubsysEnableSoapSSL}
-\item[\MacroB{<SUBSYS>\_ENABLE\_SOAP\_SSL}]
-  \index{SUBSYS\_ENABLE\_SOAP\_SSL macro@\texttt{<SUBSYS>\_ENABLE\_SOAP\_SSL} macro}
-  A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, enables SOAP over SSL for the specified
-  \MacroNI{<SUBSYS>}.
-  Any specific \MacroNI{<SUBSYS>\_ENABLE\_SOAP\_SSL} setting overrides
-  the value of \MacroNI{ENABLE\_SOAP\_SSL}.
-
-\label{param:EnableSoapSSL}
-\item[\Macro{ENABLE\_SOAP\_SSL}]
-  A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, enables SOAP over SSL for all daemons.
-
-\label{param:SubsysSoapSSLPort}
-\item[\MacroB{<SUBSYS>\_SOAP\_SSL\_PORT}]
-  \index{SUBSYS\_SOAP\_SSL\_PORT macro@\texttt{<SUBSYS>\_SOAP\_SSL\_PORT} macro}
-  The port number on which SOAP over SSL messages are
-  accepted, when SOAP over SSL is enabled.
-  The \MacroNI{<SUBSYS>} must be specified, because multiple daemons
-  running on a single machine may not share a port.
-  This parameter is required when SOAP over SSL is enabled.
-  There is no default value.
-
-  The macro is named by substituting \MacroNI{<SUBSYS>}
-  with the appropriate subsystem string as defined in
-  section~\ref{sec:HTCondor-Subsystem-Names}.
-
-\label{param:SoapSSLServerKeyfile}
-\item[\Macro{SOAP\_SSL\_SERVER\_KEYFILE}]
-  The complete path and file name to specify the daemon's
-  identity, as used in authentication when SOAP over SSL is enabled.
-  The file is to be  an OpenSSL PEM file containing a certificate
-  and private key.
-  This parameter is required when SOAP over SSL is enabled.
-  There is no default value.
-
-\label{param:SoapSSLServerKeyfilePassword}
-\item[\Macro{SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD}]
-  An optional complete path and file name to specify
-  a password for unlocking the daemon's private key.
-  There is no default value.
-
-\label{param:SoapSSLCaFile}
-\item[\Macro{SOAP\_SSL\_CA\_FILE}]
-  The complete path and file name to specify 
-  a file containing certificates of trusted Certificate Authorities (CAs).
-  Only clients who present a certificate signed by a trusted
-  CA will be authenticated.
-  When SOAP over SSL is enabled, this parameter or
-  \Macro{SOAP\_SSL\_CA\_DIR} must be set.
-  There is no default value.
-  The EC2 GAHP may use this file to specify a trusted CA.
-
-\label{param:SoapSSLCaDir}
-\item[\Macro{SOAP\_SSL\_CA\_DIR}]
-  The complete path to a directory
-  containing certificates of trusted Certificate Authorities (CAs).
-  Only clients who present a certificate signed by a trusted
-  CA will be authenticated.
-  When SOAP over SSL is enabled, this variable or the variable
-  \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
-  There is no default value.
-  The EC2 GAHP may use this directory in the specification a trusted CA.
-
-\label{param:SoapSSLDhFile}
-\item[\Macro{SOAP\_SSL\_DH\_FILE}]
-  An optional complete path and file name to a DH file
-  containing keys for a DH key exchange.
-  There is no default value.
-
-\label{param:SoapSslSkipHostCheck}
-\item[\Macro{SOAP\_SSL\_SKIP\_HOST\_CHECK}]
-  When a SOAP server is authenticated via SSL, the server's host name
-  is normally compared with the host name contained in the server's
-  X.509 credential. If the two do not match, authentication fails.
-  When this boolean variable is set to \Expr{True},
-  the host name comparison is disabled.
-  The default value is \Expr{False}.
-
-\end{description}
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\subsection{\label{sec:Stork-Config-File-Entries}Stork Configuration
 %File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -12636,6 +12555,76 @@ on page~\pageref{sec:daemon-classad-hooks}.
   configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
   \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
+\label{param:StartdCronJobMetrics}
+\item[\Macro{STARTD\_CRON\_<JobName>\_METRICS}]
+  A space or comma -separated list.  Each element in the list is a metric
+  type, either \Expr{SUM} or \Expr{PEAK}; a colon; and a metric name.
+
+  An attribute preceded by \Expr{SUM} is a metric which accumulates over
+  time.  The canonical example is seconds of CPU usage.
+
+  An attribute preceded by \Expr{PEAK} is a metric which instead records
+  the largest value reported over the period of use.  The canonical example
+  is megabytes of memory usage.
+
+  A job with \MacroNI{STARTD\_CRON\_<JobName>\_METRICS} set is a custom
+  machine resource monitor (CMRM),  and its output is handled differently
+  than a normal job's.  A CMRM should output one ad per custom machine
+  resource instance and use \Attr{SlotMergeConstraint}s
+  (see \ref{sec:daemon-classad-hooks}) to specify the instance to which
+  it applies.
+
+  The ad corresponding to each custom machine resource instance should have
+  an attribute for each metric named in the configuration.  For SUM metrics,
+  the attribute should be \Attr{Uptime<MetricName>Seconds}; for PEAK metrics,
+  the attribute should be \Attr{Uptime<MetricName>PeakUsage}.
+
+  Each value should be the value of the metric since the last time the
+  job reported.  The reported value may therefore go up or down; HTCondor
+  will record either the the sum or the peak value, as appropriate, for
+  % both the duration of the job running in a slot assigned resources of the
+         the duration of the job running in a slot assigned resources of the
+    corresponding type.
+  % corresponding type and the recent past, as defined by FIXME.
+
+  For example, if your custom resources are SQUIDs, and you detected four
+  of them, your monitor might output the following:
+
+\begin{verbatim}
+SlotMergeConstraint = StringListMember( "SQUID0", AssignedSQUIDs )
+UptimeSQUIDsSeconds = 5.0
+UptimeSQUIDsMemoryPeakUsage = 50
+- SQUIDsReport0
+SlotMergeConstraint = StringListMember( "SQUID1", AssignedSQUIDs )
+UptimeSQUIDsSeconds = 1.0
+UptimeSQUIDsMemoryPeakUsage = 10
+- SQUIDsReport1
+SlotMergeConstraint = StringListMember( "SQUID2", AssignedSQUIDs )
+UptimeSQUIDsSeconds = 9.0
+UptimeSQUIDsMemoryPeakUsage = 90
+- SQUIDsReport2
+SlotMergeConstraint = StringListMember( "SQUID3", AssignedSQUIDs )
+UptimeSQUIDsSeconds = 4.0
+UptimeSQUIDsMemoryPeakUsage = 40
+- SQUIDsReport3
+\end{verbatim}
+
+  The names ('SQUIDsReport0') may be anything, but must be consistent from
+  report to report and the ClassAd for each report must have a distinct
+  name.
+
+  You might specify the monitor in the example above as follows:
+
+\begin{verbatim}
+MACHINE_RESOURCE_INVENTORY_SQUIDs = /usr/local/bin/cmr-squid-discovery
+
+STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) SQUIDs_MONITOR
+STARTD_CRON_SQUIDs_MONITOR_MODE = Periodic
+STARTD_CRON_SQUIDs_MONITOR_PERIOD = 10
+STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE = /usr/local/bin/cmr-squid-monitor
+STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs, PEAK:SQUIDsMemory
+\end{verbatim}
+
 \label{param:StartdCronJobMode}
 \label{param:ScheddCronJobMode}
 \label{param:BenchmarksJobMode}
@@ -12812,7 +12801,7 @@ on page~\pageref{sec:daemon-classad-hooks}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Config-Windows-Only}Configuration File Entries Only for Windows Platforms}
+\subsection{\label{sec:Config-Windows}Configuration File Entries Only for Windows Platforms}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!Windows platform configuration variables}
 These macros are utilized only on Windows platforms.
@@ -12871,6 +12860,21 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   A fractional number of machines contributing to the value of 
   \MacroNI{DEFRAG\_DRAINING\_MACHINES\_PER\_HOUR} is rounded to the nearest
   whole number of machines on a per day basis.
+
+\label{param:DefragDrainingStartExpr}
+\item[\Macro{DEFRAG\_DRAINING\_START\_EXPR}] A ClassAd expression that
+  replaces the machine's \Macro{START} expression while it's draining.
+  Slots which accepted a job after the machine begain draining set the
+  machine ad attribute \Attr{AcceptedWhileDraining} to \Expr{true}.
+  When the last job which was not accepted while draining exits, all
+  other jobs are immediately evicted with a \Attr{MaxJobRetirementTime}
+  of 0; job vacate times are still respected.  While the jobs which were
+  accepted while draining are vacating, the \MacroNI{START} expression is
+  \Expr{false}.  Using \Expr{\$(START)} in this expression is usually
+  a mistake: it will be replaced by the defrag daemon's \MacroNI{START}
+  expression, \emph{not} the value of the target machine's \MacroNI{START}
+  expression (and especially not the value of its \MacroNI{START} expression
+  at the time draining begins).
 
 \label{param:DefragRequirements}
 \item[\Macro{DEFRAG\_REQUIREMENTS}] An expression that specifies which
@@ -13136,3 +13140,11 @@ in ClassAds that the \Condor{collector} daemon has.
   is used when not specified.
 
 \end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-annex}\Condor{annex} Configuration File Macros}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!condor\_annex configuration variables}
+
+See section \ref{sec:clouds-config} for \Condor{annex} configuration file
+macros.

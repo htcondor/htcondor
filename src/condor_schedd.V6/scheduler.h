@@ -42,7 +42,6 @@
 #include "HashTable.h"
 #include "string_list.h"
 #include "list.h"
-#include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
 #include "write_user_log.h"
 #include "autocluster.h"
@@ -83,6 +82,8 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 class JobQueueJob;
 extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
+class JobQueueCluster;
+
 typedef std::set<JOB_ID_KEY> JOB_ID_SET;
 
 bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
@@ -118,6 +119,39 @@ struct shadow_rec
 }; 
 
 
+// The schedd will have one of these structures per owner, and one for the schedd as a whole
+// these counters are new for 8.7, and used with the code that keeps live counts of jobs
+// by tracking state transitions
+//
+struct LiveJobCounters {
+  int JobsSuspended;
+  int JobsIdle;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
+  int JobsRunning;
+  int JobsRemoved;
+  int JobsCompleted;
+  int JobsHeld;
+  int SchedulerJobsIdle;
+  int SchedulerJobsRunning;
+  int SchedulerJobsRemoved;
+  int SchedulerJobsCompleted;
+  int SchedulerJobsHeld;
+  void clear_counters() { memset(this, 0, sizeof(*this)); }
+  void publish(ClassAd & ad, const char * prefix);
+  LiveJobCounters()
+	: JobsSuspended(0)
+	, JobsIdle(0)
+	, JobsRunning(0)
+	, JobsRemoved(0)
+	, JobsCompleted(0)
+	, JobsHeld(0)
+	, SchedulerJobsIdle(0)
+	, SchedulerJobsRunning(0)
+	, SchedulerJobsRemoved(0)
+	, SchedulerJobsCompleted(0)
+	, SchedulerJobsHeld(0)
+  {}
+};
+
 // counters within the SubmitterData struct that are cleared and re-computed by count_jobs.
 struct SubmitterCounters {
   int JobsRunning;
@@ -144,6 +178,7 @@ struct SubmitterCounters {
 	, JobsHeld(0)
 	, JobsFlocked(0)
 	, JobsFlockedHere(0)
+	, WeightedJobsFlockedHere(0)
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
 	, Hits(0)
@@ -207,6 +242,7 @@ struct RealOwnerCounters {
   {}
 };
 
+
 // The schedd will have one of these records for each unique owner, it counts jobs that
 // have that Owner attribute even if the jobs also have an AccountingGroup or NiceUser
 // attribute and thus have a different SUBMITTER name than their OWNER name
@@ -218,11 +254,13 @@ struct OwnerInfo {
   const char * Name() const { return name.empty() ? "" : name.c_str(); }
   bool empty() const { return name.empty(); }
   RealOwnerCounters num; // job counts by OWNER rather than by submitter
+  LiveJobCounters live; // job counts that are always up-to-date with the committed job state
   time_t LastHitTime; // records the last time we incremented num.Hit, use to expire OwnerInfo
   OwnerInfo() : LastHitTime(0) { }
 };
 
 typedef std::map<std::string, OwnerInfo> OwnerInfoMap;
+
 
 class match_rec: public ClaimIdParser
 {
@@ -278,6 +316,8 @@ class match_rec: public ClaimIdParser
 	char const *description() {
 		return m_description.Value();
 	}
+
+	PROC_ID m_next_job;
 };
 
 class UserIdentity {
@@ -310,7 +350,7 @@ class UserIdentity {
 		MyString auxid() const { return m_auxid; }
 
 			// For use in HashTables
-		static unsigned int HashFcn(const UserIdentity & index);
+		static size_t HashFcn(const UserIdentity & index);
 	
 	private:
 		MyString m_username;
@@ -393,6 +433,24 @@ private:
 	classad_shared_ptr<Stream> m_stream;
 };
 
+#define USE_VANILLA_START 1
+
+class VanillaMatchAd : public ClassAd
+{
+	public:
+		/// Default constructor
+		VanillaMatchAd() {};
+		virtual ~VanillaMatchAd() { Reset(); };
+
+	bool Insert(const std::string &attr, ClassAd*ad);
+	bool EvalAsBool(ExprTree *expr, bool def_value);
+	bool EvalExpr(ExprTree *expr, classad::Value &val);
+	void Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob * job);
+	void Reset();
+private:
+	ClassAd owner_ad;
+};
+
 class Scheduler : public Service
 {
   public:
@@ -469,10 +527,18 @@ class Scheduler : public Service
 	int 			publish( ClassAd *ad );
 	void			OptimizeMachineAdForMatchmaking(ClassAd *ad);
     match_rec*      AddMrec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
+	// support for START_VANILLA_UNIVERSE
+	ExprTree *      flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo* powni);
+	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const char *&because); // returns true when START_VANILLA allows this job to run on this match
+	bool            jobCanNegotiate(JobQueueJob * job, const char *&because); // returns true when START_VANILLA allows this job to negotiate
+	bool            vanillaStartExprIsConst(VanillaMatchAd &vad, bool &bval);
+	bool            evalVanillaStartExpr(VanillaMatchAd &vad);
+
 	// All deletions of match records _MUST_ go through DelMrec() to ensure
 	// proper cleanup.
     int         	DelMrec(char const*);
     int         	DelMrec(match_rec*);
+    int         	unlinkMrec(match_rec*);
 	match_rec*      FindMrecByJobID(PROC_ID);
 	match_rec*      FindMrecByClaimID(char const *claim_id);
 	void            SetMrecJobID(match_rec *rec, int cluster, int proc);
@@ -482,6 +548,7 @@ class Scheduler : public Service
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	void            sendSignalToShadow(pid_t pid,int sig,PROC_ID proc);
 	int				AlreadyMatched(PROC_ID*);
+	int				AlreadyMatched(JobQueueJob * job, int universe);
 	void			ExpediteStartJobs();
 	void			StartJobs();
 	void			StartJob(match_rec *rec);
@@ -500,7 +567,7 @@ class Scheduler : public Service
 						TransferDaemon *&td_ref ); 
 	bool			startTransferd( int cluster, int proc ); 
 	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
-	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync );
+	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
 	bool			WriteReleaseToUserLog( PROC_ID job_id );
@@ -509,6 +576,9 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
+	bool			WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 	int				receive_startd_alive(int cmd, Stream *s);
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions
@@ -562,6 +632,9 @@ class Scheduler : public Service
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
 	int				aliveInterval( void ) { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
+	int				getMaxMaterializedJobsPerCluster() { return MaxMaterializedJobsPerCluster; }
+	bool			getAllowLateMaterialize() { return AllowLateMaterialize; }
+	int				getMaxJobsRunning() { return MaxJobsRunning; }
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
 	int				getMaxJobsPerOwner() { return MaxJobsPerOwner; }
@@ -652,8 +725,17 @@ class Scheduler : public Service
 	ScheddStatistics stats;
 	ScheddOtherStatsMgr OtherPoolStats;
 
+	// live counters for running/held/idle jobs
+	LiveJobCounters liveJobCounts; // job counts that are always up-to-date with the committed job state
+
+	// the significant attributes that the schedd belives are absolutely required.
+	// This is NOT the effective set of sig attrs we get after we talk to negotiators
+	// it is the basic set needed for correct operation of the Schedd: Requirements,Rank,
+	classad::References MinimalSigAttrs;
+
 	const OwnerInfo * insert_owner_const(const char*);
-	void incrementRecentlyAdded(const char *);
+	const OwnerInfo * lookup_owner_const(const char*);
+	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
 
 private:
 
@@ -663,8 +745,9 @@ private:
 		const char *		name;
 		classad::ExprTree *	requirement;
 		classad::ExprTree * reason;
+		bool				isWarning;
 
-		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr ) : name(n), requirement(r), reason(rr) {}
+		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr, bool iw ) : name(n), requirement(r), reason(rr), isWarning(iw) {}
 	} SubmitRequirementsEntry;
 
 	typedef std::vector< SubmitRequirementsEntry > SubmitRequirements;
@@ -696,6 +779,8 @@ private:
 	int             MaxNextJobDelay;
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
+	bool			AllowLateMaterialize;
+	int				MaxMaterializedJobsPerCluster;
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
 	int				MaxRunningSchedulerJobsPerOwner;
@@ -728,6 +813,7 @@ private:
 	SubmitterDataMap Submitters;   // map of job counters by submitter, used to make SUBMITTER ads
 	int				NumUniqueOwners;
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
+
 	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
@@ -764,6 +850,9 @@ private:
 	SelfDrainingQueue job_is_finished_queue;
 	int jobIsFinishedHandler( ServiceData* job_id );
 
+		// variables to implement SCHEDD_VANILLA_START expression
+	ConstraintHolder vanilla_start_expr;
+
 		// Get the associated GridJobCounts object for a given
 		// user identity.  If necessary, will create a new one for you.
 		// You can read or write the values, but don't go
@@ -793,7 +882,6 @@ private:
 
 	// connection variables
 	struct sockaddr_in	From;
-	int					Len; 
 
 	ExprTree* slotWeightOfJob;
 	ClassAd * slotWeightGuessAd;
@@ -887,15 +975,10 @@ private:
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
-	shadow_rec*     find_shadow_rec(PROC_ID*);
 	
-#ifdef CARMI_OPS
-	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
-#endif
-
 	void			expand_mpi_procs(StringList *, StringList *);
 
-	HashTable <HashKey, match_rec *> *matches;
+	HashTable <std::string, match_rec *> *matches;
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
@@ -920,6 +1003,9 @@ private:
 	int get_job_connect_info_handler(int, Stream* s);
 	int get_job_connect_info_handler_implementation(int, Stream* s);
 
+		// Given two job IDs, start the first job on the second job's resource.
+	int reassign_slot_handler( int cmd, Stream * s );
+
 		// Mark a job as clean
 	int clear_dirty_job_attrs_handler(int, Stream *stream);
 
@@ -937,17 +1023,6 @@ private:
 	bool m_need_reschedule;
 	int m_send_reschedule_timer;
 	Timeslice m_negotiate_timeslice;
-
-	// some stuff about Quill that should go into the ad
-#ifdef HAVE_EXT_POSTGRESQL
-	int quill_enabled;
-	int quill_is_remotely_queryable;
-	char *quill_name;
-	char *quill_db_name;
-	char *quill_db_ip_addr;
-	char *quill_db_query_password;
-	int prevLHF;
-#endif
 
 	StringList m_job_machine_attrs;
 	int m_job_machine_attrs_history_length;
@@ -971,6 +1046,8 @@ private:
 	int m_history_helper_rid;
 
 	bool m_matchPasswordEnabled;
+
+	friend class DedicatedScheduler;
 };
 
 
@@ -998,6 +1075,7 @@ extern bool releaseJob( int cluster, int proc, const char* reason = NULL,
 					 bool use_transaction = false, 
 					 bool email_user = false, bool email_admin = false,
 					 bool write_to_user_log = true);
+extern bool setJobFactoryPauseAndLog(JobQueueCluster * cluster, int pause_mode, int hold_code, const std::string& reason);
 
 
 /** Hook to call whenever we're going to give a job to a "job

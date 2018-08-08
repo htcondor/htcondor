@@ -95,6 +95,12 @@ registerAllGceCommands(void)
 	registerGceGahpCommand(GCE_COMMAND_INSTANCE_LIST,
 			GceInstanceList::ioCheck, GceInstanceList::workerFunction);
 
+	registerGceGahpCommand(GCE_COMMAND_GROUP_INSERT,
+			GceGroupInsert::ioCheck, GceGroupInsert::workerFunction);
+
+	registerGceGahpCommand(GCE_COMMAND_GROUP_DELETE,
+			GceGroupDelete::ioCheck, GceGroupDelete::workerFunction);
+
 	return true;
 }
 
@@ -316,7 +322,7 @@ Request::Request (const char *cmd)
 
 // Functions for IOProcess class
 IOProcess::IOProcess()
-	: m_workers_list(20, &hashFuncInt)
+	: m_workers_list(&hashFuncInt)
 {
 	m_async_mode = false;
 	m_new_results_signaled = false;
@@ -475,7 +481,7 @@ IOProcess::createNewWorker(void)
 	pthread_detach(thread);
 
 	// Insert a new worker to HashTable
-	m_workers_list.insert(new_worker->m_id, new_worker);
+	ASSERT( m_workers_list.insert(new_worker->m_id, new_worker) == 0 );
 	m_avail_workers_num++;
 
 	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker->m_id);

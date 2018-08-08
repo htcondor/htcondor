@@ -559,7 +559,7 @@ HADStateMachine::sendCommandToOthers( int comm )
     while( (addr = m_otherHadIps.next()) ) {
 
         dprintf( D_FULLDEBUG, "send command %s(%d) to %s\n",
-				 utilToString(comm),comm,addr);
+				 getCommandStringSafe(comm),comm,addr);
 
         Daemon d( DT_ANY, addr );
         ReliSock sock;
@@ -578,7 +578,7 @@ HADStateMachine::sendCommandToOthers( int comm )
         // startCommand - max timeout is m_connectionTimeout sec
         if( !d.startCommand( cmd, &sock, m_connectionTimeout ) ) {
             dprintf( D_ALWAYS,"cannot start command %s(%d) to addr %s\n",
-					 utilToString(comm),cmd,addr);
+					 getCommandStringSafe(comm),cmd,addr);
             sock.close();
             continue;
         }
@@ -623,21 +623,21 @@ HADStateMachine::sendReplicationCommand( int command )
     int cmd = command;
     dprintf( D_FULLDEBUG,
 			 "send command %s(%d) to replication daemon %s\n",
-			 utilToString(cmd), cmd, m_replicationDaemonSinfulString );
+			 getCommandStringSafe(cmd), cmd, m_replicationDaemonSinfulString );
 
     // startCommand - max timeout is m_connectionTimeout sec
     if(! (m_masterDaemon->startCommand(cmd,&sock,m_connectionTimeout )) ) {
         dprintf( D_ALWAYS,
 				 "cannot start command %s, addr %s\n",
-				 utilToString(cmd), m_replicationDaemonSinfulString );
+				 getCommandStringSafe(cmd), m_replicationDaemonSinfulString );
         sock.close();
 
         return false;
     }
 
-    char* subsys = const_cast<char*>( daemonCore->InfoCommandSinfulString( ) );
+    if( !sock.put(daemonCore->InfoCommandSinfulString( )) ||
+        !sock.end_of_message() ) {
 
-    if( !sock.code(subsys) || !sock.end_of_message() ) {
         dprintf( D_ALWAYS, "send to replication daemon, !sock.code false \n");
         sock.close();
 
@@ -765,13 +765,13 @@ HADStateMachine::sendControlCmdToMaster( int comm )
     int cmd = comm;
     dprintf( D_FULLDEBUG,
 			 "send command %s(%d) [%s] to master %s\n",
-			 utilToString(cmd), cmd, m_controlleeName,
+			 getCommandStringSafe(cmd), cmd, m_controlleeName,
 			 m_masterDaemon->addr() );
 
     // startCommand - max timeout is m_connectionTimeout sec
     if(! m_masterDaemon->startCommand( cmd, &sock, m_connectionTimeout )  ) {
         dprintf( D_ALWAYS,"cannot start command %s, addr %s\n",
-				 utilToString(cmd), m_masterDaemon->addr() );
+				 getCommandStringSafe(cmd), m_masterDaemon->addr() );
         sock.close();
         return false;
     }
@@ -960,7 +960,7 @@ HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
 	char	buf[1024];
 
     dprintf( D_FULLDEBUG, "commandHandler command %s(%d) is received\n",
-			 utilToString(cmd), cmd);
+			 getCommandStringSafe(cmd), cmd);
 
     strm->timeout( m_connectionTimeout );
 

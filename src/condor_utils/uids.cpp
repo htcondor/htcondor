@@ -28,6 +28,7 @@
 #include "my_username.h"
 #include "daemon.h"
 #include "store_cred.h"
+#include "../condor_sysapi/sysapi.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
@@ -154,7 +155,7 @@ static const struct {
       {SID_REVISION, 2, SECURITY_NT_AUTHORITY, {SECURITY_BUILTIN_DOMAIN_RID}}, DOMAIN_ALIAS_RID_ADMINS,
       {SID_REVISION, 2, SECURITY_NT_AUTHORITY, {SECURITY_BUILTIN_DOMAIN_RID}}, DOMAIN_ALIAS_RID_USERS,
    };
-#pragma pack(pop, 1)
+#pragma pack(pop)
 
 // return a copy of the SID of the owner of the current process
 //
@@ -278,9 +279,36 @@ static int should_use_keyring_sessions() {
 
 	if(!DidParamForKeyringSessions) {
 		UseKeyringSessions = param_boolean("USE_KEYRING_SESSIONS", false);
+
+		if (UseKeyringSessions) {
+			// pre 3.X kernels don't have full support for our use
+			// of this.  specifically, you can't create a new
+			// keyring session in a clone() which we rely on (by
+			// default) for spawning shadows.  suggest a config
+			// change as a workaround and EXCEPT if that's the
+			// case.
+			bool using_clone = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
+			bool is_modern = sysapi_is_linux_version_atleast("3.0.0");
+			if (using_clone && !is_modern) {
+				EXCEPT("USE_KEYRING_SESSIONS==true and USE_CLONE_TO_CREATE_PROCESSES==true are not compatible with a pre-3.0.0 kernel!");
+			}
+		}
 		DidParamForKeyringSessions = true;
 	}
 	return UseKeyringSessions;
+}
+#endif
+
+#ifdef LINUX
+static int keyring_session_creation_timeout() {
+	static int KeyringSessionCreationTimeout = 0;
+	static int DidParamForKeyringSessionCreationTimeout = FALSE;
+
+	if(!DidParamForKeyringSessionCreationTimeout) {
+		KeyringSessionCreationTimeout = param_boolean("KEYRING_SESSION_CREATION_TIMEOUT", 20);
+		DidParamForKeyringSessionCreationTimeout = true;
+	}
+	return KeyringSessionCreationTimeout;
 }
 #endif
 
@@ -1529,7 +1557,52 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	 * avoid potentially nasty recursive situations, ONLY call
 	 * dprintf() from inside of this function if the
 	 * dologging parameter is non-zero.
+	 * THIS IS A LIE, SEE COMMENT DIRECTLY BELOW.
 	 */
+
+	// dologging is NOT a boolean!  It currently can be one of:
+	//
+	// 0 == no logging (avoid recursion because of priv changes inside dprintf itself)
+	// 1 == go ahead and log
+	// 999 == in between clone() and exec(), so DEFINITELY DO NOT CALL dprintf()!!!!
+	//
+	// apparently, all the places that currently treat non-zero as true are not
+	// in execution paths that occur in practice.  however, the new keyring session
+	// code definitely hits this case.  in order to leave old code alone, I am only
+	// using the really_dologging inside the new keyring session code, but perhaps all
+	// instances of dologging should be changed to really_dologging in this function.
+	//
+
+	// H   H  EEEEE  Y   Y
+	// H   H  E       Y Y
+	// HHHHH  EEEE     Y
+	// H   H  E        Y
+	// H   H  EEEEE    Y
+
+	// You do not want to call dprintf() in this function AT ALL unless you
+	// really know what you are doing.  Normally, it's not a problem to
+	// call this function in PRIV_ROOT or PRIV_USER.  But you can't do it
+	// from inside *this* function.  If you are unlucky, doing so might
+	// cause the log to rotate, and when it does, the log rotation calls
+	// _set_priv to become condor to rotate the logs.  However, this
+	// function is NOT re-entrant because of the global variables that get
+	// modified and Bad Things(TM) that are Extremely Hard To Debug(TM) can
+	// happen.  (Namely, the new log file after rotation is created with
+	// the wrong priv.  This will likely fail if attempted as the user, due
+	// to log directory permissions.  But if it happens as root, it will
+	// succeed, and the next time a daemon tries to open the file as
+	// condor, it will fail and not start up.
+
+	// It can be extremely tricky to get right, so the matter is resolved
+	// for now by declaring that NO printfing is allowed except for the few
+	// below that were carefully studied to make sure that cannot cause
+	// this issue.
+
+	// instead, use the mechanism that buffers the debug messages in RAM
+	// and then dumps them out at the end when it is safe to do so because
+	// the internal state is consistent with reality.
+
+	bool really_dologging = (dologging && (dologging != NO_PRIV_MEMORY_CHANGES));
 
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;
@@ -1555,13 +1628,6 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			EXCEPT("Programmer Error: attempted switch to user privilege, "
 				   "but user ids are not initialized");
 		}
-
-		// ultimately, to be extra-paranoid all switches need a new
-		// session (to shed any old creds).  however, that means we can
-		// no longer dprintf in any of the below code since doing so
-		// switches to condor priv, creates a new session, and messes
-		// up the whole process below.  so for now, we only do it when
-		// switching to user priv.
 
 		// We only get here if we are actually switching state. (Not if we
 		// requested to to switch to the current state, or if we requested
@@ -1590,10 +1656,34 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 
 			// create a new session
 			set_root_euid();
-			condor_keyctl_session(NULL);
-			key_serial_t sess_keyring = KEY_SPEC_SESSION_KEYRING;
-			if (dologging) dprintf(D_SECURITY, "KEYCTL: New session keyring %i\n", sess_keyring);
 
+			// if session creation fails, it could be that old
+			// sessions have not yet been garbage collected.
+			//
+			// since we can't continue without success, sleep a
+			// tiny amount and try again, up to a maximum timeout
+			// in which case we EXCEPT.
+
+			// get the timeout.  if we're going to sleep for 1 millisecond,
+			// convert the timeout to a count and only try that many times.
+			int timeout = keyring_session_creation_timeout();
+			const int sleep_amount = 1000; // 1000 usec == 1 millisec
+			int max_attempts = timeout * (1000000/sleep_amount);
+
+			// attempt creation and loop until success or timeout.
+			while( condor_keyctl_session(NULL) == -1 ) {
+				if (errno == EDQUOT) {
+					// check for timeout
+					if (max_attempts-- <= 0) {
+						EXCEPT("FATAL: Unable to create new session keyring when switching priv.");
+					}
+
+					// sleep briefly, squash return value, try again
+					if(usleep(sleep_amount)) {}
+				} else {
+					_exit(98);
+				}
+			}
 
 			// if we were in priv user and are switching out, we record the keyring
 			// id holding the user's AFS token, since it's likely we'll switch back
@@ -1641,27 +1731,27 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 
 					// create the keyring name for user keyring
 					MyString ring_name = "htcondor_uid";
-					ring_name = ring_name + UserUid;
+					ring_name += IntToStr( UserUid );
 
 					// locate the user keyring
 					key_serial_t user_keyring = condor_keyctl_search(htcondor_keyring, "keyring", ring_name.Value(), 0);
 					if(user_keyring == -1) {
 						CurrentSessionKeyring = KEY_SPEC_INVALID_KEYRING;
 						CurrentSessionKeyringUID = KEY_SPEC_INVALID_UID;
-						if (dologging) dprintf(D_ALWAYS,
+						if (really_dologging) _condor_save_dprintf_line(D_ALWAYS,
 							"KEYCTL: unable to find keyring '%s', error: %s\n",
 							ring_name.Value(), strerror(errno));
 					} else {
 						CurrentSessionKeyring = user_keyring;
 						CurrentSessionKeyringUID = UserUid;
-						if (dologging) dprintf(D_SECURITY,
+						if (really_dologging) _condor_save_dprintf_line(D_SECURITY,
 							 "KEYCTL: found user keyring %s (%li) for uid %i.\n",
 							 ring_name.Value(), (long)user_keyring, UserUid);
 					}
 				} else {
 					CurrentSessionKeyring = PreviousSessionKeyring;
 					CurrentSessionKeyringUID = PreviousSessionKeyringUID;
-					if (dologging) dprintf(D_SECURITY, "KEYCTL: resuming stored keyring %i and uid %i.\n",
+					if (really_dologging) _condor_save_dprintf_line(D_SECURITY, "KEYCTL: resuming stored keyring %i and uid %i.\n",
 						CurrentSessionKeyring, CurrentSessionKeyringUID);
 				}
 
@@ -1676,10 +1766,10 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 					// link the user keyring to our session keyring
 					long link_success = condor_keyctl_link(user_keyring, sess_keyring);
 					if(link_success == -1) {
-						if (dologging) dprintf(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
+						if (really_dologging) _condor_save_dprintf_line(D_ALWAYS, "KEYCTL: link(%li,%li) error: %s\n",
 							(long)user_keyring, (long)sess_keyring, strerror(errno));
 					} else {
-						if (dologging) dprintf(D_SECURITY, "KEYCTL: linked key %li to %li\n",
+						if (really_dologging) _condor_save_dprintf_line(D_SECURITY, "KEYCTL: linked key %li to %li\n",
 							(long)user_keyring, (long)sess_keyring);
 					}
 				}
@@ -1710,7 +1800,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			break;
 		default:
 			if ( dologging ) {
-				dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+				_condor_save_dprintf_line( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
 			}
 		}
 	}
@@ -1729,6 +1819,11 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		CurrentPrivState = PrevPrivState;
 	}
 	else if( dologging ) {
+		// this is an okay place to dprintf, so let's dump all the
+		// stuff we've buffered (if any), and then log change in priv
+		// state.
+
+		_condor_dprintf_saved_lines();
 		log_priv(PrevPrivState, CurrentPrivState, file, line);
 	}
 

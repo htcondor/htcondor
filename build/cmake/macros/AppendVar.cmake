@@ -28,6 +28,27 @@ MACRO (APPEND_VAR _VAR _VAL)
 
 ENDMACRO(APPEND_VAR)
 
+# append var to a list unless it is already in the list
+MACRO (APPEND_UNIQUE_VAR _VAR _VAL)
+
+	if(${_VAR})
+		set (_not_found ON)
+		foreach (v IN LISTS ${_VAR})
+			if ("~${v}" STREQUAL "~${_VAL}")
+				set(_not_found OFF)
+			endif()
+		endforeach (v)
+		if (_not_found)
+			set (${_VAR} "${${_VAR}};${_VAL}")
+		endif(_not_found)
+	else(${_VAR})
+		set (${_VAR} ${_VAL})
+	endif(${_VAR})
+
+	set (${_VAR} ${${_VAR}} PARENT_SCOPE )
+
+ENDMACRO(APPEND_UNIQUE_VAR)
+
 
 macro(append_target_property_flag _target _property _flag)
     get_property(_val TARGET ${_target} PROPERTY ${_property})

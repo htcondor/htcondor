@@ -94,7 +94,9 @@ process_submit_errstack(CondorError *errstack)
         }
         else
         {
+#if (PY_MINOR_VERSION >= 6) || (PY_MAJOR_VERSION > 2)
             PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 0);
+#endif
         }
     }
 }
@@ -404,6 +406,457 @@ private:
     std::deque<boost::shared_ptr<ClassAdWrapper> > m_requests;
 };
 
+struct QueueItemsIterator {
+	QueueItemsIterator() : num_rows(0) {}
+	~QueueItemsIterator() { m_fea.clear(); }
+
+	inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
+
+	void init(SubmitHash & h, const char * qargs) {
+		num_rows  = 0;
+		m_fea.clear();
+		if (qargs) {
+			std::string errmsg;
+			if (h.parse_q_args(qargs, m_fea, errmsg) != 0) { THROW_EX(RuntimeError, errmsg.c_str()); }
+		}
+	}
+
+	bool needs_submit_lines() { return m_fea.items_filename == "<"; }
+
+	boost::python::object next()
+	{
+		auto_free_ptr line(m_fea.items.pop());
+		if ( ! line) { THROW_EX(StopIteration, "All items returned"); }
+
+		if (m_fea.vars.number() > 1 || (m_fea.vars.number()==1 && (YourStringNoCase("Item") != m_fea.vars.first()))) {
+			std::vector<const char*> splits;
+			m_fea.split_item(line.ptr(), splits);
+
+			boost::python::dict values;
+			int ix = 0;
+			for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+				values[boost::python::object(std::string(key))] = boost::python::object(std::string(splits[ix++]));
+			}
+
+			return boost::python::object(values);
+		} else {
+			return boost::python::object(std::string(line.ptr()));
+		}
+	}
+
+	char * next_row()
+	{
+		char * row = m_fea.items.pop();
+		if (row) { ++num_rows; }
+		return row;
+	}
+
+	int row_count() { return num_rows; }
+
+	int load_items(SubmitHash & h, MacroStreamMemoryFile &ms)
+	{
+		std::string errmsg;
+		int rval = h.load_inline_q_foreach_items(ms, m_fea, errmsg);
+		if (rval == 1) { // 1 means forech data is external
+			rval = h.load_external_q_foreach_items(m_fea, false, errmsg);
+		}
+		if (rval < 0) { THROW_EX(RuntimeError, errmsg.c_str());}
+		return 0;
+	}
+
+	friend struct SubmitStepFromQArgs;
+private:
+	int num_rows;
+	SubmitForeachArgs m_fea;
+};
+
+struct SubmitResult {
+
+	SubmitResult(JOB_ID_KEY id, int num_jobs, const classad::ClassAd * clusterAd)
+		: m_id(id)
+		, m_num(num_jobs)
+	{
+		if (clusterAd) m_ad.Update(*clusterAd);
+	}
+
+	int cluster() { return m_id.cluster; }
+	int first_procid() { return m_id.proc; }
+	int num_procs() { return m_num; }
+	boost::shared_ptr<ClassAdWrapper> clusterad() {
+		//PRAGMA_REMIND("does the ref counting work if our m_ad is actually a shared_ptr<ClassAdWrapper> ?")
+		boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
+		ad->Update(m_ad);
+		return ad;
+	}
+
+	std::string toString() const
+	{
+		std::string str;
+		formatstr(str, "Submitted %d jobs into cluster %d,%d :\n", m_num, m_id.cluster, m_id.proc);
+		classad::References attrs;
+		sGetAdAttrs(attrs, m_ad, false, NULL);
+		sPrintAdAttrs(str, m_ad, attrs);
+		return str;
+	}
+
+private:
+	classad::ClassAd m_ad;
+	JOB_ID_KEY m_id;
+	int m_num;
+};
+
+
+// Helper class wrapping a python iterator that manages the iterator and the count/step
+// and populates the resulting key/value pairs into into the given SubmitHash as 'live' values
+// This class is not meant to be directly callable from Python, rather it provides common
+// code used by the Submit class and by the SubmitJobsIterator class
+struct SubmitStepFromPyIter {
+
+	SubmitStepFromPyIter(SubmitHash & h, const JOB_ID_KEY & id, int num, boost::python::object from)
+		: m_hash(h)
+		, m_jidInit(id.cluster, id.proc)
+		, m_items(NULL)
+		, m_nextProcId(id.proc)
+		, m_done(false)
+	{
+		if (num > 0) { m_fea.queue_num = num; }
+
+		// get an interator for the foreach data. this grabs a refcount
+		if (PyIter_Check(from.ptr())) {
+			m_items = PyObject_GetIter(from.ptr());
+		}
+	}
+
+	~SubmitStepFromPyIter() {
+		// release the iterator refcount (if any)
+		Py_XDECREF(m_items);
+
+		// disconnnect the hashtable from our livevars pointers
+		unset_live_vars();
+	}
+
+	bool done() { return m_done; }
+	bool has_items() { return m_items; }
+	int  step_size() { return m_fea.queue_num ? m_fea.queue_num : 1; }
+	const char * errmsg() { if ( ! m_errmsg.empty()) { return m_errmsg.c_str(); } return NULL;}
+
+	// returns < 0 on error
+	// returns 0 if done iterating
+	// returns 2 for first iteration
+	// returns 1 for subsequent iterations
+	int next(JOB_ID_KEY & jid, int & item_index, int & step)
+	{
+		if (m_done) return 0;
+
+		int step_size = m_fea.queue_num ? m_fea.queue_num : 1;
+		int iter_index = (m_nextProcId - m_jidInit.proc);
+
+		jid.cluster = m_jidInit.cluster;
+		jid.proc = m_nextProcId;
+		item_index = iter_index / step_size;
+		step = iter_index % step_size;
+
+		if (0 == step) { // have we started a new row?
+			if (m_items) { 
+				int rval = next_rowdata();
+				if (rval <= 0) {
+					// no more row data, we are done
+					m_done = (rval == 0);
+					return rval;
+				}
+				set_live_vars();
+			} else {
+				if (0 == iter_index) {
+					// if no next row, then we are done iterating, unless it is the FIRST iteration
+					// in which case we want to pretend there is a single empty item called "Item"
+					m_hash.set_live_submit_variable("Item", "", true);
+				} else {
+					m_done = true;
+					return 0;
+				}
+			}
+		}
+
+		++m_nextProcId;
+		return (0 == iter_index) ? 2 : 1;
+	}
+
+	StringList & vars() { return m_fea.vars; }
+	SubmitForeachArgs & fea() { return m_fea; }
+
+	// 
+	void set_live_vars()
+	{
+		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+			auto str = m_livevars.find(key);
+			if (str != m_livevars.end()) {
+				m_hash.set_live_submit_variable(key, str->second.c_str(), false);
+			} else {
+				m_hash.unset_live_submit_variable(key);
+			}
+		}
+	}
+
+	void unset_live_vars()
+	{
+		// set the pointers of the 'live' variables to the unset string (i.e. "")
+		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+			m_hash.unset_live_submit_variable(key);
+		}
+	}
+
+	// load the livevars array from the next item of the iterator
+	// returns < 0 on error, 0 if there is no next item, 1 on success.
+	int next_rowdata()
+	{
+		PyObject *obj = PyIter_Next(m_items);
+		if ( ! obj) {
+			return 0;
+		}
+
+		bool no_vars_yet = m_fea.vars.number() == 0;
+
+		// load the next row item
+		if (PyDict_Check(obj)) {
+			PyObject *k, *v;
+			Py_ssize_t pos = 0;
+			while (PyDict_Next(obj, &pos, &k, &v)) {
+				std::string key = extract<std::string>(k);
+				m_livevars[key] = extract<std::string>(v);
+				if (no_vars_yet) { m_fea.vars.append(key.c_str()); }
+			}
+		} else if (PyList_Check(obj)) {
+			// use the key names that have been stored in m_fea.vars
+			// and the items from the list, which must be strings...
+			// if there are no keys, then make some up.
+			Py_ssize_t num = PyList_Size(obj);
+			if (no_vars_yet) {
+				if (num > 10) { THROW_EX(ValueError, "Too many items in Queue itemdata element"); }
+				// no vars have been specified, so make some up based on the number if items in the list
+				std::string key("Item");
+				for (Py_ssize_t ix = 0; ix < num; ++ix) {
+					m_fea.vars.append(key.c_str());
+					formatstr(key, "Item%d", (int)ix+1);
+				}
+			}
+			const char * key = m_fea.vars.first();
+			for (Py_ssize_t ix = 0; ix < num; ++ix) {
+				PyObject * v = PyList_GetItem(obj, ix);
+				m_livevars[key] = extract<std::string>(v);
+				key = m_fea.vars.next();
+				if ( ! key) break;
+			}
+		} else {
+			// not a list or a dict, the item must be a string.
+			extract<std::string> item_extract(obj);
+			if ( ! item_extract.check()) {
+				m_errmsg = "'from' data must be an iterator of strings or of dicts";
+				return -1;
+			}
+
+			// if there are NO vars, then create a single Item var and store the whole string
+			// if there are vars, then split the string in the same way that the QUEUE statement would
+			if (no_vars_yet) { 
+				const char * key = "Item";
+				m_fea.vars.append(key);
+				m_livevars[key] = item_extract();
+			} else {
+				std::string str = item_extract();;
+				auto_free_ptr data(strdup(str.c_str()));
+
+				std::vector<const char*> splits;
+				m_fea.split_item(data.ptr(), splits);
+				int ix = 0;
+				for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+					m_livevars[key] = splits[ix++];
+				}
+			}
+		}
+
+		Py_DECREF(obj);
+		return 1;
+	}
+
+	// return all of the live value data as a single 'line' using the given item separator and line terminator
+	int get_rowdata(std::string & line, const char * sep, const char * eol)
+	{
+		// so that the separator and line terminators can be \0, we make the size strlen()
+		// unless the first character is \0, then the size is 1
+		int cchSep = sep ? (sep[0] ? strlen(sep) : 1) : 0;
+		int cchEol = eol ? (eol[0] ? strlen(eol) : 1) : 0;
+		line.clear();
+		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+			if ( ! line.empty() && sep) line.append(sep, cchSep);
+			auto str = m_livevars.find(key);
+			if (str != m_livevars.end() && ! str->second.empty()) {
+				line += str->second;
+			}
+		}
+		if (eol && ! line.empty()) line.append(eol, cchEol);
+		return (int)line.size();
+	}
+
+	// this is called repeatedly when we are sending rowdata to the schedd
+	static int send_row(void* pv, std::string & rowdata) {
+		SubmitStepFromPyIter *sii = (SubmitStepFromPyIter*)pv;
+
+		rowdata.clear();
+		if (sii->done())
+			return 0;
+
+		// Split and write into the string using US (0x1f) a field separator and LF as record terminator
+		if ( ! sii->get_rowdata(rowdata, "\x1F", "\n"))
+			return 0;
+
+		int rval = sii->next_rowdata();
+		if (rval < 0) { return rval; }
+		if (rval == 0) { sii->m_done = true; } // so subsequent iterations will return 0
+		return 1;
+	}
+
+protected:
+
+	SubmitHash & m_hash;         // the (externally owned) submit hash we are updating as we iterate
+	JOB_ID_KEY m_jidInit;
+	PyObject * m_items;
+	SubmitForeachArgs m_fea;
+	NOCASE_STRING_MAP m_livevars; // holds live data for active vars
+	int  m_nextProcId;
+	bool m_done;
+	std::string m_errmsg;
+};
+
+
+struct SubmitJobsIterator {
+
+	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, boost::python::object from, time_t qdate, const std::string & owner)
+		: m_sspi(m_hash, id, num, from)
+		, m_ssqa(m_hash)
+		, m_iter_qargs(false)
+		, m_return_proc_ads(procs)
+	{
+			// copy the input submit hash into our new hash.
+			m_hash.init();
+			copy_hash(h);
+			m_hash.setDisableFileChecks(true);
+			m_hash.init_base_ad(qdate, owner.c_str());
+	}
+
+	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, const std::string & qargs, MacroStreamMemoryFile & ms_inline_items, time_t qdate, const std::string & owner)
+		: m_sspi(m_hash, id, 0, boost::python::object())
+		, m_ssqa(m_hash)
+		, m_iter_qargs(true)
+		, m_return_proc_ads(procs)
+	{
+		// copy the input submit hash into our new hash.
+		m_hash.init();
+		copy_hash(h);
+		m_hash.setDisableFileChecks(true);
+		m_hash.init_base_ad(qdate, owner.c_str());
+
+		if (qargs.empty()) {
+			m_ssqa.begin(id, num);
+		} else {
+			std::string errmsg;
+			if (m_ssqa.begin(id, qargs.c_str()) != 0) { THROW_EX(RuntimeError, "Invalid queue arguments"); }
+			else {
+				size_t ix; int line;
+				ms_inline_items.save_pos(ix, line);
+				int rv = m_ssqa.load_items(ms_inline_items, false, errmsg);
+				ms_inline_items.rewind_to(ix, line);
+				if (rv != 0) { THROW_EX(RuntimeError, errmsg.c_str()); }
+			}
+		}
+	}
+
+
+	~SubmitJobsIterator() {}
+
+	void copy_hash(SubmitHash & h)
+	{
+		//PRAGMA_REMIND("this will loose meta info, should have a MACRO_SET copy operation instead.")
+		HASHITER it = hash_iter_begin(h.macros(), HASHITER_NO_DEFAULTS);
+		for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
+			const char * key = hash_iter_key(it);
+			const char * val = hash_iter_value(it);
+			m_hash.set_submit_param(key, val);
+		}
+		hash_iter_delete(&it);
+
+		const char * ver = h.getScheddVersion();
+		if ( ! ver || ! ver[0]) ver = CondorVersion();
+
+		m_hash.setScheddVersion(ver);
+	}
+
+	inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
+
+	boost::shared_ptr<ClassAdWrapper> next()
+	{
+		JOB_ID_KEY jid;
+		int item_index;
+		int step;
+		int rval;
+
+		if (m_iter_qargs) {
+			if (m_ssqa.done()) { THROW_EX(StopIteration, "All ads processed"); }
+			rval = m_ssqa.next(jid, item_index, step);
+		} else {
+			if (m_sspi.done()) { THROW_EX(StopIteration, "All ads processed"); }
+			rval = m_sspi.next(jid, item_index, step);
+			if (rval < 0) { THROW_EX(RuntimeError, m_sspi.errmsg()); }
+		}
+		if (rval == 0)  { THROW_EX(StopIteration, "All ads processed"); }
+
+		// on first iteration, if the initial proc id is not 0, then we need to make sure
+		// to call make_job_ad with a proc id of 0 to force the cluster ad to be created.
+		ClassAd * job = NULL;
+		if (rval == 2 && jid.proc > 0) {
+			JOB_ID_KEY cid(jid.cluster, 0);
+			job = m_hash.make_job_ad(cid, item_index, step, false, false, NULL, NULL);
+			if (job) {
+				job = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
+			}
+		} else {
+			job = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
+		}
+
+		if ( ! job) {
+			THROW_EX(RuntimeError, "Failed to get next job");
+		}
+
+		boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
+		if (m_return_proc_ads) {
+			if (rval == 2) { // this is the cluster iteration
+				ad->UpdateFromChain(*job);
+			} else {
+				// update just from the procad
+				ad->Update(*job);
+			}
+		} else {
+			ad->UpdateFromChain(*job);
+		}
+		return ad;
+	}
+
+	boost::shared_ptr<ClassAdWrapper> clusterad()
+	{
+		ClassAd* cad = m_hash.get_cluster_ad();
+		if ( ! cad) {
+			THROW_EX(RuntimeError, "No cluster ad");
+		}
+		boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
+		ad->Update(*cad);
+		return ad;
+	}
+
+private:
+	SubmitHash m_hash;
+	SubmitStepFromPyIter m_sspi;
+	SubmitStepFromQArgs m_ssqa;
+	bool m_iter_qargs;
+	bool m_return_proc_ads;
+};
 
 struct Schedd;
 struct ConnectionSentry
@@ -418,9 +871,14 @@ public:
     void disconnect();
     bool connected() const {return m_connected;}
     bool transaction() const {return m_transaction;}
+    int  clusterId() const {return m_cluster_id;}
+    int  procId() const {return m_proc_id;}
+    int  newCluster();
+    int  newProc();
     void reschedule();
     std::string owner() const;
     std::string schedd_version();
+    const ClassAd* capabilites();
 
     static boost::shared_ptr<ConnectionSentry> enter(boost::shared_ptr<ConnectionSentry> obj);
     static bool exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object obj2, boost::python::object obj3);
@@ -428,8 +886,12 @@ public:
 private:
     bool m_connected;
     bool m_transaction;
+    bool m_queried_capabilities;
+    int  m_cluster_id; // non-zero when there is a submit transaction and newCluster has been called already
+    int  m_proc_id; // the last value returned from newProc
     SetAttributeFlags_t m_flags;
     Schedd& m_schedd;
+    ClassAd m_capabilities;	// populated via the GetScheddCapabilities
 };
 
 
@@ -608,7 +1070,10 @@ QueryIterator::nextAds()
         }
         catch (boost::python::error_already_set)
         {
-            if (PyErr_ExceptionMatches(PyExc_StopIteration)) {break;}
+            if (PyErr_ExceptionMatches(PyExc_StopIteration)) {
+                PyErr_Clear();
+                break;
+            }
             throw;
         }
     }
@@ -719,7 +1184,7 @@ struct Schedd {
         return negotiator;
     }
 
-    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
+    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs)
     {
         std::string constraint;
         extract<std::string> constraint_extract(constraint_obj);
@@ -748,20 +1213,30 @@ struct Schedd {
             attrs_list.append(attrName.c_str()); // note append() does strdup
         }
 
-        ClassAdList jobs;
-
         list retval;
         int fetchResult;
+        CondorError errstack;
         {
         query_process_helper helper;
         helper.callable = callback;
         helper.output_list = retval;
         void *helper_ptr = static_cast<void *>(&helper);
+        ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
+        ClassAd ** p_summary_ad = NULL;
+        if ( fetch_opts == CondorQ::fetch_SummaryOnly ) {  // only get the summary ad if option says so
+            p_summary_ad = &summary_ad;
+        }
+
 
         {
             condor::ModuleLock ml;
             helper.ml = &ml;
-            fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, true, NULL);
+            fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, 2, &errstack, p_summary_ad);
+			if (summary_ad) {
+				query_process_callback(helper_ptr,summary_ad);
+				delete summary_ad;
+				summary_ad = NULL;
+			}
         }
         }
 
@@ -779,8 +1254,13 @@ struct Schedd {
             PyErr_SetString(PyExc_RuntimeError, "Parse error in constraint.");
             throw_error_already_set();
             break;
+        case Q_UNSUPPORTED_OPTION_ERROR:
+            PyErr_SetString(PyExc_RuntimeError, "Query fetch option unsupported by this schedd.");
+            throw_error_already_set();
+			break;
         default:
-            PyErr_SetString(PyExc_IOError, "Failed to fetch ads from schedd.");
+			std::string errmsg = "Failed to fetch ads from schedd, errmsg=" + errstack.getFullText();
+			PyErr_SetString(PyExc_IOError, errmsg.c_str());
             throw_error_already_set();
             break;
         }
@@ -1343,13 +1823,13 @@ struct Schedd {
     }
 
 
-    boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1)
+    boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
         std::string val_str;
         extract<ExprTreeHolder &> exprtree_extract(requirement);
         extract<std::string> string_extract(requirement);
         classad::ExprTree *expr = NULL;
-	boost::shared_ptr<classad::ExprTree> expr_ref;
+        boost::shared_ptr<classad::ExprTree> expr_ref;
         if (string_extract.check())
         {
             classad::ClassAdParser parser;
@@ -1381,9 +1861,52 @@ struct Schedd {
 		projList->push_back(entry);
 	}
 
+	// decode the since argument, this can either be an expression, or a string
+	// containing either an expression, a cluster id or a full job id.
+	classad::ExprTree *since_expr_copy = NULL;
+	extract<ExprTreeHolder &> since_exprtree_extract(since);
+	extract<std::string> since_string_extract(since);
+	extract<int>  since_cluster_extract(since);
+	if (since_cluster_extract.check()) {
+		std::string expr_str;
+		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
+		classad::ClassAdParser parser;
+		parser.ParseExpression(expr_str, since_expr_copy);
+	} else if (since_string_extract.check()) {
+		std::string since_str = since_string_extract();
+		classad::ClassAdParser parser;
+		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
+			THROW_EX(ValueError, "Unable to parse since argument as an expression or as a job id.");
+		} else {
+			classad::Value val;
+			if (ExprTreeIsLiteral(since_expr_copy, val) && val.IsNumber()) {
+				delete since_expr_copy; since_expr_copy = NULL;
+				// if the stop constraint is a numeric literal.
+				// then there are a few special cases...
+				// it might be a job id. or it might (someday) be a time value
+				PROC_ID jid;
+				const char * pend;
+				if (StrIsProcId(since_str.c_str(), jid.cluster, jid.proc, &pend) && !*pend) {
+					if (jid.proc >= 0) {
+						formatstr(since_str, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
+					} else {
+						formatstr(since_str, "ClusterId == %d", jid.cluster);
+					}
+					parser.ParseExpression(since_str, since_expr_copy);
+				}
+			}
+		}
+	} else if (since_exprtree_extract.check()) {
+		since_expr_copy = since_exprtree_extract().get()->Copy();
+	} else if (since.ptr() != Py_None) {
+		THROW_EX(ValueError, "invalid since argument");
+	}
+
+
 	classad::ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, expr_copy);
 	ad.InsertAttr(ATTR_NUM_MATCHES, match);
+	if (since_expr_copy) { ad.Insert("Since", since_expr_copy); }
 
 	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
 	ad.Insert(ATTR_PROJECTION, projTree);
@@ -1414,7 +1937,7 @@ struct Schedd {
         return sentry_ptr;
     }
 
-    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default, boost::python::object tag=boost::python::object())
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs, boost::python::object tag=boost::python::object())
     {
         std::string val_str;
 
@@ -1500,7 +2023,7 @@ private:
 };
 
 ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttributeFlags_t flags, bool continue_txn)
-     : m_connected(false), m_transaction(false), m_flags(flags), m_schedd(schedd)
+     : m_connected(false), m_transaction(false), m_queried_capabilities(false), m_cluster_id(0), m_proc_id(-1), m_flags(flags), m_schedd(schedd)
 {
     if (schedd.m_connection)
     {
@@ -1531,12 +2054,42 @@ ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttribut
     m_transaction = transaction;
 }
 
+const ClassAd* ConnectionSentry::capabilites()
+{
+	if ( ! m_queried_capabilities) {
+		condor::ModuleLock ml;
+		GetScheddCapabilites(0, m_capabilities);
+		m_queried_capabilities = true;
+	}
+	if (m_queried_capabilities) {
+		return &m_capabilities;
+	}
+	return NULL;
+}
+
+int
+ConnectionSentry::newCluster()
+{
+    condor::ModuleLock ml;
+    m_cluster_id = NewCluster();
+    m_proc_id = -1; // we have not yet called newProc for this cluster
+    return m_cluster_id;
+}
+
+int
+ConnectionSentry::newProc()
+{
+    condor::ModuleLock ml;
+    m_proc_id = NewProc(m_cluster_id);
+    return m_proc_id;
+}
 
 void
 ConnectionSentry::reschedule()
 {
     m_schedd.reschedule();
 }
+
 
 std::string
 ConnectionSentry::owner() const
@@ -1655,21 +2208,56 @@ ConnectionSentry::~ConnectionSentry()
     disconnect();
 }
 
-
 struct Submit
 {
+	static MACRO_SOURCE EmptyMacroSrc; 
 public:
-    Submit()
+    Submit() 
+       : m_ms_inline("", 0, EmptyMacroSrc)
+       , m_queue_may_append_to_cluster(false)
     {
         m_hash.init();
     }
 
 
     Submit(boost::python::dict input)
+       : m_ms_inline("", 0, EmptyMacroSrc)
+       , m_queue_may_append_to_cluster(false)
     {
         m_hash.init();
         update(input);
     }
+
+
+	Submit(const std::string lines)
+       : m_ms_inline("", 0, EmptyMacroSrc)
+       , m_queue_may_append_to_cluster(false)
+	{
+		m_hash.init();
+		if ( ! lines.empty()) {
+			m_hash.insert_source("<PythonString>", m_src_pystring);
+			MacroStreamMemoryFile ms(lines.c_str(), lines.size(), m_src_pystring);
+
+			std::string errmsg;
+			char * qline = NULL;
+			int rval = m_hash.parse_up_to_q_line(ms, errmsg, &qline);
+			if (rval != 0) { THROW_EX(RuntimeError, errmsg.c_str()); }
+			if (qline) {
+				const char * qa = SubmitHash::is_queue_statement(qline);
+				if (qa) {
+					m_qargs = qa;
+
+					// store the rest of the submit file raw. we can't parse it yet, but it might contain itemdata
+					size_t cbremain;
+					const char * remain = ms.remainder(cbremain);
+					if (remain && cbremain) {
+						m_remainder.assign(remain, cbremain);
+						m_ms_inline.set(m_remainder.c_str(), cbremain, 0, m_src_pystring);
+					}
+				}
+			}
+		}
+	}
 
 
     std::string
@@ -1867,7 +2455,9 @@ public:
             ss << hash_iter_key(it) << " = " << hash_iter_value(it) << "\n";
             hash_iter_next(it);
         }
-        ss << "queue";
+        if ( ! m_qargs.empty()) {
+            ss << "queue " << m_qargs;
+        }
         hash_iter_delete(&it);
         return ss.str();
     }
@@ -1880,6 +2470,33 @@ public:
         return obj.attr("__repr__")();
     }
 
+	// helper function for determining if this is a factory submit for a job submit
+	bool is_factory(long long & max_materialize, boost::shared_ptr<ConnectionSentry> txn)
+	{
+		bool factory_submit = false;
+		long long max_idle = INT_MAX;
+
+		// check to see if a factory submit was desired, and if the schedd supports it
+		//
+		if (m_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit,ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
+			factory_submit = true;
+		} else if (m_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
+			max_materialize = INT_MAX;
+			factory_submit = true;
+		}
+		if (factory_submit) {
+			// PRAGMA_REMIND("move this into the schedd object?")
+			const ClassAd *capabilities = txn->capabilites();
+			bool allows_late = false;
+			if (capabilities && capabilities->LookupBool("LateMaterialize", allows_late) && allows_late) {
+				factory_submit = true;
+			} else {
+				factory_submit = false; // sorry, no can do.
+			}
+		}
+
+		return factory_submit;
+	}
 
     int 
     queue(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object ad_results)
@@ -1896,7 +2513,7 @@ public:
             keep_results = true;
         }
 
-		// Before calling init_cluster_ad(), we should invoke methods to tell
+		// Before calling init_base_ad(), we should invoke methods to tell
 		// the submit code if we want file checks, and to tell the version of the
 		// remote schedd.  If for some reason we do not have a the remote
 		// schedd version, assume it is running the same version we are (this is
@@ -1909,88 +2526,225 @@ public:
 			m_hash.setScheddVersion(CondorVersion());
 		}
 
-        if (m_hash.init_cluster_ad(time(NULL), txn->owner().c_str()))
-        {
-            process_submit_errstack(m_hash.error_stack());
-            THROW_EX(RuntimeError, "Failed to create a cluster ad");
-        }
-        process_submit_errstack(m_hash.error_stack());
+		bool factory_submit = false;
+		long long max_materialize = INT_MAX;
+		int cluster = txn->clusterId();
+		const int first_procid = 0;
+		JOB_ID_KEY jid;
+		int step=0, item_index=0, rval=0;
+		int num_jobs = 0;
 
-        bool failed_copy = false;
-        ClassAd addl_ad;
-        std::stringstream ss;
-        HASHITER it = hash_iter_begin(const_cast<Submit *>(this)->m_hash.macros(), HASHITER_NO_DEFAULTS);
-        while (!hash_iter_done(it) && !failed_copy)
-        {
-            const char *key = hash_iter_key(it);
-            if (key && (*key == '+'))
-            {
-                ss.str("");
-                ss.clear();
-                ss << (key + 1) << " = " << hash_iter_value(it) << "\n";
-                failed_copy = !addl_ad.Insert(ss.str());
-            }
-            hash_iter_next(it);
-        }
-        hash_iter_delete(&it);
-        if (failed_copy)
-        {
-            THROW_EX(ValueError, "Failed to create a copy of attributes");
-        }
+		SubmitStepFromQArgs ssi(m_hash);
 
-        int cluster;
-        {
-            condor::ModuleLock ml;
-            cluster = NewCluster();
-        }
-        if (cluster < 0)
-        {
-            THROW_EX(RuntimeError, "Failed to create new cluster.");
-        }
-        for (int idx=0; idx<count; idx++)
-        {
-            int procid;
-            {
-                condor::ModuleLock ml;
-                procid = NewProc(cluster);
-            }
-            if (procid < 0)
-            {
-                THROW_EX(RuntimeError, "Failed to create new proc ID.");
-            }
-            JOB_ID_KEY jid(cluster, procid);
-            ClassAd *proc_ad = m_hash.make_job_ad(jid, 0, idx, false, false, NULL, NULL);
-            process_submit_errstack(m_hash.error_stack());
-            if (!proc_ad)
-            {
-                THROW_EX(RuntimeError, "Failed to create new job ad");
-            }
-            proc_ad->InsertAttr(ATTR_CLUSTER_ID, cluster);
-            proc_ad->InsertAttr(ATTR_PROC_ID, procid);
+		// if this is the first queue statement of this transaction, (or if we need to get a new cluster)
+		// we have some once-per-cluster initialization to do.
+		if ( ! m_hash.base_job_was_initialized() || cluster <= 0 || m_hash.getClusterId() != cluster || ! m_queue_may_append_to_cluster) {
 
-            if (!proc_ad->Update(addl_ad))
-            {
-                THROW_EX(ValueError, "Failed to copy extra attributes")
-            }
+			if (m_hash.init_base_ad(time(NULL), txn->owner().c_str())) {
+				process_submit_errstack(m_hash.error_stack());
+				THROW_EX(RuntimeError, "Failed to create a cluster ad");
+			}
+			process_submit_errstack(m_hash.error_stack());
 
-            classad::ClassAdUnParser unparser;
-            unparser.SetOldClassAd( true );
-            for (classad::ClassAd::const_iterator it = proc_ad->begin(); it != proc_ad->end(); it++)
-            {
-                std::string rhs;
-                unparser.Unparse(rhs, it->second);
-                if (-1 == SetAttribute(cluster, procid, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck))
-                {
-                    THROW_EX(ValueError, it->first.c_str());
-                }
-            }
-            if (keep_results)
-            {
-                boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
-                results_ad->CopyFromChain(*proc_ad);
-                ad_results.attr("append")(results_ad);
-            }
-        }
+			factory_submit = is_factory(max_materialize, txn);
+
+			cluster = txn->newCluster();
+			if (cluster < 0) {
+				THROW_EX(RuntimeError, "Failed to create new cluster.");
+			}
+
+			// begin the iterator for QUEUE foreach data. we only allow multiple queue statements
+			// if there is NOT any foreach data.  so we will only get here when 
+			if (m_qargs.empty()) {
+				ssi.begin(JOB_ID_KEY(cluster, first_procid), count);
+			} else {
+				if (ssi.begin(JOB_ID_KEY(cluster, first_procid), m_qargs.c_str()) != 0) { THROW_EX(RuntimeError, "Invalid QUEUE statement"); }
+				else {
+					std::string errmsg;
+					size_t ix; int line;
+					m_ms_inline.save_pos(ix, line);
+					int rv = ssi.load_items(m_ms_inline, false, errmsg);
+					m_ms_inline.rewind_to(ix, line);
+					if (rv != 0) { THROW_EX(RuntimeError, errmsg.c_str()); }
+				}
+			}
+			if (count != 0 && count != ssi.step_size()) { THROW_EX(RuntimeError, "count argument supplied to queue method conflicts with count in submit QUEUE statement"); }
+			count = ssi.step_size();
+
+			if (factory_submit) {
+				char path[4096];
+				if (getcwd(path, 4095)) { m_hash.set_submit_param("FACTORY.Iwd", path); }
+			}
+
+			// if there were no queue arguments supplied, then we allow multiple calls to this queue() method
+			// to append jobs to a single cluster.
+			if (m_qargs.empty() && ! factory_submit) {
+				m_queue_may_append_to_cluster = true;
+			}
+
+		} else {
+			// pick up where we left off
+			int last_proc_id = txn->procId();
+			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
+		}
+
+#if 1
+
+		if (factory_submit) {
+
+			// force re-initialization (and a new cluster) if this hash is used again.
+			m_queue_may_append_to_cluster = false;
+
+			// load the first item, this also sets jid, item_index, and step
+			rval = ssi.next(jid, item_index, step);
+
+			// turn the submit hash into a submit digest
+			std::string submit_digest;
+			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// make and send the cluster ad
+			ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
+			process_submit_errstack(m_hash.error_stack());
+			if ( ! proc_ad) {
+				THROW_EX(RuntimeError, "Failed to create new job ad");
+			}
+			classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
+			if (clusterad) {
+				rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+				process_submit_errstack(m_hash.error_stack());
+			} else {
+				rval = -1;
+			}
+			if (rval < 0) { THROW_EX(ValueError, "Failed to create send job attributes"); }
+
+			submit_digest += "\n";
+			submit_digest += "Queue ";
+			if (count) { formatstr_cat(submit_digest, "%d ", count); }
+
+			// send over the itemdata
+			int row_count = 1;
+			if (ssi.has_items()) {
+				MyString items_filename;
+				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, items_filename, &row_count) < 0 || row_count <= 0) {
+					THROW_EX(ValueError, "Failed to to send materialize itemdata");
+				}
+
+				// PRAGMA_REMIND("fix this when python submit supports foreach, maybe make this common with condor_submit")
+				auto_free_ptr submit_vars(ssi.vars().print_to_delimed_string(","));
+				if (submit_vars) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+
+				//char slice_str[16*3+1];
+				//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
+				if ( ! items_filename.empty()) { submit_digest += "from "; submit_digest += items_filename.c_str(); }
+			}
+			submit_digest += "\n";
+
+			num_jobs = row_count * count;
+
+			// materialize all of the jobs unless the user requests otherwise.
+			// (the admin can also set a limit which is applied at the schedd)
+			max_materialize = MIN(max_materialize, num_jobs);
+			max_materialize = MAX(max_materialize, 1);
+
+			// send the submit digest to the schedd. the schedd will parse the digest at this point
+			// and return success or failure.
+			if (SetJobFactory(cluster, (int)max_materialize, NULL, submit_digest.c_str()) < 0) {
+				THROW_EX(RuntimeError, "Failed to send job factory for max_materilize.");
+			}
+
+		} else {
+			// loop through the itemdata, sending jobs for each item
+			//
+			while ((rval = ssi.next(jid, item_index, step)) > 0) {
+
+				int procid = txn->newProc();
+				if (procid < 0) { THROW_EX(RuntimeError, "Failed to create new proc ID."); }
+				if (procid != jid.proc) { THROW_EX(RuntimeError, "Internal error: newProc does not match iterator procid"); }
+
+				ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
+				process_submit_errstack(m_hash.error_stack());
+				if ( ! proc_ad) {
+					THROW_EX(RuntimeError, "Failed to create new job ad");
+				}
+
+				// on first iteration, send the cluster ad (if any) before the first proc ad
+				if (rval == 2) {
+					classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
+					if (clusterad) {
+						rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+					}
+				}
+				// send the proc ad unless there was a failure.
+				if (rval >= 0) {
+					rval = SendJobAttributes(jid, *proc_ad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+				}
+				process_submit_errstack(m_hash.error_stack());
+				if (rval < 0) {
+					THROW_EX(ValueError, "Failed to create send job attributes");
+				}
+
+				if (keep_results) {
+					boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
+					results_ad->CopyFromChain(*proc_ad);
+					ad_results.attr("append")(results_ad);
+				}
+
+				++num_jobs;
+			}
+		}
+#else
+		for (int idx=0; idx<count; idx++)
+		{
+			int procid = -99;
+			if (factory_submit) {
+				procid = 0;
+			} else {
+				condor::ModuleLock ml;
+				procid = NewProc(cluster);
+			}
+			if (procid < 0) {
+				THROW_EX(RuntimeError, "Failed to create new proc ID.");
+			}
+
+			JOB_ID_KEY jid(cluster, procid);
+			ClassAd *proc_ad = m_hash.make_job_ad(jid, 0, idx, false, false, NULL, NULL);
+			process_submit_errstack(m_hash.error_stack());
+			if (!proc_ad) {
+				THROW_EX(RuntimeError, "Failed to create new job ad");
+			}
+
+			// before sending procid 0, also send the cluster ad.
+			int rval = 0;
+			if ((procid == 0) || factory_submit) {
+				classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
+				if (clusterad) {
+					rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+				}
+			}
+			// send the proc ad
+			if ((rval >= 0) && ! factory_submit) {
+				rval = SendJobAttributes(jid, *proc_ad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+			}
+			process_submit_errstack(m_hash.error_stack());
+			if (rval < 0) {
+				THROW_EX(ValueError, "Failed to create send job attributes");
+			}
+
+			if (keep_results) {
+				boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
+				results_ad->CopyFromChain(*proc_ad);
+				ad_results.attr("append")(results_ad);
+			}
+
+			// For factory submits, we don't actually loop over the queue number
+			// and we want a new cluster (i.e. factory) for each queue statement.
+			if (factory_submit) {
+				// force re-initialization if this hash is used again.
+				m_hash.reset();
+				break;
+			}
+		}
+#endif
 
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
@@ -2001,9 +2755,303 @@ public:
         return cluster;
     }
 
+	boost::shared_ptr<SubmitResult>
+	queue_from_iter(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object from)
+	{
+		if (!txn.get() || !txn->transaction()) { THROW_EX(RuntimeError, "Job queue attempt without active transaction"); }
+
+		// Before calling init_base_ad(), we should invoke methods to tell
+		// the submit code if we want file checks, and to tell the version of the
+		// remote schedd.  If for some reason we do not have a the remote
+		// schedd version, assume it is running the same version we are (this is
+		// the same logic employed by condor_submit).
+
+		m_hash.setDisableFileChecks( param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", true) ? 1 : 0 );
+		if ( txn->schedd_version().length() > 0 ) {
+			m_hash.setScheddVersion(txn->schedd_version().c_str());
+		} else {
+			m_hash.setScheddVersion(CondorVersion());
+		}
+
+		bool factory_submit = false;
+		long long max_materialize = INT_MAX;
+		const int first_proc_id = 0; // someday maybe this will be non-zero?
+		int num_jobs = 0;
+
+		if (m_hash.init_base_ad(time(NULL), txn->owner().c_str())) {
+			process_submit_errstack(m_hash.error_stack());
+			THROW_EX(RuntimeError, "Failed to create a cluster ad");
+		}
+		process_submit_errstack(m_hash.error_stack());
+
+		factory_submit = is_factory(max_materialize, txn);
+
+		int cluster = txn->newCluster();
+		if (cluster < 0) {
+			THROW_EX(RuntimeError, "Failed to create new cluster.");
+		}
+		// this will be a single use cluster,
+		m_queue_may_append_to_cluster = false;
+
+		if (factory_submit) {
+			char path[4096];
+			if (getcwd(path, 4095)) { m_hash.set_submit_param("FACTORY.Iwd", path); }
+		}
+
+		JOB_ID_KEY jid;
+		int step=0, item_index=0, rval;
+		SubmitStepFromPyIter ssi(m_hash, JOB_ID_KEY(cluster, first_proc_id), count, from);
+
+		if (factory_submit) {
+
+			// get the first rowdata, we need that to build the submit digest, etc
+			rval = ssi.next(jid, item_index, step);
+			if (rval < 0) { THROW_EX(RuntimeError, ssi.errmsg()); }
+
+			// turn the submit hash into a submit digest
+			std::string submit_digest;
+			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// make a proc0 ad (because that's the same as a cluster ad)
+			ClassAd *proc_ad = m_hash.make_job_ad(JOB_ID_KEY(cluster, 0), 0, 0, false, false, NULL, NULL);
+			process_submit_errstack(m_hash.error_stack());
+			if ( ! proc_ad) {
+				THROW_EX(RuntimeError, "Failed to create new job ad");
+			}
+
+			// send the cluster ad
+			classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
+			if (clusterad) {
+				rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+				process_submit_errstack(m_hash.error_stack());
+				if (rval < 0) {
+					THROW_EX(ValueError, "Failed to create send job attributes");
+				}
+			}
+
+			// send the itemdata (if any)
+			int row_count = 1;
+			if (ssi.has_items()) {
+				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, ssi.fea().items_filename, &row_count) < 0 || row_count <= 0) {
+					THROW_EX(ValueError, "Failed to to send materialize itemdata");
+				}
+				num_jobs = row_count * ssi.step_size();
+			}
+
+			// append the queue statement
+			submit_digest += "\n";
+			submit_digest += "Queue ";
+			if (count) { formatstr_cat(submit_digest, "%d ", count); }
+			auto_free_ptr submit_vars(ssi.vars().print_to_delimed_string(","));
+			if (submit_vars.ptr()) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+			//char slice_str[16*3+1];
+			//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
+			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename.c_str(); }
+			submit_digest += "\n";
+
+			// materialize all of the jobs unless the user requests otherwise.
+			// (the admin can also set a limit which is applied at the schedd)
+			max_materialize = MIN(max_materialize, num_jobs);
+			max_materialize = MAX(max_materialize, 1);
+
+			// send the submit digest to the schedd. the schedd will parse the digest at this point
+			// and return success or failure.
+			if (SetJobFactory(cluster, (int)max_materialize, NULL, submit_digest.c_str()) < 0) {
+				THROW_EX(RuntimeError, "Failed to send job factory for max_materilize.");
+			}
+
+
+		} else {
+
+			while ((rval = ssi.next(jid, item_index, step)) > 0) {
+
+				int procid = txn->newProc();
+				if (procid < 0) { THROW_EX(RuntimeError, "Failed to create new proc ID."); }
+				if (procid != jid.proc) { THROW_EX(RuntimeError, "Internal error: newProc does not match iterator procid"); }
+
+				ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
+				process_submit_errstack(m_hash.error_stack());
+				if ( ! proc_ad) { THROW_EX(RuntimeError, "Failed to create new job ad"); }
+
+				// on first iteration, send the cluster ad (if any) before the first proc ad
+				if (rval == 2) {
+					classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
+					if (clusterad) {
+						rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+					}
+				}
+				// send the proc ad unless there was a failure.
+				if (rval >= 0) {
+					rval = SendJobAttributes(jid, *proc_ad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
+				}
+				process_submit_errstack(m_hash.error_stack());
+				if (rval < 0) {
+					THROW_EX(ValueError, "Failed to create send job attributes");
+				}
+
+				++num_jobs;
+			}
+
+		}
+
+		if (rval < 0) { THROW_EX(RuntimeError, ssi.errmsg()); }
+
+		if (param_boolean("SUBMIT_SEND_RESCHEDULE",true)) {
+			txn->reschedule();
+		}
+		m_hash.warn_unused(stderr, "Submit object");
+		process_submit_errstack(m_hash.error_stack());
+
+		boost::shared_ptr<SubmitResult> result(new SubmitResult(JOB_ID_KEY(cluster,0), num_jobs, m_hash.get_cluster_ad()));
+
+		return result;
+	}
+
+// (boost::python::arg("self"),
+	//boost::python::arg("count")=1,
+	//boost::python::arg("from")=boost::python::object(),
+	//boost::python::arg("clusterid")=1,
+	//boost::python::arg("procid")=0,
+	//boost::python::arg("qdate")=0
+	//boost::python::arg("owner")=std::string(),
+	boost::shared_ptr<SubmitJobsIterator>
+	iterjobs(int count, boost::python::object from, int clusterid, int procid, time_t qdate, const std::string owner)
+	{
+		if (clusterid < 0 || procid < 0) { THROW_EX(RuntimeError, "Job id out of range"); }
+
+		if ( ! clusterid) clusterid = 1;
+		if ( ! qdate) qdate = time(NULL);
+
+		std::string p0wner;
+		if ( ! owner.empty()) {
+			// PRAGMA_REMIND("replace this with a proper username validation function?")
+			if (std::string::npos != owner.find_first_of(" \t\n\r")) { THROW_EX(ValueError, "Invalid characters in Owner"); }
+			p0wner = owner;
+		} else {
+			auto_free_ptr user(my_username());
+			if (user) {
+				p0wner = user.ptr();
+			} else {
+				p0wner = "unknown";
+			}
+		}
+
+		SubmitJobsIterator *sji;
+		if (PyIter_Check(from.ptr())) {
+			sji = new SubmitJobsIterator(m_hash, false, JOB_ID_KEY(clusterid, procid), count, from, qdate, p0wner);
+		} else {
+			sji = new SubmitJobsIterator(m_hash, false, JOB_ID_KEY(clusterid, procid), count, m_qargs, m_ms_inline, qdate, p0wner);
+		}
+		boost::shared_ptr<SubmitJobsIterator> iter(sji);
+		return iter;
+	}
+
+	boost::shared_ptr<SubmitJobsIterator>
+	iterprocs(int count, boost::python::object from, int clusterid, int procid, time_t qdate, const std::string owner)
+	{
+		if (clusterid < 0 || procid < 0) { THROW_EX(RuntimeError, "Job id out of range"); }
+		if ( ! clusterid) clusterid = 1;
+		if ( ! qdate) qdate = time(NULL);
+
+		std::string p0wner;
+		if ( ! owner.empty()) {
+			// PRAGMA_REMIND("replace this with a proper username validation function?")
+			if (std::string::npos != owner.find_first_of(" \t\n\r")) { THROW_EX(ValueError, "Invalid characters in Owner"); }
+			p0wner = owner;
+		} else {
+			auto_free_ptr user(my_username());
+			if (user) {
+				p0wner = user.ptr();
+			} else {
+				p0wner = "unknown";
+			}
+		}
+
+		SubmitJobsIterator * sji;
+		if (PyIter_Check(from.ptr())) {
+			sji = new SubmitJobsIterator(m_hash, true, JOB_ID_KEY(clusterid, procid), count, from, qdate, p0wner);
+		} else {
+			sji = new SubmitJobsIterator(m_hash, true, JOB_ID_KEY(clusterid, procid), count, m_qargs, m_ms_inline, qdate, p0wner);
+		}
+		boost::shared_ptr<SubmitJobsIterator> iter(sji);
+		return iter;
+	}
+
+	boost::shared_ptr<QueueItemsIterator>
+	iterqitems(const std::string qline)
+	{
+		const char * pqargs = "";
+		bool use_remainder = true;
+
+		if ( ! qline.empty()) {
+			// incase they sent a string that starts with the word "queue", skip over that now.
+			pqargs = SubmitHash::is_queue_statement(qline.c_str());
+			if ( ! pqargs) pqargs = qline.c_str();
+			use_remainder = false;
+		} else if ( ! m_qargs.empty()) {
+			pqargs = m_qargs.c_str();
+			use_remainder = true;
+		}
+
+		QueueItemsIterator * qit = new QueueItemsIterator();
+		if (qit) {
+			qit->init(m_hash, pqargs);
+			if (qit->needs_submit_lines() && ! use_remainder) {
+				THROW_EX(RuntimeError, "inline items not available");
+			}
+
+			size_t ix; int line;
+			m_ms_inline.save_pos(ix, line);
+			qit->load_items(m_hash, m_ms_inline);
+			m_ms_inline.rewind_to(ix, line);
+		}
+
+		boost::shared_ptr<QueueItemsIterator> iter(qit);
+		return iter;
+	}
+
+	std::string
+	getQArgs() const
+	{
+		if (m_qargs.empty()) { return std::string(); }
+		return std::string(m_qargs);
+	}
+
+	// set queue arguments from input, stripping of the leading word 'queue' if needed.
+	void
+	setQArgs(const std::string qline)
+	{
+		if (qline.empty()) { m_qargs.clear(); m_ms_inline.reset(); m_remainder.clear(); }
+
+		if (qline.find_first_of("\n") != std::string::npos) {
+			THROW_EX(ValueError, "QArgs cannot contain a newline character");
+		}
+
+		const char * qargs = SubmitHash::is_queue_statement(qline.c_str());
+		if (qargs) { // if we skipped over a "queue" keyword, then by definition the args were changed
+			m_qargs = qargs;
+			m_ms_inline.reset();
+			m_remainder.clear();
+		} else if (qline != m_qargs) { // if the args changed, clear the submit remainder
+			m_qargs = qline;
+			m_ms_inline.reset();
+			m_remainder.clear();
+		}
+	}
+
 private:
     SubmitHash m_hash;
+    std::string m_qargs;
+    std::string m_remainder; // holds remainder of input after queue statement.
+    MACRO_SOURCE m_src_pystring; // needed for MacroStreamMemoryFile to point to
+    MacroStreamMemoryFile m_ms_inline; // extra lines after queue statement, used if we are doing inline foreach data
+    bool m_queue_may_append_to_cluster; // when true, the queue() method can add jobs to the existing cluster
 };
+
+// shared source for all instances of MacroStreamMemoryFile that have an empty stream
+MACRO_SOURCE Submit::EmptyMacroSrc = { false, false, 3, -2, -1, -2 }; 
+
+
 
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 5);
@@ -2031,8 +3079,11 @@ void export_schedd()
         ;
 
     enum_<CondorQ::QueryFetchOpts>("QueryOpts")
-        .value("Default", CondorQ::fetch_Default)
+        .value("Default", CondorQ::fetch_Jobs)
         .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
+        .value("GroupBy", CondorQ::fetch_GroupBy)
+        .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
+        .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
         ;
 
     enum_<BlockingMode>("BlockingMode")
@@ -2060,9 +3111,9 @@ void export_schedd()
             ":param opts: Any one of the QueryOpts enum.\n"
             ":return: A list of matching jobs, containing the requested attributes.",
 #if BOOST_VERSION < 103400
-            (boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #endif
             ))
         .def("act", &Schedd::actOnJobs2)
@@ -2111,7 +3162,14 @@ void export_schedd()
             ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
             ":param match: Number of matches to return.\n"
-            ":return: An iterator for the matching job ads")
+            ":param since: optional job id or expression that will signal the end of records to return; the job that matches this will not be returned.\n"
+            ":return: An iterator for the matching job ads",
+#if BOOST_VERSION >= 103400
+             (boost::python::arg("self"),
+#endif
+             boost::python::arg("requirements"), boost::python::arg("projection"), boost::python::arg("match")=-1,
+             boost::python::arg("since")=boost::python::object())
+            )
         .def("refreshGSIProxy", &Schedd::refreshGSIProxy, "Refresh the GSI proxy for a given job\n"
             ":param cluster: Job cluster.\n"
             ":param proc: Job proc.\n"
@@ -2129,9 +3187,9 @@ void export_schedd()
             ":param name: A name to identify the query (defaults to the schedd name).\n"
             ":return: An iterator for the matching job ads",
 #if BOOST_VERSION < 103400
-            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default, boost::python::arg("name")=boost::python::object())
+            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #else
-            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default, boost::python::arg("name")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #endif
             )
         .def("negotiate", &Schedd::negotiate, boost::python::with_custodian_and_ward_postcall<1, 0>(),
@@ -2166,13 +3224,48 @@ void export_schedd()
 
     class_<Submit>("Submit")
         .def(init<boost::python::dict>())
+        .def(init<std::string>())
         //.def_pickle(submit_pickle_suite())
         .def("expand", &Submit::expand, "Expand all macros for a given attribute")
         .def("queue", &Submit::queue, "Submit the current object to the remote queue\n"
              ":param txn: An active transaction object\n"
              ":return: Cluster ID of submitted job(s).  Throws a RuntimeError if the submission fails\n",
-             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=1, boost::python::arg("ad_results")=boost::python::object())
+             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("ad_results")=boost::python::object())
             )
+        .def("queue_with_itemdata", &Submit::queue_from_iter, "Submit the current object to the remote queue\n"
+             ":param txn: An active transaction object\n"
+             ":param count: a queue count for each item from the iterator, defaults to 1\n"	 // set to 0 in prototype, treated as 1 by queue method.
+             ":param from: an iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'\n"
+             ":return: a SubmitResult class, containing cluster ID, cluster ClassAd and range of Job ids Cluster ID of submitted job(s).  Throws a RuntimeError if the submission fails\n",
+             (boost::python::arg("self"), boost::python::arg("txn"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object())
+            )
+        .def("jobs", &Submit::iterjobs, "Turn the current object into sequence of simulated job ClassAds\n"
+             ":param count: the queue count for each item in the from list, defaults to 1\n"
+             ":param from: a iterator of strings or dictionaries containing the itemdata for each job e.g. 'queue in' or 'queue from'\n"
+             ":param clusterid: the value to use for ClusterId when making job ads, defaults to 1\n"
+             ":param procid: the initial value for ProcId when making job ads, defaults to 0\n"
+             ":param qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.\n"
+             ":param owner: a string value for the Owner attribute of the job\n"
+             ":return: An iterator for the resulting job ads.  Throws a RuntimeError if valid job ads cannot be made\n",
+             (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
+            )
+        .def("procs", &Submit::iterprocs, "Turn the current object into sequence of simulate job proc ClassAds. The first ClassAd will be the cluster ad plus a ProcId attribute\n"
+             ":param count: the queue count for each item in the from list, defaults to 1\n"
+             ":param from: a iterator of strings or dictionaries containing the foreach data e.g. 'queue in' or 'queue from'\n"
+             ":param clusterid: the value to use for ClusterId when making job ads, defaults to 1\n"
+             ":param procid: the initial value for ProcId when making job ads, defaults to 0\n"
+             ":param qdate: a UNIX timestamp value for the QDATE attribute of the jobs, 0 means use the current time.\n"
+             ":param owner: a string value for the Owner attribute of the job\n"
+             ":return: An iterator for the resulting job ads.  Throws a RuntimeError if valid job ads cannot be made\n",
+             (boost::python::arg("self"), boost::python::arg("count")=0, boost::python::arg("from")=boost::python::object(), boost::python::arg("clusterid")=1, boost::python::arg("procid")=0, boost::python::arg("qdate")=0, boost::python::arg("owner")=std::string())
+            )
+        .def("itemdata", &Submit::iterqitems, "Iterate the itemdata from the queue statement\n"
+             ":param queue: a submit queue statement, or the arguments to a submit queue statement, defaults to QArgs\n"
+             ":return: An iterator for the resulting items\n",
+             (boost::python::arg("self"), boost::python::arg("qargs")=std::string())
+            )
+        .def("getQArgs", &Submit::getQArgs, "get the arguments of Queue statement passed to the constructor\n")
+        .def("setQArgs", &Submit::setQArgs, "set the arguments for the Queue statement\n")
         .def("__delitem__", &Submit::deleteItem)
         .def("__getitem__", &Submit::getItem)
         .def("__setitem__", &Submit::setItem)
@@ -2190,17 +3283,37 @@ void export_schedd()
         .def("update", &Submit::update, "Copy the contents of a given Submit object into the current object")
         ;
 
+    class_<SubmitResult>("SubmitResult", no_init)
+        .def("__str__", &SubmitResult::toString)
+        .def("cluster", &SubmitResult::cluster, "return the clusterid from the submitted jobs")
+        .def("clusterad", &SubmitResult::clusterad, "return the Cluster ad from the submitted jobs")
+        .def("first_proc", &SubmitResult::first_procid, "return the first ProcId from the submitted jobs")
+        .def("num_procs", &SubmitResult::num_procs, "return the number of submitted jobs")
+        ;
+    register_ptr_to_python< boost::shared_ptr<SubmitResult> >();
+
+    class_<SubmitJobsIterator>("SubmitJobsIterator", no_init)
+        .def(NEXT_FN, &SubmitJobsIterator::next, "return the next ad from Submit.jobs.")
+        .def("__iter__", &SubmitJobsIterator::pass_through)
+        .def("clusterad", &SubmitJobsIterator::clusterad, "return the Cluster ad that proc ads should be chained to")
+        ;
+
+    class_<QueueItemsIterator>("QueueItemsIterator", no_init)
+        .def(NEXT_FN, &QueueItemsIterator::next, "return the next item from a submit queue statement.")
+        .def("__iter__", &QueueItemsIterator::pass_through)
+        ;
+
     class_<RequestIterator>("ResourceRequestIterator", no_init)
-        .def("next", &RequestIterator::next, "Get next resource request.")
+        .def(NEXT_FN, &RequestIterator::next, "Get next resource request.")
         ;
 
     class_<HistoryIterator>("HistoryIterator", no_init)
-        .def("next", &HistoryIterator::next)
+        .def(NEXT_FN, &HistoryIterator::next)
         .def("__iter__", &HistoryIterator::pass_through)
         ;
 
     class_<QueryIterator>("QueryIterator", no_init)
-        .def("next", &QueryIterator::next, "Return the next ad from the query results.\n"
+        .def(NEXT_FN, &QueryIterator::next, "Return the next ad from the query results.\n"
             ":param mode: One of the BlockingMode enum; Blocking or NonBlocking.\n"
             ":return: The next ad in the query results.  If NonBlocking mode is used, returns None if no ad is available..\n"
             "Throws a StopIterator exception if no results are available..\n",
@@ -2224,5 +3337,7 @@ void export_schedd()
     register_ptr_to_python< boost::shared_ptr<RequestIterator> >();
     register_ptr_to_python< boost::shared_ptr<HistoryIterator> >();
     register_ptr_to_python< boost::shared_ptr<QueryIterator> >();
+    register_ptr_to_python< boost::shared_ptr<QueueItemsIterator> >();
+    register_ptr_to_python< boost::shared_ptr<SubmitJobsIterator> >();
 
 }

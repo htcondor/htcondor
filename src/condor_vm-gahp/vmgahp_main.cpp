@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
 #include "vmgahp_common.h"

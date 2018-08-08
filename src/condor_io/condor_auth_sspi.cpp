@@ -370,7 +370,7 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 }
 
 int 
-Condor_Auth_SSPI::wrap(char *   input, 
+Condor_Auth_SSPI::wrap(const char *   input,
                              int      input_len, 
                              char*&   output, 
                              int&     output_len)
@@ -425,7 +425,7 @@ Condor_Auth_SSPI::wrap(char *   input,
 }
 
 int 
-Condor_Auth_SSPI::unwrap(char *   input, 
+Condor_Auth_SSPI::unwrap(const char *   input,
                              int      input_len, 
                              char*&   output, 
                              int&     output_len)

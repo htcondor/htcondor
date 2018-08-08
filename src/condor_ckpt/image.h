@@ -137,7 +137,7 @@ extern "C" {
 	void init_image_with_iwd( char *iwd );
 	void init_image_relocatable( int truth );
 	void _condor_prestart( int syscall_mode );
-	void Suicide();
+	void Suicide() GCC_NORETURN;
 }
 
 #define DUMP( leader, name, fmt ) \

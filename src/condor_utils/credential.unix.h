@@ -29,7 +29,6 @@
 
 #include "condor_common.h"
 #include <time.h>
-#include <iostream>
 #include "classad/classad_distribution.h"
 
 #include "MyString.h"

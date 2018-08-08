@@ -91,6 +91,7 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_MPI );
 	printf( "%s = True\n", ATTR_HAS_TDP );
 	printf( "%s = True\n", ATTR_HAS_JOB_DEFERRAL );
+    printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
 
 		/*
 		  Attributes describing what kinds of Job Info Communicators

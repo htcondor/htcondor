@@ -110,16 +110,16 @@ convertHistoryFile(const char *oldHistoryFileName)
 			Readbuf.chomp();
 			if( strncmp(Readbuf.Value(), CLUSTERID, strlen(CLUSTERID)) == 0 ) {
 				tmploc = Readbuf.FindChar('=');
-				ClusterId = Readbuf.Substr(tmploc+2, Readbuf.Length() -1);
+				ClusterId = Readbuf.substr(tmploc+2, Readbuf.Length());
 			}else if( strncmp(Readbuf.Value(), PROCID, strlen(PROCID)) == 0 ) {
 				tmploc = Readbuf.FindChar('=');
-				ProcId = Readbuf.Substr(tmploc+2, Readbuf.Length() -1);
+				ProcId = Readbuf.substr(tmploc+2, Readbuf.Length());
 			}else if( strncmp(Readbuf.Value(), OWNER, strlen(OWNER)) == 0 ) {
 				tmploc = Readbuf.FindChar('=');
-				Owner = Readbuf.Substr(tmploc+2, Readbuf.Length() -1);
+				Owner = Readbuf.substr(tmploc+2, Readbuf.Length());
 			}else if( strncmp(Readbuf.Value(), COMPLETIONDATE, strlen(COMPLETIONDATE)) == 0 ) {
 				tmploc = Readbuf.FindChar('=');
-				CompletionDate = Readbuf.Substr(tmploc+2, Readbuf.Length() -1);
+				CompletionDate = Readbuf.substr(tmploc+2, Readbuf.Length());
 			}
 		}
 	}

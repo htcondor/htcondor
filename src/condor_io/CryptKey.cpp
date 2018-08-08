@@ -40,7 +40,7 @@ KeyInfo :: KeyInfo(const KeyInfo& copy)
     init(copy.keyData_, copy.keyDataLen_);
 }
 
-KeyInfo :: KeyInfo(unsigned char * keyData,
+KeyInfo :: KeyInfo(const unsigned char * keyData,
                    int             keyDataLen,
                    Protocol        protocol,
                    int             duration )
@@ -71,7 +71,7 @@ KeyInfo& KeyInfo :: operator=(const KeyInfo& copy)
     return *this;
 }
 
-void KeyInfo :: init(unsigned char * keyData, int keyDataLen)
+void KeyInfo :: init(const unsigned char * keyData, int keyDataLen)
 {
     if ((keyDataLen > 0) && keyData) {
         keyDataLen_ = keyDataLen;

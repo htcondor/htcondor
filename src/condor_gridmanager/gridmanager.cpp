@@ -44,6 +44,7 @@
 
 #include "ec2job.h"
 #include "gcejob.h"
+#include "azurejob.h"
 
 #if !defined(WIN32)
 #  include "creamjob.h"
@@ -52,8 +53,6 @@
 #define QMGMT_TIMEOUT 15
 
 #define UPDATE_SCHEDD_DELAY		5
-
-#define HASH_TABLE_SIZE			500
 
 struct JobType
 {
@@ -71,10 +70,8 @@ struct VacateRequest {
 	action_result_t result;
 };
 
-HashTable <PROC_ID, VacateRequest> pendingScheddVacates( HASH_TABLE_SIZE,
-														 hashFuncPROC_ID );
-HashTable <PROC_ID, VacateRequest> completedScheddVacates( HASH_TABLE_SIZE,
-														   hashFuncPROC_ID );
+HashTable <PROC_ID, VacateRequest> pendingScheddVacates( hashFuncPROC_ID );
+HashTable <PROC_ID, VacateRequest> completedScheddVacates( hashFuncPROC_ID );
 
 struct JobStatusRequest {
 	PROC_ID job_id;
@@ -82,10 +79,8 @@ struct JobStatusRequest {
 	int job_status;
 };
 
-HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( HASH_TABLE_SIZE,
-														hashFuncPROC_ID );
-HashTable <PROC_ID, JobStatusRequest> completedJobStatus( HASH_TABLE_SIZE,
-														  hashFuncPROC_ID );
+HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( hashFuncPROC_ID );
+HashTable <PROC_ID, JobStatusRequest> completedJobStatus( hashFuncPROC_ID );
 
 
 SimpleList<int> scheddUpdateNotifications;
@@ -95,8 +90,7 @@ struct ScheddUpdateRequest {
 	bool m_notify;
 };
 
-HashTable <PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates( HASH_TABLE_SIZE,
-													 hashFuncPROC_ID );
+HashTable <PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates( hashFuncPROC_ID );
 bool addJobsSignaled = false;
 bool updateJobsSignaled = false;
 bool checkLeasesSignaled = false;
@@ -117,12 +111,14 @@ int maxScheddFailures = 10;	// Years of careful research...
 void RequestContactSchedd();
 void doContactSchedd();
 
+std::map<std::string, BaseJob*> FetchProxyList;
+
 // handlers
 int ADD_JOBS_signalHandler( Service *, int );
 int REMOVE_JOBS_signalHandler( Service *, int );
 void CHECK_LEASES_signalHandler();
 int UPDATE_JOBAD_signalHandler( Service *, int );
-
+int FetchProxyDelegationHandler( Service *, int, Stream * );
 
 static bool jobExternallyManaged(ClassAd * ad)
 {
@@ -363,6 +359,14 @@ Init()
 	new_type->AdMatchFunc = GCEJobAdMatch;
 	new_type->CreateFunc = GCEJobCreate;
 	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "Azure" );
+	new_type->InitFunc = AzureJobInit;
+	new_type->ReconfigFunc = AzureJobReconfig;
+	new_type->AdMatchFunc = AzureJobAdMatch;
+	new_type->CreateFunc = AzureJobCreate;
+	jobTypes.Append( new_type );
 #endif
 	
 	new_type = new JobType;
@@ -433,6 +437,12 @@ Register()
 */
 	daemonCore->Register_Timer( 60, 60, CHECK_LEASES_signalHandler,
 								"CHECK_LEASES_signalHandler" );
+
+	daemonCore->Register_Command( FETCH_PROXY_DELEGATION,
+								  "FETCH_PROXY_DELEGATION",
+								  &FetchProxyDelegationHandler,
+								  "FetchProxyDelegationHandler",
+								  NULL, DAEMON, D_COMMAND, true );
 
 	Reconfig();
 }
@@ -590,7 +600,6 @@ doContactSchedd()
 	char *job_id_str;
 	PROC_ID job_id;
 	CondorError errstack;
-	int tmp_int;
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
@@ -1052,10 +1061,7 @@ contact_schedd_next_add_job:
 					failure_line_num = __LINE__;
 					commit_transaction = false;
 					goto contact_schedd_disconnect;
-				} else if ( GetAttributeInt( curr_job->procID.cluster,
-											 curr_job->procID.proc,
-											 ATTR_CLUSTER_ID,
-											 &tmp_int ) < 0 ) {
+				} else if ( errno == ENOENT ) {
 						// The job is not in the schedd's job queue. This
 						// probably means that the user did a condor_rm -f,
 						// so pretend that all updates for the job succeed.
@@ -1254,4 +1260,69 @@ dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	return;
 }
 
+int FetchProxyDelegationHandler( Service *, int, Stream *sock )
+{
+	ReliSock* rsock = (ReliSock*)sock;
+	std::string xfer_id;
+	INFNBatchJob *job = NULL;
+	filesize_t file_size = 0;
+	time_t expiration_time = 0;
+	time_t result_expiration_time = 0;
+	int rc = 0;
+	std::map<std::string, BaseJob*>::iterator xfer_ptr;
+
+		// make sure this connection is authenticated, and we know who
+		// the user is.  also, set a timeout, since we don't want to
+		// block long trying to read from our client.
+	rsock->timeout( 10 );
+	rsock->decode();
+
+	dprintf( D_FULLDEBUG, "FetchProxyDelegationHandler(): client: %s\n",
+			 rsock->getAuthenticatedName() );
+
+		// read the xfer id from the client
+	rsock->decode();
+	if ( !rsock->code( xfer_id ) || !rsock->end_of_message() ) {
+		dprintf( D_FAILURE, "FetchProxyDelegationHandler(): failed to read xfer id\n" );
+		goto refuse;
+	}
+	dprintf( D_FULLDEBUG, "FetchProxyDelegationHandler(): xfer id: %s\n", xfer_id.c_str() );
+
+	xfer_ptr = FetchProxyList.find( xfer_id );
+	if ( xfer_ptr == FetchProxyList.end() ) {
+		dprintf( D_FAILURE, "FetchProxyDelegationHandler(): unknown transfer id: %s\n",
+				 xfer_id.c_str() );
+		goto refuse;
+	}
+
+	job = dynamic_cast<INFNBatchJob*>(xfer_ptr->second);
+	if ( job == NULL ) {
+		dprintf( D_FAILURE, "FetchProxyDelegationHandler(): cast failed\n" );
+		goto refuse;
+	}
+
+	dprintf( D_FULLDEBUG, "Delegating proxy %s\n", job->jobProxy->proxy_filename );
+
+	// Delegate the proxy to the client
+	rsock->encode();
+	rsock->put( OK );
+	rsock->end_of_message();
+
+	expiration_time = GetDesiredDelegatedJobCredentialExpiration( job->jobAd );
+
+	rc = rsock->put_x509_delegation( &file_size, job->jobProxy->proxy_filename,
+									 expiration_time, &result_expiration_time );
+	if ( rc < 0 ) {
+			// transfer failed
+		dprintf( D_ALWAYS, "FetchProxyDelegationHandler(): delegation failed\n" );
+	}
+
+	return TRUE;
+
+ refuse:
+	rsock->encode();
+	rsock->put( NOT_OK );
+	rsock->end_of_message();
+	return FALSE;
+}
 

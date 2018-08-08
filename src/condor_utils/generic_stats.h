@@ -26,7 +26,7 @@
 //   * declare your probes as class (or struct) members
 //     * use stats_entry_abs<T>    for probes that need a value and a max value (i.e. number of shadows processes)
 //     * use stats_entry_recent<T> for probes that need a value and a recent value (i.e. number of jobs that have finished)
-//     * use stats_entry_recent<Probe> for general statistics value (min,max,avg,std)
+//     * use stats_entry_probe<T>  for general statistics value (min,max,avg,std)
 //     * use stats_recent_counter_timer for runtime accumulators (int count, double runtime with overall and recent)
 //     * use stats_ema for exponential moving averages
 //     * use stats_sum_ema_rate for computing a running total and exponential moving averages of the rate of change
@@ -1172,6 +1172,7 @@ const int ProbeDetailMode_Normal  = (0<<2); // show all 6 fields Count, Sum, Avg
 const int ProbeDetailMode_Tot     = (1<<2); // show Sum as integer value without tag
 const int ProbeDetailMode_Brief   = (2<<2); // show Avg without tag, Min, Max
 const int ProbeDetailMode_RT_SUM  = (3<<2); // show runtime fields, Sum=Runtime, Count published without tag
+const int ProbeDetailMode_CAMM    = (4<<2); // show 4 fields. Count, Avg, Min, Max
 
 // --------------------------------------------------------------------
 //  statistcs probe for histogram data.
@@ -1208,10 +1209,10 @@ public:
    static const int PubDefault = PubValue;
    void AppendToString(MyString & str) const {
       if (this->cLevels > 0) {
-         str += this->data[0];
+         str += IntToStr( this->data[0] );
          for (int ix = 1; ix <= this->cLevels; ++ix) {
             str += ", ";
-            str += this->data[ix];
+            str += IntToStr( this->data[ix] );
             }
          }
       }
@@ -1552,9 +1553,9 @@ int generic_stats_ParseConfigString(
 
 class StatisticsPool {
 public:
-   StatisticsPool(int size=30) 
-      : pub(size, MyStringHash, updateDuplicateKeys) 
-      , pool(size, hashFuncVoidPtr, updateDuplicateKeys) 
+   StatisticsPool()
+      : pub(hashFunction)
+      , pool(hashFuncVoidPtr)
       {
       };
    ~StatisticsPool();

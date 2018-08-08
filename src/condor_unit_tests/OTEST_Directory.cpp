@@ -146,6 +146,10 @@ static bool test_dircat_empty_file(void);
 static bool test_dircat_empty_file_delim(void);
 static bool test_dircat_non_empty(void);
 static bool test_dircat_non_empty_delim(void);
+static bool test_dirscat_no_delim(void);
+static bool test_dirscat_delim(void);
+static bool test_dirscat_alt_delim(void);
+static bool test_dirscat_extra_delim(void);
 static bool test_temp_dir_path(void);
 static bool test_create_temp_file(void);
 static bool test_create_temp_file_dir(void);
@@ -161,7 +165,8 @@ static MyString
 	empty_dir,
 	full_dir,
 	file_dir,
-	tmp;
+	tmp,
+	dircatbuf;
 
 static const char
 	*readme = "README";
@@ -294,6 +299,10 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_dircat_empty_file_delim);
 	driver.register_function(test_dircat_non_empty);
 	driver.register_function(test_dircat_non_empty_delim);
+	driver.register_function(test_dirscat_no_delim);
+	driver.register_function(test_dirscat_delim);
+	driver.register_function(test_dirscat_alt_delim);
+	driver.register_function(test_dirscat_extra_delim);
 	driver.register_function(test_temp_dir_path);
 	driver.register_function(test_create_temp_file);
 	driver.register_function(test_create_temp_file_dir);
@@ -2524,14 +2533,12 @@ static bool test_dircat_empty_path() {
 	expect.formatstr("%c%s", DIR_DELIM_CHAR, "File");
 	emit_output_expected_header();
 	emit_retval("%s", expect.Value());
-	const char* ret_val = dircat("", "File");
+	const char* ret_val = dircat("", "File", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
 	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
-		delete[] ret_val;
 		FAIL;
 	}
-	delete[] ret_val;
 	PASS;
 }
 
@@ -2544,14 +2551,12 @@ static bool test_dircat_empty_file() {
 	expect.formatstr("%s%c", "Path", DIR_DELIM_CHAR);
 	emit_output_expected_header();
 	emit_retval("%s", expect.Value());
-	const char* ret_val = dircat("Path", "");
+	const char* ret_val = dircat("Path", "", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
 	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
-		delete[] ret_val;
 		FAIL;
 	}
-	delete[] ret_val;
 	PASS;
 }
 
@@ -2567,14 +2572,12 @@ static bool test_dircat_empty_file_delim() {
 	expect.formatstr("%s%c", "Path", DIR_DELIM_CHAR);
 	emit_output_expected_header();
 	emit_retval("%s", expect.Value());
-	const char* ret_val = dircat(path.Value(), "");
+	const char* ret_val = dircat(path.Value(), "", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
 	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
-		delete[] ret_val;
 		FAIL;
 	}
-	delete[] ret_val;
 	PASS;
 }
 
@@ -2587,14 +2590,12 @@ static bool test_dircat_non_empty() {
 	expect.formatstr("%s%c%s", "Path", DIR_DELIM_CHAR, "File");
 	emit_output_expected_header();
 	emit_retval("Path%cFile", DIR_DELIM_CHAR);
-	const char* ret_val = dircat("Path", "File");
+	const char* ret_val = dircat("Path", "File", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
 	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
-		delete[] ret_val;
 		FAIL;
 	}
-	delete[] ret_val;
 	PASS;
 }
 
@@ -2611,14 +2612,97 @@ static bool test_dircat_non_empty_delim() {
 	expect.formatstr("%s%s", path.Value(), "File");
 	emit_output_expected_header();
 	emit_retval("%s", expect.Value());
-	const char* ret_val = dircat(path.Value(), "File");
+	const char* ret_val = dircat(path.Value(), "File", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
 	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
-		delete[] ret_val;
 		FAIL;
 	}
-	delete[] ret_val;
+	PASS;
+}
+
+static bool test_dirscat_no_delim() {
+	emit_test("Test dirscat() when passed a non-empty file name and a non-empty "
+		"path name that do not have directory delimiters");
+	MyString path;
+	path.formatstr("Path%cTo%cFile", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	emit_input_header();
+	emit_param("Path", "%s", path.Value());
+	emit_param("File name", "File");
+	MyString expect;
+	expect.formatstr("%s%c%s%c", path.Value(), DIR_DELIM_CHAR, "File", DIR_DELIM_CHAR);
+	emit_output_expected_header();
+	emit_retval("%s", expect.Value());
+	const char* ret_val = dirscat(path.Value(), "File", dircatbuf);
+	emit_output_actual_header();
+	emit_retval("%s", ret_val);
+	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_dirscat_delim() {
+	emit_test("Test dirscat() when passed a non-empty file name and a non-empty "
+		"path name that include the directory delimiter.");
+	MyString path;
+	path.formatstr("Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	emit_input_header();
+	emit_param("Path", "%s", path.Value());
+	emit_param("File name", "/File");
+	MyString expect;
+	expect.formatstr("%s%s%c", path.Value(), "File", DIR_DELIM_CHAR);
+	emit_output_expected_header();
+	emit_retval("%s", expect.Value());
+	const char* ret_val = dirscat(path.Value(), "/File", dircatbuf);
+	emit_output_actual_header();
+	emit_retval("%s", ret_val);
+	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_dirscat_alt_delim() {
+	emit_test("Test dirscat() when passed a non-empty file name and a non-empty "
+		"path name that include the directory delimiter.");
+	MyString path;
+	path.formatstr("Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	emit_input_header();
+	emit_param("Path", "%s", path.Value());
+	emit_param("File name", "File/");
+	MyString expect;
+	expect.formatstr("%s%s%c", path.Value(), "File", DIR_DELIM_CHAR);
+	emit_output_expected_header();
+	emit_retval("%s", expect.Value());
+	const char* ret_val = dirscat(path.Value(), "File/", dircatbuf);
+	emit_output_actual_header();
+	emit_retval("%s", ret_val);
+	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_dirscat_extra_delim() {
+	emit_test("Test dirscat() when passed a non-empty file name and a non-empty "
+		"path name that include exceess directory delimiters.");
+	MyString barepath;
+	barepath.formatstr("Path%cTo%cFile", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	MyString path(barepath); path += "//";
+	emit_input_header();
+	emit_param("Path", "%s", path.Value());
+	emit_param("File name", "/File//");
+	MyString expect;
+	expect.formatstr("%s%c%s%c", barepath.Value(), DIR_DELIM_CHAR, "File", DIR_DELIM_CHAR);
+	emit_output_expected_header();
+	emit_retval("%s", expect.Value());
+	const char* ret_val = dirscat(path.Value(), "/File//", dircatbuf);
+	emit_output_actual_header();
+	emit_retval("%s", ret_val);
+	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+		FAIL;
+	}
 	PASS;
 }
 

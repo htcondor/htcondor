@@ -30,7 +30,6 @@
 #include "directory.h"
 #include "condor_config.h"
 #include "spooled_job_files.h"
-#include "condor_string.h"
 #include "util_lib_proto.h"
 #include "daemon.h"
 #include "daemon_types.h"
@@ -39,11 +38,14 @@
 #include "globus_utils.h"
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
-#include "file_transfer_db.h"
+#include "mk_cache_links.h"
 #include "subsystem_info.h"
 #include "condor_url.h"
 #include "my_popen.h"
+#include "file_transfer_stats.h"
+#include "utc_time.h"
 #include <list>
+#include <fstream>
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -101,6 +103,7 @@ extern "C" {
 	int		set_seed( int );
 }
 
+
 struct upload_info {
 	FileTransfer *myobj;
 };
@@ -108,23 +111,6 @@ struct upload_info {
 struct download_info {
 	FileTransfer *myobj;
 };
-
-// Hash function for FileCatalogHashTable
-static unsigned int compute_filename_hash(const MyString &key) 
-{
-	return key.Hash();
-}
-
-// Hash function for pid table.
-static unsigned int compute_transkey_hash(const MyString &key) 
-{
-	return key.Hash();
-}
-
-static unsigned int compute_transthread_hash(const int &pid) 
-{
-	return (unsigned int)pid;
-}
 
 FileTransfer::FileTransfer()
 {
@@ -185,6 +171,7 @@ FileTransfer::FileTransfer()
 	m_sec_session_id = NULL;
 	I_support_filetransfer_plugins = false;
 	plugin_table = NULL;
+	multifile_plugins_enabled = false;
 	MaxUploadBytes = -1;  // no limit by default
 	MaxDownloadBytes = -1;
 }
@@ -196,14 +183,14 @@ FileTransfer::~FileTransfer()
 				"active transfer.  Cancelling transfer.\n");
 		abortActiveTransfer();
 	}
-	if (TransferPipe[0] >= 0) {
+	if (daemonCore && (TransferPipe[0] >= 0)) {
 		if( registered_xfer_pipe ) {
 			registered_xfer_pipe = false;
 			daemonCore->Cancel_Pipe(TransferPipe[0]);
 		}
 		daemonCore->Close_Pipe(TransferPipe[0]);
 	}
-	if (TransferPipe[1] >= 0) daemonCore->Close_Pipe(TransferPipe[1]);
+	if (daemonCore && (TransferPipe[1] >= 0)) daemonCore->Close_Pipe(TransferPipe[1]);
 	if (Iwd) free(Iwd);
 	if (ExecFile) free(ExecFile);
 	if (UserLogFile) free(UserLogFile);
@@ -219,7 +206,7 @@ FileTransfer::~FileTransfer()
 	if (DontEncryptOutputFiles) delete DontEncryptOutputFiles;
 	if (OutputDestination) delete OutputDestination;
 	if (IntermediateFiles) delete IntermediateFiles;
-	if (SpooledIntermediateFiles) delete SpooledIntermediateFiles;
+	if (SpooledIntermediateFiles) free(SpooledIntermediateFiles);
 	// Note: do _not_ delete FileToSend!  It points to OutputFile or Intermediate.
 	if (last_download_catalog) {
 		// iterate through and delete entries
@@ -323,6 +310,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	} else {
 		InputFiles = new StringList(NULL,",");
 	}
+	StringList PubInpFiles;
+	if (Ad->LookupString(ATTR_PUBLIC_INPUT_FILES, &dynamic_buf) == 1) {
+	      // Add PublicInputFiles to InputFiles list.
+	      // If these files will be transferred via web server cache,
+	      // they will be removed from InputFiles.
+	      PubInpFiles.initializeFromString(dynamic_buf);
+	      free(dynamic_buf);
+	      dynamic_buf = NULL;
+	      const char *path;
+	      PubInpFiles.rewind();
+	      while ((path = PubInpFiles.next()) != NULL) {
+		  if (!InputFiles->file_contains(path))
+		      InputFiles->append(path);			
+	      }
+	}
 	if (Ad->LookupString(ATTR_JOB_INPUT, buf, sizeof(buf)) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf) ) {			
@@ -330,7 +332,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
-
+	
 	// If we are spooling, we want to ignore URLs
 	// We want the file transfer plugin to be invoked at the starter, not the schedd.
 	// See https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=2162
@@ -345,7 +347,13 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		char *list = InputFiles->print_to_string();
 		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
 		free(list);
+	} 
+#ifdef HAVE_HTTP_PUBLIC_FILES    
+	else if (IsServer() && !is_spool && param_boolean("ENABLE_HTTP_PUBLIC_FILES", false)) {
+		// For files to be cached, change file names to URLs
+		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
 	}
+#endif
 	
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf, sizeof(buf)) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
@@ -386,7 +394,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	m_jobid.formatstr("%d.%d",Cluster,Proc);
 	if ( IsServer() && Spool ) {
 
-		SpoolSpace = gen_ckpt_name(Spool,Cluster,Proc,0);
+		std::string buf;
+		SpooledJobFiles::getJobSpoolPath(Ad, buf);
+		SpoolSpace = strdup(buf.c_str());
 		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
@@ -406,7 +416,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// Note: This will break Condor-C jobs if the executable is ever
 		//   spooled the old-fashioned way (which doesn't happen currently).
 		if ( IsServer() && Spool ) {
-			ExecFile = gen_ckpt_name(Spool,Cluster,ICKPT,0);
+			ExecFile = GetSpooledExecutablePath(Cluster, Spool);
 			if ( access(ExecFile,F_OK | X_OK) < 0 ) {
 				free(ExecFile); ExecFile = NULL;
 			}
@@ -438,7 +448,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			xferExec=1;
 		}
 
-		if ( xferExec && !InputFiles->file_contains(ExecFile) ) {
+		if ( xferExec && !InputFiles->file_contains(ExecFile) &&
+		  !PubInpFiles.file_contains(ExecFile)) {
+			// Don't add exec file if it already is in cached list
 			InputFiles->append(ExecFile);	
 		}	
 	} else if ( IsClient() && !simple_init ) {
@@ -572,8 +584,16 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
-	if(IsServer() && !spooling_output) {
-		if(!InitDownloadFilenameRemaps(Ad)) return 0;
+	if(!spooling_output) {
+		if(IsServer()) {
+			if(!InitDownloadFilenameRemaps(Ad)) return 0;
+		} 
+#ifdef HAVE_HTTP_PUBLIC_FILES
+		else if( !simple_init ) {
+			// Only add input remaps for starter receiving
+			AddInputFilenameRemaps(Ad);
+		}
+#endif
 	}
 
 	CondorError e;
@@ -600,7 +620,8 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 int
 FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
-	char *remap_fname = NULL;
+	std::string remap_fname;
+	std::string ulog_fname;
 
 	dprintf(D_FULLDEBUG,"Entering FileTransfer::InitDownloadFilenameRemaps\n");
 
@@ -608,10 +629,25 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	if(!Ad) return 1;
 
 	// when downloading files from the job, apply output name remaps
-	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS,&remap_fname)) {
-		AddDownloadFilenameRemaps(remap_fname);
-		free(remap_fname);
-		remap_fname = NULL;
+	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS,remap_fname)) {
+		AddDownloadFilenameRemaps(remap_fname.c_str());
+	}
+
+	// If a client is receiving spooled output files which include a
+	// user job log file with a directory component, add a remap.
+	// Otherwise, the user log will end up in the iwd, which is wrong.
+	if (IsClient() && Ad->LookupString(ATTR_ULOG_FILE, ulog_fname) &&
+		ulog_fname.find(DIR_DELIM_CHAR) != std::string::npos) {
+
+		std::string full_name;
+		if (fullpath(ulog_fname.c_str())) {
+			full_name = ulog_fname;
+		} else {
+			Ad->LookupString(ATTR_JOB_IWD, full_name);
+			full_name += DIR_DELIM_CHAR;
+			full_name += ulog_fname;
+		}
+		AddDownloadFilenameRemap(condor_basename(full_name.c_str()), full_name.c_str());
 	}
 
 	if(!download_filename_remaps.IsEmpty()) {
@@ -619,6 +655,34 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	}
 	return 1;
 }
+
+#ifdef HAVE_HTTP_PUBLIC_FILES
+int
+FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
+	dprintf(D_FULLDEBUG,"Entering FileTransfer::AddInputFilenameRemaps\n");
+
+	if(!Ad) {
+		dprintf(D_FULLDEBUG, "FileTransfer::AddInputFilenameRemaps -- job ad null\n");
+	  	return 1;
+	}
+	
+	download_filename_remaps = "";
+	char *remap_fname = NULL;
+
+	// when downloading files from the job, apply input name remaps
+	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,&remap_fname)) {
+		AddDownloadFilenameRemaps(remap_fname);
+		free(remap_fname);
+		remap_fname = NULL;
+	}
+	if(!download_filename_remaps.IsEmpty()) {
+		dprintf(D_FULLDEBUG, "FileTransfer: input file remaps: %s\n",download_filename_remaps.Value());
+	}
+	return 1;
+}
+#endif
+
+
 int
 FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 	bool use_file_catalog) 
@@ -641,7 +705,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 
 	if (!TranskeyTable) {
 		// initialize our hashtable
-		if (!(TranskeyTable = new TranskeyHashTable(7, compute_transkey_hash)))
+		if (!(TranskeyTable = new TranskeyHashTable(hashFunction)))
 		{
 			// failed to allocate our hashtable ?!?!
 			return 0;
@@ -656,7 +720,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 	if (!TransThreadTable) {
 		// initialize our thread hashtable
 		if (!(TransThreadTable =
-			  new TransThreadHashTable(7, compute_transthread_hash))) {
+			  new TransThreadHashTable(hashFuncInt))) {
 			// failed to allocate our hashtable ?!?!
 			return 0;
 		}
@@ -804,7 +868,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 				ATTR_TRANSFER_INTERMEDIATE_FILES,
 				dynamic_buf ? dynamic_buf : "(none)");
 		if ( dynamic_buf ) {
-			SpooledIntermediateFiles = strnewp(dynamic_buf);
+			SpooledIntermediateFiles = strdup(dynamic_buf);
 			free(dynamic_buf);
 			dynamic_buf = NULL;
 		}
@@ -1440,10 +1504,10 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	if ( transobject->Info.success ) {
 		if ( transobject->Info.type == DownloadFilesType ) {
-			transobject->downloadEndTime = UtcTime::getTimeDouble();
+			transobject->downloadEndTime = condor_gettimestamp_double();
 
 		} else if ( transobject->Info.type == UploadFilesType ) {
-			transobject->uploadEndTime = UtcTime::getTimeDouble();
+			transobject->uploadEndTime = condor_gettimestamp_double();
 
 		}
 	}
@@ -1702,7 +1766,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
 
-		downloadStartTime = UtcTime::getTimeDouble();
+		downloadStartTime = condor_gettimestamp_double();
 
 	}
 	
@@ -1758,13 +1822,12 @@ FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
 int
 FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 {
-	int rc;
+	int rc = 0;
 	int reply = 0;
 	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes=0;
 	MyString filename;;
 	MyString fullname;
-	char *tmp_buf = NULL;
 	int final_transfer = 0;
 	bool download_success = true;
 	bool try_again = true;
@@ -1774,6 +1837,15 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
 	int numFiles = 0;
+	ClassAd pluginStatsAd;
+
+	// Variable for deferred transfers, used to transfer multiple files at once
+	// by certain filte transfer plugins. These need to be scoped to the full
+	// function.
+	bool isDeferredTransfer = false;
+	classad::ClassAdUnParser unparser;
+	std::map<std::string, std::string> deferredTransfers;
+	std::unique_ptr<classad::ClassAd> thisTransfer( new classad::ClassAd() );
 
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
@@ -1783,7 +1855,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
 
-	downloadStartTime = UtcTime::getTimeDouble();
+	downloadStartTime = condor_gettimestamp_double();
 
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
@@ -1834,17 +1906,16 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	}
 
 		/*
-		  if we want to change priv states but haven't done so
-		  yet, set it now.  we only need to do this once since
-		  we're no longer doing any hard-coded insanity with
-		  PRIV_CONDOR and everything can either be done in our
-		  existing priv state (want_priv_change == FALSE) or in
-		  the priv state we were told to use... Derek, 2005-04-21
+		  If we want to change priv states, do it now.
+		  Even if we don't transfer any files, we write a commit
+		  file at the end.
 		*/
 	if( want_priv_change ) {
 		saved_priv = set_priv( desired_priv_state );
 	}
 
+	// Start the main download loop. Read reply codes + filenames off a
+	// socket wire, s, then handle downloads according to the reply code.
 	for (;;) {
 		if( !s->code(reply) ) {
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
@@ -1876,15 +1947,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			}
 		}
 
-		// code() allocates memory for the string if the pointer is NULL.
-		tmp_buf = NULL;
-		if( !s->code(tmp_buf) ) {
+		if( !s->code(filename) ) {
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
-		filename = tmp_buf;
-		free( tmp_buf );
-		tmp_buf = NULL;
 
 			// This check must come after we have called set_priv()
 		if( !LegalPathInSandbox(filename.Value(),Iwd) ) {
@@ -1933,7 +1999,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			}
 			else if(res) {
 				// legit remap was found
-				if(!is_relative_to_cwd(remap_filename.Value())) {
+				if(fullpath(remap_filename.Value())) {
 					fullname = remap_filename;
 				}
 				else {
@@ -2036,7 +2102,24 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		start = time(NULL);
+		
+		// Setup the FileTransferStats object for this file, which we'll use
+		// to gather per-transfer statistics (different from the other
+		// statistics gathering which only tracks cumulative totals)
+		FileTransferStats thisFileStats;
+		thisFileStats.TransferFileBytes = 0;
+		thisFileStats.TransferFileName = filename.Value();
+		thisFileStats.TransferProtocol = "cedar";
+		thisFileStats.TransferStartTime = condor_gettimestamp_double();
+		thisFileStats.TransferType = "download";
 
+		// Create a ClassAd we'll use to store stats from a file transfer
+		// plugin, if we end up using one.
+		ClassAd pluginStatsAd;
+
+		// Until we are told otherwise, assume this file transfer will not be
+		// deferred until the end of the loop.
+		isDeferredTransfer = false;
 
 		if (reply == 999) {
 			// filename already received:
@@ -2133,10 +2216,45 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-			dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
+			if( multifile_plugins_enabled ) {
+				
+				// Determine which plugin to invoke, and whether it supports multiple
+				// file transfer.
+				MyString pluginPath = DetermineFileTransferPlugin( errstack, URL.Value(), fullname.Value() );
+				bool thisPluginSupportsMultifile = false;
+				if( plugins_multifile_support.find( pluginPath ) != plugins_multifile_support.end() ) {
+					thisPluginSupportsMultifile = plugins_multifile_support[pluginPath];
+				}
 
-			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), LocalProxyName.Value());
+				if( thisPluginSupportsMultifile ) {
+					// Do not send the file right now! 
+					// Instead, add it to a deferred list, which we'll deal with 
+					// after the main download loop.
+					dprintf( D_FULLDEBUG, "DoDownload: deferring transfer of URL %s "
+						" until end of download loop.\n", URL.Value() );
+					thisTransfer->Clear();
+					thisTransfer->InsertAttr( "Url", URL );
+					thisTransfer->InsertAttr( "DownloadFileName", fullname );
+					std::string thisTransferString;
+					unparser.Unparse( thisTransferString, thisTransfer.get() );
 
+					// Add this result to our deferred transfers map.
+					if ( deferredTransfers.find( pluginPath ) == deferredTransfers.end() ) {
+						deferredTransfers.insert( std::pair<std::string, std::string>( pluginPath, thisTransferString ) );
+					} 
+					else {
+						deferredTransfers[pluginPath] += thisTransferString;
+					}
+
+					isDeferredTransfer = true;
+				}
+			}
+
+			if( !isDeferredTransfer ) {
+				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
+
+				rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
+			}
 
 		} else if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
@@ -2226,6 +2344,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		elapsed = time(NULL)-start;
+		thisFileStats.TransferEndTime = condor_gettimestamp_double();
+		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
 		if( rc < 0 ) {
 			int the_error = errno;
@@ -2330,31 +2450,51 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 		*total_bytes += bytes;
+		thisFileStats.TransferFileBytes += bytes;
+		thisFileStats.TransferTotalBytes += bytes;
 		bytes = 0;
 
 		numFiles++;
 
-#ifdef HAVE_EXT_POSTGRESQL
-	        file_transfer_record record;
-		record.fullname = fullname.Value();
-		record.bytes = bytes;
-		record.elapsed  = elapsed;
-    
-			// Get the name of the daemon calling DoDownload
-		char daemon[16]; daemon[15] = '\0';
-		strncpy(daemon, get_mySubSystem()->getName(), 15);
-		record.daemon = daemon;
+		// Gather a few more statistics
+		thisFileStats.TransferSuccess = download_success;
 
-		record.sockp =s;
-		record.transfer_time = start;
-		record.delegation_method_id = delegation_method;
-		file_transfer_db(&record, &jobAd);
-#else
+		// Merge the file transfer stats we recorded here with the stats 
+		// retrieved from a plugin. If we didn't use a file transfer plugin 
+		// this time, this ClassAd will just be empty.
+		ClassAd thisFileStatsAd;
+		thisFileStats.Publish(thisFileStatsAd);
+		thisFileStatsAd.Update(pluginStatsAd);
+
+		// Write stats to disk
+		if( !isDeferredTransfer ) {
+			OutputFileTransferStats(thisFileStatsAd);
+		}
+
 		// Get rid of compiler set-but-not-used warnings on Linux
 		// Hopefully the compiler can just prune out the emitted code.
 		if (delegation_method) {}
 		if (elapsed) {}
-#endif
+	}
+	// End of the main download loop
+
+	// Now that we've completed the main file transfer loop, it's time to 
+	// transfer all files that needed a third party plugin. Iterate over the list
+	// of deferred transfers, and invoke each set with the appopriate plugin.
+	if ( hold_code == 0 ) {
+		for ( auto it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
+			rc = InvokeMultipleFileTransferPlugin( errstack, it->first, it->second, 
+				LocalProxyName.Value() );
+			if ( rc != 0 ) {
+				dprintf( D_ALWAYS, "FILETRANSFER: Multiple file transfer failed: %s\n",
+					errstack.getFullText().c_str() );
+				download_success = false;
+				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_subcode = rc;
+				try_again = false;
+				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
+			}
+		}
 	}
 
 	// go back to the state we were in before file transfer
@@ -2438,7 +2578,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	}
 
-	downloadEndTime = UtcTime::getTimeDouble();
+	downloadEndTime = condor_gettimestamp_double();
 
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
@@ -2805,6 +2945,11 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 {
 	dprintf(D_FULLDEBUG,"entering FileTransfer::UploadThread\n");
 	FileTransfer * myobj = ((upload_info *)arg)->myobj;
+
+	if (s == NULL) {
+		return 0;
+	}
+
 	filesize_t	total_bytes;
 	int status = myobj->DoUpload( &total_bytes, (ReliSock *)s );
 	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
@@ -2856,7 +3001,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number;
 
-	uploadStartTime = UtcTime::getTimeDouble();
+	uploadStartTime = condor_gettimestamp_double();
 
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
@@ -2928,7 +3073,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			is_url = true;
 			fullname = filename;
 			dprintf(D_FULLDEBUG, "DoUpload: sending %s as URL.\n", filename);
-		} else if( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
+		} else if( !fullpath( filename ) ){
 			// looks like a relative path
 			fullname.formatstr("%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
 		} else {
@@ -3189,9 +3334,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				URL += filename;
 
 				// actually invoke the plugin.  this could block indefinitely.
+				ClassAd pluginStatsAd;
 				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.Value(), URL.Value());
 				dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.Value());
-				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), URL.Value(), LocalProxyName.Value());
+				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), URL.Value(), &pluginStatsAd, LocalProxyName.Value());
 				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.Value(), URL.Value(), rc);
 
 				// report the results:
@@ -3400,7 +3546,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			first_failed_line_number);
 	} 
 
-	uploadEndTime = UtcTime::getTimeDouble();
+	uploadEndTime = condor_gettimestamp_double();
 
 	upload_success = true;
 	return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
@@ -4103,7 +4249,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	// big enough that the chains are decent sized. Suppose you might
 	// have 50,000 files. In the case for 997 buckets and even distribution, 
 	// the chains would be ~50 entries long. Good enough.
-	(*catalog) = new FileCatalogHashTable(997, compute_filename_hash);
+	(*catalog) = new FileCatalogHashTable(hashFunction);
 
 	/* If we've decided not to use a file catalog, then leave it empty. */
 	if (m_use_file_catalog == false) {
@@ -4160,8 +4306,43 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 	m_sec_session_id = session_id ? strdup(session_id) : NULL;
 }
 
+// Determines the third-party plugin needed for a file transfer.
+// Looks at both source and destination to determine which one contains a URL,
+// then extracts the method (ie. http, ftp) and uses it to lookup plugin.
+MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
 
-int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, const char* proxy_filename) {
+	char *URL = NULL;
+	MyString plugin;
+
+	// First, check the destination to see if it looks like a URL.
+	// If not, source must be the URL.
+	if( IsUrl( dest ) ) {
+		URL = const_cast<char*>(dest);
+		dprintf( D_FULLDEBUG, "FILETRANSFER: using destination to determine "
+			"plugin type: %s\n", dest );
+	}
+	else {
+		URL = const_cast<char*>(source);
+		dprintf( D_FULLDEBUG, "FILETRANSFER: using source to determine "
+			"plugin type: %s\n", source );
+	}
+
+	// Find the type of transfer
+	MyString method = getURLType( URL );
+
+	// Hashtable returns zero if found.
+	if ( plugin_table->lookup( method, plugin ) ) {
+		// no plugin for this type!!!
+		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.Value() );
+		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.Value() );
+		return NULL;
+	}
+
+	return plugin;
+}
+
+
+int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, ClassAd* plugin_stats, const char* proxy_filename) {
 
 	if (plugin_table == NULL) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", source);
@@ -4244,11 +4425,20 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// if so, drop_privs should be false.  the default is to drop privs.
 	bool drop_privs = !param_boolean("RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false);
 
-	// invoke it
+	// Invoke the plugin
 	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
-	int plugin_status = my_pclose(plugin_pipe);
 
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
+	// Capture stdout from the plugin and dump it to the stats file
+	char single_stat[1024];
+	while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
+		if( !plugin_stats->Insert( single_stat ) ) {
+			dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", single_stat);
+		}
+	}
+
+	// Close the plugin
+	int plugin_status = my_pclose(plugin_pipe);
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin.Value(), plugin_status);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -4273,19 +4463,231 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// any non-zero exit from plugin indicates error.  this function needs to
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
+
 	if (plugin_status != 0) {
-		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s", plugin_status, plugin.Value());
+		std::string errorMessage;
+		std::string transferUrl;
+		plugin_stats->LookupString("TransferError", errorMessage);
+		plugin_stats->LookupString("TransferUrl", transferUrl);
+		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)", 
+			plugin_status, plugin.Value(), errorMessage.c_str(), transferUrl.c_str());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 
 	return 0;
 }
 
+// Similar to FileTransfer::InvokeFileTransferPlugin, modified to transfer 
+// multiple files in a single plugin invocation.
+// Returns 0 on success, error code >= 1 on failure.
+int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, 
+			std::string plugin_path, std::string transfer_files_string, 
+			const char* proxy_filename ) {
+
+	ArgList plugin_args;
+	CondorClassAdFileIterator adFileIter;
+	FILE* input_file;
+	FILE* output_file;
+	std::string input_filename;
+	std::string output_filename;
+	std::string plugin_name;
+
+	if ( plugin_table == NULL ) {
+		dprintf( D_FULLDEBUG, "FILETRANSFER: No plugin table defined! "
+				"(requesting multi-file transfer)\n" );
+		e.pushf( "FILETRANSFER", 1, "No plugin table defined (requesting "
+				"multi-file transfer)" );
+		return GET_FILE_PLUGIN_FAILED;
+	}
+
+	// Prepare environment for the plugin
+	Env plugin_env;
+	plugin_env.Import();
+
+	// Add x509UserProxy if it's defined
+	if ( proxy_filename && *proxy_filename ) {
+		plugin_env.SetEnv( "X509_USER_PROXY",proxy_filename );
+		dprintf( D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n",
+				proxy_filename );
+	}
+
+	// Determine if we want to run the plugin with root priv (if available).
+	// If so, drop_privs should be false.  the default is to drop privs.
+	bool drop_privs = !param_boolean( "RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false );
+
+	// Lookup the initial working directory
+	std::string iwd;
+	if ( jobAd.LookupString( ATTR_JOB_IWD, iwd ) != 1) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+					"Job Ad did not have an IWD! Aborting.\n" );
+		return 1;
+	}
+
+	// Create an input file for the plugin.
+	// Input file consists of the transfer_files_string data (list of classads)
+	// which we'll save to a temporary file in the working directory.
+	plugin_name = plugin_path.substr( plugin_path.find_last_of("/\\") + 1 );
+	input_filename = iwd + "/." + plugin_name + ".in";
+	input_file = safe_fopen_wrapper( input_filename.c_str(), "w" );
+	fputs( transfer_files_string.c_str(), input_file );
+	fclose( input_file );
+
+	// Prepare args for the plugin
+	output_filename = iwd + "/." + plugin_name + ".out";
+	plugin_args.AppendArg( plugin_path.c_str() );
+	plugin_args.AppendArg( "-infile" );
+	plugin_args.AppendArg( input_filename.c_str() );
+	plugin_args.AppendArg( "-outfile" );
+	plugin_args.AppendArg( output_filename.c_str() );
+
+	// Invoke the plugin
+	dprintf( D_ALWAYS, "FILETRANSFER: invoking: %s \n", plugin_path.c_str() );
+	FILE* plugin_pipe = my_popen( plugin_args, "r", FALSE, &plugin_env, drop_privs );
+	if( !plugin_pipe ) {
+		dprintf ( D_ALWAYS, "FILETRANSFER: failed to invoke multifile transfer "
+			"plugin %s, aborting\n", plugin_path.c_str() );
+		return GET_FILE_PLUGIN_FAILED;
+	}
+	int plugin_status = my_pclose( plugin_pipe );
+	if( plugin_status >= 0 ) {
+		dprintf ( D_ALWAYS, "FILETRANSFER: plugin %s returned %i (%s)\n", 
+			plugin_path.c_str(), plugin_status, strerror( plugin_status ) );
+	}
+	else {
+		dprintf ( D_ALWAYS, "FILETRANSFER: plugin %s returned a negative status "
+			"code (%d). Something is very wrong, aborting.\n", plugin_path.c_str(), 
+			plugin_status );
+		return GET_FILE_PLUGIN_FAILED;
+	}
+
+	// there is a unique issue when invoking plugins as root where shared
+	// libraries defined as relative to $ORIGIN in the RUNPATH will not
+	// be loaded for security reasons.  in this case the dynamic loader
+	// exits with 127 before even calling main() in the plugin.
+	//
+	// if we suspect this is the case, let's print a hint since it's
+	// otherwise very difficult to understand what is happening and why
+	// this failed.
+	if ( !drop_privs && plugin_status == 32512 ) {
+		dprintf (D_ALWAYS, "FILETRANSFER: ERROR!  You are invoking plugins as root because "
+			"you have RUN_FILETRANSFER_PLUGINS_WITH_ROOT set to TRUE.  However, some of "
+			"the shared libraries in your plugin are likely paths that are relative to "
+			"$ORIGIN, and then dynamic library loader refuses to load those for security "
+			"reasons.  Run 'ldd' on your plugin and move needed libraries to a system "
+			"location controlled by root. Good luck!\n");
+	}
+
+	// Output stats regardless of success or failure
+	output_file = safe_fopen_wrapper( output_filename.c_str(), "r" );
+	if ( output_file == NULL ) {
+		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open curl_plugin output file "
+			"%s.\n", input_filename.c_str() );
+		return GET_FILE_PLUGIN_FAILED;
+	}
+	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
+		dprintf( D_ALWAYS, "FILETRANSFER: Failed to iterate over file transfer output.\n" );
+		return GET_FILE_PLUGIN_FAILED;
+	}
+	else {
+		// Iterate over the classads in the file, and output each one
+		// to our transfer_history log file.
+		ClassAd this_file_stats_ad;
+		while ( adFileIter.next( this_file_stats_ad ) > 0 ) {
+
+			OutputFileTransferStats( this_file_stats_ad );
+
+			// If this classad represents a failed transfer, produce an error
+			bool transfer_success;
+			this_file_stats_ad.LookupBool( "TransferSuccess", transfer_success );
+			if ( !transfer_success ) {
+				std::string error_message;
+				std::string transfer_url;
+				this_file_stats_ad.LookupString( "TransferError", error_message );
+				this_file_stats_ad.LookupString( "TransferUrl", transfer_url );
+				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)", 
+					plugin_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
+			}
+		}
+	}
+	fclose(output_file);
+
+	if ( plugin_status != 0 ) {
+		return GET_FILE_PLUGIN_FAILED;
+	}
+
+	return 0;
+}
+
+int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
+
+	// this log is meant to be kept in the condor LOG directory, so switch to
+	// the correct priv state to manipulate files in that dir.
+	priv_state saved_priv = set_condor_priv();
+
+	// Read name of statistics file from params
+	std::string stats_file_path = param( "FILE_TRANSFER_STATS_LOG" );
+
+	// First, check for an existing statistics file. 
+	struct stat stats_file_buf;
+	int rc = stat( stats_file_path.c_str(), &stats_file_buf );
+	if( rc == 0 ) {
+		// If it already exists and is larger than 5 Mb, copy the contents 
+		// to a .old file. 
+		if( stats_file_buf.st_size > 5000000 ) {
+			std::string stats_file_old_path = param( "FILE_TRANSFER_STATS_LOG" );
+			stats_file_old_path += ".old";
+			// TODO: Add a lock to prevent two starters from rotating the log 
+			// at the same time.
+			if (rotate_file(stats_file_path.c_str(), stats_file_old_path.c_str()) != 0) {
+				dprintf(D_ALWAYS, "FileTransfer failed to rotate %s to %s\n", stats_file_path.c_str(), stats_file_old_path.c_str());
+			}
+		}
+	}
+
+	// Add some new job-related statistics that were not available from
+	// the file transfer plugin.
+	int cluster_id;    
+	jobAd.LookupInteger( ATTR_CLUSTER_ID, cluster_id );
+	stats.Assign( "JobClusterId", cluster_id );
+
+	int proc_id;    
+	jobAd.LookupInteger( ATTR_PROC_ID, proc_id );
+	stats.Assign( "JobProcId", proc_id );
+
+	MyString owner;
+	jobAd.LookupString( ATTR_OWNER, owner );
+	stats.Assign( "JobOwner", owner );
+
+	// Output statistics to file
+	MyString stats_string;
+	MyString stats_output = "***\n";
+	sPrintAd( stats_string, stats );
+	stats_output += stats_string;
+
+	FILE* stats_file = safe_fopen_wrapper( stats_file_path.c_str(), "a" );
+	if( !stats_file ) {
+		dprintf( D_ALWAYS, "FILETRANSFER: failed to open statistics file %s with"
+			" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
+	}
+	else {
+		int stats_file_fd = fileno( stats_file );
+		if ( write( stats_file_fd, stats_output.Value(), stats_output.length() ) == -1 ) {
+			dprintf( D_ALWAYS, "FILETRANSFER: failed to write to statistics file %s with"
+				" error %d (%s)\n", stats_file_path.c_str(), errno, strerror(errno) );
+		}
+		fclose( stats_file );
+	}
+	
+	// back to previous priv state
+	set_priv(saved_priv);
+
+	return 0;
+}
 
 MyString FileTransfer::GetSupportedMethods() {
 	MyString method_list;
 
-	// iterate plugin_table if it exists
+	// iterate plugin_table if it existssrc
 	if (plugin_table) {
 		MyString junk;
 		MyString method;
@@ -4317,8 +4719,13 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 		return 0;
 	}
 
+	// See if multifile transfer plugins are enabled
+	if (param_boolean("ENABLE_MULTIFILE_TRANSFER_PLUGINS", true)) {
+		multifile_plugins_enabled = true;
+	}
+
 	// plugin_table is a member variable
-	plugin_table = new PluginHashTable(7, compute_filename_hash);
+	plugin_table = new PluginHashTable(hashFunction);
 
 	StringList plugin_list (plugin_list_string);
 	plugin_list.rewind();
@@ -4326,14 +4733,16 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 	char *p;
 	while ((p = plugin_list.next())) {
 		// TODO: plugin must be an absolute path (win and unix)
-
-		MyString methods = DeterminePluginMethods(e, p);
+		SetPluginMappings( e, p );
+		
+		// Now verify that the plugin supports at least one transfer method.
+		MyString methods = GetSupportedMethods();
 		if (!methods.IsEmpty()) {
 			// we support at least one plugin type
 			I_support_filetransfer_plugins = true;
-			InsertPluginMappings(methods, p);
 		} else {
 			dprintf(D_ALWAYS, "FILETRANSFER: failed to add plugin \"%s\" because: %s\n", p, e.getFullText().c_str());
+			e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring", p);
 		}
 	}
 
@@ -4342,8 +4751,8 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 }
 
 
-MyString
-FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
+void
+FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 {
     FILE* fp;
     const char *args[] = { path, "-classad", NULL};
@@ -4356,7 +4765,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
     if( ! fp ) {
         dprintf( D_ALWAYS, "FILETRANSFER: Failed to execute %s, ignoring\n", path );
 		e.pushf("FILETRANSFER", 1, "Failed to execute %s, ignoring", path );
-        return "";
+        return;
     }
     ClassAd* ad = new ClassAd;
     bool read_something = false;
@@ -4368,7 +4777,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
             delete( ad );
             pclose( fp );
 			e.pushf("FILETRANSFER", 1, "Received invalid input '%s', ignoring", buf );
-            return "";
+            return;
         }
     }
     my_pclose( fp );
@@ -4378,7 +4787,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
                  path );
         delete( ad );
 		e.pushf("FILETRANSFER", 1, "\"%s -classad\" did not produce any output, ignoring", path );
-        return "";
+        return;
     }
 
 	// TODO: verify that plugin type is FileTransfer
@@ -4386,19 +4795,24 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 
 	// extract the info we care about
 	char* methods = NULL;
-	if (ad->LookupString( "SupportedMethods", &methods)) {
-		// free the memory, return a MyString
-		MyString m = methods;
-		free(methods);
-        delete( ad );
-		return m;
+	bool this_plugin_supports_multifile = false;
+	if ( ad->LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
+		plugins_multifile_support[path] = this_plugin_supports_multifile;
+	}
+	
+	// Before adding mappings, make sure that if multifile plugins are disabled,
+	// this is not a multifile plugin.
+	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
+		if (ad->LookupString( "SupportedMethods", &methods)) {
+			// free the memory, return a MyString
+			MyString m = methods;
+			free(methods);
+			InsertPluginMappings( m, path );
+		}
 	}
 
-	dprintf(D_ALWAYS, "FILETRANSFER output of \"%s -classad\" does not contain SupportedMethods, ignoring plugin\n", path );
-	e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring", path );
-
 	delete( ad );
-	return "";
+	return;
 }
 
 
@@ -4412,7 +4826,9 @@ FileTransfer::InsertPluginMappings(MyString methods, MyString p)
 	method_list.rewind();
 	while((m = method_list.next())) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m, p.Value());
-		plugin_table->insert(m, p);
+		if ( plugin_table->insert(m, p, true) != 0 ) {
+			dprintf(D_FULLDEBUG, "FILETRANSFER: error adding protocol \"%s\" to plugin table, ignoring\n", m);
+		}
 	}
 }
 
@@ -4469,7 +4885,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	}
 
 	std::string full_src_path;
-	if( is_relative_to_cwd( src_path ) ) {
+	if( !fullpath( src_path ) ) {
 		full_src_path = iwd;
 		if( full_src_path.length() > 0 ) {
 			full_src_path += DIR_DELIM_CHAR;
@@ -4657,7 +5073,7 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 	canonicalize_dir_delimiters( buf );
 	path = buf.Value();
 
-	if( !is_relative_to_cwd(path) ) {
+	if( fullpath(path) ) {
 		return false;
 	}
 
@@ -4744,7 +5160,7 @@ GetDelegatedProxyRenewalTime(ClassAd *jobAd)
 bool
 FileTransfer::outputFileIsSpooled(char const *fname) {
 	if(fname) {
-		if( is_relative_to_cwd(fname) ) {
+		if( !fullpath(fname) ) {
 			if( Iwd && SpoolSpace && strcmp(Iwd,SpoolSpace)==0 ) {
 				return true;
 			}

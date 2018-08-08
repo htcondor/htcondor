@@ -40,6 +40,7 @@
 #include "tokener.h"
 #include <submit_utils.h>
 #include <xform_utils.h>
+#include <my_async_fread.h>
 
 #include <string>
 #include <set>
@@ -113,7 +114,7 @@ public:
 // forward function references
 void Usage(FILE*);
 void PrintRules(FILE*);
-int DoUnitTests(int options);
+int DoUnitTests(int options, std::vector<input_file> & inputs);
 int ApplyTransform(void *pv, ClassAd * job);
 bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args);
 #ifdef USE_XFORM_UTILS
@@ -505,10 +506,11 @@ main( int argc, const char *argv[] )
 	if (DashConvertOldRoutes) { exit(ConvertJobRouterRoutes(DashConvertOldRoutes)); }
 
 	// the -dry argument takes a qualifier that I'm hijacking to do queue parsing unit tests for now the 8.3 series.
-	if (UnitTestOpts > 0) { exit(DoUnitTests(UnitTestOpts)); }
+	if (UnitTestOpts > 0) { exit(DoUnitTests(UnitTestOpts, inputs)); }
 
 	// read the transform rules into the MacroStreamXFormSource
 	int rval = 0;
+	std::string errmsg = "";
 	MacroStreamXFormSource ms;
 	if (rules.empty()) {
 		fprintf(stderr, "ERROR : no transform rules file specified.\n");
@@ -525,7 +527,7 @@ main( int argc, const char *argv[] )
 #else
 		insert_source("<stdin>", LocalMacroSet, FileMacroSource);
 #endif
-		rval = ms.load(stdin, FileMacroSource);
+		rval = ms.load(stdin, FileMacroSource, errmsg);
 	} else {
 		FILE *file = safe_fopen_wrapper_follow(rules[0], "r");
 		if (file == NULL) {
@@ -538,7 +540,7 @@ main( int argc, const char *argv[] )
 		insert_source(rules[0], LocalMacroSet, FileMacroSource);
 		RulesFileMacroDef.psz = const_cast<char*>(rules[0]);
 #endif
-		rval = ms.load(file, FileMacroSource);
+		rval = ms.load(file, FileMacroSource, errmsg);
 		if (rval < 0 || ! ms.close_when_done(true)) {
 			fclose(file);
 		}
@@ -1450,6 +1452,8 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 	classad::ClassAdParser parser;
 	std::string tmp3;
 
+	parser.SetOldClassAd(true);
+
 	// give the line to our tokener so we can parse it.
 	tokener toke(line);
 	if ( ! toke.next()) return 0; // keep scanning
@@ -1568,7 +1572,7 @@ int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 			fprintf(stderr, "ERROR: SET %s has no value", attr.c_str());
 		} else {
 			ExprTree * expr = NULL;
-			if ( ! parser.ParseExpression(ConvertEscapingOldToNew(rhs.ptr()), expr, true)) {
+			if ( ! parser.ParseExpression(rhs.ptr(), expr, true)) {
 				fprintf(stderr, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				const bool cache_it = false;
@@ -2085,9 +2089,8 @@ int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const 
 				unparser.Unparse(rhs, tree);
 				if ( ! rhs.empty()) {
 
-					StringList myrefs;
-					StringList target;
-					route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+					classad::References myrefs;
+					GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 					if (atrid == atr_REQUESTMEMORY || 
 						atrid == atr_REQUESTCPUS || atrid == atr_REMOTE_NODENUMBER || atrid == atr_REMOTE_SMPGRANULARITY ||
 						atrid == atr_ONEXITHOLD || atrid == atr_ONEXITHOLDREASON || atrid == atr_ONEXITHOLDSUBCODE ||
@@ -2095,15 +2098,6 @@ int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const 
 
 						ExprTree * def_tree = default_route_ad.Lookup(it->first);
 						bool is_def_expr = (def_tree && *tree == *def_tree);
-
-						/*
-						target.create_union(myrefs, true);
-						target.remove("null");
-						target.remove("InputRSL.maxMemory");
-						target.remove("InputRSL.xcount");
-						target.remove("InputRSL.queue");
-						target.remove("InputRSL");
-						*/
 
 						if (atrid == atr_REQUESTMEMORY && is_def_expr) {
 							//has_def_RequestMemory = true;
@@ -2121,11 +2115,11 @@ int ConvertNextJobRouterRoute(std::string & routing_string, int & offset, const 
 							set_cmds[attr] = "$Fq(queue)";
 						} else {
 							evalset_cmds[attr] = rhs;
-							for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+							evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 						}
 					} else {
 						evalset_cmds[attr] = rhs;
-						for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+						evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 					}
 				}
 			}
@@ -2427,8 +2421,93 @@ int ConvertJobRouterRoutes(int options)
 	return 0;
 }
 
-int DoUnitTests(int /*options*/)
+int DoUnitTests(int options, std::vector<input_file> & inputs)
 {
+	if (options) {
+		std::vector<MyAsyncFileReader*> readers;
+		for (std::vector<input_file>::iterator it = inputs.begin(); it != inputs.end(); ++it) {
+			MyAsyncFileReader * reader = new MyAsyncFileReader();
+
+			int rval = reader->open(it->filename);
+			if (rval < 0) {
+				fprintf(stdout, "async open failed : %d %s", reader->error_code(), strerror(reader->error_code()));
+			} else {
+				rval = reader->queue_next_read();
+				if (rval < 0) {
+					fprintf(stdout, "async read failed : %d %s", reader->error_code(), strerror(reader->error_code()));
+				}
+			}
+			if (rval < 0) {
+				delete reader;
+			} else {
+				readers.push_back(reader);
+			}
+		}
+
+		int cpending = 0;
+		const int max_pending = 10;
+		int lineno = 0;
+		while ( ! readers.empty()) {
+
+			for (std::vector<MyAsyncFileReader*>::iterator it = readers.begin(); it != readers.end(); /* advance in the loop*/) {
+				MyAsyncFileReader* reader = *it;
+
+				bool is_done = false;
+				const char * p1;
+				const char * p2;
+				int c1, c2;
+				if (reader->get_data(p1, c1, p2, c2)) {
+				#if 1
+					MyString tmp;
+					bool got_line = reader->output().readLine(tmp);
+					if (got_line) ++lineno;
+					if (options & 1) {
+						fprintf(stdout, "reader %p: get_data(%p, %d, %p, %d) %d [%3d]:%s\n", reader, p1, c1, p2, c2, got_line, lineno, tmp.Value());
+					} else {
+						fprintf(stdout, "%s", tmp.Value());
+					}
+					if ( ! got_line) {
+						++cpending;
+						if (cpending > max_pending) {
+							is_done = true;
+						}
+					}
+				#else
+					MyString tmp;
+					if (p1) { tmp.set(p1, MIN(c1,30)); }
+					fprintf(stdout, "reader %p: get_data(%p, %d, %p, %d) %s\n", reader, p1, c1, p2, c2, tmp.Value());
+					reader->consume_data(120);
+				#endif
+				} else if (reader->is_closed() || reader->error_code()) {
+					is_done = true;
+					int tot_reads=-1, tot_pending=-1;
+					reader->get_stats(tot_reads, tot_pending);
+					int err = reader->error_code();
+					if (err) {
+						fprintf(stdout, "reader %p: closed. reads=%d, pending=%d, error=%d %s\n",
+							reader, tot_reads, tot_pending, err, strerror(err));
+					} else {
+						fprintf(stdout, "reader %p: closed. reads=%d, pending=%d\n", reader, tot_reads, tot_pending);
+					}
+				} else {
+					fprintf(stdout, "reader %p: pending...\n", reader);
+					sleep(1);
+					++cpending;
+					if (cpending > max_pending) {
+						is_done = true;
+					}
+				}
+
+				if (is_done) {
+					delete *it;
+					it = readers.erase(it);
+				} else {
+					++it;
+				}
+			}
+		}
+	}
+
 	return 0;
 }
 

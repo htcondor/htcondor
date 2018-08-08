@@ -31,47 +31,11 @@
 
 /* TODO This function needs to be tested.
  */
-int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos)
-{
-	classad::ClassAdParser parser;
-	classad::ClassAd *newAd;
-
-		// We don't support the pos argument at the moment.
-	if ( pos ) {
-		*pos = 0;
-	}
-
-		// String escaping is different between new and old ClassAds.
-		// We need to convert the escaping from old to new style before
-		// handing the expression to the new ClassAds parser.
-	std::string newAdStr = "[";
-	newAdStr.append( compat_classad::ConvertEscapingOldToNew( str ) );
-	newAdStr += "]";
-	newAd = parser.ParseClassAd( newAdStr );
-	if ( newAd == NULL ) {
-		tree = NULL;
-		return 1;
-	}
-	if ( newAd->size() != 1 ) {
-		delete newAd;
-		tree = NULL;
-		return 1;
-	}
-	
-	classad::ClassAd::iterator itr = newAd->begin();
-	name = itr->first.c_str();
-	tree = itr->second->Copy();
-	delete newAd;
-	return 0;
-}
-
-/* TODO This function needs to be tested.
- */
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 {
 	classad::ClassAdParser parser;
-	std::string str = compat_classad::ConvertEscapingOldToNew( s );
-	if ( parser.ParseExpression( str, tree, true ) ) {
+	parser.SetOldClassAd( true );
+	if ( parser.ParseExpression( s, tree, true ) ) {
 		return 0;
 	} else {
 		tree = NULL;
@@ -80,6 +44,16 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 		}
 		return 1;
 	}
+}
+
+bool ParseLongFormAttrValue(const char * str, std::string & attr, classad::ExprTree*&tree, int*pos)
+{
+	const char * rhs = NULL;
+	if ( ! compat_classad::SplitLongFormAttrValue(str, attr, rhs)) {
+		if (pos) *pos = 0;
+		return 1;
+	}
+	return ParseClassAdRvalExpr(rhs, tree, pos) == 0;
 }
 
 /*
@@ -420,6 +394,28 @@ static int GetAttrsAndScopes(classad::ExprTree * expr, classad::References * att
 	 return walk_attr_refs(expr, AccumAttrsAndScopes, &tmp);
 }
 
+int AccumAttrsOfScopes(void *pv, const std::string & attr, const std::string &scope, bool /*absolute*/)
+{
+	AttrsAndScopes & p = *(AttrsAndScopes *)pv;
+	if (p.scopes->find(scope) != p.scopes->end()) {
+		p.attrs->insert(attr);
+	}
+	return 1;
+}
+
+// add attribute references to attrs when they are of the given scope. for example when scope is "MY"
+// and the expression contains MY.Foo, the Foo is added to attrs.
+int GetAttrRefsOfScope(classad::ExprTree * expr, classad::References &attrs, const std::string &scope)
+{
+	 classad::References scopes;
+	 scopes.insert(scope);
+	 AttrsAndScopes tmp;
+	 tmp.attrs = &attrs;
+	 tmp.scopes = &scopes;
+	 return walk_attr_refs(expr, AccumAttrsOfScopes, &tmp);
+}
+
+
 // edit the given expr changing attribute references as the mapping indicates
 int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 {
@@ -551,14 +547,11 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 			delete tree;
 			tree = NULL;
 		}
-		classad::ExprTree *tmp_tree = NULL;
-		if ( ParseClassAdRvalExpr( constraint, tmp_tree ) != 0 ) {
+		if ( ParseClassAdRvalExpr( constraint, tree ) != 0 ) {
 			dprintf( D_ALWAYS,
 				"can't parse constraint: %s\n", constraint );
 			return false;
 		}
-		tree = compat_classad::RemoveExplicitTargetRefs( tmp_tree );
-		delete tmp_tree;
 		saved_constraint = strdup( constraint );
 	}
 
@@ -647,7 +640,9 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 }
 
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
-				  compat_classad::ClassAd *target, classad::Value &result )
+				  compat_classad::ClassAd *target, classad::Value &result,
+				  const std::string & sourceAlias,
+				  const std::string & targetAlias )
 {
 	int rc = TRUE;
 	if ( !expr || !source ) {
@@ -659,7 +654,7 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 	expr->SetParentScope( source );
 	if ( target && target != source ) {
-		mad = compat_classad::getTheMatchAd( source, target );
+		mad = compat_classad::getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
 	if ( !source->EvaluateExpr( expr, result ) ) {
 		rc = FALSE;

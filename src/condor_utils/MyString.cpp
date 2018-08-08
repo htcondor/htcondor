@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "MyString.h"
 #include "condor_snutils.h"
-#include "condor_string.h"
+#include "condor_debug.h"
 #include "condor_random_num.h"
 #include "strupr.h"
 #include "simplelist.h"
@@ -38,12 +38,6 @@ MyString::MyString()
 	init();
     return;
 }
-  
-MyString::MyString(int i) 
-{
-	init();
-	*this += i;
-};
 
 MyString::MyString(const char* S) 
 {
@@ -68,12 +62,13 @@ MyString::~MyString()
     if (Data) {
 		delete[] Data;
 	}
+#if 0
 	delete [] tokenBuf;
+#endif
 	init(); // for safety -- errors if you try to re-use this object
 }
 
-
-MyString::operator std::string()
+MyString::operator std::string() const
 {
     std::string r = this->Value();
     return r;
@@ -92,6 +87,7 @@ MyString::operator[](int pos) const
     return Data[pos];
 }
 
+#if 0
 const char&
 MyString::operator[](int pos)
 {
@@ -101,15 +97,27 @@ MyString::operator[](int pos)
 	}	
 	return Data[pos];
 }
+#endif
 
 void
-MyString::setChar(int pos, char value)
+MyString::setAt(int pos, char value)
 {
 	if ( pos >= 0 && pos < Len ) {
 		Data[pos] = value;
 		if ( value == '\0' ) {
 			Len = pos;
 		}
+	} else {
+		// No op.
+	}
+}
+
+void
+MyString::truncate(int pos)
+{
+	if ( pos >= 0 && pos < Len ) {
+		Data[pos] = '\0';
+		Len = pos;
 	} else {
 		// No op.
 	}
@@ -142,6 +150,8 @@ MyString::operator=( const char *s )
 	assign_str(s, (int)s_len);
     return *this;
 }
+
+
 
 void
 MyString::assign_str( const char *s, int s_len ) 
@@ -177,20 +187,20 @@ MyString::reserve( const int sz )
 	if (sz < 0) {
 		return false;
 	}
+	if (sz <= Len && Data) {
+		return true;
+	}
     char *buf = new char[ sz+1 ];
     if (!buf) {
 		return false;
 	}
     buf[0] = '\0';
     if (Data) {
-	  // newlen is needed in case we are shortening the string.
-	  int newlen = MIN(sz, Len);
       // Only copy over existing data into the new buffer.
-      strncpy( buf, Data, newlen ); 
+      strncpy( buf, Data, Len );
 	  // Make sure it's NULL terminated. strncpy won't make sure of it.
-	  buf[newlen] = '\0'; 
+	  buf[Len] = '\0';
       delete [] Data;
-	  Len = newlen;
     }
     // Len will be the same, since we didn't add new text
     capacity = sz;
@@ -215,7 +225,9 @@ MyString::reserve_at_least(const int sz)
 	bool success;
 
 	twice_as_much = 2 * capacity;
-	if (twice_as_much > sz) {
+	if (sz <= capacity && capacity > 0) {
+		success = true;
+	} else if (twice_as_much > sz) {
 		success = reserve(twice_as_much);
 		if (!success) { // allocate failed, get just enough?
 			success = reserve(sz);
@@ -326,71 +338,6 @@ MyString operator+(const MyString& S1, const MyString& S2)
 
 // the buffers below are all sufficiently large that this is no danger of non-null termination.
 MSC_DISABLE_WARNING(6053) // call to snprintf might not null terminate string.
-
-MyString& 
-MyString::operator+=( int i )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%d", i );
-    int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-    return *this;
-}
-
-
-MyString& 
-MyString::operator+=( unsigned int ui )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%u", ui );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString& 
-MyString::operator+=( long l )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%ld", l );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString&
-MyString::operator+=( long long l )
-{
-	const int bufLen = 64;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%lld", l );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
-
-MyString& 
-MyString::operator+=( double d )
-{
-	const int bufLen = 128;
-	char tmp[bufLen];
-	::snprintf( tmp, bufLen, "%f", d );
-	int s_len = (int)strlen( tmp );
-	ASSERT(s_len < bufLen);
-	append_str( tmp, s_len );
-	return *this;
-}
-
 
 // ----------------------------------------
 //           Serialization helpers
@@ -553,32 +500,26 @@ MSC_RESTORE_WARNING(6052) // call to snprintf might not null terminate string.
  *--------------------------------------------------------------------*/
 
 MyString 
-MyString::Substr(int pos1, int pos2) const 
+MyString::substr(int pos, int len) const
 {
     MyString S;
 
-	if (Len <= 0) {
+	if ( pos >= Len || len <= 0 ) {
 	    return S;
 	}
-
-    if (pos2 >= Len) {
-		pos2 = Len - 1;
+	if ( pos < 0 ) {
+		pos = 0;
 	}
-    if (pos1 < 0) {
-		pos1=0;
+	if ( pos + len > Len ) {
+		len = Len - pos;
 	}
-    if (pos1 > pos2) {
-		return S;
-	}
-    int len = pos2-pos1+1;
-    char* tmp = new char[len+1];
-    strncpy(tmp,Data+pos1,len);
-    tmp[len]='\0';
-    S=tmp;
-    delete[] tmp;
+	S.reserve( len );
+	strncpy( S.Data, Data+pos, len );
+	S.Data[len] = '\0';
+	S.Len = len;
     return S;
 }
-    
+
 // this function escapes characters by putting some other
 // character before them.  it does NOT convert newlines to
 // the two chars '\n'.
@@ -625,17 +566,6 @@ MyString::FindChar(int Char, int FirstPos) const
     return tmp-Data;
 }
 
-unsigned int 
-MyString::Hash() const 
-{
-	int i;
-	unsigned int result = 0;
-	for(i = 0; i < Len; i++) {
-		result = (result<<5) + result + (unsigned char)Data[i];
-	}
-	return result;
-}	  
- 
 // returns the index of the first match, or -1 for no match found
 int 
 MyString::find(const char *pszToFind, int iStartPos) const
@@ -838,7 +768,7 @@ MyString::trim( void )
 	while ( end >= 0 && isspace(Data[end]) ) { --end; }
 
 	if ( begin != 0 || end != Length() - 1 ) {
-		*this = Substr(begin, end);
+		*this = substr(begin, 1 + end - begin);
 	}
 }
 
@@ -849,12 +779,10 @@ MyString::trim_quotes(const char * quote_chars)
 	if( Len < 2 ) {
 		return 0;
 	}
-	int begin = 0;
-	char ch = Data[begin];
+	char ch = Data[0];
 	if (strchr(quote_chars, ch)) {
-		int end = Length() -1;
-		if (end > begin && Data[end] == ch) {
-			*this = Substr(begin+1, end-1);
+		if (Data[Len - 1] == ch) {
+			*this = substr(1, Len - 2);
 			return ch;
 		}
 	}
@@ -862,17 +790,20 @@ MyString::trim_quotes(const char * quote_chars)
 }
 
 void
-MyString::compressSpaces( void )
+MyString::RemoveAllWhitespace( void )
 {
-	if( Len == 0 ) {
-		return;
-	}
-	for ( int i = 0, j = 0; i <= Length(); ++i, ++j ) {
-		if ( isspace ( Data[i] ) ) {
-			i++;
+	int i;
+	int j;
+	for ( i = 0, j = 0; i < Length(); i++ ) {
+		if ( !isspace( Data[i] ) ) {
+			if ( i != j ) {
+				Data[j] = Data[i];
+			}
+			j++;
 		}
-		setChar ( j, Data[i] );
 	}
+	Data[j] = '\0';
+	Len = j;
 }
 
 // if len is 10, this means 10 random ascii characters from the set.
@@ -940,9 +871,11 @@ MyString::init()
     Data=NULL;
     Len=0;
     capacity = 0;
+#if 0
 	tokenBuf = NULL;
 	nextToken = NULL;
 	dummy = '\0';
+#endif
 }
 
 /*--------------------------------------------------------------------
@@ -1145,8 +1078,83 @@ bool MyString::readLine( MyStringSource & src, bool append /*= false*/) {
  *
  *--------------------------------------------------------------------*/
 
+MyStringTokener::MyStringTokener() : tokenBuf(NULL), nextToken(NULL) {}
+/*
+MyStringTokener::MyStringTokener(const char *str) : tokenBuf(NULL), nextToken(NULL)
+{
+	if (str) Tokenize(str);
+}
+*/
+MyStringTokener::~MyStringTokener()
+{
+	if (tokenBuf) {
+		free(tokenBuf);
+		tokenBuf = NULL;
+	}
+	nextToken = NULL;
+}
+
+void MyStringTokener::Tokenize(const char *str)
+{
+	if (tokenBuf) { 
+		free( tokenBuf );
+		tokenBuf = NULL;
+	}
+	nextToken = NULL;
+	if ( str ) {
+		tokenBuf = strdup( str );
+		if ( strlen( tokenBuf ) > 0 ) {
+			nextToken = tokenBuf;
+		}
+	}
+}
+
+const char *MyStringTokener::GetNextToken(const char *delim, bool skipBlankTokens)
+{
+	const char *result = nextToken;
+
+	if ( !delim || strlen(delim) == 0 ) {
+		result = NULL;
+	}
+
+	if ( result != NULL ) {
+		while ( *nextToken != '\0' && index(delim, *nextToken) == NULL ) {
+			nextToken++;
+		}
+
+		if ( *nextToken != '\0' ) {
+			*nextToken = '\0';
+			nextToken++;
+		} else {
+			nextToken = NULL;
+		}
+	}
+
+	if ( skipBlankTokens && result && strlen(result) == 0 ) {
+		result = GetNextToken(delim, skipBlankTokens);
+	}
+
+	return result;
+}
+
+
+MyStringWithTokener::MyStringWithTokener(const MyString &S)
+{
+	init();
+	assign_str(S.Value(), S.Len);
+}
+
+MyStringWithTokener::MyStringWithTokener(const char *s)
+{
+	init();
+	size_t s_len = s ? strlen(s) : 0;
+	assign_str(s, (int)s_len);
+}
+
+#if 1
+#else
 void
-MyString::Tokenize()
+MyStringWithTokener::Tokenize()
 {
 	delete [] tokenBuf;
 	tokenBuf = new char[strlen(Value()) + 1];
@@ -1159,7 +1167,7 @@ MyString::Tokenize()
 }
 
 const char *
-MyString::GetNextToken(const char *delim, bool skipBlankTokens)
+MyStringTokener::GetNextToken(const char *delim, bool skipBlankTokens)
 {
 	const char *result = nextToken;
 
@@ -1184,18 +1192,7 @@ MyString::GetNextToken(const char *delim, bool skipBlankTokens)
 
 	return result;
 }
-
-
-/*--------------------------------------------------------------------
- *
- * Private
- *
- *--------------------------------------------------------------------*/
-
-unsigned int MyStringHash( const MyString &str )
-{
-	return str.Hash();
-}
+#endif
 
 
 /*--------------------------------------------------------------------
@@ -1227,34 +1224,6 @@ bool YourString::operator<(const YourString &rhs) const {
 	if ( ! m_str) { return rhs.m_str ? true : false; }
 	else if ( ! rhs.m_str) { return false; }
 	return strcmp(m_str, rhs.m_str) < 0;
-}
-unsigned int YourString::hashFunction(const YourString &s) {
-	// hash function for strings
-	// Chris Torek's world famous hashing function
-	unsigned int hash = 0;
-	if (!s.m_str) return 7; // Least random number
-
-	const char *p = s.m_str;
-	while (*p) {
-		hash = (hash<<5)+hash + (unsigned char)*p;
-		p++;
-	}
-
-	return hash;
-}
-unsigned int YourString::hashFunctionNoCase(const YourString &s) {
-	// hash function for strings
-	// Chris Torek's world famous hashing function
-	unsigned int hash = 0;
-	if (!s.m_str) return 7; // Least random number
-
-	const char *p = s.m_str;
-	while (*p) {
-		hash = (hash<<5)+hash + (unsigned char)(*p & ~0x20);
-		p++;
-	}
-
-	return hash;
 }
 
 

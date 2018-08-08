@@ -70,7 +70,7 @@ if (WITH_OPENSSL)
 
 		if ( DARWIN )
 			exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-			if (${TEST_VER} MATCHES "10.1[1-9]" )
+			if (${TEST_VER} MATCHES "10.1[1-2]" )
 				if ( NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/openssl-darwin )
 					exec_program( curl ${CMAKE_CURRENT_BINARY_DIR} ARGS -O ${EXTERNALS_SOURCE_URL}/openssl-darwin.tar.gz )
 					exec_program( tar ${CMAKE_CURRENT_BINARY_DIR} ARGS xvf openssl-darwin.tar.gz )
@@ -78,25 +78,25 @@ if (WITH_OPENSSL)
 				set( DARWIN_OPENSSL_INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/openssl-darwin/include" )
 				set( DARWIN_OPENSSL_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/openssl-darwin/lib" )
 				set(BUILDING_OPENSSL ON PARENT_SCOPE)
+			elseif (${TEST_VER} MATCHES "10.1[3-9]" )
+				if ( NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/libressl-2.2.7 )
+					exec_program( curl ${CMAKE_CURRENT_BINARY_DIR} ARGS -O ${EXTERNALS_SOURCE_URL}/libressl-2.2.7.tar.gz )
+					exec_program( tar ${CMAKE_CURRENT_BINARY_DIR} ARGS xvf libressl-2.2.7.tar.gz libressl-2.2.7/include )
+					exec_program( mkdir ${CMAKE_CURRENT_BINARY_DIR} ARGS libressl-2.2.7/lib )
+					exec_program( ln ${CMAKE_CURRENT_BINARY_DIR} ARGS -s /usr/lib/libcrypto.dylib libressl-2.2.7/lib )
+					exec_program( ln ${CMAKE_CURRENT_BINARY_DIR} ARGS -s /usr/lib/libssl.dylib libressl-2.2.7/lib )
+				endif()
+				set( DARWIN_OPENSSL_INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/libressl-2.2.7/include" )
+				set( DARWIN_OPENSSL_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/libressl-2.2.7/lib" )
+				set(BUILDING_OPENSSL ON PARENT_SCOPE)
 			else()
 				set( DARWIN_OPENSSL_INCLUDE /usr/include )
 				set( DARWIN_OPENSSL_LIB_DIR /usr/lib )
 			endif()
 		endif()
 
-		# On macOS 10.13 and above, we have to use the older 0.9.8
-		# version of openssl.
-		# The default version is libressl 2.2.7, which removes
-		# several functions that globus and voms use.
-		# Soon, we should resolve those issues so that we can get
-		# away from using the crusty old version.
-		if ( DARWIN AND "${TEST_VER}" MATCHES "10.1[3-9]" )
-			set( LIBSSL_FOUND "/usr/lib/libssl.0.9.8.dylib" )
-			set( LIBCRYPTO_FOUND "/usr/lib/libcrypto.0.9.8.dylib" )
-		else()
-			find_library( LIBSSL_FOUND "ssl" )
-			find_library( LIBCRYPTO_FOUND "crypto" )
-		endif()
+		find_library( LIBSSL_FOUND "ssl" )
+		find_library( LIBCRYPTO_FOUND "crypto" )
 		set( OPENSSL_FOUND "${LIBSSL_FOUND};${LIBCRYPTO_FOUND}" )
 
 		if( DLOPEN_SECURITY_LIBS )

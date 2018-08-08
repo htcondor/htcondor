@@ -192,7 +192,14 @@ after_migrate:
 		}
 		if (((memory_controller = cgroup_add_controller(orig_cgroup, MEMORY_CONTROLLER_STR)) != NULL) &&
 			(!cgroup_add_value_uint64(memory_controller, "memory.move_charge_at_immigrate", orig_migrate))) {
-			cgroup_modify_cgroup(orig_cgroup);
+				if ((err = cgroup_modify_cgroup(orig_cgroup))) {
+					dprintf(D_ALWAYS, 
+						"Unable to change cgroup %s memory controller settings for migration. "
+						"Some memory accounting will be inaccurate (ProcFamily %u): %u %s\n",
+						orig_cgroup_string, m_root_pid, err, cgroup_strerror(err));
+			} else {
+				changed_orig = true;
+				}
 		}
 		cgroup_free(&orig_cgroup);
 	}
@@ -312,6 +319,7 @@ ProcFamily::freezer_cgroup(const char * state)
 				"(ProcFamily %u) due to process state; signal delivery "
 				"won't be atomic\n", m_cgroup_string.c_str(), m_root_pid);
 			err = -EBUSY;
+			goto ret;
 		} else {
 			dprintf(D_ALWAYS,
 				"Unable to commit freezer change %s for cgroup %s (ProcFamily %u). %u %s\n",

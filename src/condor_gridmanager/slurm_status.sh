@@ -88,6 +88,7 @@ END {
     if ( slurm_status ~ "SPECIAL_EXIT" ) { blah_status = 4 }
     if ( slurm_status ~ "STOPPED" ) { blah_status = 2 }
     if ( slurm_status ~ "SUSPENDED" ) { blah_status = 2 }
+    if ( slurm_status ~ "TIMEOUT" ) { blah_status = 4 }
 
     print "[BatchJobId=\"" job_id "\";JobStatus=" blah_status ";"
     if ( blah_status == 4 ) {

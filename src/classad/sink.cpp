@@ -169,8 +169,7 @@ Unparse( string &buffer, const Value &val )
 		case Value::INTEGER_VALUE: {
 			long long	i;
 			val.IsIntegerValue( i );
-			sprintf( tempBuf, "%lld", i );
-			buffer += tempBuf;
+			append_long(buffer, i);
 			return;
 		}
 		case Value::REAL_VALUE: {
@@ -255,6 +254,8 @@ Unparse( string &buffer, const Value &val )
 			UnparseAux( buffer, exprs );
 			return;
 		}
+		default:
+			break;
 	}
 }
 
@@ -269,9 +270,14 @@ Unparse( string &buffer, const ExprTree *tree )
 
 	switch( tree->GetKind( ) ) {
 		case ExprTree::LITERAL_NODE: {
+#if 0
+			Value::NumberFactor factor;
+			const Value & val = ((const Literal*)tree)->getValue(factor);
+#else
 			Value				val;
 			Value::NumberFactor	factor;
 			((Literal*)tree)->GetComponents( val, factor );
+#endif
 			UnparseAux( buffer, val, factor );
 			return;
 		}
@@ -315,10 +321,17 @@ Unparse( string &buffer, const ExprTree *tree )
 			return;
 		}
 		
-		case ExprTree::EXPR_ENVELOPE:
-		{
-			// recurse b/c we indirect for this element.
-			Unparse( buffer, ((CachedExprEnvelope*)tree)->get());
+		case ExprTree::EXPR_ENVELOPE: {
+#if 0
+			if (this->oldClassAd) {
+				buffer += ((CachedExprEnvelope*)tree)->get_unparsed_str();
+			} else {
+#else
+			{
+#endif
+				// recurse b/c we indirect for this element.
+				Unparse( buffer, ((CachedExprEnvelope*)tree)->get());
+			}
 			return;
 		}
 
@@ -380,9 +393,9 @@ UnparseAux(string &buffer, Operation::OpKind op, ExprTree *t1, ExprTree *t2,
 {
 		// case 0: parentheses op
 	if( op==Operation::PARENTHESES_OP ) {
-		buffer += "( ";
+		buffer += "(";
 		Unparse( buffer, t1 );
-		buffer += " )";
+		buffer += ")";
 		return;
 	}
 		// case 1: check for unary ops
@@ -519,7 +532,7 @@ UnparseAux( string &buffer, vector<ExprTree*>& exprs )
  * it's unparsed either as a quoted attribute or non-quoted attribute 
  */
 void ClassAdUnParser::
-UnparseAux( string &buffer, string identifier )
+UnparseAux( string &buffer, const string &identifier )
 {
 	Value  val;
 	string idstr;

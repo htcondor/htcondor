@@ -106,46 +106,6 @@ pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 
 	ad = the_ad;
 
-	// If we're dealing with an old starter (pre 7.7.2) and file transfer
-	// may be used, we need to rename the stdout/err files to
-	// StdoutRemapName and StderrRemapName. Otherwise, they won't transfer
-	// back correctly if they contain any path information.
-	// If we don't know what version the starter is and we know file
-	// transfer will be used, do the rename. It won't harm a new starter
-	// and allows us to work correctly with old starters in more cases.
-	const CondorVersionInfo *vi = syscall_sock->get_peer_version();
-	if ( vi == NULL || !vi->built_since_version(7,7,2) ) {
-		std::string value;
-		ad->LookupString( ATTR_SHOULD_TRANSFER_FILES, value );
-		ShouldTransferFiles_t should_transfer = getShouldTransferFilesNum( value.c_str() );
-
-		if ( should_transfer == STF_YES ||
-			 ( vi != NULL && should_transfer == STF_IF_NEEDED ) ) {
-			ad = new ClassAd( *ad );
-			delete_ad = true;
-
-			// This is the same modification a modern starter will do when
-			// using file transfer in JICShadow::initWithFileTransfer()
-			bool stream;
-			std::string stdout_name;
-			std::string stderr_name;
-			ad->LookupString( ATTR_JOB_OUTPUT, stdout_name );
-			ad->LookupString( ATTR_JOB_ERROR, stderr_name );
-			if ( ad->LookupBool( ATTR_STREAM_OUTPUT, stream ) && !stream &&
-				 !nullFile( stdout_name.c_str() ) ) {
-				ad->Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
-			}
-			if ( ad->LookupBool( ATTR_STREAM_ERROR, stream ) && !stream &&
-				 !nullFile( stderr_name.c_str() ) ) {
-				if ( stdout_name == stderr_name ) {
-					ad->Assign( ATTR_JOB_ERROR, StdoutRemapName );
-				} else {
-					ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
-				}
-			}
-		}
-	}
-
 	return 0;
 }
 
@@ -162,13 +122,9 @@ pseudo_get_user_info(ClassAd *&ad)
 		user_ad = new ClassAd;
 
 #ifndef WIN32
-		char buf[1024];
+		user_ad->Assign( ATTR_UID, (int)get_user_uid() );
 
-		sprintf( buf, "%s = %d", ATTR_UID, (int)get_user_uid() );
-		user_ad->Insert( buf );
-
-		sprintf( buf, "%s = %d", ATTR_GID, (int)get_user_gid() );
-		user_ad->Insert( buf );
+		user_ad->Assign( ATTR_GID, (int)get_user_gid() );
 #endif
 
 	}
@@ -282,8 +238,10 @@ pseudo_register_mpi_master_info( ClassAd* ad )
 	if( ! Shadow->setMpiMasterInfo(addr) ) {
 		dprintf( D_ALWAYS, "ERROR: received "
 				 "pseudo_register_mpi_master_info for a non-MPI job!\n" );
+		free(addr);
 		return -1;
 	}
+	free(addr);
 	return 0;
 }
 
@@ -298,10 +256,9 @@ so CurrentWorkingDir is replaced with the job's iwd.
  
 static void complete_path( const char *short_path, MyString &full_path )
 {
-	if(short_path[0]==DIR_DELIM_CHAR) {
+	if ( fullpath(short_path) ) {
 		full_path = short_path;
 	} else {
-		// strcpy(full_path,CurrentWorkingDir);
 		full_path.formatstr("%s%s%s",
 						  Shadow->getIwd(),
 						  DIR_DELIM_STRING,
@@ -663,6 +620,20 @@ pseudo_phase( char *phase )
 
 	return 0;
 }
+
+int
+pseudo_get_job_ad( ClassAd* &ad )
+{
+	RemoteResource *remote;
+	if (parallelMasterResource == NULL) {
+		remote = thisRemoteResource;
+	} else {
+		remote = parallelMasterResource;
+	}
+	ad = remote->getJobAd();
+	return 0;
+}
+
 
 int
 pseudo_get_job_attr( const char *name, MyString &expr )

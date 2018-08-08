@@ -33,6 +33,7 @@
 #include "secure_file.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"
+#include "my_popen.h"
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
 
@@ -47,9 +48,100 @@ void SecureZeroMemory(void *p, size_t n)
 
 
 int
-ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
+NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
+{
+	// store a SciToken produced by the credential producer.
+	//
+	// this is a stop-gap measure to transition from the "old" (cern/desy)
+	// framework into the "new" (scitokens) framework.  once the modules
+	// exist and are configurable, the token should be stored using that
+	// method, not via the credential producer.
+
+	dprintf(D_ALWAYS, "ZKM: NEW store cred user %s len %i mode %i\n", user, len, mode);
+
+	// only set to true if it actually happens
+	cred_modified = false;
+
+	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	if(!cred_dir) {
+		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return FAILURE;
+	}
+
+	// get username
+	char username[256];
+	const char *at = strchr(user, '@');
+	strncpy(username, user, (at-user));
+	username[at-user] = 0;
+
+	// remove mark on update for "mark and sweep"
+	credmon_clear_mark(username);
+
+	// create dir for user's creds
+	MyString user_cred_dir;
+	user_cred_dir.formatstr("%s%c%s", cred_dir, DIR_DELIM_CHAR, username);
+	mkdir(user_cred_dir.Value(), 0700);
+
+	// create filenames
+	char tmpfilename[PATH_MAX];
+	char filename[PATH_MAX];
+	sprintf(tmpfilename, "%s%cscitokens.top.tmp", user_cred_dir.Value(), DIR_DELIM_CHAR);
+	sprintf(filename, "%s%cscitokens.top", user_cred_dir.Value(), DIR_DELIM_CHAR);
+	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
+
+	// contents of pw are base64 encoded.  decode now just before they go
+	// into the file.
+	int rawlen = -1;
+	unsigned char* rawbuf = NULL;
+	zkm_base64_decode(pw, &rawbuf, &rawlen);
+
+	if (rawlen <= 0) {
+		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		free(rawbuf);
+		return false;
+	}
+
+	// create user cred dir
+	priv_state priv = set_root_priv();
+	mkdir(user_cred_dir.Value(), 0700);
+	set_priv(priv);
+
+	// write temp file
+	int rc = write_secure_file(tmpfilename, rawbuf, rawlen, true);
+
+	// caller of condor_base64_decode is responsible for freeing buffer
+	free(rawbuf);
+
+	if (rc != SUCCESS) {
+		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
+		return FAILURE;
+	}
+
+	// now move into place
+	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
+	priv = set_root_priv();
+	rc = rename(tmpfilename, filename);
+	set_priv(priv);
+
+	if (rc == -1) {
+		dprintf(D_ALWAYS, "ZKM: failed to rename %s to %s\n", tmpfilename, filename);
+
+		// should we rm tmpfilename ?
+		return FAILURE;
+	}
+
+	// credential succesfully stored
+	cred_modified = true;
+	return SUCCESS;
+}
+
+int
+ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
 {
 	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i\n", user, len, mode);
+
+	// only set to true if it actually happens
+	cred_modified = false;
 
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
@@ -69,12 +161,31 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 	// check to see if .cc already exists
 	char ccfilename[PATH_MAX];
 	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
-	struct stat junk_buf;
-	int rc = stat(ccfilename, &junk_buf);
-	if (rc==0) {
-		// if the credential cache already exists, we don't even need
-		// to write the file.  just return success as quickly as
-		// possible.
+	struct stat cred_stat_buf;
+	int rc = stat(ccfilename, &cred_stat_buf);
+
+	// if the credential already exists, we should update it if
+	// it's more than X seconds old.  if X is zero, we always
+	// update it.  if X is negative, we never update it.
+	int fresh_time = param_integer("SEC_CREDENTIAL_REFRESH_INTERVAL", -1);
+
+	// if it already exists and we don't update, call it a "success".
+	if (rc==0 && fresh_time < 0) {
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s already exist in %s, and interval is %i\n",
+			username, ccfilename, fresh_time );
+
+		return SUCCESS;
+	}
+
+	// return success if the credential exists and has been recently
+	// updated.  note that if fresh_time is zero, we'll never return
+	// success here, meaning we will always update the credential.
+	time_t now = time(NULL);
+	if ((rc==0) && (now - cred_stat_buf.st_mtime < fresh_time)) {
+		// was updated in the last X seconds, so call it a "success".
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s already exist in %s, and interval is %i\n",
+			username, ccfilename, fresh_time );
+
 		return SUCCESS;
 	}
 
@@ -122,6 +233,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode)
 	}
 
 	// credential succesfully stored
+	cred_modified = true;
 	return SUCCESS;
 }
 
@@ -217,7 +329,7 @@ char* getStoredCredential(const char *username, const char *domain)
 	return NULL;
 }
 
-int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode)
+int store_cred_service(const char *user, const char *cred, const size_t credlen, int mode, int &cred_modified)
 {
 	const char *at = strchr(user, '@');
 	if ((at == NULL) || (at == user)) {
@@ -227,8 +339,14 @@ int store_cred_service(const char *user, const char *cred, const size_t credlen,
 	if (( (size_t)(at - user) != strlen(POOL_PASSWORD_USERNAME)) ||
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
+		// See if we are operating in "new" or "old" mode and dispatch accordingly
+		if (param_boolean("TOKENS", false)) {
+			dprintf(D_ALWAYS, "ZKM: GOT *NEW* UNIX STORE CRED\n");
+			return NEW_UNIX_STORE_CRED(user, cred, credlen, mode, cred_modified);
+		}
+
 		dprintf(D_ALWAYS, "ZKM: GOT UNIX STORE CRED\n");
-		return ZKM_UNIX_STORE_CRED(user, cred, credlen, mode);
+		return ZKM_UNIX_STORE_CRED(user, cred, credlen, mode, cred_modified);
 	}
 
 	//
@@ -297,6 +415,10 @@ int store_cred_service(const char *user, const char *cred, const size_t credlen,
 		free(filename);
 	}
 
+	// if we got here we were dealing with pool password.  a return value of
+	// SUCCESS means we operated on the credential, so it was modified.
+	cred_modified = (answer == SUCCESS);
+
 	return answer;
 }
 
@@ -349,7 +471,7 @@ char* getStoredCredential(const char *username, const char *domain)
 	return strdup(pw);
 }
 
-int store_cred_service(const char *user, const char *pw, const size_t, int mode)
+int store_cred_service(const char *user, const char *pw, const size_t, int mode, int &cred_modified)
 {
 
 	wchar_t pwbuf[MAX_PASSWORD_LENGTH];
@@ -460,6 +582,10 @@ int store_cred_service(const char *user, const char *pw, const size_t, int mode)
 		set_priv(priv);
 	}
 	
+	// if we got here we were dealing with pool password.  a return value of
+	// SUCCESS means we operated on the credential, so it was modified.
+	cred_modified = (answer == SUCCESS);
+
 	return answer;
 }	
 
@@ -681,6 +807,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	int mode;
 	int result;
 	int answer = FAILURE;
+	int cred_modified = false;
 	bool dcfound = daemonCore != NULL;
 
 	dprintf (D_ALWAYS, "ZKM: First potential block in store_cred_handler, DC==%i\n", dcfound);
@@ -747,7 +874,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 				if(pw) {
 					pwlen = strlen(pw)+1;
 				}
-				answer = store_cred_service(user,pw,pwlen,mode);
+				answer = store_cred_service(user,pw,pwlen,mode,cred_modified);
 			}
 		}
 	}
@@ -755,7 +882,51 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	// no credmon on windows
 #ifdef WIN32
 #else
-	if(answer == SUCCESS) {
+
+	// see if we're in "new" mode.  call a hook to translate refresh into access
+	if(param_boolean("TOKENS", false)) {
+		char* cthook = param("SEC_CREDD_TOKEN_HOOK");
+		if (!cthook) {
+			dprintf(D_ALWAYS, "CREDS: no SEC_CREDD_TOKEN_HOOK... skipping\n");
+		} else {
+			MyString credd_token_hook = cthook;
+			free(cthook);
+
+			// run it with the full path to "top" cred as an argument
+			char* scd = param("SEC_CREDENTIAL_DIRECTORY");
+			if (!scd) {
+				dprintf(D_ALWAYS, "CREDS: no SEC_CREDENTIAL_DIRECTORY\n");
+				return false;
+			}
+			MyString cred_filename;
+			cred_filename.formatstr("%s/%s/%s", scd, sock->getOwner(), "scitokens.top");
+			free(scd);
+
+			ArgList hook_args;
+			hook_args.AppendArg(credd_token_hook.Value());
+			hook_args.AppendArg(cred_filename.Value());
+
+			dprintf(D_ALWAYS, "CREDS: invoking %s %s as root\n", credd_token_hook.Value(), cred_filename.Value());
+			priv_state priv = set_root_priv();
+
+			// need to use Create_Process and make this non-blocking
+			int rc = my_system(hook_args);
+
+			set_priv(priv);
+			if (rc) {
+				// fail
+				dprintf(D_ALWAYS, "CREDS: invoking %s %s failed with %i.\n", credd_token_hook.Value(), cred_filename.Value(), rc);
+				return FALSE;
+			}
+
+			// success
+			dprintf(D_ALWAYS, "CREDS: success converting %s\n", cred_filename.Value());
+		}
+	}
+
+	// we only need to signal CREDMON if the file was just written.  if it
+	// already existed, just leave it be, and don't signal the CREDMON.
+	if(answer == SUCCESS && cred_modified) {
 		// good so far, but the real answer is determined by our ability
 		// to signal the credmon and have the .cc file appear.  we don't
 		// want this to block so we go back to daemoncore and set a timer
@@ -772,6 +943,8 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 			daemonCore->Register_Timer(0, store_cred_handler_continue, "Poll for existence of .cc file");
 			daemonCore->Register_DataPtr(retry_state);
 		}
+	} else {
+		dprintf(D_SECURITY | D_FULLDEBUG, "NBSTORECRED: not signaling credmon.  (answer==%i, cred_modified==%i)\n", answer, cred_modified);
 	}
 #endif // WIN32
 
@@ -784,11 +957,16 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	}
 
 #ifndef WIN32  // no credmon on windows
-	// answer is SUCCESS only if we registered a timer to poll for the cred
-	// file, in which case we should return now instead of finishing the
-	// wire protocol.
-	if(answer == SUCCESS) {
-		return FALSE;
+	// if we modified the credential, then we also attempted to register a
+	// timer to poll for the cred file.  if that happened succesfully, return
+	// now so we can poll in a non-blocking way.
+	//
+	// if we either had a failure, or had success but didn't modify the file,
+	// then there's nothing to poll for and we should not return and should
+	// finish the wire protocol below.
+	//
+	if(answer == SUCCESS && cred_modified) {
+		return TRUE;
 	}
 #endif // WIN32
 
@@ -804,7 +982,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 			"store_cred: Failed to send end of message.\n");
 	}
 
-	return FALSE;
+	return (answer == SUCCESS);
 }
 
 
@@ -934,6 +1112,10 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 	dprintf (D_ALWAYS, "ZKM: First potential block in store_pool_cred_handler, DC==%i\n", dcfound);
 
+	// we don't actually care if the cred was modified in this
+	// situation, but the below function signature requires it
+	int cred_modified = false;
+
 	s->decode();
 	if (!s->code(domain) || !s->code(pw) || !s->end_of_message()) {
 		dprintf(D_ALWAYS, "store_pool_cred: failed to receive all parameters\n");
@@ -948,13 +1130,13 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	username += domain;	
 
 	// do the real work
-	if (pw) {
+	if (pw && *pw) {
 		size_t pwlen = strlen(pw)+1;
-		result = store_cred_service(username.Value(), pw, pwlen, ADD_MODE);
+		result = store_cred_service(username.Value(), pw, pwlen, ADD_MODE, cred_modified);
 		SecureZeroMemory(pw, strlen(pw));
 	}
 	else {
-		result = store_cred_service(username.Value(), NULL, 0, DELETE_MODE);
+		result = store_cred_service(username.Value(), NULL, 0, DELETE_MODE, cred_modified);
 	}
 
 	s->encode();
@@ -1003,7 +1185,11 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 		if(pw) {
 			pwlen=strlen(pw)+1;
 		}
-		return_val = store_cred_service(user,pw,pwlen,mode);
+		// we don't actually care if the cred was modified in this
+		// situation, but the below function signature requires it
+		int cred_modified = false;
+
+		return_val = store_cred_service(user,pw,pwlen,mode,cred_modified);
 	} else {
 			// send out the request remotely.
 
@@ -1072,8 +1258,8 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 		}
 		else {
 				// only need to send the domain and password for STORE_POOL_CRED
-			if (!sock->code(const_cast<char*&>(user)) ||
-				!sock->code(const_cast<char*&>(pw)) ||
+			if (!sock->put(user) ||
+				!sock->put(pw) ||
 				!sock->end_of_message()) {
 				dprintf(D_ALWAYS, "store_cred: failed to send STORE_POOL_CRED message\n");
 				delete sock;

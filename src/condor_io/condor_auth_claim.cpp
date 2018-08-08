@@ -106,18 +106,13 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 			//send 1 and then our username
 			mySock_->encode();
 			retval = 1;
-			char* tmpUser = strdup(myUser.Value());
-			ASSERT(tmpUser);
 			if (!mySock_->code( retval ) || 
-			    !mySock_->code( tmpUser ))
+			    !mySock_->code( myUser ))
 			{
-				free(tmpUser);
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
 					pszFunction, __LINE__);
 				return fail; 
 			}
-			//setRemoteUser(tmpUser); // <-- IS THIS NEEDED????
-			free(tmpUser);
 			if (!mySock_->end_of_message()) { 
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
 					pszFunction, __LINE__);
@@ -156,42 +151,36 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 				return fail;
 			}
 
-			if( tmpUser ) {
+			MyString myUser = tmpUser;
 
-				MyString myUser = tmpUser;
-
-				// check SEC_CLAIMTOBE_INCLUDE_DOMAIN. this knob exists (and defaults
-				// to false) to provide backwards compatibility. it will be removed
-				// completely in the development (6.9) series
-				if (param_boolean("SEC_CLAIMTOBE_INCLUDE_DOMAIN", false)) {
-					// look for an '@' char in the name we received.
-					// if present (newer clients), set the domain using
-					// the given component. if not present (older clients),
-					// use UID_DOMAIN from our config
-					char* tmpDomain = NULL;
-					char* at = strchr(tmpUser, '@');
-					if ( at ) {
-						*at = '\0';
-						if (*(at + 1) != '\0') {
-							tmpDomain = strdup(at + 1);
-						}
+			// check SEC_CLAIMTOBE_INCLUDE_DOMAIN. this knob exists (and defaults
+			// to false) to provide backwards compatibility. it will be removed
+			// completely in the development (6.9) series
+			if (param_boolean("SEC_CLAIMTOBE_INCLUDE_DOMAIN", false)) {
+				// look for an '@' char in the name we received.
+				// if present (newer clients), set the domain using
+				// the given component. if not present (older clients),
+				// use UID_DOMAIN from our config
+				char* tmpDomain = NULL;
+				char* at = strchr(tmpUser, '@');
+				if ( at ) {
+					*at = '\0';
+					if (*(at + 1) != '\0') {
+						tmpDomain = strdup(at + 1);
 					}
-					if (!tmpDomain) {
-						tmpDomain = param("UID_DOMAIN");
-					}
-					ASSERT(tmpDomain);
-					setRemoteDomain(tmpDomain);
-					myUser.formatstr("%s@%s", tmpUser, tmpDomain);
-					free(tmpDomain);
 				}
-				setRemoteUser(tmpUser);
-				setAuthenticatedName(myUser.Value());
-				free(tmpUser);
-				retval = 1;
-			} else {
-				// tmpUser is NULL; failure
-				retval = 0;
+				if (!tmpDomain) {
+					tmpDomain = param("UID_DOMAIN");
+				}
+				ASSERT(tmpDomain);
+				setRemoteDomain(tmpDomain);
+				myUser.formatstr("%s@%s", tmpUser, tmpDomain);
+				free(tmpDomain);
 			}
+			setRemoteUser(tmpUser);
+			setAuthenticatedName(myUser.Value());
+			free(tmpUser);
+			retval = 1;
 
 			mySock_->encode();
 			if (!mySock_->code( retval )) { 

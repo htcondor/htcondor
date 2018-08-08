@@ -33,7 +33,7 @@ public:
 	void init();
 	void config();
 	void stop();
-
+	void poll();
 
 private:
 	ClassAdLogReader job_log_reader;

@@ -20,14 +20,14 @@ UserLog = ".log_1521_fmz75O"
 NumJobStarts = 0
 JobUniverse = 5
 In = "/dev/null"
-Requirements = ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+Requirements = (TARGET.Arch == "X86_64") && (TARGET.OpSys == "LINUX") && (TARGET.Disk >= RequestDisk) && (TARGET.Memory >= RequestMemory) && (TARGET.HasFileTransfer)
 ClusterId = 15
 WhenToTransferOutput = "ON_EXIT"
 CompletionDate = 0
 BufferSize = 524288
 Environment = ""
 TargetType = "Machine"
-LeaveJobInQueue = ( StageOutFinish > 0 ) isnt true
+LeaveJobInQueue = (StageOutFinish > 0) isnt true
 x509UserProxyExpiration = 1357354655
 JobNotification = 0
 Owner = "bbockelm"
@@ -89,7 +89,7 @@ OnExitRemove = true
 Arguments = "faux"
 StreamOut = false
 CurrentTime = time()
-RequestMemory = ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+RequestMemory = ifthenelse(MemoryUsage isnt undefined,MemoryUsage,(ImageSize + 1023) / 1024)
 RemoteUserCpu = 0.0
 NiceUser = false
 SUBMIT_UserLog = "/home/cse496/bbockelm/.log_1521_fmz75O"

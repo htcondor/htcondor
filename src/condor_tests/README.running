@@ -90,7 +90,7 @@ Simple guide to running tests in the Condor test suite
 
 	Modify TimeoutChanges to have the test and a number for minutes:
 
-			job_quill_basic 35
+			job_ckpt_lfs_std 40
 
 7) Repeating tests more then once per test run in the Build & Test
 

@@ -195,9 +195,9 @@ void test_ads_dont_match(ClassAd *classad_1, ClassAd *classad_2,
     int line_number, TestResults *results);
 void test_printed_version(ClassAd *classad, const char *attribute_name, 
     char *expected_string, int line_number, TestResults *results);
-void test_in_references(char *name,	StringList &references,
+void test_in_references(char *name,	classad::References &references,
     int line_number, TestResults *results);
-void test_not_in_references(char *name,	StringList &references,
+void test_not_in_references(char *name,	classad::References &references,
     int line_number, TestResults *results);
 void test_dirty_attribute(
     TestResults *results);
@@ -434,14 +434,14 @@ main(
 
 	if (parameters.test_references) {
 		printf("\nTesting References...\n");
-		StringList  *internal_references; 
-		StringList  *external_references; 
+		classad::References *internal_references;
+		classad::References *external_references;
 
-		internal_references = new StringList;
-		external_references = new StringList;
+		internal_references = new classad::References;
+		external_references = new classad::References;
 
-		classads[9]->GetReferences("Requirements", internal_references,
-								   external_references);
+		GetReferences("Requirements", *classads[9], internal_references,
+		              external_references);
 		test_in_references("Memory", *internal_references, __LINE__, &test_results);
 		test_in_references("Disk", *internal_references, __LINE__, &test_results);
 		test_in_references("ImageSize", *external_references, __LINE__, &test_results);
@@ -458,11 +458,11 @@ main(
 		delete internal_references;
 		delete external_references;
 
-		internal_references = new StringList;
-		external_references = new StringList;
+		internal_references = new classad::References;
+		external_references = new classad::References;
 
-		classads[10]->GetReferences("Requirements", internal_references,
-								   external_references);
+		GetReferences("Requirements", *classads[10], internal_references,
+		              external_references);
 		test_in_references("Memory", *internal_references, __LINE__, &test_results);
 		test_in_references("Disk", *internal_references, __LINE__, &test_results);
 		test_in_references("ImageSize", *external_references, __LINE__, &test_results);
@@ -1261,21 +1261,11 @@ test_printed_version(
 void
 test_in_references(
 	char         *name,        // IN: What to look for 
-	StringList   &references,   // IN: References to examine
+	classad::References &references,   // IN: References to examine
     int          line_number,  // IN: The line number to print
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
-	char *reference;
-	bool is_in_references = false;
-
-	references.rewind(); 
-	while ((reference = references.next()) != NULL) {
-		if (!strcmp(reference, name)) {
-			is_in_references = true;
-			break;
-		}
-	}
-	if (is_in_references) {
+	if (references.count(name) > 0) {
 		printf("Passed: %s is in references in line %d.\n", 
 			   name, line_number);
 		results->AddResult(true);
@@ -1298,21 +1288,11 @@ test_in_references(
 void
 test_not_in_references(
 	char         *name,        // IN: What to look for 
-	StringList   &references,   // IN: References to examine
+	classad::References &references,   // IN: References to examine
     int          line_number,  // IN: The line number to print
 	TestResults  *results)     // OUT: Modified to reflect result of test
 {
-	char *reference;
-	bool is_in_references = false;
-
-	references.rewind(); 
-	while ((reference = references.next()) != NULL) {
-		if (!strcmp(reference, name)) {
-			is_in_references = true;
-			break;
-		}
-	}
-	if (!is_in_references) {
+	if (!references.count(name) == 0) {
 		printf("Passed: %s is not in references in line %d.\n", 
 			   name, line_number);
 		results->AddResult(true);

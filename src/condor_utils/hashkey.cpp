@@ -43,26 +43,12 @@ bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
     return (  ( lhs.name == rhs.name ) && ( lhs.ip_addr == rhs.ip_addr ) );
 }
 
-static int sumOverString(const MyString &str)
+size_t adNameHashFunction (const AdNameHashKey &key)
 {
-	int sum = 0;
-	for (const char *p = str.Value(); p && *p; p++) {
-		sum += *p;
-	}
-	return sum;
-}
+    size_t bkt = 0;
 
-unsigned int stringHashFunction (const MyString &str)
-{
-	return sumOverString(str);
-}
-
-unsigned int adNameHashFunction (const AdNameHashKey &key)
-{
-    unsigned int bkt = 0;
-
-    bkt += sumOverString(key.name);
-    bkt += sumOverString(key.ip_addr);
+    bkt += hashFunction(key.name);
+    bkt += hashFunction(key.ip_addr);
 
     return bkt;
 }
@@ -177,7 +163,7 @@ getIpAddr( const char *ad_type,
 // functions to make the hashkeys ...
 // make hashkeys from the obtained ad
 bool
-makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeStartdAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 
 	// get the name of the startd;
@@ -194,12 +180,12 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 		int	slot;
 		if (ad->LookupInteger( ATTR_SLOT_ID, slot)) {
 			hk.name += ":";
-			hk.name += slot;
+			hk.name += IntToStr( slot );
 		}
 		else if (param_boolean("ALLOW_VM_CRUFT", false) &&
 				 ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot)) {
 			hk.name += ":";
-			hk.name += slot;
+			hk.name += IntToStr( slot );
 		}
 	}
 
@@ -217,32 +203,8 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 	return true;
 }
 
-#ifdef HAVE_EXT_POSTGRESQL
 bool
-makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad )
-{
-
-	// get the name of the quill daemon
-	if ( !adLookup( "Quill", ad, ATTR_NAME, ATTR_MACHINE, hk.name ) ) {
-		return false;
-	}
-	
-	// as in the case of submittor ads (see makeScheddAdHashKey), we
-	// also use the schedd name to construct the hash key for a quill
-	// ad.  this solves the problem of multiple quill daemons on the
-	// same name on the same machine submitting to the same pool
-	// -Ameet Kini <akini@cs.wisc.edu> 8/2005
-	MyString	tmp;
-	if ( adLookup( "Quill", ad, ATTR_SCHEDD_NAME, NULL, tmp, false ) ) {
-		hk.name += tmp;
-	}
-
-	return true;
-}
-#endif /* HAVE_EXT_POSTGRESQL */
-
-bool
-makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeScheddAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 
 	// get the name of the schedd
@@ -274,7 +236,7 @@ makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 
 
 bool
-makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeLicenseAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 
 	// get the name of the license
@@ -292,7 +254,7 @@ makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 
 
 bool
-makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeMasterAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 	hk.ip_addr = "";
 	return adLookup( "Master", ad, ATTR_NAME, ATTR_MACHINE, hk.name );
@@ -300,36 +262,47 @@ makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 
 
 bool
-makeCkptSrvrAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeCkptSrvrAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "CheckpointServer", ad, ATTR_MACHINE, NULL, hk.name );
 }
 
 bool
-makeCollectorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeCollectorAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "Collector", ad, ATTR_NAME, ATTR_MACHINE, hk.name );
 }
 
 bool
-makeStorageAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeStorageAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "Storage", ad, ATTR_NAME, NULL, hk.name );
 }
 
 bool
-makeAccountingAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeAccountingAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
-	return adLookup( "Accounting", ad, ATTR_NAME, NULL, hk.name );
+	if ( !adLookup( "Accounting", ad, ATTR_NAME, NULL, hk.name ) ) {
+		return false;
+	}
+
+	// Get the name of the negotiator this accounting ad is from.
+	// Older negotiators didn't set ATTR_NEGOTIATOR_NAME, so this is
+	// optional.
+	MyString tmp;
+	if ( adLookup( "Accounting", ad, ATTR_NEGOTIATOR_NAME, NULL, tmp ) ) {
+		hk.name += tmp;
+	}
+	return true;
 }
 
 
 bool
-makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeNegotiatorAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "Negotiator",  ad, ATTR_NAME, NULL, hk.name );
@@ -337,14 +310,14 @@ makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 
 
 bool
-makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeHadAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "HAD", ad, ATTR_NAME, NULL, hk.name );
 }
 
 bool
-makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad)
+makeGridAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
     MyString tmp;
     
@@ -384,25 +357,11 @@ makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 // (e.g. this wouldn't work for submitter ads - see code for
 // makeScheddAdHashKey above)
 bool
-makeGenericAdHashKey (AdNameHashKey &hk, ClassAd *ad )
+makeGenericAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 {
 	hk.ip_addr = "";
 	return adLookup( "Generic", ad, ATTR_NAME, NULL, hk.name );
 }
-
-bool
-makeXferServiceAdHashKey (AdNameHashKey &hk, ClassAd *ad)
-{
-	return makeNegotiatorAdHashKey( hk, ad );
-}
-
-
-bool
-makeLeaseManagerAdHashKey (AdNameHashKey &hk, ClassAd *ad)
-{
-	return makeNegotiatorAdHashKey( hk, ad );
-}
-
 
 
 // utility function:  parse the string "<aaa.bbb.ccc.ddd:pppp>"

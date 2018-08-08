@@ -71,7 +71,7 @@ my $on_success = sub {
 my $GetClusterId = sub {
 	my $cid = shift;
 	$ClusterId = $cid;
-	print "Resquestd Cluster Got $ClusterId\n";
+	print "Requested Cluster Got $ClusterId\n";
 	##########################
 	#
 	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
@@ -148,10 +148,10 @@ sub VerifyNoJobs
 			die "TOOO MANY tries to find empty queue with condor_q\n";
 		}
 		$count += 1;
-		@queue = `condor_q`;
+		@queue = `condor_q -tot`;
 		foreach my $line (@queue) {
 			chomp($line);
-			if($line =~ /^(\d+)\s\jobs;.*$/) {
+			if($line =~ /(\d+)\s+jobs;\s+/i) {
 				$jobsrunning = $1;
 				if($1 eq "0") {
 					$done = 1;
@@ -175,7 +175,7 @@ sub  ValidateExit
 		die "Cluster ID should not be zero\n";
 	}
 	VerifyNoJobs();
-	@history = `condor_history -l $ClusterId | grep UserLog`;
+	@history = `condor_history -long -attributes UserLog $ClusterId`;
 
 	foreach my $ad (@history) {
 		chomp($ad);
@@ -200,7 +200,7 @@ sub GetExitClassAd
 
 	VerifyNoJobs();
 	CondorTest::debug("GetExitClassAd: Expected,$expected\n",2);
-	@history = `condor_history -l $ClusterId | grep ExitCode`;
+	@history = `condor_history -long -attributes ExitCode $ClusterId`;
 
 	foreach my $ad (@history) {
 		chomp($ad);

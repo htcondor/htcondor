@@ -79,9 +79,6 @@
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define strtoll _strtoi64
-#ifndef rint
-#define rint(num) floor(num + .5)
-#endif
 #define isnan _isnan
 	// isinf() defined in util.h
 
@@ -105,7 +102,6 @@
 #define SAL_Ret_notnull
 #define SAL_assume(expr)
 #endif // WIN32
-
 
 #include "classad/debug.h"
 

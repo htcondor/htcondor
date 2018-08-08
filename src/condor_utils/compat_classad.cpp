@@ -30,6 +30,8 @@
 #include "condor_arglist.h"
 #define CLASSAD_USER_MAP_RETURNS_STRINGLIST 1
 
+#include <sstream>
+
 class MapFile;
 extern int reconfig_user_maps();
 extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
@@ -61,6 +63,19 @@ static StringList ClassAdUserLibs;
 
 static void registerClassadFunctions();
 static void classad_debug_dprintf(const char *s);
+
+// The Windows compiler doesn't like this C++11 style of object
+// initialization.
+#if !defined(WIN32)
+classad::References ClassAdPrivateAttrs = { ATTR_CAPABILITY,
+		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
+		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
+#else
+static const std::string private_attrs[] = { ATTR_CAPABILITY,
+		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
+		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
+classad::References ClassAdPrivateAttrs( private_attrs, private_attrs + COUNTOF(private_attrs) );
+#endif
 
 bool ClassAd::m_initConfig = false;
 bool ClassAd::m_strictEvaluation = false;
@@ -131,37 +146,31 @@ Reconfig()
 	}
 }
 
-static classad::MatchClassAd *the_match_ad = NULL;
+static classad::MatchClassAd the_match_ad;
 static bool the_match_ad_in_use = false;
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
-									  classad::ClassAd *target )
+                                      classad::ClassAd *target,
+                                      const std::string &source_alias,
+                                      const std::string &target_alias )
 {
 	ASSERT( !the_match_ad_in_use );
 	the_match_ad_in_use = true;
 
-	if( !the_match_ad ) {
-		the_match_ad = new classad::MatchClassAd( );
-	}
-	the_match_ad->ReplaceLeftAd( source );
-	the_match_ad->ReplaceRightAd( target );
+	the_match_ad.ReplaceLeftAd( source );
+	the_match_ad.ReplaceRightAd( target );
 
-	if ( !ClassAd::m_strictEvaluation ) {
-		source->alternateScope = target;
-		target->alternateScope = source;
-	}
+	the_match_ad.SetLeftAlias( source_alias );
+	the_match_ad.SetRightAlias( target_alias );
 
-	return the_match_ad;
+	return &the_match_ad;
 }
 
 void releaseTheMatchAd()
 {
 	ASSERT( the_match_ad_in_use );
 
-	classad::ClassAd *ad;
-	ad = the_match_ad->RemoveLeftAd();
-	ad->alternateScope = NULL;
-	ad = the_match_ad->RemoveRightAd();
-	ad->alternateScope = NULL;
+	the_match_ad.RemoveLeftAd();
+	the_match_ad.RemoveRightAd();
 
 	the_match_ad_in_use = false;
 }
@@ -1883,83 +1892,38 @@ int CondorClassAdListWriter::writeFooter(FILE* out, bool xml_always_write_header
 	return 0;
 }
 
+
 bool
-ClassAdAttributeIsPrivate( char const *name )
+ClassAdAttributeIsPrivate( const std::string &name )
 {
-	if( strcasecmp(name,ATTR_CLAIM_ID) == 0 ) {
-			// This attribute contains the secret capability cookie
-		return true;
-	}
-	if( strcasecmp(name,ATTR_PAIRED_CLAIM_ID) == 0 ) {
-			// This attribute contains the secret capability cookie
-		return true;
-	}
-	if( strcasecmp(name,ATTR_CAPABILITY) == 0 ) {
-			// This attribute contains the secret capability cookie
-		return true;
-	}
-	if( strcasecmp(name,ATTR_CLAIM_IDS) == 0 ) {
-			// This attribute contains secret capability cookies
-		return true;
-	}
-	if( strcasecmp(name,ATTR_TRANSFER_KEY) == 0 ) {
-			// This attribute contains the secret file transfer cookie
-		return true;
-	}
-	if (strcasecmp(name,ATTR_CHILD_CLAIM_IDS) == 0) {
-			// In a partitionable slot, contains all the claim ids
-		return true;
-	}
-	if (strcasecmp(name,ATTR_CLAIM_ID_LIST) == 0) {
-			// In a partitionable slot with consumption policies,
-			// contains extra claim ids
-		return true;
-	}
-	return false;
+	return ClassAdPrivateAttrs.find( name ) != ClassAdPrivateAttrs.end();
 }
 
-bool ClassAd::Insert( const std::string &attrName, classad::ExprTree *& expr, bool bCache )
+bool ClassAd::Insert( const std::string &attrName, classad::ExprTree *& expr)
 {
-	return classad::ClassAd::Insert( attrName, expr, bCache );
+	return classad::ClassAd::Insert( attrName, expr );
 }
 
-int ClassAd::Insert( const char *name, classad::ExprTree *& expr, bool bCache )
+int ClassAd::Insert( const char *name, classad::ExprTree *& expr )
 {
-	string str = name;
-	return Insert( str, expr, bCache ) ? TRUE : FALSE;
+	string str(name);
+	return Insert( str, expr ) ? TRUE : FALSE;
 }
 
 int
 ClassAd::Insert(const std::string &str)
 {
-	
-	size_t backslash = str.find('\\');
-	if (backslash == std::string::npos) {
-		// No backslashes, no need to escape 'em (and mutate the string)
-		if (!classad::ClassAd::Insert(str)) {
-	  		return FALSE;
-		}
-		return TRUE;
-	}
-
-	// At least one backslash, take the slow path, allocate a new string
+	// this is not the optimial path, it would be better to
+	// use either the 2 argument insert, or the const char* form below
 	return this->Insert(str.c_str());
 }
 
 int
 ClassAd::Insert( const char *str )
 {
-		// String escaping is different between new and old ClassAds.
-		// We need to convert the escaping from old to new style before
-		// handing the expression to the new ClassAds parser.
-	string newAdStr;
-	ConvertEscapingOldToNew( str, newAdStr );
-	
-	if (!classad::ClassAd::Insert(newAdStr))
-	{
-	  return FALSE;
+	if ( ! InsertLongFormAttrValue(*this, str, true)) {
+		return FALSE;
 	}
-	
 	return TRUE;
 }
 
@@ -1968,14 +1932,15 @@ AssignExpr(char const *name,char const *value)
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *expr = NULL;
+	par.SetOldClassAd( true );
 
 	if ( value == NULL ) {
 		value = "Undefined";
 	}
-	if ( !par.ParseExpression( ConvertEscapingOldToNew( value ), expr, true ) ) {
+	if ( !par.ParseExpression( value, expr, true ) ) {
 		return FALSE;
 	}
-	if ( !Insert( name, expr, false ) ) {
+	if ( !Insert( name, expr ) ) {
 		delete expr;
 		return FALSE;
 	}
@@ -2232,36 +2197,6 @@ EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
 		}
 	} else if( target->Lookup( name ) ) {
 		if( target->EvaluateAttr( name, value ) ) {
-			rc = 1;
-		}
-	}
-	releaseTheMatchAd();
-	return rc;
-}
-
-int ClassAd::
-EvalString( const char *name, classad::ClassAd *target, char *value )
-{
-	int rc = 0;
-	string strVal;
-
-	if( target == this || target == NULL ) {
-		if( EvaluateAttrString( name, strVal ) ) {
-			strcpy( value, strVal.c_str( ) );
-			rc = 1;
-		}
-		return rc;
-	}
-
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttrString( name, strVal ) ) {
-			strcpy( value, strVal.c_str( ) );
-			rc = 1;
-		}
-	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrString( name, strVal ) ) {
-			strcpy( value, strVal.c_str( ) );
 			rc = 1;
 		}
 	}
@@ -2614,7 +2549,7 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				 !ClassAdAttributeIsPrivate( itr->first ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
 				output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
@@ -2628,7 +2563,7 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			 !ClassAdAttributeIsPrivate( itr->first ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
 			output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
@@ -2663,7 +2598,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			 !ClassAdAttributeIsPrivate( itr->first ) ) {
 			attrs.insert(itr->first);
 		}
 	}
@@ -2678,7 +2613,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				 !ClassAdAttributeIsPrivate( itr->first ) ) {
 				attrs.insert(itr->first);
 			}
 		}
@@ -2720,7 +2655,7 @@ sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::Refe
 	Note: this function and its sister the outputs to MyString do not call each other for reasons of efficiency...
 */
 int
-sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs )
+sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs, const char * indent /*=NULL*/ )
 {
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
@@ -2729,6 +2664,7 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 	for (it = attrs.begin(); it != attrs.end(); ++it) {
 		const ExprTree * tree = ad.Lookup(*it); // use Lookup rather than find in case we have a parent ad.
 		if (tree) {
+			if (indent) output += indent;
 			output += *it;
 			output += " = ";
 			unp.Unparse( output, tree );
@@ -2738,6 +2674,24 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 
 	return TRUE;
 }
+
+/** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
+	This version if the classad function prints the attributes in sorted order and allows for an optional
+	indent character to be printed at the start of each line. A terminating \n is guaranteed, even if the
+	incoming ad is empty. This makes it ideal for use with dprintf() like this
+	     if (IsDebugLevel(D_JOB)) { dprintf(D_JOB, "Job ad:\n%s", formatAd(buf, ad, "\t")); }
+	@param output The std::string to write into
+	@return std::string.c_str()
+*/
+const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, StringList *attr_white_list /*= NULL*/, bool exclude_private /*= false*/)
+{
+	classad::References attrs;
+	sGetAdAttrs(attrs, ad, exclude_private, attr_white_list);
+	sPrintAdAttrs(buffer, ad, attrs, indent);
+	if (buffer.empty() || (buffer[buffer.size()-1] != '\n')) { buffer += "\n"; }
+	return buffer.c_str();
+}
+
 
 // Taken from the old classad's function. Got rid of incorrect documentation. 
 ////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 
@@ -2859,61 +2813,6 @@ NextNameOriginal()
 	return name;
 }
 
-// Back compatibility helper methods
-
-void AddExplicitTargetRefs( classad::ClassAd &ad ) 
-{
-	set< string, classad::CaseIgnLTStr > definedAttrs;
-	for( classad::AttrList::iterator a = ad.begin( ); a != ad.end( ); a++ ) {
-		definedAttrs.insert(a->first);
-	}
-	
-	for( classad::AttrList::iterator a = ad.begin( ); a != ad.end( ); a++ ) {
-		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
-		{
-		  classad::ExprTree * pTree = compat_classad::AddExplicitTargetRefs( a->second, definedAttrs );
-			ad.Insert( a->first, pTree ) ;
-		}
-	}
-}
-
-void RemoveExplicitTargetRefs( classad::ClassAd &ad )
-{
-	for( classad::AttrList::iterator a = ad.begin( ); a != ad.end( ); a++ ) {
-		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
-		{
-		  classad::ExprTree * pTree = compat_classad::RemoveExplicitTargetRefs( a->second );
-			ad.Insert( a->first, pTree );
-		}
-	}
-}  
-
-
-void ClassAd:: 
-AddTargetRefs( TargetAdType /*target_type*/, bool /*do_version_check*/ )
-{
-	// Disable AddTargetRefs for now
-	return;
-
-	// Remove use of CondorVersionInfo, which would require several
-	// additional files in libcondorapi.
-#if 0
-	MyString ver_str;
-	if ( do_version_check && this->LookupString( ATTR_VERSION, ver_str ) ) {
-		CondorVersionInfo ver( ver_str.Value() );
-		if ( ver.built_since_version( 7, 5, 1 ) ) {
-			return;
-		}
-	}
-
-	for( classad::AttrList::iterator a = begin(); a != end(); a++ ) {
-		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
-			this->Insert( a->first, 
-						  compat_classad::AddTargetRefs( a->second, target_type ) );
-		}
-	}
-#endif
-}
 
 // Determine if a value is valid to be written to the log. The value
 // is a RHS of an expression. According to LogSetAttribute::WriteBody,
@@ -3081,7 +2980,7 @@ CopyAttribute(const char *target_attr, classad::ClassAd &target_ad, const char *
 	classad::ExprTree *e = source_ad.Lookup( source_attr );
 	if ( e ) {
 		e = e->Copy();
-		target_ad.Insert( target_attr, e, false );
+		target_ad.Insert( target_attr, e );
 	} else {
 		target_ad.Delete( target_attr );
 	}
@@ -3127,7 +3026,7 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 		while( (attr = attr_white_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
 				classad::ExprTree *new_expr = expr->Copy();
-				tmp_ad.Insert( attr, new_expr, false );
+				tmp_ad.Insert( attr, new_expr );
 			}
 		}
 		unparser.Unparse( xml, &tmp_ad );
@@ -3175,7 +3074,7 @@ sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr
 		while( (attr = attr_white_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
 				classad::ExprTree *new_expr = expr->Copy();
-				tmp_ad.Insert( attr, new_expr, false );
+				tmp_ad.Insert( attr, new_expr );
 			}
 		}
 		unparser.Unparse( output, &tmp_ad );
@@ -3237,87 +3136,67 @@ void ClassAd::ChainCollapse()
             ASSERT(tmpExprTree); 
 
             //K, it's clear. Insert it, but don't try to 
-            Insert((*itr).first, tmpExprTree, false);
+            Insert((*itr).first, tmpExprTree);
         }
     }
 }
 
-void ClassAd::
-GetReferences(const char* attr,
-                StringList *internal_refs,
-                StringList *external_refs) const
-{
-    ExprTree *tree;
 
-    tree = Lookup(attr);
-    if(tree != NULL)
-    {
-		_GetReferences( tree, internal_refs, external_refs );
-    }
+int ClassAd::AttrChainDepth(const std::string & attr)
+{
+	int result = 0;
+	if (LookupIgnoreChain(attr)) { result |= 1; }
+	classad::ClassAd *parent = GetChainedParentAd();
+	if (parent && parent->Lookup(attr)) { result |= 2; }
+	return result;
 }
 
-bool ClassAd::
-GetExprReferences(const char* expr,
-				  StringList *internal_refs,
-				  StringList *external_refs) const
+
+// the freestanding functions 
+
+bool
+GetReferences( const char* attr, const classad::ClassAd &ad,
+               classad::References *internal_refs,
+               classad::References *external_refs )
 {
+	ExprTree *tree;
+
+	tree = ad.Lookup( attr );
+	if ( tree != NULL ) {
+		return GetExprReferences( tree, ad, internal_refs, external_refs );
+	} else {
+		return false;
+	}
+}
+
+bool
+GetExprReferences( const char* expr, const classad::ClassAd &ad,
+                   classad::References *internal_refs,
+                   classad::References *external_refs )
+{
+	bool rv = false;
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
+	par.SetOldClassAd( true );
 
-    if ( !par.ParseExpression( ConvertEscapingOldToNew( expr ), tree, true ) ) {
-        return false;
-    }
+	if ( !par.ParseExpression( expr, tree, true ) ) {
+		return false;
+	}
 
-	_GetReferences( tree, internal_refs, external_refs );
+	rv = GetExprReferences( tree, ad, internal_refs, external_refs );
 
 	delete tree;
 
-	return true;
+	return rv;
 }
 
-bool ClassAd::
-GetExprReferences(classad::ExprTree *tree,
-				  StringList *internal_refs,
-				  StringList *external_refs) const
-{
-	_GetReferences( tree, internal_refs, external_refs );
-	return true;
-}
-
-static void AppendReference( StringList &reflist, char const *name )
-{
-	char const *end = strchr(name,'.');
-	std::string buf;
-	if( end ) {
-			// if attribute reference is of form 'one.two.three...'
-			// only insert 'one' in the list of references
-
-		if( end == name ) {
-				// If reference is of form '.one.two.three...'
-				// only insert 'one'.  This is unlikely to be correct,
-				// because the root scope is likely to be the MatchClassAd,
-				// but inserting an empty attribute name would make it
-				// harder to understand what is going on, so it seems
-				// better to insert 'one'.
-			end = strchr(end,'.');
-		}
-
-		buf.append(name,end-name);
-		name = buf.c_str();
-	}
-
-	if( !reflist.contains_anycase(name) ) {
-		reflist.append(name);
-	}
-}
-
-void ClassAd::
-_GetReferences(classad::ExprTree *tree,
-			   StringList *internal_refs,
-			   StringList *external_refs) const
+bool
+GetExprReferences( const classad::ExprTree *tree, const classad::ClassAd &ad,
+                   classad::References *internal_refs,
+                   classad::References *external_refs )
 {
 	if ( tree == NULL ) {
-		return;
+		return false;
 	}
 
 	classad::References ext_refs_set;
@@ -3325,16 +3204,17 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References::iterator set_itr;
 
 	bool ok = true;
-	if( external_refs && !GetExternalReferences(tree, ext_refs_set, true) ) {
+	if( external_refs && !ad.GetExternalReferences(tree, ext_refs_set, true) ) {
 		ok = false;
 	}
-	if( internal_refs && !GetInternalReferences(tree, int_refs_set, true) ) {
+	if( internal_refs && !ad.GetInternalReferences(tree, int_refs_set, true) ) {
 		ok = false;
 	}
 	if( !ok ) {
 		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
-		dPrintAd(D_FULLDEBUG, *this);
+		dPrintAd(D_FULLDEBUG, ad);
 		dprintf(D_FULLDEBUG,"End of offending ad.\n");
+		return false;
 	}
 
 		// We first process the references and save results in
@@ -3344,175 +3224,47 @@ _GetReferences(classad::ExprTree *tree,
 		// duplicates while inserting into the StringList.
 
 	if ( external_refs ) {
-		for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
-			  set_itr++ ) {
-			const char *name = set_itr->c_str();
-			// Check for references to things in the MatchClassAd
-			// and do the right thing.  This does not cover all
-			// possible ways of referencing things in the match ad,
-			// but it covers the ones users are expected to use
-			// and the ones expected from OptimizeAdForMatchmaking.
-			if ( strncasecmp( name, "target.", 7 ) == 0 ) {
-				AppendReference( *external_refs, &set_itr->c_str()[7] );
-			} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
-				AppendReference( *external_refs, &set_itr->c_str()[6] );
-			} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
-				AppendReference( *external_refs, &set_itr->c_str()[6] );
-			} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
-				AppendReference( *external_refs, &set_itr->c_str()[7] );
-			} else {
-				AppendReference( *external_refs, set_itr->c_str() );
-			}
-		}
+		TrimReferenceNames( ext_refs_set, true );
+		external_refs->insert( ext_refs_set.begin(), ext_refs_set.end() );
 	}
-
 	if ( internal_refs ) {
-		for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
-			  set_itr++ ) {
-			AppendReference( *internal_refs, set_itr->c_str() );
-		}
+		TrimReferenceNames( int_refs_set, false );
+		internal_refs->insert( int_refs_set.begin(), int_refs_set.end() );
 	}
+	return true;
 }
 
-
-
-// the freestanding functions 
-
-classad::ExprTree *
-AddExplicitTargetRefs(classad::ExprTree *tree,
-						std::set < std::string, classad::CaseIgnLTStr > & definedAttrs) 
+void TrimReferenceNames( classad::References &ref_set, bool external )
 {
-	if( tree == NULL ) {
-		return NULL;
-	}
-	classad::ExprTree::NodeKind nKind = tree->GetKind( );
-	switch( nKind ) {
-	case classad::ExprTree::ATTRREF_NODE: {
-		classad::ExprTree *expr = NULL;
-		string attr = "";
-		bool abs = false;
-		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
-		if( abs || expr != NULL ) {
-			return tree->Copy( );
-		}
-		else {
-			if( definedAttrs.find( attr ) == definedAttrs.end( ) ) {
-					// attribute is not defined, so insert "target"
-				classad::AttributeReference *target = NULL;
-				target = classad::AttributeReference::MakeAttributeReference(NULL,
-																	"target");
-				return classad::AttributeReference::MakeAttributeReference(target,attr);
+	classad::References new_set;
+	classad::References::iterator it;
+	for ( it = ref_set.begin(); it != ref_set.end(); it++ ) {
+		const char *name = it->c_str();
+		if ( external ) {
+			if ( strncasecmp( name, "target.", 7 ) == 0 ) {
+				name += 7;
+			} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
+				name += 6;
+			} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
+				name += 6;
+			} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
+				name += 7;
+			} else if ( name[0] == '.' ) {
+				name += 1;
 			}
-			else {
-				return tree->Copy( );
+		} else {
+			if ( name[0] == '.' ) {
+				name += 1;
 			}
 		}
-	}
-	case classad::ExprTree::OP_NODE: {
-		classad::Operation::OpKind oKind;
-		classad::ExprTree * expr1 = NULL;
-		classad::ExprTree * expr2 = NULL;
-		classad::ExprTree * expr3 = NULL;
-		classad::ExprTree * newExpr1 = NULL;
-		classad::ExprTree * newExpr2 = NULL;
-		classad::ExprTree * newExpr3 = NULL;
-		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
-		if( expr1 != NULL ) {
-			newExpr1 = AddExplicitTargetRefs( expr1, definedAttrs );
+		const char *end = strchr( name, '.' );
+		if ( end ) {
+			new_set.insert( std::string( name, end-name ) );
+		} else {
+			new_set.insert( name );
 		}
-		if( expr2 != NULL ) {
-			newExpr2 = AddExplicitTargetRefs( expr2, definedAttrs );
-		}
-		if( expr3 != NULL ) {
-			newExpr3 = AddExplicitTargetRefs( expr3, definedAttrs );
-		}
-		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
 	}
-	case classad::ExprTree::FN_CALL_NODE: {
-		std::string fn_name;
-		classad::ArgumentList old_fn_args;
-		classad::ArgumentList new_fn_args;
-		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
-		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
-			new_fn_args.push_back( AddExplicitTargetRefs( *i, definedAttrs ) );
-		}
-		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
-	}
-	default: {
- 			// old ClassAds have no function calls, nested ClassAds or lists
-			// literals have no attrrefs in them
-		return tree->Copy( );
-	}
-	}
-} 
-
-classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
-{
-	if( tree == NULL ) {
-		return NULL;
-	}
-	classad::ExprTree::NodeKind nKind = tree->GetKind( );
-	switch( nKind ) {
-	case classad::ExprTree::ATTRREF_NODE: {
-		classad::ExprTree *expr = NULL;
-		string attr = "";
-		bool abs = false;
-		( ( classad::AttributeReference * )tree )->GetComponents(expr,attr,abs);
-		if(!abs && (expr != NULL)) {
-			string newAttr = "";
-			classad::ExprTree *exp = NULL;
-			abs = false;
-			( ( classad::AttributeReference * )expr )->GetComponents(exp,newAttr,abs);
-			if (strcasecmp(newAttr.c_str(), "target") == 0){
-				return classad::AttributeReference::MakeAttributeReference(NULL,attr);
-			}	 
-		} 
-		return tree->Copy();
-	}
-	case classad::ExprTree::OP_NODE: {
-		classad::Operation::OpKind oKind;
-		classad::ExprTree * expr1 = NULL;
-		classad::ExprTree * expr2 = NULL;
-		classad::ExprTree * expr3 = NULL;
-		classad::ExprTree * newExpr1 = NULL;
-		classad::ExprTree * newExpr2 = NULL;
-		classad::ExprTree * newExpr3 = NULL;
-		( ( classad::Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
-		if( expr1 != NULL ) {
-			newExpr1 = RemoveExplicitTargetRefs( expr1  );
-		}
-		if( expr2 != NULL ) {
-			newExpr2 = RemoveExplicitTargetRefs( expr2 );
-		}
-		if( expr3 != NULL ) {
-			newExpr3 = RemoveExplicitTargetRefs( expr3 );
-		}
-		return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
-	}
-	case classad::ExprTree::FN_CALL_NODE: {
-		std::string fn_name;
-		classad::ArgumentList old_fn_args;
-		classad::ArgumentList new_fn_args;
-		( ( classad::FunctionCall * )tree )->GetComponents( fn_name, old_fn_args );
-		for ( classad::ArgumentList::iterator i = old_fn_args.begin(); i != old_fn_args.end(); i++ ) {
-			new_fn_args.push_back( RemoveExplicitTargetRefs( *i ) );
-		}
-		return classad::FunctionCall::MakeFunctionCall( fn_name, new_fn_args );
-	}
-	default: {
- 			// old ClassAds have no function calls, nested ClassAds or lists
-			// literals have no attrrefs in them
-		return tree->Copy( );
-	}
-	}
-}	
-
-
-classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType /*target_type*/ )
-{
-	// Disable AddTargetRefs for now
-	return tree->Copy();
-
+	ref_set.swap( new_set );
 }
 
 const char *ConvertEscapingOldToNew( const char *str )
@@ -3552,6 +3304,58 @@ void ConvertEscapingOldToNew( const char *str, std::string &buffer )
 	}
 	buffer.resize(ix);
 }
+
+// split a single line of -long-form classad into attr and value part
+// removes leading whitespace and whitespace around the =
+// set rhs to point to the first non whitespace character after the =
+// you can pass this to ConvertEscapingOldToNew
+// returns true if there was an = and the attr was non-empty
+//
+bool SplitLongFormAttrValue(const char * line, std::string &attr, const char* &rhs)
+{
+	while (isspace(*line)) ++line;
+
+	const char * peq = strchr(line, '=');
+	if ( ! peq) return false;
+
+	const char * p = peq;
+	while (p > line && ' ' == p[-1]) --p;
+	attr.clear();
+	attr.append(line, p-line);
+
+	// set rhs to the first non-space character after the =
+	p = peq+1;
+	while (' ' == *p) ++p;
+	rhs = p;
+
+	return !attr.empty();
+}
+
+// split a single line of -long form classad into addr and value, then
+// parse and insert into the given classad, using the classadCache or not as requested.
+//
+bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_cache)
+{
+	std::string attr;
+	const char * rhs;
+	if ( ! SplitLongFormAttrValue(line, attr, rhs)) {
+		return false;
+	}
+
+	if (use_cache) {
+		return ad.InsertViaCache(attr, rhs);
+	}
+
+	classad::ClassAdParser parser;
+	parser.SetOldClassAd(true);
+	ExprTree *tree = parser.ParseExpression(rhs);
+	if ( ! tree) {
+		return false;
+
+	}
+	return ad.Insert(attr, tree);
+}
+
 
 // end functions
 

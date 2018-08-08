@@ -34,7 +34,6 @@
 #include "HashTable.h"
 #include "condor_id.h"
 #include "CondorError.h"
-#include "stat_struct.h"
 #include <iosfwd>
 #include <string>
 
@@ -214,7 +213,7 @@ public:
 protected:
 	friend class CheckEvents;
 
-	static unsigned int hashFuncJobID(const CondorID &key);
+	static size_t hashFuncJobID(const CondorID &key);
 
 private:
 	void cleanup();

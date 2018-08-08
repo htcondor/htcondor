@@ -93,7 +93,7 @@ class ExprTree
 		};
 
 		/// Virtual destructor
-		virtual ~ExprTree ();
+		virtual ~ExprTree () {};
 
 		/** Sets the lexical parent scope of the expression, which is used to 
 				determine the lexical scoping structure for resolving attribute
@@ -108,9 +108,11 @@ class ExprTree
 		void SetParentScope( const ClassAd* p );
 
 		/** Gets the parent scope of the expression.
+			Some expressions (e.g. literals) don't know their parent
+			scope and always return NULL.
 		 	@return The parent scope of the expression.
 		*/
-		const ClassAd *GetParentScope( ) const { return( parentScope ); }
+		virtual const ClassAd *GetParentScope( ) const = 0;
 
 		/** Makes a deep copy of the expression tree
 		 * 	@return A deep copy of the expression, or NULL on failure.
@@ -172,20 +174,18 @@ class ExprTree
   	protected:
 		void debug_print(const char *message) const;
 		void debug_format_value(Value &value, double time=0) const;
-		ExprTree ();
+		ExprTree () {};
 
-        /** Fill in this ExprTree with the contents of the other ExprTree.
-         *  @return true if the copy succeeded, false otherwise.
-         */
-        void CopyFrom(const ExprTree &literal);
+		/** Fill in this ExprTree with the contents of the other ExprTree.
+		*  @return true if the copy succeeded, false otherwise.
+		*/
+		void CopyFrom(const ExprTree &) { }
 
 		bool Evaluate( Value& v, ExprTree*& t ) const;
 		bool Flatten( Value& val, ExprTree*& tree) const;
 
 		bool Flatten( EvalState&, Value&, ExprTree*&, int* = NULL ) const;
 		bool Evaluate( EvalState &, Value &, ExprTree *& ) const;
-
-		const ClassAd	*parentScope;
 
 		enum {
 			EVAL_FAIL,
@@ -197,13 +197,10 @@ class ExprTree
 
   	private: 
 		friend class Operation;
-#ifdef TJ_REFACTOR
-#else
 		friend class Operation1;
 		friend class Operation2;
 		friend class Operation3;
 		friend class OperationParens;
-#endif
 		friend class AttributeReference;
 		friend class FunctionCall;
 		friend class FunctionTable;
@@ -227,8 +224,6 @@ class ExprTree
 		// have the user set a function to call to debug classads
 		static void (*user_debug_function)(const char *);
 };
-
-std::ostream& operator<<(std::ostream &os, const ExprTree *expr);
 
 } // classad
 

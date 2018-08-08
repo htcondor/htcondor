@@ -123,19 +123,8 @@ typedef struct {
 } PROC;
 #endif
 
-#if defined(NEW_PROC)
-#define PROC_VERSION	3
-typedef PROC V3_PROC;
-typedef union {
-	V2_PROC v2_proc;
-	V3_PROC v3_proc;
-} GENERIC_PROC;
-#else
-#define PROC_VERSION	2
-#endif
-
 typedef struct {
-	PROC_ID			id;		
+	PROC_ID			id;
 	char			*owner;
 	int				q_date;
 	int				status;

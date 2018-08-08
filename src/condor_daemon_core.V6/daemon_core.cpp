@@ -25,9 +25,6 @@
 // //////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
-#ifdef HAVE_EXT_GSOAP
-#include "soap_core.h"
-#endif
 
 #include "condor_socket_types.h"
 
@@ -46,7 +43,6 @@ static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
 static const int DEFAULT_MAXPIPES = 8;
 static const int DEFAULT_MAXREAPS = 100;
-static const int DEFAULT_PIDBUCKETS = 11;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
@@ -232,14 +228,14 @@ void **curr_regdataptr;
 extern void drop_addr_file( void );
 
 // Hash function for pid table.
-static unsigned int compute_pid_hash(const pid_t &key)
+static size_t compute_pid_hash(const pid_t &key)
 {
-	return (unsigned int)key;
+	return (size_t)key;
 }
 
 // DaemonCore constructor.
 
-DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
+DaemonCore::DaemonCore(int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
 	: comTable(32),
 	sigTable(10),
@@ -250,7 +246,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_advertise_ipv4_first(false)
 {
 
-	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0 || ReapSize < 0)
+	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || ReapSize < 0)
 	{
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
@@ -264,9 +260,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
     dc_stats.Init(enable_stats); // initilize statistics.
     dc_stats.SetWindowSize(20*60);
 
-	if ( PidSize == 0 )
-		PidSize = DEFAULT_PIDBUCKETS;
-	pidTable = new PidHashTable(PidSize, compute_pid_hash);
+	pidTable = new PidHashTable(compute_pid_hash);
 	ppid = 0;
 #ifdef WIN32
 	// init the mutex
@@ -327,10 +321,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	memset(&blankSockEnt,'\0',sizeof(SockEnt));
 	sockTable->fill(blankSockEnt);
 
-#ifdef HAVE_EXT_GSOAP
-	soap_ssl_sock = -1;
-#endif
-
 	// See the comment in the header.  This can't be a reconfigure setting
 	// because everybody's sinfuls are derived from the shared port's sinful
 	// (when shared port is enabled, which it is by default), and the shared
@@ -371,10 +361,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	curr_dataptr = NULL;
 	curr_regdataptr = NULL;
 
-	send_child_alive_timer = -1;
-	m_want_send_child_alive = true;
-
-	max_hang_time_raw = 3600;
 #ifdef WIN32
 	dcmainThreadId = ::GetCurrentThreadId();
 #endif
@@ -402,6 +388,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	super_dc_rsock = NULL;
 	super_dc_ssock = NULL;
+	m_super_dc_port = -1;
 	m_iMaxReapsPerCycle = 1;
     m_iMaxAcceptsPerCycle = 1;
 
@@ -425,12 +412,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	peaceful_shutdown = false;
 
-#ifdef HAVE_EXT_GSOAP
-#ifdef HAVE_EXT_OPENSSL
-	mapfile =  NULL;
-#endif
-#endif
-
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
 #ifndef WIN32
@@ -452,14 +433,13 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	}
 #endif
 
-	soap = NULL;
-
 	localAdFile = NULL;
 
 	m_collector_list = NULL;
 	m_wants_restart = true;
 	m_in_daemon_shutdown = false;
 	m_in_daemon_shutdown_fast = false;
+	sent_signal = false;
 	m_private_network_name = NULL;
 
 #ifdef HAVE_CLONE
@@ -474,6 +454,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	m_ccb_listeners = NULL;
 	m_shared_port_endpoint = NULL;
+	nRegisteredSocks = 0;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -537,6 +518,7 @@ DaemonCore::~DaemonCore()
 	// Since we created these, we need to clean them up.
 	delete super_dc_rsock;
 	delete super_dc_ssock;
+	m_super_dc_port = -1;
 
 	for (i=0;i<nReap;i++) {
 		free( reapTable[i].reap_descrip );
@@ -570,6 +552,10 @@ DaemonCore::~DaemonCore()
 	}
 
 	if( pipeTable ) {
+		for ( i = 0; i < nPipe; i++ ) {
+			free( (*pipeTable)[i].pipe_descrip );
+			free( (*pipeTable)[i].handler_descrip );
+		}
 		delete( pipeTable );
 	}
 
@@ -585,13 +571,6 @@ DaemonCore::~DaemonCore()
 	if (_cookie_data_old) {
 		free(_cookie_data_old);
 	}
-
-#ifdef HAVE_EXT_GSOAP
-	if( soap ) {
-		dc_soap_free(soap);
-		soap = NULL;
-	}
-#endif
 
 	if(localAdFile) {
 		free(localAdFile);
@@ -1229,6 +1208,11 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		// Sinful in the address file will have TCP_FORWARDING_HOST as its
 		// primary address, and older versions of HTCondor don't ignore
 		// the primary address).
+		//
+		// NOTE: For the primary address in our sinful string, prefer an
+		// IPv4 address, if available. The primary address is only used by
+		// older clients (pre-8.3.x) that don't understand the addrs field
+		// and probably don't have good IPv6 support.
 		char const * addr = sock->get_sinful_public();
 		if(! sa.is_ipv4()) {
 			for( int i = initialCommandSock; i < nSock; ++i ) {
@@ -1455,6 +1439,23 @@ DaemonCore::superUserNetworkIpAddr(void) {
 	}
 
 	return super_dc_rsock->get_sinful();
+}
+
+bool
+DaemonCore::Is_Command_From_SuperUser( Stream *s )
+{
+	if (m_super_dc_port < 0) {
+		// This daemon does not have a super user command port
+		return false;
+	}
+
+	Sock *sock = dynamic_cast<Sock *>(s);
+	if (!sock) {
+		// Pointer passed to us is not a Sock ?!
+		return false;
+	}
+
+	return sock->get_port() == m_super_dc_port;
 }
 
 
@@ -3033,59 +3034,6 @@ DaemonCore::reconfig(void) {
 
 	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
 
-#ifdef HAVE_EXT_GSOAP
-	if( param_boolean("ENABLE_SOAP",false) ||
-		param_boolean("ENABLE_WEB_SERVER",false) )
-	{
-		// tstclair: reconfigure the soap object
-		if( soap ) {
-			dc_soap_free(soap);
-			soap = NULL;
-		}
-
-		dc_soap_init(soap);
-		
-	}
-	else {
-		// Do not have to deallocate soap if it was enabled and has
-		// now been disabled.  Access to it will be disallowed, even
-		// though the structure is still allocated.
-	}
-#endif
-#ifdef HAVE_EXT_GSOAP
-#ifdef HAVE_EXT_OPENSSL
-	MyString subsys = MyString(get_mySubSystem()->getName());
-	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
-
-	if (enable_soap_ssl) {
-		if (mapfile) {
-			delete mapfile; mapfile = NULL;
-		}
-		mapfile = new MapFile;
-		char * credential_mapfile;
-		if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
-			EXCEPT("DaemonCore: No CERTIFICATE_MAPFILE defined, "
-				   "unable to identify users, required by ENABLE_SOAP_SSL");
-		}
-		char * user_mapfile;
-		if (NULL == (user_mapfile = param("USER_MAPFILE"))) {
-			EXCEPT("DaemonCore: No USER_MAPFILE defined, "
-				   "unable to identify users, required by ENABLE_SOAP_SSL");
-		}
-		bool assume_hash = param_boolean("CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS", false);
-		int line;
-		if (0 != (line = mapfile->ParseCanonicalizationFile(credential_mapfile, assume_hash))) {
-			EXCEPT("DaemonCore: Error parsing CERTIFICATE_MAPFILE at line %d",
-				   line);
-		}
-		if (0 != (line = mapfile->ParseUsermapFile(user_mapfile))) {
-			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
-		}
-	}
-#endif // HAVE_EXT_OPENSSL
-#endif // HAVE_EXT_GSOAP
-
-
 		// FAKE_CREATE_THREAD is an undocumented config knob which turns
 		// Create_Thread() into a simple function call in the main process,
 		// rather than a thread/fork.
@@ -3097,53 +3045,7 @@ DaemonCore::reconfig(void) {
 	m_fake_create_thread = param_boolean("FAKE_CREATE_THREAD",false);
 #endif
 
-	// Setup a timer to send child keepalives to our parent, if we have
-	// a daemon core parent.
-	if ( ppid && m_want_send_child_alive ) {
-		MyString buf;
-		int old_max_hang_time_raw = max_hang_time_raw;
-		buf.formatstr("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
-		max_hang_time_raw = param_integer(buf.Value(),param_integer("NOT_RESPONDING_TIMEOUT",3600,1),1);
-
-		if( max_hang_time_raw != old_max_hang_time_raw || send_child_alive_timer == -1 ) {
-			max_hang_time = max_hang_time_raw + timer_fuzz(max_hang_time_raw);
-				// timer_fuzz() should never make it <= 0
-			ASSERT( max_hang_time > 0 );
-		}
-		int old_child_alive_period = m_child_alive_period;
-		m_child_alive_period = (max_hang_time / 3) - 30;
-		if ( m_child_alive_period < 1 )
-			m_child_alive_period = 1;
-		if ( send_child_alive_timer == -1 ) {
-
-				// 2008-06-18 7.0.3: commented out direct call to
-				// SendAliveToParent(), because it causes deadlock
-				// between the shadow and schedd if the job classad
-				// that the schedd is writing over a pipe to the
-				// shadow is larger than the pipe buffer size.
-				// For now, register timer for 0 seconds instead
-				// of calling SendAliveToParent() immediately.
-				// This means we are vulnerable to a race condition,
-				// in which we hang before the first CHILDALIVE.  If
-				// that happens, our parent will never kill us.
-
-			send_child_alive_timer = Register_Timer(0,
-					(unsigned)m_child_alive_period,
-					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
-					"DaemonCore::SendAliveToParent", this );
-
-				// Send this immediately, because if we hang before
-				// sending this message, our parent will not kill us.
-				// (Commented out.  See reason above.)
-				// SendAliveToParent();
-		} else if( m_child_alive_period != old_child_alive_period ) {
-				// Our parent will not know about our new alive period
-				// until the next time we send it an ALIVE message, so
-				// we can't just increase the time to our next call
-				// without risking being killed as a hung child.
-			Reset_Timer(send_child_alive_timer, 1, m_child_alive_period);
-		}
-	}
+	m_DaemonKeepAlive.reconfig();
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
@@ -3703,7 +3605,6 @@ void DaemonCore::Driver()
 			time_t now = time(NULL);
 
 			bool recheck_status = false;
-			//bool call_soap_handler = false;
 
 			// If a command came in on the super-user command socket, then
 			// set a flag so in the loop below we only schedule command callbacks
@@ -4233,12 +4134,12 @@ struct CallCommandHandlerInfo {
 		m_deadline(deadline),
 		m_time_spent_on_sec(time_spent_on_sec)
 	{
-		m_start_time.getTime();
+		condor_gettimestamp( m_start_time );
 	}
 	int m_req;
 	time_t m_deadline;
 	float m_time_spent_on_sec;
-	UtcTime m_start_time;
+	struct timeval m_start_time;
 };
 
 int
@@ -4251,9 +4152,9 @@ DaemonCore::HandleReqPayloadReady(Stream *stream)
 	int req = callback_info->m_req;
 	time_t orig_deadline = callback_info->m_deadline;
 	float time_spent_on_sec = callback_info->m_time_spent_on_sec;
-	UtcTime now;
-	now.getTime();
-	float time_waiting_for_payload = now.difference(callback_info->m_start_time);
+	struct timeval now;
+	condor_gettimestamp( now );
+	float time_waiting_for_payload = timersub_double( now, callback_info->m_start_time );
 
 	delete callback_info;
 
@@ -4885,6 +4786,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 				// below to determine whether we should send a UNIX
 				// SIGTERM or a DC signal.
 			if ( pid != mypid && target_has_dcpm == FALSE ) {
+				dprintf(D_ALWAYS, "Send_Signal SIGTERM to pid %d using Shutdown_Graceful\n", pid);
 				if( Shutdown_Graceful(pid) ) {
 					msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
 				}
@@ -5010,9 +4912,11 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, destination );
 
 	// now destination process is local, send via UDP; if remote, send via TCP
+	bool is_udp = false;
 	if ( is_local == TRUE && d->hasUDPCommandPort()) {
 		msg->setStreamType(Stream::safe_sock);
 		if( !nonblocking ) msg->setTimeout(3);
+		is_udp = true;
 	}
 	else {
 		msg->setStreamType(Stream::reli_sock);
@@ -5021,6 +4925,8 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	{
 		msg->setSecSessionId(pidinfo->child_session_id);
 	}
+	dprintf(D_FULLDEBUG, "Send_Signal %d to pid %d via %s in %s mode\n", sig, pid, is_udp ? "UDP" : "TCP", nonblocking ? "nonblocking" : "blocking");
+
 	msg->messengerDelivery( true ); // we really are sending this message
 	if( nonblocking ) {
 		d->sendMsg( msg.get() );
@@ -5675,6 +5581,7 @@ public:
  	   m_fs_remap(fs_remap),
 	   m_wrote_tracking_gid(false),
 	   m_no_dprintf_allowed(false),
+	   m_priv_state(PRIV_USER),
 	   m_clone_newpid_pid(-1),
 	   m_clone_newpid_ppid(-1)
 	{
@@ -6400,7 +6307,7 @@ void CreateProcessForkit::exec() {
 				// Now, if we didn't find it in the inherit list, close it
 			if ( ( ! found ) && ( close ( q ) != -1 ) ) {
 				closed_fds[num_closed++] = q;
-				msg += q;
+				msg += IntToStr( q );
 				msg += ' ';
 			}
 		}
@@ -6549,7 +6456,7 @@ void CreateProcessForkit::exec() {
 			// exec().  Otherwise, it would be a leak.
 		MyString msg = "Printing fds to inherit: ";
 		for ( int a=0 ; a<m_numInheritFds ; a++ ) {
-			msg += m_inheritFds[a];
+			msg += IntToStr( m_inheritFds[a] );
 			msg += ' ';
 		}
 		dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
@@ -7057,6 +6964,10 @@ int DaemonCore::Create_Process(
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
 			goto wrapup;
 		}
+		KeyCacheEntry *entry = NULL;
+		rc = getSecMan()->session_cache->lookup(session_id_c_str,entry);
+		ASSERT( rc && entry && entry->policy() );
+		entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 		IpVerify* ipv = getSecMan()->getIpVerify();
 		MyString id = CONDOR_CHILD_FQU;
 		ipv->PunchHole(DAEMON, id);
@@ -8122,9 +8033,6 @@ int DaemonCore::Create_Process(
 	pidtmp->is_local = TRUE;
 	pidtmp->parent_is_local = TRUE;
 	pidtmp->reaper_id = reaper_id;
-	pidtmp->hung_tid = -1;
-	pidtmp->was_not_responding = FALSE;
-	pidtmp->got_alive_msg = 0;
 	if(!session_id.empty())
 	{
 		pidtmp->child_session_id = strdup(session_id.c_str());
@@ -8361,7 +8269,9 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		priv_state saved_priv = get_priv();
 		int exit_status = start_func(arg,s);
 
-		if (s) delete s;
+		if (s) { delete s; s=NULL; }
+		if (arg) { free(arg);	arg=NULL; }		// arg should point to malloc()'ed data
+
 #ifndef WIN32
 			// In unix, we need to make exit_status like wait waitpid() returns
 		exit_status = exit_status<<8;
@@ -8529,9 +8439,6 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	pidtmp->is_local = TRUE;
 	pidtmp->parent_is_local = TRUE;
 	pidtmp->reaper_id = reaper_id;
-	pidtmp->hung_tid = -1;
-	pidtmp->was_not_responding = FALSE;
-	pidtmp->got_alive_msg = 0;
 #ifdef WIN32
 	// we lie here and set pidtmp->pid to equal the tid.  this allows
 	// the DaemonCore WinNT pidwatcher code to remain mostly ignorant
@@ -8781,9 +8688,6 @@ DaemonCore::Inherit( void )
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
 		pidtmp->reaper_id = 0;
-		pidtmp->hung_tid = -1;
-		pidtmp->was_not_responding = FALSE;
-		pidtmp->got_alive_msg = 0;
 #ifdef WIN32
 		pidtmp->deallocate = 0L;
 
@@ -8965,6 +8869,10 @@ DaemonCore::Inherit( void )
 			{
 				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
 			}
+			KeyCacheEntry *entry = NULL;
+			rc = getSecMan()->session_cache->lookup(claimid.secSessionId(),entry);
+			ASSERT( rc && entry && entry->policy() );
+			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			MyString id;
 			id.formatstr("%s", CONDOR_PARENT_FQU);
@@ -9024,7 +8932,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 				desired_size = param_integer("COLLECTOR_SOCKET_BUFSIZE",
 											 10000 * 1024, 1024);
 				int final_udp = it->ssock()->set_os_buffers(desired_size);
-				msg += (int)(final_udp / 1024);
+				msg += IntToStr(final_udp / 1024);
 				msg += "k (UDP), ";
 			}
 
@@ -9035,7 +8943,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 											 128 * 1024, 1024 );
 				int final_tcp = it->rsock()->set_os_buffers( desired_size, true );
 
-				msg += (int)(final_tcp / 1024);
+				msg += IntToStr(final_tcp / 1024);
 				msg += "k (TCP)";
 			}
 			if( !msg.IsEmpty() ) {
@@ -9133,6 +9041,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		daemonCore->Register_Command_Socket( (Stream*)super_dc_ssock );
 		super_dc_rsock->set_inheritable(FALSE);
 		super_dc_ssock->set_inheritable(FALSE);
+		m_super_dc_port = super_dc_rsock->get_port();
 
 		free(superAddrFN);
 	}
@@ -9155,8 +9064,8 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			// this handler receives keepalive pings from our children, so
 			// we can detect if any of our kids are hung.
 		daemonCore->Register_CommandWithPayload( DC_CHILDALIVE,"DC_CHILDALIVE",
-			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
-			"HandleChildAliveCommand", daemonCore, DAEMON,
+			(CommandHandlercpp)&DaemonKeepAlive::HandleChildAliveCommand,
+			"HandleChildAliveCommand", &m_DaemonKeepAlive, DAEMON,
 			D_FULLDEBUG );
 	}
 }
@@ -9192,8 +9101,10 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 			}
 
 			if( errno == ECHILD || errno == EAGAIN || errno == 0 ) {
+				/* 
 				dprintf( D_FULLDEBUG,
 						 "DaemonCore: No more children processes to reap.\n" );
+				*/
 			} else {
 					// If it's not what we expect, we want D_ALWAYS
 				dprintf( D_ALWAYS, "waitpid() returned %d, errno = %d\n",
@@ -9622,7 +9533,6 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			ASSERT(pidentry);
 			pidentry->parent_is_local = TRUE;
 			pidentry->reaper_id = defaultReaper;
-			pidentry->hung_tid = -1;
 			pidentry->new_process_group = FALSE;
 		} else {
 
@@ -9723,10 +9633,6 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		::CloseHandle(pidentry->hProcess);
 	}
 #endif
-	// cancel the hung timer if we have one
-	if ( pidentry->hung_tid != -1 ) {
-		Cancel_Timer(pidentry->hung_tid);
-	}
 	// and delete the pidentry
 	delete pidentry;
 
@@ -9766,197 +9672,6 @@ const char* DaemonCore::GetExceptionString(int sig)
 }
 
 
-int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
-{
-	pid_t child_pid = 0;
-	unsigned int timeout_secs = 0;
-	PidEntry *pidentry;
-	int ret_value;
-	double dprintf_lock_delay = 0.0;
-
-	if (!stream->code(child_pid) ||
-		!stream->code(timeout_secs)) {
-		dprintf(D_ALWAYS,"Failed to read ChildAlive packet (1)\n");
-		return FALSE;
-	}
-
-		// There is an optional additional dprintf_lock_delay in the
-		// message.  It is optional so that external programs can send
-		// simple alive messages using condor_squawk.
-	if( stream->peek_end_of_message() ) {
-		if( !stream->end_of_message() ) {
-			dprintf(D_ALWAYS,"Failed to read ChildAlive packet (2)\n");
-			return FALSE;
-		}
-	}
-	else if( !stream->code(dprintf_lock_delay) ||
-			 !stream->end_of_message())
-	{
-		dprintf(D_ALWAYS,"Failed to read ChildAlive packet (3)\n");
-		return FALSE;
-	}
-
-
-	if ((pidTable->lookup(child_pid, pidentry) < 0)) {
-		// we have no information on this pid
-		dprintf(D_ALWAYS,
-			"Received child alive command from unknown pid %d\n",child_pid);
-		return FALSE;
-	}
-
-	if ( pidentry->hung_tid != -1 ) {
-		ret_value = daemonCore->Reset_Timer( pidentry->hung_tid, timeout_secs );
-		ASSERT( ret_value != -1 );
-	} else {
-		pidentry->hung_tid =
-			Register_Timer(timeout_secs,
-							(TimerHandlercpp) &DaemonCore::HungChildTimeout,
-							"DaemonCore::HungChildTimeout", this);
-		ASSERT( pidentry->hung_tid != -1 );
-
-		Register_DataPtr( &pidentry->pid);
-	}
-
-	pidentry->was_not_responding = FALSE;
-	pidentry->got_alive_msg += 1;
-
-	dprintf(D_DAEMONCORE,
-			"received childalive, pid=%d, secs=%d, dprintf_lock_delay=%f\n",child_pid,timeout_secs,dprintf_lock_delay);
-
-		/* The Lock Convoy of Shadowy Doom.  Once upon a time, there
-		 * was a submit machine that melted down for hours with high
-		 * load and no way for the admins to bring it back to normal
-		 * without rebooting it.  There were 30k-40k shadows running.
-		 * During that time, some of the shadows waited for hours to
-		 * get a lock to the shadow log, while others experienced much
-		 * less wait time, indicating a high degree of unfairness.
-		 * Further analysis revealed that the system was likely
-		 * spending most of its time context switching whenever the
-		 * lock was freed and was rarely actually getting any real
-		 * work done.  This is known as the lock convoy problem.
-		 *
-		 * To address this, we made unix daemons append without
-		 * locking (using O_APPEND).  A lock is still used for
-		 * rotation, but this should not lead to the lock convoy
-		 * problem unless rotation is happening in a matter of
-		 * seconds.  Just in case the shadowy convoy ever returns,
-		 * we want to leave some better clues behind.
-		 */
-
-	if( dprintf_lock_delay > 0.01 ) {
-		dprintf(D_ALWAYS,"WARNING: child process %d reports that it has spent %.1f%% of its time waiting for a lock to its log file.  This could indicate a scalability limit that could cause system stability problems.\n",child_pid,dprintf_lock_delay*100);
-	}
-	if( dprintf_lock_delay > 0.1 ) {
-			// things are looking serious, so let's send mail
-		static time_t last_email = 0;
-		if( last_email == 0 || time(NULL)-last_email > 60 ) {
-			last_email = time(NULL);
-
-			std::string subject;
-			formatstr(subject,"Condor process reports long locking delays!");
-
-			FILE *mailer = email_admin_open(subject.c_str());
-			if( mailer ) {
-				fprintf(mailer,
-						"\n\nThe %s's child process with pid %d has spent %.1f%% of its time waiting\n"
-						"for a lock to its log file.  This could indicate a scalability limit\n"
-						"that could cause system stability problems.\n",
-						get_mySubSystem()->getName(),
-						child_pid,
-						dprintf_lock_delay*100);
-				email_close( mailer );
-			}
-		}
-	}
-
-	return TRUE;
-
-}
-
-int DaemonCore::HungChildTimeout()
-{
-	pid_t hung_child_pid;
-	pid_t *hung_child_pid_ptr;
-	PidEntry *pidentry;
-	bool first_time = true;
-
-	/* get the pid out of the allocated memory it was placed into */
-	hung_child_pid_ptr = (pid_t*)GetDataPtr();
-	hung_child_pid = *hung_child_pid_ptr;
-
-	if ((pidTable->lookup(hung_child_pid, pidentry) < 0)) {
-		// we have no information on this pid, it must have exited
-		return FALSE;
-	}
-
-	// reset our tid to -1 so HandleChildAliveCommand() knows that there
-	// is currently no timer set.
-	pidentry->hung_tid = -1;
-
-	if( ProcessExitedButNotReaped( hung_child_pid ) ) {
-			// This process has exited, but we have not gotten around to
-			// reaping it yet.  Do nothing.
-		dprintf(D_FULLDEBUG,"Canceling hung child timer for pid %d, because it has exited but has not been reaped yet.\n",hung_child_pid);
-		return FALSE;
-	}
-
-	// set a flag in the PidEntry so a reaper can discover it was killed
-	// because it was hung.
-	if( pidentry->was_not_responding ) {
-		first_time = false;
-	}
-	else {
-	pidentry->was_not_responding = TRUE;
-	}
-
-	// Now make certain that this pid did not exit by verifying we still
-	// exist in the pid table.  We must do this because ServiceCommandSocket
-	// could result in a process reaper being invoked.
-	if ((pidTable->lookup(hung_child_pid, pidentry) < 0)) {
-		// we have no information anymore on this pid, it must have exited
-		return FALSE;
-	}
-
-	// Now see if was_not_responding flipped back to FALSE
-	if ( pidentry->was_not_responding == FALSE ) {
-		// the child saved itself!
-		return FALSE;
-	}
-
-	dprintf(D_ALWAYS,"ERROR: Child pid %d appears hung! Killing it hard.\n",
-		hung_child_pid);
-
-	// and hardkill the bastard!
-	bool want_core = param_boolean( "NOT_RESPONDING_WANT_CORE", false );
-#ifndef WIN32
-	if( want_core ) {
-		// On multiple occassions, I have observed the child process
-		// get hung while writing its core file.  If we never follow
-		// up with a hard-kill, this can result in the service going
-		// down for days, which is terrible.  Therefore, set a timer
-		// to call us again and follow up with a hard-kill.
-		if( !first_time ) {
-			dprintf(D_ALWAYS,
-					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n",hung_child_pid);
-			want_core = false;
-		}
-		else {
-			dprintf(D_ALWAYS, "Sending SIGABRT to child to generate a core file.\n");
-			const int want_core_timeout = 600;
-			pidentry->hung_tid =
-				Register_Timer(want_core_timeout,
-							   (TimerHandlercpp) &DaemonCore::HungChildTimeout,
-							   "DaemonCore::HungChildTimeout", this);
-			ASSERT( pidentry->hung_tid != -1 );
-			Register_DataPtr( &pidentry->pid );
-		}
-	}
-#endif
-	Shutdown_Fast(hung_child_pid, want_core );
-
-	return TRUE;
-}
-
 int DaemonCore::Was_Not_Responding(pid_t pid)
 {
 	PidEntry *pidentry;
@@ -9982,124 +9697,6 @@ int DaemonCore::Got_Alive_Messages(pid_t pid, bool & not_responding)
 
 	not_responding = pidentry->was_not_responding;
 	return pidentry->got_alive_msg;
-}
-
-int DaemonCore::SendAliveToParent()
-{
-	MyString parent_sinful_string_buf;
-	char const *parent_sinful_string;
-	char const *tmp;
-	int ret_val;
-	static bool first_time = true;
-	int number_of_tries = 3;
-
-	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
-
-	if ( !ppid ) {
-		// no daemon core parent, nothing to send
-		return FALSE;
-	}
-
-		/* Don't have the CGAHP and/or DAGMAN, which are launched as the user,
-		   attempt to send keep alives to daemon. Permissions are not likely to
-		   allow user proccesses to send signals to Condor daemons. 
-		   Note that we shouldn't have to check for DAGMan here as no
-		   daemon core info should have been inherited down to DAGMan, 
-		   but it doesn't hurt to be sure here since we already need
-		   to check for the CGAHP. */
-	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP) ||
-	  	get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN))
-	{
-		return FALSE;
-	}
-
-		/* Before we possibly block trying to send this alive message to our 
-		   parent, lets see if this parent pid (ppid) exists on this system.
-		   This protects, for instance, against us acting a bogus CONDOR_INHERIT
-		   environment variable that perhaps just got inherited down through
-		   the ages.
-		*/
-	if ( !Is_Pid_Alive(ppid) ) {
-		dprintf(D_FULLDEBUG,
-			"DaemonCore: in SendAliveToParent() - ppid %ul disappeared!\n",
-			ppid);
-		return FALSE;
-	}
-
-	tmp = InfoCommandSinfulString(ppid);
-	if ( tmp ) {
-			// copy the result from InfoCommandSinfulString,
-			// because the pointer we got back is a static buffer
-		parent_sinful_string_buf = tmp;
-		parent_sinful_string = parent_sinful_string_buf.Value();
-	} else {
-		dprintf(D_FULLDEBUG,"DaemonCore: No parent_sinful_string. "
-			"SendAliveToParent() failed.\n");
-			// parent already gone?
-		return FALSE;
-	}
-
-		// If we are using glexec, then keepalives from the starter
-		// to the startd will likely fail unless the user really went out
-		// of their way to set things up so the starter and startd can authenticate
-		// over the network.  So in the event that glexec
-		// is being used, clear our first time flag so we do not
-		// EXCEPT on failure and so we only try once.
-	if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_STARTER) && 
-		 param_boolean("GLEXEC_STARTER",false) )
-	{
-		first_time = false;
-	}
-
-	double dprintf_lock_delay = dprintf_get_lock_delay();
-	dprintf_reset_lock_delay();
-
-	bool blocking = first_time;
-	classy_counted_ptr<Daemon> d = new Daemon(DT_ANY,parent_sinful_string);
-	classy_counted_ptr<ChildAliveMsg> msg = new ChildAliveMsg(mypid,max_hang_time,number_of_tries,dprintf_lock_delay,blocking);
-
-	int timeout = m_child_alive_period / number_of_tries;
-	if( timeout < 60 ) {
-		timeout = 60;
-		}
-	msg->setDeadlineTimeout( timeout );
-	msg->setTimeout( timeout );
-
-	if( blocking || !d->hasUDPCommandPort() || !m_wants_dc_udp ) {
-		msg->setStreamType( Stream::reli_sock );
-			}
-	else {
-		msg->setStreamType( Stream::safe_sock );
-		}
-
-	if( blocking ) {
-		d->sendBlockingMsg( msg.get() );
-		ret_val = msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED;
-			}
-	else {
-		d->sendMsg( msg.get() );
-		ret_val = TRUE;
-		}
-
-	if ( first_time ) {
-		first_time = false;
-		if ( ret_val == FALSE ) {
-			EXCEPT("FAILED TO SEND INITIAL KEEP ALIVE TO OUR PARENT %s",
-				parent_sinful_string);
-		}
-	}
-
-	if (ret_val == FALSE) {
-		dprintf(D_ALWAYS,"DaemonCore: Leaving SendAliveToParent() - "
-			"FAILED sending to %s\n",
-			parent_sinful_string);
-	} else if( msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED ) {
-		dprintf(D_FULLDEBUG,"DaemonCore: Leaving SendAliveToParent() - success\n");
-	} else {
-		dprintf(D_FULLDEBUG,"DaemonCore: Leaving SendAliveToParent() - pending\n");
-	}
-
-	return TRUE;
 }
 
 int DaemonCore::CheckProcInterface()
@@ -10841,9 +10438,11 @@ void DaemonCore :: invalidateSessionCache()
 	/* for now, never invalidate the session cache */
 	return;
 
+/* when we do invalidate the session cache, uncomment this...
     if (sec_man) {
         sec_man->invalidateAllCache();
     }
+*/
 }
 
 
@@ -11184,10 +10783,10 @@ DaemonCore::PidEntry::PidEntry() : pid(0),
 	is_local(0),
 	parent_is_local(0),
 	reaper_id(0),
-	hung_tid(0),
+	stdin_offset(0),
+	hung_past_this_time(0),
 	was_not_responding(0),
 	got_alive_msg(0),
-	stdin_offset(0),
 	child_session_id(NULL)
 {
 	for (int i=0;i<3;++i) {
@@ -11375,34 +10974,4 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 		m_ssock = counted_ptr<SafeSock>(new SafeSock);
 	}
 	return true;
-}
-
-int DaemonCore::find_interface_command_port_do_not_use(const condor_sockaddr & addr) {
-
-	// Boldly assuming all entries in dc_socks have relisocks and
-	// that all listen sockets for a given protocol use the same port
-	// As of Sept 2014, I believe these are true.  This function should
-	// go away long before these are violated.
-	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
-		ASSERT(it->has_relisock());
-		condor_sockaddr listen_addr = it->rsock()->my_addr();
-		if(addr.get_protocol() == listen_addr.get_protocol()) {
-			return listen_addr.get_port();
-		}
-	}
-	// No matching listen socket.
-	return 0;
-}
-
-bool DaemonCore::is_command_port_do_not_use(const condor_sockaddr & addr) {
-	// Boldly assuming all entries in dc_socks have relisocks and
-	// that all listen sockets for a given protocol use the same port
-	// As of Sept 2014, I believe these are true.  This function should
-	// go away long before these are violated.
-	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
-		ASSERT(it->has_relisock());
-		condor_sockaddr listen_addr = it->rsock()->my_addr();
-		if(listen_addr == addr) { return true; }
-	}
-	return false;
 }

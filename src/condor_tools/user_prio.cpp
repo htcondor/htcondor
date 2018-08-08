@@ -107,12 +107,12 @@ struct LineRec {
 //-----------------------------------------------------------------
 
 static int CalcTime(int,int,int);
-static void usage(char* name);
-static void ProcessInfo(AttrList* ad,std::vector<AttrList> &accountingAds, bool GroupRollup,bool HierFlag);
-static int CountElem(AttrList* ad);
-static void CollectInfo(int numElem, AttrList* ad, std::vector<AttrList> & accountingAds, LineRec* LR, bool GroupRollup);
+static void usage(const char* name);
+static void ProcessInfo(ClassAd* ad,std::vector<ClassAd> &accountingAds, bool GroupRollup,bool HierFlag);
+static int CountElem(ClassAd* ad);
+static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> & accountingAds, LineRec* LR, bool GroupRollup);
 static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag);
-static void PrintResList(AttrList* ad);
+static void PrintResList(ClassAd* ad);
 
 //-----------------------------------------------------------------
 
@@ -246,13 +246,13 @@ struct LineRecLT {
     }
 };
 
-void ConvertLegacyUserprioAdToAdList(AttrList &ad, std::vector<AttrList> & prios)
+void ConvertLegacyUserprioAdToAdList(ClassAd &ad, std::vector<ClassAd> & prios)
 {
 	std::string attr;
 	int id;
 
-	for (AttrList::iterator next = ad.begin(); next != ad.end(); /*++next*/) {
-		AttrList::iterator it = next++; // advance iterator now, in case we want to remove it
+	for (ClassAd::iterator next = ad.begin(); next != ad.end(); /*++next*/) {
+		ClassAd::iterator it = next++; // advance iterator now, in case we want to remove it
 		const char * pattr = it->first.c_str();
 		const char * p = pattr;
 
@@ -301,13 +301,13 @@ void ConvertLegacyUserprioAdToAdList(AttrList &ad, std::vector<AttrList> & prios
 
 static void PrintModularAds(
 	FILE *    out,
-	AttrList* ad,
-	std::vector<AttrList> accountingAds, // if ad is NULL, values are here
+	ClassAd* ad,
+	std::vector<ClassAd> accountingAds, // if ad is NULL, values are here
 	bool      customFormat,
 	AttrListPrintMask & print_mask,
 	GenericQuery constraint)
 {
-	std::vector<AttrList> prioAds;
+	std::vector<ClassAd> prioAds;
 
 	// if ad is not-null, we're passed in the ads in the old format in ad
 	if (ad != 0) {
@@ -355,7 +355,7 @@ static void PrintModularAds(
 #define IsArgColon is_dash_arg_colon_prefix
 
 int
-main(int argc, char* argv[])
+main(int argc, const char* argv[])
 {
   bool LongFlag=false;
   int LegacyAdFormat = 1; // bit 1 = default to legacy, bit 2 = insist on legacy
@@ -370,6 +370,7 @@ main(int argc, char* argv[])
   bool ResetAll=false;
   int GetResList=0;
   int UserPrioFile=0;
+  std::string neg_name;
   std::string pool;
   AttrListPrintMask print_mask;
   GenericQuery constraint; // used to build a complex constraint.
@@ -446,11 +447,18 @@ main(int argc, char* argv[])
         // make sure we have at least one argument to autoformat
         if (argc <= i+1 || *(argv[i+1]) == '-') {
             fprintf (stderr, "Error: Argument %s requires at last one attribute parameter\n", argv[i]);
-            fprintf(stderr, "\t\te.g. condor_history %s ClusterId\n", argv[i]);
+            fprintf(stderr, "\t\te.g. condor_prio %s Name\n", argv[i]);
             usage(argv[0]);
         }
         if (pcolon) ++pcolon; // if there are options, skip over the colon to the options.
-        int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, print_mask, false);
+        classad::References refs;
+        int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, print_mask, refs, false);
+        if (ixNext < 0) {
+            fprintf (stderr, "Error: Invalid expression: %s\n", argv[-ixNext]);
+            exit(1);
+        }
+        //TODO: add support for projected queries?
+        //initStringListFromAttrs(projection, true, refs, true);
         if (ixNext > i)
             i = ixNext-1;
         customFormat = true;
@@ -546,6 +554,11 @@ main(int argc, char* argv[])
       if (argc-i<=1) usage(argv[0]);
       pool = argv[i+1];
       i++;
+    }
+    else if (IsArg(argv[i],"name")) {
+      if (argc-i<=1) usage(argv[0]);
+      neg_name = argv[i+1];
+      i++;
 	} 
 	else if (IsArg(argv[i], "collector", 3)) {
 		fromCollector = true;
@@ -563,7 +576,7 @@ main(int argc, char* argv[])
   //----------------------------------------------------------
 
 	  // Get info on our negotiator
-  Daemon negotiator(DT_NEGOTIATOR, NULL, (pool != "") ? pool.c_str() : NULL);
+  Daemon negotiator(DT_NEGOTIATOR, (neg_name != "") ? neg_name.c_str() : NULL, (pool != "") ? pool.c_str() : NULL);
   if (!negotiator.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
               argv[0], (pool != "") ? pool.c_str() : "local pool");
@@ -581,7 +594,7 @@ main(int argc, char* argv[])
 
   if (SetPrio) { // set priority
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetPrio+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -612,7 +625,7 @@ main(int argc, char* argv[])
 
   else if (SetFactor) { // set priority
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetFactor+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -648,7 +661,7 @@ main(int argc, char* argv[])
 
   else if (SetAccum) { // set accumulated usage
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetAccum+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -682,7 +695,7 @@ main(int argc, char* argv[])
   }
   else if (SetBegin) { // set begin usage time
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetBegin+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -717,7 +730,7 @@ main(int argc, char* argv[])
   }
   else if (SetLast) { // set last usage time
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[SetLast+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -752,7 +765,7 @@ main(int argc, char* argv[])
   }
   else if (ResetUsage) { // set priority
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[ResetUsage+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -781,7 +794,7 @@ main(int argc, char* argv[])
 
   else if (DeleteUser) { // remove a user record from the accountant
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[DeleteUser+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the record you wish\n",
@@ -823,7 +836,7 @@ main(int argc, char* argv[])
 
   else if (GetResList) { // get resource list
 
-    char* tmp;
+	const char* tmp;
 	if( ! (tmp = strchr(argv[GetResList+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
@@ -845,7 +858,7 @@ main(int argc, char* argv[])
 
     // get reply
     sock->decode();
-    AttrList* ad=new AttrList();
+    ClassAd* ad=new ClassAd();
     if (!getClassAdNoTypes(sock, *ad) ||
         !sock->end_of_message()) {
       fprintf( stderr, "failed to get classad from negotiator\n" );
@@ -868,7 +881,7 @@ main(int argc, char* argv[])
       exit(1);
     }
 
-    AttrList* ad=new AttrList();
+    ClassAd* ad=new ClassAd();
     bool is_eof = false; 
     int error = 0;
 	if ( ! ad->InsertFromFile(file, is_eof, error) && error) {
@@ -893,22 +906,22 @@ main(int argc, char* argv[])
 
     if (LongFlag || customFormat) {
        if ( ! LegacyAdFormat || customFormat) {
-		  std::vector<AttrList> empty;
+		  std::vector<ClassAd> empty;
           PrintModularAds(stdout, ad, empty, customFormat, print_mask, constraint);
        } else {
           fPrintAd(stdout, *ad);
        }
     }
     else {
-		std::vector<AttrList> empty;
+		std::vector<ClassAd> empty;
 		ProcessInfo(ad,empty,GroupRollup,HierFlag);
 	}
 
   }
   else {  // Get prios not from file, but from collector or negotiator
 
-	AttrList *ad = NULL;
-	std::vector<AttrList> accountingAds;
+	ClassAd *ad = NULL;
+	std::vector<ClassAd> accountingAds;
 
 	DCCollector c((pool.length() > 0) ? pool.c_str() : 0);
 	c.locate();
@@ -923,6 +936,12 @@ main(int argc, char* argv[])
 		ClassAdList ads;
 		CondorError errstack;
 		QueryResult q;
+
+		if ( !neg_name.empty() ) {
+			std::string constraint;
+			formatstr(constraint, "%s == \"%s\"", ATTR_NEGOTIATOR_NAME, neg_name.c_str());
+			query.addANDConstraint(constraint.c_str());
+		}
 
 		CollectorList * collectors = CollectorList::create((pool.length() > 0) ? pool.c_str() : 0);
 		q = collectors->query (query, ads, &errstack);
@@ -948,7 +967,7 @@ main(int argc, char* argv[])
 
 	    // get reply
 		sock->decode();
-		ad=new AttrList();
+		ad=new ClassAd();
 		if (!getClassAdNoTypes(sock, *ad) ||
    	     !sock->end_of_message()) {
 			fprintf( stderr, "failed to get classad from negotiator\n" );
@@ -982,7 +1001,7 @@ main(int argc, char* argv[])
 					// if we have the ad in the vector-of-ads format, print them
 					// out like we do with condor_history, newline separated
 					// and without the numbered attr names.  Different, but more useful
-				for (std::vector<AttrList>::iterator it = accountingAds.begin();
+				for (std::vector<ClassAd>::iterator it = accountingAds.begin();
 						it != accountingAds.end();
 						it++) {
 					fPrintAd(stdout, *it);
@@ -1001,7 +1020,7 @@ main(int argc, char* argv[])
 
 //-----------------------------------------------------------------
 
-static void ProcessInfo(AttrList* ad, std::vector<AttrList> &accountingAds, bool GroupRollup,bool HierFlag)
+static void ProcessInfo(ClassAd* ad, std::vector<ClassAd> &accountingAds, bool GroupRollup,bool HierFlag)
 {
   int NumElem = 0;
 
@@ -1070,7 +1089,7 @@ static void ProcessInfo(AttrList* ad, std::vector<AttrList> &accountingAds, bool
 
 //-----------------------------------------------------------------
 
-static int CountElem(AttrList* ad)
+static int CountElem(ClassAd* ad)
 {
 	int numSubmittors;
 	if( ad->LookupInteger( "NumSubmittors", numSubmittors ) ) 
@@ -1084,7 +1103,7 @@ static int CountElem(AttrList* ad)
 
 //-----------------------------------------------------------------
 
-static void CollectInfo(int numElem, AttrList* ad, std::vector<AttrList> &accountingAds, LineRec* LR, bool GroupRollup)
+static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accountingAds, LineRec* LR, bool GroupRollup)
 {
   char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42], attrRequested[32];
   char  attrLastUsage[32];
@@ -1720,9 +1739,10 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
 
 //-----------------------------------------------------------------
 
-static void usage(char* name) {
+static void usage(const char* name) {
   fprintf( stderr, "usage: %s [options] [edit-option | display-options]\n"
      "    where [options] are\n"
+     "\t-name <name>\t\tName of negotiator\n"
      "\t-pool <host>\t\tUse host as the central manager to query\n"
      "\t-inputfile <file>\tDisplay priorities from <file>\n"
      "\t-help\t\t\tThis Screen\n"
@@ -1778,7 +1798,7 @@ static void usage(char* name) {
 
 //-----------------------------------------------------------------
 
-static void PrintResList(AttrList* ad)
+static void PrintResList(ClassAd* ad)
 {
   // fPrintAd(stdout, *ad);
 

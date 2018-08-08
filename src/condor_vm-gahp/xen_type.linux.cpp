@@ -21,7 +21,7 @@
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 
 #include "condor_config.h"
-#include "condor_string.h"
+#include "basename.h"
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
@@ -128,7 +128,7 @@ VirshType::Start()
 			vmprintf(D_ALWAYS, "Succeeded to restart with checkpointed files\n");
 
 			// Here we manually update timestamp of all writable disk files
-			m_start_time.getTime();
+			m_start_time = time(NULL);
 			return true;
 		}else {
 			// Failed to restart with checkpointed files
@@ -161,7 +161,7 @@ VirshType::Start()
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
 	    vmprintf(D_ALWAYS, "Failed to create libvirt domain: %s\n", (err ? err->message : "No reason found"));
 
-	    if( strstr( err->message, "mage is not in qcow2 format" ) != NULL ) {
+	    if (err && err->message && (strstr(err->message, "image is not in qcow2 format") != NULL)) {
 			m_result_msg = VMGAHP_ERR_BAD_IMAGE;
 		}
 
@@ -175,7 +175,7 @@ VirshType::Start()
 	set_priv(priv);
 
 	setVMStatus(VM_RUNNING);
-	m_start_time.getTime();
+	m_start_time = time(NULL);
 	m_cpu_time = 0;
 
 	// Here we manually update timestamp of all writable disk files
@@ -257,13 +257,15 @@ VirshType::Shutdown()
 			    killVM();
 		    }
 		  }
-		// Now we don't need working files any more
-		m_delete_working_files = true;
-		m_is_checkpointed = false;
+		if ( m_vm_no_output_vm  ) {
+			// Now we don't need working files any more
+			m_delete_working_files = true;
+			m_is_checkpointed = false;
+		}
 	}
 
 	setVMStatus(VM_STOPPED);
-	m_stop_time.getTime();
+	m_stop_time = time(NULL);
 	return true;
 }
 
@@ -338,7 +340,9 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
   if(tmp != NULL)
     {
       MyString errormsg;
-      args.AppendArgsV1RawOrV2Quoted(tmp,&errormsg);
+      if (!args.AppendArgsV1RawOrV2Quoted(tmp,&errormsg)) {
+		vmprintf(D_ALWAYS, "Cannot parse LIBVIRT_XML_SCRIPT_ARGS: %s\n", tmp);
+	  }
       free(tmp);
     }
   StringList input_strings, output_strings, error_strings;
@@ -661,7 +665,7 @@ VirshType::Status()
 					}
 					if(getVMStatus() != VM_STOPPED) {
 						setVMStatus(VM_STOPPED);
-						m_stop_time.getTime();
+						m_stop_time = time(NULL);
 					}
 					m_result_msg += "Stopped";
 					return true;
@@ -677,7 +681,7 @@ VirshType::Status()
 						}
 						if(getVMStatus() != VM_STOPPED) {
 							setVMStatus(VM_STOPPED);
-							m_stop_time.getTime();
+							m_stop_time = time(NULL);
 						}
 						m_result_msg += "Stopped";
 						return true;
@@ -723,10 +727,6 @@ VirshType::Status()
 	    m_cpu_time = info->cpuTime / 1000000000.0;
 	    m_result_msg += "Running";
 
-	    m_result_msg += " ";
-	    m_result_msg += VMGAHP_STATUS_COMMAND_CPUUTILIZATION;
-	    m_result_msg += "=";
-
 	    if ( (CurrentStamp - LastStamp) > 0 )
 	    {
 	      // Old calc method because of libvirt version mismatches.
@@ -735,21 +735,23 @@ VirshType::Status()
 	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1000000000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
 	    }
 
-	    m_result_msg += percentUtilization;
+	    formatstr_cat( m_result_msg, " %s=%f",
+	                   VMGAHP_STATUS_COMMAND_CPUUTILIZATION,
+	                   percentUtilization );
 
-	    m_result_msg += " " VMGAHP_STATUS_COMMAND_CPUTIME "=";
-	    m_result_msg += m_cpu_time;
+	    formatstr_cat( m_result_msg, " %s=%f",
+	                   VMGAHP_STATUS_COMMAND_CPUTIME, m_cpu_time );
 
 	    LastCpuTime = CurrentCpuTime;
 	    LastStamp = CurrentStamp;
 
 	    // Memory usage is in kbytes.
 	    if( info->memory != 0 ) {
-	    	formatstr( m_result_msg, "%s %s=%lu", m_result_msg.c_str(), VMGAHP_STATUS_COMMAND_MEMORY, info->memory );
+	    	formatstr_cat( m_result_msg, " %s=%lu", VMGAHP_STATUS_COMMAND_MEMORY, info->memory );
 	    }
 
 	    if( info->maxMem != 0 ) {
-	    	formatstr( m_result_msg, "%s %s=%lu", m_result_msg.c_str(), VMGAHP_STATUS_COMMAND_MAX_MEMORY, info->maxMem );
+	    	formatstr_cat( m_result_msg, " %s=%lu", VMGAHP_STATUS_COMMAND_MAX_MEMORY, info->maxMem );
 	    }
 
 		vmprintf( D_FULLDEBUG, "Reporting status: %s\n", m_result_msg.c_str() );
@@ -771,7 +773,7 @@ VirshType::Status()
 	    if(getVMStatus() != VM_STOPPED)
 	      {
 		setVMStatus(VM_STOPPED);
-		m_stop_time.getTime();
+		m_stop_time = time(NULL);
 	      }
 	    m_result_msg += "Stopped";
 	    virDomainFree(dom);
@@ -813,10 +815,10 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
 		m_xml += m_vm_name;
 		m_xml += "</name>";
 		m_xml += "<memory>";
-		m_xml += m_vm_mem * 1024;
+		m_xml += IntToStr( m_vm_mem * 1024 );
 		m_xml += "</memory>";
 		m_xml += "<vcpu>";
-		m_xml += m_vcpus;
+		m_xml += IntToStr( m_vcpus );
 		m_xml += "</vcpu>";
 		m_xml += "<os><type>hvm</type></os>";
 		m_xml += "<devices>";
@@ -872,10 +874,10 @@ XenType::CreateVirshConfigFile(const char* filename)
 		m_xml += m_vm_name;
 		m_xml += "</name>";
 		m_xml += "<memory>";
-		m_xml += m_vm_mem * 1024;
+		m_xml += IntToStr( m_vm_mem * 1024 );
 		m_xml += "</memory>";
 		m_xml += "<vcpu>";
-		m_xml += m_vcpus;
+		m_xml += IntToStr( m_vcpus );
 		m_xml += "</vcpu>";
 		m_xml += "<os><type>linux</type>";
 
@@ -1452,7 +1454,7 @@ VirshType::killVMFast(const char* vmname, virConnectPtr libvirt_con)
 	    virErrorPtr err = virConnGetLastError(libvirt_con);
 	    if (err && err->code != VIR_ERR_NO_DOMAIN)
 	      {
-		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", vmname, (err ? err->message : "No reason found"));
+		vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", vmname, (err->message ? err->message : "No reason found"));
 		return false;
 	      }
 	    else

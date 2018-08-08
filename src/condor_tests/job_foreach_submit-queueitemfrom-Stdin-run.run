@@ -1,4 +1,5 @@
 #! /usr/bin/env perl
+#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -127,7 +128,7 @@ my @queuestate = ();
 my $remainingjobs = 0;
 while($jobsdone eq "false") {
 	@queuestate = ();
-	$cmdstatus = runCondorTool("condor_q", \@queuestate, 2, {emit_output=>1});
+	$cmdstatus = runCondorTool("condor_q -tot -all", \@queuestate, 2, {emit_output=>1});
 	$remainingjobs = CheckQueue(\@queuestate);
 	if($remainingjobs == 0) {
 		$jobsdone = "true";
@@ -188,7 +189,7 @@ sub CheckQueue {
 	foreach my $line (@{$queueref}) {
 		chomp($line);
 		print "looking at:$line\n";
-		if($line =~ /^(\d+)\s+jobs.*$/) {
+		if($line =~ /(\d+)\s+jobs;\s+/) {
 			print "Jobs line seen:$line\n";
 			$jobcount = $1;
 			return($jobcount);

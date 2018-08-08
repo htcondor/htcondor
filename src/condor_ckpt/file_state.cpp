@@ -628,7 +628,10 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 		if(!f) return 0;
 
 		old_file = p->file;
-		if( old_file->close()!=0 ) return 0;
+		if( old_file->close()!=0 ) {
+			free(f);
+			return 0;
+		}
 
 		replace_file( old_file, f );
 

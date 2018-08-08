@@ -71,6 +71,11 @@ VMProc::VMProc(ClassAd *jobAd) : OsProc(jobAd)
 	m_vm_cputime = 0;
 	m_vm_utilization = -1.0;
 
+	m_vm_max_memory = 0;
+	m_vm_memory = 0;
+
+	m_vm_last_ckpt_time = 0;
+
 	//Find the interval of sending vm status command to vmgahp server
 	m_vmstatus_interval = param_integer( "VM_STATUS_INTERVAL", 
 			VM_DEFAULT_STATUS_INTERVAL);
@@ -692,7 +697,7 @@ VMProc::StartJob()
 			"VMProc::CheckStatus", this);
 
 	// Set job_start_time in user_proc.h
-	job_start_time.getTime();
+	condor_gettimestamp( job_start_time );
 	dprintf( D_ALWAYS, "StartJob for VM succeeded\n");
 
 	// If we do manage to launch, clear the FTL attributes.
@@ -1127,8 +1132,6 @@ VMProc::ShutdownGraceful()
 		return true;
 	}
 
-	bool delete_working_files = true;
-
 	if( m_vm_checkpoint ) {
 		// We need to do checkpoint before vacating.
 		// The reason we call checkpoint explicitly here
@@ -1145,7 +1148,6 @@ VMProc::ShutdownGraceful()
 			// This means the checkpoint succeeded but file transfer failed.
 			// We will not delete files in the working directory so that
 			// file transfer will be retried
-			delete_working_files = false;
 			dprintf(D_ALWAYS, "Vacating checkpoint succeeded but "
 					"file transfer failed\n");
 		}
@@ -1158,26 +1160,6 @@ VMProc::ShutdownGraceful()
 	m_is_soft_suspended = false;
 	is_checkpointed = false;
 	requested_exit = true;
-
-	// destroy vmgahp server
-	if( m_vmgahp->cleanup() == false ) {
-		//daemonCore->Send_Signal(JobPid, SIGKILL);
-		daemonCore->Kill_Family(JobPid);
-
-		// To make sure that the process dealing with a VM exits,
-		killProcessForVM();
-	}
-
-	// final cleanup.. 
-	cleanup();
-
-	// Because we already performed checkpoint, 
-	// we don't need to keep files in the working directory.
-	// So file transfer will not be called again.
-	if( delete_working_files ) {
-		Directory working_dir( Starter->GetWorkingDir(), PRIV_USER );
-		working_dir.Remove_Entire_Directory();
-	}
 
 	return false;	// return false says shutdown is pending	
 }
@@ -1364,7 +1346,7 @@ VMProc::CkptDone(bool success)
 		// File uploading succeeded
 		// update checkpoint counter and last ckpt timestamp
 		m_vm_ckpt_count++;
-		m_vm_last_ckpt_time.getTime();
+		m_vm_last_ckpt_time = time(NULL);
 	}
 
 	if( m_is_vacate_ckpt ) {
@@ -1540,20 +1522,12 @@ VMProc::reportErrorToStartd()
 	}
 
 	// Send pid of this starter
-	MyString s_pid;
-	s_pid += (int)daemonCore->getpid();
-
-	char *buffer = strdup(s_pid.Value());
-	ASSERT(buffer);
-
-	ssock.code(buffer);
+	ssock.put( IntToStr( (int)daemonCore->getpid() ) );
 
 	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
-		free(buffer);
 		return false;
 	}
-	free(buffer);
 
 	sleep(1);
 	return true;
@@ -1593,26 +1567,15 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 	}
 
 	// Send the pid of this starter
-	MyString s_pid;
-	s_pid += (int)daemonCore->getpid();
-
-	char *starter_pid = strdup(s_pid.Value());
-	ASSERT(starter_pid);
-	ssock.code(starter_pid);
+	ssock.put( IntToStr( (int)daemonCore->getpid() ) );
 
 	// Send vm info 
-	char *vm_value = strdup(value);
-	ASSERT(vm_value);
-	ssock.code(vm_value);
+	ssock.put(value);
 
 	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to local startd %s\n", addr);
-		free(starter_pid);
-		free(vm_value);
 		return false;
 	}
-	free(starter_pid);
-	free(vm_value);
 
 	sleep(1);
 	return true;
@@ -1655,8 +1618,7 @@ VMProc::setVMPID(int vm_pid)
 	// Get initial usage of the process	
 	updateUsageOfVM();
 
-	MyString pid_string;
-	pid_string += (int)m_vm_pid;
+	MyString pid_string = IntToStr( (int)m_vm_pid );
 
 	// Report this PID to local startd
 	reportVMInfoToStartd(VM_UNIV_VMPID, pid_string.Value());

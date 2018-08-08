@@ -172,10 +172,10 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ## the collector to fork off a separate worker process for each
 ## query request.  Up to COLLECTOR_QUERY_WORKERS worker processes
 ## will be created in this way.  If more than these are already running
-## and another query arrives, the main process will handle this query.
+## and another query arrives, it will be queued until a worker completes.
 ## Fork workers are available for UNIX systems only, and this setting
 ## is ingored in all others (Windows).
-COLLECTOR_QUERY_WORKERS	= 2
+COLLECTOR_QUERY_WORKERS	= 4
 
 
 ##--------------------------------------------------------------------

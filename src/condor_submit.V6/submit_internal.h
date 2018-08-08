@@ -76,6 +76,7 @@ public:
 	virtual int get_NewCluster() = 0;
 	virtual int get_NewProc(int cluster_id) = 0;
 	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL) = 0;
+	virtual int get_Capabilities(ClassAd& reply) = 0;
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 ) = 0;
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 ) = 0;
 	virtual int send_SpoolFileIfNeeded(ClassAd& ad) = 0;
@@ -83,6 +84,11 @@ public:
 	virtual int send_SpoolFileBytes(char const *filename) = 0;
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack) = 0;
 	virtual int  get_type() = 0;
+	virtual bool has_late_materialize() = 0;
+	virtual bool allows_late_materialize() = 0;
+	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text) = 0;
+	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o) = 0;
+	//virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text) = 0;
 protected:
 	AbstractScheddQ() {}
 };
@@ -96,11 +102,12 @@ enum {
 
 class ActualScheddQ : public AbstractScheddQ {
 public:
-	ActualScheddQ() : qmgr(NULL) {}
+	ActualScheddQ() : qmgr(NULL), tried_to_get_capabilities(false), has_late(false), allows_late(false) {}
 	virtual ~ActualScheddQ();
 	virtual int get_NewCluster();
 	virtual int get_NewProc(int cluster_id);
 	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL);
+	virtual int get_Capabilities(ClassAd& reply);
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
 	virtual int send_SpoolFileIfNeeded(ClassAd& ad);
@@ -108,10 +115,20 @@ public:
 	virtual int send_SpoolFileBytes(char const *filename);
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack);
 	virtual int  get_type() { return AbstractQ_TYPE_SCHEDD_RPC; }
+	virtual bool has_late_materialize(); // version check for late materialize
+	virtual bool allows_late_materialize(); // capabilities check ffor late materialize enabled.
+	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
+	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
+	//virtual int set_Foreach(int cluster, int itemnum, const char * filename, const char * text);
 
 	bool Connect(DCSchedd & MySchedd, CondorError & errstack);
 private:
 	Qmgr_connection * qmgr;
+	ClassAd capabilities;
+	bool tried_to_get_capabilities;
+	bool has_late; // set in Connect based on the version in DCSchedd
+	bool allows_late;
+	int init_capabilities();
 };
 
 class SimScheddQ : public AbstractScheddQ {
@@ -120,6 +137,7 @@ public:
 	virtual ~SimScheddQ();
 	virtual int get_NewCluster();
 	virtual int get_NewProc(int cluster_id);
+	virtual int get_Capabilities(ClassAd& reply);
 	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL);
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
@@ -128,6 +146,10 @@ public:
 	virtual int send_SpoolFileBytes(char const *filename);
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack);
 	virtual int  get_type() { return AbstractQ_TYPE_SIM; }
+	virtual bool has_late_materialize() { return true; }
+	virtual bool allows_late_materialize() { return true; }
+	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
+	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
 
 	bool Connect(FILE* fp, bool close_on_disconnect, bool log_all);
 private:
@@ -137,6 +159,45 @@ private:
 	bool log_all_communication;
 	FILE * fp;
 };
+
+
+// global struct that we use to keep track of where we are so we
+// can give useful error messages.
+enum {
+	PHASE_INIT=0,       // before we begin reading from the submit file
+	PHASE_READ_SUBMIT,  // while reading the submit file, and not on a Queue line
+	PHASE_DASH_APPEND,  // while processing -a arguments (happens when we see the Queue line)
+	PHASE_QUEUE,        // while processing the Queue line from a submit file
+	PHASE_QUEUE_ARG,    // while processing the -queue argument
+	PHASE_COMMIT,       // after processing the submit file/arguments
+};
+struct SubmitErrContext {
+	int phase;          // one of PHASE_xxx enum
+	int step;           // set to Step loop variable during queue iteration
+	int item_index;     // set to itemIndex/Row loop variable during queue iteration
+	const char * macro_name; // set to macro name during submit hashtable lookup/expansion
+	const char * raw_macro_val; // set to raw macro value during submit hashtable expansion
+};
+extern struct SubmitErrContext  ErrContext;
+
+#if 0 // no longer used
+int submit_factory_job (
+	FILE * fp,
+	MACRO_SOURCE & source,            // source that fp refers to
+	List<const char> & extraLines,    // lines passed in via -a argument
+	std::string & queueCommandLine);  // queue statement passed in via -q argument
+#endif
+
+int write_factory_file(const char * filename, const void* data, size_t cb, mode_t access);
+
+// used by refactoring of main submit loop.
+
+// convert the Foreach arguments to a from <file> type of argument, and create the file
+// if the foreach mode is foreach_not, then this function does nothing.
+//
+int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int ClusterId, bool spill_items);
+int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o);
+int SendClusterAd (ClassAd * ad);
 
 
 #endif // _SUBMIT_INTERNAL_H

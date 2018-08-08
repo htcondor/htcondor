@@ -96,7 +96,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 		rval = 1; // a new ad is a changed ad
 	} else {
 		// found the ad, now we want to update it, and possbly check for changes in the update
-		dprintf( D_FULLDEBUG, "Replacing ClassAd for '%s'\n", ad_name );
+		dprintf( D_FULLDEBUG, "Updating ClassAd for '%s'\n", ad_name );
 		if (CAP_IF_CHANGED == auto_publish) {
 			ClassAd* oldAd = sad->GetAd();
 			if ( ! oldAd) {
@@ -107,7 +107,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 				rval =  ! ClassAdsAreSame(ad, oldAd, &ignore_list);
 			}
 		}
-		sad->ReplaceAd(ad);
+		sad->AggregateFrom(ad);
 	}
 
 		// now, figure out if we need to update the collector based on

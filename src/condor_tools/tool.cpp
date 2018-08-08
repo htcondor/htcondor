@@ -70,7 +70,8 @@ bool peaceful_shutdown = false;
 bool force_shutdown = false;
 bool full = false;
 bool all = false;
-char* constraint = NULL;
+const char* constraint = NULL;
+std::string annexString;
 const char* subsys = NULL;
 const char* exec_program = NULL;
 int takes_subsys = 0;
@@ -80,7 +81,7 @@ bool IgnoreMissingDaemon = false;
 
 bool all_good = true;
 
-HashTable<MyString, bool> addresses_sent( 100, MyStringHash );
+HashTable<MyString, bool> addresses_sent( hashFunction );
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -130,6 +131,10 @@ usage( const char *str, int iExitCode )
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 	fprintf( stderr, 
 			 "    -all\t\tall hosts in your pool (overrides other targets)\n" );
+	fprintf( stderr,
+			 "    -annex-name <name>\tall annex hosts in the named annex\n" );
+	fprintf( stderr,
+			 "    -annex-slots\tall annex hosts in your pool\n" );
 	fprintf( stderr, "    hostname\t\tgiven host\n" );
 	fprintf( stderr, "    <ip.address:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr,
@@ -155,9 +160,6 @@ usage( const char *str, int iExitCode )
 		fprintf( stderr, "    -collector\n" );
 		fprintf( stderr, "    -negotiator\n" );
 		fprintf( stderr, "    -kbdd\n" );
-#ifdef HAVE_EXT_POSTGRESQL
-		fprintf( stderr, "    -quill\n" );
-#endif
 	}
 	fprintf( stderr, "\n" );
 
@@ -322,6 +324,7 @@ subsys_check( char* MyName )
 	subsys = (char*)1;
 }
 
+bool skipAfterAnnex = false;
 
 int
 main( int argc, char *argv[] )
@@ -413,7 +416,8 @@ main( int argc, char *argv[] )
 		fprintf( stderr, "ERROR: unknown command %s\n", MyName );
 		usage( "condor" );
 	}
-	
+
+
 		// First, deal with options (begin with '-')
 	tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
@@ -426,12 +430,6 @@ main( int argc, char *argv[] )
 		case 'v':
 			version();
 			break;
-#ifdef HAVE_EXT_POSTGRESQL
-		case 'q':
-			subsys_check( MyName );
-			dt = DT_QUILL;
-			break;
-#endif
 		case 'h':
 			usage( MyName, 0 );
 			break;
@@ -606,6 +604,45 @@ main( int argc, char *argv[] )
 						// We got a "-all", remember that
 					all = true;
 					break;
+				case 'n': {
+					// We got -annex*, all of which default to the master.
+					if( cmd == DAEMONS_OFF ) {
+						subsys_check( MyName );
+						dt = DT_MASTER;
+					}
+
+					char * option = * tmp;
+					++tmp;
+					char * argument = NULL;
+					if( tmp ) { argument = * tmp; }
+					--tmp;
+
+					if( strcmp( option, "-annex-name" ) == 0 ) {
+						if( argument ) {
+							formatstr( annexString, ATTR_ANNEX_NAME " =?= \"%s\"", argument );
+							skipAfterAnnex = true;
+							++tmp;
+						} else {
+							fprintf( stderr, "ERROR: -annex-name requires an annex name\n" );
+							usage( NULL );
+						}
+					} else if( strcmp( option, "-annex-slots" ) == 0 ) {
+						annexString = "IsAnnex";
+					} else {
+						if( argument && argument[0] != '-' ) {
+							formatstr( annexString, ATTR_ANNEX_NAME " =?= \"%s\"", argument );
+							skipAfterAnnex = true;
+							++tmp;
+						} else {
+							annexString = "IsAnnex";
+						}
+					}
+
+					if( constraint && (! annexString.empty()) ) {
+						formatstr( annexString, "(%s) && (%s)", constraint, annexString.c_str() );
+					}
+					constraint = annexString.c_str();
+					} break;
 				default:
 					fprintf( stderr, 
 							 "ERROR: unknown parameter: \"%s\"\n",
@@ -792,7 +829,7 @@ main( int argc, char *argv[] )
 
 	if (constraint && got_name_or_addr) {
 		fprintf (stderr,
-			"ERROR: use of constraint conflicts with other arguments containing names or addresses.\n"
+			"ERROR: use of -constraint or -annex conflicts with other arguments containing names or addresses.\n"
 			"You can change the constraint to select daemons by name by adding\n"
 			"  (NAME == \"daemon-name\" || MACHINE == \"daemon-name\")\n"
 			"to your constraint.\n");
@@ -947,6 +984,12 @@ doCommands(int /*argc*/,char * argv[],char *MyName,StringList & unresolved_names
 				//  -cmd XXX     (but not "-collector")
 				//  -subsys XXX  (but not "-schedd" or "-startd")
 			switch( (*argv)[1] ) {
+			case 'a':
+				if( (*argv)[2] == 'n' && skipAfterAnnex ) {
+					// this is -annex, skip the next one.
+					++argv;
+				}
+				break;
 			case 'p':
 				if( (*argv)[2] == '\0' || (*argv)[2] == 'o' ) {
 						// this is -pool, skip the next one.
@@ -1216,12 +1259,6 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 	case DT_CREDD:
 		adtype = CREDD_AD;
 		break;
-	case DT_QUILL:
-		adtype = QUILL_AD;
-		break;
-	case DT_LEASE_MANAGER:
-		adtype = LEASE_MANAGER_AD;
-		break;
 	case DT_GENERIC:
 		adtype = GENERIC_AD;
 		break;
@@ -1481,7 +1518,6 @@ doCommand( Daemon* d )
 			continue;
 		}
 
-		char	*psubsys = const_cast<char *>(subsys);
 		switch(real_cmd) {
 		case VACATE_CLAIM:
 			if( is_per_claim_startd_cmd ) {
@@ -1540,7 +1576,7 @@ doCommand( Daemon* d )
 			if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
-			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
+			if( !sock.put( subsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 							cmdToStr(my_cmd), d->idStr() );
 				all_good = false;
@@ -1554,7 +1590,7 @@ doCommand( Daemon* d )
 			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
-			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
+			if( !sock.put( subsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 						 cmdToStr(my_cmd), d->idStr() );
 				all_good = false;
@@ -1608,11 +1644,10 @@ doCommand( Daemon* d )
 			break;
 		case SET_SHUTDOWN_PROGRAM:
 		{
-			char	*pexec = const_cast<char *>(exec_program); 
 			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
-			if( !sock.code( pexec ) || !sock.end_of_message() ) {
+			if( !sock.put( exec_program ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 						 cmdToStr(my_cmd), d->idStr() );
 				all_good = false;

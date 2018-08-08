@@ -39,7 +39,7 @@ struct hostent *NameEnt;
 **#define NUL       "\0";
 */
 
-WriteUserLog logFile("owner", NULL, "local.log", 0, 0, 0, (bool)0, NULL);
+WriteUserLog logFile("owner", NULL, "local.log", 0, 0, 0, false);
 
 static void simulateUsage(struct rusage &ru) {
 	memset(&ru, 0, sizeof(ru));

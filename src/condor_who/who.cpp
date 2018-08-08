@@ -45,16 +45,13 @@
 #include "setenv.h"
 
 #include <vector>
-#include <sstream>
 #include <map>
-#include <iostream>
 
 #include "backward_file_reader.h"
 
 using std::vector;
 using std::map;
 using std::string;
-using std::stringstream;
 
 // stuff that we can scrape from the log directory about various daemons.
 //
@@ -95,7 +92,7 @@ static struct {
 
 	List<const char> print_head; // The list of headings for the mask entries
 	AttrListPrintMask print_mask;
-	ArgList projection;    // Attributes that we want the server to send us
+	classad::References projection;    // Attributes that we want the server to send us
 
 	int    diagnostic; // output useful only to developers
 	bool   verbose;    // extra output useful to users
@@ -301,15 +298,9 @@ bool starts_with(const char * p1, const char * p2, const char ** ppEnd)
 void AddPrintColumn(const char * heading, int width, const char * expr)
 {
 	ClassAd ad;
-	StringList attributes;
-	if(!ad.GetExprReferences(expr, NULL, &attributes)) {
+	if(!GetExprReferences(expr, ad, NULL, &App.projection)) {
 		fprintf( stderr, "Error:  Parse error of: %s\n", expr);
 		exit(1);
-	}
-
-	attributes.rewind();
-	while (const char *str = attributes.next()) {
-		App.projection.AppendArg(str);
 	}
 
 	App.print_head.Append(heading);
@@ -328,7 +319,7 @@ format_int_runtime (long long utime, Formatter & /*fmt*/)
 
 // print out static or dynamic slot id.
 static bool
-render_slot_id (std::string & out, AttrList * ad, Formatter & /*fmt*/)
+render_slot_id (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 {
 	int slotid;
 	if ( ! ad->LookupInteger(ATTR_SLOT_ID, slotid))
@@ -1002,7 +993,7 @@ format_jobid_program (const char *jobid, Formatter & /*fmt*/)
 
 void AddPrintColumn(const char * heading, int width, const char * attr, const CustomFormatFn & fmt)
 {
-	App.projection.AppendArg(attr);
+	App.projection.insert(attr);
 	App.print_head.Append(heading);
 
 	int wid = width ? width : (int)strlen(heading);
@@ -1148,21 +1139,21 @@ void parse_args(int /*argc*/, char *argv[])
 						if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
 							cust_fmt = render_slot_id;
 							pattr = ATTR_SLOT_ID;
-							App.projection.AppendArg(pattr);
-							App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
-							App.projection.AppendArg(ATTR_NAME);
+							App.projection.insert(pattr);
+							App.projection.insert(ATTR_SLOT_DYNAMIC);
+							App.projection.insert(ATTR_NAME);
 						} else if (MATCH == strcasecmp(parg, "PID")) {
 							cust_fmt = format_jobid_pid;
 							pattr = ATTR_JOB_ID;
-							App.projection.AppendArg(pattr);
+							App.projection.insert(pattr);
 						} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
 							cust_fmt = format_jobid_program;
 							pattr = ATTR_JOB_ID;
-							App.projection.AppendArg(pattr);
+							App.projection.insert(pattr);
 						} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
 							cust_fmt = format_int_runtime;
 							pattr = ATTR_TOTAL_JOB_RUN_TIME;
-							App.projection.AppendArg(pattr);
+							App.projection.insert(pattr);
 						} else {
 							parg = argv[ixArg];
 						}
@@ -1170,15 +1161,9 @@ void parse_args(int /*argc*/, char *argv[])
 
 					if ( ! cust_fmt) {
 						ClassAd ad;
-						StringList attributes;
-						if(!ad.GetExprReferences(parg, NULL, &attributes)) {
+						if(!GetExprReferences(parg, ad, NULL, &App.projection)) {
 							fprintf( stderr, "Error:  Parse error of: %s\n", parg);
 							exit(1);
-						}
-
-						attributes.rewind();
-						while (const char *str = attributes.next()) {
-							App.projection.AppendArg(str);
 						}
 					}
 
@@ -1237,8 +1222,8 @@ void parse_args(int /*argc*/, char *argv[])
 			AddPrintColumn("OWNER", 0, ATTR_REMOTE_OWNER);
 			AddPrintColumn("CLIENT", 0, ATTR_CLIENT_MACHINE);
 			AddPrintColumn("SLOT", 0, ATTR_SLOT_ID, render_slot_id);
-			App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
-			App.projection.AppendArg(ATTR_NAME);
+			App.projection.insert(ATTR_SLOT_DYNAMIC);
+			App.projection.insert(ATTR_NAME);
 			AddPrintColumn("JOB", -6, ATTR_JOB_ID);
 			AddPrintColumn("  RUNTIME", 12, ATTR_TOTAL_JOB_RUN_TIME, format_int_runtime);
 			AddPrintColumn("PID", -6, ATTR_JOB_ID, format_jobid_pid);
@@ -1613,10 +1598,8 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	if (App.projection.Count() > 0) {
-		char **attr_list = App.projection.GetStringArray();
-		query->setDesiredAttrs(attr_list);
-		deleteStringArray(attr_list);
+	if (App.projection.size() > 0) {
+		query->setDesiredAttrs(App.projection);
 	}
 
 	// if diagnose was requested, just print the query ad
@@ -1681,7 +1664,7 @@ main( int argc, char *argv[] )
 		}
 
 
-		// extern int mySortFunc(AttrList*,AttrList*,void*);
+		// extern int mySortFunc(ClassAd*,ClassAd*,void*);
 		// result.Sort((SortFunctionType)mySortFunc);
 
 		if (App.show_full_ads) {
@@ -2332,7 +2315,10 @@ static bool get_daemon_ready(const char * addr, const char * requirements, time_
 
 	ReliSock sock;
 	sock.timeout(sec_to_wait + 2); // wait 2 seconds longer than the requested timeout.
-	sock.connect(addr);
+	if (!sock.connect(addr)) {
+		fprintf(stderr, "cannot connect to %s\n", addr);
+		return false;
+	}
 
 	if ( ! dae.startCommand(DC_QUERY_READY, &sock, sec_to_wait + 2)) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't startCommand DC_QUERY_READY to %s\n", addr); }
@@ -2373,15 +2359,15 @@ static bool get_daemon_ready(const char * addr, const char * requirements, time_
 static char * get_daemon_param(const char * addr, const char * param_name)
 {
 	char * value = NULL;
-	// sock.code needs write access to the string for some reason...
-	auto_free_ptr tmp_param_name(strdup(param_name));
-	ASSERT(tmp_param_name);
 
 	Daemon dae(DT_ANY, addr, addr);
 
 	ReliSock sock;
 	sock.timeout(20);   // years of research... :)
-	sock.connect(addr);
+	if (!sock.connect(addr)) {
+		fprintf(stderr, "Cannot connect to %s\n", addr);
+		return value;
+	}
 
 	if ( ! dae.startCommand(CONFIG_VAL, &sock, 2)) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't startCommand CONFIG_VAL for %s to %s\n", param_name, addr); }
@@ -2392,14 +2378,13 @@ static char * get_daemon_param(const char * addr, const char * param_name)
 	sock.encode();
 	//if (App.diagnostic) { printf("Querying %s for $(%s) param\n", addr, param_name); }
 
-	char * name_copy = tmp_param_name.ptr();
-	if ( ! sock.code(name_copy)) {
+	if ( ! sock.put(param_name)) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't send CONFIG_VAL for %s to %s\n", param_name, addr); }
 	} else if ( ! sock.end_of_message()) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't send end of message to %s\n", addr); }
 	} else {
 		sock.decode();
-		if ( ! sock.code(value)) {
+		if ( ! sock.code_nullstr(value)) {
 			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive reply from %s\n", addr); }
 		} else if( ! sock.end_of_message()) {
 			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive end of message from %s\n", addr); }
@@ -2502,7 +2487,9 @@ static bool ping_a_daemon(std::string addr, std::string /*name*/)
 
 	ReliSock sock;
 	sock.timeout(20);   // years of research... :)
-	sock.connect(addr.c_str());
+	if (!sock.connect(addr.c_str())) {
+		return false;
+	}
 	dae.startCommand(DC_NOP, &sock, 20);
 	success = sock.end_of_message();
 	sock.close();

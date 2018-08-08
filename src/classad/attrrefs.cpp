@@ -28,6 +28,7 @@ namespace classad {
 AttributeReference::
 AttributeReference()
 {
+	parentScope = NULL;
 	expr = NULL;
 	absolute = false;
 }
@@ -37,6 +38,7 @@ AttributeReference()
 AttributeReference::
 AttributeReference( ExprTree *tree, const string &attrname, bool absolut )
 {
+	parentScope = NULL;
 	attributeStr = attrname;
 	expr = tree;
 	absolute = absolut;
@@ -90,6 +92,7 @@ CopyFrom(const AttributeReference &ref)
 
     success = true;
 
+	parentScope = ref.parentScope;
 	attributeStr = ref.attributeStr;
 	if( ref.expr && ( expr=ref.expr->Copy( ) ) == NULL ) {
         success = false;
@@ -151,6 +154,7 @@ operator==(const AttributeReference &ref1, const AttributeReference &ref2)
 void AttributeReference::
 _SetParentScope( const ClassAd *parent ) 
 {
+	parentScope = parent;
 	if( expr ) expr->SetParentScope( parent );
 }
 

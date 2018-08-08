@@ -1,0 +1,86 @@
+#!/usr/bin/env perl
+
+##**************************************************************
+##
+## Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use strict;
+use warnings;
+
+#
+# This is a test to determine if multiple Custom Machine Resource monitors
+# can function correctly at the same time.
+#
+
+use CondorTest;
+use CondorUtils;
+use CondorPersonal;
+
+use CustomMachineResource;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+NUM_CPUS = 4
+
+MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
+use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor-both, SUM:SQUIDs, PEAK:SQUIDsMemory )
+
+MACHINE_RESOURCE_INVENTORY_TAKOs = $(TEST_DIR)/cmr-tako-discovery
+use feature : monitor( TAKOs, Periodic, 10, $(TEST_DIR)/cmr-tako-monitor, SUM:TAKOs, PEAK:TAKOsMemory )
+
+SCHEDD_CLUSTER_INITIAL_VALUE = 9000
+
+NUM_SLOTS = 2
+NUM_SLOTS_TYPE_1 = 2
+SLOT_TYPE_1 = SQUIDs=2 TAKOs=2 CPUs=2
+
+UPDATE_INTERVAL = 20
+STARTER_UPDATE_INTERVAL = 20
+SHADOW_QUEUE_UPDATE_INTERVAL = 20
+
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testName = 'cmr_monitor_many_instances';
+my $testDescription = 'Custom Machine Resources - Monitor Test Many, Multiple Instances';
+
+#
+# Verify the configuration before running the test.
+#
+CustomMachineResource::TestSlotAndResourceCount( 2, $testName, "SQUID" );
+CustomMachineResource::TestSlotAndResourceCount( 2, $testName, "TAKO" );
+
+#
+# Verify that the monitor's report is being read correctly.
+#
+CustomMachineResource::TestUptimeResourceSeconds( $testName, "SQUID" );
+CustomMachineResource::TestUptimeResourceSeconds( $testName, "TAKO" );
+
+#
+# Verify that we're computing the usage correctly.
+#
+CustomMachineResource::TestResourceUsage( $testName, "SQUID", undef, 2 );
+CustomMachineResource::TestResourceUsage( $testName, "TAKO", undef, 2 );
+
+#
+# Verify that we're computing the peak usage correctly.
+#
+CustomMachineResource::TestResourceMemoryUsage( $testName, "SQUID", undef, 2 );
+CustomMachineResource::TestResourceMemoryUsage( $testName, "TAKO", undef, 2 );
+
+exit( 0 );

@@ -58,6 +58,7 @@
 #include "condor_threads.h"
 #include "log_rotate.h"
 #include "dprintf_internal.h"
+#include "utc_time.h"
 
 #if defined(HAVE__FTIME)
 # include <sys/timeb.h>
@@ -68,6 +69,8 @@
 #if defined(HAVE_CLOCK_GETTTIME)
 # include <time.h>
 #endif
+
+#include <sstream>
 
 // define this to have D_TIMESTAMP|D_SUB_SECOND be microseconds rather than milliseconds
 // this is useful mostly when trying to put log entries from multiple daemons on the same
@@ -88,7 +91,8 @@ static FILE *preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t
 FILE *open_debug_file( int debug_level, const char flags[] );
 
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
-static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
+void _condor_save_dprintf_line_va( int flags, const char* fmt, va_list args );
+void _condor_save_dprintf_line( int flags, const char* fmt, ... );
 void _condor_dprintf_saved_lines( void );
 struct saved_dprintf {
 	int level;
@@ -291,7 +295,8 @@ DebugFileInfo::DebugFileInfo(const dprintf_output_settings& p) :
 	outputTarget(STD_OUT), debugFP(NULL), choice(p.choice), headerOpts(p.HeaderOpts),
 	maxLog(p.logMax), logZero(0), maxLogNum(p.maxLogNum),
 	want_truncate(p.want_truncate), accepts_all(p.accepts_all),
-	rotate_by_time(p.rotate_by_time) {}
+	rotate_by_time(p.rotate_by_time), dont_panic(false),
+	userData(0), dprintfFunc(_dprintf_global_func) {}
 
 bool DebugFileInfo::MatchesCatAndFlags(int cat_and_flags) const
 {
@@ -318,7 +323,7 @@ static char *formatTimeHeader(struct tm *tm) {
 
 const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info)
 {
-	time_t clock_now = info.clock_now;
+	time_t clock_now = info.tv.tv_sec;
 
 	static char *buf = NULL;
 	static int buflen = 0;
@@ -342,9 +347,9 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				// changing the output format.  wenger 2009-02-24.
 			if (hdr_flags & D_SUB_SECOND) {
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%06d ", (int)clock_now, info.microseconds );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%06d ", (int)clock_now, (int)info.tv.tv_usec );
 				#else
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", (int)clock_now, (info.microseconds+500)/1000 );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", (int)clock_now, (int)(info.tv.tv_usec+500)/1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d ", (int)clock_now );
@@ -355,9 +360,9 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 		} else {
 			if (hdr_flags & D_SUB_SECOND) {
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), info.microseconds );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), (int)info.tv.tv_usec );
 				#else
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), (info.microseconds+500)/1000 );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), (int)(info.tv.tv_usec+500)/1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s ", formatTimeHeader(info.tm));
@@ -679,67 +684,19 @@ static int _condor_dprintf_getbacktrace(DebugHeaderInfo &info, unsigned int hdr_
  * fill in current time in the DebugHeaderInfo structure, paying attention to dprintf flags
  * and returning modified dprintf flags if requested.
  */
-static time_t _condor_dprintf_gettime(DebugHeaderInfo &info, unsigned int hdr_flags, unsigned int * phdr_flags_out = NULL)
+static void _condor_dprintf_gettime(DebugHeaderInfo &info, unsigned int hdr_flags)
 {
 	if (hdr_flags & D_SUB_SECOND) {
-	#if defined WIN32
-		// Windows8 has GetSystemTimePreciseAsFileTime which returns sub-microsecond system times.
-		static bool check_for_precise = false;
-		static void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
-		static BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
-		if ( ! check_for_precise) {
-			HMODULE hmod = GetModuleHandle("Kernel32.dll");
-			if (hmod) { *(FARPROC*)&get_precise_time = GetProcAddress(hmod, "GetSystemTimePreciseAsFileTime"); }
-			hmod = GetModuleHandle("ntdll.dll");
-			if (hmod) { *(FARPROC*)&time_to_1970 = GetProcAddress(hmod, "RtlTimeToSecondsSince1970"); }
-			check_for_precise = true;
-		}
-		unsigned long long nanos = 0;
-		if (get_precise_time) {
-			get_precise_time(&nanos);
-			unsigned long now = 0;
-			time_to_1970(&nanos, &now);
-			info.clock_now = now;
-			info.microseconds = (int)((nanos / 10) % 1000000);
-		} else {
-			struct _timeb tv;
-			_ftime(&tv);
-			info.clock_now = tv.time;
-			info.microseconds = tv.millitm * 1000;
-		}
-	#elif defined(HAVE_CLOCK_GETTIME)
-		struct timespec tm;
-		#if ! defined(D_SUB_SECOND_IS_MICROSECONDS) && defined(HAVE_CLOCK_REALTIME_COARSE)
-		clock_gettime(CLOCK_REALTIME_COARSE, &tm);
-		#else
-		clock_gettime(CLOCK_REALTIME, &tm);
-		#endif
-		info.clock_now = tm.tv_sec;
-		info.microseconds = tm.tv_nsec / 1000;
-	#elif defined(HAVE_GETTIMEOFDAY)
-		struct timeval	tv;
-		gettimeofday(&tv, NULL);
-		info.clock_now = tv.tv_sec;
-		info.microseconds = tv.tv_usec;
-	#elif defined(HAVE__FTIME)
-		struct _timeb tv;
-		_ftime(&tv);
-		info.clock_now = tv.time;
-		info.microseconds = tv.millitm * 1000;
-	#else
-		hdr_flags &= ~D_SUB_SECOND;
-		(void)time(&info.clock_now);
-		info.microseconds = 0;
-	#endif
+		condor_gettimestamp(info.tv);
 	} else {
-		(void)time(&info.clock_now);
-		info.microseconds = 0;
+		info.tv.tv_sec = time(NULL);
+		info.tv.tv_usec = 0;
 	}
 	if ( ! (hdr_flags & D_TIMESTAMP)) {
-		info.tm = localtime(&info.clock_now);
+		// On windows, timeval::tv_sec is a long, not a time_t
+		time_t now = info.tv.tv_sec;
+		info.tm = localtime(&now);
 	}
-	if (phdr_flags_out) *phdr_flags_out = hdr_flags;
-	return info.clock_now;
 }
 
 /* _condor_dfprintf
@@ -754,7 +711,7 @@ _condor_dfprintf( struct DebugFileInfo* it, const char* fmt, ... )
 	unsigned int hdr_flags = DebugHeaderOptions;
 
 	memset((void*)&info,0,sizeof(info)); // just to stop Purify UMR errors
-	_condor_dprintf_gettime(info, hdr_flags, &hdr_flags);
+	_condor_dprintf_gettime(info, hdr_flags);
 	if (hdr_flags & D_BACKTRACE) _condor_dprintf_getbacktrace(info, hdr_flags, &hdr_flags);
 
     va_start( args, fmt );
@@ -776,6 +733,62 @@ int dprintf_getCount(void)
 // prototype
 struct tm *localtime();
 
+//#define ENABLE_DPRINTF_PROFILING 1
+#ifdef ENABLE_DPRINTF_PROFILING
+
+class _dprintf_va_runtime : public _condor_runtime
+{
+public:
+	bool is_enabled;
+	_dprintf_va_runtime() : is_enabled(false) { };
+	~_dprintf_va_runtime() {
+		if (is_enabled) {
+			enabled_runtime += elapsed_runtime();
+			enabled_count += 1;
+		} else {
+			disabled_runtime += elapsed_runtime();
+			disabled_count += 1;
+		}
+	};
+	static double disabled_runtime;
+	static double enabled_runtime;
+	static long disabled_count;
+	static long enabled_count;
+	static void clear() {
+		enabled_runtime = disabled_runtime = 0;
+		enabled_count = disabled_count = 0;
+	}
+};
+
+double _dprintf_va_runtime::enabled_runtime = 0;
+double _dprintf_va_runtime::disabled_runtime = 0;
+long _dprintf_va_runtime::enabled_count = 0;
+long _dprintf_va_runtime::disabled_count = 0;
+
+#endif // ENABLE_DPRINTF_PROFILING
+
+bool _condor_dprintf_runtime (
+	double & disabled_runtime,
+	long & disabled_count,
+	double & enabled_runtime,
+	long & enabled_count,
+	bool clear)
+{
+#ifdef ENABLE_DPRINTF_PROFILING
+	disabled_runtime = _dprintf_va_runtime::disabled_runtime;
+	disabled_count = _dprintf_va_runtime::disabled_count;
+	enabled_runtime = _dprintf_va_runtime::enabled_runtime;
+	enabled_count = _dprintf_va_runtime::enabled_count;
+	if (clear) { _dprintf_va_runtime::clear(); }
+	return true;
+#else
+	enabled_runtime = disabled_runtime = 0;
+	enabled_count = disabled_count = 0;
+	if (clear) {}
+	return false;
+#endif
+}
+
 void
 _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list args )
 {
@@ -793,6 +806,10 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	priv_state	priv;
 	std::vector<DebugFileInfo>::iterator it;
 
+#ifdef ENABLE_DPRINTF_PROFILING
+	_dprintf_va_runtime art;
+#endif
+
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
 
@@ -809,7 +826,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		   initialized until we call dprintf_config().
 		*/
 	if( ! _condor_dprintf_works ) {
-		_condor_save_dprintf_line( cat_and_flags, fmt, args );
+		_condor_save_dprintf_line_va( cat_and_flags, fmt, args );
 		return; 
 	} 
 
@@ -817,6 +834,10 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 	if ( ! IsDebugCatAndVerbosity(cat_and_flags) && ! (cat_and_flags & D_FAILURE))
 		return;
 
+	// if this dprintf is enabled, switch runtime accumulation into the enabled counters
+#ifdef ENABLE_DPRINTF_PROFILING
+	art.is_enabled = true;
+#endif
 
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
 
@@ -899,7 +920,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		memset((void*)&info,0,sizeof(info)); // just to stop Purify UMR errors
 		info.ident = ident;
 		unsigned int hdr_flags = DebugHeaderOptions | (cat_and_flags & D_BACKTRACE);
-		_condor_dprintf_gettime(info, hdr_flags, &hdr_flags);
+		_condor_dprintf_gettime(info, hdr_flags);
 		if (hdr_flags & D_BACKTRACE) _condor_dprintf_getbacktrace(info, hdr_flags, &hdr_flags);
 	
 		#ifdef va_copy
@@ -1873,8 +1894,17 @@ mkargv( int* argc, char* argv[], char* line )
 	return( _condor_mkargv(argc, argv, line) );
 }
 
-static void
-_condor_save_dprintf_line( int flags, const char* fmt, va_list args )
+void
+_condor_save_dprintf_line( int flags, const char* fmt, ... )
+{
+	va_list ap;
+	va_start(ap, fmt);
+	_condor_save_dprintf_line_va( flags, fmt, ap );
+	va_end(ap);
+}
+
+void
+_condor_save_dprintf_line_va( int flags, const char* fmt, va_list args )
 {
 	char* buf;
 	struct saved_dprintf* new_node;
@@ -1914,6 +1944,13 @@ _condor_dprintf_saved_lines( void )
 	struct saved_dprintf* next;
 
 	if( ! saved_list ) {
+		return;
+	}
+
+	if( ! _condor_dprintf_works ) {
+		// if this function was called, but there's no place to put
+		// the saved dprintf messages, there's nothing we can do at the
+		// moment so just return.  The messages are still saved.
 		return;
 	}
 

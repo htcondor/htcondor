@@ -27,18 +27,24 @@
 class CondorError {
 
 	public:
-		CondorError();
-		~CondorError();
+		CondorError() : _subsys(NULL), _code(0), _message(NULL), _next(NULL) {}
+		~CondorError() { if (_next || _subsys || _message) clear(); }
 		CondorError(const CondorError&);
 		CondorError& operator=(const CondorError&);
 		void push( const char* subsys, int code, const char* message );
 		void pushf( const char* subsys, int code, const char* format, ... ) CHECK_PRINTF_FORMAT(4,5); 
-		std::string getFullText( bool want_newline = false );
-		const char* subsys(int level = 0);
-		int   code(int level = 0);
-		const char* message(int level = 0);
+		std::string getFullText( bool want_newline = false ) const;
+		// returns NULL if no subsys at that level
+		const char* subsys(int level = 0) const;
+		int   code(int level = 0) const;
+		// returns "" if no message at that level
+		const char* message(int level = 0) const;
+		// returns true if class was init'ed but never populated. note that this does not necessarily mean that code != 0 (because warnings)
+		bool empty() const { return !_next && !_subsys && !_message && !_code; }
+		void walk(bool (*fn)(void*pv, int code, const char * subsys, const char * message), void*pv) const;
 
 		bool  pop();
+		bool  empty();
 		void  clear();
 
 	private:

@@ -1,0 +1,218 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use CondorPersonal;
+use strict;
+use warnings;
+
+# NOTES: this test will fail if does not run in an environment where it gets to control
+#        the condor configuration.  It *may* erroneously succeed if run with a StartdLog
+#        that has events that predate this test.
+# 
+
+# request that a personal HTCondor be started before the test, and that it have
+# the following appended to its config file.
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+  NUM_CPUS = 6
+  NUM_SLOTS = 6
+  SCHEDD_ALLOW_LATE_MATERIALIZE = true
+  # turn on special logging of late materialization
+  SCHEDD_MATERIALIZE_LOG = $(LOG)/MaterializeLog
+  #ENABLE_ASYNC_LATE_MATERIALIZE_ITEM_DATA = true
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+# dump the environment.
+TLOG "the environment\n";
+foreach my $key (keys %ENV) { print "\t$key = $ENV{$key}\n"; }
+
+my $testname = "job_late_materialization";
+my $was_evicted = 0;
+
+my $pid = $$;
+my $submitfile = "$testname$pid.sub";
+
+my @basesubmit = "
+	universe = vanilla
+	executable = x_sleep.pl
+	arguments = 10
+	log = $submitfile.log
+	notification = never
+	max_materialize = 4
+	queue 10
+	";
+
+TLOG("creating submit file $submitfile\n");
+print @basesubmit;
+
+# create the submit file
+open(SF,">$submitfile") or die "Failed to open '$submitfile' : $!\n";
+print SF @basesubmit;
+close(SF);
+
+my $total_factories = 0;
+my $total_materialized = 0;
+my $total_exited = 0;
+my $num_materialized = 0;
+my $num_running = 0;
+my $num_idle = 0;
+my $peak_materialized = 0;
+my $peak_running = 0;
+my $peak_idle = 0;
+
+# Because of the idiocy of RunTest, a job exiting successfully is an error unless we register a callback or do this..
+Condor::SetAllowedEvents("RegisterExitSuccess");
+
+# callbacks for the log reader while the job is running.
+#
+my $executed = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $procid = $args{"job"};
+
+	$num_running++;
+	if ($num_running > $peak_running) { $peak_running = $num_running; }
+	$num_idle--;
+
+	TLOG "OK: Job $cluster.$procid began executing: Present=$num_materialized, Idle=$num_idle, Running=$num_running\n";
+	return 0;
+};
+CondorTest::RegisterExecute($testname, $executed);
+
+my $submitted = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $procid = $args{"job"};
+	if ($procid < 0) {
+		TLOG "OK: Factory $cluster was submitted\n";
+		$total_factories++;
+	} else {
+		$total_materialized++;
+		$num_materialized++;
+		if ($num_materialized > $peak_materialized) { $peak_materialized = $num_materialized; }
+		$num_idle++;
+		if ($num_idle > $peak_idle) { $peak_idle = $num_idle; }
+
+		TLOG "OK: Job $cluster.$procid was submitted: Present=$num_materialized, Idle=$num_idle, Running=$num_running\n";
+	}
+	return 0;
+};
+CondorTest::RegisterSubmit($testname, $submitted);
+
+my $exited = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $procid = $args{"job"};
+	if ($procid < 0) {
+		TLOG "OK: Factory $cluster was removed\n";
+	} else {
+		$num_materialized--;
+		$num_running--;
+		$total_exited++;
+		TLOG "OK: Job $cluster.$procid exited: Present=$num_materialized, Idle=$num_idle, Running=$num_running\n";
+	}
+	return 0;
+};
+CondorTest::RegisterExited($testname, $exited);
+CondorTest::RegisterExitedSuccess($testname, $exited);
+
+my $evicted = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $procid = $args{"job"};
+	TLOG ("unexpected job $cluster.$procid was evicted, this is unexpected, but not fatal.\n");
+	$num_running--;
+	$num_idle++;
+	return 0;
+};
+CondorTest::RegisterEvictedWithRequeue($testname, $evicted);
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $evicted);
+
+# Run a late materialization job and make sure it finishes.
+# RunTest will not return until all of the jobs have exited.
+# it will have the side effect of printing TLOG messages when a job materializes, runs, and exits
+# and also keeping totals for these events
+#
+TLOG("Submitting $submitfile to test late materialization\n");
+my $res = CondorTest::RunTest($testname, $submitfile, 0);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'all-jobs-ran');
+
+# print out final state counters
+#
+TLOG("Checking state counters\n");
+print "\t\tCur\tPeak\tTotal\n";
+print "Materialized\t$num_materialized\t$peak_materialized\t$total_materialized\n";
+print "Exited\t\t_\t_\t$total_exited\n";
+print "Running\t\t$num_running\t$peak_running\n";
+print "Idle\t\t$num_idle\t$peak_idle\n";
+
+$res = ($total_materialized == 10);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'total-materialized');
+$res = ($peak_materialized == 4);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'max_materialize');
+$res = ($peak_idle == 4);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'max_idle');
+
+# reset counter for the second run
+$total_materialized = 0;
+$total_exited = 0;
+$num_materialized = 0;
+$num_running = 0;
+$num_idle = 0;
+$peak_materialized = 0;
+$peak_running = 0;
+$peak_idle = 0;
+
+# use a subfile with itemdata for the second test
+# 
+my $sub2name = $testname;
+
+TLOG("Submitting $submitfile with itemdata to test late materialization\n");
+$res = CondorTest::RunTest2(name=>$sub2name, want_checkpoint=>0, submit_body=>"
+	executable = x_sleep.pl
+	log = $sub2name.log
+	notification = never
+	max_materialize = 7
+	queue 3 arguments in (10,30,15,1)
+	");
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'inline-itemdata');
+
+# print out final state counters
+#
+TLOG("Checking state counters\n");
+print "\t\tCur\tPeak\tTotal\n";
+print "Materialized\t$num_materialized\t$peak_materialized\t$total_materialized\n";
+print "Exited\t\t_\t_\t$total_exited\n";
+print "Running\t\t$num_running\t$peak_running\n";
+print "Idle\t\t$num_idle\t$peak_idle\n";
+
+$res = ($total_materialized == 12);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-total-materialized');
+$res = ($peak_materialized == 7);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-max_materialize');
+$res = ($peak_idle == 7);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-max_idle');
+
+
+CondorTest::EndTest();
+

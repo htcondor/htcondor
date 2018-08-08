@@ -119,7 +119,7 @@ static const char NiceUserName[] = "nice-user";
 static const size_t IP_STRING_BUF_SIZE = 48;
 
 /* Max space needed to hold a sinful string, as
- * returned by sin_to_string()
+ * returned by condor_sockaddr::to_sinful()
  */
 // TODO: [IPV6] Should be increased
 #define SINFUL_STRING_BUF_SIZE 64

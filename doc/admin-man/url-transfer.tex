@@ -194,3 +194,91 @@ then the \Condor{starter} will attempt to send the command to the
 \Condor{shadow}, but the \Condor{shadow} will ignore the command.
 No files will be transferred, and the job will be placed on hold.
 \end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:HTTP-Public-File-Transfer}
+Enabling the Transfer of Public Input Files over HTTP}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Another option for transferring files over HTTP is for users to specify
+a list of \emph{public input files}. These are specified in the submit
+file as follows:
+\footnotesize
+\begin{verbatim}
+public_input_files = file1,file2,file3
+\end{verbatim}
+\normalsize
+
+HTCondor will automatically convert these files into URLs and transfer them 
+over HTTP using plug-ins. The advantage to this approach is that system 
+administrators can leverage Squid caches or load-balancing infrastructure, 
+resulting in improved performance. This also allows us to gather statistics 
+about file transfers that were not previously available.
+
+When a user submits a job with public input files, HTCondor generates a 
+hash link for each file in the root directory for the web server. Each 
+of these links points back to the original file on local disk. Next, 
+HTCondor replaces the names of the files in the submit job with web links
+to their hashes. These get sent to the execute node, which downloads the 
+files using our curl\_plugin tool, and are then remapped back to their
+original names.
+
+In the event of any errors or configuration problems, HTCondor will fall back 
+to a regular (non-HTTP) file transfer.
+
+To enable HTTP public file transfers, a system administrator must perform
+several steps as described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:HTTP-Public-Files-Web-Server}Install a web service
+for public input files}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+An HTTP service must be installed and configured on the submit node. Any regular 
+web server software such as Apache (\URL{https://httpd.apache.org/}) or nginx 
+(\URL{https://nginx.org}) will do. The submit node must be running a Linux 
+system.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:HTTP-Public-Files-Knobs}Configuration knobs for
+public input files}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Several knobs must be set and configured correctly for this functionality to
+work:
+
+\begin{itemize}
+\item \Macro{ENABLE\_HTTP\_PUBLIC\_FILES}: Must be set to true (default: 
+\emph{false})
+\item \Macro{HTTP\_PUBLIC\_FILES\_ADDRESS}: The full web address (hostname + port) 
+where your web server is serving files (default: \emph{127.0.0.1:8080})
+\item \Macro{HTTP\_PUBLIC\_FILES\_ROOT\_DIR}: Absolute path to the local directory
+where the web service is serving files from.
+\item \Macro{HTTP\_PUBLIC\_FILES\_USER}: User security level used to write links to
+the directory specified by HTTP\_PUBLIC\_FILES\_ROOT\_DIR. There are three valid 
+options for this knob:
+\begin{enumerate}
+\item \Bold{<user>}: Links will be written as user who submitted the job.
+\item \Bold{<condor>}: Links will be written as user running condor daemons. 
+By default this is the user \emph{condor} unless you have changed this by 
+setting the configuration parameter CONDOR\_IDS.
+\item \Bold{<\emph{\%username\%}>}: Links will be written as the user 
+\emph{\%username\%} (ie. \emph{httpd}, \emph{nobody}) If using this option, 
+make sure the directory is writable by this particular user.
+\end{enumerate}
+The default setting is \emph{<condor>}.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:HTTP-Public-Files-Infrastructure}Additional
+HTTP infrastructure for public input files}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The main advantage of using HTTP for file transfers is that system
+administrators can use additional infrastructure (such as Squid caching) to
+improve file transfer performance. This is outside the scope of the HTCondor 
+configuration but is still worth mentioning here. When curl\_plugin is
+invoked, it checks the environment variable \emph{http\_proxy} for a proxy 
+server address; by setting this appropriately on execute nodes, a system 
+can dramatically improve transfer speeds for commonly used files.
+

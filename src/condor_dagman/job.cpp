@@ -119,10 +119,12 @@ Job::Job( const char* jobName,
 	abort_dag_val = -1; // so Coverity is happy
 	have_abort_dag_return_val = false;
 	abort_dag_return_val = -1; // so Coverity is happy
+	is_factory = false;
 	_visited = false;
 	_dfsOrder = -1; // so Coverity is happy
 
 	_queuedNodeJobProcs = 0;
+	_numSubmittedProcs = 0;
 
 	_explicitPriority = 0;
 	_effectivePriority = _explicitPriority;
@@ -775,7 +777,7 @@ Job::GetJobstateJobTag()
 			int begin = jobTagName[0] == '\"' ? 1 : 0;
 			int last = jobTagName.Length() - 1;
 			int end = jobTagName[last] == '\"' ? last - 1 : last;
-			jobTagName = jobTagName.Substr( begin, end );
+			jobTagName = jobTagName.substr( begin, 1 + end - begin );
 		}
 
 		MyString tmpJobTag = MultiLogFiles::loadValueFromSubFile(
@@ -787,7 +789,7 @@ Job::GetJobstateJobTag()
 			int begin = tmpJobTag[0] == '\"' ? 1 : 0;
 			int last = tmpJobTag.Length() - 1;
 			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
-			tmpJobTag = tmpJobTag.Substr( begin, end );
+			tmpJobTag = tmpJobTag.substr( begin, 1 + end - begin );
 		}
 		_jobTag = strnewp( tmpJobTag.Value() );
 	}

@@ -36,7 +36,7 @@ public:
 	IOProxy();
 	~IOProxy();
 
-	bool init( JICShadow * shadow, const char *config_file, bool want_io, bool want_updates, bool want_delayed );
+	bool init( JICShadow * shadow, const char *config_file, bool want_io, bool want_updates, bool want_delayed, condor_sockaddr *bindTo = NULL );
 
 private:
 	int connect_callback( Stream * );

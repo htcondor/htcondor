@@ -28,6 +28,7 @@
 */
 
 #ifdef WIN32
+#if _MSC_VER < 1900
 int 
 snprintf(
 	char       *str, 
@@ -65,7 +66,7 @@ vsnprintf(
 
 	return length;
 }
-		  
+#endif
 
 // Returns the number of characters that a printf would return,
 // without actually printing the characters anywhere.

@@ -58,7 +58,6 @@
 #include "condor_syscall_mode.h"
 #include "pool_allocator.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
@@ -76,7 +75,6 @@
 #include "condor_auth_x509.h"
 #include "setenv.h"
 #include "HashTable.h"
-#include "extra_param_info.h"
 #include "condor_uid.h"
 #include "condor_mkstemp.h"
 #include "basename.h"
@@ -123,7 +121,6 @@ void process_locals( const char*, const char*);
 void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
 void check_params();
-bool find_user_file(MyString & filename, const char * basename, bool check_access);
 
 // External variables
 //extern int	ConfigLineNo;
@@ -140,7 +137,7 @@ static MACRO_SET ConfigMacroSet = {
 	/* CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULT | */ 0,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults, NULL };
 const MACRO_SOURCE DetectedMacro = { true,  false, 0, -2, -1, -2 };
-const MACRO_SOURCE DefaultMacro  = { true,  false, 1, -2, -1, -2 };
+//const MACRO_SOURCE DefaultMacro  = { true,  false, 1, -2, -1, -2 };
 const MACRO_SOURCE EnvMacro      = { false, false, 2, -2, -1, -2 };
 const MACRO_SOURCE WireMacro     = { false, false, 3, -2, -1, -2 };
 
@@ -1073,15 +1070,18 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 		// Now, insert any macros defined in the environment.
 	char **my_environ = GetEnviron();
-	for( int i = 0; my_environ[i]; i++ ) {
-		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
-		strcpy( magic_prefix, "_" );
-		strcat( magic_prefix, myDistro->Get() );
-		strcat( magic_prefix, "_" );
-		int prefix_len = (int)strlen( magic_prefix );
 
+		// Build "magic_prefix" with _condor_, or w/e distro we are
+
+	std::string magic_prefix;
+	magic_prefix += "_";
+	magic_prefix += myDistro->Get();
+	magic_prefix += "_";
+	int prefix_len = magic_prefix.size();
+
+	for( int i = 0; my_environ[i]; i++ ) {
 		// proceed only if we see the magic prefix
-		if( strncasecmp( my_environ[i], magic_prefix, prefix_len ) != 0 ) {
+		if( strncasecmp( my_environ[i], magic_prefix.c_str(), prefix_len ) != 0 ) {
 			continue;
 		}
 
@@ -1129,7 +1129,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		free( config_source );
 	}
 
-	// init_ipaddr and init_full_hostname is now obsolete
 	CondorError errorStack;
 	if(! init_network_interfaces( & errorStack )) {
 		const char * subsysName = get_mySubSystem()->getName();
@@ -1146,11 +1145,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		free( tmp );
 		reset_local_hostname();
 	}
-
-		// Also, we should be safe to process the NETWORK_INTERFACE
-		// parameter at this point, if it's set.
-	//init_ipaddr( TRUE );
-
 
 		// The IPv6 code currently caches some results that depend
 		// on configuration settings such as NETWORK_INTERFACE.
@@ -1182,8 +1176,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		// call with is_daemon=false, since that is fine for both daemons
 		// and non-daemons to do.
 	condor_auth_config( false );
-
-	ConfigConvertDefaultIPToSocketIP();
 
 	//Configure condor_fsync
 	condor_fsync_on = param_boolean("CONDOR_FSYNC", true);
@@ -1506,7 +1498,7 @@ find_user_file(MyString &file_location, const char * basename, bool check_access
 
 	if (can_switch_ids())
 		return false;
-	if ( ! is_relative_to_cwd(basename)) {
+	if ( fullpath(basename)) {
 		file_location = basename;
 	} else {
 #ifdef UNIX
@@ -2671,7 +2663,7 @@ bool param_find_item (
 		if (pdf) {
 			name_found = name;
 			name_found.upper_case();
-			name_found.setChar((int)(pdot - name)+1, 0); // MyString trucates when you setChar(,0)
+			name_found.truncate((int)(pdot - name)+1);
 			name_found += pdf->key;
 			it.is_def = true;
 			it.pdef = pdf;

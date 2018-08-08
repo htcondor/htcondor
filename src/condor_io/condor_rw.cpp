@@ -27,6 +27,7 @@
 #include "internet.h"
 #include "selector.h"
 #include "condor_threads.h"
+#include "condor_sockfunc.h"
 
 /*
  * Returns true if the given error number indicates
@@ -55,7 +56,14 @@ static char const *not_null_peer_description(char const *peer_description,SOCKET
     if( peer_description ) {
         return peer_description;
     }
-    return sock_peer_to_string(fd,sinbuf,SINFUL_STRING_BUF_SIZE,"disconnected socket");
+
+	condor_sockaddr addr;
+	if (condor_getpeername(fd, addr) < 0) {
+		return "disconnected socket";
+	}
+
+	addr.to_sinful(sinbuf, SINFUL_STRING_BUF_SIZE);
+	return sinbuf;
 }
 
 /* Generic read/write wrappers for condor.  These function emulate-ish the 

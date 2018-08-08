@@ -55,7 +55,7 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
 
 #ifdef WIN32
 	int iLength = strFilename.Length();
-	if (!strcasecmp(strFilename.Substr(iLength - 4, iLength - 1).Value(), ".dll"))
+	if (!strcasecmp(strFilename.substr(iLength - 4, 4).Value(), ".dll"))
 	{	// if the filename ends in ".dll"
 		
 		// in order to mimic the behavior of LoadLibrary
@@ -130,9 +130,8 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
 	{
 		dprintf( D_FULLDEBUG, "Checking dir: %s\n", psDir );
 
-		char *psFullDir = dircat(psDir, strFilename.Value());
-		MyString strFullDir = psFullDir;
-		delete [] psFullDir;
+		MyString strFullDir;
+		dircat(psDir, strFilename.Value(), strFullDir);
 
 		StatInfo info(strFullDir.Value());
 		if( info.Error() == SIGood ) {

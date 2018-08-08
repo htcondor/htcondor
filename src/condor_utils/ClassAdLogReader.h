@@ -105,7 +105,7 @@ public:
 
 private:
         ClassAdLogIterator(const std::string &fname);
-	ClassAdLogIterator() : m_current(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_END)) {}
+	ClassAdLogIterator() : m_current(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_END)), m_eof(false) {}
 
 	void Next();
 	bool Load();

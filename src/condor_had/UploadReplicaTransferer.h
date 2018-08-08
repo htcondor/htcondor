@@ -30,18 +30,21 @@ class UploadReplicaTransferer : public BaseReplicaTransferer
 {
 public:
     /* Function  : UploadReplicaTransferer constructor
-     * Arguments : pDaemonSinfulString  - downloading daemon sinfull string
+     * Arguments : command              - exact command given on command line
+     *             pDaemonSinfulString  - downloading daemon sinfull string
      *             pVersionFilePath     - version string in dot-separated format
      *             pStateFilesPathsList - list of paths to the state files
      */
-    UploadReplicaTransferer(const MyString&  pDaemonSinfulString,
+    UploadReplicaTransferer(const MyString &command,
+                            const MyString&  pDaemonSinfulString,
                             const MyString&  pVersionFilePath,
                             //const MyString&  pStateFilePath):
 							const StringList& pStateFilePathsList):
          BaseReplicaTransferer( pDaemonSinfulString,
                                 pVersionFilePath,
                                 //pStateFilePath ) {};
-								pStateFilePathsList ) {}; 
+								pStateFilePathsList ),
+		 m_command( command ) {};
 	/* Function    : initialize
      * Return value: TRANSFERER_TRUE  - upon success
      *               TRANSFERER_FALSE - upon failure
@@ -53,6 +56,8 @@ public:
 private:
     int upload();
     int uploadFile(MyString& filePath, MyString& extension);
+
+	MyString m_command;
 };
 
 #endif // UPLOAD_REPLICA_TRANSFERER_H

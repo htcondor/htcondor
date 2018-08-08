@@ -44,29 +44,25 @@ class AdNameHashKey
 };
 
 // the hash functions
-unsigned int adNameHashFunction (const AdNameHashKey &);
-unsigned int stringHashFunction (const MyString &);
+size_t adNameHashFunction (const AdNameHashKey &);
 
 // type for the hash tables ...
 typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;
 typedef HashTable <MyString, CollectorHashTable *> GenericAdHashTable;
 
 // functions to make the hashkeys
-bool makeStartdAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeQuillAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeScheddAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeLicenseAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeMasterAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeCkptSrvrAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeCollectorAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeAccountingAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeHadAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeXferServiceAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeLeaseManagerAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeGridAdHashKey (AdNameHashKey &, ClassAd *);
-bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeStartdAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeScheddAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeLicenseAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeMasterAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeCkptSrvrAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeCollectorAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeStorageAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeAccountingAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeNegotiatorAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeHadAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeGridAdHashKey (AdNameHashKey &, const ClassAd *);
+bool makeGenericAdHashKey (AdNameHashKey &, const ClassAd *);
 
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
 // [OBSOLETE] do not use it. specification of sinful string has been changed

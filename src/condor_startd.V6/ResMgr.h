@@ -72,6 +72,8 @@ public:
 	stats_entry_recent<int>	total_rank_preemptions;
 	stats_entry_recent<int>	total_user_prio_preemptions;
 	stats_entry_recent<int>	total_job_starts;
+	stats_entry_recent<Probe> job_busy_time;
+	stats_entry_recent<Probe> job_duration;
 
 	time_t init_time;
 	time_t lifetime;
@@ -90,11 +92,24 @@ public:
 		pool.AddProbe("JobUserPrioPreemptions", &total_user_prio_preemptions);
 		pool.AddProbe("JobStarts", &total_job_starts);
 
+		// publish two Miron probes, showing only XXXCount if count is zero, and
+		// also XXXMin, XXXMax and XXXAvg if count is non-zero
+		const int flags = stats_entry_recent<Probe>::PubValueAndRecent | ProbeDetailMode_CAMM | IF_NONZERO | IF_VERBOSEPUB;
+		pool.AddProbe("JobBusyTime", &job_busy_time, NULL, flags);
+		pool.AddProbe("JobDuration", &job_duration, NULL, flags);
+
+		// for probes to be published if they are in the whitelist
+		std::string strWhitelist;
+		if (param(strWhitelist, "STATISTICS_TO_PUBLISH_LIST")) {
+			pool.SetVerbosities(strWhitelist.c_str(), 0, true);
+		}
+
+
 		pool.SetRecentMax(recent_window, window_quantum);
 	}
 
 	void Publish(ClassAd &ad, int flags) const {
-		pool.Publish(ad, flags);	
+		pool.Publish(ad, flags);
 	}
 
 	void Tick(time_t now) {
@@ -180,7 +195,9 @@ public:
 	int		adlist_delete( const char *name ) { return extra_ads.Delete( name ); }
 	int		adlist_delete( StartdCronJob * job ) { return extra_ads.DeleteJob( job ); }
 	int		adlist_clear( StartdCronJob * job )  { return extra_ads.ClearJob( job ); } // delete child ads, and clear the base job ad
-	int		adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask );
+	int		adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask, const char * r_id_str );
+	void	adlist_reset_monitors( unsigned r_id, ClassAd * forWhom );
+	void	adlist_unset_monitors( unsigned r_id, ClassAd * forWhom );
 
 	// Methods to control various timers
 	void	check_polling( void );	// See if we need to poll frequently
@@ -293,7 +310,7 @@ public:
 	bool considerResumingAfterDraining();
 
 		// how_fast: DRAIN_GRACEFUL, DRAIN_QUICK, DRAIN_FAST
-	bool startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,std::string &new_request_id,std::string &error_msg,int &error_code);
+	bool startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code);
 
 	bool cancelDraining(std::string request_id,std::string &error_msg,int &error_code);
 
@@ -307,6 +324,11 @@ public:
 	bool typeNumCmp( int* a, int* b );
 
 	void calculateAffinityMask(Resource *rip);
+
+	void checkForDrainCompletion();
+	int getMaxJobRetirementTimeOverride() { return max_job_retirement_time_override; }
+	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -386,6 +408,7 @@ private:
 	int expected_quick_draining_badput;
 	int total_draining_badput;
 	int total_draining_unclaimed;
+	int max_job_retirement_time_override;
 };
 
 

@@ -145,4 +145,9 @@ const int CONDOR_HOLD_CODE_EC2ConnectionProblem = 40;
 const int CONDOR_HOLD_CODE_EC2ServerError = 41;
 const int CONDOR_HOLD_CODE_EC2InstancePotentiallyLostError = 42;
 
+const int CONDOR_HOLD_CODE_PreScriptFailed = 43;
+const int CONDOR_HOLD_CODE_PostScriptFailed = 44;
+
+// NOTE!!! If you add a new hold code here, don't forget to update the condor-wiki magic numbers page!
+
 #endif

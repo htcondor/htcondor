@@ -25,9 +25,6 @@
 // //////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
-#ifdef HAVE_EXT_GSOAP
-#include "soap_core.h"
-#endif
 #include "authentication.h"
 #include "reli_sock.h"
 #include "condor_daemon_core.h"
@@ -48,10 +45,6 @@ static int ZZZ_always_increase() {
 const std::string DaemonCommandProtocol::WaitForSocketDataString = "DaemonCommandProtocol::WaitForSocketData";
 
 DaemonCommandProtocol::DaemonCommandProtocol( Stream * sock, bool is_command_sock, bool isSharedPortLoopback ) :
-#ifdef HAVE_EXT_GSOAP
-	m_is_http_post(false),
-	m_is_http_get(false),
-#endif
 	m_isSharedPortLoopback( isSharedPortLoopback ),
 	m_nonblocking(!is_command_sock), // cannot re-register command sockets for non-blocking read
 	m_delete_sock(!is_command_sock), // must not delete registered command sockets
@@ -80,7 +73,8 @@ DaemonCommandProtocol::DaemonCommandProtocol( Stream * sock, bool is_command_soc
 
 	m_sec_man = daemonCore->getSecMan();
 
-	m_handle_req_start_time.getTime();
+	condor_gettimestamp( m_handle_req_start_time );
+	timerclear( &m_async_waiting_start_time );
 
 	ASSERT(m_sock);
 
@@ -123,7 +117,6 @@ int DaemonCommandProtocol::doProtocol()
 
 	if( m_sock ) {
 		if( m_sock->deadline_expired() ) {
-			MyString msg;
 			dprintf(D_ALWAYS,"DaemonCommandProtocol: deadline for security handshake with %s has expired.\n",
 					m_sock->peer_description());
 
@@ -135,7 +128,6 @@ int DaemonCommandProtocol::doProtocol()
 			what_next = WaitForSocketData();
 		}
 		else if( m_is_tcp && !m_sock->is_connected()) {
-			MyString msg;
 			dprintf(D_ALWAYS,"DaemonCommandProtocol: TCP connection to %s failed.\n",
 					m_sock->peer_description());
 
@@ -219,7 +211,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		// SocketCallback is called.
 	incRefCount();
 
-	m_async_waiting_start_time.getTime();
+	condor_gettimestamp( m_async_waiting_start_time );
 
 	return CommandProtocolInProgress;
 }
@@ -230,9 +222,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 int
 DaemonCommandProtocol::SocketCallback( Stream *stream )
 {
-	UtcTime async_waiting_stop_time;
-	async_waiting_stop_time.getTime();
-	m_async_waiting_time += async_waiting_stop_time.difference(&m_async_waiting_start_time);
+	struct timeval async_waiting_stop_time;
+	condor_gettimestamp( async_waiting_stop_time );
+	m_async_waiting_time += timersub_double( async_waiting_stop_time, m_async_waiting_start_time );
 
 	daemonCore->Cancel_Socket( stream, m_prev_sock_ent );
 	m_prev_sock_ent = NULL;
@@ -516,66 +508,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
-#ifdef HAVE_EXT_GSOAP
-	if ( strstr(tmpbuf,"GET") ) {
-		if ( param_boolean("USE_SHARED_PORT", true) ) {
-			dprintf(D_ALWAYS, "Received HTTP GET connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_description());
-		}
-		else if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
-			// mini-web server requires READ authorization.
-			if ( daemonCore->Verify("HTTP GET", READ,m_sock->peer_addr(),NULL) ) {
-				m_is_http_get = true;
-			}
-		} else {
-			dprintf(D_ALWAYS,"Received HTTP GET connection from %s -- "
-							 "DENIED because ENABLE_WEB_SERVER=FALSE\n",
-							 m_sock->peer_description());
-		}
-	} else {
-		if ( strstr(tmpbuf,"POST") ) {
-			if ( param_boolean("USE_SHARED_PORT", true) ) {
-				dprintf(D_ALWAYS, "Received HTTP POST connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_description());
-			}
-			else if ( param_boolean("ENABLE_SOAP",false) ) {
-				// SOAP requires SOAP authorization.
-				if ( daemonCore->Verify("HTTP POST",SOAP_PERM,m_sock->peer_addr(),NULL) ) {
-					m_is_http_post = true;
-				}
-			} else {
-				dprintf(D_ALWAYS,"Received HTTP POST connection from %s -- "
-							 "DENIED because ENABLE_SOAP=FALSE\n",
-							 m_sock->peer_description());
-			}
-		}
-	}
-	if ( m_is_http_post || m_is_http_get )
-	{
-		struct soap *cursoap;
-
-			// Socket appears to be HTTP, so deal with it.
-		dprintf(D_ALWAYS, "Received HTTP %s connection from %s\n",
-			m_is_http_get ? "GET" : "POST",
-			m_sock->peer_description() );
-
-
-		ASSERT( daemonCore->soap );
-		cursoap = dc_soap_accept(m_sock, daemonCore->soap);
-
-			// Now, process the Soap RPC request and dispatch it
-		dprintf(D_ALWAYS,"About to serve HTTP request...\n");
-		dc_soap_serve(cursoap);
-		dc_soap_free(cursoap);
-		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
-
-			// gsoap already closed the socket.  so set the socket in
-			// the underlying CEDAR object to INVALID_SOCKET, so
-			// CEDAR won't close it again when we delete the object.
-		m_sock->invalidateSock();
-
-		m_result = TRUE;
-		return CommandProtocolFinished;
-	}
-#endif // HAVE_EXT_GSOAP
 
 		// This was not a soap request; next, see if we have a special command
 		// handler for unknown command integers.
@@ -689,9 +621,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 			dPrintAd (D_SECURITY, m_auth_info);
 		}
 
-		MyString peer_version;
+		std::string peer_version;
 		if( m_auth_info.LookupString( ATTR_SEC_REMOTE_VERSION, peer_version ) ) {
-			CondorVersionInfo ver_info( peer_version.Value() );
+			CondorVersionInfo ver_info( peer_version.c_str() );
 			m_sock->set_peer_version( &ver_info );
 		}
 
@@ -721,7 +653,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					(m_is_tcp) ? "TCP" : "UDP",
 					m_auth_cmd,
 					"UNREGISTERED COMMAND!",
-					m_user.Value(),
+					m_user.c_str(),
 					m_sock->peer_description());
 
 			m_result = FALSE;
@@ -824,6 +756,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					}
 				}
 
+				std::string peer_version;
+
 				// grab some attributes out of the policy.
 				if (m_policy) {
 					char *tmp  = NULL;
@@ -849,12 +783,25 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						tmp = NULL;
 					}
 
+					m_policy->LookupString( ATTR_SEC_REMOTE_VERSION, peer_version );
 
 					bool tried_authentication=false;
 					m_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
 					m_sock->setTriedAuthentication(tried_authentication);
 					m_sock->setSessionID(session->id());
 				}
+
+				// When using a cached session, only use the version
+				// from the session for the socket's peer version.
+				// This maintains symmetry of version info between
+				// client and server.
+				if ( !peer_version.empty() ) {
+					CondorVersionInfo ver_info( peer_version.c_str() );
+					m_sock->set_peer_version( &ver_info );
+				} else {
+					m_sock->set_peer_version( NULL );
+				}
+
 				m_new_session = false;
 
 			} // end of case: using existing session
@@ -908,12 +855,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// generate a new session
 
 					// generate a unique ID.
-					MyString tmpStr;
-					tmpStr.formatstr( "%s:%i:%i:%i", 
+					std::string tmpStr;
+					formatstr( tmpStr, "%s:%i:%i:%i",
 									get_local_hostname().Value(), daemonCore->mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (m_sid == NULL);
-					m_sid = strdup(tmpStr.Value());
+					m_sid = strdup(tmpStr.c_str());
 
 					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
 
@@ -1361,8 +1308,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 						m_req,
 						m_comTable[m_cmd_index].command_descrip,
 						(m_is_tcp) ? "TCP" : "UDP",
-						!m_user.IsEmpty() ? " from " : "",
-						m_user.Value(),
+						!m_user.empty() ? " from " : "",
+						m_user.c_str(),
 						m_sock->peer_description(),
 						PermString(m_comTable[m_cmd_index].perm));
 
@@ -1381,8 +1328,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 		// When re-using security sessions, need to set the socket's
 		// authenticated user name from the value stored in the cached
 		// session.
-		if( m_user.Length() && !m_sock->isAuthenticated() ) {
-			m_sock->setFullyQualifiedUser(m_user.Value());
+		if( m_user.size() && !m_sock->isAuthenticated() ) {
+			m_sock->setFullyQualifiedUser(m_user.c_str());
 		}
 
 		// grab the user from the socket
@@ -1393,8 +1340,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			}
 		}
 
-		MyString command_desc;
-		command_desc.formatstr("command %d (%s)",m_req,m_comTable[m_cmd_index].command_descrip);
+		std::string command_desc;
+		formatstr(command_desc,"command %d (%s)",m_req,m_comTable[m_cmd_index].command_descrip);
 
 		// this is the final decision on m_perm.  this is what matters.
 		if( m_comTable[m_cmd_index].force_authentication &&
@@ -1409,10 +1356,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 		}
 		else {
 			m_perm = daemonCore->Verify(
-						  command_desc.Value(),
+						  command_desc.c_str(),
 						  m_comTable[m_cmd_index].perm,
 						  m_sock->peer_addr(),
-						  m_user.Value() );
+						  m_user.c_str() );
 		}
 
 	} else {
@@ -1663,8 +1610,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);
 
-		UtcTime handler_start_time(true);
-		double sec_time = handler_start_time.difference(&m_handle_req_start_time);
+		struct timeval handler_start_time;
+		condor_gettimestamp( handler_start_time );
+		double sec_time = timersub_double( handler_start_time, m_handle_req_start_time );
 		sec_time -= m_async_waiting_time;
 
 		if( m_sock_had_no_deadline ) {

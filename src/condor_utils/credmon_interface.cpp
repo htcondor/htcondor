@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "credmon_interface.h"
+#include "directory.h"
 #ifdef WIN32
 #else
 #include <fnmatch.h>
@@ -87,7 +88,11 @@ bool credmon_fill_watchfile_name(char* watchfilename, const char* user) {
 			strncpy(username, user, 255);
 			username[255] = 0;
 		}
-		sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
+		if(param_boolean("TOKENS", false)) {
+			sprintf(watchfilename, "%s%c%s%cscitokens.use", cred_dir.ptr(), DIR_DELIM_CHAR, username, DIR_DELIM_CHAR);
+		} else {
+			sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
+		}
 	}
 
 	return true;
@@ -105,7 +110,7 @@ bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal) {
 
 	// this will be the filename we poll for
 	char watchfilename[PATH_MAX];
-	if (credmon_fill_watchfile_name(const_cast<char*>(watchfilename), user) == false) {
+	if (credmon_fill_watchfile_name(watchfilename, user) == false) {
 		return false;
 	}
 
@@ -151,7 +156,10 @@ bool credmon_poll_continue(const char* user, int retry) {
 
 	struct stat junk_buf;
 
+	// stat the file as root
+	priv_state priv = set_root_priv();
 	int rc = stat(watchfilename, &junk_buf);
+	set_priv(priv);
 	if (rc==-1) {
 		dprintf(D_FULLDEBUG, "CREDMON: warning, got errno %i, waiting for %s to appear (retry: %i)\n", errno, watchfilename, retry);
 		// DON'T BLOCK!  Just say we didn't find it and let the caller decide what to do.
@@ -339,7 +347,57 @@ int markfilter(const dirent*d) {
 }
 #endif
 
-void process_cred_file(const char *src) {
+void process_cred_mark_dir(const char *src) {
+	auto_free_ptr cred_dir_name(param("SEC_CREDENTIAL_DIRECTORY"));
+
+	// in theory, this should never be undefined if we got here, but we're about
+	// to recursively delete directories as root so let's bail just to be safe.
+	if(!cred_dir_name) {
+		dprintf(D_ALWAYS, "CREDMON: SWEEPING, but SEC_CREDENTIAL_DIRECTORY not defined!\n");
+		return;
+	}
+
+	Directory cred_dir(cred_dir_name.ptr(), PRIV_ROOT);
+
+	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, MARK: %s\n", cred_dir_name.ptr(), src );
+	if ( cred_dir.Find_Named_Entry( src ) ) {
+		// it's possible that there are two users named "marky" and
+		// "marky.mark".  make sure the marky.mark file is NOT a
+		// directory, otherwise we'll delete poor marky's creds.
+		if (cred_dir.IsDirectory()) {
+			dprintf( D_ALWAYS, "SKIPPING DIRECTORY \"%s\" in %s\n", src, cred_dir_name.ptr());
+			return;
+		}
+	} else {
+		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", src, cred_dir_name.ptr());
+		return;
+	}
+
+	// delete the mark file (now that we're sure it's not a directory)
+	dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, src );
+	if (!cred_dir.Remove_Current_File()) {
+		dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, src );
+		return;
+	}
+
+	// delete the user's dir
+	MyString username = src;
+	username = username.substr(0, username.Length()-5);
+	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name.ptr(), username.Value());
+	if ( cred_dir.Find_Named_Entry( username.Value() ) ) {
+		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, username.Value() );
+		if (!cred_dir.Remove_Current_File()) {
+			dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name.ptr(), DIR_DELIM_CHAR, username.Value() );
+			return;
+		}
+	} else {
+		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", username.Value(), cred_dir_name.ptr());
+		return;
+	}
+}
+
+
+void process_cred_mark_file(const char *src) {
    //char * src = fname;
    char * trg = strdup(src);
    strcpy((trg + strlen(src) - 5), ".cred");
@@ -374,11 +432,16 @@ void credmon_sweep_creds() {
 	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
 	if (n >= 0) {
 		while (n--) {
-			fullpathname.formatstr("%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, namelist[n]->d_name);
-			priv_state priv = set_root_priv();
-			process_cred_file(fullpathname.c_str());
-			set_priv(priv);
+			if(param_boolean("TOKENS", false)) {
+				process_cred_mark_dir(namelist[n]->d_name);
+			} else {
+				fullpathname.formatstr("%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, namelist[n]->d_name);
+				priv_state priv = set_root_priv();
+				process_cred_mark_file(fullpathname.c_str());
+				set_priv(priv);
+			}
 			free(namelist[n]);
+
 		}
 		free(namelist);
 	} else {

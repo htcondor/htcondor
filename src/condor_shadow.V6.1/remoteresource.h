@@ -327,6 +327,11 @@ class RemoteResource : public Service {
     bool wasClaimDeactivated( void ) {
        return already_killed_graceful || already_killed_fast; };
 
+		/** Return true if we received a job_exit syscall from the
+			starter, false if not.
+		*/
+	bool gotJobExit() { return m_got_job_exit; };
+
 		/** If the job on this resource exited with a signal, return
 			the signal.  If not, return -1. */
 	int exitSignal( void );
@@ -499,6 +504,7 @@ private:
 
 	bool already_killed_graceful;
 	bool already_killed_fast;
+	bool m_got_job_exit;
 
 	void logRemoteAccessCheck(bool allow,char const *op,char const *name);
 

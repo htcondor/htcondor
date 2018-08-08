@@ -91,7 +91,7 @@ int IMDS::RenameFile(struct in_addr machine_IP,
 			return CANNOT_RENAME_FILE;
 		}
 		strncpy(old_file_ptr->data.file_name, new_file_name, 
-				MAX_CONDOR_FILENAME_LENGTH);
+				MAX_CONDOR_FILENAME_LENGTH - 1);
 		old_file_ptr->data.last_modified_time = time(NULL);
 		(void) Index.AddNewFile(machine_IP, owner_name, new_file_name, 
 								old_file_ptr);

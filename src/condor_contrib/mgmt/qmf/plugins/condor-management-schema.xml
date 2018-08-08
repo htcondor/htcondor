@@ -730,14 +730,14 @@ Set by Collector:
       <arg name="Subsystem"
 	   dir="I" type="sstr"
 	   desc="The component/subsystem to start: one of STARTD,
-		 SCHEDD, COLLECTOR, NEGOTIATOR, KBDD or QUILL"/>
+		 SCHEDD, COLLECTOR, NEGOTIATOR or KBDD"/>
     </method>
 
     <method name="Stop">
       <arg name="Subsystem"
 	   dir="I" type="sstr"
 	   desc="The component/subsystem to stop: one of STARTD,
-		 SCHEDD, COLLECTOR, NEGOTIATOR, KBDD or QUILL"/>
+		 SCHEDD, COLLECTOR, NEGOTIATOR or KBDD"/>
     </method>
   </class>
 

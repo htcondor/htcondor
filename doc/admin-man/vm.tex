@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:vm-install}Setting Up the VM and Docker Universes}
+\section{Setting Up the VM and Docker Universes}\label{sec:vm-install}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -395,3 +395,11 @@ need to run containers with root privilige, you may set the configuration
 parameter \Macro{DOCKER\_DROP\_ALL\_CAPABILITIES} to an expression that
 evalutes to false.  This expression is evaluted in the context of the machine ad (my) and the job ad (target).
 
+Docker universe jobs may fail to start on certain Linux machines when SELinux is enabled.
+The symptom is a permission denied error when reading or executing from the condor scratch
+directory.  To fix this problem, an administrator will need to run the following command
+as root on the execute directories for all the startd machines:
+
+\begin{verbatim}
+# chcon -Rt svirt_sandbox_file_t /var/lib/condor/execute 
+\end{verbatim}

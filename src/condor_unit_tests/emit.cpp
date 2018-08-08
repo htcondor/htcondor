@@ -85,7 +85,7 @@ void Emitter::emit_function(const char* function) {
 		"-----------------------------------------------------\n", function);
 	if(print_failures && print_successes) {
 		dprintf(D_ALWAYS, "%s", test_buf->Value());
-		test_buf->setChar(0, '\0');
+		test_buf->truncate(0);
 	}
 }
 
@@ -97,7 +97,7 @@ void Emitter::emit_object(const char* object) {
 		"---------------------------------------------------\n", object);
 	if(print_failures && print_successes) {
 		dprintf(D_ALWAYS, "%s", test_buf->Value());
-		test_buf->setChar(0, '\0');
+		test_buf->truncate(0);
 	}
 	object_tests++;
 }
@@ -186,11 +186,11 @@ void Emitter::emit_result_success(int line, const char * file) {
 	if(print_successes && !print_failures) {
 		if(!test_buf->IsEmpty()) {
 			dprintf(D_ALWAYS, "%s", test_buf->Value());
-			test_buf->setChar(0, '\0');
+			test_buf->truncate(0);
 		}
 		dprintf(D_ALWAYS, "%s", buf->Value());
 	}
-	buf->setChar(0, '\0');
+	buf->truncate(0);
 	passed_tests++;
 	delete cur_test_name;
 	cur_test_name = 0;
@@ -284,17 +284,17 @@ void Emitter::print_result_failure() {
 	if(print_failures && !print_successes) {
 		if(!test_buf->IsEmpty()) {
 			dprintf(D_ALWAYS, "%s", test_buf->Value());
-			test_buf->setChar(0, '\0');
+			test_buf->truncate(0);
 		}
 		dprintf(D_ALWAYS, "%s", buf->Value());
 	}
-	buf->setChar(0, '\0');
+	buf->truncate(0);
 }
 
 void Emitter::print_now_if_possible() {
 	if(print_failures && print_successes) {
 		dprintf(D_ALWAYS, "%s", buf->Value());
-		buf->setChar(0, '\0');
+		buf->truncate(0);
 	}
 }
 

@@ -124,7 +124,6 @@ Server::Server()
 	restore_req_sd = -1;
 	service_req_sd = -1;
 	replicate_req_sd = -1;
-	socket_bufsize = 0;
 	max_xfers = 0;
 	max_store_xfers = 0;
 	max_restore_xfers = 0;
@@ -246,7 +245,6 @@ void Server::Init()
 
 	clean_interval = param_integer( "CKPT_SERVER_CLEAN_INTERVAL",CLEAN_INTERVAL );
 	check_parent_interval = param_integer( "CKPT_SERVER_CHECK_PARENT_INTERVAL",120);
-	socket_bufsize = param_integer( "CKPT_SERVER_SOCKET_BUFSIZE",0 );
 	max_xfers = param_integer( "CKPT_SERVER_MAX_PROCESSES",DEFAULT_XFERS );
 	max_store_xfers = param_integer( "CKPT_SERVER_MAX_STORE_PROCESSES",max_xfers );
 	max_restore_xfers = param_integer( "CKPT_SERVER_MAX_RESTORE_PROCESSES",max_xfers );
@@ -354,6 +352,12 @@ int Server::SetUpPort(u_short port)
       dprintf(D_ALWAYS, "ERROR: cannot open a server request socket\n");
       exit(CKPT_SERVER_SOCKET_ERROR);
   }
+
+  if (temp_sd < 0) {
+      dprintf(D_ALWAYS, "ERROR: cannot create server request socket\n");
+      exit(CKPT_SERVER_SOCKET_ERROR);
+  }
+
   socket_addr.set_ipv4();
   socket_addr.set_addr_any();
   socket_addr.set_port(port);
@@ -724,7 +728,7 @@ void Server::HandleRequest(int req_sd,
 void Server::ProcessServiceReq(int             req_id,
 							   FDContext       *fdc,
 							   struct in_addr  shadow_IP,
-							   service_req_pkt service_req)
+							   const service_req_pkt &service_req)
 {  
 	service_reply_pkt  service_reply;
 	char               log_msg[256];
@@ -886,6 +890,13 @@ void Server::ProcessServiceReq(int             req_id,
 					close(fdc->fd);
 					return;
 				}
+
+ 				if (data_conn_sd < 0) {
+					Log("Cannot obtain a socket from server");
+					close(fdc->fd);
+					return;
+				}
+
 				server_sa.clear();
 				server_sa.set_ipv4();
 				server_sa.set_addr_any();
@@ -913,6 +924,8 @@ void Server::ProcessServiceReq(int             req_id,
 				// the reply.
 				service_reply.server_addr.s_addr = ntohl(server_addr.s_addr);
 				service_reply.port = server_sa.get_port();
+				close(data_conn_sd);
+				data_conn_sd = -1;
 			} else {
 				service_reply.server_addr.s_addr = 0;
 				service_reply.port = 0;
@@ -1014,7 +1027,7 @@ void Server::ProcessServiceReq(int             req_id,
 				key.formatstr("%s/%s/%s", inet_ntoa(shadow_IP), 
 						service_req.owner_name, service_req.file_name);
 				if (CkptClassAds) {
-					CkptClassAds->DestroyClassAd(key.Value());
+					CkptClassAds->DestroyClassAd(key);
 				}
 			}
 			break;
@@ -1107,8 +1120,8 @@ void Server::ProcessServiceReq(int             req_id,
 }
 
 
-void Server::ScheduleReplication(struct in_addr shadow_IP, char *owner,
-								 char *filename, int level)
+void Server::ScheduleReplication(struct in_addr shadow_IP, const char *owner,
+								 const char *filename, int level)
 {
 	char        log_msg[256];
 	static bool first_time = true;
@@ -1343,11 +1356,6 @@ void Server::SendStatus(int data_conn_sd)
       exit(CHILDTERM_ACCEPT_ERROR);
     }
   close(data_conn_sd);
-  if (socket_bufsize) {
-		  // Changing buffer size may fail
-	  setsockopt(xfer_sd, SOL_SOCKET, SO_SNDBUF, (char*) &socket_bufsize, 
-				 sizeof(socket_bufsize));
-  }
   imds.TransferFileInfo(xfer_sd);
   close(xfer_sd);
 }
@@ -1654,11 +1662,6 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 		exit(CHILDTERM_ACCEPT_ERROR);
     }
 	close(data_conn_sd);
-	if (socket_bufsize) {
-			// Changing buffer size may fail
-		setsockopt(xfer_sd, SOL_SOCKET, SO_RCVBUF, (char*) &socket_bufsize, 
-				   sizeof(socket_bufsize));
-	}
 	bytes_recvd = stream_file_xfer(xfer_sd, file_fd, file_size);
 	// note that if file size == -1, we don't know if we got the complete 
 	// file, so we must rely on the client to commit via SERVICE_RENAME
@@ -1954,12 +1957,6 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 		exit(CHILDTERM_ACCEPT_ERROR);
     }
 	close(data_conn_sd);
-
-	if (socket_bufsize) {
-			// Changing buffer size may fail
-		setsockopt(xfer_sd, SOL_SOCKET, SO_SNDBUF, (char*) &socket_bufsize, 
-			   sizeof(socket_bufsize));
-	}
 
 	bytes_sent = stream_file_xfer(file_fd, xfer_sd, file_size);
 

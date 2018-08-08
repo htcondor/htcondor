@@ -21,7 +21,6 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_network.h"
-#include "condor_string.h"
 #include "subsystem_info.h"
 #include "env.h"
 #include "basename.h"

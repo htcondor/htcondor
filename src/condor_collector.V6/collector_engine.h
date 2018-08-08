@@ -21,9 +21,7 @@
 #define __COLLECTOR_ENGINE_H__
 
 #include "condor_classad.h"
-#include "condor_daemon_core.h"
 
-#include "condor_collector.h"
 #include "collector_stats.h"
 #include "hashkey.h"
 
@@ -85,12 +83,11 @@ class CollectorEngine : public Service
 	bool setCollectorRequirements( char const *str, MyString &error_desc );
 
   private:
-	typedef bool (*HashFunc) (AdNameHashKey &, ClassAd *);
+	typedef bool (*HashFunc) (AdNameHashKey &, const ClassAd *);
 
 	bool LookupByAdType(AdTypes, CollectorHashTable *&, HashFunc &);
  
 	// the greater tables
-	enum {GREATER_TABLE_SIZE = 1024};
 
 	/**
 	* TODO<tstclair>: Eval notes and refactor when time permits.
@@ -101,25 +98,19 @@ class CollectorEngine : public Service
 
 	CollectorHashTable StartdAds;
 	CollectorHashTable StartdPrivateAds;
-#ifdef HAVE_EXT_POSTGRESQL
-	CollectorHashTable QuillAds;
-#endif /* HAVE_EXT_POSTGRESQL */
 	CollectorHashTable ScheddAds;
 	CollectorHashTable SubmittorAds;
 	CollectorHashTable LicenseAds;
 	CollectorHashTable MasterAds;
 	CollectorHashTable StorageAds;
-	CollectorHashTable XferServiceAds;
 	CollectorHashTable AccountingAds;
 
 	// the lesser tables
-	enum {LESSER_TABLE_SIZE = 32};
 	CollectorHashTable CkptServerAds;
 	CollectorHashTable GatewayAds;
 	CollectorHashTable CollectorAds;
 	CollectorHashTable NegotiatorAds;
 	CollectorHashTable HadAds;
-	CollectorHashTable LeaseManagerAds;
 	CollectorHashTable GridAds;
 	
 	// table for "generic" ad types
@@ -169,6 +160,7 @@ class CollectorEngine : public Service
 	int m_forwardInterval;
 public: // so that the config code can set it.
 	bool m_allowOnlyOneNegotiator; // prior to 8.5.8, this was hard-coded to be true.
+	int  m_get_ad_options; // new for 8.7.0, may be temporary
 };
 
 

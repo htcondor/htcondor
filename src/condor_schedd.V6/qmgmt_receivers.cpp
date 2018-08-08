@@ -26,6 +26,7 @@
 #include "condor_secman.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
+#include "authentication.h"
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
@@ -324,10 +325,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		if (strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
-			errno = 0;
 			dprintf( D_SYSCALLS, "SetAttributeByConstraint (MyProxyPassword) not supported...\n");
 			rval = 0;
-			terrno = errno;
+			terrno = 0;
 		} else {
 
 			errno = 0;
@@ -364,8 +364,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		char *attr_value=NULL;
 		int terrno;
 		SetAttributeFlags_t flags = 0;
-		const char *users_username;
-		const char *condor_username;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -376,8 +374,6 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		if( request_num == CONDOR_SetAttribute2 ) {
 			assert( syscall_sock->code( flags ) );
 		}
-		users_username = syscall_sock->getOwner();
-		condor_username = get_condor_username();
 		if (attr_name) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name);
 		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
 		assert( syscall_sock->end_of_message() );;
@@ -386,8 +382,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		// We do NOT want to include MyProxy password in the ClassAd (since it's a secret)
 		// I'm not sure if this is the best place to do this, but....
 		if (attr_name && attr_value && strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
-			errno = 0;
 			dprintf( D_SYSCALLS, "Got MyProxyPassword, stashing...\n");
+			errno = 0;
 			rval = SetMyProxyPassword (cluster_id, proc_id, attr_value);
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
@@ -402,8 +398,12 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 				// If we're modifying a previously-submitted job AND either
 				// the client's username is not HTCondor's (i.e. not a
 				// daemon) OR the client says we should log...
-			if( (cluster_id != active_cluster_num) && (rval == 0) &&
-				( strcmp(users_username, condor_username) || (flags & SHOULDLOG) ) ) { 
+			if( ( IsDebugCategory( D_AUDIT ) ) &&
+			    ( cluster_id != active_cluster_num ) &&
+			    ( rval == 0 ) &&
+			    ( ( strcmp(syscall_sock->getOwner(), get_condor_username()) &&
+			        strcmp(syscall_sock->getFullyQualifiedUser(), CONDOR_CHILD_FQU) ) ||
+			      ( flags & SHOULDLOG ) ) ) {
 
 				dprintf( D_AUDIT, *syscall_sock, 
 						 "Set Attribute for job %d.%d, "
@@ -430,6 +430,108 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		return 0;
 	}
+
+	case CONDOR_SetJobFactory:
+	case CONDOR_SetMaterializeData:
+	{
+		int cluster_id, num;
+		assert( syscall_sock->code(cluster_id) );
+		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
+		assert( syscall_sock->code(num) );
+		dprintf( D_SYSCALLS, "	num = %d\n", num );
+		char * filename = NULL;
+		assert( syscall_sock->code(filename) );
+		dprintf( D_SYSCALLS, "	factory_filename = %s\n", filename ? filename : "NULL" );
+		char * text = NULL;
+		assert( syscall_sock->code(text) );
+		if (text) { dprintf( D_SYSCALLS, "	factory_text = %s\n", text ); }
+		assert( syscall_sock->end_of_message() );
+
+			// this is only valid during submission of a cluster
+		int terrno = 0;
+		if (cluster_id != active_cluster_num) {
+			rval = -1;
+			terrno = EPERM;
+		} else if (request_num == CONDOR_SetMaterializeData) {
+			// obsolete, don't do anything with this RPC
+			rval = -1;
+			terrno = EPERM;
+		} else {
+			errno = 0;
+			SetAttributeFlags_t flags = 0;
+			rval = SetAttributeInt( cluster_id, -1, ATTR_JOB_MATERIALIZE_LIMIT, num, flags );
+			if (rval >= 0) {
+				rval = QmgmtHandleSetJobFactory(cluster_id, filename, text);
+				if (rval == 0) {
+					//PRAGMA_REMIND("FUTURE: allow first proc id to be > 0 ?")
+					const int first_proc_id = 0;
+					rval = SetAttributeInt(cluster_id, -1, ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, first_proc_id, flags);
+				}
+			}
+			terrno = errno;
+		}
+
+		if (filename) { free(filename); filename = NULL; } 
+		if (text)     { free(text); text = NULL; }
+
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		// send a status reply
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );
+		return 0;
+	} break;
+
+	case CONDOR_SendMaterializeData:
+	{
+		int cluster_id, flags, row_count = 0;
+		assert( syscall_sock->code(cluster_id) );
+		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
+		assert( syscall_sock->code(flags) );
+		dprintf( D_SYSCALLS, "	flags = 0x%x\n", flags );
+
+		int terrno = 0;
+		MyString filename; // set to the filename that the data was spooled to.
+		if (cluster_id != active_cluster_num) {
+			return -1;
+		}
+
+		rval = QmgmtHandleSendMaterializeData(cluster_id, syscall_sock, filename, row_count, terrno);
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d, filename = %s\n", rval, terrno, filename.empty() ? "NULL" : filename.c_str() );
+		if (rval < 0) {
+			errno = terrno;
+			return rval;
+		}
+		assert( syscall_sock->end_of_message() );
+
+		// send a status reply and also the name of the file we wrote the itemdata to
+		syscall_sock->encode();
+		assert( syscall_sock->code(filename) );
+		assert( syscall_sock->code(row_count) );
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );
+		return 0;
+	} break;
+
+	case CONDOR_GetCapabilities: {
+		int mask;
+		assert( syscall_sock->code(mask) );
+		assert( syscall_sock->end_of_message() );
+
+		errno = 0;
+		ClassAd reply;
+		GetSchedulerCapabilities(mask, reply);
+		syscall_sock->encode();
+		assert( putClassAd( syscall_sock, reply ) );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	} break;
 
 	case CONDOR_SetTimerAttribute:
 	  {
@@ -526,35 +628,47 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		else {
 			flags = 0;
 		}
-		assert( syscall_sock->end_of_message() );;
+		assert( syscall_sock->end_of_message() );
 
-		errno = 0;
 		CondorError errstack;
-		rval = CommitTransaction( flags, & errstack );
+		errno = 0;
+		rval = CommitTransactionAndLive( flags, & errstack );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
+		const CondorVersionInfo *vers = syscall_sock->get_peer_version();
+		bool send_classad = vers && vers->built_since_version(8, 3, 4);
+		bool always_send_classad = vers && vers->built_since_version(8, 7, 4);
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
-			const CondorVersionInfo *vers = syscall_sock->get_peer_version();
-			if (vers && vers->built_since_version(8, 3, 4))
-			{
-				// Send a classad, for less backwards-incompatibility.
-				int code = 1;
-				const char * reason = "QMGMT rejected job submission.";
-				if( errstack.subsys() ) {
-					code = 2;
-					reason = errstack.message();
-				}
-
-				ClassAd reply;
-				reply.Assign( "ErrorCode", code );
-				reply.Assign( "ErrorReason", reason );
-				assert( putClassAd( syscall_sock, reply ) );
-			}
 		}
+		if( rval < 0 && send_classad ) {
+			// Send a classad, for less backwards-incompatibility.
+			int code = 1;
+			const char * reason = "QMGMT rejected job submission.";
+			if(! errstack.empty()) {
+				code = 2;
+				reason = errstack.message();
+			}
+
+			ClassAd reply;
+			reply.Assign( "ErrorCode", code );
+			reply.Assign( "ErrorReason", reason );
+			assert( putClassAd( syscall_sock, reply ) );
+		} else if( always_send_classad ) {
+			ClassAd reply;
+
+			std::string reason;
+			if(! errstack.empty()) {
+				reason = errstack.getFullText();
+				reply.Assign( "WarningReason", reason );
+			}
+
+			assert( putClassAd( syscall_sock, reply ) );
+		}
+
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}
@@ -579,6 +693,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			rval = GetAttributeFloat( cluster_id, proc_id, attr_name, &value );
 		}
 		else {
+			errno = EACCES;
 			rval = -1;
 		}
 		terrno = errno;
@@ -618,6 +733,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			rval = GetAttributeInt( cluster_id, proc_id, attr_name, &value );
 		}
 		else {
+			errno = EACCES;
 			rval = -1;
 		}
 		terrno = errno;
@@ -662,6 +778,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			rval = GetAttributeStringNew( cluster_id, proc_id, attr_name, &value );
 		}
 		else {
+			errno = EACCES;
 			rval = -1;
 		}
 		terrno = errno;
@@ -703,6 +820,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			rval = GetAttributeExprNew( cluster_id, proc_id, attr_name, &value );
 		}
 		else {
+			errno = EACCES;
 			rval = -1;
 		}
 		terrno = errno;
@@ -1005,6 +1123,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 #if 0
+		// SendSpoolFile() sends the reply before receiving the file.
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {

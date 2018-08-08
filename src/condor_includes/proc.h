@@ -47,6 +47,11 @@ typedef struct PROC_ID {
 		if ( ! job_id_str) { cluster =  proc = 0; return false; }
 		return StrIsProcId(job_id_str, this->cluster, this->proc, NULL);
 	}
+
+	PROC_ID() : cluster( -1 ), proc( -1 ) {}
+	PROC_ID( int c, int p ) : cluster(c), proc(p) {}
+	bool isValid() { return cluster != -1 && proc != -1; }
+	void invalidate() { cluster = -1; proc = -1; }
 #endif
 } PROC_ID;
 
@@ -93,8 +98,8 @@ END_C_DECLS
 // Put C++ definitions here
 #if defined(__cplusplus)
 bool operator==( const PROC_ID a, const PROC_ID b);
-unsigned int hashFuncPROC_ID( const PROC_ID & );
-unsigned int hashFunction(const PROC_ID &);
+size_t hashFuncPROC_ID( const PROC_ID & );
+size_t hashFunction(const PROC_ID &);
 void procids_to_mystring(ExtArray<PROC_ID> *procids, MyString &str);
 ExtArray<PROC_ID>* mystring_to_procids(MyString &str);
 
@@ -139,13 +144,14 @@ typedef struct JOB_ID_KEY {
 	// constructing JOB_ID_KEY(NULL) ends up calling this constructor because there is no single int constructor - ClassAdLog depends on that...
 	JOB_ID_KEY(const char * job_id_str) : cluster(0), proc(0) { if (job_id_str) set(job_id_str); }
 	operator const PROC_ID&() const { return *((const PROC_ID*)this); }
+	operator std::string() const;
 	void sprint(MyString &s) const;
 	bool set(const char * job_id_str) { return StrIsProcId(job_id_str, this->cluster, this->proc, NULL); }
-	static unsigned int hash(const JOB_ID_KEY &);
+	static size_t hash(const JOB_ID_KEY &);
 } JOB_ID_KEY;
 
 inline bool operator==( const JOB_ID_KEY a, const JOB_ID_KEY b) { return a.cluster == b.cluster && a.proc == b.proc; }
-unsigned int hashFunction(const JOB_ID_KEY &);
+size_t hashFunction(const JOB_ID_KEY &);
 
 
 #endif

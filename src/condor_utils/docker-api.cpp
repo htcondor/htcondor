@@ -32,7 +32,7 @@ int DockerAPI::default_timeout = 120;
 // care if the image is stored locally or not (except to the extent that
 // remote image pull violates the principle of least astonishment).
 //
-int DockerAPI::run(
+int DockerAPI::createContainer(
 	ClassAd &machineAd,
 	ClassAd &jobAd,
 	const std::string & containerName,
@@ -55,7 +55,7 @@ int DockerAPI::run(
 	ArgList runArgs;
 	if ( ! add_docker_arg(runArgs))
 		return -1;
-	runArgs.AppendArg( "run" );
+	runArgs.AppendArg( "create" );
 
 	// Write out a file with the container ID.
 	// FIXME: The startd can check this to clean up after us.
@@ -154,6 +154,33 @@ int DockerAPI::run(
 	formatstr(uidgidarg, "%d:%d", uid, gid);
 	runArgs.AppendArg(uidgidarg);
 
+#ifndef WIN32
+	// Now the supplemental groups, if any exist
+	char *user_name = 0;
+
+	if (pcache()->get_user_name(uid, user_name)) {
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		{ // These need to be run as root
+		pcache()->cache_uid(user_name);
+		pcache()->cache_groups(user_name);
+		}
+
+		int num = pcache()->num_groups(user_name);
+		if (num > 0) {
+			gid_t groups[num];
+			if (pcache()->get_groups(user_name, num, groups)) {
+				for (int i = 0; i < num; i++) {
+					runArgs.AppendArg("--group-add");
+					std::string suppGroup;
+					formatstr(suppGroup, "%d", groups[i]);
+					runArgs.AppendArg(suppGroup);
+				}
+			}
+		}
+		free(user_name);
+	}
+#endif
+
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );
 
@@ -183,6 +210,83 @@ int DockerAPI::run(
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Create_Process() failed.\n" );
+		return -1;
+	}
+	pid = childPID;
+
+	return 0;
+}
+
+int DockerAPI::startContainer(
+	const std::string &containerName,
+	int & pid,
+	int * childFDs,
+	CondorError & /* err */ ) {
+
+	ArgList startArgs;
+	if ( ! add_docker_arg(startArgs))
+		return -1;
+	startArgs.AppendArg("start");
+	startArgs.AppendArg("-a"); // start in Attached mode
+	startArgs.AppendArg(containerName);
+
+	MyString displayString;
+	startArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_ALWAYS, "Runnning: %s\n", displayString.c_str() );
+
+	FamilyInfo fi;
+	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
+	int childPID = daemonCore->Create_Process( startArgs.GetArg(0), startArgs,
+		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, NULL, "/",
+		& fi, NULL, childFDs );
+
+	if( childPID == FALSE ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Create_Process() failed.\n" );
+		return -1;
+	}
+	pid = childPID;
+
+	return 0;
+}
+
+int 
+DockerAPI::execInContainer( const std::string &containerName,
+			    const std::string &command,
+			    const ArgList     &arguments,
+			    const Env &environment,
+			    int *childFDs,
+			    int reaperid,
+			    int &pid) {
+
+	ArgList execArgs;
+	if ( ! add_docker_arg(execArgs))
+		return -1;
+	execArgs.AppendArg("exec");
+	execArgs.AppendArg("-ti"); 
+
+	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to pass enviroment to docker.\n" );
+		return -8;
+	}
+
+	execArgs.AppendArg(containerName);
+	execArgs.AppendArg(command);
+
+	execArgs.AppendArgsFromArgList(arguments);
+
+
+	MyString displayString;
+	execArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_ALWAYS, "execing: %s\n", displayString.c_str() );
+
+	FamilyInfo fi;
+	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
+	int childPID = daemonCore->Create_Process( execArgs.GetArg(0), execArgs,
+		PRIV_CONDOR_FINAL, reaperid, FALSE, FALSE, NULL, "/",
+		& fi, NULL, childFDs );
+
+	if( childPID == FALSE ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Create_Process() failed to condor exec.\n" );
 		return -1;
 	}
 	pid = childPID;
@@ -513,9 +617,9 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 	memUsage = netIn = netOut = userCpu = sysCpu = 0;
 
 		// Would really like a real JSON parser here...
-	pos = response.find("\"max_usage\"");
+	pos = response.find("\"rss\"");
 	if (pos != std::string::npos) {
-		sscanf(response.c_str()+pos, "\"max_usage\":%" SCNu64, &memUsage);
+		sscanf(response.c_str()+pos, "\"rss\":%" SCNu64, &memUsage);
 	}
 	pos = response.find("\"tx_bytes\"");
 	if (pos != std::string::npos) {
@@ -1064,7 +1168,7 @@ gc_image(const std::string & image) {
   std::list<std::string> images;
   std::string imageFilename;
   
-  int cache_size = param_integer("DOCKER_IMAGE_CACHE_SIZE", 20);
+  int cache_size = param_integer("DOCKER_IMAGE_CACHE_SIZE", 8);
   cache_size--;
   if (cache_size < 0) cache_size = 0;
 
@@ -1094,6 +1198,8 @@ gc_image(const std::string & image) {
 
       if (strlen(existingImage) > 1) {
 	existingImage[strlen(existingImage) - 1] = '\0'; // remove newline
+      } else {
+	continue; // zero length image name, skip		
       }
       std::string tmp(existingImage);
       //
@@ -1102,7 +1208,7 @@ gc_image(const std::string & image) {
 	images.push_back(tmp);
       }
     }
-    fclose(f);
+  fclose(f);
   }
 
   dprintf(D_ALWAYS, "Found %lu entries in docker image cache.\n", images.size());
@@ -1110,6 +1216,8 @@ gc_image(const std::string & image) {
    std::list<std::string>::iterator iter;
    int remove_count = (int)images.size() - cache_size;
    if (remove_count < 0) remove_count = 0;
+
+   std::list<std::string> removed_images;
 
    for (iter = images.begin(); iter != images.end(); iter++) {
     if (remove_count <= 0) break;
@@ -1119,9 +1227,15 @@ gc_image(const std::string & image) {
     int result = DockerAPI::rmi(toRemove, err);
 
     if (result == 0) {
-      images.erase(iter);
+      removed_images.push_back(toRemove);
       remove_count--;
     }
+  }
+
+  // We've removed one or more images from docker, remove those from the
+  // images list
+  for (iter = removed_images.begin(); iter != removed_images.end(); iter++) {
+	images.remove(*iter);
   }
 
   images.push_back(image); // our current image is the most recent one

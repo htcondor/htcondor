@@ -24,7 +24,7 @@
 #define ouch(x) dprintf(D_SECURITY,"SSL Auth: %s",x)
 #include "authentication.h"
 #include "condor_auth_ssl.h"
-#include "condor_string.h"
+#include "condor_config.h"
 #include "condor_environ.h"
 #include "CondorError.h"
 #include "openssl/rand.h"
@@ -36,7 +36,7 @@
 #endif
 
 // Symbols from libssl
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 static long (*SSL_CTX_ctrl_ptr)(SSL_CTX *, int, long, void *) = NULL;
 #endif
 static void (*SSL_CTX_free_ptr)(SSL_CTX *) = NULL;
@@ -57,7 +57,7 @@ static void (*SSL_free_ptr)(SSL *) = NULL;
 static int (*SSL_get_error_ptr)(const SSL *, int) = NULL;
 static X509 *(*SSL_get_peer_certificate_ptr)(const SSL *) = NULL;
 static long (*SSL_get_verify_result_ptr)(const SSL *) = NULL;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 static int (*SSL_library_init_ptr)() = NULL;
 static void (*SSL_load_error_strings_ptr)() = NULL;
 #else
@@ -87,7 +87,7 @@ Condor_Auth_SSL :: ~Condor_Auth_SSL()
 {
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
     ERR_remove_state( 0 );
-#elif OPENSSL_VERSION_NUMBER < 0x10100000L
+#elif OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
     ERR_remove_thread_state( 0 );
 #endif
 	if(m_crypto) delete(m_crypto);
@@ -109,7 +109,7 @@ bool Condor_Auth_SSL::Initialize()
 		Condor_Auth_Kerberos::Initialize() == false ||
 #endif
 		 (dl_hdl = dlopen(LIBSSL_SO, RTLD_LAZY)) == NULL ||
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||
 #endif
 		 !(SSL_CTX_free_ptr = (void (*)(SSL_CTX *))dlsym(dl_hdl, "SSL_CTX_free")) ||
@@ -130,7 +130,7 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_get_error_ptr = (int (*)(const SSL *, int))dlsym(dl_hdl, "SSL_get_error")) ||
 		 !(SSL_get_peer_certificate_ptr = (X509 *(*)(const SSL *))dlsym(dl_hdl, "SSL_get_peer_certificate")) ||
 		 !(SSL_get_verify_result_ptr = (long (*)(const SSL *))dlsym(dl_hdl, "SSL_get_verify_result")) ||
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_library_init_ptr = (int (*)())dlsym(dl_hdl, "SSL_library_init")) ||
 		 !(SSL_load_error_strings_ptr = (void (*)())dlsym(dl_hdl, "SSL_load_error_strings")) ||
 #else
@@ -142,7 +142,7 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
 		 !(SSL_method_ptr = (SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
-#elif OPENSSL_VERSION_NUMBER < 0x10100000L
+#elif OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
 #else
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "TLS_method"))
@@ -162,7 +162,7 @@ bool Condor_Auth_SSL::Initialize()
 		m_initSuccess = true;
 	}
 #else
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	SSL_CTX_ctrl_ptr = SSL_CTX_ctrl;
 #endif
 	SSL_CTX_free_ptr = SSL_CTX_free;
@@ -179,7 +179,7 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_get_error_ptr = SSL_get_error;
 	SSL_get_peer_certificate_ptr = SSL_get_peer_certificate;
 	SSL_get_verify_result_ptr = SSL_get_verify_result;
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	SSL_library_init_ptr = SSL_library_init;
 	SSL_load_error_strings_ptr = SSL_load_error_strings;
 #else
@@ -220,20 +220,6 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
     SSL_CTX *ctx = NULL;
 	unsigned char session_key[AUTH_SSL_SESSION_KEY_LEN];
 
-    /* This next bit is just to get the fqdn of the host we're communicating
-       with.  One would think that remoteHost would have this, but it doesn't
-       seem to. -Ian
-    */
-    /* After some discussion with Zach, we don't actually do any checking
-       that involves the host name, so whatever...
-    const char *peerHostAddr = getRemoteHost();
-    struct hostent *he = condor_gethostbyname(peerHostAddr);
-    dprintf(D_SECURITY,"Peer addr: '%s'\n", peerHostAddr);
-    const char *peerHostName = get_full_hostname_from_hostent(
-        condor_gethostbyaddr(he->h_addr, sizeof he->h_addr, AF_INET), NULL);
-    dprintf(D_SECURITY,"Got hostname for peer: '%s'\n", peerHostName);
-    */
-
 	// allocate a large buffer for comminications
 	buffer = (char*) malloc( AUTH_SSL_BUF_SIZE );
     
@@ -253,16 +239,20 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         }
         if( !(ssl = (*SSL_new_ptr)( ctx )) ) {
             ouch( "Error creating SSL context\n" );
+            BIO_free( conn_in );
+            BIO_free( conn_out );
             client_status = AUTH_SSL_ERROR;
+        } else {
+            (*SSL_set_bio_ptr)( ssl, conn_in, conn_out );
         }
         server_status = client_share_status( client_status );
         if( server_status != AUTH_SSL_A_OK || client_status != AUTH_SSL_A_OK ) {
             ouch( "SSL Authentication fails, terminating\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
-
-        (*SSL_set_bio_ptr)( ssl, conn_in, conn_out );
 
         done = 0;
         round_ctr = 0;
@@ -341,6 +331,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             if( client_status == AUTH_SSL_QUITTING
                 || server_status == AUTH_SSL_QUITTING ) {
                 ouch( "SSL Authentication failed\n" );
+				(*SSL_CTX_free_ptr)(ctx);
+				(*SSL_free_ptr)(ssl);
 				free(buffer);
                 return fail;
             }
@@ -362,6 +354,18 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( client_status == AUTH_SSL_QUITTING
             || server_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			// Read and ignore the session key from the server.
+			// Then tell it we're bailing, if it still thinks
+			// everything is ok.
+			int dummy;
+			if (AUTH_SSL_ERROR == receive_message(server_status, dummy, buffer)) {
+				server_status = AUTH_SSL_QUITTING;
+			}
+			if (server_status != AUTH_SSL_QUITTING) {
+				send_message(AUTH_SSL_QUITTING, buffer, 0);
+			}
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -410,7 +414,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
                     server_status = AUTH_SSL_QUITTING;
                 }
             }
-            dprintf(D_ALWAYS, "Status: c: %d, s: %d\n", client_status, server_status);
+            dprintf(D_SECURITY, "Status: c: %d, s: %d\n", client_status, server_status);
             if(server_status == AUTH_SSL_HOLDING
                && client_status == AUTH_SSL_HOLDING) {
                 done = 1;
@@ -422,6 +426,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed at session key exchange.\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -444,19 +450,23 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         }
         if (!(ssl = (*SSL_new_ptr)(ctx))) {
             ouch("Error creating SSL context\n");
+            BIO_free( conn_in );
+            BIO_free( conn_out );
             server_status = AUTH_SSL_ERROR;
+        } else {
+            // SSL_set_accept_state(ssl); // Do I really have to do this?
+            (*SSL_set_bio_ptr)(ssl, conn_in, conn_out);
         }
         client_status = server_share_status( server_status );
         if( client_status != AUTH_SSL_A_OK
             || server_status != AUTH_SSL_A_OK ) {
             ouch( "SSL Authentication fails, terminating\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
   
-        // SSL_set_accept_state(ssl); // Do I really have to do this?
-        (*SSL_set_bio_ptr)(ssl, conn_in, conn_out);
-
         done = 0;
         round_ctr = 0;
         while( !done ) {
@@ -530,6 +540,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             if( client_status == AUTH_SSL_QUITTING
                 || server_status == AUTH_SSL_QUITTING ) {
                 ouch( "SSL Authentication failed\n" );
+				(*SSL_CTX_free_ptr)(ctx);
+				(*SSL_free_ptr)(ssl);
 				free(buffer);
                 return fail;
             }
@@ -550,12 +562,22 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			// Tell the client that we're bailing
+			send_message(AUTH_SSL_QUITTING, buffer, 0);
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
         if(!RAND_bytes(session_key, AUTH_SSL_SESSION_KEY_LEN)) {
             ouch("Couldn't generate session key.\n");
             server_status = AUTH_SSL_QUITTING;
+			// Tell the client that we're bailing
+			send_message(AUTH_SSL_QUITTING, buffer, 0);
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
+			free(buffer);
+			return fail;
         }
         //dprintf(D_SECURITY,"Generated session key: '%s'\n", session_key);
 
@@ -605,7 +627,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
                 client_status = server_receive_message(
                     server_status, buffer, conn_in, conn_out );
             }
-            dprintf(D_ALWAYS, "Status: c: %d, s: %d\n", client_status, server_status);
+            dprintf(D_SECURITY, "Status: c: %d, s: %d\n", client_status, server_status);
             if(server_status == AUTH_SSL_HOLDING
                && client_status == AUTH_SSL_HOLDING) {
                 done = 1;
@@ -617,6 +639,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed at key exchange.\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -669,14 +693,14 @@ Condor_Auth_SSL::setup_crypto(unsigned char* key, const int keylen)
 }
 
 bool
-Condor_Auth_SSL::encrypt(unsigned char* input, 
+Condor_Auth_SSL::encrypt(const unsigned char* input,
 					int input_len, unsigned char* & output, int& output_len)
 {
 	return encrypt_or_decrypt(true,input,input_len,output,output_len);
 }
 
 bool
-Condor_Auth_SSL::decrypt(unsigned char* input, int input_len, 
+Condor_Auth_SSL::decrypt(const unsigned char* input, int input_len,
 							unsigned char* & output, int& output_len)
 {
 	return encrypt_or_decrypt(false,input,input_len,output,output_len);
@@ -684,7 +708,7 @@ Condor_Auth_SSL::decrypt(unsigned char* input, int input_len,
 
 bool
 Condor_Auth_SSL::encrypt_or_decrypt(bool want_encrypt, 
-									   unsigned char* input, 
+									   const unsigned char* input,
 									   int input_len, 
 									   unsigned char* &output, 
 									   int &output_len)
@@ -731,13 +755,13 @@ Condor_Auth_SSL::encrypt_or_decrypt(bool want_encrypt,
 }
 
 int 
-Condor_Auth_SSL::wrap(char *   input, 
+Condor_Auth_SSL::wrap(const char *   input,
 						 int      input_len, 
 						 char*&   output, 
 						 int&     output_len)
 {
 	bool result;
-	unsigned char* in = (unsigned char*)input;
+	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	dprintf(D_SECURITY, "In wrap.\n");
 	result = encrypt(in,input_len,out,output_len);
@@ -748,13 +772,13 @@ Condor_Auth_SSL::wrap(char *   input,
 }
 
 int 
-Condor_Auth_SSL::unwrap(char *   input, 
+Condor_Auth_SSL::unwrap(const char *   input,
 						   int      input_len, 
 						   char*&   output, 
 						   int&     output_len)
 {
 	bool result;
-	unsigned char* in = (unsigned char*)input;
+	const unsigned char* in = (const unsigned char*)input;
 	unsigned char* out = (unsigned char*)output;
 	
 	dprintf(D_SECURITY, "In unwrap.\n");
@@ -778,7 +802,7 @@ Condor_Auth_SSL::unwrap(char *   input,
 
 int Condor_Auth_SSL :: init_OpenSSL(void)
 {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
     if (!(*SSL_library_init_ptr)()) {
         return AUTH_SSL_ERROR;
     }
@@ -1164,7 +1188,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		goto setup_server_ctx_err;
 	}
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	// disable SSLv2.  it has vulnerabilities.
 	//SSL_CTX_set_options( ctx, SSL_OP_NO_SSLv2 );
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv2, NULL );
@@ -1188,7 +1212,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		// TODO where's this?
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
     (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
     //SSL_CTX_set_options( ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2 );
     (*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_ALL|SSL_OP_NO_SSLv2, NULL );
 #endif

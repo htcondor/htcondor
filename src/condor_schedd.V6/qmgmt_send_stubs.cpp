@@ -213,6 +213,130 @@ DestroyCluster( int cluster_id, const char * /*reason*/ )
 	return rval;
 }
 
+#if 0
+static int SetFactoryInfo(int req, int cluster_id, int num, const char * filename, const char * text)
+{
+	int	rval;
+
+	CurrentSysCall = req;
+
+	qmgmt_sock->encode();
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(cluster_id) );
+	neg_on_error( qmgmt_sock->code(num) );
+	neg_on_error( qmgmt_sock->put(filename) );
+	neg_on_error( qmgmt_sock->put(text) );
+	neg_on_error( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	neg_on_error( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	neg_on_error( qmgmt_sock->end_of_message() );
+	return rval;
+}
+#endif
+
+bool GetScheddCapabilites(int mask, ClassAd & ad)
+{
+	CurrentSysCall = CONDOR_GetCapabilities;
+
+	qmgmt_sock->encode();
+	if ( ! qmgmt_sock->code(CurrentSysCall) ||
+		 ! qmgmt_sock->code(mask) ||
+		 ! qmgmt_sock->end_of_message()) {
+		return false;
+	}
+	qmgmt_sock->decode();
+	if ( ! getClassAd(qmgmt_sock, ad) ) {
+		return false;
+	}
+	return qmgmt_sock->end_of_message() != 0;
+}
+
+int SetJobFactory(int cluster_id, int num, const char * filename, const char * text)
+{
+	int	rval = -1;
+
+	CurrentSysCall = CONDOR_SetJobFactory;
+
+	qmgmt_sock->encode();
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(cluster_id) );
+	neg_on_error( qmgmt_sock->code(num) );
+	neg_on_error( qmgmt_sock->put(filename) );
+	neg_on_error( qmgmt_sock->put(text) );
+	neg_on_error( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	neg_on_error( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	neg_on_error( qmgmt_sock->end_of_message() );
+	return rval;
+}
+
+int SendMaterializeData(int cluster_id, int flags, int (*next)(void* pv, std::string&item), void* pv, MyString & filename, int* pnum_items)
+{
+	int	rval = -1;
+	int num_items = -1;
+	filename.clear();
+	if (pnum_items) *pnum_items = num_items;
+
+	CurrentSysCall = CONDOR_SendMaterializeData;
+	qmgmt_sock->encode();
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(cluster_id) );
+	neg_on_error( qmgmt_sock->code(flags) );
+
+	// read the items and send them in 64k (ish) chunks
+	const size_t cbAlloc = 0x10000;
+	unsigned char buf[cbAlloc];
+	int ix = 0;
+	std::string item;
+	while ((rval = next(pv, item)) == 1) {
+		if (item.size() + ix > cbAlloc) {
+			if (ix == 0) { errno = E2BIG; return -1; } // single item > 64k !!!
+			neg_on_error ( qmgmt_sock->code_bytes(buf, ix) );
+			ix = 0;
+		}
+		memcpy(buf+ix, item.data(), item.size());
+		ix += item.size();
+	}
+
+	// if next failed, just bail now.
+	if (rval < 0) { errno = EINVAL; return rval; }
+
+	// put the remainder (if any)
+	if (ix) { neg_on_error ( qmgmt_sock->code_bytes(buf, ix) ); }
+
+	// put end of stream, then switch to decode mode to read the reply
+	neg_on_error( qmgmt_sock->end_of_message() );
+	qmgmt_sock->decode();
+
+	// reply is the spooled filename and the item count
+	neg_on_error( qmgmt_sock->code(filename) );
+	neg_on_error( qmgmt_sock->code(num_items) );
+	neg_on_error( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	neg_on_error( qmgmt_sock->end_of_message() );
+	if (pnum_items) *pnum_items = num_items;
+	return rval;
+
+}
 
 #if 0
 int
@@ -428,16 +552,27 @@ RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 	}
 	neg_on_error( qmgmt_sock->end_of_message() );
 
+
+	ClassAd reply;
 	qmgmt_sock->decode();
 	neg_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
 		neg_on_error( qmgmt_sock->code(terrno) );
-		const CondorVersionInfo *vers = qmgmt_sock->get_peer_version();
-		if (vers && vers->built_since_version(8, 3, 4))
-		{
-			ClassAd reply;
-			neg_on_error( getClassAd( qmgmt_sock, reply ) );
+	}
 
+	// In some situations, we (the client) won't know the server's version,
+	// but the server will know our version.  To handle that, we have to
+	// look at what's on the wire, rather than what we should expect.
+	// Luckily, the only thing after the terrno, if any, is a classad, so
+	// this shouldn't cause future version incompabilities.
+	bool gotClassAd = false;
+	if(! qmgmt_sock->peek_end_of_message()) {
+		neg_on_error( getClassAd( qmgmt_sock, reply ) );
+		gotClassAd = true;
+	}
+
+	if( rval < 0 ) {
+		if( gotClassAd ) {
 			std::string errmsg;
 			if( errstack && reply.LookupString( "ErrorReason", errmsg ) ) {
 				int errCode = terrno;
@@ -448,6 +583,13 @@ RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
+	} else if( gotClassAd ) {
+		std::string warningReason;
+		if( errstack && reply.LookupString( "WarningReason", warningReason ) ) {
+			if(! warningReason.empty()) {
+				errstack->push( "SCHEDD", 0, warningReason.c_str() );
+			}
+		}
 	}
 	neg_on_error( qmgmt_sock->end_of_message() );
 
@@ -476,7 +618,7 @@ GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
 			errno = terrno;
 			return rval;
 		}
-		neg_on_error( qmgmt_sock->code(value) );
+		neg_on_error( qmgmt_sock->code(*value) );
 		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
@@ -505,7 +647,7 @@ GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value 
 			errno = terrno;
 			return rval;
 		}
-		neg_on_error( qmgmt_sock->code(value) );
+		neg_on_error( qmgmt_sock->code(*value) );
 		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
@@ -695,6 +837,7 @@ CloseSocket()
 
 	return 0;
 }
+
 
 ClassAd *
 GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_expansions*/ )

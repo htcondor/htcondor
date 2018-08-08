@@ -23,11 +23,11 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "classad_hashtable.h"
 #include "list.h"
 #include "daemon.h"
 #include "dc_schedd.h"
 #include "dc_collector.h"
+#include <map>
 
 #include "basejob.h"
 
@@ -61,5 +61,6 @@ bool requestJobStatus( BaseJob *job, int &job_status );
 bool requestJobStatus( PROC_ID job_id, int tid, int &job_status );
 void requestScheddUpdateNotification( int timer_id );
 
+extern std::map<std::string, BaseJob*> FetchProxyList;
 
 #endif

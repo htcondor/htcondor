@@ -23,7 +23,6 @@
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "directory.h"
-#include "condor_string.h"
 #include "status_string.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
@@ -78,7 +77,7 @@ Directory::Directory( const char *name, priv_state priv )
 {
 	initialize( priv );
 
-	curr_dir = strnewp(name);
+	curr_dir = strdup(name);
 	//dprintf(D_FULLDEBUG, "Initializing Directory: curr_dir = %s\n",curr_dir?curr_dir:"NULL");
 	ASSERT(curr_dir);
 
@@ -98,7 +97,7 @@ Directory::Directory( StatInfo* info, priv_state priv )
 	ASSERT(info);
 	initialize( priv );
 
-	curr_dir = strnewp( info->FullPath() );
+	curr_dir = strdup( info->FullPath() );
 	ASSERT(curr_dir);
 
 #ifndef WIN32
@@ -142,7 +141,7 @@ Directory::initialize( priv_state priv )
 
 Directory::~Directory()
 {
-	delete [] curr_dir;
+	free( curr_dir );
 	if( curr ) {
 		delete curr;
 	}
@@ -407,9 +406,6 @@ Directory::do_remove_dir( const char* path )
 	return false;
 
 #endif /* UNIX vs. WIN32 */
-
-	EXCEPT( "Programmer error: Directory::do_remove_dir() didn't return" );
-	return false;
 }
 
 
@@ -608,7 +604,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 		MyString errmsg;
 		if( rval < 0 ) {
 			errmsg = "my_spawnl returned ";
-			errmsg += rval;
+			errmsg += IntToStr( rval );
 		} else {
 			errmsg = "/bin/rm ";
 			statusString( rval, errmsg );

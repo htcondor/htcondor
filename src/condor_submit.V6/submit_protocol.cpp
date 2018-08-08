@@ -21,7 +21,6 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_network.h"
-#include "condor_string.h"
 #include "spooled_job_files.h"
 #include "subsystem_info.h"
 #include "env.h"
@@ -53,7 +52,6 @@
 #include "match_prefix.h"
 
 #include "extArray.h"
-#include "HashTable.h"
 #include "MyString.h"
 #include "string_list.h"
 #include "which.h"
@@ -65,7 +63,6 @@
 #include "globus_utils.h"
 #include "enum_utils.h"
 #include "setenv.h"
-#include "classad_hashtable.h"
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"
@@ -97,6 +94,14 @@ ActualScheddQ::~ActualScheddQ()
 bool ActualScheddQ::Connect(DCSchedd & MySchedd, CondorError & errstack) {
 	if (qmgr) return true;
 	qmgr = ConnectQ(MySchedd.addr(), 0 /* default */, false /* default */, &errstack, NULL, MySchedd.version());
+	allows_late = has_late = false;
+	if (qmgr) {
+		CondorVersionInfo cvi(MySchedd.version());
+		if (cvi.built_since_version(8,7,1)) {
+			has_late = true;
+			allows_late = param_boolean("SCHEDD_ALLOW_LATE_MATERIALIZE",has_late);
+		}
+	}
 	return qmgr != NULL;
 }
 
@@ -113,6 +118,38 @@ int ActualScheddQ::get_NewCluster() { return NewCluster(); }
 int ActualScheddQ::get_NewProc(int cluster_id) { return NewProc(cluster_id); }
 int ActualScheddQ::destroy_Cluster(int cluster_id, const char *reason) { return DestroyCluster(cluster_id, reason); }
 
+int ActualScheddQ::init_capabilities() {
+	int rval = 0;
+	if ( ! tried_to_get_capabilities) {
+		rval = GetScheddCapabilites(0, capabilities);
+		tried_to_get_capabilities = true;
+
+		// fetch late materialize caps from the capabilities ad.
+		allows_late = has_late = false;
+		if ( ! capabilities.LookupBool("LateMaterialize", allows_late)) {
+			allows_late = has_late = false;
+		} else {
+			has_late = true; // schedd knows about late materialize
+		}
+	}
+	return rval;
+}
+bool ActualScheddQ::has_late_materialize() {
+	init_capabilities();
+	return has_late;
+}
+bool ActualScheddQ::allows_late_materialize() {
+	init_capabilities();
+	return allows_late;
+}
+int ActualScheddQ::get_Capabilities(ClassAd & caps) {
+	int rval = init_capabilities();
+	if (rval == 0) {
+		caps.Update(capabilities);
+	}
+	return rval;
+}
+
 int ActualScheddQ::set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags) {
 	return SetAttribute(cluster, proc, attr, value, flags);
 }
@@ -120,6 +157,63 @@ int ActualScheddQ::set_Attribute(int cluster, int proc, const char *attr, const 
 int ActualScheddQ::set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags) {
 	return SetAttributeInt(cluster, proc, attr, value, flags);
 }
+
+int ActualScheddQ::set_Factory(int cluster, int qnum, const char * filename, const char * text) {
+	return SetJobFactory(cluster, qnum, filename, text);
+}
+
+static int send_row(void* pv, std::string & rowdata) {
+	SubmitForeachArgs &fea = *((SubmitForeachArgs *)pv);
+
+	rowdata.clear();
+	char *str = fea.items.next();
+	if ( ! str)
+		return 0;
+
+	// check to see if the data is already using the ASCII 'unit separator' character
+	// if not, then we want to split and re-assemble multi field data using US as the separator
+	bool got_US = strchr(str, '\x1F') != NULL;
+
+	// we only need to split and re-assemble the field data if there are multiple fields
+	if (fea.vars.number() > 1 && ! got_US) {
+		auto_free_ptr tmp(strdup(str));
+		std::vector<const char *> splits;
+		if (fea.split_item(tmp.ptr(), splits) <= 0)
+			return -1;
+		for (auto it = splits.begin(); it != splits.end(); ++it) {
+			if ( ! rowdata.empty()) rowdata += "\x1F";
+			rowdata += *it;
+		}
+	} else {
+		rowdata = str;
+	}
+	// terminate the data with a newline if it does not already have one.
+	size_t cch = rowdata.size();
+	if ( ! cch || rowdata[cch-1] != '\n') { rowdata += "\n"; }
+
+	return 1;
+}
+
+int ActualScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
+{
+	if (o.items.number() > 0) {
+		int row_count = 0;
+		o.items.rewind();
+		int rval = SendMaterializeData(cluster_id, 0, send_row, &o, o.items_filename, &row_count);
+		if (rval) return rval;
+		if (row_count != o.items.number()) {
+			fprintf(stderr, "\nERROR: schedd returned row_count=%d after spooling %d items\n", row_count, o.items.number());
+			return -1;
+		}
+	}
+	return 0;
+}
+
+/*
+int ActualScheddQ::set_Foreach(int cluster, int itemnum, const char * filename, const char * text) {
+	return SetMaterializeData(cluster, itemnum, filename, text);
+}
+*/
 
 int ActualScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) { return SendSpoolFileIfNeeded(ad); }
 int ActualScheddQ::send_SpoolFile(char const *filename) { return SendSpoolFile(filename); }
@@ -183,10 +277,19 @@ int SimScheddQ::destroy_Cluster(int cluster_id, const char * /*reason*/) {
 	return 0;
 }
 
+int SimScheddQ::get_Capabilities(ClassAd & caps) {
+	caps.Assign( "LateMaterialize", true );
+	return GetScheddCapabilites(0, caps);
+}
+
+// hack for 8.7.8 testing
+extern int attr_chain_depth;
+
 int SimScheddQ::set_Attribute(int cluster_id, int proc_id, const char *attr, const char *value, SetAttributeFlags_t /*flags*/) {
 	ASSERT(cluster_id == cluster);
 	ASSERT(proc_id == proc || proc_id == -1);
 	if (fp) {
+		if (attr_chain_depth) fprintf(fp, "%d", attr_chain_depth-1);
 		if (log_all_communication) fprintf(fp, "::set(%d,%d) ", cluster_id, proc_id);
 		fprintf(fp, "%s=%s\n", attr, value);
 	}
@@ -201,6 +304,33 @@ int SimScheddQ::set_AttributeInt(int cluster_id, int proc_id, const char *attr, 
 	}
 	return 0;
 }
+
+
+int SimScheddQ::set_Factory(int cluster_id, int qnum, const char * filename, const char * text) {
+	ASSERT(cluster_id == cluster);
+	if (fp) {
+		if (log_all_communication) {
+			fprintf(fp, "::setFactory(%d,%d,%s,%s) ", cluster_id, qnum, filename?filename:"NULL", text?"<text>":"NULL");
+			if (text) { fprintf(fp, "factory_text=%s\n", text); }
+			else if (filename) { fprintf(fp, "factory_file=%s\n", filename); }
+			else { fprintf(fp, "\n"); }
+		}
+	}
+	return 0;
+}
+
+
+int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
+{
+	ASSERT(cluster_id == cluster);
+	if (o.items.number() > 0) {
+		if (log_all_communication) {
+			fprintf(fp, "::sendItemdata(%d) %d items", cluster_id, o.items.number());
+		}
+	}
+	return 0;
+}
+
 
 int SimScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) {
 	if (fp) {

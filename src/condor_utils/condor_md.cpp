@@ -66,7 +66,7 @@ void Condor_MD_MAC :: init()
 #endif
 }
 
-unsigned char * Condor_MD_MAC::computeOnce(unsigned char * buffer, unsigned long length)
+unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer, unsigned long length)
 {
 #ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
@@ -77,7 +77,7 @@ unsigned char * Condor_MD_MAC::computeOnce(unsigned char * buffer, unsigned long
 #endif
 }
 
-unsigned char * Condor_MD_MAC::computeOnce(unsigned char * buffer, 
+unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer,
                                            unsigned long   length, 
                                            KeyInfo       * key)
 {
@@ -99,8 +99,8 @@ unsigned char * Condor_MD_MAC::computeOnce(unsigned char * buffer,
 #endif
 }
 
-bool Condor_MD_MAC::verifyMD(unsigned char * md, 
-                             unsigned char * buffer, 
+bool Condor_MD_MAC::verifyMD(const unsigned char * md,
+                             const unsigned char * buffer,
                              unsigned long   length)
 {
 #ifdef HAVE_EXT_OPENSSL
@@ -113,8 +113,8 @@ bool Condor_MD_MAC::verifyMD(unsigned char * md,
 #endif
 }
 
-bool Condor_MD_MAC::verifyMD(unsigned char * md, 
-                             unsigned char * buffer, 
+bool Condor_MD_MAC::verifyMD(const unsigned char * md,
+                             const unsigned char * buffer,
                              unsigned long   length, 
                              KeyInfo       * key)
 {
@@ -192,7 +192,7 @@ unsigned char * Condor_MD_MAC::computeMD()
 #endif
 }
 
-bool Condor_MD_MAC :: verifyMD(unsigned char * md)
+bool Condor_MD_MAC :: verifyMD(const unsigned char * md)
 {
 #ifdef HAVE_EXT_OPENSSL
     unsigned char * md2 = computeMD();

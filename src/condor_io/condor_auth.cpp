@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_auth.h"
-#include "condor_string.h"
+#include "condor_config.h"
 
 //static const char root[] = "root";
 
@@ -97,7 +97,7 @@ Condor_Auth_Base :: ~Condor_Auth_Base()
 	}
 }
 
-int Condor_Auth_Base :: wrap(char *   input, 
+int Condor_Auth_Base :: wrap(const char *   input,
                              int      input_len, 
                              char*&   output, 
                              int&     output_len)
@@ -114,7 +114,7 @@ int Condor_Auth_Base :: wrap(char *   input,
     return 1;
 }
     
-int Condor_Auth_Base :: unwrap(char*   input, 
+int Condor_Auth_Base :: unwrap(const char*   input,
                                int     input_len, 
                                char*&  output, 
                                int&    output_len)

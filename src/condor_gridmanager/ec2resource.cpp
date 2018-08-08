@@ -25,10 +25,8 @@
 #include "ec2resource.h"
 #include "gridmanager.h"
 
-#define HASH_TABLE_SIZE	500
-
-HashTable <HashKey, EC2Resource *>
-	EC2Resource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
+HashTable <std::string, EC2Resource *>
+    EC2Resource::ResourcesByName( hashFunction );
 
 const char * EC2Resource::HashName( const char * resource_name,
 		const char * public_key_file, const char * private_key_file )
@@ -45,12 +43,12 @@ EC2Resource* EC2Resource::FindOrCreateResource(const char * resource_name,
 	int rc;
 	EC2Resource *resource = NULL;
 
-	rc = ResourcesByName.lookup( HashKey( HashName( resource_name, public_key_file, private_key_file ) ), resource );
+	rc = ResourcesByName.lookup( HashName( resource_name, public_key_file, private_key_file ), resource );
 	if ( rc != 0 ) {
 		resource = new EC2Resource( resource_name, public_key_file, private_key_file );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashKey( HashName( resource_name, public_key_file, private_key_file ) ), resource );
+		ResourcesByName.insert( HashName( resource_name, public_key_file, private_key_file ), resource );
 	} else {
 		ASSERT(resource);
 	}
@@ -72,7 +70,7 @@ EC2Resource::EC2Resource( const char *resource_name,
 	m_public_key_file = strdup(public_key_file);
 	m_private_key_file = strdup(private_key_file);
 
-	gahp = NULL;
+	status_gahp = gahp = NULL;
 
 	char * gahp_path = param( "EC2_GAHP" );
 	if ( gahp_path == NULL ) {
@@ -109,8 +107,8 @@ EC2Resource::EC2Resource( const char *resource_name,
 
 EC2Resource::~EC2Resource()
 {
-	ResourcesByName.remove( HashKey( HashName( resourceName, m_public_key_file,
-											   m_private_key_file ) ) );
+	ResourcesByName.remove( HashName( resourceName, m_public_key_file,
+										m_private_key_file ) );
 	if ( gahp ) delete gahp;
 	if (m_public_key_file) free(m_public_key_file);
 	if (m_private_key_file) free(m_private_key_file);
@@ -249,14 +247,16 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 		}
 
         returnStatus.rewind();
-        ASSERT( returnStatus.number() % 6 == 0 );
-        for( int i = 0; i < returnStatus.number(); i += 6 ) {
+        ASSERT( returnStatus.number() % 8 == 0 );
+        for( int i = 0; i < returnStatus.number(); i += 8 ) {
             std::string instanceID = returnStatus.next();
             std::string status = returnStatus.next();
             std::string clientToken = returnStatus.next();
             std::string keyName = returnStatus.next();
             std::string stateReasonCode = returnStatus.next();
             std::string publicDNSName = returnStatus.next();
+            /* std::string spotFleetRequestID = */ returnStatus.next();
+            /* std::string annexName = */ returnStatus.next();
 
             // Efficiency suggests we look via the instance ID first,
             // and then try to look things up via the client token
@@ -266,7 +266,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
             // include the client token in its status responses, and therefore
             // we can't always fully reconstruct the remoteJobID used as the key.
             EC2Job * job = NULL;
-            rc = jobsByInstanceID.lookup( HashKey( instanceID.c_str() ), job );
+            rc = jobsByInstanceID.lookup( instanceID, job );
             if( rc == 0 ) {
                 ASSERT( job );
 
@@ -288,7 +288,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
                 formatstr( remoteJobID, "ec2 %s %s", resourceName, clientToken.c_str() );
 
                 BaseJob * tmp = NULL;
-                rc = BaseJob::JobsByRemoteId.lookup( HashKey( remoteJobID.c_str() ), tmp );
+                rc = BaseJob::JobsByRemoteId.lookup( remoteJobID, tmp );
 
                 if( rc == 0 ) {
                     ASSERT( tmp );
@@ -350,7 +350,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         	std::string requestID = nextJob->m_spot_request_id;
         	if(! requestID.empty()) {
 	            EC2Job * spotJob = NULL;
-    	        spotRC = spotJobsByRequestID.lookup( HashKey( requestID.c_str() ), spotJob );
+    	        spotRC = spotJobsByRequestID.lookup( requestID, spotJob );
     	    }
 
     	    if( spotRC == 0 ) {
@@ -404,7 +404,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
             std::string statusCode = spotReturnStatus.next();
 
             EC2Job * spotJob = NULL;
-            spotRC = spotJobsByRequestID.lookup( HashKey( requestID.c_str() ), spotJob );
+            spotRC = spotJobsByRequestID.lookup( requestID, spotJob );
             if( spotRC != 0 ) {
 				// dprintf( D_FULLDEBUG, "Failed to find spot request '%s' by ID, looking for client token '%s'...\n", requestID.c_str(), launchGroup.c_str() );
 

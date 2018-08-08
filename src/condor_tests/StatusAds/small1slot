@@ -11,7 +11,7 @@ CondorLoadAvg = 0.0
 CondorPlatform = "$CondorPlatform: X86_64-RedHat_6.5 $"
 CondorVersion = "$CondorVersion: 8.2.6 Dec 02 2014 BuildID: UW_development PRE-RELEASE-UWCS $"
 ConsoleIdle = 14681389
-CpuBusy = ( ( LoadAvg - CondorLoadAvg ) >= 0.5 )
+CpuBusy = ((LoadAvg - CondorLoadAvg) >= 0.5)
 CpuBusyTime = 0
 CpuIsBusy = false
 Cpus = 1
@@ -54,7 +54,7 @@ HibernationState = "NONE"
 HibernationSupportedStates = "S4"
 ImageSize = 192012
 IsLocalStartd = false
-IsValidCheckpointPlatform = ( TARGET.JobUniverse =!= 1 || ( ( MY.CheckpointPlatform =!= undefined ) && ( ( TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform ) || ( TARGET.NumCkpts == 0 ) ) ) )
+IsValidCheckpointPlatform = (TARGET.JobUniverse =!= 1 || ((MY.CheckpointPlatform =!= undefined) && ((TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) || (TARGET.NumCkpts == 0))))
 IsWakeAble = false
 IsWakeOnLanEnabled = false
 IsWakeOnLanSupported = false
@@ -113,7 +113,7 @@ RemoteAutoregroup = false
 RemoteNegotiatingGroup = "<none>"
 RemoteOwner = "bt@cs.wisc.edu"
 RemoteUser = "bt@cs.wisc.edu"
-Requirements = ( START ) && ( IsValidCheckpointPlatform )
+Requirements = (START) && (IsValidCheckpointPlatform)
 RetirementTimeRemaining = -9
 SlotID = 1
 SlotType = "Static"

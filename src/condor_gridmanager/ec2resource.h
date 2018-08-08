@@ -55,7 +55,7 @@ public:
 
 	~EC2Resource();
 
-	static HashTable <HashKey, EC2Resource *> ResourcesByName;
+	static HashTable <std::string, EC2Resource *> ResourcesByName;
 
 	const char *ResourceType();
 
@@ -77,8 +77,8 @@ public:
     BatchStatusResult FinishBatchStatus();
     EC2GahpClient * BatchGahp() { return status_gahp; }
 
-    HashTable< HashKey, EC2Job * > jobsByInstanceID;
-    HashTable< HashKey, EC2Job * > spotJobsByRequestID;
+    HashTable< std::string, EC2Job * > jobsByInstanceID;
+    HashTable< std::string, EC2Job * > spotJobsByRequestID;
 
 private:
 	void DoPing(unsigned & ping_delay,

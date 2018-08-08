@@ -38,6 +38,13 @@ else
     echo "You will be logged out after ${TMOUT} seconds of inactivity."
   fi
 
+
+  if [ -S ${_CONDOR_SCRATCH_DIR}/.docker_sock ]
+  then
+	CONDOR_CONFIG=/dev/null
+	export CONDOR_CONFIG
+	exec /usr/bin/condor_docker_enter
+  fi
   # start a shell for the user
   if [ "${_CONDOR_SHELL}" != "" ]; then
     # use the shell preferred by the user

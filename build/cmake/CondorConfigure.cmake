@@ -82,7 +82,11 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
+	if (DEFINED PYTHON_VERSION)
+		set(Python_ADDITIONAL_VERSIONS ${PYTHON_VERSION})
+	endif()
 	include (FindPythonLibs)
+	message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
 	# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
 	# This helps ensure we get the same version of the libraries and python
 	# on systems with both python2 and python3.
@@ -90,6 +94,7 @@ if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
 		set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
 	endif()
 	include (FindPythonInterp)
+	message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
 else()
 	if(WINDOWS)
 		#only for Visual Studio 2012
@@ -172,6 +177,8 @@ else()
 						message(STATUS "PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
 						set(PYTHONLIBS_FOUND TRUE)
 						set(PYTHONINTERP_FOUND TRUE)
+						set(PYTHON_VERSION_STRING "${_PYTHON_VERSION_LIST}")
+						message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
 					endif()
 				endif()
 			endif()
@@ -273,6 +280,8 @@ if( NOT WINDOWS)
 	find_program( AUTOCONF autoconf )
 	find_program( AUTOMAKE automake )
 	find_program( LIBTOOLIZE libtoolize )
+	check_include_files("sqlite3.h" HAVE_SQLITE3_H)
+	find_library( SQLITE3_LIB "sqlite3" )
 
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
@@ -296,12 +305,10 @@ if( NOT WINDOWS)
 	check_symbol_exists(epoll_create1 "sys/epoll.h" CONDOR_HAVE_EPOLL)
 	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
 	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC)
-	# OSX will pass the symbol_exists test, but it doesn't really have this function (sigh)
-	if (NOT ${OS_NAME} STREQUAL "DARWIN")
-		check_symbol_exists(_POSIX_MONOTONIC_CLOCK "unistd.h" HAVE_CLOCK_GETTIME)
-		check_symbol_exists(CLOCK_MONOTONIC_RAW "time.h" HAVE_CLOCK_MONOTONIC_RAW)
-		check_symbol_exists(CLOCK_REALTIME_COARSE "time.h" HAVE_CLOCK_REALTIME_COARSE)
-	endif()
+	check_function_exists("clock_gettime" HAVE_CLOCK_GETTIME)
+	check_symbol_exists(CLOCK_MONOTONIC_RAW "time.h" HAVE_CLOCK_MONOTONIC_RAW)
+	check_symbol_exists(CLOCK_REALTIME_COARSE "time.h" HAVE_CLOCK_REALTIME_COARSE)
+	check_function_exists("clock_nanosleep" HAVE_CLOCK_NANOSLEEP)
 
 	check_function_exists("access" HAVE_ACCESS)
 	check_function_exists("clone" HAVE_CLONE)
@@ -418,7 +425,7 @@ if( NOT WINDOWS)
 
 		# Some versions of Clang require an additional C++11 flag, as the default stdlib
 		# is from an old GCC version.
-		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+		if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 		endif()
 
@@ -568,6 +575,7 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	glibc_detect( GLIBC_VERSION )
 
 	set(HAVE_GNU_LD ON)
+    option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
 elseif(${OS_NAME} STREQUAL "AIX")
 	set(AIX ON)
@@ -619,6 +627,7 @@ option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
 
 #####################################
 # PROPER option
@@ -765,10 +774,9 @@ if (NOT WINDOWS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 endif()
 
-
 #####################################
 # Do we want to link in libssl and kerberos or dlopen() them at runtime?
-if (LINUX AND NOT PROPER)
+if (LINUX AND NOT PROPER AND NOT WANT_PYTHON_WHEELS)
 	set( DLOPEN_SECURITY_LIBS TRUE )
 endif()
 
@@ -785,9 +793,18 @@ endif()
 
 if (WINDOWS)
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
-
-  if(NOT (MSVC_VERSION LESS 1700))
+  if(NOT (MSVC_VERSION LESS 1900))
+    if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+      set(BOOST_DOWNLOAD_WIN boost-1.64.0-VC15-Win64.tar.gz)
+    else()
+      set(BOOST_DOWNLOAD_WIN boost-1.64.0-VC15-Win32.tar.gz)
+    endif()
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.64.0)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.2l)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.40)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.14.5)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.54.1)
+  elseif(NOT (MSVC_VERSION LESS 1700))
 	if (MSVC11)
       if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
         set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
@@ -815,28 +832,41 @@ else ()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.64.0)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.37)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
 
 	# globus is an odd *beast* which requires a bit more config.
+	# old globus builds on manylinux1 (centos5 docker image)
 	if (LINUX)
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/6.0)
+		if (${SYSTEM_NAME} MATCHES "centos5.11")
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
+		else()
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/6.0)
+		endif()
+	elseif(DARWIN)
+		exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
+		if (${TEST_VER} MATCHES "10.1[3-9]")
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/6.0)
+		else()
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
+		endif()
 	else()
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
 	endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
-    # voms held back for MacOS (config issues) (2.1.0 needed for OpenSSL 1.1)
-    if (LINUX)
+	# voms held back for MacOS (config issues) (2.1.0 needed for OpenSSL 1.1)
+	# old voms also builds on manylinux1 (centos5 docker image)
+    if (LINUX AND NOT ${SYSTEM_NAME} MATCHES "centos5.11")
         add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
     else()
         add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
@@ -917,7 +947,7 @@ endif()
 
 #####################################
 # Do we want to link in the GSI libraries or dlopen() them at runtime?
-if (HAVE_EXT_GLOBUS AND LINUX AND NOT PROPER)
+if (HAVE_EXT_GLOBUS AND LINUX AND NOT PROPER AND NOT WANT_PYTHON_WHEELS)
 	set( DLOPEN_GSI_LIBS TRUE )
 endif()
 
@@ -970,6 +1000,7 @@ set (CONDOR_COLLECTOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_collector.V6)
 set (CONDOR_NEGOTIATOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_negotiator.V6)
 set (CONDOR_SCHEDD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_schedd.V6)
 set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
+
 ###########################################
 
 ###########################################
@@ -995,18 +1026,19 @@ endif()
 
 ###########################################
 # in order to use clock_gettime, you need to link the the rt library
-if (HAVE_CLOCK_GETTIME)
+# (only for linux with glibc < 2.17)
+if (HAVE_CLOCK_GETTIME AND LINUX)
     set(RT_FOUND "rt")
 else()
     set(RT_FOUND "")
 endif()
 
-set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${RT_FOUND}")
-set (CONDOR_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND}")
-set (CONDOR_TOOL_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND}")
+set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${RT_FOUND};${MUNGE_FOUND}")
+set (CONDOR_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${MUNGE_FOUND}")
+set (CONDOR_TOOL_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${MUNGE_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 if (LINUX AND NOT PROPER)
-  set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND}")
+  set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${MUNGE_FOUND}")
 else ()
   set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")
 endif ()
@@ -1168,7 +1200,7 @@ else(MSVC)
 	if ( NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" )
 		check_c_compiler_flag(-rdynamic c_rdynamic)
 		if (c_rdynamic)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
 		endif(c_rdynamic)
 	endif()
 

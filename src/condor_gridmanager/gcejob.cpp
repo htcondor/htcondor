@@ -21,11 +21,8 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "basename.h"
-#include "nullfile.h"
-#include "filename_tools.h"
 
 #ifdef WIN32
 #else
@@ -133,6 +130,7 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	BaseJob( classad ),
 	m_preemptible( false ),
 	m_retry_times( 0 ),
+	m_failure_injection(NULL),
 	probeNow( false )
 {
 	string error_string = "";
@@ -154,11 +152,7 @@ GCEJob::GCEJob( ClassAd *classad ) :
 
 	// check the auth_file
 	jobAd->LookupString( ATTR_GCE_AUTH_FILE, m_authFile );
-
-	if ( m_authFile.empty() ) {
-		error_string = "Auth file not defined";
-		goto error_exit;
-	}
+	jobAd->LookupString( ATTR_GCE_ACCOUNT, m_account );
 
 	// Check for failure injections.
 	m_failure_injection = getenv( "GM_FAILURE_INJECTION" );
@@ -276,7 +270,8 @@ GCEJob::GCEJob( ClassAd *classad ) :
 		GCEResource::FindOrCreateResource( m_serviceUrl.c_str(),
 										   m_project.c_str(),
 										   m_zone.c_str(),
-										   m_authFile.c_str() );
+										   m_authFile.c_str(),
+										   m_account.c_str() );
 	myResource->RegisterJob( this );
 
 	value.clear();
@@ -342,7 +337,7 @@ GCEJob::~GCEJob()
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 		if( ! m_instanceId.empty() ) {
-			myResource->jobsByInstanceID.remove( HashKey( m_instanceId.c_str() ) );
+			myResource->jobsByInstanceID.remove( m_instanceId );
 		}
 	}
 	delete gahp;
@@ -463,10 +458,6 @@ void GCEJob::doEvaluateState()
 
 
 			case GM_SAVE_INSTANCE_NAME: {
-				// If we don't know yet what type of server we're talking
-				// to (e.g. all pings have failed because the server's
-				// down), we have to wait here, as that affects how we'll
-				// submit the job.
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CLEAR_REQUEST;
 					break;
@@ -526,6 +517,7 @@ void GCEJob::doEvaluateState()
 					// gce_instance_insert() will check the input arguments
 					rc = gahp->gce_instance_insert( m_serviceUrl,
 													m_authFile,
+													m_account,
 													m_project,
 													m_zone,
 													m_instanceName,
@@ -544,18 +536,6 @@ void GCEJob::doEvaluateState()
 
 					lastSubmitAttempt = time(NULL);
 
-					if ( rc != 0 &&
-						 gahp_error_code == "NEED_CHECK_VM_START" ) {
-						// get an error code from gahp server said that we should check if
-						// the VM has been started successfully in EC2
-
-						// Maxmium retry times is 3, if exceeds this limitation, we fall through
-						if ( m_retry_times++ < maxRetryTimes ) {
-							gmState = GM_START_VM;
-						}
-						break;
-					}
-
 					if ( rc == 0 ) {
 
 						ASSERT( instance_id != "" );
@@ -564,12 +544,6 @@ void GCEJob::doEvaluateState()
 
 						gmState = GM_SAVE_INSTANCE_ID;
 
-					} else if ( gahp_error_code == "InstanceLimitExceeded" ) {
-						// meet the resource limitation (maximum 20 instances)
-						// should retry this command later
-						myResource->CancelSubmit( this );
-						daemonCore->Reset_Timer( evaluateStateTid,
-												 submitInterval );
 					 } else {
 						errorString = gahp->getErrorString();
 						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
@@ -816,6 +790,7 @@ void GCEJob::doEvaluateState()
 
 				rc = gahp->gce_instance_delete( m_serviceUrl,
 												m_authFile,
+												m_account,
 												m_project,
 												m_zone,
 												m_instanceName );
@@ -980,7 +955,7 @@ void GCEJob::GCESetRemoteJobId( const char *instance_name, const char *instance_
 		formatstr( full_job_id, "gce %s %s", m_serviceUrl.c_str(), instance_name );
 		if ( instance_id && instance_id[0] ) {
 			// We need this to do bulk status queries.
-			myResource->jobsByInstanceID.insert( HashKey( instance_id ), this );
+			myResource->jobsByInstanceID.insert( instance_id, this );
 			formatstr_cat( full_job_id, " %s", instance_id );
 		}
 	}
@@ -1064,7 +1039,7 @@ void GCEJob::StatusUpdate( const char * instanceID,
 	// SetRemoteJobStatus() sets the last-update timestamp, but
 	// only returns true if the status has changed.
 	if( SetRemoteJobStatus( status ) ) {
-		remoteJobState = status;
+		remoteJobState = status ? status : "";
 		probeNow = true;
 		SetEvaluateState();
 	}

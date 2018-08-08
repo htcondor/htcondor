@@ -52,7 +52,7 @@ int main()
  
         case ULOG_OK:
 
-            eventName = ULogEventNumberNames[e->eventNumber];
+            eventName = e->eventName();
 
 			printf( "Log event: %s", eventName );
 

@@ -30,7 +30,7 @@
 #include "basename.h"
 
 TransferDaemon::TransferDaemon(MyString fquser, MyString id, TDMode status) :
-	m_treqs_in_progress(200, hashFuncMyString)
+	m_treqs_in_progress(hashFunction)
 {
 	m_fquser = fquser;
 	m_id = id;
@@ -240,7 +240,10 @@ TransferDaemon::push_transfer_requests(void)
 
 		// Let's use the only encapsulation protocol we have at the moment.
 		m_treq_sock->encode();
-		m_treq_sock->code((unsigned char *)encap);
+		if (!m_treq_sock->put(encap)) {
+			dprintf(D_ALWAYS, "transferd hung up on us, not able to send transfer requests\n");
+			return false;
+		}
 		m_treq_sock->end_of_message();
 
 		// This only puts a small amount of the treq onto the channel. The
@@ -293,7 +296,7 @@ TransferDaemon::push_transfer_requests(void)
 			// move it from the original enqueue list to the in progress hash
 			// keyed by its capability
 			m_treqs.DeleteCurrent();
-			m_treqs_in_progress.insert(treq->get_capability(), treq);
+			ASSERT(m_treqs_in_progress.insert(treq->get_capability(), treq) == 0);
 
 		} else {
 			dprintf(D_ALWAYS, "Transferd said request was invalid.\n");
@@ -563,11 +566,11 @@ TransferDaemon::call_reaper_callback(long pid, int status, TransferDaemon *td)
 TDMan::TDMan()
 {
 	m_td_table = 
-		new HashTable<MyString, TransferDaemon*>(200, hashFuncMyString);
+		new HashTable<MyString, TransferDaemon*>(hashFunction);
 	m_id_table = 
-		new HashTable<MyString, MyString>(200, hashFuncMyString);
+		new HashTable<MyString, MyString>(hashFunction);
 	m_td_pid_table = 
-		new HashTable<long, TransferDaemon*>(200, hashFuncLong);
+		new HashTable<long, TransferDaemon*>(hashFuncLong);
 }
 
 TDMan::~TDMan()
@@ -906,7 +909,10 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	// This is the initial registration ad from the transferd:
 	//	ATTR_TD_SINFUL
 	//	ATTR_TD_ID
-	getClassAd(rsock, regad);
+	if (!getClassAd(rsock, regad)) {
+		dprintf(D_ALWAYS, "Remote side hung up on transferd\n");
+		return CLOSE_STREAM;
+	}
 	rsock->end_of_message();
 	regad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
 	regad.LookupString(ATTR_TREQ_TD_ID, td_id);

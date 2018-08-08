@@ -28,7 +28,6 @@
 #include "condor_daemon_core.h"
 #include "MyString.h"
 #include "gahp_common.h"
-#include "condor_string.h"
 #include "strupr.h"
 #include "my_popen.h"
 #include "condor_environ.h"
@@ -42,7 +41,7 @@ extern CStarter* Starter;
 VMGahpServer::VMGahpServer(const char *vmgahpserver,
                            const char *vmtype,
                            ClassAd* job_ad) :
-	m_request_table(20, &hashFuncInt)
+	m_request_table(&hashFuncInt)
 {
 	m_is_initialized = false;
 	m_is_cleanuped = false;

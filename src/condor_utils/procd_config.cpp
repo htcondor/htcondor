@@ -49,11 +49,9 @@ get_procd_address()
 		if (!lockdir) {
 			EXCEPT("PROCD_ADDRESS not defined in configuration");
 		}
-		char *temp = dircat(lockdir,"procd_pipe");
-		ASSERT(temp);
-		ret = temp;
+		char const *p = dircat(lockdir,"procd_pipe",ret);
+		ASSERT(p);
 		free(lockdir);
-		delete [] temp;
 #endif
 	}
 

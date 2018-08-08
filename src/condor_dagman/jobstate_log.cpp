@@ -18,7 +18,6 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_string.h"  /* for strnewp() */
 #include "MyString.h"
 #include "debug.h"
 #include "jobstate_log.h"
@@ -56,7 +55,7 @@ JobstateLog::JobstateLog()
 //---------------------------------------------------------------------------
 JobstateLog::~JobstateLog()
 {
-	delete [] _jobstateLogFile;
+	free( _jobstateLogFile );
 	if ( _outfile ) {
 		fclose( _outfile );
 		_outfile = NULL;
@@ -312,7 +311,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 	ASSERT( node );
 
 	const char *prefix = "ULOG_";
-	const char *eventName = ULogEventNumberNames[event->eventNumber];
+	const char *eventName = event->eventName();
 	if ( strstr( eventName, prefix ) != eventName ) {
        	debug_printf( DEBUG_QUIET, "Warning: didn't find expected prefix "
 					"%s in event name %s\n", prefix, eventName );
@@ -500,14 +499,15 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 			MyString &nodeName, int &seqNum )
 {
 	line.chomp();
-	line.Tokenize();
-	const char* timestampTok = line.GetNextToken( " ", false );
-	const char* nodeNameTok = line.GetNextToken( " ", false );
-	(void)line.GetNextToken( " ", false ); // event name
-	(void)line.GetNextToken( " ", false ); // condor id
-	(void)line.GetNextToken( " ", false ); // job tag (pegasus site)
-	(void)line.GetNextToken( " ", false ); // unused
-	const char* seqNumTok = line.GetNextToken( " ", false );
+	MyStringTokener tok;
+	tok.Tokenize(line.Value());
+	const char* timestampTok = tok.GetNextToken( " ", false );
+	const char* nodeNameTok = tok.GetNextToken( " ", false );
+	(void)tok.GetNextToken( " ", false ); // event name
+	(void)tok.GetNextToken( " ", false ); // condor id
+	(void)tok.GetNextToken( " ", false ); // job tag (pegasus site)
+	(void)tok.GetNextToken( " ", false ); // unused
+	const char* seqNumTok = tok.GetNextToken( " ", false );
 
 	if ( (timestampTok == NULL) || (nodeNameTok == NULL) ) {
 		debug_printf( DEBUG_QUIET, "Warning: error parsing "

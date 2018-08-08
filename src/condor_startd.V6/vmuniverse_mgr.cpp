@@ -108,7 +108,6 @@ VMStarterInfo::getUsageOfVM(ProcFamilyUsage &usage)
 		usage.total_resident_set_size = m_vm_alive_pinfo.rssize;
 #if HAVE_PSS
 		usage.total_proportional_set_size = m_vm_alive_pinfo.pssize;
-		usage.total_proportional_set_size = m_vm_alive_pinfo.pssize_available;
 #endif
 	}else {
 		usage.total_image_size = 0;
@@ -329,7 +328,7 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
 			ad->Assign(ATTR_VM_NETWORKING, m_vm_networking); 
 		}else {
 			ExprTree * pTree =  expr->Copy();
-			ad->Insert(attr_name, pTree, false);
+			ad->Insert(attr_name, pTree);
 		}
 	}
 
@@ -783,10 +782,14 @@ VMUniverseMgr::findVMStarterInfoWithIP(const char* ip)
 	return NULL;
 }
 
-void 
-VMUniverseMgr::checkVMUniverse(void)
+void
+VMUniverseMgr::checkVMUniverse( bool warn )
 {
-	dprintf( D_ALWAYS, "VM-gahp server reported an internal error\n");
+	// This might be better as detect, where detect never sets m_needCheck
+	// because it should be an error for there to be running VMs on startup.
+	if( warn ) {
+		dprintf( D_ALWAYS, "VM-gahp server reported an internal error\n");
+	}
 
 	if( numOfRunningVM() == 0 ) {
 		// There is no running VM job.
@@ -794,7 +797,7 @@ VMUniverseMgr::checkVMUniverse(void)
 		docheckVMUniverse();
 		return;
 	}
-	
+
 	// There are running VM jobs.
 	// We need to wait for all jobs to be finished
 	// When all jobs are finished, we will call docheckVMUniverse function

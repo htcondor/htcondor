@@ -29,7 +29,7 @@
 #include <sys/epoll.h>
 #endif
 
-static unsigned int
+static size_t
 ccbid_hash(const CCBID &ccbid) {
 	return ccbid;
 }
@@ -469,19 +469,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 		// potential flexibility on the CCB server side to do things like
 		// assign different targets to different CCB server sub-processes,
 		// each with their own command port.
-
-	//
-	// We need to reply with a contact string of the proper protocol.  At
-	// some point, we'll just send /all/ of our command sockets, but for
-	// now, just use the rewriter (and lie to make sure it happens).
-	//
-	std::string exprString;
-	formatstr( exprString, "%s = \"<%s>\"", ATTR_MY_ADDRESS, m_address.Value() );
-	ConvertDefaultIPToSocketIP( ATTR_MY_ADDRESS, exprString, * stream );
-	std::string rewrittenAddress = exprString.substr( strlen( ATTR_MY_ADDRESS ) + 5 );
-	rewrittenAddress.resize( rewrittenAddress.size() - 2 );
-	dprintf( D_NETWORK | D_VERBOSE, "Will send %s instead of %s to CCB client %s.\n", rewrittenAddress.c_str(), m_address.Value(), sock->my_ip_str() );
-	CCBIDToContactString( rewrittenAddress.c_str(), target->getCCBID(), ccb_contact );
+	CCBIDToContactString( m_address.Value(), target->getCCBID(), ccb_contact );
 
 	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
 

@@ -313,7 +313,7 @@ void XFormHash::push_warning(FILE * fh, const char* format, ... ) //CHECK_PRINTF
 	va_end(ap);
 
 	if (LocalMacroSet.errors) {
-		LocalMacroSet.errors->push("XForm", 0, message);
+		LocalMacroSet.errors->push("XForm", 0, message ? message : "");
 	} else {
 		fprintf(fh, "\nWARNING: %s", message ? message : "");
 	}
@@ -696,7 +696,7 @@ int MacroStreamXFormSource::setUniverse(const char * uni) {
 	return universe;
 }
 
-int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSource)
+int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSource, std::string & errmsg)
 {
 	for (const char *line = lines.first(); line; line = lines.next()) {
 		const char * p;
@@ -705,7 +705,12 @@ int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSo
 			if ( ! tmp.empty()) name = tmp;
 			lines.deleteCurrent();
 		} else if (NULL != (p = is_xform_statement(line, "requirements"))) {
-			setRequirements(p);
+			int err = 0;
+			setRequirements(p, err);
+			if (err < 0) {
+				formatstr(errmsg, "invalid REQUIREMENTS : %s", p);
+				return err;
+			}
 			lines.deleteCurrent();
 		} else if (NULL != (p = is_xform_statement(line, "universe"))) {
 			setUniverse(p);
@@ -729,7 +734,7 @@ int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSo
 	return lines.number();
 }
 
-int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource)
+int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource, std::string & errmsg)
 {
 	StringList lines;
 
@@ -775,7 +780,7 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource)
 		}
 	}
 
-	return open(lines, FileSource);
+	return open(lines, FileSource, errmsg);
 }
 
 const char * MacroStreamXFormSource::getFormattedText(std::string & buf, const char *prefix /*=""*/, bool include_comments /*=false*/)
@@ -813,10 +818,10 @@ const char * MacroStreamXFormSource::getFormattedText(std::string & buf, const c
 	return buf.c_str();
 }
 
-classad::ExprTree* MacroStreamXFormSource::setRequirements(const char * require)
+classad::ExprTree* MacroStreamXFormSource::setRequirements(const char * require, int & err)
 {
 	requirements.set(require ? strdup(require) : NULL);
-	return requirements.Expr();
+	return requirements.Expr(&err);
 }
 
 bool MacroStreamXFormSource::matches(ClassAd * candidate_ad)
@@ -1117,11 +1122,11 @@ static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * att
 	} else {
 		ExprTree * tree = ad->Remove(attr);
 		if (tree) {
-			if (ad->Insert(attrNew, tree, false)) {
+			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
 				if (flags&1) fprintf(stderr, "ERROR: could not rename %s to %s\n", attr.c_str(), attrNew);
-				if ( ! ad->Insert(attr, tree, false)) {
+				if ( ! ad->Insert(attr, tree)) {
 					delete tree;
 				}
 			}
@@ -1144,7 +1149,7 @@ static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrN
 		ExprTree * tree = ad->Lookup(attr);
 		if (tree) {
 			tree = tree->Copy();
-			if (ad->Insert(attrNew, tree, false)) {
+			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
 				if (flags&1) fprintf(stderr, "ERROR: could not copy %s to %s\n", attr.c_str(), attrNew);
@@ -1372,6 +1377,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 	MacroStreamXFormSource & xform = pargs->xfm;
 
 	classad::ClassAdParser parser;
+	parser.SetOldClassAd(true);
 	std::string tmp3;
 
 	// give the line to our tokener so we can parse it.
@@ -1496,11 +1502,10 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 			if (is_tool) fprintf(stderr, "ERROR: SET %s has no value", attr.c_str());
 		} else {
 			ExprTree * expr = NULL;
-			if ( ! parser.ParseExpression(ConvertEscapingOldToNew(rhs.ptr()), expr, true)) {
+			if ( ! parser.ParseExpression(rhs.ptr(), expr, true)) {
 				if (is_tool) fprintf(stderr, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
-				const bool cache_it = false;
-				if ( ! ad->Insert(attr, expr, cache_it)) {
+				if ( ! ad->Insert(attr, expr)) {
 					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), rhs.ptr());
 					delete expr;
 				}
@@ -1518,8 +1523,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 				if (is_tool) fprintf(stderr, "ERROR: EVALSET %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				ExprTree * tree = XFormCopyValueToTree(val);
-				const bool cache_it = false;
-				if ( ! ad->Insert(attr, tree, cache_it)) {
+				if ( ! ad->Insert(attr, tree)) {
 					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
 					delete tree;
 				} else if (verbose) {
@@ -1900,9 +1904,8 @@ int ConvertJobRouterRouteToXForm (
 				unparser.Unparse(rhs, tree);
 				if ( ! rhs.empty()) {
 
-					StringList myrefs;
-					StringList target;
-					route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+					classad::References myrefs;
+					GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 					if (atrid == atr_REQUESTMEMORY || 
 						atrid == atr_REQUESTCPUS || atrid == atr_REMOTE_NODENUMBER || atrid == atr_REMOTE_SMPGRANULARITY ||
 						atrid == atr_ONEXITHOLD || atrid == atr_ONEXITHOLDREASON || atrid == atr_ONEXITHOLDSUBCODE ||
@@ -1911,25 +1914,17 @@ int ConvertJobRouterRouteToXForm (
 						ExprTree * def_tree = base_route_ad.Lookup(it->first);
 						bool is_def_expr = (def_tree && *tree == *def_tree);
 
-						/*
-						target.create_union(myrefs, true);
-						target.remove("null");
-						target.remove("InputRSL.maxMemory");
-						target.remove("InputRSL.xcount");
-						target.remove("InputRSL.queue");
-						target.remove("InputRSL");
-						*/
 						if (!(options & XForm_ConvertJobRouter_Fix_EvalSet)) {
 							// experimental flattening....
-							if ( ! myrefs.isEmpty()) {
+							if ( ! myrefs.empty()) {
 								rhs.clear();
 								unparse_special(unparser, rhs, route_ad, tree, atr_f_MyTarget | atr_f_Flatten);
 
-								myrefs.clearAll();
-								route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+								myrefs.clear();
+								GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 							}
 							evalset_cmds[attr] = rhs;
-							for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+							evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 						} else if (atrid == atr_REQUESTMEMORY && is_def_expr) {
 							//has_def_RequestMemory = true;
 							set_cmds[attr] = "$(maxMemory:2000)";
@@ -1946,27 +1941,27 @@ int ConvertJobRouterRouteToXForm (
 							set_cmds[attr] = "$Fq(queue)";
 						} else {
 							// experimental flattening....
-							if ( ! myrefs.isEmpty()) {
+							if ( ! myrefs.empty()) {
 								rhs.clear();
 								unparse_special(unparser, rhs, route_ad, tree, atr_f_MyTarget | atr_f_Flatten);
 
-								myrefs.clearAll();
-								route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+								myrefs.clear();
+								GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 							}
 							evalset_cmds[attr] = rhs;
-							for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+							evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 						}
 					} else {
 						// experimental flattening....
-						if ( ! myrefs.isEmpty()) {
+						if ( ! myrefs.empty()) {
 							rhs.clear();
 							unparse_special(unparser, rhs, route_ad, tree, atr_f_MyTarget | atr_f_Flatten);
 
-							myrefs.clearAll();
-							route_ad.GetExprReferences(rhs.c_str(), &myrefs, &target);
+							myrefs.clear();
+							GetExprReferences(rhs.c_str(), route_ad, &myrefs, NULL);
 						}
 						evalset_cmds[attr] = rhs;
-						for (char* str = myrefs.first(); str; str = myrefs.next()) { evalset_myrefs.insert(str); }
+						evalset_myrefs.insert(myrefs.begin(), myrefs.end());
 					}
 				}
 			}
@@ -2153,7 +2148,8 @@ int XFormLoadFromJobRouterRoute (
 	StringList statements;
 	int rval = ConvertJobRouterRouteToXForm(statements, xform.getName(), routing_string, offset, base_route_ad, options);
 	if (rval == 1) {
-		xform.open(statements, ArgumentMacro);
+		std::string errmsg;
+		xform.open(statements, ArgumentMacro, errmsg);
 	}
 	return rval;
 }

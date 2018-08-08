@@ -94,7 +94,7 @@ $special = SubmitReturnCluster($sleepf2);
 
 my $numberinstate = 0;
 my $result = 0;
-CondorTest::VerifyNoJobsInState("running",2,30);
+CondorTest::VerifyNumJobsInState("running",2,30);
 system(" condor_q -run -nobatch");
 
 my @cmdout = `condor_q -run -nobatch`;

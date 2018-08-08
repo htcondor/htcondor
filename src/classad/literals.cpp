@@ -32,71 +32,23 @@ static int revInt(string revNumStr);
 static double revDouble(string revNumStr);
 static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin);
 
-Literal::
-Literal ()
+
+void Literal::setError(int err, const char *msg /*=NULL*/)
 {
-	factor = Value::NO_FACTOR;
+	CondorErrno = err;
+	CondorErrMsg = msg ? msg : "";
 }
 
-
-Literal::
-~Literal ()
-{
-}
-
-Literal::
-Literal(const Literal &literal)
-{
-    CopyFrom(literal);
-    return;
-}
-
-Literal &Literal::
-operator=(const Literal &literal)
-{
-    if (this != &literal) {
-        CopyFrom(literal);
-    }
-    return *this;
-}
-
-ExprTree *Literal::
-Copy( ) const
-{
-	Literal *newTree = new Literal;
-
-	if (newTree == 0) {
-		CondorErrno = ERR_MEM_ALLOC_FAILED;
-		CondorErrMsg = "";
-		return((Literal*)NULL);
-	}
-    newTree->CopyFrom(*this);
-	return newTree;
-}
-
-void Literal::
-CopyFrom(const Literal &literal)
-{
-    ExprTree::CopyFrom(literal);
-    value.CopyFrom(literal.value);
-    factor = literal.factor;
-    return;
-}
 
 Literal* Literal::
 MakeReal(string number_string) 
 {
-	Value  val;
-	double real;
-    char   *end;
-
-    real = strtod(number_string.c_str(), &end);
-    if (end == number_string.c_str() && real == 0.0) {
-		val.SetErrorValue();
-    } else {
-		val.SetRealValue(real);
+	char   *end;
+	double real = strtod(number_string.c_str(), &end);
+	if (end == number_string.c_str() && real == 0.0) {
+		return MakeUndefined();
 	}
-	return MakeLiteral(val);
+	return MakeReal(real);
 }
 
 Literal* Literal::
@@ -432,56 +384,20 @@ Literal* Literal::
 MakeLiteral( const Value& val, Value::NumberFactor f ) 
 {
 	if(val.GetType()==Value::CLASSAD_VALUE || val.GetType()==Value::LIST_VALUE || val.GetType()==Value::SLIST_VALUE){
-		CondorErrno = ERR_BAD_VALUE;
-		CondorErrMsg = "list and classad values are not literals";
+		setError(ERR_BAD_VALUE, "list and classad values are not literals");
 		return( NULL );
 	}
 
 	Literal* lit = new Literal();
 	if( !lit ){
-		CondorErrno = ERR_MEM_ALLOC_FAILED;
-		CondorErrMsg = "";
+		setError(ERR_MEM_ALLOC_FAILED);
 		return NULL;
 	}
 	lit->value.CopyFrom( val );
 	if( !val.IsIntegerValue() && !val.IsRealValue() ) f = Value::NO_FACTOR;
-	lit->factor = f;
+	lit->value.factor = f;
 
 	return lit;
-}
-
-
-void Literal::
-GetValue( Value &val ) const 
-{
-	long long	i;
-	double	r;
-
-	val.CopyFrom( value );
-
-	// if integer or real, multiply by the factor
-	if (val.IsIntegerValue(i)) {
-		if( factor != Value::NO_FACTOR ) {
-			val.SetRealValue( ((double)i)*Value::ScaleFactor[factor] );
-		}
-	} else if (val.IsRealValue(r)) {
-		if( factor != Value::NO_FACTOR ) {
-			val.SetRealValue (r*Value::ScaleFactor[factor]);
-		}
-	}
-}
-
-bool Literal::
-GetStringValue( const char* & cstr ) const 
-{
-	return value.IsStringValue(cstr);
-}
-
-void Literal::
-GetComponents( Value &val, Value::NumberFactor &f ) const
-{
-	val = value;
-	f = factor;
 }
 
 bool Literal::
@@ -498,7 +414,7 @@ SameAs(const ExprTree *tree) const
         const Literal *other_literal;
         
         other_literal = (const Literal *) pSelfTree;
-        is_same = (   factor == other_literal->factor
+        is_same = (   value.factor == other_literal->value.factor
                    && value.SameAs(other_literal->value));
     }
     return is_same;
@@ -514,22 +430,8 @@ operator==(Literal &literal1, Literal &literal2)
 bool Literal::
 _Evaluate (EvalState &, Value &val) const
 {
-	long long	i;
-	double	r;
-
 	val.CopyFrom( value );
-
-	// if integer or real, multiply by the factor
-	if (val.IsIntegerValue(i)) {
-		if( factor != Value::NO_FACTOR ) {
-			val.SetRealValue( ((double)i)*Value::ScaleFactor[factor] );
-		} else {
-			val.SetIntegerValue(i);
-		}
-	} else if (val.IsRealValue(r)) {
-		val.SetRealValue (r*Value::ScaleFactor[factor]);
-	}
-
+	val.ApplyFactor();
 	return( true );
 }
 

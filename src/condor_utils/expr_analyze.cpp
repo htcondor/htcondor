@@ -22,7 +22,6 @@
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "MyString.h"
 #include "string_list.h"
@@ -88,15 +87,15 @@ public:
 		unparser.Unparse(unparsed, tree);
 
 #if 1
-		StringList target;
-		ad.GetExprReferences(unparsed.c_str(), NULL, &target);
-		constant = target.isEmpty();
+		classad::References target;
+		GetExprReferences(unparsed.c_str(), ad, NULL, &target);
+		constant = target.empty();
 #else
-		StringList myrefs;
-		StringList target;
-		ad.GetExprReferences(unparsed.c_str(), &myrefs, &target);
-		constant = target.isEmpty();
-		if (constant && myrefs.contains_anycase("CurrentTime")) {
+		classad::References myrefs;
+		classad::References target;
+		GetExprReferences(unparsed.c_str(), ad, &myrefs, &target);
+		constant = target.empty();
+		if (constant && myrefs.count("CurrentTime")) {
 			constant = false;
 		}
 #endif
@@ -651,11 +650,20 @@ const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buf
 	return temp_buffer.c_str();
 }
 
+// This is the function you probably want to call.
+// It does match analysis of all of the clauses in the given attribute of the request ad
+// against all of the target ads and appends the analysis to the given return_buf.
+// typical use would be
+//    AnalyzeRequirementsForEachTarget(jobAd, ATTR_REQUIREMENTS, attrs, &startdAds[0], startdAds.size(), ...
+// or
+//    ClassAd::References attrs; attrs.insert(ATTR_START);
+//    AnalyzeRequirementsForEachTarget(slotClassAd, ATTR_REQUIREMENTS, attrs, &jobAds[0], jobAds.size(), ...
+//
 void AnalyzeRequirementsForEachTarget(
 	ClassAd *request,
 	const char * attrConstraint, // must be an attribute in the request ad
 	classad::References & inline_attrs, // expand these attrs inline
-	ClassAdList & targets,
+	std::vector<ClassAd *> targets,
 	std::string & return_buf,
 	const anaFormattingOptions & fmt)
 {
@@ -860,7 +868,7 @@ void AnalyzeRequirementsForEachTarget(
 		subs[ix].matches = 0;
 
 		// do short-circuit evaluation of && operations
-		int matches_all = targets.Length();
+		int matches_all = (int)targets.size();
 		int ix_left = subs[ix].ix_left;
 		int ix_right = subs[ix].ix_right;
 		if (ix_left >= 0 && ix_right >= 0 && subs[ix].logic_op) {
@@ -917,8 +925,8 @@ void AnalyzeRequirementsForEachTarget(
 			}
 		}
 
-		targets.Open();
-		while (ClassAd *target = targets.Next()) {
+		for (size_t ixt = 0; ixt < targets.size(); ++ixt) {
+			ClassAd *target = targets[ixt];
 
 			classad::Value eval_result;
 			bool bool_val;
@@ -928,7 +936,6 @@ void AnalyzeRequirementsForEachTarget(
 				subs[ix].matches += 1;
 			}
 		}
-		targets.Close();
 
 		// did the left or right path of a logic op dominate the result?
 		if (ix_left >= 0 && ix_right >= 0 && subs[ix].logic_op) {
@@ -1282,30 +1289,29 @@ void AddReferencedAttribsToBuffer(
 	ClassAd * request,
 	const char * expr_string, // expression string or attribute name
 	classad::References & hidden_refs, // don't print these even if they appear in the trefs list
-	StringList & trefs, // out, returns target refs
+	classad::References & trefs, // out, returns target refs
 	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false
 	const char * pindent,
 	std::string & return_buf)
 {
-	StringList refs;
-	trefs.clearAll();
+	classad::References refs;
+	trefs.clear();
 
-	request->GetExprReferences(expr_string,&refs,&trefs);
-	if (refs.isEmpty() && trefs.isEmpty())
+	GetExprReferences(expr_string,*request,&refs,&trefs);
+	if (refs.empty() && trefs.empty())
 		return;
-
-	refs.rewind();
 
 	if ( ! pindent) pindent = "";
 
+	classad::References::iterator it;
 	AttrListPrintMask pm;
 	pm.SetAutoSep(NULL, "", "\n", "\n");
-	while(const char *attr = refs.next()) {
-		if (hidden_refs.find(attr) != hidden_refs.end())
+	for ( it = refs.begin(); it != refs.end(); it++ ) {
+		if (hidden_refs.find(*it) != hidden_refs.end())
 			continue;
 		std::string label;
-		formatstr(label, raw_values ? "%s%s = %%r" : "%s%s = %%V", pindent, attr);
-		pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
+		formatstr(label, raw_values ? "%s%s = %%r" : "%s%s = %%V", pindent, it->c_str());
+		pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, it->c_str());
 	}
 	if ( ! pm.IsEmpty()) {
 		pm.display(return_buf, request);
@@ -1313,22 +1319,22 @@ void AddReferencedAttribsToBuffer(
 }
 
  void AddTargetAttribsToBuffer (
-	StringList & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
+	classad::References & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
 	ClassAd * request,
 	ClassAd * target,
 	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false
 	const char * pindent,
 	std::string & return_buf)
 {
-	trefs.rewind();
+	classad::References::iterator it;
 
 	AttrListPrintMask pm;
 	pm.SetAutoSep(NULL, "", "\n", "\n");
-	while(const char *attr = trefs.next()) {
+	for ( it = trefs.begin(); it != trefs.end(); it++ ) {
 		std::string label;
-		formatstr(label, raw_values ? "%sTARGET.%s = %%r" : "%sTARGET.%s = %%V", pindent, attr);
-		if (target->LookupExpr(attr)) {
-			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
+		formatstr(label, raw_values ? "%sTARGET.%s = %%r" : "%sTARGET.%s = %%V", pindent, it->c_str());
+		if (target->LookupExpr(it->c_str())) {
+			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, it->c_str());
 		}
 	}
 	if (pm.IsEmpty())

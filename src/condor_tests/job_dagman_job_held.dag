@@ -1,6 +1,10 @@
 CONFIG job_dagman_job_held.config
 
-JOB A job_dagman_job_held-nodeA.cmd
+# Disabled for now, since we've changed DAGMAN_MAX_JOB_HOLDS to reflect number
+# of held procs at any instance, instead of number of hold events over the
+# course of a job's lifetime. We should re-enable later once we've added
+# functionality to support both.
+# JOB A job_dagman_job_held-nodeA.cmd
 
 # This is a parallel job.
 JOB B job_dagman_job_held-nodeB.cmd

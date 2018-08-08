@@ -77,7 +77,7 @@ if (NOT WINDOWS)
 
   if (LINUX OR DARWIN)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
-	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 8 )
+	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 10 )
 	condor_set_link_libs( classad "${PCRE_FOUND};${DL_FOUND}" )
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
@@ -170,5 +170,5 @@ if (NOT PROPER)
 endif(NOT PROPER)
 
 ###### Test executables
-condor_unit_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
-condor_unit_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)

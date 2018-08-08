@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{API-Python} Python Bindings}
+\section{Python Bindings}\label{API-Python}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{API!Python bindings}
 \index{Python bindings}
@@ -23,7 +23,7 @@ command line tools.
 % It looks wrong in the html version.
 \textbf{\texttt{htcondor} module functions:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{platform( )}
 
 Returns the platform of HTCondor this module is running on.
@@ -149,7 +149,7 @@ which returns a list of all ads available without blocking.
 
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{The module object, \texttt{param}}, is
@@ -158,7 +158,7 @@ in the current HTCondor configuration.
 
 \textbf{The \texttt{Schedd} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( classad )}
 
@@ -259,7 +259,7 @@ different queries when using the \texttt{poll()} module function.
 
 \\ \hline
 
-\texttt{history( (object) requirements, (list) projection, (int) match )}
+\texttt{history( (object) requirements, (list) projection, (int) match, (object) since )}
 
 Request history records from the \Condor{schedd} daemon.
 Returns an iterator to a set of ClassAds representing completed jobs.
@@ -273,6 +273,13 @@ that are to be included for each job.
 The empty list causes all attributes to be included.
 
 Parameter \texttt{match} is an integer cap on the number of jobs to include. 
+
+Parameter \texttt{since} is an optional argument that indicates when to stop iterating. 
+It can either be an \texttt{ExprTree}, an integer or a string.
+If the parameter is a string, then it is first parsed as a cluster id and then a full job id, if it does
+not parse as one of these, it is assumed to be an expression and is parsed as such.  If the parameter is
+an integer, then it is treated as a cluster id.
+The first job that matches it will not be returned, and iteration will cease.
 \\ \hline
 
 \texttt{submit( ad, count = 1, spool = false, ad\_results = None )}
@@ -377,20 +384,24 @@ Finally, \texttt{ScheddNegotiate} has a \texttt{sendClaim} method for sending cl
 back to the remote schedd based on a given resource request.
 
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{The \texttt{Submit} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( (dict)input = None )}
 
 Create an instance of the \texttt{Submit} class.  
 
 Optional parameter \texttt{input} is a Python dictionary containing
-submit file key = value pairs.
+submit file key = value pairs, or a string containing the text of a submit file.
 If omitted, the submit class is initially empty.
+
+If a string is used, the text should consist of valid \Condor{submit} statments optionally followed
+by a a single \Condor{submit} QUEUE statement. The arguments to the QUEUE statement will be stored
+in the \texttt{QArgs} member of this class and used when the \texttt{queue()} method of this class is called.
 
 \\ \hline
 \texttt{expand( (str)attr )}
@@ -403,19 +414,36 @@ Returns a string containing the value of the given attribute with
 all macros expanded.
 
 \\ \hline
-\texttt{ queue( (object)txn, (int)count = 1, (object)ad\_results = None )}
+\texttt{ queue( (object)txn, (int)count = 0, (object)ad\_results = None )}
 
 Submit the current object to a remote queue.
 Parameter \texttt{txn} is an active transaction object (see
 \texttt{Schedd.transaction()}).
 
-Optional parameter \texttt{count} is the number of procs to create
-(defaults to 1 if not specified).
+Optional parameter \texttt{count} is the number of procs to create.
+If not specified, or a value of 0 is given the QArgs member of this class
+is used to determine the number of procs to submit.  If no QArgs  were specified, one job is submitted.
 
 Optional parameter \texttt{ad\_results} is an object to receive the
-ClassAd resulting from this submit.
+ClassAd(s) resulting from this submit.
 
 Returns the ClusterID of the submitted job(s).
+
+Throws a RuntimeError if the submission fails.
+
+\\ \hline
+\texttt{ queue\_with\_itemdata( (object)txn, (int)count = 0, (object)from = None )}
+
+Submit the current object to a remote queue.
+
+Parameter \texttt{txn} is an active transaction object (see \texttt{Schedd.transaction()}).
+
+Optional parameter \texttt{count} is the number of procs submitted for each item.
+
+Optional parameter \texttt{from} is an iterator of strings or dictionaries that specify the itemdata for the set of jobs.
+Each item from this iterator will submit \texttt{count} procs.
+
+Returns a \texttt{SubmitResult} class describing the submitted job(s).
 
 Throws a RuntimeError if the submission fails.
 
@@ -451,13 +479,120 @@ Copy the contents of a given Submit object into the current object.
 Parameter \texttt{submit} is the Submit object to copy.
 
 \\ \hline
-\end{tabular}
+
+\texttt{ jobs( (int)count = 0, (object)from = None, (int)clusterid = 1, (int) procid = 0, (time\_t) qdate = 0, (string) owner = "" )}
+
+Returns an iterator of simulated job ClassAds using the current settings of this class.
+
+Optional parameter \texttt{count} is the number of jobs for each item in the \texttt{from} iteration. 
+It is the total number of jobs to return if \texttt{from} is None.  If not specified or the value 0 is given
+the value from the \texttt{QArgs} memeber will be used.
+
+Optional parameter \texttt{from} is an iterator of strings or dictionaries that specify the itemdata for the set of simulated jobs.
+Each item from this iterator will results in \texttt{count} simulated jobs. If not specified or None is given
+the value from the \texttt{QArgs} member will be used.
+
+Optional parameter \texttt{clusterid} is the value to use for the \Attr{ClusterId} attribute of the simulated jobs.
+If not specified, 1 is used.
+
+Optional parameter \texttt{procid} is the value to use for the \Attr{ProcId} attribute of the first simulated job.
+If not specified 0 is used.
+
+Optional paramater \texttt{qdate} is the unix timestamp value to use as the \Attr{QDate} attribute of the simulated jobs.
+If not specified the current time is used.
+
+Optional parameter \texttt{owner} is the username to use as the \Attr{Owner} attribute of the simulated jobs.
+If not specified, the name of the current user is used.
+
+\\ \hline
+
+\texttt{ procs( (int)count = 0, (object)from = None, (int)clusterid = 1, (int) procid = 0, (time\_t) qdate = 0, (string) owner = None )}
+
+Returns an iterator of simulated partial job ClassAds using the current settings of this class.
+The first job ClassAd returned will be complete, all other job ClassAds will contain only attributes that
+differ from the first job.  This list of proc ClassAds is what the \texttt{queue} or \texttt{queue\_with\_itemdata}
+methods would submit to the \Condor{schedd}, with the exception of the \Attr{ClusterId} attribute, which cannot be
+known ahead of time.
+
+Optional parameter \texttt{count} is the number of procs for each item in the \texttt{from} iteration. 
+It is the total number of jobs to return if \texttt{from} is None.  If not specified or the value 0 is given
+the value from the \texttt{QArgs} memeber will be used.
+
+Optional parameter \texttt{from} is an iterator of strings or dictionaries that specify the itemdata for the set of procs.
+Each item from this iterator will results in \texttt{count} simulated jobs. If not specified or None is given
+the value from the \texttt{QArgs} member will be used.
+
+Optional parameter \texttt{clusterid} is the value to use for the \Attr{ClusterId} attribute of the procs.
+If not specified, 1 is used.
+
+Optional parameter \texttt{procid} is the value to use for the \Attr{ProcId} attribute of the first procs.
+If not specified 0 is used.
+
+Optional paramater \texttt{qdate} is the unix timestamp value to use as the \Attr{QDate} attribute of the procs.
+If not specified the current time is used.
+
+Optional parameter \texttt{owner} is the username to use as the \Attr{Owner} attribute of the procs.
+If not specified, the name of the current user is used.
+
+\\ \hline
+
+\texttt{ itemdata( (string)qargs=None)}
+
+Returns an iterator of itemdata for the given QUEUE arguments. If \texttt{qargs} is not specified, the arguments
+to the QUEUE statement passed to the contructor or to the \texttt{setQArgs} method is used.
+
+For example \texttt{itemdata("matching *.dat")} would return an iterator of filenames that match *.dat from the current directory.
+This is the same iterator used by \Condor{submit} when processing QUEUE statements.
+
+\\ \hline
+
+\texttt{ getQArgs()}
+
+Returns arguments specified in the QUEUE statement passed to the contructor.  These are the arguments that will be used
+by the \texttt{queue} or \texttt{queue\_from\_itemdata} methods if not overridden by arguments to those methods.
+
+\\ \hline
+
+\texttt{ setQArgs((string)args)}
+
+Sets the arguments to be used by subsequent calls to the \texttt{queue} or \texttt{queue\_from\_itemdata} methods.
+
+\\ \hline
+\end{longtable}
 \end{flushleft}
 
+\textbf{The \texttt{SubmitResult} class:}
+\begin{flushleft}
+\begin{longtable}{|p{16cm}|} \hline
+
+\\ \hline
+\texttt{cluster()}
+
+Returns the integer value of the \Attr{ClusterId} of the submitted jobs.
+
+\\ \hline
+\texttt{clusterad()}
+
+Returns the cluster ClassAd of the submitted jobs, This is identical to the job ClassAd of the first job
+with the \Attr{ProcId} attribute removed.
+
+\\ \hline
+\texttt{first\_proc()}
+
+Returns the integer value of the \Attr{ProcId} attribute of the first job submitted.
+
+\\ \hline
+\texttt{num\_procs()}
+
+Returns the integer number of procs submitted.
+
+\\ \hline
+\end{longtable}
+\end{flushleft}
 
 \textbf{The \texttt{Collector} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( pool = None )}
 
@@ -543,12 +678,12 @@ Optional parameter \texttt{statistics} is a list of statistics attributes
 to include, if they exist for the specified daemon.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{The \texttt{Negotiator} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( (ClassAd)ad = None ) }
 
@@ -630,12 +765,12 @@ Set the accumulated usage of a specified user.
 Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
 Parameter \texttt{usage} is the usage to be set for the user.
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{The \texttt{Startd} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( (ClassAd)ad = None ) }
 
@@ -676,7 +811,7 @@ to cancel; if not specified, all draining requests for this startd
 are canceled.
 
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
@@ -693,7 +828,7 @@ then all future commands will fail with strange connection errors.
 This is the only mechanism to invalidate in-memory sessions.
 
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( )}
 
@@ -726,7 +861,7 @@ try; if not given, \texttt{DC\_NOP} will be used.
 
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 The \texttt{Param} class provides a dictionary-like interface
@@ -734,7 +869,7 @@ to the current configuration.
 
 \textbf{The \texttt{Param} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{\_\_getitem\_\_( (str)attr )}
 
 Returns the configuration for variable \texttt{attr}
@@ -792,7 +927,7 @@ Updates the current configuration to match the one in object
 \texttt{source}.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 The \texttt{RemoteParam} class provides a dictionary-like interface
@@ -800,7 +935,7 @@ to the configuration of daemons.
 
 \textbf{The \texttt{RemoteParam} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{\_\_getitem\_\_( (str)attr )}
 
 Returns the configuration for variable \texttt{attr}
@@ -872,7 +1007,7 @@ Rebuilds the dictionary corresponding to the current
 configuration of the daemon.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 The \texttt{Claim} class provides access to HTCondor's
@@ -880,7 +1015,7 @@ Compute-On-Demand facilities.
 
 \textbf{The \texttt{Claim} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( classad )}
 
@@ -940,12 +1075,12 @@ claim for future use.
 \texttt{delegateGSIProxy()}
 Send an x509 proxy credential to an activated claim.
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{Module enums:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{AdTypes}
 
@@ -1011,7 +1146,7 @@ Values may be
 \texttt{NoHeader}.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1032,7 +1167,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> len(results)
 3812
 >>> results[0]
-[ Name = "slot1@red-d20n35"; MyType = "Machine"; TargetType = "Job"; CurrentTime = time() ]
+[ Name = "slot1@red-d20n35"; MyType = "Machine"; TargetType = "Job" ]
 >>> scheddAd = coll.locate(htcondor.DaemonTypes.Schedd, "red-gw1.unl.edu")
 >>> scheddAd["ScheddIpAddr"]
 '<129.93.239.132:53020>'
@@ -1041,7 +1176,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> len(results)
 63
 >>> results[0]
-[ MyType = "Job"; TargetType = "Machine"; ServerTime = 1356722353; ClusterId = 674143; ProcId = 0; CurrentTime = time() ]
+[ MyType = "Job"; TargetType = "Machine"; ServerTime = 1356722353; ClusterId = 674143; ProcId = 0 ]
 >>> htcondor.param["COLLECTOR_HOST"]
 'hcc-briantest.unl.edu'
 >>> schedd = htcondor.Schedd() # Defaults to the local schedd.
@@ -1116,7 +1251,7 @@ and the object can take lists, dictionaries, and ClassAds as values.
 
 \textbf{\texttt{classad} module functions:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{parseOne( input, parser=Auto )}
 
 Parse the entire \texttt{input} into a single ClassAd.
@@ -1210,13 +1345,13 @@ for more information about loadable libraries for ClassAd functions.
 
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
 \textbf{Standard Python object methods for the \Expr{ClassAd} class:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( str )}
 
@@ -1236,13 +1371,13 @@ with square brackets and semicolons.
 For example, \Expr{[ Foo = "bar"; ]} may be returned.
 
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
 \textbf{The \texttt{classad} object has the following dictionary-like methods:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{items( )}
 
 Returns an iterator of tuples. Each item returned by the iterator 
@@ -1302,13 +1437,13 @@ Updates the ClassAd with the key/value pairs of the given object.
 Returns nothing.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
 \textbf{Additional methods:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{eval( attr )}
 
 Evaluate the value given a ClassAd attribute \texttt{attr}.
@@ -1398,7 +1533,7 @@ an internal reference is any attribute in the expression which is
 found in the \texttt{ClassAd}.
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 
@@ -1412,7 +1547,7 @@ produce an error until it is evaluated with a call to \texttt{bool()} or the
 
 \textbf{\texttt{ExprTree} class methods:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 \texttt{\_\_init\_\_( str )}
 
 Parse the string \texttt{str} to create an \texttt{ExprTree}.
@@ -1434,12 +1569,12 @@ Converts expression to a float (evaluating as necessary).
 Evaluate the expression and return as a ClassAd value, 
 typically a Python object.
 \\ \hline
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 \textbf{Module enums:}
 \begin{flushleft}
-\begin{tabular}{|p{16cm}|} \hline
+\begin{longtable}{|p{16cm}|} \hline
 
 \texttt{Parser}
 
@@ -1451,7 +1586,7 @@ or \texttt{New}.
 
 \\ \hline
 
-\end{tabular}
+\end{longtable}
 \end{flushleft}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "MyString.h"
 #include "globus_utils.h"
-#include "classad_hashtable.h"
 #include "file_transfer.h"
 
 #include "basejob.h"
@@ -85,6 +84,7 @@ class INFNBatchJob : public BaseJob
 	GahpClient *m_xfer_gahp;
 	FileTransfer *m_filetrans;
 	std::string m_sandboxPath;
+	std::string m_xferId;
 
 	void ProcessRemoteAd( ClassAd *remote_ad );
 

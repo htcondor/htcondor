@@ -33,7 +33,7 @@ static bool registered_reverse_connect_command = false;
 
 // hash of CCBClients waiting for a reverse connect command
 // indexed by connection id
-static HashTable< MyString,classy_counted_ptr<CCBClient> > waiting_for_reverse_connect(MyStringHash);
+static HashTable< MyString,classy_counted_ptr<CCBClient> > waiting_for_reverse_connect(hashFunction);
 
 
 
@@ -353,7 +353,7 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, MyString &ccb_address,
 		return false;
 	}
 	ccb_address = ccb_contact;
-	ccb_address.setChar(ptr-ccb_contact,'\0');
+	ccb_address.truncate(ptr-ccb_contact);
 	ccbid = ptr+1;
 	return true;
 }

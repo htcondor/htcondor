@@ -62,15 +62,15 @@ void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int f
 template <>
 void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
    MyString str;
-   str += (long)this->value;
+   str += IntToStr( (long)this->value );
    str += " ";
-   str += (long)this->recent;
+   str += IntToStr( (long)this->recent );
    str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          str += !ix ? "[" : (ix == this->buf.cMax ? "|" : ",");
-         str += (long)this->buf.pbuf[ix];
+         str += IntToStr( (long)this->buf.pbuf[ix] );
          }
       str += "]";
       }
@@ -537,6 +537,22 @@ int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe, int Deta
    } else if (DetailMode == ProbeDetailMode_Tot) {
       // for Totals, publish the Sum without a suffix
       ret = ad.Assign(pattr, (long long)probe.Sum);
+   } else if (DetailMode == ProbeDetailMode_CAMM) {
+      // for CAMM, publish the Avg and the Min & Max and Count using their normal names
+      // publish Avg, Min and Max only if count is non-zero
+      attr.formatstr("%sCount", pattr);
+      ret = ad.Assign(attr.Value(), probe.Count);
+
+      if (probe.Count != 0) {
+         attr.formatstr("%sAvg", pattr);
+         ad.Assign(attr.Value(), probe.Avg());
+
+         attr.formatstr("%sMin", pattr);
+         ad.Assign(attr.Value(), probe.Min);
+
+         attr.formatstr("%sMax", pattr);
+         ad.Assign(attr.Value(), probe.Max);
+      }
    }
    return ret;
 }
@@ -1060,10 +1076,10 @@ void StatisticsPool::InsertProbe (
    FN_STATS_ENTRY_DELETE  fndel) // Destructor
 {
    pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
-   pub.insert(name, item);
+   pub.insert(name, item, true);
 
    poolitem pi = { unit, fOwned, fnadv, fnclr, fnsrm, fndel };
-   pool.insert(probe, pi);
+   pool.insert(probe, pi, true);
 }
 
 void StatisticsPool::InsertPublish (
@@ -1077,7 +1093,7 @@ void StatisticsPool::InsertPublish (
    FN_STATS_ENTRY_UNPUBLISH fnunp) // unpublish method
 {
    pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
-   pub.insert(name, item);
+   pub.insert(name, item, true);
 }
 
 /* tj: IMPLEMENT THIS
@@ -1136,7 +1152,7 @@ void StatisticsPool::ClearRecent()
 
 void StatisticsPool::SetRecentMax(int window, int quantum)
 {
-   int cRecent = quantum ? window / quantum : window;
+   int cRecent = (quantum > 0) ? (window / quantum) : window;
 
    void* pitem;
    poolitem item;

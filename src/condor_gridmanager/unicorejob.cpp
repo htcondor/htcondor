@@ -22,7 +22,6 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "basename.h"
 #include "spooled_job_files.h"
@@ -80,8 +79,6 @@ static const char *GMStateNames[] = {
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
-
-#define HASH_TABLE_SIZE			500
 
 
 void UnicoreJobInit()
@@ -145,7 +142,7 @@ UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 		return;
 	}
 	
-	if ( JobsByUnicoreId.lookup( HashKey( job_id.c_str() ), job ) != 0 ||
+	if ( JobsByUnicoreId.lookup( job_id, job ) != 0 ||
 		 job == NULL ) {
 		dprintf( D_FULLDEBUG, "UnicoreGahpCallbackHandler: status ad for "
 				 "unknown job, ignoring\n" );
@@ -167,7 +164,7 @@ UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 	update_ad->ResetExpr();
 	while ( update_ad->NextExpr( new_name, new_expr ) ) {
 		ExprTree * pTree = new_expr->Copy();
-		job->newRemoteStatusAd->Insert( new_name, pTree, false );
+		job->newRemoteStatusAd->Insert( new_name, pTree );
 	}
 
 	job->SetEvaluateState();
@@ -179,8 +176,8 @@ int UnicoreJob::probeInterval = 300;			// default value
 int UnicoreJob::submitInterval = 300;			// default value
 int UnicoreJob::gahpCallTimeout = 300;			// default value
 
-HashTable<HashKey, UnicoreJob *> UnicoreJob::JobsByUnicoreId( HASH_TABLE_SIZE,
-															  hashFunction );
+HashTable<std::string, UnicoreJob *>
+    UnicoreJob::JobsByUnicoreId( hashFunction );
 
 UnicoreJob::UnicoreJob( ClassAd *classad )
 	: BaseJob( classad )
@@ -198,7 +195,6 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	enteredCurrentUnicoreState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
-	submitFailureCode = 0;
 	submitAd = NULL;
 	newRemoteStatusAd = NULL;
 	gahp = NULL;
@@ -262,7 +258,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 UnicoreJob::~UnicoreJob()
 {
 	if ( jobContact ) {
-		JobsByUnicoreId.remove(HashKey(jobContact));
+		JobsByUnicoreId.remove(jobContact);
 		free( jobContact );
 	}
 	if ( resourceName ) {
@@ -800,10 +796,10 @@ void UnicoreJob::SetRemoteJobId( const char *job_id )
 		// but the unicore gahp. This is because the job status
 		// notifications we receive don't include the unicore resource.
 	if ( jobContact ) {
-		JobsByUnicoreId.remove(HashKey(jobContact));
+		JobsByUnicoreId.remove(jobContact);
 	}
 	if ( job_id ) {
-		JobsByUnicoreId.insert(HashKey(job_id), this);
+		ASSERT( JobsByUnicoreId.insert(job_id, this) == 0);
 	}
 
 	free( jobContact );

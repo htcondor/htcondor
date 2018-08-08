@@ -40,12 +40,14 @@ public:
 	static const char *HashName( const char *resource_name,
 								 const char *project,
 								 const char *zone,
-								 const char *auth_file );
+								 const char *auth_file,
+								 const char *account );
 
 	static GCEResource* FindOrCreateResource( const char *resource_name,
 											  const char *project,
 											  const char *zone,
-											  const char *auth_file );
+											  const char *auth_file,
+											  const char *account );
 
 	GahpClient *gahp;
 	GahpClient *status_gahp;
@@ -53,11 +55,12 @@ public:
 	GCEResource( const char *resource_name,
 				 const char *project,
 				 const char *zone,
-				 const char *auth_file );
+				 const char *auth_file,
+				 const char *account );
 
 	~GCEResource();
 
-	static HashTable <HashKey, GCEResource *> ResourcesByName;
+	static HashTable <std::string, GCEResource *> ResourcesByName;
 
 	const char *ResourceType();
 
@@ -73,7 +76,7 @@ public:
 	BatchStatusResult FinishBatchStatus();
 	GahpClient * BatchGahp() { return status_gahp; }
 
-	HashTable< HashKey, GCEJob * > jobsByInstanceID;
+	HashTable< std::string, GCEJob * > jobsByInstanceID;
 
 private:
 	void DoPing(unsigned & ping_delay,
@@ -81,6 +84,7 @@ private:
 				bool & ping_succeeded  );
 
 	char *m_auth_file;
+	char *m_account;
 	char *m_project;
 	char *m_zone;
 

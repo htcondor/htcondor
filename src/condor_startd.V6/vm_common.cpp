@@ -190,7 +190,6 @@ MSC_DISABLE_WARNING(6262) // function uses 60820 bytes of stack
 bool 
 vmapi_sendCommand(char *addr, int cmd, void *data)
 {
-	char *buffer = NULL;
 	Daemon hstartd(DT_STARTD, addr);
 
 	SafeSock ssock;
@@ -208,15 +207,12 @@ vmapi_sendCommand(char *addr, int cmd, void *data)
 		return FALSE;
 	}
 
-	buffer = strdup(daemonCore->InfoCommandSinfulString());
-	ASSERT(buffer);
-
-	if ( !ssock.code(buffer) ) {
+	if ( !ssock.put(daemonCore->InfoCommandSinfulString()) ) {
 		dprintf( D_FULLDEBUG,
 				 "Failed to send command(%s)'s arguments to "
 				 "VM startd %s: %s\n",
-				 getCommandString(cmd), addr, buffer );
-		free(buffer);
+				 getCommandString(cmd), addr,
+				 daemonCore->InfoCommandSinfulString() );
 		return FALSE;
 	}
 
@@ -227,11 +223,9 @@ vmapi_sendCommand(char *addr, int cmd, void *data)
 
 	if( !ssock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "Failed to send EOM to VM startd %s\n", addr );
-		free(buffer);
 		return FALSE;
 	}
 
-	free(buffer);
 	return TRUE;
 }
 MSC_RESTORE_WARNING(6262) // function uses 60820 bytes of stack

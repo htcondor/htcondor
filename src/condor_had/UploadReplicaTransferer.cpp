@@ -56,28 +56,50 @@ safeUnlinkStateAndVersionFiles( const MyString& stateFilePath,
 int
 UploadReplicaTransferer::initialize( )
 {
-    reinitialize( );
+	reinitialize( );
 
-    m_socket = new ReliSock( );
+	if ( m_command == "up-new" ) {
+		// Try to get inherited socket
+		Stream **socks = daemonCore->GetInheritedSocks();
+		if (socks[0] == NULL ||
+			socks[0]->type() != Stream::reli_sock) {
+			dprintf( D_ALWAYS,
+				"UploadReplicaTransferer::initialize failed to get inherited socket\n" );
+			return TRANSFERER_FALSE;
+		}
+		m_socket = (ReliSock *)socks[0];
 
-	// enable timeouts, we set them to the maximal possible value because the
-	// maximal life policy of transferers is managed from within the code of
-	// replication daemon, so that transferers behave as if they are given the
-	// infinite time to upload the files
-    //m_socket->set_timeout_multiplier( 1 );
-    m_socket->timeout( INT_MAX ); // m_connectionTimeout );
-    // no retries after 'm_connectionTimeout' seconds of unsuccessful connection
-    m_socket->doNotEnforceMinimalCONNECT_TIMEOUT( );
+		int reply = 1;
+		m_socket->encode();
+		if( ! m_socket->code( reply ) ||
+			! m_socket->end_of_message( ) ) {
+			dprintf( D_ALWAYS,
+				"UploadReplicaTransferer::initialize failed to send reply\n" );
+			return TRANSFERER_FALSE;
+		}
+		m_socket->timeout( INT_MAX ); // m_connectionTimeout );
 
-    if( ! m_socket->connect( 
-		const_cast<char*>( m_daemonSinfulString.Value( ) ), 0, false ) ) {
-        dprintf( D_ALWAYS, 
+	} else {
+		m_socket = new ReliSock( );
+
+		// enable timeouts, we set them to the maximal possible value because the
+		// maximal life policy of transferers is managed from within the code of
+		// replication daemon, so that transferers behave as if they are given the
+		// infinite time to upload the files
+		//m_socket->set_timeout_multiplier( 1 );
+		m_socket->timeout( INT_MAX ); // m_connectionTimeout );
+		// no retries after 'm_connectionTimeout' seconds of unsuccessful connection
+		m_socket->doNotEnforceMinimalCONNECT_TIMEOUT( );
+
+		if( ! m_socket->connect( m_daemonSinfulString.Value( ), 0, false ) ) {
+			dprintf( D_ALWAYS,
 				"UploadReplicaTransferer::initialize cannot connect to %s\n",
-                 m_daemonSinfulString.Value( ) );
-        return TRANSFERER_FALSE;
-    }
-    // send accounting information and version files
-    return upload( );
+				m_daemonSinfulString.Value( ) );
+			return TRANSFERER_FALSE;
+		}
+	}
+	// send accounting information and version files
+	return upload( );
 }
 
 /* Function    : upload
@@ -113,24 +135,18 @@ UploadReplicaTransferer::upload( )
 //							"message\n", bytesTotal );
 //		return TRANSFERER_FALSE;
 //	}
-    MyString extension( daemonCore->getpid( ) );
+    MyString extension;
 	// the .up ending is needed in order not to confuse between upload and
     // download processes temporary files
-    extension += ".";
-    extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
+	formatstr( extension, "%d.%s", daemonCore->getpid( ),
+	           UPLOADING_TEMPORARY_FILES_EXTENSION );
 
-	char* temporaryVersionFilePath =
-			const_cast<char*>(m_versionFilePath.Value());
-	/*char* temporaryStateFilePath   = 
-			const_cast<char*>(m_stateFilePath.Value());*/
-	char* temporaryExtension       = const_cast<char*>(extension.Value());
-
-    if( ! FilesOperations::safeCopyFile( temporaryVersionFilePath,
-										 temporaryExtension ) ) {
+    if( ! FilesOperations::safeCopyFile( m_versionFilePath.Value(),
+										 extension.Value() ) ) {
 		dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to copy "
-						   "version file %s\n", temporaryVersionFilePath );
-		FilesOperations::safeUnlinkFile( temporaryVersionFilePath,
-										 temporaryExtension );
+				 "version file %s\n", m_versionFilePath.Value() );
+		FilesOperations::safeUnlinkFile( m_versionFilePath.Value(),
+										 extension.Value() );
 		return TRANSFERER_FALSE;
 	}
 	char* stateFilePath = NULL;
@@ -139,7 +155,7 @@ UploadReplicaTransferer::upload( )
 
 	while( ( stateFilePath = m_stateFilePathsList.next( ) ) ) {
 		if( ! FilesOperations::safeCopyFile( stateFilePath,
-		                                     temporaryExtension ) ) {
+		                                     extension.Value() ) ) {
 			dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to copy "
 							   "state file %s\n", stateFilePath );
 			// we return anyway, so that we should not worry that we operate
@@ -152,21 +168,21 @@ UploadReplicaTransferer::upload( )
 	}
 	m_stateFilePathsList.rewind( );
 	
-	/*if( ! FilesOperations::safeCopyFile( temporaryStateFilePath,
-                                         temporaryExtension ) ) {
+	/*if( ! FilesOperations::safeCopyFile( m_stateFilePath.Value(),
+                                         extension.Value() ) ) {
         dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to copy "
-                           "state file %s\n", temporaryStateFilePath );
-		safeUnlinkStateAndVersionFiles( temporaryStateFilePath,
-                                        temporaryVersionFilePath,
-									    temporaryExtension );
+                           "state file %s\n", m_stateFilePath.Value() );
+		safeUnlinkStateAndVersionFiles( m_stateFilePath.Value(),
+                                        m_versionFilePath.Value(),
+									    extension.Value() );
         return TRANSFERER_FALSE;
     }*/
     // upload version file
     if( uploadFile( m_versionFilePath, extension ) == TRANSFERER_FALSE){
 		dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to upload "
-						   "version file %s\n", temporaryVersionFilePath );
-		//FilesOperations::safeUnlinkFile( temporaryStateFilePath, 
-		//								 temporaryExtension );
+				 "version file %s\n", m_versionFilePath.Value() );
+		//FilesOperations::safeUnlinkFile( m_stateFilePath.Value(),
+		//								 extension.Value() );
 		safeUnlinkStateAndVersionFiles( m_stateFilePathsList,
 		                                m_versionFilePath,
 									    extension);
@@ -175,8 +191,8 @@ UploadReplicaTransferer::upload( )
 	// trying to unlink the temporary files; upon failure we still return the
     // status of uploading the files, since the most important thing here is
     // that the files were uploaded successfully
-	//FilesOperations::safeUnlinkFile( temporaryVersionFilePath, 
-	//								 temporaryExtension );
+	//FilesOperations::safeUnlinkFile( m_versionFilePath.Value(),
+	//								 extension.Value() );
     m_stateFilePathsList.rewind( );
 	
 	while( ( stateFilePath = m_stateFilePathsList.next( ) ) ) {
@@ -199,8 +215,8 @@ UploadReplicaTransferer::upload( )
 	/*if( uploadFile( m_stateFilePath, extension ) == TRANSFERER_FALSE ){
 		return TRANSFERER_FALSE;
 	}*/
-	//FilesOperations::safeUnlinkFile( temporaryStateFilePath,
-	//								 temporaryExtension );
+	//FilesOperations::safeUnlinkFile( m_stateFilePath.Value(),
+	//								 extension.Value() );
 	return TRANSFERER_TRUE;
 }
 

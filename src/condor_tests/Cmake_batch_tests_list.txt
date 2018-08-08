@@ -164,7 +164,6 @@ job_transform_names-1
 cmd_submit-batchname-1
 negotiator_match_log_exists
 job_schedd_restart-check_reconnect
-soap_api_test_schedd
 job_aggressive_flocking
 job_core_basic_par
 job_core_err_java
@@ -313,6 +312,7 @@ job_partitionable_basic_van
 job_hgq_negfail_basic_van
 job_hgq_autoregroup_basic_van
 job_starter_script-A
-soap_job_tests
 config_validate_policy_templates
+docker_simulator_test
 map_user_to_groups_metaknob_test
+cmd_submit-factory

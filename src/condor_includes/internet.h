@@ -41,47 +41,13 @@
 extern "C" {
 #endif
 
-/* Convert "<xx.xx.xx.xx:pppp?params>" to a sockaddr_in  TCP */
-//int string_to_sin(const char *addr, struct sockaddr_in *s_in);
-
-/* Split "<host:port?params>" into parts: host, port, and params. If
-   the port or params are not in the string, the result is set to
-   NULL.  Any of the result char** values may be NULL, in which case
-   they are parsed but not set.  The caller is responsible for freeing
-   all result strings.
-*/
-int split_sin( const char *addr, char **host, char **port, char **params );
-
-
-//char *sin_to_string(const struct sockaddr_in *s_in);
-
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
 int string_to_port( const char* addr );
-
-/* Extract the ip_addr from a string of the form "<xx.xx.xx.xx:pppp>"
-   and convert it to the unsigned int version from the ASCII version */
-//unsigned int string_to_ip( const char* addr );
 
 /* Convert a hostname[:port] to sinful string */
 char * hostname_to_string (const char * hostname, const int default_port );
 
 const char *sock_to_string(SOCKET sockd);
-
-/*
- Puts socket peer's sinful address in buf.  Returns this value or the
- specified unknown value if address could not be determined.
- Buffer should be at least SINFUL_STRING_BUF_SIZE,
- but if it is less, the value will be truncated if necessary.
-*/
-char const *
-sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown);
-
-/* Return the real hostname of a machine given a sin; return NULL if it cannot
- * be found or error.  Also return aliases. */
-//char *sin_to_hostname(const struct sockaddr_in *s_in, char ***aliases);
-
-//void
-//display_from( struct sockaddr_in *from );
 
 /* Returns 1 if h1 and h2 are both hostnames which refer to the same
    host, 0 if they don't, and -1 on error. */
@@ -113,11 +79,6 @@ char* getHostFromAddr( const char* addr );
    newly allocated string which must be de-allocated with free().
 */
 char* getAddrFromClaimId( const char* id );
-
-/* Binds the given fd to any port on the correct local interface for
-   this machine.   is_outgoing tells it how to param.  Returns 1 if
-   successful, 0 on error. */
-int _condor_local_bind( int is_outgoing, int fd );
 
 // generates sinful string.
 // it detects whether given ip address is IPv4 or IPv6.

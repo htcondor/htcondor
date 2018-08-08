@@ -129,6 +129,10 @@ class BaseShadow : public Service
 			@param reason The reason the job exited (JOB_BLAH_BLAH)
 		 */
 	virtual void shutDown( int reason );
+		/** Forces the starter to shutdown fast as well.<p>
+			@param reason The reason the job exited (JOB_BLAH_BLAH)
+		 */
+	virtual void shutDownFast( int reason );
 
 		/** Graceful shutdown method.  This is virtual so each kind of
 			shadow can do the right thing.
@@ -219,6 +223,12 @@ class BaseShadow : public Service
 			universe-specific code before we exit.
 		*/
 	void evictJob( int reason );
+		/** It's possible to the shadow to initiate eviction, and in
+			some cases that means we need to wait around for the starter
+			to tell us what happened.
+		*/
+	virtual void exitAfterEvictingJob( int reason ) { DC_Exit( reason ); }
+	virtual bool exitDelayed( int & /*reason*/ ) { return false; }
 
 		/** The total number of bytes sent over the network on
 			behalf of this job.
@@ -275,12 +285,6 @@ class BaseShadow : public Service
 		/** Update this job.
 		 */
 	int handleUpdateJobAd(int sig);
-
-		/** This function returns a file pointer that one can 
-			write an email message into.
-			@return A mail message file pointer.
-		*/
-	FILE* emailUser( const char *subjectline );
 
 		/** This is used to tack on something (like "res #") 
 			after the header and before the text of a dprintf
@@ -494,7 +498,6 @@ class BaseShadow : public Service
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );
 	BaseShadow& operator = ( const BaseShadow& );
-
 };
 
 extern void dumpClassad( const char*, ClassAd*, int );

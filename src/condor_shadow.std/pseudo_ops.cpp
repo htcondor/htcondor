@@ -543,20 +543,17 @@ pseudo_work_request( PROC *p, char *&a_out, char *&targ, char *&orig, int *kill_
 bool
 is_ckpt_file(const char path[])
 {
-	char *test_path;
+	std::string test_path;
 
-	test_path = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
-	if (strcmp(path, test_path) == 0) {
-		free(test_path); test_path = NULL;
+	SpooledJobFiles::getJobSpoolPath( JobAd, test_path );
+	if (strcmp(path, test_path.c_str()) == 0) {
 		return true;
 	}
-	strcat(test_path, ".tmp");
-	if (strcmp(path, test_path) == 0) {
-		free(test_path); test_path = NULL;
+	test_path += ".tmp";
+	if (strcmp(path, test_path.c_str()) == 0) {
 		return true;
 	}
 
-	free(test_path); test_path = NULL;
 	return false;
 }
 
@@ -570,7 +567,7 @@ is_ickpt_file(const char path[])
 {
 	char *test_path;
 
-	test_path = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
+	test_path = GetSpooledExecutablePath( Proc->id.cluster, Spool );
 	if (strcmp(path, test_path) == 0) {
 		free(test_path); test_path = NULL;
 		return true;
@@ -811,6 +808,7 @@ pseudo_get_file_stream(
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
 		if (CkptFile || ICkptFile) set_priv(priv);
 		close(file_fd);
+		close(connect_sock);
 		return -1;
 	case 0:	/* the child */
 			// reset this so dprintf has the right pid in the header
@@ -989,6 +987,7 @@ pseudo_put_file_stream(
 	  case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
 		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
+		close(connect_sock);
 		close(file_fd);
 		return -1;
 	  case 0:	/* the child */

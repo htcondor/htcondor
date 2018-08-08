@@ -444,6 +444,12 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 	}
 
 	char const *ptr = strchr(verstring,' ');
+	if (ptr == NULL) {
+		// must not be a version string at all
+		ver.MajorVer = 0;
+		return false;
+	}
+
 	ptr++;		// skip space after the colon
 
 	int cfld = sscanf(ptr,"%d.%d.%d ",&ver.MajorVer,&ver.MinorVer,&ver.SubMinorVer);
@@ -494,8 +500,14 @@ CondorVersionInfo::string_to_PlatformData(const char *platformstring,
 	}
 
 	char const *ptr = strchr(platformstring,' ');
-	ptr++;		// skip space after the colon
 
+	// No space mean ill-formed string, punt to our own version number
+	if (!ptr) {
+		ver = myversion;
+		return true;
+	}
+
+	ptr++;		// skip space after the colon
 
 	size_t len = strcspn(ptr,"-");
 	if( len ) {

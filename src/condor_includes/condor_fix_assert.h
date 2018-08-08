@@ -23,6 +23,11 @@
 #ifndef WIN32	/* on Win32, we do EXCEPT instead of assert */
 #include <assert.h>
 #else
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+#include "condor_header_features.h"
+#include "condor_system.h"
 #include "condor_debug.h"
 #endif	/* of else ifndef WIN32 */
 

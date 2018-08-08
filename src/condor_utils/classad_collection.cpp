@@ -24,8 +24,8 @@
 #include "classad_collection.h"
 
 
-// Force instantiation of the Generic ClassAdCollection that uses HashKey as the key type.
+// Force instantiation of the Generic ClassAdCollection that uses std::string as the key type.
 // (i.e. the old pre-template ClassAdCollection). This the one used by most ad-hock users of
 // this class, but not by the schedd.
-template class GenericClassAdCollection<HashKey,const char*,ClassAd*>;
+template class GenericClassAdCollection<std::string,ClassAd*>;
 

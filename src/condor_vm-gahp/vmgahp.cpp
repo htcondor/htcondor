@@ -25,7 +25,6 @@
 #include "env.h"
 #include "condor_environ.h"
 #include "condor_daemon_core.h"
-#include "condor_string.h"
 #include "MyString.h"
 #include "condor_attributes.h"
 #include "condor_vm_universe_types.h"
@@ -106,7 +105,7 @@ unsigned __stdcall pipe_forward_thread(void *)
 #endif
 
 VMGahp::VMGahp(VMGahpConfig* config, const char* iwd)
-	: m_pending_req_table(20, &hashFuncInt)
+	: m_pending_req_table(&hashFuncInt)
 {
 	m_async_mode = true;
 	m_new_results_signaled = false;
@@ -287,8 +286,12 @@ VMGahp::addNewRequest(const char *cmd)
 	VMRequest *new_req = new VMRequest(cmd);
 	ASSERT(new_req);
 
-	m_pending_req_table.insert(new_req->m_reqid, new_req);
-	return new_req;
+	if ( m_pending_req_table.insert(new_req->m_reqid, new_req) == 0 ) {
+		return new_req;
+	} else {
+		delete new_req;
+		return NULL;
+	}
 }
 
 void
@@ -603,7 +606,11 @@ VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args)
 	} else {
 		VMRequest *new_req;
 		new_req = addNewRequest(cmd);
-		returnOutputSuccess();
+		if ( new_req ) {
+			returnOutputSuccess();
+		} else {
+			returnOutputError();
+		}
 		return new_req;
 	}
 	return NULL;
@@ -742,8 +749,7 @@ VMGahp::executeStart(VMRequest *req)
 		req->m_is_success = true;
 
 		// Result is set to a new vm_id
-		req->m_result = "";
-		req->m_result += new_vm->getVMId();
+		formatstr( req->m_result, "%d", new_vm->getVMId() );
 
 		addVM(new_vm);
 		vmprintf(D_FULLDEBUG, "executeStart success!\n");
@@ -937,7 +943,8 @@ VMGahp::executeStatus(VMRequest *req)
 	if(vm == NULL) {
 		req->m_has_result = true;
 		req->m_is_success = true;
-		req->m_result = "Stopped";
+		req->m_result = VMGAHP_STATUS_COMMAND_STATUS;
+		req->m_result += "=Stopped";
 		return;
 	}else {
 		int result = vm->Status();
@@ -981,8 +988,7 @@ VMGahp::executeGetpid(VMRequest *req)
 		req->m_is_success = true;
 
 		// Result is set to the pid of actual process for VM
-		req->m_result = "";
-		req->m_result += vm->PidOfVM();
+		formatstr( req->m_result, "%d", vm->PidOfVM() );
 		return;
 	}
 }
@@ -1053,27 +1059,13 @@ VMGahp::make_result_line(VMRequest *req)
 	if(req->m_is_success) {
 		// Success
 		// Format: <req_id> 0 <result string>
-		res_str += req->m_reqid;
-		res_str += " ";
-		res_str += 0;
-		res_str += " ";
-		if( req->m_result.Length() == 0) {
-			res_str += "NULL";
-		} else {
-			res_str += req->m_result.Value();
-		}
+		formatstr( res_str, "%d 0 %s", req->m_reqid,
+		           req->m_result.Length() ? req->m_result.Value() : "NULL" );
 	}else {
 		// Error
 		// Format: <req_id> 1 <result string>
-		res_str += req->m_reqid;
-		res_str += " ";
-		res_str += 1;
-		res_str += " ";
-		if( req->m_result.Length() == 0) {
-			res_str += "NULL";
-		} else {
-			res_str += req->m_result.Value();
-		}
+		formatstr( res_str, "%d 1 %s", req->m_reqid,
+		           req->m_result.Length() ? req->m_result.Value() : "NULL" );
 	}
 	return res_str.Value();
 }

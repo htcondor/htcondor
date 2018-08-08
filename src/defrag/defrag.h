@@ -55,6 +55,7 @@ class Defrag: public Service {
 	int m_max_whole_machines;
 	std::string m_whole_machine_expr;
 	std::string m_defrag_requirements;
+	std::string m_draining_start_expr;
 	ClassAd m_rank_ad;
 	int m_draining_schedule;
 	std::string m_draining_schedule_str;

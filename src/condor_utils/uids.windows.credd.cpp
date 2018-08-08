@@ -49,7 +49,7 @@ bool get_password_from_credd (
 		credd_sock->decode();
 		pw[0] = '\0';
 		char *my_buffer = pw;
-		if ( credd_sock->code(my_buffer,cb) && pw[0] ) {
+		if ( credd_sock->get(my_buffer,cb) && pw[0] ) {
 			got_password = true;
 		} else {
 			dprintf(D_FULLDEBUG,

@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "user_job_policy.h"
-#include "classad_hashtable.h"
+#include "HashTable.h"
 #include "baseresource.h"
 
 class BaseResource;
@@ -81,7 +81,7 @@ class BaseJob : public Service
 	virtual void NotifyResourceUp();
 
 	static HashTable<PROC_ID, BaseJob *> JobsByProcId;
-	static HashTable<HashKey, BaseJob *> JobsByRemoteId;
+	static HashTable<std::string, BaseJob *> JobsByRemoteId;
 
 	ClassAd *jobAd;
 	PROC_ID procID;

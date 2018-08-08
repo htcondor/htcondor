@@ -42,42 +42,25 @@ if (WITH_GLOBUS)
 
 		condor_pre_external( GLOBUS globus-6.0-p1 "lib;include" "done")
 
-		# GNU libtool isn't included in Mac OS 10.8, but Globus
-		# needs libltdl. Build it and install it in the Globus
-		# install location. Then add it to the include and link paths.
-		# (For our 10.7 binaries to run on 10.6 or 10.8, we can't
-		#  use the OS's libltdl. So always build our own on Darwin.)
 		if ( DARWIN )
-			condor_pre_external( LIBTOOL libtool-2.4.2 "lib;include" "done")
-
-			ExternalProject_Add(libtool
-					#-- Download Step ----------
-					DOWNLOAD_DIR ${LIBTOOL_STAGE}/dl
-					URL ${EXTERNALS_SOURCE_URL}/libtool-2.4.2.tar.gz
-					#--Configure step ----------
-					CONFIGURE_COMMAND ./configure --prefix=${LIBTOOL_INSTALL_LOC}
-					#--Build Step ----------
-					BUILD_COMMAND make
-					BUILD_IN_SOURCE 1
-					#--install Step ----------
-					INSTALL_DIR ${LIBTOOL_INSTALL_LOC}
-					INSTALL_COMMAND make install &&
-						touch ${LIBTOOL_INSTALL_LOC}/done)
-
-			condor_post_external( libtool OFF OFF )
-			set( GLOBUS_DEPENDS ${LIBTOOL_REF} )
+			set( GLOBUS_PATCH patch -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/libressl.patch &&
+				patch -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/libtool.patch &&
+				patch -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/no-pkg-config.patch )
+			set( GLOBUS_FLAGS CFLAGS=-I${DARWIN_OPENSSL_INCLUDE} LDFLAGS=-L${DARWIN_OPENSSL_LIB_DIR} )
 		else()
-			set( GLOBUS_DEPENDS "" )
+			set( GLOBUS_PATCH "" )
+			set( GLOBUS_FLAGS "" )
 		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
 		ExternalProject_Add(globus
-							DEPENDS ${GLOBUS_DEPENDS}
 							#-- Download Step ----------
 							DOWNLOAD_DIR ${GLOBUS_STAGE}/dl
 							URL ${EXTERNALS_SOURCE_URL}/globus_toolkit-6.0.1506371041.tar.gz
+							#--Patch step ----------
+							PATCH_COMMAND ${GLOBUS_PATCH}
 							#--Configure step ----------
-							CONFIGURE_COMMAND ./configure --prefix=${GLOBUS_INSTALL_LOC}
+							CONFIGURE_COMMAND ./configure ${GLOBUS_FLAGS} --prefix=${GLOBUS_INSTALL_LOC}
 							#--Build Step ----------
 							BUILD_COMMAND make &&
 								ln -sfn . ${GLOBUS_INSTALL_LOC}/include/globus

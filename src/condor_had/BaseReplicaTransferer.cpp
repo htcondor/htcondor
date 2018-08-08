@@ -40,8 +40,7 @@ BaseReplicaTransferer::BaseReplicaTransferer(
    m_maxTransferLifetime( DEFAULT_MAX_TRANSFER_LIFETIME )
 {
 	// 'malloc'-allocated string
-	char* stateFilePathsAsString = 
-		const_cast<StringList&>(pStateFilePathsList).print_to_string();
+	char* stateFilePathsAsString = pStateFilePathsList.print_to_string();
 	// copying the string lists
 	if ( stateFilePathsAsString ) {
 		m_stateFilePathsList.initializeFromString( stateFilePathsAsString );
@@ -70,21 +69,19 @@ BaseReplicaTransferer::reinitialize( )
 
 void
 BaseReplicaTransferer::safeUnlinkStateAndVersionFiles(
-	const StringList& stateFilePathsList,
+	StringList& stateFilePathsList,
     const MyString&   versionFilePath,
     const MyString&   extension)
 {
 	FilesOperations::safeUnlinkFile( versionFilePath.Value( ),
                                      extension.Value( ) );
-	StringList& stateFilePathsListRef =
-		const_cast<StringList&>(stateFilePathsList);
-	stateFilePathsListRef.rewind();
+	stateFilePathsList.rewind();
 
 	char* stateFilePath = NULL;
 
-	while( ( stateFilePath = stateFilePathsListRef.next( ) ) ) {
+	while( ( stateFilePath = stateFilePathsList.next( ) ) ) {
 		FilesOperations::safeUnlinkFile( stateFilePath,
                                      	 extension.Value( ) );
 	}
-	stateFilePathsListRef.rewind();
+	stateFilePathsList.rewind();
 }

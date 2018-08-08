@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "condor_string.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_commands.h"
@@ -118,9 +118,6 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_startd_fqu = sock->getFullyQualifiedUser();
 	m_startd_ip_addr = sock->peer_ip_str();
 
-	std::string scheduler_addr_to_send = m_scheduler_addr;
-	ConvertDefaultIPToSocketIP(ATTR_SCHEDD_IP_ADDR,scheduler_addr_to_send,*sock);
-
 		// Insert an attribute in the request ad to inform the
 		// startd that this schedd is capable of understanding 
 		// the newer protocol where the claim response may send
@@ -137,7 +134,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
-	    !sock->put( scheduler_addr_to_send.c_str() ) ||
+	    !sock->put( m_scheduler_addr.c_str() ) ||
 	    !sock->put( m_alive_interval ) ||
 		!this->putExtraClaims(sock))
 	{
@@ -341,7 +338,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -463,7 +460,7 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	if( !tmp->code(reply) || !tmp->end_of_message()) {
 		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		delete tmp;
 		return CONDOR_ERROR;
@@ -942,7 +939,7 @@ DCStartd::vacateClaim( const char* name_vacate )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::vacateClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -957,7 +954,7 @@ DCStartd::vacateClaim( const char* name_vacate )
 		return false;
 	}
 
-	if( ! reli_sock.code((unsigned char *)const_cast<char*>(name_vacate)) ) {
+	if( ! reli_sock.put(name_vacate) ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "DCStartd::vacateClaim: Failed to send Name to the startd" );
 		return false;
@@ -998,7 +995,7 @@ DCStartd::_suspendClaim( )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::_suspendClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -1056,7 +1053,7 @@ DCStartd::_continueClaim( )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::_continueClaim: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -1107,7 +1104,7 @@ DCStartd::checkpointJob( const char* name_ckpt )
 	if( ! reli_sock.connect(_addr) ) {
 		std::string err = "DCStartd::checkpointJob: ";
 		err += "Failed to connect to startd (";
-		err += _addr;
+		err += _addr ? _addr : "NULL";
 		err += ')';
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
@@ -1123,7 +1120,7 @@ DCStartd::checkpointJob( const char* name_ckpt )
 	}
 
 		// Now, send the name
-	if( ! reli_sock.code((unsigned char *)const_cast<char*>(name_ckpt)) ) {
+	if( ! reli_sock.put(name_ckpt) ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "DCStartd::checkpointJob: Failed to send Name to the startd" );
 		return false;
@@ -1240,7 +1237,7 @@ bool DCClaimIdMsg::readMsg( DCMessenger *, Sock *sock )
 }
 
 bool
-DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,std::string &request_id)
+DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,char const *start_expr,std::string &request_id)
 {
 	std::string error_msg;
 	ClassAd request_ad;
@@ -1255,6 +1252,9 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 	request_ad.Assign(ATTR_RESUME_ON_COMPLETION,resume_on_completion);
 	if( check_expr ) {
 		request_ad.AssignExpr(ATTR_CHECK_EXPR,check_expr);
+	}
+	if( start_expr ) {
+		request_ad.AssignExpr(ATTR_START_EXPR,start_expr);
 	}
 
 	if( !putClassAd(sock, request_ad) || !sock->end_of_message() ) {

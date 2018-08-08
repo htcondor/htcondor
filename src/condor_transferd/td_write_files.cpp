@@ -97,7 +97,10 @@ TransferD::write_files_handler(int /* cmd */, Stream *sock)
 	rsock->decode();
 
 	// soak the request ad from the client about what it wants to transfer
-	getClassAd(rsock, reqad);
+	if (!getClassAd(rsock, reqad)) {
+		return CLOSE_STREAM;
+	}
+
 	rsock->end_of_message();
 
 	reqad.LookupString(ATTR_TREQ_CAPABILITY, capability);
@@ -194,7 +197,7 @@ TransferD::write_files_handler(int /* cmd */, Stream *sock)
 
 	// associate the tid with the request so I can deal with it propery in
 	// the reaper
-	m_client_to_transferd_threads.insert(tid, treq);
+	ASSERT( m_client_to_transferd_threads.insert(tid, treq) == 0 );
 
 	// The stream is inherited to the thread, who does the transfer and
 	// finishes the protocol, but in the parent, I'm closing it.

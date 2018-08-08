@@ -31,8 +31,6 @@
 	//changed isSeparator to allow constructor to redefine
 //#define isSeparator(x) (isspace(x) || x == ',' )
 
-char *strnewp( const char * );
-
 int
 StringList::isSeparator( char x )
 {
@@ -47,9 +45,9 @@ StringList::isSeparator( char x )
 StringList::StringList(const char *s, const char *delim ) 
 {
 	if ( delim ) {
-		m_delimiters = strnewp( delim );
+		m_delimiters = strdup( delim );
 	} else {
-		m_delimiters = strnewp( "" );
+		m_delimiters = strdup( "" );
 	}
 	if ( s ) {
 		initializeFromString(s);
@@ -59,7 +57,7 @@ StringList::StringList(const char *s, const char *delim )
 StringList::StringList(const char *s, char delim_char, bool keep_empty_fields )
 {
 	char delims[2] = { delim_char, 0 };
-	m_delimiters = strnewp( delims );
+	m_delimiters = strdup( delims );
 	if ( s ) {
 		if (keep_empty_fields) {
 			initializeFromString(s, delim_char);
@@ -77,7 +75,7 @@ StringList::StringList( const StringList &other )
 
 	const char *delim = other.getDelimiters();
 	if ( delim ) {
-		m_delimiters = strnewp( delim );
+		m_delimiters = strdup( delim );
 	}
 
 	// Walk through the other list, verify that everything is in my list
@@ -204,8 +202,7 @@ StringList::clearAll()
 StringList::~StringList ()
 {
 	clearAll();
-	if ( m_delimiters )
-		delete [] m_delimiters;
+	free(m_delimiters);
 }
 
 

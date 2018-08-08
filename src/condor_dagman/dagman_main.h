@@ -23,6 +23,8 @@
 #include "dag.h"
 #include "string_list.h"
 #include "dagman_classad.h"
+#include "dagman_stats.h"
+#include "utc_time.h"
 
 	// Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
@@ -36,7 +38,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 			bool removeCondorJobs = true );
 void main_shutdown_graceful( void );
 void main_shutdown_logerror( void );
-void print_status();
+void print_status( bool forceScheddUpdate = false );
 
 class Dagman {
   public:
@@ -60,6 +62,9 @@ class Dagman {
 		// for some errors/warnings.
 	void ResolveDefaultLog();
 
+		// Publish statistics to a log file.
+	void PublishStats();
+
     Dag * dag;
     int maxIdle;  // Maximum number of idle DAG nodes
     int maxJobs;  // Maximum number of Jobs to run at once
@@ -78,7 +83,12 @@ class Dagman {
     int max_submit_attempts;
 		// maximum number of jobs to submit in a single periodic timer
 		// interval
-    int max_submits_per_interval;
+	int max_submits_per_interval;
+		// In "aggressive submit" mode, DAGMan overrides the timer interval
+		// which DaemonCore fires every m_user_log_scan_interval seconds. 
+		// The submit cycle will continue submitting jobs until there are no 
+		// more ready jobs available, or until it exceeds max_submit_attempts.
+	bool aggressive_submit;
 
 		// How long dagman waits before checking the log files to see if
 		// some events happened. With very short running jobs in a linear
@@ -86,6 +96,11 @@ class Dagman {
 		// job finished so it can submit the next one. This allows us to
 		// configure that to be much faster with a minimum of 1 second.
 	int m_user_log_scan_interval;
+
+		// How long dagman waits before updating the schedd with its metrics
+		// and statistics. These are not essential updates, so typically we
+		// will want to keep them infrequent to reduce load on the schedd.
+	int schedd_update_interval;
 
 		// "Primary" DAG file -- if we have multiple DAG files this is
 		// the first one.  The lock file name, rescue DAG name, etc., 
@@ -230,6 +245,9 @@ class Dagman {
 		// True iff we should remove node jobs ourself when we are
 		// condor_rm'ed.
 	bool _removeNodeJobs;
+
+		// Dagman statistics
+	DagmanStats _dagmanStats;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

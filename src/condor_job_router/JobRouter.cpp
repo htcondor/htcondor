@@ -62,11 +62,12 @@ const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
 JobRouter::JobRouter(bool as_tool)
-	: m_jobs(5000,hashFuncStdString,rejectDuplicateKeys)
+	: m_jobs(hashFunction)
 	, m_schedd2_name(NULL)
 	, m_schedd2_pool(NULL)
 	, m_schedd1_name(NULL)
 	, m_schedd1_pool(NULL)
+	, m_round_robin_selection(true)
 	, m_operate_as_tool(as_tool)
 {
 	m_scheduler = NULL;
@@ -128,11 +129,9 @@ JobRouter::~JobRouter() {
 #endif
 	if ( ! m_operate_as_tool) { InvalidatePublicAd(); }
 
-	m_scheduler->stop();
 	delete m_scheduler;
 	m_scheduler = NULL;
 	if( m_scheduler2 ) {
-		m_scheduler2->stop();
 		delete m_scheduler2;
 		m_scheduler2 = NULL;
 	}
@@ -205,8 +204,10 @@ JobRouter::config() {
 	}
 
 	m_scheduler->config();
+	m_scheduler->stop();
 	if( m_scheduler2 ) {
 		m_scheduler2->config();
+		m_scheduler2->stop();
 	}
 
 #if HAVE_JOB_HOOKS
@@ -242,7 +243,7 @@ JobRouter::config() {
 	}
 
 
-	RoutingTable *new_routes = new RoutingTable(200,hashFuncStdString,rejectDuplicateKeys);
+	RoutingTable *new_routes = new RoutingTable(hashFunction);
 
 	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
 
@@ -383,13 +384,18 @@ JobRouter::config() {
 		ParseRoutingEntries( routing_str, PARAM_JOB_ROUTER_ENTRIES, router_defaults_ad, allow_empty_requirements, new_routes );
 	}
 
-	if(!m_enable_job_routing) return;
+	if(!m_enable_job_routing) {
+		delete new_routes;
+		return;
+	}
 
 	SetRoutingTable(new_routes);
 
 		// Whether to release the source job if the routed job
 		// goes on hold
 	m_release_on_hold = param_boolean("JOB_ROUTER_RELEASE_ON_HOLD", true);
+
+	m_round_robin_selection = param_boolean("JOB_ROUTER_ROUND_ROBIN_SELECTION", false);
 
 		// default is no maximum (-1)
 	m_max_jobs = param_integer("JOB_ROUTER_MAX_JOBS",-1);
@@ -918,7 +924,7 @@ JobRouter::DeallocateRoutingTable(RoutingTable *routes) {
 
 RoutingTable *
 JobRouter::AllocateRoutingTable() {
-	return new RoutingTable(200,hashFuncStdString,rejectDuplicateKeys);
+	return new RoutingTable(hashFunction);
 }
 
 void
@@ -998,6 +1004,12 @@ void
 JobRouter::Poll() {
 	dprintf(D_FULLDEBUG,"JobRouter: polling state of (%d) managed jobs.\n",NumManagedJobs());
 
+	// Update our mirror(s) of the job queue(s).
+	m_scheduler->poll();
+	if ( m_scheduler2 ) {
+		m_scheduler2->poll();
+	}
+
 	m_poll_count++;
 	if((m_poll_count % 5) == 1) {
 		//Every now and then (especially when we start up), make sure
@@ -1043,7 +1055,7 @@ CombineParentAndChildClassAd(classad::ClassAd *dest,classad::ClassAd *ad,classad
 		dprintf(D_FULLDEBUG,"failed to copy %s value\n",itr->first.c_str());
 			return false;
 		}
-		if(!dest->Insert(itr->first,tree, false)) {
+		if(!dest->Insert(itr->first,tree)) {
 		dprintf(D_FULLDEBUG,"failed to insert %s\n",itr->first.c_str());	
 		return false;
 		}
@@ -1238,7 +1250,7 @@ JobRouter::GetCandidateJobs() {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	JobRoute *route;
 
-	HashTable<std::string,std::string> constraint_list(200,hashFuncStdString,rejectDuplicateKeys);
+	HashTable<std::string,std::string> constraint_list(hashFunction);
 	std::string umbrella_constraint;
 
 	std::string dbuf("JobRouter: Checking for candidate jobs. routing table is:\n"
@@ -1456,6 +1468,10 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 		mad.RemoveLeftAd();
 		mad.RemoveRightAd();
 #endif
+
+		if (!m_round_robin_selection && !matches.empty()) {
+			break;
+		}
 	}
 
 	if(!matches.size()) return NULL;
@@ -1930,9 +1946,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	classad::ClassAd *ad = ad_collection2->GetClassAd(job->dest_key);
 
-	// If ad is not found, this could be because Quill hasn't seen
-	// it yet, in which case this is not a problem.  The following
-	// attempts to ensure this by seeing if enough time has passed
+	// If ad is not found, check if enough time has passed
 	// since we submitted the job.
 
 	if(!ad) {
@@ -2919,7 +2933,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		else {
 			expr = expr->Copy();
 		}
-		if(!src_ad->Insert(new_attr,expr,false)) {
+		if(!src_ad->Insert(new_attr,expr)) {
 			return false;
 		}
 	}
@@ -2941,7 +2955,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree, false)) {
+		if(!src_ad->Insert(attr,tree)) {
 			return false;
 		}
 	}
@@ -2954,7 +2968,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree, false)) {
+		if(!src_ad->Insert(attr,tree)) {
 			return false;
 		}
 		classad::Value val;

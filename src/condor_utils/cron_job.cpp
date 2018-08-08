@@ -21,7 +21,6 @@
 #include <limits.h>
 #include <string.h>
 #include "condor_debug.h"
-#include "condor_string.h"
 #include "condor_daemon_core.h"
 #include "condor_cron_job_mgr.h"
 #include "condor_cron_job_params.h"
@@ -405,6 +404,7 @@ CronJob::Reaper( int exitPid, int exitStatus )
 	case CRON_TERM_SENT:
 	case CRON_KILL_SENT:
 		m_in_shutdown = false;
+		// Fall through...	
 		//@fallthrough@
 	default:
 		SetState( CRON_IDLE );			// Note that it's dead

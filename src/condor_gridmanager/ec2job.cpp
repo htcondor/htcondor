@@ -21,11 +21,8 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "basename.h"
-#include "nullfile.h"
-#include "filename_tools.h"
 #include "condor_holdcodes.h"
 
 #ifdef WIN32
@@ -162,6 +159,8 @@ int EC2Job::maxRetryTimes = 3;
 MSC_DISABLE_WARNING(6262) // function uses more than 16k of stack
 EC2Job::EC2Job( ClassAd *classad ) :
 	BaseJob( classad ),
+	holdReasonCode( 0 ),
+	holdReasonSubCode( 0 ),
 	m_was_job_completion( false ),
 	m_retry_times( 0 ),
 	probeNow( false ),
@@ -169,8 +168,6 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	purgedTwice( false ),
 	updatedOnce( false )
 {
-	int holdReasonCode = 0;
-	int holdReasonSubCode = 0;
 	string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
@@ -191,6 +188,10 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	m_should_gen_key_pair = false;
 	m_keypair_created = false;
 	std::string gahpName;
+
+	m_failure_injection = 0;
+	m_parameters_and_values = 0;
+	m_group_ids = 0;
 
 	// check the public_key_file
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
@@ -471,10 +472,10 @@ EC2Job::~EC2Job()
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 		if( ! m_spot_request_id.empty() ) {
-			myResource->spotJobsByRequestID.remove( HashKey( m_spot_request_id.c_str() ) );
+			myResource->spotJobsByRequestID.remove( m_spot_request_id );
 		}
 		if( ! m_remoteJobId.empty() ) {
-			myResource->jobsByInstanceID.remove( HashKey( m_remoteJobId.c_str() ) );
+			myResource->jobsByInstanceID.remove( m_remoteJobId );
 		}
 	}
 
@@ -834,7 +835,7 @@ void EC2Job::doEvaluateState()
 					}
 
 					// construct input parameters for ec2_vm_start()
-					std::string instance_id = "";
+					std::vector< std::string > instance_ids;
 
 					// For a given EC2 Job, in its life cycle, the attributes will not change
 
@@ -859,10 +860,11 @@ void EC2Job::doEvaluateState()
 											 m_block_device_mapping,
 											 m_iam_profile_arn,
 											 m_iam_profile_name,
+											 1,
 											 *m_group_names,
 											 *m_group_ids,
 											 *m_parameters_and_values,
-											 instance_id,
+											 instance_ids,
 											 gahp_error_code);
 
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -885,6 +887,8 @@ void EC2Job::doEvaluateState()
 					}
 
 					if ( rc == 0 ) {
+						ASSERT( instance_ids.size() == 1 );
+						std::string instance_id = instance_ids[0];
 						ASSERT( instance_id != "" );
 						SetInstanceId( instance_id.c_str() );
 						WriteGridSubmitEventToUserLog(jobAd);
@@ -2046,7 +2050,7 @@ void EC2Job::EC2SetRemoteJobId( const char *client_token, const char *instance_i
 		formatstr( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
 		if ( instance_id && instance_id[0] ) {
 			// We need this to do bulk status queries.
-			myResource->jobsByInstanceID.insert( HashKey( instance_id ), this );
+			myResource->jobsByInstanceID.insert( instance_id, this );
 			formatstr_cat( full_job_id, " %s", instance_id );
 		}
 	}
@@ -2238,6 +2242,7 @@ void EC2Job::associate_n_attach()
 		case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
 			if ((condorState == REMOVED) || (condorState == HELD))
 				gmState = GM_DELETE;
+			// Fall through...
 			//@fallthrough@
 		default:
 			if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
@@ -2270,6 +2275,7 @@ void EC2Job::associate_n_attach()
 			case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
 				if ( (condorState == REMOVED) || (condorState == HELD) )
 					gmState = GM_DELETE;
+				// Fall through...
 				//@fallthrough@
 			default:
 				if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
@@ -2316,6 +2322,7 @@ void EC2Job::associate_n_attach()
 				case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
 					if ( (condorState == REMOVED) || (condorState == HELD) )
 						gmState = GM_DELETE;
+					// Fall through...
 					//@fallthrough@
 				default:
 					if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
@@ -2428,13 +2435,13 @@ void EC2Job::SetRequestID( const char * requestID ) {
 			// If the job is forgetting about its request ID, make sure that
 			// the resource does, as well; otherwise, we can have one job
 			// updated by both the dedicated and spot batch status processes.
-			myResource->spotJobsByRequestID.remove( HashKey( m_spot_request_id.c_str() ) );
+			myResource->spotJobsByRequestID.remove( m_spot_request_id );
 		}
 		jobAd->AssignExpr( ATTR_EC2_SPOT_REQUEST_ID, "Undefined" );
 		m_spot_request_id = std::string();
 	} else {
 		jobAd->Assign( ATTR_EC2_SPOT_REQUEST_ID, requestID );
-		myResource->spotJobsByRequestID.insert( HashKey( requestID ), this );
+		myResource->spotJobsByRequestID.insert( requestID, this );
 		m_spot_request_id = requestID;
 	}
 }

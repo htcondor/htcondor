@@ -11,7 +11,8 @@ class DockerAPI {
 		static const int docker_hung = -9; // this error code is returned when we timed out a command to docker.
 
 		/**
-		 * Runs command in the Docker identified by imageID.  The container
+		 * Create a new container, identified by imageID but don't
+		 * start it.  The container
 		 * will be named name.  The command will run in the given
 		 * environment with the given arguments.  If directory is non-empty,
 		 * it will be mapped into the container and the command run there
@@ -34,7 +35,7 @@ class DockerAPI {
 		 * @param error			On success, unchanged.  Otherwise, [TODO].
 		 * @return 				0 on success, negative otherwise.
 		 */
-		static int run(			ClassAd &machineAd,
+		static int createContainer(	ClassAd &machineAd,
 						ClassAd &jobAd,
 						const std::string & name,
 						const std::string & imageID,
@@ -47,6 +48,18 @@ class DockerAPI {
 						int * childFDs,
 						CondorError & error );
 
+		static int startContainer(const std::string &name,
+						int &pid,
+						int *childFDs,
+						CondorError &error);
+
+		static int execInContainer( const std::string &containerName,
+					    const std::string &command,
+					    const ArgList &arguments,
+					    const Env &environment,
+					    int *childFDs,
+					    int reaperid,
+					    int &pid);
 		/**
 		 * Releases the disk space (but not the image) associated with
 		 * the given container.

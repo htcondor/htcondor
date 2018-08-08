@@ -54,9 +54,10 @@ class token_cache {
 	private:
 
 		/* Data Members */
-		int current_age;
 		TokenHashTable *TokenTable;
-		
+		int current_age;
+		int dummy;
+
 		/* helper functions */
 		int getNextAge() { return current_age++; }
 		void removeOldestToken();

@@ -36,10 +36,6 @@
 #define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
 #endif
 
-#define LOG_HASH_SIZE 37 // prime
-
-#define LOG_INFO_HASH_SIZE 37 // prime
-
 #define DEBUG_LOG_FILES 0 //TEMP
 #if DEBUG_LOG_FILES
 #  define D_LOG_FILES D_ALWAYS
@@ -52,8 +48,8 @@ using namespace std;
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	allLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
-	activeLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys)
+	allLogFiles(hashFunction),
+	activeLogFiles(hashFunction)
 {
 }
 
@@ -377,7 +373,14 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 	MyString strToReturn;
 	strToReturn.reserve_at_least(iLength);
 
-	fseek(pFile, 0, SEEK_SET);
+	if (fseek(pFile, 0, SEEK_SET) < 0) {
+		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
+				"fseek(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				errno, strerror(errno) );
+		fclose(pFile);
+		return "";
+	}
+
 	char *psBuf = new char[iLength+1];
 		/*  We now clear the buffer to ensure there will be a NULL at the
 			end of our buffer after the fread().  Why no just do
@@ -490,20 +493,21 @@ MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-MultiLogFiles::getParamFromSubmitLine(MyString &submitLine,
+MultiLogFiles::getParamFromSubmitLine(MyString &submitLineIn,
 		const char *paramName)
 {
 	MyString	paramValue("");
 
 	const char *DELIM = "=";
 
-	submitLine.Tokenize();
-	const char *	rawToken = submitLine.GetNextToken(DELIM, true);
+	MyStringTokener submittok;
+	submittok.Tokenize(submitLineIn.Value());
+	const char *	rawToken = submittok.GetNextToken(DELIM, true);
 	if ( rawToken ) {
 		MyString	token(rawToken);
 		token.trim();
 		if ( !strcasecmp(token.Value(), paramName) ) {
-			rawToken = submitLine.GetNextToken(DELIM, true);
+			rawToken = submittok.GetNextToken(DELIM, true);
 			if ( rawToken ) {
 				paramValue = rawToken;
 				paramValue.trim();
@@ -536,7 +540,7 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 		while ( logicalLine[logicalLine.Length()-1] == continuation ) {
 
 				// Remove the continuation character.
-			logicalLine.setChar(logicalLine.Length()-1, '\0');
+			logicalLine.truncate(logicalLine.Length()-1);
 
 				// Append the next physical line.
 			physicalLine = listIn.next();
@@ -559,16 +563,16 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned int
+size_t
 ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 {
-	int		result = (key._cluster * 29) ^ (key._proc * 7) ^ key._subproc;
+	long result = (key._cluster * 29) ^ (key._proc * 7) ^ key._subproc;
 
 		// Make sure we produce a non-negative result (modulus on negative
 		// value may produce a negative result (implementation-dependent).
 	if ( result < 0 ) result = -result;
 
-	return (unsigned int)result;
+	return (size_t)result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -103,6 +103,7 @@ CondorQuery::
 CondorQuery (AdTypes qType)
 {
 	genericQueryType = NULL;
+	resultLimit = 0;
 	queryType = qType;
 	switch (qType)
 	{
@@ -125,15 +126,6 @@ CondorQuery (AdTypes qType)
 		query.setFloatKwList (const_cast<char **>(StartdFloatKeywords));
 		command = QUERY_STARTD_PVT_ADS;
 		break;
-
-#ifdef HAVE_EXT_POSTGRESQL
-	  case QUILL_AD:
-		query.setNumStringCats (0);
-		query.setNumIntegerCats(0);
-		query.setNumFloatCats  (0);
-		command = QUERY_QUILL_ADS;
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case SCHEDD_AD:
 		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
@@ -221,20 +213,6 @@ CondorQuery (AdTypes qType)
 		command = QUERY_STORAGE_ADS;
 		break;
 
-	  case XFER_SERVICE_AD:
-		query.setNumStringCats (0);
-		query.setNumIntegerCats(0);
-		query.setNumFloatCats  (0);
-		command = QUERY_XFER_SERVICE_ADS;
-		break;
-
-	  case LEASE_MANAGER_AD:
-		query.setNumStringCats (0);
-		query.setNumIntegerCats(0);
-		query.setNumFloatCats  (0);
-		command = QUERY_LEASE_MANAGER_ADS;
-		break;
-
 	  case CREDD_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -257,13 +235,6 @@ CondorQuery (AdTypes qType)
 		break;
 
 	  case DATABASE_AD:
-		query.setNumStringCats (0);
-		query.setNumIntegerCats(0);
-		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
-		break;
-
-	  case DBMSD_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
@@ -402,7 +373,7 @@ addORConstraint (const char *value)
 // for daemons like the schedd that may have thousands of
 // superflous statistics in the ad.
 bool
-CondorQuery::setLocationLookup(const std::string &location)
+CondorQuery::setLocationLookup(const std::string &location, bool want_one_result /*=true*/)
 {
 	extraAttrs.InsertAttr(ATTR_LOCATION_QUERY, location);
 
@@ -419,6 +390,7 @@ CondorQuery::setLocationLookup(const std::string &location)
 	}
 
 	setDesiredAttrs(attrs);
+	if (want_one_result) { setResultLimit(1); }
 	return true;
 }
 
@@ -522,6 +494,7 @@ getQueryAd (ClassAd &queryAd)
 	ExprTree *tree;
 
 	queryAd = extraAttrs;
+	if (resultLimit > 0) { queryAd.Assign(ATTR_LIMIT_RESULTS, resultLimit); }
 
 	result = (QueryResult) query.makeQuery (tree);
 	if (result != Q_OK) return result;
@@ -530,11 +503,6 @@ getQueryAd (ClassAd &queryAd)
 	// fix types
 	SetMyTypeName (queryAd, QUERY_ADTYPE);
 	switch (queryType) {
-#ifdef HAVE_EXT_POSTGRESQL
-	  case QUILL_AD:
-		SetTargetTypeName (queryAd, QUILL_ADTYPE);
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
 
 	  case DEFRAG_AD:
 		SetTargetTypeName(queryAd, DEFRAG_ADTYPE);
@@ -588,24 +556,12 @@ getQueryAd (ClassAd &queryAd)
 		}
 		break;
 
-      case XFER_SERVICE_AD:
-        SetTargetTypeName (queryAd, XFER_SERVICE_ADTYPE);
-        break;
-
-      case LEASE_MANAGER_AD:
-        SetTargetTypeName (queryAd, LEASE_MANAGER_ADTYPE);
-        break;
-
 	  case ANY_AD:
 		SetTargetTypeName (queryAd, ANY_ADTYPE);
 		break;
 
 	  case DATABASE_AD:
 		SetTargetTypeName (queryAd, DATABASE_ADTYPE);
-		break;
-
-	  case DBMSD_AD:
-		SetTargetTypeName (queryAd, DBMSD_ADTYPE);
 		break;
 
 	  case TT_AD:

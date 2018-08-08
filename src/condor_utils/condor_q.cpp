@@ -27,17 +27,8 @@
 #include "condor_config.h"
 #include "CondorError.h"
 #include "condor_classad.h"
-#include "quill_enums.h"
 #include "dc_schedd.h"
 #include "my_username.h"
-
-#ifdef HAVE_EXT_POSTGRESQL
-#include "pgsqldatabase.h"
-#include "jobqueuesnapshot.h"
-
-static ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot  *jqSnapshot);
-
-#endif /* HAVE_EXT_POSTGRESQL */
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
@@ -303,56 +294,9 @@ CondorQ::fetchQueueFromDB (ClassAdList &list,
 						   const char *dbconn,
 						   CondorError*  /*errstack*/)
 {
-#ifndef HAVE_EXT_POSTGRESQL
 	(void) list;
 	(void) lastUpdate;
 	(void) dbconn;
-#else
-	int     		result;
-	JobQueueSnapshot	*jqSnapshot;
-	const char 		*constraint;
-	ClassAd        *ad;
-	QuillErrCode   rv;
-	ExprTree *tree;
-
-	jqSnapshot = new JobQueueSnapshot(dbconn);
-
-	rv = jqSnapshot->startIterateAllClassAds(clusterarray,
-						 numclusters,
-						 procarray,
-						 numprocs,
-						 schedd,
-						 FALSE,
-						 scheddBirthdate,
-						 lastUpdate);
-
-	if (rv == QUILL_FAILURE) {
-		delete jqSnapshot;
-		return Q_COMMUNICATION_ERROR;
-	} else if (rv == JOB_QUEUE_EMPTY) {
-		delete jqSnapshot;
-		return Q_OK;
-	}
-
-	// make the query ad
-	if ((result = query.makeQuery (tree)) != Q_OK) {
-		delete jqSnapshot;
-		return result;
-	}
-
-	constraint = ExprTreeToString(tree);
-	delete tree;
-
-	ad = getDBNextJobByConstraint(constraint, jqSnapshot);
-
-	while (ad != (ClassAd *) 0) {
-		ad->ChainCollapse();
-		list.Insert(ad);
-		ad = getDBNextJobByConstraint(constraint, jqSnapshot);
-	}	
-
-	delete jqSnapshot;
-#endif /* HAVE_EXT_POSTGRESQL */
 
 	return Q_OK;
 }
@@ -365,7 +309,8 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 										condor_q_process_func process_func,
 										void * process_func_data,
 										int useFastPath,
-										CondorError* errstack)
+										CondorError* errstack,
+										ClassAd ** psummary_ad)
 {
 	Qmgr_connection *qmgr;
 	ExprTree		*tree;
@@ -379,12 +324,12 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	delete tree;
 
 	if (useFastPath > 1) {
-		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, useFastPath, errstack);
+		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, useFastPath, errstack, psummary_ad);
 		free( constraint);
 		return result;
 	}
 
-	if (fetch_opts != fetch_Default) {
+	if (fetch_opts != fetch_Jobs) {
 		free( constraint );
 		return Q_UNSUPPORTED_OPTION_ERROR;
 	}
@@ -420,7 +365,8 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 					void * process_func_data,
 					int connect_timeout,
 					int useFastPath,
-					CondorError *errstack)
+					CondorError *errstack,
+					ClassAd ** psummary_ad)
 {
 	classad::ClassAdParser parser;
 	classad::ExprTree *expr = NULL;
@@ -445,11 +391,19 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	} else if (fetch_opts == fetch_GroupBy) {
 		request_ad.InsertAttr("ProjectionIsGroupBy", true);
 		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
-	} else if (fetch_opts == fetch_MyJobs) {
-		const char * owner = my_username();
-		if (owner) { request_ad.InsertAttr("Me", owner); }
-		request_ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
-		want_authentication = true;
+	} else {
+		if (fetch_opts & fetch_MyJobs) {
+			const char * owner = my_username();
+			if (owner) { request_ad.InsertAttr("Me", owner); }
+			request_ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
+			want_authentication = true;
+		}
+		if (fetch_opts & fetch_SummaryOnly) {
+			request_ad.InsertAttr("SummaryOnly", true);
+		}
+		if (fetch_opts & fetch_IncludeClusterAd) {
+			request_ad.InsertAttr("IncludeClusterAd", true);
+		}
 	}
 
 	if (match_limit >= 0) {
@@ -525,37 +479,6 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
 	dprintf(D_FULLDEBUG, "Sent classad to schedd\n");
 
-#if 0
-	// if doing MyJobs queryies, we can expect to get a late authentication request
-	// unless we have already authenticated, or the schedd is older and doesn't know to try.
-	if (expect_late_authentication) {
-		ReliSock* rsock = (ReliSock*)sock;
-		if (rsock->triedAuthentication()) {
-			expect_late_authentication = false;
-			dprintf(D_FULLDEBUG, "MyJobs option requires authentication, and it already happened.\n");
-		} else {
-			CondorVersionInfo const *peer_ver = rsock->get_peer_version();
-			auto_free_ptr verstr(peer_ver ? peer_ver->get_version_string() : NULL);
-			dprintf(D_FULLDEBUG, "Schedd version is %s\n", verstr ? verstr.ptr() : "NULL");
-			expect_late_authentication = peer_ver && peer_ver->built_since_version(8,5,5);
-			dprintf(D_FULLDEBUG, "MyJobs option requires authentication, and schedd %s late authentication\n", 
-				expect_late_authentication ? "supports" : "does not support");
-		}
-	}
-
-	// we interrupt this condor_q query to do authentication now.
-	if (expect_late_authentication) {
-		ReliSock* rsock = (ReliSock*)sock;
-		dprintf(D_FULLDEBUG, "Attempting late authentication\n");
-		CondorError errstack;
-		bool authenticated = SecMan::authenticate_sock(rsock, CLIENT_PERM, &errstack);
-		if ( ! authenticated && IsDebugCatAndVerbosity(D_FULLDEBUG)) {
-			dprintf(D_FULLDEBUG, "Authentication failed: %s\n", errstack.message());
-		}
-		dprintf(D_FULLDEBUG, "Continuing command %s Authentication\n", authenticated ? "with" : "without");
-	}
-#endif
-
 	int rval = 0;
 	do {
 		ad = new ClassAd();
@@ -574,6 +497,14 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 			{
 				if (errstack) errstack->push("TOOL", intVal, errorMsg.c_str());
 				rval = Q_REMOTE_ERROR;
+			}
+			if (psummary_ad && rval == 0) {
+				std::string val;
+				if (ad->LookupString(ATTR_MY_TYPE, val) && val == "Summary") {
+					ad->Delete(ATTR_OWNER); // remove the bogus owner attribute
+					*psummary_ad = ad; // return the final ad, because it has summary information
+					ad = NULL; // so we don't delete it below.
+				}
 			}
 			break;
 		}
@@ -600,64 +531,10 @@ CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
 									  void * process_func_data,
 									  CondorError*  /*errstack*/ )
 {
-#ifndef HAVE_EXT_POSTGRESQL
 	(void) dbconn;
 	(void) lastUpdate;
 	(void) process_func;
 	(void) process_func_data;
-#else
-	int     		result;
-	JobQueueSnapshot	*jqSnapshot;
-	const char           *constraint;
-	ClassAd        *ad;
-	QuillErrCode             rv;
-	ExprTree *tree;
-
-	ASSERT(process_func);
-
-	jqSnapshot = new JobQueueSnapshot(dbconn);
-
-	rv = jqSnapshot->startIterateAllClassAds(clusterarray,
-						 numclusters,
-						 procarray,
-						 numprocs,
-						schedd,
-						 FALSE,
-						scheddBirthdate,
-						lastUpdate);
-
-	if (rv == QUILL_FAILURE) {
-		delete jqSnapshot;
-		return Q_COMMUNICATION_ERROR;
-	}
-	else if (rv == JOB_QUEUE_EMPTY) {
-		delete jqSnapshot;
-		return Q_OK;
-	}	
-
-	// make the query ad
-	if ((result = query.makeQuery (tree)) != Q_OK) {
-		delete jqSnapshot;
-		return result;
-	}
-
-	constraint = ExprTreeToString(tree);
-	delete tree;
-
-	ad = getDBNextJobByConstraint(constraint, jqSnapshot);
-	
-	while (ad != (ClassAd *) 0) {
-			// Process the data and insert it into the list
-		if ((*process_func) (process_func_data, ad) ) {
-			ad->Clear();
-			delete ad;
-		}
-		
-		ad = getDBNextJobByConstraint(constraint, jqSnapshot);
-	}	
-
-	delete jqSnapshot;
-#endif /* HAVE_EXT_POSTGRESQL */
 
 	return Q_OK;
 }
@@ -665,79 +542,8 @@ CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
 void
 CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType)
 {
-#ifndef HAVE_EXT_POSTGRESQL
 	(void) dbconn;
 	(void) qType;
-#else
-
-	JobQueueDatabase *DBObj = NULL;
-	const char    *rowvalue;
-	int           ntuples;
-	SQLQuery      sqlquery;
-	char *tmp;
-	dbtype dt;
-
-	tmp = param("QUILL_DB_TYPE");
-	if (tmp) {
-		if (strcasecmp(tmp, "PGSQL") == 0) {
-			dt = T_PGSQL;
-		}
-	} else {
-		dt = T_PGSQL; // assume PGSQL by default
-	}
-
-	free(tmp);
-
-	switch (dt) {				
-	case T_PGSQL:
-		DBObj = new PGSQLDatabase(dbconn);
-		break;
-	default:
-		break;;
-	}
-
-	if (!DBObj || (DBObj->connectDB() == QUILL_FAILURE))
-	{
-		fprintf(stderr, "\n-- Failed to connect to the database\n");
-		return;
-	}
-
-	switch (qType) {
-	case AVG_TIME_IN_QUEUE:
-
-		sqlquery.setQuery(QUEUE_AVG_TIME, NULL);		
-		sqlquery.prepareQuery();
-
-		DBObj->execQuery(sqlquery.getQuery(), ntuples);
-
-			/* we expect exact one row out of the query */
-		if (ntuples != 1) {
-			fprintf(stderr, "\n-- Failed to execute the query\n");
-			return;
-		}
-		
-		rowvalue = DBObj -> getValue(0, 0);
-
-		if(strcmp(rowvalue,"") == 0) // result from empty job queue in pgsql
-			{ 
-			printf("\nJob queue is curently empty\n");
-		} else {
-			printf("\nAverage time in queue for uncompleted jobs (in days hh:mm:ss)\n");
-			printf("%s\n", rowvalue);		 
-		}
-		
-		DBObj -> releaseQueryResult();
-		break;
-	default:
-		fprintf(stderr, "Error: type of query not supported\n");
-		return;
-		break;
-	}
-
-	if(DBObj) {
-		delete DBObj;
-	}	
-#endif /* HAVE_EXT_POSTGRESQL */
 }
 
 int
@@ -928,26 +734,3 @@ short_print(
 		cmd
 	);
 }
-
-#ifdef HAVE_EXT_POSTGRESQL
-
-ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot	*jqSnapshot)
-{
-	ClassAd *ad;
-	
-	while(jqSnapshot->iterateAllClassAds(ad) != DONE_JOBS_CURSOR) {
-		if ((!constraint || !constraint[0] || EvalBool(ad, constraint))) {
-			return ad;		      
-		}
-		
-		if (ad != (ClassAd *) 0) {
-			ad->Clear();
-			delete ad;
-			ad = (ClassAd *) 0;
-		}
-	}
-
-	return (ClassAd *) 0;
-}
-
-#endif /* HAVE_EXT_POSTGRESQL */

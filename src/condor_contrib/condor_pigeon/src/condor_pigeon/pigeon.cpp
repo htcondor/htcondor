@@ -247,8 +247,8 @@ void Pigeon::stdoutHandler(int /*pipe*/) {
     int pos = m_line_stdout.FindChar('\n', 0);
     while (pos > 0) {                
       //Here we get a newline terminated string to process.
-      MyString line = m_line_stdout.Substr(0, pos-1);
-      m_line_stdout = m_line_stdout.Substr(pos+1, m_line_stdout.Length());
+      MyString line = m_line_stdout.substr(0, pos);
+      m_line_stdout = m_line_stdout.substr(pos+1, m_line_stdout.Length());
 
       if (line.find("START_AD") >= 0) {
         MyString adKey, adValue;
@@ -288,8 +288,8 @@ void Pigeon::stderrHandler(int /*pipe*/) {
     int pos = m_line_stderr.FindChar('\n', 0);
     while (pos > 0) {                
       //Here we get a newline terminated string to process.
-      MyString line = m_line_stderr.Substr(0, pos-1);
-      m_line_stderr = m_line_stderr.Substr(pos+1, m_line_stderr.Length());
+      MyString line = m_line_stderr.ubstr(0, pos);
+      m_line_stderr = m_line_stderr.substr(pos+1, m_line_stderr.Length());
       dprintf(D_ALWAYS, "STDERR: %s\n", line.Value());
       pos = m_line_stderr.FindChar('\n', 0);
     }

@@ -27,6 +27,20 @@
 class StartdCronJobParams : public ClassAdCronJobParams
 {
   public:
+	class Metric {
+		public:
+			typedef double (*Operator)(double a, double b);
+
+			Metric() : _o(NULL), _t(NULL) { }
+			Metric( Operator o, const char * t ) : _o(o), _t(t) { }
+			double operator()( double a, double b ) { return (*_o)(a, b); }
+			const char * c_str() { return _t; }
+		private:
+			Operator _o;
+			const char * _t;
+	};
+  	typedef std::map< std::string, Metric > Metrics;
+
 	StartdCronJobParams( const char			*job_name,
 						 const CronJobMgr	&mgr );
 	~StartdCronJobParams( void ) { };
@@ -35,7 +49,18 @@ class StartdCronJobParams : public ClassAdCronJobParams
 	bool Initialize( void );
 	bool InSlotList( unsigned slot ) const;
 
+	bool isMetric( const std::string & attributeName ) const;
+	bool addMetric( const char * metricType, const char * resourceName );
+	bool getMetric( const std::string & attributeName, Metric & m ) const;
+	bool isResourceMonitor( void ) const { return metrics.size() > 0; }
+
+	static bool getResourceNameFromAttributeName( const std::string & attributeName, std::string & resourceName );
+	static bool attributeIsSumMetric( const std::string & attributeName );
+	static bool attributeIsPeakMetric( const std::string & attributeName );
+
   private:
+  	Metrics metrics;
+
 	std::list<unsigned>	m_slots;
 };
 

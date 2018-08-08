@@ -23,13 +23,11 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "classad_hashtable.h"
 
 #include "basejob.h"
 #include "ec2resource.h"
 #include "proxymanager.h"
 #include "gahp-client.h"
-#include "vm_univ_utils.h"
 
 void EC2JobInit();
 void EC2JobReconfig();

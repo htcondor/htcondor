@@ -52,7 +52,7 @@ void Condor_Crypt_Blowfish:: resetState()
      num_=0;
 }
 
-bool Condor_Crypt_Blowfish :: encrypt(unsigned char *  input, 
+bool Condor_Crypt_Blowfish :: encrypt(const unsigned char *  input,
                                       int              input_len, 
                                       unsigned char *& output, 
                                       int&             output_len)
@@ -75,7 +75,7 @@ bool Condor_Crypt_Blowfish :: encrypt(unsigned char *  input,
 #endif
 }
 
-bool Condor_Crypt_Blowfish :: decrypt(unsigned char *  input, 
+bool Condor_Crypt_Blowfish :: decrypt(const unsigned char *  input,
                                       int              input_len, 
                                       unsigned char *& output, 
                                       int&             output_len)

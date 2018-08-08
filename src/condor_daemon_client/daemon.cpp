@@ -25,7 +25,6 @@
 #include "condor_open.h"
 
 #include "daemon.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "condor_query.h"
@@ -72,6 +71,11 @@ Daemon::common_init() {
 	m_has_udp_command_port = true;
 }
 
+DaemonAllowLocateFull::DaemonAllowLocateFull( daemon_t tType, const char* tName, const char* tPool ) 
+	: Daemon(  tType, tName,  tPool ) 
+{
+
+}
 
 Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool ) 
 {
@@ -104,6 +108,11 @@ Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool )
 			 _addr ? _addr : "NULL" );
 }
 
+DaemonAllowLocateFull::DaemonAllowLocateFull( const ClassAd* tAd, daemon_t tType, const char* tPool ) 
+	: Daemon(  tAd,  tType,  tPool ) 
+{
+
+}
 
 Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool ) 
 {
@@ -136,12 +145,6 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_CREDD:
 		_subsys = strnewp( "CREDD" );
 		break;
-	case DT_QUILL:
-		_subsys = strnewp( "QUILL" );
-		break;
-	case DT_LEASE_MANAGER:
-		_subsys = strnewp( "LEASE_MANAGER" );
-		break;
 	case DT_GENERIC:
 		_subsys = strnewp( "GENERIC" );
 		break;
@@ -171,6 +174,11 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 
 }
 
+DaemonAllowLocateFull::DaemonAllowLocateFull( const DaemonAllowLocateFull &copy )
+	: Daemon( copy )
+{
+
+}
 
 Daemon::Daemon( const Daemon &copy ): ClassyCountedPtr()
 {
@@ -180,7 +188,6 @@ Daemon::Daemon( const Daemon &copy ): ClassyCountedPtr()
 	deepCopy( copy );
 }
 
- 
 Daemon&
 Daemon::operator=(const Daemon &copy)
 {
@@ -558,14 +565,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, i
 
 	start_command_result = sec_man->startCommand(cmd, sock, raw_protocol, errstack, subcmd, callback_fn, misc_data, nonblocking, cmd_description, sec_session_id);
 
-	if(callback_fn) {
-		// SecMan::startCommand() called the callback function, so we just return here
-		return start_command_result;
-	}
-	else {
-		// There is no callback function.
-		return start_command_result;
-	}
+	return start_command_result;
 }
 
 Sock *
@@ -948,6 +948,12 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 //////////////////////////////////////////////////////////////////////
 
 bool
+DaemonAllowLocateFull::locate( Daemon::LocateType method )
+{
+	return Daemon::locate( method );
+}
+
+bool
 Daemon::locate( Daemon::LocateType method )
 {
 	bool rval=false;
@@ -1021,17 +1027,9 @@ Daemon::locate( Daemon::LocateType method )
 			rval = getCmInfo( "COLLECTOR" );
 		} while (rval == false && nextValidCm() == true);
 		break;
-	case DT_QUILL:
-		setSubsystem( "QUILL" );
-		rval = getDaemonInfo( SCHEDD_AD, true, method );
-		break;
 	case DT_TRANSFERD:
 		setSubsystem( "TRANSFERD" );
 		rval = getDaemonInfo( ANY_AD, true, method );
-		break;
-	case DT_LEASE_MANAGER:
-		setSubsystem( "LEASEMANAGER" );
-		rval = getDaemonInfo( LEASE_MANAGER_AD, true, method );
 		break;
 	case DT_HAD:
 		setSubsystem( "HAD" );
@@ -1229,7 +1227,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			}
 			delete [] my_name;
 		}
-	} else if ( ( _type != DT_NEGOTIATOR ) && ( _type != DT_LEASE_MANAGER ) ) {
+	} else if ( _type != DT_NEGOTIATOR ) {
 			// We were passed neither a name nor an address, so use
 			// the local daemon, unless we're NEGOTIATOR, in which case
 			// we'll still query the collector even if we don't have the 
@@ -1302,7 +1300,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 				query.setLocationLookup(_name);
 			}
 		} else {
-			if ( ( _type != DT_NEGOTIATOR ) && ( _type != DT_LEASE_MANAGER) ) {
+			if ( _type != DT_NEGOTIATOR ) {
 					// If we're not querying for negotiator
 					//    (which there's only one of)
 					// and we don't have the name
@@ -2412,4 +2410,51 @@ void Daemon::sendBlockingMsg( classy_counted_ptr<DCMsg> msg )
 	DCMessenger *messenger = new DCMessenger(this);
 
 	messenger->sendBlockingMsg( msg );
+}
+
+bool
+Daemon::getInstanceID( std::string & instanceID ) {
+	// Enter the cargo cult.
+	if( IsDebugLevel( D_COMMAND ) ) {
+		dprintf( D_COMMAND, "Daemon::getInstanceID() making connection to "
+			"'%s'\n", _addr ? _addr : "NULL" );
+	}
+
+	ReliSock rSock;
+	rSock.timeout( 5 );
+	if(! connectSock( & rSock )) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to connect "
+			"to remote daemon at '%s'\n", _addr ? _addr : "NULL" );
+		return false;
+	}
+
+	if(! startCommand( DC_QUERY_INSTANCE, (Sock *) & rSock, 5 )) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to send "
+			"command to remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	if(! rSock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to send "
+			"end of message to remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	unsigned char instance_id[17];
+	const int instance_length = 16;
+	rSock.decode();
+	if(! rSock.get_bytes( instance_id, instance_length )) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to read "
+			"instance ID from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	if(! rSock.end_of_message()) {
+		dprintf( D_FULLDEBUG, "Daemon::getInstanceID() failed to read "
+			"end of message from remote daemon at '%s'\n", _addr );
+		return false;
+	}
+
+	instanceID.assign( (const char *)instance_id, instance_length );
+	return true;
 }

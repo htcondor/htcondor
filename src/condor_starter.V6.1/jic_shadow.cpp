@@ -30,7 +30,8 @@
 #include "ipv6_hostname.h"
 #include "internet.h"
 #include "basename.h"
-#include "condor_string.h"  // for strnewp
+#include "condor_config.h"
+#include "util_lib_proto.h"
 #include "condor_attributes.h"
 #include "condor_commands.h"
 #include "command_strings.h"
@@ -66,7 +67,7 @@ const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 #endif
 
 JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
-	m_wrote_chirp_config(false)
+	m_wrote_chirp_config(false), m_job_update_attrs_set(false)
 {
 	if( ! shadow_name ) {
 		EXCEPT( "Trying to instantiate JICShadow with no shadow name!" );
@@ -87,7 +88,9 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	fs_domain = NULL;
 
 	transfer_at_vacate = false;
+	m_job_setup_done = false;
 	wants_file_transfer = false;
+	wants_x509_proxy = false;
 	job_cleanup_disconnected = false;
 	syscall_sock_registered  = false;
 	syscall_sock_lost_tid = -1;
@@ -434,7 +437,8 @@ JICShadow::transferOutput( bool &transient_failure )
 		// finished.  may as well do this in the foreground,
 		// since we do not want to be interrupted by anything
 		// short of a hardkill. 
-	if( filetrans && ((requested_exit == false) || transfer_at_vacate) ) {
+		// Don't transfer if we haven't started the job.
+	if( filetrans && m_job_setup_done && ((requested_exit == false) || transfer_at_vacate) ) {
 
 		if ( shadowDisconnected() ) {
 				// trigger retransfer on reconnect
@@ -466,6 +470,11 @@ JICShadow::transferOutput( bool &transient_failure )
 		// ft list
 		filetrans->addFileToExceptionList(JOB_AD_FILENAME);
 		filetrans->addFileToExceptionList(MACHINE_AD_FILENAME);
+		filetrans->addFileToExceptionList(".docker_sock");
+		filetrans->addFileToExceptionList(".docker_stdout");
+		filetrans->addFileToExceptionList(".docker_stderr");
+		filetrans->addFileToExceptionList(".update.ad");
+		filetrans->addFileToExceptionList(".update.ad.tmp");
 		if (m_wrote_chirp_config) {
 			filetrans->addFileToExceptionList(CHIRP_CONFIG_FILENAME);
 		}
@@ -496,7 +505,10 @@ JICShadow::transferOutput( bool &transient_failure )
 			std::string full_stats = "(peer stats from starter): ";
 			full_stats += stats;
 		
-			REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+			if (shadow_version && shadow_version->built_since_version(8, 5, 8)) 
+			{
+				REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
+			}
 		}
 		set_priv(saved_priv);
 
@@ -587,6 +599,15 @@ JICShadow::transferOutputMopUp(void)
 
 
 void
+JICShadow::allJobsGone( void )
+{
+	if ( shadow_version && shadow_version->built_since_version(8,7,8) ) {
+		dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
+		Starter->StarterExit( Starter->GetShutdownExitCode() );
+	}
+}
+
+void
 JICShadow::gotShutdownFast( void )
 {
 		// Despite what the user wants, do not transfer back any files 
@@ -652,12 +673,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	ClassAd reply;
 	publishStarterInfo( &reply );
 
-	MyString line;
-	line = ATTR_RESULT;
-	line += "=\"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
-	reply.Insert( line.Value() );
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
 
 	if( ! sendCAReply(s, getCommandString(CA_RECONNECT_JOB), &reply) ) {
 		dprintf( D_ALWAYS, "Failed to reply to request\n" );
@@ -769,6 +785,8 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 void
 JICShadow::notifyJobPreSpawn( void )
 {
+	m_job_setup_done = true;
+
 			// Notify the shadow we're about to exec.
 	REMOTE_CONDOR_begin_execution();
 
@@ -946,71 +964,34 @@ JICShadow::registerStarterInfo( void )
 void
 JICShadow::publishStarterInfo( ClassAd* ad )
 {
-	char *tmp = NULL;
 	char* tmp_val = NULL;
-	int size;
 
-	size = strlen(uid_domain) + strlen(ATTR_UID_DOMAIN) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=\"%s\"", ATTR_UID_DOMAIN, uid_domain );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_UID_DOMAIN, uid_domain );
 
-	size = strlen(fs_domain) + strlen(ATTR_FILE_SYSTEM_DOMAIN) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, fs_domain ); 
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_FILE_SYSTEM_DOMAIN, fs_domain );
 
 	MyString slotName = Starter->getMySlotName();
-	MyString line = ATTR_NAME;
-	line += "=\"";
-	line += slotName;
-	line += '@';
-	
-	line += get_local_fqdn();
-	line += '"';
-	ad->Insert( line.Value() );
+	slotName += '@';
+	slotName += get_local_fqdn();
+	ad->Assign( ATTR_NAME, slotName );
 
 	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 
 	tmp_val = param( "ARCH" );
-	size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=\"%s\"", ATTR_ARCH, tmp_val );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_ARCH, tmp_val );
 	free( tmp_val );
 
 	tmp_val = param( "OPSYS" );
-	size = strlen(tmp_val) + strlen(ATTR_OPSYS) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=\"%s\"", ATTR_OPSYS, tmp_val );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_OPSYS, tmp_val );
 	free( tmp_val );
 
 	tmp_val = param( "CKPT_SERVER_HOST" );
 	if( tmp_val ) {
-		size = strlen(tmp_val) + strlen(ATTR_CKPT_SERVER) + 5; 
-		tmp = (char*) malloc( size * sizeof(char) );
-		ASSERT( tmp != NULL );
-		sprintf( tmp, "%s=\"%s\"", ATTR_CKPT_SERVER, tmp_val ); 
-		ad->Insert( tmp );
-		free( tmp );
+		ad->Assign( ATTR_CKPT_SERVER, tmp_val );
 		free( tmp_val );
 	}
 
-	size = strlen(ATTR_HAS_RECONNECT) + 6;
-	tmp = (char*) malloc( size * sizeof(char) );
-	ASSERT( tmp != NULL );
-	sprintf( tmp, "%s=TRUE", ATTR_HAS_RECONNECT );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign( ATTR_HAS_RECONNECT, true );
 
 		// Finally, publish all the DC-managed attributes.
 	daemonCore->publish(ad);
@@ -1319,6 +1300,7 @@ JICShadow::initJobInfo( void )
 	if (!JobInfoCommunicator::initJobInfo()) return false;
 
 	char *orig_job_iwd;
+	MyString x509userproxy;
 
 	if( ! job_ad ) {
 		EXCEPT( "JICShadow::initJobInfo() called with NULL job ad!" );
@@ -1357,6 +1339,14 @@ JICShadow::initJobInfo( void )
 		dprintf( D_ALWAYS, "Error in JICShadow::initJobInfo(): "
 				 "Can't find %s in job ad\n", ATTR_CLUSTER_ID );
 		return false;
+	}
+
+	if( job_ad->LookupString(ATTR_X509_USER_PROXY, x509userproxy) ) {
+		wants_x509_proxy = true;
+	}
+	else {
+		dprintf( D_FULLDEBUG, "Job doesn't specify x509userproxy, assuming not "
+				 "needed\n" );
 	}
 
 	if( ! job_ad->LookupInteger(ATTR_PROC_ID, job_proc) ) { 
@@ -1489,34 +1479,28 @@ JICShadow::initWithFileTransfer()
 	// the special names StdoutRemapName and StderrRemapName.
 	// The shadow will remap these to the original names when transferring
 	// the output.
-	if ( shadow_version->built_since_version( 7, 7, 2 ) ) {
-		bool stream;
-		std::string stdout_name;
-		std::string stderr_name;
-		job_ad->LookupString( ATTR_JOB_OUTPUT, stdout_name );
-		job_ad->LookupString( ATTR_JOB_ERROR, stderr_name );
-		if ( job_ad->LookupBool( ATTR_STREAM_OUTPUT, stream ) && !stream &&
-			 !nullFile( stdout_name.c_str() ) ) {
-			job_ad->Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
-		}
-		if ( job_ad->LookupBool( ATTR_STREAM_ERROR, stream ) && !stream &&
-			 !nullFile( stderr_name.c_str() ) ) {
-			if ( stdout_name == stderr_name ) {
-				job_ad->Assign( ATTR_JOB_ERROR, StdoutRemapName );
-			} else {
-				job_ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
-			}
+	bool stream;
+	std::string stdout_name;
+	std::string stderr_name;
+	job_ad->LookupString( ATTR_JOB_OUTPUT, stdout_name );
+	job_ad->LookupString( ATTR_JOB_ERROR, stderr_name );
+	if ( job_ad->LookupBool( ATTR_STREAM_OUTPUT, stream ) && !stream &&
+		 !nullFile( stdout_name.c_str() ) ) {
+		job_ad->Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
+	}
+	if ( job_ad->LookupBool( ATTR_STREAM_ERROR, stream ) && !stream &&
+		 !nullFile( stderr_name.c_str() ) ) {
+		if ( stdout_name == stderr_name ) {
+			job_ad->Assign( ATTR_JOB_ERROR, StdoutRemapName );
+		} else {
+			job_ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
 		}
 	}
 
 	wants_file_transfer = true;
 	change_iwd = true;
 	job_iwd = strdup( Starter->GetWorkingDir() );
-	MyString line = ATTR_JOB_IWD;
-	line += " = \"";
-	line += job_iwd;
-	line+= '"';
-	job_ad->Insert( line.Value() );
+	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
 
 		// now that we've got the iwd we're using and all our
 		// transfer-related flags set, we can finally initialize the
@@ -1700,7 +1684,9 @@ refuse(ReliSock * s)
 	ASSERT(s);
 	s->encode();
 	int i = 0; // == failure;
-	s->code(i); // == failure
+	if (!s->code(i)) {
+		dprintf(D_ALWAYS, "Unable to refuse X509 proxy update -- has client gone away?\n");
+	}
 	s->end_of_message();
 }
 
@@ -1800,7 +1786,11 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 
 		// Send our reply back to the client
 	rsock->encode();
-	rsock->code(reply);
+	if (!rsock->code(reply)) {
+		dprintf(D_ALWAYS,
+		        "Attempt to refresh X509 proxy failed to reply\n");
+		reply = false;
+	}
 	rsock->end_of_message();
 
 	if(reply) {
@@ -1844,7 +1834,9 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 	if( ! usingFileTransfer() ) {
 		s->encode();
 		int i = 2; // == success, but please don't call any more.
-		s->code(i); // == success, but please don't call any more.
+		if (!s->code(i)) { // == success, but please don't call any more.
+			dprintf(D_ALWAYS, "Unable to update X509 proxy request -- has client gone away?\n");
+		}
 		s->end_of_message();
 		refuse(s);
 		return false;
@@ -1980,6 +1972,74 @@ JICShadow::getDelayedUpdate( const std::string &name )
 }
 
 bool
+JICShadow::publishStartdUpdates( ClassAd* ad ) {
+	// Construct the list of attributes to pull from the slot's update ad.
+	// Arguably, this list should be passed to the starter from the startd,
+	// because you can theoretically run more than one, but we'll ignore
+	// that for now (and the startd doesn't produce the list itself).
+	if(! m_job_update_attrs_set) {
+		m_job_update_attrs.append( "CPUsUsage" );
+
+		std::string scjl;
+		if( param( scjl, "STARTD_CRON_JOBLIST" ) ) {
+			StringList jobs( scjl.c_str() );
+			for( char * metricName = jobs.first(); metricName != NULL; metricName = jobs.next() ) {
+				std::string metrics;
+				std::string paramName;
+				formatstr( paramName, "STARTD_CRON_%s_METRICS", metricName );
+				if( param( metrics, paramName.c_str() ) ) {
+					StringList pairs( metrics.c_str() );
+					for( char * pair = pairs.first(); pair != NULL; pair = pairs.next() ) {
+					StringList tn( pair, ":" );
+						/* char * metricType = */ tn.first();
+						char * resourceName = tn.next();
+
+						std::string metricName;
+						formatstr( metricName, "%sUsage", resourceName );
+						m_job_update_attrs.append( metricName.c_str() );
+
+						formatstr( metricName, "Recent%sUsage", resourceName );
+						m_job_update_attrs.append( metricName.c_str() );
+					}
+				}
+			}
+		}
+
+		m_job_update_attrs_set = true;
+	}
+
+	// Pull the list of attributes from the slot's update ad.
+	bool published = false;
+	if(! m_job_update_attrs.isEmpty()) {
+		m_job_update_attrs.rewind();
+		const char * attrName = NULL;
+
+		std::string updateAdPath = ".update.ad";
+		FILE * updateAdFile = NULL;
+		{
+			TemporaryPrivSentry p( PRIV_USER );
+			updateAdFile = safe_fopen_wrapper_follow( updateAdPath.c_str(), "r" );
+		}
+		if( updateAdFile ) {
+			int isEOF, error, empty;
+			ClassAd updateAd( updateAdFile, "\n", isEOF, error, empty );
+			fclose( updateAdFile );
+
+			while( (attrName = m_job_update_attrs.next()) != NULL ) {
+				// dprintf( D_ALWAYS, "Updating job ad: %s\n", attrName );
+				ad->CopyAttribute( attrName, & updateAd );
+				published = true;
+			}
+		} else {
+			dprintf( D_ALWAYS, "Failed to open '%s' to read update ad: %s (%d).\n",
+				updateAdPath.c_str(), strerror(errno), errno );
+		}
+	}
+
+	return published;
+}
+
+bool
 JICShadow::publishUpdateAd( ClassAd* ad )
 {
 	// These are updates taken from Chirp
@@ -2037,6 +2097,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	ad->Update(m_delayed_updates);
 	m_delayed_updates.Clear();
 
+	if( publishStartdUpdates( ad ) ) { return true; }
 	return retval;
 }
 
@@ -2045,7 +2106,6 @@ bool
 JICShadow::publishJobExitAd( ClassAd* ad )
 {
 	filesize_t execsz = 0;
-	char buf[200];
 
 	// if there is a filetrans object, then let's send the current
 	// size of the starter execute directory back to the shadow.  this
@@ -2056,8 +2116,7 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		// owns the directory and it may not be world-readable
 		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
 		execsz = starter_dir.GetDirectorySize();
-		sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
-		ad->Insert( buf );
+		ad->Assign( ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) );
 
 	}
 	MyString spooled_files;
@@ -2079,7 +2138,10 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		// walk through all the UserProcs and have those publish, as
 		// well.  It returns true if there was anything published,
 		// false if not.
-	return Starter->publishJobExitAd( ad );
+	bool retval = Starter->publishJobExitAd( ad );
+
+	if( publishStartdUpdates( ad ) ) { return true; }
+	return retval;
 }
 
 
@@ -2342,6 +2404,33 @@ JICShadow::beginFileTransfer( void )
 		}
 		return true;
 	}
+		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
+	else if ( wants_x509_proxy ) {
+		
+			// Get scratch directory path
+		const char* scratch_dir = Starter->GetWorkingDir();
+
+			// Get source path to proxy file on the submit machine
+		MyString proxy_source_path;
+		job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_source_path );
+
+			// Get proxy expiration timestamp
+		time_t proxy_expiration = GetDesiredDelegatedJobCredentialExpiration( job_ad );
+
+			// Parse proxy filename
+		MyString proxy_filename = condor_basename( proxy_source_path.Value() );
+
+			// Combine scratch dir and proxy filename to get destination proxy path on execute machine
+		MyString proxy_dest_path = scratch_dir;
+		proxy_dest_path += DIR_DELIM_CHAR;
+		proxy_dest_path += proxy_filename;
+
+			// Do RPC call to get delegated proxy.
+		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.Value(), proxy_dest_path.Value(), proxy_expiration );
+
+			// Update job ad with location of proxy
+		job_ad->Assign( ATTR_X509_USER_PROXY, proxy_dest_path.Value() );
+	}
 		// no transfer wanted or started, so return false
 	return false;
 }
@@ -2373,7 +2462,9 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			ASSERT( !shadowDisconnected() );
 
-			REMOTE_CONDOR_dprintf_stats(const_cast<char *>(full_stats.c_str()));
+			if (shadow_version && shadow_version->built_since_version(8, 5, 8)) {
+				REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
+			}
 		}
 
 			// If we transferred the executable, make sure it
@@ -2526,11 +2617,22 @@ JICShadow::initIOProxy( void )
 		want_delayed ? "true" : "false");
 	if( want_io_proxy || want_updates || want_delayed || job_universe==CONDOR_UNIVERSE_JAVA ) {
 		m_wrote_chirp_config = true;
+		condor_sockaddr *bindTo = NULL;
+		struct in_addr addr;
+		addr.s_addr = htonl(0xac110001);
+		condor_sockaddr dockerInterface(addr);
+
+		bool wantDocker = false;
+		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
+		if (wantDocker) {
+			bindTo = &dockerInterface;
+		}
+
 		io_proxy_config_file.formatstr( "%s%c%s" ,
 				 Starter->GetWorkingDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.Value());
-		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed) ) {
+		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;
@@ -2561,6 +2663,16 @@ JICShadow::initUserCredentials() {
 		return true;
 	}
 
+
+	// NEW METHOD (skips rest of function)
+	if (param_boolean("TOKENS", false)) {
+		// just call the refresh code, which both fetches from the shadow and updates the sandbox
+		return refreshSandboxCredentialsMultiple();
+	}
+
+
+	// OLD METHOD (used by CERN and DESY)
+
 	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "ERROR: in initUserCredentials() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
@@ -2578,20 +2690,41 @@ JICShadow::initUserCredentials() {
 	// check to see if .cc already exists
 	char ccfilename[PATH_MAX];
 	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, user.c_str());
-	struct stat junk_buf;
-	int rc = stat(ccfilename, &junk_buf);
-	if (rc==0) {
-		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s domain %s already exist in %s\n",
-			user.c_str(), domain.c_str(), ccfilename );
+	struct stat cred_stat_buf;
+	int rc = stat(ccfilename, &cred_stat_buf);
+
+	// if the credential already exists, we should update it if
+	// it's more than X seconds old.  if X is zero, we always
+	// update it.  if X is negative, we never update it.
+	int fresh_time = param_integer("SEC_CREDENTIAL_REFRESH_INTERVAL", -1);
+
+	if (rc==0 && fresh_time < 0) {
 		// if the credential cache already exists, we don't even need
 		// to talk to the shadow.  just return success as quickly as
 		// possible.
 		//
 		// before we do, copy the creds to the sandbox and initialize
 		// the timer to monitor them.  propagate any errors.
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s already exist in %s, and interval is %i\n",
+			user.c_str(), ccfilename, fresh_time );
+
 		rc = refreshSandboxCredentials();
 		return rc;
 	}
+
+	// return success if the credential exists and has been recently
+	// updated.  note that if fresh_time is zero, we'll never return
+	// success here, meaning we will always update the credential.
+	time_t now = time(NULL);
+	if ((rc==0) && (now - cred_stat_buf.st_mtime < fresh_time)) {
+		// was updated in the last X seconds, just copy existing to sandbox
+		dprintf(D_FULLDEBUG, "CREDMON: credentials for user %s already exist in %s, and interval is %i\n",
+			user.c_str(), ccfilename, fresh_time );
+
+		rc = refreshSandboxCredentials();
+		return rc;
+	}
+
 	dprintf(D_FULLDEBUG, "CREDMON: obtaining credentials for user %s domain %s from shadow %s\n",
 		 user.c_str(), domain.c_str(), shadow->addr() );
 
@@ -2601,8 +2734,9 @@ JICShadow::initUserCredentials() {
 	dprintf(D_FULLDEBUG, "CREDMON: got cred %s\n", credential.c_str());
 
 	//
-	// We should refactor the below code and that of ZKM_UNIX_STORE_CRED as
-	// they are essentially identical.
+	// We should refactor the below code and that of ZKM_UNIX_STORE_CRED
+	// as they are essentially identical other than copying the creds to
+	// the sandbox
 	//
 
 	// create filenames
@@ -2612,14 +2746,6 @@ JICShadow::initUserCredentials() {
 	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user.c_str());
 	dprintf(D_FULLDEBUG, "CREDMON: writing data to %s\n", tmpfilename);
 
-/*
-	// contents of credential are base64 encoded.  decode now just before
-	// they go into the file.
-	int rawlen = -1;
-	std::string tmp_in(credential.c_str());
-	std::vector<BYTE> rawbuf = Base64::zkm_base64_decode(tmp_in);
-	rawlen = rawbuf.size();
-*/
 	int rawlen = -1;
 	unsigned char* rawbuf = NULL;
 	zkm_base64_decode(credential.c_str(), &rawbuf, &rawlen);
@@ -2771,9 +2897,9 @@ JICShadow::refreshSandboxCredentials()
 	memcpy(&m_sandbox_creds_last_update, &syscred.st_mtime, sizeof(time_t));
 
 	// only need to do this once
-	if(getKRB5CCNAME() == NULL) {
+	if(getCredPath() == NULL) {
 		dprintf(D_ALWAYS, "CERN: configuring job to use KRB5CCNAME %s\n", sandboxccfilename);
-		setKRB5CCNAME(sandboxccfilename);
+		setCredPath(sandboxccfilename);
 	}
 
 	// if we made it here, we succeeded!
@@ -2807,6 +2933,112 @@ resettimer:
 
 	// return boolean value true on success
 	return (rc);
+}
+
+bool
+JICShadow::refreshSandboxCredentialsMultiple()
+{
+	/*
+	  This method is invoked whenever we should fetch fresh credentials
+	  from the shadow and then update them in the job sandbox.
+	*/
+	dprintf(D_ALWAYS, "CREDS: in refreshSandboxCredentialsMultiple()\n");
+
+	// set/reset timer
+	int sec_cred_refresh = param_integer("SEC_CREDENTIAL_REFRESH", 300);
+	if (sec_cred_refresh > 0) {
+		if (m_refresh_sandbox_creds_tid == -1) {
+			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
+				sec_cred_refresh,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple,
+				"refreshSandboxCredentialsMultiple",
+				this );
+		} else {
+			daemonCore->Reset_Timer(m_refresh_sandbox_creds_tid, sec_cred_refresh);
+		}
+		dprintf(D_SECURITY,
+			"CREDS: will refresh credentials again in %i seconds\n", sec_cred_refresh);
+	} else {
+		dprintf(D_SECURITY, "CREDS: cred refresh is DISABLED.\n");
+	}
+
+	// do syscall to receive credential wallet
+	REMOTE_CONDOR_getcreds();
+
+	// setup .condor_creds directory in sandbox (may already exist).
+	MyString cred_dir_name;
+	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
+		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
+		return -1;
+	}
+	MyString pid_s;
+	pid_s.formatstr("%i", getpid());
+	cred_dir_name += DIR_DELIM_CHAR;
+	cred_dir_name += pid_s;
+
+	MyString sandbox_dir_name = Starter->GetWorkingDir();
+	sandbox_dir_name += DIR_DELIM_CHAR;
+	sandbox_dir_name += ".condor_creds";
+
+	// create dir to hold creds
+	int rc = 0;
+	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.Value());
+	priv_state p = set_user_priv();
+	rc = mkdir(sandbox_dir_name.Value(), 0700);
+	set_priv(p);
+	if(rc != 0) {
+		if(errno != 17) {
+			dprintf(D_SECURITY, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
+			return false;
+		}
+	}
+
+	// for each file in SEC_CREDENTIAL_DIR, atomically update in sandbox
+	Directory source_dir(cred_dir_name.Value(), PRIV_ROOT);
+
+	const char* filename;
+	while ((filename = source_dir.Next())) {
+
+		dprintf(D_SECURITY, "CREDS: copying %s from %s to %s\n", filename, cred_dir_name.Value(), sandbox_dir_name.Value());
+		// use dircat() instead
+		MyString src_filename = cred_dir_name;
+		src_filename += DIR_DELIM_CHAR;
+		src_filename += filename;
+
+		// read the file (fourth argument "true" means as_root)
+		unsigned char *buf = 0;
+		size_t len = 0;
+		bool rc = read_secure_file(src_filename.Value(), (void**)(&buf), &len, true);
+		dprintf(D_SECURITY, "CREDS: reading %s, result %i\n", src_filename.Value(), rc);
+
+		// use dircat() instead
+		MyString dest_filename = sandbox_dir_name;
+		dest_filename += DIR_DELIM_CHAR;
+		dest_filename += filename;
+
+		MyString tmp_filename = dest_filename;
+		tmp_filename += ".tmp";
+
+		// write file as user
+		priv_state p = set_user_priv();
+
+                rc = write_secure_file(tmp_filename.Value(), buf, len, false);
+		dprintf(D_SECURITY, "CREDS: writing %s, result %i\n", tmp_filename.Value(), rc);
+
+		// move file into place (as user);
+		rc = rename(tmp_filename.Value(), dest_filename.Value());
+		dprintf(D_SECURITY, "CREDS: moving %s to %s, result %i\n", tmp_filename.Value(), dest_filename.Value(), (rc==0)?rc:errno);
+
+		set_priv(p);
+	}
+
+	// only need to do this once
+	if(getCredPath() == NULL) {
+		dprintf(D_SECURITY, "CREDS: setting env _CONDOR_CREDS to %s\n", sandbox_dir_name.Value());
+		setCredPath(sandbox_dir_name.Value());
+	}
+
+	return true;
 }
 #endif  // WIN32
 

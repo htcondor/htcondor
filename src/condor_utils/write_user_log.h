@@ -82,16 +82,19 @@ class WriteUserLog
     /** The log file lock            */  FileLockBase *lock;
     /** The log file                 */  int fd;
     /** Implementation detail        */  mutable bool copied;
+    /** Whether to use user priv     */  bool user_priv_flag;
 
       // set of jobs that are using this log file
       log_file_cache_refset_t refset;
 
       log_file(const char* p) : path(p), lock(NULL), fd(-1),
-        copied(false) {}
-      log_file() : lock(NULL), fd(-1), copied(false) {}
+        copied(false), user_priv_flag(false) {}
+      log_file() : lock(NULL), fd(-1), copied(false), user_priv_flag(false) {}
       log_file(const log_file& orig);
       ~log_file(); 
       log_file& operator=(const log_file& rhs);
+      void set_user_priv_flag(bool v) { user_priv_flag = v; }
+      bool get_user_priv_flag() { return user_priv_flag; }
     };
 
     typedef std::map<std::string, log_file*> log_file_cache_map_t;
@@ -106,16 +109,13 @@ class WriteUserLog
         @param proc condorID proc    to put into each ULogEvent
         @param subp condorID subproc to put into each ULogEvent
 		@param xml  make this true to write XML logs, false to use the old form
-		@param gjid global job ID
     */
     WriteUserLog(const char *owner, const char *domain,
 				 const std::vector<const char*>& file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT,
-				 const char *gjid = NULL);
+				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     WriteUserLog(const char *owner, const char *domain,
 				 const char* file,
-				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT,
-				 const char *gjid = NULL);
+				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     
     WriteUserLog(const char *owner, const char *file,
 				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
@@ -129,14 +129,13 @@ class WriteUserLog
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
-        @param gjid the condor global job id to put into each ULogEvent
 		@return true on success
     */
     bool initialize(const char *owner, const char *domain,
 			   const std::vector<const char *>& file,
-			   int c, int p, int s, const char *gjid);
+			   int c, int p, int s);
     bool initialize(const char *owner, const char *domain,
-			   const char *file, int c, int p, int s, const char *gjid);
+			   const char *file, int c, int p, int s);
     
     /** Initialize the log file.
         @param file the path name of the log file to be written (copied)
@@ -145,10 +144,8 @@ class WriteUserLog
         @param s the condor ID subproc to put into each ULogEvent
 		@return true on success
     */
-    bool initialize(const char *file, int c, int p, int s,
-			const char *gjid);
-    bool initialize(const std::vector<const char *>& file, int c, int p, int s,
-			const char *gjid);
+    bool initialize(const char *file, int c, int p, int s);
+    bool initialize(const std::vector<const char *>& file, int c, int p, int s);
    
 #if !defined(WIN32)
     /** Initialize the log file (PrivSep mode only)
@@ -160,11 +157,9 @@ class WriteUserLog
         @param s the condor ID subproc to put into each ULogEvent
 		@return true on success
     */
-    bool initialize(uid_t, gid_t, const std::vector<const char *>&, int, int, int,
-			const char *gjid);
-    bool initialize(uid_t u, gid_t g, const char *f, int c, int p, int s,
-				const char *gjid) {
-			return initialize(u,g,std::vector<const char*>(1,f),c,p,s,gjid);
+    bool initialize(uid_t, gid_t, const std::vector<const char *>&, int, int, int);
+    bool initialize(uid_t u, gid_t g, const char *f, int c, int p, int s) {
+			return initialize(u,g,std::vector<const char*>(1,f),c,p,s);
 		}
 #endif
 
@@ -176,7 +171,7 @@ class WriteUserLog
         @param s the condor ID subproc to put into each ULogEvent
 		@return true on success
     */
-    bool initialize(int c, int p, int s, const char *gjid);
+    bool initialize(int c, int p, int s);
 
 	/** Read in the configuration parameters
 		@param force Force a reconfigure; otherwise Configure() will
@@ -317,7 +312,7 @@ class WriteUserLog
 
 	///
     void Reset( void );
-    bool internalInitialize(int c, int p, int s, const char *gjid);
+    bool internalInitialize(int c, int p, int s);
 	void FreeAllResources( void );
 	void FreeGlobalResources( bool final );
 	void FreeLocalResources( void );
@@ -398,7 +393,6 @@ class WriteUserLog
 	/** PrivSep: the user's UID      */  uid_t      m_privsep_uid;
 	/** PrivSep: the user's GID      */  gid_t      m_privsep_gid;
 #endif
-	/** The GlobalJobID for this job */  char     * m_gjid;
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;

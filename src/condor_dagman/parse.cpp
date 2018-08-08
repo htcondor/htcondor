@@ -45,6 +45,7 @@
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
+static const char * ILLEGAL_CHARS = "+.";
 
 static ExtArray<char*> _spliceScope;
 static bool _useDagDir = false;
@@ -119,6 +120,16 @@ isReservedWord( const char *token )
 						"ERROR: token (%s) is a reserved word\n", token );
 			return true;
 		}
+    }
+    return false;
+}
+
+bool
+containsIllegalChars( const char *token ) {
+    for( unsigned int i = 0; i < strlen(token); i++ ) {
+        if( strchr( ILLEGAL_CHARS, token[i] ) ) {
+            return true;
+        }
     }
     return false;
 }
@@ -548,6 +559,17 @@ parse_subdag( Dag *dag,
 	return false;
 }
 
+static const char* next_possibly_quoted_token( void )
+{
+	char *remainder = strtok( NULL, "" );
+	while ( remainder[0] == ' ' || remainder[0] == '\t' )
+		remainder++;
+	if ( remainder[0] == '"' )
+		return strtok( ++remainder, "\"" );
+	else
+		return strtok( remainder, DELIMITERS );
+}
+
 //-----------------------------------------------------------------------------
 static bool 
 parse_node( Dag *dag, 
@@ -583,11 +605,28 @@ parse_node( Dag *dag,
 		return false;
 	}
 
+    if( containsIllegalChars( nodeName ) ) {
+        MyString errorMessage;
+    	errorMessage.formatstr( "ERROR: %s (line %d): JobName %s contains one "
+                  "or more illegal characters (", dagFile, lineNum, nodeName );
+        for( unsigned int i = 0; i < strlen( ILLEGAL_CHARS ); i++ ) {
+            errorMessage += "'";
+            errorMessage += ILLEGAL_CHARS[i];
+            errorMessage += "'";         
+            if( i < strlen( ILLEGAL_CHARS ) - 1 ) {
+                errorMessage += ", ";
+            }
+        }
+        errorMessage += ")\n";
+        debug_error( 1, DEBUG_QUIET, "%s", errorMessage.Value() );
+        return false;
+    }
+
 	MyString tmpNodeName = munge_job_name(nodeName);
 	nodeName = tmpNodeName.Value();
 
 		// next token is the submit file name
-	const char *submitFile = strtok( NULL, DELIMITERS );
+	const char *submitFile = next_possibly_quoted_token();
 	if ( !submitFile ) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file "
 					"specified\n", dagFile, lineNum );
@@ -607,7 +646,7 @@ parse_node( Dag *dag,
 				return false;
 			}
 
-			directory = strtok( NULL, DELIMITERS );
+			directory = next_possibly_quoted_token();
 			if ( !directory ) {
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no directory "
 							"specified after DIR keyword\n", dagFile, lineNum );
@@ -2418,7 +2457,7 @@ static MyString munge_job_name(const char *jobName)
 	MyString newName;
 
 	if ( _mungeNames ) {
-		newName = MyString(_thisDagNum) + "." + jobName;
+		newName = IntToStr(_thisDagNum) + "." + jobName;
 	} else {
 		newName = jobName;
 	}
@@ -2530,11 +2569,11 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 		if ( !escaped ) {
 			if ( *str == '"' ) {
 				// we don't want that last " in the string
-				varValue.setChar( varValue.Length() - 1, '\0' );
+				varValue.truncate( varValue.Length() - 1 );
 				stillInQuotes = false;
 			} else if ( *str == '\\' ) {
 				// on the next pass it will be filled in appropriately
-				varValue.setChar( varValue.Length() - 1, '\0' );
+				varValue.truncate( varValue.Length() - 1 );
 				escaped = true;
 				continue;
 			}

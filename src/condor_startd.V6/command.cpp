@@ -329,16 +329,13 @@ int
 command_give_state( Service*, int, Stream* stream ) 
 {
 	int rval = TRUE;
-	char* tmp;
 	dprintf( D_FULLDEBUG, "command_give_state() called.\n" );
 	stream->encode();
-	tmp = strdup( state_to_string(resmgr->state()) );
-	if ( ! stream->code( tmp ) ||
+	if ( ! stream->put( state_to_string(resmgr->state()) ) ||
 		 ! stream->end_of_message() ) {
 		dprintf( D_FULLDEBUG, "command_give_state(): failed to send state\n" );
 		rval = FALSE;
 	}
-	free( tmp );
 	return rval;
 }
 
@@ -526,11 +523,13 @@ countres:
 		}
 	}
 #ifndef WIN32
-	if (ResCount == 0) {
-		dprintf(D_FULLDEBUG, "CREDMON: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
-		credmon_mark_creds_for_sweeping(curuser.c_str());
-	} else {
-		dprintf(D_FULLDEBUG, "CREDMON: user %s still running %i jobs\n", curuser.c_str(), ResCount);
+	if(!param_boolean("TOKENS", false)) {
+		if (ResCount == 0) {
+			dprintf(D_FULLDEBUG, "CREDMON: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
+			credmon_mark_creds_for_sweeping(curuser.c_str());
+		} else {
+			dprintf(D_FULLDEBUG, "CREDMON: user %s still running %i jobs\n", curuser.c_str(), ResCount);
+		}
 	}
 #endif //WIN32
 
@@ -793,10 +792,6 @@ command_query_ads( Service*, int, Stream* stream)
 		return FALSE;
 	}
 
-#if defined(ADD_TARGET_SCOPING)
-	AddExplicitTargetRefs( queryAd );
-#endif
-
    MyString stats_config;
    int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
    queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
@@ -870,7 +865,11 @@ command_vm_register( Service*, int, Stream* s )
 
 	if( vmapi_register_cmd_handler(raddr, &permission) == TRUE ) {
 		s->encode();
-		s->code(permission);
+		if (!s->code(permission)) {
+			dprintf( D_ALWAYS, "command_vm_register: Can't send permisison\n");
+			free(raddr);
+			return(false);
+		}
 		s->end_of_message();
 	}else{
 		free(raddr);
@@ -1244,10 +1243,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
-#if defined(ADD_TARGET_SCOPING)
-	req_classad->AddTargetRefs( TargetMachineAttrs );
-#endif
-
 		// Try now to read the schedd addr and aline interval.
 		// Do _not_ abort if we fail, since older (pre v6.1.11) schedds do 
 		// not send this information until after we accept the request, and we
@@ -1277,6 +1272,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				if (! stream->get_secret(claim_id)) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
 					free(claim_id);
+					free(dslots);
 					ABORT;
 				}
 				dslots[i] = resmgr->get_by_any_id( claim_id );
@@ -1285,11 +1281,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 					free( claim_id );
+					free(dslots);
 					ABORT;
 				}
 				free( claim_id );
 				if ( !dslots[i]->retirementExpired() ) {
 					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
+					free(dslots);
 					ABORT;
 				}
 			}
@@ -1428,7 +1426,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					// We're going to preempt.  Save everything we
 					// need to know into r_pre.
 				rip->r_pre->setRequestStream( stream );
-				rip->r_pre->setad( req_classad );
+				rip->r_pre->setjobad( req_classad );
 				rip->r_pre->loadAccountingInfo();
 				rip->r_pre->setrank( rank );
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
@@ -1508,7 +1506,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// We decided to accept the request, save the schedd's
 		// stream, the rank and the classad of this request.
 	rip->r_cur->setRequestStream( stream );
-	rip->r_cur->setad( req_classad );
+	rip->r_cur->setjobad( req_classad );
 	rip->r_cur->setrank( rank );
 	rip->r_cur->setoldrank( oldrank );
 
@@ -1573,8 +1571,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 {
 	int interval = -1;
 	char *client_addr = NULL;
-	char RemoteOwner[512];
-	RemoteOwner[0] = '\0';
+	std::string RemoteOwner;
 	Resource * ripb = NULL;
 
 		// There should not be a pre claim object now.
@@ -1707,20 +1704,20 @@ accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 
 		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
-		EvalString( ATTR_USER, rip->r_cur->ad(), RemoteOwner ) == 0 ) { 
+			EvalString( ATTR_USER, rip->r_cur->ad(), RemoteOwner ) == 0 ) {
 		rip->dprintf( D_ALWAYS, 
 				 "Can't evaluate attribute %s in request ad.\n", 
 				 ATTR_USER );
-		RemoteOwner[0] = '\0';
+		RemoteOwner.clear();
 	}
-	if( '\0' != RemoteOwner[0] ) {
-		if (ripb) { ripb->r_cur->client()->setowner( RemoteOwner ); ripb->r_cur->client()->setuser( RemoteOwner ); }
-		rip->r_cur->client()->setowner( RemoteOwner );
+	if( !RemoteOwner.empty() ) {
+		if (ripb) { ripb->r_cur->client()->setowner( RemoteOwner.c_str() ); ripb->r_cur->client()->setuser( RemoteOwner.c_str() ); }
+		rip->r_cur->client()->setowner( RemoteOwner.c_str() );
 			// For now, we say the remote user is the same as the
 			// remote owner.  In the future, we might decide to leave
 			// RemoteUser undefined until the resource is busy...
-		rip->r_cur->client()->setuser( RemoteOwner );
-		rip->dprintf( D_ALWAYS, "Remote owner is %s\n", RemoteOwner );
+		rip->r_cur->client()->setuser( RemoteOwner.c_str() );
+		rip->dprintf( D_ALWAYS, "Remote owner is %s\n", RemoteOwner.c_str() );
 	} else {
 		rip->dprintf( D_ALWAYS, "Remote owner is NULL\n" );
 			// TODO: What else should we do here???
@@ -1806,10 +1803,6 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
-#if defined(ADD_TARGET_SCOPING)
-	req_classad->AddTargetRefs( TargetMachineAttrs );
-#endif
-
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
 
 		// Now, ask the ResMgr to recompute so we have totally
@@ -1819,14 +1812,14 @@ activate_claim( Resource* rip, Stream* stream )
 	resmgr->compute( A_TIMEOUT | A_UPDATE );
 
 		// Possibly print out the ads we just got to the logs.
-	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
 	if( IsDebugLevel( D_JOB ) ) {
-		dPrintAd( D_JOB, *req_classad );
+		std::string adbuf;
+		rip->dprintf( D_JOB, "REQ_CLASSAD:\n%s", formatAd(adbuf, *req_classad, "\t") );
 	}
-	  
-	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
+
 	if( IsDebugLevel( D_MACHINE ) ) {
-		dPrintAd( D_MACHINE, *mach_classad );
+		std::string adbuf;
+		rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n%s", formatAd(adbuf, *mach_classad, "\t") );
 	}
 
 		// See if machine and job meet each other's requirements, if
@@ -1873,7 +1866,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// figure out what starter they want to use
 	Starter* tmp_starter;
 	bool no_starter = false;
-	tmp_starter = resmgr->starter_mgr.findStarter( req_classad,
+	tmp_starter = resmgr->starter_mgr.newStarter( req_classad,
 												   mach_classad,
 												   no_starter,
 												   starter );
@@ -2014,32 +2007,28 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 #endif	// of ifdef WIN32
 
-		// now that we've gotten this far, we're really going to try
-		// to spawn the starter.  set it in our Claim object.  Once
-		// it's there, we no longer control this memory so we should
-		// clear out our pointer to avoid confusion/problems.
-	rip->r_cur->setStarter( tmp_starter );
+		// update the current rank on this claim
+	float rank = rip->compute_rank( req_classad );
+	rip->r_cur->setrank( rank );
+
+		// Actually spawn the starter.
+		// If the starter successfully spawns then ownership of the
+		// Starter object and the request classad (i.e. the job ad)
+		// will be transferred
+	if ( ! rip->r_cur->spawnStarter(tmp_starter, req_classad, shadow_sock)) {
+			// if Claim::spawnStarter fails, it calls resetClaim()
+		delete req_classad; req_classad = NULL;
+		delete tmp_starter; tmp_starter = NULL;
+		ABORT;
+	}
+	// Once we spawn the starter, we no longer own the request ad
+	req_classad = NULL;
+
+	// keep track of the pointer to the Starter object with a new variable
+	// so we remember that we don't own it anymore.
 	// this variable will be used to know the IP of Starter later.
 	Starter* vm_starter = tmp_starter;
 	tmp_starter = NULL;
-
-		// update the current rank on this claim
-	float rank = rip->compute_rank( req_classad ); 
-	rip->r_cur->setrank( rank );
-
-		// Grab the job ID, so we've got it.  Once we give the
-		// req_classad to the Claim object, we no longer control it. 
-	rip->r_cur->saveJobInfo( req_classad );
-	req_classad = NULL;
-
-		// Actually spawn the starter
-	if( ! rip->r_cur->spawnStarter(shadow_sock) ) {
-			// if Claim::spawnStarter fails, it resets the Claim
-			// object to clear out all the info we just stashed above
-			// with setStarter() and saveJobInfo().  it's safe to just
-			// abort now, and all the state will be happy.
-		ABORT;
-	}
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
 		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad, rip->executeDir()) 
@@ -2347,6 +2336,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		goto cleanup;
 	}
 
+	claim->publish(&reply, A_PUBLIC);
 	if( ! claim->publishStarterAd(&reply) ) {
 		MyString err_msg = "No starter found for ";
 		err_msg += ATTR_GLOBAL_JOB_ID;
@@ -2425,10 +2415,6 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 	} else {
 		cmd = getCmdFromReliSock( rsock, &ad, false );
 	}
-
-#if defined(ADD_TARGET_SCOPING)
-	ad.AddTargetRefs( TargetMachineAttrs );
-#endif
 
 		// since we really care about the command string for a lot of
 		// things, let's just grab it out of the classad once right
@@ -2599,11 +2585,12 @@ command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 	ad.LookupBool(ATTR_RESUME_ON_COMPLETION,resume_on_completion);
 
 	ExprTree *check_expr = ad.LookupExpr( ATTR_CHECK_EXPR );
+	ExprTree *start_expr = ad.LookupExpr( ATTR_START_EXPR );
 
 	std::string new_request_id;
 	std::string error_msg;
 	int error_code = 0;
-	bool ok = resmgr->startDraining(how_fast,resume_on_completion,check_expr,new_request_id,error_msg,error_code);
+	bool ok = resmgr->startDraining(how_fast,resume_on_completion,check_expr,start_expr,new_request_id,error_msg,error_code);
 	if( !ok ) {
 		dprintf(D_ALWAYS,"Failed to start draining, error code %d: %s\n",error_code,error_msg.c_str());
 	}

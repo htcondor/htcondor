@@ -22,7 +22,7 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
+#include "basename.h"
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "daemon.h"
@@ -94,13 +94,6 @@ static const char *GMStateNames[] = {
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
 
-#define LOG_GLOBUS_ERROR(func,error) \
-    dprintf(D_ALWAYS, \
-		"(%d.%d) gmState %s, remoteState %d: %s returned error %d\n", \
-        procID.cluster,procID.proc,GMStateNames[gmState],remoteState, \
-        func,error)
-
-
 
 void CondorJobInit()
 {
@@ -166,6 +159,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	calcRuntimeStats = false;
 
 	remoteJobId.cluster = 0;
+	remoteJobId.proc = 0;
 	gahpAd = NULL;
 	gmState = GM_INIT;
 	remoteState = JOB_STATE_UNKNOWN;
@@ -174,7 +168,6 @@ CondorJob::CondorJob( ClassAd *classad )
 	lastSubmitAttempt = 0;
 	lastRemoveAttempt = 0;
 	numSubmitAttempts = 0;
-	submitFailureCode = 0;
 	remoteScheddName = NULL;
 	remotePoolName = NULL;
 	submitterId = NULL;
@@ -1383,7 +1376,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
 			ExprTree * pTree = new_expr->Copy();
-			jobAd->Insert( attrs_to_copy[index], pTree, false );
+			jobAd->Insert( attrs_to_copy[index], pTree );
 		}
 	}
 
@@ -1553,22 +1546,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	expr.clear();
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, expr );
 	submit_ad->Assign( ATTR_SUBMITTER_GLOBAL_JOB_ID, expr );
-
-		// If JOB_PROXY_OVERRIDE_FILE is set in the config file, then
-		// these attributes aren't set in the local job ad, so we need
-		// to set them explicitly.
-	if ( jobProxy ) {
-		submit_ad->Assign( ATTR_X509_USER_PROXY, jobProxy->proxy_filename );
-		submit_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT,
-						   jobProxy->subject->subject_name );
-		if (jobProxy->subject->email)
-			submit_ad->Assign( ATTR_X509_USER_PROXY_EMAIL,
-						   jobProxy->subject->email );
-		if ( jobProxy->subject->has_voms_attrs ) {
-			submit_ad->Assign( ATTR_X509_USER_PROXY_FQAN,
-							   jobProxy->subject->fqan );
-		}
-	}
 
 	bool cleared_environment = false;
 	bool cleared_arguments = false;

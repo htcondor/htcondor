@@ -41,25 +41,18 @@ const std::string netgroup_detected = "***";
 #endif
 
 // Hash function for Permission hash table
-static unsigned int
+static size_t
 compute_perm_hash(const in6_addr &in_addr)
 {
 		// the hash function copied from MyString::Hash()
 	int Len = sizeof(in6_addr);
 	const unsigned char* Data = (const unsigned char*)&in_addr;
 	int i;
-	unsigned int result = 0;
+	size_t result = 0;
 	for(i = 0; i < Len; i++) {
 		result = (result<<5) + result + Data[i];
 	}
 	return result;
-}
-
-// Hash function for HolePunchTable_t hash tables
-static unsigned int
-compute_host_hash( const MyString & str )
-{
-	return ( str.Hash() );
 }
 
 // == operator for struct in_addr, also needed for hash table template
@@ -78,7 +71,7 @@ IpVerify::IpVerify()
 		PunchedHoleArray[perm] = NULL;
 	}
 
-	PermHashTable = new PermHashTable_t(797, compute_perm_hash);
+	PermHashTable = new PermHashTable_t(compute_perm_hash);
 }
 
 
@@ -326,7 +319,7 @@ IpVerify::add_hash_entry(const struct in6_addr & sin6_addr, const char * user, p
         }
 	}
     else {
-        perm = new UserPerm_t(42, compute_host_hash);
+        perm = new UserPerm_t(hashFunction);
         if (PermHashTable->insert(sin6_addr, perm) != 0) {
             delete perm;
             return FALSE;
@@ -547,7 +540,7 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
     assert(pentry);
 
 	NetStringList * whichHostList = new NetStringList();
-    UserHash_t * whichUserHash = new UserHash_t(1024, compute_host_hash);
+    UserHash_t * whichUserHash = new UserHash_t(hashFunction);
 
     StringList slist(list);
 	char *entry, * host, * user;
@@ -697,7 +690,6 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 			} else {
 				condor_netaddr netaddr;
 				if (netaddr.from_net_string(permbuf)) {
-				//if (is_valid_network(permbuf, NULL, NULL)) {
 					*user = strdup("*");
 					*host = strdup(permbuf);
 				} else {
@@ -1097,7 +1089,7 @@ IpVerify::PunchHole(DCpermission perm, const MyString& id)
 	int count = 0;
 	if (PunchedHoleArray[perm] == NULL) {
 		PunchedHoleArray[perm] =
-			new HolePunchTable_t(compute_host_hash);
+			new HolePunchTable_t(hashFunction);
 		ASSERT(PunchedHoleArray[perm] != NULL);
 	}
 	else {
@@ -1221,71 +1213,3 @@ IpVerify::PermTypeEntry::~PermTypeEntry() {
 	}
 }
 
-
-#ifdef WANT_STANDALONE_TESTING
-#include "condor_io.h"
-#ifdef WIN32
-#	include <crtdbg.h>
-   _CrtMemState s1, s2, s3;
-#endif
-int
-main()
-{
-	char buf[50];
-	char buf1[50];
-	struct sockaddr_in sin;
-	SafeSock ssock;
-	IpVerify* userverify;
-
-	set_mySubSystem( "COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
-
-	config();
-
-#ifdef WIN32
-	_CrtMemCheckpoint( &s1 );
-#endif
-
-	userverify = new IpVerify();
-
-	userverify->Init();
-
-	buf[0] = '\0';
-
-	while( 1 ) {
-		printf("Enter test:\n");
-		scanf("%s",buf);
-		if ( strncmp(buf,"exit",4) == 0 )
-			break;
-		if ( strncmp(buf,"reinit",6) == 0 ) {
-			config();
-			userverify->Init();
-			continue;
-		}
-		printf("Verifying %s ... ",buf);
-		sprintf(buf1,"<%s:1970>",buf);
-		string_to_sin(buf1,&sin);
-		if ( userverify->Verify(WRITE,&sin) == TRUE )
-			printf("ALLOW\n");
-		else
-			printf("DENY\n");
-	}
-	
-	delete userverify;
-
-#ifdef WIN32
-	_CrtMemCheckpoint( &s2 );
-	// _CrtMemDumpAllObjectsSince( &s1 );
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
-    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDOUT);
-    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
-	if ( _CrtMemDifference( &s3, &s1, &s2 ) )
-      _CrtMemDumpStatistics( &s3 );
-	// _CrtDumpMemoryLeaks();	// report any memory leaks on Win32
-#endif
-
-	return TRUE;
-}
-#endif	// of WANT_STANDALONE_TESTING

@@ -25,7 +25,7 @@
 #include "condor_config.h"
 #include "condor_distribution.h"
 #include "read_user_log.h"
-#include "HashTable.h"
+#include <set>
 /*
 XXX XXX XXX WARNING WARNING WARNING
 The exit codes in this program are slightly different than
@@ -194,7 +194,7 @@ rescue :
 	completed=0;
 	flagged = 0;
 	ReadUserLog log ;
-	HashTable<MyString,MyString> table(127,MyStringHash);
+	std::set<std::string> table;
 	
 	if(log.initialize(log_file_name,false,false,true)) {
 		sec_fp = safe_fopen_wrapper_follow(log_file_name, "r", 0644);
@@ -216,7 +216,6 @@ rescue :
 
 				char key[1024];
 				sprintf(key,"%d.%d.%d",event->cluster,event->proc,event->subproc);
-				MyString str(key);
 				if( jobnum_matches( event, cluster, process, subproc ) ) {
 
 					if (echo_events) {
@@ -228,17 +227,17 @@ rescue :
 					if(event->eventNumber==ULOG_SUBMIT) {
 						dprintf(D_FULLDEBUG,"%s submitted\n",key);
 						if (print_status) printf("%s submitted\n", key);
-						table.insert(str,str);
+						table.insert(key);
 						submitted++;
 					} else if(event->eventNumber==ULOG_JOB_TERMINATED) {
 						dprintf(D_FULLDEBUG,"%s completed\n",key);
 						if (print_status) printf("%s completed\n", key);
-						table.remove(str);
+						table.erase(key);
 						completed++;
 					} else if(event->eventNumber==ULOG_JOB_ABORTED) {
 						dprintf(D_FULLDEBUG,"%s aborted\n",key);
 						if (print_status) printf("%s aborted\n", key);
-						table.remove(str);
+						table.erase(key);
 						aborted++;
 					} else if (event->eventNumber==ULOG_EXECUTE) {
 						if (print_status) {
@@ -273,7 +272,7 @@ rescue :
 				}
 				
 				dprintf(D_FULLDEBUG,"%d submitted %d completed %d aborted %d remaining\n",submitted,completed,aborted,submitted-completed-aborted);
-				if(table.getNumElements()==0) {
+				if(table.size()==0) {
 					if(submitted>0) {
 						if( !minjobs ) {
 							printf("All jobs done.\n");

@@ -476,10 +476,10 @@ sub read_array_content_to_table {
 	}
 	my $head_pos = $cnt+1;
 
-	# read everything before the blank line and store them to $data
+	# read everything before the blank line or totals line and store them to $data
 	$cnt = 0;
 	my %data;
-	while(defined $table[$head_pos+$cnt] && $table[$head_pos+$cnt]=~ /\S/){
+	while(defined $table[$head_pos+$cnt] && $table[$head_pos+$cnt]=~ /\S/ && $table[$head_pos+$cnt] !~ /[0-9]+\s+jobs;/){
 		$data{$cnt} = $table[$head_pos+$cnt];
 		$cnt++;
 	}
@@ -495,6 +495,8 @@ sub read_array_content_to_table {
 		}
 	}
 	my $arg = $table[$num];
+	# for 8.7.2 new totals line, strip off the leading words "Total for <ident>:" so it looks (mostly) like the pre 8.7.2 summary line
+	if (defined $arg && $arg =~ /^Total for/) { $arg =~ s/^Total for [^:]*:\s*//; }
 	my @summary = defined $arg? (split / /, $arg) : " ";
 	return (\%other,\%data,\@summary);
 }
@@ -606,7 +608,7 @@ sub check_status {
 'State' => sub{return $_[1] eq 'Unclaimed';},
 'Activity' => sub{return $_[1] eq 'Idle';},
 'LoadAv' => sub{
-	my $loadavg = sprintf "%.3f",$Attr_new{$_[0]-1}{LoadAvg};
+	my $loadavg = sprintf "%.3f",$Attr_new{$_[0]-1}{CondorLoadAvg};
 	if ($_[1] eq $loadavg){
 		return 1;
 	} else {
@@ -841,7 +843,7 @@ sub check_status {
 'OpSys' => sub {return $_[1] eq 'LINUX';},
 'Arch' => sub {return $_[1] eq 'X86_64';},
 'LoadAv' => sub {
-	my $loadavg = sprintf "%.3f",$Attr_old{$_[0]-1}{LoadAvg};
+	my $loadavg = sprintf "%.3f",$Attr_old{$_[0]-1}{CondorLoadAvg};
 	return $_[1] eq $loadavg;},
 'RemoteUser' => sub {return $_[1] eq "foo\@cs.wisc.edu";},
 'ClientMachine' => sub {
@@ -1053,10 +1055,15 @@ sub how_many_entries {
 	my $index = 0;
 	for my $i (0..(scalar @content)-1){
 		if ($content[$i] =~ /\S/){
-			$index++;
+			if ($content[$i] =~ /[0-9]+ jobs;/) {
+				# don't count totals lines as entries.
+			} else {
+				$index++;
+			}
 		}
 	}
-	return ($index - 3);
+	# -2 to account for title and headings
+	return ($index - 2);
 }
 
 
@@ -1342,33 +1349,33 @@ sub find_real_heading {
 		$real_heading = '-batch';
 	# if there are three command arguments, one has to be -nobatch andone has to be -wide
 	} elsif (defined $command_arg && $command_arg =~ /(.+)\s+(.+)\s+(.+)/){
-		if ($1 ne '-wide' && $1 ne '-nobatch'){
+		if (substr($1,0,5) ne '-wide' && $1 ne '-nobatch'){
 			$real_heading = $1;
 		}
-		if ($2 ne '-wide' && $2 ne '-nobatch'){
+		if (substr($2,0,5) ne '-wide' && $2 ne '-nobatch'){
 			$real_heading = $2;
 		}	
-		if ($3 ne '-wide' && $3 ne '-nobatch'){
+		if (substr($3,0,5) ne '-wide' && $3 ne '-nobatch'){
 			$real_heading = $3;
 		}
 	# if there are two command arguments, one can be -wide or -nobatch
 	} elsif (defined $command_arg && $command_arg =~ /(.+)\s+(.+)/){
-		if (('-nobatch' eq $1 || '-nobatch' eq $2) && ('-wide' eq $1 || '-wide' eq $2)){
+		if (('-nobatch' eq $1 || '-nobatch' eq $2) && ('-wide' eq substr($1,0,5) || '-wide' eq substr($2,0,5))){
 			$real_heading = '-nobatch';
 		} elsif ($1 eq '-nobatch'){
 			$real_heading = $2;
 		} elsif ($2 eq '-nobatch'){
 			$real_heading = $1;
-		} elsif ($1 eq '-wide' && $2 ne '-dag' && $2 ne '-run'){
+		} elsif (substr($1,0,5) eq '-wide' && $2 ne '-dag' && $2 ne '-run'){
 			$real_heading = $2;
-		} elsif ($2 eq '-wide' && $1 ne '-dag' && $1 ne '-run'){
+		} elsif (substr($2,0,5) eq '-wide' && $1 ne '-dag' && $1 ne '-run'){
 			$real_heading = $1;
 		} else {
 			$real_heading = '-batch';
 		}	
 	# one command argument, -dag and -run same with -batch
 	} elsif (defined $command_arg){
-		if ($command_arg eq '-wide' || $command_arg eq '-run' || $command_arg eq '-dag'){
+		if (substr($command_arg,0,5) eq '-wide' || $command_arg eq '-run' || $command_arg eq '-dag'){
 			$real_heading = '-batch';
 		} else {
 			$real_heading = $command_arg;

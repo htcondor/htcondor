@@ -25,6 +25,7 @@
 #include "condor_auth_claim.h"
 #include "condor_auth_anonymous.h"
 #include "condor_auth_fs.h"
+#include "condor_auth_munge.h"
 #include "condor_auth_sspi.h"
 #include "condor_auth_x509.h"
 #include "condor_auth_ssl.h"
@@ -262,7 +263,16 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				m_auth = new Condor_Auth_FS(mySock, 1);
 				m_method_name = "FS_REMOTE";
 				break;
+
 #endif /* !defined(WIN32) */
+
+#if defined(HAVE_EXT_MUNGE)
+			case CAUTH_MUNGE:
+				m_auth = new Condor_Auth_MUNGE(mySock);
+				m_method_name = "MUNGE";
+				break;
+#endif
+
 			case CAUTH_CLAIMTOBE:
 				m_auth = new Condor_Auth_Claim(mySock);
 				m_method_name = "CLAIMTOBE";
@@ -902,7 +912,11 @@ int Authentication::exchangeKey(KeyInfo *& key)
 
     if (mySock->isClient()) {
         mySock->decode();
-        mySock->code(hasKey);
+        if (!mySock->code(hasKey)) {
+			hasKey = 0;
+			retval = 0;
+			dprintf(D_SECURITY, "Authentication::exchangeKey server disconnected from us\n");
+		}
         mySock->end_of_message();
         if (hasKey) {
             if (!mySock->code(keyLength) ||
@@ -933,7 +947,11 @@ int Authentication::exchangeKey(KeyInfo *& key)
         mySock->encode();
         if (key == 0) {
             hasKey = 0;
-            mySock->code(hasKey);
+            if (!mySock->code(hasKey)) {
+				dprintf(D_SECURITY, "Authentication::exchangeKey client hung up during key exchange\n");
+            	mySock->end_of_message();
+				return 0;
+			}
             mySock->end_of_message();
             return 1;
         }
@@ -946,7 +964,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
             protocol  = (int) key->getProtocol();
             duration  = key->getDuration();
 
-            if (!authenticator_->wrap((char *)const_cast<unsigned char*>(key->getKeyData()), keyLength, encryptedKey, outputLen))
+            if (!authenticator_->wrap((const char *)key->getKeyData(), keyLength, encryptedKey, outputLen))
 			{
 				// failed to wrap key.
 				return 0;
@@ -1011,6 +1029,15 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
 			method_bitmask &= ~CAUTH_GSI;
 		}
+#if defined(HAVE_EXT_MUNGE)
+		if ( (method_bitmask & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )
+#else
+		if (method_bitmask & CAUTH_MUNGE)
+#endif
+		{
+			dprintf (D_SECURITY, "HANDSHAKE: excluding Munge: %s\n", "Initialization failed");
+			method_bitmask &= ~CAUTH_MUNGE;
+		}
         dprintf ( D_SECURITY, "HANDSHAKE: sending (methods == %i) to server\n", method_bitmask);
         if ( !mySock->code( method_bitmask ) || !mySock->end_of_message() ) {
             return -1;
@@ -1066,6 +1093,15 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 		dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
 		client_methods &= ~CAUTH_GSI;
 		shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	}
+#if defined(HAVE_EXT_MUNGE)
+	if ( (shouldUseMethod & CAUTH_MUNGE) && Condor_Auth_MUNGE::Initialize() == false )
+#else
+	if (shouldUseMethod & CAUTH_MUNGE)
+#endif
+	{
+		dprintf (D_SECURITY, "HANDSHAKE: excluding Munge: %s\n", "Initialization failed");
+		shouldUseMethod &= ~CAUTH_MUNGE;
 	}
 
 	dprintf ( D_SECURITY, "HANDSHAKE: i picked (method == %i)\n", shouldUseMethod);

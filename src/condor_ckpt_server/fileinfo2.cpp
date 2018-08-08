@@ -102,9 +102,9 @@ file_info_node* FileInformation::AddFileInfo(const condor_sockaddr& machine_IP,
     }
   n->data.machine_IP = machine_IP;
   machine_IP.to_ip_string(temp_name, sizeof(temp_name));
-  strncpy(n->data.machine_IP_name, temp_name, MAX_MACHINE_NAME_LENGTH);
-  strncpy(n->data.owner_name, owner_name, MAX_NAME_LENGTH);
-  strncpy(n->data.file_name, file_name, MAX_CONDOR_FILENAME_LENGTH);
+  strncpy(n->data.machine_IP_name, temp_name, MAX_MACHINE_NAME_LENGTH - 1);
+  strncpy(n->data.owner_name, owner_name, MAX_NAME_LENGTH - 1);
+  strncpy(n->data.file_name, file_name, MAX_CONDOR_FILENAME_LENGTH - 1);
   n->data.size = file_size;
   n->data.last_modified_time = time(NULL);
   n->data.state = state;
@@ -208,11 +208,11 @@ void FileInformation::TransferFileInfo(int socket_desc)
       while ((ptr != NULL) && (buf_count < max_buf))
 	{
 	  strncpy(buffer[buf_count].file_name, ptr->data.file_name, 
-		  STATUS_FILENAME_LENGTH);
+		  STATUS_FILENAME_LENGTH - 1);
 	  strncpy(buffer[buf_count].owner_name, ptr->data.owner_name,
-		  STATUS_OWNER_NAME_LENGTH);
+		  STATUS_OWNER_NAME_LENGTH - 1);
 	  strncpy(buffer[buf_count].machine_IP_name, ptr->data.machine_IP_name,
-		  STATUS_MACHINE_NAME_LENGTH);
+		  STATUS_MACHINE_NAME_LENGTH - 1);
 	  buffer[buf_count].size = htonl(ptr->data.size);
 	  buffer[buf_count].last_modified_time = 
 	                     htonl((u_lint) ptr->data.last_modified_time);

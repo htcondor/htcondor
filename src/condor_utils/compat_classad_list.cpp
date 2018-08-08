@@ -26,16 +26,12 @@
 
 namespace compat_classad {
 
-static unsigned int
+static size_t
 ptr_hash_fn(ClassAd* const &index)
 {
 	intptr_t i = (intptr_t)index;
 
-#if (SIZEOF_VOIDPTR > 4)
-	return (unsigned int)( i ^ (i>>32) );
-#else
-	return (unsigned int) i;
-#endif
+	return (size_t) i;
 }
 
 ClassAdListDoesNotDeleteAds::ClassAdListDoesNotDeleteAds():

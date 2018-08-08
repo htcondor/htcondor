@@ -117,6 +117,9 @@ ScheddNegotiate::getRemotePool()
 	return m_remote_pool.c_str();
 }
 
+// this is in qmgmt.cpp...
+extern JobQueueJob* GetJobAd(const PROC_ID& jid);
+
 bool
 ScheddNegotiate::nextJob()
 {
@@ -141,15 +144,34 @@ ScheddNegotiate::nextJob()
 
 		if( !getAutoClusterRejected(m_current_auto_cluster_id) ) {
 			while( cluster->popJob(m_current_job_id) ) {
-				if( !scheduler_skipJob(m_current_job_id) ) {
+				const char* because = "";
+				bool skip_all = false;
+				JobQueueJob * job = GetJobAd(m_current_job_id);
+				if ( ! job)
+				{
+					dprintf(D_MATCH,
+						"skipping job %d.%d because it no longer exists\n",
+						m_current_job_id.cluster,m_current_job_id.proc);
+					continue;
+				}
 
+				if( !scheduler_skipJob(job, NULL, skip_all, because) ) {
+					// now get a *copy* of the job into m_current_job_ad. it is still linked to the cluster ad
+					// until we call ChainCollapse() on the copy which we do before leaving this method.
 					if( !scheduler_getJobAd( m_current_job_id, m_current_job_ad ) )
 					{
-						dprintf(D_FULLDEBUG,
+						dprintf(D_MATCH,
 							"skipping job %d.%d because it no longer exists\n",
 							m_current_job_id.cluster,m_current_job_id.proc);
 					}
 					else {
+						int count_max = INT_MAX;
+
+						if ( ! scheduler_getRequestConstraints(m_current_job_id, m_current_job_ad, &count_max)) {
+							dprintf(D_MATCH,
+								"skipping job %d.%d because scheduler_getRequestConstraints returned false\n",
+								m_current_job_id.cluster,m_current_job_id.proc);
+						}
 						// Insert the number of jobs remaining in this
 						// resource request cluster into the ad - the negotiator
 						// may use this information to give us more than one match
@@ -166,6 +188,7 @@ ScheddNegotiate::nextJob()
 						if ( universe != CONDOR_UNIVERSE_PARALLEL ) {
 							// add one to cluster size to cover the current popped job
 							int resource_count = 1+cluster->size();
+							if (count_max > 0) { resource_count = MIN(resource_count, count_max); }
 							if (resource_count > m_jobs_can_offer && (m_jobs_can_offer > 0))
 							{
 								dprintf(D_FULLDEBUG, "Offering %d jobs instead of %d to the negotiator for this cluster; nearing internal limits (MAX_JOBS_RUNNING, etc).\n", m_jobs_can_offer, resource_count);
@@ -419,18 +442,33 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		sig_attrs.insert(ATTR_OWNER);
 		sig_attrs.insert(ATTR_CLUSTER_ID);
 		sig_attrs.insert(ATTR_PROC_ID);
+		sig_attrs.insert(ATTR_RESOURCE_REQUEST_CONSTRAINT);
 		sig_attrs.insert(ATTR_RESOURCE_REQUEST_COUNT);
 		sig_attrs.insert(ATTR_GLOBAL_JOB_ID);
 		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
 		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
 		sig_attrs.insert(ATTR_WANT_PSLOT_PREEMPTION);
 		sig_attrs.insert(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
+
+		if (IsDebugVerbose(D_MATCH)) {
+			std::string tmp;
+			sPrintAdAttrs(tmp, m_current_job_ad, sig_attrs);
+			dprintf(D_MATCH | D_VERBOSE, "resource request for job %d.%d :\n%s\n", m_current_job_id.cluster, m_current_job_id.proc, tmp.c_str());
+		}
+
 		// ship it!
 		putad_result = putClassAd(sock, m_current_job_ad, 0, &sig_attrs);
 	} else {
 		// send the entire classad.  perhaps we are doing this because the
 		// ad does not have ATTR_AUTO_CLUSTER_ATTRS defined for some reason,
 		// or perhaps we are doing this because we were explicitly told to do so.
+
+		if (IsDebugVerbose(D_MATCH)) {
+			std::string tmp;
+			sPrintAd(tmp, m_current_job_ad);
+			dprintf(D_MATCH | D_VERBOSE, "resource request (all) for job %d.%d :\n%s\n", m_current_job_id.cluster, m_current_job_id.proc, tmp.c_str());
+		}
+
 		putad_result = putClassAd(sock, m_current_job_ad);
 	}
 	if( !putad_result ) {
@@ -466,6 +504,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 
 	case REJECTED:
 		m_reject_reason = "Unknown reason";
+		// Fall through...
 		//@fallthrough@
 	case REJECTED_WITH_REASON: {
 		// To support resource request lists, the
@@ -475,10 +514,11 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		// this information out of m_reject_reason.
 		int pos = m_reject_reason.FindChar('|');
 		if ( pos >= 0 ) {
-			m_reject_reason.Tokenize();
-			/*const char *reason =*/ m_reject_reason.GetNextToken("|",false);
-			const char *ac = m_reject_reason.GetNextToken("|",false);
-			const char *jobid = m_reject_reason.GetNextToken("|",false);
+			MyStringTokener tok;
+			tok.Tokenize(m_reject_reason.Value());
+			/*const char *reason =*/ tok.GetNextToken("|",false);
+			const char *ac = tok.GetNextToken("|",false);
+			const char *jobid = tok.GetNextToken("|",false);
 			if (ac && jobid) {
 				int rr_cluster, rr_proc;
 				m_current_auto_cluster_id = atoi(ac);
@@ -489,7 +529,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 				m_current_job_id.cluster = rr_cluster;
 				m_current_job_id.proc = rr_proc;
 			}
-			m_reject_reason.setChar(pos,'\0');	// will truncate string at pos
+			m_reject_reason.truncate(pos);	// will truncate string at pos
 		}
 		scheduler_handleJobRejected( m_current_job_id, m_reject_reason.c_str() );
 		m_jobs_rejected++;
@@ -499,6 +539,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 	}
 
 	case SEND_JOB_INFO:
+		//dprintf(D_MATCH, "got SEND_JOB_INFO\n");
 		m_num_resource_reqs_sent = 0;  // clear counter of reqs sent this round
 		if( !sendJobInfo(sock) ) {
 				// We failed to talk to the negotiator, so close the socket.
@@ -507,6 +548,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		break;
 
 	case SEND_RESOURCE_REQUEST_LIST:
+		//dprintf(D_MATCH, "got SEND_RESOURCE_REQUEST_LIST\n");
 		m_num_resource_reqs_sent = 0; // clear counter of reqs sent this round
 		if( !sendResourceRequestList(sock) ) {
 				// We failed to talk to the negotiator, so close the socket.
@@ -667,10 +709,6 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 					 "Can't get my match ad from negotiator\n" );
 			return false;
 		}
-#if defined(ADD_TARGET_SCOPING)
-		m_match_ad.AddTargetRefs( TargetJobAttrs );
-#endif
-
 		break;
 	}
 	case END_NEGOTIATE:

@@ -32,7 +32,7 @@
 
 
 TrackTotals::
-TrackTotals (ppOption m) : allTotals(16, MyStringHash)
+TrackTotals (ppOption m) : allTotals(hashFunction)
 {
 	ppo = m;
 	malformed = 0;
@@ -92,11 +92,6 @@ bool TrackTotals::haveTotals()
     	case PP_STARTD_RUN:
 		case PP_STARTD_STATE:
     	case PP_STARTD_COD:
-
-#ifdef HAVE_EXT_POSTGRESQL
-    	case PP_QUILL_NORMAL:
-#endif /* HAVE_EXT_POSTGRESQL */
-
     	case PP_SCHEDD_NORMAL:
     	case PP_SUBMITTER_NORMAL:
     	case PP_CKPT_SRVR_NORMAL:
@@ -123,7 +118,7 @@ displayTotals (FILE *file, int keyLength)
 
 		
 	// sort the keys (insertion sort) so we display totals in sorted order
-	const char **keys = new const char* [allTotals.getNumElements()];
+	char **keys = new char* [allTotals.getNumElements()];
 	ASSERT(keys);
 	allTotals.startIterations();
 	for (k = 0; k < allTotals.getNumElements(); k++) // for each key
@@ -157,7 +152,7 @@ displayTotals (FILE *file, int keyLength)
 	{
 		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
 		allTotals.lookup(MyString(keys[k]), ct);
-		free((void *)const_cast<char*>(keys[k]));
+		free(keys[k]);
 		ct->displayInfo(file);
 		had_tot_keys = true;
 	}
@@ -563,50 +558,6 @@ displayInfo( FILE *file, int )
 			 running, suspended, vacating, killing );
 }
 
-QuillNormalTotal::
-QuillNormalTotal()
-{
-	numSqlTotal = 0;
-	numSqlLastBatch = 0;
-}
-
-int QuillNormalTotal::
-update (ClassAd *ad, int /*options*/)
-{
-	int attrSqlTotal, attrSqlLastBatch;
-	bool badAd = false;
-
-	if (ad->LookupInteger(ATTR_QUILL_SQL_TOTAL, attrSqlTotal)) {
-		 numSqlTotal += attrSqlTotal;
-	} else {
-		badAd = true;
-	}
-
-	if( ad->LookupInteger(ATTR_QUILL_SQL_LAST_BATCH, 
-						  attrSqlLastBatch) ) {
-		numSqlLastBatch += attrSqlLastBatch;
-	} else {
-		badAd = true;
-	}
-
-	return !badAd;
-}
-
-
-void QuillNormalTotal::
-displayHeader(FILE *file)
-{
-	fprintf (file, "%18s %18s\n", "NumSqlTotal", "NumSqlLastBatch");
-}
-
-
-void QuillNormalTotal::
-displayInfo (FILE *file, int tl)
-{
-	if (tl) fprintf(file,"%18d %18d\n", numSqlTotal, numSqlLastBatch);
-}
-
-
 ScheddNormalTotal::
 ScheddNormalTotal()
 {
@@ -768,11 +719,6 @@ makeTotalObject (ppOption ppo)
 		case PP_STARTD_STATE:		ct = new StartdStateTotal;	break;
 		case PP_STARTD_COD:			ct = new StartdCODTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
-
-#ifdef HAVE_EXT_POSTGRESQL
-		case PP_QUILL_NORMAL:		ct = new QuillNormalTotal; break;
-#endif /* HAVE_EXT_POSTGRESQL */
-
 		case PP_SUBMITTER_NORMAL:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
 
@@ -816,13 +762,6 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 
 		// all ads in the following categories hash to the same key for totals
 		case PP_CKPT_SRVR_NORMAL:
-
-		//here we might want a separate case for QUILL_NORMAL 
-		//but we keep it here for now
-#ifdef HAVE_EXT_POSTGRESQL
-		case PP_QUILL_NORMAL:
-#endif /* HAVE_EXT_POSTGRESQL */
-
 		case PP_SCHEDD_NORMAL:
 			key = " ";
 			return 1;

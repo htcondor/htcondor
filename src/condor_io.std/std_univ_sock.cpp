@@ -119,7 +119,7 @@ StdUnivSock::addr_changed()
 }
 
 const char *
-StdUnivSock::peer_ip_str()
+StdUnivSock::peer_ip_str() const
 {
     if( _peer_ip_buf[0] ) {
         return _peer_ip_buf;
@@ -131,7 +131,7 @@ StdUnivSock::peer_ip_str()
 }
 
 condor_sockaddr
-StdUnivSock::my_addr()
+StdUnivSock::my_addr() const
 {
 	sockaddr_storage addr;
 	SOCKET_LENGTH_TYPE addr_len;
@@ -142,7 +142,7 @@ StdUnivSock::my_addr()
 }
 
 condor_sockaddr
-StdUnivSock::peer_addr()
+StdUnivSock::peer_addr() const
 {
 	sockaddr_storage addr;
 	SOCKET_LENGTH_TYPE addr_len;
@@ -153,7 +153,7 @@ StdUnivSock::peer_addr()
 }
 
 char *
-StdUnivSock::get_sinful_peer()
+StdUnivSock::get_sinful_peer() const
 {       
     if( _sinful_peer_buf[0] ) {
         return _sinful_peer_buf;
@@ -165,7 +165,7 @@ StdUnivSock::get_sinful_peer()
 }
 
 char const *
-StdUnivSock::default_peer_description()
+StdUnivSock::default_peer_description() const
 {
 	char const *retval = get_sinful_peer();
 	if( !retval ) {
@@ -175,7 +175,7 @@ StdUnivSock::default_peer_description()
 }
 
 bool
-StdUnivSock::canEncrypt()
+StdUnivSock::canEncrypt() const
 {
 	return false;
 }
@@ -499,14 +499,14 @@ StdUnivSock::attach_to_file_desc( int fd )
 #endif
 
 Stream::stream_type 
-StdUnivSock::type() 
+StdUnivSock::type() const
 { 
 	return Stream::reli_sock; 
 }
 
 
 bool
-StdUnivSock::peer_is_local()
+StdUnivSock::peer_is_local() const
 {
 	EXCEPT("not implemented");
 	return false;
@@ -533,14 +533,14 @@ StdUnivSock::CloneStream()
 }
 
 int
-StdUnivSock::bytes_available_to_read()
+StdUnivSock::bytes_available_to_read() const
 {
 	EXCEPT("not implemented");
 	return -1;
 }
 
 const char*
-StdUnivSock::my_ip_str()
+StdUnivSock::my_ip_str() const
 {
 	EXCEPT("not implemented");
 	return NULL;

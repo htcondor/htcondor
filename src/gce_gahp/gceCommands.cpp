@@ -29,6 +29,7 @@
 #include "stat_wrapper.h"
 #include <curl/curl.h>
 #include "thread_control.h"
+#include <sqlite3.h>
 
 using std::string;
 using std::map;
@@ -235,7 +236,11 @@ void AddInstanceToResult( vector<string> &result, string &id,
 
 struct AuthInfo {
 	string m_auth_file;
+	string m_account;
 	string m_access_token;
+	string m_client_id;
+	string m_client_secret;
+	string m_refresh_token;
 	time_t m_expiration;
 	time_t m_last_attempt;
 	pthread_cond_t m_cond;
@@ -249,14 +254,12 @@ struct AuthInfo {
 };
 
 // A table of Google OAuth 2.0 credentials, keyed on the filename the
-// credentials were read from.
+// credentials were read from and which account the credentials are for.
 map<string, AuthInfo> authTable;
 
-// Obtain a refresh token from Google's OAuth 2.0 service using the
-// provided credentials.
-bool TryAuthRefresh( const string &client_id, const string &client_secret,
-					 const string &refresh_token, string &access_token,
-					 int &expires_in, string &err_msg )
+// Obtain an access token from Google's OAuth 2.0 service using the
+// provided credentials (refresh token and client secret).
+bool TryAuthRefresh( AuthInfo &auth_info )
 {
 	// Fill in required attributes & parameters.
 	GceRequest request;
@@ -266,16 +269,16 @@ bool TryAuthRefresh( const string &client_id, const string &client_secret,
 
 	// TODO Do we need any newlines in this body?
 	request.requestBody = "client_id=";
-	request.requestBody += client_id;
+	request.requestBody += auth_info.m_client_id;
 	request.requestBody += "&client_secret=";
-	request.requestBody += client_secret;
+	request.requestBody += auth_info.m_client_secret;
 	request.requestBody += "&refresh_token=";
-	request.requestBody += refresh_token;
+	request.requestBody += auth_info.m_refresh_token;
 	request.requestBody += "&grant_type=refresh_token";
 
 	// Send the request.
 	if( ! request.SendRequest() ) {
-		err_msg = request.errorMessage;
+		auth_info.m_err_msg = request.errorMessage;
 		return false;
 	}
 
@@ -296,18 +299,288 @@ bool TryAuthRefresh( const string &client_id, const string &client_secret,
 	}
 
 	if ( my_access_token.empty() ) {
-		err_msg = "No access_token in server response";
+		auth_info.m_err_msg = "No access_token in server response";
 		return false;
 	}
 	if ( my_expires_in == 0 ) {
-		err_msg = "No expiration in server_response";
+		auth_info.m_err_msg = "No expiration in server_response";
 		return false;
 	}
 
-	access_token = my_access_token;
-	expires_in = my_expires_in;
+	auth_info.m_access_token = my_access_token;
+	auth_info.m_expiration = my_expires_in + time(NULL);
 
 	return true;
+}
+
+bool ReadCredData( AuthInfo &auth_info, const classad::ClassAd &cred_ad )
+{
+	string access_token;
+	string refresh_token;
+	string client_id;
+	string client_secret;
+	string token_expiry;
+	time_t expiration = 0;
+	cred_ad.EvaluateAttrString("access_token", access_token);
+	cred_ad.EvaluateAttrString("refresh_token", refresh_token);
+	cred_ad.EvaluateAttrString("client_id", client_id);
+	cred_ad.EvaluateAttrString("client_secret", client_secret);
+	cred_ad.EvaluateAttrString("token_expiry", token_expiry);
+	if ( ! token_expiry.empty() ) {
+		struct tm expiration_tm;
+		if ( strptime(token_expiry.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
+			expiration = timegm(&expiration_tm);
+		}
+	}
+
+	if ( refresh_token.empty() ) {
+		// This is a service credential
+		if ( access_token.empty() ) {
+			auth_info.m_err_msg = "Failed to find refresh_token or access_token in credentials file";
+			return false;
+		}
+		if ( expiration < time(NULL) ) {
+			auth_info.m_err_msg = "Access_token is expired, please re-login";
+			return false;
+		}
+		auth_info.m_access_token = access_token;
+		auth_info.m_expiration = expiration;
+	} else {
+		// This is a user credential
+		if ( client_id.empty() ) {
+			auth_info.m_err_msg = "Failed to find client_id in credentials file";
+			return false;
+		}
+		if ( client_secret.empty() ) {
+			auth_info.m_err_msg = "Failed to find client_secret in credentials file";
+			return false;
+		}
+		auth_info.m_refresh_token = refresh_token;
+		auth_info.m_client_id = client_id;
+		auth_info.m_client_secret = client_secret;
+	}
+	return true;
+}
+
+int SqliteCredFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
+{
+	AuthInfo *auth_info = (AuthInfo *)auth_ptr;
+	if ( argc < 2 || strcmp( col_name[1], "value" ) ) {
+		auth_info->m_err_msg = "Bad schema in credentials DB";
+		return 0;
+	}
+	classad::ClassAdJsonParser parser;
+	classad::ClassAd cred_ad;
+	if ( ! parser.ParseClassAd(argv[1], cred_ad, true) ) {
+		auth_info->m_err_msg = "Invalid JSON data";
+		return 0;
+	}
+	// If the user didn't specify an account, remember which one we got.
+	// This is important if we need to look in the access_tokens db.
+	if ( auth_info->m_account.empty() ) {
+		auth_info->m_account = argv[0];
+	}
+	// Clear the not-found error message set before the query.
+	auth_info->m_err_msg.clear();
+	// If ReadCredData() fails, it'll set auth_info->m_err_msg.
+	// No need to take any further action here.
+	ReadCredData( *auth_info, cred_ad );
+	return 0;
+}
+
+int SqliteAccessFileCB( void *auth_ptr, int argc, char **argv, char **col_name )
+{
+	AuthInfo *auth_info = (AuthInfo *)auth_ptr;
+	if ( argc < 4 || strcmp( col_name[1], "access_token" ) ||
+		 strcmp( col_name[2], "token_expiry" ) ) {
+		auth_info->m_err_msg = "Bad schema in access_token DB";
+		return 0;
+	}
+	// Clear the not-found error message set before the query.
+	auth_info->m_err_msg.clear();
+
+	auth_info->m_access_token = argv[1];
+	// Parse token expiry time in (UTC) format
+	// "2016-07-27T18:44:12Z"
+	struct tm expiration_tm;
+	if ( strptime(argv[2], "%Y-%m-%d %T", &expiration_tm ) != NULL) {
+		auth_info->m_expiration = timegm(&expiration_tm);
+	}
+	return 0;
+}
+
+// These are return values for ReadCredFileSqlite() and ReadCredFileJson().
+// CRED_FILE_SUCCESS: The requested credentials were successfully read.
+// CRED_FILE_FAILURE: The requested credentials could not be obtained.
+// CRED_FILE_BAD_FORMAT: The file was not the correct format. The caller
+//    could retry reading in a different format.
+#define CRED_FILE_SUCCESS       0
+#define CRED_FILE_FAILURE       1
+#define CRED_FILE_BAD_FORMAT    2
+
+// Read a gcloud credentials file in the new SQL format and extract
+// credentials for the given account. If no account is specified, one
+// is picked arbitrarily.
+int ReadCredFileSqlite( AuthInfo &auth_info )
+{
+	sqlite3 *db;
+	char *db_err_msg;
+	int rc;
+	char *query_stmt;
+
+	if ( auth_info.m_account.empty() ) {
+		rc = asprintf(&query_stmt, "select * from credentials limit 1;");
+	} else {
+		rc = asprintf(&query_stmt, "select * from credentials where account_id = \"%s\";", auth_info.m_account.c_str());
+	}
+	assert(rc >= 0);
+
+	rc = sqlite3_open_v2(auth_info.m_auth_file.c_str(), &db, SQLITE_OPEN_READONLY, NULL);
+	if ( rc ) {
+		formatstr(auth_info.m_err_msg, "Failed to open credentials file: %s",
+		          sqlite3_errmsg(db));
+		sqlite3_close(db);
+		free(query_stmt);
+		return CRED_FILE_FAILURE;
+	}
+	auth_info.m_err_msg = "Account not found in credentials db";
+	rc = sqlite3_exec(db, query_stmt, SqliteCredFileCB, &auth_info, &db_err_msg);
+	free(query_stmt);
+	query_stmt = NULL;
+	if ( rc != SQLITE_OK ) {
+		formatstr(auth_info.m_err_msg, "Failed to query credentials db: %s",
+		          db_err_msg);
+		sqlite3_free(db_err_msg);
+		sqlite3_close(db);
+		return (rc == SQLITE_NOTADB) ? CRED_FILE_BAD_FORMAT : CRED_FILE_FAILURE;
+	}
+	sqlite3_close(db);
+
+	if ( ! auth_info.m_err_msg.empty() ) {
+		return CRED_FILE_FAILURE;
+	}
+	if ( ! auth_info.m_refresh_token.empty() ) {
+		return CRED_FILE_SUCCESS;
+	}
+	// If there's no refresh token, then we're dealing with a service
+	// account. We need to read the accompanying access_tokens.db file.
+	if ( auth_info.m_account.empty() ) {
+		rc = asprintf(&query_stmt, "select * from access_tokens limit 1;");
+	} else {
+		rc = asprintf(&query_stmt, "select * from access_tokens where account_id = \"%s\";", auth_info.m_account.c_str());
+	}
+	assert(rc >= 0);
+
+	string access_tokens_file;
+	size_t slash_pos = auth_info.m_auth_file.find_last_of('/');
+	if ( slash_pos != string::npos ) {
+		access_tokens_file = auth_info.m_auth_file.substr( 0, slash_pos );
+		access_tokens_file += "/";
+	}
+	access_tokens_file += "access_tokens.db";
+	rc = sqlite3_open_v2(access_tokens_file.c_str(), &db, SQLITE_OPEN_READONLY, NULL);
+	if ( rc ) {
+		formatstr(auth_info.m_err_msg, "Failed to open access_tokens file: %s",
+		          sqlite3_errmsg(db));
+		sqlite3_close(db);
+		free(query_stmt);
+		return CRED_FILE_FAILURE;
+	}
+	auth_info.m_err_msg = "Account not found in access_tokens db";
+	rc = sqlite3_exec(db, query_stmt, SqliteAccessFileCB, &auth_info, &db_err_msg);
+	free(query_stmt);
+	query_stmt = NULL;
+	if ( rc != SQLITE_OK ) {
+		formatstr(auth_info.m_err_msg, "Failed to query access_tokens db: %s",
+		          db_err_msg);
+		sqlite3_free(db_err_msg);
+		sqlite3_close(db);
+		return CRED_FILE_FAILURE;
+	}
+	sqlite3_close(db);
+	if ( ! auth_info.m_err_msg.empty() ) {
+		return CRED_FILE_FAILURE;
+	}
+	return CRED_FILE_SUCCESS;
+}
+
+// Read a gcloud credentials file in the old JSON format and extract
+// credentials for the given account. If no account is specified, one
+// is picked arbitrarily.
+int ReadCredFileJson( AuthInfo &auth_info )
+{
+	auth_info.m_err_msg.clear();
+	FILE *fp = safe_fopen_wrapper_follow(auth_info.m_auth_file.c_str(), "r");
+	if ( fp == NULL ) {
+		auth_info.m_err_msg = "Failed to open credentials file";
+		return CRED_FILE_FAILURE;
+	}
+	classad::ClassAdJsonParser parser;
+	classad::ClassAd file_ad;
+	if ( ! parser.ParseClassAd(fp, file_ad, true) ) {
+		auth_info.m_err_msg = "Invalid JSON data";
+		fclose(fp);
+		return CRED_FILE_BAD_FORMAT;
+	}
+	fclose(fp);
+	classad::ExprTree *tree;
+	tree = file_ad.Lookup("data");
+	if ( tree == NULL || tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
+		auth_info.m_err_msg = "Invalid JSON data";
+		return CRED_FILE_FAILURE;
+	}
+	std::vector<ExprTree*> cred_list;
+	((classad::ExprList*)tree)->GetComponents(cred_list);
+	for ( std::vector<ExprTree*>::iterator itr = cred_list.begin(); itr != cred_list.end(); itr++ ) {
+		if ( (*itr)->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+			continue;
+		}
+		classad::ClassAd *acct_ad = (classad::ClassAd*)(*itr);
+		classad::Value val;
+		string account_id;
+		if ( !acct_ad->EvaluateExpr("key.account", val) || !val.IsStringValue(account_id) ) {
+			continue;
+		}
+		if ( !auth_info.m_account.empty() ) {
+			if ( account_id != auth_info.m_account ) {
+				continue;
+			}
+		}
+		classad::ExprTree *cred_expr;
+		cred_expr = acct_ad->Lookup("credential");
+		if ( cred_expr == NULL || cred_expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+			continue;
+		}
+		if ( ReadCredData(auth_info, *(classad::ClassAd*)cred_expr ) ) {
+			auth_info.m_account = account_id;
+			return CRED_FILE_SUCCESS;
+		}
+	}
+	if ( auth_info.m_err_msg.empty() ) {
+		auth_info.m_err_msg = "Account not found in credentials file";
+	}
+	return CRED_FILE_FAILURE;
+}
+
+bool FindDefaultCredentialsFile( string &cred_file )
+{
+	struct passwd *pw;
+	if ( (pw = getpwuid(getuid())) == NULL ) {
+		return false;
+	}
+	string test_cred_file = pw->pw_dir;
+	test_cred_file += "/.config/gcloud/credentials.db";
+	if ( access(test_cred_file.c_str(), R_OK) == 0 ) {
+		cred_file = test_cred_file;
+		return true;
+	}
+	test_cred_file = pw->pw_dir;
+	test_cred_file += "/.config/gcloud/credentials";
+	if ( access(test_cred_file.c_str(), R_OK) == 0 ) {
+		cred_file = test_cred_file;
+		return true;
+	}
+	return false;
 }
 
 // Given a file containing OAuth 2.0 credentials, return an access
@@ -322,10 +595,28 @@ bool TryAuthRefresh( const string &client_id, const string &client_secret,
 // The results are cached (in authTable map), so that the OAuth service
 // is only contacted when necessary (the first time we see a file and
 // when the access token is about to expire).
-bool GetAccessToken( const string &auth_file, string &access_token,
-					 string &err_msg)
+bool GetAccessToken( const string &auth_file_in, const string &account_in,
+                     string &access_token, string &err_msg)
 {
-	AuthInfo &auth_entry = authTable[auth_file];
+	// If we get an empty or 'NULL' filename, look for the file in the
+	// default location used by the gcloud client tools.
+	string auth_file;
+	if ( !auth_file_in.empty() && strcasecmp( auth_file_in.c_str(), NULLSTRING ) != 0 ) {
+		auth_file = auth_file_in;
+	} else if ( FindDefaultCredentialsFile( auth_file ) == false ) {
+		err_msg = "Failed to find default credentials file";
+		return false;
+	}
+
+	// If we get an account name of NULL, treat it like an empty string,
+	// which means use any account.
+	string map_key;
+	string account;
+	if ( strcasecmp( account_in.c_str(), NULLSTRING ) != 0 ) {
+		account = account_in;
+	}
+	map_key = auth_file + "#" + account;
+	AuthInfo &auth_entry = authTable[map_key];
 
 	while ( auth_entry.m_refreshing ) {
 		pthread_cond_wait( &auth_entry.m_cond, &global_big_mutex );
@@ -339,79 +630,44 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 
 	if ( auth_entry.m_auth_file.empty() ) {
 		auth_entry.m_auth_file = auth_file;
+		auth_entry.m_account = account;
 	}
 
 	if ( auth_entry.m_expiration < time(NULL) + (5 * 60) ) {
+		int rc;
 		auth_entry.m_refreshing = true;
+
+		// We either don't have an access token or we have one that's
+		// about to expire. Try to get a shiny new one.
+
+		if ( auth_entry.m_err_msg.empty() && ! auth_entry.m_refresh_token.empty() ) {
+			if ( TryAuthRefresh( auth_entry ) ) {
+				goto done;
+			}
+		}
+
+		// Refresh failed or not possible (no refresh token).
+		// Try to read our credentials from the file(s).
 		auth_entry.m_err_msg.clear();
 
-		string auth_file_contents;
-		string client_id;
-		string client_secret;
-		string refresh_token;
-		string access_token;
-		string key;
-		string value;
-		int nesting = 0;
-		int expires_in = 0;
-		long int expiration_timestamp = 0;
-		const char *pos;
-		if ( !readShortFile( auth_file, auth_file_contents ) ) {
-			auth_entry.m_err_msg = "Failed to read auth file";
+		// First try reading the credentials file in the new sql format.
+		// If it doesn't look like an sql file, try again using the old
+		// json text format.
+		rc = ReadCredFileSqlite( auth_entry );
+		if ( rc == CRED_FILE_BAD_FORMAT ) {
+			rc = ReadCredFileJson( auth_entry );
+		}
+		if ( rc != CRED_FILE_SUCCESS ) {
+			// auth_entry.m_err_msg set by the read functions on any error
 			goto done;
 		}
 
-		pos = auth_file_contents.c_str();
-		while ( ParseJSONLine( pos, key, value, nesting ) ) {
-			if ( key == "refresh_token" ) {
-				refresh_token = value;
-			} else if ( key == "client_id" ) {
-				client_id = value;
-			} else if ( key == "client_secret" ) {
-				client_secret = value;
-			} else if ( key == "access_token" ) {
-				access_token = value;
-			} else if ( key == "expires_in" ) {
-				expires_in = atoi(value.c_str());
-			} else if ( key == "token_expiry") {
-				// Parse token expiry time in (UTC) format
-				// ""2016-07-27T18:44:12Z"
-				struct tm expiration_tm;
-				if ( strptime(value.c_str(), "%Y-%m-%dT%TZ", &expiration_tm ) != NULL) {
-					expiration_timestamp = timegm(&expiration_tm);
-				}
-			}
-		}
-		if ( refresh_token.empty() ) {
-			if ( expiration_timestamp > 0 ) {
-				expires_in = expiration_timestamp - time(NULL);
-			}
-			if ( access_token.empty() ) {
-				auth_entry.m_err_msg = "Failed to find refresh_token or access_token in auth file";
-				goto done;
-			}
-			if ( expires_in <= 0 ) {
-				auth_entry.m_err_msg = "Access_token is expired, please re-login.";
-				goto done;
-			}
-			auth_entry.m_access_token = access_token;
-			auth_entry.m_expiration = time(NULL) + expires_in;
-			goto done;
-		}
-		if ( client_id.empty() ) {
-			auth_entry.m_err_msg = "Failed to find client_id in auth file";
-			goto done;
-		}
-		if ( client_secret.empty() ) {
-			auth_entry.m_err_msg = "Failed to find client_secret in auth file";
+		if ( auth_entry.m_refresh_token.empty() ) {
+			// This is a service credential, should already have an access token
 			goto done;
 		}
 
-		if ( TryAuthRefresh( client_id, client_secret, refresh_token,
-							 auth_entry.m_access_token, expires_in,
-							 auth_entry.m_err_msg ) ) {
-			auth_entry.m_expiration = time(NULL) + expires_in;
-		}
+		TryAuthRefresh( auth_entry );
 
 	done:
 		auth_entry.m_last_attempt = time(NULL);
@@ -427,6 +683,62 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 		access_token = auth_entry.m_access_token;
 		return true;
 	}
+}
+
+// Repeatedly calls GCP for operation status until the operation
+// is completed. On failure, stores an appropriate message in
+// err_msg and returns false. On success, stores targetId value in
+// instance_id (if non-NULL) and returns true.
+bool verifyRequest( const string &serviceUrl, const string &auth_file,
+					string &err_msg, string *instance_id = NULL )
+{
+	string status;
+	bool in_err = false;
+	do {
+
+		// Give the operation some time to complete.
+		// TODO Is there a better way to do this?
+		gce_gahp_release_big_mutex();
+		sleep( 5 );
+		gce_gahp_grab_big_mutex();
+
+		GceRequest op_request;
+		op_request.serviceURL = serviceUrl;
+		op_request.requestMethod = "GET";
+
+		if ( !GetAccessToken( auth_file, "", op_request.accessToken, err_msg ) ) {
+			return false;
+		}
+
+		if ( !op_request.SendRequest() ) {
+			err_msg = op_request.errorMessage;
+			return false;
+		}
+
+		int nesting = 0;
+		string key;
+		string value;
+		const char *pos = op_request.resultString.c_str();
+		while ( ParseJSONLine( pos, key, value, nesting ) ) {
+			if ( key == "status" ) {
+				status = value;
+			} else if ( key == "error" ) {
+				in_err = true;
+			} else if ( key == "warnings" ) {
+				in_err = false;
+			} else if ( key == "message" && in_err ) {
+				err_msg = value;
+			} else if ( key == "targetId" && instance_id ) {
+				*instance_id = value;
+			}
+		}
+	} while ( status != "DONE" );
+
+	if ( !err_msg.empty() ) {
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -656,12 +968,12 @@ bool GceRequest::SendRequest()
 
 	ca_dir = getenv( "X509_CERT_DIR" );
 	if ( ca_dir == NULL ) {
-		ca_dir = getenv( "SOAP_SSL_CA_DIR" );
+		ca_dir = getenv( "GAHP_SSL_CADIR" );
 	}
 
 	ca_file = getenv( "X509_CERT_FILE" );
 	if ( ca_file == NULL ) {
-		ca_file = getenv( "SOAP_SSL_CA_FILE" );
+		ca_file = getenv( "GAHP_SSL_CAFILE" );
 	}
 
 	// FIXME: Update documentation to reflect no hardcoded default.
@@ -759,17 +1071,17 @@ GcePing::GcePing() { }
 
 GcePing::~GcePing() { }
 
-// Expecting:GCE_PING <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_PING <req_id> <serviceurl> <authfile> <account> <project> <zone>
 bool GcePing::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_PING" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 6 ) ) {
+	if( ! verify_number_args( argc, 7 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 6, argv[0] );
+				 argc, 7, argv[0] );
 		return false;
 	}
 
@@ -777,14 +1089,14 @@ bool GcePing::workerFunction(char **argv, int argc, string &result_string) {
 	GcePing ping_request;
 	ping_request.serviceURL = argv[2];
 	ping_request.serviceURL += "/projects/";
-	ping_request.serviceURL += argv[4];
-	ping_request.serviceURL += "/zones/";
 	ping_request.serviceURL += argv[5];
+	ping_request.serviceURL += "/zones/";
+	ping_request.serviceURL += argv[6];
 	ping_request.serviceURL += "/instances";
 	ping_request.requestMethod = "GET";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, ping_request.accessToken,
+	if ( !GetAccessToken( auth_file, argv[4], ping_request.accessToken,
 						  ping_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   ping_request.errorMessage.c_str() );
@@ -811,7 +1123,7 @@ GceInstanceInsert::GceInstanceInsert() { }
 
 GceInstanceInsert::~GceInstanceInsert() { }
 
-// Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_INSTANCE_INSERT <req_id> <serviceurl> <authfile> <account> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
 //     <preemptible> <json_file>
 bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_string) {
@@ -820,10 +1132,10 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 13 ) ) {
+	if( ! verify_number_args( argc, 14 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 13, argv[0] );
+				 argc, 14, argv[0] );
 		return false;
 	}
 
@@ -831,24 +1143,24 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	GceInstanceInsert insert_request;
 	insert_request.serviceURL = argv[2];
 	insert_request.serviceURL += "/projects/";
-	insert_request.serviceURL += argv[4];
-	insert_request.serviceURL += "/zones/";
 	insert_request.serviceURL += argv[5];
+	insert_request.serviceURL += "/zones/";
+	insert_request.serviceURL += argv[6];
 	insert_request.serviceURL += "/instances";
 	insert_request.requestMethod = "POST";
 
 	std::map<string, string> metadata;
-	if ( strcasecmp( argv[9], NULLSTRING ) ) {
+	if ( strcasecmp( argv[10], NULLSTRING ) ) {
 		string key;
 		string value;
-		const char *pos = argv[9];
+		const char *pos = argv[10];
 		while ( ParseMetadataLine( pos, key, value, ',' ) ) {
 			metadata[key] = value;
 		}
 	}
-	if ( strcasecmp( argv[10], NULLSTRING ) ) {
+	if ( strcasecmp( argv[11], NULLSTRING ) ) {
 		string file_contents;
-		if ( !readShortFile( argv[10], file_contents ) ) {
+		if ( !readShortFile( argv[11], file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open metadata file" );
 			return true;
 		}
@@ -860,8 +1172,8 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		}
 	}
 	string json_file_contents;
-	if ( strcasecmp( argv[12], NULLSTRING ) ) {
-		if ( !readShortFile( argv[12], json_file_contents ) ) {
+	if ( strcasecmp( argv[13], NULLSTRING ) ) {
+		if ( !readShortFile( argv[13], json_file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
 			return true;
 		}
@@ -869,22 +1181,22 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 
 	insert_request.requestBody = "{\n";
 	insert_request.requestBody += " \"machineType\": \"";
-	insert_request.requestBody += argv[7];
+	insert_request.requestBody += argv[8];
 	insert_request.requestBody += "\",\n";
 	insert_request.requestBody += " \"name\": \"";
-	insert_request.requestBody += argv[6];
+	insert_request.requestBody += argv[7];
 	insert_request.requestBody += "\",\n";
 	insert_request.requestBody += "  \"scheduling\":\n";
 	insert_request.requestBody += "  {\n";
 	insert_request.requestBody += "    \"preemptible\": ";
-	insert_request.requestBody += argv[11];
+	insert_request.requestBody += argv[12];
 	insert_request.requestBody += "\n  },\n";
 	insert_request.requestBody += " \"disks\": [\n  {\n";
 	insert_request.requestBody += "   \"boot\": true,\n";
 	insert_request.requestBody += "   \"autoDelete\": true,\n";
 	insert_request.requestBody += "   \"initializeParams\": {\n";
 	insert_request.requestBody += "    \"sourceImage\": \"";
-	insert_request.requestBody += argv[8];
+	insert_request.requestBody += argv[9];
 	insert_request.requestBody += "\"\n";
 	insert_request.requestBody += "   }\n  }\n ],\n";
 	if ( !metadata.empty() ) {
@@ -910,7 +1222,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "   \"network\": \"";
 	insert_request.requestBody += argv[2];
 	insert_request.requestBody += "/projects/";
-	insert_request.requestBody += argv[4];
+	insert_request.requestBody += argv[5];
 	insert_request.requestBody += "/global/networks/default\",\n";
 	insert_request.requestBody += "   \"accessConfigs\": [\n    {\n";
 	insert_request.requestBody += "     \"name\": \"External NAT\",\n";
@@ -945,7 +1257,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	}
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, insert_request.accessToken,
+	if ( !GetAccessToken( auth_file, argv[4], insert_request.accessToken,
 						  insert_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   insert_request.errorMessage.c_str() );
@@ -989,14 +1301,14 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		GceRequest op_request;
 		op_request.serviceURL = argv[2];
 		op_request.serviceURL += "/projects/";
-		op_request.serviceURL += argv[4];
-		op_request.serviceURL += "/zones/";
 		op_request.serviceURL += argv[5];
+		op_request.serviceURL += "/zones/";
+		op_request.serviceURL += argv[6];
 		op_request.serviceURL += "/operations/";
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, op_request.accessToken,
+		if ( !GetAccessToken( auth_file, "", op_request.accessToken,
 							  op_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   op_request.errorMessage.c_str() );
@@ -1051,17 +1363,17 @@ GceInstanceDelete::GceInstanceDelete() { }
 
 GceInstanceDelete::~GceInstanceDelete() { }
 
-// Expecting:GCE_INSTACE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>
+// Expecting:GCE_INSTANCE_DELETE <req_id> <serviceurl> <authfile> <account> <project> <zone> <instance_name>
 bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_DELETE" ) == 0 );
 
 	int requestID;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 7 ) ) {
+	if( ! verify_number_args( argc, 8 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 6, argv[0] );
+				 argc, 8, argv[0] );
 		return false;
 	}
 
@@ -1069,15 +1381,15 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 	GceInstanceDelete delete_request;
 	delete_request.serviceURL = argv[2];
 	delete_request.serviceURL += "/projects/";
-	delete_request.serviceURL += argv[4];
-	delete_request.serviceURL += "/zones/";
 	delete_request.serviceURL += argv[5];
-	delete_request.serviceURL += "/instances/";
+	delete_request.serviceURL += "/zones/";
 	delete_request.serviceURL += argv[6];
+	delete_request.serviceURL += "/instances/";
+	delete_request.serviceURL += argv[7];
 	delete_request.requestMethod = "DELETE";
 
 	string auth_file = argv[3];
-	if ( !GetAccessToken( auth_file, delete_request.accessToken,
+	if ( !GetAccessToken( auth_file, argv[4], delete_request.accessToken,
 						  delete_request.errorMessage ) ) {
 		result_string = create_failure_result( requestID,
 											   delete_request.errorMessage.c_str() );
@@ -1120,14 +1432,14 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 		GceRequest op_request;
 		op_request.serviceURL = argv[2];
 		op_request.serviceURL += "/projects/";
-		op_request.serviceURL += argv[4];
-		op_request.serviceURL += "/zones/";
 		op_request.serviceURL += argv[5];
+		op_request.serviceURL += "/zones/";
+		op_request.serviceURL += argv[6];
 		op_request.serviceURL += "/operations/";
 		op_request.serviceURL += op_name;
 		op_request.requestMethod = "GET";
 
-		if ( !GetAccessToken( auth_file, op_request.accessToken,
+		if ( !GetAccessToken( auth_file, "", op_request.accessToken,
 							  op_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   op_request.errorMessage.c_str() );
@@ -1173,7 +1485,7 @@ GceInstanceList::GceInstanceList() { }
 
 GceInstanceList::~GceInstanceList() { }
 
-// Expecting:GCE_INSTANCE_LIST <req_id> <serviceurl> <authfile> <project> <zone>
+// Expecting:GCE_INSTANCE_LIST <req_id> <serviceurl> <authfile> <account> <project> <zone>
 bool GceInstanceList::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_LIST" ) == 0 );
 
@@ -1182,10 +1494,10 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 	vector<string> results;
 	get_int( argv[1], & requestID );
 
-	if( ! verify_number_args( argc, 6 ) ) {
+	if( ! verify_number_args( argc, 7 ) ) {
 		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
 		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-				 argc, 6, argv[0] );
+				 argc, 7, argv[0] );
 		return false;
 	}
 
@@ -1194,9 +1506,9 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		GceInstanceList list_request;
 		list_request.serviceURL = argv[2];
 		list_request.serviceURL += "/projects/";
-		list_request.serviceURL += argv[4];
-		list_request.serviceURL += "/zones/";
 		list_request.serviceURL += argv[5];
+		list_request.serviceURL += "/zones/";
+		list_request.serviceURL += argv[6];
 		list_request.serviceURL += "/instances";
 		if (!next_page_token.empty() ) {
 			dprintf( D_ALWAYS, "Requesting page token %s\n", next_page_token.c_str() );
@@ -1208,7 +1520,7 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		list_request.requestMethod = "GET";
 
 		string auth_file = argv[3];
-		if ( !GetAccessToken( auth_file, list_request.accessToken,
+		if ( !GetAccessToken( auth_file, argv[4], list_request.accessToken,
 							  list_request.errorMessage ) ) {
 			result_string = create_failure_result( requestID,
 												   list_request.errorMessage.c_str() );
@@ -1221,6 +1533,7 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 			result_string = create_failure_result( requestID,
 								list_request.errorMessage.c_str(),
 								list_request.errorCode.c_str() );
+			return true;
 		} else {
 			string next_id;
 			string next_name;
@@ -1283,4 +1596,389 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 			return true;
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------
+
+GceGroupInsert::GceGroupInsert() { }
+
+GceGroupInsert::~GceGroupInsert() { }
+
+// Expecting GCE_GROUP_INSERT <req_id> <serviceurl> <authfile> <account> <project> <zone>
+//     <group_name> <machine_type> <image> <metadata> <metadata_file>
+//     <preemptible> <json_file> <count> <duration_hours>
+
+bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string) {
+	assert( strcasecmp( argv[0], "GCE_GROUP_INSERT" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_number_args( argc, 16 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 16, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	GceGroupInsert insert_request;
+	insert_request.serviceURL = argv[2];
+	insert_request.serviceURL += "/projects/";
+	insert_request.serviceURL += argv[5];
+	insert_request.serviceURL += "/global/instanceTemplates";
+	insert_request.requestMethod = "POST";
+
+	std::map<string, string> metadata;
+	if ( strcasecmp( argv[10], NULLSTRING ) ) {
+		string key;
+		string value;
+		const char *pos = argv[10];
+		while ( ParseMetadataLine( pos, key, value, ',' ) ) {
+			metadata[key] = value;
+		}
+	}
+	if ( strcasecmp( argv[11], NULLSTRING ) ) {
+		string file_contents;
+		if ( !readShortFile( argv[11], file_contents ) ) {
+			result_string = create_failure_result( requestID, "Failed to open metadata file" );
+			return true;
+		}
+		string key;
+		string value;
+		const char *pos = file_contents.c_str();
+		while( ParseMetadataLine( pos, key, value, '\n' ) ) {
+			metadata[key] = value;
+		}
+	}
+	string json_file_contents;
+	if ( strcasecmp( argv[13], NULLSTRING ) ) {
+		if ( !readShortFile( argv[13], json_file_contents ) ) {
+			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
+			return true;
+		}
+	}
+
+	insert_request.requestBody = "{\n";
+	insert_request.requestBody += " \"name\": \"";
+	insert_request.requestBody += argv[7];
+	insert_request.requestBody += "-template\",\n";
+	insert_request.requestBody += "  \"properties\": \n";
+	insert_request.requestBody += "  {\n";
+	insert_request.requestBody += "   \"machineType\": \"";
+	insert_request.requestBody += argv[8];
+	insert_request.requestBody += "\",\n";
+	insert_request.requestBody += "    \"scheduling\":\n";
+	insert_request.requestBody += "    {\n";
+	insert_request.requestBody += "      \"preemptible\": ";
+	insert_request.requestBody += argv[12];
+	insert_request.requestBody += "\n    },\n";
+	insert_request.requestBody += "   \"disks\": [\n  {\n";
+	insert_request.requestBody += "     \"boot\": true,\n";
+	insert_request.requestBody += "     \"autoDelete\": true,\n";
+	insert_request.requestBody += "     \"initializeParams\": {\n";
+	insert_request.requestBody += "      \"sourceImage\": \"";
+	insert_request.requestBody += argv[9];
+	insert_request.requestBody += "\"\n";
+	insert_request.requestBody += "   }\n  }\n ],\n";
+	if ( !metadata.empty() ) {
+		insert_request.requestBody += " \"metadata\": {\n";
+		insert_request.requestBody += "  \"items\": [\n";
+
+		for ( map<string, string>::const_iterator itr = metadata.begin(); itr != metadata.end(); itr++ ) {
+			if ( itr != metadata.begin() ) {
+				insert_request.requestBody += ",\n";
+			}
+			insert_request.requestBody += "   {\n    \"key\": \"";
+			insert_request.requestBody += itr->first;
+			insert_request.requestBody += "\",\n";
+			insert_request.requestBody += "    \"value\": \"";
+			insert_request.requestBody += escapeJSONString( itr->second.c_str() );
+			insert_request.requestBody += "\"\n   }";
+		}
+
+		insert_request.requestBody += "\n  ]\n";
+		insert_request.requestBody += " },\n";
+	}
+	insert_request.requestBody += " \"networkInterfaces\": [\n  {\n";
+	insert_request.requestBody += "   \"network\": \"";
+	insert_request.requestBody += argv[2];
+	insert_request.requestBody += "/projects/";
+	insert_request.requestBody += argv[5];
+	insert_request.requestBody += "/global/networks/default\",\n";
+	insert_request.requestBody += "   \"accessConfigs\": [\n    {\n";
+	insert_request.requestBody += "     \"name\": \"External NAT\",\n";
+	insert_request.requestBody += "     \"type\": \"ONE_TO_ONE_NAT\"\n";
+	insert_request.requestBody += "    }\n   ]\n";
+	insert_request.requestBody += "  }\n ]";
+	insert_request.requestBody += "}\n}\n";
+
+	if ( !json_file_contents.empty() ) {
+		classad::ClassAd instance_ad;
+		classad::ClassAd custom_ad;
+		classad::ClassAdJsonParser parser;
+		classad::ClassAdJsonUnParser unparser;
+		string wrap_custom_attrs = "{" + json_file_contents + "}";
+
+		if ( !parser.ParseClassAd( insert_request.requestBody, instance_ad, true ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse instance description" );
+			return true;
+		}
+
+		if ( !parser.ParseClassAd( wrap_custom_attrs, custom_ad, true ) ) {
+			result_string = create_failure_result( requestID,
+									"Failed to parse custom attributes" );
+			return true;
+		}
+
+		instance_ad.Update( custom_ad );
+
+		insert_request.requestBody.clear();
+		unparser.Unparse( insert_request.requestBody, &instance_ad );
+	}
+
+	string auth_file = argv[3];
+	if ( !GetAccessToken( auth_file, argv[4], insert_request.accessToken,
+						  insert_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   insert_request.errorMessage.c_str() );
+		return true;
+	}
+
+	// Send the request.
+	if( ! insert_request.SendRequest() ) {
+		dprintf( D_ALWAYS, "Error is '%s'\n", insert_request.errorMessage.c_str() );
+		// TODO Fix construction of error message
+		result_string = create_failure_result( requestID,
+							insert_request.errorMessage.c_str(),
+							insert_request.errorCode.c_str() );
+		return true;
+	}
+
+	string op_name;
+	string key;
+	string value;
+	int nesting = 0;
+
+	const char *pos = insert_request.resultString.c_str();
+	while( ParseJSONLine( pos, key, value, nesting ) ) {
+		if ( key == "name" ) {
+			op_name = value;
+			break;
+		}
+	}
+
+	// Wait for instance template to be created
+	string err_msg;
+	string opUrl = argv[2];
+	opUrl += "/projects/";
+	opUrl += argv[5];
+	opUrl += "/global/operations/";
+	opUrl += op_name;
+	if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+		return true;
+	}
+
+	// Now construct managed instance group
+	GceRequest group_request;
+	group_request.serviceURL = argv[2];
+	group_request.serviceURL += "/projects/";
+	group_request.serviceURL += argv[5];
+	group_request.serviceURL += "/zones/";
+	group_request.serviceURL += argv[6];
+	group_request.serviceURL += "/instanceGroupManagers";
+	group_request.requestMethod = "POST";
+	group_request.requestBody = "{\n";
+	group_request.requestBody += " \"name\": \"";
+	group_request.requestBody += argv[7];
+	group_request.requestBody += "-group\",\n";
+	group_request.requestBody += " \"instanceTemplate\": \"";
+	group_request.requestBody += "/projects/";
+	group_request.requestBody += argv[5];
+	group_request.requestBody += "/global/instanceTemplates/";
+	group_request.requestBody += argv[7];
+	group_request.requestBody += "-template\",\n";
+	group_request.requestBody += " \"baseInstanceName\": \"";
+	group_request.requestBody += argv[7];
+	group_request.requestBody += "-instance\",\n";
+	group_request.requestBody += " \"targetSize\": \"";
+	group_request.requestBody += argv[14];
+	group_request.requestBody += "\"\n";
+	group_request.requestBody += "}\n";
+
+
+	if ( !GetAccessToken( auth_file, "", group_request.accessToken,
+						  group_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   group_request.errorMessage.c_str() );
+		return true;
+	}
+
+	if ( !group_request.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+							group_request.errorMessage.c_str(),
+							group_request.errorCode.c_str() );
+		return true;
+	}
+
+	nesting = 0;
+	pos = group_request.resultString.c_str();
+	while( ParseJSONLine( pos, key, value, nesting ) ) {
+		if ( key == "name" ) {
+			op_name = value;
+			break;
+		}
+	}
+
+	// Wait for group template to be created
+	opUrl = argv[2];
+	opUrl += "/projects/";
+	opUrl += argv[5];
+	opUrl += "/zones/";
+	opUrl += argv[6];
+	opUrl += "/operations/";
+	opUrl += op_name;
+	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+		result_string = create_success_result( requestID, NULL );
+	} else {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+	}
+
+	return true;
+}
+
+
+// ---------------------------------------------------------------------------
+
+GceGroupDelete::GceGroupDelete() { }
+
+GceGroupDelete::~GceGroupDelete() { }
+
+// Expecting GCE_GROUP_DELETE <req_id> <serviceurl> <authfile> <account> <project> <zone> <group_name>
+
+bool GceGroupDelete::workerFunction(char **argv, int argc, string &result_string) {
+	assert( strcasecmp( argv[0], "GCE_GROUP_DELETE" ) == 0 );
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_number_args( argc, 8 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 8, argv[0] );
+		return false;
+	}
+
+	// Now construct managed instance group
+	GceRequest group_request;
+	group_request.serviceURL = argv[2];
+	group_request.serviceURL += "/projects/";
+	group_request.serviceURL += argv[5];
+	group_request.serviceURL += "/zones/";
+	group_request.serviceURL += argv[6];
+	group_request.serviceURL += "/instanceGroupManagers/";
+	group_request.serviceURL += argv[7];
+	group_request.serviceURL += "-group";
+	group_request.requestMethod = "DELETE";
+
+	string auth_file = argv[3];
+	if ( !GetAccessToken( auth_file, argv[4], group_request.accessToken,
+						  group_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   group_request.errorMessage.c_str() );
+		return true;
+	}
+
+	string op_name;
+	string key;
+	string value;
+	int nesting = 0;
+	const char *pos = group_request.resultString.c_str();
+	string opUrl = argv[2];
+	string err_msg;
+
+	if ( !group_request.SendRequest() ) {
+		if (group_request.errorCode.find("404") != std::string::npos) {
+		    dprintf( D_ALWAYS, "Got 404, group manager already deleted, continuing\n");
+			// Continue if group manager delete not found
+			// Attempt to delete instance template
+		} else {
+			// Other responses indicate some other critical failure
+			result_string = create_failure_result( requestID,
+							group_request.errorMessage.c_str(),
+							group_request.errorCode.c_str() );
+			return true;
+		}
+	} else {
+
+		while( ParseJSONLine( pos, key, value, nesting ) ) {
+			if ( key == "name" ) {
+				op_name = value;
+				break;
+			}
+		}
+
+		// Wait for instance group manager to be deleted
+		opUrl += "/projects/";
+		opUrl += argv[5];
+		opUrl += "/zones/";
+		opUrl += argv[6];
+		opUrl += "/operations/";
+		opUrl += op_name;
+		if ( verifyRequest( opUrl, auth_file, err_msg ) == false ) {
+			result_string = create_failure_result( requestID, err_msg.c_str() );
+			return true;
+		}
+	}
+
+	// Fill in required attributes & parameters.
+	GceGroupDelete delete_request;
+	delete_request.serviceURL = argv[2];
+	delete_request.serviceURL += "/projects/";
+	delete_request.serviceURL += argv[5];
+	delete_request.serviceURL += "/global/instanceTemplates/";
+	delete_request.serviceURL += argv[7];
+	delete_request.serviceURL += "-template";
+	delete_request.requestMethod = "DELETE";
+
+	if ( !GetAccessToken( auth_file, "", delete_request.accessToken,
+						  delete_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   delete_request.errorMessage.c_str() );
+		return true;
+	}
+
+	// Send the request.
+	if( ! delete_request.SendRequest() ) {
+		dprintf( D_ALWAYS, "Error is '%s'\n", delete_request.errorMessage.c_str() );
+		// TODO Fix construction of error message
+		result_string = create_failure_result( requestID,
+							delete_request.errorMessage.c_str(),
+							delete_request.errorCode.c_str() );
+		return true;
+	}
+
+	nesting = 0;
+	pos = delete_request.resultString.c_str();
+	while( ParseJSONLine( pos, key, value, nesting ) ) {
+		if ( key == "name" ) {
+			op_name = value;
+			break;
+		}
+	}
+
+	// Wait for instance template to be deleted
+	opUrl = argv[2];
+	opUrl += "/projects/";
+	opUrl += argv[5];
+	opUrl += "/global/operations/";
+	opUrl += op_name;
+	if ( verifyRequest( opUrl, auth_file, err_msg ) ) {
+		result_string = create_success_result( requestID, NULL );
+	} else {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+	}
+	return true;
 }

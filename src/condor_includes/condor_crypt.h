@@ -76,12 +76,12 @@ class Condor_Crypt_Base {
     // RETURNS: None
     //------------------------------------------
 
-    virtual bool encrypt(unsigned char *   input, 
+    virtual bool encrypt(const unsigned char *   input,
                          int               input_len, 
                          unsigned char *&  output, 
                          int&              output_len) = 0;
 
-    virtual bool decrypt(unsigned char *  input, 
+    virtual bool decrypt(const unsigned char *  input,
                          int              input_len, 
                          unsigned char *& output, 
                          int&             output_len) = 0;

@@ -187,7 +187,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             itor.CurrentAttribute( buf, expr );
 
 
-            if(!compat_classad::ClassAdAttributeIsPrivate(buf.c_str()))
+            if(!compat_classad::ClassAdAttributeIsPrivate(buf))
             {
                 if(excludeTypes)
                 {
@@ -237,7 +237,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
 
             attrItor.CurrentAttribute( buf, expr );
 
-            if(compat_classad::ClassAdAttributeIsPrivate(buf.c_str())){
+            if(compat_classad::ClassAdAttributeIsPrivate(buf)){
                 continue;
             }
 
@@ -256,10 +256,9 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             //get buf's c_str in an editable format
             exprString = (char*)malloc(buf.size() + 1);
             strncpy(exprString, buf.c_str(),buf.size() + 1 ); 
-            //ConvertDefaultIPToSocketIP(tmpAttrName.c_str(),&exprString,*sock);
             /*
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
-                    compat_classad::ClassAdAttributeIsPrivate(tmpAttrName.c_str())) {
+                    compat_classad::ClassAdAttributeIsPrivate(tmpAttrName)) {
                 sock->put(SECRET_MARKER);
 
                 sock->put_secret(exprString);

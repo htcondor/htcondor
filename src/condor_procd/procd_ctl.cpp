@@ -110,7 +110,7 @@ main(int argc, char* argv[])
 				argv[0]);
 			list_commands();
 			return 1;
-			continue;
+			//continue;
 		}
 
 		// This is the failure case if we manage to pass all checks above.

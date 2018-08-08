@@ -68,7 +68,7 @@ StartdNamedClassAd::ShouldMergeInto(ClassAd * merge_into, const char ** pattr_us
 	// for which the constraint evaluates to true, and don't merge otherwise.
 	if (merge_from->Lookup(ATTR_SLOT_MERGE_CONSTRAINT)) {
 		int matches = false;
-		*pattr_used = ATTR_SLOT_MERGE_CONSTRAINT;
+		if (pattr_used) *pattr_used = ATTR_SLOT_MERGE_CONSTRAINT;
 		merge_from->EvalBool(ATTR_SLOT_MERGE_CONSTRAINT, merge_into, matches);
 		return matches;
 	}
@@ -108,10 +108,314 @@ StartdNamedClassAd::ShouldMergeInto(ClassAd * merge_into, const char ** pattr_us
 bool
 StartdNamedClassAd::MergeInto(ClassAd *merge_into)
 {
-	ClassAd * merge_from = this->GetAd();
-	if ( ! merge_into || ! merge_from)
-		return false;
+	return StartdNamedClassAd::Merge( merge_into, this->GetAd() );
+}
 
-	int cMerged = MergeClassAdsIgnoring(merge_into, merge_from, this->dont_merge_attrs);
+bool
+StartdNamedClassAd::isResourceMonitor() {
+	return m_job.isResourceMonitor();
+}
+
+bool
+StartdNamedClassAd::Merge( ClassAd * to, ClassAd * from ) {
+	if ( ! to || ! from ) {
+		return false;
+	}
+
+	int cMerged = MergeClassAdsIgnoring(to, from, dont_merge_attrs);
 	return cMerged > 0;
+}
+
+void
+StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
+	if ( ! to || ! from ) { return; }
+
+	const StartdCronJobParams & params = m_job.Params();
+	for( auto i = from->begin(); i != from->end(); ++i ) {
+		const std::string & name = i->first;
+		ExprTree * expr = i->second;
+
+		StartdCronJobParams::Metric metric;
+		if( params.getMetric( name, metric ) ) {
+			double newValue;
+			classad::Value v;
+			expr->Evaluate( v );
+			if(! v.IsNumber( newValue )) {
+				dprintf( D_ALWAYS, "Metric %s in job %s is not a number.  Ignoring, but you probably shouldn't.\n", name.c_str(), params.GetName() );
+				continue;
+			}
+
+			double oldValue;
+			if( to->EvaluateAttrNumber( name, oldValue ) ) {
+				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f %s %f\n", to, from, name.c_str(), oldValue, metric.c_str(), newValue );
+				to->InsertAttr( name, metric( oldValue, newValue ) );
+			} else {
+				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f\n", to, from, name.c_str(), newValue );
+				to->InsertAttr( name, newValue );
+			}
+
+			//
+			// In addition to aggregating the (global) Uptime* statistics,
+			// we need to aggregate the per-job statistics for SUM and PEAK
+			// metrics, which call their per-job attributes different things
+			// because they're computed differently.
+			//
+			// Per-job SUM metrics are computed when we write the slot's
+			// update ad (in Resource::Publish()), using the aggregate of the
+			// StartOfJob* attributes (which record the metric as of the job's
+			// first sample).  Because the slot ads are regenerated from
+			// scrach every time, we need to recompute the StartOfJob*
+			// aggregates every time.
+			//
+			// Per-job PEAK metrics are computed each time we receive a new
+			// sample (in AggregateFrom()), but for the same reason as for
+			// SUM metrics, we have to recompute the aggregate PEAK of each
+			// resource instance again every time.
+			//
+
+			std::string perJobAttributeName;
+			if( StartdCronJobParams::attributeIsSumMetric( name ) ) {
+				perJobAttributeName = "StartOfJob" + name;
+			} else if( StartdCronJobParams::attributeIsPeakMetric( name ) ) {
+				if(! StartdCronJobParams::getResourceNameFromAttributeName( name, perJobAttributeName )) { continue; }
+				perJobAttributeName += "Usage";
+			} else {
+				dprintf( D_ALWAYS, "Found metric '%s' of unknown type.  Ignoring, but you probably shouldn't.\n", name.c_str() );
+				continue;
+			}
+
+			expr = to->Lookup( perJobAttributeName );
+			if( expr == NULL ) {
+				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f\n", to, from, perJobAttributeName.c_str(), oldValue );
+				to->CopyAttribute( perJobAttributeName.c_str(), perJobAttributeName.c_str(), from );
+			} else {
+				classad::Value v;
+				expr->Evaluate( v );
+				if( v.IsNumber( oldValue ) &&
+				  from->EvaluateAttrNumber( perJobAttributeName, newValue ) ) {
+					// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f %s %f\n", to, from, perJobAttributeName.c_str(), oldValue, metric.c_str(), newValue );
+					to->InsertAttr( perJobAttributeName, metric( oldValue, newValue ) );
+				}
+			}
+
+			// Record for each resource when we last updated it.
+			std::string lastUpdateName = "LastUpdate" + name;
+			to->CopyAttribute( lastUpdateName.c_str(), "LastUpdate", from );
+		} else if( name.find( "StartOfJob" ) == 0 ) {
+			// dprintf( D_FULLDEBUG, "Aggregate(): skipping StartOfJob* attribute '%s'\n", name.c_str() );
+		} else if( name == "ResetStartOfJob" ) {
+			// dprintf( D_FULLDEBUG, "Aggregate(): skipping ResetStartOfJob\n", name.c_str() );
+		} else if( name == "SlotMergeConstraint" ) {
+			// dprintf( D_FULLDEBUG, "Aggregate(): skipping SlotMergeConstraintn", name.c_str() );
+		} else {
+			// dprintf( D_FULLDEBUG, "Aggregate(): copying '%s'.\n", name.c_str() );
+			ExprTree * copy = expr->Copy();
+			if(! to->Insert( name, copy )) {
+				dprintf( D_ALWAYS, "Failed to copy attribute while aggregating ad.  Ignoring, but you probably shouldn't.\n" );
+			}
+		}
+	}
+}
+
+void
+StartdNamedClassAd::AggregateFrom(ClassAd *from)
+{
+	if( isResourceMonitor() ) {
+		ClassAd * to = this->GetAd();
+
+		//
+		// AggregateFrom() is called only from StartdCronJob::Publish(),
+		// which is only called when a new ad arrives from the cron job,
+		// which is the only time we want to reset the start of job
+		// attribute.
+		//
+
+		bool resetStartOfJob = false;
+		if( to->LookupBool( "ResetStartOfJob", resetStartOfJob ) && resetStartOfJob ) {
+			// dprintf( D_FULLDEBUG, "AggregateFrom(): resetting StartOfJob* attributes...\n" );
+
+			for( auto i = to->begin(); i != to->end(); ++i ) {
+				const std::string & name = i->first;
+				if( name.find( "StartOfJob" ) != 0 ) { continue; }
+
+				std::string uptimeName = name.substr( 10 );
+				if( StartdCronJobParams::attributeIsSumMetric( uptimeName ) ) {
+					to->CopyAttribute( name.c_str(), uptimeName.c_str() );
+
+					std::string firstUpdateName = "FirstUpdate" + uptimeName;
+					to->CopyAttribute( firstUpdateName.c_str(), "LastUpdate" );
+				} else if( StartdCronJobParams::attributeIsPeakMetric( uptimeName ) ) {
+					// PEAK metrics don't use the StartOfJob* attributes.  If
+					// the current job peak isn't set when a new sample comes
+					// in, it becomes the new peak.
+					continue;
+				} else {
+					dprintf( D_ALWAYS, "Found StartOfJob* attribute '%s' of uknown metric type.  Ignoring, but you probably shouldn't.\n", name.c_str() );
+					continue;
+				}
+			}
+
+			to->Delete( "ResetStartOfJob" );
+		}
+
+		// The per-job value for PEAK metrics can only be calculated here,
+		// where we know we're looking at a new sample value, and not
+		// aggregating old ones.
+		const StartdCronJobParams & params = m_job.Params();
+		for( auto i = from->begin(); i != from->end(); ++i ) {
+			const std::string & name = i->first;
+			ExprTree * expr = i->second;
+
+			StartdCronJobParams::Metric metric;
+			if( params.getMetric( name, metric ) ) {
+				double sampleValue;
+				classad::Value v;
+				expr->Evaluate( v );
+				if(! v.IsNumber( sampleValue )) {
+					// Don't duplicate the warning in Aggregate() here.
+					continue;
+				}
+
+				if(! StartdCronJobParams::attributeIsPeakMetric( name )) {
+					continue;
+				}
+
+				std::string usageName;
+				if(! StartdCronJobParams::getResourceNameFromAttributeName( name, usageName )) { continue; }
+				usageName += "Usage";
+
+				if(! to->Lookup( usageName )) {
+					to->InsertAttr( usageName, sampleValue );
+					// dprintf( D_ALWAYS, "First %s sample for current job set to %.2f\n", GetName(), sampleValue );
+				} else {
+					double currentUsage;
+					to->EvaluateAttrNumber( usageName, currentUsage );
+					to->InsertAttr( usageName, metric( sampleValue, currentUsage ) );
+					// dprintf( D_ALWAYS, "%s sample was %.2f, current job peak now %.2f\n", GetName(), sampleValue, metric( sampleValue, currentUsage ) );
+				}
+
+				// Record for each resource when we last updated it.
+				std::string lastUpdateName = "LastUpdate" + usageName;
+				to->CopyAttribute( lastUpdateName.c_str(), "LastUpdate", from );
+			}
+		}
+
+		Aggregate( to, from );
+	} else {
+		ReplaceAd( from );
+	}
+}
+
+bool
+StartdNamedClassAd::AggregateInto(ClassAd *into)
+{
+	if( isResourceMonitor() ) {
+		//
+		// AggregateInto() is only called by StartdNamedClassAdList::Publish(),
+		// which only called from ResMgr::adlist_publish(), which is only
+		// called from Resource::publish(), which is called to construct the
+		// slot ads.
+		//
+		Aggregate( into, this->GetAd() );
+		return true;
+	} else {
+		return this->GetAd() ? into->CopyFrom( * this->GetAd() ) : true;
+	}
+}
+
+void
+StartdNamedClassAd::reset_monitor() {
+	if(! isResourceMonitor()) {
+		dprintf( D_ALWAYS, "StartdNamedClassAd::reset_monitor(): ignoring request to reset monitor of non-monitor.\n" );
+		return;
+	}
+
+	ClassAd * from = this->GetAd();
+	if( from == NULL ) { return; }
+
+	// dprintf( D_FULLDEBUG, "StartdNameClassAd::reset_monitor() for %s\n", GetName() );
+	const StartdCronJobParams & params = m_job.Params();
+	for( auto i = from->begin(); i != from->end(); ++i ) {
+		const std::string & name = i->first;
+		ExprTree * expr = i->second;
+
+		if( params.isMetric( name ) ) {
+			double initialValue;
+			classad::Value v;
+			expr->Evaluate( v );
+			if(! v.IsNumber( initialValue )) {
+				dprintf( D_ALWAYS, "Metric %s in job %s is not a number.  Ignoring, but you probably shouldn't.\n", name.c_str(), params.GetName() );
+				continue;
+			}
+
+			if( StartdCronJobParams::attributeIsSumMetric( name ) ) {
+				std::string jobAttributeName;
+				formatstr( jobAttributeName, "StartOfJob%s", name.c_str() );
+				from->InsertAttr( jobAttributeName.c_str(), initialValue );
+				from->InsertAttr( "ResetStartOfJob", true );
+			} else if( StartdCronJobParams::attributeIsPeakMetric( name ) ) {
+				std::string usageName;
+				if(! StartdCronJobParams::getResourceNameFromAttributeName( name, usageName )) { continue; }
+				usageName += "Usage";
+				// If we just delete usageName, when Resource::refresh_ad()
+				// (probably wrongly) reuses its ClassAd member variable,
+				// the value from the last time we updated the slot ad will
+				// persist.  Instead, make sure that the persistent resource
+				// instance ad we're modifying here will stomp on the value
+				// by instead setting usageName to undefined explicitly.
+				from->AssignExpr( usageName.c_str(), "undefined" );
+			} else {
+				dprintf( D_ALWAYS, "Found metric '%s' of unknown type.  Ignoring, but you probably shouldn't.\n", name.c_str() );
+			}
+		}
+	}
+}
+
+void
+StartdNamedClassAd::unset_monitor() {
+	if(! isResourceMonitor()) {
+		dprintf( D_ALWAYS, "StartdNamedClassAd::unset_monitor(): ignoring request to reset monitor of non-monitor.\n" );
+		return;
+	}
+
+	ClassAd * from = this->GetAd();
+	if( from == NULL ) { return; }
+
+	// dprintf( D_FULLDEBUG, "StartdNameClassAd::unset_monitor() for %s\n", GetName() );
+	const StartdCronJobParams & params = m_job.Params();
+	for( auto i = from->begin(); i != from->end(); ++i ) {
+		std::string name = i->first;
+		ExprTree * expr = i->second;
+
+		if( params.isMetric( name ) ) {
+			double initialValue;
+			classad::Value v;
+			expr->Evaluate( v );
+			if(! v.IsNumber( initialValue )) {
+				dprintf( D_ALWAYS, "Metric %s in job %s is not a number.  Ignoring, but you probably shouldn't.\n", name.c_str(), params.GetName() );
+				continue;
+			}
+
+			std::string jobAttributeName;
+			formatstr( jobAttributeName, "StartOfJob%s", name.c_str() );
+			from->Delete( jobAttributeName );
+
+			std::string firstUpdateName;
+			formatstr( firstUpdateName, "FirstUpdate%s", name.c_str() );
+			from->Delete( firstUpdateName );
+
+			std::string lastUpdateName;
+			formatstr( lastUpdateName, "LastUpdate%s", name.c_str() );
+			from->Delete( lastUpdateName );
+
+			std::string usageName;
+			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, usageName )) { continue; }
+			usageName += "Usage";
+			from->Delete( usageName );
+
+			std::string lastUsageUpdateName;
+			formatstr( lastUsageUpdateName, "LastUpdate%s", usageName.c_str() );
+			from->Delete( lastUsageUpdateName );
+		}
+	}
 }

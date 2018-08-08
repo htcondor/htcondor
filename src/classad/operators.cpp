@@ -26,38 +26,11 @@ using namespace std;
 
 namespace classad {
 
-#ifdef TJ_REFACTOR
-Operation::
-Operation ()
-{
-	operation = __NO_OP__;
-	child1    = NULL;
-	child2    = NULL;
-	child3    = NULL;
-}
-#endif
-
-#ifdef TJ_REFACTOR
-Operation::
-Operation(const Operation &op)
-{
-    CopyFrom(op);
-    return;
-}
-#endif
-
 Operation::
 ~Operation ()
 {
-#ifdef TJ_REFACTOR
-	if( child1 ) delete child1;
-	if( child2 ) delete child2;
-	if( child3 ) delete child3;
-#endif
 }
 
-#ifdef TJ_REFACTOR
-#else
 Operation1::
 ~Operation1 ()
 {
@@ -84,58 +57,7 @@ Operation3::
 	if( child2 ) { delete child2; child2 = NULL; }
 	if( child3 ) { delete child3; child3 = NULL; }
 }
-#endif
 
-#ifdef TJ_REFACTOR
-Operation &Operation::
-operator=(const Operation &op)
-{
-    if (this != &op) {
-        CopyFrom(op);
-    }
-    return *this;
-}
-
-ExprTree *Operation::
-Copy( ) const
-{
-	Operation *newTree = new Operation ();
-	if (newTree != NULL) {
-        if (!newTree->CopyFrom(*this)) {
-            delete newTree;
-            newTree = NULL;
-        }
-    }
-
-	return newTree;
-}
-
-bool Operation::
-CopyFrom(const Operation &op)
-{
-    bool success;
-
-    success = true;
-
-	if( op.child1 && (child1 = op.child1->Copy()) == NULL){
-        success = false;
-    } else if( op.child2 && (child2 = op.child2->Copy()) == NULL ){
-        success = false;
-    } else if( op.child3 && (child3 = op.child3->Copy()) == NULL ){
-        success = false;
-	} else {
-        operation   = op.operation;
-        ExprTree::CopyFrom(op);
-    }
-
-    if (success == false) {
-        CondorErrno = ERR_MEM_ALLOC_FAILED;
-		CondorErrMsg = "";
-    }
-
-    return success;
-}
-#else
 ExprTree *Operation::
 Copy( ) const
 {
@@ -175,6 +97,7 @@ Copy( ) const
 		CondorErrMsg = "";
 		if (e1) delete e1;
 	}
+	opnode->parentScope = parentScope;
 	return opnode;
 }
 
@@ -199,6 +122,7 @@ Copy( ) const
 		CondorErrMsg = "";
 		if (e1) delete e1;
 	}
+	opnode->parentScope = parentScope;
 	return opnode;
 }
 
@@ -232,6 +156,7 @@ Copy( ) const
 		if (e1) delete e1;
 		if (e2) delete e2;
 	}
+	opnode->parentScope = parentScope;
 	return opnode;
 }
 
@@ -274,10 +199,9 @@ Copy( ) const
 		if (e2) delete e2;
 		if (e2) delete e3;
 	}
+	opnode->parentScope = parentScope;
 	return opnode;
 }
-
-#endif
 
 bool Operation::
 SameAs(const ExprTree *tree) const
@@ -293,15 +217,8 @@ SameAs(const ExprTree *tree) const
     } else {
         other_op = (const Operation *) pSelfTree;
 
-#ifdef TJ_REFACTOR
-        if (   operation == other_op->operation
-            && SameChild(child1, other_op->child1)
-            && SameChild(child2, other_op->child2)
-            && SameChild(child3, other_op->child3)) {
-#else
         if (this->GetOpKind() == other_op->GetOpKind()
             && SameChildren(this, other_op)) {
-#endif
             is_same = true;
         } else {
             is_same = false;
@@ -316,13 +233,8 @@ bool operator==(const Operation &op1, const Operation &op2)
     return op1.SameAs(&op2);
 }
 
-#ifdef TJ_REFACTOR
-bool Operation::
-SameChild(const ExprTree *tree1, const ExprTree *tree2) const
-#else
 bool Operation::
 SameChild(const ExprTree *tree1, const ExprTree *tree2)
-#endif
 {
     bool is_same; 
 
@@ -337,8 +249,6 @@ SameChild(const ExprTree *tree1, const ExprTree *tree2)
     return is_same;
 }
 
-#ifdef TJ_REFACTOR
-#else
 bool Operation::
 SameChildren(const Operation* pop1, const Operation* pop2)
 {
@@ -359,16 +269,11 @@ SameChildren(const Operation* pop1, const Operation* pop2)
 	}
 	return false;
 }
-#endif
 
 void Operation::
 _SetParentScope( const ClassAd* parent ) 
 {
-#ifdef TJ_REFACTOR
-	if( child1 ) child1->SetParentScope( parent );
-	if( child2 ) child2->SetParentScope( parent );
-	if( child3 ) child3->SetParentScope( parent );
-#else
+	parentScope = parent;
 	// PRAGMA_REMIND("fix this for derived classes")
 	ExprTree* e1 = NULL;
 	ExprTree* e2 = NULL;
@@ -378,7 +283,6 @@ _SetParentScope( const ClassAd* parent )
 	if (e1) e1->SetParentScope(parent);
 	if (e2) e2->SetParentScope(parent);
 	if (e3) e3->SetParentScope(parent);
-#endif
 }
 
 
@@ -576,14 +480,11 @@ _Evaluate (EvalState &state, Value &result) const
 	valid2 = false;
 	valid3 = false;
 
-#ifdef TJ_REFACTOR
-#else
 	OpKind operation = __NO_OP__;
 	ExprTree* child1 = NULL;
 	ExprTree* child2 = NULL;
 	ExprTree* child3 = NULL;
 	this->GetComponents(operation, child1, child2, child3);
-#endif
 
 	// Evaluate all valid children
 	if (child1) { 
@@ -624,11 +525,7 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 {
 	bool arg1_bool;
 
-#ifdef TJ_REFACTOR
-	switch( operation ) {
-#else
 	switch( this->GetOpKind() ) {
-#endif
 	case LOGICAL_OR_OP:
 		if( arg1.IsBooleanValueEquiv(arg1_bool) && arg1_bool ) {
 			result.SetBooleanValue( true );
@@ -642,22 +539,7 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 		}
 		break;
 	case TERNARY_OP:
-#ifdef TJ_REFACTOR
-		if( arg1.IsBooleanValueEquiv(arg1_bool) ) {
-			if( arg1_bool ) {
-				if( child2 ) {
-					return child2->Evaluate(state,result);
-				}
-			}
-			else {
-				if( child3 ) {
-					return child3->Evaluate(state,result);
-				}
-			}
-		}
-#else
 		return ((const Operation3*)this)->shortCircuit(state, arg1, result);
-#endif
 		break;
 	default:
 		// no-op
@@ -666,8 +548,6 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 	return false;
 }
 
-#ifdef TJ_REFACTOR
-#else
 bool Operation3::
 shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 {
@@ -691,7 +571,6 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 	}
 	return false;
 }
-#endif
 
 bool Operation::
 _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
@@ -701,14 +580,11 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 	ExprTree 	*t1=NULL, *t2=NULL, *t3=NULL;
 	bool		valid1=false, valid2=false, valid3=false;
 
-#ifdef TJ_REFACTOR
-#else
 	OpKind operation = __NO_OP__;
 	ExprTree* child1 = NULL;
 	ExprTree* child2 = NULL;
 	ExprTree* child3 = NULL;
 	this->GetComponents(operation, child1, child2, child3);
-#endif
 
 	// Evaluate all valid children
 	tree = NULL;
@@ -844,9 +720,6 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, int *opPtr ) const
 	int		childOp1=__NO_OP__, childOp2=__NO_OP__;
 	ExprTree	*fChild1=NULL, *fChild2=NULL;
 	Value		val1, val2, val3;
-#ifdef TJ_REFACTOR
-	OpKind		newOp = operation, op = operation;
-#else
 	OpKind op = this->GetOpKind();
 	OpKind newOp = op;
 	ExprTree *child1 = NULL;
@@ -855,7 +728,6 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, int *opPtr ) const
 		ExprTree * dummy = NULL;
 		this->GetComponents(op, child1, child2, dummy);
 	}
-#endif
 
 	tree = NULL; // Just to be safe...  wenger 2003-12-11.
 	
@@ -1878,18 +1750,6 @@ coerceToNumber (Value &v1, Value &v2)
 Operation *Operation::
 MakeOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
 {
-#ifdef TJ_REFACTOR
-	Operation *opnode = new Operation;
-	if( !opnode ) {
-		CondorErrno = ERR_MEM_ALLOC_FAILED;
-		CondorErrMsg = "";
-		return( NULL );
-	}
-	opnode->operation = op;
-	opnode->child1    = e1;
-	opnode->child2    = e2;
-	opnode->child3    = e3;
-#else
 	Operation *opnode = NULL;
 	if (op == PARENTHESES_OP) {
 		opnode = new OperationParens(e1);
@@ -1905,7 +1765,6 @@ MakeOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
 		CondorErrMsg = "";
 		return( NULL );
 	}
-#endif
 	return( opnode );
 }
 
@@ -1913,22 +1772,13 @@ MakeOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
 void Operation::
 GetComponents( OpKind &op, ExprTree *&e1, ExprTree *&e2, ExprTree *&e3 ) const
 {
-#ifdef TJ_REFACTOR
-	op = operation;
-	e1 = child1;
-	e2 = child2;
-	e3 = child3;
-#else
 	op = __NO_OP__;
 	e1 = NULL;
 	e2 = NULL;
 	e3 = NULL;
-#endif
 }
 
 
-#ifdef TJ_REFACTOR
-#else
 void Operation1::
 GetComponents( OpKind &op, ExprTree *&e1, ExprTree *&e2, ExprTree *&e3 ) const
 {
@@ -1964,7 +1814,6 @@ GetComponents( OpKind &op, ExprTree *&e1, ExprTree *&e2, ExprTree *&e3 ) const
 	e2 = child2;
 	e3 = child3;
 }
-#endif // TJ_REFACTOR
 
 Operation *Operation::
 MakeOperation( OpKind op, Value &val, ExprTree *tree ) 
@@ -2007,143 +1856,6 @@ MakeOperation( OpKind op, ExprTree *tree, Value &val )
 bool Operation::
 flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 {
-#ifdef TJ_REFACTOR
-	ExprTree 	*fChild1 = NULL, *fChild2 = NULL, *fChild3 = NULL;
-	Value		eval1, eval2, eval3, dummy;
-
-	switch( operation ) {
-		case UNARY_PLUS_OP:
-		case UNARY_MINUS_OP:
-		case PARENTHESES_OP:
-		case LOGICAL_NOT_OP:
-		case BITWISE_NOT_OP:
-			if( !child1->Flatten( state, eval1, fChild1 ) ) {
-				tree = NULL;
-				return false;
-			} 
-			if( fChild1 ) {
-				tree = Operation::MakeOperation( operation, fChild1 );
-				return( tree != NULL );
-			} else {
-				_doOperation( operation, eval1, dummy, dummy, true, false, 
-					false, val );
-				tree = NULL;
-				eval1.Clear();
-				return true;
-			}
-			break;
-
-
-		case TERNARY_OP:
-			// Flatten the selector expression
-			if( !child1->Flatten( state, eval1, fChild1 ) ) {
-				tree = NULL;
-				return false;
-			}
-
-			// check if selector expression collapsed to a non-undefined value
-			if( !fChild1 && !eval1.IsUndefinedValue() ) {
-				bool   		b; 
-
-				// if the selector is not boolean-equivalent, propagate error
-				if( !eval1.IsBooleanValueEquiv(b) ) {
-					val.SetErrorValue();	
-					eval1.Clear();
-					tree = NULL;
-					return true;
-				}
-
-				// eval1 is either a real or an integer
-				if( b ) {
-					return child2->Flatten( state, val, tree );	
-				} else {
-					return child3->Flatten( state, val, tree );	
-				}
-			} else {
-				// Flatten arms of the if expression
-				if( !child2->Flatten( state, eval2, fChild2 ) ||
-					!child3->Flatten( state, eval3, fChild3 ) ) {
-					// clean up
-					if( fChild1 ) delete fChild1;
-					if( fChild2 ) delete fChild2;
-					if( fChild3 ) delete fChild3;
-					tree = NULL;
-					return false;
-				}
-
-				// if any arm collapsed into a value, make it a Literal
-				if( !fChild2 ) fChild2 = Literal::MakeLiteral( eval2 );
-				if( !fChild3 ) fChild3 = Literal::MakeLiteral( eval3 );
-				if( !fChild2 || !fChild3 ) {
-					// clean up
-					if( fChild1 ) delete fChild1;
-					if( fChild2 ) delete fChild2;
-					if( fChild3 ) delete fChild3;
-					tree = NULL;
-					return false;
-				}
-	
-				// fChild1 may be NULL if child1 Flattened to UNDEFINED
-				if( !fChild1 ) {
-					fChild1 = child1->Copy();
-				}
-
-				tree = Operation::MakeOperation( operation, fChild1, fChild2, 
-						fChild3 );
-				if( !tree ) {
-					// clean up
-					if( fChild1 ) delete fChild1;
-					if( fChild2 ) delete fChild2;
-					if( fChild3 ) delete fChild3;
-					tree = NULL;
-					return false;
-				}
-				return true;
-			}	
-			// will not get here
-			return false;
-
-		case SUBSCRIPT_OP:
-			// Flatten both arguments
-			if( !child1->Flatten( state, eval1, fChild1 ) ||
-				!child2->Flatten( state, eval2, fChild2 ) ) {
-				if( fChild1 ) delete fChild1;
-				if( fChild2 ) delete fChild2;
-				tree = NULL;
-				return false;
-			}
-
-			// if both arguments Flattened to values, Evaluate now
-			if( !fChild1 && !fChild2 ) {
-				_doOperation( operation, eval1, eval2, dummy, true, true, false,
-						val );
-				tree = NULL;
-				return true;
-			} 
-
-			// otherwise convert Flattened values into literals
-			if( !fChild1 ) fChild1 = Literal::MakeLiteral( eval1 );
-			if( !fChild2 ) fChild2 = Literal::MakeLiteral( eval2 );
-			if( !fChild1 || !fChild2 ) {
-				if( fChild1 ) delete fChild1;
-				if( fChild2 ) delete fChild2;
-				tree = NULL;
-				return false;
-			}
-				
-			tree = Operation::MakeOperation( operation, fChild1, fChild2 );
-			if( !tree ) {
-				if( fChild1 ) delete fChild1;
-				if( fChild2 ) delete fChild2;
-				tree = NULL;
-				return false;
-			}
-			return true;
-
-		default:
-			CLASSAD_EXCEPT( "Should not get here" );
-	}
-#else
 	OpKind op = this->GetOpKind();
 	if (op == PARENTHESES_OP) {
 		return ((OperationParens*)this)->flatten(state, val, tree);
@@ -2154,13 +1866,10 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 	} else if (op == SUBSCRIPT_OP) {
 		return ((Operation2*)this)->flatten(state, val, tree);
 	}
-#endif
 
 	return true;
 }
 
-#ifdef TJ_REFACTOR
-#else
 
 bool Operation1::
 flatten( EvalState &state, Value &val, ExprTree *&tree ) const
@@ -2329,8 +2038,6 @@ flatten( EvalState &state, Value &val, ExprTree *&tree ) const
 	// will not get here
 	return false;
 }
-
-#endif
 
 bool Operation::
 IsStrictOperator( OpKind op ) 

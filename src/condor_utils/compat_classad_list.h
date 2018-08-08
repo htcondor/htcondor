@@ -134,8 +134,6 @@ class ClassAdList: public ClassAdListDoesNotDeleteAds
 	virtual void Clear();
 };
 
-typedef ClassAdList AttrListList;
-
 } // namespace compat_classad
 
 #endif

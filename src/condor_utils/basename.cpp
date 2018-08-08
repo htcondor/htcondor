@@ -108,41 +108,6 @@ condor_dirname(const char *path)
 }
 
 /*
-  A dirname() function appropriate to URLs that is happy on both Unix
-  and NT.  This allocates space for a new string that holds the path
-  of the parent directory of the path it was given.   The returned
-  directory name ends with the last directory delimiter found in the
-  URL.  If the given path has no directory delimiters, or is NULL, we
-  just return ".".  In all cases, the string we return is new space,
-  and must be deallocated with free().
-*/
-char *
-condor_url_dirname(const char *path)
-{
-    char *s, *parent;
-    char *lastDelim = NULL;
-
-    if( ! path || path[0] == '\0') {
-        return strdup( "." );
-    }
-
-    parent = strdup( path );
-    for (s = parent; s && *s != '\0'; s++) {
-        if (*s == '\\' || *s == '/') {
-            lastDelim = s;
-        }
-    }
-
-    if ( lastDelim ) {
-        *(lastDelim+1) = '\0';
-        return parent;
-    } else {
-        free(parent);
-        return strdup( "." );
-    }
-}
-
-/*
   DEPRECATED: just in case we need changes along the lines of
   condor_basename() some time in the future.
 

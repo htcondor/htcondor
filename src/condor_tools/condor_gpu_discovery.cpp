@@ -24,21 +24,12 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <list>
+#include <algorithm>
 
 #include <time.h>
 #include <stdarg.h> // for va_start
 
-#if 0 
-// can't use these on linux without pulling in ALL of condor_utils - ssl, crypto, etc. 
-// so for now, just copy the bits we want inline.
-#include <match_prefix.h>
-#include <stl_string_utils.h>
-#endif
-
-
-// we don't want to use the actual cuda headers because we want to build on machines where they are not installed.
-//#include <cuda_runtime_api.h>
-//#include "nvml.h"
 #include "cuda_header_doc.h"
 #include "opencl_header_doc.h"
 #include "nvml_stub.h"
@@ -52,10 +43,10 @@
 #define CUDACALL __stdcall
 #else
 #include <dlfcn.h>
-#define CUDACALL 
+#define CUDACALL
 #endif
 
-#ifdef WIN32 
+#ifdef WIN32
 // to simplfy the dynamic loading of .so/.dll, make a Windows function
 // for looking up a symbol that looks like the equivalent *nix function.
 static void* dlsym(void* hlib, const char * symbol) {
@@ -72,8 +63,8 @@ int ConvertSMVer2Cores(int major, int minor)
         int Cores;
 	} sSMtoCores;
 
-    sSMtoCores nGpuArchCoresPerSM[] = 
-    { 
+    sSMtoCores nGpuArchCoresPerSM[] =
+    {
         { 0x10,  8 }, // Tesla Generation (SM 1.0) G80 class
         { 0x11,  8 }, // Tesla Generation (SM 1.1) G8x class
         { 0x12,  8 }, // Tesla Generation (SM 1.2) G9x class
@@ -82,6 +73,14 @@ int ConvertSMVer2Cores(int major, int minor)
         { 0x21, 48 }, // Fermi Generation (SM 2.1) GF10x class
         { 0x30, 192}, // Kepler Generation (SM 3.0) GK10x class
         { 0x35, 192}, // Kepler Generation (SM 3.5) GK11x class
+        // From the CUDA 8.0 header:
+        { 0x37, 192}, // Kepler Generation (SM 3.7) GK21x class
+        { 0x50, 128}, // Maxwell Generation (SM 5.0) GM10x class
+        { 0x52, 128}, // Maxwell Generation (SM 5.2) GM20x class
+        { 0x53, 128}, // Maxwell Generation (SM 5.3) GM20x class
+        { 0x60, 64 }, // Pascal Generation (SM 6.0) GP100 class
+        { 0x61, 128}, // Pascal Generation (SM 6.1) GP10x class
+        { 0x62, 128}, // Pascal Generation (SM 6.2) GP10x class
         {   -1, -1 }
     };
 
@@ -233,7 +232,7 @@ cudaError_t CUDACALL sim_cudaGetDeviceCount(int* pdevs) {
 	} else {
 		*pdevs = aSimConfig[sim_index].deviceCount;
 	}
-	return cudaSuccess; 
+	return cudaSuccess;
 }
 cudaError_t CUDACALL sim_cudaDriverGetVersion(int* pver) {
 	if (sim_index < 0 || sim_index > sim_index_max)
@@ -265,7 +264,7 @@ cudaError_t CUDACALL sim_cudaGetDeviceProperties(struct cudaDeviceProp * p, int 
 		dev = aSimConfig[sim_index].device;
 	}
 
-	strncpy(p->name, dev->name, sizeof(p->name));
+	strncpy(p->name, dev->name, sizeof(p->name) - 1);
 	p->major = (dev->SM & 0xF0) >> 4;
 	p->minor = (dev->SM & 0x0F);
 	p->multiProcessorCount = dev->multiProcessorCount;
@@ -640,6 +639,20 @@ cudaError_t CUDACALL ocl_GetDeviceCount(int * pcount) {
 
 void usage(FILE* output, const char* argv0);
 
+bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
+	char * tokenizer = strdup( list );
+	if( tokenizer == NULL ) {
+		fprintf( stderr, "Error: device list too long\n" );
+		return false;
+	}
+	char * next = strtok( tokenizer, "," );
+	for( ; next != NULL; next = strtok( NULL, "," ) ) {
+		dwl.push_back( atoi( next ) );
+	}
+	free( tokenizer );
+	return true;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
@@ -652,11 +665,12 @@ main( int argc, const char** argv)
 	int opt_basic = 0; // publish basic GPU properties
 	int opt_extra = 0; // publish extra GPU properties.
 	int opt_dynamic = 0; // publish dynamic GPU properties
+	int opt_cron = 0;  // publish in a form usable by STARTD_CRON
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
 	//int opt_rdp = 0;
-	int opt_dev = -1;   // -1 means all devs, otherwise print info only for this dev
+	std::list<int> dwl; // Device White List
 	int opt_nvcuda = 0; // use nvcuda rather than cudarl
 	int opt_opencl = 0; // prefer opencl detection
 	int opt_cuda_only = 0; // require cuda detection
@@ -666,6 +680,34 @@ main( int argc, const char** argv)
 	const char * pcolon;
 	int i;
     int dev;
+
+	//
+	// When run with CUDA_VISIBLE_DEVICES set, only report the visible
+	// devices, but do so with the machine-level device indices.  The
+	// easiest way to do the latter is by unsetting CUDA_VISIBLE_DEVICES.
+	//
+	char * cvd = getenv( "CUDA_VISIBLE_DEVICES" );
+	if( cvd != NULL ) {
+		if(! addToDeviceWhiteList( cvd, dwl )) { return 1; }
+	}
+#if defined(WINDOWS)
+	putenv( "CUDA_VISIBLE_DEVICES=" );
+#else
+	unsetenv( "CUDA_VISIBLE_DEVICES" );
+#endif
+
+	// Ditto for GPU_DEVICE_ORDINAL.  If we ever handle dissimilar GPUs
+	// properly (right now, the negotiator can't tell them apart), we'll
+	// have to change this program to filter for specific types of GPUs.
+	char * gdo = getenv( "GPU_DEVICE_ORDINAL" );
+	if( gdo != NULL ) {
+		if(! addToDeviceWhiteList( gdo, dwl )) { return 1; }
+	}
+#if defined( WINDOWS)
+	putenv( "GPU_DEVICE_ORDINAL=" );
+#else
+	unsetenv( "GPU_DEVICE_ORDINAL" );
+#endif
 
 	for (i=1; i<argc && argv[i]; i++) {
 		if (is_dash_arg_prefix(argv[i], "help", 1)) {
@@ -682,6 +724,9 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "dynamic", 3)) {
 			opt_dynamic = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "cron", 4)) {
+			opt_cron = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "mixed", 3) || is_dash_arg_prefix(argv[i], "hetero", 3)) {
 			opt_hetero = 1;
@@ -710,6 +755,10 @@ main( int argc, const char** argv)
 		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
 				opt_pre_arg = argv[++i];
+				if (strlen(opt_pre_arg) > 80) {
+						fprintf (stderr, "Error: -prefix should be less than 80 characters\n");
+						return 1;
+				}
 			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "device", 3)) {
@@ -718,7 +767,7 @@ main( int argc, const char** argv)
 				usage(stderr, argv[0]);
 				return 1;
 			}
-			opt_dev = atoi(argv[++i]);
+			dwl.push_back( atoi(argv[++i]) );
 		}
 		else if (is_dash_arg_colon_prefix(argv[i], "simulate", &pcolon, 3)) {
 			opt_simulate = 1;
@@ -824,7 +873,7 @@ main( int argc, const char** argv)
 				// if no cuda, fall back to OpenCL detection
 			} else {
 				print_error(MODE_DIAGNOSTIC_ERR, "Error %d: Cant open library: %s\r\n", GetLastError(), cudart_library);
-				fprintf(stdout, "Detected%s=0\n", opt_tag);
+				if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
@@ -859,7 +908,7 @@ main( int argc, const char** argv)
 				// if no cuda, fall back to OpenCL detection
 			} else {
 				print_error(MODE_DIAGNOSTIC_ERR, "Error %s: Cant open library: %s\n", dlerror(), cudart_library);
-				fprintf(stdout, "Detected%s=0\n", opt_tag);
+				if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
 			}
@@ -894,7 +943,7 @@ main( int argc, const char** argv)
 			#else
 			print_error(MODE_ERROR, "Error %s: Cant find %s in library: %s\n", dlerror(), "cudaGetDeviceCount", cudart_library);
 			#endif
-			fprintf(stdout, "Detected%s=0\n", opt_tag);
+			if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 			if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 			return 0;
 		}
@@ -923,7 +972,7 @@ main( int argc, const char** argv)
 	// If there are no devices, there is nothing more to do
     if (deviceCount == 0) {
         // There is no device supporting CUDA
-		fprintf(stdout, "Detected%s=0\n", opt_tag);
+		if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 		if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 		return 0;
 	}
@@ -988,22 +1037,31 @@ main( int argc, const char** argv)
 	// print out info about detected GPU resources
 	//
 	std::string detected_gpus;
+	int filteredDeviceCount = 0;
 	for (dev = 0; dev < deviceCount; dev++) {
+		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
+			continue;
+		}
+
 		char prefix[100];
 		sprintf(prefix,"%s%d",opt_pre,dev);
 		dev_props[prefix].clear(); // this has the side effect of creating the KVP for prefix.
 		if ( ! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += prefix;
+		++filteredDeviceCount;
 	}
-	fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
+
+	if ( ! opt_cron) {
+		fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
+	}
 	if (opt_config) {
-		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, deviceCount);
+		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, filteredDeviceCount);
 	}
 
 	// print out static and/or dynamic info about detected GPU resources
 	for (dev = 0; dev < deviceCount; dev++) {
 
-		if (opt_dev >= 0 && (opt_dev != dev)) {
+		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
 		}
 
@@ -1142,7 +1200,7 @@ main( int argc, const char** argv)
 
 	for (dev = 0; dev < deviceCount; dev++) {
 
-		if (opt_dev >= 0 && (opt_dev != dev)) {
+		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
 		}
 
@@ -1243,6 +1301,7 @@ void usage(FILE* out, const char * argv0)
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"
 		"    -config           Output in HTCondor config syntax\n"
+		"    -cron             Output for use as a STARTD_CRON job, use with -dynamic\n"
 		"    -help             Show this screen and exit\n"
 		"    -verbose          Show detection progress\n"
 		//"    -diagnostic       Show detection diagnostic information\n"

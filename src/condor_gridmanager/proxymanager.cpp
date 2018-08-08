@@ -24,7 +24,7 @@
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "condor_config.h"
-#include "classad_hashtable.h"
+#include "HashTable.h"
 #include "util_lib_proto.h"
 #include "env.h"
 #include "directory.h"
@@ -35,24 +35,13 @@
 #include "globus_utils.h"
 
 #include "proxymanager.h"
-//#include "myproxy_manager.h"
 #include "gridmanager.h"
-#include "condor_string.h"
 
 #include <sstream>
 
-#define HASH_TABLE_SIZE			500
 
-
-//template class HashTable<HashKey, MyProxyManager *>;
-//template class HashBucket<HashKey, MyProxyManager *>;
-
-HashTable <HashKey, Proxy *> ProxiesByFilename( HASH_TABLE_SIZE,
-												hashFunction );
-HashTable <HashKey, ProxySubject *> SubjectsByName( 50, hashFunction );
-//HashTable <HashKey, MyProxyManager *> MyProxyManagersByPath ( HASH_TABLE_SIZE, hashFunction );
-
-//MyProxyManager myProxyManager;
+HashTable <std::string, Proxy *> ProxiesByFilename( hashFunction );
+HashTable <std::string, ProxySubject *> SubjectsByName( hashFunction );
 
 static bool proxymanager_initialized = false;
 static int CheckProxies_tid = TIMER_UNSET;
@@ -183,93 +172,9 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 	char *email = NULL;
 	char *first_fqan = NULL;
 	std::string proxy_path;
-	std::string owner;
-	char *param_str = NULL;
 	bool has_voms_attrs = false;
 
-	if ( job_ad->LookupString( ATTR_OWNER, owner ) ) {
-		std::string param_name;
-		formatstr( param_name, "JOB_PROXY_OVERRIDE_FILE_%s", owner.c_str() );
-		param_str = param( param_name.c_str() );
-	}
-	if ( param_str == NULL ) {
-		param_str = param( "JOB_PROXY_OVERRIDE_FILE" );
-	}
-	if ( param_str ) {
-		proxy_path = param_str;
-		free( param_str );
-	} else if ( job_ad->LookupString( ATTR_X509_USER_PROXY,
-									  proxy_path ) == 0 ) {
-
-		// Special handling for "use best proxy"
-		job_ad->LookupString( ATTR_X509_USER_PROXY_FQAN, &fqan );
-		job_ad->LookupString( ATTR_X509_USER_PROXY_FIRST_FQAN, &first_fqan );
-		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &subject_name );
-		job_ad->LookupString( ATTR_X509_USER_PROXY_EMAIL, &email );
-		if ( subject_name ) {
-			if ( fqan == NULL ) {
-				fqan = strdup( subject_name );
-			} else {
-				has_voms_attrs = true;
-			}
-			if ( SubjectsByName.lookup( HashKey(fqan),
-										proxy_subject ) != 0 ) {
-				// We don't know about this proxy subject yet,
-				// create a new ProxySubject and fill it out
-				std::string tmp;
-				proxy_subject = new ProxySubject;
-				proxy_subject->subject_name = strdup( subject_name );
-				if (email)
-					proxy_subject->email = strdup( email );
-				else
-					proxy_subject->email = NULL;
-				proxy_subject->fqan = fqan ? strdup( fqan ) : NULL;
-				proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
-				proxy_subject->has_voms_attrs = has_voms_attrs;
-
-				// Create a master proxy for our new ProxySubject
-				Proxy *new_master = new Proxy;
-				new_master->id = next_proxy_id++;
-				formatstr( tmp, "%s/master_proxy.%d", masterProxyDirectory,
-							 new_master->id );
-				new_master->proxy_filename = strdup( tmp.c_str() );
-				new_master->num_references = 0;
-				new_master->subject = proxy_subject;
-				//SetMasterProxy( new_master, proxy );
-				new_master->expiration_time = -1;
-				new_master->near_expired = true;
-				ProxiesByFilename.insert( HashKey(new_master->proxy_filename),
-										  new_master );
-
-				proxy_subject->master_proxy = new_master;
-
-				SubjectsByName.insert(HashKey(proxy_subject->fqan),
-									  proxy_subject);
-			}
-			// Now that we have a proxy_subject, return it's master proxy
-			proxy = proxy_subject->master_proxy;
-			proxy->num_references++;
-			if ( func_ptr ) {
-				Callback cb;
-				cb.m_func_ptr = func_ptr;
-				cb.m_data = data;
-				if ( proxy->m_callbacks.IsMember( cb ) == false ) {
-					proxy->m_callbacks.Append( cb );
-				}
-			}
-			free( subject_name );
-			if ( email )
-				free( email );
-			free( fqan );
-			free( first_fqan );
-			return proxy;
-
-		}
-
-		free( subject_name );
-		free( email );
-		free( fqan );
-		free( first_fqan );
+	if ( job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_path ) == 0 ) {
 		//sprintf( error, "%s is not set in the job ad", ATTR_X509_USER_PROXY );
 		error = "";
 		return NULL;
@@ -288,7 +193,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		}
 	}
 
-	if ( ProxiesByFilename.lookup( HashKey(proxy_path.c_str()), proxy ) == 0 ) {
+	if ( ProxiesByFilename.lookup( proxy_path, proxy ) == 0 ) {
 		// We already know about this proxy,
 		// use the existing Proxy struct
 		proxy->num_references++;
@@ -360,9 +265,9 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			}
 		}
 
-		ProxiesByFilename.insert(HashKey(proxy_path.c_str()), proxy);
+		ProxiesByFilename.insert(proxy_path, proxy);
 
-		if ( SubjectsByName.lookup( HashKey(fqan), proxy_subject ) != 0 ) {
+		if ( SubjectsByName.lookup( fqan, proxy_subject ) != 0 ) {
 			// We don't know about this proxy subject yet,
 			// create a new ProxySubject and fill it out
 			std::string tmp;
@@ -382,12 +287,12 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			new_master->num_references = 0;
 			new_master->subject = proxy_subject;
 			SetMasterProxy( new_master, proxy );
-			ProxiesByFilename.insert( HashKey(new_master->proxy_filename),
-									  new_master );
+			ASSERT( ProxiesByFilename.insert( new_master->proxy_filename,
+			                                  new_master ) == 0 );
 
 			proxy_subject->master_proxy = new_master;
 
-			SubjectsByName.insert(HashKey(proxy_subject->fqan),
+			SubjectsByName.insert(proxy_subject->fqan,
 								  proxy_subject);
 		}
 
@@ -573,11 +478,11 @@ ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 
 			// TODO shouldn't we be deleting the physical file for the
 			//   master proxy, since we created it?
-			ProxiesByFilename.remove( HashKey(proxy_subject->master_proxy->proxy_filename) );
+			ProxiesByFilename.remove( proxy_subject->master_proxy->proxy_filename );
 			free( proxy_subject->master_proxy->proxy_filename );
 			delete proxy_subject->master_proxy;
 
-			SubjectsByName.remove( HashKey(proxy_subject->fqan) );
+			SubjectsByName.remove( proxy_subject->fqan );
 			free( proxy_subject->subject_name );
 			if ( proxy_subject->email )
 				free( proxy_subject->email );
@@ -631,7 +536,7 @@ void DeleteMyProxyEntry (MyProxyEntry *& myproxy_entry) {
 // Utility function to deep-delete the Proxy data structure
 void DeleteProxy (Proxy *& proxy)
 {
-	ProxiesByFilename.remove( HashKey(proxy->proxy_filename) );
+	ProxiesByFilename.remove( proxy->proxy_filename );
 
 	proxy->subject->proxies.Delete( proxy );
 

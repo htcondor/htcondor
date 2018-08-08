@@ -24,7 +24,6 @@
 #include "classad_merge.h"
 #include "vm_common.h"
 #include "VMRegister.h"
-#include "file_sql.h"
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
@@ -39,11 +38,11 @@
 #endif
 #endif
 
+#include "stat_info.h"
+
 #ifndef max
 #define max(x,y) (((x) < (y)) ? (y) : (x))
 #endif
-
-extern FILESQL *FILEObj;
 
 std::vector<SlotType> SlotType::types(10);
 static bool warned_startd_attrs_once = false; // used to prevent repetition of the warning about mixing STARTD_ATTRS and STARTD_EXPRS
@@ -192,7 +191,7 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 	return out.c_str();
 }
 
-Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
+Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent ) : m_acceptedWhileDraining( false )
 {
 	MyString tmp;
 	const char* tmpName;
@@ -330,20 +329,6 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	r_no_collector_updates = SlotType::type_param_boolean(cap, "HIDDEN", false);
 
 	update_tid = -1;
-
-		// Set ckpt filename for avail stats here, since this object
-		// knows the resource id, and we need to use a different ckpt
-		// file for each resource.
-	if( compute_avail_stats ) {
-		char *log = param("LOG");
-		if (log) {
-			MyString avail_stats_ckpt_file(log);
-			free(log);
-			tmp.formatstr( "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
-			avail_stats_ckpt_file += tmp;
-			r_avail_stats.checkpoint_filename(avail_stats_ckpt_file);
-		}
-	}
 
 	r_cpu_busy = 0;
 	r_cpu_busy_start_time = 0;
@@ -708,30 +693,32 @@ Resource::killAllClaims( void )
 	shutdownAllClaims( false );
 }
 
+extern ExprTree * globalDrainingStartExpr;
+
 void
 Resource::shutdownAllClaims( bool graceful, bool reversible )
 {
-		// shutdown the COD claims
+	// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
 
-	if( Resource::DYNAMIC_SLOT == get_feature() ) {
-		if( graceful ) {
-			void_retire_claim(reversible);
-		} else {
-			void_kill_claim();
-		}
+	// The original code sequence here looked moronic.  This one isn't
+	// much better, but here's why we're doing it: void_kill_claim() delete()s
+	// _this_ if it's a dynamic slot, so we can't call _any_ member function
+	// after we call void_kill_claim().  I don't know if that applies to
+	// void_retire_claim(), but the original code implied that it did.
+	bool safe = Resource::DYNAMIC_SLOT != get_feature();
 
-		// We have deleted ourself and can't send any updates.
+	// shutdown our own claims
+	if( graceful ) {
+		void_retire_claim(reversible);
 	} else {
-		if( graceful ) {
-			void_retire_claim(reversible);
-		} else {
-			void_kill_claim();
-		}
+		void_kill_claim();
+	}
 
-			// Tell the negotiator not to match any new jobs to this slot,
-			// since they would just be rejected by the startd anyway.
-		r_reqexp->unavail();
+	// if we haven't deleted ourselves, mark ourselves unavailable and
+	// update the collector.
+	if( safe ) {
+		r_reqexp->unavail( globalDrainingStartExpr );
 		update();
 	}
 }
@@ -927,6 +914,16 @@ Resource::starterExited( Claim* cur_claim )
 		return;
 	}
 
+	// Somewhere before the end of this function, this Resource gets
+	// delete()d, or at least partially over-written.  (I'm leaning
+	// towards deleted, because this Resource isn't in the ResMgr's
+	// Resource list when we check at the end of this function.)
+	// So decide now if we need to check if we're done draining.
+	bool shouldCheckForDrainCompletion = false;
+	if(isDraining() && !m_acceptedWhileDraining) {
+		shouldCheckForDrainCompletion = true;
+	}
+
 		// let our ResState object know the starter exited, so it can
 		// deal with destination state stuff...  we'll eventually need
 		// to move more of the code from below here into the
@@ -962,6 +959,10 @@ Resource::starterExited( Claim* cur_claim )
 				 state_to_string(s) );
 		change_state( owner_state );
 		break;
+	}
+
+	if( shouldCheckForDrainCompletion ) {
+		resmgr->checkForDrainCompletion();
 	}
 }
 
@@ -1072,7 +1073,7 @@ Resource::leave_preempting_state( void )
 {
 	int tmp;
 
-	r_cur->vacate();	// Send a vacate to the client of the claim
+	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim
 	delete r_cur;
 	r_cur = NULL;
 
@@ -1305,6 +1306,30 @@ Resource::do_update( void )
 #endif
 #endif
 
+		// Modifying the ClassAds we're sending in ResMgr::send_update()
+		// would be evil, so do the collector filtering here.
+	std::vector< std::string > deleteList;
+	for( auto i = public_ad.begin(); i != public_ad.end(); ++i ) {
+		const std::string & name = i->first;
+		//
+		// Arguably, this code here and the code in Resource::publish()
+		// would benefit from a startd-global (?) list of the names of all
+		// custom global resources; that way, we could confirm that this
+		// Uptime* attribute actually corresponded to a custom global
+		// resource and wasn't something from somewhere else (for instance,
+		// some other startd cron job).
+		//
+		if( name.find( "Uptime" ) == 0
+		 || name.find( "StartOfJobUptime" ) == 0
+		 || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
+		 || name.find( "FirstUpdate" ) == 0 ) {
+			deleteList.push_back( name );
+		}
+	}
+	for( auto i = deleteList.begin(); i != deleteList.end(); ++i ) {
+		public_ad.Delete( * i );
+	}
+
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad, true );
@@ -1334,11 +1359,6 @@ Resource::publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad )
     }
 
     this->publish_private( private_ad );
-
-    // log classad into sql log so that it can be updated to DB
-    if (FILEObj) {
-        FILESQL::daemonAdInsert(public_ad, "Machines", FILEObj, prevLHF);
-	}
 }
 
 
@@ -2131,7 +2151,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// get the same values as their parent slots.
 		MyString slot_name(r_id_str);
 		int iUnderPos = slot_name.find("_");
-		if (iUnderPos >=0) { slot_name.setChar (iUnderPos,  '\0'); }
+		if (iUnderPos >=0) { slot_name.truncate (iUnderPos); }
 
 		// load the relevant param that controls the attribute list.  
 		// We preserve the behavior of config_fill_ad here so the effective list is STARTD_ATTRS + SLOTn_STARTD_ATTRS
@@ -2225,7 +2245,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
             cap->Assign(ATTR_SLOT_TYPE, "Static");
 			break; // Do nothing
 		}
-	}		
+	}
 
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
 			// If we're claimed or preempting, handle anything listed
@@ -2317,13 +2337,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		r_pre->publishPreemptingClaim( cap, mask );
 	}
 
-		// Put in availability statistics
-	r_avail_stats.publish( cap, mask );
-
 	r_cod_mgr->publish( cap, mask );
 
 	// Publish the supplemental Class Ads
-	resmgr->adlist_publish( r_id, cap, mask );
+	resmgr->adlist_publish( r_id, cap, mask, r_id_str );
 
     // Publish the monitoring information
     daemonCore->dc_stats.Publish(*cap);
@@ -2377,9 +2394,123 @@ Resource::publish( ClassAd* cap, amask_t mask )
         }
     }
 
-#if defined(ADD_TARGET_SCOPING)
-	cap->AddTargetRefs( TargetJobAttrs, false );
+	cap->InsertAttr( "AcceptedWhileDraining", m_acceptedWhileDraining );
+	if( resmgr->getMaxJobRetirementTimeOverride() >= 0 ) {
+		cap->InsertAttr( ATTR_MAX_JOB_RETIREMENT_TIME, resmgr->getMaxJobRetirementTimeOverride() );
+	}
+
+	// Don't bother to write an ad to disk that won't include the extras ads.
+	// Also only write the ad to disk when the claim has a ClassAd and the
+	// starter knows where the execute directory is.  Empirically, this set
+	// of conditions also ensures that reset_monitor() has been called, so
+	// the first ad we write will include the StartOfJob* attribute(s).
+	if( IS_PUBLIC(mask) && IS_UPDATE(mask)
+	  && r_cur && r_cur->ad() && r_cur->executeDir() ) {
+		std::string updateAdDir;
+		formatstr( updateAdDir, "%s/dir_%d", r_cur->executeDir(), r_cur->starterPID() );
+
+		// Write to a temporary file first and then rename it
+		// to ensure atomic updates.
+		std::string updateAdTmpPath;
+		formatstr( updateAdTmpPath, "%s/.update.ad.tmp", updateAdDir.c_str() );
+
+		FILE * updateAdFile = NULL;
+#if defined(WINDOWS)
+		{
+			TemporaryPrivSentry p( PRIV_ROOT );
+			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
+		}
+#else
+		StatInfo si( updateAdDir.c_str() );
+		if(! si.Error()) {
+			set_user_ids( si.GetOwner(), si.GetGroup() );
+			TemporaryPrivSentry p( PRIV_USER, true );
+			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
+		}
 #endif
+
+		if( updateAdFile ) {
+			std::vector< std::string > deleteList;
+			for( auto i = cap->begin(); i != cap->end(); ++i ) {
+				const std::string & name = i->first;
+
+				// Compute the SUM metrics' *Usage values.  The PEAK metrics
+				// have already inserted their *Usage values into the ad.
+				if( name.find( "StartOfJob" ) == 0 ) {
+					std::string usageName;
+					std::string uptimeName = name.substr( 10 );
+					if(! StartdCronJobParams::getResourceNameFromAttributeName( uptimeName, usageName )) { continue; }
+					usageName += "Usage";
+
+					std::string lastUpdateName = "LastUpdate" + uptimeName;
+					std::string firstUpdateName = "FirstUpdate" + uptimeName;
+
+					// Note that we calculate the usage rate only for full
+					// sample intervals.  This eliminates the imprecision of
+					// the sample interval in which the job started; since we
+					// can't include the usage from the sample interval in
+					// which the job ended, we also don't include the time
+					// the job was running in that interval.  The computation
+					// is thus exact for its time period.
+					std::string usageExpr;
+					formatstr( usageExpr, "(%s - %s)/(%s - %s)",
+						uptimeName.c_str(), name.c_str(),
+						lastUpdateName.c_str(), firstUpdateName.c_str() );
+
+					classad::Value v;
+					if(! cap->EvaluateExpr( usageExpr, v )) { continue; }
+					double usageValue;
+					if(! v.IsNumber( usageValue )) { continue; }
+					cap->InsertAttr( usageName, usageValue );
+
+					deleteList.push_back( uptimeName );
+					deleteList.push_back( name );
+					deleteList.push_back( lastUpdateName );
+					deleteList.push_back( firstUpdateName );
+				}
+			}
+
+			// This is inefficient, but not inefficient enough to rewrite
+			// fPrintAd() with a blacklist.
+			classad::References r;
+			sGetAdAttrs( r, * cap, true, NULL );
+			for( auto i = deleteList.begin(); i != deleteList.end(); ++i ) {
+				r.erase( *i );
+			}
+
+			std::string adstring;
+			sPrintAdAttrs( adstring, * cap, r );
+
+			fprintf( updateAdFile, "%s", adstring.c_str() );
+			// fwrite( updateAdFile, sizeof( char ), strlen( adstring.c_str() ), adstring.c_str() );
+
+			fclose( updateAdFile );
+
+
+			// Rename the temporary.
+			std::string updateAdPath;
+			formatstr( updateAdPath, "%s/.update.ad", updateAdDir.c_str() );
+
+#if defined(WINDOWS)
+			{
+				TemporaryPrivSentry p( PRIV_ROOT );
+				rename( updateAdTmpPath.c_str(), updateAdPath.c_str() );
+			}
+#else
+			StatInfo si( updateAdDir.c_str() );
+			if(! si.Error()) {
+				set_user_ids( si.GetOwner(), si.GetGroup() );
+				TemporaryPrivSentry p(PRIV_USER, true);
+				if (rename(updateAdTmpPath.c_str(), updateAdPath.c_str()) < 0) {
+					dprintf(D_ALWAYS, "Failed to rename update ad from  %s to %s\n", updateAdTmpPath.c_str(), updateAdPath.c_str());
+				}
+			}
+#endif
+		} else {
+			dprintf( D_ALWAYS, "Failed to open '%s' for writing update ad: %s (%d).\n",
+				updateAdTmpPath.c_str(), strerror( errno ), errno );
+		}
+	}
 }
 
 void
@@ -2575,10 +2706,6 @@ Resource::compute( amask_t mask )
 		// Actually, we'll have the Reqexp object compute too, so that
 		// we get static stuff recomputed on reconfig, etc.
 	r_reqexp->compute( mask );
-
-		// Compute availability statistics
-	r_avail_stats.compute( mask );
-
 }
 
 
@@ -2586,14 +2713,10 @@ void
 Resource::dprintf_va( int flags, const char* fmt, va_list args ) const
 {
 	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
-	if( resmgr->is_smp() ) {
-		MyString fmt_str( r_id_str );
-		fmt_str += ": ";
-		fmt_str += fmt;
-		::_condor_dprintf_va( flags, ident, fmt_str.Value(), args );
-	} else {
-		::_condor_dprintf_va( flags, ident, fmt, args );
-	}
+	std::string fmt_str( r_id_str );
+	fmt_str += ": ";
+	fmt_str += fmt;
+	::_condor_dprintf_va( flags, ident, fmt_str.c_str(), args );
 }
 
 
@@ -2607,8 +2730,10 @@ Resource::dprintf( int flags, const char* fmt, ... ) const
 }
 
 
+// Update the Cpus and Memory usage values of the starter on the active claim
+// and compute the condor load average from those numbers.
 float
-Resource::compute_condor_load( void )
+Resource::compute_condor_usage( void )
 {
 	float cpu_usage, avg, max, load;
 	int numcpus = resmgr->num_real_cpus();
@@ -2622,12 +2747,21 @@ Resource::compute_condor_load( void )
 		num_since_last = polling_interval;
 	}
 
+	// this will have the cpus usage value that we use for calculating the load average
+	cpu_usage = 0.0;
+
+	if (r_cur) {
+		// update the Cpus and Memory usage numbers of the active claim.
+		// the claim will cache the values returned here and we can fetch them again later.
+		double pctCpu = 0.0;
+		long long imageSize = 0;
+		r_cur->updateUsage(pctCpu, imageSize);
+
 		// we only consider the opportunistic Condor claim for
 		// CondorLoadAvg, not any of the COD claims...
-	if( r_cur && r_cur->isActive() ) {
-		cpu_usage = r_cur->percentCpuUsage();
-	} else {
-		cpu_usage = 0.0;
+		if (r_cur->isActive()) {
+			cpu_usage = (float)pctCpu;
+		}
 	}
 
 	if( IsDebugVerbose( D_LOAD ) ) {
@@ -2852,7 +2986,7 @@ Resource::willingToRun(ClassAd* request_ad)
 			// Since we have a request ad, we can also check its requirements.
 		Starter* tmp_starter;
 		bool no_starter = false;
-		tmp_starter = resmgr->starter_mgr.findStarter(request_ad, r_classad, no_starter );
+		tmp_starter = resmgr->starter_mgr.newStarter(request_ad, r_classad, no_starter );
 		if (!tmp_starter) {
 			req_requirements = 0;
 		}
@@ -2889,12 +3023,12 @@ Resource::willingToRun(ClassAd* request_ad)
 
 			// Possibly print out the ads we just got to the logs.
 		if (IsDebugLevel(D_JOB)) {
-			dprintf(D_JOB, "REQ_CLASSAD:\n");
-			dPrintAd(D_JOB, *request_ad);
+			std::string adbuf;
+			dprintf(D_JOB, "REQ_CLASSAD:\n%s", formatAd(adbuf, *request_ad, "\t"));
 		}
 		if (IsDebugLevel(D_MACHINE)) {
-			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
-			dPrintAd(D_MACHINE, *r_classad);
+			std::string adbuf;
+			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n%s", formatAd(adbuf, *r_classad, "\t"));
 		}
 	}
 	else {
@@ -2929,7 +3063,7 @@ Resource::createOrUpdateFetchClaim(ClassAd* job_ad, float rank)
 			// We're currently claimed with a fetch claim, and we just
 			// fetched another job. Instead of generating a new Claim,
 			// we just need to update r_cur with the new job ad.
-		r_cur->setad(job_ad);
+		r_cur->setjobad(job_ad);
 		r_cur->setrank(rank);
 	}
 	else {
@@ -2945,7 +3079,7 @@ void
 Resource::createFetchClaim(ClassAd* job_ad, float rank)
 {
 	Claim* new_claim = new Claim(this, CLAIM_FETCH);
-	new_claim->setad(job_ad);
+	new_claim->setjobad(job_ad);
 	new_claim->setrank(rank);
 
 	if (state() == claimed_state) {
@@ -2962,25 +3096,23 @@ Resource::createFetchClaim(ClassAd* job_ad, float rank)
 bool
 Resource::spawnFetchedWork(void)
 {
-        // First, we have to find a Starter that will work.
-    Starter* tmp_starter;
+		// First, we have to find a Starter that will work.
+	Starter* tmp_starter;
 	bool no_starter = false;
-    tmp_starter = resmgr->starter_mgr.findStarter(r_cur->ad(), r_classad, no_starter);
+	tmp_starter = resmgr->starter_mgr.newStarter(r_cur->ad(), r_classad, no_starter);
 	if( ! tmp_starter ) {
 		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Could not find a starter that can run fetched work request, aborting.\n");
 		change_state(owner_state);
 		return false;
 	}
 
-		// Update the claim object with info from this job ClassAd now
-		// that we're actually activating it. By not passing any
-		// argument here, we tell saveJobInfo() to keep the copy of
-		// the ClassAd it already has instead of clobbering it.
-	r_cur->saveJobInfo();
+		// Update the claim object with info from the job classad stored in the Claim object
+		// Then spawn the given starter.
+		// If the starter was spawned, we no longer own the tmp_starter object
+	ASSERT(r_cur->ad() != NULL);
+	if ( ! r_cur->spawnStarter(tmp_starter, NULL)) {
+		delete tmp_starter; tmp_starter = NULL;
 
-	r_cur->setStarter(tmp_starter);
-
-	if (!r_cur->spawnStarter()) {
 		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
 		change_state(owner_state);
 			// spawnStarter() deletes the Claim's starter object on
@@ -3600,6 +3732,13 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 	}
 	attrValue += "}";
 	cap->AssignExpr(attrName.c_str(), attrValue.c_str());
-	
+
 	return;
+}
+
+void
+Resource::invalidateAllClaimIDs() {
+	if( r_pre ) { r_pre->invalidateID(); }
+	if( r_pre_pre ) { r_pre_pre->invalidateID(); }
+	if( r_cur ) { r_cur->invalidateID(); }
 }

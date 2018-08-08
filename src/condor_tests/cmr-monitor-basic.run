@@ -1,0 +1,73 @@
+#!/usr/bin/env perl
+#testreq: personal
+
+##**************************************************************
+##
+## Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use strict;
+use warnings;
+
+#
+# This is a basic test to determine if Custom Machine Resource monitors are
+# working properly.
+#
+
+use CondorTest;
+use CondorUtils;
+use CondorPersonal;
+
+use CustomMachineResource;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+NUM_CPUS = 16
+
+MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
+
+STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) SQUIDs_MONITOR
+STARTD_CRON_SQUIDs_MONITOR_MODE = periodic
+STARTD_CRON_SQUIDs_MONITOR_PERIOD = 10
+STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE = $(TEST_DIR)/cmr-squid-monitor
+STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs
+
+SCHEDD_CLUSTER_INITIAL_VALUE = 1000
+
+UPDATE_INTERVAL = 20
+STARTER_UPDATE_INTERVAL = 20
+SHADOW_QUEUE_UPDATE_INTERVAL = 20
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testName = 'cmr_monitor_basic';
+my $testDescription = 'Custom Machine Resources - Monitor Test Basic';
+
+#
+# Verify the configuration before running the test.
+#
+CustomMachineResource::TestSlotAndSQUIDsCount( 16, $testName );
+
+#
+# Verify that the monitor's report is being read correctly.
+#
+CustomMachineResource::TestUptimeSQUIDsSeconds( $testName );
+
+#
+# Verify that we're computing the usage correctly.
+#
+exit( CustomMachineResource::TestSQUIDsUsage( $testName ) );

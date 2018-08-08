@@ -102,6 +102,8 @@ class FunctionCall : public ExprTree
 	 */
 	bool FunctionIsDefined() const {return function != NULL;}
 
+	virtual const ClassAd *GetParentScope( ) const { return( parentScope ); }
+
  protected:
 	/// Constructor
 	FunctionCall ();
@@ -121,6 +123,8 @@ class FunctionCall : public ExprTree
     static FuncTable &getFunctionTable(void);
 	static bool		 initialized;
 	
+	const ClassAd *parentScope;
+
 	// function call specific information
 	std::string		functionName;
 	ClassAdFunc		function;

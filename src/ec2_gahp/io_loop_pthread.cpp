@@ -24,6 +24,7 @@
 #include <time.h>
 
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "string_list.h"
 #include "HashTable.h"
 #include "PipeBuffer.h"
@@ -87,14 +88,15 @@ registerAllAmazonCommands(void)
 	}
 
 	// EC2 Commands
-
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_START,
 			AmazonVMStart::ioCheck, AmazonVMStart::workerFunction);
+
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_START_SPOT,
             AmazonVMStartSpot::ioCheck, AmazonVMStartSpot::workerFunction);
 
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP,
 			AmazonVMStop::ioCheck, AmazonVMStop::workerFunction);
+
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP_SPOT,
 			AmazonVMStopSpot::ioCheck, AmazonVMStopSpot::workerFunction);
 
@@ -128,13 +130,31 @@ registerAllAmazonCommands(void)
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_SERVER_TYPE,
             AmazonVMServerType::ioCheck, AmazonVMServerType::workerFunction);
 
-	// Spot Fleet commands
+	// Annex commands
 	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_START,
 			AmazonBulkStart::ioCheck, AmazonBulkStart::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_PUT_RULE,
 			AmazonPutRule::ioCheck, AmazonPutRule::workerFunction );
 	registerAmazonGahpCommand( AMAZON_COMMAND_PUT_TARGETS,
 			AmazonPutTargets::ioCheck, AmazonPutTargets::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_STOP,
+			AmazonBulkStop::ioCheck, AmazonBulkStop::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_DELETE_RULE,
+			AmazonDeleteRule::ioCheck, AmazonDeleteRule::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_REMOVE_TARGETS,
+			AmazonRemoveTargets::ioCheck, AmazonRemoveTargets::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_GET_FUNCTION,
+			AmazonGetFunction::ioCheck, AmazonGetFunction::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_S3_UPLOAD,
+			AmazonS3Upload::ioCheck, AmazonS3Upload::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_CF_CREATE_STACK,
+			AmazonCreateStack::ioCheck, AmazonCreateStack::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_CF_DESCRIBE_STACKS,
+			AmazonDescribeStacks::ioCheck, AmazonDescribeStacks::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_CALL_FUNCTION,
+			AmazonCallFunction::ioCheck, AmazonCallFunction::workerFunction );
+	registerAmazonGahpCommand( AMAZON_COMMAND_BULK_QUERY,
+			AmazonBulkQuery::ioCheck, AmazonBulkQuery::workerFunction );
 
 	return true;
 }
@@ -173,18 +193,22 @@ main( int argc, char ** const argv )
 	sigprocmask( SIG_UNBLOCK, &sigSet, NULL );
 #endif
 
-	set_mySubSystem("AMAZON_GAHP", SUBSYSTEM_TYPE_GAHP);
-
 	int min_workers = MIN_NUMBER_WORKERS;
 	int max_workers = -1;
-	const char * dprintfName = "EC2_GAHP";
+	const char * subSystemName = "EC2_GAHP";
+	const char * logDirectory = NULL;
 
 	int c = 0;
-	while ( (c = my_getopt(argc, argv, "l:f:d:w:m:" )) != -1 ) {
+	while ( (c = my_getopt(argc, argv, "l:s:f:d:w:m:" )) != -1 ) {
 		switch(c) {
 			case 'l':
 				if( my_optarg && *my_optarg ) {
-					dprintfName = my_optarg;
+					logDirectory = my_optarg;
+				}
+				break;
+			case 's':
+				if( my_optarg && *my_optarg ) {
+					subSystemName = my_optarg;
 				}
 				break;
 			case 'f':
@@ -214,8 +238,14 @@ main( int argc, char ** const argv )
 		}
 	}
 
+	// This is horrible, but I can't find the "right" way to do it.
+    if( logDirectory != NULL ) {
+    	setenv( "_CONDOR_LOG", logDirectory, 1 );
+    }
+
+    set_mySubSystem( subSystemName, SUBSYSTEM_TYPE_GAHP );
     config();
-    dprintf_config( dprintfName );
+    dprintf_config( subSystemName );
     const char * debug_string = getenv( "DebugLevel" );
     if( debug_string && * debug_string ) {
         set_debug_flags( debug_string, 0 );
@@ -359,7 +389,7 @@ Worker::removeRequest(int req_id)
 
 // Functions for IOProcess class
 IOProcess::IOProcess()
-	: m_workers_list(20, &hashFuncInt)
+	: m_workers_list(&hashFuncInt)
 {
 	m_async_mode = false;
 	m_new_results_signaled = false;
@@ -517,7 +547,7 @@ IOProcess::createNewWorker(void)
 	pthread_detach(thread);
 
 	// Insert a new worker to HashTable
-	m_workers_list.insert(new_worker->m_id, new_worker);
+	ASSERT( m_workers_list.insert(new_worker->m_id, new_worker) == 0 );
 	m_avail_workers_num++;
 
 	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker->m_id);

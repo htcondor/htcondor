@@ -26,7 +26,6 @@
 #include "condor_environ.h"
 
 #include "authentication.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "my_hostname.h"
@@ -91,8 +90,8 @@ std::map<std::string,KeyCache*> *SecMan::m_tagged_session_cache = NULL;
 std::string SecMan::m_tag;
 KeyCache *SecMan::session_cache = &SecMan::m_default_session_cache;
 std::string SecMan::m_pool_password;
-HashTable<MyString,MyString> SecMan::command_map(209, MyStringHash, updateDuplicateKeys);
-HashTable<MyString,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(256, MyStringHash, rejectDuplicateKeys);
+HashTable<MyString,MyString> SecMan::command_map(hashFunction);
+HashTable<MyString,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(hashFunction);
 int SecMan::sec_man_ref_count = 0;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
@@ -2225,7 +2224,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				}
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
-				if (m_sec_man.command_map.insert(keybuf, sesid) == 0) {
+				if (m_sec_man.command_map.insert(keybuf, sesid, true) == 0) {
 					// success
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
@@ -2633,6 +2632,8 @@ SecMan::sec_char_to_auth_method( char* method ) {
 		return CAUTH_KERBEROS;
 	} else if ( !strcasecmp( method, "CLAIMTOBE" ) ) {
 		return CAUTH_CLAIMTOBE;
+	} else if ( !strcasecmp( method, "MUNGE" ) ) {
+		return CAUTH_MUNGE;
 	} else if ( !strcasecmp( method, "ANONYMOUS" ) ) {
 		return CAUTH_ANONYMOUS;
 	}
@@ -2701,17 +2702,27 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 }
 
 
-SecMan::SecMan()
-{
+SecMan::SecMan() :
+	m_cached_auth_level((DCpermission)-1),
+	m_cached_raw_protocol(false),
+	m_cached_use_tmp_sec_session(false),
+	m_cached_force_authentication(false),
+	m_cached_return_value(-1) {
+	
 	if ( NULL == m_ipverify ) {
 		m_ipverify = new IpVerify( );
 	}
-	m_cached_auth_level = (DCpermission)-1; // intentionally invalid
 	sec_man_ref_count++;
 }
 
 
-SecMan::SecMan(const SecMan & /* copy */) {
+SecMan::SecMan(const SecMan & rhs/* copy */) : 
+	m_cached_auth_level(rhs.m_cached_auth_level), 
+	m_cached_raw_protocol(rhs.m_cached_raw_protocol), 
+	m_cached_use_tmp_sec_session(rhs.m_cached_use_tmp_sec_session), 
+	m_cached_force_authentication(rhs.m_cached_force_authentication),
+	m_cached_return_value(rhs.m_cached_return_value) {
+
 	sec_man_ref_count++;
 }
 
@@ -2751,7 +2762,7 @@ SecMan::sec_copy_attribute( classad::ClassAd &dest, const ClassAd &source, const
 	ExprTree *e = source.LookupExpr(attr);
 	if (e) {
 		ExprTree *cp = e->Copy();
-		dest.Insert(attr,cp,false);
+		dest.Insert(attr,cp);
 		return true;
 	} else {
 		return false;
@@ -2766,7 +2777,7 @@ SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, const ClassAd &s
 	}
 
 	e = e->Copy();
-	bool retval = dest.Insert(to_attr, e, false) != 0;
+	bool retval = dest.Insert(to_attr, e) != 0;
 	return retval;
 }
 
@@ -2813,45 +2824,6 @@ SecMan::invalidateExpiredCache()
 		}
 	}
 }
-
-/*
-
-			// a failure here signals that the cache may be invalid.
-			// delete this entry from table and force normal auth.
-			KeyCacheEntry * ek = NULL;
-			if (session_cache->lookup(keybuf, ek) == 0) {
-				delete ek;
-			} else {
-				dprintf (D_SECURITY, "SECMAN: unable to delete KeyCacheEntry.\n");
-			}
-			session_cache->remove(keybuf);
-			m_have_session = false;
-
-			// close this connection and start a new one
-			if (!sock->close()) {
-				dprintf ( D_ALWAYS, "SECMAN: could not close socket to %s\n",
-						sin_to_string(sock->peer_addr()));
-				return false;
-			}
-
-			KeyInfo* nullp = 0;
-			if (!sock->set_crypto_key(false, nullp)) {
-				dprintf ( D_ALWAYS, "SECMAN: could not re-init crypto!\n");
-				return false;
-			}
-			if (!sock->set_MD_mode(MD_OFF, nullp)) {
-				dprintf ( D_ALWAYS, "SECMAN: could not re-init Digest Mode!\n");
-				return false;
-			}
-			if (!sock->connect(sock->get_connect_addr(), 0)) {
-				dprintf ( D_ALWAYS, "SECMAN: could not reconnect to %s.\n",
-						sin_to_string(sock->peer_addr()));
-				return false;
-			}
-
-			goto choose_action;
-*/
-
 
 MyString SecMan::getDefaultAuthenticationMethods() {
 	MyString methods;
@@ -3024,7 +2996,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( crypto_methods.Length() ) {
 		int pos = crypto_methods.FindChar(',');
 		if( pos >= 0 ) {
-			crypto_methods.setChar(pos,'\0');
+			crypto_methods.truncate(pos);
 			policy.Assign(ATTR_SEC_CRYPTO_METHODS,crypto_methods);
 		}
 	}
@@ -3143,7 +3115,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		}
 
 		// NOTE: HashTable returns ZERO on SUCCESS!!!
-		if (command_map.insert(keybuf, sesid) == 0) {
+		if (command_map.insert(keybuf, sesid, true) == 0) {
 			// success
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
@@ -3187,7 +3159,7 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	}
 
 		// get rid of final ']'
-	buf.setChar(buf.Length()-1,'\0');
+	buf.truncate(buf.Length()-1);
 
 	StringList lines(buf.Value(),";");
 	lines.rewind();
@@ -3229,6 +3201,17 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FIRST_FQAN);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FQAN);
 	return true;
+}
+
+bool
+SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name, std::string &attr_value)
+{
+	KeyCacheEntry *session_key = NULL;
+	if (!session_cache->lookup(session_id, session_key)) {return false;}
+	ClassAd *policy = session_key->policy();
+	if (!policy) {return false;}
+
+	return policy->LookupString(attr_name,attr_value) ? true : false;
 }
 
 bool

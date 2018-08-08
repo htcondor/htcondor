@@ -2,6 +2,7 @@
 #include "ipv6_interface.h"
 #include "condor_config.h"
 #include "condor_sockaddr.h"
+#include "my_hostname.h"
 
 #if HAVE_GETIFADDRS
 #include <ifaddrs.h>
@@ -43,13 +44,27 @@ uint32_t find_scope_id(const condor_sockaddr& addr) {
 
 uint32_t ipv6_get_scope_id() {
 	if (!scope_id_inited) {
-		MyString network_interface;
-		if (param(network_interface, "NETWORK_INTERFACE")) {
-			condor_sockaddr addr;
-			if (addr.from_ip_string(network_interface)) {
-				scope_id = find_scope_id(addr);
-			}
+		std::string network_interface;
+		std::string ipv4_str;
+		std::string ipv6_str;
+		std::string ipbest_str;
+		condor_sockaddr addr;
+		if (param(network_interface, "NETWORK_INTERFACE") &&
+		    network_interface_to_ip("NETWORK_INTERFACE",
+		                            network_interface.c_str(),
+		                            ipv4_str, ipv6_str, ipbest_str) &&
+		    addr.from_ip_string(ipv6_str.c_str()) && addr.is_link_local())
+		{
+			scope_id = find_scope_id(addr);
 		}
+		else if (network_interface_to_ip("Ipv6LinkLocal", "fe80:*",
+		                                 ipv4_str, ipv6_str, ipbest_str) &&
+		         addr.from_ip_string(ipv6_str.c_str()) &&
+		         addr.is_link_local())
+		{
+			scope_id = find_scope_id(addr);
+		}
+		scope_id_inited = true;
 	}
 
 	return scope_id;

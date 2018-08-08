@@ -42,9 +42,6 @@
 #define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
 					 return 0; }
 
-#include "file_sql.h"
-extern FILESQL *FILEObj;
-
 
 //extern ClassAd *JobAd;
 
@@ -82,8 +79,12 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_JOB_STATUS_KNOWN",		// Job status known
 	"ULOG_JOB_STAGE_IN",			// Job staging in input files
 	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
-	"ULOG_ATTRIBUTE_UPDATE",			// Job attribute updated
-	"ULOG_PRESKIP"					// PRE_SKIP event for DAGMan
+	"ULOG_ATTRIBUTE_UPDATE",		// Job attribute updated
+	"ULOG_PRESKIP",					// PRE_SKIP event for DAGMan
+	"ULOG_FACTORY_SUBMIT",			// Factory submitted
+	"ULOG_FACTORY_REMOVE", 			// Factory removed
+	"ULOG_FACTORY_PAUSED",			// Factory paused
+	"ULOG_FACTORY_RESUMED",			// Factory resumed
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -211,11 +212,21 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_PRESKIP:
 		return new PreSkipEvent;
 
+	case ULOG_FACTORY_SUBMIT:
+		return new FactorySubmitEvent;
+
+	case ULOG_FACTORY_REMOVE:
+		return new FactoryRemoveEvent;
+
+	case ULOG_FACTORY_PAUSED:
+		return new FactoryPausedEvent;
+
+	case ULOG_FACTORY_RESUMED:
+		return new FactoryResumedEvent;
+
 	default:
-		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
-		// Return NULL/0 here instead of EXCEPTing to fix Gnats PR 706.
-		// wenger 2006-06-08.
-		return 0;
+		dprintf( D_ALWAYS, "Unknown ULogEventNumber: %d, reading it as a FutureEvent\n", event );
+		return new FutureEvent(event);
 	}
 
     return 0;
@@ -238,9 +249,6 @@ ULogEvent::ULogEvent(void)
 	tm = localtime(&eventTimeval.tv_sec);
 	eventTime = *tm;
 #endif
-
-	scheddname = NULL;
-	m_gjid = NULL;
 }
 
 
@@ -264,12 +272,21 @@ bool ULogEvent::formatEvent( std::string &out )
 	return formatHeader( out ) && formatBody( out );
 }
 
-const char* ULogEvent::eventName(void) const
+const char * getULogEventNumberName(ULogEventNumber number)
 {
-	if( eventNumber == (ULogEventNumber)-1 ) {
+	if( number == (ULogEventNumber)-1 ) {
 		return NULL;
 	}
-	return ULogEventNumberNames[eventNumber];
+	if (number < (int)COUNTOF(ULogEventNumberNames)) {
+		return ULogEventNumberNames[number];
+	}
+	return "ULOG_FUTURE_EVENT";
+}
+
+
+const char* ULogEvent::eventName(void) const
+{
+	return getULogEventNumberName(eventNumber);
 }
 
 
@@ -436,9 +453,21 @@ ULogEvent::toClassAd(void)
 	case ULOG_ATTRIBUTE_UPDATE:
 		SetMyTypeName(*myad, "AttributeUpdateEvent");
 		break;
-	  default:
-		delete myad;
-		return NULL;
+	case ULOG_FACTORY_SUBMIT:
+		SetMyTypeName(*myad, "FactorySubmitEvent");
+		break;
+	case ULOG_FACTORY_REMOVE:
+		SetMyTypeName(*myad, "FactoryRemoveEvent");
+		break;
+	case ULOG_FACTORY_PAUSED:
+		SetMyTypeName(*myad, "FactoryPausedEvent");
+		break;
+	case ULOG_FACTORY_RESUMED:
+		SetMyTypeName(*myad, "FactoryResumedEvent");
+		break;
+	default:
+		SetMyTypeName(*myad, "FutureEvent");
+		break;
 	}
 
 	char* eventTimeStr = time_to_iso8601(eventTime, ISO8601_ExtendedFormat,
@@ -501,26 +530,6 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("Subproc", subproc);
 }
 
-void
-ULogEvent::insertCommonIdentifiers(ClassAd &adToFill)
-{
-	//if( !adToFill ) return;
-	if(!scheddname) {
-		scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-	}
-	if(scheddname) {
-	  adToFill.Assign("scheddname", scheddname);
-	}
-
-	if(m_gjid) {
-	  adToFill.Assign("globaljobid", m_gjid);
-	}
-
-	adToFill.Assign("cluster_id", cluster);
-	adToFill.Assign("proc_id", proc);
-	adToFill.Assign("spid", subproc);
-}
-
 
 // class is used to build up Usage/Request/Allocated table for each 
 // Partitionable resource before we print out the table.
@@ -529,7 +538,17 @@ public:
 	std::string use;
 	std::string req;
 	std::string alloc;
+	std::string assigned;
 };
+
+// return true if the input consts solely of digits
+static bool is_bare_integer(const char * str) {
+	if ( ! str) return false;
+	// skip all leading digits
+	while (isdigit(*str)) ++str;
+	// return true if the next char is \0, false otherwise
+	return !*str;
+}
 
 // function to format the usage ClassAd for the userlog
 // The usage ClassAd should contain attrbutes that match the pattern
@@ -546,6 +565,7 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	unp.SetOldClassAd( true, true );
 
 	std::map<std::string, SlotResTermSumy*> useMap;
+	int has_fractional_mask = 0;
 
 	for (classad::ClassAd::iterator iter = pusageAd->begin();
 		 iter != pusageAd->end();
@@ -559,11 +579,14 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 		} else if (ixu > 0 && 0 == iter->first.substr(ixu).compare("Usage")) {
 			efld = 0;
 			key = iter->first.substr(0,ixu);
-		} 
-		else /*if (useMap[iter->first])*/ { // Allocated
+		} else if( iter->first.find( "Assigned" ) == 0 ) {
+			key = iter->first.substr( 8 ); // size "Assigned" == 8
+			efld = 3;
+		} else /*if (useMap[iter->first])*/ { // Allocated
 			efld = 2;
 			key = iter->first;
 		}
+
 		if (key.size() != 0) {
 			title_case(key); // capitalize it to make it consistent for map lookup.
 			SlotResTermSumy * psumy = useMap[key];
@@ -576,7 +599,26 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 				//formatstr_cat(out, "\tfound %x for key %s\n", psumy, key.c_str());
 			}
 			std::string val = "";
-			unp.Unparse(val, iter->second);
+			classad::Value cval;
+			double rval, tval;
+			if (ExprTreeIsLiteral(iter->second, cval) && cval.IsRealValue(rval)) {
+				if (modf(rval,&tval) > 0.0) {
+					// show fractional values only if there actually *are* fractional values
+					// format doubles with %.2f
+					formatstr(val, "%.2f", rval);
+					has_fractional_mask |= 1<<efld;
+				} else {
+				#if 1 
+					formatstr(val, "%lld", (long long)tval);
+				#else // for testing
+					formatstr(val, "%.2f", rval);
+					has_fractional_mask |= 1<<efld;
+				#endif
+				}
+			} else {
+				unp.Unparse(val, iter->second);
+			}
+
 
 			//formatstr_cat(out, "\t%-8s \t= %4s\t(efld%d, key = %s)\n", iter->first.c_str(), val.c_str(), efld, key.c_str());
 
@@ -591,6 +633,9 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 				case 2:	// Allocated
 					psumy->alloc = val;
 					break;
+				case 3: // Assigned
+					psumy->assigned = val;
+					break;
 			}
 		} else {
 			std::string val = "";
@@ -601,7 +646,7 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	if (useMap.empty())
 		return;
 
-	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0;
+	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0, cchAssigned = 0;
 	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
 		 it != useMap.end();
 		 ++it) {
@@ -612,17 +657,40 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 				unp.Unparse(psumy->alloc, tree);
 			}
 		}
+		// pad out non-fractional values for usage, request and allocation
+		// so that they align with the fractional values.  note that this code will break
+		// if the use/req/or alloc strings are something other than numbers
+		// since we are working with classads, that's possible, but not normal...
+		// if it starts to happen, we would probably have to change the values from strings to classad::value's
+		// and rework the formatting code.
+		if (has_fractional_mask & (1<<0)) { // is there fractional usage reported?
+			if (is_bare_integer(psumy->use.c_str())) { // and the value is an integer?
+				psumy->use += "   "; // pad to align to %.2f
+			}
+		}
+		if (has_fractional_mask & (1<<1)) { // is there fractional request reported?
+			if (is_bare_integer(psumy->req.c_str())) { // and the value is an integer?
+				psumy->req += "   "; // pad to align to %.2f
+			}
+		}
+		if (has_fractional_mask & (1<<2)) { // is there fractional allocation reported?
+			if (is_bare_integer(psumy->alloc.c_str())) { // and the value is an integer?
+				psumy->alloc += "   "; // pad to align to %.2f
+			}
+		}
+
 		//formatstr_cat(out, "\t%s %s %s %s\n", it->first.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
 		cchRes = MAX(cchRes, (int)it->first.size());
 		cchUse = MAX(cchUse, (int)psumy->use.size());
 		cchReq = MAX(cchReq, (int)psumy->req.size());
 		cchAlloc = MAX(cchAlloc, (int)psumy->alloc.size());
+		cchAssigned = MAX(cchAssigned, (int)psumy->assigned.size());
 	}
 
 	MyString fmt;
-	fmt.formatstr("\tPartitionable Resources : %%%ds %%%ds %%%ds\n", cchUse, cchReq, MAX(cchAlloc,9));
-	formatstr_cat(out, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "");
-	fmt.formatstr("\t   %%-%ds : %%%ds %%%ds %%%ds\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
+	fmt.formatstr("\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n", cchUse, cchReq, MAX(cchAlloc,9));
+	formatstr_cat(out, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "", cchAssigned ? "Assigned" : "");
+	fmt.formatstr("\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
 	//fputs(fmt.Value(), file);
 	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
 		 it != useMap.end();
@@ -631,7 +699,7 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 		std::string lbl = it->first.c_str(); 
 		if (lbl.compare("Memory") == 0) lbl += " (MB)";
 		else if (lbl.compare("Disk") == 0) lbl += " (KB)";
-		formatstr_cat(out, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
+		formatstr_cat(out, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str(), psumy->assigned.c_str());
 		delete psumy;
 	}
 	//formatstr_cat(out, "\t  *See Section %d.%d in the manual for information about requesting resources\n", 2, 5);
@@ -651,6 +719,7 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 	int ixUse = -1;
 	int ixReq = -1;
 	int ixAlloc = -1;
+	int ixAssigned = -1;
 
 	for (;;) {
 		char sz[250];
@@ -703,8 +772,14 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 			ixReq = (int)(psz - pszTbl)+1;     // save right edge of Request
 			while (*psz == ' ') ++psz;         // skip spaces
 			if (*psz) {                        // if there is an "Allocated"
-				while (*psz && *psz != ' ') ++psz; // skip "Allocated"
-				ixAlloc = (int)(psz - pszTbl)+1;
+				char *p = strstr(psz, "Allocated");
+				if (p) {
+					ixAlloc = (int)(p - pszTbl)+9; // save right edge of Allocated
+					p = strstr(p, "Assigned");
+					if (p) { // if there is an "Assigned"
+						ixAssigned = (int)(p - pszTbl); // save *left* edge of assigned (it gets the remaineder of the line)
+					}
+				}
 			}
 		} else if (ixUse > 0) {
 			pszTbl[ixUse] = 0;
@@ -719,11 +794,116 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 				formatstr(exprstr, "%s = %s", pszLbl, &pszTbl[ixReq+1]);
 				puAd->Insert(exprstr.c_str());
 			}
+			if (ixAssigned > 0) {
+				// the remainder of the line is the assigned value
+				formatstr(exprstr, "Assigned%s = %s", pszLbl, &pszTbl[ixAssigned]);
+				//trim(exprstr);
+				puAd->Insert(exprstr.c_str());
+			}
 		}
 	}
 
 	*ppusageAd = puAd;
 }
+
+// ----- the FutureEvent class
+bool
+FutureEvent::formatBody( std::string &out )
+{
+	out += head;
+	out += "\n";
+	if ( ! payload.empty()) {
+		out += payload;
+	}
+	return true;
+}
+
+int
+FutureEvent::readEvent (FILE * file)
+{
+	// read lines until we see "...\n"
+	// then rewind to the beginning of the end sentinal and return
+
+	fpos_t filep;
+	fgetpos( file, &filep );
+
+	bool athead = true;
+	MyString line;
+	while (line.readLine(file)) {
+		if (line == "...\n") {
+			fsetpos( file, &filep );
+			break;
+		}
+		else if (athead) {
+			line.chomp();
+			head = line;
+			athead = false;
+		} else {
+			payload += line;
+		}
+	}
+	return 1;
+}
+
+ClassAd*
+FutureEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	myad->Assign("EventHead", head.c_str());
+	if ( ! payload.empty()) {
+		StringTokenIterator lines(payload, 120, "\r\n");
+		const std::string * str;
+		while ((str = lines.next_string())) { 
+			if ( ! myad->Insert(*str)) {
+				// TODO: append lines that are not classad statements to an "EventPayloadLines" attribute.
+			}
+		}
+	}
+	return myad;
+}
+
+void
+FutureEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if ( ! ad->LookupString("EventHead", head)) { head.clear(); }
+
+	// Get the list of attributes that remain after we remove the known ones.
+	classad::References attrs;
+	sGetAdAttrs(attrs, *ad, false, NULL);
+	attrs.erase(ATTR_MY_TYPE);
+	attrs.erase("EventTypeNumber");
+	attrs.erase("Cluster");
+	attrs.erase("Proc");
+	attrs.erase("Subproc");
+	attrs.erase("EventTime");
+	attrs.erase("EventHead");
+	attrs.erase("EventPayloadLines");
+
+	// print the remaining attributes into the payload.
+	payload.clear();
+	if ( ! attrs.empty()) {
+		sPrintAdAttrs(payload, *ad, attrs);
+	}
+
+	// TODO Print value of EventPayloadLines attribute as raw text to the payload
+}
+
+void FutureEvent::setHead(const char * head_text)
+{
+	MyString line(head_text);
+	line.chomp();
+	head = line;
+}
+
+void FutureEvent::setPayload(const char * payload_text)
+{
+	payload = payload_text;
+}
+
 
 
 // ----- the SubmitEvent class
@@ -732,6 +912,7 @@ SubmitEvent::SubmitEvent(void)
 	submitHost = NULL;
 	submitEventLogNotes = NULL;
 	submitEventUserNotes = NULL;
+	submitEventWarnings = NULL;
 	eventNumber = ULOG_SUBMIT;
 }
 
@@ -745,6 +926,9 @@ SubmitEvent::~SubmitEvent(void)
     }
     if( submitEventUserNotes ) {
         delete[] submitEventUserNotes;
+    }
+    if( submitEventWarnings ) {
+        delete[] submitEventWarnings;
     }
 }
 
@@ -786,8 +970,15 @@ SubmitEvent::formatBody( std::string &out )
 			return false;
 		}
 	}
+	if( submitEventWarnings ) {
+		retval = formatstr_cat( out, "    WARNING: Committed job submission into the queue with the following warning(s): %.8110s\n", submitEventWarnings );
+		if( retval < 0 ) {
+			return false;
+		}
+	}
 	return true;
 }
+
 
 int
 SubmitEvent::readEvent (FILE *file)
@@ -820,39 +1011,44 @@ SubmitEvent::readEvent (FILE *file)
 
 	fpos_t filep;
 	fgetpos( file, &filep );
-
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
-
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
 
-		// some users of this library (dagman) depend on whitespace
-		// being stripped from the beginning of the log notes field
+	// some users of this library (dagman) depend on whitespace
+	// being stripped from the beginning of the log notes field
 	char const *strip_s = s;
 	while( *strip_s && isspace(*strip_s) ) {
 		strip_s++;
 	}
-
 	submitEventLogNotes = strnewp( strip_s );
+
 
 	// see if the next line contains an optional user event notes
 	// string, and, if not, rewind, because that means we slurped in
 	// the next event delimiter looking for it...
-
 	fgetpos( file, &filep );
-
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
-
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
-
 	submitEventUserNotes = strnewp( s );
+
+
+	fgetpos( file, &filep );
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+	submitEventWarnings = strnewp( s );
+
 	return 1;
 }
 
@@ -871,6 +1067,9 @@ SubmitEvent::toClassAd(void)
 	}
 	if( submitEventUserNotes && submitEventUserNotes[0] ) {
 		if( !myad->InsertAttr("UserNotes",submitEventUserNotes) ) return NULL;
+	}
+	if( submitEventWarnings && submitEventWarnings[0] ) {
+		if( !myad->InsertAttr("Warnings",submitEventWarnings) ) return NULL;
 	}
 
 	return myad;
@@ -904,6 +1103,14 @@ SubmitEvent::initFromClassAd(ClassAd* ad)
 	if( mallocstr ) {
 		submitEventUserNotes = new char[strlen(mallocstr) + 1];
 		strcpy(submitEventUserNotes, mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+
+	ad->LookupString("Warnings", &mallocstr);
+	if( mallocstr ) {
+		submitEventWarnings = new char[strlen(mallocstr) + 1];
+		strcpy(submitEventWarnings, mallocstr);
 		free(mallocstr);
 		mallocstr = NULL;
 	}
@@ -1441,51 +1648,6 @@ RemoteErrorEvent::formatBody( std::string &out )
 
 	if(!critical_error) error_type = "Warning";
 
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1, tmpCl2;
-
-		snprintf(messagestr, 512, "Remote %s from %s on %s",
-				 error_type,
-				 daemon_name,
-				 execute_host);
-
-		if (critical_error) {
-			tmpCl1.Assign("endts", (int)GetEventclock());
-			tmpCl1.Assign("endtype", ULOG_REMOTE_ERROR);
-			tmpCl1.Assign("endmessage", messagestr);
-
-			// this inserts scheddname, cluster, proc, etc
-			insertCommonIdentifiers(tmpCl2);
-
-			MyString tmp;
-			tmp.formatstr("endtype = null");
-			tmpCl2.Insert(tmp.Value());
-
-			// critical error means this run is ended.
-			// condor_event.o is part of cplus_lib.a, which may be linked by
-			// non-daemons who wouldn't have initialized FILEObj. We don't
-			// need to log events for non-daemons.
-			if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2)
-				== QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Logging Event 5--- Error\n");
-				return 0; // return a error code, 0
-			}
-		} else {
-		        // this inserts scheddname, cluster, proc, etc
-			insertCommonIdentifiers(tmpCl1);
-
-			tmpCl1.Assign("eventtype", ULOG_REMOTE_ERROR);
-			tmpCl1.Assign("eventtime", (int)GetEventclock());
-			tmpCl1.Assign("description", messagestr);
-
-			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Logging Event 5--- Error\n");
-				return 0; // return a error code, 0
-			}
-		}
-	}
-
 	retval = formatstr_cat(
 	  out,
 	  "%s from %s on %s:\n",
@@ -1725,60 +1887,6 @@ ExecuteEvent::formatBody( std::string &out )
 {
 	int retval;
 
-	if (FILEObj) {
-		ClassAd tmpCl1, tmpCl2, tmpCl3;
-		MyString tmp = "";
-
-		scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-		if(scheddname)
-			dprintf(D_FULLDEBUG, "scheddname = %s\n", scheddname);
-		else
-			dprintf(D_FULLDEBUG, "scheddname is null\n");
-
-		if( !executeHost ) {
-			setExecuteHost("");
-		}
-
-		dprintf(D_FULLDEBUG, "executeHost = %s\n", executeHost);
-
-		dprintf(D_FULLDEBUG, "Executehost name = %s\n", remoteName ? remoteName : "" );
-
-		tmpCl1.Assign("endts", (int)GetEventclock());
-
-		tmp.formatstr("endtype = -1");
-		tmpCl1.Insert(tmp.Value());
-
-		tmp.formatstr("endmessage = \"UNKNOWN ERROR\"");
-		tmpCl1.Insert(tmp.Value());
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmp.formatstr("endtype = null");
-		tmpCl2.Insert(tmp.Value());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
-			return false; // return a error code, false
-		}
-
-		if( !remoteName ) {
-			setRemoteName("");
-		}
-		tmpCl3.Assign("machine_id", remoteName);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl3);
-
-		tmpCl3.Assign("startts", (int)GetEventclock());
-
-		if (FILEObj->file_newEvent("Runs", &tmpCl3) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	retval = formatstr_cat( out, "Job executing on host: %s\n", executeHost );
 
 	if (retval < 0) {
@@ -1860,27 +1968,6 @@ bool
 ExecutableErrorEvent::formatBody( std::string &out )
 {
 	int retval;
-
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		tmpCl1.Assign("endts", (int)GetEventclock());
-		tmpCl1.Assign("endtype", ULOG_EXECUTABLE_ERROR);
-		tmpCl1.Assign("endmessage", messagestr);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmp.formatstr( "endtype = null");
-		tmpCl2.Insert(tmp.Value());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 12--- Error\n");
-			return false; // return a error code, false
-		}
-	}
 
 	switch (errType)
 	{
@@ -1977,26 +2064,6 @@ CheckpointedEvent::~CheckpointedEvent(void)
 bool
 CheckpointedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-
-		sprintf(messagestr,  "Job was checkpointed");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_CHECKPOINTED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 6--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if ((formatstr_cat( out, "Job was checkpointed.\n" ) < 0)	||
 		(!formatRusage( out, run_remote_rusage ))				||
 		(formatstr_cat( out, "  -  Run Remote Usage\n" ) < 0)	||
@@ -2342,68 +2409,6 @@ JobEvictedEvent::formatBody( std::string &out )
 		formatUsageAd( out, pusageAd );
 	}
 
-	if (FILEObj) {
-		char messagestr[512], checkpointedstr[6], terminatestr[512];
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		strcpy(checkpointedstr, "");
-		strcpy(messagestr, "");
-		strcpy(terminatestr, "");
-
-		if( terminate_and_requeued ) {
-			sprintf(messagestr,  "Job evicted, terminated and was requeued");
-			strcpy(checkpointedstr, "false");
-		} else if( checkpointed ) {
-			sprintf(messagestr,  "Job evicted and was checkpointed");
-			strcpy(checkpointedstr, "true");
-		} else {
-			sprintf(messagestr,  "Job evicted and was not checkpointed");
-			strcpy(checkpointedstr, "false");
-		}
-
-		if(terminate_and_requeued ) {
-			if( normal ) {
-				sprintf(terminatestr,  " (1) Normal termination (return value %d)", return_value);
-			} else {
-				sprintf(terminatestr,  " (0) Abnormal termination (signal %d)", signal_number);
-
-				if( core_file ) {
-					strcat(terminatestr, " (1) Corefile in: ");
-					strcat(terminatestr, core_file);
-				} else {
-					strcat(terminatestr, " (0) No core file ");
-				}
-			}
-
-			if( reason ) {
-				strcat(terminatestr,  " reason: ");
-				strcat(terminatestr,  reason);
-			}
-		}
-
-		tmpCl1.Assign("endts", (int)GetEventclock());
-		tmpCl1.Assign("endtype", ULOG_JOB_EVICTED);
-
-		tmp.formatstr( "endmessage = \"%s%s\"", messagestr, terminatestr);
-		tmpCl1.Insert(tmp.Value());
-
-		tmpCl1.Assign("wascheckpointed", checkpointedstr);
-		tmpCl1.Assign("runbytessent", sent_bytes);
-		tmpCl1.Assign("runbytesreceived", recvd_bytes);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmp.formatstr( "endtype = null");
-		tmpCl2.Insert(tmp.Value());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 2 --- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
   return true;
 }
 
@@ -2571,29 +2576,6 @@ JobAbortedEvent::getReason( void ) const
 bool
 JobAbortedEvent::formatBody( std::string &out )
 {
-
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-		MyString tmp = "";
-
-		if (reason)
-			snprintf(messagestr,  512, "Job was aborted by the user: %s", reason);
-		else
-			sprintf(messagestr,  "Job was aborted by the user");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_ABORTED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 7--- Error\n");
-			return false; // return a error code, false
-		}
-	}
 
 	if( formatstr_cat( out, "Job was aborted by the user.\n" ) < 0 ) {
 		return false;
@@ -2764,40 +2746,6 @@ TerminatedEvent::formatBody( std::string &out, const char *header )
 		formatUsageAd( out, pusageAd );
 	}
 
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		strcpy(messagestr, "");
-
-		if( normal ) {
-			sprintf(messagestr,  "(1) Normal termination (return value %d)", returnValue);
-		} else {
-			sprintf(messagestr,  "(0) Abnormal termination (signal %d)", signalNumber);
-			if( core_file ) {
-				strcat(messagestr, " (1) Corefile in: ");
-				strcat(messagestr, core_file);
-			} else {
-				strcat(messagestr, " (0) No core file ");
-			}
-		}
-
-		tmpCl1.Assign("endmessage", messagestr);
-		tmpCl1.Assign("runbytessent", sent_bytes);
-		tmpCl1.Assign("runbytesreceived", recvd_bytes);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmpCl2.Assign("endts", (int)GetEventclock());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 3--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	return true;
 }
 
@@ -2936,25 +2884,6 @@ JobTerminatedEvent::~JobTerminatedEvent(void)
 bool
 JobTerminatedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		tmpCl1.Assign("endts", (int)GetEventclock());
-		tmpCl1.Assign("endtype", ULOG_JOB_TERMINATED);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
-
-		tmp.formatstr( "endtype = null");
-		tmpCl2.Insert(tmp.Value());
-
-		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 4--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
   if( formatstr_cat( out, "Job terminated.\n" ) < 0 ) {
 	  return false;
   }
@@ -3277,52 +3206,6 @@ ShadowExceptionEvent::readEvent (FILE *file)
 bool
 ShadowExceptionEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[BUFSIZ+18];
-		ClassAd tmpCl1, tmpCl2;
-		MyString tmp = "";
-
-		snprintf(messagestr, BUFSIZ+18, "Shadow exception: %s", message);
-		messagestr[COUNTOF(messagestr)-1] = 0;
-
-		// remove the new line in the end if any
-		if  (messagestr[strlen(messagestr)-1] == '\n')
-			messagestr[strlen(messagestr)-1] = '\0';
-
-		if (began_execution) {
-			tmpCl1.Assign("endts", (int)GetEventclock());
-			tmpCl1.Assign("endtype", ULOG_SHADOW_EXCEPTION);
-			tmpCl1.Assign("endmessage", messagestr);
-			tmpCl1.Assign("runbytessent", sent_bytes);
-
-			tmpCl1.Assign("runbytesreceived", recvd_bytes);
-
-			// this inserts scheddname, cluster, proc, etc
-			insertCommonIdentifiers(tmpCl2);
-
-			tmp.formatstr( "endtype = null");
-			tmpCl2.Insert(tmp.Value());
-
-			if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Logging Event 13--- Error\n");
-				return false; // return a error code, false
-			}
-		} else {
-			// this inserts scheddname, cluster, proc, etc
-			insertCommonIdentifiers(tmpCl1);
-
-			tmpCl1.Assign("eventtype", ULOG_SHADOW_EXCEPTION);
-			tmpCl1.Assign("eventtime", (int)GetEventclock());
-			tmpCl1.Assign("description", messagestr);
-
-			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-				dprintf(D_ALWAYS, "Logging Event 14 --- Error\n");
-				return false; // return a error code, false
-			}
-		}
-
-	}
-
 	if (formatstr_cat( out, "Shadow exception!\n\t" ) < 0)
 		return false;
 	if (formatstr_cat( out, "%s\n", message ) < 0)
@@ -3399,26 +3282,6 @@ JobSuspendedEvent::readEvent (FILE *file)
 bool
 JobSuspendedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-		MyString tmp = "";
-
-		sprintf(messagestr, "Job was suspended (Number of processes actually suspended: %d)", num_pids);
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_SUSPENDED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 8--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if (formatstr_cat( out, "Job was suspended.\n\t" ) < 0)
 		return false;
 	if (formatstr_cat( out, "Number of processes actually suspended: %d\n",
@@ -3473,26 +3336,6 @@ JobUnsuspendedEvent::readEvent (FILE *file)
 bool
 JobUnsuspendedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-		MyString tmp = "";
-
-		sprintf(messagestr, "Job was unsuspended");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_UNSUSPENDED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
- 	    if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 9--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if (formatstr_cat( out, "Job was unsuspended.\n" ) < 0)
 		return false;
 
@@ -3624,28 +3467,6 @@ JobHeldEvent::readEvent( FILE *file )
 bool
 JobHeldEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-
-		if (reason)
-			snprintf(messagestr, 512, "Job was held: %s", reason);
-		else
-			sprintf(messagestr, "Job was held: reason unspecified");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_HELD);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 10--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if( formatstr_cat( out, "Job was held.\n" ) < 0 ) {
 		return false;
 	}
@@ -3782,29 +3603,6 @@ JobReleasedEvent::readEvent( FILE *file )
 bool
 JobReleasedEvent::formatBody( std::string &out )
 {
-	if (FILEObj) {
-		char messagestr[512];
-		ClassAd tmpCl1;
-		MyString tmp = "";
-
-		if (reason)
-			snprintf(messagestr, 512, "Job was released: %s", reason);
-		else
-			sprintf(messagestr, "Job was released: reason unspecified");
-
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl1);
-
-		tmpCl1.Assign("eventtype", ULOG_JOB_RELEASED);
-		tmpCl1.Assign("eventtime", (int)GetEventclock());
-		tmpCl1.Assign("description", messagestr);
-
-		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
-			dprintf(D_ALWAYS, "Logging Event 11--- Error\n");
-			return false; // return a error code, false
-		}
-	}
-
 	if( formatstr_cat( out, "Job was released.\n" ) < 0 ) {
 		return false;
 	}
@@ -4540,7 +4338,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
 		line.chomp();
-		setDisconnectReason( &line[4] );
+		setDisconnectReason( line.Value()+4 );
 	} else {
 		return 0;
 	}
@@ -4552,9 +4350,9 @@ JobDisconnectedEvent::readEvent( FILE *file )
 	if( line.replaceString("    Trying to reconnect to ", "") ) {
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
-			line.setChar( i, '\0' );
+			setStartdAddr( line.Value()+(i+1) );
+			line.truncate( i );
 			setStartdName( line.Value() );
-			setStartdAddr( &line[i+1] );
 		} else {
 			return 0;
 		}
@@ -4564,9 +4362,9 @@ JobDisconnectedEvent::readEvent( FILE *file )
 		}
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
-			line.setChar( i, '\0' );
+			setStartdAddr( line.Value()+(i+1) );
+			line.truncate( i );
 			setStartdName( line.Value() );
-			setStartdAddr( &line[i+1] );
 		} else {
 			return 0;
 		}
@@ -4574,7 +4372,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 			&& line[2] == ' ' && line[3] == ' ' && line[4] )
 		{
 			line.chomp();
-			setNoReconnectReason( &line[4] );
+			setNoReconnectReason( line.Value()+4 );
 		} else {
 			return 0;
 		}
@@ -5004,7 +4802,7 @@ JobReconnectFailedEvent::readEvent( FILE *file )
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
 		line.chomp();
-		setReason( &line[4] );
+		setReason( line.Value()+4 );
 	} else {
 		return 0;
 	}
@@ -5016,7 +4814,7 @@ JobReconnectFailedEvent::readEvent( FILE *file )
 			// now everything until the first ',' will be the name
 		int i = line.FindChar( ',' );
 		if( i > 0 ) {
-			line.setChar( i, '\0' );
+			line.truncate( i );
 			setStartdName( line.Value() );
 		} else {
 			return 0;
@@ -5951,4 +5749,524 @@ void PreSkipEvent::setSkipNote(const char* s)
 	else {
 		skipEventLogNotes = NULL;
 	}
+}
+
+// ----- the FactorySubmitEvent class
+FactorySubmitEvent::FactorySubmitEvent(void)
+{
+	submitEventLogNotes = NULL;
+	submitEventUserNotes = NULL;
+	submitHost = NULL;
+	eventNumber = ULOG_FACTORY_SUBMIT;
+}
+
+FactorySubmitEvent::~FactorySubmitEvent(void)
+{
+	if( submitHost ) {
+		delete[] submitHost;
+	}
+	if( submitEventLogNotes ) {
+		delete[] submitEventLogNotes;
+	}
+	if( submitEventUserNotes ) {
+		delete[] submitEventUserNotes;
+	}
+}
+
+void
+FactorySubmitEvent::setSubmitHost(char const *addr)
+{
+	if( submitHost ) {
+		delete[] submitHost;
+	}
+	if( addr ) {
+		submitHost = strnewp(addr);
+		ASSERT( submitHost );
+	}
+	else {
+		submitHost = NULL;
+	}
+}
+
+bool
+FactorySubmitEvent::formatBody( std::string &out )
+{
+	int retval = formatstr_cat (out, "Factory submitted from host: %s\n", submitHost);
+	if (retval < 0)
+	{
+		return false;
+	}
+	if( submitEventLogNotes ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes );
+		if( retval < 0 ) {
+			return false;
+		}
+	}
+	if( submitEventUserNotes ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes );
+		if( retval < 0 ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+int
+FactorySubmitEvent::readEvent (FILE *file)
+{
+	char s[8192];
+	s[0] = '\0';
+	delete[] submitEventLogNotes;
+	submitEventLogNotes = NULL;
+	MyString line;
+	if( !line.readLine(file) ) {
+		return 0;
+	}
+	setSubmitHost(line.Value()); // allocate memory
+	if( sscanf( line.Value(), "Factory submitted from host: %s\n", submitHost ) != 1 ) {
+		return 0;
+	}
+
+	// check if event ended without specifying submit host.
+	// in this case, the submit host would be the event delimiter
+	if ( strncmp(submitHost,"...",3)==0 ) {
+		submitHost[0] = '\0';
+		// Backup to leave event delimiter unread go past \n too
+		fseek( file, -4, SEEK_CUR );
+		return 1;
+	}
+
+	// see if the next line contains an optional event notes string,
+	// and, if not, rewind, because that means we slurped in the next
+	// event delimiter looking for it...
+
+	fpos_t filep;
+	fgetpos( file, &filep );
+
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+	
+		// some users of this library (dagman) depend on whitespace
+		// being stripped from the beginning of the log notes field
+	char const *strip_s = s;
+	while( *strip_s && isspace(*strip_s) ) {
+		strip_s++;
+	}
+
+	submitEventLogNotes = strnewp( strip_s );
+
+	// see if the next line contains an optional user event notes
+	// string, and, if not, rewind, because that means we slurped in
+	// the next event delimiter looking for it...
+
+	fgetpos( file, &filep );
+
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+	submitEventUserNotes = strnewp( s );
+
+	return 1;
+}
+
+ClassAd*
+FactorySubmitEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if( submitHost && submitHost[0] ) {
+		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
+	}
+
+	return myad;
+}
+
+
+void
+FactorySubmitEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+	char* mallocstr = NULL;
+	ad->LookupString("SubmitHost", &mallocstr);
+	if( mallocstr ) {
+		setSubmitHost(mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+}
+
+// ----- the FactoryRemoveEvent class
+FactoryRemoveEvent::FactoryRemoveEvent(void)
+	: next_proc_id(0), next_row(0), completion(Incomplete), notes(NULL)
+{
+	eventNumber = ULOG_FACTORY_REMOVE;
+}
+
+FactoryRemoveEvent::~FactoryRemoveEvent(void)
+{
+	if (notes) { free(notes); } notes = NULL;
+}
+
+// read until \n into the supplied buffer
+// if got a record terminator or EOF, then rewind the file position and return false
+// otherwise return true.
+static bool read_line_or_rewind(FILE *file, char *buf, int bufsiz) {
+	memset(buf, 0, bufsiz);
+	if (feof(file)) return false;
+	fpos_t filep;
+	fgetpos( file, &filep );
+	if( !fgets( buf, bufsiz, file ) || strcmp( buf, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return false;
+	}
+	return true;
+}
+
+#define FACTORY_REMOVED_BANNER "Factory removed"
+
+bool
+FactoryRemoveEvent::formatBody( std::string &out )
+{
+	int retval = formatstr_cat (out, FACTORY_REMOVED_BANNER "\n");
+	if (retval < 0)
+		return false;
+	// show progress.
+	formatstr_cat(out, "\tMaterialized %d jobs from %d items.", next_proc_id, next_row);
+	// and completion status
+	if (completion <= Error) {
+		formatstr_cat(out, "\tError %d\n", completion);
+	} else if (completion == Complete) {
+		out += "\tComplete\n";
+	} else if (completion >= Paused) {
+		out += "\tPaused\n";
+	} else {
+		out += "\tIncomplete\n";
+	}
+	// and optional notes
+	if (notes) { formatstr_cat(out, "\t%s\n", notes); }
+	return true;
+}
+
+
+int
+FactoryRemoveEvent::readEvent (FILE *file)
+{
+	if( !file ) {
+		return 0;
+	}
+
+	next_proc_id = next_row = 0;
+	completion = Incomplete;
+	if (notes) { free(notes); } notes = NULL;
+
+	// get the remainder of the first line (if any)
+	// or rewind so we don't slurp up the next event delimiter
+	char buf[BUFSIZ];
+	if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) {
+		return 1; // backwards compatibility
+	}
+
+	// be intentionally forgiving about the text here, so as not to introduce bugs if we change terminology
+	if (strstr(buf, "remove") || strstr(buf,"Remove")) {
+		// got the "Factory Removed" line, now get the next line.
+		if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
+			return 1; // this field is optional
+		}
+	}
+
+	const char * p = buf;
+	while (isspace(*p)) ++p;
+
+	// parse out progress
+	if (2 == sscanf(p, "Materialized %d jobs from %d items.", &next_proc_id, &next_row)) {
+		p = strstr(p, "items.") + 6;
+		while (isspace(*p)) ++p;
+	}
+	// parse out completion
+	if (starts_with_ignore_case(p, "error")) {
+		int code = atoi(p+5);
+		completion = (code < 0) ? (CompletionCode)code : Error;
+	} else if (starts_with_ignore_case(p, "Complete")) {
+		completion = Complete;
+	} else if (starts_with_ignore_case(p, "Paused")) {
+		completion = Paused;
+	} else {
+		completion = Incomplete;
+	}
+
+	// read the notes field.
+	if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
+		return 1; // notes field is optional
+	}
+
+	chomp(buf);  // strip the newline
+	p = buf;
+	// discard leading spaces, and store the result as the notes
+	while (isspace(*p)) ++p;
+	if (*p) { notes = strdup(p); }
+
+	return 1;
+}
+
+ClassAd*
+FactoryRemoveEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if (notes) {
+		if( !myad->InsertAttr("Notes", notes) ) {
+			delete myad;
+			return NULL;
+		}
+	}
+	if( !myad->InsertAttr("NextProcId", next_proc_id) ||
+		!myad->InsertAttr("NextRow", next_row) ||
+		!myad->InsertAttr("Completion", completion)
+		) {
+		delete myad;
+		return NULL;
+	}
+	return myad;
+}
+
+
+void
+FactoryRemoveEvent::initFromClassAd(ClassAd* ad)
+{
+	next_proc_id = next_row = 0;
+	completion = Incomplete;
+	if (notes) { free(notes); } notes = NULL;
+
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	int code = Incomplete;
+	ad->LookupInteger("Completion", code);
+	completion = (CompletionCode)code;
+
+	ad->LookupInteger("NextProcId", next_proc_id);
+	ad->LookupInteger("NextRow", next_row);
+
+	ad->LookupString("Notes", &notes);
+}
+
+// ----- the FactoryPausedEvent class
+
+
+#define FACTORY_PAUSED_BANNER "Job Materialization Paused"
+#define FACTORY_RESUMED_BANNER "Job Materialization Resumed"
+
+int
+FactoryPausedEvent::readEvent (FILE *file)
+{
+	if( !file ) {
+		return 0;
+	}
+
+	pause_code = 0;
+	if (reason) { free(reason); }
+	reason = NULL;
+
+	char buf[BUFSIZ];
+	if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) {
+		return 1; // backwards compatibility
+	}
+
+	// be intentionally forgiving about the text here, so as not to introduce bugs if we change terminology
+	if (strstr(buf, "pause") || strstr(buf,"Pause")) {
+		// got the "Paused" line, now get the next line.
+		if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
+			return 1; // this field is optional
+		}
+	}
+
+	// The next line should be the pause reason.
+	chomp(buf);  // strip the newline
+	const char * p = buf;
+	// discard leading spaces, and store the result as the reason
+	while (isspace(*p)) ++p;
+	if (*p) { reason = strdup(p); }
+
+	// read the pause code and/or hold code, if they exist
+	while ( read_line_or_rewind(file, buf, sizeof(buf)) ) {
+		char * endp;
+		p = buf;
+
+		p = strstr(p, "PauseCode ");
+		if (p) {
+			p += sizeof("PauseCode ")-1;
+			pause_code = (int)strtoll(p,&endp,10);
+			if ( ! strstr(endp, "HoldCode")) {
+				continue;
+			}
+		} else {
+			p = buf;
+		}
+
+		p = strstr(p, "HoldCode ");
+		if (p) {
+			p += sizeof("HoldCode ")-1;
+			hold_code = (int)strtoll(p,&endp,10);
+			continue;
+		}
+
+		break;
+	}
+
+	return 1;
+}
+
+
+bool
+FactoryPausedEvent::formatBody( std::string &out )
+{
+	out += FACTORY_PAUSED_BANNER "\n";
+	if (reason || pause_code != 0) {
+		formatstr_cat(out, "\t%s\n", reason ? reason : "");
+	}
+	if (pause_code != 0) {
+		formatstr_cat(out, "\tPauseCode %d\n", pause_code);
+	}
+	if (hold_code != 0) {
+		formatstr_cat(out, "\tHoldCode %d\n", hold_code);
+	}
+	return true;
+}
+
+
+ClassAd*
+FactoryPausedEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if (reason) {
+		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
+	}
+	if( !myad->InsertAttr("PauseCode", pause_code) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("HoldCode", hold_code) ) {
+		delete myad;
+		return NULL;
+	}
+
+	return myad;
+}
+
+
+void
+FactoryPausedEvent::initFromClassAd(ClassAd* ad)
+{
+	pause_code = 0;
+	if (reason) { free(reason); } reason = NULL;
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	ad->LookupString("Reason", &reason);
+	ad->LookupInteger("PauseCode", pause_code);
+	ad->LookupInteger("HoldCode", hold_code);
+}
+
+void FactoryPausedEvent::setReason(const char* str)
+{
+	if (reason) { free(reason); } reason = NULL;
+	if (str) reason = strdup(str);
+}
+
+// ----- the FactoryResumedEvent class
+
+bool
+FactoryResumedEvent::formatBody( std::string &out )
+{
+	out += FACTORY_RESUMED_BANNER "\n";
+	if (reason) {
+		formatstr_cat(out, "\t%s\n", reason);
+	}
+	return true;
+}
+
+int
+FactoryResumedEvent::readEvent (FILE *file)
+{
+	if( !file ) {
+		return 0;
+	}
+
+	if (reason) { free(reason); }
+	reason = NULL;
+
+	char buf[BUFSIZ];
+	if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) {
+		return 1; // backwards compatibility
+	}
+
+	// be intentionally forgiving about the text here, so as not to introduce bugs if we change terminology
+	if (strstr(buf, "resume") || strstr(buf,"Resume")) {
+		// got the "Resumed" line, now get the next line.
+		if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
+			return 1; // this field is optional
+		}
+	}
+
+	// The next line should be the resume reason.
+	chomp(buf);  // strip the newline
+	const char * p = buf;
+	// discard leading spaces, and store the result as the reason
+	while (isspace(*p)) ++p;
+	if (*p) { reason = strdup(p); }
+
+	return 1;
+}
+
+ClassAd*
+FactoryResumedEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if (reason) {
+		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
+	}
+	return myad;
+}
+
+
+void
+FactoryResumedEvent::initFromClassAd(ClassAd* ad)
+{
+	if (reason) { free(reason); } reason = NULL;
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	ad->LookupString("Reason", &reason);
+}
+
+void FactoryResumedEvent::setReason(const char* str)
+{
+	if (reason) { free(reason); } reason = NULL;
+	if (str) reason = strdup(str);
 }

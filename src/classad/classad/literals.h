@@ -33,15 +33,23 @@ typedef std::vector<ExprTree*> ArgumentList;
 */
 class Literal : public ExprTree 
 {
-  	public:
+	public:
 		/// Destructor
-    	virtual ~Literal ();
+		virtual ~Literal () {};
 
-        /// Copy constructor
-        Literal(const Literal &literal);
+		/// Copy constructor
+		Literal(const Literal &lit)
+			: ExprTree()
+			, value(lit.value)
+			{}
 
-        /// Assignment operator
-        Literal &operator=(const Literal &literal);
+		/// Assignment operator
+		Literal &operator=(const Literal &lit) {
+			if (this != &lit) {
+				CopyFrom(lit);
+			}
+			return *this;
+		}
 
 		/// node type
 		virtual NodeKind GetKind (void) const { return LITERAL_NODE; }
@@ -90,10 +98,69 @@ class Literal : public ExprTree
 		 */
 		static Literal* MakeReal(std::string realstr);
 
-		/// Make a deep copy
-		virtual ExprTree* Copy( ) const;
+		/// optimized literal makers for common cases.
+		// these skip the error setting reporting on purpose - leaving that to the caller if it is desired.
+		static Literal* MakeBool(bool val) {
+			Literal* lit = new Literal();
+			if (lit) { lit->value.SetBooleanValue(val); }
+			return lit;
+		}
+		static Literal* MakeLong(long long val) {
+			Literal* lit = new Literal();
+			if (lit) { lit->value.SetIntegerValue(val); }
+			return lit;
+		}
+		static Literal* MakeReal(double real) {
+			Literal* lit = new Literal();
+			if (lit) { lit->value.SetRealValue(real); }
+			return lit;
+		}
+		static Literal* MakeString(const std::string & str) {
+			Literal* lit = new Literal();
+			if (lit) { lit->value.SetStringValue(str); }
+			return lit;
+		}
+		static Literal* MakeString(const char* str) {
+			Literal* lit = new Literal();
+			if (lit) { lit->value.SetStringValue(str); }
+			return lit;
+		}
+		static Literal* MakeString(const char* str, size_t cch) {
+			Literal* lit = new Literal();
+			if (lit) { lit->value.SetStringValue(str, cch); }
+			return lit;
+		}
+		static Literal* MakeError() {
+			Literal* lit = new Literal();
+			if (lit) { lit->value.SetErrorValue(); }
+			return lit;
+		}
+		static Literal* MakeUndefined() {
+			Literal* lit = new Literal();
+			if (lit) { lit->value.SetUndefinedValue(); }
+			return lit;
+		}
 
-        void CopyFrom(const Literal &literal);
+		/// optimized value replacers
+		void SetBool(bool val) { value.SetBooleanValue(val); }
+		void SetReal(double val) { value.SetRealValue(val); }
+		void SetLong(long long val) { value.SetIntegerValue(val); }
+		void SetString(const char * str) { value.SetStringValue(str); }
+		void SetString(const char * str, size_t cch) { value.SetStringValue(str, cch); }
+		void SetString(const std::string & str) { value.SetStringValue(str); }
+		void SetUndefined() { value.SetUndefinedValue(); }
+
+		/// Make a deep copy
+		virtual ExprTree* Copy( ) const {
+			Literal *tree = new Literal(*this);
+			if ( ! tree) setError(ERR_MEM_ALLOC_FAILED);
+			return tree;
+		}
+
+		void CopyFrom(const Literal &lit) {
+			ExprTree::CopyFrom(lit);
+			value.CopyFrom(lit.value);
+		}
 
 		/** Factory method to construct a Literal
 		 * @param v The value to convert to a literal. (Cannot be a classad or
@@ -109,17 +176,31 @@ class Literal : public ExprTree
 		 * 	@param v The encapsulated value
 		 * 	@param f The number factor (invalid if v is non-numeric)
 		 */
-		void GetComponents( Value& v, Value::NumberFactor &f ) const;
+		void GetComponents( Value& v, Value::NumberFactor &f ) const {
+			v = value;
+			// TJ: This is wrong, but necessary to preserve the fiction that factor lives in Literal.
+			v.factor = Value::NO_FACTOR;
+			f = value.factor;
+		}
 
-		/** Deconstructor to get the encapsulated value
+		const Value& getValue(Value::NumberFactor &f) const {
+			// TJ: This is wrong, but necessary to preserve the fiction that factor lives in Literal.
+			f = value.factor;
+			return value;
+		}
+
+		/** Get the encapsulated value (with the factor applied)
 		 * 	@param v The value encapsulated by the literal
 		 */
-		void GetValue( Value& v ) const;
+		void GetValue( Value& val ) const {
+			val.CopyFrom( value );
+			val.ApplyFactor();
+		}
 		
 		/** Special case fetch of the c_str() within a literal string
 		 *  to avoid copying it into a new literal
 		 */
-		bool GetStringValue( const char * & cstr ) const;
+		bool GetStringValue( const char * & cstr ) const { return value.IsStringValue(cstr); };
 
 		/* Takes the number of seconds since the epoch as argument - epochsecs, 
 		 *and returns the timezone offset(relative to GMT) in the currect locality
@@ -130,9 +211,12 @@ class Literal : public ExprTree
 
         friend bool operator==(Literal &literal1, Literal &literal2);
 
+		virtual const ClassAd *GetParentScope( ) const { return NULL; }
+
 	protected:
 		/// Constructor
-    	Literal ();
+		Literal () {}
+		static void setError(int err, const char *msg=NULL);
 
   	private:
 		friend class FunctionCall;
@@ -146,8 +230,7 @@ class Literal : public ExprTree
  		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&) const;
 
 		// literal specific information
-    	Value   			value;
-		Value::NumberFactor	factor;
+		Value value;
 };
 
 } // classad

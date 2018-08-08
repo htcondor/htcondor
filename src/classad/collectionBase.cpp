@@ -1957,7 +1957,7 @@ GetStringClassAd(string key, string &ad){
 	 classad.InsertAttr( "Key", key );
 	 if( ( itr = classadTable.find( key ) ) != classadTable.end( ) ) {
 	   newad=(ClassAd *) ((itr->second).ad)->Copy();
-	   classad.Insert("Ad", newad, false);
+	   classad.Insert("Ad", newad);
 	 }else{
 	   return false;
 	 };

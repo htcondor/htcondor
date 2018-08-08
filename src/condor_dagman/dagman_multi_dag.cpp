@@ -185,9 +185,8 @@ MakePathAbsolute(MyString &filePath, MyString &errMsg)
 	if ( !fullpath( filePath.Value() ) ) {
 		MyString    currentDir;
 		if ( ! condor_getcwd( currentDir ) ) {
-			errMsg = MyString( "condor_getcwd() failed with errno " ) +
-						errno + " (" + strerror(errno) + ") at " + __FILE__
-						+ ":" + __LINE__;
+			formatstr( errMsg, "condor_getcwd() failed with errno %d (%s) at %s:%d",
+			           errno, strerror(errno), __FILE__, __LINE__ );
 			result = false;
 		}
 

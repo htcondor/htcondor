@@ -27,8 +27,6 @@
 //
 // the purpose of the class is to have all the relevant functions in
 // single place.
-//
-// Also, this is replacement for is_valid_network() in internet.cpp
 
 class condor_netaddr
 {
@@ -51,7 +49,9 @@ public:
 	// mask bits.  An IPv6 network may be specified as an IPv6 literal
 	// followed by a slash followed by an integer specifying the number of
 	// mask bits; or as an IPv6 literal with the second of its trailing
-	// colons replaced by a star.  Examples:
+	// colons replaced by a star. When a full IPv6 literal is used (with
+	// or without a slash and mask bits), the use of square brackets is
+	// allowed but optional. Examples:
 	//
 	// 128.104.100.22
 	//
@@ -60,7 +60,9 @@ public:
 	// 128.104.0.0/16
 	//
 	// 2607:f388:107c:501:1b:21ff:feca:51f0
+	// [2607:f388:107c:501:1b:21ff:feca:51f0]
 	// 2607:f388:107c:501::/60
+	// [2607:f388:107c:501::]/60
 	// 2607:f388:107c:501:*
 	//
 	bool from_net_string(const char* net);

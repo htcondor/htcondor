@@ -126,6 +126,19 @@ void JOB_ID_KEY::sprint(MyString &s) const
 	s.formatstr("%d.%d", this->cluster, this->proc);
 }
 
+JOB_ID_KEY::operator std::string() const
+{
+	std::string s;
+	if ( proc == -1 ) {
+		// cluster ad key
+		formatstr(s, "0%d.-1", this->cluster);
+	} else {
+		// proc ad key
+		formatstr(s, "%d.%d", this->cluster, this->proc);
+	}
+	return s;
+}
+
 #ifdef _MSC_VER
 #define rotl32(x,y) _rotl(x,y)
 #define rotl64(x,y) _rotl64(x,y)
@@ -194,9 +207,9 @@ unsigned int inline MurmurHash32x2_nofinal(unsigned int u1, unsigned int u2) {
 int job_hash_algorithm = JOB_HASH_ALGOR;
 
 #if JOB_HASH_ALGOR == 0
-inline unsigned int hashkey_compat_hash(const char * p)
+inline size_t hashkey_compat_hash(const char * p)
 {
-	unsigned int hash = 0;
+	size_t hash = 0;
 
 	while (*p) {
 		hash = (hash<<5) + hash + (unsigned char)*p++;
@@ -206,7 +219,7 @@ inline unsigned int hashkey_compat_hash(const char * p)
 }
 #endif
 
-unsigned int JOB_ID_KEY::hash(const JOB_ID_KEY &key)
+size_t JOB_ID_KEY::hash(const JOB_ID_KEY &key)
 {
 #if JOB_HASH_ALGOR == 0
 	char buf[PROC_ID_STR_BUFLEN];
@@ -224,7 +237,7 @@ unsigned int JOB_ID_KEY::hash(const JOB_ID_KEY &key)
 }
 
 
-unsigned int hashFunction(const JOB_ID_KEY &key)
+size_t hashFunction(const JOB_ID_KEY &key)
 {
 #if JOB_HASH_ALGOR == 0
 	char buf[PROC_ID_STR_BUFLEN];

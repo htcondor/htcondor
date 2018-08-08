@@ -408,6 +408,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	lease_duration = -1;
 	already_killed_graceful = false;
 	already_killed_fast = false;
+	m_got_job_exit = false;
 	m_want_chirp = false;
 	m_want_streaming_io = false;
 	m_attempt_shutdown_tid = -1;
@@ -1408,7 +1409,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
 	if( tree ) {
 		tree = tree->Copy();
-		jobAd->Insert(ATTR_MEMORY_USAGE, tree, false);
+		jobAd->Insert(ATTR_MEMORY_USAGE, tree);
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, real_value) ) {
@@ -1448,6 +1449,17 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     jobAd->CopyAttribute(ATTR_BLOCK_WRITES, update_ad);
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_READS, update_ad);
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITES, update_ad);
+
+	// FIXME: If we're convinced that we want a whitelist here (chirp
+	// would seem to make a mockery of that), we should at least rewrite
+	// all of the copies to be based on a table.
+	jobAd->CopyAttribute( "PreExitCode", update_ad );
+	jobAd->CopyAttribute( "PreExitSignal", update_ad );
+	jobAd->CopyAttribute( "PreExitBySignal", update_ad );
+
+	jobAd->CopyAttribute( "PostExitCode", update_ad );
+	jobAd->CopyAttribute( "PostExitSignal", update_ad );
+	jobAd->CopyAttribute( "PostExitBySignal", update_ad );
 
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics
@@ -1513,8 +1525,22 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 		// Process all chirp-based updates from the starter.
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
-		if (allowRemoteWriteAttributeAccess(it->first))
-		{
+		size_t offset = -1;
+		if (allowRemoteWriteAttributeAccess(it->first)) {
+			classad::ExprTree *expr_copy = it->second->Copy();
+			jobAd->Insert(it->first, expr_copy);
+			shadow->watchJobAttr(it->first);
+		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
+			&& offset == it->first.length() - 5 ) {
+			classad::ExprTree *expr_copy = it->second->Copy();
+			jobAd->Insert(it->first, expr_copy);
+			shadow->watchJobAttr(it->first);
+		} else if( (offset = it->first.rfind( "Provisioned" )) != std::string::npos
+			&& offset == it->first.length() - 11 ) {
+			classad::ExprTree *expr_copy = it->second->Copy();
+			jobAd->Insert(it->first, expr_copy);
+			shadow->watchJobAttr(it->first);
+		} else if( it->first.find( "Assigned" ) == 0 ) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
@@ -1584,6 +1610,12 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		setStarterAddress( starter_addr.Value() );
 	}
 
+	if( IsDebugLevel(D_MACHINE) ) {
+		dprintf( D_MACHINE, "shadow's job ad after update:\n" );
+		dPrintAd( D_MACHINE, * jobAd );
+		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
+	}
+
 		// now that we've gotten an update, we should evaluate our
 		// periodic user policy again, since we have new information
 		// and something might now evaluate to true which we should
@@ -1618,23 +1650,19 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 		// copy of the job ClassAd
 	int now = (int)time(NULL);
 	int total_suspensions = 0;
-	char tmp[256];
 
 	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
 	total_suspensions++;
-	sprintf( tmp, "%s = %d", ATTR_TOTAL_SUSPENSIONS, total_suspensions );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
 
-	sprintf( tmp, "%s = %d", ATTR_LAST_SUSPENSION_TIME, now );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_LAST_SUSPENSION_TIME, now );
 
 	// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
 	
 	// TSTCLAIR: In promotion to 1st class status we *must* 
 	// update the job in the queue
-	sprintf( tmp, "%s = %d", ATTR_JOB_STATUS , SUSPENDED );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_JOB_STATUS, SUSPENDED );
 	shadow->updateJobInQueue(U_STATUS);
 	
 	return rval;
@@ -1657,7 +1685,6 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 	int now = (int)time(NULL);
 	int cumulative_suspension_time = 0;
 	int last_suspension_time = 0;
-	char tmp[256];
 
 		// add in the time I spent suspended to a running total
 	jobAd->LookupInteger( ATTR_CUMULATIVE_SUSPENSION_TIME,
@@ -1675,21 +1702,17 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 		jobAd->Assign(ATTR_UNCOMMITTED_SUSPENSION_TIME, uncommitted_suspension_time);
 	}
 
-	sprintf( tmp, "%s = %d", ATTR_CUMULATIVE_SUSPENSION_TIME,
-			 cumulative_suspension_time );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, cumulative_suspension_time );
 
 		// set the current suspension time to zero, meaning not suspended
-	sprintf(tmp, "%s = 0", ATTR_LAST_SUSPENSION_TIME );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
 
 		// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
 
 	// TSTCLAIR: In promotion to 1st class status we *must* 
 	// update the job in the queue
-	sprintf( tmp, "%s = %d", ATTR_JOB_STATUS , RUNNING );
-	jobAd->Insert( tmp );
+	jobAd->Assign( ATTR_JOB_STATUS, RUNNING );
 	shadow->updateJobInQueue(U_STATUS);
 
 	return rval;
@@ -1879,6 +1902,8 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
 	setExitReason( reason_for_exit );
 
+	m_got_job_exit = true;
+
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1;
 	if (filetrans.GetDownloadTimestamps(&tStart)) {
@@ -1911,24 +1936,19 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 			   always done in the past, so it's no less accurate than
 			   an old shadow talking to the same starter...
 			*/
-		char tmp[64];
 		if( WIFSIGNALED(exit_status) ) {
 			exited_by_signal = true;
-			sprintf( tmp, "%s=TRUE", ATTR_ON_EXIT_BY_SIGNAL );
-			jobAd->Insert( tmp );
+			jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
 
 			exit_value = WTERMSIG( exit_status );
-			sprintf( tmp, "%s=%d", ATTR_ON_EXIT_SIGNAL, exit_value );
-			jobAd->Insert( tmp );
+			jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exit_value );
 
 		} else {
 			exited_by_signal = false;
-			sprintf( tmp, "%s=FALSE", ATTR_ON_EXIT_BY_SIGNAL );
-			jobAd->Insert( tmp );
+			jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 
 			exit_value = WEXITSTATUS( exit_status );
-			sprintf( tmp, "%s=%d", ATTR_ON_EXIT_CODE, exit_value );
-			jobAd->Insert( tmp );
+			jobAd->Assign( ATTR_ON_EXIT_CODE, exit_value );
 		}
 	}
 }
@@ -2006,13 +2026,7 @@ RemoteResource::beginExecution( void )
 void
 RemoteResource::hadContact( void )
 {
-		// Length: ATTR_LAST_JOB_LEASE_RENEWAL is 19, '=' is 1,
-		// MAX_INT is 10, and another 10 to spare should plenty... 
-	char contact_buf[40];
-	last_job_lease_renewal = time(0);
-	snprintf( contact_buf, 32, "%s=%d", ATTR_LAST_JOB_LEASE_RENEWAL,
-			  (int)last_job_lease_renewal );
-	jobAd->Insert( contact_buf );
+	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, (int)last_job_lease_renewal );
 }
 
 
@@ -2080,13 +2094,11 @@ RemoteResource::reconnect( void )
 		// each time we get here, see how much time remains...
 	int remaining = remainingLeaseDuration();
 	if( !remaining ) {
-	dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
+		dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
 			 ATTR_JOB_LEASE_DURATION );
-		MyString reason = "Job disconnected too long: ";
-		reason += ATTR_JOB_LEASE_DURATION;
-		reason += " (";
-		reason += lease_duration;
-		reason += " seconds) expired";
+		MyString reason;
+		formatstr( reason, "Job disconnected too long: %s (%d seconds) expired",
+		           ATTR_JOB_LEASE_DURATION, lease_duration );
 		shadow->reconnectFailed( reason.Value() );
 	}
 	dprintf( D_ALWAYS, "%s remaining: %d\n", ATTR_JOB_LEASE_DURATION,
@@ -2360,8 +2372,7 @@ RemoteResource::requestReconnect( void )
 	char* value = NULL;
 	jobAd->LookupString(ATTR_TRANSFER_KEY,&value);
 	if (value) {
-		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_KEY,value);
-		req.Insert(msg.Value());
+		req.Assign(ATTR_TRANSFER_KEY, value);
 		free(value);
 		value = NULL;
 	} else {
@@ -2370,8 +2381,7 @@ RemoteResource::requestReconnect( void )
 	}
 	jobAd->LookupString(ATTR_TRANSFER_SOCKET,&value);
 	if (value) {
-		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_SOCKET,value);
-		req.Insert(msg.Value());
+		req.Assign(ATTR_TRANSFER_SOCKET, value);
 		free(value);
 		value = NULL;
 	} else {

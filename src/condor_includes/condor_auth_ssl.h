@@ -89,8 +89,8 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     // RETURNS: 1 -- true; 0 -- false
     //------------------------------------------
 
-    int wrap(char* input, int input_len, char*& output, int& output_len);
-    int unwrap(char* input, int input_len, char*& output, int& output_len);
+    int wrap(const char* input, int input_len, char*& output, int& output_len);
+    int unwrap(const char* input, int input_len, char*& output, int& output_len);
 
  private:
 
@@ -131,14 +131,14 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 
 		/** Encrypt data using the session key.  Called by wrap. 
 		 */
-	bool encrypt(unsigned char *  input, 
+	bool encrypt(const unsigned char *  input,
                  int              input_len, 
                  unsigned char *& output, 
                  int&             output_len);
 	
 		/* Decrypt data based on the session key.  Called by unwrap.
 		 */
-	bool decrypt(unsigned char *  input, 
+	bool decrypt(const unsigned char *  input,
                  int              input_len, 
                  unsigned char *& output, 
                  int&             output_len);
@@ -146,7 +146,7 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
 		/** Decrypt or encrypt based on first argument. 
 		 */
 	bool encrypt_or_decrypt(bool want_encrypt,
-							unsigned char *  input,
+							const unsigned char *  input,
 							int              input_len,
 							unsigned char *& output,
 							int&             output_len);

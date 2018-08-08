@@ -203,6 +203,10 @@ else
 	  # Wait for an exclusive lock, 20 second timeout
 	  flock -x -w 20 200 \
 	    || exitwitherr 50 "Failed to obtain file lock on $lockfile"
+	  # Make certain uid keyring has search access so we can find
+	  # it again when rejoining this session
+	  keyctl setperm $uid_ring_id 0x3f3f0000 \
+		  || exitwitherr 50 "Failed to setperm on uid keyring"
 	  # Make certain session keyring has uid write access so we can link
 	  # the PAG session below.
 	  keyctl setperm @s 0x1f3f0000 \

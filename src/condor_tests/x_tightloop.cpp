@@ -83,7 +83,7 @@ DWORD WINAPI get_timing(__in LPVOID lpParameter)
 
 	len = ret;
 
-	ret = write(fd, (const void *)&bigbuff, len);
+	ret = write(fd, (const void *)&bigbuff, (unsigned int)len);
 	if( ret == -1 ) {
 		fprintf(stderr, "hmmm error writing file: %s\n",strerror(errno));
 	}

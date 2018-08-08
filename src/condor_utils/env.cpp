@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_string.h"
 #include "condor_attributes.h"
 
 #include "env.h"
@@ -42,7 +41,7 @@ Env::Env()
 {
 	input_was_v1 = false;
 	_envTable = new HashTable<MyString, MyString>
-		( 127, &MyStringHash, updateDuplicateKeys );
+		( &hashFunction );
 	ASSERT( _envTable );
 }
 
@@ -492,7 +491,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 	}
 
 	// make a copy of nameValueExpr for modifying
-	expr = strnewp( nameValueExpr );
+	expr = strdup( nameValueExpr );
 	ASSERT( expr );
 
 	// find the delimiter
@@ -502,7 +501,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 		// This environment entry is an unexpanded $$() macro.
 		// We just want to keep it in the environment verbatim.
 		SetEnv(expr,NO_ENVIRONMENT_VALUE);
-		delete[] expr;
+		free(expr);
 		return true;
 	}
 
@@ -520,7 +519,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 			}
 			AddErrorMessage(msg.Value(),error_msg);
 		}
-		delete[] expr;
+		free(expr);
 		return false;
 	}
 
@@ -529,7 +528,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 
 	// do the deed
 	retval = SetEnv( expr, delim + 1 );
-	delete[] expr;
+	free(expr);
 	return retval;
 }
 
@@ -547,7 +546,7 @@ Env::SetEnv( const MyString & var, const MyString & val )
 	if( var.Length() == 0 ) {
 		return false;
 	}
-	bool ret = (_envTable->insert( var, val ) == 0);
+	bool ret = (_envTable->insert( var, val, true ) == 0);
 	ASSERT( ret );
 #if defined(WIN32)
 	m_sorted_varnames.erase(var.Value());
@@ -602,7 +601,7 @@ Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_del
 
 	if(result->Length() > old_len) {
 		// Clear any partial output we may have generated above.
-		result->setChar(old_len,'\0');
+		result->truncate(old_len);
 	}
 
 	return getDelimitedStringV2Raw(result,error_msg,true);
@@ -626,7 +625,7 @@ Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) con
 		return true;
 	}
 	else {
-		result->setChar(0, '\0');
+		result->truncate(0);
 		return getDelimitedStringV2Quoted(result,error_msg);
 	}
 }

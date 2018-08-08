@@ -6,7 +6,6 @@
 # % define uw_build 1
 # % define std_univ 1
 
-%define gsoap 1
 %define aviary 0
 %define plumage 0
 %define systemd 0
@@ -43,8 +42,6 @@
 %if %uw_build
 %define debug 1
 %define verbose 1
-%define gsoap 0
-%else
 %endif
 
 # define these to 1 if you want to include externals in source rpm
@@ -223,7 +220,6 @@ BuildRequires: cmake
 BuildRequires: %_bindir/flex
 BuildRequires: %_bindir/byacc
 BuildRequires: pcre-devel
-#BuildRequires: postgresql-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
 BuildRequires: libvirt-devel
@@ -238,6 +234,7 @@ BuildRequires: openldap-devel
 BuildRequires: python-devel
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
+BuildRequires: sqlite-devel
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
@@ -292,13 +289,10 @@ BuildRequires: globus-callout-devel
 BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
+BuildRequires: munge-devel
 BuildRequires: voms-devel
 %endif
 BuildRequires: libtool-ltdl-devel
-
-%if %gsoap
-BuildRequires: gsoap-devel >= 2.7.12-1
-%endif
 
 %if %aviary
 BuildRequires: wso2-wsf-cpp-devel >= 2.1.0-4
@@ -358,10 +352,6 @@ Requires: ecryptfs-utils
 
 %if %blahp && ! %uw_build
 Requires: blahp >= 1.16.1
-%endif
-
-%if %gsoap
-Requires: gsoap >= 2.7.12
 %endif
 
 %if %uw_build
@@ -654,15 +644,18 @@ Includes all the files necessary to support running standard universe jobs.
 %endif
 
 %if %uw_build
-%package static-shadow
-Summary: Statically linked condow_shadow and condor_master binaries
-Group: Applications/System
 
-%description static-shadow
-Provides condor_shadow_s and condor_master_s, which have all the globus
-libraries statically linked in and, as a result, have a smaller private
+%ifarch %{ix86}
+%package small-shadow
+Summary: 32-bit condor_shadow binary
+Group: Applications/System
+Requires: %name-external-libs%{?_isa} = %version-%release
+
+%description small-shadow
+Provides the 32-bit condor_shadow_s, which has a smaller private
 memory footprint per process.  This makes it possible to run more shadows
 on a single machine at once when memory is the limiting factor.
+%endif
 
 %package externals
 Summary: External packages built into HTCondor
@@ -682,6 +675,41 @@ AutoProv: 0
 %description external-libs
 Includes the libraries for external packages built when UW_BUILD is enabled
 
+%endif
+
+%package annex-ec2
+Summary: Configuration and scripts to make an EC2 image annex-compatible.
+Group: Applications/System
+Requires: %name = %version-%release
+Requires(post): /sbin/chkconfig
+Requires(preun): /sbin/chkconfig
+
+%description annex-ec2
+Configures HTCondor to make an EC2 image annex-compatible.  Do NOT install
+on a non-EC2 image.
+
+%files annex-ec2
+%if %systemd
+%_libexecdir/condor/condor-annex-ec2
+%{_unitdir}/condor-annex-ec2.service
+%else
+%_initrddir/condor-annex-ec2
+%endif
+%config(noreplace) %_sysconfdir/condor/config.d/50ec2.config
+%config(noreplace) %_sysconfdir/condor/master_shutdown_script.sh
+
+%post annex-ec2
+%if %systemd
+/bin/systemctl enable condor-annex-ec2
+%else
+/sbin/chkconfig --add condor-annex-ec2
+%endif
+
+%preun annex-ec2
+%if %systemd
+/bin/systemctl disable condor-annex-ec2
+%else
+/sbin/chkconfig --del condor-annex-ec2 > /dev/null 2>&1 || :
 %endif
 
 %package all
@@ -766,7 +794,6 @@ cmake \
        -DBUILD_TESTING:BOOL=FALSE \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
-       -DWITH_POSTGRESQL:BOOL=FALSE \
 %if %cream
        -DWITH_CREAM:BOOL=TRUE \
 %else
@@ -804,19 +831,11 @@ cmake \
 %endif
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
-%if %gsoap
-       -DWITH_GSOAP:BOOL=TRUE \
-%else
-       -DWITH_GSOAP:BOOL=FALSE \
-%endif
-       -DWITH_POSTGRESQL:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
        -DWANT_LEASE_MANAGER:BOOL=FALSE \
        -DWANT_HDFS:BOOL=FALSE \
-       -DWANT_QUILL:BOOL=FALSE \
        -DWITH_ZLIB:BOOL=FALSE \
-       -DWITH_POSTGRESQL:BOOL=FALSE \
        -DWANT_CONTRIB:BOOL=ON \
        -DWITH_PIGEON:BOOL=FALSE \
 %if %plumage
@@ -925,7 +944,7 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
-mkdir -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
+mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -983,9 +1002,6 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_master_off.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_reconfig_schedd.1
 
-# not packaging quill bits
-rm -f %{buildroot}/%{_mandir}/man1/condor_load_history.1
-
 # this one got removed but the manpage was left around
 rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 
@@ -993,12 +1009,21 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
 rm -rf %{buildroot}/%{_sysconfdir}/init.d
 
+# Temporarily turn off python for Fedora
+%if 0%{?fedora}
+rm -f %{buildroot}/%{_bindir}/condor_top
+rm -f %{buildroot}/%{_mandir}/man1/condor_top.1
+%endif
+
 %if %systemd
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_tmpfilesdir}
 install -m 0644 %{buildroot}/etc/examples/condor-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
 
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_libexecdir}/condor/condor-annex-ec2
+
 mkdir -p %{buildroot}%{_unitdir}
+install -m 0644 %{buildroot}/etc/examples/condor-annex-ec2.service %{buildroot}%{_unitdir}/condor-annex-ec2.service
 install -m 0644 %{buildroot}/etc/examples/condor.service %{buildroot}%{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/etc/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
@@ -1010,6 +1035,7 @@ install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/osg-env.
 %else
 # install the lsb init script
 install -Dp -m0755 %{buildroot}/etc/examples/condor.init %{buildroot}%{_initrddir}/condor
+install -Dp -m0755 %{buildroot}/etc/examples/condor-annex-ec2 %{buildroot}%{_initrddir}/condor-annex-ec2
 %if 0%{?osg} || 0%{?hcc}
 # Set condor service enviroment variables for LCMAPS on OSG systems
 install -Dp -m 0644 %{SOURCE4} %buildroot/usr/share/osg/sysconfig/condor
@@ -1051,6 +1077,9 @@ rm -rf %{buildroot}%{_sbindir}/condor_install
 rm -rf %{buildroot}%{_sbindir}/condor_install_local
 rm -rf %{buildroot}%{_sbindir}/condor_local_start
 rm -rf %{buildroot}%{_sbindir}/condor_local_stop
+%ifarch x86_64
+rm -rf %{buildroot}%{_sbindir}/condor_shadow_s
+%endif
 rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
 rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
 rm -rf %{buildroot}%{_sbindir}/filelock_midwife
@@ -1213,11 +1242,6 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/condor/config.d/
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
-%if %gsoap || %uw_build
-%dir %_datadir/condor/webservice/
-%_datadir/condor/webservice/condorCollector.wsdl
-%_datadir/condor/webservice/condorSchedd.wsdl
-%endif
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
 %_libdir/libcondorapi.so
@@ -1227,7 +1251,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
 %_libexecdir/condor/sshd.sh
-%_libexecdir/condor/condor_history_helper
+%_libexecdir/condor/get_orted_cmd.sh
+%_libexecdir/condor/orted_launcher.sh
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
@@ -1269,6 +1294,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_mips
 %_libexecdir/condor/data_plugin
 %_libexecdir/condor/curl_plugin
+%_libexecdir/condor/multifile_curl_plugin
 %_libexecdir/condor/condor_shared_port
 %_libexecdir/condor/condor_glexec_wrapper
 %_libexecdir/condor/glexec_starter_setup.sh
@@ -1283,6 +1309,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/libcollector_python_plugin.so
 %endif
 %_mandir/man1/condor_advertise.1.gz
+%_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_cod.1.gz
@@ -1318,6 +1345,9 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
+%if ! 0%{?fedora}
+%_mandir/man1/condor_top.1.gz
+%endif
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
@@ -1343,15 +1373,18 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_rmdir.1.gz
 %_mandir/man1/condor_tail.1.gz
 %_mandir/man1/condor_who.1.gz
+%_mandir/man1/condor_now.1.gz
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
+%_bindir/condor_now
 %_bindir/condor_prio
 %_bindir/condor_transfer_data
 %_bindir/condor_check_userlogs
 %_bindir/condor_q
 %_libexecdir/condor/condor_transferer
 %_bindir/condor_cod
+%_bindir/condor_docker_enter
 %_bindir/condor_qedit
 %_bindir/condor_userlog
 %_bindir/condor_release
@@ -1369,7 +1402,6 @@ rm -rf %{buildroot}
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
 %_bindir/condor_stats
-%_bindir/condor_top.pl
 %_bindir/condor_version
 %_bindir/condor_history
 %_bindir/condor_status
@@ -1390,8 +1422,9 @@ rm -rf %{buildroot}
 %_bindir/condor_job_router_info
 %_bindir/condor_transform_ads
 %_bindir/condor_update_machine_ad
-# reconfig_schedd, restart
+%_bindir/condor_annex
 # sbin/condor is a link for master_off, off, on, reconfig,
+# reconfig_schedd, restart
 %_sbindir/condor_advertise
 %_sbindir/condor_aklog
 %_sbindir/condor_c-gahp
@@ -1401,7 +1434,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
-%_sbindir/condor_init
 %_sbindir/condor_master
 %_sbindir/condor_negotiator
 %_sbindir/condor_off
@@ -1410,7 +1442,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_reconfig
 %_sbindir/condor_replication
 %_sbindir/condor_restart
-%attr(6755, root, root) %_sbindir/condor_root_switchboard
 %_sbindir/condor_schedd
 %_sbindir/condor_set_shutdown
 %_sbindir/condor_shadow
@@ -1429,12 +1460,13 @@ rm -rf %{buildroot}
 %_sbindir/grid_monitor.sh
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp
+%_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
 %if %uw_build
-%_sbindir/condor_master_s
 %_sbindir/boinc_gahp
 %endif
 %_libexecdir/condor/condor_gpu_discovery
+%_libexecdir/condor/condor_gpu_utilization
 %_sbindir/condor_vm-gahp-vmware
 %_sbindir/condor_vm_vmware
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
@@ -1667,6 +1699,7 @@ rm -rf %{buildroot}
 %if ! 0%{?fedora}
 %files python
 %defattr(-,root,root,-)
+%_bindir/condor_top
 %_libdir/libpyclassad*.so
 %_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad.so
@@ -1735,8 +1768,11 @@ rm -rf %{buildroot}
 %endif
 
 %if %uw_build
-%files static-shadow
+
+%ifarch %{ix86}
+%files small-shadow
 %{_sbindir}/condor_shadow_s
+%endif
 
 %files external-libs
 %dir %_libdir/condor
@@ -1916,16 +1952,40 @@ fi
 %endif
 
 %changelog
+* Tue May 22 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-2
+- Reinstate man pages
+- Drop centos from dist tag in 32-bit Enterprise Linux 7 RPMs
+
+* Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-1
+- The condor annex can easily use multiple regions simultaneously
+- HTCondor now uses CUDA_VISIBLE_DEVICES to tell which GPU devices to manage
+- HTCondor now reports GPU memory utilization
+
 * Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.11-1
 - Can now do an interactive submit of a Singularity job
 - Shared port daemon is more resilient when starved for TCP ports
 - The Windows installer configures the environment for the Python bindings
 - Fixed several other minor problems
 
+* Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.7-1
+- condor_ssh_to_job now works with Docker Universe jobs
+- A 32-bit condor_shadow is available for Enterprise Linux 7 systems
+- Tracks and reports custom resources, e.g. GPUs, in the job ad and user log
+- condor_q -unmatchable reports jobs that will not match any slots
+- Several updates to the parallel universe
+- Spaces are now allowed in input, output, and error paths in submit files
+- In DAG files, spaces are now allowed in submit file paths
+
 * Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.10-1
 - Fixed a problem where condor_preen would crash on an active submit node
 - Improved systemd configuration to clean up processes if the master crashes
 - Fixed several other minor problems
+
+* Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.6-1
+- Machines won't enter "Owner" state unless using the Desktop policy
+- One can use SCHEDD and JOB instead of MY and TARGET in SUBMIT_REQUIREMENTS
+- HTCondor now reports all submit warnings, not just the first one
+- The HTCondor Python bindings in pip are now built from the release branch
 
 * Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.9-1
 - Fixed a bug where some Accounting Groups could get too much surplus quota
@@ -1936,8 +1996,20 @@ fi
 - Fixed a bug where MAX_JOBS_SUBMITTED could be permanently reduced
 - Fixed problems with very large disk requests
 
+* Tue Nov 14 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.5-1
+- Fixed an issue validating VOMS proxies
+
 * Tue Nov 14 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.8-1
 - Fixed an issue validating VOMS proxies
+
+* Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.4-1
+- Improvements to DAGMan including support for late job materialization
+- Updates to condor_annex including improved status reporting
+- When submitting jobs, HTCondor can now warn about job requirements
+- Fixed a bug where remote CPU time was not recorded in the history
+- Improved support for OpenMPI jobs
+- The high availability daemon now works with IPV6 and shared_port
+- The HTCondor Python bindings are now available for Python 2 and 3 in pip
 
 * Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.7-1
 - Fixed a bug where memory limits might not be updated in cgroups
@@ -1945,6 +2017,12 @@ fi
 - Updated systemd configuration to shutdown HTCondor in an orderly fashion
 - The curl_plugin utility can now do HTTPS transfers
 - Specifying environment variables now works with the Python Submit class
+
+* Tue Sep 12 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.3-1
+- Further updates to the late job materialization technology preview
+- An improved condor_top tool
+- Enhanced the AUTO setting for ENABLE_IPV{4,6} to be more selective
+- Fixed several small memory leaks
 
 * Tue Sep 12 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.6-1
 - HTCondor daemons no longer crash on reconfig if syslog is used for logging
@@ -1971,6 +2049,16 @@ fi
 * Thu Jul 13 2017 Tim Theisen <tim@cs.wisc.edu> - 8.4.12-1
 - Can configure the condor_startd to compute free disk space once
 
+* Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-1
+- Improved condor_schedd performance by turning off file checks by default
+- condor_annex -status finds VM instances that have not joined the pool
+- Able to update an annex's lease without adding new instances
+- condor_annex now keeps a command log
+- condor_q produces an expanded multi-line summary
+- Automatically retry and/or resume http file transfers when appropriate
+- Reduced load on the condor_collector by optimizing queries
+- A python based condor_top tool
+
 * Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.4-1
 - Python bindings are now available on MacOSX
 - Fixed a bug where PASSWORD authentication could fail to exchange keys
@@ -1981,6 +2069,14 @@ fi
 - Fixed a bug where using an X.509 proxy might corrupt the job queue log
 - Fixed a memory leak in the Python bindings
 
+* Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.1-1
+- Several performance enhancements in the collector
+- Further refinement and initial documentation of the HTCondor Annex
+- Enable chirp for Docker jobs
+- Job Router uses first match rather than round-robin matching
+- The schedd tracks jobs counts by status for each owner
+- Technology preview of late job materialization in the schedd
+
 * Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.2-1
 - New metaknobs for mapping users to groups
 - Now case-insensitive with Windows user names when storing credentials
@@ -1988,6 +2084,12 @@ fi
 - Report RemoteSysCpu for Docker jobs
 - Allow SUBMIT_REQUIREMENT to refer to X509 secure attributes
 - Linux kernel tuning script takes into account the machine's role
+
+* Thu Mar 02 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.0-1
+- Performance improvements in collector's ingestion of ClassAds
+- Added collector attributes to report query times and forks
+- Removed extra white space around parentheses when unparsing ClassAds
+- Technology preview of the HTCondor Annex
 
 * Thu Mar 02 2017 Tim Theisen <tim@cs.wisc.edu> - 8.6.1-1
 - condor_q works in situations where user authentication is not configured

@@ -40,21 +40,6 @@ for f in \
     src/condor_tests/x_vmware_configpostsrc \
     src/condor_tests/job_ligo_x86-64-chkpttst.cmd \
     src/condor_tests/job_ligo_x86-64-chkpttst.run \
-    src/condor_tests/job_quill_basic.cmd \
-    src/condor_tests/job_quill_basic.pl \
-    src/condor_tests/job_quill_basic.run \
-    src/condor_tests/x_job_quill_basic.template \
-    src/condor_tests/x_job_quill_supw \
-    src/condor_tests/x_param.quill \
-    src/condor_tests/x_postgress_quill.conf \
-    src/condor_tests/x_quill_buildperlmods.pl \
-    src/condor_tests/x_quill_config_postsrc.template \
-    src/condor_tests/x_quill_Expect-1.20.tar.gz \
-    src/condor_tests/x_quill_IO-Tty-1.07.tar.gz \
-    src/condor_tests/x_quill_pgsqlinstall.pl \
-    src/condor_tests/x_quill_pgsqlstop.pl \
-    src/condor_tests/x_quill_readline-5.2.tar.gz \
-    src/condor_tests/x_quill_readlineinstall.pl \
     condor_src-7.6.0-all-all.tar.gz;
 do
     echo "...removing $f";

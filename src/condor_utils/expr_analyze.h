@@ -46,11 +46,20 @@ typedef struct {
 	const char * target_type_name;
 } anaFormattingOptions;
 
+// This is the function you probably want to call.  
+// It does match analysis of all of the clauses in the given attribute of the request ad
+// against all of the target ads and appends the analysis to the given return_buf.
+// typical use would be
+//    AnalyzeRequirementsForEachTarget(jobAd, ATTR_REQUIREMENTS, attrs, &startdAds[0], startdAds.size(), ...
+// or
+//    ClassAd::References attrs; attrs.insert(ATTR_START);
+//    AnalyzeRequirementsForEachTarget(slotClassAd, ATTR_REQUIREMENTS, attrs, &jobAds[0], jobAds.size(), ...
+//
 void AnalyzeRequirementsForEachTarget(
 	ClassAd *request,
 	const char * attrConstraint, // must be an attribute in the request ad
 	classad::References & inline_attrs, // expand these attrs inline
-	ClassAdList & targets,
+	std::vector<ClassAd*> targets,
 	std::string & return_buf,
 	const anaFormattingOptions & fmt);
 
@@ -61,7 +70,7 @@ int AnalyzeThisSubExpr(
 	ClassAd *myad,
 	classad::ExprTree* expr,
 	classad::References & inline_attrs, // expand attrs with these names inline
-	std::vector<AnalSubExpr> & clauses,
+	std::vector<AnalSubExpr> & clauses, // out: clauses are appended to this list as analysis proceeds.
 	bool must_store,
 	int depth,
 	const anaFormattingOptions & fmt);
@@ -70,7 +79,7 @@ void AddReferencedAttribsToBuffer(
 	ClassAd * request,
 	const char * expr_string, // expression string or attribute name
 	classad::References & hidden_refs, // don't print these even if they appear in the trefs list
-	StringList & trefs, // out, returns target refs
+	classad::References & trefs, // out, returns target refs
 	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false
 	const char * pindent,
 	std::string & return_buf);
@@ -90,7 +99,7 @@ private:
 		accum += val; 
 	#ifdef WIN32
 		// from expermentation with vs2012 (32 bit), memory allocation does NOT return consecutive allocations
-		// but the smallest obserable differnce shows that the allocator adds 8 and then quantizes by 8
+		// but the smallest obserable difference shows that the allocator adds 8 and then quantizes by 8
 		quantized += 8 + ((val + 7) & ~7);
 	#else
 		// from http://web.eecs.utk.edu/~huangj/cs360/360/notes/Malloc1/lecture.html
@@ -105,7 +114,7 @@ private:
 };
 
 void AddTargetAttribsToBuffer(
-	StringList & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
+	classad::References & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
 	ClassAd * request,
 	ClassAd * target,
 	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false

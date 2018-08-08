@@ -77,13 +77,6 @@ utilCancelTimer(int& timerId);
  */
 void 
 utilCancelReaper(int& reaperId);
-/* Function    : utilToString 
- * Arguments   : command - id 
- * Return value: const char* - static string representation of the given command
- * Description : represents the given command id in string format
- */
-const char* 
-utilToString( int command );
 /* Function    : utilToSinful
  * Arguments   : address - remote daemon address in either "ip:port" or 
  *				 "hostname:port" format, optionally enclosed in '<>' brackets

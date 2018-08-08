@@ -352,7 +352,7 @@ def get_slurm_location(program):
         return os.path.join(_slurm_location_cache, program)
     load_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'blah_load_config.sh')
     if os.path.exists(load_config_path) and os.access(load_config_path, os.R_OK):
-        cmd = 'source %s && echo "${slurm_binpath:-/usr/bin}/%s"' % (load_config_path, program)
+        cmd = "/bin/bash -c 'source %s && echo ${slurm_binpath:-/usr/bin}/%s'" % (load_config_path, program)
     else:
         cmd = 'which %s' % program
     child_stdout = os.popen(cmd)
@@ -367,7 +367,7 @@ job_id_re = re.compile("JobId=([0-9]+) .*")
 exec_host_re = re.compile("\s*BatchHost=([\w\-.]+)")
 status_re = re.compile("\s*JobState=([\w]+) .*")
 exit_status_re = re.compile(".* ExitCode=(-?[0-9]+:[0-9]+)")
-status_mapping = {"BOOT_FAIL": 4, "CANCELLED": 3, "COMPLETED": 4, "CONFIGURING": 1, "COMPLETING": 2, "FAILED": 4, "NODE_FAIL": 4, "PENDING": 1, "PREEMPTED": 4, "RUNNING": 2, "SPECIAL_EXIT": 4, "STOPPED": 2, "SUSPENDED": 2}
+status_mapping = {"BOOT_FAIL": 4, "CANCELLED": 3, "COMPLETED": 4, "CONFIGURING": 1, "COMPLETING": 2, "FAILED": 4, "NODE_FAIL": 4, "PENDING": 1, "PREEMPTED": 4, "RUNNING": 2, "SPECIAL_EXIT": 4, "STOPPED": 2, "SUSPENDED": 2, "TIMEOUT": 4}
 
 def parse_scontrol_fd(fd):
     """

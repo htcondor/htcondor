@@ -26,6 +26,12 @@
 #include "condor_holdcodes.h"
 #include "docker-api.h"
 #include "condor_daemon_client.h"
+#include "condor_daemon_core.h"
+
+#ifdef HAVE_SCM_RIGHTS_PASSFD
+#include "shared_port_scm_rights.h"
+#include "fdpass.h"
+#endif
 
 extern CStarter *Starter;
 
@@ -79,9 +85,13 @@ static bool handleFTL(int error) {
 // the full container ID as (part of) the cgroup identifier(s).
 //
 
-DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1) { }
+DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ), updateTid(-1), memUsage(0), netIn(0), netOut(0), userCpu(0), sysCpu(0), waitForCreate(false), execReaperId(-1) { }
 
-DockerProc::~DockerProc() { }
+DockerProc::~DockerProc() { 
+	if ( daemonCore && daemonCore->SocketIsRegistered(&listener)) {
+		daemonCore->Cancel_Socket(&listener);
+	}
+}
 
 int DockerProc::StartJob() {
 	std::string imageID;
@@ -142,39 +152,22 @@ int DockerProc::StartJob() {
 	recoveryAd.Assign("DockerContainerName", containerName.c_str());
 	Starter->WriteRecoveryFile(&recoveryAd);
 
-
-
-	//
-	// Do I/O redirection (includes streaming).
-	//
-
-	int childFDs[3] = { -2, -2, -2 };
+	int childFDs[3] = { 0, 0, 0 }; 
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
-	// getStdFile() returns -1 on error.
+	std::string workingDir = Starter->GetWorkingDir();
+	//std::string DockerOutputFile = workingDir + "/docker_stdout";
+	std::string DockerErrorFile  = workingDir + "/docker_stderror";
 
-	if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdin.\n" );
-		return FALSE;
+	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
 	}
-	if( -1 == (childFDs[1] = openStdFile( SFT_OUT, NULL, true, "Output file" )) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdout.\n" );
-		daemonCore->Close_FD( childFDs[0] );
-		return FALSE;
-	}
-	if( -1 == (childFDs[2] = openStdFile( SFT_ERR, NULL, true, "Error file" )) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stderr.\n" );
-		daemonCore->Close_FD( childFDs[0] );
-		daemonCore->Close_FD( childFDs[1] );
-		return FALSE;
-	}
-	}
-
+	  
 	  // Ulog the execute event
 	Starter->jic->notifyJobPreSpawn();
 
 	CondorError err;
-	// DockerAPI::run() returns a PID from daemonCore->Create_Process(), which
+	// DockerAPI::createContainer() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
 	// will trigger the reaper(s) when the container terminates.
 	
@@ -185,38 +178,138 @@ int DockerProc::StartJob() {
 
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
-	int rv = DockerAPI::run( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, err );
+	int rv = DockerAPI::createContainer( *machineAd, *JobAd, containerName, imageID, command, args, job_env, sandboxPath, extras, JobPid, childFDs, err );
 	if( rv < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
+		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		handleFTL(rv);
 		return FALSE;
 	}
-	dprintf( D_FULLDEBUG, "DockerAPI::run() returned pid %d\n", JobPid );
+	dprintf( D_FULLDEBUG, "DockerAPI::createContainer() returned pid %d\n", JobPid );
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "Create_Process succeeded, pid=%d\n", JobPid);
 	// If we manage to start the Docker job, clear the offline state for docker universe
 	handleFTL(0);
 
-	// Start a timer to poll for job usage updates.
-	updateTid = daemonCore->Register_Timer(2, 
-			20, (TimerHandlercpp)&DockerProc::getStats, 
-				"DockerProc::getStats",this);
-
-	++num_pids; // Used by OsProc::PublishUpdateAd().
+	waitForCreate = true;  // Tell the reaper to run start container on exit
 	return TRUE;
 }
 
+int execPid;
+ReliSock *ns;
+
+bool
+DockerProc::ExecReaper(int pid, int status) {
+	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d with status %d\n", pid, status);
+	if (pid == execPid) {
+		dprintf(D_ALWAYS, "docker exec pid %d exited\n", pid);
+		delete ns;
+		return 0;
+	} else {
+		dprintf(D_ALWAYS, "docker exec unknown pid %d exited\n", pid);
+	}
+	return true;
+}
 
 bool DockerProc::JobReaper( int pid, int status ) {
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-	dprintf( D_FULLDEBUG, "DockerProc::JobReaper()\n" );
+	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d status is %d wait_for_Create is %d\n", pid, status, waitForCreate);
 
-	daemonCore->Cancel_Timer(updateTid);
+	if (waitForCreate) {
+		// When we get here, the docker create container has exited
+
+		if (status != 0) {
+			// Error creating container.  Perhaps invalid image
+			std::string message;
+
+			char buf[512];
+			buf[0] = '\0';
+
+			{
+			TemporaryPrivSentry sentry(PRIV_USER);
+			std::string fileName = Starter->GetWorkingDir();
+			fileName += "/docker_stderror";
+			int fd = open(fileName.c_str(), O_RDONLY, 0000);
+			if (fd >= 0) {
+				int r = read(fd, buf, 511);
+				if (r < 0) {
+					dprintf(D_ALWAYS, "Cannot read docker error file on docker create container. Errno %d\n", errno);
+				} else {
+					buf[r] = '\0';
+					int buflen = strlen(buf);
+					for (int i = 0; i < buflen; i++) {
+						if (buf[i] == '\n') buf[i] = ' ';
+					}
+				}
+				close(fd);
+			} else {
+				dprintf(D_ALWAYS, "Cannot open docker_stderror\n");
+			}
+			}
+			message = buf;
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
+			{
+			TemporaryPrivSentry sentry(PRIV_USER);
+			unlink("docker_stderror");
+			}
+			return VanillaProc::JobReaper( pid, status );
+		}
+
+		waitForCreate = false;
+		dprintf(D_FULLDEBUG, "DockerProc::JobReaper docker create (pid %d) exited with status %d\n", pid, status);
+		
+		CondorError err;
+
+		//
+		// Do I/O redirection (includes streaming).
+		//
+
+		int childFDs[3] = { -2, -2, -2 };
+		{
+		TemporaryPrivSentry sentry(PRIV_USER);
+		// getStdFile() returns -1 on error.
+
+		if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdin.\n" );
+			return FALSE;
+		}
+
+		if( -1 == (childFDs[1] = openStdFile( SFT_OUT, NULL, true, "Output file" )) ) {
+
+			dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdout.\n" );
+			daemonCore->Close_FD( childFDs[0] );
+			return FALSE;
+		}
+		if( -1 == (childFDs[2] = openStdFile( SFT_ERR, NULL, true, "Error file" )) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stderr.\n" );
+			daemonCore->Close_FD( childFDs[0] );
+			daemonCore->Close_FD( childFDs[1] );
+			return FALSE;
+		}
+		}
+
+		{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
+		}
+		// Start a timer to poll for job usage updates.
+		updateTid = daemonCore->Register_Timer(2, 
+				20, (TimerHandlercpp)&DockerProc::getStats, 
+					"DockerProc::getStats",this);
+
+		SetupDockerSsh();
+
+		++num_pids; // Used by OsProc::PublishUpdateAd().
+		return false; // don't exit
+	}
+
 
 	//
 	// This should mean that the container has terminated.
 	//
 	if( pid == JobPid ) {
+
+		daemonCore->Cancel_Timer(updateTid);
+
+		TemporaryPrivSentry sentry(PRIV_ROOT);
 		//
 		// Even running Docker in attached mode, we have a race condition
 		// is exiting when the container exits, not when the docker daemon
@@ -261,11 +354,14 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				imageName = "Unknown"; // shouldn't ever happen
 			}
 
+			/*
 			std::string message;
-			formatstr(message, "Cannot start container: invalid image name: %s", imageName.c_str());
+			formatstr(message, "Cannot start container\n");
 
 			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
 			return VanillaProc::JobReaper( pid, status );
+			*/
+			EXCEPT("Cannot inspect exited container");
 		}
 
 		if( ! dockerAd.LookupBool( "Running", running ) ) {
@@ -338,19 +434,118 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );
 			return VanillaProc::JobReaper( pid, status );
 		}
-		dprintf( D_FULLDEBUG, "Setting status of Docker job to %d.\n", dockerStatus );
-		status = dockerStatus;
+		status = dockerStatus > 128 ? (dockerStatus - 128) : (dockerStatus << 8);
+		dprintf( D_FULLDEBUG, "Setting status of Docker job to %d.\n", status );
 
 		// TODO: Record final job usage.
 
 		// We don't have to do any process clean-up, because container.
 		// We'll do the disk clean-up after we've transferred files.
+
+		// This helps to make ssh-to-job more plausible.
+		return VanillaProc::JobReaper( pid, status );
 	}
 
-	// This helps to make ssh-to-job more plausible.
-	return VanillaProc::JobReaper( pid, status );
+	return 0;
 }
 
+void
+DockerProc::SetupDockerSsh() {
+#ifdef LINUX
+	// First, create a unix domain socket that we can listen on
+	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (uds < 0) {
+		dprintf(D_ALWAYS, "Cannot create unix domain socket for docker ssh_to_job\n");
+		return;
+	}
+
+	// stuff the unix domain socket into a reli sock
+	listener.close();
+	listener.assignDomainSocket(uds);
+
+	// and bind it to a filename in the scratch directory
+	struct sockaddr_un pipe_addr;
+	memset(&pipe_addr, 0, sizeof(pipe_addr));
+	pipe_addr.sun_family = AF_UNIX;
+	unsigned pipe_addr_len;
+
+	std::string workingDir = Starter->GetWorkingDir();
+	std::string pipeName = workingDir + "/.docker_sock";	
+
+	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
+	pipe_addr_len = SUN_LEN(&pipe_addr);
+
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	int rc = bind(uds, (struct sockaddr *)&pipe_addr, pipe_addr_len);
+	if (rc < 0) {
+		dprintf(D_ALWAYS, "Cannot bind unix domain socket at %s for docker ssh_to_job: %d\n", pipeName.c_str(), errno);
+		return;
+	}
+	}
+
+	listen(uds, 50);
+	listener._state = Sock::sock_special;
+	listener._special_state = ReliSock::relisock_listen;
+
+	// now register this socket so we get called when connected to
+	int rc;
+	rc = daemonCore->Register_Socket(
+		&listener,
+		"Docker sshd listener",
+		(SocketHandlercpp)&DockerProc::AcceptSSHClient,
+		"DockerProc::AcceptSSHClient",
+		this);
+	ASSERT( rc >= 0 );
+
+	// and a reaper 
+	execReaperId = daemonCore->Register_Reaper("ExecReaper", (ReaperHandlercpp)&DockerProc::ExecReaper,
+		"ExecReaper", this);
+#else
+	// Shut the compiler up
+	(void)execReaperId;
+#endif
+	return;
+}
+
+
+int
+DockerProc::AcceptSSHClient(Stream *stream) {
+#ifdef LINUX
+	int fds[3];
+	ns = ((ReliSock*)stream)->accept();
+
+	dprintf(D_ALWAYS, "Accepted new connection from ssh client for docker job\n");
+	fds[0] = fdpass_recv(ns->get_file_desc());
+	fds[1] = fdpass_recv(ns->get_file_desc());
+	fds[2] = fdpass_recv(ns->get_file_desc());
+
+	ArgList args;
+	args.AppendArg("-i");
+
+	Env env;
+	MyString env_errors;
+	if( !Starter->GetJobEnv(JobAd,&env,&env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting DockerProc::exec: %s\n", env_errors.Value());
+		return 0;
+	}
+
+	int rc;
+	{
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	rc = DockerAPI::execInContainer(
+	 containerName, "/bin/bash", args, env,fds,execReaperId,execPid);
+	}
+
+	dprintf(D_ALWAYS, "docker exec returned %d for pid %d\n", rc, execPid);
+
+#else
+	// Shut the compiler up
+	(void)stream;
+#endif
+	return KEEP_STREAM;
+}
 
 //
 // JobExit() is called after file transfer.
@@ -610,7 +805,8 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		char *scratchName = 0;
 			// Foreach scratch name...
 		while ( (scratchName=sl.next()) ) {
-			char * hostDir = dirscat(workingDir.c_str(), scratchName);
+			MyString hostdirbuf;
+			const char * hostDir = dirscat(workingDir.c_str(), scratchName, hostdirbuf);
 			std::string volumePath;
 			volumePath.append(hostDir).append(":").append(scratchName);
 			if (mkdir_and_parents_if_needed( hostDir, S_IRWXU, PRIV_USER )) {
@@ -619,7 +815,6 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 			} else {
 				dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", hostDir);
 			}
-			delete [] hostDir; hostDir = NULL;
 		}
 	}
 

@@ -57,6 +57,7 @@
 
 #include "network2.h"
 #include "internet.h"
+#include "internet_obsolete.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,18 +68,6 @@
 
 /* P R O T O T Y P E S */
 char *param(void);
-
-//char* GetIPName(struct in_addr machine_IP)
-//{
-//  char* temp_name;
-//
-//  temp_name = inet_ntoa(machine_IP);
-//  if (temp_name == NULL)
-//    return "<Unresolved IP>";
-//  else
-//    return temp_name;
-//}
-
 
 /******************************************************************************
 *                                                                             *
@@ -125,9 +114,15 @@ int I_bind(int socket_desc, condor_sockaddr& addr, int is_well_known)
   priv_state old_priv = PRIV_UNKNOWN;
 
   //temp = sizeof(struct sockaddr_in);
-  setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
-  setsockopt(socket_desc, SOL_SOCKET, SO_LINGER,
+  int ret = setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
+  if (ret < 0) {
+      fprintf(stderr, "\nWARNING: Cannot set SO_REUSEADDR on socket %d\n", socket_desc);
+  }
+  ret = setsockopt(socket_desc, SOL_SOCKET, SO_LINGER,
 			 (char*)&linger, sizeof(linger));
+  if (ret < 0) {
+      fprintf(stderr, "\nWARNING: Cannot set SO_LINGER on socket %d\n", socket_desc);
+  }
 
   // remember we did this transformation before calling this function...
   // so undo it here.
@@ -188,52 +183,6 @@ int I_bind(int socket_desc, condor_sockaddr& addr, int is_well_known)
 }
 
 
-
-
-/******************************************************************************
-*                                                                             *
-*   Function: gethostnamebyaddr(struct in_addr* addr)                         *
-*                                                                             *
-*******************************************************************************
-*                                                                             *
-*   This function, by using the gethostbyaddr() function, returns a pointer   *
-*   to the name (i.e., string) of a machine.  The machine is specified by     *
-*   the parameter which is an IP address.                                     *
-*                                                                             *
-*   Note: this function may fail if the name server cannot find the name of   *
-*         a machine.  In this case, this function will terminate the program. *
-*                                                                             *
-*******************************************************************************
-*                                                                             *
-*   Parameters:                                                               *
-*        struct in_addr* addr - a pointer to an IP address                    *
-*                                                                             *
-*******************************************************************************
-*                                                                             *
-*   Return Type:                                                              *
-*        char* - a pointer to a static area where a machine's (string) name   *
-*                is held                                                      *
-*                                                                             *
-******************************************************************************/
-
-
-//char* gethostnamebyaddr(struct in_addr* addr)
-//{
-//  struct hostent* h;
-//
-//  h = condor_gethostbyaddr((char*)addr, sizeof(struct in_addr), AF_INET);
-//  if (h == NULL)
-//    {
-//      fprintf(stderr, "\nERROR:\n");
-//      fprintf(stderr, "ERROR:\n");
-//      fprintf(stderr, "ERROR: cannot get host information (pid=%d)\n",
-//	      (int) getpid());
-//      fprintf(stderr, "ERROR:\n");
-//      fprintf(stderr, "ERROR:\n\n");
-//      return NULL;
-//    }
-//  return(h->h_name);
-//}
 
 
 /******************************************************************************

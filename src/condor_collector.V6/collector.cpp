@@ -19,15 +19,9 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_status.h"
-#include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_network.h"
-#include "internet.h"
-#include "condor_io.h"
 #include "condor_attributes.h"
 #include "condor_email.h"
-#include "condor_query.h"
 
 #include "condor_daemon_core.h"
 #include "status_types.h"
@@ -35,10 +29,8 @@
 
 #include "condor_collector.h"
 #include "collector_engine.h"
-#include "HashTable.h"
 #include "hashkey.h"
 
-#include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_universe.h"
 #include "ipv6_hostname.h"
@@ -52,6 +44,10 @@
 
 #include "ccb_server.h"
 
+#ifdef TRACK_QUERIES_BY_SUBSYS
+#include "subsystem_info.h" // so we can track query by client subsys
+#endif
+
 using std::vector;
 using std::string;
 
@@ -62,20 +58,22 @@ extern "C" char* CondorPlatform( void );
 
 CollectorStats CollectorDaemon::collectorStats( false, 0 );
 CollectorEngine CollectorDaemon::collector( &collectorStats );
+int CollectorDaemon::HandleQueryInProcPolicy = HandleQueryInProcSmallTableAndQuery;
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
-char* CollectorDaemon::CollectorName;
+char* CollectorDaemon::CollectorName = NULL;
 Timeslice CollectorDaemon::view_sock_timeslice;
 vector<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
 
 ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
+int CollectorDaemon::__resultLimit__;
 int CollectorDaemon::__failed__;
 List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
 std::string CollectorDaemon::__adType__;
 ExprTree *CollectorDaemon::__filter__;
 
-TrackTotals* CollectorDaemon::normalTotals;
+TrackTotals* CollectorDaemon::normalTotals = NULL;
 int CollectorDaemon::submittorRunningJobs;
 int CollectorDaemon::submittorIdleJobs;
 int CollectorDaemon::submittorNumAds;
@@ -89,16 +87,10 @@ int CollectorDaemon::machinesClaimed;
 int CollectorDaemon::machinesOwner;
 int CollectorDaemon::startdNumAds;
 
-
-ForkWork CollectorDaemon::forkQuery;
-
-ClassAd* CollectorDaemon::ad;
-CollectorList* CollectorDaemon::collectorsToUpdate;
-DCCollector* CollectorDaemon::worldCollector;
+ClassAd* CollectorDaemon::ad = NULL;
+CollectorList* CollectorDaemon::collectorsToUpdate = NULL;
+DCCollector* CollectorDaemon::worldCollector = NULL;
 int CollectorDaemon::UpdateTimerId;
-
-ClassAd *CollectorDaemon::query_any_result;
-ClassAd CollectorDaemon::query_any_request;
 
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
 
@@ -107,7 +99,23 @@ StringList *viewCollectorTypes;
 CCBServer *CollectorDaemon::m_ccb_server;
 bool CollectorDaemon::filterAbsentAds;
 
+Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_high_prio;
+Queue<CollectorDaemon::pending_query_entry_t *> CollectorDaemon::query_queue_low_prio;
+int CollectorDaemon::ReaperId = -1;
+int CollectorDaemon::max_query_workers = 4;
+int CollectorDaemon::reserved_for_highprio_query_workers = 1;
+int CollectorDaemon::max_pending_query_workers = 50;
+int CollectorDaemon::max_query_worktime = 0;
+int CollectorDaemon::active_query_workers = 0;
+int CollectorDaemon::pending_query_workers = 0;
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+bool CollectorDaemon::want_track_queries_by_subsys = false;
+#endif
+
 //---------------------------------------------------------
+
+
 
 // prototypes of library functions
 typedef void (*SIGNAL_HANDLER)();
@@ -117,9 +125,6 @@ extern "C"
 }
  
 //----------------------------------------------------------------
-
-void
-computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringList &expanded_projection);
 
 void CollectorDaemon::Init()
 {
@@ -152,11 +157,6 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
-#ifdef HAVE_EXT_POSTGRESQL
-	daemonCore->Register_CommandWithPayload(QUERY_QUILL_ADS,"QUERY_QUILL_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-#endif /* HAVE_EXT_POSTGRESQL */
-
 	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_MASTER_ADS,"QUERY_MASTER_ADS",
@@ -182,10 +182,6 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_HAD_ADS,"QUERY_HAD_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_CommandWithPayload(QUERY_XFER_SERVICE_ADS,"QUERY_XFER_SERVICE_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_CommandWithPayload(QUERY_LEASE_MANAGER_ADS,"QUERY_LEASE_MANAGER_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_ANY_ADS,"QUERY_ANY_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
     daemonCore->Register_CommandWithPayload(QUERY_GRID_ADS,"QUERY_GRID_ADS",
@@ -196,12 +192,6 @@ void CollectorDaemon::Init()
 	// install command handlers for invalidations
 	daemonCore->Register_CommandWithPayload(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_STARTD_PERM);
-
-#ifdef HAVE_EXT_POSTGRESQL
-	daemonCore->Register_CommandWithPayload(INVALIDATE_QUILL_ADS,"INVALIDATE_QUILL_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
-#endif /* HAVE_EXT_POSTGRESQL */
-
 	daemonCore->Register_CommandWithPayload(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_CommandWithPayload(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
@@ -233,23 +223,11 @@ void CollectorDaemon::Init()
 	daemonCore->Register_CommandWithPayload(INVALIDATE_ADS_GENERIC,
 		"INVALIDATE_ADS_GENERIC", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_CommandWithPayload(INVALIDATE_XFER_SERVICE_ADS,
-		"INVALIDATE_XFER_ENDPOINT_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_CommandWithPayload(INVALIDATE_LEASE_MANAGER_ADS,
-		"INVALIDATE_LEASE_MANAGER_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
     daemonCore->Register_CommandWithPayload(INVALIDATE_GRID_ADS,
         "INVALIDATE_GRID_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
 
 	// install command handlers for updates
-
-#ifdef HAVE_EXT_POSTGRESQL
-	daemonCore->Register_CommandWithPayload(UPDATE_QUILL_AD,"UPDATE_QUILL_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-#endif /* HAVE_EXT_POSTGRESQL */
-
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_STARTD_PERM);
 	daemonCore->Register_CommandWithPayload(MERGE_STARTD_AD,"MERGE_STARTD_AD",
@@ -271,10 +249,6 @@ void CollectorDaemon::Init()
 	daemonCore->Register_CommandWithPayload(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
 	daemonCore->Register_CommandWithPayload(UPDATE_HAD_AD,"UPDATE_HAD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_CommandWithPayload(UPDATE_XFER_SERVICE_AD,"UPDATE_XFER_SERVICE_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_CommandWithPayload(UPDATE_LEASE_MANAGER_AD,"UPDATE_LEASE_MANAGER_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_CommandWithPayload(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
 		(CommandHandler)receive_update,"receive_update", NULL, DAEMON);
@@ -321,14 +295,47 @@ void CollectorDaemon::Init()
 	// add an exponential moving average counter of updates received.
 	daemonCore->dc_stats.NewProbe("Collector", "UpdatesReceived", AS_COUNT | IS_CLS_SUM_EMA_RATE | IF_BASICPUB);
 
-	forkQuery.Initialize( );
+	// add a reaper for our query threads spawned off via Create_Thread
+	if ( ReaperId == -1 ) {
+		ReaperId = daemonCore->Register_Reaper("CollectorDaemon::QueryReaper",
+						(ReaperHandler)&CollectorDaemon::QueryReaper,
+						"CollectorDaemon::QueryReaper()",NULL);
+	}	
 }
+
+collector_runtime_probe HandleQuery_runtime;
+collector_runtime_probe HandleLocate_runtime;
+collector_runtime_probe HandleQueryForked_runtime;
+collector_runtime_probe HandleQueryMissedFork_runtime;
+collector_runtime_probe HandleLocateForked_runtime;
+collector_runtime_probe HandleLocateMissedFork_runtime;
+
+
+template <typename T>
+class _condor_variable_auto_accum_runtime : public _condor_runtime
+{
+public:
+	_condor_variable_auto_accum_runtime(T * store) : runtime(store) { }; // remember where to save result
+	~_condor_variable_auto_accum_runtime() { (*runtime) += elapsed_runtime(); };
+	T * runtime;
+};
+
 
 int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 										 int command,
 										 Stream* sock)
 {
-	ClassAd cad;
+	int return_status = TRUE;
+	pending_query_entry_t *query_entry = NULL;
+	bool handle_in_proc;
+	bool is_locate;
+	KnownSubsystemId clientSubsys = SUBSYSTEM_ID_UNKNOWN;
+	AdTypes whichAds;
+	ClassAd *cad = new ClassAd();
+	ASSERT(cad);
+
+	_condor_variable_auto_accum_runtime<collector_runtime_probe> rt(&HandleQuery_runtime);
+	//double rt_last = rt.begin;
 
 	sock->decode();
 
@@ -338,64 +345,356 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	sock->timeout(1);
 
 	bool ep = CondorThreads::enable_parallel(true);
-	bool res = !getClassAd(sock, cad) || !sock->end_of_message();
+	bool res = !getClassAd(sock, *cad) || !sock->end_of_message();
 	CondorThreads::enable_parallel(ep);
     if( res )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
-        return FALSE;
+		return_status = FALSE;
+		goto END;
     }
 
-		// here we set up a network timeout of a longer duration
-	sock->timeout(QueryTimeout);
-
 	// Initial query handler
-	AdTypes whichAds = receive_query_public( command );
+	whichAds = receive_query_public( command );
 
-	UtcTime begin(true);
+	is_locate = cad->Lookup(ATTR_LOCATION_QUERY) != NULL;
+	if (is_locate) { rt.runtime = &HandleLocate_runtime; }
 
-	// Perform the query
-	List<ClassAd> results;
-	ForkStatus	fork_status = FORK_FAILED;
-	int	   		return_status = 0;
-
-    if (whichAds != (AdTypes) -1) {
-
-			// only fork to handle the query for the "big" tables
-		if ((whichAds == GENERIC_AD) || 
-			(whichAds == ANY_AD) || 
-			(whichAds == STARTD_PVT_AD) || 
-			(whichAds == STARTD_AD) || 
-			(whichAds == MASTER_AD)) {
-
-				fork_status = forkQuery.NewJob();
-				if ( FORK_PARENT == fork_status) {
-					return 1;
-				} 
+	// Figure out whether to handle the query inline or to fork.
+	handle_in_proc = false;
+	if (HandleQueryInProcPolicy == HandleQueryInProcAlways) {
+		handle_in_proc = true;
+	} else if (HandleQueryInProcPolicy == HandleQueryInProcNever) {
+		handle_in_proc = false;
+	} else {
+		bool is_bigtable = ((whichAds == GENERIC_AD) || (whichAds == ANY_AD) || (whichAds == STARTD_PVT_AD) || (whichAds == STARTD_AD) || (whichAds == MASTER_AD));
+		if (HandleQueryInProcPolicy == HandleQueryInProcSmallTable) {
+			handle_in_proc = !is_bigtable;
+		} else {
+			bool small_query = is_locate;
+			if ( ! is_locate) {
+				long long result_limit = 0;
+				bool has_limit = cad->EvaluateAttrInt(ATTR_LIMIT_RESULTS, result_limit);
+				bool has_projection = cad->Lookup(ATTR_PROJECTION);
+				small_query = has_projection && has_limit && (result_limit < 10);
+			}
+			switch (HandleQueryInProcPolicy) {
+				case HandleQueryInProcSmallQuery: handle_in_proc = small_query; break;
+				case HandleQueryInProcSmallTableAndQuery: handle_in_proc = !is_bigtable && small_query; break;
+				case HandleQueryInProcSmallTableOrQuery: handle_in_proc = !is_bigtable || small_query; break;
+			}
 		}
-		// small table query / Child / Fork failed / busy
-		process_query_public (whichAds, &cad, &results);
+	}
+	// If we are not allowed any forked query workers, i guess we are going in-proc
+	if ( max_query_workers < 1 ) {
+		handle_in_proc = true;
 	}
 
-	UtcTime end_write, end_query(true);
+	// Set a deadline on the query socket if the admin specified one in the config,
+	// but if the socket came to us with a previous (shorter) deadline, honor it.
+	if ( max_query_worktime > 0 ) {   // max_query_worktime came from config file
+		time_t new_deadline = time(NULL) + max_query_worktime;
+		time_t sock_deadline = sock->get_deadline();
+		if ( sock_deadline > 0 ) {
+			new_deadline = MIN(new_deadline,sock_deadline);
+		}
+		sock->set_deadline(new_deadline);
+		// dprintf(D_FULLDEBUG,"QueryWorker old sock_deadline = %d, now new_deadline = %d\n",sock_deadline,new_deadline);
+	}
 
-	// send the results via cedar
+	// malloc a query_entry struct.  we must use malloc here, not new, since
+	// DaemonCore::Create_Thread requires a buffer created with malloc(), as it 
+	// will insist on calling free().  Sigh.
+	query_entry = (pending_query_entry_t *) malloc( sizeof(pending_query_entry_t) );
+	ASSERT(query_entry);
+	query_entry->cad = cad;
+	query_entry->is_locate = is_locate;
+	query_entry->subsys[0] = 0;
+	query_entry->sock = sock;
+	query_entry->whichAds = whichAds;
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+	if ( want_track_queries_by_subsys ) {
+		std::string subsys;
+		const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
+		daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
+		if ( ! subsys.empty()) {
+			clientSubsys = getKnownSubsysNum(subsys.c_str());
+			strncpy(query_entry->subsys, subsys.c_str(), COUNTOF(query_entry->subsys));
+			query_entry->subsys[COUNTOF(query_entry->subsys)-1] = 0;
+		}
+	}
+#endif
+
+	// Now we are ready to either invoke a worker thread directly to handle the query,
+	// or enqueue a request to run the worker thread later.
+	if ( handle_in_proc ) {
+		// We want to immediately handle the query inline in this process.
+		// So in this case, we simply directly invoke our worker thread function.
+		dprintf(D_FULLDEBUG,"QueryWorker: about to handle query in-process\n");
+		return_status = receive_query_cedar_worker_thread((void *)query_entry,sock);
+	} else {
+		// Enqueue the query to ultimately run in a forked process created created with
+		// DaemonCore::Create_Thread().  
+		// We add the pending query entry to a queue, and then directly invoke the worker 
+		// thread reaper, as the reaper handles popping entries off the queue and invoking
+		// Create_Thread once where are enough worker slots.
+		// Note in this case, we must return KEEP_STEAM so the socket to our client is not
+		// closed before we handle the request; it will be closed by the reaper ( in parent process)
+		// and/or by daemoncore (in child process).  Either way, don't close it upon exit from this
+		// command handler.
+		int did_we_fork = FALSE;
+
+		// We want to add a query request into the queue.
+		// Decide if it should go into the high priority or low priorirty queue
+		// based upon the Subsystem attribute in the session for this connection;
+		// if the request is from the NEGOTIATOR, it is high priority.
+		// Also high priority if command is from the superuser (i.e. via condor_sos).
+		bool high_prio_query = false;
+		if ( clientSubsys == SUBSYSTEM_ID_UNKNOWN ) {
+			// If we have not yet determined the subsystem, we must do that now.
+			std::string subsys;
+			const std::string &sess_id = static_cast<Sock *>(sock)->getSessionID();
+			daemonCore->getSecMan()->getSessionStringAttribute(sess_id.c_str(),ATTR_SEC_SUBSYSTEM,subsys);
+			if ( ! subsys.empty()) {
+				clientSubsys = getKnownSubsysNum(subsys.c_str());
+				strncpy(query_entry->subsys, subsys.c_str(), COUNTOF(query_entry->subsys));
+				query_entry->subsys[COUNTOF(query_entry->subsys)-1] = 0;
+			}
+		}
+		if ( clientSubsys == SUBSYSTEM_ID_NEGOTIATOR || daemonCore->Is_Command_From_SuperUser(sock) )
+		{
+			high_prio_query = true;
+		}
+
+		// Now that we know if the incoming query is high priority or not,
+		// place it into the proper queue if we don't already have too many pending.
+		if ( ((high_prio_query==false) &&
+			  (active_query_workers + pending_query_workers <  max_query_workers + max_pending_query_workers - reserved_for_highprio_query_workers))
+			 ||
+			 ((high_prio_query==true) &&
+			  (active_query_workers - reserved_for_highprio_query_workers + query_queue_high_prio.Length() <  max_query_workers + max_pending_query_workers))
+		   )
+		{
+			if ( high_prio_query ) {
+				query_queue_high_prio.enqueue( query_entry );
+			} else {
+				query_queue_low_prio.enqueue( query_entry );
+			}
+			did_we_fork = QueryReaper(NULL, -1, -1);
+			cad = NULL; // set this to NULL so we won't delete it below; our reaper will remove it
+			query_entry = NULL; // set this to NULL so we won't free it below; daemoncore will remove it
+			return_status = KEEP_STREAM; // tell daemoncore to not mess with socket when we return
+		} else {
+			dprintf( D_ALWAYS, 
+				"QueryWorker: dropping %s priority query request due to max pending workers of %d ( max %d reserved %d active %d pending %d )\n", 
+				high_prio_query ? "high" : "low",
+				max_pending_query_workers, max_query_workers, reserved_for_highprio_query_workers, active_query_workers, pending_query_workers );
+			collectorStats.global.DroppedQueries += 1;
+		}
+
+		// Update a few statistics
+		if ( !daemonCore->DoFakeCreateThread() ) {  // if we are configured to really fork()...
+			if (did_we_fork == TRUE) {
+				// A new worker was forked off
+				if (is_locate) { rt.runtime = &HandleLocateForked_runtime; } else { rt.runtime = &HandleQueryForked_runtime; }
+			} else {
+				// Did not yet fork off a new worker cuz we are at a limit
+				if (is_locate) { rt.runtime = &HandleLocateMissedFork_runtime; } else { rt.runtime = &HandleQueryMissedFork_runtime; }
+			}
+		}
+	}
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+	if ( want_track_queries_by_subsys ) {
+		// count the number of queries for each client subsystem.
+		if (clientSubsys >= 0 && clientSubsys < SUBSYSTEM_ID_COUNT) {
+			if (handle_in_proc) {
+				collectorStats.global.InProcQueriesFrom[clientSubsys] += 1;
+			} else {
+				collectorStats.global.ForkQueriesFrom[clientSubsys] += 1;
+			}
+		}
+	}
+#endif
+
+END:
+    // all done
+	delete cad;
+	free(query_entry);
+	return return_status;
+}
+
+
+// Return 1 if forked a worker, 0 if not, and -1 upon an error.
+int CollectorDaemon::QueryReaper(Service *, int pid, int /* exit_status */ )
+{
+	if ( pid >= 0 ) {
+		dprintf(D_FULLDEBUG,
+			"QueryWorker: Child %d done\n", pid);
+		if (active_query_workers > 0 ) {
+			active_query_workers--;
+		}
+		collectorStats.global.ActiveQueryWorkers = active_query_workers;
+	}
+
+	// Grab a queue_entry to service, ignoring "stale" (old) entries.
+	bool high_prio_query;
+	pending_query_entry_t * query_entry = NULL;	
+	while ( query_entry == NULL ) {
+		// Pull of an entry from our high_prio queue; if nothing there, grab
+		// one from our low prio queue.  Ignore "stale" (old) requests.
+
+		high_prio_query = query_queue_high_prio.Length() > 0;
+
+		// Dequeue a high priority entry if worker slots available.
+		if ( active_query_workers < max_query_workers ) {
+			query_queue_high_prio.dequeue(query_entry);
+			// If high priority queue is empty, dequeue a low priority entry
+			// if a worker slot (minus those reserved only for high prioirty) is available.
+			if ((query_entry == NULL) &&
+			    (active_query_workers < (max_query_workers - reserved_for_highprio_query_workers)))
+			{
+				query_queue_low_prio.dequeue(query_entry);
+			}
+		}
+
+		// Update our pending stats counters.  Note we need to do this regardless
+		// of if query_entry==NULL, since we may be here because something was either
+		// recently added into the queue, or recently removed from the queue.
+		pending_query_workers = query_queue_high_prio.Length() + query_queue_low_prio.Length();
+		collectorStats.global.PendingQueries = pending_query_workers;
+
+		// If query_entry==NULL, we are not forking anything now, so we're done for now
+		if ( query_entry == NULL ) {
+			// If we are not forking because we hit fork limits, dprintf
+			if ( pending_query_workers > 0  ) {
+				dprintf( D_ALWAYS,
+					"QueryWorker: delay forking %s priority query because too many workers ( max %d reserved %d active %d pending %d ) \n",
+					high_prio_query ? "high" : "low",
+					max_query_workers, reserved_for_highprio_query_workers, active_query_workers, pending_query_workers );
+			}
+			return 0;
+		}
+
+		// If we are here because a fork worker just exited (pid >= 0), or
+		// if there are still more pending queries in the queue, then it is possible
+		// that the query_entry we are about to service has been sitting around
+		// in the queue for some time.  So we need to check if it is "stale"
+		// before we spend time forking.
+		if ( pid >= 0 || pending_query_workers > 0 ) {
+			// Consider a query_request to be stale if
+			//   a) our deadline on the socket has expired, or
+			//   b) the client has closed the TCP socket.
+			// Note that we can figure out (b) by asking CEDAR if
+			// the socket is "readReady()", which will return true if
+			// either the socket is closed or the socket has data waiting to be read.
+			// Since we know there should be nothing more to read on this socket (the
+			// client should now be awaiting our reponse), if readReady() return true
+			// we can safely assume that TCP thinks the socket has been closed.
+			if ( query_entry->sock->deadline_expired() ||
+				static_cast<Sock *>(query_entry->sock)->readReady() )
+			{
+				dprintf( D_ALWAYS, 
+					"QueryWorker: dropping stale query request because %s ( max %d active %d pending %d )\n", 
+					query_entry->sock->deadline_expired() ? "max worktime expired" : "client gone",
+					max_query_workers, active_query_workers, pending_query_workers );
+				collectorStats.global.DroppedQueries += 1;				
+				// now deallocate everything with this query_entry
+				delete query_entry->sock;
+				delete query_entry->cad;
+				free(query_entry); 
+				query_entry = NULL;  // so we will loop and dequeue another entry
+			}
+		}
+	}  // end of while queue_entry == NULL
+
+	// If we have made it here, we are allowed to fork another worker
+	// to handle the query represented by query_entry. Fork one!
+	// First stash a copy of query_entry->sock and query_entry->cad so 
+	// we can deallocate the memory associated with these after a succesfull 
+	// call to Create_Thread - we need to stash them away because DaemonCore will
+	// free the query_entry struct itself.
+	Stream *sock = query_entry->sock;
+	query_entry->sock = NULL;
+	ClassAd *query_classad = query_entry->cad;
+	int tid = daemonCore->
+		Create_Thread((ThreadStartFunc)&CollectorDaemon::receive_query_cedar_worker_thread,
+		    (void *)query_entry, sock, ReaperId);
+	if (tid == FALSE) {
+		dprintf(D_ALWAYS,
+				"ERROR: Create_Thread failed trying to fork a QueryWorker!\n");
+		free(query_entry); // daemoncore won't free this if Create_Thread fails
+		delete sock;
+		delete query_classad;
+		return -1;
+	}
+
+	// If we made it here, we forked off another worker. 
+
+	// Increment our count of active workers
+	active_query_workers++;
+	collectorStats.global.ActiveQueryWorkers = active_query_workers;
+
+	// Also close query_entry->sock since DaemonCore
+	// will have cloned this socket for the child, and we have no need to write anything
+	// out here in the parent once the child finishes.
+	delete sock;
+	sock = NULL;
+
+	// Also deallocate the memory associated with the stashed in query_classad.
+	// It is safe to do this now, because if Create_Thread already forked the child
+	// now has a copy, or the Create_Thread ran in-proc it has already completed.
+	delete query_classad;
+	query_classad = NULL;
+
+	dprintf(D_ALWAYS,
+			"QueryWorker: forked new %sworker with id %d ( max %d active %d pending %d )\n",
+			high_prio_query ? "high priority " : "", tid,
+			max_query_workers, active_query_workers, pending_query_workers);
+
+	return 1;
+}
+
+
+int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Stream* sock)
+{
+	int return_status = TRUE;
+	double begin = condor_gettimestamp_double();
+	List<ClassAd> results;
+
+	// Pull out relavent state from query_entry
+	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
+	ClassAd *cad = query_entry->cad;
+	bool is_locate = query_entry->is_locate;
+	AdTypes whichAds = query_entry->whichAds;
+
+	// Perform the query
+
+	if (whichAds != (AdTypes) -1) {
+		process_query_public (whichAds, cad, &results);
+	}
+
+	double end_query = condor_gettimestamp_double();
+	double end_write = 0.0;
+
+	// send the results via cedar			
+	sock->timeout(QueryTimeout); // set up a network timeout of a longer duration
 	sock->encode();
 	results.Rewind();
 	ClassAd *curr_ad = NULL;
 	int more = 1;
 	
-
 		// See if query ad asks for server-side projection
 	string projection = "";
 		// turn projection string into a set of attributes
 	classad::References proj;
 	bool evaluate_projection = false;
-	if (cad.LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
+	if (cad->LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
 		StringTokenIterator list(projection);
 		const std::string * attr;
 		while ((attr = list.next_string())) { proj.insert(*attr); }
-	} else if (cad.Lookup(ATTR_PROJECTION)) {
+	} else if (cad->Lookup(ATTR_PROJECTION)) {
 		// if projection is not a simple string, then assume that evaluating it as a string in the context of the ad will work better
 		// (the negotiator sends this sort of projection)
 		evaluate_projection = true;
@@ -411,10 +710,12 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		// our persistent collector ad.
 		ClassAd * stats_ad = NULL;
 		if ((whichAds == COLLECTOR_AD) && collector.isSelfAd(curr_ad)) {
+			dprintf(D_ALWAYS,"Query includes collector's self ad\n");
 			// update stats in the collector ad before we return it.
 			MyString stats_config;
-			cad.LookupString("STATISTICS_TO_PUBLISH",stats_config);
+			cad->LookupString("STATISTICS_TO_PUBLISH",stats_config);
 			if (stats_config != "stored") {
+				dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.Value());
 				stats_ad = new ClassAd();
 				daemonCore->dc_stats.Publish(*stats_ad, stats_config.Value());
 				daemonCore->monitor_data.ExportData(stats_ad, true);
@@ -427,14 +728,21 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		if (evaluate_projection) {
 			proj.clear();
 			projection.clear();
-			if (cad.EvalString(ATTR_PROJECTION, curr_ad, projection) && ! projection.empty()) {
+			if (cad->EvalString(ATTR_PROJECTION, curr_ad, projection) && ! projection.empty()) {
 				StringTokenIterator list(projection);
 				const std::string * attr;
 				while ((attr = list.next_string())) { proj.insert(*attr); }
 			}
 		}
 
-        if (!sock->code(more) || !putClassAd(sock, *curr_ad, 0, proj.empty() ? NULL : &proj))
+		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, 0, proj.empty() ? NULL : &proj));
+        
+		if (stats_ad) {
+			stats_ad->Unchain();
+			delete stats_ad;
+		}
+
+		if (send_failed)
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
@@ -442,11 +750,14 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			goto END;
         }
 
-		if (stats_ad) {
-			stats_ad->Unchain();
-			delete stats_ad;
+		if (sock->deadline_expired()) {
+			dprintf( D_ALWAYS,
+				"QueryWorker: max_worktime expired while sending query result to client -- aborting\n");
+			return_status = 0;
+			goto END;
 		}
-    }
+
+	} // end of while loop for next result ad to send
 
 	// end of query response ...
 	more = 0;
@@ -460,26 +771,27 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	{
 		dprintf (D_ALWAYS, "Error flushing CEDAR socket\n");
 	}
-	return_status = 1;
 
-	end_write.getTime();
+	end_write = condor_gettimestamp_double();
 
 	dprintf (D_ALWAYS,
-			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; peer=%s; projection={%s}\n",
+			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}\n",
 			 __numAds__,
 			 __failed__,
-			 end_query.difference(begin),
-			 end_write.difference(end_query),
+			 end_query - begin,
+			 end_write - end_query,
 			 AdTypeToString(whichAds),
 			 ExprTreeToString(__filter__),
+			 is_locate,
+			 (__resultLimit__ == INT_MAX) ? 0 : __resultLimit__,
+			 query_entry->subsys,
 			 sock->peer_description(),
 			 projection.c_str());
+END:
+	
+	// All done.  Deallocate memory allocated in this method.  Note that DaemonCore 
+	// will supposedly free() the query_entry struct itself and also delete sock.
 
-    // all done; let daemon core will clean up connection
-  END:
-	if ( FORK_CHILD == fork_status ) {
-		forkQuery.WorkerDone( );		// Never returns
-	}
 	return return_status;
 }
 
@@ -500,13 +812,6 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = SCHEDD_AD;
 		break;
 
-#ifdef HAVE_EXT_POSTGRESQL
-	  case QUERY_QUILL_ADS:
-		dprintf (D_ALWAYS, "Got QUERY_QUILL_ADS\n");
-		whichAds = QUILL_AD;
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
-		
 	  case QUERY_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_SUBMITTOR_ADS\n");
 		whichAds = SUBMITTOR_AD;
@@ -557,16 +862,6 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = HAD_AD;
 		break;
 
-	  case QUERY_XFER_SERVICE_ADS:
-		dprintf (D_FULLDEBUG,"Got QUERY_XFER_SERVICE_ADS\n");
-		whichAds = XFER_SERVICE_AD;
-		break;
-
-	  case QUERY_LEASE_MANAGER_ADS:
-		dprintf (D_FULLDEBUG,"Got QUERY_LEASE_MANAGER_ADS\n");
-		whichAds = LEASE_MANAGER_AD;
-		break;
-
 	  case QUERY_GENERIC_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_GENERIC_ADS\n");
 		whichAds = GENERIC_AD;
@@ -613,9 +908,6 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 				 sock->type() == Stream::reli_sock ? "TCP" : "UDP" );
         return FALSE;
     }
-#if defined(ADD_TARGET_SCOPING)
-	RemoveExplicitTargetRefs( cad );
-#endif
 
     // cancel timeout --- collector engine sets up its own timeout for
     // collecting further information
@@ -632,13 +924,6 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 		dprintf (D_ALWAYS, "Got INVALIDATE_SCHEDD_ADS\n");
 		whichAds = SCHEDD_AD;
 		break;
-
-#ifdef HAVE_EXT_POSTGRESQL
-	  case INVALIDATE_QUILL_ADS:
-		dprintf (D_ALWAYS, "Got INVALIDATE_QUILL_ADS\n");
-		whichAds = QUILL_AD;
-		break;
-#endif /* HAVE_EXT_POSTGRESQL */
 		
 	  case INVALIDATE_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_SUBMITTOR_ADS\n");
@@ -673,16 +958,6 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	  case INVALIDATE_HAD_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_HAD_ADS\n");
 		whichAds = HAD_AD;
-		break;
-
-	  case INVALIDATE_XFER_SERVICE_ADS:
-		dprintf (D_ALWAYS, "Got INVALIDATE_XFER_SERVICE_ADS\n");
-		whichAds = XFER_SERVICE_AD;
-		break;
-
-	  case INVALIDATE_LEASE_MANAGER_ADS:
-		dprintf (D_ALWAYS, "Got INVALIDATE_LEASE_MANAGER_ADS\n");
-		whichAds = LEASE_MANAGER_AD;
 		break;
 
 	  case INVALIDATE_STORAGE_ADS:
@@ -744,10 +1019,19 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 }
 
 
+collector_runtime_probe CollectorEngine_receive_update_runtime;
+collector_runtime_probe CollectorEngine_ru_pre_collect_runtime;
+collector_runtime_probe CollectorEngine_ru_collect_runtime;
+collector_runtime_probe CollectorEngine_ru_plugins_runtime;
+collector_runtime_probe CollectorEngine_ru_forward_runtime;
+collector_runtime_probe CollectorEngine_ru_stash_socket_runtime;
+
 int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 {
     int	insert;
 	ClassAd *cad;
+	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_receive_update_runtime);
+	double rt_last = rt.begin;
 
 	daemonCore->dc_stats.AddToAnyProbe("UpdatesReceived", 1);
 
@@ -757,6 +1041,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	// get endpoint
 	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
+	CollectorEngine_ru_pre_collect_runtime += rt.tick(rt_last);
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
 	{
@@ -782,6 +1067,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		return FALSE;
 
 	}
+	CollectorEngine_ru_collect_runtime += rt.tick(rt_last);
 
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
@@ -789,6 +1075,8 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 #if defined(HAVE_DLOPEN) && !defined(DARWIN)
 	CollectorPluginManager::Update(command, *cad);
 #endif
+
+	CollectorEngine_ru_plugins_runtime += rt.tick(rt_last);
 
 	if (viewCollectorTypes) {
 		forward_classad_to_view_collector(command,
@@ -798,9 +1086,13 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
         send_classad_to_sock(command, cad);
 	}
 
+	CollectorEngine_ru_forward_runtime += rt.tick(rt_last);
+
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
-		return stashSocket( (ReliSock *)sock );
+		int rv = stashSocket( (ReliSock *)sock );
+		CollectorEngine_ru_stash_socket_runtime += rt.tick(rt_last);
+		return rv;
 	}
 
 	// let daemon core clean up the socket
@@ -985,6 +1277,9 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 		// Found a match 
         __numAds__++;
 		__ClassAdResultList__->Append(cad);
+		if (__numAds__ >= __resultLimit__) {
+			return 0; // tell it to stop iterating, we have all the results we want
+		}
     } else {
 		__failed__++;
 	}
@@ -992,13 +1287,11 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
     return 1;
 }
 
+
 void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,
 											List<ClassAd>* results)
 {
-#if defined(ADD_TARGET_SCOPING)
-	RemoveExplicitTargetRefs( *query );
-#endif
 	// set up for hashtable scan
 	__query__ = query;
 	__numAds__ = 0;
@@ -1019,6 +1312,11 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	if ( __filter__ == NULL ) {
 		dprintf (D_ALWAYS, "Query missing %s\n", ATTR_REQUIREMENTS );
 		return;
+	}
+
+	__resultLimit__ = INT_MAX; // no limit
+	if ( ! query->LookupInteger(ATTR_LIMIT_RESULTS, __resultLimit__) || __resultLimit__ <= 0) {
+		__resultLimit__ = INT_MAX; // no limit
 	}
 
 	// See if we should exclude Collector Ads from generic queries.  Still
@@ -1044,11 +1342,11 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 
 	// if ATTR_ABSENT is not alrady referenced in the query.
 	if ( filterAbsentAds ) {	// filterAbsentAds is true if ABSENT_REQUIREMENTS defined
-		StringList machine_refs;  // machine attrs referenced by requirements
+		classad::References machine_refs;  // machine attrs referenced by requirements
 		bool checks_absent = false;
 
-		query->GetReferences(ATTR_REQUIREMENTS,NULL,&machine_refs);
-		checks_absent = machine_refs.contains_anycase( ATTR_ABSENT );
+		GetReferences(ATTR_REQUIREMENTS,*query,NULL,&machine_refs);
+		checks_absent = machine_refs.count( ATTR_ABSENT );
 		if (!checks_absent) {
 			MyString modified_filter;
 			modified_filter.formatstr("(%s) && (%s =!= True)",
@@ -1258,11 +1556,6 @@ void CollectorDaemon::reportToDevelopers (void)
 	// If we don't have any machines reporting to us, bail out early
 	if (machinesTotal == 0) return;
 
-	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
-		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
-		return;
-	}
-
 	// Accumulate our monthly maxes
 	ustatsMonthly.setMax( ustatsAccum );
 
@@ -1277,13 +1570,14 @@ void CollectorDaemon::reportToDevelopers (void)
 	fprintf( mailer , "    %s\n", CondorVersion() );
 	fprintf( mailer , "    %s\n\n", CondorPlatform() );
 
-	delete normalTotals;
 	normalTotals = &totals;
 
 	if (!collector.walkHashTable (STARTD_AD, reportStartdScanFunc)) {
 		dprintf (D_ALWAYS, "Error making monthly report (startd scan) \n");
 	}
-		
+
+	normalTotals = NULL;
+
 	// output totals summary to the mailer
 	totals.displayTotals( mailer, 20 );
 
@@ -1330,6 +1624,33 @@ void CollectorDaemon::Config()
 
     if (CollectorName) free (CollectorName);
     CollectorName = param("COLLECTOR_NAME");
+
+	HandleQueryInProcPolicy = HandleQueryInProcSmallTableOrQuery;
+	auto_free_ptr policy(param("HANDLE_QUERY_IN_PROC_POLICY"));
+	if (policy) {
+		bool boolval;
+		if (string_is_boolean_param(policy, boolval)) {
+			if( boolval ) {
+				HandleQueryInProcPolicy = HandleQueryInProcAlways;
+			} else {
+				HandleQueryInProcPolicy = HandleQueryInProcNever;
+			}
+		} else if (YourStringNoCase("always") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcAlways;
+		} else if (YourStringNoCase("never") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcNever;
+		} else if (YourStringNoCase("small_table") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcSmallTable;
+		} else if (YourStringNoCase("small_query") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcSmallQuery;
+		} else if (YourStringNoCase("small_table_or_query") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcSmallTableOrQuery;
+		} else if (YourStringNoCase("small_table_and_query") == policy) {
+			HandleQueryInProcPolicy = HandleQueryInProcSmallTableAndQuery;
+		} else {
+			dprintf(D_ALWAYS, "Unknown value for HANDLE_QUERY_IN_PROC_POLICY, using default of SMALL_TABLE_OR_QUERY");
+		}
+	}
 
 	// handle params for Collector updates
 	if ( UpdateTimerId >= 0 ) {
@@ -1430,6 +1751,15 @@ void CollectorDaemon::Config()
 	}
 
 	collector.m_allowOnlyOneNegotiator = param_boolean("COLLECTOR_ALLOW_ONLY_ONE_NEGOTIATOR", false);
+	// This it temporary (for 8.7.0) just in case we need to turn off the new getClassAdEx options
+	collector.m_get_ad_options = param_integer("COLLECTOR_GETAD_OPTIONS", GET_CLASSAD_FAST | GET_CLASSAD_LAZY_PARSE);
+	collector.m_get_ad_options &= (GET_CLASSAD_LAZY_PARSE | GET_CLASSAD_FAST | GET_CLASSAD_NO_CACHE);
+	MyString opts;
+	if (collector.m_get_ad_options & GET_CLASSAD_FAST) { opts += "fast "; }
+	if (collector.m_get_ad_options & GET_CLASSAD_NO_CACHE) { opts += "no-cache "; }
+	else if (collector.m_get_ad_options & GET_CLASSAD_LAZY_PARSE) { opts += "lazy-parse "; }
+	if (opts.empty()) { opts = "none "; }
+	dprintf(D_ALWAYS, "COLLECTOR_GETAD_OPTIONS set to %s(0x%x)\n", opts.c_str(), collector.m_get_ad_options);
 
 	tmp = param(COLLECTOR_REQUIREMENTS);
 	MyString collector_req_err;
@@ -1515,6 +1845,10 @@ void CollectorDaemon::Config()
 
 	bool collector_daemon_stats = param_boolean ("COLLECTOR_DAEMON_STATS",true);
 	collectorStats.setDaemonStats( collector_daemon_stats );
+	if (param_boolean("RESET_DC_STATS_ON_RECONFIG",false)) {
+		daemonCore->dc_stats.Clear();
+		collectorStats.global.Clear();
+	}
 
 	history_size = param_integer ("COLLECTOR_DAEMON_HISTORY_SIZE",128);
 	collectorStats.setDaemonHistorySize( history_size );
@@ -1522,8 +1856,25 @@ void CollectorDaemon::Config()
 	time_t garbage_interval = param_integer( "COLLECTOR_STATS_SWEEP", DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL );
 	collectorStats.setGarbageCollectionInterval( garbage_interval );
 
-    int size = param_integer ("COLLECTOR_QUERY_WORKERS", 2);
-    forkQuery.setMaxWorkers( size );
+    max_query_workers = param_integer ("COLLECTOR_QUERY_WORKERS", 4, 0);
+	max_pending_query_workers = param_integer ("COLLECTOR_QUERY_WORKERS_PENDING", 50, 0);
+	max_query_worktime = param_integer("COLLECTOR_QUERY_MAX_WORKTIME",0,0);
+	reserved_for_highprio_query_workers = param_integer("COLLECTOR_QUERY_WORKERS_RESERVE_FOR_HIGH_PRIO",1,0);
+
+	// max_query_workers had better be at least one greater than reserved_for_highprio_query_workers,
+	// or condor_status queries will never be answered.
+	// note we do allow max_query_workers to be zero, which means do all queries in-proc - this
+	// is useful for developers profiling the code, since profiling forked workers is a pain.
+	if ( max_query_workers - reserved_for_highprio_query_workers < 1) {
+		reserved_for_highprio_query_workers = MAX(0, (max_query_workers - 1) );
+		dprintf(D_ALWAYS,
+				"Warning: Resetting COLLECTOR_QUERY_WORKERS_RESERVE_FOR_HIGH_PRIO to %d\n",
+				reserved_for_highprio_query_workers);
+	}
+
+#ifdef TRACK_QUERIES_BY_SUBSYS
+	want_track_queries_by_subsys = param_boolean("COLLECTOR_TRACK_QUERY_BY_SUBSYS",true);
+#endif
 
 	bool ccb_server_enabled = param_boolean("ENABLE_CCB_SERVER",true);
 	if( ccb_server_enabled ) {
@@ -1559,11 +1910,16 @@ void CollectorDaemon::Exit()
 	// Allowing the stack to clean up worker processes is problematic
 	// because the collector will be shutdown and the daemonCore
 	// object deleted by the time the worker cleanup is attempted.
-	forkQuery.DeleteAll( );
+	// forkQuery.DeleteAll( );
 	if ( UpdateTimerId >= 0 ) {
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
 	}
+	free( CollectorName );
+	delete ad;
+	delete collectorsToUpdate;
+	delete worldCollector;
+	delete m_ccb_server;
 	return;
 }
 
@@ -1577,11 +1933,16 @@ void CollectorDaemon::Shutdown()
 	// Allowing the stack to clean up worker processes is problematic
 	// because the collector will be shutdown and the daemonCore
 	// object deleted by the time the worker cleanup is attempted.
-	forkQuery.DeleteAll( );
+	// forkQuery.DeleteAll( );
 	if ( UpdateTimerId >= 0 ) {
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
 	}
+	free( CollectorName );
+	delete ad;
+	delete collectorsToUpdate;
+	delete worldCollector;
+	delete m_ccb_server;
 	return;
 }
 
@@ -1625,7 +1986,6 @@ void CollectorDaemon::sendCollectorAd()
 
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad, NULL );
-
     daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
 
@@ -1951,25 +2311,3 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 	return 0;
 }
 
-	// Given a full ad, and a StringList of expressions, compute
-	// the list of all attributes those exressions depend on.
-
-	// So, if the projection is passed in "foo", and foo is an expression
-	// that expands to bar, we return bar
-	
-void
-computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringList &expanded_projection) {
-    projectionList->Rewind();
-
-		// For each expression in the list...
-	MyString attr;
-	while (projectionList->Next(attr)) {
-
-			// Get the indirect attributes
-		if( !full_ad->GetExprReferences(attr.Value(), &expanded_projection, NULL) ) {
-			dprintf(D_FULLDEBUG,
-				"computeProjection failed to parse "
-				"requested ClassAd expression: %s\n",attr.Value());
-		}
-	}
-}

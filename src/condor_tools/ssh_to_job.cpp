@@ -449,13 +449,6 @@ bool SSHToJob::execute_ssh()
 			return false;
 		}
 
-		// As long as we have the job, check to see if it is docker, and warn
-		bool isDockerJob = false;
-		if (jobAd->LookupBool(ATTR_WANT_DOCKER, isDockerJob)) {
-			fprintf(stderr, "Warning: connecting to a docker job will allow acces to input and output sandbox, but not the rest of the container\n");
-		}
-
-
 		std::string gridResource, vmName, kpName;
 		bool gotGridResource = jobAd->EvaluateAttrString( ATTR_GRID_RESOURCE, gridResource );
 		bool gotVMName = jobAd->EvaluateAttrString( ATTR_EC2_REMOTE_VM_NAME, vmName );

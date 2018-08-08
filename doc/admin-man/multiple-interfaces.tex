@@ -112,10 +112,8 @@ Here are descriptions of the limitations.
   each with a separate IP, the daemon must choose which two IP addresses to
   advertise so that other daemons and tools can connect to it.
 
-  By default, HTCondor advertises the IP address of the network interface
-  used to contact the \Condor{collector} as its public address,
-  since this is the most likely to be
-  accessible to other processes that query the same \Condor{collector}.
+  By default, HTCondor advertises the most public IP address available
+  on the machine.
   The \Macro{NETWORK\_INTERFACE} configuration variable can be used 
   to specify the public IP address HTCondor should advertise, and
   \Macro{PRIVATE\_NETWORK\_INTERFACE}, along with

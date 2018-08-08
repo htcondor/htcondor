@@ -52,7 +52,7 @@ LocalUserLog::init( const std::vector<const char*>& filename, bool is_xml,
 	priv_state priv;
 	priv = set_user_priv();
 
-	bool ret = u_log.initialize(filename, cluster, proc, subproc, NULL);
+	bool ret = u_log.initialize(filename, cluster, proc, subproc);
 	if( ! ret ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to initialize Starter's UserLog, aborting\n" );

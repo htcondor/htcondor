@@ -50,7 +50,7 @@ GridUniverseLogic::GridUniverseLogic()
 	ASSERT( gman_pid_table == NULL );
 
 	// Make our hashtable
-	gman_pid_table = new GmanPidTable_t(10,&MyStringHash);
+	gman_pid_table = new GmanPidTable_t(hashFunction);
 
 	// Register a reaper for this grid managers
 	rid = daemonCore->Register_Reaper("GManager",
@@ -224,18 +224,15 @@ GridUniverseLogic::signal_all(int sig)
 
 
 // Note: caller must deallocate return value w/ delete []
-char *
-GridUniverseLogic::scratchFilePath(gman_node_t *gman_node)
+const char *
+GridUniverseLogic::scratchFilePath(gman_node_t *gman_node, MyString & path)
 {
 	MyString filename;
 	filename.formatstr("%s%p.%d",scratch_prefix,
 					gman_node,daemonCore->getpid());
-	char *prefix = temp_dir_path();
+	auto_free_ptr prefix(temp_dir_path());
 	ASSERT(prefix);
-		// note: dircat allocates with new char[]
-	char *finalpath = dircat(prefix,filename.Value());
-	free(prefix);
-	return finalpath;
+	return dircat(prefix,filename.Value(),path);
 }
 
 
@@ -323,7 +320,8 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 	// Remove node from our hash table
 	gman_pid_table->remove(owner);
 	// Remove any scratch directory used by this gridmanager
-	char *scratchdir = scratchFilePath(gman_node);
+	MyString scratchdirbuf;
+	const char *scratchdir = scratchFilePath(gman_node, scratchdirbuf);
 	ASSERT(scratchdir);
 	if ( IsDirectory(scratchdir) && 
 		 init_user_ids(gman_node->owner, gman_node->domain) ) 
@@ -346,7 +344,6 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 		set_priv(saved_priv);
 		uninit_user_ids();
 	}
-	delete [] scratchdir;
 
 	// Reclaim memory from the node itself
 	delete gman_node;
@@ -553,7 +550,8 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	// command-line arguments to tell where it is.
 	bool failed = false;
 	gman_node = new gman_node_t;
-	char *finalpath = scratchFilePath(gman_node);
+	MyString pathbuf;
+	const char *finalpath = scratchFilePath(gman_node, pathbuf);
 	priv_state saved_priv = set_user_priv();
 	if ( (mkdir(finalpath,0700)) < 0 ) {
 		// mkdir failed.  
@@ -565,7 +563,6 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	uninit_user_ids();
 	args.AppendArg("-S");	// -S = "ScratchDir" argument
 	args.AppendArg(finalpath);
-	delete [] finalpath;
 	if ( failed ) {
 		// we already did dprintf reason to the log...
 		free(gman_binary);

@@ -31,6 +31,7 @@
 #include "spooled_job_files.h"
 #include "condor_debug.h"
 #include "internet.h"
+#include "internet_obsolete.h"
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
@@ -58,7 +59,7 @@
 
 extern "C" {
 	int JobIsStandard();
-	void NotifyUser( char *buf, PROC *proc );
+	void NotifyUser( char *buf, int reason, PROC *proc );
 	int terminate_is_pending(void);
 	void publishNotifyEmail( FILE* mailer, char* buf, PROC* proc );
 	void HoldJob( const char* long_reason, const char* short_reason,
@@ -126,7 +127,7 @@ terminate_is_pending(void)
 }
 
 void
-NotifyUser( char *buf, PROC *proc )
+NotifyUser( char *buf, int reason, PROC *proc )
 {
         FILE *mailer;
         char subject[ BUFSIZ ];	
@@ -139,36 +140,6 @@ NotifyUser( char *buf, PROC *proc )
 		if( ! JobAd ) {
 			dprintf( D_ALWAYS, "In NotifyUser() w/ NULL JobAd!\n" );
 			return;
-		}
-
-			// email HACK for John Bent <johnbent@cs.wisc.edu>
-			// added by Derek Wright <wright@cs.wisc.edu> 2005-02-20
-		char* email_cc = param( "EMAIL_NOTIFICATION_CC" );
-		if( email_cc ) {
-			bool allows_cc = true;
-			int bool_val;
-			if( JobAd->LookupBool(ATTR_ALLOW_NOTIFICATION_CC, bool_val) ) {
-				dprintf( D_FULLDEBUG, "Job defined %s to %s\n",
-						 ATTR_ALLOW_NOTIFICATION_CC,
-						 bool_val ? "TRUE" : "FALSE" );
-				allows_cc = (bool)bool_val;
-			} else {
-				dprintf( D_FULLDEBUG, "%s not defined, assuming TRUE\n",
-						 ATTR_ALLOW_NOTIFICATION_CC );
-			}
-			if( allows_cc ) {
-				dprintf( D_FULLDEBUG, "%s is TRUE, sending email to \"%s\"\n",
-						 ATTR_ALLOW_NOTIFICATION_CC, email_cc );
-				mailer = email_open( email_cc, subject );
-				publishNotifyEmail( mailer, buf, proc );
-				email_close( mailer );
-			} else {
-				dprintf( D_FULLDEBUG,
-						 "%s is FALSE, not sending email copy\n",
-						 ATTR_ALLOW_NOTIFICATION_CC );
-			}
-			free( email_cc );
-			email_cc = NULL;
 		}
 
         /* If user loaded program incorrectly, always send a message. */
@@ -196,7 +167,8 @@ NotifyUser( char *buf, PROC *proc )
                 }
         }
 
-		mailer = email_user_open(JobAd, subject);
+		Email em;
+		mailer = em.open_stream( JobAd, reason, subject );
         if( mailer == NULL ) {
                 dprintf(D_ALWAYS,
                         "Shadow: Cannot notify user( %s, %s, %s )\n",
@@ -205,7 +177,7 @@ NotifyUser( char *buf, PROC *proc )
 				return;
         }
 		publishNotifyEmail( mailer, buf, proc );
-		email_close(mailer);
+		em.send();
 }
 
 
@@ -396,7 +368,8 @@ HoldJob( const char* long_reason, const char* short_reason, int reason_code,
 		dprintf( D_ALWAYS, "Failed to commit updated job queue status!\n" );
 	}
 
-	mailer = email_user_open(JobAd, subject);
+	Email em;
+	mailer = em.open_stream( JobAd, JOB_SHOULD_HOLD, subject );
 	if( ! mailer ) {
 			// User didn't want email, so just exit now with the right
 			// value so the schedd actually puts the job on hold.
@@ -419,7 +392,7 @@ HoldJob( const char* long_reason, const char* short_reason, int reason_code,
 	}
 	fprintf( mailer, "\nis being put on hold.\n\n" );
 	fprintf( mailer, "%s", long_reason );
-	email_close(mailer);
+	em.send();
 
 		// Now that the user knows why, exit with the right code. 
 	dprintf( D_ALWAYS, "Job going into Hold state.\n");
@@ -524,8 +497,6 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 	ASSERT (JobAd != NULL );
 
 	switch( WTERMSIG(status) ) {
-	 case -1: /* On Digital Unix, WTERMSIG returns -1 if we weren't
-				 killed by a sig.  This is the same case as sig 0 */  
 	 case 0: /* If core, bad executable -- otherwise a normal exit */
 		if( WCOREDUMP(status) && WEXITSTATUS(status) == ENOEXEC ) {
 			(void)sprintf( notification, "is not executable." );

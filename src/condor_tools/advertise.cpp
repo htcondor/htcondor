@@ -31,6 +31,8 @@
 #include "dc_collector.h"
 #include "my_hostname.h"
 
+#include <algorithm>
+
 void
 usage( const char *cmd , const char * opt)
 {
@@ -248,6 +250,33 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
+	// If the command is unspecified, guess.
+	if( command == -1 ) {
+		ads.Rewind();
+		ClassAd * c = ads.Next();
+		std::string myType;
+		c->LookupString( ATTR_MY_TYPE, myType );
+		if( myType.empty() ) {
+			fprintf( stderr, "MyType not set in ad, aborting.\n" );
+			return 1;
+		}
+		std::transform( myType.begin(), myType.end(), myType.begin(), toupper );
+
+		std::string commandString;
+		if( myType == "GENERIC" ) {
+			commandString = "UPDATE_AD_GENERIC";
+		} else {
+			formatstr( commandString, "UPDATE_%s_AD", myType.c_str() );
+		}
+
+		int commandInt = getCommandNum( commandString.c_str() );
+		if( commandInt == -1 ) {
+			dprintf( D_FULLDEBUG, "Unrecognized ad type '%s', using GENERIC.\n", myType.c_str() );
+			commandInt = UPDATE_AD_GENERIC;
+		}
+		command = commandInt;
+	}
+
 	CollectorList * collectors;
 	if ( pool ) {
 		collector = new Daemon( DT_COLLECTOR, pool, 0 );
@@ -288,19 +317,14 @@ int main( int argc, char *argv[] )
 				ad->Assign( ATTR_MY_ADDRESS, tmp.Value() );
 			}
 
-			if ( use_tcp ) {
-				if( !sock ) {
-					sock = collector->startCommand(command,Stream::reli_sock,20);
-				}
-				else {
-						// Use existing connection.
-					sock->encode();
-					sock->put(command);
-				}
+			if( !sock ) {
+				sock = collector->startCommand(command,
+					use_tcp ? Stream::reli_sock : Stream::safe_sock,
+					20);
 			} else {
-					// We must open a new UDP socket each time.
-				delete sock;
-				sock = collector->startCommand(command,Stream::safe_sock,20);
+					// Use existing connection.
+				sock->encode();
+				sock->put(command);
 			}
 
 			int result = 0;

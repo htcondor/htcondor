@@ -92,11 +92,20 @@ enum ULogEventNumber {
 	/** Job performing stage-in   */  ULOG_JOB_STAGE_IN				= 31,
 	/** Job performing stage-out  */  ULOG_JOB_STAGE_OUT			= 32,
 	/** Attribute updated  */         ULOG_ATTRIBUTE_UPDATE			= 33,
-	/** PRE_SKIP event for DAGMan */  ULOG_PRESKIP					= 34
+	/** PRE_SKIP event for DAGMan */  ULOG_PRESKIP					= 34,
+	/** Factory submitted         */  ULOG_FACTORY_SUBMIT			= 35,
+	/** Factory removed           */  ULOG_FACTORY_REMOVE			= 36,
+	/** Factory paused            */  ULOG_FACTORY_PAUSED			= 37,
+	/** Factory resumed           */  ULOG_FACTORY_RESUMED			= 38,
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
+#if 1
+// use ULogEvent::eventName() instead....
+// extern const char * getULogEventNumberName(ULogEventNumber number);
+#else
 extern const char ULogEventNumberNames[][30];
+#endif
 
 //----------------------------------------------------------------------------
 /** Enumeration of possible outcomes after attempting to read an event.
@@ -199,7 +208,6 @@ class ULogEvent {
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 	   
-	void setGlobalJobId(const char *gjid) { m_gjid = gjid; } 
     /// The event last read, or to be written.
     ULogEventNumber    eventNumber;
 
@@ -222,10 +230,6 @@ class ULogEvent {
     /// The subproc field of the Condor ID for this event
     int                subproc;
     
-    /// Added by Ameet
-    char *scheddname;
-    //char globaljobid[100];
-
   protected:
 
     /** Read the resource usage from the log file.
@@ -282,10 +286,6 @@ class ULogEvent {
      */
     bool formatHeader( std::string &out );
 
-	/// the global job id for the job associated with this event
-	void insertCommonIdentifiers(ClassAd &adToFill);
-	const char *m_gjid;
-
   private:
     /// The time this event occurred (eventclock is Unix timestamp;
 	/// eventTime is local time); these MUST correspond to the same
@@ -317,6 +317,47 @@ ULogEvent *instantiateEvent (ULogEventNumber event);
 	@return a new object, subclass of ULogEvent
 */
 ULogEvent *instantiateEvent (ClassAd *ad);
+
+
+// This event type is used for all events where the event ID is not in the ULogEventNumber enum
+// for this build.
+class FutureEvent : public ULogEvent
+{
+  public:
+    FutureEvent(ULogEventNumber en) { eventNumber = en; };
+    ~FutureEvent(void) {};
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
+
+	/** Return a ClassAd representation of this SubmitEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd(void);
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+	const std::string & Head() { return head; } // remainder of event line (without trailing \n)
+	const std::string & Payload() { return payload; } // other lines of the event (\n separated)
+	void setHead(const char * head_text);
+	void setPayload(const char * payload_text);
+
+private:
+	std::string head; // the remainder of the first line of the event, after the  timestamp (may be empty)
+	std::string payload; // the body text of the event (may be empty)
+};
 
 //----------------------------------------------------------------------------
 /** Framework for a single Submit Log Event object.  Below is an example
@@ -365,6 +406,8 @@ class SubmitEvent : public ULogEvent
     char* submitEventLogNotes;
     // user-supplied text to include in the log event
     char* submitEventUserNotes;
+    // schedd-supplied warning about unmet future requirements
+    char* submitEventWarnings;
 
  private:
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
@@ -1984,6 +2027,168 @@ class PreSkipEvent : public ULogEvent
 	char* skipEventLogNotes;
 
 };
+
+//----------------------------------------------------------------------------
+/** Framework for a Factory Submit Log Event object.  Below is an example
+    Factory Submit Log entry from Condor v8. <p>
+
+<PRE>
+000 (172.000.000) 10/20 16:56:54 Factory submitted from host: <128.105.165.12:32779>
+...
+</PRE>
+*/
+class FactorySubmitEvent : public ULogEvent
+{
+  public:
+    ///
+    FactorySubmitEvent(void);
+    ///
+    ~FactorySubmitEvent(void);
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
+
+    /** Return a ClassAd representation of this SubmitEvent.
+        @return NULL for failure, the ClassAd pointer otherwise
+    */
+    virtual ClassAd* toClassAd(void);
+
+    /** Initialize from this ClassAd.
+        @param a pointer to the ClassAd to initialize from
+    */
+    virtual void initFromClassAd(ClassAd* ad);
+
+    void setSubmitHost(char const *addr);
+
+    // dagman-supplied text to include in the log event
+    char* submitEventLogNotes;
+    // user-supplied text to include in the log event
+    char* submitEventUserNotes;
+
+ private:
+    /// For Condor v8, a host string in the form: "<128.105.165.12:32779>".
+    char *submitHost;
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a Factory Remove Log Event object.  Below is an example
+    Factory Remove Log entry from Condor v8. <p>
+
+<PRE>
+000 (172.000.000) 10/20 16:56:54 Factory removed
+...
+</PRE>
+*/
+class FactoryRemoveEvent : public ULogEvent
+{
+  public:
+    ///
+    FactoryRemoveEvent(void);
+    ///
+    ~FactoryRemoveEvent(void);
+
+/** Read the body of the next Submit event.
+    @param file the non-NULL readable log file
+    @return 0 for failure, 1 for success
+*/
+virtual int readEvent (FILE *);
+
+/** Format the body of this event.
+    @param out string to which the formatted text should be appended
+    @return false for failure, true for success
+*/
+virtual bool formatBody( std::string &out );
+
+/** Return a ClassAd representation of this SubmitEvent.
+    @return NULL for failure, the ClassAd pointer otherwise
+*/
+virtual ClassAd* toClassAd(void);
+
+/** Initialize from this ClassAd.
+    @param a pointer to the ClassAd to initialize from
+*/
+virtual void initFromClassAd(ClassAd* ad);
+
+	enum CompletionCode {
+		Error=-1, Incomplete=0, Complete=1, Paused=2
+	};
+
+	int next_proc_id;
+	int next_row;
+	CompletionCode completion; // -1 == error, 0 = incomplete, 1 = normal-completion, 2 = paused
+	char * notes;
+};
+
+//------------------------------------------------------------------------
+/** Framework for a job factory paused event object.
+ *  Occurs if job factory pauses for a reason other than completion
+*/
+class FactoryPausedEvent : public ULogEvent
+{
+	char* reason; // why the factory was paused
+	int pause_code;  // hold code if the factory is paused because the cluster is held
+	int hold_code;
+
+public:
+	FactoryPausedEvent () : reason(NULL), pause_code(0), hold_code(0) { eventNumber = ULOG_FACTORY_PAUSED; };
+	~FactoryPausedEvent () { if (reason) { free(reason); } reason = NULL; };
+
+	// initialize this class by reading the next event from the given log file
+	virtual int readEvent (FILE * log_file);
+
+	// Format the body of this event, and append to the given std::string
+	virtual bool formatBody( std::string &out );
+
+	// Return a ClassAd representation of this event
+	virtual ClassAd* toClassAd(void);
+
+	// initialize this class from the given ClassAd
+	virtual void initFromClassAd(ClassAd* ad);
+
+	// @return pointer to reason, will be NULL if not set
+	const char* getReason() const { return reason; }
+	int getPauseCode() const { return pause_code; }
+	int getHoldCode() const { return hold_code; }
+
+	// set the reason member to the given string
+	void setReason(const char* str);
+	void setPauseCode(const int code) { pause_code = code; }
+	void setHoldCode(const int code) { hold_code = code; }
+};
+
+class FactoryResumedEvent : public ULogEvent
+{
+	char* reason;
+
+public:
+	FactoryResumedEvent () : reason(NULL) { eventNumber = ULOG_FACTORY_RESUMED; };
+	~FactoryResumedEvent () { if (reason) { free(reason); } reason = NULL; };
+
+	// initialize this class by reading the next event from the given log file
+	virtual int readEvent (FILE *);
+	// Format the body of this event, and append to the given std::string
+	virtual bool formatBody( std::string &out );
+	// Return a ClassAd representation of this event
+	virtual ClassAd* toClassAd(void);
+	// initialize this class from the given ClassAd
+	virtual void initFromClassAd(ClassAd* ad);
+
+	// @return pointer to reason, will be "" if not set
+	const char* getReason() const { return reason; }
+
+	// set the reason member to the given string
+	void setReason(const char* str);
+};
+
 
 #endif // __CONDOR_EVENT_H__
 

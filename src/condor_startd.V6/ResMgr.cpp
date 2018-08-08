@@ -33,7 +33,7 @@
 
 #include "strcasestr.h"
 
-ResMgr::ResMgr() : extras_classad( NULL )
+ResMgr::ResMgr() : extras_classad( NULL ), max_job_retirement_time_override(-1)
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -150,7 +150,6 @@ ResMgr::~ResMgr()
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
-	delete m_attr;
 
 #if HAVE_BACKFILL
 	if( m_backfill_mgr ) {
@@ -193,6 +192,7 @@ ResMgr::~ResMgr()
 	if( new_type_nums ) {
 		delete [] new_type_nums;
 	}
+	delete m_attr;
 }
 
 
@@ -272,10 +272,6 @@ ResMgr::init_config_classad( void )
 	// Publish all DaemonCore-specific attributes, which also handles
 	// STARTD_ATTRS for us.
 	daemonCore->publish(config_classad);
-
-#if defined(ADD_TARGET_SCOPING)
-	config_classad->AddTargetRefs( TargetJobAttrs, false );
-#endif
 }
 
 
@@ -771,14 +767,14 @@ ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff, cons
 
 
 int
-ResMgr::adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask )
+ResMgr::adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask, const char * r_id_str )
 {
 	// Check the mask
 	if (  ( mask & ( A_PUBLIC | A_UPDATE ) ) != ( A_PUBLIC | A_UPDATE )  ) {
 		return 0;
 	}
 
-	return extra_ads.Publish( resAd, r_id );
+	return extra_ads.Publish( resAd, r_id, r_id_str );
 }
 
 
@@ -1074,7 +1070,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 		if ( ! param_boolean("STARTD_SEND_READY_AFTER_FIRST_UPDATE", true)) return res;
 
 		// send a DC_SET_READY message to the master to indicate the STARTD is ready to go
-		std::string master_sinful(daemonCore->InfoCommandSinfulString(-2));
+		MyString master_sinful(daemonCore->InfoCommandSinfulString(-2));
 		if ( ! master_sinful.empty()) {
 			dprintf( D_ALWAYS, "Sending DC_SET_READY message to master %s\n", master_sinful.c_str());
 			ClassAd readyAd;
@@ -1269,7 +1265,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
-	startd_stats.pool.Publish(*cp, 0);
+	startd_stats.Publish(*cp, 0);
 	startd_stats.Tick(time(0));
 
 #if HAVE_HIBERNATION
@@ -1498,8 +1494,13 @@ int
 ResMgr::start_sweep_timer( void )
 {
 	// only sweep if we have a cred dir
-	char* p = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr p(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!p) {
+		return TRUE;
+	}
+
+	// only sweep if not in TOKENS mode
+	if (!param_boolean("TOKENS", false)) {
 		return TRUE;
 	}
 
@@ -2271,9 +2272,13 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 	}
 }
 
+ExprTree * globalDrainingStartExpr = NULL;
+
 bool
-ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,std::string &new_request_id,std::string &error_msg,int &error_code)
+ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code)
 {
+	// For now, let's assume that that you never want to change the start
+	// expression while draining.
 	if( draining ) {
 		new_request_id = "";
 		error_msg = "Draining already in progress.";
@@ -2335,6 +2340,13 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 			// they will finish within their retirement time, so do
 			// not call setBadputCausedByDraining() yet
 
+		// Even if we could pass start_expr through walk(), it turns out,
+		// beceause ResState::enter_action() calls unavail() as well, we
+		// really do need to keep the global.  To that end, we /want/ to
+		// assign the NULL value here if that's what we got, so that we
+		// do the right thing if we drain without a START expression after
+		// draining with one.
+		globalDrainingStartExpr = start_expr ? start_expr->Copy() : NULL;
 		walk(&Resource::releaseAllClaimsReversibly);
 	}
 	else if( how_fast <= DRAIN_QUICK ) {
@@ -2404,9 +2416,18 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 
 	int longest_retirement_remaining = 0;
 	for( int i = 0; i < nresources; i++ ) {
-		int retirement_remaining = resources[i]->evalRetirementRemaining();
-		if( retirement_remaining > longest_retirement_remaining ) {
-			longest_retirement_remaining = retirement_remaining;
+		// The max job retirement time of jobs accepted while draining is
+		// implicitly zero.  Otherwise, we'd need to record the result of
+		// this computation at the instant we entered draining state and
+		// set a timer to vacate all slots at that point.  This would
+		// probably be more efficient, but would be a small semantic change,
+		// because jobs would no longer be able to voluntarily reduce their
+		// max job retirement time after retirement began.
+		if(! resources[i]->wasAcceptedWhileDraining()) {
+			int retirement_remaining = resources[i]->evalRetirementRemaining();
+			if( retirement_remaining > longest_retirement_remaining ) {
+				longest_retirement_remaining = retirement_remaining;
+			}
 		}
 	}
 	return longest_retirement_remaining;
@@ -2568,4 +2589,44 @@ void
 ResMgr::addToDrainingBadput( int badput )
 {
 	total_draining_badput += badput;
+}
+
+void
+ResMgr::adlist_reset_monitors( unsigned r_id, ClassAd * forWhom ) {
+	extra_ads.reset_monitors( r_id, forWhom );
+}
+
+void
+ResMgr::adlist_unset_monitors( unsigned r_id, ClassAd * forWhom ) {
+	extra_ads.unset_monitors( r_id, forWhom );
+}
+
+void
+ResMgr::checkForDrainCompletion() {
+	if( ! resources ) { return; }
+
+	bool allAcceptedWhileDraining = true;
+	for( int i = 0; i < nresources; ++i ) {
+		if(! resources[i]->wasAcceptedWhileDraining()) {
+			// Not sure how COD and draining are supposed to interact, but
+			// the partitionable slot is never accepted-while-draining,
+			// nor claimed, nor should it block drain from completing.
+			if(! resources[i]->hasAnyClaim()) { continue; }
+			allAcceptedWhileDraining = false;
+		}
+	}
+	if(! allAcceptedWhileDraining) { return; }
+
+	dprintf( D_ALWAYS, "Initiating final draining (all original jobs complete).\n" );
+	// This (auto-reversibly) sets START to false when we release all claims.
+	globalDrainingStartExpr = NULL;
+	// Invalidate all claim IDs.  This prevents the schedd from claiming
+	// resources that were negotiated before draining finished.
+	walk( &Resource::invalidateAllClaimIDs );
+	// Set MAXJOBRETIREMENTTIME to 0.  This will be reset in ResState::eval()
+	// when draining completes.
+	this->max_job_retirement_time_override = 0;
+	walk( & Resource::refresh_classad, A_PUBLIC );
+	// Initiate final draining.
+	walk( & Resource::releaseAllClaimsReversibly );
 }

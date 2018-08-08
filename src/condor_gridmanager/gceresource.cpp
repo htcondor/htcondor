@@ -25,18 +25,17 @@
 #include "gceresource.h"
 #include "gridmanager.h"
 
-#define HASH_TABLE_SIZE	13
-
-HashTable <HashKey, GCEResource *> 
-	GCEResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
+HashTable <std::string, GCEResource *>
+    GCEResource::ResourcesByName( hashFunction );
 
 const char * GCEResource::HashName( const char *resource_name,
 									const char *project,
 									const char *zone,
-									const char *auth_file )
+									const char *auth_file,
+									const char *account )
 {
 	static std::string hash_name;
-	formatstr( hash_name, "gce %s %s %s#%s", resource_name, project, zone, auth_file );
+	formatstr( hash_name, "gce %s %s %s#%s#%s", resource_name, project, zone, auth_file, account );
 	return hash_name.c_str();
 }
 
@@ -44,17 +43,18 @@ const char * GCEResource::HashName( const char *resource_name,
 GCEResource* GCEResource::FindOrCreateResource( const char *resource_name,
 												const char *project,
 												const char *zone,
-												const char *auth_file )
+												const char *auth_file,
+												const char *account )
 {
 	int rc;
 	GCEResource *resource = NULL;
 
-	rc = ResourcesByName.lookup( HashKey( HashName( resource_name, project, zone, auth_file ) ), resource );
+	rc = ResourcesByName.lookup( HashName( resource_name, project, zone, auth_file, account ), resource );
 	if ( rc != 0 ) {
-		resource = new GCEResource( resource_name, project, zone, auth_file );
+		resource = new GCEResource( resource_name, project, zone, auth_file, account );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashKey( HashName( resource_name, project, zone, auth_file ) ), resource );
+		ResourcesByName.insert( HashName( resource_name, project, zone, auth_file, account ), resource );
 	} else {
 		ASSERT(resource);
 	}
@@ -66,7 +66,8 @@ GCEResource* GCEResource::FindOrCreateResource( const char *resource_name,
 GCEResource::GCEResource( const char *resource_name,
 						  const char *project,
 						  const char *zone,
-						  const char *auth_file ) :
+						  const char *auth_file,
+						  const char *account ) :
 		BaseResource( resource_name ),
 		jobsByInstanceID( hashFunction ),
 		m_hadAuthFailure( false )
@@ -74,10 +75,11 @@ GCEResource::GCEResource( const char *resource_name,
 	// although no one will use resource_name, we still keep it for base class constructor
 
 	m_auth_file = strdup(auth_file);
+	m_account = strdup(account);
 	m_project = strdup(project);
 	m_zone = strdup(zone);
 
-	gahp = NULL;
+	status_gahp = gahp = NULL;
 
 	char * gahp_path = param( "GCE_GAHP" );
 	if ( gahp_path == NULL ) {
@@ -107,9 +109,10 @@ GCEResource::GCEResource( const char *resource_name,
 
 GCEResource::~GCEResource()
 {
-	ResourcesByName.remove( HashKey( HashName( resourceName, m_project, m_zone, m_auth_file ) ) );
+	ResourcesByName.remove( HashName( resourceName, m_project, m_zone, m_auth_file, m_account ) );
 	delete gahp;
 	free( m_auth_file );
+	free( m_account );
 	free( m_project );
 	free( m_zone );
 }
@@ -128,7 +131,7 @@ const char *GCEResource::ResourceType()
 
 const char *GCEResource::GetHashName()
 {
-	return HashName( resourceName, m_project, m_zone, m_auth_file );
+	return HashName( resourceName, m_project, m_zone, m_auth_file, m_account );
 }
 
 void GCEResource::PublishResourceAd( ClassAd *resource_ad )
@@ -136,6 +139,7 @@ void GCEResource::PublishResourceAd( ClassAd *resource_ad )
 	BaseResource::PublishResourceAd( resource_ad );
 
 	resource_ad->Assign( ATTR_GCE_AUTH_FILE, m_auth_file );
+	resource_ad->Assign( ATTR_GCE_ACCOUNT, m_account );
 	resource_ad->Assign( ATTR_GCE_PROJECT, m_project );
 	resource_ad->Assign( ATTR_GCE_ZONE, m_zone );
 
@@ -154,7 +158,7 @@ void GCEResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_
 	ping_delay = 0;
 
 	std::string error_code;
-	int rc = gahp->gce_ping( resourceName, m_auth_file, m_project, m_zone );
+	int rc = gahp->gce_ping( resourceName, m_auth_file, m_account, m_project, m_zone );
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
@@ -190,7 +194,7 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 	StringList instance_status_list;
 	StringList instance_status_msg_list;
 	int rc = status_gahp->gce_instance_list( resourceName, m_auth_file,
-											 m_project, m_zone,
+											 m_account, m_project, m_zone,
 											 instance_id_list,
 											 instance_name_list,
 											 instance_status_list,
@@ -239,7 +243,7 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 				   instance_name.c_str(), instance_id.c_str() );
 
 		BaseJob * tmp = NULL;
-		rc = BaseJob::JobsByRemoteId.lookup( HashKey( remote_job_id.c_str() ), tmp );
+		rc = BaseJob::JobsByRemoteId.lookup( remote_job_id, tmp );
 
 		if( rc == 0 ) {
 			ASSERT( tmp );
@@ -263,7 +267,7 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 				   instance_name.c_str() );
 
 		tmp = NULL;
-		rc = BaseJob::JobsByRemoteId.lookup( HashKey( remote_job_id.c_str() ), tmp );
+		rc = BaseJob::JobsByRemoteId.lookup( remote_job_id, tmp );
 
 		if( rc == 0 ) {
 			ASSERT( tmp );

@@ -126,6 +126,7 @@ job_dagman_splice-O
 job_dagman_splice-P
 job_dagman_splice-Q
 job_dagman_splice-R
+job_dagman_splice-scaling
 job_dagman_subdag-A
 job_dagman_subdag_in_splice-A
 job_dagman_subdag_multi_prohibit-A

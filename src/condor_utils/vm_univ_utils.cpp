@@ -25,7 +25,6 @@
 #include "basename.h"
 #include "MyString.h"
 #include "string_list.h"
-#include "condor_string.h"
 #include "directory.h"
 #include "condor_attributes.h"
 #include "setenv.h"
@@ -204,11 +203,11 @@ parse_param_string(const char *line, MyString &name, MyString &value, bool del_q
 		return;
 	}
 
-	name = one_line.Substr(0, pos -1);
+	name = one_line.substr(0, pos);
 	if( pos == (one_line.Length() - 1) ) {
 		value = "";
 	}else {
-		value = one_line.Substr( pos+1, one_line.Length() - 1); 
+		value = one_line.substr( pos+1, one_line.Length());
 	}
 
 	name.trim();
@@ -251,13 +250,9 @@ create_name_for_VM(ClassAd *ad, MyString& vmname)
 	// replace '@' with '_'
 	int pos = -1;
 	while( (pos = stringattr.find("@") ) >= 0 ) {
-		stringattr.setChar(pos, '_');
+		stringattr.setAt(pos, '_');
 	}
 
-	vmname = stringattr;
-	vmname += "_";
-	vmname += cluster_id;
-	vmname += "_";
-	vmname += proc_id;
+	formatstr( vmname, "%s_%d.%d", stringattr.Value(), cluster_id, proc_id );
 	return true;
 }

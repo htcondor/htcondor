@@ -84,7 +84,7 @@ Query( const string &viewName, ExprTree *expr, bool two_way_matching )
         } else {
             // setup evluation environment if a constraint was supplied
             parent = expr->GetParentScope( );
-            if( !( ad=mad.GetLeftAd() ) || !ad->Insert(ATTR_REQUIREMENTS,expr,false ) ) {
+            if( !( ad=mad.GetLeftAd() ) || !ad->Insert(ATTR_REQUIREMENTS,expr) ) {
                 expr->SetParentScope( parent );
                 return( false );
             }

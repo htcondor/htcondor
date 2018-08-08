@@ -1,4 +1,4 @@
-\begin{ManPage}{\label{man-condor-release}\Condor{release}}{1}
+\begin{ManPage}{\Condor{release}}{man-condor-release}{1}
 {release held jobs in the HTCondor queue}
 \index{HTCondor commands!condor\_release}
 \index{condor\_release command}
@@ -10,7 +10,7 @@
 \ToolDebugOption
 \ToolLocate
 \ToolJobs
-$|$ \OptArg{-constraint}{expression} \Dots
+\Bar{} \OptArg{-constraint}{expression} \Dots
 
 \SynProg{\Condor{release}}
 \ToolDebugOption
@@ -38,7 +38,7 @@ For any given job, only the owner of the job or one of the queue super users
 	\OptItem{\Arg{user}}{Release jobs belonging to specified user}
 	\OptItem{\OptArg{-constraint}{expression}} {Release all jobs which match
 	                the job ClassAd expression constraint}
-        \OptItem{\Arg{-all}}{Release all the jobs in the queue}
+        \OptItem{\Opt{-all}}{Release all the jobs in the queue}
 \end{Options}
 
 \SeeAlso

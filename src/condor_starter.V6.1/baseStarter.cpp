@@ -33,7 +33,7 @@
 #include "vm_proc.h"
 #include "my_hostname.h"
 #include "internet.h"
-#include "condor_string.h"  // for strnewp
+#include "util_lib_proto.h"
 #include "condor_attributes.h"
 #include "classad_command_util.h"
 #include "condor_random_num.h"
@@ -52,6 +52,7 @@
 #include "condor_base64.h"
 #include "my_username.h"
 #include <Regex.h>
+#include "starter_util.h"
 
 extern "C" int get_random_int();
 extern void main_shutdown_fast();
@@ -275,6 +276,7 @@ CStarter::StarterExit( int code )
 
 void CStarter::FinalCleanup()
 {
+	removeCredentials();
 	RemoveRecoveryFile();
 	removeTempExecuteDir();
 }
@@ -1072,7 +1074,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		size_t size = 0;
 		off_t offset = *it2;
 
-		if (it->size() && ((*it)[0] != DIR_DELIM_CHAR))
+		if ( it->size() && !fullpath(it->c_str()) )
 		{
 			*it = iwd + DIR_DELIM_CHAR + *it;
 		}
@@ -1636,6 +1638,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	}
 	if( !proc->SshStartJob(std,std_fname) ) {
 		dprintf(D_ALWAYS,"Failed to start sshd.\n");
+		delete proc;
 		return FALSE;
 	}
 	m_job_list.Append(proc);
@@ -2257,11 +2260,8 @@ CStarter::removeDeferredJobs() {
 			// We failed to cancel the timer!
 			// This is bad because our job might execute when it shouldn't have
 			//
-		MyString error = "Failed to cancel deferred execution timer for Job ";
-		error += this->jic->jobCluster();
-		error += ".";
-		error += this->jic->jobProc();
-		EXCEPT( "%s", error.Value() );
+		EXCEPT( "Failed to cancel deferred execution timer for Job %d.%d",
+		        this->jic->jobCluster(), this->jic->jobProc() );
 		ret = false;
 	}
 	return ( ret );
@@ -2756,9 +2756,31 @@ CStarter::Reaper(int pid, int exit_status)
 				 WEXITSTATUS(exit_status) );
 	}
 
-	if( pre_script && pre_script->JobReaper(pid, exit_status) ) {		
-			// TODO: deal with shutdown case?!?
-		
+	if( pre_script && pre_script->JobReaper(pid, exit_status) ) {
+		bool exitStatusSpecified = false;
+		int desiredExitStatus = computeDesiredExitStatus( "Pre", this->jic->jobClassAd(), & exitStatusSpecified );
+		if( exitStatusSpecified && exit_status != desiredExitStatus ) {
+			dprintf( D_ALWAYS, "Pre script failed, putting job on hold.\n" );
+
+			ClassAd updateAd;
+			publishUpdateAd( & updateAd );
+			updateAd.CopyAttribute( ATTR_ON_EXIT_CODE, "PreExitCode", & updateAd );
+			jic->periodicJobUpdate( & updateAd, true );
+
+			// This kills the shadow, which should cause us to catch a
+			// SIGQUIT from the startd in short order...
+			jic->holdJob( "Pre script failed.",
+				CONDOR_HOLD_CODE_PreScriptFailed,
+				0 );
+
+			// ... but we might as well do what the SIGQUIT handler does
+			// here and call main_shutdown_fast().  Maybe someday we'll
+			// fix main_shutdown_fast(), or write a similar function, that
+			// won't write spurious errors to the log.
+			main_shutdown_fast();
+			return FALSE;
+		}
+
 			// when the pre script exits, we know the m_job_list is
 			// going to be empty, so don't bother with any of the rest
 			// of this.  instead, the starter is now able to call
@@ -2773,6 +2795,30 @@ CStarter::Reaper(int pid, int exit_status)
 	}
 
 	if( post_script && post_script->JobReaper(pid, exit_status) ) {
+		bool exitStatusSpecified = false;
+		int desiredExitStatus = computeDesiredExitStatus( "Post", this->jic->jobClassAd(), & exitStatusSpecified );
+		if( exitStatusSpecified && exit_status != desiredExitStatus ) {
+			dprintf( D_ALWAYS, "Post script failed, putting job on hold.\n" );
+
+			ClassAd updateAd;
+			publishUpdateAd( & updateAd );
+			updateAd.CopyAttribute( ATTR_ON_EXIT_CODE, "PostExitCode", & updateAd );
+			jic->periodicJobUpdate( & updateAd, true );
+
+			// This kills the shadow, which should cause us to catch a
+			// SIGQUIT from the startd in short order...
+			jic->holdJob( "Post script failed.",
+				CONDOR_HOLD_CODE_PostScriptFailed,
+				0 );
+
+			// ... but we might as well do what the SIGQUIT handler does
+			// here and call main_shutdown_fast().  Maybe someday we'll
+			// fix main_shutdown_fast(), or write a similar function, that
+			// won't write spurious errors to the log.
+			main_shutdown_fast();
+			return FALSE;
+		}
+
 			// when the post script exits, we know the m_job_list is
 			// going to be empty, so don't bother with any of the rest
 			// of this.  instead, the starter is now able to call
@@ -3155,13 +3201,18 @@ CStarter::PublishToEnv( Env* proc_env )
 		}
 	}
 
+	if(param_boolean("TOKENS", false)) {
+		const char* sandbox_cred_dir = jic->getCredPath();
+		proc_env->SetEnv( "_CONDOR_CREDS", sandbox_cred_dir );
+	} else {
 		// kerberos credential cache (in sandbox)
-	const char* krb5ccname = jic->getKRB5CCNAME();
-	if( krb5ccname && (krb5ccname[0] != '\0') ) {
-		// using env_name as env_value
-		env_name = "FILE:";
-		env_name += krb5ccname;
-		proc_env->SetEnv( "KRB5CCNAME", env_name );
+		const char* krb5ccname = jic->getCredPath();
+		if( krb5ccname && (krb5ccname[0] != '\0') ) {
+			// using env_name as env_value
+			env_name = "FILE:";
+			env_name += krb5ccname;
+			proc_env->SetEnv( "KRB5CCNAME", env_name );
+		}
 	}
 
 		// path to the output ad, if any
@@ -3191,12 +3242,12 @@ CStarter::PublishToEnv( Env* proc_env )
 	if (get_port_range (TRUE, &low, &high) == TRUE) {
 		MyString tmp_port_number;
 
-		tmp_port_number = high;
+		tmp_port_number = IntToStr( high );
 		env_name = base.Value();
 		env_name += "HIGHPORT";
 		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
 
-		tmp_port_number = low;
+		tmp_port_number = IntToStr( low );
 		env_name = base.Value();
 		env_name += "LOWPORT";
 		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
@@ -3225,7 +3276,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		int cpus = 0;
 		if (mach->LookupInteger(ATTR_CPUS, cpus)) {
 			if (cpus > 0) {
-				proc_env->SetEnv("OMP_NUM_THREADS", cpus);
+				proc_env->SetEnv("OMP_NUM_THREADS", IntToStr( cpus ));
 			}
 		}
 	}
@@ -3576,6 +3627,45 @@ CStarter::updateX509Proxy( int cmd, Stream* s )
 }
 
 
+
+
+
+bool
+CStarter::removeCredentials( void )
+{
+	if (false == param_boolean("TOKENS", false)) {
+		// nothing to do...  success?
+		return true;
+	}
+
+	MyString cred_dir_name;
+	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
+		dprintf(D_ALWAYS, "CREDMON: removeCredentials doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
+		return false;
+	}
+
+	Directory cred_dir( cred_dir_name.Value(), PRIV_ROOT );
+
+	MyString pid_name;
+	pid_name = IntToStr( daemonCore->getpid() );
+	if ( cred_dir.Find_Named_Entry( pid_name.Value() ) ) {
+		dprintf( D_FULLDEBUG, "CREDMON: Removing %s%c%s\n", cred_dir_name.Value(), DIR_DELIM_CHAR, pid_name.Value() );
+		if (!cred_dir.Remove_Current_File()) {
+			dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name.Value(), DIR_DELIM_CHAR, pid_name.Value() );
+			return false;
+		}
+	} else {
+		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", pid_name.Value(), cred_dir_name.Value());
+		return false;
+	}
+
+	// success
+	return true;
+}
+
+
+
+
 bool
 CStarter::removeTempExecuteDir( void )
 {
@@ -3585,7 +3675,7 @@ CStarter::removeTempExecuteDir( void )
 	}
 
 	MyString dir_name = "dir_";
-	dir_name += (int)daemonCore->getpid();
+	dir_name += IntToStr( daemonCore->getpid() );
 
 #if !defined(WIN32)
 	if (condorPrivSepHelper() != NULL) {
@@ -3635,12 +3725,9 @@ CStarter::removeTempExecuteDir( void )
 			// for chroots other than the trivial one, cat the chroot to the configured execute dir
 			// we don't expect to ever get here on Windows.
 			// If we do get here on Windows, Find_Named_Entry will just fail to find a match
-			const char *tmp = dircat(it->second.c_str(), Execute);
-			if ( ! tmp) {
+			if ( ! dircat(it->second.c_str(), Execute, full_exec_dir)) {
 				continue;
 			}
-			full_exec_dir = tmp;
-			delete [] tmp;
 		}
 		Directory execute_dir( full_exec_dir.Value(), PRIV_ROOT );
 		if ( execute_dir.Find_Named_Entry( dir_name.Value() ) ) {
@@ -3736,6 +3823,38 @@ CStarter::WriteAdFiles()
 			fPrintAd(fp, *ad, true);
 			fclose(fp);
 		}
+	}
+
+	// Correct the bogus Provisioned* attributes in the job ad.
+	ClassAd * machineAd = this->jic->machClassAd();
+	if( machineAd ) {
+		ClassAd updateAd;
+
+		std::string machineResourcesString;
+		if(machineAd->LookupString( ATTR_MACHINE_RESOURCES, machineResourcesString)) {
+			updateAd.Assign( "ProvisionedResources", machineResourcesString );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to ProvisionedResources\n", ATTR_MACHINE_RESOURCES );
+		} else {
+			machineResourcesString = "CPUs, Disk, Memory";
+		}
+		StringList machineResourcesList( machineResourcesString.c_str() );
+
+		machineResourcesList.rewind();
+		while( const char * resourceName = machineResourcesList.next() ) {
+			std::string provisionedResourceName;
+			formatstr( provisionedResourceName, "%sProvisioned", resourceName );
+			updateAd.CopyAttribute( provisionedResourceName.c_str(), resourceName, machineAd );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName, provisionedResourceName.c_str() );
+
+			std::string assignedResourceName;
+			formatstr( assignedResourceName, "Assigned%s", resourceName );
+			updateAd.CopyAttribute( assignedResourceName.c_str(), assignedResourceName.c_str(), machineAd );
+			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad\n", assignedResourceName.c_str() );
+		}
+
+		dprintf( D_FULLDEBUG, "Updating *Provisioned and Assigned* attributes:\n" );
+		dPrintAd( D_FULLDEBUG, updateAd );
+		jic->periodicJobUpdate( & updateAd, true );
 	}
 
 	return ret_val;

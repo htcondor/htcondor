@@ -17,6 +17,7 @@
  ############################################################### 
 
 
+condor_exe(condor_now "now.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_update_machine_ad "update_machine_ad.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_preen "preen.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -31,6 +32,10 @@ condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_transform_ads "transform_ads.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+if (LINUX)
+condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+endif()
+
 
 #condor_exe(condor_curlplugin "condor_curlplugin.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
@@ -55,13 +60,8 @@ condor_exe(condor_tail "peek.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_version "version.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_wait "wait.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe(condor_history "history.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${POSTGRESQL_FOUND}" OFF)
-condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${POSTGRESQL_FOUND}" OFF)
-
-if (WANT_QUILL AND HAVE_EXT_POSTGRESQL)
-	condor_exe(condor_load_history "load_history.cpp" ${C_BIN} "tt;${CONDOR_TOOL_LIBS};${POSTGRESQL_FOUND}" OFF)
-	condor_exe(condor_dump_history "dump_history.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${POSTGRESQL_FOUND}" OFF)
-endif(WANT_QUILL AND HAVE_EXT_POSTGRESQL)
+condor_exe(condor_history "history.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 
@@ -105,11 +105,7 @@ endif(NOT WINDOWS)
 condor_exe(condor_stats "stats.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 if( WINDOWS )
-	if(NOT (MSVC_VERSION LESS 1700))
-		condor_exe(condor_setup "condor_setup.c;soap_setupStub.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-	else()
-		condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-	endif()
+	condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 	condor_exe(condor_set_acls "condor_set_acls.c" ${C_BIN} "" OFF)
 endif()
 
@@ -136,6 +132,7 @@ endif()
 ############################################################
 if ( LINUX AND HAVE_LIBDL AND HAVE_DLFCN_H AND HAVE_DLOPEN )
 	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
+	condor_exe( condor_gpu_utilization "condor_gpu_utilization.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
 else ()
 	if (WINDOWS)
 		condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )

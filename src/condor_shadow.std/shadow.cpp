@@ -42,15 +42,10 @@
 
 #include "user_job_policy.h"
 
-#if defined(AIX31) || defined(AIX32)
-#include "syscall.aix.h"
-#endif
-
 #include "condor_debug.h"
 #include "fileno.h"
 #include "exit.h"
 
-#include "file_sql.h"
 #include "spool_version.h"
 
 /* XXX This should not be here */
@@ -59,8 +54,6 @@
 #endif
 
 int	UsePipes;
-
-extern FILESQL *FILEObj;
 
 extern "C" {
 	void reaper(int);
@@ -82,7 +75,7 @@ extern "C" {
 	void handle_terminate_pending();
 	int terminate_is_pending(void);
 	void get_local_rusage( struct rusage *bsd_rusage );
-	void NotifyUser( char *buf, PROC *proc );
+	void NotifyUser( char *buf, int reason, PROC *proc );
 	FILE	*fdopen(int, const char *);
 	int		whoami(char **buf,int *bufpos,int *buflen);
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
@@ -147,10 +140,11 @@ int		MyPid;
 int		LogPipe;
 int		ImageSize;
 
-GENERIC_PROC GenProc;
 #if defined(NEW_PROC)
+	PROC	GenProc;
 	PROC	*Proc = (PROC *)&GenProc;
 #else
+	V2_PROC	GenProc;
 	V2_PROC	*Proc = (V2_PROC *)&GenProc;
 #endif
 
@@ -314,19 +308,12 @@ main(int argc, char *argv[] )
 	reserved_swap = param_integer("RESERVED_SWAP", 0);
 	reserved_swap *= 1024; /* megabytes -> kb */
 
-	bool use_sql_log = param_boolean("QUILL_USE_SQL_LOG", false);
-    FILEObj = FILESQL::createInstance(use_sql_log);
-	
 	free_swap = sysapi_swap_space();
 
 	dprintf( D_FULLDEBUG, "*** Reserved Swap = %d\n", reserved_swap );
 	dprintf( D_FULLDEBUG, "*** Free Swap = %d\n", free_swap );
 	if( reserved_swap && free_swap < reserved_swap ) {
 		dprintf( D_ALWAYS, "Not enough reserved swap space\n" );
-		if(FILEObj) {
-		  delete FILEObj;
-		}
-
 		exit( JOB_NO_MEM );
 	}
 
@@ -525,9 +512,6 @@ main(int argc, char *argv[] )
     if( My_Filesystem_Domain ) {
         free( My_Filesystem_Domain );
     }
-        if(FILEObj) {
-                delete FILEObj;
-        }
 
 	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
 		ExitReason );
@@ -574,7 +558,7 @@ handle_terminate_pending()
 	log_termination (&local_rusage, &JobRusage);
 
 	if( notification[0] ) {
-		NotifyUser( notification, Proc );
+		NotifyUser( notification, ExitReason, Proc );
 	}
 
 	/* using the above ExitReason... */
@@ -772,7 +756,7 @@ Wrapup( )
 	log_termination (&local_rusage, &JobRusage);
 
 	if( notification[0] ) {
-		NotifyUser( notification, Proc );
+		NotifyUser( notification, ExitReason, Proc );
 	}
 }
 
@@ -1301,13 +1285,13 @@ start_job( char *cluster_id, char *proc_id )
 		strcpy( CkptName, "" );
 		strcpy( TmpCkptName, "" );
 	} else {
-		tmp = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
-		snprintf( CkptName, MAXPATHLEN, "%s", tmp );
+		std::string buf;
+		SpooledJobFiles::getJobSpoolPath( JobAd, buf );
+		snprintf( CkptName, MAXPATHLEN, "%s", buf.c_str() );
 		sprintf( TmpCkptName, "%s.tmp", CkptName );
-		free(tmp); tmp = NULL;
 	}
 
-	tmp = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
+	tmp = GetSpooledExecutablePath( Proc->id.cluster, Spool );
 	snprintf( ICkptName, MAXPATHLEN, "%s", tmp );
 	free(tmp); tmp = NULL;
 
@@ -1565,7 +1549,7 @@ void RemoveNewShadowDroppings(char *cluster, char *proc)
 {
 	char names[2][1024];
 	int j;
-	char *ckpt_name;
+	std::string ckpt_name;
 	char *myspool;
 	struct stat buf;
 	int clusternum, procnum;
@@ -1617,12 +1601,11 @@ void RemoveNewShadowDroppings(char *cluster, char *proc)
 		free(myspool);
 		return;
 	}
-	ckpt_name = gen_ckpt_name( myspool, clusternum, procnum, 0 );
+	SpooledJobFiles::getJobSpoolPath( JobAd, ckpt_name );
 
-	strcpy(names[0], ckpt_name);
-	strcpy(names[1], ckpt_name);
+	strcpy(names[0], ckpt_name.c_str());
+	strcpy(names[1], ckpt_name.c_str());
 	strcat(names[1], ".tmp");
-	free(ckpt_name); ckpt_name = NULL;
 
 	for (j = 0; j < 2; j++)
 	{

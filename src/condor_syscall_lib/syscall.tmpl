@@ -247,11 +247,10 @@ circumstances:
 		REMOTE_SYSCALLS - build stubs for general remote syscalls.
 		CLIP - clipped condor - only build the syscalls needed
 			to run the starter and vanilla jobs.
-		CARMI_OPS - build stubs for CARMI
  */
 
-#define SEND_PATH(name) in code(name)
-#define GET_PATH(name) out code(name)
+#define SEND_PATH(name) in code_nullstr(name)
+#define GET_PATH(name) out code_nullstr(name)
 #define ALLOC_PATH(name) null_alloc(name)
 
 /* Does EXTRACT mean static or dynamic? */
@@ -978,7 +977,7 @@ They are not needed for remote I/O or for the condor daemons.
 	*/
 #	if !defined(SWITCH)
 		int getlogin( char *&loginbuf ) : pseudo {
-			out code( loginbuf );
+			out code_nullstr( loginbuf );
 			null_alloc ( loginbuf );
 		}  
 #	endif /* not SWITCH */
@@ -1203,7 +1202,7 @@ they should be built in the special "clipped" version.
 #	endif
 
 	int report_error( char *msg ) : pseudo {
-		in code( msg );
+		in code_nullstr( msg );
 		null_alloc(msg);
 	}
 
@@ -1285,23 +1284,23 @@ they should be built in the special "clipped" version.
 
 	int get_job_attr( const char *attrname, char *&expr ) : pseudo
 	{
-		in code(attrname);
+		in code_nullstr(attrname);
 		null_alloc(attrname);
-		out code(expr);
+		out code_nullstr(expr);
 		null_alloc(expr);
 	}
 
 	int set_job_attr( const char *attrname, const char *expr ) : pseudo
 	{
-		in code(attrname);
+		in code_nullstr(attrname);
 		null_alloc(attrname);
-		in code(expr);
+		in code_nullstr(expr);
 		null_alloc(expr);
 	}
 
 	int constrain( const char *expr ) : pseudo
 	{
-		in code(expr);
+		in code_nullstr(expr);
 		null_alloc(expr);
 	}
 
@@ -1627,116 +1626,6 @@ not_supported {
 }
 
 #endif /* REMOTE_SYSCALLS and not CLIP */
-
-/*
-These calls are only built specially for CARMI.
-*/
-
-#ifdef CARMI_OPS
-
-#define RequestId int
-#define ResponseTag int
-#define HostId int
-#define ProcessId int
-#define ResourceClass char* /* for the time being */
-
-	int carmi_cancel_request(RequestId id, ResponseTag resp_tag) : pseudo; 
-
-	int carmi_config( ResponseTag resp_tag)	: pseudo; 
-
-	int carmi_get_class_ad(HostId id, ResponseTag resp_tag) : pseudo; 
-
-	int carmi_addhosts(char *class_name, int count, ResponseTag resp_tag) 
-		: pseudo {
-		SEND_PATH( class_name );
-		ALLOC_PATH( class_name );
-	}
-
-	int carmi_delhosts(int count, HostId* hosts, ResponseTag resp_tag) 
-		:pseudo {
-		in code_bytes_bool( hosts, count*sizeof(HostId) );
-		alloc( hosts, count*sizeof(HostId) );
-	}	
-
-	int carmi_add_notify(char *class_name, ResponseTag resp_tag) :pseudo{
-		SEND_PATH( class_name );
-		ALLOC_PATH( class_name );
-	}
-
-	int carmi_delete_notify(int count, HostId *host_ids, 
-                                ResponseTag resp_tag): pseudo {
-		in code_bytes_bool( host_ids, count*sizeof(HostId) );
-		alloc( host_ids, count*sizeof(HostId) );
-	}
-
-	int carmi_suspend_notify(int count, HostId *host_ids,
-                                 ResponseTag resp_tag) : pseudo {
-		in code_bytes_bool( host_ids, count*sizeof(HostId) );
-		alloc( host_ids, count*sizeof(HostId) );
-	}
-
-	int carmi_resume_notify(int count, HostId *host_ids,
-			ResponseTag resp_tag)  : pseudo{
-		in code_bytes_bool( host_ids, count*sizeof(HostId) );
-		alloc( host_ids, count*sizeof(HostId) );
-	}
-
-	int carmi_class_spawn(char *executable, char* argv[], char *class_name,
-		  ResponseTag resp_tag) : pseudo {
-		SEND_PATH( executable );
-		ALLOC_PATH( executable );
-		SEND_PATH( class_name );
-		ALLOC_PATH( class_name );
-	}
-
-	int carmi_process_info( ResponseTag resp_tag) : pseudo; 
-
-	int carmi_class_definitions( ResponseTag resp_tag) : pseudo; 
-
-	int carmi_define_class( rcclass resc_class, 
-				ResponseTag resp_tag) : pseudo {
-	}
-
-	int carmi_remove_class( char *class_name, 
-                                ResponseTag resp_tag) : pseudo{
-		SEND_PATH( class_name );
-		ALLOC_PATH( class_name );
-	}
-
-	int carmi_ckpt(int ckpt_cnt, ProcessId *ckpt_list, 
-	   int consistent_cnt, ProcessId *consistent_list, int flush_cnt, 
-	   ProcessId *flush_list, HostId id) : pseudo{
-
-		in code_bytes_bool( ckpt_list, ckpt_cnt*sizeof(ProcessId) );
-		alloc( ckpt_list, ckpt_cnt*sizeof(ProcessId) );
-
-		in code_bytes_bool( consistent_list, consistent_cnt*sizeof(ProcessId) );
-		alloc( consistent_list, consistent_cnt*sizeof(ProcessId) );
-
-		in code_bytes_bool( flush_list, flush_cnt*sizeof(ProcessId) );
-		alloc( flush_list, flush_cnt*sizeof(ProcessId) );
-
-	}
-
-	int carmi_restart(int restart_cnt, ProcessId *restart_list, 
-	  int consistent_cnt, ProcessId *consistent_list): pseudo {
-
-		in code_bytes_bool( restart_list, restart_cnt*sizeof(ProcessId) );
-		alloc( restart_list, restart_cnt*sizeof(ProcessId) );
-
-		in code_bytes_bool( consistent_list, consistent_cnt*sizeof(ProcessId) );
-		alloc( consistent_list, consistent_cnt*sizeof(ProcessId) );
-
-	}
-
-	int carmi_migrate(ProcessId target, HostId host, int
-	  consistent_cnt, ProcessId *consistent_list): pseudo {
-
-		in code_bytes_bool( consistent_list, consistent_cnt*sizeof(ProcessId) );
-		alloc( consistent_list, consistent_cnt*sizeof(ProcessId) );
-
-	}
-#endif /* CARMI_OPS */
 
 
 

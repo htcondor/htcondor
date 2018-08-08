@@ -284,6 +284,42 @@ void convert_escapes_json(string &text, bool &validStr, bool &quotedExpr)
 }
 
 
+// Append a formated 64 bit int to a string.
+// much faster than sprintf because it ignores locale
+
+void
+append_long(std::string &s, long long l) {
+	char buf[28]; // build up the string backwards here
+	char *p = buf;
+
+	if (l >= 0) {
+		do {
+			*p = '0' + l % 10;
+			p++;
+		} while (l /= 10);
+
+		while (p != buf) {
+			p--;
+			s += *p;
+		}
+		return;
+
+	} else {
+		s += '-';
+		do {
+			// a negative number mod 10 is a negative
+			*p = '0' - l % 10;
+			p++;
+		} while (l /= 10);
+
+		while (p != buf) {
+			p--;
+			s += *p;
+		}
+		return;
+	}
+}
+
 void 
 getLocalTime(time_t *now, struct tm *localtm) 
 {

@@ -26,73 +26,37 @@
 #endif
 
 
-UtcTime::UtcTime( bool get_time )
+void condor_gettimestamp( struct timeval &tv )
 {
-	sec = 0;
-	usec = 0;
-	if ( get_time ) {
-		getTime( );
+#if defined(WIN32)
+	// Windows8 has GetSystemTimePreciseAsFileTime which returns sub-microsecond system times.
+	static bool check_for_precise = false;
+	static void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
+	static BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
+	if ( ! check_for_precise) {
+		HMODULE hmod = GetModuleHandle("Kernel32.dll");
+		if (hmod) { *(FARPROC*)&get_precise_time = GetProcAddress(hmod, "GetSystemTimePreciseAsFileTime"); }
+		hmod = GetModuleHandle("ntdll.dll");
+		if (hmod) { *(FARPROC*)&time_to_1970 = GetProcAddress(hmod, "RtlTimeToSecondsSince1970"); }
+		check_for_precise = true;
 	}
-}
-
-double
-UtcTime::getTimeDouble( void )
-{
-#if defined(HAVE__FTIME)
-	struct _timeb timebuffer;
-	_ftime( &timebuffer );
-	return ( timebuffer.time + (timebuffer.millitm * 0.001) );
+	unsigned long long nanos = 0;
+	if (get_precise_time) {
+		get_precise_time(&nanos);
+		unsigned long now = 0;
+		time_to_1970(&nanos, &now);
+		tv.tv_sec = now;
+		tv.tv_usec = (int)((nanos / 10) % 1000000);
+	} else {
+		struct _timeb tb;
+		_ftime(&tb);
+		tv.tv_sec = tb.time;
+		tv.tv_usec = tb.millitm * 1000;
+	}
 #elif defined(HAVE_GETTIMEOFDAY)
-	struct timeval	tv;
 	gettimeofday( &tv, NULL );
-	return ( tv.tv_sec + ( tv.tv_usec * 0.000001 ) );
 #else
 #error Neither _ftime() nor gettimeofday() are available!
 #endif
 }
 
-void
-UtcTime::getTime()
-{
-#if defined(HAVE__FTIME)
-		// call _ftime()
-	struct _timeb timebuffer;
-	_ftime( &timebuffer );
-
-	sec = timebuffer.time;
-	usec = (long) timebuffer.millitm * 1000; // convert milli to micro 
-#elif defined(HAVE_GETTIMEOFDAY)
-		// UNIX
-	struct timeval now;
-	gettimeofday( &now, NULL );
-	sec = now.tv_sec;
-	usec = (long)now.tv_usec;
-#else
-#error Neither _ftime() nor gettimeofday() are available!
-#endif
-}
-
-double
-UtcTime::difference( const UtcTime* other_time ) const
-{
-	if( ! other_time ) {
-		return 0.0;
-	}
-	return difference( *other_time );
-}
-
-double
-UtcTime::difference( const UtcTime &other_time ) const
-{
-	double other = other_time.combined();
-	double me = combined();
-
-	return me - other;
-}
-
-bool
-operator==(const UtcTime &lhs, const UtcTime &rhs) 
-{
-	return ((lhs.seconds() == rhs.seconds()) &&
-			(lhs.microseconds() == rhs.microseconds()) );
-}

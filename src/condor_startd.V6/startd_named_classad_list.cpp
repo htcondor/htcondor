@@ -118,30 +118,105 @@ StartdNamedClassAdList::Register( StartdNamedClassAd *ad )
 }
 
 int
-StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id )
+StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char * r_id_str )
 {
 	std::list<NamedClassAd *>::iterator iter;
 	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
 		NamedClassAd		*nad = *iter;
 		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
 		ASSERT( sad );
+
+		if( sad->isResourceMonitor() ) { continue; }
+
 		const char * match_attr = NULL;
 		if ( sad->InSlotList(r_id) && sad->ShouldMergeInto(merged_ad, &match_attr) ) {
 			ClassAd	*ad = nad->GetAd( );
 			if ( NULL != ad ) {
 				dprintf( D_FULLDEBUG,
-						 "Publishing ClassAd '%s' to slot %d [%s matches]\n",
-						 nad->GetName(), r_id, match_attr ? match_attr : "InSlotList" );
+						 "Publishing ClassAd '%s' to %s [%s matches]\n",
+						 nad->GetName(), r_id_str, match_attr ? match_attr : "InSlotList" );
 				sad->MergeInto(merged_ad);
 			}
 		}
 		else if (match_attr) {
 			dprintf( D_FULLDEBUG,
-						"Rejecting ClassAd '%s' for slot %d [%s does not match]\n",
-						nad->GetName(), r_id, match_attr );
+						"Rejecting ClassAd '%s' for %s [%s does not match]\n",
+						nad->GetName(), r_id_str, match_attr );
 		}
 	}
 
-	// Done
+	//
+	// Because each (this) slot may have more than one custom resource of a
+	// given type (e.g., two GPUs), we need to aggregate, rather than merge,
+	// the resource-specific ads produce by the resource monitor.  We assume
+	// -- and once we fix #6489, will be able to enforce -- that monitors
+	// for different resources will not have the same attribute names, so
+	// we only need single accumulator ad (and don't have to split the
+	// monitor ads by resource type).
+	//
+	ClassAd accumulator;
+	// dprintf( D_FULLDEBUG, "Generating usage for %s...\n", r_id_str );
+	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
+		NamedClassAd		*nad = *iter;
+		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
+		ASSERT( sad );
+
+		if(! sad->isResourceMonitor()) { continue; }
+
+		const char * match_attr = NULL;
+		// dprintf( D_FULLDEBUG, "... adding %s...\n", sad->GetName() );
+		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( merged_ad, & match_attr ) ) {
+			sad->AggregateInto( & accumulator );
+		}
+	}
+	// dprintf( D_FULLDEBUG, "... done generating usage report for %s.\n", r_id_str );
+
+#if 0
+	classad::Value v, w;
+	double usmpu = -1, smu = -1;
+	accumulator.EvaluateAttr( "UptimeSQUIDsMemoryPeakUsage", v ) && v.IsNumber( usmpu );
+	accumulator.EvaluateAttr( "SQUIDsMemoryUsage", w ) && w.IsNumber( smu );
+	dprintf( D_FULLDEBUG, "%s UptimeSQUIDsMemoryPeakUsage = %.2f SQUIDsMemoryUsage = %.2f\n",
+		r_id_str, usmpu, smu );
+#endif
+
+	// We don't filter out the (raw) Uptime* metrics here, because the
+	// starter needs them to compute the (per-job) *Usage metrics.  Instead,
+	// we filter them out in Resource::do_update().
+	StartdNamedClassAd::Merge( merged_ad, & accumulator );
 	return 0;
+}
+
+void
+StartdNamedClassAdList::reset_monitors( unsigned r_id, ClassAd * forWhom ) {
+	std::list<NamedClassAd *>::iterator iter;
+	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
+		NamedClassAd		*nad = *iter;
+		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
+		ASSERT( sad );
+
+		if(! sad->isResourceMonitor()) { continue; }
+		const char * match_attr = NULL;
+		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( forWhom, & match_attr ) ) {
+			sad->reset_monitor();
+		}
+	}
+
+}
+
+void
+StartdNamedClassAdList::unset_monitors( unsigned r_id, ClassAd * forWhom ) {
+	std::list<NamedClassAd *>::iterator iter;
+	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
+		NamedClassAd		*nad = *iter;
+		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
+		ASSERT( sad );
+
+		if(! sad->isResourceMonitor()) { continue; }
+		const char * match_attr = NULL;
+		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( forWhom, & match_attr ) ) {
+			sad->unset_monitor();
+		}
+	}
+
 }

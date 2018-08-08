@@ -30,30 +30,20 @@
 extern "C" {
 #endif
 
-char * getline ( FILE *fp );
-
 char* getExecPath( void );
 
 int rotate_file(const char *old_filename, const char *new_filename);
-
 int rotate_file_dprintf(const char *old_filename, const char *new_filename, int calledByDprintf);
 
 /// If new_filename exists, overwrite it.
 int copy_file(const char *old_filename, const char *new_filename);
-
 int hardlink_or_copy_file(const char *old_filename, const char *new_filename);
 
+//Only daemon_core_main need this
 void detach ( void );
-int do_connect ( const char *host, const char *service, u_short port );
-int udp_connect ( char *host, u_short port );
-void dprintf ( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
-void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
-void condor_except_should_dump_core( int flag );
-int getdtablesize ( void );
 
-int mkargv ( int *argc, char *argv[], char *line );
-//char * format_time ( float fp_secs );
-void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
+// only for standard uni shadow
+void update_rusage( struct rusage *ru1, struct rusage *ru2 );
 
 #if defined(__cplusplus)
 }		/* End of extern "C" declaration */

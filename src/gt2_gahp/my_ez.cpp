@@ -651,7 +651,14 @@ globus_l_gass_server_ez_register_accept_callback(
 				flags |= O_BINARY;
 #endif
                 rc = globus_libc_open(path, flags, 0600);
-		fstat(rc, &statstruct);
+				if (rc < 0) {
+					goto deny;
+				}
+		int ret = fstat(rc, &statstruct);
+		if (ret < 0) {
+			close(rc);
+			goto deny;
+		}
 	    }
 	    else
 	    {

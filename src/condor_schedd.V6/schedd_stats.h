@@ -177,8 +177,9 @@ class ScheddOtherStatsMgr {
 public:
    ScheddOtherStatsMgr(ScheddStatistics & stats)
      : config(stats)
-	 , pools(10, MyStringHash, updateDuplicateKeys)
+	 , pools(hashFunction)
    {};
+   ~ScheddOtherStatsMgr();
 
    void Clear();
    time_t Tick(time_t now); // call this when time may have changed to update StatsUpdateTime, etc.
@@ -193,7 +194,7 @@ public:
    bool Enable(const char * pre, const char * trig, bool stats_by_trig_value=false, time_t lifetime=0);
    bool Contains(const char * pre) { return pools.exists(pre) == 0; }
    ScheddOtherStats * Lookup(const char * pre) { ScheddOtherStats * po = NULL; pools.lookup(pre, po); return po; }
-   bool DisableAll();
+   bool DisableAll(); // returns true if any were enabled before this call
    bool RemoveDisabled();
    bool AnyEnabled();
    void DeferJobsSubmitted(int cluster, int proc);

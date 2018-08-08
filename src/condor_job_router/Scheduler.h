@@ -34,6 +34,7 @@ public:
 	void init();
 	void config();
 	void stop();
+	void poll();
 	int id();
 
 private:

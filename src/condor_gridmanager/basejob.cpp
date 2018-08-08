@@ -22,7 +22,6 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "write_user_log.h"
@@ -36,17 +35,13 @@
 #include "condor_holdcodes.h"
 #include "exit.h"
 
-#define HASH_TABLE_SIZE			500
-
 
 int BaseJob::periodicPolicyEvalTid = TIMER_UNSET;
 
 int BaseJob::m_checkRemoteStatusTid = TIMER_UNSET;
 
-HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( HASH_TABLE_SIZE,
-													 hashFuncPROC_ID );
-HashTable<HashKey, BaseJob *> BaseJob::JobsByRemoteId( HASH_TABLE_SIZE,
-													   hashFunction );
+HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( hashFuncPROC_ID );
+HashTable<std::string, BaseJob *> BaseJob::JobsByRemoteId( hashFunction );
 
 void BaseJob::BaseJobReconfig()
 {
@@ -95,6 +90,7 @@ BaseJob::BaseJob( ClassAd *classad )
 
 	jobAd = classad;
 
+	procID.cluster = procID.proc = 0;
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	jobAd->LookupInteger( ATTR_PROC_ID, procID.proc );
 
@@ -103,9 +99,10 @@ BaseJob::BaseJob( ClassAd *classad )
 	std::string remote_id;
 	jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
 	if ( !remote_id.empty() ) {
-		JobsByRemoteId.insert( HashKey( remote_id.c_str() ), this );
+		ASSERT( JobsByRemoteId.insert( remote_id, this ) == 0 );
 	}
 
+	condorState = IDLE; // Just in case lookup fails
 	jobAd->LookupInteger( ATTR_JOB_STATUS, condorState );
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
@@ -155,7 +152,7 @@ BaseJob::~BaseJob()
 		jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
 	}
 	if ( !remote_id.empty() ) {
-		JobsByRemoteId.remove( HashKey( remote_id.c_str() ) );
+		JobsByRemoteId.remove( remote_id );
 	}
 
 	if ( jobAd ) {
@@ -434,7 +431,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 		return;
 	}
 	if ( !old_job_id.empty() ) {
-		JobsByRemoteId.remove( HashKey( old_job_id.c_str() ) );
+		JobsByRemoteId.remove( old_job_id );
 		jobAd->AssignExpr( ATTR_GRID_JOB_ID, "Undefined" );
 	} else {
 		//  old job id was NULL
@@ -442,7 +439,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 		jobAd->Assign( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
 	}
 	if ( !new_job_id.empty() ) {
-		JobsByRemoteId.insert( HashKey( new_job_id.c_str() ), this );
+		ASSERT( JobsByRemoteId.insert( new_job_id, this ) == 0 );
 		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id.c_str() );
 	} else {
 		// new job id is NULL
@@ -685,7 +682,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 			if ( (expr = new_ad->LookupExpr( held_removed_update_attrs[i] )) != NULL ) {
 				ExprTree * pTree = expr->Copy();
-				jobAd->Insert( held_removed_update_attrs[i], pTree, false );
+				jobAd->Insert( held_removed_update_attrs[i], pTree );
 			} else {
 				jobAd->Delete( held_removed_update_attrs[i] );
 			}
@@ -998,7 +995,6 @@ InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	std::string userLogFile, dagmanNodeLog;
-	std::string gjid;
 	bool use_xml = false;
 	std::vector<const char*> logfiles;
 
@@ -1014,11 +1010,10 @@ InitializeUserLog( ClassAd *job_ad )
 
 	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-	job_ad->LookupString( ATTR_GLOBAL_JOB_ID, gjid );
 	job_ad->LookupBool( ATTR_ULOG_USE_XML, use_xml );
 
 	WriteUserLog *ULog = new WriteUserLog();
-	ULog->initialize(logfiles, cluster, proc, 0, gjid.c_str());
+	ULog->initialize(logfiles, cluster, proc, 0);
 	ULog->setUseXML( use_xml );
 	return ULog;
 }

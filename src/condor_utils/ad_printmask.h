@@ -27,9 +27,6 @@
 #include "pool_allocator.h"
 #include "tokener.h"
 
-// currently no-one uses the MyRowOfData version of the print mask
-//#define ALLOW_ROD_PRINTMASK
-
 enum {
 	FormatOptionNoPrefix = 0x01,
 	FormatOptionNoSuffix = 0x02,
@@ -57,12 +54,12 @@ enum {
 typedef const char *(*IntCustomFormat)(long long, struct Formatter &);
 typedef const char *(*FloatCustomFormat)(double, struct Formatter &);
 typedef const char *(*StringCustomFormat)(const char*, struct Formatter &);
-//typedef const char *(*AlwaysCustomFormat)(AttrList*,struct Formatter &);
+//typedef const char *(*AlwaysCustomFormat)(ClassAd*,struct Formatter &);
 typedef const char *(*ValueCustomFormat)(const classad::Value & value, struct Formatter &);
-typedef bool (*StringCustomRender)(std::string & str, AttrList*, struct Formatter &);
-typedef bool (*IntCustomRender)(long long & lval, AttrList*, struct Formatter &);
-typedef bool (*FloatCustomRender)(double & dval, AttrList*, struct Formatter &);
-typedef bool (*ValueCustomRender)(classad::Value & value, AttrList*, struct Formatter &);
+typedef bool (*StringCustomRender)(std::string & str, ClassAd*, struct Formatter &);
+typedef bool (*IntCustomRender)(long long & lval, ClassAd*, struct Formatter &);
+typedef bool (*FloatCustomRender)(double & dval, ClassAd*, struct Formatter &);
+typedef bool (*ValueCustomRender)(classad::Value & value, ClassAd*, struct Formatter &);
 
 class CustomFormatFn {
 public:
@@ -128,9 +125,6 @@ typedef struct {
 } CustomFormatFnTableItem;
 typedef case_sensitive_sorted_tokener_lookup_table<CustomFormatFnTableItem> CustomFormatFnTable;
 
-#ifdef ALLOW_ROD_PRINTMASK
-class MyRowOfData; // forward ref
-#endif
 class MyRowOfValues; // forward ref
 
 class AttrListPrintMask
@@ -161,17 +155,13 @@ class AttrListPrintMask
 	int walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const char * head), void* pv, const List<const char> * pheadings=NULL) const;
 
 	// display functions
-	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *
-	int   display (FILE *, AttrListList *, AttrList *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
-	int   display (std::string & out, AttrList *, AttrList *target=NULL ); // append to string out. return number of chars added
-#ifdef ALLOW_ROD_PRINTMASK
-	int   render (MyRowOfData & row, AttrList *, AttrList *target=NULL ); // render columns to text and add to MyRowOfData, returns number of cols
-	int   display (std::string & out, MyRowOfData & row); // append to string out. return number of chars added
-#endif
-	int   render (MyRowOfValues & row, AttrList *, AttrList *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
+	int   display (FILE *, ClassAd *, ClassAd *target=NULL);		// output to FILE *
+	int   display (FILE *, ClassAdList *, ClassAd *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
+	int   display (std::string & out, ClassAd *, ClassAd *target=NULL ); // append to string out. return number of chars added
+	int   render (MyRowOfValues & row, ClassAd *, ClassAd *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
 	int   display (std::string & out, MyRowOfValues & row); // append to string out. return number of chars added
-	int   calc_widths(AttrList *, AttrList *target=NULL );          // set column widths
-	int   calc_widths(AttrListList *, AttrList *target=NULL);
+	int   calc_widths(ClassAd *, ClassAd *target=NULL );          // set column widths
+	int   calc_widths(ClassAdList *, ClassAd *target=NULL);
 	int   display_Headings(FILE *, List<const char> & headings);
 	char *display_Headings(const char * pszzHead);
 	char *display_Headings(List<const char> & headings);
@@ -179,6 +169,7 @@ class AttrListPrintMask
 	char *display_Headings(void) { return display_Headings(headings); }
 	void set_heading(const char * heading);
 	bool has_headings() { return headings.Length() > 0; }
+	void clear_headings() { headings.Clear(); }
 	const char * store(const char * psz) { return stringpool.insert(psz); } // store a string in the local string pool.
 	// iterate formatter and attribs, calling pfn and allowing fmt to be changed until pfn returns < 0
 	int adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr), void* pv);
@@ -207,56 +198,6 @@ class AttrListPrintMask
 							);
 };
 
-#ifdef ALLOW_ROD_PRINTMASK
-
-class MyRowOfData
-{
-public:
-	MyRowOfData() : pdata(NULL), cols(0), cmax(0), flat(false) {};
-	~MyRowOfData();
-	int cat(const char * s);
-	int SetMaxCols(int max_cols);
-
-	// Copies a null-terminated character string into the object
-	//MyRowOfData& operator=(const char *s);
-	// appends a null-terminated string
-	//MyRowOfData& operator+=(const char *s);
-	// appends a MyString
-	MyRowOfData& operator+=(const MyString &S) { cat(S.c_str()); return *this; }
-
-	bool formatstr_cat(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
-
-	//int Length();
-	int ColCount() { return cols; }
-	int ColWidth(int index=-1) {
-		if (index < 0) index = cols+index;
-		if (index >= 0 && index < cols) return strlen(pdata[index]);
-		return -1;
-	}
-	const char * Column(int index) {
-		if (index < 0) index = cols+index;
-		if (index >= 0 && index < cols) return pdata[index];
-		return NULL;
-	}
-	const char * SwapColumnData(int index, const char * cnew) {
-		const char * cold = NULL;
-		if (index < 0) index = cols+index;
-		if (index >= 0 && index < cols) {
-			cold = pdata[index];
-			pdata[index] = const_cast<char*>(cnew);
-		}
-		return cold;
-	}
-
-private:
-	char **       pdata; // pointer to data, either an array of pointers, or a pointer to an szz
-	int           cols;
-	int           cmax;
-	bool          flat;
-};
-
-#endif
-
 class MyRowOfValues
 {
 public:
@@ -267,6 +208,27 @@ public:
 	int cat(const classad::Value & s);
 	classad::Value * next(int & index);
 	MyRowOfValues& operator+=(const classad::Value &S) { cat(S); return *this; }
+
+	MyRowOfValues& operator = ( const MyRowOfValues & rhs ) {
+		cols = rhs.cols;
+		cmax = rhs.cmax;
+
+		if( pvalid != NULL ) { delete pvalid; }
+		pvalid = new unsigned char[cmax];
+		memset( pvalid, '\0', cmax );
+
+		if( pdata != NULL ) { delete pdata; }
+		pdata = new classad::Value[cmax];
+		for( int i = 0; i < cmax; ++i ) {
+			pdata[i] = rhs.pdata[i];
+			pvalid[i] = rhs.pvalid[i];
+		}
+
+		return * this;
+	}
+
+	MyRowOfValues( const MyRowOfValues & in ) :
+	  pdata( NULL ), pvalid( NULL ), cols( 0 ), cmax( 0 ) { * this = in; }
 
 	bool empty() { return cols > 0; }
 	int ColCount() { return cols; }
@@ -303,10 +265,11 @@ private:
 // returns the number of arguments consumed
 int parse_autoformat_args (
 	int /*argc*/,
-	char* argv[],
+	const char* argv[],
 	int ixArg,
 	const char *popts,
 	AttrListPrintMask & print_mask,
+	classad::References & attrs, // out: returns attributes refereced by the expressions added to print_mask
 	bool diagnostic);
 
 // functions & classes in make_printmask.cpp
@@ -413,6 +376,7 @@ typedef struct PrintMaskMakeSettings {
 	std::string where_expression;      // out: classad expression from WHERE
 	classad::References attrs;        // out: ClassAd attributes referenced in mask or group_by outputs
 	classad::References scopes;       // out: scopes for ClassAd attributes referenced in mask or group_by outputs (i.e. target or job)
+	classad::References sumattrs;     // out: ClassAd attributes referenced in summary mask
 
 	PrintMaskMakeSettings() : headfoot(STD_HEADFOOT), aggregate(PR_NO_AGGREGATION) {}
 	void reset() {
@@ -420,6 +384,7 @@ typedef struct PrintMaskMakeSettings {
 		where_expression.clear();
 		attrs.clear();
 		scopes.clear();
+		sumattrs.clear();
 		headfoot = STD_HEADFOOT;
 		aggregate = PR_NO_AGGREGATION;
 	}
@@ -432,9 +397,10 @@ typedef struct PrintMaskMakeSettings {
 int SetAttrListPrintMaskFromStream (
 	SimpleInputStream & stream, // in: fetch lines from this stream until nextline() returns NULL
 	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
-	AttrListPrintMask & mask, // out: columns and headers set in SELECT
+	AttrListPrintMask & prmask, // out: columns and headers set in SELECT
 	PrintMaskMakeSettings & settings, // in,out: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
+	AttrListPrintMask * summask, // out: columns and headers set in SUMMMARY
 	std::string & error_message // out, if return is non-zero, this will be an error message
 	);
 
@@ -443,6 +409,8 @@ int PrintPrintMask(std::string & output,
 	const AttrListPrintMask & mask,       // in: columns and headers set in SELECT
 	const List<const char> * pheadings,   // in: headings override
 	const PrintMaskMakeSettings & settings, // in: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
-	const std::vector<GroupByKeyInfo> & group_by); // in: ordered set of attributes/expressions in GROUP BY
+	const std::vector<GroupByKeyInfo> & group_by,
+	AttrListPrintMask * summask // out: columns and headers set in SUMMMARY
+	); // in: ordered set of attributes/expressions in GROUP BY
 
 #endif // __AD_PRINT_MASK__

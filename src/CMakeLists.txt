@@ -31,51 +31,95 @@ if (BUILD_TESTING)
 	if (WINDOWS)
 		add_custom_target( BLD_TESTS )
 		add_dependencies( BLD_TESTS ${CONDOR_TESTS} )
+		#set(COPY_COMMAND xcopy /y)
+		#set(COPY_RECURSIVE_COMMAND xcopy /ys)
 	else(WINDOWS)
 		add_custom_target(tests)
 		add_dependencies(tests ${CONDOR_TESTS})
+		#set(COPY_COMMAND cp)
+		#set(COPY_RECURSIVE_COMMAND cp -r)
 	endif(WINDOWS)
 
-    # create the directory for copying the tests, and copy all the perl and binary tests
-    # currently we do not copy any payload required by the tests. Will need to figure out
-    # if the payload file names follow a particular format, so that it will be easy to
-    # copy all of them using regex/wildcards.
-    # TODO: remote `cp -r` command to make the code platform independent. there are 2
-    # ways to do this:
-    # - if we can gurantee all platforms use cmake > 3.5 we may be able to use wildcards
-    #   in cmake's copy command
-    # - glob all test files and then write a per file custom command to copy it to the
-    #   test package.
-    add_custom_target(tests-tar-pkg
-        DEPENDS tests
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CPACK_TEST_PACKAGE_FILE_NAME}
-        COMMAND cp -r ${CMAKE_CURRENT_BINARY_DIR}/condor_tests/*.exe* ${CPACK_TEST_PACKAGE_FILE_NAME}
-        COMMAND cp -r ${CONDOR_SOURCE_DIR}/src/condor_tests/*.pl ${CONDOR_SOURCE_DIR}/src/condor_tests/*.pm ${CONDOR_SOURCE_DIR}/src/condor_tests/*.run ${CPACK_TEST_PACKAGE_FILE_NAME}
-    )
+	# This is a bit ugly, but to make a package of tests, what we have to do is build a cmake script file
+	# using FILE(WRITE/APPEND) commands that has inside it FILE(INSTALL) commands to build up the 
+	# directory tree of tests and test dependencies that we want to package.
+	#
+	# we then define a custom target that invokes this cmake script file and then tars up the result
+	#
+	set(COPY_TESTS_CMAKE_FILE "${CMAKE_CURRENT_BINARY_DIR}/copy_tests.cmake")
+	FILE(WRITE ${COPY_TESTS_CMAKE_FILE}
+		"# generated cmake file to copy tests\n"
+		"IF(NOT DEFINED CMAKE_INSTALL_PREFIX)\n"
+		"  SET(CMAKE_INSTALL_PREFIX \"${CMAKE_BINARY_DIR}/release_dir\")\n"
+	"ENDIF()\n"
+	)
+	if (WINDOWS)
+		FILE(APPEND ${COPY_TESTS_CMAKE_FILE}
+			"IF(NOT DEFINED BUILD_TYPE)\n"
+			"  SET(BUILD_TYPE RelWithDebInfo)\n"
+			"ENDIF()\n"
+		)
+	endif(WINDOWS)
 
-	set(CONDOR_SCRIPTS_DIR ${CONDOR_SOURCE_DIR}/src/condor_scripts)
-	foreach(scriptFile Condor.pm
-			   CondorTest.pm
-			   CondorPersonal.pm
-			   CondorUtils.pm
-			   CheckOutputFormats.pm
-               run_test.pl)
-            add_custom_command(
-                TARGET tests-tar-pkg
-                POST_BUILD
-                COMMAND ${CMAKE_COMMAND} ARGS -E copy ${CONDOR_SCRIPTS_DIR}/${scriptFile} ${CPACK_TEST_PACKAGE_FILE_NAME}
-            )
-	endforeach(scriptFile)
+	# recursive copy the condor_tests source directory
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "FILE(INSTALL \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests\" DESTINATION \${CMAKE_INSTALL_PREFIX})\n")
 
-    add_custom_command(
-        TARGET tests-tar-pkg
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E tar czf ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz ${CPACK_TEST_PACKAGE_FILE_NAME}
-        COMMAND ${CMAKE_COMMAND} -E copy ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz ${CMAKE_BINARY_DIR}
-        COMMAND ${CMAKE_COMMAND} -E remove -f ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CPACK_TEST_PACKAGE_FILE_NAME}
-    )
+	# setup a big copy list for the tests themselves
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "FILE(INSTALL " "DESTINATION \${CMAKE_INSTALL_PREFIX}/condor_tests TYPE EXECUTABLE FILES\n")
+	# 
+	FOREACH (test IN LISTS CONDOR_TEST_EXES)
+		if (WINDOWS)
+			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_tests/\${BUILD_TYPE}/${test}\"\n")
+		else (WINDOWS)
+			FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_tests/${test}\" \n")
+		endif(WINDOWS)
+	ENDFOREACH (test)
+	# copy rules for pl tests
+	FOREACH (test IN LISTS CONDOR_PL_TESTS)
+		FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_tests/${test}.run\" \n")
+	ENDFOREACH (test)
+	# copy rules for tests helper scripts
+	FOREACH (script IN LISTS CONDOR_TEST_HELPER_SCRIPTS)
+		FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_SOURCE_DIR}/condor_scripts/${script}\" \n")
+	ENDFOREACH (script)
+	# close the big copy list
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_SOURCE_DIR}/msconfig/do_tests.pl\" \n")
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} ")\n")
 
+	# copy the generated test lists
+	APPEND_UNIQUE_VAR(CONDOR_TEST_LIST_TAGS "all")
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "FILE(INSTALL " "DESTINATION \${CMAKE_INSTALL_PREFIX}/condor_tests TYPE FILE FILES\n")
+	#FOREACH (tag "quick" "all" "ckpt" "core" "condorc" "critical" "dagman" "filexfer" "framework" "full" "java" "lib" "local" "long" "rsc" "simple" "stduniv" "time")
+	FOREACH (tag IN LISTS CONDOR_TEST_LIST_TAGS)
+		FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${TEST_TARGET_DIR}/list_${tag}\"\n")
+	ENDFOREACH(tag)
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_utils/command_name_tables.h\"\n")
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_utils/param_info_tables.h\"\n")
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} ")\n")
+
+	IF(WINDOWS)
+		FILE(TO_NATIVE_PATH "${COPY_TESTS_CMAKE_FILE}" WIN_COPY_TESTS_FILE)
+		add_custom_target(tests-tar-pkg
+			DEPENDS BLD_TESTS
+			COMMAND ${CMAKE_COMMAND} -DBUILD_TYPE=$(Configuration) -DCMAKE_INSTALL_PREFIX=${CPACK_TEST_PACKAGE_FILE_NAME} -P "${WIN_COPY_TESTS_FILE}"
+		)
+	ELSE(WINDOWS)
+		add_custom_target(tests-tar-pkg
+			DEPENDS tests
+			COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=${CPACK_TEST_PACKAGE_FILE_NAME} -P ${COPY_TESTS_CMAKE_FILE}
+		)
+	ENDIF(WINDOWS)
+
+	add_custom_command(
+	    TARGET tests-tar-pkg
+	    POST_BUILD
+	    COMMAND ${CMAKE_COMMAND} -E tar czf ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz ${CPACK_TEST_PACKAGE_FILE_NAME}
+	    COMMAND ${CMAKE_COMMAND} -E copy ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz ${CMAKE_BINARY_DIR}
+	    COMMAND ${CMAKE_COMMAND} -E remove -f ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz
+	    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CPACK_TEST_PACKAGE_FILE_NAME}
+	)
+
+	dprint("CONDOR_TEST_LIST_TAGS=${CONDOR_TEST_LIST_TAGS}")
 	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
 endif()
 

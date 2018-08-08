@@ -49,7 +49,6 @@
 #include "ntsysinfo.WINDOWS.h"
 #endif
 #include "self_monitor.h"
-//#include "stdsoap2.h"
 #include "condor_pidenvid.h"
 #include "condor_arglist.h"
 #include "env.h"
@@ -62,6 +61,7 @@
 #include "generic_stats.h"
 #include "filesystem_remap.h"
 #include "counted_ptr.h"
+#include "daemon_keep_alive.h"
 #include <vector>
 
 #include "../condor_procd/proc_family_io.h"
@@ -285,6 +285,7 @@ class DaemonCore : public Service
 #endif
   friend int dc_main(int, char**);
   friend class DaemonCommandProtocol;
+  friend class DaemonKeepAlive;
     
   public:
     
@@ -293,7 +294,7 @@ class DaemonCore : public Service
 	 * Typically these methods are invoked from functions inside 
 	 * of daemon_core_main.C.
 	 */
-    DaemonCore (int PidSize = 0, int ComSize = 0, int SigSize = 0,
+    DaemonCore (int ComSize = 0, int SigSize = 0,
                 int SocSize = 0, int ReapSize = 0, int PipeSize = 0);
     ~DaemonCore();
     void Driver();
@@ -474,6 +475,12 @@ class DaemonCore : public Service
 		   otherwise NULL.
 		*/
 	const char* superUserNetworkIpAddr(void);
+
+		/** Determine if a Stream passed to a command handler
+			originated via the condor_sos command (i.e. via super user socket)
+			@return true if super user command, else false
+		*/
+	bool Is_Command_From_SuperUser( Stream *s );
 
 		/**
 		   @return The daemon's private network name, or NULL if there
@@ -1346,6 +1353,7 @@ class DaemonCore : public Service
 	int Kill_Thread(int tid);
 	//@}
 
+
 	/** Public method to allow things that fork() themselves without
 		using Create_Thread() to set the magic DC variable so that our
 		version of exit() uses _exit() instead of exit() and we don't
@@ -1406,69 +1414,6 @@ class DaemonCore : public Service
 	void RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
 	void UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
 	
-        // A little info on the "soap_ssl_sock"... There once was a
-        // bug known as the "single transaction problem" and it made
-        // the SOAP code very sad because it meant that if anything in
-        // the Schedd changed during a SOAP transaction bad things
-        // could happen. Things were horrible. A raging EXCEPT monster
-        // was roaming the daemons and no one had time to fight
-        // it. Until one day a powerful wizard named Ddot said, "I
-        // will vanquish the EXCEPT monster! I have a plan to kill it
-        // quickly." And everyone was happy, well mostly. For Ddot and
-        // others, mostly a young mage Ttam, knew that to truly
-        // vanquish the EXCEPT monster was not quick work. But
-        // everyone wanted the EXCEPT monster gone and they accepted
-        // Ddot's plan. True to his word, Ddot made quick work of the
-        // EXCEPT monster. To do so he didn't kill the monster but
-        // changed the daemons so that when a SOAP transaction was
-        // running everything else except the daemon's command socket
-        // (incidentally where the SOAP messages came in on) would be
-        // suspended. The plan worked and there was a time of great
-        // joy, nervous joy. But the joy could not last forever. Very
-        // few things do. The day came when Ttam was busily concocting
-        // a spell to secure SOAP communication using SSL. Ttam worked
-        // diligently trying to find the best way to integrate his SSL
-        // work. He knew that all SOAP communications came in on one
-        // port, the initial_command_sock, and he wanted to SOAP SSL
-        // communication to as well. Unfortunately, he was thwarted by
-        // SSL's evil multiple versions. Ttam could simply not create
-        // a simple way to tell if messages sent to daemons were
-        // CEDAR, SOAP or SSL messages. Ttam accepted a partial defeat
-        // and decided to allow SOAP SSL communication to arrive on a
-        // separate port. Ttam was excited, he felt things were
-        // working out well for him. Little did he know that the
-        // powerful spell the wizard Ddot had cast to vanquish the
-        // EXCEPT monster was about to stop him dead in his
-        // tracks. There he was, Ttam, nearly finished with the SOAP
-        // SSL spell. He had tested it with simple single message
-        // tests and it looked good. But, one day Ttam decided to do a
-        // full test of the new spell and discovered that it
-        // failed. While the first message to the SOAP SSL port went
-        // through fine all subsequent ones were ignored. At first
-        // Ttam was very perplexed, but then he remembered Ddot's
-        // magic. Ddot's solution to ignore all communication with a
-        // daemon during a SOAP transaction meant that the SOAP SSL
-        // messages were also ignored. The day had come that Ddot and
-        // Ttam had dreaded. The EXCEPT monster had to be dealt with
-        // properly. Unfortunately, yet again, Ttam was but a mage
-        // lacking the great power needed to vanquish the beast. And,
-        // Ddot had the power, he was one of the few, but he was off
-        // fighting other, more important, monsters in other
-        // lands. So, yet again, the EXCEPT monster was to be dealt
-        // with quickly instead of completely. A new plan was set and
-        // Ttam set out to perform it. A soap_ssl_sock was created
-        // that would hold the special number identifying the SOAP SSL
-        // port, and during a SOAP transaction not only would the
-        // initial_command_sock be allowed to accept messages, but the
-        // soap_ssl_sock would as well. Unfortunately, the
-        // soap_ssl_sock had to be set from the land of soap_core.C
-        // and not daemon_core.C, but that was of little consequence
-        // because Ttam knew that his spell must be undone when Ddot
-        // could return and properly dispatch the EXCEPT monster.
-	int			  	  soap_ssl_sock;
-
-	MapFile * mapfile;
-  	
     SelfMonitorData monitor_data;
 
 	char 	*localAdFile;
@@ -1523,7 +1468,7 @@ class DaemonCore : public Service
 		   is to send CHILDALIVEs.
 		*/
 	void WantSendChildAlive( bool send_alive )
-		{ m_want_send_child_alive = send_alive; }
+		{ m_DaemonKeepAlive.WantSendChildAlive(send_alive); }
 	
 		/**
 			Returns true if a wake signal was sent to the master's select.
@@ -1586,7 +1531,9 @@ class DaemonCore : public Service
       #ifdef WIN32
 	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
       #endif
+	   stats_entry_abs<int> UdpQueueDepth;  // Unread bytes for the UDP command port 
 
+		
        stats_entry_recent<Probe> PumpCycle;   // count of pump cycles plus sum of cycle time with min/max/avg/std 
        stats_entry_sum_ema_rate<int> Commands;
 
@@ -1623,24 +1570,7 @@ class DaemonCore : public Service
 
 	} dc_stats;
 
-	// Do not use this function for anything. It's a temporary hack to get
-	// ConvertDefaultIPToSocketIP working in mixed-mode IPv4/IPv6.  The
-	// real goal is to eliminate ConvertDefaultIPToSocketIP, and eliminate
-	// the need for this.
-	//
-	// All that said: given a condor_sockaddr, this will look for the interface
-	// that best matches and will return its port.
-	int find_interface_command_port_do_not_use(const condor_sockaddr & addr);
-
-	// Do not use this function for anything. It's a temporary hack to get
-	// ConvertDefaultIPToSocketIP working in mixed-mode IPv4/IPv6.  The
-	// real goal is to eliminate ConvertDefaultIPToSocketIP, and eliminate
-	// the need for this.
-	//
-	// All that said: given a condor_sockaddr, determine if it describes
-	// one of our command ports.
-	bool is_command_port_do_not_use(const condor_sockaddr & addr);
-
+	bool wants_dc_udp_self() const { return m_wants_dc_udp_self;}
   private:      
 
 		// do and our parents/children want/have a udp comment socket?
@@ -1695,6 +1625,7 @@ class DaemonCore : public Service
 	SockPairVec dc_socks;
 	ReliSock* super_dc_rsock;	// super user tcp command socket
 	SafeSock* super_dc_ssock;	// super user udp command socket
+	int m_super_dc_port;		// super user listen port
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 	int m_iMaxReapsPerCycle; // maximum number reapers to invoke per event loop
 	int m_MaxTimeSkip;
@@ -1812,6 +1743,8 @@ class DaemonCore : public Service
         void*           data_ptr;
         int             dprintf_flag;
 		int             wait_for_payload;
+
+		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), dprintf_flag(0), wait_for_payload(0) {}
     };
 
     void                DumpCommandTable(int, const char* = NULL);
@@ -1867,7 +1800,6 @@ class DaemonCore : public Service
 	int				  nRegisteredSocks; // number of sockets registered, always < nSock
 	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
-  	struct soap		  *soap;
 
 		// number of file descriptors in use past which we should start
 		// avoiding the creation of new persistent sockets.  Do not use
@@ -1954,12 +1886,14 @@ class DaemonCore : public Service
         int is_local;
         int parent_is_local;
         int reaper_id;
-        int hung_tid;   // Timer to detect hung processes
-        int was_not_responding;
-        int got_alive_msg; // number of child alive messages received
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
         MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
         int stdin_offset;
+
+		// these three data members are set/used by the DaemonKeepAlive class
+        unsigned int hung_past_this_time;   // if >0, child is hung if time() > this value
+        int was_not_responding;
+        int got_alive_msg; // number of child alive messages received
 
 		/* the environment variables which allow me the track the pidfamily
 			of this pid (where applicable) */
@@ -2059,15 +1993,9 @@ class DaemonCore : public Service
 
     Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
 
-    // methods to detect and kill hung processes
-    int HandleChildAliveCommand(int command, Stream* stream);
-    int HungChildTimeout();
-    int SendAliveToParent();
-    int max_hang_time;
-	int max_hang_time_raw;
-	int m_child_alive_period;
-    int send_child_alive_timer;
-	bool m_want_send_child_alive;
+	// Methods to detect and kill hung processes are consolidated
+	// in the DaemonKeepAlive helper friend class.
+	DaemonKeepAlive m_DaemonKeepAlive;
 
 	// Method to check on and possibly recover from a bad connection
 	// to the procd. Suitable to be registered as a one-shot timer.

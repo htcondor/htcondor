@@ -32,9 +32,9 @@
 static void usage(void);
 
 TransferD::TransferD() :
-	m_treqs(200, hashFuncMyString),
-	m_client_to_transferd_threads(200, hashFuncLong),
-	m_transferd_to_client_threads(200, hashFuncLong)
+	m_treqs(hashFunction),
+	m_client_to_transferd_threads(hashFuncLong),
+	m_transferd_to_client_threads(hashFuncLong)
 {
 	m_initialized = FALSE;
 	m_update_sock = NULL;
@@ -166,7 +166,6 @@ int
 TransferD::accept_transfer_request(FILE *fin)
 {
 	MyString encapsulation_method_line;
-	MyString encap_end_line;
 	EncapMethod em;
 	int rval = 0;
 
@@ -322,9 +321,7 @@ int
 TransferD::accept_transfer_request_handler(Stream *sock)
 {
 	MyString encapsulation_method_line;
-	MyString encap_end_line;
 	EncapMethod em;
-	char *str = NULL;
 
 	dprintf(D_ALWAYS, 
 		"Entering TransferD::accept_transfer_request_handler()\n");
@@ -337,13 +334,10 @@ TransferD::accept_transfer_request_handler(Stream *sock)
 
 	sock->decode();
 
-	if (sock->code(str) == 0) {
+	if (sock->code(encapsulation_method_line) == 0) {
 		EXCEPT("Schedd closed connection, I'm going away.");
 	}
 	sock->end_of_message();
-
-	encapsulation_method_line = str; // makes a copy
-	free(str);
 
 	encapsulation_method_line.trim();
 

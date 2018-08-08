@@ -43,7 +43,7 @@ JobRouterHookMgr::JobRouterHookMgr()
 	  m_warn_exit(true),
 	  NUM_HOOKS(5),
 	  UNDEFINED("UNDEFINED"),
-	  m_hook_paths(MyStringHash)
+	  m_hook_paths(hashFunction)
 {
 	// JOB_EXIT is an old name for JOB_FINALIZE.
 	// Keep both for anyone still using the old name.
@@ -608,8 +608,9 @@ TranslateClient::hookExited(int exit_status)
 		ClassAd job_ad;
 		const char* hook_line = NULL;
 
-		m_std_out.Tokenize();
-		while ((hook_line = m_std_out.GetNextToken("\n", true)))
+		MyStringTokener tok;
+		tok.Tokenize(m_std_out.Value());
+		while ((hook_line = tok.GetNextToken("\n", true)))
 		{
 			if (!job_ad.Insert(hook_line))
 			{
@@ -695,8 +696,9 @@ StatusClient::hookExited(int exit_status)
 			ATTR_TARGET_TYPE,
 			NULL };
 
-		m_std_out.Tokenize();
-		while ((hook_line = m_std_out.GetNextToken("\n", true)))
+		MyStringTokener tok;
+		tok.Tokenize(m_std_out.Value());
+		while ((hook_line = tok.GetNextToken("\n", true)))
 		{
 			if (!job_ad.Insert(hook_line))
 			{
@@ -782,8 +784,9 @@ ExitClient::hookExited(int exit_status) {
 			classad::ClassAdCollection *ad_collection = job_router->GetScheduler()->GetClassAds();
 			classad::ClassAd *orig_ad = ad_collection->GetClassAd(m_routed_job->src_key);
 
-			m_std_out.Tokenize();
-			while ((hook_line = m_std_out.GetNextToken("\n", true)))
+			MyStringTokener tok;
+			tok.Tokenize(m_std_out.Value());
+			while ((hook_line = tok.GetNextToken("\n", true)))
 			{
 				if (!job_ad.Insert(hook_line))
 				{

@@ -154,6 +154,9 @@ bool adsource::get_line(std::string & buffer)
 // --------------------------------------------------------------------
 int parse_ads(bool with_cache, bool verbose=false)
 {
+	int barf_counter = 0;
+	int rval = 0;
+
 	if (with_cache) {
 		ClassAdSetExpressionCaching(true); 
 	} else {
@@ -164,11 +167,10 @@ int parse_ads(bool with_cache, bool verbose=false)
 	vector<string> inputData;
 	classad_shared_ptr<ClassAd> pAd(new ClassAd);
 
-
 	srand(42);
 	adsource infile;
 
-	string szInput;
+	string szInput, name, szValue;
 	szInput.reserve(longest_kvp);
 	clock_t Start = clock();
 
@@ -182,10 +184,31 @@ int parse_ads(bool with_cache, bool verbose=false)
 		{
 			ads.push_back(pAd);
 			pAd.reset( new ClassAd );
+			continue;
 		}
-		else if ( !pAd->Insert(szInput) )
+
+		size_t pos = szInput.find('=');
+
+		// strip whitespace before the attribute and and around the =
+		size_t npos = pos;
+		while (npos > 0 && szInput[npos-1] == ' ') { npos--; }
+		size_t bpos = 0;
+		while (bpos < npos && szInput[bpos] == ' ') { bpos++; }
+		name = szInput.substr(bpos, npos - bpos);
+
+		size_t vpos = pos+1;
+		while (szInput[vpos] == ' ') { vpos++; }
+		szValue = szInput.substr(vpos);
+
+		if ( pAd->InsertViaCache(name, szValue) )
 		{
+			++barf_counter;
 			fprintf(stdout, "BARFED ON: %s\n", szInput.c_str());
+			if (barf_counter > 1000) {
+				fprintf(stdout, "error count exceeds 1000, aborting test\n");
+				rval = 1;
+				break;
+			}
 		}
 	}
 
@@ -195,7 +218,7 @@ int parse_ads(bool with_cache, bool verbose=false)
 	CachedExprEnvelope::_debug_dump_keys("output.txt");
 
 	ads.clear();
-	return 0;
+	return rval;
 }
 
 int main(int argc, const char ** argv)

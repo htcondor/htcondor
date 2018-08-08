@@ -38,7 +38,7 @@
 
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
-static const char * _globus_error_message = NULL;
+static std::string _globus_error_message;
 
 #if defined(HAVE_EXT_GLOBUS)
 
@@ -51,6 +51,10 @@ int (*globus_module_activate_ptr)(
 	globus_module_descriptor_t *) = NULL;
 int (*globus_thread_set_model_ptr)(
 	const char *) = NULL;
+globus_object_t *(*globus_error_peek_ptr)(
+	globus_result_t) = NULL;
+char *(*globus_error_print_friendly_ptr)(
+	globus_object_t *) = NULL;
 // Symbols from libglobus_gsi_sysconfig
 globus_result_t (*globus_gsi_sysconfig_get_proxy_filename_unix_ptr)(
 	char **, globus_gsi_proxy_file_type_t) = NULL;
@@ -211,18 +215,31 @@ GlobusJobStatusName( int status )
 const char *
 x509_error_string( void )
 {
-	return _globus_error_message;
+	return _globus_error_message.c_str();
 }
 
 static
 void
 set_error_string( const char *message )
 {
-	if ( _globus_error_message ) {
-		free( const_cast<char *>(_globus_error_message) );
-	}
-	_globus_error_message = strdup( message );
+	_globus_error_message = message;
 }
+
+#if defined(HAVE_EXT_GLOBUS)
+static
+bool
+set_error_string( globus_result_t result )
+{
+	globus_object_t *err_obj = (*globus_error_peek_ptr)( result );
+	char *msg = NULL;
+	if ( err_obj && (msg = (*globus_error_print_friendly_ptr)( err_obj )) ) {
+		_globus_error_message = msg;
+		free( msg );
+		return true;
+	}
+	return false;
+}
+#endif
 
 /* Activate the globus gsi modules for use by functions in this file.
  * Returns zero if the modules were successfully activated. Returns -1 if
@@ -248,9 +265,7 @@ activate_globus_gsi( void )
 
 	if ( Condor_Auth_SSL::Initialize() == false ) {
 		// Error in the dlopen/sym calls for libssl, return failure.
-		std::string buf;
-		formatstr( buf, "Failed to open SSL library" );
-		set_error_string( buf.c_str() );
+		_globus_error_message = "Failed to open SSL library";
 		activation_failed = true;
 		return -1;
 	}
@@ -262,6 +277,8 @@ activate_globus_gsi( void )
 		 (dl_hdl = dlopen(LIBGLOBUS_COMMON_SO, RTLD_LAZY)) == NULL ||
 		 !(globus_module_activate_ptr = (int (*)(globus_module_descriptor_t*))dlsym(dl_hdl, "globus_module_activate")) ||
 		 !(globus_thread_set_model_ptr = (int (*)(const char*))dlsym(dl_hdl, "globus_thread_set_model")) ||
+		 !(globus_error_peek_ptr = (globus_object_t* (*)(globus_result_t))dlsym(dl_hdl, "globus_error_peek")) ||
+		 !(globus_error_print_friendly_ptr = (char* (*)(globus_object_t*))dlsym(dl_hdl, "globus_error_print_friendly")) ||
 		 (dl_hdl = dlopen(LIBGLOBUS_CALLOUT_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGLOBUS_PROXY_SSL_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGLOBUS_OPENSSL_ERROR_SO, RTLD_LAZY)) == NULL ||
@@ -333,15 +350,15 @@ activate_globus_gsi( void )
 		 ) {
 			 // Error in the dlopen/sym calls, return failure.
 		const char *err = dlerror();
-		std::string buf;
-		formatstr( buf, "Failed to open GSI libraries: %s", err ? err : "Unknown error" );
-		set_error_string( buf.c_str() );
+		formatstr( _globus_error_message, "Failed to open GSI libraries: %s", err ? err : "Unknown error" );
 		activation_failed = true;
 		return -1;
 	}
 #else
 	globus_module_activate_ptr = globus_module_activate;
 	globus_thread_set_model_ptr = globus_thread_set_model;
+	globus_error_peek_ptr = globus_error_peek;
+	globus_error_print_friendly_ptr = globus_error_print_friendly;
 	globus_gsi_sysconfig_get_proxy_filename_unix_ptr = globus_gsi_sysconfig_get_proxy_filename_unix;
 	globus_gsi_cred_get_cert_ptr = globus_gsi_cred_get_cert;
 	globus_gsi_cred_get_cert_chain_ptr = globus_gsi_cred_get_cert_chain;
@@ -1242,8 +1259,7 @@ x509_send_delegation( const char *source_file,
 	(void) send_data_func;
 	(void) send_data_ptr;
 
-	_globus_error_message =
-		strdup( NOT_SUPPORTED_MSG );
+	_globus_error_message = NOT_SUPPORTED_MSG;
 	return -1;
 
 #else
@@ -1260,6 +1276,8 @@ x509_send_delegation( const char *source_file,
 	int idx = 0;
 	globus_gsi_cert_utils_cert_type_t cert_type;
 	int is_limited;
+	bool did_recv = false;
+	bool did_send = false;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return -1;
@@ -1286,14 +1304,17 @@ x509_send_delegation( const char *source_file,
 		goto cleanup;
 	}
 
-	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 ) {
+	did_recv = true;
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 || buffer == NULL ) {
 		rc = -1;
+		_globus_error_message = "Failed to receive delegation request";
 		error_line = __LINE__;
 		goto cleanup;
 	}
 
 	if ( buffer_to_bio( buffer, buffer_len, &bio ) == FALSE ) {
 		rc = -1;
+		_globus_error_message = "buffer_to_bio() failed";
 		error_line = __LINE__;
 		goto cleanup;
 	}
@@ -1322,6 +1343,7 @@ x509_send_delegation( const char *source_file,
 	switch ( cert_type ) {
 	case GLOBUS_GSI_CERT_UTILS_TYPE_CA:
 		rc = -1;
+		_globus_error_message = "delegating CA certs not supported";
 		error_line = __LINE__;
 		goto cleanup;
 	case GLOBUS_GSI_CERT_UTILS_TYPE_EEC:
@@ -1396,6 +1418,7 @@ x509_send_delegation( const char *source_file,
 	bio = BIO_new( BIO_s_mem() );
 	if ( bio == NULL ) {
 		rc = -1;
+		_globus_error_message = "BIO_new() failed";
 		error_line = __LINE__;
 		goto cleanup;
 	}
@@ -1436,25 +1459,32 @@ x509_send_delegation( const char *source_file,
 
 	if ( bio_to_buffer( bio, &buffer, &buffer_len ) == FALSE ) {
 		rc = -1;
+		_globus_error_message = "bio_to_buffer() failed";
 		error_line = __LINE__;
 		goto cleanup;
 	}
 
+	did_send = true;
 	if ( send_data_func( send_data_ptr, buffer, buffer_len ) != 0 ) {
 		rc = -1;
+		_globus_error_message = "Failed to send delegated proxy";
 		error_line = __LINE__;
 		goto cleanup;
 	}
 
  cleanup:
-	/* TODO Extract Globus error message if result isn't GLOBUS_SUCCESS */
-	if ( error_line ) {
-		char buff[1024];
-		snprintf( buff, sizeof(buff), "x509_send_delegation failed at line %d",
-				  error_line );
-		set_error_string( buff );
+	if ( rc == -1 && result != GLOBUS_SUCCESS ) {
+		if ( !set_error_string( result ) ) {
+			formatstr( _globus_error_message, "x509_send_delegation() failed at line %d", error_line );
+		}
 	}
 
+	if ( !did_recv ) {
+		recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len );
+	}
+	if ( !did_send ) {
+		send_data_func( send_data_ptr, NULL, 0 );
+	}
 	if ( bio ) {
 		BIO_free( bio );
 	}
@@ -1503,8 +1533,7 @@ x509_receive_delegation( const char *destination_file,
 	(void) send_data_func;			// Quiet compiler warnings
 	(void) send_data_ptr;			// Quiet compiler warnings
 	(void) state_ptr;			// Quiet compiler warnings
-	_globus_error_message =
-		strdup( NOT_SUPPORTED_MSG );
+	_globus_error_message = NOT_SUPPORTED_MSG;
 	return -1;
 
 #else
@@ -1518,6 +1547,7 @@ x509_receive_delegation( const char *destination_file,
 	char *buffer = NULL;
 	size_t buffer_len = 0;
 	BIO *bio = NULL;
+	bool did_send = false;
 
 	if ( activate_globus_gsi() != 0 ) {
 		if ( st->m_dest ) { free(st->m_dest); }
@@ -1595,6 +1625,7 @@ x509_receive_delegation( const char *destination_file,
 	bio = BIO_new( BIO_s_mem() );
 	if ( bio == NULL ) {
 		rc = -1;
+		_globus_error_message = "BIO_new() failed";
 		error_line = __LINE__;
 		goto cleanup;
 	}
@@ -1609,6 +1640,7 @@ x509_receive_delegation( const char *destination_file,
 
 	if ( bio_to_buffer( bio, &buffer, &buffer_len ) == FALSE ) {
 		rc = -1;
+		_globus_error_message = "bio_to_buffer() failed";
 		error_line = __LINE__;
 		goto cleanup;
 	}
@@ -1616,8 +1648,10 @@ x509_receive_delegation( const char *destination_file,
 	BIO_free( bio );
 	bio = NULL;
 
+	did_send = true;
 	if ( send_data_func( send_data_ptr, buffer, buffer_len ) != 0 ) {
 		rc = -1;
+		_globus_error_message = "Failed to send delegation request";
 		error_line = __LINE__;
 		goto cleanup;
 	}
@@ -1626,15 +1660,15 @@ x509_receive_delegation( const char *destination_file,
 	buffer = NULL;
 
 cleanup:
-	/* TODO Extract Globus error message if result isn't GLOBUS_SUCCESS */
-	if ( error_line ) {
-		char buff[1024];
-		snprintf( buff, sizeof(buff), "x509_receive_delegation failed "
-			"at line %d", error_line );
-		buff[1023] = '\0';
-		set_error_string( buff );
+	if ( rc == -1 && result != GLOBUS_SUCCESS ) {
+		if ( !set_error_string( result ) ) {
+			formatstr( _globus_error_message, "x509_send_delegation() failed at line %d", error_line );
+		}
 	}
 
+	if ( !did_send ) {
+		send_data_func( send_data_ptr, NULL, 0 );
+	}
 	if ( bio ) {
 		BIO_free( bio );
 	}
@@ -1645,7 +1679,7 @@ cleanup:
 		(*globus_gsi_proxy_handle_attrs_destroy_ptr)( handle_attrs );
 	}
 	// Error!  Cleanup memory immediately and return.
-	if ( rc && st ) {
+	if ( rc ) {
 		if ( st->m_request_handle ) {
 			(*globus_gsi_proxy_handle_destroy_ptr)( st->m_request_handle );
 		}
@@ -1678,8 +1712,7 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
 	(void) recv_data_func;			// Quiet compiler warnings
 	(void) recv_data_ptr;			// Quiet compiler warnings
 	(void) state_ptr_raw;			// Quiet compiler warnings
-	_globus_error_message =
-		strdup( NOT_SUPPORTED_MSG );
+	_globus_error_message = NOT_SUPPORTED_MSG;
 	return -1;
 
 #else
@@ -1692,14 +1725,16 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
 	size_t buffer_len = 0;
 	BIO *bio = NULL;
 
-	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 ) {
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 || buffer == NULL ) {
 		rc = -1;
+		_globus_error_message = "Failed to receive delegated proxy";
 		error_line = __LINE__;
 		goto cleanup;
 	}
 
 	if ( buffer_to_bio( buffer, buffer_len, &bio ) == FALSE ) {
 		rc = -1;
+		_globus_error_message = "buffer_to_bio() failed";
 		error_line = __LINE__;
 		goto cleanup;
 	}
@@ -1724,12 +1759,10 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
 	}
 
  cleanup:
-	/* TODO Extract Globus error message if result isn't GLOBUS_SUCCESS */
-	if ( error_line ) {
-		char buff[1024];
-		snprintf( buff, sizeof(buff), "x509_receive_delegation failed "
-				  "at line %d", error_line );
-		set_error_string( buff );
+	if ( rc == -1 && result != GLOBUS_SUCCESS ) {
+		if ( !set_error_string( result ) ) {
+			formatstr( _globus_error_message, "x509_send_delegation() failed at line %d", error_line );
+		}
 	}
 
 	if ( bio ) {

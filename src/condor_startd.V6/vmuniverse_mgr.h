@@ -72,7 +72,10 @@ public:
 	bool allocVM(pid_t pid, ClassAd &ad, char const *execute_dir); 
 	void freeVM(pid_t pid); // pid for exited starter
 
-	void checkVMUniverse(void); // check whether vm universe is available
+	// This is only supposed to check if VM universe is available, but
+	// is more commonly called as a response to the vm-gahp failing.
+	// If warn is false, don't print the scary log message about that.
+	void checkVMUniverse( bool warn = true );
 
 	int getFreeVMMemSize(void);
 	bool canCreateVM(ClassAd *jobAd = NULL);

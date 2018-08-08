@@ -44,11 +44,8 @@ using std::set;
 
 int BoincResource::gahpCallTimeout = 300;	// default value
 
-#define HASH_TABLE_SIZE			500
-
-HashTable <HashKey, BoincResource *>
-    BoincResource::ResourcesByName( HASH_TABLE_SIZE,
-									hashFunction );
+HashTable <std::string, BoincResource *>
+    BoincResource::ResourcesByName( hashFunction );
 
 enum BatchSubmitStatus {
 	BatchUnsubmitted,
@@ -81,7 +78,7 @@ BoincResource *BoincResource::FindOrCreateResource( const char *resource_name,
 	const char *hash_name = HashName( resource_name, authenticator );
 	ASSERT(hash_name);
 
-	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
+	rc = ResourcesByName.lookup( hash_name, resource );
 	if ( rc != 0 ) {
 		resource = new BoincResource( resource_name, authenticator );
 		ASSERT(resource);
@@ -89,7 +86,7 @@ BoincResource *BoincResource::FindOrCreateResource( const char *resource_name,
 			delete resource;
 			resource = NULL;
 		} else {
-			ResourcesByName.insert( HashKey( hash_name ), resource );
+			ResourcesByName.insert( hash_name, resource );
 		}
 	} else {
 		ASSERT(resource);
@@ -109,6 +106,8 @@ BoincResource::BoincResource( const char *resource_name,
 	m_activeLeaseBatch = NULL;
 	m_submitGahp = NULL;
 	m_activeSubmitBatch = NULL;
+
+	m_activeLeaseTime = 0;
 
 //	hasLeases = true;
 //	m_hasSharedLeases = true;
@@ -135,7 +134,7 @@ BoincResource::~BoincResource()
 	daemonCore->Cancel_Timer( m_leaseTid );
 	daemonCore->Cancel_Timer( m_submitTid );
 
-	ResourcesByName.remove( HashKey( HashName( resourceName, m_authenticator ) ) );
+	ResourcesByName.remove( HashName( resourceName, m_authenticator ) );
 
 	free( m_serviceUri );
 	free( m_authenticator );
@@ -725,6 +724,7 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 				m_submitGahp->purgePendingRequests();
 				// TODO What else should we do?
 			} else {
+				(*batch)->m_submit_status = BatchSubmitting;
 				m_activeSubmitBatch = (*batch);
 				delay = TIMER_NEVER;
 				break; // or reset timer and return?

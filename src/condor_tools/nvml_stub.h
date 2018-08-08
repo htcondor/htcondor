@@ -147,3 +147,60 @@ typedef enum nvmlEccCounterType_enum
  * @deprecated Mapped to \ref NVML_MEMORY_ERROR_TYPE_UNCORRECTED
  */
 #define NVML_DOUBLE_BIT_ECC NVML_MEMORY_ERROR_TYPE_UNCORRECTED
+
+/**
+ *  Represents Type of Sampling Event
+ */
+typedef enum nvmlSamplingType_enum
+{
+    NVML_TOTAL_POWER_SAMPLES        = 0, //!< To represent total power drawn by GPU
+    NVML_GPU_UTILIZATION_SAMPLES    = 1, //!< To represent percent of time during which one or more kernels was executing on the GPU
+    NVML_MEMORY_UTILIZATION_SAMPLES = 2, //!< To represent percent of time during which global (device) memory was being read or written
+    NVML_ENC_UTILIZATION_SAMPLES    = 3, //!< To represent percent of time during which NVENC remains busy
+    NVML_DEC_UTILIZATION_SAMPLES    = 4, //!< To represent percent of time during which NVDEC remains busy
+    NVML_PROCESSOR_CLK_SAMPLES      = 5, //!< To represent processor clock samples
+    NVML_MEMORY_CLK_SAMPLES         = 6, //!< To represent memory clock samples
+
+    // Keep this last
+    NVML_SAMPLINGTYPE_COUNT
+} nvmlSamplingType_t;
+
+/**
+ * Represents the type for sample value returned
+ */
+typedef enum nvmlValueType_enum
+{
+    NVML_VALUE_TYPE_DOUBLE = 0,
+    NVML_VALUE_TYPE_UNSIGNED_INT = 1,
+    NVML_VALUE_TYPE_UNSIGNED_LONG = 2,
+    NVML_VALUE_TYPE_UNSIGNED_LONG_LONG = 3,
+    NVML_VALUE_TYPE_SIGNED_LONG_LONG = 4,
+
+    // Keep this last
+    NVML_VALUE_TYPE_COUNT
+} nvmlValueType_t;
+
+typedef union nvmlValue_st
+{
+    double dVal;                    //!< If the value is double
+    unsigned int uiVal;             //!< If the value is unsigned int
+    unsigned long ulVal;            //!< If the value is unsigned long
+    unsigned long long ullVal;      //!< If the value is unsigned long long
+    signed long long sllVal;        //!< If the value is signed long long
+} nvmlValue_t;
+
+/**
+ * Information for Sample
+ */
+typedef struct nvmlSample_st
+{
+    unsigned long long timeStamp;   //!< CPU Timestamp in microseconds
+    nvmlValue_t sampleValue;        //!< Sample Value
+} nvmlSample_t;
+
+// Memory info
+typedef struct nvmlMemory_t {
+	unsigned long long free;
+	unsigned long long total;
+	unsigned long long used;
+} nvmlMemory_t;

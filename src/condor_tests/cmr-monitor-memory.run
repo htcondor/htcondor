@@ -1,0 +1,71 @@
+#!/usr/bin/env perl
+
+##**************************************************************
+##
+## Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use strict;
+use warnings;
+
+#
+# This is a basic test to determine if the PEAK metrics of Custom Machine
+# Resource monitors are working properly.
+#
+
+use CondorTest;
+use CondorUtils;
+use CondorPersonal;
+
+use CustomMachineResource;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+NUM_CPUS = 16
+
+MACHINE_RESOURCE_INVENTORY_SQUIDs = $(TEST_DIR)/cmr-squid-discovery
+use feature : monitor( SQUIDs, Periodic, 10, $(TEST_DIR)/cmr-squid-monitor-memory, PEAK:SQUIDsMemory )
+
+SCHEDD_CLUSTER_INITIAL_VALUE = 3000
+
+UPDATE_INTERVAL = 20
+STARTER_UPDATE_INTERVAL = 20
+SHADOW_QUEUE_UPDATE_INTERVAL = 20
+
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testName = 'cmr_monitor_memory';
+my $testDescription = 'Custom Machine Resources - Monitor Test Memory';
+
+#
+# Verify the configuration before running the test.
+#
+CustomMachineResource::TestSlotAndSQUIDsCount( 16, $testName );
+
+#
+# We don't verify that the monitor's report is being read correctly, because
+# the cmr-monitor-basic* tests already have; that code doesn't know anything
+# about metric types, so it can't misbehave on that basis.  Additionally, it
+# will quickly become clear, given the usage patterns produce by
+# cmr-squid-monitor-memory, if there are any problems reading the values.
+#
+
+#
+# Verify that we're computing the peak usage correctly.
+#
+exit( CustomMachineResource::TestSQUIDsMemoryUsage( $testName ) );

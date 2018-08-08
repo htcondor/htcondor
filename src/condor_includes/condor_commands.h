@@ -178,6 +178,9 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define SWAP_CLAIM_AND_ACTIVATION (SCHED_VERS+117) // swap claim & activation between two STARTD resources, for moving a job into a 'transfer' slot.
 #define SEND_RESOURCE_REQUEST_LIST	(SCHED_VERS+118)     // used in negotiation protocol
 #define QUERY_JOB_ADS_WITH_AUTH (SCHED_VERS+119) // Same as QUERY_JOB_ADS but requires authentication
+#define FETCH_PROXY_DELEGATION (SCHED_VERS+120)
+
+#define REASSIGN_SLOT (SCHED_VERS+121) // Given two job IDs, deactivate the victim job's claim and reactivate it running the beneficiary job.
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
@@ -201,6 +204,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define REPLICATION_GIVING_UP_VERSION      (REPLICATION_COMMANDS_BASE + 3)
 #define REPLICATION_SOLICIT_VERSION        (REPLICATION_COMMANDS_BASE + 4)
 #define REPLICATION_SOLICIT_VERSION_REPLY  (REPLICATION_COMMANDS_BASE + 5)
+#define REPLICATION_TRANSFER_FILE_NEW      (REPLICATION_COMMANDS_BASE + 6)
 
 /*
   The ClassAd-only protocol.  CA_CMD is the base command that's sent
@@ -296,10 +300,6 @@ const int UPDATE_NEGOTIATOR_AD 	= 49;
 const int QUERY_NEGOTIATOR_ADS	= 50;
 const int INVALIDATE_NEGOTIATOR_ADS = 51;
 
-const int UPDATE_QUILL_AD	= 52;
-const int QUERY_QUILL_ADS	= 53;
-const int INVALIDATE_QUILL_ADS  = 54;
-
 const int UPDATE_HAD_AD = 55;
 const int QUERY_HAD_ADS = 56;
 const int INVALIDATE_HAD_ADS = 57;
@@ -309,13 +309,13 @@ const int INVALIDATE_ADS_GENERIC = 59;
 
 const int UPDATE_STARTD_AD_WITH_ACK = 60;
 
-const int UPDATE_XFER_SERVICE_AD		= 61;
-const int QUERY_XFER_SERVICE_ADS		= 62;
-const int INVALIDATE_XFER_SERVICE_ADS	= 63;
+//const int UPDATE_XFER_SERVICE_AD		= 61;	/* Not used */
+//const int QUERY_XFER_SERVICE_ADS		= 62;	/* Not used */
+//const int INVALIDATE_XFER_SERVICE_ADS	= 63;	/* Not used */
 
-const int UPDATE_LEASE_MANAGER_AD		= 64;
-const int QUERY_LEASE_MANAGER_ADS		= 65;
-const int INVALIDATE_LEASE_MANAGER_ADS  = 66;
+//const int UPDATE_LEASE_MANAGER_AD		= 64;	/* Not used */
+//const int QUERY_LEASE_MANAGER_ADS		= 65;	/* Not used */
+//const int INVALIDATE_LEASE_MANAGER_ADS  = 66;	/* Not used */
 
 const int CCB_REGISTER = 67;
 const int CCB_REQUEST = 68;
@@ -406,6 +406,7 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define DC_OFF_FORCE       (DC_BASE+42)
 #define DC_SET_READY       (DC_BASE+43)  // sent to parent to indicate a demon is ready for use
 #define DC_QUERY_READY     (DC_BASE+44)  // daemon command handler should reply only once it and children are ready
+#define DC_QUERY_INSTANCE  (DC_BASE+45)  // ask if a daemon is alive - returns a random 64 bit int that will not change as long as this instance is alive.
 
 
 /*
@@ -486,14 +487,6 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define TRANSFERD_WRITE_FILES	(TRANSFERD_BASE+2)
 /* files are being read from the transferd's storage */
 #define TRANSFERD_READ_FILES	(TRANSFERD_BASE+3)
-
-/*
-*** Commands used by the new lease manager daemon
-*/
-#define LEASE_MANAGER_BASE			75000
-#define LEASE_MANAGER_GET_LEASES	(LEASE_MANAGER_BASE+0)
-#define LEASE_MANAGER_RENEW_LEASE	(LEASE_MANAGER_BASE+1)
-#define LEASE_MANAGER_RELEASE_LEASE	(LEASE_MANAGER_BASE+2)
 
 
 /*

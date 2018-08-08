@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "basename.h"
 #include "spooled_job_files.h"
@@ -111,8 +110,6 @@ static const char *GMStateNames[] = {
 #else
 #	define file_contains contains
 #endif
-
-#define NORDUGRID_LOG_DIR ".nordugrid_log"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.

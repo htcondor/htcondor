@@ -24,11 +24,6 @@
 #include "HashTable.h"
 
 
-unsigned int hashFuncStdString( std::string const & key)
-{
-    return hashFuncChars(key.c_str());
-}
-
 #if 0 /*Not currently needed*/
 
 bool encode_classad(Stream *sock,classad::ClassAd *ad) {

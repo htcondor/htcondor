@@ -52,6 +52,9 @@
 #define _CRT_NONSTDC_NO_DEPRECATE 1
 #define _CRT_NONSTDC_NO_WARNINGS
 
+// we define this this to disable the warning about using WSAAddressToStringA
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+
 // #define NOGDI
 #define NOSOUND
 
@@ -164,7 +167,9 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define S_IRWXO 2
 #define S_ISDIR(mode) (((mode)&_S_IFDIR) == _S_IFDIR)
 #define S_ISREG(mode) (((mode)&_S_IFREG) == _S_IFREG)
+#if _MSC_VER < 1800 // Added to the standard library in VS 2013
 #define rint(num) ((num<0.)? -floor(-num+.5):floor(num+.5))
+#endif
 
 #ifndef ETIMEDOUT
 #define ETIMEDOUT ERROR_TIMEOUT
@@ -177,8 +182,6 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #ifndef EWOULDBLOCK
 #	define EWOULDBLOCK EAGAIN
 #endif
-
-typedef fd_set *SELECT_FDSET_PTR;
 
 struct rusage {
     struct timeval ru_utime;    /* user time used */

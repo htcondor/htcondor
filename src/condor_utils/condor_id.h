@@ -87,7 +87,7 @@ class CondorID : public ServiceData
 	virtual int ServiceDataCompare( ServiceData const* other ) const;
 
 		/** For use with SelfDrainingQueue. */
-	virtual unsigned int HashFn( ) const;
+	virtual size_t HashFn( ) const;
 
     /// The job cluster
     int _cluster;

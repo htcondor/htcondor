@@ -63,6 +63,16 @@ public:
 	void remove_anycase (const char* str);
 	char *next (void) { return m_strings.Next(); }
 	char *first (void) { m_strings.Rewind(); return m_strings.Next(); }
+	char *pop () {
+		if (m_strings.IsEmpty())
+			return NULL;
+		return m_strings.PopHead();
+	}
+	void append (const char* mem, int cb) {
+		char * p = (char *)malloc(cb+2);
+		memcpy(p, mem, cb); p[cb] = p[cb+1] = 0;
+		m_strings.Append(p);
+	}
 	
 	/** This is invalid when "current" points to NULL as stated in list.h*/
 	void deleteCurrent();

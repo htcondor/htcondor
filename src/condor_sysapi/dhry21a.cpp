@@ -43,13 +43,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <math.h>
 #include "dhry.h"
 /* DO NOT include sysapi.h here */
 
 #include "utc_time.h"
-#define dtime()	UtcTime::getTimeDouble()
+#define dtime()	condor_gettimestamp_double()
 
 
 /* Global Variables: */
@@ -553,10 +552,10 @@ mips_raw( void )
 	// For faster machines, run with more loops.
 	loops = int(floor( 0.99 + (1.0 * QUICK_RUNS * quick_mips * LOOP_CONST )));
 	while( true ) {
-		double t1 = UtcTime::getTimeDouble( );
+		double t1 = condor_gettimestamp_double( );
 		mips_ = dhry_mips(loops);
 
-		double t2 = UtcTime::getTimeDouble( );
+		double t2 = condor_gettimestamp_double( );
 
 		if ( mips_ > 0 ) {
 			lloops = loops;

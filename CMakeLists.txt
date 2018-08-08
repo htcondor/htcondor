@@ -37,7 +37,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "8.6.11")
+set(VERSION "8.7.10")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
@@ -45,8 +45,8 @@ set(VERSION "8.6.11")
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
-#set(PRE_RELEASE "PRE-RELEASE-UWCS")
-set(PRE_RELEASE OFF)
+set(PRE_RELEASE "PRE-RELEASE-UWCS")
+#set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for
 #   PRE_RELEASE to be forced into a build.
@@ -73,7 +73,6 @@ list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake/macros;${CONDOR_S
 include (dprint) # set debug module 1st to all spewing in other modules if needed
 include (AppendVar)
 include (CommandTarget)
-include (gSOAPGen)
 include (CloneInstall)
 include (FindMultiple)
 include (FindSoName)
@@ -105,7 +104,7 @@ include (AddSubdirectories)
 include (CTest)
 include (CondorPLTest)
 include (CondorExeTest)
-include (CondorUnitTest)
+#include (CondorUnitTest)
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)
