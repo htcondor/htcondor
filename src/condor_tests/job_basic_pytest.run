@@ -13,11 +13,11 @@ def submit_callback():
     Utils.TLog("Custom submit callback called!")
 
 def success_callback():
-    Utils.TLog("Custom success callback called, exiting with status 0")
+    Utils.TLog("Test succeded. Exiting with status 0")
     sys.exit(0)
 
 def failure_callback():
-    Utils.TLog("Custom failure callback called, exiting with status 1")
+    Utils.TLog("Test failed. Exiting with status 1")
     sys.exit(1)
 
 
@@ -44,12 +44,13 @@ def main():
     test_job = CondorJob(job_args)
 
     # Register handlers
-    test.RegisterSubmit(submit_callback)
-    test.RegisterSuccess(success_callback)
-    test.RegisterFailure(failure_callback)
+    test_job.RegisterSubmit(submit_callback)
+    test_job.RegisterSuccess(success_callback)
+    test_job.RegisterFailure(failure_callback)
 
     # Submit the test job
-    result = test.SubmitJob(test_job)
+    result = test_job.Submit()
+    test_job.WaitForFinish()
     Utils.TLog("Test returned result: " + str(result))
 
     # Assume that PersonalCondor will shut down by itself if we don't explicitly call it?
