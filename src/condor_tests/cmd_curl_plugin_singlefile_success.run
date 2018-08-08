@@ -5,6 +5,7 @@ import sys
 
 from pytest.CondorJob import CondorJob
 from pytest.CondorTest import CondorTest
+from pytest.Globals import *
 from pytest.HTTPServer import HTTPServer
 from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
@@ -12,11 +13,11 @@ from pytest.Utils import Utils
 
 def SuccessCallback():
     Utils.TLog("Job successful as expected. Test passed.")
-    sys.exit(0)
+    sys.exit(SUCCESS)
 
 def FailureCallback():
     Utils.TLog("Job failed unexpectedly. Test failed.")
-    sys.exit(1)
+    sys.exit(TEST_FAILURE)
 
 def HttpSuccessUrlHandler(request):
     request.protocol_version = "HTTP/1.1"
@@ -49,21 +50,24 @@ def main():
     job_args = {
         "executable":               "cmd_curl_plugin_singlefile_success.py",
         "output":                   "cmd_curl_plugin_singlefile_success.out",
-        "error":                    "cmd_curl_plugin_singlefile_success.err",
         "transfer_input_files":     success_url,
         "should_transfer_files":    "YES"
     }
     test_job = CondorJob(job_args)
 
-    # Register handlers
-    test.RegisterSuccess(SuccessCallback)
-    test.RegisterFailure(FailureCallback)
+    # Register job handlers
+    test_job.RegisterSuccess(SuccessCallback)
+    test_job.RegisterFailure(FailureCallback)
 
     # Submit the test job
-    result = test.SubmitJob(test_job)
-    Utils.TLog("Test returned result: " + str(result))
+    test_job.Submit()
+    result = test_job.WaitForFinish()
+    Utils.TLog("Job returned result: " + str(result))
 
-    # All done, sit and wait. Success/failure callbacks will exit the test.
+    # The success/failure callbacks handle the sys.exit() calls
+    # All our testing infrastructure will shut down via destructors
+    # Nothing left to do at this point.
+
 
 
 if __name__ == "__main__":

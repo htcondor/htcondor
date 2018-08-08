@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 
+from Globals import *
 from Utils import Utils
 
 class PersonalCondor(object):

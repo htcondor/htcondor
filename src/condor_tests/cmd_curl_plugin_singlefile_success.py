@@ -5,7 +5,7 @@ import time
 success_file = open("success", "r")
 success_contents = success_file.read()
 if "<html>Great success!</html>" not in success_contents:
-    print("Success file contents don't match, test fail")
+    print("ERROR: Success file contents don't match, going to sleep")
     while True:
         time.sleep(1) # Go to sleep forever to trigger a timeout
 
