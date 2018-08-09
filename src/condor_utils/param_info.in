@@ -5511,6 +5511,23 @@ default : @end
 	PREEMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
 @end
 
+[$POLICY.PREEMPT_IF_RUNTIME_EXCEEDS]
+description=Limit job runtimes. args([limit_in_seconds])  default: 24 hours
+default : @end
+	MAX_JOB_RUNTIME = $(1:24*3600)
+	PREEMPT_RUNTIME_EXCEEDS = (JobState == "Running") && ((time() - JobCurrentStartDate) > $(MAX_JOB_RUNTIME))
+	use policy : PREEMPT_IF( PREEMPT_RUNTIME_EXCEEDS )
+@end
+
+[$POLICY.HOLD_IF_RUNTIME_EXCEEDS]
+description=Limit job runtimes. args([limit_in_seconds])  default: 24 hours
+default : @end
+	MAX_JOB_RUNTIME = $(1:24*3600)
+	HOLD_REASON_RUNTIME_EXCEEDS = runtime exceeded maximum ($(MAX_JOB_RUNTIME) seconds)
+	HOLD_RUNTIME_EXCEEDS = (JobState == "Running") && ((time() - JobCurrentStartDate) > $(MAX_JOB_RUNTIME))
+	use policy : WANT_HOLD_IF( HOLD_RUNTIME_EXCEEDS, $(HOLD_SUBCODE_RUNTIME_EXCEEDS:103), $(HOLD_REASON_RUNTIME_EXCEEDS) )
+@end
+
 [$POLICY.STARTD_PUBLISH_CpusUsage]
 description=Publish a CpusUsage attribute in the STARTD
 default : @end
