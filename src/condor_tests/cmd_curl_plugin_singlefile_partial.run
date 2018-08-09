@@ -5,6 +5,7 @@ import sys
 
 from pytest.CondorJob import CondorJob
 from pytest.CondorTest import CondorTest
+from pytest.Globals import *
 from pytest.HTTPServer import HTTPServer
 from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
@@ -12,11 +13,11 @@ from random import randint
 
 def SuccessCallback():
     Utils.TLog("Job successful as expected. Test passed.")
-    sys.exit(0)
+    sys.exit(SUCCESS)
 
 def FailureCallback():
     Utils.TLog("Job failed unexpectedly. Test failed.")
-    sys.exit(1)
+    sys.exit(TEST_FAILURE)
 
 def HttpPartialUrlHandler(request):
 
@@ -82,18 +83,18 @@ def main():
     job_args = {
         "executable":               "cmd_curl_plugin_singlefile_partial.py",
         "output":                   "cmd_curl_plugin_singlefile_partial.out",
-        "error":                    "cmd_curl_plugin_singlefile_partial.err",
         "transfer_input_files":     partial_url,
         "should_transfer_files":    "YES"
     }
     test_job = CondorJob(job_args)
 
     # Register handlers
-    test.RegisterSuccess(SuccessCallback)
-    test.RegisterFailure(FailureCallback)
+    test_job.RegisterSuccess(SuccessCallback)
+    test_job.RegisterFailure(FailureCallback)
 
     # Submit the test job
-    result = test.SubmitJob(test_job)
+    test_job.Submit()
+    result = test_job.WaitForFinish()
     Utils.TLog("Test returned result: " + str(result))
 
     # All done, sit and wait. Success/failure callbacks will exit the test.

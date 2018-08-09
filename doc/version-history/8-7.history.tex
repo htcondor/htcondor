@@ -29,7 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added a new file transfer plugin, \emph{multifile\_curl\_plugin} which is
+able to transfer multiple files with only a single invocation of the plugin, 
+preserving the TCP connection. It also takes a classad as input data, which will 
+allow us to pass in more complex input than the existing \emph{curl\_plugin}.
+\Ticket{6499}
 
 \end{itemize}
 

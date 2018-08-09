@@ -5,18 +5,18 @@ import sys
 
 from pytest.CondorJob import CondorJob
 from pytest.CondorTest import CondorTest
+from pytest.Globals import *
 from pytest.HTTPServer import HTTPServer
 from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
 
-
 def SuccessCallback():
     Utils.TLog("Job ran successfully but was supposed to go on hold. Test failed.")
-    sys.exit(1)
+    sys.exit(TEST_FAILURE)
 
 def FailureCallback():
     Utils.TLog("Job went on hold as expected. Test passed.")
-    sys.exit(0)
+    sys.exit(SUCCESS)
 
 def HttpServerErrorUrlHandler(request):
     request.protocol_version = "HTTP/1.1"
@@ -47,18 +47,18 @@ def main():
         "executable":               "x_echostring.pl",
         "arguments":                "This test is designed to fail, should not be seeing this",
         "output":                   "cmd_curl_plugin_singlefile_failure.out",
-        "error":                    "cmd_curl_plugin_singlefile_failure.err",
         "transfer_input_files":     servererror_url,
         "should_transfer_files":    "YES"
     }
     test_job = CondorJob(job_args)
 
     # Register handlers
-    test.RegisterSuccess(SuccessCallback)
-    test.RegisterFailure(FailureCallback)
+    test_job.RegisterSuccess(SuccessCallback)
+    test_job.RegisterFailure(FailureCallback)
 
     # Submit the test job
-    result = test.SubmitJob(test_job)
+    test_job.Submit()
+    result = test_job.WaitForFinish()
     Utils.TLog("Test returned result: " + str(result))
 
     # All done, sit and wait. Success/failure callbacks will exit the test.
