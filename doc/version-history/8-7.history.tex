@@ -35,13 +35,26 @@ preserving the TCP connection. It also takes a classad as input data, which will
 allow us to pass in more complex input than the existing \emph{curl\_plugin}.
 \Ticket{6499}
 
+\item Added two new policies, \MacroNI{PREEMPT\_IF\_RUNTIME\_EXCEEDS} and
+\MacroNI{HOLD\_IF\_RUNTIME\_EXCEEDS}.  The former is (intended to be)
+identical to the policy \MacroNI{LIMIT\_JOB\_RUNTIMES}, except without
+ordering constraints with respect to other policy macros.
+(\MacroNI{ALWAYS\_RUN\_JOBS} must still come before any other policy macro,
+but unlike \MacroNI{LIMIT\_JOB\_RUNTIMES},
+\MacroNI{PREEMPT\_IF\_RUNTIME\_EXCEEDS} may come after other policy macros.)
+Additionally, both of the new policies function while the machine is draining.
+\Ticket{6701}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug where \MacroNI{PREEMPT} was not be evaluated if the
+machine was draining.  This prevent the HOLD\_IF series of policies from
+functioning properly in that situation.
+\Ticket{6697}
 
 \end{itemize}
 
