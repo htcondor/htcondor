@@ -539,10 +539,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 		dprintf(D_FULLDEBUG,"Done checking for old scratch dirs\n");			
 
-		if (prefix != NULL) {
-			free(prefix);
-			prefix = NULL;
-		}
+		free(prefix);
 
 	}	// end of once-per-schedd invocation block
 
