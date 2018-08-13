@@ -91,6 +91,7 @@ while (<CM>) {
 close(CM);
 mkdir("/tmp/$runid/condor-$condor_version") || die "Can't mkdir(/tmp/$runid/condor-$condor_version): $!\n";
 
+system("cp -p .??* /tmp/$runid/condor-$condor_version");
 system("cp -pr * /tmp/$runid/condor-$condor_version");
 chdir("/tmp/$runid") || die "Can't chdir(/tmp/$runid): $!\n";
 
