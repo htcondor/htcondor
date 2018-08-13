@@ -45,8 +45,8 @@ from pytest.Utils import Utils
 testname = os.path.basename(__file__)[:-3]
 
 # dump the environment.
-Utils.TLog("the environment")
-for e in os.environ: Utils.Log(e + " = " + os.getenv(e))
+#Utils.TLog("the environment")
+#for e in os.environ: Utils.Log(e + " = " + os.getenv(e))
 
 sub = htcondor.Submit("""
 	universe = vanilla
@@ -112,29 +112,28 @@ def wait_for_cluster_removal(id, logfile, timeout):
 			#print ad
 
 			if ad['MyType'] == 'FactoryRemoveEvent' :
-				#print "my cluster is gone"
+				Utils.TLog("ulog: FactoryRemove({0})".format(cluster))
 				total_factories -= 1
 
-				print ' results for cluster {0}'.format(cluster)
-				print ''
-				print '          now peak total'
-				print 'running  {0:4d} {1:4d} {2:5d}'.format(num_running, peak_running, total_running)
-				print 'idle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized)
-				print 'factory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1)
+				print '\t          now peak total'
+				print '\trunning  {0:4d} {1:4d} {2:5d}'.format(num_running, peak_running, total_running)
+				print '\tidle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized)
+				print '\tpresent  {0:4d} {1:4d} {2:5d}'.format(num_materialized, peak_materialized, total_materialized)
+				print '\tfactory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1)
 				break
 
 			elif ad['MyType'] == 'FactorySubmitEvent' :
-				#print "there is my cluster"
+				Utils.TLog("ulog: FactorySubmit({0})".format(cluster))
 				total_factories += 1
 				continue
 
 			elif ad['MyType'] == 'SubmitEvent' :
-				#print "there is my job"
 				total_materialized += 1
 				num_materialized += 1
 				num_idle += 1
-				if total_materialized > peak_materialized : peak_materialized = total_materialized
+				if num_materialized > peak_materialized : peak_materialized = num_materialized
 				if num_idle > peak_idle : peak_idle = num_idle
+				Utils.TLog("ulog: jobSubmit() idle={0}({1}), materialized={2}({3})".format(num_idle, peak_idle, num_materialized, peak_materialized))
 				continue
 
 			elif ad['MyType'] == 'ExecuteEvent' :
@@ -142,13 +141,14 @@ def wait_for_cluster_removal(id, logfile, timeout):
 				num_running += 1
 				num_idle -= 1
 				if num_running > peak_running : peak_running = num_running
-				#print "my job is running! ", num_running
+				Utils.TLog("ulog: jobExec() running={0}({1})".format(num_running, peak_running))
 				continue
 
 			elif ad['MyType'] == 'JobTerminatedEvent' :
-				print "there goes my job"
+				total_exited += 1
 				num_running -= 1
-				if ad['TerminatedNormally'] == 'true' : num_materialized -= 1
+				if ad['TerminatedNormally'] : num_materialized -= 1
+				Utils.TLog("ulog: jobTerm({0}) run={1}({2}), materialized={3}({4})".format(ad['TerminatedNormally'], num_running, peak_running, num_materialized, peak_materialized))
 				continue
 
 		except StopIteration:
@@ -164,15 +164,19 @@ if timed_out :
 	Utils.TLog("Timed out waiting for cluster remove event")
 	exit(1)
 
+retval = 0
 Utils.TLog("cluster completed, checking results:")
-if peak_materialized != sub['max_materialize'] : 
+if peak_materialized != int(sub['max_materialize']) :
 	Utils.Log("FAILURE: peak_materialized({0}) != max_materialize({1})".format(peak_materialized, sub['max_materialize']))
-elif total_materialized != 10 : 
-	Utils.Log("FAILURE: total_materialized({0}) != queue ({1})".format(total_materialized, 10))
-elif total_exited != 10 : 
-	Utils.Log("FAILURE: total_exited({0}) != queue ({1})".format(total_exited, 10))
+	retval = 1
+elif total_materialized != int(sub.getQArgs()) : 
+	Utils.Log("FAILURE: total_materialized({0}) != queue {1}".format(total_materialized, sub.getQArgs()))
+	retval = 1
+elif total_exited != int(sub.getQArgs()) : 
+	Utils.Log("FAILURE: total_exited({0}) != queue {1}".format(total_exited, sub.getQArgs()))
+	retval = 1
 else :
 	Utils.Log("OK: all checks passed")
 
-exit(0)
+exit(retval)
 
