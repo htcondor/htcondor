@@ -89,12 +89,17 @@ while (<CM>) {
     }
 }
 close(CM);
-mkdir("/tmp/$runid/condor-$condor_version") || die "Can't mkdir(/tmp/$runid/condor-$condor_version): $!\n";
+mkdir("/tmp/$runid/condor-$condor_version") ||
+    die "Can't mkdir(/tmp/$runid/condor-$condor_version): $!\n";
 
+system("cp -p .??* /tmp/$runid/condor-$condor_version");
 system("cp -pr * /tmp/$runid/condor-$condor_version");
+unlink("/tmp/$runid/condor-$condor_version/$buildid_file") ||
+    die "Can't remove /tmp/$runid/condor-$condor_version/$buildid_file: $!\n";
 chdir("/tmp/$runid") || die "Can't chdir(/tmp/$runid): $!\n";
 
-open ( TAR, "tar cvfz $CommonDir/condor-$condor_version.tgz condor-$condor_version 2>&1|" ) || die "Can't make the source tarball: $!\n";
+open ( TAR, "tar cvfz $CommonDir/condor-$condor_version.tgz condor-$condor_version 2>&1|" ) ||
+    die "Can't make the source tarball: $!\n";
 my $tar_log = "$CommonDir/tar.log";
 open( TAR_LOG, ">$tar_log" ) || die "Can't open $tar_log: $!\n";
 $oldfh = select(TAR_LOG); $| = 1; select($oldfh);
@@ -120,7 +125,8 @@ if(!(defined $opt_skip_doc)){
 	print "Building man page nroff source\n";
 	chdir( "$DocDir" ) || die "Can't chdir($DocDir): $!\n";
 	my $doc_log = "$CommonDir/nroff.log";
-	open( DOC, "make just-man-pages 2>&1|" ) || die "Can't open 'make just-man-pages': $!\n";
+	open( DOC, "make just-man-pages 2>&1|" ) ||
+        die "Can't open 'make just-man-pages': $!\n";
 	open( DOC_LOG, ">$doc_log" ) || die "Can't open $doc_log: $!\n";
 	$oldfh = select(DOC_LOG); $| = 1; select($oldfh);
 	while( <DOC> ) {
