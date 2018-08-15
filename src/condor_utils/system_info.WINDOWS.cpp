@@ -78,7 +78,7 @@ void SystemInfoUtils::LPCWSTR2MyString( LPCWSTR strW, MyString& str )
 	if ( actChar == '\0' )
 		return;
 
-	ULONG len = wcslen(strW) + 1;
+	size_t len = wcslen(strW) + 1;
 	TCHAR* pBuffer = new TCHAR[ len ];
 	TCHAR* pNewStr = pBuffer;
 

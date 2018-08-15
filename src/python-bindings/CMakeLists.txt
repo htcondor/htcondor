@@ -3,70 +3,166 @@ if(WINDOWS)
   if(WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND)
     #only for VS2012 and above
     if(NOT (MSVC_VERSION LESS 1700))
-        #only for boost-1.54.0
-        IF("${BOOST_VER}" STREQUAL "boost-1.54.0")
-            message(STATUS "===> Generating python-bindings")
-      
-            include_directories(${PYTHON_INCLUDE_DIRS} ${BOOST_INCLUDE})
-            link_directories(${BOOST_LD})
+        #only for boost-1.54.0 or boost-1.68
+		IF("${BOOST_VER}" MATCHES "boost-1.(54|68).0")
+			message(STATUS "===> Generating python-bindings with boost 1.${CMAKE_MATCH_1}")
+			set(BOOST_LIB_BOOST_VER "1_${CMAKE_MATCH_1}")
+			if ("${CMAKE_MATCH_1}" EQUAL "54") # no bitness neeeded	(32 bit only)
+			else() #need bitness
+				if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+					set(BOOST_LIB_BOOST_VER "x64-1_${CMAKE_MATCH_1}")
+				else()
+					set(BOOST_LIB_BOOST_VER "x32-1_${CMAKE_MATCH_1}")
+				endif()
+			endif()
+			if(MSVC_VERSION EQUAL 1700)
+				set(BOOST_LIB_PY2_VC_VER "python-vc110")
+				set(BOOST_LIB_PY3_VC_VER "python3-vc110")
+			else()
+				set(BOOST_LIB_PY2_VC_VER "python27-vc141")
+				set(BOOST_LIB_PY3_VC_VER "python36-vc141")
+			endif()
 
-            # the boost python libraries for debug vs nondebug are different
-            # so for every library, we need two names (3 names if you want add support for python_d)
-            set(PYTHON_LIBRARY_BOOST_ONE ${BOOST_LD}/boost_python-vc110-mt-1_54.lib)
-            set(PYTHON_LIBRARY_BOOST_ONE_D ${BOOST_LD}/boost_python-vc110-mt-gd-1_54.lib)
-            set(PYTHON_LIBRARY_BOOST_TWO ${BOOST_LD}/libboost_python-vc110-mt-1_54.lib)
-            set(PYTHON_LIBRARY_BOOST_TWO_D ${BOOST_LD}/libboost_python-vc110-mt-gd-1_54.lib)
+			link_directories(${BOOST_LD})
+			include_directories(${BOOST_INCLUDE})
 
-            # When you build Debug, the mere act of including <pyconfig.h>
-            # will generate a reference to the python27_d library in the object files
-            # if you let boost include pyconfig.h, then it defeats this behavior unless
-            # you enable python debugging in the boost way.  We don't currently support
-            # this option with htcondor builds, so if you end up with link errors to a
-            # non-existent python27_d, the problem is in the order that you include headers
-            # set(PYTHON_DEBUG_LIBRARY ${BOOST_LD}/python27_d.lib)
+			if (DEFINED PYTHON_VERSION_STRING)
+				#we have to do this per-target because python2 and python3 need different ones
+				message(STATUS "PYTHON_VERSION_STRING=${PYTHON_VERSION_STRING}")
+				message(STATUS "PYTHON_DLL_SUFFIX=${PYTHON_DLL_SUFFIX}")
+				message(STATUS "BOOST_LIB_BOOST_VER=${BOOST_LIB_BOOST_VER}")
+				message(STATUS "BOOST_LIB_PY2_VC_VER=${BOOST_LIB_PY2_VC_VER}")
 
-            get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
-            string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
-            if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
-              set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
-            else()
-              message(FATAL_ERROR "Can't determine HTCondor version!")
-            endif()
+				# the boost python libraries for debug vs nondebug are different
+				# so for every library, we need two names (3 names if you want add support for python_d)
+				#set(PYTHON_LIBRARY_BOOST_ONE ${BOOST_LD}/boost_python-${BOOST_LIB_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib)
+				#set(PYTHON_LIBRARY_BOOST_ONE_D ${BOOST_LD}/boost_python-${BOOST_LIB_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib)
+				#set(PYTHON_LIBRARY_BOOST_TWO ${BOOST_LD}/libboost_python-${BOOST_LIB_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib)
+				#set(PYTHON_LIBRARY_BOOST_TWO_D ${BOOST_LD}/libboost_python-${BOOST_LIB_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib)
 
-            condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
-            target_link_libraries( pyclassad ${CLASSADS_FOUND}
-              optimized ${PYTHON_LIBRARY_BOOST_ONE} debug ${PYTHON_LIBRARY_BOOST_ONE_D}
-              optimized ${PYTHON_LIBRARY_BOOST_TWO} debug ${PYTHON_LIBRARY_BOOST_TWO_D}
-              ${PYTHON_LIBRARIES} )
-            set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
+				set(THE_BOOST_LIBS
+				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					)
 
-            # Note we do not use condor_shared_lib below because we want a separate install target.
-            # the 'optimized' keyword indicates that the library following it is for release builds only
-            # the 'debug' keyword indicates that the library following it is for debug builds only
-            add_library( classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-            target_link_libraries( classad_module pyclassad ${PCRE_FOUND}
-              optimized ${PYTHON_LIBRARY_BOOST_ONE} debug ${PYTHON_LIBRARY_BOOST_ONE_D}
-              optimized ${PYTHON_LIBRARY_BOOST_TWO} debug ${PYTHON_LIBRARY_BOOST_TWO_D}
-              ${PYTHON_LIBRARIES} )
-            set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
-            set_target_properties(classad_module PROPERTIES SUFFIX ".pyd" )
 
-            # This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
-            # python functions.
-            add_library( classad_python_user SHARED classad_python_user.cpp )
-            target_link_libraries( classad_python_user condor_utils pyclassad ${CONDOR_WIN_LIBS})
-            set_target_properties(classad_python_user PROPERTIES SUFFIX ".pyd" )
-            install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
+				# When you build Debug, the mere act of including <pyconfig.h>
+				# will generate a reference to the python27_d library in the object files
+				# if you let boost include pyconfig.h, then it defeats this behavior unless
+				# you enable python debugging in the boost way.  We don't currently support
+				# this option with htcondor builds, so if you end up with link errors to a
+				# non-existent python27_d, the problem is in the order that you include headers
+				# set(PYTHON_DEBUG_LIBRARY ${BOOST_LD}/python27_d.lib)
 
-            add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
-            target_link_libraries( htcondor pyclassad condor_utils
-              optimized ${PYTHON_LIBRARY_BOOST_ONE} debug ${PYTHON_LIBRARY_BOOST_ONE_D}
-              optimized ${PYTHON_LIBRARY_BOOST_TWO} debug ${PYTHON_LIBRARY_BOOST_TWO_D}
-              ${PYTHON_LIBRARIES} ${CONDOR_WIN_LIBS} )
-            set_target_properties( htcondor PROPERTIES SUFFIX ".pyd" )
+				get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
+				string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
+				if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
+				  set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+				else()
+				  message(FATAL_ERROR "Can't determine HTCondor version!")
+				endif()
 
-            install ( TARGETS pyclassad DESTINATION ${C_LIB} )
-            install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )
+				condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
+				target_link_libraries( pyclassad ${CLASSADS_FOUND} ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
+				set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
+				target_include_directories( pyclassad PUBLIC ${PYTHON_INCLUDE_DIRS} )
+
+				# Note we do not use condor_shared_lib below because we want a separate install target.
+				# the 'optimized' keyword indicates that the library following it is for release builds only
+				# the 'debug' keyword indicates that the library following it is for debug builds only
+				add_library( classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
+				target_link_libraries( classad_module pyclassad ${PCRE_FOUND} ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
+				set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
+				set_target_properties(classad_module PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
+				target_include_directories( classad_module PUBLIC ${PYTHON_INCLUDE_DIRS} )
+
+				# This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
+				# python functions.
+				add_library( classad_python_user SHARED classad_python_user.cpp )
+				target_link_libraries( classad_python_user condor_utils pyclassad ${CONDOR_WIN_LIBS})
+				set_target_properties(classad_python_user PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
+				target_include_directories( classad_python_user PUBLIC ${PYTHON_INCLUDE_DIRS} )
+				install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
+
+				add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
+				target_link_libraries( htcondor pyclassad condor_utils ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} ${CONDOR_WIN_LIBS} )
+				set_target_properties( htcondor PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
+				target_include_directories( htcondor PUBLIC ${PYTHON_INCLUDE_DIRS} )
+
+				install ( TARGETS pyclassad DESTINATION ${C_LIB} )
+				install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )
+			endif(DEFINED PYTHON_VERSION_STRING) # python27 was found
+
+			if (DEFINED PYTHON3_VERSION_STRING) # python36 was found
+				#we have to do this per-target because python2 and python3 need different ones
+				#include_directories(${PYTHON_INCLUDE_DIRS} ${BOOST_INCLUDE})
+				message(STATUS "PYTHON3_VERSION_STRING=${PYTHON3_VERSION_STRING}")
+				message(STATUS "PYTHON3_LIBRARIES=${PYTHON3_LIBRARIES}")
+				message(STATUS "PYTHON3_INCLUDE_DIRS=${PYTHON3_INCLUDE_DIRS}")
+				message(STATUS "PYTHON3_DLL_SUFFIX=${PYTHON3_DLL_SUFFIX}")
+				message(STATUS "BOOST_LIB_BOOST_VER=${BOOST_LIB_BOOST_VER}")
+				message(STATUS "BOOST_LIB_PY3_VC_VER=${BOOST_LIB_PY3_VC_VER}")
+
+				include_directories(${PYTHON3_INCLUDE_DIRS})
+
+				# When you build Debug, the mere act of including <pyconfig.h>
+				# will generate a reference to the python27_d library in the object files
+				# if you let boost include pyconfig.h, then it defeats this behavior unless
+				# you enable python debugging in the boost way.  We don't currently support
+				# this option with htcondor builds, so if you end up with link errors to a
+				# non-existent python27_d, the problem is in the order that you include headers
+				# set(PYTHON_DEBUG_LIBRARY ${BOOST_LD}/python27_d.lib)
+
+				get_filename_component(PYTHON3_LIBRARY_FILENAME ${PYTHON3_LIBRARIES} NAME)
+				string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON3_VERSION_STRING})
+				if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
+				  set( PY3CLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+				else()
+				  message(FATAL_ERROR "Can't determine HTCondor version!")
+				endif()
+
+				set(THE_BOOST_LIBS
+				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					)
+
+				condor_shared_lib( py3classad classad.cpp classad_wrapper.h exprtree_wrapper.h )
+				target_link_libraries( py3classad ${CLASSADS_FOUND} ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
+				set_target_properties( py3classad PROPERTIES OUTPUT_NAME "${PY3CLASSAD_LIB_NAME}" )
+				target_include_directories( py3classad PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+
+				# Note we do not use condor_shared_lib below because we want a separate install target.
+				# the 'optimized' keyword indicates that the library following it is for release builds only
+				# the 'debug' keyword indicates that the library following it is for debug builds only
+				add_library( py3classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
+				target_link_libraries( py3classad_module py3classad ${PCRE_FOUND}  ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
+				set_target_properties(py3classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad PDB_NAME py3classad)
+				set_target_properties(py3classad_module PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
+				target_include_directories( py3classad_module PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+
+				# This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
+				# python functions.
+				add_library( classad_python3_user SHARED classad_python_user.cpp )
+				target_link_libraries( classad_python3_user condor_utils py3classad ${THE_BOOST_LIBS} ${CONDOR_WIN_LIBS})
+				set_target_properties(classad_python3_user PROPERTIES PREFIX "" OUTPUT_NAME classad_python_user PDB_NAME classad_python3_user)
+				set_target_properties(classad_python3_user PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
+				target_include_directories( classad_python3_user PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+				install ( TARGETS classad_python3_user DESTINATION "${C_LIBEXEC}" )
+
+				add_library( py3htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
+				target_link_libraries( py3htcondor py3classad condor_utils ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} ${CONDOR_WIN_LIBS} )
+				set_target_properties( py3htcondor PROPERTIES PREFIX "" OUTPUT_NAME htcondor PDB_NAME py3htcondor)
+				set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
+				target_include_directories( py3htcondor PUBLIC ${PYTHON_INCLUDE3_DIRS} )
+
+				install ( TARGETS py3classad DESTINATION ${C_LIB} )
+				install ( TARGETS py3htcondor py3classad_module DESTINATION ${C_PYTHONARCHLIB} )
+
+			endif(DEFINED PYTHON3_VERSION_STRING) # python36 was found
 
 	    # more targets are built if we plan on building wheels
 	    if ( WANT_PYTHON_WHEELS )
