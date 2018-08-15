@@ -464,7 +464,22 @@ BEGIN_C_DECLS
 	char * param_ctx (const char *name, MACRO_EVAL_CONTEXT & ctx);
 
 	// config source file info
-	typedef struct macro_source { bool is_inside; bool is_command; short int id; int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
+	typedef struct macro_source { 
+		bool is_inside; 
+		bool is_command;
+		short int id;
+		int line;
+		short int meta_id;
+		short int meta_off;
+
+		macro_source() :
+			is_inside(false), is_command(false), id(-1), line(0), meta_id(0), meta_off(0)
+			{}
+		macro_source(bool Is_inside, bool Is_command, short int Id, int Line, short int Meta_id, short int Meta_off) :
+			is_inside(Is_inside), is_command(Is_command), id(Id), line(Line), meta_id(Meta_id), meta_off(Meta_off)
+			{}
+	} MACRO_SOURCE;
+
 	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
 	extern const MACRO_SOURCE EnvMacro;
 	extern const MACRO_SOURCE WireMacro;
