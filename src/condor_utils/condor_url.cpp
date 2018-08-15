@@ -26,11 +26,20 @@ bool IsUrl( const char *url )
 	if ( !url ) {
 		return false;
 	}
-	const char *ptr = url;
-	while ( isalpha( *ptr ) ) {
-		ptr++;
+
+	if ( !isalpha( url[0] ) ) {
+		return false;
 	}
-	if ( ptr != url && ptr[0] == ':' && ptr[1] == '/' && ptr[2] == '/' ) {
+
+	const char *ptr = & url[1];
+	while ( isalnum( *ptr ) || *ptr == '+' || *ptr == '-' || *ptr == '.' ) {
+		++ptr;
+	}
+	// This is more restrictive than is necessary for URIs, which are not
+	// required to have authority ([user@]host[:port]) sections.  It's not
+	// clear from the RFC if an authority section is required for a URL,
+	// but until somebody complains, it is for HTCondor.
+	if ( ptr[0] == ':' && ptr[1] == '/' && ptr[2] == '/' && ptr[3] != '\0' ) {
 		return true;
 	}
 	return false;
