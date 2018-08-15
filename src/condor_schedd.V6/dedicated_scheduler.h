@@ -261,7 +261,7 @@ class DedicatedScheduler : public Service {
 		*/
 	void clearResourceRequests( void );
 
-	int getResourceRequestSize() const { return resource_requests.size(); }
+	int getResourceRequestSize() const { return (int)resource_requests.size(); }
 	void incrementSplitMatchCount() { split_match_count++;}
 	int getSplitMatchCount() const { return split_match_count;}
 

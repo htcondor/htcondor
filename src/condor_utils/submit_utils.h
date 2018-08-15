@@ -898,8 +898,8 @@ struct SubmitStepFromQArgs {
 	{
 		// so that the separator and line terminators can be \0, we make the size strlen()
 		// unless the first character is \0, then the size is 1
-		int cchSep = sep ? (sep[0] ? strlen(sep) : 1) : 0;
-		int cchEol = eol ? (eol[0] ? strlen(eol) : 1) : 0;
+		int cchSep = sep ? (sep[0] ? (int)strlen(sep) : 1) : 0;
+		int cchEol = eol ? (eol[0] ? (int)strlen(eol) : 1) : 0;
 		line.clear();
 		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
 			if ( ! line.empty() && sep) line.append(sep, cchSep);

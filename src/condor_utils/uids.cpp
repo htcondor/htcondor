@@ -849,7 +849,6 @@ const char* get_condor_username()
 	PTOKEN_USER pTokenUser = (PTOKEN_USER)InfoBuffer;
 	DWORD dwInfoBufferSize,dwAccountSize = 200, dwDomainSize = 200;
 	SID_NAME_USE snu;
-	int length;
 
 	if ( CondorUserName )
 		return CondorUserName;
@@ -866,7 +865,7 @@ const char* get_condor_username()
 	LookupAccountSid(NULL, pTokenUser->User.Sid, szAccountName,
 		&dwAccountSize,szDomainName, &dwDomainSize, &snu);
 
-	length = strlen(szAccountName) + strlen(szDomainName) + 4;
+	size_t length = strlen(szAccountName) + strlen(szDomainName) + 4;
 	CondorUserName = (char *) malloc(length);
 	if (CondorUserName == NULL) {
 		EXCEPT("Out of memory. Aborting.");

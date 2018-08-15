@@ -8,6 +8,10 @@
  // so push end undef the macro before, and restore our definition after we call pyconfig.h
  #pragma push_macro("PLATFORM")
  #undef PLATFORM
+
+ // pymath declares the round() function with the wrong dll linkage
+ // defining it here prevents that
+ #define HAVE_ROUND 1
 #else
  #if defined(__APPLE__)
   // undef HAVE_SSIZE_T to force pyport.h to typedef Py_ssize_t from Py_intptr_t instead of ssize_t
