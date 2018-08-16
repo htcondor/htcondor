@@ -171,7 +171,10 @@ Singularity::setup(ClassAd &machineAd,
 	// Bind
 	// Mount under scratch
 	std::string scratch;
-	if (param(scratch, "MOUNT_UNDER_SCRATCH")) {
+	if (!param_eval_string(scratch, "MOUNT_UNDER_SCRATCH", "", &jobAd)) {
+		param(scratch, "MOUNT_UNDER_SCRATCH");
+	}
+	if (scratch.length() > 0) {
 		StringList scratch_list(scratch.c_str());
 		scratch_list.rewind();
 		char *next_dir;
