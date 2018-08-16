@@ -21,26 +21,35 @@
 #include "condor_common.h"
 #include "condor_url.h"
 
-const char* IsUrl( const char *url )
+bool IsUrl( const char *url )
 {
 	if ( !url ) {
-		return NULL;
+		return false;
 	}
-	const char *ptr = url;
-	while ( isalpha( *ptr ) ) {
-		ptr++;
+
+	if ( !isalpha( url[0] ) ) {
+		return false;
 	}
-	if ( ptr != url && ptr[0] == ':' && ptr[1] == '/' && ptr[2] == '/' ) {
-		return ptr;
+
+	const char *ptr = & url[1];
+	while ( isalnum( *ptr ) || *ptr == '+' || *ptr == '-' || *ptr == '.' ) {
+		++ptr;
 	}
-	return NULL;
+	// This is more restrictive than is necessary for URIs, which are not
+	// required to have authority ([user@]host[:port]) sections.  It's not
+	// clear from the RFC if an authority section is required for a URL,
+	// but until somebody complains, it is for HTCondor.
+	if ( ptr[0] == ':' && ptr[1] == '/' && ptr[2] == '/' && ptr[3] != '\0' ) {
+		return true;
+	}
+	return false;
 }
 
 MyString getURLType( const char *url ) {
 	MyString t;
-	const char * endp = IsUrl(url);
-	if (endp) { // if non-null, this is a URL
-		t.set(url, (int)(endp - url));
+	if(IsUrl(url)) {
+		MyString u = url;
+		t = u.Substr(0,u.FindChar(':')-1);
 	}
 	return t;
 }
