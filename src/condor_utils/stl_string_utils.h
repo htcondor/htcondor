@@ -63,6 +63,13 @@ bool readLine(std::string& dst, FILE *fp, bool append);
 //Return true iff the given string is a blank line.
 int blankline ( const char *str );
 
+// fast case-insensitive search for attr in a list of attributes
+// returns a pointer to the first character in the list after the matching attribute
+// returns NULL if no match.  DO NOT USE ON ARBITRARY strings. this can generate
+// false matches if the strings contain characters other than those valid for classad attributes
+// attributes in the list should be separated by comma, space or newline
+const char * is_attr_in_attr_list(const char * attr, const char * list);
+
 bool chomp(std::string &str);
 void trim(std::string &str);
 void lower_case(std::string &str);
