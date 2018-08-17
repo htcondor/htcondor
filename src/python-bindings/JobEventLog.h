@@ -45,6 +45,8 @@ class JobEvent {
 		ClassAdWrapper * caw;
 };
 
+class JobEventLog;
+
 class JobEventLog {
 	public:
 		JobEventLog( const std::string & filename );
@@ -54,21 +56,26 @@ class JobEventLog {
 
 		boost::shared_ptr< JobEvent > next();
 
-		// FIXME: how to implement this?
-		// This returns this object after setting it into follow mode.
-		// FIXME: and optionally setting the follow-mode timeout.
-		// boost::python::object follow( int milliseconds );
+		// We should be able to set the return type policy for follow()
+		// and follow_for() in the .def() call, but none of them actually
+		// work, so we do things by hand, instead.
 
-		// This object is its own iterator.  (FIXME: Is this supposed to be a copy?)
-		inline static boost::python::object pass_through( boost::python::object const & o ) { return o; };
+		// This returns this object after setting it into follow mode.
+		static boost::python::object follow( boost::python::object & self );
+
+		// As follow(), but also sets the follow timeout.
+		static boost::python::object follow_for( boost::python::object & self,
+			int milliseconds );
+
+		// This object is its own iterator.  boost::python::object is apparently
+		// intrinsically a reference to a Python object, so the copy here isn't.
+		inline static boost::python::object pass_through( const boost::python::object & o ) { return o; };
 
 		void setFollowTimeout( int milliseconds ) { timeout = milliseconds; };
 		int getFollowTimeout() const { return timeout; }
 
-		// FIXME: do we need these if we can get follow() working?
 		bool isFollowing() const { return following; }
 		void setFollowing() { following = true; }
-
 		void unsetFollowing() { following = false; }
 
 	private:

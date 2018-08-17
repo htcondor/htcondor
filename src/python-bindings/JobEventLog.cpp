@@ -33,6 +33,20 @@ JobEventLog::JobEventLog( const std::string & filename ) :
 
 JobEventLog::~JobEventLog() { }
 
+boost::python::object
+JobEventLog::follow( boost::python::object & self ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+	jel->following = true;
+	return self;
+}
+
+boost::python::object
+JobEventLog::follow_for( boost::python::object & self, int milliseconds ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+	jel->timeout = milliseconds;
+	return follow( self );
+}
+
 boost::shared_ptr< JobEvent >
 JobEventLog::next() {
 	ULogEvent * event = NULL;
@@ -101,6 +115,8 @@ JobEvent::Py_GetAttr( const std::string & s ) {
 		delete classad;
 	}
 
+	// FIXME: If this doesn't THROW_EX( AttributeError ... ), we need to.
+	// If it THROW_EX( KeyError ...)s instead, we need to catch it convert.
 	return caw->get( s );
 }
 
@@ -111,8 +127,9 @@ void export_event_log() {
 	boost::python::class_<JobEventLog>( "JobEventLog", "...", boost::python::init<const std::string &>() )
 		.def( "isInitialized", &JobEventLog::isInitialized, "..." )
 		.def( NEXT_FN, &JobEventLog::next, "..." )
+		.def( "follow", &JobEventLog::follow, "..." )
+		.def( "follow", &JobEventLog::follow_for, "..." )
 		.def( "__iter__", &JobEventLog::pass_through )
-//		.def( "follow", &JobEventLog::follow, "..." )
 		.def( "setFollowTimeout", &JobEventLog::setFollowTimeout, "..." )
 		.def( "getFollowTimeout", &JobEventLog::getFollowTimeout, "..." )
 		.def( "isFollowing", &JobEventLog::isFollowing, "..." )
