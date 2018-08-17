@@ -32,7 +32,7 @@ class WaitForUserLog {
 		virtual ~WaitForUserLog();
 
 		bool isInitialized() { return reader.isInitialized() && trigger.isInitialized(); }
-		ULogEventOutcome readEvent( ULogEvent * & event, int timeout = -1 );
+		ULogEventOutcome readEvent( ULogEvent * & event, int timeout = -1, bool following = true );
 
 	private:
 		std::string filename;

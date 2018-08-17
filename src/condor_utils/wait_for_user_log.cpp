@@ -35,7 +35,7 @@ WaitForUserLog::~WaitForUserLog() { }
 #define ULOG_INVALID ULOG_RD_ERROR
 
 ULogEventOutcome
-WaitForUserLog::readEvent( ULogEvent * & event, int timeout ) {
+WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
 	if(! isInitialized()) {
 		return ULOG_INVALID;
 	}
@@ -44,6 +44,8 @@ WaitForUserLog::readEvent( ULogEvent * & event, int timeout ) {
 	if( outcome != ULOG_NO_EVENT ) {
 		return outcome;
 	} else {
+		if(! following) { return ULOG_NO_EVENT; }
+
 		int result = trigger.wait( timeout );
 		switch( result ) {
 			case -1:

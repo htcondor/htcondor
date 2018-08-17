@@ -57,7 +57,7 @@ int
 FileModifiedTrigger::read_inotify_events( void ) {
 	// Magic from 'man inotify'.
 	char buf[ sizeof(struct inotify_event) + NAME_MAX + 1 ]
-    	__attribute__ ((aligned(__alignof__(struct inotify_event))));
+		__attribute__ ((aligned(__alignof__(struct inotify_event))));
 
 	while( true ) {
 		ssize_t len = read( inotify_fd, buf, sizeof( buf ) );
