@@ -353,7 +353,6 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 
 	const char * a = attr;
 	const char * p = list;
-	bool string_match = false;
 	while (*p) {
 		a = attr;
 		while (*a && ALPHANUM_EQUAL_NOCASE(*p,*a)) { ++p, ++a; }
