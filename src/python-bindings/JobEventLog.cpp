@@ -104,6 +104,10 @@ JobEvent::type() const {
 
 boost::python::object
 JobEvent::Py_GetAttr( const std::string & s ) {
+	// We could special-case cluster, proc, and subproc like we did type(),
+	// or detect them here.  (Arguably, type() should be type, but that's
+	// for later.)  The former is probably the fastest.
+
 	if( caw == NULL ) {
 		ClassAd * classad = event->toClassAd();
 		if( classad == NULL ) {
@@ -111,9 +115,12 @@ JobEvent::Py_GetAttr( const std::string & s ) {
 		}
 
 		caw = new ClassAdWrapper();
-		caw->CopyFrom( * reinterpret_cast< classad::ClassAd * >( classad ) );
+		caw->CopyFrom( * static_cast< classad::ClassAd * >( classad ) );
 		delete classad;
 	}
+
+	// We could special-case some synthetic attributes here (e.g., JobID),
+	// but it'd be faster to write accessors (see above).
 
 	// FIXME: If this doesn't THROW_EX( AttributeError ... ), we need to.
 	// If it THROW_EX( KeyError ...)s instead, we need to catch it convert.
@@ -150,45 +157,45 @@ void export_event_log() {
 
 	// Register the ULogEventNumber enumeration as JobEventType
 	boost::python::enum_<ULogEventNumber>( "JobEventType", "..." )
-		.value( "ULOG_SUBMIT", ULOG_SUBMIT )
-		.value( "ULOG_EXECUTE", ULOG_EXECUTE )
-		.value( "ULOG_EXECUTABLE_ERROR", ULOG_EXECUTABLE_ERROR )
-		.value( "ULOG_CHECKPOINTED", ULOG_CHECKPOINTED )
-		.value( "ULOG_JOB_EVICTED", ULOG_JOB_EVICTED )
-		.value( "ULOG_JOB_TERMINATED", ULOG_JOB_TERMINATED )
-		.value( "ULOG_IMAGE_SIZE", ULOG_IMAGE_SIZE )
-		.value( "ULOG_SHADOW_EXCEPTION", ULOG_SHADOW_EXCEPTION )
-		.value( "ULOG_GENERIC", ULOG_GENERIC )
-		.value( "ULOG_JOB_ABORTED", ULOG_JOB_ABORTED )
-		.value( "ULOG_JOB_SUSPENDED", ULOG_JOB_SUSPENDED )
-		.value( "ULOG_JOB_UNSUSPENDED", ULOG_JOB_UNSUSPENDED )
-		.value( "ULOG_JOB_HELD", ULOG_JOB_HELD )
-		.value( "ULOG_JOB_RELEASED", ULOG_JOB_RELEASED )
-		.value( "ULOG_NODE_EXECUTE", ULOG_NODE_EXECUTE )
-		.value( "ULOG_NODE_TERMINATED", ULOG_NODE_TERMINATED )
-		.value( "ULOG_POST_SCRIPT_TERMINATED", ULOG_POST_SCRIPT_TERMINATED )
-		.value( "ULOG_GLOBUS_SUBMIT", ULOG_GLOBUS_SUBMIT )
-		.value( "ULOG_GLOBUS_SUBMIT_FAILED", ULOG_GLOBUS_SUBMIT_FAILED )
-		.value( "ULOG_GLOBUS_RESOURCE_UP", ULOG_GLOBUS_RESOURCE_UP )
-		.value( "ULOG_GLOBUS_RESOURCE_DOWN", ULOG_GLOBUS_RESOURCE_DOWN )
-		.value( "ULOG_REMOTE_ERROR", ULOG_REMOTE_ERROR )
-		.value( "ULOG_JOB_DISCONNECTED", ULOG_JOB_DISCONNECTED )
-		.value( "ULOG_JOB_RECONNECTED", ULOG_JOB_RECONNECTED )
-		.value( "ULOG_JOB_RECONNECT_FAILED", ULOG_JOB_RECONNECT_FAILED )
-		.value( "ULOG_GRID_RESOURCE_UP", ULOG_GRID_RESOURCE_UP )
-		.value( "ULOG_GRID_RESOURCE_DOWN", ULOG_GRID_RESOURCE_DOWN )
-		.value( "ULOG_GRID_SUBMIT", ULOG_GRID_SUBMIT )
-		.value( "ULOG_JOB_AD_INFORMATION", ULOG_JOB_AD_INFORMATION )
-		.value( "ULOG_JOB_STATUS_UNKNOWN", ULOG_JOB_STATUS_UNKNOWN )
-		.value( "ULOG_JOB_STATUS_KNOWN", ULOG_JOB_STATUS_KNOWN )
-		.value( "ULOG_JOB_STAGE_IN", ULOG_JOB_STAGE_IN )
-		.value( "ULOG_JOB_STAGE_OUT", ULOG_JOB_STAGE_OUT )
-		.value( "ULOG_ATTRIBUTE_UPDATE", ULOG_ATTRIBUTE_UPDATE )
-		.value( "ULOG_PRESKIP", ULOG_PRESKIP )
-		.value( "ULOG_FACTORY_SUBMIT", ULOG_FACTORY_SUBMIT )
-		.value( "ULOG_FACTORY_REMOVE", ULOG_FACTORY_REMOVE )
-		.value( "ULOG_FACTORY_PAUSED", ULOG_FACTORY_PAUSED )
-		.value( "ULOG_FACTORY_RESUMED", ULOG_FACTORY_RESUMED )
-		.value( "ULOG_NONE", ULOG_NONE )
+		.value( "SUBMIT", ULOG_SUBMIT )
+		.value( "EXECUTE", ULOG_EXECUTE )
+		.value( "EXECUTABLE_ERROR", ULOG_EXECUTABLE_ERROR )
+		.value( "CHECKPOINTED", ULOG_CHECKPOINTED )
+		.value( "JOB_EVICTED", ULOG_JOB_EVICTED )
+		.value( "JOB_TERMINATED", ULOG_JOB_TERMINATED )
+		.value( "IMAGE_SIZE", ULOG_IMAGE_SIZE )
+		.value( "SHADOW_EXCEPTION", ULOG_SHADOW_EXCEPTION )
+		.value( "GENERIC", ULOG_GENERIC )
+		.value( "JOB_ABORTED", ULOG_JOB_ABORTED )
+		.value( "JOB_SUSPENDED", ULOG_JOB_SUSPENDED )
+		.value( "JOB_UNSUSPENDED", ULOG_JOB_UNSUSPENDED )
+		.value( "JOB_HELD", ULOG_JOB_HELD )
+		.value( "JOB_RELEASED", ULOG_JOB_RELEASED )
+		.value( "NODE_EXECUTE", ULOG_NODE_EXECUTE )
+		.value( "NODE_TERMINATED", ULOG_NODE_TERMINATED )
+		.value( "POST_SCRIPT_TERMINATED", ULOG_POST_SCRIPT_TERMINATED )
+		.value( "GLOBUS_SUBMIT", ULOG_GLOBUS_SUBMIT )
+		.value( "GLOBUS_SUBMIT_FAILED", ULOG_GLOBUS_SUBMIT_FAILED )
+		.value( "GLOBUS_RESOURCE_UP", ULOG_GLOBUS_RESOURCE_UP )
+		.value( "GLOBUS_RESOURCE_DOWN", ULOG_GLOBUS_RESOURCE_DOWN )
+		.value( "REMOTE_ERROR", ULOG_REMOTE_ERROR )
+		.value( "JOB_DISCONNECTED", ULOG_JOB_DISCONNECTED )
+		.value( "JOB_RECONNECTED", ULOG_JOB_RECONNECTED )
+		.value( "JOB_RECONNECT_FAILED", ULOG_JOB_RECONNECT_FAILED )
+		.value( "GRID_RESOURCE_UP", ULOG_GRID_RESOURCE_UP )
+		.value( "GRID_RESOURCE_DOWN", ULOG_GRID_RESOURCE_DOWN )
+		.value( "GRID_SUBMIT", ULOG_GRID_SUBMIT )
+		.value( "JOB_AD_INFORMATION", ULOG_JOB_AD_INFORMATION )
+		.value( "JOB_STATUS_UNKNOWN", ULOG_JOB_STATUS_UNKNOWN )
+		.value( "JOB_STATUS_KNOWN", ULOG_JOB_STATUS_KNOWN )
+		.value( "JOB_STAGE_IN", ULOG_JOB_STAGE_IN )
+		.value( "JOB_STAGE_OUT", ULOG_JOB_STAGE_OUT )
+		.value( "ATTRIBUTE_UPDATE", ULOG_ATTRIBUTE_UPDATE )
+		.value( "PRESKIP", ULOG_PRESKIP )
+		.value( "FACTORY_SUBMIT", ULOG_FACTORY_SUBMIT )
+		.value( "FACTORY_REMOVE", ULOG_FACTORY_REMOVE )
+		.value( "FACTORY_PAUSED", ULOG_FACTORY_PAUSED )
+		.value( "FACTORY_RESUMED", ULOG_FACTORY_RESUMED )
+		.value( "NONE", ULOG_NONE )
 	;
 }
