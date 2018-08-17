@@ -104,7 +104,7 @@ JobEvent::type() const {
 
 boost::python::object
 JobEvent::Py_GetAttr( const std::string & s ) {
-	// We could special-case cluster, proc, and subproc like we did type(),
+	// We could special-case cluster, proc, and subproc like we did type,
 	// or detect them here.  (Arguably, type() should be type, but that's
 	// for later.)  The former is probably the fastest.
 
@@ -148,7 +148,8 @@ void export_event_log() {
 	boost::python::register_ptr_to_python< boost::shared_ptr< JobEventLog > >();
 
 	boost::python::class_<JobEvent>( "JobEvent", boost::python::no_init )
-		.def( "type", & JobEvent::type, "..." )
+		// .def( "type", & JobEvent::type, "..." )
+		.add_property( "type", & JobEvent::type, "..." )
 		.def( "__getattr__", & JobEvent::Py_GetAttr )
 	;
 

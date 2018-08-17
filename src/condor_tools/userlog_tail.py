@@ -26,8 +26,8 @@ def main( argv ):
 		exit( 3 )
 
 	for event in jel.follow( 1000 ):
-		print "Found event of type {0}".format( event.type() )
-		if event.type() != htcondor.JobEventType.NONE:
+		print "Found event of type {0}".format( event.type )
+		if event.type != htcondor.JobEventType.NONE:
 			print "... for job {0}".format( event.Cluster )
 
 if __name__ == "__main__":
