@@ -21,14 +21,14 @@
 #include "condor_common.h"
 #include "condor_url.h"
 
-bool IsUrl( const char *url )
+const char* IsUrl( const char *url )
 {
 	if ( !url ) {
-		return false;
+		return NULL;
 	}
 
 	if ( !isalpha( url[0] ) ) {
-		return false;
+		return NULL;
 	}
 
 	const char *ptr = & url[1];
@@ -40,16 +40,16 @@ bool IsUrl( const char *url )
 	// clear from the RFC if an authority section is required for a URL,
 	// but until somebody complains, it is for HTCondor.
 	if ( ptr[0] == ':' && ptr[1] == '/' && ptr[2] == '/' && ptr[3] != '\0' ) {
-		return true;
+		return ptr;
 	}
-	return false;
+	return NULL;
 }
 
 MyString getURLType( const char *url ) {
 	MyString t;
-	if(IsUrl(url)) {
-		MyString u = url;
-		t = u.substr(0,u.FindChar(':'));
+	const char * endp = IsUrl(url);
+	if (endp) { // if non-null, this is a URL
+		t.set(url, (int)(endp - url));
 	}
 	return t;
 }
