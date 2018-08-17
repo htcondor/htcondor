@@ -236,6 +236,9 @@ if (BUILD_TESTING)
 		# an example test that depends on python bindings
 		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
 		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
+
+		# Tests of the python bindings
+		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
 	endif()
 
 	if(WITH_GANGLIA)

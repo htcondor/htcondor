@@ -619,17 +619,25 @@ void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const cha
 	// the signature needs to be recomputed as it may have changed.
 	// Note we do this whether or not the transaction is committed - that
 	// is ok, and actually is probably more efficient than hitting disk.
-	char * sigAttrs = NULL;
-	job.LookupString(ATTR_AUTO_CLUSTER_ATTRS,&sigAttrs);
-	if ( sigAttrs ) {
-		StringList attrs(sigAttrs);
-		if ( attrs.contains_anycase(attr) ) {
+	ExprTree * expr = job.Lookup(ATTR_AUTO_CLUSTER_ATTRS);
+	if (expr) {
+		std::string tmp;
+		const char * sigAttrs = NULL;
+		if (ExprTreeIsLiteralString(expr, sigAttrs)) {
+		} else if (job.LookupString(ATTR_AUTO_CLUSTER_ATTRS, tmp)) {
+			// we don't expect this to be an expression rather than a string
+			// but if it is, we should still be able to handle it.
+			sigAttrs = tmp.c_str();
+		} else {
+			// is not a string and does not evaluate to one.
+			return;
+		}
+
+		if (is_attr_in_attr_list(attr, sigAttrs)) {
 			job.Delete(ATTR_AUTO_CLUSTER_ID);
 			job.Delete(ATTR_AUTO_CLUSTER_ATTRS);
 			job.autocluster_id = -1;
 		}
-		free(sigAttrs);
-		sigAttrs = NULL;
 	}
 }
 

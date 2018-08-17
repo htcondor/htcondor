@@ -88,8 +88,8 @@ use CheckOutputFormats;
 #
 #################################################################
 
-Condor::DebugLevel(5);
-CondorPersonal::DebugLevel(5);
+Condor::DebugLevel(2);
+CondorPersonal::DebugLevel(2);
 my @debugcollection = ();
 
 my $starttime = time();
@@ -460,6 +460,7 @@ sub load_test_requirements
 
     if (open(TF, "<${name}.run")) {
         my $record = 0;
+        my $triplequote = 0;
         my $conf = "";
         while (my $line = <TF>) {
             CondorUtils::fullchomp($line);
@@ -479,15 +480,26 @@ sub load_test_requirements
 
             if($line =~ /<<CONDOR_TESTREQ_CONFIG/) {
                 $record = 1;
+                if ($line =~ /"""/) { $triplequote = 1; }
                 next;
             }
 
             if($line =~ /^#endtestreq/) {
+                if ($record) {
+                    $requirements->{testconf} = $conf . "\n";
+                    $requirements->{testconf} .= "TEST_DIR = ${BaseDir}\n";
+                }
                 $record = 0;
                 last;
             }
 
             if($record && $line =~ /CONDOR_TESTREQ_CONFIG/) {
+                $requirements->{testconf} = $conf . "\n";
+                $requirements->{testconf} .= "TEST_DIR = ${BaseDir}\n";
+                $record = 0;
+            }
+
+            if($record && $triplequote && $line =~ /^"""$/) {
                 $requirements->{testconf} = $conf . "\n";
                 $requirements->{testconf} .= "TEST_DIR = ${BaseDir}\n";
                 $record = 0;
