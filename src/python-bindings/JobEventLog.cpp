@@ -105,8 +105,7 @@ JobEvent::type() const {
 boost::python::object
 JobEvent::Py_GetAttr( const std::string & s ) {
 	// We could special-case cluster, proc, and subproc like we did type,
-	// or detect them here.  (Arguably, type() should be type, but that's
-	// for later.)  The former is probably the fastest.
+	// or detect them here.  The former is probably faster.
 
 	if( caw == NULL ) {
 		ClassAd * classad = event->toClassAd();
@@ -131,7 +130,7 @@ JobEvent::Py_GetAttr( const std::string & s ) {
 // ----------------------------------------------------------------------------
 
 void export_event_log() {
-	boost::python::class_<JobEventLog>( "JobEventLog", "...", boost::python::init<const std::string &>() )
+	boost::python::class_<JobEventLog, boost::noncopyable>( "JobEventLog", "...", boost::python::init<const std::string &>() )
 		.def( "isInitialized", &JobEventLog::isInitialized, "..." )
 		.def( NEXT_FN, &JobEventLog::next, "..." )
 		.def( "follow", &JobEventLog::follow, "..." )
@@ -147,8 +146,7 @@ void export_event_log() {
 	// Allows conversion of JobEventLog instances to Python objects.
 	boost::python::register_ptr_to_python< boost::shared_ptr< JobEventLog > >();
 
-	boost::python::class_<JobEvent>( "JobEvent", boost::python::no_init )
-		// .def( "type", & JobEvent::type, "..." )
+	boost::python::class_<JobEvent, boost::noncopyable>( "JobEvent", boost::python::no_init )
 		.add_property( "type", & JobEvent::type, "..." )
 		.def( "__getattr__", & JobEvent::Py_GetAttr )
 	;

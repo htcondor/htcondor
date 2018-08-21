@@ -38,6 +38,9 @@ class WaitForUserLog {
 		std::string filename;
 		ReadUserLog reader;
 		FileModifiedTrigger trigger;
+
+		WaitForUserLog( const WaitForUserLog & );
+		WaitForUserLog & operator =( const WaitForUserLog & );
 };
 
 #endif
