@@ -276,7 +276,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 
 
 		// get the info, if there is any
-		const char * cleartext_info = ((SafeSock*)m_sock)->isIncomingDataMD5ed();
+		const char * cleartext_info = ((SafeSock*)m_sock)->isIncomingDataHashed();
 		char * sess_id = NULL;
 		char * return_address_ss = NULL;
 
@@ -291,10 +291,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				tmp = info_list.next();
 				if (tmp) {
 					return_address_ss = strdup(tmp);
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet from %s uses MD5 session %s.\n",
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet from %s uses hash session %s.\n",
 							return_address_ss, sess_id);
 				} else {
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet uses MD5 session %s.\n", sess_id);
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet uses hash session %s.\n", sess_id);
 				}
 
 			} else {
@@ -406,7 +406,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
-				// but first, see above behavior in MD5 code above.
+				// but first, send a message to whoever provided us with incorrect session id
 				daemonCore->send_invalidate_session( return_address_ss, sess_id );
 
 				if( return_address_ss ) {

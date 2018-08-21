@@ -238,7 +238,7 @@ job_filexfer_whento-base_van
 job_filexfer_whento-simpleinput_van
 job_filexfer_whento-withinput_van
 job_filexfer_output_van
-job_filexfer_md5-remote_van
+job_filexfer_sha256-remote_van
 job_startd_rank_preempt
 cmd_wait_shows-all
 cmd_wait_shows-base

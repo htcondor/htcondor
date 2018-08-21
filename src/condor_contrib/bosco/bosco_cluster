@@ -33,12 +33,6 @@ ssh_control_path="/tmp/bosco_ssh_control.%r@%h:%p"
 # Executables
 TR=tr
 
-if [ `uname` = Darwin ] ; then
-    MD5SUM=md5
-else
-    MD5SUM=md5sum
-fi
-
 usage()
 {
 cat << EOM
@@ -813,8 +807,8 @@ fi
 
 # If the key doesn't exist, create it
 if [ ! -e $bosco_key ]; then
-    # Generate a md5sum password
-    PASSPHRASE=`echo $RANDOM$RANDOM$RANDOM$RANDOM | $MD5SUM | awk '{print $1}'`
+    # Generate a password
+    PASSPHRASE=`echo $RANDOM$RANDOM$RANDOM$RANDOM`
 
     # Output the password to a specially crafted file
     mkdir -p `dirname $PASSPHRASE_LOCATION`
@@ -1004,7 +998,7 @@ if [ ! -n "$PRIVATE_ON_MU" ]; then
     fi
 
     if [ ! -e $bosco_passwd_file ]; then  
-        random_string=`echo $RANDOM | $MD5SUM | awk '{print $1}'` 
+        random_string=`echo $RANDOM`
         condor_store_cred -p $random_string -f $bosco_passwd_file 
     fi
 

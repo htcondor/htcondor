@@ -1107,7 +1107,7 @@ FileTransfer::ComputeFilesToSend()
 					(modification_time != dir.GetModifyTime()) ) {
 				// file has changed in size or modification time.  this
 				// doesn't catch the case where the file was modified
-				// without changing size and is then back-dated.  use md5
+				// without changing size and is then back-dated.  use a hash
 				// or something if that's truly needed, and compare the
 				// checksums.
 				dprintf( D_FULLDEBUG, 
@@ -4259,7 +4259,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 
 	// now, iterate the directory and put the relavant info into the catalog.
 	// this currently excludes directories, and only stores the modification
-	// time and filesize.  if you were to add md5 sums, signatures, etc., that
+	// time and filesize.  if you were to add hashes, signatures, etc., that
 	// would go here.
 	//
 	// also note this information is not sufficient to notice a byte changing
