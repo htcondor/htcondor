@@ -24,7 +24,11 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
+
 #include "read_user_log.h"
+#include "file_modified_trigger.h"
+#include "wait_for_user_log.h"
+
 #include <set>
 /*
 XXX XXX XXX WARNING WARNING WARNING
@@ -101,7 +105,6 @@ int main( int argc, char *argv[] )
 	int minjobs = 0;
 	int print_status = false;
 	int echo_events = false;
-	int debug_print_rescue = false;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -181,141 +184,98 @@ int main( int argc, char *argv[] )
 		} else {
 			fprintf(stderr,"Couldn't understand job number: %s\n",job_name);
 			EXIT_FAILURE;
-		}			
+		}
 	}
-	
+
 	dprintf(D_FULLDEBUG,"Reading log file %s\n",log_file_name);
-	int submitted, aborted, completed, flagged;
-	FILE *sec_fp = NULL;
-	int pos, nPos;
-rescue :
-	submitted=0;
-	aborted=0;
-	completed=0;
-	flagged = 0;
-	ReadUserLog log ;
+	int submitted = 0, aborted = 0, completed = 0;
 	std::set<std::string> table;
-	
-	if(log.initialize(log_file_name,false,false,true)) {
-		sec_fp = safe_fopen_wrapper_follow(log_file_name, "r", 0644);
-		fseek (sec_fp, 0, SEEK_END);
-		pos = ftell(sec_fp); 
-		nPos = pos;	if (debug_print_rescue) printf("begin:%d ", nPos);
-		while(1) {
-			fseek(sec_fp, 0, SEEK_END);
-			int tmp_pos = ftell(sec_fp);
-			
-			ULogEventOutcome outcome;
-			ULogEvent *event;
-			outcome = log.readEvent(event);
-			
-			if(outcome==ULOG_OK) {
-				flagged = 0;
-				pos = nPos = tmp_pos;
-				if (debug_print_rescue) printf("top:%d ", nPos);
 
-				char key[1024];
-				sprintf(key,"%d.%d.%d",event->cluster,event->proc,event->subproc);
-				if( jobnum_matches( event, cluster, process, subproc ) ) {
+	WaitForUserLog wful( log_file_name );
+	if(! wful.isInitialized()) {
+		fprintf( stderr, "Couldn't open %s: %s\n", log_file_name, strerror(errno) );
+		EXIT_FAILURE;
+	}
 
-					if (echo_events) {
-						std::string event_str;
-						event->formatEvent( event_str );
-						printf( "%s...\n", event_str.c_str() );
-					}
+	while( 1 ) {
+		int now = time(NULL);
+		int timeout_ms = (stoptime - now) * 1000;
 
-					if(event->eventNumber==ULOG_SUBMIT) {
-						dprintf(D_FULLDEBUG,"%s submitted\n",key);
-						if (print_status) printf("%s submitted\n", key);
-						table.insert(key);
-						submitted++;
-					} else if(event->eventNumber==ULOG_JOB_TERMINATED) {
-						dprintf(D_FULLDEBUG,"%s completed\n",key);
-						if (print_status) printf("%s completed\n", key);
-						table.erase(key);
-						completed++;
-					} else if(event->eventNumber==ULOG_JOB_ABORTED) {
-						dprintf(D_FULLDEBUG,"%s aborted\n",key);
-						if (print_status) printf("%s aborted\n", key);
-						table.erase(key);
-						aborted++;
-					} else if (event->eventNumber==ULOG_EXECUTE) {
-						if (print_status) {
-							printf("%s executing on host %s\n", key, ((ExecuteEvent*)event)->getExecuteHost());
-						}
-					} else {
-						/* nothing to do */
+		if( stoptime && now > stoptime ) {
+			printf( "Time expired.\n" );
+			EXIT_FAILURE;
+		}
+
+		ULogEventOutcome outcome;
+		ULogEvent * event;
+		outcome = wful.readEvent( event, timeout_ms );
+		if( outcome == ULOG_OK ) {
+			char key[1024];
+			sprintf(key,"%d.%d.%d",event->cluster,event->proc,event->subproc);
+			if( jobnum_matches( event, cluster, process, subproc ) ) {
+				if (echo_events) {
+					std::string event_str;
+					event->formatEvent( event_str );
+					printf( "%s...\n", event_str.c_str() );
+				}
+
+				if(event->eventNumber==ULOG_SUBMIT) {
+					dprintf(D_FULLDEBUG,"%s submitted\n",key);
+					if (print_status) printf("%s submitted\n", key);
+					table.insert(key);
+					submitted++;
+				} else if(event->eventNumber==ULOG_JOB_TERMINATED) {
+					dprintf(D_FULLDEBUG,"%s completed\n",key);
+					if (print_status) printf("%s completed\n", key);
+					table.erase(key);
+					completed++;
+				} else if(event->eventNumber==ULOG_JOB_ABORTED) {
+					dprintf(D_FULLDEBUG,"%s aborted\n",key);
+					if (print_status) printf("%s aborted\n", key);
+					table.erase(key);
+					aborted++;
+				} else if (event->eventNumber==ULOG_EXECUTE) {
+					if (print_status) {
+						printf("%s executing on host %s\n", key, ((ExecuteEvent*)event)->getExecuteHost());
 					}
-				}
-				delete event;
-				if( minjobs && (completed + aborted >= minjobs ) ) {
-					printf( "Specifed number of jobs (%d) done.\n", minjobs );
-					EXIT_SUCCESS;
-				}
-			} else {
-				// did something change in the file since our last visit?
-				fseek(sec_fp, 0, SEEK_END);
-				nPos = ftell(sec_fp);
-				if (flagged == 1) {
-					fclose(sec_fp);
-					dprintf(D_FULLDEBUG, "INFO: File %s changed but userLog reader could not read another event. We are reinitializing userLog reader. \n", log_file_name);
-					if (debug_print_rescue) printf("rescue:%d ", nPos);
-					if (print_status) printf("<reinitializing userLog reader>\n");
-					// reinitialize the user log, we ended up here a second time 
-					goto rescue;
-				}
-				if ( nPos != pos ){
-					if (debug_print_rescue) printf("lagging:%d!=%d ", nPos, pos);
-					pos = nPos;
-					// we do not want to retry every time we are in a waiting sleep cycle, therefore flag a change
-					flagged = 1;
-				}
-				
-				dprintf(D_FULLDEBUG,"%d submitted %d completed %d aborted %d remaining\n",submitted,completed,aborted,submitted-completed-aborted);
-				if(table.size()==0) {
-					if(submitted>0) {
-						if( !minjobs ) {
-							printf("All jobs done.\n");
-							EXIT_SUCCESS;
-						}
-					} else {
-						if(cluster==ANY_NUMBER) {
-							fprintf(stderr,"This log does not mention any jobs!\n");
-						} else {
-							fprintf(stderr,"This log does not mention that job!\n");
-						}
-						EXIT_FAILURE;
-					}
-				} else if(stoptime && time(0)>stoptime) {
-					printf("Time expired.\n");
-					EXIT_FAILURE;
 				} else {
-					time_t sleeptime;
-
-					if(stoptime) {
-						sleeptime = stoptime-time(0);
-					} else {
-						sleeptime = 5;
-					}
-
-					if(sleeptime>5) {
-						sleeptime = 5;
-					} else if(sleeptime<1) {
-						sleeptime = 1;
-					}
-
-					log.synchronize();
-					dprintf(D_FULLDEBUG,"No more events, sleeping for %ld seconds\n", (long)sleeptime);
-					sleep(sleeptime);
-					
+					/* nothing to do */
 				}
 			}
+			delete event;
+
+			if( minjobs && (completed + aborted >= minjobs ) ) {
+				printf( "Specifed number of jobs (%d) done.\n", minjobs );
+				EXIT_SUCCESS;
+			}
+
+			if( table.size() == 0 && submitted > 0 && (!minjobs) ) {
+				printf( "All jobs done.\n" );
+				EXIT_SUCCESS;
+			}
+		} else if( outcome == ULOG_NO_EVENT ) {
+			if( table.size() == 0 && submitted == 0 ) {
+				if( cluster == ANY_NUMBER ) {
+					fprintf(stderr,"This log does not mention any jobs!\n");
+				} else {
+					fprintf(stderr,"This log does not mention that job!\n");
+				}
+				EXIT_FAILURE;
+			}
+		} else if( outcome == ULOG_RD_ERROR ) {
+			dprintf( D_FULLDEBUG, "Got ULOG_RD_ERROR, done.\n" );
+			EXIT_FAILURE;
+		} else if( outcome == ULOG_MISSED_EVENT ) {
+			dprintf( D_FULLDEBUG, "Got ULOG_MISSED_EVENT, done.\n" );
+			EXIT_FAILURE;
+		} else if( outcome == ULOG_UNK_ERROR ) {
+			dprintf( D_FULLDEBUG, "Got ULOG_UNK_ERROR, done.\n" );
+			EXIT_FAILURE;
+		} else {
+			EXCEPT( "Unknown result reading user log." );
 		}
-		fclose(sec_fp);
-	} else {
-		fprintf(stderr,"Couldn't open %s: %s\n",log_file_name,strerror(errno));
 	}
+
 	EXIT_FAILURE;
-	
 	return 1; /* meaningless, but it makes Windows happy */
 }
