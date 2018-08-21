@@ -134,7 +134,7 @@ sub TestSha256Data {
 	CondorTest::debug("Old SHA256 = $oldsha256\n",1);
 
 	my $newSHA256file = $newfile . "SHA256";
-	my $dataSHA256 = Digest::SHA256->new;
+	my $dataSHA256 = Digest::SHA->new(256);
 
 	open(SHA256,">$newSHA256file") || die "Can't open SHA256 output file $!\n";
 	open(DATA,"<$newfile") || die "Trying to open data file\n" ;
