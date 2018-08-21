@@ -1,0 +1,55 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+
+my $stats = 0;
+
+$cmd = 'job_filexfer_md5-remote_java.cmd';
+$testdesc =  'Do file transfers with md5 - java U';
+$testname = "job_filexfer_md5_java";
+
+$success = sub {
+	CondorTest::debug("Transfer job worked..... need to chack data file.\n",1);
+	$stats = CondorTest::verbose_system("job_filexfer_md5-testdata.pl -m=200");
+	if($stats != 0)
+	{
+		die "Test of MD5 data failed\n";
+	}
+};
+
+if( ! -e "data")
+{
+	CondorTest::debug("Making data file\n",1);
+	$stats = CondorTest::verbose_system("job_filexfer_md5-createdata.pl -m=200");
+}
+else
+{
+	CondorTest::debug("Data file already exists....skipping generation\n",1);
+}
+
+CondorTest::RegisterExitedSuccess($testname, $success);
+if(CondorTest::RunTest($testname, $cmd, 0)) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
