@@ -21,7 +21,11 @@
 #ifndef CONDOR_MESSAGE_DIGEST_MAC
 #define CONDOR_MESSAGE_DIGEST_MAC
 
+#ifdef FIPS_MODE
 static const int MAC_SIZE = 32;
+#else
+static const int MAC_SIZE = 16;
+#endif
 
 #include "CryptKey.h"
 //----------------------------------------------------------------------

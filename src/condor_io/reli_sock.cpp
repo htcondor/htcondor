@@ -615,7 +615,7 @@ ReliSock::put_bytes_after_encryption(const void *dta, int sz) {
 
 	int		nw;
 	int 	tw = 0;
-	int		header_size = isOutgoing_MD5_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
+	int		header_size = isOutgoing_Hash_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
 	for(nw=0;;) {
 		
 		if (snd_msg.buf.full()) {

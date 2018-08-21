@@ -4886,7 +4886,7 @@ int SubmitHash::SetExecutable()
 			if (!hash.IsEmpty()) {
 				ClassAd tmp_ad;
 				tmp_ad.Assign(ATTR_OWNER, owner);
-				tmp_ad.Assign(ATTR_JOB_CMD_SHA, hash.Value());
+				tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash.Value());
 				ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
 			}
 			else {

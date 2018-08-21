@@ -69,13 +69,13 @@ make_hash_filename(const std::string& owner, const std::string& hash)
 std::string
 ickpt_share_get_hash(ClassAd& ad)
 {
-	// for now, we only pay attention to the executable's SHA
+	// for now, we only pay attention to the executable's checksum
 	//
 	MyString hash;
-	if (!ad.LookupString(ATTR_JOB_CMD_SHA, hash)) {
+	if (!ad.LookupString(ATTR_JOB_CMD_CHECKSUM, hash)) {
 		return "";
 	}
-	return escape_for_filename(ATTR_JOB_CMD_SHA) +
+	return escape_for_filename(ATTR_JOB_CMD_CHECKSUM) +
 	       "-" +
 	       escape_for_filename(hash.Value());
 }
