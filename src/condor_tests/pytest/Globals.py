@@ -32,26 +32,26 @@ class JobStatus:
 
 class JobUniverse:
 	Name = {
-    	"standard": 1,
-    	"vanilla": 5,
-    	"docker": 5,
-    	"scheduler": 7,
-    	"MPI": 8,
-    	"grid": 9,
-    	"java": 10,
-    	"parallel": 11,
-    	"local": 12,
-	    "vm": 13
+		"standard": 1,
+		"vanilla": 5,
+		"docker": 5,
+		"scheduler": 7,
+		"MPI": 8,
+		"grid": 9,
+		"java": 10,
+		"parallel": 11,
+		"local": 12,
+		"vm": 13
 	}
 
 	Number = {
-    	1: "standard",
-    	5: "vanilla",
-    	7: "scheduler",
-    	8: "MPI",
-    	9: "grid",
-    	10: "java",
-    	11: "parallel",
-    	12: "local",
-	    13: "vm"
+		1: "standard",
+		5: "vanilla",
+		7: "scheduler",
+		8: "MPI",
+		9: "grid",
+		10: "java",
+		11: "parallel",
+		12: "local",
+		13: "vm"
 	}
