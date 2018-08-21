@@ -43,6 +43,9 @@ class JobEvent {
 	private:
 		ULogEvent * event;
 		ClassAdWrapper * caw;
+
+		JobEvent( const JobEvent & je );
+		JobEvent & operator =( const JobEvent & je );
 };
 
 class JobEventLog;
@@ -50,7 +53,7 @@ class JobEventLog;
 class JobEventLog {
 	public:
 		JobEventLog( const std::string & filename );
-		~JobEventLog();
+		virtual ~JobEventLog();
 
 		bool isInitialized() { return wful.isInitialized(); }
 
@@ -82,6 +85,9 @@ class JobEventLog {
 		int timeout;
 		bool following;
 		WaitForUserLog wful;
+
+		JobEventLog( const JobEventLog & jel );
+		JobEventLog & operator =( const JobEventLog & jel );
 };
 
 #endif
