@@ -130,17 +130,18 @@ JobEvent::Py_GetAttr( const std::string & s ) {
 // ----------------------------------------------------------------------------
 
 void export_event_log() {
-	boost::python::class_<JobEventLog, boost::noncopyable>( "JobEventLog", "...", boost::python::init<const std::string &>() )
-		.def( "isInitialized", &JobEventLog::isInitialized, "..." )
-		.def( NEXT_FN, &JobEventLog::next, "..." )
-		.def( "follow", &JobEventLog::follow, "..." )
-		.def( "follow", &JobEventLog::follow_for, "..." )
-		.def( "__iter__", &JobEventLog::pass_through )
-		.def( "setFollowTimeout", &JobEventLog::setFollowTimeout, "..." )
-		.def( "getFollowTimeout", &JobEventLog::getFollowTimeout, "..." )
-		.def( "isFollowing", &JobEventLog::isFollowing, "..." )
-		.def( "setFollowing", &JobEventLog::setFollowing, "..." )
-		.def( "unsetFollowing", &JobEventLog::unsetFollowing, "..." )
+	// Could use some DocTest blocks too, probably.
+	boost::python::class_<JobEventLog, boost::noncopyable>( "JobEventLog", "Reads job event (user) logs.\n", boost::python::init<const std::string &>( "Create an instance of the JobEventLog class.  It will have an infinite timeout (-1) but will not be in following mode.\n:param filename: A file containing a job event (user) log." ) )
+		.def( "isInitialized", &JobEventLog::isInitialized, "Return true if ready for use.\n" )
+		.def( NEXT_FN, &JobEventLog::next, "Return the next JobEvent in the log, blocking if in follow mode for no longer than the timeout." )
+		.def( "follow", &JobEventLog::follow, "Set following mode and return self (which is its own iterator)." )
+		.def( "follow", &JobEventLog::follow_for, "Set following mode.  Set the timeout to the argument.  Return self (which is its own iterator)." )
+		.def( "__iter__", &JobEventLog::pass_through, "Return self (which is its own iterator)." )
+		.def( "setFollowTimeout", &JobEventLog::setFollowTimeout, "Set the timeout used in following mode." )
+		.def( "getFollowTimeout", &JobEventLog::getFollowTimeout, "Get the timeout used in following mode." )
+		.def( "isFollowing", &JobEventLog::isFollowing, "Return true iff the log is following mode." )
+		.def( "setFollowing", &JobEventLog::setFollowing, "Set following mode (to true)." )
+		.def( "unsetFollowing", &JobEventLog::unsetFollowing, "Unset following mode (set following mode to false)." )
 	;
 
 	// Allows conversion of JobEventLog instances to Python objects.
