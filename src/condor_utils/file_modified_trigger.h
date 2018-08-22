@@ -36,6 +36,9 @@ class FileModifiedTrigger {
 		std::string filename;
 		bool initialized;
 
+		FileModifiedTrigger( const FileModifiedTrigger & fmt );
+		FileModifiedTrigger & operator =( const FileModifiedTrigger & fmt );
+
 #if defined( LINUX )
 		int read_inotify_events( void );
 		int inotify_fd;

@@ -137,6 +137,7 @@ int		DashMaxJobs = 0;	 // maximum number of jobs to create before generating an 
 int		DashMaxClusters = 0; // maximum number of clusters to create before generating an error.
 const char * DashDryRunOutName = NULL;
 int		DumpSubmitHash = 0;
+int		DumpSubmitDigest = 0;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
@@ -608,6 +609,9 @@ main( int argc, const char *argv[] )
 							needs_file_arg = true;
 						} else if (YourString(opt) == "def") {
 							DumpSubmitHash &= ~HASHITER_NO_DEFAULTS;
+							needs_file_arg = true;
+						} else if (YourString(opt) == "digest") {
+							DumpSubmitDigest = 1;
 							needs_file_arg = true;
 						} else {
 							int optval = atoi(opt);
@@ -1882,6 +1886,10 @@ int submit_jobs (
 			if (max_materialize <= 0) max_materialize = INT_MAX;
 			max_materialize = MIN(max_materialize, total_procs);
 			max_materialize = MAX(max_materialize, 1);
+
+			if (DashDryRun && DumpSubmitDigest) {
+				fprintf(stdout, "\n----- submit digest -----\n%s-----\n", submit_digest.c_str());
+			}
 
 			// send the submit digest to the schedd. the schedd will parse the digest at this point
 			// and return success or failure.
