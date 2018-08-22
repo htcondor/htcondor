@@ -244,7 +244,7 @@ public:
 		 * @param error - where the error message will be stored if there's a problem
 		 * @return true if the parameter was a valid CronTab attribute
 		 **/
-	static bool validateParameter( int, const char*, MyString& );
+	static bool validateParameter(const char* param, const char * attr, MyString& error);
 		//
 		// Attribute names
 		// A nice list that we can iterate through easily
