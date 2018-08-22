@@ -182,6 +182,8 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 
 #define REASSIGN_SLOT (SCHED_VERS+121) // Given two job IDs, deactivate the victim job's claim and reactivate it running the beneficiary job.
 
+#define DOWNLOAD_SANDBOX_WITH_PERMS (SCHED_VERS+122) // Download the Sandbox from a schedd
+
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
 #define DRAIN_QUICK 10

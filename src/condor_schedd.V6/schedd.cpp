@@ -213,6 +213,7 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 	case SPOOL_JOB_FILES_WITH_PERMS:
 	case TRANSFER_DATA:
 	case TRANSFER_DATA_WITH_PERMS:
+	case DOWNLOAD_SANDBOX_WITH_PERMS:
 	case UPDATE_GSI_CRED:
 	case DELEGATE_GSI_CRED_SCHEDD:
 	case QMGMT_WRITE_CMD:
@@ -4862,7 +4863,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 
 	JobAdsArrayLen = jobs->getlast() + 1;
 //	dprintf(D_FULLDEBUG,"TODD spoolJobFilesWorkerThread: JobAdsArrayLen=%d\n",JobAdsArrayLen);
-	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
+	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS || mode == DOWNLOAD_SANDBOX_WITH_PERMS ) {
 		// if sending sandboxes, first tell the client how many
 		// we are about to send.
 		dprintf(D_FULLDEBUG, "Scheduler::generalJobFilesWorkerThread: "
@@ -4902,7 +4903,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			// If sending the output sandbox, first ensure that it's owned
 			// by the user, in case we were using the old chowning behavior
 			// when the job completed.
-			if ( (mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS) &&
+			if ( (mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS || mode == DOWNLOAD_SANDBOX_WITH_PERMS) &&
 				 SpooledJobFiles::jobRequiresSpoolDirectory( ad ) )
 			{
 				SpooledJobFiles::createJobSpoolDirectory( ad, PRIV_USER );
@@ -4921,13 +4922,26 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		}
 #endif
 
+		/*
+		if (mode == DOWNLOAD_SANDBOX_WITH_PERMS) {
+			ad->Delete( ATTR_JOB_OUTPUT );
+			ad->Delete( ATTR_JOB_ERROR );
+		}
+		*/
+
 			// Create a file transfer object, with schedd as the server.
 			// If we're receiving files, don't create a file catalog in
 			// the FileTransfer object. The submitter's IWD is probably not
 			// valid on this machine and we won't use the catalog anyway.
-		result = ftrans.SimpleInit(ad, true, true, rsock, xfer_priv,
-								   (mode == TRANSFER_DATA ||
-									mode == TRANSFER_DATA_WITH_PERMS));
+		if (mode == DOWNLOAD_SANDBOX_WITH_PERMS) {
+			result = ftrans.SimpleInit(ad, false, false, rsock, PRIV_UNKNOWN, false, true);
+		} else {
+			result = ftrans.SimpleInit(ad, true, true, rsock, xfer_priv,
+									   (mode == TRANSFER_DATA ||
+										mode == TRANSFER_DATA_WITH_PERMS));
+			
+		}
+		
 		if ( !result ) {
 			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to init filetransfer for job %d.%d \n",
@@ -5090,6 +5104,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	switch(mode) {
 		case SPOOL_JOB_FILES_WITH_PERMS: // uploading perm files to schedd
 		case TRANSFER_DATA_WITH_PERMS:	// downloading perm files from schedd
+		case DOWNLOAD_SANDBOX_WITH_PERMS: // Download sandbox
 			peer_version = NULL;
 			if ( !rsock->code(peer_version) ) {
 				dprintf(D_AUDIT | D_FAILURE, *rsock, 
@@ -5139,6 +5154,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// of the queue, which I can then determine what to transfer out of.
 		case TRANSFER_DATA:
 		case TRANSFER_DATA_WITH_PERMS:
+		case DOWNLOAD_SANDBOX_WITH_PERMS:
 			// read constraint string
 			if ( !rsock->code(constraint_string) || constraint_string == NULL )
 			{
@@ -5219,6 +5235,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// downloading files from schedd
 		case TRANSFER_DATA:
 		case TRANSFER_DATA_WITH_PERMS:
+		case DOWNLOAD_SANDBOX_WITH_PERMS:
 			{
 			ClassAd * tmp_ad = GetNextJobByConstraint(constraint_string,1);
 			JobAdsArrayLen = 0;
@@ -5297,6 +5314,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// downloading files from the schedd
 		case TRANSFER_DATA:
 		case TRANSFER_DATA_WITH_PERMS:
+		case DOWNLOAD_SANDBOX_WITH_PERMS:
 			if ( transfer_reaper_id == -1 ) {
 				transfer_reaper_id = daemonCore->Register_Reaper(
 						"transferJobFilesReaper",
@@ -13606,6 +13624,11 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
+		daemonCore->Register_CommandWithPayload(DOWNLOAD_SANDBOX_WITH_PERMS,
+ 			"DOWNLOAD_SANDBOX_WITH_PERMS", 
+ 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
+ 			"spoolJobFiles", this, WRITE, D_COMMAND,
+ 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
 			"updateGSICred", this, WRITE, D_COMMAND,

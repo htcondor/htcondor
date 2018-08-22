@@ -29,6 +29,9 @@
 #include "file_transfer.h"
 #include "condor_version.h"
 #include "condor_ftp.h"
+#include "directory.h"
+
+#include <sstream>
 
 
 // // // // //
@@ -539,6 +542,256 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	if(numdone) { *numdone = JobAdsArrayLen; }
 
 	return true;
+}
+
+
+bool DCSchedd::transferInputSandbox(const char* constraint, 
+		const MyString &destination, CondorError * errstack, int * numdone /*=0*/)
+{
+	if(numdone) { *numdone = 0; }
+	//ExprTree *tree = NULL;
+	//const char *lhstr;
+	int reply;
+	int i;
+	ReliSock rsock;
+	int JobAdsArrayLen;
+	bool use_new_command = true;
+
+	if ( version() ) {
+		CondorVersionInfo vi( version() );
+		if ( vi.built_since_version(6,7,7) ) {
+			use_new_command = true;
+		} else {
+			use_new_command = false;
+		}
+	}
+
+		// // // // // // // //
+		// On the wire protocol
+		// // // // // // // //
+
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "DCSchedd::transferInputSandbox: "
+				 "Failed to connect to schedd (%s)\n", _addr );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::transferInputSandbox",
+							CEDAR_ERR_CONNECT_FAILED,
+							"Failed to connect to schedd" );
+		}
+		return false;
+	}
+	if ( use_new_command ) {
+		if( ! startCommand(DOWNLOAD_SANDBOX_WITH_PERMS, (Sock*)&rsock, 0,
+							 errstack) ) {
+			dprintf( D_ALWAYS, "DCSchedd::transferInputSandbox: "
+					 "Failed to send command (DOWNLOAD_SANDBOX_WITH_PERMS) "
+					 "to the schedd\n" );
+			return false;
+		}
+	} else {
+		if( ! startCommand(TRANSFER_DATA, (Sock*)&rsock, 0, errstack) ) {
+			dprintf( D_ALWAYS, "DCSchedd::transferInputSandbox: "
+					 "Failed to send command (TRANSFER_DATA) "
+					 "to the schedd\n" );
+			return false;
+		}
+	}
+
+		// First, if we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf( D_ALWAYS, 
+			"DCSchedd::transferInputSandbox: authentication failure: %s\n",
+			errstack ? errstack->getFullText().c_str() : "" );
+		return false;
+	}
+
+	// If we don't already know the version of the schedd, try to pull
+	// it out of CEDAR. It's important to know for the FileTransfer
+	// protocol.
+	const CondorVersionInfo *peer_version = rsock.get_peer_version();
+	if ( _version == NULL && peer_version != NULL ) {
+		_version = peer_version->get_version_string();
+	}
+	if ( _version == NULL ) {
+		dprintf( D_ALWAYS, "Unable to determine schedd version for file transfer\n" );
+	}
+
+	rsock.encode();
+
+		// Send our version if using the new command
+	if ( use_new_command ) {
+		if ( !rsock.put( CondorVersion() ) ) {
+			dprintf(D_ALWAYS,"DCSchedd:transferInputSandbox: "
+					"Can't send version string to the schedd\n");
+			if ( errstack ) {
+				errstack->push( "DCSchedd::transferInputSandbox",
+								CEDAR_ERR_PUT_FAILED,
+								"Can't send version string to the schedd" );
+			}
+			return false;
+		}
+	}
+
+		// Send the constraint
+	if ( !rsock.put(constraint) ) {
+		dprintf(D_ALWAYS,"DCSchedd:transferInputSandbox: "
+				"Can't send JobAdsArrayLen to the schedd\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::transferInputSandbox",
+							CEDAR_ERR_PUT_FAILED,
+							"Can't send JobAdsArrayLen to the schedd" );
+		}
+		return false;
+	}
+
+	if ( !rsock.end_of_message() ) {
+		std::string errmsg;
+		formatstr(errmsg,
+				"Can't send initial message (version + constraint) to schedd (%s), probably an authorization failure",
+				_addr);
+
+		dprintf(D_ALWAYS,"DCSchedd::transferInputSandbox: %s\n", errmsg.c_str());
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::transferInputSandbox",
+				CEDAR_ERR_EOM_FAILED,
+				errmsg.c_str());
+		}
+		return false;
+	}
+
+		// Now, read how many jobs matched the constraint.
+	rsock.decode();
+	if ( !rsock.code(JobAdsArrayLen) ) {
+		std::string errmsg;
+		formatstr(errmsg,
+				"Can't receive JobAdsArrayLen from the schedd (%s)",
+				_addr);
+
+		dprintf(D_ALWAYS,"DCSchedd::transferInputSandbox: %s\n", errmsg.c_str());
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::transferInputSandbox",
+				CEDAR_ERR_GET_FAILED,
+				errmsg.c_str());
+		}
+		return false;
+	}
+
+	rsock.end_of_message();
+
+	dprintf(D_FULLDEBUG,"DCSchedd:transferInputSandbox: "
+		"%d jobs matched my constraint (%s)\n",
+		JobAdsArrayLen, constraint);
+
+		// Now read all the files via the file transfer object
+	for (i=0; i<JobAdsArrayLen; i++) {
+		FileTransfer ftrans;
+		ClassAd job;
+
+			// grab job ClassAd
+		if ( !getClassAd(&rsock, job) ) {
+			std::string errmsg;
+			formatstr(errmsg, "Can't receive job ad %d from the schedd", i);
+
+			dprintf(D_ALWAYS, "DCSchedd::transferInputSandbox: %s\n", errmsg.c_str());
+
+			if( errstack ) {
+				errstack->push(
+								 "DCSchedd::transferInputSandbox",
+								 CEDAR_ERR_GET_FAILED,
+								 errmsg.c_str());
+			}
+			return false;
+		}
+
+		rsock.end_of_message();
+
+		/* Don't do this for transferring input files
+			// translate the job ad by replacing the 
+			// saved SUBMIT_ attributes
+		job.ResetExpr();
+		while( job.NextExpr(lhstr, tree) ) {
+			if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
+					// this attr name starts with SUBMIT_
+					// compute new lhs (strip off the SUBMIT_)
+				const char *new_attr_name = strchr(lhstr,'_');
+				ExprTree * pTree;
+				ASSERT(new_attr_name);
+				new_attr_name++;
+					// insert attribute
+				pTree = tree->Copy();
+				job.Insert(new_attr_name, pTree);
+			}
+		}	// while next expr
+		*/
+		int cluster = -1, proc = -1;
+		job.LookupInteger(ATTR_CLUSTER_ID,cluster);
+		job.LookupInteger(ATTR_PROC_ID,proc);
+		std::stringstream new_destination;
+		new_destination << static_cast<std::string>(destination) << DIR_DELIM_CHAR << cluster << DIR_DELIM_CHAR << proc;
+		// Set the IWD to the destination
+		mkdir_and_parents_if_needed(new_destination.str().c_str(), 0700);
+		job.Assign( ATTR_JOB_IWD, new_destination.str() );
+		
+		// Set the output and error to the remapped names
+		job.Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
+		job.Assign( ATTR_JOB_ERROR, StderrRemapName );
+
+		if ( !ftrans.SimpleInit(&job,false,false,&rsock) ) {
+			if( errstack ) {
+				errstack->pushf(
+					"DCSchedd::transferInputSandbox",
+					FILETRANSFER_INIT_FAILED,
+					"File transfer initialization failed for target job %d.%d",
+					cluster, proc );
+			}
+			return false;
+		}
+		
+		/*
+		// We want files to be copied to their final places, so apply
+		// any filename remaps when downloading.
+		if ( !ftrans.InitDownloadFilenameRemaps(&job) ) {
+			return false;
+		}
+		*/
+		if ( use_new_command ) {
+			ftrans.setPeerVersion( version() );
+		}
+		if ( !ftrans.DownloadFiles() ) {
+			if( errstack ) {
+				FileTransfer::FileTransferInfo ft_info = ftrans.GetInfo();
+
+				int cluster = -1, proc = -1;
+				job.LookupInteger(ATTR_CLUSTER_ID,cluster);
+				job.LookupInteger(ATTR_PROC_ID,proc);
+				errstack->pushf(
+					"DCSchedd::transferInputSandbox",
+					FILETRANSFER_DOWNLOAD_FAILED,
+					"File transfer failed for target job %d.%d: %s",
+					cluster, proc, ft_info.error_desc.Value() );
+			}
+			return false;
+		}
+	}	
+		
+	rsock.end_of_message();
+
+	rsock.encode();
+
+	reply = OK;
+	rsock.code(reply);
+	rsock.end_of_message();
+
+	if(numdone) { *numdone = JobAdsArrayLen; }
+
+	return true;
+	
+	
 }
 
 // when a transferd registers itself, it identifies who it is. The connection

@@ -1704,6 +1704,22 @@ struct Schedd {
         }
     }
 
+    void transferInputSandbox(std::string jobs, const std::string &destination)
+    {
+        CondorError errstack;
+        DCSchedd schedd(m_addr.c_str());
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = !schedd.transferInputSandbox(jobs.c_str(), destination, &errstack);
+        }
+        if (result)
+        {
+            THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
+        }
+    }
+
+
     int refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
     {
         time_t now = time(NULL);
@@ -3153,6 +3169,9 @@ void export_schedd()
 #endif
         .def("retrieve", &Schedd::retrieve, "Retrieve the output sandbox from one or more jobs.\n"
             ":param jobs: A expression string matching the list of job output sandboxes to retrieve.\n")
+        .def("transferInputSandbox", &Schedd::transferInputSandbox, "Download the input sandbox for a single job\n"
+            ":param jobs: A expression string matching the list of job output sandboxes to retrieve.\n"
+            ":param destination: Destination of the input sandbox.")
         .def("edit", &Schedd::edit, "Edit one or more jobs in the queue.\n"
             ":param job_spec: Either a list of jobs (CLUSTER.PROC) or a string containing a constraint to match jobs against.\n"
             ":param attr: Attribute name to edit.\n"
