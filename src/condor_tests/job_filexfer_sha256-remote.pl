@@ -21,65 +21,20 @@
 use File::Copy;
 use File::Path;
 use Getopt::Long;
-use Digest::MD5;
 
-open(DATA,">data") || die "Can't open output file $!\n";
+my $outputfile = $ARGV[0];
+
 
 GetOptions (
 		'help' => \$help,
 		'megs=i' => \$megs,
 );
 
-my $rows = $megs;
-my $rowsz = 1048576;
-my $seed_char = int(rand (ord("~") - ord(" ") + 1)) + ord(" ");
-my $start_char = chr($seed_char);
 
-print "Start char -$start_char-\mn";
-
-if ( $help )    { help() and exit(0); }
-
-die "Need megabytes defined\n" unless defined $megs;
-
-my $rowchar = $seed_char++;
-my $row = "";
-
-
-if($seed_char == ord("~"))
-{
-	$seed_char = ord(" ");
-}
-
-foreach (1..$rowsz)
-{
-	$row .= chr($rowchar++);
-	if($rowchar == ord("~"))
-	{	
-		$rowchar = ord(" ");
-	}
-}
-
-foreach (1..$rows)
-{
-	print DATA "$row";
-}
-
-close(DATA);
-
-open(DATA,"<data") || die "Can't open input file $!\n";
-open(MD5,">datamd5") || die "Can't open MD5 output file $!\n";
-my $datamd5 = Digest::MD5->new;
-
-$datamd5->addfile(DATA);
-close(DATA);
-
-
-my $hexmd5 = $datamd5->hexdigest;
-
-print MD5 "$hexmd5\n";
-close(MD5);
-
-
+verbose_system("pwd;ls");
+verbose_system("mv data $outputfile");
+verbose_system("touch $outputfile");
+verbose_system("pwd;ls");
 
 # =================================
 # print help

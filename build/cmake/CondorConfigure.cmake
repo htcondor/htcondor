@@ -253,6 +253,10 @@ else()
 	find_package (OpenMP)
 endif()
 
+if (FIPS_BUILD)
+    add_definitions(-DFIPS_MODE=1)
+endif()
+
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
 if (CONDOR_PLATFORM)
     add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")

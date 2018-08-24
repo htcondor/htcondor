@@ -122,4 +122,23 @@ FileModifiedTrigger::wait( int timeout ) {
 	}
 }
 
+#else
+
+//
+// Stubs for other platforms.  We should replace these with (a) a Windows-
+// specific blocking interface and (b) a "unix" (MacOSX) fallback that polls.
+//
+// Collected as its own block for clarity.
+//
+
+FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
+	filename( f ), initialized( false ) { }
+
+FileModifiedTrigger::~FileModifiedTrigger() { }
+
+int
+FileModifiedTrigger::wait( int milliseconds ) {
+	return -1;
+}
+
 #endif

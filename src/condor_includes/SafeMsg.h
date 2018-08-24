@@ -63,7 +63,7 @@ class _condorInMsg
 			const int seq,	// seq. # of the packet
 			const int len,	// length of the packet
 			const void* data,	// data of the packet
-            const char * MD5KeyId, 
+            const char * HashKeyId,
             const unsigned char * md, 
             const char * EncKeyId, 
 			_condorInMsg* prev);	// pointer to the previous InMsg in the chain
@@ -85,11 +85,11 @@ class _condorInMsg
 		// get the current data without incrementing the 'current position'
 		int peek(char &c);
 
-        void set_sec(const char * MD5Keyid,  // MD5 key id
-                const unsigned char * md,  // MD5 key id
+        void set_sec(const char * HashKeyId,  // key id
+                const unsigned char * md,  // key id
                 const char * EncKeyId);
 
-        const char * isDataMD5ed();
+        const char * isDataHashed();
         const char * isDataEncrypted();
 
         void resetEnc();
@@ -121,7 +121,7 @@ class _condorInMsg
 		char *tempBuf;		/* temporary buffer to hold data being taken
 						 * from possibly multiple packets */
 		size_t tempBufLen;
-        char * incomingMD5KeyId_;
+        char * incomingHashKeyId_;
         char * incomingEncKeyId_;
         unsigned char * md_;
         bool   verified_;
@@ -190,7 +190,7 @@ class _condorPacket
 		// actually used.
 		int set_MTU(const int mtu);
 
-        const char * isDataMD5ed();
+        const char * isDataHashed();
         const char * isDataEncrypted();   
         const unsigned char * md();
         bool verifyMD(Condor_MD_MAC * mdChecker);
@@ -227,8 +227,8 @@ class _condorPacket
 
         short            outgoingMdLen_;
         short            outgoingEidLen_;
-        char *           incomingMD5KeyId_;     // Keyid as seen from the incoming packet
-        char *           outgoingMD5KeyId_;     // Keeyid for outgoing packet
+        char *           incomingHashKeyId_;     // Keyid as seen from the incoming packet
+        char *           outgoingHashKeyId_;     // Keeyid for outgoing packet
         char *           incomingEncKeyId_;     // Keyid as seen from the incoming packet
         char *           outgoingEncKeyId_;     // Keeyid for outgoing packet
         bool             verified_;

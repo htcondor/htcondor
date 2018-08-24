@@ -299,8 +299,8 @@ bool Buf::computeMD(char * checkSUM, Condor_MD_MAC * checker)
 {
 	alloc_buf();
 
-    // I absolutely hate this! 21
-    checker->addMD((unsigned char *) &(_dta[21]), _dta_sz - 21);
+    // normal cedar header is 5 bytes.  Add MAC_SIZE to that for this to work
+    checker->addMD((unsigned char *) &(_dta[5+MAC_SIZE]), _dta_sz - (5+MAC_SIZE));
     unsigned char * md = checker->computeMD();
 
     if (md) {
