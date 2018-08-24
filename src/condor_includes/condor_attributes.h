@@ -310,7 +310,11 @@
 #define ATTR_JOB_DESCRIPTION "JobDescription"
 #define ATTR_STACK_SIZE  "StackSize"
 #define ATTR_JOB_CMD_HASH  "CmdHash"
-#define ATTR_JOB_CMD_MD5  "CmdMD5"
+#ifdef FIPS_MODE
+#define ATTR_JOB_CMD_CHECKSUM  "CmdSHA"
+#else
+#define ATTR_JOB_CMD_CHECKSUM  "CmdMD5"
+#endif
 #define ATTR_ORIG_JOB_CMD  "OrigCmd" 
 #define ATTR_JOB_CORE_DUMPED  "JobCoreDumped"
 #define ATTR_JOB_CORE_FILENAME  "JobCoreFileName"

@@ -576,7 +576,7 @@ ReliSock::peek_end_of_message()
 	return false;
 }
 
-const char * ReliSock :: isIncomingDataMD5ed()
+const char * ReliSock :: isIncomingDataHashed()
 {
     return NULL;    // For now
 }
@@ -584,7 +584,6 @@ const char * ReliSock :: isIncomingDataMD5ed()
 int 
 ReliSock::put_bytes(const void *data, int sz)
 {
-
         // Check to see if we need to encrypt
         // Okay, this is a bug! H.W. 9/25/2001
 
@@ -616,7 +615,7 @@ ReliSock::put_bytes_after_encryption(const void *dta, int sz) {
 
 	int		nw;
 	int 	tw = 0;
-	int		header_size = isOutgoing_MD5_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
+	int		header_size = isOutgoing_Hash_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
 	for(nw=0;;) {
 		
 		if (snd_msg.buf.full()) {

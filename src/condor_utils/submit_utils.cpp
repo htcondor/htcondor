@@ -4732,33 +4732,33 @@ int SubmitHash::SetExecutable()
 				                                  true);
 			}
 
-			MyString md5;
+			MyString hash;
 			if (try_ickpt_sharing) {
 				Condor_MD_MAC cmm;
-				unsigned char* md5_raw;
+				unsigned char* hash_raw;
 				if (!cmm.addMDFile(ename)) {
 					dprintf(D_ALWAYS,
 					        "SHARE_SPOOLED_EXECUTABLES will not be used: "
-					            "MD5 of file %s failed\n",
+					            "hash of file %s failed\n",
 					        ename);
 				}
-				else if ((md5_raw = cmm.computeMD()) == NULL) {
+				else if ((hash_raw = cmm.computeMD()) == NULL) {
 					dprintf(D_ALWAYS,
 					        "SHARE_SPOOLED_EXECUTABLES will not be used: "
-					            "no MD5 support in this Condor build\n");
+					            "no hash support in this Condor build\n");
 				}
 				else {
 					for (int i = 0; i < MAC_SIZE; i++) {
-						md5.formatstr_cat("%02x", static_cast<int>(md5_raw[i]));
+						hash.formatstr_cat("%02x", static_cast<int>(hash_raw[i]));
 					}
-					free(md5_raw);
+					free(hash_raw);
 				}
 			}
 			int ret;
-			if (!md5.IsEmpty()) {
+			if (!hash.IsEmpty()) {
 				ClassAd tmp_ad;
 				tmp_ad.Assign(ATTR_OWNER, owner);
-				tmp_ad.Assign(ATTR_JOB_CMD_MD5, md5.Value());
+				tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash.Value());
 				ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
 			}
 			else {

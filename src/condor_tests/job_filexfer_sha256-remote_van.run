@@ -1,0 +1,165 @@
+#! /usr/bin/env perl
+#testreq: personal
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use Check::SimpleJob;
+use File::Copy;
+use File::Path;
+use Digest::SHA;
+
+my $stats = 0;
+
+$testname = "job_filexfer_sha256-remote_van";
+
+$success = sub {
+	CondorTest::debug("Transfer job worked..... need to chack data file.\n",1);
+	TestSha256Data("data", "backdata");
+	if($stats != 0)
+	{
+		die "Test of SHA256 data failed\n";
+	}
+};
+
+if( ! -e "data")
+{
+	CondorTest::debug("Making data file\n",1);
+	CreateSha256Data(200,"data");
+}
+else
+{
+	CondorTest::debug("Data file already exists....skipping generation\n",1);
+}
+
+CondorTest::debug("Data file created, submitting job\n",1);
+
+SimpleJob::RunCheck(
+    runthis=>"job_filexfer_sha256-remote.pl",
+    duration=>"backdata",
+    transfer_input_files=>"data,dataSHA256",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT",
+    on_success=>$success,
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+    exit(1);
+}
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
+
+sub CreateSha256Data {
+
+	my $megs = shift;
+	my $filenm = shift;
+	open(DATA,">$filenm") || die "Can't open output file $!\n";
+
+	my $rows = $megs;
+	my $rowsz = 1048576;
+	my $seed_char = int(rand ((ord("~") - ord(" ")) + 1)) + ord(" ");
+	my $start_char = chr($seed_char);
+
+	print "Start char -$start_char-\n";
+
+	my $rowchar = $seed_char;
+	my $row = "";
+
+
+	foreach (1..$rowsz)
+	{
+		$row .= chr($rowchar);
+		if($rowchar == ord("~"))
+		{	
+			$rowchar = ord(" ");
+		} else {
+			$rowchar++;
+		}
+	}
+
+	foreach (1..$rows)
+	{
+		print DATA "$row";
+	}
+
+	close(DATA);
+
+	my $outnameSHA256 = $filenm . "sha256";
+
+	open(SHA256,">$outnameSHA256") || die "Can't open SHA256 output file $!\n";
+	my $datasha256 = Digest::SHA->new(256);
+	$datasha256->addfile($filenm);
+
+	my $hexsha256 = $datasha256->hexdigest;
+
+	print SHA256 "$hexsha256\n";
+	close(SHA256);
+
+}
+
+sub TestSha256Data {
+	my $oldfile = shift;
+	my $newfile = shift;
+
+	my $oldsha256file = $oldfile . "sha256";
+	my $oldsha256;
+	open(ORIGSHA256,"<$oldsha256file") || die "Can't open sha256 checksum file $!\n";
+	while(<ORIGSHA256>)
+	{
+	    CondorUtils::fullchomp($_);
+	    $oldsha256 = $_;
+	}
+	close(ORIGSHA256);
+	CondorTest::debug("Old SHA256 = $oldsha256\n",1);
+
+	my $newSHA256file = $newfile . "SHA256";
+	my $dataSHA256 = Digest::SHA->new(256);
+
+	open(SHA256,">$newSHA256file") || die "Can't open SHA256 output file $!\n";
+	open(DATA,"<$newfile") || die "Trying to open data file\n" ;
+	$dataSHA256->addfile(DATA);
+	close(DATA);
+
+
+	my $hexSHA256 = $dataSHA256->hexdigest;
+
+	print SHA256 "$hexSHA256\n";
+	close(SHA256);
+
+	if($oldsha256 eq $hexSHA256)
+	{
+		CondorTest::debug("Check some of $oldfile and $newfile match!\n",1);
+		#verbose_system("touch WORKED");
+		unlink($oldfile);
+		unlink($newfile);
+		return(0);
+	}
+	else
+	{
+		CondorTest::debug("failed\n",1);
+		#verbose_system("touch FAILED");
+		return(1);
+	}
+}
+
