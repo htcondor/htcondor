@@ -125,20 +125,93 @@ FileModifiedTrigger::wait( int timeout ) {
 #else
 
 //
-// Stubs for other platforms.  We should replace these with (a) a Windows-
-// specific blocking interface and (b) a "unix" (MacOSX) fallback that polls.
+// Polling-based fallback implementation. :(
 //
-// Collected as its own block for clarity.
+// We should add a Windows-specific blocking interface.
 //
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "utc_time.h"
+
+#if defined(WINDOWS)
+void usleep( long long microseconds ) {
+	HANDLE timer;
+	LARGE_INTEGER timerIntervals = { microseconds * -10 };
+	timer = CreateWaitableTimer( NULL, true, NULL );
+	SetWaitableTimer( timer, & timerIntervals, 0, NULL, NULL, false );
+	WaitForSingleObject( timer, INFINITE );
+	CloseHandle( timer );
+}
+#endif /* WINDOWS */
 
 FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
-	filename( f ), initialized( false ) { }
+	filename(f), initialized(false), statfd(-1), lastSize(0)
+{
+	statfd = open( filename.c_str(), O_RDONLY );
+	if( statfd != -1 ) {
+		initialized = true;
+	}
+}
 
-FileModifiedTrigger::~FileModifiedTrigger() { }
+FileModifiedTrigger::~FileModifiedTrigger() {
+	if( initialized ) {
+		close( statfd );
+	}
+}
+
+
+//
+// Polling is the best we can do.  Use condor_gettimestemp() and not
+// clock_gettime(), despite the latter being monotonic, because it's
+// on Mac OS X until 10.12, and not available on Windows at all.
+//
 
 int
-FileModifiedTrigger::wait( int milliseconds ) {
-	return -1;
+FileModifiedTrigger::wait( int timeout ) {
+	if(! initialized) {
+		return -1;
+	}
+
+	struct timeval deadline;
+	condor_gettimestamp( deadline );
+
+	deadline.tv_sec += timeout / 1000;
+	deadline.tv_usec += (timeout % 1000) * 1000;
+	deadline.tv_usec = deadline.tv_usec % 1000000;
+
+	while( true ) {
+		struct stat statbuf;
+		int rv = fstat( statfd, & statbuf );
+		if( rv != 0 ) {
+			dprintf( D_ALWAYS, "FileModifiedTrigger::wait(): fstat() failure on previously-valid fd: %s (%d).\n", strerror(errno), errno );
+			return -1;
+		}
+
+		bool changed = statbuf.st_size != lastSize;
+		lastSize = statbuf.st_size;
+		if( changed ) { return 1; }
+
+		struct timeval now;
+		condor_gettimestamp( now );
+
+		if( deadline.tv_sec < now.tv_sec ) { return 0; }
+		else if( deadline.tv_sec == now.tv_sec &&
+			deadline.tv_usec < now.tv_usec ) { return 0; }
+		else {
+			// Sleep until the deadline, but not for more than 100 ms.
+			int duration;
+			if( now.tv_sec == deadline.tv_sec ) {
+				duration = deadline.tv_usec - now.tv_usec;
+			} else if( now.tv_sec + 1 == deadline.tv_sec ) {
+				duration = 1000000 + (deadline.tv_usec - now.tv_usec);
+			}
+			if( duration > 100000 ) { duration = 100000; }
+			usleep( duration );
+		}
+	}
 }
 
 #endif

@@ -28,7 +28,7 @@ class FileModifiedTrigger {
 		bool isInitialized( void ) const { return initialized; }
 
 		// Timeout is in milliseconds.  Returns -1 if invalid, 0 if timed
-		// out, 1 if ready to read (like poll()).
+		// out, 1 if file has changed (like poll()).
 		int wait( int timeout = -1 );
 
 	private:
@@ -42,6 +42,9 @@ class FileModifiedTrigger {
 #if defined( LINUX )
 		int read_inotify_events( void );
 		int inotify_fd;
+#else
+		int statfd;
+		off_t lastSize;
 #endif
 };
 
