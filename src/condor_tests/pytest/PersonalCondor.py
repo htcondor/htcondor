@@ -19,7 +19,7 @@ class PersonalCondor(object):
         self._is_ready = False
         self._local_dir = name + ".local"
         self._local_path = os.getcwd() + "/" + self._local_dir
-        self._local_config = self._local_path + "/condor_config.local"
+        self._local_config = self._local_path + "/condor_config"
         self._execute_path = self._local_path + "/execute"
         self._lock_path = self._local_path + "/lock"
         self._log_path = self._local_path + "/log"
@@ -120,8 +120,6 @@ class PersonalCondor(object):
 
 
     def SetCondorConfig(self):
-        # This is a little confusing, since condor_config.local is something
-        # else entirely...
         os.environ["CONDOR_CONFIG"] = self._local_config
 
 

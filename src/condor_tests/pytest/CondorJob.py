@@ -15,7 +15,6 @@ class CondorJob(object):
     def __init__(self, job_args):
         self._cluster_id = None
         self._job_args = job_args
-        self._old_status = None
         self._log = None
 
     def clusterID(self):
