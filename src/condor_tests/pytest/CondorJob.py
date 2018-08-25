@@ -7,9 +7,6 @@ from PersonalCondor import PersonalCondor
 from Globals import *
 from Utils import Utils
 
-
-
-
 class CondorJob(object):
 
     def __init__(self, job_args):
@@ -26,7 +23,7 @@ class CondorJob(object):
         Utils.TLog("Job cluster " + str(self._cluster_id) + " success callback invoked")
 
 
-    def Submit(self, wait=False):
+    def Submit(self, wait=False, count=1):
 
         # Submit the job defined by submit_args
         Utils.TLog("Submitting job with arguments: " + str(self._job_args))
@@ -34,9 +31,9 @@ class CondorJob(object):
         submit = htcondor.Submit(self._job_args)
         try:
             with schedd.transaction() as txn:
-                self._cluster_id = submit.queue(txn)
-        except:
-            print("Job submission failed for an unknown error")
+                self._cluster_id = submit.queue(txn, count)
+        except Exception as e:
+            print( "Job submission failed for an unknown error: " + str(e) )
             return JOB_FAILURE
 
         Utils.TLog("Job running on cluster " + str(self._cluster_id))
@@ -68,7 +65,7 @@ class CondorJob(object):
                     self.FailureCallback()
                     return JOB_FAILURE
             time.sleep(1)
-        
+
         # If we got this far, we hit the timeout and job did not complete
         Utils.TLog("Job failed to complete with timeout = " + str(timeout))
         return JOB_FAILURE

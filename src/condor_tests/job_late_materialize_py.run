@@ -3,13 +3,13 @@
 ##
 ## Copyright (C) 2018, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
-## 
+##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
 ## may not use this file except in compliance with the License.  You may
 ## obtain a copy of the License at
-## 
+##
 ##    http://www.apache.org/licenses/LICENSE-2.0
-## 
+##
 ## Unless required by applicable law or agreed to in writing, software
 ## distributed under the License is distributed on an "AS IS" BASIS,
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ import os
 import time
 import classad
 import htcondor
+from htcondor import JobEventType
 
 # request a  personal condor with late materialization enabled
 #testreq: personal
@@ -42,7 +43,7 @@ from pytest.CondorTest import CondorTest
 from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
 
-testname = os.path.basename(__file__)[:-3]
+testname = os.path.basename(__file__)[:-4]
 
 # dump the environment.
 #Utils.TLog("the environment")
@@ -75,11 +76,10 @@ peak_materialized = 0
 peak_running = 0
 peak_idle = 0
 
+#
+# The globals are the reason we aren't doing cluster.WaitForRemoval().
+#
 def wait_for_cluster_removal(id, logfile, timeout):
-
-	start_time = time.time()
-	end_time = start_time + timeout
-
 	global total_factories
 	global total_materialized
 	global total_exited
@@ -91,76 +91,79 @@ def wait_for_cluster_removal(id, logfile, timeout):
 	global peak_running
 	global peak_idle
 
-	events = htcondor.read_events(logfile)
-	while 1:
-		try:
-			if (time.time() > end_time) :
-				return 1
-				break
+	start_time = time.time()
+	end_time = start_time + timeout
 
-			# get an event, waiting up to 100 millisec
-			# if no event loop back to try again until the timeout expires
-			ad = events.poll(100)
-			if ad is None : continue
+	#
+	# Process events one at a time until we run out.  Then block looking for
+	# the next event until the deadline.
+	#
+	events = htcondor.JobEventLog( logfile )
+	for event in events.follow(0):
+		time_remaining = end_time - time.time()
+		if time_remaining <= 0:
+			return 1
 
-			#print ad
+		if event.type is JobEventType.NONE:
+			events.setFollowTimeout( int(time_remaining * 1000) )
+			continue
 
-			# ignore events that are not in the cluster of interest
-			if ad['Cluster'] != cluster : continue
+		if event.cluster != cluster :
+			continue
 
-			#print "oh cluster my cluster"
-			#print ad
+		if event.type == JobEventType.FACTORY_REMOVE:
+			Utils.TLog("ulog: FactoryRemove({0})".format(cluster))
+			total_factories -= 1
 
-			if ad['MyType'] == 'FactoryRemoveEvent' :
-				Utils.TLog("ulog: FactoryRemove({0})".format(cluster))
-				total_factories -= 1
+			print '\t          now peak total'
+			print '\trunning  {0:4d} {1:4d} {2:5d}'.format(num_running, peak_running, total_running)
+			print '\tidle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized)
+			print '\tpresent  {0:4d} {1:4d} {2:5d}'.format(num_materialized, peak_materialized, total_materialized)
+			print '\tfactory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1)
+			break
 
-				print '\t          now peak total'
-				print '\trunning  {0:4d} {1:4d} {2:5d}'.format(num_running, peak_running, total_running)
-				print '\tidle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized)
-				print '\tpresent  {0:4d} {1:4d} {2:5d}'.format(num_materialized, peak_materialized, total_materialized)
-				print '\tfactory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1)
-				break
+		elif event.type == JobEventType.FACTORY_SUBMIT:
+			Utils.TLog("ulog: FactorySubmit({0})".format(cluster))
+			total_factories += 1
+			continue
 
-			elif ad['MyType'] == 'FactorySubmitEvent' :
-				Utils.TLog("ulog: FactorySubmit({0})".format(cluster))
-				total_factories += 1
-				continue
+		elif event.type == JobEventType.SUBMIT:
+			total_materialized += 1
+			num_materialized += 1
+			num_idle += 1
+			if num_materialized > peak_materialized : peak_materialized = num_materialized
+			if num_idle > peak_idle : peak_idle = num_idle
+			Utils.TLog("ulog: jobSubmit() idle={0}({1}), materialized={2}({3})".format(num_idle, peak_idle, num_materialized, peak_materialized))
+			continue
 
-			elif ad['MyType'] == 'SubmitEvent' :
-				total_materialized += 1
-				num_materialized += 1
-				num_idle += 1
-				if num_materialized > peak_materialized : peak_materialized = num_materialized
-				if num_idle > peak_idle : peak_idle = num_idle
-				Utils.TLog("ulog: jobSubmit() idle={0}({1}), materialized={2}({3})".format(num_idle, peak_idle, num_materialized, peak_materialized))
-				continue
+		elif event.type == JobEventType.EXECUTE:
+			total_running += 1
+			num_running += 1
+			num_idle -= 1
+			if num_running > peak_running : peak_running = num_running
+			Utils.TLog("ulog: jobExec() running={0}({1})".format(num_running, peak_running))
+			continue
 
-			elif ad['MyType'] == 'ExecuteEvent' :
-				total_running += 1
-				num_running += 1
-				num_idle -= 1
-				if num_running > peak_running : peak_running = num_running
-				Utils.TLog("ulog: jobExec() running={0}({1})".format(num_running, peak_running))
-				continue
+		elif event.type == JobEventType.JOB_TERMINATED:
+			total_exited += 1
+			num_running -= 1
+			if event.TerminatedNormally : num_materialized -= 1
+			Utils.TLog("ulog: jobTerm({0}) run={1}({2}), materialized={3}({4})".format(event.TerminatedNormally, num_running, peak_running, num_materialized, peak_materialized))
+			continue
 
-			elif ad['MyType'] == 'JobTerminatedEvent' :
-				total_exited += 1
-				num_running -= 1
-				if ad['TerminatedNormally'] : num_materialized -= 1
-				Utils.TLog("ulog: jobTerm({0}) run={1}({2}), materialized={3}({4})".format(ad['TerminatedNormally'], num_running, peak_running, num_materialized, peak_materialized))
-				continue
+		elif event.type in [ JobEventType.IMAGE_SIZE ]:
+			continue
 
-		except StopIteration:
-			break;
+		else:
+			Utils.TLog("ulog: found unexpected event of type {0}, failing".format( str(event.type) ) );
+			return 0
 
 	return 0
-
-#end wait_for_cluster_removal
+# end wait_for_cluster_removal
 
 Utils.TLog("wait up to 5 min for jobs to materialize, run and exit")
 timed_out = wait_for_cluster_removal(cluster, logfile, 5*60)
-if timed_out : 
+if timed_out :
 	Utils.TLog("Timed out waiting for cluster remove event")
 	exit(1)
 
@@ -169,10 +172,10 @@ Utils.TLog("cluster completed, checking results:")
 if peak_materialized != int(sub['max_materialize']) :
 	Utils.Log("FAILURE: peak_materialized({0}) != max_materialize({1})".format(peak_materialized, sub['max_materialize']))
 	retval = 1
-elif total_materialized != int(sub.getQArgs()) : 
+elif total_materialized != int(sub.getQArgs()) :
 	Utils.Log("FAILURE: total_materialized({0}) != queue {1}".format(total_materialized, sub.getQArgs()))
 	retval = 1
-elif total_exited != int(sub.getQArgs()) : 
+elif total_exited != int(sub.getQArgs()) :
 	Utils.Log("FAILURE: total_exited({0}) != queue {1}".format(total_exited, sub.getQArgs()))
 	retval = 1
 else :
