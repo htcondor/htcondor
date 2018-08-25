@@ -33,10 +33,10 @@ class CondorJob(object):
         # Submit the job defined by submit_args
         Utils.TLog("Submitting job with arguments: " + str(self._job_args))
         schedd = htcondor.Schedd()
-        submit = htcondor.Submit(self._job_args, count)
+        submit = htcondor.Submit(self._job_args)
         try:
             with schedd.transaction() as txn:
-                self._cluster_id = submit.queue(txn)
+                self._cluster_id = submit.queue(txn, count)
         except:
             print("Job submission failed for an unknown error")
             return JOB_FAILURE
