@@ -107,6 +107,11 @@ JobEvent::Py_GetAttr( const std::string & s ) {
 	// We could special-case cluster, proc, and subproc like we did type,
 	// or detect them here.  The former is probably faster.
 
+	if( event == NULL ) {
+		// The NONE event has no attributes.
+		return boost::python::object();
+	}
+
 	if( caw == NULL ) {
 		ClassAd * classad = event->toClassAd();
 		if( classad == NULL ) {
