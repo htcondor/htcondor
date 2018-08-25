@@ -3,13 +3,13 @@
 ##
 ## Copyright (C) 2018, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
-## 
+##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
 ## may not use this file except in compliance with the License.  You may
 ## obtain a copy of the License at
-## 
+##
 ##    http://www.apache.org/licenses/LICENSE-2.0
-## 
+##
 ## Unless required by applicable law or agreed to in writing, software
 ## distributed under the License is distributed on an "AS IS" BASIS,
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,85 +43,19 @@ from pytest.Utils import Utils
 testname = os.path.basename(__file__)[:-4]
 test = CondorTest(testname)
 
-# dump the environment.
-#Utils.TLog("the environment")
-#for e in os.environ: Utils.Log(e + " = " + os.getenv(e))
-
-sub = htcondor.Submit("""
-	universe = vanilla
-	executable = x_sleep.pl
-	# sleep forever
-	arguments = 0
-	notification = never
-	queue 20
-	""")
-
 logfile = "{0}{1}.log".format(testname, os.getpid())
-sub['log'] = logfile
+cluster = CondorJob( {
+	"executable": "x_sleep.pl",
+	"arguments": "0",
+	"notification": "never",
+	"logfile": logfile
+	} )
+
 Utils.TLog("submitting sleep forever jobs, userlog is " + logfile)
-
-schedd = htcondor.Schedd()
-with schedd.transaction() as txn:
-	cluster = sub.queue(txn)
-
-def wait_for_execution(id, logfile, timeout):
-
-	start_time = time.time()
-	end_time = start_time + timeout
-
-	events = htcondor.read_events(logfile)
-	while 1:
-		try:
-			if (time.time() > end_time) :
-				return 1
-				break
-
-			# get an event, waiting up to 100 millisec
-			# if no event loop back to try again until the timeout expires
-			ad = events.poll(100)
-			if ad is None : continue
-
-			#print ad
-
-			# ignore events that are not in the cluster of interest
-			if ad['Cluster'] != cluster : continue
-			jobid = "%d.%d" % (cluster, ad['proc'])
-
-			#print "oh cluster my cluster"
-			#print ad
-
-			if ad['MyType'] == 'FactoryRemoveEvent' :
-				Utils.TLog("ulog: FactoryRemove({0})".format(cluster))
-				#total_factories -= 1
-				break
-
-			elif ad['MyType'] == 'FactorySubmitEvent' :
-				Utils.TLog("ulog: FactorySubmit({0})".format(cluster))
-				#total_factories += 1
-				continue
-
-			elif ad['MyType'] == 'SubmitEvent' :
-				Utils.TLog("ulog: jobSubmit({0})".format(jobid))
-				continue
-
-			elif ad['MyType'] == 'ExecuteEvent' :
-				Utils.TLog("ulog: jobExec({0})".format(jobid))
-				break
-
-			elif ad['MyType'] == 'JobTerminatedEvent' :
-				Utils.TLog("ulog: jobTerm({0}".format(jobid))
-				break
-
-		except StopIteration:
-			break;
-
-	return 0
-
-#end wait_for_execution
+cluster.Submit( False, 20 )
 
 Utils.TLog("wait up to 2 min for a job to start")
-timed_out = wait_for_execution(cluster, logfile, 2*60)
-if timed_out : 
+if not cluster.WaitUntilRunning( 2 * 60 ):
 	Utils.TLog("Timed out waiting for a job to start")
 	exit(1)
 
@@ -137,7 +71,7 @@ counts = {}
 
 Utils.TLog("fetching ANY ads and counting them")
 ads = collector.query()
-for ad in ads : 
+for ad in ads :
 	#print(ad)
 	adtype = ad['MyType']
 	name = ad['Name']
