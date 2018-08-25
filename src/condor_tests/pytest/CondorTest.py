@@ -40,3 +40,17 @@ class CondorTest(object):
                 del self._personal_condors[key]
         except:
             Utils.TLog("PersonalCondor was not running, ending test")
+
+    def exit(self, code):
+        # There should be more logging either here or in End() or
+        # probably both.
+        self.End()
+        sys.exit( code )
+
+    def RegisterFailure( self, subtest, message ):
+    	Utils.TLog( self._name + " [" + subtest + "] FAILURE " + message )
+        return None
+
+    def RegisterSuccess( self, subtest, message ):
+    	Utils.TLog( self._name + " [" + subtest + "] SUCCESS " + message )
+        return None

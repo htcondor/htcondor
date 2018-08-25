@@ -52,3 +52,12 @@ class Utils(object):
         if os.name == 'nt':
             return True
         return False
+
+    @staticmethod
+    def WriteFile( name, contents ):
+        try:
+            with open( name, 'w' ) as fd:
+                fd.write( contents )
+                return True
+        except IOError as ioe:
+            return False

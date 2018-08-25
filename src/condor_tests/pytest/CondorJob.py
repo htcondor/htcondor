@@ -7,73 +7,33 @@ from PersonalCondor import PersonalCondor
 from Globals import *
 from Utils import Utils
 
+from htcondor import JobEventLog
+from htcondor import JobEventType
+
 class CondorJob(object):
 
     def __init__(self, job_args):
         self._cluster_id = None
         self._job_args = job_args
         self._old_status = None
+        self._log = None
 
-	def clusterID(self):
-		return self._cluster_id
+    def clusterID(self):
+        return self._cluster_id
 
-    ##
-    ## Callbacks used by WaitForJob().
-    ##
+    def Submit(self, wait=False, count=1):
+        # It's easier to smash the case of the keys (since ClassAds and the
+        # submit language don't care) than to do the case-insensitive compare.
+        self._job_args = dict([(k.lower(), v) for k, v in self._job_args.items()])
 
-    #
-    # Job-state callbacks.  Called when the job's state changes to the
-    # corresponding state (including the initial state).
-    #
-
-    def IdleCallback(self):
-        return None
-
-    def RunningCallback(self):
-        return None
-
-    def RemovedCallback(self):
-        return None
-
-    def CompletedCallback(self):
-        return None
-
-    def HeldCallback(self):
-        Utils.TLog("Job was place on hold. Aborting.")
-        self.FailureCallback()
-        return JOB_FAILURE
-
-    def TransferringOutputCallback(self):
-        return None
-
-    def SuspendedCallback(self):
-        return None;
-
-    #
-    # Semantic callbacks.  Note note WaitForFinish() will return JOB_FAILURE
-    # but _not_ call the failure callback if it times out.
-    #
-    #   Success: when the job exits the queue.
-    #   Failure: when the job goes on hold.
-    #   Submit: presently not called (FIXME).
-    #
-
-    def SuccessCallback(self):
-        Utils.TLog("Job cluster " + str(self._cluster_id) + " success callback invoked")
-
-    def FailureCallback(self):
-        Utils.TLog("Job cluster " + str(self._cluster_id) + " failure callback invoked")
-
-    def SubmitCallback(self):
-        Utils.TLog("Job cluster " + str(self._cluster_id) + " submit callback invoked")
-
-
-    def Submit(self, wait=False):
+        # Extract the event log filename, or insert one if none.
+        self._log = self._job_args.setdefault( "log", "FIXME.log" )
+        self._log = os.path.abspath( self._log )
 
         # Submit the job defined by submit_args
         Utils.TLog("Submitting job with arguments: " + str(self._job_args))
         schedd = htcondor.Schedd()
-        submit = htcondor.Submit(self._job_args)
+        submit = htcondor.Submit(self._job_args, count)
         try:
             with schedd.transaction() as txn:
                 self._cluster_id = submit.queue(txn)
@@ -81,7 +41,14 @@ class CondorJob(object):
             print("Job submission failed for an unknown error")
             return JOB_FAILURE
 
-        Utils.TLog("Job running on cluster " + str(self._cluster_id))
+        Utils.TLog("Job submitted succeeded with cluster ID " + str(self._cluster_id))
+
+        # We probably don't need self._log, but it seems like it may be
+        # handy for log messages at some point.
+        self._jel = JobEventLog( self._log )
+        if not self._jel.isInitialized():
+            print( "Unable to initialize job event log " + self._log )
+            return JOB_FAILURE
 
         # Wait until job has finished running?
         if wait is True:
@@ -91,72 +58,56 @@ class CondorJob(object):
         # If we aren't waiting for finish, return None
         return None
 
+    #
+    # The timeout for these functions is in seconds, and applies to the
+    # whole process, not any individual read.
+    #
 
-    # FIXME: Do we actually want to poll the schedd, or should we be reading the log?
-    def WaitForFinish(self, timeout=240):
+    def WaitForFinish( self, timeout = 240 ):
+        return WaitUntil( [ JobEventType.TERMINATED ],
+            [ JobEventType.EXECUTE, JobEventType.SUBMIT,
+              JobEventType.IMAGE_SIZE ], timeout, proc )
 
-        schedd = htcondor.Schedd()
-        for i in range(timeout):
-            ads = schedd.query("ClusterId == %d" % self._cluster_id, ["JobStatus"])
-            Utils.TLog("Ads = " + str(ads))
+    def WaitUntilRunning( self, timeout = 240, proc = 0 ):
+        return self.WaitUntil( [ JobEventType.EXECUTE ],
+            [ JobEventType.SUBMIT ], timeout, proc )
 
-            # When the job is complete, ads will be empty
-            if len(ads) == 0:
-                self.SuccessCallback()
-                return JOB_SUCCESS
+    def WaitUntilHeld( self, timeout = 240, proc = 0 ):
+        return self.WaitUntil( [ JobEventType.JOB_HELD ],
+            [ JobEventType.EXECUTE, JobEventType.SUBMIT,
+              JobEventType.IMAGE_SIZE, JobEventType.SHADOW_EXCEPTION ],
+            timeout, proc )
 
-			# FIXME: If it's ever important to have multiple jobs in the same
-			# cluster for testing, we'll need to fix this -- look at each
-			# proc's status (and record it) individually, and then call the
-			# callbacks with the proc ID.  (Note that we won't have to record
-			# the statuses if switch to reading the user log.)  On the other
-			# hand, if we ever want to wait on the status of more than one
-			# job at the same time, we'll need a different API.
-            status = ads[0]["JobStatus"]
-            if not (self._old_status == None or self._old_status != status):
+        # FIXME: "look ahead" five seconds to see if we find the
+        # hold event, o/w fail.  TODO: file a bug to prevent the
+        # shadow exception event from entering the user log when
+        # a job goes on hold.
+
+
+    # An event type not listed in successEvents or ignoreeEvents is a failure.
+    def WaitUntil( self, successEvents, ignoreEvents, timeout = 240, proc = 0 ):
+        deadline = time.time() + timeout;
+        Utils.TLog( "[cluster " + str(self._cluster_id) + "] Waiting for " + ",".join( [str(x) for x in successEvents] ) )
+
+        for event in self._jel.follow( int(timeout * 1000) ):
+            if event.cluster == self._cluster_id and event.proc == proc:
+                if( event.type == JobEventType.NONE ):
+                    Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of type " + str(event.type) + " (ignore)" )
+                    pass
+                elif( event.type in successEvents ):
+                    Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of type " + str(event.type) + " (succeed)" )
+                    return True
+                elif( event.type in ignoreEvents ):
+                    Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of type " + str(event.type) + " (ignore)" )
+                    pass
+                else:
+                    Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found disallowed event type " + str(event.type) + " (fail)" )
+                    return False
+
+            difference = deadline - time.time();
+            if difference <= 0:
+                Utils.TLog( "[cluster " + str(self._cluster_id) + "] Timed out waiting for " + ",".join( [str(x) for x in successEvents] ) )
+                return False
+            else:
+                self._jel.setFollowTimeout( int(difference * 1000) )
                 continue
-
-            callbackName = JobStatus.Number[ status ] + "Callback"
-            method = getattr( self, callbackName )
-            callbackResult = method()
-            if( callbackResult != None ):
-                return callbackResult
-
-            self._old_status = status
-            time.sleep(1)
-
-        # If we got this far, we hit the timeout and job did not complete
-        Utils.TLog("Job failed to complete with timeout = " + str(timeout))
-        return JOB_FAILURE
-
-    def RegisterIdle(self, idle_callback_fn):
-        self.IdleCallback = idle_callback_fn
-
-    def RegisterRunning(self, running_callback_fn):
-        self.RunningCallback = running_callback_fn
-
-    def RegisterRemoved(self, removed_callback_fn):
-        self.RemovedCallback = removed_callback_fn
-
-    def RegisterCompleted(self, completed_callback_fn):
-        self.CompletedCallback = completed_callback_fn
-
-    def RegisterHeld(self, held_callback_fn):
-        self.HeldCallback = held_callback_fn
-
-    def RegisterTransferringOutput(self, to_callback_fn):
-        self.TransferringOutputCallback = to_callback_fn
-
-    def RegisterSuspended(self, suspended_callback_fn):
-        self.SuspendedCallback = suspended_callback_fn
-
-
-    def RegisterSuccess(self, success_callback_fn):
-        self.SuccessCallback = success_callback_fn
-
-    def RegisterFailure(self, failure_callback_fn):
-        self.FailureCallback = failure_callback_fn
-
-    def RegisterSubmit(self, submit_callback_fn):
-        self.SubmitCallback = submit_callback_fn
-

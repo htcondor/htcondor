@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 
 from pytest.CondorJob import CondorJob
 from pytest.CondorTest import CondorTest
@@ -53,25 +54,177 @@ from pytest.Utils import Utils
 # this test doesn't take too long.)
 #
 
-def RunningCallback():
-    Utils.TLog( "FIXME" )
+# In Python 3.4 or later, or 2.7 with pathlib installed, this would
+# instead be 'Path( filename ).touch()'.
+def touch( filename ):
+	with open( filename, 'a' ):
+		os.utime( filename, None )
+
+def askToMisbehave( job, proc, killfile ):
+	Utils.TLog( "Asking {0}.{1} to misbehave...".format( job._cluster_id, proc ) )
+	touch( killfile + ".{0}.{1}".format( job._cluster_id, proc ) )
 
 def main():
-    params = None # FIXME
-    test = CondorTest( "cmd_drain_policies", params )
-    personalCondor = test.StartPersonalCondor()
-    if personalCondor is -1:
-        Utils.TLog( "Failed to start a personal condor, aborting.\n" );
-        sys.exit( TEST_FAILURE )
+	#
+	# Construct our test executable.
+	#
+	jobFile = os.path.join( os.getcwd(), "condition-sleep.py" )
+	contents = """#!/usr/bin/env python
 
-    jobArgs = None # FIXME
-    firstTestJob = CondorJob( jobArgs )
-    firstTestJob.RegisterRunning( RunningCallback )
+import os
+import sys
+import time
+import signal
 
-    firstTestJob.submit()
-    result = firstTestJob.WaitForFinish()
+signal.signal( signal.SIGTERM, signal.SIG_IGN )
+killFile = sys.argv[1]
+maxSleep = sys.argv[2]
 
-    # FIXME: ...
+for i in range( 0, int(maxSleep) ):
+	if os.path.isfile( killFile ):
+		memoryWaste = list( range( 0, 1024 * 1024 * 16 ) )
+	time.sleep( 1 )
+
+sys.exit( 0 )
+"""
+	if not Utils.WriteFile( jobFile, contents ):
+		Utils.TLog( "Failed to write test executable, aborting.\n" );
+		sys.exit( TEST_FAILURE )
+
+	try:
+		os.chmod( jobFile, 0o755 )
+	except OSError as ose:
+		Utils.TLog( "Failed to make test file executable, aborting: {0}\n".format( ose ) );
+		sys.exit( TEST_FAILURE )
+
+	#
+	# Start a personal condor with draining and a policy to test.
+	#
+	params = {
+		"UPDATE_INTERVAL" : 5,
+		"POLLING_INTERVAL" : 5,
+		"NEGOTIATOR_INTERVAL" : 5,
+		"STARTER_UPDATE_INTERVAL" : 5,
+		"STARTER_INITIAL_UPDATE_INTERVAL" : 5,
+		"NEGOTIATOR_CYCLE_DELAY" : 5,
+		"MachineMaxVacateTime" : 5,
+		"STARTD_DEBUG" : "D_SUB_SECOND D_FULLDEBUG D_JOB",
+
+		"use feature : PartitionableSlot" : None,
+		"MAXJOBRETIREMENTTIME" : 300,
+		"use policy : HOLD_IF_MEMORY_EXCEEDED" : None
+	}
+	test = CondorTest( "cmd_drain_policies", params )
+	personalCondor = test.StartPersonalCondor()
+	if personalCondor is -1:
+		# Arguably, if it fails to start a personal condor, CondorTest should
+		# register a failure and exit of its own accord.
+		Utils.TLog( "Failed to start a personal condor, aborting.\n" );
+		sys.exit( TEST_FAILURE )
+
+	#
+	# Run the first subtest ("normal").  If it doesn't succeed, there's no
+	# point in running the second subtest, so just abort right away.
+	#
+
+	# Step (1).
+	killfile = os.getcwd() + "/killfile"
+	jobArgs = {
+		"executable":				jobFile,
+		"transfer_executable":		"false",
+		# Wouldn't it be nice if these could be literal bools, instead?
+		"should_transfer_files":	"true",
+		"universe":					"vanilla",
+		"arguments":				killfile + ".$(CLUSTER).$(PROCESS) 3600",
+		# Wouldn't it be nice if this could be a literal bool, instead?
+		"request_memory":			"1",
+		"log":						"cmd_drain_policies.log"
+	}
+	firstTestJob = CondorJob( jobArgs )
+	firstTestJob.Submit()
+
+	# Step (2).
+	if(not firstTestJob.WaitUntilRunning( 60 )):
+		test.RegisterFailure( "normal", "First job did not start running." )
+		# It would be nice for the test objects to trap exit(), but that
+		# could get tricky to implement.
+		test.exit( TEST_FAILURE )
+
+	# Step (5).
+	askToMisbehave( firstTestJob, 0, killfile )
+
+	# Step (6).
+	if(not firstTestJob.WaitUntilHeld( 60 )):
+		test.RegisterFailure( "normal", "First job did not go on hold." )
+		test.exit( TEST_FAILURE )
+
+	test.RegisterSuccess( "normal", "Job went on hold as expected" );
+
+	#
+	# Run the second subtest ("while-draining").
+	#
+
+	# Step (1).
+	# FIXME: should we rename CondorJob to CondorCluster?  It seems like
+	# waiting on multiple jobs is a lot easier if they shared a log, and
+	# the most-certain way to do that is to submit them to the same
+	# cluster.  Having said that... maybe it would be easier for the multiple
+	# wait API to be a different object constructed on the shared log and
+	# have CondorJob be a one-to-one mapping and require the user to make
+	# sure the log files are shared?
+	secondTestCluster = CondorJob( jobArgs )
+	secondTestCluster.Submit( false, 2 )
+
+	# Step (2).
+	if(not secondTestCluster.WaitUntilAllRunning( 60 )):
+		test.RegisterFailure( "while-draining", "Second test jobs did not all start running." )
+		# It would be nice for the test objects to trap exit(), but that
+		# could get tricky to implement.
+		test.exit( TEST_FAILURE )
+
+	# Step (3).  FIXME: run condor_drain command
+
+	# Step (4).  FIXME: wait for startd to start draining (and jobs
+	# to entering retiring activity).
+
+	# Step (5).
+	askToMisbehave( secondTestCluster, 0, killfile )
+
+	# Step (6).
+	if(not secondTestCluster.WaitUntilHeld( 60, 0 )):
+		test.RegisterFailure( "while-draining", "First job did not go on hold." )
+		test.exit( TEST_FAILURE )
+
+	# Step (7).
+	if( secondTestCluster.StatusOf( 1 ) != JobStatus.Running ):
+		test.RegisterFailure( "while-draining", "Second job is not still running after first job went on hold." )
+		test.exit( TEST_FAILURE )
+
+	# Step (8).
+	backfillJobArgs = jobArgs.copy();
+	backfillJobArgs[ "+Backfill" ] = "true"
+	thirdTestJOb = CondorJob( backfillJobArgs )
+	thirdTestJob.Submit()
+
+	# Step (9).
+	if(not thirdTestJob.WaitUntilRunning( 60 ) ):
+		test.RegisterFailure( "while-draining", "Third test job did not start running." )
+		test.exit( TEST_FAILURE )
+
+	# Step (10).
+	askToMisbehave( thirdTestJob, 0, killfile )
+
+	# Step (11).  FIXME: wait for it to go on hold.
+	if(not thirdTestJob.WaitUntilHeld( 60 ) ):
+		test.RegisterFailure( "while-draining", "Third job did not go on hold." )
+		test.exit( TEST_FAILURE )
+
+	# Step (12).
+	if( thirdTestJob.StatusOf() != JobStatus.Running ):
+		test.RegisterFailure( "while-draining", "Second job is not still running after backfill job went on hold." )
+		test.exit( TEST_FAILURE )
+
+	test.RegisterSuccess( "while-draining", "Jobs behaved as expected" );
 
 if __name__ == "__main__":
-    main()
+	main()

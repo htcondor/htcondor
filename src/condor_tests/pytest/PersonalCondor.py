@@ -85,6 +85,7 @@ class PersonalCondor(object):
         config = "LOCAL_DIR = " + self._local_path + "\n"
         config += "EXECUTE = " + self._execute_path + "\n"
         config += "LOCK = " + self._lock_path + "\n"
+        config += "LOG = " + self._log_path + "\n"
         config += "RUN = " + self._run_path + "\n"
         config += "SPOOL = " + self._spool_path + "\n"
         config += "COLLECTOR_HOST = $(CONDOR_HOST):0\n"
@@ -97,12 +98,15 @@ class PersonalCondor(object):
         # Add any custom params
         if params is not None:
             for key in params:
-                config += key + " = " + params[key] + "\n"
+                if params[key] is None:
+                    config += key + "\n"
+                else:
+                    config += key + " = " + str(params[key]) + "\n"
 
         config_file = open(self._local_config, "a")
         config_file.write(config)
         config_file.close()
-        
+
         # Set CONDOR_CONFIG to apply the changes we just wrote to file
         self.SetCondorConfig()
 
@@ -116,6 +120,8 @@ class PersonalCondor(object):
 
 
     def SetCondorConfig(self):
+        # This is a little confusing, since condor_config.local is something
+        # else entirely...
         os.environ["CONDOR_CONFIG"] = self._local_config
 
 
