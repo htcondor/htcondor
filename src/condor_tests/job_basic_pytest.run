@@ -11,6 +11,7 @@ from pytest.CondorJob import CondorJob
 from pytest.CondorTest import CondorTest
 from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
+from pytest.Globals import *
 
 
 def submit_callback():
@@ -43,6 +44,7 @@ def main():
         "executable":   "x_echostring.pl",
         "output":       "job_basic_pytest.out",
         "error":        "job_basic_pytest.err",
+        "log":          "job_basic_pytest.log",
         "arguments":    "\"Basic Python pytest submission, cluster $(cluster)\""
     }
     test_job = CondorJob(job_args)
@@ -53,9 +55,10 @@ def main():
     test_job.RegisterFailure(failure_callback)
 
     # Submit the test job
-    result = test_job.Submit()
+    if test_job.Submit() == JOB_FAILURE:
+        Utils.TLog( "Failed to submit job!" )
+        sys.exit( 1 )
     test_job.WaitForFinish()
-    Utils.TLog("Test returned result: " + str(result))
 
     # Assume that PersonalCondor will shut down by itself if we don't explicitly call it?
     test.End()

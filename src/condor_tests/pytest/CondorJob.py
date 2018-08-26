@@ -36,8 +36,8 @@ class CondorJob(object):
         try:
             with schedd.transaction() as txn:
                 self._cluster_id = submit.queue(txn, count)
-        except:
-            print("Job submission failed for an unknown error")
+        except Exception as e:
+            print( "Job submission failed for an unknown error: " + str(e) )
             return JOB_FAILURE
 
         Utils.TLog("Job submitted succeeded with cluster ID " + str(self._cluster_id))
@@ -51,8 +51,7 @@ class CondorJob(object):
 
         # Wait until job has finished running?
         if wait is True:
-            submit_result = self.WaitForFinish()
-            return submit_result
+            return self.WaitForFinish()
 
         # If we aren't waiting for finish, return None
         return None
