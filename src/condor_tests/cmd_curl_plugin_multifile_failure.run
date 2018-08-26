@@ -76,13 +76,13 @@ def main():
     test_job = CondorJob(job_args)
 
     # Register success and failure handlers.
-    test_job.RegisterSuccess(SuccessCallback)
-    test_job.RegisterFailure(FailureCallback)
+    test_job.RegisterJobTerminated(SuccessCallback)
+    test_job.RegisterJobHeld(FailureCallback)
 
     # Submit the test job
     result = test_job.Submit()
     job_cluster_id = test_job._cluster_id
-    test_job.WaitForFinish()
+    test_job.WaitUntilJobHeld()
 
     # If the success callback did not trigger, then so far so good.
     # Now we need to make sure none of the files actually downloaded.
