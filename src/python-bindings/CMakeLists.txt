@@ -1,5 +1,4 @@
-# We'll be deprecating event.cpp shortly.
-set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp JobEventLog.cpp )
+set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp JobEventLog.cpp )
 
 if(WINDOWS)
   if(WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND)
@@ -43,10 +42,10 @@ if(WINDOWS)
 				#set(PYTHON_LIBRARY_BOOST_TWO_D ${BOOST_LD}/libboost_python-${BOOST_LIB_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib)
 
 				set(THE_BOOST_LIBS
-				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
-				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					optimized ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+						debug ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+						debug ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
 					)
 
 
@@ -61,9 +60,9 @@ if(WINDOWS)
 				get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
 				string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
 				if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
-				  set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+					set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 				else()
-				  message(FATAL_ERROR "Can't determine HTCondor version!")
+					message(FATAL_ERROR "Can't determine HTCondor version!")
 				endif()
 
 				condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
@@ -120,16 +119,16 @@ if(WINDOWS)
 				get_filename_component(PYTHON3_LIBRARY_FILENAME ${PYTHON3_LIBRARIES} NAME)
 				string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON3_VERSION_STRING})
 				if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
-				  set( PY3CLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+					set( PY3CLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 				else()
-				  message(FATAL_ERROR "Can't determine HTCondor version!")
+					message(FATAL_ERROR "Can't determine HTCondor version!")
 				endif()
 
 				set(THE_BOOST_LIBS
-				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
-				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					optimized ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+						debug ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+						debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
 					)
 
 				condor_shared_lib( py3classad classad.cpp classad_wrapper.h exprtree_wrapper.h )
@@ -261,9 +260,8 @@ else()
       install ( TARGETS collector_python_plugin DESTINATION "${C_LIBEXEC}" )
     endif()
 
-    # See note below about deprecating log_reader.cpp.
+    # We'll deprecate log_reader.cpp at some point.
     set_source_files_properties( dc_tool.cpp classad.cpp classad_module.cpp classad_parsers.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
-    # We should probably deprecate log_reader.cpp (shortly after we deprecate event.cpp).
     add_library( htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp )
     target_link_libraries( htcondor pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
     set_target_properties( htcondor PROPERTIES PREFIX "" )
