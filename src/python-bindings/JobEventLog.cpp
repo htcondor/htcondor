@@ -50,7 +50,14 @@ JobEventLog::follow_for( boost::python::object & self, int milliseconds ) {
 boost::shared_ptr< JobEvent >
 JobEventLog::next() {
 	ULogEvent * event = NULL;
-	ULogEventOutcome outcome = wful.readEvent( event, timeout, following );
+	// Must not be declared inside the invisible scope in which we allow
+	// other Python threads to run.
+	ULogEventOutcome outcome;
+
+	Py_BEGIN_ALLOW_THREADS
+	outcome = wful.readEvent( event, timeout, following );
+	Py_END_ALLOW_THREADS
+
 	switch( outcome ) {
 		case ULOG_OK: {
 			JobEvent * je = new JobEvent( event );

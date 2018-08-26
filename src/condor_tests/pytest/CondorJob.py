@@ -16,6 +16,7 @@ class CondorJob(object):
         self._cluster_id = None
         self._job_args = job_args
         self._log = None
+        self._callbacks = { }
 
     def clusterID(self):
         return self._cluster_id
@@ -26,7 +27,7 @@ class CondorJob(object):
         self._job_args = dict([(k.lower(), v) for k, v in self._job_args.items()])
 
         # Extract the event log filename, or insert one if none.
-        self._log = self._job_args.setdefault( "log", "FIXME.log" )
+        self._log = self._job_args.setdefault( "log", "test-{0}.log".format( os.getpid() ) )
         self._log = os.path.abspath( self._log )
 
         # Submit the job defined by submit_args
@@ -51,7 +52,7 @@ class CondorJob(object):
 
         # Wait until job has finished running?
         if wait is True:
-            return self.WaitForFinish()
+            return self.WaitUntilJobTerminated()
 
         # If we aren't waiting for finish, return None
         return None
@@ -61,16 +62,16 @@ class CondorJob(object):
     # whole process, not any individual read.
     #
 
-    def WaitForFinish( self, timeout = 240 ):
-        return WaitUntil( [ JobEventType.TERMINATED ],
+    def WaitUntilJobTerminated( self, timeout = 240, proc = 0 ):
+        return self.WaitUntil( [ JobEventType.JOB_TERMINATED ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
               JobEventType.IMAGE_SIZE ], timeout, proc )
 
-    def WaitUntilRunning( self, timeout = 240, proc = 0 ):
+    def WaitUntilExecute( self, timeout = 240, proc = 0 ):
         return self.WaitUntil( [ JobEventType.EXECUTE ],
             [ JobEventType.SUBMIT ], timeout, proc )
 
-    def WaitUntilHeld( self, timeout = 240, proc = 0 ):
+    def WaitUntilJobHeld( self, timeout = 240, proc = 0 ):
         return self.WaitUntil( [ JobEventType.JOB_HELD ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
               JobEventType.IMAGE_SIZE, JobEventType.SHADOW_EXCEPTION ],
@@ -89,6 +90,9 @@ class CondorJob(object):
 
         for event in self._jel.follow( int(timeout * 1000) ):
             if event.cluster == self._cluster_id and event.proc == proc:
+                if( not self._callbacks.get( event.type ) is None ):
+                    self._callbacks[ event.type ]()
+
                 if( event.type == JobEventType.NONE ):
                     Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of type " + str(event.type) + " (ignore)" )
                     pass
@@ -99,7 +103,7 @@ class CondorJob(object):
                     Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of type " + str(event.type) + " (ignore)" )
                     pass
                 else:
-                    Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found disallowed event type " + str(event.type) + " (fail)" )
+                    Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of disallowed type " + str(event.type) + " (fail)" )
                     return False
 
             difference = deadline - time.time();
@@ -109,3 +113,17 @@ class CondorJob(object):
             else:
                 self._jel.setFollowTimeout( int(difference * 1000) )
                 continue
+
+    #
+    # The callback-based interface.  The first set respond to events.  We'll
+    # add semantic callbacks if it turns out those are useful to anyone.
+    #
+
+    def RegisterSubmit( self, submit_callback_fn ):
+        self._callbacks[ JobEventType.SUBMIT ] = submit_callback_fn
+
+    def RegisterJobTerminated( self, job_terminated_callback_fn ):
+        self._callbacks[ JobEventType.JOB_TERMINATED ] = job_terminated_callback_fn
+
+    def RegisterJobHeld( self, job_held_callback_fn ):
+        self._callbacks[ JobEventType.JOB_HELD ] = job_held_callback_fn

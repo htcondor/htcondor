@@ -51,14 +51,14 @@ def main():
 
     # Register handlers
     test_job.RegisterSubmit(submit_callback)
-    test_job.RegisterSuccess(success_callback)
-    test_job.RegisterFailure(failure_callback)
+    test_job.RegisterJobTerminated(success_callback)
+    test_job.RegisterJobHeld(failure_callback)
 
     # Submit the test job
     if test_job.Submit() == JOB_FAILURE:
         Utils.TLog( "Failed to submit job!" )
         sys.exit( 1 )
-    test_job.WaitForFinish()
+    test_job.WaitUntilJobTerminated()
 
     # Assume that PersonalCondor will shut down by itself if we don't explicitly call it?
     test.End()

@@ -16,6 +16,8 @@ def SuccessCallback():
     multifile_curl_plugin_invokes = 0
     with open(htcondor.param["STARTER_LOG"]) as starter_log:
         starter_log_content = starter_log.readlines()
+    # This assumes that this instance of the test is the only one which has
+    # used this personal condor, which is inconvenient for development work.
     for line in starter_log_content:
         if "invoking" in line and "multifile_curl_plugin" in line:
             multifile_curl_plugin_invokes += 1
@@ -78,12 +80,12 @@ def main():
     test_job = CondorJob(job_args)
 
     # Register handlers
-    test_job.RegisterSuccess(SuccessCallback)
-    test_job.RegisterFailure(FailureCallback)
+    test_job.RegisterJobTerminated(SuccessCallback)
+    test_job.RegisterJobHeld(FailureCallback)
 
     # Submit the test job
     test_job.Submit()
-    result = test_job.WaitForFinish()
+    result = test_job.WaitUntilJobTerminated()
     Utils.TLog("Test returned result: " + str(result))
 
     # The success/failure callbacks handle the sys.exit() calls
