@@ -48,9 +48,9 @@ class CondorTest(object):
         sys.exit( code )
 
     def RegisterFailure( self, subtest, message ):
-    	Utils.TLog( self._name + " [" + subtest + "] FAILURE " + message )
+        Utils.TLog( self._name + " [" + subtest + "] FAILURE " + message )
         return None
 
     def RegisterSuccess( self, subtest, message ):
-    	Utils.TLog( self._name + " [" + subtest + "] SUCCESS " + message )
+        Utils.TLog( self._name + " [" + subtest + "] SUCCESS " + message )
         return None
