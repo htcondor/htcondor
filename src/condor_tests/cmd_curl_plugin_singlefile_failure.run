@@ -16,7 +16,7 @@ def SuccessCallback():
 
 def FailureCallback():
     Utils.TLog("Job went on hold as expected. Test passed.")
-    sys.exit(SUCCESS)
+    sys.exit(TEST_SUCCESS)
 
 def HttpServerErrorUrlHandler(request):
     request.protocol_version = "HTTP/1.1"

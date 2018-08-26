@@ -25,7 +25,7 @@ def SuccessCallback():
         Utils.TLog("Wrong number of multifile_curl_plugin invocations, test failed.")
         sys.exit(TEST_FAILURE)
     Utils.TLog("Correct number of multifile_curl_plugin invocations, test succeeded.")
-    sys.exit(SUCCESS)
+    sys.exit(TEST_SUCCESS)
 
 def FailureCallback():
     Utils.TLog("Job failed unexpectedly. Test failed.")

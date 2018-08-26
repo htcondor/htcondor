@@ -13,7 +13,7 @@ from pytest.Utils import Utils
 
 def SuccessCallback():
     Utils.TLog("Job successful as expected. Test passed.")
-    sys.exit(SUCCESS)
+    sys.exit(TEST_SUCCESS)
 
 def FailureCallback():
     Utils.TLog("Job failed unexpectedly. Test failed.")
