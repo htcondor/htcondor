@@ -10,7 +10,7 @@ TEST_FAILURE = 1
 #
 
 class JobStatus:
-	Name = {
+	Number = {
 		"Idle": 1,
 		"Running": 2,
 		"Removed": 3,
@@ -20,7 +20,7 @@ class JobStatus:
 		"Suspended": 7
 	}
 
-	Number = {
+	Name = {
 		1: "Idle",
 		2: "Running",
 		3: "Removed",
@@ -31,7 +31,7 @@ class JobStatus:
 	}
 
 class JobUniverse:
-	Name = {
+	Number = {
 		"standard": 1,
 		"vanilla": 5,
 		"docker": 5,
@@ -44,7 +44,7 @@ class JobUniverse:
 		"vm": 13
 	}
 
-	Number = {
+	Name = {
 		1: "standard",
 		5: "vanilla",
 		7: "scheduler",

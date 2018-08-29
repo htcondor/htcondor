@@ -121,7 +121,7 @@ exit( 0 );
 CondorTest::WriteFileOrDie( $jobFile, $jobContents );
 chmod( 0755, $jobFile ) || die( "Failed to make ${jobFile} executable, aborting.\n" );
 
-my $killFile = cwd() . "/killfile";
+my $killFile = cwd() . "/killfile-cds";
 my $submitBody = "
 
 executable				= ${jobFile}

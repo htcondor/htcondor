@@ -20,6 +20,9 @@ class CondorTest(object):
 
 
     def __del__(self):
+        # We should be more aggressive when End()ing from the destructor:
+        # we'd really like the personal condor to go away Right Now(TM),
+        # especially for tests with retirement times.
         self.End()
 
 
