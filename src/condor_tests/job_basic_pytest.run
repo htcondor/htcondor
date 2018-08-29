@@ -18,12 +18,12 @@ def submit_callback():
     Utils.TLog("Custom submit callback called!")
 
 def success_callback():
-    Utils.TLog("Test succeded. Exiting with status 0")
-    sys.exit(0)
+    Utils.TLog("Test succeded. Exiting with status TEST_SUCCCESS")
+    sys.exit( TEST_SUCCESS )
 
 def failure_callback():
-    Utils.TLog("Test failed. Exiting with status 1")
-    sys.exit(1)
+    Utils.TLog("Test failed. Exiting with status TEST_FAILURE")
+    sys.exit( TEST_FAILURE )
 
 
 def main():
@@ -33,9 +33,9 @@ def main():
 
     # Stand up a PersonalCondor
     personal_handle = test.StartPersonalCondor()
-    if personal_handle is -1:
+    if personal_handle == -1:
         Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
-        sys.exit(1)
+        sys.exit( TEST_FAILURE )
     else:
         Utils.TLog("PersonalCondor environment started successfully with handle " + str(personal_handle))
 
@@ -57,7 +57,7 @@ def main():
     # Submit the test job
     if test_job.Submit() == JOB_FAILURE:
         Utils.TLog( "Failed to submit job!" )
-        sys.exit( 1 )
+        sys.exit( TEST_FAILURE )
     test_job.WaitUntilJobTerminated()
 
     # Assume that PersonalCondor will shut down by itself if we don't explicitly call it?

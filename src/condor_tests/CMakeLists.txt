@@ -231,14 +231,23 @@ if (BUILD_TESTING)
 	condor_pl_test (lib_include_cmd_config  "Test meta knobs" "core;quick;full;quicknolink")
 
 	# an example of a test writen in python rather than in perl
-	condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
+	# condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
 	if (WITH_PYTHON_BINDINGS)
-		# an example test that depends on python bindings
-		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
-		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
+		# An example test that depends on python bindings.
+		# condor_pl_test(python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
 
-		# Tests of the python bindings
-		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
+		# Tests of the python bindings.
+		condor_pl_test(job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
+		condor_pl_test(python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
+
+		# Tests that require the python bindings.
+		condor_pl_test(cmd_curl_plugin_singlefile_success "Successful curl_plugin single file download" "core;quick;full;quicknolink")
+		condor_pl_test(cmd_curl_plugin_singlefile_failure "Failed curl_plugin single file download" "core;quick;full;quicknolink")
+		condor_pl_test(cmd_curl_plugin_singlefile_partial "Successful curl_plugin single file download with partial retry" "core;quick;full;quicknolink")
+		condor_pl_test(cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink")
+    	condor_pl_test(cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink")
+		condor_pl_test(job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink")
+		condor_pl_test(cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink")
 	endif()
 
 	if(WITH_GANGLIA)
@@ -455,11 +464,6 @@ if (BUILD_TESTING)
 	condor_pl_test(docker_simulator_test "docker_simulator_test" "core;quick;full;quicknolink")
 	condor_pl_test(map_user_to_groups_metaknob_test "map_user_to_groups_metaknob_test" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_submit-factory "condor_submit -factory" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_curl_plugin_singlefile_success "Successful curl_plugin single file download" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_curl_plugin_singlefile_failure "Failed curl_plugin single file download" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_curl_plugin_singlefile_partial "Successful curl_plugin single file download with partial retry" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink")
-    condor_pl_test(cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink")
 
 	if (LINUX)
 		condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
@@ -641,7 +645,6 @@ if (BUILD_TESTING)
 	condor_pl_test(job_core_queue_sched "Scheduler: Verify the  queue command" "core;quick;full;quicknolink")
 	condor_pl_test(job_core_max-running_local "Local: Max job running limit" "core;quick;full;quicknolink;local")
 	condor_pl_test(job_late_materialize "Late materialization of jobs" "core;quick;full;quicknolink")
-	condor_pl_test(job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink")
 	condor_pl_test(job_schedd_restart-holdjobs-ok "Held queue ok after schedd restart" "core;quick;full;quicknolink")
 	condor_pl_test(job_schedd_restart-runningjobs-ok "Running queue ok after schedd restart" "core;quick;full;quicknolink")
 	condor_pl_test(job_schedd_restart-basic "schedd restarts" "core;quick;full;quicknolink")

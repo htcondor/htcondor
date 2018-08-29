@@ -17,6 +17,7 @@ class CondorJob(object):
         self._job_args = job_args
         self._log = None
         self._callbacks = { }
+        self._count = 0
 
     def clusterID(self):
         return self._cluster_id
@@ -37,6 +38,7 @@ class CondorJob(object):
         try:
             with schedd.transaction() as txn:
                 self._cluster_id = submit.queue(txn, count)
+                self._count = count
         except Exception as e:
             print( "Job submission failed for an unknown error: " + str(e) )
             return JOB_FAILURE
@@ -62,34 +64,56 @@ class CondorJob(object):
     # whole process, not any individual read.
     #
 
-    def WaitUntilJobTerminated( self, timeout = 240, proc = 0 ):
+    # FIXME: timeout makes sense as an optional positional argument, but
+    # proc and count should probably be parameter arguments.
+
+    def WaitUntilJobTerminated( self, timeout = 240, proc = 0, count = 0 ):
         return self.WaitUntil( [ JobEventType.JOB_TERMINATED ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
-              JobEventType.IMAGE_SIZE ], timeout, proc )
+              JobEventType.IMAGE_SIZE ], timeout, proc, count )
 
-    def WaitUntilExecute( self, timeout = 240, proc = 0 ):
+    def WaitUntilExecute( self, timeout = 240, proc = 0, count = 0 ):
         return self.WaitUntil( [ JobEventType.EXECUTE ],
-            [ JobEventType.SUBMIT ], timeout, proc )
+            [ JobEventType.SUBMIT ], timeout, proc, count )
 
-    def WaitUntilJobHeld( self, timeout = 240, proc = 0 ):
+    def WaitUntilJobHeld( self, timeout = 240, proc = 0, count = 0 ):
         return self.WaitUntil( [ JobEventType.JOB_HELD ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
               JobEventType.IMAGE_SIZE, JobEventType.SHADOW_EXCEPTION ],
-            timeout, proc )
+            timeout, proc, count )
 
         # FIXME: "look ahead" five seconds to see if we find the
         # hold event, o/w fail.  TODO: file a bug to prevent the
         # shadow exception event from entering the user log when
         # a job goes on hold.
 
+    # WaitUntilAll*() won't work with 'advanced queue statements' because we
+    # don't know how many procs to expect.  That's OK for now, since this
+    # class doesn't support AQSs... yet.
+    def WaitUntilAllJobsTerminated( self, timeout = 240 ):
+        return self.WaitUntil( [ JobEventType.JOB_TERMINATED ],
+            [ JobEventType.EXECUTE, JobEventType.SUBMIT,
+              JobEventType.IMAGE_SIZE ], timeout, -1, self._count )
+
+    def WaitUntilAllExecute( self, timeout = 240 ):
+        return self.WaitUntil( [ JobEventType.EXECUTE ],
+            [ JobEventType.SUBMIT ], timeout, -1, self._count )
+
+    def WaitUntilAllJobsHeld( self, timeout = 240 ):
+        return self.WaitUntil( [ JobEventType.JOB_HELD ],
+            [ JobEventType.EXECUTE, JobEventType.SUBMIT,
+              JobEventType.IMAGE_SIZE, JobEventType.SHADOW_EXCEPTION ],
+            timeout, -1, self._count )
+
 
     # An event type not listed in successEvents or ignoreeEvents is a failure.
-    def WaitUntil( self, successEvents, ignoreEvents, timeout = 240, proc = 0 ):
+    def WaitUntil( self, successEvents, ignoreEvents, timeout = 240, proc = 0, count = 0 ):
         deadline = time.time() + timeout;
         Utils.TLog( "[cluster " + str(self._cluster_id) + "] Waiting for " + ",".join( [str(x) for x in successEvents] ) )
 
+        successes = 0
         for event in self._jel.follow( int(timeout * 1000) ):
-            if event.cluster == self._cluster_id and event.proc == proc:
+            if event.cluster == self._cluster_id and (count > 0 or event.proc == proc):
                 if( not self._callbacks.get( event.type ) is None ):
                     self._callbacks[ event.type ]()
 
@@ -98,7 +122,9 @@ class CondorJob(object):
                     pass
                 elif( event.type in successEvents ):
                     Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of type " + str(event.type) + " (succeed)" )
-                    return True
+                    successes += 1
+                    if count <= 0 or successes == count:
+                        return True
                 elif( event.type in ignoreEvents ):
                     Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of type " + str(event.type) + " (ignore)" )
                     pass
@@ -127,3 +153,13 @@ class CondorJob(object):
 
     def RegisterJobHeld( self, job_held_callback_fn ):
         self._callbacks[ JobEventType.JOB_HELD ] = job_held_callback_fn
+
+
+    # A convenience function.
+    def QueryForJobAd( self, proc = 0 ):
+        queue = htcondor.Schedd()
+        try:
+            return queue.xquery( requirements = "ClusterID == {0} && ProcID == {1}".
+                format( self._cluster_id, proc ) ).next()
+        except StopIteration as si:
+            return None

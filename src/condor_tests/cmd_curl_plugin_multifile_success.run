@@ -25,7 +25,7 @@ def SuccessCallback():
         Utils.TLog("Wrong number of multifile_curl_plugin invocations, test failed.")
         sys.exit(TEST_FAILURE)
     Utils.TLog("Correct number of multifile_curl_plugin invocations, test succeeded.")
-    sys.exit(SUCCESS)
+    sys.exit(TEST_SUCCESS)
 
 def FailureCallback():
     Utils.TLog("Job failed unexpectedly. Test failed.")
@@ -63,7 +63,7 @@ def main():
 
     # Stand up a PersonalCondor
     personal_handle = test.StartPersonalCondor()
-    if personal_handle is -1:
+    if personal_handle == -1:
         Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
         sys.exit(1)
     else:
