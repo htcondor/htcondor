@@ -2949,6 +2949,22 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			fullname = filename;
 		}
 
+		// If this file is a Unix domain socket, skip it
+		#ifndef WIN32
+			struct stat stat_buf;
+			if ( stat( filename, &stat_buf ) < 0 ) {
+				dprintf( D_ALWAYS, "DoUpload: Failed to stat file %s, errno=%d (%s)\n",
+						filename, errno, strerror(errno) );
+			}
+			else {
+				if( S_ISSOCK( stat_buf.st_mode ) == 1 ) {
+					dprintf( D_ALWAYS, "DoUpload: File %s is a domain socket, "
+						"skipping\n", filename );
+					continue;
+				}
+			}
+		#endif
+
 		MyString dest_filename;
 		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename)==0 )) {
 			// this file is the job executable
