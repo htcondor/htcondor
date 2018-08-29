@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug which would cause certain valid URLs not be recognized.  This
+allows, for example, `s3' to be used as a custom file transfer plug-in.
+\Ticket{6722}
+
 \item Fixed a bug in the python bindings that would leak one or more ClassAds each time
 the submit or submitMany methods of the schedd class were called without passing an explict list to
 return the result ClassAds.
