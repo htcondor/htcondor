@@ -173,6 +173,11 @@ public:
 	*/
 	bool IsSymlink() { return m_isSymlink; }
 
+	/** Determine if the file is a domain socket
+		@return true if the file is a domain socket, false if not
+	*/
+	bool IsDomainSocket() { return m_isDomainSocket; }
+
 #ifndef WIN32
 	/** Get the owner of the entry.
 		@return the uid of the entry's owner
@@ -191,6 +196,7 @@ private:
 	bool m_isDirectory;
 	bool m_isExecutable;
 	bool m_isSymlink; //m_isDirectory may also be set if this points to a dir
+	bool m_isDomainSocket;
 	time_t access_time;
 	time_t modify_time;
 	time_t create_time;
