@@ -4922,23 +4922,21 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		}
 #endif
 
-		/*
-		if (mode == DOWNLOAD_SANDBOX_WITH_PERMS) {
-			ad->Delete( ATTR_JOB_OUTPUT );
-			ad->Delete( ATTR_JOB_ERROR );
-		}
-		*/
-
 			// Create a file transfer object, with schedd as the server.
 			// If we're receiving files, don't create a file catalog in
 			// the FileTransfer object. The submitter's IWD is probably not
 			// valid on this machine and we won't use the catalog anyway.
-		if (mode == DOWNLOAD_SANDBOX_WITH_PERMS) {
-			result = ftrans.SimpleInit(ad, false, false, rsock, PRIV_UNKNOWN, false, true);
-		} else {
-			result = ftrans.SimpleInit(ad, true, true, rsock, xfer_priv,
-									   (mode == TRANSFER_DATA ||
-										mode == TRANSFER_DATA_WITH_PERMS));
+		switch (mode) {
+			case DOWNLOAD_SANDBOX_WITH_PERMS:
+				result = ftrans.SimpleInit(ad, false, false, rsock, PRIV_UNKNOWN, false, true);
+				break;
+			case UPLOAD_OUTPUT_SANDBOX_WITH_PERMS:
+				result = ftrans.SimpleInit(ad,false,false,rsock);
+				break;
+			default:
+				result = ftrans.SimpleInit(ad, true, true, rsock, xfer_priv,
+											 (mode == TRANSFER_DATA ||
+											mode == TRANSFER_DATA_WITH_PERMS));
 			
 		}
 		
@@ -4959,7 +4957,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		}
 
 			// Send or receive files as needed
-		if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
+		if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS || mode ==  UPLOAD_OUTPUT_SANDBOX_WITH_PERMS ) {
 			// receive sandbox into the schedd
 			result = ftrans.DownloadFiles();
 
@@ -5007,7 +5005,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	rsock->end_of_message();
 
 	int answer;
-	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
+	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS || mode == UPLOAD_OUTPUT_SANDBOX_WITH_PERMS ) {
 		rsock->encode();
 		answer = OK;
 	} else {
@@ -5025,7 +5023,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	at which we're "about to start the job".  So we just
 	hand the sandbox directory over to the end user right now.
 	*/
-	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
+	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS || mode == UPLOAD_OUTPUT_SANDBOX_WITH_PERMS ) {
 		for (i=0; i<JobAdsArrayLen; i++) {
 
 			cluster = (*jobs)[i].cluster;
@@ -5105,6 +5103,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case SPOOL_JOB_FILES_WITH_PERMS: // uploading perm files to schedd
 		case TRANSFER_DATA_WITH_PERMS:	// downloading perm files from schedd
 		case DOWNLOAD_SANDBOX_WITH_PERMS: // Download sandbox
+		case UPLOAD_OUTPUT_SANDBOX_WITH_PERMS:
 			peer_version = NULL;
 			if ( !rsock->code(peer_version) ) {
 				dprintf(D_AUDIT | D_FAILURE, *rsock, 
@@ -5130,6 +5129,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// number.
 		case SPOOL_JOB_FILES:
 		case SPOOL_JOB_FILES_WITH_PERMS:
+		case UPLOAD_OUTPUT_SANDBOX_WITH_PERMS:
 			// read the number of jobs involved
 			if ( !rsock->code(JobAdsArrayLen) ) {
 				    dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): "
@@ -5180,6 +5180,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// uploading files to schedd 
 		case SPOOL_JOB_FILES:
 		case SPOOL_JOB_FILES_WITH_PERMS:
+		case UPLOAD_OUTPUT_SANDBOX_WITH_PERMS:
 			for (i=0; i<JobAdsArrayLen; i++) {
 				if (!rsock->code(a_job)) {
 					dprintf(D_ALWAYS, "spoolJobFiles(): cannot recv job from client\n");
@@ -5199,7 +5200,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						// the middle of using the files.
 					int finish_time;
 					if( GetAttributeInt(a_job.cluster,a_job.proc,
-					    ATTR_STAGE_IN_FINISH,&finish_time) >= 0 ) {
+					    ATTR_STAGE_IN_FINISH,&finish_time) >= 0 && mode != UPLOAD_OUTPUT_SANDBOX_WITH_PERMS) {
 						dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
 						         " stagein for job %d.%d, because stagein"
 						         " already finished for this job.\n",
@@ -5212,6 +5213,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					int job_status;
 					int job_status_result = GetAttributeInt(a_job.cluster,
 						a_job.proc,ATTR_JOB_STATUS,&job_status);
+					
+					// TODO: may have to block this area for the upload output sandbox
 					if( job_status_result >= 0 &&
 							GetAttributeInt(a_job.cluster,a_job.proc,
 							ATTR_HOLD_REASON_CODE,&holdcode) >= 0) {
@@ -5292,6 +5295,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// uploading files to the schedd
 		case SPOOL_JOB_FILES:
 		case SPOOL_JOB_FILES_WITH_PERMS:
+		case UPLOAD_OUTPUT_SANDBOX_WITH_PERMS:
 			if ( spool_reaper_id == -1 ) {
 				spool_reaper_id = daemonCore->Register_Reaper(
 						"spoolJobFilesReaper",
@@ -13629,6 +13633,11 @@ Scheduler::Register()
  			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
  			"spoolJobFiles", this, WRITE, D_COMMAND,
  			true /*force authentication*/);
+	 daemonCore->Register_CommandWithPayload(UPLOAD_OUTPUT_SANDBOX_WITH_PERMS,
+	 		"UPLOAD_OUTPUT_SANDBOX_WITH_PERMS", 
+	 		(CommandHandlercpp)&Scheduler::spoolJobFiles, 
+	 		"spoolJobFiles", this, WRITE, D_COMMAND,
+	 		true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
 			"updateGSICred", this, WRITE, D_COMMAND,

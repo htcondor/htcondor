@@ -1718,6 +1718,37 @@ struct Schedd {
             THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
         }
     }
+    
+    void transferOutputSandbox(object jobs)
+    {
+        int len = py_len(jobs);
+        std::vector<compat_classad::ClassAd*> job_array;
+        std::vector<boost::shared_ptr<compat_classad::ClassAd> > job_tmp_array;
+        job_array.reserve(len);
+        job_tmp_array.reserve(len);
+        for (int i=0; i<len; i++)
+        {
+            const ClassAdWrapper wrapper = extract<ClassAdWrapper>(jobs[i]);
+            boost::shared_ptr<compat_classad::ClassAd> tmp_ad(new compat_classad::ClassAd());
+            job_tmp_array.push_back(tmp_ad);
+            tmp_ad->CopyFrom(wrapper);
+            job_array.push_back(job_tmp_array[i].get());
+        }
+        CondorError errstack;
+        bool result;
+        DCSchedd schedd(m_addr.c_str());
+        {
+        condor::ModuleLock ml;
+        result = schedd.transferOutputSandbox( len,
+                                       &job_array[0],
+                                       &errstack );
+        }
+        if (!result)
+        {
+            PyErr_SetString(PyExc_RuntimeError, errstack.getFullText(true).c_str());
+            throw_error_already_set();
+        }
+    }
 
 
     int refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
@@ -3169,9 +3200,11 @@ void export_schedd()
 #endif
         .def("retrieve", &Schedd::retrieve, "Retrieve the output sandbox from one or more jobs.\n"
             ":param jobs: A expression string matching the list of job output sandboxes to retrieve.\n")
-        .def("transferInputSandbox", &Schedd::transferInputSandbox, "Download the input sandbox for a single job\n"
+        .def("transferInputSandbox", &Schedd::transferInputSandbox, "Download the input sandbox for multiple jobs\n"
             ":param jobs: A expression string matching the list of job output sandboxes to retrieve.\n"
             ":param destination: Destination of the input sandbox.")
+        .def("transferOutputSandbox", &Schedd::transferOutputSandbox, "Upload the output sandbox for multiple jobs\n"
+            ":param ads: A python list containing one or more job ads to upload their ouptut sandbox.\n")
         .def("edit", &Schedd::edit, "Edit one or more jobs in the queue.\n"
             ":param job_spec: Either a list of jobs (CLUSTER.PROC) or a string containing a constraint to match jobs against.\n"
             ":param attr: Attribute name to edit.\n"

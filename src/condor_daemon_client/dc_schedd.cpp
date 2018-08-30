@@ -794,6 +794,209 @@ bool DCSchedd::transferInputSandbox(const char* constraint,
 	
 }
 
+
+bool DCSchedd::transferOutputSandbox(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack)
+{
+	int reply;
+	int i;
+	ReliSock rsock;
+	bool use_new_command = true;
+
+	if ( version() ) {
+		CondorVersionInfo vi( version() );
+		if ( vi.built_since_version(6,7,7) ) {
+			use_new_command = true;
+		} else {
+			use_new_command = false;
+		}
+	}
+
+		// // // // // // // //
+		// On the wire protocol
+		// // // // // // // //
+
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect(_addr) ) {
+		std::string errmsg;
+		formatstr(errmsg, "Failed to connect to schedd (%s)", _addr);
+
+		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: %s\n", errmsg.c_str() );
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::spoolJobFiles",CEDAR_ERR_CONNECT_FAILED,
+				errmsg.c_str() );
+		}
+		return false;
+	}
+
+	if( ! startCommand(UPLOAD_OUTPUT_SANDBOX_WITH_PERMS, (Sock*)&rsock, 0,
+					   errstack) ) {
+
+		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
+			"Failed to send command (SPOOL_JOB_FILES_WITH_PERMS) "
+			"to the schedd (%s)\n", _addr );
+
+		return false;
+	}
+
+		// First, if we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+				 errstack ? errstack->getFullText().c_str() : "" );
+		return false;
+	}
+
+	// If we don't already know the version of the schedd, try to pull
+	// it out of CEDAR. It's important to know for the FileTransfer
+	// protocol.
+	const CondorVersionInfo *peer_version = rsock.get_peer_version();
+	if ( _version == NULL && peer_version != NULL ) {
+		_version = peer_version->get_version_string();
+	}
+	if ( _version == NULL ) {
+		dprintf( D_ALWAYS, "Unable to determine schedd version for file transfer\n" );
+	}
+
+	rsock.encode();
+
+	// Send our version if using the new command
+	if ( !rsock.put( CondorVersion() ) ) {
+		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+				"Can't send version string to the schedd\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::spoolJobFiles",
+							CEDAR_ERR_PUT_FAILED,
+							"Can't send version string to the schedd" );
+		}
+		return false;
+	}
+
+	// Send the number of jobs
+	if ( !rsock.code(JobAdsArrayLen) ) {
+		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+				"Can't send JobAdsArrayLen to the schedd\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::spoolJobFiles",
+							CEDAR_ERR_PUT_FAILED,
+							"Can't send JobAdsArrayLen to the schedd" );
+		}
+		return false;
+	}
+
+	if( !rsock.end_of_message() ) {
+		std::string errmsg;
+		formatstr(errmsg,
+				"Can't send initial message (version + count) to schedd (%s), probably an authorization failure",
+				_addr);
+
+		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.c_str());
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::spoolJobFiles",
+				CEDAR_ERR_EOM_FAILED,
+				errmsg.c_str());
+		}
+		return false;
+	}
+
+		// Now, put the job ids onto the wire
+	PROC_ID jobid;
+	for (i=0; i<JobAdsArrayLen; i++) {
+		if (!JobAdsArray[i]->LookupInteger(ATTR_CLUSTER_ID,jobid.cluster)) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Job ad %d did not have a cluster id\n",i);
+			if ( errstack ) {
+				errstack->pushf( "DCSchedd::spoolJobFiles", 1,
+								 "Job ad %d did not have a cluster id", i );
+			}
+			return false;
+		}
+		if (!JobAdsArray[i]->LookupInteger(ATTR_PROC_ID,jobid.proc)) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Job ad %d did not have a proc id\n",i);
+			if ( errstack ) {
+				errstack->pushf( "DCSchedd::spoolJobFiles", 1,
+								 "Job ad %d did not have a proc id", i );
+			}
+			return false;
+		}
+		rsock.code(jobid);
+	}
+
+	if( !rsock.end_of_message() ) {
+		std::string errmsg;
+		formatstr(errmsg, "Failed while sending job ids to schedd (%s)", _addr);
+
+		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.c_str());
+
+		if( errstack ) {
+			errstack->push(
+				"DCSchedd::spoolJobFiles",
+				CEDAR_ERR_EOM_FAILED,
+				errmsg.c_str());
+		}
+		return false;
+	}
+
+		// Now send all the files via the file transfer object
+	for (i=0; i<JobAdsArrayLen; i++) {
+		FileTransfer ftrans;
+		if ( !ftrans.SimpleInit(JobAdsArray[i], true, true, &rsock, PRIV_USER, true) ) {
+			if( errstack ) {
+				int cluster = -1, proc = -1;
+				if(JobAdsArray[i]) {
+					JobAdsArray[i]->LookupInteger(ATTR_CLUSTER_ID,cluster);
+					JobAdsArray[i]->LookupInteger(ATTR_PROC_ID,proc);
+				}
+				errstack->pushf(
+					"DCSchedd::spoolJobFiles",
+					FILETRANSFER_INIT_FAILED,
+					"File transfer initialization failed for target job %d.%d",
+					cluster, proc );
+			}
+			return false;
+		}
+		if ( use_new_command ) {
+			ftrans.setPeerVersion( version() );
+		}
+		if ( !ftrans.UploadFiles(true,false) ) {
+			if( errstack ) {
+				FileTransfer::FileTransferInfo ft_info = ftrans.GetInfo();
+
+				int cluster = -1, proc = -1;
+				if(JobAdsArray[i]) {
+					JobAdsArray[i]->LookupInteger(ATTR_CLUSTER_ID,cluster);
+					JobAdsArray[i]->LookupInteger(ATTR_PROC_ID,proc);
+				}
+				errstack->pushf(
+					"DCSchedd::spoolJobFiles",
+					FILETRANSFER_UPLOAD_FAILED,
+					"File transfer failed for target job %d.%d: %s",
+					cluster, proc, ft_info.error_desc.Value() );
+			}
+			return false;
+		}
+	}	
+		
+		
+	rsock.end_of_message();
+
+	rsock.decode();
+
+	reply = 0;
+	rsock.code(reply);
+	rsock.end_of_message();
+
+	if ( reply == 1 ) 
+		return true;
+	else
+		return false;
+}
+
+
+
 // when a transferd registers itself, it identifies who it is. The connection
 // is then held open and the schedd periodically might send more transfer
 // requests to the transferd. Also, if the transferd dies, the schedd is 
