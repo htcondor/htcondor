@@ -76,6 +76,7 @@ public:
 	FileTransferItem():
 		is_directory(false),
 		is_symlink(false),
+		is_domainsocket(false),
 		file_mode(NULL_FILE_PERMISSIONS),
 		file_size(0) {}
 
@@ -86,6 +87,7 @@ public:
 	std::string dest_dir;
 	bool is_directory;
 	bool is_symlink;
+	bool is_domainsocket;
 	condor_mode_t file_mode;
 	filesize_t file_size;
 };
@@ -2949,22 +2951,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			fullname = filename;
 		}
 
-		// If this file is a Unix domain socket, skip it
-		#ifndef WIN32
-			struct stat stat_buf;
-			if ( stat( filename, &stat_buf ) < 0 ) {
-				dprintf( D_ALWAYS, "DoUpload: Failed to stat file %s, errno=%d (%s)\n",
-						filename, errno, strerror(errno) );
-			}
-			else {
-				if( S_ISSOCK( stat_buf.st_mode ) == 1 ) {
-					dprintf( D_ALWAYS, "DoUpload: File %s is a domain socket, "
-						"skipping\n", filename );
-					continue;
-				}
-			}
-		#endif
-
 		MyString dest_filename;
 		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename)==0 )) {
 			// this file is the job executable
@@ -4485,7 +4471,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	ASSERT( iwd );
 
 		// To simplify error handling, we always want to include an
-		// entry for the specified path, except one case which is
+		// entry for the specified path, except two cases which are
 		// handled later on by removing the entry we add here.
 	expanded_list.push_back( FileTransferItem() );
 	FileTransferItem &file_xfer_item = expanded_list.back();
@@ -4522,7 +4508,17 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	bool trailing_slash = srclen > 0 && IS_ANY_DIR_DELIM_CHAR(src_path[srclen-1]);
 
 	file_xfer_item.is_symlink = st.IsSymlink();
+	file_xfer_item.is_domainsocket = st.IsDomainSocket();
 	file_xfer_item.is_directory = st.IsDirectory();
+
+		// If this file is a domain socket, we don't want to send it but it's
+		// also not an error. Remove the entry from the list and return true.
+	if( file_xfer_item.is_domainsocket ) {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a domain socket, excluding "
+			"from transfer list\n", full_src_path.c_str() );
+		expanded_list.pop_back();
+		return true;
+	}
 
 	if( !file_xfer_item.is_directory ) {
 		file_xfer_item.file_size = st.GetFileSize();
