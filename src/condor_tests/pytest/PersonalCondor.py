@@ -12,9 +12,10 @@ from Utils import Utils
 class PersonalCondor(object):
 
 
-    def __init__(self, name, params=None):
+    def __init__(self, name, params=None, ordered_params=None):
         self._name = name
         self._params = params
+        self._ordered_params = ordered_params
         self._master_process = None
         self._is_ready = False
         self._local_dir = name + ".local"
@@ -25,7 +26,7 @@ class PersonalCondor(object):
         self._log_path = self._local_path + "/log"
         self._run_path = self._local_path + "/run"
         self._spool_path = self._local_path + "/spool"
-        self.SetupLocalEnvironment(self._params)
+        self.SetupLocalEnvironment()
         Utils.TLog("CondorPersonal initialized with path: " + self._local_path)
 
 
@@ -34,7 +35,6 @@ class PersonalCondor(object):
 
 
     def Start(self):
-
         try:
             process = subprocess.Popen(["condor_master", "-f &"])
             if process < 0:
@@ -54,7 +54,6 @@ class PersonalCondor(object):
             return False
 
         Utils.TLog("Condor daemons are active and ready for jobs")
-
         return True
 
 
@@ -67,9 +66,19 @@ class PersonalCondor(object):
             self._is_ready = False
 
 
-    # Sets up local system environment we'll use to stand up the PersonalCondor instance.
-    def SetupLocalEnvironment(self, params=None):
+    default_params = {
+        "UPDATE_INTERVAL" : 5,
+        "POLLING_INTERVAL" : 5,
+        "NEGOTIATOR_INTERVAL" : 5,
+        "STARTER_UPDATE_INTERVAL" : 5,
+        "STARTER_INITIAL_UPDATE_INTERVAL" : 5,
+        "NEGOTIATOR_CYCLE_DELAY" : 5,
+        "MachineMaxVacateTime" : 5,
+    }
 
+
+    # Sets up local system environment we'll use to stand up the PersonalCondor instance.
+    def SetupLocalEnvironment(self):
         Utils.MakedirsIgnoreExist(self._local_dir)
         Utils.MakedirsIgnoreExist(self._execute_path)
         Utils.MakedirsIgnoreExist(self._log_path)
@@ -82,7 +91,12 @@ class PersonalCondor(object):
         os.system("condor_config_val -write:up " + self._local_config)
 
         # Add whatever internal config values we need
-        config = "LOCAL_DIR = " + self._local_path + "\n"
+        config = """
+#
+# From PersonalCondor
+#
+"""
+        config += "LOCAL_DIR = " + self._local_path + "\n"
         config += "EXECUTE = " + self._execute_path + "\n"
         config += "LOCK = " + self._lock_path + "\n"
         config += "LOG = " + self._log_path + "\n"
@@ -95,13 +109,34 @@ class PersonalCondor(object):
         if Utils.IsWindows() is True:
             config += "PROCD_ADDRESS = " + str(htcondor.param["PROCD_ADDRESS"]) + str(os.getpid()) + "\n"
 
+        config += """
+#
+# Default params
+#
+"""
+        for key in PersonalCondor.default_params:
+            config += key + " = " + str(PersonalCondor.default_params[key]) + "\n"
+
         # Add any custom params
-        if params is not None:
-            for key in params:
-                if params[key] is None:
+        if self._params is not None:
+            config += """
+#
+# Custom params
+#
+"""
+            for key in self._params:
+                if self._params[key] is None:
                     config += key + "\n"
                 else:
-                    config += key + " = " + str(params[key]) + "\n"
+                    config += key + " = " + str(self._params[key]) + "\n"
+
+        if self._ordered_params is not None:
+            config += """
+#
+# Ordered params
+#
+"""
+            config += self._ordered_params
 
         config_file = open(self._local_config, "a")
         config_file.write(config)
