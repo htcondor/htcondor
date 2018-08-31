@@ -88,6 +88,8 @@ class Utils(object):
 
         def __bool__(self):
             return self.result == self._expected_result
+        # Python 3 compability.
+        __nonzero__ = __bool__
 
     # The timeout is in seconds.
     @staticmethod
