@@ -50,6 +50,11 @@ the submit or submitMany methods of the schedd class were called without passing
 return the result ClassAds.
 \Ticket{6729}
 
+\item Fixed a bug in file transfer where jobs would go on hold if they created
+a domain socket, which the FileTransfer module would subsequently try (and fail) 
+to send back to the submit machine.
+\Ticket{6744}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
