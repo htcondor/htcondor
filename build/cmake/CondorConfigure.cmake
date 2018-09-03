@@ -82,14 +82,14 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
-	include (FindPythonLibs)
+	include (FindPythonInterp)
 	# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
 	# This helps ensure we get the same version of the libraries and python
 	# on systems with both python2 and python3.
-	if (DEFINED PYTHONLIBS_VERSION_STRING)
-		set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
+	if (DEFINED PYTHON_VERSION_STRING)
+		set(Python_ADDITIONAL_VERSIONS "${PYTHON_VERSION_STRING}")
 	endif()
-	include (FindPythonInterp)
+	include (FindPythonLibs)
 else()
 	if(WINDOWS)
 		#only for Visual Studio 2012

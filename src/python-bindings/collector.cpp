@@ -389,21 +389,33 @@ private:
         case Q_INVALID_CATEGORY:
             PyErr_SetString(PyExc_RuntimeError, "Category not supported by query type.");
             boost::python::throw_error_already_set();
+            //doesn't really fall through, the function above does not return
+            //@fallthrough@
         case Q_MEMORY_ERROR:
             PyErr_SetString(PyExc_MemoryError, "Memory allocation error.");
             boost::python::throw_error_already_set();
+            //doesn't really fall through, the function above does not return
+            //@fallthrough@
         case Q_PARSE_ERROR:
             PyErr_SetString(PyExc_SyntaxError, "Query constraints could not be parsed.");
             boost::python::throw_error_already_set();
+            //doesn't really fall through, the function above does not return
+            //@fallthrough@
         case Q_COMMUNICATION_ERROR:
             PyErr_SetString(PyExc_IOError, "Failed communication with collector.");
             boost::python::throw_error_already_set();
+            //doesn't really fall through, the function above does not return
+            //@fallthrough@
         case Q_INVALID_QUERY:
             PyErr_SetString(PyExc_RuntimeError, "Invalid query.");
             boost::python::throw_error_already_set();
+            //doesn't really fall through, the function above does not return
+            //@fallthrough@
         case Q_NO_COLLECTOR_HOST:
             PyErr_SetString(PyExc_RuntimeError, "Unable to determine collector host.");
             boost::python::throw_error_already_set();
+            //doesn't really fall through, the function above does not return
+            //@fallthrough@
         default:
             PyErr_SetString(PyExc_RuntimeError, "Unknown error from collector query.");
             boost::python::throw_error_already_set();
