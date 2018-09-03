@@ -288,7 +288,6 @@ our %submit_info = (
 								  '-DCLIPPED:BOOL' => 'OFF',
 								  '-DWITH_CREAM:BOOL' => 'OFF',
 								  '-DWITH_BOINC:BOOL' => 'OFF',
-								  '-DPYTHON_VERSION' => '2.7',
 			},
 			'prereqs'	=> [ ],
 			'xtests'	=>	undef,
@@ -561,9 +560,7 @@ our %submit_info = (
 
 	'x86_64_Fedora27'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-								'-DPYTHON_VERSION' => '2.7',
-			},
+			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},

@@ -588,8 +588,6 @@ host as the DedicatedScheduler.
 %endif
 
 
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 #######################
 %package python
 Summary: Python bindings for HTCondor.
@@ -611,7 +609,6 @@ Provides: htcondor.so
 %description python
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
-%endif
 
 
 #######################
@@ -723,10 +720,7 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 Requires: %name-python = %version-%release
-%endif
 Requires: %name-bosco = %version-%release
 %if %std_univ
 Requires: %name-std-universe = %version-%release
@@ -1009,12 +1003,6 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
 rm -rf %{buildroot}/%{_sysconfdir}/init.d
 
-# Temporarily turn off python for Fedora
-%if 0%{?fedora}
-rm -f %{buildroot}/%{_bindir}/condor_top
-rm -f %{buildroot}/%{_mandir}/man1/condor_top.1
-%endif
-
 %if %systemd
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_tmpfilesdir}
@@ -1054,13 +1042,10 @@ install -m 0755 src/condor_scripts/CondorPersonal.pm %{buildroot}%{_datadir}/con
 install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
 
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 # Install python-binding libs
 mkdir -p %{buildroot}%{python_sitearch}
 install -m 0755 src/python-bindings/{classad,htcondor}.so %{buildroot}%{python_sitearch}
 install -m 0755 src/python-bindings/libpyclassad*.so %{buildroot}%{_libdir}
-%endif
 
 # we must place the config examples in builddir so %doc can find them
 mv %{buildroot}/etc/examples %_builddir/%name-%tarball_version
@@ -1304,10 +1289,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 %_libexecdir/condor/libcollector_python_plugin.so
-%endif
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
@@ -1345,9 +1327,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
-%if ! 0%{?fedora}
 %_mandir/man1/condor_top.1.gz
-%endif
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
@@ -1695,8 +1675,6 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/20dedicated_scheduler_condor.config
 %endif
 
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 %files python
 %defattr(-,root,root,-)
 %_bindir/condor_top
@@ -1704,7 +1682,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad.so
 %{python_sitearch}/htcondor.so
-%endif
 
 %files bosco
 %defattr(-,root,root,-)
