@@ -774,8 +774,21 @@ The \Condor{negotiator} evaluates this ClassAd expression for each group
 ClassAd, 
 sorts the groups by the floating point result, 
 and then negotiates with the smallest positive value going first.
-Useful attributes to use are documented
-in section~\ref{sec:Priorities-in-Negotiation-and-Preemption}.
+Available attributes for sorting with \Macro{GROUP\_SORT\_EXPR} include:
+
+\begin{table}[ht]
+\centering
+\caption{\label{table:group-sort-expr-attrs}Attributes visible to GROUP\_SORT\_EXPR}
+\begin{tabular}{|l|l|} \hline
+\emph{Attribute Name} & \emph{Description} \\ \hline \hline
+AccountingGroup   &   A string containing the group name   \\ \hline
+GroupQuota  &   The computed limit for this group \\ \hline
+GroupQuotaInUse &   The total slot weight used by this group\\ \hline
+GroupQuotaAllocated &   Quota allocated this cycle \\ \hline
+\end{tabular}
+\end{table}
+%
+\clearpage
 
 One possible group quota policy is strict priority.
 For example, a site prefers physics users to match as many slots as they can,
