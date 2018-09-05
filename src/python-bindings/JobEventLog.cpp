@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "old_boost.h"
 
+#include "module_lock.h"
 #include "file_modified_trigger.h"
 #include "read_user_log.h"
 #include "wait_for_user_log.h"
@@ -47,6 +48,19 @@ JobEventLog::follow_for( boost::python::object & self, int milliseconds ) {
 	return follow( self );
 }
 
+class JobEventLogGlobalLockInitializer {
+	public:
+		JobEventLogGlobalLockInitializer() {
+#if defined(WIN32)
+			MODULE_LOCK_MUTEX_INITIALIZE( & mutex );
+#else
+			mutex = MODULE_LOCK_MUTEX_INITIALIZER;
+#endif
+		}
+
+		MODULE_LOCK_MUTEX_TYPE mutex;
+} jobEventLogGlobalLock;
+
 boost::shared_ptr< JobEvent >
 JobEventLog::next() {
 	ULogEvent * event = NULL;
@@ -55,7 +69,9 @@ JobEventLog::next() {
 	ULogEventOutcome outcome;
 
 	Py_BEGIN_ALLOW_THREADS
+	MODULE_LOCK_MUTEX_LOCK( & jobEventLogGlobalLock.mutex );
 	outcome = wful.readEvent( event, timeout, following );
+	MODULE_LOCK_MUTEX_UNLOCK( & jobEventLogGlobalLock.mutex );
 	Py_END_ALLOW_THREADS
 
 	switch( outcome ) {
