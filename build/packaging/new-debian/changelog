@@ -1,3 +1,14 @@
+condor (8.6.12-1) stable; urgency=medium
+
+  * Support for Debian 9, Ubuntu 16, and Ubuntu 18
+  * Fixed a memory leak that occurred when SSL authentication fails
+  * Fixed a bug where invalid transform REQUIREMENTS caused a Job to match
+  * Fixed a bug to allow a queue super user to edit protected attributes
+  * Fixed a problem setting the job environment in the Singularity container
+  * Fixed several other minor problems
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 31 Jul 2018 22:58:32 -0500
+
 condor (8.6.11) unstable; urgency=medium
 
   * Nightly build
