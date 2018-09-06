@@ -42,6 +42,11 @@ public:
 			Env &env
 			);
 
+	// To pass an environment variable FOO from host to container
+	// it must be named SINGULARITYENV_FOO.  This method does that.
+  static bool convertEnv(Env *job_env);
+
+
 private:
   static bool detect(CondorError &err);
 

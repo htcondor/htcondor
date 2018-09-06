@@ -1901,6 +1901,14 @@ fi
 %endif
 
 %changelog
+* Wed Aug 01 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.12-1
+- Support for Debian 9, Ubuntu 16, and Ubuntu 18
+- Fixed a memory leak that occurred when SSL authentication fails
+- Fixed a bug where invalid transform REQUIREMENTS caused a Job to match
+- Fixed a bug to allow a queue super user to edit protected attributes
+- Fixed a problem setting the job environment in the Singularity container
+- Fixed several other minor problems
+
 * Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.11-1
 - Can now do an interactive submit of a Singularity job
 - Shared port daemon is more resilient when starved for TCP ports
