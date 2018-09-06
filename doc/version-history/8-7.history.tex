@@ -66,8 +66,7 @@ functioning properly in that situation.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.9 not yet released.
-%\item HTCondor version 8.7.9 released on Month Date, 2018.
+\item HTCondor version 8.7.9 released on August 1, 2018.
 
 \end{itemize}
 
@@ -85,18 +84,18 @@ this version of HTCondor will use the new runtime.
 \Ticket{6665}
 
 \item Policies implemented by the startd may not function as desired while
-the machine is draining.  Specifically, if the \Macro{PREEMPT} expression
+the machine is draining.  Specifically, if the \MacroNI{PREEMPT} expression
 becomes true for a particular slot while a machine is draining, the
 corresponding job will not vacate the slot until draining completes.  For
-example, this renders the policy macro \Macro{HOLD\_IF\_MEMORY\_EXCEEDED}
-inneffective.  This has been a problem since v8.6.
+example, this renders the policy macro \MacroNI{HOLD\_IF\_MEMORY\_EXCEEDED}
+ineffective.  This has been a problem since v8.6.
 \Ticket{6697}
 
 \item Policies implemented by the startd may not function as desired while
-the startd is shutting down peacefully.  Specifically, if the \Macro{PREEMPT}
+the startd is shutting down peacefully.  Specifically, if the \MacroNI{PREEMPT}
 expression becomes true for a particular slot while the startd is shutting
 down peacefully, the corresponding job will never be vacated.  For example,
-this renders renders the policy macro \Macro{HOLD\_IF\_MEMORY\_EXCEEDED}
+this renders renders the policy macro \MacroNI{HOLD\_IF\_MEMORY\_EXCEEDED}
 ineffective.  This has been a problem since v8.6.
 \Ticket{6701}
 
@@ -107,32 +106,10 @@ ineffective.  This has been a problem since v8.6.
 
 \begin{itemize}
 
-\item HTCondor now supports backfill while draining.  You may now use the
-\Condor{drain} command, or configure the \Condor{defrag} daemon, to set a
-different \Macro{START} expression for the duration of the draining.  See
-the definition of \Macro{DEFRAG\_DRAINING\_START\_EXPR} (
-\ref{param:DefragDrainingStartExpr}) and the \Condor{drain} manual (
-\ref{man-condor-drain}) for details.  See also the known issues above for
-information which may influence your choice of \MacroNI{START} expressions.
-\Ticket{6664}
-
-\item Docker universe jobs now run with the supplemental group ids of the
-running user, not just the primary group.
-\Ticket{6658}
-
-\item Added a new tool, \Condor{now}, which tries to run the specified job
-\emph{now}.  You specify two jobs that you own from the same schedd: the
-now-job and the vacate-job.  The latter is immediately vacated; after the
-vacated job terminates, if the schedd still has the claim to the vacated job's
-slot (and it usually will), the schedd will immediately start the now-job on
-that slot.  The now-job must be idle and the vacate-job must be running.  If
-you're a queue super-user, the jobs must have the same owner, but that owner
-doesn't have to be you.
-\Ticket{6659}
-
-\item Added proxy delegation for vanilla universe jobs that define a X509 proxy
-but do not use the file transfer mechanism.
-\Ticket{6587}
+\item The HTCondor Python bindings Submit class can now be initialized from an existing
+\Condor{submit} file including the QUEUE statement.  Python bindings Submit
+class also can now submit a job for each step of a Python iterator.
+\Ticket{6679}
 
 \item VM universe jobs are now given time to shutdown after a power-off
 signal when they are evicted gracefully.
@@ -142,6 +119,33 @@ signal when they are evicted gracefully.
 set to a fully-qualified hostname that's an alias of one of the machine's
 interfaces.
 \Ticket{6702}
+
+\item Added a new tool, \Condor{now}, which tries to run the specified job
+\emph{now}.  You specify two jobs that you own from the same \Condor{schedd}: the
+now-job and the vacate-job.  The latter is immediately vacated; after the
+vacated job terminates, if the \Condor{schedd} still has the claim to the vacated job's
+slot (and it usually will), the \Condor{schedd} will immediately start the now-job on
+that slot.  The now-job must be idle and the vacate-job must be running.  If
+you're a queue super-user, the jobs must have the same owner, but that owner
+doesn't have to be you.
+\Ticket{6659}
+
+\item HTCondor now supports backfill while draining.  You may now use the
+\Condor{drain} command, or configure the \Condor{defrag} daemon, to set a
+different \MacroNI{START} expression for the duration of the draining.  See
+the definition of \MacroNI{DEFRAG\_DRAINING\_START\_EXPR} (
+\ref{param:DefragDrainingStartExpr}) and the \Condor{drain} manual (
+\ref{man-condor-drain}) for details.  See also the known issues above for
+information which may influence your choice of \MacroNI{START} expressions.
+\Ticket{6664}
+
+\item Docker universe jobs now run with the supplemental group ids of the
+running user, not just the primary group.
+\Ticket{6658}
+
+\item Added proxy delegation for vanilla universe jobs that define a X509 proxy
+but do not use the file transfer mechanism.
+\Ticket{6587}
 
 \item Added configuration parameters \MacroNI{GAHP\_SSL\_CADIR} and
 \MacroNI{GAHP\_SSL\_CAFILE} to specify trusted CAs when authenticating
@@ -254,7 +258,7 @@ the pool nor terminate themselves.
 \Ticket{6638}
 
 \item When running in a HAD setup, there is a configuration parameter,
-\Macro{COLLECTOR\_HOST\_FOR\_NEGOTIATOR} which tells the active negotiator
+\MacroNI{COLLECTOR\_HOST\_FOR\_NEGOTIATOR} which tells the active negotiator
 which collector to prefer.  Previously, this parameter had no default,
 so the negotiator might arbitrarily chose a far-away collector.  Now
 this knob defaults to the local collector in a HAD setup.
