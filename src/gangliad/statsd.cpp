@@ -374,6 +374,9 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 		else if( !strcasecmp(my_type.c_str(),"submitter") ) {
 			daemon_ad.EvaluateAttrString(ATTR_SCHEDD_NAME,machine);
 		}
+		else if( !strcasecmp(my_type.c_str(),"accounting") ) {
+			daemon_ad.EvaluateAttrString(ATTR_NEGOTIATOR_NAME,machine);
+		}
 		else {
 			// use the daemon name for the metric machine name
 			daemon_ad.EvaluateAttrString(ATTR_NAME,machine);
