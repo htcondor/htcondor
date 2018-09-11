@@ -35,24 +35,21 @@ append_config = """#<<CONDOR_TESTREQ_CONFIG
 """
 #endtestreq
 
-from pytest.CondorJob import CondorJob
-from pytest.CondorTest import CondorTest
-from pytest.PersonalCondor import PersonalCondor
+from pytest.CondorCluster import CondorCluster
 from pytest.Utils import Utils
 
 testname = os.path.basename(__file__)[:-4]
-test = CondorTest(testname)
 
 logfile = "{0}{1}.log".format(testname, os.getpid())
-cluster = CondorJob( {
+cluster = CondorCluster( {
 	"executable": "x_sleep.pl",
 	"arguments": "0",
 	"notification": "never",
-	"logfile": logfile
+	"log": logfile
 	} )
 
 Utils.TLog("submitting sleep forever jobs, userlog is " + logfile)
-cluster.Submit( False, 20 )
+cluster.Submit( 20 )
 
 Utils.TLog("wait up to 2 min for a job to start")
 if not cluster.WaitUntilExecute( 2 * 60 ):

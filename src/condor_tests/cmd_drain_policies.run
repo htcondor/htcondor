@@ -6,7 +6,7 @@ import time
 
 import htcondor
 
-from pytest.CondorJob import CondorJob
+from pytest.CondorCluster import CondorCluster
 from pytest.CondorTest import CondorTest
 from pytest.Globals import *
 from pytest.PersonalCondor import PersonalCondor
@@ -111,8 +111,7 @@ use feature : PartitionableSlot
 use policy : HOLD_IF_MEMORY_EXCEEDED
 """
 
-	test = CondorTest( "cmd_drain_policies", params, ordered_params )
-	personalCondor = test.StartPersonalCondor()
+	personalCondor = CondorTest.StartPersonalCondor( "cmd_drain_policies", params, ordered_params )
 	if personalCondor == -1:
 		# Arguably, if it fails to start a personal condor, CondorTest should
 		# register a failure and exit of its own accord.
@@ -137,45 +136,43 @@ use policy : HOLD_IF_MEMORY_EXCEEDED
 		"request_memory":			"1",
 		"log":						"cmd_drain_policies.log"
 	}
-	firstTestJob = CondorJob( jobArgs )
+	firstTestJob = CondorCluster( jobArgs )
 	firstTestJob.Submit()
 
 	# Step (2).
 	if not firstTestJob.WaitUntilExecute( 60 ):
-		test.RegisterFailure( "normal", "First job did not start running." )
-		# It would be nice for the test objects to trap exit(), but that
-		# could get tricky to implement.
-		test.exit( TEST_FAILURE )
+		CondorTest.RegisterFailure( "normal", "First job did not start running." )
+		sys.exit( TEST_FAILURE )
 
 	# Step (5).
 	askToMisbehave( firstTestJob, 0, killfile )
 
 	# Step (6).
 	if not firstTestJob.WaitUntilJobHeld( 60 ):
-		test.RegisterFailure( "normal", "First job did not go on hold." )
-		test.exit( TEST_FAILURE )
+		CondorTest.RegisterFailure( "normal", "First job did not go on hold." )
+		sys.exit( TEST_FAILURE )
 
-	test.RegisterSuccess( "normal", "Job went on hold as expected" );
+	CondorTest.RegisterSuccess( "normal", "Job went on hold as expected" );
 
 	#
 	# Run the second subtest ("while-draining").
 	#
 
 	# Step (1).
-	secondTestCluster = CondorJob( jobArgs )
-	secondTestCluster.Submit( False, 2 )
+	secondTestCluster = CondorCluster( jobArgs )
+	secondTestCluster.Submit( 2 )
 
 	# Step (2).
 	if not secondTestCluster.WaitUntilAllExecute( 60 ):
-		test.RegisterFailure( "while-draining", "Second test jobs did not all start running." )
-		test.exit( TEST_FAILURE )
+		CondorTest.RegisterFailure( "while-draining", "Second test jobs did not all start running." )
+		sys.exit( TEST_FAILURE )
 
 	# Step (3).
 	hostname = htcondor.param[ 'FULL_HOSTNAME' ]
 	if not Utils.RunCommandCarefully( ( 'condor_drain',
 		'-start', 'IsBackfill == true', hostname ), 20 ) != 0:
-		test.RegisterFailure( "while-draining", "condor_drain command failed" )
-		test.exit( TEST_FAILURE )
+		CondorTest.RegisterFailure( "while-draining", "condor_drain command failed" )
+		sys.exit( TEST_FAILURE )
 	else:
 		Utils.TLog( "Issued condor_drain command." )
 
@@ -212,8 +209,8 @@ use policy : HOLD_IF_MEMORY_EXCEEDED
 
 	# Step (6).
 	if not secondTestCluster.WaitUntilJobHeld( 60, 0 ):
-		test.RegisterFailure( "while-draining", "First job did not go on hold." )
-		test.exit( TEST_FAILURE )
+		CondorTest.RegisterFailure( "while-draining", "First job did not go on hold." )
+		sys.exit( TEST_FAILURE )
 
 	# Step (7).  Note that we ask the schedd and not the job event log if the
 	# other job is still running.  This technically causes a race condition,
@@ -227,36 +224,36 @@ use policy : HOLD_IF_MEMORY_EXCEEDED
 	# wouldn't be a problem....
 	stcJobAd = secondTestCluster.QueryForJobAd( 1 )
 	if stcJobAd['JobStatus'] != JobStatus.Number['Running']:
-		test.RegisterFailure( "while-draining", "Second job is not still running after the first job went on hold." )
-		test.exit( TEST_FAILURE )
+		CondorTest.RegisterFailure( "while-draining", "Second job is not still running after the first job went on hold." )
+		sys.exit( TEST_FAILURE )
 
 	# Step (8).
 	backfillJobArgs = jobArgs.copy();
 	backfillJobArgs[ "+IsBackfill" ] = "true"
-	thirdTestJob = CondorJob( backfillJobArgs )
+	thirdTestJob = CondorCluster( backfillJobArgs )
 	thirdTestJob.Submit()
 
 	# Step (9).
 	if not thirdTestJob.WaitUntilExecute( 60 ):
-		test.RegisterFailure( "while-draining", "Third (backfill) test job did not start running." )
-		test.exit( TEST_FAILURE )
+		CondorTest.RegisterFailure( "while-draining", "Third (backfill) test job did not start running." )
+		sys.exit( TEST_FAILURE )
 
 	# Step (10).
 	askToMisbehave( thirdTestJob, 0, killfile )
 
 	# Step (11).
 	if not thirdTestJob.WaitUntilJobHeld( 60 ):
-		test.RegisterFailure( "while-draining", "Backfill job did not go on hold." )
-		test.exit( TEST_FAILURE )
+		CondorTest.RegisterFailure( "while-draining", "Backfill job did not go on hold." )
+		sys.exit( TEST_FAILURE )
 
 	# Step (12).  See above about possible race conditions and why they
 	# shouldn't matter in practice.
 	stcJobAd = secondTestCluster.QueryForJobAd( 1 )
 	if stcJobAd['JobStatus'] != JobStatus.Number['Running']:
-		test.RegisterFailure( "while-draining", "Second job is not still running after the backfill job went on hold." )
-		test.exit( TEST_FAILURE )
+		CondorTest.RegisterFailure( "while-draining", "Second job is not still running after the backfill job went on hold." )
+		sys.exit( TEST_FAILURE )
 
-	test.RegisterSuccess( "while-draining", "Jobs behaved as expected" );
+	CondorTest.RegisterSuccess( "while-draining", "Jobs behaved as expected" );
 
 	# Ask the second job to misbehave so that our personal condor shuts
 	# down quickly (it otherwise by default waits for retirement).
