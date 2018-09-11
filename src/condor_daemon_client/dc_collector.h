@@ -142,6 +142,7 @@ private:
 
 	// Items to manage the sequence numbers
 	time_t startTime;
+	time_t reconfigTime;
 };
 
 
