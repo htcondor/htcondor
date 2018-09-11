@@ -38,16 +38,9 @@ CONDOR_TESTREQ_CONFIG
 #endtestreq
 """
 
-from pytest.CondorJob import CondorJob
-from pytest.CondorTest import CondorTest
-from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
 
 testname = os.path.basename(__file__)[:-4]
-
-# dump the environment.
-#Utils.TLog("the environment")
-#for e in os.environ: Utils.Log(e + " = " + os.getenv(e))
 
 sub = htcondor.Submit("""
 	universe = vanilla

@@ -3,7 +3,7 @@
 import os
 import sys
 
-from pytest.CondorJob import CondorJob
+from pytest.CondorCluster import CondorCluster
 from pytest.CondorTest import CondorTest
 from pytest.Globals import *
 from pytest.HTTPServer import HTTPServer
@@ -28,10 +28,6 @@ def HttpSuccessUrlHandler(request):
 
 
 def main():
-
-    # Create a new test environment
-    test = CondorTest("cmd_curl_plugin_singlefile_success")
-
     # Start a HTTP server, and register the /success URL to return a 
     httpd = HTTPServer()
     httpd.Start()
@@ -39,7 +35,7 @@ def main():
     success_url = "http://127.0.0.1:" + str(httpd._port) + "/success"
 
     # Stand up a PersonalCondor
-    personal_handle = test.StartPersonalCondor()
+    personal_handle = CondorTest.StartPersonalCondor("cmd_curl_plugin_singlefile_success")
     if personal_handle == -1:
         Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
         sys.exit(1)
@@ -53,7 +49,7 @@ def main():
         "transfer_input_files":     success_url,
         "should_transfer_files":    "YES"
     }
-    test_job = CondorJob(job_args)
+    test_job = CondorCluster(job_args)
 
     # Register job handlers
     test_job.RegisterJobTerminated(SuccessCallback)
@@ -61,13 +57,13 @@ def main():
 
     # Submit the test job
     test_job.Submit()
-    result = test_job.WaitUntilJobTerminated()
-    Utils.TLog("Job returned result: " + str(result))
+    test_job.WaitUntilJobTerminated()
 
     # The success/failure callbacks handle the sys.exit() calls
     # All our testing infrastructure will shut down via destructors
     # Nothing left to do at this point.
-
+    Utils.TLog("Test continued unexpectedly while waiting for job to terminate.  Test failed.")
+    sys.exit(TEST_FAILURE)
 
 
 if __name__ == "__main__":
