@@ -236,6 +236,11 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
             else {
                 stats->TransferSuccess = false;
                 stats->TransferError = error_buffer;
+                // If we got an HTTP error code, need to change a couple more things
+                if( return_code > 400 ) {
+                    rval = CURLE_HTTP_RETURNED_ERROR;
+                    stats->TransferError = "Server returned HTTP error code " + std::to_string(return_code);
+                }
             }
 
             // Error handling and cleanup
