@@ -177,7 +177,7 @@ use policy : HOLD_IF_MEMORY_EXCEEDED
 		Utils.TLog( "Issued condor_drain command." )
 
 	# Step (4).  Should maybe be a function on CondorPersonal?
-	Utils.TLog( "Waiting for startd to start draining." )
+	Utils.TLog( "Waiting for startd to start draining..." )
 	collector = htcondor.Collector()
 	for delay in range( 1, 20 ):
 		time.sleep( 1 )
@@ -203,6 +203,7 @@ use policy : HOLD_IF_MEMORY_EXCEEDED
 			break
 		else:
 			Utils.TLog( "Startd has not started draining yet, will check again." )
+	Utils.TLog( "... startd has started draining." )
 
 	# Step (5).
 	askToMisbehave( secondTestCluster, 0, killfile )

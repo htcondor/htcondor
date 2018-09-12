@@ -81,6 +81,8 @@ class PersonalCondor(object):
             self._is_ready = False
 
     def FinishStopping(self):
+        # FIXME: This (a) needs a timeout and (b) if the timeout expires,
+        # we need a more-agressive shutdown method.
         while self._master_process.poll() is None:
             Utils.TLog("[PC: {0}] Master did not exit, will check again in five seconds...".format(self._name))
             time.sleep( 5 )

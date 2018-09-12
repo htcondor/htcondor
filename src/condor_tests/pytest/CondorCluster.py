@@ -51,9 +51,6 @@ class CondorCluster(object):
         # We probably don't need self._log, but it seems like it may be
         # handy for log messages at some point.
         self._jel = JobEventLog( self._log )
-        if not self._jel.isInitialized():
-            print( "Unable to initialize job event log " + self._log )
-            return JOB_FAILURE
 
         return None
 
@@ -107,19 +104,19 @@ class CondorCluster(object):
 
     # An event type not listed in successEvents or ignoreeEvents is a failure.
     def WaitUntil( self, successEvents, ignoreEvents, timeout = 240, proc = 0, count = 0 ):
-        deadline = time.time() + timeout;
         Utils.TLog( "[cluster " + str(self._cluster_id) + "] Waiting for " + ",".join( [str(x) for x in successEvents] ) )
 
         successes = 0
         self._memory = EventMemory()
-        for event in self._jel.follow( int(timeout * 1000) ):
+        for event in self._jel.events( timeout ):
             # Record all events in case we need them later.
             self._memory.Append( event )
 
             if event.cluster == self._cluster_id and (count > 0 or event.proc == proc):
-                if( not self._callbacks.get( event.type ) is None ):
+                if( self._callbacks.get( event.type ) is not None ):
                     self._callbacks[ event.type ]()
 
+                #  This first clause should no longer be necessary.
                 if( event.type == JobEventType.NONE ):
                     Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of type " + str(event.type) + " (ignore)" )
                     pass
@@ -135,13 +132,8 @@ class CondorCluster(object):
                     Utils.TLog( "[cluster " + str(self._cluster_id) + "] Found relevant event of disallowed type " + str(event.type) + " (fail)" )
                     return False
 
-            difference = deadline - time.time();
-            if difference <= 0:
-                Utils.TLog( "[cluster " + str(self._cluster_id) + "] Timed out waiting for " + ",".join( [str(x) for x in successEvents] ) )
-                return False
-            else:
-                self._jel.setFollowTimeout( int(difference * 1000) )
-                continue
+        Utils.TLog( "[cluster " + str(self._cluster_id) + "] Timed out waiting for " + ",".join( [str(x) for x in successEvents] ) )
+
 
     #
     # The callback-based interface.  The first set respond to events.  We'll

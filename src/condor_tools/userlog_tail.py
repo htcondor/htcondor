@@ -8,8 +8,9 @@ import htcondor;
 # a simple accessor to add.
 
 def main( argv ):
-	jel = htcondor.JobEventLog( argv[1] )
-	if not jel.isInitialized():
+	try:
+		jel = htcondor.JobEventLog( argv[1] )
+	except IOError ioe:
 		print "Failed to find job event log {0}".format( argv[1] )
 		exit( 1 )
 

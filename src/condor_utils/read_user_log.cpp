@@ -137,7 +137,7 @@ ReadUserLog::ReadUserLog (const char * filename, bool read_only )
 	clear();
 
     if (!initialize(filename, false, false, read_only )) {
-		dprintf(D_ALWAYS, "Failed to open %s\n", filename);
+		dprintf(D_ALWAYS, "ReadUserLog: Failed to open %s\n", filename);
     }
 }
 
