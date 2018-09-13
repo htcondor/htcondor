@@ -3,7 +3,7 @@
 import os
 import sys
 
-from pytest.CondorJob import CondorJob
+from pytest.CondorCluster import CondorCluster
 from pytest.CondorTest import CondorTest
 from pytest.Globals import *
 from pytest.HTTPServer import HTTPServer
@@ -61,10 +61,6 @@ def HttpPartialUrlHandler(request):
 
 
 def main():
-
-    # Create a new test environment
-    test = CondorTest("cmd_curl_plugin_singlefile_partial")
-
     # Start a HTTP server, and register the /partial URL
     httpd = HTTPServer()
     httpd.Start()
@@ -72,7 +68,7 @@ def main():
     partial_url = "http://127.0.0.1:" + str(httpd._port) + "/partial"
 
     # Stand up a PersonalCondor
-    personal_handle = test.StartPersonalCondor()
+    personal_handle = CondorTest.StartPersonalCondor("cmd_curl_plugin_singlefile_partial")
     if personal_handle == -1:
         Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
         sys.exit(1)
@@ -86,7 +82,7 @@ def main():
         "transfer_input_files":     partial_url,
         "should_transfer_files":    "YES"
     }
-    test_job = CondorJob(job_args)
+    test_job = CondorCluster(job_args)
 
     # Register handlers
     test_job.RegisterJobTerminated(SuccessCallback)
@@ -94,10 +90,11 @@ def main():
 
     # Submit the test job
     test_job.Submit()
-    result = test_job.WaitUntilJobTerminated()
-    Utils.TLog("Test returned result: " + str(result))
+    test_job.WaitUntilJobTerminated()
 
     # All done, sit and wait. Success/failure callbacks will exit the test.
+    Utils.TLog("Test continued unexpectedly while waiting for job to terminate.  Test failed.")
+    sys.exit(TEST_FAILURE)
 
 
 if __name__ == "__main__":

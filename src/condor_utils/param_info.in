@@ -4559,21 +4559,15 @@ description=Allow public input files for a job to be transferred via HTTP
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_ADDRESS]
-default=127.0.0.1:8080
+default=127.0.0.1:80
 type=string
 description=Web address (hostname + port) for HTTP public files
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_ROOT_DIR]
-default=$(LOCAL_DIR)/public_files
+default=/usr/share/nginx/html
 type=string
 description=Folder in the local filesystem for HTTP public file links to be served from.
-tags=file_transfer
-
-[HTTP_PUBLIC_FILES_ROOT_OWNER]
-default=apache
-type=string
-description=Owner of the user who owns the directory specified by HTTP_PUBLIC_FILES_ROOT_DIR
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_STALE_AGE]
@@ -5671,6 +5665,13 @@ description=Settings for HTCondor Central Manager
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
 @end
+
+[$ROLE.Checkpoint]
+friendly_name=Settings for HTCondor Checkpoint Server
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) CKPT_SERVER
+@end
+review=?
 
 # default security policy
 [$SECURITY.HOST_BASED]

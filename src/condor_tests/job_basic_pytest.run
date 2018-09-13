@@ -7,7 +7,7 @@ import sys
 # If your test just needs to have HTCondor running, you can use testreq/CONDOR_TESTREQ_CONFIG comment mechanism instead.
 # see job_late_materialize_py for an example of the testreq mechanism
 
-from pytest.CondorJob import CondorJob
+from pytest.CondorCluster import CondorCluster
 from pytest.CondorTest import CondorTest
 from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
@@ -27,17 +27,13 @@ def failure_callback():
 
 
 def main():
-
-    # Create a new test. If we don't specify a name, take the file name.
-    test = CondorTest("job_basic_pytest")
-
     # Stand up a PersonalCondor
-    personal_handle = test.StartPersonalCondor()
-    if personal_handle == -1:
+    personal_handle = CondorTest.StartPersonalCondor("job_basic_pytest")
+    if not personal_handle:
         Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
         sys.exit( TEST_FAILURE )
     else:
-        Utils.TLog("PersonalCondor environment started successfully with handle " + str(personal_handle))
+        Utils.TLog("PersonalCondor environment started successfully")
 
     # Setup a new test job
     job_args = {
@@ -47,7 +43,7 @@ def main():
         "log":          "job_basic_pytest.log",
         "arguments":    "\"Basic Python pytest submission, cluster $(cluster)\""
     }
-    test_job = CondorJob(job_args)
+    test_job = CondorCluster(job_args)
 
     # Register handlers
     test_job.RegisterSubmit(submit_callback)
@@ -60,8 +56,8 @@ def main():
         sys.exit( TEST_FAILURE )
     test_job.WaitUntilJobTerminated()
 
-    # Assume that PersonalCondor will shut down by itself if we don't explicitly call it?
-    test.End()
+    Utils.TLog("Test continued unexpectedly while waiting for job to terminate.  Test failed.")
+    sys.exit(TEST_FAILURE)
 
 
 if __name__ == "__main__":

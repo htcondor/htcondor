@@ -29,23 +29,31 @@
 #include "classad_wrapper.h"
 #include "JobEventLog.h"
 
+#include <time.h>
+
 JobEventLog::JobEventLog( const std::string & filename ) :
-	timeout( -1 ), following( false ), wful( filename ) { }
+  deadline( 0 ), wful( filename ) {
+	if(! wful.isInitialized()) {
+		THROW_EX( IOError, "JobEventLog not initialized.  Check the debug log, looking for ReadUserLog or FileModifiedTrigger.  (Or call htcondor.enable_debug() and try again.)" );
+	}
+}
 
 JobEventLog::~JobEventLog() { }
 
 boost::python::object
-JobEventLog::follow( boost::python::object & self ) {
+JobEventLog::events( boost::python::object & self, boost::python::object & deadline ) {
 	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
-	jel->following = true;
+	if( deadline.is_none() ) {
+		jel->deadline = 0;
+	} else {
+		boost::python::extract<int> deadlineExtractor( deadline );
+		if( deadlineExtractor.check() ) {
+			jel->deadline = time(NULL) + deadlineExtractor();
+		} else {
+			THROW_EX( RuntimeError, "deadline must be an integer" );
+		}
+	}
 	return self;
-}
-
-boost::python::object
-JobEventLog::follow_for( boost::python::object & self, int milliseconds ) {
-	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
-	jel->timeout = milliseconds;
-	return follow( self );
 }
 
 class JobEventLogGlobalLockInitializer {
@@ -70,7 +78,22 @@ JobEventLog::next() {
 
 	Py_BEGIN_ALLOW_THREADS
 	MODULE_LOCK_MUTEX_LOCK( & jobEventLogGlobalLock.mutex );
-	outcome = wful.readEvent( event, timeout, following );
+
+		if( deadline ) {
+			time_t now = time(NULL);
+
+			if( deadline <= now ) {
+				// If the deadline is now, or has passed, poll for an event.
+				outcome = wful.readEvent( event, 0, false );
+			} else {
+				// If the deadline has yet to pass, block until it does.
+				outcome = wful.readEvent( event, (deadline - now) * 1000, true );
+			}
+		} else {
+			// If there isn't a deadline, block forever.
+			outcome = wful.readEvent( event, -1, true );
+		}
+
 	MODULE_LOCK_MUTEX_UNLOCK( & jobEventLogGlobalLock.mutex );
 	Py_END_ALLOW_THREADS
 
@@ -81,13 +104,7 @@ JobEventLog::next() {
 		} break;
 
 		case ULOG_NO_EVENT:
-			if(! following) {
-				THROW_EX( StopIteration, "All events processed" );
-			} else {
-				// Then readEvent() timed out.
-				JobEvent * none = new JobEvent();
-				return boost::shared_ptr< JobEvent >( none );
-			}
+			THROW_EX( StopIteration, "All events processed" );
 		break;
 
 		case ULOG_RD_ERROR:
@@ -159,17 +176,10 @@ JobEvent::Py_GetAttr( const std::string & s ) {
 
 void export_event_log() {
 	// Could use some DocTest blocks too, probably.
-	boost::python::class_<JobEventLog, boost::noncopyable>( "JobEventLog", "Reads job event (user) logs.\n", boost::python::init<const std::string &>( "Create an instance of the JobEventLog class.  It will have an infinite timeout (-1) but will not be in following mode.\n:param filename: A file containing a job event (user) log." ) )
-		.def( "isInitialized", &JobEventLog::isInitialized, "Return true if ready for use.\n" )
-		.def( NEXT_FN, &JobEventLog::next, "Return the next JobEvent in the log, blocking if in follow mode for no longer than the timeout." )
-		.def( "follow", &JobEventLog::follow, "Set following mode and return self (which is its own iterator)." )
-		.def( "follow", &JobEventLog::follow_for, "Set following mode.  Set the timeout to the argument.  Return self (which is its own iterator)." )
-		.def( "__iter__", &JobEventLog::pass_through, "Return self (which is its own iterator)." )
-		.def( "setFollowTimeout", &JobEventLog::setFollowTimeout, "Set the timeout used in following mode." )
-		.def( "getFollowTimeout", &JobEventLog::getFollowTimeout, "Get the timeout used in following mode." )
-		.def( "isFollowing", &JobEventLog::isFollowing, "Return true iff the log is following mode." )
-		.def( "setFollowing", &JobEventLog::setFollowing, "Set following mode (to true)." )
-		.def( "unsetFollowing", &JobEventLog::unsetFollowing, "Unset following mode (set following mode to false)." )
+	boost::python::class_<JobEventLog, boost::noncopyable>( "JobEventLog", "Reads job event (user) logs.\n", boost::python::init<const std::string &>( "Create an instance of the JobEventLog class.\n:param filename: A file containing a job event (user) log." ) )
+		.def( NEXT_FN, &JobEventLog::next, "Return the next JobEvent in the log, blocking until the deadline (if any)." )
+		.def( "events", &JobEventLog::events, boost::python::args("deadline"), "Return self (which is its own iterator).\n:param deadline After how many seconds from now should the iterator stop waiting for new events?  If None, wait forever.  If 0, never wait." )
+		.def( "__iter__", &JobEventLog::iter, "Return self (which is its own iterator)." )
 	;
 
 	// Allows conversion of JobEventLog instances to Python objects.

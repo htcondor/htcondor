@@ -4,7 +4,7 @@ import htcondor
 import os
 import sys
 
-from pytest.CondorJob import CondorJob
+from pytest.CondorCluster import CondorCluster
 from pytest.CondorTest import CondorTest
 from pytest.Globals import *
 from pytest.HTTPServer import HTTPServer
@@ -34,14 +34,11 @@ def HttpServerErrorUrlHandler(request):
 
 
 def main():
-
-    # Create a new test environment
     test_params = {
         "ENABLE_MULTIFILE_TRANSFER_PLUGINS":    "true",
         "FILETRANSFER_PLUGINS":                 "$(LIBEXEC)/multifile_curl_plugin",
         "STARTER_LOG_NAME_APPEND":              "false"
     }
-    test = CondorTest("cmd_curl_plugin_multifile_failure", test_params)
 
     # Start a HTTP server
     httpd = HTTPServer()
@@ -58,12 +55,12 @@ def main():
     file3_url = "http://127.0.0.1:" + str(httpd._port) + "/file3"
 
     # Stand up a PersonalCondor
-    personal_handle = test.StartPersonalCondor()
-    if personal_handle == -1:
+    personal_handle = CondorTest.StartPersonalCondor("cmd_curl_plugin_multifile_failure", test_params)
+    if not personal_handle:
         Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
         sys.exit(1)
     else:
-        Utils.TLog("PersonalCondor environment started successfully with handle " + str(personal_handle))
+        Utils.TLog("PersonalCondor environment started successfully")
 
     # Setup a new test job
     job_args = {
@@ -73,7 +70,7 @@ def main():
         "transfer_input_files":     file1_url + ", " + file2_url + ", " + file3_url,
         "should_transfer_files":    "YES"
     }
-    test_job = CondorJob(job_args)
+    test_job = CondorCluster(job_args)
 
     # Register success and failure handlers.
     test_job.RegisterJobTerminated(SuccessCallback)
@@ -84,10 +81,8 @@ def main():
     job_cluster_id = test_job._cluster_id
     test_job.WaitUntilJobHeld()
 
-    # If the success callback did not trigger, then so far so good.
-    # Now we need to make sure none of the files actually downloaded.
-
-
+    Utils.TLog("Test continued unexpectedly while waiting for job to go on hold. Test failed.")
+    sys.exit(TEST_FAILURE)
 
 if __name__ == "__main__":
     main()

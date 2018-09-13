@@ -138,6 +138,7 @@
 #define ATTR_CURRENT_RANK  "CurrentRank"
 #define ATTR_CURRENT_STATUS_UNKNOWN  "CurrentStatusUnknown"
 #define ATTR_CURRENT_TIME  "CurrentTime"
+#define ATTR_DAEMON_LAST_RECONFIG_TIME  "DaemonLastReconfigTime"
 #define ATTR_DAEMON_START_TIME  "DaemonStartTime"
 #define ATTR_DAEMON_SHUTDOWN  "DaemonShutdown"
 #define ATTR_DAEMON_SHUTDOWN_FAST  "DaemonShutdownFast"

@@ -55,35 +55,16 @@ class JobEventLog {
 		JobEventLog( const std::string & filename );
 		virtual ~JobEventLog();
 
-		bool isInitialized() { return wful.isInitialized(); }
-
 		boost::shared_ptr< JobEvent > next();
 
-		// We should be able to set the return type policy for follow()
-		// and follow_for() in the .def() call, but none of them actually
-		// work, so we do things by hand, instead.
-
-		// This returns this object after setting it into follow mode.
-		static boost::python::object follow( boost::python::object & self );
-
-		// As follow(), but also sets the follow timeout.
-		static boost::python::object follow_for( boost::python::object & self,
-			int milliseconds );
+		static boost::python::object events( boost::python::object & self, boost::python::object & deadline );
 
 		// This object is its own iterator.  boost::python::object is apparently
 		// intrinsically a reference to a Python object, so the copy here isn't.
-		inline static boost::python::object pass_through( const boost::python::object & o ) { return o; };
-
-		void setFollowTimeout( int milliseconds ) { timeout = milliseconds; };
-		int getFollowTimeout() const { return timeout; }
-
-		bool isFollowing() const { return following; }
-		void setFollowing() { following = true; }
-		void unsetFollowing() { following = false; }
+		inline static boost::python::object iter( const boost::python::object & o ) { return o; }
 
 	private:
-		int timeout;
-		bool following;
+		time_t deadline;
 		WaitForUserLog wful;
 
 		JobEventLog( const JobEventLog & jel );
