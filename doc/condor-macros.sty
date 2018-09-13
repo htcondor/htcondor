@@ -48,8 +48,13 @@
 \newcommand{\ShortExpr}[1]{\mbox{\texttt{#1}}}       % A pithy config file expression
 \newcommand{\Expr}[1]{\mbox{\texttt{#1}}}            % Config file expression
 
+\newcommand{\PyBindNI}[1]{\texttt{#1}}
+\newcommand{\PyBind}[1]{\texttt{#1}\index{#1 pybind@\texttt{#1} (Python binding)}\index{Python binding!\texttt{#1}}}
+
 \newcommand{\MacroNI}[1]{\texttt{#1}}		% Config file macro, NO index
-\newcommand{\Macro}[1]{\texttt{#1}\index{#1 macro@\texttt{#1} macro}\index{configuration macro!\texttt{#1}}}		% Config file macro and index
+\newcommand{\Macro}[1]{\texttt{#1}
+\index{#1 macro@\texttt{#1} macro}
+\index{configuration macro!\texttt{#1}}}		% Config file macro and index
 \newcommand{\MacroIndex}[1]{\index{#1 macro@\texttt{#1} macro}\index{configuration macro!\texttt{#1}}}		% index only of config file macro
 \newcommand{\MacroB}[1]{\texttt{#1}\index{configuration macro!\texttt{#1}}}		% bracketted Config file macro and index
 
