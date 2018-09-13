@@ -95,8 +95,7 @@ ParallelProc::addEnvVars()
 	sprintf(buf, "%d", Node);
 	env.SetEnv("_CONDOR_PROCNO", buf);
 
-
-		// And put the total number of nodes into CONDOR_NPROC
+		// Put the total number of nodes into CONDOR_NPROC
 	int machine_count;
 	if ( JobAd->LookupInteger( ATTR_CURRENT_HOSTS, machine_count ) !=  1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
@@ -106,6 +105,17 @@ ParallelProc::addEnvVars()
 
 	sprintf(buf, "%d", machine_count);
 	env.SetEnv("_CONDOR_NPROCS", buf);
+
+		// And put the number of CPUs into CONDOR_NCPUS
+	int cpu_count;
+	if ( JobAd->LookupInteger( ATTR_REQUEST_CPUS, cpu_count ) !=  1 ) {
+		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
+				 ATTR_REQUEST_CPUS);
+		return 0;
+	}
+
+	sprintf(buf, "%d", cpu_count);
+	env.SetEnv("_CONDOR_NCPUS", buf);
 
 		// Now stick the condor bin directory in front of the path,
 		// so user scripts can call condor_config_val
