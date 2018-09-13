@@ -24,6 +24,7 @@
 #include "read_user_log.h"
 #include "file_modified_trigger.h"
 #include "wait_for_user_log.h"
+#include "utc_time.h"
 
 WaitForUserLog::WaitForUserLog( const std::string & f ) :
 	filename( f ), reader( f.c_str() ), trigger( f ) { };
@@ -40,6 +41,7 @@ WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
 		return ULOG_INVALID;
 	}
 
+	struct timeval then; condor_gettimestamp( then );
 	ULogEventOutcome outcome = reader.readEvent( event );
 	if( outcome != ULOG_NO_EVENT ) {
 		return outcome;
@@ -52,8 +54,17 @@ WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
 				return ULOG_INVALID;
 			case  0:
 				return ULOG_NO_EVENT;
-			case  1:
-				return reader.readEvent( event );
+			case  1: {
+				// If the job event log event was not written atomically, it's
+				// possible for reader.readEvent() to return ULOG_NO_EVENT
+				// here, so if we just return that, we might break our promise
+				// about how long we waited for a new event.
+				struct timeval now; condor_gettimestamp( now );
+				int elapsedMilliseconds = timersub_usec( now, then ) / 1000;
+				ULogEventOutcome o = readEvent( event, timeout - elapsedMilliseconds, following );
+dprintf( D_ALWAYS, "%d = readEvent( , %d )\n", o, timeout - elapsedMilliseconds );
+				return o;
+				}
 			default:
 				EXCEPT( "Unknown return value from FileModifiedTrigger::wait(): %d, aborting.\n", result );
 		}
