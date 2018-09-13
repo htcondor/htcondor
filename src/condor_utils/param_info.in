@@ -4553,7 +4553,7 @@ type=bool
 description=Enable file transfer plugins that support multiple files as input
 
 [ENABLE_HTTP_PUBLIC_FILES]
-default=true
+default=false
 type=bool
 description=Allow public input files for a job to be transferred via HTTP
 tags=file_transfer
