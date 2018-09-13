@@ -5679,6 +5679,13 @@ default : @end
 @end
 review=?
 
+[$ROLE.Checkpoint]
+friendly_name=Settings for HTCondor Checkpoint Server
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) CKPT_SERVER
+@end
+review=?
+
 # default security policy
 [$SECURITY.HOST_BASED]
 description=Default (host based) Authorization policy based on IPs and DNS names
