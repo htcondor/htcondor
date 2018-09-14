@@ -1088,13 +1088,13 @@ Raise IOError if there's a problem initializing the underlying log reader.
 
 \\ \hline
 
-\texttt{events( deadline )}
+\texttt{events( stop_after )}
 
-Return self (an iterator), after setting the deadline.  If the
-\texttt{deadline} argument is \texttt{None}, there is no deadline and the
-iterator will block forever.  Otherwise, the deadline is the current time
-plus the \texttt{deadline} argument, and the iterator will block waiting
-for new events up until the deadline.
+Return an iterator (self), which will stop waiting for new events after
+\texttt{stop_after} seconds have passed.  The iterator may return an
+arbitrary number of events, including zero, before \texttt{stop_after} seconds
+have passed.  If the \texttt{stop_after} argument is \texttt{None},
+the iterator will never stop waiting for new events.
 
 \\ \hline
 \end{longtable}
@@ -1268,11 +1268,13 @@ The following is an example of using the \PyBind{JobEventLog} class:
 \footnotesize
 \begin{verbatim}
 import os
+import sys
 import htcondor
+from htcondor import JobEventType
 
 jel = htcondor.JobEventLog("logfile")
 # Stop waiting for events sixty seconds from now.
-for event in jel.events(deadline=+60):
+for event in jel.events(stop_after=60):
     if event.type == JobEventType.EXECUTE:
         break;
 else:
@@ -1282,9 +1284,14 @@ else:
 # Do something else.
 
 # Stop waiting for events ninety seconds from now.
-for event in jel.events(deadline=+90):
+for event in jel.events(stop_after=90):
     if event.type == JobEventType.JOB_TERMINATED:
         break;
+    elif event.type == JobEventType.IMAGE_SIZE:
+        pass
+    else:
+        print("Found unexpected event, aborting.")
+        sys.exit(-1)
 else:
     print("Failed to find terminated event before deadline, aborting.")
     sys.exit(-1)

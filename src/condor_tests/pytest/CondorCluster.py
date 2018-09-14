@@ -113,7 +113,7 @@ class CondorCluster(object):
             self._memory.Append( event )
 
             if event.cluster == self._cluster_id and (count > 0 or event.proc == proc):
-                if( self._callbacks.get( event.type ) is not None ):
+                if self._callbacks.get( event.type ) is not None:
                     self._callbacks[ event.type ]()
 
                 #  This first clause should no longer be necessary.

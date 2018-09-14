@@ -178,7 +178,7 @@ void export_event_log() {
 	// Could use some DocTest blocks too, probably.
 	boost::python::class_<JobEventLog, boost::noncopyable>( "JobEventLog", "Reads job event (user) logs.\n", boost::python::init<const std::string &>( "Create an instance of the JobEventLog class.\n:param filename: A file containing a job event (user) log." ) )
 		.def( NEXT_FN, &JobEventLog::next, "Return the next JobEvent in the log, blocking until the deadline (if any)." )
-		.def( "events", &JobEventLog::events, boost::python::args("deadline"), "Return self (which is its own iterator).\n:param deadline After how many seconds from now should the iterator stop waiting for new events?  If None, wait forever.  If 0, never wait." )
+		.def( "events", &JobEventLog::events, boost::python::args("stop_after"), "Return self (which is its own iterator).\n:param stop_after After how many seconds from now should the iterator stop waiting for new events?  If None, wait forever.  If 0, never wait." )
 		.def( "__iter__", &JobEventLog::iter, "Return self (which is its own iterator)." )
 	;
 
