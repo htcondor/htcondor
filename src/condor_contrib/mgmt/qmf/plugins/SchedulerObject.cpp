@@ -565,7 +565,7 @@ SchedulerObject::Suspend(std::string key, std::string &reason, std::string &text
 		return STATUS_USER + 0;
 	}
 
-	scheduler.enqueueActOnJobMyself(id,JA_SUSPEND_JOBS,true);
+	scheduler.enqueueActOnJobMyself(id,JA_SUSPEND_JOBS,true,true);
 
 	return STATUS_OK;
 }
@@ -580,7 +580,7 @@ SchedulerObject::Continue(std::string key, std::string &reason, std::string &tex
 		return STATUS_USER + 0;
 	}
 
-	scheduler.enqueueActOnJobMyself(id,JA_CONTINUE_JOBS,true);
+	scheduler.enqueueActOnJobMyself(id,JA_CONTINUE_JOBS,true,true);
 
 	return STATUS_OK;
 }
