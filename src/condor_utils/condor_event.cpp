@@ -81,8 +81,8 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
 	"ULOG_ATTRIBUTE_UPDATE",		// Job attribute updated
 	"ULOG_PRESKIP",					// PRE_SKIP event for DAGMan
-	"ULOG_FACTORY_SUBMIT",			// Factory submitted
-	"ULOG_FACTORY_REMOVE", 			// Factory removed
+	"ULOG_CLUSTER_SUBMIT",			// Cluster submitted
+	"ULOG_CLUSTER_REMOVE", 			// Cluster removed
 	"ULOG_FACTORY_PAUSED",			// Factory paused
 	"ULOG_FACTORY_RESUMED",			// Factory resumed
 };
@@ -212,10 +212,10 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_PRESKIP:
 		return new PreSkipEvent;
 
-	case ULOG_FACTORY_SUBMIT:
+	case ULOG_CLUSTER_SUBMIT:
 		return new FactorySubmitEvent;
 
-	case ULOG_FACTORY_REMOVE:
+	case ULOG_CLUSTER_REMOVE:
 		return new FactoryRemoveEvent;
 
 	case ULOG_FACTORY_PAUSED:
@@ -453,10 +453,10 @@ ULogEvent::toClassAd(void)
 	case ULOG_ATTRIBUTE_UPDATE:
 		SetMyTypeName(*myad, "AttributeUpdateEvent");
 		break;
-	case ULOG_FACTORY_SUBMIT:
+	case ULOG_CLUSTER_SUBMIT:
 		SetMyTypeName(*myad, "FactorySubmitEvent");
 		break;
-	case ULOG_FACTORY_REMOVE:
+	case ULOG_CLUSTER_REMOVE:
 		SetMyTypeName(*myad, "FactoryRemoveEvent");
 		break;
 	case ULOG_FACTORY_PAUSED:
@@ -5757,7 +5757,7 @@ FactorySubmitEvent::FactorySubmitEvent(void)
 	submitEventLogNotes = NULL;
 	submitEventUserNotes = NULL;
 	submitHost = NULL;
-	eventNumber = ULOG_FACTORY_SUBMIT;
+	eventNumber = ULOG_CLUSTER_SUBMIT;
 }
 
 FactorySubmitEvent::~FactorySubmitEvent(void)
@@ -5911,7 +5911,7 @@ FactorySubmitEvent::initFromClassAd(ClassAd* ad)
 FactoryRemoveEvent::FactoryRemoveEvent(void)
 	: next_proc_id(0), next_row(0), completion(Incomplete), notes(NULL)
 {
-	eventNumber = ULOG_FACTORY_REMOVE;
+	eventNumber = ULOG_CLUSTER_REMOVE;
 }
 
 FactoryRemoveEvent::~FactoryRemoveEvent(void)
@@ -5934,12 +5934,12 @@ static bool read_line_or_rewind(FILE *file, char *buf, int bufsiz) {
 	return true;
 }
 
-#define FACTORY_REMOVED_BANNER "Factory removed"
+#define CLUSTER_REMOVED_BANNER "Factory removed"
 
 bool
 FactoryRemoveEvent::formatBody( std::string &out )
 {
-	int retval = formatstr_cat (out, FACTORY_REMOVED_BANNER "\n");
+	int retval = formatstr_cat (out, CLUSTER_REMOVED_BANNER "\n");
 	if (retval < 0)
 		return false;
 	// show progress.

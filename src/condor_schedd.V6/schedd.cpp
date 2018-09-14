@@ -4578,7 +4578,7 @@ Scheduler::WriteFactorySubmitToUserLog( JobQueueCluster* cluster, bool do_fsync 
 
 	if (!status) {
 		dprintf( D_ALWAYS,
-				 "Unable to log ULOG_FACTORY_SUBMIT event for job %d.%d\n",
+				 "Unable to log ULOG_CLUSTER_SUBMIT event for job %d.%d\n",
 				 cluster->jid.cluster, cluster->jid.proc );
 		return false;
 	}
@@ -4616,7 +4616,7 @@ Scheduler::WriteFactoryRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 
 	if (!status) {
 		dprintf( D_ALWAYS,
-				 "Unable to log ULOG_FACTORY_REMOVE event for job %d.%d\n",
+				 "Unable to log ULOG_CLUSTER_REMOVE event for job %d.%d\n",
 				 cluster->jid.cluster, cluster->jid.proc );
 		return false;
 	}

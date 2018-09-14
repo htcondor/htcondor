@@ -96,7 +96,7 @@ def wait_for_cluster_removal(id, logfile, timeout):
 		if event.cluster != cluster:
 			continue
 
-		if event.type == JobEventType.FACTORY_REMOVE:
+		if event.type == JobEventType.CLUSTER_REMOVE:
 			Utils.TLog("ulog: FactoryRemove({0})".format(cluster))
 			total_factories -= 1
 
@@ -107,7 +107,7 @@ def wait_for_cluster_removal(id, logfile, timeout):
 			print '\tfactory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1)
 			break
 
-		elif event.type == JobEventType.FACTORY_SUBMIT:
+		elif event.type == JobEventType.CLUSTER_SUBMIT:
 			Utils.TLog("ulog: FactorySubmit({0})".format(cluster))
 			total_factories += 1
 			continue
