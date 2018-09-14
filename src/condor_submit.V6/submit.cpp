@@ -85,7 +85,6 @@
 #include "vm_univ_utils.h"
 #include "condor_md.h"
 #include "my_popen.h"
-#include "condor_base64.h"
 #include "zkm_base64.h"
 
 #include <algorithm>
@@ -2554,7 +2553,7 @@ int SendJobCredential()
 			}
 
 			// immediately convert to base64
-			char* ut64 = condor_base64_encode(uber_ticket, bytes_read);
+			char* ut64 = zkm_base64_encode(uber_ticket, bytes_read);
 
 			// sanity check:  convert it back.
 			//unsigned char *zkmbuf = 0;
