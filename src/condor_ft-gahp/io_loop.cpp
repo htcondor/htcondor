@@ -28,7 +28,9 @@
 #include "globus_utils.h"
 #include "subsystem_info.h"
 #include "file_transfer.h"
-#include "openssl/sha.h"
+#ifdef HAVE_EXT_OPENSSL
+#include <openssl/sha.h>
+#endif
 #include "directory.h"
 #include "_unordered_map.h"
 #include "basename.h"
@@ -954,6 +956,7 @@ define_sandbox_path(std::string sid, std::string &path)
 	free(t_path);
 
 
+#ifdef HAVE_EXT_OPENSSL
 	// hash the id into ascii.  A subset of a SHA256 hash is fine here, because we use the actual
 	// sandbox id as part of the path, thus making it immune to collisions.
 	// we're only using it to keep filesystems free of directories that contain
@@ -983,6 +986,7 @@ define_sandbox_path(std::string sid, std::string &path)
 	path += c_hex_sha256[5];
 	path += c_hex_sha256[6];
 	path += c_hex_sha256[7];
+#endif // ifdef HAVE_EXT_OPENSSL
 	path += DIR_DELIM_CHAR;
 	path += sid;
 
