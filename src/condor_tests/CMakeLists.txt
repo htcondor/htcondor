@@ -241,9 +241,7 @@ if (BUILD_TESTING)
 		condor_pl_test(python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
 
 		# Tests that require the python bindings.
-		condor_pl_test(cmd_curl_plugin_singlefile_success "Successful curl_plugin single file download" "core;quick;full;quicknolink")
-		condor_pl_test(cmd_curl_plugin_singlefile_failure "Failed curl_plugin single file download" "core;quick;full;quicknolink")
-		condor_pl_test(cmd_curl_plugin_singlefile_partial "Successful curl_plugin single file download with partial retry" "core;quick;full;quicknolink")
+		condor_pl_test(cmd_curl_plugin "Testing various curl_plugin functions" "core;quick;full;quicknolink")
 		condor_pl_test(cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink")
     	condor_pl_test(cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink")
 		condor_pl_test(job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink")
