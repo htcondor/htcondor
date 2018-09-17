@@ -341,27 +341,23 @@ permission to start the container as root.
 Details of the \MacroNI{DOCKER} configuration variable are in
 section~\ref{param:Docker}.
 
-Docker may be installed as \Login{root} on a RedHat Linux machine these
-ordered steps.
+Docker must be installed as \Login{root} by following these steps
+on an Enterprise Linux machine.
 \begin{enumerate}
 \item
-Acquire and install the docker software:
-\begin{verbatim}
-  yum install docker-io
-\end{verbatim}
-Note that the \Prog{docker} package,
-which manages the window manager's dock,
- may need to be uninstalled,
-if it conflicts with this \Prog{docker-io} package.
+Acquire and install the docker-engine community edition by following the
+installations instructions from docker.com
+
 \item
 Set up the groups:
 \begin{verbatim}
-  useradd -G docker condor
+  usermod -aG docker condor
 \end{verbatim}
 \item
 Invoke the docker software:
 \begin{verbatim}
-  service docker start
+  systemctl start docker
+  systemctl enable docker
 \end{verbatim}
 \item
 Reconfigure the execute machine, such that it can set the machine ClassAd
