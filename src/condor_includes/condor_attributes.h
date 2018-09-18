@@ -619,7 +619,6 @@
 #define ATTR_STATE  "State"
 #define ATTR_STARTER_IP_ADDR  "StarterIpAddr"
 #define ATTR_STARTER_ABILITY_LIST  "StarterAbilityList"
-#define ATTR_STARTER_IGNORED_ATTRS  "StarterIgnoredAttributes"
 #define ATTR_STARTER_ULOG_FILE  "StarterUserLog"
 #define ATTR_STARTER_ULOG_USE_XML  "StarterUserLogUseXML"
 #define ATTR_STARTER_WAIT_FOR_DEBUG  "StarterWaitForDebug"
