@@ -2021,10 +2021,10 @@ int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & s
 	if (rval == 0) {
 		std::string remainder; // holds the fragment of a line that straddles buffers
 		const size_t cbbuf = 0x10000; // 64kbuffer
-		size_t cbread = 0;
+		int cbread = 0;
 		char buf[cbbuf];
 		while ((cbread = sock->get_bytes(buf, cbbuf)) > 0) {
-			size_t cbwrote = write(fd, buf, cbread);
+			int cbwrote = write(fd, buf, cbread);
 			if (cbwrote != cbread) {
 				terrno = errno;
 				dprintf(D_ALWAYS, "Failing remote SendMaterializeData %d because write to '%s' failed, errno = %d (%s)\n",
@@ -4418,7 +4418,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	char * encoded_value = simple_encode (cluster_id+proc_id, pwd);
-	int len = strlen(encoded_value);
+	int len = (int)strlen(encoded_value);
 	if (write (fd, encoded_value, len) != len) {
 		set_priv(old_priv);
 		free(encoded_value);
@@ -4994,7 +4994,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		JobQueueCluster *clusterad = NULL;
 
 		int counter = 0;
-		int ad_keys_size = new_ad_keys.size();
+		int ad_keys_size = (int)new_ad_keys.size();
 		std::list<std::string>::iterator it;
 		for( it = new_ad_keys.begin(); it != new_ad_keys.end(); it++ ) {
 			++counter;
@@ -5687,7 +5687,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						// convert to the new format
 						// First, we need to re-allocate attribute_value to a bigger
 						// buffer.
-					int old_size = strlen(attribute_value);
+					int old_size = (int)strlen(attribute_value);
 					void * pv = realloc(attribute_value, old_size 
 										+ 10);  // for the extra parenthesis
 					ASSERT(pv);
@@ -5872,7 +5872,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// skip any quotation marks around strings
 					if (*tvalue == '"') {
 						tvalue++;
-						int endquoteindex = strlen(tvalue) - 1;
+						int endquoteindex = (int)strlen(tvalue) - 1;
 						if ( endquoteindex >= 0 && 
 							 tvalue[endquoteindex] == '"' ) {
 								tvalue[endquoteindex] = '\0';
@@ -6863,7 +6863,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
 		strcpy(powner,NiceUserName);
 		strcat(powner,".");
-		int cch = strlen(powner);
+		int cch = (int)strlen(powner);
 		powner += cch;
 		cremain -= cch;
 	}

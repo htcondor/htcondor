@@ -128,7 +128,9 @@ int 	InteractiveSubmitFile = 0; /* true if using INTERACTIVE_SUBMIT_FILE */
 bool	verbose = false; // formerly: int Quiet = 1;
 bool	terse = false; // generate parsable output
 SetAttributeFlags_t setattrflags = 0; // flags to SetAttribute()
-bool	SubmitFromStdin = false;
+bool	CmdFileIsStdin = false;
+bool	NoCmdFileNeeded = false; // set if there is no need for a commmand file (i.e. -queue was specified on command line and at least 1 key=value pair)
+bool	GotCmdlineKeys = false; // key=value or -append specifed on the command line
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		DashDryRun = 0;
@@ -149,7 +151,6 @@ int		dash_remote=0;
 int		dash_factory=0;
 int		default_to_factory=0;
 int		create_local_factory_file=0; // create a copy of the submit digest in the current directory
-unsigned int submit_unique_id=1; // hack to make default_to_factory work in test suite for milestone 1 (8.7.1)
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
 #endif
@@ -641,7 +642,16 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "spool", 1)) {
 				dash_remote++;
 				DisableFileChecks = 1;
-			} else if (is_dash_arg_prefix(ptr[0], "factory", 1)) {
+			} else if (is_dash_arg_prefix(ptr[0], "file", 2)) {
+				if (!(--argc) || !(*(++ptr))) {
+					fprintf(stderr, "%s: -file requires another argument\n", MyName);
+					exit(1);
+				}
+				cmd_file = *ptr;
+			} else if (is_dash_arg_prefix(ptr[0], "factory", 2)) {
+				dash_factory++;
+				DisableFileChecks = 1;
+			} else if (is_dash_arg_prefix(ptr[0], "generator", 1)) {
 				dash_factory++;
 				DisableFileChecks = 1;
 			} else if (is_dash_arg_prefix(ptr[0], "address", 2)) {
@@ -703,6 +713,7 @@ main( int argc, const char *argv[] )
 					queueCommandLine = ptr[0];
 				} else {
 					extraLines.Append( *ptr );
+					GotCmdlineKeys = true;
 				}
 			} else if (is_dash_arg_prefix(ptr[0], "batch-name", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
@@ -849,6 +860,7 @@ main( int argc, const char *argv[] )
 				exit(1);
 			}
 			submit_hash.set_arg_variable(name.c_str(), value.c_str());
+			GotCmdlineKeys = true; // there is no need for a command file.
 		} else {
 			cmd_file = *ptr;
 		}
@@ -857,9 +869,15 @@ main( int argc, const char *argv[] )
 	// Have reading the submit file from stdin imply -verbose. This is
 	// for backward compatibility with HTCondor version 8.1.1 and earlier
 	// -terse can be used to override the backward compatable behavior.
-	SubmitFromStdin = cmd_file && ! strcmp(cmd_file, "-");
-	if (SubmitFromStdin && ! terse) {
+	CmdFileIsStdin = cmd_file && (MATCH == strcmp(cmd_file, "-"));
+	if (CmdFileIsStdin && ! terse) {
 		verbose = true;
+	}
+
+	// if we got both a queue statement and at least one key=value pair on the command line
+	// we don't need a submit file at all.
+	if (GotCmdlineKeys && ! queueCommandLine.empty()) {
+		NoCmdFileNeeded = true;
 	}
 
 	// ensure I have a known transfer method
@@ -1005,7 +1023,7 @@ main( int argc, const char *argv[] )
 	}
 
 	// open submit file
-	if ( ! cmd_file || SubmitFromStdin) {
+	if (CmdFileIsStdin || ( ! cmd_file && ! NoCmdFileNeeded)) {
 		// no file specified, read from stdin
 		fp = stdin;
 		submit_hash.insert_source("<stdin>", FileMacroSource);
@@ -1017,7 +1035,6 @@ main( int argc, const char *argv[] )
 		}
 		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion
 		submit_hash.insert_submit_filename(cmd_file, FileMacroSource);
-		submit_unique_id = hashFunction(cmd_file); // hack to make default_to_factory work in test suite
 	}
 
 	// in case things go awry ...
@@ -1031,7 +1048,7 @@ main( int argc, const char *argv[] )
 	submit_hash.init_base_ad(get_submit_time(), owner);
 
 	if ( !DumpClassAdToFile ) {
-		if ( ! SubmitFromStdin && ! terse) {
+		if ( !CmdFileIsStdin && ! terse) {
 			fprintf(stdout, DashDryRun ? "Dry-Run job(s)" : "Submitting job(s)");
 		}
 	} else if ( ! DumpFileIsStdout ) {
@@ -1066,11 +1083,11 @@ main( int argc, const char *argv[] )
 
 	if( !GotQueueCommand ) {
 		fprintf(stderr, "\nERROR: \"%s\" doesn't contain any \"queue\" commands -- no jobs queued\n",
-				SubmitFromStdin ? "(stdin)" : cmd_file);
+				CmdFileIsStdin ? "(stdin)" : cmd_file);
 		exit( 1 );
 	} else if ( ! GotNonEmptyQueueCommand && ! terse) {
 		fprintf(stderr, "\nWARNING: \"%s\" has only empty \"queue\" commands -- no jobs queued\n",
-				SubmitFromStdin ? "(stdin)" : cmd_file);
+				CmdFileIsStdin ? "(stdin)" : cmd_file);
 	}
 
 	// we can't disconnect from something if we haven't connected to it: since
@@ -1092,7 +1109,7 @@ main( int argc, const char *argv[] )
 		}
 	}
 
-	if ( ! SubmitFromStdin && ! terse) {
+	if ( ! CmdFileIsStdin && ! terse) {
 		fprintf(stdout, "\n");
 	}
 
@@ -1866,14 +1883,9 @@ int submit_jobs (
 			MyString factory_path;
 			if (create_local_factory_file) {
 				MyString factory_fn;
-				//PRAGMA_REMIND("tj: remove this hack..")
-				//if (default_to_factory) { // hack to make the test suite work.
-				//	factory_fn.formatstr("condor_submit.%d.%u.digest", ClusterId, submit_unique_id);
-				//} else {
-					factory_fn.formatstr("condor_submit.%d.digest", ClusterId);
-				//}
+				factory_fn.formatstr("condor_submit.%d.digest", ClusterId);
 				factory_path = submit_hash.full_path(factory_fn.c_str(), false);
-				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), submit_digest.size(), 0644);
+				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), (int)submit_digest.size(), 0644);
 				if (rval < 0)
 					break;
 			}
@@ -2543,7 +2555,7 @@ int SendJobCredential()
 		} else {
 			uber_ticket = (unsigned char*)malloc(65536);
 			ASSERT(uber_ticket);
-			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
+			size_t bytes_read = fread(uber_ticket, 1, 65536, uber_file);
 			// what constitutes failure?
 			my_pclose(uber_file);
 
@@ -2561,14 +2573,14 @@ int SendJobCredential()
 			unsigned char* zkmbuf = NULL;
 			zkm_base64_decode(ut64, &zkmbuf, &zkmlen);
 
-			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", bytes_read, zkmlen);
+			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", (int)bytes_read, zkmlen);
 			dprintf(D_FULLDEBUG, "CREDMON: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
 
 			char preview[64];
 			strncpy(preview,ut64, 63);
 			preview[63]=0;
 
-			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", bytes_read, preview);
+			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", (int)bytes_read, preview);
 
 			// setup the username to query
 			char userdom[256];
