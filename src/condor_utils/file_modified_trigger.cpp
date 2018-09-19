@@ -203,9 +203,11 @@ FileModifiedTrigger::wait( int timeout ) {
 		else {
 			// Sleep until the deadline, but not for more than 100 ms.
 			int duration;
-			if( now.tv_sec == deadline.tv_sec ) {
+			if( deadline.tv_sec == now.tv_sec ) {
 				duration = deadline.tv_usec - now.tv_usec;
-			} else if( now.tv_sec + 1 == deadline.tv_sec ) {
+			} else { /* deadline.tv_sec > now.tv_sec */
+				// Since we're capping at 100ms, don't bother with the
+				// multiplication for a multi-second duration.
 				duration = 1000000 + (deadline.tv_usec - now.tv_usec);
 			}
 			if( duration > 100000 ) { duration = 100000; }
