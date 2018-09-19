@@ -711,9 +711,12 @@ static void get_process_table(TABULAR_MAP & table)
 #ifdef WIN32
 	cmdargs.AppendArg("tasklist");
 	//cmdargs.AppendArg("/V");
-#else
+#elif defined(LINUX)
 	cmdargs.AppendArg("ps");
 	cmdargs.AppendArg("-eF");
+#else
+	cmdargs.AppendArg("ps");
+	cmdargs.AppendArg("-ef");
 #endif
 
 	FILE * stream = my_popen(cmdargs, "r", 0);
