@@ -3204,6 +3204,11 @@ default=5
 type=int
 tags=schedd
 
+[MAX_PENDING_STARTD_CONTACTS]
+default=0
+type=int
+range=0,
+
 [GRIDMANAGER_PER_JOB]
 default=false
 type=bool
@@ -3894,6 +3899,10 @@ type=double
 default=86400
 range=0,
 type=int
+
+[DELEGATE_FULL_JOB_GSI_CREDENTIALS]
+default=false
+type=bool
 
 [STATISTICS_WINDOW_QUANTUM]
 default=240
