@@ -2396,6 +2396,7 @@ usage()
 {
 	fprintf( stderr, "Usage: %s [options] [<attrib>=<value>] [- | <submit-file>]\n", MyName );
 	fprintf( stderr, "    [options] are\n" );
+	fprintf( stderr, "\t-file <submit-file>\tRead Submit commands from <submit-file>\n");
 	fprintf( stderr, "\t-terse  \t\tDisplay terse output, jobid ranges only\n" );
 	fprintf( stderr, "\t-verbose\t\tDisplay verbose output, jobid and full job ClassAd\n" );
 	fprintf( stderr, "\t-debug  \t\tDisplay debugging output\n" );
@@ -2431,8 +2432,8 @@ usage()
 
 	fprintf( stderr, "\t<attrib>=<value>\tSet <attrib>=<value> before reading the submit file.\n" );
 
-	fprintf( stderr, "\n    If <submit-file> is omitted or is -, input is read from stdin.\n"
-					 "    Use of - implies verbose output unless -terse is specified\n");
+	fprintf( stderr, "\n    If <submit-file> is omitted or is -, and a -queue is not provided, submit commands\n"
+					"     are read from stdin. Use of - implies verbose output unless -terse is specified\n");
 }
 
 

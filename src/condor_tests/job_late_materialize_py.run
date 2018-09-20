@@ -69,10 +69,14 @@ peak_materialized = 0
 peak_running = 0
 peak_idle = 0
 
+def cluster_removal(event):
+	if (event.type == JobEventType.CLUSTER_REMOVE): return 1
+	return 0
+
 #
 # The globals are the reason we aren't doing cluster.WaitForRemoval().
 #
-def wait_for_cluster_removal(id, logfile, timeout):
+def wait_for_event(id, logfile, timeout, func):
 	global total_factories
 	global total_materialized
 	global total_exited
@@ -97,7 +101,7 @@ def wait_for_cluster_removal(id, logfile, timeout):
 			continue
 
 		if event.type == JobEventType.CLUSTER_REMOVE:
-			Utils.TLog("ulog: FactoryRemove({0})".format(cluster))
+			Utils.TLog("ulog: FactoryRemove({0})".format(event.cluster))
 			total_factories -= 1
 
 			print '\t          now peak total'
@@ -105,12 +109,12 @@ def wait_for_cluster_removal(id, logfile, timeout):
 			print '\tidle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized)
 			print '\tpresent  {0:4d} {1:4d} {2:5d}'.format(num_materialized, peak_materialized, total_materialized)
 			print '\tfactory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1)
-			break
+			#break
 
 		elif event.type == JobEventType.CLUSTER_SUBMIT:
-			Utils.TLog("ulog: FactorySubmit({0})".format(cluster))
+			Utils.TLog("ulog: FactorySubmit({0})".format(event.cluster))
 			total_factories += 1
-			continue
+			#continue
 
 		elif event.type == JobEventType.SUBMIT:
 			total_materialized += 1
@@ -118,30 +122,34 @@ def wait_for_cluster_removal(id, logfile, timeout):
 			num_idle += 1
 			if num_materialized > peak_materialized : peak_materialized = num_materialized
 			if num_idle > peak_idle : peak_idle = num_idle
-			Utils.TLog("ulog: jobSubmit() idle={0}({1}), materialized={2}({3})".format(num_idle, peak_idle, num_materialized, peak_materialized))
-			continue
+			Utils.TLog("ulog: {0}.{1} jobSubmit() idle={2}({3}), materialized={4}({5})".format(event.cluster, event.proc, num_idle, peak_idle, num_materialized, peak_materialized))
+			#continue
 
 		elif event.type == JobEventType.EXECUTE:
 			total_running += 1
 			num_running += 1
 			num_idle -= 1
 			if num_running > peak_running : peak_running = num_running
-			Utils.TLog("ulog: jobExec() running={0}({1})".format(num_running, peak_running))
-			continue
+			Utils.TLog("ulog: {0}.{1} jobExec() running={2}({3})".format(event.cluster, event.proc, num_running, peak_running))
+			#continue
 
 		elif event.type == JobEventType.JOB_TERMINATED:
 			total_exited += 1
 			num_running -= 1
 			if event.TerminatedNormally : num_materialized -= 1
-			Utils.TLog("ulog: jobTerm({0}) run={1}({2}), materialized={3}({4})".format(event.TerminatedNormally, num_running, peak_running, num_materialized, peak_materialized))
-			continue
+			Utils.TLog("ulog: {0}.{1} jobTerm({2}) run={3}({4}), materialized={5}({6})".format(event.cluster, event.proc, event.TerminatedNormally, num_running, peak_running, num_materialized, peak_materialized))
+			#continue
 
 		elif event.type in [ JobEventType.IMAGE_SIZE ]:
-			continue
+			#continue
+			pass
 
 		else:
-			Utils.TLog("ulog: found unexpected event of type {0}, failing".format( str(event.type) ) );
+			Utils.TLog("ulog: {0}.{1} found unexpected event of type {2}, failing".format( str(event.cluster, event.proc, event.type) ) );
 			return 0
+
+		if (func(event)) : break
+
 	else:
 		return 1
 
@@ -149,7 +157,7 @@ def wait_for_cluster_removal(id, logfile, timeout):
 # end wait_for_cluster_removal
 
 Utils.TLog("wait up to 5 min for jobs in cluster %d to materialize, run and exit" % cluster)
-timed_out = wait_for_cluster_removal(cluster, logfile, 5*60)
+timed_out = wait_for_event(cluster, logfile, 5*60, cluster_removal)
 if timed_out :
 	Utils.TLog("Timed out waiting for cluster remove event")
 	exit(1)
@@ -203,7 +211,7 @@ peak_running = 0
 peak_idle = 0
 
 Utils.TLog("wait up to 5 min for jobs in cluster %d to materialize, run and exit" % cluster)
-timed_out = wait_for_cluster_removal(cluster, logfile, 5*60)
+timed_out = wait_for_event(cluster, logfile, 5*60, cluster_removal)
 if timed_out:
 	Utils.TLog("Timed out waiting for cluster remove event")
 	exit(1)
@@ -253,6 +261,13 @@ items = [
 	{'item':'F', 'MY.Bar':'"f"', 'MY.Baz':'6'},
 ]
 num_items = 6
+sub['hold'] = 'true'
+
+def all_materialized(event):
+	global num_items
+	global total_materialized
+	if (event.type == JobEventType.SUBMIT) and (num_items == total_materialized) : return 1
+	return 0
 
 with schedd.transaction() as txn:
 	subres = sub.queue_with_itemdata(txn, 1, iter(items))
@@ -274,18 +289,15 @@ peak_materialized = 0
 peak_running = 0
 peak_idle = 0
 
-Utils.TLog("wait up to 5 min for jobs in cluster %d to materialize, run and exit" % cluster)
-timed_out = wait_for_cluster_removal(cluster, logfile, 5*60)
+Utils.TLog("wait up to 5 min for jobs in cluster %d to materialize" % cluster)
+timed_out = wait_for_event(cluster, logfile, 5*60, all_materialized)
 if timed_out:
-	Utils.TLog("Timed out waiting for cluster remove event")
+	Utils.TLog("Timed out waiting for all jobs to materialize")
 	exit(1)
 
 Utils.TLog("cluster %d completed, checking results:" % cluster)
 if total_materialized != num_items:
 	Utils.Log("FAILURE: total_materialized({0}) != {1}".format(total_materialized, num_items))
-	retval = 1
-elif total_exited != num_items:
-	Utils.Log("FAILURE: total_exited({0}) != {1}".format(total_exited, num_items))
 	retval = 1
 else:
 	Utils.Log("OK: total checks for cluster %d passed" % cluster)
@@ -293,10 +305,10 @@ else:
 # count jobs for this cluster in the history file
 # and check to see that the Foo attribute is correct for each
 #
-Utils.TLog("Check history file for jobs of cluster %d:" % cluster)
+Utils.TLog("Check queue for jobs of cluster %d:" % cluster)
 num_ads = 0
 num_ok = 0
-ads = schedd.history("ClusterId==%d" % cluster, ['ProcId', 'Foo', 'Bar', 'Baz'])
+ads = schedd.query("ClusterId==%d" % cluster, ['ProcId', 'JobStatus', 'Foo', 'Bar', 'Baz'])
 for ad in ads:
 	num_ads += 1
 	item = items[ad['ProcId']]
@@ -313,7 +325,7 @@ for ad in ads:
 		num_ok += 1
 
 if num_ads != num_items:
-	Utils.TLog("FAILURE: num_ads({0}) != num_items({1}) from history query".format(num_ads, num_items))
+	Utils.TLog("FAILURE: num_ads({0}) != num_items({1}) from schedd query".format(num_ads, num_items))
 	retval = 1
 elif num_ok == num_ads:
 	Utils.TLog("OK: item checks for cluster %d passed" % cluster)
