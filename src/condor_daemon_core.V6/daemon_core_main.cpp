@@ -46,7 +46,6 @@
 #endif
 
 #include "file_sql.h"
-#include "file_xml.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
@@ -102,8 +101,6 @@ time_t daemon_stop_time;
 
 /* FILESQL object */
 extern FILESQL *FILEObj;
-/* FILEXML object */
-extern FILEXML *XMLObj;
 
 #ifdef WIN32
 int line_where_service_stopped = 0;
@@ -259,10 +256,6 @@ DC_Exit( int status, const char *shutdown_program )
 	if(FILEObj) {
 		delete FILEObj;
 		FILEObj = NULL;
-	}
-	if(XMLObj) {
-		delete XMLObj;
-		XMLObj = NULL;
 	}
 
 #ifdef LINUX
@@ -2746,8 +2739,6 @@ int dc_main( int argc, char** argv )
 	bool use_sql_log = param_boolean( "QUILL_USE_SQL_LOG", false );
 
 	FILEObj = FILESQL::createInstance(use_sql_log); 
-    // create an xml log object
-    XMLObj = FILEXML::createInstanceXML();
 
 	InstallOutOfMemoryHandler();
 
