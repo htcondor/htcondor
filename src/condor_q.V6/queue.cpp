@@ -84,8 +84,8 @@ static bool render_job_status_char(std::string & result, ClassAd*ad, Formatter &
 
 // functions to fetch job ads and print them out
 //
-static bool show_file_queue(const char* jobads, const char* userlog);
-static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath);
+static bool show_file_queue(CondorClassAdListWriter* writer, const char* jobads, const char* userlog);
+static bool show_schedd_queue(CondorClassAdListWriter* writer, const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath);
 static int dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess);
 
 static void initOutputMask(AttrListPrintMask & pqmask, int qdo_mode, bool wide_mode);
@@ -549,10 +549,12 @@ int main (int argc, const char **argv)
 			setupUserpriosForAnalysis(pool, userprios_file);
 		}
 	}
-
+	
+	CondorClassAdListWriter writer(dash_long_format);
+	
 	// if fetching jobads from a file or userlog, we don't need to init any daemon or database communication
 	if ((jobads_file != NULL || userlog_file != NULL)) {
-		retval = show_file_queue(jobads_file, userlog_file);
+		retval = show_file_queue(&writer, jobads_file, userlog_file);
 		exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 	}
 
@@ -586,7 +588,7 @@ int main (int argc, const char **argv)
 				}
 			}
 
-			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
+			retval = show_schedd_queue(&writer, scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
 			/* Hopefully I got the queue from the schedd... */
 			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 		} 
@@ -701,11 +703,15 @@ int main (int argc, const char **argv)
 		} else {
 			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 		}
-		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
+		retval = show_schedd_queue(&writer, scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
 	}
 
 	// close list
 	scheddList.Close();
+
+	if(dash_long_format == ClassAdFileParseType::Parse_json) {
+		writer.writeFooter(stdout, always_write_xml_footer);
+	}
 
 	if( first ) {
 		if( global ) {
@@ -4171,7 +4177,7 @@ bool print_jobs_analysis (
 // this function handles -analyze, -streaming, -dag and all normal condor_q output
 // when the source is a SCHEDD.
 static bool
-show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
+show_schedd_queue(CondorClassAdListWriter* writer, const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
 {
 	// initialize counters
 	app.sumy.clear_counters();
@@ -4196,8 +4202,6 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	IdToClassaAdMap ads;
 	CondorError errstack;
 	ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
-
-	CondorClassAdListWriter writer(dash_long_format);
 
 	// choose a processing option for jobad's as the come off the wire.
 	// for -long -json -xml and -analyze, we need to save off the ad in a ClassAdList
@@ -4285,9 +4289,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// if we streamed, then the results have already been printed out.
 	// we just need to write the footer/summary
 	if (g_stream_results) {
-		print_full_footer(summary_ad, &writer);
+		print_full_footer(summary_ad, writer);
 		if (dash_long) { 
-			writer.writeFooter(stdout, always_write_xml_footer);
+			writer->writeFooter(stdout, always_write_xml_footer);
 		}
 		return true;
 	}
@@ -4318,12 +4322,15 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			std::string buf;
 			for (auto it = ads.begin(); it != ads.end(); ++it) {
 				buf.clear();
-				append_long_ad(buf, writer, *it->second);
+				append_long_ad(buf, *writer, *it->second);
 				if ( ! buf.empty()) { fputs(buf.c_str(), stdout); }
 			}
 		}
-		print_full_footer(summary_ad, &writer);
-		writer.writeFooter(stdout, always_write_xml_footer);
+		print_full_footer(summary_ad, writer);
+		// Don't print the footer in JSON mode, that will be done elsewhere.
+		if(dash_long_format != ClassAdFileParseType::Parse_json) {
+			writer->writeFooter(stdout, always_write_xml_footer);
+		}
 		return true;
 	}
 
@@ -4361,7 +4368,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// a global query, so that the user can see that we did something.
 	//
 	if ( ! global || cResults > 0 || !empty_summary) {
-		print_full_footer(summary_ad, &writer);
+		print_full_footer(summary_ad, writer);
 	}
 
 	return true;
@@ -4482,7 +4489,7 @@ bool iter_ads_from_file(const char *filename,
 // Read ads from a file, either in classad format, or userlog format.
 //
 static bool
-show_file_queue(const char* jobads, const char* userlog)
+show_file_queue(CondorClassAdListWriter* writer, const char* jobads, const char* userlog)
 {
 	// initialize counters
 	app.sumy.clear_counters();
@@ -4557,16 +4564,14 @@ show_file_queue(const char* jobads, const char* userlog)
 		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
 	}
 
-	CondorClassAdListWriter writer(dash_long_format);
-
-		// display the jobs from this submittor
+	// display the jobs from this submittor
 	if( cJobs != 0 || !global ) {
 
 		app.sumy.clear_counters();
 		for (auto it = jobs.begin(); it != jobs.end(); ++it) {
 			ClassAd * job = it->second.get();
 			if (dash_long) {
-				streaming_print_job(&writer, job);
+				streaming_print_job(writer, job);
 			} else {
 				process_job_to_rod_per_ad_map(&rod_result_map, job);
 			}
@@ -4577,8 +4582,8 @@ show_file_queue(const char* jobads, const char* userlog)
 		app.sumy.publish(*summary_ad, NULL);
 
 		if (dash_long) {
-			print_full_footer(summary_ad, &writer);
-			writer.writeFooter(stdout, always_write_xml_footer);
+			print_full_footer(summary_ad, writer);
+			writer->writeFooter(stdout, always_write_xml_footer);
 			return true;
 		}
 
@@ -4596,9 +4601,9 @@ show_file_queue(const char* jobads, const char* userlog)
 		print_results(rod_result_map, rod_sort_key_map, dash_dag);
 		clear_results(rod_result_map, rod_sort_key_map);
 
-		print_full_footer(summary_ad, &writer);
+		print_full_footer(summary_ad, writer);
 	}
-	if (dash_long) { writer.writeFooter(stdout, always_write_xml_footer); }
+	if (dash_long) { writer->writeFooter(stdout, always_write_xml_footer); }
 
 	return true;
 }
