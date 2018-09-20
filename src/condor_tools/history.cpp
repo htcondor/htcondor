@@ -212,6 +212,8 @@ main(int argc, char* argv[])
   char* JobHistoryFileName=NULL;
   const char * pcolon=NULL;
 
+  bool hasSince = false;
+  bool hasForwards = false;
 
   GenericQuery constraint; // used to build a complex constraint.
   ExprTree *constraintExpr=NULL;
@@ -253,10 +255,16 @@ main(int argc, char* argv[])
 	// must be at least -forw to avoid conflict with -f (for file) and -format
     else if (is_dash_arg_prefix(argv[i],"nobackwards",3) ||
 			 is_dash_arg_prefix(argv[i],"forwards",4)) {
+		if ( hasSince ) {
+			fprintf(stderr,
+				"Error: Argument -forwards cannot be combined with -since.\n");
+			exit(1);
+		}
 		if ( ! writetosocket) {
 			backwards=FALSE;
 		}
-    }
+		hasForwards = true;
+	}
 
     else if (is_dash_arg_colon_prefix(argv[i],"wide", &pcolon, 1)) {
         wide_format=TRUE;
@@ -455,6 +463,11 @@ main(int argc, char* argv[])
 		constraint.addCustomAND(argv[i]);
     }
 	else if (is_dash_arg_prefix(argv[i],"since",4)) {
+		if ( hasForwards ) {
+			fprintf(stderr,
+				"Error: Argument -forwards cannot be combined with -since.\n");
+			exit(1);
+		}
 		// make sure we have at least one more argument
 		if (argc <= i+1) {
 			fprintf( stderr, "Error: Argument %s requires another parameter\n", argv[i]);
@@ -487,6 +500,7 @@ main(int argc, char* argv[])
 			fprintf( stderr, "Error: invalid -since constraint: %s\n\tconstraint must be a job-id, or expression.", argv[i] );
 			exit(1);
 		}
+		hasSince = true;
 	}
     else if (is_dash_arg_prefix(argv[i],"completedsince",3)) {
 		i++;
