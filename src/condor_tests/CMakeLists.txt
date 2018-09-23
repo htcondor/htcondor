@@ -507,12 +507,12 @@ if (BUILD_TESTING)
 	condor_pl_test(config_if_then_else "config file ifdefs" "core;quick;full")
 	condor_pl_test(job_massive_config "LARGE config file" "core;quick;full")
 	condor_pl_test(cmd_ccv_set_rset "condor_config_val set/rset" "core;quick;full")
+	condor_pl_test(cmd_gpu_discovery "gpu discovery file" "core;quick;full")
 
 	if(NOT SOLARIS AND NOT DARWIN)
 	# globbiing only firs not supported on these platforms
 	condor_pl_test(job_foreach_submit-initialdir "submit file usage InitialDir" "core;quick;full;quicknolink")
 	condor_pl_test(job_foreach_submit-initialdir-run "submit file usage InitialDir - run submit file" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_gpu_discovery "gpu discovery file" "core;quick;full")
 	endif ()
 
 	if(LINUX)
