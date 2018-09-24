@@ -3976,7 +3976,7 @@ assignWork(const ScheddWorkMap &workMap, CurrentWorkMap &curWork, ScheddWork &ne
 void
 Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds)
 {
-	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", false))
+	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", true))
 	{
 		return;
 	}

@@ -4626,20 +4626,20 @@ type=bool
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
-default=20
+default=200
 range=1,
 type=int
 description=Size of Resource Request List
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS]
-default=false
+default=true
 type=bool
 description=Enable parallel prefetching of requests in the negotiator
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS_MAX_TIME]
-default=120
+default=60
 range=0,
 type=int
 description=Timeout for prefetch requests lists phase of negotiator
