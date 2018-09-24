@@ -43,7 +43,7 @@ JobEventLog::~JobEventLog() { }
 boost::python::object
 JobEventLog::events( boost::python::object & self, boost::python::object & deadline ) {
 	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
-	if( deadline.is_none() ) {
+	if( deadline.ptr() == Py_None ) {
 		jel->deadline = 0;
 	} else {
 		boost::python::extract<int> deadlineExtractor( deadline );
