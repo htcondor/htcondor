@@ -30,6 +30,11 @@ class MyString;
 class MyStringSource;
 #include "stl_string_utils.h"
 
+//Trim leading and trailing whitespace in place in the given buffer, returns the new size of data in the buffer
+// this does NOT \0 terminate the resulting buffer, but you can insure that it is by:
+//   buf[trim_in_place(buf, strlen(buf))] = 0;
+int trim_in_place(char* buf, int length);
+
 /** The MyString class is a C++ representation of a string. It was
  * written before we could reliably use the standard string class.
  * For an example of how to use it, see test_mystring.C.
@@ -296,6 +301,11 @@ class MyString
 		return value is 0 if no trimming occurred, or the quote char if it was trimmed.
 	*/
 	char trim_quotes(const char * quote_chars="\"");
+
+	/* Remove a prefix from the string if it matches the input
+	 * return true if the prefix matched and was removed
+	 */
+	bool remove_prefix(const char * prefix);
 
 	/** Remove all the whitespace from this string
 	*/

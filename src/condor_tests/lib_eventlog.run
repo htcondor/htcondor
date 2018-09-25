@@ -107,7 +107,9 @@ close(TPLATE);
 close(CSUB);
 
 
-my $result = system("./lib_eventlog.pl $mysubmitnm");
+my $syscmd = "./lib_eventlog.pl $mysubmitnm";
+if (CondorUtils::is_windows()) { $syscmd = "perl lib_eventlog.pl $mysubmitnm"; }
+my $result = system($syscmd);
 CondorTest::debug("Result of basic eventlog  test is  $result\n",1);
 
 if( $result == 0 ) {

@@ -4,7 +4,7 @@
 
 # tj sez, these tests should be fixed
 #cmd_status_shows-help
-cmd_wait_shows-all
+#cmd_wait_shows-all
 cmd_wait_shows-base
 cmd_wait_shows-notimeout
 cmd_wait_shows-partial
@@ -14,20 +14,22 @@ job_schedd_restart-runningjobs-ok
 # dagman gets a hard kill
 job_dagman_node_status_rm
 
+# tj: I think this should work?
+lib_include_cmd_config
+
 #Java tests turned off since java in refactor glue still not working windows 8
 # bt 6/3/14
 job_core_err_java
 job_core_initialdir_java
 job_core_input_java
 job_core_output_java
-lib_include_cmd_config
 
 lib_auth_protocol-ctb
 lib_auth_protocol-fs
 lib_auth_protocol-ssl
 lib_chirpio_van
 lib_eventlog
-lib_eventlog_base
+#lib_eventlog_base
 lib_procapi_pidtracking-snapshot
 file_transfer_submit
 

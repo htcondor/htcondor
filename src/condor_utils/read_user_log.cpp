@@ -482,14 +482,14 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 	}
 
 	m_fd = safe_open_wrapper_follow( m_state->CurPath(),
-							  m_read_only ? O_RDONLY : O_RDWR,
+							  m_read_only ? (O_RDONLY | _O_BINARY) : (O_RDWR | _O_BINARY),
 							  0 );
 	if ( m_fd < 0 ) {
 		dprintf(D_ALWAYS, "ReadUserLog::OpenLogFile safe_open_wrapper on %s returns %d: error %d(%s)\n", m_state->CurPath(), m_fd, errno, strerror(errno));
 		return ULOG_RD_ERROR;
 	}
 
-	m_fp = fdopen( m_fd, "r" );
+	m_fp = fdopen( m_fd, "rb" );
 	if ( m_fp == NULL ) {
 		CloseLogFile( true );
 		dprintf(D_ALWAYS, "ReadUserLog::OpenLogFile fdopen returns NULL\n");
@@ -1083,6 +1083,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 	long   filepos;
 	int    eventnumber;
 	int    retval1, retval2;
+	bool   got_sync_line = false;
 
 	// we obtain a write lock here not because we want to write
 	// anything, but because we want to ensure we don't read
@@ -1141,7 +1142,8 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 	}
 
 	// read event from file; check for result
-	retval2 = event->getEvent (m_fp);
+	got_sync_line = false;
+	retval2 = event->getEvent (m_fp, got_sync_line);
 
 	// check if error in reading event
 	if (!retval1 || !retval2)
@@ -1185,6 +1187,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 				}
 				return ULOG_UNK_ERROR;
 			}
+			got_sync_line = false;
 
 			// ... attempt to read the event again
 			clearerr (m_fp);
@@ -1209,7 +1212,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 						return ULOG_UNK_ERROR;
 					}
 				}
-				retval2 = event->getEvent( m_fp );
+				retval2 = event->getEvent( m_fp, got_sync_line );
 			}
 
 			// if failed again, we have a parse error
@@ -1219,7 +1222,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 							"on second try\n");
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
-				synchronize ();
+				if ( ! got_sync_line) { synchronize (); }
 				if (m_lock->isLocked()) {
 					m_lock->release();
 				}
@@ -1229,7 +1232,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			{
 				// finally got the event successfully --
 				// synchronize the log
-				if( synchronize() ) {
+				if( got_sync_line || synchronize() ) {
 					if( m_lock->isLocked() ) {
 						m_lock->release();
 					}
@@ -1277,7 +1280,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 	else
 	{
 		// got the event successfully -- synchronize the log
-		if (synchronize ())
+		if (got_sync_line || synchronize ())
 		{
 			if (m_lock->isLocked()) {
 				m_lock->release();
@@ -1379,9 +1382,14 @@ ReadUserLog::synchronize ( void )
 		return false;
 	}
 
+	const int ixN = sizeof(SynchDelimiter)-2; // back up to to point at the \n (assuming size includes a trailing \0)
 	const int bufSize = 512;
     char buffer[bufSize];
     while( fgets( buffer, bufSize, m_fp ) != NULL ) {
+		if (buffer[0] != '.') continue;
+		// this is a bit hacky, but if we have ...\r\n\0, it will covert it to ...\n\0.
+		// so that the strcmp will match it.
+		if (buffer[ixN] == '\r') { buffer[ixN] = buffer[ixN+1]; buffer[ixN+1] = buffer[ixN+2]; }
 		if( strcmp( buffer, SynchDelimiter) == 0 ) {
             return true;
         }

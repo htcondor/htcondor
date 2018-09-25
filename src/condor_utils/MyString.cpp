@@ -755,12 +755,38 @@ MyString::chomp( void )
 	return chomped;
 }
 
+// Trim leading and trailing whitespace in place in the given buffer
+// returns the new size of data in the buffer
+// this does NOT \0 terminate the resulting buffer
+// but you can insure that it is \0 terminated by:
+//   buf[trim_in_place(buf, strlen(buf))] = 0;
+// Because of the way this is coded, if length includes the terminating \0
+// then this will trim only leading whitespace.
+// note: this is here rather than in a string utils because of condorapi
+int trim_in_place(char* buf, int length)
+{
+	int pos = length;
+	while (pos > 1 && isspace(buf[pos-1])) { --pos; }
+	if (pos < length) { length = pos; }
+	pos = 0;
+	while (pos < length && isspace(buf[pos])) { ++pos; }
+	if (pos > 0) {
+		length -= pos;
+		if (length > 0) { memmove(buf, &buf[pos], length); }
+	}
+	return length;
+}
+
 void
 MyString::trim( void )
 {
 	if( Len == 0 ) {
 		return;
 	}
+#if 1 // inline trim
+	Len = trim_in_place(Data, Len);
+	Data[Len] = '\0';
+#else
 	int		begin = 0;
 	while ( begin < Len && isspace(Data[begin]) ) { ++begin; }
 
@@ -770,6 +796,7 @@ MyString::trim( void )
 	if ( begin != 0 || end != Length() - 1 ) {
 		*this = substr(begin, 1 + end - begin);
 	}
+#endif
 }
 
 char
@@ -782,11 +809,41 @@ MyString::trim_quotes(const char * quote_chars)
 	char ch = Data[0];
 	if (strchr(quote_chars, ch)) {
 		if (Data[Len - 1] == ch) {
+#if 1 // inline trime
+			if (remove_prefix(&Data[Len-1])) {
+				Len -= 1;
+				Data[Len] = '\0';
+			}
+#else
 			*this = substr(1, Len - 2);
+#endif
 			return ch;
 		}
 	}
 	return 0;
+}
+
+bool
+MyString::remove_prefix(const char * prefix)
+{
+	if (Len <= 0)
+		return false;
+
+	int pos = 0;
+	for (const char * p = prefix; *p; ++p, ++pos) {
+		if (pos >= Len || *p != Data[pos]) {
+			return false;
+		}
+	}
+
+	if (pos <= 0) {
+		return false;
+	}
+
+	Len -= pos;
+	if (Len > 0) { memmove(Data, &Data[pos], Len); }
+	Data[Len] = 0;
+	return true;
 }
 
 void
