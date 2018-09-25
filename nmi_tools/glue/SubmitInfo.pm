@@ -325,9 +325,7 @@ our %submit_info = (
 	# 32 bit CentOS 7
 	'x86_CentOS7'		=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DWITH_CREAM:BOOL' => 'OFF',
-			 },
+			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ ],
 			'xtests'	=> undef,
 		},
@@ -520,8 +518,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_Fedora'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-			},
+			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -557,20 +554,8 @@ our %submit_info = (
 	'x86_64_fedora_24'				=> 'x86_64_Fedora',
 	'x86_64_fedora_25'				=> 'x86_64_Fedora',
 	'x86_64_fedora_27'				=> 'x86_64_Fedora',
+	'x86_64_fedora_28'				=> 'x86_64_Fedora',
 
-	'x86_64_Fedora27'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
 
 	##########################################################################
 	# Platform Solaris 11 on x86_64
