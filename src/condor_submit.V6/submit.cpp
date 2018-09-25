@@ -156,6 +156,7 @@ char* RunAsOwnerCredD = NULL;
 #endif
 char * batch_name_line = NULL;
 bool sent_credential_to_credd = false;
+bool allow_crlf_script = false;
 
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
@@ -225,6 +226,7 @@ int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, 
 void cleanup_vars(SubmitHash & hash, StringList & vars);
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
+bool is_crlf_shebang(const char * path);
 int  SendLastExecutable();
 static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
 int  DoUnitTests(int options);
@@ -832,6 +834,8 @@ main( int argc, const char *argv[] )
 				query_credential = false;
 			} else if (is_dash_arg_prefix(ptr[0], "force-mpi-universe", 7)) {
 				use_condor_mpi_universe = true;
+			} else if (is_dash_arg_prefix(ptr[0], "allow-crlf-script", 7)) {
+				allow_crlf_script = true;
 			} else if (is_dash_arg_prefix(ptr[0], "help")) {
 				usage();
 				exit( 0 );
@@ -1319,6 +1323,28 @@ main( int argc, const char *argv[] )
 	return 0;
 }
 
+// check if path is a (broken) interpreter script with dos line endings
+bool is_crlf_shebang(const char *path)
+{
+	char buf[128];     // BINPRM_BUF_SIZE from <linux/binfmts.h>; also:
+	bool ret = false;  // execve(2) says the max #! line length is 127
+	FILE *fp = safe_fopen_no_create(path, "rb");
+
+	if (!fp) {
+		// can't open, don't worry about it
+		return false;
+	}
+
+	// check first line for CRLF ending if readable and starts with #!
+	if (fgets(buf, sizeof buf, fp) && buf[0] == '#' && buf[1] == '!') {
+		size_t len = strlen(buf);
+		ret = (buf[len-1] == '\n' && buf[len-2] == '\r');
+	}
+
+	fclose(fp);
+	return ret;
+}
+
 // callback passed to make_job_ad on the submit_hash that gets passed each input or output file
 // so we can choose to do file checks. 
 int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const char * pathname, int flags)
@@ -1391,6 +1417,15 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 			if (!si.Error() && (si.GetFileSize() == 0)) {
 				fprintf( stderr, "\nERROR: Executable file %s has zero length\n", ename );
 				return 1; // abort
+			}
+
+			if (is_crlf_shebang(ename)) {
+				fprintf( stderr, "\n%s: Executable file %s is a script with CRLF (DOS/Win) line endings\n",
+					allow_crlf_script ? "WARNING" : "ERROR", ename );
+				if (!allow_crlf_script) {
+					fprintf( stderr, "Run with -allow-crlf-script if this is really what you want\n");
+					return 1; // abort
+				}
 			}
 
 			if (role == SFR_EXECUTABLE) {
@@ -2414,6 +2449,7 @@ usage()
 	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	//fprintf( stderr, "\t-force-mpi-universe\tAllow submission of obsolete MPI universe\n );
+	fprintf( stderr, "\t-allow-crlf-script\tAllow submitting #! executable script with DOS/CRLF line endings\n" );
 	fprintf( stderr, "\t-dump <filename>\tWrite job ClassAds to <filename> instead of\n"
 					 "\t                \tsubmitting to a schedd.\n" );
 #if !defined(WIN32)
