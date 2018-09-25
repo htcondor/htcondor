@@ -834,7 +834,7 @@ main( int argc, const char *argv[] )
 				query_credential = false;
 			} else if (is_dash_arg_prefix(ptr[0], "force-mpi-universe", 7)) {
 				use_condor_mpi_universe = true;
-			} else if (is_dash_arg_prefix(ptr[0], "allow-crlf-script", 7)) {
+			} else if (is_dash_arg_prefix(ptr[0], "allow-crlf-script", 8)) {
 				allow_crlf_script = true;
 			} else if (is_dash_arg_prefix(ptr[0], "help")) {
 				usage();
@@ -1338,7 +1338,7 @@ bool is_crlf_shebang(const char *path)
 	// check first line for CRLF ending if readable and starts with #!
 	if (fgets(buf, sizeof buf, fp) && buf[0] == '#' && buf[1] == '!') {
 		size_t len = strlen(buf);
-		ret = (buf[len-1] == '\n' && buf[len-2] == '\r');
+		ret = (len > 2) && (buf[len-1] == '\n' && buf[len-2] == '\r');
 	}
 
 	fclose(fp);
