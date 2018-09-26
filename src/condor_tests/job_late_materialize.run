@@ -35,7 +35,8 @@ use warnings;
 my $config = <<CONDOR_TESTREQ_CONFIG;
   NUM_CPUS = 6
   NUM_SLOTS = 6
-  SCHEDD_ALLOW_LATE_MATERIALIZE = true
+  # this is now the default
+  #SCHEDD_ALLOW_LATE_MATERIALIZE = true
   # turn on special logging of late materialization
   SCHEDD_MATERIALIZE_LOG = $(LOG)/MaterializeLog
   #ENABLE_ASYNC_LATE_MATERIALIZE_ITEM_DATA = true

@@ -3035,7 +3035,7 @@ type=string
 tags=schedd,dedicated_scheduler
 
 [SCHEDD_ALLOW_LATE_MATERIALIZE]
-default=false
+default=true
 type=bool
 tags=schedd
 
