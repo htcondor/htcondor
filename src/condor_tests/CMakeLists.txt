@@ -248,6 +248,9 @@ if (BUILD_TESTING)
 		condor_pl_test(cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink")
 	endif()
 
+	# Python bindings tests
+	condor_pl_test (python_bindings_classad "Python bindings classad module" "core;quick;full;quicknolink")
+
 	if(WITH_GANGLIA)
           condor_pl_test(gangliad "Basic test of condor_gangliad." "core;quick;full;quicknolink")
         endif()
