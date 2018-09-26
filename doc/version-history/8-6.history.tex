@@ -60,6 +60,10 @@ a domain socket, which the FileTransfer module would subsequently try (and fail)
 to send back to the submit machine.
 \Ticket{6744}
 
+\item Prevented the combination of -forward and -since flags when calling
+\condor{history}, which is ambiguous as to how it should work.
+\Ticket{6417}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
