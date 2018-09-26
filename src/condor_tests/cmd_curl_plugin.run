@@ -1,0 +1,210 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+from pytest.CondorCluster import CondorCluster
+from pytest.CondorTest import CondorTest
+from pytest.Globals import *
+from pytest.HTTPServer import HTTPServer
+from pytest.PersonalCondor import PersonalCondor
+from pytest.Utils import Utils
+from random import randint
+
+# Define a few URL handlers for our HTTP server
+
+def HttpSuccessUrlHandler(request):
+    request.protocol_version = "HTTP/1.1"
+    request.send_response(200)
+    request.send_header("Content-type", "text/html")
+    request.end_headers()
+    request.wfile.write("<html>Great success!</html>")
+
+def HttpServerErrorUrlHandler(request):
+    request.send_response(500)
+    request.end_headers()
+
+def HttpPartialUrlHandler(request):
+    request.protocol_version = "HTTP/1.1"
+    partial_content = "<html>Content to return on partial requests</html>"
+
+    # If the HTTP "Range" header is not set, return a random substring
+    # of the partial_content string, but set Content-Length to the full
+    # length of the partial_content string. This will be recognized as
+    # a partial file transfer.
+    if request.headers.getheader("Range", 0) == 0:
+        request.send_response(200, "OK")
+        request.send_header("Content-Length", len(partial_content))
+        request.end_headers()
+        partial_offset = randint(1, len(partial_content) - 1);
+        request.wfile.write(partial_content[:partial_offset])
+
+    # If the HTTP "Range" header is set, return the specified byte range
+    # from the partial_content string. Set Content-Length and
+    # Content-Range accordingly.
+    else:
+        range_header = request.headers.getheader("Range", 0)
+        request_range = range_header[range_header.index("=")+1:]
+
+        # Parse the range requested. If no end index is specified, set
+        # this by default to the length of partial_content
+        request_range_tokens = request_range.split("-")
+        request_range_start = request_range_tokens[0]
+        request_range_end = str(len(partial_content))
+        if request_range_tokens[1] != "":
+            request_range_end = request_range_tokens[1]
+
+        # Now send the response with appropriate HTTP headers
+        response_range = "bytes " + request_range_start + "-" + str(int(request_range_end)-1) + "/" + request_range_end
+        response_length = int(request_range_end) - int(request_range_start)
+        request.send_response(206, "Partial Content")
+        request.send_header("Content-Range", response_range)
+        request.send_header("Content-Length", str(response_length))
+        request.end_headers()
+        request.wfile.write(partial_content[int(request_range_start):int(request_range_end)])
+
+
+def main():
+
+    # Start a HTTP server, and register various URLs to handle requests as per
+    # the methods defined at the top of this file.
+    httpd = HTTPServer()
+    httpd.Start()
+    httpd.RegisterUrlHandler("/success", HttpSuccessUrlHandler)
+    httpd.RegisterUrlHandler("/servererror", HttpServerErrorUrlHandler)
+    httpd.RegisterUrlHandler("/partial", HttpPartialUrlHandler)
+    success_url = "http://127.0.0.1:" + str(httpd._port) + "/success"
+    servererror_url = "http://127.0.0.1:" + str(httpd._port) + "/servererror"
+    partial_url = "http://127.0.0.1:" + str(httpd._port) + "/partial"
+
+    # Stand up a PersonalCondor
+    personal = CondorTest.StartPersonalCondor("cmd_curl_plugin")
+    if personal == -1:
+        Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
+        sys.exit(1)
+    else:
+        Utils.TLog("PersonalCondor environment started successfully!")
+
+
+    # Test 1
+    # Verify that a job with valid URLs under transfer_input_files runs successfully.
+    Utils.TLog("Test 1: Attempting a valid HTTP transfer, expecting success")
+
+    # Create the executable for test 1
+    success_executable = os.path.join( os.getcwd(), "cmd_curl_plugin-success.py" )
+    success_executable_contents = """#!/usr/bin/env python
+import sys
+import time
+
+success_file = open("success", "r")
+success_contents = success_file.read()
+if "<html>Great success!</html>" not in success_contents:
+    print("ERROR: Success file contents don't match, going to sleep")
+    while True:
+        time.sleep(1) # Go to sleep forever to trigger a timeout
+
+print("Success file looks good!")
+sys.exit(0)
+"""
+
+    if not Utils.WriteFile( success_executable, success_executable_contents ):
+        Utils.TLog( "Failed to write test file {0}, aborting.\n".format( success_executable ) );
+        sys.exit( TEST_FAILURE )
+    try:
+        os.chmod( success_executable, 0o755 )
+    except OSError as ose:
+        Utils.TLog( "Failed to make test file {0} executable, aborting: {1}\n".format( success_executable, ose ) );
+        sys.exit( TEST_FAILURE )
+
+    success_args = {
+        "executable":               success_executable,
+        "output":                   "cmd_curl_plugin-success.out",
+        "transfer_input_files":     success_url,
+        "should_transfer_files":    "YES"
+    }
+    success_job = CondorCluster(success_args)
+
+    # Submit the success job
+    success_job.Submit()
+    result = success_job.WaitUntilJobTerminated()
+    Utils.TLog("Test 1 completed with result: " + str(result))
+    if result is True:
+        CondorTest.RegisterSuccess("curl_plugin_success", "Test ran correctly as expected")
+    else:
+        CondorTest.RegisterFailure("curl_plugin_success", "Failed unexpectedly, something went wrong")
+
+
+    # Test 2
+    # Verify that a job with incorrect URLs (in this case, a URL that throws a server error) goes on hold.
+    Utils.TLog("Test 2: Attempting an invalid HTTP transfer, expecting job to go on hold")
+    servererror_args = {
+        "executable":               "x_echostring.pl",
+        "arguments":                "This test is designed to fail, should not be seeing this",
+        "output":                   "cmd_curl_plugin-servererror.out",
+        "transfer_input_files":     servererror_url,
+        "should_transfer_files":    "YES"
+    }
+    servererror_job = CondorCluster(servererror_args)
+
+    # Submit the server errort job
+    servererror_job.Submit()
+    result = servererror_job.WaitUntilJobHeld()
+    Utils.TLog("Test 2 completed with result: " + str(result))
+    if result is True:
+        CondorTest.RegisterSuccess("curl_plugin_servererror", "Test went on hold as expected")
+    else:
+        CondorTest.RegisterFailure("curl_plugin_servererror", "Test succeeded unexpectedly, something went wrong")
+
+
+    # Test 3
+    # Verify that curl_plugin tries again when a URL request returns partial content
+    Utils.TLog("Test 3: Attempting a partial HTTP transfer, expecting success")
+
+    # Create the executable for test 1
+    partial_executable = os.path.join( os.getcwd(), "cmd_curl_plugin-partial.py" )
+    partial_executable_contents = """#!/usr/bin/env python
+import os
+import sys
+import time
+
+partial_file = open("partial", "r")
+partial_contents = partial_file.read()
+if "<html>Content to return on partial requests</html>" not in partial_contents:
+    print("Partial file contents don't match, test fail")
+    while True:
+        time.sleep(1) # Go to sleep forever to trigger a timeout
+
+print("Partial file looks good!")
+sys.exit(0)
+"""
+
+    if not Utils.WriteFile( partial_executable, partial_executable_contents ):
+        Utils.TLog( "Failed to write test file {0}, aborting.\n".format( partial_executable ) );
+        sys.exit( TEST_FAILURE )
+    try:
+        os.chmod( partial_executable, 0o755 )
+    except OSError as ose:
+        Utils.TLog( "Failed to make test file {0} executable, aborting: {1}\n".format( partial_executable, ose ) );
+        sys.exit( TEST_FAILURE )
+
+    partial_args = {
+        "executable":               "cmd_curl_plugin-partial.py",
+        "output":                   "cmd_curl_plugin-partial.out",
+        "transfer_input_files":     partial_url,
+        "should_transfer_files":    "YES"
+    }
+    partial_job = CondorCluster(partial_args)
+
+    # Submit the partial job
+    partial_job.Submit()
+    result = partial_job.WaitUntilJobTerminated()
+    Utils.TLog("Test 3 completed with result: " + str(result))
+    if result is True:
+        CondorTest.RegisterSuccess("curl_plugin_partial", "Test ran correctly as expected")
+    else:
+        CondorTest.RegisterFailure("curl_plugin_partial", "Failed unexpectedly, something went wrong")
+
+
+
+if __name__ == "__main__":
+    main()

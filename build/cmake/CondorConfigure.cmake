@@ -27,13 +27,13 @@ elseif(${OS_NAME} MATCHES "WIN")
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
-	# lowest common denominator is WinXP-SP3, except when building with vc9, then we can't count on sdk support.
-	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WINXP)
-	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
+	# lowest common denominator is Vista (0x600), except when building with vc9, then we can't count on sdk support.
+	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WIN7)
+	add_definitions(-DWINVER=_WIN32_WINNT_WIN7)
 	if (MSVC90)
 	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	else()
-	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXPSP3)
+	    add_definitions(-DNTDDI_VERSION=NTDDI_WIN7)
 	endif()
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 	
@@ -82,19 +82,16 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
-	if (DEFINED PYTHON_VERSION)
-		set(Python_ADDITIONAL_VERSIONS ${PYTHON_VERSION})
+	include (FindPythonInterp)
+	message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
+	# As of cmake 2.8.8, the variable below is defined by FindPythonInterp.
+	# This helps ensure we get the same version of the libraries and python
+	# on systems with both python2 and python3.
+	if (DEFINED PYTHON_VERSION_STRING)
+		set(Python_ADDITIONAL_VERSIONS "${PYTHON_VERSION_STRING}")
 	endif()
 	include (FindPythonLibs)
 	message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
-	# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
-	# This helps ensure we get the same version of the libraries and python
-	# on systems with both python2 and python3.
-	if (DEFINED PYTHONLIBS_VERSION_STRING)
-		set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
-	endif()
-	include (FindPythonInterp)
-	message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
 else()
 	if(WINDOWS)
 		#only for Visual Studio 2012
@@ -251,6 +248,10 @@ if (WINDOWS)
 	# TJ: 8.5.8 disabling OpenMP on Windows because it adds a dependency on an additional merge module for VCOMP110.DLL
 else()
 	find_package (OpenMP)
+endif()
+
+if (FIPS_BUILD)
+    add_definitions(-DFIPS_MODE=1)
 endif()
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
@@ -901,7 +902,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.37)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
 
 	# globus is an odd *beast* which requires a bit more config.
@@ -932,11 +933,7 @@ else ()
     endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
-	if (PLATFORM MATCHES "Fedora27" OR PLATFORM MATCHES "Debian9" OR PLATFORM MATCHES "Ubuntu18")
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.8.6)
-	else()
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/devel)
-	endif()
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.12.1)
 
         if (LINUX)
           option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)

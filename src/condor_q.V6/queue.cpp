@@ -85,7 +85,7 @@ static bool render_job_status_char(std::string & result, ClassAd*ad, Formatter &
 // functions to fetch job ads and print them out
 //
 static bool show_file_queue(const char* jobads, const char* userlog);
-static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath);
+static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath, CondorClassAdListWriter &writer);
 static int dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess);
 
 static void initOutputMask(AttrListPrintMask & pqmask, int qdo_mode, bool wide_mode);
@@ -586,7 +586,11 @@ int main (int argc, const char **argv)
 				}
 			}
 
-			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
+			CondorClassAdListWriter writer(dash_long_format);
+			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
+			if (dash_long) {
+				writer.writeFooter(stdout, always_write_xml_footer);
+			}
 			/* Hopefully I got the queue from the schedd... */
 			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 		} 
@@ -670,6 +674,7 @@ int main (int argc, const char **argv)
 	}
 
 	first = true;
+	CondorClassAdListWriter writer(dash_long_format);
 	// get queue from each ScheddIpAddr in ad
 	scheddList.Open();
 	while ((ad = scheddList.Next()))
@@ -701,11 +706,15 @@ int main (int argc, const char **argv)
 		} else {
 			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 		}
-		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
+		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
 	}
 
 	// close list
 	scheddList.Close();
+
+	if (dash_long) {
+		writer.writeFooter(stdout, always_write_xml_footer);
+	}
 
 	if( first ) {
 		if( global ) {
@@ -4171,7 +4180,7 @@ bool print_jobs_analysis (
 // this function handles -analyze, -streaming, -dag and all normal condor_q output
 // when the source is a SCHEDD.
 static bool
-show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
+show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath,CondorClassAdListWriter &writer )
 {
 	// initialize counters
 	app.sumy.clear_counters();
@@ -4196,8 +4205,6 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	IdToClassaAdMap ads;
 	CondorError errstack;
 	ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
-
-	CondorClassAdListWriter writer(dash_long_format);
 
 	// choose a processing option for jobad's as the come off the wire.
 	// for -long -json -xml and -analyze, we need to save off the ad in a ClassAdList
@@ -4286,9 +4293,6 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// we just need to write the footer/summary
 	if (g_stream_results) {
 		print_full_footer(summary_ad, &writer);
-		if (dash_long) { 
-			writer.writeFooter(stdout, always_write_xml_footer);
-		}
 		return true;
 	}
 
@@ -4323,7 +4327,6 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			}
 		}
 		print_full_footer(summary_ad, &writer);
-		writer.writeFooter(stdout, always_write_xml_footer);
 		return true;
 	}
 

@@ -3035,7 +3035,7 @@ type=string
 tags=schedd,dedicated_scheduler
 
 [SCHEDD_ALLOW_LATE_MATERIALIZE]
-default=false
+default=true
 type=bool
 tags=schedd
 
@@ -3203,6 +3203,11 @@ tags=schedd
 default=5
 type=int
 tags=schedd
+
+[MAX_PENDING_STARTD_CONTACTS]
+default=0
+type=int
+range=0,
 
 [GRIDMANAGER_PER_JOB]
 default=false
@@ -3895,6 +3900,10 @@ default=86400
 range=0,
 type=int
 
+[DELEGATE_FULL_JOB_GSI_CREDENTIALS]
+default=false
+type=bool
+
 [STATISTICS_WINDOW_QUANTUM]
 default=240
 range=1,1000000000
@@ -4559,21 +4568,15 @@ description=Allow public input files for a job to be transferred via HTTP
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_ADDRESS]
-default=127.0.0.1:8080
+default=127.0.0.1:80
 type=string
 description=Web address (hostname + port) for HTTP public files
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_ROOT_DIR]
-default=$(LOCAL_DIR)/public_files
+default=/usr/share/nginx/html
 type=string
 description=Folder in the local filesystem for HTTP public file links to be served from.
-tags=file_transfer
-
-[HTTP_PUBLIC_FILES_ROOT_OWNER]
-default=apache
-type=string
-description=Owner of the user who owns the directory specified by HTTP_PUBLIC_FILES_ROOT_DIR
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_STALE_AGE]
@@ -4623,20 +4626,20 @@ type=bool
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
-default=20
+default=200
 range=1,
 type=int
 description=Size of Resource Request List
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS]
-default=false
+default=true
 type=bool
 description=Enable parallel prefetching of requests in the negotiator
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS_MAX_TIME]
-default=120
+default=60
 range=0,
 type=int
 description=Timeout for prefetch requests lists phase of negotiator
@@ -5671,6 +5674,13 @@ description=Settings for HTCondor Central Manager
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
 @end
+
+[$ROLE.Checkpoint]
+friendly_name=Settings for HTCondor Checkpoint Server
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) CKPT_SERVER
+@end
+review=?
 
 # default security policy
 [$SECURITY.HOST_BASED]

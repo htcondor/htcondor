@@ -231,14 +231,21 @@ if (BUILD_TESTING)
 	condor_pl_test (lib_include_cmd_config  "Test meta knobs" "core;quick;full;quicknolink")
 
 	# an example of a test writen in python rather than in perl
-	condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
+	# condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
 	if (WITH_PYTHON_BINDINGS)
-		# an example test that depends on python bindings
-		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
-		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
+		# An example test that depends on python bindings.
+		# condor_pl_test(python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
 
-		# Tests of the python bindings
-		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
+		# Tests of the python bindings.
+		condor_pl_test(job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
+		condor_pl_test(python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
+
+		# Tests that require the python bindings.
+		condor_pl_test(cmd_curl_plugin "Testing various curl_plugin functions" "core;quick;full;quicknolink")
+		condor_pl_test(cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink")
+    	condor_pl_test(cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink")
+		condor_pl_test(job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink")
+		condor_pl_test(cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink")
 	endif()
 
 	# Python bindings tests
@@ -458,11 +465,6 @@ if (BUILD_TESTING)
 	condor_pl_test(docker_simulator_test "docker_simulator_test" "core;quick;full;quicknolink")
 	condor_pl_test(map_user_to_groups_metaknob_test "map_user_to_groups_metaknob_test" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_submit-factory "condor_submit -factory" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_curl_plugin_singlefile_success "Successful curl_plugin single file download" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_curl_plugin_singlefile_failure "Failed curl_plugin single file download" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_curl_plugin_singlefile_partial "Successful curl_plugin single file download with partial retry" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink")
-    condor_pl_test(cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink")
 
 	if (LINUX)
 		condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
@@ -508,12 +510,12 @@ if (BUILD_TESTING)
 	condor_pl_test(config_if_then_else "config file ifdefs" "core;quick;full")
 	condor_pl_test(job_massive_config "LARGE config file" "core;quick;full")
 	condor_pl_test(cmd_ccv_set_rset "condor_config_val set/rset" "core;quick;full")
+	condor_pl_test(cmd_gpu_discovery "gpu discovery file" "core;quick;full")
 
 	if(NOT SOLARIS AND NOT DARWIN)
 	# globbiing only firs not supported on these platforms
 	condor_pl_test(job_foreach_submit-initialdir "submit file usage InitialDir" "core;quick;full;quicknolink")
 	condor_pl_test(job_foreach_submit-initialdir-run "submit file usage InitialDir - run submit file" "core;quick;full;quicknolink")
-	condor_pl_test(cmd_gpu_discovery "gpu discovery file" "core;quick;full")
 	endif ()
 
 	if(LINUX)
@@ -568,9 +570,6 @@ if (BUILD_TESTING)
 	#condor_pl_test(job_had_basic "Basic High Availability Daemon Test" "core;quick;full;quicknolink")
 	condor_pl_test(job_core_basic_par "Basic Parallel Universe" "core;quick;full;quicknolink")
 	#condor_pl_test(job_core_basic-security_par "Basic Parallel Universe w/security on" "core;quick;full;quicknolink")
-	#condor_pl_test(job_stork_file-file "Basic stork Test" "core;quick;full;quicknolink")
-	#condor_pl_test(job_dagman_stork_file-file "Basic stork dag Test" "core;dagman;quick;full;quicknolink")
-	#condor_pl_test(job_dagman_stork-remove "Basic stork dag w/remove Test" "core;dagman;quick;full;quicknolink")
 
     if ( ENABLE_JAVA_TESTS )
 		condor_pl_test(job_core_err_java "Java Universe: basic error test" "core;quick;full;quicknolink;java")
@@ -615,7 +614,7 @@ if (BUILD_TESTING)
 	condor_pl_test(job_core_args_van "Vanilla: Did specify args from submit file reach the job?" "core;quick;full;quicknolink")
 	condor_pl_test(job_core_args_sched "scheduler: Did specify args from submit file reach the job?" "core;quick;full;quicknolink")
 	condor_pl_test(job_core_holdrelease_van "Vanilla: Test state changes from running to hold to release." "core;quick;full;quicknolink")
-	condor_pl_test(job_core_copytospool_van "Vanilla: test that spooled executable is same via md5 checksum of both files" "core;quick;full;quicknolink")
+	condor_pl_test(job_core_copytospool_van "Vanilla: test that spooled executable is same via sha256 checksum of both files" "core;quick;full;quicknolink")
 	#condor_pl_test(job_core_getenv_van "Vanilla: job which tests getenv both on and off" "core;quick;full;quicknolink")
 	condor_pl_test(job_core_doublejeopardy_van "Vanilla: make sure condor does not generate an abort AND the expected abnormal termination." "core;quick;full;quicknolink")
 	condor_pl_test(job_core_doublejeopardy_sched "Scheduler: make sure condor does not generate an abort AND the expected abnormal termination." "core;quick;full;quicknolink")
@@ -647,7 +646,6 @@ if (BUILD_TESTING)
 	condor_pl_test(job_core_queue_sched "Scheduler: Verify the  queue command" "core;quick;full;quicknolink")
 	condor_pl_test(job_core_max-running_local "Local: Max job running limit" "core;quick;full;quicknolink;local")
 	condor_pl_test(job_late_materialize "Late materialization of jobs" "core;quick;full;quicknolink")
-	condor_pl_test(job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink")
 	condor_pl_test(job_schedd_restart-holdjobs-ok "Held queue ok after schedd restart" "core;quick;full;quicknolink")
 	condor_pl_test(job_schedd_restart-runningjobs-ok "Running queue ok after schedd restart" "core;quick;full;quicknolink")
 	condor_pl_test(job_schedd_restart-basic "schedd restarts" "core;quick;full;quicknolink")

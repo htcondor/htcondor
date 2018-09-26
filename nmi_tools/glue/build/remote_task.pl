@@ -86,11 +86,6 @@ else {
 chomp(my $hostname = `hostname -f`);
 print "Executing task '$taskname' on host '$hostname'\n";
 
-if ($ENV{NMI_PLATFORM} =~ /macos/i) {
-    # Build binaries that will work on Mac OS X 10.7 and later.
-    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
-}
-
 # Build with warnings == errors on Fedora
 my $werror="";
 if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {

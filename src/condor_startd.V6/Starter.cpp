@@ -255,22 +255,11 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		return;
 	}
 
-		// Check for ATTR_STARTER_IGNORED_ATTRS. If defined,
-		// we insert all attributes from the starter ad except those
-		// in the list. If not, we fall back on our old behavior
-		// of only inserting attributes prefixed with "Has" or
-		// "Java". Either way, we only add the "Has" attributes
-		// into the StringList (the StarterAbilityList)
-	char* ignored_attrs = NULL;
 	StringList* ignored_attr_list = NULL;
-	if (s_ad->LookupString(ATTR_STARTER_IGNORED_ATTRS, &ignored_attrs)) {
-		ignored_attr_list = new StringList(ignored_attrs);
-		free(ignored_attrs);
-
-		// of course, we don't want ATTR_STARTER_IGNORED_ATTRS
-		// in either!
-		ignored_attr_list->append(ATTR_STARTER_IGNORED_ATTRS);
-	}
+	ignored_attr_list = new StringList();
+	ignored_attr_list->append(ATTR_VERSION);
+	ignored_attr_list->append(ATTR_IS_DAEMON_CORE);
+	
 
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;

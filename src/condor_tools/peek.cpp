@@ -181,6 +181,7 @@ HTCondorPeek::parse_args(int argc, char *argv[])
 			m_transfer_stdout = false;
 		} else if(!strcmp(argv[i],"-stderr")) {
 			m_transfer_stderr = true;
+			m_transfer_stdout = false;
 		} else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "-follow")) {
 			m_follow = true;
 		} else if (!strcmp(argv[i], "-auto-retry")) {

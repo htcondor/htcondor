@@ -1601,7 +1601,9 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	// and then dumps them out at the end when it is safe to do so because
 	// the internal state is consistent with reality.
 
+#ifdef LINUX
 	bool really_dologging = (dologging && (dologging != NO_PRIV_MEMORY_CHANGES));
+#endif
 
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;

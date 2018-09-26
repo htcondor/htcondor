@@ -2426,7 +2426,10 @@ JICShadow::beginFileTransfer( void )
 		proxy_dest_path += proxy_filename;
 
 			// Do RPC call to get delegated proxy.
+			// This needs to happen with user privs so we can write to scratch dir!
+		priv_state original_priv = set_user_priv();
 		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.Value(), proxy_dest_path.Value(), proxy_expiration );
+		set_priv( original_priv );
 
 			// Update job ad with location of proxy
 		job_ad->Assign( ATTR_X509_USER_PROXY, proxy_dest_path.Value() );

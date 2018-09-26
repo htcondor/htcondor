@@ -1,9 +1,10 @@
+set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp JobEventLog.cpp )
 
 if(WINDOWS)
   if(WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND)
-    #only for VS2012 and above
-    if(NOT (MSVC_VERSION LESS 1700))
-        #only for boost-1.54.0 or boost-1.68
+	#only for VS2012 and above
+	if(NOT (MSVC_VERSION LESS 1700))
+		#only for boost-1.54.0 or boost-1.68
 		IF("${BOOST_VER}" MATCHES "boost-1.(54|68).0")
 			message(STATUS "===> Generating python-bindings with boost 1.${CMAKE_MATCH_1}")
 			set(BOOST_LIB_BOOST_VER "1_${CMAKE_MATCH_1}")
@@ -41,10 +42,10 @@ if(WINDOWS)
 				#set(PYTHON_LIBRARY_BOOST_TWO_D ${BOOST_LD}/libboost_python-${BOOST_LIB_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib)
 
 				set(THE_BOOST_LIBS
-				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
-				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					optimized ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+						debug ${BOOST_LD}/boost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+						debug ${BOOST_LD}/libboost_${BOOST_LIB_PY2_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
 					)
 
 
@@ -59,9 +60,9 @@ if(WINDOWS)
 				get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
 				string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
 				if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
-				  set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+					set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 				else()
-				  message(FATAL_ERROR "Can't determine HTCondor version!")
+					message(FATAL_ERROR "Can't determine HTCondor version!")
 				endif()
 
 				condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
@@ -86,7 +87,7 @@ if(WINDOWS)
 				target_include_directories( classad_python_user PUBLIC ${PYTHON_INCLUDE_DIRS} )
 				install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 
-				add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
+				add_library( htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} )
 				target_link_libraries( htcondor pyclassad condor_utils ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} ${CONDOR_WIN_LIBS} )
 				set_target_properties( htcondor PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
 				target_include_directories( htcondor PUBLIC ${PYTHON_INCLUDE_DIRS} )
@@ -118,16 +119,16 @@ if(WINDOWS)
 				get_filename_component(PYTHON3_LIBRARY_FILENAME ${PYTHON3_LIBRARIES} NAME)
 				string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON3_VERSION_STRING})
 				if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
-				  set( PY3CLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+					set( PY3CLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 				else()
-				  message(FATAL_ERROR "Can't determine HTCondor version!")
+					message(FATAL_ERROR "Can't determine HTCondor version!")
 				endif()
 
 				set(THE_BOOST_LIBS
-				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
-				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					optimized ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+						debug ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+					optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+						debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
 					)
 
 				condor_shared_lib( py3classad classad.cpp classad_wrapper.h exprtree_wrapper.h )
@@ -153,7 +154,7 @@ if(WINDOWS)
 				target_include_directories( classad_python3_user PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 				install ( TARGETS classad_python3_user DESTINATION "${C_LIBEXEC}" )
 
-				add_library( py3htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
+				add_library( py3htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} )
 				target_link_libraries( py3htcondor py3classad condor_utils ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} ${CONDOR_WIN_LIBS} )
 				set_target_properties( py3htcondor PROPERTIES PREFIX "" OUTPUT_NAME htcondor PDB_NAME py3htcondor)
 				set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
@@ -164,10 +165,10 @@ if(WINDOWS)
 
 			endif(DEFINED PYTHON3_VERSION_STRING) # python36 was found
 
-	    # more targets are built if we plan on building wheels
-	    if ( WANT_PYTHON_WHEELS )
-	      message(STATUS "Setting up python wheels on Windows is not yet supported")	      
-	    endif()
+		# more targets are built if we plan on building wheels
+		if ( WANT_PYTHON_WHEELS )
+			message(STATUS "Setting up python wheels on Windows is not yet supported")
+		endif()
 
             string( COMPARE EQUAL ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} INSOURCEBUILD)
             if (BUILD_TESTING)
@@ -195,13 +196,13 @@ if(WINDOWS)
               enable_testing()
             endif()
         endif()
-    endif(NOT (MSVC_VERSION LESS 1700))    
+    endif(NOT (MSVC_VERSION LESS 1700))
   endif()
 else()
   if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT SOLARIS )
     configure_file (
-  	"${PROJECT_SOURCE_DIR}/src/python-bindings/test_driver.in"
-  	"${CMAKE_CURRENT_BINARY_DIR}/test_driver"
+      "${PROJECT_SOURCE_DIR}/src/python-bindings/test_driver.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/test_driver"
     )
 
     set ( CMAKE_LIBRARY_PATH_ORIG ${CMAKE_LIBRARY_PATH} )
@@ -259,9 +260,9 @@ else()
       install ( TARGETS collector_python_plugin DESTINATION "${C_LIBEXEC}" )
     endif()
 
-
-    set_source_files_properties(config.cpp collector.cpp negotiator.cpp secman.cpp dc_tool.cpp schedd.cpp classad.cpp classad_module.cpp classad_parsers.cpp event.cpp log_reader.cpp claim.cpp startd.cpp bulk_query_iterator.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
-    add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp log_reader.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
+    # We'll deprecate log_reader.cpp at some point.
+    set_source_files_properties( dc_tool.cpp classad.cpp classad_module.cpp classad_parsers.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
+    add_library( htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp )
     target_link_libraries( htcondor pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
     set_target_properties( htcondor PROPERTIES PREFIX "" )
     set_target_properties( htcondor PROPERTIES SUFFIX ".so" )
@@ -272,7 +273,7 @@ else()
     install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )
 
     if ( DARWIN )
-	set_target_properties( pyclassad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+        set_target_properties( pyclassad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
         install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD_LIB_NAME}.dylib)" )
         install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/classad.so)" )
         install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/htcondor.so)" )
@@ -280,51 +281,51 @@ else()
 
     # more targets are built if we plan on building wheels
     if ( WANT_PYTHON_WHEELS )
-      
+
       # first, check if building in source
       set( PYPI_BUILD_DIR "${CMAKE_BINARY_DIR}/build/packaging/pypi" )
       set( PYPI_SOURCE_DIR "${CMAKE_SOURCE_DIR}/build/packaging/pypi" )
       string( COMPARE EQUAL ${PYPI_BUILD_DIR} ${PYPI_SOURCE_DIR} INSOURCEBUILD)
-      
+
       # next, set up the directory structure
       add_custom_target( pypi_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPI_BUILD_DIR}" )
       add_custom_target( pypi_classad_dir DEPENDS pypi_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPI_BUILD_DIR}/classad" )
       add_custom_target( pypi_htcondor_dir DEPENDS pypi_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPI_BUILD_DIR}/htcondor" )
       add_custom_target( pypi_lib_dir DEPENDS pypi_htcondor_dir COMMAND ${CMAKE_COMMAND} -E make_directory "${PYPI_BUILD_DIR}/htcondor/condor_libs" )
-      
+
       if( NOT INSOURCEBUILD ) # if not building in source, copy over the wheel packaging files
-	add_custom_command( TARGET pypi_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/setup.py ${PYPI_BUILD_DIR}/setup.py )
-	add_custom_command( TARGET pypi_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/setup.cfg ${PYPI_BUILD_DIR}/setup.cfg )
-	add_custom_command( TARGET pypi_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/README.rst ${PYPI_BUILD_DIR}/README.rst )
-	add_custom_command( TARGET pypi_classad_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/classad/__init__.py ${PYPI_BUILD_DIR}/classad/__init__.py )
-	add_custom_command( TARGET pypi_htcondor_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/htcondor/__init__.py ${PYPI_BUILD_DIR}/htcondor/__init__.py )
+        add_custom_command( TARGET pypi_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/setup.py ${PYPI_BUILD_DIR}/setup.py )
+        add_custom_command( TARGET pypi_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/setup.cfg ${PYPI_BUILD_DIR}/setup.cfg )
+        add_custom_command( TARGET pypi_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/README.rst ${PYPI_BUILD_DIR}/README.rst )
+        add_custom_command( TARGET pypi_classad_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/classad/__init__.py ${PYPI_BUILD_DIR}/classad/__init__.py )
+        add_custom_command( TARGET pypi_htcondor_dir POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${PYPI_SOURCE_DIR}/htcondor/__init__.py ${PYPI_BUILD_DIR}/htcondor/__init__.py )
       endif()
 
       # the pyclassad library and the classad and htcondor modules should not link libpython
       # instead, the user's python interpreter will look for any such missing symbols
       if ( DARWIN )
-	# in macOS, use "-undefined dynamic_lookup" in place of "-lpython" or "-framework Python" (i.e. ${PYTHON_LIBRARIES})
-	set( NOLINK_PYTHON_LIB "-undefined dynamic_lookup" )
+        # in macOS, use "-undefined dynamic_lookup" in place of "-lpython" or "-framework Python" (i.e. ${PYTHON_LIBRARIES})
+        set( NOLINK_PYTHON_LIB "-undefined dynamic_lookup" )
       else()
-	# in Linux, simply omit "-lpython" (i.e. ${PYTHON_LIBRARIES}) to get the same behavior
-	set( NOLILNK_PYTHON_LIB "" )
+        # in Linux, simply omit "-lpython" (i.e. ${PYTHON_LIBRARIES}) to get the same behavior
+        set( NOLILNK_PYTHON_LIB "" )
       endif()
-	
+
       # build libpyclassad *not* linked against libpython
       add_library( _pyclassad SHARED classad.cpp classad_wrapper.h exprtree_wrapper.h )
       add_dependencies( _pyclassad pypi_lib_dir )
       target_link_libraries( _pyclassad ${CLASSADS_FOUND} -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       if ( DARWIN )
-	set_target_properties( _pyclassad PROPERTIES SUFFIX ".dylib" )
-	set_target_properties( _pyclassad PROPERTIES INSTALL_NAME_DIR "${PYPI_BUILD_DIR}/htcondor/condor_libs" )
+        set_target_properties( _pyclassad PROPERTIES SUFFIX ".dylib" )
+        set_target_properties( _pyclassad PROPERTIES INSTALL_NAME_DIR "${PYPI_BUILD_DIR}/htcondor/condor_libs" )
       else()
-	set_target_properties( _pyclassad PROPERTIES SUFFIX ".so" )
+        set_target_properties( _pyclassad PROPERTIES SUFFIX ".so" )
       endif()
       set_target_properties( _pyclassad PROPERTIES PREFIX "lib" OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
       set_target_properties( _pyclassad PROPERTIES COMPILE_FLAGS "-fPIC" )
       set_target_properties( _pyclassad PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYPI_BUILD_DIR}/htcondor/condor_libs" )
       set_target_properties( _pyclassad PROPERTIES INSTALL_RPATH "$ORIGIN" )
-      
+
       # next, build the classad module *not* linked against libpython
       add_library( _classad_module SHARED _classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
       add_dependencies( _classad_module pypi_classad_dir )
@@ -335,14 +336,15 @@ else()
       set_target_properties( _classad_module PROPERTIES INSTALL_RPATH "$ORIGIN/../htcondor/condor_libs" )
 
       # finally, build the htcondor module *not* linked against libpython
-      add_library( _htcondor SHARED _htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp module_lock.cpp log_reader.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp )
+      # See note above about deprecating log_reader.cpp.
+      add_library( _htcondor SHARED _htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp )
       add_dependencies( _htcondor pypi_htcondor_dir )
       target_link_libraries( _htcondor _pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       set_target_properties( _htcondor PROPERTIES PREFIX "" )
       set_target_properties( _htcondor PROPERTIES SUFFIX ".so" )
       set_target_properties( _htcondor PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYPI_BUILD_DIR}/htcondor" )
       set_target_properties( _htcondor PROPERTIES INSTALL_RPATH "$ORIGIN/condor_libs" )
-      
+
     endif()
 
     string( COMPARE EQUAL ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} INSOURCEBUILD)

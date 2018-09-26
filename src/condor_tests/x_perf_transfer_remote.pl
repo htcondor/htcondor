@@ -21,7 +21,6 @@
 use File::Copy;
 use File::Path;
 use Getopt::Long;
-#use Digest::MD5;
 
 my $outputfile = $ARGV[0];
 

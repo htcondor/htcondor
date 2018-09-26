@@ -718,7 +718,7 @@ int SafeSock::handle_incoming_packet()
     }   
     if(tempMsg != NULL) { // found
         if (seqNo == 0) {
-            tempMsg->set_sec(_shortMsg.isDataMD5ed(),
+            tempMsg->set_sec(_shortMsg.isDataHashed(),
                     _shortMsg.md(),
                     _shortMsg.isDataEncrypted());
         }
@@ -739,7 +739,7 @@ int SafeSock::handle_incoming_packet()
     } else { // not found
         if(prev) { // add a new message at the end of the chain
             prev->nextMsg = new _condorInMsg(mID, last, seqNo, length, data, 
-                                             _shortMsg.isDataMD5ed(), 
+                                             _shortMsg.isDataHashed(),
                                              _shortMsg.md(), 
                                              _shortMsg.isDataEncrypted(), prev);
             if(!prev->nextMsg) {    
@@ -749,7 +749,7 @@ int SafeSock::handle_incoming_packet()
             //prev->nextMsg->dumpMsg();
         } else { // first message in the bucket
             _inMsgs[index] = new _condorInMsg(mID, last, seqNo, length, data, 
-                                              _shortMsg.isDataMD5ed(), 
+                                              _shortMsg.isDataHashed(),
                                               _shortMsg.md(), 
                                               _shortMsg.isDataEncrypted(), NULL);
             if(!_inMsgs[index]) {
@@ -855,7 +855,7 @@ const char * SafeSock::serialize(const char *buf)
 	return NULL;
 }
 
-const char * SafeSock :: isIncomingDataMD5ed()
+const char * SafeSock :: isIncomingDataHashed()
 {
     char c;
     if (!peek(c)) {
@@ -864,10 +864,10 @@ const char * SafeSock :: isIncomingDataMD5ed()
     else {
         if(_longMsg) {
             // long message 
-            return _longMsg->isDataMD5ed();
+            return _longMsg->isDataHashed();
         }
         else { // short message
-            return _shortMsg.isDataMD5ed();
+            return _shortMsg.isDataHashed();
         }
     }
 }
