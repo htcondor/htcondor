@@ -28,7 +28,7 @@ lib_auth_protocol-ctb
 lib_auth_protocol-fs
 lib_auth_protocol-ssl
 lib_chirpio_van
-lib_eventlog
+#lib_eventlog
 #lib_eventlog_base
 lib_procapi_pidtracking-snapshot
 file_transfer_submit
