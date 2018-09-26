@@ -64,6 +64,11 @@ to send back to the submit machine.
 \condor{history}, which is ambiguous as to how it should work.
 \Ticket{6417}
 
+\item Fixed a bug that caused output and error files with full path names
+to be transferred to the wrong directory on Windows.  This would usually
+cause output file transfer to fail.
+\Ticket{6747}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
