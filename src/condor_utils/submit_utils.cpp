@@ -461,11 +461,7 @@ SubmitHash::SubmitHash()
 	SubmitMacroSet.apool = ALLOCATION_POOL();
 	SubmitMacroSet.sources = std::vector<const char*>();
 	SubmitMacroSet.errors = new CondorError();
-#if 1
 	setup_macro_defaults();
-#else
-	SubmitMacroSet.defaults = &SubmitMacroDefaultSet;
-#endif
 
 	mctx.init("SUBMIT", 3);
 }
@@ -1049,34 +1045,6 @@ void SubmitHash::set_submit_param_used( const char *name )
 }
 
 
-
-#if 0
-int SubmitHash::InsertJobExpr (MyString const &expr)
-{
-	return InsertJobExpr(expr.Value());
-}
-
-int SubmitHash::InsertJobExpr (const char *attr_value_pair, const char * source_label /*=NULL*/)
-{
-	std::string attr;
-	ExprTree *tree = NULL;
-	if ( ! ParseLongFormAttrValue(attr_value_pair, attr, tree) || ! tree) {
-		push_error(stderr, "Parse error in expression: \n\t%s\n\t", attr_value_pair);
-		if ( ! SubmitMacroSet.errors) {
-			fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
-		}
-		ABORT_AND_RETURN( 1 );
-	}
-
-	if (!job->Insert (attr, tree)) {
-		push_error(stderr, "Unable to insert expression: %s\n", attr_value_pair);
-		ABORT_AND_RETURN( 1 );
-	}
-
-	return 0;
-}
-#endif
-
 int SubmitHash::AssignJobExpr (const char * attr, const char *expr, const char * source_label /*=NULL*/)
 {
 	ExprTree *tree = NULL;
@@ -1452,33 +1420,12 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 		}
 	}
 
-#if 1
 	if (FnCheckFile) {
 		FnCheckFile(CheckFileArg, this, role, strPathname.Value(), flags);
 	}
-#else
-	// Queue files for testing access if not already queued
-	int junk;
-	if( flags & O_WRONLY )
-	{
-		if ( CheckFilesWrite.lookup(strPathname,junk) < 0 ) {
-			// this file not found in our list; add it
-			CheckFilesWrite.insert(strPathname,junk);
-		}
-	}
-	else
-	{
-		if ( CheckFilesRead.lookup(strPathname,junk) < 0 ) {
-			// this file not found in our list; add it
-			CheckFilesRead.insert(strPathname,junk);
-		}
-	}
-#endif
 	return 0;
 }
 
-
-#if 1
 
 // Check that a stdin, stdout or stderr submit settings and files are valid
 //
@@ -1589,132 +1536,6 @@ int SubmitHash::SetStderr()
 	return 0;
 }
 
-#else
-
-int SubmitHash::SetStdFile( int which_file )
-{
-	RETURN_IF_ABORT();
-
-	bool	transfer_it = true;
-	bool	stream_it = false;
-	char	*macro_value = NULL;
-	char	*macro_value2 = NULL;
-	const char	*generic_name;
-	MyString	 strbuffer;
-
-	switch( which_file ) 
-	{
-	case 0:
-		generic_name = SUBMIT_KEY_Input;
-		macro_value = submit_param( SUBMIT_KEY_TransferInput, ATTR_TRANSFER_INPUT );
-		macro_value2 = submit_param( SUBMIT_KEY_StreamInput, ATTR_STREAM_INPUT );
-		break;
-	case 1:
-		generic_name = SUBMIT_KEY_Output;
-		macro_value = submit_param( SUBMIT_KEY_TransferOutput, ATTR_TRANSFER_OUTPUT );
-		macro_value2 = submit_param( SUBMIT_KEY_StreamOutput, ATTR_STREAM_OUTPUT );
-		break;
-	case 2:
-		generic_name = SUBMIT_KEY_Error;
-		macro_value = submit_param( SUBMIT_KEY_TransferError, ATTR_TRANSFER_ERROR );
-		macro_value2 = submit_param( SUBMIT_KEY_StreamError, ATTR_STREAM_ERROR );
-		break;
-	default:
-		push_error(stderr, "Unknown standard file descriptor (%d)\n",
-				 which_file ); 
-		ABORT_AND_RETURN( 1 );
-	}
-	RETURN_IF_ABORT();
-
-	if ( macro_value ) {
-		if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
-			transfer_it = false;
-		}
-		free( macro_value );
-	}
-
-	if ( macro_value2 ) {
-		if ( macro_value2[0] == 'T' || macro_value2[0] == 't' ) {
-			stream_it = true;
-		} else if( macro_value2[0] == 'F' || macro_value2[0] == 'f' ) {
-			stream_it = false;
-		}
-		free( macro_value2 );
-	}
-
-	macro_value = submit_param( generic_name, NULL );
-
-	/* Globus jobs are allowed to specify urls */
-	if(JobUniverse == CONDOR_UNIVERSE_GRID && is_globus_friendly_url(macro_value)) {
-		transfer_it = false;
-		stream_it = false;
-	}
-	
-	if( !macro_value || *macro_value == '\0') 
-	{
-		transfer_it = false;
-		stream_it = false;
-		// always canonicalize to the UNIX null file (i.e. /dev/null)
-		macro_value = strdup(UNIX_NULL_FILE);
-	}else if( strcmp(macro_value,UNIX_NULL_FILE)==0 ) {
-		transfer_it = false;
-		stream_it = false;
-	}else {
-		if( JobUniverse == CONDOR_UNIVERSE_VM ) {
-			push_error(stderr, "You cannot use input, ouput, "
-					"and error parameters in the submit description "
-					"file for vm universe\n");
-			ABORT_AND_RETURN( 1 );
-		}
-	}
-
-	MyString tmp = macro_value;
-	if ( check_and_universalize_path(tmp) != 0 ) {
-		// we changed the value, so we have to update macro_value
-		free(macro_value);
-		macro_value = strdup(tmp.Value());
-	}
-	
-	switch( which_file ) 
-	{
-	case 0:
-		AssignJobString(ATTR_JOB_INPUT, macro_value);
-		if ( transfer_it ) {
-			check_open( SFR_STDIN, macro_value, O_RDONLY );
-			AssignJobVal(ATTR_STREAM_INPUT, stream_it);
-		} else {
-			AssignJobVal(ATTR_TRANSFER_INPUT, false);
-		}
-		break;
-	case 1:
-		AssignJobString(ATTR_JOB_OUTPUT, macro_value);
-		if ( transfer_it ) {
-			check_open( SFR_STDOUT, macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-			AssignJobVal(ATTR_STREAM_OUTPUT, stream_it);
-			StreamStdout = stream_it;
-		} else {
-			AssignJobVal(ATTR_TRANSFER_OUTPUT, false);
-		}
-		break;
-	case 2:
-		AssignJobString(ATTR_JOB_ERROR, macro_value);
-		if ( transfer_it ) {
-			check_open( SFR_STDERR, macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-			AssignJobVal(ATTR_STREAM_ERROR, stream_it);
-			StreamStderr = stream_it;
-		} else {
-			AssignJobVal(ATTR_TRANSFER_ERROR, false);
-		}
-		break;
-	}
-		
-	if( macro_value ) {
-		free(macro_value);
-	}
-
-	return 0;
-}
-#endif
 
 class SubmitHashEnvFilter : public Env
 {
@@ -2461,29 +2282,6 @@ int SubmitHash::SetPeriodicRemoveCheck()
 	return 0;
 }
 
-#if 0 
-int SubmitHash::SetExitHoldCheck()
-{
-	RETURN_IF_ABORT();
-
-	char *ehc = submit_param(SUBMIT_KEY_OnExitHoldCheck, ATTR_ON_EXIT_HOLD_CHECK);
-	if (ehc == NULL)
-	{
-		/* user didn't have one, so add one */
-		AssignJobVal(ATTR_ON_EXIT_HOLD_CHECK, false);
-	}
-	else
-	{
-		/* user had a value for it, leave it alone */
-		AssignJobExpr(ATTR_ON_EXIT_HOLD_CHECK, ehc);
-		free(ehc);
-	}
-
-	RETURN_IF_ABORT();
-
-	return 0;
-}
-#endif
 
 int SubmitHash::SetLeaveInQueue()
 {
@@ -2525,31 +2323,6 @@ int SubmitHash::SetLeaveInQueue()
 	return 0;
 }
 
-#if 0
-int SubmitHash::SetExitRemoveCheck()
-{
-	RETURN_IF_ABORT();
-
-	char *erc = submit_param(SUBMIT_KEY_OnExitRemoveCheck, ATTR_ON_EXIT_REMOVE_CHECK);
-	MyString buffer;
-
-	if (erc == NULL)
-	{
-		/* user didn't have one, so add one */
-		AssignJobVal(ATTR_ON_EXIT_REMOVE_CHECK, true);
-	}
-	else
-	{
-		/* user had a value for it, leave it alone */
-		AssignJobExpr(ATTR_ON_EXIT_REMOVE_CHECK, erc );
-		free(erc);
-	}
-
-	RETURN_IF_ABORT();
-
-	return 0;
-}
-#endif
 
 int SubmitHash::SetNoopJob()
 {
@@ -4668,126 +4441,10 @@ int SubmitHash::SetExecutable()
 		ABORT_AND_RETURN( 1 );
 	}
 
-#if 1
 	if (FnCheckFile) {
 		int rval = FnCheckFile(CheckFileArg, this, role, ename, (transfer_it ? 1 : 0));
 		if (rval) { ABORT_AND_RETURN( rval ); }
 	}
-#else
-	// In vm universe and ec2, there is no executable file.
-	bool copy_to_spool = false;
-	if ( ignore_it ) {
-		copy_to_spool = false;
-	}else {
-		bool param_exists;
-		copy_to_spool = submit_param_bool( SUBMIT_KEY_CopyToSpool, "CopyToSpool", false, &param_exists );
-		if ( ! param_exists) {
-			if ( JobUniverse == CONDOR_UNIVERSE_STANDARD ) {
-					// Standard universe jobs can't restore from a checkpoint
-					// if the executable changes.  Therefore, it is deemed
-					// too risky to have copy_to_spool=false by default
-					// for standard universe.
-				copy_to_spool = true;
-			}
-			else {
-					// In so many cases, copy_to_spool=true would just add
-					// needless overhead.  Therefore, (as of 6.9.3), the
-					// default is false.
-				copy_to_spool = false;
-			}
-		}
-	}
-
-
-	// generate initial checkpoint file
-	// This is ignored by the schedd in 7.5.5+.  Prior to that, the
-	// basename must match the name computed by the schedd.
-	char *IckptName = GetSpooledExecutablePath(jid.cluster, "");
-
-	// ensure the executables exist and spool them only if no 
-	// $$(arch).$$(opsys) are specified  (note that if we are simply
-	// dumping the class-ad to a file, we won't actually transfer
-	// or do anything [nothing that follows will affect the ad])
-	if ( transfer_it && !DumpClassAdToFile && !strstr(ename,"$$") ) {
-
-		StatInfo si(ename);
-		if ( SINoFile == si.Error () ) {
-			push_error(stderr, "Executable file %s does not exist\n", ename );
-			ABORT_AND_RETURN( 1 );
-		}
-			    
-		if (!si.Error() && (si.GetFileSize() == 0)) {
-			push_error(stderr, "Executable file %s has zero length\n", 
-					 ename );
-			ABORT_AND_RETURN( 1 );
-		}
-
-		// spool executable if necessary
-		if ( copy_to_spool && jid.proc == 0 ) {
-
-			bool try_ickpt_sharing = false;
-			CondorVersionInfo cvi(getScheddVersion());
-			if (cvi.built_since_version(7, 3, 0)) {
-				try_ickpt_sharing = param_boolean("SHARE_SPOOLED_EXECUTABLES",
-				                                  true);
-			}
-
-			MyString hash;
-			if (try_ickpt_sharing) {
-				Condor_MD_MAC cmm;
-				unsigned char* hash_raw;
-				if (!cmm.addMDFile(ename)) {
-					dprintf(D_ALWAYS,
-					        "SHARE_SPOOLED_EXECUTABLES will not be used: "
-					            "hash of file %s failed\n",
-					        ename);
-				}
-				else if ((hash_raw = cmm.computeMD()) == NULL) {
-					dprintf(D_ALWAYS,
-					        "SHARE_SPOOLED_EXECUTABLES will not be used: "
-					            "no hash support in this Condor build\n");
-				}
-				else {
-					for (int i = 0; i < MAC_SIZE; i++) {
-						hash.formatstr_cat("%02x", static_cast<int>(hash_raw[i]));
-					}
-					free(hash_raw);
-				}
-			}
-			int ret;
-			if (!hash.IsEmpty()) {
-				ClassAd tmp_ad;
-				tmp_ad.Assign(ATTR_OWNER, owner);
-				tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash.Value());
-				ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
-			}
-			else {
-				ret = MyQ->send_SpoolFile(IckptName);
-			}
-
-			if (ret < 0) {
-				push_error(stderr, "Request to transfer executable %s failed\n",
-				         IckptName );
-				ABORT_AND_RETURN( 1 );
-			}
-
-			free(IckptName); IckptName = NULL;
-
-			// ret will be 0 if the SchedD gave us the go-ahead to send
-			// the file. if it's not, the SchedD is using ickpt sharing
-			// and already has a copy, so no need
-			//
-			if ((ret == 0) && MyQ->send_SpoolFileBytes(full_path(ename,false)) < 0) {
-				push_error(stderr, "failed to transfer executable file %s\n", 
-						 ename );
-				ABORT_AND_RETURN( 1 );
-			}
-		}
-
-	}
-	if (IckptName) free( IckptName );
-
-#endif
 	if (ename) free(ename);
 	return 0;
 }
@@ -8201,26 +7858,8 @@ int SubmitHash::parse_up_to_q_line(MacroStream &ms, std::string & errmsg, char**
 }
 int SubmitHash::parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::string & errmsg, char** qline)
 {
-#if 1
 	MacroStreamYourFile ms(fp, source);
 	return parse_up_to_q_line(ms, errmsg, qline);
-#else
-	struct _parse_up_to_q_callback_args args = { NULL, source.id };
-
-	*qline = NULL;
-
-	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
-	MacroStreamYourFile ms(fp, source);
-
-	int err = Parse_macros(ms,
-		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
-		&ctx, errmsg, parse_q_callback, &args);
-	if (err < 0)
-		return err;
-
-	*qline = args.line;
-	return 0;
-#endif
 }
 
 void SubmitHash::warn_unused(FILE* out, const char *app)
