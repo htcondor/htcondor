@@ -26,11 +26,11 @@ use Cwd;
 use CondorTest;
 use CondorUtils;
 
-my $testName = 'python_bindigs_htcondor';
+my $testName = 'python_bindings_htcondor';
 my $testDescription = 'Thin shim around htcondor_tests.py';
 
 # Where is the release dir?
-my $releaseDir = getcwd() . "../../release_dir";
+my $releaseDir = getcwd() . "/../condor";
 # For interactive testing.
 if( defined( $ARGV[0] ) ) {
 	$releaseDir = $ARGV[0];
