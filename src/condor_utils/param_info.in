@@ -2167,8 +2167,8 @@ type=string
 tags=submit
 
 [WARN_ON_UNUSED_SUBMIT_FILE_MACROS]
-default=
-type=string
+default=true
+type=bool
 tags=submit
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
