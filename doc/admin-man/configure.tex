@@ -4378,8 +4378,8 @@ WANT_HOLD_REASON = \
 
 \label{param:MountUnderScratch}
 \item[\Macro{MOUNT\_UNDER\_SCRATCH}]
-  A ClassAd expression, which when evaluated in the context of the job ClassAd evaluates
-  to a comma separated list of directories. 
+  A ClassAd expression, which when evaluated in the context of the job ClassAd, evaluates
+  to a string that contains a comma separated list of directories. 
   For each directory in the list, 
   HTCondor creates a directory in the job's temporary scratch directory 
   with that name,
@@ -4407,8 +4407,7 @@ WANT_HOLD_REASON = \
   and because jobs will not be able to fill up the real \File{/tmp} directory. 
   Another use case might be for home directories, which some jobs might want
   to write to, but that should be cleaned up after each job run.
-  The default value if not defined will be that no directories are mounted in
-  the job's temporary scratch directory.
+  The default value is \Expr{''/tmp,/var/tmp''}.
 
   If the job's execute directory is encrypted, \File{/tmp} and
   \File{/var/tmp} are automatically added to
