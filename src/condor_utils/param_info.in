@@ -716,7 +716,7 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_MAX_SUBMITS_PER_INTERVAL]
-default=5
+default=100
 type=int
 tags=dagman,dagman_main
 restart=never
@@ -2167,8 +2167,8 @@ type=string
 tags=submit
 
 [WARN_ON_UNUSED_SUBMIT_FILE_MACROS]
-default=
-type=string
+default=true
+type=bool
 tags=submit
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
@@ -2644,19 +2644,23 @@ range=1,
 type=int
 
 [NEGOTIATOR_MAX_TIME_PER_SUBMITTER]
-default=31536000
+default=60
 type=int
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MAX_TIME_PER_SCHEDD]
-default=31536000
+default=120
 type=int
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MAX_TIME_PER_PIESPIN]
-default=31536000
+default=120
 type=int
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_MAX_TIME_PER_CYCLE]
+default=1200
+type=int
 
 [NEGOTIATOR_MATCH_EXPRS]
 default=
@@ -3127,7 +3131,7 @@ type=int
 tags=schedd
 
 [CURB_MATCHMAKING]
-default=false
+default=RecentDaemonCoreDutyCycle > 0.98
 type=string
 description=Curb Expression for Matchmaking
 tags=schedd
@@ -3139,7 +3143,7 @@ type=string
 tags=schedd
 
 [START_SCHEDULER_UNIVERSE]
-default=TotalSchedulerJobsRunning < 200
+default=TotalSchedulerJobsRunning < 500
 description=expression that, when TRUE allows a Scheduler universe job to start
 type=string
 tags=schedd
@@ -3167,8 +3171,8 @@ usage=Circuit breaker to prevent an excessive number of a jobs in a single submi
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
-# default is 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
-default=100
+# default is roughly 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
+default=200
 customization=normal
 description=Max running DAGs for a single owner
 usage=Ensure that a single user does not monopolize the SCHEDD
@@ -4527,8 +4531,18 @@ description=Duration in seconds for ecryptfs key timeout
 review=toddt
 tags=ecryptfs
 
+[MAX_CONCURRENT_DOWNLOADS]
+default=100
+type=int
+range=0,
+
+[MAX_CONCURRENT_UPLOADS]
+default=100
+type=int
+range=0,
+
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
-default=
+default=2.0
 type=string
 description=
 tags=schedd
@@ -4586,7 +4600,7 @@ description=Age (in seconds) after which preen determines this file is stale and
 tags=file_transfer,preen
 
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
-default=10240
+default=81920
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for the collector.
@@ -4661,7 +4675,7 @@ description=History Helper max number of history ads
 usage=Set the limit on the number of history ads remote history will consider
 
 [HISTORY_HELPER_MAX_CONCURRENCY]
-default=2
+default=50
 range=0,
 type=int
 description=History Helper max number of helper sub-processes

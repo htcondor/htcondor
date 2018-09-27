@@ -97,7 +97,7 @@ static void Usage() {
 //---------------------------------------------------------------------------
 
 #define MAX_IDLE_DEFAULT 1000
-#define MAX_SUBMITS_PER_INT_DEFAULT 5
+#define MAX_SUBMITS_PER_INT_DEFAULT 100
 #define LOG_SCAN_INT_DEFAULT 5
 #define SCHEDD_UPDATE_INTERVAL_DEFAULT 120
 
