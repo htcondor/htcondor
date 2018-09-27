@@ -115,7 +115,6 @@ if ($job_ran) {
 	my $elog = `condor_config_val EVENT_LOG`;
 	chomp($elog);
 
-	my $expected = "x_lib_eventlog.expected";
 	my @got;
 	open(ELOG,"$readlogexe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
 	print "--x_read_joblog output--\n";
