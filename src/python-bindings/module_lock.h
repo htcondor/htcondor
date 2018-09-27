@@ -5,7 +5,7 @@
 #ifdef WIN32
   #include <windows.h> // for CRITICAL_SECTION
   #define MODULE_LOCK_MUTEX_TYPE CRITICAL_SECTION
-  #define MODULE_LOCK_MUTEX_INITAILIZER {0}
+  #define MODULE_LOCK_MUTEX_INITIALIZER {0}
   #define MODULE_LOCK_MUTEX_LOCK EnterCriticalSection
   #define MODULE_LOCK_MUTEX_UNLOCK LeaveCriticalSection
   #define MODULE_LOCK_MUTEX_INITIALIZE(mtx) InitializeCriticalSection(mtx)
@@ -17,7 +17,7 @@
 #else
   #include <pthread.h>
   #define MODULE_LOCK_MUTEX_TYPE pthread_mutex_t
-  #define MODULE_LOCK_MUTEX_INITAILIZER PTHREAD_MUTEX_INITIALIZER
+  #define MODULE_LOCK_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
   #define MODULE_LOCK_MUTEX_LOCK pthread_mutex_lock
   #define MODULE_LOCK_MUTEX_UNLOCK pthread_mutex_unlock
   #define MODULE_LOCK_MUTEX_INITIALIZE(mtx) (void)0

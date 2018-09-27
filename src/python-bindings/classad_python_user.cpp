@@ -192,7 +192,7 @@ python_invoke (const char *                 name,
         bool whitelisted = false;
         while ((tmpMod = modules.next()))
         {
-            if (modulesStr == tmpMod)
+            if (moduleName == tmpMod)
             {
                 whitelisted = true;
                 break;

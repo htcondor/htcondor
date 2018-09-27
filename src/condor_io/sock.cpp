@@ -2115,7 +2115,7 @@ char * Sock::serializeMdInfo() const
     const unsigned char * kmd = NULL;
     int len = 0;
 
-    if (isOutgoing_MD5_on()) {
+    if (isOutgoing_Hash_on()) {
         kmd = get_md_key().getKeyData();
         len = get_md_key().getKeyLength();
     }

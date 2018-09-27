@@ -56,43 +56,48 @@ section~\ref{sec:job-log-events}.
 \begin{table}[ht]
 \centering
 \caption{\label{table:user-log-event-codes}Event Codes in a Job Event Log}
-\begin{tabular}{|l|c|} \hline
+\begin{tabular}{|l|l|c|} \hline
 \emph{Event Code} & \emph{Description}   \\ \hline \hline
-000   &   Submit  \\ \hline
-001   &   Execute  \\ \hline
-002   &   Executable error  \\ \hline
-003   &   Checkpointed  \\ \hline
-004   &   Job evicted  \\ \hline
-005   &   Job terminated  \\ \hline
-006   &   Image size  \\ \hline
-007   &   Shadow exception  \\ \hline
-008   &   Generic  \\ \hline
-009   &   Job aborted  \\ \hline
-010   &   Job suspended  \\ \hline
-011   &   Job unsuspended  \\ \hline
-012   &   Job held  \\ \hline
-013   &   Job released  \\ \hline
-014   &   Node execute  \\ \hline
-015   &   Node terminated  \\ \hline
-016   &   Post script terminated  \\ \hline
-017   &   Globus submit (no longer used)  \\ \hline
-018   &   Globus submit failed  \\ \hline
-019   &   Globus resource up (no longer used)  \\ \hline
-020   &   Globus resource down (no longer used)  \\ \hline
-021   &   Remote error  \\ \hline
-022   &   Job disconnected  \\ \hline
-023   &   Job reconnected  \\ \hline
-024   &   Job reconnect failed  \\ \hline
-025   &   Grid resource up \\ \hline
-026   &   Grid resource down \\ \hline
-027   &   Grid submit \\ \hline
-028   &   Job ClassAd attribute values added to event log  \\ \hline
-029   &   Job status unknown \\ \hline
-030   &   Job status known \\ \hline
-031   &   Grid job stage in \\ \hline
-032   &   Grid job stage out \\ \hline
-033   &   Job ClassAd attribute update \\ \hline
-034   &   DAGMan PRE\_SKIP defined \\ \hline
+000   & SUBMIT  & Submit  \\ \hline
+001   & EXECUTE & Execute  \\ \hline
+002   & EXECUTABLE\_ERROR & Executable error  \\ \hline
+003   & CHECKPOINTED & Checkpointed  \\ \hline
+004   & JOB\_EVICTED & Job evicted  \\ \hline
+005   & JOB\_TERMINATED & Job terminated  \\ \hline
+006   & IMAGE\_SIZE & Image size  \\ \hline
+007   & SHADOW\_EXCEPTION & Shadow exception  \\ \hline
+008   & GENERIC & Generic  \\ \hline
+009   & JOB\_ABORTED & Job aborted  \\ \hline
+010   & JOB\_SUSPENDED & Job suspended  \\ \hline
+011   & JOB\_UNSUSPENDED & Job unsuspended  \\ \hline
+012   & JOB\_HELD & Job held  \\ \hline
+013   & JOB\_RELEASED & Job released  \\ \hline
+014   & NODE\_EXECUTE & Node execute  \\ \hline
+015   & NODE\_TERMINATED & Node terminated  \\ \hline
+016   & POST\_SCRIPT\_TERMINATED & Post script terminated  \\ \hline
+017   & GLOBUS\_SUBMIT & Globus submit (no longer used)  \\ \hline
+018   & GLOBUS\_SUBMIT\_FAILED & Globus submit failed  \\ \hline
+019   & GLOBUS\_RESOURCE\_UP & Globus resource up (no longer used)  \\ \hline
+020   & GLOBUS\_RESOURCE\_DOWN & Globus resource down (no longer used)  \\ \hline
+021   & REMOTE\_ERROR & Remote error  \\ \hline
+022   & JOB\_DISCONNECTED & Job disconnected  \\ \hline
+023   & JOB\_RECONNECTED &  Job reconnected  \\ \hline
+024   & JOB\_RECONNECT\_FAILED & Job reconnect failed  \\ \hline
+025   & GRID\_RESOURCE\_UP & Grid resource up \\ \hline
+026   & GRID\_RESOURCE\_DOWN & Grid resource down \\ \hline
+027   & GRID\_SUBMIT & Grid submit \\ \hline
+028   & JOB\_AD\_INFORMATION & Job ClassAd attribute values added to event log  \\ \hline
+029   & JOB\_STATUS\_UNKNOWN & Job status unknown \\ \hline
+030   & JOB\_STATUS\_KNOWN & Job status known \\ \hline
+031   & JOB\_STAGE\_IN & Grid job stage in \\ \hline
+032   & JOB\_STAGE\_OUT & Grid job stage out \\ \hline
+033   & ATTRIBUTE\_UPDATE & Job ClassAd attribute update \\ \hline
+034   & PRESKIP & DAGMan PRE\_SKIP defined \\ \hline
+035   & CLUSTER\_SUBMIT & Cluster submitted \\ \hline
+036   & CLUSTER\_REMOVE & Cluster removed \\ \hline
+037   & FACTORY\_PAUSED & Factory paused \\ \hline
+038   & FACTORY\_RESUMED & Factory resumed \\ \hline
+039   & NONE & No event could be returned \\ \hline
 \end{tabular}
 \end{table}
 %

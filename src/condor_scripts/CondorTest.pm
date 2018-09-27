@@ -3857,7 +3857,7 @@ sub JavaInitialize
 sub JavaTimeout
 {
 	my @responses = ();
-	print "Timeout: peekinig in starter log\n";
+	print "Timeout: peeking in starter log\n";
 	CondorLog::RunCheck(
 		daemon=>"STARTER",
 		match_regexp=>"JavaDetect",
@@ -3865,11 +3865,11 @@ sub JavaTimeout
 	);
 	my $sizeresponses = @responses;
 	if($sizeresponses > 0) {
-		print "Starter log scrapping for JavaDetect:\n";
+		print "Starter log scraping for JavaDetect:\n";
 		foreach my $line (@responses) {
 			print "$line";
 		}
-		print "Starter log scrapping for JavaDetect over:\n";
+		print "Starter log scraping for JavaDetect over:\n";
 	}
 	die "Java test timed out\n";
 }

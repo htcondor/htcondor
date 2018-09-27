@@ -3976,7 +3976,7 @@ assignWork(const ScheddWorkMap &workMap, CurrentWorkMap &curWork, ScheddWork &ne
 void
 Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds)
 {
-	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", false))
+	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", true))
 	{
 		return;
 	}
@@ -4789,7 +4789,7 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 }
 
 bool Matchmaker::
-SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft) {
+SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double /*pieLeft*/) {
     double match_cost = 0;
 
     if (cp_supports_policy(*candidate)) {
@@ -4802,7 +4802,8 @@ SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double 
     if ((used + match_cost) <= allowed) {
         return true;
     }
-    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*match_cost)) {
+
+    if ((used <= 0) && (allowed > 0)) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone

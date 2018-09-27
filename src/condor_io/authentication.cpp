@@ -1021,7 +1021,12 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
 			dprintf (D_SECURITY, "HANDSHAKE: excluding KERBEROS: %s\n", "Initialization failed");
 			method_bitmask &= ~CAUTH_KERBEROS;
 		}
-		if ( (method_bitmask & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false ) {
+#ifdef HAVE_EXT_OPENSSL
+		if ( (method_bitmask & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false )
+#else
+		if (method_bitmask & CAUTH_SSL)
+#endif
+		{
 			dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
 			method_bitmask &= ~CAUTH_SSL;
 		}
@@ -1085,7 +1090,12 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 		dprintf (D_SECURITY, "HANDSHAKE: excluding KERBEROS: %s\n", "Initialization failed");
 		shouldUseMethod &= ~CAUTH_KERBEROS;
 	}
-	if ( (shouldUseMethod & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false ) {
+#ifdef HAVE_EXT_OPENSSL
+	if ( (shouldUseMethod & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false )
+#else
+	if (shouldUseMethod & CAUTH_SSL)
+#endif
+	{
 		dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
 		shouldUseMethod &= ~CAUTH_SSL;
 	}

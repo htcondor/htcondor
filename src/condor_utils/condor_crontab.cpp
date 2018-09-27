@@ -239,7 +239,7 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
 			//
 		if ( ad->LookupString( CronTab::attributes[ctr], buffer ) ) {
 			MyString curError;
-			if ( !CronTab::validateParameter( ctr, buffer.Value(), curError ) ) {
+			if ( !CronTab::validateParameter( buffer.Value(), CronTab::attributes[ctr], curError ) ) {
 				ret = false;
 				error += curError;
 			}
@@ -276,8 +276,8 @@ CronTab::getError() {
  * 		 just the characters
  **/
 bool
-CronTab::validateParameter( int attribute_idx, const char *parameter,
-							MyString &error ) {
+CronTab::validateParameter(const char* parameter, const char * attr, MyString& error)
+{
 	bool ret = true;
 		//
 		// Make sure there are only valid characters 
@@ -288,7 +288,7 @@ CronTab::validateParameter( int attribute_idx, const char *parameter,
 		error  = "Invalid parameter value '";
 		error += parameter;
 		error += "' for ";
-		error += CronTab::attributes[attribute_idx];
+		error += attr;
 		ret = false;
 	}
 	return ( ret );
@@ -719,8 +719,8 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// the error message to the log
 		//
 	MyString error;
-	if ( ! CronTab::validateParameter(	attribute_idx,
-										param->Value(),
+	if ( ! CronTab::validateParameter(	param->Value(),
+										CronTab::attributes[attribute_idx],
 										error ) ) {
 		dprintf( D_ALWAYS, "%s", error.Value() );
 			//

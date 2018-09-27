@@ -46,7 +46,7 @@ public:
 	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
 
 	// load the submit file/digest that was passed in our constructor
-	int LoadDigest(MacroStream & ms, ClassAd * user_ident, std::string & errmsg);
+	int LoadDigest(MacroStream & ms, ClassAd * user_ident, int cluster_id, std::string & errmsg);
 	// load the item data for the given row, and setup the live submit variables for that item.
 	int LoadRowData(int row, std::string * empty_var_names=NULL);
 	// returns true when the row data is not yet loaded, but might be available if you try again later.
@@ -205,7 +205,7 @@ bool LoadJobFactoryDigest(JobFactory * factory, const char * submit_digest_text,
 	MacroStreamMemoryFile ms(submit_digest_text, -1, factory->source);
 
 	errmsg = "";
-	int rval = factory->LoadDigest(ms, user_ident, errmsg);
+	int rval = factory->LoadDigest(ms, user_ident, factory->ID(), errmsg);
 	if (rval) {
 		dprintf(D_ALWAYS, "failed to parse submit digest for factory %d : %s\n", factory->getClusterId(), errmsg.c_str());
 		return false;
@@ -230,7 +230,7 @@ int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::s
 	for (size_t ix = off; ix < cbbuf; ++ix) {
 		if (buf[ix] == '\n') {
 			remainder.append(buf+off, ix-off);
-			factory->fea.items.append(remainder.data(), remainder.size());
+			factory->fea.items.append(remainder.data(), (int)remainder.size());
 			remainder.clear();
 			off = ix+1;
 		}
@@ -283,7 +283,7 @@ JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_fil
 		// to impersonate the user while loading the itemdata.
 		// An 8.7.9 condor_submit will put the itemdata into SPOOL, so we would only impersonate
 		// if the condor_submit was 8.7.5 thru 8.7.8 (and not remote). we choose not to support that case.
-		rval = factory->LoadDigest(ms, NULL, errmsg);
+		rval = factory->LoadDigest(ms, NULL, factory->ID(), errmsg);
 	#else
 		// If we are already impersonating the user, dont pass the job ad to LoadDigest since it only needs it to impersonate the user
 		rval = factory->LoadDigest(ms, restore_priv ? NULL : job, errmsg);
@@ -636,7 +636,7 @@ static bool EnableOverlappedIO() {
 }
 #endif
 
-int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & errmsg)
+int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id, std::string & errmsg)
 {
 	char * qline = NULL;
 	int rval = parse_up_to_q_line(ms, errmsg, &qline);
@@ -684,23 +684,38 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, std::string & 
 					if  (user_ident) {
 						restore_priv = true;
 						priv = set_user_priv_from_ad(*user_ident);
+					} else {
+						// if we are not impersonating a user, then the items filename MUST be in spool
+						extern void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir /*= NULL*/);
+						extern char* Spool; // in schedd_main.cpp. 
+						MyString spooled_filename;
+						GetSpooledMaterializeDataPath(spooled_filename, cluster_id, Spool);
+						if (spooled_filename != fea.items_filename) {
+							formatstr(errmsg, "invalid filename '%s' for foreach from. File must be in Spool.", fea.items_filename.Value());
+							rval = -1;
+						}
 					}
+
+					if (rval == 0) {
 					#ifdef WIN32
-					// on Windows, make the use of async io a pref since it doesn't work on all platforms (sigh)
-					bool can_overlap = EnableOverlappedIO();
-					reader.set_sync( ! can_overlap);
+						// on Windows, make the use of async io a pref since it doesn't work on all platforms (sigh)
+						bool can_overlap = EnableOverlappedIO();
+						reader.set_sync(!can_overlap);
 					#endif
 
-					// setup an async reader for the itemdata
-					rval = reader.open(fea.items_filename.c_str());
-					if (rval) {
-						formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
-					} else {
-						rval = reader.queue_next_read();
+						// setup an async reader for the itemdata
+						rval = reader.open(fea.items_filename.c_str());
 						if (rval) {
-							formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
-						} else {
-							fea.foreach_mode = foreach_from_async;
+							formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
+						}
+						else {
+							rval = reader.queue_next_read();
+							if (rval) {
+								formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
+							}
+							else {
+								fea.foreach_mode = foreach_from_async;
+							}
 						}
 					}
 					// failed to open or start the item reader, so just close it and free the internal buffers.

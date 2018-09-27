@@ -42,9 +42,6 @@ mv ../condor-${condor_version}.tgz ./condor_${condor_version}.orig.tar.gz
 tar xfpz condor_${condor_version}.orig.tar.gz
 cd condor-${condor_version}
 
-# Update condor_version for pre-release build
-condor_release="0.$condor_build_id"
-
 if $(grep -qi stretch /etc/os-release); then
     dist='stretch'
 elif $(grep -qi xenial /etc/os-release); then
@@ -58,8 +55,17 @@ echo "Distribution is $dist"
 
 # copy srpm files from condor sources into the SOURCES directory
 cp -pr build/packaging/new-debian debian
-#cat build/packaging/new-debian/changelog >> debian/changelog
+
+# Update condor_version for pre-release build
+condor_release="0.$condor_build_id"
+# Update condor_version for final build
+#condor_release="1"
+
+# Nightly build changelog
 dch --distribution $dist --newversion "$condor_version-$condor_release" "Nightly build"
+
+# Final release changelog
+#dch --release --distribution $dist ignored
 
 dpkg-buildpackage -uc -us
 

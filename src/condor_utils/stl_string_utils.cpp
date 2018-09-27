@@ -328,6 +328,57 @@ int blankline( const char *str )
 	return( (*str=='\0') ? 1 : 0);
 }
 
+/*
+ * return true if the input attibute is in the list of attributes
+ * search is case insensitive.  Items in the list should be space or comma or newline separated
+ * return value is NULL if attribute not found, or a pointer to the first character in the list
+ * after the matching attribute if a match is found
+ *
+ * This code relys on the fact that attribute names can only contain Alpha-numeric characters, _ or .
+ * The list is must be separated by comma, space or non-printing characters and must contain only
+ * valid attribute names otherwise. these assumptions allow for some shortcuts in the code
+ * that make it much faster than an iterative strcasecmp would be.  They also mean that an attempt
+ * to use this to compare arbitrary strings could result in false matches. 
+ * For instance, { is uppercase [ according to this code. and * would match \n
+ *
+ */
+const char * is_attr_in_attr_list(const char * attr, const char * list)
+{
+	// a fairly optimized comparison of characters to see if they match case-insenstively
+	// this ONLY works for A-Za-Z0-9, and can generate false matches if either of the strings
+	// contains non-printing characters, but it will work for our use case here
+	#define ALPHANUM_EQUAL_NOCASE(c1,c2) ((((c1) ^ (c2)) & ~0x20) == 0)
+	// this is true for space, comma and newline, NOT true for :;<=>?@
+	#define IS_SEP_CHAR(ch) ((ch) <= ',')
+
+	const char * a = attr;
+	const char * p = list;
+	while (*p) {
+		a = attr;
+		while (*a && ALPHANUM_EQUAL_NOCASE(*p,*a)) { ++p, ++a; }
+		// we get to here at the end of attr, or when char matching fails against the list
+
+		if ( ! *a) {
+			// at the end of attr, we have a match if we are also at the end of
+			// an entry in the list
+			if ( ! *p || IS_SEP_CHAR(*p)) {
+				// the attribute has ended, so this is a match
+				// return a pointer to where we stopped searching.
+				return p;
+			}
+		}
+
+		// skip to the end of this entry in the list (skip all non-separator characters)
+		while (*p && !IS_SEP_CHAR(*p)) { ++p; }
+		// skip to the start of the next entry (skip separator characters)
+		while (*p && IS_SEP_CHAR(*p)) { ++p; }
+	}
+
+	#undef ALPHANUM_EQUAL_NOCASE
+	#undef IS_SEP_CHAR
+
+	return NULL;
+}
 
 #if 1
 static MyStringTokener tokenbuf;

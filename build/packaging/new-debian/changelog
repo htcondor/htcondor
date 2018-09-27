@@ -1,3 +1,24 @@
+condor (8.7.9-1) unstable; urgency=medium
+
+  * Support for Debian 9, Ubuntu 16, and Ubuntu 18
+  * Improved Python bindings to support the full range of submit functionality
+  * Allows VMs to shutdown when the job is being gracefully evicted
+  * Can now specify a host name alias (CNAME) for NETWORK_HOSTNAME
+  * Added the ability to run a job immediately by replacing a running job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 01 Aug 2018 00:40:39 -0500
+
+condor (8.6.12-1) stable; urgency=medium
+
+  * Support for Debian 9, Ubuntu 16, and Ubuntu 18
+  * Fixed a memory leak that occurred when SSL authentication fails
+  * Fixed a bug where invalid transform REQUIREMENTS caused a Job to match
+  * Fixed a bug to allow a queue super user to edit protected attributes
+  * Fixed a problem setting the job environment in the Singularity container
+  * Fixed several other minor problems
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 31 Jul 2018 22:58:32 -0500
+
 condor (8.6.11) unstable; urgency=medium
 
   * Nightly build

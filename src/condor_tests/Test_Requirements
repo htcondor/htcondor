@@ -240,6 +240,7 @@ job_filexfer_base_van: personal
 job_filexfer_basic_van: personal
 job_filexfer_input-onegone_van: personal
 job_filexfer_limitback_van: personal
+job_filexfer_sha256-remote_van: personal
 job_filexfer_md5-remote_van: personal
 job_filexfer_output_van: personal
 job_filexfer_output-withvacate_van: personal

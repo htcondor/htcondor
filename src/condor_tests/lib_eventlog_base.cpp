@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include "write_user_log.h"
 #include "read_user_log.h"
+#include "my_username.h"
 
 int
 WriteStateFile( const ReadUserLog::FileState &state, const char *state_file )
@@ -124,9 +125,12 @@ ReadEventLog( const char *event_log, int num_events, const char *state_file )
 int
 WriteEventLog( const char *event_log, int &num_events )
 {
+	char * owner = my_username();
+	char * domain = my_domainname();
+
 	int			errors = 0;
 	WriteUserLog		writer;
-	if (!writer.initialize("owner", NULL, event_log, 1, 1, 1)) {
+	if (!writer.initialize(owner, domain, event_log, 1, 1, 1)) {
 		fprintf( stderr, "Failed to initailize writer (#1)\n" );
 		errors++;
 	}
@@ -146,7 +150,7 @@ WriteEventLog( const char *event_log, int &num_events )
 	}
 
 	// Generate an execute event
-	if (!writer.initialize("owner", NULL, event_log, 1, 1, 1)) {
+	if (!writer.initialize(owner, domain, event_log, 1, 1, 1)) {
 		fprintf( stderr, "Failed to initailize writer (#2)\n" );
 		errors++;
 	}

@@ -50,17 +50,6 @@ typically, found by using \texttt{Collector.locate(...)}.
 to send to a daemon.   Some commands require additional arguments; 
 for example, sending \texttt{DaemonOff} to a \Condor{master} requires 
 one to specify which subsystem to turn off. 
-\\ \hline
-\texttt{read\_events( file\_obj, is\_xml = True ) }
-
-Read and parse an HTCondor event log file.
-Returns a Python iterator of ClassAds.
-
-Parameter \texttt{file\_obj} is a file object corresponding to an HTCondor
-event log.
-
-The optional parameter \texttt{is\_xml} specifies whether the event log is
-XML-formatted.
 
 \\ \hline
 
@@ -565,7 +554,6 @@ Sets the arguments to be used by subsequent calls to the \texttt{queue} or \text
 \begin{flushleft}
 \begin{longtable}{|p{16cm}|} \hline
 
-\\ \hline
 \texttt{cluster()}
 
 Returns the integer value of the \Attr{ClusterId} of the submitted jobs.
@@ -1075,6 +1063,40 @@ claim for future use.
 \texttt{delegateGSIProxy()}
 Send an x509 proxy credential to an activated claim.
 
+\\ \hline
+\end{longtable}
+\end{flushleft}
+\pagebreak% This forces the next paragraph, heading, and table onto the same
+% page.  There's a different way to do that, but this is one is nice and easy.
+The \PyBind{JobEventLog} reads HTCondor job event (user) logs.  See the example
+in section \ref{Python-Example}.  Its iterators return \PyBind{JobEvent}s,
+which always have the \texttt{type} property.  Events
+which are not of type \texttt{JobEventType.NONE} always have the
+\texttt{cluster} and \texttt{proc} properties, and may have other properties,
+depending on their specific type.
+
+\textbf{The \PyBindNI{JobEventLog} class:}
+\begin{flushleft}
+\begin{longtable}{|p{16cm}|}
+\hline
+
+\texttt{\_\_init\_\_( filename )}
+
+Create an instance of the \PyBindNI{JobEventLog} class.
+The \texttt{filename} argument indicates the log file to read.
+Raise IOError if there's a problem initializing the underlying log reader.
+
+\\ \hline
+
+\texttt{events( stop\_after )}
+
+Return an iterator (self), which will stop waiting for new events after
+\texttt{stop\_after} seconds have passed.  The iterator may return an
+arbitrary number of events, including zero, before \texttt{stop\_after} seconds
+have passed.  If the \texttt{stop\_after} argument is \texttt{None},
+the iterator will never stop waiting for new events.
+
+\\ \hline
 \end{longtable}
 \end{flushleft}
 
@@ -1099,6 +1121,10 @@ A list of types of known HTCondor daemons.
 \texttt{JobAction}
 
 A list of actions that can be performed on a job in a \Condor{schedd}.
+\\ \hline
+\texttt{JobEventType}
+
+A list of job event types.  See table~\ref{table:user-log-event-codes}.
 \\ \hline
 \texttt{SubsystemType}
 
@@ -1234,6 +1260,41 @@ This same example, using a dictionary instead of constructing a ClassAd:
 \footnotesize
 \begin{verbatim}
 htcondor.Schedd().submit({"Cmd": "/bin/echo"})
+\end{verbatim}
+\normalsize
+
+The following is an example of using the \PyBind{JobEventLog} class:
+
+\footnotesize
+\begin{verbatim}
+import os
+import sys
+import htcondor
+from htcondor import JobEventType
+
+jel = htcondor.JobEventLog("logfile")
+# Stop waiting for events sixty seconds from now.
+for event in jel.events(stop_after=60):
+    if event.type == JobEventType.EXECUTE:
+        break;
+else:
+    print("Failed to find execute event before deadline, aborting.")
+    sys.exit(-1)
+
+# Do something else.
+
+# Stop waiting for events ninety seconds from now.
+for event in jel.events(stop_after=90):
+    if event.type == JobEventType.JOB_TERMINATED:
+        break;
+    elif event.type == JobEventType.IMAGE_SIZE:
+        pass
+    else:
+        print("Found unexpected event, aborting.")
+        sys.exit(-1)
+else:
+    print("Failed to find terminated event before deadline, aborting.")
+    sys.exit(-1)
 \end{verbatim}
 \normalsize
 

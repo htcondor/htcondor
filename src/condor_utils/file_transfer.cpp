@@ -78,6 +78,7 @@ public:
 	FileTransferItem():
 		is_directory(false),
 		is_symlink(false),
+		is_domainsocket(false),
 		file_mode(NULL_FILE_PERMISSIONS),
 		file_size(0) {}
 
@@ -88,6 +89,7 @@ public:
 	std::string dest_dir;
 	bool is_directory;
 	bool is_symlink;
+	bool is_domainsocket;
 	condor_mode_t file_mode;
 	filesize_t file_size;
 };
@@ -1107,7 +1109,7 @@ FileTransfer::ComputeFilesToSend()
 					(modification_time != dir.GetModifyTime()) ) {
 				// file has changed in size or modification time.  this
 				// doesn't catch the case where the file was modified
-				// without changing size and is then back-dated.  use md5
+				// without changing size and is then back-dated.  use a hash
 				// or something if that's truly needed, and compare the
 				// checksums.
 				dprintf( D_FULLDEBUG, 
@@ -4259,7 +4261,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 
 	// now, iterate the directory and put the relavant info into the catalog.
 	// this currently excludes directories, and only stores the modification
-	// time and filesize.  if you were to add md5 sums, signatures, etc., that
+	// time and filesize.  if you were to add hashes, signatures, etc., that
 	// would go here.
 	//
 	// also note this information is not sufficient to notice a byte changing
@@ -4872,7 +4874,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	ASSERT( iwd );
 
 		// To simplify error handling, we always want to include an
-		// entry for the specified path, except one case which is
+		// entry for the specified path, except two cases which are
 		// handled later on by removing the entry we add here.
 	expanded_list.push_back( FileTransferItem() );
 	FileTransferItem &file_xfer_item = expanded_list.back();
@@ -4909,7 +4911,17 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	bool trailing_slash = srclen > 0 && IS_ANY_DIR_DELIM_CHAR(src_path[srclen-1]);
 
 	file_xfer_item.is_symlink = st.IsSymlink();
+	file_xfer_item.is_domainsocket = st.IsDomainSocket();
 	file_xfer_item.is_directory = st.IsDirectory();
+
+		// If this file is a domain socket, we don't want to send it but it's
+		// also not an error. Remove the entry from the list and return true.
+	if( file_xfer_item.is_domainsocket ) {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a domain socket, excluding "
+			"from transfer list\n", full_src_path.c_str() );
+		expanded_list.pop_back();
+		return true;
+	}
 
 	if( !file_xfer_item.is_directory ) {
 		file_xfer_item.file_size = st.GetFileSize();

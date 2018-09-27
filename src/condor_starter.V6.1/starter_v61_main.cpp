@@ -153,10 +153,6 @@ printClassAd( void )
 		std::string dockerVersion;
 		if( DockerProc::Version( dockerVersion ) ) {
 			printf( "%s = \"%s\"\n", ATTR_DOCKER_VERSION, dockerVersion.c_str() );
-			// CondorVersion seems like a good idea to ignore;
-			// ignoring IsDaemonCore to get the same ad as before,
-			// except with ATTR_DOCKER_VERSION in it.  *sigh*
-			printf( "%s = \"CondorVersion, IsDaemonCore\"\n", ATTR_STARTER_IGNORED_ATTRS );
 		}
 	}
 

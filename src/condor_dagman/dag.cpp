@@ -647,11 +647,11 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				// _jobstateLog.WriteJobSuccessOrFailure( job );
 				break;
 
-			case ULOG_FACTORY_SUBMIT:
+			case ULOG_CLUSTER_SUBMIT:
 				ProcessFactorySubmitEvent(job);
 				break;
 
-			case ULOG_FACTORY_REMOVE:
+			case ULOG_CLUSTER_REMOVE:
 				ProcessFactoryRemoveEvent(job, recovery);
 				break;
 
@@ -3870,7 +3870,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		return node;
 	}
 
-	if( event->eventNumber == ULOG_FACTORY_SUBMIT ) {
+	if( event->eventNumber == ULOG_CLUSTER_SUBMIT ) {
 		const FactorySubmitEvent* factory_submit_event = (const FactorySubmitEvent*)event;
 		if ( factory_submit_event->submitEventLogNotes ) {
 			char nodeName[1024] = "";

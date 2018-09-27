@@ -1781,6 +1781,19 @@ it is the minimum amount of memory needed in the created dynamic slot.
 If not set by the job, its definition is specified by 
 configuration variable \Macro{JOB\_DEFAULT\_REQUESTMEMORY}.
 
+%%% ClassAd attribute: Requirements
+\index{ClassAd job attribute!Requirements}
+\index{Requirements!job ClassAd attribute}
+\item[\AdAttr{Requirements}:] A classad expression evaluated by the
+\Condor{negotiator}, \Condor{schedd}, and \{Condor{startd} in the context of 
+slot ad.  If true, this job is eligible to run on that slot.  If the job 
+requirements does not mention the (startd) attribute \Macro{OPSYS}, the 
+schedd will append a clause to Requirements forcing the job to match the 
+same \Macro{OPSYS} as the submit machine.  The schedd appends a simliar 
+clause to match the \Macro{ARCH}.  The schedd parameter
+ \Macro{APPEND\_REQUIREMENTS}, will, if set, append that value to every 
+job's requirements expression.
+
 %%% ClassAd attribute: ResidentSetSize
 \index{ClassAd job attribute!ResidentSetSize}
 \index{ResidentSetSize!job ClassAd attribute}
