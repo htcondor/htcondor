@@ -613,16 +613,16 @@ reinitialize ()
 	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
 
 	// up to 1 year per negotiation cycle
- 	MaxTimePerCycle = param_integer("NEGOTIATOR_MAX_TIME_PER_CYCLE",31536000);
+	MaxTimePerCycle = param_integer("NEGOTIATOR_MAX_TIME_PER_CYCLE",1200);
 
 	// up to 1 year per submitter by default
- 	MaxTimePerSubmitter = param_integer("NEGOTIATOR_MAX_TIME_PER_SUBMITTER",31536000);
+	MaxTimePerSubmitter = param_integer("NEGOTIATOR_MAX_TIME_PER_SUBMITTER",60);
 
 	// up to 1 year per schedd by default
-	MaxTimePerSchedd = param_integer("NEGOTIATOR_MAX_TIME_PER_SCHEDD",31536000);
+	MaxTimePerSchedd = param_integer("NEGOTIATOR_MAX_TIME_PER_SCHEDD",120);
 
 	// up to 1 year per spin by default
- 	MaxTimePerSpin = param_integer("NEGOTIATOR_MAX_TIME_PER_PIESPIN",31536000);
+	MaxTimePerSpin = param_integer("NEGOTIATOR_MAX_TIME_PER_PIESPIN",120);
 
 	// deal with a possibly resized socket cache, or create the socket
 	// cache if this is the first time we got here.
