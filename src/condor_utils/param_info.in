@@ -4533,10 +4533,12 @@ tags=ecryptfs
 
 [MAX_CONCURRENT_DOWNLOADS]
 default=100
+type=int
 range=0,
 
 [MAX_CONCURRENT_UPLOADS]
 default=100
+type=int
 range=0,
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
