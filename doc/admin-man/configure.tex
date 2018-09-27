@@ -5259,7 +5259,7 @@ These macros control the \Condor{schedd}.
 
 \label{param:StartSchedulerUniverse}
 \item[\Macro{START\_SCHEDULER\_UNIVERSE}]
-  A boolean value that defaults to \Expr{TotalSchedulerJobsRunning < 200}.
+  A boolean value that defaults to \Expr{TotalSchedulerJobsRunning < 500}.
   The \Condor{schedd} uses this macro to determine whether to start
   a \SubmitCmdNI{scheduler} universe job. 
   At intervals determined by \MacroNI{SCHEDD\_INTERVAL}, 
@@ -5379,7 +5379,7 @@ MAX_JOBS_RUNNING	= \
   This integer value limits the number of scheduler universe jobs that any
   given owner (user) can have running at one time.  This limit will affect
   the number of running Dagman jobs, but not the number of nodes within a
-  DAG. The default is no limit
+  DAG. The default value is 200
 
 \label{param:MaxJobsPerSubmission}
 \item[\Macro{MAX\_JOBS\_PER\_SUBMISSION}]
@@ -10015,7 +10015,7 @@ not changed by doing a \Condor{reconfig}.
   The legal range of values is 1 to 1000.
   If defined with a value less than 1, the  value 1 will be used.
   If defined with a value greater than 1000, the value 1000 will be used.
-  If not defined, it defaults to 5.
+  If not defined, it defaults to 100.
   (As of version 8.4.2, the default may be automatically decreased if
   \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to a small value.  If so,
   this will be noted in the \File{dagman.out} file.)

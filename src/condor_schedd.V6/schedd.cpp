@@ -13055,13 +13055,13 @@ Scheduler::Init()
 		delete tmp_expr;
 	} else {
 		// Default Expression
-		this->StartSchedulerUniverse = strdup( "TotalSchedulerJobsRunning < 200" );
+		this->StartSchedulerUniverse = strdup( "TotalSchedulerJobsRunning < 500" );
 		dprintf( D_FULLDEBUG, "Using default expression for "
 				 "START_SCHEDULER_UNIVERSE: %s\n", this->StartSchedulerUniverse );
 	}
 	free( tmp );
 
-	MaxRunningSchedulerJobsPerOwner = param_integer("MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER", INT_MAX);
+	MaxRunningSchedulerJobsPerOwner = param_integer("MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER", 200);
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	MaxJobsPerOwner = param_integer( "MAX_JOBS_PER_OWNER", INT_MAX );
 	MaxJobsPerSubmission = param_integer( "MAX_JOBS_PER_SUBMISSION", INT_MAX );

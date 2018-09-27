@@ -716,7 +716,7 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_MAX_SUBMITS_PER_INTERVAL]
-default=5
+default=100
 type=int
 tags=dagman,dagman_main
 restart=never
@@ -3143,7 +3143,7 @@ type=string
 tags=schedd
 
 [START_SCHEDULER_UNIVERSE]
-default=TotalSchedulerJobsRunning < 200
+default=TotalSchedulerJobsRunning < 500
 description=expression that, when TRUE allows a Scheduler universe job to start
 type=string
 tags=schedd
@@ -3171,8 +3171,8 @@ usage=Circuit breaker to prevent an excessive number of a jobs in a single submi
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
-# default is 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
-default=100
+# default is roughly 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
+default=200
 customization=normal
 description=Max running DAGs for a single owner
 usage=Ensure that a single user does not monopolize the SCHEDD
