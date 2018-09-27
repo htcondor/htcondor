@@ -4127,7 +4127,7 @@ type=string
 tags=schedd,startd,claim
 
 [MOUNT_UNDER_SCRATCH]
-default=
+default="/tmp,/var/tmp"
 version=7.7.5
 type=string
 tags=starter
