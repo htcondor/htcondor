@@ -1889,7 +1889,7 @@ int Scheduler::command_history(int, Stream* stream)
 		return FALSE;
 	}
 
-	if ((param_integer("HISTORY_HELPER_MAX_HISTORY", 10000) == 0) || param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 2) == 0) {
+	if ((param_integer("HISTORY_HELPER_MAX_HISTORY", 10000) == 0) || param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 50) == 0) {
 		return sendHistoryErrorAd(stream, 10, "Remote history has been disabled on this schedd");
 	}
 
@@ -13452,7 +13452,7 @@ Scheduler::Init()
 
 	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
 
-	m_history_helper_max = param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 2);
+	m_history_helper_max = param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 50);
 
     m_userlog_file_cache_max = param_integer("USERLOG_FILE_CACHE_MAX", 0, 0);
     m_userlog_file_cache_clear_interval = param_integer("USERLOG_FILE_CACHE_CLEAR_INTERVAL", 60, 0);

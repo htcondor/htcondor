@@ -598,7 +598,7 @@ File System Configuration File Entries''.
 \label{param:HistoryHelperMaxConcurrency}
 \item[\Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY}]
   Specifies the maximum number of concurrent remote \Condor{history}
-  queries allowed at a time; defaults to 2.  When this maximum is exceeded,
+  queries allowed at a time; defaults to 50.  When this maximum is exceeded,
   further queries will be queued in a non-blocking manner. Setting this option
   to 0 disables remote history access. A remote history access is defined
   as an invocation of \Condor{history} that specifies a \Opt{-name} option

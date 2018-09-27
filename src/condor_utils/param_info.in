@@ -4673,7 +4673,7 @@ description=History Helper max number of history ads
 usage=Set the limit on the number of history ads remote history will consider
 
 [HISTORY_HELPER_MAX_CONCURRENCY]
-default=2
+default=50
 range=0,
 type=int
 description=History Helper max number of helper sub-processes
