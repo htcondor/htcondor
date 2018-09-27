@@ -234,26 +234,27 @@ if (BUILD_TESTING)
 	# condor_pl_test (python_example "Sample python test" "core;quick;full;quicknolink")
 	if (WITH_PYTHON_BINDINGS)
 		# An example test that depends on python bindings.
-		# condor_pl_test(python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
+		# condor_pl_test (python_bindings_example "Sample python bindings test" "core;quick;full;quicknolink")
 
 		# Tests of the python bindings.
-		condor_pl_test(job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
-		condor_pl_test(python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
+		condor_pl_test (python_bindings_classad "Python bindings classad module"
+		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module"
+		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
+
+		# Tests of the pytest suite.
+		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
 
 		# Tests that require the python bindings.
-		condor_pl_test(cmd_curl_plugin "Testing various curl_plugin functions" "core;quick;full;quicknolink")
-		condor_pl_test(cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink")
-    	condor_pl_test(cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink")
-		condor_pl_test(job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink")
-		condor_pl_test(cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink")
+		condor_pl_test (cmd_curl_plugin "Testing various curl_plugin functions" "core;quick;full;quicknolink")
+		condor_pl_test (cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "core;quick;full;quicknolink")
+    	condor_pl_test (cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink")
+		condor_pl_test (job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink")
+		condor_pl_test (cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink")
 	endif()
 
-	# Python bindings tests
-	condor_pl_test (python_bindings_classad "Python bindings classad module" "core;quick;full;quicknolink")
-
 	if(WITH_GANGLIA)
-          condor_pl_test(gangliad "Basic test of condor_gangliad." "core;quick;full;quicknolink")
-        endif()
+		 condor_pl_test(gangliad "Basic test of condor_gangliad." "core;quick;full;quicknolink")
+	endif()
 
 	if (NOT AIX)
 	  condor_pl_test(lib_procapi_pidtracking-snapshot "Fast Termination Child Cleanup Test" "core;quick;full;quicknolink")
@@ -561,7 +562,6 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_q_protocols "version variance checking" "core;quick;full")
 	condor_pl_test(job_rank_and_aclustering "rank and autoclustering checking" "core;quick;full")
 	#condor_pl_test(cmd_ccval_remote "param remote checks" "core;quick;full")
-	#condor_pl_test(lib_python_bindings "check python bindings" "core;quick;full")
 	condor_pl_test(lib_param_completeness "minimal knobs" "core;quick;full")
 	condor_pl_test(lib_param_conditionals "config conditionals" "core;quick;full")
 	condor_pl_test(unit_test_macro_expand "config macro unit tests" "core;quick;full")
