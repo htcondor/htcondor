@@ -356,37 +356,3 @@ PARENT INPUT1 INPUT2 CHILD PROCESS
 PARENT PROCESS CHILD RESULT
 \end{verbatim}
 \normalsize
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Stork-Lease-Manager}The Lease Manager}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Stork!condor\_lease\_manager@\Condor{lease\_manager}}
-\index{Condor daemon!condor\_lease\_manager@\Condor{lease\_manager}}
-\index{daemon!condor\_lease\_manager@\Condor{lease\_manager}}
-\index{condor\_lease\_manager daemon}
-
-The Lease Manager provides a mechanism for managing leases to resources, 
-as described by Condor's ClassAd mechanism.  
-The resources and leases are persistent,
-so that state may be restored after a shutdown or crash.
-
-Resources are advertised to the Lease Manager by publishing a Condor ClassAd 
-with a \Condor{collector}.
-These leases describe the number of resources available (the number of leases),
-and they can also specify a requirements expression 
-using Condor's ClassAd mechanism.
-The resource may also specify the maximum 
-duration of the leases it will allow.
-
-Similarly, leases are requested by through the Condor ClassAd mechanism;
-a Condor daemon client API provides an interface through which to 
-request a lease.  
-This request ClassAd may specify the number of and the duration of 
-the resource leases that are being requested.
-It may also specify a requirements expression.
-
-With both the resource and request able to specify requirements expressions, 
-the Lease Manager performs 2-way match making, providing a great deal 
-of flexibility.
-
-\index{Stork|)}

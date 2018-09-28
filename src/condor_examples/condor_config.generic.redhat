@@ -2174,38 +2174,6 @@ LIBVIRT_XML_SCRIPT = $(LIBEXEC)/libvirt_simple_script.awk
 
 ##
 ##--------------------------------------------------------------------
-##  condor_lease_manager lease manager daemon
-##--------------------------------------------------------------------
-##  Where is the LeaseManager binary installed?
-LeaseManager			= $(SBIN)/condor_lease_manager
-
-# Turn on the lease manager
-#DAEMON_LIST			= $(DAEMON_LIST), LeaseManager
-
-# The identification and location of the lease manager for local clients.
-LeaseManger_ADDRESS_FILE	= $(LOG)/.lease_manager_address
-
-## LeaseManager startup arguments
-#LeaseManager_ARGS		= -local-name generic
-
-## LeaseManager daemon debugging log
-LeaseManager_LOG		= $(LOG)/LeaseManagerLog
-LeaseManager_DEBUG		= D_FULLDEBUG
-MAX_LeaseManager_LOG		= 1000000
-
-# Basic parameters
-LeaseManager.GETADS_INTERVAL	= 60
-LeaseManager.UPDATE_INTERVAL	= 300
-LeaseManager.PRUNE_INTERVAL	= 60
-LeaseManager.DEBUG_ADS		= False
-
-LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
-#LeaseManager.QUERY_ADTYPE	= Any
-#LeaseManager.QUERY_CONSTRAINTS	= MyType == "SomeType"
-#LeaseManager.QUERY_CONSTRAINTS	= TargetType == "SomeType"
-
-##
-##--------------------------------------------------------------------
 ##  KBDD - keyboard activity detection daemon
 ##--------------------------------------------------------------------
 ##  When the KBDD starts up, it can place it's address (IP and port)
