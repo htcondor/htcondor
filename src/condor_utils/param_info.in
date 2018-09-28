@@ -410,6 +410,10 @@ default=
 type=string
 tags=starter
 
+[TRUST_LOCAL_UID_DOMAIN]
+default=true
+type=bool
+
 [STARTER_LOCAL_LOGGING]
 default=
 type=string
