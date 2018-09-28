@@ -6244,12 +6244,29 @@ int SubmitHash::SetTransferFiles()
 		//  (F) STF is STF_NO and transfer_input_files or transfer_output_files specified
 	const char *should = "INTERNAL ERROR";
 	const char *when = "INTERNAL ERROR";
-	bool default_should;
+	bool default_should = false;
 	bool default_when;
 	FileTransferOutput_t when_output;
 	MyString err_msg;
 	
-	should = submit_param(ATTR_SHOULD_TRANSFER_FILES, SUBMIT_KEY_ShouldTransferFiles);
+	// check to see if the user specified should_transfer_files.
+	// if they didn't check to see if the admin did. 
+	auto_free_ptr should_param(submit_param(ATTR_SHOULD_TRANSFER_FILES, SUBMIT_KEY_ShouldTransferFiles));
+	if ( ! should_param) {
+		should_param.set(param("SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES"));
+		if (should_param) {
+			if (getShouldTransferFilesNum(should_param) < 0) {
+				// if config default for should transfer files is invalid, just ignore it.
+				// otherwise all submits would generate an error/warning which the users cannot fix.
+				should_param.clear();
+			} else {
+				// admin specified should_transfer_files counts as a default should
+				default_should = true;
+			}
+		}
+	}
+
+	should = should_param;
 	if (!should) {
 		should = "IF_NEEDED";
 		should_transfer = STF_IF_NEEDED;
@@ -6266,7 +6283,6 @@ int SubmitHash::SetTransferFiles()
 			print_wrapped_text(err_msg.Value(), stderr);
 			ABORT_AND_RETURN( 1 );
 		}
-		default_should = false;
 	}
 
 	if (should_transfer == STF_NO &&

@@ -2063,6 +2063,13 @@ default=true
 type=string
 tags=submit
 
+[SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES]
+description=Set the default value submit should use for should_transfer_files for jobs that don't specify
+default=
+type=string
+tags=submit
+usage=Set to YES, NO, or IF_NEEDED.  IF_NEEDED is used if this is empty or invalid
+
 [SUBMIT_SEND_RESCHEDULE]
 default=true
 type=bool
