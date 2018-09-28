@@ -4607,7 +4607,7 @@ description=Age (in seconds) after which preen determines this file is stale and
 tags=file_transfer,preen
 
 [COLLECTOR_MAX_FILE_DESCRIPTORS]
-default=81920
+default=10240
 range=0,
 type=int
 usage=Set the limit on file descriptor usage for the collector.
