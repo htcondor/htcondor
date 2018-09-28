@@ -148,11 +148,6 @@ type=int
 default=9
 type=int
 
-[MASTER_SQLLOG]
-default=
-type=string
-description=Master SQL Log
-
 [FULL_HOSTNAME]
 default=
 type=string
@@ -606,13 +601,6 @@ restart=never
 [MAX_DAGMAN_LOG]
 default=0
 type=int
-tags=dagman,dagman_main
-restart=never
-
-[DAGMAN_ALLOW_LOG_ERROR]
-default=false
-type=bool
-customization=never
 tags=dagman,dagman_main
 restart=never
 

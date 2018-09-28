@@ -10179,32 +10179,6 @@ not changed by doing a \Condor{reconfig}.
   \Expr{True}.
   \Bold{Note: users should rarely change this setting.}
 
-\label{param:DAGManStorkSubmitExe}
-\item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
-  This configuration variable is no longer used; 
-  as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
-  Setting this configuration variable will result in a warning
-  from \Condor{dagman} (which will be turned into a fatal error
-  if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
-  \Bold{Note: users should never change this setting.}
-
-  For completeness, here is the definition for historical purposes: 
-  The executable that \Condor{dagman} will use to submit Stork jobs.
-  If not defined, \Condor{dagman} looks for \Prog{stork\_submit} in the path.
-
-\label{param:DAGManStorkRmExe}
-\item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
-  This configuration variable is no longer used; 
-  as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
-  Setting this configuration variable will result in a warning
-  from \Condor{dagman} (which will be turned into a fatal error
-  if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
-  \Bold{Note: users should never change this setting.}
-
-  For completeness, here is the definition for historical purposes: 
-  The executable that \Condor{dagman} will use to remove Stork jobs.
-  If not defined, \Condor{dagman} looks for \Prog{stork\_rm} in the path.
-
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -10365,19 +10339,6 @@ not changed by doing a \Condor{reconfig}.
   (and not ignored),
   the DAG will abort during the initialization process. 
   If not defined, \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} defaults to
-  \Expr{False}.
-
-\label{param:DAGManAllowLogError}
-\item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
-  This configuration variable is no longer used; 
-  as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
-  \Bold{Note: users should never change this setting.}
-
-  For completeness, here is the definition for historical purposes: 
-  A boolean value defining whether \Condor{dagman} will still attempt
-  to run a node job, even if errors are detected in the job event log
-  specification.  This setting has an effect only on nodes that are
-  Stork jobs (not HTCondor jobs).  The default value if not defined is
   \Expr{False}.
 
 \label{param:DAGManAllowEvents}
@@ -11790,84 +11751,6 @@ via \Prog{MyProxy}, available from
   refresh proxy certificates.  By default, this macro is undefined.
 
 \end{description}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\subsection{\label{sec:Stork-Config-File-Entries}Stork Configuration
-%File Macros}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%\begin{description}
-%
-%\label{param:StorkMaxNumJobs}
-%\item[\Macro{STORK\_MAX\_NUM\_JOBS}]
-  %An integer limit on the number of concurrent data placement jobs
-  %handled by Stork.  The default value when not defined is 10.
-%
-%\label{param:StorkMaxRetry}
-%\item[\Macro{STORK\_MAX\_RETRY}]
-  %An integer limit on the
-  %number of attempts for a single data placement job.  For data transfers,
-  %this includes transfer attempts on the primary protocol, all
-  %alternate protocols, and all retries.
-  %The default value when not defined is 10.
-%
-%\label{param:StorkMaxDelayInMinutes}
-%\item[\Macro{STORK\_MAXDELAY\_INMINUTES}]
-  %An integer limit (in minutes) on the run time for a data placement job,
-  %after which the job is considered failed.
-  %The default value when not defined is 10,
-  %and the minimum legal value is 1.
-%
-%\label{param:StorkTmpCredDir}
-%\item[\Macro{STORK\_TMP\_CRED\_DIR}]
-  %The full path to the temporary credential storage directory used by Stork.
-  %The default value is \File{/tmp} when not defined. 
-%
-%\label{param:StorkModuleDir}
-%\item[\Macro{STORK\_MODULE\_DIR}]
-  %The full path to the directory containing Stork modules.
-  %The default value when not defined is 
-  %as defined by \MacroUNI{LIBEXEC}.  It is a fatal error for
-  %both \MacroNI{STORK\_MODULE\_DIR} and \MacroNI{LIBEXEC} to be undefined.
-%
-%\label{param:CreddSuperUsers}
-%\item[\Macro{CRED\_SUPER\_USERS}]
-  %Access to a stored credential is
-  %restricted to the user who submitted the credential, and any user
-  %names specified in this macro.  The format is a space or comma
-  %separated list of user names which are valid on the \Stork{credd}
-  %host.
-  %The default value of this macro is \Expr{root} on Unix systems, and
-  %\Expr{Administrator} on Windows systems.
-%
-%\label{param:CredStoreDir}
-%\item[\Macro{CRED\_STORE\_DIR}]
-  %Directory for storing credentials.  This
-  %directory must exist prior to starting \Stork{credd}.  It is highly
-  %recommended to restrict access permissions to \emph{only} the
-  %directory owner.
-  %The default value is \Expr{\$(SPOOL\_DIR)/cred}.
-%
-%\label{param:CredIndexFile}
-%\item[\Macro{CRED\_INDEX\_FILE}]
-  %Index file path of saved credentials.
-  %This file will be automatically created if it does not exist.
-  %The default value is \Expr{\$(CRED\_STORE\_DIR)/cred-index}.
-%
-%\label{param:DefaultCredExpireThreshold}
-%\item[\Macro{DEFAULT\_CRED\_EXPIRE\_THRESHOLD}]
-  %\Stork{credd} will attempt
-  %to refresh credentials when their remaining lifespan is less than this
-  %value.
-  %Units = seconds.  Default value = 3600 seconds (1 hour).
-%
-%\label{param:CredCheckInterval}
-%\item[\Macro{CRED\_CHECK\_INTERVAL}]
-  %\Stork{credd} periodically checks
-  %remaining lifespan of stored credentials, at this interval.
-  %Units = seconds.  Default value = 60 seconds (1 minute).
-%
-%\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-ssh-to-job}Configuration File Entries

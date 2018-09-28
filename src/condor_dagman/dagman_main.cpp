@@ -339,13 +339,6 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_POST_SCRIPTS setting: %d\n",
 				maxPostScripts );
 
-	bool allowLogError = param_boolean( "DAGMAN_ALLOW_LOG_ERROR", false );
-	if ( allowLogError ) {
-		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_ALLOW_LOG_ERROR is "
-					"no longer supported\n" );
-		check_warning_strictness( DAG_STRICT_2 );
-	}
-
 	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES",
 				mungeNodeNames );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %s\n",
@@ -377,18 +370,6 @@ Dagman::Config()
 	if( !condorRmExe ) {
 		condorRmExe = strdup( "condor_rm" );
 		ASSERT( condorRmExe );
-	}
-
-	if ( param_boolean( "DAGMAN_STORK_SUBMIT_EXE", false ) ) {
-		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_STORK_SUBMIT_EXE is "
-					"no longer supported\n" );
-		check_warning_strictness( DAG_STRICT_1 );
-	}
-
-	if ( param_boolean( "DAGMAN_STORK_RM_EXE", false ) ) {
-		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_STORK_RM_EXE is "
-					"no longer supported\n" );
-		check_warning_strictness( DAG_STRICT_1 );
 	}
 
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",

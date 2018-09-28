@@ -23,9 +23,6 @@
 ## job_dagman_rescue_recov, to ensure that NOOP nodes are tested
 ## for rescue DAGs and recovery mode.
 
-## Note: NOOP Stork nodes are supported, but are not included in
-## this test because Stork is not supported on all platforms.
-
 use CondorTest;
 use CondorUtils;
 
