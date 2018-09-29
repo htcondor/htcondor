@@ -197,7 +197,7 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
   to identify interactive jobs for \Condor{startd} policy usage.  }
 
 \OptItem{\Opt{-allow-crlf-script}}{Changes the check for an invalid line ending
-on the executable script's \#\! line from an ERROR to a WARNING.  The \#\! line
+on the executable script's \Expr{\#!} line from an ERROR to a WARNING.  The \Expr{\#!} line
 will be ignored by Windows, so it won't matter if it is invalid; but Unix and Linux
 will not run a script that has a Windows/DOS line ending on the first line of the script.
 So \Condor{submit} will not allow such a script to be submitted as the job's
