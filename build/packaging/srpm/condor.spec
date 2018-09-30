@@ -1062,6 +1062,7 @@ rm -rf %{buildroot}%{_sbindir}/condor_local_start
 rm -rf %{buildroot}%{_sbindir}/condor_local_stop
 %ifarch x86_64
 rm -rf %{buildroot}%{_sbindir}/condor_shadow_s
+rm -rf %{buildroot}%{_sysconfdir}/condor/config.d/00-small-shadow
 %endif
 rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
 rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
@@ -1747,6 +1748,7 @@ rm -rf %{buildroot}
 %ifarch %{ix86}
 %files small-shadow
 %{_sbindir}/condor_shadow_s
+%config(noreplace) %_sysconfdir/condor/config.d/00-small-shadow
 %endif
 
 %files external-libs
