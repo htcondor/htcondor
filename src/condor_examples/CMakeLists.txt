@@ -29,15 +29,16 @@ install(FILES		50ec2.config
 		DESTINATION	"${C_CONFIGD}"
 )
 
+install(FILES		master_shutdown_script.sh
+		DESTINATION	"${C_CONFIGD}/.."
+		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
+)
+endif (RPM_SYSTEM_NAME)
+
 # Only install the small shadow configuration on RHEL
 if (RPM_SYSTEM_NAME)
 install(FILES		00-small-shadow
 		DESTINATION	"${C_CONFIGD}"
-)
-
-install(FILES		master_shutdown_script.sh
-		DESTINATION	"${C_CONFIGD}/.."
-		PERMISSIONS	${CONDOR_SCRIPT_PERMS}
 )
 endif (RPM_SYSTEM_NAME)
 
