@@ -260,7 +260,9 @@ if (BUILD_TESTING)
 	if (LINUX)
 		# test gives false positives on darwin and windows
 		condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
-		condor_pl_test(shadow_s_mem_usage-basic "report static shadow memory use" "core;quick;full;quicknolink")
+		if (${BIT_MODE} MATCHES "32")
+			condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "core;quick;full;quicknolink")
+		endif()
 	endif(LINUX)
 
 	##########################################################

@@ -36,9 +36,9 @@ install(FILES		master_shutdown_script.sh
 endif (RPM_SYSTEM_NAME)
 
 # Only install the small shadow configuration on RHEL
-if (RPM_SYSTEM_NAME)
+if (RPM_SYSTEM_NAME AND (${BIT_MODE} MATCHES "32"))
 install(FILES		00-small-shadow
-		DESTINATION	"${C_CONFIGD}"
+		DESTINATION	"${C_ETC_EXAMPLES}"
 )
 endif (RPM_SYSTEM_NAME)
 
@@ -73,6 +73,7 @@ install (FILES
 		condor.socket
 		condor-tmpfiles.conf
 		condor-annex-ec2.service
+		00-single-node
 		DESTINATION ${C_ETC_EXAMPLES})
 
 install (FILES

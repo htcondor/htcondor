@@ -140,6 +140,30 @@ Description: distributed workload management system - documentation
  This package provides HTCondor's documentation in HTML and PDF format, as well
  as configuration and other examples.
 
+Package: htcondor-config-single-node
+Architecture: all
+Section: science
+Depends: htcondor (= ${binary:Version}),
+         ${misc:Depends}
+Description: distributed workload management system - single node configuration
+ Like other full-featured batch systems, HTCondor provides a job queueing
+ mechanism, scheduling policy, priority scheme, resource monitoring, and
+ resource management. Users submit their serial or parallel jobs to HTCondor;
+ HTCondor places them into a queue. It chooses when and where to run the jobs
+ based upon a policy, carefully monitors their progress, and ultimately
+ informs the user upon completion.
+ .
+ Unlike more traditional batch queueing systems, HTCondor can also effectively
+ harness wasted CPU power from otherwise idle desktop workstations. HTCondor
+ does not require a shared file system across machines - if no shared file
+ system is available, HTCondor can transfer the job's data files on behalf of
+ the user.
+ .
+ This package provides an example configuration is good for trying out HTCondor
+ for the first time. It only configures the IPv4 loopback address, turns on
+ basic security and shortens many timers to be more responsive.
+
+
 Package: htcondor-dbg
 Architecture: any
 Section: debug
