@@ -23,6 +23,6 @@ file( GLOB shadowRmvElements Example* *.t.* )
 # Build a small shadow on 32-bit Linux platforms
 if (LINUX AND (${BIT_MODE} MATCHES "32"))
     condor_daemon( shadow_s "${shadowRmvElements}" "${CONDOR_LIBS_FOR_SHADOW}" "${C_SBIN}" )
-endif(LINUX)
+endif()
 condor_daemon( shadow "${shadowRmvElements}" "${CONDOR_LIBS_FOR_SHADOW}" "${C_SBIN}" )
 
