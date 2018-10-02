@@ -469,7 +469,8 @@ void BoincJob::doEvaluateState()
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else if ( remoteState == BOINC_JOB_STATUS_ERROR ) {
-				// TODO Handle error
+			        gmState = GM_HOLD;
+				jobAd->Assign( ATTR_HOLD_REASON, "Reason unknown, check the server");
 			} else {
 				// TODO anything to do?
 			}
