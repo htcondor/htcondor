@@ -40,6 +40,7 @@ def remove_ignore_missing(file):
 
 
 # Bootstrap condor
+release_dir = os.environ["_condor_RELEASE_DIR"]
 testdir = os.path.join(os.getcwd(), "tests_tmp")
 logdir = os.path.join(testdir, "log")
 makedirs_ignore_exist(testdir)
@@ -58,7 +59,7 @@ class WithDaemons(unittest.TestCase):
         self.pid = -1
         to_delete = [i for i in os.environ if i.lower().startswith("_condor_")]
         for key in to_delete: del os.environ[key]
-        os.environ["_condor_RELEASE_DIR"] = "/home/tlmiller/more-condor/install"
+        os.environ["_condor_RELEASE_DIR"] = release_dir
         os.environ["_condor_CONDOR_HOST"] = socket.getfqdn()
         os.environ["_condor_LOCAL_DIR"] = testdir
         os.environ["_condor_LOG"] =  '$(LOCAL_DIR)/log'
@@ -117,7 +118,7 @@ class WithDaemons(unittest.TestCase):
         if not self.pid:
             try:
                 try:
-                    condor_master = "/home/tlmiller/more-condor/install/sbin/condor_master"
+                    condor_master = release_dir + "/sbin/condor_master"
                     os.execvp(condor_master, ["condor_master", "-f"])
                 except:
                     e = sys.exc_info()[1]
@@ -160,12 +161,6 @@ class WithDaemons(unittest.TestCase):
                 pass
             time.sleep(1)
         return coll.locate(dtype, dname)
-
-#
-# FIXME: Schedd.act() doesn't raise an exception when we see
-# '09/27/18 12:24:49 DCSchedd:actOnJobs: Action failed', which means that
-# these tests aren't reliable.
-#
 
 class TestPythonBindings(WithDaemons):
 
@@ -427,7 +422,11 @@ class TestPythonBindings(WithDaemons):
         schedd.act(htcondor.JobAction.Remove, "ClusterId == %d" % cluster)
         time.sleep(3)
 
-    def testScheddNonblockingQueryCount(self):
+    # This test causes the log event 'DCSchedd:actOnJobs: Action failed',
+    # which needs to be a test error (and therefore failure).  (If act()
+    # doesn't or can't return false, it needs to throw an exception.)
+    # def testScheddNonblockingQueryCount(self):
+    def ScheddNonblockingQueryCount(self):
         os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
         self.launch_daemons(["SCHEDD"])
         schedd = htcondor.Schedd()

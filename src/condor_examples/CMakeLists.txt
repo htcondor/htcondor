@@ -40,7 +40,7 @@ if (RPM_SYSTEM_NAME AND (${BIT_MODE} MATCHES "32"))
 install(FILES		00-small-shadow
 		DESTINATION	"${C_ETC_EXAMPLES}"
 )
-endif (RPM_SYSTEM_NAME)
+endif ()
 
 
 install(FILES		condor.sysconfig

@@ -4052,8 +4052,9 @@ int SubmitHash::SetJobRetries()
 	std::string retry_until;
 
 	bool enable_retries = false;
+	bool success_exit_code_set = false;
 	if (submit_param_long_exists(SUBMIT_KEY_MaxRetries, ATTR_JOB_MAX_RETRIES, num_retries)) { enable_retries = true; }
-	if (submit_param_long_exists(SUBMIT_KEY_SuccessExitCode, ATTR_JOB_SUCCESS_EXIT_CODE, success_code, true)) { enable_retries = true; }
+	if (submit_param_long_exists(SUBMIT_KEY_SuccessExitCode, ATTR_JOB_SUCCESS_EXIT_CODE, success_code, true)) { enable_retries = true; success_exit_code_set = true; }
 	if (submit_param_exists(SUBMIT_KEY_RetryUntil, NULL, retry_until)) { enable_retries = true; }
 	if ( ! enable_retries)
 	{
@@ -4114,7 +4115,7 @@ int SubmitHash::SetJobRetries()
 
 	// build the sub expression that checks for exit codes that should end retries
 	std::string code_check;
-	if (success_code != 0) {
+	if (success_exit_code_set) {
 		AssignJobVal(ATTR_JOB_SUCCESS_EXIT_CODE, success_code);
 		code_check = ATTR_JOB_SUCCESS_EXIT_CODE;
 	} else {
