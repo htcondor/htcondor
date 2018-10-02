@@ -93,7 +93,8 @@ class CondorCluster(object):
 
     def WaitUntilAllExecute( self, timeout = 240 ):
         return self.WaitUntil( [ JobEventType.EXECUTE ],
-            [ JobEventType.SUBMIT ], timeout, -1, self._count )
+            [ JobEventType.SUBMIT, JobEventType.IMAGE_SIZE ],
+            timeout, -1, self._count )
 
     def WaitUntilAllJobsHeld( self, timeout = 240 ):
         return self.WaitUntil( [ JobEventType.JOB_HELD ],
