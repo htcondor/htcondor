@@ -4158,7 +4158,7 @@ description=MemoryUsage metric for VM Universe jobs
 tags=starter
 
 [DEFAULT_JOB_MAX_RETRIES]
-default=10
+default=2
 type=int
 description=Default maximum number of retries when a submit file enables retries.
 tags=submit
