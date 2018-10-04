@@ -4047,7 +4047,7 @@ int SubmitHash::SetJobRetries()
 	submit_param_exists(SUBMIT_KEY_OnExitRemoveCheck, ATTR_ON_EXIT_REMOVE_CHECK, erc);
 	submit_param_exists(SUBMIT_KEY_OnExitHoldCheck, ATTR_ON_EXIT_HOLD_CHECK, ehc);
 
-	long long num_retries = param_integer("DEFAULT_JOB_MAX_RETRIES", 10);
+	long long num_retries = param_integer("DEFAULT_JOB_MAX_RETRIES", 2);
 	long long success_code = 0;
 	std::string retry_until;
 
