@@ -175,11 +175,10 @@ if (BUILD_TESTING)
 			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel7"
 			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl6"
 			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl7"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "centos7"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-6"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-7"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-8"
-			  # Debian testing.
-			  OR "${SYSTEM_NAME}" MATCHES "Debian-"
 			  OR "${SYSTEM_NAME}" MATCHES "Ubuntu-14" )
 				condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
 			endif()
