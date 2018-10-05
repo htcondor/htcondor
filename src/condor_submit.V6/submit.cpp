@@ -2558,6 +2558,38 @@ int SetSyscalls( int foo ) { return foo; }
 }
 
 
+MyString credd_has_modules(char* m) {
+	dprintf(D_ALWAYS, "ZKM: querying %s tokens for %s\n", m, my_username());
+	Daemon my_credd(DT_CREDD);
+	if (my_credd.locate()) {
+		CondorError e;
+		ReliSock *r;
+		r = (ReliSock*)my_credd.startCommand(ZKM_QUERY_CREDS, Stream::reli_sock, 20, &e);
+
+		if(!r) {
+			fprintf( stderr, "\nZKMERROR: startCommand failed!\n");
+			exit( 1 );
+		}
+
+		r->encode();
+		char* u = my_username();
+		r->code(u);
+		r->code(m);
+		r->end_of_message();
+		r->decode();
+		MyString URL;
+		r->code(URL);
+		r->end_of_message();
+		r->close();
+		delete r;
+		return URL;
+	} else {
+		fprintf( stderr, "\nZKMERROR: locate(credd) failed!\n");
+		exit( 1 );
+	}
+}
+
+
 int SendJobCredential()
 {
 	// however, if we do need to send it for any job, we only need to do that once.
@@ -2569,6 +2601,24 @@ int SendJobCredential()
 	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {
 		// nothing to do
 		return 0;
+	}
+
+	if(param_boolean("ZKMTOKENS", false)) {
+		printf("ZKM GOT HERE 2.\n");
+		char* m = param("MODULES_NEEDED");
+		if (m) {
+			dprintf(D_ALWAYS, "ZKM: checking tokens for %s\n", m);
+
+			MyString URL = credd_has_modules(m);
+			if (!URL.empty()) {
+				// report to user a URL
+				fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_username(), URL.Value());
+				exit(1);
+			}
+			free(m);
+		} else {
+			dprintf(D_ALWAYS, "ZKM: NO MODULES REQUESTED\n");
+		}
 	}
 
 	// If SEC_CREDENTIAL_PRODUCER is set to magic value CREDENTIAL_ALREADY_STORED,
@@ -2610,6 +2660,7 @@ int SendJobCredential()
 			unsigned char* zkmbuf = NULL;
 			zkm_base64_decode(ut64, &zkmbuf, &zkmlen);
 
+			// zkmbuf IS LEAKING
 			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", (int)bytes_read, zkmlen);
 			dprintf(D_FULLDEBUG, "CREDMON: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
 
@@ -2618,6 +2669,8 @@ int SendJobCredential()
 			preview[63]=0;
 
 			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", (int)bytes_read, preview);
+
+			// my_domainname() returns NULL on UNIX... no need to use this
 
 			// setup the username to query
 			char userdom[256];
