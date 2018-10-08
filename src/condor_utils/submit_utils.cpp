@@ -2883,7 +2883,7 @@ int SubmitHash::SetGridParams()
 			push_error(stderr, "EC2 grid jobs require a service URL\n");
 			ABORT_AND_RETURN( 1 );
 		}
-		
+
 
 		free( tmp );
 
@@ -2974,58 +2974,76 @@ int SubmitHash::SetGridParams()
 		push_error(stderr, "Unicore grid jobs require a " SUBMIT_KEY_KeystorePassphraseFile " parameter\n");
 		ABORT_AND_RETURN( 1 );
 	}
-	
+
 	//
 	// EC2 grid-type submit attributes
 	//
 	if ( (tmp = submit_param( SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID )) ) {
-		// check public key file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				push_error(stderr, "Failed to open public key file %s (%s)\n", 
-							 full_path(tmp), strerror(errno));
-				ABORT_AND_RETURN( 1 );
-			}
-			fclose(fp);
+		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
+			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
+			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
+			free( tmp );
+		} else {
+			// check public key file can be opened
+			if ( !DisableFileChecks ) {
+				if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+					push_error(stderr, "Failed to open public key file %s (%s)\n", 
+							 	full_path(tmp), strerror(errno));
+					ABORT_AND_RETURN( 1 );
+				}
+				fclose(fp);
 
-			StatInfo si(full_path(tmp));
-			if (si.IsDirectory()) {
-				push_error(stderr, "%s is a directory\n", full_path(tmp));
-				ABORT_AND_RETURN( 1 );
+				StatInfo si(full_path(tmp));
+				if (si.IsDirectory()) {
+					push_error(stderr, "%s is a directory\n", full_path(tmp));
+					ABORT_AND_RETURN( 1 );
+				}
 			}
+			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, full_path(tmp));
+			free( tmp );
 		}
-		AssignJobString(ATTR_EC2_ACCESS_KEY_ID, full_path(tmp));
-		free( tmp );
-	} else if ( gridType == "ec2" ) {
-		push_error(stderr, "EC2 jobs require a \"%s\" parameter\n", SUBMIT_KEY_EC2AccessKeyId );
-		ABORT_AND_RETURN( 1 );
 	}
-	
+
 	if ( (tmp = submit_param( SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY )) ) {
-		// check private key file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				push_error(stderr, "Failed to open private key file %s (%s)\n", 
-							 full_path(tmp), strerror(errno));
-				ABORT_AND_RETURN( 1 );
-			}
-			fclose(fp);
+		if( MATCH == strcasecmp( tmp, USE_INSTANCE_ROLE_MAGIC_STRING ) ) {
+			AssignJobString(ATTR_EC2_ACCESS_KEY_ID, USE_INSTANCE_ROLE_MAGIC_STRING);
+			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, USE_INSTANCE_ROLE_MAGIC_STRING);
+			free( tmp );
+		} else {
+			// check private key file can be opened
+			if ( !DisableFileChecks ) {
+				if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+					push_error(stderr, "Failed to open private key file %s (%s)\n", 
+							 	full_path(tmp), strerror(errno));
+					ABORT_AND_RETURN( 1 );
+				}
+				fclose(fp);
 
-			StatInfo si(full_path(tmp));
-			if (si.IsDirectory()) {
-				push_error(stderr, "%s is a directory\n", full_path(tmp));
-				ABORT_AND_RETURN( 1 );
+				StatInfo si(full_path(tmp));
+				if (si.IsDirectory()) {
+					push_error(stderr, "%s is a directory\n", full_path(tmp));
+					ABORT_AND_RETURN( 1 );
+				}
 			}
+			AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, full_path(tmp));
+			free( tmp );
 		}
-		AssignJobString(ATTR_EC2_SECRET_ACCESS_KEY, full_path(tmp));
-		free( tmp );
-	} else if ( gridType == "ec2" ) {
-		push_error(stderr, "EC2 jobs require a " SUBMIT_KEY_EC2SecretAccessKey " parameter\n");
-		ABORT_AND_RETURN( 1 );
 	}
-	
+
+	if ( gridType == "ec2" ) {
+		if(! job->Lookup( ATTR_EC2_ACCESS_KEY_ID )) {
+			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2AccessKeyId "' parameter\n" );
+			ABORT_AND_RETURN( 1 );
+		}
+		if(! job->Lookup( ATTR_EC2_SECRET_ACCESS_KEY )) {
+			push_error(stderr, "EC2 jobs require a '" SUBMIT_KEY_EC2SecretAccessKey "' parameter\n");
+			ABORT_AND_RETURN( 1 );
+		}
+	}
+
+
 	bool bKeyPairPresent=false;
-	
+
 	// EC2KeyPair is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2KeyPair, ATTR_EC2_KEY_PAIR )) ||
 		(tmp = submit_param( SUBMIT_KEY_EC2KeyPairAlt, ATTR_EC2_KEY_PAIR ))) {
@@ -3033,7 +3051,7 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 		bKeyPairPresent=true;
 	}
-	
+
 	// EC2KeyPairFile is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ||
 		(tmp = submit_param( SUBMIT_KEY_EC2KeyPairFileAlt, ATTR_EC2_KEY_PAIR_FILE ))) {
@@ -3068,31 +3086,31 @@ int SubmitHash::SetGridParams()
 		push_error(stderr, "EC2 jobs require a \"%s\" parameter\n", SUBMIT_KEY_EC2AmiID );
 		ABORT_AND_RETURN( 1 );
 	}
-	
+
 	// EC2InstanceType is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2InstanceType, ATTR_EC2_INSTANCE_TYPE )) ) {
 		AssignJobString(ATTR_EC2_INSTANCE_TYPE, tmp);
 		free( tmp );
 	}
-	
+
 	// EC2VpcSubnet is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2VpcSubnet, ATTR_EC2_VPC_SUBNET )) ) {
 		AssignJobString(ATTR_EC2_VPC_SUBNET , tmp);
 		free( tmp );
 	}
-	
+
 	// EC2VpcIP is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2VpcIP, ATTR_EC2_VPC_IP )) ) {
 		AssignJobString(ATTR_EC2_VPC_IP , tmp);
 		free( tmp );
 	}
-		
+
 	// EC2ElasticIP is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2ElasticIP, ATTR_EC2_ELASTIC_IP )) ) {
 		AssignJobString(ATTR_EC2_ELASTIC_IP, tmp);
 		free( tmp );
 	}
-	
+
 	bool HasAvailabilityZone=false;
 	// EC2AvailabilityZone is not a necessary parameter
 	if( (tmp = submit_param( SUBMIT_KEY_EC2AvailabilityZone, ATTR_EC2_AVAILABILITY_ZONE )) ) {
@@ -3100,7 +3118,7 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 		HasAvailabilityZone=true;
 	}
-	
+
 	// EC2EBSVolumes is not a necessary parameter
     if( (tmp = submit_param( SUBMIT_KEY_EC2EBSVolumes, ATTR_EC2_EBS_VOLUMES )) ) {
 		if( validate_disk_param(tmp, 2, 2) == false ) 
@@ -3113,13 +3131,13 @@ int SubmitHash::SetGridParams()
 					"vol-35bcc15e:hda1,vol-35bcc16f:hda2\n");
 			ABORT_AND_RETURN(1);
 		}
-		
+
 		if (!HasAvailabilityZone)
 		{
 			push_error(stderr, "'ec2_ebs_volumes' requires 'ec2_availability_zone'\n");
 			ABORT_AND_RETURN(1);
 		}
-		
+
 		AssignJobString(ATTR_EC2_EBS_VOLUMES, tmp);
 		free( tmp );
 	}

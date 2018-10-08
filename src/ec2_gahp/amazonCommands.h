@@ -138,6 +138,8 @@ class AmazonRequest {
 		std::string canonicalizeQueryString();
 		bool createV4Signature( const std::string & payload, std::string & authorizationHeader, bool sendContentSHA = false );
 
+	// This happens to be useful for obtaining metadata information.
+	protected:
 		bool sendPreparedRequest(	const std::string & protocol,
 									const std::string & uri,
 									const std::string & payload );
@@ -504,5 +506,16 @@ class AmazonBulkQuery : public AmazonRequest {
 		StringList resultList;
 };
 
-#endif
+class AmazonMetadataQuery : public AmazonRequest {
+	public:
+		AmazonMetadataQuery( int i, const char * c ) : AmazonRequest( i, c ) { }
+		virtual ~AmazonMetadataQuery() { }
 
+		virtual bool SendRequest( const std::string & uri );
+
+		virtual std::string & getResultString() {
+			return resultString;
+		}
+};
+
+#endif
