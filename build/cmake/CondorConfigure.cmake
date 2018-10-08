@@ -932,7 +932,7 @@ else ()
     endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.12.1)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.14.1)
 
         if (LINUX)
           option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
