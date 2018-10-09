@@ -84,6 +84,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 		// just in case transferOutputMopUp gets called before transferOutput
 	m_ft_rval = true;
 	trust_uid_domain = false;
+	trust_local_uid_domain = true;
 	uid_domain = NULL;
 	fs_domain = NULL;
 
@@ -277,6 +278,7 @@ JICShadow::config( void )
 	fs_domain = param( "FILESYSTEM_DOMAIN" );  
 
 	trust_uid_domain = param_boolean_crufty("TRUST_UID_DOMAIN", false);
+	trust_local_uid_domain = param_boolean("TRUST_LOCAL_UID_DOMAIN", true);
 }
 
 
@@ -1610,6 +1612,13 @@ JICShadow::sameUidDomain( void )
 		// their config file, don't perform this check, so sites can
 		// use UID domains that aren't substrings of DNS names if they
 		// have to.
+	if( trust_local_uid_domain && syscall_sock && syscall_sock->peer_is_local() ) {
+		dprintf( D_FULLDEBUG, "SameUidDomain(): Peer is on a local "
+		         "interface and TRUST_LOCAL_UID_DOMAIN=True, "
+		         "returning true\n" );
+		return true;
+	}
+
 	if( trust_uid_domain ) {
 		dprintf( D_FULLDEBUG, "TRUST_UID_DOMAIN is 'True' in the config "
 				 "file, not comparing shadow's UidDomain (%s) against its "

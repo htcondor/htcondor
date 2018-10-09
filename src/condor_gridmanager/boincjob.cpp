@@ -469,7 +469,8 @@ void BoincJob::doEvaluateState()
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else if ( remoteState == BOINC_JOB_STATUS_ERROR ) {
-				// TODO Handle error
+			        gmState = GM_HOLD;
+				jobAd->Assign( ATTR_HOLD_REASON, "Reason unknown, check the server");
 			} else {
 				// TODO anything to do?
 			}
@@ -931,6 +932,13 @@ std::string BoincJob::GetAppName()
 	std::string name;
 	jobAd->LookupString( ATTR_JOB_CMD, name );
 	return name;
+}
+
+std::string BoincJob::GetVar(const char * str)
+{
+        std::string var = "";
+        jobAd->LookupString( str, var );
+        return var;
 }
 
 ArgList *BoincJob::GetArgs()

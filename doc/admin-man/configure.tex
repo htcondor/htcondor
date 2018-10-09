@@ -598,7 +598,7 @@ File System Configuration File Entries''.
 \label{param:HistoryHelperMaxConcurrency}
 \item[\Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY}]
   Specifies the maximum number of concurrent remote \Condor{history}
-  queries allowed at a time; defaults to 2.  When this maximum is exceeded,
+  queries allowed at a time; defaults to 50.  When this maximum is exceeded,
   further queries will be queued in a non-blocking manner. Setting this option
   to 0 disables remote history access. A remote history access is defined
   as an invocation of \Condor{history} that specifies a \Opt{-name} option
@@ -4378,8 +4378,8 @@ WANT_HOLD_REASON = \
 
 \label{param:MountUnderScratch}
 \item[\Macro{MOUNT\_UNDER\_SCRATCH}]
-  A ClassAd expression, which when evaluated in the context of the job ClassAd evaluates
-  to a comma separated list of directories. 
+  A ClassAd expression, which when evaluated in the context of the job ClassAd, evaluates
+  to a string that contains a comma separated list of directories. 
   For each directory in the list, 
   HTCondor creates a directory in the job's temporary scratch directory 
   with that name,
@@ -4407,8 +4407,7 @@ WANT_HOLD_REASON = \
   and because jobs will not be able to fill up the real \File{/tmp} directory. 
   Another use case might be for home directories, which some jobs might want
   to write to, but that should be cleaned up after each job run.
-  The default value if not defined will be that no directories are mounted in
-  the job's temporary scratch directory.
+  The default value is \Expr{''/tmp,/var/tmp''}.
 
   If the job's execute directory is encrypted, \File{/tmp} and
   \File{/var/tmp} are automatically added to
@@ -5260,7 +5259,7 @@ These macros control the \Condor{schedd}.
 
 \label{param:StartSchedulerUniverse}
 \item[\Macro{START\_SCHEDULER\_UNIVERSE}]
-  A boolean value that defaults to \Expr{TotalSchedulerJobsRunning < 200}.
+  A boolean value that defaults to \Expr{TotalSchedulerJobsRunning < 500}.
   The \Condor{schedd} uses this macro to determine whether to start
   a \SubmitCmdNI{scheduler} universe job. 
   At intervals determined by \MacroNI{SCHEDD\_INTERVAL}, 
@@ -5380,7 +5379,7 @@ MAX_JOBS_RUNNING	= \
   This integer value limits the number of scheduler universe jobs that any
   given owner (user) can have running at one time.  This limit will affect
   the number of running Dagman jobs, but not the number of nodes within a
-  DAG. The default is no limit
+  DAG. The default value is 200
 
 \label{param:MaxJobsPerSubmission}
 \item[\Macro{MAX\_JOBS\_PER\_SUBMISSION}]
@@ -5416,14 +5415,14 @@ MAX_JOBS_RUNNING	= \
   \Condor{schedd} daemon's own ClassAd.  
   While this expression evaluates to \Expr{True}, the
   \Condor{schedd} will refrain from requesting more resources from a
-  \Condor{negotiator}.  Defaults to \Expr{False}.
+  \Condor{negotiator}.  Defaults to \Expr{RecentDaemonCoreDutyCycle > 0.98}.
 
 \label{param:MaxConcurrentDownloads}
 \item[\Macro{MAX\_CONCURRENT\_DOWNLOADS}]
   This specifies the maximum
   number of simultaneous transfers of output files from execute
   machines to the submit machine.  The limit applies to all jobs
-  submitted from the same \Condor{schedd}.  The default is 10.  A
+  submitted from the same \Condor{schedd}.  The default is 100.  A
   setting of 0 means unlimited transfers.  This limit currently does
   not apply to grid universe jobs or standard universe jobs, and it
   also does not apply to streaming output files.  When the limit is
@@ -5435,7 +5434,7 @@ MAX_JOBS_RUNNING	= \
   This specifies the maximum
   number of simultaneous transfers of input files from the submit
   machine to execute machines.  The limit applies to all jobs
-  submitted from the same \Condor{schedd}.  The default is 10.  A
+  submitted from the same \Condor{schedd}.  The default is 100.  A
   setting of 0 means unlimited transfers.  This limit currently does
   not apply to grid universe jobs or standard universe jobs.  When the
   limit is reached, additional transfers will queue up and wait before
@@ -5464,7 +5463,7 @@ MAX_JOBS_RUNNING	= \
   When the disk load is above the upper limit, no new transfers
   will be started.  When between the lower and upper limits, new
   transfers will only be started to replace ones that finish.
-  There is no default value if this variable is not defined.
+  The default value is 2.0.
 
 \label{param:FileTransferDiskLoadThrottleWaitBetweenIncrements}
 \item[\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_WAIT\_BETWEEN\_INCREMENTS}]
@@ -7465,6 +7464,15 @@ do not specify their own with:
   a known submit command.  This check may help spot spelling errors
   of known submit commands.
 
+\label{param:SubmitDefaultShouldTransferFiles}
+\item[\Macro{SUBMIT\_DEFAULT\_SHOULD\_TRANSFER\_FILES}]
+  Provides a default value for the submit command
+  \SubmitCmd{should\_transfer\_files} if the submit file does
+  not supply a value and when the value is not forced by some
+  other command in the submit file, such as the universe.
+  Valid values are YES, TRUE, ALWAYS, NO, FALSE, NEVER and IF\_NEEDED.
+  If the value is not one of these, then IF\_NEEDED will be used.
+
 \label{param:SubmitSendReschedule}
 \item[\Macro{SUBMIT\_SEND\_RESCHEDULE}]
   A boolean expression that when False, prevents \Condor{submit} from
@@ -8369,7 +8377,7 @@ These macros affect the \Condor{negotiator}.
   negotiation cycle.  Once this time limit has been reached, the
   \Condor{negotiator} will skip
   over requests from this submitter until the next negotiation cycle.
-  It defaults to the number of seconds in one year.
+  It defaults to 60 seconds.
 
 \label{param:NegotiatorMaxTimePerSchedd}
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SCHEDD}]
@@ -8378,7 +8386,7 @@ These macros affect the \Condor{negotiator}.
   negotiation cycle.  Once this time limit has been reached, the
   \Condor{negotiator} will skip
   over requests from this \Condor{schedd} until the next negotiation cycle.
-  It defaults to the number of seconds in one year.
+  It defaults to 120 seconds.
 
 \label{param:NegotiatorMaxTimePerCycle}
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_CYCLE}]
@@ -8387,7 +8395,7 @@ These macros affect the \Condor{negotiator}.
   negotiation cycle.  Once this time limit has been reached, the
   \Condor{negotiator} will skip
   over requests from all submitters until the next negotiation cycle.
-  It defaults to the number of seconds in one year.
+  It defaults to 1200 seconds.
 
 \label{param:NegotiatorMaxTimePerPieSpin}
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN}]
@@ -8404,7 +8412,7 @@ These macros affect the \Condor{negotiator}.
   machines or some machines not being allocated at all.
   See section~\ref{sec:PieSlice} on page~\pageref{sec:PieSlice}
   for a description of a pie slice.
-  It defaults to the number of seconds in one year.
+  It defaults to 120 seconds.
 
 \label{param:UseResourceRequestCounts}
 \item[\Macro{USE\_RESOURCE\_REQUEST\_COUNTS}]
@@ -8431,7 +8439,7 @@ These macros affect the \Condor{negotiator}.
   especially over a wide-area network.
   Setting this value too high, however,
   could cause the \Condor{schedd} to unnecessarily block on network I/O.  
-  The default value is 20.  If \MacroNI{USE\_RESOURCE\_REQUEST\_COUNTS}
+  The default value is 200.  If \MacroNI{USE\_RESOURCE\_REQUEST\_COUNTS}
   is set to \Expr{False}, then this variable will be unconditionally set
   to a value of 1.
 
@@ -10016,7 +10024,7 @@ not changed by doing a \Condor{reconfig}.
   The legal range of values is 1 to 1000.
   If defined with a value less than 1, the  value 1 will be used.
   If defined with a value greater than 1000, the value 1000 will be used.
-  If not defined, it defaults to 5.
+  If not defined, it defaults to 100.
   (As of version 8.4.2, the default may be automatically decreased if
   \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to a small value.  If so,
   this will be noted in the \File{dagman.out} file.)
@@ -10170,32 +10178,6 @@ not changed by doing a \Condor{reconfig}.
   If not defined, \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} defaults to
   \Expr{True}.
   \Bold{Note: users should rarely change this setting.}
-
-\label{param:DAGManStorkSubmitExe}
-\item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
-  This configuration variable is no longer used; 
-  as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
-  Setting this configuration variable will result in a warning
-  from \Condor{dagman} (which will be turned into a fatal error
-  if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
-  \Bold{Note: users should never change this setting.}
-
-  For completeness, here is the definition for historical purposes: 
-  The executable that \Condor{dagman} will use to submit Stork jobs.
-  If not defined, \Condor{dagman} looks for \Prog{stork\_submit} in the path.
-
-\label{param:DAGManStorkRmExe}
-\item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
-  This configuration variable is no longer used; 
-  as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
-  Setting this configuration variable will result in a warning
-  from \Condor{dagman} (which will be turned into a fatal error
-  if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
-  \Bold{Note: users should never change this setting.}
-
-  For completeness, here is the definition for historical purposes: 
-  The executable that \Condor{dagman} will use to remove Stork jobs.
-  If not defined, \Condor{dagman} looks for \Prog{stork\_rm} in the path.
 
 \end{description}
 
@@ -10357,19 +10339,6 @@ not changed by doing a \Condor{reconfig}.
   (and not ignored),
   the DAG will abort during the initialization process. 
   If not defined, \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} defaults to
-  \Expr{False}.
-
-\label{param:DAGManAllowLogError}
-\item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
-  This configuration variable is no longer used; 
-  as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
-  \Bold{Note: users should never change this setting.}
-
-  For completeness, here is the definition for historical purposes: 
-  A boolean value defining whether \Condor{dagman} will still attempt
-  to run a node job, even if errors are detected in the job event log
-  specification.  This setting has an effect only on nodes that are
-  Stork jobs (not HTCondor jobs).  The default value if not defined is
   \Expr{False}.
 
 \label{param:DAGManAllowEvents}
@@ -11782,84 +11751,6 @@ via \Prog{MyProxy}, available from
   refresh proxy certificates.  By default, this macro is undefined.
 
 \end{description}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\subsection{\label{sec:Stork-Config-File-Entries}Stork Configuration
-%File Macros}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%\begin{description}
-%
-%\label{param:StorkMaxNumJobs}
-%\item[\Macro{STORK\_MAX\_NUM\_JOBS}]
-  %An integer limit on the number of concurrent data placement jobs
-  %handled by Stork.  The default value when not defined is 10.
-%
-%\label{param:StorkMaxRetry}
-%\item[\Macro{STORK\_MAX\_RETRY}]
-  %An integer limit on the
-  %number of attempts for a single data placement job.  For data transfers,
-  %this includes transfer attempts on the primary protocol, all
-  %alternate protocols, and all retries.
-  %The default value when not defined is 10.
-%
-%\label{param:StorkMaxDelayInMinutes}
-%\item[\Macro{STORK\_MAXDELAY\_INMINUTES}]
-  %An integer limit (in minutes) on the run time for a data placement job,
-  %after which the job is considered failed.
-  %The default value when not defined is 10,
-  %and the minimum legal value is 1.
-%
-%\label{param:StorkTmpCredDir}
-%\item[\Macro{STORK\_TMP\_CRED\_DIR}]
-  %The full path to the temporary credential storage directory used by Stork.
-  %The default value is \File{/tmp} when not defined. 
-%
-%\label{param:StorkModuleDir}
-%\item[\Macro{STORK\_MODULE\_DIR}]
-  %The full path to the directory containing Stork modules.
-  %The default value when not defined is 
-  %as defined by \MacroUNI{LIBEXEC}.  It is a fatal error for
-  %both \MacroNI{STORK\_MODULE\_DIR} and \MacroNI{LIBEXEC} to be undefined.
-%
-%\label{param:CreddSuperUsers}
-%\item[\Macro{CRED\_SUPER\_USERS}]
-  %Access to a stored credential is
-  %restricted to the user who submitted the credential, and any user
-  %names specified in this macro.  The format is a space or comma
-  %separated list of user names which are valid on the \Stork{credd}
-  %host.
-  %The default value of this macro is \Expr{root} on Unix systems, and
-  %\Expr{Administrator} on Windows systems.
-%
-%\label{param:CredStoreDir}
-%\item[\Macro{CRED\_STORE\_DIR}]
-  %Directory for storing credentials.  This
-  %directory must exist prior to starting \Stork{credd}.  It is highly
-  %recommended to restrict access permissions to \emph{only} the
-  %directory owner.
-  %The default value is \Expr{\$(SPOOL\_DIR)/cred}.
-%
-%\label{param:CredIndexFile}
-%\item[\Macro{CRED\_INDEX\_FILE}]
-  %Index file path of saved credentials.
-  %This file will be automatically created if it does not exist.
-  %The default value is \Expr{\$(CRED\_STORE\_DIR)/cred-index}.
-%
-%\label{param:DefaultCredExpireThreshold}
-%\item[\Macro{DEFAULT\_CRED\_EXPIRE\_THRESHOLD}]
-  %\Stork{credd} will attempt
-  %to refresh credentials when their remaining lifespan is less than this
-  %value.
-  %Units = seconds.  Default value = 3600 seconds (1 hour).
-%
-%\label{param:CredCheckInterval}
-%\item[\Macro{CRED\_CHECK\_INTERVAL}]
-  %\Stork{credd} periodically checks
-  %remaining lifespan of stored credentials, at this interval.
-  %Units = seconds.  Default value = 60 seconds (1 minute).
-%
-%\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-ssh-to-job}Configuration File Entries

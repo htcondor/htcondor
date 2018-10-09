@@ -613,16 +613,16 @@ reinitialize ()
 	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
 
 	// up to 1 year per negotiation cycle
- 	MaxTimePerCycle = param_integer("NEGOTIATOR_MAX_TIME_PER_CYCLE",31536000);
+	MaxTimePerCycle = param_integer("NEGOTIATOR_MAX_TIME_PER_CYCLE",1200);
 
 	// up to 1 year per submitter by default
- 	MaxTimePerSubmitter = param_integer("NEGOTIATOR_MAX_TIME_PER_SUBMITTER",31536000);
+	MaxTimePerSubmitter = param_integer("NEGOTIATOR_MAX_TIME_PER_SUBMITTER",60);
 
 	// up to 1 year per schedd by default
-	MaxTimePerSchedd = param_integer("NEGOTIATOR_MAX_TIME_PER_SCHEDD",31536000);
+	MaxTimePerSchedd = param_integer("NEGOTIATOR_MAX_TIME_PER_SCHEDD",120);
 
 	// up to 1 year per spin by default
- 	MaxTimePerSpin = param_integer("NEGOTIATOR_MAX_TIME_PER_PIESPIN",31536000);
+	MaxTimePerSpin = param_integer("NEGOTIATOR_MAX_TIME_PER_PIESPIN",120);
 
 	// deal with a possibly resized socket cache, or create the socket
 	// cache if this is the first time we got here.
@@ -1189,6 +1189,41 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 		}
 	}
 	free(tmp);
+
+	tmp=param("PREEMPTION_RANK");
+	if ( tmp && PreemptionRank) {
+		const char* preempt_rank_name = "preempt_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(preempt_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(preempt_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+	tmp=param("NEGOTIATOR_PRE_JOB_RANK");
+	if ( tmp && NegotiatorPreJobRank) {
+		const char* pre_job_rank_name = "pre_job_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(pre_job_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(pre_job_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+	tmp=param("NEGOTIATOR_POST_JOB_RANK");
+	if ( tmp && NegotiatorPostJobRank) {
+		const char* post_job_rank_name = "post_job_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(post_job_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(post_job_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+
 	if (sample_startd_ad) {
 		delete sample_startd_ad;
 		sample_startd_ad = NULL;
@@ -3976,7 +4011,7 @@ assignWork(const ScheddWorkMap &workMap, CurrentWorkMap &curWork, ScheddWork &ne
 void
 Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds)
 {
-	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", false))
+	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", true))
 	{
 		return;
 	}

@@ -1436,7 +1436,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
-PRAGMA_REMIND("tj: TODO fix to handle summary print format")
+//PRAGMA_REMIND("tj: TODO fix to handle summary print format")
 static int set_print_mask_from_stream(
 	AttrListPrintMask & print_mask,
 	std::string & constraint,

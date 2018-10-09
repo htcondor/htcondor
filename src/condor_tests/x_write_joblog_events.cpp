@@ -33,6 +33,7 @@
 #include <sys/socket.h>
 #endif
 #include "write_user_log.h"
+#include "my_username.h"
 
 struct hostent *NameEnt;
 /*
@@ -75,23 +76,25 @@ main(int argc, char **argv)
 	char *logname = argv[1];
 	int count = atoi(argv[3]);
 
+	char * owner = my_username();
+	char * domain = my_domainname();
 
 	if( strcmp(argv[2],"submit") == 0) {
 		//printf("Drop submit events\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, false);
+			WriteUserLog log(owner, domain, logname, cluster, 0, 0, false);
 			writeSubmitEvent(&log);
 		}
 	} else if( strcmp(argv[2],"execute") == 0) {
 		//printf("Drop execute event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, false);
+			WriteUserLog log(owner, domain, logname, cluster, 0, 0, false);
 			writeExecuteEvent(&log);
 		}
 	} else if( strcmp(argv[2],"terminated") == 0) {
 		//printf("Drop terminated event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
-			WriteUserLog log("owner", NULL, logname, cluster, 0, 0, false);
+			WriteUserLog log(owner, domain, logname, cluster, 0, 0, false);
 			writeJobTerminatedEvent(&log);
 		}
 	}

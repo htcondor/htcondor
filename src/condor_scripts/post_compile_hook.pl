@@ -62,10 +62,6 @@ my @poisoned_syms = (
 			# contraints in our handling of it. Also, this is a read only
 			# fopen.
 			'condor_chirp/chirp_client.o',
-
-			# This is a test program which presumably doesn't need the poison
-			# policy protection.
-			'condor_lease_manager/lease_manager_tester.o',
 		],
 
 		# These are wholesale exempt since they represent code we know to be

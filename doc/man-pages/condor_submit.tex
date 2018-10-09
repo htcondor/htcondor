@@ -21,6 +21,7 @@
 \oOpt{-spool}
 \oOptArg{-dump}{filename}
 \oOpt{-interactive}
+\oOpt{-allow-crlf-script}
 \oOpt{-dry-run}
 \oOptArg{-maxjobs}{number-of-jobs}
 \oOpt{-single-cluster}
@@ -194,6 +195,13 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
   \SubmitCmd{universe} commands are overwritten to be sleep and vanilla.
   The job ClassAd attribute \Attr{InteractiveJob} is set to \Expr{True}
   to identify interactive jobs for \Condor{startd} policy usage.  }
+
+\OptItem{\Opt{-allow-crlf-script}}{Changes the check for an invalid line ending
+on the executable script's \Expr{\#!} line from an ERROR to a WARNING.  The \Expr{\#!} line
+will be ignored by Windows, so it won't matter if it is invalid; but Unix and Linux
+will not run a script that has a Windows/DOS line ending on the first line of the script.
+So \Condor{submit} will not allow such a script to be submitted as the job's
+executable unless this option is supplied. }
 
 \OptItem{\OptArg{-dry-run}{file}}{Parse the submit description file,
   sending the resulting job ClassAd to the file given by \Arg{file}, but

@@ -30,7 +30,8 @@ append_config = """
 #<<CONDOR_TESTREQ_CONFIG;
   NUM_CPUS = 6
   NUM_SLOTS = 6
-  SCHEDD_ALLOW_LATE_MATERIALIZE = true
+  # this is now the default
+  #SCHEDD_ALLOW_LATE_MATERIALIZE = true
   # turn on special logging of late materialization
   SCHEDD_MATERIALIZE_LOG = $(LOG)/MaterializeLog
   #ENABLE_ASYNC_LATE_MATERIALIZE_ITEM_DATA = true
@@ -101,7 +102,7 @@ def wait_for_event(id, logfile, timeout, func):
 			continue
 
 		if event.type == JobEventType.CLUSTER_REMOVE:
-			Utils.TLog("ulog: FactoryRemove({0})".format(event.cluster))
+			Utils.TLog("ulog: ClusterRemove({0})".format(event.cluster))
 			total_factories -= 1
 
 			print '\t          now peak total'
@@ -112,7 +113,7 @@ def wait_for_event(id, logfile, timeout, func):
 			#break
 
 		elif event.type == JobEventType.CLUSTER_SUBMIT:
-			Utils.TLog("ulog: FactorySubmit({0})".format(event.cluster))
+			Utils.TLog("ulog: ClusterSubmit({0})".format(event.cluster))
 			total_factories += 1
 			#continue
 

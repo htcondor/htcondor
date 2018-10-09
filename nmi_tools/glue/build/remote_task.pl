@@ -301,7 +301,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS|Fedora)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS|Fedora|SL)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {
@@ -319,7 +319,7 @@ sub check_rpm {
 
 sub create_deb {    
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(Debian9|Ubuntu16|Ubuntu18)/) {
+    if (!($ENV{NMI_PLATFORM} =~ /(Debian8|Ubuntu14)/)) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_deb.sh";
     } else {

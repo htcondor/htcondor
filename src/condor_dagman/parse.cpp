@@ -243,23 +243,6 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					   "submitfile" );
 		}
 
-		// Handle a Stork job spec
-		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
-		//
-		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
-			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"ERROR: the DAP token is no longer supported\n",
-				filename, lineNumber );
-			parsed_line_successfully = false;
-		}
-
-		else if	(strcasecmp(token, "DATA") == 0) {
-			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"ERROR: the DATA token is no longer supported\n",
-				filename, lineNumber );
-			parsed_line_successfully = false;
-		}
-
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
@@ -337,19 +320,6 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-				// Parsed in first pass.
-			parsed_line_successfully = true;
-		}
-
-		// Handle a Stork job spec
-		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
-		//
-		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
-				// Parsed in first pass.
-			parsed_line_successfully = true;
-		}
-
-		else if	(strcasecmp(token, "DATA") == 0) {
 				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}

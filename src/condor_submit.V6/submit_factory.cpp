@@ -489,7 +489,7 @@ int submit_factory_job (
 		// if submit foreach data is not already a disk file, turn it into one.
 		bool make_foreach_file = false;
 		if (spill_foreach_data) {
-			PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
+			//PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
 			if (o.items.isEmpty()) {
 				o.foreach_mode = foreach_not;
 			} else {

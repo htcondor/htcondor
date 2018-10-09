@@ -1,0 +1,86 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use strict;
+use warnings;
+
+use Cwd;
+
+use CondorTest;
+use CondorUtils;
+
+my $testName = 'python_bindings_htcondor';
+my $testDescription = 'Thin shim around htcondor_tests.py';
+
+# Where is the release dir?
+my $releaseDir = getcwd() . "/../condor";
+# For interactive testing.
+if( defined( $ARGV[0] ) ) {
+	$releaseDir = $ARGV[0];
+}
+
+# Where are the HTCondor binaries?
+$ENV{_condor_RELEASE_DIR} = $releaseDir;
+# Where are the Python bindings?
+$ENV{PYTHONPATH} = $releaseDir . "/lib/python";
+
+# Where are the tests?
+chdir( 'python_bindings' );
+
+# Run the Python tests.
+my $result = runCommandCarefully( { 'emit_output' => 1 },
+	getcwd() . "/htcondor_tests.py", "-v" );
+
+if( $result->{ 'exitcode' } != 0 ) {
+	print( "htcondor_tests.py did not exit cleanly, aborting.\n" );
+	CondorTest::RegisterResult( 0, 'test_name', $testName );
+	CondorTest::EndTest();
+	exit( 1 );
+}
+
+# Arguably, we should look for the individual results reported by -v
+# instead, and report those, but this is entire file is only a temporary
+# hack until MarkC gets done rewriting htcondor_tests.py anyway, so...
+my $testOK = 0;
+my @output = @{$result->{ 'stdout' }};
+my @error = @{$result->{ 'stderr' }};
+for( my $i = 0; $i < scalar(@error); ++$i ) {
+	my $line = $error[$i];
+	if( $line eq "----------------------------------------------------------------------\n" ) {
+		my $secondLine = $error[$i + 1];
+		if( $secondLine =~ /^Ran (\d+) tests? in (\d+).(\d+)s$/ ) {
+			my $thirdLine = $error[$i + 3];
+			if( $thirdLine eq "OK\n" ) {
+				$testOK = 1;
+			}
+		}
+	}
+}
+
+if( $testOK ) {
+	CondorTest::RegisterResult( 1, 'test_name', $testName );
+	CondorTest::EndTest();
+	exit( 0 );
+} else {
+	print( "htcondor_tests.py failed, aborting.\n" );
+	CondorTest::RegisterResult( 0, 'test_name', $testName );
+	CondorTest::EndTest();
+	exit( 1 );
+}

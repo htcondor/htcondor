@@ -490,6 +490,7 @@ private:
 	char* uid_domain;
 	char* fs_domain;
 	bool trust_uid_domain;
+	bool trust_local_uid_domain;
 
 	std::string m_chirp_config_filename;
 	bool m_wrote_chirp_config;
