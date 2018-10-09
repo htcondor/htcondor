@@ -16172,14 +16172,12 @@ Scheduler::indexAJob( JobQueueJob* jobAd, bool loading_job_queue )
 void
 Scheduler::removeJobFromIndexes( const JOB_ID_KEY& job_id )
 {
-	dprintf(D_ALWAYS, "MRC [Scheduler::removeJobFromIndexes] called, job_id=%s\n", job_id);
 	// Walk the prio queue of local jobs
 	for (std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); it++) {
-		dprintf(D_ALWAYS, "MRC [Scheduler::StartLocalJobs] job=%s, prio=%d\n", std::string(curr->job_id).c_str(), curr->prio);
-		JobQueueJob* job = GetJobAd(curr->job_id);
+		JobQueueJob* job = GetJobAd(it->job_id);
 		// If this record matches the job_id passed in, erase it
-		if (curr->job_id == job_id) { 
-			LocalJobsPrioQueue.erase(curr);
+		if (it->job_id == job_id) { 
+			LocalJobsPrioQueue.erase(it);
 			return;
 		}
 	}
