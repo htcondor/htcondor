@@ -30,6 +30,7 @@
 #define _CONDOR_SCHED_H_
 
 #include <map>
+#include <queue>
 #include <set>
 
 #include "dc_collector.h"
@@ -84,7 +85,20 @@ extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
 class JobQueueCluster;
 
-typedef std::set<JOB_ID_KEY> JOB_ID_SET;
+//typedef std::set<JOB_ID_KEY> JOB_ID_SET;
+class LocalJobRec {
+  public:
+	int			prio;
+	JOB_ID_KEY 	job_id;
+
+	LocalJobRec(int _prio, JOB_ID_KEY _job_id) :
+		prio(_prio),
+		job_id(_job_id)
+	{}
+	bool operator<(const LocalJobRec& rhs) const {
+		return this->prio >= rhs.prio;
+	}
+};
 
 bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
 
@@ -815,6 +829,8 @@ private:
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
 
 	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
+	std::set<LocalJobRec> LocalJobsPrioQueue;
+	
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown

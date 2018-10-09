@@ -8674,29 +8674,26 @@ Scheduler::StartLocalJobs()
 	if ( ExitWhenDone ) {
 		return;
 	}
-#if 0 // enable this code to walk the table of LocalJobIds instead of the whole queue
-	  // note that this code is only about 20% faster than walking the whole job queue
-	  // when 0.1% of jobs are schedular universe. it's probably even slower if a larger
-	  // percentage of the jobs are scheduler universe.
+	  
 	double begin = _condor_debug_get_time_double();
-	// Instead of walking the job queue. walk the set of local/scheduler jobs
-	for (JOB_ID_SET::iterator it = LocalJobIds.begin(); it != LocalJobIds.end(); /*++it not here*/) {
-		JOB_ID_SET::iterator curr = it++; // save and advance the iterator, in case we want to erase the item
-		JobQueueJob *job = GetJobAd(*curr);
-		if ( ! job) { // this id no longer refers to a job. so remove it from the list.
-			//TODO: should we warn when this happens??
-			LocalJobIds.erase(curr);
+	
+	// Instead of walking the job queue. walk the prio queue of local jobs
+	for (std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); /*++it not here*/) {
+		std::set<LocalJobRec>::iterator curr = it++; // save and advance the iterator, in case we want to erase the item
+		JobQueueJob* job = GetJobAd(curr->job_id);
+		dprintf(D_ALWAYS, "MRC [Scheduler::StartLocalJobs] job=%s, prio=%d\n", std::string(curr->job_id).c_str(), curr->prio);
+		// If this id no longer refers to a job, remove it from the list.
+		if (!job) { 
+			// TODO: Should we warn when this happens??
+			LocalJobsPrioQueue.erase(curr);
 			continue;
 		}
-		// call the old queue walk function.
-		find_idle_local_jobs(job, *curr, NULL);
+		// Call the old queue walk function.
+		// TODO: If we're only using this to start local jobs, and not walk the queue, should we rename appropriately?
+		find_idle_local_jobs(job, curr->job_id, NULL);
 	}
 	double runtime = _condor_debug_get_time_double() - begin;
 	WalkJobQ_find_idle_local_jobs_runtime += runtime;
-	//WalkJobQ_runtime += runtime;
-#else
-	WalkJobQueue(find_idle_local_jobs);
-#endif
 }
 
 shadow_rec*
@@ -16157,14 +16154,14 @@ Scheduler::claimLocalStartd()
  * @param loading_job_queue - true if this function is called when reloading the job queue
  **/
 void
-Scheduler::indexAJob( JobQueueJob * /*jobAd*/, bool /*loading_job_queue*/ )
+Scheduler::indexAJob( JobQueueJob* jobAd, bool loading_job_queue )
 {
-#if 0 // enable this code to keep an index of LocalJobIds
 	int univ = jobAd->Universe();
+	dprintf(D_ALWAYS, "univ=%d, loading_job_queue=%s\n", univ, loading_job_queue ? "true" : "false");
 	if (univ == CONDOR_UNIVERSE_LOCAL || univ == CONDOR_UNIVERSE_SCHEDULER) {
-		LocalJobIds.insert(jobAd->jid);
+		LocalJobRec rec = LocalJobRec(0, jobAd->jid);
+		LocalJobsPrioQueue.insert(rec);
 	}
-#endif
 }
 
 /**
@@ -16173,11 +16170,23 @@ Scheduler::indexAJob( JobQueueJob * /*jobAd*/, bool /*loading_job_queue*/ )
  * @param jobAd - the new job to be added to the cronTabs table
  **/
 void
-Scheduler::removeJobFromIndexes( const JOB_ID_KEY& /*job_id*/ )
+Scheduler::removeJobFromIndexes( const JOB_ID_KEY& job_id )
 {
-#if 0 // enable this code to keep an index of LocalJobIds
-	LocalJobIds.erase(job_id);
-#endif
+	dprintf(D_ALWAYS, "MRC [Scheduler::removeJobFromIndexes] called, job_id=%s\n", job_id);
+	// Walk the prio queue of local jobs
+	for (std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); it++) {
+		dprintf(D_ALWAYS, "MRC [Scheduler::StartLocalJobs] job=%s, prio=%d\n", std::string(curr->job_id).c_str(), curr->prio);
+		JobQueueJob* job = GetJobAd(curr->job_id);
+		// If this record matches the job_id passed in, erase it
+		if (curr->job_id == job_id) { 
+			LocalJobsPrioQueue.erase(curr);
+			return;
+		}
+	}
+
+	// If we got this far, something is wrong. Report an error.
+	dprintf(D_FULLDEBUG, "ERROR: Could not find job_id = %s in the priority list of local jobs.\n", job_id);
+	return;
 }
 
 /**
