@@ -1553,10 +1553,15 @@ ClassAd *CondorJob::buildSubmitAd()
 		// Remove all remote_* attributes from the new ad before
 		// translating remote_* attributes from the original ad.
 		// See gittrac #376 for why we have two loops here.
+		// Also remove all SUBMIT_* attributes from the new ad.
+		// Otherwise, the remote schedd will erroneously think it has
+		// already rewritten file paths in the ad to refer to its own
+		// SPOOL directory.
 	const char *next_name;
 	submit_ad->ResetName();
 	while ( (next_name = submit_ad->NextNameOriginal()) != NULL ) {
-		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
+		if ( ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 ||
+		       strncasecmp( next_name, "SUBMIT_", 7 ) == 0 ) &&
 			 strlen( next_name ) > 7 ) {
 
 			submit_ad->Delete( next_name );
