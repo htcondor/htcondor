@@ -206,23 +206,33 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 		}
 	}
 
-	int fd = safe_open_no_create_follow( publicKeyFile.c_str(), O_RDONLY );
-	if( fd == -1 ) {
-		fprintf( stderr, "Unable to open public key file '%s': '%s' (%d).\n",
-			publicKeyFile.c_str(), strerror( errno ), errno );
-		setup_usage();
-		return 1;
+	if( MATCH == strcasecmp( publicKeyFile.c_str(), "FROM" )
+	  && MATCH == strcasecmp( privateKeyFile.c_str(), "INSTANCE" ) ) {
+		publicKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
+		privateKeyFile = USE_INSTANCE_ROLE_MAGIC_STRING;
 	}
-	close( fd );
 
-	fd = safe_open_no_create_follow( privateKeyFile.c_str(), O_RDONLY );
-	if( fd == -1 ) {
-		fprintf( stderr, "Unable to open private key file '%s': '%s' (%d).\n",
-			privateKeyFile.c_str(), strerror( errno ), errno );
-		setup_usage();
-		return 1;
+	if( publicKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
+		int fd = safe_open_no_create_follow( publicKeyFile.c_str(), O_RDONLY );
+		if( fd == -1 ) {
+			fprintf( stderr, "Unable to open public key file '%s': '%s' (%d).\n",
+				publicKeyFile.c_str(), strerror( errno ), errno );
+			setup_usage();
+			return 1;
+		}
+		close( fd );
 	}
-	close( fd );
+
+	if( privateKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
+		int fd = safe_open_no_create_follow( privateKeyFile.c_str(), O_RDONLY );
+		if( fd == -1 ) {
+			fprintf( stderr, "Unable to open private key file '%s': '%s' (%d).\n",
+				privateKeyFile.c_str(), strerror( errno ), errno );
+			setup_usage();
+			return 1;
+		}
+		close( fd );
+	}
 
 
 	std::string cfURL = cloudFormationURL ? cloudFormationURL : "";
