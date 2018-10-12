@@ -247,7 +247,7 @@ if (WINDOWS)
 	message(STATUS "OpenMP support will be disabled on Windows until we have a chance to fix the installer to support it")
 	# TJ: 8.5.8 disabling OpenMP on Windows because it adds a dependency on an additional merge module for VCOMP110.DLL
 else()
-	find_package (OpenMP)
+	find_package ("OpenMP")
 endif()
 
 if (FIPS_BUILD)
