@@ -969,6 +969,12 @@ std::string ClassAdWrapper::toOldString() const
     return ad_str;
 }
 
+bool ClassAdWrapper::contains(const std::string & attr) const
+{
+	return Lookup(attr) != NULL;
+}
+
+
 AttrKeyIter ClassAdWrapper::beginKeys()
 {
     return AttrKeyIter(begin());

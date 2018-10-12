@@ -23,15 +23,12 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 
-
-#$cmd_template = "lib_eventlog.template";
-#$testdesc =  'lib_eventlog - test dropping of events AND job ad attributes into event log' ;
-#$cmd = "lib_eventlog.cmd";
-
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 
-print scalar localtime() . "\n";
+$testname = "lib_eventlog-xml";
+TLOG("$testname begins\n");
+
 my $on_execute = sub {
 };
 
@@ -50,7 +47,6 @@ my $firstappend_condor_config = '
 	ALL_DEBUG = D_FULLDEBUG
 ';
 
-$testname = "lib_eventlog-xml";
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"libeventlogxml");
 
@@ -73,18 +69,17 @@ on_success => $on_success,
 on_submit => $on_submit,
 ); # jobid 1
 
-#my $result = system("./lib_eventlog.pl $mysubmitnm");
 my $result = 0;
 
 
-CondorTest::debug("Result of basic eventlog  test is  $result\n",1);
+TLOG("Result of basic eventlog  test is  $result\n",1);
 
 # well did we get out the results into the log we wanted?
 # determine where the log went
 # run log reader and compare with expected values.
 
 
-print "Checking results......\n";
+print "\tChecking results......\n";
 
 my $elog = `condor_config_val EVENT_LOG`;
 fullchomp($elog);
@@ -96,13 +91,13 @@ if($isitwindows == 1) {
 	$elog = $_;
 }
 
-print "EVENT_LOG is:$elog\n";
+print "\tEVENT_LOG is:$elog\n";
 
 my $expected = "x_lib_eventlog.expected";
 my @want;
 my @got;
 
-print "Open expected results and real results\n";
+#print "Open expected results and real results\n";
 
 if(is_windows()) {
 	open(ELOG,"x_read_joblog.exe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
@@ -125,19 +120,18 @@ close(EXP);
 foreach $line (@got) {
 	my $desired = shift(@want);
 	if($desired ne $line) {
-		CondorTest::debug("Result Mismatch!:$desired ne $line!!!!\n",1);
-		print "Result Mismatch!:wanted:$desired ne got:$line!!!!\n";
+		print "\tResult Mismatch: wanted:$desired ne got:$line\n";
 		$result += 1;
 		last;
 	} else {
-		#print "Result Match!:$desired eq $line!!!!\n";
+		#print "\tResult Match: $desired eq $line\n";
 	}
 }
 if($result == 0) {
-	print "Results all Match! Test is a success.\n";
+	print "\tResults all Match. Test is a success.\n";
 	CondorTest::RegisterResult(1, test_name, $testname);
 } else {
-	print "Mismatches=$result! Test is a failure.\n";
+	print "\t$result Mismatches. Test is a failure.\n";
 	CondorTest::RegisterResult(0, test_name, $testname);
 }
 

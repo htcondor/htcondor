@@ -66,7 +66,6 @@ public:
 public:
 	const char *getName( void ) const { return m_name; };
 	bool getXml( void ) const { return m_isXml; };
-	bool getStork( void ) const { return m_stork; };
 	double getRandomProb( void ) const { return m_randomProb; };
 	Verbosity getVerbosity( void ) const { return m_verbosity; };
 	bool Verbose( Verbosity v ) const { return (m_verbosity >= v); };
@@ -74,7 +73,6 @@ public:
 public:
 	const char	*m_name;
 	bool		 m_isXml;
-	bool		 m_stork;
 	double		 m_randomProb;		// Probability of 'random' events
 	Verbosity	 m_verbosity;
 };
@@ -90,7 +88,6 @@ public:
 	const SharedOptions	&getShared( void ) const { return m_shared; };
 	const char *getName( void ) const { return m_shared.getName(); };
 	bool getXml( void ) const { return m_shared.getXml(); };
-	bool getStork( void ) const { return m_shared.getStork(); };
 	double getRandomProb( void ) const {
 		return m_shared.getRandomProb();
 	};
@@ -106,13 +103,9 @@ public:
 		return m_cluster >= 0 ? m_cluster : getpid();
 	};
 	int getProc( void ) const {
-		if ( m_shared.m_stork )
-			return -1;
 		return m_proc >= 0 ? m_proc : 0;
 	};
 	int getSubProc( void ) const {
-		if ( m_shared.m_stork )
-			return -1;
 		return m_subProc >= 0 ? m_subProc : 0;
 	};
 	int getNumProcs( void ) const { return m_numProcs; };
@@ -170,7 +163,6 @@ public:
 	};
 	const char *getName( void ) const { return m_shared.getName(); };
 	bool getXml( void ) const { return m_shared.getXml(); };
-	bool getStork( void ) const { return m_shared.getStork(); };
 	double getRandomProb( void ) const {
 		return m_shared.getRandomProb();
 	};
@@ -447,7 +439,6 @@ SharedOptions::SharedOptions( void )
 {
 	m_name				= NULL;
 	m_isXml				= false;
-	m_stork				= false;
 	m_randomProb		= 0.0;
 	m_verbosity			= VERB_ERROR;
 }
@@ -559,7 +550,6 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 		"  -p|--persist <file>: persist writer state to file (for jobid gen)\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
 		"  --no-sleep: Don't sleep at all between events\n"
-		"  --stork: simulate Stork (-1 for proc and subproc)\n"
 		"  --random <percent>: gen other random events every <percent> times\n"
 		"  --submit_note <string>: submit event note\n"
 		"\n"
@@ -729,10 +719,6 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 		else if ( arg.Match("no-sleep") ) {
 			opts->m_sleep_seconds  = 0;
 			opts->m_sleep_useconds = 0;
-
-		}
-		else if ( arg.Match( "stork") ) {
-			m_shared.m_stork = true;
 
 		}
 		else if ( arg.Match("subproc") ) {

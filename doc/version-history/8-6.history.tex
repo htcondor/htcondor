@@ -45,8 +45,8 @@ The details of each version are described below.
 allows, for example, `s3' to be used as a custom file transfer plug-in.
 \Ticket{6722}
 
-\item Fixed a bug in the python bindings that would leak one or more ClassAds each time
-the submit or submitMany methods of the schedd class were called without passing an explict list to
+\item Fixed a bug in the Python bindings that would leak one or more ClassAds each time
+the submit or submitMany methods of the schedd class were called without passing an explicit list to
 return the result ClassAds.
 \Ticket{6729}
 
@@ -54,6 +54,23 @@ return the result ClassAds.
 a domain socket, which the FileTransfer module would subsequently try (and fail) 
 to send back to the submit machine.
 \Ticket{6744}
+
+\item Prevented the combination of -forward and -since flags when calling
+\condor{history}, which is ambiguous as to how it should work.
+\Ticket{6417}
+
+\item Fixed a bug that caused output and error files with full path names
+to be transferred to the wrong directory on Windows.  This would usually
+cause output file transfer to fail.
+\Ticket{6747}
+
+\item Fixed a bug that could cause grid-type condor jobs under the grid
+universe to fail if the job's sandbox is transferred more than once.
+\Ticket{6791}
+
+\item Fixed a bug in the Python classad module that caused the Python \Expr{in}
+keyword to be case sensitive when used to see if a ClassAd contains a given attribute.
+\Ticket{6535}
 
 \end{itemize}
 
@@ -179,7 +196,7 @@ process (defined by \MacroNI{PREEN\_COREFILES\_PER\_PROCESS}).
 \begin{itemize}
 
 \item The MSI installer for Windows now appends the directory needed to use the
-HTCondor python bindings libraries into the \Env{PYTHONPATH} environment variable.
+HTCondor Python bindings libraries into the \Env{PYTHONPATH} environment variable.
 \Ticket{6607}
 
 \item If the user sets the environment variable \Env{OMP\_NUM\_THREADS} to some value
@@ -406,7 +423,7 @@ retry indefinitely when polling for credentials.
 after an attempt to submit to the underlying batch system failed.
 \Ticket{6586}
 
-\item Fixed a bug in python plugin support for the \Condor{collector} that would result
+\item Fixed a bug in Python plugin support for the \Condor{collector} that would result
 in the \Condor{collector} switching from writing from the CollectorLog to writing to
 the ToolLog after a reconfig.
 \Ticket{6588}
@@ -456,7 +473,7 @@ quota to some groups when \MacroNI{ACCEPT\_SURPLUS} is on and
 
 \item Fixed a bug in the Python bindings when doing queries that specify a
 projection with the ``attr\_list'' argument. The bug could could
-potentially result in memory corruption of the python interpreter process.
+potentially result in memory corruption of the Python interpreter process.
 \Ticket{6468}
 
 \item Reduced the amount of time that \Condor{preen} will block the
@@ -621,7 +638,7 @@ HTCondor daemons stopped via systemd will no longer continue to appear
 alive with \Condor{status}.
 \Ticket{6096}
 
-\item Fixed problems in python bindings when using the Submit class
+\item Fixed problems in Python bindings when using the Submit class
 to submit jobs specifying environment variables or file redirection.
 \Ticket{6420}
 
@@ -740,7 +757,7 @@ short period of time.
 \Ticket{6385}
 
 \item Fixed handling of backslashes in string values in old ClassAds
-format in the python bindings.
+format in the Python bindings.
 \Ticket{6382}
 
 \item Fixed a bug in how the CPU usage of Slurm jobs is interpreted.

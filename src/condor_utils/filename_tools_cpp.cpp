@@ -101,7 +101,7 @@ static char * copy_upto( char *in, char *out, char delim, int length )
 		if( *in==0 ) {
 			*trimmedend = 0;
 			return 0;
-		} else if( *in=='\\' && !escape ) {
+		} else if( *in=='\\' && !escape && (in[1] == delim)) {
 			escape=1;
 			in++;
 		} else if( *in==delim && !escape ) {

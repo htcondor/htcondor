@@ -1,0 +1,509 @@
+#!/usr/bin/python
+
+import classad
+import datetime
+import os
+import pickle
+import re
+import sys
+import tempfile
+import types
+import unittest
+import warnings
+
+from pytest.Globals import *
+
+_long_type = int if sys.version_info > (3,) else long
+
+def assertEqual(val1, val2):
+    if val1 != val2: 
+        raise ValueError("Values " + str(val1) + " and " + str(val2) + " not equal")
+
+def assertNotEqual(val1, val2):
+    if val1 == val2: 
+        raise ValueError("Values " + str(val1) + " and " + str(val2) + "are equal not expected")
+
+def assertRaises(exception, callable, args=[], kwds=[]):
+    try:
+        callable(args)
+    except exception as error:
+        return
+    raise Exception("Did not raise exception " + str(exception) + " as expected")
+
+def assertTrue(expr):
+    if expr is not True:
+        raise ValueError("Expression " + str(expr) + " is not True")
+
+def assertFalse(expr):
+    if expr is not False:
+        raise ValueError("Expression " + str(expr) + " is not False")
+
+def one_ad_verify(ad):
+    assertEqual(len(ad), 2)
+    assertEqual(ad["foo"], 1)
+    assertEqual(ad["bar"], 2)
+
+def new_ads_verify(ads):
+    ads = list(ads)
+    assertEqual(len(ads), 2)
+    ad1, ad2 = ads
+    assertEqual(ad1["foo"], "bar")
+    assertEqual(ad1["baz"], classad.Value.Undefined)
+    assertEqual(ad2["bar"], 1)
+    assertEqual(len(ad1), 2)
+    assertEqual(len(ad2), 1)
+    assertRaises(KeyError, ad1.__getitem__, "bar")
+
+def old_ads_verify(ads):
+    ads = list(ads)
+    assertEqual(len(ads), 2)
+    ad1, ad2 = ads
+    assertEqual(ad1["MaxHosts"], 1)
+    assertEqual(ad1["Managed"], "Schedd")
+    assertEqual(ad2["User"], "bbockelm@users.opensciencegrid.org")
+    assertEqual(ad2["SUBMIT_x509userproxy"], "/tmp/x509up_u1221")
+    assertEqual(len(ad1), 2)
+    assertEqual(len(ad2), 2)
+
+
+
+class TestClassad(object):
+
+    def test_classad_constructor():
+        ad = classad.ClassAd('[foo = "1"; bar = 2]')
+        assertEqual(ad['foo'], "1")
+        assertEqual(ad['bar'], 2)
+        assertRaises(KeyError, ad.__getitem__, 'baz')
+
+    def test_pickle():
+        ad = classad.ClassAd({"one": 1})
+        expr = classad.ExprTree("2+2")
+        pad = pickle.dumps(ad)
+        pexpr = pickle.dumps(expr)
+        ad2 = pickle.loads(pad)
+        expr2 = pickle.loads(pexpr)
+        assertEqual(ad2.__repr__(), "[ one = 1 ]")
+        assertEqual(expr2.__repr__(), "2 + 2")
+
+    def test_load_classad_from_file():
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ad = classad.parse(open("python_bindings/test.ad"))
+        assertEqual(ad["foo"], "bar")
+        assertEqual(ad["baz"], classad.Value.Undefined)
+        assertRaises(KeyError, ad.__getitem__, "bar")
+
+    def test_load_classad_from_file_v2():
+        ad = classad.parseOne(open("python_bindings/test.ad"))
+        assertEqual(ad["foo"], "bar")
+        assertEqual(ad["baz"], classad.Value.Undefined)
+        assertRaises(KeyError, ad.__getitem__, "bar")
+
+    def test_parse_one():
+        ad = classad.parseOne("foo = 1\nbar = 2")
+        one_ad_verify(ad)
+        ad = classad.parseOne("[foo = 1; bar = 2]")
+        one_ad_verify(ad)
+        ad = classad.parseOne("foo = 1", classad.Parser.New)
+        assertEqual(len(ad), 0)
+        one_ad_verify(classad.parseOne("foo = 1\nbar = 2\n"))
+        one_ad_verify(classad.parseOne("foo = 1\nbar = 1\n\nbar = 2\n"))
+        ad = classad.parseOne("[foo = 1]", classad.Parser.Old)
+        assertEqual(len(ad), 0)
+        one_ad_verify(classad.parseOne("[foo = 1; bar = 1;] [bar = 2]"))
+        one_ad_verify(classad.parseOne("-------\nfoo = 1\nbar = 2\n\n"))
+
+    def test_parse_iter():
+        tf = tempfile.TemporaryFile()
+        tf.write(b"[foo = 1] [bar = 2]")
+        tf.seek(0)
+        if sys.version_info > (3,):
+            tf,tf_ = open(tf.fileno()), tf
+        ad_iter = classad.parseAds(tf)
+        ad = next(ad_iter)
+        assertEqual(len(ad), 1)
+        assertEqual(ad["foo"], 1)
+        assertEqual(" [bar = 2]", tf.read())
+        tf = tempfile.TemporaryFile()
+        tf.write(b"-----\nfoo = 1\n\nbar = 2\n")
+        tf.seek(0)
+        if sys.version_info > (3,):
+            tf,tf_ = open(tf.fileno()), tf
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ad_iter = classad.parseOldAds(tf)
+        ad = next(ad_iter)
+        assertEqual(len(ad), 1)
+        assertEqual(ad["foo"], 1)
+        assertEqual("bar = 2\n", tf.read())
+
+    def test_parse_next():
+        tf = tempfile.TemporaryFile()
+        tf.write(b"[foo = 1] [bar = 2]")
+        tf.seek(0)
+        if sys.version_info > (3,):
+            tf,tf_ = open(tf.fileno()), tf
+        ad = classad.parseNext(tf)
+        assertEqual(len(ad), 1)
+        assertEqual(ad["foo"], 1)
+        assertEqual(" [bar = 2]", tf.read())
+        tf = tempfile.TemporaryFile()
+        tf.write(b"-----\nfoo = 1\n\nbar = 2\n")
+        tf.seek(0)
+        if sys.version_info > (3,):
+            tf,tf_ = open(tf.fileno()), tf
+        ad = classad.parseNext(tf)
+        assertEqual(len(ad), 1)
+        assertEqual(ad["foo"], 1)
+        assertEqual("bar = 2\n", tf.read())
+
+    def test_load_classads():
+        new_ads_verify(classad.parseAds(open("python_bindings/test_multiple.ad")))
+        new_ads_verify(classad.parseAds(open("python_bindings/test_multiple.ad").read()))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            old_ads_verify(classad.parseOldAds(open("python_bindings/test_multiple.old.ad")))
+            old_ads_verify(classad.parseOldAds(open("python_bindings/test_multiple.old.ad").read()))
+        old_ads_verify(classad.parseAds(open("python_bindings/test_multiple.old.ad")))
+        old_ads_verify(classad.parseAds(open("python_bindings/test_multiple.old.ad").read()))
+
+    def test_warnings():
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            classad.parseOld("foo = 1\nbar = 2")
+            assertEqual(len(w), 1)
+            assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            assertTrue("deprecated" in str(w[-1].message))
+
+    def test_old_classad():
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ad = classad.parseOld(open("python_bindings/test.old.ad"))
+        contents = open("python_bindings/test.old.ad").read()
+        keys = []
+        for line in contents.splitlines():
+            info = line.split(" = ")
+            if len(info) != 2:
+                continue
+            assertTrue(info[0] in ad)
+            assertEqual(ad.lookup(info[0]).__repr__(), info[1])
+            keys.append(info[0])
+        for key in ad:
+            assertTrue(key in keys)
+
+    def test_old_classad_v2():
+        ad = classad.parseNext(open("python_bindings/test.old.ad"))
+        contents = open("python_bindings/test.old.ad").read()
+        keys = []
+        for line in contents.splitlines():
+            info = line.split(" = ")
+            if len(info) != 2:
+                continue
+            assertTrue(info[0] in ad)
+            assertEqual(ad.lookup(info[0]).__repr__(), info[1])
+            keys.append(info[0])
+        for key in ad:
+            assertTrue(key in keys)
+
+    def test_exprtree():
+        ad = classad.ClassAd()
+        ad["foo"] = classad.ExprTree("2+2")
+        expr = ad["foo"]
+        assertEqual(expr.__repr__(), "2 + 2")
+        assertEqual(expr.eval(), 4)
+
+    def test_exprtree_func():
+        ad = classad.ClassAd()
+        ad["foo"] = classad.ExprTree('regexps("foo (bar)", "foo bar", "\\\\1")')
+        assertEqual(ad.eval("foo"), "bar")
+
+    def test_list_conversion():
+        ad = dict(classad.ClassAd("[a = {1,2,3}]"))
+        assertTrue(isinstance(ad["a"], list))
+        assertTrue(isinstance(ad["a"][0], _long_type))
+        def listAdd(a, b): return a+b
+        classad.register(listAdd)
+        assertEqual(classad.ExprTree("listAdd({1,2}, {3,4})")[0], 1)
+
+    def test_dict_conversion():
+        ad = classad.ClassAd({'a': [1,2, {}]})
+        dict_ad = dict(ad)
+        assertTrue(isinstance(dict_ad["a"][2], dict))
+        assertEqual(classad.ClassAd(dict_ad).__repr__(), "[ a = { 1,2,[  ] } ]")
+        ad = classad.ClassAd("[a = [b = {1,2,3}]]")
+        inner_list = dict(ad)['a']['b']
+        assertTrue(isinstance(inner_list, list))
+        assertTrue(isinstance(inner_list[0], _long_type))
+        assertTrue(isinstance(ad['a'], dict))
+
+    def test_ad_assignment():
+        ad = classad.ClassAd()
+        ad["foo"] = 2.1
+        assertEqual(ad["foo"], 2.1)
+        ad["foo"] = 2
+        assertEqual(ad["foo"], 2)
+        ad["foo"] = "bar"
+        assertEqual(ad["foo"], "bar")
+        assertRaises(TypeError, ad.__setitem__, {})
+
+    def test_ad_refs():
+        ad = classad.ClassAd()
+        ad["foo"] = classad.ExprTree("bar + baz")
+        ad["bar"] = 2.1
+        ad["baz"] = 4
+        assertEqual(ad["foo"].__repr__(), "bar + baz")
+        assertEqual(ad.eval("foo"), 6.1)
+
+    def test_ad_special_values():
+        ad = classad.ClassAd()
+        ad["foo"] = classad.ExprTree('regexp(12, 34)')
+        ad["bar"] = classad.Value.Undefined
+        assertEqual(ad["foo"].eval(), classad.Value.Error)
+        assertNotEqual(ad["foo"].eval(), ad["bar"])
+        assertEqual(classad.Value.Undefined, ad["bar"])
+
+    def test_ad_iterator():
+        ad = classad.ClassAd()
+        ad["foo"] = 1
+        ad["bar"] = 2
+        assertEqual(len(ad), 2)
+        assertEqual(len(list(ad)), 2)
+        assertEqual(list(ad)[1], "foo")
+        assertEqual(list(ad)[0], "bar")
+        assertEqual(list(ad.items())[1][1], 1)
+        assertEqual(list(ad.items())[0][1], 2)
+        assertEqual(list(ad.values())[1], 1)
+        assertEqual(list(ad.values())[0], 2)
+
+    def test_ad_lookup():
+        ad = classad.ClassAd()
+        ad["foo"] = classad.Value.Error
+        assertTrue(isinstance(ad.lookup("foo"), classad.ExprTree))
+        assertEqual(ad.lookup("foo").eval(), classad.Value.Error)
+
+    def test_get():
+        ad = classad.ClassAd()
+        assertEqual(ad.get("foo"), None)
+        assertEqual(ad.get("foo", "bar"), "bar")
+        ad["foo"] = "baz"
+        assertEqual(ad.get("foo"), "baz")
+        assertEqual(ad.get("foo", "bar"), "baz")
+
+    def test_setdefault():
+        ad = classad.ClassAd()
+        assertEqual(ad.setdefault("foo", "bar"), "bar")
+        assertEqual(ad.get("foo"), "bar")
+        ad["bar"] = "baz"
+        assertEqual(ad.setdefault("bar", "foo"), "baz")
+
+    def test_update():
+        ad = classad.ClassAd()
+        ad.update({"1": 2})
+        assertTrue("1" in ad)
+        assertEqual(ad["1"], 2)
+        ad.update([("1",3)])
+        assertEqual(ad["1"], 3)
+        other = classad.ClassAd({"3": "5"})
+        ad.update(other)
+        del other
+        assertTrue("3" in ad)
+        assertEqual(ad["3"], "5")
+
+    def test_invalid_ref():
+        expr = classad.ExprTree("foo")
+        assertEqual(classad.Value.Undefined, expr.eval())
+
+    def test_temp_scope():
+        expr = classad.ExprTree("foo")
+        assertEqual("bar", expr.eval({"foo": "bar"}))
+        ad = classad.ClassAd({"foo": "baz", "test": classad.ExprTree("foo")})
+        expr = ad["test"]
+        assertEqual("baz", expr.eval())
+        assertEqual("bar", expr.eval({"foo": "bar"}))
+        assertEqual("bar", expr.eval({"foo": "bar"}))
+        assertEqual("baz", expr.eval())
+
+    def test_abstime():
+        expr = classad.ExprTree('absTime("2013-11-12T07:50:23")')
+        dt = expr.eval()
+        assertTrue(isinstance(dt, datetime.datetime))
+        assertEqual(dt.year, 2013)
+        assertEqual(dt.month, 11)
+        assertEqual(dt.day, 12)
+        assertEqual(dt.hour, 7)
+        assertEqual(dt.minute, 50)
+        assertEqual(dt.second, 23)
+
+        ad = classad.ClassAd({"foo": dt})
+        dt2 = ad["foo"]
+        assertTrue(isinstance(dt2, datetime.datetime))
+        assertEqual(dt, dt2)
+
+        ad = classad.ClassAd({"foo": datetime.datetime.now()});
+        td = (datetime.datetime.now()-ad["foo"])
+        assertEqual(td.days, 0)
+        assertTrue(td.seconds < 300)
+
+    def test_reltime():
+        expr = classad.ExprTree('relTime(5)')
+        assertEqual(expr.eval(), 5)
+
+    def test_quote():
+        assertEqual(classad.quote("foo"), '"foo"')
+        assertEqual(classad.quote('"foo'), '"\\"foo"')
+        for i in ["foo", '"foo', '"\\"foo']:
+            assertEqual(i, classad.unquote(classad.quote(i)))
+
+    def test_literal():
+        assertEqual(classad.ExprTree('"foo"'), classad.Literal("foo"))
+        assertEqual(classad.Literal(1).eval(), 1)
+
+    def test_operator():
+        expr = classad.Literal(1) + 2
+        assertTrue(isinstance(expr, classad.ExprTree))
+        assertTrue(expr.sameAs(classad.ExprTree('1 + 2')))
+        expr = classad.Literal(1) & 2
+        assertTrue(isinstance(expr, classad.ExprTree))
+        assertEqual(expr.eval(), 0)
+        assertTrue(expr.sameAs(classad.ExprTree('1 & 2')))
+        expr = classad.Attribute("foo").is_(classad.Value.Undefined)
+        assertTrue(expr.eval())
+        ad = classad.ClassAd("[foo = 1]")
+        expr = classad.Attribute("foo").isnt_(classad.Value.Undefined)
+        assertTrue(expr.eval(ad))
+        expr = classad.Literal(1).and_( classad.Literal(2) )
+        assertRaises(RuntimeError, bool, expr)
+
+    def test_subscript():
+        ad = classad.ClassAd({'foo': [0,1,2,3]})
+        expr = classad.Attribute("foo")._get(2)
+        assertTrue(isinstance(expr, classad.ExprTree))
+        assertEqual(expr.eval(), classad.Value.Undefined)
+        assertEqual(expr.eval(ad), 2)
+
+    def test_function():
+        expr = classad.Function("strcat", "hello", " ", "world")
+        assertTrue(isinstance(expr, classad.ExprTree))
+        assertEqual(expr.eval(), "hello world")
+        expr = classad.Function("regexp", ".*")
+        assertEqual(expr.eval(), classad.Value.Error)
+
+    def test_flatten():
+        expr = classad.Attribute("foo") == classad.Attribute("bar")
+        ad = classad.ClassAd({"bar": 1})
+        assertTrue(ad.flatten(expr).sameAs( classad.ExprTree('foo == 1') ))
+
+    def test_matches():
+        left = classad.ClassAd('[requirements = other.foo == 3; bar=1]')
+        right = classad.ClassAd('[foo = 3]')
+        right2 = classad.ClassAd('[foo = 3; requirements = other.bar == 1;]')
+        assertFalse(left.matches(right))
+        assertTrue(right.matches(left))
+        assertFalse(right.symmetricMatch(left))
+        assertTrue(left.matches(right2))
+        assertTrue(right2.symmetricMatch(left))
+
+    def test_bool():
+        assertTrue(bool( classad.ExprTree('true || false') ))
+        assertTrue(bool( classad.Literal(True).or_(False) )) 
+        assertFalse(bool( classad.ExprTree('true && false') ))
+        assertFalse(bool( classad.Literal(True).and_(False) ))
+
+    def test_register():
+        class BadException(Exception): pass
+        def myAdd(a, b): return a+b
+        def myBad(a, b): raise BadException("bad")
+        def myComplex(a): return 1j # ClassAds have no complex numbers, not able to convert from python to an expression
+        def myExpr(**kw): return classad.ExprTree("foo") # Functions must return values; this becomes "undefined".
+        def myFoo(foo): return foo['foo']
+        def myIntersect(a, b): return set(a).intersection(set(b))
+        classad.register(myAdd)
+        classad.register(myAdd, name='myAdd2')
+        classad.register(myBad)
+        classad.register(myComplex)
+        classad.register(myExpr)
+        classad.register(myFoo)
+        classad.register(myIntersect)
+        assertEqual(3, classad.ExprTree('myAdd(1, 2)').eval())
+        assertEqual(3, classad.ExprTree('myAdd2(1, 2)').eval())
+        assertRaises(BadException, classad.ExprTree('myBad(1, 2)').eval)
+        assertRaises(TypeError, classad.ExprTree('myComplex(1)').eval)
+        assertEqual(classad.Value.Undefined, classad.ExprTree('myExpr()').eval())
+        assertEqual(classad.ExprTree('myExpr()').eval({"foo": 2}), 2)
+        assertRaises(TypeError, classad.ExprTree('myAdd(1)').eval) # myAdd requires 2 arguments; only one is given.
+        assertEqual(classad.ExprTree('myFoo([foo = 1])').eval(), 1)
+        assertEqual(classad.ExprTree('size(myIntersect({1, 2}, {2, 3}))').eval(), 1)
+        assertEqual(classad.ExprTree('myIntersect({1, 2}, {2, 3})[0]').eval(), 2)
+
+    def test_state():
+        def myFunc(state): return 1 if state else 0
+        classad.register(myFunc)
+        assertEqual(0, classad.ExprTree('myFunc(false)').eval())
+        assertEqual(1, classad.ExprTree('myFunc("foo")').eval())
+        ad = classad.ClassAd("""[foo = myFunc(); bar = 2]""")
+        assertEqual(1, ad.eval('foo'))
+        ad['foo'] = classad.ExprTree('myFunc(1)')
+        assertRaises(TypeError, ad.eval, ('foo',))
+        def myFunc(arg1, **kw): return kw['state']['bar']
+        classad.register(myFunc)
+        assertEqual(2, ad.eval('foo'))
+
+    def test_refs():
+        ad = classad.ClassAd({"bar": 2})
+        expr = classad.ExprTree("foo =?= bar")
+        assertEqual(ad.externalRefs(expr), ["foo"])
+        assertEqual(ad.internalRefs(expr), ["bar"])
+
+    def test_cast():
+        assertEqual(4, int(classad.ExprTree('1+3')))
+        assertEqual(4.5, float(classad.ExprTree('1.0+3.5')))
+        assertEqual(34, int(classad.ExprTree('strcat("3", "4")')))
+        assertEqual(34.5, float(classad.ExprTree('"34.5"')))
+        assertRaises(ValueError, float, classad.ExprTree('"34.foo"'))
+        assertRaises(ValueError, int, classad.ExprTree('"12 "'))
+        ad = classad.ClassAd("""[foo = 2+5; bar = foo]""")
+        expr = ad['bar']
+        assertEqual(7, int(expr))
+        assertEqual(7, int(ad.lookup('bar')))
+        assertEqual(0, int(classad.ExprTree('false')))
+        assertEqual(0.0, float(classad.ExprTree('false')))
+        assertEqual(1, int(classad.ExprTree('true')))
+        assertEqual(1.0, float(classad.ExprTree('true')))
+        assertEqual(3, int(classad.ExprTree('3.99')))
+        assertEqual(3.0, float(classad.ExprTree('1+2')))
+        assertRaises(ValueError, int, classad.ExprTree('undefined'))
+        assertRaises(ValueError, float, classad.ExprTree('error'))
+        assertRaises(ValueError, float, classad.ExprTree('foo'))
+
+
+
+def main():
+
+    successful_tests = []
+    failed_tests = []
+
+    for name, attr in TestClassad.__dict__.iteritems():
+        if callable(attr):
+            try:
+                attr()
+                successful_tests.append(str(name) + " was successful")
+            except Exception as error:
+                failed_tests.append(str(name) + " failed: " + str(error))
+
+    print("*** SUCCESSFUL UNIT TESTS ***")
+    for result in successful_tests:
+        print(result)
+
+    if failed_tests:
+        print("\n*** FAILED UNIT TESTS ***")
+        for result in failed_tests:
+            print(result)
+
+    if not failed_tests:
+        sys.exit(TEST_SUCCESS)
+    else:
+        sys.exit(TEST_FAILURE)
+
+if __name__ == "__main__":
+    main()
+

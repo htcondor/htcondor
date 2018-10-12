@@ -502,7 +502,9 @@ VanillaProc::StartJob()
 		buf += mount_under_scratch.ptr();
 		mount_under_scratch.set(buf.StrDup());
 	}
-	if (mount_under_scratch) {
+
+	// mount_under_scratch only works with rootly powers
+	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap()) {
 		const char* working_dir = Starter->GetWorkingDir();
 
 		if (IsDirectory(working_dir)) {

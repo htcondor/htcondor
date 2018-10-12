@@ -1,0 +1,58 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Development Release Series 8.9}\label{sec:History-8-9}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is the development release series of HTCondor.
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-9-0}Version 8.9.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.9.0 not yet released.
+%\item HTCondor version 8.9.0 released on Month Date, 2018.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item  Normally, HTCondor requires the user to specify their credentials
+when using EC2 (via the grid universe or via \Condor{annex}).  This allows
+users to use different accounts from the same machine.  However,
+if a user started an EC2 instance with the privileges necessary to start
+other instances, and ran HTCondor in that instance, HTCondor was unable to
+use that instance's privileges; the user still had to specify their
+credentials.  Instead, the user may now specify ``FROM INSTANCE'' instead
+of the name of a credential file to indicate that HTCondor should use the
+instance's credentials.
+
+By default, any user with access to a privileged EC2 instance has access to
+that instance's privileges.  If you would like to make use of this feature,
+please read \ref{sec:Instance Roles} before adding privileges (an instance
+role) to an instance which allows access by other users, specifically
+including the submitting of jobs to or running jobs on that instance.
+\Ticket{6789}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+

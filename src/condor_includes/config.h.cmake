@@ -158,9 +158,6 @@
 /* Define if sha1 checksums are required for released packages*/
 #cmakedefine ENABLE_CHECKSUM_SHA1 1
 
-/* Define if enabling lease manager (USED)*/
-#cmakedefine WANT_LEASE_MANAGER 1
-
 /* Define if enabling NeST (USED)*/
 #cmakedefine WANT_NEST 1
 

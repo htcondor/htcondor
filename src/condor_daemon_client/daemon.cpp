@@ -1012,10 +1012,6 @@ Daemon::locate( Daemon::LocateType method )
 	  setSubsystem( "CREDD" );
 	  rval = getDaemonInfo( CREDD_AD, true, method );
 	  break;
-	case DT_STORK:
-	  setSubsystem( "STORK" );
-	  rval = getDaemonInfo( ANY_AD, false, method );
-	  break;
 	case DT_VIEW_COLLECTOR:
 		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
 				// If we found it, we're done.

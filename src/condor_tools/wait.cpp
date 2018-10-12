@@ -105,6 +105,7 @@ int main( int argc, char *argv[] )
 	int minjobs = 0;
 	int print_status = false;
 	int echo_events = false;
+	int dont_wait = false; // set to true when the wait is 0 - read all events then exit.
 
 	myDistro->Init( argc, argv );
 	config();
@@ -136,8 +137,13 @@ int main( int argc, char *argv[] )
 				EXIT_FAILURE;
 			}
 			waittime = atoi(argv[i]);
-			stoptime = time(0) + waittime;
-			dprintf(D_FULLDEBUG,"Will wait until %s\n",ctime(&stoptime));
+			if (waittime) {
+				stoptime = time(0) + waittime;
+				dprintf(D_FULLDEBUG,"Will wait until %s\n",ctime(&stoptime));
+			} else {
+				dprintf(D_FULLDEBUG,"Will exit at EOF\n");
+				dont_wait = true;
+			}
 		} else if( !strcmp( argv[i], "-num" ) ) {
 			i++;
 			if( i >= argc ) {
@@ -152,6 +158,8 @@ int main( int argc, char *argv[] )
 				EXIT_FAILURE;
 			}
 			dprintf( D_FULLDEBUG, "Will wait until %d jobs end\n", minjobs );
+		} else if (log_file_name != NULL && job_name == NULL && !strcmp(argv[i], "-1")) {
+			job_name = argv[i]; // treat a bare -1 as 'all clusters'
 		} else if(argv[i][0]!='-') {
 			if(!log_file_name) {
 				log_file_name = argv[i];
@@ -198,12 +206,14 @@ int main( int argc, char *argv[] )
 	}
 
 	while( 1 ) {
-		int now = time(NULL);
-		int timeout_ms = (stoptime - now) * 1000;
-
-		if( stoptime && now > stoptime ) {
-			printf( "Time expired.\n" );
-			EXIT_FAILURE;
+		int timeout_ms = 0;
+		if ( ! dont_wait) {
+			int now = time(NULL);
+			if( stoptime && now > stoptime ) {
+				printf( "Time expired.\n" );
+				EXIT_FAILURE;
+			}
+			timeout_ms = (stoptime - now) * 1000;
 		}
 
 		ULogEventOutcome outcome;
@@ -260,9 +270,14 @@ int main( int argc, char *argv[] )
 				} else {
 					fprintf(stderr,"This log does not mention that job!\n");
 				}
-				EXIT_FAILURE;
+				if ( ! dont_wait) {
+					EXIT_FAILURE;
+				}
 			}
-		} else if( outcome == ULOG_RD_ERROR ) {
+			if (dont_wait) {
+				EXIT_SUCCESS;
+			}
+	} else if( outcome == ULOG_RD_ERROR ) {
 			dprintf( D_FULLDEBUG, "Got ULOG_RD_ERROR, done.\n" );
 			EXIT_FAILURE;
 		} else if( outcome == ULOG_MISSED_EVENT ) {

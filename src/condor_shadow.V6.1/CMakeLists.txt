@@ -20,10 +20,9 @@ include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 ## Create targets
 file( GLOB shadowRmvElements Example* *.t.* )
-# We cannot make a proper static shadow as we don't have the static globus
-# libraries available
-if (NOT PROPER AND LINUX)
-  condor_daemon( shadow_s "${shadowRmvElements}" "${CONDOR_LIBS_STATIC}" "${C_SBIN}" )
-endif(NOT PROPER AND LINUX)
+# Build a small shadow on 32-bit Linux platforms
+if (LINUX AND (${BIT_MODE} MATCHES "32"))
+    condor_daemon( shadow_s "${shadowRmvElements}" "${CONDOR_LIBS_FOR_SHADOW}" "${C_SBIN}" )
+endif()
 condor_daemon( shadow "${shadowRmvElements}" "${CONDOR_LIBS_FOR_SHADOW}" "${C_SBIN}" )
 

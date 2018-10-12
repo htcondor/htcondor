@@ -640,6 +640,16 @@ Requires: %name = %version-%release
 Includes all the files necessary to support running standard universe jobs.
 %endif
 
+%package config-single-node
+Summary: Conguration for a single-node (personal) HTCondor
+Group: Applications/System
+Requires: %name = %version-%release
+
+%description config-single-node
+This example configuration is good for trying out HTCondor for the first time.
+It only configures the IPv4 loopback address, turns on basic security and
+shortens many timers to be more responsive.
+
 %if %uw_build
 
 %ifarch %{ix86}
@@ -793,7 +803,6 @@ cmake \
 %else
        -DWITH_CREAM:BOOL=FALSE \
 %endif
-       -DWANT_LEASE_MANAGER:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/usr \
@@ -827,7 +836,6 @@ cmake \
        -DHAVE_BOINC:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
-       -DWANT_LEASE_MANAGER:BOOL=FALSE \
        -DWANT_HDFS:BOOL=FALSE \
        -DWITH_ZLIB:BOOL=FALSE \
        -DWANT_CONTRIB:BOOL=ON \
@@ -942,6 +950,12 @@ mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
+
+%ifarch %{ix86}
+populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-small-shadow
+%endif
+
+populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-single-node
 
 %if %qmf
 # Install condor-qmf's base plugin configuration
@@ -1062,9 +1076,6 @@ rm -rf %{buildroot}%{_sbindir}/condor_install
 rm -rf %{buildroot}%{_sbindir}/condor_install_local
 rm -rf %{buildroot}%{_sbindir}/condor_local_start
 rm -rf %{buildroot}%{_sbindir}/condor_local_stop
-%ifarch x86_64
-rm -rf %{buildroot}%{_sbindir}/condor_shadow_s
-%endif
 rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
 rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
 rm -rf %{buildroot}%{_sbindir}/filelock_midwife
@@ -1661,6 +1672,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
+%_libexecdir/condor/test_user_mapping
 
 %if %cream
 %files cream-gahp
@@ -1744,11 +1756,16 @@ rm -rf %{buildroot}
 %endif
 %endif
 
+%files config-single-node
+%config(noreplace) %_sysconfdir/condor/config.d/00-single-node
+
+
 %if %uw_build
 
 %ifarch %{ix86}
 %files small-shadow
 %{_sbindir}/condor_shadow_s
+%config(noreplace) %_sysconfdir/condor/config.d/00-small-shadow
 %endif
 
 %files external-libs

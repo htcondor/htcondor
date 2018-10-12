@@ -45,6 +45,16 @@ but unlike \MacroNI{LIMIT\_JOB\_RUNTIMES},
 Additionally, both of the new policies function while the machine is draining.
 \Ticket{6701}
 
+\item If the first line of the job's executable starts with \Expr{\#!}
+\Condor{submit} will now check that line for a Windows/DOS line ending, and if it finds
+one, it will not submit the job because such a script will not be able to start on Unix
+or Linux platforms.  This check can be changed from an error to a warnding by submitting
+with the \Opt{allow-crlf-script} option.
+\Ticket{6660}
+
+\item Added support for spaces in remapped file paths in \Condor{submit}.
+\Ticket{6642}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

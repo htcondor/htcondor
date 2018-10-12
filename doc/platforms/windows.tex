@@ -293,7 +293,7 @@ always be set locally by running the
   condor_store_cred add -c
 \end{verbatim}
 command as the local SYSTEM account. Third party tools such as PsExec can be 
-used to accomplish this. When condor_store_cred is run as the local SYSTEM 
+used to accomplish this. When condor\_store\_cred is run as the local SYSTEM
 account, it bypasses the network authentication and writes the pool password 
 to the registry itself. This allows the other condor daemons (also running
 under the SYSTEM account) to access the pool password when authenticating
