@@ -96,7 +96,17 @@ class LocalJobRec {
 		job_id(_job_id)
 	{}
 	bool operator<(const LocalJobRec& rhs) const {
-		return this->prio >= rhs.prio;
+		// We want LocalJobRec objects to run in priority order, but when two
+		// records have equal priority, they run in order of submission which we
+		// infer from the cluster.proc pair (lower numbers go first)
+		if(this->prio == rhs.prio) {
+			if(this->job_id.cluster == rhs.job_id.cluster) {
+				return this->job_id.proc < rhs.job_id.proc;
+			}
+			return this->job_id.cluster < rhs.job_id.cluster;
+		}
+		// When sorting in priority order, higher numbers go first
+		return this->prio > rhs.prio;
 	}
 };
 

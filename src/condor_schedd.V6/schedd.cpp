@@ -8681,7 +8681,6 @@ Scheduler::StartLocalJobs()
 	for (std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); /*++it not here*/) {
 		std::set<LocalJobRec>::iterator curr = it++; // save and advance the iterator, in case we want to erase the item
 		JobQueueJob* job = GetJobAd(curr->job_id);
-		dprintf(D_ALWAYS, "MRC [Scheduler::StartLocalJobs] job=%s, prio=%d\n", std::string(curr->job_id).c_str(), curr->prio);
 		// If this id no longer refers to a job, remove it from the list.
 		if (!job) { 
 			// TODO: Should we warn when this happens??
@@ -8689,7 +8688,7 @@ Scheduler::StartLocalJobs()
 			continue;
 		}
 		// Call the old queue walk function.
-		// TODO: If we're only using this to start local jobs, and not walk the queue, should we rename appropriately?
+		// TODO: If we're only using find_idle_local_jobs to start local jobs, and not walk the queue, should we rename appropriately?
 		find_idle_local_jobs(job, curr->job_id, NULL);
 	}
 	double runtime = _condor_debug_get_time_double() - begin;
@@ -16157,10 +16156,13 @@ void
 Scheduler::indexAJob( JobQueueJob* jobAd, bool loading_job_queue )
 {
 	int univ = jobAd->Universe();
-	dprintf(D_ALWAYS, "univ=%d, loading_job_queue=%s\n", univ, loading_job_queue ? "true" : "false");
-	if (univ == CONDOR_UNIVERSE_LOCAL || univ == CONDOR_UNIVERSE_SCHEDULER) {
-		LocalJobRec rec = LocalJobRec(0, jobAd->jid);
-		LocalJobsPrioQueue.insert(rec);
+	if ( univ == CONDOR_UNIVERSE_LOCAL || univ == CONDOR_UNIVERSE_SCHEDULER ) {
+		int job_prio = 0;
+		if( !jobAd->LookupInteger( ATTR_JOB_PRIO, job_prio ) ) {
+			dprintf( D_FULLDEBUG, "Error looking up priority for local job, defaulting to 0\n" );
+		}
+		LocalJobRec rec = LocalJobRec( job_prio, jobAd->jid );
+		LocalJobsPrioQueue.insert( rec );
 	}
 }
 
@@ -16173,17 +16175,16 @@ void
 Scheduler::removeJobFromIndexes( const JOB_ID_KEY& job_id )
 {
 	// Walk the prio queue of local jobs
-	for (std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); it++) {
-		JobQueueJob* job = GetJobAd(it->job_id);
+	for ( std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); it++ ) {
 		// If this record matches the job_id passed in, erase it
-		if (it->job_id == job_id) { 
-			LocalJobsPrioQueue.erase(it);
+		if ( it->job_id == job_id ) {
+			LocalJobsPrioQueue.erase( it );
 			return;
 		}
 	}
 
 	// If we got this far, something is wrong. Report an error.
-	dprintf(D_FULLDEBUG, "ERROR: Could not find job_id = %s in the priority list of local jobs.\n", job_id);
+	dprintf(D_FULLDEBUG, "ERROR: Could not find job_id = %s in the priority list of local jobs.\n", std::string( job_id ).c_str() );
 	return;
 }
 
