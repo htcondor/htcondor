@@ -117,12 +117,14 @@ annex creation commands into the audit log if \MacroNI{ANNEX\_DEBUG} includes
 \label{param:AnnexDefaultAccessKeyFile}
 \item[\Macro{ANNEX\_DEFAULT\_ACCESS\_KEY\_FILE}]
   The full path to the AWS access key file \Condor{annex} should use.
-  No default.
+  No default.  If ``FROM INSTANCE'', \Condor{annex} will assume it's
+  running on an EC2 instance and try to use that instance's credentials.
 
 \label{param:AnnexDefaultSecretKeyFile}
 \item[\Macro{ANNEX\_DEFAULT\_SECRET\_KEY\_FILE}]
   The full path to the AWS secret key file \Condor{annex} should use.
-  No default.
+  No default.  If ``FROM INSTANCE'', \Condor{annex} will assume it's
+  running on an EC2 instance and try to use that instance's credentials.
 
 \label{param:AnnexDefaultS3Bucket}
 \item[\Macro{ANNEX\_DEFAULT\_S3\_BUCKET}]

@@ -1189,6 +1189,41 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 		}
 	}
 	free(tmp);
+
+	tmp=param("PREEMPTION_RANK");
+	if ( tmp && PreemptionRank) {
+		const char* preempt_rank_name = "preempt_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(preempt_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(preempt_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+	tmp=param("NEGOTIATOR_PRE_JOB_RANK");
+	if ( tmp && NegotiatorPreJobRank) {
+		const char* pre_job_rank_name = "pre_job_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(pre_job_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(pre_job_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+	tmp=param("NEGOTIATOR_POST_JOB_RANK");
+	if ( tmp && NegotiatorPostJobRank) {
+		const char* post_job_rank_name = "post_job_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(post_job_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(post_job_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+
 	if (sample_startd_ad) {
 		delete sample_startd_ad;
 		sample_startd_ad = NULL;

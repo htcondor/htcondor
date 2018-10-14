@@ -43,8 +43,7 @@ JobEventLog::~JobEventLog() { }
 boost::python::object
 JobEventLog::events( boost::python::object & self, boost::python::object & deadline ) {
 	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
-    // Using compatible expression for old boost. Revert this change in 8.9.0
-	if( deadline.ptr() == Py_None ) {
+	if( deadline.is_none() ) {
 		jel->deadline = 0;
 	} else {
 		boost::python::extract<int> deadlineExtractor( deadline );
