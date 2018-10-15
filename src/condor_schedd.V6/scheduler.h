@@ -761,6 +761,8 @@ class Scheduler : public Service
 	const OwnerInfo * lookup_owner_const(const char*);
 	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
 
+	std::set<LocalJobRec> LocalJobsPrioQueue;
+
 private:
 
 	// We have to evaluate requirements in the listed order to maintain
@@ -838,9 +840,6 @@ private:
 	int				NumUniqueOwners;
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
 
-	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
-	std::set<LocalJobRec> LocalJobsPrioQueue;
-	
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown

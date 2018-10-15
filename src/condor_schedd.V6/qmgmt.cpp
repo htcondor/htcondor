@@ -4204,6 +4204,27 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		DoSetAttributeCallbacks(keys, attr_category);
 	}
 
+	// If we are changing the priority of a scheduler/local universe job, we need
+	// to update the LocalJobsPrioQueue data
+	if ( ( universe == CONDOR_UNIVERSE_SCHEDULER || 
+		universe == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
+		if ( job ) { 
+			// Walk the prio queue of local jobs
+			for ( std::set<LocalJobRec>::iterator it = scheduler.LocalJobsPrioQueue.begin(); it != scheduler.LocalJobsPrioQueue.end(); it++ ) {
+				// If this record matches the job_id passed in, erase it, then
+				// add a new record with the updated priority value. The
+				// LocalJobsPrioQueue std::set will automatically order it.
+				if ( it->job_id.cluster == cluster_id && it->job_id.proc == proc_id ) {
+					scheduler.LocalJobsPrioQueue.erase( it );
+					JOB_ID_KEY jid = JOB_ID_KEY( cluster_id, proc_id );
+					LocalJobRec rec = LocalJobRec( atoi ( attr_value ), jid );
+					scheduler.LocalJobsPrioQueue.insert( rec );
+					break;
+				}
+			}
+		}
+	}
+
 	return 0;
 }
 
