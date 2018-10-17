@@ -6953,6 +6953,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 	}
 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
+	std::list<int> usableDSlots;
 	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second <= newRank; slot++) {
 		int dSlot = ranks[slot].first; // dslot index in childXXX list
 
@@ -6973,9 +6974,9 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 				// couldn't parse or evaluate, give up on this dslot
 				continue;
 			}
-		
+
 			if (accountant.GetPriority(remoteOwner) < preemptPrio + PriorityDelta) {
-				// this slot's user prio is better than preempter.  
+				// this slot's user prio is better than preempter.
 				// (and ranks are equal). Don't consider preempting it
 				continue;
 			}
@@ -6984,7 +6985,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 				// for preemption requirements use
 			mutatedMachine.Assign("CandidateSlot", dSlot);
 
-				// if PreemptionRequirementsPslot evals to true, below 
+				// if PreemptionRequirementsPslot evals to true, below
 				// will be true
 			result.SetBooleanValue(false);
 
@@ -6999,11 +7000,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 				// didn't eval to boolean or eval'ed to false.  Ignore this slot
 				continue;
 			}
-			
-			// Finally, if we made it here, this slot is a candidate for preemption,
-			// fall through and try to merge its resources into the pslot to match
-			// and preempt this one.		
 
+			// Finally, if we made it here, this slot is a candidate for
+			// preemption, fall through and try to merge its resources into
+			// the pslot to match and preempt this one.
+			usableDSlots.push_back(slot);
 		}
 
 			// for each splitable resource, get it from the dslot, and add to pslot
@@ -7036,10 +7037,12 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 		classad::MatchClassAd::UnoptimizeAdForMatchmaking(job);
 
 		if (IsAMatch(&mutatedMachine, job)) {
-			dprintf(D_FULLDEBUG, "Matched pslot by rank preempting %d dynamic slots\n", slot + 1);
+			dprintf(D_FULLDEBUG, "Matched pslot by rank preempting %d dynamic slots\n", (int)usableDSlots.size());
 			dslot_claims.clear();
 
-			for (unsigned int child = 0; child < slot + 1; child++) {
+			auto i = usableDSlots.begin();
+			for( ; i != usableDSlots.end(); ++i ) {
+				int child = *i;
 				dslot_claims += child_claims[ranks[child].first];
 				dslot_claims += " ";
 				// TODO Move this clearing of claim ids to
@@ -7050,7 +7053,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 			}
 
 			return true;
-		} 
+		}
 	}
 
 	return false;
