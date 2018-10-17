@@ -30,7 +30,8 @@ class ExceptionHandler {
 		void SetPID( pid_t pid );  
 		void TurnOff( );
 		void TurnOn( );
-		static LPTSTR GetExceptionString( DWORD dwCode );
+		static LPCTSTR GetExceptionString(DWORD dwCode, LPTSTR buf, size_t bufsiz);
+		static LPCTSTR GetExceptionInfo(PEXCEPTION_RECORD per, LPTSTR buf, size_t bufsiz);
     
 	private:
       // entry point where control comes on an unhandled exception
@@ -39,17 +40,25 @@ class ExceptionHandler {
       // where report info is extracted and generated    
       static void GenerateExceptionReport( PEXCEPTION_POINTERS pExceptionInfo );
       // Helper functions      
-      static BOOL GetLogicalAddress(PVOID addr, PTSTR szModule, DWORD len,
-                                    DWORD& section, DWORD& offset );
-      static void IntelStackWalk( PCONTEXT pContext );
+      static BOOL GetLogicalAddress(PVOID addr, PTSTR szModule, DWORD len, DWORD& section, UINT_PTR& offset );
+      static void SimpleStackWalk( PCONTEXT pContext );
       static void ImagehlpStackWalk( PCONTEXT pContext );
       static int __cdecl _tprintf(const TCHAR * format, ...);  
       static BOOL InitImagehlpFunctions( void );    
 
 	  // workaround for bug in older version of ms's dbghlp.dll 
-	  static BOOL InternalSymGetLineFromAddr(IN HANDLE hProcess, IN DWORD dwAddr, 
+	  static BOOL InternalSymGetLineFromAddr(IN HANDLE hProcess,
+								#ifdef _WIN64
+									IN DWORD64 dwAddr,
+								#else
+									IN DWORD dwAddr,
+								#endif
 									OUT PDWORD pdwDisplacement, 
-									OUT PIMAGEHLP_LINE  Line);
+								#ifdef _WIN64
+									OUT PIMAGEHLP_LINE64 Line);
+								#else
+									OUT PIMAGEHLP_LINE Line);
+								#endif
 
       // Variables used by the class
       static TCHAR m_szLogFileName[MAX_PATH];
@@ -60,6 +69,18 @@ class ExceptionHandler {
       // with GetProcAddress
       typedef BOOL (__stdcall * SYMINITIALIZEPROC)( HANDLE, LPSTR, BOOL );
       typedef BOOL (__stdcall *SYMCLEANUPPROC)( HANDLE );
+#ifdef _WIN64
+	  typedef BOOL(__stdcall * STACKWALK64PROC)
+		  (DWORD, HANDLE, HANDLE, LPSTACKFRAME64, LPVOID,
+			  PREAD_PROCESS_MEMORY_ROUTINE64, PFUNCTION_TABLE_ACCESS_ROUTINE64,
+			  PGET_MODULE_BASE_ROUTINE64, PTRANSLATE_ADDRESS_ROUTINE64);
+	  typedef LPVOID(__stdcall *SYMFUNCTIONTABLEACCESS64PROC)(HANDLE, DWORD64);
+	  typedef DWORD64(__stdcall *SYMGETMODULEBASE64PROC)(HANDLE, DWORD64);
+	  typedef BOOL(__stdcall *SYMGETSYMFROMADDR64PROC)
+		  (HANDLE, DWORD64, PDWORD64, PIMAGEHLP_SYMBOL64);
+	  typedef BOOL(__stdcall *SYMGETLINEFROMADDR64PROC)
+		  (HANDLE, DWORD64, PDWORD, PIMAGEHLP_LINE64);
+#else
       typedef BOOL (__stdcall * STACKWALKPROC)
                    ( DWORD, HANDLE, HANDLE, LPSTACKFRAME, LPVOID,
                     PREAD_PROCESS_MEMORY_ROUTINE,PFUNCTION_TABLE_ACCESS_ROUTINE,
@@ -70,15 +91,23 @@ class ExceptionHandler {
                                     ( HANDLE, DWORD, PDWORD, PIMAGEHLP_SYMBOL );
 	  typedef BOOL (__stdcall *SYMGETLINEFROMADDRPROC) 
 		  (HANDLE, DWORD, PDWORD, PIMAGEHLP_LINE);
-
+#endif
 
       static SYMINITIALIZEPROC _SymInitialize;
       static SYMCLEANUPPROC _SymCleanup;     
+#ifdef _WIN64
+	  static STACKWALK64PROC _StackWalk;
+	  static SYMFUNCTIONTABLEACCESS64PROC _SymFunctionTableAccess;
+	  static SYMGETMODULEBASE64PROC _SymGetModuleBase;
+	  static SYMGETSYMFROMADDR64PROC _SymGetSymFromAddr;
+	  static SYMGETLINEFROMADDR64PROC _SymGetLineFromAddr;
+#else
 	  static STACKWALKPROC _StackWalk;
       static SYMFUNCTIONTABLEACCESSPROC _SymFunctionTableAccess;
       static SYMGETMODULEBASEPROC _SymGetModuleBase;
       static SYMGETSYMFROMADDRPROC _SymGetSymFromAddr;      
 	  static SYMGETLINEFROMADDRPROC _SymGetLineFromAddr;
+#endif
 };
 
 extern ExceptionHandler g_ExceptionHandler;  // global instance of class
