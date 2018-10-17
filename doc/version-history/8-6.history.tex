@@ -80,6 +80,12 @@ grid universe and the job router.
 when the files were made by the 64-bit Windows binaries.
 \Ticket{6801}
 
+\item Fixed a bug in how jobs are sorted in priority order in the
+\Condor{schedd} when any of these job attributes are set:
+\AdAttr{PreJobPrio1}, \AdAttr{PreJobPrio2}, \AdAttr{PostJobPrio1}, and
+\AdAttr{PostJobPrio2}.
+\Ticket{6800}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
