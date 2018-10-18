@@ -7004,8 +7004,8 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio, 
 			// Finally, if we made it here, this slot is a candidate for
 			// preemption, fall through and try to merge its resources into
 			// the pslot to match and preempt this one.
-			usableDSlots.push_back(slot);
 		}
+		usableDSlots.push_back(slot);
 
 			// for each splitable resource, get it from the dslot, and add to pslot
 		for (std::list<std::string>::iterator it = attrs.begin(); it != attrs.end(); it++) {
