@@ -6771,7 +6771,7 @@ stats_entry_abs<int> SCGetAutoClusterType;
 // seperate. 
 int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 {
-    int     job_prio, 
+    int     job_prio = 0, 
             pre_job_prio1, 
             pre_job_prio2, 
             post_job_prio1, 
@@ -6843,16 +6843,16 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	// to flag priocompare routine to not use them.
 	 
     if (!job->LookupInteger(ATTR_PRE_JOB_PRIO1, pre_job_prio1)) {
-         pre_job_prio1 = INT_MIN;
+         pre_job_prio1 = 0;
     }
     if (!job->LookupInteger(ATTR_PRE_JOB_PRIO2, pre_job_prio2)) {
-         pre_job_prio2 = INT_MIN;
+         pre_job_prio2 = 0;
     } 
     if (!job->LookupInteger(ATTR_POST_JOB_PRIO1, post_job_prio1)) {
-         post_job_prio1 = INT_MIN;
+         post_job_prio1 = 0;
     }	 
     if (!job->LookupInteger(ATTR_POST_JOB_PRIO2, post_job_prio2)) {
-         post_job_prio2 = INT_MIN;
+         post_job_prio2 = 0;
     }
 
     job->LookupInteger(ATTR_JOB_PRIO, job_prio);
