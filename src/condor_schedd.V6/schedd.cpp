@@ -180,7 +180,7 @@ schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
 schedd_runtime_probe WalkJobQ_count_a_job_runtime;
 schedd_runtime_probe WalkJobQ_PeriodicExprEval_runtime;
 schedd_runtime_probe WalkJobQ_clear_autocluster_id_runtime;
-schedd_runtime_probe WalkJobQ_find_idle_local_jobs_runtime;
+schedd_runtime_probe WalkJobQ_start_local_jobs_runtime;
 schedd_runtime_probe WalkJobQ_fixAttrUser_runtime;
 schedd_runtime_probe WalkJobQ_updateSchedDInterval_runtime;
 
@@ -8140,7 +8140,7 @@ PostInitJobQueue()
 
 
 int
-find_idle_local_jobs( JobQueueJob *job, const JOB_ID_KEY&, void* )
+Scheduler::start_local_job( JobQueueJob *job, const JOB_ID_KEY&, void* )
 {
 	// Since this function may be used while walking the whole queue
 	// It's important to reject jobs that we aren't going to start very quickly.
@@ -8284,7 +8284,32 @@ find_idle_local_jobs( JobQueueJob *job, const JOB_ID_KEY&, void* )
 		if( univ == CONDOR_UNIVERSE_LOCAL ) {
 			dprintf( D_FULLDEBUG, "Found idle local universe job %d.%d\n",
 					 id.cluster, id.proc );
-			scheduler.start_local_universe_job( &id );
+			shadow_rec* local_rec = NULL;
+
+				// set our CurrentHosts to 1 so we don't consider this job
+				// still idle.  we'll actually mark it as status RUNNING once
+				// we spawn the starter for it.  unlike other kinds of jobs,
+				// local universe jobs don't have to worry about having the
+				// status wrong while the job sits in the RunnableJob queue,
+				// since we're not negotiating for them at all... 
+			SetAttributeInt( id.cluster, id.proc, ATTR_CURRENT_HOSTS, 1 );
+
+				//
+				// If we start a local universe job, the LocalUniverseJobsRunning
+				// tally isn't updated so we have no way of knowing whether we can
+				// start the next job. This would cause a ton of local jobs to
+				// just get fired off all at once even though there was a limit set.
+				// So instead, I am following Derek's example with the scheduler 
+				// universe and updating our running tally
+				// Andy - 11.14.2004 - pavlo@cs.wisc.edu
+				//
+			if ( this->LocalUniverseJobsIdle > 0 ) {
+				this->LocalUniverseJobsIdle--;
+			}
+			this->LocalUniverseJobsRunning++;
+
+			local_rec = add_shadow_rec( 0, &id, CONDOR_UNIVERSE_LOCAL, NULL, -1 );
+			addRunnableJob( local_rec );
 		} else {
 			// if there is a per-owner scheduler job limit that is smaller than the per-owner job limit
 			if (scheduler.MaxRunningSchedulerJobsPerOwner > 0 &&
@@ -8688,11 +8713,11 @@ Scheduler::StartLocalJobs()
 			continue;
 		}
 		// Call the old queue walk function.
-		// TODO: If we're only using find_idle_local_jobs to start local jobs, and not walk the queue, should we rename appropriately?
-		find_idle_local_jobs(job, curr->job_id, NULL);
+		// TODO: Make sure that start_local_job does not do anything to WalkJobQ_start_local_jobs_runtime
+		start_local_job(job, curr->job_id, NULL);
 	}
 	double runtime = _condor_debug_get_time_double() - begin;
-	WalkJobQ_find_idle_local_jobs_runtime += runtime;
+	WalkJobQ_start_local_jobs_runtime += runtime;
 }
 
 shadow_rec*
@@ -9844,40 +9869,6 @@ Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 	addRunnableJob( srec );
 	return srec;
 }
-
-
-shadow_rec*
-Scheduler::start_local_universe_job( PROC_ID* job_id )
-{
-	shadow_rec* srec = NULL;
-
-		// set our CurrentHosts to 1 so we don't consider this job
-		// still idle.  we'll actually mark it as status RUNNING once
-		// we spawn the starter for it.  unlike other kinds of jobs,
-		// local universe jobs don't have to worry about having the
-		// status wrong while the job sits in the RunnableJob queue,
-		// since we're not negotiating for them at all... 
-	SetAttributeInt( job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1 );
-
-		//
-		// If we start a local universe job, the LocalUniverseJobsRunning
-		// tally isn't updated so we have no way of knowing whether we can
-		// start the next job. This would cause a ton of local jobs to
-		// just get fired off all at once even though there was a limit set.
-		// So instead, I am following Derek's example with the scheduler 
-		// universe and updating our running tally
-		// Andy - 11.14.2004 - pavlo@cs.wisc.edu
-		//	
-	if ( this->LocalUniverseJobsIdle > 0 ) {
-		this->LocalUniverseJobsIdle--;
-	}
-	this->LocalUniverseJobsRunning++;
-
-	srec = add_shadow_rec( 0, job_id, CONDOR_UNIVERSE_LOCAL, NULL, -1 );
-	addRunnableJob( srec );
-	return srec;
-}
-
 
 void
 Scheduler::addRunnableJob( shadow_rec* srec )

@@ -521,7 +521,7 @@ class Scheduler : public Service
 	friend	int		NewProc(int cluster_id);
 	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
 //	friend	void	job_prio(ClassAd *);
-	friend  int		find_idle_local_jobs(JobQueueJob *, const JOB_ID_KEY&, void*);
+	int				start_local_job(JobQueueJob *, const JOB_ID_KEY&, void*);
 	friend	int		updateSchedDInterval(JobQueueJob*, const JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
@@ -991,7 +991,6 @@ private:
 
 	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
-	shadow_rec*		start_local_universe_job(PROC_ID*);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
 										Env const *env, 
