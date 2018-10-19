@@ -394,7 +394,16 @@ void BaseJob::UpdateRuntimeStats()
 
 		// The job has started a new interval of running
 		int current_time = (int)time(NULL);
+		int last_start_date = 0;
 		jobAd->Assign( ATTR_SHADOW_BIRTHDATE, current_time );
+		if ( jobAd->LookupInteger( ATTR_JOB_START_DATE, last_start_date ) == 0 ) {
+			jobAd->Assign( ATTR_JOB_START_DATE, current_time );
+		}
+		if ( jobAd->LookupInteger( ATTR_JOB_CURRENT_START_DATE, last_start_date ) ) {
+			jobAd->Assign( ATTR_JOB_LAST_START_DATE, last_start_date );
+		}
+		jobAd->Assign( ATTR_JOB_CURRENT_START_DATE, current_time );
+		jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE, current_time );
 
 		int num_job_starts = 0;
 		jobAd->LookupInteger( ATTR_NUM_JOB_STARTS, num_job_starts );
