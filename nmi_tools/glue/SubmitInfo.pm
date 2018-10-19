@@ -284,10 +284,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_Debian9'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-								  '-DWITH_CREAM:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ ],
 			'xtests'	=>	undef,
 		},

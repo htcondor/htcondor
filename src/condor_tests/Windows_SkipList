@@ -159,3 +159,6 @@ job_dagman_splice_connect-F
 #lib_eventlog_rotation-w_5_rotations
 #lib_eventlog_rotation-w_old_rotations
 #lib_eventlog_rotation-w_old_rotations_2_loops
+
+python_bindings_classad
+python_bindings_htcondor

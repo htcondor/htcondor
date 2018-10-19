@@ -72,6 +72,24 @@ universe to fail if the job's sandbox is transferred more than once.
 keyword to be case sensitive when used to see if a ClassAd contains a given attribute.
 \Ticket{6535}
 
+\item Fixed how job start timestamps are recorded in the job ad in the
+grid universe and the job router.
+\Ticket{6773}
+
+\item Fixed a bug that resulted in core files on Windows being mostly empty
+when the files were made by the 64-bit Windows binaries.
+\Ticket{6801}
+
+\item Fixed a bug in how jobs are sorted in priority order in the
+\Condor{schedd} when any of these job attributes are set:
+\AdAttr{PreJobPrio1}, \AdAttr{PreJobPrio2}, \AdAttr{PostJobPrio1}, and
+\AdAttr{PostJobPrio2}.
+\Ticket{6800}
+
+\item Fixed a bug where the negotiator would erroneously preempt some
+dynamic slots when \Macro{ALLOW\_PSLOT\_PREEMPTION} is set.
+\Ticket{6793}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

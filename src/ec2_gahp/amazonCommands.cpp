@@ -3132,8 +3132,6 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
 
 AmazonCreateTags::~AmazonCreateTags() { }
 
-// Expecting:
-//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value>* NULLSTRING
 bool AmazonCreateTags::ioCheck(char **argv, int argc)
 {
     return verify_min_number_args(argc, 8) &&
@@ -3147,7 +3145,7 @@ bool AmazonCreateTags::ioCheck(char **argv, int argc)
 }
 
 // Expecting:
-//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value> ...
+//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value>* NULLSTRING
 bool
 AmazonCreateTags::workerFunction(char **argv,
                                  int argc,
