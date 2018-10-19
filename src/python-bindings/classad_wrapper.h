@@ -70,6 +70,8 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
 
     std::string toOldString() const;
 
+    bool contains(const std::string & attr) const;
+
     AttrKeyIter beginKeys();
 
     AttrKeyIter endKeys();

@@ -606,7 +606,7 @@ int command_continue_claim( Service*, int cmd, Stream* stream )
 			rval=rip->continue_claim();
 			break;
 		default:
-			rip->log_ignore( cmd, s );
+			rip->log_ignore( cmd, s, rip->activity() );
 			return FALSE;
 	}		
 	

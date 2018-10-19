@@ -3239,8 +3239,10 @@ Daemons::UpdateCollector()
 #endif
 #endif
 
-		// Reset the timer so we don't do another period update until 
-	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
+		// Reset the timer so we don't do another period update until
+	if( update_tid != -1 ) {
+		daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
+	}
 
 	dprintf( D_FULLDEBUG, "exit Daemons::UpdateCollector\n" );
 }
