@@ -956,6 +956,7 @@ populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-small-shadow
 %endif
 
 populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-single-node
+populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/50ec2.config
 
 %if %qmf
 # Install condor-qmf's base plugin configuration
