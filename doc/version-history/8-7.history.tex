@@ -61,6 +61,11 @@ with the \Opt{allow-crlf-script} option.
 \item Improved error handling during SSL authentication.
 \Ticket{6720}
 
+\item Improved throughput when submitting a large number of Condor-C jobs.
+Previously, Condor-C jobs could remain held for a long time in the remote
+\Condor{schedd}'s queue while other jobs were being submitted.
+\Ticket{6716}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
