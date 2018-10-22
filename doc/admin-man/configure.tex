@@ -4420,8 +4420,8 @@ WANT_HOLD_REASON = \
   (See~\ref{PreCmd} for information on PreCmd.)
 
   Also note that, if \MacroNI{MOUNT\_UNDER\_SCRATCH} is defined, it
-  must either be a string or an expression that evaluates to a
-  string.
+  must either be a ClassAd string (with double-quotes) or an expression
+  that evaluates to a string.
 
   For Docker Universe jobs, any directories that are mounted under scratch are
   also volume mounted on the same paths inside the container.  That is, any
@@ -7343,7 +7343,7 @@ Configuration File Entries}
   \SubmitCmdNI{success\_exit\_code} is defined in the submit file,
   and \SubmitCmdNI{max\_retries} is not.)
   (See section~\ref{condor-submit-max-retries} for more information.)
-  The default value if not defined is 10.
+  The default value if not defined is 2.
 
 \end{description}
 
