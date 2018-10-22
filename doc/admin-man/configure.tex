@@ -2790,6 +2790,18 @@ section~\ref{sec:shared-fs}.
   % Default definition in config file: bogus
   % Result if not defined or RHS is empty: this entry is considered False
 
+\label{param:TrustLocalUidDomain}
+\item[\Macro{TRUST\_LOCAL\_UID\_DOMAIN}]
+  This parameter works like \MacroNI{TRUST\_UID\_DOMAIN}, but is only
+  applied when the \Condor{starter} and \Condor{shadow} are on the same
+  machine.
+  If this paramater is set to \Expr{True}, then the \Condor{shadow}'s
+  \MacroNI{UID\_DOMAIN} doesn't have to be a substring its hostname.
+  If this paramater is set to \Expr{False}, then \MacroNI{UID\_DOMAIN}
+  controls whether this substring requirement is enforced by the
+  \Condor{starter}.
+  The default is \Expr{True}.
+
 \label{param:SoftUidDomain}
 \item[\Macro{SOFT\_UID\_DOMAIN}]
   A boolean variable that defaults to \Expr{False} when not defined.

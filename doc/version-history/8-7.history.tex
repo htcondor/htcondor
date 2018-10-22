@@ -70,6 +70,11 @@ Previously, Condor-C jobs could remain held for a long time in the remote
 \Ticket{6768}
 \Ticket{6787}
 
+\item Added new configuration parameter \MacroNI{TRUST\_LOCAL\_UID\_DOMAIN}.
+It works like \MacroNI{TRUST\_UID\_DOMAIN}, but only applies when the
+\Condor{shadow} and \Condor{starter} are on the same machine.
+\Ticket{6785}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
