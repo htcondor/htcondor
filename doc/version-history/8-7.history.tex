@@ -66,6 +66,11 @@ machine was draining.  This prevent the HOLD\_IF series of policies from
 functioning properly in that situation.
 \Ticket{6697}
 
+\item Fixed a bug that could cause a job to go into a rapid cycle
+between running and idle status if a policy expression evaluated to
+Undefined during input file transfer.
+\Ticket{6728}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
