@@ -3433,9 +3433,6 @@ int SubmitHash::SetGridParams()
 		}
 		AssignJobString(ATTR_AZURE_AUTH_FILE, full_path(tmp));
 		free( tmp );
-	} else if ( gridType == "azure" ) {
-		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAuthFile );
-		ABORT_AND_RETURN( 1 );
 	}
 
 	if ( (tmp = submit_param( SUBMIT_KEY_AzureImage, ATTR_AZURE_IMAGE )) ) {

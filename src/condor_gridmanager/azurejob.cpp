@@ -151,8 +151,8 @@ AzureJob::AzureJob( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_AZURE_AUTH_FILE, m_authFile );
 
 	if ( m_authFile.empty() ) {
-		error_string = "Auth file not defined";
-		goto error_exit;
+		// This means attempt to grab the default Azure CLI credentials
+		m_authFile = "NULL";
 	}
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
