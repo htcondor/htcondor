@@ -55,6 +55,26 @@ with the \Opt{allow-crlf-script} option.
 \item Added support for spaces in remapped file paths in \Condor{submit}.
 \Ticket{6642}
 
+\item The MUNGE security method is now supported on all linux platforms.
+\Ticket{6713}
+
+\item Improved error handling during SSL authentication.
+\Ticket{6720}
+
+\item Improved throughput when submitting a large number of Condor-C jobs.
+Previously, Condor-C jobs could remain held for a long time in the remote
+\Condor{schedd}'s queue while other jobs were being submitted.
+\Ticket{6716}
+
+\item Changed default values for several configuration parameters.
+\Ticket{6768}
+\Ticket{6787}
+
+\item Added new configuration parameter \MacroNI{TRUST\_LOCAL\_UID\_DOMAIN}.
+It works like \MacroNI{TRUST\_UID\_DOMAIN}, but only applies when the
+\Condor{shadow} and \Condor{starter} are on the same machine.
+\Ticket{6785}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -65,6 +85,18 @@ with the \Opt{allow-crlf-script} option.
 machine was draining.  This prevent the HOLD\_IF series of policies from
 functioning properly in that situation.
 \Ticket{6697}
+
+\item Fixed a bug that could cause a job to go into a rapid cycle
+between running and idle status if a policy expression evaluated to
+Undefined during input file transfer.
+\Ticket{6728}
+
+\item \Condor{who} now works properly on macOS.
+\Ticket{6652}
+
+\item Fixed output of condor\_q -global when printing in JSON, XML, or
+new ClassAd format.
+\Ticket{6761}
 
 \end{itemize}
 
