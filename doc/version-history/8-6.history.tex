@@ -41,6 +41,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where \MacroNI{MOUNT\_UNDER\_SCRATCH} would not be
+interpreted as an expression for Singularity jobs.
+\Ticket{6740}
+
+\item Fixed a bug which would cause the \Condor{negotiator} to crash if the
+second argument of an ternary operator is omitted in a \MacroNI{START}
+expression.  \Expr{(expression ?: value)}
+\Ticket{6798}
+
+\item Fixed a bug where Singularity would not be advertised
+when Docker was not configured.
+\Ticket{6772}
+
+\item Fixed a bug where Docker Universe jobs would not bind mount the
+scratch directory when the jobs did not transfer files.
+\Ticket{6776}
+
 \item Fixed a bug which would cause certain valid URLs not be recognized.  This
 allows, for example, `s3' to be used as a custom file transfer plug-in.
 \Ticket{6722}
