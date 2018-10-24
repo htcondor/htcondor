@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -u
 
 import platform
 
@@ -2207,27 +2207,15 @@ class AzureGAHPCommandExec():
                     ci.cmdParams["vmName"])
                 self.queue_result(ci.request_id, "NULL")
             except Exception as e:
-                vm_info = self.get_vm_info(
-                    ci.request_id, client_libs.compute, 
-                    client_libs.network, ci.cmdParams["rgName"], 
-                    ci.cmdParams["vmName"])
-                error = self.escape(
-                    "{} - {} {}{}".format(
-                        vm_info["vm_id"], vm_info["public_ip"], 
-                        str(e.args[0]), double_line_break)
-                    )
                 self.process_error(
-                    ci.request_id, e, 
-                    "{} {}".format(
-                        error_deleting_vm, error)
-                    )           
+                    ci.request_id, e, error_deleting_vm)
         elif(ci.command.upper() == cmds.list_vm):
             try:
                 vms_info_list = self.list_rg(
                     ci.request_id, client_libs.compute, 
                     client_libs.network, ci.cmdParams["rgName"], 
                     ci.cmdParams["vmName"], ci.cmdParams["tag"])
-                result = "NULL {} {}".format(
+                result = "NULL {}{}".format(
                     str(len(vms_info_list)), ''.join(vms_info_list))
                 self.queue_result(ci.request_id, result)
                 self.write_message(
@@ -2295,9 +2283,8 @@ class AzureGAHPCommandExec():
                     ci.request_id, e, error_scaling_vmss)
 
     def process_error(self, request_id, e, error_message):
-        message = "{} {}{}".format(
-            error_message, self.escape(str(e.args[0])), 
-            double_line_break)
+        message = "{}\\ {}".format(
+            self.escape(error_message), self.escape(str(e.args[0])))
         self.write_message(request_id, message, logging.ERROR)
         self.queue_result(request_id, message)
     
