@@ -92,6 +92,13 @@ This attributes are intended to aid in writing policy expressions that prevent a
 when the node has frequently failed to start jobs.
 \Ticket{6698}
 
+\item For grid-type boinc jobs, the following job ad attributes can be
+used to to set the BOINC job template parameters of the same name:
+\Attr{rsc\_fpops\_est}, \Attr{rsc\_fpops\_bound},
+\Attr{rsc\_memory\_bound}, \Attr{rsc\_disk\_bound}, \Attr{delay\_bound},
+and \Attr{app\_version\_num}.
+\Ticket{6760}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
