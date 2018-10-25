@@ -54,7 +54,6 @@
     static bool backtrace_have_symbols = false;
 # endif
 #endif
-#include "util_lib_proto.h"		// for mkargv() proto
 #include "condor_threads.h"
 #include "log_rotate.h"
 #include "dprintf_internal.h"
@@ -1882,16 +1881,6 @@ fclose_wrapper( FILE *stream, int maxRetries )
 	}
 
 	return result;
-}
-
-int _condor_mkargv( int* argc, char* argv[], char* line );
-
-// Why the heck is this in here, rather than in mkargv.c?  wenger 2009-02-24.
-// prototype
-int
-mkargv( int* argc, char* argv[], char* line )
-{
-	return( _condor_mkargv(argc, argv, line) );
 }
 
 void
