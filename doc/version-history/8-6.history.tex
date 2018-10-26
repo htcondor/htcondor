@@ -42,6 +42,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Updated the systemd unit file to start HTCondor daemons after NFS
+and the automounter was available.
+\Ticket{6794}
+
+\item Fixed a bug where short-lived Docker jobs would report spuriously
+high usage.
+\Ticket{6796}
+
 \item Python bindings are now available on Debian 9, Ubuntu 16, and
 Ubuntu 18.
 \Ticket{6751}
