@@ -70,16 +70,17 @@ New ClassAds added new features
 and were designed as a stand-alone library that could be used apart
 from HTCondor.
 
-In HTCondor version 7.5.1, HTCondor switched the internal usage of
-ClassAds from Old to New.
+In HTCondor version 7.5.1, HTCondor switched to using the New ClassAd library
+for all use of ClassAds within HTCondor. The library is
+placed into a compatibility mode so that HTCondor 7.5.1 is still able to exchange ClassAds with
+older versions of HTCondor.
+
 All user interaction with tools (such as \Condor{q}) as well as
-output of tools is still done as Old ClassAds.
-Before HTCondor version 7.5.1, New ClassAds were used in just a few places 
-within HTCondor, 
-for example, in the Job Router.
+output of tools is still compatible with Old ClassAds.
+Before HTCondor version 7.5.1, New ClassAds were used only in the Job Router.
 There are some syntax and behavior differences between Old and New
-ClassAds,
-all of which will remain invisible to users of HTCondor for this version.
+ ClassAds, all of which should remain invisible to users of HTCondor.
+
 A complete description of New ClassAds can be found at
 \URL{http://htcondor.org/classad/classad.html},
 and in the ClassAd Language Reference Manual found on that web page.
@@ -227,7 +228,7 @@ in figure~\ref{ClassAd:operator-fig}.
   *   / 
   +   - (addition, subtraction)
   <   <=   >=   >
-  ==  !=  =?=  =!=
+  ==  !=  =?=  is  =!=  isnt
   &&
   ||                   (low precedence) 
 \end{verbatim}
@@ -235,7 +236,7 @@ in figure~\ref{ClassAd:operator-fig}.
 operators}
 \end{figure}
 The operator with the highest precedence is the unary minus operator.  The
-only operators which are unfamiliar are the \verb+=?=+ and \verb+=!=+
+only operators which are unfamiliar are the \verb+=?=+, \verb+is+, \verb+=!=+ and \verb+isnt+
 operators, which are discussed in Section~\ref{ClassAd:evaluation-meta}.
 
 
@@ -1099,14 +1100,18 @@ if either of their operands have these exceptional values.
 		\verb@>=@ \verb@>@ are strict with respect to both \Expr{UNDEFINED} 
 		and \Expr{ERROR}.
 
-		\item In addition, the operators \verb@=?=@ and \verb@=!=@ behave
+		\item In addition, the operators \verb@=?=@, \verb@is@, \verb@=!=@ and \verb@isnt@ behave
 		similar to \verb@==@ and \verb@!=@, but are not strict.  Semantically,
-		the \verb@=?=@ tests if its operands are ``identical,'' i.e., have
+		the \verb@=?=@ and \verb@is@ test if their operands are ``identical,'' i.e., have
 		the same type and the same value.  For example, \verb@10 == UNDEFINED@ 
 		and \verb@UNDEFINED == UNDEFINED@ both evaluate to \Expr{UNDEFINED},
-		but \verb@10 =?= UNDEFINED@ and \verb@UNDEFINED =?= UNDEFINED@ 
+		but \verb@10 =?= UNDEFINED@ and \verb@UNDEFINED is UNDEFINED@ 
 		evaluate to \Expr{FALSE} and \Expr{TRUE} respectively.  The
-		\verb@=!=@ operator tests for the ``is not identical to'' condition.
+		\verb@=!=@ and \verb@isnt@ operators test for the ``is not identical to'' condition.
+
+		\verb@=?=@ and \verb@is@ have the same behavior as each other. And \verb@isnt@ and \verb@=!=@
+		behave the same as each other.  The ClassAd unparser will always use \verb@=?=@ in preference to \verb@is@
+		and \verb@=!=@ in preference to \verb@isnt@ when printing out ClassAds.
 	\end{enumerate}
 
 	\item\textbf{Logical operators:}

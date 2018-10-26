@@ -1839,6 +1839,74 @@ conditions that were present when the job checkpointed.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
+%% azure_admin_key
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!azure\_admin\_key}
+\label{condor-submit-azure-admin-key}
+\item[azure\_admin\_key = \lt{}pathname\gt{}]
+For grid type \SubmitCmdNI{azure} jobs,
+specifies the path and file name of a file that contains an SSH public key.
+This key can be used to log into the administrator account of the instance
+via SSH.
+
+%%%%%%%%%%%%%%%%%%%
+%% azure_admin_username
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!azure\_admin\_username}
+\label{condor-submit-azure-admin-username}
+\item[azure\_admin\_username = \lt{}account name\gt{}]
+For grid type \SubmitCmdNI{azure} jobs,
+specifies the name of an administrator account to be created in the
+instance. This account can be logged into via SSH.
+
+%%%%%%%%%%%%%%%%%%%
+%% azure_auth_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!azure\_auth\_file}
+\label{condor-submit-azure-auth-file}
+\item[azure\_auth\_file = \lt{}pathname\gt{}]
+For grid type \SubmitCmdNI{azure} jobs,
+specifies a path and file name of the authorization file that grants
+permission for HTCondor to use the Azure account.
+If it's not defined, then HTCondor will attempt to use the default
+credentials of the Azure CLI tools.
+
+%%%%%%%%%%%%%%%%%%%
+%% azure_image
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!azure\_image}
+\label{condor-submit-azure-image}
+\item[azure\_image = \lt{}image id\gt{}]
+For grid type \SubmitCmdNI{azure} jobs,
+identifies the disk image to be used for the boot disk of the instance.
+This image must already be registered within Azure.
+
+%%%%%%%%%%%%%%%%%%%
+%% azure_location
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!azure\_location}
+\label{condor-submit-azure-location}
+\item[azure\_location = \lt{}image id\gt{}]
+For grid type \SubmitCmdNI{azure} jobs,
+identifies the location within Azure where the instance should be run.
+As an example, one current location is \Expr{centralus}.
+
+%%%%%%%%%%%%%%%%%%%
+%% azure_size
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!azure\_size}
+\label{condor-submit-azure-size}
+\item[azure\_size = \lt{}machine type\gt{}]
+For grid type \SubmitCmdNI{azure} jobs,
+the hardware configuration that the virtual machine instance is to run on.
+
+%%%%%%%%%%%%%%%%%%%
 %% batch_queue
 %%%%%%%%%%%%%%%%%%%
 

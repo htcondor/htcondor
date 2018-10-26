@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The grid universe can now be used to create and manage VM instances
+in Microsoft Azure, using the new grid type \SubmitCmdNI{azure}.
+\Ticket{6176}
+
 \item Added a new file transfer plugin, \emph{multifile\_curl\_plugin} which is
 able to transfer multiple files with only a single invocation of the plugin, 
 preserving the TCP connection. It also takes a classad as input data, which will 
@@ -44,6 +48,11 @@ but unlike \MacroNI{LIMIT\_JOB\_RUNTIMES},
 \MacroNI{PREEMPT\_IF\_RUNTIME\_EXCEEDS} may come after other policy macros.)
 Additionally, both of the new policies function while the machine is draining.
 \Ticket{6701}
+
+\item \Condor{submit} will no longer attempt to read submit commands from standard input
+when there is no submit file if a queue statement and at least one submit command
+is provided on the command line.
+\Ticket{6581}
 
 \item If the first line of the job's executable starts with \Expr{\#!}
 \Condor{submit} will now check that line for a Windows/DOS line ending, and if it finds
@@ -75,6 +84,25 @@ It works like \MacroNI{TRUST\_UID\_DOMAIN}, but only applies when the
 \Condor{shadow} and \Condor{starter} are on the same machine.
 \Ticket{6785}
 
+\item Added a new configuration parameter \MacroNI{SUBMIT\_DEFAULT\_SHOULD\_TRANSFER\_FILES}.
+It determines whether file transfer should default to YES, NO, or AUTO when when the submit file
+does not supply a value for \MacroNI{should\_transfer\_files} and file transfer is not forced
+on or off by some other parameter in the submit file.  Prior to this addition, \Condor{submit} would
+always default to AUTO.
+\Ticket{6784}
+
+\item Added new statistics attributes about the lifetime of the \Condor{starter} to the \Condor{startd} Ad.
+This attributes are intended to aid in writing policy expressions that prevent a node from matching jobs
+when the node has frequently failed to start jobs.
+\Ticket{6698}
+
+\item For grid-type boinc jobs, the following job ad attributes can be
+used to to set the BOINC job template parameters of the same name:
+\Attr{rsc\_fpops\_est}, \Attr{rsc\_fpops\_bound},
+\Attr{rsc\_memory\_bound}, \Attr{rsc\_disk\_bound}, \Attr{delay\_bound},
+and \Attr{app\_version\_num}.
+\Ticket{6760}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -97,6 +125,23 @@ Undefined during input file transfer.
 \item Fixed output of condor\_q -global when printing in JSON, XML, or
 new ClassAd format.
 \Ticket{6761}
+
+\item Fixed a bug that could cause \Condor{wait} and the python bindings
+on Windows to repeat events when reading the job event log.
+\Ticket{6752}
+
+\item Added missing Accounting, Credd, and Defrag AdTypes to the python bindings
+AdTypes enumeration.
+\Ticket{6737}
+
+\item Fixed a bug that caused late materialization jobs to handle the \MacroNI{getenv}
+submit command incorrectly.
+\Ticket{6723}
+
+\item Fixed an inefficiency in the SetAttribute remote procedure call that could sometimes
+result in noticable performance reduction of the \Condor{schedd}.  Removing this inefficiency
+will allow a single \Condor{schedd} to handle updates from a larger number of running jobs.
+\Ticket{6732}
 
 \end{itemize}
 

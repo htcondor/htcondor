@@ -3433,9 +3433,6 @@ int SubmitHash::SetGridParams()
 		}
 		AssignJobString(ATTR_AZURE_AUTH_FILE, full_path(tmp));
 		free( tmp );
-	} else if ( gridType == "azure" ) {
-		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAuthFile );
-		ABORT_AND_RETURN( 1 );
 	}
 
 	if ( (tmp = submit_param( SUBMIT_KEY_AzureImage, ATTR_AZURE_IMAGE )) ) {
@@ -3865,22 +3862,6 @@ int SubmitHash::SetArguments()
 }
 
 
-static bool is_non_negative_int(const char * Value, long long & lval)
-{
-	lval = 0;
-	if (strstr(Value,".")) {
-		return false;
-	}
-	char *endptr=NULL;
-	lval = strtoll(Value,&endptr,10);
-	if (lval < 0 || endptr == Value || *endptr) {
-		lval = 0;
-		return false;
-	}
-
-	return true;
-}
-
 //
 // returns true if the job has one of the attributes set that requires job deferral
 // used by SetRequirements and some of the validation code.
@@ -3918,9 +3899,12 @@ int SubmitHash::SetJobDeferral()
 	if ( temp != NULL ) {
 		// make certain the input is valid
 		long long dtime = 0;
-		if (is_non_negative_int(temp, dtime)) {
-			AssignJobVal(ATTR_DEFERRAL_TIME, dtime);
-		} else {
+		bool valid = AssignJobExpr(ATTR_DEFERRAL_TIME, temp) == 0;
+		classad::Value value;
+		if (valid && ExprTreeIsLiteral(job->Lookup(ATTR_DEFERRAL_TIME), value)) {
+			valid = value.IsIntegerValue(dtime) && dtime >= 0;
+		}
+		if ( ! valid) {
 			push_error(stderr, SUBMIT_KEY_DeferralTime " = %s is invalid, must eval to a non-negative integer.\n", temp );
 			ABORT_AND_RETURN( 1 );
 		}
@@ -3959,9 +3943,12 @@ int SubmitHash::SetJobDeferral()
 			
 			// make certain the input is valid
 			long long dtime = 0;
-			if (is_non_negative_int(temp, dtime)) {
-				AssignJobVal(ATTR_DEFERRAL_WINDOW, dtime);
-			} else {
+			bool valid = AssignJobExpr(ATTR_DEFERRAL_WINDOW, temp) == 0;
+			classad::Value value;
+			if (valid && ExprTreeIsLiteral(job->Lookup(ATTR_DEFERRAL_WINDOW), value)) {
+				valid = value.IsIntegerValue(dtime) && dtime >= 0;
+			}
+			if (!valid) {
 				push_error(stderr, SUBMIT_KEY_DeferralWindow " = %s is invalid, must eval to a non-negative integer.\n", temp );
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3995,9 +3982,12 @@ int SubmitHash::SetJobDeferral()
 		if ( temp != NULL ){
 			// make certain the input is valid
 			long long dtime = 0;
-			if (is_non_negative_int(temp, dtime)) {
-				AssignJobVal(ATTR_DEFERRAL_PREP_TIME, dtime);
-			} else {
+			bool valid = AssignJobExpr(ATTR_DEFERRAL_PREP_TIME, temp) == 0;
+			classad::Value value;
+			if (valid && ExprTreeIsLiteral(job->Lookup(ATTR_DEFERRAL_PREP_TIME), value)) {
+				valid = value.IsIntegerValue(dtime) && dtime >= 0;
+			}
+			if (!valid) {
 				push_error(stderr, SUBMIT_KEY_DeferralPrepTime " = %s is invalid, must eval to a non-negative integer.\n", temp );
 				ABORT_AND_RETURN( 1 );
 			}
