@@ -26,5 +26,18 @@ Here is a list of items that administrators should be aware of.
 % round robin
 \Ticket{6190}
 
+\item
+% PREEMPTION_REQUIREMENTS in the negotiator no longer has a hard-code
+% check that the preempting user has a better fair-share user priority
+% than the running user.
+% Overly-lax expressions ('True' being the worst) will lead to slots
+% being preempted every negotiation cycle.
+% Suggest one of the following always be a clause in the expression:
+% For pools with fair-share only:
+%   RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2
+% For pools with groups and quotas:
+%   (SubmitterGroupResourcesInUse < SubmitterGroupQuota) && (RemoteGroupResourcesInUse > RemoteGroupQuota)
+\Ticket{4699}
+
 \end{itemize}
 
