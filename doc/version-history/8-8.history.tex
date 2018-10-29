@@ -37,7 +37,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Jobs in REMOVED status now properly leave the queue when
+evaluation of their \Attr{LeaveJobInQueue} attribute changes from
+\Expr{True} to \Expr{False}.
+\Ticket{6808}
 
 \end{itemize}
 
