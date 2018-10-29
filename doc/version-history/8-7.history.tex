@@ -57,14 +57,14 @@ is provided on the command line.
 \item If the first line of the job's executable starts with \Expr{\#!}
 \Condor{submit} will now check that line for a Windows/DOS line ending, and if it finds
 one, it will not submit the job because such a script will not be able to start on Unix
-or Linux platforms.  This check can be changed from an error to a warnding by submitting
+or Linux platforms.  This check can be changed from an error to a warning by submitting
 with the \Opt{allow-crlf-script} option.
 \Ticket{6660}
 
 \item Added support for spaces in remapped file paths in \Condor{submit}.
 \Ticket{6642}
 
-\item The MUNGE security method is now supported on all linux platforms.
+\item The MUNGE security method is now supported on all Linux platforms.
 \Ticket{6713}
 
 \item Improved error handling during SSL authentication.
@@ -110,13 +110,18 @@ and \Attr{app\_version\_num}.
 \begin{itemize}
 
 \item Fixed a bug where \MacroNI{PREEMPT} was not be evaluated if the
-machine was draining.  This prevent the HOLD\_IF series of policies from
+machine was draining.  This prevent the \Expr{HOLD\_IF} series of policies from
 functioning properly in that situation.
 \Ticket{6697}
 
+\item Fixed a bug that occured when starting Docker Universe jobs that
+would cause the start to crash and the jobs to cycle between \Expr{running}
+and \Expr{idle} status.
+\Ticket{6725}
+
 \item Fixed a bug that could cause a job to go into a rapid cycle
-between running and idle status if a policy expression evaluated to
-Undefined during input file transfer.
+between \Expr{running} and \Expr{idle} status if a policy expression evaluated
+to \Expr{Undefined} during input file transfer.
 \Ticket{6728}
 
 \item \Condor{who} now works properly on macOS.
