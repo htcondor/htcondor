@@ -136,7 +136,7 @@ LATEX_SOURCES = $(MANUAL_SOURCES) \
                 overview/overview.tex overview/contributions.tex \
                 platforms/platforms.tex platforms/linux.tex platforms/windows.tex platforms/macosx.tex \
                 user-man/limitations.tex user-man/user.tex user-man/limitations.tex user-man/filetransfer.tex user-man/interactive.tex user-man/managing.tex user-man/java.tex user-man/parallel.tex user-man/dagman.tex user-man/vm.tex user-man/docker.tex user-man/time-scheduling.tex \
-                version-history/history.tex version-history/8-7.history.tex version-history/upgradingto8-6.tex version-history/8-6.history.tex version-history/8-5.history.tex version-history/8-4.history.tex
+                version-history/history.tex version-history/8-9.history.tex version-history/8-7.history.tex version-history/upgradingto8-6.tex version-history/8-6.history.tex version-history/8-5.history.tex version-history/8-4.history.tex
 
 # Only the v8.7 branch requires the fourth run to remove the 'labels may
 # changed' warning.  We should figure out why.
