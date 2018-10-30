@@ -387,7 +387,7 @@ def parse_scontrol_fd(fd):
             #print cur_job_id, line
             cur_job_info = {"BatchJobId": '"%s"' % cur_job_id}
             continue
-        if cur_job_id == None:
+        if cur_job_id is None:
             continue
         m = exec_host_re.match(line)
         if m:

@@ -301,7 +301,7 @@ class TriggerConfig(Session):
             return 1
         
     def _get_condortriggerservice(self):
-        if self.cts == None:
+        if self.cts is None:
             try:
                 self.cts = self.getObjects(_class="condortriggerservice")[0]
             except IndexError:
