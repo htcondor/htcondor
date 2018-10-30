@@ -1907,7 +1907,7 @@ fi
 - Python bindings are now built for the Debian and Ubuntu platforms
 - Fixed a memory leak in the Python bindings
 - Fixed a bug where absolute paths failed for output/error files on Windows
-- Fixed a bug where a grid job fails if the sandbox is transferred twice
+- Fixed a bug using Condor-C to run Condor-C jobs
 - Fixed a bug where Singularity could not be used if Docker was not present
 
 * Wed Aug 01 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.12-1
