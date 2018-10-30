@@ -1220,9 +1220,17 @@ of the subsystem corresponding to the daemon.
   For example, the default log defined for the \Condor{master} daemon
   is \File{\$(LOG)/MasterLog}.
   The default value for other subsystems is \File{\$(LOG)/<SUBSYS>LOG}.
+  The special value \Expr{SYSLOG} causes the daemon to log via the syslog
+  facility on Linux.
   If the log file cannot be written to,
   then the daemon will attempt to log this into a new file of the name
   \File{\$(LOG)/dprintf\_failure.<SUBSYS>} before the daemon exits.
+
+\label{param:LogToSyslog}
+\item[\Marco{LOG\_TO\_SYSLOG}
+  A boolean value that is \Expr{False} by default.
+  When \Expr{True}, all daemon logs are routed to the syslog facility on
+  Linux.
 
 \label{param:MaxSubsysLog}
 \item[\Macro{MAX\_<SUBSYS>\_LOG}]
