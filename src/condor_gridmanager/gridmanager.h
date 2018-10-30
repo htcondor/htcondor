@@ -25,7 +25,6 @@
 #include "condor_daemon_core.h"
 #include "list.h"
 #include "daemon.h"
-#include "dc_schedd.h"
 #include "dc_collector.h"
 #include <map>
 
@@ -40,8 +39,10 @@
 
 #define GM_RESOURCE_UNLIMITED	1000000000
 
+extern bool starterMode;
 extern char *ScheddAddr;
 extern char *ScheddName;
+class DCSchedd;
 extern DCSchedd *ScheddObj;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
@@ -56,9 +57,10 @@ void Register();
 void Reconfig();
 
 void requestScheddUpdate( BaseJob *job, bool notify );
-bool requestScheddVacate( BaseJob *job, action_result_t &result );
-bool requestJobStatus( BaseJob *job, int &job_status );
-bool requestJobStatus( PROC_ID job_id, int tid, int &job_status );
+// Nobody calls these.
+// bool requestScheddVacate( BaseJob *job, action_result_t &result );
+// bool requestJobStatus( BaseJob *job, int &job_status );
+// bool requestJobStatus( PROC_ID job_id, int tid, int &job_status );
 void requestScheddUpdateNotification( int timer_id );
 
 extern std::map<std::string, BaseJob*> FetchProxyList;

@@ -54,7 +54,7 @@ void BaseJob::BaseJobReconfig()
 	periodic_interval.setMinInterval( param_integer( "PERIODIC_EXPR_INTERVAL", 60 ) );
 	periodic_interval.setMaxInterval( param_integer( "MAX_PERIODIC_EXPR_INTERVAL", 1200 ) );
 	periodic_interval.setTimeslice( param_double( "PERIODIC_EXPR_TIMESLICE", 0.01, 0, 1 ) );
-	if ( periodic_interval.getMinInterval() > 0 ) {
+	if ( (! starterMode) && periodic_interval.getMinInterval() > 0 ) {
 		periodicPolicyEvalTid = daemonCore->Register_Timer( periodic_interval,
 							BaseJob::EvalAllPeriodicJobExprs,
 							"EvalAllPeriodicJobExprs" );

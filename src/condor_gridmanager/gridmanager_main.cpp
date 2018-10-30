@@ -29,6 +29,7 @@
 
 #include "gridmanager.h"
 
+bool starterMode = false;
 char *myUserName = NULL;
 char *SelectionValue = NULL;
 
@@ -69,6 +70,9 @@ main_init( int argc, char ** const argv )
 			}
 			SelectionValue = strdup( argv[i + 1] );
 			i++;
+			break;
+		case 'B':
+			starterMode = true;
 			break;
 		case 'C':
 			if ( argc <= i + 1 )

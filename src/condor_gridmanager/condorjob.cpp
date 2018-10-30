@@ -26,7 +26,6 @@
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "daemon.h"
-#include "dc_schedd.h"
 #include "nullfile.h"
 
 #include "gridmanager.h"

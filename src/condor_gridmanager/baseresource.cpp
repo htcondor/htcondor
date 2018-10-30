@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "dc_schedd.h"
 
 #include "baseresource.h"
 #include "basejob.h"
@@ -218,21 +219,23 @@ bool BaseResource::Invalidate () {
         "((TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\") && "
 		 "(TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\"))",
         ATTR_HASH_NAME, GetHashName (),
-        ATTR_SCHEDD_NAME, ScheddObj->name (),
-		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
+        ATTR_SCHEDD_NAME, starterMode ? "starter-mode" : ScheddObj->name (),
+		ATTR_SCHEDD_IP_ADDR, starterMode ? "starter-mode" : ScheddObj->addr (),
         ATTR_OWNER, myUserName );
     ad.AssignExpr ( ATTR_REQUIREMENTS, line.c_str() );
 
 	ad.Assign( ATTR_HASH_NAME, GetHashName() );
-	ad.Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
-	ad.Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
+	if(! starterMode) {
+		ad.Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
+		ad.Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
+	}
 	ad.Assign( ATTR_OWNER, myUserName );
 
     dprintf (
         D_FULLDEBUG,
         "BaseResource::InvalidateResource: \n%s\n",
         line.c_str() );
-    
+
 	return daemonCore->sendUpdates( INVALIDATE_GRID_ADS, &ad, NULL, true ) > 0;
 }
 
@@ -295,8 +298,10 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 	formatstr( buff, "%s %s", ResourceType(), resourceName );
 	resource_ad->Assign( ATTR_NAME, buff.c_str() );
 	resource_ad->Assign( "HashName", GetHashName() );
-	resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddName );
-    resource_ad->Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
+	if(! starterMode) {
+		resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddName );
+    	resource_ad->Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
+    }
 	resource_ad->Assign( ATTR_OWNER, myUserName );
 	if ( SelectionValue ) {
 		resource_ad->Assign( ATTR_GRIDMANAGER_SELECTION_VALUE, SelectionValue );

@@ -120,6 +120,10 @@ void CHECK_LEASES_signalHandler();
 int UPDATE_JOBAD_signalHandler( Service *, int );
 int FetchProxyDelegationHandler( Service *, int, Stream * );
 
+bool requestScheddVacate( BaseJob *job, action_result_t &result );
+bool requestJobStatus( BaseJob *job, int &job_status );
+bool requestJobStatus( PROC_ID job_id, int tid, int &job_status );
+
 static bool jobExternallyManaged(ClassAd * ad)
 {
 	ASSERT(ad);
@@ -287,7 +291,7 @@ Init()
 
 	// schedd address may be overridden by a commandline option
 	// only set it if it hasn't been set already
-	if ( ScheddAddr == NULL ) {
+	if ( ScheddAddr == NULL && (! starterMode) ) {
 		schedd_pid = daemonCore->getppid();
 		char const *tmp = daemonCore->InfoCommandSinfulString( schedd_pid );
 		if ( tmp == NULL ) {
@@ -304,7 +308,7 @@ Init()
 		ScheddName = strdup( "" );
 	}
 
-	if ( ScheddObj == NULL ) {
+	if ( ScheddObj == NULL && (! starterMode) ) {
 		ScheddObj = new DCSchedd( ScheddAddr );
 		ASSERT( ScheddObj );
 		if ( ScheddObj->locate() == false ) {
@@ -414,18 +418,30 @@ Init()
 		new_type->InitFunc();
 	}
 
+	// If we're running in starter mode, we don't register GRIDMAN_ADD_JOBS,
+	// so we never get anything started if we don't do this here.
+	if( starterMode ) {
+		RequestContactSchedd();
+	}
 }
 
 void
 Register()
 {
-	daemonCore->Register_Signal( GRIDMAN_ADD_JOBS, "AddJobs",
-								 (SignalHandler)&ADD_JOBS_signalHandler,
-								 "ADD_JOBS_signalHandler", NULL );
-
 	daemonCore->Register_Signal( GRIDMAN_REMOVE_JOBS, "RemoveJobs",
 								 (SignalHandler)&REMOVE_JOBS_signalHandler,
 								 "REMOVE_JOBS_signalHandler", NULL );
+
+	// We don't want to deal with them, so don't even bother to register
+	// the other handlers.
+	if( starterMode ) {
+		Reconfig();
+		return;
+	}
+
+	daemonCore->Register_Signal( GRIDMAN_ADD_JOBS, "AddJobs",
+								 (SignalHandler)&ADD_JOBS_signalHandler,
+								 "ADD_JOBS_signalHandler", NULL );
 
 	daemonCore->Register_Signal( UPDATE_JOBAD, "UpdateJobAd",
 								 (SignalHandler)&UPDATE_JOBAD_signalHandler,
@@ -580,8 +596,135 @@ CHECK_LEASES_signalHandler()
 	}
 }
 
+void doContactScheddOriginal();
+void doContactScheddStarterMode();
+
 void
-doContactSchedd()
+doContactSchedd() {
+	contactScheddTid = TIMER_UNSET;
+
+	if( starterMode ) {
+		doContactScheddStarterMode();
+	} else {
+		doContactScheddOriginal();
+	}
+}
+
+void
+doContactScheddStarterMode() {
+
+	// requestScheddVacate() should never be called in starter mode.
+	// (It is currently never called at all.)
+	ASSERT( pendingScheddVacates.getNumElements() == 0 );
+
+	// CHECK_LEASES_signalHandler() should never be called in starter mode.
+	ASSERT( ! checkLeasesSignaled );
+
+	// ADD_JOBS_signalHandler() should never be called in starter mode.
+	ASSERT( ! addJobsSignaled );
+
+	if( firstScheddContact ) {
+		firstScheddContact = false;
+
+		// At some point, we should read an arbitrarily large number
+		// of ads from stdin, merging the subsequent ads with the first as
+		// we go, to simplify certain types of testing.
+
+		int error; bool eof;
+		ClassAd * jobAd = new ClassAd();
+		int numAttrs = jobAd->InsertFromFile( stdin, eof, error );
+		if( numAttrs <= 0 ) {
+			delete jobAd;
+
+			dprintf( D_ALWAYS, "Failed to parse ClassAd on stdin, shutting down.\n" );
+			daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+			return;
+		}
+
+		PROC_ID jobID;
+		jobAd->LookupInteger( ATTR_CLUSTER_ID, jobID.cluster );
+		jobAd->LookupInteger( ATTR_PROC_ID, jobID.proc );
+
+		BaseJob * job = NULL;
+		ASSERT( BaseJob::JobsByProcId.lookup( jobID, job ) != 0 );
+
+		JobType * jobType;
+		jobTypes.Rewind();
+		while( jobTypes.Next( jobType ) ) {
+			if( jobType->AdMatchFunc( jobAd ) ) {
+				dprintf( D_ALWAYS, "Using job type %s for ad from stdin (%d.%d).\n",
+					jobType->Name, jobID.cluster, jobID.proc );
+				break;
+			}
+		}
+
+		if( jobType == NULL ) {
+			job = new BaseJob( jobAd );
+		} else {
+			job = jobType->CreateFunc( jobAd );
+		}
+
+		ASSERT( job );
+		job->SetEvaluateState();
+		dprintf( D_ALWAYS, "Found job %d.%d on stdin, inserting.\n",
+			job->procID.cluster, job->procID.proc );
+	}
+
+	// UPDATE_JOBAD_signalHandler() should never be called in starter mode.
+	ASSERT( ! updateJobsSignaled );
+
+	// requestJobStatus() should never be called in starter mode.
+	// (It is currently never called at all.)
+	ASSERT( pendingJobStatus.getNumElements() == 0 );
+
+
+	ScheddUpdateRequest * request;
+	pendingScheddUpdates.startIterations();
+	while( pendingScheddUpdates.iterate( request ) != 0 ) {
+		BaseJob * job = request->m_job;
+
+		ExprTree * expr;
+		const char * attrName;
+		const char * attrValue;
+		job->jobAd->ResetExpr();
+		while( job->jobAd->NextDirtyExpr( attrName, expr ) ) {
+			attrValue = ExprTreeToString( expr );
+			fprintf( stdout, "%s = %s\n", attrName, attrValue );
+		}
+		fprintf( stdout, "\n" );
+		job->jobAd->ClearAllDirtyFlags();
+
+		if ( request->m_notify ) { job->SetEvaluateState(); }
+		pendingScheddUpdates.remove( job->procID );
+
+		if( job->deleteFromGridmanager ) {
+			delete job;
+		}
+		delete request;
+	}
+
+
+	int timer_id;
+	scheddUpdateNotifications.Rewind();
+	while( scheddUpdateNotifications.Next( timer_id ) ) {
+		daemonCore->Reset_Timer( timer_id, 0 );
+	}
+	scheddUpdateNotifications.Clear();
+
+	// Check if we have any jobs left to manage. If not, exit.
+	if ( BaseJob::JobsByProcId.getNumElements() == 0 ) {
+		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	}
+
+	// Reset the clock.
+	lastContactSchedd = time(NULL);
+
+	// Do NOT (ever) evaluate job policy when running in starter mode.
+}
+
+void
+doContactScheddOriginal()
 {
 	int rc;
 	Qmgr_connection *schedd;
@@ -604,8 +747,6 @@ doContactSchedd()
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
 	initJobExprs();
-
-	contactScheddTid = TIMER_UNSET;
 
 	// vacateJobs
 	/////////////////////////////////////////////////////
