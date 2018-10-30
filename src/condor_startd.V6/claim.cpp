@@ -2383,19 +2383,17 @@ newIdString( char** id_str_ptr )
 	MyString id;
 	// Keeping with tradition, we insert the startd's address in
 	// the claim id.  As of condor 7.2, nothing relies on this.
-	// Strip out CCB and other special info so we don't get any
-	// '#' characters in the address.
+	// Starting in 8.9, we use the full sinful string, which can
+	// contain '#'. Parsers should look for the first '>' in the
+	// string to reliably extract the startd's sinful.
 
-	Sinful my_sin( daemonCore->publicNetworkIpAddr() );
-	my_sin.clearParams();
-	char const *my_addr = my_sin.getSinful();
-
-	ASSERT( my_addr && !strchr(my_addr,'#') );
-
-	formatstr( id, "%s#%d#%d#", my_addr, (int)startd_startup, sequence_num );
+	formatstr( id, "%s#%d#%d#", daemonCore->publicNetworkIpAddr(),
+	           (int)startd_startup, sequence_num );
 
 		// keylen is 20 in order to avoid generating claim ids that
 		// overflow the 80 byte buffer in pre-7.1.3 negotiators
+		// Note: Claim id strings have been longer than 80 characters
+		//   ever since we started putting a security session ad in them.
 	const size_t keylen = 20;
 	char *keybuf = Condor_Crypt_Base::randomHexKey(keylen);
 	id += keybuf;
