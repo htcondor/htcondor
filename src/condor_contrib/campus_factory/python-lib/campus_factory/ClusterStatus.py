@@ -45,7 +45,7 @@ class CondorConfig:
         config_dict = {}
         for line in stdout.split('\n'):
             match = line_re.search(line)
-            if match == None:
+            if match is None:
                 continue
             (key, value) = match.groups()
             config_dict[key] = value
@@ -133,7 +133,7 @@ class ClusterStatus:
         @return: [(ClusterID, ProcID): [classad,...]]
         
         """
-        if constraint == None:
+        if constraint is None:
             constraint = self.status_constraint
         
         # Refresh the condor_status, if necessary
