@@ -956,6 +956,7 @@ populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-small-shadow
 %endif
 
 populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-single-node
+populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/50ec2.config
 
 %if %qmf
 # Install condor-qmf's base plugin configuration
@@ -1146,8 +1147,10 @@ rm -rf %{buildroot}%{_datadir}/condor/{libpyclassad*,htcondor,classad}.so
 mkdir -p %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python_sitelib}
-%if 0%{?osg} || 0%{?hcc}
+%if 0%{?hcc}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.factory %{buildroot}%{_sysconfdir}/condor/config.d/60-campus_factory.config
+%endif
+%if 0%{?osg} || 0%{?hcc}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
 %endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
@@ -1697,9 +1700,11 @@ rm -rf %{buildroot}
 
 %files bosco
 %defattr(-,root,root,-)
+%if 0%{?hcc}
+%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
+%endif
 %if 0%{?osg} || 0%{?hcc}
 %config(noreplace) %_sysconfdir/condor/campus_factory.conf
-%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
 %endif
 %_libexecdir/condor/shellselector
 %_libexecdir/condor/campus_factory

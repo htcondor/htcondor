@@ -1546,9 +1546,8 @@ using the New environment syntax. If both \AdAttr{PreEnv} and
 \item[\AdAttr{PreJobPrio1}:]  An integer value representing a user's
 priority to affect of choice of jobs to run.
 A larger value gives higher priority. 
-The range of valid values is  \Expr{INT\_MIN + 1} to \Expr{INT\_MAX}.
 When not explicitly set for a job,
-\Expr{INT\_MIN}, the lowest possible priority, is used for comparison purposes.
+0 is used for comparison purposes.
 This attribute, when set, is considered first:
 before \AdAttr{PreJobPrio2}, before \AdAttr{JobPrio},
 before \AdAttr{PostJobPrio1}, before \AdAttr{PostJobPrio2},
@@ -1560,9 +1559,8 @@ and before \AdAttr{QDate}.
 \item[\AdAttr{PreJobPrio2}:]  An integer value representing a user's
 priority to affect of choice of jobs to run.
 A larger value gives higher priority. 
-The range of valid values is  \Expr{INT\_MIN + 1} to \Expr{INT\_MAX}.
 When not explicitly set for a job,
-\Expr{INT\_MIN}, the lowest possible priority, is used for comparison purposes.
+0 is used for comparison purposes.
 This attribute, when set, is considered after \AdAttr{PreJobPrio1}, 
 but before \AdAttr{JobPrio},
 before \AdAttr{PostJobPrio1}, before \AdAttr{PostJobPrio2},
@@ -1574,9 +1572,8 @@ and before \AdAttr{QDate}.
 \item[\AdAttr{PostJobPrio1}:]  An integer value representing a user's
 priority to affect of choice of jobs to run.
 A larger value gives higher priority. 
-The range of valid values is  \Expr{INT\_MIN + 1} to \Expr{INT\_MAX}.
 When not explicitly set for a job,
-\Expr{INT\_MIN}, the lowest possible priority, is used for comparison purposes.
+0 is used for comparison purposes.
 This attribute, when set, is considered after \AdAttr{PreJobPrio1}, 
 after \AdAttr{PreJobPrio1},
 and after \AdAttr{JobPrio},
@@ -1589,9 +1586,8 @@ and before \AdAttr{QDate}.
 \item[\AdAttr{PostJobPrio2}:]  An integer value representing a user's
 priority to affect of choice of jobs to run.
 A larger value gives higher priority. 
-The range of valid values is  \Expr{INT\_MIN + 1} to \Expr{INT\_MAX}.
 When not explicitly set for a job,
-\Expr{INT\_MIN}, the lowest possible priority, is used for comparison purposes.
+0 is used for comparison purposes.
 This attribute, when set, is considered after \AdAttr{PreJobPrio1}, 
 after \AdAttr{PreJobPrio1},
 after \AdAttr{JobPrio},

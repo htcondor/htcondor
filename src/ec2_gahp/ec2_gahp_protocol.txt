@@ -718,7 +718,7 @@
 
     + Request Line:
 
-        EC2_VM_CREATE_KEYPAIR <SP> <request-ID> <SP> <service-URL>
+        EC2_VM_DESTROY_KEYPAIR <SP> <request-ID> <SP> <service-URL>
             <SP> <accessKeyFile> <SP> <secretKeyFile>
             <SP> <ssh-keypair-name> <CRLF>
 
@@ -733,7 +733,7 @@
 
     + Request Line:
 
-        EC2_VM_CREATE_KEYPAIR <SP> <request-ID> <SP> <service-URL>
+        EC2_VM_ASSOCIATE_ADDRESS <SP> <request-ID> <SP> <service-URL>
             <SP> <accessKeyFile> <SP> <secretKeyFile>
             <SP> <instance-ID> <SP> <elastic-IP> <CRLF>
 
@@ -748,7 +748,7 @@
 
     + Request Line:
 
-        EC2_VM_CREATE_KEYPAIR <SP> <request-ID> <SP> <service-URL>
+        EC2_VM_ATTACH_VOLUME <SP> <request-ID> <SP> <service-URL>
             <SP> <accessKeyFile> <SP> <secretKeyFile>
             <SP> <volume-ID> <SP> <instance-ID>
             <SP> <device> <CRLF>
@@ -765,7 +765,7 @@
 
     + Request Line:
 
-        EC2_VM_CREATE_KEYPAIR <SP> <request-ID> <SP> <service-URL>
+        EC2_VM_CREATE_TAGS <SP> <request-ID> <SP> <service-URL>
             <SP> <accessKeyFile> <SP> <secretKeyFile>
             <SP> <resource-ID> [<SP> <tag-name> = <tag-value>]+ CRLF
 
@@ -788,7 +788,7 @@
 
     + Request Line:
 
-        EC2_VM_CREATE_KEYPAIR <SP> <request-ID> <SP> <service-URL>
+        EC2_VM_SERVER_TYPE <SP> <request-ID> <SP> <service-URL>
             <SP> <accessKeyFile> <SP> <secretKeyFile> <CRLF>
 
     + Result Line:

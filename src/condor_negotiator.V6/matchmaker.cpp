@@ -6957,6 +6957,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 	backupAd->AssignExpr(ATTR_REMOTE_USER,"UNDEFINED");
 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
+	std::list<int> usableDSlots;
 	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second <= newRank; slot++) {
 		int dSlot = ranks[slot].first; // dslot index in childXXX list
 
@@ -7035,7 +7036,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 				candidatePreemptState = RANK_PREEMPTION;
 			}
 
+			// Finally, if we made it here, this slot is a candidate for
+			// preemption, fall through and try to merge its resources into
+			// the pslot to match and preempt this one.
 		}
+		usableDSlots.push_back(slot);
 
 			// for each splitable resource, get it from the dslot, and add to pslot
 		for (std::list<std::string>::iterator it = attrs.begin(); it != attrs.end(); it++) {
@@ -7073,10 +7078,12 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 			dprintf(D_FULLDEBUG, "Matched pslot %s by %s preempting %d dynamic slots\n", 
 				name.c_str(),
 				candidatePreemptState == PRIO_PREEMPTION ? "priority" : "startd rank",
-				slot + 1);
+				(int)usableDSlots.size());
 			dslot_claims.clear();
 
-			for (unsigned int child = 0; child < slot + 1; child++) {
+			auto i = usableDSlots.begin();
+			for( ; i != usableDSlots.end(); ++i ) {
+				int child = *i;
 				dslot_claims += child_claims[ranks[child].first];
 				dslot_claims += " ";
 				// TODO Move this clearing of claim ids to
@@ -7099,7 +7106,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 			// Note we do not want to delete backupAd when returning here, since we handed off this
 			// pointer to unmutatedSlotAds above; it will be deleted in DeleteMatchList().
 			return true;
-		} 
+		}
 	}
 
 	// If we made it here, we failed to match this pSlot.  So restore the pslot ad back to

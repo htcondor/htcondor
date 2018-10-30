@@ -127,7 +127,6 @@ void set_vmgahpoptions();
 void set_mailoptions();
 void set_hostpermissions();
 void set_vmuniverse();
-void set_hdfs();
 
 int main(int argc, char** argv) {
 
@@ -152,7 +151,6 @@ int main(int argc, char** argv) {
   set_mailoptions ();
   set_hostpermissions ();
   set_vmuniverse();
-  set_hdfs();
   
   /* the following options go in the vmgahp config file */
   if ( 'Y' == Opt.enablevmuniverse ) {
@@ -255,7 +253,6 @@ set_release_dir() {
 		set_option("RELEASE_DIR", Opt.release_dir);
 		set_option("LOCAL_DIR", Opt.release_dir);
 		//Hack until I work out the AWK script.
-		set_option("HDFS", "$(SBIN)/condor_hdfs.exe");
 		set_option("ROOSTER", "$(SBIN)/condor_rooster.exe");
 	}
 }
@@ -361,26 +358,6 @@ set_vmuniverse() {
 		set_option("VM_NETWORKING", "TRUE");	  
 	}
 	
-}
-
-void set_hdfs() {
-	char buf[MAX_PATH];
-	if ( Opt.namedata ) {
-		set_option("HDFS_SERVICES", Opt.namedata);
-		set_option("HDFS_NAMENODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_name");
-		set_option("HDFS_DATANODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_data");
-		set_option("HDFS_HOME", "$(RELEASE_DIR)/HDFS");
-	}
-
-	if ( Opt.namenode && Opt.nameport ) {
-		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.nameport);
-		set_option("HDFS_NAMENODE", buf);
-	}
-
-	if ( Opt.namenode && Opt.namewebport ) {
-		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.namewebport);
-		set_option("HDFS_NAMENODE_WEB", buf);
-	}
 }
 
 bool 

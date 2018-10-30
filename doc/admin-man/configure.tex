@@ -2790,6 +2790,18 @@ section~\ref{sec:shared-fs}.
   % Default definition in config file: bogus
   % Result if not defined or RHS is empty: this entry is considered False
 
+\label{param:TrustLocalUidDomain}
+\item[\Macro{TRUST\_LOCAL\_UID\_DOMAIN}]
+  This parameter works like \MacroNI{TRUST\_UID\_DOMAIN}, but is only
+  applied when the \Condor{starter} and \Condor{shadow} are on the same
+  machine.
+  If this paramater is set to \Expr{True}, then the \Condor{shadow}'s
+  \MacroNI{UID\_DOMAIN} doesn't have to be a substring its hostname.
+  If this paramater is set to \Expr{False}, then \MacroNI{UID\_DOMAIN}
+  controls whether this substring requirement is enforced by the
+  \Condor{starter}.
+  The default is \Expr{True}.
+
 \label{param:SoftUidDomain}
 \item[\Macro{SOFT\_UID\_DOMAIN}]
   A boolean variable that defaults to \Expr{False} when not defined.
@@ -4420,8 +4432,8 @@ WANT_HOLD_REASON = \
   (See~\ref{PreCmd} for information on PreCmd.)
 
   Also note that, if \MacroNI{MOUNT\_UNDER\_SCRATCH} is defined, it
-  must either be a string or an expression that evaluates to a
-  string.
+  must either be a ClassAd string (with double-quotes) or an expression
+  that evaluates to a string.
 
   For Docker Universe jobs, any directories that are mounted under scratch are
   also volume mounted on the same paths inside the container.  That is, any
@@ -7343,7 +7355,7 @@ Configuration File Entries}
   \SubmitCmdNI{success\_exit\_code} is defined in the submit file,
   and \SubmitCmdNI{max\_retries} is not.)
   (See section~\ref{condor-submit-max-retries} for more information.)
-  The default value if not defined is 10.
+  The default value if not defined is 2.
 
 \end{description}
 
@@ -9335,6 +9347,12 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{GCE\_GAHP}]
   The complete path and file name of the GCE GAHP executable.
   The default value is \File{\MacroUNI{SBIN}/gce\_gahp}.
+
+\label{param:AzureGAHP}
+\item[\Macro{AZURE\_GAHP}]
+  The complete path and file name of the Azure GAHP executable.
+  The default value is \File{\MacroUNI{SBIN}/AzureGAHPServer.py} on
+  Windows and \File{\MacroUNI{SBIN}/AzureGAHPServer} on other platforms.
 
 \label{param:BOINCGAHP}
 \item[\Macro{BOINC\_GAHP}]

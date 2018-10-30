@@ -4438,8 +4438,8 @@ clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
 	int cluster1 = *((const int*)ptr1);
 	int cluster2 = *((const int*)ptr2);
 	int c1_qdate, c2_qdate;	
-	int c1_prio, c1_preprio1, c1_preprio2, c1_postprio1, c1_postprio2=0;	
-	int c2_prio, c2_preprio1, c2_preprio2, c2_postprio1, c2_postprio2=0;
+	int c1_prio=0, c1_preprio1=0, c1_preprio2=0, c1_postprio1=0, c1_postprio2=0;
+	int c2_prio=0, c2_preprio1=0, c2_preprio2=0, c2_postprio1=0, c2_postprio2=0;
 
 	if ((GetAttributeInt(cluster1, 0, ATTR_Q_DATE, &c1_qdate) < 0) || 
 	        (GetAttributeInt(cluster2, 0, ATTR_Q_DATE, &c2_qdate) < 0) ||
@@ -4448,28 +4448,24 @@ clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
 		
 		return -1;
 	}
-	
-        if (GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO1, &c1_preprio1) > -1 &&
-	       GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO1, &c2_preprio1) > -1 ){
-	     if (c1_preprio1 < c2_preprio1) {
-		return 1;
-	     }
 
-	     if (c1_preprio1 > c2_preprio1) {
-		return -1;
-	     }
-        }
-	
-	if (GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO2, &c1_preprio2) > -1 &&
-	       GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO2, &c2_preprio2) > -1 ) {
-	     if (c1_preprio2 < c2_preprio2) {
+	GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO1, &c1_preprio1);
+	GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO1, &c2_preprio1);
+	if (c1_preprio1 < c2_preprio1) {
 		return 1;
-	     }
-
-	     if (c1_preprio2 > c2_preprio2) {
+	}
+	if (c1_preprio1 > c2_preprio1) {
 		return -1;
-	     }
-        }
+	}
+
+	GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO2, &c1_preprio2);
+	GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO2, &c2_preprio2);
+	if (c1_preprio2 < c2_preprio2) {
+		return 1;
+	}
+	if (c1_preprio2 > c2_preprio2) {
+		return -1;
+	}
 	
 	if (c1_prio < c2_prio) {
 		return 1;
@@ -4478,28 +4474,24 @@ clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
 	if (c1_prio > c2_prio) {
 		return -1;
 	}
-	
-        if (GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO1, &c1_postprio1) > -1 &&
-	       GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO1, &c2_postprio1) > -1 ) { 
-	     if (c1_postprio1 < c2_postprio1) {
-		return 1;
-	     }
 
-	     if (c1_postprio1 > c2_postprio1) {
-		return -1;
-	     }
-        }
-	
-	if (GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO2, &c1_postprio2) > -1 &&
-	       GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO2, &c2_postprio2) > -1 ) {
-	     if (c1_postprio2 < c2_postprio2) {
+	GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO1, &c1_postprio1);
+	GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO1, &c2_postprio1);
+	if (c1_postprio1 < c2_postprio1) {
 		return 1;
-	     }
-
-	     if (c1_postprio2 > c2_postprio2) {
+	}
+	if (c1_postprio1 > c2_postprio1) {
 		return -1;
-	     }
-        }
+	}
+
+	GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO2, &c1_postprio2);
+	GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO2, &c2_postprio2);
+	if (c1_postprio2 < c2_postprio2) {
+		return 1;
+	}
+	if (c1_postprio2 > c2_postprio2) {
+		return -1;
+	}
 	
 	return (c1_qdate - c2_qdate);
 }
