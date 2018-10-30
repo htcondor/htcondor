@@ -41,6 +41,7 @@
 #include "sig_install.h"
 #include "basename.h"
 #include "globus_utils.h"
+#include "condor_claimid_parser.h"
 
 // Global variables
 int cmd = 0;
@@ -843,7 +844,8 @@ parseArgv( int  /*argc*/, char* argv[] )
 			// This is the last resort, because claim ids are
 			// no longer considered to be the correct place to
 			// get the startd's address.
-		target = getAddrFromClaimId( claim_id );
+		ClaimIdParser id_parser(claim_id);
+		target = strdup(id_parser.startdSinfulAddr());
 	} else { 
 			// local startd
 		target = NULL;

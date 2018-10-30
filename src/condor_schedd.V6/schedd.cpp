@@ -7939,7 +7939,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			// rely on the claim id to tell us how to connect to the startd.
 		dprintf( D_ALWAYS, "WARNING: %s not in job queue for %d.%d, "
 				 "so using claimid.\n", ATTR_STARTD_IP_ADDR, cluster, proc );
-		startd_addr = getAddrFromClaimId( claim_id );
+		ClaimIdParser id_parser(claim_id);
+		startd_addr = strdup(id_parser.startdSinfulAddr());
 		SetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr);
 	}
 	
