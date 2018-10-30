@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.13 not yet released.
-%\item HTCondor version 8.6.13 released on Month Date, 2018.
+\item HTCondor version 8.6.13 released on October 31, 2018.
 
 \end{itemize}
 
@@ -32,6 +31,10 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Python bindings are now available on Debian 9, Ubuntu 16, and
+Ubuntu 18.
+\Ticket{6751}
 
 \item Grid-type cream jobs are now supported on all linux platforms.
 \Ticket{6799}
@@ -47,14 +50,14 @@ operator to be case sensitive when used to see if a ClassAd contains a given
 attribute.
 \Ticket{6535}
 
-\item Python bindings are now available on Debian 9, Ubuntu 16, and
-Ubuntu 18.
-\Ticket{6751}
-
 \item Fixed a bug in the Python bindings that would leak one or more ClassAds
 each time the submit or submitMany methods of the schedd class were called
 without passing an explicit list to return the result ClassAds.
 \Ticket{6729}
+
+\item Fixed a problem processing the whitelist of user modules for the Python
+bindings.
+\Ticket{6387}
 
 \item Fixed a bug that caused output and error files with full path names
 to be transferred to the wrong directory on Windows.  This would usually

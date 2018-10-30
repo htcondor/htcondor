@@ -62,10 +62,10 @@ condor_release="0.$condor_build_id"
 #condor_release="1"
 
 # Nightly build changelog
-dch --distribution $dist --newversion "$condor_version-$condor_release" "Nightly build"
+#dch --distribution $dist --newversion "$condor_version-$condor_release" "Nightly build"
 
 # Final release changelog
-#dch --release --distribution $dist ignored
+dch --release --distribution $dist ignored
 
 dpkg-buildpackage -uc -us
 

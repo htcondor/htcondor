@@ -492,144 +492,18 @@ above for details on this.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:install-rpms}
-Unix Installation from an RPM}
-\index{installation!using Red Hat RPMs}
-\index{RPM installation on Red Hat}
+\subsubsection{\label{sec:install-repository}
+Unix Installation from a repository}
 
-RPMs are available for HTCondor \VersionNotice.
-We provide a Yum repository, as well as 
-installation and configuration in one easy step.
-This RPM installation is currently available for Red Hat-compatible
-systems only.
-As of HTCondor version 7.5.1, 
-the HTCondor RPM installs into File Hierachy Standard locations.
+Installing HTCondor from repositories preferred for systems that you
+administer.
+If you do not have administrative access, use the tarball instructions below.
 
-Yum repositories and instructions are at
- \URL{http://htcondor.org/yum/} .
-The repositories are named to distinguish stable releases from
-development releases and by Red Hat version number. 
-The 4 repositories are:
-\begin{itemize}
-  \item \File{htcondor-stable-rhel6.repo}
-  \item \File{htcondor-stable-rhel7.repo}
-  \item \File{htcondor-development-rhel6.repo}
-  \item \File{htcondor-development-rhel7.repo}
-\end{itemize}
-
-Here is an ordered set of steps that get HTCondor running using the RPM.
-\begin{enumerate}
-\item The HTCondor package will automatically add a \Login{condor} user/group,
-if it does not exist already.
-Sites wishing to control the attributes of this user/group 
-should add the \Login{condor} user/group manually before installation.
-
-\item Download and install the meta-data that describes 
-the appropriate YUM repository. 
-This example is for the stable series, on RHEL 7.
-\footnotesize
-\begin{verbatim}
-  cd /etc/yum.repos.d
-  wget http://htcondor.org/yum/repo.d/htcondor-stable-rhel7.repo
-\end{verbatim}
-\normalsize
-Note that this step need be done only once;
-do not get the same repository more than once.
-
-\item Import signing key
-The RPMs are signed in the Redhat 6 and RedHat 7 repositories. 
-\begin{verbatim}
-  wget http://htcondor.org/yum/RPM-GPG-KEY-HTCondor
-  rpm --import RPM-GPG-KEY-HTCondor
-\end{verbatim}
-
-\item Install HTCondor.
-\begin{verbatim}
-  yum install condor-all
-\end{verbatim}
-
-\item As needed, edit the HTCondor configuration files to customize.
-The configuration files are in the directory \File{/etc/condor/} .
-Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
-The installation will be able to find configuration files without
-additional administrative intervention,
-as the configuration files are placed in \File{/etc},
-and HTCondor searches this directory.
-
-\item Start HTCondor daemons:
-\begin{verbatim}
-  /sbin/service condor start
-\end{verbatim}
-
-\end{enumerate}
-
-% Alain thinks that upgrades DO work.
-%RPM upgrade (\Opt{-u} option) does not currently
-%work for HTCondor \VersionNotice.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:install-debs}
-Unix Installation from a Debian Package}
-\index{installation!using Debian packages}
-\index{Debian installation with Debian packages}
-
-Debian packages are available in HTCondor \VersionNotice.
-We provide an APT repository, as well as 
-installation and configuration in one easy step.
-These Debian packages of HTCondor are currently available for 
-Debian 7 (wheezy) and Debian 8 (jessie).
-As of HTCondor version 7.5.1, 
-the HTCondor Debian package installs into File Hierachy Standard locations.
-
-The HTCondor APT repositories are specified at
- \URL{http://htcondor.org/debian/} .
-See this web page for repository information.
-
-Here is an ordered set of steps that get HTCondor running.
-\begin{enumerate}
-\item The HTCondor package will automatically add a \Login{condor} user/group,
-if it does not exist already.
-Sites wishing to control the attributes of this user/group 
-should add the \Login{condor} user/group manually before installation.
-
-\item If not already present,
-set up access to the appropriate APT repository;
-they are distinguished as stable or development release,
-and by operating system. 
-Ensure that the correct one of the following release and 
-operating system-specific lines is in 
-the file \File{/etc/apt/sources.list} .
-\footnotesize
-\begin{verbatim}
-deb http://htcondor.org/debian/stable/ wheezy contrib
-deb http://htcondor.org/debian/development/ wheezy contrib
-deb http://htcondor.org/debian/stable/ jessie contrib
-deb http://htcondor.org/debian/development/ jessie contrib
-\end{verbatim}
-\normalsize
-Note that this step need be done only once;
-do not add the same repository more than once.
-
-\item Install and start HTCondor services:
-\begin{verbatim}
-  apt-get update
-  apt-get install condor
-\end{verbatim}
-
-\item As needed, edit the HTCondor configuration files to customize.
-The configuration files are in the directory \File{/etc/condor/} .
-Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
-The installation will be able to find configuration files without
-additional administrative intervention,
-as the configuration files are placed in \File{/etc},
-and HTCondor searches this directory.
-
-Then, if any configuration changes are made, restart HTCondor with
-\begin{verbatim}
-  /etc/init.d/condor restart
-\end{verbatim}
-
-\end{enumerate}
+Repositories are available Red Hat Enterprise Linux and derivatives such as
+CentOS and Scientific Linux.
+Repositories are also available for Debian and Ubuntu LTS.
+Visit the installation documentation at
+ \URL{https://research.cs.wisc.edu/htcondor/instructions/}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:unix-install-from-tarball}
