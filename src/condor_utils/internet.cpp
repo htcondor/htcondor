@@ -565,9 +565,9 @@ getAddrFromClaimId( const char* id )
 	char* tmp;
 	char* addr;
 	char* copy = strdup( id );
-	tmp = strchr( copy, '#' );
+	tmp = strchr( copy, '>' );
 	if( tmp ) {
-		*tmp = '\0';
+		tmp[1] = '\0';
 		if( is_valid_sinful(copy) ) {
 			addr = strdup( copy );
 			free( copy );
