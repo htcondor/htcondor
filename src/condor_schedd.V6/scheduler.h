@@ -30,7 +30,6 @@
 #define _CONDOR_SCHED_H_
 
 #include <map>
-#include <queue>
 #include <set>
 
 #include "dc_collector.h"
@@ -522,7 +521,7 @@ class Scheduler : public Service
 	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
 //	friend	void	job_prio(ClassAd *);
 	void			AddRunnableLocalJobs();
-	bool			IsJobEligibleToRun(JobQueueJob* job);
+	bool			IsLocalJobEligibleToRun(JobQueueJob* job);
 	friend	int		updateSchedDInterval(JobQueueJob*, const JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
@@ -541,7 +540,7 @@ class Scheduler : public Service
 	void			addCronTabClassAd( JobQueueJob* );
 	void			addCronTabClusterId( int );
 	void			indexAJob(JobQueueJob* job, bool loading_job_queue=false);
-	void			removeJobFromIndexes(const JOB_ID_KEY& job_id);
+	void			removeJobFromIndexes(const JOB_ID_KEY& job_id, int job_prio=0);
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
 

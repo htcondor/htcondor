@@ -8481,7 +8481,7 @@ Scheduler::AddRunnableLocalJobs()
 	  
 	double begin = _condor_debug_get_time_double();
 	
-	// Instead of walking the job queue. walk the prio queue of local jobs
+	// Instead of walking the job queue, walk the prio queue of local jobs
 	for (std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); /*++it not here*/) {
 		std::set<LocalJobRec>::iterator curr = it++; // save and advance the iterator, in case we want to erase the item
 		JobQueueJob* job = GetJobAd(curr->job_id);
@@ -8525,11 +8525,10 @@ Scheduler::AddRunnableLocalJobs()
 		// sure its even eligible to run
 		// We do not count REMOVED or HELD jobs
 		//
-        dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] max_hosts=%d, cur_hosts=%d\n", max_hosts, cur_hosts);
 		if ( max_hosts > cur_hosts &&
 			(status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) ) {
 			
-			if (!IsJobEligibleToRun(job)) {
+			if (!IsLocalJobEligibleToRun(job)) {
 				continue;
 			}
 
@@ -8603,7 +8602,7 @@ Scheduler::AddRunnableLocalJobs()
 }
 
 bool
-Scheduler::IsJobEligibleToRun(JobQueueJob* job) {
+Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 
 	PROC_ID id = job->jid;
 
@@ -16130,9 +16129,8 @@ Scheduler::indexAJob( JobQueueJob* jobAd, bool /*loading_job_queue*/ )
 	int univ = jobAd->Universe();
 	if ( univ == CONDOR_UNIVERSE_LOCAL || univ == CONDOR_UNIVERSE_SCHEDULER ) {
 		int job_prio = 0;
-		if( !jobAd->LookupInteger( ATTR_JOB_PRIO, job_prio ) ) {
-			dprintf( D_FULLDEBUG, "Error looking up priority for local job, defaulting to 0\n" );
-		}
+		// If JobPrio is not set in the job ad, it will default to 0
+		jobAd->LookupInteger( ATTR_JOB_PRIO, job_prio );
 		LocalJobRec rec = LocalJobRec( job_prio, jobAd->jid );
 		LocalJobsPrioQueue.insert( rec );
 	}
@@ -16144,19 +16142,10 @@ Scheduler::indexAJob( JobQueueJob* jobAd, bool /*loading_job_queue*/ )
  * @param jobAd - the new job to be added to the cronTabs table
  **/
 void
-Scheduler::removeJobFromIndexes( const JOB_ID_KEY& job_id )
+Scheduler::removeJobFromIndexes( const JOB_ID_KEY& job_id, int job_prio )
 {
-	// Walk the prio queue of local jobs
-	for ( std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); it++ ) {
-		// If this record matches the job_id passed in, erase it
-		if ( it->job_id == job_id ) {
-			LocalJobsPrioQueue.erase( it );
-			return;
-		}
-	}
-
-	// If we got this far, something is wrong. Report an error.
-	dprintf(D_FULLDEBUG, "ERROR: Could not find job_id = %s in the priority list of local jobs.\n", std::string( job_id ).c_str() );
+	LocalJobRec rec = LocalJobRec( job_prio, job_id );
+	LocalJobsPrioQueue.erase( rec );
 	return;
 }
 
