@@ -722,7 +722,7 @@ class AzureGAHPCommandExec():
                 )
             vnet = network_client.virtual_networks.get(
                 cmd_params.vnet_rg_name, cmd_params.vnet_name)
-            if(subnet == None):
+            if(subnet is None):
                 subnets_of_vnet = vnet.subnets
                 if len(subnets_of_vnet) > 0:
                     # use first subnet of the vnet
