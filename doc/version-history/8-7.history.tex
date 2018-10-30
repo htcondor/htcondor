@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The grid universe can now be used to create and manage VM instances
+in Microsoft Azure, using the new grid type \SubmitCmdNI{azure}.
+\Ticket{6176}
+
 \item Added a new file transfer plugin, \emph{multifile\_curl\_plugin} which is
 able to transfer multiple files with only a single invocation of the plugin, 
 preserving the TCP connection. It also takes a classad as input data, which will 
@@ -91,6 +95,13 @@ always default to AUTO.
 This attributes are intended to aid in writing policy expressions that prevent a node from matching jobs
 when the node has frequently failed to start jobs.
 \Ticket{6698}
+
+\item For grid-type boinc jobs, the following job ad attributes can be
+used to to set the BOINC job template parameters of the same name:
+\Attr{rsc\_fpops\_est}, \Attr{rsc\_fpops\_bound},
+\Attr{rsc\_memory\_bound}, \Attr{rsc\_disk\_bound}, \Attr{delay\_bound},
+and \Attr{app\_version\_num}.
+\Ticket{6760}
 
 \end{itemize}
 

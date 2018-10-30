@@ -141,8 +141,6 @@
 //#cmakedefine HAVE_VSNPRINTF
 ///* Define to 1 if you have the ANSI C header files. */
 //#cmakedefine STDC_HEADERS
-///* Define if enabling HDFS */
-//#cmakedefine WANT_HDFS
 ///* Define to 1 if the X Window System is missing or not being used. */
 //#cmakedefine X_DISPLAY_MISSING
 ///* Define to 1 if 'lex' declares 'yytext' as a 'char *' by default, not a 'char[]'. */

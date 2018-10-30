@@ -582,9 +582,6 @@ LOCK		= $(LOG)
 #MAX_SHARED_PORT_LOG     = $(MAX_DEFAULT_LOG)
 #SHARED_PORT_DEBUG       =
 
-#MAX_HDFS_LOG            = $(MAX_DEFAULT_LOG)
-#HDFS_DEBUG              =
-
 # High Availability Logs
 #MAX_HAD_LOG		= $(MAX_DEFAULT_LOG)
 #HAD_DEBUG		=
@@ -940,7 +937,6 @@ SHARED_PORT_LOG = $(LOG)/SharedPortLog
 HAD_LOG		= $(LOG)/HADLog
 REPLICATION_LOG	= $(LOG)/ReplicationLog
 TRANSFERER_LOG	= $(LOG)/TransfererLog
-HDFS_LOG	= $(LOG)/HDFSLog
 
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
@@ -1061,7 +1057,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT, \
+#JOB_ROUTER, ROOSTER, LEASEMANAGER, SHARED_PORT, \
 #DEFRAG, GANGLIAD, ANNEXD
 
 
@@ -1076,7 +1072,6 @@ CKPT_SERVER			= $(SBIN)/condor_ckpt_server
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
 ROOSTER                         = $(LIBEXEC)/condor_rooster
-HDFS				= $(SBIN)/condor_hdfs
 SHARED_PORT			= $(LIBEXEC)/condor_shared_port
 TRANSFERER			= $(LIBEXEC)/condor_transferer
 DEFRAG                          = $(LIBEXEC)/condor_defrag
@@ -2202,97 +2197,6 @@ KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 # %f --> key file to generate
 # %% --> %
 #SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f -t rsa"
-
-######################################################################
-##
-##  Condor HDFS
-##
-##  This is the default local configuration file for configuring Condor
-##  daemon responsible for running services related to hadoop 
-##  distributed storage system.  You should copy this file to the
-##  appropriate location and customize it for your needs.  
-##
-##  Unless otherwise specified, settings that are commented out show
-##  the defaults that are used if you don't define a value.  Settings
-##  that are defined here MUST BE DEFINED since they have no default
-##  value.
-##
-######################################################################
-
-######################################################################
-## FOLLOWING MUST BE CHANGED
-######################################################################
-
-## The location for hadoop installation directory. The default location
-## is under 'libexec' directory. The directory pointed by HDFS_HOME 
-## should contain a lib folder that contains all the required Jars necessary
-## to run HDFS name and data nodes. 
-#HDFS_HOME = $(RELEASE_DIR)/libexec/hdfs
-
-## The host and port for hadoop's name node. If this machine is the
-## name node (see HDFS_SERVICES) then the specified port will be used
-## to run name node. 
-#HDFS_NAMENODE = hdfs://example.com:9000
-#HDFS_NAMENODE_WEB = example.com:8000
-
-#HDFS_BACKUPNODE = hdfs://example.com:50100
-#HDFS_BACKUPNODE_WEB = example.com:50105
-
-## You need to pick one machine as name node by setting this parameter
-## to HDFS_NAMENODE. The remaining machines in a storage cluster will
-## act as data nodes (HDFS_DATANODE).
-#HDFS_NODETYPE = HDFS_DATANODE
-
-## If machine is selected to be NameNode then by a role should defined.
-## If it selected to be DataNode then this parameter is ignored.
-## Available options:
-## ACTIVE: Active NameNode role (default value)
-## BACKUP: Always synchronized with the active NameNode state, thus 
-##         creating a backup of the namespace. Currently the NameNode
-##         supports one Backup node at a time.
-## CHECKPOINT: Periodically creates checkpoints of the namespace. 
-#HDFS_NAMENODE_ROLE = ACTIVE
-
-## The two set of directories that are required by HDFS are for name 
-## node (HDFS_NAMENODE_DIR) and data node (HDFS_DATANODE_DIR). The 
-## directory for name node is only required for a machine running 
-## name node service and  is used to store critical meta data for 
-## files. The data node needs its directory to store file blocks and 
-## their replicas.
-#HDFS_NAMENODE_DIR = /tmp/hadoop_name
-#HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
-
-## Unlike name node address settings (HDFS_NAMENODE), that needs to be 
-## well known across the storage cluster, data node can run on any 
-## arbitrary port of given host.
-#HDFS_DATANODE_ADDRESS = 0.0.0.0:0
-
-####################################################################
-## OPTIONAL
-#####################################################################
-
-## Sets the log4j debug level. All the emitted debug output from HDFS
-## will go in 'hdfs.log' under $(LOG) directory.
-#HDFS_LOG4J=DEBUG
-
-## The access to HDFS services both name node and data node can be 
-## restricted by specifying IP/host based filters. By default settings
-## from ALLOW_READ/ALLOW_WRITE and DENY_READ/DENY_WRITE
-## are used to specify allow and deny list. The below two parameters can
-## be used to override these settings. Read the Condor manual for 
-## specification of these filters.
-## WARN: HDFS doesn't make any distinction between read or write based connection.
-#HDFS_ALLOW=*
-#HDFS_DENY=*
-
-#Fully qualified name for Name node and Datanode class.
-#HDFS_NAMENODE_CLASS=org.apache.hadoop.hdfs.server.namenode.NameNode
-#HDFS_DATANODE_CLASS=org.apache.hadoop.hdfs.server.datanode.DataNode
-#HDFS_DFSADMIN_CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
-
-## In case an old name for hdfs configuration files is required.
-#HDFS_SITE_FILE = hdfs-site.xml
-
 
 ##
 ##--------------------------------------------------------------------
