@@ -1,3 +1,13 @@
+condor (8.7.10-1) unstable; urgency=medium
+
+  * Can now interactively submit Docker jobs
+  * The administrator can now add arguments to the Singularity command line
+  * The MUNGE security method is now supported on all Linux platforms
+  * The grid universe can create and manage VM instances in Microsoft Azure
+  * Added a single-node package to facilitate using a personal HTCondor
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 30 Oct 2018 16:07:41 -0500
+
 condor (8.6.13-1) stable; urgency=medium
 
   * Made the Python 'in' operator case-insensitive for ClassAd attributes

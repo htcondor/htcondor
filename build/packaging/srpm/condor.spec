@@ -1951,6 +1951,13 @@ fi
 %endif
 
 %changelog
+* Wed Oct 31 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.10-1
+- Can now interactively submit Docker jobs
+- The administrator can now add arguments to the Singularity command line
+- The MUNGE security method is now supported on all Linux platforms
+- The grid universe can create and manage VM instances in Microsoft Azure
+- Added a single-node package to facilitate using a personal HTCondor
+
 * Wed Oct 31 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.13-1
 - Made the Python 'in' operator case-insensitive for ClassAd attributes
 - Python bindings are now built for the Debian and Ubuntu platforms
