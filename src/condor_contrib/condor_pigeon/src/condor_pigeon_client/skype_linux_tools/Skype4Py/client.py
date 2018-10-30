@@ -333,7 +333,7 @@ class IPluginMenuItem(Cached):
             self._CacheDict['ENABLED'] = cndexp(Enabled, u'TRUE', u'FALSE')
 
     def _Property(self, PropName, Set=None):
-        if Set == None:
+        if Set is None:
             return self._CacheDict[PropName]
         self._Skype._Property('MENU_ITEM', self._Id, PropName, Set)
         self._CacheDict[PropName] = unicode(Set)

@@ -52,12 +52,12 @@ class ICall(Cached):
 
         @note: This command functions for active calls only.
         '''
-        if Set == None: # get
+        if Set is None: # get
             args = args2dict(self._Property('CAPTURE_MIC', Cache=False))
             for t in args:
                 if t == callIoDeviceTypePort:
                     args[t] = int(args[t])
-            if DeviceType == None: # get active devices
+            if DeviceType is None: # get active devices
                 return args
             return args.get(DeviceType, None)
         elif DeviceType != None: # set
@@ -95,12 +95,12 @@ class ICall(Cached):
 
         @note: This command functions for active calls only.
         '''
-        if Set == None: # get
+        if Set is None: # get
             args = args2dict(self._Property('INPUT', Cache=False))
             for t in args:
                 if t == callIoDeviceTypePort:
                     args[t] = int(args[t])
-            if DeviceType == None: # get active devices
+            if DeviceType is None: # get active devices
                 return args
             return args.get(DeviceType, None)
         elif DeviceType != None: # set
@@ -140,12 +140,12 @@ class ICall(Cached):
         
         @note: This command functions for active calls only.
         '''
-        if Set == None: # get
+        if Set is None: # get
             args = args2dict(self._Property('OUTPUT', Cache=False))
             for t in args:
                 if t == callIoDeviceTypePort:
                     args[t] = int(args[t])
-            if DeviceType == None: # get active devices
+            if DeviceType is None: # get active devices
                 return args
             return args.get(DeviceType, None)
         elif DeviceType != None: # set

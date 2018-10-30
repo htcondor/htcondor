@@ -296,7 +296,7 @@ class _ISkypeAPI(_ISkypeAPIBase):
         fail = self.x11.XGetWindowProperty(self.disp, self.win_root, skype_inst,
                             0, 1, False, 33, byref(type_ret), byref(format_ret),
                             byref(nitems_ret), byref(bytes_after_ret), byref(winp))
-        if not fail and self.error == None and format_ret.value == 32 and nitems_ret.value == 1:
+        if not fail and self.error is None and format_ret.value == 32 and nitems_ret.value == 1:
             return winp.contents.value
 
     def Close(self):

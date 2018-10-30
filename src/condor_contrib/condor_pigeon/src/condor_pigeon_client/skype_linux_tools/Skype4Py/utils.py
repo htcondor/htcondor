@@ -150,7 +150,7 @@ class _WeakMethod(object):
     def __call__(self):
         if self.weak_im_self:
             im_self = self.weak_im_self()
-            if im_self == None:
+            if im_self is None:
                 return None
         else:
             im_self = None
@@ -159,7 +159,7 @@ class _WeakMethod(object):
     def __repr__(self):
         obj = self()
         objrepr = repr(obj)
-        if obj == None:
+        if obj is None:
             objrepr = 'dead'
         return '<weakref at 0x%x; %s>' % (id(self), objrepr)
     def _dies(self, ref):

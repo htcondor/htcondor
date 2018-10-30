@@ -75,7 +75,7 @@ class IApplication(Cached):
         @param Streams: Streams to send the datagram to or None if all currently connected streams should be used.
         @type Streams: sequence of L{IApplicationStream}
         '''
-        if Streams == None:
+        if Streams is None:
             Streams = self.Streams
         for s in Streams:
             s.SendDatagram(Text)

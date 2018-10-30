@@ -169,7 +169,7 @@ class ICallChannelManager(EventHandlingBase):
 
     def _OnCallStatus(self, pCall, Status):
         if Status == clsRinging:
-            if self._Application == None:
+            if self._Application is None:
                 self.CreateApplication()
             self._Application.Connect(pCall.PartnerHandle, True)
             for stream in self._Application.Streams:

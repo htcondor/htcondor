@@ -26,7 +26,7 @@ class Carbon(object):
 
     def __init__(self):
         path = find_library('Carbon')
-        if path == None:
+        if path is None:
             raise ImportError('Could not find Carbon.framework')
         self.lib = cdll.LoadLibrary(path)
         self.lib.RunCurrentEventLoop.argtypes = (c_double,)
@@ -59,7 +59,7 @@ class CoreFoundation(object):
 
     def __init__(self):
         path = find_library('CoreFoundation')
-        if path == None:
+        if path is None:
             raise ImportError('Could not find CoreFoundation.framework')
         self.lib = cdll.LoadLibrary(path)
         self.cfstrs = []

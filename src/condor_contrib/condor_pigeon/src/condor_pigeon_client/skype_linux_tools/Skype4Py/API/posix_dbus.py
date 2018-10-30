@@ -67,14 +67,14 @@ class _ISkypeAPI(_ISkypeAPIBase):
             if self.bus != None:
                 raise TypeError('Bus and MainLoop cannot be used at the same time!')
         except KeyError:
-            if self.bus == None:
+            if self.bus is None:
                 import dbus.mainloop.glib
                 import gobject
                 gobject.threads_init()
                 dbus.mainloop.glib.threads_init()
                 mainloop = dbus.mainloop.glib.DBusGMainLoop()
                 self.mainloop = gobject.MainLoop()
-        if self.bus == None:
+        if self.bus is None:
             from dbus import SessionBus
             self.bus = SessionBus(private=True, mainloop=mainloop)
         if opts:

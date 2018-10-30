@@ -373,7 +373,7 @@ class ISkype(EventHandlingBase):
         while '' in arg:
             arg.remove('')
         jarg = ' '.join(arg)
-        if Set == None: # Get
+        if Set is None: # Get
             if Cache and self._Cache and h in self._CacheDict:
                 return self._CacheDict[h]
             Value = self._DoCommand('GET %s' % jarg, jarg)
@@ -397,7 +397,7 @@ class ISkype(EventHandlingBase):
 
     def _Alter(self, ObjectType, ObjectId, AlterName, Args=None, Reply=None):
         com = 'ALTER %s %s %s' % (str(ObjectType), str(ObjectId), str(AlterName))
-        if Reply == None:
+        if Reply is None:
             Reply = com
         if Args != None:
             com = '%s %s' % (com, Args)
