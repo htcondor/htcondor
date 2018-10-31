@@ -3642,6 +3642,13 @@ ResponsibleForPeriodicExprs( JobQueueJob *jobad, int & status )
 	if( univ==CONDOR_UNIVERSE_SCHEDULER || univ==CONDOR_UNIVERSE_LOCAL ) {
 		return 1;
 	} else if(univ==CONDOR_UNIVERSE_GRID) {
+		if( status == REMOVED && !jobManagedDone(jobad) && jobad->LookupString(ATTR_GRID_JOB_ID, NULL, 0) ) {
+			// Looks like the job's remote job id is still valid,
+			// so there is still a job submitted remotely somewhere,
+			// and the gridmanager hasn't said it's done with it.
+			// Don't do policy evaluation or call DestroyProc() yet.
+			return 0;
+		}
 		return 1;
 	} else {
 		switch(status) {
@@ -3732,16 +3739,7 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 	}
 
 	if ( status == COMPLETED || status == REMOVED ) {
-		// Note: should also call DestroyProc on REMOVED, but 
-		// that will screw up globus universe jobs until we fix
-		// up confusion w/ MANAGED==True.  The issue is a job may be
-		// removed; if the remove failed, it may be placed on hold
-		// with managed==false.  If it is released again, we want the 
-		// gridmanager to go at it again.....  
-		// So for now, just call if status==COMPLETED -Todd <tannenba@cs.wisc.edu>
-		if ( status == COMPLETED ) {
-			DestroyProc(cluster,proc);
-		}
+		DestroyProc(cluster,proc);
 		return 1;
 	}
 

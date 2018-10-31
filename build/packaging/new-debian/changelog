@@ -1,3 +1,24 @@
+condor (8.7.10-1) unstable; urgency=medium
+
+  * Can now interactively submit Docker jobs
+  * The administrator can now add arguments to the Singularity command line
+  * The MUNGE security method is now supported on all Linux platforms
+  * The grid universe can create and manage VM instances in Microsoft Azure
+  * Added a single-node package to facilitate using a personal HTCondor
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 30 Oct 2018 16:07:41 -0500
+
+condor (8.6.13-1) stable; urgency=medium
+
+  * Made the Python 'in' operator case-insensitive for ClassAd attributes
+  * Python bindings are now built for the Debian and Ubuntu platforms
+  * Fixed a memory leak in the Python bindings
+  * Fixed a bug where absolute paths failed for output/error files on Windows
+  * Fixed a bug using Condor-C to run Condor-C jobs
+  * Fixed a bug where Singularity could not be used if Docker was not present
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 30 Oct 2018 10:28:39 -0500
+
 condor (8.7.9-1) unstable; urgency=medium
 
   * Support for Debian 9, Ubuntu 16, and Ubuntu 18
