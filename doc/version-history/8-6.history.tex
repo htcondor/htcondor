@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.6.13 not yet released.
-%\item HTCondor version 8.6.13 released on Month Date, 2018.
+\item HTCondor version 8.6.13 released on October 31, 2018.
 
 \end{itemize}
 
@@ -33,7 +32,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Python bindings are now available on Debian 9, Ubuntu 16, and
+Ubuntu 18.
+\Ticket{6751}
+
+\item Grid-type cream jobs are now supported on all linux platforms.
+\Ticket{6799}
 
 \end{itemize}
 
@@ -41,36 +45,44 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug which would cause certain valid URLs not be recognized.  This
-allows, for example, `s3' to be used as a custom file transfer plug-in.
-\Ticket{6722}
+\item Fixed a bug in the Python classad module that caused the Python \Expr{in}
+operator to be case sensitive when used to see if a ClassAd contains a given
+attribute.
+\Ticket{6535}
 
-\item Fixed a bug in the Python bindings that would leak one or more ClassAds each time
-the submit or submitMany methods of the schedd class were called without passing an explicit list to
-return the result ClassAds.
+\item Fixed a bug in the Python bindings that would leak one or more ClassAds
+each time the submit or submitMany methods of the schedd class were called
+without passing an explicit list to return the result ClassAds.
 \Ticket{6729}
 
-\item Fixed a bug in file transfer where jobs would go on hold if they created
-a domain socket, which the FileTransfer module would subsequently try (and fail) 
-to send back to the submit machine.
-\Ticket{6744}
-
-\item Prevented the combination of -forward and -since flags when calling
-\condor{history}, which is ambiguous as to how it should work.
-\Ticket{6417}
+\item Fixed a problem processing the whitelist of user modules for the Python
+bindings.
+\Ticket{6387}
 
 \item Fixed a bug that caused output and error files with full path names
 to be transferred to the wrong directory on Windows.  This would usually
 cause output file transfer to fail.
 \Ticket{6747}
 
-\item Fixed a bug that could cause grid-type condor jobs under the grid
+\item Fixed a bug that could cause grid-type \Expr{condor} jobs under the grid
 universe to fail if the job's sandbox is transferred more than once.
 \Ticket{6791}
 
-\item Fixed a bug in the Python classad module that caused the Python \Expr{in}
-keyword to be case sensitive when used to see if a ClassAd contains a given attribute.
-\Ticket{6535}
+\item Fixed a bug where Singularity would not be usable if Docker was not
+installed.
+\Ticket{6772}
+
+\item Fixed a bug where \MacroNI{MOUNT\_UNDER\_SCRATCH} would not be
+interpreted as an expression for Singularity jobs.
+\Ticket{6740}
+
+\item Fixed a bug where Docker Universe jobs would not bind mount the
+scratch directory when the jobs did not transfer files.
+\Ticket{6776}
+
+\item Fixed a bug where short-lived Docker jobs would report spuriously
+high usage.
+\Ticket{6796}
 
 \item Fixed how job start timestamps are recorded in the job ad in the
 grid universe and the job router.
@@ -89,6 +101,28 @@ when the files were made by the 64-bit Windows binaries.
 \item Fixed a bug where the negotiator would erroneously preempt some
 dynamic slots when \Macro{ALLOW\_PSLOT\_PREEMPTION} is set.
 \Ticket{6793}
+
+\item Updated the systemd unit file to start HTCondor daemons after NFS
+and the automounter was available.
+\Ticket{6794}
+
+\item Fixed a bug which would cause the \Condor{negotiator} to crash if the
+second argument of an ternary operator is omitted in a \MacroNI{START}
+expression.  \Expr{(expression ?: value)}
+\Ticket{6798}
+
+\item Fixed a bug which would cause certain valid URLs not be recognized.  This
+allows, for example, `s3' to be used as a custom file transfer plug-in.
+\Ticket{6722}
+
+\item Fixed a bug in file transfer where jobs would go on hold if they created
+a domain socket, which the FileTransfer module would subsequently try (and fail)
+to send back to the submit machine.
+\Ticket{6744}
+
+\item Prevented the combination of -forward and -since flags when calling
+\condor{history}, which is ambiguous as to how it should work.
+\Ticket{6417}
 
 \end{itemize}
 
