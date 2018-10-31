@@ -48,10 +48,14 @@ typedef struct PROC_ID {
 		return StrIsProcId(job_id_str, this->cluster, this->proc, NULL);
 	}
 
-	PROC_ID() : cluster( -1 ), proc( -1 ) {}
+	// The schedd uses 0.0 in the job log for its own purposes.  Since it
+	// further defines all of cluster 0 (and all negative process numbers)
+	// as non-jobs, we'll use job 0.1 to mark the invalid job to preserve
+	// the negative numbers for future expansion.
+	PROC_ID() : cluster( 0 ), proc( 11 ) {}
 	PROC_ID( int c, int p ) : cluster(c), proc(p) {}
-	bool isValid() { return cluster != -1 && proc != -1; }
-	void invalidate() { cluster = -1; proc = -1; }
+	bool isValid() { return cluster != 0 && proc != 1; }
+	void invalidate() { cluster = 0; proc = 1; }
 #endif
 } PROC_ID;
 

@@ -817,3 +817,45 @@ ChildAliveMsg::messageSendFailed( DCMessenger *messenger )
 		}
 	}
 }
+
+
+TwoClassAdMsg::TwoClassAdMsg( int cmd, ClassAd & first, ClassAd & second ) :
+	DCMsg( cmd ), firstClassAd( first ), secondClassAd( second ) { }
+
+bool
+TwoClassAdMsg::writeMsg( DCMessenger *, Sock * sock ) {
+	if(! putClassAd( sock, firstClassAd )) {
+		sockFailed( sock );
+		return false;
+	}
+	if(! putClassAd( sock, secondClassAd )) {
+		sockFailed( sock );
+		return false;
+	}
+	return true;
+}
+
+bool
+TwoClassAdMsg::readMsg( DCMessenger *, Sock * sock ) {
+	if(! getClassAd( sock, firstClassAd )) {
+		sockFailed( sock );
+		return false;
+	}
+	if(! getClassAd( sock, secondClassAd )) {
+		sockFailed( sock );
+		return false;
+	}
+	return true;
+}
+
+DCMsg::MessageClosureEnum
+TwoClassAdMsg::messageSent( DCMessenger * messenger, Sock * sock ) {
+	messenger->startReceiveMsg( this, sock );
+	return MESSAGE_CONTINUING;
+}
+
+DCMsg::MessageClosureEnum
+TwoClassAdMsg::messageReceived( DCMessenger * messenger, Sock * ) {
+	reportSuccess( messenger );
+	return MESSAGE_FINISHED;
+}

@@ -317,7 +317,7 @@ class match_rec: public ClaimIdParser
 		return m_description.Value();
 	}
 
-	PROC_ID m_next_job;
+	PROC_ID m_now_job;
 };
 
 class UserIdentity {
@@ -890,8 +890,9 @@ private:
 	// utility functions
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, int flock_level, int debug_level);
-    int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
-    int			command_query_ads(int, Stream* stream);
+	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
+	int			command_query_ads(int, Stream* stream);
 	int			command_history(int, Stream* stream);
 	int			history_helper_launcher(const HistoryHelperState &state);
 	int			history_helper_reaper(int, int);
