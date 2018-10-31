@@ -203,10 +203,6 @@ Source123: zlib-1.2.3.tar.gz
 Patch8: osg_sysconfig_in_init_script.patch
 #% endif
 
-# HCC patches
-# See gt3158
-Patch15: wso2-axis2.patch
-
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires: cmake
@@ -707,10 +703,6 @@ exit 0
 
 %if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
-%endif
-
-%if 0%{?hcc}
-%patch15 -p0
 %endif
 
 # fix errant execute permissions
