@@ -42,6 +42,9 @@
 	bringing in the full classad.h header file structure causing complications
 	to third parties using this API. -psilord 02/21/03
 */
+namespace classad {
+	class ClassAd;
+}
 namespace compat_classad {
   class ClassAd;
 }
@@ -886,6 +889,11 @@ class TerminatedEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     int readEventBody( FILE *, bool & got_sync_line, const char* header );
+
+	/** Populate the pusageAd from the given classad
+		@return 0 for failure, 1 for success
+	*/
+	int initUsageFromAd(const classad::ClassAd& ad);
 
 
     /** Format the body of the next Terminated event.

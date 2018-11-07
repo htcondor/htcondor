@@ -33,6 +33,7 @@
 #include <sys/socket.h>
 #endif
 #include "write_user_log.h"
+#include "classad/classad_distribution.h"
 #include "my_username.h"
 
 struct hostent *NameEnt;
@@ -168,6 +169,16 @@ int writeNodeTerminatedEvent(WriteUserLog &logFile)
 	struct rusage ru;
 	simulateUsage(ru);
 
+	classad::ClassAd use;
+	use.InsertAttr("RequestMemory", 44);
+	use.InsertAttr("Memory", 55);
+	use.InsertAttr("MemoryUsage", 33);
+
+	use.InsertAttr("RequestPets", 1);
+	use.InsertAttr("Pets", 1);
+	use.InsertAttr("PetsUsage", 0.5);
+	use.InsertAttr("AssignedPets", "Spot");
+
 	NodeTerminatedEvent nodeterminated;
 	nodeterminated.node = 44;
 	nodeterminated.normal = false;
@@ -180,6 +191,9 @@ int writeNodeTerminatedEvent(WriteUserLog &logFile)
 	nodeterminated.total_recvd_bytes = 800000;
 	nodeterminated.total_sent_bytes = 900000;
 	nodeterminated.setCoreFile( "badfilecore" );
+
+	nodeterminated.initUsageFromAd(use);
+	
 	if ( !logFile.writeEvent(&nodeterminated) ) {
 	        printf("Complain about bad nodeterminated write\n");
 			exit(1);

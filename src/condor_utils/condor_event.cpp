@@ -3343,6 +3343,79 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 	return 1;
 }
 
+// extract Request<RES>, "<RES>Usage", "Assigned<RES>" and "<RES>" attributes from the given ad
+// both Request<RES> and <RES> must exist, Assignd<RES> and <RES>Usage may or may not
+// other attributes of the input ad are ignored
+int TerminatedEvent::initUsageFromAd(const classad::ClassAd& ad)
+{
+	std::string strRequest("Request");
+	std::string attr; // temporary
+
+	// the strategy here is to iterate the attributes of the classad
+	// looking ones that start with "Request" If we find one
+	// we remove the "Request" prefix, and check to see if the remainder
+	// is a resource tag. We do this by looking for a bare attribute with that name.
+	// if we find that, then we have a <RES> tag
+	// then we copy the "<RES>", "Request<RES>", "<RES>Usage" and "Assigned<RES>" attributes
+	for (auto it = ad.begin(); it != ad.end(); ++it) {
+		if (starts_with_ignore_case(it->first, strRequest)) {
+			// remove the Request prefix to get a tag. does that tag exist as an attribute?
+			std::string tag = it->first.substr(7);
+			if (tag.empty())
+				continue; 
+			ExprTree * expr = ad.Lookup(tag);
+			if ( ! expr)
+				continue;
+
+			// got one, tag is a resource tag
+
+			if ( ! pusageAd) {
+				pusageAd = new ClassAd();
+				if ( ! pusageAd)
+					return 0; // failure
+			}
+
+			// Copy <RES> attribute into the pusageAd
+			expr = expr->Copy();
+			if ( ! expr)
+				return 0;
+			pusageAd->Insert(tag, expr);
+
+			// Copy Request<RES> attribute into the pusageAd
+			expr = it->second->Copy();
+			if ( ! expr)
+				return 0;
+			pusageAd->Insert(it->first, expr);
+
+			// Copy <RES>Usage attribute if it exists
+			attr = tag; attr += "Usage";
+			expr = ad.Lookup(attr);
+			if (expr) {
+				expr = expr->Copy();
+				if ( ! expr)
+					return 0;
+				pusageAd->Insert(attr, expr);
+			} else {
+				pusageAd->Delete(attr);
+			}
+
+			// Copy Assigned<RES> attribute if it exists
+			attr = "Assigned"; attr += tag;
+			expr = ad.Lookup(attr);
+			if (expr) {
+				expr = expr->Copy();
+				if (!expr)
+					return 0;
+				pusageAd->Insert(attr, expr);
+			} else {
+				pusageAd->Delete(attr);
+			}
+		}
+	}
+
+	return 1;
+}
+
 
 // ----- JobTerminatedEvent class
 JobTerminatedEvent::JobTerminatedEvent(void) : TerminatedEvent()
@@ -3387,6 +3460,10 @@ JobTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
+
+	if (pusageAd) {
+		myad->Update(*pusageAd);
+	}
 
 	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
 		delete myad;
@@ -3468,6 +3545,8 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
+
+	initUsageFromAd(*ad);
 
 	int reallybool;
 	if( ad->LookupInteger("TerminatedNormally", reallybool) ) {
@@ -4477,6 +4556,10 @@ NodeTerminatedEvent::toClassAd(void)
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 
+	if (pusageAd) {
+		myad->Update(*pusageAd);
+	}
+
 	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
 		delete myad;
 		return NULL;
@@ -4559,6 +4642,8 @@ NodeTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
+
+	initUsageFromAd(*ad);
 
 	int reallybool;
 	if( ad->LookupInteger("TerminatedNormally", reallybool) ) {
