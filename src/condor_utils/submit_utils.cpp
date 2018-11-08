@@ -7851,7 +7851,7 @@ int SubmitHash::parse_up_to_q_line(MacroStream &ms, std::string & errmsg, char**
 
 	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
 
-	PRAGMA_REMIND("move firstread (used by Parse_macros) and at_eof() into MacroStream class")
+	//PRAGMA_REMIND("move firstread (used by Parse_macros) and at_eof() into MacroStream class")
 
 	int err = Parse_macros(ms,
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
@@ -7859,7 +7859,7 @@ int SubmitHash::parse_up_to_q_line(MacroStream &ms, std::string & errmsg, char**
 	if (err < 0)
 		return err;
 
-	PRAGMA_REMIND("TJ:TODO qline is a pointer to a global (static) variable here, it should be instanced instead.")
+	//PRAGMA_REMIND("TJ:TODO qline is a pointer to a global (static) variable here, it should be instanced instead.")
 	*qline = args.line;
 	return 0;
 }
