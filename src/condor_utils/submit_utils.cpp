@@ -525,6 +525,7 @@ struct SimpleExprInfo {
 	char const *attr; // job attribute
 	char const *default_value; // default value
 	bool quote_it;    // whether to quote as a string before parsing.
+	bool attr_is_alt2; // use attr as additional alternate submit key
 };
 
 static char * trim_and_strip_quotes_in_place(char * str)
@@ -1989,10 +1990,10 @@ int SubmitHash::SetUserLog()
 
 	static const SimpleExprInfo logs[] = {
 		/*submit_param*/ {SUBMIT_KEY_UserLogFile, ATTR_ULOG_FILE,
-				ATTR_ULOG_FILE, NULL, true},
+				ATTR_ULOG_FILE, NULL, true, false},
 		/*submit_param*/ {SUBMIT_KEY_DagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG,
-				ATTR_DAGMAN_WORKFLOW_LOG, NULL, true},
-		{NULL,NULL,NULL,NULL,false}
+				ATTR_DAGMAN_WORKFLOW_LOG, NULL, true, false},
+		{NULL,NULL,NULL,NULL,false,false}
 	};
 
 	for(const SimpleExprInfo * si = &logs[0]; si->key; ++si) {
@@ -3641,16 +3642,16 @@ int SubmitHash::SetCronTab()
 
 	static const SimpleExprInfo fields[] = {
 		/*submit_param*/ {SUBMIT_KEY_CronMinute, ATTR_CRON_MINUTES,
-				ATTR_CRON_MINUTES, NULL, true},
+				ATTR_CRON_MINUTES, NULL, true, false},
 		/*submit_param*/ {SUBMIT_KEY_CronHour, ATTR_CRON_HOURS,
-				ATTR_CRON_HOURS, NULL, true},
+				ATTR_CRON_HOURS, NULL, true, false},
 		/*submit_param*/ {SUBMIT_KEY_CronDayOfMonth, ATTR_CRON_DAYS_OF_MONTH,
-				ATTR_CRON_DAYS_OF_MONTH, NULL, true},
+				ATTR_CRON_DAYS_OF_MONTH, NULL, true, false},
 		/*submit_param*/ {SUBMIT_KEY_CronMonth, ATTR_CRON_MONTHS,
-				ATTR_CRON_MONTHS, NULL, true},
+				ATTR_CRON_MONTHS, NULL, true, false},
 		/*submit_param*/ {SUBMIT_KEY_CronDayOfWeek, ATTR_CRON_DAYS_OF_WEEK,
-				ATTR_CRON_DAYS_OF_WEEK, NULL, true},
-		{NULL,NULL,NULL,NULL,false}
+				ATTR_CRON_DAYS_OF_WEEK, NULL, true, false},
+		{NULL,NULL,NULL,NULL,false,false}
 	};
 
 	bool has_cron = false;
@@ -4778,14 +4779,14 @@ int SubmitHash::SetSimpleJobExprs()
 	RETURN_IF_ABORT();
 	static const SimpleExprInfo simple_exprs[] = {
 		/*submit_param*/ {SUBMIT_KEY_NextJobStartDelay, ATTR_NEXT_JOB_START_DELAY,
-				ATTR_NEXT_JOB_START_DELAY, NULL, false},
+				ATTR_NEXT_JOB_START_DELAY, NULL, false, false},
 		/*submit_param*/ {ATTR_JOB_KEEP_CLAIM_IDLE, SUBMIT_KEY_KeepClaimIdle,
-				ATTR_JOB_KEEP_CLAIM_IDLE, NULL, false},
+				ATTR_JOB_KEEP_CLAIM_IDLE, NULL, false, false},
 		/*submit_param*/ {ATTR_JOB_AD_INFORMATION_ATTRS, SUBMIT_KEY_JobAdInformationAttrs,
-				ATTR_JOB_AD_INFORMATION_ATTRS, NULL, true},
-		/*submit_param*/ {SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE,
-				ATTR_JOB_MATERIALIZE_MAX_IDLE, NULL, false},
-		{NULL,NULL,NULL,NULL,false}
+				ATTR_JOB_AD_INFORMATION_ATTRS, NULL, true, false},
+		/*submit_param*/ {SUBMIT_KEY_JobMaterializeMaxIdle, SUBMIT_KEY_JobMaterializeMaxIdleAlt,
+				ATTR_JOB_MATERIALIZE_MAX_IDLE, NULL, false, true},
+		{NULL,NULL,NULL,NULL,false, false}
 	};
 
 	const SimpleExprInfo *i = simple_exprs;
@@ -4793,6 +4794,9 @@ int SubmitHash::SetSimpleJobExprs()
 		char *expr;
 		expr = submit_param( i->key, i->alt );
 		RETURN_IF_ABORT();
+		if ( ! expr && i->attr_is_alt2) {
+			expr = submit_param(i->attr, i->key);
+		}
 		if( !expr ) {
 			if( !i->default_value ) {
 				continue;
