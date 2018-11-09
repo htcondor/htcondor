@@ -1831,7 +1831,8 @@ int submit_jobs (
 		if (GotQueueCommand == 1) {
 			if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
 				want_factory = 1;
-			} else if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
+			} else if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true) ||
+				       submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
 				max_materialize = INT_MAX; // no max materialize specified, so set it to number of jobs
 				want_factory = 1;
 			} else if (want_factory < 0) {

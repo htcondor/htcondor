@@ -2250,6 +2250,19 @@ an optional specification of the Virtual Private Cloud (VPC) that
 this instance should be a part of.
 
 %%%%%%%%%%%%%%%%%%%
+%% gce_account
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_account}
+\label{condor-submit-gce-account}
+\item[gce\_account = \lt{}account name\gt{}]
+For grid type \SubmitCmdNI{gce} jobs,
+specifies the Google cloud services account to use.
+If this submit command isn't specified, then a random account
+from the authorization file given by \SubmitCmd{gce\_auth\_file}
+will be used.
+
+%%%%%%%%%%%%%%%%%%%
 %% gce_auth_file
 %%%%%%%%%%%%%%%%%%%
 
@@ -2259,7 +2272,8 @@ this instance should be a part of.
 For grid type \SubmitCmdNI{gce} jobs, 
 specifies a path and file name of the authorization file that grants
 permission for HTCondor to use the Google account.
-There is no default value when not specified.
+If this command is not specified, then the default file of the
+Google command-line tools will be used.
 
 %%%%%%%%%%%%%%%%%%%
 %% gce_image
