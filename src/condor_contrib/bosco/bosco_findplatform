@@ -16,9 +16,10 @@ DEB8="DEB8"
 DEB9="DEB9"
 UBUNTU14="UBUNTU14"
 UBUNTU16="UBUNTU16"
+UBUNTU18="UBUNTU18"
 
-SUPPORTED_OSX = ['10.10', '10.11', '10.12']
-SUPPORTED_PLATFORMS = [ RH6, RH7, OSX, DEB8, DEB9, UBUNTU14, UBUNTU16 ]
+SUPPORTED_OSX = ['10.10', '10.11', '10.12', '10.13', '10.14']
+SUPPORTED_PLATFORMS = [ RH6, RH7, OSX, DEB8, DEB9, UBUNTU14, UBUNTU16, UBUNTU18 ]
 
 # download URLs for the different platforms
 URL_DICT={
@@ -29,6 +30,7 @@ URL_DICT={
   RH7: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat7.tar.gz",
   UBUNTU14: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu14.tar.gz",
   UBUNTU16: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu16.tar.gz",
+  UBUNTU18: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu18.tar.gz",
 }
 
 BIT32="32bit"
@@ -113,6 +115,8 @@ Codename:    oneiric
           retv=UBUNTU14
         if line[len('DISTRIB_RELEASE='):].startswith('16.'):
           retv=UBUNTU16
+        if line[len('DISTRIB_RELEASE='):].startswith('18.'):
+          retv=UBUNTU18
   return retv
 
 def findversion():
@@ -146,6 +150,8 @@ def findversion():
           return UBUNTU14
         if mydist[1].startswith('16'):
           return UBUNTU16
+        if mydist[1].startswith('18'):
+          return UBUNTU18
     if os.path.isfile('/etc/redhat-release'):
       return findversion_redhat()
     elif os.path.isfile('/etc/lsb-release'):
