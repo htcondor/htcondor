@@ -39,6 +39,7 @@ class JobEvent {
 		int cluster() const;
 		int proc() const;
 
+		boost::python::list Py_Keys();
 		boost::python::object Py_GetItem( const std::string & k );
 		bool Py_Contains( const std::string & k );
 

@@ -155,6 +155,24 @@ JobEvent::proc() const {
 	return event->proc;
 }
 
+boost::python::list
+JobEvent::Py_Keys() {
+	if( ad == NULL ) {
+		ad = event->toClassAd();
+		if( ad == NULL ) {
+			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+		}
+	}
+
+	boost::python::list l;
+	auto i = ad->begin();
+	for( ; i != ad->end(); ++i ) {
+		l.append( i->first );
+	}
+
+	return l;
+}
+
 bool
 JobEvent::Py_Contains( const std::string & k ) {
 	if( ad == NULL ) {
@@ -220,6 +238,7 @@ void export_event_log() {
 		.add_property( "cluster", & JobEvent::cluster, "..." )
 		.add_property( "proc", & JobEvent::cluster, "..." )
 		.add_property( "timestamp", & JobEvent::timestamp, "..." )
+		.def( "keys", &JobEvent::Py_Keys )
 		.def( "__contains__", &JobEvent::Py_Contains )
 		.def( "__getitem__", &JobEvent::Py_GetItem );
 
