@@ -128,48 +128,59 @@ JobEventLog::next() {
 
 // ----------------------------------------------------------------------------
 
-JobEvent::JobEvent() : event( NULL ), caw( NULL ) { }
-
-JobEvent::JobEvent( ULogEvent * e ) : event( e ), caw( NULL ) { }
+JobEvent::JobEvent( ULogEvent * e ) : event( e ), ad( NULL ) { }
 
 JobEvent::~JobEvent() {
 	if( event ) { delete event; }
-	if( caw ) { delete caw; }
+	if( ad ) { delete ad; }
 }
 
 ULogEventNumber
 JobEvent::type() const {
-	if( event ) { return event->eventNumber; }
-	else { return ULogEventNumber::ULOG_NONE; }
+	return event->eventNumber;
 }
 
+time_t
+JobEvent::timestamp() const {
+	return event->GetEventclock();
+}
+
+int
+JobEvent::cluster() const {
+	return event->cluster;
+}
+
+int
+JobEvent::proc() const {
+	return event->proc;
+}
+
+// from classad.cpp
+extern boost::python::object
+convert_value_to_python( const classad::Value & value );
+
 boost::python::object
-JobEvent::Py_GetAttr( const std::string & s ) {
-	// We could special-case cluster, proc, and subproc like we did type,
-	// or detect them here.  The former is probably faster.
-
-	if( event == NULL ) {
-		// The NONE event has no attributes.
-		return boost::python::object();
-	}
-
-	if( caw == NULL ) {
-		ClassAd * classad = event->toClassAd();
-		if( classad == NULL ) {
+JobEvent::Py_GetItem( const std::string & k ) {
+	if( ad == NULL ) {
+		ad = event->toClassAd();
+		if( ad == NULL ) {
 			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
 		}
-
-		caw = new ClassAdWrapper();
-		caw->CopyFrom( * static_cast< classad::ClassAd * >( classad ) );
-		delete classad;
 	}
 
-	// We could special-case some synthetic attributes here (e.g., JobID),
-	// but it'd be faster to write accessors (see above).
-
-	// FIXME: If this doesn't THROW_EX( AttributeError ... ), we need to.
-	// If it THROW_EX( KeyError ...)s instead, we need to catch it convert.
-	return caw->get( s );
+	// Based on ClassAdWrapper::contains(), I don't need to free this.
+	ExprTree * e = ad->Lookup( k );
+	if( e ) {
+		classad::Value v;
+		if( e->Evaluate( v ) ) {
+			return convert_value_to_python( v );
+		} else {
+			// All the values in an event's ClassAd should be constants.
+			THROW_EX( TypeError, "Unable to evaluate expression" );
+		}
+	} else {
+		THROW_EX( KeyError, k.c_str() );
+	}
 }
 
 
@@ -188,8 +199,11 @@ void export_event_log() {
 
 	boost::python::class_<JobEvent, boost::noncopyable>( "JobEvent", boost::python::no_init )
 		.add_property( "type", & JobEvent::type, "..." )
-		.def( "__getattr__", & JobEvent::Py_GetAttr )
-	;
+		.add_property( "cluster", & JobEvent::cluster, "..." )
+		.add_property( "proc", & JobEvent::cluster, "..." )
+		.add_property( "timestamp", & JobEvent::timestamp, "..." )
+		.def( "__getitem__", &JobEvent::Py_GetItem );
+
 
 	// Allows conversion of JobEvent instances to Python objects.
 	boost::python::register_ptr_to_python< boost::shared_ptr< JobEvent > >();
