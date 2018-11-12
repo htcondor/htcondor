@@ -155,6 +155,10 @@ JobEvent::proc() const {
 	return event->proc;
 }
 
+// from classad.cpp
+extern boost::python::object
+convert_value_to_python( const classad::Value & value );
+
 boost::python::list
 JobEvent::Py_Keys() {
 	if( ad == NULL ) {
@@ -168,6 +172,56 @@ JobEvent::Py_Keys() {
 	auto i = ad->begin();
 	for( ; i != ad->end(); ++i ) {
 		l.append( i->first );
+	}
+
+	return l;
+}
+
+boost::python::list
+JobEvent::Py_Values() {
+	if( ad == NULL ) {
+		ad = event->toClassAd();
+		if( ad == NULL ) {
+			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+		}
+	}
+
+	boost::python::list l;
+	auto i = ad->begin();
+	for( ; i != ad->end(); ++i ) {
+		ExprTree * e = i->second;
+		classad::Value v;
+		if( e->Evaluate(v) ) {
+			l.append( convert_value_to_python( v ) );
+		} else {
+			// All the values in an event's ClassAd should be constants.
+			THROW_EX( TypeError, "Unable to evaluate expression" );
+		}
+	}
+
+	return l;
+}
+
+boost::python::list
+JobEvent::Py_Items() {
+	if( ad == NULL ) {
+		ad = event->toClassAd();
+		if( ad == NULL ) {
+			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+		}
+	}
+
+	boost::python::list l;
+	auto i = ad->begin();
+	for( ; i != ad->end(); ++i ) {
+		ExprTree * e = i->second;
+		classad::Value v;
+		if( e->Evaluate(v) ) {
+			l.append( boost::python::make_tuple( i->first, convert_value_to_python( v ) ) );
+		} else {
+			// All the values in an event's ClassAd should be constants.
+			THROW_EX( TypeError, "Unable to evaluate expression" );
+		}
 	}
 
 	return l;
@@ -190,10 +244,6 @@ JobEvent::Py_Contains( const std::string & k ) {
 		return false;
 	}
 }
-
-// from classad.cpp
-extern boost::python::object
-convert_value_to_python( const classad::Value & value );
 
 boost::python::object
 JobEvent::Py_GetItem( const std::string & k ) {
@@ -239,6 +289,8 @@ void export_event_log() {
 		.add_property( "proc", & JobEvent::cluster, "..." )
 		.add_property( "timestamp", & JobEvent::timestamp, "..." )
 		.def( "keys", &JobEvent::Py_Keys )
+		.def( "items", &JobEvent::Py_Items )
+		.def( "values", &JobEvent::Py_Values )
 		.def( "__contains__", &JobEvent::Py_Contains )
 		.def( "__getitem__", &JobEvent::Py_GetItem );
 
