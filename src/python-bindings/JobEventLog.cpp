@@ -155,6 +155,24 @@ JobEvent::proc() const {
 	return event->proc;
 }
 
+bool
+JobEvent::Py_Contains( const std::string & k ) {
+	if( ad == NULL ) {
+		ad = event->toClassAd();
+		if( ad == NULL ) {
+			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+		}
+	}
+
+	// Based on ClassAdWrapper::contains(), I don't need to free this.
+	ExprTree * e = ad->Lookup( k );
+	if( e ) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 // from classad.cpp
 extern boost::python::object
 convert_value_to_python( const classad::Value & value );
@@ -202,6 +220,7 @@ void export_event_log() {
 		.add_property( "cluster", & JobEvent::cluster, "..." )
 		.add_property( "proc", & JobEvent::cluster, "..." )
 		.add_property( "timestamp", & JobEvent::timestamp, "..." )
+		.def( "__contains__", &JobEvent::Py_Contains )
 		.def( "__getitem__", &JobEvent::Py_GetItem );
 
 

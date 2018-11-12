@@ -40,6 +40,7 @@ class JobEvent {
 		int proc() const;
 
 		boost::python::object Py_GetItem( const std::string & k );
+		bool Py_Contains( const std::string & k );
 
 	private:
 		ULogEvent * event;
