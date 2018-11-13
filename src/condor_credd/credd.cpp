@@ -202,62 +202,85 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 {
 	ReliSock* r = (ReliSock*)s;
 	r->decode();
-	MyString user, modules;
-	r->code(user);
-	r->code(modules);
+	int numads;
+	r->code(numads);
+	ClassAd requests[numads];
+	for(int i=0; i<numads; i++) {
+		getClassAd(r, requests[i]);
+	}
 	r->end_of_message();
 
-	dprintf(D_ALWAYS, "ZKM: got zkm_query_creds for user %s modules %s\n", user.Value(), modules.Value());
+	dprintf(D_ALWAYS, "ZKM: got zkm_query_creds.  there are %i requests.\n", numads);
 
 	MyString URL;
 
-	StringList mod(modules.Value(),",");
-	MyString missing;
-	char* onemod;
-	mod.rewind();
-	while(onemod=mod.next()) {
-		MyString tmpfname = onemod;
+	ClassAd missing[numads];
+	int nummissing = 0;
+	for(int i=0; i<numads; i++) {
+		MyString service;
+		MyString handle;
+		MyString user;
+		requests[i].LookupString("Service", service);
+		requests[i].LookupString("Handle", handle);
+		requests[i].LookupString("Username", user);
+
+		MyString tmpfname;
+		tmpfname = service;
+		tmpfname.replaceString("/",":");
+		if(handle.Length()) {
+			tmpfname += "_";
+			tmpfname += handle;
+		}
 		tmpfname += ".top";
 
 		dprintf(D_ALWAYS, "ZKM: looking for %s\n", tmpfname.Value());
 		if (!credmon_poll_continue(user.Value(), 0, tmpfname.Value())) {
-			if(!missing.empty()) {
-				missing += ",";
-			}
 			dprintf(D_ALWAYS, "ZKM: missing %s\n", tmpfname.Value());
-			missing += onemod;
+			missing[nummissing] = requests[i];
+			nummissing++;
 		}
 	}
 
-	if(!missing.empty()) {
+	if(nummissing > 0) {
 		// create unique request file with classad metadata
 		char *key = Condor_Crypt_Base::randomHexKey(32);
 
 		MyString contents;
 
-		StringList mis(missing.Value(),",");
-		char* onemis;
-		mis.rewind();
-		while(onemis = mis.next()) {
+		for (int i=0; i<nummissing; i++) {
 			// fill in everything we need to pass
 			ClassAd ad;
 			MyString tmpname;
 			MyString tmpvalue;
-			ad.Assign("LocalUser", user);
-			ad.Assign("Provider", onemis);
 
-			tmpname = onemis;
+			MyString service;
+			missing[i].LookupString("Service", service);
+			ad.Assign("Provider", service);
+
+			missing[i].LookupString("Username", tmpvalue);
+			ad.Assign("LocalUser", tmpvalue);
+
+			missing[i].LookupString("Handle", tmpvalue);
+			ad.Assign("Handle", tmpvalue);
+
+			missing[i].LookupString("Scopes", tmpvalue);
+			ad.Assign("Scopes", tmpvalue);
+
+			missing[i].LookupString("Audience", tmpvalue);
+			ad.Assign("Audience", tmpvalue);
+
+			tmpname = service;
 			tmpname += "_CLIENT_ID";
 			param(tmpvalue, tmpname.c_str());
 			ad.Assign("ClientId", tmpvalue);
 
 			// this is a hack.  secret needs to be in a root-owned file, not in config.
-			tmpname = onemis;
+			tmpname = service;
 			tmpname += "_CLIENT_SECRET";
 			param(tmpvalue, tmpname.c_str());
 			ad.Assign("ClientSecret", tmpvalue);
 
-			tmpname = onemis;
+			tmpname = service;
 			tmpname += "_RETURN_URL_SUFFIX";
 			param(tmpvalue, tmpname.c_str());
 
@@ -273,17 +296,17 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			ad.Assign("ReturnUrl", URL);
 			URL = "";
 
-			tmpname = onemis;
+			tmpname = service;
 			tmpname += "_AUTHORIZATION_URL";
 			param(tmpvalue, tmpname.c_str());
 			ad.Assign("AuthorizationUrl", tmpvalue);
 
-			tmpname = onemis;
+			tmpname = service;
 			tmpname += "_TOKEN_URL";
 			param(tmpvalue, tmpname.c_str());
 			ad.Assign("TokenUrl", tmpvalue);
 
-			tmpname = onemis;
+			tmpname = service;
 			tmpname += "_USER_URL";
 			param(tmpvalue, tmpname.c_str());
 			ad.Assign("UserUrl", tmpvalue);
