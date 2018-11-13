@@ -42,6 +42,7 @@ class JobEvent {
 		boost::python::list Py_Keys();
 		boost::python::list Py_Items();
 		boost::python::list Py_Values();
+		boost::python::object Py_Get( const std::string & k, boost::python::object d = boost::python::object() );
 		boost::python::object Py_GetItem( const std::string & k );
 		bool Py_Contains( const std::string & k );
 

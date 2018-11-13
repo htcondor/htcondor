@@ -245,6 +245,32 @@ JobEvent::Py_Contains( const std::string & k ) {
 	}
 }
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(JobEventPyGetOverloads, Py_Get, 1, 2)
+
+boost::python::object
+JobEvent::Py_Get( const std::string & k, boost::python::object d ) {
+	if( ad == NULL ) {
+		ad = event->toClassAd();
+		if( ad == NULL ) {
+			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+		}
+	}
+
+	// Based on ClassAdWrapper::contains(), I don't need to free this.
+	ExprTree * e = ad->Lookup( k );
+	if( e ) {
+		classad::Value v;
+		if( e->Evaluate( v ) ) {
+			return convert_value_to_python( v );
+		} else {
+			// All the values in an event's ClassAd should be constants.
+			THROW_EX( TypeError, "Unable to evaluate expression" );
+		}
+	} else {
+		return d;
+	}
+}
+
 boost::python::object
 JobEvent::Py_GetItem( const std::string & k ) {
 	if( ad == NULL ) {
@@ -283,16 +309,17 @@ void export_event_log() {
 	// Allows conversion of JobEventLog instances to Python objects.
 	boost::python::register_ptr_to_python< boost::shared_ptr< JobEventLog > >();
 
-	boost::python::class_<JobEvent, boost::noncopyable>( "JobEvent", boost::python::no_init )
+	boost::python::class_<JobEvent, boost::noncopyable>( "JobEvent", "...", boost::python::no_init )
 		.add_property( "type", & JobEvent::type, "..." )
 		.add_property( "cluster", & JobEvent::cluster, "..." )
 		.add_property( "proc", & JobEvent::cluster, "..." )
 		.add_property( "timestamp", & JobEvent::timestamp, "..." )
-		.def( "keys", &JobEvent::Py_Keys )
-		.def( "items", &JobEvent::Py_Items )
-		.def( "values", &JobEvent::Py_Values )
-		.def( "__contains__", &JobEvent::Py_Contains )
-		.def( "__getitem__", &JobEvent::Py_GetItem );
+		.def( "get", &JobEvent::Py_Get, JobEventPyGetOverloads( "..." ) )
+		.def( "keys", &JobEvent::Py_Keys, "..." )
+		.def( "items", &JobEvent::Py_Items, "..." )
+		.def( "values", &JobEvent::Py_Values, "..." )
+		.def( "__contains__", &JobEvent::Py_Contains, "..." )
+		.def( "__getitem__", &JobEvent::Py_GetItem, "..."  );
 
 
 	// Allows conversion of JobEvent instances to Python objects.
