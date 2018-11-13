@@ -159,6 +159,21 @@ JobEvent::proc() const {
 extern boost::python::object
 convert_value_to_python( const classad::Value & value );
 
+boost::python::object
+JobEvent::Py_IterKeys() {
+	return Py_Keys().attr("__iter__")();
+}
+
+boost::python::object
+JobEvent::Py_IterValues() {
+	return Py_Values().attr("__iter__")();
+}
+
+boost::python::object
+JobEvent::Py_IterItems() {
+	return Py_Items().attr("__iter__")();
+}
+
 boost::python::list
 JobEvent::Py_Keys() {
 	if( ad == NULL ) {
@@ -295,7 +310,6 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	}
 }
 
-
 // ----------------------------------------------------------------------------
 
 void export_event_log() {
@@ -318,6 +332,10 @@ void export_event_log() {
 		.def( "keys", &JobEvent::Py_Keys, "..." )
 		.def( "items", &JobEvent::Py_Items, "..." )
 		.def( "values", &JobEvent::Py_Values, "..." )
+		.def( "iterkeys", &JobEvent::Py_IterKeys, "..." )
+		.def( "iteritems", &JobEvent::Py_IterItems, "..." )
+		.def( "itervalues", &JobEvent::Py_IterValues, "..." )
+		.def( "__iter__", &JobEvent::Py_IterKeys, "..." )
 		.def( "__contains__", &JobEvent::Py_Contains, "..." )
 		.def( "__getitem__", &JobEvent::Py_GetItem, "..."  );
 
