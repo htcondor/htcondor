@@ -146,16 +146,3 @@ index 716edbe07c..967e029189 100644
 ++# Permissions needed to allow a personal HTCondor to work out of the box on Debian
 ++ALLOW_WRITE = $(CONDOR_HOST) $(IP_ADDRESS) 127.*
 ++ALLOW_NEGOTIATOR = $(CONDOR_HOST) $(IP_ADDRESS) 127.*
-diff --git a/src/condor_examples/condor.service b/src/condor_examples/condor.service
-index 3bab7c73f7..acd282072b 100644
---- a/src/condor_examples/condor.service
-+++ b/src/condor_examples/condor.service
-@@ -1,7 +1,7 @@
- 
- [Unit]
- Description=Condor Distributed High-Throughput-Computing
--After=syslog.target network-online.target nslcd.service ypbind.service time-sync.target
-+After=network-online.target nslcd.service ypbind.service time-sync.target
- Wants=network-online.target
- # Disabled until HTCondor security fixed.
- # Requires=condor.socket

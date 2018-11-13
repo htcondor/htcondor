@@ -19,8 +19,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.7.10 not yet released.
-%\item HTCondor version 8.7.10 released on Month Date, 2018.
+\item HTCondor version 8.7.10 released on October 31, 2018.
 
 \end{itemize}
 
@@ -29,9 +28,27 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item One can now submit an interactive Docker job.
+\Ticket{6710}
+
+\item Added the \MacroNI{SINGULARITY\_EXTRA\_ARGUMENTS} configuration parameter.
+Administrators can now append arguments to the Singularity command line.
+\Ticket{6731}
+
+\item The MUNGE security method is now supported on all Linux platforms.
+\Ticket{6713}
+
+\item The grid universe can now be used to create and manage VM instances
+in Microsoft Azure, using the new grid type \SubmitCmdNI{azure}.
+\Ticket{6176}
+
+\item Added single-node configuration package to facilitate using a
+personal HTCondor.
+\Ticket{6709}
+
 \item Added a new file transfer plugin, \emph{multifile\_curl\_plugin} which is
-able to transfer multiple files with only a single invocation of the plugin, 
-preserving the TCP connection. It also takes a classad as input data, which will 
+able to transfer multiple files with only a single invocation of the plugin,
+preserving the TCP connection. It also takes a ClassAd as input data, which will
 allow us to pass in more complex input than the existing \emph{curl\_plugin}.
 \Ticket{6499}
 
@@ -45,12 +62,62 @@ but unlike \MacroNI{LIMIT\_JOB\_RUNTIMES},
 Additionally, both of the new policies function while the machine is draining.
 \Ticket{6701}
 
-\item If the first line of the job's executable starts with \#\!
+\item \Condor{submit} will no longer attempt to read submit commands from standard input
+when there is no submit file if a queue statement and at least one submit command
+is provided on the command line.
+\Ticket{6581}
+
+\item If the first line of the job's executable starts with \Expr{\#!}
 \Condor{submit} will now check that line for a Windows/DOS line ending, and if it finds
 one, it will not submit the job because such a script will not be able to start on Unix
-or Linux platforms.  This check can be changed from an error to a warnding by submitting
+or Linux platforms.  This check can be changed from an error to a warning by submitting
 with the \Opt{allow-crlf-script} option.
 \Ticket{6660}
+
+\item Added support for spaces in remapped file paths in \Condor{submit}.
+\Ticket{6642}
+
+\item Improved error handling during SSL authentication.
+\Ticket{6720}
+
+\item Improved throughput when submitting a large number of Condor-C jobs.
+Previously, Condor-C jobs could remain held for a long time in the remote
+\Condor{schedd}'s queue while other jobs were being submitted.
+\Ticket{6716}
+
+\item Updated default configuration parameters to improve performance for
+large pools and gives users a better experience.
+\Ticket{6768}
+\Ticket{6787}
+
+\item Added new configuration parameter \MacroNI{TRUST\_LOCAL\_UID\_DOMAIN}.
+It works like \MacroNI{TRUST\_UID\_DOMAIN}, but only applies when the
+\Condor{shadow} and \Condor{starter} are on the same machine.
+\Ticket{6785}
+
+\item Added a new configuration parameter \MacroNI{SUBMIT\_DEFAULT\_SHOULD\_TRANSFER\_FILES}.
+It determines whether file transfer should default to YES, NO, or AUTO when when the submit file
+does not supply a value for \MacroNI{should\_transfer\_files} and file transfer is not forced
+on or off by some other parameter in the submit file.  Prior to this addition, \Condor{submit} would
+always default to AUTO.
+\Ticket{6784}
+
+\item Added new statistics attributes about the lifetime of the \Condor{starter} to the \Condor{startd} Ad.
+This attributes are intended to aid in writing policy expressions that prevent a node from matching jobs
+when the node has frequently failed to start jobs.
+\Ticket{6698}
+
+\item For grid-type \Expr{boinc} jobs, the following job ad attributes can be
+used to to set the BOINC job template parameters of the same name:
+\Attr{rsc\_fpops\_est}, \Attr{rsc\_fpops\_bound},
+\Attr{rsc\_memory\_bound}, \Attr{rsc\_disk\_bound}, \Attr{delay\_bound},
+and \Attr{app\_version\_num}.
+\Ticket{6760}
+
+\item Daemons now advertise \Attr{DaemonLastReconfigTime} in all of their ads.
+This is either the boot time of the time, or the last time \Condor{reconfig}
+was run on that daemon.
+\Ticket{6758}
 
 \end{itemize}
 
@@ -59,9 +126,65 @@ with the \Opt{allow-crlf-script} option.
 \begin{itemize}
 
 \item Fixed a bug where \MacroNI{PREEMPT} was not be evaluated if the
-machine was draining.  This prevent the HOLD\_IF series of policies from
+machine was draining.  This prevent the \Expr{HOLD\_IF} series of policies from
 functioning properly in that situation.
 \Ticket{6697}
+
+\item Fixed a bug that occurred when starting Docker Universe jobs that
+would cause the \Condor{starter} to crash and the jobs to cycle between
+\Expr{running} and \Expr{idle} status.
+\Ticket{6725}
+
+\item Fixed a bug that could cause a job to go into a rapid cycle
+between \Expr{running} and \Expr{idle} status if a policy expression evaluated
+to \Expr{Undefined} during input file transfer.
+\Ticket{6728}
+
+\item Fixed bugs where small jobs would not match partitionable slots when
+Group Quotas were enabled.
+\Ticket{6714}
+\Ticket{6750}
+
+\item Fixed a bug that prevented \Condor{tail} \Expr{-stderr} from working.
+\Ticket{6755}
+
+\item \Condor{who} now works properly on macOS.
+\Ticket{6652}
+
+\item Fixed output of \Condor{q} -global when printing in JSON, XML, or
+new ClassAd format.
+\Ticket{6761}
+
+\item Fixed a bug that could cause \Condor{wait} and the python bindings
+on Windows to repeat events when reading the job event log.
+\Ticket{6752}
+
+\item Added missing Accounting, Credd, and Defrag AdTypes to the python bindings
+AdTypes enumeration.
+\Ticket{6737}
+
+\item Fixed a bug that caused late materialization jobs to handle the \MacroNI{getenv}
+submit command incorrectly.
+\Ticket{6723}
+
+\item Fixed an inefficiency in the SetAttribute remote procedure call that could sometimes
+result in noticeable performance reduction of the \Condor{schedd}.  Removing this inefficiency
+will allow a single \Condor{schedd} to handle updates from a larger number of running jobs.
+\Ticket{6732}
+
+\item The \Condor{gangliad} can now publish accounting Ads as Ganglia metrics.
+\Ticket{6757}
+
+\item \Condor{ssh\_to\_job} is now configured to use the IPv4 loopback address.
+This avoids problems when IPv6 is present but not enabled.
+\Ticket{6711}
+
+\item Fixed a bug where the \Attr{JobSuccessExitCode} was not set.
+\Ticket{6786}
+
+\item Fixed a problem with the EC2 configuration file was present in the
+tarballs.
+\Ticket{6797}
 
 \end{itemize}
 
@@ -602,7 +725,7 @@ job cluster, instead of once per job.
 \begin{itemize}
 
 \item \Security
-This release of HTCondor fixes a security-related bug described at 
+This release of HTCondor fixes a security-related bug described at
 \URL{http://htcondor.org/security/vulnerabilities/HTCONDOR-2017-0001.html}.
 \Ticket{6455}
 

@@ -247,7 +247,7 @@ if (WINDOWS)
 	message(STATUS "OpenMP support will be disabled on Windows until we have a chance to fix the installer to support it")
 	# TJ: 8.5.8 disabling OpenMP on Windows because it adds a dependency on an additional merge module for VCOMP110.DLL
 else()
-	find_package (OpenMP)
+	find_package ("OpenMP")
 endif()
 
 if (FIPS_BUILD)
@@ -675,7 +675,6 @@ endif()
 # compilation/build options.
 option(UW_BUILD "Variable to allow UW-esk builds." OFF)
 option(HAVE_HIBERNATION "Support for condor controlled hibernation" ON)
-option(WANT_LEASE_MANAGER "Enable lease manager functionality" ON)
 option(HAVE_JOB_HOOKS "Enable job hook functionality" ON)
 option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
@@ -932,8 +931,7 @@ else ()
         add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
     endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.12.1)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.14.1)
 
         if (LINUX)
           option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
@@ -1064,10 +1062,6 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 if (HAVE_EXT_OPENSSL)
 	add_definitions(-DWITH_OPENSSL) # used only by SOAP
 endif(HAVE_EXT_OPENSSL)
-
-if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
-	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
-endif()
 
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.

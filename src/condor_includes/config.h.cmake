@@ -141,8 +141,6 @@
 //#cmakedefine HAVE_VSNPRINTF
 ///* Define to 1 if you have the ANSI C header files. */
 //#cmakedefine STDC_HEADERS
-///* Define if enabling HDFS */
-//#cmakedefine WANT_HDFS
 ///* Define to 1 if the X Window System is missing or not being used. */
 //#cmakedefine X_DISPLAY_MISSING
 ///* Define to 1 if 'lex' declares 'yytext' as a 'char *' by default, not a 'char[]'. */
@@ -157,9 +155,6 @@
 
 /* Define if sha1 checksums are required for released packages*/
 #cmakedefine ENABLE_CHECKSUM_SHA1 1
-
-/* Define if enabling lease manager (USED)*/
-#cmakedefine WANT_LEASE_MANAGER 1
 
 /* Define if enabling NeST (USED)*/
 #cmakedefine WANT_NEST 1

@@ -62,8 +62,8 @@ if ($boos) { $CloneDir =~ s/userdir/sources/; }
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	my $enable_vs9 = 0;
 	my $enable_x64 = 0;
-	my $use_latest_vs = 0;
-	my $use_cmake3 = 0;
+	my $use_latest_vs = 1;
+	my $use_cmake3 = 1;
 
 	#uncomment to use vs9 on Win7 platform
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
@@ -94,7 +94,11 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     $externals_loc   = "c:/temp/condor";
     #$ENV{CONDOR_BLD_EXTERNAL_STAGE} = "$externals_loc";
 	if ($use_cmake3) {
-		$ENV{PATH} = "C:\\Program Files\\CMake3\\bin;$ENV{PATH}";
+		if (-d "C:\\Tools\\CMake3\\bin") {
+			$ENV{PATH} = "C:\\Tools\\CMake3\\bin;$ENV{PATH}";
+		} else {
+			$ENV{PATH} = "C:\\Program Files\\CMake3\\bin;$ENV{PATH}";
+		}
 	} else {
 		$ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{PATH}";
 	}

@@ -1,0 +1,66 @@
+--- gsoap-2.7/gsoap/stdsoap2.cpp	2010-04-06 11:23:14.000000000 -0500
++++ gsoap-2.7/gsoap/stdsoap2.cpp-patched	2018-10-12 16:24:51.475671375 -0500
+@@ -3982,7 +3982,12 @@
+       }
+       if (!(soap->ssl_flags & SOAP_SSL_SKIP_HOST_CHECK))
+       { X509_NAME *subj;
++	STACK_OF(CONF_VALUE) *val = NULL;
++#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
++        GENERAL_NAMES *names = NULL;
++#else
+         int ext_count;
++#endif
+         int ok = 0;
+         X509 *peer;
+         peer = SSL_get_peer_certificate(soap->ssl);
+@@ -3991,6 +3996,7 @@
+           soap->fclosesocket(soap, fd);
+           return SOAP_INVALID_SOCKET;
+         }
++#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+         ext_count = X509_get_ext_count(peer);
+         if (ext_count > 0)
+         { int i;
+@@ -4051,6 +4057,33 @@
+               break;
+           }
+         }
++#else
++        names = (GENERAL_NAMES*)X509_get_ext_d2i(peer, NID_subject_alt_name, NULL, NULL);
++        if (names)
++        {
++	  val = i2v_GENERAL_NAMES(NULL, names, val);
++	  sk_GENERAL_NAME_pop_free(names, GENERAL_NAME_free);
++	}
++	if (val)
++	{
++	  int j;
++	  for (j = 0; j < sk_CONF_VALUE_num(val); j++)
++	  {
++	    CONF_VALUE *nval = sk_CONF_VALUE_value(val, j);
++	    if (nval && (!strcmp(nval->name, "DNS") || !strcmp(nval->name, "IP Address")) && !soap_tag_cmp(host, nval->value))
++	    {
++	      ok = 1;
++	      DBGLOG(TEST, SOAP_MESSAGE(fdebug, "SSL: host name %s match with certificate %s %s\n", host, nval->name, nval->value));
++	      break;
++	    }
++	    else
++	    {
++	      DBGLOG(TEST, SOAP_MESSAGE(fdebug, "SSL: host name %s mismatch with certificate %s %s\n", host, nval->name, nval->value));
++	    }
++	  }
++	  sk_CONF_VALUE_pop_free(val, X509V3_conf_free);
++	}
++#endif
+         if (!ok && (subj = X509_get_subject_name(peer)))
+         { int i = -1;
+           do
+@@ -4060,7 +4093,7 @@
+               break;
+             name = X509_NAME_ENTRY_get_data(X509_NAME_get_entry(subj, i));
+             if (name)
+-            { if (!soap_tag_cmp(host, (const char*)M_ASN1_STRING_data(name)))
++            { if (!soap_tag_cmp(host, (const char*)ASN1_STRING_data(name)))
+                 ok = 1;
+               else
+               { unsigned char *tmp = NULL;

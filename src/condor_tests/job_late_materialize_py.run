@@ -70,6 +70,11 @@ peak_materialized = 0
 peak_running = 0
 peak_idle = 0
 
+def print_file_contents(filename):
+	with open(filename) as fh : logdata = fh.read()
+	print("--- %s ---" % filename)
+	print(logdata)
+
 def cluster_removal(event):
 	if (event.type == JobEventType.CLUSTER_REMOVE): return 1
 	return 0
@@ -105,11 +110,11 @@ def wait_for_event(id, logfile, timeout, func):
 			Utils.TLog("ulog: ClusterRemove({0})".format(event.cluster))
 			total_factories -= 1
 
-			print '\t          now peak total'
-			print '\trunning  {0:4d} {1:4d} {2:5d}'.format(num_running, peak_running, total_running)
-			print '\tidle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized)
-			print '\tpresent  {0:4d} {1:4d} {2:5d}'.format(num_materialized, peak_materialized, total_materialized)
-			print '\tfactory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1)
+			print('\t          now peak total')
+			print('\trunning  {0:4d} {1:4d} {2:5d}'.format(num_running, peak_running, total_running))
+			print('\tidle     {0:4d} {1:4d} {2:5d}'.format(num_idle, peak_idle, total_materialized))
+			print('\tpresent  {0:4d} {1:4d} {2:5d}'.format(num_materialized, peak_materialized, total_materialized))
+			print('\tfactory  {0:4d} {1:4d} {2:5d}'.format(total_factories, 1, 1))
 			#break
 
 		elif event.type == JobEventType.CLUSTER_SUBMIT:
@@ -146,7 +151,7 @@ def wait_for_event(id, logfile, timeout, func):
 			pass
 
 		else:
-			Utils.TLog("ulog: {0}.{1} found unexpected event of type {2}, failing".format( str(event.cluster, event.proc, event.type) ) );
+			Utils.TLog("ulog: {0}.{1} found unexpected event of type {2}, failing".format(event.cluster, event.proc, event.type));
 			return 0
 
 		if (func(event)) : break
@@ -183,7 +188,7 @@ sub = htcondor.Submit("""
 	executable = x_sleep.pl
 	arguments = 1
 	notification = never	
-	materialize_max_idle = 6
+	max_idle = 6
 	My.Foo = "$(Item)"
 	log = %s.$(ClusterId).log
 	queue in (A, B, C, D, E, F, G, H, I, J, K, L)
@@ -218,8 +223,8 @@ if timed_out:
 	exit(1)
 
 Utils.TLog("cluster %d completed, checking results:" % cluster)
-if peak_idle != int(sub['materialize_max_idle']):
-	Utils.Log("FAILURE: peak_idle({0}) != materialize_max_idle({1})".format(peak_idle, sub['materialize_max_idle']))
+if peak_idle != int(sub['max_idle']):
+	Utils.Log("FAILURE: peak_idle({0}) != max_idle({1})".format(peak_idle, sub['max_idle']))
 	retval = 1
 elif total_materialized != num_items:
 	Utils.Log("FAILURE: total_materialized({0}) != {1}".format(total_materialized, num_items))
@@ -294,6 +299,7 @@ Utils.TLog("wait up to 5 min for jobs in cluster %d to materialize" % cluster)
 timed_out = wait_for_event(cluster, logfile, 5*60, all_materialized)
 if timed_out:
 	Utils.TLog("Timed out waiting for all jobs to materialize")
+	print_file_contents(logfile)
 	exit(1)
 
 Utils.TLog("cluster %d completed, checking results:" % cluster)

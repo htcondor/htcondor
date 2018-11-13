@@ -36,7 +36,8 @@ class CondorTest(object):
         if pc is None:
             pc = PersonalCondor( name, params, ordered_params )
             CondorTest._personal_condors[ name ] = pc
-        pc.Start()
+       	if not pc.Start():
+       		raise RuntimeError("Personal condor '{0}' failed to start.".format(name));
         return pc
 
     @staticmethod
@@ -44,11 +45,13 @@ class CondorTest(object):
         pc = CondorTest._personal_condors.get( name )
         if pc is not None:
             pc.Stop()
+            del CondorTest._personal_condors[name]
 
     @staticmethod
     def StopAllPersonalCondors():
         for name, pc in CondorTest._personal_condors.keys():
             pc.Stop()
+        CondorTest._personal_condors.clear()
 
 
     #

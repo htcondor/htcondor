@@ -1,0 +1,2 @@
+# Configure for the small (32-bit) shadow on this system
+SHADOW = $(SBIN)/condor_shadow_s

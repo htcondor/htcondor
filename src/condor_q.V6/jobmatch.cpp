@@ -1556,7 +1556,7 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 	}
 
 #if 1
-	PRAGMA_REMIND("TJ: what does this do?")
+	//PRAGMA_REMIND("TJ: what does this do?")
 #else
 	if (better_analyze) {
 		std::string ana_buffer = "";

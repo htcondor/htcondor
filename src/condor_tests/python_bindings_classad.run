@@ -500,7 +500,11 @@ def main():
             print(result)
 
     if not failed_tests:
+<<<<<<< HEAD
         sys.exit(SUCCESS)
+=======
+        sys.exit(TEST_SUCCESS)
+>>>>>>> master
     else:
         sys.exit(TEST_FAILURE)
 

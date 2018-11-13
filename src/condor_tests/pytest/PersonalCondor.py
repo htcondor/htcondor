@@ -83,13 +83,16 @@ class PersonalCondor(object):
     def FinishStopping(self):
         # FIXME: This (a) needs a timeout and (b) if the timeout expires,
         # we need a more-agressive shutdown method.
+        #
+        # FIXME: It should also, if it detects that the master exited,
+        # decline to try to stop the master again when this process exits.
         while self._master_process.poll() is None:
             Utils.TLog("[PC: {0}] Master did not exit, will check again in five seconds...".format(self._name))
             time.sleep( 5 )
         Utils.TLog("[PC: {0}] Master exited".format(self._name))
 
     def Stop(self):
-        self.StartStopping()
+        self.BeginStopping()
         self.FinishStopping()
 
     def Start(self):
@@ -144,6 +147,10 @@ class PersonalCondor(object):
 # From PersonalCondor
 #
 """
+		# `condor_config_val -write:up` includes the local config file.  Don't
+		# include it again, since the right thing to set this knob to is
+		# '$(LOCAL_DIR)/condor_config.local', and that file won't exist.
+        config += "LOCAL_CONFIG_FILE = \n"
         config += "LOCAL_DIR = " + self._local_path + "\n"
         config += "EXECUTE = " + self._execute_path + "\n"
         config += "LOCK = " + self._lock_path + "\n"

@@ -45,6 +45,7 @@ my @expected_output =
 'Job Released.........',
 'Job Node Execute.........',
 'Node Terminated .........',
+'	Memory : requested 44, got 55, used 33',
 'Post Script Terminated.........',
 'Job Globus Submit.........',
 'Job Globus Submit Failed.........',

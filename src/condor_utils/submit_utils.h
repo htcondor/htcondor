@@ -312,7 +312,8 @@
 #define SUBMIT_KEY_JobMaxVacateTime "job_max_vacate_time"
 
 #define SUBMIT_KEY_JobMaterializeLimit "max_materialize"
-#define SUBMIT_KEY_JobMaterializeMaxIdle "materialize_max_idle"
+#define SUBMIT_KEY_JobMaterializeMaxIdle "max_idle"
+#define SUBMIT_KEY_JobMaterializeMaxIdleAlt "materialize_max_idle"
 
 #define SUBMIT_KEY_REMOTE_PREFIX "Remote_"
 

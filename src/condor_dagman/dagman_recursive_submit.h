@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#if 0 // Moved to dagman_utils
 #ifndef DAGMAN_RECURSIVE_SUBMIT_H
 #define DAGMAN_RECURSIVE_SUBMIT_H
 
@@ -151,3 +152,4 @@ int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 }
 
 #endif	// ifndef DAGMAN_RECURSIVE_SUBMIT_H
+#endif

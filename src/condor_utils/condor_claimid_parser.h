@@ -55,7 +55,15 @@ class ClaimIdParser {
 	char const *startdSinfulAddr() {
 		if( m_sinful_part.IsEmpty() ) {
 			char const *str = m_claim_id.Value();
-			char const *end = strchr(str,'#');
+			char const *end;
+			if ( str[0] == '<' ) {
+				end = strchr(str, '>');
+				if ( end != NULL ) {
+					end++;
+				}
+			} else {
+				end = strchr(str, '#');
+			}
 			int length = end ? end - str : 0;
 			m_sinful_part.formatstr("%.*s",length,str);
 		}

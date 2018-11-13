@@ -142,8 +142,6 @@ job_dagman_basic
 #job_dagman_splice-N
 #job_dagman_splice-O
 #job_dagman_splice-scaling
-##job_dagman_stork-file-file
-##job_dagman_stork-remove
 #job_dagman_subdag-A
 #job_dagman_submit_fails_post
 #job_dagman_usedagdir

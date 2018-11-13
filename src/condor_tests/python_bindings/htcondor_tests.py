@@ -40,6 +40,10 @@ def remove_ignore_missing(file):
 
 
 # Bootstrap condor
+<<<<<<< HEAD
+=======
+release_dir = os.environ["_condor_RELEASE_DIR"]
+>>>>>>> master
 testdir = os.path.join(os.getcwd(), "tests_tmp")
 logdir = os.path.join(testdir, "log")
 makedirs_ignore_exist(testdir)
@@ -58,6 +62,7 @@ class WithDaemons(unittest.TestCase):
         self.pid = -1
         to_delete = [i for i in os.environ if i.lower().startswith("_condor_")]
         for key in to_delete: del os.environ[key]
+<<<<<<< HEAD
         os.environ["_condor_MASTER"] = os.path.join(os.getcwd(), "../condor_master.V6/condor_master")
         os.environ["_condor_COLLECTOR"] = os.path.join(os.getcwd(), "../condor_collector.V6/condor_collector")
         os.environ["_condor_SCHEDD"] = os.path.join(os.getcwd(), "../condor_schedd.V6/condor_schedd")
@@ -67,6 +72,9 @@ class WithDaemons(unittest.TestCase):
         os.environ["_condor_NEGOTIATOR"] = os.path.join(os.getcwd(), "../condor_negotiator.V6/condor_negotiator")
         os.environ["_condor_SHADOW"] = os.path.join(os.getcwd(), "../condor_shadow.V6.1/condor_shadow")
         os.environ["_condor_SHARED_PORT"] = os.path.join(os.getcwd(), "../condor_shared_port/condor_shared_port")
+=======
+        os.environ["_condor_RELEASE_DIR"] = release_dir
+>>>>>>> master
         os.environ["_condor_CONDOR_HOST"] = socket.getfqdn()
         os.environ["_condor_LOCAL_DIR"] = testdir
         os.environ["_condor_LOG"] =  '$(LOCAL_DIR)/log'
@@ -125,7 +133,12 @@ class WithDaemons(unittest.TestCase):
         if not self.pid:
             try:
                 try:
+<<<<<<< HEAD
                     os.execvp("condor_master", ["condor_master", "-f"])
+=======
+                    condor_master = release_dir + "/sbin/condor_master"
+                    os.execvp(condor_master, ["condor_master", "-f"])
+>>>>>>> master
                 except:
                     e = sys.exc_info()[1]
                     print(str(e))
@@ -168,7 +181,10 @@ class WithDaemons(unittest.TestCase):
             time.sleep(1)
         return coll.locate(dtype, dname)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
 class TestPythonBindings(WithDaemons):
 
     def testRemoteParam(self):
@@ -214,7 +230,14 @@ class TestPythonBindings(WithDaemons):
         self.assertTrue("MyAddress" in coll_ad)
         self.assertEqual(coll_ad["Name"].split(":")[-1], os.environ["_condor_PORT"])
 
+<<<<<<< HEAD
     def testLocateList(self):
+=======
+    # FIXME: The locate() call on the last line raises ValueError.  It seems
+    # like it should (although 'collector.example' is probably a safer name),
+    # but I don't know that, so I'm just disabling the test instead.
+    def LocateList(self):
+>>>>>>> master
         self.launch_daemons(["COLLECTOR"])
         coll = htcondor.Collector()
         coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
@@ -261,6 +284,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
+<<<<<<< HEAD
         ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(ad, 1, False, ads)
@@ -268,6 +292,13 @@ class TestPythonBindings(WithDaemons):
         for i in range(60):
             ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
             #print ads
+=======
+        ad = classad.parseOne(open("submit.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 1, False, ads)
+        for i in range(60):
+            ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+>>>>>>> master
             if len(ads) == 0:
                 break
             if i % 2 == 0:
@@ -281,6 +312,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
+<<<<<<< HEAD
         ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(ad, 10, False, ads)
@@ -289,6 +321,14 @@ class TestPythonBindings(WithDaemons):
             ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
             ads = list(ads)
             #print ads
+=======
+        ad = classad.parseOne(open("submit.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 10, False, ads)
+        for i in range(60):
+            ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+            ads = list(ads)
+>>>>>>> master
             if len(ads) == 0:
                 break
             if i % 2 == 0:
@@ -302,6 +342,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
+<<<<<<< HEAD
         ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submitMany(ad, [({'foo': 1}, 5), ({'foo': 2}, 5)], False, ads)
@@ -310,6 +351,14 @@ class TestPythonBindings(WithDaemons):
             ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus", 'ProcId', 'foo'])
             ads = list(ads)
             #print ads
+=======
+        ad = classad.parseOne(open("submit.ad"))
+        ads = []
+        cluster = schedd.submitMany(ad, [({'foo': 1}, 5), ({'foo': 2}, 5)], False, ads)
+        for i in range(60):
+            ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus", 'ProcId', 'foo'])
+            ads = list(ads)
+>>>>>>> master
             for ad in ads:
                 if ad['ProcId'] < 5: self.assertEqual(ad['foo'], 1)
                 else: self.assertEqual(ad['foo'], 2)
@@ -326,7 +375,11 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
+<<<<<<< HEAD
         ad = classad.parseOne(open("tests/submit.ad"))
+=======
+        ad = classad.parseOne(open("submit.ad"))
+>>>>>>> master
         ads = []
         cluster = schedd.submit(ad, 10, False, ads)
         for i in range(60):
@@ -336,17 +389,29 @@ class TestPythonBindings(WithDaemons):
             for query in htcondor.poll([ads_iter, ads_iter2]):
                 self.assertTrue(query.tag() in ["query1", "query2"])
                 ads += query.nextAdsNonBlocking()
+<<<<<<< HEAD
             #print ads
+=======
+>>>>>>> master
             if len(ads) == 0:
                 break
             if i % 2 == 0:
                 schedd.reschedule()
 
+<<<<<<< HEAD
     def testNegotiate(self):
         #htcondor.param['TOOL_DEBUG'] = 'D_FULLDEBUG'
         #os.environ['_condor_SCHEDD_DEBUG'] = 'D_FULLDEBUG, D_NETWORK'
         #htcondor.enable_debug()
 
+=======
+    # FIXME: The loop below doesn't check for a time-out condition, so when
+    # it does, this test errors out rather than fails.  More importantly,
+    # there's a type error in the call to session.sendClaim().  Also,
+    # the second timeout loop also needs an else clause; it it times out,
+    # we don't want to chase the 'file not found' red herring again.
+    def Negotiator(self):
+>>>>>>> master
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD"])
         output_file = os.path.join(testdir, "test.out")
         if os.path.exists(output_file):
@@ -354,7 +419,11 @@ class TestPythonBindings(WithDaemons):
         schedd = htcondor.Schedd()
 
         schedd.act(htcondor.JobAction.Remove, 'true')
+<<<<<<< HEAD
         ad = classad.parseOne(open("tests/submit.ad"))
+=======
+        ad = classad.parseOne(open("submit.ad"))
+>>>>>>> master
         ads = []
         cluster = schedd.submit(ad, 1, False, ads)
 
@@ -399,7 +468,11 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
+<<<<<<< HEAD
         ad = classad.parseOne(open("tests/submit.ad"))
+=======
+        ad = classad.parseOne(open("submit.ad"))
+>>>>>>> master
         ads = []
         cluster = schedd.submit(ad, 10, False, ads)
         for i in range(60):
@@ -414,7 +487,10 @@ class TestPythonBindings(WithDaemons):
                         ctrs[pos] += 1
                     except StopIteration:
                         iters.remove((it, pos))
+<<<<<<< HEAD
             print(ctrs)
+=======
+>>>>>>> master
             if ctrs[0] == 0:
                 break
             if i % 2 == 0:
@@ -426,6 +502,7 @@ class TestPythonBindings(WithDaemons):
         os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
         self.launch_daemons(["SCHEDD"])
         schedd = htcondor.Schedd()
+<<<<<<< HEAD
         submit_ad = classad.parseOne(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(submit_ad, 300, False, ads)
@@ -443,12 +520,31 @@ class TestPythonBindings(WithDaemons):
         self.launch_daemons(["SCHEDD"])
         schedd = htcondor.Schedd()
         submit_ad = classad.parseOne(open("tests/submit_large.ad"))
+=======
+        submit_ad = classad.parseOne(open("submit.ad"))
+        ads = []
+        cluster = schedd.submit(submit_ad, 300, False, ads)
+        ads = schedd.xquery("ClusterId == %d" % cluster)
+        schedd.act(htcondor.JobAction.Remove, "ClusterId == %d" % cluster)
+        time.sleep(3)
+
+    # This test causes the log event 'DCSchedd:actOnJobs: Action failed',
+    # which needs to be a test error (and therefore failure).  (If act()
+    # doesn't or can't return false, it needs to throw an exception.)
+    # def testScheddNonblockingQueryCount(self):
+    def ScheddNonblockingQueryCount(self):
+        os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
+        self.launch_daemons(["SCHEDD"])
+        schedd = htcondor.Schedd()
+        submit_ad = classad.parseOne(open("submit_large.ad"))
+>>>>>>> master
         schedd.act(htcondor.JobAction.Remove, "true")
         ads = []
         time.sleep(1)
         while ads:
             time.sleep(.2)
             ads = schedd.query("true")
+<<<<<<< HEAD
         #print ads
         for i in range(1, 60):
             print("Testing querying %d jobs in queue." % i)
@@ -457,6 +553,12 @@ class TestPythonBindings(WithDaemons):
             ads2 = list(schedd.xquery("true", ["ClusterID", "ProcID", "a1", "a2", "a3", "a4"]))
             #print ads
             #print ads2
+=======
+        for i in range(1, 60):
+            schedd.submit(submit_ad, i, True, ads)
+            ads = schedd.query("true", ["ClusterID", "ProcID"])
+            ads2 = list(schedd.xquery("true", ["ClusterID", "ProcID", "a1", "a2", "a3", "a4"]))
+>>>>>>> master
             self.assertFalse(ads2[0].lookup("ProcID") == classad.Value.Undefined)
             for ad in ads:
                 found_ad = False
@@ -478,6 +580,7 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(output_file):
             os.unlink(output_file)
         schedd = htcondor.Schedd()
+<<<<<<< HEAD
         ad = classad.parseOne(open("tests/submit.ad"))
         result_ads = []
         cluster = schedd.submit(ad, 1, True, result_ads)
@@ -486,6 +589,14 @@ class TestPythonBindings(WithDaemons):
         for i in range(60):
             ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
             #print ads
+=======
+        ad = classad.parseOne(open("submit.ad"))
+        result_ads = []
+        cluster = schedd.submit(ad, 1, True, result_ads)
+        schedd.spool(result_ads)
+        for i in range(60):
+            ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+>>>>>>> master
             self.assertEqual(len(ads), 1)
             if ads[0]["JobStatus"] == 4:
                 break
@@ -493,14 +604,26 @@ class TestPythonBindings(WithDaemons):
                 schedd.reschedule()
             time.sleep(1)
         schedd.retrieve("ClusterId == %d" % cluster)
+<<<<<<< HEAD
         #print "Final status:", schedd.query("ClusterId == %d" % cluster)[0];
+=======
+>>>>>>> master
         schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
         self.assertEqual(len(ads), 0)
         self.assertEqual(open(output_file).read(), "hello world\n")
 
 
+<<<<<<< HEAD
     def testScheddSubmitFile(self):
+=======
+    # FIXME: the last half of this is all broken because ClusterID really
+    # isn't in the ad.  I don't know if that's a bug or a deliberate API
+    # change or if the test never worked in the first place.  Also,
+    # it appears the first assertEqual() is erroneous (again, I don't know
+    # if this is a mistake, a bug, or a deliberately changed API).
+    def ScheddSubmitFile(self):
+>>>>>>> master
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
         submit_obj = htcondor.Submit()
 
@@ -552,7 +675,12 @@ class TestPythonBindings(WithDaemons):
         self.assertTrue(len(open(outfile).read()) > 0)
 
 
+<<<<<<< HEAD
     def testClaim(self):
+=======
+    # FIXME: Like all other timing loops, this one needs an else clause.
+    def Claim(self):
+>>>>>>> master
         os.environ['_condor_VALID_COD_USERS'] = pwd.getpwuid(os.geteuid()).pw_name
         self.launch_daemons(["COLLECTOR", "STARTD"])
         output_file = os.path.abspath(os.path.join(testdir, "test.out"))
@@ -590,7 +718,12 @@ class TestPythonBindings(WithDaemons):
         claim.deactivate(htcondor.VacateTypes.Fast)
         claim.release()
 
+<<<<<<< HEAD
     def testDrain(self):
+=======
+    # FIXME: Like all other timing loops, this one needs an else clause.
+    def Drain(self):
+>>>>>>> master
         self.launch_daemons(["COLLECTOR", "STARTD"])
         output_file = os.path.abspath(os.path.join(testdir, "test.out"))
         if os.path.exists(output_file):
@@ -628,6 +761,7 @@ class TestPythonBindings(WithDaemons):
         self.assertTrue("AuthorizationSucceeded" in authz_ad)
         self.assertTrue(authz_ad['AuthorizationSucceeded'])
 
+<<<<<<< HEAD
     def testEventLog(self):
         events = list(htcondor.read_events(open("tests/test_log.txt")))
         self.assertEqual(len(events), 4)
@@ -646,6 +780,10 @@ class TestPythonBindings(WithDaemons):
         self.assertEqual(set(a.keys()), set(b.keys()))
         for key, val in a.items():
             self.assertEqual(val, b[key])
+=======
+    # Deprecated.  FIXME: add JobEventLog test.
+    # def testEventLog(self):
+>>>>>>> master
 
     def testTransaction(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
@@ -656,7 +794,11 @@ class TestPythonBindings(WithDaemons):
         if os.path.exists(log_file):
             os.unlink(log_file)
         schedd = htcondor.Schedd()
+<<<<<<< HEAD
         ad = classad.parseOne(open("tests/submit_sleep.ad"))
+=======
+        ad = classad.parseOne(open("submit_sleep.ad"))
+>>>>>>> master
         result_ads = []
         cluster = schedd.submit(ad, 1, True, result_ads)
 

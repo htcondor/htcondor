@@ -20,8 +20,18 @@ class CondorCluster(object):
         self._count = 0
         self._schedd = schedd
 
-    def ClusterID(self):
+    @property
+    def cluster_id(self):
         return self._cluster_id
+
+    def Remove(self):
+        if self._schedd is None:
+            self._schedd = htcondor.Schedd()
+        constraint = "ClusterId == {0}".format(self._cluster_id)
+        ad = self._schedd.act(htcondor.JobAction.Remove, constraint)
+        if ad["TotalSuccess"] != self._count:
+            return False
+        return True
 
     # @return The corresponding CondorCluster object or None.
     def Submit(self, count=1):
@@ -43,16 +53,14 @@ class CondorCluster(object):
                 self._cluster_id = submit.queue(txn, count)
                 self._count = count
         except Exception as e:
-            print( "Job submission failed for an unknown error: " + str(e) )
-            return JOB_FAILURE
+            Utils.TLog( "Job submission failed for an unknown error: " + str(e) )
+            raise RuntimeError(e)
 
         Utils.TLog("Job submitted succeeded with cluster ID " + str(self._cluster_id))
 
         # We probably don't need self._log, but it seems like it may be
         # handy for log messages at some point.
         self._jel = JobEventLog( self._log )
-
-        return None
 
     def Schedd(self):
         return self._schedd
@@ -83,6 +91,12 @@ class CondorCluster(object):
         # shadow exception event from entering the user log when
         # a job goes on hold.
 
+    def WaitUntilJobEvicted( self, timeout = 240, proc = 0, count = 0 ):
+        return self.WaitUntil( [ JobEventType.JOB_EVICTED ],
+            [ JobEventType.EXECUTE, JobEventType.SUBMIT,
+              JobEventType.IMAGE_SIZE ],
+            timeout, proc, count )
+
     # WaitUntilAll*() won't work with 'advanced queue statements' because we
     # don't know how many procs to expect.  That's OK for now, since this
     # class doesn't support AQSs... yet.
@@ -93,7 +107,8 @@ class CondorCluster(object):
 
     def WaitUntilAllExecute( self, timeout = 240 ):
         return self.WaitUntil( [ JobEventType.EXECUTE ],
-            [ JobEventType.SUBMIT ], timeout, -1, self._count )
+            [ JobEventType.SUBMIT, JobEventType.IMAGE_SIZE ],
+            timeout, -1, self._count )
 
     def WaitUntilAllJobsHeld( self, timeout = 240 ):
         return self.WaitUntil( [ JobEventType.JOB_HELD ],
@@ -101,6 +116,11 @@ class CondorCluster(object):
               JobEventType.IMAGE_SIZE, JobEventType.SHADOW_EXCEPTION ],
             timeout, -1, self._count )
 
+    def WaitUntilAllJobsEvicted( self, timeout = 240 ):
+        return self.WaitUntil( [ JobEventType.JOB_EVICTED ],
+            [ JobEventType.EXECUTE, JobEventType.SUBMIT,
+              JobEventType.IMAGE_SIZE ],
+            timeout, -1, self._count )
 
     # An event type not listed in successEvents or ignoreeEvents is a failure.
     def WaitUntil( self, successEvents, ignoreEvents, timeout = 240, proc = 0, count = 0 ):

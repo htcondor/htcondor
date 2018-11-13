@@ -91,6 +91,36 @@ We also strongly recommend that every \Condor{annex} disk image:
 \item  Use the instance's public IP, by setting \Macro{TCP\_FORWARDING\_HOST}.
 \item  Turn on communications integrity and encryption.
 \item  Encrypt the run directories.
+\item  Restrict access to the EC2 meta-data server to root.
 \end{itemize}
 
 The default disk image is configured to do all of this.
+
+\subsubsection{Instance Roles}
+\label{sec:Instance Roles}
+
+To explain the last point immediately above, EC2 stores (temporary)
+credentials for the role, if any, associated with an instance on that
+instance's meta-data server, which may be accessed via HTTP at a well-
+known address (currently 169.254.169.254).  Unless otherwise configured,
+any process in the instance can access the meta-data server and thereby
+make use of the instance's credentials.
+
+Until version 8.9.0, there was no HTCondor-based reason to run an EC2
+instance with an instance role.  Starting in 8.9.0, however, HTCondor
+gained the ability to use the instance role's credentials to run EC2
+universe jobs and \Condor{annex} commands.  This has several advantages
+over copying credentials into the instance: it may be more convenient,
+and if you're the only user of the instance, it's more secure, because
+the instance's credentials expire when the instance does.
+
+However, wanting to allow (other) users to run jobs on or submit jobs to
+your instance may not mean you want them to able to act with the instance's
+privileges (e.g., starting more instances on your account).  Although
+securing your instances ultimately remains your responsibility, the default
+images we provide for \Condor{annex}, and the condor-annex-ec2 package, both
+use the kernel-level firewall to prevent access to the metadata server by any
+process not owned by root.  Because this firewall rule is added during the
+boot sequence, it will be in place before HTCondor can start any user jobs,
+and should therefore be effective in preventing access to the instance's
+credentials by normal users or their jobs.

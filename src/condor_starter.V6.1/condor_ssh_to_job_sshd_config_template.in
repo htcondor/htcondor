@@ -26,3 +26,31 @@ X11Forwarding yes
 # By default, OpenSSH uses the ipv6 loopback even if ipv6 is disabled in the
 # kernel.  This forces OpenSSH to use the "local" network instead
 X11UseLocalhost no
+
+# The following settings are recommended for good security.
+# In particular, only FIPS 140-2 algorithms are used
+# https://rhel7stig.readthedocs.io/en/latest/
+# https://www.stigviewer.com/stig/red_hat_enterprise_linux_7/
+
+#-High Severity
+Protocol 2
+PermitEmptyPasswords no
+
+#-Medium Severity
+Ciphers aes128-ctr,aes192-ctr,aes256-ctr
+MACs hmac-sha2-256,hmac-sha2-512
+PermitRootLogin no
+PermitUserEnvironment no
+ClientAliveInterval 600
+ClientAliveCountMax 0
+GSSAPIAuthentication no
+KerberosAuthentication no
+HostbasedAuthentication no
+IgnoreRhosts yes
+IgnoreUserKnownHosts yes
+PrintLastLog yes
+UsePrivilegeSeparation sandbox
+Compression no
+# banner=/etc/issue # Set to your warning banner
+# StrictModes yes # Can't set due to tmp-like directory
+# RhostsRSAAuthentication no # Obsolete Protocol version 1 option

@@ -321,7 +321,9 @@ main_init( int, char* argv[] )
 	                              "command_delegate_gsi_cred", 0, DAEMON );
 #endif
 
-
+	daemonCore->Register_Command( COALESCE_SLOTS, "COALESCE_SLOTS",
+								  (CommandHandler)command_coalesce_slots,
+								  "command_coalesce_slots", 0, DAEMON );
 
 		// OWNER permission commands
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
@@ -353,7 +355,7 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( CA_CMD, "CA_CMD",
 								  (CommandHandler)command_classad_handler,
 								  "command_classad_handler", 0, WRITE );
-	
+
 	// Virtual Machine commands
 	if( vmapi_is_host_machine() == TRUE ) {
 		daemonCore->Register_Command( VM_REGISTER,

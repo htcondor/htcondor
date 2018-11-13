@@ -25,7 +25,7 @@ used to submit one of these batch jobs.
 \Macro{GLITE\_LOCATION} is the path to the directory containing the GAHP's
 configuration file and auxiliary binaries.
 In the HTCondor distribution, these files are located in 
-\File{\MacroUNI{LIB}/glite}.
+\File{\MacroUNI{LIBEXEC}/glite}.
 The batch GAHP's configuration file is in
 \File{\MacroUNI{GLITE\_LOCATION}/etc/batch\_gahp.config}.
 The batch GAHP's auxiliary binaries
@@ -34,7 +34,7 @@ The HTCondor configuration file appears
 
 \footnotesize
 \begin{verbatim}
-GLITE_LOCATION = $(LIB)/glite
+GLITE_LOCATION = $(LIBEXEC)/glite
 BATCH_GAHP     = $(GLITE_LOCATION)/bin/batch_gahp
 \end{verbatim}
 \normalsize

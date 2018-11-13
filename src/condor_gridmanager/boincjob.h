@@ -54,6 +54,7 @@ class BoincJob : public BaseJob
 						  bool &transfer_all,
 						  GahpClient::BoincOutputFiles &outputs );
 	std::string GetAppName();
+	std::string GetVar(const char *str);
 	ArgList *GetArgs();
 	void GetInputFilenames( std::vector<std::pair<std::string, std::string> > &files );
 

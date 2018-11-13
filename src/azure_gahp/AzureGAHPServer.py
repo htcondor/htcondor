@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -u
 
 import platform
 
@@ -15,7 +15,7 @@ import datetime
 import json
 import time
 from collections import deque
-from azure.common.credentials import ServicePrincipalCredentials
+from azure.common.credentials import ServicePrincipalCredentials, get_azure_cli_credentials
 from azure.graphrbac import GraphRbacManagementClient
 from azure.graphrbac.models import *
 from azure.mgmt.compute.models import DiskCreateOption
@@ -332,20 +332,21 @@ class AzureGAHPCommandExec():
     # Read credentails from file
     def read_app_settings_file(self, file_name):
         dnary = dict()
-        with open(file_name, "r") as f:
-            for line in f:
-                if not line.strip():
-                   continue
-                nvp = line.split(" ")
-                if(not nvp):
-                    return None
-                if(len(nvp) < 2):
-                    return None
-                nvp[0] = nvp[0].strip()
-                nvp[1] = nvp[1].strip()
-                if((len(nvp[0]) < 1) or (len(nvp[1]) < 1)):
-                    return None
-                dnary[nvp[0]] = nvp[1]
+        if file_name != "NULL":
+            with open(file_name, "r") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    nvp = line.split(" ")
+                    if(not nvp):
+                        return None
+                    if(len(nvp) < 2):
+                        return None
+                    nvp[0] = nvp[0].strip()
+                    nvp[1] = nvp[1].strip()
+                    if((len(nvp[0]) < 1) or (len(nvp[1]) < 1)):
+                        return None
+                    dnary[nvp[0]] = nvp[1]
 
         app_settings = GahpAppSettingsBuilder(dnary)
         return app_settings
@@ -384,8 +385,13 @@ class AzureGAHPCommandExec():
 
     # Load credentials from file
     def create_credentials_from_file(self, request_id, file_name):
-        dnary = self.read_app_settings_from_file(file_name)
-        cred = self.create_service_credentials(request_id, dnary)
+        dnary = dict()
+        cred = None
+        if file_name == "NULL":
+            cred, _ = get_azure_cli_credentials()
+        else:
+            dnary = self.read_app_settings_from_file(file_name)
+            cred = self.create_service_credentials(request_id, dnary)
         self.set_vm_count_in_thread(dnary)
         self.write_message(
             request_id, 
@@ -433,21 +439,30 @@ class AzureGAHPCommandExec():
         resource_client.providers.register('Microsoft.Scheduler')
         resource_client.providers.register('Microsoft.KeyVault')
 
+        aad_client = None
         # Get token for Azure AD
-        resource_url = "https://login.microsoftonline.com/{}".format(
-            app_settings.tenant_id)
-        context = adal.AuthenticationContext(resource_url)
-        GRAPH_RESOURCE = '00000002-0000-0000-c000-000000000000' #AAD graph resource
-        aad_token = context.acquire_token_with_client_credentials(
-            GRAPH_RESOURCE,
-            app_settings.client_id, 
-            app_settings.secret)
+        # TODO This Active Directory Authentication Library code only
+        #   works with a service account principal at the moment.
+        #   We skip it if we're using the default CLI credentials.
+        #   This code is only used for the AZURE_VMSS_CREATE and
+        #   AZURE_KEYVAULT_CREATE commands, which we don't currently
+        #   use for the grid universe.
+        #   This deficiency should be fixed at some point.
+        if app_settings.tenant_id != None:
+            resource_url = "https://login.microsoftonline.com/{}".format(
+                app_settings.tenant_id)
+            context = adal.AuthenticationContext(resource_url)
+            GRAPH_RESOURCE = '00000002-0000-0000-c000-000000000000' #AAD graph resource
+            aad_token = context.acquire_token_with_client_credentials(
+                GRAPH_RESOURCE,
+                app_settings.client_id,
+                app_settings.secret)
 
-        # Update access token in credentials for Azure AD client
-        aad_credentials = copy.deepcopy(credentials)
-        aad_credentials.token['access_token'] = aad_token['accessToken']
-        aad_client = GraphRbacManagementClient(
-            aad_credentials, app_settings.tenant_id)
+            # Update access token in credentials for Azure AD client
+            aad_credentials = copy.deepcopy(credentials)
+            aad_credentials.token['access_token'] = aad_token['accessToken']
+            aad_client = GraphRbacManagementClient(
+                aad_credentials, app_settings.tenant_id)
 
         dnary = {
             "compute_client": compute_client,
@@ -2192,27 +2207,15 @@ class AzureGAHPCommandExec():
                     ci.cmdParams["vmName"])
                 self.queue_result(ci.request_id, "NULL")
             except Exception as e:
-                vm_info = self.get_vm_info(
-                    ci.request_id, client_libs.compute, 
-                    client_libs.network, ci.cmdParams["rgName"], 
-                    ci.cmdParams["vmName"])
-                error = self.escape(
-                    "{} - {} {}{}".format(
-                        vm_info["vm_id"], vm_info["public_ip"], 
-                        str(e.args[0]), double_line_break)
-                    )
                 self.process_error(
-                    ci.request_id, e, 
-                    "{} {}".format(
-                        error_deleting_vm, error)
-                    )           
+                    ci.request_id, e, error_deleting_vm)
         elif(ci.command.upper() == cmds.list_vm):
             try:
                 vms_info_list = self.list_rg(
                     ci.request_id, client_libs.compute, 
                     client_libs.network, ci.cmdParams["rgName"], 
                     ci.cmdParams["vmName"], ci.cmdParams["tag"])
-                result = "NULL {} {}".format(
+                result = "NULL {}{}".format(
                     str(len(vms_info_list)), ''.join(vms_info_list))
                 self.queue_result(ci.request_id, result)
                 self.write_message(
@@ -2280,9 +2283,8 @@ class AzureGAHPCommandExec():
                     ci.request_id, e, error_scaling_vmss)
 
     def process_error(self, request_id, e, error_message):
-        message = "{} {}{}".format(
-            error_message, self.escape(str(e.args[0])), 
-            double_line_break)
+        message = "{}\\ {}".format(
+            self.escape(error_message), self.escape(str(e.args[0])))
         self.write_message(request_id, message, logging.ERROR)
         self.queue_result(request_id, message)
     

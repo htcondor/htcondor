@@ -33,7 +33,7 @@
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
 static char* RealUserName = NULL;
-static int SwitchIds = TRUE;
+static int SetPrivIgnoreAllRequests = FALSE;
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
 #ifdef WIN32
@@ -187,9 +187,21 @@ const PSID my_user_Sid()
 } 
 #endif 
 
+void
+set_priv_ignore_all_requests( void )
+{
+   SetPrivIgnoreAllRequests = TRUE;
+}
+
 int
 can_switch_ids( void )
 {
+   static int SwitchIds = TRUE;
+
+   if (SetPrivIgnoreAllRequests) {
+	   return FALSE;
+   }
+
 #ifdef WIN32
    static bool HasChecked = false;
    // can't switch users if we're not root/SYSTEM
