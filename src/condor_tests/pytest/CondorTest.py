@@ -106,10 +106,11 @@ class CondorTest(object):
                 rv = TEST_FAILURE
 
         # Make sure the PCs are really gone.
-        Utils.TLog( "Waiting for personal condor(s) to finish stopping..." )
-        time.sleep(5)
-        for name, pc in CondorTest._personal_condors.items():
-            pc.FinishStopping()
+        if len(CondorTest._personal_condors) > 0:
+            Utils.TLog( "Waiting for personal condor(s) to finish stopping..." )
+            time.sleep(5)
+            for name, pc in CondorTest._personal_condors.items():
+                pc.FinishStopping()
 
         # If we're the last registered exit handler to raise an exception,
         # this would determine the interpreter's exit code, but instead
