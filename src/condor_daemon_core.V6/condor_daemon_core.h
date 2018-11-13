@@ -2077,8 +2077,13 @@ class DaemonCore : public Service
 		*/
 	void initCollectorList(void);
 
+	// Inform a client that they attempted to resume a session that
+	// we don't have.
+	// If the client is version 8.8.0 or later, extended information
+	// can be provided in the info_ad. Older clients will assume the
+	// ad is part of the session id to invalidate.
 	void send_invalidate_session ( const char* sinful, const char* sessid,
-	                               const char* our_sinful = NULL );
+	                               const ClassAd* info_ad = NULL );
 
 	bool m_wants_restart;
 	bool m_in_daemon_shutdown;
