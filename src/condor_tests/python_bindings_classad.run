@@ -506,15 +506,6 @@ def main():
     rfd.close()
 
 
-    if failed_tests:
-        print("\n*** FAILED UNIT TESTS ***")
-        for result in failed_tests:
-            print(result)
-
-    if not failed_tests:
-        sys.exit(TEST_SUCCESS)
-    else:
-        sys.exit(TEST_FAILURE)
 
 if __name__ == "__main__":
     main()
