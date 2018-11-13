@@ -155,6 +155,18 @@ JobEvent::proc() const {
 	return event->proc;
 }
 
+int
+JobEvent::Py_Len() {
+	if( ad == NULL ) {
+		ad = event->toClassAd();
+		if( ad == NULL ) {
+			THROW_EX( RuntimeError, "Failed to convert event to class ad" );
+		}
+	}
+
+	return ad->size();
+}
+
 // from classad.cpp
 extern boost::python::object
 convert_value_to_python( const classad::Value & value );
@@ -335,6 +347,8 @@ void export_event_log() {
 		.def( "iterkeys", &JobEvent::Py_IterKeys, "..." )
 		.def( "iteritems", &JobEvent::Py_IterItems, "..." )
 		.def( "itervalues", &JobEvent::Py_IterValues, "..." )
+		.def( "has_key", &JobEvent::Py_Contains, "..." )
+		.def( "__len__", &JobEvent::Py_Len, "..." )
 		.def( "__iter__", &JobEvent::Py_IterKeys, "..." )
 		.def( "__contains__", &JobEvent::Py_Contains, "..." )
 		.def( "__getitem__", &JobEvent::Py_GetItem, "..."  );

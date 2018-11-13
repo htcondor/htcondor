@@ -47,7 +47,9 @@ class JobEvent {
 		boost::python::object Py_IterValues();
 		boost::python::object Py_Get( const std::string & k, boost::python::object d = boost::python::object() );
 		boost::python::object Py_GetItem( const std::string & k );
+
 		bool Py_Contains( const std::string & k );
+		int Py_Len();
 
 	private:
 		ULogEvent * event;
