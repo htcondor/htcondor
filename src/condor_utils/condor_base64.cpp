@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 
-#include "zkm_base64.h"
+#include "condor_base64.h"
 
 static const std::string base64_chars = 
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -31,7 +31,7 @@ static inline bool is_base64(BYTE c) {
   return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-std::string Base64::zkm_base64_encode(BYTE const* buf, unsigned int bufLen) {
+std::string Base64::condor_base64_encode(BYTE const* buf, unsigned int bufLen) {
   std::string ret;
   int i = 0;
   int j = 0;
@@ -72,7 +72,7 @@ std::string Base64::zkm_base64_encode(BYTE const* buf, unsigned int bufLen) {
   return ret;
 }
 
-std::vector<BYTE> Base64::zkm_base64_decode(std::string encoded_string) {
+std::vector<BYTE> Base64::condor_base64_decode(std::string encoded_string) {
   int in_len = encoded_string.size();
   int i = 0;
   int j = 0;
@@ -119,16 +119,16 @@ std::vector<BYTE> Base64::zkm_base64_decode(std::string encoded_string) {
 
 
 // Caller needs to free the returned pointer
-char* zkm_base64_encode(const unsigned char *input, int length) {
-	std::string tstr = Base64::zkm_base64_encode(input, length);
+char* condor_base64_encode(const unsigned char *input, int length) {
+	std::string tstr = Base64::condor_base64_encode(input, length);
 	return strdup(tstr.c_str());
 }
 
 
 // Caller needs to free *output if non-NULL
-void zkm_base64_decode(const char *input,unsigned char **output, int *output_length) {
+void condor_base64_decode(const char *input,unsigned char **output, int *output_length) {
 	std::string tinput(input);
-	std::vector<BYTE> tvec =  Base64::zkm_base64_decode(tinput);
+	std::vector<BYTE> tvec =  Base64::condor_base64_decode(tinput);
 	*output_length = tvec.size();
 	if (*output_length > 0 ) {
 		*output=(unsigned char*)malloc(*output_length);

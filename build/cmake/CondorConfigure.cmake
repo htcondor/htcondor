@@ -1063,10 +1063,6 @@ if (HAVE_EXT_OPENSSL)
 	add_definitions(-DWITH_OPENSSL) # used only by SOAP
 endif(HAVE_EXT_OPENSSL)
 
-if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
-	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
-endif()
-
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
