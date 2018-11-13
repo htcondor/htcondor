@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifndef _ZKM_BASE64_H_
-#define _ZKM_BASE64_H_
+#ifndef _CONDOR_BASE64_H_
+#define _CONDOR_BASE64_H_
 
 #include <vector>
 #include <string>
