@@ -338,7 +338,7 @@ void export_event_log() {
 	boost::python::class_<JobEvent, boost::noncopyable>( "JobEvent", "...", boost::python::no_init )
 		.add_property( "type", & JobEvent::type, "..." )
 		.add_property( "cluster", & JobEvent::cluster, "..." )
-		.add_property( "proc", & JobEvent::cluster, "..." )
+		.add_property( "proc", & JobEvent::proc, "..." )
 		.add_property( "timestamp", & JobEvent::timestamp, "..." )
 		.def( "get", &JobEvent::Py_Get, JobEventPyGetOverloads( "..." ) )
 		.def( "keys", &JobEvent::Py_Keys, "..." )
