@@ -93,6 +93,7 @@ std::string SecMan::m_pool_password;
 HashTable<MyString,MyString> SecMan::command_map(hashFunction);
 HashTable<MyString,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(hashFunction);
 int SecMan::sec_man_ref_count = 0;
+std::set<std::string> SecMan::m_not_my_family;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
@@ -1373,6 +1374,16 @@ SecManStartCommand::sendAuthInfo_inner()
 			}
 		}
 	}
+	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session && daemonCore && !daemonCore->m_family_session_id.empty() ) {
+		// See if this server may be in our family
+		// TODO This could be more sophisticated, like checking if our peer
+		//   is using the same shared port service as us.
+		if ( m_sock->peer_is_local() && m_sec_man.m_not_my_family.count(m_sock->get_connect_addr()) == 0 ) {
+			dprintf(D_SECURITY, "Trying family security session for local peer\n");
+			m_have_session = m_sec_man.LookupNonExpiredSession(daemonCore->m_family_session_id.c_str(), m_enc_key);
+			ASSERT(m_have_session);
+		}
+	}
 
 	// if we have a private key, we will use the same security policy that
 	// was decided on when the key was issued.
@@ -1552,6 +1563,9 @@ SecManStartCommand::sendAuthInfo_inner()
 	if (dcss) {
 		m_auth_info.Assign(ATTR_SEC_SERVER_COMMAND_SOCK, dcss);
 	}
+
+	// Tell the server the sinful string we used to contact it
+	m_auth_info.Assign(ATTR_SEC_CONNECT_SINFUL, m_sock->get_connect_addr());
 
 	// fill in command
 	m_auth_info.Assign(ATTR_SEC_COMMAND, m_cmd);
@@ -2575,6 +2589,9 @@ bool SecMan :: invalidateKey(const char * key_id)
 	remove_commands(keyEntry);
 
 	// Now, remove session id
+	if (daemonCore && !strcmp(daemonCore->m_family_session_id.c_str(), key_id) ) {
+		dprintf ( D_SECURITY, "DC_INVALIDATE_KEY: ignoring request to invalidate family security key.\n" );
+	} else
 	if (session_cache->remove(key_id)) {
 		dprintf ( D_SECURITY, 
 				  "DC_INVALIDATE_KEY: removed key id %s.\n", 
