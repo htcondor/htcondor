@@ -175,40 +175,50 @@ IpVerify::Init()
 		if( pDeny ) {
 			dprintf ( D_SECURITY, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.Value());
 		}
-		// Treat a "*", "*/*" for ALLOW_XXX as if it's just undefined,
-		// because that's the optimized default, except for
-		// CONFIG_PERM which has a different default (see below).
-		if( perm != CONFIG_PERM ) {
-			if(pAllow && (!strcmp(pAllow, "*") || !strcmp(pAllow, "*/*"))) {
-				free( pAllow );
-				pAllow = NULL;
-			}
-		}
-		if ( !pAllow && !pDeny ) {
-			if (perm == CONFIG_PERM) { 	  // deny all CONFIG requests 
-				pentry->behavior = USERVERIFY_DENY; // by default
-				dprintf( D_SECURITY, "ipverify: %s optimized to deny everyone\n", PermString(perm) );
+
+		// Treat "*" or "*/*" for ALLOW_XXX specially, because that's an optimized default.
+		bool allowAll = pAllow && (!strcmp(pAllow, "*") || !strcmp(pAllow, "*/*"));
+		bool denyAll = pDeny && (!strcmp(pDeny, "*") || !strcmp(pDeny, "*/*"));
+
+		if( !pAllow ) { // deny all requests by default
+			if( perm == ALLOW ) {
+				// ALLOW is implicitly allowed
+				pentry->behavior = USERVERIFY_ALLOW; // belt and suspenders
+			} else if( perm == READ || perm == WRITE ) {
+				// READ and WRITE could be implied -> cannot flat out DENY
+				pentry->behavior = USERVERIFY_USE_TABLE;
+				if (pDeny) {
+					fill_table( pentry, pDeny, false );
+				}
 			} else {
-				pentry->behavior = USERVERIFY_ALLOW;
-				if( perm != ALLOW ) {
-					dprintf( D_SECURITY, "ipverify: %s optimized to allow anyone\n", PermString(perm) );
+				if ( denyAll ) {
+					pentry->behavior = USERVERIFY_DENY;
+					dprintf( D_SECURITY, "ipverify: %s optimized to deny everyone\n", PermString(perm) );
+				} else {
+					pentry->behavior = USERVERIFY_USE_TABLE;
+					if (pDeny) {
+						fill_table( pentry, pDeny, false );
+					}
 				}
 			}
-		} else {
-			if ( pDeny && !pAllow && perm != CONFIG_PERM ) {
-				pentry->behavior = USERVERIFY_ONLY_DENIES;
+		} else if ( pAllow && !pDeny ) {
+			if ( allowAll ) {
+				pentry->behavior = USERVERIFY_ALLOW;
+				dprintf( D_SECURITY, "ipverify: %s optimized to allow anyone\n", PermString(perm) );
 			} else {
 				pentry->behavior = USERVERIFY_USE_TABLE;
-			}
-			if ( pAllow ) {
 				fill_table( pentry, pAllow, true );
-				free(pAllow);
-				pAllow = NULL;
 			}
-			if ( pDeny ) {
-				fill_table( pentry,	pDeny, false );
-				free(pDeny);
-				pDeny = NULL;
+		} else { // pAllow && pDeny
+			if ( denyAll ) {
+				pentry->behavior = USERVERIFY_DENY;
+			} else if ( allowAll ) {
+				pentry->behavior = USERVERIFY_ONLY_DENIES;
+				fill_table( pentry, pDeny, false );
+			} else {
+				pentry->behavior = USERVERIFY_USE_TABLE;
+				fill_table( pentry, pAllow, true );
+				fill_table( pentry, pDeny, false );
 			}
 		}
 		if (pAllow) {

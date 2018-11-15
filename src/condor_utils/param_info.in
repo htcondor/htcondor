@@ -3308,8 +3308,8 @@ default=true
 type=bool
 tags=master
 
-[ALLOW_ADMINISTRATOR]
-default=$(CONDOR_HOST)
+[ALLOW_CLIENT]
+default=*
 type=string
 tags=security
 
