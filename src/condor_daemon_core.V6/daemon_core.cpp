@@ -6971,7 +6971,6 @@ int DaemonCore::Create_Process(
 		IpVerify* ipv = getSecMan()->getIpVerify();
 		MyString id = CONDOR_CHILD_FQU;
 		ipv->PunchHole(DAEMON, id);
-		ipv->PunchHole(CLIENT_PERM, id);
 
 		privateinheritbuf += " SessionKey:";
 
@@ -8888,7 +8887,6 @@ DaemonCore::Inherit( void )
 			MyString id;
 			id.formatstr("%s", CONDOR_PARENT_FQU);
 			ipv->PunchHole(DAEMON, id);
-			ipv->PunchHole(CLIENT_PERM, id);
 		}
 		if( strncmp(ptmp,"FamilySessionKey:",17)==0 ) {
 			if ( param_boolean("SEC_USE_FAMILY_SESSION", true) ) {
@@ -8945,7 +8943,6 @@ DaemonCore::Inherit( void )
 			ipv->PunchHole(ADVERTISE_SCHEDD_PERM, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(ADVERTISE_STARTD_PERM, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(NEGOTIATOR, CONDOR_FAMILY_FQU);
-			ipv->PunchHole(CLIENT_PERM, CONDOR_FAMILY_FQU);
 		}
 	}
 #endif
