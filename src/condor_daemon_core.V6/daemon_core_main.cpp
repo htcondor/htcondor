@@ -1304,11 +1304,9 @@ handle_nop( Service*, int, Stream* stream)
 int
 handle_invalidate_key( Service*, int, Stream* stream)
 {
-	int result = 0;
+    int result = 0;
 	char *key_id = NULL;
-	std::string their_sinful;
-	char *info_ad_str;
-	ClassAd info_ad;
+	char *their_sinful = NULL;
 
 	stream->decode();
 	if ( ! stream->code(key_id) ) {
@@ -1321,21 +1319,18 @@ handle_invalidate_key( Service*, int, Stream* stream)
 		return FALSE;
 	}
 
-	info_ad_str = strchr(key_id, '\n');
-	if ( info_ad_str ) {
-		*info_ad_str = '\0';
-		info_ad_str++;
-		classad::ClassAdParser parser;
-		parser.ParseClassAd(info_ad_str, info_ad, false);
-		info_ad.LookupString(ATTR_SEC_CONNECT_SINFUL, their_sinful);
+	their_sinful = strchr(key_id, '\n');
+	if ( their_sinful ) {
+		*their_sinful = '\0';
+		their_sinful++;
 	}
 
-	result = daemonCore->getSecMan()->invalidateKey(key_id);
-	if ( !their_sinful.empty() && !strcmp(key_id, daemonCore->m_family_session_id.c_str()) ) {
+    result = daemonCore->getSecMan()->invalidateKey(key_id);
+	if ( their_sinful && !strcmp(key_id, daemonCore->m_family_session_id.c_str()) ) {
 		daemonCore->getSecMan()->m_not_my_family.insert(their_sinful);
 	}
-	free(key_id);
-	return result;
+    free(key_id);
+    return result;
 }
 
 int
