@@ -707,14 +707,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 					char * return_addr = NULL;
 					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
-					std::string our_sinful;
-					m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
 
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
 							   "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr ? return_addr : "(none)");
 
 					if( return_addr ) {
-						daemonCore->send_invalidate_session( return_addr, m_sid, our_sinful.c_str() );
+						daemonCore->send_invalidate_session( return_addr, m_sid );
 						free (return_addr);
 					}
 

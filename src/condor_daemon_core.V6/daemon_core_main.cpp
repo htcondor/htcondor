@@ -1306,7 +1306,6 @@ handle_invalidate_key( Service*, int, Stream* stream)
 {
     int result = 0;
 	char *key_id = NULL;
-	char *their_sinful = NULL;
 
 	stream->decode();
 	if ( ! stream->code(key_id) ) {
@@ -1319,16 +1318,7 @@ handle_invalidate_key( Service*, int, Stream* stream)
 		return FALSE;
 	}
 
-	their_sinful = strchr(key_id, '\n');
-	if ( their_sinful ) {
-		*their_sinful = '\0';
-		their_sinful++;
-	}
-
     result = daemonCore->getSecMan()->invalidateKey(key_id);
-	if ( their_sinful && !strcmp(key_id, daemonCore->m_family_session_id.c_str()) ) {
-		daemonCore->getSecMan()->m_not_my_family.insert(their_sinful);
-	}
     free(key_id);
     return result;
 }

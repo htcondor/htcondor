@@ -92,7 +92,6 @@ public:
         static std::string m_tag;
 	static HashTable<MyString, MyString> command_map;
 	static int sec_man_ref_count;
-	static std::set<std::string> m_not_my_family;
 
 	// Manage the pool password
 	static std::string m_pool_password;
