@@ -5,10 +5,10 @@
 %%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Development Release Series 8.8}\label{sec:History-8-8}
+\section{Stable Release Series 8.8}\label{sec:History-8-8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This is the development release series of HTCondor.
+This is the stable release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -29,7 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Made the Python bindings' \PyBindNI{JobEvent} API more Pythonic by
+handling optional event attributes as if the \PyBindNI{JobEvent} object
+were a dictionary, instead.  See section \ref{Python-JobEventLog} for details.
+\Ticket{6820}
 
 \end{itemize}
 
