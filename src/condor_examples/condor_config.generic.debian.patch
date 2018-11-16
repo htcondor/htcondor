@@ -1,5 +1,5 @@
---- condor_config.generic	2017-01-10 16:07:05.052352063 -0600
-+++ condor_config.patched	2017-01-10 16:06:48.898201252 -0600
+--- condor_config.generic	2018-11-15 15:58:25.435608213 -0600
++++ condor_config.patched	2018-11-15 15:57:48.579307868 -0600
 @@ -19,25 +19,23 @@
  ######################################################################
  
@@ -31,7 +31,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-@@ -50,5 +48,34 @@
+@@ -50,5 +48,27 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -59,11 +59,4 @@
 +
 +PROCD_ADDRESS = $(RUN)/procd_pipe
 +
-+##  What machine is your central manager?
-+
-+CONDOR_HOST = $(FULL_HOSTNAME)
-+
-+##  This macro determines what daemons the condor_master will start and keep its watchful eyes on.
-+##  The list is a comma or space separated list of subsystem names
-+
-+DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
++##  Install the condor-single-node package to run HTCondor on a single node

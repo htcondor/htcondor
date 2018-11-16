@@ -140,7 +140,7 @@ Description: distributed workload management system - documentation
  This package provides HTCondor's documentation in HTML and PDF format, as well
  as configuration and other examples.
 
-Package: htcondor-config-single-node
+Package: htcondor-single-node
 Architecture: all
 Section: science
 Depends: htcondor (= ${binary:Version}),

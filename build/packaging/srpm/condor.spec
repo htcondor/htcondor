@@ -582,12 +582,12 @@ Requires: %name = %version-%release
 Includes all the files necessary to support running standard universe jobs.
 %endif
 
-%package config-single-node
+%package single-node
 Summary: Conguration for a single-node (personal) HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 
-%description config-single-node
+%description single-node
 This example configuration is good for trying out HTCondor for the first time.
 It only configures the IPv4 loopback address, turns on basic security and
 shortens many timers to be more responsive.
@@ -1592,7 +1592,7 @@ rm -rf %{buildroot}
 %endif
 %endif
 
-%files config-single-node
+%files single-node
 %config(noreplace) %_sysconfdir/condor/config.d/00-single-node
 
 
