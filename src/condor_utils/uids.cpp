@@ -27,6 +27,7 @@
 #include "condor_distribution.h"
 #include "my_username.h"
 #include "daemon.h"
+#include "condor_daemon_core.h"
 #include "store_cred.h"
 #include "../condor_sysapi/sysapi.h"
 
@@ -190,7 +191,13 @@ const PSID my_user_Sid()
 void
 set_priv_ignore_all_requests( void )
 {
-   SetPrivIgnoreAllRequests = TRUE;
+   // Only honor request to ignore priv changes
+   // if we are not a daemonCore daemon.  
+   // This allows daemons (like the Collector) that pull
+   // in Python based plugins to continue to work.
+   if (daemonCore == NULL) {
+       SetPrivIgnoreAllRequests = TRUE;
+   }
 }
 
 int
