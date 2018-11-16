@@ -1107,11 +1107,10 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		char *specified_host = param( buf.c_str() );
 		if ( specified_host ) {
 				// Found an entry.  Use this name.
-			_name = strdup( specified_host );
+			_name = specified_host;
 			dprintf( D_HOSTNAME, 
 					 "No name given, but %s defined to \"%s\"\n",
 					 buf.c_str(), specified_host );
-			free(specified_host);
 		}
 	}
 	if( _name ) {
@@ -1195,8 +1194,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// name (and the full hostname, since that's just the
 			// "host part" of the "name"...
 		New_alias( strdup(get_host_part( _name )) );
-		New_name( strdup(tmp) );
-		free( tmp );
+		New_name( tmp );
 		dprintf( D_HOSTNAME, "Using \"%s\" for name in Daemon object\n",
 				 tmp );
 			// now, grab the fullhost from the name we just made...

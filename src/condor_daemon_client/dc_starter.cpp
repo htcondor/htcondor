@@ -78,8 +78,7 @@ DCStarter::initFromClassAd( ClassAd* ad )
 	}
 
 	if( ad->LookupString(ATTR_VERSION, &tmp) ) {
-		New_version( strdup(tmp) );
-		free( tmp );
+		New_version( tmp );
 		tmp = NULL;
 	}
 
