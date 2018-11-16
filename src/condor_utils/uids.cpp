@@ -33,7 +33,7 @@
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
 static char* RealUserName = NULL;
-static int SwitchIds = TRUE;
+static int SetPrivIgnoreAllRequests = FALSE;
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
 #ifdef WIN32
@@ -187,9 +187,21 @@ const PSID my_user_Sid()
 } 
 #endif 
 
+void
+set_priv_ignore_all_requests( void )
+{
+   SetPrivIgnoreAllRequests = TRUE;
+}
+
 int
 can_switch_ids( void )
 {
+   static int SwitchIds = TRUE;
+
+   if (SetPrivIgnoreAllRequests) {
+	   return FALSE;
+   }
+
 #ifdef WIN32
    static bool HasChecked = false;
    // can't switch users if we're not root/SYSTEM
@@ -849,7 +861,6 @@ const char* get_condor_username()
 	PTOKEN_USER pTokenUser = (PTOKEN_USER)InfoBuffer;
 	DWORD dwInfoBufferSize,dwAccountSize = 200, dwDomainSize = 200;
 	SID_NAME_USE snu;
-	int length;
 
 	if ( CondorUserName )
 		return CondorUserName;
@@ -866,7 +877,7 @@ const char* get_condor_username()
 	LookupAccountSid(NULL, pTokenUser->User.Sid, szAccountName,
 		&dwAccountSize,szDomainName, &dwDomainSize, &snu);
 
-	length = strlen(szAccountName) + strlen(szDomainName) + 4;
+	size_t length = strlen(szAccountName) + strlen(szDomainName) + 4;
 	CondorUserName = (char *) malloc(length);
 	if (CondorUserName == NULL) {
 		EXCEPT("Out of memory. Aborting.");
@@ -1602,7 +1613,9 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	// and then dumps them out at the end when it is safe to do so because
 	// the internal state is consistent with reality.
 
+#ifdef LINUX
 	bool really_dologging = (dologging && (dologging != NO_PRIV_MEMORY_CHANGES));
+#endif
 
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;

@@ -1232,7 +1232,7 @@ get_corefile_program( const char* corefile, const char* dir ) {
 
 		std::array<char, 128> buffer;
 		std::string cmd_output;
-		std::shared_ptr<FILE> process_pipe( my_popen( args, "r", 0 ), my_pclose );
+		std::unique_ptr<FILE, decltype(&my_pclose)> process_pipe( my_popen( args, "r", 0 ), my_pclose );
 
 		// Run the file command and capture output.
 		// On any error, return an empty string.

@@ -174,6 +174,12 @@ int DockerProc::StartJob() {
 	ClassAd *machineAd = Starter->jic->machClassAd();
 
 	std::list<std::string> extras;
+	std::string scratchDir = Starter->GetWorkingDir();
+		// if file xfer is off, need to also mount SCRATCH_DIR (= cwd)
+	if (scratchDir != sandboxPath) {
+		extras.push_back(scratchDir + ":" + scratchDir);
+	}
+
 	buildExtraVolumes(extras, *machineAd, *JobAd);
 
 	// The following line is for condor_who to parse

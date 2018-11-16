@@ -47,7 +47,6 @@
 #include "extArray.h"
 #include "HashTable.h"
 #include <set>
-#include "dagman_recursive_submit.h"
 #include "dagman_metrics.h"
 
 using namespace std;
@@ -647,11 +646,11 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				// _jobstateLog.WriteJobSuccessOrFailure( job );
 				break;
 
-			case ULOG_FACTORY_SUBMIT:
+			case ULOG_CLUSTER_SUBMIT:
 				ProcessFactorySubmitEvent(job);
 				break;
 
-			case ULOG_FACTORY_REMOVE:
+			case ULOG_CLUSTER_REMOVE:
 				ProcessFactoryRemoveEvent(job, recovery);
 				break;
 
@@ -3870,7 +3869,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		return node;
 	}
 
-	if( event->eventNumber == ULOG_FACTORY_SUBMIT ) {
+	if( event->eventNumber == ULOG_CLUSTER_SUBMIT ) {
 		const FactorySubmitEvent* factory_submit_event = (const FactorySubmitEvent*)event;
 		if ( factory_submit_event->submitEventLogNotes ) {
 			char nodeName[1024] = "";
@@ -4085,7 +4084,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
+		if ( _dagmanUtils.runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
 					node->GetDirectory(), node->_effectivePriority,
 					isRetry ) != 0 ) {
 			++node->_submitTries;

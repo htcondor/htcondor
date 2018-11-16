@@ -62,6 +62,9 @@ AdTypes convert_to_ad_type(daemon_t d_type)
     case DT_HAD:
         ad_type = HAD_AD;
 		break;
+    case DT_CREDD:
+        ad_type = CREDD_AD;
+        break;
     default:
         PyErr_SetString(PyExc_ValueError, "Unknown daemon type.");
         throw_error_already_set();

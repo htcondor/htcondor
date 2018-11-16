@@ -7,11 +7,19 @@ use CondorTest;
 use CondorUtils;
 use NetworkTestConfigs;
 
+# Is this really the best way to get the LIBEXEC dir?
+my $libexecDir = `condor_config_val LIBEXEC`;
+CondorUtils::fullchomp( $libexecDir );
+if( ! -d $libexecDir ) {
+	print( "LIBEXEC '$libexecDir' is not a directory, failing test.\n" );
+	return -1;
+}
+
 #
 # The 'test_user_mapping' binary tests the MapFile.cpp parsing
 # and mapping
 #
-my $rv = system( 'test_user_mapping -v' );
+my $rv = system( "${libexecDir}/test_user_mapping -v" );
 
 my $testName = "unit_test_user_mapping";
 if( $rv == 0 ) {

@@ -93,18 +93,15 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 	if (significant_attrs && ! next_id_exhausted && (MATCH == strcasecmp(new_sig_attrs,significant_attrs))) {
 		if (free_input_attrs) {
 			free(const_cast<char*>(new_sig_attrs));
-			new_sig_attrs = NULL;
 		}
 		return false;
 	}
 
 	//PRAGMA_REMIND("tj: is it worth checking to see if the significant attrs only changed order?")
 
-	const char * free_attrs = NULL;
-
 	if (replace_attrs || ! significant_attrs) {
 		// Create significant_attrs from new_sig_attrs
-		free_attrs = significant_attrs; // remember to free this later
+		free(const_cast<char*>(significant_attrs));
 		if (free_input_attrs) {
 			significant_attrs = new_sig_attrs;
 		} else {
@@ -119,15 +116,13 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 		StringList new_attrs(new_sig_attrs);
 		sig_attrs_changed = attrs.create_union(new_attrs,true);
 		if (sig_attrs_changed) {
-			free_attrs = significant_attrs; // free this later
+			free(const_cast<char*>(significant_attrs));
 			significant_attrs = attrs.print_to_string();
-		} else if (free_input_attrs) {
-			free_attrs = new_sig_attrs; // free this later
+		}
+		if (free_input_attrs) {
+			free(const_cast<char*>(new_sig_attrs));
 		}
 	}
-
-	// free whatever list of attrs we don't need anymore
-	if (free_attrs) { free(const_cast<char*>(free_attrs)); free_attrs = NULL; }
 
 	// the SIGNIFICANT_ATTRIBUTES setting changed, purge our
 	// state.
@@ -624,17 +619,25 @@ void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const cha
 	// the signature needs to be recomputed as it may have changed.
 	// Note we do this whether or not the transaction is committed - that
 	// is ok, and actually is probably more efficient than hitting disk.
-	char * sigAttrs = NULL;
-	job.LookupString(ATTR_AUTO_CLUSTER_ATTRS,&sigAttrs);
-	if ( sigAttrs ) {
-		StringList attrs(sigAttrs);
-		if ( attrs.contains_anycase(attr) ) {
+	ExprTree * expr = job.Lookup(ATTR_AUTO_CLUSTER_ATTRS);
+	if (expr) {
+		std::string tmp;
+		const char * sigAttrs = NULL;
+		if (ExprTreeIsLiteralString(expr, sigAttrs)) {
+		} else if (job.LookupString(ATTR_AUTO_CLUSTER_ATTRS, tmp)) {
+			// we don't expect this to be an expression rather than a string
+			// but if it is, we should still be able to handle it.
+			sigAttrs = tmp.c_str();
+		} else {
+			// is not a string and does not evaluate to one.
+			return;
+		}
+
+		if (is_attr_in_attr_list(attr, sigAttrs)) {
 			job.Delete(ATTR_AUTO_CLUSTER_ID);
 			job.Delete(ATTR_AUTO_CLUSTER_ATTRS);
 			job.autocluster_id = -1;
 		}
-		free(sigAttrs);
-		sigAttrs = NULL;
 	}
 }
 

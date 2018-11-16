@@ -50,17 +50,6 @@ typically, found by using \texttt{Collector.locate(...)}.
 to send to a daemon.   Some commands require additional arguments; 
 for example, sending \texttt{DaemonOff} to a \Condor{master} requires 
 one to specify which subsystem to turn off. 
-\\ \hline
-\texttt{read\_events( file\_obj, is\_xml = True ) }
-
-Read and parse an HTCondor event log file.
-Returns a Python iterator of ClassAds.
-
-Parameter \texttt{file\_obj} is a file object corresponding to an HTCondor
-event log.
-
-The optional parameter \texttt{is\_xml} specifies whether the event log is
-XML-formatted.
 
 \\ \hline
 
@@ -396,8 +385,12 @@ back to the remote schedd based on a given resource request.
 Create an instance of the \texttt{Submit} class.  
 
 Optional parameter \texttt{input} is a Python dictionary containing
-submit file key = value pairs.
+submit file key = value pairs, or a string containing the text of a submit file.
 If omitted, the submit class is initially empty.
+
+If a string is used, the text should consist of valid \Condor{submit} statments optionally followed
+by a a single \Condor{submit} QUEUE statement. The arguments to the QUEUE statement will be stored
+in the \texttt{QArgs} member of this class and used when the \texttt{queue()} method of this class is called.
 
 \\ \hline
 \texttt{expand( (str)attr )}
@@ -410,19 +403,36 @@ Returns a string containing the value of the given attribute with
 all macros expanded.
 
 \\ \hline
-\texttt{ queue( (object)txn, (int)count = 1, (object)ad\_results = None )}
+\texttt{ queue( (object)txn, (int)count = 0, (object)ad\_results = None )}
 
 Submit the current object to a remote queue.
 Parameter \texttt{txn} is an active transaction object (see
 \texttt{Schedd.transaction()}).
 
-Optional parameter \texttt{count} is the number of procs to create
-(defaults to 1 if not specified).
+Optional parameter \texttt{count} is the number of procs to create.
+If not specified, or a value of 0 is given the QArgs member of this class
+is used to determine the number of procs to submit.  If no QArgs  were specified, one job is submitted.
 
 Optional parameter \texttt{ad\_results} is an object to receive the
-ClassAd resulting from this submit.
+ClassAd(s) resulting from this submit.
 
 Returns the ClusterID of the submitted job(s).
+
+Throws a RuntimeError if the submission fails.
+
+\\ \hline
+\texttt{ queue\_with\_itemdata( (object)txn, (int)count = 0, (object)from = None )}
+
+Submit the current object to a remote queue.
+
+Parameter \texttt{txn} is an active transaction object (see \texttt{Schedd.transaction()}).
+
+Optional parameter \texttt{count} is the number of procs submitted for each item.
+
+Optional parameter \texttt{from} is an iterator of strings or dictionaries that specify the itemdata for the set of jobs.
+Each item from this iterator will submit \texttt{count} procs.
+
+Returns a \texttt{SubmitResult} class describing the submitted job(s).
 
 Throws a RuntimeError if the submission fails.
 
@@ -458,9 +468,115 @@ Copy the contents of a given Submit object into the current object.
 Parameter \texttt{submit} is the Submit object to copy.
 
 \\ \hline
+
+\texttt{ jobs( (int)count = 0, (object)from = None, (int)clusterid = 1, (int) procid = 0, (time\_t) qdate = 0, (string) owner = "" )}
+
+Returns an iterator of simulated job ClassAds using the current settings of this class.
+
+Optional parameter \texttt{count} is the number of jobs for each item in the \texttt{from} iteration. 
+It is the total number of jobs to return if \texttt{from} is None.  If not specified or the value 0 is given
+the value from the \texttt{QArgs} memeber will be used.
+
+Optional parameter \texttt{from} is an iterator of strings or dictionaries that specify the itemdata for the set of simulated jobs.
+Each item from this iterator will results in \texttt{count} simulated jobs. If not specified or None is given
+the value from the \texttt{QArgs} member will be used.
+
+Optional parameter \texttt{clusterid} is the value to use for the \Attr{ClusterId} attribute of the simulated jobs.
+If not specified, 1 is used.
+
+Optional parameter \texttt{procid} is the value to use for the \Attr{ProcId} attribute of the first simulated job.
+If not specified 0 is used.
+
+Optional paramater \texttt{qdate} is the unix timestamp value to use as the \Attr{QDate} attribute of the simulated jobs.
+If not specified the current time is used.
+
+Optional parameter \texttt{owner} is the username to use as the \Attr{Owner} attribute of the simulated jobs.
+If not specified, the name of the current user is used.
+
+\\ \hline
+
+\texttt{ procs( (int)count = 0, (object)from = None, (int)clusterid = 1, (int) procid = 0, (time\_t) qdate = 0, (string) owner = None )}
+
+Returns an iterator of simulated partial job ClassAds using the current settings of this class.
+The first job ClassAd returned will be complete, all other job ClassAds will contain only attributes that
+differ from the first job.  This list of proc ClassAds is what the \texttt{queue} or \texttt{queue\_with\_itemdata}
+methods would submit to the \Condor{schedd}, with the exception of the \Attr{ClusterId} attribute, which cannot be
+known ahead of time.
+
+Optional parameter \texttt{count} is the number of procs for each item in the \texttt{from} iteration. 
+It is the total number of jobs to return if \texttt{from} is None.  If not specified or the value 0 is given
+the value from the \texttt{QArgs} memeber will be used.
+
+Optional parameter \texttt{from} is an iterator of strings or dictionaries that specify the itemdata for the set of procs.
+Each item from this iterator will results in \texttt{count} simulated jobs. If not specified or None is given
+the value from the \texttt{QArgs} member will be used.
+
+Optional parameter \texttt{clusterid} is the value to use for the \Attr{ClusterId} attribute of the procs.
+If not specified, 1 is used.
+
+Optional parameter \texttt{procid} is the value to use for the \Attr{ProcId} attribute of the first procs.
+If not specified 0 is used.
+
+Optional paramater \texttt{qdate} is the unix timestamp value to use as the \Attr{QDate} attribute of the procs.
+If not specified the current time is used.
+
+Optional parameter \texttt{owner} is the username to use as the \Attr{Owner} attribute of the procs.
+If not specified, the name of the current user is used.
+
+\\ \hline
+
+\texttt{ itemdata( (string)qargs=None)}
+
+Returns an iterator of itemdata for the given QUEUE arguments. If \texttt{qargs} is not specified, the arguments
+to the QUEUE statement passed to the contructor or to the \texttt{setQArgs} method is used.
+
+For example \texttt{itemdata("matching *.dat")} would return an iterator of filenames that match *.dat from the current directory.
+This is the same iterator used by \Condor{submit} when processing QUEUE statements.
+
+\\ \hline
+
+\texttt{ getQArgs()}
+
+Returns arguments specified in the QUEUE statement passed to the contructor.  These are the arguments that will be used
+by the \texttt{queue} or \texttt{queue\_from\_itemdata} methods if not overridden by arguments to those methods.
+
+\\ \hline
+
+\texttt{ setQArgs((string)args)}
+
+Sets the arguments to be used by subsequent calls to the \texttt{queue} or \texttt{queue\_from\_itemdata} methods.
+
+\\ \hline
 \end{longtable}
 \end{flushleft}
 
+\textbf{The \texttt{SubmitResult} class:}
+\begin{flushleft}
+\begin{longtable}{|p{16cm}|} \hline
+
+\texttt{cluster()}
+
+Returns the integer value of the \Attr{ClusterId} of the submitted jobs.
+
+\\ \hline
+\texttt{clusterad()}
+
+Returns the cluster ClassAd of the submitted jobs, This is identical to the job ClassAd of the first job
+with the \Attr{ProcId} attribute removed.
+
+\\ \hline
+\texttt{first\_proc()}
+
+Returns the integer value of the \Attr{ProcId} attribute of the first job submitted.
+
+\\ \hline
+\texttt{num\_procs()}
+
+Returns the integer number of procs submitted.
+
+\\ \hline
+\end{longtable}
+\end{flushleft}
 
 \textbf{The \texttt{Collector} class:}
 \begin{flushleft}
@@ -947,6 +1063,40 @@ claim for future use.
 \texttt{delegateGSIProxy()}
 Send an x509 proxy credential to an activated claim.
 
+\\ \hline
+\end{longtable}
+\end{flushleft}
+\pagebreak% This forces the next paragraph, heading, and table onto the same
+% page.  There's a different way to do that, but this is one is nice and easy.
+The \PyBind{JobEventLog} reads HTCondor job event (user) logs.  See the example
+in section \ref{Python-Example}.  Its iterators return \PyBind{JobEvent}s,
+which always have the \texttt{type} property.  Events
+which are not of type \texttt{JobEventType.NONE} always have the
+\texttt{cluster} and \texttt{proc} properties, and may have other properties,
+depending on their specific type.
+
+\textbf{The \PyBindNI{JobEventLog} class:}
+\begin{flushleft}
+\begin{longtable}{|p{16cm}|}
+\hline
+
+\texttt{\_\_init\_\_( filename )}
+
+Create an instance of the \PyBindNI{JobEventLog} class.
+The \texttt{filename} argument indicates the log file to read.
+Raise IOError if there's a problem initializing the underlying log reader.
+
+\\ \hline
+
+\texttt{events( stop\_after )}
+
+Return an iterator (self), which will stop waiting for new events after
+\texttt{stop\_after} seconds have passed.  The iterator may return an
+arbitrary number of events, including zero, before \texttt{stop\_after} seconds
+have passed.  If the \texttt{stop\_after} argument is \texttt{None},
+the iterator will never stop waiting for new events.
+
+\\ \hline
 \end{longtable}
 \end{flushleft}
 
@@ -971,6 +1121,10 @@ A list of types of known HTCondor daemons.
 \texttt{JobAction}
 
 A list of actions that can be performed on a job in a \Condor{schedd}.
+\\ \hline
+\texttt{JobEventType}
+
+A list of job event types.  See table~\ref{table:user-log-event-codes}.
 \\ \hline
 \texttt{SubsystemType}
 
@@ -1106,6 +1260,41 @@ This same example, using a dictionary instead of constructing a ClassAd:
 \footnotesize
 \begin{verbatim}
 htcondor.Schedd().submit({"Cmd": "/bin/echo"})
+\end{verbatim}
+\normalsize
+
+The following is an example of using the \PyBind{JobEventLog} class:
+
+\footnotesize
+\begin{verbatim}
+import os
+import sys
+import htcondor
+from htcondor import JobEventType
+
+jel = htcondor.JobEventLog("logfile")
+# Stop waiting for events sixty seconds from now.
+for event in jel.events(stop_after=60):
+    if event.type == JobEventType.EXECUTE:
+        break;
+else:
+    print("Failed to find execute event before deadline, aborting.")
+    sys.exit(-1)
+
+# Do something else.
+
+# Stop waiting for events ninety seconds from now.
+for event in jel.events(stop_after=90):
+    if event.type == JobEventType.JOB_TERMINATED:
+        break;
+    elif event.type == JobEventType.IMAGE_SIZE:
+        pass
+    else:
+        print("Found unexpected event, aborting.")
+        sys.exit(-1)
+else:
+    print("Failed to find terminated event before deadline, aborting.")
+    sys.exit(-1)
 \end{verbatim}
 \normalsize
 

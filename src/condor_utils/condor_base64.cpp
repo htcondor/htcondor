@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2016, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,81 +18,121 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_debug.h"
-#include "condor_config.h"
+
 #include "condor_base64.h"
 
-// For base64 encoding
-#if HAVE_EXT_OPENSSL
-# include <openssl/sha.h>
-# include <openssl/hmac.h>
-# include <openssl/evp.h>
-# include <openssl/bio.h>
-# include <openssl/buffer.h>
-#endif
+static const std::string base64_chars = 
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+             "abcdefghijklmnopqrstuvwxyz"
+             "0123456789+/";
 
-// Caller needs to free the returned pointer
-char* condor_base64_encode(const unsigned char *input, int length)
-{
-#if HAVE_EXT_OPENSSL
-	BIO *bmem, *b64;
-	BUF_MEM *bptr;
 
-	b64 = BIO_new(BIO_f_base64());
-	bmem = BIO_new(BIO_s_mem());
-	b64 = BIO_push(b64, bmem);
-	BIO_write(b64, input, length);
-	(void)BIO_flush(b64);
-	BIO_get_mem_ptr(b64, &bptr);
-
-	char *buff = (char *)malloc(bptr->length);
-	ASSERT(buff);
-	memcpy(buff, bptr->data, bptr->length-1);
-	buff[bptr->length-1] = 0;
-	BIO_free_all(b64);
-
-	return buff;
-#else
-	(void) input;
-	(void) length;
-	EXCEPT( "condor_base64_encode() not available: HAVE_EXT_OPENSSL is false" );
-	return NULL;
-#endif
+static inline bool is_base64(BYTE c) {
+  return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
+std::string Base64::condor_base64_encode(BYTE const* buf, unsigned int bufLen) {
+  std::string ret;
+  int i = 0;
+  int j = 0;
+  BYTE char_array_3[3];
+  BYTE char_array_4[4];
+
+  while (bufLen--) {
+    char_array_3[i++] = *(buf++);
+    if (i == 3) {
+      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+      char_array_4[3] = char_array_3[2] & 0x3f;
+
+      for(i = 0; (i <4) ; i++)
+        ret += base64_chars[char_array_4[i]];
+      i = 0;
+    }
+  }
+
+  if (i)
+  {
+    for(j = i; j < 3; j++)
+      char_array_3[j] = '\0';
+
+    char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+    char_array_4[3] = char_array_3[2] & 0x3f;
+
+    for (j = 0; (j < i + 1); j++)
+      ret += base64_chars[char_array_4[j]];
+
+    while((i++ < 3))
+      ret += '=';
+  }
+
+  return ret;
+}
+
+std::vector<BYTE> Base64::condor_base64_decode(std::string encoded_string) {
+  int in_len = encoded_string.size();
+  int i = 0;
+  int j = 0;
+  int in_ = 0;
+  BYTE char_array_4[4], char_array_3[3];
+  std::vector<BYTE> ret;
+
+  while (in_len-- && ( (encoded_string[in_]=='\n') || (( encoded_string[in_] != '=') && is_base64(encoded_string[in_])))) {
+    if(encoded_string[in_]=='\n') {
+      in_++;
+      continue;
+    }
+    char_array_4[i++] = encoded_string[in_]; in_++;
+    if (i ==4) {
+      for (i = 0; i <4; i++)
+        char_array_4[i] = base64_chars.find(char_array_4[i]);
+
+      char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+      char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+      char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+      for (i = 0; (i < 3); i++)
+          ret.push_back(char_array_3[i]);
+      i = 0;
+    }
+  }
+
+  if (i) {
+    for (j = i; j <4; j++)
+      char_array_4[j] = 0;
+
+    for (j = 0; j <4; j++)
+      char_array_4[j] = base64_chars.find(char_array_4[j]);
+
+    char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+    char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+    char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+    for (j = 0; (j < i - 1); j++) ret.push_back(char_array_3[j]);
+  }
+
+  return ret;
+}
+
+
+// Caller needs to free the returned pointer
+char* condor_base64_encode(const unsigned char *input, int length) {
+	std::string tstr = Base64::condor_base64_encode(input, length);
+	return strdup(tstr.c_str());
+}
+
+
 // Caller needs to free *output if non-NULL
-void condor_base64_decode(const char *input,unsigned char **output, int *output_length)
-{
-#if HAVE_EXT_OPENSSL
-	BIO *b64, *bmem;
-
-	ASSERT( input );
-	ASSERT( output );
-	ASSERT( output_length );
-
-	int input_length = strlen(input);
-
-		// assuming output length is <= input_length
-	*output = (unsigned char *)malloc(input_length + 1);
-	ASSERT( *output );
-	memset(*output, 0, input_length);
-
-	b64 = BIO_new(BIO_f_base64());
-	bmem = BIO_new_mem_buf((void *)const_cast<char*>(input), input_length);
-	bmem = BIO_push(b64, bmem);
-
-	*output_length = BIO_read(bmem, *output, input_length);
-	if( *output_length < 0 ) {
-		free( *output );
-		*output = NULL;
+void condor_base64_decode(const char *input,unsigned char **output, int *output_length) {
+	std::string tinput(input);
+	std::vector<BYTE> tvec =  Base64::condor_base64_decode(tinput);
+	*output_length = tvec.size();
+	if (*output_length > 0 ) {
+		*output=(unsigned char*)malloc(*output_length);
+		memcpy(*output, tvec.data(), *output_length);
 	}
-
-	BIO_free_all(bmem);
-#else
-	(void) input;
-	(void) output;
-	(void) output_length;
-	EXCEPT( "condor_base64_encode() not available: HAVE_EXT_OPENSSL is false" );
-#endif
 }
 

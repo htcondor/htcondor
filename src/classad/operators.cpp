@@ -1997,7 +1997,7 @@ flatten( EvalState &state, Value &val, ExprTree *&tree ) const
 		}
 	} else {
 		// Flatten arms of the if expression
-		if( !child2->Flatten( state, eval2, fChild2 ) ||
+		if( child2 && !child2->Flatten( state, eval2, fChild2 ) ||
 			!child3->Flatten( state, eval3, fChild3 ) ) {
 			// clean up
 			if( fChild1 ) delete fChild1;
@@ -2008,9 +2008,9 @@ flatten( EvalState &state, Value &val, ExprTree *&tree ) const
 		}
 
 		// if any arm collapsed into a value, make it a Literal
-		if( !fChild2 ) fChild2 = Literal::MakeLiteral( eval2 );
+		if( child2 && !fChild2 ) fChild2 = Literal::MakeLiteral( eval2 );
 		if( !fChild3 ) fChild3 = Literal::MakeLiteral( eval3 );
-		if( !fChild2 || !fChild3 ) {
+		if( !fChild3 ) {
 			// clean up
 			if( fChild1 ) delete fChild1;
 			if( fChild2 ) delete fChild2;

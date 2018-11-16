@@ -45,6 +45,7 @@ void
 DCCollector::init( bool needs_reconfig )
 {
 	static long bootTime = 0;
+	reconfigTime = 0;
 
 	update_rsock = NULL;
 	use_tcp = true;
@@ -55,9 +56,10 @@ DCCollector::init( bool needs_reconfig )
 	if (bootTime == 0) {
 		bootTime = time( NULL );
 	} 
-	startTime = bootTime;
+	reconfigTime = startTime = bootTime;
 
 	if( needs_reconfig ) {
+		reconfigTime = time( NULL );
 		reconfig();
 	}
 }
@@ -113,7 +115,6 @@ DCCollector::deepCopy( const DCCollector& copy )
 	update_destination = copy.update_destination ? strdup( copy.update_destination ) : NULL;
 
 	startTime = copy.startTime;
-
 }
 
 
@@ -194,9 +195,11 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 	// Add start time & seq # to the ads before we publish 'em
 	if ( ad1 ) {
 		ad1->Assign(ATTR_DAEMON_START_TIME, startTime);
+		ad1->Assign(ATTR_DAEMON_LAST_RECONFIG_TIME, reconfigTime);
 	}
 	if ( ad2 ) {
 		ad2->Assign(ATTR_DAEMON_START_TIME, startTime);
+		ad2->Assign(ATTR_DAEMON_LAST_RECONFIG_TIME, reconfigTime);
 	}
 
 	if ( ad1 ) {

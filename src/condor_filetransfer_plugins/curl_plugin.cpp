@@ -174,14 +174,12 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
                 curl_easy_setopt( handle, CURLOPT_WRITEFUNCTION, ftp_write_callback );
             }
 
-            // * If the following option is set to 0, then curl_easy_perform()
-            // returns 0 even on errors (404, 500, etc.) So we can't identify
-            // some failures. I don't think it's supposed to do that?
-            // * If the following option is set to 1, then something else bad
-            // happens? 500 errors fail before we see HTTP headers but I don't
-            // think that's a big deal.
-            // * Let's keep it set to 1 for now.
-            curl_easy_setopt( handle, CURLOPT_FAILONERROR, 1 );
+            // We need to set CURLOPT_FAILONERROR to 0 so the client doesn't
+            // die immediately a 401 or 500 error (which sometimes causes a
+            // broken socket on the server).
+            // However with this setting, HTTP errors (401, 500, etc.) are
+            // considered successful, so we need to manually check for these.
+            curl_easy_setopt( handle, CURLOPT_FAILONERROR, 0 );
             
             if( diagnostic ) {
                 curl_easy_setopt( handle, CURLOPT_VERBOSE, 1 );
@@ -227,7 +225,10 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
             stats->ConnectionTimeSeconds +=  ( transfer_total_time - transfer_connection_time );
             stats->TransferReturnCode = return_code;
 
-            if( rval == CURLE_OK ) {
+            // Make sure to check the return code here as well as rval!
+            // HTTP error codes like 401, 500 are considered successful by 
+            // libcurl and we don't want them to be.
+            if( rval == CURLE_OK && return_code <= 400 ) {
                 stats->TransferSuccess = true;
                 stats->TransferError = "";
                 stats->TransferFileBytes = ftell( file );
@@ -235,6 +236,11 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
             else {
                 stats->TransferSuccess = false;
                 stats->TransferError = error_buffer;
+                // If we got an HTTP error code, need to change a couple more things
+                if( return_code > 400 ) {
+                    rval = CURLE_HTTP_RETURNED_ERROR;
+                    stats->TransferError = "Server returned HTTP error code " + std::to_string((long long int)return_code);
+                }
             }
 
             // Error handling and cleanup

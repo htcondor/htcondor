@@ -613,16 +613,16 @@ reinitialize ()
 	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
 
 	// up to 1 year per negotiation cycle
- 	MaxTimePerCycle = param_integer("NEGOTIATOR_MAX_TIME_PER_CYCLE",31536000);
+	MaxTimePerCycle = param_integer("NEGOTIATOR_MAX_TIME_PER_CYCLE",1200);
 
 	// up to 1 year per submitter by default
- 	MaxTimePerSubmitter = param_integer("NEGOTIATOR_MAX_TIME_PER_SUBMITTER",31536000);
+	MaxTimePerSubmitter = param_integer("NEGOTIATOR_MAX_TIME_PER_SUBMITTER",60);
 
 	// up to 1 year per schedd by default
-	MaxTimePerSchedd = param_integer("NEGOTIATOR_MAX_TIME_PER_SCHEDD",31536000);
+	MaxTimePerSchedd = param_integer("NEGOTIATOR_MAX_TIME_PER_SCHEDD",120);
 
 	// up to 1 year per spin by default
- 	MaxTimePerSpin = param_integer("NEGOTIATOR_MAX_TIME_PER_PIESPIN",31536000);
+	MaxTimePerSpin = param_integer("NEGOTIATOR_MAX_TIME_PER_PIESPIN",120);
 
 	// deal with a possibly resized socket cache, or create the socket
 	// cache if this is the first time we got here.
@@ -1189,6 +1189,41 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 		}
 	}
 	free(tmp);
+
+	tmp=param("PREEMPTION_RANK");
+	if ( tmp && PreemptionRank) {
+		const char* preempt_rank_name = "preempt_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(preempt_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(preempt_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+	tmp=param("NEGOTIATOR_PRE_JOB_RANK");
+	if ( tmp && NegotiatorPreJobRank) {
+		const char* pre_job_rank_name = "pre_job_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(pre_job_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(pre_job_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+	tmp=param("NEGOTIATOR_POST_JOB_RANK");
+	if ( tmp && NegotiatorPostJobRank) {
+		const char* post_job_rank_name = "post_job_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(post_job_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(post_job_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+
 	if (sample_startd_ad) {
 		delete sample_startd_ad;
 		sample_startd_ad = NULL;
@@ -3976,7 +4011,7 @@ assignWork(const ScheddWorkMap &workMap, CurrentWorkMap &curWork, ScheddWork &ne
 void
 Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds)
 {
-	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", false))
+	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", true))
 	{
 		return;
 	}
@@ -4789,7 +4824,7 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 }
 
 bool Matchmaker::
-SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft) {
+SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double /*pieLeft*/) {
     double match_cost = 0;
 
     if (cp_supports_policy(*candidate)) {
@@ -4802,7 +4837,8 @@ SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double 
     if ((used + match_cost) <= allowed) {
         return true;
     }
-    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*match_cost)) {
+
+    if ((used <= 0) && (allowed > 0)) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone
@@ -6921,6 +6957,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 	backupAd->AssignExpr(ATTR_REMOTE_USER,"UNDEFINED");
 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
+	std::list<int> usableDSlots;
 	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second <= newRank; slot++) {
 		int dSlot = ranks[slot].first; // dslot index in childXXX list
 
@@ -6999,7 +7036,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 				candidatePreemptState = RANK_PREEMPTION;
 			}
 
+			// Finally, if we made it here, this slot is a candidate for
+			// preemption, fall through and try to merge its resources into
+			// the pslot to match and preempt this one.
 		}
+		usableDSlots.push_back(slot);
 
 			// for each splitable resource, get it from the dslot, and add to pslot
 		for (std::list<std::string>::iterator it = attrs.begin(); it != attrs.end(); it++) {
@@ -7037,10 +7078,12 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 			dprintf(D_FULLDEBUG, "Matched pslot %s by %s preempting %d dynamic slots\n", 
 				name.c_str(),
 				candidatePreemptState == PRIO_PREEMPTION ? "priority" : "startd rank",
-				slot + 1);
+				(int)usableDSlots.size());
 			dslot_claims.clear();
 
-			for (unsigned int child = 0; child < slot + 1; child++) {
+			auto i = usableDSlots.begin();
+			for( ; i != usableDSlots.end(); ++i ) {
+				int child = *i;
 				dslot_claims += child_claims[ranks[child].first];
 				dslot_claims += " ";
 				// TODO Move this clearing of claim ids to
@@ -7063,7 +7106,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 			// Note we do not want to delete backupAd when returning here, since we handed off this
 			// pointer to unmutatedSlotAds above; it will be deleted in DeleteMatchList().
 			return true;
-		} 
+		}
 	}
 
 	// If we made it here, we failed to match this pSlot.  So restore the pslot ad back to

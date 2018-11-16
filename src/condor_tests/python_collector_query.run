@@ -1,0 +1,180 @@
+#! /usr/bin/env python
+##**************************************************************
+##
+## Copyright (C) 2018, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+import os
+import time
+import classad
+import htcondor
+
+# request a  personal condor 6 slots, GPUs and 2 slot types
+#testreq: personal
+append_config = """#<<CONDOR_TESTREQ_CONFIG
+  NUM_CPUS = 6
+  use FEATURE : PartitionableSlot(1, 50%)
+  use FEATURE : GPUs
+  GPU_DISCOVERY_EXTRA = -sim:1,3
+  NUM_SLOTS_TYPE_2 = 3
+  #CONDOR_TESTREQ_CONFIG ends
+"""
+#endtestreq
+
+from pytest.CondorCluster import CondorCluster
+from pytest.Utils import Utils
+
+testname = os.path.basename(__file__)[:-4]
+
+logfile = "{0}{1}.log".format(testname, os.getpid())
+cluster = CondorCluster( {
+	"executable": "x_sleep.pl",
+	"arguments": "0",
+	"notification": "never",
+	"log": logfile
+	} )
+
+Utils.TLog("submitting sleep forever jobs, userlog is " + logfile)
+cluster.Submit( 20 )
+
+Utils.TLog("wait up to 2 min for a job to start")
+if not cluster.WaitUntilExecute( 2 * 60 ):
+	Utils.TLog("Timed out waiting for a job to start")
+	exit(1)
+
+retval = 0
+Utils.TLog("A job is running, now we can do status queries")
+
+collector = htcondor.Collector()
+
+retval = 1
+
+# counters for ads by type
+counts = {}
+
+Utils.TLog("fetching ANY ads and counting them")
+ads = collector.query()
+for ad in ads :
+	#print(ad)
+	adtype = ad['MyType']
+	name = ad['Name']
+	print ("{0:12s} {1}".format(adtype, name))
+	if adtype in counts :
+		counts[adtype] += 1
+	else :
+		counts[adtype] = 1
+
+Utils.TLog("Got %d ads:" % len(ads))
+print(counts)
+
+failchecks = 0
+if (counts['DaemonMaster'] != 1) :
+	Utils.Log("FAILURE: expected 1 DaemonMaster ad, got %d" % counts['DaemonMaster'])
+	failchecks += 1
+if (counts['Collector'] != 1) :
+	Utils.Log("FAILURE: expected 1 Collector ad, got %d" % counts['Collector'])
+	failchecks += 1
+if (counts['Negotiator'] != 1) :
+	Utils.Log("FAILURE: expected 1 Negotiator ad, got %d" % counts['Negotiator'])
+	failchecks += 1
+if (counts['Scheduler'] != 1) :
+	Utils.Log("FAILURE: expected 1 Scheduler ad, got %d" % counts['Scheduler'])
+	failchecks += 1
+if (counts['Submitter'] != 1) :
+	Utils.Log("FAILURE: expected 1 Submitter ad, got %d" % counts['Submitter'])
+	failchecks += 1
+if (counts['Accounting'] != 2) :
+	Utils.Log("FAILURE: expected 2 Accounting ads, got %d" % counts['Accounting'])
+	failchecks += 1
+if (counts['Machine'] != 4) :
+	Utils.Log("FAILURE: expected 4 Machine ads, got %d" % counts['Machine'])
+	failchecks += 1
+
+Utils.TLog("Fetching Master ad:")
+masterAds = collector.query(htcondor.AdTypes.Master, True, ["MyType", "Name","MyAddress","MASTER_StartTime"])
+for ad in masterAds : print(ad)
+if (len(masterAds) != 1) :
+	Utils.Log("FAILURE: expected 1 Master ad, got %d" % len(masterAds))
+	failchecks += 1
+elif (len(masterAds[0]) != 4) :
+	Utils.Log("FAILURE: expected 4 Master ad attributes, got %d" % len(masterAds[0]))
+	failchecks += 1
+
+Utils.TLog("Fetching Collector ad:")
+collectorAds = collector.query(htcondor.AdTypes.Collector, True, ["MyType", "Name","MyAddress","UpdatesLost"])
+for ad in collectorAds : print(ad)
+if (len(collectorAds) != 1) :
+	Utils.Log("FAILURE: expected 1 Collector ad, got %d" % len(collectorAds))
+	failchecks += 1
+elif (len(collectorAds[0]) != 4) :
+	Utils.Log("FAILURE: expected 4 Collector ad attributes, got %d" % len(collectorAds[0]))
+	failchecks += 1
+
+Utils.TLog("Fetching Negotiator ad:")
+negotiatorAds = collector.query(htcondor.AdTypes.Negotiator, True, ["MyType", "Name","MyAddress","LastNegotiationCycleEnd0"])
+for ad in negotiatorAds : print(ad)
+if (len(negotiatorAds) != 1) :
+	Utils.Log("FAILURE: expected 1 Negotiator ad, got %d" % len(negotiatorAds))
+	failchecks += 1
+elif (len(negotiatorAds[0]) != 4) :
+	Utils.Log("FAILURE: expected 4 Negotiator ad attributes, got %d" % len(negotiatorAds[0]))
+	failchecks += 1
+
+Utils.TLog("Fetching Schedd ad:")
+scheddAds = collector.query(htcondor.AdTypes.Schedd, True, ["MyType", "Name","MyAddress","NumUsers","JobsStarted","Autoclusters"])
+for ad in scheddAds : print(ad)
+if (len(scheddAds) != 1) :
+	Utils.Log("FAILURE: expected 1 Schedd ad, got %d" % len(scheddAds))
+	failchecks += 1
+elif (len(scheddAds[0]) != 6) :
+	Utils.Log("FAILURE: expected 6 Schedd ad attributes, got %d" % len(scheddAds[0]))
+	failchecks += 1
+
+Utils.TLog("Fetching Submitter ads:")
+submitterAds = collector.query(htcondor.AdTypes.Submitter, True, ["MyType", "Name","MyAddress","IdleJobs","RunningJobs"])
+for ad in submitterAds : print(ad)
+if (len(submitterAds) != 1) :
+	Utils.Log("FAILURE: expected 1 Submitter ad, got %d" % len(submitterAds))
+	failchecks += 1
+elif (len(submitterAds[0]) != 5) :
+	Utils.Log("FAILURE: expected 5 Submitter ad attributes, got %d" % len(submitterAds[0]))
+	failchecks += 1
+
+Utils.TLog("Fetching Accounting ads:")
+accountingAds = collector.query(htcondor.AdTypes.Accounting, True, ["MyType", "Name","IsAccountingGroup","Priority","WeightedResourcesUsed"])
+for ad in accountingAds : print(ad)
+if (len(accountingAds) != 2) :
+	Utils.Log("FAILURE: expected 2 Accounting ads, got %d" % len(accountingAds))
+	failchecks += 1
+elif (len(accountingAds[1]) != 5) :
+	Utils.Log("FAILURE: expected 5 Accounting ad attributes, got %d" % len(accountingAds[1]))
+	failchecks += 1
+
+Utils.TLog("Fetching Machine ads:")
+machineAds = collector.query(htcondor.AdTypes.Startd, True, ["MyType", "Name","MyAddress","PartitionableSlot","DynamicSlot","SlotID","Cpus","Memory","GPUs","AssignedGPUs","State","Activity"])
+for ad in machineAds : print(ad)
+if (len(machineAds) != 4) :
+	Utils.Log("FAILURE: expected 4 Machine ads, got %d" % len(machineAds))
+	failchecks += 1
+elif (len(machineAds[1]) < 9 or len(machineAds[1]) > 11) :
+	Utils.Log("FAILURE: expected 9 to 11 Machine ad attributes, got %d" % len(machineAds[1]))
+	failchecks += 1
+
+if failchecks == 0 : retval = 0
+
+exit(retval)
+

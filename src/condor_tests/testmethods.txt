@@ -145,9 +145,9 @@ job_core_compressfiles_std.run*
 	Expects: input file contents = output file contents.
 
 job_core_copytospool_van.run*
-	Description: Vanilla test that spooled executable is same via md5 checksum of both files.
+	Description: Vanilla test that spooled executable is same via sha256 checksum of both files.
 	Method:  Job is submitted on hold and original and spooled executable are matched
-		via md5 checcksums. Submit event is the trigger to check.
+		via sha256 checcksums. Submit event is the trigger to check.
 	Expects: Submit event and then an abort event after we remove held job.
 
 		up front? Weakness..... Inherited test.
@@ -742,14 +742,9 @@ job_filexfer_limitback_van.run*
 		files and makes sure they arrive
 	Expects: 2 files to arrive - does not test if third file did too.
 
-job_filexfer_md5_java.run*
-	Description: 
-	Method: 
-	Expects:
-
-job_filexfer_md5_van.run*
-	Description: create and move 200 megs of MD5 checksumed data 
-	Method: Moce the data and returnit as a different name and verify same md5 
+job_filexfer_sha256_van.run*
+	Description: create and move 200 megs of SHA256 checksumed data 
+	Method: Moce the data and returnit as a different name and verify same sha256 
 		checksum on the data.
 	Expects: checksum of new file to match original checksum
 

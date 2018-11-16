@@ -47,7 +47,6 @@
 #include "secure_file.h"
 #include "credmon_interface.h"
 #include "condor_base64.h"
-#include "zkm_base64.h"
 
 #include <algorithm>
 
@@ -84,10 +83,12 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 		// just in case transferOutputMopUp gets called before transferOutput
 	m_ft_rval = true;
 	trust_uid_domain = false;
+	trust_local_uid_domain = true;
 	uid_domain = NULL;
 	fs_domain = NULL;
 
 	transfer_at_vacate = false;
+	m_job_setup_done = false;
 	wants_file_transfer = false;
 	wants_x509_proxy = false;
 	job_cleanup_disconnected = false;
@@ -276,6 +277,7 @@ JICShadow::config( void )
 	fs_domain = param( "FILESYSTEM_DOMAIN" );  
 
 	trust_uid_domain = param_boolean_crufty("TRUST_UID_DOMAIN", false);
+	trust_local_uid_domain = param_boolean("TRUST_LOCAL_UID_DOMAIN", true);
 }
 
 
@@ -436,7 +438,8 @@ JICShadow::transferOutput( bool &transient_failure )
 		// finished.  may as well do this in the foreground,
 		// since we do not want to be interrupted by anything
 		// short of a hardkill. 
-	if( filetrans && ((requested_exit == false) || transfer_at_vacate) ) {
+		// Don't transfer if we haven't started the job.
+	if( filetrans && m_job_setup_done && ((requested_exit == false) || transfer_at_vacate) ) {
 
 		if ( shadowDisconnected() ) {
 				// trigger retransfer on reconnect
@@ -783,6 +786,8 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 void
 JICShadow::notifyJobPreSpawn( void )
 {
+	m_job_setup_done = true;
+
 			// Notify the shadow we're about to exec.
 	REMOTE_CONDOR_begin_execution();
 
@@ -1606,6 +1611,13 @@ JICShadow::sameUidDomain( void )
 		// their config file, don't perform this check, so sites can
 		// use UID domains that aren't substrings of DNS names if they
 		// have to.
+	if( trust_local_uid_domain && syscall_sock && syscall_sock->peer_is_local() ) {
+		dprintf( D_FULLDEBUG, "SameUidDomain(): Peer is on a local "
+		         "interface and TRUST_LOCAL_UID_DOMAIN=True, "
+		         "returning true\n" );
+		return true;
+	}
+
 	if( trust_uid_domain ) {
 		dprintf( D_FULLDEBUG, "TRUST_UID_DOMAIN is 'True' in the config "
 				 "file, not comparing shadow's UidDomain (%s) against its "
@@ -2422,7 +2434,10 @@ JICShadow::beginFileTransfer( void )
 		proxy_dest_path += proxy_filename;
 
 			// Do RPC call to get delegated proxy.
+			// This needs to happen with user privs so we can write to scratch dir!
+		priv_state original_priv = set_user_priv();
 		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.Value(), proxy_dest_path.Value(), proxy_expiration );
+		set_priv( original_priv );
 
 			// Update job ad with location of proxy
 		job_ad->Assign( ATTR_X509_USER_PROXY, proxy_dest_path.Value() );
@@ -2744,7 +2759,7 @@ JICShadow::initUserCredentials() {
 
 	int rawlen = -1;
 	unsigned char* rawbuf = NULL;
-	zkm_base64_decode(credential.c_str(), &rawbuf, &rawlen);
+	condor_base64_decode(credential.c_str(), &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
 		dprintf(D_ALWAYS, "CREDMON: failed to decode credential into file (%s)!\n", filename);

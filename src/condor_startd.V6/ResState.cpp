@@ -251,6 +251,15 @@ ResState::eval( void )
 				} else {
 					rip->setBadputCausedByPreemption();
 				}
+
+				// Before entering the preempting state, check to see if we
+				// would have preempted during the preceding polling interval.
+				// This allows startd policies to put jobs on hold during
+				// draining.
+				if( 1 == rip->eval_preempt() ) {
+					rip->preemptIsTrue();
+				}
+
 				dprintf( D_ALWAYS, "State change: claim retirement ended/expired\n" );
 				// STATE TRANSITION #18
 				change( preempting_state );

@@ -113,6 +113,7 @@ main( int argc, char* argv[] )
 
 	config_ex( CONFIG_OPT_WANT_META | CONFIG_OPT_NO_EXIT );
 
+	int failures = 0;
 	IpVerify ipverify;
 
 	MyString line;
@@ -136,13 +137,15 @@ main( int argc, char* argv[] )
 		condor_sockaddr addr;
 		if( !addr.from_sinful(sin_str) ) {
 			fprintf(stderr,"Invalid ip address: %s\n",ip);
-			exit(1);
+			failures++;
+			continue;
 		}
 
 		DCpermission perm = StringToDCpermission(perm_str);
 		if( perm == LAST_PERM ) {
 			fprintf(stderr,"Invalid permission level: %s\n",perm_str);
-			exit(1);
+			failures++;
+			continue;
 		}
 
 		if( strcmp(fqu,"*") == 0 ) {
@@ -161,8 +164,8 @@ main( int argc, char* argv[] )
 		if( expected && strcasecmp(expected,result) != 0 ) {
 			printf("Got wrong result '%s' for '%s': reason: %s!\n",
 				   result,line.Value(),reason.Value());
-			printf("Aborting.\n");
-			exit(1);
+			failures++;
+			continue;
 		}
 		if( expected ) {
 			printf("%s\n",line.Value());
@@ -171,4 +174,11 @@ main( int argc, char* argv[] )
 			printf("%s %s\n",line.Value(),result);
 		}
 	}
+
+	if (failures) {
+		printf("Aborting because of %d failures\n", failures);
+		exit(1);
+	}
+
+	exit(0);
 }

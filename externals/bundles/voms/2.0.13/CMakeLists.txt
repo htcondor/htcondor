@@ -42,7 +42,7 @@ if ( WITH_VOMS AND WITH_GLOBUS )
 			set ( CONFIGURE_ENV true )
 		ENDIF()
 
-		condor_pre_external( VOMS voms-2.0.13-p1 "include;lib" "done")
+		condor_pre_external( VOMS voms-2.0.13-p2 "include;lib" "done")
 
 		ExternalProject_Add(voms
 			#-- Download Step ----------

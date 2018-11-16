@@ -50,33 +50,25 @@ check_version_string () {
   [[ ${!1} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Bad ${1//_/ }: '${!1}'"
 }
 
+# get the version and build id
+condor_build_id=$(<BUILD-ID)
+condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
+
+[[ $condor_version ]] || fail "Condor version string not found"
+check_version_string  condor_version
+
 # Do everything in a temp dir that will go away on errors or end of script
 tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
 trap 'rm -rf "$tmpd"' EXIT
 
 cd "$tmpd"
 mkdir SOURCES BUILD BUILDROOT RPMS SPECS SRPMS
-
-# untar the condor sources into a temporary directory
-mkdir "condor_src"
-cd "condor_src"
-tar xfpz "$TMP"/condor.tar.gz
-
-# get the version and build id out of the sources
-condor_build_id=$(<BUILD-ID)
-condor_version=$(awk -F\" '/^set\(VERSION / {print $2}' CMakeLists.txt)
-
-[[ $condor_version ]] || fail "Condor version string not found"
-check_version_string  condor_version
+mv ../condor-${condor_version}.tgz SOURCES/condor-${condor_version}.tar.gz
 
 # copy srpm files from condor sources into the SOURCES directory
-cd ..
-cp -p condor_src/build/packaging/srpm/* SOURCES
-
-# rename the condor_src directory to have the version number in it, then tar that up
-mv "condor_src" "condor-$condor_version"
-tar cfz SOURCES/condor-$condor_version.tar.gz "condor-$condor_version"
-rm -rf "condor-$condor_version"
+tar xvfpz SOURCES/condor-${condor_version}.tar.gz condor-${condor_version}/build/packaging/srpm
+cp -p condor-${condor_version}/build/packaging/srpm/* SOURCES
+rm -rf condor-${condor_version}
 
 # inject the version and build id into the spec file
 update_spec_define () {

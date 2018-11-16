@@ -17,6 +17,7 @@ void export_daemon_and_ad_types()
         .value("Negotiator", DT_NEGOTIATOR)
         .value("HAD", DT_HAD)
         .value("Generic", DT_GENERIC)
+        .value("Credd", DT_CREDD)
         ;
 
     enum_<AdTypes>("AdTypes")
@@ -33,5 +34,8 @@ void export_daemon_and_ad_types()
         .value("Grid", GRID_AD)
         .value("HAD", HAD_AD)
         .value("License", LICENSE_AD)
+        .value("Credd", CREDD_AD)
+        .value("Defrag", DEFRAG_AD)
+        .value("Accounting", ACCOUNTING_AD)
         ;
 }

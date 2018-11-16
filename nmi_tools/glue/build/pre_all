@@ -53,14 +53,80 @@ my $DocDir = "$CommonDir/doc";
 -d $SrcDir || die "$SrcDir does not exist!\n";
 
 ######################################################################
-# Step #1: build nroff sources
+# Step #1: Obtain the build id... I don't particularly like this but...
+######################################################################
+
+print "Creating embedded buildid\n";
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+
+# Stash this in the common dir for remote_pre
+if (defined($opt_version_buildid)) {
+  $runid = $opt_version_buildid;
+  print "Using build id from command-line: $runid\n";
+}
+else {
+  $runid = acquire_runid();
+  print "Automatically discovered that my build id is: $runid\n";
+}
+
+my $buildid_file="BUILD-ID";
+open( BUILDID_FILE, ">$buildid_file") || die "Can't open $buildid_file: $!\n";
+print BUILDID_FILE "$runid\n";
+close( BUILDID_FILE );
+
+######################################################################
+# Step #2: Create the official source tarball
+######################################################################
+
+print "Creating official source tarball\n";
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+mkdir("/tmp/$runid") || die "Can't mkdir(/tmp/$runid): $!\n";
+open(CM, "CMakeLists.txt") || die "Can't open CMakeLists.txt: $!\n";
+while (<CM>) {
+    if (m/^set\(VERSION "(\d+\.\d+\.\d+)"\)/) {
+        $condor_version = $1;
+        break;
+    }
+}
+close(CM);
+mkdir("/tmp/$runid/condor-$condor_version") ||
+    die "Can't mkdir(/tmp/$runid/condor-$condor_version): $!\n";
+
+system("cp -p .??* /tmp/$runid/condor-$condor_version");
+system("cp -pr * /tmp/$runid/condor-$condor_version");
+unlink("/tmp/$runid/condor-$condor_version/$buildid_file") ||
+    die "Can't remove /tmp/$runid/condor-$condor_version/$buildid_file: $!\n";
+chdir("/tmp/$runid") || die "Can't chdir(/tmp/$runid): $!\n";
+
+open ( TAR, "tar cvfz $CommonDir/condor-$condor_version.tgz condor-$condor_version 2>&1|" ) ||
+    die "Can't make the source tarball: $!\n";
+my $tar_log = "$CommonDir/tar.log";
+open( TAR_LOG, ">$tar_log" ) || die "Can't open $tar_log: $!\n";
+$oldfh = select(TAR_LOG); $| = 1; select($oldfh);
+while( <TAR> ) {
+    print TAR_LOG "$_";
+}
+close( TAR );
+close( TAR_LOG );
+$tar_status = $?;
+if( $tar_status ) {
+    print `cat $tar_log`;
+    die "Build source tarball failed with status $tar_status!\n";
+} else {
+    unlink( $tar_log ) || warn "Can't unlink($tar_log): $!\n";
+}
+system("rm -rf /tmp/$runid");
+
+######################################################################
+# Step #3: build nroff sources
 ######################################################################
 
 if(!(defined $opt_skip_doc)){
 	print "Building man page nroff source\n";
 	chdir( "$DocDir" ) || die "Can't chdir($DocDir): $!\n";
 	my $doc_log = "$CommonDir/nroff.log";
-	open( DOC, "make just-man-pages 2>&1|" ) || die "Can't open 'make just-man-pages': $!\n";
+	open( DOC, "make just-man-pages 2>&1|" ) ||
+        die "Can't open 'make just-man-pages': $!\n";
 	open( DOC_LOG, ">$doc_log" ) || die "Can't open $doc_log: $!\n";
 	$oldfh = select(DOC_LOG); $| = 1; select($oldfh);
 	while( <DOC> ) {
@@ -90,28 +156,6 @@ if(!(defined $opt_skip_doc)){
 } else {
 	print "Doc being skipped as requested\n";
 }
-
-######################################################################
-# Step #2) Obtain the build id... I don't particularly like this but...
-######################################################################
-
-print "Creating embedded buildid\n";
-chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
-
-# Stash this in the common dir for remote_pre
-if (defined($opt_version_buildid)) {
-  $runid = $opt_version_buildid;
-  print "Using build id from command-line: $runid\n";
-}
-else {
-  $runid = acquire_runid();
-  print "Automatically discovered that my build id is: $runid\n";
-}
-
-my $buildid_file="BUILD-ID";
-open( BUILDID_FILE, ">$buildid_file") || die "Can't open $buildid_file: $!\n";
-print BUILDID_FILE "$runid\n";
-close( BUILDID_FILE );
 
 ######################################################################
 # subroutines

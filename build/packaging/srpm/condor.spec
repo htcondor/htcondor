@@ -6,7 +6,6 @@
 # % define uw_build 1
 # % define std_univ 1
 
-%define aviary 0
 %define plumage 0
 %define systemd 0
 %define cgroups 0
@@ -64,11 +63,6 @@
 %if 0%{?hcc}
 %define blahp 0
 %define cream 0
-%if 0%{?rhel} >= 7
-%define aviary 0
-%else
-%define aviary 1
-%endif
 %if 0%{?rhel} >= 6
 %define std_univ 0
 %endif
@@ -82,7 +76,6 @@
 %endif
 
 %if 0%{?osg} && 0%{?rhel} == 7
-%define aviary 0
 %define std_univ 0
 %endif
 
@@ -210,10 +203,6 @@ Source123: zlib-1.2.3.tar.gz
 Patch8: osg_sysconfig_in_init_script.patch
 #% endif
 
-# HCC patches
-# See gt3158
-Patch15: wso2-axis2.patch
-
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires: cmake
@@ -234,6 +223,7 @@ BuildRequires: openldap-devel
 BuildRequires: python-devel
 BuildRequires: boost-devel
 BuildRequires: redhat-rpm-config
+BuildRequires: sqlite-devel
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
@@ -288,14 +278,10 @@ BuildRequires: globus-callout-devel
 BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
+BuildRequires: munge-devel
 BuildRequires: voms-devel
 %endif
 BuildRequires: libtool-ltdl-devel
-
-%if %aviary
-BuildRequires: wso2-wsf-cpp-devel >= 2.1.0-4
-BuildRequires: wso2-axis2-devel >= 2.1.0-4
-%endif
 
 %if %plumage
 BuildRequires: mongodb-devel >= 1.6.4-3
@@ -415,48 +401,6 @@ Obsoletes: condor-qmf-plugins
 
 %description qmf
 Components to connect HTCondor to the QMF management bus.
-%endif
-
-#######################
-%if %aviary
-%package aviary-common
-Summary: HTCondor Aviary development components
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: python-suds >= 0.4.1
-
-%description aviary-common
-Components to develop against simplified WS interface to HTCondor.
-
-%package aviary
-Summary: HTCondor Aviary components
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: %name-classads = %{version}-%{release}
-Requires: condor-aviary-common = %{version}-%{release}
-
-%description aviary
-Components to provide simplified WS interface to HTCondor.
-
-%package aviary-hadoop-common
-Summary: HTCondor Aviary Hadoop development components
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: python-suds >= 0.4.1
-Requires: condor-aviary-common = %{version}-%{release}
-
-%description aviary-hadoop-common
-Components to develop against simplified WS interface to HTCondor.
-
-%package aviary-hadoop
-Summary: HTCondor Aviary Hadoop components
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: condor-aviary = %{version}-%{release}
-Requires: condor-aviary-hadoop-common = %{version}-%{release}
-
-%description aviary-hadoop
-Aviary Hadoop plugin and components.
 %endif
 
 #######################
@@ -586,8 +530,6 @@ host as the DedicatedScheduler.
 %endif
 
 
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 #######################
 %package python
 Summary: Python bindings for HTCondor.
@@ -609,7 +551,6 @@ Provides: htcondor.so
 %description python
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
-%endif
 
 
 #######################
@@ -640,6 +581,16 @@ Requires: %name = %version-%release
 %description std-universe
 Includes all the files necessary to support running standard universe jobs.
 %endif
+
+%package single-node
+Summary: Conguration for a single-node (personal) HTCondor
+Group: Applications/System
+Requires: %name = %version-%release
+
+%description single-node
+This example configuration is good for trying out HTCondor for the first time.
+It only configures the IPv4 loopback address, turns on basic security and
+shortens many timers to be more responsive.
 
 %if %uw_build
 
@@ -721,10 +672,7 @@ Requires: %name-classads = %version-%release
 %if %cream
 Requires: %name-cream-gahp = %version-%release
 %endif
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 Requires: %name-python = %version-%release
-%endif
 Requires: %name-bosco = %version-%release
 %if %std_univ
 Requires: %name-std-universe = %version-%release
@@ -755,10 +703,6 @@ exit 0
 
 %if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
-%endif
-
-%if 0%{?hcc}
-%patch15 -p0
 %endif
 
 # fix errant execute permissions
@@ -797,7 +741,6 @@ cmake \
 %else
        -DWITH_CREAM:BOOL=FALSE \
 %endif
-       -DWANT_LEASE_MANAGER:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/usr \
@@ -831,7 +774,6 @@ cmake \
        -DHAVE_BOINC:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
-       -DWANT_LEASE_MANAGER:BOOL=FALSE \
        -DWANT_HDFS:BOOL=FALSE \
        -DWITH_ZLIB:BOOL=FALSE \
        -DWANT_CONTRIB:BOOL=ON \
@@ -840,11 +782,6 @@ cmake \
        -DWITH_PLUMAGE:BOOL=TRUE \
 %else
        -DWITH_PLUMAGE:BOOL=FALSE \
-%endif
-%if %aviary
-       -DWITH_AVIARY:BOOL=TRUE \
-%else
-       -DWITH_AVIARY:BOOL=FALSE \
 %endif
        -DWANT_FULL_DEPLOYMENT:BOOL=TRUE \
 %if %qmf
@@ -914,7 +851,7 @@ populate %{_libdir}/ %{buildroot}/%{_datadir}/condor/libclassad.so*
 rm -f %{buildroot}/%{_datadir}/condor/libclassad.a
 mv %{buildroot}%{_datadir}/condor/lib*.so %{buildroot}%{_libdir}/
 
-%if %aviary || %qmf
+%if %qmf
 populate %{_libdir}/condor/plugins %{buildroot}/%{_usr}/libexec/*-plugin.so
 %endif
 
@@ -947,23 +884,16 @@ mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
 
+%ifarch %{ix86}
+populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-small-shadow
+%endif
+
+populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-single-node
+populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/50ec2.config
+
 %if %qmf
 # Install condor-qmf's base plugin configuration
 populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/60condor-qmf.config
-%endif
-%if %aviary
-# Install condor-aviary's base plugin configuration
-populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/61aviary.config
-populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/63aviary-hadoop.config
-
-mkdir -p %{buildroot}/%{_var}/lib/condor/aviary
-populate %{_var}/lib/condor/aviary %{buildroot}/usr/axis2.xml
-populate %{_var}/lib/condor/aviary %{buildroot}/usr/services/
-populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/collector/libaviary_collector_axis.so
-populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/collector/AviaryCollectorPlugin-plugin.so
-populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/hadoop/AviaryHadoopPlugin-plugin.so
-populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/job/AviaryScheddPlugin-plugin.so
-populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/locator/AviaryLocatorPlugin-plugin.so
 %endif
 
 %if %plumage
@@ -1007,12 +937,6 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
 rm -rf %{buildroot}/%{_sysconfdir}/init.d
 
-# Temporarily turn off python for Fedora
-%if 0%{?fedora}
-rm -f %{buildroot}/%{_bindir}/condor_top
-rm -f %{buildroot}/%{_mandir}/man1/condor_top.1.gz
-%endif
-
 %if %systemd
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_tmpfilesdir}
@@ -1052,13 +976,10 @@ install -m 0755 src/condor_scripts/CondorPersonal.pm %{buildroot}%{_datadir}/con
 install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
 install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
 
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 # Install python-binding libs
 mkdir -p %{buildroot}%{python_sitearch}
 install -m 0755 src/python-bindings/{classad,htcondor}.so %{buildroot}%{python_sitearch}
 install -m 0755 src/python-bindings/libpyclassad*.so %{buildroot}%{_libdir}
-%endif
 
 # we must place the config examples in builddir so %doc can find them
 mv %{buildroot}/etc/examples %_builddir/%name-%tarball_version
@@ -1075,9 +996,6 @@ rm -rf %{buildroot}%{_sbindir}/condor_install
 rm -rf %{buildroot}%{_sbindir}/condor_install_local
 rm -rf %{buildroot}%{_sbindir}/condor_local_start
 rm -rf %{buildroot}%{_sbindir}/condor_local_stop
-%ifarch x86_64
-rm -rf %{buildroot}%{_sbindir}/condor_shadow_s
-%endif
 rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
 rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
 rm -rf %{buildroot}%{_sbindir}/filelock_midwife
@@ -1148,8 +1066,10 @@ rm -rf %{buildroot}%{_datadir}/condor/{libpyclassad*,htcondor,classad}.so
 mkdir -p %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python_sitelib}
-%if 0%{?osg} || 0%{?hcc}
+%if 0%{?hcc}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.factory %{buildroot}%{_sysconfdir}/condor/config.d/60-campus_factory.config
+%endif
+%if 0%{?osg} || 0%{?hcc}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
 %endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
@@ -1302,10 +1222,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 %_libexecdir/condor/libcollector_python_plugin.so
-%endif
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
@@ -1343,9 +1260,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
-%if ! 0%{?fedora}
 %_mandir/man1/condor_top.1.gz
-%endif
 %_mandir/man1/condor_transfer_data.1.gz
 %_mandir/man1/condor_transform_ads.1.gz
 %_mandir/man1/condor_update_machine_ad.1.gz
@@ -1505,94 +1420,6 @@ rm -rf %{buildroot}
 %endif
 
 #################
-%if %aviary
-%files aviary-common
-%defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
-%_sysconfdir/condor/config.d/61aviary.config
-%dir %_libdir/condor/plugins
-%_libdir/condor/plugins/AviaryScheddPlugin-plugin.so
-%_libdir/condor/plugins/AviaryLocatorPlugin-plugin.so
-%_libdir/condor/plugins/AviaryCollectorPlugin-plugin.so
-%_libdir/condor/plugins/libaviary_collector_axis.so
-%_sbindir/aviary_query_server
-%dir %_datadir/condor/aviary
-%_datadir/condor/aviary/jobcontrol.py*
-%_datadir/condor/aviary/jobquery.py*
-%_datadir/condor/aviary/submissions.py*
-%_datadir/condor/aviary/submission_ids.py*
-%_datadir/condor/aviary/subinventory.py*
-%_datadir/condor/aviary/submit.py*
-%_datadir/condor/aviary/setattr.py*
-%_datadir/condor/aviary/jobinventory.py*
-%_datadir/condor/aviary/locator.py*
-%_datadir/condor/aviary/collector_tool.py*
-%dir %_datadir/condor/aviary/dag
-%_datadir/condor/aviary/dag/diamond.dag
-%_datadir/condor/aviary/dag/dag-submit.py*
-%_datadir/condor/aviary/dag/job.sub
-%dir %_datadir/condor/aviary/module
-%_datadir/condor/aviary/module/aviary/util.py*
-%_datadir/condor/aviary/module/aviary/https.py*
-%_datadir/condor/aviary/module/aviary/__init__.py*
-%_datadir/condor/aviary/README
-%dir %_var/lib/condor/aviary
-%_var/lib/condor/aviary/axis2.xml
-%dir %_var/lib/condor/aviary/services
-%dir %_var/lib/condor/aviary/services/job
-%_var/lib/condor/aviary/services/job/services.xml
-%_var/lib/condor/aviary/services/job/aviary-common.xsd
-%_var/lib/condor/aviary/services/job/aviary-job.xsd
-%_var/lib/condor/aviary/services/job/aviary-job.wsdl
-%dir %_var/lib/condor/aviary/services/query
-%_var/lib/condor/aviary/services/query/services.xml
-%_var/lib/condor/aviary/services/query/aviary-common.xsd
-%_var/lib/condor/aviary/services/query/aviary-query.xsd
-%_var/lib/condor/aviary/services/query/aviary-query.wsdl
-%dir %_var/lib/condor/aviary/services/locator
-%_var/lib/condor/aviary/services/locator/services.xml
-%_var/lib/condor/aviary/services/locator/aviary-common.xsd
-%_var/lib/condor/aviary/services/locator/aviary-locator.xsd
-%_var/lib/condor/aviary/services/locator/aviary-locator.wsdl
-%dir %_var/lib/condor/aviary/services/collector
-%_var/lib/condor/aviary/services/collector/services.xml
-%_var/lib/condor/aviary/services/collector/aviary-common.xsd
-%_var/lib/condor/aviary/services/collector/aviary-collector.xsd
-%_var/lib/condor/aviary/services/collector/aviary-collector.wsdl
-%_var/lib/condor/aviary/services/collector/libaviary_collector_axis.so
-
-%files aviary
-%defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
-%_libdir/libaviary_axis_provider.so
-%_libdir/libaviary_wso2_common.so
-%dir %_libdir/condor/plugins
-%_var/lib/condor/aviary/services/job/libaviary_job_axis.so
-%_var/lib/condor/aviary/services/query/libaviary_query_axis.so
-%_var/lib/condor/aviary/services/locator/libaviary_locator_axis.so
-
-%files aviary-hadoop-common
-%defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
-%_var/lib/condor/aviary/services/hadoop/services.xml
-%_var/lib/condor/aviary/services/hadoop/aviary-common.xsd
-%_var/lib/condor/aviary/services/hadoop/aviary-hadoop.xsd
-%_var/lib/condor/aviary/services/hadoop/aviary-hadoop.wsdl
-%_datadir/condor/aviary/hadoop_tool.py*
-
-%files aviary-hadoop
-%defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
-%_var/lib/condor/aviary/services/hadoop/libaviary_hadoop_axis.so
-%_libdir/condor/plugins/AviaryHadoopPlugin-plugin.so
-%_sysconfdir/condor/config.d/63aviary-hadoop.config
-%_datadir/condor/aviary/hdfs_datanode.sh
-%_datadir/condor/aviary/hdfs_namenode.sh
-%_datadir/condor/aviary/mapred_jobtracker.sh
-%_datadir/condor/aviary/mapred_tasktracker.sh
-%endif
-
-#################
 %if %plumage
 %files plumage
 %defattr(-,root,root,-)
@@ -1679,6 +1506,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
+%_libexecdir/condor/test_user_mapping
 
 %if %cream
 %files cream-gahp
@@ -1693,8 +1521,6 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/20dedicated_scheduler_condor.config
 %endif
 
-# Temporarily turn off python for Fedora
-%if ! 0%{?fedora}
 %files python
 %defattr(-,root,root,-)
 %_bindir/condor_top
@@ -1702,13 +1528,14 @@ rm -rf %{buildroot}
 %_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad.so
 %{python_sitearch}/htcondor.so
-%endif
 
 %files bosco
 %defattr(-,root,root,-)
+%if 0%{?hcc}
+%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
+%endif
 %if 0%{?osg} || 0%{?hcc}
 %config(noreplace) %_sysconfdir/condor/campus_factory.conf
-%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
 %endif
 %_libexecdir/condor/shellselector
 %_libexecdir/condor/campus_factory
@@ -1765,11 +1592,16 @@ rm -rf %{buildroot}
 %endif
 %endif
 
+%files single-node
+%config(noreplace) %_sysconfdir/condor/config.d/00-single-node
+
+
 %if %uw_build
 
 %ifarch %{ix86}
 %files small-shadow
 %{_sbindir}/condor_shadow_s
+%config(noreplace) %_sysconfdir/condor/config.d/00-small-shadow
 %endif
 
 %files external-libs
@@ -1950,6 +1782,36 @@ fi
 %endif
 
 %changelog
+* Wed Oct 31 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.10-1
+- Can now interactively submit Docker jobs
+- The administrator can now add arguments to the Singularity command line
+- The MUNGE security method is now supported on all Linux platforms
+- The grid universe can create and manage VM instances in Microsoft Azure
+- Added a single-node package to facilitate using a personal HTCondor
+
+* Wed Oct 31 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.13-1
+- Made the Python 'in' operator case-insensitive for ClassAd attributes
+- Python bindings are now built for the Debian and Ubuntu platforms
+- Fixed a memory leak in the Python bindings
+- Fixed a bug where absolute paths failed for output/error files on Windows
+- Fixed a bug using Condor-C to run Condor-C jobs
+- Fixed a bug where Singularity could not be used if Docker was not present
+
+* Wed Aug 01 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.9-1
+- Support for Debian 9, Ubuntu 16, and Ubuntu 18
+- Improved Python bindings to support the full range of submit functionality
+- Allows VMs to shutdown when the job is being gracefully evicted
+- Can now specify a host name alias (CNAME) for NETWORK_HOSTNAME
+- Added the ability to run a job immediately by replacing a running job
+
+* Wed Aug 01 2018 Tim Theisen <tim@cs.wisc.edu> - 8.6.12-1
+- Support for Debian 9, Ubuntu 16, and Ubuntu 18
+- Fixed a memory leak that occurred when SSL authentication fails
+- Fixed a bug where invalid transform REQUIREMENTS caused a Job to match
+- Fixed a bug to allow a queue super user to edit protected attributes
+- Fixed a problem setting the job environment in the Singularity container
+- Fixed several other minor problems
+
 * Tue May 22 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-2
 - Reinstate man pages
 - Drop centos from dist tag in 32-bit Enterprise Linux 7 RPMs

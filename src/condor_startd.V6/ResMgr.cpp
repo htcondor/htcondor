@@ -150,7 +150,6 @@ ResMgr::~ResMgr()
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
-	delete m_attr;
 
 #if HAVE_BACKFILL
 	if( m_backfill_mgr ) {
@@ -193,6 +192,7 @@ ResMgr::~ResMgr()
 	if( new_type_nums ) {
 		delete [] new_type_nums;
 	}
+	delete m_attr;
 }
 
 
@@ -1265,7 +1265,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
-	startd_stats.pool.Publish(*cp, 0);
+	startd_stats.Publish(*cp, 0);
 	startd_stats.Tick(time(0));
 
 #if HAVE_HIBERNATION

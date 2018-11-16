@@ -684,6 +684,35 @@ as it would otherwise not have any event for the DAGMan node to
 which the script belongs, 
 and in recovery, DAGMan's internal tables would become corrupted.
 
+\noindent\Bold{Event Number:} 035 \\
+\Bold{Event Name:} Factory Submit \\
+\Bold{Event Description:} This event occurs when a user submits a cluster
+using late materialization.
+
+\noindent\Bold{Event Number:} 036 \\
+\Bold{Event Name:} Cluster Removed \\
+\Bold{Event Description:} Only written for clusters using late
+materialization.  This event occurs after all the jobs in
+a cluster submitted using late materialization have materialized and
+completed, or when the cluster is removed (by \Condor{rm}).
+
+\noindent\Bold{Event Number:} 037 \\
+\Bold{Event Name:} Factory Paused \\
+\Bold{Event Description:} This event occurs when job materialization
+for a cluster has been paused.
+
+\noindent\Bold{Event Number:} 038 \\
+\Bold{Event Name:} Factory Resumed \\
+\Bold{Event Description:} This event occurs when job materialization
+for a cluster has been resumed
+
+\noindent\Bold{Event Number:} 039 \\
+\Bold{Event Name:} None \\
+\Bold{Event Description:} This event should never occur in a log but
+may be returned by log reading code in certain situations (e.g.,
+timing out while waiting for a new event to appear in the log).
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
 \subsection{\label{sec:job-completion}Job Completion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

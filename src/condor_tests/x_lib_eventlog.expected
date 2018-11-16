@@ -3,20 +3,20 @@ Job Generic.........
 Examine cluster 1
 Job Submited.........
 Job Ad Information.........
-JobStatus is 1
-BillString is 'Good'
-BillInt is 69
-BillBool is 1
+	JobStatus is 1
+	BillString is "Good"
+	BillInt is 69
+	BillBool is true
 Job Executed.........
 Job Ad Information.........
-JobStatus is 2
-BillString is 'Good'
-BillInt is 69
-BillBool is 1
+	JobStatus is 2
+	BillString is "Good"
+	BillInt is 69
+	BillBool is true
 Job Terminated.........
 Job Ad Information.........
-JobStatus is 2
-BillString is 'Good'
-BillInt is 69
-BillBool is 1
+	JobStatus is 2
+	BillString is "Good"
+	BillInt is 69
+	BillBool is true
 DONE

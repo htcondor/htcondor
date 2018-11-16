@@ -157,7 +157,7 @@ private:
     
 };
 
-static boost::python::object
+boost::python::object
 convert_value_to_python(const classad::Value &value)
 {
     boost::python::object result;
@@ -968,6 +968,12 @@ std::string ClassAdWrapper::toOldString() const
     pp.Unparse(ad_str, this);
     return ad_str;
 }
+
+bool ClassAdWrapper::contains(const std::string & attr) const
+{
+	return Lookup(attr) != NULL;
+}
+
 
 AttrKeyIter ClassAdWrapper::beginKeys()
 {

@@ -24,46 +24,48 @@ check_version_string () {
   [[ ${!1} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Bad ${1//_/ }: '${!1}'"
 }
 
+# get the version and build id
+condor_build_id=$(<BUILD-ID)
+condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
+
+[[ $condor_version ]] || fail "Condor version string not found"
+check_version_string  condor_version
+
 # Do everything in a temp dir that will go away on errors or end of script
 tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
 trap 'rm -rf "$tmpd"' EXIT
 
 cd "$tmpd"
 
-# untar the condor sources into a temporary directory
-mkdir "condor_src"
-cd "condor_src"
-tar xfpz "$TMP"/condor.tar.gz
+# Unpack the official tarball
+mv ../condor-${condor_version}.tgz ./condor_${condor_version}.orig.tar.gz
+tar xfpz condor_${condor_version}.orig.tar.gz
+cd condor-${condor_version}
 
-# get the version and build id out of the sources
-condor_build_id=$(<BUILD-ID)
-condor_version=$(awk -F\" '/^set\(VERSION / {print $2}' CMakeLists.txt)
-
-[[ $condor_version ]] || fail "Condor version string not found"
-check_version_string  condor_version
-
-# Update condor_version for pre-release build
-condor_release="0.$condor_build_id"
+if $(grep -qi stretch /etc/os-release); then
+    dist='stretch'
+elif $(grep -qi xenial /etc/os-release); then
+    dist='xenial'
+elif $(grep -qi bionic /etc/os-release); then
+    dist='bionic'
+else
+    dist='unstable'
+fi
+echo "Distribution is $dist"
 
 # copy srpm files from condor sources into the SOURCES directory
 cp -pr build/packaging/new-debian debian
-#date=$(date)
-#changelog="condor ($condor_version-$condor_release~1) unstable; urgency=medium
-#
-#  * Nightly build
-#
-# -- Tim Theisen <tim@cs.wisc.edu> $date
-#"
-#echo "$changelog" > debian/changelog
-#cat build/packaging/new-debian/changelog >> debian/changelog
-dch --distribution unstable --newversion "$condor_version-$condor_release" "Nightly build"
-cd ..
 
-# rename the condor_src directory to have the version number in it, then tar that up
-mv "condor_src" "condor-$condor_version"
-tar cfz condor_$condor_version.orig.tar.gz "condor-$condor_version"
-#rm -rf "condor-$condor_version"
-cd "condor-$condor_version"
+# Update condor_version for pre-release build
+condor_release="0.$condor_build_id"
+# Update condor_version for final build
+#condor_release="1"
+
+# Nightly build changelog
+dch --distribution $dist --newversion "$condor_version-$condor_release" "Nightly build"
+
+# Final release changelog
+#dch --release --distribution $dist ignored
 
 dpkg-buildpackage -uc -us
 

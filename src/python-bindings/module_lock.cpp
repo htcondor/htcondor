@@ -51,7 +51,7 @@ void ConfigOverrides::apply(ConfigOverrides * old)
 
 using namespace condor;
 
-MODULE_LOCK_MUTEX_TYPE ModuleLock::m_mutex = MODULE_LOCK_MUTEX_INITAILIZER;
+MODULE_LOCK_MUTEX_TYPE ModuleLock::m_mutex = MODULE_LOCK_MUTEX_INITIALIZER;
 #ifdef WIN32
 bool ModuleLock::m_mutex_intialized = false;
 #endif

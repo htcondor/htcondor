@@ -138,6 +138,7 @@
 #define ATTR_CURRENT_RANK  "CurrentRank"
 #define ATTR_CURRENT_STATUS_UNKNOWN  "CurrentStatusUnknown"
 #define ATTR_CURRENT_TIME  "CurrentTime"
+#define ATTR_DAEMON_LAST_RECONFIG_TIME  "DaemonLastReconfigTime"
 #define ATTR_DAEMON_START_TIME  "DaemonStartTime"
 #define ATTR_DAEMON_SHUTDOWN  "DaemonShutdown"
 #define ATTR_DAEMON_SHUTDOWN_FAST  "DaemonShutdownFast"
@@ -310,7 +311,11 @@
 #define ATTR_JOB_DESCRIPTION "JobDescription"
 #define ATTR_STACK_SIZE  "StackSize"
 #define ATTR_JOB_CMD_HASH  "CmdHash"
-#define ATTR_JOB_CMD_MD5  "CmdMD5"
+#ifdef FIPS_MODE
+#define ATTR_JOB_CMD_CHECKSUM  "CmdSHA"
+#else
+#define ATTR_JOB_CMD_CHECKSUM  "CmdMD5"
+#endif
 #define ATTR_ORIG_JOB_CMD  "OrigCmd" 
 #define ATTR_JOB_CORE_DUMPED  "JobCoreDumped"
 #define ATTR_JOB_CORE_FILENAME  "JobCoreFileName"
@@ -614,7 +619,6 @@
 #define ATTR_STATE  "State"
 #define ATTR_STARTER_IP_ADDR  "StarterIpAddr"
 #define ATTR_STARTER_ABILITY_LIST  "StarterAbilityList"
-#define ATTR_STARTER_IGNORED_ATTRS  "StarterIgnoredAttributes"
 #define ATTR_STARTER_ULOG_FILE  "StarterUserLog"
 #define ATTR_STARTER_ULOG_USE_XML  "StarterUserLogUseXML"
 #define ATTR_STARTER_WAIT_FOR_DEBUG  "StarterWaitForDebug"
@@ -741,6 +745,7 @@
 #define ATTR_WANT_REMOTE_UPDATES "WantRemoteUpdates"
 #define ATTR_WANT_DELAYED_UPDATES "WantDelayedUpdates"
 #define ATTR_WANT_MATCH_DIAGNOSTICS  "WantMatchDiagnostics"
+#define ATTR_WANT_PARALLEL_SCHEDULING  "WantParallelScheduling"
 #define ATTR_WANT_PARALLEL_SCHEDULING_GROUPS  "WantParallelSchedulingGroups"
 #define ATTR_WANT_CHECKPOINT_SIGNAL  "WantCheckpointSignal"
 #define ATTR_WANT_PSLOT_PREEMPTION  "WantPslotPreemption"

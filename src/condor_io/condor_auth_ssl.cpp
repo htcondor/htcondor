@@ -239,16 +239,20 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         }
         if( !(ssl = (*SSL_new_ptr)( ctx )) ) {
             ouch( "Error creating SSL context\n" );
+            BIO_free( conn_in );
+            BIO_free( conn_out );
             client_status = AUTH_SSL_ERROR;
+        } else {
+            (*SSL_set_bio_ptr)( ssl, conn_in, conn_out );
         }
         server_status = client_share_status( client_status );
         if( server_status != AUTH_SSL_A_OK || client_status != AUTH_SSL_A_OK ) {
             ouch( "SSL Authentication fails, terminating\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
-
-        (*SSL_set_bio_ptr)( ssl, conn_in, conn_out );
 
         done = 0;
         round_ctr = 0;
@@ -327,6 +331,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             if( client_status == AUTH_SSL_QUITTING
                 || server_status == AUTH_SSL_QUITTING ) {
                 ouch( "SSL Authentication failed\n" );
+				(*SSL_CTX_free_ptr)(ctx);
+				(*SSL_free_ptr)(ssl);
 				free(buffer);
                 return fail;
             }
@@ -348,6 +354,18 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( client_status == AUTH_SSL_QUITTING
             || server_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			// Read and ignore the session key from the server.
+			// Then tell it we're bailing, if it still thinks
+			// everything is ok.
+			int dummy;
+			if (AUTH_SSL_ERROR == receive_message(server_status, dummy, buffer)) {
+				server_status = AUTH_SSL_QUITTING;
+			}
+			if (server_status != AUTH_SSL_QUITTING) {
+				send_message(AUTH_SSL_QUITTING, buffer, 0);
+			}
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -408,6 +426,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed at session key exchange.\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
@@ -430,19 +450,23 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         }
         if (!(ssl = (*SSL_new_ptr)(ctx))) {
             ouch("Error creating SSL context\n");
+            BIO_free( conn_in );
+            BIO_free( conn_out );
             server_status = AUTH_SSL_ERROR;
+        } else {
+            // SSL_set_accept_state(ssl); // Do I really have to do this?
+            (*SSL_set_bio_ptr)(ssl, conn_in, conn_out);
         }
         client_status = server_share_status( server_status );
         if( client_status != AUTH_SSL_A_OK
             || server_status != AUTH_SSL_A_OK ) {
             ouch( "SSL Authentication fails, terminating\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
   
-        // SSL_set_accept_state(ssl); // Do I really have to do this?
-        (*SSL_set_bio_ptr)(ssl, conn_in, conn_out);
-
         done = 0;
         round_ctr = 0;
         while( !done ) {
@@ -516,6 +540,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             if( client_status == AUTH_SSL_QUITTING
                 || server_status == AUTH_SSL_QUITTING ) {
                 ouch( "SSL Authentication failed\n" );
+				(*SSL_CTX_free_ptr)(ctx);
+				(*SSL_free_ptr)(ssl);
 				free(buffer);
                 return fail;
             }
@@ -536,12 +562,20 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed\n" );
+			// Tell the client that we're bailing
+			send_message(AUTH_SSL_QUITTING, buffer, 0);
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }
         if(!RAND_bytes(session_key, AUTH_SSL_SESSION_KEY_LEN)) {
             ouch("Couldn't generate session key.\n");
             server_status = AUTH_SSL_QUITTING;
+			// Tell the client that we're bailing
+			send_message(AUTH_SSL_QUITTING, buffer, 0);
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
 			return fail;
         }
@@ -605,6 +639,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         if( server_status == AUTH_SSL_QUITTING
             || client_status == AUTH_SSL_QUITTING ) {
             ouch( "SSL Authentication failed at key exchange.\n" );
+			(*SSL_CTX_free_ptr)(ctx);
+			(*SSL_free_ptr)(ssl);
 			free(buffer);
             return fail;
         }

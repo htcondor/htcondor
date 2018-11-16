@@ -181,6 +181,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define FETCH_PROXY_DELEGATION (SCHED_VERS+120)
 
 #define REASSIGN_SLOT (SCHED_VERS+121) // Given two job IDs, deactivate the victim job's claim and reactivate it running the beneficiary job.
+#define COALESCE_SLOTS (SCHED_VERS+122) // Given a resource request (job ad) and k claim IDs, invalidate them, merge them into one slot, and return that slot's new claim ID and machine ad.  The resource request is used to compute left-overs.
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0

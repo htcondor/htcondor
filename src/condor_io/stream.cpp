@@ -1090,7 +1090,7 @@ Stream::put( char const *s)
 		s = "";
 	}
 
-	len = strlen(s)+1;
+	len = (int)strlen(s)+1;
 	if (get_encryption()) {
 		if (put(len) == FALSE) {
 			return FALSE;
@@ -1122,7 +1122,7 @@ Stream::put_nullstr( char const *s)
 		if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
 	}
 	else{
-		len = strlen(s)+1;
+		len = (int)strlen(s)+1;
 		if (get_encryption()) {
 			if (put(len) == FALSE) {
 				return FALSE;

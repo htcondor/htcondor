@@ -85,7 +85,7 @@ static bool render_job_status_char(std::string & result, ClassAd*ad, Formatter &
 // functions to fetch job ads and print them out
 //
 static bool show_file_queue(const char* jobads, const char* userlog);
-static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath);
+static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath, CondorClassAdListWriter &writer);
 static int dryFetchQueue(const char * file, StringList & proj, int fetch_opts, int limit, buffer_line_processor pfnProcess, void *pvProcess);
 
 static void initOutputMask(AttrListPrintMask & pqmask, int qdo_mode, bool wide_mode);
@@ -586,7 +586,11 @@ int main (int argc, const char **argv)
 				}
 			}
 
-			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
+			CondorClassAdListWriter writer(dash_long_format);
+			retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
+			if (dash_long) {
+				writer.writeFooter(stdout, always_write_xml_footer);
+			}
 			/* Hopefully I got the queue from the schedd... */
 			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 		} 
@@ -670,6 +674,7 @@ int main (int argc, const char **argv)
 	}
 
 	first = true;
+	CondorClassAdListWriter writer(dash_long_format);
 	// get queue from each ScheddIpAddr in ad
 	scheddList.Open();
 	while ((ad = scheddList.Next()))
@@ -701,11 +706,15 @@ int main (int argc, const char **argv)
 		} else {
 			useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
 		}
-		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery);
+		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
 	}
 
 	// close list
 	scheddList.Close();
+
+	if (dash_long) {
+		writer.writeFooter(stdout, always_write_xml_footer);
+	}
 
 	if( first ) {
 		if( global ) {
@@ -1672,7 +1681,7 @@ processCommandLineArguments (int argc, const char *argv[])
 	if ( ! autoformat_args.empty()) {
 		auto_standard_summary = false; // we will either have a custom summary, or none.
 
-		int nargs = autoformat_args.size();
+		int nargs = (int)autoformat_args.size();
 		autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[cargs] is.
 		classad::References refs;
 		if (dash_tot) {
@@ -2264,7 +2273,7 @@ render_globusHostAndJM(std::string & result, ClassAd *ad, Formatter & /*fmt*/ )
 	char	host[80] = "[?????]";
 	char	jm[80] = "fork";
 	char	*tmp;
-	int	p;
+	size_t	ix;
 	char *attr_value = NULL;
 	char *resource_name = NULL;
 	char *grid_type = NULL;
@@ -2290,21 +2299,21 @@ render_globusHostAndJM(std::string & result, ClassAd *ad, Formatter & /*fmt*/ )
 			 !strcasecmp( grid_type, "globus" ) ) {
 
 			// copy the hostname
-			p = strcspn( resource_name, ":/" );
-			if ( p >= (int) sizeof(host) )
-				p = sizeof(host) - 1;
-			strncpy( host, resource_name, p );
-			host[p] = '\0';
+			ix = strcspn( resource_name, ":/" );
+			if (ix >= (int) sizeof(host) )
+				ix = sizeof(host) - 1;
+			strncpy( host, resource_name, ix);
+			host[ix] = '\0';
 
 			if ( ( tmp = strstr( resource_name, "jobmanager-" ) ) != NULL ) {
 				tmp += 11; // 11==strlen("jobmanager-")
 
 				// copy the jobmanager name
-				p = strcspn( tmp, ":" );
-				if ( p >= (int) sizeof(jm) )
-					p = sizeof(jm) - 1;
-				strncpy( jm, tmp, p );
-				jm[p] = '\0';
+				ix = strcspn( tmp, ":" );
+				if (ix >= (int) sizeof(jm) )
+					ix = sizeof(jm) - 1;
+				strncpy( jm, tmp, ix);
+				jm[ix] = '\0';
 			}
 
 		} else if ( !strcasecmp( grid_type, "gt4" ) ) {
@@ -2331,8 +2340,8 @@ render_globusHostAndJM(std::string & result, ClassAd *ad, Formatter & /*fmt*/ )
 				strncpy( host, resource_name, sizeof(host) );
 				host[sizeof(host)-1] = '\0';
 			}
-			p = strcspn( host, ":/" );
-			host[p] = '\0';
+			ix = strcspn( host, ":/" );
+			host[ix] = '\0';
 		}
 	}
 
@@ -2412,7 +2421,7 @@ render_gridResource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 	std::string mgr = "[?]";
 	std::string host = "[???]";
 	const bool fshow_host_port = false;
-	const unsigned int width = 1+6+1+8+1+18+1;
+	const size_t width = 1+6+1+8+1+18+1;
 
 	if ( ! ad->EvalString(ATTR_GRID_RESOURCE, NULL, str))
 		return false;
@@ -2420,7 +2429,7 @@ render_gridResource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 	// GridResource is a string with the format 
 	//      "type host_url manager" (where manager can contain whitespace)
 	// or   "type host_url/jobmanager-manager"
-	unsigned int ixHost = str.find_first_of(' ');
+	size_t ixHost = str.find_first_of(' ');
 	if (ixHost < str.length()) {
 		grid_type = str.substr(0, ixHost);
 		ixHost += 1; // skip over space.
@@ -2429,19 +2438,19 @@ render_gridResource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 		ixHost = 0;
 	}
 
-	unsigned int ix2 = str.find_first_of(' ', ixHost);
+	size_t ix2 = str.find_first_of(' ', ixHost);
 	if (ix2 < str.length()) {
 		mgr = str.substr(ix2+1);
 	} else {
-		unsigned int ixMgr = str.find("jobmanager-", ixHost);
+		size_t ixMgr = str.find("jobmanager-", ixHost);
 		if (ixMgr < str.length()) 
 			mgr = str.substr(ixMgr+11);	//sizeof("jobmanager-") == 11
 		ix2 = ixMgr;
 	}
 
-	unsigned int ix3 = str.find("://", ixHost);
+	size_t ix3 = str.find("://", ixHost);
 	ix3 = (ix3 < str.length()) ? ix3+3 : ixHost;
-	unsigned int ix4 = str.find_first_of(fshow_host_port ? "/" : ":/",ix3);
+	size_t ix4 = str.find_first_of(fshow_host_port ? "/" : ":/",ix3);
 	if (ix4 > ix2) ix4 = ix2;
 	host = str.substr(ix3, ix4-ix3);
 
@@ -2491,12 +2500,12 @@ render_gridJobId(std::string & jid, ClassAd *ad, Formatter & /*fmt*/ )
 	}
 	bool gram = (MATCH == grid_type.compare("gt5")) || (MATCH == grid_type.compare("gt2"));
 
-	unsigned int ix2 = str.find_last_of(" ");
+	size_t ix2 = str.find_last_of(" ");
 	ix2 = (ix2 < str.length()) ? ix2 + 1 : 0;
 
-	unsigned int ix3 = str.find("://", ix2);
+	size_t ix3 = str.find("://", ix2);
 	ix3 = (ix3 < str.length()) ? ix3+3 : ix2;
-	unsigned int ix4 = str.find_first_of("/",ix3);
+	size_t ix4 = str.find_first_of("/",ix3);
 	ix4 = (ix4 < str.length()) ? ix4 : ix3;
 	host = str.substr(ix3, ix4-ix3);
 
@@ -2504,11 +2513,11 @@ render_gridJobId(std::string & jid, ClassAd *ad, Formatter & /*fmt*/ )
 		jid = host;
 		jid += " : ";
 		if (str[ix4] == '/') ix4 += 1;
-		unsigned int ix5 = str.find_first_of("/",ix4);
+		size_t ix5 = str.find_first_of("/",ix4);
 		jid = str.substr(ix4, ix5-ix4);
 		if (ix5 < str.length()) {
 			if (str[ix5] == '/') ix5 += 1;
-			unsigned int ix6 = str.find_first_of("/",ix5);
+			size_t ix6 = str.find_first_of("/",ix5);
 			jid += ".";
 			jid += str.substr(ix5, ix6-ix5);
 		}
@@ -3427,9 +3436,9 @@ static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_n
 	if (first_col_is_job_id) {
 		char buf[20];
 		sprintf(buf, "%d", max_cluster);
-		vals.cluster_width = strlen(buf);
+		vals.cluster_width = (int)strlen(buf);
 		sprintf(buf, "%d", max_proc);
-		vals.proc_width = strlen(buf);
+		vals.proc_width = (int)strlen(buf);
 	}
 
 	if (has_owner_column && ! widescreen && longest_name > 14) {
@@ -3555,7 +3564,7 @@ format_name_column_for_dag_nodes(ROD_MAP_BY_ID & results, int name_column, int c
 
 			const char * name = NULL;
 			pcolval->IsStringValue(name);
-			int cch = strlen(name);
+			int cch = (int)strlen(name);
 
 			buf.clear();
 			buf.reserve(cch + 3 + it->second.generation);
@@ -4171,7 +4180,7 @@ bool print_jobs_analysis (
 // this function handles -analyze, -streaming, -dag and all normal condor_q output
 // when the source is a SCHEDD.
 static bool
-show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
+show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath,CondorClassAdListWriter &writer )
 {
 	// initialize counters
 	app.sumy.clear_counters();
@@ -4196,8 +4205,6 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	IdToClassaAdMap ads;
 	CondorError errstack;
 	ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
-
-	CondorClassAdListWriter writer(dash_long_format);
 
 	// choose a processing option for jobad's as the come off the wire.
 	// for -long -json -xml and -analyze, we need to save off the ad in a ClassAdList
@@ -4286,9 +4293,6 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// we just need to write the footer/summary
 	if (g_stream_results) {
 		print_full_footer(summary_ad, &writer);
-		if (dash_long) { 
-			writer.writeFooter(stdout, always_write_xml_footer);
-		}
 		return true;
 	}
 
@@ -4323,7 +4327,6 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			}
 		}
 		print_full_footer(summary_ad, &writer);
-		writer.writeFooter(stdout, always_write_xml_footer);
 		return true;
 	}
 
@@ -4523,7 +4526,7 @@ show_file_queue(const char* jobads, const char* userlog)
 		
 	} else if (userlog != NULL) {
 		CondorID * JobIds = NULL;
-		int cJobIds = constrID.size();
+		int cJobIds = (int)constrID.size();
 		if (cJobIds > 0) JobIds = &constrID[0];
 
 		if ( ! userlog_to_classads(userlog, AddJobToClassAdCollection, &jobs, JobIds, cJobIds, constr.Expr())) {

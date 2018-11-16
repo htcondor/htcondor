@@ -128,7 +128,7 @@ BEGIN
 	$hoststring = "notset:000";
     $vacates = 0;
 	$lastconfig = "";
-	$DEBUGLEVEL = 3;
+	$DEBUGLEVEL = 2;
 	$CondorTestPid = $$;
 }
 
@@ -3421,7 +3421,7 @@ sub CoreCheck {
 	my $totalerrors = 0;
 
 	# dump list of files we will check.
-	foreach my $perp (@files) { TestDebug("\tCoreCheck will check: $perp:\n", 2); }
+	#foreach my $perp (@files) { TestDebug("\tCoreCheck will check: $perp:\n", 2); }
 
 	foreach my $perp (@files) {
 		CondorUtils::fullchomp($perp);
@@ -3468,7 +3468,7 @@ sub CoreCheck {
 			$scancount = ScanForERROR($fullpath,$tstart,$tend);
 			$totalerrors += $scancount;
 
-			TestDebug("CoreCheck ScanForERROR found $scancount 'ERROR's in $perp\n",2);
+			TestDebug("CoreCheck ScanForERROR found $scancount 'ERROR's in $perp\n",2) if ($scancount > 0);
 			print "CoreCheck ScanForERROR found $scancount 'ERROR's in $perp\n" if ($scancount > 0);
 		}
 	}
@@ -3599,7 +3599,7 @@ sub ScanForERROR
 				AddFileTrace($daemonlog, $1, $line);
 			}
 		} elsif($line =~ /^.*ERROR.*$/){
-			TestDebug("Skipping this error: $line\n",2);
+			#TestDebug("Skipping this error: $line\n",2);
 		}
 	}
 	close(MDL);
@@ -3857,7 +3857,7 @@ sub JavaInitialize
 sub JavaTimeout
 {
 	my @responses = ();
-	print "Timeout: peekinig in starter log\n";
+	print "Timeout: peeking in starter log\n";
 	CondorLog::RunCheck(
 		daemon=>"STARTER",
 		match_regexp=>"JavaDetect",
@@ -3865,11 +3865,11 @@ sub JavaTimeout
 	);
 	my $sizeresponses = @responses;
 	if($sizeresponses > 0) {
-		print "Starter log scrapping for JavaDetect:\n";
+		print "Starter log scraping for JavaDetect:\n";
 		foreach my $line (@responses) {
 			print "$line";
 		}
-		print "Starter log scrapping for JavaDetect over:\n";
+		print "Starter log scraping for JavaDetect over:\n";
 	}
 	die "Java test timed out\n";
 }

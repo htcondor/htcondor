@@ -62,8 +62,8 @@ if ($boos) { $CloneDir =~ s/userdir/sources/; }
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	my $enable_vs9 = 0;
 	my $enable_x64 = 0;
-	my $use_latest_vs = 0;
-	my $use_cmake3 = 0;
+	my $use_latest_vs = 1;
+	my $use_cmake3 = 1;
 
 	#uncomment to use vs9 on Win7 platform
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
@@ -94,7 +94,11 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     $externals_loc   = "c:/temp/condor";
     #$ENV{CONDOR_BLD_EXTERNAL_STAGE} = "$externals_loc";
 	if ($use_cmake3) {
-		$ENV{PATH} = "C:\\Program Files\\CMake3\\bin;$ENV{PATH}";
+		if (-d "C:\\Tools\\CMake3\\bin") {
+			$ENV{PATH} = "C:\\Tools\\CMake3\\bin;$ENV{PATH}";
+		} else {
+			$ENV{PATH} = "C:\\Program Files\\CMake3\\bin;$ENV{PATH}";
+		}
 	} else {
 		$ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{PATH}";
 	}
@@ -120,8 +124,6 @@ if ($ENV{NMI_PLATFORM} =~ /macos/i) {
         $ENV{CC} = "gcc";
         $ENV{CXX} = "g++";
     }
-    # Build binaries that will work on Mac OS X 10.7 and later.
-    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
 	# Hack. Some of the mac build machines have a python version in
 	# /usr/local/bin that cmake thinks won't work with the python
 	# library in /usr/lib. Prepend /usr/bin to the PATH to use that
@@ -134,13 +136,6 @@ foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
 }
 print "------------------------- ENV DUMP ------------------------\n";
 print "Configure args: " . join(' ', @ARGV) . "\n";
-
-######################################################################
-# Save source tree for native redhat RPM builds
-######################################################################
-if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS|Fedora|Debian9|Ubuntu16)/) {
-    system("cd $CloneDir && tar cfz $ENV{TMP}/condor.tar.gz *");
-}
 
 ######################################################################
 # Determine the right cmake to use. Either the one on the machine is
@@ -188,7 +183,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 ######################################################################
 # figure out if we have java
 ######################################################################
-if ($ENV{NMI_PLATFORM} = ~ /_win/i) {
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     my $javaver = `reg QUERY "HKLM\\Software\\JavaSoft\\Java Runtime Environment"`;
 	#print "check for java runtime returned $javaver\n";
     # look for "CurrentVersion    REG_SZ    n.m"

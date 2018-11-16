@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+
+import htcondor
+import os
+import sys
+
+from pytest.CondorCluster import CondorCluster
+from pytest.CondorTest import CondorTest
+from pytest.Globals import *
+from pytest.HTTPServer import HTTPServer
+from pytest.PersonalCondor import PersonalCondor
+from pytest.Utils import Utils
+
+job_cluster_id = None
+
+def SuccessCallback():
+    Utils.TLog("Job succeeded unexpectedly when it was supposed to go on hold. Test failed.")
+    sys.exit(TEST_FAILURE)
+
+def FailureCallback():
+    Utils.TLog("Job went on hold as expected. Test passed")
+    sys.exit(TEST_SUCCESS)
+
+def HttpSuccessUrlHandler(request):
+    request.protocol_version = "HTTP/1.1"
+    request.send_response(200)
+    request.send_header("Content-type", "text/html")
+    request.end_headers()
+    request.wfile.write("<html>Great success!</html>")
+
+def HttpServerErrorUrlHandler(request):
+    request.protocol_version = "HTTP/1.1"
+    request.send_response(500)
+
+
+def main():
+    test_params = {
+        "ENABLE_MULTIFILE_TRANSFER_PLUGINS":    "true",
+        "FILETRANSFER_PLUGINS":                 "$(LIBEXEC)/multifile_curl_plugin",
+        "STARTER_LOG_NAME_APPEND":              "false"
+    }
+
+    # Start a HTTP server
+    httpd = HTTPServer()
+    httpd.Start()
+
+    # Register three separate URLs
+    # Two are supposed to successfully serve a small file
+    # One is supposed to generate a 500 server error and cause the job to go on hold
+    httpd.RegisterUrlHandler("/file1", HttpSuccessUrlHandler)
+    httpd.RegisterUrlHandler("/file2", HttpServerErrorUrlHandler)
+    httpd.RegisterUrlHandler("/file3", HttpSuccessUrlHandler)
+    file1_url = "http://127.0.0.1:" + str(httpd._port) + "/file1"
+    file2_url = "http://127.0.0.1:" + str(httpd._port) + "/file2"
+    file3_url = "http://127.0.0.1:" + str(httpd._port) + "/file3"
+
+    # Stand up a PersonalCondor
+    personal_handle = CondorTest.StartPersonalCondor("cmd_curl_plugin_multifile_failure", test_params)
+    if not personal_handle:
+        Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
+        sys.exit(1)
+    else:
+        Utils.TLog("PersonalCondor environment started successfully")
+
+    # Setup a new test job
+    job_args = {
+        "executable":               "x_echostring.pl",
+        "arguments":                "Testing multifile_curl_plugin failure",
+        "output":                   "cmd_curl_plugin_multifile_failure.out",
+        "transfer_input_files":     file1_url + ", " + file2_url + ", " + file3_url,
+        "should_transfer_files":    "YES"
+    }
+    test_job = CondorCluster(job_args)
+
+    # Register success and failure handlers.
+    test_job.RegisterJobTerminated(SuccessCallback)
+    test_job.RegisterJobHeld(FailureCallback)
+
+    # Submit the test job
+    result = test_job.Submit()
+    job_cluster_id = test_job._cluster_id
+    test_job.WaitUntilJobHeld()
+
+    Utils.TLog("Test continued unexpectedly while waiting for job to go on hold. Test failed.")
+    sys.exit(TEST_FAILURE)
+
+if __name__ == "__main__":
+    main()

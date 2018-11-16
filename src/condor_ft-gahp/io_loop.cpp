@@ -28,7 +28,9 @@
 #include "globus_utils.h"
 #include "subsystem_info.h"
 #include "file_transfer.h"
-#include "openssl/md5.h"
+#ifdef HAVE_EXT_OPENSSL
+#include <openssl/sha.h>
+#endif
 #include "directory.h"
 #include "_unordered_map.h"
 #include "basename.h"
@@ -954,37 +956,37 @@ define_sandbox_path(std::string sid, std::string &path)
 	free(t_path);
 
 
-	// hash the id into ascii.  MD5 is fine here, because we use the actual
-	// sandbox id as part of the path, thus making it immune to MD5 collisions.
+#ifdef HAVE_EXT_OPENSSL
+	// hash the id into ascii.  A subset of a SHA256 hash is fine here, because we use the actual
+	// sandbox id as part of the path, thus making it immune to collisions.
 	// we're only using it to keep filesystems free of directories that contain
 	// too many files.  in the year 2040, when 2^16 files exist in a single
 	// directory, feel free to extend this to 3, or (log_v2 n)
-	unsigned char hash_buf[MD5_DIGEST_LENGTH];
-	MD5((unsigned char*)const_cast<char*>(sid.c_str()), sid.length(), hash_buf);
+	unsigned char hash_buf[SHA256_DIGEST_LENGTH];
+	SHA256((unsigned char*)const_cast<char*>(sid.c_str()), sid.length(), hash_buf);
 
-	char c_hex_md5[MD5_DIGEST_LENGTH*2+1];
-	for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-		sprintf(&(c_hex_md5[i*2]), "%02x", hash_buf[i]);
+	char c_hex_sha256[SHA256_DIGEST_LENGTH*2+1];
+	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+		sprintf(&(c_hex_sha256[i*2]), "%02x", hash_buf[i]);
 	}
-	c_hex_md5[MD5_DIGEST_LENGTH*2] = 0;
+	c_hex_sha256[SHA256_DIGEST_LENGTH*2] = 0;
 
-	// now construct a two-level directory from the hash.  this potential loop
-	// is unrolled, because MD5_DIGEST_LENGTH is currently (and likely always
-	// will be 16).  see above comment.
+	// now construct a two-level directory from the hash.
 	path += DIR_DELIM_CHAR;
-	path += c_hex_md5[0];
-	path += c_hex_md5[1];
-	path += c_hex_md5[2];
-	path += c_hex_md5[3];
+	path += c_hex_sha256[0];
+	path += c_hex_sha256[1];
+	path += c_hex_sha256[2];
+	path += c_hex_sha256[3];
 	path += DIR_DELIM_CHAR;
-	path += c_hex_md5[0];
-	path += c_hex_md5[1];
-	path += c_hex_md5[2];
-	path += c_hex_md5[3];
-	path += c_hex_md5[4];
-	path += c_hex_md5[5];
-	path += c_hex_md5[6];
-	path += c_hex_md5[7];
+	path += c_hex_sha256[0];
+	path += c_hex_sha256[1];
+	path += c_hex_sha256[2];
+	path += c_hex_sha256[3];
+	path += c_hex_sha256[4];
+	path += c_hex_sha256[5];
+	path += c_hex_sha256[6];
+	path += c_hex_sha256[7];
+#endif // ifdef HAVE_EXT_OPENSSL
 	path += DIR_DELIM_CHAR;
 	path += sid;
 

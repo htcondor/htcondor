@@ -9261,21 +9261,6 @@ pidWatcherThread( void* arg )
 			// But for now, handle it all here.
 
 			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
-#if 0  // this code replaced by call to Do_Wake_up_select() below
-				// send a NOP command to wake up select()
-			Daemon d( DT_ANY, daemonCore->privateNetworkIpAddr() );
-	        SafeSock ssock;
-			ReliSock rsock;
-			Sock &sock = (d.hasUDPCommandPort() && daemonCore->dc_ssock) ?
-				*(Sock *)&ssock : *(Sock *)&rsock;
-				// Use raw command protocol to avoid blocking on ourself.
-			notify_failed = 
-				!d.connectSock(&sock,1) ||
-				!d.startCommand(DC_NOP, &sock, 1, NULL, "DC_NOP", true) ||
-				!sock.end_of_message();
-#else
-//#pragma REMIND("TJ: remove this dead code.")
-#endif
 				// while we have the Big_fat_mutex, copy any exited pids
 				// out of our thread local MyExitedQueue and into our main
 				// thread's WaitpidQueue (of course, we must have the mutex
@@ -9655,8 +9640,8 @@ const char* DaemonCore::GetExceptionString(int sig)
 	static char exception_string[80];
 
 #ifdef WIN32
-	sprintf(exception_string,"exception %s",
-		ExceptionHandler::GetExceptionString(sig));
+	char  buf[sizeof(exception_string) - 25];
+	sprintf(exception_string,"exception %d %s", sig, ExceptionHandler::GetExceptionString(sig, buf, sizeof(buf)));
 #else
 	if ( sig > 64 ) {
 		sig = WTERMSIG(sig);

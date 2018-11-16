@@ -31,7 +31,8 @@ my $iswindows = CondorUtils::is_windows();
 
 my $append_config;
 $append_config = "
-	SCHEDD_ALLOW_LATE_MATERIALIZE = true
+	# this is now the default
+	#SCHEDD_ALLOW_LATE_MATERIALIZE = true
 ";
 
 ###########  create submit file ##################

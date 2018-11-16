@@ -57,6 +57,7 @@ class ReliSock : public Sock {
 	friend class Authentication;
 	friend class BlockingModeGuard;
 	friend class DockerProc;
+	friend class OsProc;
 
 //	PUBLIC INTERFACE TO RELIABLE SOCKS
 //
@@ -272,7 +273,7 @@ public:
 	// This matters for the authentication protocol.
 	void isClient(bool flag) { is_client=flag; };
 
-    const char * isIncomingDataMD5ed();
+    const char * isIncomingDataHashed();
 
 	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
 	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}

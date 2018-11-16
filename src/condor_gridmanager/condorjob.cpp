@@ -1277,6 +1277,8 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_ON_EXIT_CODE,
 		ATTR_EXIT_REASON,
 		ATTR_JOB_CURRENT_START_DATE,
+		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
+		ATTR_JOB_LAST_START_DATE,
 		ATTR_SHADOW_BIRTHDATE,
 		ATTR_JOB_LOCAL_SYS_CPU,
 		ATTR_JOB_LOCAL_USER_CPU,
@@ -1553,10 +1555,15 @@ ClassAd *CondorJob::buildSubmitAd()
 		// Remove all remote_* attributes from the new ad before
 		// translating remote_* attributes from the original ad.
 		// See gittrac #376 for why we have two loops here.
+		// Also remove all SUBMIT_* attributes from the new ad.
+		// Otherwise, the remote schedd will erroneously think it has
+		// already rewritten file paths in the ad to refer to its own
+		// SPOOL directory.
 	const char *next_name;
 	submit_ad->ResetName();
 	while ( (next_name = submit_ad->NextNameOriginal()) != NULL ) {
-		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
+		if ( ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 ||
+		       strncasecmp( next_name, "SUBMIT_", 7 ) == 0 ) &&
 			 strlen( next_name ) > 7 ) {
 
 			submit_ad->Delete( next_name );

@@ -7,6 +7,7 @@
 \oOpt{-terse}
 \oOpt{-verbose}
 \oOpt{-unused}
+\oOptArg{-file}{submit\_file}
 \oOptArg{-name}{schedd\_name}
 \oOptArg{-remote}{schedd\_name}
 \oOptArg{-addr}{\Sinful{ip:port}}
@@ -20,6 +21,7 @@
 \oOpt{-spool}
 \oOptArg{-dump}{filename}
 \oOpt{-interactive}
+\oOpt{-allow-crlf-script}
 \oOpt{-dry-run}
 \oOptArg{-maxjobs}{number-of-jobs}
 \oOpt{-single-cluster}
@@ -32,18 +34,20 @@
 
 \Condor{submit} is the program for submitting jobs for execution
 under HTCondor.
-\Condor{submit} requires a submit description file which contains commands
-to direct the queuing of jobs.
-One submit description file may contain
+\Condor{submit} requires one or more submit description commands
+to direct the queuing of jobs. These commands may come from a file,
+standard input, the command line, or from some combination of these.
+One submit description may contain
 specifications for the queuing of many HTCondor jobs at once.
 A single invocation of \Condor{submit} may cause one or
 more clusters.
 A cluster is a set of jobs
-specified in the submit description file
+specified in the submit description
 between \SubmitCmd{queue} commands for which the executable is not changed.
 It is advantageous to submit
 multiple jobs as a single cluster because:
 \begin{itemize}
+\item Much less memory is used by the scheduler to hold the same number of jobs.
 \item Only one copy of the checkpoint file is needed to 
 represent all jobs in a cluster until they begin execution.
 \item There is much less overhead involved for HTCondor to start the next
@@ -52,17 +56,20 @@ a big difference when submitting lots of short jobs.
 \end{itemize}
 
 Multiple clusters may be specified within a single
-submit description file.
+submit description.
 Each cluster must specify a single executable.
 
 The job ClassAd attribute \Attr{ClusterId} identifies a cluster.
 
 The \Arg{submit description file} argument is the path and file name of 
 the submit description file. 
-If this optional argument is missing or is the dash character (\Expr{-}),
+If this optional argument is the dash character (\Expr{-}),
 then the commands are taken from standard input.  If \Expr{-} is
 specified for the \Arg{submit description file}, \Opt{-verbose} is
 implied; this can be overridden by specifying \Opt{-terse}.
+
+If no \Arg{submit discription file} argument is given, and no \Arg{-queue} argument
+is given, commands are taken automatically from standard input.
 
 Note that submission of jobs from a Windows machine requires
 a stashed password to allow HTCondor to impersonate the user submitting
@@ -91,6 +98,10 @@ A comment is any line beginning with a pound character (\verb@#@).
   Printing the warnings can help identify spelling
   errors of submit description file commands.  The warnings are sent
   to stderr. }
+
+\OptItem{\OptArg{-file}{submit\_file}}{Use \Arg{submit\_file} as the submit
+  discription file. This is equivalent to providing \Arg{submit\_file} as an
+  argument without the preceeding \Arg{-file}. }
 
 \OptItem{\OptArg{-name}{schedd\_name}}{Submit to the specified \Condor{schedd}.
 Use this option to submit to a \Condor{schedd} other than the default local one.
@@ -184,6 +195,13 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
   \SubmitCmd{universe} commands are overwritten to be sleep and vanilla.
   The job ClassAd attribute \Attr{InteractiveJob} is set to \Expr{True}
   to identify interactive jobs for \Condor{startd} policy usage.  }
+
+\OptItem{\Opt{-allow-crlf-script}}{Changes the check for an invalid line ending
+on the executable script's \Expr{\#!} line from an ERROR to a WARNING.  The \Expr{\#!} line
+will be ignored by Windows, so it won't matter if it is invalid; but Unix and Linux
+will not run a script that has a Windows/DOS line ending on the first line of the script.
+So \Condor{submit} will not allow such a script to be submitted as the job's
+executable unless this option is supplied. }
 
 \OptItem{\OptArg{-dry-run}{file}}{Parse the submit description file,
   sending the resulting job ClassAd to the file given by \Arg{file}, but

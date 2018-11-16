@@ -2480,7 +2480,8 @@ public:
 		//
 		if (m_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit,ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
 			factory_submit = true;
-		} else if (m_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
+		} else if (m_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true) ||
+			m_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
 			max_materialize = INT_MAX;
 			factory_submit = true;
 		}
@@ -3127,9 +3128,9 @@ void export_schedd()
             ":param spool: Set to true to spool files separately.\n"
             ":param ad_results: If set to a list, the resulting ClassAds will be added to the list post-submit.\n"
 #if BOOST_VERSION < 103400
-            ":return: Newly created cluster ID.", (boost::python::arg("ad"), boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list())))
+            ":return: Newly created cluster ID.", (boost::python::arg("ad"), boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
 #else
-            ":return: Newly created cluster ID.", (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list())))
+            ":return: Newly created cluster ID.", (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
 #endif
         .def("submitMany", &Schedd::submitMany, "Submit one or more jobs to the HTCondor schedd.\n"
              ":param cluster_ad: ClassAd describing the job cluster.  All jobs inherit from this base ad.\n"
@@ -3140,7 +3141,7 @@ void export_schedd()
 #if BOOST_VERSION >= 103400
              boost::python::arg("self"),
 #endif
-             boost::python::arg("cluster_ad"), boost::python::arg("proc_ads"), boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list()))
+             boost::python::arg("cluster_ad"), boost::python::arg("proc_ads"), boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object()))
         .def("spool", &Schedd::spool, "Spool a list of given ads to the remote HTCondor schedd.\n"
             ":param ads: A python list containing one or more ads to spool.\n")
         .def("transaction", &Schedd::transaction, transaction_overloads("Start a transaction with the schedd.\n"

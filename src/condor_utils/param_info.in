@@ -148,11 +148,6 @@ type=int
 default=9
 type=int
 
-[MASTER_SQLLOG]
-default=
-type=string
-description=Master SQL Log
-
 [FULL_HOSTNAME]
 default=
 type=string
@@ -415,6 +410,10 @@ default=
 type=string
 tags=starter
 
+[TRUST_LOCAL_UID_DOMAIN]
+default=true
+type=bool
+
 [STARTER_LOCAL_LOGGING]
 default=
 type=string
@@ -609,13 +608,6 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_ALLOW_LOG_ERROR]
-default=false
-type=bool
-customization=never
-tags=dagman,dagman_main
-restart=never
-
 [DAGMAN_ALWAYS_RUN_POST]
 default=false
 type=bool
@@ -716,7 +708,7 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_MAX_SUBMITS_PER_INTERVAL]
-default=5
+default=100
 type=int
 tags=dagman,dagman_main
 restart=never
@@ -2063,6 +2055,13 @@ default=true
 type=string
 tags=submit
 
+[SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES]
+description=Set the default value submit should use for should_transfer_files for jobs that don't specify
+default=
+type=string
+tags=submit
+usage=Set to YES, NO, or IF_NEEDED.  IF_NEEDED is used if this is empty or invalid
+
 [SUBMIT_SEND_RESCHEDULE]
 default=true
 type=bool
@@ -2167,8 +2166,8 @@ type=string
 tags=submit
 
 [WARN_ON_UNUSED_SUBMIT_FILE_MACROS]
-default=
-type=string
+default=true
+type=bool
 tags=submit
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
@@ -2644,19 +2643,23 @@ range=1,
 type=int
 
 [NEGOTIATOR_MAX_TIME_PER_SUBMITTER]
-default=31536000
+default=60
 type=int
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MAX_TIME_PER_SCHEDD]
-default=31536000
+default=120
 type=int
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_MAX_TIME_PER_PIESPIN]
-default=31536000
+default=120
 type=int
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_MAX_TIME_PER_CYCLE]
+default=1200
+type=int
 
 [NEGOTIATOR_MATCH_EXPRS]
 default=
@@ -3035,7 +3038,7 @@ type=string
 tags=schedd,dedicated_scheduler
 
 [SCHEDD_ALLOW_LATE_MATERIALIZE]
-default=false
+default=true
 type=bool
 tags=schedd
 
@@ -3127,7 +3130,7 @@ type=int
 tags=schedd
 
 [CURB_MATCHMAKING]
-default=false
+default=RecentDaemonCoreDutyCycle > 0.98
 type=string
 description=Curb Expression for Matchmaking
 tags=schedd
@@ -3139,7 +3142,7 @@ type=string
 tags=schedd
 
 [START_SCHEDULER_UNIVERSE]
-default=TotalSchedulerJobsRunning < 200
+default=TotalSchedulerJobsRunning < 500
 description=expression that, when TRUE allows a Scheduler universe job to start
 type=string
 tags=schedd
@@ -3167,8 +3170,8 @@ usage=Circuit breaker to prevent an excessive number of a jobs in a single submi
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
-# default is 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
-default=100
+# default is roughly 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
+default=200
 customization=normal
 description=Max running DAGs for a single owner
 usage=Ensure that a single user does not monopolize the SCHEDD
@@ -3203,6 +3206,11 @@ tags=schedd
 default=5
 type=int
 tags=schedd
+
+[MAX_PENDING_STARTD_CONTACTS]
+default=0
+type=int
+range=0,
 
 [GRIDMANAGER_PER_JOB]
 default=false
@@ -3501,6 +3509,46 @@ tags=annex
 
 [ANNEX_DEFAULT_ODI_INSTANCE_TYPE_V8_7_0]
 default = m4.large
+type=string
+tags=annex
+
+[eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[eu_central_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-0e5c4998acc873d00
+type=string
+tags=annex
+
+[eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[eu_west_1.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-052abc65f9a1f2191
+type=string
+tags=annex
+
+[eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[eu_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-054747f2946a308fc
+type=string
+tags=annex
+
+[eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID]
+default = $(eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8)
+type=string
+tags=annex
+
+[eu_west_3.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
+default = ami-07ed49c22921c0d31
 type=string
 tags=annex
 
@@ -3895,6 +3943,10 @@ default=86400
 range=0,
 type=int
 
+[DELEGATE_FULL_JOB_GSI_CREDENTIALS]
+default=false
+type=bool
+
 [STATISTICS_WINDOW_QUANTUM]
 default=240
 range=1,1000000000
@@ -4118,7 +4170,7 @@ type=string
 tags=schedd,startd,claim
 
 [MOUNT_UNDER_SCRATCH]
-default=
+default="/tmp,/var/tmp"
 version=7.7.5
 type=string
 tags=starter
@@ -4146,7 +4198,7 @@ description=MemoryUsage metric for VM Universe jobs
 tags=starter
 
 [DEFAULT_JOB_MAX_RETRIES]
-default=10
+default=2
 type=int
 description=Default maximum number of retries when a submit file enables retries.
 tags=submit
@@ -4518,8 +4570,18 @@ description=Duration in seconds for ecryptfs key timeout
 review=toddt
 tags=ecryptfs
 
+[MAX_CONCURRENT_DOWNLOADS]
+default=100
+type=int
+range=0,
+
+[MAX_CONCURRENT_UPLOADS]
+default=100
+type=int
+range=0,
+
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
-default=
+default=2.0
 type=string
 description=
 tags=schedd
@@ -4559,21 +4621,15 @@ description=Allow public input files for a job to be transferred via HTTP
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_ADDRESS]
-default=127.0.0.1:8080
+default=127.0.0.1:80
 type=string
 description=Web address (hostname + port) for HTTP public files
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_ROOT_DIR]
-default=$(LOCAL_DIR)/public_files
+default=/usr/share/nginx/html
 type=string
 description=Folder in the local filesystem for HTTP public file links to be served from.
-tags=file_transfer
-
-[HTTP_PUBLIC_FILES_ROOT_OWNER]
-default=apache
-type=string
-description=Owner of the user who owns the directory specified by HTTP_PUBLIC_FILES_ROOT_DIR
 tags=file_transfer
 
 [HTTP_PUBLIC_FILES_STALE_AGE]
@@ -4623,20 +4679,20 @@ type=bool
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
-default=20
+default=200
 range=1,
 type=int
 description=Size of Resource Request List
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS]
-default=false
+default=true
 type=bool
 description=Enable parallel prefetching of requests in the negotiator
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PREFETCH_REQUESTS_MAX_TIME]
-default=120
+default=60
 range=0,
 type=int
 description=Timeout for prefetch requests lists phase of negotiator
@@ -4658,7 +4714,7 @@ description=History Helper max number of history ads
 usage=Set the limit on the number of history ads remote history will consider
 
 [HISTORY_HELPER_MAX_CONCURRENCY]
-default=2
+default=50
 range=0,
 type=int
 description=History Helper max number of helper sub-processes
@@ -5511,6 +5567,23 @@ default : @end
 	PREEMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
 @end
 
+[$POLICY.PREEMPT_IF_RUNTIME_EXCEEDS]
+description=Limit job runtimes. args([limit_in_seconds])  default: 24 hours
+default : @end
+	MAX_JOB_RUNTIME = $(1:24*3600)
+	PREEMPT_RUNTIME_EXCEEDS = (JobState == "Running") && ((time() - JobCurrentStartDate) > $(MAX_JOB_RUNTIME))
+	use policy : PREEMPT_IF( PREEMPT_RUNTIME_EXCEEDS )
+@end
+
+[$POLICY.HOLD_IF_RUNTIME_EXCEEDS]
+description=Limit job runtimes. args([limit_in_seconds])  default: 24 hours
+default : @end
+	MAX_JOB_RUNTIME = $(1:24*3600)
+	HOLD_REASON_RUNTIME_EXCEEDS = runtime exceeded maximum ($(MAX_JOB_RUNTIME) seconds)
+	HOLD_RUNTIME_EXCEEDS = (JobState == "Running") && ((time() - JobCurrentStartDate) > $(MAX_JOB_RUNTIME))
+	use policy : WANT_HOLD_IF( HOLD_RUNTIME_EXCEEDS, $(HOLD_SUBCODE_RUNTIME_EXCEEDS:103), $(HOLD_REASON_RUNTIME_EXCEEDS) )
+@end
+
 [$POLICY.STARTD_PUBLISH_CpusUsage]
 description=Publish a CpusUsage attribute in the STARTD
 default : @end
@@ -5654,6 +5727,13 @@ description=Settings for HTCondor Central Manager
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
 @end
+
+[$ROLE.Checkpoint]
+friendly_name=Settings for HTCondor Checkpoint Server
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) CKPT_SERVER
+@end
+review=?
 
 # default security policy
 [$SECURITY.HOST_BASED]
@@ -6032,7 +6112,6 @@ default : @end
 	MAX_JOB_ROUTER_LOG=1000000
 	MAX_REPLICATION_LOG=1000000
 	MAX_ROOSTER_LOG=1000000
-	MAX_HDFS_LOG=1000000
 	MAX_HAD_LOG=1000000
 	MAX_TRANSFERER_LOG=1000000
 	MAX_GRIDMANAGER_LOG=1000000
@@ -6057,14 +6136,6 @@ win32_default : @end
 	JAVA_CLASSPATH_SEPARATOR=:
 	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
 	INVALID_LOG_FILES=core
-	HDFS_NAMENODE=hdfs://example.com:9000
-	HDFS_NAMENODE_WEB=example.com:8000
-	HDFS_BACKUPNODE=hdfs://example.com:50100
-	HDFS_BACKUPNODE_WEB=example.com:50105
-	HDFS_NODETYPE=HDFS_DATANODE
-	HDFS_NAMENODE_ROLE=ACTIVE
-	HDFS_NAMENODE_DIR=/tmp/hadoop_name
-	HDFS_DATANODE_DIR=/scratch/tmp/hadoop_data
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
 @end
 

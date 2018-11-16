@@ -73,12 +73,17 @@ void *convert_to_FILEptr(PyObject* obj) {
         PyErr_Clear();
         return nullptr;
     }
-    int flags = fcntl(fd, F_GETFL);
+#ifdef WIN32
+	// for now, support only readonly, since we have no way to query the open state of the fd
+	int flags = O_RDONLY | O_BINARY;
+#else
+	int flags = fcntl(fd, F_GETFL);
     if (flags == -1)
     {
         THROW_ERRNO(IOError);
     }
-    const char * file_flags = (flags&O_RDWR) ? "w+" : ( (flags&O_WRONLY) ? "w" : "r" );
+#endif
+	const char * file_flags = (flags&O_RDWR) ? "w+" : ( (flags&O_WRONLY) ? "w" : "r" );
     FILE* fp = fdopen(fd, file_flags);
     setbuf(fp, NULL);
     return fp;
@@ -219,6 +224,7 @@ export_classad()
         .def("values", boost::python::range(&ClassAdWrapper::beginValues, &ClassAdWrapper::endValues))
         .def("items", boost::python::range(&ClassAdWrapper::beginItems, &ClassAdWrapper::endItems))
         .def("__len__", &ClassAdWrapper::size)
+        .def("__contains__", &ClassAdWrapper::contains)
         .def("lookup", &ClassAdWrapper::LookupExpr, condor::classad_expr_return_policy<>(), "Lookup an attribute and return a ClassAd expression.  This method will not attempt to evaluate it to a python object.")
         .def("printOld", &ClassAdWrapper::toOldString, "Represent this ClassAd as a string in the \"old ClassAd\" format.")
         .def("get", &ClassAdWrapper::get, get_overloads("Retrieve a value from the ClassAd"))

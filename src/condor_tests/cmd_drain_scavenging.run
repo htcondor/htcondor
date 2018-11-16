@@ -80,6 +80,10 @@ my $testDescription = 'Test scavenging.';
 # the fourth and fifth jobs will look start (or not start) only on the basis
 # of the (recommended) START expression we use when we begin draining.
 #
+# [Correcting the above: now that we actually respect individual job MJRTs
+# during retirement, which we (temporarily?) need so that job policy will
+# work, we can't use an MJRT of 0 as a signal of backfilliness.]
+#
 # After the first three jobs have started, we'll begin draining with a START
 # expression of 'TARGET.MaxJobRetirementTime == 0'.  Then we'll verify that
 # the slots have all changed state & activity, and that the new START
@@ -117,7 +121,7 @@ exit( 0 );
 CondorTest::WriteFileOrDie( $jobFile, $jobContents );
 chmod( 0755, $jobFile ) || die( "Failed to make ${jobFile} executable, aborting.\n" );
 
-my $killFile = cwd() . "/killfile";
+my $killFile = cwd() . "/killfile-cds";
 my $submitBody = "
 
 executable				= ${jobFile}
@@ -131,11 +135,13 @@ log						= cmd_drain_scavenging.log
 queue 3
 
 arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
-MaxJobRetirementTime	= 0
++IsBackfill				= True
+MaxJobRetirementTime	= 60
 
 queue 1
 
 arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
++IsBackfill				= False
 MaxJobRetirementTime	= 60
 
 queue 1
@@ -191,7 +197,7 @@ my $execute = sub {
 
 		print( "Beginning draining...\n" );
 		runCommandCarefully( undef, qw( condor_drain -start ),
-			'TARGET.MaxJobRetirementTime == 0', $hostName );
+			'TARGET.IsBackfill', $hostName );
 
 		print( "Verifying state changes...\n" );
 		for( my $delay = 0; $delay <= 20; ++$delay ) {
@@ -213,7 +219,7 @@ my $execute = sub {
 				print( "Considering '" . $ad->{ "Name" } . "'...\n" );
 				if(! $ad->{ "State" } =~ /^Claimed$/i) { print( "Found unexpected state '" . $ad->{ "State" } . "', will retry.\n" ); $stateChanged = 0; last; }
 				if(! $ad->{ "Activity" } =~ /^Retiring$/i) { print( "Found unexpected activity '" . $ad->{ "Activity" } . "', will retry.\n" ); $stateChanged = 0; last; }
-				if(! $ad->{ "Start" } =~ /TARGET\.MaxJobRetirementTime == 0/i) { print( "Found unexpected START '" . $ad->{ "Start" } . "', will retry.\n" ); $stateChanged = 0; last; }
+				if(! $ad->{ "Start" } =~ /TARGET\.IsBackfill == True/i) { print( "Found unexpected START '" . $ad->{ "Start" } . "', will retry.\n" ); $stateChanged = 0; last; }
 				if(! $ad->{ "AcceptedWhileDraining" } =~ /^False$/i) { print( "Found unexpected AcceptedWhileDraining '" . $ad->{ "AcceptedWhileDraining" } . "', will retry.\n" ); $stateChanged = 0; last; }
 			}
 			if( $stateChanged == 1 ) { last; }
@@ -361,15 +367,16 @@ my $evicted = sub {
 		}
 		print( "... machine fully drained.\n" );
 
+		my $progress = 0;
 		my $logFileName = `condor_config_val STARTD_LOG`;
 		CondorUtils::fullchomp( $logFileName );
 		print( "Checking MaxJobRetirementTime and MaxMachineVacateTime...\n" );
 		for( my $delay = 0; $delay <= 20; ++$delay ) {
 			if( $delay == 20 ) {
-				die( "... did not find all necessary state changes in log, aborting.\n" );
+				die( "... did not find all necessary state changes (found $progress of them) in log, aborting.\n" );
 			}
 
-			if( checkTiming( $logFileName ) ) { last; }
+			if( checkTiming( $logFileName, \$progress ) ) { last; }
 
 			sleep( 1 );
 		}
@@ -426,7 +433,7 @@ sub touch {
 }
 
 sub checkTiming {
-	my( $logFileName ) = @_;
+	my( $logFileName, $progress ) = @_;
 
 	#
 	# We're looking for the following sequence with the following time deltas:
@@ -442,6 +449,7 @@ sub checkTiming {
 
 	my $state = 0;
 	my $finalDrainStartTime = undef;
+	my $jidm = '\[\d+\.\d+\]';
 	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)?( \(.*\))?';
 	while( my $line = <LOG> ) {
 		CondorUtils::fullchomp( $line );
@@ -452,6 +460,7 @@ sub checkTiming {
 			next;
 		}
 
+		# I have no idea why this log message doesn't have a job ID.
 		if( $state == 1 && $line =~ /^${secondsMatch} slot1_1: Changing activity: Busy -> Retiring$/ ) {
 			if( $finalDrainStartTime != $1 ) {
 				die( "slot1_1 did not start retiring immediately, aborting.\n" );
@@ -461,6 +470,7 @@ sub checkTiming {
 			}
 		}
 
+		# I have no idea why this log message doesn't have a job ID.
 		if( $state == 2 && $line =~ /^${secondsMatch} slot1_1: State change: claim retirement ended\/expired$/ ) {
 			if( $finalDrainStartTime != $1 ) {
 				die( "MaxJobRetirementTime was not 0, aborting.\n" );
@@ -470,6 +480,7 @@ sub checkTiming {
 			}
 		}
 
+		# I have no idea why this log message doesn't have a job ID.
 		if( $state == 3 && $line =~ /^${secondsMatch} slot1_1: Changing state and activity: Claimed\/Retiring -> Preempting\/Vacating$/ ) {
 			if( $finalDrainStartTime != $1 ) {
 				die( "slot1_1 did not immediately switch from retiring to preempting.\n" );
@@ -479,7 +490,7 @@ sub checkTiming {
 			}
 		}
 
-		if( $state == 4 && $line =~ /^${secondsMatch} slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
+		if( $state == 4 && $line =~ /^${secondsMatch} slot1_1${jidm}: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
 			# Especially with sub-second reporting, allow the startd some time to work.
 			if( (($finalDrainStartTime + 5) % 60) != $1 && (($finalDrainStartTime + 6) % 60) != $1 ) {
 				die( "MaxMachineVacateTime was not 5.\n" );
@@ -491,5 +502,6 @@ sub checkTiming {
 	}
 	close( LOG );
 
+	${$progress} = $state;
 	return ($state == 5);
 }

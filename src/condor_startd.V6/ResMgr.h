@@ -72,6 +72,8 @@ public:
 	stats_entry_recent<int>	total_rank_preemptions;
 	stats_entry_recent<int>	total_user_prio_preemptions;
 	stats_entry_recent<int>	total_job_starts;
+	stats_entry_recent<Probe> job_busy_time;
+	stats_entry_recent<Probe> job_duration;
 
 	time_t init_time;
 	time_t lifetime;
@@ -90,11 +92,24 @@ public:
 		pool.AddProbe("JobUserPrioPreemptions", &total_user_prio_preemptions);
 		pool.AddProbe("JobStarts", &total_job_starts);
 
+		// publish two Miron probes, showing only XXXCount if count is zero, and
+		// also XXXMin, XXXMax and XXXAvg if count is non-zero
+		const int flags = stats_entry_recent<Probe>::PubValueAndRecent | ProbeDetailMode_CAMM | IF_NONZERO | IF_VERBOSEPUB;
+		pool.AddProbe("JobBusyTime", &job_busy_time, NULL, flags);
+		pool.AddProbe("JobDuration", &job_duration, NULL, flags);
+
+		// for probes to be published if they are in the whitelist
+		std::string strWhitelist;
+		if (param(strWhitelist, "STATISTICS_TO_PUBLISH_LIST")) {
+			pool.SetVerbosities(strWhitelist.c_str(), 0, true);
+		}
+
+
 		pool.SetRecentMax(recent_window, window_quantum);
 	}
 
 	void Publish(ClassAd &ad, int flags) const {
-		pool.Publish(ad, flags);	
+		pool.Publish(ad, flags);
 	}
 
 	void Tick(time_t now) {

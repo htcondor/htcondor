@@ -138,7 +138,7 @@ the set of configuration it incorporates.
 	are 1 and 100\% respectively).
 	See~\ref{sec:SMP-Divide} for information on partitionalble
 	slot policies.
-	
+
     \item \texttt{AssignAccountingGroup( map\_filename )}
 	Sets up a \Condor{schedd} job transform that assigns an accounting group to
 	each job as it is submitted. The accounting is determined by mapping the
@@ -229,8 +229,8 @@ the set of configuration it incorporates.
     resources.
     If this policy is used together with the \texttt{Limit\_Job\_Runtimes}
     policy,
-    order the specification by placing this \texttt{Always\_Run\_Jobs} 
-    policy first. 
+    order the specification by placing this \texttt{Always\_Run\_Jobs}
+    policy first.
 
     \item \texttt{UWCS\_Desktop}
 
@@ -247,10 +247,24 @@ the set of configuration it incorporates.
     \item \texttt{Limit\_Job\_Runtimes( limit\_in\_seconds )}
 
     Limits running jobs to a maximum of the specified time using preemption.
-	(The default limit is 24 hours.)
+	(The default limit is 24 hours.)  This policy does not work while the
+	machine is draining; use the following policy instead.
+
     If this policy is used together with the \texttt{Always\_Run\_Jobs} policy,
-    order the specification by placing this \texttt{Limit\_Job\_Runtimes} 
-    policy second. 
+    order the specification by placing this \texttt{Limit\_Job\_Runtimes}
+    policy second.
+
+	\item \texttt{Preempt\_if\_Runtime\_Exceeds( limit\_in\_seconds )}
+
+	Limits running jobs to a maximum of the specified time
+	using preemption.
+	(The default limit is 24 hours).
+
+	\item \texttt{Hold\_if\_Runtime\_Exceeds( limit\_in\_seconds )}
+
+	Limits running jobs to a maximum of the specified time
+	by placing them on hold immediately (ignoring any job retirement time).
+	(The default limit is 24 hours).
 
 	\item \texttt{Preempt\_If\_Cpus\_Exceeded}
 

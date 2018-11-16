@@ -278,7 +278,7 @@ public:
         // RETURNS: true -- success; false -- false
         //------------------------------------------
 
-        bool isOutgoing_MD5_on() const { return (mdMode_ == MD_ALWAYS_ON); }
+        bool isOutgoing_Hash_on() const { return (mdMode_ == MD_ALWAYS_ON); }
         //------------------------------------------
         // PURPOSE: whether MD is turned on or not
         // REQUIRE: None
@@ -286,13 +286,13 @@ public:
         //          false -- MD is off
         //------------------------------------------
 
-        virtual const char * isIncomingDataMD5ed() = 0;
+        virtual const char * isIncomingDataHashed() = 0;
         //------------------------------------------
         // PURPOSE: To check to see if incoming data
-        //          has MD5 checksum/. NOTE! Currently,
+        //          has checksum/. NOTE! Currently,
         //          this method should be used with UDP only!
         // REQUIRE: None
-        // RETURNS: NULL -- data does not contain MD5
+        // RETURNS: NULL -- data does not contain hash
         //          key id -- if the data is checksumed
         //------------------------------------------
 

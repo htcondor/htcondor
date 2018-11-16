@@ -1781,7 +1781,7 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 			classad::ClassAdJsonUnParser  unparser;
 			output = cNonEmptyOutputAds ? ",\n" : "[\n";
 			if (print_order) {
-				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+				//PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
 				//unparser.Unparse(output, job, print_order);
 				unparser.Unparse(output, job);
 			} else {
@@ -1798,7 +1798,7 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 			classad::ClassAdUnParser  unparser;
 			output = cNonEmptyOutputAds ? ",\n" : "{\n";
 			if (print_order) {
-				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+				//PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
 				//unparser.Unparse(output, job, print_order);
 				unparser.Unparse(output, job);
 			} else {
@@ -1818,7 +1818,7 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 				AddClassAdXMLFileHeader(output);
 			}
 			if (print_order) {
-				PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
+				//PRAGMA_REMIND("fix to call call Unparse with projection when it exists")
 				//unparser.Unparse(output, job, print_order);
 				unparser.Unparse(output, job);
 			} else {

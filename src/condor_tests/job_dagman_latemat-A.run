@@ -31,7 +31,8 @@ use CondorUtils;
 
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
-	SCHEDD_ALLOW_LATE_MATERIALIZE = true
+	# this is now the default
+	#SCHEDD_ALLOW_LATE_MATERIALIZE = true
 	SUBMIT_FACTORY_JOBS_BY_DEFAULT = true
 CONDOR_TESTREQ_CONFIG
 #endtestreq

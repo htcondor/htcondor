@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  ***************************************************************/
-
+#if 0 // Moved to dagman_utils
 #include "condor_common.h"
 #include "dagman_recursive_submit.h"
 #include "MyString.h"
@@ -145,3 +145,4 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 
 	return result;
 }
+#endif

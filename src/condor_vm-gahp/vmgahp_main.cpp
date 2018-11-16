@@ -433,7 +433,7 @@ void main_init(int argc, char *argv[])
 	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
 		// Try to test
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
-	  if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
+		if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 			priv_state priv = set_root_priv();
 
 			if( XenType::checkXenParams(gahpconfig) == false ) {
@@ -442,7 +442,7 @@ void main_init(int argc, char *argv[])
 				DC_Exit(0);
 			}
 			set_priv(priv);
-	  }else if ( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+		} else if ( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 			priv_state priv = set_root_priv();
 
 			if( KVMType::checkXenParams(gahpconfig) == false ) {
@@ -452,7 +452,7 @@ void main_init(int argc, char *argv[])
 			}
 			set_priv(priv);
 
-	  } else
+		} else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
 			priv_state priv = set_user_priv();

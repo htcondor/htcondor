@@ -1217,6 +1217,8 @@ gc_image(const std::string & image) {
    int remove_count = (int)images.size() - cache_size;
    if (remove_count < 0) remove_count = 0;
 
+   std::list<std::string> removed_images;
+
    for (iter = images.begin(); iter != images.end(); iter++) {
     if (remove_count <= 0) break;
     std::string toRemove = *iter;
@@ -1225,9 +1227,15 @@ gc_image(const std::string & image) {
     int result = DockerAPI::rmi(toRemove, err);
 
     if (result == 0) {
-      images.erase(iter);
+      removed_images.push_back(toRemove);
       remove_count--;
     }
+  }
+
+  // We've removed one or more images from docker, remove those from the
+  // images list
+  for (iter = removed_images.begin(); iter != removed_images.end(); iter++) {
+	images.remove(*iter);
   }
 
   images.push_back(image); // our current image is the most recent one

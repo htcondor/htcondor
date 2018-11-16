@@ -86,11 +86,6 @@ else {
 chomp(my $hostname = `hostname -f`);
 print "Executing task '$taskname' on host '$hostname'\n";
 
-if ($ENV{NMI_PLATFORM} =~ /macos/i) {
-    # Build binaries that will work on Mac OS X 10.7 and later.
-    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
-}
-
 # Build with warnings == errors on Fedora
 my $werror="";
 if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
@@ -306,7 +301,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS|Fedora)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|CentOS|Fedora|SL)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {
@@ -324,7 +319,7 @@ sub check_rpm {
 
 sub create_deb {    
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(Debian9|Ubuntu16|Ubuntu18)/) {
+    if (!($ENV{NMI_PLATFORM} =~ /(Debian8|Ubuntu14)/)) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_deb.sh";
     } else {

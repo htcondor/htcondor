@@ -38,6 +38,10 @@ public:
 	// Destructor
 	//------------------------------------------
 
+    static bool Initialize();
+    // Perform one-time initialization, primarily dlopen()ing the
+    // munge lib. Returns true on success, false on failure.
+
 	int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
 	//------------------------------------------
 	// PURPOSE: authenticate with the other side
@@ -70,6 +74,9 @@ public:
 	//------------------------------------------
 
 private:
+	static bool m_initTried;
+	static bool m_initSuccess;
+
 	// the shared session key produced as output of the protocol
 	Condor_Crypt_3des* m_crypto;
 

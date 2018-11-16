@@ -66,6 +66,7 @@ if ($boos) {
 	open(FH, '>', 'swap_userdir.cmd') or print "Cant open swap_userdir.cmd for writing: $!\n";
 	if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 		print FH '"userdir\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/msconfig userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
+		print FH 'del userdir\condor-*.tgz' . "\n";
 		print FH 'move userdir\* sources' . "\n";
 		print FH 'move userdir\src sources\src' . "\n";
 		print FH 'move userdir\doc sources\doc' . "\n";
@@ -87,6 +88,7 @@ if ($boos) {
 		print FH 'mv userdir/msconfig sources' . "\n";
 		print FH 'mv userdir/nmi_tools sources' . "\n";
 		print FH 'tar xvf swap_userdir.tgz' . "\n";
+		print FH 'mv sources/condor-*.tgz userdir' . "\n";
 	}
 	close(FH);
 	chmod(0777,'swap_userdir.cmd');
@@ -121,7 +123,7 @@ else {
     print TASKLIST "$BUILD_TESTS_TASK 4h\n";
     print TASKLIST "$UNSTRIPPED_TASK 4h\n";
     print TASKLIST "$CHECK_UNSTRIPPED_TASK 4h\n";
-    if (!($ENV{NMI_PLATFORM} =~ /(x86_64_Debian9|RedHat|CentOS|Fedora|x86_64_Ubuntu16)/)) {
+    if ($ENV{NMI_PLATFORM} =~ /(Debian8|Ubuntu14)/) {
         print TASKLIST "$NATIVE_DEBUG_TASK 4h\n";
     }
     print TASKLIST "$NATIVE_TASK 4h\n";

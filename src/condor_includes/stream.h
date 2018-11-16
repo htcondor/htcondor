@@ -372,7 +372,7 @@ public:
 	int put(double);
 	int put(char const *);
 	int put(const MyString &);
-	int put(const std::string &str) {return this->put(str.c_str(), 1 + str.length());}
+	int put(const std::string &str) {return this->put(str.c_str(), 1 + (int)str.length());}
 	// The second argument is the length of the string, including the
 	// NUL terminator.
 	int put(char const *, int);

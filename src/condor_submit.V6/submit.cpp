@@ -85,7 +85,6 @@
 #include "condor_md.h"
 #include "my_popen.h"
 #include "condor_base64.h"
-#include "zkm_base64.h"
 
 #include <algorithm>
 #include <string>
@@ -128,7 +127,9 @@ int 	InteractiveSubmitFile = 0; /* true if using INTERACTIVE_SUBMIT_FILE */
 bool	verbose = false; // formerly: int Quiet = 1;
 bool	terse = false; // generate parsable output
 SetAttributeFlags_t setattrflags = 0; // flags to SetAttribute()
-bool	SubmitFromStdin = false;
+bool	CmdFileIsStdin = false;
+bool	NoCmdFileNeeded = false; // set if there is no need for a commmand file (i.e. -queue was specified on command line and at least 1 key=value pair)
+bool	GotCmdlineKeys = false; // key=value or -append specifed on the command line
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		DashDryRun = 0;
@@ -136,6 +137,7 @@ int		DashMaxJobs = 0;	 // maximum number of jobs to create before generating an 
 int		DashMaxClusters = 0; // maximum number of clusters to create before generating an error.
 const char * DashDryRunOutName = NULL;
 int		DumpSubmitHash = 0;
+int		DumpSubmitDigest = 0;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
@@ -148,12 +150,12 @@ int		dash_remote=0;
 int		dash_factory=0;
 int		default_to_factory=0;
 int		create_local_factory_file=0; // create a copy of the submit digest in the current directory
-unsigned int submit_unique_id=1; // hack to make default_to_factory work in test suite for milestone 1 (8.7.1)
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
 #endif
 char * batch_name_line = NULL;
 bool sent_credential_to_credd = false;
+bool allow_crlf_script = false;
 
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
@@ -223,6 +225,7 @@ int set_vars(SubmitHash & hash, StringList & vars, char * item, int item_index, 
 void cleanup_vars(SubmitHash & hash, StringList & vars);
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
+bool is_crlf_shebang(const char * path);
 int  SendLastExecutable();
 static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
 int  DoUnitTests(int options);
@@ -605,6 +608,9 @@ main( int argc, const char *argv[] )
 						} else if (YourString(opt) == "def") {
 							DumpSubmitHash &= ~HASHITER_NO_DEFAULTS;
 							needs_file_arg = true;
+						} else if (YourString(opt) == "digest") {
+							DumpSubmitDigest = 1;
+							needs_file_arg = true;
 						} else {
 							int optval = atoi(opt);
 							// if the argument is -dry:<number> and number is > 0x10,
@@ -634,7 +640,16 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "spool", 1)) {
 				dash_remote++;
 				DisableFileChecks = 1;
-			} else if (is_dash_arg_prefix(ptr[0], "factory", 1)) {
+			} else if (is_dash_arg_prefix(ptr[0], "file", 2)) {
+				if (!(--argc) || !(*(++ptr))) {
+					fprintf(stderr, "%s: -file requires another argument\n", MyName);
+					exit(1);
+				}
+				cmd_file = *ptr;
+			} else if (is_dash_arg_prefix(ptr[0], "factory", 2)) {
+				dash_factory++;
+				DisableFileChecks = 1;
+			} else if (is_dash_arg_prefix(ptr[0], "generator", 1)) {
 				dash_factory++;
 				DisableFileChecks = 1;
 			} else if (is_dash_arg_prefix(ptr[0], "address", 2)) {
@@ -696,6 +711,7 @@ main( int argc, const char *argv[] )
 					queueCommandLine = ptr[0];
 				} else {
 					extraLines.Append( *ptr );
+					GotCmdlineKeys = true;
 				}
 			} else if (is_dash_arg_prefix(ptr[0], "batch-name", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
@@ -814,6 +830,8 @@ main( int argc, const char *argv[] )
 				query_credential = false;
 			} else if (is_dash_arg_prefix(ptr[0], "force-mpi-universe", 7)) {
 				use_condor_mpi_universe = true;
+			} else if (is_dash_arg_prefix(ptr[0], "allow-crlf-script", 8)) {
+				allow_crlf_script = true;
 			} else if (is_dash_arg_prefix(ptr[0], "help")) {
 				usage();
 				exit( 0 );
@@ -842,6 +860,7 @@ main( int argc, const char *argv[] )
 				exit(1);
 			}
 			submit_hash.set_arg_variable(name.c_str(), value.c_str());
+			GotCmdlineKeys = true; // there is no need for a command file.
 		} else {
 			cmd_file = *ptr;
 		}
@@ -850,9 +869,15 @@ main( int argc, const char *argv[] )
 	// Have reading the submit file from stdin imply -verbose. This is
 	// for backward compatibility with HTCondor version 8.1.1 and earlier
 	// -terse can be used to override the backward compatable behavior.
-	SubmitFromStdin = cmd_file && ! strcmp(cmd_file, "-");
-	if (SubmitFromStdin && ! terse) {
+	CmdFileIsStdin = cmd_file && (MATCH == strcmp(cmd_file, "-"));
+	if (CmdFileIsStdin && ! terse) {
 		verbose = true;
+	}
+
+	// if we got both a queue statement and at least one key=value pair on the command line
+	// we don't need a submit file at all.
+	if (GotCmdlineKeys && ! queueCommandLine.empty()) {
+		NoCmdFileNeeded = true;
 	}
 
 	// ensure I have a known transfer method
@@ -998,7 +1023,7 @@ main( int argc, const char *argv[] )
 	}
 
 	// open submit file
-	if ( ! cmd_file || SubmitFromStdin) {
+	if (CmdFileIsStdin || ( ! cmd_file && ! NoCmdFileNeeded)) {
 		// no file specified, read from stdin
 		fp = stdin;
 		submit_hash.insert_source("<stdin>", FileMacroSource);
@@ -1010,7 +1035,6 @@ main( int argc, const char *argv[] )
 		}
 		// this does both insert_source, and also gives a values to the default $(SUBMIT_FILE) expansion
 		submit_hash.insert_submit_filename(cmd_file, FileMacroSource);
-		submit_unique_id = hashFunction(cmd_file); // hack to make default_to_factory work in test suite
 	}
 
 	// in case things go awry ...
@@ -1024,7 +1048,7 @@ main( int argc, const char *argv[] )
 	submit_hash.init_base_ad(get_submit_time(), owner);
 
 	if ( !DumpClassAdToFile ) {
-		if ( ! SubmitFromStdin && ! terse) {
+		if ( !CmdFileIsStdin && ! terse) {
 			fprintf(stdout, DashDryRun ? "Dry-Run job(s)" : "Submitting job(s)");
 		}
 	} else if ( ! DumpFileIsStdout ) {
@@ -1059,11 +1083,11 @@ main( int argc, const char *argv[] )
 
 	if( !GotQueueCommand ) {
 		fprintf(stderr, "\nERROR: \"%s\" doesn't contain any \"queue\" commands -- no jobs queued\n",
-				SubmitFromStdin ? "(stdin)" : cmd_file);
+				CmdFileIsStdin ? "(stdin)" : cmd_file);
 		exit( 1 );
 	} else if ( ! GotNonEmptyQueueCommand && ! terse) {
 		fprintf(stderr, "\nWARNING: \"%s\" has only empty \"queue\" commands -- no jobs queued\n",
-				SubmitFromStdin ? "(stdin)" : cmd_file);
+				CmdFileIsStdin ? "(stdin)" : cmd_file);
 	}
 
 	// we can't disconnect from something if we haven't connected to it: since
@@ -1085,7 +1109,7 @@ main( int argc, const char *argv[] )
 		}
 	}
 
-	if ( ! SubmitFromStdin && ! terse) {
+	if ( ! CmdFileIsStdin && ! terse) {
 		fprintf(stdout, "\n");
 	}
 
@@ -1295,6 +1319,28 @@ main( int argc, const char *argv[] )
 	return 0;
 }
 
+// check if path is a (broken) interpreter script with dos line endings
+bool is_crlf_shebang(const char *path)
+{
+	char buf[128];     // BINPRM_BUF_SIZE from <linux/binfmts.h>; also:
+	bool ret = false;  // execve(2) says the max #! line length is 127
+	FILE *fp = safe_fopen_no_create(path, "rb");
+
+	if (!fp) {
+		// can't open, don't worry about it
+		return false;
+	}
+
+	// check first line for CRLF ending if readable and starts with #!
+	if (fgets(buf, sizeof buf, fp) && buf[0] == '#' && buf[1] == '!') {
+		size_t len = strlen(buf);
+		ret = (len > 2) && (buf[len-1] == '\n' && buf[len-2] == '\r');
+	}
+
+	fclose(fp);
+	return ret;
+}
+
 // callback passed to make_job_ad on the submit_hash that gets passed each input or output file
 // so we can choose to do file checks. 
 int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const char * pathname, int flags)
@@ -1367,6 +1413,15 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 			if (!si.Error() && (si.GetFileSize() == 0)) {
 				fprintf( stderr, "\nERROR: Executable file %s has zero length\n", ename );
 				return 1; // abort
+			}
+
+			if (is_crlf_shebang(ename)) {
+				fprintf( stderr, "\n%s: Executable file %s is a script with CRLF (DOS/Win) line endings\n",
+					allow_crlf_script ? "WARNING" : "ERROR", ename );
+				if (!allow_crlf_script) {
+					fprintf( stderr, "Run with -allow-crlf-script if this is really what you want\n");
+					return 1; // abort
+				}
 			}
 
 			if (role == SFR_EXECUTABLE) {
@@ -1772,7 +1827,8 @@ int submit_jobs (
 		if (GotQueueCommand == 1) {
 			if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
 				want_factory = 1;
-			} else if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
+			} else if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true) ||
+				       submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
 				max_materialize = INT_MAX; // no max materialize specified, so set it to number of jobs
 				want_factory = 1;
 			} else if (want_factory < 0) {
@@ -1859,14 +1915,9 @@ int submit_jobs (
 			MyString factory_path;
 			if (create_local_factory_file) {
 				MyString factory_fn;
-				//PRAGMA_REMIND("tj: remove this hack..")
-				//if (default_to_factory) { // hack to make the test suite work.
-				//	factory_fn.formatstr("condor_submit.%d.%u.digest", ClusterId, submit_unique_id);
-				//} else {
-					factory_fn.formatstr("condor_submit.%d.digest", ClusterId);
-				//}
+				factory_fn.formatstr("condor_submit.%d.digest", ClusterId);
 				factory_path = submit_hash.full_path(factory_fn.c_str(), false);
-				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), submit_digest.size(), 0644);
+				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), (int)submit_digest.size(), 0644);
 				if (rval < 0)
 					break;
 			}
@@ -1878,6 +1929,10 @@ int submit_jobs (
 			if (max_materialize <= 0) max_materialize = INT_MAX;
 			max_materialize = MIN(max_materialize, total_procs);
 			max_materialize = MAX(max_materialize, 1);
+
+			if (DashDryRun && DumpSubmitDigest) {
+				fprintf(stdout, "\n----- submit digest -----\n%s-----\n", submit_digest.c_str());
+			}
 
 			// send the submit digest to the schedd. the schedd will parse the digest at this point
 			// and return success or failure.
@@ -2373,6 +2428,7 @@ usage()
 {
 	fprintf( stderr, "Usage: %s [options] [<attrib>=<value>] [- | <submit-file>]\n", MyName );
 	fprintf( stderr, "    [options] are\n" );
+	fprintf( stderr, "\t-file <submit-file>\tRead Submit commands from <submit-file>\n");
 	fprintf( stderr, "\t-terse  \t\tDisplay terse output, jobid ranges only\n" );
 	fprintf( stderr, "\t-verbose\t\tDisplay verbose output, jobid and full job ClassAd\n" );
 	fprintf( stderr, "\t-debug  \t\tDisplay debugging output\n" );
@@ -2390,6 +2446,7 @@ usage()
 	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	//fprintf( stderr, "\t-force-mpi-universe\tAllow submission of obsolete MPI universe\n );
+	fprintf( stderr, "\t-allow-crlf-script\tAllow submitting #! executable script with DOS/CRLF line endings\n" );
 	fprintf( stderr, "\t-dump <filename>\tWrite job ClassAds to <filename> instead of\n"
 					 "\t                \tsubmitting to a schedd.\n" );
 #if !defined(WIN32)
@@ -2408,8 +2465,8 @@ usage()
 
 	fprintf( stderr, "\t<attrib>=<value>\tSet <attrib>=<value> before reading the submit file.\n" );
 
-	fprintf( stderr, "\n    If <submit-file> is omitted or is -, input is read from stdin.\n"
-					 "    Use of - implies verbose output unless -terse is specified\n");
+	fprintf( stderr, "\n    If <submit-file> is omitted or is -, and a -queue is not provided, submit commands\n"
+					"     are read from stdin. Use of - implies verbose output unless -terse is specified\n");
 }
 
 
@@ -2532,7 +2589,7 @@ int SendJobCredential()
 		} else {
 			uber_ticket = (unsigned char*)malloc(65536);
 			ASSERT(uber_ticket);
-			int bytes_read = fread(uber_ticket, 1, 65536, uber_file);
+			size_t bytes_read = fread(uber_ticket, 1, 65536, uber_file);
 			// what constitutes failure?
 			my_pclose(uber_file);
 
@@ -2548,16 +2605,16 @@ int SendJobCredential()
 			//unsigned char *zkmbuf = 0;
 			int zkmlen = -1;
 			unsigned char* zkmbuf = NULL;
-			zkm_base64_decode(ut64, &zkmbuf, &zkmlen);
+			condor_base64_decode(ut64, &zkmbuf, &zkmlen);
 
-			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", bytes_read, zkmlen);
+			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", (int)bytes_read, zkmlen);
 			dprintf(D_FULLDEBUG, "CREDMON: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
 
 			char preview[64];
 			strncpy(preview,ut64, 63);
 			preview[63]=0;
 
-			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", bytes_read, preview);
+			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", (int)bytes_read, preview);
 
 			// setup the username to query
 			char userdom[256];
@@ -2613,33 +2670,33 @@ int SendLastExecutable()
 												true);
 		}
 
-		MyString md5;
+		MyString hash;
 		if (try_ickpt_sharing) {
 			Condor_MD_MAC cmm;
-			unsigned char* md5_raw;
+			unsigned char* hash_raw;
 			if (!cmm.addMDFile(ename)) {
 				dprintf(D_ALWAYS,
 						"SHARE_SPOOLED_EXECUTABLES will not be used: "
 							"MD5 of file %s failed\n",
 						ename);
 			}
-			else if ((md5_raw = cmm.computeMD()) == NULL) {
+			else if ((hash_raw = cmm.computeMD()) == NULL) {
 				dprintf(D_ALWAYS,
 						"SHARE_SPOOLED_EXECUTABLES will not be used: "
 							"no MD5 support in this Condor build\n");
 			}
 			else {
 				for (int i = 0; i < MAC_SIZE; i++) {
-					md5.formatstr_cat("%02x", static_cast<int>(md5_raw[i]));
+					hash.formatstr_cat("%02x", static_cast<int>(hash_raw[i]));
 				}
-				free(md5_raw);
+				free(hash_raw);
 			}
 		}
 		int ret;
-		if ( ! md5.IsEmpty()) {
+		if ( ! hash.IsEmpty()) {
 			ClassAd tmp_ad;
 			tmp_ad.Assign(ATTR_OWNER, owner);
-			tmp_ad.Assign(ATTR_JOB_CMD_MD5, md5.Value());
+			tmp_ad.Assign(ATTR_JOB_CMD_CHECKSUM, hash.Value());
 			ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
 		}
 		else {

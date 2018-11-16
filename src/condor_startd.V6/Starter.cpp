@@ -255,22 +255,11 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		return;
 	}
 
-		// Check for ATTR_STARTER_IGNORED_ATTRS. If defined,
-		// we insert all attributes from the starter ad except those
-		// in the list. If not, we fall back on our old behavior
-		// of only inserting attributes prefixed with "Has" or
-		// "Java". Either way, we only add the "Has" attributes
-		// into the StringList (the StarterAbilityList)
-	char* ignored_attrs = NULL;
 	StringList* ignored_attr_list = NULL;
-	if (s_ad->LookupString(ATTR_STARTER_IGNORED_ATTRS, &ignored_attrs)) {
-		ignored_attr_list = new StringList(ignored_attrs);
-		free(ignored_attrs);
-
-		// of course, we don't want ATTR_STARTER_IGNORED_ATTRS
-		// in either!
-		ignored_attr_list->append(ATTR_STARTER_IGNORED_ATTRS);
-	}
+	ignored_attr_list = new StringList();
+	ignored_attr_list->append(ATTR_VERSION);
+	ignored_attr_list->append(ATTR_IS_DAEMON_CORE);
+	
 
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
@@ -939,11 +928,16 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
 	{
+		dprintf(D_JOB, "Could not read update job ClassAd update from starter, assuming final_update\n");
 		final_update = 1;
 	}
 	else {
-		dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
-		dPrintAd( D_JOB, update_ad );
+		if (IsDebugLevel(D_JOB)) {
+			std::string adbuf;
+			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
+		} else {
+			dprintf(D_FULLDEBUG, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
+		}
 
 		// In addition to new info about the job, the starter also
 		// inserts contact info for itself (important for CCB and
@@ -961,7 +955,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 
 		Claim* claim = resmgr->getClaimByPid(s_pid);
 		if( claim ) {
-			claim->receiveJobClassAdUpdate( update_ad );
+			claim->receiveJobClassAdUpdate(update_ad, final_update);
 
 			ClassAd * jobAd = claim->ad();
 			if (jobAd) {
@@ -1608,12 +1602,7 @@ Starter::softkillTimeout( void )
 {
 	s_softkill_tid = -1;
 	if( active() ) {
-		Claim * c = resmgr->getClaimByPid( pid() );
-		if( c && c->rip() && c->rip()->r_id_str ) {
-			dprintf( D_ALWAYS, "%s: max vacate time expired.  Escalating to a fast shutdown of the job.\n",  c->rip()->r_id_str );
-		} else {
-			dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
-		}
+		dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
 		killHard(s_is_vm_universe ? vm_killing_timeout : killing_timeout);
 	}
 }

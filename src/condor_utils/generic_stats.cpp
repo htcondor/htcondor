@@ -537,6 +537,22 @@ int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe, int Deta
    } else if (DetailMode == ProbeDetailMode_Tot) {
       // for Totals, publish the Sum without a suffix
       ret = ad.Assign(pattr, (long long)probe.Sum);
+   } else if (DetailMode == ProbeDetailMode_CAMM) {
+      // for CAMM, publish the Avg and the Min & Max and Count using their normal names
+      // publish Avg, Min and Max only if count is non-zero
+      attr.formatstr("%sCount", pattr);
+      ret = ad.Assign(attr.Value(), probe.Count);
+
+      if (probe.Count != 0) {
+         attr.formatstr("%sAvg", pattr);
+         ad.Assign(attr.Value(), probe.Avg());
+
+         attr.formatstr("%sMin", pattr);
+         ad.Assign(attr.Value(), probe.Min);
+
+         attr.formatstr("%sMax", pattr);
+         ad.Assign(attr.Value(), probe.Max);
+      }
    }
    return ret;
 }
