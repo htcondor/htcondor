@@ -118,8 +118,8 @@ index 716edbe07c..967e029189 100644
   #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
   
   ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
--@@ -50,5 +48,34 @@
-+@@ -50,5 +48,44 @@
+-@@ -50,5 +48,27 @@
++@@ -50,5 +48,33 @@
   #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
   
   ##--------------------------------------------------------------------
@@ -132,17 +132,13 @@ index 716edbe07c..967e029189 100644
  +EXECUTE = $(LOCAL_DIR)/lib/condor/execute
  +BIN     = $(RELEASE_DIR)/bin
  +LIB     = $(RELEASE_DIR)/lib/condor
-@@ -67,3 +67,13 @@
- +##  The list is a comma or space separated list of subsystem names
+@@ -60,3 +60,9 @@
+ +PROCD_ADDRESS = $(RUN)/procd_pipe
  +
- +DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
+ +##  Install the condor-single-node package to run HTCondor on a single node
 ++
 ++# Don't phone home
 ++CONDOR_DEVELOPERS = NONE
 ++CONDOR_DEVELOPERS_COLLECTOR = NONE
 ++
 ++SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = /etc/condor/condor_ssh_to_job_sshd_config_template
-++
-++# Permissions needed to allow a personal HTCondor to work out of the box on Debian
-++ALLOW_WRITE = $(CONDOR_HOST) $(IP_ADDRESS) 127.*
-++ALLOW_NEGOTIATOR = $(CONDOR_HOST) $(IP_ADDRESS) 127.*
