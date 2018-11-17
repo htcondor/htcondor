@@ -191,7 +191,7 @@ const PSID my_user_Sid()
 void
 set_priv_ignore_all_requests( void )
 {
-#ifndef _NO_EXTERN_DAEMON_CORE
+#ifdef _NO_EXTERN_DAEMON_CORE
     // Provide a fake daemonCore pointer when compiling for the test suite.
     void* daemonCore = NULL;
 #endif
