@@ -205,6 +205,13 @@ else()
       "${CMAKE_CURRENT_BINARY_DIR}/test_driver"
     )
 
+    # Modern compilers complain about using the deprecated std::auto_ptr.
+    # Prevent boost from using them, except on Debian 9, where a compile
+    # time error occurs
+    if ( NOT ${PLATFORM} MATCHES "Debian.*9" )
+      add_definitions ( -DBOOST_NO_AUTO_PTR )
+    endif()
+
     set ( CMAKE_LIBRARY_PATH_ORIG ${CMAKE_LIBRARY_PATH} )
     set ( CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/lib64 )
     set ( CMAKE_LIBRARY_PATH CMAKE_LIBRARY_PATH_ORIG)
