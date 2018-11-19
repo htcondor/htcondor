@@ -35,9 +35,6 @@
   #endif
 #endif
 
-// Tell boost to use std::auto_ptr 
-#define BOOST_NO_AUTO_PTR
-
 // pyconfig.h changes the definition of the PyObject structure if _DEBUG is defined!!!
 // On windows it also generates references to pythonNNN_d.lib library instead of pythonNNN.lib
 // but the python guys don't actually ship a pythonNNN_d.lib,  we avoid this problem by
