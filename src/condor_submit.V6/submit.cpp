@@ -2579,7 +2579,7 @@ int SetSyscalls( int foo ) { return foo; }
 
 MyString credd_has_tokens(MyString m) {
 
-	dprintf(D_ALWAYS, "ZKM: querying %s tokens for %s\n", m.c_str(), my_username());
+	dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), my_username());
 
 	// PHASE 1
 	//
@@ -2595,7 +2595,7 @@ MyString credd_has_tokens(MyString m) {
 
 	services.rewind();
 	while ((service = services.next())) {
-		dprintf(D_ALWAYS, "ZKM: getting details for %s\n", service);
+		dprintf(D_ALWAYS, "CRED: getting details for %s\n", service);
 
 /*
  * QUESTION:  do i need to actually do the PARAM in order to make the refcount NON-ZERO?
@@ -2612,8 +2612,6 @@ MyString credd_has_tokens(MyString m) {
 		HASHITER it = hash_iter_begin(submit_hash.macros());
 		for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
 			MyString key = hash_iter_key(it);
-			//const char * val = hash_iter_value(it);
-			// printf("CHECKING: %s = %s\n", key.c_str(), val ? val : "NULL");
 
 			// for building the things we will extract from the submit keys
 			MyString param_name;
@@ -2628,13 +2626,8 @@ MyString credd_has_tokens(MyString m) {
 				if (key.Length() > param_name.Length()) {
 					handle += "*";
 					handle += key.substr(param_name.Length()+1, key.Length());
-					printf("** FOUND TOKEN: %s handle %s\n", service, handle.c_str());
-				} else {
-					printf("** FOUND TOKEN: %s (no handle)\n", service);
 				}
 				token_names.append(handle.c_str());
-			} else {
-				// printf("SKIPPING %s %s %i\n", key.c_str(), param_name.c_str(), param_name.Length());
 			}
 
 			param_name.formatstr("%s_OAUTH_PERMISSIONS", service);
@@ -2647,27 +2640,16 @@ MyString credd_has_tokens(MyString m) {
 				if (key.Length() > param_name.Length()) {
 					handle += "*";
 					handle += key.substr(param_name.Length()+1, key.Length());
-					printf("** FOUND TOKEN: %s handle %s\n", service, handle.c_str());
-				} else {
-					printf("** FOUND TOKEN: %s (no handle)\n", service);
 				}
 				token_names.append(handle.c_str());
-			} else {
-				// printf("SKIPPING %s %s %i\n", key.c_str(), param_name.c_str(), param_name.Length());
 			}
 		}
 		hash_iter_delete(&it);
 
 		// if there were no options, we still need to add this token to the list
 		if(!found_defs) {
-			printf("** FOUND TOKEN: %s (no handle, no options)\n", service);
 			token_names.append(service);
 		}
-
-		char* tmpMUSTFREE = token_names.print_to_string();
-		printf("** LIST OF FOUND TOKENS: %s\n", tmpMUSTFREE);
-		free(tmpMUSTFREE);
-
 	}
 
 	StringList unique_names;
@@ -2682,11 +2664,6 @@ MyString credd_has_tokens(MyString m) {
 	//
 	// Then, insert that ad into the "master" ad that we will send to credd
 	// (nested classad)
-
-
-	char* tmpMUSTFREE = unique_names.print_to_string();
-	printf("** UNIQUE TOKENS: %s\n", tmpMUSTFREE);
-	free(tmpMUSTFREE);
 
 
 	// we'll have one classad per token.  create an array while we build them up
@@ -2736,7 +2713,6 @@ MyString credd_has_tokens(MyString m) {
 			config_param_name.formatstr("%s_DEFAULT_SCOPES", service_name.c_str());
 			param_val = param(config_param_name.c_str());
 		}
-		printf ("SETTING Permissions TO %s.\n", param_val.c_str());
 		request_ad.Assign("Scopes", param_val);
 
 		// get resource (audience) from submit file or config file if needed
@@ -2757,16 +2733,15 @@ MyString credd_has_tokens(MyString m) {
 			config_param_name.formatstr("%s_DEFAULT_AUDIENCE", service_name.c_str());
 			param_val = param(config_param_name.c_str());
 		}
-		printf ("SETTING Audience TO %s.\n", param_val.c_str());
 		request_ad.Assign("Audience", param_val);
-
-		printf ("SETTING Username TO %s.\n", my_username());
 		request_ad.Assign("Username", my_username());
 
-		std::string dbgout;
-                classad::ClassAdUnParser unp;
-		unp.Unparse(dbgout, &request_ad);
-		printf("FINAL AD: %s\n", dbgout.c_str());
+		if (IsDebugLevel (D_SECURITY)) {
+			std::string dbgout;
+			classad::ClassAdUnParser unp;
+			unp.Unparse(dbgout, &request_ad);
+			dprintf(D_SECURITY, "OAUTH REQUEST: %s\n", dbgout.c_str());
+		}
 
 		requests[index] = request_ad;
 	}
@@ -2782,7 +2757,7 @@ MyString credd_has_tokens(MyString m) {
 		r = (ReliSock*)my_credd.startCommand(ZKM_QUERY_CREDS, Stream::reli_sock, 20, &e);
 
 		if(!r) {
-			fprintf( stderr, "\nZKMERROR: startCommand failed!\n");
+			fprintf( stderr, "\nCRED: startCommand to CredD failed!\n");
 			exit( 1 );
 		}
 
@@ -2801,7 +2776,7 @@ MyString credd_has_tokens(MyString m) {
 		delete r;
 		return URL;
 	} else {
-		fprintf( stderr, "\nZKMERROR: locate(credd) failed!\n");
+		fprintf( stderr, "\nCRED: locate(credd) failed!\n");
 		exit( 1 );
 	}
 }
@@ -2832,20 +2807,17 @@ int process_job_credentials()
 		// tokens needed.
 
 		MyString tokens_needed = submit_hash.submit_param_mystring("UseOathServies", "use_oauth_services");
-		printf("SERVICES NEEDED: %s\n", tokens_needed.c_str());
 
 		if (!tokens_needed.empty()) {
-			dprintf(D_ALWAYS, "ZKM: checking tokens for %s\n", tokens_needed.c_str());
-
 			MyString URL = credd_has_tokens(tokens_needed);
 			if (!URL.empty()) {
 				// report to user a URL
 				fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_username(), URL.Value());
 				exit(1);
 			}
-			dprintf(D_ALWAYS, "ZKM: CredD says we have everything: %s\n", tokens_needed.c_str());
+			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", tokens_needed.c_str());
 		} else {
-			dprintf(D_ALWAYS, "ZKM: NO MODULES REQUESTED\n");
+			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
 		}
 	}
 
