@@ -709,12 +709,20 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
 					std::string our_sinful;
 					m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+					ClassAd info_ad;
+					// Presence of the ConnectSinful attribute indicates
+					// that the client understands and wants the
+					// extended information ad in the
+					// DC_INVALIDATE_KEY message.
+					if ( !our_sinful.empty() ) {
+						info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+					}
 
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
 							   "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr ? return_addr : "(none)");
 
 					if( return_addr ) {
-						daemonCore->send_invalidate_session( return_addr, m_sid, our_sinful.c_str() );
+						daemonCore->send_invalidate_session( return_addr, m_sid, &info_ad );
 						free (return_addr);
 					}
 

@@ -10981,16 +10981,21 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 	return 0;
 }
 
-void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const char* our_sinful ) {
+void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const ClassAd* info_ad ) {
 	if ( !sinful ) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
 		return;
 	}
 
 	std::string the_msg = sessid;
-	if ( our_sinful && our_sinful[0] ) {
+
+	// If given a non-empty ad, add it to our message.
+	// This extra information is understood in version 8.8.0
+	// and above.
+	if ( info_ad && info_ad->size() > 0 ) {
 		the_msg += "\n";
-		the_msg += our_sinful;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse(the_msg, info_ad);
 	}
 
 	classy_counted_ptr<Daemon> daemon = new Daemon(DT_ANY,sinful,NULL);
