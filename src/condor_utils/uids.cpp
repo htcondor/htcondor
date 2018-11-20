@@ -191,10 +191,6 @@ const PSID my_user_Sid()
 void
 set_priv_ignore_all_requests( void )
 {
-#ifndef _NO_EXTERN_DAEMON_CORE
-    // Provide a fake daemonCore pointer when compiling for the test suite.
-    void* daemonCore = NULL;
-#endif
    // Only honor request to ignore priv changes
    // if we are not a daemonCore daemon.  
    // This allows daemons (like the Collector) that pull
