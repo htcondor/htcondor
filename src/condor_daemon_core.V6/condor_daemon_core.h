@@ -1621,6 +1621,9 @@ class DaemonCore : public Service
 	};
 	typedef std::vector<SockPair> SockPairVec;
 
+	std::string m_family_session_id;
+	std::string m_family_session_key;
+
   private:
 	SockPairVec dc_socks;
 	ReliSock* super_dc_rsock;	// super user tcp command socket
@@ -2074,7 +2077,8 @@ class DaemonCore : public Service
 		*/
 	void initCollectorList(void);
 
-	void send_invalidate_session ( const char* sinful, const char* sessid );
+	void send_invalidate_session ( const char* sinful, const char* sessid,
+	                               const char* our_sinful = NULL );
 
 	bool m_wants_restart;
 	bool m_in_daemon_shutdown;
