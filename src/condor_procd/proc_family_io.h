@@ -100,6 +100,7 @@ struct ProcFamilyUsage {
     int64_t          block_writes;
 	int64_t          block_read_bytes;
 	int64_t          block_write_bytes;
+	double           io_wait;;
 
 	ProcFamilyUsage() :
 		user_cpu_time(0),
@@ -117,7 +118,8 @@ struct ProcFamilyUsage {
         block_reads(0),
         block_writes(0),
 		block_read_bytes(0),
-		block_write_bytes(0)
+		block_write_bytes(0),
+		io_wait(0.0)
 	{ }
 };
 

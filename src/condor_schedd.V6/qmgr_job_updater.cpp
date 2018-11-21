@@ -158,6 +158,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT );
 	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT_TIME );
 	common_job_queue_attrs->insert( ATTR_NUM_JOB_COMPLETIONS );
+	common_job_queue_attrs->insert( ATTR_IO_WAIT);
 
 	// FIXME: What I'd actually like is a way to queue all attributes
 	// not in any whitelist for delivery with the last update.

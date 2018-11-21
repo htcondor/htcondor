@@ -772,6 +772,12 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_BLOCK_WRITES, usage->block_writes);
 	}
 
+dprintf(D_ALWAYS, "GGT GGT GGT about to set io wait to %g\n", usage->io_wait);
+	if (usage->io_wait >= 0.0) {
+		ad->Assign(ATTR_IO_WAIT, usage->io_wait);
+	}
+
+
 		// Update our knowledge of how many processes the job has
 	num_pids = usage->num_procs;
 
