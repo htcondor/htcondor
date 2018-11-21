@@ -28,21 +28,22 @@ X11Forwarding yes
 X11UseLocalhost no
 
 # The following settings are recommended for good security.
-# In particular, only FIPS 140-2 algorithms are used
-# https://rhel7stig.readthedocs.io/en/latest/
-# https://www.stigviewer.com/stig/red_hat_enterprise_linux_7/
+# In particular, only FIPS 140-2 algorithms are used.
+# URLs for extra information re FIPS security compliance:
+#    https://rhel7stig.readthedocs.io/en/latest/
+#    https://www.stigviewer.com/stig/red_hat_enterprise_linux_7/
+#    https://people.redhat.com/swells/scap-security-guide/tables/table-rhel7-stig-manual.html
 
-#-High Severity
+#-FIPS High Severity
 Protocol 2
 PermitEmptyPasswords no
 
-#-Medium Severity
+#-FIPS Medium Severity
+# Note: Ciphers and MACs below will be incompatible with RHEL5 or earlier.
 Ciphers aes128-ctr,aes192-ctr,aes256-ctr
 MACs hmac-sha2-256,hmac-sha2-512
 PermitRootLogin no
 PermitUserEnvironment no
-ClientAliveInterval 600
-ClientAliveCountMax 0
 GSSAPIAuthentication no
 KerberosAuthentication no
 HostbasedAuthentication no
@@ -50,7 +51,14 @@ IgnoreRhosts yes
 IgnoreUserKnownHosts yes
 PrintLastLog yes
 UsePrivilegeSeparation sandbox
-Compression no
+Compression delayed
+
+#-Recommended for security, but left out ssh_to_job config
+# because they provide minimal value and are likely to annoy
+# users or generate needless warnings in the ssh_to_job setting.
+#
+# ClientAliveInterval 600  # Note: condor_submit -i sets TMOUT
+# ClientAliveCountMax 0
 # banner=/etc/issue # Set to your warning banner
 # StrictModes yes # Can't set due to tmp-like directory
 # RhostsRSAAuthentication no # Obsolete Protocol version 1 option

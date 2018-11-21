@@ -724,6 +724,7 @@ export CMAKE_PREFIX_PATH=/usr
 
 cmake \
        -DBUILDID:STRING=%condor_build_id \
+       -DPACKAGEID:STRING=%{version}-%{release} \
        -DUW_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
 %if ! %std_univ
@@ -770,6 +771,7 @@ cmake \
        -DBUILDID:STRING=RH-%{version}-%{release} \
        -D_VERBOSE:BOOL=TRUE \
 %endif
+       -DPACKAGEID:STRING=%{version}-%{release} \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DHAVE_KBDD:BOOL=TRUE \
