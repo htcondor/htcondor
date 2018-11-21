@@ -158,7 +158,7 @@ if(WINDOWS)
 				target_link_libraries( py3htcondor py3classad condor_utils ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} ${CONDOR_WIN_LIBS} )
 				set_target_properties( py3htcondor PROPERTIES PREFIX "" OUTPUT_NAME htcondor PDB_NAME py3htcondor)
 				set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
-				target_include_directories( py3htcondor PUBLIC ${PYTHON_INCLUDE3_DIRS} )
+				target_include_directories( py3htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
 				install ( TARGETS py3classad DESTINATION ${C_LIB} )
 				install ( TARGETS py3htcondor py3classad_module DESTINATION ${C_PYTHONARCHLIB} )
