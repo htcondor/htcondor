@@ -27,14 +27,13 @@
 #include "condor_distribution.h"
 #include "my_username.h"
 #include "daemon.h"
-#include "condor_daemon_core.h"
 #include "store_cred.h"
 #include "../condor_sysapi/sysapi.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
 static char* RealUserName = NULL;
-static int SetPrivIgnoreAllRequests = FALSE;
+static int SetPrivIgnoreAllRequests = TRUE;  // this is true until daemon_core sets it to false for daemons
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
 #ifdef WIN32
@@ -188,20 +187,13 @@ const PSID my_user_Sid()
 } 
 #endif 
 
-void
-set_priv_ignore_all_requests( void )
+// called by deamonCore to conditionally enable priv switching
+// returns TRUE if priv switching is enabled, FALSE if not.
+int
+set_priv_initialize(void)
 {
-#ifndef _NO_EXTERN_DAEMON_CORE
-    // Provide a fake daemonCore pointer when compiling for the test suite.
-    void* daemonCore = NULL;
-#endif
-   // Only honor request to ignore priv changes
-   // if we are not a daemonCore daemon.  
-   // This allows daemons (like the Collector) that pull
-   // in Python based plugins to continue to work.
-   if (daemonCore == NULL) {
-       SetPrivIgnoreAllRequests = TRUE;
-   }
+	SetPrivIgnoreAllRequests = FALSE;
+	return can_switch_ids();
 }
 
 int

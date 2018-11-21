@@ -253,6 +253,7 @@ main(int argc, char *argv[] )
 	char	*bogus_capability;
 	int		i;
 
+	set_priv_initialize();
 	set_mySubSystem( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
 
 	myDistro->Init( argc, argv );

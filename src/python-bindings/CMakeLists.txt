@@ -2,6 +2,10 @@ set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_an
 
 if(WINDOWS)
   if(WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND)
+    # Modern compilers complain about using the deprecated std::auto_ptr.
+    # Prevent boost from using them.
+    add_definitions ( -DBOOST_NO_AUTO_PTR )
+
 	#only for VS2012 and above
 	if(NOT (MSVC_VERSION LESS 1700))
 		#only for boost-1.54.0 or boost-1.68
