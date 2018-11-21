@@ -2576,6 +2576,8 @@ extern "C" {
 int SetSyscalls( int foo ) { return foo; }
 }
 
+// The code below needs work before it can build on Windows or older Macs
+#ifdef LINUX
 
 MyString credd_has_tokens(MyString m) {
 
@@ -2781,6 +2783,11 @@ MyString credd_has_tokens(MyString m) {
 	}
 }
 
+#else
+
+MyString credd_has_tokens(MyString m) { return NULL; }
+
+#endif
 
 int process_job_credentials()
 {
