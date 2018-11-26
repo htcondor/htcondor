@@ -28,6 +28,8 @@
 #include "get_daemon_name.h"
 #include "subsystem_info.h"
 #include "credmon_interface.h"
+#include "ipv6_hostname.h"
+#include "secure_file.h"
 
 //-------------------------------------------------------------
 
@@ -60,6 +62,12 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 	daemonCore->Register_Command( CREDD_REFRESH_ALL, "CREDD_REFRESH_ALL",
 								(CommandHandlercpp)&CredDaemon::refresh_all_handler,
 								"refresh_all_handler", this, DAEMON,
+								D_FULLDEBUG );
+
+		// See if creds are present for all modules requested
+	daemonCore->Register_Command( ZKM_QUERY_CREDS, "ZKM_QUERY_CREDS",
+								(CommandHandlercpp)&CredDaemon::zkm_query_creds,
+								"zkm_query_creds", this, DAEMON,
 								D_FULLDEBUG );
 
 		// set timer to periodically advertise ourself to the collector
@@ -186,6 +194,180 @@ void
 CredDaemon::nop_handler(int, Stream*)
 {
 	return;
+}
+
+
+void
+CredDaemon::zkm_query_creds( int, Stream* s)
+{
+	ReliSock* r = (ReliSock*)s;
+	r->decode();
+	int numads;
+	r->code(numads);
+	// ifdef LINUX because this code doesn't build on Windows and older Macs
+#ifdef LINUX
+	ClassAd requests[numads];
+	for(int i=0; i<numads; i++) {
+		getClassAd(r, requests[i]);
+	}
+#else
+	ClassAd request;
+	for(int i=0; i<numads; i++) {
+		getClassAd(r, request);
+	}
+#endif
+	r->end_of_message();
+
+	dprintf(D_ALWAYS, "ZKM: got zkm_query_creds.  there are %i requests.\n", numads);
+
+	MyString URL;
+
+	// ifdef LINUX because this code doesn't build on Windows and older Macs
+#ifdef LINUX
+	ClassAd missing[numads];
+	int nummissing = 0;
+	for(int i=0; i<numads; i++) {
+		MyString service;
+		MyString handle;
+		MyString user;
+		requests[i].LookupString("Service", service);
+		requests[i].LookupString("Handle", handle);
+		requests[i].LookupString("Username", user);
+
+		MyString tmpfname;
+		tmpfname = service;
+		tmpfname.replaceString("/",":");
+		if(handle.Length()) {
+			tmpfname += "_";
+			tmpfname += handle;
+		}
+		tmpfname += ".top";
+
+		dprintf(D_ALWAYS, "ZKM: looking for %s\n", tmpfname.Value());
+		if (!credmon_poll_continue(user.Value(), 0, tmpfname.Value())) {
+			dprintf(D_ALWAYS, "ZKM: missing %s\n", tmpfname.Value());
+			missing[nummissing] = requests[i];
+			nummissing++;
+		}
+	}
+
+	if(nummissing > 0) {
+		// create unique request file with classad metadata
+		char *key = Condor_Crypt_Base::randomHexKey(32);
+
+		MyString contents;
+
+		for (int i=0; i<nummissing; i++) {
+			// fill in everything we need to pass
+			ClassAd ad;
+			MyString tmpname;
+			MyString tmpvalue;
+
+			MyString service;
+			missing[i].LookupString("Service", service);
+			ad.Assign("Provider", service);
+
+			missing[i].LookupString("Username", tmpvalue);
+			ad.Assign("LocalUser", tmpvalue);
+
+			missing[i].LookupString("Handle", tmpvalue);
+			ad.Assign("Handle", tmpvalue);
+
+			missing[i].LookupString("Scopes", tmpvalue);
+			ad.Assign("Scopes", tmpvalue);
+
+			missing[i].LookupString("Audience", tmpvalue);
+			ad.Assign("Audience", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_CLIENT_ID";
+			param(tmpvalue, tmpname.c_str());
+			ad.Assign("ClientId", tmpvalue);
+
+			// this is a hack.  secret needs to be in a root-owned file, not in config.
+			tmpname = service;
+			tmpname += "_CLIENT_SECRET";
+			param(tmpvalue, tmpname.c_str());
+			ad.Assign("ClientSecret", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_RETURN_URL_SUFFIX";
+			param(tmpvalue, tmpname.c_str());
+
+			MyString hn = get_local_fqdn();
+			char* h = param("ZKMHOST");
+			if(h) {
+				hn = h;
+				free(h);
+			}
+			URL = "https://";
+			URL += hn;
+			URL += tmpvalue;
+			ad.Assign("ReturnUrl", URL);
+			URL = "";
+
+			tmpname = service;
+			tmpname += "_AUTHORIZATION_URL";
+			param(tmpvalue, tmpname.c_str());
+			ad.Assign("AuthorizationUrl", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_TOKEN_URL";
+			param(tmpvalue, tmpname.c_str());
+			ad.Assign("TokenUrl", tmpvalue);
+
+			tmpname = service;
+			tmpname += "_USER_URL";
+			param(tmpvalue, tmpname.c_str());
+			ad.Assign("UserUrl", tmpvalue);
+
+			// serialize classad into string
+			MyString ad_string;
+			sPrintAd(ad_string, ad);
+
+			dprintf(D_ALWAYS, "ZKM: appending:%s\n", ad_string.Value());
+			if(!contents.empty()) {
+				contents += "\n";
+			}
+			contents += ad_string;
+		}
+
+		// write the file into sec_credential_dir
+		auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
+		if(!cred_dir) {
+			EXCEPT("NO SEC_CREDENTIAL_DIRECTORY");
+		}
+
+		MyString path = (char*)(cred_dir.ptr());
+		path += "/";
+		path += key;
+
+		dprintf(D_ALWAYS, "ZKM: writing to %s.  data len %i:\n%s\n", path.Value(), contents.Length(), contents.Value());
+		int rc = write_secure_file(path.Value(), contents.Value(), contents.Length(), true);
+
+		if (rc != SUCCESS) {
+			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", path.Value());
+		} else {
+			MyString hn = get_local_fqdn();
+			char* h = param("ZKMHOST");
+			if(h) {
+				hn = h;
+				free(h);
+			}
+			URL = "https://";
+			URL += hn;
+			URL += "/key/";
+			URL += key;
+		}
+
+		dprintf(D_ALWAYS, "ZKM: sending URL '%s'\n", URL.Value());
+	}
+#else
+#endif
+
+	r->encode();
+	r->code(URL);
+	r->end_of_message();
 }
 
 void
