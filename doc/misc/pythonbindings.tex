@@ -237,9 +237,16 @@ It defaults to having the \Condor{schedd} daemon return all attributes.
 
 Parameter \texttt{limit} is the maximum number of results this query will return.
 
-Parameter \texttt{opts} specifies any additional query options.  Currently, the
-only non-default option is \texttt{QueryOpts.AutoCluster}, which returns
-autoclusters in the schedd, not jobs.
+Parameter \texttt{opts} specifies any additional query options.  Non-default options are
+\texttt{QueryOpts.AutoCluster}, which returns autoclusters in the schedd, not jobs,
+and \texttt{QueryOpts.GroupBy}, which returns aggregates, not jobs.
+\texttt{QueryOpts.GroupBy} which must be used with an attr\_list.
+When the \texttt{QueryOpts.GroupBy} option is supplied, the returned ads will be similar to those
+returned by the \texttt{QueryOpts.AutoCluster}, but calculated on the fly using the
+provided attr\_list as the list of attributes to aggregate on.  When either of these options
+are used, each returned ad will have a JobCount attribute that indicates how many jobs have
+that set of values for the set of attributes returned, and a JobIds attribute that has the smallest
+and largest job id for that aggregate.
 
 Parameter \texttt{name} provides a \textit{tag} name for the returned query iterator.
 This string will always be returned from the \texttt{tag()} method of the returned
