@@ -204,16 +204,26 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 	r->decode();
 	int numads;
 	r->code(numads);
+	// ifdef LINUX because this code doesn't build on Windows and older Macs
+#ifdef LINUX
 	ClassAd requests[numads];
 	for(int i=0; i<numads; i++) {
 		getClassAd(r, requests[i]);
 	}
+#else
+	ClassAd request;
+	for(int i=0; i<numads; i++) {
+		getClassAd(r, request);
+	}
+#endif
 	r->end_of_message();
 
 	dprintf(D_ALWAYS, "ZKM: got zkm_query_creds.  there are %i requests.\n", numads);
 
 	MyString URL;
 
+	// ifdef LINUX because this code doesn't build on Windows and older Macs
+#ifdef LINUX
 	ClassAd missing[numads];
 	int nummissing = 0;
 	for(int i=0; i<numads; i++) {
@@ -323,7 +333,7 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 		}
 
 		// write the file into sec_credential_dir
-	        auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
+		auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
 		if(!cred_dir) {
 			EXCEPT("NO SEC_CREDENTIAL_DIRECTORY");
 		}
@@ -333,7 +343,7 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 		path += key;
 
 		dprintf(D_ALWAYS, "ZKM: writing to %s.  data len %i:\n%s\n", path.Value(), contents.Length(), contents.Value());
-	        int rc = write_secure_file(path.Value(), contents.Value(), contents.Length(), true);
+		int rc = write_secure_file(path.Value(), contents.Value(), contents.Length(), true);
 
 		if (rc != SUCCESS) {
 			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", path.Value());
@@ -352,6 +362,8 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 
 		dprintf(D_ALWAYS, "ZKM: sending URL '%s'\n", URL.Value());
 	}
+#else
+#endif
 
 	r->encode();
 	r->code(URL);
