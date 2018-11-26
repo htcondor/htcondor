@@ -234,7 +234,7 @@ int  DoUnitTests(int options);
 char *owner = NULL;
 char *myproxy_password = NULL;
 
-int  SendJobCredential();
+int process_job_credentials();
 
 extern DLL_IMPORT_MAGIC char **environ;
 
@@ -974,8 +974,6 @@ main( int argc, const char *argv[] )
 					"\tcondor_store_cred add\n", userdom );
 			exit(1);
 		}
-#else
-		SendJobCredential();
 #endif
 	}
 
@@ -1697,6 +1695,7 @@ int send_cluster_ad(SubmitHash & hash, int ClusterId)
 }
 
 
+
 int submit_jobs (
 	FILE * fp,
 	MACRO_SOURCE & source,
@@ -1747,6 +1746,26 @@ int submit_jobs (
 		rval = ParseDashAppendLines(append_lines, source, submit_hash.macros());
 		if (rval < 0)
 			break;
+
+
+		// OAUTH (SCITOKENS) CODE INSERT
+		//
+		// This should not stay here.  We would like a separate API
+		// that can be called by python bindings and condor_store_cred
+		// (as well is submit) to do this work.
+		//
+		// But for now, here it is, and this should be refactored in
+		// the 8.9 series.
+		//
+		int cred_result = process_job_credentials();
+
+		// zero means success, we should continue.  otherwise bail.
+		if (cred_result) {
+			// what is the best way to bail out / abort the submit process?
+			printf("BAILING OUT: %i\n", cred_result);
+			exit(1);
+		}
+
 
 		// we'll use the GotQueueCommand flag as a convenient flag for 'this is the first iteration of the loop'
 		if ( ! GotQueueCommand) {
@@ -2558,13 +2577,256 @@ extern "C" {
 int SetSyscalls( int foo ) { return foo; }
 }
 
+// The code below needs work before it can build on Windows or older Macs
+#ifdef LINUX
 
-int SendJobCredential()
+MyString credd_has_tokens(MyString m) {
+
+	dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", m.c_str(), my_username());
+
+	// PHASE 1
+	//
+	// scan the submit keys for things that match the form
+	// <service>_OAUTH_[PERMISSIONS|RESOURCE](_<handle>)?
+	// and create a list of individual tokens (with handles)
+	// that we need to have.
+
+	StringList services(m.c_str());
+	char* service;
+
+	StringList token_names;
+
+	services.rewind();
+	while ((service = services.next())) {
+		dprintf(D_ALWAYS, "CRED: getting details for %s\n", service);
+
+/*
+ * QUESTION:  do i need to actually do the PARAM in order to make the refcount NON-ZERO?
+ *
+		permissions = submit_hash.submit_param_mystring(param_name);
+*/
+
+		// there may not be any options (PERMISSIONS|RESOURCE) but we'll still
+		// need to add a token anyways.  this keeps track of whether we found
+		// any options so we don't add the base case if we did
+		bool found_defs = false;
+
+		// iterate the submit keys
+		HASHITER it = hash_iter_begin(submit_hash.macros());
+		for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
+			MyString key = hash_iter_key(it);
+
+			// for building the things we will extract from the submit keys
+			MyString param_name;
+
+			param_name.formatstr("%s_OAUTH_RESOURCE", service);
+			if (0 == strncasecmp(param_name.c_str(), key.c_str(), param_name.Length())) {
+				// true if we find anything at all
+				found_defs = true;
+
+				MyString handle = service;
+				// we have a match, see if there is a handle at the end
+				if (key.Length() > param_name.Length()) {
+					handle += "*";
+					handle += key.substr(param_name.Length()+1, key.Length());
+				}
+				token_names.append(handle.c_str());
+			}
+
+			param_name.formatstr("%s_OAUTH_PERMISSIONS", service);
+			if (0 == strncasecmp(param_name.c_str(), key.c_str(), param_name.Length())) {
+				// true if we find anything at all
+				found_defs = true;
+
+				MyString handle = service;
+				// we have a match, see if there is a handle at the end
+				if (key.Length() > param_name.Length()) {
+					handle += "*";
+					handle += key.substr(param_name.Length()+1, key.Length());
+				}
+				token_names.append(handle.c_str());
+			}
+		}
+		hash_iter_delete(&it);
+
+		// if there were no options, we still need to add this token to the list
+		if(!found_defs) {
+			token_names.append(service);
+		}
+	}
+
+	StringList unique_names;
+	unique_names.create_union(token_names, true);
+	unique_names.qsort();
+
+
+	// PHASE 2
+	//
+	// Lookup each unique token name, create an ad for this token request
+	// (and fill in defaults from config file if needed).
+	//
+	// Then, insert that ad into the "master" ad that we will send to credd
+	// (nested classad)
+
+
+	// we'll have one classad per token.  create an array while we build them up
+	ClassAd requests[unique_names.number()];
+
+	char* token;
+	unique_names.rewind();
+
+	for(int index = 0; index < unique_names.number(); index++) {
+		token = unique_names.next();
+		ClassAd request_ad;
+		MyString token_MyS = token;
+
+		MyString service_name;
+		MyString handle;
+		int starpos = token_MyS.FindChar('*');
+		if(starpos == -1) {
+			// no handle, just service
+			service_name = token_MyS;
+		} else {
+			// no split into two
+			service_name = token_MyS.substr(0,starpos);
+			handle = token_MyS.substr(starpos+1,token_MyS.Length());
+		}
+		request_ad.Assign("Service", service_name);
+		request_ad.Assign("Handle", handle);
+
+		MyString param_name;
+		MyString config_param_name;
+		MyString param_val;
+
+		// get permissions (scopes) from submit file or config file if needed
+		param_name.formatstr("%s_OAUTH_PERMISSIONS", service_name.c_str());
+		if (handle.Length()) {
+			param_name += "_";
+			param_name += handle;
+		}
+		param_val = submit_hash.submit_param_mystring(param_name.c_str(), NULL);
+		if(param_val.Length() == 0) {
+			// not specified: is this required?
+			config_param_name.formatstr("%s_USER_DEFINE_SCOPES", service_name.c_str());
+			param_val  = param(config_param_name.c_str());
+			if (param_val[0] == 'R') {
+				printf ("You must specify %s to use OAuth service %s.\n", param_name.c_str(), service_name.c_str());
+				exit(1);
+			}
+			config_param_name.formatstr("%s_DEFAULT_SCOPES", service_name.c_str());
+			param_val = param(config_param_name.c_str());
+		}
+		request_ad.Assign("Scopes", param_val);
+
+		// get resource (audience) from submit file or config file if needed
+		param_name.formatstr("%s_OAUTH_RESOURCE", service_name.c_str());
+		if (handle.Length()) {
+			param_name += "_";
+			param_name += handle;
+		}
+		param_val = submit_hash.submit_param_mystring(param_name.c_str(), NULL);
+		if(param_val.Length() == 0) {
+			// not specified: is this required?
+			config_param_name.formatstr("%s_USER_DEFINE_AUDIENCE", service_name.c_str());
+			param_val  = param(config_param_name.c_str());
+			if (param_val[0] == 'R') {
+				printf ("You must specify %s to use OAuth service %s.\n", param_name.c_str(), service_name.c_str());
+				exit(1);
+			}
+			config_param_name.formatstr("%s_DEFAULT_AUDIENCE", service_name.c_str());
+			param_val = param(config_param_name.c_str());
+		}
+		request_ad.Assign("Audience", param_val);
+		request_ad.Assign("Username", my_username());
+
+		if (IsDebugLevel (D_SECURITY)) {
+			std::string dbgout;
+			classad::ClassAdUnParser unp;
+			unp.Unparse(dbgout, &request_ad);
+			dprintf(D_SECURITY, "OAUTH REQUEST: %s\n", dbgout.c_str());
+		}
+
+		requests[index] = request_ad;
+	}
+
+	// PHASE 3
+	//
+	// Send all the requests to the CREDD
+	//
+	Daemon my_credd(DT_CREDD);
+	if (my_credd.locate()) {
+		CondorError e;
+		ReliSock *r;
+		r = (ReliSock*)my_credd.startCommand(ZKM_QUERY_CREDS, Stream::reli_sock, 20, &e);
+
+		if(!r) {
+			fprintf( stderr, "\nCRED: startCommand to CredD failed!\n");
+			exit( 1 );
+		}
+
+		r->encode();
+		int numads = unique_names.number();
+		r->code(numads);
+		for (int i=0; i<numads; i++) {
+			putClassAd(r, requests[i]);
+		}
+		r->end_of_message();
+		r->decode();
+		MyString URL;
+		r->code(URL);
+		r->end_of_message();
+		r->close();
+		delete r;
+		return URL;
+	} else {
+		fprintf( stderr, "\nCRED: locate(credd) failed!\n");
+		exit( 1 );
+	}
+}
+
+#else
+
+MyString credd_has_tokens(MyString m) { return NULL; }
+
+#endif
+
+int process_job_credentials()
 {
 	// however, if we do need to send it for any job, we only need to do that once.
 	if (sent_credential_to_credd) {
 		return 0;
 	}
+
+	// do this by default, the knob is just to skip in case this code causes problems
+	if(param_boolean("SEC_PROCESS_SUBMIT_TOKENS", true)) {
+
+		// we need to extract a few things from the submit file that
+		// tell us what credentials will be needed for the job.
+		//
+		// we then craft a classad that we will send to the credd to
+		// see if we have the needed tokens.  if not, the credd will
+		// create a "request file" and provide a URL that references
+		// it.  we forward this URL to the user so they can obtain the
+		// tokens needed.
+
+		MyString tokens_needed = submit_hash.submit_param_mystring("UseOathServies", "use_oauth_services");
+
+		if (!tokens_needed.empty()) {
+			MyString URL = credd_has_tokens(tokens_needed);
+			if (!URL.empty()) {
+				// report to user a URL
+				fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_username(), URL.Value());
+				exit(1);
+			}
+			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", tokens_needed.c_str());
+		} else {
+			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
+		}
+	}
+
+
+
+	// deal with credentials generated by a user-invoked script
 
 	MyString producer;
 	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {
@@ -2611,6 +2873,7 @@ int SendJobCredential()
 			unsigned char* zkmbuf = NULL;
 			condor_base64_decode(ut64, &zkmbuf, &zkmlen);
 
+			// zkmbuf IS LEAKING
 			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", (int)bytes_read, zkmlen);
 			dprintf(D_FULLDEBUG, "CREDMON: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
 
@@ -2619,6 +2882,8 @@ int SendJobCredential()
 			preview[63]=0;
 
 			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", (int)bytes_read, preview);
+
+			// my_domainname() returns NULL on UNIX... no need to use this
 
 			// setup the username to query
 			char userdom[256];
