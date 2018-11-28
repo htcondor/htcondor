@@ -344,6 +344,7 @@ if (BUILD_TESTING)
 	# Not in use till endurance testing done.
 	# condor_pl_test(lib_sysapi "Run SysApi Tests" "core;quick;full;quicknolink")
 	# condor_pl_test(lib_procapi "Run ProcApi Tests" "core;quick;full;quicknolink")
+	condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink")
 
 	##### dagman tests
 	condor_pl_test(job_core_chirp_par "Exercise the chirp I/O C library in Parallel Universe" "lib;quick;full")
