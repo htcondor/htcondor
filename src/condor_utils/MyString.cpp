@@ -24,8 +24,8 @@
 #include "condor_debug.h"
 #include "condor_random_num.h"
 #include "strupr.h"
-#include "simplelist.h"
 #include <limits>
+#include <vector>
 
 /*--------------------------------------------------------------------
  *
@@ -602,7 +602,7 @@ MyString::replaceString(
 	const char *pszReplaceWith, 
 	int iStartFromPos) 
 {
-	SimpleList<int> listMatchesFound; 		
+	std::vector<int> listMatchesFound;
 	
 	int iToReplaceLen = (int)strlen(pszToReplace);
 	if (!iToReplaceLen) {
@@ -614,21 +614,21 @@ MyString::replaceString(
 		iStartFromPos = find(pszToReplace, iStartFromPos);
 		if (iStartFromPos == -1)
 			break;
-		listMatchesFound.Append(iStartFromPos);
+		listMatchesFound.push_back(iStartFromPos);
 		iStartFromPos += iToReplaceLen;
 	}
-	if (!listMatchesFound.Number())
+	if (!listMatchesFound.size())
 		return false;
 	
 	int iLenDifPerMatch = iWithLen - iToReplaceLen;
-	int iNewLen = Len + iLenDifPerMatch * listMatchesFound.Number();
+	int iNewLen = Len + iLenDifPerMatch * listMatchesFound.size();
 	char *pNewData = new char[iNewLen+1];
 		
 	int iItemStartInData;
 	int iPosInNewData = 0;
 	int iPreviousEnd = 0;
-	listMatchesFound.Rewind();
-	while(listMatchesFound.Next(iItemStartInData)) {
+	for(size_t i = 0; i < listMatchesFound.size(); i++) {
+		iItemStartInData = listMatchesFound[i];
 		memcpy(pNewData + iPosInNewData, 
 			   Data + iPreviousEnd, 
 			   iItemStartInData - iPreviousEnd);

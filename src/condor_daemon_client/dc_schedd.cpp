@@ -1971,10 +1971,17 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 }
 
 bool
-DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string & errorMessage ) {
+DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage, PROC_ID * vids, unsigned vCount, int flags ) {
+	std::string vidList;
+	formatstr( vidList, "%d.%d", vids[0].cluster, vids[0].proc );
+	for( unsigned i = 1; i < vCount; ++i ) {
+		formatstr( vidList, "%s, %d.%d", vidList.c_str(),
+			vids[i].cluster, vids[i].proc );
+	}
+
 	if( IsDebugLevel( D_COMMAND ) ) {
-		dprintf( D_COMMAND, "DCSchedd::reassignSlot( %d.%d, %d.%d ) making connection to %s\n",
-			vid.cluster, vid.proc, bid.cluster, bid.proc,
+		dprintf( D_COMMAND, "DCSchedd::reassignSlot( %d.%d <- %s ) making connection to %s\n",
+			bid.cluster, bid.proc, vidList.c_str(),
 			_addr ? _addr : "NULL");
 	}
 
@@ -1997,11 +2004,21 @@ DCSchedd::reassignSlot( PROC_ID vid, PROC_ID bid, ClassAd & reply, std::string &
 		return false;
 	}
 
+	// It would seem obvious to construct a ClassAd list of ClassAds
+	// with attributes "Cluster" and "Proc", but it turns out to be
+	// way easier to send a StringList of the x.y notation, instead.
+	//
+	// It's also marginally more efficient to send a string than two
+	// 64-bit ints, so encode the beneficiary job ID that way.
+	char bidStr[PROC_ID_STR_BUFLEN];
+	ProcIdToStr( bid, bidStr );
+
 	ClassAd request;
-	request.Assign( "Victim" ATTR_CLUSTER_ID, vid.cluster );
-	request.Assign( "Victim" ATTR_PROC_ID, vid.proc );
-	request.Assign( "Beneficiary" ATTR_CLUSTER_ID, bid.cluster );
-	request.Assign( "Beneficiary" ATTR_PROC_ID, bid.proc );
+	request.Assign( "VictimJobIDs", vidList.c_str() );
+	request.Assign( "BeneficiaryJobID", bidStr );
+	if( flags != 0 ) {
+		request.Assign( "Flags", flags );
+	}
 
 	sock.encode();
 	if(! putClassAd( & sock, request )) {

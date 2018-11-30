@@ -128,7 +128,8 @@ MANUAL_SOURCES = \
 # Note that the wildcard glob-expansion may pick up more latex source files
 # than we actually include, but that's OK, as this make macro is just used
 # for determining rebuild depencies, it doesn't define what to actually
-# build into the manual.
+# build into the manual.  Don't wildcard the document root, since those
+# source files are where we do define what's actually built into the manual.
 
 LATEX_SOURCES = $(MANUAL_SOURCES) \
                 condor-macros.sty \
@@ -138,8 +139,8 @@ LATEX_SOURCES = $(MANUAL_SOURCES) \
                 $(wildcard contrib/*.tex) \
                 $(wildcard grids/*.tex) \
                 $(wildcard misc/*.tex) \
-                overview/overview.tex overview/contributions.tex \
-                platforms/platforms.tex platforms/linux.tex platforms/windows.tex platforms/macosx.tex \
+                $(wildcard overview/*.tex) \
+                $(wildcard platforms/*.tex) \
                 $(wildcard user-man/*.tex) \
                 $(wildcard version-history/*.tex)
 

@@ -237,9 +237,16 @@ It defaults to having the \Condor{schedd} daemon return all attributes.
 
 Parameter \texttt{limit} is the maximum number of results this query will return.
 
-Parameter \texttt{opts} specifies any additional query options.  Currently, the
-only non-default option is \texttt{QueryOpts.AutoCluster}, which returns
-autoclusters in the schedd, not jobs.
+Parameter \texttt{opts} specifies any additional query options.  Non-default options are
+\texttt{QueryOpts.AutoCluster}, which returns autoclusters in the schedd, not jobs,
+and \texttt{QueryOpts.GroupBy}, which returns aggregates, not jobs.
+\texttt{QueryOpts.GroupBy} which must be used with an attr\_list.
+When the \texttt{QueryOpts.GroupBy} option is supplied, the returned ads will be similar to those
+returned by the \texttt{QueryOpts.AutoCluster}, but calculated on the fly using the
+provided attr\_list as the list of attributes to aggregate on.  When either of these options
+are used, each returned ad will have a JobCount attribute that indicates how many jobs have
+that set of values for the set of attributes returned, and a JobIds attribute that has the smallest
+and largest job id for that aggregate.
 
 Parameter \texttt{name} provides a \textit{tag} name for the returned query iterator.
 This string will always be returned from the \texttt{tag()} method of the returned
@@ -1068,12 +1075,19 @@ Send an x509 proxy credential to an activated claim.
 \end{flushleft}
 \pagebreak% This forces the next paragraph, heading, and table onto the same
 % page.  There's a different way to do that, but this is one is nice and easy.
+\subsubsection{JobEventLog}
+\label{Python-JobEventLog}
 The \PyBind{JobEventLog} reads HTCondor job event (user) logs.  See the example
 in section \ref{Python-Example}.  Its iterators return \PyBind{JobEvent}s,
-which always have the \texttt{type} property.  Events
-which are not of type \texttt{JobEventType.NONE} always have the
-\texttt{cluster} and \texttt{proc} properties, and may have other properties,
-depending on their specific type.
+immutable objects which always have the \texttt{type}, \texttt{cluster},
+\texttt{proc}, and \texttt{timestamp} properties.  Event-specific values may
+be accessed via the subscript operator.  \PyBindNI{JobEvent} objects
+implement the \texttt{dict}-like methods \texttt{keys}, \texttt{values},
+\texttt{items}, \texttt{get}, \texttt{has\_key}, \texttt{iterkeys},
+\texttt{itervalues}, and \texttt{iteritems}, as in Python 2.
+\PyBindNI{JobEvent} objects support both \texttt{in} operators
+(\texttt{if "attribute" in jobEvent} and \texttt{for attrName in JobEvent})
+and may also be passed as arguments to \texttt{len}.
 
 \textbf{The \PyBindNI{JobEventLog} class:}
 \begin{flushleft}

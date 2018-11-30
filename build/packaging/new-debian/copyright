@@ -108,7 +108,6 @@ Copyright: 1999-2006, University of Chicago
 License: Apache-2.0
 
 Files: src/condor_filetransfer_plugins/hdfs*
-       src/condor_contrib/aviary/src/axis2_*
 Copyright: 2006, Apache Software Foundation
 License: Apache-2.0
 
@@ -127,12 +126,6 @@ License: Apache-2.0
 Files: src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/Skype4Py/*
 Copyright: 2007-2008, Arkadiusz Wahlig
 License: BSD-3-clause
-
-Files: src/condor_contrib/aviary/test/module/aviary/https.py
-Copyright: 2011, Joseph Turner
-           2011, David Norton, Jr
-           2009-2011 Red Hat, Inc
-License: Apache-2.0
 
 Files: src/condor_contrib/rcondor/*
 Copyright: 2010, Jeffrey M. Dost <jdost@ucsd.edu>
@@ -175,7 +168,6 @@ License: BSD-3-clause
 Files: *.cmake
  src/condor_contrib/plumage/*
  src/condor_contrib/triggerd/*
- src/condor_contrib/aviary/*
  src/condor_contrib/utils/broker_utils.*
  src/condor_contrib/mgmt/qmf/*
  src/condor_collector.V6/*CollectorPlugin*

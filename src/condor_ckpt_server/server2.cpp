@@ -2549,6 +2549,7 @@ void UnblockSignals()
 int main( int /*argc*/, char **argv )
 {
 	/* For daemonCore, etc. */
+	set_priv_initialize();
 	set_mySubSystem( "CKPT_SERVER", SUBSYSTEM_TYPE_DAEMON );
 
 	myName = argv[0];

@@ -62,13 +62,17 @@ int get_credmon_pid() {
 }
 
 
-bool credmon_fill_watchfile_name(char* watchfilename, const char* user) {
+bool credmon_fill_watchfile_name(char* watchfilename, const char* user, const char* name = NULL) {
 
 	// construct filename to poll for
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "CREDMON: ERROR: got credmon_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return false;
+	}
+
+	if (!name) {
+		name = "scitokens.use";
 	}
 
 	// if user == NULL this is a special case.  we want the credd to
@@ -89,7 +93,7 @@ bool credmon_fill_watchfile_name(char* watchfilename, const char* user) {
 			username[255] = 0;
 		}
 		if(param_boolean("TOKENS", false)) {
-			sprintf(watchfilename, "%s%c%s%cscitokens.use", cred_dir.ptr(), DIR_DELIM_CHAR, username, DIR_DELIM_CHAR);
+			sprintf(watchfilename, "%s%c%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, username, DIR_DELIM_CHAR, name);
 		} else {
 			sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 		}
@@ -146,11 +150,11 @@ bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal) {
 
 // do exactly one test for the existance of the .cc file.  this does not block,
 // just returns false right away and let's the caller decide what to do.
-bool credmon_poll_continue(const char* user, int retry) {
+bool credmon_poll_continue(const char* user, int retry, const char* name) {
 
 	// this will be the filename we poll for
 	char watchfilename[PATH_MAX];
-	if (credmon_fill_watchfile_name(watchfilename, user) == false) {
+	if (credmon_fill_watchfile_name(watchfilename, user, name) == false) {
 		return false;
 	}
 

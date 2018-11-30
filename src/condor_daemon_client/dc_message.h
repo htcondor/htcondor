@@ -453,6 +453,28 @@ private:
 	ClassAd m_msg;
 };
 
+/*
+ * TwoClassAdMsg is a message consisting of two ClassAds.
+  */
+class TwoClassAdMsg : public DCMsg {
+	public:
+		TwoClassAdMsg( int cmd, ClassAd & first, ClassAd & second );
+
+		virtual bool writeMsg( DCMessenger * messenger, Sock * sock );
+		virtual bool readMsg( DCMessenger * messenger, Sock * sock );
+
+		virtual MessageClosureEnum messageSent( DCMessenger * messenger, Sock * sock );
+		virtual MessageClosureEnum messageReceived( DCMessenger * messenger, Sock *sock );
+
+		// Custom methods.
+		ClassAd & getFirstClassAd() { return firstClassAd; }
+		ClassAd & getSecondClassAd() { return secondClassAd; }
+
+	private:
+		ClassAd firstClassAd;
+		ClassAd secondClassAd;
+};
+
 class ChildAliveMsg: public DCMsg {
 public:
 	ChildAliveMsg( int mypid, int max_hang_time, int max_tries, double dprintf_lock_delay, bool blocking );

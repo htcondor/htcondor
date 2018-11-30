@@ -79,6 +79,14 @@ command_handler( Service*, int cmd, Stream* stream )
 int
 deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 {
+	static int failureMode = -1;
+	if( failureMode == -1 ) {
+		failureMode = param_integer( "COALESCE_FAILURE_MODE", 0 );
+	}
+	if( failureMode == 5 ) {
+		return FALSE;
+	}
+
 	int rval;
 	bool claim_is_closing = rip->curClaimIsClosing();
 
@@ -2649,6 +2657,246 @@ command_cancel_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 	s->encode();
 	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"command_cancel_drain_jobs: failed to send response to %s\n",s->peer_description());
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+int
+command_coalesce_slots( Service *, int, Stream * stream ) {
+	Sock * sock = (Sock *)stream;
+	ClassAd commandAd;
+	// This becomes owned by the new slot's claim.
+	ClassAd * resourceAd = new ClassAd();
+
+	int failureMode = param_integer( "COALESCE_FAILURE_MODE", 0 );
+
+	if( failureMode == 1 ) {
+		// FIXME: Consider dprintf() ing and returning FALSE, instead, as
+		// that may be better for the startd than a long blocking call here.
+		sleep( 21 );
+	}
+
+	if(! getClassAd( sock, commandAd )) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): failed to get command ad\n" );
+		return FALSE;
+	}
+
+	if(! getClassAd( sock, * resourceAd )) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): failed to get resource request\n" );
+		delete resourceAd;
+		return FALSE;
+	}
+
+	std::string claimIDListString;
+	if(! commandAd.LookupString( ATTR_CLAIM_ID_LIST, claimIDListString )) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): command ad missing claim ID list\n" );
+		delete resourceAd;
+		return FALSE;
+	}
+
+	StringList claimIDList( claimIDListString.c_str() );
+	if( claimIDList.isEmpty() ) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): command ad's claim ID list empty or invalid\n" );
+		delete resourceAd;
+		return FALSE;
+	}
+	// Remove duplicate claims.
+	claimIDList.rewind();
+	char * claimID = NULL;
+	std::set< char * > ucil;
+	while( (claimID = claimIDList.next()) != NULL ) {
+		ucil.insert( claimID );
+	}
+
+	//
+	// Coalesce the claims.
+	//
+	std::string errorString;
+	CAResult result = CA_SUCCESS;
+
+	Resource * parent = NULL;
+	for( auto i = ucil.begin(); i != ucil.end(); ++i ) {
+		claimID = * i;
+
+		// If a slot has been preempted, don't coalesce it.
+		Resource * r = resmgr->get_by_cur_id( claimID );
+
+		// We'll ignore failed preconditions on the basis that if we return
+		// what we can, the schedd may (eventually) be able to do something
+		// useful with the remaining resources.
+		if(! r) {
+			formatstr( errorString, "can't find slot with given claim ID" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
+		if( r->state() != claimed_state ) {
+			formatstr( errorString, "given slot is not claimed" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
+		// This is a hack to allow the schedd to retry instead of fixing the
+		// race condition where a starter tells the shadow it's done but,
+		// because it exits an arbitrary amount of time later (after deleting
+		// the sandbox), the startd doesn't switch the slot's state to Idle.
+		if( r->activity() != idle_act ) {
+			formatstr( errorString, "given slot is not idle" );
+			result = CA_INVALID_STATE;
+			break;
+		}
+
+		// I don't know under which circumstances this would arise, but it may
+		// be a legitimate retry opportunity.
+		if( r->isDeactivating() ) {
+			formatstr( errorString, "given slot is deactivating, try again later" );
+			result = CA_INVALID_STATE;
+			break;
+		}
+
+		// Only deal with dynamic slots.
+		if( r->get_parent() == NULL ) {
+			formatstr( errorString, "given slot is not dynamic" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
+		if( parent == NULL ) {
+			parent = r->get_parent();
+		} else if( parent != r->get_parent() ) {
+			formatstr( errorString, "all slots must have the same parent" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+	}
+
+	if( failureMode == 2 ) {
+		result = CA_FAILURE;
+		errorString = "FAILURE INJECTION: 2";
+	} else if( failureMode == 3 ) {
+		result = CA_INVALID_STATE;
+		errorString = "FAILURE INJECTION: 3";
+	}
+
+	if( result != CA_SUCCESS ) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): %s\n", errorString.c_str() );
+		delete resourceAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( result ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, errorString.c_str() );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		return FALSE;
+	}
+
+	if( ! parent ) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce any slots\n" );
+		delete resourceAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "Unable to coalesce any slots" );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		return FALSE;
+	}
+
+	dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing slots...\n" );
+	for( auto i = ucil.begin(); i != ucil.end(); ++i ) {
+		claimID = * i;
+
+		// If a slot has been preempted, don't coalesce it.
+		Resource * r = resmgr->get_by_cur_id( claimID );
+		dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing %s...\n", r->r_id_str );
+
+		// Despite appearances, this also transfers the nonfungible resources.
+		*(parent->r_attr) += *(r->r_attr);
+		*(r->r_attr) -= *(r->r_attr);
+
+		// Destroy the old slot.
+		r->kill_claim();
+	}
+
+	// We just updated the partitionable slot's resources...
+	parent->refresh_classad( A_PUBLIC );
+
+	Claim * leftoverClaim = NULL;
+	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
+	Resource * coalescedSlot = initialize_resource( parent, resourceAd, leftoverClaim );
+	if( coalescedSlot == NULL ) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );
+		delete resourceAd;
+
+		ClassAd replyAd;
+		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
+		replyAd.InsertAttr( ATTR_ERROR_STRING, "Unable to coalesce any slots" );
+		putClassAd( sock, replyAd );
+
+		ClassAd slotAd;
+		putClassAd( sock, slotAd );
+
+		return FALSE;
+	}
+
+	if( leftoverClaim != NULL ) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): unexpectedly got partitionable leftovers, ignoring.\n" );
+	}
+
+	// Assign the coalesced slot a new claim ID.  It's currently got
+	// whatever its parent slot had, which may belong to someone else.
+	coalescedSlot->r_cur->invalidateID();
+
+	// Sadly, launching a starter requires us to do this.
+	ASSERT( sock->peer_addr().is_valid() );
+	MyString hostname = get_full_hostname( sock->peer_addr() );
+	if(! hostname.IsEmpty() ) {
+		coalescedSlot->r_cur->client()->sethost( hostname.Value() );
+	} else {
+		MyString ip = sock->peer_addr().to_ip_string();
+		coalescedSlot->r_cur->client()->sethost( ip.Value() );
+	}
+
+	// We'e ignoring consumption policy here.  (See request_claim().)  This
+	// is probably a good thing.
+
+	coalescedSlot->r_cur->setjobad( resourceAd );
+	// We're ignoring rank here.  (See request_claim().)
+	coalescedSlot->r_cur->loadAccountingInfo();
+	coalescedSlot->r_cur->loadRequestInfo();
+
+	// The coalesced slot is born claimed.
+	coalescedSlot->change_state( claimed_state );
+	coalescedSlot->refresh_classad( A_PUBLIC );
+	parent->refresh_classad( A_PUBLIC );
+
+	dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing complete, sending reply\n" );
+
+	ClassAd replyAd;
+	replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+
+	// ATTR_CLAIM_ID is magic and will be encrypted.
+	if( failureMode != 4 ) {
+		replyAd.InsertAttr( ATTR_CLAIM_ID, coalescedSlot->r_cur->id() );
+	}
+
+	if(! putClassAd( sock, replyAd )) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): failed to send reply ad\n" );
+		return FALSE;
+	}
+
+	ClassAd slotAd( * coalescedSlot->r_classad );
+	// coalescedSlot->publish_private( & slotAd );
+	if(! putClassAd( sock, slotAd )) {
+		dprintf( D_ALWAYS, "command_coalesce_slots(): failed to send slot ad\n" );
 		return FALSE;
 	}
 

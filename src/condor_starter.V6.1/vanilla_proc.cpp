@@ -754,15 +754,29 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 #endif
 
-	if (usage->block_read_bytes >= 0) 
-        m_statistics.BlockReadBytes = usage->block_read_bytes;
-	if (usage->block_write_bytes >= 0) 
-        m_statistics.BlockWriteBytes = usage->block_write_bytes;
+	if (usage->block_read_bytes >= 0)  {
+        	m_statistics.BlockReadBytes = usage->block_read_bytes;
+		ad->Assign(ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes / 1024l);
+	}
+	if (usage->block_write_bytes >= 0) {
+		m_statistics.BlockWriteBytes = usage->block_write_bytes;
+		ad->Assign(ATTR_BLOCK_WRITE_KBYTES, usage->block_write_bytes / 1024l);
+	}
 
-	if (usage->block_reads >= 0)
-        m_statistics.BlockReads = usage->block_reads;
-	if (usage->block_writes >= 0)
-        m_statistics.BlockWrites = usage->block_writes;
+	if (usage->block_reads >= 0) {
+        	m_statistics.BlockReads = usage->block_reads;
+		ad->Assign(ATTR_BLOCK_READS, usage->block_reads);
+	}
+	if (usage->block_writes >= 0) {
+        	m_statistics.BlockWrites = usage->block_writes;
+		ad->Assign(ATTR_BLOCK_WRITES, usage->block_writes);
+	}
+
+dprintf(D_ALWAYS, "GGT GGT GGT about to set io wait to %g\n", usage->io_wait);
+	if (usage->io_wait >= 0.0) {
+		ad->Assign(ATTR_IO_WAIT, usage->io_wait);
+	}
+
 
 		// Update our knowledge of how many processes the job has
 	num_pids = usage->num_procs;

@@ -157,7 +157,7 @@ private:
     
 };
 
-static boost::python::object
+boost::python::object
 convert_value_to_python(const classad::Value &value)
 {
     boost::python::object result;

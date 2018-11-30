@@ -1,3 +1,0 @@
-author: Peter MacKinnon
-organization: Red Hat Inc.
-e-mail: pmackinn@redhat.com
