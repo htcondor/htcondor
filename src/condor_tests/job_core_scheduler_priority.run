@@ -17,7 +17,6 @@ from pytest.Utils import Utils
 
 def cleanup():
     os.system("rm -rf job_core_scheduler_priority.local")
-    os.system("rm -rf job_core_scheduler_priority*.out")
     os.system("rm -rf job_core_scheduler_priority*.log")
 
 
@@ -40,7 +39,7 @@ def main():
     for cluster in range(5):
         job_args = {
             "universe":     "scheduler",
-            "executable":   "/bin/bash",
+            "executable":   "x_echostring.pl",
             "arguments":    "Testing equal priority cluster $(cluster)",
             "output":       "job_core_scheduler_priority-equal-$(cluster).out",
             "log":          "job_core_scheduler_priority-equal.log"
@@ -52,25 +51,68 @@ def main():
 
     # Now make sure the equal priority jobs run in the same order we submitted them
     equal_event_log = JobEventLog("job_core_scheduler_priority-equal.log")
-    equal_success = True
+    equal_success = False
     expected_cluster = 1
     for event in equal_event_log.events(240):
         if event.type is JobEventType.JOB_TERMINATED:
             if event.cluster == expected_cluster:
                 Utils.TLog("Got a JOB_TERMINATED event for cluster " + str(event.cluster) + " in expected order.")
-                expected_cluster = expected_cluster + 1
+                # If this was the last cluster we care about, exit the for loop
+                if event.cluster == 5:
+                    equal_success = True
+                    break
+                else:
+                    expected_cluster = expected_cluster + 1
             else:
                 Utils.TLog("Got a JOB_TERMINATED event for cluster " + str(event.cluster) + " out of order, was expecting cluster " + str(expected_cluster))
-                event_success = False
-                break
-            # If this was the last cluster we care about, exit the for loop
-            if event.cluster == 5:
                 break
 
     if equal_success is True:
         CondorTest.RegisterSuccess("job_core_scheduler_priority-equal", "Test ran equal priority jobs in correct order")
     else:
         CondorTest.RegisterFailure("job_core_scheduler_priority-equal", "Test did not run equal priority jobs in correct order")
+
+    # Test 2: Check that jobs of unequal priority run in priority order
+
+    # Submit five scheduler jobs of unequal priority
+    unequal_prio_jobs = []
+    for cluster in range(5):
+        job_args = {
+            "universe":     "scheduler",
+            "executable":   "x_echostring.pl",
+            "arguments":    "Testing unequal priority cluster $(cluster)",
+            "output":       "job_core_scheduler_priority-unequal-$(cluster).out",
+            "log":          "job_core_scheduler_priority-unequal.log",
+            "priority":     "$(cluster)"
+        }
+        unequal_prio_jobs.append(CondorCluster(job_args))
+
+        # Submit the test job
+        unequal_prio_jobs[cluster].Submit()
+
+    # Now make sure the equal priority jobs run in the same order we submitted them
+    unequal_event_log = JobEventLog("job_core_scheduler_priority-unequal.log")
+    unequal_success = False
+    expected_cluster = 10
+    for event in unequal_event_log.events(240):
+        if event.type is JobEventType.JOB_TERMINATED:
+            if event.cluster == expected_cluster:
+                Utils.TLog("Got a JOB_TERMINATED event for cluster " + str(event.cluster) + " in expected order.")
+                # If this was the last cluster we care about, exit the for loop
+                if event.cluster == 6:
+                    unequal_success = True
+                    break
+                else:
+                    expected_cluster = expected_cluster - 1
+            else:
+                Utils.TLog("Got a JOB_TERMINATED event for cluster " + str(event.cluster) + " out of order, was expecting cluster " + str(expected_cluster))
+                break
+
+    if unequal_success is True:
+        CondorTest.RegisterSuccess("job_core_scheduler_priority-unequal", "Test ran unequal priority jobs in correct order")
+    else:
+        CondorTest.RegisterFailure("job_core_scheduler_priority-unequal", "Test did not run unequal priority jobs in correct order")
+
 
 
 if __name__ == "__main__":
