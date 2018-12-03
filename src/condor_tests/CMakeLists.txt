@@ -239,6 +239,7 @@ if (BUILD_TESTING)
 		condor_pl_test (python_bindings_classad "Python bindings classad module" "core;quick;full;quicknolink")
 		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module" "core;quick;full;quicknolink")
 		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
+		condor_pl_test (python_bindings_jobeventlog "tests the JobEvent class" "core;quick;full;quicknolink")
 
 		# Tests of the pytest suite.
 		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
