@@ -24,6 +24,11 @@ def main():
 
     cleanup()
 
+    # Quick hack to convince Windows to run our jobs
+    executable_file = "/bin/sleep"
+    if Utils.IsWindows() is True:
+        executable_file = "sleep.exe"
+
     # Stand up a PersonalCondor with some custom config
     env_params = {
         "MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER": 1,
@@ -35,19 +40,16 @@ def main():
     # Test 1: Check that jobs of equal priority run in submission order
 
     # Submit five scheduler jobs of equal priority
-    equal_prio_jobs = []
     for cluster in range(5):
         job_args = {
             "universe":     "scheduler",
-            "executable":   "x_echostring.pl",
-            "arguments":    "Testing equal priority cluster $(cluster)",
+            "executable":   executable_file,
+            "arguments":    "0",
             "output":       "job_core_scheduler_priority-equal-$(cluster).out",
             "log":          "job_core_scheduler_priority-equal.log"
         }
-        equal_prio_jobs.append(CondorCluster(job_args))
-
-        # Submit the test job
-        equal_prio_jobs[cluster].Submit()
+        this_job = CondorCluster(job_args)
+        this_job.Submit()
 
     # Now make sure the equal priority jobs run in the same order we submitted them
     equal_event_log = JobEventLog("job_core_scheduler_priority-equal.log")
@@ -75,20 +77,17 @@ def main():
     # Test 2: Check that jobs of unequal priority run in priority order
 
     # Submit five scheduler jobs of unequal priority
-    unequal_prio_jobs = []
     for cluster in range(5):
         job_args = {
             "universe":     "scheduler",
-            "executable":   "x_echostring.pl",
-            "arguments":    "Testing unequal priority cluster $(cluster)",
+            "executable":   executable_file,
+            "arguments":    "0",
             "output":       "job_core_scheduler_priority-unequal-$(cluster).out",
             "log":          "job_core_scheduler_priority-unequal.log",
             "priority":     "$(cluster)"
         }
-        unequal_prio_jobs.append(CondorCluster(job_args))
-
-        # Submit the test job
-        unequal_prio_jobs[cluster].Submit()
+        this_job = CondorCluster(job_args)
+        this_job.Submit()
 
     # Now make sure the equal priority jobs run in the same order we submitted them
     unequal_event_log = JobEventLog("job_core_scheduler_priority-unequal.log")
