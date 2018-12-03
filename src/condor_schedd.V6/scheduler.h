@@ -84,7 +84,30 @@ extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
 class JobQueueCluster;
 
-typedef std::set<JOB_ID_KEY> JOB_ID_SET;
+//typedef std::set<JOB_ID_KEY> JOB_ID_SET;
+class LocalJobRec {
+  public:
+	int			prio;
+	JOB_ID_KEY 	job_id;
+
+	LocalJobRec(int _prio, JOB_ID_KEY _job_id) :
+		prio(_prio),
+		job_id(_job_id)
+	{}
+	bool operator<(const LocalJobRec& rhs) const {
+		// We want LocalJobRec objects to run in priority order, but when two
+		// records have equal priority, they run in order of submission which we
+		// infer from the cluster.proc pair (lower numbers go first)
+		if(this->prio == rhs.prio) {
+			if(this->job_id.cluster == rhs.job_id.cluster) {
+				return this->job_id.proc < rhs.job_id.proc;
+			}
+			return this->job_id.cluster < rhs.job_id.cluster;
+		}
+		// When sorting in priority order, higher numbers go first
+		return this->prio > rhs.prio;
+	}
+};
 
 bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
 
@@ -497,7 +520,8 @@ class Scheduler : public Service
 	friend	int		NewProc(int cluster_id);
 	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
 //	friend	void	job_prio(ClassAd *);
-	friend  int		find_idle_local_jobs(JobQueueJob *, const JOB_ID_KEY&, void*);
+	void			AddRunnableLocalJobs();
+	bool			IsLocalJobEligibleToRun(JobQueueJob* job);
 	friend	int		updateSchedDInterval(JobQueueJob*, const JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
@@ -516,7 +540,7 @@ class Scheduler : public Service
 	void			addCronTabClassAd( JobQueueJob* );
 	void			addCronTabClusterId( int );
 	void			indexAJob(JobQueueJob* job, bool loading_job_queue=false);
-	void			removeJobFromIndexes(const JOB_ID_KEY& job_id);
+	void			removeJobFromIndexes(const JOB_ID_KEY& job_id, int job_prio=0);
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
 
@@ -552,7 +576,6 @@ class Scheduler : public Service
 	void			ExpediteStartJobs();
 	void			StartJobs();
 	void			StartJob(match_rec *rec);
-	void			StartLocalJobs();
 	void			sendAlives();
 	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler();
@@ -737,6 +760,8 @@ class Scheduler : public Service
 	const OwnerInfo * lookup_owner_const(const char*);
 	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
 
+	std::set<LocalJobRec> LocalJobsPrioQueue;
+
 private:
 
 	// We have to evaluate requirements in the listed order to maintain
@@ -814,7 +839,6 @@ private:
 	int				NumUniqueOwners;
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
 
-	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
@@ -967,7 +991,6 @@ private:
 
 	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
-	shadow_rec*		start_local_universe_job(PROC_ID*);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
 										Env const *env, 

@@ -710,6 +710,9 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		fprintf(pSubFile, "+%s\t= \"%s\"\n", ATTR_JOB_BATCH_NAME,
 					deepOpts.batchName.c_str());
 	}
+    if (shallowOpts.priority != 0) {
+        fprintf(pSubFile, "priority\t= %d\n", shallowOpts.priority);
+    }
 #if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 #endif

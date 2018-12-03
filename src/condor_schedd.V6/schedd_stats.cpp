@@ -215,7 +215,7 @@ void ScheddStatistics::InitMain()
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_count_a_job,             IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_PeriodicExprEval,        IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_clear_autocluster_id,    IF_VERBOSEPUB);
-   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_find_idle_local_jobs,    IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_add_runnable_local_jobs, IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_fixAttrUser,             IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_updateSchedDInterval,    IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_mark_idle,               IF_VERBOSEPUB);

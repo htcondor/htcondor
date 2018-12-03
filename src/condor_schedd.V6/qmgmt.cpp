@@ -3153,6 +3153,10 @@ int DestroyProc(int cluster_id, int proc_id)
 
 	DecrementClusterSize(cluster_id, clusterad);
 
+	// We'll need the JobPrio value later after the ad has been destroyed
+	int job_prio = 0;
+	ad->LookupInteger(ATTR_JOB_PRIO, job_prio);
+
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 
@@ -3199,7 +3203,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 
 		// remove jobid from any indexes
-	scheduler.removeJobFromIndexes(key);
+	scheduler.removeJobFromIndexes(key, job_prio);
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
@@ -4202,6 +4206,27 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		keys.insert(key.c_str());
 		// TODO: convert the keys to PROC_IDs before calling DoSetAttributeCallbacks?
 		DoSetAttributeCallbacks(keys, attr_category);
+	}
+
+	// If we are changing the priority of a scheduler/local universe job, we need
+	// to update the LocalJobsPrioQueue data
+	if ( ( universe == CONDOR_UNIVERSE_SCHEDULER ||
+		universe == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
+		if ( job ) {
+			// Walk the prio queue of local jobs
+			for ( std::set<LocalJobRec>::iterator it = scheduler.LocalJobsPrioQueue.begin(); it != scheduler.LocalJobsPrioQueue.end(); it++ ) {
+				// If this record matches the job_id passed in, erase it, then
+				// add a new record with the updated priority value. The
+				// LocalJobsPrioQueue std::set will automatically order it.
+				if ( it->job_id.cluster == cluster_id && it->job_id.proc == proc_id ) {
+					scheduler.LocalJobsPrioQueue.erase( it );
+					JOB_ID_KEY jid = JOB_ID_KEY( cluster_id, proc_id );
+					LocalJobRec rec = LocalJobRec( atoi ( attr_value ), jid );
+					scheduler.LocalJobsPrioQueue.insert( rec );
+					break;
+				}
+			}
+		}
 	}
 
 	return 0;

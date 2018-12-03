@@ -181,7 +181,7 @@ schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
 schedd_runtime_probe WalkJobQ_count_a_job_runtime;
 schedd_runtime_probe WalkJobQ_PeriodicExprEval_runtime;
 schedd_runtime_probe WalkJobQ_clear_autocluster_id_runtime;
-schedd_runtime_probe WalkJobQ_find_idle_local_jobs_runtime;
+schedd_runtime_probe WalkJobQ_add_runnable_local_jobs_runtime;
 schedd_runtime_probe WalkJobQ_fixAttrUser_runtime;
 schedd_runtime_probe WalkJobQ_updateSchedDInterval_runtime;
 
@@ -962,7 +962,8 @@ Scheduler::timeout()
 
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
 		this->calculateCronTabSchedules();
-		StartLocalJobs();
+		dprintf(D_ALWAYS, "MRC [Scheduler::timeout] about to call AddRunnableLocalJobs from Scheduler::timeout\n");
+		AddRunnableLocalJobs();
 	}
 
 	/* Call function that will start using our local startd if it
@@ -8171,187 +8172,6 @@ PostInitJobQueue()
 }
 
 
-int
-find_idle_local_jobs( JobQueueJob *job, const JOB_ID_KEY&, void* )
-{
-	// Since this function may be used while walking the whole queue
-	// It's important to reject jobs that we aren't going to start very quickly.
-	// so we get universe and Noop flag out of the job object rather than
-	// doing an attribute lookup here - it's at least an order of magnitude faster.
-	int univ = job->Universe();
-	if( univ != CONDOR_UNIVERSE_LOCAL && univ != CONDOR_UNIVERSE_SCHEDULER ) {
-		return 0;
-	}
-
-	if (univ == CONDOR_UNIVERSE_LOCAL && scheduler.m_use_startd_for_local) {
-		return 0;
-	}
-
-	if (job->IsNoopJob()) {
-		return 0;
-	}
-
-	PROC_ID id = job->jid;
-	int	status;
-	int	cur_hosts;
-	int	max_hosts;
-
-	job->LookupInteger(ATTR_JOB_STATUS, status);
-
-	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) != 1) {
-		cur_hosts = ((status == RUNNING || status == TRANSFERRING_OUTPUT) ? 1 : 0);
-	}
-	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
-		max_hosts = ((status == IDLE) ? 1 : 0);
-	}
-	
-		//
-		// Before evaluating whether we can run this job, first make 
-		// sure its even eligible to run
-		// We do not count REMOVED or HELD jobs
-		//
-	if ( max_hosts > cur_hosts &&
-		(status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) ) {
-			//
-			// The jobs will now attempt to have their requirements
-			// evalulated. We first check to see if the requirements are defined.
-			// If they are not, then we'll continue.
-			// If they are, then we make sure that they evaluate to true.
-			// Evaluate the schedd's ad and the job ad against each 
-			// other. We break it out so we can print out any errors 
-			// as needed
-			//
-		ClassAd scheddAd;
-		scheduler.publish( &scheddAd );
-
-			//
-			// Select the start expression based on the universe
-			//
-		const char *universeExp = ( univ == CONDOR_UNIVERSE_LOCAL ?
-									ATTR_START_LOCAL_UNIVERSE :
-									ATTR_START_SCHEDULER_UNIVERSE );
-	
-			//
-			// Start Universe Evaluation (a.k.a. schedd requirements).
-			// Only if this attribute is NULL or evaluates to true 
-			// will we allow a job to start.
-			//
-		bool requirementsMet = true;
-		int requirements = 1;
-		if ( scheddAd.LookupExpr( universeExp ) != NULL ) {
-				//
-				// We have this inner block here because the job
-				// should not be allowed to start if the schedd's 
-				// requirements failed to evaluate for some reason
-				//
-			if ( scheddAd.EvalBool( universeExp, job, requirements ) ) {
-				requirementsMet = (bool)requirements;
-				if ( ! requirements ) {
-					dprintf( D_FULLDEBUG, "%s evaluated to false for job %d.%d. "
-										  "Unable to start job.\n",
-										  universeExp, id.cluster, id.proc );
-				}
-			} else {
-				requirementsMet = false;
-				dprintf( D_ALWAYS, "The schedd's %s attribute could "
-								   "not be evaluated for job %d.%d. "
-								   "Unable to start job\n",
-								   universeExp, id.cluster, id.proc );
-			}
-		}
-
-		if ( ! requirementsMet) {
-			if (IsDebugVerbose(D_ALWAYS)) {
-				char *exp = sPrintExpr( scheddAd, universeExp );
-				if ( exp ) {
-					dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
-					free( exp );
-				}
-			}
-			return 0;
-		}
-			//
-			// Job Requirements Evaluation
-			//
-		if ( job->LookupExpr( ATTR_REQUIREMENTS ) != NULL ) {
-				// Treat undefined/error as FALSE for job requirements, too.
-			if ( job->EvalBool(ATTR_REQUIREMENTS, &scheddAd, requirements) ) {
-				requirementsMet = (bool)requirements;
-				if ( !requirements ) {
-					dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d "
-							 "evaluated to false. Unable to start job\n",
-							 ATTR_REQUIREMENTS, id.cluster, id.proc );
-				}
-			} else {
-				requirementsMet = false;
-				dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d did "
-						 "not evaluate. Unable to start job\n",
-						 ATTR_REQUIREMENTS, id.cluster, id.proc );
-			}
-
-		}
-			//
-			// If the job's requirements failed up above, we will want to 
-			// print the expression to the user and return
-			//
-		if ( ! requirementsMet) {
-			if (IsDebugVerbose(D_ALWAYS)) {
-				char *exp = sPrintExpr( *job, ATTR_REQUIREMENTS );
-				if ( exp ) {
-					dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
-					free( exp );
-				// This is too verbose.
-				//dprintf(D_FULLDEBUG,"Schedd ad that failed to match:\n");
-				//dPrintAd(D_FULLDEBUG, scheddAd);
-				//dprintf(D_FULLDEBUG,"Job ad that failed to match:\n");
-				//dPrintAd(D_FULLDEBUG, *job);
-				}
-			}
-			return 0;
-		}
-
-			//
-			// It's safe to go ahead and run the job!
-			//
-		if( univ == CONDOR_UNIVERSE_LOCAL ) {
-			dprintf( D_FULLDEBUG, "Found idle local universe job %d.%d\n",
-					 id.cluster, id.proc );
-			scheduler.start_local_universe_job( &id );
-		} else {
-			// if there is a per-owner scheduler job limit that is smaller than the per-owner job limit
-			if (scheduler.MaxRunningSchedulerJobsPerOwner > 0 &&
-			    scheduler.MaxRunningSchedulerJobsPerOwner < scheduler.MaxJobsPerOwner) {
-				OwnerInfo * owndat = scheduler.get_ownerinfo(job);
-				if (owndat->num.SchedulerJobsRunning >= scheduler.MaxRunningSchedulerJobsPerOwner) {
-					dprintf( D_FULLDEBUG,
-							 "Skipping idle scheduler universe job %d.%d because %s already has %d Scheduler jobs running\n",
-							 id.cluster, id.proc, owndat->Name(), owndat->num.SchedulerJobsRunning );
-					return 0;
-				}
-			} else if (scheduler.MaxRunningSchedulerJobsPerOwner == 0) {
-				dprintf( D_FULLDEBUG,
-						 "Skipping idle scheduler universe job %d.%d because Scheduler Universe is disabled by MaxRunningSchedulerJobsPerOwner==0 \n",
-						 id.cluster, id.proc );
-				return 0;
-			}
-			dprintf( D_FULLDEBUG,
-					 "Found idle scheduler universe job %d.%d\n",
-					 id.cluster, id.proc );
-				/*
-				  we've decided to spawn a scheduler universe job.
-				  instead of doing that directly, we'll go through our
-				  aboutToSpawnJobHandler() hook isntead.  inside
-				  aboutToSpawnJobHandlerDone(), if the job is a
-				  scheduler universe job, we'll spawn it then.  this
-				  wrapper handles all the logic for if we want to
-				  invoke the hook in its own thread or not, etc.
-				*/
-			callAboutToSpawnJobHandler( id.cluster, id.proc, NULL );
-		}
-	}
-	return 0;
-}
-
 void
 Scheduler::ExpediteStartJobs()
 {
@@ -8407,7 +8227,8 @@ Scheduler::StartJobs()
 		StartJob( rec );
 	}
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
-		StartLocalJobs();
+		dprintf(D_ALWAYS, "MRC [Scheduler::StartJobs] about to call AddRunnableLocalJobs from Scheduler::StartJobs\n");
+		AddRunnableLocalJobs();
 	}
 
 	dprintf(D_FULLDEBUG, "-------- Done starting jobs --------\n");
@@ -8686,34 +8507,244 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 }
 
 void
-Scheduler::StartLocalJobs()
+Scheduler::AddRunnableLocalJobs()
 {
+	dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] called\n");
 	if ( ExitWhenDone ) {
 		return;
 	}
-#if 0 // enable this code to walk the table of LocalJobIds instead of the whole queue
-	  // note that this code is only about 20% faster than walking the whole job queue
-	  // when 0.1% of jobs are schedular universe. it's probably even slower if a larger
-	  // percentage of the jobs are scheduler universe.
+	  
 	double begin = _condor_debug_get_time_double();
-	// Instead of walking the job queue. walk the set of local/scheduler jobs
-	for (JOB_ID_SET::iterator it = LocalJobIds.begin(); it != LocalJobIds.end(); /*++it not here*/) {
-		JOB_ID_SET::iterator curr = it++; // save and advance the iterator, in case we want to erase the item
-		JobQueueJob *job = GetJobAd(*curr);
-		if ( ! job) { // this id no longer refers to a job. so remove it from the list.
-			//TODO: should we warn when this happens??
-			LocalJobIds.erase(curr);
+	
+	// Instead of walking the job queue, walk the prio queue of local jobs
+	for (std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); /*++it not here*/) {
+		std::set<LocalJobRec>::iterator curr = it++; // save and advance the iterator, in case we want to erase the item
+		JobQueueJob* job = GetJobAd(curr->job_id);
+		// If this id no longer refers to a job, remove it from the list.
+		if (!job) { 
+			// TODO: Should we warn when this happens??
+			LocalJobsPrioQueue.erase(curr);
 			continue;
 		}
-		// call the old queue walk function.
-		find_idle_local_jobs(job, *curr, NULL);
+
+		// We only want to look at jobs that are in IDLE status
+		// TODO: Figure out why RunLocalJob (formerly find_idle_local_jobs)
+		// also allows RUNNING and TRANSFERRING_OUTPUT jobs to go ahead
+		int status;
+		job->LookupInteger(ATTR_JOB_STATUS, status);
+		if (status != IDLE) continue;
+		// TODO: Figure out where we enforce the START_SCHEDULER_UNIVERSE constraint
+		// TODO: Make sure that StartLocalJob does not do anything to WalkJobQ_start_local_jobs_runtime
+		int univ = job->Universe();
+		if (univ == CONDOR_UNIVERSE_LOCAL && scheduler.m_use_startd_for_local) {
+			continue;
+		}
+
+		if (job->IsNoopJob()) {
+			continue;
+		}
+
+		PROC_ID id = job->jid;
+		int	cur_hosts;
+		int	max_hosts;
+
+		if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) != 1) {
+			cur_hosts = ((status == RUNNING || status == TRANSFERRING_OUTPUT) ? 1 : 0);
+		}
+		if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
+			max_hosts = ((status == IDLE) ? 1 : 0);
+		}
+	
+		//
+		// Before evaluating whether we can run this job, first make 
+		// sure its even eligible to run
+		// We do not count REMOVED or HELD jobs
+		//
+		dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] checking status of job %s\n", std::string(job->jid).c_str());
+		if ( max_hosts > cur_hosts &&
+			(status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) ) {
+			
+			if (!IsLocalJobEligibleToRun(job)) {
+				continue;
+			}
+			dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] job %s passed the eligibility check\n", std::string(job->jid).c_str());
+			//
+			// It's safe to go ahead and run the job!
+			//
+			if( univ == CONDOR_UNIVERSE_LOCAL ) {
+				dprintf( D_FULLDEBUG, "Found idle local universe job %d.%d\n",
+					 id.cluster, id.proc );
+				shadow_rec* local_rec = NULL;
+
+				// set our CurrentHosts to 1 so we don't consider this job
+				// still idle.  we'll actually mark it as status RUNNING once
+				// we spawn the starter for it.  unlike other kinds of jobs,
+				// local universe jobs don't have to worry about having the
+				// status wrong while the job sits in the RunnableJob queue,
+				// since we're not negotiating for them at all... 
+				SetAttributeInt( id.cluster, id.proc, ATTR_CURRENT_HOSTS, 1 );
+
+				//
+				// If we start a local universe job, the LocalUniverseJobsRunning
+				// tally isn't updated so we have no way of knowing whether we can
+				// start the next job. This would cause a ton of local jobs to
+				// just get fired off all at once even though there was a limit set.
+				// So instead, I am following Derek's example with the scheduler 
+				// universe and updating our running tally
+				// Andy - 11.14.2004 - pavlo@cs.wisc.edu
+				//
+				if ( this->LocalUniverseJobsIdle > 0 ) {
+					this->LocalUniverseJobsIdle--;
+				}
+				this->LocalUniverseJobsRunning++;
+
+				local_rec = add_shadow_rec( 0, &id, CONDOR_UNIVERSE_LOCAL, NULL, -1 );
+				addRunnableJob( local_rec );
+			} else {
+				dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] job %s is scheduler universe\n", std::string(job->jid).c_str());
+				// if there is a per-owner scheduler job limit that is smaller than the per-owner job limit
+				if (scheduler.MaxRunningSchedulerJobsPerOwner > 0 &&
+					scheduler.MaxRunningSchedulerJobsPerOwner < scheduler.MaxJobsPerOwner) {
+					OwnerInfo * owndat = scheduler.get_ownerinfo(job);
+					dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] owndat->num.SchedulerJobsRunning = %d\n", owndat->num.SchedulerJobsRunning);
+					if (owndat->num.SchedulerJobsRunning >= scheduler.MaxRunningSchedulerJobsPerOwner) {
+						dprintf( D_FULLDEBUG,
+							 "Skipping idle scheduler universe job %d.%d because %s already has %d Scheduler jobs running\n",
+							 id.cluster, id.proc, owndat->Name(), owndat->num.SchedulerJobsRunning );
+						continue;
+					}
+				} else if (scheduler.MaxRunningSchedulerJobsPerOwner == 0) {
+					dprintf( D_FULLDEBUG,
+						 "Skipping idle scheduler universe job %d.%d because Scheduler Universe is disabled by MaxRunningSchedulerJobsPerOwner==0 \n",
+						 id.cluster, id.proc );
+					continue;
+				}
+				dprintf( D_FULLDEBUG,
+					 "Found idle scheduler universe job %d.%d\n",
+					 id.cluster, id.proc );
+				/*
+				  we've decided to spawn a scheduler universe job.
+				  instead of doing that directly, we'll go through our
+				  aboutToSpawnJobHandler() hook isntead.  inside
+				  aboutToSpawnJobHandlerDone(), if the job is a
+				  scheduler universe job, we'll spawn it then.  this
+				  wrapper handles all the logic for if we want to
+				  invoke the hook in its own thread or not, etc.
+				*/
+				dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] about to send job %s to the SpawnJobHandler\n", std::string(job->jid).c_str());
+				callAboutToSpawnJobHandler( id.cluster, id.proc, NULL );
+			}
+		}
 	}
 	double runtime = _condor_debug_get_time_double() - begin;
-	WalkJobQ_find_idle_local_jobs_runtime += runtime;
-	//WalkJobQ_runtime += runtime;
-#else
-	WalkJobQueue(find_idle_local_jobs);
-#endif
+	WalkJobQ_add_runnable_local_jobs_runtime += runtime;
+}
+
+bool
+Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
+
+	PROC_ID id = job->jid;
+
+	// The jobs will now attempt to have their requirements
+	// evalulated. We first check to see if the requirements are defined.
+	// If they are not, then we'll continue.
+	// If they are, then we make sure that they evaluate to true.
+	// Evaluate the schedd's ad and the job ad against each 
+	// other. We break it out so we can print out any errors 
+	// as needed
+	//
+	ClassAd scheddAd;
+	scheduler.publish( &scheddAd );
+
+	//
+	// Select the start expression based on the universe
+	//
+	int univ = job->Universe();
+	const char *universeExp = ( univ == CONDOR_UNIVERSE_LOCAL ?
+							ATTR_START_LOCAL_UNIVERSE :
+							ATTR_START_SCHEDULER_UNIVERSE );
+
+	//
+	// Start Universe Evaluation (a.k.a. schedd requirements).
+	// Only if this attribute is NULL or evaluates to true 
+	// will we allow a job to start.
+	//
+	bool requirementsMet = true;
+	int requirements = 1;
+	if ( scheddAd.LookupExpr( universeExp ) != NULL ) {
+		//
+		// We have this inner block here because the job
+		// should not be allowed to start if the schedd's 
+		// requirements failed to evaluate for some reason
+		//
+		if ( scheddAd.EvalBool( universeExp, job, requirements ) ) {
+			requirementsMet = (bool)requirements;
+			if ( ! requirements ) {
+				dprintf( D_FULLDEBUG, "%s evaluated to false for job %d.%d. "
+									"Unable to start job.\n",
+									universeExp, id.cluster, id.proc );
+			}
+		} else {
+			requirementsMet = false;
+			dprintf( D_ALWAYS, "The schedd's %s attribute could "
+							"not be evaluated for job %d.%d. "
+							"Unable to start job\n",
+							universeExp, id.cluster, id.proc );
+		}
+	}
+
+	if ( ! requirementsMet) {
+		if (IsDebugVerbose(D_ALWAYS)) {
+			char *exp = sPrintExpr( scheddAd, universeExp );
+			if ( exp ) {
+				dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
+				free( exp );
+			}
+		}
+		return false;
+	}
+	//
+	// Job Requirements Evaluation
+	//
+	if ( job->LookupExpr( ATTR_REQUIREMENTS ) != NULL ) {
+			// Treat undefined/error as FALSE for job requirements, too.
+		if ( job->EvalBool(ATTR_REQUIREMENTS, &scheddAd, requirements) ) {
+			requirementsMet = (bool)requirements;
+			if ( !requirements ) {
+				dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d "
+							"evaluated to false. Unable to start job\n",
+							ATTR_REQUIREMENTS, id.cluster, id.proc );
+			}
+		} else {
+			requirementsMet = false;
+			dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d did "
+						"not evaluate. Unable to start job\n",
+						ATTR_REQUIREMENTS, id.cluster, id.proc );
+		}
+
+	}
+	//
+	// If the job's requirements failed up above, we will want to 
+	// print the expression to the user and return
+	//
+	if ( ! requirementsMet) {
+		if (IsDebugVerbose(D_ALWAYS)) {
+			char *exp = sPrintExpr( *job, ATTR_REQUIREMENTS );
+			if ( exp ) {
+				dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
+				free( exp );
+			// This is too verbose.
+			//dprintf(D_FULLDEBUG,"Schedd ad that failed to match:\n");
+			//dPrintAd(D_FULLDEBUG, scheddAd);
+			//dprintf(D_FULLDEBUG,"Job ad that failed to match:\n");
+			//dPrintAd(D_FULLDEBUG, *job);
+			}
+		}
+		return false;
+	}
+
+	// If we got this far, the job is eligible to run
+	return true;
 }
 
 shadow_rec*
@@ -9865,40 +9896,6 @@ Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 	addRunnableJob( srec );
 	return srec;
 }
-
-
-shadow_rec*
-Scheduler::start_local_universe_job( PROC_ID* job_id )
-{
-	shadow_rec* srec = NULL;
-
-		// set our CurrentHosts to 1 so we don't consider this job
-		// still idle.  we'll actually mark it as status RUNNING once
-		// we spawn the starter for it.  unlike other kinds of jobs,
-		// local universe jobs don't have to worry about having the
-		// status wrong while the job sits in the RunnableJob queue,
-		// since we're not negotiating for them at all... 
-	SetAttributeInt( job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1 );
-
-		//
-		// If we start a local universe job, the LocalUniverseJobsRunning
-		// tally isn't updated so we have no way of knowing whether we can
-		// start the next job. This would cause a ton of local jobs to
-		// just get fired off all at once even though there was a limit set.
-		// So instead, I am following Derek's example with the scheduler 
-		// universe and updating our running tally
-		// Andy - 11.14.2004 - pavlo@cs.wisc.edu
-		//	
-	if ( this->LocalUniverseJobsIdle > 0 ) {
-		this->LocalUniverseJobsIdle--;
-	}
-	this->LocalUniverseJobsRunning++;
-
-	srec = add_shadow_rec( 0, job_id, CONDOR_UNIVERSE_LOCAL, NULL, -1 );
-	addRunnableJob( srec );
-	return srec;
-}
-
 
 void
 Scheduler::addRunnableJob( shadow_rec* srec )
@@ -16181,14 +16178,16 @@ Scheduler::claimLocalStartd()
  * @param loading_job_queue - true if this function is called when reloading the job queue
  **/
 void
-Scheduler::indexAJob( JobQueueJob * /*jobAd*/, bool /*loading_job_queue*/ )
+Scheduler::indexAJob( JobQueueJob* jobAd, bool /*loading_job_queue*/ )
 {
-#if 0 // enable this code to keep an index of LocalJobIds
 	int univ = jobAd->Universe();
-	if (univ == CONDOR_UNIVERSE_LOCAL || univ == CONDOR_UNIVERSE_SCHEDULER) {
-		LocalJobIds.insert(jobAd->jid);
+	if ( univ == CONDOR_UNIVERSE_LOCAL || univ == CONDOR_UNIVERSE_SCHEDULER ) {
+		int job_prio = 0;
+		// If JobPrio is not set in the job ad, it will default to 0
+		jobAd->LookupInteger( ATTR_JOB_PRIO, job_prio );
+		LocalJobRec rec = LocalJobRec( job_prio, jobAd->jid );
+		LocalJobsPrioQueue.insert( rec );
 	}
-#endif
 }
 
 /**
@@ -16197,11 +16196,16 @@ Scheduler::indexAJob( JobQueueJob * /*jobAd*/, bool /*loading_job_queue*/ )
  * @param jobAd - the new job to be added to the cronTabs table
  **/
 void
-Scheduler::removeJobFromIndexes( const JOB_ID_KEY& /*job_id*/ )
+Scheduler::removeJobFromIndexes( const JOB_ID_KEY& job_id, int job_prio )
 {
-#if 0 // enable this code to keep an index of LocalJobIds
-	LocalJobIds.erase(job_id);
-#endif
+	// TODO: Figure out where SchedulerJobsRunning gets decremented
+	dprintf(D_ALWAYS, "MRC [Scheduler::removeJobFromIndexes] removing job_id = %s with job_prio = %d\n", std::string(job_id).c_str(), job_prio);
+	LocalJobRec rec = LocalJobRec( job_prio, job_id );
+	LocalJobsPrioQueue.erase( rec );
+	for (std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); ++it) {
+		dprintf(D_ALWAYS, "MRC [Scheduler::removeJobFromIndexes] \tafter removal, job = %s is still in the queue\n", std::string(it->job_id).c_str());
+	}	
+	return;
 }
 
 /**
