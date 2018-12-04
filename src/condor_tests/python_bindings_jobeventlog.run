@@ -82,7 +82,9 @@ def compareEvent(event, count):
 		18: { "Reason": "Cause it could" },
 		19: { "RMContact": "ResourceUp" },
 		20: { "RMContact": "ResourceDown" },
-		21: { "ErrorMsg": "this is the write test error string", "Daemon": "<write" },
+		21: { "ErrorMsg": "this is the write test error string",
+			   "Daemon": "<write job log test>",
+			   "ExecuteHost": standardHost },
 		22: { "EventDescription": "Job disconnected, attempting to reconnect",
 		      "StartdName": "ThatMachine", "DisconnectReason": "TL;DR",
 		      "StartdAddr": "<128.105.165.12:32780>" },
@@ -114,7 +116,7 @@ def compareEvent(event, count):
 				Utils.TLog("Event {0}'s {1} is missing".format(count, attr))
 				return False
 			if event[attr] != expectedEventAttributes[count][attr]:
-				Utils.TLog("Event {3}'s {0} was '{2}', not '{1}'".format(attr, expectedEventAttributes[count][attr], event[attr], count))
+				Utils.TLog("Event {0}'s {1} was '{2}', not '{3}'".format(count, attr, event[attr], expectedEventAttributes[count][attr]))
 				return False
 		d = set(event.keys()) - set(expectedEventAttributes[count].keys()) - set(boringAttrs)
 		if d:
