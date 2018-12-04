@@ -59,4 +59,4 @@
 +
 +PROCD_ADDRESS = $(RUN)/procd_pipe
 +
-+##  Install the condor-single-node package to run HTCondor on a single node
++##  Install the minihtcondor package to run HTCondor on a single node
