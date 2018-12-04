@@ -559,6 +559,7 @@ main( int argc, const char *argv[] )
 
 	MyName = condor_basename(argv[0]);
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	//TODO:this should go away, and the owner name be placed in ad by schedd!

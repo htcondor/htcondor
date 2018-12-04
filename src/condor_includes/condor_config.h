@@ -347,6 +347,7 @@ extern "C" {
 	#define CONFIG_OPT_DEPRECATION_WARNINGS 0x400 // warn about obsolete syntax/elements
 	#define CONFIG_OPT_SUBMIT_SYNTAX 0x1000 // allow +Attr and -Attr syntax like submit files do.
 	bool config();
+	int set_priv_initialize(void); // duplicated here for 8.8.0 to minimize code churn. actual function is in uids.cpp
 	bool config_ex(int opt);
 	bool config_host(const char* host, int config_options);
 	bool validate_config(bool abort_if_invalid, int opt);

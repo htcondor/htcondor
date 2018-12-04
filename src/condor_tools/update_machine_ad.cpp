@@ -42,6 +42,8 @@ void usage( const char * self ) {
 }
 
 int main( int argc, char ** argv ) {
+
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	char * name = NULL, * pool = NULL, * file = NULL;

@@ -343,6 +343,7 @@ main( int argc, char *argv[] )
 #endif
 
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );

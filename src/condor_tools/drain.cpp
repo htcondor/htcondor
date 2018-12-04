@@ -74,6 +74,7 @@ main( int argc, char *argv[] )
 
 	myDistro->Init( argc, argv );
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
 	dprintf_OnExitDumpOnErrorBuffer(stderr);

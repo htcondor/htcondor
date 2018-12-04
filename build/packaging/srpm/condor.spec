@@ -587,14 +587,15 @@ Requires: %name = %version-%release
 Includes all the files necessary to support running standard universe jobs.
 %endif
 
-%package single-node
-Summary: Conguration for a single-node (personal) HTCondor
+%package -n minicondor
+Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
+Requires: python2-condor = %version-%release
 
-%description single-node
+%description -n minicondor
 This example configuration is good for trying out HTCondor for the first time.
-It only configures the IPv4 loopback address, turns on basic security and
+It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
 %if %uw_build
@@ -895,7 +896,7 @@ cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_
 populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-small-shadow
 %endif
 
-populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-single-node
+populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/50ec2.config
 
 %if %qmf
@@ -1599,8 +1600,8 @@ rm -rf %{buildroot}
 %endif
 %endif
 
-%files single-node
-%config(noreplace) %_sysconfdir/condor/config.d/00-single-node
+%files -n minicondor
+%config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
 
 
 %if %uw_build

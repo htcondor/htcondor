@@ -135,7 +135,7 @@ index 716edbe07c..967e029189 100644
 @@ -60,3 +60,9 @@
  +PROCD_ADDRESS = $(RUN)/procd_pipe
  +
- +##  Install the condor-single-node package to run HTCondor on a single node
+ +##  Install the minihtcondor package to run HTCondor on a single node
 ++
 ++# Don't phone home
 ++CONDOR_DEVELOPERS = NONE

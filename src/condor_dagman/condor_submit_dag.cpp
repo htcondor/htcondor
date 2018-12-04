@@ -90,6 +90,7 @@ int main(int argc, char *argv[])
 		// libraries which use it will write to the right place...
 	dprintf_set_tool_debug("TOOL", 0);
 	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 		// Initialize our Distribution object -- condor vs. hawkeye, etc.
