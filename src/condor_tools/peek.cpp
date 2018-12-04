@@ -138,6 +138,7 @@ HTCondorPeek::parse_args(int argc, char *argv[])
 	std::string job_id;
 
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	for (int i=1; i<argc; i++) {

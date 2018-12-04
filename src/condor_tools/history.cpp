@@ -188,6 +188,7 @@ main(int argc, const char* argv[])
   int i;
   myDistro->Init( argc, argv );
 
+  set_priv_initialize(); // allow uid switching if root
   config();
 
   readfromfile = ! param_defined("SCHEDD_HOST");

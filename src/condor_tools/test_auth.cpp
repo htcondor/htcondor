@@ -112,6 +112,7 @@ main( int argc, char* argv[] )
 		get_mySubSystem()->setName( "DAEMON-TOOL" );
 	}
 
+	set_priv_initialize(); // allow uid switching if root
 	config_ex( CONFIG_OPT_WANT_META | CONFIG_OPT_NO_EXIT );
 
 	int failures = 0;

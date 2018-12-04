@@ -135,6 +135,7 @@ int main( int argc, char *argv[] )
 	bool many_connections = false;
 
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	bool use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", true );

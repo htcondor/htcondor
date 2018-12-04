@@ -62,4 +62,4 @@
 +
 +SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = /etc/condor/condor_ssh_to_job_sshd_config_template
 +
-+##  Install the condor-single-node package to run HTCondor on a single node
++##  Install the minicondor package to run HTCondor on a single node
