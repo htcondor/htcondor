@@ -95,6 +95,7 @@ main( int argc, char *argv[] )
 
 	myDistro->Init( argc, argv );
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	cmd = getCommandFromArgv( argc, argv );

@@ -371,6 +371,7 @@ int main( int argc, char *argv[] )
 	Daemon * daemon = NULL;
 
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	for( i=1; i<argc; i++ ) {

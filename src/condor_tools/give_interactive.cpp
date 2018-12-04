@@ -423,6 +423,7 @@ main(int argc, char *argv[])
 
 	slot_counts = new HashTable <std::string, int> (hashFunction);
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	// parse command line args
