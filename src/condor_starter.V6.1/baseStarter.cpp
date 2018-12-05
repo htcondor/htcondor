@@ -31,6 +31,7 @@
 #include "mpi_comrade_proc.h"
 #include "parallel_proc.h"
 #include "vm_proc.h"
+#include "ec2_proc.h"
 #include "my_hostname.h"
 #include "internet.h"
 #include "util_lib_proto.h"
@@ -1211,7 +1212,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	}
 	if (!s->code(file_count) || !s->end_of_message())
 	{
-		dprintf(D_ALWAYS, "Failed to send file count %ld for peeking at logs.\n", file_count);
+		dprintf(D_ALWAYS, "Failed to send file count %lu for peeking at logs.\n", file_count);
 	}
 	return file_count == file_list.size();
 }
@@ -2362,15 +2363,15 @@ CStarter::SpawnJob( void )
 		// userproc class, and actually start the job.
 	ClassAd* jobAd = jic->jobClassAd();
 	if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, jobUniverse ) < 1 ) {
-		dprintf( D_ALWAYS, 
-				 "Job doesn't specify universe, assuming VANILLA\n" ); 
+		dprintf( D_ALWAYS,
+				 "Job doesn't specify universe, assuming VANILLA\n" );
 	}
 	dprintf( D_ALWAYS, "Starting a %s universe job with ID: %d.%d\n",
 			 CondorUniverseName(jobUniverse), jic->jobCluster(),
 			 jic->jobProc() );
 
 	UserProc *job;
-	switch ( jobUniverse )  
+	switch ( jobUniverse )
 	{
 		case CONDOR_UNIVERSE_LOCAL:
 		case CONDOR_UNIVERSE_VANILLA: {
@@ -2403,22 +2404,28 @@ CStarter::SpawnJob( void )
 			}
 			break;
 		}
-		case CONDOR_UNIVERSE_VM:
-			job = new VMProc( jobAd );
+		case CONDOR_UNIVERSE_VM: {
+			bool wantStarterEC2 = false;
+			jobAd->LookupBool( "WantStarterEC2", wantStarterEC2 );
+			if( wantStarterEC2 ) {
+				job = new EC2Proc( jobAd );
+			} else {
+				job = new VMProc( jobAd );
+			}
 			ASSERT(job);
-			break;
+			} break;
 		default:
 			dprintf( D_ALWAYS, "Starter doesn't support universe %d (%s)\n",
-					 jobUniverse, CondorUniverseName(jobUniverse) ); 
+					 jobUniverse, CondorUniverseName(jobUniverse) );
 			return FALSE;
 	} /* switch */
 
 	if (job->StartJob()) {
 		m_job_list.Append(job);
-		
+
 			//
 			// If the Starter received a Suspend call while the
-			// job was being deferred or preparing, we need to 
+			// job was being deferred or preparing, we need to
 			// suspend it right away.
 			//
 			// I am not sure if it's ok to do this right after
