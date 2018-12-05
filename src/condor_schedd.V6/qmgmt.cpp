@@ -3122,6 +3122,9 @@ int DestroyProc(int cluster_id, int proc_id)
 		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
 	}
 
+	// Remove the job from its autocluster
+	scheduler.autocluster.removeFromAutocluster(*ad);
+
 	// Append to history file
 	AppendHistory(ad);
 
@@ -4002,7 +4005,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		// give the autocluster code a chance to invalidate (or rebuild)
 		// based on the changed attribute.
-		scheduler.autocluster.preSetAttribute(*job, attr_name, attr_value, flags);
+		if (scheduler.autocluster.preSetAttribute(*job, attr_name, attr_value, flags)) {
+			DirtyPrioRecArray();
+			dprintf(D_FULLDEBUG,
+					"Prioritized runnable job list will be rebuilt, because "
+					"ClassAd attribute %s=%s changed\n",
+					attr_name,attr_value);
+		}
 	}
 
 	// This block handles rounding of attributes.

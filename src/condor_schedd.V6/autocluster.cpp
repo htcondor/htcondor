@@ -610,7 +610,7 @@ int AutoCluster::getAutoClusterid(JobQueueJob *job)
 	return cur_id;
 }
 
-void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const char * /*value*/, int /*flags*/)
+bool AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const char * /*value*/, int /*flags*/)
 {
 	// If any of the attrs used to create the signature are
 	// changed, then delete the ATTR_AUTO_CLUSTER_ID, since
@@ -628,14 +628,29 @@ void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const cha
 			sigAttrs = tmp.c_str();
 		} else {
 			// is not a string and does not evaluate to one.
-			return;
+			return false;
 		}
 
 		if (is_attr_in_attr_list(attr, sigAttrs)) {
-			job.Delete(ATTR_AUTO_CLUSTER_ID);
-			job.Delete(ATTR_AUTO_CLUSTER_ATTRS);
-			job.autocluster_id = -1;
+			removeFromAutocluster(job);
+			return true;
 		}
+	}
+	return false;
+}
+
+void AutoCluster::removeFromAutocluster(JobQueueJob &job)
+{
+	if (job.autocluster_id >= 0) {
+#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+		JobIdSetMap::iterator it = cluster_use.find(job.autocluster_id);
+		if (it != cluster_use.end()) {
+			it->second.erase(job.jid);
+		}
+#endif
+		job.Delete(ATTR_AUTO_CLUSTER_ID);
+		job.Delete(ATTR_AUTO_CLUSTER_ATTRS);
+		job.autocluster_id = -1;
 	}
 }
 
