@@ -138,7 +138,7 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 // lookup the autocluster for a job (assumes job.autocluster_id is valid)
 JobCluster::JobIdSetMap::iterator JobCluster::find_job_id_set(JobQueueJob & job)
 {
-	// use the job's cluster_id field to quickly lookup the old JobIdSetMap
+	// use the job's autocluster_id field to quickly lookup the old JobIdSetMap
 	// if that set map actually still contains the job, return it.
 	JobIdSetMap::iterator it = cluster_use.find(job.autocluster_id);
 	if (it != cluster_use.end() && it->second.contains(job.jid)) {
@@ -312,9 +312,7 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 			JobIdSetMap::iterator jit = find_job_id_set(job);
 			if (jit != cluster_use.end()) {
 				int old_id = jit->first;
-				if (old_id == cur_id) {
-					jit->second.insert(job.jid);
-				} else {
+				if (old_id != cur_id) {
 					jit->second.erase(job.jid);
 					if (jit->second.empty()) { cluster_gone.insert(old_id); }
 					cluster_use[cur_id].insert(job.jid);
