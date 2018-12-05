@@ -35,7 +35,7 @@
 #include "prioritysimplelist.h"
 #include "throttle_by_category.h"
 #include "MyString.h"
-#include "dagman_recursive_submit.h"
+#include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
 
 // Which layer of splices do we want to lift?
@@ -837,7 +837,10 @@ class Dag {
 	HashTable<MyString, Dag*> _splices;
 
 	// A reference to something the dagman passes into the constructor
-  	StringList& _dagFiles;
+	  StringList& _dagFiles;
+	  
+	// Internal instance of a DagmanUtils object
+	DagmanUtils _dagmanUtils;
 
 	/** Print a numbered list of the DAG files.
 	    @param The list of DAG files being run.

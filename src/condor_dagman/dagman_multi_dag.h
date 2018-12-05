@@ -33,6 +33,7 @@ const int MAX_RESCUE_DAG_DEFAULT = 100;
 	// is normally configured lower).
 const int ABS_MAX_RESCUE_DAG_NUM = 999;
 
+#if 0 // Moved to dagman_utils
 /** Get the configuration file (if any) and the submit append commands
 	(if any), specified by the given list of DAG files.  If more than one
 	DAG file specifies a configuration file, they must specify the same file.
@@ -57,6 +58,7 @@ bool GetConfigAndAttrs( /* const */ StringList &dagFiles, bool useDagDir,
 	@return true if the operation succeeded; otherwise false
 */
 bool MakePathAbsolute(MyString &filePath, MyString &errMsg);
+#endif
 
 /** Finds the number of the last existing rescue DAG file for the
 	given "primary" DAG.

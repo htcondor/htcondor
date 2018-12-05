@@ -101,7 +101,14 @@ public:
 
 	int *makeCpuAffinityMask(int slotId);
 
+	virtual bool SupportsPIDNamespace() { return true;}
+
 protected:
+
+	ReliSock sshListener;
+	void SetupSingularitySsh();
+	int AcceptSingSshClient(Stream *stream);
+	int SingEnterReaper( int pid, int status );
 
 	bool is_suspended;
 	bool is_checkpointed;
@@ -115,6 +122,7 @@ protected:
 private:
 
 	bool m_using_priv_sep;
+	int singReaperId;
 
 #if defined ( WIN32 )
     OwnerProfile owner_profile_;

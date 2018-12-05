@@ -379,6 +379,7 @@ main(int argc, const char* argv[])
   const char * pcolon = NULL; // used to parse -arg:opt arguments
 
   myDistro->Init( argc, argv );
+  set_priv_initialize(); // allow uid switching if root
   config();
 
   MinLastUsageTime=time(0)-60*60*24;  // Default to show only users active in the last day

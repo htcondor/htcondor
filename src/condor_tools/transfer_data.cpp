@@ -182,6 +182,7 @@ main(int argc, char *argv[])
 
 	myDistro->Init( argc, argv );
 	MyName = condor_basename(argv[0]);
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 #if !defined(WIN32)

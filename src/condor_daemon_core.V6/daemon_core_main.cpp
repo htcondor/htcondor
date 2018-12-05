@@ -1892,6 +1892,8 @@ int dc_main( int argc, char** argv )
 	bool	done;
 
 
+	set_priv_initialize();
+
 	condor_main_argc = argc;
 	condor_main_argv = (char **)malloc((argc+1)*sizeof(char *));
 	for(i=0;i<argc;i++) {

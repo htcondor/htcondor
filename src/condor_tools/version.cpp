@@ -88,6 +88,7 @@ main(int argc, char *argv[])
 
 	char *path=NULL, *fullpath=NULL, *vername=NULL, *platform=NULL;
 	if( use_syscall_lib ) {
+		set_priv_initialize(); // allow uid switching if root
 		config();
 		path = param( "LIB" );
 		if( path == NULL ) {

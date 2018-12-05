@@ -1326,6 +1326,7 @@ void init_condor_config()
 		// is no global config file, so tell the config subsystem that.
 		config_continue_if_no_config(true);
 	}
+	set_priv_initialize(); // allow uid switching if root
 	config();
 }
 

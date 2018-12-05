@@ -33,18 +33,16 @@
 #include <sys/socket.h>
 #endif
 #include "write_user_log.h"
+#include "classad/classad_distribution.h"
 #include "my_username.h"
 
 struct hostent *NameEnt;
-/*
-**#define NUL       "\0";
-*/
 
 static void simulateUsage(struct rusage &ru) {
 	memset(&ru, 0, sizeof(ru));
-	// put in some 'reasonble' values here??
+	ru.ru_utime.tv_sec = 93784;
+	ru.ru_stime.tv_sec = 454028;
 }
-
 
 int writeSubmitEvent(WriteUserLog &logFile)
 {
@@ -109,6 +107,11 @@ int writeExecutableErrorEvent(WriteUserLog &logFile)
 int writeCheckpointedEvent(WriteUserLog &logFile)
 {
 	CheckpointedEvent checkpoint;
+	checkpoint.sent_bytes = 11;
+	rusage ru;
+	simulateUsage(ru);
+	checkpoint.run_local_rusage = ru;
+	checkpoint.run_remote_rusage = ru;
 	if ( !logFile.writeEvent(&checkpoint) ) {
 		printf("Complain about bad checkpoint write\n");
 		exit(1);
@@ -133,6 +136,15 @@ int writeJobEvictedEvent(WriteUserLog &logFile)
 	JobEvictedEvent jobevicted;
 	jobevicted.setReason("It misbehaved!");
 	jobevicted.setCoreFile("corefile");
+	rusage ru;
+	simulateUsage(ru);
+	jobevicted.run_local_rusage = ru;
+	jobevicted.run_remote_rusage = ru;
+	jobevicted.sent_bytes = 1;
+	jobevicted.recvd_bytes = 2;
+	jobevicted.terminate_and_requeued = true;
+	jobevicted.normal = true;
+	jobevicted.checkpointed = false;
 	if ( !logFile.writeEvent(&jobevicted) ) {
 	        printf("Complain about bad jobevicted write\n");
 			exit(1);
@@ -151,11 +163,15 @@ int writeJobTerminatedEvent(WriteUserLog &logFile)
 	jobterminated.returnValue = 4;
 	jobterminated.run_remote_rusage = ru;
 	jobterminated.total_remote_rusage = ru;
+	// Should local usage always be 0?
+	jobterminated.run_local_rusage = ru;
+	jobterminated.total_local_rusage = ru;
 	jobterminated.recvd_bytes = 200000;
 	jobterminated.sent_bytes = 400000;
 	jobterminated.total_recvd_bytes = 800000;
 	jobterminated.total_sent_bytes = 900000;
 	jobterminated.setCoreFile( "badfilecore" );
+	jobterminated.normal = false;
 	if ( !logFile.writeEvent(&jobterminated) ) {
 	        printf("Complain about bad jobterminated write\n");
 			exit(1);
@@ -168,6 +184,16 @@ int writeNodeTerminatedEvent(WriteUserLog &logFile)
 	struct rusage ru;
 	simulateUsage(ru);
 
+	classad::ClassAd use;
+	use.InsertAttr("RequestMemory", 44);
+	use.InsertAttr("Memory", 55);
+	use.InsertAttr("MemoryUsage", 33);
+
+	use.InsertAttr("RequestPets", 1);
+	use.InsertAttr("Pets", 1);
+	use.InsertAttr("PetsUsage", 0.5);
+	use.InsertAttr("AssignedPets", "Spot");
+
 	NodeTerminatedEvent nodeterminated;
 	nodeterminated.node = 44;
 	nodeterminated.normal = false;
@@ -175,11 +201,17 @@ int writeNodeTerminatedEvent(WriteUserLog &logFile)
 	nodeterminated.returnValue = 4;
 	nodeterminated.run_remote_rusage = ru;
 	nodeterminated.total_remote_rusage = ru;
+	// Should local usage always be 0?
+	nodeterminated.run_local_rusage = ru;
+	nodeterminated.total_local_rusage = ru;
 	nodeterminated.recvd_bytes = 200000;
 	nodeterminated.sent_bytes = 400000;
 	nodeterminated.total_recvd_bytes = 800000;
 	nodeterminated.total_sent_bytes = 900000;
 	nodeterminated.setCoreFile( "badfilecore" );
+
+	nodeterminated.initUsageFromAd(use);
+
 	if ( !logFile.writeEvent(&nodeterminated) ) {
 	        printf("Complain about bad nodeterminated write\n");
 			exit(1);
@@ -250,6 +282,9 @@ int writeJobImageSizeEvent(WriteUserLog &logFile)
 {
 	JobImageSizeEvent jobimagesizeevent;
 	jobimagesizeevent.image_size_kb = 128;
+	jobimagesizeevent.resident_set_size_kb = 129;
+	jobimagesizeevent.proportional_set_size_kb = 130;
+	jobimagesizeevent.memory_usage_mb = 131;
 	if ( !logFile.writeEvent(&jobimagesizeevent) ) {
 		printf("Complain about bad jobimagesizeevent write\n");
 		exit(1);
@@ -543,7 +578,9 @@ main(int argc, const char * argv[])
 	const char * logname = "local.log";
 	if (argc > 1) { logname = argv[1]; }
 
-	WriteUserLog logFile(owner, domain, logname, 0, 0, 0, false);
+	// The cluster and proc IDs are arbitrary but should be non-zero.  The
+	// subproc ID is always (and must be) zero.
+	WriteUserLog logFile(owner, domain, logname, 14, 55, 0, false);
 
 	writeSubmitEvent(logFile);
 	writeExecuteEvent(logFile);

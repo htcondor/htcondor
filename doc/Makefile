@@ -123,20 +123,26 @@ release : ref.pdf ref.html
 
 MANUAL_SOURCES = \
     man-macros.tex \
-    man-pages/man.tex man-pages/tool_common.tex man-pages/bosco_cluster.tex man-pages/bosco_findplatform.tex man-pages/bosco_install.tex man-pages/bosco_ssh_start.tex man-pages/bosco_start.tex man-pages/bosco_stop.tex man-pages/bosco_uninstall.tex man-pages/condor_advertise.tex man-pages/condor_annex.tex man-pages/condor_check_userlogs.tex man-pages/condor_checkpoint.tex man-pages/condor_chirp.tex man-pages/condor_cod.tex man-pages/condor_compile.tex man-pages/condor_config_val.tex man-pages/condor_configure.tex man-pages/condor_continue.tex man-pages/condor_convert_history.tex man-pages/condor_dagman.tex man-pages/condor_dagman_metrics_reporter.tex man-pages/condor_drain.tex man-pages/condor_fetchlog.tex man-pages/condor_findhost.tex man-pages/condor_gather_info.tex man-pages/condor_gpu_discovery.tex man-pages/condor_history.tex man-pages/condor_hold.tex man-pages/condor_install.tex man-pages/condor_job_router_info.tex man-pages/condor_master.tex man-pages/condor_off.tex man-pages/condor_on.tex man-pages/condor_ping.tex man-pages/condor_pool_job_report.tex man-pages/condor_power.tex man-pages/condor_preen.tex man-pages/condor_prio.tex man-pages/condor_procd.tex man-pages/condor_q.tex man-pages/condor_qedit.tex man-pages/condor_qsub.tex man-pages/condor_reconfig.tex man-pages/condor_release.tex man-pages/condor_reschedule.tex man-pages/condor_restart.tex man-pages/condor_rm.tex man-pages/condor_rmdir.tex man-pages/condor_router_history.tex man-pages/condor_router_q.tex man-pages/condor_router_rm.tex man-pages/condor_run.tex man-pages/condor_set_shutdown.tex man-pages/condor_ssh_to_job.tex man-pages/condor_sos.tex man-pages/condor_stats.tex man-pages/condor_status.tex man-pages/condor_store_cred.tex man-pages/condor_submit.tex man-pages/submitcmds.tex man-pages/condor_submit_dag.tex man-pages/condor_suspend.tex man-pages/condor_tail.tex man-pages/condor_top.tex man-pages/condor_transfer_data.tex man-pages/condor_transform_ads.tex man-pages/condor_update_machine_ad.tex man-pages/condor_updates_stats.tex man-pages/condor_urlfetch.tex man-pages/condor_userlog.tex man-pages/condor_userprio.tex man-pages/condor_vacate.tex man-pages/condor_vacate_job.tex man-pages/condor_version.tex man-pages/condor_wait.tex man-pages/condor_who.tex man-pages/gidd_alloc.tex man-pages/procd_ctl.tex man-pages/condor_now.tex
+	$(wildcard man-pages/*.tex)
+
+# Note that the wildcard glob-expansion may pick up more latex source files
+# than we actually include, but that's OK, as this make macro is just used
+# for determining rebuild depencies, it doesn't define what to actually
+# build into the manual.  Don't wildcard the document root, since those
+# source files are where we do define what's actually built into the manual.
 
 LATEX_SOURCES = $(MANUAL_SOURCES) \
                 condor-macros.sty \
                 symbol.tex license.tex faq.tex \
-                admin-man/if-else.tex admin-man/function-macros.tex admin-man/admin.tex admin-man/intro.tex admin-man/install.tex admin-man/install-windows.tex admin-man/configure-intro.tex admin-man/if-else.tex admin-man/function-macros.tex admin-man/configure-metaknobs.tex admin-man/configure.tex admin-man/userprio.tex admin-man/policy.tex admin-man/multi-core.tex admin-man/security.tex admin-man/networking.tex admin-man/ports.tex admin-man/shared-port-daemon.tex admin-man/multiple-interfaces.tex admin-man/ccb.tex admin-man/tcp-update.tex admin-man/ipv6.tex admin-man/ckpt-server.tex admin-man/daemoncore.tex admin-man/monitoring.tex admin-man/absent.tex admin-man/high-availability.tex admin-man/ha.tex admin-man/special.tex admin-man/afs.tex admin-man/url-transfer.tex admin-man/multiple-platforms.tex admin-man/full-condor-compile.tex admin-man/kbdd.tex admin-man/condor-view-server.tex admin-man/virtual-machines.tex admin-man/dedicated.tex admin-man/backfill.tex admin-man/PID-namespaces.tex admin-man/group-tracking.tex admin-man/limits.tex admin-man/limits-cgroup.tex admin-man/concurrency.tex admin-man/java.tex admin-man/vm.tex admin-man/singularity.tex admin-man/power.tex \
-                clouds/cloud-computing.tex clouds/introduction.tex clouds/user-guide.tex clouds/customization.tex clouds/aws.tex clouds/azure.tex clouds/gcp.tex clouds/config.tex \
-                contrib/contrib.tex contrib/hdfs.tex contrib/condor-view-client.tex contrib/logview.tex \
-                grids/grid-computing.tex grids/intro.tex grids/flocking.tex grids/grid-universe.tex grids/condor-c.tex grids/condor-g.tex grids/using.tex grids/grid-monitor.tex grids/nordugrid.tex grids/unicore.tex grids/batch.tex grids/amazon.tex grids/gce.tex grids/cream.tex grids/boinc.tex grids/grid-matchmaking.tex grids/job_router.tex \
-                misc/misc.tex misc/classad.tex misc/ckpt.tex misc/cod.tex misc/hooks.tex misc/job-hooks.tex misc/logging.tex misc/attributes.tex misc/jobad.tex misc/machad.tex misc/masterad.tex misc/scheddad.tex misc/negotiatorad.tex misc/submitterad.tex misc/defragad.tex misc/collectorad.tex misc/statsattributes.tex misc/numbers.tex misc/API.tex misc/pythonbindings.tex misc/chirp.tex misc/user-log.tex misc/commandline.tex misc/drmaa.tex \
-                overview/overview.tex overview/contributions.tex \
-                platforms/platforms.tex platforms/linux.tex platforms/windows.tex platforms/macosx.tex \
-                user-man/limitations.tex user-man/user.tex user-man/limitations.tex user-man/filetransfer.tex user-man/interactive.tex user-man/managing.tex user-man/java.tex user-man/parallel.tex user-man/dagman.tex user-man/vm.tex user-man/docker.tex user-man/time-scheduling.tex \
-                version-history/history.tex version-history/8-7.history.tex version-history/upgradingto8-6.tex version-history/8-6.history.tex version-history/8-5.history.tex version-history/8-4.history.tex
+				$(wildcard admin-main/*.tex) \
+				$(wildcard clouds/*.tex) \
+                $(wildcard contrib/*.tex) \
+                $(wildcard grids/*.tex) \
+                $(wildcard misc/*.tex) \
+                $(wildcard overview/*.tex) \
+                $(wildcard platforms/*.tex) \
+                $(wildcard user-man/*.tex) \
+                $(wildcard version-history/*.tex)
 
 # Only the v8.7 branch requires the fourth run to remove the 'labels may
 # changed' warning.  We should figure out why.

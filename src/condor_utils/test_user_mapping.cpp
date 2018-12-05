@@ -50,7 +50,7 @@ bool dash_verbose = false;
 int fail_count;
 
 template <class c>
-bool within(YourString ys, c lb, c hb) { return false; }
+bool within(YourString /*ys*/, c /*lb*/, c /*hb*/) { return false; }
 
 template <> bool within(YourString ys, int lb, int hb) {
 	int v = atoi(ys.Value());

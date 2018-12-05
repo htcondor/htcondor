@@ -75,10 +75,6 @@ dnl
 # non-standard location of libtool.
 #ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
 
-if ENABLE_EXPLICIT_TEMPLATES
-  _libclassad_la_SOURCES = instantiations.cpp
-endif
-
 lib_LTLIBRARIES = libclassad.la
 
 nobase_include_HEADERS =						\
@@ -126,10 +122,6 @@ libclassad_la_LDFLAGS = -version-info 2:0:0
 MF_DEFINE_PROGRAM([cxi])
 
 MF_DEFINE_PROGRAM([classad_version])
-
-if ENABLE_EXPLICIT_TEMPLATES
-  _classad_functional_tester_SOURCES = test_instantiations.cpp
-endif
 
 MF_DEFINE_PROGRAM([classad_functional_tester],
   [$(_classad_functional_tester_SOURCES)])

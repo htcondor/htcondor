@@ -1450,6 +1450,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_READS, update_ad);
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITES, update_ad);
 
+    jobAd->CopyAttribute(ATTR_IO_WAIT, update_ad);
+
 	// FIXME: If we're convinced that we want a whitelist here (chirp
 	// would seem to make a mockery of that), we should at least rewrite
 	// all of the copies to be based on a table.

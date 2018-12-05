@@ -36,7 +36,8 @@ class CondorTest(object):
         if pc is None:
             pc = PersonalCondor( name, params, ordered_params )
             CondorTest._personal_condors[ name ] = pc
-        pc.Start()
+       	if not pc.Start():
+       		raise RuntimeError("Personal condor '{0}' failed to start.".format(name));
         return pc
 
     @staticmethod
@@ -44,11 +45,13 @@ class CondorTest(object):
         pc = CondorTest._personal_condors.get( name )
         if pc is not None:
             pc.Stop()
+            del CondorTest._personal_condors[name]
 
     @staticmethod
     def StopAllPersonalCondors():
         for name, pc in CondorTest._personal_condors.keys():
             pc.Stop()
+        CondorTest._personal_condors.clear()
 
 
     #
@@ -103,10 +106,11 @@ class CondorTest(object):
                 rv = TEST_FAILURE
 
         # Make sure the PCs are really gone.
-        Utils.TLog( "Waiting for personal condor(s) to finish stopping..." )
-        time.sleep(5)
-        for name, pc in CondorTest._personal_condors.items():
-            pc.FinishStopping()
+        if CondorTest._personal_condors:
+            Utils.TLog( "Waiting for personal condor(s) to finish stopping..." )
+            time.sleep(5)
+            for name, pc in CondorTest._personal_condors.items():
+                pc.FinishStopping()
 
         # If we're the last registered exit handler to raise an exception,
         # this would determine the interpreter's exit code, but instead

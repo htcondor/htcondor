@@ -108,6 +108,7 @@ main( int argc, char *argv[] )
 #endif
 
 	// initialize the config settings
+	set_priv_initialize(); // allow uid switching if root
 	config_ex(CONFIG_OPT_NO_EXIT);
 	
 		// Initialize things

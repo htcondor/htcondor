@@ -31,6 +31,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include "read_user_log.h"
+#include "classad/classad_distribution.h"
 
 struct hostent *NameEnt;
 /*
@@ -285,6 +286,30 @@ int main(int argc, char* argv[])
 					break;
 				  case ULOG_NODE_TERMINATED:
 					printf("Node Terminated .........\n");
+					{
+						NodeTerminatedEvent *info = dynamic_cast<NodeTerminatedEvent*>(e);
+						if (!info) {
+							printf("Event isn't a NodeTerminatedEvent!!!\n");
+							break;
+						}
+
+						// print a attribute which is always there
+						classad::ClassAd * ad = reinterpret_cast<classad::ClassAd*>(info->toClassAd());
+						if ( ! ad) { printf("toClassAd failed!\n"); break; }
+
+						int rmem = -1, memu = -1, mem = -1;
+						if (!ad->EvaluateAttrNumber("Memory", mem)) {
+							printf("\tMemory not found!\n");
+						}
+						if (!ad->EvaluateAttrNumber("MemoryUsage", memu)) {
+							printf("\tMemoryUsage not found!\n");
+						}
+						if (!ad->EvaluateAttrNumber("RequestMemory", rmem)) {
+							printf("\tRequestMemory not found!\n");
+						}
+						printf("\tMemory : requested %d, got %d, used %d\n", rmem, mem, memu);
+						delete ad;
+					}
 					break;
 				  case ULOG_POST_SCRIPT_TERMINATED:
 					printf("Post Script Terminated.........\n");

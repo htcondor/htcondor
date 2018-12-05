@@ -223,6 +223,7 @@ main( int argc, char *argv[] )
 		usage();
 	}
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 

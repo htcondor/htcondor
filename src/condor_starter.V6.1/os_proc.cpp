@@ -27,6 +27,12 @@
 #include "os_proc.h"
 #include "starter.h"
 #include "condor_daemon_core.h"
+
+#ifdef HAVE_SCM_RIGHTS_PASSFD
+#include "shared_port_scm_rights.h"
+#include "fdpass.h"
+#endif
+
 #include "condor_attributes.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
@@ -43,6 +49,7 @@
 #endif
 #include "classad_oldnew.h"
 #include "singularity.h"
+#include "find_child_proc.h"
 
 #include <sstream>
 
@@ -71,6 +78,9 @@ OsProc::OsProc( ClassAd* ad )
 
 OsProc::~OsProc()
 {
+	if ( daemonCore && daemonCore->SocketIsRegistered(&sshListener)) {
+		daemonCore->Cancel_Socket(&sshListener);
+	}
 }
 
 
@@ -500,9 +510,16 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	std::stringstream ss2;
 	ss2 << Starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
 	std::string execute_dir = ss2.str();
-	htcondor::Singularity::result sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd, execute_dir, job_env);
+	htcondor::Singularity::result sing_result; 
+	if (SupportsPIDNamespace()) {
+		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd, execute_dir, job_env);
+	} else {
+		sing_result = htcondor::Singularity::DISABLE;
+	}
+
 	if (sing_result == htcondor::Singularity::SUCCESS) {
 		dprintf(D_ALWAYS, "Running job via singularity.\n");
+		SetupSingularitySsh();
 		if (fs_remap) {
 			dprintf(D_ALWAYS, "Disabling filesystem remapping; singularity will perform these features.\n");
 			fs_remap = NULL;
@@ -666,6 +683,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	return 1;
 }
 
+int singExecPid;
+ReliSock *sns;
 
 bool
 OsProc::JobReaper( int pid, int status )
@@ -1003,4 +1022,147 @@ OsProc::makeCpuAffinityMask(int slotId) {
 
 	free(affinityParamResult);
 	return mask;
+}
+
+void
+OsProc::SetupSingularitySsh() {
+#ifdef LINUX
+	// Right now, this only works if we are root.
+	if (!can_switch_ids()) {
+		return;
+	}
+	
+	// First, create a unix domain socket that we can listen on
+	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (uds < 0) {
+		dprintf(D_ALWAYS, "Cannot create unix domain socket for docker ssh_to_job\n");
+		return;
+	}
+
+	// stuff the unix domain socket into a reli sock
+	sshListener.close();
+	sshListener.assignDomainSocket(uds);
+
+	// and bind it to a filename in the scratch directory
+	struct sockaddr_un pipe_addr;
+	memset(&pipe_addr, 0, sizeof(pipe_addr));
+	pipe_addr.sun_family = AF_UNIX;
+	unsigned pipe_addr_len;
+
+	std::string workingDir = Starter->GetWorkingDir();
+	std::string pipeName = workingDir + "/.docker_sock";	
+
+	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
+	pipe_addr_len = SUN_LEN(&pipe_addr);
+
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	int rc = bind(uds, (struct sockaddr *)&pipe_addr, pipe_addr_len);
+	if (rc < 0) {
+		dprintf(D_ALWAYS, "Cannot bind unix domain socket at %s for singularity ssh_to_job: %d\n", pipeName.c_str(), errno);
+		return;
+	}
+	}
+
+	listen(uds, 50);
+	sshListener._state = Sock::sock_special;
+	sshListener._special_state = ReliSock::relisock_listen;
+
+	// now register this socket so we get called when connected to
+	int rc;
+	rc = daemonCore->Register_Socket(
+		&sshListener,
+		"Singularity sshd listener",
+		(SocketHandlercpp)&OsProc::AcceptSingSshClient,
+		"OsProc::AcceptSingSshClient",
+		this);
+	ASSERT( rc >= 0 );
+
+
+	// and a reaper 
+	singReaperId = daemonCore->Register_Reaper("SingEnterReaper", (ReaperHandlercpp)&OsProc::SingEnterReaper,
+		"ExecReaper", this);
+
+#else
+	// Shut the compiler up
+	//(void)execReaperId;
+#endif
+}
+
+int
+OsProc::AcceptSingSshClient(Stream *stream) {
+#ifdef LINUX
+        int fds[3];
+        sns = ((ReliSock*)stream)->accept();
+
+        dprintf(D_ALWAYS, "Accepted new connection from ssh client for docker job\n");
+        fds[0] = fdpass_recv(sns->get_file_desc());
+        fds[1] = fdpass_recv(sns->get_file_desc());
+        fds[2] = fdpass_recv(sns->get_file_desc());
+
+	int pid = findChildProc(JobPid);
+	if (pid == -1) {
+		pid = JobPid; // hope for the best
+	}
+	ArgList args;
+	args.AppendArg("/usr/bin/nsenter");
+	args.AppendArg("-a"); // all namespaces
+	args.AppendArg("-t"); // target pid
+	char buf[32];
+	sprintf(buf,"%d", pid);
+	args.AppendArg(buf); // pid of running job
+
+	args.AppendArg("/usr/sbin/chroot");
+
+	args.AppendArg("--userspec");
+	sprintf(buf, "%d", get_user_uid());
+	args.AppendArg(buf);
+	
+	sprintf(buf,"/proc/%d/root", pid);
+	args.AppendArg(buf);
+
+	Env env;
+	MyString env_errors;
+	Starter->GetJobEnv(JobAd,&env,&env_errors);
+
+	singExecPid = daemonCore->Create_Process(
+		"/usr/bin/nsenter",
+		args,
+		PRIV_ROOT,
+		singReaperId,
+		FALSE,
+		FALSE,
+		&env,
+		".",
+		NULL,
+		NULL,
+		fds);
+	{
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+        }
+
+        dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
+
+
+
+
+	
+
+
+#endif
+return KEEP_STREAM;
+}
+
+int 
+OsProc::SingEnterReaper( int pid, int status ) {
+	dprintf(D_FULLDEBUG, "OsProc:singEnterReaper called with pid %d status = %d\n", pid, status);
+		
+	if (pid == singExecPid) {
+		delete sns;
+		return false;
+	} else {
+		dprintf(D_ALWAYS, "OsProc::singEnterReaper called for unknown pid %d\n", pid);
+	}
+	
+	return true;
 }

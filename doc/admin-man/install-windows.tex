@@ -330,30 +330,7 @@ the condition chosen for when to run jobs.]
      The path to the \Prog{Perl} executable.
      \end{description}
 
-\item[STEP 9: HDFS Settings.]
-     A radio button enables support for 
-     the Hadoop Distributed File System (HDFS).
-     When enabled, a further radio button specifies 
-     either name node or data node mode.
-
-     Running HDFS requires Java to be installed,
-     and HTCondor must know where the installation is.
-     Running HDFS in data node mode also requires the installation of Cygwin,
-     and the path to the Cygwin directory must be added to the 
-     global \Env{PATH} environment variable.
-
-     HDFS has several configuration options that must be filled in to be used.
-     \begin{description}
-     \item[Primary Name Node]
-     The full host name of the primary name node.
-     \item[Name Node Port]
-     The port that the name node is listening on.
-     \item[Name Node Web Port]
-     The port the name node's web interface is bound to.
-     It should be different from the name node's main port.
-     \end{description}
-
-\item[STEP 10: Choose Setup Type]
+\item[STEP 9: Choose Setup Type]
 
 \index{Windows!installation!location of files}
 The next step is where the destination of the HTCondor files will be

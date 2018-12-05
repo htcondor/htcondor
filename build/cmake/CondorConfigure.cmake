@@ -272,6 +272,10 @@ else()
 endif(PRE_RELEASE)
 add_definitions( -DCONDOR_VERSION="${VERSION}" )
 
+if(PACKAGEID)
+  add_definitions( -DPACKAGEID=${PACKAGEID} )
+endif(PACKAGEID)
+
 if( NOT BUILD_DATE )
   GET_DATE( BUILD_DATE )
 endif()
@@ -931,7 +935,6 @@ else ()
         add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
     endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.14.1)
 
         if (LINUX)
@@ -1063,10 +1066,6 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 if (HAVE_EXT_OPENSSL)
 	add_definitions(-DWITH_OPENSSL) # used only by SOAP
 endif(HAVE_EXT_OPENSSL)
-
-if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
-	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
-endif()
 
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.

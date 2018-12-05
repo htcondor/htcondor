@@ -47,7 +47,6 @@
 #include "extArray.h"
 #include "HashTable.h"
 #include <set>
-#include "dagman_recursive_submit.h"
 #include "dagman_metrics.h"
 
 using namespace std;
@@ -4085,7 +4084,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
+		if ( _dagmanUtils.runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
 					node->GetDirectory(), node->_effectivePriority,
 					isRetry ) != 0 ) {
 			++node->_submitTries;
