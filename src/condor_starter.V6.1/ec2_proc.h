@@ -40,6 +40,11 @@ class EC2Proc : public OsProc {
 		virtual bool Hold();
 		virtual bool ShutdownGraceful();
 		virtual bool ShutdownFast();
+
+	protected:
+		int jobAdPipeID;
+		int updateAdPipeID;
+		int stderrPipeID;
 };
 
 #endif /* _CONDOR_EC2_PROC_H */
