@@ -8909,7 +8909,8 @@ DaemonCore::Inherit( void )
 			char* c_session_id = Condor_Crypt_Base::randomHexKey();
 			char* c_session_key = Condor_Crypt_Base::randomHexKey();
 
-			m_family_session_id = c_session_id;
+			m_family_session_id = "family:";
+			m_family_session_id += c_session_id;
 			m_family_session_key = c_session_key;
 
 			free(c_session_id);

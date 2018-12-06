@@ -2580,7 +2580,7 @@ bool SecMan :: invalidateKey(const char * key_id)
 
 	session_cache->lookup(key_id, keyEntry);
 
-	if ( keyEntry && keyEntry->expiration() <= time(NULL) ) {
+	if ( keyEntry && keyEntry->expiration() <= time(NULL) && keyEntry->expiration() > 0 ) {
 		dprintf( D_SECURITY,
 				 "DC_INVALIDATE_KEY: security session %s %s expired.\n",
 				 key_id, keyEntry->expirationType() );

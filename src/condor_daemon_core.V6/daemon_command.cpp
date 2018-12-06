@@ -720,6 +720,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
 							   "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr ? return_addr : "(none)");
+					if( !strncmp( m_sid, "family:", strlen("family:") ) ) {
+						dprintf(D_ALWAYS, "  The remote daemon thinks that we are in the same family of Condor daemon processes as it, but I don't recognize its family security session.\n");
+						dprintf(D_ALWAYS, "  If we are in the same family of processes, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+					}
 
 					if( return_addr ) {
 						daemonCore->send_invalidate_session( return_addr, m_sid, &info_ad );
