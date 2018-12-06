@@ -365,11 +365,25 @@ public:
 			char const *who = "unknown";
 			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to start non-blocking update to %s.\n",who);
+			if (dc_collector) {
+				while (!dc_collector->pending_update_list.empty()) {
+					// UpdateData's dtor removes this from the pending update list
+					delete(dc_collector->pending_update_list.front());
+				}
+				ud = 0;	
+			}
 		}
 		else if(sock && !DCCollector::finishUpdate(ud->dc_collector,sock,ud->ad1,ud->ad2)) {
 			char const *who = "unknown";
 			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to send non-blocking update to %s.\n",who);
+			if (dc_collector) {
+				while (!dc_collector->pending_update_list.empty()) {
+					// UpdateData's dtor removes this from the pending update list
+					delete(dc_collector->pending_update_list.front());
+				}
+				ud = 0;	
+			}
 		}
 		else if(sock && sock->type() == Sock::reli_sock) {
 			// We keep the TCP socket around for sending more updates.
@@ -381,7 +395,9 @@ public:
 		if(sock) {
 			delete sock;
 		}
-		delete ud;
+		if (ud) {
+			delete ud;
+		}
 
 			// Now that we finished sending the update, we can start sequentially sending
 			// the pending updates.  We send these updates synchronously in sequence
