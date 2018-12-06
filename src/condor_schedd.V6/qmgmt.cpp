@@ -208,6 +208,7 @@ prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
 prio_rec	* PrioRec = &PrioRecArray[0];
 int			N_PrioRecs = 0;
 HashTable<int,int> *PrioRecAutoClusterRejected = NULL;
+int BuildPrioRecArrayTid = -1;
 
 static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
@@ -3121,6 +3122,9 @@ int DestroyProc(int cluster_id, int proc_id)
 		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
 	}
 
+	// Remove the job from its autocluster
+	scheduler.autocluster.removeFromAutocluster(*ad);
+
 	// Append to history file
 	AppendHistory(ad);
 
@@ -4005,7 +4009,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		// give the autocluster code a chance to invalidate (or rebuild)
 		// based on the changed attribute.
-		scheduler.autocluster.preSetAttribute(*job, attr_name, attr_value, flags);
+		if (scheduler.autocluster.preSetAttribute(*job, attr_name, attr_value, flags)) {
+			DirtyPrioRecArray();
+			dprintf(D_FULLDEBUG,
+					"Prioritized runnable job list will be rebuilt, because "
+					"ClassAd attribute %s=%s changed\n",
+					attr_name,attr_value);
+		}
 	}
 
 	// This block handles rounding of attributes.
@@ -6857,7 +6867,8 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     if (cur_hosts>=max_hosts || job_status==HELD || 
 			job_status==REMOVED || job_status==COMPLETED ||
 			job->IsNoopJob() ||
-			!service_this_universe(universe,job))
+			!service_this_universe(universe,job) ||
+			scheduler.AlreadyMatched(job, job->Universe()))
 	{
         return cur_hosts;
 	}
@@ -7316,6 +7327,19 @@ static void DoBuildPrioRecArray() {
 }
 
 /*
+ * Force a rebuild of the PrioRec array if we're beyond the max interval
+ * for a rebuild.
+ * This is meant to be called periodically as a DaemonCore timer.
+ */
+void BuildPrioRecArrayPeriodic()
+{
+	if ( time(NULL) >= PrioRecArrayTimeslice.getStartTime().tv_sec + PrioRecRebuildMaxInterval ) {
+		PrioRecArrayIsDirty = true;
+		BuildPrioRecArray(false);
+	}
+}
+
+/*
  * Build an array of runnable jobs sorted by priority.  If there are
  * a lot of jobs in the queue, this can be expensive, so avoid building
  * the array too often.
@@ -7343,6 +7367,12 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 				"Reusing prioritized runnable job list because nothing has "
 				"changed.\n");
 		return false;
+	}
+
+	if ( BuildPrioRecArrayTid < 0 ) {
+		BuildPrioRecArrayTid = daemonCore->Register_Timer(
+				PrioRecRebuildMaxInterval, PrioRecRebuildMaxInterval,
+				&BuildPrioRecArrayPeriodic, "BuildPrioRecArrayPeriodic");
 	}
 
 		// run without any delay the first time
@@ -7492,17 +7522,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				PrioRec[i].owner[0] = '\0';
 				dprintf(D_FULLDEBUG,
 						"record for job %d.%d skipped until PrioRec rebuild (%s)\n",
-						jobid.cluster, jobid.proc, isRunnable ? "already matched" : "no longer runnable");
-
-					// Ensure that PrioRecArray is rebuilt
-					// eventually, because changes in the status
-					// of AlreadyMatched() can happen without
-					// changes to the status of the job, (not the
-					// normal case, but still possible) so the
-					// dirty flag may not get set when the job
-					// is no longer AlreadyMatched() unless we
-					// set it here and keep rebuilding the array.
-				DirtyPrioRecArray();
+						PrioRec[i].id.cluster, PrioRec[i].id.proc, isRunnable ? "already matched" : "no longer runnable");
 
 					// Move along to the next job in the prio rec array
 				continue;
