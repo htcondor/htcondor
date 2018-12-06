@@ -59,8 +59,11 @@ def assertFalse(expr, subtest, msg=""):
         if msg != "": failureMessage = msg
         CondorTest.RegisterFailure(subtest, failureMessage)
 
+# Used for local development only! Never call this in live code, it will do horrible things!
 def cleanup():
     os.system("rm -rf *.local")
+    os.system("rm -rf *.err")
+    os.system("rm -rf *.out")
 
 def waitLocalDaemon(daemon, timeout=5):
     address_file = htcondor.param[daemon + "_ADDRESS_FILE"]
@@ -144,7 +147,7 @@ def testLocate():
     assertEqual(coll_ad["Name"].split(":")[-1], htcondor.param["PORT"], "testLocate")
     CondorTest.StopPersonalCondor("testLocate")
 
-def LocateList():
+def testLocateList():
     env_params = { 
         "COLLECTOR_ARGS": "-port $(PORT)",
         "COLLECTOR_HOST": "$(CONDOR_HOST):$(PORT)"
@@ -199,7 +202,7 @@ def testCollectorAdvertise():
 
 def testScheddSubmit():
     personal = CondorTest.StartPersonalCondor("testScheddSubmit")
-    submit_ad = classad.ClassAd('[Err = "testScheddSubmit.err"; Out = "testScheddSubmit.out"; Cmd = "/bin/echo"; Arguments = "hello world"]')
+    submit_ad = classad.ClassAd('[Err = "testScheddSubmit.err"; Out = "testScheddSubmit.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
     schedd = htcondor.Schedd()
     ads = []
     cluster = schedd.submit(submit_ad, 1, False, ads)
@@ -210,12 +213,12 @@ def testScheddSubmit():
         if i % 2 == 0:
             schedd.reschedule()
         time.sleep(1)
-    assertEqual(open("testScheddSubmit.out").read(), "hello world\n", "testScheddSubmit")
+    assertEqual(open("testScheddSubmit.out").read(), "hello world \n", "testScheddSubmit")
     CondorTest.StopPersonalCondor("testScheddSubmit")
 
 def testScheddSubmitMany():
     personal = CondorTest.StartPersonalCondor("testScheddSubmitMany")
-    submit_ad = classad.ClassAd('[Err = "testScheddSubmitMany.err"; Out = "testScheddSubmitMany.out"; Cmd = "/bin/echo"; Arguments = "hello world"]')
+    submit_ad = classad.ClassAd('[Err = "testScheddSubmitMany.err"; Out = "testScheddSubmitMany.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
     schedd = htcondor.Schedd()
     ads = []
     cluster = schedd.submit(submit_ad, 10, False, ads)
@@ -227,12 +230,12 @@ def testScheddSubmitMany():
         if i % 2 == 0:
             schedd.reschedule()
         time.sleep(1)
-    assertEqual(open("testScheddSubmitMany.out").read(), "hello world\n", "testScheddSubmitMany")
+    assertEqual(open("testScheddSubmitMany.out").read(), "hello world \n", "testScheddSubmitMany")
     CondorTest.StopPersonalCondor("testScheddSubmitMany")
 
 def testScheddSubmitMany2():
     personal = CondorTest.StartPersonalCondor("testScheddSubmitMany2")
-    submit_ad = classad.ClassAd('[Err = "testScheddSubmitMany2.err"; Out = "testScheddSubmitMany2.out"; Cmd = "/bin/echo"; Arguments = "hello world"]')
+    submit_ad = classad.ClassAd('[Err = "testScheddSubmitMany2.err"; Out = "testScheddSubmitMany2.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
     schedd = htcondor.Schedd()
     ads = []
     cluster = schedd.submitMany(submit_ad, [({'foo': 1}, 5), ({'foo': 2}, 5)], False, ads)
@@ -247,12 +250,12 @@ def testScheddSubmitMany2():
         if i % 2 == 0:
             schedd.reschedule()
         time.sleep(1)
-    assertEqual(open("testScheddSubmitMany2.out").read(), "hello world\n", "testScheddSubmitMany2-3")
+    assertEqual(open("testScheddSubmitMany2.out").read(), "hello world \n", "testScheddSubmitMany2-3")
     CondorTest.StopPersonalCondor("testScheddSubmitMany2")
 
 def testScheddQueryPoll():
     personal = CondorTest.StartPersonalCondor("testScheddQueryPoll")
-    submit_ad = classad.ClassAd('[Err = "testScheddQueryPoll.err"; Out = "testScheddQueryPoll.out"; Cmd = "/bin/echo"; Arguments = "hello world"]')
+    submit_ad = classad.ClassAd('[Err = "testScheddQueryPoll.err"; Out = "testScheddQueryPoll.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
     schedd = htcondor.Schedd()
     ads = []
     cluster = schedd.submit(submit_ad, 10, False, ads)
@@ -274,12 +277,12 @@ def testScheddQueryPoll():
 # there's a type error in the call to session.sendClaim().  Also,
 # the second timeout loop also needs an else clause; it it times out,
 # we don't want to chase the 'file not found' red herring again.
-def Negotiator():
+def testNegotiator():
     personal = CondorTest.StartPersonalCondor("Negotiator")
     schedd = htcondor.Schedd()
 
     schedd.act(htcondor.JobAction.Remove, 'true')
-    submit_ad = classad.ClassAd('[Err = "Negotiator.err"; Out = "Negotiator.out"; Cmd = "/bin/echo"; Arguments = "hello world"]')
+    submit_ad = classad.ClassAd('[Err = "Negotiator.err"; Out = "Negotiator.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
     ads = []
     cluster = schedd.submit(submit_ad, 1, False, ads)
 
@@ -318,13 +321,13 @@ def Negotiator():
         if len(ads) == 0:
             break
         time.sleep(1)
-    assertEqual(open(output_file).read(), "hello world\n", "Negotiator-5")
+    assertEqual(open(output_file).read(), "hello world \n", "Negotiator-5")
     CondorTest.StopPersonalCondor("Negotiator")
 
 def testScheddNonblockingQuery():
     personal = CondorTest.StartPersonalCondor("testScheddNonblockingQuery")
     schedd = htcondor.Schedd()
-    submit_ad = classad.ClassAd('[Err = "testScheddNonblockingQuery.err"; Out = "testScheddNonblockingQuery.out"; Cmd = "/bin/echo"; Arguments = "hello world"]')
+    submit_ad = classad.ClassAd('[Err = "testScheddNonblockingQuery.err"; Out = "testScheddNonblockingQuery.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
     ads = []
     cluster = schedd.submit(submit_ad, 10, False, ads)
     for i in range(60):
@@ -344,14 +347,14 @@ def testScheddNonblockingQuery():
         if i % 2 == 0:
             schedd.reschedule()
         time.sleep(1)
-    assertEqual(open("testScheddNonblockingQuery.out").read(), "hello world\n", "testScheddNonblockingQuery")
+    assertEqual(open("testScheddNonblockingQuery.out").read(), "hello world \n", "testScheddNonblockingQuery")
     CondorTest.StopPersonalCondor("testScheddNonblockingQuery")
 
 # FIXME: This test doesn't actually check anything. Should we fix it or dump it?
 def testScheddNonblockingQueryRemove():
     personal = CondorTest.StartPersonalCondor("testScheddNonblockingQueryRemove")
     schedd = htcondor.Schedd()
-    submit_ad = classad.ClassAd('[Err = "testScheddNonblockingQueryRemove.err"; Out = "testScheddNonblockingQueryRemove.out"; Cmd = "/bin/echo"; Arguments = "hello world"]')
+    submit_ad = classad.ClassAd('[Err = "testScheddNonblockingQueryRemove.err"; Out = "testScheddNonblockingQueryRemove.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
     ads = []
     cluster = schedd.submit(submit_ad, 300, False, ads)
     ads = schedd.xquery("ClusterId == %d" % cluster)
@@ -392,7 +395,7 @@ def testScheddNonblockingQueryCount():
 def testScheddSubmitSpool():
     personal = CondorTest.StartPersonalCondor("testScheddSubmitSpool")
     schedd = htcondor.Schedd()
-    submit_ad = classad.ClassAd('[Err = "testScheddSubmitSpool.err"; Out = "testScheddSubmitSpool.out"; Cmd = "/bin/echo"; Arguments = "hello world"]')
+    submit_ad = classad.ClassAd('[Err = "testScheddSubmitSpool.err"; Out = "testScheddSubmitSpool.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
     result_ads = []
     cluster = schedd.submit(submit_ad, 1, True, result_ads)
     schedd.spool(result_ads)
@@ -408,7 +411,7 @@ def testScheddSubmitSpool():
     schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
     ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
     assertEqual(len(ads), 0, "testScheddSubmitSpool-2")
-    assertEqual(open("testScheddSubmitSpool.out").read(), "hello world\n", "testScheddSubmitSpool-3")
+    assertEqual(open("testScheddSubmitSpool.out").read(), "hello world \n", "testScheddSubmitSpool-3")
     CondorTest.StopPersonalCondor("testScheddSubmitSpool")
 
 # FIXME: the last half of this is all broken because ClusterID really
@@ -416,7 +419,7 @@ def testScheddSubmitSpool():
 # change or if the test never worked in the first place.  Also,
 # it appears the first assertEqual() is erroneous (again, I don't know
 # if this is a mistake, a bug, or a deliberately changed API).
-def ScheddSubmitFile():
+def testScheddSubmitFile():
     personal = CondorTest.StartPersonalCondor("ScheddSubmitFile")
     submit_obj = htcondor.Submit()
 
@@ -470,7 +473,7 @@ def ScheddSubmitFile():
     CondorTest.StopPersonalCondor("ScheddSubmitFile")
 
 # FIXME: Like all other timing loops, this one needs an else clause.
-def Claim():
+def testClaim():
     os.environ['_condor_VALID_COD_USERS'] = pwd.getpwuid(os.geteuid()).pw_name
     personal = CondorTest.StartPersonalCondor("Claim")
     output_file = "Claim.out"
@@ -495,7 +498,7 @@ def Claim():
     for i in range(10):
         if os.path.exists(output_file): break
         time.sleep(1)
-    assertEqual(open(output_file).read(), "hello world\n", "Claim-1")
+    assertEqual(open(output_file).read(), "hello world \n", "Claim-1")
     sleep_job = dict(job_common)
     sleep_job['Args'] = "-c 'sleep 5m'"
     claim.activate(sleep_job)
@@ -509,7 +512,7 @@ def Claim():
 
 # FIXME: Like all other timing loops, this one needs an else clause.
 # FIXME: This test doesn't check anything. Should we fix it or ditch it?
-def Drain():
+def testDrain():
     personal = CondorTest.StartPersonalCondor("Drain")
     output_file = "Drain.out"
     coll = htcondor.Collector()
@@ -614,8 +617,6 @@ def testTransaction():
 
 def main():
 
-    #cleanup()
-
     # Setup condor environment variables that will be used globally across all tests
     os.environ["_condor_PORT"] = "9622"
     os.environ["_condor_SCHEDD_NAME"] = "python_bindings_htcondor"
@@ -624,7 +625,7 @@ def main():
     testRemoteParam()
     testRemoteSetParam()
     testLocate()
-    LocateList()
+    testLocateList()
     #testRemoteLocate() # FIXME
     #testScheddLocate() # FIXME
     #testCollectorAdvertise() # FIXME
@@ -632,17 +633,16 @@ def main():
     testScheddSubmitMany()
     testScheddSubmitMany2()
     testScheddQueryPoll()
-    #Negotiator() # FIXME
+    #testNegotiator() # FIXME
     testScheddNonblockingQuery()
     #testScheddNonblockingQueryRemove() # FIXME
     testScheddNonblockingQueryCount()
     testScheddSubmitSpool()
-    #ScheddSubmitFile() # FIXME
-    Claim()
-    #Drain() # FIXME
+    #testScheddSubmitFile() # FIXME
+    #testClaim() # FIXME
+    #testDrain() # FIXME
     testPing()
     testTransaction()
-
 
 
 if __name__ == '__main__':
