@@ -237,14 +237,14 @@ static size_t compute_pid_hash(const pid_t &key)
 
 DaemonCore::DaemonCore(int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
-	: comTable(32),
+	: m_create_family_session(true),
+	comTable(32),
 	sigTable(10),
 	reapTable(4),
 	t(TimerManager::GetTimerManager()),
 	m_command_port_arg(-1),
 	m_dirty_command_sock_sinfuls(true),
-	m_advertise_ipv4_first(false),
-	m_create_family_session(true)
+	m_advertise_ipv4_first(false)
 {
 
 	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || ReapSize < 0)
