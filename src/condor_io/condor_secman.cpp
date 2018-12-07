@@ -1332,6 +1332,8 @@ SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_
 StartCommandResult
 SecManStartCommand::sendAuthInfo_inner()
 {
+	Sinful destsinful( m_sock->get_connect_addr() );
+	Sinful oursinful( global_dc_sinful() );
 
 	// find out if we have a session id to use for this command
 
@@ -1375,10 +1377,12 @@ SecManStartCommand::sendAuthInfo_inner()
 		}
 	}
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session && daemonCore && !daemonCore->m_family_session_id.empty() ) {
-		// See if this server may be in our family
-		// TODO This could be more sophisticated, like checking if our peer
-		//   is using the same shared port service as us.
-		if ( m_sock->peer_is_local() && m_sec_man.m_not_my_family.count(m_sock->get_connect_addr()) == 0 ) {
+		// We have a process family security session.
+		// Try using it if the following are all true:
+		// 1) Peer is on a local network interface
+		// 2) If we're using shared port, peer is using same command port as us
+		// 3) Peer isn't in m_not_my_family
+		if ( m_sock->peer_is_local() && (oursinful.getSharedPortID() == NULL || oursinful.getPortNum() == destsinful.getPortNum()) && m_sec_man.m_not_my_family.count(m_sock->get_connect_addr()) == 0 ) {
 			dprintf(D_SECURITY, "Trying family security session for local peer\n");
 			m_have_session = m_sec_man.LookupNonExpiredSession(daemonCore->m_family_session_id.c_str(), m_enc_key);
 			ASSERT(m_have_session);
@@ -1512,8 +1516,6 @@ SecManStartCommand::sendAuthInfo_inner()
 	// we set a cookie in daemoncore and put the cookie in the classad
 	// as proof that the message came from ourself.
 
-	Sinful destsinful( m_sock->get_connect_addr() );
-	Sinful oursinful( global_dc_sinful() );
 	bool using_cookie = false;
 
 	if (oursinful.addressPointsToMe(destsinful)) {
