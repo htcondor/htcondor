@@ -243,7 +243,8 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	t(TimerManager::GetTimerManager()),
 	m_command_port_arg(-1),
 	m_dirty_command_sock_sinfuls(true),
-	m_advertise_ipv4_first(false)
+	m_advertise_ipv4_first(false),
+	m_create_family_session(true)
 {
 
 	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || ReapSize < 0)
@@ -8904,7 +8905,7 @@ DaemonCore::Inherit( void )
 	}
 
 	if ( m_family_session_id.empty() ) {
-		if ( param_boolean("SEC_USE_FAMILY_SESSION", true) ) {
+		if ( m_create_family_session && param_boolean("SEC_USE_FAMILY_SESSION", true) ) {
 			dprintf(D_DAEMONCORE, "Creating family security session.\n");
 			char* c_session_id = Condor_Crypt_Base::randomHexKey();
 			char* c_session_key = Condor_Crypt_Base::randomHexKey();

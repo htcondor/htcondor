@@ -752,6 +752,7 @@ void
 main_pre_command_sock_init( )
 {
 	daemonCore->WantSendChildAlive( false );
+	daemonCore->m_create_family_session = false;
 }
 
 int
