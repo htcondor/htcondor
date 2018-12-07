@@ -21,11 +21,14 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
+#include "starter.h"
+extern CStarter * Starter;
+
 #include "os_proc.h"
 #include "ec2_proc.h"
 
 EC2Proc::EC2Proc( ClassAd * jobAd ) : OsProc( jobAd ),
-  jobAdPipeID(-1), updateAdPipeID(-1), stderrPipeID(-1) {
+  jobAdPipeID(-1), updateAdPipeID(-1) {
 	dprintf( D_PERF_TRACE, "EC2Proc::EC2Proc( %p )\n", JobAd );
 }
 
@@ -53,13 +56,22 @@ EC2Proc::StartJob() {
 		return false;
 	}
 
-	int stderrPipeFDs[2];
-	if(! daemonCore->Create_Pipe( stderrPipeFDs, false, false, true, true )) {
-		dprintf( D_ALWAYS, "EC2Proc::StartJob(): failed to create stderr pipe.\n" );
+	std::string logFile = Starter->GetWorkingDir();
+	logFile += "/gridmanager.log";
+	priv_state old_priv = set_user_priv();
+	int logFD = open( logFile.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644 );
+	set_priv( old_priv );
+	if( logFD == -1 ) {
+		dprintf( D_ALWAYS, "EC2Proc::StartJob(): failed to open grid manager log file '%s' (%d): '%s'.\n", logFile.c_str(), errno, strerror(errno) );
 		return false;
 	}
 
-	int fds[] = { jobAdPipeFDs[0], updateAdPipeFDs[1], stderrPipeFDs[1] };
+	int fds[] = { jobAdPipeFDs[0], updateAdPipeFDs[1], logFD };
+
+	std::string ec2GahpLog = Starter->GetWorkingDir();
+	ec2GahpLog += "/ec2gahp.log";
+	Env env;
+	env.SetEnv( "_CONDOR_EC2_GAHP_LOG", ec2GahpLog );
 
 	ArgList args;
 	args.AppendArg( "condor_gridmanager" );
@@ -67,8 +79,7 @@ EC2Proc::StartJob() {
 	args.AppendArg( "-t" );
 	args.AppendArg( "-B" );
 	args.AppendArg( "-S" );
-	// FIXME: for Windows.
-	args.AppendArg( "/tmp" );
+	args.AppendArg( Starter->GetWorkingDir() );
 
 	// I don't know what the lifetime of this object is or who's responsible
 	// for it, but I can't kill the child process [family] without it.
@@ -76,7 +87,7 @@ EC2Proc::StartJob() {
 
 	JobPid = daemonCore->Create_Process(
 		param( "GRIDMANAGER" ) /* does this leak? */,
-		args, PRIV_USER_FINAL, 1, FALSE, FALSE, NULL, NULL, fi, NULL, fds );
+		args, PRIV_USER_FINAL, 1, FALSE, FALSE, & env, NULL, fi, NULL, fds );
 	if( JobPid == FALSE ) {
 		// See OsProc::StartJob() for better error-handling.
 		JobPid = -1;
@@ -91,7 +102,6 @@ EC2Proc::StartJob() {
 
 	this->jobAdPipeID = jobAdPipeFDs[1];
 	this->updateAdPipeID = updateAdPipeFDs[0];
-	this->stderrPipeID = stderrPipeFDs[0];
 
 	//
 	// Write the job ad to the grid manager.  If at some point we ever care,
@@ -153,22 +163,16 @@ EC2Proc::JobReaper( int pid, int status ) {
 	//
 
 	//
-	// Check stderr for problems.
+	// Close the pipes.
 	//
-	char buf[4097];
-	int rv = daemonCore->Read_Pipe( this->stderrPipeID, buf, 4096 );
-	if( rv == -1 ) {
-		dprintf( D_PERF_TRACE, "EC2Proc::JobReaper( %d, %d ): error reading stderr pipe (%d): '%s'.\n", pid, status, errno, strerror(errno) );
-		return true;
+	if( this->jobAdPipeID != -1 ) {
+		daemonCore->Close_Pipe( this->jobAdPipeID );
+		jobAdPipeID = -1;
 	}
-	buf[rv] = '\0';
-	if( rv != 0 ) {
-		dprintf( D_ALWAYS, "EC2Proc::JobReaper( %d, %d ): grid manager's stderr was '%s'.\n", pid, status, buf );
+	if( this->updateAdPipeID != -1 ) {
+		daemonCore->Close_Pipe( this->updateAdPipeID );
+		updateAdPipeID = -1;
 	}
-
-	//
-	// FIXME: Close the pipes.
-	//
 
 	JobPid = -1;
 	return true;
@@ -234,6 +238,6 @@ bool
 EC2Proc::ShutdownFast() {
 	dprintf( D_PERF_TRACE, "EC2Proc::ShutdownFast()\n" );
 
-	// FIXME: ...
-	return true;
+	daemonCore->Send_Signal( JobPid, GRIDMAN_REMOVE_JOBS );
+	return false;
 }

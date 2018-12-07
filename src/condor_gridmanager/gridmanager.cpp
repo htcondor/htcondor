@@ -509,6 +509,18 @@ REMOVE_JOBS_signalHandler( Service *, int )
 {
 	dprintf(D_FULLDEBUG,"Received REMOVE_JOBS signal\n");
 
+	if( starterMode ) {
+		ClassAd updateAd;
+		updateAd.InsertAttr( ATTR_JOB_STATUS, REMOVED );
+
+		BaseJob * job = NULL;
+		BaseJob::JobsByProcId.startIterations();
+		while( BaseJob::JobsByProcId.iterate( job ) ) {
+			job->JobAdUpdateFromSchedd( & updateAd, false );
+		}
+		return TRUE;
+	}
+
 	// For held jobs that are still submitted to remote resources
 	// (i.e. GridJobId defined) which are then removed, we need
 	// to trigger an add-jobs query so that we attempt to cancel
