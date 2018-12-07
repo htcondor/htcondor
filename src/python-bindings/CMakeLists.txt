@@ -2,6 +2,10 @@ set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_an
 
 if(WINDOWS)
   if(WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND)
+    # Modern compilers complain about using the deprecated std::auto_ptr.
+    # Prevent boost from using them.
+    add_definitions ( -DBOOST_NO_AUTO_PTR )
+
 	#only for VS2012 and above
 	if(NOT (MSVC_VERSION LESS 1700))
 		#only for boost-1.54.0 or boost-1.68
@@ -158,7 +162,7 @@ if(WINDOWS)
 				target_link_libraries( py3htcondor py3classad condor_utils ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} ${CONDOR_WIN_LIBS} )
 				set_target_properties( py3htcondor PROPERTIES PREFIX "" OUTPUT_NAME htcondor PDB_NAME py3htcondor)
 				set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
-				target_include_directories( py3htcondor PUBLIC ${PYTHON_INCLUDE3_DIRS} )
+				target_include_directories( py3htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
 				install ( TARGETS py3classad DESTINATION ${C_LIB} )
 				install ( TARGETS py3htcondor py3classad_module DESTINATION ${C_PYTHONARCHLIB} )

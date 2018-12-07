@@ -239,6 +239,7 @@ if (BUILD_TESTING)
 		condor_pl_test (python_bindings_classad "Python bindings classad module" "core;quick;full;quicknolink")
 		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module" "core;quick;full;quicknolink")
 		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
+		condor_pl_test (python_bindings_jobeventlog "tests the JobEvent class" "core;quick;full;quicknolink")
 
 		# Tests of the pytest suite.
 		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
@@ -346,6 +347,7 @@ if (BUILD_TESTING)
 	# Not in use till endurance testing done.
 	# condor_pl_test(lib_sysapi "Run SysApi Tests" "core;quick;full;quicknolink")
 	# condor_pl_test(lib_procapi "Run ProcApi Tests" "core;quick;full;quicknolink")
+	condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink")
 
 	##### dagman tests
 	condor_pl_test(job_core_chirp_par "Exercise the chirp I/O C library in Parallel Universe" "lib;quick;full")

@@ -277,6 +277,7 @@
 #define ATTR_HOOK_KEYWORD  "HookKeyword"
 #define ATTR_IDLE_JOBS  "IdleJobs"
 #define ATTR_IMAGE_SIZE  "ImageSize"
+#define ATTR_IO_WAIT  "IOWait"
 #define ATTR_RESIDENT_SET_SIZE  "ResidentSetSize"
 #define ATTR_PROPORTIONAL_SET_SIZE  "ProportionalSetSizeKb"
 #define ATTR_INTERACTIVE  "Interactive"

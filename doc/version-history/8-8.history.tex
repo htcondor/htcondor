@@ -68,6 +68,12 @@ handling optional event attributes as if the \PyBindNI{JobEvent} object
 were a dictionary, instead.  See section \ref{Python-JobEventLog} for details.
 \Ticket{6820}
 
+\item Added job ad attribute \Macro{BlockReadKbytes} and \Macro{BlockWriteKybtes}
+which describe the number of kbytes read and written by the job to the sandbox
+directory.  These are only defined on Linux machines with cgroup support enabled
+for vanilla jobs.
+\Ticket{6826}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

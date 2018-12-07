@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
 	
 	// load up configuration file
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	if (!parseCommandLine(&options, argc, argv)) {

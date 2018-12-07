@@ -23,6 +23,7 @@ override_dh_auto_configure:
 		-DUW_BUILD:BOOL=OFF \
 		-D_DEBUG:BOOL=TRUE \
 		-DBUILDID:STRING="Debian-$(debver)"\
+		-DPACKAGEID:STRING="$(debver)"\
 		-DFORCE_PRE_RELEASE:STRING="Debian-$(debver)"\
 		-DCMAKE_SKIP_RPATH:BOOL=ON \
 		-DHAVE_EXT_GSOAP:BOOL=OFF \

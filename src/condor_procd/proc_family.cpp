@@ -599,6 +599,54 @@ ProcFamily::aggregate_usage_cgroup_blockio_io_serviced(ProcFamilyUsage* usage)
 	return 0;
 }
 
+int
+ProcFamily::aggregate_usage_cgroup_io_wait(ProcFamilyUsage* usage) {
+	if (!m_cm.isMounted(CgroupManager::BLOCK_CONTROLLER) || !m_cgroup.isValid())
+		return 1;
+
+	int ret;
+	void *handle;
+	char line_contents[BLOCK_STATS_LINE_MAX], sep[]=" ", *tok_handle, *word, *info[3];
+	char blkio_stats_name[] = "blkio.io_wait_time";
+	short ctr;
+	int64_t total = 0;
+	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
+	                              blkio_stats_name, &handle, line_contents, BLOCK_STATS_LINE_MAX);
+	while (ret == 0) {
+		ctr = 0;
+		word = strtok_r(line_contents, sep, &tok_handle);
+		while (word && ctr < 3) {
+			info[ctr++] = word;
+			word = strtok_r(NULL, sep, &tok_handle);
+		}
+		if (ctr == 2) {
+			errno = 0;
+			int64_t ctrval = strtoll(info[1], NULL, 10);
+			if (errno) {
+				dprintf(D_FULLDEBUG, "Error parsing kernel value to a long: %s; %s\n",
+					 info[1], strerror(errno));
+				break;
+			}
+			if (strcmp(info[0], "Total") == 0) {
+				total = ctrval;
+			} 
+		}
+		ret = cgroup_read_value_next(&handle, line_contents, BLOCK_STATS_LINE_MAX);
+	}
+	if (handle != NULL) {
+		cgroup_read_value_end(&handle);
+	}
+
+	if (ret != ECGEOF) {
+		dprintf(D_ALWAYS, "Internal cgroup error when retrieving iowait statistics: %s\n", cgroup_strerror(ret));
+		return 1;
+	}
+
+	usage->io_wait = total / 1.e9;
+
+	return 0;
+}
+
 int ProcFamily::get_cpu_usage_cgroup(long &user_time, long &sys_time) {
 
 	if (!m_cm.isMounted(CgroupManager::CPUACCT_CONTROLLER)) {
@@ -695,6 +743,7 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 
 	aggregate_usage_cgroup_blockio(usage);
 	aggregate_usage_cgroup_blockio_io_serviced(usage);
+	aggregate_usage_cgroup_io_wait(usage);
 
 	// Finally, update the list of tasks
 	if ((err = count_tasks_cgroup()) < 0) {

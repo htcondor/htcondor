@@ -17,6 +17,8 @@ void usage( char * self ) {
 }
 
 int main( int argc, char ** argv ) {
+
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	if( argc < 2 ) {
