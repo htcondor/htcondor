@@ -1247,6 +1247,10 @@ default=true
 type=bool
 tags=daemon_core
 
+[SEC_USE_FAMILY_SESSION]
+default=true
+type=bool
+
 [CERTIFICATE_MAPFILE]
 default=
 type=string

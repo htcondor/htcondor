@@ -237,7 +237,8 @@ static size_t compute_pid_hash(const pid_t &key)
 
 DaemonCore::DaemonCore(int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
-	: comTable(32),
+	: m_create_family_session(true),
+	comTable(32),
 	sigTable(10),
 	reapTable(4),
 	t(TimerManager::GetTimerManager()),
@@ -6971,6 +6972,7 @@ int DaemonCore::Create_Process(
 		IpVerify* ipv = getSecMan()->getIpVerify();
 		MyString id = CONDOR_CHILD_FQU;
 		ipv->PunchHole(DAEMON, id);
+		ipv->PunchHole(CLIENT_PERM, id);
 
 		privateinheritbuf += " SessionKey:";
 
@@ -6982,6 +6984,19 @@ int DaemonCore::Create_Process(
 			goto wrapup;
 		}
 		ClaimIdParser claimId(session_id_c_str, session_info.Value(), session_key_c_str);
+		privateinheritbuf += claimId.claimId();
+	}
+	if(want_command_port != FALSE && !m_family_session_id.empty() && priv != PRIV_USER_FINAL && priv != PRIV_CONDOR_FINAL)
+	{
+		MyString family_session_info;
+		bool rc = getSecMan()->ExportSecSessionInfo(m_family_session_id.c_str(), family_session_info);
+		if(!rc)
+		{
+			dprintf(D_ALWAYS, "ERROR: Create_Process failed to export family security session for child daemon.\n");
+			goto wrapup;
+		}
+		ClaimIdParser claimId(m_family_session_id.c_str(), family_session_info.Value(), m_family_session_key.c_str());
+		privateinheritbuf += " FamilySessionKey:";
 		privateinheritbuf += claimId.claimId();
 	}
 #endif
@@ -8838,15 +8853,12 @@ DaemonCore::Inherit( void )
 	information around.
 	*/
 #ifndef Solaris
+	std::string family_session_info;
 	const char *privEnvName = EnvGetName( ENV_PRIVATE );
 	const char *privTmp = GetEnv( privEnvName );
 	if ( privTmp != NULL ) {
 		dprintf ( D_DAEMONCORE, "Processing %s from parent\n", privEnvName );
 	}
-	if(!privTmp)
-	{
-		return;
-		}
 
 	StringList private_list(privTmp, " ");
 	UnsetEnv( privEnvName );
@@ -8877,6 +8889,65 @@ DaemonCore::Inherit( void )
 			MyString id;
 			id.formatstr("%s", CONDOR_PARENT_FQU);
 			ipv->PunchHole(DAEMON, id);
+			ipv->PunchHole(CLIENT_PERM, id);
+		}
+		if( strncmp(ptmp,"FamilySessionKey:",17)==0 ) {
+			if ( param_boolean("SEC_USE_FAMILY_SESSION", true) ) {
+				dprintf(D_DAEMONCORE, "Inheriting family security session.\n");
+				ClaimIdParser claimid(ptmp+17);
+				m_family_session_id = claimid.secSessionId();
+				m_family_session_key = claimid.secSessionKey();
+				family_session_info = claimid.secSessionInfo();
+			} else {
+				dprintf(D_DAEMONCORE, "Ignoring inherited family security session\n");
+			}
+		}
+	}
+
+	if ( m_family_session_id.empty() ) {
+		if ( m_create_family_session && param_boolean("SEC_USE_FAMILY_SESSION", true) ) {
+			dprintf(D_DAEMONCORE, "Creating family security session.\n");
+			char* c_session_id = Condor_Crypt_Base::randomHexKey();
+			char* c_session_key = Condor_Crypt_Base::randomHexKey();
+
+			m_family_session_id = "family:";
+			m_family_session_id += c_session_id;
+			m_family_session_key = c_session_key;
+
+			free(c_session_id);
+			free(c_session_key);
+		} else {
+			dprintf(D_DAEMONCORE, "Not creating family security session\n");
+		}
+	}
+
+	if ( ! m_family_session_id.empty() ) {
+		bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
+				DAEMON,
+				m_family_session_id.c_str(),
+				m_family_session_key.c_str(),
+				family_session_info.c_str(),
+				CONDOR_FAMILY_FQU,
+				NULL,
+				0);
+
+		if(!rc) {
+			dprintf(D_ALWAYS, "ERROR: Failed to create family security session.\n");
+			m_family_session_id.clear();
+			m_family_session_key.clear();
+		} else {
+
+			KeyCacheEntry *entry = NULL;
+			rc = getSecMan()->session_cache->lookup(m_family_session_id.c_str(),entry);
+			ASSERT( rc && entry && entry->policy() );
+			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
+			IpVerify* ipv = getSecMan()->getIpVerify();
+			ipv->PunchHole(DAEMON, CONDOR_FAMILY_FQU);
+			ipv->PunchHole(ADVERTISE_MASTER_PERM, CONDOR_FAMILY_FQU);
+			ipv->PunchHole(ADVERTISE_SCHEDD_PERM, CONDOR_FAMILY_FQU);
+			ipv->PunchHole(ADVERTISE_STARTD_PERM, CONDOR_FAMILY_FQU);
+			ipv->PunchHole(NEGOTIATOR, CONDOR_FAMILY_FQU);
+			ipv->PunchHole(CLIENT_PERM, CONDOR_FAMILY_FQU);
 		}
 	}
 #endif
@@ -10915,17 +10986,28 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 	return 0;
 }
 
-void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid ) {
+void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid, const ClassAd* info_ad ) {
 	if ( !sinful ) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
 		return;
+	}
+
+	std::string the_msg = sessid;
+
+	// If given a non-empty ad, add it to our message.
+	// This extra information is understood in version 8.8.0
+	// and above.
+	if ( info_ad && info_ad->size() > 0 ) {
+		the_msg += "\n";
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse(the_msg, info_ad);
 	}
 
 	classy_counted_ptr<Daemon> daemon = new Daemon(DT_ANY,sinful,NULL);
 
 	classy_counted_ptr<DCStringMsg> msg = new DCStringMsg(
 		DC_INVALIDATE_KEY,
-		sessid );
+		the_msg.c_str() );
 
 	msg->setSuccessDebugLevel(D_SECURITY);
 	msg->setRawProtocol(true);
