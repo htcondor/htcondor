@@ -226,10 +226,12 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 			}
 		}
 
-		delete s3Gahp;
 		delete gahp;
 		delete eventsGahp;
 		delete lambdaGahp;
+		delete s3Gahp;
+
+		delete scratchpad;
 		return FALSE;
 	}
 
@@ -432,10 +434,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		delete gahp;
 		delete eventsGahp;
 		delete lambdaGahp;
-
-		delete reply;
-		delete scratchpad;
 		delete s3Gahp;
+
+		delete scratchpad;
 
 		return FALSE;
 }
