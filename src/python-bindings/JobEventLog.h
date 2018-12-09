@@ -55,6 +55,7 @@ class JobEventLog {
 		JobEventLog( const std::string & filename );
 		virtual ~JobEventLog();
 
+		void close();
 		boost::shared_ptr< JobEvent > next();
 
 		static boost::python::object events( boost::python::object & self, boost::python::object & deadline );

@@ -26,6 +26,7 @@ class FileModifiedTrigger {
 		virtual ~FileModifiedTrigger( void );
 
 		bool isInitialized( void ) const { return initialized; }
+		void releaseResources();
 
 		// Timeout is in milliseconds.  Returns -1 if invalid, 0 if timed
 		// out, 1 if file has changed (like poll()).

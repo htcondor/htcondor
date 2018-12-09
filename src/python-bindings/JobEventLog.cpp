@@ -56,6 +56,11 @@ JobEventLog::events( boost::python::object & self, boost::python::object & deadl
 	return self;
 }
 
+void
+JobEventLog::close() {
+	wful.releaseResources();
+}
+
 class JobEventLogGlobalLockInitializer {
 	public:
 		JobEventLogGlobalLockInitializer() {
@@ -103,6 +108,7 @@ JobEventLog::next() {
 			return boost::shared_ptr< JobEvent >( je );
 		} break;
 
+		case ULOG_INVALID:
 		case ULOG_NO_EVENT:
 			THROW_EX( StopIteration, "All events processed" );
 		break;
@@ -180,6 +186,7 @@ void export_event_log() {
 		.def( NEXT_FN, &JobEventLog::next, "Return the next JobEvent in the log, blocking until the deadline (if any)." )
 		.def( "events", &JobEventLog::events, boost::python::args("stop_after"), "Return self (which is its own iterator).\n:param stop_after After how many seconds from now should the iterator stop waiting for new events?  If None, wait forever.  If 0, never wait." )
 		.def( "__iter__", &JobEventLog::iter, "Return self (which is its own iterator)." )
+		.def( "close", &JobEventLog::close, "Closes any open underlying file; self will no longer iterate." )
 	;
 
 	// Allows conversion of JobEventLog instances to Python objects.
