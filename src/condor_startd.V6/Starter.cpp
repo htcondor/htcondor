@@ -695,8 +695,8 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		dummyAd.Assign(ATTR_JOB_PRIO, 0);
 		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
 		dummyAd.Assign(ATTR_JOB_CMD, "boinc");
-		MyString gjid;
-		gjid.formatstr("%s#%d#%d#%d", get_local_hostname().Value(), now, 1, now);
+		std::string gjid;
+		formatstr(gjid,"%s#%d#%d#%d", get_local_hostname().Value(), now, 1, now);
 		dummyAd.Assign(ATTR_GLOBAL_JOB_ID, gjid);
 		jobAd = &dummyAd;
 	}
@@ -757,7 +757,7 @@ int
 Starter::execJobPipeStarter( Claim* claim )
 {
 	int rval;
-	MyString lock_env;
+	std::string lock_env;
 	ArgList args;
 	Env env;
 	char* tmp;
@@ -776,7 +776,7 @@ Starter::execJobPipeStarter( Claim* claim )
 		lock_env += DIR_DELIM_CHAR;
 		lock_env += "StarterLock.cod";
 
-		env.SetEnv(lock_env.Value());
+		env.SetEnv(lock_env.c_str());
 	}
 
 		// Create an argument list for this starter, based on the claim.
@@ -891,8 +891,8 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 		case APPEND_CLUSTER: args.AppendArg(claim->cluster()); break;
 
 		case APPEND_JOBID: {
-			MyString jobid;
-			jobid.formatstr("%d.%d", claim->cluster(), claim->proc());
+			std::string jobid;
+			formatstr(jobid, "%d.%d", claim->cluster(), claim->proc());
 			args.AppendArg(jobid.c_str());
 		} break;
 
@@ -1344,7 +1344,7 @@ Starter::dprintf( int flags, const char* fmt, ... )
 	va_list args;
 	va_start( args, fmt );
 	if ( ! s_dpf.empty()) {
-		MyString fmt_str( s_dpf );
+		std::string fmt_str( s_dpf );
 		fmt_str += ": ";
 		fmt_str += fmt;
 		::_condor_dprintf_va( flags, ident, fmt_str.c_str(), args );

@@ -117,6 +117,7 @@ printClassAd( void )
 int
 main( int argc, char *argv[] )
 {
+	set_priv_initialize();
 	set_mySubSystem( "STARTER", SUBSYSTEM_TYPE_STARTER );
 
 	myDistro->Init( argc, argv );

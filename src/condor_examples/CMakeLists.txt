@@ -69,7 +69,7 @@ install (FILES
 		condor.socket
 		condor-tmpfiles.conf
 		condor-annex-ec2.service
-		00-single-node
+		00-minicondor
 		50ec2.config
 		DESTINATION ${C_ETC_EXAMPLES})
 

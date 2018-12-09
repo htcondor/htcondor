@@ -2668,7 +2668,7 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 	Sock * sock = (Sock *)stream;
 	ClassAd commandAd;
 	// This becomes owned by the new slot's claim.
-	ClassAd * resourceAd = new ClassAd();
+	ClassAd * requestAd = new ClassAd();
 
 	int failureMode = param_integer( "COALESCE_FAILURE_MODE", 0 );
 
@@ -2683,23 +2683,23 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 		return FALSE;
 	}
 
-	if(! getClassAd( sock, * resourceAd )) {
+	if(! getClassAd( sock, * requestAd ) || ! sock->end_of_message()) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): failed to get resource request\n" );
-		delete resourceAd;
+		delete requestAd;
 		return FALSE;
 	}
 
 	std::string claimIDListString;
 	if(! commandAd.LookupString( ATTR_CLAIM_ID_LIST, claimIDListString )) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): command ad missing claim ID list\n" );
-		delete resourceAd;
+		delete requestAd;
 		return FALSE;
 	}
 
 	StringList claimIDList( claimIDListString.c_str() );
 	if( claimIDList.isEmpty() ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): command ad's claim ID list empty or invalid\n" );
-		delete resourceAd;
+		delete requestAd;
 		return FALSE;
 	}
 	// Remove duplicate claims.
@@ -2780,9 +2780,11 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 		errorString = "FAILURE INJECTION: 3";
 	}
 
+	sock->encode();
+
 	if( result != CA_SUCCESS ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): %s\n", errorString.c_str() );
-		delete resourceAd;
+		delete requestAd;
 
 		ClassAd replyAd;
 		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( result ) );
@@ -2792,12 +2794,14 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 		ClassAd slotAd;
 		putClassAd( sock, slotAd );
 
+		sock->end_of_message();
+
 		return FALSE;
 	}
 
 	if( ! parent ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce any slots\n" );
-		delete resourceAd;
+		delete requestAd;
 
 		ClassAd replyAd;
 		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
@@ -2806,6 +2810,8 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 
 		ClassAd slotAd;
 		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
 
 		return FALSE;
 	}
@@ -2831,10 +2837,10 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 
 	Claim * leftoverClaim = NULL;
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
-	Resource * coalescedSlot = initialize_resource( parent, resourceAd, leftoverClaim );
+	Resource * coalescedSlot = initialize_resource( parent, requestAd, leftoverClaim );
 	if( coalescedSlot == NULL ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );
-		delete resourceAd;
+		delete requestAd;
 
 		ClassAd replyAd;
 		replyAd.InsertAttr( ATTR_RESULT, getCAResultString( CA_FAILURE ) );
@@ -2843,6 +2849,8 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 
 		ClassAd slotAd;
 		putClassAd( sock, slotAd );
+
+		sock->end_of_message();
 
 		return FALSE;
 	}
@@ -2868,7 +2876,7 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 	// We'e ignoring consumption policy here.  (See request_claim().)  This
 	// is probably a good thing.
 
-	coalescedSlot->r_cur->setjobad( resourceAd );
+	coalescedSlot->r_cur->setjobad( requestAd );
 	// We're ignoring rank here.  (See request_claim().)
 	coalescedSlot->r_cur->loadAccountingInfo();
 	coalescedSlot->r_cur->loadRequestInfo();
@@ -2895,7 +2903,7 @@ command_coalesce_slots( Service *, int, Stream * stream ) {
 
 	ClassAd slotAd( * coalescedSlot->r_classad );
 	// coalescedSlot->publish_private( & slotAd );
-	if(! putClassAd( sock, slotAd )) {
+	if(! putClassAd( sock, slotAd ) || !sock->end_of_message()) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): failed to send slot ad\n" );
 		return FALSE;
 	}

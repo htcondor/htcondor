@@ -668,7 +668,7 @@ void CleanupReminderTimerCallback()
 		const CleanupReminder & cr = it->first; // alias the CleanupReminder so that the code below is clearer
 
 		bool retry_now = retry_on_this_iter(it->second, cr.cat);
-		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.Value(), it->second, retry_now);
+		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.c_str(), it->second, retry_now);
 
 		// if our exponential backoff says we should retry this time, attempt the cleanup.
 		if (retry_now) {
@@ -676,18 +676,18 @@ void CleanupReminderTimerCallback()
 			switch (cr.cat) {
 			case CleanupReminder::category::exec_dir:
 				if (retry_cleanup_execute_dir(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.Value());
+					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
 					erase_it = true;
 				} else {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.Value(), err);
+					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
 				}
 				break;
 			case CleanupReminder::category::account:
 				if (retry_cleanup_user_account(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.Value());
+					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
 					erase_it = true;
 				} else {
-					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.Value(), err);
+					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
 				}
 				break;
 			}

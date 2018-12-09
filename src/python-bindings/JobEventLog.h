@@ -29,20 +29,31 @@
 
 class JobEvent {
 	public:
-		// Constructs the 'none' event.
-		JobEvent();
-
 		// Constructs an event of the appropriate type.
 		JobEvent( ULogEvent * event );
 
 		virtual ~JobEvent();
 
 		ULogEventNumber type() const;
-		boost::python::object Py_GetAttr( const std::string & s );
+		time_t timestamp() const;
+		int cluster() const;
+		int proc() const;
+
+		boost::python::list Py_Keys();
+		boost::python::list Py_Items();
+		boost::python::list Py_Values();
+		boost::python::object Py_IterKeys();
+		boost::python::object Py_IterItems();
+		boost::python::object Py_IterValues();
+		boost::python::object Py_Get( const std::string & k, boost::python::object d = boost::python::object() );
+		boost::python::object Py_GetItem( const std::string & k );
+
+		bool Py_Contains( const std::string & k );
+		int Py_Len();
 
 	private:
 		ULogEvent * event;
-		ClassAdWrapper * caw;
+		ClassAd * ad;
 
 		JobEvent( const JobEvent & je );
 		JobEvent & operator =( const JobEvent & je );

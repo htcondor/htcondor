@@ -55,7 +55,7 @@ VacateType getVacateType( ClassAd* ad );
 class CleanupReminder {
 public:
 	enum category { exec_dir=0, account };
-	MyString name; // name of resource to cleanup
+	std::string name; // name of resource to cleanup
 	category cat;  // category of resource, e.g execute dir, account name, etc.
 	int      opt; // options, meaning depends on category
 
@@ -70,8 +70,8 @@ public:
 	}
 
 	~CleanupReminder() {}
-	CleanupReminder(const char * n=NULL, category c=exec_dir, int o=0) : name(n), cat(c), opt(o) {}
-	CleanupReminder(const MyString &n, category c, int o=0) : name(n), cat(c), opt(o) {}
+	//CleanupReminder(const char * n=NULL, category c=exec_dir, int o=0) : name(n), cat(c), opt(o) {}
+	CleanupReminder(const std::string &n, category c, int o=0) : name(n), cat(c), opt(o) {}
 	CleanupReminder(const CleanupReminder & cr) : name(cr.name), cat(cr.cat), opt(cr.opt) {}
 	void operator =(const CleanupReminder & cr) { name = cr.name; cat = cr.cat; opt = cr.opt; }
 
@@ -104,10 +104,10 @@ public:
 // on ever iteration.
 typedef std::map<CleanupReminder, int> CleanupReminderMap;
 
-void add_exec_dir_cleanup_reminder(const MyString & dir, int options);
-void add_account_cleanup_reminder(const MyString & name);
+void add_exec_dir_cleanup_reminder(const std::string & dir, int options);
+void add_account_cleanup_reminder(const std::string& name);
 
-bool retry_cleanup_execute_dir(const MyString & path, int options, int &err);
-bool retry_cleanup_user_account(const MyString & path, int options, int &err);
+bool retry_cleanup_execute_dir(const std::string & path, int options, int &err);
+bool retry_cleanup_user_account(const std::string & path, int options, int &err);
 
 #endif /* _UTIL_H */

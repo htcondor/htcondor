@@ -159,7 +159,14 @@ struct Collector {
     object locateAll(daemon_t d_type)
     {
         AdTypes ad_type = convert_to_ad_type(d_type);
-        return query(ad_type, boost::python::object(""), list(), "");
+        boost::python::list attrlist;
+        attrlist.append("MyAddress");
+        attrlist.append("AddressV1");
+        attrlist.append("CondorVersion");
+        attrlist.append("CondorPlatform");
+        attrlist.append("Name");
+        attrlist.append("Machine");
+        return query(ad_type, boost::python::object(""), attrlist, "");
     }
 
     object locate(daemon_t d_type, const std::string &name="")

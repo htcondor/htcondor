@@ -77,6 +77,7 @@ main( int argc, char *argv[] )
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	if( argc < 2 ) {
