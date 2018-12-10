@@ -295,12 +295,6 @@ track_by_associated_cgroup(ProcFamilyClient& pfc, int argc, char* argv[])
 	}
 	return 0;
 }
-#else
-static int
-track_by_associated_cgroup(ProcFamilyClient&, int, char**) {
-	fprintf(stderr, "error: cgroups not supported not compiled into this client\n");
-	return 1;
-}
 #endif
 
 static int
