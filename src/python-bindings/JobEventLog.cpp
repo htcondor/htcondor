@@ -61,6 +61,31 @@ JobEventLog::close() {
 	wful.releaseResources();
 }
 
+boost::python::object
+JobEventLog::enter( boost::python::object & self ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+	jel->deadline = 0;
+	return self;
+}
+
+boost::python::object
+JobEventLog::exit( boost::python::object & self,
+  boost::python::object & /* exceptionType */,
+  boost::python::object & /* exceptionValue */,
+  boost::python::object & /* traceback */ ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+
+	// If all three arguments are None, the with block exited normally, and
+	// we should close the FD(s).
+	//
+	// If the block exited with an exception, we should close the FD(s).
+	jel->close();
+
+	// If we expected an exception to occur during normal operation, we
+	// could check for it here and return Py_True to suppress it.
+	return boost::python::object(boost::python::handle<>(boost::python::borrowed(Py_False)));
+}
+
 class JobEventLogGlobalLockInitializer {
 	public:
 		JobEventLogGlobalLockInitializer() {
@@ -336,6 +361,8 @@ void export_event_log() {
 		.def( "events", &JobEventLog::events, boost::python::args("stop_after"), "Return self (which is its own iterator).\n:param stop_after After how many seconds from now should the iterator stop waiting for new events?  If None, wait forever.  If 0, never wait." )
 		.def( "__iter__", &JobEventLog::iter, "Return self (which is its own iterator)." )
 		.def( "close", &JobEventLog::close, "Closes any open underlying file; self will no longer iterate." )
+		.def( "__enter__", &JobEventLog::enter, "(Iterable context management.)" )
+		.def( "__exit__", &JobEventLog::exit, "(Iterable context management.)" )
 	;
 
 	// Allows conversion of JobEventLog instances to Python objects.

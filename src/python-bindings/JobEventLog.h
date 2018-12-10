@@ -75,6 +75,13 @@ class JobEventLog {
 		// intrinsically a reference to a Python object, so the copy here isn't.
 		inline static boost::python::object iter( const boost::python::object & o ) { return o; }
 
+		// This object is its own context manager.
+		static boost::python::object enter( boost::python::object & self );
+		static boost::python::object exit( boost::python::object & self,
+			boost::python::object & exceptionType,
+			boost::python::object & exceptionValue,
+			boost::python::object & traceback );
+
 	private:
 		time_t deadline;
 		WaitForUserLog wful;
