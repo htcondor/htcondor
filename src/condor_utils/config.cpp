@@ -1203,6 +1203,16 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	return 0;
 }
 
+void MACRO_SET::initialize() {
+	size = 0; allocation_size = 0; sorted = 0;
+	table = NULL; metat = NULL; defaults = NULL;
+
+	options = CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX;
+	apool = ALLOCATION_POOL();
+	sources = std::vector<const char*>();
+	errors = new CondorError();
+}
+
 // fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 // the preface is printed with fprintf but not with the errors stack.
 void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char* format, ... ) //CHECK_PRINTF_FORMAT(5,6);

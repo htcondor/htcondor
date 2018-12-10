@@ -105,6 +105,7 @@ typedef struct macro_set {
 	// fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 	// the preface is printed with fprintf but not with the errors stack.
 	void push_error(FILE * fh, int code, const char* preface, const char* format, ... ) CHECK_PRINTF_FORMAT(5,6);
+	void initialize();
 #endif
 } MACRO_SET;
 
