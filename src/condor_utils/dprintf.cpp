@@ -1494,12 +1494,13 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 				*/
 		}
 		else {
-			snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n",
-					  filePath.c_str(), old );
+			// This absurd construction is because there's no other way to
+			// tell gcc 8 that we really do want to truncate the arguments.
+			int rv = snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n", filePath.c_str(), old ); ++rv;
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
-	
+
 	/* double check the result of the rename
 	   If we are not using locking, then it is possible for two processes
 	   to rotate at the same time, in which case the following check
@@ -1604,8 +1605,9 @@ _condor_fd_panic( int line, const char* file )
 
 	if( !debug_file_ptr ) {
 		save_errno = errno;
-		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(),
-				 panic_msg ); 
+		// This absurd construction is because there's no other way to
+		// tell gcc 8 that we really do want to truncate the arguments.
+		int rv = snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(), panic_msg ); ++rv;
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
