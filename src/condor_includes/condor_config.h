@@ -382,7 +382,17 @@ public:
 	MACRO_DEF_ITEM * pdef; // for use when default comes from per-daemon override table.
 	MACRO_SET & set;
 	HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), pdef(NULL), set(setIn) {}
-	HASHITER& operator=(const HASHITER& rhs) { if (this != &rhs) { memcpy(this, &rhs, sizeof(HASHITER)); } return *this; }
+	HASHITER & operator =( const HASHITER & rhs ) {
+		if( this != & rhs ) {
+			this->opts = rhs.opts;
+			this->ix = rhs.ix;
+			this->id = rhs.id;
+			this->is_def = rhs.is_def;
+			this->pdef = rhs.pdef;
+			this->set = rhs.set;
+		}
+		return * this;
+	}
 };
 enum { HASHITER_NO_DEFAULTS=1, HASHITER_USED_DEFAULTS=2, HASHITER_USED=4, HASHITER_SHOW_DUPS=8 };
 inline HASHITER hash_iter_begin(MACRO_SET & set, int options=0) { return HASHITER(set,options); }
