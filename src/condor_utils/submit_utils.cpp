@@ -455,11 +455,7 @@ SubmitHash::SubmitHash()
 	, TransferInputSizeKb(0)
 
 {
-	memset(&SubmitMacroSet, 0, sizeof(SubmitMacroSet));
-	SubmitMacroSet.options = CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX;
-	SubmitMacroSet.apool = ALLOCATION_POOL();
-	SubmitMacroSet.sources = std::vector<const char*>();
-	SubmitMacroSet.errors = new CondorError();
+	SubmitMacroSet.initialize();
 	setup_macro_defaults();
 
 	mctx.init("SUBMIT", 3);
