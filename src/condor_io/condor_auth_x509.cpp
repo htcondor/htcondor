@@ -226,7 +226,8 @@ int Condor_Auth_X509 :: wrap(const char*  data_in,
     if (!m_globusActivated || !isValid())
         return FALSE;	
     
-    input_token->value  = (void *)data_in;
+    // Yes, this is completely absurd.
+    input_token->value  = const_cast<void *>(reinterpret_cast<const void *>(data_in));
     input_token->length = length_in;
     
     major_status = (*gss_wrap_ptr)(&minor_status,
@@ -261,7 +262,8 @@ int Condor_Auth_X509 :: unwrap(const char*  data_in,
         return FALSE;
     }
     
-    input_token -> value = (void *)data_in;
+    // Yes, this is completely absurd.
+    input_token -> value  = const_cast<void *>(reinterpret_cast<const void *>(data_in));
     input_token -> length = length_in;
     
     major_status = (*gss_unwrap_ptr)(&minor_status,
