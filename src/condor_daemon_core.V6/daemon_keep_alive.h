@@ -53,8 +53,10 @@ protected:
 
 private:
     int SendAliveToParent();
+    void SendAliveToParentFromTimer() { (void)SendAliveToParent(); }
     int KillHungChild(void* pidentry);
 	int ScanForHungChildren();
+	void ScanForHungChildrenFromTimer() { (void)ScanForHungChildren(); }
 
     int max_hang_time;
 	int max_hang_time_raw;

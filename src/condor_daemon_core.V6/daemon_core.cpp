@@ -7833,7 +7833,7 @@ int DaemonCore::Create_Process(
 						 "with the ProcD\n",
 						 executable );
 				Register_Timer(0,
-					(TimerHandlercpp)&DaemonCore::CheckProcInterface,
+					(TimerHandlercpp)&DaemonCore::CheckProcInterfaceFromTimer,
 					"DaemonCore::CheckProcInterface", this );
 				break;
 
