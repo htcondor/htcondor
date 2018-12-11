@@ -73,14 +73,14 @@ DCShadow::initFromClassAd( ClassAd* ad )
 		return false;
 	} else {
 		if( is_valid_sinful(tmp) ) {
-			New_addr( strdup(tmp) );
+			New_addr( tmp );
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "ERROR: DCShadow::initFromClassAd(): invalid %s in ad (%s)\n", 
 					 ATTR_SHADOW_IP_ADDR, tmp );
+			free( tmp );
 		}
-		free( tmp );
 		tmp = NULL;
 	}
 
