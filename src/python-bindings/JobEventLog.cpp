@@ -352,6 +352,25 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	}
 }
 
+std::string
+JobEvent::Py_Repr() {
+	// We could (also) sPrintAd() the backing ClassAd, but might be TMI.
+	std::string constructorish;
+	formatstr( constructorish,
+		"JobEvent(type=%d, cluster=%d, proc=%d, timestamp=%ld)",
+		type(), cluster(), proc(), timestamp() );
+	return constructorish;
+}
+
+std::string
+JobEvent::Py_Str() {
+	std::string buffer;
+	if(! event->formatEvent( buffer )) {
+		buffer = Py_Repr();
+	}
+	return buffer;
+}
+
 // ----------------------------------------------------------------------------
 
 void export_event_log() {
@@ -381,6 +400,8 @@ void export_event_log() {
 		.def( "iteritems", &JobEvent::Py_IterItems, "..." )
 		.def( "itervalues", &JobEvent::Py_IterValues, "..." )
 		.def( "has_key", &JobEvent::Py_Contains, "..." )
+		.def( "__str__", &JobEvent::Py_Str, "..." )
+		.def( "__repr__", &JobEvent::Py_Repr, "..." )
 		.def( "__len__", &JobEvent::Py_Len, "..." )
 		.def( "__iter__", &JobEvent::Py_IterKeys, "..." )
 		.def( "__contains__", &JobEvent::Py_Contains, "..." )
