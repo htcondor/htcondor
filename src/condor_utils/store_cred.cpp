@@ -850,13 +850,20 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 		}
 		else {
 				// We don't allow one user to set another user's credential
+				//   (except for users explicitly allowed to)
+				// TODO: We deliberately ignore the user domains. Isn't
+				//   that a security issue?
 				// we don't allow updates to the pool password through this interface
+			std::string param_val;
+			param(param_val, "CRED_SUPER_USERS");
+			StringList auth_users( param_val.c_str() );
+			auth_users.append(std::string(user).substr(0, tmp-user).c_str());
 			const char *sock_owner = sock->getOwner();
 			if ( sock_owner == NULL ||
 #if defined(WIN32)
-			     strncasecmp( sock_owner, user, tmp-user )
+			     !auth_users.contains_anycase_withwildcard( sock_owner )
 #else
-			     strncmp( sock_owner, user, tmp-user )
+			     !auth_users.contains_withwildcard( sock_owner )
 #endif
 			   )
 			{
