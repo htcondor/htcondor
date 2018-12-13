@@ -98,7 +98,7 @@ ATTRIBUTES = [attr.strip() for attr in opts.attrs.split(',')]
     
 # set default daemon from checking the DAEMON_LIST in specified order
 if not DAEMON:
-    if POOL != None:
+    if POOL is not None:
         DAEMON = 'Collector'
     else:
         for DAEMON in ['Schedd', 'Startd', 'Collector', 'Negotiator', 'Master']:
@@ -107,7 +107,7 @@ if not DAEMON:
 
 # set machine name if name is not set
 MACHINE = None
-if (NAME == None) and (POOL == None):
+if (NAME is None) and (POOL is None):
     if DAEMON in ['Schedd', 'Startd', 'Master']:
         MACHINE = htcondor.param['FULL_HOSTNAME']
     else:
@@ -176,9 +176,9 @@ def getConstraint(machine = None, name = None):
     """Figure out what the constraint string should be and return it"""
 
     constraints = []
-    if machine != None :
+    if machine is not None :
         constraints.append('(Machine =?= {0})'.format(classad.quote(machine)))
-    if name != None:
+    if name is not None:
         constraints.append('(Name =?= {0})'.format(classad.quote(name)))
 
     constraint = ' && '.join(constraints)
@@ -187,7 +187,7 @@ def getConstraint(machine = None, name = None):
 def warnMultipleAds(n, daemon, pool):
     """Prints a warning to stderr if the Collector returns multiple ads"""
     
-    if pool == None:
+    if pool is None:
         pool = htcondor.param['COLLECTOR_HOST']
     sys.stderr.write((
         'Warning: Received {0} {1} ads from Collector {2}\n'
@@ -197,7 +197,7 @@ def warnMultipleAds(n, daemon, pool):
 def errNoAds(daemon, pool):
     """Prints an error to stderr and quits if the Collector returns no ClassAds"""
     
-    if pool == None:
+    if pool is None:
         pool = htcondor.param['COLLECTOR_HOST']
     sys.stderr.write((
         'Error: Did not receive any {0} ads from Collector {1}\n'
@@ -377,7 +377,7 @@ def computeRuntimeStats(old, new):
             R, dR = (None, None)
 
         # compute runtime/count between ads
-        if (dC > 0) and (dR != None):
+        if (dC > 0) and (dR is not None):
             R_curr = dR / float(dC)
         else:
             R_curr = None
@@ -391,20 +391,20 @@ def computeRuntimeStats(old, new):
                 R_[stat] = None
 
         R_pct_avg, R_pct_max, R_sigmas = (None, None, None)
-        if R_curr != None:
+        if R_curr is not None:
 
             # compare current runtime/count to lifetime runtime/count
-            if R_['Avg'] != None:
+            if R_['Avg'] is not None:
                 R_pct_avg = 100. * R_curr / float(R_['Avg'])
 
             # compare current runtime/count to lifetime max/min range
-            if (R_['Max'] != None) and (R_['Min'] != None):
+            if (R_['Max'] is not None) and (R_['Min'] is not None):
                 R_pct_max = 100. * ( (R_curr - R_['Min']) /
                                          float(R_['Max'] - R_['Min']) )
 
             # compare difference between current and lifetime runtime/count
             # to the lifetime standard deviation in runtime/count
-            if (R_['Avg'] != None) and (R_['Std'] != None):
+            if (R_['Avg'] is not None) and (R_['Std'] is not None):
                 R_sigmas = (R_curr - R_['Avg']) / float(R_['Std'])
 
         # compute count/sec between ads
@@ -418,7 +418,7 @@ def computeRuntimeStats(old, new):
 
         # compare current counts/sec to lifetime counts/sec
         C_pct_avg = None
-        if (dC > 0) and (C_avg != None):
+        if (dC > 0) and (C_avg is not None):
             C_pct_avg = 100. * C_curr / float(C_avg)
 
         # cleanup item name
@@ -626,7 +626,7 @@ def printInstHealthStats(old, new):
 
     # in the case that we cannot get the values from between ads,
     # just print the recent DC stats
-    if (duty_cycle == None) or (ops_per_sec == None):
+    if (duty_cycle is None) or (ops_per_sec is None):
         return printRecentHealthStats(new)
 
     lines = 0
@@ -816,7 +816,7 @@ if __name__ == '__main__':
 
         # if we're querying the Collector, first get the "old" ClassAd
         else:
-            if NAME == None:
+            if NAME is None:
                 NAME = getDaemonName(POOL, DAEMON, MACHINE)
 
             old = queryClassAd(POOL, DAEMON, NAME, DIRECT)
