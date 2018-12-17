@@ -2820,6 +2820,10 @@ int process_job_credentials()
 				exit(1);
 			}
 			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", tokens_needed.c_str());
+
+			// force this to be written into the job, by using set_arg_variable
+			// it is also available to the submit file parser itself (i.e. can be used in If statements)
+			submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
 		} else {
 			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
 		}
