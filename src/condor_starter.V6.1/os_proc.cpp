@@ -60,8 +60,8 @@ extern const char* JOB_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
 
 
-int singExecPid;
-ReliSock *sns;
+int singExecPid = -1;
+ReliSock *sns = 0;
 
 /* OsProc class implementation */
 
@@ -76,8 +76,6 @@ OsProc::OsProc( ClassAd* ad )
 	job_not_started = false;
 	m_using_priv_sep = false;
 	UserProc::initialize();
-	sns = 0;
-	singExecPid = -1;
 }
 
 
