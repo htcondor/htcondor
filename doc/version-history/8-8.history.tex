@@ -64,5 +64,11 @@ tring to materialize a job that has multi-column itemdata. The bug was introduce
 the 8.7.10 release.
 \Ticket{6827}
 
+\item Fixed a couple of bugs in the job event log reader code that were made visible by
+the new JobEventLog python object. The remote error and job terminated event did not read
+all of the available information from the job log correctly. 
+\Ticket{6816}
+\Ticket{6836}
+
 \end{itemize}
 
