@@ -2238,9 +2238,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
 		cap->Assign(ATTR_SLOT_ID, r_id);
-		if (param_boolean("ALLOW_VM_CRUFT", false)) {
-			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
-		}
 
 		if (r_pair_name) {
 			cap->Assign( ATTR_SLOT_PAIR_NAME, r_pair_name );

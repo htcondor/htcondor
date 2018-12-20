@@ -206,14 +206,7 @@ void initTypes( int max_types, StringList **type_strings, int except )
 		buf.formatstr("SLOT_TYPE_%d", i);
 		tmp = param(buf.Value());
 		if (!tmp) {
-			if (param_boolean("ALLOW_VM_CRUFT", false)) {
-				buf.formatstr("VIRTUAL_MACHINE_TYPE_%d", i);
-				if (!(tmp = param(buf.Value()))) {
-					continue;
-				}
-			} else {
 				continue;
-			}
 		}
 		type_strings[i] = new StringList();
 		type_strings[i]->initializeFromString( tmp );
@@ -240,14 +233,7 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
 
 	for( i=1; i<max_types; i++ ) {
 		param_name.formatstr("NUM_SLOTS_TYPE_%d", i);
-		if (param_boolean("ALLOW_VM_CRUFT", false)) {
-			cruft_name.formatstr("NUM_VIRTUAL_MACHINES_TYPE_%d", i);
-			my_type_nums[i] = param_integer(param_name.Value(),
-											 param_integer(cruft_name.Value(),
-														   0));
-		} else {
-			my_type_nums[i] = param_integer(param_name.Value(), 0);
-		}
+		my_type_nums[i] = param_integer(param_name.Value(), 0);
 		if (my_type_nums[i]) {
 			num_set = 1;
 			num += my_type_nums[i];
@@ -261,13 +247,7 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
 			// We haven't found any special types yet.  Therefore,
 			// we're evenly dividing things, so we only have to figure
 			// out how many nodes to advertise.
-		if (param_boolean("ALLOW_VM_CRUFT", false)) {
-			my_type_nums[0] = param_integer("NUM_SLOTS",
-										  param_integer("NUM_VIRTUAL_MACHINES",
-														num_cpus));
-		} else {
-			my_type_nums[0] = param_integer("NUM_SLOTS", num_cpus);
-		}
+		my_type_nums[0] = param_integer("NUM_SLOTS", num_cpus);
 		num = my_type_nums[0];
 	}
 	*array_ptr = my_type_nums;

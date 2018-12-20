@@ -536,10 +536,7 @@ init_params( int /* first_time */)
 	}
 	param_and_insert_unique_items("STARTD_SLOT_ATTRS", *startd_slot_attrs);
 	param_and_insert_unique_items("STARTD_SLOT_EXPRS", *startd_slot_attrs);
-	if (startd_slot_attrs->isEmpty() && param_boolean("ALLOW_VM_CRUFT", false)) {
-		param_and_insert_unique_items("STARTD_VM_ATTRS", *startd_slot_attrs);
-		param_and_insert_unique_items("STARTD_VM_EXPRS", *startd_slot_attrs);
-	}
+
 	// now insert attributes needed by HTCondor
 	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", *startd_slot_attrs);
 	if (startd_slot_attrs->isEmpty()) {

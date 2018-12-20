@@ -6099,11 +6099,6 @@ addRemoteUserPrios( ClassAd	*ad )
 	if (!ad->LookupInteger(ATTR_TOTAL_SLOTS, total_slots)) {
 		total_slots = 0;
 	}
-	if (!total_slots && (param_boolean("ALLOW_VM_CRUFT", false))) {
-		if (!ad->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES, total_slots)) {
-			total_slots = 0;
-		}
-	}
 		// The for-loop below publishes accounting information about each slot
 		// into each other slot.  This is relatively computationally expensive,
 		// especially for startds that manage a lot of slots, and 99% of the world

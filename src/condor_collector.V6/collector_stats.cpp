@@ -770,10 +770,6 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 		if (ad->LookupInteger( ATTR_SLOT_ID, slot)) {
 			slot_buf.formatstr(":%d", slot);
 		}
-		else if (param_boolean("ALLOW_VM_CRUFT", false) &&
-				 ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot)) {
-			slot_buf.formatstr(":%d", slot);
-		}
 	}
 	key.name = buf;
 	key.name += slot_buf.Value();

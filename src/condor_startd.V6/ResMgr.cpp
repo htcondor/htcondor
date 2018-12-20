@@ -442,13 +442,7 @@ ResMgr::init_resources( void )
 
 		// These things can only be set once, at startup, so they
 		// don't need to be in build_cpu_attrs() at all.
-	if (param_boolean("ALLOW_VM_CRUFT", false)) {
-		max_types = param_integer("MAX_SLOT_TYPES",
-								  param_integer("MAX_VIRTUAL_MACHINE_TYPES",
-												10));
-	} else {
-		max_types = param_integer("MAX_SLOT_TYPES", 10);
-	}
+	max_types = param_integer("MAX_SLOT_TYPES", 10);
 
 	max_types += 1;
 
@@ -1258,9 +1252,6 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 {
 	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
 		cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
-		if (param_boolean("ALLOW_VM_CRUFT", false)) {
-			cp->Assign(ATTR_TOTAL_VIRTUAL_MACHINES, numSlots());
-		}
 	}
 
 	starter_mgr.publish( cp, how_much );

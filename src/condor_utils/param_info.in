@@ -472,11 +472,6 @@ default=
 type=string
 tags=starter
 
-[ALLOW_VM_CRUFT]
-default=false
-type=bool
-tags=starter
-
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
 default=false
 type=bool
@@ -1990,11 +1985,6 @@ tags=startd,ResMgr
 [BACKFILL_SYSTEM]
 default=
 type=string
-tags=startd,ResMgr
-
-[MAX_VIRTUAL_MACHINE_TYPES]
-default=10
-type=int
 tags=startd,ResMgr
 
 [MAX_SLOT_TYPES]
