@@ -753,7 +753,7 @@ Env::getStringArray() const {
 	int numVars = _envTable->getNumElements();
 	int i;
 
-	array = new char*[ numVars+1 ];
+	array = (char **)malloc((numVars+1)*sizeof(char*));
 	ASSERT( array );
 
     MyString var, val;
@@ -762,7 +762,7 @@ Env::getStringArray() const {
 	for( i = 0; _envTable->iterate( var, val ); i++ ) {
 		ASSERT( i < numVars );
 		ASSERT( var.Length() > 0 );
-		array[i] = new char[ var.Length() + val.Length() + 2 ];
+		array[i] = (char *)malloc(var.Length() + val.Length() + 2);
 		ASSERT( array[i] );
 		strcpy( array[i], var.Value() );
 		if(val != NO_ENVIRONMENT_VALUE) {

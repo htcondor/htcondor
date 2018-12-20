@@ -180,8 +180,6 @@ extern int 		CondorErrno;
 
 } // classad
 
-char* strnewp( const char* );
-
 #include "classad/classadErrno.h"
 
 #endif//__CLASSAD_COMMON_H__

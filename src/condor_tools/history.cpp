@@ -26,7 +26,6 @@
 #include "condor_environ.h"
 #include "dc_collector.h"
 #include "dc_schedd.h"
-#include "get_daemon_name.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
 #include "MyString.h"

@@ -478,7 +478,7 @@ Matchmaker::
 	if ( cachedName ) free(cachedName);
 	if ( cachedAddr ) free(cachedAddr);
 
-	delete [] NegotiatorName;
+	free(NegotiatorName);
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
@@ -594,7 +594,7 @@ reinitialize ()
 
 	if ( NegotiatorNameInConfig || NegotiatorName == NULL ) {
 		char *tmp = param( "NEGOTIATOR_NAME" );
-		delete [] NegotiatorName;
+		free( NegotiatorName );
 		if ( tmp ) {
 			NegotiatorName = build_valid_daemon_name( tmp );
 			free( tmp );

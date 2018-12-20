@@ -133,7 +133,7 @@ struct MgmtMasterPlugin : public Service, MasterPlugin
 		free(mechanism);
 
 		master = new com::redhat::grid::MasterObject(agent, default_name);
-		delete [] default_name;
+		free(default_name);
 
 		ReliSock *sock = new ReliSock;
 		if (!sock) {

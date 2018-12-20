@@ -110,9 +110,9 @@ DCCollector::deepCopy( const DCCollector& copy )
 	up_type = copy.up_type;
 
 	if( update_destination ) {
-        delete [] update_destination;
+        free(update_destination);
     }
-	update_destination = strnewp( copy.update_destination );
+	update_destination = copy.update_destination ? strdup( copy.update_destination ) : NULL;
 
 	startTime = copy.startTime;
 }
@@ -590,7 +590,7 @@ void
 DCCollector::initDestinationStrings( void )
 {
 	if( update_destination ) {
-		delete [] update_destination;
+		free(update_destination);
 		update_destination = NULL;
 	}
 
@@ -608,7 +608,7 @@ DCCollector::initDestinationStrings( void )
 	} else {
 		if (_addr) dest = _addr;
 	}
-	update_destination = strnewp( dest.c_str() );
+	update_destination = strdup( dest.c_str() );
 }
 
 
@@ -639,7 +639,7 @@ DCCollector::~DCCollector( void )
 		delete( update_rsock );
 	}
 	if( update_destination ) {
-		delete [] update_destination;
+		free(update_destination);
 	}
 
 		// In case there are any nonblocking updates in progress,

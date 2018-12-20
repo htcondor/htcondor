@@ -29,6 +29,7 @@
 #include "stat_wrapper.h"
 #include "read_user_log.h"
 #include "user_log_header.h"
+#include "condor_string.h"
 #include "my_username.h"
 #include <stdio.h>
 #if defined(UNIX)

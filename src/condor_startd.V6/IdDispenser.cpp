@@ -20,36 +20,36 @@
 #include "condor_common.h"
 
 #include "IdDispenser.h"
+#include "condor_debug.h"
 
 
-IdDispenser::IdDispenser( int size, int seed ) :
-	free_ids(size+2)
+IdDispenser::IdDispenser( int seed ) :
+	free_ids(seed, false)
 {
-	int i;
-	free_ids.setFiller(true);
-	free_ids.fill(true);
-	for( i=0; i<seed; i++ ) {
-		free_ids[i] = false;
-	}
 }
 
 
 int
 IdDispenser::next( void )
 {
-	int i;
-	for( i=1 ; ; i++ ) {
+	size_t i;
+	for( i = 1; i < free_ids.size(); i++ ) {
 		if( free_ids[i] ) {
 			free_ids[i] = false;
 			return i;
 		}
 	}
+	free_ids.push_back(false);
+	return free_ids.size() - 1;
 }
 
 
 void
 IdDispenser::insert( int id )
 {
+	if( (size_t)id >= free_ids.size() ) {
+		EXCEPT( "IdDispenser::insert: %d is out of range", id );
+	}
 	if( free_ids[id] ) {
 		EXCEPT( "IdDispenser::insert: %d is already free", id );
 	}

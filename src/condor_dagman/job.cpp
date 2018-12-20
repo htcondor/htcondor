@@ -59,15 +59,10 @@ const char * Job::status_t_names[] = {
 
 //---------------------------------------------------------------------------
 Job::~Job() {
-	delete [] _directory;
-	delete [] _cmdFile;
-	delete [] _dagFile;
-    // NOTE: we cast this to char* because older MS compilers
-    // (contrary to the ISO C++ spec) won't allow you to delete a
-    // const.  This has apparently been fixed in Visual C++ .NET, but
-    // as of 6/2004 we don't yet use that.  For details, see:
-    // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
-	delete [] _jobName;
+	free(_directory);
+	free(_cmdFile);
+	free(_dagFile);
+	free(_jobName);
 
 	varsFromDag->Rewind();
 	NodeVar *var;
@@ -79,7 +74,7 @@ Job::~Job() {
 	delete _scriptPre;
 	delete _scriptPost;
 
-	delete [] _jobTag;
+	free(_jobTag);
 }
 
 //---------------------------------------------------------------------------
@@ -98,9 +93,9 @@ Job::Job( const char* jobName,
 	_Status = STATUS_READY;
 	countedAsDone = false;
 
-	_jobName = strnewp (jobName);
-	_directory = strnewp (directory);
-	_cmdFile = strnewp (cmdFile);
+	_jobName = strdup (jobName);
+	_directory = strdup (directory);
+	_cmdFile = strdup (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
 
@@ -167,9 +162,9 @@ Job::PrefixDirectory(MyString &prefix)
 	newdir += "/";
 	newdir += _directory;
 
-	delete [] _directory;
+	free(_directory);
 
-	_directory = strnewp(newdir.Value());
+	_directory = strdup(newdir.Value());
 }
 
 //---------------------------------------------------------------------------
@@ -733,9 +728,9 @@ Job::PrefixName(const MyString &prefix)
 {
 	MyString tmp = prefix + _jobName;
 
-	delete[] _jobName;
+	free(_jobName);
 
-	_jobName = strnewp(tmp.Value());
+	_jobName = strdup(tmp.Value());
 }
 
 
@@ -759,8 +754,8 @@ Job::ResolveVarsInterpolations(void)
 void
 Job::SetDagFile(const char *dagFile)
 {
-	delete _dagFile;
-	_dagFile = strnewp( dagFile );
+	free(_dagFile);
+	_dagFile = strdup( dagFile );
 }
 
 //---------------------------------------------------------------------------
@@ -791,7 +786,7 @@ Job::GetJobstateJobTag()
 			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
 			tmpJobTag = tmpJobTag.substr( begin, 1 + end - begin );
 		}
-		_jobTag = strnewp( tmpJobTag.Value() );
+		_jobTag = strdup( tmpJobTag.Value() );
 	}
 
 	return _jobTag;

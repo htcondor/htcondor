@@ -576,7 +576,7 @@ init_params( int /* first_time */)
 	auto_free_ptr tmp(param("STARTD_NAME"));
 	if (tmp) {
 		if( Name ) {
-			delete [] Name;
+			free(Name);
 		}
 		Name = build_valid_daemon_name(tmp);
 		dprintf( D_FULLDEBUG, "Using %s for name\n", Name );

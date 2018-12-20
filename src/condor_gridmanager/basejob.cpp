@@ -25,6 +25,7 @@
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "write_user_log.h"
+#include "condor_string.h"
 
 #include "gridmanager.h"
 #include "basejob.h"
