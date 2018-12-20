@@ -44,6 +44,12 @@ directory.  These are only defined on Linux machines with cgroup support enabled
 for vanilla jobs.
 \Ticket{6826}
 
+\item Added configuration parameter \MacroNI{CRED\_SUPER\_USERS},
+a list of users who are permitted to store credentials for any user
+when using the \Condor{store\_credd} command. Normally, users can
+only store credentials for themselves.
+\Ticket{6346}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
