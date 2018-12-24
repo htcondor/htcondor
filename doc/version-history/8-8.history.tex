@@ -74,6 +74,12 @@ directory.  These are only defined on Linux machines with cgroup support enabled
 for vanilla jobs.
 \Ticket{6826}
 
+\item Added configuration parameter \MacroNI{CRED\_SUPER\_USERS},
+a list of users who are permitted to store credentials for any user
+when using the \Condor{store\_credd} command. Normally, users can
+only store credentials for themselves.
+\Ticket{6346}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -93,6 +99,12 @@ the effective uid of the calling process.
 tring to materialize a job that has multi-column itemdata. The bug was introduced in
 the 8.7.10 release.
 \Ticket{6827}
+
+\item Fixed a couple of bugs in the job event log reader code that were made visible by
+the new JobEventLog python object. The remote error and job terminated event did not read
+all of the available information from the job log correctly. 
+\Ticket{6816}
+\Ticket{6836}
 
 \end{itemize}
 
