@@ -61,7 +61,7 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	// only set to true if it actually happens
 	cred_modified = false;
 
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir( param("SEC_CREDENTIAL_DIRECTORY") );
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return FAILURE;
@@ -78,7 +78,7 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 
 	// create dir for user's creds
 	MyString user_cred_dir;
-	user_cred_dir.formatstr("%s%c%s", cred_dir, DIR_DELIM_CHAR, username);
+	user_cred_dir.formatstr("%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 	mkdir(user_cred_dir.Value(), 0700);
 
 	// create filenames
@@ -142,7 +142,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	// only set to true if it actually happens
 	cred_modified = false;
 
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir( param("SEC_CREDENTIAL_DIRECTORY") );
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "ERROR: got STORE_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return FAILURE;
@@ -159,7 +159,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 
 	// check to see if .cc already exists
 	char ccfilename[PATH_MAX];
-	sprintf(ccfilename, "%s%c%s.cc", cred_dir, DIR_DELIM_CHAR, username);
+	sprintf(ccfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 	struct stat cred_stat_buf;
 	int rc = stat(ccfilename, &cred_stat_buf);
 
@@ -191,8 +191,8 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	// create filenames
 	char tmpfilename[PATH_MAX];
 	char filename[PATH_MAX];
-	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir, DIR_DELIM_CHAR, username);
-	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, username);
+	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir.ptr(), DIR_DELIM_CHAR, username);
+	sprintf(filename, "%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
 
 	// contents of pw are base64 encoded.  decode now just before they go
@@ -242,7 +242,7 @@ ZKM_UNIX_GET_CRED(const char *user, const char *domain)
 {
 	dprintf(D_ALWAYS, "ZKM: get cred user %s domain %s\n", user, domain);
 
-	char* cred_dir = param("SEC_CREDENTIAL_DIRECTORY");
+	auto_free_ptr cred_dir( param("SEC_CREDENTIAL_DIRECTORY") );
 	if(!cred_dir) {
 		dprintf(D_ALWAYS, "ERROR: got GET_CRED but SEC_CREDENTIAL_DIRECTORY not defined!\n");
 		return NULL;
@@ -250,7 +250,7 @@ ZKM_UNIX_GET_CRED(const char *user, const char *domain)
 
 	// create filenames
 	MyString filename;
-	filename.formatstr("%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user);
+	filename.formatstr("%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, user);
 	dprintf(D_ALWAYS, "CERN: reading data from %s\n", filename.c_str());
 
 	// read the file (fourth argument "true" means as_root)
@@ -290,8 +290,8 @@ char* getStoredCredential(const char *username, const char *domain)
 
 	// EVERYTHING BELOW HERE IS FOR POOL PASSWORD ONLY
 
-	char *filename = param("SEC_PASSWORD_FILE");
-	if (filename == NULL) {
+	auto_free_ptr filename( param("SEC_PASSWORD_FILE") );
+	if (!filename) {
 		dprintf(D_ALWAYS,
 		        "error fetching pool password; "
 		            "SEC_PASSWORD_FILE not defined\n");
@@ -324,7 +324,7 @@ char* getStoredCredential(const char *username, const char *domain)
 		return pw;
 	}
 
-	dprintf(D_ALWAYS, "getStoredCredential(): read_secure_file(%s) failed!\n", filename);
+	dprintf(D_ALWAYS, "getStoredCredential(): read_secure_file(%s) failed!\n", filename.ptr());
 	return NULL;
 }
 

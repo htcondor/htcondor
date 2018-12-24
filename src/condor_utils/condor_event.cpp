@@ -1988,7 +1988,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 		MyString et = line.substr(0, ix);
 		et.trim();
 		strncpy(error_type, et.Value(), sizeof(error_type));
-		line = line.substr(ix + 6, sizeof(daemon_name) * 2);
+		line = line.substr(ix + 6, line.length());
 		line.trim();
 	} else {
 		strncpy(error_type, "Error", sizeof(error_type));
@@ -2002,7 +2002,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 		MyString dn = line.substr(0, ix);
 		dn.trim();
 		strncpy(daemon_name, dn.Value(), sizeof(daemon_name));
-		line = line.substr(ix + 4, sizeof(execute_host));
+		line = line.substr(ix + 4, line.length());
 		line.trim();
 	}
 
