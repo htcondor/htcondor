@@ -199,7 +199,7 @@ class Factory:
             # Check if there are any idle jobs
             if not self.UseOffline:
                 user_idle = self.GetIdleJobs(ClusterStatus())
-                if user_idle == None:
+                if user_idle is None:
                     logging.info("Received None from idle jobs")
                     self.SleepFactory()
                     continue
@@ -231,7 +231,7 @@ class Factory:
                     idleslots = idlejobs = None
                 
                 # If the cluster preferences weren't met, then move on
-                if idleslots == None or idlejobs == None:
+                if idleslots is None or idlejobs is None:
                     continue
 
                 # Get the offline ads to update.
@@ -309,7 +309,7 @@ class Factory:
             
             
             idleuserjobs = status.GetIdleJobs(schedds)
-            if idleuserjobs == None:
+            if idleuserjobs is None:
                 logging.info("Received None from idle user jobs, going to try later")
                 return None
             
