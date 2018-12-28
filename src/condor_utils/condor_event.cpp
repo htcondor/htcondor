@@ -2777,7 +2777,7 @@ JobEvictedEvent::formatBody( std::string &out )
   } else if( checkpointed ) {
     retval = formatstr_cat( out, "(1) Job was checkpointed.\n\t" );
   } else {
-    retval = formatstr_cat( out, "(0) Job was not checkpointed.\n\t" );
+    retval = formatstr_cat( out, "(0) CPU times\n\t" );
   }
 
   if( retval < 0 ) {

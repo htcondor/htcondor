@@ -924,15 +924,7 @@ sub Monitor
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
 
-		    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
-		    {
-			monitor_debug( "$job_id was evicted without ckpt\n" ,2);
-			# execute callback if one is registered
-			&$EvictedWithoutCheckpointCallback( %info )
-			    if defined $EvictedWithoutCheckpointCallback;
-
-		    }
-		    elsif( $line =~ /^\s+\(1\) Job was checkpointed\./ )
+		    if( $line =~ /^\s+\(1\) Job was checkpointed\./ )
 		    {
 			monitor_debug( "$job_id was evicted with ckpt\n" ,2);
 			# execute callback if one is registered
@@ -945,6 +937,14 @@ sub Monitor
 			# execute callback if one is registered
 			&$EvictedWithRequeueCallback( %info )
 			    if defined $EvictedWithRequeueCallback;
+		    }
+		    elsif( $line =~ /^\s+\(0\) / )
+		    {
+			monitor_debug( "$job_id was evicted without ckpt\n" ,2);
+			# execute callback if one is registered
+			&$EvictedWithoutCheckpointCallback( %info )
+			    if defined $EvictedWithoutCheckpointCallback;
+
 		    }
 		    else
 		    {
@@ -1825,15 +1825,7 @@ sub MultiMonitor
 		    CondorUtils::fullchomp($line);
 		    $linenum++;
 
-		    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
-		    {
-			monitor_debug( "job was evicted without ckpt\n" ,2);
-			# execute callback if one is registered
-			&$EvictedWithoutCheckpointCallback( %info )
-			    if defined $EvictedWithoutCheckpointCallback;
-
-		    }
-		    elsif( $line =~ /^\s+\(1\) Job was checkpointed\./ )
+		    if( $line =~ /^\s+\(1\) Job was checkpointed\./ )
 		    {
 			monitor_debug( "job was evicted with ckpt\n" ,2);
 			# execute callback if one is registered
@@ -1846,6 +1838,14 @@ sub MultiMonitor
 			# execute callback if one is registered
 			&$EvictedWithRequeueCallback( %info )
 			    if defined $EvictedWithRequeueCallback;
+		    }
+		    elsif( $line =~ /^\s+\(0\) / )
+		    {
+			monitor_debug( "job was evicted without ckpt\n" ,2);
+			# execute callback if one is registered
+			&$EvictedWithoutCheckpointCallback( %info )
+			    if defined $EvictedWithoutCheckpointCallback;
+
 		    }
 		    else
 		    {
