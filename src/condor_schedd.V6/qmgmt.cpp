@@ -42,7 +42,6 @@
 #include "env.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
-#include "condor_string.h" // for strnewp, etc.
 #include "forkwork.h"
 #include "condor_open.h"
 #include "ickpt_share.h"
@@ -208,6 +207,7 @@ prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
 prio_rec	* PrioRec = &PrioRecArray[0];
 int			N_PrioRecs = 0;
 HashTable<int,int> *PrioRecAutoClusterRejected = NULL;
+int BuildPrioRecArrayTid = -1;
 
 static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
@@ -944,9 +944,9 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 	ASSERT(owner == NULL);
 
 	if ( o ) {
-		fquser = strnewp(o);
+		fquser = strdup(o);
 			// owner is just fquser that stops at the first '@' 
-		owner = strnewp(o);
+		owner = strdup(o);
 		char *atsign = strchr(owner,'@');
 		if (atsign) {
 			*atsign = '\0';
@@ -954,7 +954,7 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 	}
 
 	addr = raddr;
-	myendpoint = strnewp(addr.to_ip_string().Value());
+	myendpoint = strdup(addr.to_ip_string().Value());
 
 	return true;
 }
@@ -972,11 +972,11 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 bool
 QmgmtPeer::setEffectiveOwner(char const *o)
 {
-	delete [] owner;
+	free(owner);
 	owner = NULL;
 
 	if ( o ) {
-		owner = strnewp(o);
+		owner = strdup(o);
 	}
 	return true;
 }
@@ -985,15 +985,15 @@ void
 QmgmtPeer::unset()
 {
 	if (owner) {
-		delete [] owner;
+		free(owner);
 		owner = NULL;
 	}
 	if (fquser) {
-		delete fquser;
+		free(fquser);
 		fquser = NULL;
 	}
 	if (myendpoint) {
-		delete [] myendpoint;
+		free(myendpoint);
 		myendpoint = NULL;
 	}
 	if (sock) sock=NULL;	// note: do NOT delete sock!!!!!
@@ -3121,6 +3121,9 @@ int DestroyProc(int cluster_id, int proc_id)
 		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
 	}
 
+	// Remove the job from its autocluster
+	scheduler.autocluster.removeFromAutocluster(*ad);
+
 	// Append to history file
 	AppendHistory(ad);
 
@@ -3152,6 +3155,10 @@ int DestroyProc(int cluster_id, int proc_id)
 	JobQueue->DestroyClassAd(key);
 
 	DecrementClusterSize(cluster_id, clusterad);
+
+	// We'll need the JobPrio value later after the ad has been destroyed
+	int job_prio = 0;
+	ad->LookupInteger(ATTR_JOB_PRIO, job_prio);
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
@@ -3199,7 +3206,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 
 		// remove jobid from any indexes
-	scheduler.removeJobFromIndexes(key);
+	scheduler.removeJobFromIndexes(key, job_prio);
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
@@ -4001,7 +4008,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		// give the autocluster code a chance to invalidate (or rebuild)
 		// based on the changed attribute.
-		scheduler.autocluster.preSetAttribute(*job, attr_name, attr_value, flags);
+		if (scheduler.autocluster.preSetAttribute(*job, attr_name, attr_value, flags)) {
+			DirtyPrioRecArray();
+			dprintf(D_FULLDEBUG,
+					"Prioritized runnable job list will be rebuilt, because "
+					"ClassAd attribute %s=%s changed\n",
+					attr_name,attr_value);
+		}
 	}
 
 	// This block handles rounding of attributes.
@@ -4202,6 +4215,27 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		keys.insert(key.c_str());
 		// TODO: convert the keys to PROC_IDs before calling DoSetAttributeCallbacks?
 		DoSetAttributeCallbacks(keys, attr_category);
+	}
+
+	// If we are changing the priority of a scheduler/local universe job, we need
+	// to update the LocalJobsPrioQueue data
+	if ( ( universe == CONDOR_UNIVERSE_SCHEDULER ||
+		universe == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
+		if ( job ) {
+			// Walk the prio queue of local jobs
+			for ( std::set<LocalJobRec>::iterator it = scheduler.LocalJobsPrioQueue.begin(); it != scheduler.LocalJobsPrioQueue.end(); it++ ) {
+				// If this record matches the job_id passed in, erase it, then
+				// add a new record with the updated priority value. The
+				// LocalJobsPrioQueue std::set will automatically order it.
+				if ( it->job_id.cluster == cluster_id && it->job_id.proc == proc_id ) {
+					scheduler.LocalJobsPrioQueue.erase( it );
+					JOB_ID_KEY jid = JOB_ID_KEY( cluster_id, proc_id );
+					LocalJobRec rec = LocalJobRec( atoi ( attr_value ), jid );
+					scheduler.LocalJobsPrioQueue.insert( rec );
+					break;
+				}
+			}
+		}
 	}
 
 	return 0;
@@ -6832,7 +6866,8 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     if (cur_hosts>=max_hosts || job_status==HELD || 
 			job_status==REMOVED || job_status==COMPLETED ||
 			job->IsNoopJob() ||
-			!service_this_universe(universe,job))
+			!service_this_universe(universe,job) ||
+			scheduler.AlreadyMatched(job, job->Universe()))
 	{
         return cur_hosts;
 	}
@@ -7291,6 +7326,19 @@ static void DoBuildPrioRecArray() {
 }
 
 /*
+ * Force a rebuild of the PrioRec array if we're beyond the max interval
+ * for a rebuild.
+ * This is meant to be called periodically as a DaemonCore timer.
+ */
+void BuildPrioRecArrayPeriodic()
+{
+	if ( time(NULL) >= PrioRecArrayTimeslice.getStartTime().tv_sec + PrioRecRebuildMaxInterval ) {
+		PrioRecArrayIsDirty = true;
+		BuildPrioRecArray(false);
+	}
+}
+
+/*
  * Build an array of runnable jobs sorted by priority.  If there are
  * a lot of jobs in the queue, this can be expensive, so avoid building
  * the array too often.
@@ -7318,6 +7366,12 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 				"Reusing prioritized runnable job list because nothing has "
 				"changed.\n");
 		return false;
+	}
+
+	if ( BuildPrioRecArrayTid < 0 ) {
+		BuildPrioRecArrayTid = daemonCore->Register_Timer(
+				PrioRecRebuildMaxInterval, PrioRecRebuildMaxInterval,
+				&BuildPrioRecArrayPeriodic, "BuildPrioRecArrayPeriodic");
 	}
 
 		// run without any delay the first time
@@ -7467,17 +7521,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				PrioRec[i].owner[0] = '\0';
 				dprintf(D_FULLDEBUG,
 						"record for job %d.%d skipped until PrioRec rebuild (%s)\n",
-						jobid.cluster, jobid.proc, isRunnable ? "already matched" : "no longer runnable");
-
-					// Ensure that PrioRecArray is rebuilt
-					// eventually, because changes in the status
-					// of AlreadyMatched() can happen without
-					// changes to the status of the job, (not the
-					// normal case, but still possible) so the
-					// dirty flag may not get set when the job
-					// is no longer AlreadyMatched() unless we
-					// set it here and keep rebuilding the array.
-				DirtyPrioRecArray();
+						PrioRec[i].id.cluster, PrioRec[i].id.proc, isRunnable ? "already matched" : "no longer runnable");
 
 					// Move along to the next job in the prio rec array
 				continue;

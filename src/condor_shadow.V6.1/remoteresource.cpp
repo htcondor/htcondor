@@ -24,7 +24,6 @@
 #include "remoteresource.h"
 #include "exit.h"             // for JOB_BLAH_BLAH exit reasons
 #include "condor_debug.h"     // for D_debuglevel #defines
-#include "condor_string.h"    // for strnewp()
 #include "condor_attributes.h"
 #include "internet.h"
 #include "condor_daemon_core.h"
@@ -434,10 +433,10 @@ RemoteResource::~RemoteResource()
 		thisRemoteResource = NULL;
 	}
 	if ( dc_startd     ) delete dc_startd;
-	if ( machineName   ) delete [] machineName;
-	if ( starterAddress) delete [] starterAddress;
-	if ( starterArch   ) delete [] starterArch;
-	if ( starterOpsys  ) delete [] starterOpsys;
+	if ( machineName   ) free( machineName );
+	if ( starterAddress) free( starterAddress );
+	if ( starterArch   ) free( starterArch );
+	if ( starterOpsys  ) free( starterOpsys );
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
@@ -814,11 +813,11 @@ RemoteResource::getMachineName( char *& mName )
 {
 
 	if ( !mName ) {
-		mName = strnewp( machineName );
+		mName = strdup( machineName );
 	} else {
 		if ( machineName ) {
-			delete [] mName;
-			mName = strnewp( machineName );
+			free( mName );
+			mName = strdup( machineName );
 		} else {
 			mName[0] = '\0';
 		}
@@ -840,9 +839,8 @@ RemoteResource::getStartdAddress( char *& sinful )
 		return;
 	}
 	if( sinful ) {
-		delete [] sinful;
-	}
-	sinful = strnewp( addr );
+		free( sinful );	}
+	sinful = strdup( addr );
 }
 
 void
@@ -859,9 +857,9 @@ RemoteResource::getStartdName( char *& remoteName )
 		return;
 	}
 	if( remoteName ) {
-		delete [] remoteName;
+		free( remoteName );
 	}
-	remoteName = strnewp( localName );
+	remoteName = strdup( localName );
 }
 
 
@@ -880,9 +878,9 @@ RemoteResource::getClaimId( char *& id )
 		return;
 	}
 	if( id ) {
-		delete[] id;
+		free( id );
 	}
-	id = strnewp( my_id );
+	id = strdup( my_id );
 }
 
 void
@@ -890,11 +888,11 @@ RemoteResource::getStarterAddress( char *& starterAddr )
 {
 
 	if (!starterAddr) {
-		starterAddr = strnewp( starterAddress );
+		starterAddr = starterAddress ? strdup( starterAddress ) : NULL;
 	} else {
 		if ( starterAddress ) {
-			delete[] starterAddr;
-			starterAddr = strnewp( starterAddress );
+			free( starterAddr );
+			starterAddr = strdup( starterAddress );
 		} else {
 			starterAddr[0] = '\0';
 		}
@@ -1124,8 +1122,8 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	if( ad->LookupString(ATTR_NAME, &tmp) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
-				delete [] machineName;
-				machineName = strnewp( tmp );
+				free(machineName);
+				machineName = strdup( tmp );
 			}
 		}	
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
@@ -1134,8 +1132,8 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	} else if( ad->LookupString(ATTR_MACHINE, &tmp) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
-				delete [] machineName;
-				machineName = strnewp( tmp );
+				free(machineName);
+				machineName = strdup( tmp );
 			}
 		}	
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
@@ -1145,21 +1143,19 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 
 	if( ad->LookupString(ATTR_ARCH, &tmp) ) {
 		if( starterArch ) {
-			delete [] starterArch;
+			free( starterArch );
 		}	
-		starterArch = strnewp( tmp );
+		starterArch = tmp;
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_ARCH, tmp ); 
-		free( tmp );
 		tmp = NULL;
 	}
 
 	if( ad->LookupString(ATTR_OPSYS, &tmp) ) {
 		if( starterOpsys ) {
-			delete [] starterOpsys;
+			free( starterOpsys );
 		}	
-		starterOpsys = strnewp( tmp );
+		starterOpsys = tmp;
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_OPSYS, tmp ); 
-		free( tmp );
 		tmp = NULL;
 	}
 
@@ -1196,18 +1192,18 @@ RemoteResource::setMachineName( const char * mName )
 {
 
 	if ( machineName )
-		delete [] machineName;
+		free(machineName);
 	
-	machineName = strnewp ( mName );
+	machineName = strdup ( mName );
 }
 
 void
 RemoteResource::setStarterAddress( const char * starterAddr )
 {
 	if( starterAddress ) {
-		delete [] starterAddress;
+		free( starterAddress );
 	}	
-	starterAddress = strnewp( starterAddr );
+	starterAddress = strdup( starterAddr );
 }
 
 
@@ -1449,6 +1445,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     jobAd->CopyAttribute(ATTR_BLOCK_WRITES, update_ad);
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_READS, update_ad);
     jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITES, update_ad);
+
+    jobAd->CopyAttribute(ATTR_IO_WAIT, update_ad);
 
 	// FIXME: If we're convinced that we want a whitelist here (chirp
 	// would seem to make a mockery of that), we should at least rewrite
@@ -2184,7 +2182,7 @@ RemoteResource::locateReconnectStarter( void )
 			setStarterAddress( tmp );
 			dprintf( D_ALWAYS, "Found starter: %s\n", tmp );
 			free( tmp );
-			delete[] claimid;
+			free( claimid );
 			return true;
 		} else {
 			EXCEPT( "impossible: locateStarter() returned success "
@@ -2250,7 +2248,7 @@ RemoteResource::locateReconnectStarter( void )
 		EXCEPT( "impossible: success already handled" );
 		break;
 	}
-	delete[] claimid;
+	free( claimid );
 	return false;
 }
 

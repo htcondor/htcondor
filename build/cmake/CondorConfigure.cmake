@@ -272,6 +272,10 @@ else()
 endif(PRE_RELEASE)
 add_definitions( -DCONDOR_VERSION="${VERSION}" )
 
+if(PACKAGEID)
+  add_definitions( -DPACKAGEID=${PACKAGEID} )
+endif(PACKAGEID)
+
 if( NOT BUILD_DATE )
   GET_DATE( BUILD_DATE )
 endif()

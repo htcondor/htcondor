@@ -24,7 +24,6 @@
 #include "condor_attributes.h"
 #include "condor_distribution.h"
 #include "dc_collector.h"
-#include "get_daemon_name.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
 #include "MyString.h"

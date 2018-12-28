@@ -423,6 +423,7 @@ main(int argc, char *argv[])
 
 	slot_counts = new HashTable <std::string, int> (hashFunction);
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	// parse command line args
@@ -561,14 +562,7 @@ main(int argc, char *argv[])
 
 				// How many slots are on that machine?
 				if (!offer->LookupInteger(ATTR_TOTAL_SLOTS, slot_count)) {
-					if (param_boolean("ALLOW_VM_CRUFT", false)) {
-						if (!offer->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES,
-												  slot_count)) {
-							slot_count = 1;
-						}
-					} else {
-						slot_count = 1;
-					}
+					slot_count = 1;
 				}
 
 				slot_count_thus_far = 0;

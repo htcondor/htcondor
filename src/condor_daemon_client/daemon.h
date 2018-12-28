@@ -681,7 +681,7 @@ protected:
 		  use that, and pass it to build_valid_daemon_name() to make
 		  sure we have a fully-qualified hostname.  If not, we just
 		  use get_local_fqdn().  The string we return is newly
-		  allocated and should be deallocated with delete []. 
+		  allocated and should be deallocated with free(). 
 		  */
 	char* localName( void );
 
@@ -742,7 +742,7 @@ protected:
 		   the value you pass in.  Unlike newError(), this DOES NOT
 		   make a copy of what you pass (since so many of our util lib
 		   functions already allocate a string), so the string you
-		   pass in should be a strnewp()'ed or equivalent string.  
+		   pass in should be a strdup()'ed or equivalent string.  
 		   We simply return the value you pass in.
 		*/
 	char* New_full_hostname( char* );

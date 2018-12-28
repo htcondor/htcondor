@@ -66,7 +66,7 @@ bool getClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
  * @param sock the stream
  * @param ad the ClassAd to be sent
  */
-int putClassAd (Stream *sock, classad::ClassAd& ad);
+int putClassAd (Stream *sock, const classad::ClassAd& ad);
 
 /** Send the ClassAd on the CEDAR stream, this function has the functionality of all of the above
  * @param sock the stream
@@ -76,7 +76,7 @@ int putClassAd (Stream *sock, classad::ClassAd& ad);
  *  if the PUT_CLASSAD_NON_BLOCKING flag is used, then This will not block even if the send socket is full.
  *  and the return value is 2 if it would have blocked; the ClassAd will be buffered in memory.
  */
-int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::References * whitelist = NULL);
+int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const classad::References * whitelist = NULL);
 // options valuees for putClassad
 #define PUT_CLASSAD_NO_PRIVATE          0x01 // exclude private attributes
 #define PUT_CLASSAD_NO_TYPES            0x02 // exclude MyType and TargetType from output.

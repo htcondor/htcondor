@@ -96,6 +96,7 @@ main( int argc, char *argv[] )
 
 	myDistro->Init( argc, argv );
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	cmd = getCommandFromArgv( argc, argv );
@@ -259,21 +260,6 @@ fillRequirements( ClassAd* req )
 		require += "==";
 		require += IntToStr( slot_id );
 		require += ")&&(";
-	}
-	else if (param_boolean("ALLOW_VM_CRUFT", false)) {
-		int vm_id = 0;
-		if (name) {
-			if (sscanf(name, "vm%d@", &vm_id) != 1) { 
-				vm_id = 0;
-			}
-		}
-		if (vm_id > 0) {
-			require += "TARGET.";
-			require += ATTR_VIRTUAL_MACHINE_ID;
-			require += "==";
-			require += IntToStr( vm_id );
-			require += ")&&(";
-		}
 	}
 
 	require += jic_req;

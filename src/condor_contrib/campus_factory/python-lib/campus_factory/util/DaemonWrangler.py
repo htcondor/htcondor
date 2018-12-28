@@ -22,7 +22,7 @@ class DaemonWrangler:
         """
         @param daemons: A list of daemons that will be included in the package
         """
-        if daemons == None:
+        if daemons is None:
             self.daemons = DEFAULT_GLIDEIN_DAEMONS
         else:
             self.daemons = daemons
@@ -42,7 +42,7 @@ class DaemonWrangler:
         
         # See if the daemons exist
         daemon_paths = self._CheckDaemons()
-        if daemon_paths == None:
+        if daemon_paths is None:
             logging.error("Unable to read all daemons, not packaging...")
             raise Exception("Unable to check all daemons")
         

@@ -23,7 +23,6 @@
 #include "condor_attributes.h"
 #include "condor_state.h"
 #include "status_types.h"
-#include "get_daemon_name.h"
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_collector.h"
@@ -1326,6 +1325,7 @@ void init_condor_config()
 		// is no global config file, so tell the config subsystem that.
 		config_continue_if_no_config(true);
 	}
+	set_priv_initialize(); // allow uid switching if root
 	config();
 }
 

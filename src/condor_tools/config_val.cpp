@@ -811,6 +811,7 @@ main( int argc, const char* argv[] )
 	if (write_config || stats_with_defaults) {
 		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
 	}
+	set_priv_initialize(); // allow uid switching if root
 	config_host(NULL, config_options);
 	validate_config(false, 0); // validate, but do not abort.
 	if (print_config_sources) {

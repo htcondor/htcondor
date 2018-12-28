@@ -505,6 +505,7 @@ int main (int argc, const char **argv)
 
 	// load up configuration file
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
 	dprintf_OnExitDumpOnErrorBuffer(stderr);
@@ -1004,7 +1005,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			scheddQuery.setLocationLookup(daemonname);
 			Q.addSchedd(daemonname);
 
-			delete [] daemonname;
+			free(daemonname);
 			i++;
 			querySchedds = true;
 		} 

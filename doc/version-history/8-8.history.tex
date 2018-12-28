@@ -5,11 +5,45 @@
 %%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Development Release Series 8.8}\label{sec:History-8-8}
+\section{Stable Release Series 8.8}\label{sec:History-8-8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This is the development release series of HTCondor.
+This is the stable release series of HTCondor.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 8.8.x releases.
+New features will be added in the 8.9.x development series.
+
 The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-8-1}Version 8.8.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.8.1 not yet released.
+%\item HTCondor version 8.8.1 released on Month Date, 2018.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-8-0}Version 8.8.0}
@@ -29,7 +63,22 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Made the Python bindings' \PyBindNI{JobEvent} API more Pythonic by
+handling optional event attributes as if the \PyBindNI{JobEvent} object
+were a dictionary, instead.  See section \ref{Python-JobEventLog} for details.
+\Ticket{6820}
+
+\item Added job ad attribute \Macro{BlockReadKbytes} and \Macro{BlockWriteKybtes}
+which describe the number of kbytes read and written by the job to the sandbox
+directory.  These are only defined on Linux machines with cgroup support enabled
+for vanilla jobs.
+\Ticket{6826}
+
+\item Added configuration parameter \MacroNI{CRED\_SUPER\_USERS},
+a list of users who are permitted to store credentials for any user
+when using the \Condor{store\_credd} command. Normally, users can
+only store credentials for themselves.
+\Ticket{6346}
 
 \end{itemize}
 
@@ -45,6 +94,17 @@ evaluation of their \Attr{LeaveJobInQueue} attribute changes from
 \item Fixed a bug where invoking the Python bindings as root could change
 the effective uid of the calling process.
 \Ticket{6817}
+
+\item Fixed a bug that could result in crashing of the \Condor{schedd} while
+tring to materialize a job that has multi-column itemdata. The bug was introduced in
+the 8.7.10 release.
+\Ticket{6827}
+
+\item Fixed a couple of bugs in the job event log reader code that were made visible by
+the new JobEventLog python object. The remote error and job terminated event did not read
+all of the available information from the job log correctly. 
+\Ticket{6816}
+\Ticket{6836}
 
 \end{itemize}
 

@@ -707,12 +707,26 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 					char * return_addr = NULL;
 					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
+					std::string our_sinful;
+					m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+					ClassAd info_ad;
+					// Presence of the ConnectSinful attribute indicates
+					// that the client understands and wants the
+					// extended information ad in the
+					// DC_INVALIDATE_KEY message.
+					if ( !our_sinful.empty() ) {
+						info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+					}
 
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
 							   "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr ? return_addr : "(none)");
+					if( !strncmp( m_sid, "family:", strlen("family:") ) ) {
+						dprintf(D_ALWAYS, "  The remote daemon thinks that we are in the same family of Condor daemon processes as it, but I don't recognize its family security session.\n");
+						dprintf(D_ALWAYS, "  If we are in the same family of processes, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+					}
 
 					if( return_addr ) {
-						daemonCore->send_invalidate_session( return_addr, m_sid );
+						daemonCore->send_invalidate_session( return_addr, m_sid, &info_ad );
 						free (return_addr);
 					}
 

@@ -169,8 +169,8 @@ Triggerd::init()
    {
       char* valid_name = build_valid_daemon_name(name);
       daemonName = valid_name;
-      delete[] name;
-      delete[] valid_name;
+      free(name);
+      free(valid_name);
    }
    else
    {
@@ -178,7 +178,7 @@ Triggerd::init()
       if(default_name)
       {
          daemonName = default_name;
-         delete[] default_name;
+         free(default_name);
       }
    }
 

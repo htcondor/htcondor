@@ -266,7 +266,7 @@ WorkerThread::WorkerThread(const char* name, condor_thread_func_t routine, void*
 	status_ = THREAD_UNBORN;
 
 
-	name_ = strnewp(name);
+	name_ = name ? strdup(name) : NULL;
 	routine_ = routine;
 	arg_ = arg;
 }
@@ -276,7 +276,7 @@ WorkerThread::WorkerThread(const char* name, condor_thread_func_t routine, void*
 WorkerThread::~WorkerThread()
 {	
 	// note: do NOT delete arg_  !
-	if (name_) delete [] name_;
+	if (name_) free(name_);
 	if (user_pointer_) delete (Service *)user_pointer_;
 
 	// remove tid from our hash table

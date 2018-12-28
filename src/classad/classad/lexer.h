@@ -78,8 +78,7 @@ class Lexer
 			LEX_OPEN_PAREN,
 			LEX_CLOSE_PAREN,
 			LEX_OPEN_BRACE,
-			LEX_CLOSE_BRACE,
-			LEX_BACKSLASH
+			LEX_CLOSE_BRACE
 		};
 
 		class TokenValue

@@ -238,6 +238,7 @@ int main(int argc, char* argv[])
   if (QueryType==-1 || FromDate<0 || FromDate>Now || ToDate<FromDate) Usage(argv[0]);
   // if (ToDate>Now) ToDate=Now;
 
+  set_priv_initialize(); // allow uid switching if root
   config();
 
   Daemon view_host( DT_VIEW_COLLECTOR, 0, pool );

@@ -34,6 +34,7 @@ append_config = """
   #SCHEDD_ALLOW_LATE_MATERIALIZE = true
   # turn on special logging of late materialization
   SCHEDD_MATERIALIZE_LOG = $(LOG)/MaterializeLog
+  SCHEDD_DEBUG = D_MATERIALIZE:2 D_CAT $(SCHEDD_DEBUG)
   #ENABLE_ASYNC_LATE_MATERIALIZE_ITEM_DATA = true
 CONDOR_TESTREQ_CONFIG
 #endtestreq
@@ -46,7 +47,7 @@ testname = os.path.basename(__file__)[:-4]
 sub = htcondor.Submit("""
 	universe = vanilla
 	executable = x_sleep.pl
-	arguments = 10
+	arguments = 3
 	notification = never
 	max_materialize = 4
 	queue 10
@@ -142,8 +143,8 @@ def wait_for_event(id, logfile, timeout, func):
 		elif event.type == JobEventType.JOB_TERMINATED:
 			total_exited += 1
 			num_running -= 1
-			if event.TerminatedNormally : num_materialized -= 1
-			Utils.TLog("ulog: {0}.{1} jobTerm({2}) run={3}({4}), materialized={5}({6})".format(event.cluster, event.proc, event.TerminatedNormally, num_running, peak_running, num_materialized, peak_materialized))
+			if event["TerminatedNormally"] : num_materialized -= 1
+			Utils.TLog("ulog: {0}.{1} jobTerm({2}) run={3}({4}), materialized={5}({6})".format(event.cluster, event.proc, event["TerminatedNormally"], num_running, peak_running, num_materialized, peak_materialized))
 			#continue
 
 		elif event.type in [ JobEventType.IMAGE_SIZE ]:
@@ -234,6 +235,9 @@ elif total_exited != num_items:
 	retval = 1
 else:
 	Utils.Log("OK: total checks for cluster %d passed" % cluster)
+
+# wait a bit for the jobs to get written into the history file
+time.sleep(5)
 
 # count jobs for this cluster in the history file
 # and check to see that the Foo attribute is correct for each

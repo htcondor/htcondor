@@ -90,6 +90,7 @@ int main(int argc, char *argv[])
 		// libraries which use it will write to the right place...
 	dprintf_set_tool_debug("TOOL", 0);
 	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 		// Initialize our Distribution object -- condor vs. hawkeye, etc.
@@ -710,6 +711,9 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		fprintf(pSubFile, "+%s\t= \"%s\"\n", ATTR_JOB_BATCH_NAME,
 					deepOpts.batchName.c_str());
 	}
+    if (shallowOpts.priority != 0) {
+        fprintf(pSubFile, "priority\t= %d\n", shallowOpts.priority);
+    }
 #if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 #endif

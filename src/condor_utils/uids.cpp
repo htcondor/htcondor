@@ -33,7 +33,7 @@
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
 static char* RealUserName = NULL;
-static int SetPrivIgnoreAllRequests = FALSE;
+static int SetPrivIgnoreAllRequests = TRUE;  // this is true until daemon_core sets it to false for daemons
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
 #ifdef WIN32
@@ -187,10 +187,13 @@ const PSID my_user_Sid()
 } 
 #endif 
 
-void
-set_priv_ignore_all_requests( void )
+// called by deamonCore to conditionally enable priv switching
+// returns TRUE if priv switching is enabled, FALSE if not.
+int
+set_priv_initialize(void)
 {
-   SetPrivIgnoreAllRequests = TRUE;
+	SetPrivIgnoreAllRequests = FALSE;
+	return can_switch_ids();
 }
 
 int

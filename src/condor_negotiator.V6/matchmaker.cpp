@@ -478,7 +478,7 @@ Matchmaker::
 	if ( cachedName ) free(cachedName);
 	if ( cachedAddr ) free(cachedAddr);
 
-	delete [] NegotiatorName;
+	free(NegotiatorName);
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
@@ -594,7 +594,7 @@ reinitialize ()
 
 	if ( NegotiatorNameInConfig || NegotiatorName == NULL ) {
 		char *tmp = param( "NEGOTIATOR_NAME" );
-		delete [] NegotiatorName;
+		free( NegotiatorName );
 		if ( tmp ) {
 			NegotiatorName = build_valid_daemon_name( tmp );
 			free( tmp );
@@ -6098,11 +6098,6 @@ addRemoteUserPrios( ClassAd	*ad )
 	total_slots = 0;
 	if (!ad->LookupInteger(ATTR_TOTAL_SLOTS, total_slots)) {
 		total_slots = 0;
-	}
-	if (!total_slots && (param_boolean("ALLOW_VM_CRUFT", false))) {
-		if (!ad->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES, total_slots)) {
-			total_slots = 0;
-		}
 	}
 		// The for-loop below publishes accounting information about each slot
 		// into each other slot.  This is relatively computationally expensive,

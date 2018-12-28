@@ -147,9 +147,9 @@ class PersonalCondor(object):
 # From PersonalCondor
 #
 """
-		# `condor_config_val -write:up` includes the local config file.  Don't
-		# include it again, since the right thing to set this knob to is
-		# '$(LOCAL_DIR)/condor_config.local', and that file won't exist.
+        # `condor_config_val -write:up` includes the local config file.  Don't
+        # include it again, since the right thing to set this knob to is
+        # '$(LOCAL_DIR)/condor_config.local', and that file won't exist.
         config += "LOCAL_CONFIG_FILE = \n"
         config += "LOCAL_DIR = " + self._local_path + "\n"
         config += "EXECUTE = " + self._execute_path + "\n"

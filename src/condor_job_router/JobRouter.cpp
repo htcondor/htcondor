@@ -557,7 +557,7 @@ JobRouter::InitPublicAd()
 	char *valid_name = build_valid_daemon_name(m_job_router_name.c_str());
 	ASSERT( valid_name );
 	daemonName = valid_name;
-	delete [] valid_name;
+	free(valid_name);
 
 	m_public_ad = ClassAd();
 

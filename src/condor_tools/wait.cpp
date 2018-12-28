@@ -108,6 +108,7 @@ int main( int argc, char *argv[] )
 	int dont_wait = false; // set to true when the wait is 0 - read all events then exit.
 
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	for( i=1; i<argc; i++ ) {

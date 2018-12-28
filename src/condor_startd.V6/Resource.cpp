@@ -246,7 +246,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		// we need this before we instantiate the Reqexp object...
 	if (SlotType::type_param_boolean(cap, "PARTITIONABLE", false)) {
 		set_feature( PARTITIONABLE_SLOT );
-		m_id_dispenser = new IdDispenser( 3, 1 );
+		m_id_dispenser = new IdDispenser( 1 );
 	} else {
 		set_feature( STANDARD_SLOT );
 	}
@@ -2238,9 +2238,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
 		cap->Assign(ATTR_SLOT_ID, r_id);
-		if (param_boolean("ALLOW_VM_CRUFT", false)) {
-			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
-		}
 
 		if (r_pair_name) {
 			cap->Assign( ATTR_SLOT_PAIR_NAME, r_pair_name );

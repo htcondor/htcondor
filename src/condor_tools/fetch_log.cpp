@@ -82,6 +82,7 @@ int main( int argc, char *argv[] )
 	daemon_t type = DT_MASTER;
 
 	myDistro->Init( argc, argv );
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	for( i=1; i<argc; i++ ) {

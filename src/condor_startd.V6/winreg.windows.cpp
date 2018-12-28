@@ -56,25 +56,6 @@ struct WinPerf_Query
 
 #include <hashtable.h>
 
-#if 1
-//PRAGMA_REMIND("remove this dead code")
-#else
-// This is a simple wrapper class to enable char *'s
-// that we don't manage to be put into HashTables
-
-// HashTable needs operator==, which we define to be
-// case-insensitive for ClassAds
-
-class YourInsensitiveString
-{
-	public:
-		YourInsensitiveString() : s(0) {}
-		YourInsensitiveString(const char *str) : s(str) {}
-		bool operator==(const YourInsensitiveString &rhs) { return (lstrcmpi(s,rhs.s) == 0); }
-		const char *s; // Someone else owns this
-};
-#endif
-
 // D_NORMAL can be set to D_ALWAYS to cause a LOT more output from the WinReg code
 #define D_NORMAL D_FULLDEBUG
 
@@ -582,25 +563,6 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 	return pszAttr;
 }
 
-
-#if 1
-//PRAGMA_REMIND("remove this dead code")
-#else
-
-// Chris Torek's world famous hashing function
-// Modified to be case-insensitive
-static unsigned int torekHash(const YourInsensitiveString &s) {
-	unsigned int hash = 0;
-
-	const char *p = s.s;
-	while (*p) {
-		hash = (hash<<5)+hash + (unsigned char)tolower(*p);
-		p++;
-	}
-
-	return hash;
-}
-#endif
 
 static size_t
 DWORDHash( const DWORD & n )

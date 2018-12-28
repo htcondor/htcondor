@@ -235,7 +235,7 @@ cleanup_memory( void )
 		ad = NULL;
 	}
 	if ( MasterName ) {
-		delete [] MasterName;
+		free( MasterName );
 		MasterName = NULL;
 	}
 	if ( FS_Preen ) {
@@ -1056,7 +1056,7 @@ init_params()
 			} 
 		}
 	} else {
-		delete [] MasterName;
+		free( MasterName );
 		tmp = param( "MASTER_NAME" );
 		MasterName = build_valid_daemon_name( tmp );
 		free( tmp );
@@ -1321,7 +1321,7 @@ init_classad()
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
 		ad->Assign(ATTR_NAME, default_name);
-		delete [] default_name;
+		free(default_name);
 	}
 
 #if !defined(WIN32)
@@ -1513,7 +1513,7 @@ invalidate_ads() {
 	
 	MyString line;
 	std::string escaped_name;
-	char* default_name = ::strnewp(MasterName);
+	char* default_name = MasterName ? ::strdup(MasterName) : NULL;
 	if(!default_name) {
 		default_name = default_daemon_name();
 	}
@@ -1524,7 +1524,7 @@ invalidate_ads() {
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 	daemonCore->sendUpdates( INVALIDATE_MASTER_ADS, &cmd_ad, NULL, false );
-	delete [] default_name;
+	free( default_name );
 }
 
 static const struct {

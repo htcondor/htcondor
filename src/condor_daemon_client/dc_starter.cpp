@@ -66,20 +66,19 @@ DCStarter::initFromClassAd( ClassAd* ad )
 		return false;
 	} else {
 		if( is_valid_sinful(tmp) ) {
-			New_addr( strnewp(tmp) );
+			New_addr( tmp );
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "ERROR: DCStarter::initFromClassAd(): invalid %s in ad (%s)\n", 
 					 ATTR_STARTER_IP_ADDR, tmp );
+			free( tmp );
 		}
-		free( tmp );
 		tmp = NULL;
 	}
 
 	if( ad->LookupString(ATTR_VERSION, &tmp) ) {
-		New_version( strnewp(tmp) );
-		free( tmp );
+		New_version( tmp );
 		tmp = NULL;
 	}
 

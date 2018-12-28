@@ -2420,7 +2420,6 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 	if( claim_type == CLAIM_OPPORTUNISTIC
 		&& param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) )
 	{
-		MyString fqu;
 		MyString session_id;
 		MyString session_key;
 		MyString session_info;

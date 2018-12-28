@@ -80,7 +80,7 @@ HANDLE priv_state_get_handle();
 
 const char *get_user_loginname(void); 
 int can_switch_ids( void );
-void set_priv_ignore_all_requests(void);  // if called, all subsequent set_priv calls are NOOPs
+int set_priv_initialize(void); // called by deamonCore to conditionally enable priv switching, returns TRUE if switching is enabled
 void clear_passwd_cache(void);
 void delete_passwd_cache(void);
 void init_condor_ids(void);
