@@ -164,14 +164,20 @@ FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
 }
 
 FileModifiedTrigger::~FileModifiedTrigger() {
-	if( initialized ) {
-		close( statfd );
-	}
+	releaseResources();
 }
 
+void
+FileModifiedTrigger::releaseResources() {
+	if( initialized && statfd != -1 ) {
+		close( statfd );
+		statfd = -1;
+	}
+	initialized = false;
+}
 
 //
-// Polling is the best we can do.  Use condor_gettimestemp() and not
+// Polling is the best we can do.  Use condor_gettimestamp() and not
 // clock_gettime(), despite the latter being monotonic, because it's
 // on Mac OS X until 10.12, and not available on Windows at all.
 //
