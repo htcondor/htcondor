@@ -348,7 +348,7 @@ def get_slurm_location(program):
     Locate the copy of the slurm bin the blahp configuration wants to use.
     """
     global _slurm_location_cache
-    if _slurm_location_cache != None:
+    if _slurm_location_cache is not None:
         return os.path.join(_slurm_location_cache, program)
     load_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'blah_load_config.sh')
     if os.path.exists(load_config_path) and os.access(load_config_path, os.R_OK):
@@ -387,7 +387,7 @@ def parse_scontrol_fd(fd):
             #print cur_job_id, line
             cur_job_info = {"BatchJobId": '"%s"' % cur_job_id}
             continue
-        if cur_job_id == None:
+        if cur_job_id is None:
             continue
         m = exec_host_re.match(line)
         if m:

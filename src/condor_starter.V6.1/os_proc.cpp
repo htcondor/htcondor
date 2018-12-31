@@ -60,6 +60,9 @@ extern const char* JOB_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
 
 
+int singExecPid = -1;
+ReliSock *sns = 0;
+
 /* OsProc class implementation */
 
 OsProc::OsProc( ClassAd* ad )
@@ -683,9 +686,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	return 1;
 }
 
-int singExecPid;
-ReliSock *sns;
-
 bool
 OsProc::JobReaper( int pid, int status )
 {
@@ -1095,7 +1095,7 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         int fds[3];
         sns = ((ReliSock*)stream)->accept();
 
-        dprintf(D_ALWAYS, "Accepted new connection from ssh client for docker job\n");
+        dprintf(D_ALWAYS, "Accepted new connection from ssh client for container job\n");
         fds[0] = fdpass_recv(sns->get_file_desc());
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
@@ -1137,17 +1137,8 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		NULL,
 		NULL,
 		fds);
-	{
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-        }
 
         dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
-
-
-
-
-	
-
 
 #endif
 return KEEP_STREAM;

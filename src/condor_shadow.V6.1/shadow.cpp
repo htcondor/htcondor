@@ -173,11 +173,11 @@ UniShadow::logExecuteEvent( void )
 	char* sinful = NULL;
 	remRes->getStartdAddress( sinful );
 	event.setExecuteHost( sinful );
-	delete[] sinful;
+	free( sinful );
 	char* remote_name = NULL;
 	remRes->getStartdName(remote_name);
 	event.setRemoteName(remote_name);
-	delete[] remote_name;
+	free( remote_name );
 	if( !uLog.writeEvent(&event, getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
 				 "can't write to UserLog!\n" );
@@ -490,7 +490,7 @@ UniShadow::logReconnectedEvent( void )
 	char* starter = NULL;
 	remRes->getStarterAddress( starter );
 	event.setStarterAddr( starter );
-	delete [] starter;
+	free( starter );
 	starter = NULL;
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
@@ -525,7 +525,7 @@ UniShadow::getMachineName( MyString &machineName )
 		remRes->getMachineName(name);
 		if( name ) {
 			machineName = name;
-			delete [] name;
+			free(name);
 			return true;
 		}
 	}

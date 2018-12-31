@@ -26,7 +26,7 @@ class Carbon(object):
 
     def __init__(self):
         path = find_library('Carbon')
-        if path == None:
+        if path is None:
             raise ImportError('Could not find Carbon.framework')
         self.lib = cdll.LoadLibrary(path)
         self.lib.RunCurrentEventLoop.argtypes = (c_double,)
@@ -59,7 +59,7 @@ class CoreFoundation(object):
 
     def __init__(self):
         path = find_library('CoreFoundation')
-        if path == None:
+        if path is None:
             raise ImportError('Could not find CoreFoundation.framework')
         self.lib = cdll.LoadLibrary(path)
         self.cfstrs = []
@@ -114,7 +114,7 @@ class CFType(object):
             self.handle = None
         self.owner = False
         self.__dict__.update(kwargs)
-        if self.handle != None and not isinstance(self.handle, c_void_p):
+        if self.handle is not None and not isinstance(self.handle, c_void_p):
             self.handle = c_void_p(self.handle)
 
     def retain(self):
@@ -276,9 +276,9 @@ class CFDistributedNotificationCenter(CFType):
         if not callable(callback):
             raise TypeError('callback must be callable')
         self.callbacks[(unicode(observer), unicode(name))] = callback
-        if name != None and not isinstance(name, CFString):
+        if name is not None and not isinstance(name, CFString):
             name = self.cf.CFSTR(name)
-        if obj != None and not isinstance(obj, CFString):
+        if obj is not None and not isinstance(obj, CFString):
             obj = self.cf.CFSTR(obj)
         if drop:
             behaviour = 1
@@ -295,9 +295,9 @@ class CFDistributedNotificationCenter(CFType):
     def remove_observer(self, observer, name=None, obj=None):
         if not isinstance(observer, CFString):
             observer = self.cf.CFString(observer)
-        if name != None and not isinstance(name, CFString):
+        if name is not None and not isinstance(name, CFString):
             name = self.cf.CFSTR(name)
-        if obj != None and not isinstance(obj, CFString):
+        if obj is not None and not isinstance(obj, CFString):
             obj = self.cf.CFSTR(obj)
         self.cf.lib.CFNotificationCenterRemoveObserver(self, observer, name, obj)
         try:
@@ -308,9 +308,9 @@ class CFDistributedNotificationCenter(CFType):
     def post_notification(self, name, obj=None, userInfo=None, immediate=False):
         if not isinstance(name, CFString):
             name = self.cf.CFSTR(name)
-        if obj != None and not isinstance(obj, CFString):
+        if obj is not None and not isinstance(obj, CFString):
             obj = self.cf.CFSTR(obj)
-        if userInfo != None and not isinstance(userInfo, CFDictionary):
+        if userInfo is not None and not isinstance(userInfo, CFDictionary):
             userInfo = self.cf.CFDictionary(userInfo)
         self.cf.lib.CFNotificationCenterPostNotification(self, name, obj, userInfo, immediate)
 

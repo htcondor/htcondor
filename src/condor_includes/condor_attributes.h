@@ -568,8 +568,6 @@
 #define ATTR_REMOTE_USER  "RemoteUser"
 #define ATTR_REMOTE_USER_PRIO  "RemoteUserPrio"
 #define ATTR_REMOTE_USER_RESOURCES_IN_USE  "RemoteUserResourcesInUse"
-// Deprecated (cruft) -- use: ATTR_REMOTE_SLOT_ID 
-#define ATTR_REMOTE_VIRTUAL_MACHINE_ID  "RemoteVirtualMachineID"
 #define ATTR_REMOVE_KILL_SIG  "RemoveKillSig"
 #define ATTR_REMOVE_REASON  "RemoveReason"
 #define ATTR_REQUEUE_REASON  "RequeueReason"
@@ -716,8 +714,6 @@
 #define ATTR_TOTAL_TIME_DRAINED_IDLE  "TotalTimeDrainedIdle"
 #define ATTR_TOTAL_TIME_DRAINED_RETIRING  "TotalTimeDrainedRetiring"
 
-// Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
-#define ATTR_TOTAL_VIRTUAL_MACHINES  "TotalVirtualMachines"
 #define ATTR_TOTAL_VIRTUAL_MEMORY  "TotalVirtualMemory"
 #define ATTR_UID  "Uid"
 #define ATTR_UID_DOMAIN  "UidDomain"
@@ -770,8 +766,6 @@
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
 #define ATTR_SCHEDD_BIRTHDATE  "ScheddBday"
 #define ATTR_SHADOW_VERSION  "ShadowVersion"
-// Deprecated (cruft) -- use: ATTR_SLOT_ID
-#define ATTR_VIRTUAL_MACHINE_ID  "VirtualMachineID"
 #define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"
 #define ATTR_TRANSFER_TYPE  "TransferType"

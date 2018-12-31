@@ -562,14 +562,7 @@ main(int argc, char *argv[])
 
 				// How many slots are on that machine?
 				if (!offer->LookupInteger(ATTR_TOTAL_SLOTS, slot_count)) {
-					if (param_boolean("ALLOW_VM_CRUFT", false)) {
-						if (!offer->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES,
-												  slot_count)) {
-							slot_count = 1;
-						}
-					} else {
-						slot_count = 1;
-					}
+					slot_count = 1;
 				}
 
 				slot_count_thus_far = 0;

@@ -1988,7 +1988,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 		MyString et = line.substr(0, ix);
 		et.trim();
 		strncpy(error_type, et.Value(), sizeof(error_type));
-		line = line.substr(ix + 6, sizeof(daemon_name) * 2);
+		line = line.substr(ix + 6, line.length());
 		line.trim();
 	} else {
 		strncpy(error_type, "Error", sizeof(error_type));
@@ -2002,7 +2002,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 		MyString dn = line.substr(0, ix);
 		dn.trim();
 		strncpy(daemon_name, dn.Value(), sizeof(daemon_name));
-		line = line.substr(ix + 4, sizeof(execute_host));
+		line = line.substr(ix + 4, line.length());
 		line.trim();
 	}
 
@@ -2777,7 +2777,7 @@ JobEvictedEvent::formatBody( std::string &out )
   } else if( checkpointed ) {
     retval = formatstr_cat( out, "(1) Job was checkpointed.\n\t" );
   } else {
-    retval = formatstr_cat( out, "(0) Job was not checkpointed.\n\t" );
+    retval = formatstr_cat( out, "(0) CPU times\n\t" );
   }
 
   if( retval < 0 ) {

@@ -257,7 +257,6 @@ PeekToken (TokenValue *lvalp)
 		case LEX_CLOSE_BOX:
 		case LEX_CLOSE_PAREN:
 		case LEX_CLOSE_BRACE:
-		case LEX_BACKSLASH:
 			tokenizePunctOperator();
 			break;
 		default:
@@ -974,7 +973,6 @@ strLexToken (int tokenValue)
 		case LEX_CLOSE_PAREN:            return "LEX_CLOSE_PAREN";
 		case LEX_OPEN_BRACE: 			 return "LEX_OPEN_BRACE";
 		case LEX_CLOSE_BRACE: 			 return "LEX_CLOSE_BRACE";
-		case LEX_BACKSLASH:              return "LEX_BACKSLASH";
 
 		default:
 				return "** Unknown **";

@@ -325,15 +325,15 @@ class IPluginMenuItem(Cached):
         self._Skype = Skype
         self._Id = unicode(Id)
         self._CacheDict = {}
-        if Caption != None:
+        if Caption is not None:
             self._CacheDict['CAPTION'] = unicode(Caption)
-        if Hint != None:
+        if Hint is not None:
             self._CacheDict['HINT'] = unicode(Hint)
-        if Enabled != None:
+        if Enabled is not None:
             self._CacheDict['ENABLED'] = cndexp(Enabled, u'TRUE', u'FALSE')
 
     def _Property(self, PropName, Set=None):
-        if Set == None:
+        if Set is None:
             return self._CacheDict[PropName]
         self._Skype._Property('MENU_ITEM', self._Id, PropName, Set)
         self._CacheDict[PropName] = unicode(Set)

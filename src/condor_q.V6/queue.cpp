@@ -1005,7 +1005,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			scheddQuery.setLocationLookup(daemonname);
 			Q.addSchedd(daemonname);
 
-			delete [] daemonname;
+			free(daemonname);
 			i++;
 			querySchedds = true;
 		} 

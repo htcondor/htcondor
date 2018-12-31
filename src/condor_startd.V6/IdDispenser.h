@@ -20,16 +20,16 @@
 #ifndef _CONDOR_IDDISPENSER_H
 #define _CONDOR_IDDISPENSER_H
 
-#include "extArray.h"
+#include <vector>
 
 class IdDispenser
 {
 public:
-	IdDispenser( int size, int seed );
+	IdDispenser( int seed );
 	int		next( void );
 	void	insert( int id );
 private:
-	ExtArray<bool> free_ids;
+	std::vector<bool> free_ids;
 };
 
 #endif
