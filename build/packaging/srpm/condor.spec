@@ -1104,6 +1104,7 @@ rm -rf %{buildroot}%{_usrsrc}/drmaa/drmaa-*
 rm -rf %{buildroot}/usr/DOC
 rm -rf %{buildroot}/usr/INSTALL
 rm -rf %{buildroot}/usr/LICENSE-2.0.txt
+rm -rf %{buildroot}/usr/NOTICE.txt
 rm -rf %{buildroot}/usr/README
 rm -rf %{buildroot}/usr/examples/
 rm -rf %{buildroot}%{_includedir}/MyString.h
@@ -1216,7 +1217,7 @@ rm -rf %{buildroot}
 %files
 %exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt examples
+%doc LICENSE-2.0.txt NOTICE.txt examples
 %dir %_sysconfdir/condor/
 %config(noreplace) %_sysconfdir/condor/condor_config
 %if %systemd
