@@ -1960,6 +1960,16 @@ fi
 %endif
 
 %changelog
+* Thu Jan 03 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.0-1
+- Automatically add AWS resources to your pool using HTCondor Annex
+- The Python bindings now include submit functionality
+- Added the ability to run a job immediately by replacing a running job
+- A new minicondor package makes single node installations easy
+- HTCondor now tracks and reports GPU utilization
+- Several performance enhancements in the collector
+- The grid universe can create and manage VM instances in Microsoft Azure
+- The MUNGE security method is now supported on all Linux platforms
+
 * Wed Oct 31 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.10-1
 - Can now interactively submit Docker jobs
 - The administrator can now add arguments to the Singularity command line
