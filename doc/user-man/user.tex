@@ -1452,16 +1452,6 @@ This setting is available in all universes.
 See section~\ref{sec:Configuring-SMP} for more details about SMP
 machines and their configuration.
 
-\item \Env{CONDOR\_VM}
-\index{CONDOR\_VM environment variable}
-\index{environment variables!CONDOR\_VM}
-equivalent to \Env{\_CONDOR\_SLOT} described above, except that it is
-only available in the standard universe.
-\Note As of HTCondor version 6.9.3, this environment variable is no longer
-used.
-It will only be defined if the \Macro{ALLOW\_VM\_CRUFT} configuration
-variable is set to \Expr{True}.
-
 \item \Env{X509\_USER\_PROXY}
 \index{X509\_USER\_PROXY environment variable}
 \index{environment variables!X509\_USER\_PROXY}
