@@ -101,8 +101,8 @@ override_dh_install-arch:
 override_dh_auto_clean:
 	dh_auto_clean
 	# clean up our own mess
-	-find $(CURDIR) -name '*.class' -delete -o -name '*.jar' -delete
-	-rm src/condor_chirp/chirp/java/client/*.java
+	#-find $(CURDIR) -name '*.class' -delete -o -name '*.jar' -delete
+	#-rm src/condor_chirp/chirp/java/client/*.java
 	# clean leftovers of upstream clean run
 	-rm src/condor_tests/list*
 	-rm src/condor_examples/condor.boot.debian \

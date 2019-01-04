@@ -1,16 +1,1 @@
 # in order of upstream compatibility and invasiveness
-default_debian_config
-debian_init
-no_java_for_now
-#enable_pythonbindings
-globus-multi-arch
-#gsoap_symbols
-campus_factory_syntax.patch
-# should be obsolete in condor 7.7.6+, but cannot confirm
-fix_condor_run
-alpha-fix-getpid.patch
-as-needed-libs-ftbfs.patch
-qsub_sentinel_robustness
-raspbian_detection
-fix_bashisms
-notice_file

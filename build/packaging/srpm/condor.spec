@@ -1104,6 +1104,7 @@ rm -rf %{buildroot}%{_usrsrc}/drmaa/drmaa-*
 rm -rf %{buildroot}/usr/DOC
 rm -rf %{buildroot}/usr/INSTALL
 rm -rf %{buildroot}/usr/LICENSE-2.0.txt
+rm -rf %{buildroot}/usr/NOTICE.txt
 rm -rf %{buildroot}/usr/README
 rm -rf %{buildroot}/usr/examples/
 rm -rf %{buildroot}%{_includedir}/MyString.h
@@ -1216,7 +1217,7 @@ rm -rf %{buildroot}
 %files
 %exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt examples
+%doc LICENSE-2.0.txt NOTICE.txt examples
 %dir %_sysconfdir/condor/
 %config(noreplace) %_sysconfdir/condor/condor_config
 %if %systemd
@@ -1959,6 +1960,16 @@ fi
 %endif
 
 %changelog
+* Thu Jan 03 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.0-1
+- Automatically add AWS resources to your pool using HTCondor Annex
+- The Python bindings now include submit functionality
+- Added the ability to run a job immediately by replacing a running job
+- A new minicondor package makes single node installations easy
+- HTCondor now tracks and reports GPU utilization
+- Several performance enhancements in the collector
+- The grid universe can create and manage VM instances in Microsoft Azure
+- The MUNGE security method is now supported on all Linux platforms
+
 * Wed Oct 31 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.10-1
 - Can now interactively submit Docker jobs
 - The administrator can now add arguments to the Singularity command line

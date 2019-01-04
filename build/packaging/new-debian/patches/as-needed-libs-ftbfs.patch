@@ -1,9 +1,0 @@
-diff --git a/src/condor_shadow.V6.1/CMakeLists.txt b/src/condor_shadow.V6.1/CMakeLists.txt
-index 0bfdb4eed0..1fc143e03a 100644
---- a/src/condor_shadow.V6.1/CMakeLists.txt
-+++ b/src/condor_shadow.V6.1/CMakeLists.txt
-@@ -27,3 +27,4 @@ if (LINUX AND (${BIT_MODE} MATCHES "32"))
- endif()
- condor_daemon( shadow "${shadowRmvElements}" "${CONDOR_LIBS_FOR_SHADOW}" "${C_SBIN}" )
- 
-+TARGET_LINK_LIBRARIES(condor_shadow dl)
