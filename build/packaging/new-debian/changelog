@@ -1,3 +1,16 @@
+condor (8.8.0-1) stable; urgency=medium
+
+  * Automatically add AWS resources to your pool using HTCondor Annex
+  * The Python bindings now include submit functionality
+  * Added the ability to run a job immediately by replacing a running job
+  * A new minihtcondor package makes single node installations easy
+  * HTCondor now tracks and reports GPU utilization
+  * Several performance enhancements in the collector
+  * The grid universe can create and manage VM instances in Microsoft Azure
+  * The MUNGE security method is now supported on all Linux platforms
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 03 Jan 2019 12:03:47 -0600
+
 condor (8.7.10-1) unstable; urgency=medium
 
   * Can now interactively submit Docker jobs

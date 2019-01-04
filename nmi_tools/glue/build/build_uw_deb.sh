@@ -56,13 +56,8 @@ echo "Distribution is $dist"
 # copy srpm files from condor sources into the SOURCES directory
 cp -pr build/packaging/new-debian debian
 
-# Update condor_version for pre-release build
-condor_release="0.$condor_build_id"
-# Update condor_version for final build
-#condor_release="1"
-
 # Nightly build changelog
-dch --distribution $dist --newversion "$condor_version-$condor_release" "Nightly build"
+dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
 
 # Final release changelog
 #dch --release --distribution $dist ignored

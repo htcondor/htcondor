@@ -4842,17 +4842,6 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   make HTCondor advertise more slots than there are CPUs on the machine.
   To do that, use \Macro{NUM\_CPUS}.
 
-\label{param:AllowVMCruft}
-\item[\Macro{ALLOW\_VM\_CRUFT}]
-  A boolean value that HTCondor sets and uses internally, currently
-  defaulting to \Expr{True}.  When \Expr{True},
-  HTCondor looks for configuration variables named with the
-  previously used string \MacroNI{VM} after searching unsuccessfully
-  for variables named with the currently used string \MacroNI{SLOT}.
-  When \Expr{False}, HTCondor does \emph{not} look for variables named
-  with the previously used string \MacroNI{VM} after searching
-  unsuccessfully for the string \MacroNI{SLOT}. 
-
 \end{description}
 
 

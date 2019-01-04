@@ -767,8 +767,6 @@ The value will be \verb@X@ for the slot with
 name="slotX@full.hostname"
 \end{verbatim}
 For non-SMP machines with one slot, the value will be 1.
-\Note This attribute was added in HTCondor version 6.9.3.
-For older versions of HTCondor, see \AdAttr{VirtualMachineID} below.
 %
 \index{ClassAd machine attribute!SlotType}
 \label{SlotType-machine-attribute} 
@@ -976,12 +974,6 @@ This attribute will only be defined if it has a value greater than 0.
 \item[\AdAttr{UidDomain}:] a domain name configured by the HTCondor 
 administrator which describes a cluster of machines which all have 
 the same \File{passwd} file entries, and therefore all have the same logins.
-%
-\index{ClassAd machine attribute!VirtualMachineID}
-\item[\AdAttr{VirtualMachineID}:] 
-Starting with HTCondor version 6.9.3, this attribute is now longer used.
-Instead, use \AdAttr{SlotID}, as described above.
-This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 %
 \index{ClassAd machine attribute!VirtualMemory}
 \item[\AdAttr{VirtualMemory}:] The amount of currently available virtual memory 

@@ -61,7 +61,9 @@
 ## There are no settings beyond this point.
 ######################################################################
 
-
+# Source LSB init function. This will allow for, e.g., systemd to smoothly
+# redirect init script calls to systemctl
+. /lib/lsb/init-functions
 
 # help & usage
 myusage() {
