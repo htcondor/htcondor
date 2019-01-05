@@ -52,15 +52,15 @@ class ICall(Cached):
 
         @note: This command functions for active calls only.
         '''
-        if Set == None: # get
+        if Set is None: # get
             args = args2dict(self._Property('CAPTURE_MIC', Cache=False))
             for t in args:
                 if t == callIoDeviceTypePort:
                     args[t] = int(args[t])
-            if DeviceType == None: # get active devices
+            if DeviceType is None: # get active devices
                 return args
             return args.get(DeviceType, None)
-        elif DeviceType != None: # set
+        elif DeviceType is not None: # set
             self._Alter('SET_CAPTURE_MIC', '%s=%s' % (DeviceType, quote(unicode(Set), True)))
         else:
             raise TypeError('DeviceType must be specified if Set is used')
@@ -95,15 +95,15 @@ class ICall(Cached):
 
         @note: This command functions for active calls only.
         '''
-        if Set == None: # get
+        if Set is None: # get
             args = args2dict(self._Property('INPUT', Cache=False))
             for t in args:
                 if t == callIoDeviceTypePort:
                     args[t] = int(args[t])
-            if DeviceType == None: # get active devices
+            if DeviceType is None: # get active devices
                 return args
             return args.get(DeviceType, None)
-        elif DeviceType != None: # set
+        elif DeviceType is not None: # set
             self._Alter('SET_INPUT', '%s=%s' % (DeviceType, quote(unicode(Set), True)))
         else:
             raise TypeError('DeviceType must be specified if Set is used')
@@ -140,15 +140,15 @@ class ICall(Cached):
         
         @note: This command functions for active calls only.
         '''
-        if Set == None: # get
+        if Set is None: # get
             args = args2dict(self._Property('OUTPUT', Cache=False))
             for t in args:
                 if t == callIoDeviceTypePort:
                     args[t] = int(args[t])
-            if DeviceType == None: # get active devices
+            if DeviceType is None: # get active devices
                 return args
             return args.get(DeviceType, None)
-        elif DeviceType != None: # set
+        elif DeviceType is not None: # set
             self._Alter('SET_OUTPUT', '%s=%s' % (DeviceType, quote(unicode(Set), True)))
         else:
             raise TypeError('DeviceType must be specified if Set is used')

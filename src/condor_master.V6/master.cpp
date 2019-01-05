@@ -136,7 +136,7 @@ const char	*default_daemon_list[] = {
 // examples in src/condor_examples
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
-"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, HDFS, "
+"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
 "REPLICATION, JOB_ROUTER, ROOSTER, SHARED_PORT, "
 "DEFRAG, GANGLIAD, ANNEXD";
 
@@ -235,7 +235,7 @@ cleanup_memory( void )
 		ad = NULL;
 	}
 	if ( MasterName ) {
-		delete [] MasterName;
+		free( MasterName );
 		MasterName = NULL;
 	}
 	if ( FS_Preen ) {
@@ -1056,7 +1056,7 @@ init_params()
 			} 
 		}
 	} else {
-		delete [] MasterName;
+		free( MasterName );
 		tmp = param( "MASTER_NAME" );
 		MasterName = build_valid_daemon_name( tmp );
 		free( tmp );
@@ -1321,7 +1321,7 @@ init_classad()
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
 		ad->Assign(ATTR_NAME, default_name);
-		delete [] default_name;
+		free(default_name);
 	}
 
 #if !defined(WIN32)
@@ -1513,7 +1513,7 @@ invalidate_ads() {
 	
 	MyString line;
 	std::string escaped_name;
-	char* default_name = ::strnewp(MasterName);
+	char* default_name = MasterName ? ::strdup(MasterName) : NULL;
 	if(!default_name) {
 		default_name = default_daemon_name();
 	}
@@ -1524,7 +1524,7 @@ invalidate_ads() {
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 	daemonCore->sendUpdates( INVALIDATE_MASTER_ADS, &cmd_ad, NULL, false );
-	delete [] default_name;
+	free( default_name );
 }
 
 static const struct {
@@ -1806,7 +1806,7 @@ void init_firewall_exceptions() {
 		 *dagman_image_path, *negotiator_image_path, *collector_image_path, 
 		 *starter_image_path, *shadow_image_path, *gridmanager_image_path, 
 		 *gahp_image_path, *gahp_worker_image_path, *credd_image_path, 
-		 *vmgahp_image_path, *kbdd_image_path, *hdfs_image_path, *bin_path;
+		 *vmgahp_image_path, *kbdd_image_path, *bin_path;
 	const char* dagman_exe = "condor_dagman.exe";
 
 	WindowsFirewallHelper wfh;
@@ -1850,7 +1850,6 @@ void init_firewall_exceptions() {
 	gahp_worker_image_path = param("CONDOR_GAHP_WORKER");
 	credd_image_path = param("CREDD");
 	kbdd_image_path = param("KBDD");
-	hdfs_image_path = param("HDFS");
 	vmgahp_image_path = param("VM_GAHP_SERVER");
 	
 	// We also want to add exceptions for the DAGMan we ship
@@ -1954,13 +1953,6 @@ void init_firewall_exceptions() {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				credd_image_path);
-		}
-	}
-
-	if ( (daemons.FindDaemon("HDFS") != NULL) && hdfs_image_path ) {
-		if ( !SUCCEEDED(wfh.addTrusted(hdfs_image_path)) ) {
-			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-				"windows firewall exception list.\n", hdfs_image_path);
 		}
 	}
 

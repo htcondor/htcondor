@@ -41,6 +41,7 @@
 #include "sig_install.h"
 #include "basename.h"
 #include "globus_utils.h"
+#include "condor_claimid_parser.h"
 
 // Global variables
 int cmd = 0;
@@ -95,6 +96,7 @@ main( int argc, char *argv[] )
 
 	myDistro->Init( argc, argv );
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	cmd = getCommandFromArgv( argc, argv );
@@ -258,21 +260,6 @@ fillRequirements( ClassAd* req )
 		require += "==";
 		require += IntToStr( slot_id );
 		require += ")&&(";
-	}
-	else if (param_boolean("ALLOW_VM_CRUFT", false)) {
-		int vm_id = 0;
-		if (name) {
-			if (sscanf(name, "vm%d@", &vm_id) != 1) { 
-				vm_id = 0;
-			}
-		}
-		if (vm_id > 0) {
-			require += "TARGET.";
-			require += ATTR_VIRTUAL_MACHINE_ID;
-			require += "==";
-			require += IntToStr( vm_id );
-			require += ")&&(";
-		}
 	}
 
 	require += jic_req;
@@ -842,7 +829,8 @@ parseArgv( int  /*argc*/, char* argv[] )
 			// This is the last resort, because claim ids are
 			// no longer considered to be the correct place to
 			// get the startd's address.
-		target = getAddrFromClaimId( claim_id );
+		ClaimIdParser id_parser(claim_id);
+		target = strdup(id_parser.startdSinfulAddr());
 	} else { 
 			// local startd
 		target = NULL;

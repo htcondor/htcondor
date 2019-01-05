@@ -1,0 +1,271 @@
+#!/usr/bin/env python
+
+import sys
+import time
+
+from pytest.CondorCluster import CondorCluster
+from pytest.CondorTest import CondorTest
+from pytest.Globals import *
+from pytest.PersonalCondor import PersonalCondor
+from pytest.Utils import Utils
+
+from htcondor import JobEventType
+import htcondor
+
+# At most how many slots do we try to coalesce?
+maxVictimJobs = 3
+
+def runCondorNowTest(pc, victimCount):
+	# Sleep for way longer than the startd will need in order to evict.
+	job_params = {
+		"executable": 				"x_sleep.pl",
+		"transfer_executable":		"true",
+		"should_transfer_files":	"true",
+		"universe":					"vanilla",
+		"arguments": 				"600",
+		"log":						"cmd_now-{0}.log".format(victimCount)
+	}
+
+	victimCluster = pc.CondorCluster(job_params)
+	try:
+		victimCluster.Submit(maxVictimJobs)
+	except RuntimeError as re:
+		Utils.TLog("Failed to submit {1} victim job(s) ({0}), aborting.".format(str(re), maxVictimCount))
+		sys.exit(1)
+
+	if not victimCluster.WaitUntilAllExecute(60):
+		Utils.TLog("Victim jobs did not start, aborting.")
+		sys.exit(1)
+
+	vIDs = []
+	for proc in range(0,victimCount):
+		vIDs.append("{0}.{1}".format(victimCluster.cluster_id, proc))
+
+	beneficiaryCluster = pc.CondorCluster(job_params)
+	try:
+		beneficiaryCluster.Submit(1)
+	except RuntimeError as re:
+		Utils.TLog("Failed to submit beneficiary job ({0}), aborting.".format(str(re)))
+		sys.exit(1)
+
+	bID = "{0}.0".format(beneficiaryCluster.cluster_id)
+	Utils.TLog( "Running " + " ".join( [ 'condor_now', bID ] + vIDs ) )
+	result = Utils.RunCommandCarefully( [ 'condor_now', bID ] + vIDs )
+	if not result:
+		Utils.TLog("Failed run condor_now command, aborting.")
+		Utils.TLog("stdout:")
+		Utils.TLog(result.output)
+		Utils.TLog("stderr:")
+		Utils.TLog(result.error)
+		sys.exit(1)
+
+
+	# Wait for victim job(s) to be evicted.
+	for proc in range(victimCount):
+		if not victimCluster.WaitUntilJobEvicted(60, -1, 1):
+			CondorTest.RegisterFailure("runCondorNowTest-{0}".format(victimCount),
+				"Jobs were not evicted before deadline" )
+			sys.exit(1)
+
+	# Wait for beneficiary job to start running.
+	if not beneficiaryCluster.WaitUntilExecute(60):
+		CondorTest.RegisterFailure("runCondorNowTest-{0}".format(victimCount),
+			"Job was not run before deadline" )
+		sys.exit(1)
+
+	# We could also check, I suppose, to make sure that correct jobs were
+	# evicted...
+
+	# ... and, with condor_status -direct <schedd> -startd and inspecting
+	# the D_TEST log output, that the pccc table is empty and that the
+	# match list contains what we expect it to contain.
+
+	if not victimCluster.Remove():
+		CondorTest.RegisterFailure("runCondorNowTest-{0}".format(victimCount),
+			"Failed to remove victim cluster" )
+		sys.exit(1)
+	if not beneficiaryCluster.Remove():
+		CondorTest.RegisterFailure("runCondorNowTest-{0}".format(victimCount),
+			"Failed to remove beneficiary cluster" )
+		sys.exit(1)
+
+	CondorTest.RegisterSuccess("runCondorNowTest-{0}".format(victimCount),
+		"Victim jobs were evicted, and beneficiary job run, as expected" )
+
+
+def testFailureInjection(failureNo):
+	params = {
+		"NUM_CPUS": maxVictimJobs,
+		"STARTD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST",
+		"SCHEDD_DEBUG": "D_CATEGORY D_SUB_SECOND D_TEST",
+		"COALESCE_FAILURE_MODE": failureNo
+	}
+	ordered_params = """
+use feature : PartitionableSlot
+"""
+	pc = CondorTest.StartPersonalCondor(
+		"cmd_now-failure-{0}".format(failureNo), params, ordered_params )
+
+	job_params = {
+		"executable": 				"x_sleep.pl",
+		"transfer_executable":		"true",
+		"should_transfer_files":	"true",
+		"universe":					"vanilla",
+		"arguments": 				"600",
+		"log":						"cmd_now-failure-{0}.log".format(failureNo)
+	}
+
+	victimCluster = pc.CondorCluster(job_params)
+	try:
+		victimCluster.Submit(maxVictimJobs)
+	except RuntimeError as re:
+		Utils.TLog("Failed to submit {1} victim job(s) ({0}), aborting.".format(str(re), maxVictimCount))
+		sys.exit(1)
+
+	if not victimCluster.WaitUntilAllExecute(60):
+		Utils.TLog("Victim jobs did not start, aborting.")
+		sys.exit(1)
+
+	vIDs = []
+	for proc in range(0,maxVictimJobs):
+		vIDs.append("{0}.{1}".format(victimCluster.cluster_id, proc))
+
+	beneficiaryCluster = pc.CondorCluster(job_params)
+	try:
+		beneficiaryCluster.Submit(1)
+	except RuntimeError as re:
+		Utils.TLog("Failed to submit beneficiary job ({0}), aborting.".format(str(re)))
+		sys.exit(1)
+
+	bID = "{0}.0".format(beneficiaryCluster.cluster_id)
+	Utils.TLog( "Running " + " ".join( [ 'condor_now', bID ] + vIDs ) )
+	result = Utils.RunCommandCarefully( [ 'condor_now', bID ] + vIDs )
+	if not result:
+		Utils.TLog("Failed run condor_now command, aborting.")
+		Utils.TLog("stdout:")
+		Utils.TLog(result.output)
+		Utils.TLog("stderr:")
+		Utils.TLog(result.error)
+		sys.exit(1)
+
+	failureStringsByNo = {
+		1: "[now job {0}]: coalesce command timed out, failing".format(bID),
+		2: "[now job {0}]: coalesce failed:".format(bID),
+		3: "[now job {0}]: coalesce failed last retry, giving up".format(bID),
+		4: "[now job {0}]: coalesce did not return a claim ID, failing".format(bID),
+		5: "[now job {0}]: targeted job(s) did not vacate quickly enough, failing".format(bID)
+	}
+
+	if failureStringsByNo.get(failureNo) is not None:
+		time.sleep(20)
+
+		found = False
+		for i in range(20):
+			log = "{0}/SchedLog".format(pc._log_path)
+			with open(log, "r") as fd:
+				for line in fd:
+					if failureStringsByNo[failureNo] in line:
+						found = True
+			if found:
+				break
+			Utils.TLog( "Will check schedd log again in a second." )
+			time.sleep(1)
+		else:
+			Utils.TLog( "Failed to find failure before deadline." )
+			CondorTest.StopPersonalCondor(pc._name)
+			CondorTest.RegisterFailure("condor_now-failure-{0}".format(failureNo),
+				"failure did not happen before deadline")
+	else:
+		# The reason we retry coalesce commands is because of a stupid
+		# race condition between the startd replying and the starter actually
+		# finishing.  In the other tests, this is transparent to us, because
+		# we wait for the beneficiary job to start running.  In these tests,
+		# since we expect that won't happen, we just have to wait.
+		time.sleep( 5 )
+
+	# Query the schedd's machine ads; we don't actually care about the
+	# results, but doing so will cause the schedd to dump some diagnostic
+	# data to D_TEST.
+	result = Utils.RunCommandCarefully( [ 'condor_status', '-schedd', '-af',
+		'MyAddress' ] )
+	if not result:
+		Utils.TLog( "Failed to find schedd address, aborting." )
+		sys.exit(1)
+	sinful = result.output.rstrip()
+	Utils.TLog( "Found schedd sinful {0}".format(sinful) )
+	result = Utils.RunCommandCarefully( [ 'condor_status', '-startd',
+		'-direct', sinful] )
+	if not result:
+		Utils.TLog( "Failed to get schedd machine ads, aborting." )
+		sys.exit(1)
+
+	CondorTest.StopPersonalCondor(pc._name)
+
+	#
+	# Check the schedd's log.  I set D_CATEGORY, so first we throw away
+	# anything that doesn't include (D_TEST), then we check that the four
+	# lines we want are in place and in order, with no intervening lines.
+	#
+	# 'pcccDumpTable(): dumping table...'
+	# 'pcccDumpTable(): ... done dumping PCCC table.'
+	# 'Dumping match records (with now jobs)...'
+	# '... done dumping match records.'
+	#
+
+	# This is horrible.
+	match = 0
+	log = "{0}/SchedLog".format(pc._log_path)
+	with open(log, "r") as fd:
+		for line in fd:
+			if match == 0 and "(D_TEST) pcccDumpTable(): dumping table..." in line:
+				match = 1
+				continue
+			if match == 1 and "(D_TEST) pcccDumpTable(): ... done dumping PCCC table." in line:
+				match = 2
+				continue
+			if match == 2 and "(D_TEST) Dumping match records (with now jobs)..." in line:
+				match = 3
+				continue
+			if match == 3 and "(D_TEST) ... done dumping match records." in line:
+				match = 4
+				break
+			match = 0
+		if match == 4:
+			CondorTest.RegisterSuccess("condor_now-failure-{0}".format(failureNo),
+				"schedd log indicated expected state" )
+		else:
+			CondorTest.RegisterFailure("condor_now-failure-{0}".format(failureNo),
+				"schedd log did not indicate expected state")
+
+
+def main():
+	params = {
+		"NUM_CPUS": maxVictimJobs
+	}
+	ordered_params = """
+use feature : PartitionableSlot
+"""
+	pc = CondorTest.StartPersonalCondor( "cmd_now", params, ordered_params )
+
+	for i in range(maxVictimJobs):
+		runCondorNowTest(pc, i + 1)
+
+	#
+	# The basic idea here is to set a failure-injecting config knob in the
+	# startd and then run condor_now.  The command-line tool will succeed,
+	# but the schedd should log (at D_ALWAYS) an error and, when prompted by
+	# condor_status -direct <schedd> -startd, log (at D_TEST) the relevant
+	# internal state of the schedd (the pccc table and the match records).
+	# We then check to make sure the state is what we expect it to be
+	# (the pccc table empty, the matches involved in the now command empty,
+	# and all the other matches still present).
+	#
+	CondorTest.StopPersonalCondor(pc._name)
+	for i in range(1,6):
+		testFailureInjection(i)
+
+	# Nothing, possibly aside from the functionality under test, went wrong.
+	sys.exit(0)
+
+if __name__ == "__main__":
+	main()

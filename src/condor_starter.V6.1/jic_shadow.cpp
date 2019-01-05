@@ -47,7 +47,6 @@
 #include "secure_file.h"
 #include "credmon_interface.h"
 #include "condor_base64.h"
-#include "zkm_base64.h"
 
 #include <algorithm>
 
@@ -1239,10 +1238,6 @@ JICShadow::initUserPriv( void )
 		if( nobody_user == NULL ) {
 			snprintf( nobody_param, 20, "%s_USER", slotName.Value() );
 			nobody_user = param(nobody_param);
-			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", false)) {
-				snprintf( nobody_param, 20, "VM%s_USER", slotName.Value() );
-				nobody_user = param(nobody_param);
-			}
 		}
 
         if ( nobody_user != NULL ) {
@@ -2760,7 +2755,7 @@ JICShadow::initUserCredentials() {
 
 	int rawlen = -1;
 	unsigned char* rawbuf = NULL;
-	zkm_base64_decode(credential.c_str(), &rawbuf, &rawlen);
+	condor_base64_decode(credential.c_str(), &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
 		dprintf(D_ALWAYS, "CREDMON: failed to decode credential into file (%s)!\n", filename);

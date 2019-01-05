@@ -138,8 +138,13 @@ public:
 
 	/** called just before setAttribute sets an attribute value so that we can decide whether
 	  * or not to invalidate the autocluster
+	  * Returns true if job was removed from its autocluster.
 	  */
-	void preSetAttribute(JobQueueJob & job, const char * attr, const char * value, int flags);
+	bool preSetAttribute(JobQueueJob & job, const char * attr, const char * value, int flags);
+
+	/** Unconditionally remove a job from its assigned autocluster.
+	 */
+	void removeFromAutocluster(JobQueueJob &job);
 
 	/** Return number of active autoclusters
 	  */

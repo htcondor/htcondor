@@ -373,7 +373,7 @@ bool ULogEvent::is_sync_line(const char * line)
 bool ULogEvent::read_optional_line(FILE* file, bool & got_sync_line, char * buf, size_t bufsize, bool chomp /*=true*/, bool trim /*=false*/)
 {
 	buf[0] = 0;
-	if( !fgets( buf, bufsize, file )) {
+	if( !fgets( buf, (int)bufsize, file )) {
 		return false;
 	}
 	if (is_sync_line(buf)) {
@@ -424,7 +424,7 @@ bool ULogEvent::read_line_value(const char * prefix, MyString & val, FILE* file,
 	}
 	if (chomp) { str.chomp(); }
 	if (starts_with(str.c_str(), prefix)) {
-		val = str.substr(strlen(prefix), str.Length());
+		val = str.substr((int)strlen(prefix), str.Length());
 		return true;
 	}
 	return false;
@@ -1230,7 +1230,7 @@ SubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 
 	// see if the next line contains an optional user event notes string
 #ifdef DONT_EVER_SEEK
-	submitEventUserNotes = read_optional_line(file, got_sync_line, true, false);
+	submitEventUserNotes = read_optional_line(file, got_sync_line, true, true);
 	if( ! submitEventUserNotes) {
 		return 1;
 	}
@@ -1976,12 +1976,41 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}
-	int retval = sscanf(
-		line.Value(),
-		"%127s from %127s on %127s",
-		error_type,
-		daemon_name,
-		execute_host);
+
+	// parse error_type, daemon_name and execute_host from a line of the form
+	// [Error|Warning] from <daemon_name> on <execute_host>:
+	// " from ", " on ", and the trailing ":" are added by format body and should be removed here.
+
+	int retval = 0;
+	line.trim();
+	int ix = line.find(" from ");
+	if (ix > 0) {
+		MyString et = line.substr(0, ix);
+		et.trim();
+		strncpy(error_type, et.Value(), sizeof(error_type));
+		line = line.substr(ix + 6, line.length());
+		line.trim();
+	} else {
+		strncpy(error_type, "Error", sizeof(error_type));
+		retval = -1;
+	}
+
+	ix = line.find(" on ");
+	if (ix <= 0) {
+		daemon_name[0] = 0;
+	} else {
+		MyString dn = line.substr(0, ix);
+		dn.trim();
+		strncpy(daemon_name, dn.Value(), sizeof(daemon_name));
+		line = line.substr(ix + 4, line.length());
+		line.trim();
+	}
+
+	// we expect to see a : after the daemon name, if we find it. remove it.
+	ix = line.length();
+	if (ix > 0 && line[ix-1] == ':') { line.truncate(ix - 1); }
+
+	strncpy(execute_host, line.Value(), sizeof(execute_host));
 #else
     int retval = fscanf(
 	  file,
@@ -2748,7 +2777,7 @@ JobEvictedEvent::formatBody( std::string &out )
   } else if( checkpointed ) {
     retval = formatstr_cat( out, "(1) Job was checkpointed.\n\t" );
   } else {
-    retval = formatstr_cat( out, "(0) Job was not checkpointed.\n\t" );
+    retval = formatstr_cat( out, "(0) CPU times\n\t" );
   }
 
   if( retval < 0 ) {
@@ -3001,7 +3030,8 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	// try to read the reason, this is optional
-	if (read_optional_line(line, file, got_sync_line)) {
+	if (read_optional_line(line, file, got_sync_line, true)) {
+		line.trim();
 		reason = line.detach_buffer();
 	}
 #else
@@ -4047,10 +4077,13 @@ JobHeldEvent::readEvent( FILE *file, bool & got_sync_line )
 		return 0;
 	}
 	// try to read the reason, this is optional
-	if ( ! read_optional_line(line, file, got_sync_line)) {
+	if ( ! read_optional_line(line, file, got_sync_line, true)) {
 		return 1;	// backwards compatibility
 	}
-	reason = line.detach_buffer();
+	line.trim();
+	if (line != "Reason unspecified") {
+		reason = line.detach_buffer();
+	}
 
 	int incode = 0;
 	int insubcode = 0;
@@ -4224,10 +4257,13 @@ JobReleasedEvent::readEvent( FILE *file, bool & got_sync_line )
 		return 0;
 	}
 	// try to read the reason, this is optional
-	if ( ! read_optional_line(line, file, got_sync_line)) {
+	if ( ! read_optional_line(line, file, got_sync_line, true)) {
 		return 1;	// backwards compatibility
 	}
-	reason = line.detach_buffer();
+	line.trim();
+	if (! line.empty()) {
+		reason = line.detach_buffer();
+	}
 #else
 	if( fscanf(file, "Job was released.\n") == EOF ) {
 		return 0;
@@ -4782,7 +4818,7 @@ PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 	}
 	line.trim();
 	if (starts_with(line.Value(), dagNodeNameLabel)) {
-		int label_len = strlen( dagNodeNameLabel );
+		size_t label_len = strlen( dagNodeNameLabel );
 		dagNodeName = strnewp( line.Value() + label_len );
 	}
 
@@ -6721,6 +6757,7 @@ FactorySubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 1;
 	}
+	line.trim();
 	submitEventUserNotes = line.detach_buffer();
 #else
 

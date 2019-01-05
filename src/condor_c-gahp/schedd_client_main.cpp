@@ -58,6 +58,12 @@ usage()
 void init_pipes();
 
 void
+main_pre_command_sock_init()
+{
+	daemonCore->m_create_family_session = false;
+}
+
+void
 main_init( int argc, char ** const argv )
 {
 	dprintf(D_FULLDEBUG, "Welcome to the C-GAHP\n");
@@ -210,6 +216,7 @@ main( int argc, char **argv )
 {
 	set_mySubSystem( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
 
+	dc_main_pre_command_sock_init = main_pre_command_sock_init;
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

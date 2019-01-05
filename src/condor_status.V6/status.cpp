@@ -712,6 +712,7 @@ main (int argc, char *argv[])
 	// initialize to read from config file
 	myDistro->Init( argc, argv );
 	myName = argv[0];
+	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
 
@@ -2338,7 +2339,7 @@ secondPass (int argc, char *argv[])
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);
 			}
-			delete [] daemonname;
+			free(daemonname);
 			daemonname = NULL;
 		} else if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
 			if (diagnose) { printf ("[%s]\n", argv[i+1]); }

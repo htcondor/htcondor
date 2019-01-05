@@ -18,7 +18,10 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#if 0 // Moved to dagman_utils
 #include "dagman_recursive_submit.h"
+#endif
+#include "../condor_utils/dagman_utils.h"
 #include "MyString.h"
 #include "which.h"
 #include "string_list.h"
@@ -37,13 +40,14 @@
 #include "condor_attributes.h"
 #include "dag_tokener.h"
 
-
+#if 0 // Moved to dagman_utils
 #ifdef WIN32
 const char* dagman_exe = "condor_dagman.exe";
 const char* valgrind_exe = "valgrind.exe";
 #else
 const char* dagman_exe = "condor_dagman";
 const char* valgrind_exe = "valgrind";
+#endif
 #endif
 
 int printUsage(int iExitCode=1); // NOTE: printUsage calls exit(1), so it doesn't return
@@ -57,18 +61,25 @@ int doRecursionNew( SubmitDagDeepOptions &deepOpts,
 int parseJobOrDagLine( const char *dagLine, dag_tokener &tokens,
 			const char *fileType, const char *&submitOrDagFile,
 			const char *&directory );
+#if 0 // Moved to dagman_utils
 int setUpOptions( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts,
 			StringList &dagFileAttrLines );
+#endif
 void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts);
 int getOldSubmitFlags( SubmitDagShallowOptions &shallowOpts );
 int parseArgumentsLine( const MyString &subLine,
 			SubmitDagShallowOptions &shallowOpts );
+#if 0 // Moved to dagman_utils
 void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 			/* const */ SubmitDagShallowOptions &shallowOpts,
 			/* const */ StringList &dagFileAttrLines );
+#endif
 int submitDag( SubmitDagShallowOptions &shallowOpts );
+
+// Initial DagmanUtils object
+DagmanUtils dagmanUtils;
 
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -79,6 +90,7 @@ int main(int argc, char *argv[])
 		// libraries which use it will write to the right place...
 	dprintf_set_tool_debug("TOOL", 0);
 	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 		// Initialize our Distribution object -- condor vs. hawkeye, etc.
@@ -123,7 +135,7 @@ int main(int argc, char *argv[])
 	}
 	
 		// Further work to get the shallowOpts structure set up properly.
-	tmpResult = setUpOptions( deepOpts, shallowOpts, dagFileAttrLines );
+	tmpResult = dagmanUtils.setUpOptions( deepOpts, shallowOpts, dagFileAttrLines );
 	if ( tmpResult != 0 ) return tmpResult;
 
 		// Check whether the output files already exist; if so, we may
@@ -143,7 +155,7 @@ int main(int argc, char *argv[])
 	}
 
 		// Write the actual submit file for DAGMan.
-	writeSubmitFile( deepOpts, shallowOpts, dagFileAttrLines );
+	dagmanUtils.writeSubmitFile( deepOpts, shallowOpts, dagFileAttrLines );
 
 	return submitDag( shallowOpts );
 }
@@ -207,7 +219,7 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 					submitFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
 
 						// Now run condor_submit_dag on the DAG file.
-					if ( runSubmitDag( deepOpts, submitFile.Value(),
+					if ( dagmanUtils.runSubmitDag( deepOpts, submitFile.Value(),
 								directory, shallowOpts.priority,
 								false ) != 0 ) {
 						result = 1;
@@ -233,7 +245,7 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 				}
 
 					// Now run condor_submit_dag on the DAG file.
-				if ( runSubmitDag( deepOpts, nestedDagFile, directory,
+				if ( dagmanUtils.runSubmitDag( deepOpts, nestedDagFile, directory,
 							shallowOpts.priority, false ) != 0 ) {
 					result = 1;
 				}
@@ -289,6 +301,7 @@ parseJobOrDagLine( const char *dagLine, dag_tokener &tokens,
 	return 0;
 }
 
+#if 0 // Moved to dagman_utils
 //---------------------------------------------------------------------------
 /** Set up things in deep and shallow options that aren't directly specified
 	on the command line.
@@ -364,6 +377,7 @@ setUpOptions( SubmitDagDeepOptions &deepOpts,
 
 	return 0;
 }
+#endif
 
 //---------------------------------------------------------------------------
 /** Submit the DAGMan submit file unless the -no_submit option was given.
@@ -630,6 +644,7 @@ parseArgumentsLine( const MyString &subLine,
 	return 0;
 }
 
+#if 0 // Moved to dagman_utils
 class EnvFilter : public Env
 {
 public:
@@ -696,6 +711,9 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		fprintf(pSubFile, "+%s\t= \"%s\"\n", ATTR_JOB_BATCH_NAME,
 					deepOpts.batchName.c_str());
 	}
+    if (shallowOpts.priority != 0) {
+        fprintf(pSubFile, "priority\t= %d\n", shallowOpts.priority);
+    }
 #if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 #endif
@@ -947,6 +965,7 @@ void writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 
 	fclose(pSubFile);
 }
+#endif
 
 //---------------------------------------------------------------------------
 void
@@ -1079,7 +1098,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					// as full paths, to make it easier to determine whether
 					// several paths point to the same file.
 				MyString	errMsg;
-				if (!MakePathAbsolute(shallowOpts.strConfigFile, errMsg)) {
+				if (!dagmanUtils.MakePathAbsolute(shallowOpts.strConfigFile, errMsg)) {
 					fprintf( stderr, "%s\n", errMsg.Value() );
    					exit( 1 );
 				}

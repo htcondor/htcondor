@@ -34,7 +34,7 @@ class DockerProc : public VanillaProc {
 		virtual void SetupDockerSsh();
 		virtual int  AcceptSSHClient(Stream *stream);
 
-		virtual int getStats(int tid);
+		virtual void getStats();
 		static bool Detect();
 		static bool Version( std::string & version );
 

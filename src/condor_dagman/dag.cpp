@@ -47,7 +47,6 @@
 #include "extArray.h"
 #include "HashTable.h"
 #include <set>
-#include "dagman_recursive_submit.h"
 #include "dagman_metrics.h"
 
 using namespace std;
@@ -235,10 +234,10 @@ Dag::~Dag()
     delete _submitQ;
     delete _readyQ;
 
-	delete[] _dot_file_name;
-	delete[] _dot_include_file_name;
+	free(_dot_file_name);
+	free(_dot_include_file_name);
 
-	delete[] _statusFileName;
+	free(_statusFileName);
 
 	delete _metrics;
 
@@ -2717,8 +2716,8 @@ Dag::ParentListString( Job *node, const char delim ) const
 void 
 Dag::SetDotFileName(const char *dot_file_name)
 {
-	delete[] _dot_file_name;
-	_dot_file_name = strnewp(dot_file_name);
+	free(_dot_file_name);
+	_dot_file_name = strdup(dot_file_name);
 	return;
 }
 
@@ -2736,8 +2735,8 @@ Dag::SetDotFileName(const char *dot_file_name)
 void
 Dag::SetDotIncludeFileName(const char *include_file_name)
 {
-	delete[] _dot_include_file_name;
-	_dot_include_file_name = strnewp(include_file_name);
+	free(_dot_include_file_name);
+	_dot_include_file_name = strdup(include_file_name);
 	return;
 }
 
@@ -2835,7 +2834,7 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 		check_warning_strictness( DAG_STRICT_3 );
 		return;
 	}
-	_statusFileName = strnewp( statusFileName );
+	_statusFileName = strdup( statusFileName );
 	_minStatusUpdateTime = minUpdateTime;
 	_alwaysUpdateStatus = alwaysUpdate;
 }
@@ -4085,7 +4084,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
+		if ( _dagmanUtils.runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
 					node->GetDirectory(), node->_effectivePriority,
 					isRetry ) != 0 ) {
 			++node->_submitTries;

@@ -1621,6 +1621,7 @@ class DaemonCore : public Service
 	};
 	typedef std::vector<SockPair> SockPairVec;
 
+	bool m_create_family_session;
 	std::string m_family_session_id;
 	std::string m_family_session_key;
 

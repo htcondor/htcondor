@@ -26,7 +26,6 @@
 #include "condor_environ.h"
 #include "dc_collector.h"
 #include "dc_schedd.h"
-#include "get_daemon_name.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
 #include "MyString.h"
@@ -188,6 +187,7 @@ main(int argc, const char* argv[])
   int i;
   myDistro->Init( argc, argv );
 
+  set_priv_initialize(); // allow uid switching if root
   config();
 
   readfromfile = ! param_defined("SCHEDD_HOST");

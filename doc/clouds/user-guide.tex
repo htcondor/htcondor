@@ -677,8 +677,29 @@ Force HTCondor to read the new configuration by restarting it:
 
 \subsection{Prepare your AWS account}
 
-Since v8.7.1, the \Condor{annex} tool has included a \texttt{-setup} command which will
-prepare your AWS account.
+Since v8.7.1, the \Condor{annex} tool has included a \texttt{-setup} command
+which will prepare your AWS account.
+
+If, and only if, you will be using \Condor{annex} from an EC2 instance to
+which you have assigned an IAM role with sufficient privileges\footnote{%
+You may assign an IAM role to an EC2 instance when you launch it, or at
+any subsequent time, through the AWS web console (or other interfaces with
+which you may be familiar).  If you start the instance using HTCondor's
+EC2 universe, you may specify the IAM instance profile with the
+\SubmitCmd{ec2\_iam\_profile\_name} or \SubmitCmd{ec2\_iam\_profile\_arn}
+submit commands.}, you may skip down to the \textbf{\nameref{sec:Checking the Setup}}
+heading after running the following command.
+
+\terminal{%
+\$ condor\_annex -setup FROM INSTANCE \\
+Creating configuration bucket (this takes less than a minute)....... complete. \\
+Creating Lambda functions (this takes about a minute)........ complete. \\
+Creating instance profile (this takes about two minutes)................... complete. \\
+Creating security group (this takes less than a minute)..... complete. \\
+Setup successful.
+}
+
+Otherwise, continue by obtaining an access key, as follows.
 
 \subsubsection{Obtaining an Access Key}
 
@@ -747,6 +768,7 @@ Setup successful.
 }
 
 \subsubsection{Checking the Setup}
+\label{sec:Checking the Setup}
 
 You can verify at this point (or any later time) that the setup procedure
 completed successfully by running the following command.

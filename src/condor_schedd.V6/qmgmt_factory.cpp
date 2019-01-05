@@ -677,6 +677,7 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 					// the reader was primed with itemdata sent over the wire...
 				} else if (fea.items.number() > 0) {
 					// we populated the itemdata already
+					dprintf(D_MATERIALIZE | D_VERBOSE, "Digest itemdata for cluster %d already loaded. number=%d\n", cluster_id, fea.items.number());
 				} else {
 					// before opening the item data file, we (may) want to impersonate the user
 					bool restore_priv = false;
@@ -691,6 +692,7 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 						MyString spooled_filename;
 						GetSpooledMaterializeDataPath(spooled_filename, cluster_id, Spool);
 						if (spooled_filename != fea.items_filename) {
+							dprintf(D_MATERIALIZE, "invalid filename '%s' for foreach from, Cluster %d factory will be disabled\n", fea.items_filename.Value(), cluster_id);
 							formatstr(errmsg, "invalid filename '%s' for foreach from. File must be in Spool.", fea.items_filename.Value());
 							rval = -1;
 						}
@@ -813,6 +815,11 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 	// if we find one, then use that instead of the default token separator
 	char * pus = strchr(data, '\x1F');
 	if (pus) {
+		char * pend = data + strlen(data);
+		// remove trailing \r\n
+		if (pend > data && pend[-1] == '\n') { *--pend = 0; }
+		if (pend > data && pend[-1] == '\r') { *--pend = 0; }
+
 		for (;;) {
 			*pus = 0;
 			// trim token separator and also trailing whitespace
@@ -821,7 +828,8 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 			if ( ! var) break;
 
 			// advance to the next field and skip leading whitespace
-			data = pus+1;
+			data = pus;
+			if (data < pend) ++data;
 			while (*data == ' ' || *data == '\t') ++data;
 			pus = strchr(data, '\x1F');
 			var = fea.vars.next();
@@ -829,14 +837,8 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 				set_live_submit_variable(var, data, false);
 			}
 			if ( ! pus) {
-				// last field, check for trailing whitespace and \r\n 
-				pus = data + strlen(data);
-				if (pus > data && pus[-1] == '\n') --pus;
-				if (pus > data && pus[-1] == '\r') --pus;
-				if (pus == data) {
-					// we ran out of fields! use terminating null for all of the remaining fields
-					while ((var = fea.vars.next())) { set_live_submit_variable(var, data, false); }
-				}
+				// last field, use the terminating null for the remainder of items.
+				pus = pend;
 			}
 		}
 	} else {

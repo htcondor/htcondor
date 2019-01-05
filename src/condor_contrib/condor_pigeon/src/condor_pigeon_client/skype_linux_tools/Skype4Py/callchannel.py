@@ -169,7 +169,7 @@ class ICallChannelManager(EventHandlingBase):
 
     def _OnCallStatus(self, pCall, Status):
         if Status == clsRinging:
-            if self._Application == None:
+            if self._Application is None:
                 self.CreateApplication()
             self._Application.Connect(pCall.PartnerHandle, True)
             for stream in self._Application.Streams:
@@ -206,7 +206,7 @@ class ICallChannelManager(EventHandlingBase):
         @param ApplicationName: Application name
         @type ApplicationName: unicode
         '''
-        if ApplicationName != None:
+        if ApplicationName is not None:
             self.Name = ApplicationName
         self._Application = self._Skype.Application(self.Name)
         self._Skype.RegisterEventHandler('ApplicationStreams', self._OnApplicationStreams)

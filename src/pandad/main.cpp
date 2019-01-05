@@ -2,6 +2,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "subsystem_info.h"
+#include "condor_uid.h"
 
 #include <string>
 #include <stdio.h>
@@ -44,6 +45,7 @@ int main( int /* argc */, char ** /* argv */ ) {
 	configureSignals();
 
 	// This incantation makes dprintf() work.
+	set_priv_initialize();
 	set_mySubSystem( "pandad", SUBSYSTEM_TYPE_DAEMON );
 	config();
 	dprintf_config( "pandad" );

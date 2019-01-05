@@ -237,7 +237,8 @@ static size_t compute_pid_hash(const pid_t &key)
 
 DaemonCore::DaemonCore(int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
-	: comTable(32),
+	: m_create_family_session(true),
+	comTable(32),
 	sigTable(10),
 	reapTable(4),
 	t(TimerManager::GetTimerManager()),
@@ -5677,8 +5678,12 @@ pid_t CreateProcessForkit::clone_safe_getpid() {
 		// caching in libc).  Therefore, use the syscall to get
 		// the answer directly.
 
-	int retval = syscall(SYS_getpid);
-
+	pid_t retval;
+#ifdef __alpha__
+	retval = syscall(SYS_getxpid);
+#else
+	retval = syscall(SYS_getpid);
+#endif
 		// If we were fork'd with CLONE_NEWPID, we think our PID is 1.
 		// In this case, ask the parent!
 	if (retval == 1) {
@@ -5698,7 +5703,13 @@ pid_t CreateProcessForkit::clone_safe_getppid() {
 		// See above comment for clone_safe_getpid() for explanation of
 		// why we need to do this.
 	
-	int retval = syscall(SYS_getppid);
+	pid_t retval;
+#if defined(__alpha__) && defined(__GNUC__)
+	syscall(SYS_getxpid);
+	__asm__("mov $20, %0" : "=r"(retval) : :);
+#else
+	retval = syscall(SYS_getppid);
+#endif
 
 		// If ppid is 0, then either Condor is init (DEAR GOD) or we
 		// were created with CLONE_NEWPID; ask the parent!
@@ -8904,12 +8915,13 @@ DaemonCore::Inherit( void )
 	}
 
 	if ( m_family_session_id.empty() ) {
-		if ( param_boolean("SEC_USE_FAMILY_SESSION", true) ) {
+		if ( m_create_family_session && param_boolean("SEC_USE_FAMILY_SESSION", true) ) {
 			dprintf(D_DAEMONCORE, "Creating family security session.\n");
 			char* c_session_id = Condor_Crypt_Base::randomHexKey();
 			char* c_session_key = Condor_Crypt_Base::randomHexKey();
 
-			m_family_session_id = c_session_id;
+			m_family_session_id = "family:";
+			m_family_session_id += c_session_id;
 			m_family_session_key = c_session_key;
 
 			free(c_session_id);
@@ -9330,21 +9342,6 @@ pidWatcherThread( void* arg )
 			// But for now, handle it all here.
 
 			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
-#if 0  // this code replaced by call to Do_Wake_up_select() below
-				// send a NOP command to wake up select()
-			Daemon d( DT_ANY, daemonCore->privateNetworkIpAddr() );
-	        SafeSock ssock;
-			ReliSock rsock;
-			Sock &sock = (d.hasUDPCommandPort() && daemonCore->dc_ssock) ?
-				*(Sock *)&ssock : *(Sock *)&rsock;
-				// Use raw command protocol to avoid blocking on ourself.
-			notify_failed = 
-				!d.connectSock(&sock,1) ||
-				!d.startCommand(DC_NOP, &sock, 1, NULL, "DC_NOP", true) ||
-				!sock.end_of_message();
-#else
-//#pragma REMIND("TJ: remove this dead code.")
-#endif
 				// while we have the Big_fat_mutex, copy any exited pids
 				// out of our thread local MyExitedQueue and into our main
 				// thread's WaitpidQueue (of course, we must have the mutex

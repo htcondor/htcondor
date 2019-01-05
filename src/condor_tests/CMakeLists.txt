@@ -239,6 +239,7 @@ if (BUILD_TESTING)
 		condor_pl_test (python_bindings_classad "Python bindings classad module" "core;quick;full;quicknolink")
 		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module" "core;quick;full;quicknolink")
 		condor_pl_test (python_collector_query "tests of the query method of the collector class" "core;quick;full;quicknolink")
+		condor_pl_test (python_bindings_jobeventlog "tests the JobEvent class" "core;quick;full;quicknolink")
 
 		# Tests of the pytest suite.
 		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "core;quick;full;quicknolink")
@@ -249,6 +250,8 @@ if (BUILD_TESTING)
     	condor_pl_test (cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "core;quick;full;quicknolink")
 		condor_pl_test (job_late_materialize_py "Late materialization of jobs via python" "core;quick;full;quicknolink")
 		condor_pl_test (cmd_drain_policies "condor_drain and job policies" "core;quick;full;quicknolink")
+		condor_pl_test (cmd_now_internals "testing condor_now internals" "core;quick;full;quicknolink")
+		condor_pl_test (cmd_now "condor_now functional tests" "core;quick;full;quicknolink")
 	endif()
 
 	if(WITH_GANGLIA)
@@ -344,6 +347,7 @@ if (BUILD_TESTING)
 	# Not in use till endurance testing done.
 	# condor_pl_test(lib_sysapi "Run SysApi Tests" "core;quick;full;quicknolink")
 	# condor_pl_test(lib_procapi "Run ProcApi Tests" "core;quick;full;quicknolink")
+	condor_pl_test(job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "core;quick;full;quicknolink")
 
 	##### dagman tests
 	condor_pl_test(job_core_chirp_par "Exercise the chirp I/O C library in Parallel Universe" "lib;quick;full")

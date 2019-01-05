@@ -478,7 +478,7 @@ Matchmaker::
 	if ( cachedName ) free(cachedName);
 	if ( cachedAddr ) free(cachedAddr);
 
-	delete [] NegotiatorName;
+	free(NegotiatorName);
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
@@ -594,7 +594,7 @@ reinitialize ()
 
 	if ( NegotiatorNameInConfig || NegotiatorName == NULL ) {
 		char *tmp = param( "NEGOTIATOR_NAME" );
-		delete [] NegotiatorName;
+		free( NegotiatorName );
 		if ( tmp ) {
 			NegotiatorName = build_valid_daemon_name( tmp );
 			free( tmp );
@@ -1189,6 +1189,41 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 		}
 	}
 	free(tmp);
+
+	tmp=param("PREEMPTION_RANK");
+	if ( tmp && PreemptionRank) {
+		const char* preempt_rank_name = "preempt_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(preempt_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(preempt_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+	tmp=param("NEGOTIATOR_PRE_JOB_RANK");
+	if ( tmp && NegotiatorPreJobRank) {
+		const char* pre_job_rank_name = "pre_job_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(pre_job_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(pre_job_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+	tmp=param("NEGOTIATOR_POST_JOB_RANK");
+	if ( tmp && NegotiatorPostJobRank) {
+		const char* post_job_rank_name = "post_job_rank__";	// any name will do
+		sample_startd_ad->AssignExpr(post_job_rank_name,tmp);
+		ExprTree *expr = sample_startd_ad->Lookup(post_job_rank_name);
+		if ( expr != NULL ) {
+			sample_startd_ad->GetExternalReferences(expr,external_references,true);
+		}
+	}
+	free(tmp);
+
+
 	if (sample_startd_ad) {
 		delete sample_startd_ad;
 		sample_startd_ad = NULL;
@@ -6063,11 +6098,6 @@ addRemoteUserPrios( ClassAd	*ad )
 	total_slots = 0;
 	if (!ad->LookupInteger(ATTR_TOTAL_SLOTS, total_slots)) {
 		total_slots = 0;
-	}
-	if (!total_slots && (param_boolean("ALLOW_VM_CRUFT", false))) {
-		if (!ad->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES, total_slots)) {
-			total_slots = 0;
-		}
 	}
 		// The for-loop below publishes accounting information about each slot
 		// into each other slot.  This is relatively computationally expensive,

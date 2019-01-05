@@ -47,9 +47,16 @@ FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
 }
 
 FileModifiedTrigger::~FileModifiedTrigger() {
+	releaseResources();
+}
+
+void
+FileModifiedTrigger::releaseResources() {
 	if( initialized && inotify_fd != -1 ) {
 		close( inotify_fd );
+		inotify_fd = -1;
 	}
+	initialized = false;
 }
 
 
@@ -94,7 +101,7 @@ FileModifiedTrigger::read_inotify_events( void ) {
 int
 FileModifiedTrigger::wait( int timeout ) {
 	if(! initialized) {
-		return -1;
+		return -1; // FIXME: return ULOG_INVALID -ish instead
 	}
 
 	struct pollfd pollfds[1];
@@ -106,7 +113,7 @@ FileModifiedTrigger::wait( int timeout ) {
 	int events = poll( pollfds, 1, timeout );
 	switch( events ) {
 		case -1:
-			return -1;
+			return -1; // FIXME: return ULOG_RD_ERROR -ish instead
 
 		case 0:
 			return 0;
@@ -116,7 +123,7 @@ FileModifiedTrigger::wait( int timeout ) {
 				return read_inotify_events();
 			} else {
 				dprintf( D_ALWAYS, "FileModifiedTrigger::wait(): poll() returned an event I didn't ask for.\n" );
-				return -1;
+				return -1; // FIXME: return ULOG_UNK_ERROR -ish instead.
 			}
 		break;
 	}
@@ -157,14 +164,20 @@ FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
 }
 
 FileModifiedTrigger::~FileModifiedTrigger() {
-	if( initialized ) {
-		close( statfd );
-	}
+	releaseResources();
 }
 
+void
+FileModifiedTrigger::releaseResources() {
+	if( initialized && statfd != -1 ) {
+		close( statfd );
+		statfd = -1;
+	}
+	initialized = false;
+}
 
 //
-// Polling is the best we can do.  Use condor_gettimestemp() and not
+// Polling is the best we can do.  Use condor_gettimestamp() and not
 // clock_gettime(), despite the latter being monotonic, because it's
 // on Mac OS X until 10.12, and not available on Windows at all.
 //

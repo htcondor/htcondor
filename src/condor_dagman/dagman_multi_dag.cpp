@@ -29,6 +29,7 @@
 // Just so we can link in the ReadMultipleUserLogs class.
 MULTI_LOG_HASH_INSTANCE;
 
+#if 0 // Moved to dagman_utils
 //-------------------------------------------------------------------------
 static void
 AppendError(MyString &errMsg, const MyString &newError)
@@ -195,6 +196,7 @@ MakePathAbsolute(MyString &filePath, MyString &errMsg)
 
 	return result;
 }
+#endif
 
 //-------------------------------------------------------------------------
 int

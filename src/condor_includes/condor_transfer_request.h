@@ -20,7 +20,6 @@
 #ifndef TRANSFER_REQUEST_H
 #define TRANSFER_REQUEST_H
 
-#include "extArray.h"
 #include "MyString.h"
 #include "file_transfer.h"
 #include "proc.h"
@@ -149,8 +148,8 @@ class TransferRequest
 		// stuff the array pf procids I got from the submit client into
 		// here so the schedd knows what to do just before they get pushed
 		// to the td.
-		void set_procids(ExtArray<PROC_ID> *jobs);
-		ExtArray<PROC_ID>* get_procids(void);
+		void set_procids(std::vector<PROC_ID> *jobs);
+		std::vector<PROC_ID>* get_procids(void);
 
 		// add a jobad to the transfer request, this accepts ownership
 		// of the memory passed to it.
@@ -226,7 +225,7 @@ class TransferRequest
 		SimpleList<ClassAd *> m_todo_ads;
 
 		// Here is the original array of procids I got from the client
-		ExtArray<PROC_ID> *m_procids;
+		std::vector<PROC_ID> *m_procids;
 
 		// In the schedd's codebase, it needs to stash a client socket into
 		// the request to deal with across callbacks.

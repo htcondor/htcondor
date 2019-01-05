@@ -53,7 +53,11 @@ HibernationManager::~HibernationManager ( void ) throw ()
 	if ( m_hibernator ) {
 		delete m_hibernator;
 	}
-	for ( int i = 0;  i < m_adapters.getlast();  i++ ) {
+	// TODO This is wrong, but necessary in the current code.
+	//   Our callers call addInterface() once and eventually delete
+	//   the interface they added. So we need this off-by-one
+	//   error where we don't delete the last item in our vector.
+	for ( size_t i = 0;  i + 1 < m_adapters.size();  i++ ) {
 		delete m_adapters[i];
 	}
 }
@@ -70,7 +74,7 @@ HibernationManager::initialize ( void )
 bool
 HibernationManager::addInterface( NetworkAdapterBase &adapter )
 {
-	m_adapters.add( &adapter );
+	m_adapters.push_back( &adapter );
 	if (  (NULL == m_primary_adapter)  ||
 		  (m_primary_adapter->isPrimary() == false) ) {
 		m_primary_adapter = &adapter;
@@ -115,9 +119,9 @@ HibernationManager::getSupportedStates( unsigned & mask ) const
 
 bool
 HibernationManager::getSupportedStates(
-	ExtArray<HibernatorBase::SLEEP_STATE> &states ) const
+	std::vector<HibernatorBase::SLEEP_STATE> &states ) const
 {
-	states.truncate(-1);
+	states.clear();
 	if ( m_hibernator ) {
 		unsigned mask = m_hibernator->getStates( );
 		return HibernatorBase::maskToStates( mask, states );
@@ -129,7 +133,7 @@ bool
 HibernationManager::getSupportedStates( MyString &str ) const
 {
 	str = "";
-	ExtArray<HibernatorBase::SLEEP_STATE> states;
+	std::vector<HibernatorBase::SLEEP_STATE> states;
 	if ( !getSupportedStates( states ) ) {
 		return false;
 	}

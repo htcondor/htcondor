@@ -29,6 +29,7 @@ $testname = "lib_userlog";
 
 my @expected_output =
 (
+'Examine cluster 14',
 'Job Submited.........',
 'Job Executed.........',
 'Job Execution Error.........',

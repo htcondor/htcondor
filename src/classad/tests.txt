@@ -59,8 +59,6 @@ test-lexer-one-token ) LEX_CLOSE_PAREN
 test-lexer-one-token { LEX_OPEN_BRACE
 test-lexer-one-token } LEX_CLOSE_BRACE
 
-# I think this should evaluate to LEX_BACKSLASH. Apparently
-# it's not actually used anywhere, so it's an error instead. 
 test-lexer-one-token \ LEX_TOKEN_ERROR
 
 ######################################################################

@@ -619,9 +619,6 @@ ROOSTER_DEBUG           =
 MAX_SHARED_PORT_LOG     = 1000000
 SHARED_PORT_DEBUG       =
 
-MAX_HDFS_LOG            = 1000000
-HDFS_DEBUG              =
-
 # High Availability Logs
 MAX_HAD_LOG		= 1000000
 HAD_DEBUG		=
@@ -985,7 +982,6 @@ SHARED_PORT_LOG = $(LOG)/SharedPortLog
 HAD_LOG		= $(LOG)/HADLog
 REPLICATION_LOG	= $(LOG)/ReplicationLog
 TRANSFERER_LOG	= $(LOG)/TransfererLog
-HDFS_LOG	= $(LOG)/HDFSLog
 
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
@@ -1106,7 +1102,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT, \
+#JOB_ROUTER, ROOSTER, LEASEMANAGER, SHARED_PORT, \
 #DEFRAG, GANGLIAD, ANNEXD
 
 
@@ -1120,7 +1116,6 @@ COLLECTOR			= $(SBIN)/condor_collector
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
 ROOSTER                         = $(LIBEXEC)/condor_rooster
-HDFS				= $(SBIN)/condor_hdfs
 SHARED_PORT			= $(LIBEXEC)/condor_shared_port
 TRANSFERER			= $(LIBEXEC)/condor_transferer
 DEFRAG                          = $(LIBEXEC)/condor_defrag

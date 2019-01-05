@@ -42,7 +42,6 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
-#include "get_daemon_name.h"
 //#include "condor_qmgr.h"  // only submit_protocol.cpp is allowed to access the schedd's Qmgt functions
 #include "sig_install.h"
 #include "access.h"
@@ -83,7 +82,6 @@
 #include "condor_md.h"
 #include "my_popen.h"
 #include "condor_base64.h"
-#include "zkm_base64.h"
 
 #include <algorithm>
 #include <string>

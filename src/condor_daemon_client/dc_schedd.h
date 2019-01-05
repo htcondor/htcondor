@@ -280,12 +280,14 @@ public:
 		kills the job.  The caller must authenticate as a queue user or
 		the owner of both jobs; the victim must be running and the beneficiary
 		must be idle.  Returns true iff it received a valid reply.
-			@param victim The job to vacate.
 			@param beneficiary The job the schedule on the vacated slot.
 			@param reply The reply from the schedd (unchanged if none).
 			@param errorMessage The error message (unchanged if none).
+			@param victims A pointer to an array victim jobs.
+			@param victimCount The size of the array.
+			@param flags Reserved.
 		*/
-	bool reassignSlot( PROC_ID victim, PROC_ID beneficiary, ClassAd & reply, std::string & errorMessage );
+	bool reassignSlot( PROC_ID beneficiary, ClassAd & reply, std::string & errorMessage, PROC_ID * victims, unsigned victimCount, int flags = 0 );
 
 		/** Get starter connection info for a running job.
 			@param jobid What job to act on

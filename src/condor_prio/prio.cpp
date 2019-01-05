@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "get_daemon_name.h"
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_schedd.h"
@@ -77,6 +76,7 @@ main( int argc, char *argv[] )
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	if( argc < 2 ) {

@@ -717,10 +717,9 @@ bool DockerProc::ShutdownFast() {
 }
 
 
-int
-DockerProc::getStats(int /*tid*/) {
+void
+DockerProc::getStats() {
 	DockerAPI::stats( containerName, memUsage, netIn, netOut, userCpu, sysCpu);
-	return true;
 }
 
 bool DockerProc::PublishUpdateAd( ClassAd * ad ) {

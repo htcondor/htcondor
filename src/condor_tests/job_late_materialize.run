@@ -56,7 +56,7 @@ my $submitfile = "$testname$pid.sub";
 my @basesubmit = "
 	universe = vanilla
 	executable = x_sleep.pl
-	arguments = 10
+	arguments = 3
 	log = $submitfile.log
 	notification = never
 	max_materialize = 4
@@ -187,11 +187,12 @@ $peak_idle = 0;
 # use a subfile with itemdata for the second test
 # 
 my $sub2name = $testname;
+my $log2name = $testname . "_2";
 
 TLOG("Submitting $submitfile with itemdata to test late materialization\n");
 $res = CondorTest::RunTest2(name=>$sub2name, want_checkpoint=>0, submit_body=>"
 	executable = x_sleep.pl
-	log = $sub2name.log
+	log = $log2name.$pid.log
 	notification = never
 	max_materialize = 7
 	queue 3 arguments in (10,30,15,1)
@@ -212,6 +213,54 @@ CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-tot
 $res = ($peak_materialized == 7);
 CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-max_materialize');
 $res = ($peak_idle == 7);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-max_idle');
+
+# reset counter for the second run
+$total_materialized = 0;
+$total_exited = 0;
+$num_materialized = 0;
+$num_running = 0;
+$num_idle = 0;
+$peak_materialized = 0;
+$peak_running = 0;
+$peak_idle = 0;
+
+# use a subfile with multicolumn itemdata for the third test
+# 
+my $sub3name = $testname;
+my $log3name = $testname . "_3";
+
+TLOG("Submitting $submitfile with itemdata to test late materialization\n");
+$res = CondorTest::RunTest2(name=>$sub3name, want_checkpoint=>0, submit_body=>"
+	executable = x_sleep.pl
+	arguments = 1
+	log = $log3name.$pid.log
+	notification = never
+	my.foo = \$Fq(foo)
+	max_idle = 4
+	queue foo,my.bar,my.baz from (
+	  A \"a\" 1
+	  B \"b\" 2
+	  C \"c\" 3
+	  D \"d\" 4
+	  E \"e\" 5
+	  F \"f\" 6
+	)
+	");
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'inline-itemdata');
+
+# print out final state counters
+#
+TLOG("Checking state counters\n");
+print "\t\tCur\tPeak\tTotal\n";
+print "Materialized\t$num_materialized\t$peak_materialized\t$total_materialized\n";
+print "Exited\t\t_\t_\t$total_exited\n";
+print "Running\t\t$num_running\t$peak_running\n";
+print "Idle\t\t$num_idle\t$peak_idle\n";
+
+$res = ($total_materialized == 6);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-total-materialized');
+$res = ($peak_idle == 4);
 CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-max_idle');
 
 

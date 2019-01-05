@@ -110,9 +110,9 @@ DCCollector::deepCopy( const DCCollector& copy )
 	up_type = copy.up_type;
 
 	if( update_destination ) {
-        delete [] update_destination;
+        free(update_destination);
     }
-	update_destination = strnewp( copy.update_destination );
+	update_destination = copy.update_destination ? strdup( copy.update_destination ) : NULL;
 
 	startTime = copy.startTime;
 }
@@ -368,11 +368,25 @@ public:
 			char const *who = "unknown";
 			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to start non-blocking update to %s.\n",who);
+			if (dc_collector) {
+				while (!dc_collector->pending_update_list.empty()) {
+					// UpdateData's dtor removes this from the pending update list
+					delete(dc_collector->pending_update_list.front());
+				}
+				ud = 0;	
+			}
 		}
 		else if(sock && !DCCollector::finishUpdate(ud->dc_collector,sock,ud->ad1,ud->ad2)) {
 			char const *who = "unknown";
 			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to send non-blocking update to %s.\n",who);
+			if (dc_collector) {
+				while (!dc_collector->pending_update_list.empty()) {
+					// UpdateData's dtor removes this from the pending update list
+					delete(dc_collector->pending_update_list.front());
+				}
+				ud = 0;	
+			}
 		}
 		else if(sock && sock->type() == Sock::reli_sock) {
 			// We keep the TCP socket around for sending more updates.
@@ -384,7 +398,9 @@ public:
 		if(sock) {
 			delete sock;
 		}
-		delete ud;
+		if (ud) {
+			delete ud;
+		}
 
 			// Now that we finished sending the update, we can start sequentially sending
 			// the pending updates.  We send these updates synchronously in sequence
@@ -574,7 +590,7 @@ void
 DCCollector::initDestinationStrings( void )
 {
 	if( update_destination ) {
-		delete [] update_destination;
+		free(update_destination);
 		update_destination = NULL;
 	}
 
@@ -592,7 +608,7 @@ DCCollector::initDestinationStrings( void )
 	} else {
 		if (_addr) dest = _addr;
 	}
-	update_destination = strnewp( dest.c_str() );
+	update_destination = strdup( dest.c_str() );
 }
 
 
@@ -623,7 +639,7 @@ DCCollector::~DCCollector( void )
 		delete( update_rsock );
 	}
 	if( update_destination ) {
-		delete [] update_destination;
+		free(update_destination);
 	}
 
 		// In case there are any nonblocking updates in progress,

@@ -28,8 +28,9 @@ with the \SubmitCmdNI{grid} universe, setting the
 by the service's URL. For example,
 partial contents of the submit description file may be
 \begin{verbatim}
-grid_resource = ec2 https://ec2.amazonaws.com/
+grid_resource = ec2 https://ec2.us-east-1.amazonaws.com/
 \end{verbatim}
+(Replace 'us-east-1' with the AWS region you'd like to use.)
 
 Since the job is a virtual machine image,
 most of the submit description file commands
@@ -45,7 +46,8 @@ provide the identifier for the image using \SubmitCmd{ec2\_ami\_id}.
 
 \index{grid type!ec2!authentication methods}
 This grid type requires access to user authentication information,
-in the form of path names to files containing the appropriate keys.
+in the form of path names to files containing the appropriate keys,
+with one exception, described below.
 
 The \SubmitCmdNI{ec2} grid type has two different authentication methods.
 The first authentication method uses the EC2 API's built-in authentication.
@@ -57,7 +59,7 @@ ec2_access_key_id = /path/to/access.key
 ec2_secret_access_key = /path/to/secret.key
 \end{verbatim}
 
-The \Expr{euca3://} and \Expr{euca3s://} protocols must use this 
+The \Expr{euca3://} and \Expr{euca3s://} protocols must use this
 authentication method.
 These protocols exist to work correctly when the resources do not support
 the \Param{InstanceInitiatedShutdownBehavior} parameter.
@@ -80,6 +82,17 @@ ec2_secret_access_key = /path/to/x.509/private.key
 \end{verbatim}
 
 If using an X.509 proxy, specify the proxy in both places.
+
+The exception to both of these cases applies when submitting EC2 jobs
+to an HTCondor running in an EC2 instance.  If that instance has been
+configured with sufficient privileges, you may specify ``FROM INSTANCE''
+(without the quotes) for either \SubmitCmdNI{ec2\_access\_key\_id} or
+\SubmitCmdNI{ec2\_secret\_access\_key}, and HTCondor will use the
+instance's credentials.  (AWS grants an EC2 instance access to temporary
+credentials, renewed over the instance's lifetime, based on the instance's
+assigned IAM (instance) profile and the corresponding IAM role.  You may
+specify the this information when launching an instance or later, during
+its lifetime.)
 
 HTCondor can use the EC2 API to create an SSH key pair that allows
 secure log in to the virtual machine once it is running.

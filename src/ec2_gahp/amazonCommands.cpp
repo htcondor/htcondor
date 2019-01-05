@@ -492,6 +492,83 @@ std::string pathEncode( const std::string & original ) {
 	return encoded;
 }
 
+bool AmazonMetadataQuery::SendRequest( const std::string & uri ) {
+	// Don't know what the meta-data server would do with anything else.
+	httpVerb = "GET";
+	// Spin the throttling engine up appropriately.
+	Throttle::now( & signatureTime );
+	// Send a "prepared" request (e.g., don't do any AWS security).
+	return sendPreparedRequest( "http", uri, "" );
+}
+
+bool
+fetchSecurityTokens( int rID, std::string & keyID, std::string & saKey, std::string & token ) {
+	int requestID = -10 * rID;
+
+	// (1) Determine the IAM role to use:
+	//     * Execute `curl http://169.254.169.254/latest/meta-data/iam/security-credentials/`;
+	//       the trailing slash is important. :(
+	//     * If there's only one, use that one.  Otherwise, look for the
+	//       'HTCondor' role and use that one.  Otherwise, fail.
+	// (2) Execute `curl http://169.254.169.254/latest/meta-data/iam/security-credentials/<iam-role>`.
+	// (3) Parse the JSON from step two for for "AccessKeyId",
+	//     "SecretAccessKey", and "Token", assigning them appropriately.
+
+	AmazonMetadataQuery listRequest( requestID--, "list-credentials" );
+	std::string uri = "http://169.254.169.254/latest/meta-data/iam/security-credentials/";
+	bool result = listRequest.SendRequest( uri );
+	if(! result) {
+		dprintf( D_ALWAYS, "fetchSecurityTokens(): Failed to fetch list of IAM roles (%s).\n", uri.c_str() );
+		return false;
+	}
+
+	std::string listOfRoles = listRequest.getResultString();
+
+	std::string role;
+	StringList sl( listOfRoles.c_str(), "\n" );
+	switch( sl.number() ) {
+		case 0:
+			dprintf( D_ALWAYS, "fetchSecurityTokens(): Found empty list of roles.\n" );
+			return false;
+		case 1:
+			role = sl.first();
+			break;
+		default:
+			char * name = NULL;
+			sl.rewind();
+			while( (name = sl.next()) != NULL ) {
+				if( strstr( name, "HTCondor" ) != NULL ) {
+					role = name;
+					break;
+				}
+			}
+			break;
+	}
+
+	AmazonMetadataQuery roleRequest( requestID--, "fetch-credentials" );
+	uri += role;
+	result = roleRequest.SendRequest( uri );
+	if(! result) {
+		dprintf( D_ALWAYS, "fetchSecurityTokens(): Failed to fetch security tokens for role (%s).\n", uri.c_str() );
+		return false;
+	}
+
+	ClassAd reply;
+	classad::ClassAdJsonParser cajp;
+	if(! cajp.ParseClassAd( roleRequest.getResultString(), reply, true )) {
+		dprintf( D_ALWAYS, "fetchSecurityTokens(): Failed to parse reply '%s' as JSON.\n",
+			roleRequest.getResultString().c_str() );
+		return false;
+	}
+
+	// I think this ordering prevents short-circuiting.
+	result = true;
+	result = reply.LookupString( "AccessKeyId", keyID ) && result;
+	result = reply.LookupString( "SecretAccessKey", saKey ) && result;
+	result = reply.LookupString( "Token", token ) && result;
+	return result;
+}
+
 bool AmazonRequest::createV4Signature(	const std::string & payload,
 										std::string & authorizationValue,
 										bool sendContentSHA ) {
@@ -526,13 +603,46 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	// everything in the POST body, instead.
 	std::string canonicalQueryString;
 
-	// ... that is, unless we're using the GET method.
+	// This function doesn't (currently) support query parameters,
+	// but no current caller attempts to use them.
 	ASSERT( (httpVerb != "GET") || query_parameters.size() == 0 );
 
 	// The canonical headers must include the Host header, so add that
 	// now if we don't have it.
 	if( headers.find( "Host" ) == headers.end() ) {
 		headers[ "Host" ] = host;
+	}
+
+	// If we're using temporary credentials, we need to add the token
+	// header here as well.  We set saKey and keyID here (well before
+	// necessary) since we'll get them for free when we get the token.
+	std::string keyID;
+	std::string saKey;
+	std::string token;
+	if( this->secretKeyFile == USE_INSTANCE_ROLE_MAGIC_STRING || this->accessKeyFile == USE_INSTANCE_ROLE_MAGIC_STRING ) {
+		if(! fetchSecurityTokens( requestID, keyID, saKey, token ) ) {
+			this->errorCode = "E_FILE_IO";
+			this->errorMessage = "Unable to obtain role credentials'.";
+			dprintf( D_ALWAYS, "Unable to obtain role credentials, failing.\n" );
+			return false;
+		}
+		headers[ "X-Amz-Security-Token" ] = token;
+	} else {
+		if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+			this->errorCode = "E_FILE_IO";
+			this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
+			dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
+			return false;
+		}
+		trim( saKey );
+
+		if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+			this->errorCode = "E_FILE_IO";
+			this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
+			dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
+			return false;
+		}
+		trim( keyID );
 	}
 
 	// S3 complains if x-amz-date isn't signed, so do this early.
@@ -683,16 +793,9 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 
 
 	//
-	// Create task 3's inputs.
+	// Creating task 3's inputs was done when we checked to see if we needed
+	// to get the security token, since they come along for free when we do.
 	//
-	std::string saKey;
-	if( ! readShortFile( this->secretKeyFile, saKey ) ) {
-		this->errorCode = "E_FILE_IO";
-		this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
-		dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
-		return false;
-	}
-	trim( saKey );
 
 	// Task 3: calculate the signature.
 	saKey = "AWS4" + saKey;
@@ -723,15 +826,6 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 
 	std::string signature;
 	convertMessageDigestToLowercaseHex( messageDigest, mdLength, signature );
-
-	std::string keyID;
-	if( ! readShortFile( this->accessKeyFile, keyID ) ) {
-		this->errorCode = "E_FILE_IO";
-		this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
-		dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
-		return false;
-	}
-	trim( keyID );
 
 	formatstr( authorizationValue, "AWS4-HMAC-SHA256 Credential=%s/%s,"
 				" SignedHeaders=%s, Signature=%s",

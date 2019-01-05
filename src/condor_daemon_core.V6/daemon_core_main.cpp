@@ -1332,6 +1332,8 @@ handle_invalidate_key( Service*, int, Stream* stream)
 
 	result = daemonCore->getSecMan()->invalidateKey(key_id);
 	if ( !their_sinful.empty() && !strcmp(key_id, daemonCore->m_family_session_id.c_str()) ) {
+		dprintf(D_ALWAYS, "DC_INVALIDATE_KEY: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", their_sinful.c_str());
+		dprintf(D_ALWAYS, "  If that is in error, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
 		daemonCore->getSecMan()->m_not_my_family.insert(their_sinful);
 	}
 	free(key_id);
@@ -1906,6 +1908,8 @@ int dc_main( int argc, char** argv )
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	bool	done;
 
+
+	set_priv_initialize();
 
 	condor_main_argc = argc;
 	condor_main_argv = (char **)malloc((argc+1)*sizeof(char *));

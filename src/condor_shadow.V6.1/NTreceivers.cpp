@@ -29,7 +29,7 @@
 #include "remoteresource.h"
 #include "directory.h"
 #include "secure_file.h"
-#include "zkm_base64.h"
+#include "condor_base64.h"
 
 
 #if defined(Solaris)
@@ -2199,7 +2199,7 @@ case CONDOR_getdir:
 				had_error = true;
 				break;
 			}
-			MyString b64 = zkm_base64_encode(buf, len);
+			MyString b64 = condor_base64_encode(buf, len);
 			free(buf);
 
 			ClassAd ad;

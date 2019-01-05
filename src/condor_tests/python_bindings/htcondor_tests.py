@@ -691,4 +691,3 @@ class TestPythonBindings(WithDaemons):
 
 if __name__ == '__main__':
     unittest.main()
-

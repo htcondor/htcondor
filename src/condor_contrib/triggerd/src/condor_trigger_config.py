@@ -301,7 +301,7 @@ class TriggerConfig(Session):
             return 1
         
     def _get_condortriggerservice(self):
-        if self.cts == None:
+        if self.cts is None:
             try:
                 self.cts = self.getObjects(_class="condortriggerservice")[0]
             except IndexError:
@@ -328,7 +328,7 @@ class TriggerConfigOptionParser(OptionParser):
         valid = False
         if len(args) != 1:
             return False
-        if opts.add and not opts.delete and not opts.init and not opts.list and not opts.test and opts.name != None and opts.query != None and opts.text != None:
+        if opts.add and not opts.delete and not opts.init and not opts.list and not opts.test and opts.name is not None and opts.query is not None and opts.text is not None:
             valid = True
         elif not opts.add and opts.delete >= 0 and not opts.init and not opts.list and not opts.test:
             valid = True
@@ -355,9 +355,9 @@ def main():
     session = TriggerConfig(opts.test)
 
     print "Connecting to broker '%s'..." % target
-    if opts.user != None and opts.password != None:
+    if opts.user is not None and opts.password is not None:
        target = "%s/%s@%s" % (opts.user, opts.password, target)
-    elif opts.user != None:
+    elif opts.user is not None:
        target = "%s@%s" % (opts.user, target)
 
     try:
@@ -371,7 +371,7 @@ def main():
             ret_val = session.add_default_triggers()
         elif opts.add:
             ret_val = session.add_trigger(opts.name, opts.query, opts.text)
-        elif opts.delete != None:
+        elif opts.delete is not None:
             ret_val = session.del_trigger(opts.delete)
         elif opts.list:
             session.list_triggers()

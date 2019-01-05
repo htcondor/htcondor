@@ -223,6 +223,7 @@ main( int argc, char *argv[] )
 		usage();
 	}
 
+	set_priv_initialize(); // allow uid switching if root
 	config();
 
 
@@ -425,7 +426,7 @@ main( int argc, char *argv[] )
 			exit(1);
 		}
 		std::string constr(daemonname); constr.insert(0, ATTR_NAME " == \""); constr.append("\"");
-		delete[] daemonname;
+		free(daemonname);
 		CondorQuery query(SCHEDD_AD);
 		query.addORConstraint (constr.c_str());
 
