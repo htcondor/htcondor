@@ -34,7 +34,7 @@ ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 
 Qmgr_connection *
-ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* errstack, const char *effective_owner, const char* schedd_version_str )
+ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* errstack, const char *effective_owner, const char* /*schedd_version_str*/ )
 {
 	int		rval, ok;
 	int cmd = read_only ? QMGMT_READ_CMD : QMGMT_WRITE_CMD;
