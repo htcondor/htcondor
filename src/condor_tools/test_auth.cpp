@@ -178,8 +178,7 @@ main( int argc, char* argv[] )
 
 	if (failures) {
 		printf("Aborting because of %d failures\n", failures);
-		exit(1);
 	}
 
-	exit(0);
+	exit(failures);
 }
