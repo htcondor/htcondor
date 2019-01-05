@@ -155,15 +155,11 @@ IpVerify::Init()
 			// command port and don't need the other authorization lists.
 			if(strcmp(PermString(perm),"CLIENT")==0){ 
 				pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
-				pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param, ssysname );
 				pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
-				pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param, ssysname );
 			}
 		} else {
 			pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
-			pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param, ssysname );
 			pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
-			pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param, ssysname );
 		}
 		// concat the two
 		pAllow = merge(pNewAllow, pOldAllow);
@@ -818,7 +814,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 	}
 
 	if ( PermTypeArray[perm]->behavior == USERVERIFY_ALLOW ) {
-			// allow if no HOSTALLOW_* or HOSTDENY_* restrictions 
+			// allow if no ALLOW_* or DENY_* restrictions 
 			// specified.
 		if( allow_reason ) {
 			allow_reason->formatstr(
