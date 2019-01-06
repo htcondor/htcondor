@@ -1,7 +1,6 @@
 # One platform per line.  Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-x86_64_Debian8
 x86_64_Debian9
 x86_64_MacOSX10
 x86_64_MacOSX13
