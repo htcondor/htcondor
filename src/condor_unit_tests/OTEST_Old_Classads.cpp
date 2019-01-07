@@ -260,6 +260,10 @@ static bool test_regexps_error_pattern(void);
 static bool test_regexps_error_target(void);
 static bool test_regexps_error_option(void);
 static bool test_regexps_error_return(void);
+static bool test_regexps_full(void);
+static bool test_regexps_full_global(void);
+static bool test_replace(void);
+static bool test_replaceall(void);
 static bool test_stringlist_regexp_member_match_default(void);
 static bool test_stringlist_regexp_member_match_non_default(void);
 static bool test_stringlist_regexp_member_match_case(void);
@@ -531,6 +535,10 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_regexps_error_target);
 	driver.register_function(test_regexps_error_option);
 	driver.register_function(test_regexps_error_return);
+	driver.register_function(test_regexps_full);
+	driver.register_function(test_regexps_full_global);
+	driver.register_function(test_replace);
+	driver.register_function(test_replaceall);
 	driver.register_function(test_stringlist_regexp_member_match_default);
 	driver.register_function(test_stringlist_regexp_member_match_non_default);
 	driver.register_function(test_stringlist_regexp_member_match_case);
@@ -6746,6 +6754,114 @@ static bool test_regexps_error_return() {
 	emit_retval("%d", retVal);
 	emit_param("INT Value", "%d", actual);
 	if(retVal != 1 || actual != expect) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_regexps_full() {
+	emit_test("Test that regexps() with 'f' option returns full target "
+		"string with a single replacement.");
+	const char* classad_string = "\tA1=regexps(\"s(.)\", "
+		"\"thisisamatchlist\", \"S\\1\", \"f\")";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	std::string actual;
+	const char* expect = "thiSisamatchlist";
+	int retVal = classad.EvalString("A1", NULL, actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_regexps_full_global() {
+	emit_test("Test that regexps() with 'fg' options returns full target "
+		"string with global replacement.");
+	const char* classad_string = "\tA1=regexps(\"s(.)\", "
+		"\"thisisamatchlist\", \"S\\1\", \"fg\")";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	std::string actual;
+	const char* expect = "thiSiSamatchliSt";
+	int retVal = classad.EvalString("A1", NULL, actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_replace() {
+	emit_test("Test that replace() returns full target "
+		"string with a single replacement.");
+	const char* classad_string = "\tA1=replace(\"s(.)\", "
+		"\"thisisamatchlist\", \"S\\1\")";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	std::string actual;
+	const char* expect = "thiSisamatchlist";
+	int retVal = classad.EvalString("A1", NULL, actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_replaceall() {
+	emit_test("Test that replaceall() returns full target "
+		"string with global replacement.");
+	const char* classad_string = "\tA1=replaceall(\"s(.)\", "
+		"\"thisisamatchlist\", \"S\\1\")";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	std::string actual;
+	const char* expect = "thiSiSamatchliSt";
+	int retVal = classad.EvalString("A1", NULL, actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", "%s", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
 		FAIL;
 	}
 	PASS;
