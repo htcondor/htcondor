@@ -153,6 +153,8 @@ FunctionCall( )
 		functionTable["regexp"		] =	(void*)matchPattern;
         functionTable["regexpmember"] =	(void*)matchPatternMember;
 		functionTable["regexps"     ] = (void*)substPattern;
+		functionTable["replace"     ] = (void*)substPattern;
+		functionTable["replaceall"  ] = (void*)substPattern;
 #endif
 
 			// conversion functions
@@ -2596,7 +2598,7 @@ static bool regexp_helper(const char *pattern, const char *target,
                           Value &result);
 
 bool FunctionCall::
-substPattern( const char*,const ArgumentList &argList,EvalState &state,
+substPattern( const char *name,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
     bool        have_options;
@@ -2649,6 +2651,14 @@ substPattern( const char*,const ArgumentList &argList,EvalState &state,
         result.SetErrorValue( );
         return( true );
     }
+
+	if( strcasecmp( name, "replace" ) == 0 ) {
+		have_options = true;
+		options_string += "f";
+	} else if( strcasecmp( name, "replaceall" ) == 0 ) {
+		have_options = true;
+		options_string += "fg";
+	}
 
 		// if either argument is not a string, the result is an error
 	if( !arg0.IsStringValue( pattern ) || !arg1.IsStringValue( target ) || !arg2.IsStringValue( replace ) ) {
