@@ -1,11 +1,13 @@
+from __future__ import absolute_import
+
 import classad
 import htcondor
 import os
 import time
 
-from Globals import *
-from Utils import Utils
-from EventMemory import EventMemory
+from .Globals import *
+from .Utils import Utils
+from .EventMemory import EventMemory
 
 from htcondor import JobEventLog
 from htcondor import JobEventType
