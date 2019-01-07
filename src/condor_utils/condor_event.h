@@ -123,7 +123,8 @@ enum ULogEventOutcome
     /** No event occured (like EOF)  */ ULOG_NO_EVENT,
     /** Error reading log file       */ ULOG_RD_ERROR,
     /** Missed event                 */ ULOG_MISSED_EVENT,
-    /** Unknown Error                */ ULOG_UNK_ERROR
+    /** Unknown Error                */ ULOG_UNK_ERROR,
+    /**                              */ ULOG_INVALID
 };
 
 /// For printing the enum value.  cout << ULogEventOutcomeNames[outcome];

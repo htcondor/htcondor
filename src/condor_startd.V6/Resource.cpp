@@ -1089,6 +1089,8 @@ Resource::leave_preempting_state( void )
 			r_pre = NULL;
 			remove_pre(); // do full cleanup of pre stuff
 				// STATE TRANSITION preempting -> claimed
+				// TLM: STATE TRANSITION #23
+				// TLM: STATE TRANSITION #24
 			acceptClaimRequest();
 			return;
 		}
@@ -1097,7 +1099,10 @@ Resource::leave_preempting_state( void )
 		dest = owner_state;	// So change_state() below will be correct.
 		//@fallthrough@
 	case owner_state:
+		// TLM: STATE TRANSITION #22
+		// TLM: STATE TRANSITION #25
 	case delete_state:
+		// TLM: Undocumented, hopefully on purpose.
 		remove_pre();
 		change_state( dest );
 		return;
@@ -1141,9 +1146,13 @@ Resource::leave_preempting_state( void )
 		r_pre = NULL;
 		remove_pre(); // do full cleanup of pre stuff
 			// STATE TRANSITION preempting -> claimed
+			// TLM: STATE TRANSITION #23
+			// TLM: STATE TRANSITION #24
 		acceptClaimRequest();
 	} else {
 			// STATE TRANSITION preempting -> owner
+			// TLM: STATE TRANSITION #22
+			// TLM: STATE TRANSITION #25
 		remove_pre();
 		change_state( owner_state );
 	}

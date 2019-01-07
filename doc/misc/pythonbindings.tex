@@ -1111,6 +1111,13 @@ have passed.  If the \texttt{stop\_after} argument is \texttt{None},
 the iterator will never stop waiting for new events.
 
 \\ \hline
+
+\texttt{close()}
+
+Closes any open underlying file.  Subsequent iterations on this JobEventLog
+will immediately terminate (will never return another JobEvent).
+
+\\ \hline
 \end{longtable}
 \end{flushleft}
 

@@ -48,7 +48,7 @@ def RunExternal(command, str_stdin=""):
             popen_inst.stdin.close()
 
         #logging.debug("len(str_stdin) = %i, read_from_child = %i, rlist = %s, wlist = %s", len(str_stdin), read_from_child, rlist, wlist)
-        if popen_inst.poll() != None and len(str_stdin) == 0 and (read_from_child == -1 or read_from_child == 0):
+        if popen_inst.poll() is not None and len(str_stdin) == 0 and (read_from_child == -1 or read_from_child == 0):
             break
     
     logging.debug("Exit code: %i", popen_inst.wait())

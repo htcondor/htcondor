@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 #include "condor_common.h"
+#include <algorithm>
 #include "compat_classad.h"
 
 #include "condor_classad.h"
@@ -2540,6 +2541,7 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 
 	const classad::ClassAd *parent = ad.GetChainedParentAd();
 
+	std::map< std::string, std::string > attributes;
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
 			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
@@ -2552,8 +2554,8 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 				 !ClassAdAttributeIsPrivate( itr->first ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
-				output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
-									value.c_str() );
+				// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
+				attributes[ itr->first ] = value;
 			}
 		}
 	}
@@ -2566,9 +2568,18 @@ sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, St
 			 !ClassAdAttributeIsPrivate( itr->first ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
-			output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
-								value.c_str() );
+			// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
+			attributes[ itr->first ] = value;
 		}
+	}
+
+	std::vector< std::string> keys;
+	for( auto i = attributes.begin(); i != attributes.end(); ++i ) {
+		keys.push_back( i->first );
+	}
+	std::sort( keys.begin(), keys.end() );
+	for( auto i = keys.begin(); i != keys.end(); ++i ) {
+		output.formatstr_cat( "%s = %s\n", i->c_str(), attributes[ *i ].c_str() );
 	}
 
 	return TRUE;

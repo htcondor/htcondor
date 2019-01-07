@@ -309,6 +309,10 @@ class ReadUserLog
 	 */
 	bool SetFileState( const ReadUserLog::FileState &state );
 
+	/** Release all resources this object has claimed/allocated.
+	*/
+	void releaseResources( void );
+
   private:
 
     /** Internal initializer from saved state.
@@ -358,10 +362,6 @@ class ReadUserLog
 	/** Set all members to their cleared values.
 	*/
 	void clear( void );
-
-	/** Release all resources this object has claimed/allocated.
-	*/
-	void releaseResources( void );
 
     /** Read the next event from the log file.  The event pointer to
         set to point to a newly instatiated ULogEvent object.

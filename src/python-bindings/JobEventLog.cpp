@@ -56,6 +56,36 @@ JobEventLog::events( boost::python::object & self, boost::python::object & deadl
 	return self;
 }
 
+void
+JobEventLog::close() {
+	wful.releaseResources();
+}
+
+boost::python::object
+JobEventLog::enter( boost::python::object & self ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+	jel->deadline = 0;
+	return self;
+}
+
+boost::python::object
+JobEventLog::exit( boost::python::object & self,
+  boost::python::object & /* exceptionType */,
+  boost::python::object & /* exceptionValue */,
+  boost::python::object & /* traceback */ ) {
+	JobEventLog * jel = boost::python::extract<JobEventLog *>( self );
+
+	// If all three arguments are None, the with block exited normally, and
+	// we should close the FD(s).
+	//
+	// If the block exited with an exception, we should close the FD(s).
+	jel->close();
+
+	// If we expected an exception to occur during normal operation, we
+	// could check for it here and return Py_True to suppress it.
+	return boost::python::object(boost::python::handle<>(boost::python::borrowed(Py_False)));
+}
+
 class JobEventLogGlobalLockInitializer {
 	public:
 		JobEventLogGlobalLockInitializer() {
@@ -103,6 +133,7 @@ JobEventLog::next() {
 			return boost::shared_ptr< JobEvent >( je );
 		} break;
 
+		case ULOG_INVALID:
 		case ULOG_NO_EVENT:
 			THROW_EX( StopIteration, "All events processed" );
 		break;
@@ -321,6 +352,25 @@ JobEvent::Py_GetItem( const std::string & k ) {
 	}
 }
 
+std::string
+JobEvent::Py_Repr() {
+	// We could (also) sPrintAd() the backing ClassAd, but might be TMI.
+	std::string constructorish;
+	formatstr( constructorish,
+		"JobEvent(type=%d, cluster=%d, proc=%d, timestamp=%ld)",
+		type(), cluster(), proc(), timestamp() );
+	return constructorish;
+}
+
+std::string
+JobEvent::Py_Str() {
+	std::string buffer;
+	if(! event->formatEvent( buffer )) {
+		buffer = Py_Repr();
+	}
+	return buffer;
+}
+
 // ----------------------------------------------------------------------------
 
 void export_event_log() {
@@ -329,6 +379,9 @@ void export_event_log() {
 		.def( NEXT_FN, &JobEventLog::next, "Return the next JobEvent in the log, blocking until the deadline (if any)." )
 		.def( "events", &JobEventLog::events, boost::python::args("stop_after"), "Return self (which is its own iterator).\n:param stop_after After how many seconds from now should the iterator stop waiting for new events?  If None, wait forever.  If 0, never wait." )
 		.def( "__iter__", &JobEventLog::iter, "Return self (which is its own iterator)." )
+		.def( "close", &JobEventLog::close, "Closes any open underlying file; self will no longer iterate." )
+		.def( "__enter__", &JobEventLog::enter, "(Iterable context management.)" )
+		.def( "__exit__", &JobEventLog::exit, "(Iterable context management.)" )
 	;
 
 	// Allows conversion of JobEventLog instances to Python objects.
@@ -347,6 +400,8 @@ void export_event_log() {
 		.def( "iteritems", &JobEvent::Py_IterItems, "..." )
 		.def( "itervalues", &JobEvent::Py_IterValues, "..." )
 		.def( "has_key", &JobEvent::Py_Contains, "..." )
+		.def( "__str__", &JobEvent::Py_Str, "..." )
+		.def( "__repr__", &JobEvent::Py_Repr, "..." )
 		.def( "__len__", &JobEvent::Py_Len, "..." )
 		.def( "__iter__", &JobEvent::Py_IterKeys, "..." )
 		.def( "__contains__", &JobEvent::Py_Contains, "..." )

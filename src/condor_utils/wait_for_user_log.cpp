@@ -31,9 +31,11 @@ WaitForUserLog::WaitForUserLog( const std::string & f ) :
 
 WaitForUserLog::~WaitForUserLog() { }
 
-// This is what ReadUserLog::readEvent() does, but I'm not sure it's right.
-// So, a layer of indirection.
-#define ULOG_INVALID ULOG_RD_ERROR
+void
+WaitForUserLog::releaseResources() {
+	reader.releaseResources();
+	trigger.releaseResources();
+}
 
 ULogEventOutcome
 WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
@@ -50,7 +52,7 @@ WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
 
 		int result = trigger.wait( timeout );
 		switch( result ) {
-			case -1:
+			case -1: // FIXME: return ULOG errors...
 				return ULOG_INVALID;
 			case  0:
 				return ULOG_NO_EVENT;
