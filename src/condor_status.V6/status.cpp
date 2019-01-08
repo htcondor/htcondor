@@ -1052,7 +1052,7 @@ main (int argc, char *argv[])
 	}
 
 	// Address (host:port) is taken from requested pool, if given.
-	char* addr = (NULL != pool) ? pool->addr() : NULL;
+	const char* addr = (NULL != pool) ? pool->addr() : NULL;
 	Daemon* requested_daemon = pool;
 
 	// If we're in "direct" mode, then we attempt to locate the daemon

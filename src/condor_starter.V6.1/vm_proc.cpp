@@ -1497,7 +1497,7 @@ VMProc::reportErrorToStartd()
 		return false;
 	}
 
-	char* addr = startd.addr();
+	const char* addr = startd.addr();
 	if( !addr ) {
 		dprintf(D_ALWAYS,"Can't find the address of local startd\n");
 		return false;
@@ -1543,7 +1543,7 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 		return false;
 	}
 
-	char* addr = startd.addr();
+	const char* addr = startd.addr();
 	if( !addr ) {
 		dprintf(D_ALWAYS,"Can't find the address of local startd\n");
 		return false;

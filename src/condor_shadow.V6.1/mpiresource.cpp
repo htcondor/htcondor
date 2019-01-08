@@ -129,7 +129,7 @@ MpiResource::writeULogEvent( ULogEvent* event )
 void
 MpiResource::beginExecution( void )
 {
-	char* startd_addr;
+	const char* startd_addr;
 	if( ! dc_startd ) {
 		dprintf( D_ALWAYS, "beginExecution() "
 				 "called with no DCStartd object!\n" ); 

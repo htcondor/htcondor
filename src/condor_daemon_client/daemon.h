@@ -140,7 +140,7 @@ public:
 		  enountered in the Daemon object, this will start returning a
 		  string desribing it.  Returns NULL if there's no error.
 		  */
-	char* error( void )	{ return _error; }
+	const char* error( void )	{ return _error; }
 
  		/** Return the result code of the previous action.  If there's
 			a problem and the error() string above is set, this result
@@ -167,7 +167,7 @@ public:
 		  NULL).  @return The name of this daemon (not necessarily the
 		  hostname).
 		  */
-	char* name( void );
+	const char* name( void );
 
 		/** Return the hostname where the daemon is running.  This is
 		  just the hostname, without the domain.  For example,
@@ -175,19 +175,19 @@ public:
 		  an error in the locate() method.
 		  @return Just the hostname where the daemon is running.
 		  */
-	char* hostname( void );
+	const char* hostname( void );
 
 		/** 
 			@return The version string of this daemon, or NULL if we
 			don't know it.
 		*/
-	char* version( void );
+	const char* version( void );
 
 		/** 
 			@return The platform string of this daemon, or NULL if we
 			don't know it.
 		*/
-	char* platform( void );
+	const char* platform( void );
 
 		/** Return the full hostname where the daemon is running.
 		  This is the fully qualified hostname, including the domain
@@ -196,7 +196,7 @@ public:
 		  method. 
 		  @return The fully-qualified hostname where the daemon is running.
 		  */
-	char* fullHostname( void );
+	const char* fullHostname( void );
 
 		/** Return the address of the daemon.  This is given as a
 		  "sinful string", which is used throughout Condor to specify
@@ -206,7 +206,7 @@ public:
 		  only if there was an error in the locate() method.
 		  @return The sinful string of the daemon.
 		  */
-	char* addr( void );
+	const char* addr( void );
 
 		/** Return the remote pool this daemon reports to.  If the
 		  requested daemon is reporting to a remote pool (not the
@@ -216,7 +216,7 @@ public:
 		  reporting to the local pool.
 		  @return The name of the collector for the daemon.
 		  */
-	char* pool( void );
+	const char* pool( void );
 
 		/** Return the port the daemon is listening on.  This is the
 		  integer port number that daemon has bound to.  It will
@@ -814,7 +814,7 @@ protected:
 		   It may be either blocking or nonblocking, depending on the
 		   nonblocking flag.  This version uses an existing socket.
 		 */
-	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man, bool raw_protocol, char const *sec_session_id );
+	static StartCommandResult startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id );
 
 		/**
 		   Internal function used by public versions of startCommand().

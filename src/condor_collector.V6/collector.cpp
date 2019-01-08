@@ -2020,7 +2020,7 @@ void CollectorDaemon::sendCollectorAd()
 	// see people run a collector on each macnine in their pool. Duh.
 	if ( worldCollector && machinesTotal > 0) {
 		char update_addr_default [] = "(null)";
-		char *update_addr = worldCollector->addr();
+		const char *update_addr = worldCollector->addr();
 		if (!update_addr) update_addr = update_addr_default;
 		if( ! worldCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, collectorsToUpdate->getAdSeq(), NULL, false) ) {
 			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "

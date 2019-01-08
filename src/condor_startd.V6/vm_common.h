@@ -27,17 +27,17 @@
 
 extern int vm_register_interval; //seconds
 
-bool vmapi_is_allowed_host_addr(char *addr);
-bool vmapi_is_allowed_vm_addr(char *addr);
+bool vmapi_is_allowed_host_addr(const char *addr);
+bool vmapi_is_allowed_vm_addr(const char *addr);
 int vmapi_num_of_registered_vm(void);
-int vmapi_register_cmd_handler(char *addr, int *permission);
+int vmapi_register_cmd_handler(const char *addr, int *permission);
 bool vmapi_is_usable_for_condor(void);
 bool vmapi_is_my_machine(char* );
 
 void vmapi_request_host_classAd(void);
 ClassAd* vmapi_get_host_classAd(void);
 
-bool vmapi_sendCommand(char *addr, int cmd, void *data);
-Daemon* vmapi_findDaemon( char *host_name, daemon_t real_dt);
+bool vmapi_sendCommand(const char *addr, int cmd, void *data);
+Daemon* vmapi_findDaemon( const char *host_name, daemon_t real_dt);
 
 #endif /* _VM_COMMON_H */

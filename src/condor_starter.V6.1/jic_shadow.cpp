@@ -2540,7 +2540,7 @@ JICShadow::initShadowInfo( ClassAd* ad )
 		delete shadow_version;
 		shadow_version = NULL;
 	}
-	char* tmp = shadow->version();
+	const char* tmp = shadow->version();
 	if( tmp ) {
 		dprintf( D_FULLDEBUG, "Shadow version: %s\n", tmp );
 		shadow_version = new CondorVersionInfo( tmp, "SHADOW" );

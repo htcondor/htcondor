@@ -926,7 +926,7 @@ main(int argc, const char* argv[])
 
 	DCCollector c((pool.length() > 0) ? pool.c_str() : 0);
 	c.locate();
-	char *v = c.version();
+	const char *v = c.version();
 	CondorVersionInfo cvi(v);
 	if (!cvi.built_since_version(8,5,2)) {
 		fromCollector = false;	

@@ -279,7 +279,7 @@ Daemon::~Daemon()
 // Data-providing methods
 //////////////////////////////////////////////////////////////////////
 
-char*
+const char*
 Daemon::name( void )
 {
 	if( ! _name ) {
@@ -289,7 +289,7 @@ Daemon::name( void )
 }
 
 
-char*
+const char*
 Daemon::hostname( void )
 {
 	if( ! _hostname && ! _tried_init_hostname ) {
@@ -299,7 +299,7 @@ Daemon::hostname( void )
 }
 
 
-char*
+const char*
 Daemon::version( void )
 {
 	if( ! _version && ! _tried_init_version ) {
@@ -309,7 +309,7 @@ Daemon::version( void )
 }
 
 
-char*
+const char*
 Daemon::platform( void )
 {
 	if( ! _platform && ! _tried_init_version ) {
@@ -319,7 +319,7 @@ Daemon::platform( void )
 }
 
 
-char*
+const char*
 Daemon::fullHostname( void )
 {
 	if( ! _full_hostname && ! _tried_init_hostname ) {
@@ -329,7 +329,7 @@ Daemon::fullHostname( void )
 }
 
 
-char*
+const char*
 Daemon::addr( void )
 {
 	if( ! _addr ) {
@@ -339,7 +339,7 @@ Daemon::addr( void )
 }
 
 
-char*
+const char*
 Daemon::pool( void )
 {
 	if( ! _pool ) {
@@ -538,7 +538,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 
 
 StartCommandResult
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -620,7 +620,6 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 						 misc_data,
 						 nonblocking,
 						 cmd_description,
-						 _version,
 						 &_sec_man,
 						 raw_protocol,
 						 sec_session_id);
@@ -632,7 +631,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorErr
 {
 	// This is a blocking version of startCommand().
 	const bool nonblocking = false;
-	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
+	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;
@@ -713,7 +712,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError 
 {
 	// This is the nonblocking version of startCommand().
 	const bool nonblocking = true;
-	return startCommand(cmd,sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
+	return startCommand(cmd,sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id);
 }
 
 bool
@@ -721,7 +720,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, c
 {
 	// This is a blocking version of startCommand().
 	const bool nonblocking = false;
-	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
+	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,&_sec_man,raw_protocol,sec_session_id);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return true;

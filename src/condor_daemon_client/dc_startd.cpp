@@ -1144,7 +1144,7 @@ DCStartd::getAds( ClassAdList &adsList )
 	// fetch the query
 	QueryResult q;
 	CondorQuery* query;
-	char* ad_addr;
+	const char* ad_addr;
 
 	// instantiate query object
 	if (!(query = new CondorQuery (STARTD_AD))) {

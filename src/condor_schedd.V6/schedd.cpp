@@ -561,7 +561,7 @@ match_rec::setStatus( int stat )
 }
 
 
-ContactStartdArgs::ContactStartdArgs( char const* the_claim_id, char const *extra_claims, char* sinfulstr, bool is_dedicated ) 
+ContactStartdArgs::ContactStartdArgs( char const* the_claim_id, char const *extra_claims, const char* sinfulstr, bool is_dedicated ) 
 {
 	csa_claim_id = strdup( the_claim_id );
 	csa_extra_claims = strdup( extra_claims );
@@ -7265,7 +7265,7 @@ Scheduler::negotiate(int command, Stream* s)
 		std::vector<condor_sockaddr>::iterator iter;
 		bool match = false;
 		Daemon negotiator (DT_NEGOTIATOR);
-		char *negotiator_hostname = negotiator.fullHostname();
+		const char *negotiator_hostname = negotiator.fullHostname();
 		if (!negotiator_hostname) {
 			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
 			free(sig_attrs_from_cm);
@@ -16033,7 +16033,7 @@ bool
 Scheduler::claimLocalStartd()
 {
 	Daemon startd(DT_STARTD, NULL, NULL);
-	char *startd_addr = NULL;	// local startd sinful string
+	const char *startd_addr = NULL;	// local startd sinful string
 	int slot_id;
 	int number_of_claims = 0;
 	char claim_id[155];	

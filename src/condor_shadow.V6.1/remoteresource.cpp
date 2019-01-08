@@ -642,7 +642,7 @@ RemoteResource::killStarter( bool graceful )
 		already_killed_fast = true;
 	}
 
-	char* addr = dc_startd->addr();
+	const char* addr = dc_startd->addr();
 	if( addr ) {
 		dprintf( D_FULLDEBUG, "Killed starter (%s) at %s\n", 
 				 graceful ? "graceful" : "fast", addr );
@@ -706,8 +706,8 @@ RemoteResource::dprintfSelf( int debugLevel )
 	shadow->dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
 					  "host info:\n");
 	if( dc_startd ) {
-		char* addr = dc_startd->addr();
-		char* id = dc_startd->getClaimId();
+		const char* addr = dc_startd->addr();
+		const char* id = dc_startd->getClaimId();
 		shadow->dprintf( debugLevel, "\tstartdAddr: %s\n", 
 						 addr ? addr : "Unknown" );
 		shadow->dprintf( debugLevel, "\tClaimId: %s\n", 
@@ -834,7 +834,7 @@ RemoteResource::getStartdAddress( char *& sinful )
 	if( ! dc_startd ) {
 		return;
 	}
-	char* addr = dc_startd->addr();
+	const char* addr = dc_startd->addr();
 	if( ! addr ) {
 		return;
 	}
@@ -852,7 +852,7 @@ RemoteResource::getStartdName( char *& remoteName )
 	if( ! dc_startd ) {
 		return;
 	}
-	char* localName = dc_startd->name();
+	const char* localName = dc_startd->name();
 	if( ! localName ) {
 		return;
 	}
@@ -873,7 +873,7 @@ RemoteResource::getClaimId( char *& id )
 	if( ! dc_startd ) {
 		return;
 	}
-	char* my_id = dc_startd->getClaimId();
+	const char* my_id = dc_startd->getClaimId();
 	if( ! my_id ) {
 		return;
 	}

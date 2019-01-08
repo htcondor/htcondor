@@ -291,7 +291,7 @@ void set_factory_submit_info(int cluster, int num_procs)
 	SubmitInfo.back().lastjob = num_procs-1;
 }
 
-void TestFilePermissions( char *scheddAddr = NULL )
+void TestFilePermissions( const char *scheddAddr = NULL )
 {
 #ifdef WIN32
 	// this isn't going to happen on Windows since:

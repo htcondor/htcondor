@@ -25,11 +25,11 @@
 class VMManager;
 class VMMachine {
 public:
-	VMMachine(VMManager *, char *);
+	VMMachine(VMManager *, const char *);
 	virtual ~VMMachine();
 
 	void sendEventToVM(int, void*);
-	bool match(char *);
+	bool match(const char *);
 	void print(void);
 	void updateTimeStamp(void);
 	int getTimeStamp(void);

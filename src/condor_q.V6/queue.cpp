@@ -497,7 +497,7 @@ int main (int argc, const char **argv)
 	char		*scheddName=NULL;
 	std::string		scheddMachine;
 	int		useFastScheddQuery = 0;
-	char		*tmp;
+	const char	*tmp;
 	int         retval = 0;
 
 	Collectors = NULL;

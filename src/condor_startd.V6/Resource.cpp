@@ -1419,7 +1419,7 @@ Resource::update_with_ack( void )
 
     }
 
-    char     *address = collector.addr ();
+    const char *address = collector.addr ();
     ReliSock *socket  = (ReliSock*) collector.startCommand (
         UPDATE_STARTD_AD_WITH_ACK );
 

@@ -65,7 +65,7 @@ public:
 		/** @return the ClaimId string for this startd, NULL if we
 			don't have a value yet.
 		*/
-	char* getClaimId( void ) { return claim_id; };
+	const char* getClaimId( void ) { return claim_id; };
 
 		/** This is the old-style way of requesting a claim, not the
 			"generic ClassAd" way, which currently only supports COD
