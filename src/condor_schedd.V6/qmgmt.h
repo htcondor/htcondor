@@ -306,6 +306,7 @@ bool isQueueSuperUser( const char* user );
 // Verify that the user issuing a command (test_owner) is authorized
 // to modify the given job.  In addition to everything OwnerCheck2()
 // does, this also calls IPVerify to check for WRITE authorization.
+// This call assumes Q_SOCK is set to a valid QmgmtPeer object.
 bool OwnerCheck( ClassAd *ad, const char *test_owner );
 
 // Verify that the user issuing a command (test_owner) is authorized
@@ -491,7 +492,6 @@ bool UniverseUsesVanillaStartExpr(int universe);
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 
 QmgmtPeer* getQmgmtConnectionInfo();
-bool OwnerCheck(int,int);
 
 
 // priority records

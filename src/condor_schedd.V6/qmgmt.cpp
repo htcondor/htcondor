@@ -2327,24 +2327,6 @@ QmgmtSetEffectiveOwner(char const *o)
 	return 0;
 }
 
-bool
-OwnerCheck(int cluster_id,int proc_id)
-{
-	ClassAd				*ad = NULL;
-
-	if (!Q_SOCK) {
-		return 0;
-	}
-
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
-	if (!JobQueue->LookupClassAd(key, ad)) {
-		return 0;
-	}
-
-	return OwnerCheck(ad, Q_SOCK->getOwner());
-}
-
 // Test if this owner matches my owner, so they're allowed to update me.
 bool
 OwnerCheck(ClassAd *ad, const char *test_owner)

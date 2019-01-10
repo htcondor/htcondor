@@ -203,9 +203,10 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		// modify and those we cannot because the client is not 
 		// authorized to.
 		//////////////////////
-		setQSock(rsock);	// so OwnerCheck() will work
 		for (size_t i = 0; i < jobs->size(); i++) {
-			if (OwnerCheck((*jobs)[i].cluster, (*jobs)[i].proc)) {
+			MyString job_owner = "";
+			GetAttributeString((*jobs)[i].cluster, (*jobs)[i].proc, ATTR_OWNER, job_owner);
+			if (OwnerCheck2(NULL, rsock->getOwner(), job_owner.c_str())) {
 				// only allow the user to manipulate jobs it is entitled to.
 				// structure copy...
 				modify_allow_jobs->push_back((*jobs)[i]);
@@ -222,7 +223,6 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 				modify_deny_jobs->push_back((*jobs)[i]);
 			}
 		}
-		unsetQSock();
 
 		// pack back into the reqad both allow and deny arrays so the client
 		// knows for which jobids it may transfer the files.
@@ -273,23 +273,18 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		modify_allow_jobs = new std::vector<PROC_ID>;
 		ASSERT(modify_allow_jobs);
 
-		setQSock(rsock);	// so OwnerCheck() will work
-
 		// Walk the job queue looking for jobs which match the constraint
 		// filter. Then filter that set with OwnerCheck to ensure 
 		// the client has the correct authority to modify these jobids.
 		tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 1);
 		while (tmp_ad) {
 			PROC_ID job_id;
-			if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,job_id.cluster) &&
-				tmp_ad->LookupInteger(ATTR_PROC_ID,job_id.proc) &&
-				OwnerCheck(job_id.cluster, job_id.proc) )
+			if ( OwnerCheck2(tmp_ad, rsock->getOwner()) )
 			{
 				modify_allow_jobs->push_back(job_id);
 			}
 			tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 0);
 		}
-		unsetQSock();
 
 		// Let the client know what jobids it may actually transfer for.
 		procids_to_string(modify_allow_jobs, jids_allow);
@@ -1562,17 +1557,13 @@ Scheduler::downloadJobFiles(int mode, Stream* s)
 	jobs = new ExtArray<PROC_ID>;
 	ASSERT(jobs);
 
-	setQSock(rsock);	// so OwnerCheck() will work
-
 	time_t now = time(NULL);
 
 	{
 	ClassAd * tmp_ad = GetNextJobByConstraint(constraint_string,1);
 	JobAdsArrayLen = 0;
 	while (tmp_ad) {
-		if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,a_job.cluster) &&
-		 	tmp_ad->LookupInteger(ATTR_PROC_ID,a_job.proc) &&
-		 	OwnerCheck(a_job.cluster, a_job.proc) )
+		if ( OwnerCheck2(tmp_ad, rsock->getOwner()) )
 		{
 			(*jobs)[JobAdsArrayLen++] = a_job;
 		}
@@ -1589,8 +1580,6 @@ Scheduler::downloadJobFiles(int mode, Stream* s)
 						ATTR_STAGE_OUT_START,now);
 	}
 	}
-
-	unsetQSock();
 
 	rsock->end_of_message();
 
