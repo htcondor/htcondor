@@ -943,8 +943,6 @@ void GlobusJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool attr_exists;
-	bool attr_dirty;
 	int rc;
 	int status;
 	int error;
@@ -1318,8 +1316,7 @@ void GlobusJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -1633,8 +1630,7 @@ void GlobusJob::doEvaluateState()
 
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
-				if ( attr_exists && attr_dirty ) {
+				if ( jobAd->IsAttributeDirty( ATTR_JOB_STATUS ) ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -1884,8 +1880,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			} break;
 		case GM_RESTART_SAVE: {
 			// Save the restarted jobmanager's contact string on the schedd.
-			jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
-			if ( attr_exists && attr_dirty ) {
+			if ( jobAd->IsAttributeDirty( ATTR_GRID_JOB_ID ) ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
@@ -2222,10 +2217,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			const char *name;
-			ExprTree *expr;
-			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr(name, expr) ) {
+			if ( jobAd->dirtyBegin() != jobAd->dirtyEnd() ) {
 				requestScheddUpdate( this, true );
 				break;
 			}

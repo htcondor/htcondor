@@ -2788,7 +2788,6 @@ void ClassAd::
 ResetExpr()
 {
 	m_exprItrState = ItrUninitialized;
-    m_dirtyItrInit = false;
 }
 
 void ClassAd::
@@ -2906,65 +2905,6 @@ bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 	value = m_exprItr->second;
 	m_exprItr++;
 	return true;
-}
-
-//provides a way to get the next dirty expression in the set of 
-//  dirty attributes.
-bool ClassAd::
-NextDirtyExpr(const char *&name, classad::ExprTree *&expr)
-{
-    //this'll reset whenever ResetDirtyItr is called
-    if(!m_dirtyItrInit)
-    {
-        m_dirtyItr = dirtyBegin();
-        m_dirtyItrInit = true;
-    }
-
-	name = NULL;
-    expr = NULL;
-
-	// get the next dirty attribute if we aren't past the end.
-	// Removed attributes appear in the list, but we don't want
-	// to return them in the old ClassAd API, so skip them.
-	while ( m_dirtyItr != dirtyEnd() ) {
-		name = m_dirtyItr->c_str();
-		expr = classad::ClassAd::Lookup(*m_dirtyItr);
-		m_dirtyItr++;
-		if ( expr ) {
-			break;
-		} else {
-			name = NULL;
-		}
-	}
-
-    return expr != NULL;
-}
-
-void ClassAd::
-SetDirtyFlag(const char *name, bool dirty)
-{
-	if ( dirty ) {
-		MarkAttributeDirty( name );
-	} else {
-		MarkAttributeClean( name );
-	}
-}
-
-void ClassAd::
-GetDirtyFlag(const char *name, bool *exists, bool *dirty) const
-{
-	if ( Lookup( name ) == NULL ) {
-		if ( exists ) {
-			*exists = false;
-		}
-		return;
-	}
-	if ( exists ) {
-		*exists = true;
-	}
-	if ( dirty ) {
-		*dirty = IsAttributeDirty( name );
-	}
 }
 
 void ClassAd::

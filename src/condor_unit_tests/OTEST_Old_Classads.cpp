@@ -1771,17 +1771,14 @@ static bool test_reference_name_trimming_external() {
 }
 
 static bool test_next_dirty_expr_clear() {
-	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
+	emit_test("Test that dirtyBegin() returns no dirty attributes after "
 		"calling ClearAllDirtyFlags() on a classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
-	const char* name;
-	ExprTree* expr;
-	classad.NextDirtyExpr(name, expr);
+	auto dirty_itr = classad.dirtyBegin();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("STRING", "");
@@ -1789,26 +1786,24 @@ static bool test_next_dirty_expr_clear() {
 	emit_output_expected_header();
 	emit_param("Has Dirty Attribute", "FALSE");
 	emit_output_actual_header();
-	emit_param("Has Dirty Attribute", "%s", tfstr(name));
-	if(name) {
+	emit_param("Has Dirty Attribute", "%s", tfstr(dirty_itr != classad.dirtyEnd()));
+	if(dirty_itr != classad.dirtyEnd()) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_next_dirty_expr_insert() {
-	emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
+	emit_test("Test that dirtyBegin() returns a dirty attribute after "
 		"inserting an attribute into the classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
 	classad.Insert("C = 3");
-	const char* name;
-	ExprTree* expr;
-	classad.NextDirtyExpr(name, expr);
+	auto dirty_itr = classad.dirtyBegin();
+	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("STRING", "");
@@ -1824,20 +1819,17 @@ static bool test_next_dirty_expr_insert() {
 }
 
 static bool test_next_dirty_expr_insert_two_calls() {
-	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
-		"inserting one attribute into the classad and calling NextDirtyExpr() "
-		"two times.");
+	emit_test("Test that dirtyBegin() returns no dirty attributes after "
+		"inserting one attribute into the classad and incrementing the "
+		"iterator one time.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
 	classad.Insert("C = 3");
-	const char* name;
-	ExprTree* expr;
-	classad.NextDirtyExpr(name, expr);
-	classad.NextDirtyExpr(name, expr);
+	auto dirty_itr = classad.dirtyBegin();
+	dirty_itr++;
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("STRING", "");
@@ -1845,27 +1837,25 @@ static bool test_next_dirty_expr_insert_two_calls() {
 	emit_output_expected_header();
 	emit_param("Has Dirty Attribute", "FALSE");
 	emit_output_actual_header();
-	emit_param("Has Dirty Attribute", "%s", tfstr(name));
-	if(name) {
+	emit_param("Has Dirty Attribute", "%s", tfstr(dirty_itr != classad.dirtyEnd()));
+	if(dirty_itr != classad.dirtyEnd()) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_next_dirty_expr_two_inserts_first() {
-	emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
+	emit_test("Test that dirtyBegin() returns a dirty attribute after "
 		"inserting two attributes into the classad.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
 	classad.Insert("C = 3");
 	classad.Insert("D = 4");
-	const char* name;
-	ExprTree* expr;
-	classad.NextDirtyExpr(name, expr);
+	auto dirty_itr = classad.dirtyBegin();
+	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("STRING", "");
@@ -1881,21 +1871,19 @@ static bool test_next_dirty_expr_two_inserts_first() {
 }
 
 static bool test_next_dirty_expr_two_inserts_second() {
-	emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
-		"inserting two attributes into the classad and calling NextDirtyExpr() "
-		"two times.");
+	emit_test("Test that dirtyBegin() returns a dirty attribute after "
+		"inserting two attributes into the classad and incrementing the "
+		"iterator one time.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.EnableDirtyTracking();
 	classad.initFromString(classad_string, NULL);
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
 	classad.Insert("C = 3");
 	classad.Insert("D = 4");
-	const char* name;
-	ExprTree* expr;
-	classad.NextDirtyExpr(name, expr);
-	classad.NextDirtyExpr(name, expr);
+	auto dirty_itr = classad.dirtyBegin();
+	dirty_itr++;
+	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("STRING", "");
@@ -1911,22 +1899,19 @@ static bool test_next_dirty_expr_two_inserts_second() {
 }
 
 static bool test_next_dirty_expr_two_inserts_third() {
-	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
-		"inserting two attributes into the classad and calling NextDirtyExpr() "
-		"three times.");
+	emit_test("Test that dirtyBegin() returns no dirty attributes after "
+		"inserting two attributes into the classad and incrementing the "
+		"iterator two times.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
 	classad.Insert("C = 3");
 	classad.Insert("D = 4");
-	const char* name;
-	ExprTree* expr;
-	classad.NextDirtyExpr(name, expr);
-	classad.NextDirtyExpr(name, expr);
-	classad.NextDirtyExpr(name, expr);
+	auto dirty_itr = classad.dirtyBegin();
+	dirty_itr++;
+	dirty_itr++;
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("STRING", "");
@@ -1934,30 +1919,26 @@ static bool test_next_dirty_expr_two_inserts_third() {
 	emit_output_expected_header();
 	emit_param("Has Dirty Attribute", "FALSE");
 	emit_output_actual_header();
-	emit_param("Has Dirty Attribute", "%s", tfstr(name));
-	if(name) {
+	emit_param("Has Dirty Attribute", "%s", tfstr(dirty_itr != classad.dirtyEnd()));
+	if(dirty_itr != classad.dirtyEnd()) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_next_dirty_expr_two_inserts_clear() {
-	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
+	emit_test("Test that dirtyBegin() returns no dirty attributes after "
 		"inserting two attributes into the classad and then calling "
-		"ClearAllDirtyFlags() and ResetExpr().");
+		"ClearAllDirtyFlags().");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
 	classad.Insert("C = 3");
 	classad.Insert("D = 4");
-	const char* name;
-	ExprTree* expr;
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
-	classad.NextDirtyExpr(name, expr);
+	auto dirty_itr = classad.dirtyBegin();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("STRING", "");
@@ -1965,28 +1946,26 @@ static bool test_next_dirty_expr_two_inserts_clear() {
 	emit_output_expected_header();
 	emit_param("Has Dirty Attribute", "FALSE");
 	emit_output_actual_header();
-	emit_param("Has Dirty Attribute", "%s", tfstr(name));
-	if(name) {
+	emit_param("Has Dirty Attribute", "%s", tfstr(dirty_itr != classad.dirtyEnd()));
+	if(dirty_itr != classad.dirtyEnd()) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_next_dirty_expr_set_first() {
-	emit_test("Test that NextDirtyExpr() returns a dirty attribute after "
+	emit_test("Test that dirtyBegin() returns a dirty attribute after "
 		"setting both attributes to dirty and then setting one to not dirty.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
-	classad.SetDirtyFlag("A", true);
-	classad.SetDirtyFlag("B", true);
-	classad.SetDirtyFlag("B", false);
-	const char* name;
-	ExprTree* expr;
-	classad.NextDirtyExpr(name, expr);
+	classad.MarkAttributeDirty("A");
+	classad.MarkAttributeDirty("B");
+	classad.MarkAttributeClean("B");
+	auto dirty_itr = classad.dirtyBegin();
+	const char* name = (dirty_itr == classad.dirtyEnd()) ? "" : dirty_itr->c_str();
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("STRING", "");
@@ -2002,22 +1981,19 @@ static bool test_next_dirty_expr_set_first() {
 }
 
 static bool test_next_dirty_expr_set_second() {
-	emit_test("Test that NextDirtyExpr() returns no dirty attributes after "
+	emit_test("Test that dirtyBegin() returns no dirty attributes after "
 		"setting both attributes to dirty, setting one to not dirty, and then "
-		"calling NextDirtyExpr() twice.");
+		"incrementing the iterator once.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
-	classad.SetDirtyFlag("A", true);
-	classad.SetDirtyFlag("B", true);
-	classad.SetDirtyFlag("B", false);
-	const char* name;
-	ExprTree* expr;
-	classad.NextDirtyExpr(name, expr);
-	classad.NextDirtyExpr(name, expr);
+	classad.MarkAttributeDirty("A");
+	classad.MarkAttributeDirty("B");
+	classad.MarkAttributeClean("B");
+	auto dirty_itr = classad.dirtyBegin();
+	dirty_itr++;
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("STRING", "");
@@ -2025,99 +2001,86 @@ static bool test_next_dirty_expr_set_second() {
 	emit_output_expected_header();
 	emit_param("Has Dirty Attribute", "FALSE");
 	emit_output_actual_header();
-	emit_param("Has Dirty Attribute", "%s", tfstr(name));
-	if(name) {
+	emit_param("Has Dirty Attribute", "%s", tfstr(dirty_itr != classad.dirtyEnd()));
+	if(dirty_itr != classad.dirtyEnd()) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_dirty_flag_exists_dirty() {
-	emit_test("Test that GetDirtyFlag() sets both boolean parameters to true "
+	emit_test("Test that IsAttributeDirty() returns true "
 		"when the given name exists and is dirty.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
-	classad.SetDirtyFlag("A", true);
-	classad.SetDirtyFlag("B", true);
-	classad.SetDirtyFlag("B", false);
-	bool exists = false, dirty = false;
-	classad.GetDirtyFlag("A", &exists, &dirty);
+	classad.MarkAttributeDirty("A");
+	classad.MarkAttributeDirty("B");
+	classad.MarkAttributeClean("B");
+	bool dirty = classad.IsAttributeDirty("A");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute Name", "A");
 	emit_param("BOOL", "");
-	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("'A' Exists", "TRUE");
 	emit_param("'A' is Dirty", "TRUE");
 	emit_output_actual_header();
-	emit_param("'A' Exists", tfstr(exists));
 	emit_param("'A' is Dirty", tfstr(dirty));
-	if(!exists || !dirty) {
+	if(!dirty) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_dirty_flag_exists_not_dirty() {
-	emit_test("Test that GetDirtyFlag() sets only exists to true when the "
+	emit_test("Test that IsAttributeDirty() returns false when the "
 		"given name exists but is not dirty.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
-	classad.SetDirtyFlag("A", true);
-	classad.SetDirtyFlag("B", true);
-	classad.SetDirtyFlag("B", false);
-	bool exists = false, dirty = true;
-	classad.GetDirtyFlag("B", &exists, &dirty);
+	classad.MarkAttributeDirty("A");
+	classad.MarkAttributeDirty("B");
+	classad.MarkAttributeClean("B");
+	bool dirty = classad.IsAttributeDirty("B");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute Name", "B");
 	emit_param("BOOL", "");
-	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("'B' Exists", "TRUE");
 	emit_param("'B' is Dirty", "FALSE");
 	emit_output_actual_header();
-	emit_param("'B' Exists", tfstr(exists));
 	emit_param("'B' is Dirty", tfstr(dirty));
-	if(!exists || dirty) {
+	if(dirty) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_dirty_flag_not_exist() {
-	emit_test("Test that GetDirtyFlag() sets exists to false when the given "
+	emit_test("Test that IsAttributeDirty() returns false when the given "
 		"name doesn't exist.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
-	classad.ResetExpr();
-	classad.SetDirtyFlag("A", true);
-	classad.SetDirtyFlag("B", true);
-	classad.SetDirtyFlag("B", false);
-	bool exists = true, dirty = false;
-	classad.GetDirtyFlag("Unknown", &exists, &dirty);
+	classad.MarkAttributeDirty("A");
+	classad.MarkAttributeDirty("B");
+	classad.MarkAttributeClean("B");
+	bool dirty = classad.IsAttributeDirty("Unknown");
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute Name", "B");
 	emit_param("BOOL", "");
-	emit_param("BOOL", "");
 	emit_output_expected_header();
-	emit_param("'Unknown' Exists", "FALSE");
+	emit_param("'Unknown' is Dirty", "FALSE");
 	emit_output_actual_header();
-	emit_param("'Unknown' Exists", tfstr(exists));
-	if(exists) {
+	emit_param("'Unknown' Exists", tfstr(dirty));
+	if(dirty) {
 		FAIL;
 	}
 	PASS;

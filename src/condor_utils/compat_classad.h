@@ -351,15 +351,6 @@ class ClassAd : public classad::ClassAd
 
 	bool NextExpr( const char *&name, ExprTree *&value );
 
-    /** Gets the next dirty expression tree
-     * @return The ExprTree associated with the next dirty attribute, or null if one does not exist.
-     */
-    bool NextDirtyExpr(const char *&name, classad::ExprTree *&expr);
-
-	// Set or clear the dirty flag for each expression.
-	void SetDirtyFlag(const char *name, bool dirty);
-	void GetDirtyFlag(const char *name, bool *exists, bool *dirty) const;
-
 	// Copy value of source_attr in source_ad to target_attr
 	// in this ad.  If source_ad is NULL, it defaults to this ad.
 	// If source_attr is undefined, target_attr is deleted, if
@@ -405,9 +396,6 @@ class ClassAd : public classad::ClassAd
 
 	classad::ClassAd::iterator m_exprItr;
 	ItrStateEnum m_exprItrState;
-
-    classad::DirtyAttrList::iterator m_dirtyItr;
-    bool m_dirtyItrInit;
 
 	// poison Assign of ExprTree* type for public users
 	// otherwise the compiler will resolve against the bool overload 

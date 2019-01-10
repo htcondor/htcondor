@@ -5483,10 +5483,11 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 		return -1;
 	}
 
-	ad->ResetExpr();
-	while( ad->NextDirtyExpr(name, expr) != false )
+	for ( auto itr = ad->dirtyBegin(); itr != ad->dirtyEnd(); itr++ )
 	{
-		if(!ClassAdAttributeIsPrivate(name))
+		name = itr->c_str();
+		expr = ad->LookupExpr(name);
+		if(expr && !ClassAdAttributeIsPrivate(name))
 		{
 			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{

@@ -361,8 +361,12 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		EXCEPT( "QmgrJobUpdater::updateJob: Unknown update type (%d)!", type );
 	}
 
-	job_ad->ResetExpr();
-	while( job_ad->NextDirtyExpr(name, tree) ) {
+	for ( auto itr = job_ad->dirtyBegin(); itr != job_ad->dirtyEnd(); itr++ ) {
+		name = itr->c_str();
+		tree = job_ad->LookupExpr(name);
+		if ( tree == NULL ) {
+			continue;
+		}
 		// There used to be a check for tree->invisible here,
 		// but there are no codepaths that reach here with
 		// private attributes set to invisible.
@@ -421,7 +425,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		itr != undirty_attrs.end();
 		++itr)
 	{
-		job_ad->SetDirtyFlag(itr->c_str(),false);
+		job_ad->MarkAttributeClean(*itr);
 	}
 	return true;
 }
