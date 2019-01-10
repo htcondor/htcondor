@@ -46,7 +46,8 @@ main( int argc, char **argv ) {
         diagnostic = 1;
     } 
     else if(argc != 3) {
-        return -1;
+        printf("Usage: %s SOURCE DEST\n", argv[0]);
+        return 1;
     }
 
     // Initialize win32 + SSL socket libraries.
@@ -227,7 +228,7 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
 
             // Make sure to check the return code here as well as rval!
             // HTTP error codes like 401, 500 are considered successful by 
-            // libcurl and we don't want them to be.
+            // libcurl, but we want to treat them as errors.
             if( rval == CURLE_OK && return_code <= 400 ) {
                 stats->TransferSuccess = true;
                 stats->TransferError = "";
@@ -237,7 +238,14 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
                 stats->TransferSuccess = false;
                 stats->TransferError = error_buffer;
                 // If we got an HTTP error code, need to change a couple more things
-                if( return_code > 400 ) {
+                if( rval != CURLE_OK ) {
+                    const char * curl_err = curl_easy_strerror( ( CURLcode ) rval );
+                    if (curl_err) {
+                        stats->TransferError = "Client library encountered an error: " + std::string(curl_err);
+                    } else {
+                        stats->TransferError = "Client library encountered an unknown error.";
+                    }
+                } else if( return_code > 400 ) {
                     rval = CURLE_HTTP_RETURNED_ERROR;
                     stats->TransferError = "Server returned HTTP error code " + std::to_string((long long int)return_code);
                 }
