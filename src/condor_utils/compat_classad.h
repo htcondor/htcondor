@@ -196,20 +196,9 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name,bool value)
 	{ return InsertAttr( name, value) ? TRUE : FALSE; }
 
-		// for iteration through expressions
-//		void		ResetExpr();
-//		classad::ExprTree*	NextExpr();
-
 		// lookup values in classads  (for simple assignments)
       classad::ExprTree* LookupExpr(const char* name) const
 	  { return Lookup( name ); }
-
-		/** Lookup (don't evaluate) an attribute that is a string.
-		 *  @param name The attribute
-		 *  @param value The string, copied with strcpy (DANGER)
-		 *  @return true if the attribute exists and is a string, false otherwise
-		 */
-//	int LookupString(const char *name, char *value) const; 
 
 		/** Lookup (don't evaluate) an attribute that is a string.
 		 *  @param name The attribute
@@ -372,16 +361,11 @@ class ClassAd : public classad::ClassAd
 
 	bool NextExpr( const char *&name, ExprTree *&value );
 
-	// returns 0 if not attr found, 1 if attr is in ad, 2 if in parent ad, 3 if in both ad and parent ad
-	int AttrChainDepth(const std::string & attr);
-
 	static void Reconfig();
 	static bool m_initConfig;
 	static bool m_strictEvaluation;
 
  private:
-	void evalFromEnvironment( const char *name, classad::Value val );
-
 	enum ItrStateEnum {
 		ItrUninitialized,
 		ItrInThisAd,

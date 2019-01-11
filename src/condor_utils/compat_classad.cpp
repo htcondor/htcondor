@@ -1958,36 +1958,6 @@ Assign(char const *name,char const *value)
 	}
 }
 
-//  void ClassAd::
-//  ResetExpr() { this->ptrExpr = exprList; }
-
-//  ExprTree* ClassAd::
-//  NextExpr(){}
-
-//  void ClassAd::
-//  ResetName() { this->ptrName = exprList; }
-
-//  const char* ClassAd::
-//  NextNameOriginal(){}
-
-
-//  ExprTree* ClassAd::
-//  Lookup(char *) const{}
-
-//  ExprTree* ClassAd::
-//  Lookup(const char*) const{}
-
-//int ClassAd::
-//LookupString( const char *name, char *value ) const 
-//{
-//	string strVal;
-//	if( !EvaluateAttrString( string( name ), strVal ) ) {
-//		return 0;
-//	}
-//	strcpy( value, strVal.c_str( ) );
-//	return 1;
-//} 
-
 int ClassAd::
 LookupString(const char *name, char *value, int max_len) const
 {
@@ -3080,16 +3050,6 @@ ChainCollapse(classad::ClassAd &ad)
             ad.Insert((*itr).first, tmpExprTree);
         }
     }
-}
-
-
-int ClassAd::AttrChainDepth(const std::string & attr)
-{
-	int result = 0;
-	if (LookupIgnoreChain(attr)) { result |= 1; }
-	classad::ClassAd *parent = GetChainedParentAd();
-	if (parent && parent->Lookup(attr)) { result |= 2; }
-	return result;
 }
 
 
