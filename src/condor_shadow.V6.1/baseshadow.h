@@ -351,6 +351,7 @@ class BaseShadow : public Service
 			@param type What kind of update we want to do
 			@return true on success, false on failure
 		*/
+	void recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd );
 	bool updateJobInQueue( update_t type );
 
 		/** Connect to the job queue and update one attribute */

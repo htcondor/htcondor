@@ -102,15 +102,8 @@ enum ULogEventNumber {
 	/** Factory paused            */  ULOG_FACTORY_PAUSED			= 37,
 	/** Factory resumed           */  ULOG_FACTORY_RESUMED			= 38,
 	/** For the Python bindings   */  ULOG_NONE						= 39,
+	/** File transfer             */  ULOG_FILE_TRANSFER			= 40,
 };
-
-/// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
-#if 1
-// use ULogEvent::eventName() instead....
-// extern const char * getULogEventNumberName(ULogEventNumber number);
-#else
-extern const char ULogEventNumberNames[][30];
-#endif
 
 //----------------------------------------------------------------------------
 /** Enumeration of possible outcomes after attempting to read an event.
@@ -2231,6 +2224,39 @@ public:
 
 	// set the reason member to the given string
 	void setReason(const char* str);
+};
+
+// ----------------------------------------------------------------------------
+
+class FileTransferEvent : public ULogEvent {
+	public:
+		FileTransferEvent();
+		~FileTransferEvent();
+
+		virtual int readEvent( FILE * f, bool & got_sync_line );
+		virtual bool formatBody( std::string & out );
+
+		virtual ClassAd * toClassAd();
+		virtual void initFromClassAd( ClassAd * ad );
+
+		enum FileTransferEventType {
+			NONE = 0,
+			IN_QUEUED = 1,
+			IN_STARTED = 2,
+			IN_FINISHED = 3,
+			OUT_QUEUED = 4,
+			OUT_STARTED = 5,
+			OUT_FINISHED = 6,
+			MAX = 7
+		};
+
+		static const char * FileTransferEventTypeNames[];
+
+		void setType( FileTransferEventType ftet ) { type = ftet; }
+		FileTransferEventType getType() const { return type; }
+
+	protected:
+		FileTransferEventType type;
 };
 
 

@@ -44,10 +44,7 @@
 #define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
 					 return 0; }
 
-
-//extern ClassAd *JobAd;
-
-const char ULogEventNumberNames[][30] = {
+const char ULogEventNumberNames[][41] = {
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
@@ -88,6 +85,7 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_FACTORY_PAUSED",			// Factory paused
 	"ULOG_FACTORY_RESUMED",			// Factory resumed
 	"ULOG_NONE",					// None (try again later)
+	"ULOG_FILE_TRANSFER",			// File transfer
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -226,6 +224,9 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_FACTORY_RESUMED:
 		return new FactoryResumedEvent;
+
+	case ULOG_FILE_TRANSFER:
+		return new FileTransferEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Unknown ULogEventNumber: %d, reading it as a FutureEvent\n", event );
@@ -562,6 +563,9 @@ ULogEvent::toClassAd(void)
 		break;
 	case ULOG_FACTORY_RESUMED:
 		SetMyTypeName(*myad, "FactoryResumedEvent");
+		break;
+	case ULOG_FILE_TRANSFER:
+		SetMyTypeName(*myad, "FileTransferEvent");
 		break;
 	default:
 		SetMyTypeName(*myad, "FutureEvent");
@@ -7264,4 +7268,79 @@ void FactoryResumedEvent::setReason(const char* str)
 {
 	if (reason) { free(reason); } reason = NULL;
 	if (str) reason = strdup(str);
+}
+
+//
+// FileTransferEvent
+//
+
+const char * FileTransferEvent::FileTransferEventTypeNames[] = {
+	"NONE",
+	"in queued",
+	"in started",
+	"in finished",
+	"out queued",
+	"out started",
+	"out finished"
+};
+
+FileTransferEvent::FileTransferEvent() : type( FileTransferEvent::NONE ) {
+	eventNumber = ULOG_FILE_TRANSFER;
+}
+
+FileTransferEvent::~FileTransferEvent() { }
+
+bool
+FileTransferEvent::formatBody( std::string & out ) {
+	if( type == FileTransferEventType::NONE ) {
+		dprintf( D_ALWAYS, "Unspecified type in FileTransferEvent::formatBody()\n" );
+		return false;
+	} else if( FileTransferEventType::NONE < type
+	           && type < FileTransferEventType::MAX ) {
+		return formatstr_cat( out, "File transfer %s\n",
+			FileTransferEventTypeNames[type] ) > 0;
+	} else {
+		dprintf( D_ALWAYS, "Unknown type in FileTransferEvent::formatBody()\n" );
+		return false;
+	}
+}
+
+int
+FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
+	MyString typeString;
+	if(! read_line_value( "File transfer ", typeString, f, got_sync_line)) {
+		return 0;
+	}
+
+	// NONE is not a legal event type in the log.
+	bool foundTypeName = false;
+	for( int i = 1; i < FileTransferEventType::MAX; ++i ) {
+		if( FileTransferEventTypeNames[i] == typeString ) {
+			foundTypeName = true;
+			type = (FileTransferEventType)i;
+		}
+	}
+	if(! foundTypeName) { return false; }
+
+	return 1;
+}
+
+ClassAd *
+FileTransferEvent::toClassAd() {
+	ClassAd * ad = ULogEvent::toClassAd();
+	if(! ad) { return NULL; }
+
+	if(! ad->InsertAttr( "Type", (int)type )) {
+		delete ad;
+		return NULL;
+	}
+
+	return ad;
+}
+
+void
+FileTransferEvent::initFromClassAd( ClassAd * ad ) {
+	ULogEvent::initFromClassAd( ad );
+
+	ad->LookupInteger( "Type", (int &)type );
 }

@@ -1265,6 +1265,89 @@ BaseShadow::watchJobAttr( const std::string & name )
 }
 
 
+void
+BaseShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
+/*
+	bool b;
+	dprintf( D_ALWAYS, "FROM %s = %s, %s = %s, %s = %s; TO %s = %s, %s = %s, %s = %s\n",
+		ATTR_TRANSFER_QUEUED,
+			jobAd->LookupBool( ATTR_TRANSFER_QUEUED, b ) ?( b ? "true" : "false"  ): "unset",
+		ATTR_TRANSFERRING_INPUT,
+			jobAd->LookupBool( ATTR_TRANSFERRING_INPUT, b ) ?( b ? "true" : "false"  ): "unset",
+		ATTR_TRANSFERRING_OUTPUT,
+			jobAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, b ) ?( b ? "true" : "false"  ): "unset",
+		ATTR_TRANSFER_QUEUED,
+			ftAd->LookupBool( ATTR_TRANSFER_QUEUED, b ) ?( b ? "true" : "false"  ): "unset",
+		ATTR_TRANSFERRING_INPUT,
+			ftAd->LookupBool( ATTR_TRANSFERRING_INPUT, b ) ?( b ? "true" : "false"  ): "unset",
+		ATTR_TRANSFERRING_OUTPUT,
+			ftAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, b ) ?( b ? "true" : "false"  ): "unset"
+	);
+*/
+
+	bool tq = false; bool tqSet = ftAd->LookupBool( ATTR_TRANSFER_QUEUED, tq );
+	bool ti = false; bool tiSet = ftAd->LookupBool( ATTR_TRANSFERRING_INPUT, ti );
+	bool to = false; bool toSet = ftAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, to );
+
+	// If either ATTR_TRANSFER_QUEUED or ATTR_TRANSFERRING_INPUT hasn't
+	// been set yet, file transfer hasn't done anything yet and there's
+	// event to record.
+	if( (!tqSet) || (!tiSet) ) {
+		return;
+	}
+
+	// If all six of the booleans in the ftAd are the same as the booleans
+	// in the job ad, then we've already written out the event.
+	bool jtq = false; bool jtqSet = jobAd->LookupBool( ATTR_TRANSFER_QUEUED, jtq );
+	bool jti = false; bool jtiSet = jobAd->LookupBool( ATTR_TRANSFERRING_INPUT, jti );
+	bool jto = false; bool jtoSet = jobAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, jto );
+	if(  jtq == tq && jtqSet == tqSet
+	  && jti == ti && jtiSet == tiSet
+	  && jto == to && jtoSet == toSet ) {
+		return;
+	}
+
+	//
+	// I suppose for maximum geek cred I should shift tq, ti, toSet, and to
+	// into a bitfield and switch on that, instead.
+	//
+
+	FileTransferEvent te;
+	if( tq && ti && (!toSet) ) {
+		// Transfer-in was queued.
+		dprintf( D_ALWAYS, "Transfer-in queued.\n" );
+		te.setType( FileTransferEvent::IN_QUEUED );
+		// te.setAdditional( "Host", ... );
+	} else if( (!tq) && ti && (!toSet) ) {
+		// Transfer-in has started.
+		dprintf( D_ALWAYS, "Transfer-in started.\n" );
+		te.setType( FileTransferEvent::IN_STARTED );
+	} else if( (!tq) && (!ti) && (!toSet) ) {
+		// Transfer-in has finished.
+		dprintf( D_ALWAYS, "Transfer-in finished.\n" );
+		te.setType( FileTransferEvent::IN_FINISHED );
+		// te.setSuccess( ... );
+	} else if( tq && (!ti) && (toSet && to) ) {
+		// Transfer-out has been queued.
+		dprintf( D_ALWAYS, "Transfer-out queued.\n" );
+		te.setType( FileTransferEvent::OUT_QUEUED );
+	} else if( (!tq) && (!ti) && (toSet && to) ) {
+		// Transfer-out has started.
+		dprintf( D_ALWAYS, "Transfer-out started.\n" );
+		te.setType( FileTransferEvent::OUT_STARTED );
+	} else if( (!tq) && (!ti) && (toSet && (!to)) ) {
+		// Transfer-out has finished.
+		dprintf( D_ALWAYS, "Transfer-out finished.\n" );
+		te.setType( FileTransferEvent::OUT_FINISHED );
+		// te.setSuccess( ... );
+	}
+
+	if(! uLog.writeEvent( &te, jobAd )) {
+		dprintf( D_ALWAYS, "Unable to log file transfer event.\n" );
+	}
+}
+
+
 bool
 BaseShadow::updateJobInQueue( update_t type )
 {
@@ -1315,6 +1398,7 @@ BaseShadow::updateJobInQueue( update_t type )
 		break;
 	}
 
+	recordFileTransferStateChanges( jobAd, & ftAd );
 	MergeClassAdsCleanly(jobAd,&ftAd);
 
 	ASSERT( job_updater );

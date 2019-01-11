@@ -453,5 +453,15 @@ void export_event_log() {
 		.value( "FACTORY_PAUSED", ULOG_FACTORY_PAUSED )
 		.value( "FACTORY_RESUMED", ULOG_FACTORY_RESUMED )
 		.value( "NONE", ULOG_NONE )
+		.value( "FILE_TRANSFER", ULOG_FILE_TRANSFER )
+	;
+
+	boost::python::enum_<FileTransferEvent::FileTransferEventType>( "FileTransferEventType", "..." )
+		.value( "IN_QUEUED", FileTransferEvent::IN_QUEUED )
+		.value( "IN_STARTED", FileTransferEvent::IN_STARTED )
+		.value( "IN_FINISHED", FileTransferEvent::IN_FINISHED )
+		.value( "OUT_QUEUED", FileTransferEvent::OUT_QUEUED )
+		.value( "OUT_STARTED", FileTransferEvent::OUT_STARTED )
+		.value( "OUT_FINISHED", FileTransferEvent::OUT_FINISHED )
 	;
 }
