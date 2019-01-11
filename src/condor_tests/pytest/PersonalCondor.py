@@ -219,7 +219,7 @@ class PersonalCondor(object):
         os.environ["CONDOR_CONFIG"] = self._local_config
         return previous_condor_config
 
-    # MRC: Eventually want to do this using python bindings
+    # TODO: Eventually want to do this using python bindings
     # For internal use only.
     def _WaitForReadyDaemons(self):
         is_ready_attempts = 6
