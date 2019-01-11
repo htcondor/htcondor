@@ -109,6 +109,14 @@ void CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, 
 // Shortcut for CopyAttribute(target_attr, target_ad, source_attr, target_ad)
 void CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const std::string &source_attr);
 
+/** Takes the ad this ad is chained to, copies over all the
+ *  attributes from the parent ad that aren't in this classad
+ *  (so attributes in both the parent ad and this ad retain the
+ *  values from this ad), and then makes this ad not chained to
+ *  the parent.
+ */
+void ChainCollapse(classad::ClassAd &ad);
+
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -363,14 +371,6 @@ class ClassAd : public classad::ClassAd
 	const char *NextNameOriginal();
 
 	bool NextExpr( const char *&name, ExprTree *&value );
-
-    /** Takes the ad this is chained to, copies over all the 
-     *  attributes from the parent ad that aren't in this classad
-     *  (so attributes in both the parent ad and this ad retain the 
-     *  values from this ad), and then makes this ad not chained to
-     *  the parent.
-     */
-    void ChainCollapse();
 
 	// returns 0 if not attr found, 1 if attr is in ad, 2 if in parent ad, 3 if in both ad and parent ad
 	int AttrChainDepth(const std::string & attr);

@@ -3279,7 +3279,7 @@ DedicatedScheduler::AddMrec(
 
 	// Collapse the chained ad attributes into this copied ad,
 	// just in case the job is removed while the request is still pending.
-	pending_requests[claim_id]->ChainCollapse();
+	ChainCollapse(*pending_requests[claim_id]);
 
     // PartitionableSlot in match_ad can never be 'true' as match_ad was
     // tweaked by ScheddNegotiate::fixupPartitionableSlot. If we want 

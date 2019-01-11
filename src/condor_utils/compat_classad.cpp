@@ -3044,11 +3044,12 @@ QuoteAdStringValue(char const *val, std::string &buf)
     return buf.c_str();
 }
 
-void ClassAd::ChainCollapse()
+void
+ChainCollapse(classad::ClassAd &ad)
 {
     classad::ExprTree *tmpExprTree;
 
-	classad::ClassAd *parent = GetChainedParentAd();
+	classad::ClassAd *parent = ad.GetChainedParentAd();
 
     if(!parent)
     {   
@@ -3056,7 +3057,7 @@ void ClassAd::ChainCollapse()
         return;
     }
 
-    Unchain();
+    ad.Unchain();
 
     classad::AttrList::iterator itr; 
 
@@ -3067,7 +3068,7 @@ void ClassAd::ChainCollapse()
         // This means that the attributes in our classad takes precedence
         // over the ones in the chained class ad.
 
-        if( !Lookup((*itr).first) )
+        if( !ad.Lookup((*itr).first) )
         {
             tmpExprTree = (*itr).second;     
 
@@ -3076,7 +3077,7 @@ void ClassAd::ChainCollapse()
             ASSERT(tmpExprTree); 
 
             //K, it's clear. Insert it, but don't try to 
-            Insert((*itr).first, tmpExprTree);
+            ad.Insert((*itr).first, tmpExprTree);
         }
     }
 }
