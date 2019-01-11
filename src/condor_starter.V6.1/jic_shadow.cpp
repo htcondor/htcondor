@@ -2031,7 +2031,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 
 			while( (attrName = m_job_update_attrs.next()) != NULL ) {
 				// dprintf( D_ALWAYS, "Updating job ad: %s\n", attrName );
-				ad->CopyAttribute( attrName, & updateAd );
+				CopyAttribute( attrName, *ad, updateAd );
 				published = true;
 			}
 		} else {

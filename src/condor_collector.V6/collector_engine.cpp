@@ -575,8 +575,8 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				// Negotiator matches up private ad with public ad by
 				// using the following.
 			if( retVal ) {
-				pvtAd->CopyAttribute( ATTR_MY_ADDRESS, retVal );
-				pvtAd->CopyAttribute( ATTR_NAME, retVal );
+				CopyAttribute( ATTR_MY_ADDRESS, *pvtAd, *retVal );
+				CopyAttribute( ATTR_NAME, *pvtAd, *retVal );
 			}
 
 			CollectorEngine_rucc_getPvtAd_runtime.Add(rt.tick(rt_last));

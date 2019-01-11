@@ -2902,26 +2902,8 @@ bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 	return true;
 }
 
-void ClassAd::
-CopyAttribute( char const *target_attr, classad::ClassAd *source_ad )
-{
-	CopyAttribute( target_attr, target_attr, source_ad );
-}
-
-
-void ClassAd::
-CopyAttribute( char const *target_attr, char const *source_attr,
-			   classad::ClassAd *source_ad )
-{
-	ASSERT( target_attr );
-	ASSERT( source_attr );
-        if (!source_ad) {source_ad = this;}
-        
-	CopyAttribute(target_attr, *this, source_attr, *source_ad);
-}
-
-void ClassAd::
-CopyAttribute(const char *target_attr, classad::ClassAd &target_ad, const char *source_attr, const classad::ClassAd &source_ad)
+void
+CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const std::string &source_attr, const classad::ClassAd &source_ad)
 {
 	classad::ExprTree *e = source_ad.Lookup( source_attr );
 	if ( e ) {
@@ -2930,6 +2912,18 @@ CopyAttribute(const char *target_attr, classad::ClassAd &target_ad, const char *
 	} else {
 		target_ad.Delete( target_attr );
 	}
+}
+
+void
+CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const classad::ClassAd &source_ad)
+{
+	CopyAttribute(target_attr, target_ad, target_attr, source_ad);
+}
+
+void
+CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const std::string &source_attr)
+{
+	CopyAttribute(target_attr, target_ad, source_attr, target_ad);
 }
 
 //////////////XML functions///////////

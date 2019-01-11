@@ -7149,7 +7149,7 @@ ClassAd* SubmitHash::make_job_ad (
 			// we need to make sure that that job status is in the proc ad
 			// because the job counters by status in the schedd depends on this.
 			if ( ! procAd->LookupIgnoreChain(ATTR_JOB_STATUS)) {
-				ClassAd::CopyAttribute(ATTR_JOB_STATUS, *procAd, ATTR_JOB_STATUS, *procAd->GetChainedParentAd());
+				CopyAttribute(ATTR_JOB_STATUS, *procAd, ATTR_JOB_STATUS, *procAd->GetChainedParentAd());
 			}
 		} else if ( ! clusterAd && ! base_job_is_cluster_ad) {
 			// promote the procad to a clusterad

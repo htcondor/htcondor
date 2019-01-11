@@ -214,7 +214,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 		// Prior to 7.2.0, the negotiator depended on the startd
 		// supplying matching MyAddress in public and private ads.
 	if ( ad1 && ad2 ) {
-		ad2->CopyAttribute(ATTR_MY_ADDRESS,ad1);
+		CopyAttribute(ATTR_MY_ADDRESS,*ad2,*ad1);
 	}
 
 		// We never want to try sending an update to port 0.  If we're

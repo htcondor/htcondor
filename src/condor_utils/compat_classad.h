@@ -96,6 +96,19 @@ int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::
 
 bool initAdFromString(char const *str, classad::ClassAd &ad);
 
+// Copy value of source_attr in source_ad to target_attr in target_ad.
+// If source_attr isn't in source_ad, target_attr is deleted, if
+// it exists.
+void CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const std::string &source_attr, const classad::ClassAd &source_ad);
+
+// Copy value of target_attr in source_ad to target_attr in target_ad.
+// Shortcut for CopyAttribute(target_attr, target_ad, target_attr, source_ad)
+void CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const classad::ClassAd &source_ad);
+
+// Copy value of source_attr in target_ad to target_attr in target_ad.
+// Shortcut for CopyAttribute(target_attr, target_ad, source_attr, target_ad)
+void CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const std::string &source_attr);
+
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -350,22 +363,6 @@ class ClassAd : public classad::ClassAd
 	const char *NextNameOriginal();
 
 	bool NextExpr( const char *&name, ExprTree *&value );
-
-	// Copy value of source_attr in source_ad to target_attr
-	// in this ad.  If source_ad is NULL, it defaults to this ad.
-	// If source_attr is undefined, target_attr is deleted, if
-	// it exists.
-	void CopyAttribute(char const *target_attr, char const *source_attr, classad::ClassAd *source_ad=NULL );
-
-	// Copy value of source_attr in source_ad to an attribute
-	// of the same name in this ad.  Shortcut for
-	// CopyAttribute(target_attr,target_attr,source_ad).
-	void CopyAttribute(char const *target_attr, classad::ClassAd *source_ad );
-
-        static void CopyAttribute(const char *target_attr, classad::ClassAd &target_ad, const char *source_attr, const classad::ClassAd &source_ad);
-        static void CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const std::string &source_attr, const classad::ClassAd &source_ad)
-        {CopyAttribute(target_attr.c_str(), target_ad, source_attr.c_str(), source_ad);}
-
 
     /** Takes the ad this is chained to, copies over all the 
      *  attributes from the parent ad that aren't in this classad

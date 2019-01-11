@@ -1428,44 +1428,44 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-    jobAd->CopyAttribute(ATTR_NETWORK_IN, update_ad);
-    jobAd->CopyAttribute(ATTR_NETWORK_OUT, update_ad);
+    CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
+    CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
 
-    jobAd->CopyAttribute(ATTR_BLOCK_READ_KBYTES, update_ad);
-    jobAd->CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITE_KBYTES, update_ad);
+    CopyAttribute(ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
+    CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_WRITE_KBYTES, *jobAd, *update_ad);
 
-    jobAd->CopyAttribute(ATTR_BLOCK_READ_BYTES, update_ad);
-    jobAd->CopyAttribute(ATTR_BLOCK_WRITE_BYTES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READ_BYTES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITE_BYTES, update_ad);
+    CopyAttribute(ATTR_BLOCK_READ_BYTES, *jobAd, *update_ad);
+    CopyAttribute(ATTR_BLOCK_WRITE_BYTES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_READ_BYTES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_WRITE_BYTES, *jobAd, *update_ad);
 
-    jobAd->CopyAttribute(ATTR_BLOCK_READS, update_ad);
-    jobAd->CopyAttribute(ATTR_BLOCK_WRITES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READS, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITES, update_ad);
+    CopyAttribute(ATTR_BLOCK_READS, *jobAd, *update_ad);
+    CopyAttribute(ATTR_BLOCK_WRITES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_READS, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_WRITES, *jobAd, *update_ad);
 
-    jobAd->CopyAttribute(ATTR_IO_WAIT, update_ad);
+    CopyAttribute(ATTR_IO_WAIT, *jobAd, *update_ad);
 
 	// FIXME: If we're convinced that we want a whitelist here (chirp
 	// would seem to make a mockery of that), we should at least rewrite
 	// all of the copies to be based on a table.
-	jobAd->CopyAttribute( "PreExitCode", update_ad );
-	jobAd->CopyAttribute( "PreExitSignal", update_ad );
-	jobAd->CopyAttribute( "PreExitBySignal", update_ad );
+	CopyAttribute( "PreExitCode", *jobAd, *update_ad );
+	CopyAttribute( "PreExitSignal", *jobAd, *update_ad );
+	CopyAttribute( "PreExitBySignal", *jobAd, *update_ad );
 
-	jobAd->CopyAttribute( "PostExitCode", update_ad );
-	jobAd->CopyAttribute( "PostExitSignal", update_ad );
-	jobAd->CopyAttribute( "PostExitBySignal", update_ad );
+	CopyAttribute( "PostExitCode", *jobAd, *update_ad );
+	CopyAttribute( "PostExitSignal", *jobAd, *update_ad );
+	CopyAttribute( "PostExitBySignal", *jobAd, *update_ad );
 
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics
-    jobAd->CopyAttribute("StatsLastUpdateTimeStarter", "StatsLastUpdateTime", update_ad);
-    jobAd->CopyAttribute("StatsLifetimeStarter", "StatsLifetime", update_ad);
-    jobAd->CopyAttribute("RecentStatsLifetimeStarter", "RecentStatsLifetime", update_ad);
-    jobAd->CopyAttribute("RecentWindowMaxStarter", "RecentWindowMax", update_ad);
-    jobAd->CopyAttribute("RecentStatsTickTimeStarter", "RecentStatsTickTime", update_ad);
+    CopyAttribute("StatsLastUpdateTimeStarter", *jobAd, "StatsLastUpdateTime", *update_ad);
+    CopyAttribute("StatsLifetimeStarter", *jobAd, "StatsLifetime", *update_ad);
+    CopyAttribute("RecentStatsLifetimeStarter", *jobAd, "RecentStatsLifetime", *update_ad);
+    CopyAttribute("RecentWindowMaxStarter", *jobAd, "RecentWindowMax", *update_ad);
+    CopyAttribute("RecentStatsTickTimeStarter", *jobAd, "RecentStatsTickTime", *update_ad);
 
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		if( int_value > disk_usage ) {

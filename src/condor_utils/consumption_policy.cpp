@@ -87,7 +87,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
             // (e.g. I'd not expect this case to arise elsewhere, like the negotiator)
             string ta;
             formatstr(ta, "_cp_temp_%s", ra.c_str());
-            job.CopyAttribute(ta.c_str(), ra.c_str());
+            CopyAttribute(ta, job, ra);
             job.Assign(ra.c_str(), ov);
             override = true;
         }
@@ -119,7 +119,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
             // restore saved value for RequestedXXX if it was overridden by _condor_RequestedXXX
             string ta;
             formatstr(ta, "_cp_temp_%s", ra.c_str());
-            job.CopyAttribute(ra.c_str(), ta.c_str());
+            CopyAttribute(ra, job, ta);
             job.Delete(ta.c_str());
         }
         if (missing) {
@@ -227,7 +227,7 @@ void cp_override_requested(ClassAd& job, ClassAd& resource, consumption_map_t& c
 
         string oa;
         formatstr(oa, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, asset);
-        job.CopyAttribute(oa.c_str(), ra.c_str());
+        CopyAttribute(oa, job, ra);
         assign_preserve_integers(job, ra.c_str(), j->second);
     }
 }
@@ -240,7 +240,7 @@ void cp_restore_requested(ClassAd& job, const consumption_map_t& consumption) {
         string oa;
         formatstr(ra, "%s%s", ATTR_REQUEST_PREFIX, asset);
         formatstr(oa, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, asset);
-        job.CopyAttribute(ra.c_str(), oa.c_str());
+        CopyAttribute(ra, job, oa);
         job.Delete(oa);
     }    
 }

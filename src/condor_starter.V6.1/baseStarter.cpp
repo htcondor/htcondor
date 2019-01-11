@@ -2764,7 +2764,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
-			updateAd.CopyAttribute( ATTR_ON_EXIT_CODE, "PreExitCode", & updateAd );
+			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PreExitCode", updateAd );
 			jic->periodicJobUpdate( & updateAd, true );
 
 			// This kills the shadow, which should cause us to catch a
@@ -2802,7 +2802,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
-			updateAd.CopyAttribute( ATTR_ON_EXIT_CODE, "PostExitCode", & updateAd );
+			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PostExitCode", updateAd );
 			jic->periodicJobUpdate( & updateAd, true );
 
 			// This kills the shadow, which should cause us to catch a
@@ -3843,12 +3843,12 @@ CStarter::WriteAdFiles()
 		while( const char * resourceName = machineResourcesList.next() ) {
 			std::string provisionedResourceName;
 			formatstr( provisionedResourceName, "%sProvisioned", resourceName );
-			updateAd.CopyAttribute( provisionedResourceName.c_str(), resourceName, machineAd );
+			CopyAttribute( provisionedResourceName, updateAd, resourceName, *machineAd );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName, provisionedResourceName.c_str() );
 
 			std::string assignedResourceName;
 			formatstr( assignedResourceName, "Assigned%s", resourceName );
-			updateAd.CopyAttribute( assignedResourceName.c_str(), assignedResourceName.c_str(), machineAd );
+			CopyAttribute( assignedResourceName, updateAd, *machineAd );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad\n", assignedResourceName.c_str() );
 		}
 
