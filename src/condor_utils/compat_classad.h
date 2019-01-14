@@ -94,6 +94,8 @@ int sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool ex
 int sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References & attrs, const char * indent=NULL );
 int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References & attrs);
 
+bool initAdFromString(char const *str, classad::ClassAd &ad);
+
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -341,8 +343,6 @@ class ClassAd : public classad::ClassAd
 		 *  but is not a number.
 		 */
 	int EvalBool  (const char *name, classad::ClassAd *target, int &value);
-
-	bool initFromString(char const *str,MyString *err_msg=NULL);
 
     void ResetExpr();
 

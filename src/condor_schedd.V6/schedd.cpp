@@ -962,7 +962,6 @@ Scheduler::timeout()
 
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
 		this->calculateCronTabSchedules();
-		dprintf(D_ALWAYS, "MRC [Scheduler::timeout] about to call AddRunnableLocalJobs from Scheduler::timeout\n");
 		AddRunnableLocalJobs();
 	}
 
@@ -8227,7 +8226,6 @@ Scheduler::StartJobs()
 		StartJob( rec );
 	}
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
-		dprintf(D_ALWAYS, "MRC [Scheduler::StartJobs] about to call AddRunnableLocalJobs from Scheduler::StartJobs\n");
 		AddRunnableLocalJobs();
 	}
 
@@ -8509,7 +8507,6 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 void
 Scheduler::AddRunnableLocalJobs()
 {
-	dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] called\n");
 	if ( ExitWhenDone ) {
 		return;
 	}
@@ -8560,14 +8557,13 @@ Scheduler::AddRunnableLocalJobs()
 		// sure its even eligible to run
 		// We do not count REMOVED or HELD jobs
 		//
-		dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] checking status of job %s\n", std::string(job->jid).c_str());
 		if ( max_hosts > cur_hosts &&
 			(status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) ) {
 			
 			if (!IsLocalJobEligibleToRun(job)) {
 				continue;
 			}
-			dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] job %s passed the eligibility check\n", std::string(job->jid).c_str());
+
 			//
 			// It's safe to go ahead and run the job!
 			//
@@ -8601,12 +8597,10 @@ Scheduler::AddRunnableLocalJobs()
 				local_rec = add_shadow_rec( 0, &id, CONDOR_UNIVERSE_LOCAL, NULL, -1 );
 				addRunnableJob( local_rec );
 			} else {
-				dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] job %s is scheduler universe\n", std::string(job->jid).c_str());
 				// if there is a per-owner scheduler job limit that is smaller than the per-owner job limit
 				if (scheduler.MaxRunningSchedulerJobsPerOwner > 0 &&
 					scheduler.MaxRunningSchedulerJobsPerOwner < scheduler.MaxJobsPerOwner) {
 					OwnerInfo * owndat = scheduler.get_ownerinfo(job);
-					dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] owndat->num.SchedulerJobsRunning = %d\n", owndat->num.SchedulerJobsRunning);
 					if (owndat->num.SchedulerJobsRunning >= scheduler.MaxRunningSchedulerJobsPerOwner) {
 						dprintf( D_FULLDEBUG,
 							 "Skipping idle scheduler universe job %d.%d because %s already has %d Scheduler jobs running\n",
@@ -8631,7 +8625,6 @@ Scheduler::AddRunnableLocalJobs()
 				  wrapper handles all the logic for if we want to
 				  invoke the hook in its own thread or not, etc.
 				*/
-				dprintf(D_ALWAYS, "MRC [Scheduler::AddRunnableLocalJobs] about to send job %s to the SpawnJobHandler\n", std::string(job->jid).c_str());
 				callAboutToSpawnJobHandler( id.cluster, id.proc, NULL );
 			}
 		}
@@ -16198,12 +16191,8 @@ void
 Scheduler::removeJobFromIndexes( const JOB_ID_KEY& job_id, int job_prio )
 {
 	// TODO: Figure out where SchedulerJobsRunning gets decremented
-	dprintf(D_ALWAYS, "MRC [Scheduler::removeJobFromIndexes] removing job_id = %s with job_prio = %d\n", std::string(job_id).c_str(), job_prio);
 	LocalJobRec rec = LocalJobRec( job_prio, job_id );
 	LocalJobsPrioQueue.erase( rec );
-	for (std::set<LocalJobRec>::iterator it = LocalJobsPrioQueue.begin(); it != LocalJobsPrioQueue.end(); ++it) {
-		dprintf(D_ALWAYS, "MRC [Scheduler::removeJobFromIndexes] \tafter removal, job = %s is still in the queue\n", std::string(it->job_id).c_str());
-	}	
 	return;
 }
 

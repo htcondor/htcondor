@@ -466,8 +466,6 @@ VanillaProc::StartJob()
        }
 	}
 // End of chroot 
-#endif
-
 
 	// On Linux kernel 2.4.19 and later, we can give each job its
 	// own FS mounts.
@@ -553,6 +551,7 @@ VanillaProc::StartJob()
 		}
 		mount_under_scratch.clear();
 	}
+#endif
 
 #if defined(LINUX)
 	// On Linux kernel 2.6.24 and later, we can give each

@@ -2461,13 +2461,13 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	return rc;
 }
 
-bool ClassAd::
-initFromString( char const *str,MyString *err_msg )
+bool
+initAdFromString( char const *str, classad::ClassAd &ad )
 {
 	bool succeeded = true;
 
 	// First, clear our ad so we start with a fresh ClassAd
-	Clear();
+	ad.Clear();
 
 	char *exprbuf = new char[strlen(str)+1];
 	ASSERT( exprbuf );
@@ -2486,14 +2486,9 @@ initFromString( char const *str,MyString *err_msg )
 		}
 		str += len;
 
-		if (!Insert(exprbuf)) {
-			if( err_msg ) {
-				err_msg->formatstr("Failed to parse ClassAd expression: '%s'",
+		if (!InsertLongFormAttrValue(ad, exprbuf, true)) {
+			dprintf(D_ALWAYS,"Failed to parse ClassAd expression: '%s'\n",
 					exprbuf);
-			} else {
-				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: '%s'\n",
-					exprbuf);
-			}
 			succeeded = false;
 			break;
 		}
