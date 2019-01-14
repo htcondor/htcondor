@@ -1903,9 +1903,14 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	m_got_job_exit = true;
 
 	// record the start time of transfer output into the job ad.
-	time_t tStart = -1;
-	if (filetrans.GetDownloadTimestamps(&tStart)) {
+	time_t tStart = -1, tEnd = -1;
+	if (filetrans.GetDownloadTimestamps(&tStart, &tEnd)) {
 		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, (int)tStart);
+		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE, (int)tEnd);
+	}
+	if (filetrans.GetUploadTimestamps(&tStart, &tEnd)) {
+		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE, (int)tStart);
+		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE, (int)tEnd);
 	}
 
 #if 0 // tj: this seems to record only transfer output time, turn it off for now.

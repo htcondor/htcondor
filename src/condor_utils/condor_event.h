@@ -2250,12 +2250,15 @@ class FileTransferEvent : public ULogEvent {
 			MAX = 7
 		};
 
-		static const char * FileTransferEventTypeNames[];
+		static const char * FileTransferEventStrings[];
 
 		void setType( FileTransferEventType ftet ) { type = ftet; }
 		FileTransferEventType getType() const { return type; }
 
+		void setQueueingDelay( time_t duration ) { queueingDelay = duration; }
+
 	protected:
+		time_t queueingDelay;
 		FileTransferEventType type;
 };
 

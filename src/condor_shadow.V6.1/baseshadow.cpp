@@ -1267,24 +1267,6 @@ BaseShadow::watchJobAttr( const std::string & name )
 
 void
 BaseShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
-/*
-	bool b;
-	dprintf( D_ALWAYS, "FROM %s = %s, %s = %s, %s = %s; TO %s = %s, %s = %s, %s = %s\n",
-		ATTR_TRANSFER_QUEUED,
-			jobAd->LookupBool( ATTR_TRANSFER_QUEUED, b ) ?( b ? "true" : "false"  ): "unset",
-		ATTR_TRANSFERRING_INPUT,
-			jobAd->LookupBool( ATTR_TRANSFERRING_INPUT, b ) ?( b ? "true" : "false"  ): "unset",
-		ATTR_TRANSFERRING_OUTPUT,
-			jobAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, b ) ?( b ? "true" : "false"  ): "unset",
-		ATTR_TRANSFER_QUEUED,
-			ftAd->LookupBool( ATTR_TRANSFER_QUEUED, b ) ?( b ? "true" : "false"  ): "unset",
-		ATTR_TRANSFERRING_INPUT,
-			ftAd->LookupBool( ATTR_TRANSFERRING_INPUT, b ) ?( b ? "true" : "false"  ): "unset",
-		ATTR_TRANSFERRING_OUTPUT,
-			ftAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, b ) ?( b ? "true" : "false"  ): "unset"
-	);
-*/
-
 	bool tq = false; bool tqSet = ftAd->LookupBool( ATTR_TRANSFER_QUEUED, tq );
 	bool ti = false; bool tiSet = ftAd->LookupBool( ATTR_TRANSFERRING_INPUT, ti );
 	bool to = false; bool toSet = ftAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, to );
@@ -1314,32 +1296,44 @@ BaseShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 
 	FileTransferEvent te;
 	if( tq && ti && (!toSet) ) {
-		// Transfer-in was queued.
-		dprintf( D_ALWAYS, "Transfer-in queued.\n" );
 		te.setType( FileTransferEvent::IN_QUEUED );
 		// te.setAdditional( "Host", ... );
+
+		jobAd->Assign( "TransferInQueued", (int)time(NULL) );
 	} else if( (!tq) && ti && (!toSet) ) {
-		// Transfer-in has started.
-		dprintf( D_ALWAYS, "Transfer-in started.\n" );
 		te.setType( FileTransferEvent::IN_STARTED );
+
+		time_t now = (int)time(NULL);
+		jobAd->Assign( "TransferInStarted", now );
+
+		time_t then;
+		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
+			te.setQueueingDelay( now - then );
+		}
 	} else if( (!tq) && (!ti) && (!toSet) ) {
-		// Transfer-in has finished.
-		dprintf( D_ALWAYS, "Transfer-in finished.\n" );
 		te.setType( FileTransferEvent::IN_FINISHED );
 		// te.setSuccess( ... );
+
+		jobAd->Assign( "TransferInFinished", (int)time(NULL) );
 	} else if( tq && (!ti) && (toSet && to) ) {
-		// Transfer-out has been queued.
-		dprintf( D_ALWAYS, "Transfer-out queued.\n" );
 		te.setType( FileTransferEvent::OUT_QUEUED );
+
+		jobAd->Assign( "TransferOutQueued", (int)time(NULL) );
 	} else if( (!tq) && (!ti) && (toSet && to) ) {
-		// Transfer-out has started.
-		dprintf( D_ALWAYS, "Transfer-out started.\n" );
 		te.setType( FileTransferEvent::OUT_STARTED );
+
+		time_t now = (int)time(NULL);
+		jobAd->Assign( "TransferOutStarted", now );
+
+		time_t then;
+		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
+			te.setQueueingDelay( now - then );
+		}
 	} else if( (!tq) && (!ti) && (toSet && (!to)) ) {
-		// Transfer-out has finished.
-		dprintf( D_ALWAYS, "Transfer-out finished.\n" );
 		te.setType( FileTransferEvent::OUT_FINISHED );
 		// te.setSuccess( ... );
+
+		jobAd->Assign( "TransferOutFinished", (int)time(NULL) );
 	}
 
 	if(! uLog.writeEvent( &te, jobAd )) {

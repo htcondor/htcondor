@@ -7274,17 +7274,19 @@ void FactoryResumedEvent::setReason(const char* str)
 // FileTransferEvent
 //
 
-const char * FileTransferEvent::FileTransferEventTypeNames[] = {
+const char * FileTransferEvent::FileTransferEventStrings[] = {
 	"NONE",
-	"in queued",
-	"in started",
-	"in finished",
-	"out queued",
-	"out started",
-	"out finished"
+	"Entered queue to transfer input files",
+	"Started transferring input files",
+	"Finished transferring input files",
+	"Entered queue to transfer output files",
+	"Started transferring output files",
+	"Finished transferring input files"
 };
 
-FileTransferEvent::FileTransferEvent() : type( FileTransferEvent::NONE ) {
+FileTransferEvent::FileTransferEvent() : queueingDelay(-1),
+  type( FileTransferEvent::NONE )
+{
 	eventNumber = ULOG_FILE_TRANSFER;
 }
 
@@ -7297,30 +7299,61 @@ FileTransferEvent::formatBody( std::string & out ) {
 		return false;
 	} else if( FileTransferEventType::NONE < type
 	           && type < FileTransferEventType::MAX ) {
-		return formatstr_cat( out, "File transfer %s\n",
-			FileTransferEventTypeNames[type] ) > 0;
+		if( formatstr_cat( out, "%s\n",
+		                   FileTransferEventStrings[type] ) < 0 ) {
+			return false;
+		}
 	} else {
 		dprintf( D_ALWAYS, "Unknown type in FileTransferEvent::formatBody()\n" );
 		return false;
 	}
+
+	if( queueingDelay != -1 ) {
+		if( formatstr_cat( out, "\tSeconds spent in queue: %lu\n",
+		                   queueingDelay ) < 0 ) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 int
 FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
-	MyString typeString;
-	if(! read_line_value( "File transfer ", typeString, f, got_sync_line)) {
+	// Require an 'optional' line  because read_line_value() requires a prefix.
+	MyString eventString;
+	if(! read_optional_line( eventString, f, got_sync_line )) {
 		return 0;
 	}
 
-	// NONE is not a legal event type in the log.
-	bool foundTypeName = false;
+	// NONE is not a legal event in the log.
+	bool foundEventString = false;
 	for( int i = 1; i < FileTransferEventType::MAX; ++i ) {
-		if( FileTransferEventTypeNames[i] == typeString ) {
-			foundTypeName = true;
+		if( FileTransferEventStrings[i] == eventString ) {
+			foundEventString = true;
 			type = (FileTransferEventType)i;
+			break;
 		}
 	}
-	if(! foundTypeName) { return false; }
+	if(! foundEventString) { return false; }
+
+
+	MyString optionalLine;
+	if(! read_optional_line( optionalLine, f, got_sync_line )) {
+		return got_sync_line ? 1 : 0;
+	}
+
+	optionalLine.chomp();
+	MyString prefix = "\tSeconds spent in queue: ";
+	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
+		MyString value = optionalLine.substr( prefix.Length(), optionalLine.Length());
+
+		char * endptr = NULL;
+		queueingDelay = strtol( value.c_str(), & endptr, 10 );
+		if(! (endptr && endptr != '\0')) {
+			return 0;
+		}
+	}
 
 	return 1;
 }
