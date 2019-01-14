@@ -7350,7 +7350,7 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 
 		char * endptr = NULL;
 		queueingDelay = strtol( value.c_str(), & endptr, 10 );
-		if(! (endptr && endptr != '\0')) {
+		if( endptr == NULL || endptr[0] != '\0' ) {
 			return 0;
 		}
 	}
@@ -7368,6 +7368,13 @@ FileTransferEvent::toClassAd() {
 		return NULL;
 	}
 
+	if( queueingDelay != -1 ) {
+		if(! ad->InsertAttr( "QueueingDelay", queueingDelay )) {
+			delete ad;
+			return NULL;
+		}
+	}
+
 	return ad;
 }
 
@@ -7375,5 +7382,13 @@ void
 FileTransferEvent::initFromClassAd( ClassAd * ad ) {
 	ULogEvent::initFromClassAd( ad );
 
-	ad->LookupInteger( "Type", (int &)type );
+	int typePunning = -1;
+	ad->LookupInteger( "Type", typePunning );
+	if( typePunning != -1 ) {
+		type = (FileTransferEventType)typePunning;
+	}
+
+	ad->LookupInteger( "QueueingDelay", queueingDelay );
 }
+
+
