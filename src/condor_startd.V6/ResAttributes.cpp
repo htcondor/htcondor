@@ -628,7 +628,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 		int error = 0;
 		bool is_eof = false;
 		ClassAd ad;
-		int cAttrs = ad.InsertFromFile(fp, is_eof, error);
+		int cAttrs = InsertFromFile(fp, ad, is_eof, error);
 		if (cAttrs <= 0) {
 			if (error) dprintf(D_ALWAYS, "Could not parse ClassAd for local resource '%s' (error %d) assuming quantity of 0\n", tag, error);
 		} else {

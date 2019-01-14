@@ -272,17 +272,17 @@ int main(int argc, const char *argv[])
 class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
 {
  public:
-	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
-	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* file);
+	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);
+	virtual int OnParseError(std::string & line, classad::ClassAd & ad, FILE* file);
 	// return non-zero if new parser, o if old (line oriented) parser, non-zero is returned the above functions will never be called.
-	virtual int NewParser(ClassAd & /*ad*/, FILE* /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
+	virtual int NewParser(classad::ClassAd & /*ad*/, FILE* /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
 	std::string schedd_name;
 	std::string schedd_addr;
 };
 
 // this method is called before each line is parsed. 
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
+int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/)
 {
 	// treat blank lines as delimiters.
 	if (line.size() <= 0) {
@@ -330,7 +330,7 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/
 
 // this method is called when the parser encounters an error
 // return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-int CondorQClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & ad, FILE* file)
+int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & ad, FILE* file)
 {
 	// when we get a parse error, skip ahead to the start of the next classad.
 	int ee = this->PreParse(line, ad, file);
@@ -369,7 +369,7 @@ static bool read_classad_file(const char *filename, classad::ClassAdCollection &
 
 			int error;
 			bool is_eof;
-			int cAttrs = classad->InsertFromFile(file, is_eof, error, &parse_helper);
+			int cAttrs = InsertFromFile(file, *classad, is_eof, error, &parse_helper);
 
 			bool include_classad = cAttrs > 0 && error >= 0;
 			if (include_classad && constr) {

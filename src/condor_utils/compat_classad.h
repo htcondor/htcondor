@@ -96,6 +96,11 @@ int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::
 
 bool initAdFromString(char const *str, classad::ClassAd &ad);
 
+/* helper for constructor that reads from file
+ * returns number of attributes added, 0 if none, -1 if parse error
+ */
+int InsertFromFile(FILE*, classad::ClassAd &ad, bool& is_eof, int& error, ClassAdFileParseHelper* phelp=NULL);
+
 // Copy value of source_attr in source_ad to target_attr in target_ad.
 // If source_attr isn't in source_ad, target_attr is deleted, if
 // it exists.
@@ -133,11 +138,6 @@ class ClassAd : public classad::ClassAd
 
 		/** A constructor that reads old ClassAds from a FILE */
 	ClassAd(FILE*,const char*delim,int&isEOF,int&error,int&empty);	// Constructor, read from file.
-
-		/* helper for constructor that reads from file 
-		 * returns number of attributes added, 0 if none, -1 if parse error
-		 */
-	int InsertFromFile(FILE*, bool& is_eof, int& error, ClassAdFileParseHelper* phelp=NULL);
 
 		/* This is a pass-through to ClassAd::Insert(). Because we define
 		 * our own Insert() below, our parent's Insert() won't be found
@@ -393,13 +393,13 @@ class ClassAdFileParseHelper
 	// explicit virtual destructor
 	virtual ~ClassAdFileParseHelper() {}
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file)=0;
+	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file)=0;
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* FILE)=0;
+	virtual int OnParseError(std::string & line, classad::ClassAd & ad, FILE* FILE)=0;
 	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
 	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
 	// as a line from the file. we do this to avoid having to backtrack the FILE*
-	virtual int NewParser(ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg)=0;
+	virtual int NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg)=0;
 };
 
 // this implements a classad file parse helper that
@@ -412,13 +412,13 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	// explicit virtual destructor
 	virtual ~CondorClassAdFileParseHelper();
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
+	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* FILE);
+	virtual int OnParseError(std::string & line, classad::ClassAd & ad, FILE* FILE);
 	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
 	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
 	// as a line from the file. we do this to avoid having to backtrack the FILE*
-	virtual int NewParser(ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg);
+	virtual int NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg);
 
 	enum ParseType {
 		Parse_long=0, // file is in the traditional -long form, possibly with a delimiter line between ads

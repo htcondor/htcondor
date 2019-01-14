@@ -1348,7 +1348,7 @@ bool CondorClassAdFileParseHelper::line_is_ad_delimitor(const std::string & line
 
 // this method is called before each line is parsed.
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-int CondorClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
+int CondorClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/)
 {
 	// if this line matches the ad delimitor, tell the parser to stop parsing
 	if (line_is_ad_delimitor(line))
@@ -1368,7 +1368,7 @@ int CondorClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/,
 
 // this method is called when the parser encounters an error
 // return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*ad*/, FILE* file)
+int CondorClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & /*ad*/, FILE* file)
 {
 	if (parse_type >= Parse_xml && parse_type < Parse_auto) {
 		// here line is actually errmsg.
@@ -1392,7 +1392,7 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*a
 }
 
 
-int CondorClassAdFileParseHelper::NewParser(ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg)
+int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg)
 {
 	detected_long = false;
 	if (parse_type < Parse_xml || parse_type > Parse_auto) {
@@ -1532,8 +1532,8 @@ int CondorClassAdFileParseHelper::NewParser(ClassAd & ad, FILE* file, bool & det
 
 
 // returns number of attributes added to the ad
-int ClassAd::
-InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFileParseHelper* phelp /*=NULL*/)
+int
+InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFileParseHelper* phelp /*=NULL*/)
 {
 	int ee = 1;
 	int cAttrs = 0;
@@ -1543,7 +1543,7 @@ InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFile
 		// new classad style parsers do all of the work in the NewParser callback
 		// they will return non-zero to indicate that they are new classad style parsers.
 		bool detected_long = false;
-		cAttrs = phelp->NewParser(*this, file, detected_long, buffer);
+		cAttrs = phelp->NewParser(ad, file, detected_long, buffer);
 		if (cAttrs > 0) {
 			error = 0;
 			is_eof = false;
@@ -1556,7 +1556,7 @@ InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFile
 			}
 			is_eof = feof(file);
 			error = cAttrs;
-			return phelp->OnParseError(buffer, *this, file);
+			return phelp->OnParseError(buffer, ad, file);
 		}
 		// got a 0 from NewParser, fall down into the old (-long) style parser
 		if (detected_long && ! buffer.empty()) {
@@ -1579,7 +1579,7 @@ InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFile
 		// otherwise set ee to decide what to do with this line.
 		ee = 1;
 		if (phelp) {
-			ee = phelp->PreParse(buffer, *this, file);
+			ee = phelp->PreParse(buffer, ad, file);
 		} else {
 			// default is to skip blank lines and comment lines
 			for (size_t ix = 0; ix < buffer.size(); ++ix) {
@@ -1605,19 +1605,19 @@ InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFile
 
 parse_line:
 		// Insert the string into the classad
-		if (Insert(buffer.c_str()) !=  0) {
+		if (InsertLongFormAttrValue(ad, buffer.c_str(), true) !=  0) {
 			++cAttrs;
 		} else {
 			ee = -1;
 			if (phelp) {
-				ee = phelp->OnParseError(buffer, *this, file);
+				ee = phelp->OnParseError(buffer, ad, file);
 				if (1 == ee) {
 					// buffer has (presumably) been modified, re-try parsing.
 					// but only retry once.
-					if (Insert(buffer.c_str()) != 0) {
+					if (InsertLongFormAttrValue(ad, buffer.c_str(), true) != 0) {
 						++cAttrs;
 					} else {
-						ee = phelp->OnParseError(buffer, *this, file);
+						ee = phelp->OnParseError(buffer, ad, file);
 						if (1 == ee) ee = -1;  // treat another attempt to reparse as a failure.
 					}
 				}
@@ -1672,7 +1672,7 @@ int CondorClassAdFileIterator::next(ClassAd & classad, bool merge /*=false*/)
 	if (at_eof) return 0;
 	if ( ! file) { error = -1; return -1; }
 
-	int cAttrs = classad.InsertFromFile(file, at_eof, error, parse_help);
+	int cAttrs = InsertFromFile(file, classad, at_eof, error, parse_help);
 	if (cAttrs > 0) return cAttrs;
 	if (at_eof) {
 		if (file && close_file_at_eof) { fclose(file); file = NULL; }
