@@ -107,8 +107,7 @@ IpVerify::~IpVerify()
 int
 IpVerify::Init()
 {
-	char *pAllow = NULL, *pDeny = NULL, *pOldAllow = NULL, *pOldDeny = NULL,
-		*pNewAllow = NULL, *pNewDeny = NULL;
+	char *pAllow = NULL, *pDeny = NULL;
 	DCpermission perm;
 	const char* const ssysname = get_mySubSystem()->getName();	
 
@@ -154,17 +153,13 @@ IpVerify::Init()
 			// subsystems only load the CLIENT lists, since they have no
 			// command port and don't need the other authorization lists.
 			if(strcmp(PermString(perm),"CLIENT")==0){ 
-				pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
-				pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
+				pAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
+				pDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
 			}
 		} else {
-			pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
-			pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
+			pAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
+			pDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
 		}
-		// concat the two
-		pAllow = merge(pNewAllow, pOldAllow);
-		// concat the two
-		pDeny = merge(pNewDeny, pOldDeny);
 		if( pAllow ) {
 			dprintf ( D_SECURITY, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.Value());
 		}
@@ -172,51 +167,38 @@ IpVerify::Init()
 			dprintf ( D_SECURITY, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.Value());
 		}
 
-		// Treat "*" or "*/*" for ALLOW_XXX specially, because that's an optimized default.
+		// Treat "*" or "*/*" specially, because that's an optimized default.
 		bool allowAll = pAllow && (!strcmp(pAllow, "*") || !strcmp(pAllow, "*/*"));
 		bool denyAll = pDeny && (!strcmp(pDeny, "*") || !strcmp(pDeny, "*/*"));
 
-		if( !pAllow ) { // deny all requests by default
-			if( perm == ALLOW ) {
-				// ALLOW is implicitly allowed
-				pentry->behavior = USERVERIFY_ALLOW; // belt and suspenders
-			} else if( perm == READ || perm == WRITE ) {
-				// READ and WRITE could be implied -> cannot flat out DENY
-				pentry->behavior = USERVERIFY_USE_TABLE;
-				if (pDeny) {
-					fill_table( pentry, pDeny, false );
-				}
-			} else {
-				if ( denyAll ) {
-					pentry->behavior = USERVERIFY_DENY;
-					dprintf( D_SECURITY, "ipverify: %s optimized to deny everyone\n", PermString(perm) );
-				} else {
-					pentry->behavior = USERVERIFY_USE_TABLE;
-					if (pDeny) {
-						fill_table( pentry, pDeny, false );
-					}
-				}
-			}
-		} else if ( pAllow && !pDeny ) {
-			if ( allowAll ) {
+		// Optimized cases
+		if (perm == ALLOW) {
+			pentry->behavior = USERVERIFY_ALLOW;
+		} else if (denyAll || (!pAllow && (perm != READ && perm != WRITE))) { // Deny everyone
+			// READ or WRITE may be implicitly allowed by other permissions
+			pentry->behavior = USERVERIFY_DENY;
+			dprintf( D_SECURITY, "ipverify: %s optimized to deny everyone\n", PermString(perm) );
+		} else if (allowAll) {
+			if (!pDeny) { // Allow anyone
 				pentry->behavior = USERVERIFY_ALLOW;
 				dprintf( D_SECURITY, "ipverify: %s optimized to allow anyone\n", PermString(perm) );
 			} else {
-				pentry->behavior = USERVERIFY_USE_TABLE;
-				fill_table( pentry, pAllow, true );
-			}
-		} else { // pAllow && pDeny
-			if ( denyAll ) {
-				pentry->behavior = USERVERIFY_DENY;
-			} else if ( allowAll ) {
 				pentry->behavior = USERVERIFY_ONLY_DENIES;
-				fill_table( pentry, pDeny, false );
-			} else {
-				pentry->behavior = USERVERIFY_USE_TABLE;
-				fill_table( pentry, pAllow, true );
 				fill_table( pentry, pDeny, false );
 			}
 		}
+
+		// Only load table entries if necessary
+		if (pentry->behavior == USERVERIFY_USE_TABLE) {
+			if ( pAllow ) {
+				fill_table( pentry, pAllow, true );
+			}
+			if ( pDeny ) {
+				fill_table( pentry, pDeny, false );
+			}
+		}
+
+        // Free up strings for next time around the loop
 		if (pAllow) {
 			free(pAllow);
 			pAllow = NULL;
@@ -225,49 +207,11 @@ IpVerify::Init()
 			free(pDeny);
 			pDeny = NULL;
 		}
-		if (pOldAllow) {
-			free(pOldAllow);
-			pOldAllow = NULL;
-		}
-		if (pOldDeny) {
-			free(pOldDeny);
-			pOldDeny = NULL;
-		}
-		if (pNewAllow) {
-			free(pNewAllow);
-			pNewAllow = NULL;
-		}
-		if (pNewDeny) {
-			free(pNewDeny);
-			pNewDeny = NULL;
-		}
 	}
 	dprintf(D_FULLDEBUG|D_SECURITY,"Initialized the following authorization table:\n");
 	if(PermHashTable)	
 		PrintAuthTable(D_FULLDEBUG|D_SECURITY);
 	return TRUE;
-}
-
-char * IpVerify :: merge(char * pNewList, char * pOldList)
-{
-    char * pList = NULL;
-
-    if (pOldList) {
-        if (pNewList) {
-            pList = (char *)malloc(strlen(pOldList) + strlen(pNewList) + 2);
-            ASSERT( pList );
-            sprintf(pList, "%s,%s", pNewList, pOldList);
-        }
-        else {
-            pList = strdup(pOldList);
-        }
-    }
-    else {
-        if (pNewList) {
-            pList = strdup(pNewList);
-        }
-    }
-    return pList;
 }
 
 bool IpVerify :: has_user(UserPerm_t * perm, const char * user, perm_mask_t & mask )
