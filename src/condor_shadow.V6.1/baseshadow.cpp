@@ -407,7 +407,7 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 			 getCluster(), getProc(), hold_reason_code, hold_reason_subcode,reason );
 
 	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!" );
+		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!\n" );
 		DC_Exit( JOB_SHOULD_HOLD );
 	}
 
@@ -493,7 +493,7 @@ BaseShadow::mockTerminateJob( MyString exit_reason,
 void BaseShadow::removeJobPre( const char* reason )
 {
 	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "In removeJob() w/ NULL JobAd!" );
+		dprintf( D_ALWAYS, "In removeJob() w/ NULL JobAd!\n" );
 	}
 	dprintf( D_ALWAYS, "Job %d.%d is being removed: %s\n", 
 			 getCluster(), getProc(), reason );
@@ -560,7 +560,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	bool signaled;
 
 	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "In terminateJob() w/ NULL JobAd!" );
+		dprintf( D_ALWAYS, "In terminateJob() w/ NULL JobAd!\n" );
 	}
 
 	/* The first thing we do is record that we are in a termination pending
@@ -732,7 +732,7 @@ BaseShadow::evictJob( int reason )
 			 getCluster(), getProc(), from_where.Value() );
 
 	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "In evictJob() w/ NULL JobAd!" );
+		dprintf( D_ALWAYS, "In evictJob() w/ NULL JobAd!\n" );
 		DC_Exit( reason );
 	}
 
@@ -761,7 +761,7 @@ void
 BaseShadow::requeueJob( const char* reason )
 {
 	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "In requeueJob() w/ NULL JobAd!" );
+		dprintf( D_ALWAYS, "In requeueJob() w/ NULL JobAd!\n" );
 	}
 	dprintf( D_ALWAYS, 
 			 "Job %d.%d is being put back in the job queue: %s\n", 

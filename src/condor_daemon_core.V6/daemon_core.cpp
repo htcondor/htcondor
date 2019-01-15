@@ -3214,7 +3214,7 @@ DaemonCore::Do_Wake_up_select()
 		async_pipe_signal = true;
 #ifdef WIN32
 		if (GetCurrentThreadId() == dcmainThreadId) {
-			dprintf (D_ALWAYS, "DaemonCore::Do_Wake_up_select called from main thread. this should never happen.");
+			dprintf (D_ALWAYS, "DaemonCore::Do_Wake_up_select called from main thread. this should never happen.\n");
 			return false;
 		}
 		fSuccess = send(async_pipe[1].get_socket(), "!", 1, 0) > 0;

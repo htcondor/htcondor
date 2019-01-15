@@ -3546,7 +3546,7 @@ obtainAdsFromCollector (
 			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
 
 			if(!ad->LookupString(ATTR_NAME, &remoteHost)) {
-				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.");
+				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.\n");
 				continue;
 			}
 

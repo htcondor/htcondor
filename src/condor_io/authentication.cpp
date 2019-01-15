@@ -592,7 +592,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 					dprintf (D_SECURITY, "Globus-based mapping failed; will use gsi@unmapped.\n");
 				}
 #else
-				dprintf(D_ALWAYS, "ZKM: GSI not compiled, but was used?!!");
+				dprintf(D_ALWAYS, "ZKM: GSI not compiled, but was used?!!\n");
 #endif
 				return;
 			} else {
@@ -623,7 +623,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(authentication_name);
 		dprintf(D_SECURITY, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
 #else
-		dprintf(D_ALWAYS, "ZKM: GSI not compiled, so can't call nameGssToLocal!!");
+		dprintf(D_ALWAYS, "ZKM: GSI not compiled, so can't call nameGssToLocal!!\n");
 #endif
 	} else {
 		dprintf (D_FULLDEBUG, "ZKM: global_map_file not present!\n");

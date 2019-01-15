@@ -793,7 +793,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	// Create temporary file to store myproxy-get-delegation's stderr
 	myProxyEntry->get_delegation_err_filename = create_temp_file();
 	if(!myProxyEntry->get_delegation_err_filename) {
-		dprintf( D_ALWAYS, "Failed to create temp file");
+		dprintf( D_ALWAYS, "Failed to create temp file\n");
 	} else {
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'chmod' ignored.
 		chmod (myProxyEntry->get_delegation_err_filename, 0600);

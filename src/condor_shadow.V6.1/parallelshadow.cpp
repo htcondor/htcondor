@@ -968,7 +968,7 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 		ExecuteEvent event;
 		event.setExecuteHost( "MPI_job" );
 		if ( !uLog.writeEvent( &event, jobAd )) {
-			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
+			dprintf ( D_ALWAYS, "Unable to log EXECUTE event.\n" );
 		}
 		
 			// Now that everything is started, we can finally invoke

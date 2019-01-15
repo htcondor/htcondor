@@ -1648,7 +1648,7 @@ void CollectorDaemon::Config()
 		} else if (YourStringNoCase("small_table_and_query") == policy) {
 			HandleQueryInProcPolicy = HandleQueryInProcSmallTableAndQuery;
 		} else {
-			dprintf(D_ALWAYS, "Unknown value for HANDLE_QUERY_IN_PROC_POLICY, using default of SMALL_TABLE_OR_QUERY");
+			dprintf(D_ALWAYS, "Unknown value for HANDLE_QUERY_IN_PROC_POLICY, using default of SMALL_TABLE_OR_QUERY\n");
 		}
 	}
 

@@ -1898,13 +1898,13 @@ CStarter::createTempExecuteDir( void )
 				FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
 					GetProcAddress(advapi,"EncryptionDisable");
 				if ( !EncryptionDisable ) {
-					dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()\n");
 					efs_support = false;
 				}
 				FPEncryptFileA EncryptFile = (FPEncryptFileA) 
 					GetProcAddress(advapi,"EncryptFileA");
 				if ( !EncryptFile ) {
-					dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()\n");
 					efs_support = false;
 				}
 			}
@@ -2693,7 +2693,7 @@ CStarter::PeriodicCkpt( void )
 						false,
 						err.holdCode(),
 						err.holdSubCode());
-					dprintf(D_ALWAYS,"failed to change sandbox to condor ownership before checkpoint");
+					dprintf(D_ALWAYS,"failed to change sandbox to condor ownership before checkpoint\n");
 					return false;
 				}
 			}

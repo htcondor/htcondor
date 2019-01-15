@@ -243,7 +243,7 @@ CondorLockFile::GetLock( time_t lock_ht )
 		// Step 3: Set the expiration time
 	status = SetExpireTime( temp_file.c_str( ), lock_ht );
 	if ( status ) {
-		dprintf( D_ALWAYS, "GetLock: Error setting expiration time" );
+		dprintf( D_ALWAYS, "GetLock: Error setting expiration time\n" );
 		unlink( temp_file.c_str( ) );
 		return -1;
 	}
