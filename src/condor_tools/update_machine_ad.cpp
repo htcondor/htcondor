@@ -80,7 +80,8 @@ int main( int argc, char ** argv ) {
 	}
 
 	int isEOF = 0, isError = 0, isEmpty = 0;
-	ClassAd update( f, "\n", isEOF, isError, isEmpty );
+	ClassAd update;
+	InsertFromFile( f, update, "\n", isEOF, isError, isEmpty );
 	if( isError || isEmpty ) {
 		fprintf( stderr, "Failed to parse '%s', aborting.\n", file );
 		//if( isEOF ) { fprintf( stderr, "File ended unexpectedly.  Please add a blank line the end of the file.\n" ); }

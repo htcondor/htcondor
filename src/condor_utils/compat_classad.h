@@ -96,10 +96,12 @@ int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::
 
 bool initAdFromString(char const *str, classad::ClassAd &ad);
 
-/* helper for constructor that reads from file
+/* Fill in a ClassAd by reading from file
  * returns number of attributes added, 0 if none, -1 if parse error
+ * The second form emulates the behavior of an old ClassAd constructor.
  */
 int InsertFromFile(FILE*, classad::ClassAd &ad, bool& is_eof, int& error, ClassAdFileParseHelper* phelp=NULL);
+int InsertFromFile(FILE*, classad::ClassAd &ad, const std::string &delim, int& is_eof, int& error, int &empty);
 
 // Copy value of source_attr in source_ad to target_attr in target_ad.
 // If source_attr isn't in source_ad, target_attr is deleted, if
@@ -135,9 +137,6 @@ class ClassAd : public classad::ClassAd
 
 		/**@name Deprecated functions (only for use within Condor) */
 		//@{
-
-		/** A constructor that reads old ClassAds from a FILE */
-	ClassAd(FILE*,const char*delim,int&isEOF,int&error,int&empty);	// Constructor, read from file.
 
 		/* This is a pass-through to ClassAd::Insert(). Because we define
 		 * our own Insert() below, our parent's Insert() won't be found

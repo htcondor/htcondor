@@ -217,7 +217,8 @@ check_recovery_file( const char *execute_dir )
 	int eof = 0;
 	int error = 0;
 	int empty = 0;
-	recovery_ad = new ClassAd( recovery_fp, "***", eof, error, empty );
+	recovery_ad = new ClassAd;
+	InsertFromFile( recovery_fp, *recovery_ad, "***", eof, error, empty );
 	if ( error || empty ) {
 		fclose( recovery_fp );
 		if (unlink(recovery_file.c_str()) < 0) {

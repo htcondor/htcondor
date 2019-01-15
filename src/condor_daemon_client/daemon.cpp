@@ -1861,7 +1861,8 @@ Daemon::readLocalClassAd( const char* subsys )
 	addr_file = NULL;
 
 	int adIsEOF, errorReadingAd, adEmpty = 0;
-	adFromFile = new ClassAd(addr_fp, "...", adIsEOF, errorReadingAd, adEmpty);
+	adFromFile = new ClassAd;
+	InsertFromFile(addr_fp, *adFromFile, "...", adIsEOF, errorReadingAd, adEmpty);
 	ASSERT(adFromFile);
 	if(!m_daemon_ad_ptr) {
 		m_daemon_ad_ptr = new ClassAd(*adFromFile);

@@ -2026,7 +2026,8 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		}
 		if( updateAdFile ) {
 			int isEOF, error, empty;
-			ClassAd updateAd( updateAdFile, "\n", isEOF, error, empty );
+			ClassAd updateAd;
+			InsertFromFile( updateAdFile, updateAd, "\n", isEOF, error, empty );
 			fclose( updateAdFile );
 
 			while( (attrName = m_job_update_attrs.next()) != NULL ) {

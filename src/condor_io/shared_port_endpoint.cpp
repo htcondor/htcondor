@@ -714,7 +714,8 @@ SharedPortEndpoint::InitRemoteAddress()
 	}
 
 	int adIsEOF = 0, errorReadingAd = 0, adEmpty = 0;
-	ClassAd *ad = new ClassAd(fp, "[classad-delimiter]", adIsEOF, errorReadingAd, adEmpty);
+	ClassAd *ad = new ClassAd;
+	InsertFromFile(fp, *ad, "[classad-delimiter]", adIsEOF, errorReadingAd, adEmpty);
 	ASSERT(ad);
 	fclose( fp );
 

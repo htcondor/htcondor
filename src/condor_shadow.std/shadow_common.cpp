@@ -689,7 +689,8 @@ InitJobAd(int cluster, int proc)
 		int isError = 0;
 		int isEmpty = 0;
 		if ( ipc_fp ) {
-			JobAd = new ClassAd(ipc_fp,"***",isEOF,isError,isEmpty);
+			JobAd = new ClassAd;
+			InsertFromFile(ipc_fp,*JobAd,"***",isEOF,isError,isEmpty);
 			if( ! is_stdin ) {
 				fclose( ipc_fp );
 				unlink( IpcFile );

@@ -1241,77 +1241,6 @@ ClassAd::~ClassAd()
 {
 }
 
-ClassAd::
-ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
-{
-	if ( !m_initConfig ) {
-		this->Reconfig();
-		m_initConfig = true;
-	}
-
-	DisableDirtyTracking();
-
-	ResetName();
-    ResetExpr();
-
-
-	int index;
-	MyString buffer;
-	MyStringFpSource myfs(file, false);
-	size_t delimLen = strlen( delimitor );
-
-	empty = TRUE;
-
-	while( 1 ) {
-
-			// get a line from the file
-		if ( buffer.readLine( myfs, false ) == false ) {
-			error = ( isEOF = feof( file ) ) ? 0 : errno;
-			return;
-		}
-
-			// did we hit the delimitor?
-		if ( strncmp( buffer.Value(), delimitor, delimLen ) == 0 ) {
-				// yes ... stop
-			isEOF = feof( file );
-			error = 0;
-			return;
-		}
-
-			// Skip any leading white-space
-		index = 0;
-		while ( index < buffer.Length() &&
-				( buffer[index] == ' ' || buffer[index] == '\t' ) ) {
-			index++;
-		}
-
-			// if the rest of the string is empty, try reading again
-			// if it starts with a pound character ("#"), treat as a comment
-		if( index == buffer.Length() || buffer[index] == '\n' ||
-			buffer[index] == '#' ) {
-			continue;
-		}
-
-			// Insert the string into the classad
-		if( Insert( buffer.Value() ) == FALSE ) { 	
-				// print out where we barfed to the log file
-			dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n",
-					buffer.Value());
-				// read until delimitor or EOF; whichever comes first
-			buffer = "";
-			while ( strncmp( buffer.Value(), delimitor, delimLen ) &&
-					!feof( file ) ) {
-				buffer.readLine( myfs, false );
-			}
-			isEOF = feof( file );
-			error = -1;
-			return;
-		} else {
-			empty = FALSE;
-		}
-	}
-}
-
 CondorClassAdFileParseHelper::~CondorClassAdFileParseHelper()
 {
 	switch (parse_type) {
@@ -1637,6 +1566,16 @@ parse_line:
 	}
 }
 
+int
+InsertFromFile(FILE *file, classad::ClassAd &ad, const std::string &delim, int& is_eof, int& error, int &empty)
+{
+	CondorClassAdFileParseHelper helper(delim);
+	bool eof_bool = false;
+	int c_attrs = InsertFromFile(file, ad, eof_bool, error, &helper);
+	is_eof = eof_bool;
+	empty = c_attrs <= 0;
+	return c_attrs;
+}
 
 bool CondorClassAdFileIterator::begin(
 	FILE* fh,

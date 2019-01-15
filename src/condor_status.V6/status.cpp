@@ -1793,7 +1793,8 @@ firstPass (int argc, char *argv[])
 			target = argv[i];
 			FILE *targetFile = safe_fopen_wrapper_follow(target, "r");
 			int iseof, iserror, empty;
-			mainPP.targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
+			mainPP.targetAd = new ClassAd;
+			InsertFromFile(targetFile, *mainPP.targetAd, "\n\n", iseof, iserror, empty);
 			fclose(targetFile);
 		} else
 		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
