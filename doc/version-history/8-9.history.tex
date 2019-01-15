@@ -80,6 +80,14 @@ including the submitting of jobs to or running jobs on that instance.
 the \Condor{master} has been removed from the contributed source. 
 \Ticket{6809}
 
+\item Scheduler Universe jobs now start in order of priority, instead of random 
+order. This is most typically used for DAGMan. When running \Condor{submit_dag} 
+against a .dag file, you can use the -priority <N> flag to set the priority
+for the overall \Condor{dagman} job. When the \Condor{schedd} is starting new 
+Scheduler Universe jobs, the highest priority queued job will start first. If 
+all queued Scheduler Universe jobs have equal priority, they get started in 
+order of subnmission.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
