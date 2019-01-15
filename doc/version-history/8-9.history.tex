@@ -12,6 +12,36 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-9-1}Version 8.9.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.9.1 not yet released.
+%\item HTCondor version 8.9.1 released on Month Date, 2019.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-9-0}Version 8.9.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -49,6 +79,14 @@ including the submitting of jobs to or running jobs on that instance.
 \item the \Condor{hdfs} daemon which allowed the hdfs daemons to run under
 the \Condor{master} has been removed from the contributed source. 
 \Ticket{6809}
+
+\item Scheduler Universe jobs now start in order of priority, instead of random 
+order. This is most typically used for DAGMan. When running \Condor{submit_dag} 
+against a .dag file, you can use the -priority <N> flag to set the priority
+for the overall \Condor{dagman} job. When the \Condor{schedd} is starting new 
+Scheduler Universe jobs, the highest priority queued job will start first. If 
+all queued Scheduler Universe jobs have equal priority, they get started in 
+order of subnmission.
 
 \end{itemize}
 
