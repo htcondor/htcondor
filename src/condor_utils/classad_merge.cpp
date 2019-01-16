@@ -31,7 +31,6 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 		return;
 	}
 
-	merge_from->ResetName();
 	merge_from->ResetExpr();
 
 	bool was_dirty_tracking = merge_into->SetDirtyTracking(mark_dirty);
@@ -83,7 +82,6 @@ int MergeClassAdsIgnoring(ClassAd *merge_into, ClassAd *merge_from, const AttrNa
 		return 0;
 	}
 
-	merge_from->ResetName();
 	merge_from->ResetExpr();
 
 	bool was_dirty_tracking = merge_into->SetDirtyTracking(mark_dirty);

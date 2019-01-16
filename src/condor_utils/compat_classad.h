@@ -355,9 +355,6 @@ class ClassAd : public classad::ClassAd
 
     void ResetExpr();
 
-	void ResetName();
-	const char *NextNameOriginal();
-
 	bool NextExpr( const char *&name, ExprTree *&value );
 
 	static void Reconfig();
@@ -370,9 +367,6 @@ class ClassAd : public classad::ClassAd
 		ItrInThisAd,
 		ItrInChain
 	};
-
-	classad::ClassAd::iterator m_nameItr;
-	ItrStateEnum m_nameItrState;
 
 	classad::ClassAd::iterator m_exprItr;
 	ItrStateEnum m_exprItrState;

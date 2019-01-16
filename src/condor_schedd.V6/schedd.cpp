@@ -7712,25 +7712,23 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 			// Carry Negotiator Match expressions over from the
 			// match record.
-		match->my_match_ad->ResetName();
-		char const *c_name;
 		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-		while( (c_name=match->my_match_ad->NextNameOriginal()) ) {
-			if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(c_name);
+		for ( auto itr = match->my_match_ad->begin(); itr != match->my_match_ad->end(); itr++ ) {
+			if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(itr->first.c_str());
 				if ( expr ) {
 					continue;
 				}
-				expr = match->my_match_ad->LookupExpr(c_name);
+				expr = itr->second;
 				if( !expr ) {
 					continue;
 				}
 				const char *new_value = NULL;
 				new_value = ExprTreeToString(expr);
 				ASSERT(new_value);
-				msg->leftover_startd_ad()->AssignExpr(c_name,new_value);
+				msg->leftover_startd_ad()->AssignExpr(itr->first.c_str(),new_value);
  				dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from match record.\n",
-                                	slot_name, c_name, new_value);
+				         slot_name, itr->first.c_str(), new_value);
 			}
 		}
 

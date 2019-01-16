@@ -1203,7 +1203,6 @@ ClassAd::ClassAd()
 		m_initConfig = true;
 	}
 
-	ResetName();
     ResetExpr();
 
 	DisableDirtyTracking();
@@ -1218,7 +1217,6 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 
 	CopyFrom( ad );
 
-	ResetName();
     ResetExpr();
 
 }
@@ -1232,7 +1230,6 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 
 	CopyFrom( ad );
 
-	ResetName();
     ResetExpr();
 
 }
@@ -2692,39 +2689,6 @@ void ClassAd::
 ResetExpr()
 {
 	m_exprItrState = ItrUninitialized;
-}
-
-void ClassAd::
-ResetName()
-{
-	m_nameItrState = ItrUninitialized;
-}
-
-const char *ClassAd::
-NextNameOriginal()
-{
-	const char *name = NULL;
-	classad::ClassAd *chained_ad = GetChainedParentAd();
-
-	if( m_nameItrState == ItrUninitialized ) {
-		m_nameItr = begin();
-		m_nameItrState = ItrInThisAd;
-	}
-
-	// After iterating through all the names in this ad,
-	// get all the names in our chained ad as well.
-	if ( chained_ad && m_nameItrState != ItrInChain && m_nameItr == end() ) {
-		m_nameItr = chained_ad->begin();
-		m_nameItrState = ItrInChain;
-	}
-	if ( ( m_nameItrState!=ItrInChain && m_nameItr == end() ) ||
-		 ( m_nameItrState==ItrInChain && chained_ad == NULL ) ||
-		 ( m_nameItrState==ItrInChain && m_nameItr == chained_ad->end() ) ) {
-		return NULL;
-	}
-	name = m_nameItr->first.c_str();
-	m_nameItr++;
-	return name;
 }
 
 

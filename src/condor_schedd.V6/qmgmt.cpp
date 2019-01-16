@@ -5618,18 +5618,16 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		StringList AttrsToExpand;
 		const char * curr_attr_to_expand;
 		AttrsToExpand.append(ATTR_JOB_CMD);
-		ad->ResetName();
-		const char *attr_name = ad->NextNameOriginal();
-		for ( ; attr_name; attr_name = ad->NextNameOriginal() ) {
-			if ( strncasecmp(attr_name,"MATCH_",6) == 0 ) {
+		for ( auto itr = expanded_ad->begin(); itr != expanded_ad->end(); itr++ ) {
+			if ( strncasecmp(itr->first.c_str(),"MATCH_",6) == 0 ) {
 					// We do not want to expand MATCH_XXX attributes,
 					// because these are used to store the result of
 					// previous expansions, which could potentially
 					// contain literal $$(...) in the replacement text.
 				continue;
 			}
-			if ( strcasecmp(attr_name,ATTR_JOB_CMD) ) { 
-				AttrsToExpand.append(attr_name);
+			if ( strcasecmp(itr->first.c_str(),ATTR_JOB_CMD) ) {
+				AttrsToExpand.append(itr->first.c_str());
 			}
 		}
 
@@ -5946,22 +5944,20 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				// Copy NegotiatorMatchExprXXX attributes from startd ad
 				// to the job ad.  These attributes were inserted by the
 				// negotiator.
-			startd_ad->ResetName();
-			char const *c_name;
 			size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-			while( (c_name=startd_ad->NextNameOriginal()) ) {
-				if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-					ExprTree *expr = startd_ad->LookupExpr(c_name);
+			for ( auto itr = startd_ad->begin(); itr != startd_ad->end(); itr++ ) {
+				if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+					ExprTree *expr = itr->second;
 					if( !expr ) {
 						continue;
 					}
 					const char *new_value = NULL;
 					new_value = ExprTreeToString(expr);
 					ASSERT(new_value);
-					expanded_ad->AssignExpr(c_name,new_value);
+					expanded_ad->AssignExpr(itr->first.c_str(),new_value);
 
 					MyString match_exp_name = MATCH_EXP;
-					match_exp_name += c_name;
+					match_exp_name += itr->first;
 					if ( SetAttribute(cluster_id,proc_id,match_exp_name.Value(),new_value) < 0 )
 					{
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
