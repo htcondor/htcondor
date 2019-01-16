@@ -4,9 +4,14 @@
 #include "../condor_utils/condor_url.h"
 #include "multifile_curl_plugin.h"
 #include "utc_time.h"
+#include <exception>
+#include <sstream>
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <fstream>
+#include <cstdio>
+#include <rapidjson/document.h>
 
 #define MAX_RETRY_ATTEMPTS 20
 
@@ -46,6 +51,56 @@ CurlWriteCallback(char *buffer, size_t size, size_t nitems, void *userdata) {
     return fwrite(buffer, size, nitems, static_cast<FILE*>(userdata));
 }
 
+
+void
+GetToken(const std::string & cred_name, std::string & token) {
+	if (cred_name.empty()) {
+		return;
+	}
+	const char *creddir = getenv("_CONDOR_CREDS");
+	if (!creddir) {
+		std::stringstream ss; ss << "Credential for " << cred_name << " requested by $_CONDOR_CREDS not set";
+		throw std::runtime_error(ss.str());
+	}
+
+	std::string cred_path = std::string(creddir) + DIR_DELIM_STRING + cred_name + ".use";
+	int fd = open(cred_path.c_str(), O_RDONLY);
+	if (-1 == fd) {
+		fprintf( stderr, "Error: Unable to open credential file %s: %s (errno=%d)", cred_path.c_str(),
+			strerror(errno), errno);
+		std::stringstream ss; ss << "Unable to open credential file " << cred_path << ": " << strerror(errno) << " (errno=" << errno << ")";
+		throw std::runtime_error(ss.str());
+	}
+	close(fd);
+	std::ifstream istr(cred_path, std::ios::binary);
+	if (!istr.is_open()) {
+		throw std::runtime_error("Failed to reopen credential file");
+	}
+	for (std::string line; std::getline(istr, line); ) {
+		auto iter = line.begin();
+		while (std::isspace(*iter)) {iter++;}
+		if (*iter == '#') continue;
+		rapidjson::Document doc;
+		if (doc.Parse(line.c_str()).HasParseError()) {
+			// DO NOT include the error message as part of the exception; the error
+			// message may include private information in the credential file itself,
+			// which we don't want to go into the public hold message.
+			throw std::runtime_error("Unable to parse token as JSON");
+                }
+		if (!doc.IsObject()) {
+			throw std::runtime_error("Token is not a JSON object");
+		}
+		if (!doc.HasMember("access_token")) {
+			throw std::runtime_error("No 'access_token' key in JSON object");
+		}
+		auto &access_obj = doc["access_token"];
+		if (!access_obj.IsString()) {
+			throw std::runtime_error("'access_token' value is not a string");
+		}
+		token = access_obj.GetString();
+	}
+}
+
 }
 
 MultiFileCurlPlugin::MultiFileCurlPlugin( bool diagnostic ) :
@@ -72,9 +127,10 @@ MultiFileCurlPlugin::InitializeCurl() {
     return init;
 }
 
-
 void
-MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url) {
+MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::string &cred,
+        struct curl_slist *& header_list)
+{
     curl_easy_setopt( _handle, CURLOPT_URL, url.c_str() );
     curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
 
@@ -87,16 +143,26 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url) {
     curl_easy_setopt( _handle, CURLOPT_READDATA, NULL );
     curl_easy_setopt( _handle, CURLOPT_WRITEDATA, NULL );
 
+    std::string token;
+
     // Libcurl options for HTTP, HTTPS and FILE
     if( !strncasecmp( url.c_str(), "http://", 7 ) ||
             !strncasecmp( url.c_str(), "https://", 8 ) ||
             !strncasecmp( url.c_str(), "file://", 7 ) ) {
         curl_easy_setopt( _handle, CURLOPT_FOLLOWLOCATION, 1 );
         curl_easy_setopt( _handle, CURLOPT_HEADERFUNCTION, &HeaderCallback );
+
+        GetToken(cred, token);
     }
     // Libcurl options for FTP
     else if( !strncasecmp( url.c_str(), "ftp://", 6 ) ) {
         curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, &FtpWriteCallback );
+    }
+
+    if (!token.empty()) {
+        std::string authz_header = "Authorization: Bearer ";
+        authz_header += token;
+        header_list = curl_slist_append(header_list, authz_header.c_str());
     }
 
     // * If the following option is set to 0, then curl_easy_perform()
@@ -169,14 +235,24 @@ MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
 }
 
 int
-MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &local_file_name ) {
+MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &local_file_name,
+        const std::string &cred )
+{
     FILE *file = nullptr;
     int rval = -1;
 
     if( !(file=OpenLocalFile(local_file_name, "r")) ) {
         return rval;
     }
-    InitializeCurlHandle( url );
+    struct curl_slist *header_list = NULL;
+    try {
+        InitializeCurlHandle( url, cred, header_list );
+    } catch (const std::exception &exc) {
+        _this_file_stats->TransferSuccess = false;
+        _this_file_stats->TransferError = exc.what();
+        fprintf( stderr, "Error: %s.\n", exc.what() );
+        return rval;
+    }   
 
     int fd = fileno(file);
     struct stat stat_buf;
@@ -190,12 +266,16 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
     curl_easy_setopt( _handle, CURLOPT_UPLOAD, 1L);
     curl_easy_setopt( _handle, CURLOPT_INFILESIZE_LARGE, (curl_off_t)stat_buf.st_size );
 
+    if (header_list) curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+
     // Update some statistics
     _this_file_stats->TransferType = "upload";
     _this_file_stats->TransferTries += 1;
 
     // Perform the curl request
     rval = curl_easy_perform( _handle );
+
+    if (header_list) curl_slist_free_all(header_list);
 
     FinishCurlTransfer( rval, file );
 
@@ -221,10 +301,20 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
     if ( !(file=OpenLocalFile(local_file_name, partial_bytes ? "a+" : "w")) ) {
         return rval;
     }
-    InitializeCurlHandle( url );
+    struct curl_slist *header_list = NULL;
+    try {
+        InitializeCurlHandle( url, cred, header_list );
+    } catch (const std::exception &exc) {
+        _this_file_stats->TransferSuccess = false;
+        _this_file_stats->TransferError = exc.what();
+        fprintf( stderr, "Error: %s.\n", exc.what() );
+        return rval;
+    }   
 
     // Libcurl options that apply to all transfer protocols
     curl_easy_setopt( _handle, CURLOPT_WRITEDATA, file );
+
+    if (header_list) curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
 
     // If we are attempting to resume a download, set additional flags
     if( partial_bytes ) {
@@ -238,6 +328,8 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
 
     // Perform the curl request
     rval = curl_easy_perform( _handle );
+
+    if (header_list) curl_slist_free_all(header_list);
 
     // Check if the request completed partially. If so, set some
     // variables so we can attempt a resume on the next try.
@@ -356,7 +448,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
                 full_url = full_url.substr(offset + 1);
             }
 
-            file_rval = UploadFile( full_url, local_file_name );
+            file_rval = UploadFile( full_url, local_file_name, cred );
             // If curl request is successful, break out of the loop
             if( file_rval == CURLE_OK ) {
                 break;
