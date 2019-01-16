@@ -1288,10 +1288,11 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 	// of the machine.
 	//
 
-	cap->ResetExpr();
 	ExprTree * expr = NULL;
 	const char * attr = NULL;
-	while( cap->NextExpr( attr, expr ) ) {
+	for ( auto itr = cap->begin(); itr != cap->end(); itr++ ) {
+		attr = itr->first.c_str();
+		expr = itr->second;
 		//
 		// Copy the whole ad over, excepting special or computed attributes.
 		//

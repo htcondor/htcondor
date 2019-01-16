@@ -488,8 +488,9 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	ExprTree * tree;
 	const char *lhstr = 0;
 	const char *rhstr = 0;
-	src.ResetExpr();
-	while( src.NextExpr(lhstr, tree) ) {
+	for( auto itr = src.begin(); itr != src.end(); itr++ ) {
+		lhstr = itr->first.c_str();
+		tree = itr->second;
 		if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 			continue;
 		}

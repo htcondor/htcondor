@@ -353,23 +353,11 @@ class ClassAd : public classad::ClassAd
 		 */
 	int EvalBool  (const char *name, classad::ClassAd *target, int &value);
 
-    void ResetExpr();
-
-	bool NextExpr( const char *&name, ExprTree *&value );
-
 	static void Reconfig();
 	static bool m_initConfig;
 	static bool m_strictEvaluation;
 
  private:
-	enum ItrStateEnum {
-		ItrUninitialized,
-		ItrInThisAd,
-		ItrInChain
-	};
-
-	classad::ClassAd::iterator m_exprItr;
-	ItrStateEnum m_exprItrState;
 
 	// poison Assign of ExprTree* type for public users
 	// otherwise the compiler will resolve against the bool overload 

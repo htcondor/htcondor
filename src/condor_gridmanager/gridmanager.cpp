@@ -175,7 +175,6 @@ requestScheddUpdate( BaseJob *job, bool notify )
 	// Check if there's anything that actually requires contacting the
 	// schedd. If not, just return true (i.e. update is complete)
 
-	job->jobAd->ResetExpr();
 	if ( job->deleteFromGridmanager == false &&
 		 job->deleteFromSchedd == false &&
 		 job->jobAd->dirtyBegin() == job->jobAd->dirtyEnd() ) {

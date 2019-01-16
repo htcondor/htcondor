@@ -376,13 +376,14 @@ OfflineCollectorPlugin::mergeClassAd (
 		return;
 	}
 
-	ad.ResetExpr();
 	ExprTree *expr;
 	const char *attr_name;
-	while (ad.NextExpr(attr_name, expr)) {
+	for ( auto itr = ad.begin(); itr != ad.end(); itr++ ) {
 		MyString new_val;
 		MyString old_val;
 
+		attr_name = itr->first.c_str();
+		expr = itr->second;
 		ASSERT( attr_name && expr );
 
 		new_val = ExprTreeToString( expr );

@@ -2541,10 +2541,11 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 {
 	ASSERT( c_jobad );
 
-	update_ad.ResetExpr();
 	const char *name;
 	ExprTree *expr;
-	while( update_ad.NextExpr(name, expr) ) {
+	for ( auto itr = update_ad.begin(); itr != update_ad.end(); itr++ ) {
+		name = itr->first.c_str();
+		expr = itr->second;
 
 		ASSERT( name );
 		if( !strcmp(name,ATTR_MY_TYPE) ||

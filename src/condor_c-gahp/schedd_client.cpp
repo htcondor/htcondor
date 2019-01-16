@@ -615,11 +615,12 @@ doContactSchedd()
 			goto contact_schedd_disconnect;
 		}
 
-		current_command->classad->ResetExpr();
 		ExprTree *tree;
 		const char *lhstr, *rhstr;
-		while( current_command->classad->NextExpr(lhstr, tree) ) {
+		for( auto itr = current_command->classad->begin(); itr != current_command->classad->end(); itr++ ) {
 
+			lhstr = itr->first.c_str();
+			tree = itr->second;
 			rhstr = ExprTreeToString( tree );
 			if( !lhstr || !rhstr) {
 				formatstr( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
@@ -969,10 +970,11 @@ update_report_result:
 			}
 
 			// Set all the classad attribute on the remote classad
-			current_command->classad->ResetExpr();
 			ExprTree *tree;
 			const char *lhstr, *rhstr;
-			while( current_command->classad->NextExpr(lhstr, tree) ) {
+			for( auto itr = current_command->classad->begin(); itr != current_command->classad->end(); itr++ ) {
+				lhstr = itr->first.c_str();
+				tree = itr->second;
 
 				if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 					continue;

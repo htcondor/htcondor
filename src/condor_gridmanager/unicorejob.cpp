@@ -158,14 +158,7 @@ UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 
 		// If we already have an unprocessed update ad, merge the two,
 		// with the new one overwriting duplicate attributes.
-	const char *new_name;
-	ExprTree *new_expr;
-
-	update_ad->ResetExpr();
-	while ( update_ad->NextExpr( new_name, new_expr ) ) {
-		ExprTree * pTree = new_expr->Copy();
-		job->newRemoteStatusAd->Insert( new_name, pTree );
-	}
+	job->newRemoteStatusAd->Update( *update_ad );
 
 	job->SetEvaluateState();
 

@@ -263,8 +263,9 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
-	s_ad->ResetExpr();
-	while( s_ad->NextExpr(lhstr, tree) ) {
+	for (auto itr = s_ad->begin(); itr != s_ad->end(); itr++) {
+		lhstr = itr->first.c_str();
+		tree = itr->second;
 		pCopy=0;
 	
 		if (ignored_attr_list) {

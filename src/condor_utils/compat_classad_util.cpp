@@ -597,13 +597,17 @@ bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 	return false;
 }
 
+// TODO ClassAd::SameAs() does a better job, but lacks an ignore list.
+//   This function will return true if ad1 has attributes that ad2 lacks.
+//   Both functions ignore any chained parent ad.
 bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad2, StringList *ignored_attrs, bool verbose )
 {
 	classad::ExprTree *ad1_expr, *ad2_expr;
 	const char* attr_name;
-	ad2->ResetExpr();
 	bool found_diff = false;
-	while( ad2->NextExpr(attr_name, ad2_expr) && ! found_diff ) {
+	for ( auto itr = ad2->begin(); itr != ad2->end(); itr++ ) {
+		attr_name = itr->first.c_str();
+		ad2_expr = itr->second;
 		if( ignored_attrs && ignored_attrs->contains_anycase(attr_name) ) {
 			if( verbose ) {
 				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): skipping \"%s\"\n",

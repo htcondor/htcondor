@@ -3000,8 +3000,9 @@ int NewProcFromAd (ClassAd * job, int ProcId, JobQueueJob * ClusterAd, SetAttrib
 	const char *attr;
 	std::string buffer;
 
-	job->ResetExpr();
-	while( job->NextExpr(attr, tree) ) {
+	for ( auto itr = job->begin(); itr != job->end(); itr++ ) {
+		attr = itr->first.c_str();
+		tree = itr->second;
 		if ( ! attr || ! tree) {
 			dprintf(D_ALWAYS, "ERROR: Null attribute name or value for job %d.%d\n", ClusterId, ProcId );
 			return -1;

@@ -433,8 +433,9 @@ VMType::createConfigUsingScript(const char* configfile)
 	const char *name;
 	ExprTree* expr = NULL;
 
-	m_classAd.ResetExpr();
-	while( m_classAd.NextExpr(name, expr) ) {
+	for( auto itr = m_classAd.begin(); itr != m_classAd.end(); itr++ ) {
+		name = itr->first.c_str();
+		expr = itr->second;
 		if( !strncasecmp( name, "JobVM", strlen("JobVM") ) ||
 			!strncasecmp( name, "VMPARAM", strlen("VMPARAM") )) {
 

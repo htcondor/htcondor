@@ -1203,8 +1203,6 @@ ClassAd::ClassAd()
 		m_initConfig = true;
 	}
 
-    ResetExpr();
-
 	DisableDirtyTracking();
 }
 
@@ -1216,9 +1214,6 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 	}
 
 	CopyFrom( ad );
-
-    ResetExpr();
-
 }
 
 ClassAd::ClassAd( const classad::ClassAd &ad )
@@ -1229,9 +1224,6 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 	}
 
 	CopyFrom( ad );
-
-    ResetExpr();
-
 }
 
 ClassAd::~ClassAd()
@@ -2685,13 +2677,6 @@ GetTargetTypeName( const classad::ClassAd &ad )
 	return targetTypeStr.c_str( );
 }
 
-void ClassAd::
-ResetExpr()
-{
-	m_exprItrState = ItrUninitialized;
-}
-
-
 // Determine if a value is valid to be written to the log. The value
 // is a RHS of an expression. According to LogSetAttribute::WriteBody,
 // the only invalid character is a '\n'.
@@ -2746,32 +2731,6 @@ IsValidAttrName(const char *name) {
 		name++;
 	}
 
-	return true;
-}
-
-bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
-{
-	classad::ClassAd *chained_ad = GetChainedParentAd();
-
-	if( m_exprItrState == ItrUninitialized ) {
-		m_exprItr = begin();
-		m_exprItrState = ItrInThisAd;
-	}
-
-	// After iterating through all the attributes in this ad,
-	// get all the attributes in our chained ad as well.
-	if ( chained_ad && m_exprItrState != ItrInChain && m_exprItr == end() ) {
-		m_exprItr = chained_ad->begin();
-		m_exprItrState = ItrInChain;
-	}
-	if ( ( m_exprItrState!=ItrInChain && m_exprItr == end() ) ||
-		 ( m_exprItrState==ItrInChain && chained_ad == NULL ) ||
-		 ( m_exprItrState==ItrInChain && m_exprItr == chained_ad->end() ) ) {
-		return false;
-	}
-	name = m_exprItr->first.c_str();
-	value = m_exprItr->second;
-	m_exprItr++;
 	return true;
 }
 
