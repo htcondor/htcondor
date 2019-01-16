@@ -2,6 +2,8 @@
 #define CURL_STATICLIB // this has to match the way the curl library was built.
 #endif
 
+#include <string>
+
 #include <curl/curl.h>
 
 using namespace std;
@@ -20,7 +22,7 @@ class MultiFileCurlPlugin {
     ~MultiFileCurlPlugin();
 
     int InitializeCurl();
-    int DownloadFile( const char* url, const char* local_file_name );
+    int DownloadFile( const char* url, const char* local_file_name, const std::string &);
     int DownloadMultipleFiles( string input_filename );
     int ServerSupportsResume( const char* url );
     static size_t HeaderCallback( char* buffer, size_t size, size_t nitems );

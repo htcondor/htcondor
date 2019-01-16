@@ -2,13 +2,71 @@
 #include "condor_classad.h"
 #include "../condor_utils/file_transfer_stats.h"
 #include "../condor_utils/condor_url.h"
+#include "../condor_utils/picojson.h"
 #include "multifile_curl_plugin.h"
 #include "utc_time.h"
 #include <iostream>
+#include <fstream>
+#include <cstdio>
 
 #define MAX_RETRY_ATTEMPTS 20
 
-using namespace std;
+namespace {
+
+bool
+GetToken(const std::string & cred_name, std::string & token) {
+	const char *creddir = getenv("_CONDOR_CREDS");
+	if (!creddir) {
+		fprintf( stderr, "Error: credential for %s requested by $_CONDOR_CREDS not set.\n", cred_name.c_str() );
+		return false;
+	}
+
+	std::string cred_path = std::string(creddir) + DIR_DELIM_STRING + cred_name + ".use";
+	int fd = open(cred_path.c_str(), O_RDONLY);
+	if (-1 == fd) {
+		fprintf( stderr, "Error: Unable to open credential file %s: %s (errno=%d)", cred_path.c_str(),
+			strerror(errno), errno);
+		return false;
+	}
+	close(fd);
+	std::ifstream istr(cred_path, std::ios::binary);
+	if (!istr.is_open()) {
+		return false;
+	}
+	for (std::string line; std::getline(istr, line); ) {
+		auto iter = line.begin();
+		while (std::isspace(*(iter++))) {}
+		if (*iter == '#') continue;
+		auto offset = std::distance(line.begin(), iter);
+		auto token_json = line.substr(offset, line.find(" ", offset + 1));
+		picojson::value json_value;
+		auto err = picojson::parse(json_value, token_json);
+		if (!err.empty()) {
+			fprintf( stderr, "Error: unable to parse token as JSON: %s\n", err.c_str());
+			return false;
+                }
+		if (!json_value.is<picojson::object>()) {
+			fprintf( stderr, "Error: token is not valid JSON object.\n" );
+			return false;
+		}
+		auto json_obj = json_value.get<picojson::object>();
+		auto json_iter = json_obj.find("access_token");
+		if (json_iter == json_obj.end()) {
+			fprintf( stderr, "Error: no 'access_token' key in JSON object.\n" );
+			return false;
+		}
+		if (!json_iter->second.is<std::string>()) {
+			fprintf( stderr, "Error: 'access_token' value is not a string.\n" );
+			return false;
+		}
+		token = json_iter->second.get<std::string>();
+		return true;
+	}
+	return false;
+}
+
+}
+
 
 MultiFileCurlPlugin::MultiFileCurlPlugin( int diagnostic ) :
     _handle ( NULL ),
@@ -38,7 +96,7 @@ MultiFileCurlPlugin::InitializeCurl() {
 }
 
 int 
-MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name ) {
+MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name, const std::string & cred ) {
 
     char error_buffer[CURL_ERROR_SIZE];
     char partial_range[20];
@@ -73,13 +131,28 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name 
         curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
         curl_easy_setopt( _handle, CURLOPT_WRITEDATA, file );
 
+        std::string token;
+
         // Libcurl options for HTTP, HTTPS and FILE
         if( !strncasecmp( url, "http://", 7 ) || 
                             !strncasecmp( url, "https://", 8 ) || 
                             !strncasecmp( url, "file://", 7 ) ) {
+
+            if (!GetToken(cred, token)) {
+                return rval;
+            }
+
             curl_easy_setopt( _handle, CURLOPT_FOLLOWLOCATION, 1 );
             curl_easy_setopt( _handle, CURLOPT_HEADERFUNCTION, this->HeaderCallback );
         }
+
+        struct curl_slist *header_list = NULL;
+        if (!token.empty()) {
+            std::string authz_header = "Authorization: ";
+            authz_header += token;
+            header_list = curl_slist_append(header_list, authz_header.c_str());
+        }
+
         // Libcurl options for FTP
         else if( !strncasecmp( url, "ftp://", 6 ) ) {
             curl_easy_setopt( _handle, CURLOPT_WRITEFUNCTION, this->FtpWriteCallback );
@@ -116,8 +189,12 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name 
         _this_file_stats->TransferType = "download";
         _this_file_stats->TransferTries += 1;
 
+        if (header_list) curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
+
         // Perform the curl request
         rval = curl_easy_perform( _handle );
+
+        if (header_list) curl_slist_free_all(header_list);
 
         // Check if the request completed partially. If so, set some
         // variables so we can attempt a resume on the next try.
@@ -166,7 +243,7 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name 
 }
 
 int
-MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
+MultiFileCurlPlugin::DownloadMultipleFiles( std::string input_filename ) {
 
     classad::ClassAd stats_ad;
     classad::ClassAdUnParser unparser;
