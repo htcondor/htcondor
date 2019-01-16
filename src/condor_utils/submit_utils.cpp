@@ -5378,7 +5378,7 @@ int SubmitHash::SetRequirements()
 				if (file_list) {
 					StringList files(file_list.ptr(), ",");
 					for (const char * file = files.first(); file; file = files.next()) {
-						if (IsUrl(file)){ methods.insert(getURLType(file)); }
+						if (IsUrl(file)){ methods.insert(getURLType(file, true)); }
 					}
 				}
 
@@ -5386,7 +5386,7 @@ int SubmitHash::SetRequirements()
 				file_list.set(submit_param(SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION));
 				if (file_list) {
 					if (IsUrl(file_list)){
-						methods.insert(getURLType(file_list));
+						methods.insert(getURLType(file_list, true));
 					}
 				}
 

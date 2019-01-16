@@ -4721,13 +4721,13 @@ MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const ch
 	}
 
 	// Find the type of transfer
-	MyString method = getURLType( URL );
+	auto method = getURLType( URL, true );
 
 	// Hashtable returns zero if found.
 	if ( plugin_table->lookup( method, plugin ) ) {
 		// no plugin for this type!!!
-		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.Value() );
-		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.Value() );
+		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str() );
+		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
 		return NULL;
 	}
 
@@ -4767,22 +4767,17 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 		return GET_FILE_PLUGIN_FAILED;
 	}
 
-	// extract the protocol/method
-	char* method = (char*) malloc(1 + (colon-URL));
-	ASSERT( method );
-	strncpy(method, URL, (colon-URL));
-	method[(colon-URL)] = '\0';
-
+	// Find the type of transfer
+	auto method = getURLType( URL, true );
 
 	// look up the method in our hash table
 	MyString plugin;
 
 	// hashtable returns zero if found.
-	if (plugin_table->lookup((MyString)method, plugin)) {
+	if (plugin_table->lookup(method.c_str(), plugin)) {
 		// no plugin for this type!!!
-		e.pushf("FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method);
-		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method);
-		free(method);
+		e.pushf("FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str());
+		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 
@@ -4849,9 +4844,6 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 			"reasons.  Run 'ldd' on your plugin and move needed libraries to a system "
 			"location controlled by root. Good luck!\n");
 	}
-
-	// clean up
-	free(method);
 
 	// any non-zero exit from plugin indicates error.  this function needs to
 	// return -1 on error, or zero otherwise, so map plugin_status to the
