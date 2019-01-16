@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "../condor_utils/file_transfer_stats.h"
+#include "../condor_utils/condor_url.h"
 #include "multifile_curl_plugin.h"
 #include "utc_time.h"
 #include <iostream>
@@ -236,7 +237,18 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
                 sleep( retry_count++ );
             #endif
 
-            rval = DownloadFile( url.c_str(), local_file_name.c_str() );
+            // Everything prior to the first '+' is the credential name.
+            std::string full_scheme = getURLType(url.c_str(), false);
+            auto offset = full_scheme.find_last_of("+");
+            auto cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
+
+            // The actual transfer should only be everything after the last '+'
+            std::string full_url = url;
+            if (offset != std::string::npos) {
+                full_url = full_url.substr(offset + 1);
+            }
+
+            rval = DownloadFile( full_url.c_str(), local_file_name.c_str(), cred );
 
             // If curl request is successful, break out of the loop
             if( rval == CURLE_OK ) {
