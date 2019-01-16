@@ -4619,7 +4619,10 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 	priv_state saved_priv = set_condor_priv();
 
 	// Read name of statistics file from params
-	std::string stats_file_path = param( "FILE_TRANSFER_STATS_LOG" );
+	std::string stats_file_path;
+	if (!param( stats_file_path, "FILE_TRANSFER_STATS_LOG" )) {
+		return 1;
+	}
 
 	// First, check for an existing statistics file. 
 	struct stat stats_file_buf;
@@ -4628,7 +4631,7 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 		// If it already exists and is larger than 5 Mb, copy the contents 
 		// to a .old file. 
 		if( stats_file_buf.st_size > 5000000 ) {
-			std::string stats_file_old_path = param( "FILE_TRANSFER_STATS_LOG" );
+			std::string stats_file_old_path = stats_file_path;
 			stats_file_old_path += ".old";
 			// TODO: Add a lock to prevent two starters from rotating the log 
 			// at the same time.
