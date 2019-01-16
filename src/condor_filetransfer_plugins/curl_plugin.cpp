@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "../condor_utils/file_transfer_stats.h"
+#include "../condor_utils/condor_url.h"
 #include "utc_time.h"
 
 #ifdef WIN32
@@ -12,7 +13,7 @@
 #define MAX_RETRY_ATTEMPTS 20
 
 int send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats* stats );
-int server_supports_resume( CURL* handle, char* url );
+int server_supports_resume( CURL* handle, const char* url );
 void init_stats( char **argv );
 static size_t header_callback( char* buffer, size_t size, size_t nitems );
 static size_t ftp_write_callback( void* buffer, size_t size, size_t nmemb, void* stream );
@@ -135,43 +136,55 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
     static int partial_file = 0;
     static long partial_bytes = 0;
 
+    std::string scheme_suffix = IsUrl(argv[1]) ?
+        getURLType(argv[1], true) : "";
+
     // Input transfer: URL -> file
-    if ( !strncasecmp( argv[1], "http://", 7 ) ||
-         !strncasecmp( argv[1], "https://", 8 ) ||
-         !strncasecmp( argv[1], "ftp://", 6 ) ||
-         !strncasecmp( argv[1], "file://", 7 ) ) {
+    if ( scheme_suffix == "http" || scheme_suffix == "https" ||
+         scheme_suffix == "ftp" || scheme_suffix == "file" ) {
+
+        // Everything prior to the first '+' is the credential name.
+        std::string full_scheme = getURLType(argv[1], false);
+        auto offset = full_scheme.find_last_of("+");
+        auto cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
+
+        // The actual transfer should only be everything after the last '+'
+        std::string full_url(argv[1]);
+        if (offset != std::string::npos) {
+            full_url = full_url.substr(offset+1);
+        }
 
         int close_output = 1;
         if ( ! strcmp(argv[2],"-") ) {
             file = stdout;
             close_output = 0;
-            if ( diagnostic ) { 
-                fprintf( stderr, "fetching %s to stdout\n", argv[1] ); 
+            if ( diagnostic ) {
+                fprintf( stderr, "fetching %s to stdout\n", full_url.c_str() );
             }
         } 
         else {
             file = partial_file ? fopen( argv[2], "a+" ) : fopen(argv[2], "w" ); 
             close_output = 1;
             if ( diagnostic ) { 
-                fprintf( stderr, "fetching %s to %s\n", argv[1], argv[2] ); 
+                fprintf( stderr, "fetching %s to %s\n", full_url.c_str(), argv[2] );
             }
         }
 
         if( file ) {
             // Libcurl options that apply to all transfer protocols
-            curl_easy_setopt( handle, CURLOPT_URL, argv[1] );
+            curl_easy_setopt( handle, CURLOPT_URL, full_url.c_str() );
             curl_easy_setopt( handle, CURLOPT_CONNECTTIMEOUT, 60 );
             curl_easy_setopt( handle, CURLOPT_WRITEDATA, file );
 
             // Libcurl options for HTTP, HTTPS and FILE
-            if( !strncasecmp( argv[1], "http://", 7 ) || 
-                                !strncasecmp( argv[1], "https://", 8 ) || 
-                                !strncasecmp( argv[1], "file://", 7 ) ) {
+            if( scheme_suffix == "http" ||
+                    scheme_suffix == "https" ||
+                    scheme_suffix == "file" ) {
                 curl_easy_setopt( handle, CURLOPT_FOLLOWLOCATION, 1 );
                 curl_easy_setopt( handle, CURLOPT_HEADERFUNCTION, header_callback );
             }
             // Libcurl options for FTP
-            else if( !strncasecmp( argv[1], "ftp://", 6 ) ) {
+            else if( scheme_suffix == "ftp" ) {
                 curl_easy_setopt( handle, CURLOPT_WRITEFUNCTION, ftp_write_callback );
             }
 
@@ -210,7 +223,7 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
             // Check if the request completed partially. If so, set some
             // variables so we can attempt a resume on the next try.
             if( rval == CURLE_PARTIAL_FILE ) {
-                if( server_supports_resume( handle, argv[1] ) ) {
+                if( server_supports_resume( handle, full_url.c_str() ) ) {
                     partial_file = 1;
                     partial_bytes = ftell( file );
                 }
@@ -357,7 +370,7 @@ send_curl_request( char** argv, int diagnostic, CURL* handle, FileTransferStats*
     Return 1 if resume is supported, 0 if not.
 */
 int 
-server_supports_resume( CURL* handle, char* url ) {
+server_supports_resume( CURL* handle, const char* url ) {
 
     int rval = -1;
 

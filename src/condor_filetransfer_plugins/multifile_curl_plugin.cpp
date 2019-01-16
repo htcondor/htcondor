@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "../condor_utils/file_transfer_stats.h"
+#include "../condor_utils/condor_url.h"
 #include "multifile_curl_plugin.h"
 #include "utc_time.h"
 #include <iostream>
@@ -211,7 +212,7 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
 
 
 int 
-MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &local_file_name, long &partial_bytes ) {
+MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &local_file_name, const std::string &cred, long &partial_bytes ) {
 
     char partial_range[20];
     FILE *file = NULL;
@@ -344,8 +345,18 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
 
             std::this_thread::sleep_for(std::chrono::seconds(retry_count++));
 
-            file_rval = UploadFile( url, local_file_name );
+            // Everything prior to the first '+' is the credential name.
+            std::string full_scheme = getURLType(url.c_str(), false);
+            auto offset = full_scheme.find_last_of("+");
+            auto cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
 
+            // The actual transfer should only be everything after the last '+'
+            std::string full_url = url;
+            if (offset != std::string::npos) {
+                full_url = full_url.substr(offset + 1);
+            }
+
+            file_rval = UploadFile( full_url, local_file_name );
             // If curl request is successful, break out of the loop
             if( file_rval == CURLE_OK ) {
                 break;
@@ -413,8 +424,19 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
 
             std::this_thread::sleep_for(std::chrono::seconds(retry_count++));
 
+            // Everything prior to the first '+' is the credential name.
+            std::string full_scheme = getURLType(url.c_str(), false);
+            auto offset = full_scheme.find_last_of("+");
+            auto cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
+
+            // The actual transfer should only be everything after the last '+'
+            std::string full_url = url;
+            if (offset != std::string::npos) {
+                full_url = full_url.substr(offset + 1);
+            }
+
             // partial_bytes are updated if the file downloaded partially.
-            rval = DownloadFile( url.c_str(), local_file_name.c_str(), partial_bytes );
+            rval = DownloadFile( full_url, local_file_name, cred, partial_bytes );
 
             // If curl request is successful, break out of the loop
             if( rval == CURLE_OK ) {

@@ -34,7 +34,7 @@ class MultiFileCurlPlugin {
     static size_t FtpWriteCallback( void* buffer, size_t size, size_t nmemb, void* stream );
     int ServerSupportsResume( const std::string &url );
     int UploadFile( const std::string &url, const std::string &local_file_name );
-    int DownloadFile( const std::string &url, const std::string &local_file_name, long &partial_bytes );
+    int DownloadFile( const std::string &url, const std::string &local_file_name, const std::string &cred, long &partial_bytes );
     int BuildTransferRequests (const std::string & input_filename, std::vector<std::pair<std::string, transfer_request>> &requested_files) const;
     FILE *OpenLocalFile (const std::string &local_file, const char *mode) const;
 
