@@ -2385,6 +2385,11 @@ JICShadow::beginFileTransfer( void )
 
 		filetrans = new FileTransfer();
 
+		const char *cred_path = getCredPath();
+		if (cred_path) {
+			filetrans->setCredsDir(cred_path);
+		}
+
 			// In the starter, we never want to use
 			// SpooledOutputFiles, because we are not reading the
 			// output from the spool.  We always want to use
