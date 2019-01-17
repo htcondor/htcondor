@@ -130,6 +130,11 @@ class FileTransfer: public Service {
 		       commands */
 	void setSecuritySession(char const *session_id);
 
+	/** @param cred_dir The location of the credentials directory to be used
+	 *  with the file transfer plugins.
+	 */
+	void setCredsDir(const std::string &cred_dir) {m_cred_dir = cred_dir;}
+
 		/** Set limits on how much data will be sent/received per job
 			(i.e. per call to DoUpload() or DoDownload()).  The job is
 			put on hold if the limit is exceeded.  The files are sent
@@ -429,6 +434,7 @@ class FileTransfer: public Service {
 	TransferQueueContactInfo m_xfer_queue_contact_info;
 	MyString m_jobid; // what job we are working on, for informational purposes
 	char *m_sec_session_id;
+	std::string m_cred_dir;
 	filesize_t MaxUploadBytes;
 	filesize_t MaxDownloadBytes;
 

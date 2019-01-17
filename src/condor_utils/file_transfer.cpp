@@ -4796,6 +4796,11 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// start with this environment
 	plugin_env.Import();
 
+	// Add any credential directory.
+	if (!m_cred_dir.empty()) {
+		plugin_env.SetEnv( "_CONDOR_CREDS", m_cred_dir.c_str() );
+	}
+
 	// add x509UserProxy if it's defined
 	if (proxy_filename && *proxy_filename) {
 		plugin_env.SetEnv("X509_USER_PROXY",proxy_filename);
@@ -4889,6 +4894,11 @@ int FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// Prepare environment for the plugin
 	Env plugin_env;
 	plugin_env.Import();
+
+	// Add any credential directory.
+	if (!m_cred_dir.empty()) {
+		plugin_env.SetEnv( "_CONDOR_CREDS", m_cred_dir.c_str() );
+	}
 
 	// Add x509UserProxy if it's defined
 	if ( proxy_filename && *proxy_filename ) {
