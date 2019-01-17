@@ -35,12 +35,10 @@ GetToken(const std::string & cred_name, std::string & token) {
 	}
 	for (std::string line; std::getline(istr, line); ) {
 		auto iter = line.begin();
-		while (std::isspace(*(iter++))) {}
+		while (std::isspace(*iter)) {iter++;}
 		if (*iter == '#') continue;
-		auto offset = std::distance(line.begin(), iter);
-		auto token_json = line.substr(offset, line.find(" ", offset + 1));
 		picojson::value json_value;
-		auto err = picojson::parse(json_value, token_json);
+		auto err = picojson::parse(json_value, line);
 		if (!err.empty()) {
 			fprintf( stderr, "Error: unable to parse token as JSON: %s\n", err.c_str());
 			return false;
@@ -148,7 +146,7 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name,
 
         struct curl_slist *header_list = NULL;
         if (!token.empty()) {
-            std::string authz_header = "Authorization: ";
+            std::string authz_header = "Authorization: Bearer ";
             authz_header += token;
             header_list = curl_slist_append(header_list, authz_header.c_str());
         }
