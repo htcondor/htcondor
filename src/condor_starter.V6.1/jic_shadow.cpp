@@ -2975,13 +2975,16 @@ JICShadow::refreshSandboxCredentialsMultiple()
 	}
 
 	// do syscall to receive credential wallet
-	REMOTE_CONDOR_getcreds();
+	if (REMOTE_CONDOR_getcreds() <= 0) {
+		dprintf(D_ALWAYS, "ERROR: Failed to receive user credentials.\n");
+		return false;
+	}
 
 	// setup .condor_creds directory in sandbox (may already exist).
 	MyString cred_dir_name;
 	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
 		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
-		return -1;
+		return false;
 	}
 	MyString pid_s;
 	pid_s.formatstr("%i", getpid());
