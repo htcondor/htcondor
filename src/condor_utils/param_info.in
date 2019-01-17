@@ -4604,7 +4604,7 @@ type=bool
 description=Whether to invoke file transfer plugins as user or as root
 
 [ENABLE_MULTIFILE_TRANSFER_PLUGINS]
-default=false
+default=true
 type=bool
 description=Enable file transfer plugins that support multiple files as input
 
