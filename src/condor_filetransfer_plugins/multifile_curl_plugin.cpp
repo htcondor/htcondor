@@ -5,6 +5,8 @@
 #include "../condor_utils/picojson.h"
 #include "multifile_curl_plugin.h"
 #include "utc_time.h"
+#include <exception>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <cstdio>
@@ -13,12 +15,12 @@
 
 namespace {
 
-bool
+void
 GetToken(const std::string & cred_name, std::string & token) {
 	const char *creddir = getenv("_CONDOR_CREDS");
 	if (!creddir) {
-		fprintf( stderr, "Error: credential for %s requested by $_CONDOR_CREDS not set.\n", cred_name.c_str() );
-		return false;
+		std::stringstream ss; ss << "Credential for " << cred_name << " requested by $_CONDOR_CREDS not set";
+		throw std::runtime_error(ss.str());
 	}
 
 	std::string cred_path = std::string(creddir) + DIR_DELIM_STRING + cred_name + ".use";
@@ -26,12 +28,13 @@ GetToken(const std::string & cred_name, std::string & token) {
 	if (-1 == fd) {
 		fprintf( stderr, "Error: Unable to open credential file %s: %s (errno=%d)", cred_path.c_str(),
 			strerror(errno), errno);
-		return false;
+		std::stringstream ss; ss << "Unable to open credential file " << cred_path << ": " << strerror(errno) << " (errno=" << errno << ")";
+		throw std::runtime_error(ss.str());
 	}
 	close(fd);
 	std::ifstream istr(cred_path, std::ios::binary);
 	if (!istr.is_open()) {
-		return false;
+		throw std::runtime_error("Failed to reopen credential file");
 	}
 	for (std::string line; std::getline(istr, line); ) {
 		auto iter = line.begin();
@@ -40,27 +43,24 @@ GetToken(const std::string & cred_name, std::string & token) {
 		picojson::value json_value;
 		auto err = picojson::parse(json_value, line);
 		if (!err.empty()) {
-			fprintf( stderr, "Error: unable to parse token as JSON: %s\n", err.c_str());
-			return false;
+			// DO NOT include the error message as part of the exception; the error
+			// message may include private information in the credential file itself,
+			// which we don't want to go into the public hold message.
+			throw std::runtime_error("Unable to parse token as JSON");
                 }
 		if (!json_value.is<picojson::object>()) {
-			fprintf( stderr, "Error: token is not valid JSON object.\n" );
-			return false;
+			throw std::runtime_error("Token is not a JSON object");
 		}
 		auto json_obj = json_value.get<picojson::object>();
 		auto json_iter = json_obj.find("access_token");
 		if (json_iter == json_obj.end()) {
-			fprintf( stderr, "Error: no 'access_token' key in JSON object.\n" );
-			return false;
+			throw std::runtime_error("No 'access_token' key in JSON object");
 		}
 		if (!json_iter->second.is<std::string>()) {
-			fprintf( stderr, "Error: 'access_token' value is not a string.\n" );
-			return false;
+			throw std::runtime_error("'access_token' value is not a string");
 		}
 		token = json_iter->second.get<std::string>();
-		return true;
 	}
-	return false;
 }
 
 }
@@ -124,6 +124,9 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name,
     }
 
     if( file ) {
+        // Update some statistics
+        _this_file_stats->TransferType = "download";
+
         // Libcurl options that apply to all transfer protocols
         curl_easy_setopt( _handle, CURLOPT_URL, url );
         curl_easy_setopt( _handle, CURLOPT_CONNECTTIMEOUT, 60 );
@@ -136,7 +139,12 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name,
                             !strncasecmp( url, "https://", 8 ) || 
                             !strncasecmp( url, "file://", 7 ) ) {
 
-            if (!GetToken(cred, token)) {
+            try {
+                GetToken(cred, token);
+            } catch (const std::exception &exc) {
+                _this_file_stats->TransferSuccess = false;
+                _this_file_stats->TransferError = exc.what();
+                fprintf( stderr, "Error: %s.\n", exc.what() );
                 return rval;
             }
 
@@ -183,8 +191,6 @@ MultiFileCurlPlugin::DownloadFile( const char* url, const char* local_file_name,
         // unclear how to tune this constant.
         // curl_easy_setopt(_handle, CURLOPT_MAXREDIRS, 1000);
 
-        // Update some statistics
-        _this_file_stats->TransferType = "download";
         _this_file_stats->TransferTries += 1;
 
         if (header_list) curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, header_list);
