@@ -284,11 +284,23 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			param(tmpvalue, tmpname.c_str());
 			ad.Assign("ClientId", tmpvalue);
 
-			// this is a hack.  secret needs to be in a root-owned file, not in config.
+			char *buf = NULL;
+			size_t buf_len = 0;
+			std::string secret;
 			tmpname = service;
-			tmpname += "_CLIENT_SECRET";
+			tmpname += "_CLIENT_SECRET_FILE";
 			param(tmpvalue, tmpname.c_str());
-			ad.Assign("ClientSecret", tmpvalue);
+			// Read the file and use the contents before the first
+			// newline, if any.
+			if(read_secure_file(tmpvalue.Value(), (void**)&buf, &buf_len, true)) {
+				for ( size_t i = 0; i < buf_len; i++ ) {
+					if ( buf[i] == '\n' ) {
+						buf_len = i;
+					}
+				}
+				secret.assign(buf, buf_len);
+			}
+			ad.Assign("ClientSecret", secret);
 
 			tmpname = service;
 			tmpname += "_RETURN_URL_SUFFIX";

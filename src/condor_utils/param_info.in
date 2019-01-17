@@ -5834,8 +5834,6 @@ default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
 	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
-
-	use feature : GPUsMonitor
 @end
 
 [$FEATURE.Monitor]
