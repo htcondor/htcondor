@@ -7281,7 +7281,7 @@ const char * FileTransferEvent::FileTransferEventStrings[] = {
 	"Finished transferring input files",
 	"Entered queue to transfer output files",
 	"Started transferring output files",
-	"Finished transferring input files"
+	"Finished transferring output files"
 };
 
 FileTransferEvent::FileTransferEvent() : queueingDelay(-1),
