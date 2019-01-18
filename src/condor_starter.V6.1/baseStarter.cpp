@@ -1898,13 +1898,13 @@ CStarter::createTempExecuteDir( void )
 				FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
 					GetProcAddress(advapi,"EncryptionDisable");
 				if ( !EncryptionDisable ) {
-					dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()\n");
 					efs_support = false;
 				}
 				FPEncryptFileA EncryptFile = (FPEncryptFileA) 
 					GetProcAddress(advapi,"EncryptFileA");
 				if ( !EncryptFile ) {
-					dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()\n");
 					efs_support = false;
 				}
 			}
@@ -2693,7 +2693,7 @@ CStarter::PeriodicCkpt( void )
 						false,
 						err.holdCode(),
 						err.holdSubCode());
-					dprintf(D_ALWAYS,"failed to change sandbox to condor ownership before checkpoint");
+					dprintf(D_ALWAYS,"failed to change sandbox to condor ownership before checkpoint\n");
 					return false;
 				}
 			}
@@ -2764,7 +2764,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
-			updateAd.CopyAttribute( ATTR_ON_EXIT_CODE, "PreExitCode", & updateAd );
+			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PreExitCode", updateAd );
 			jic->periodicJobUpdate( & updateAd, true );
 
 			// This kills the shadow, which should cause us to catch a
@@ -2802,7 +2802,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 			ClassAd updateAd;
 			publishUpdateAd( & updateAd );
-			updateAd.CopyAttribute( ATTR_ON_EXIT_CODE, "PostExitCode", & updateAd );
+			CopyAttribute( ATTR_ON_EXIT_CODE, updateAd, "PostExitCode", updateAd );
 			jic->periodicJobUpdate( & updateAd, true );
 
 			// This kills the shadow, which should cause us to catch a
@@ -3843,12 +3843,12 @@ CStarter::WriteAdFiles()
 		while( const char * resourceName = machineResourcesList.next() ) {
 			std::string provisionedResourceName;
 			formatstr( provisionedResourceName, "%sProvisioned", resourceName );
-			updateAd.CopyAttribute( provisionedResourceName.c_str(), resourceName, machineAd );
+			CopyAttribute( provisionedResourceName, updateAd, resourceName, *machineAd );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName, provisionedResourceName.c_str() );
 
 			std::string assignedResourceName;
 			formatstr( assignedResourceName, "Assigned%s", resourceName );
-			updateAd.CopyAttribute( assignedResourceName.c_str(), assignedResourceName.c_str(), machineAd );
+			CopyAttribute( assignedResourceName, updateAd, *machineAd );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad\n", assignedResourceName.c_str() );
 		}
 

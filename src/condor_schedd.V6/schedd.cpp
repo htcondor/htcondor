@@ -7568,9 +7568,9 @@ Scheduler::contactStartd( ContactStartdArgs* args )
     // make a subway transfer from slot/match ad to job/request ad, on their way
     // to the claim, and then eventually back around to the negotiator for use in
     // preemption policies:
-    jobAd->CopyAttribute(ATTR_REMOTE_GROUP, mrec->my_match_ad);
-    jobAd->CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, mrec->my_match_ad);
-    jobAd->CopyAttribute(ATTR_REMOTE_AUTOREGROUP, mrec->my_match_ad);
+    CopyAttribute(ATTR_REMOTE_GROUP, *jobAd, *mrec->my_match_ad);
+    CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, *jobAd, *mrec->my_match_ad);
+    CopyAttribute(ATTR_REMOTE_AUTOREGROUP, *jobAd, *mrec->my_match_ad);
 
 	// Tell the startd side who should send alives... startd or schedd
 	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );	
@@ -15132,7 +15132,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		else {
 			reply.Assign( ATTR_JOB_STATUS, job_status );
 			if( job_status == HELD ) {
-				reply.CopyAttribute( ATTR_HOLD_REASON, jobad );
+				CopyAttribute( ATTR_HOLD_REASON, reply, *jobad );
 			}
 			error_msg.formatstr("Job %d.%d is not running.",
 							  jobid.cluster,jobid.proc);

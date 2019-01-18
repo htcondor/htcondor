@@ -947,10 +947,6 @@ cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 %endif
 
 # Install perl modules
-install -m 0755 src/condor_scripts/Condor.pm %{buildroot}%{_datadir}/condor/
-install -m 0755 src/condor_scripts/CondorPersonal.pm %{buildroot}%{_datadir}/condor/
-install -m 0755 src/condor_scripts/CondorTest.pm %{buildroot}%{_datadir}/condor/
-install -m 0755 src/condor_scripts/CondorUtils.pm %{buildroot}%{_datadir}/condor/
 
 # Install python-binding libs
 mkdir -p %{buildroot}%{python_sitearch}
@@ -1126,11 +1122,7 @@ rm -rf %{buildroot}
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
 %_datadir/condor/CondorJavaWrapper.class
-%_datadir/condor/Condor.pm
 %_datadir/condor/scimark2lib.jar
-%_datadir/condor/CondorPersonal.pm
-%_datadir/condor/CondorTest.pm
-%_datadir/condor/CondorUtils.pm
 %if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
 %endif

@@ -416,7 +416,8 @@ void Defrag::loadState()
 	}
 	else {
 		int isEOF=0, errorReadingAd=0, adEmpty=0;
-		ClassAd *ad = new ClassAd(fp, "...", isEOF, errorReadingAd, adEmpty);
+		ClassAd *ad = new ClassAd;
+		InsertFromFile(fp, *ad, "...", isEOF, errorReadingAd, adEmpty);
 		fclose( fp );
 
 		if( errorReadingAd ) {

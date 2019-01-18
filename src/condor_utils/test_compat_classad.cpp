@@ -399,7 +399,7 @@ bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3
     }
     */
     
-    c2->ChainCollapse();
+    ChainCollapse(*c2);
 
      
     /*

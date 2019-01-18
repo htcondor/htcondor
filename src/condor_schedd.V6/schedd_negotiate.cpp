@@ -204,7 +204,7 @@ ScheddNegotiate::nextJob()
 						// Copy attributes from chained parent ad into our copy 
 						// so if parent is deleted before we finish negotiation,
 						// we don't crash trying to access a deleted parent ad.
-						m_current_job_ad.ChainCollapse();
+						ChainCollapse(m_current_job_ad);
 						return true;
 					}
 				}

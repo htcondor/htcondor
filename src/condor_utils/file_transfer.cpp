@@ -2480,6 +2480,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	}
 	// End of the main download loop
 
+        // Release transfer queue slot after file has been put but before the
+        // final transfer ACKs are done.  In the future where multifile transfers
+        // plugins are used in DoDownload, this would allow DoDownload side to
+        // perform external plugin-based transfers without the queue slot
+        //
+	xfer_queue.ReleaseTransferQueueSlot();
+
 	// Now that we've completed the main file transfer loop, it's time to 
 	// transfer all files that needed a third party plugin. Iterate over the list
 	// of deferred transfers, and invoke each set with the appopriate plugin.
@@ -3536,6 +3543,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			Info.addSpooledFile( dest_filename.Value() );
 		}
 	}
+	// Release transfer queue slot after file has been put but before the
+	// final transfer statistics are done.  The remote side (typically, the starter),
+	// currently does multifile transfer plugins during this time and we do not want
+	// to keep the queue slot held when this transfer plugin is invoked.
+	xfer_queue.ReleaseTransferQueueSlot();
 
 	do_download_ack = true;
 	do_upload_ack = true;

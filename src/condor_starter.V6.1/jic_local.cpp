@@ -190,7 +190,7 @@ void
 JICLocal::disconnect()
 {
 		// Someday this might mean something, for now it doesn't.
-	dprintf(D_ALWAYS, "Starter using JICLocal does not support disconnect");
+	dprintf(D_ALWAYS, "Starter using JICLocal does not support disconnect\n");
 	return;
 }
 

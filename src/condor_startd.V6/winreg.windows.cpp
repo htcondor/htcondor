@@ -1064,7 +1064,7 @@ bool WinPerf_Object::GetValue(
 		ULONGLONG old = GetRawValue(pCounter, prev);
 		if (ctval.value.ul >= old)
 			ctval.value.ul = ctval.value.ul - old;
-		//else dprintf(D_FULLDEBUG, "  PrintValue: negative delta from winreg performance data.");
+		//else dprintf(D_FULLDEBUG, "  PrintValue: negative delta from winreg performance data.\n");
 	}
 
 	// number are easy, they can be decimal or hex
@@ -1240,7 +1240,7 @@ char * WinPerf_Object::PrintValue(
 		if (val >= old)
 			val = val - old;
 		else
-			dprintf(D_FULLDEBUG, "  PrintValue: negative delta from winreg performance data.");
+			dprintf(D_FULLDEBUG, "  PrintValue: negative delta from winreg performance data.\n");
 		//dprintf(D_FULLDEBUG, "  PrintValue: delta %I64d - %I64d = %I64d,  %I64d/%I64d %I64d/%I64d %I64d %I64d\n", 
 		//	val, old, val - old, time.head, time.headfreq, time.obj, time.objfreq, time.nanos, time.objabs);
 	}
@@ -1428,7 +1428,7 @@ bool init_WinPerf_Query(
 				}
 				if (query.idAlt[NUM_ELEMENTS(query.idAlt)-1] != 0)
 				{
-					dprintf (D_ALWAYS, "Error: too many counter ids map to the same name!");
+					dprintf (D_ALWAYS, "Error: too many counter ids map to the same name!\n");
 					query.idAlt[NUM_ELEMENTS(query.idAlt)-1] = 0;
 				}
 			}

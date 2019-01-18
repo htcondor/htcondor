@@ -4165,6 +4165,7 @@ tags=schedd,startd,claim
 
 [MOUNT_UNDER_SCRATCH]
 default="/tmp,/var/tmp"
+win32_default=
 version=7.7.5
 type=string
 tags=starter
@@ -4604,7 +4605,7 @@ type=bool
 description=Whether to invoke file transfer plugins as user or as root
 
 [ENABLE_MULTIFILE_TRANSFER_PLUGINS]
-default=false
+default=true
 type=bool
 description=Enable file transfer plugins that support multiple files as input
 
@@ -4885,8 +4886,8 @@ type=string
 description=When a slot should be in Owner state
 
 [FILETRANSFER_PLUGINS]
-default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
-win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
+default=$(LIBEXEC)/multifile_curl_plugin, $(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
+win32_default=$(LIBEXEC)\multifile_curl_plugin.exe $(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
 description=List of paths to installed file transfer plugins
 tags=startd
 
@@ -5869,8 +5870,6 @@ default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
 	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
-
-	use feature : GPUsMonitor
 @end
 
 [$FEATURE.Monitor]

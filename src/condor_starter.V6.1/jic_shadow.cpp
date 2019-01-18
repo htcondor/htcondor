@@ -2026,12 +2026,13 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		}
 		if( updateAdFile ) {
 			int isEOF, error, empty;
-			ClassAd updateAd( updateAdFile, "\n", isEOF, error, empty );
+			ClassAd updateAd;
+			InsertFromFile( updateAdFile, updateAd, "\n", isEOF, error, empty );
 			fclose( updateAdFile );
 
 			while( (attrName = m_job_update_attrs.next()) != NULL ) {
 				// dprintf( D_ALWAYS, "Updating job ad: %s\n", attrName );
-				ad->CopyAttribute( attrName, & updateAd );
+				CopyAttribute( attrName, *ad, updateAd );
 				published = true;
 			}
 		} else {
@@ -2790,7 +2791,7 @@ JICShadow::initUserCredentials() {
 	// now signal the credmon
 	rc = credmon_poll(user.c_str(), false, true);
 	if(!rc) {
-		dprintf(D_ALWAYS, "CREDMON: credmon failed to produce .cc file!");
+		dprintf(D_ALWAYS, "CREDMON: credmon failed to produce .cc file!\n");
 		return false;
 	}
 
@@ -2970,13 +2971,16 @@ JICShadow::refreshSandboxCredentialsMultiple()
 	}
 
 	// do syscall to receive credential wallet
-	REMOTE_CONDOR_getcreds();
+	if (REMOTE_CONDOR_getcreds() <= 0) {
+		dprintf(D_ALWAYS, "ERROR: Failed to receive user credentials.\n");
+		return false;
+	}
 
 	// setup .condor_creds directory in sandbox (may already exist).
 	MyString cred_dir_name;
 	if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
 		dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
-		return -1;
+		return false;
 	}
 	MyString pid_s;
 	pid_s.formatstr("%i", getpid());

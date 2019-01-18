@@ -187,7 +187,7 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 			expr = to->Lookup( perJobAttributeName );
 			if( expr == NULL ) {
 				// dprintf( D_ALWAYS, "Aggregate( %p, %p ): %s = %f\n", to, from, perJobAttributeName.c_str(), oldValue );
-				to->CopyAttribute( perJobAttributeName.c_str(), perJobAttributeName.c_str(), from );
+				CopyAttribute( perJobAttributeName, *to, *from );
 			} else {
 				classad::Value v;
 				expr->Evaluate( v );
@@ -200,7 +200,7 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 
 			// Record for each resource when we last updated it.
 			std::string lastUpdateName = "LastUpdate" + name;
-			to->CopyAttribute( lastUpdateName.c_str(), "LastUpdate", from );
+			CopyAttribute( lastUpdateName, *to, "LastUpdate", *from );
 		} else if( name.find( "StartOfJob" ) == 0 ) {
 			// dprintf( D_FULLDEBUG, "Aggregate(): skipping StartOfJob* attribute '%s'\n", name.c_str() );
 		} else if( name == "ResetStartOfJob" ) {
@@ -240,10 +240,10 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 				std::string uptimeName = name.substr( 10 );
 				if( StartdCronJobParams::attributeIsSumMetric( uptimeName ) ) {
-					to->CopyAttribute( name.c_str(), uptimeName.c_str() );
+					CopyAttribute( name, *to, uptimeName );
 
 					std::string firstUpdateName = "FirstUpdate" + uptimeName;
-					to->CopyAttribute( firstUpdateName.c_str(), "LastUpdate" );
+					CopyAttribute( firstUpdateName, *to, "LastUpdate" );
 				} else if( StartdCronJobParams::attributeIsPeakMetric( uptimeName ) ) {
 					// PEAK metrics don't use the StartOfJob* attributes.  If
 					// the current job peak isn't set when a new sample comes
@@ -296,7 +296,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 				// Record for each resource when we last updated it.
 				std::string lastUpdateName = "LastUpdate" + usageName;
-				to->CopyAttribute( lastUpdateName.c_str(), "LastUpdate", from );
+				CopyAttribute( lastUpdateName, *to, "LastUpdate", *from );
 			}
 		}
 

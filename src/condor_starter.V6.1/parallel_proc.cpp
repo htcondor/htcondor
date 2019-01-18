@@ -54,7 +54,7 @@ ParallelProc::StartJob()
 	}
 
 	if ( ! addEnvVars() ) {
-		dprintf( D_ALWAYS, "ERROR adding environment variable to job");
+		dprintf( D_ALWAYS, "ERROR adding environment variable to job\n");
 		return 0;
 	}
 

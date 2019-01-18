@@ -885,7 +885,7 @@ main(int argc, const char* argv[])
     ClassAd* ad=new ClassAd();
     bool is_eof = false; 
     int error = 0;
-	if ( ! ad->InsertFromFile(file, is_eof, error) && error) {
+	if ( ! InsertFromFile(file, *ad, is_eof, error) && error) {
       fprintf(stderr, "Error %d reading userprio ads\n", error);
       fclose(file);
       exit(1);
