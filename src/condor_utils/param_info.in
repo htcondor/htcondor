@@ -4165,6 +4165,7 @@ tags=schedd,startd,claim
 
 [MOUNT_UNDER_SCRATCH]
 default="/tmp,/var/tmp"
+win32_default=
 version=7.7.5
 type=string
 tags=starter
