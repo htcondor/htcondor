@@ -51,7 +51,7 @@ if ( NOT PROPER AND NOT LINUX )
     #--install Step ----------
     INSTALL_DIR ${PCRE_INSTALL_LOC}
     INSTALL_COMMAND ${PCRE_INSTALL} )
-	
+
 	#################################################################
 	# Set the target dependencies which the rest of condor depends on.
 	if (WINDOWS)
@@ -90,13 +90,40 @@ if ( NOT PROPER AND NOT LINUX )
 
 else( NOT PROPER AND NOT LINUX )
 
-        if (HAVE_PCRE_H OR HAVE_PCRE_PCRE_H)
-            find_multiple( "pcre" PCRE_FOUND )
-        endif()
+		if (HAVE_PCRE_H OR HAVE_PCRE_PCRE_H)
+			find_multiple( "pcre" PCRE_FOUND )
+		endif()
 
 endif( NOT PROPER AND NOT LINUX )
 
-##################### 
+
+if( ${SYSTEM_NAME} STREQUAL "sl6.3" )
+	condor_pre_external( PCRE pcre-8.40 "lib;include" "include/pcre.h")
+
+	set( PCRE_DOWNLOAD ${PCRE_VER}.tar.gz )
+	set( PCRE_CONFIGURE ./configure --prefix=${PCRE_INSTALL_LOC} --disable-cpp )
+	set( PCRE_MAKE make && make test )
+	set( PCRE_INSTALL make install )
+
+	ExternalProject_Add(pcre
+		DOWNLOAD_DIR ${PCRE_STAGE}/dl
+		URL ${EXTERNALS_SOURCE_URL}/${PCRE_DOWNLOAD}
+		PATCH_COMMAND ${PCRE_PATCH}
+		CONFIGURE_COMMAND ${PCRE_CONFIGURE}
+		BUILD_COMMAND ${PCRE_MAKE}
+		BUILD_IN_SOURCE 1
+		INSTALL_DIR ${PCRE_INSTALL_LOC}
+		INSTALL_COMMAND ${PCRE_INSTALL}
+	)
+
+	condor_post_external( pcre include OFF )
+
+	set( PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.so" )
+	set( HAVE_PCRE_H ON PARENT_SCOPE )
+endif()
+
+
+#####################
 ## Hard failure if there is no PCRE
 if (PCRE_FOUND)
 	message (STATUS "external configured (PCRE_FOUND=${PCRE_FOUND})")
