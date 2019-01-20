@@ -13652,7 +13652,7 @@ Scheduler::Register()
 		 // so it is deemed safe to open these commands up to READ
 		 // access.
 	daemonCore->Register_CommandWithPayload(RELEASE_CLAIM, "RELEASE_CLAIM", 
-			(CommandHandlercpp)&Scheduler::release_claim, 
+			(CommandHandlercpp)&Scheduler::release_claim_command_handler,
 			"release_claim", this, READ);
 	daemonCore->Register_CommandWithPayload( ALIVE, "ALIVE", 
 			(CommandHandlercpp)&Scheduler::receive_startd_alive,
@@ -13754,7 +13754,7 @@ Scheduler::Register()
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(
 		"reaper",
-		(ReaperHandlercpp)&Scheduler::child_exit,
+		(ReaperHandlercpp)&Scheduler::child_exit_from_reaper,
 		"child_exit", this );
 
 	m_history_helper_rid = daemonCore->Register_Reaper(
