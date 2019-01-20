@@ -2256,8 +2256,13 @@ class FileTransferEvent : public ULogEvent {
 		FileTransferEventType getType() const { return type; }
 
 		void setQueueingDelay( time_t duration ) { queueingDelay = duration; }
+		time_t getQueueingDelay() { return queueingDelay; }
+
+		void setHost( const std::string & h) { host = h; }
+		const std::string & getHost() { return host; }
 
 	protected:
+		std::string host;
 		time_t queueingDelay;
 		FileTransferEventType type;
 };

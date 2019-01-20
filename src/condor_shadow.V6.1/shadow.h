@@ -140,6 +140,9 @@ class UniShadow : public BaseShadow
 	virtual void emailTerminateEvent( int exitReason, 
 					update_style_t kind = US_NORMAL );
 
+	// Record the file transfer state changes.
+	virtual void recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd );
+
 		/** Do all work to cleanup before this shadow can exit.  We've
 			only got 1 RemoteResource to kill the starter on.
 		*/

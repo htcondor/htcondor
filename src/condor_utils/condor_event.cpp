@@ -7308,12 +7308,22 @@ FileTransferEvent::formatBody( std::string & out ) {
 		return false;
 	}
 
+
 	if( queueingDelay != -1 ) {
 		if( formatstr_cat( out, "\tSeconds spent in queue: %lu\n",
 		                   queueingDelay ) < 0 ) {
 			return false;
 		}
 	}
+
+
+	if(! host.empty()) {
+		if( formatstr_cat( out, "\tTransferring to host: %s\n",
+		                   host.c_str() ) < 0 ) {
+			return false;
+		}
+	}
+
 
 	return true;
 }
@@ -7338,22 +7348,46 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 	if(! foundEventString) { return false; }
 
 
+	// Check for an optional line.
 	MyString optionalLine;
 	if(! read_optional_line( optionalLine, f, got_sync_line )) {
 		return got_sync_line ? 1 : 0;
 	}
-
 	optionalLine.chomp();
+
+	// Did we record the queueing delay?
 	MyString prefix = "\tSeconds spent in queue: ";
 	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
-		MyString value = optionalLine.substr( prefix.Length(), optionalLine.Length());
+		MyString value = optionalLine.substr( prefix.Length(), optionalLine.Length() );
 
 		char * endptr = NULL;
 		queueingDelay = strtol( value.c_str(), & endptr, 10 );
 		if( endptr == NULL || endptr[0] != '\0' ) {
 			return 0;
 		}
+
+		// If we read an optional line, check for the next one.
+		if(! read_optional_line( optionalLine, f, got_sync_line )) {
+			return got_sync_line ? 1 : 0;
+		}
+		optionalLine.chomp();
 	}
+
+
+	// Did we record the starter host?
+	prefix = "\tTransferring to host: ";
+	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
+		host = optionalLine.substr( prefix.Length(), optionalLine.Length() );
+
+/*
+		// If we read an optional line, check for the next one.
+		if(! read_optional_line( optionalLine, f, got_sync_line )) {
+			return got_sync_line ? 1 : 0;
+		}
+		optionalLine.chomp();
+*/
+	}
+
 
 	return 1;
 }
@@ -7375,6 +7409,13 @@ FileTransferEvent::toClassAd() {
 		}
 	}
 
+	if(! host.empty()) {
+		if(! ad->InsertAttr( "Host", host )) {
+			delete ad;
+			return NULL;
+		}
+	}
+
 	return ad;
 }
 
@@ -7389,6 +7430,6 @@ FileTransferEvent::initFromClassAd( ClassAd * ad ) {
 	}
 
 	ad->LookupInteger( "QueueingDelay", queueingDelay );
+
+	ad->LookupString( "Host", host );
 }
-
-
