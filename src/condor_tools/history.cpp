@@ -26,7 +26,6 @@
 #include "condor_environ.h"
 #include "dc_collector.h"
 #include "dc_schedd.h"
-#include "get_daemon_name.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
 #include "MyString.h"
@@ -1159,10 +1158,11 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
         }
       
-        if( !( ad=new ClassAd(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
+        if( !( ad=new ClassAd ) ){
             fprintf( stderr, "Error:  Out of memory\n" );
             exit( 1 );
-        } 
+        }
+        InsertFromFile(LogFile,*ad,"***", EndFlag, ErrorFlag, EmptyFlag);
         if( ErrorFlag ) {
             printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
             ErrorFlag=0;

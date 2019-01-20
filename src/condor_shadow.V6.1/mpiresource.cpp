@@ -129,7 +129,7 @@ MpiResource::writeULogEvent( ULogEvent* event )
 void
 MpiResource::beginExecution( void )
 {
-	char* startd_addr;
+	const char* startd_addr;
 	if( ! dc_startd ) {
 		dprintf( D_ALWAYS, "beginExecution() "
 				 "called with no DCStartd object!\n" ); 
@@ -145,7 +145,7 @@ MpiResource::beginExecution( void )
 	event.setExecuteHost( startd_addr );
 	event.node = node_num;
 	if( ! writeULogEvent(&event) ) {
-		dprintf( D_ALWAYS, "Unable to log NODE_EXECUTE event." );
+		dprintf( D_ALWAYS, "Unable to log NODE_EXECUTE event.\n" );
 	}
 
 		// Call our parent class's version to handle everything else. 

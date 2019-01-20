@@ -305,7 +305,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 			// Make an update ad from the stdout of the hook
 		MyString out(*getStdOut());
 		ClassAd updateAd;
-		updateAd.initFromString(out.Value(), NULL);
+		initAdFromString(out.Value(), updateAd);
 		dprintf(D_FULLDEBUG, "Prepare hook output classad\n");
 		dPrintAd(D_FULLDEBUG, updateAd);
 

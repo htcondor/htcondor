@@ -44,10 +44,7 @@
 #define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
 					 return 0; }
 
-
-//extern ClassAd *JobAd;
-
-const char ULogEventNumberNames[][30] = {
+const char ULogEventNumberNames[][41] = {
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
@@ -88,6 +85,7 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_FACTORY_PAUSED",			// Factory paused
 	"ULOG_FACTORY_RESUMED",			// Factory resumed
 	"ULOG_NONE",					// None (try again later)
+	"ULOG_FILE_TRANSFER",			// File transfer
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -226,6 +224,9 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_FACTORY_RESUMED:
 		return new FactoryResumedEvent;
+
+	case ULOG_FILE_TRANSFER:
+		return new FileTransferEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Unknown ULogEventNumber: %d, reading it as a FutureEvent\n", event );
@@ -562,6 +563,9 @@ ULogEvent::toClassAd(void)
 		break;
 	case ULOG_FACTORY_RESUMED:
 		SetMyTypeName(*myad, "FactoryResumedEvent");
+		break;
+	case ULOG_FILE_TRANSFER:
+		SetMyTypeName(*myad, "FileTransferEvent");
 		break;
 	default:
 		SetMyTypeName(*myad, "FutureEvent");
@@ -1988,7 +1992,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 		MyString et = line.substr(0, ix);
 		et.trim();
 		strncpy(error_type, et.Value(), sizeof(error_type));
-		line = line.substr(ix + 6, sizeof(daemon_name) * 2);
+		line = line.substr(ix + 6, line.length());
 		line.trim();
 	} else {
 		strncpy(error_type, "Error", sizeof(error_type));
@@ -2002,7 +2006,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 		MyString dn = line.substr(0, ix);
 		dn.trim();
 		strncpy(daemon_name, dn.Value(), sizeof(daemon_name));
-		line = line.substr(ix + 4, sizeof(execute_host));
+		line = line.substr(ix + 4, line.length());
 		line.trim();
 	}
 
@@ -2777,7 +2781,7 @@ JobEvictedEvent::formatBody( std::string &out )
   } else if( checkpointed ) {
     retval = formatstr_cat( out, "(1) Job was checkpointed.\n\t" );
   } else {
-    retval = formatstr_cat( out, "(0) Job was not checkpointed.\n\t" );
+    retval = formatstr_cat( out, "(0) CPU times\n\t" );
   }
 
   if( retval < 0 ) {
@@ -7264,4 +7268,168 @@ void FactoryResumedEvent::setReason(const char* str)
 {
 	if (reason) { free(reason); } reason = NULL;
 	if (str) reason = strdup(str);
+}
+
+//
+// FileTransferEvent
+//
+
+const char * FileTransferEvent::FileTransferEventStrings[] = {
+	"NONE",
+	"Entered queue to transfer input files",
+	"Started transferring input files",
+	"Finished transferring input files",
+	"Entered queue to transfer output files",
+	"Started transferring output files",
+	"Finished transferring output files"
+};
+
+FileTransferEvent::FileTransferEvent() : queueingDelay(-1),
+  type( FileTransferEvent::NONE )
+{
+	eventNumber = ULOG_FILE_TRANSFER;
+}
+
+FileTransferEvent::~FileTransferEvent() { }
+
+bool
+FileTransferEvent::formatBody( std::string & out ) {
+	if( type == FileTransferEventType::NONE ) {
+		dprintf( D_ALWAYS, "Unspecified type in FileTransferEvent::formatBody()\n" );
+		return false;
+	} else if( FileTransferEventType::NONE < type
+	           && type < FileTransferEventType::MAX ) {
+		if( formatstr_cat( out, "%s\n",
+		                   FileTransferEventStrings[type] ) < 0 ) {
+			return false;
+		}
+	} else {
+		dprintf( D_ALWAYS, "Unknown type in FileTransferEvent::formatBody()\n" );
+		return false;
+	}
+
+
+	if( queueingDelay != -1 ) {
+		if( formatstr_cat( out, "\tSeconds spent in queue: %lu\n",
+		                   queueingDelay ) < 0 ) {
+			return false;
+		}
+	}
+
+
+	if(! host.empty()) {
+		if( formatstr_cat( out, "\tTransferring to host: %s\n",
+		                   host.c_str() ) < 0 ) {
+			return false;
+		}
+	}
+
+
+	return true;
+}
+
+int
+FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
+	// Require an 'optional' line  because read_line_value() requires a prefix.
+	MyString eventString;
+	if(! read_optional_line( eventString, f, got_sync_line )) {
+		return 0;
+	}
+
+	// NONE is not a legal event in the log.
+	bool foundEventString = false;
+	for( int i = 1; i < FileTransferEventType::MAX; ++i ) {
+		if( FileTransferEventStrings[i] == eventString ) {
+			foundEventString = true;
+			type = (FileTransferEventType)i;
+			break;
+		}
+	}
+	if(! foundEventString) { return false; }
+
+
+	// Check for an optional line.
+	MyString optionalLine;
+	if(! read_optional_line( optionalLine, f, got_sync_line )) {
+		return got_sync_line ? 1 : 0;
+	}
+	optionalLine.chomp();
+
+	// Did we record the queueing delay?
+	MyString prefix = "\tSeconds spent in queue: ";
+	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
+		MyString value = optionalLine.substr( prefix.Length(), optionalLine.Length() );
+
+		char * endptr = NULL;
+		queueingDelay = strtol( value.c_str(), & endptr, 10 );
+		if( endptr == NULL || endptr[0] != '\0' ) {
+			return 0;
+		}
+
+		// If we read an optional line, check for the next one.
+		if(! read_optional_line( optionalLine, f, got_sync_line )) {
+			return got_sync_line ? 1 : 0;
+		}
+		optionalLine.chomp();
+	}
+
+
+	// Did we record the starter host?
+	prefix = "\tTransferring to host: ";
+	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
+		host = optionalLine.substr( prefix.Length(), optionalLine.Length() );
+
+/*
+		// If we read an optional line, check for the next one.
+		if(! read_optional_line( optionalLine, f, got_sync_line )) {
+			return got_sync_line ? 1 : 0;
+		}
+		optionalLine.chomp();
+*/
+	}
+
+
+	return 1;
+}
+
+ClassAd *
+FileTransferEvent::toClassAd() {
+	ClassAd * ad = ULogEvent::toClassAd();
+	if(! ad) { return NULL; }
+
+	if(! ad->InsertAttr( "Type", (int)type )) {
+		delete ad;
+		return NULL;
+	}
+
+	if( queueingDelay != -1 ) {
+		if(! ad->InsertAttr( "QueueingDelay", queueingDelay )) {
+			delete ad;
+			return NULL;
+		}
+	}
+
+	if(! host.empty()) {
+		if(! ad->InsertAttr( "Host", host )) {
+			delete ad;
+			return NULL;
+		}
+	}
+
+	return ad;
+}
+
+void
+FileTransferEvent::initFromClassAd( ClassAd * ad ) {
+	ULogEvent::initFromClassAd( ad );
+
+	int typePunning = -1;
+	ad->LookupInteger( "Type", typePunning );
+	if( typePunning != -1 ) {
+		type = (FileTransferEventType)typePunning;
+	}
+
+	ad->LookupInteger( "QueueingDelay", queueingDelay );
+
+	ad->LookupString( "Host", host );
 }

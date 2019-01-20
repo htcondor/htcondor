@@ -657,7 +657,7 @@ ReadUserLog::determineLogType( void )
 	int nothing;
 	if( fseek( m_fp, 0, SEEK_SET) )	{
 		dprintf(D_ALWAYS,
-				"fseek failed in ReadUserLog::determineLogType");
+				"fseek failed in ReadUserLog::determineLogType\n");
 		Unlock( false );
 		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
@@ -673,7 +673,7 @@ ReadUserLog::determineLogType( void )
 
 	if( fseek( m_fp, filepos, SEEK_SET ) ) {
 		dprintf( D_ALWAYS,
-				 "fseek failed in ReadUserLog::determineLogType");
+				 "fseek failed in ReadUserLog::determineLogType\n");
 		Unlock( false );
 		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
@@ -719,14 +719,14 @@ ReadUserLog::skipXMLHeader(char afterangle, long filepos)
 		// now we are in a tag like <[^?!]*>, so go back two chars and
 		// we're all set
 		if( fseek(m_fp, filepos, SEEK_SET) )	{
-			dprintf(D_ALWAYS, "fseek failed in ReadUserLog::skipXMLHeader");
+			dprintf(D_ALWAYS, "fseek failed in ReadUserLog::skipXMLHeader\n");
 			Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 			return false;
 		}
 	} else {
 		// there was no prolog, so go back to the beginning
 		if( fseek(m_fp, filepos, SEEK_SET) )	{
-			dprintf(D_ALWAYS, "fseek failed in ReadUserLog::skipXMLHeader");
+			dprintf(D_ALWAYS, "fseek failed in ReadUserLog::skipXMLHeader\n");
 			Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 			return false;
 		}
@@ -1050,7 +1050,7 @@ ReadUserLog::readEventXML( ULogEvent *& event )
 		// we don't have the full event in the stream yet; restore file
 		// position and return
 		if( fseek(m_fp, filepos, SEEK_SET) )	{
-			dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
+			dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent\n");
 			return ULOG_UNK_ERROR;
 		}
 		clearerr(m_fp);
@@ -1170,7 +1170,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			m_lock->obtain( WRITE_LOCK );
 		}
 		if( fseek( m_fp, filepos, SEEK_SET)) {
-			dprintf( D_ALWAYS, "fseek() failed in %s:%d", __FILE__, __LINE__ );
+			dprintf( D_ALWAYS, "fseek() failed in %s:%d\n", __FILE__, __LINE__ );
 			if ( m_lock->isLocked() ) {
 				m_lock->release();
 			}
@@ -1181,7 +1181,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			// if synchronization was successful, reset file position and ...
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
-				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
+				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent\n");
 				if ( m_lock->isLocked() ) {
 					m_lock->release();
 				}
@@ -1262,7 +1262,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			dprintf( D_FULLDEBUG, "ReadUserLog: syncronize() failed\n");
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
-				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
+				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent\n");
 				if (m_lock->isLocked()) {
 					m_lock->release();
 				}

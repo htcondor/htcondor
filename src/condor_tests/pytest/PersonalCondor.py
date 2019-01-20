@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import re
 import subprocess
@@ -6,9 +8,9 @@ import time
 import classad
 import htcondor
 
-from Globals import *
-from Utils import Utils
-from CondorCluster import CondorCluster
+from .Globals import *
+from .Utils import Utils
+from .CondorCluster import CondorCluster
 
 class PersonalCondor(object):
 
@@ -98,7 +100,7 @@ class PersonalCondor(object):
     def Start(self):
         try:
             process = subprocess.Popen(["condor_master", "-f &"])
-            if process < 0:
+            if not process:
                 Utils.TLog("[PC: {0}] Child was terminated by signal: {1}".format(self._name, str(process)))
                 return False
         except OSError as e:
@@ -219,7 +221,7 @@ class PersonalCondor(object):
         os.environ["CONDOR_CONFIG"] = self._local_config
         return previous_condor_config
 
-    # MRC: Eventually want to do this using python bindings
+    # TODO: Eventually want to do this using python bindings
     # For internal use only.
     def _WaitForReadyDaemons(self):
         is_ready_attempts = 6

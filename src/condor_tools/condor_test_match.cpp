@@ -462,7 +462,8 @@ MatchTest::read_classad_file(const char *filename, ExprTree *constraint_expr, bo
 
     do {
         ad_pos = ftell(file);
-        classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
+        classad = new ClassAd;
+        InsertFromFile(file, *classad, "\n", is_eof, is_error, is_empty);
         if (!is_error && !is_empty) {
             if( !constraint_expr || EvalBool(classad, constraint_expr) )
             {

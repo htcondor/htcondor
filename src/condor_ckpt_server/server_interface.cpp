@@ -165,7 +165,7 @@ extern "C" int ConnectToServer(request_type type)
 			server_sa.set_port(CKPT_SVR_RESTORE_REQ_PORT);
 			break;
 		case REPLICATE_REQ:
-			dprintf(D_ALWAYS, "ERROR: REPLICATE_REQ not implemented.");
+			dprintf(D_ALWAYS, "ERROR: REPLICATE_REQ not implemented.\n");
 			close(conn_req_sd);
 			return CKPT_SERVER_SOCKET_ERROR;
 			break;

@@ -71,6 +71,6 @@ class XInterface
 
 	// The following are for getting rid of the obnoxious utmp stuff.
 	FILE * utmp_fp;
-	ExtArray<char *> *logged_on_users;
+	std::vector<char *> *logged_on_users;
 };
 #endif //__XINTERFACE_H__

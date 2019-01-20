@@ -126,6 +126,17 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
 	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE );
+	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE );
+	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE );
+	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE );
+
+	common_job_queue_attrs->insert( "TransferInQueued" );
+	common_job_queue_attrs->insert( "TransferInStarted" );
+	common_job_queue_attrs->insert( "TransferInFinished" );
+	common_job_queue_attrs->insert( "TransferOutQueued" );
+	common_job_queue_attrs->insert( "TransferOutStarted" );
+	common_job_queue_attrs->insert( "TransferOutFinished" );
+
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
@@ -361,8 +372,12 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		EXCEPT( "QmgrJobUpdater::updateJob: Unknown update type (%d)!", type );
 	}
 
-	job_ad->ResetExpr();
-	while( job_ad->NextDirtyExpr(name, tree) ) {
+	for ( auto itr = job_ad->dirtyBegin(); itr != job_ad->dirtyEnd(); itr++ ) {
+		name = itr->c_str();
+		tree = job_ad->LookupExpr(name);
+		if ( tree == NULL ) {
+			continue;
+		}
 		// There used to be a check for tree->invisible here,
 		// but there are no codepaths that reach here with
 		// private attributes set to invisible.
@@ -421,7 +436,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		itr != undirty_attrs.end();
 		++itr)
 	{
-		job_ad->SetDirtyFlag(itr->c_str(),false);
+		job_ad->MarkAttributeClean(*itr);
 	}
 	return true;
 }

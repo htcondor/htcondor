@@ -2605,7 +2605,7 @@ static bool test_mf_ad_ret_v1r_valid() {
 		"ClassAd that uses V1Raw.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1, NULL);
+	initAdFromString(AD_V1, classad);
 	bool expect = true;
 	bool actual = env.MergeFrom(&classad, NULL);
 	emit_input_header();
@@ -2626,7 +2626,7 @@ static bool test_mf_ad_ret_v2r_valid() {
 		"ClassAd that uses V2Raw.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2, NULL);
+	initAdFromString(AD_V2, classad);
 	bool expect = true;
 	bool actual = env.MergeFrom(&classad, NULL);
 	emit_input_header();
@@ -2647,7 +2647,7 @@ static bool test_mf_ad_ret_valid_define() {
 		"ClassAd that doesn't define an Environment");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD, NULL);
+	initAdFromString(AD, classad);
 	bool expect = true;
 	bool actual = env.MergeFrom(&classad, NULL);
 	emit_input_header();
@@ -2668,7 +2668,7 @@ static bool test_mf_ad_ret_v1r_invalid_name() {
 		"ClassAd that uses V1Raw due to a missing variable name.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1_MISS_NAME, NULL);
+	initAdFromString(AD_V1_MISS_NAME, classad);
 	bool expect = false;
 	bool actual = env.MergeFrom(&classad, NULL);
 	emit_input_header();
@@ -2689,7 +2689,7 @@ static bool test_mf_ad_ret_v1r_invalid_delim() {
 		"ClassAd that uses V1Raw due to a missing delimiter.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1_MISS_DELIM, NULL);
+	initAdFromString(AD_V1_MISS_DELIM, classad);
 	bool expect = false;
 	bool actual = env.MergeFrom(&classad, NULL);
 	emit_input_header();
@@ -2710,7 +2710,7 @@ static bool test_mf_ad_ret_v2r_invalid_name() {
 		"ClassAd that uses V2Raw due to a missing variable name.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2_MISS_NAME, NULL);
+	initAdFromString(AD_V2_MISS_NAME, classad);
 	bool expect = false;
 	bool actual = env.MergeFrom(&classad, NULL);
 	emit_input_header();
@@ -2731,7 +2731,7 @@ static bool test_mf_ad_ret_v2r_invalid_delim() {
 		"ClassAd that uses V2Raw due to a missing delimiter.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2_MISS_DELIM, NULL);
+	initAdFromString(AD_V2_MISS_DELIM, classad);
 	bool expect = false;
 	bool actual = env.MergeFrom(&classad, NULL);
 	emit_input_header();
@@ -2754,7 +2754,7 @@ static bool test_mf_ad_error_v1r_invalid_name() {
 	Env env;
 	MyString actual;
 	ClassAd classad;
-	classad.initFromString(AD_V1_MISS_NAME, NULL);
+	initAdFromString(AD_V1_MISS_NAME, classad);
 	env.MergeFrom(&classad, &actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_NAME);
@@ -2774,7 +2774,7 @@ static bool test_mf_ad_error_v1r_invalid_delim() {
 	Env env;
 	MyString actual;
 	ClassAd classad;
-	classad.initFromString(AD_V1_MISS_DELIM, NULL);
+	initAdFromString(AD_V1_MISS_DELIM, classad);
 	env.MergeFrom(&classad, &actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_DELIM);
@@ -2794,7 +2794,7 @@ static bool test_mf_ad_error_v2r_invalid_name() {
 	Env env;
 	MyString actual;
 	ClassAd classad;
-	classad.initFromString(AD_V2_MISS_NAME, NULL);
+	initAdFromString(AD_V2_MISS_NAME, classad);
 	env.MergeFrom(&classad, &actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_NAME);
@@ -2814,7 +2814,7 @@ static bool test_mf_ad_error_v2r_invalid_delim() {
 	Env env;
 	MyString actual;
 	ClassAd classad;
-	classad.initFromString(AD_V2_MISS_NAME, NULL);
+	initAdFromString(AD_V2_MISS_NAME, classad);
 	env.MergeFrom(&classad, &actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_NAME);
@@ -2852,7 +2852,7 @@ static bool test_mf_ad_add_define() {
 		"when passed a ClassAd that doesn't define an environment variable.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD, NULL);
+	initAdFromString(AD, classad);
 	MyString actual;
 	env.MergeFrom(&classad, NULL);
 	env.getDelimitedStringForDisplay(&actual);
@@ -2875,7 +2875,7 @@ static bool test_mf_ad_add_v1r_one() {
 	Env env;
 	const char* classad_string = "\tEnv = \"one=1\"";
 	ClassAd classad;
-	classad.initFromString(classad_string, NULL);
+	initAdFromString(classad_string, classad);
 	MyString actual;
 	env.MergeFrom(&classad, NULL);
 	env.getDelimitedStringForDisplay(&actual);
@@ -2897,7 +2897,7 @@ static bool test_mf_ad_add_v1r_many() {
 		"passed a valid ClassAd that uses V1Raw with many variables.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1, NULL);
+	initAdFromString(AD_V1, classad);
 	MyString actual;
 	env.MergeFrom(&classad, NULL);
 	env.getDelimitedStringForDisplay(&actual);
@@ -2920,7 +2920,7 @@ static bool test_mf_ad_add_v2r_one() {
 	Env env;
 	const char* classad_string = "\tEnvironment = \"one=1\"";
 	ClassAd classad;
-	classad.initFromString(classad_string, NULL);
+	initAdFromString(classad_string, classad);
 	MyString actual;
 	env.MergeFrom(&classad, NULL);
 	env.getDelimitedStringForDisplay(&actual);
@@ -2942,7 +2942,7 @@ static bool test_mf_ad_add_v2r_many() {
 		"passed a valid ClassAd that uses V2Raw with many variables.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2, NULL);
+	initAdFromString(AD_V2, classad);
 	MyString actual;
 	env.MergeFrom(&classad, NULL);
 	env.getDelimitedStringForDisplay(&actual);
@@ -2964,7 +2964,7 @@ static bool test_mf_ad_v1r_replace() {
 		"passed a valid ClassAd that uses V1Raw with many variables.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1_REP, NULL);
+	initAdFromString(AD_V1_REP, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
 	env.MergeFrom(&classad, NULL);
@@ -2988,7 +2988,7 @@ static bool test_mf_ad_v2r_replace() {
 		"passed a valid ClassAd that uses V2Raw with many variables.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2_REP, NULL);
+	initAdFromString(AD_V2_REP, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
 	env.MergeFrom(&classad, NULL);
@@ -3013,7 +3013,7 @@ static bool test_mf_ad_v1r_replace_add() {
 		" V1Raw with many variables.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1_REP_ADD, NULL);
+	initAdFromString(AD_V1_REP_ADD, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
 	env.MergeFrom(&classad, NULL);
@@ -3038,7 +3038,7 @@ static bool test_mf_ad_v2r_replace_add() {
 		" V2Raw with many variables.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2_REP_ADD, NULL);
+	initAdFromString(AD_V2_REP_ADD, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
 	env.MergeFrom(&classad, NULL);
@@ -3781,7 +3781,7 @@ static bool test_insert_env_into_classad_v1_v1_replace() {
 	char* actual;
 	env.MergeFromV1Raw(V1R_REP, NULL);
 	ClassAd classad;
-	classad.initFromString(AD_V1, NULL);
+	initAdFromString(AD_V1, classad);
 	env.InsertEnvIntoClassAd(&classad, NULL);
 	classad.LookupString("Env", &actual);
 	emit_input_header();
@@ -3808,7 +3808,7 @@ static bool test_insert_env_into_classad_v1_v2_replace() {
 	char* actual;
 	env.MergeFromV1Raw(V1R_REP, NULL);
 	ClassAd classad;
-	classad.initFromString(AD_V2, NULL);
+	initAdFromString(AD_V2, classad);
 	env.InsertEnvIntoClassAd(&classad, NULL);
 	classad.LookupString("Environment", &actual);
 	emit_input_header();
@@ -3835,7 +3835,7 @@ static bool test_insert_env_into_classad_v2_v1_replace() {
 	char* actual;
 	env.MergeFromV2Raw(V2R_REP, NULL);
 	ClassAd classad;
-	classad.initFromString(AD_V1, NULL);
+	initAdFromString(AD_V1, classad);
 	env.InsertEnvIntoClassAd(&classad, NULL);
 	classad.LookupString("Env", &actual);
 	emit_input_header();
@@ -3862,7 +3862,7 @@ static bool test_insert_env_into_classad_v2_v2_replace() {
 	char* actual;
 	env.MergeFromV2Raw(V2R_REP, NULL);
 	ClassAd classad;
-	classad.initFromString(AD_V2, NULL);
+	initAdFromString(AD_V2, classad);
 	env.InsertEnvIntoClassAd(&classad, NULL);
 	classad.LookupString("Environment", &actual);
 	emit_input_header();
@@ -4006,7 +4006,7 @@ static bool test_insert_env_into_classad_version_v1_semi() {
 	char *actual, *version = info.get_version_string();
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
-	classad.initFromString(AD_V1, NULL);
+	initAdFromString(AD_V1, classad);
 	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);
 	classad.LookupString("Env", &actual);
 	emit_input_header();
@@ -4037,7 +4037,7 @@ static bool test_insert_env_into_classad_version_v1_line() {
 	char *actual, *version = info.get_version_string();
 	env.MergeFromV2Raw(V2R_REP, NULL);
 	ClassAd classad;
-	classad.initFromString(AD_V1_WIN, NULL);
+	initAdFromString(AD_V1_WIN, classad);
 	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);
 	classad.LookupString("Env", &actual);
 	emit_input_header();
@@ -4100,7 +4100,7 @@ static bool test_insert_env_into_classad_version_v1_error_v2() {
 	MyString error;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
 	ClassAd classad;
-	classad.initFromString(AD_V2);
+	initAdFromString(AD_V2, classad);
 	env.InsertEnvIntoClassAd(&classad, &error, NULL, &info);
 	classad.LookupString("Env", &actual);
 	emit_input_header();
@@ -4799,7 +4799,7 @@ static bool test_get_delim_str_v1or2_raw_ad_return_v1() {
 		"ClassAd using V1 format.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1, NULL);
+	initAdFromString(AD_V1, classad);
 	MyString result, error;
 	bool expect = true;
 	bool actual = env.getDelimitedStringV1or2Raw(&classad, &result, &error);
@@ -4823,7 +4823,7 @@ static bool test_get_delim_str_v1or2_raw_ad_return_v2() {
 		"ClassAd using V2 format.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2, NULL);
+	initAdFromString(AD_V2, classad);
 	MyString result, error;
 	bool expect = true;
 	bool actual = env.getDelimitedStringV1or2Raw(&classad, &result, &error);
@@ -4847,7 +4847,7 @@ static bool test_get_delim_str_v1or2_raw_ad_return_invalid_v1() {
 		"passed an invalid ClassAd using V1 format.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1_MISS_BOTH, NULL);
+	initAdFromString(AD_V1_MISS_BOTH, classad);
 	MyString result, error;
 	bool expect = false;
 	bool actual = env.getDelimitedStringV1or2Raw(&classad, &result, &error);
@@ -4871,7 +4871,7 @@ static bool test_get_delim_str_v1or2_raw_ad_return_invalid_v2() {
 		"passed an invalid ClassAd using V2 format.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2_MISS_BOTH, NULL);
+	initAdFromString(AD_V2_MISS_BOTH, classad);
 	MyString result, error;
 	bool expect = false;
 	bool actual = env.getDelimitedStringV1or2Raw(&classad, &result, &error);
@@ -4896,7 +4896,7 @@ static bool test_get_delim_str_v1or2_raw_ad_error_v1() {
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1_MISS_BOTH, NULL);
+	initAdFromString(AD_V1_MISS_BOTH, classad);
 	MyString result, error;
 	env.getDelimitedStringV1or2Raw(&classad, &result, &error);
 	emit_input_header();
@@ -4918,7 +4918,7 @@ static bool test_get_delim_str_v1or2_raw_ad_error_v2() {
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2_MISS_BOTH, NULL);
+	initAdFromString(AD_V2_MISS_BOTH, classad);
 	MyString result, error;
 	env.getDelimitedStringV1or2Raw(&classad, &result, &error);
 	emit_input_header();
@@ -4961,7 +4961,7 @@ static bool test_get_delim_str_v1or2_raw_ad_result_v1() {
 		"MyString to the expected value for an Env object in V1 format.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1, NULL);
+	initAdFromString(AD_V1, classad);
 	MyString actual, error;
 	env.getDelimitedStringV1or2Raw(&classad, &actual, &error);
 	emit_input_header();
@@ -4984,7 +4984,7 @@ static bool test_get_delim_str_v1or2_raw_ad_result_v2() {
 		"MyString to the expected value for an Env object in V2 format.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V2_SEMI, NULL);
+	initAdFromString(AD_V2_SEMI, classad);
 	MyString actual, error;
 	env.getDelimitedStringV1or2Raw(&classad, &actual, &error);
 	emit_input_header();
@@ -5008,7 +5008,7 @@ static bool test_get_delim_str_v1or2_raw_ad_result_replace() {
 		"from the ClassAd.");
 	Env env;
 	ClassAd classad;
-	classad.initFromString(AD_V1_REP, NULL);
+	initAdFromString(AD_V1_REP, classad);
 	MyString actual1, actual2, error;
 	env.MergeFromV1Raw(V1R, NULL);
 	env.getDelimitedStringV1Raw(&actual1, &error);
@@ -6589,7 +6589,7 @@ static bool test_input_was_v1_false_ad() {
 	emit_test("Test that InputWasV1() returns false for an Env object "
 		"created from a ClassAd that uses a V2 environment with MergeFrom().");
 	ClassAd classad;
-	classad.initFromString(AD_V2, NULL);
+	initAdFromString(AD_V2, classad);
 	Env env;
 	env.MergeFrom(&classad, NULL);
 	bool expect = false;
@@ -6648,7 +6648,7 @@ static bool test_input_was_v1_true_ad() {
 	emit_test("Test that InputWasV1() returns true for an Env object "
 		"created from a ClassAd that uses a V1 environment with MergeFrom().");
 	ClassAd classad;
-	classad.initFromString(AD_V1, NULL);
+	initAdFromString(AD_V1, classad);
 	Env env;
 	env.MergeFrom(&classad, NULL);
 	bool expect = true;

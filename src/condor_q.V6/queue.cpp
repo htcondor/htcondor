@@ -386,8 +386,8 @@ class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFilePa
 		: CondorClassAdFileParseHelper("\n", typ)
 		, is_schedd(false), is_submitter(false)
 	{}
-	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
-	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* file);
+	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);
+	virtual int OnParseError(std::string & line, classad::ClassAd & ad, FILE* file);
 	std::string schedd_name;
 	std::string schedd_addr;
 	bool is_schedd;
@@ -396,7 +396,7 @@ class CondorQClassAdFileParseHelper : public compat_classad::CondorClassAdFilePa
 
 // this method is called before each line is parsed. 
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
+int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/)
 {
 	// treat blank lines as delimiters.
 	if (line.size() <= 0) {
@@ -447,7 +447,7 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/
 
 // this method is called when the parser encounters an error
 // return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-int CondorQClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & ad, FILE* file)
+int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & ad, FILE* file)
 {
 	// when we get a parse error, skip ahead to the start of the next classad.
 	int ee = this->PreParse(line, ad, file);
@@ -497,7 +497,7 @@ int main (int argc, const char **argv)
 	char		*scheddName=NULL;
 	std::string		scheddMachine;
 	int		useFastScheddQuery = 0;
-	char		*tmp;
+	const char	*tmp;
 	int         retval = 0;
 
 	Collectors = NULL;
@@ -1005,7 +1005,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			scheddQuery.setLocationLookup(daemonname);
 			Q.addSchedd(daemonname);
 
-			delete [] daemonname;
+			free(daemonname);
 			i++;
 			querySchedds = true;
 		} 

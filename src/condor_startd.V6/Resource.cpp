@@ -246,7 +246,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		// we need this before we instantiate the Reqexp object...
 	if (SlotType::type_param_boolean(cap, "PARTITIONABLE", false)) {
 		set_feature( PARTITIONABLE_SLOT );
-		m_id_dispenser = new IdDispenser( 3, 1 );
+		m_id_dispenser = new IdDispenser( 1 );
 	} else {
 		set_feature( STANDARD_SLOT );
 	}
@@ -1089,6 +1089,8 @@ Resource::leave_preempting_state( void )
 			r_pre = NULL;
 			remove_pre(); // do full cleanup of pre stuff
 				// STATE TRANSITION preempting -> claimed
+				// TLM: STATE TRANSITION #23
+				// TLM: STATE TRANSITION #24
 			acceptClaimRequest();
 			return;
 		}
@@ -1097,7 +1099,10 @@ Resource::leave_preempting_state( void )
 		dest = owner_state;	// So change_state() below will be correct.
 		//@fallthrough@
 	case owner_state:
+		// TLM: STATE TRANSITION #22
+		// TLM: STATE TRANSITION #25
 	case delete_state:
+		// TLM: Undocumented, hopefully on purpose.
 		remove_pre();
 		change_state( dest );
 		return;
@@ -1141,9 +1146,13 @@ Resource::leave_preempting_state( void )
 		r_pre = NULL;
 		remove_pre(); // do full cleanup of pre stuff
 			// STATE TRANSITION preempting -> claimed
+			// TLM: STATE TRANSITION #23
+			// TLM: STATE TRANSITION #24
 		acceptClaimRequest();
 	} else {
 			// STATE TRANSITION preempting -> owner
+			// TLM: STATE TRANSITION #22
+			// TLM: STATE TRANSITION #25
 		remove_pre();
 		change_state( owner_state );
 	}
@@ -1410,7 +1419,7 @@ Resource::update_with_ack( void )
 
     }
 
-    char     *address = collector.addr ();
+    const char *address = collector.addr ();
     ReliSock *socket  = (ReliSock*) collector.startCommand (
         UPDATE_STARTD_AD_WITH_ACK );
 
@@ -2238,9 +2247,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
 		cap->Assign(ATTR_SLOT_ID, r_id);
-		if (param_boolean("ALLOW_VM_CRUFT", false)) {
-			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
-		}
 
 		if (r_pair_name) {
 			cap->Assign( ATTR_SLOT_PAIR_NAME, r_pair_name );

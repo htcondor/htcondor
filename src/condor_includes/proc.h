@@ -104,8 +104,8 @@ END_C_DECLS
 bool operator==( const PROC_ID a, const PROC_ID b);
 size_t hashFuncPROC_ID( const PROC_ID & );
 size_t hashFunction(const PROC_ID &);
-void procids_to_mystring(ExtArray<PROC_ID> *procids, MyString &str);
-ExtArray<PROC_ID>* mystring_to_procids(MyString &str);
+void procids_to_string(const std::vector<PROC_ID> *procids, std::string &str);
+std::vector<PROC_ID>* string_to_procids(const std::string &str);
 
 // result MUST be of size PROC_ID_STR_BUFLEN
 void ProcIdToStr(const PROC_ID a, char *result);

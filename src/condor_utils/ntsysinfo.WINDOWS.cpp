@@ -137,31 +137,30 @@ CSysinfo::~CSysinfo()
 	}
 }
 
-int CSysinfo::GetPIDs (ExtArray<pid_t> & dest)
+int CSysinfo::GetPIDs (std::vector<pid_t> & dest)
 {
 #if 0
 	// This code is deprecated in favor of using supported functions below
-	int s=0;
 	pid_t curpid = 0;
 	DWORD *startblock = memptr;
+	dest.clear();
 	Refresh();	
 	while (startblock)
 	{
 		curpid = *(startblock + 17);
-		dest[s++] = curpid;
+		dest.push_back(curpid);
 		startblock = NextBlock (startblock);
 		if ( startblock == (DWORD*)1 ) {
 			startblock = memptr;
-			s = 0;
+			dest.clear();
 		}
 	}
-	return (s);
+	return (int)dest.size();
 #endif
 	HANDLE hProcessSnap;
 	PROCESSENTRY32 pe32;
-	int s;
 
-	s = 0;
+	dest.clear();
 
 	// Take a snapshot of all processes in the system.
 	hProcessSnap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
@@ -183,15 +182,15 @@ int CSysinfo::GetPIDs (ExtArray<pid_t> & dest)
 	}
 	
 	// Now walk the snapshot of processes, and
-	// stick each one in our ExtArray to form our Pid list.
+	// stick each one in our vector to form our Pid list.
 	do {
-		dest[s++] = pe32.th32ProcessID;
+		dest.push_back( pe32.th32ProcessID );
 	} while( Process32Next( hProcessSnap, &pe32 ) );
 
   // Don't forget to clean up the snapshot object!
   CloseHandle( hProcessSnap );
   
-  return s; // return the number of PIDs we got
+  return (int)dest.size(); // return the number of PIDs we got
 }
 
 DWORD CSysinfo::NumThreads (pid_t pid)
@@ -411,12 +410,14 @@ void CSysinfo::Explore(pid_t pid)
 #endif
 
 #if 0
-int CSysinfo::GetTIDs (pid_t pid, ExtArray<DWORD> & tids, 
-					   ExtArray<DWORD> & tstatus)
+int CSysinfo::GetTIDs (pid_t pid, std::vector<DWORD> & tids, 
+					   std::vector<DWORD> & tstatus)
 #endif
-int CSysinfo::GetTIDs (pid_t pid, ExtArray<DWORD> & tids)
+int CSysinfo::GetTIDs (pid_t pid, std::vector<DWORD> & tids)
 {
 	DWORD s = 0;
+
+	tids.clear();
 
 	if ( !IsWin2k ) {
 		/*** Window NT 4.0 Specific Code -- this does not work on Win2k! ***/
@@ -427,8 +428,8 @@ int CSysinfo::GetTIDs (pid_t pid, ExtArray<DWORD> & tids)
 			return 0;
 		for (s=0; s < *(block+1); s++)
 		{
-			tids[s] = *(block+43+s*16);	
-			// tstatus[s] = *(block+48+s*16) + (*(block+47+s*16)<<8);
+			tids.push_back( *(block+43+s*16) );
+			// tstatus.push_back( *(block+48+s*16) + (*(block+47+s*16)<<8) );
 		}
 		return (int)s;
 	}
@@ -460,7 +461,7 @@ int CSysinfo::GetTIDs (pid_t pid, ExtArray<DWORD> & tids)
         { 
             if (te32.th32OwnerProcessID == pid) 
             { 
-				tids[s] = te32.th32ThreadID;	
+				tids.push_back( te32.th32ThreadID );
 				s++;
             } 
         } 
@@ -475,16 +476,16 @@ int CSysinfo::GetTIDs (pid_t pid, ExtArray<DWORD> & tids)
 
 pid_t CSysinfo::FindThreadProcess (DWORD find_tid)
 {
-	ExtArray<pid_t> pids(256);
-	ExtArray<DWORD> tids;
+	std::vector<pid_t> pids;
+	std::vector<DWORD> tids;
 	int num_pids;
 	int num_tids;
 	
 	num_pids = GetPIDs (pids);
-	for (int s=0; s<num_pids; s++)
+	for (size_t s=0; s<pids.size(); s++)
 	{
 		num_tids = GetTIDs (pids[s], tids);
-		for (int l=0; l<num_tids; l++)
+		for (size_t l=0; l<tids.size(); l++)
 		{
 			if (find_tid == tids[l])
 				return pids[s];

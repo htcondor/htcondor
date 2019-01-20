@@ -227,7 +227,7 @@ Rooster::wakeUp(ClassAd *startd_ad)
 	stdin_pipe_fds[0] = -1; // child's side
 	stdin_pipe_fds[1] = -1; // my side
 	if( !daemonCore->Create_Pipe(stdin_pipe_fds) ) {
-		dprintf(D_ALWAYS,"Rooster::wakeUp: failed to create stdin pipe.");
+		dprintf(D_ALWAYS,"Rooster::wakeUp: failed to create stdin pipe.\n");
 		return false;
 	}
 
@@ -235,7 +235,7 @@ Rooster::wakeUp(ClassAd *startd_ad)
 	stdout_pipe_fds[0] = -1; // my side
 	stdout_pipe_fds[1] = -1; // child's side
 	if( !daemonCore->Create_Pipe(stdout_pipe_fds) ) {
-		dprintf(D_ALWAYS,"Rooster::wakeUp: failed to create stdout pipe.");
+		dprintf(D_ALWAYS,"Rooster::wakeUp: failed to create stdout pipe.\n");
 		daemonCore->Close_Pipe(stdin_pipe_fds[0]);
 		daemonCore->Close_Pipe(stdin_pipe_fds[1]);
 		return false;

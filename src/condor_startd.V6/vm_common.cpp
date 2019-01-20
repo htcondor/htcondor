@@ -31,7 +31,7 @@ extern VMManager *vmmanager;
 int vm_register_interval = 60; //seconds
 
 bool 
-vmapi_is_allowed_host_addr(char *addr)
+vmapi_is_allowed_host_addr(const char *addr)
 {
 	// The format of addr is <ip_addr:port>. Ex.) <10.3.4.5:2345>
 	if( !addr || !is_valid_sinful(addr))
@@ -39,7 +39,7 @@ vmapi_is_allowed_host_addr(char *addr)
 
 	if( vmapi_is_virtual_machine() == TRUE ) {
 		// Packets are only allowed from the host machine
-		char* hostip;
+		const char* hostip;
 		hostip = vmregister->getHostSinful();
 
 		if( !hostip )
@@ -54,7 +54,7 @@ vmapi_is_allowed_host_addr(char *addr)
 }
 
 bool 
-vmapi_is_allowed_vm_addr(char *addr)
+vmapi_is_allowed_vm_addr(const char *addr)
 {
 	// The format of addr is <ip_addr:port>. Ex.) <10.3.4.5:2345>
 	if( !addr || !is_valid_sinful(addr))
@@ -91,7 +91,7 @@ vmapi_num_of_registered_vm(void)
 }
 
 int 
-vmapi_register_cmd_handler(char *addr, int *permission)
+vmapi_register_cmd_handler(const char *addr, int *permission)
 {
 	if( vmapi_is_host_machine() == FALSE )
 		return FALSE;
@@ -188,7 +188,7 @@ vmapi_get_host_classAd(void)
 // XXX: Refactor for use with calls like _requestVMRegister
 MSC_DISABLE_WARNING(6262) // function uses 60820 bytes of stack
 bool 
-vmapi_sendCommand(char *addr, int cmd, void *data)
+vmapi_sendCommand(const char *addr, int cmd, void *data)
 {
 	Daemon hstartd(DT_STARTD, addr);
 
@@ -232,13 +232,13 @@ MSC_RESTORE_WARNING(6262) // function uses 60820 bytes of stack
 
 // Heavily cut and paste from resolveNames in condor_tools/tool.C
 static Daemon*
-_FindDaemon( char *host_name, daemon_t real_dt, Daemon *pool)
+_FindDaemon( const char *host_name, daemon_t real_dt, Daemon *pool)
 {
 	Daemon* d = NULL;
 	char* tmp = NULL;
 	const char* host = NULL;
 	bool had_error = FALSE;
-	char *pool_addr = NULL;
+	const char *pool_addr = NULL;
 
 	if( !pool || !host_name )
 		return NULL;
@@ -333,7 +333,7 @@ _FindDaemon( char *host_name, daemon_t real_dt, Daemon *pool)
 }
 
 Daemon*
-vmapi_findDaemon( char *host_name, daemon_t real_dt)
+vmapi_findDaemon( const char *host_name, daemon_t real_dt)
 {
 	Daemon *collector;
 	Daemon *found;

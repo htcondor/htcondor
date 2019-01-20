@@ -42,7 +42,6 @@
 #include "env.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
-#include "condor_string.h" // for strnewp, etc.
 #include "forkwork.h"
 #include "condor_open.h"
 #include "ickpt_share.h"
@@ -945,9 +944,9 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 	ASSERT(owner == NULL);
 
 	if ( o ) {
-		fquser = strnewp(o);
+		fquser = strdup(o);
 			// owner is just fquser that stops at the first '@' 
-		owner = strnewp(o);
+		owner = strdup(o);
 		char *atsign = strchr(owner,'@');
 		if (atsign) {
 			*atsign = '\0';
@@ -955,7 +954,7 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 	}
 
 	addr = raddr;
-	myendpoint = strnewp(addr.to_ip_string().Value());
+	myendpoint = strdup(addr.to_ip_string().Value());
 
 	return true;
 }
@@ -973,11 +972,11 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 bool
 QmgmtPeer::setEffectiveOwner(char const *o)
 {
-	delete [] owner;
+	free(owner);
 	owner = NULL;
 
 	if ( o ) {
-		owner = strnewp(o);
+		owner = strdup(o);
 	}
 	return true;
 }
@@ -986,15 +985,15 @@ void
 QmgmtPeer::unset()
 {
 	if (owner) {
-		delete [] owner;
+		free(owner);
 		owner = NULL;
 	}
 	if (fquser) {
-		delete fquser;
+		free(fquser);
 		fquser = NULL;
 	}
 	if (myendpoint) {
-		delete [] myendpoint;
+		free(myendpoint);
 		myendpoint = NULL;
 	}
 	if (sock) sock=NULL;	// note: do NOT delete sock!!!!!
@@ -2326,24 +2325,6 @@ QmgmtSetEffectiveOwner(char const *o)
 		return -1;
 	}
 	return 0;
-}
-
-bool
-OwnerCheck(int cluster_id,int proc_id)
-{
-	ClassAd				*ad = NULL;
-
-	if (!Q_SOCK) {
-		return 0;
-	}
-
-	JobQueueKeyBuf key;
-	IdToKey(cluster_id,proc_id,key);
-	if (!JobQueue->LookupClassAd(key, ad)) {
-		return 0;
-	}
-
-	return OwnerCheck(ad, Q_SOCK->getOwner());
 }
 
 // Test if this owner matches my owner, so they're allowed to update me.
@@ -5502,10 +5483,11 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 		return -1;
 	}
 
-	ad->ResetExpr();
-	while( ad->NextDirtyExpr(name, expr) != false )
+	for ( auto itr = ad->dirtyBegin(); itr != ad->dirtyEnd(); itr++ )
 	{
-		if(!ClassAdAttributeIsPrivate(name))
+		name = itr->c_str();
+		expr = ad->LookupExpr(name);
+		if(expr && !ClassAdAttributeIsPrivate(name))
 		{
 			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{
@@ -5629,7 +5611,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		// Copy attributes from chained parent ad into the expanded ad
 		// so if parent is deleted before caller is finished with this
 		// ad, things will still be ok.
-		expanded_ad->ChainCollapse();
+		ChainCollapse(*expanded_ad);
 
 			// Make a stringlist of all attribute names in job ad.
 			// Note: ATTR_JOB_CMD must be first in AttrsToExpand...

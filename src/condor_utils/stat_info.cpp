@@ -22,7 +22,6 @@
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "stat_info.h"
-#include "condor_string.h"
 #include "status_string.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
@@ -34,8 +33,8 @@
 StatInfo::StatInfo( const char *path )
 {
 	char *s, *last = NULL, *trail_slash = NULL, chslash;
-	fullpath = strnewp( path );
-	dirpath = strnewp( path );
+	fullpath = path ? strdup( path ) : NULL;
+	dirpath = path ? strdup( path ) : NULL;
 
 		// Since we've got our own copy of the full path now sitting
 		// in dirpath, we can find the last directory delimiter, make
@@ -48,7 +47,7 @@ StatInfo::StatInfo( const char *path )
 		}
 	}
 	if( last != NULL && last[1] ) {
-		filename = strnewp( &last[1] ); 
+		filename = strdup( &last[1] );
 		last[1] = '\0';
 	} else {
 		filename = NULL;
@@ -68,11 +67,11 @@ StatInfo::StatInfo( const char *path )
 StatInfo::StatInfo( const char *param_dirpath,
 					const char *param_filename )
 {
-	this->filename = strnewp( param_filename );
+	this->filename = strdup( param_filename );
 	this->dirpath = make_dirpath( param_dirpath );
 	MyString buf;
 	dircat( param_dirpath, param_filename, buf );
-	fullpath = buf.detach_buffer();
+	fullpath = strdup( buf.Value() );
 	stat_file( fullpath );
 }
 
@@ -91,11 +90,11 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 					time_t time_modify, filesize_t fsize,
 					bool is_dir, bool is_symlink )
 {
-	this->dirpath = strnewp( dirpath );
-	this->filename = strnewp( filename );
+	this->dirpath = strdup( dirpath );
+	this->filename = strdup( filename );
 	MyString buf;
 	dircat( dirpath, filename, buf);
-	fullpath = buf.detach_buffer();
+	fullpath = strdup( buf.Value() );
 	si_error = SIGood;
 	si_errno = 0;
 	access_time = time_access;
@@ -111,9 +110,9 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 
 StatInfo::~StatInfo( void )
 {
-	if ( filename ) delete [] filename;
-	if ( dirpath )  delete [] dirpath;
-	if ( fullpath ) delete [] fullpath;
+	if ( filename ) free( filename );
+	if ( dirpath )  free( dirpath );
+	if ( fullpath ) free( fullpath );
 }
 
 
@@ -302,11 +301,11 @@ StatInfo::make_dirpath( const char* dir )
 	if( dir[dirlen - 1] == DIR_DELIM_CHAR ) {
 			// We've already got the delim, just return a copy of what
 			// we were passed in:
-		rval = new char[dirlen + 1];
+		rval = (char *)malloc(dirlen + 1);
 		sprintf( rval, "%s", dir );
 	} else {
 			// We need to include the delim character.
-		rval = new char[dirlen + 2];
+		rval = (char *)malloc(dirlen + 2);
 		sprintf( rval, "%s%c", dir, DIR_DELIM_CHAR );
 	}
 	return rval;

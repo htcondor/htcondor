@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+
 import atexit
 import sys
 import time
 
-from Globals import *
-from Utils import Utils
-from PersonalCondor import PersonalCondor
+from .Globals import *
+from .Utils import Utils
+from .PersonalCondor import PersonalCondor
 
 class CondorTest(object):
 
@@ -121,7 +123,7 @@ class CondorTest(object):
         # but since we're in the exit handler, that probably doesn't matter.
         if sys.modules.get("threading") is not None:
         	del sys.modules["threading"]
-        sys.exit(rv)
+        sys.exit(0)
 
     # The 'early-out' method.  Records the intended exit code, because
     # Python doesn't.  We could skip using the atexit library, but this

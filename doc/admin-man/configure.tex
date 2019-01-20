@@ -4842,17 +4842,6 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   make HTCondor advertise more slots than there are CPUs on the machine.
   To do that, use \Macro{NUM\_CPUS}.
 
-\label{param:AllowVMCruft}
-\item[\Macro{ALLOW\_VM\_CRUFT}]
-  A boolean value that HTCondor sets and uses internally, currently
-  defaulting to \Expr{True}.  When \Expr{True},
-  HTCondor looks for configuration variables named with the
-  previously used string \MacroNI{VM} after searching unsuccessfully
-  for variables named with the currently used string \MacroNI{SLOT}.
-  When \Expr{False}, HTCondor does \emph{not} look for variables named
-  with the previously used string \MacroNI{VM} after searching
-  unsuccessfully for the string \MacroNI{SLOT}. 
-
 \end{description}
 
 
@@ -8987,6 +8976,15 @@ These macros affect the \Condor{credd}.
   Subsequent uses of that password do not require
   communication with the \Condor{credd} daemon.
   
+\label{param:CredSuperUsers}
+\item[\Macro{CRED\_SUPER\_USERS}]
+  A comma and/or space separated list of user names on a given machine
+  that are permitted to store credentials for any user when using the
+  \Condor{store\_cred} command.
+  When not on this list, users can only store their own credentials.
+  Entries in this list can contain a single '*' wildcard character,
+  which matches any sequence of characters.
+
 \label{param:SkipWindowsLogonNetwork}
 \item[\Macro{SKIP\_WINDOWS\_LOGON\_NETWORK}]
   A boolean value that defaults to \Expr{False}.

@@ -478,7 +478,7 @@ Matchmaker::
 	if ( cachedName ) free(cachedName);
 	if ( cachedAddr ) free(cachedAddr);
 
-	delete [] NegotiatorName;
+	free(NegotiatorName);
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
@@ -594,7 +594,7 @@ reinitialize ()
 
 	if ( NegotiatorNameInConfig || NegotiatorName == NULL ) {
 		char *tmp = param( "NEGOTIATOR_NAME" );
-		delete [] NegotiatorName;
+		free( NegotiatorName );
 		if ( tmp ) {
 			NegotiatorName = build_valid_daemon_name( tmp );
 			free( tmp );
@@ -3546,7 +3546,7 @@ obtainAdsFromCollector (
 			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
 
 			if(!ad->LookupString(ATTR_NAME, &remoteHost)) {
-				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.");
+				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.\n");
 				continue;
 			}
 
@@ -5768,9 +5768,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
     // these propagate into the slot ad in the schedd match rec, and from there eventually to the claim
     // structures in the startd:
-    offer->CopyAttribute(ATTR_REMOTE_GROUP, ATTR_SUBMITTER_GROUP, &request);
-    offer->CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, ATTR_SUBMITTER_NEGOTIATING_GROUP, &request);
-    offer->CopyAttribute(ATTR_REMOTE_AUTOREGROUP, ATTR_SUBMITTER_AUTOREGROUP, &request);
+    CopyAttribute(ATTR_REMOTE_GROUP, *offer, ATTR_SUBMITTER_GROUP, request);
+    CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, *offer, ATTR_SUBMITTER_NEGOTIATING_GROUP, request);
+    CopyAttribute(ATTR_REMOTE_AUTOREGROUP, *offer, ATTR_SUBMITTER_AUTOREGROUP);
 
 	// insert cluster and proc from the request into the offer; this is
 	// used by schedd_negotiate.cpp when resource request lists are being used
@@ -6098,11 +6098,6 @@ addRemoteUserPrios( ClassAd	*ad )
 	total_slots = 0;
 	if (!ad->LookupInteger(ATTR_TOTAL_SLOTS, total_slots)) {
 		total_slots = 0;
-	}
-	if (!total_slots && (param_boolean("ALLOW_VM_CRUFT", false))) {
-		if (!ad->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES, total_slots)) {
-			total_slots = 0;
-		}
 	}
 		// The for-loop below publishes accounting information about each slot
 		// into each other slot.  This is relatively computationally expensive,
@@ -6614,8 +6609,8 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		// Copy some stuff from the startd ad into the update ad so
 		// the collector can identify what ad to merge our update
 		// into.
-	update_ad.CopyAttribute(ATTR_NAME,ATTR_NAME,startd_ad);
-	update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
+	CopyAttribute(ATTR_NAME, update_ad, *startd_ad);
+	CopyAttribute(ATTR_STARTD_IP_ADDR, update_ad, *startd_ad);
 
 	time_t now = time(NULL);
 	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,(int)now);
@@ -6658,7 +6653,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		ClassAd slot1_update_ad;
 
 		slot1_update_ad.Assign(ATTR_NAME,slot1_name);
-		slot1_update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
+		CopyAttribute(ATTR_STARTD_IP_ADDR,slot1_update_ad,*startd_ad);
 		MyString slotX_last_match_time;
 		slotX_last_match_time.formatstr("slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
 		slot1_update_ad.Assign(slotX_last_match_time.Value(),(int)now);

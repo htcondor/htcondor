@@ -160,7 +160,7 @@ compat_classad::ClassAd* get_classad_from_file(){
 	const char* classad_string = "A = 0.7\n B=2\n C = 3\n D = \"alain\"\n "
 		"MyType=\"foo\"\n TargetType=\"blah\"";
 	compat_classad::ClassAd classad;
-	classad.initFromString(classad_string, NULL);
+	initAdFromString(classad_string, classad);
 	classad_file = safe_fopen_wrapper_follow("classad_file", "w");
 	fPrintAd(classad_file, classad);
 	fprintf(classad_file, "***\n");
@@ -168,7 +168,8 @@ compat_classad::ClassAd* get_classad_from_file(){
 
 	int iseof, error, empty;
 	classad_file = safe_fopen_wrapper_follow("classad_file", "r");
-	classad_from_file = new ClassAd(classad_file, "***", iseof, error, empty);
+	classad_from_file = new ClassAd;
+	InsertFromFile(classad_file, *classad_from_file, "***", iseof, error, empty);
 	fclose(classad_file);
 
 	return classad_from_file;

@@ -2302,10 +2302,7 @@ REMOTE_CONDOR_getcreds()
 		condor_base64_decode(b64.Value(), &rawbuf, &rawlen);
 
 		if (rawlen <= 0) {
-			dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
-			free(rawbuf);
-			EXCEPT("failure");
-			return false;
+			EXCEPT("Failed to decode credential sent by shadow!");
 		}
 
 		// write temp file
@@ -2330,7 +2327,9 @@ REMOTE_CONDOR_getcreds()
 	ON_ERROR_RETURN( result );
 
 	// return status
-	return cmd;
+	// >0:  Success
+	// <=0: Failure
+	return (cmd >= 0) ? 1 : 0;
 }
 
 int

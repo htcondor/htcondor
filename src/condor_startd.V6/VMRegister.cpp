@@ -54,7 +54,7 @@ VMRegister::~VMRegister()
 }
 
 static bool 
-_requestVMRegister(char *addr)
+_requestVMRegister(const char *addr)
 {
 	char *buffer = NULL;
 	Daemon hstartd(DT_STARTD, addr);
@@ -176,7 +176,7 @@ VMRegister::requestHostClassAds(void)
 	SetTargetTypeName(query_ad, STARTD_ADTYPE);
 	query_ad.Assign(ATTR_REQUIREMENTS, true);
 
-	char *addr = m_vm_host_daemon->addr();
+	const char *addr = m_vm_host_daemon->addr();
 	Daemon hstartd(DT_STARTD, addr);
 	ReliSock ssock;
 
@@ -253,7 +253,7 @@ VMRegister::requestHostClassAds(void)
 	}
 }
 
-char *
+const char *
 VMRegister::getHostSinful(void)
 {
 	if( !m_vm_host_daemon )

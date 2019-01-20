@@ -1802,7 +1802,7 @@ access_via_nfs( const char * /*file*/ )
 	}
 
 	if( !Executing_UID_Domain[0] ) {
-		dprintf( D_SYSCALLS, "\tdon't know UID domain of executing machine" );
+		dprintf( D_SYSCALLS, "\tdon't know UID domain of executing machine\n" );
 		dprintf( D_SYSCALLS, "\taccess_via_NFS() returning FALSE\n" );
 		return FALSE;
 	}

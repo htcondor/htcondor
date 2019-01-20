@@ -472,11 +472,6 @@ default=
 type=string
 tags=starter
 
-[ALLOW_VM_CRUFT]
-default=false
-type=bool
-tags=starter
-
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
 default=false
 type=bool
@@ -1992,11 +1987,6 @@ default=
 type=string
 tags=startd,ResMgr
 
-[MAX_VIRTUAL_MACHINE_TYPES]
-default=10
-type=int
-tags=startd,ResMgr
-
 [MAX_SLOT_TYPES]
 default=10
 type=int
@@ -3308,8 +3298,8 @@ default=true
 type=bool
 tags=master
 
-[ALLOW_ADMINISTRATOR]
-default=$(CONDOR_HOST)
+[ALLOW_CLIENT]
+default=*
 type=string
 tags=security
 
@@ -4175,6 +4165,7 @@ tags=schedd,startd,claim
 
 [MOUNT_UNDER_SCRATCH]
 default="/tmp,/var/tmp"
+win32_default=
 version=7.7.5
 type=string
 tags=starter
@@ -4614,7 +4605,7 @@ type=bool
 description=Whether to invoke file transfer plugins as user or as root
 
 [ENABLE_MULTIFILE_TRANSFER_PLUGINS]
-default=false
+default=true
 type=bool
 description=Enable file transfer plugins that support multiple files as input
 
@@ -4895,8 +4886,8 @@ type=string
 description=When a slot should be in Owner state
 
 [FILETRANSFER_PLUGINS]
-default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
-win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
+default=$(LIBEXEC)/multifile_curl_plugin, $(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
+win32_default=$(LIBEXEC)\multifile_curl_plugin.exe $(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
 description=List of paths to installed file transfer plugins
 tags=startd
 
@@ -5747,6 +5738,7 @@ default : @end
 	ALLOW_OWNER=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_READ=*
 	ALLOW_WRITE=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
+	ALLOW_DAEMON=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_NEGOTIATOR=$(CONDOR_HOST)
 	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
 	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
@@ -5782,6 +5774,7 @@ default : @end
 	ALLOW_OWNER=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
 	ALLOW_READ=*
 	ALLOW_WRITE=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
+	ALLOW_DAEMON=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
 	ALLOW_NEGOTIATOR=$(authuser)@$(CONDOR_HOST)
 	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
 	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
@@ -5877,8 +5870,6 @@ default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
 	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
 	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
-
-	use feature : GPUsMonitor
 @end
 
 [$FEATURE.Monitor]

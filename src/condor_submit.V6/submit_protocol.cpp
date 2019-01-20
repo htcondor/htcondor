@@ -44,7 +44,6 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
-#include "get_daemon_name.h"
 #include "condor_qmgr.h"
 #include "sig_install.h"
 #include "access.h"

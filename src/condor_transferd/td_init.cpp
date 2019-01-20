@@ -217,7 +217,8 @@ TransferD::accept_transfer_request_encapsulation_old_classads(FILE *fin)
 	MyString cap;
 
 	/* read the transfer request header packet upon construction */
-	ad = new ClassAd(fin, classad_delimitor, eof, error, empty);
+	ad = new ClassAd;
+	InsertFromFile(fin, *ad, classad_delimitor, eof, error, empty);
 	if (empty == TRUE) {
 		EXCEPT("Protocol faliure, can't read initial Info Packet");
 	}
@@ -237,7 +238,8 @@ TransferD::accept_transfer_request_encapsulation_old_classads(FILE *fin)
 
 	// read all the work ads associated with this TransferRequest
 	for (i = 0; i < treq->get_num_transfers(); i++) {
-		ad = new ClassAd(fin, classad_delimitor, eof, error, empty);
+		ad = new ClassAd;
+		InsertFromFile(fin, *ad, classad_delimitor, eof, error, empty);
 		if (empty == TRUE) {
 			EXCEPT("Expected %d transfer job ads, got %d instead.", 
 				treq->get_num_transfers(), i);

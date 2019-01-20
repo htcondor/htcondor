@@ -1,11 +1,13 @@
+from __future__ import absolute_import
+
 import classad
 import htcondor
 import os
 import time
 
-from Globals import *
-from Utils import Utils
-from EventMemory import EventMemory
+from .Globals import *
+from .Utils import Utils
+from .EventMemory import EventMemory
 
 from htcondor import JobEventLog
 from htcondor import JobEventType
@@ -74,16 +76,17 @@ class CondorCluster(object):
     def WaitUntilJobTerminated( self, timeout = 240, proc = 0, count = 0 ):
         return self.WaitUntil( [ JobEventType.JOB_TERMINATED ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
-              JobEventType.IMAGE_SIZE ], timeout, proc, count )
+              JobEventType.IMAGE_SIZE, JobEventType.FILE_TRANSFER ], timeout, proc, count )
 
     def WaitUntilExecute( self, timeout = 240, proc = 0, count = 0 ):
         return self.WaitUntil( [ JobEventType.EXECUTE ],
-            [ JobEventType.SUBMIT ], timeout, proc, count )
+            [ JobEventType.SUBMIT, JobEventType.FILE_TRANSFER ], timeout, proc, count )
 
     def WaitUntilJobHeld( self, timeout = 240, proc = 0, count = 0 ):
         return self.WaitUntil( [ JobEventType.JOB_HELD ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
-              JobEventType.IMAGE_SIZE, JobEventType.SHADOW_EXCEPTION ],
+              JobEventType.IMAGE_SIZE, JobEventType.SHADOW_EXCEPTION,
+              JobEventType.FILE_TRANSFER ],
             timeout, proc, count )
 
         # FIXME: "look ahead" five seconds to see if we find the
@@ -94,7 +97,7 @@ class CondorCluster(object):
     def WaitUntilJobEvicted( self, timeout = 240, proc = 0, count = 0 ):
         return self.WaitUntil( [ JobEventType.JOB_EVICTED ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
-              JobEventType.IMAGE_SIZE ],
+              JobEventType.IMAGE_SIZE, JobEventType.FILE_TRANSFER ],
             timeout, proc, count )
 
     # WaitUntilAll*() won't work with 'advanced queue statements' because we
@@ -103,23 +106,24 @@ class CondorCluster(object):
     def WaitUntilAllJobsTerminated( self, timeout = 240 ):
         return self.WaitUntil( [ JobEventType.JOB_TERMINATED ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
-              JobEventType.IMAGE_SIZE ], timeout, -1, self._count )
+              JobEventType.IMAGE_SIZE, JobEventType.FILE_TRANSFER ], timeout, -1, self._count )
 
     def WaitUntilAllExecute( self, timeout = 240 ):
         return self.WaitUntil( [ JobEventType.EXECUTE ],
-            [ JobEventType.SUBMIT, JobEventType.IMAGE_SIZE ],
+            [ JobEventType.SUBMIT, JobEventType.IMAGE_SIZE, JobEventType.FILE_TRANSFER ],
             timeout, -1, self._count )
 
     def WaitUntilAllJobsHeld( self, timeout = 240 ):
         return self.WaitUntil( [ JobEventType.JOB_HELD ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
-              JobEventType.IMAGE_SIZE, JobEventType.SHADOW_EXCEPTION ],
+              JobEventType.IMAGE_SIZE, JobEventType.SHADOW_EXCEPTION,
+              JobEventType.FILE_TRANSFER ],
             timeout, -1, self._count )
 
     def WaitUntilAllJobsEvicted( self, timeout = 240 ):
         return self.WaitUntil( [ JobEventType.JOB_EVICTED ],
             [ JobEventType.EXECUTE, JobEventType.SUBMIT,
-              JobEventType.IMAGE_SIZE ],
+              JobEventType.IMAGE_SIZE, JobEventType.FILE_TRANSFER ],
             timeout, -1, self._count )
 
     # An event type not listed in successEvents or ignoreeEvents is a failure.

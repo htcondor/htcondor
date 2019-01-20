@@ -80,7 +80,7 @@ const char* rrStateToString( ResourceState s );
 	<pre>
 	Parameter  Member   Results
 	---------  ------   ----------
-	  NULL     exists    string strnewp'ed and returned
+	  NULL     exists    string strdup'ed and returned
 	  NULL      NULL     NULL returned
 	 !NULL     exists    strcpy occurs
 	 !NULL      NULL     "" into parameter

@@ -236,6 +236,12 @@ MultiFileCurlPlugin::DownloadMultipleFiles( string input_filename ) {
                 sleep( retry_count++ );
             #endif
 
+            if (url.substr(0, 7) == "davs://") {
+                url = std::string("https://") + url.substr(7);
+            } else if (url.substr(0, 6) == "dav://") {
+                url = std::string("http://") + url.substr(6);
+            }
+
             rval = DownloadFile( url.c_str(), local_file_name.c_str() );
 
             // If curl request is successful, break out of the loop
@@ -423,14 +429,13 @@ main( int argc, char **argv ) {
                 "MultipleFileSupport = true\n"
                 "PluginVersion = \"0.2\"\n"
                 "PluginType = \"FileTransfer\"\n"
-                "SupportedMethods = \"http,https,ftp,file\"\n"
+                "SupportedMethods = \"dav,davs\"\n"
             );
             return 0;
         }
     }
     // If not, iterate over command-line arguments and set variables appropriately
     else {
-        fprintf( stderr, "MRC: multifile_curl_plugin invoked\n" );
         for( int i = 1; i < argc; i ++ ) {
             if ( strcmp( argv[i], "-infile" ) == 0 ) {
                 if ( i < ( argc - 1 ) ) {

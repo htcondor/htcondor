@@ -360,6 +360,8 @@ sub DoChild
         SetupPythonPath();
         print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
         $perl = "python";
+        print "\tPython version: ";
+        system ("python --version");
     }
 
     my $test_starttime = time();

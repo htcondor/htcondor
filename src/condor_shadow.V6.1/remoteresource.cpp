@@ -24,7 +24,6 @@
 #include "remoteresource.h"
 #include "exit.h"             // for JOB_BLAH_BLAH exit reasons
 #include "condor_debug.h"     // for D_debuglevel #defines
-#include "condor_string.h"    // for strnewp()
 #include "condor_attributes.h"
 #include "internet.h"
 #include "condor_daemon_core.h"
@@ -434,10 +433,10 @@ RemoteResource::~RemoteResource()
 		thisRemoteResource = NULL;
 	}
 	if ( dc_startd     ) delete dc_startd;
-	if ( machineName   ) delete [] machineName;
-	if ( starterAddress) delete [] starterAddress;
-	if ( starterArch   ) delete [] starterArch;
-	if ( starterOpsys  ) delete [] starterOpsys;
+	if ( machineName   ) free( machineName );
+	if ( starterAddress) free( starterAddress );
+	if ( starterArch   ) free( starterArch );
+	if ( starterOpsys  ) free( starterOpsys );
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
@@ -643,7 +642,7 @@ RemoteResource::killStarter( bool graceful )
 		already_killed_fast = true;
 	}
 
-	char* addr = dc_startd->addr();
+	const char* addr = dc_startd->addr();
 	if( addr ) {
 		dprintf( D_FULLDEBUG, "Killed starter (%s) at %s\n", 
 				 graceful ? "graceful" : "fast", addr );
@@ -707,8 +706,8 @@ RemoteResource::dprintfSelf( int debugLevel )
 	shadow->dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
 					  "host info:\n");
 	if( dc_startd ) {
-		char* addr = dc_startd->addr();
-		char* id = dc_startd->getClaimId();
+		const char* addr = dc_startd->addr();
+		const char* id = dc_startd->getClaimId();
 		shadow->dprintf( debugLevel, "\tstartdAddr: %s\n", 
 						 addr ? addr : "Unknown" );
 		shadow->dprintf( debugLevel, "\tClaimId: %s\n", 
@@ -814,11 +813,11 @@ RemoteResource::getMachineName( char *& mName )
 {
 
 	if ( !mName ) {
-		mName = strnewp( machineName );
+		mName = strdup( machineName );
 	} else {
 		if ( machineName ) {
-			delete [] mName;
-			mName = strnewp( machineName );
+			free( mName );
+			mName = strdup( machineName );
 		} else {
 			mName[0] = '\0';
 		}
@@ -835,14 +834,13 @@ RemoteResource::getStartdAddress( char *& sinful )
 	if( ! dc_startd ) {
 		return;
 	}
-	char* addr = dc_startd->addr();
+	const char* addr = dc_startd->addr();
 	if( ! addr ) {
 		return;
 	}
 	if( sinful ) {
-		delete [] sinful;
-	}
-	sinful = strnewp( addr );
+		free( sinful );	}
+	sinful = strdup( addr );
 }
 
 void
@@ -854,14 +852,14 @@ RemoteResource::getStartdName( char *& remoteName )
 	if( ! dc_startd ) {
 		return;
 	}
-	char* localName = dc_startd->name();
+	const char* localName = dc_startd->name();
 	if( ! localName ) {
 		return;
 	}
 	if( remoteName ) {
-		delete [] remoteName;
+		free( remoteName );
 	}
-	remoteName = strnewp( localName );
+	remoteName = strdup( localName );
 }
 
 
@@ -875,14 +873,14 @@ RemoteResource::getClaimId( char *& id )
 	if( ! dc_startd ) {
 		return;
 	}
-	char* my_id = dc_startd->getClaimId();
+	const char* my_id = dc_startd->getClaimId();
 	if( ! my_id ) {
 		return;
 	}
 	if( id ) {
-		delete[] id;
+		free( id );
 	}
-	id = strnewp( my_id );
+	id = strdup( my_id );
 }
 
 void
@@ -890,11 +888,11 @@ RemoteResource::getStarterAddress( char *& starterAddr )
 {
 
 	if (!starterAddr) {
-		starterAddr = strnewp( starterAddress );
+		starterAddr = starterAddress ? strdup( starterAddress ) : NULL;
 	} else {
 		if ( starterAddress ) {
-			delete[] starterAddr;
-			starterAddr = strnewp( starterAddress );
+			free( starterAddr );
+			starterAddr = strdup( starterAddress );
 		} else {
 			starterAddr[0] = '\0';
 		}
@@ -1124,8 +1122,8 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	if( ad->LookupString(ATTR_NAME, &tmp) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
-				delete [] machineName;
-				machineName = strnewp( tmp );
+				free(machineName);
+				machineName = strdup( tmp );
 			}
 		}	
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
@@ -1134,8 +1132,8 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	} else if( ad->LookupString(ATTR_MACHINE, &tmp) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
-				delete [] machineName;
-				machineName = strnewp( tmp );
+				free(machineName);
+				machineName = strdup( tmp );
 			}
 		}	
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
@@ -1145,21 +1143,19 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 
 	if( ad->LookupString(ATTR_ARCH, &tmp) ) {
 		if( starterArch ) {
-			delete [] starterArch;
+			free( starterArch );
 		}	
-		starterArch = strnewp( tmp );
+		starterArch = tmp;
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_ARCH, tmp ); 
-		free( tmp );
 		tmp = NULL;
 	}
 
 	if( ad->LookupString(ATTR_OPSYS, &tmp) ) {
 		if( starterOpsys ) {
-			delete [] starterOpsys;
+			free( starterOpsys );
 		}	
-		starterOpsys = strnewp( tmp );
+		starterOpsys = tmp;
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_OPSYS, tmp ); 
-		free( tmp );
 		tmp = NULL;
 	}
 
@@ -1196,18 +1192,18 @@ RemoteResource::setMachineName( const char * mName )
 {
 
 	if ( machineName )
-		delete [] machineName;
+		free(machineName);
 	
-	machineName = strnewp ( mName );
+	machineName = strdup ( mName );
 }
 
 void
 RemoteResource::setStarterAddress( const char * starterAddr )
 {
 	if( starterAddress ) {
-		delete [] starterAddress;
+		free( starterAddress );
 	}	
-	starterAddress = strnewp( starterAddr );
+	starterAddress = strdup( starterAddr );
 }
 
 
@@ -1432,44 +1428,44 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-    jobAd->CopyAttribute(ATTR_NETWORK_IN, update_ad);
-    jobAd->CopyAttribute(ATTR_NETWORK_OUT, update_ad);
+    CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
+    CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
 
-    jobAd->CopyAttribute(ATTR_BLOCK_READ_KBYTES, update_ad);
-    jobAd->CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITE_KBYTES, update_ad);
+    CopyAttribute(ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
+    CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_WRITE_KBYTES, *jobAd, *update_ad);
 
-    jobAd->CopyAttribute(ATTR_BLOCK_READ_BYTES, update_ad);
-    jobAd->CopyAttribute(ATTR_BLOCK_WRITE_BYTES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READ_BYTES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITE_BYTES, update_ad);
+    CopyAttribute(ATTR_BLOCK_READ_BYTES, *jobAd, *update_ad);
+    CopyAttribute(ATTR_BLOCK_WRITE_BYTES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_READ_BYTES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_WRITE_BYTES, *jobAd, *update_ad);
 
-    jobAd->CopyAttribute(ATTR_BLOCK_READS, update_ad);
-    jobAd->CopyAttribute(ATTR_BLOCK_WRITES, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READS, update_ad);
-    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITES, update_ad);
+    CopyAttribute(ATTR_BLOCK_READS, *jobAd, *update_ad);
+    CopyAttribute(ATTR_BLOCK_WRITES, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_READS, *jobAd, *update_ad);
+    CopyAttribute("Recent" ATTR_BLOCK_WRITES, *jobAd, *update_ad);
 
-    jobAd->CopyAttribute(ATTR_IO_WAIT, update_ad);
+    CopyAttribute(ATTR_IO_WAIT, *jobAd, *update_ad);
 
 	// FIXME: If we're convinced that we want a whitelist here (chirp
 	// would seem to make a mockery of that), we should at least rewrite
 	// all of the copies to be based on a table.
-	jobAd->CopyAttribute( "PreExitCode", update_ad );
-	jobAd->CopyAttribute( "PreExitSignal", update_ad );
-	jobAd->CopyAttribute( "PreExitBySignal", update_ad );
+	CopyAttribute( "PreExitCode", *jobAd, *update_ad );
+	CopyAttribute( "PreExitSignal", *jobAd, *update_ad );
+	CopyAttribute( "PreExitBySignal", *jobAd, *update_ad );
 
-	jobAd->CopyAttribute( "PostExitCode", update_ad );
-	jobAd->CopyAttribute( "PostExitSignal", update_ad );
-	jobAd->CopyAttribute( "PostExitBySignal", update_ad );
+	CopyAttribute( "PostExitCode", *jobAd, *update_ad );
+	CopyAttribute( "PostExitSignal", *jobAd, *update_ad );
+	CopyAttribute( "PostExitBySignal", *jobAd, *update_ad );
 
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics
-    jobAd->CopyAttribute("StatsLastUpdateTimeStarter", "StatsLastUpdateTime", update_ad);
-    jobAd->CopyAttribute("StatsLifetimeStarter", "StatsLifetime", update_ad);
-    jobAd->CopyAttribute("RecentStatsLifetimeStarter", "RecentStatsLifetime", update_ad);
-    jobAd->CopyAttribute("RecentWindowMaxStarter", "RecentWindowMax", update_ad);
-    jobAd->CopyAttribute("RecentStatsTickTimeStarter", "RecentStatsTickTime", update_ad);
+    CopyAttribute("StatsLastUpdateTimeStarter", *jobAd, "StatsLastUpdateTime", *update_ad);
+    CopyAttribute("StatsLifetimeStarter", *jobAd, "StatsLifetime", *update_ad);
+    CopyAttribute("RecentStatsLifetimeStarter", *jobAd, "RecentStatsLifetime", *update_ad);
+    CopyAttribute("RecentWindowMaxStarter", *jobAd, "RecentWindowMax", *update_ad);
+    CopyAttribute("RecentStatsTickTimeStarter", *jobAd, "RecentStatsTickTime", *update_ad);
 
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		if( int_value > disk_usage ) {
@@ -1907,9 +1903,14 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	m_got_job_exit = true;
 
 	// record the start time of transfer output into the job ad.
-	time_t tStart = -1;
-	if (filetrans.GetDownloadTimestamps(&tStart)) {
+	time_t tStart = -1, tEnd = -1;
+	if (filetrans.GetDownloadTimestamps(&tStart, &tEnd)) {
 		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, (int)tStart);
+		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE, (int)tEnd);
+	}
+	if (filetrans.GetUploadTimestamps(&tStart, &tEnd)) {
+		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE, (int)tStart);
+		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE, (int)tEnd);
 	}
 
 #if 0 // tj: this seems to record only transfer output time, turn it off for now.
@@ -2186,7 +2187,7 @@ RemoteResource::locateReconnectStarter( void )
 			setStarterAddress( tmp );
 			dprintf( D_ALWAYS, "Found starter: %s\n", tmp );
 			free( tmp );
-			delete[] claimid;
+			free( claimid );
 			return true;
 		} else {
 			EXCEPT( "impossible: locateStarter() returned success "
@@ -2252,7 +2253,7 @@ RemoteResource::locateReconnectStarter( void )
 		EXCEPT( "impossible: success already handled" );
 		break;
 	}
-	delete[] claimid;
+	free( claimid );
 	return false;
 }
 

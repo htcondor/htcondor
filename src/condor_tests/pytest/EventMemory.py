@@ -1,5 +1,7 @@
-from Globals import *
-from Utils import Utils
+from __future__ import absolute_import
+
+from .Globals import *
+from .Utils import Utils
 
 import unittest
 

@@ -411,7 +411,7 @@ typedef enum {
 class ContactStartdArgs
 {
 public:
-	ContactStartdArgs( char const* the_claim_id, char const *extra_claims, char* sinful, bool is_dedicated );
+	ContactStartdArgs( char const* the_claim_id, char const *extra_claims, const char* sinful, bool is_dedicated );
 	~ContactStartdArgs();
 
 	char*		claimId( void )		{ return csa_claim_id; };

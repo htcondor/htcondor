@@ -37,7 +37,7 @@ public:
 	void registerVM(void);
 	void sendEventToHost(int, void*);
 	void requestHostClassAds(void);
-	char *getHostSinful(void);
+	const char *getHostSinful(void);
 
 	void startRegisterTimer(void);
 	void cancelRegisterTimer(void);

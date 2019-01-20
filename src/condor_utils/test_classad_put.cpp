@@ -331,9 +331,9 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
 	c1 = new ClassAd;
 	c2 = new ClassAd;
 	c3 =  new ClassAd;
-    c1->initFromString(classad_strings[0], NULL);
-    c2->initFromString(classad_strings[1], NULL);
-    c3->initFromString(classad_strings[2], NULL);
+    initAdFromString(classad_strings[0], *c1);
+    initAdFromString(classad_strings[1], *c2);
+    initAdFromString(classad_strings[2], *c3);
     SetMyTypeName(*c1, "c1");
     SetMyTypeName(*c2, "c2");
     SetMyTypeName(*c3, "c3");

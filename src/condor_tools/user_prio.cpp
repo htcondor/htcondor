@@ -885,7 +885,7 @@ main(int argc, const char* argv[])
     ClassAd* ad=new ClassAd();
     bool is_eof = false; 
     int error = 0;
-	if ( ! ad->InsertFromFile(file, is_eof, error) && error) {
+	if ( ! InsertFromFile(file, *ad, is_eof, error) && error) {
       fprintf(stderr, "Error %d reading userprio ads\n", error);
       fclose(file);
       exit(1);
@@ -926,7 +926,7 @@ main(int argc, const char* argv[])
 
 	DCCollector c((pool.length() > 0) ? pool.c_str() : 0);
 	c.locate();
-	char *v = c.version();
+	const char *v = c.version();
 	CondorVersionInfo cvi(v);
 	if (!cvi.built_since_version(8,5,2)) {
 		fromCollector = false;	

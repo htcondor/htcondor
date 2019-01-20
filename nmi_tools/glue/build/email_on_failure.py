@@ -93,7 +93,7 @@ def check_runid(config, runid):
     #     Pending - NULL
     if this_result == 0:
         die_nice("This script was called for a run that succeeded", runid)
-    elif prev_result == None:
+    elif prev_result is None:
         die_nice("The previous run is not complete yet", runid)
     elif prev_result == 0:
         # We have a failure and the previous run succeeded.  Now is our time to shine!

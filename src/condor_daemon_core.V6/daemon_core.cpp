@@ -3214,7 +3214,7 @@ DaemonCore::Do_Wake_up_select()
 		async_pipe_signal = true;
 #ifdef WIN32
 		if (GetCurrentThreadId() == dcmainThreadId) {
-			dprintf (D_ALWAYS, "DaemonCore::Do_Wake_up_select called from main thread. this should never happen.");
+			dprintf (D_ALWAYS, "DaemonCore::Do_Wake_up_select called from main thread. this should never happen.\n");
 			return false;
 		}
 		fSuccess = send(async_pipe[1].get_socket(), "!", 1, 0) > 0;
@@ -5678,8 +5678,12 @@ pid_t CreateProcessForkit::clone_safe_getpid() {
 		// caching in libc).  Therefore, use the syscall to get
 		// the answer directly.
 
-	int retval = syscall(SYS_getpid);
-
+	pid_t retval;
+#ifdef __alpha__
+	retval = syscall(SYS_getxpid);
+#else
+	retval = syscall(SYS_getpid);
+#endif
 		// If we were fork'd with CLONE_NEWPID, we think our PID is 1.
 		// In this case, ask the parent!
 	if (retval == 1) {
@@ -5699,7 +5703,13 @@ pid_t CreateProcessForkit::clone_safe_getppid() {
 		// See above comment for clone_safe_getpid() for explanation of
 		// why we need to do this.
 	
-	int retval = syscall(SYS_getppid);
+	pid_t retval;
+#if defined(__alpha__) && defined(__GNUC__)
+	syscall(SYS_getxpid);
+	__asm__("mov $20, %0" : "=r"(retval) : :);
+#else
+	retval = syscall(SYS_getppid);
+#endif
 
 		// If ppid is 0, then either Condor is init (DEAR GOD) or we
 		// were created with CLONE_NEWPID; ask the parent!

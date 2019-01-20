@@ -10,7 +10,45 @@ found in the version history:~\ref{sec:History-8-7}):
 
 \begin{itemize}
 
-\item None.
+\item \Condor{annex} is tool to help users and administrators use cloud
+resources to run HTCondor jobs.
+It automates the processes of acquiring those resources, securely configuring
+them to safely join the local pool, and ensuring that they shut down when up or
+idle for too long.
+It presently works only with AWS.
+
+\item The Python bindings now include submit functionality.
+\Ticket{6679}
+\Ticket{6649}
+
+\item Added a new tool, \Condor{now}, which tries to run the specified job
+\emph{now}.  You specify two jobs that you own from the same \Condor{schedd}: the
+now-job and the vacate-job.  The latter is immediately vacated; after the
+vacated job terminates, if the \Condor{schedd} still has the claim to the vacated job's
+slot (and it usually will), the \Condor{schedd} will immediately start the now-job on
+that slot.  The now-job must be idle and the vacate-job must be running.  If
+you're a queue super-user, the jobs must have the same owner, but that owner
+doesn't have to be you.
+\Ticket{6659}
+
+\item Provides a new package, \Expr{minicondor} on Red Hat based systems and
+\Expr{minihtcondor} on Debian and Ubuntu based systems.
+This mini-HTCondor package configures HTCondor to work on a single machine.
+\Ticket{6823}
+
+\item HTCondor now tracks and reports GPU Usage and GPU memory usage.
+\Ticket{6477}
+\Ticket{6544}
+
+\item Several performance enhancements in the collector.
+
+\item The grid universe can now be used to create and manage VM instances
+in Microsoft Azure, using the new grid type \SubmitCmdNI{azure}.
+\Ticket{6176}
+
+\item Added support for both user and daemon authentication using the MUNGE service.
+The MUNGE security method is now supported on all Linux platforms.
+\Ticket{6404}
 
 \end{itemize}
 
@@ -21,104 +59,30 @@ Here is a list of items that administrators should be aware of.
 
 \begin{itemize}
 
-\item
-% Job Router route selection change, now first-match instead of
-% round robin
+\item In the Job Router, when a candidate job matches multiple routes,
+the first route is now always selected.
+The old behavior of spreading jobs across all matching routes round-robin
+style can be enabled by setting the new configuration parameter
+\MacroNI{JOB\_ROUTER\_ROUND\_ROBIN\_SELECTION} to \Expr{True}.
 \Ticket{6190}
 
-\item
-% PREEMPTION_REQUIREMENTS in the negotiator no longer has a hard-code
-% check that the preempting user has a better fair-share user priority
-% than the running user.
-% Overly-lax expressions ('True' being the worst) will lead to slots
-% being preempted every negotiation cycle.
-% Suggest one of the following always be a clause in the expression:
-% For pools with fair-share only:
-%   RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2
-% For pools with groups and quotas:
-%   (SubmitterGroupResourcesInUse < SubmitterGroupQuota) && (RemoteGroupResourcesInUse > RemoteGroupQuota)
+\item \MacroNI{PREEMPTION\_REQUIREMENTS} in the negotiator no longer has a hard-coded
+check that the preempting user has a better fair-share user priority
+than the running user.
 \Ticket{4699}
 
+Overly-lax expressions (\Expr{True} being the worst) will lead to slots
+being preempted every negotiation cycle.
+One of the following clauses should be in the expression:
+
+For pools with fair-share only:
+\begin{verbatim}
+  RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2
+\end{verbatim}
+
+For pools with groups and quotas:
+\begin{verbatim}
+  (SubmitterGroupResourcesInUse < SubmitterGroupQuota) && (RemoteGroupResourcesInUse > RemoteGroupQuota)
+\end{verbatim}
+
 \end{itemize}
-
-% Food for thought
-
-% Thu Mar 02 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.0-1
-% Performance improvements in collector's ingestion of ClassAds
-% Added collector attributes to report query times and forks
-% Removed extra white space around parentheses when unparsing ClassAds
-% Technology preview of the HTCondor Annex
-
-% Mon Apr 24 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.1-1
-% Several performance enhancements in the collector
-% Further refinement and initial documentation of the HTCondor Annex
-% Enable chirp for Docker jobs
-% Job Router uses first match rather than round-robin matching
-% The schedd tracks jobs counts by status for each owner
-% Technology preview of late job materialization in the schedd
-
-% Thu Jun 22 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.2-1
-% Improved condor_schedd performance by turning off file checks by default
-% condor_annex -status finds VM instances that have not joined the pool
-% Able to update an annex's lease without adding new instances
-% condor_annex now keeps a command log
-% condor_q produces an expanded multi-line summary
-% Automatically retry and/or resume http file transfers when appropriate
-% Reduced load on the condor_collector by optimizing queries
-% A python based condor_top tool
-
-% Tue Sep 12 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.3-1
-% Further updates to the late job materialization technology preview
-% An improved condor_top tool
-% Enhanced the AUTO setting for ENABLE_IPV{4,6} to be more selective
-% Fixed several small memory leaks
-
-% Tue Oct 31 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.4-1
-% Improvements to DAGMan including support for late job materialization
-% Updates to condor_annex including improved status reporting
-% When submitting jobs, HTCondor can now warn about job requirements
-% Fixed a bug where remote CPU time was not recorded in the history
-% Improved support for OpenMPI jobs
-% The high availability daemon now works with IPV6 and shared_port
-% The HTCondor Python bindings are now available for Python 2 and 3 in pip
-
-% Tue Nov 14 2017 Tim Theisen <tim@cs.wisc.edu> - 8.7.5-1
-% Fixed an issue validating VOMS proxies
-
-% Thu Jan 04 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.6-1
-% Machines won't enter "Owner" state unless using the Desktop policy
-% One can use SCHEDD and JOB instead of MY and TARGET in SUBMIT_REQUIREMENTS
-% HTCondor now reports all submit warnings, not just the first one
-% The HTCondor Python bindings in pip are now built from the release branch
-
-% Tue Mar 13 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.7-1
-% condor_ssh_to_job now works with Docker Universe jobs
-% A 32-bit condor_shadow is available for Enterprise Linux 7 systems
-% Tracks and reports custom resources, e.g. GPUs, in the job ad and user log
-% condor_q -unmatchable reports jobs that will not match any slots
-% Several updates to the parallel universe
-% Spaces are now allowed in input, output, and error paths in submit files
-% In DAG files, spaces are now allowed in submit file paths
-
-% Thu May 10 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-1
-% The condor annex can easily use multiple regions simultaneously
-% HTCondor now uses CUDA_VISIBLE_DEVICES to tell which GPU devices to manage
-% HTCondor now reports GPU memory utilization
-
-% Tue May 22 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.8-2
-% Reinstate man pages
-% Drop centos from dist tag in 32-bit Enterprise Linux 7 RPMs
-
-% Wed Aug 01 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.9-1
-% Support for Debian 9, Ubuntu 16, and Ubuntu 18
-% Improved Python bindings to support the full range of submit functionality
-% Allows VMs to shutdown when the job is being gracefully evicted
-% Can now specify a host name alias (CNAME) for NETWORK_HOSTNAME
-% Added the ability to run a job immediately by replacing a running job
-
-% Wed Oct 31 2018 Tim Theisen <tim@cs.wisc.edu> - 8.7.10-1
-% Can now interactively submit Docker jobs
-% The administrator can now add arguments to the Singularity command line
-% The MUNGE security method is now supported on all Linux platforms
-% The grid universe can create and manage VM instances in Microsoft Azure
-% Added a single-node package to facilitate using a personal HTCondor

@@ -28,6 +28,17 @@ The details of each version are described below.
 
 \end{itemize}
 
+\noindent Known Issues:
+
+\begin{itemize}
+
+\item GPU resource monitoring is no longer enabled by default after reports
+indicating excessive CPU usage.  GPU resource monitoring may be enable by
+adding `use feature: GPUsMonitor' to the HTCondor configuration.
+\Ticket{6857}
+
+\end{itemize}
+
 
 \noindent New Features:
 
@@ -53,8 +64,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.8.0 not yet released.
-%\item HTCondor version 8.8.0 released on Month Date, 2018.
+\item HTCondor version 8.8.0 released on January 3, 2019.
 
 \end{itemize}
 
@@ -63,16 +73,39 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Provides a new package: \Expr{minicondor} on Red Hat based systems and
+\Expr{minihtcondor} on Debian and Ubuntu based systems.
+This mini-HTCondor package configures HTCondor to work on a single machine.
+\Ticket{6823}
+
 \item Made the Python bindings' \PyBindNI{JobEvent} API more Pythonic by
 handling optional event attributes as if the \PyBindNI{JobEvent} object
 were a dictionary, instead.  See section \ref{Python-JobEventLog} for details.
 \Ticket{6820}
 
-\item Added job ad attribute \Macro{BlockReadKbytes} and \Macro{BlockWriteKybtes}
+\item Added job ad attribute \MacroNI{BlockReadKbytes} and \MacroNI{BlockWriteKybtes}
 which describe the number of kbytes read and written by the job to the sandbox
 directory.  These are only defined on Linux machines with cgroup support enabled
 for vanilla jobs.
 \Ticket{6826}
+
+\item The new \Attr{IOWait} attribute gives the I/O Wait time recorded by the
+cgroup controller.
+\Ticket{6830}
+
+\item \Condor{ssh\_to\_job} is now configured to be more secure. In particular,
+it will only use FIPS 140-2 approved algorithms.
+\Ticket{6822}
+
+\item Added configuration parameter \MacroNI{CRED\_SUPER\_USERS},
+a list of users who are permitted to store credentials for any user
+when using the \Condor{store\_credd} command. Normally, users can
+only store credentials for themselves.
+\Ticket{6346}
+
+\item For packaged HTCondor installations, the package version is now present
+in the HTCondor version string.
+\Ticket{6828}
 
 \end{itemize}
 
@@ -80,19 +113,35 @@ for vanilla jobs.
 
 \begin{itemize}
 
-\item Jobs in REMOVED status now properly leave the queue when
-evaluation of their \Attr{LeaveJobInQueue} attribute changes from
-\Expr{True} to \Expr{False}.
-\Ticket{6808}
+\item Fixed a problem where a daemon would queue updates indefinitely when another
+daemon is offline.
+This is most noticeable as excess memory utilization when a \Condor{schedd} is
+trying to flock to an offline HTCondor pool.
+\Ticket{6837}
 
 \item Fixed a bug where invoking the Python bindings as root could change
 the effective uid of the calling process.
 \Ticket{6817}
 
-\item Fixed a bug that could result in crashing of the \Condor{schedd} while
-tring to materialize a job that has multi-column itemdata. The bug was introduced in
-the 8.7.10 release.
+\item Jobs in REMOVED status now properly leave the queue when
+evaluation of their \Attr{LeaveJobInQueue} attribute changes from
+\Expr{True} to \Expr{False}.
+\Ticket{6808}
+
+\item Fixed a rarely occurring bug where the \Condor{schedd} would crash when
+jobs were submitted with a \Expr{queue} statement with multiple keys.
+The bug was introduced in the 8.7.10 release.
 \Ticket{6827}
+
+\item Fixed a couple of bugs in the job event log reader code that were made visible by
+the new JobEventLog python object. The remote error and job terminated event did not read
+all of the available information from the job log correctly. 
+\Ticket{6816}
+\Ticket{6836}
+
+\item On Debian and Ubuntu systems, the templates for \Condor{ssh\_to\_job} and
+interactive submits are no longer installed in \File{/etc/condor}.
+\Ticket{6770}
 
 \end{itemize}
 

@@ -69,7 +69,8 @@ ClassAd * java_detect()
 	}
 
 	int eof=0,error=0,empty=0;
-	ClassAd *ad = new ClassAd(stream,"***",eof,error,empty);
+	ClassAd *ad = new ClassAd;
+	InsertFromFile(stream,*ad,"***",eof,error,empty);
 
 	int rc = my_pclose(stream);
 	if( rc!=0 ) {

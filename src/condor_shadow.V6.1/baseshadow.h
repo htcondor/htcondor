@@ -353,6 +353,9 @@ class BaseShadow : public Service
 		*/
 	bool updateJobInQueue( update_t type );
 
+	// Called by updateJobInQueue() to generate file transfer events.
+	virtual void recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) = 0;
+
 		/** Connect to the job queue and update one attribute */
 	virtual bool updateJobAttr( const char *name, const char *expr, bool log=false );
 

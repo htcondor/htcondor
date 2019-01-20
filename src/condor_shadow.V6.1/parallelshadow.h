@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "baseshadow.h"
 #include "mpiresource.h"
-#include "list.h"
 
 
 
@@ -133,6 +132,8 @@ class ParallelShadow : public BaseShadow
 
 	virtual void logDisconnectedEvent( const char* reason );
 
+	virtual void recordFileTransferStateChanges( ClassAd * /* jobAd */, ClassAd * /* ftAd */ ) { }
+
 	virtual bool updateJobAttr(const char*, const char*, bool log=false);
 
 	virtual bool updateJobAttr(const char*, int, bool log=false);
@@ -214,7 +215,7 @@ class ParallelShadow : public BaseShadow
 
 		// the list of remote (mpi) resources
 		// Perhaps use STL soon.
-	ExtArray<MpiResource *> ResourceList;
+	std::vector<MpiResource *> ResourceList;
 
 		/** Replace $(NODE) with the proper node number */
 	void replaceNode ( ClassAd *ad, int nodenum );

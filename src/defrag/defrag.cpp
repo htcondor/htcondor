@@ -416,7 +416,8 @@ void Defrag::loadState()
 	}
 	else {
 		int isEOF=0, errorReadingAd=0, adEmpty=0;
-		ClassAd *ad = new ClassAd(fp, "...", isEOF, errorReadingAd, adEmpty);
+		ClassAd *ad = new ClassAd;
+		InsertFromFile(fp, *ad, "...", isEOF, errorReadingAd, adEmpty);
 		fclose( fp );
 
 		if( errorReadingAd ) {
@@ -856,7 +857,7 @@ Defrag::publish(ClassAd *ad)
 	char *valid_name = build_valid_daemon_name(m_defrag_name.c_str());
 	ASSERT( valid_name );
 	m_daemon_name = valid_name;
-	delete [] valid_name;
+	free(valid_name);
 
 	SetMyTypeName(*ad, "Defrag");
 	SetTargetTypeName(*ad, "");

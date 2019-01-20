@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "MyString.h"
-#include "extArray.h"
 #include "simplelist.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
@@ -146,7 +145,7 @@ TransferRequest::append_task(ClassAd *ad)
 }
 
 void
-TransferRequest::set_procids(ExtArray<PROC_ID> *procs)
+TransferRequest::set_procids(std::vector<PROC_ID> *procs)
 {
 	ASSERT(m_ip != NULL);
 
@@ -154,7 +153,7 @@ TransferRequest::set_procids(ExtArray<PROC_ID> *procs)
 }
 
 // do not free this returned pointer
-ExtArray<PROC_ID>*
+std::vector<PROC_ID>*
 TransferRequest::get_procids(void)
 {
 	ASSERT(m_ip != NULL);

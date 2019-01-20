@@ -1052,7 +1052,7 @@ main (int argc, char *argv[])
 	}
 
 	// Address (host:port) is taken from requested pool, if given.
-	char* addr = (NULL != pool) ? pool->addr() : NULL;
+	const char* addr = (NULL != pool) ? pool->addr() : NULL;
 	Daemon* requested_daemon = pool;
 
 	// If we're in "direct" mode, then we attempt to locate the daemon
@@ -1793,7 +1793,8 @@ firstPass (int argc, char *argv[])
 			target = argv[i];
 			FILE *targetFile = safe_fopen_wrapper_follow(target, "r");
 			int iseof, iserror, empty;
-			mainPP.targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
+			mainPP.targetAd = new ClassAd;
+			InsertFromFile(targetFile, *mainPP.targetAd, "\n\n", iseof, iserror, empty);
 			fclose(targetFile);
 		} else
 		if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
@@ -2339,7 +2340,7 @@ secondPass (int argc, char *argv[])
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);
 			}
-			delete [] daemonname;
+			free(daemonname);
 			daemonname = NULL;
 		} else if (is_dash_arg_prefix (argv[i], "constraint", 3)) {
 			if (diagnose) { printf ("[%s]\n", argv[i+1]); }

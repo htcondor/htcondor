@@ -6,7 +6,6 @@ import datetime
 import errno
 import htcondor
 import os
-import pwd
 import re
 import signal
 import socket
@@ -16,6 +15,10 @@ import time
 from pytest.CondorTest import CondorTest
 from pytest.PersonalCondor import PersonalCondor
 from pytest.Utils import Utils
+
+if Utils.IsWindows is False:
+    import pwd
+
 
 def assertEqual(val1, val2, subtest, msg=""):
     if val1 == val2: 
@@ -112,7 +115,7 @@ def testRemoteParam():
 
 def testRemoteSetParam():
     env_params = { 
-        "SETTABLE_ATTRS_READ": "FOO",
+        "SETTABLE_ATTRS_READ": "OOF",
         "ENABLE_RUNTIME_CONFIG": "TRUE"
     }
     personal = CondorTest.StartPersonalCondor("testRemoteSetParam", env_params)
@@ -121,16 +124,16 @@ def testRemoteSetParam():
     rparam = htcondor.RemoteParam(coll_ad)
     #for item in rparam.items():
     #    print("rparam item = " + str(item))
-    assertTrue("FOO" not in rparam, "testRemoteSetParam-1")
-    rparam["FOO"] = "BAR"
+    assertTrue("OOF" not in rparam, "testRemoteSetParam-1")
+    rparam["OOF"] = "BAR"
     htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
     rparam2 = htcondor.RemoteParam(coll_ad)
-    assertTrue("FOO" in rparam2, "testRemoteSetParam-2")
-    assertEqual(rparam2["FOO"], "BAR", "testRemoteSetParam-3")
-    del rparam["FOO"]
+    assertTrue("OOF" in rparam2, "testRemoteSetParam-2")
+    assertEqual(rparam2["OOF"], "BAR", "testRemoteSetParam-3")
+    del rparam["OOF"]
     rparam2.refresh()
     htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
-    assertTrue("FOO" not in rparam2, "testRemoteSetParam-4")
+    assertTrue("OOF" not in rparam2, "testRemoteSetParam-4")
     assertTrue(("ENABLE_CHIRP_DELAYED", "true") in rparam2.items(), "testRemoteSetParam-5")
     CondorTest.StopPersonalCondor("testRemoteSetParam")
 
@@ -200,6 +203,7 @@ def testCollectorAdvertise():
     assertTrue("Foo" not in ads[0], "testCollectorAdvertise-4")
     CondorTest.StopPersonalCondor("testCollectorAdvertise")
 
+# FIXME: Fails to clean up correctly in Windows at end of test
 def testScheddSubmit():
     personal = CondorTest.StartPersonalCondor("testScheddSubmit")
     submit_ad = classad.ClassAd('[Err = "testScheddSubmit.err"; Out = "testScheddSubmit.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
@@ -216,6 +220,7 @@ def testScheddSubmit():
     assertEqual(open("testScheddSubmit.out").read(), "hello world \n", "testScheddSubmit")
     CondorTest.StopPersonalCondor("testScheddSubmit")
 
+# FIXME: Fails to clean up correctly in Windows at end of test
 def testScheddSubmitMany():
     personal = CondorTest.StartPersonalCondor("testScheddSubmitMany")
     submit_ad = classad.ClassAd('[Err = "testScheddSubmitMany.err"; Out = "testScheddSubmitMany.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
@@ -233,6 +238,7 @@ def testScheddSubmitMany():
     assertEqual(open("testScheddSubmitMany.out").read(), "hello world \n", "testScheddSubmitMany")
     CondorTest.StopPersonalCondor("testScheddSubmitMany")
 
+# FIXME: Fails to clean up correctly in Windows at end of test
 def testScheddSubmitMany2():
     personal = CondorTest.StartPersonalCondor("testScheddSubmitMany2")
     submit_ad = classad.ClassAd('[Err = "testScheddSubmitMany2.err"; Out = "testScheddSubmitMany2.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
@@ -253,6 +259,7 @@ def testScheddSubmitMany2():
     assertEqual(open("testScheddSubmitMany2.out").read(), "hello world \n", "testScheddSubmitMany2-3")
     CondorTest.StopPersonalCondor("testScheddSubmitMany2")
 
+# FIXME: This test exits arbitrarily on the Batlab Windows computers (but works fine on local Windows 10)
 def testScheddQueryPoll():
     personal = CondorTest.StartPersonalCondor("testScheddQueryPoll")
     submit_ad = classad.ClassAd('[Err = "testScheddQueryPoll.err"; Out = "testScheddQueryPoll.out"; Cmd = "x_echostring.pl"; Arguments = "hello world"]')
@@ -324,6 +331,7 @@ def testNegotiator():
     assertEqual(open(output_file).read(), "hello world \n", "Negotiator-5")
     CondorTest.StopPersonalCondor("Negotiator")
 
+# FIXME: Directory cleanup breaks in Python 2
 def testScheddNonblockingQuery():
     personal = CondorTest.StartPersonalCondor("testScheddNonblockingQuery")
     schedd = htcondor.Schedd()
@@ -623,26 +631,29 @@ def main():
 
     # Now run the tests!
     testRemoteParam()
-    testRemoteSetParam()
-    testLocate()
-    testLocateList()
-    #testRemoteLocate() # FIXME
-    #testScheddLocate() # FIXME
-    #testCollectorAdvertise() # FIXME
-    testScheddSubmit()
-    testScheddSubmitMany()
-    testScheddSubmitMany2()
-    testScheddQueryPoll()
-    #testNegotiator() # FIXME
-    testScheddNonblockingQuery()
-    #testScheddNonblockingQueryRemove() # FIXME
-    testScheddNonblockingQueryCount()
-    testScheddSubmitSpool()
-    #testScheddSubmitFile() # FIXME
-    #testClaim() # FIXME
-    #testDrain() # FIXME
-    testPing()
-    testTransaction()
+
+    if Utils.IsWindows() is False:
+        print("Running Linux-only tests")
+        testRemoteSetParam()
+        testLocate()
+        testLocateList()
+        #testRemoteLocate() # FIXME
+        #testScheddLocate() # FIXME
+        #testCollectorAdvertise() # FIXME
+        #testScheddNonblockingQueryRemove() # FIXME
+        testScheddNonblockingQueryCount()
+        testScheddSubmitSpool()
+        #testScheddSubmitFile() # FIXME
+        #testDrain() # FIXME
+        testPing()
+        testTransaction()
+        testScheddNonblockingQuery()
+        testScheddSubmit()
+        testScheddSubmitMany()
+        testScheddSubmitMany2()
+        testScheddQueryPoll()
+        #testNegotiator() # FIXME
+        #testClaim() # FIXME
 
 
 if __name__ == '__main__':

@@ -442,13 +442,7 @@ ResMgr::init_resources( void )
 
 		// These things can only be set once, at startup, so they
 		// don't need to be in build_cpu_attrs() at all.
-	if (param_boolean("ALLOW_VM_CRUFT", false)) {
-		max_types = param_integer("MAX_SLOT_TYPES",
-								  param_integer("MAX_VIRTUAL_MACHINE_TYPES",
-												10));
-	} else {
-		max_types = param_integer("MAX_SLOT_TYPES", 10);
-	}
+	max_types = param_integer("MAX_SLOT_TYPES", 10);
 
 	max_types += 1;
 
@@ -470,7 +464,7 @@ ResMgr::init_resources( void )
 	if( ! num_res ) {
 			// We're not configured to advertise any nodes.
 		resources = NULL;
-		id_disp = new IdDispenser( num_cpus(), 1 );
+		id_disp = new IdDispenser( 1 );
 		return;
 	}
 
@@ -489,7 +483,7 @@ ResMgr::init_resources( void )
 	}
 
 		// We can now seed our IdDispenser with the right slot id.
-	id_disp = new IdDispenser( num_cpus(), i+1 );
+	id_disp = new IdDispenser( i+1 );
 
 		// Finally, we can free up the space of the new_cpu_attrs
 		// array itself, now that all the objects it was holding that
@@ -1258,9 +1252,6 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 {
 	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
 		cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
-		if (param_boolean("ALLOW_VM_CRUFT", false)) {
-			cp->Assign(ATTR_TOTAL_VIRTUAL_MACHINES, numSlots());
-		}
 	}
 
 	starter_mgr.publish( cp, how_much );

@@ -273,7 +273,7 @@ int main(int argc, char* argv[])
   ReliSock sock;
   bool connect_error = true;
   do {
-    if (sock.connect((char*) view_host.addr(), 0)) {
+    if (sock.connect(view_host.addr(), 0)) {
       connect_error = false;
       break;
     }

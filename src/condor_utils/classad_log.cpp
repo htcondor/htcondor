@@ -829,7 +829,11 @@ LogSetAttribute::Play(void *data_structure)
 	} else {
 		rval = FALSE;
 	}
-	ad->SetDirtyFlag(name, is_dirty);
+	if (is_dirty) {
+		ad->MarkAttributeDirty(name);
+	} else {
+		ad->MarkAttributeClean(name);
+	}
 
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::SetAttribute(key, name, value);
