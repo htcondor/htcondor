@@ -784,14 +784,14 @@ TDMan::refuse(Stream *s)
 
 // the reaper for when a transferd goes away or dies.
 int
-TDMan::transferd_reaper(long pid, int status) 
+TDMan::transferd_reaper(int pid, int status) 
 {
 	MyString fquser;
 	MyString id;
 	TransferDaemon *dead_td = NULL;
 	TdAction ret;
 
-	dprintf(D_ALWAYS, "TDMan: Reaped transferd pid %ld with status %d\n", 
+	dprintf(D_ALWAYS, "TDMan: Reaped transferd pid %d with status %d\n", 
 		pid, status);
 
 	//////////////////////////////////////////////////////////////////////

@@ -236,7 +236,9 @@ class TDMan : public Service
 		void register_handlers(void);
 
 		// what to do when a td dies or exits
-		int transferd_reaper(long pid, int status);
+		// we implicitly required that sizeof(int) == sizeof(long) here.
+		// int transferd_reaper(long pid, int status);
+		int transferd_reaper(int pid, int status);
 
 		// deal with a td that comes back to register itself to me.
 		int transferd_registration(int cmd, Stream *sock);
