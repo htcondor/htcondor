@@ -132,6 +132,8 @@ class ParallelShadow : public BaseShadow
 
 	virtual void logDisconnectedEvent( const char* reason );
 
+	virtual void recordFileTransferStateChanges( ClassAd * /* jobAd */, ClassAd * /* ftAd */ ) { }
+
 	virtual bool updateJobAttr(const char*, const char*, bool log=false);
 
 	virtual bool updateJobAttr(const char*, int, bool log=false);

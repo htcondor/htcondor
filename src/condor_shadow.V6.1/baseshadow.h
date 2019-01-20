@@ -351,8 +351,10 @@ class BaseShadow : public Service
 			@param type What kind of update we want to do
 			@return true on success, false on failure
 		*/
-	void recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd );
 	bool updateJobInQueue( update_t type );
+
+	// Called by updateJobInQueue() to generate file transfer events.
+	virtual void recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) = 0;
 
 		/** Connect to the job queue and update one attribute */
 	virtual bool updateJobAttr( const char *name, const char *expr, bool log=false );

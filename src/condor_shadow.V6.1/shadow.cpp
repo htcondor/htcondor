@@ -569,3 +569,89 @@ UniShadow::exitLeaseHandler() {
 	DC_Exit( delayedExitReason );
 	return TRUE;
 }
+
+void
+UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
+	bool tq = false; bool tqSet = ftAd->LookupBool( ATTR_TRANSFER_QUEUED, tq );
+	bool ti = false; bool tiSet = ftAd->LookupBool( ATTR_TRANSFERRING_INPUT, ti );
+	bool to = false; bool toSet = ftAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, to );
+
+	// If either ATTR_TRANSFER_QUEUED or ATTR_TRANSFERRING_INPUT hasn't
+	// been set yet, file transfer hasn't done anything yet and there's
+	// event to record.
+	if( (!tqSet) || (!tiSet) ) {
+		return;
+	}
+
+	// If all six of the booleans in the ftAd are the same as the booleans
+	// in the job ad, then we've already written out the event.
+	bool jtq = false; bool jtqSet = jobAd->LookupBool( ATTR_TRANSFER_QUEUED, jtq );
+	bool jti = false; bool jtiSet = jobAd->LookupBool( ATTR_TRANSFERRING_INPUT, jti );
+	bool jto = false; bool jtoSet = jobAd->LookupBool( ATTR_TRANSFERRING_OUTPUT, jto );
+	if(  jtq == tq && jtqSet == tqSet
+	  && jti == ti && jtiSet == tiSet
+	  && jto == to && jtoSet == toSet ) {
+		return;
+	}
+
+	//
+	// I suppose for maximum geek cred I should shift tq, ti, toSet, and to
+	// into a bitfield and switch on that, instead.
+	//
+
+	FileTransferEvent te;
+	if( tq && ti && (!toSet) ) {
+		te.setType( FileTransferEvent::IN_QUEUED );
+
+		// There really ought to be a remote resource if we're doing
+		// file transfer...
+		if( remRes ) {
+			char * starterAddr = NULL;
+			remRes->getStarterAddress( starterAddr );
+			if( starterAddr ) {
+				te.setHost( starterAddr );
+				free( starterAddr );
+			}
+		}
+
+		jobAd->Assign( "TransferInQueued", (int)time(NULL) );
+	} else if( (!tq) && ti && (!toSet) ) {
+		te.setType( FileTransferEvent::IN_STARTED );
+
+		time_t now = (int)time(NULL);
+		jobAd->Assign( "TransferInStarted", now );
+
+		time_t then;
+		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
+			te.setQueueingDelay( now - then );
+		}
+	} else if( (!tq) && (!ti) && (!toSet) ) {
+		te.setType( FileTransferEvent::IN_FINISHED );
+		// te.setSuccess( ... );
+
+		jobAd->Assign( "TransferInFinished", (int)time(NULL) );
+	} else if( tq && (!ti) && (toSet && to) ) {
+		te.setType( FileTransferEvent::OUT_QUEUED );
+
+		jobAd->Assign( "TransferOutQueued", (int)time(NULL) );
+	} else if( (!tq) && (!ti) && (toSet && to) ) {
+		te.setType( FileTransferEvent::OUT_STARTED );
+
+		time_t now = (int)time(NULL);
+		jobAd->Assign( "TransferOutStarted", now );
+
+		time_t then;
+		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
+			te.setQueueingDelay( now - then );
+		}
+	} else if( (!tq) && (!ti) && (toSet && (!to)) ) {
+		te.setType( FileTransferEvent::OUT_FINISHED );
+		// te.setSuccess( ... );
+
+		jobAd->Assign( "TransferOutFinished", (int)time(NULL) );
+	}
+
+	if(! uLog.writeEvent( &te, jobAd )) {
+		dprintf( D_ALWAYS, "Unable to log file transfer event.\n" );
+	}
+}
