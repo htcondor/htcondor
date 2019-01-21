@@ -204,28 +204,19 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 	r->decode();
 	int numads;
 	r->code(numads);
-	// ifdef LINUX because this code doesn't build on Windows and older Macs
-#ifdef LINUX
-	ClassAd requests[numads];
+
+	std::vector<ClassAd> requests;
+	requests.resize(numads);
 	for(int i=0; i<numads; i++) {
 		getClassAd(r, requests[i]);
 	}
-#else
-	ClassAd request;
-	for(int i=0; i<numads; i++) {
-		getClassAd(r, request);
-	}
-#endif
 	r->end_of_message();
 
-	dprintf(D_ALWAYS, "ZKM: got zkm_query_creds.  there are %i requests.\n", numads);
+	dprintf(D_ALWAYS, "Got query_creds for %d OAUTH services.\n", numads);
 
 	MyString URL;
 
-	// ifdef LINUX because this code doesn't build on Windows and older Macs
-#ifdef LINUX
-	ClassAd missing[numads];
-	int nummissing = 0;
+	ClassAdListDoesNotDeleteAds missing;
 	for(int i=0; i<numads; i++) {
 		MyString service;
 		MyString handle;
@@ -236,47 +227,56 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 
 		MyString tmpfname;
 		tmpfname = service;
-		tmpfname.replaceString("/",":");
+		tmpfname.replaceString("/",":"); // TODO: : isn't going to work on Windows. should use ; instead
 		if(handle.Length()) {
 			tmpfname += "_";
 			tmpfname += handle;
 		}
 		tmpfname += ".top";
 
-		dprintf(D_ALWAYS, "ZKM: looking for %s\n", tmpfname.Value());
+		dprintf(D_FULLDEBUG, "query_creds: checking for %s\n", tmpfname.Value());
 		if (!credmon_poll_continue(user.Value(), 0, tmpfname.Value())) {
-			dprintf(D_ALWAYS, "ZKM: missing %s\n", tmpfname.Value());
-			missing[nummissing] = requests[i];
-			nummissing++;
+			dprintf(D_ALWAYS, "query_creds: did not find %s\n", tmpfname.Value());
+			missing.Insert(&requests[i]);
 		}
 	}
 
-	if(nummissing > 0) {
+	if (missing.Length() > 0) {
 		// create unique request file with classad metadata
-		char *key = Condor_Crypt_Base::randomHexKey(32);
+		auto_free_ptr key(Condor_Crypt_Base::randomHexKey(32));
 
-		MyString contents;
+		MyString web_prefix;
+		param(web_prefix, "CREDMON_WEB_PREFIX");
+		if (web_prefix.empty()) {
+			web_prefix = "https://";
+			web_prefix += get_local_fqdn();
+		}
 
-		for (int i=0; i<nummissing; i++) {
+		MyString contents; // what we will write to the credential directory for this URL
+
+		missing.Rewind();
+		ClassAd * req;
+		while ((req = missing.Next())) {
 			// fill in everything we need to pass
 			ClassAd ad;
 			MyString tmpname;
 			MyString tmpvalue;
+			MyString secret_filename;
 
 			MyString service;
-			missing[i].LookupString("Service", service);
+			req->LookupString("Service", service);
 			ad.Assign("Provider", service);
 
-			missing[i].LookupString("Username", tmpvalue);
+			req->LookupString("Username", tmpvalue);
 			ad.Assign("LocalUser", tmpvalue);
 
-			missing[i].LookupString("Handle", tmpvalue);
+			req->LookupString("Handle", tmpvalue);
 			ad.Assign("Handle", tmpvalue);
 
-			missing[i].LookupString("Scopes", tmpvalue);
+			req->LookupString("Scopes", tmpvalue);
 			ad.Assign("Scopes", tmpvalue);
 
-			missing[i].LookupString("Audience", tmpvalue);
+			req->LookupString("Audience", tmpvalue);
 			ad.Assign("Audience", tmpvalue);
 
 			tmpname = service;
@@ -284,39 +284,42 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			param(tmpvalue, tmpname.c_str());
 			ad.Assign("ClientId", tmpvalue);
 
-			char *buf = NULL;
-			size_t buf_len = 0;
-			std::string secret;
 			tmpname = service;
 			tmpname += "_CLIENT_SECRET_FILE";
-			param(tmpvalue, tmpname.c_str());
-			// Read the file and use the contents before the first
-			// newline, if any.
-			if(read_secure_file(tmpvalue.Value(), (void**)&buf, &buf_len, true)) {
-				for ( size_t i = 0; i < buf_len; i++ ) {
-					if ( buf[i] == '\n' ) {
-						buf_len = i;
+			tmpvalue.clear();
+			char *buf = NULL;
+			size_t buf_len = 0;
+			int secret_len = 0;
+			if (param(secret_filename, tmpname.c_str()) && ! secret_filename.empty() &&
+				read_secure_file(secret_filename.Value(), (void**)&buf, &buf_len, true)) {
+				// Read the file and use the contents before the first
+				// newline, if any. remember the buffer is probably not null terminated!
+				size_t i = 0;
+				for ( i = 0; i < buf_len; i++ ) {
+					// file may have terminating \r\n, etc,
+					// we use only up to the first non-printing character
+					if ( buf[i] <= 0x1F ) {
+						break;
 					}
 				}
-				secret.assign(buf, buf_len);
+				secret_len = i;
+				tmpvalue.set(buf, secret_len);
+				memset(buf, 0, buf_len); // overwrite the secret before freeing the buffer
+				free(buf);
+			} else {
+				//TODO: make a better error return channel for this command
+				URL.formatstr("Failed to securely read client secret for service %s", service.c_str());
+				dprintf(D_ALWAYS, "query_creds: ERROR: could not securely read file '%s' for service %s\n", secret_filename.c_str(), service.c_str());
+				goto bail;
 			}
-			ad.Assign("ClientSecret", secret);
+			ad.Assign("ClientSecret", tmpvalue);
 
 			tmpname = service;
 			tmpname += "_RETURN_URL_SUFFIX";
-			param(tmpvalue, tmpname.c_str());
-
-			MyString hn = get_local_fqdn();
-			char* h = param("ZKMHOST");
-			if(h) {
-				hn = h;
-				free(h);
-			}
-			URL = "https://";
-			URL += hn;
-			URL += tmpvalue;
-			ad.Assign("ReturnUrl", URL);
-			URL = "";
+			auto_free_ptr url_suffix(param(tmpname.c_str()));
+			tmpvalue = web_prefix;
+			if (url_suffix) { tmpvalue += url_suffix.ptr(); }
+			ad.Assign("ReturnUrl", tmpvalue);
 
 			tmpname = service;
 			tmpname += "_AUTHORIZATION_URL";
@@ -334,14 +337,19 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			ad.Assign("UserUrl", tmpvalue);
 
 			// serialize classad into string
-			MyString ad_string;
-			sPrintAd(ad_string, ad);
-
-			dprintf(D_ALWAYS, "ZKM: appending:%s\n", ad_string.Value());
 			if(!contents.empty()) {
 				contents += "\n";
 			}
-			contents += ad_string;
+			// append the new ad
+			sPrintAd(contents, ad);
+
+			if (IsDebugVerbose(D_FULLDEBUG)) {
+				MyString tmp;
+				tmp.formatstr("<contents of %s> %d bytes", secret_filename.Value(), secret_len);
+				ad.Assign("ClientSecret", tmp.Value());
+				dprintf(D_FULLDEBUG, "Service %s ad:\n", service.Value());
+				dPrintAd(D_FULLDEBUG, ad);
+			}
 		}
 
 		// write the file into sec_credential_dir
@@ -350,33 +358,27 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 			EXCEPT("NO SEC_CREDENTIAL_DIRECTORY");
 		}
 
-		MyString path = (char*)(cred_dir.ptr());
+		MyString path = cred_dir.ptr();
 		path += "/";
-		path += key;
+		path += key.ptr();
 
-		dprintf(D_ALWAYS, "ZKM: writing to %s.  data len %i:\n%s\n", path.Value(), contents.Length(), contents.Value());
+		dprintf(D_ALWAYS, "query_creds: storing %d bytes for %d services to %s\n", contents.Length(), missing.Length(), path.Value());
 		int rc = write_secure_file(path.Value(), contents.Value(), contents.Length(), true);
 
 		if (rc != SUCCESS) {
-			dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", path.Value());
+			dprintf(D_ALWAYS, "query_creds: failed to write secure temp file %s\n", path.Value());
 		} else {
-			MyString hn = get_local_fqdn();
-			char* h = param("ZKMHOST");
-			if(h) {
-				hn = h;
-				free(h);
-			}
-			URL = "https://";
-			URL += hn;
+			// on success we return a URL
+			URL = web_prefix;
 			URL += "/key/";
-			URL += key;
+			URL += key.ptr();
+			dprintf(D_ALWAYS, "query_creds: returning URL %s\n", URL.Value());
 		}
-
-		dprintf(D_ALWAYS, "ZKM: sending URL '%s'\n", URL.Value());
+	} else {
+		dprintf(D_ALWAYS, "query_creds: found all requested OAUTH services. returning empty URL %s\n", URL.Value());
 	}
-#else
-#endif
 
+bail:
 	r->encode();
 	r->code(URL);
 	r->end_of_message();

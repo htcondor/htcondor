@@ -2579,7 +2579,6 @@ int SetSyscalls( int foo ) { return foo; }
 }
 
 // The code below needs work before it can build on Windows or older Macs
-#ifdef LINUX
 
 MyString credd_has_tokens(MyString m) {
 
@@ -2671,14 +2670,14 @@ MyString credd_has_tokens(MyString m) {
 
 
 	// we'll have one classad per token.  create an array while we build them up
-	ClassAd requests[unique_names.number()];
+	ClassAdList requests;
 
 	char* token;
 	unique_names.rewind();
 
 	for(int index = 0; index < unique_names.number(); index++) {
 		token = unique_names.next();
-		ClassAd request_ad;
+		ClassAd *request_ad = new ClassAd();
 		MyString token_MyS = token;
 
 		MyString service_name;
@@ -2692,8 +2691,8 @@ MyString credd_has_tokens(MyString m) {
 			service_name = token_MyS.substr(0,starpos);
 			handle = token_MyS.substr(starpos+1,token_MyS.Length());
 		}
-		request_ad.Assign("Service", service_name);
-		request_ad.Assign("Handle", handle);
+		request_ad->Assign("Service", service_name);
+		request_ad->Assign("Handle", handle);
 
 		MyString param_name;
 		MyString config_param_name;
@@ -2717,7 +2716,7 @@ MyString credd_has_tokens(MyString m) {
 			config_param_name.formatstr("%s_DEFAULT_SCOPES", service_name.c_str());
 			param_val = param(config_param_name.c_str());
 		}
-		request_ad.Assign("Scopes", param_val);
+		request_ad->Assign("Scopes", param_val);
 
 		// get resource (audience) from submit file or config file if needed
 		param_name.formatstr("%s_OAUTH_RESOURCE", service_name.c_str());
@@ -2737,17 +2736,17 @@ MyString credd_has_tokens(MyString m) {
 			config_param_name.formatstr("%s_DEFAULT_AUDIENCE", service_name.c_str());
 			param_val = param(config_param_name.c_str());
 		}
-		request_ad.Assign("Audience", param_val);
-		request_ad.Assign("Username", my_username());
+		request_ad->Assign("Audience", param_val);
+		request_ad->Assign("Username", my_username());
 
 		if (IsDebugLevel (D_SECURITY)) {
 			std::string dbgout;
 			classad::ClassAdUnParser unp;
-			unp.Unparse(dbgout, &request_ad);
+			unp.Unparse(dbgout, request_ad);
 			dprintf(D_SECURITY, "OAUTH REQUEST: %s\n", dbgout.c_str());
 		}
 
-		requests[index] = request_ad;
+		requests.Insert(request_ad);
 	}
 
 	// PHASE 3
@@ -2768,8 +2767,9 @@ MyString credd_has_tokens(MyString m) {
 		r->encode();
 		int numads = unique_names.number();
 		r->code(numads);
+		requests.Rewind();
 		for (int i=0; i<numads; i++) {
-			putClassAd(r, requests[i]);
+			putClassAd(r, *(requests.Next()));
 		}
 		r->end_of_message();
 		r->decode();
@@ -2785,11 +2785,6 @@ MyString credd_has_tokens(MyString m) {
 	}
 }
 
-#else
-
-MyString credd_has_tokens(MyString m) { return NULL; }
-
-#endif
 
 int process_job_credentials()
 {
@@ -2810,13 +2805,17 @@ int process_job_credentials()
 		// it.  we forward this URL to the user so they can obtain the
 		// tokens needed.
 
-		MyString tokens_needed = submit_hash.submit_param_mystring("UseOathServies", "use_oauth_services");
+		MyString tokens_needed = submit_hash.submit_param_mystring("UseOAuthServies", "use_oauth_services");
 
 		if (!tokens_needed.empty()) {
 			MyString URL = credd_has_tokens(tokens_needed);
 			if (!URL.empty()) {
-				// report to user a URL
-				fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_username(), URL.Value());
+				if (IsUrl(URL.c_str())) {
+					// report to user a URL
+					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_username(), URL.Value());
+				} else {
+					fprintf(stderr, "\nOAuth error: %s\n\n", URL.Value());
+				}
 				exit(1);
 			}
 			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", tokens_needed.c_str());
@@ -2870,7 +2869,7 @@ int process_job_credentials()
 			}
 
 			// immediately convert to base64
-			char* ut64 = zkm_base64_encode(uber_ticket, bytes_read);
+			char* ut64 = zkm_base64_encode(uber_ticket, (int)bytes_read);
 
 			// sanity check:  convert it back.
 			//unsigned char *zkmbuf = 0;
