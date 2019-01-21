@@ -187,14 +187,14 @@ CredDaemon::invalidate_ad()
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
 }
 
-void
+int
 CredDaemon::nop_handler(int, Stream*)
 {
-	return;
+	return 0; // ????
 }
 
 
-void
+int
 CredDaemon::zkm_query_creds( int, Stream* s)
 {
 	ReliSock* r = (ReliSock*)s;
@@ -377,9 +377,11 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 	r->encode();
 	r->code(URL);
 	r->end_of_message();
+
+	return 0; // ????
 }
 
-void
+int
 CredDaemon::refresh_all_handler( int, Stream* s)
 {
 	ReliSock* r = (ReliSock*)s;
@@ -408,6 +410,8 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	dPrintAd(D_SECURITY | D_FULLDEBUG, ad);
 	putClassAd(r, ad);
 	r->end_of_message();
+
+	return 0; // ????
 }
 
 //-------------------------------------------------------------
