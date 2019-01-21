@@ -564,10 +564,9 @@ UniShadow::exitDelayed( int &reason ) {
 	return false;
 }
 
-int
+void
 UniShadow::exitLeaseHandler() {
 	DC_Exit( delayedExitReason );
-	return TRUE;
 }
 
 void
