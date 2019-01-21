@@ -164,7 +164,7 @@ class ParallelShadow : public BaseShadow
             and then sends us a RESOURCE_AVAILABLE signal.  Upon
             receipt of that signal (it's registered in init()), we
             enter this function */
-    int getResources( void );
+    void getResources( void );
 
         /** When we've got all the resources we need, we enter this
             function, which starts the mpi job */
