@@ -733,12 +733,11 @@ RemoteResource::dprintfSelf( int debugLevel )
 	}
 }
 
-int
+void
 RemoteResource::attemptShutdownTimeout()
 {
 	m_attempt_shutdown_tid = -1;
 	attemptShutdown();
-	return TRUE;
 }
 
 void
