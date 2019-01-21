@@ -773,7 +773,7 @@ RemoteResource::attemptShutdown()
 		}
 		else {
 			m_attempt_shutdown_tid = daemonCore->Register_Timer(1, 0,
-				(TimerHandlercpp)&RemoteResource::attemptShutdownTimeout,
+				reinterpret_cast<TimerHandlercpp>(&RemoteResource::attemptShutdownTimeout),
 				"attempt shutdown", this);
 			if( m_attempt_shutdown_tid != -1 ) {
 				dprintf(D_FULLDEBUG,"Delaying shutdown of shadow, because file transfer is still active.\n");
