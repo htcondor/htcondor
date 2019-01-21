@@ -897,20 +897,17 @@ JobInfoCommunicator::startUpdateTimer( void )
 }
 
 
-/* 
+/*
    We can't just have our periodic timer call periodicJobUpdate()
    directly, since it passes in arguments that screw up the default
    bool that determines if we want to ensure the update works.  So,
    the periodic updates call this function instead, which calls the
    non-ensure version.
 */
-int
+void
 JobInfoCommunicator::periodicJobUpdateTimerHandler( void )
 {
-	if( periodicJobUpdate(NULL, false) ) {
-		return TRUE;
-	}
-	return FALSE;
+	periodicJobUpdate(NULL, false);
 }
 
 
