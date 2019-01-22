@@ -47,7 +47,7 @@ void SecureZeroMemory(void *p, size_t n)
 
 
 int
-NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
+OAUTH_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
 {
 	// store a SciToken produced by the credential producer.
 	//
@@ -56,7 +56,7 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	// exist and are configurable, the token should be stored using that
 	// method, not via the credential producer.
 
-	dprintf(D_ALWAYS, "ZKM: NEW store cred user %s len %i mode %i\n", user, len, mode);
+	dprintf(D_ALWAYS, "OAUTH store cred user %s len %i mode %i\n", user, len, mode);
 
 	// only set to true if it actually happens
 	cred_modified = false;
@@ -86,7 +86,7 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	char filename[PATH_MAX];
 	sprintf(tmpfilename, "%s%cscitokens.top.tmp", user_cred_dir.Value(), DIR_DELIM_CHAR);
 	sprintf(filename, "%s%cscitokens.top", user_cred_dir.Value(), DIR_DELIM_CHAR);
-	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
+	dprintf(D_ALWAYS, "Writing user cred data to %s\n", tmpfilename);
 
 	// contents of pw are base64 encoded.  decode now just before they go
 	// into the file.
@@ -95,7 +95,7 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	condor_base64_decode(pw, &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
-		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		dprintf(D_ALWAYS, "Failed to decode credential!\n");
 		free(rawbuf);
 		return false;
 	}
@@ -112,18 +112,18 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	free(rawbuf);
 
 	if (rc != SUCCESS) {
-		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
+		dprintf(D_ALWAYS, "Failed to write secure temp file %s\n", tmpfilename);
 		return FAILURE;
 	}
 
 	// now move into place
-	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
+	dprintf(D_ALWAYS, "Renaming %s to %s\n", tmpfilename, filename);
 	priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
 
 	if (rc == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to rename %s to %s\n", tmpfilename, filename);
+		dprintf(D_ALWAYS, "Failed to rename %s to %s\n", tmpfilename, filename);
 
 		// should we rm tmpfilename ?
 		return FAILURE;
@@ -135,9 +135,9 @@ NEW_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 }
 
 int
-ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
+UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &cred_modified)
 {
-	dprintf(D_ALWAYS, "ZKM: store cred user %s len %i mode %i\n", user, len, mode);
+	dprintf(D_ALWAYS, "Unix store cred user %s len %i mode %i\n", user, len, mode);
 
 	// only set to true if it actually happens
 	cred_modified = false;
@@ -193,7 +193,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	char filename[PATH_MAX];
 	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir.ptr(), DIR_DELIM_CHAR, username);
 	sprintf(filename, "%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, username);
-	dprintf(D_ALWAYS, "ZKM: writing data to %s\n", tmpfilename);
+	dprintf(D_ALWAYS, "Writing credential data to %s\n", tmpfilename);
 
 	// contents of pw are base64 encoded.  decode now just before they go
 	// into the file.
@@ -202,7 +202,7 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	condor_base64_decode(pw, &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
-		dprintf(D_ALWAYS, "ZKM: failed to decode credential!\n");
+		dprintf(D_ALWAYS, "Failed to decode credential!\n");
 		free(rawbuf);
 		return false;
 	}
@@ -214,18 +214,18 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 	free(rawbuf);
 
 	if (rc != SUCCESS) {
-		dprintf(D_ALWAYS, "ZKM: failed to write secure temp file %s\n", tmpfilename);
+		dprintf(D_ALWAYS, "Failed to write secure temp file %s\n", tmpfilename);
 		return FAILURE;
 	}
 
 	// now move into place
-	dprintf(D_ALWAYS, "ZKM: renaming %s to %s\n", tmpfilename, filename);
+	dprintf(D_ALWAYS, "Renaming %s to %s\n", tmpfilename, filename);
 	priv_state priv = set_root_priv();
 	rc = rename(tmpfilename, filename);
 	set_priv(priv);
 
 	if (rc == -1) {
-		dprintf(D_ALWAYS, "ZKM: failed to rename %s to %s\n", tmpfilename, filename);
+		dprintf(D_ALWAYS, "Failed to rename %s to %s\n", tmpfilename, filename);
 
 		// should we rm tmpfilename ?
 		return FAILURE;
@@ -238,9 +238,9 @@ ZKM_UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, i
 
 
 char*
-ZKM_UNIX_GET_CRED(const char *user, const char *domain)
+UNIX_GET_CRED(const char *user, const char *domain)
 {
-	dprintf(D_ALWAYS, "ZKM: get cred user %s domain %s\n", user, domain);
+	dprintf(D_ALWAYS, "Unix get cred user %s domain %s\n", user, domain);
 
 	auto_free_ptr cred_dir( param("SEC_CREDENTIAL_DIRECTORY") );
 	if(!cred_dir) {
@@ -278,8 +278,8 @@ char* getStoredCredential(const char *username, const char *domain)
 	}
 
 	if (strcmp(username, POOL_PASSWORD_USERNAME) != 0) {
-		dprintf(D_ALWAYS, "ZKM: GOT UNIX GET CRED\n");
-		return ZKM_UNIX_GET_CRED(username, domain);
+		dprintf(D_ALWAYS, "GOT UNIX GET CRED\n");
+		return UNIX_GET_CRED(username, domain);
 	} 
 
 	// See if the security manager has overridden the pool password.
@@ -339,13 +339,13 @@ int store_cred_service(const char *user, const char *cred, const size_t credlen,
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
 		// See if we are operating in "new" or "old" mode and dispatch accordingly
-		if (param_boolean("TOKENS", false)) {
-			dprintf(D_ALWAYS, "ZKM: GOT *NEW* UNIX STORE CRED\n");
-			return NEW_UNIX_STORE_CRED(user, cred, credlen, mode, cred_modified);
+		if (param_boolean("CREDD_OAUTH_MODE", false)) {
+			dprintf(D_ALWAYS, "GOT OAUTH STORE CRED\n");
+			return OAUTH_STORE_CRED(user, cred, credlen, mode, cred_modified);
 		}
 
-		dprintf(D_ALWAYS, "ZKM: GOT UNIX STORE CRED\n");
-		return ZKM_UNIX_STORE_CRED(user, cred, credlen, mode, cred_modified);
+		dprintf(D_ALWAYS, "GOT UNIX STORE CRED\n");
+		return UNIX_STORE_CRED(user, cred, credlen, mode, cred_modified);
 	}
 
 	//
@@ -677,7 +677,6 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 	char * user = NULL;
 	char * domain = NULL;
 	char * password = NULL;
-	bool dcfound = (daemonCore != NULL);
 
 	/* Check our connection.  We must be very picky since we are talking
 	   about sending out passwords.  We want to make certain
@@ -717,7 +716,7 @@ get_cred_handler(void *, int /*i*/, Stream *s)
 
 		// Get the username and domain from the wire
 
-	dprintf (D_ALWAYS, "ZKM: First potential block in get_cred_handler, DC==%i\n", dcfound);
+	//dprintf (D_ALWAYS, "First potential block in get_cred_handler, DC==%i\n", daemonCore != NULL);
 
 	sock->decode();
 
@@ -807,9 +806,8 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 	int result;
 	int answer = FAILURE;
 	int cred_modified = false;
-	bool dcfound = daemonCore != NULL;
 
-	dprintf (D_ALWAYS, "ZKM: First potential block in store_cred_handler, DC==%i\n", dcfound);
+	//dprintf (D_ALWAYS, "First potential block in store_cred_handler, DC==%i\n", daemonCore != NULL);
 
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
@@ -1081,7 +1079,6 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	char *pw = NULL;
 	char *domain = NULL;
 	MyString username = POOL_PASSWORD_USERNAME "@";
-	bool dcfound = daemonCore != NULL;
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
@@ -1116,7 +1113,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 		free(credd_host);
 	}
 
-	dprintf (D_ALWAYS, "ZKM: First potential block in store_pool_cred_handler, DC==%i\n", dcfound);
+	//dprintf (D_ALWAYS, "First potential block in store_pool_cred_handler, DC==%i\n", daemonCore != NULL);
 
 	// we don't actually care if the cred was modified in this
 	// situation, but the below function signature requires it
@@ -1165,7 +1162,6 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	int result;
 	int return_val;
 	Sock* sock = NULL;
-	bool dcfound = daemonCore != NULL;
 
 		// to help future debugging, print out the mode we are in
 	static const int mode_offset = 100;
@@ -1273,7 +1269,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			}
 		}
 		
-		dprintf (D_ALWAYS, "ZKM: First potential block in store_cred, DC==%i\n", dcfound);
+		//dprintf (D_ALWAYS, "First potential block in store_cred, DC==%i\n", daemonCore != NULL);
 
 		sock->decode();
 		

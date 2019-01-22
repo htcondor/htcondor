@@ -47,7 +47,7 @@ int write_password_file(const char* path, const char* password)
 	size_t password_len = strlen(password);
 	char *scrambled_password = (char*)malloc(password_len);
 	memset(scrambled_password, 0, password_len);
-	simple_scramble(scrambled_password, password, password_len);
+	simple_scramble(scrambled_password, password, (int)password_len);
 	int rc = write_secure_file(path, scrambled_password, password_len, true);
 	free(scrambled_password);
 	return rc;
@@ -134,11 +134,11 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 	if(as_root) {
 		// open the file with root priv but drop it asap
 		priv_state priv = set_root_priv();
-		fp = safe_fopen_wrapper_follow(fname, "r");
+		fp = safe_fopen_wrapper_follow(fname, "rb");
 		save_errno = errno;
 		set_priv(priv);
 	} else {
-		fp = safe_fopen_wrapper_follow(fname, "r");
+		fp = safe_fopen_wrapper_follow(fname, "rb");
 		save_errno = errno;
 	}
 
@@ -162,8 +162,10 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 		return false;
 	}
 
-	// skip ownership check on windows
-#ifndef WIN32
+#ifdef WIN32
+	// ownership check and permissions check on Windows is done differently
+	// PRAGMA_REMIND("check ACLs on Windows for owner and permissions")
+#else
 	// make sure the file owner matches expected owner
 	uid_t fowner;
 	if(as_root) {
@@ -178,7 +180,6 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 		fclose(fp);
 		return false;
 	}
-#endif
 
 	// make sure no one else can read the file
 	if (st.st_mode & 077) {
@@ -188,6 +189,7 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root)
 		fclose(fp);
 		return false;
 	}
+#endif
 
 	// now read the entire file.
 	size_t fsize = st.st_size;
