@@ -97,7 +97,7 @@ else( NOT PROPER AND NOT LINUX )
 endif( NOT PROPER AND NOT LINUX )
 
 
-if( ${SYSTEM_NAME} STREQUAL "sl6.3" )
+if( SYSTEM_NAME STREQUAL "sl6.3" )
 	condor_pre_external( PCRE pcre-8.40 "lib;include" "include/pcre.h")
 
 	set( PCRE_DOWNLOAD ${PCRE_VER}.tar.gz )
@@ -121,7 +121,6 @@ if( ${SYSTEM_NAME} STREQUAL "sl6.3" )
 	set( PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.so" )
 	set( HAVE_PCRE_H ON PARENT_SCOPE )
 endif()
-
 
 #####################
 ## Hard failure if there is no PCRE
