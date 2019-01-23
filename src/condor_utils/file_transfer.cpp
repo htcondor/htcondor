@@ -3556,7 +3556,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		if( dest_filename.FindChar(DIR_DELIM_CHAR) < 0 &&
 			dest_filename != condor_basename(JobStdoutFile.Value()) &&
-			dest_filename != condor_basename(JobStderrFile.Value()) )
+			dest_filename != condor_basename(JobStderrFile.Value()) &&
+			(file_command != 999 || file_subcommand != 7) )
 		{
 			Info.addSpooledFile( dest_filename.Value() );
 		}

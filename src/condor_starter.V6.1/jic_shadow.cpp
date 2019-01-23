@@ -2087,7 +2087,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	}
 
 	MyString spooled_files;
-	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.Length() > 0 )
+	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) )
 	{
 		ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,spooled_files);
 	}

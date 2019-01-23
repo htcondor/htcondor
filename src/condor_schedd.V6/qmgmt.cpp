@@ -6238,15 +6238,46 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 	}
 
 		// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
+	std::string url_remap_commands;
 	expr = job_ad->LookupExpr(ATTR_TRANSFER_OUTPUT_REMAPS);
 	snprintf(new_attr_name,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 	if ( expr ) {
-		const char *remap_buf = ExprTreeToString(expr);
-		ASSERT(remap_buf);
-		if ( modify_ad ) {
-			job_ad->AssignExpr(new_attr_name,remap_buf);
+
+			// Try to parse out the URL remaps; those stay in the original
+			// attribute.
+		std::string remap_string;
+		if (job_ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS, remap_string)) {
+			StringList remap_commands_list(remap_string.c_str(), ";");
+			remap_commands_list.rewind();
+			char *command;
+			std::string remap_commands;
+			while( (command = remap_commands_list.next()) ) {
+				StringList command_parts(command, " =");
+				if (command_parts.number() != 2) {continue;}
+				command_parts.rewind();
+				command_parts.next();
+				auto dest = command_parts.next();
+				if (IsUrl(dest)) {
+					url_remap_commands += command;
+					url_remap_commands += ";";
+				} else {
+					remap_commands += command;
+					remap_commands += ";";
+				}
+			}
+			if (modify_ad) {
+				job_ad->InsertAttr(new_attr_name, remap_commands);
+			} else {
+				SetAttributeString(cluster, proc, new_attr_name, remap_commands.c_str());
+			}
 		} else {
-			SetAttribute(cluster,proc,new_attr_name,remap_buf);
+			const char *remap_buf = ExprTreeToString(expr);
+			ASSERT(remap_buf);
+			if ( modify_ad ) {
+				job_ad->AssignExpr(new_attr_name, remap_buf);
+			} else {
+				SetAttribute(cluster,proc,new_attr_name,remap_buf);
+			}
 		}
 	}
 	else if(job_ad->LookupExpr(new_attr_name)) {
@@ -6265,9 +6296,17 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		// spool space. We only want to remap when the submitter
 		// retrieves the files.
 	if ( modify_ad ) {
-		job_ad->AssignExpr(ATTR_TRANSFER_OUTPUT_REMAPS,"Undefined");
+		if (url_remap_commands.empty()) {
+			job_ad->AssignExpr(ATTR_TRANSFER_OUTPUT_REMAPS, "Undefined");
+		} else {
+			job_ad->InsertAttr(ATTR_TRANSFER_OUTPUT_REMAPS, url_remap_commands);
+		}
 	} else {
-		SetAttribute(cluster,proc,ATTR_TRANSFER_OUTPUT_REMAPS,"Undefined");
+		if (url_remap_commands.empty()) {
+			SetAttribute(cluster,proc,ATTR_TRANSFER_OUTPUT_REMAPS,"Undefined");
+		} else {
+			SetAttributeString(cluster, proc, ATTR_TRANSFER_OUTPUT_REMAPS, url_remap_commands.c_str());
+		}
 	}
 
 		// Now, for all the attributes listed in 
