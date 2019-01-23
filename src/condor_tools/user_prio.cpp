@@ -1106,8 +1106,8 @@ static int CountElem(ClassAd* ad)
 
 static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accountingAds, LineRec* LR, bool GroupRollup)
 {
-  char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42], attrRequested[32];
-  char  attrLastUsage[32];
+  char  attrName[64], attrPrio[64], attrResUsed[64], attrWtResUsed[64], attrFactor[64], attrBeginUsage[64], attrAccUsage[64], attrRequested[64];
+  char  attrLastUsage[64];
   MyString attrAcctGroup;
   MyString attrIsAcctGroup;
   char  name[128], policy[32];
@@ -1184,7 +1184,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
         IsAcctGroup = false;
     }
 
-    char attr[32];
+    char attr[64];
     sprintf( attr, "EffectiveQuota%s", strI );
     if (ad->LookupFloat(attr, effective_quota)) LR[i-1].HasDetail |= DetailEffQuota;
     sprintf( attr, "ConfigQuota%s", strI );
