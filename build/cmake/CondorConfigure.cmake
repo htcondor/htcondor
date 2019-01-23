@@ -901,7 +901,7 @@ else ()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
-  if( ${SYSTEM_NAME} STREQUAL "sl6.3" )
+  if( SYSTEM_NAME STREQUAL "sl6.3" )
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.40)
   else()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
