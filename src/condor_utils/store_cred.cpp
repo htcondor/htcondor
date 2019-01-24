@@ -889,7 +889,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 #else
 
 	// see if we're in "new" mode.  call a hook to translate refresh into access
-	if(param_boolean("TOKENS", false)) {
+	if(param_boolean("CREDD_OAUTH_MODE", false)) {
 		char* cthook = param("SEC_CREDD_TOKEN_HOOK");
 		if (!cthook) {
 			dprintf(D_ALWAYS, "CREDS: no SEC_CREDD_TOKEN_HOOK... skipping\n");
