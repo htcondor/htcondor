@@ -1085,7 +1085,7 @@ int store_pool_cred_handler(class Service *, int, Stream *s)
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
-		return 1; /// FIXME: ???
+		return CLOSE_STREAM;
 	}
 
 	// if we're the CREDD_HOST, make sure any password setting is done locally
@@ -1110,7 +1110,7 @@ int store_pool_cred_handler(class Service *, int, Stream *s)
 			if (!addr || strcmp(my_ip_str.Value(), addr)) {
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password remotely\n");
 				free(credd_host);
-				return 1; // FIXME: ????
+				return CLOSE_STREAM;
 			}
 		}
 		free(credd_host);
@@ -1133,7 +1133,7 @@ int store_pool_cred_handler(class Service *, int, Stream *s)
 	}
 
 	// construct the full pool username
-	username += domain;	
+	username += domain;
 
 	// do the real work
 	if (pw && *pw) {
@@ -1154,15 +1154,11 @@ int store_pool_cred_handler(class Service *, int, Stream *s)
 		dprintf(D_ALWAYS, "store_pool_cred: Failed to send end of message.\n");
 	}
 
-	// FIXME: ????
-	return 0;
-
 spch_cleanup:
 	if (pw) free(pw);
 	if (domain) free(domain);
 
-	// FIXME: ????
-	return 1;
+	return CLOSE_STREAM;
 }
 
 int 

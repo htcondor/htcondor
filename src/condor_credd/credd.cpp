@@ -378,7 +378,7 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 	r->code(URL);
 	r->end_of_message();
 
-	return 0; // ????
+	return CLOSE_STREAM;
 }
 
 int
@@ -411,7 +411,7 @@ CredDaemon::refresh_all_handler( int, Stream* s)
 	putClassAd(r, ad);
 	r->end_of_message();
 
-	return 0; // ????
+	return CLOSE_STREAM;
 }
 
 //-------------------------------------------------------------
