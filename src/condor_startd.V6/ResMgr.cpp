@@ -1491,7 +1491,7 @@ ResMgr::start_sweep_timer( void )
 	}
 
 	// only sweep if not in TOKENS mode
-	if (!param_boolean("TOKENS", false)) {
+	if (!param_boolean("CREDD_OAUTH_MODE", false)) {
 		return TRUE;
 	}
 

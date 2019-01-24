@@ -92,7 +92,7 @@ bool credmon_fill_watchfile_name(char* watchfilename, const char* user, const ch
 			strncpy(username, user, 255);
 			username[255] = 0;
 		}
-		if(param_boolean("TOKENS", false)) {
+		if(param_boolean("CREDD_OAUTH_MODE", false)) {
 			sprintf(watchfilename, "%s%c%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, username, DIR_DELIM_CHAR, name);
 		} else {
 			sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
@@ -436,7 +436,7 @@ void credmon_sweep_creds() {
 	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
 	if (n >= 0) {
 		while (n--) {
-			if(param_boolean("TOKENS", false)) {
+			if(param_boolean("CREDD_OAUTH_MODE", false)) {
 				process_cred_mark_dir(namelist[n]->d_name);
 			} else {
 				fullpathname.formatstr("%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, namelist[n]->d_name);
