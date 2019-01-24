@@ -531,7 +531,7 @@ countres:
 		}
 	}
 #ifndef WIN32
-	if(!param_boolean("TOKENS", false)) {
+	if(!param_boolean("CREDD_OAUTH_MODE", false)) {
 		if (ResCount == 0) {
 			dprintf(D_FULLDEBUG, "CREDMON: user %s no longer running jobs, mark cred for sweeping.\n", curuser.c_str());
 			credmon_mark_creds_for_sweeping(curuser.c_str());

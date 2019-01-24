@@ -299,8 +299,8 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 						break;
 					}
 				}
-				secret_len = i;
-				tmpvalue.set(buf, secret_len);
+				secret_len = (int)i;  // the secret length might be less than the file length
+				tmpvalue.set(buf, secret_len); // copy so that we can null terminate
 				memset(buf, 0, buf_len); // overwrite the secret before freeing the buffer
 				free(buf);
 			} else {
@@ -356,11 +356,13 @@ CredDaemon::zkm_query_creds( int, Stream* s)
 		}
 
 		MyString path = cred_dir.ptr();
-		path += "/";
+		path += DIR_DELIM_CHAR;
 		path += key.ptr();
 
 		dprintf(D_ALWAYS, "query_creds: storing %d bytes for %d services to %s\n", contents.Length(), missing.Length(), path.Value());
-		int rc = write_secure_file(path.Value(), contents.Value(), contents.Length(), true);
+		const bool as_root = false; // write as current user
+		const bool group_readable = true;
+		int rc = write_secure_file(path.Value(), contents.Value(), contents.Length(), as_root, group_readable);
 
 		if (rc != SUCCESS) {
 			dprintf(D_ALWAYS, "query_creds: failed to write secure temp file %s\n", path.Value());
