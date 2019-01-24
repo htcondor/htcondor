@@ -1075,7 +1075,7 @@ static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
 }
 
-int store_pool_cred_handler(Service *, int, Stream *s)
+int store_pool_cred_handler(class Service *, int, Stream *s)
 {
 	int result;
 	char *pw = NULL;
