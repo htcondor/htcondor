@@ -38,6 +38,7 @@ std::string Base64::condor_base64_encode(BYTE const* buf, unsigned int bufLen) {
   BYTE char_array_3[3];
   BYTE char_array_4[4];
 
+  int count = 0;
   while (bufLen--) {
     char_array_3[i++] = *(buf++);
     if (i == 3) {
@@ -48,8 +49,14 @@ std::string Base64::condor_base64_encode(BYTE const* buf, unsigned int bufLen) {
 
       for(i = 0; (i <4) ; i++)
         ret += base64_chars[char_array_4[i]];
+		count += 4;
       i = 0;
     }
+
+	if (count == 76) {
+		ret += '\n';
+		count = 0;
+	}
   }
 
   if (i)
