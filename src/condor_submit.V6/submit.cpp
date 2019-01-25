@@ -84,7 +84,7 @@
 #include "vm_univ_utils.h"
 #include "condor_md.h"
 #include "my_popen.h"
-#include "condor_base64.h"
+#include "zkm_base64.h"
 
 #include <algorithm>
 #include <string>
@@ -2865,13 +2865,13 @@ int process_job_credentials()
 			}
 
 			// immediately convert to base64
-			char* ut64 = condor_base64_encode(uber_ticket, (int)bytes_read);
+			char* ut64 = zkm_base64_encode(uber_ticket, (int)bytes_read);
 
 			// sanity check:  convert it back.
 			//unsigned char *zkmbuf = 0;
 			int zkmlen = -1;
 			unsigned char* zkmbuf = NULL;
-			condor_base64_decode(ut64, &zkmbuf, &zkmlen);
+			zkm_base64_decode(ut64, &zkmbuf, &zkmlen);
 
 			// zkmbuf IS LEAKING
 			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", (int)bytes_read, zkmlen);
