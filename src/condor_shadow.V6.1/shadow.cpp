@@ -624,6 +624,15 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		time_t then;
 		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
 			te.setQueueingDelay( now - then );
+		} else {
+			if( remRes ) { // this should always be true...
+				char * starterAddr = NULL;
+				remRes->getStarterAddress( starterAddr );
+				if( starterAddr ) {
+					te.setHost( starterAddr );
+					free( starterAddr );
+				}
+			}
 		}
 	} else if( (!tq) && (!ti) && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_FINISHED );
