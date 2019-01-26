@@ -3154,12 +3154,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		return_and_resetpriv( -1 );
 	}
 
-	for( filelist_it = filelist.begin();
-		 filelist_it != filelist.end();
-		 filelist_it++ )
+	std::sort(filelist.begin(), filelist.end());
+	for(const auto &fileitem : filelist )
 	{
-		auto &filename = filelist_it->srcName();
-		auto &dest_dir = filelist_it->destDir();
+		auto &filename = fileitem.srcName();
+		auto &dest_dir = fileitem.destDir();
 
 		if( !dest_dir.empty() ) {
 			dprintf(D_FULLDEBUG,"DoUpload: sending file %s to %s%c\n", filename.c_str(), dest_dir.c_str(), DIR_DELIM_CHAR);
@@ -3293,8 +3292,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		bool fail_because_mkdir_not_supported = false;
 		bool fail_because_symlink_not_supported = false;
-		if( filelist_it->isDirectory() ) {
-			if( filelist_it->isSymlink() ) {
+		if( fileitem.isDirectory() ) {
+			if( fileitem.isSymlink() ) {
 				fail_because_symlink_not_supported = true;
 				dprintf(D_ALWAYS,"DoUpload: attempting to transfer symlink %s which points to a directory.  This is not supported.\n", filename.c_str());
 			}
@@ -3489,9 +3488,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		} else if( file_command == TransferCommand::Mkdir ) { // mkdir
 			// the only data sent is the file_mode.
-			bytes = sizeof( filelist_it->fileMode() );
+			bytes = sizeof( fileitem.fileMode() );
 
-			if( !s->put( filelist_it->fileMode() ) ) {
+			if( !s->put( fileitem.fileMode() ) ) {
 				rc = -1;
 				dprintf(D_ALWAYS,"DoUpload: failed to send mkdir mode\n");
 			}
