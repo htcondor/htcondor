@@ -55,6 +55,7 @@
 #include "condor_md.h"
 #include "my_popen.h"
 #include "condor_base64.h"
+#include "zkm_base64.h"
 
 #include <algorithm>
 #include <string>

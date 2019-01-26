@@ -32,6 +32,7 @@
 #include "credmon_interface.h"
 #include "secure_file.h"
 #include "condor_base64.h"
+#include "zkm_base64.h"
 #include "my_popen.h"
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
@@ -92,7 +93,7 @@ OAUTH_STORE_CRED(const char *user, const char *pw, const int len, int mode, int 
 	// into the file.
 	int rawlen = -1;
 	unsigned char* rawbuf = NULL;
-	condor_base64_decode(pw, &rawbuf, &rawlen);
+	zkm_base64_decode(pw, &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
 		dprintf(D_ALWAYS, "Failed to decode credential!\n");
@@ -199,7 +200,7 @@ UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &
 	// into the file.
 	int rawlen = -1;
 	unsigned char* rawbuf = NULL;
-	condor_base64_decode(pw, &rawbuf, &rawlen);
+	zkm_base64_decode(pw, &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
 		dprintf(D_ALWAYS, "Failed to decode credential!\n");
