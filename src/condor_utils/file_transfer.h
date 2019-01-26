@@ -39,7 +39,7 @@ extern const char * const StderrRemapName;
 
 class FileTransfer;	// forward declatation
 class FileTransferItem;
-typedef std::list<FileTransferItem> FileTransferList;
+typedef std::vector<FileTransferItem> FileTransferList;
 
 
 struct CatalogEntry {
