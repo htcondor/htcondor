@@ -31,8 +31,7 @@
 #include "condor_ver_info.h"
 #include "condor_classad.h"
 #include "dc_transfer_queue.h"
-#include <list>
-
+#include <vector>
 
 extern const char * const StdoutRemapName;
 extern const char * const StderrRemapName;
@@ -289,7 +288,8 @@ class FileTransfer: public Service {
 	int InitializePlugins(CondorError &e);
 	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	int InvokeMultipleFileTransferPlugin(CondorError &e, std::string plugin_path, std::string transfer_files_string, const char* proxy_filename);
+	int InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, std::vector<std::unique_ptr<ClassAd>> *);
+	int InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, CondorError &err);
     int OutputFileTransferStats( ClassAd &stats );
 	MyString GetSupportedMethods();
 
