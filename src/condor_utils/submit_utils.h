@@ -549,7 +549,7 @@ public:
 	// After calling this method, subsequent calls to make_job_ad() will produce a job ad that
 	// is chained to the cluster ad
 	// This function does nothing if the SubmitHash is using a foreign clusterad (i.e. you called set_cluster_ad())
-	bool fold_job_into_base_ad(ClassAd * job);
+	bool fold_job_into_base_ad(int cluster_id, ClassAd * job);
 
 	// If we have an initialized cluster ad, return it
 	ClassAd * get_cluster_ad() {
@@ -581,7 +581,7 @@ public:
 		baseJob.Clear();
 		jid.cluster = 0; jid.proc = 0;
 		clusterAd = NULL;
-		base_job_is_cluster_ad = false;
+		base_job_is_cluster_ad = 0;
 	}
 
 	int AssignJobExpr (const char *attr, const char * expr, const char * source_label=NULL);
@@ -627,8 +627,8 @@ protected:
 	const char * abort_macro_name; // if there is an abort_code and these are non-null, then the abort was because of this macro
 	const char * abort_raw_macro_val;
 
-	// keep track of whether we have turned the baseJob into a cluster ad yet
-	bool base_job_is_cluster_ad;
+	// keep track of whether we have turned the baseJob into a cluster ad yet, and what cluster it is
+	int base_job_is_cluster_ad;
 
 	// options set externally (by command line arguments?)
 	bool DisableFileChecks; // file checks disabled by config, not submit file
