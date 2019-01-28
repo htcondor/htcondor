@@ -2928,7 +2928,7 @@ resettimer:
 		if (m_refresh_sandbox_creds_tid == -1) {
 			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
 				sec_cred_refresh,
-				(TimerHandlercpp)&JICShadow::refreshSandboxCredentials,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentials_from_timer,
 				"refreshSandboxCredentials",
 				this );
 		} else {
@@ -2959,7 +2959,7 @@ JICShadow::refreshSandboxCredentialsMultiple()
 		if (m_refresh_sandbox_creds_tid == -1) {
 			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
 				sec_cred_refresh,
-				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple_from_timer,
 				"refreshSandboxCredentialsMultiple",
 				this );
 		} else {

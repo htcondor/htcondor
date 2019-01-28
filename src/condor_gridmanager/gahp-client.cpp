@@ -358,7 +358,7 @@ GahpServer::write_line(const char *command, int req, const char *args)
 	return;
 }
 
-void
+int
 GahpServer::Reaper(Service *,int pid,int status)
 {
 	/* This should be much better.... for now, if our Gahp Server
@@ -400,6 +400,8 @@ GahpServer::Reaper(Service *,int pid,int status)
 		formatstr_cat( buf, "\n" );
 		dprintf( D_ALWAYS, "%s", buf.c_str() );
 	}
+
+	return 0; // ????
 }
 
 GahpClient::GahpClient( const char * id, const char * path, const ArgList * args )
@@ -1294,7 +1296,7 @@ GahpServer::command_use_cached_proxy( GahpProxyInfo *new_proxy )
 	return true;
 }
 
-int
+void
 GahpServer::ProxyCallback()
 {
 	if ( m_gahp_pid > 0 ) {
@@ -1302,7 +1304,6 @@ GahpServer::ProxyCallback()
 								(TimerHandlercpp)&GahpServer::doProxyCheck,
 								"GahpServer::doProxyCheck", (Service*)this );
 	}
-	return 0;
 }
 
 void

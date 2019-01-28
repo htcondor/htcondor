@@ -963,7 +963,7 @@ ScheddNegotiate::~ScheddNegotiate()
     {
         disconnect();
     }
-    catch (boost::python::error_already_set) {}
+    catch (boost::python::error_already_set &) {}
 }
 
 
@@ -1068,7 +1068,7 @@ QueryIterator::nextAds()
             }
             results.append(nextobj);
         }
-        catch (boost::python::error_already_set)
+        catch (boost::python::error_already_set &)
         {
             if (PyErr_ExceptionMatches(PyExc_StopIteration)) {
                 PyErr_Clear();
@@ -1117,7 +1117,7 @@ query_process_callback(void * data, ClassAd* ad)
             helper->output_list.append(wrapper);
         }
     }
-    catch (error_already_set)
+    catch (boost::python::error_already_set &)
     {
         // Suppress the C++ exception.  HTCondor sure can't deal with it.
         // However, PyErr_Occurred will be set and we will no longer invoke the callback.
@@ -2335,7 +2335,7 @@ public:
             {
                 results.append(name);
             }
-            catch (boost::python::error_already_set)
+            catch (boost::python::error_already_set &)
             {
                 hash_iter_delete(&it);
                 throw;
@@ -2382,7 +2382,7 @@ public:
             {
                 results.append(boost::python::make_tuple<std::string, std::string>(name, val));
             }
-            catch (boost::python::error_already_set)
+            catch (boost::python::error_already_set &)
             {
                 hash_iter_delete(&it);
                 throw;
@@ -2406,7 +2406,7 @@ public:
             {
                 results.append(val);
             }
-            catch (boost::python::error_already_set)
+            catch (boost::python::error_already_set &)
             {
                 hash_iter_delete(&it);
                 throw;

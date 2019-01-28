@@ -429,7 +429,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 	char formatted[2048];
 	char cond[1024];
 	char info[64];
-	char suggest[64];
+	char suggest[128];
 	char value[64];
 	char tempBuff[64];
 	int p = 1;

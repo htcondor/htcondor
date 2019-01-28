@@ -423,7 +423,7 @@ struct Param
         {
             return param_to_py(attr.c_str(), pmeta, result_str);
         }
-        catch (error_already_set)
+        catch (error_already_set&)
         {
             PyErr_Clear();
             return object(result_str);
@@ -473,7 +473,7 @@ struct Param
         {
             results.append(name);
         }
-        catch (error_already_set)
+        catch (error_already_set&)
         {
             // Suppress the C++ exception.  The HTCondor code is not thread safe.
         }
@@ -542,14 +542,14 @@ struct Param
             {
                 pyvalue = param_to_py(name, pmeta, value);
             }
-            catch (error_already_set)
+            catch (error_already_set&)
             {
                 PyErr_Clear();
                 pyvalue = object(value);
             }
             results.append(make_tuple<std::string, object>(name, pyvalue));
         }
-        catch (error_already_set)
+        catch (error_already_set&)
         {
             // Suppress the python-to-C++ exception.  The HTCondor code is not thread safe.
             // This will set PyErr_Occurred so eventually the python exception fires.

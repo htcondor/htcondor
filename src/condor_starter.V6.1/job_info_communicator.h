@@ -306,11 +306,8 @@ public:
 		   function to register for the periodic 
 		   updates, and this ensures that we use the UDP version of
 		   UpdateShadow().
-
-		   This returns an int just to keep DaemonCore happy about the types.
-		   @return TRUE on success, FALSE on failure
 		*/
-	int periodicJobUpdateTimerHandler( void );
+	void periodicJobUpdateTimerHandler( void );
 
 		// // // // // // // // // // // //
 		// Misc utilities

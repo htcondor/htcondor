@@ -49,7 +49,7 @@ class CronJob : public Service
   public:
 	CronJob( CronJobParams *params, CronJobMgr &mgr );
 	virtual ~CronJob( void );
-	
+
 	virtual int KillJob( bool );
 	int Schedule( void );
 	int StartOnDemand( void );
@@ -131,7 +131,9 @@ class CronJob : public Service
 
 	// Private methods; these can be overloaded
 	virtual int RunJob( void );
+	virtual void RunJobFromTimer() { RunJob(); }
 	virtual int StartJob( void );
+	virtual void StartJobFromTimer() { StartJob(); }
 	virtual void KillHandler( void );
 	virtual int StdoutHandler( int pipe );
 	virtual int StderrHandler( int pipe );

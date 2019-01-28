@@ -441,7 +441,9 @@ private:
 	void proxyExpiring();
 
 	bool refreshSandboxCredentials();
+	void refreshSandboxCredentials_from_timer() { (void)refreshSandboxCredentials(); }
 	bool refreshSandboxCredentialsMultiple();
+	void refreshSandboxCredentialsMultiple_from_timer() { (void)refreshSandboxCredentialsMultiple(); }
 
 	bool shadowDisconnected() { return syscall_sock_lost_time > 0; };
 

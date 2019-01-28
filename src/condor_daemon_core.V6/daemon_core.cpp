@@ -293,7 +293,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 
 	nCommand = 0;
 	CommandEnt blankCommandEnt;
-	memset(&blankCommandEnt, '\0', sizeof(CommandEnt));
+	blankCommandEnt.is_cpp = false;
 	comTable.fill(blankCommandEnt);
 	m_unregisteredCommand.num = 0;
 
@@ -7843,7 +7843,7 @@ int DaemonCore::Create_Process(
 						 "with the ProcD\n",
 						 executable );
 				Register_Timer(0,
-					(TimerHandlercpp)&DaemonCore::CheckProcInterface,
+					(TimerHandlercpp)&DaemonCore::CheckProcInterfaceFromTimer,
 					"DaemonCore::CheckProcInterface", this );
 				break;
 

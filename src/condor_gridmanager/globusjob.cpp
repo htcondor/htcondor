@@ -924,14 +924,13 @@ void GlobusJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int GlobusJob::ProxyCallback()
+void GlobusJob::ProxyCallback()
 {
 	if ( ( gmState == GM_JOBMANAGER_ASLEEP && !JmShouldSleep() ) ||
 		 ( gmState == GM_SUBMITTED && jmProxyExpireTime < jobProxy->expiration_time ) ||
 		 gmState == GM_PROXY_EXPIRED ) {
 		SetEvaluateState();
 	}
-	return 0;
 }
 
 void GlobusJob::doEvaluateState()

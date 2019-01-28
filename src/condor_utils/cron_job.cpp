@@ -886,8 +886,8 @@ CronJob::SetTimer( unsigned first, unsigned period_arg )
 				 "CronJob: Creating timer for job '%s'\n", GetName() );
 		TimerHandlercpp handler =
 			(  ( IsWaitForExit() ) ? 
-			   (TimerHandlercpp)& CronJob::StartJob :
-			   (TimerHandlercpp)& CronJob::RunJob );
+			   (TimerHandlercpp)& CronJob::StartJobFromTimer :
+			   (TimerHandlercpp)& CronJob::RunJobFromTimer );
 		m_run_timer = daemonCore->Register_Timer(
 			first,
 			period_arg,
