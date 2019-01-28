@@ -432,7 +432,7 @@ SubmitHash::SubmitHash()
 	, abort_code(0)
 	, abort_macro_name(NULL)
 	, abort_raw_macro_val(NULL)
-	, base_job_is_cluster_ad(false)
+	, base_job_is_cluster_ad(0)
 	, DisableFileChecks(true)
 	, FakeFileCreationChecks(false)
 	, IsInteractiveJob(false)
@@ -6803,7 +6803,7 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * owner)
 	delete job; job = NULL;
 	delete procAd; procAd = NULL;
 	baseJob.Clear();
-	base_job_is_cluster_ad = false;
+	base_job_is_cluster_ad = 0;
 
 	// set up types of the ad
 	SetMyTypeName (baseJob, JOB_ADTYPE);
@@ -6924,7 +6924,7 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * owner)
 // is chained to the cluster ad
 // This function does nothing if the SubmitHash is using a foreign clusterad (i.e. you called set_cluster_ad())
 //
-bool SubmitHash::fold_job_into_base_ad(ClassAd * jobad)
+bool SubmitHash::fold_job_into_base_ad(int cluster_id, ClassAd * jobad)
 {
 	// its only valid to call this function if not using a foreign clusterad
 	// and if the job passed in is the same as the job we just returned from make_job_ad()
@@ -6951,9 +6951,10 @@ bool SubmitHash::fold_job_into_base_ad(ClassAd * jobad)
 	jobad->Assign(ATTR_PROC_ID, procid);
 	if (has_status) jobad->Assign(ATTR_JOB_STATUS, status);
 
-	// make sure that the base job has no procid assigment.
+	// make sure that the base job has no procid assigment, and the correct cluster id
 	baseJob.Delete(ATTR_PROC_ID);
-	base_job_is_cluster_ad = true;
+	baseJob.Assign(ATTR_CLUSTER_ID, cluster_id);
+	base_job_is_cluster_ad = jid.cluster; // so we notice if the cluster id changes and we need to make a new base ad
 
 	// chain the job to the base clusterad
 	jobad->ChainToAd(&baseJob);
@@ -7148,9 +7149,9 @@ ClassAd* SubmitHash::make_job_ad (
 			if ( ! procAd->LookupIgnoreChain(ATTR_JOB_STATUS)) {
 				CopyAttribute(ATTR_JOB_STATUS, *procAd, ATTR_JOB_STATUS, *procAd->GetChainedParentAd());
 			}
-		} else if ( ! clusterAd && ! base_job_is_cluster_ad) {
+		} else if ( ! clusterAd && (base_job_is_cluster_ad != jid.cluster)) {
 			// promote the procad to a clusterad
-			fold_job_into_base_ad(procAd);
+			fold_job_into_base_ad(jid.cluster, procAd);
 		}
 	}
 	return procAd;
