@@ -104,8 +104,20 @@ else (WINDOWS)
 			#set(INCLUDE_LOC include/boost_1.66)
 			message (FATAL_ERROR "WINDOWS builds must use pre-built boost")
 		else()
-
-			set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
+			# Boost's detection of the python include directory
+			# assumes the directory name doesn't have a
+			# suffix (e.g. /usr/include/python-3.7m).
+			# But this is common in the linux distros.
+			# This only appears to affect Python 3.
+			# NOTE: This will fail if PYTHON_INCLUDE_DIRS
+			#   has multiple directories.
+			if(${PYTHONLIBS_VERSION_STRING} VERSION_LESS "3.0.0")
+				set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
+			else()
+				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam
+					"using python : : ${PYTHON_EXECUTABLE} : ${PYTHON_INCLUDE_DIRS} ;\n")
+				set(BUILD_OPTIONS --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
+			endif()
 
 			if (DARWIN)
 				if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
