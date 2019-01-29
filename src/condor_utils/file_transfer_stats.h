@@ -35,8 +35,8 @@
 		bool TransferSuccess;
 		
 		double ConnectionTimeSeconds;
-		double TransferEndTime;
-		double TransferStartTime;
+		time_t TransferEndTime;
+		time_t TransferStartTime;
 		
 		long TransferFileBytes;
 		long TransferReturnCode;
