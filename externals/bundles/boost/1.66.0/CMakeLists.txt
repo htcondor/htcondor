@@ -126,7 +126,7 @@ else (WINDOWS)
 		endif()
 
 		set(BOOST_FILENAME boost_1_66_0)
-		condor_pre_external( BOOST boost-1.66.0 "lib;boost" "done")
+		condor_pre_external( BOOST boost-1.66.0-p1 "lib;boost" "done")
 
 		set(BOOST_MIN_BUILD_DEP --with-thread --with-test --with-python)
 		if (LINUX)
@@ -149,7 +149,8 @@ else (WINDOWS)
 			 DOWNLOAD_DIR ${BOOST_STAGE}/dl
 			 URL ${EXTERNALS_SOURCE_URL}/${BOOST_FILENAME}.tar.gz
 			#--Patch step ----------
-			PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/no_numpy.patch -p0
+			PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/no_numpy.patch -p0 &&
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/python37.patch -p0
 			#--Configure step ----------
 			 CONFIGURE_COMMAND ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${BOOTSTRAP_PYTHON_OPTION} ${CMD_TERM} echo "Configure complete"
 			#--Build Step ----------
