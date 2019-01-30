@@ -3104,34 +3104,72 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 }
 
 int
-FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::string &input, ReliSock &sock, CondorError &err)
+FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err)
 {
 	std::vector<std::unique_ptr<ClassAd>> result_ads;
 	auto result = InvokeMultipleFileTransferPlugin(err, pluginPath, input,
 		LocalProxyName.Value(), true, &result_ads);
 
 	unsigned bytes = 0;
+	int count = 0;
+	bool classad_contents_good = true;
 	for (const auto &xfer_result: result_ads) {
-		ClassAd file_info;
 		std::string filename;
-                if (!xfer_result->EvaluateAttrString("TransferFileName", filename)) {
-                        dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferFileName.\n", pluginPath.c_str());
-                        err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferFileName", pluginPath.c_str());
-                        return 0;
-                }
-		file_info.InsertAttr("Filename", filename);
+		if (!xfer_result->EvaluateAttrString("TransferFileName", filename)) {
+			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferFileName.\n", pluginPath.c_str());
+			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferFileName", pluginPath.c_str());
+			classad_contents_good = false;
+		}
+
+		// Caller sends these headers for the first file only; we are responsible
+		// for sending them subsequently.
+		if (count) {
+			// This is the trailing EOM from the last command.
+			if( !sock.end_of_message() ) {
+				dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+				return -1;
+			}
+
+			if( !sock.snd_int(static_cast<int>(TransferCommand::Other), false) ) {
+				dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+				return -1;
+			}
+			if( !sock.end_of_message() ) {
+				dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+				return -1;
+			}
+
+			if( !sock.put(condor_basename(filename.c_str())) ) {
+				dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+				return -1;
+			}
+			if( !sock.end_of_message() ) {
+				dprintf(D_FULLDEBUG, "DoUpload: failed on eom before GoAhead; exiting at %d\n",__LINE__);
+				return -1;
+			}
+		}
+		count++;
+		ClassAd file_info;
+		file_info.InsertAttr("ProtocolVersion", 1);
+		file_info.InsertAttr("Command", static_cast<int>(TransferCommand::Other));
+		file_info.InsertAttr("SubCommand", static_cast<int>(TransferSubCommand::UploadUrl));
+
+			// Filename is expected to be relative to the sandbox directory; if we don't
+			// call condor_basename here, the shadow may see the absolute path to the execute
+			// directory and flag it as illegal.
+		file_info.InsertAttr("Filename", condor_basename(filename.c_str()));
 		std::string output_url;
 		if (!xfer_result->EvaluateAttrString("TransferUrl", output_url)) {
 			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferUrl.\n", pluginPath.c_str());
 			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferUrl", pluginPath.c_str());
-			return 0;
+			classad_contents_good = false;
 		}
 		file_info.InsertAttr("OutputDestination", output_url);
 		bool xfer_success;
 		if (!xfer_result->EvaluateAttrBool("TransferSuccess", xfer_success)) {
 			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferSuccess.\n", pluginPath.c_str());
 			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferSuccess", pluginPath.c_str());
-			return 0;
+			classad_contents_good = false;
 		}
 		file_info.InsertAttr("Result", xfer_success ? 0 : 1);
 		if (!xfer_success) {
@@ -3139,7 +3177,7 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 			if (!xfer_result->EvaluateAttrString("TransferError", transfer_error)) {
 				dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferError for failed transfer.\n", pluginPath.c_str());
 				err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferError for failed transfer", pluginPath.c_str());
-				return 0;
+				classad_contents_good = false;
 			}
 			file_info.InsertAttr("ErrorString", transfer_error);
 		}
@@ -3147,11 +3185,18 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 			dprintf(D_FULLDEBUG, "DoDownload: When sending upload summaries to the remote side, a socket communication failed.\n");
 			return -1;
 		}
+
 		classad::ClassAdUnParser unp;
 		std::string serialized;
 		unp.Unparse(serialized, &file_info);
 		bytes += serialized.size();
 	}
+	if ( send_trailing_eom && !sock.end_of_message() ) {
+		dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+		return -1;
+	}
+
+	if (!classad_contents_good) {return 0;}
 
 	if (result == 0) {
 		return bytes;
@@ -3214,6 +3259,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	// Aggregate multiple file uploads; we will upload them all at once
 	std::string currentUploadPlugin;
 	std::string currentUploadRequests;
+	int currentUploadDeferred = 0;
 
 	// record the state it was in when we started... the "default" state
 	bool socket_default_crypto = s->get_encryption();
@@ -3250,14 +3296,30 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		return_and_resetpriv( -1 );
 	}
 
-	// If multiple uploads are being batched together into a single execution of a plugin,
-	// then we don't send an EOM every loop but rather in bulk after upload.
-	bool defer_eom;
+	// Pre-compute various attributes about the file transfers
+	for (auto &fileitem : filelist) {
+			// Pre-calculate if the uploader will be doing some uploads;
+			// if so, we want to determine this now so we can sort correctly.
+		if ( m_final_transfer_flag ) {
+			std::string local_output_url;
+			if (OutputDestination) {
+				local_output_url = OutputDestination;
+				local_output_url += '/';
+				local_output_url += fileitem.srcName();
+			}
+			else {
+				MyString remap_filename;
+				if ((1 == filename_remap_find(download_filename_remaps.Value(), fileitem.srcName().c_str(), remap_filename, 0)) && IsUrl(remap_filename.Value())) {
+					local_output_url = remap_filename.Value();
+				}
+			}
+			fileitem.setDestUrl(local_output_url);
+		}
+	}
 
 	std::sort(filelist.begin(), filelist.end());
 	for(const auto &fileitem : filelist )
 	{
-		defer_eom = false;
 		auto &filename = fileitem.srcName();
 		auto &dest_dir = fileitem.destDir();
 
@@ -3268,15 +3330,19 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			dprintf(D_FULLDEBUG,"DoUpload: sending file %s\n", filename.c_str());
 		}
 
-		// reset this for each file
-		bool is_url;
-		is_url = false;
-
-		if( param_boolean("ENABLE_URL_TRANSFERS", true) && IsUrl(filename.c_str()) ) {
-			// looks like a URL
-			is_url = true;
-			fullname = filename;
-			dprintf(D_FULLDEBUG, "DoUpload: sending %s as URL.\n", filename.c_str());
+		if( fileitem.isSrcUrl() ) {
+			if( param_boolean("ENABLE_URL_TRANSFERS", true) ) {
+				// looks like a URL
+				fullname = filename;
+				dprintf(D_FULLDEBUG, "DoUpload: sending %s as URL.\n", filename.c_str());
+			} else {
+				// A URL was requested but the sysadmin has disabled URL transfers; this
+				// should have been prevented by matchmaking, so we fail this instead of
+				// treating the URL as a filename.
+				dprintf(D_ALWAYS, "DoUpload: WARNING - URL transfers were disabled by the sysadmin, "
+					"but this transfer requires URL transfers to function; failing");
+				return_and_resetpriv( -1 );
+			}
 		} else if( !fullpath( filename.c_str() ) ){
 			// looks like a relative path
 			fullname.formatstr("%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
@@ -3308,7 +3374,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		//
 		// also, don't check URLs
 #ifdef WIN32
-		if( !is_url && perm_obj && !is_the_executable &&
+		if( !fileitem.isSrcUrl() && perm_obj && !is_the_executable &&
 			(perm_obj->read_access(fullname.Value()) != 1) ) {
 			// we do _not_ have permission to read this file!!
 			upload_success = false;
@@ -3361,27 +3427,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			file_command = TransferCommand::XferX509;
 		}
 
-		if ( is_url ) {
+		if ( fileitem.isSrcUrl() ) {
 			file_command = TransferCommand::DownloadUrl;
 		}
 
-		std::string local_output_url;
-		if ( m_final_transfer_flag ) {
-			if (OutputDestination) {
-				local_output_url = OutputDestination;
-				local_output_url += '/';
-				local_output_url += filename;
-			}
-			else {
-				MyString remap_filename;
-				if ((1 == filename_remap_find(download_filename_remaps.Value(), filename.c_str(), remap_filename, 0)) && IsUrl(remap_filename.Value())) {
-					local_output_url = remap_filename.Value();
-				}
-			}
-		}
-		if ( !local_output_url.empty() ) {
+		std::string multifilePluginPath;
+		if ( fileitem.isDestUrl() ) {
 			dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:7 for output URL destination: %s\n",
-				local_output_url.c_str());
+				fileitem.destUrl().c_str());
 
 			// switch from whatever command we had before to new classad
 			// command new classad command 999 and subcommand 7.
@@ -3389,6 +3442,42 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			// 7 == invoke plugin to store file
 			file_command = TransferCommand::Other;
 			file_subcommand = TransferSubCommand::UploadUrl;
+
+			if (multifile_plugins_enabled) {
+				std::string pluginPath = DetermineFileTransferPlugin( errstack, fileitem.destUrl().c_str(), fullname.c_str() );
+				if ( (plugins_multifile_support.find( pluginPath ) != plugins_multifile_support.end()) && \
+				plugins_multifile_support[pluginPath] ) {
+					multifilePluginPath = pluginPath;
+				}
+			}
+		}
+		if (multifilePluginPath.empty()) {
+			dprintf(D_FULLDEBUG, "Will upload output URL using single-file plugin.\n");
+		} else {
+			dprintf(D_FULLDEBUG, "Will upload output URL using multi-file plugin.\n");
+		}
+
+		// Flush out any transfers if we can no longer defer plugins.
+		if (!currentUploadPlugin.empty() && (multifilePluginPath != currentUploadPlugin)) {
+			dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
+			auto result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack);
+			if (-1 == result) {
+				return_and_resetpriv( -1 );
+			} else if (result == 0) {
+				error_desc.formatstr_cat(": %s", errstack.getFullText().c_str());
+				if (!first_failed_file_transfer_happened) {
+					first_failed_file_transfer_happened = true;
+					first_failed_upload_success = false;
+					first_failed_try_again = false;
+					first_failed_hold_code = CONDOR_HOLD_CODE_UploadFileError;
+					first_failed_hold_subcode = 1;
+					first_failed_error_desc = error_desc;
+					first_failed_line_number = __LINE__;
+				}
+			}
+			currentUploadPlugin = "";
+			currentUploadRequests = "";
+			currentUploadDeferred = 0;
 		}
 
 		bool fail_because_mkdir_not_supported = false;
@@ -3411,13 +3500,18 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: outgoing file_command is %i for %s\n",
 				file_command, filename.c_str() );
 
-		if( !s->snd_int(static_cast<int>(file_command), false) ) {
-			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-			return_and_resetpriv( -1 );
-		}
-		if( !s->end_of_message() ) {
-			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-			return_and_resetpriv( -1 );
+			// Frustratingly, we cannot skip the header of the first transfer command
+			// if we are defering uploads as we may have to acquire a transfer token below.
+		bool no_defer_header = multifilePluginPath.empty() || !currentUploadDeferred;
+		if (no_defer_header) {
+			if( !s->snd_int(static_cast<int>(file_command), false) ) {
+				dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
+			if( !s->end_of_message() ) {
+				dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
 		}
 
 		// now enable the crypto decision we made:
@@ -3437,13 +3531,13 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		// should we send a protocol version string instead?  or some other token
 		// like 'CLASSAD'?
 		//
-		if( !s->put(dest_filename.Value()) ) {
+		if( no_defer_header && !s->put(dest_filename.Value()) ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 
 		if( PeerDoesGoAhead ) {
-			if( !s->end_of_message() ) {
+			if( no_defer_header && !s->end_of_message() ) {
 				dprintf(D_FULLDEBUG, "DoUpload: failed on eom before GoAhead; exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
@@ -3468,6 +3562,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 			s->encode();
 		}
+		// Multifile uploads imply we execute multiple commands at once; although we can lie to the other side,
+		// maintenance of the state becomes quite complex.  Hence, we defer uploads only when the protocol
+		// is completely asynchronous.
+		bool can_defer_uploads = !PeerDoesGoAhead || (peer_goes_ahead_always && I_go_ahead_always);
 
 		UpdateXferStatus(XFER_STATUS_ACTIVE);
 
@@ -3519,29 +3617,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				source_filename += DIR_DELIM_CHAR;
 				source_filename += filename;
 
-				bool thisPluginSupportsMultifile = false;
-				std::string pluginPath;
-				if (multifile_plugins_enabled) {
-					pluginPath = DetermineFileTransferPlugin( errstack, local_output_url.c_str(), fullname.c_str() );
-					thisPluginSupportsMultifile = (plugins_multifile_support.find( pluginPath ) != plugins_multifile_support.end()) && \
-						plugins_multifile_support[pluginPath];
-				}
-				if (thisPluginSupportsMultifile) {
-					defer_eom = true;
-					if ((currentUploadPlugin != pluginPath) && !currentUploadRequests.empty()) {
-						dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
-						auto result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, errstack);
-						if (-1 == result) {
-							return_and_resetpriv( -1 );
-						}
-						rc = (result == 0);
-						bytes = result;
+				const std::string &local_output_url = fileitem.destUrl();
 
-						currentUploadRequests = "";
-					} else {
-						dprintf (D_FULLDEBUG, "DoUpload: plugin supports multi-file transfer of this URL; defering until more transfers are present.\n");
-					}
-					currentUploadPlugin = pluginPath;
+				if (!multifilePluginPath.empty()) {
+					currentUploadPlugin = multifilePluginPath;
 
 					classad::ClassAdUnParser unparser;
 					ClassAd xfer_ad;
@@ -3551,8 +3630,21 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					unparser.Unparse( xfer_str, &xfer_ad );
 
 					currentUploadRequests += xfer_str;
+					currentUploadDeferred ++;
 
-					rc = 0;
+					if (!can_defer_uploads) {
+						dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
+						auto result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, false, errstack);
+						if (-1 == result) {
+							return_and_resetpriv( -1 );
+						}
+						currentUploadPlugin = "";
+						currentUploadRequests = "";
+						currentUploadDeferred = 0;
+						rc = (result == 0) ? -1 : 0;
+					} else {
+						rc = 0;
+					}
 				} else {
 					// actually invoke the plugin.  this could block indefinitely.
 					ClassAd pluginStatsAd;
@@ -3729,11 +3821,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 		}
 
-		if( !s->end_of_message() ) {
+		if( !currentUploadDeferred && !s->end_of_message() ) {
 			dprintf(D_FULLDEBUG,"DoUpload: socket communication failure; exiting at line %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
-		
+
 		*total_bytes += bytes;
 		numFiles++;
 
@@ -3764,7 +3856,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	// Clear out the multi-upload queue
 	if (!currentUploadRequests.empty()) {
-		auto result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, errstack);
+		auto result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack);
 		if (-1 == result) {
 			return_and_resetpriv( -1 );
 		}
