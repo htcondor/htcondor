@@ -97,6 +97,9 @@ public:
 const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
 const int GO_AHEAD_UNDEFINED = 0;
 const int GO_AHEAD_ONCE = 1;    // send one file and ask again
+				// Currently, there is no usage of GO_AHEAD_ONCE; if we have a
+				// token, we assume it lasts forever.
+
 const int GO_AHEAD_ALWAYS = 2;  // send all files without asking again
 
 // Utils from the util_lib that aren't prototyped
@@ -3662,16 +3665,11 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 			bool pending = true;
 			if( xfer_queue.PollForTransferQueueSlot(timeout,pending,error_desc) )
 			{
-				if( xfer_queue.GoAheadAlways( downloading ) ) {
-						// no need to keep checking for GoAhead for each file,
-						// just let 'em rip
-					go_ahead = GO_AHEAD_ALWAYS;
-				}
-				else {
-						// send this file, and then check to see if we
-						// still have GoAhead to send more
-					go_ahead = GO_AHEAD_ONCE;
-				}
+				// In the current version of HTCondor, the file transfer
+				// queue slot lasts as long as the TCP connection does.
+				// Hence, there is no need to keep checking for GoAhead
+				// for each file; just let 'em rip.
+				go_ahead = GO_AHEAD_ALWAYS;
 			}
 			else if( !pending ) {
 				go_ahead = GO_AHEAD_FAILED;
