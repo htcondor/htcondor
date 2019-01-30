@@ -108,6 +108,7 @@ class FileTransferItem {
 public:
 	const std::string &srcName() const { return m_src_name; }
 	const std::string &destDir() const { return m_dest_dir; }
+	const std::string &destUrl() const { return m_dest_url; }
 	filesize_t fileSize() const { return m_file_size; }
 	void setDestDir(const std::string &dest) { m_dest_dir = dest; }
 	void setFileSize(filesize_t new_size) { m_file_size = new_size; }
@@ -117,6 +118,8 @@ public:
 	bool isDomainSocket() const {return is_domainsocket;}
 	bool isSymlink() const {return is_symlink;}
 	bool isDirectory() const {return is_directory;}
+	bool isSrcUrl() const {return !m_src_scheme.empty();}
+	bool isDestUrl() const {return !m_dest_scheme.empty();}
 	condor_mode_t fileMode() const {return m_file_mode;}
 	void setFileMode(condor_mode_t new_mode) {m_file_mode = new_mode;}
 
@@ -124,33 +127,67 @@ public:
 		m_src_name = src;
 		const char *scheme_end = IsUrl(src.c_str());
 		if (scheme_end) {
-			m_scheme = std::string(src.c_str(), scheme_end - src.c_str());
+			m_src_scheme = std::string(src.c_str(), scheme_end - src.c_str());
+		}
+	}
+
+	void setDestUrl(const std::string &dest_url) {
+		m_dest_url = dest_url;
+		const char *scheme_end = IsUrl(dest_url.c_str());
+		if (scheme_end) {
+			m_dest_scheme = std::string(dest_url.c_str(), scheme_end - dest_url.c_str());
 		}
 	}
 
 	bool operator<(const FileTransferItem &other) const {
-		auto is_url = !m_scheme.empty();
-		auto other_is_url = !other.m_scheme.empty();
-		if (is_url && !other_is_url) {
-			return false;
-		}
-		if (!is_url && other_is_url) {
+		// Ordering of transfers:
+		// - Destination URLs first (allows these plugins to alter CEDAR transfers on
+		//   stageout)
+		// - CEDAR-based transfers (move any credentials prior to source URLs; assume
+		//   credentials are already present for stageout).
+		// - Source URLs last.
+		//
+
+		auto is_dest_url = !m_dest_scheme.empty();
+		auto other_is_dest_url = !other.m_dest_scheme.empty();
+		if (is_dest_url && !other_is_dest_url) {
 			return true;
 		}
-		if (is_url) { // Both are URLs
-			if (m_scheme == other.m_scheme) {
+		if (!is_dest_url && other_is_dest_url) {
+			return false;
+		}
+		if (is_dest_url) {
+			if (m_dest_scheme == other.m_dest_scheme) {
+				return m_dest_url < other.m_dest_url;
+			} else {
+				return m_dest_scheme < other.m_dest_scheme;
+			}
+		}
+
+		auto is_src_url = !m_src_scheme.empty();
+		auto other_is_src_url = !other.m_src_scheme.empty();
+		if (is_src_url && !other_is_src_url) {
+			return false;
+		}
+		if (!is_src_url && other_is_src_url) {
+			return true;
+		}
+		if (is_src_url) { // Both are URLs
+			if (m_src_scheme == other.m_src_scheme) {
 				return m_src_name < other.m_src_name;
 			} else {
-				return m_scheme < other.m_scheme;
+				return m_src_scheme < other.m_src_scheme;
 			}
 		}
 		return m_src_name < other.m_src_name;
 	}
 
 private:
-	std::string m_scheme;
+	std::string m_src_scheme;
+	std::string m_dest_scheme;
 	std::string m_src_name;
 	std::string m_dest_dir;
+	std::string m_dest_url;
 	bool is_domainsocket{false};
 	bool is_directory{false};
 	bool is_symlink{false};
