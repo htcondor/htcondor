@@ -104,8 +104,20 @@ else (WINDOWS)
 			#set(INCLUDE_LOC include/boost_1.66)
 			message (FATAL_ERROR "WINDOWS builds must use pre-built boost")
 		else()
-
-			set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
+			# Boost's detection of the python include directory
+			# assumes the directory name doesn't have a
+			# suffix (e.g. /usr/include/python-3.7m).
+			# But this is common in the linux distros.
+			# This only appears to affect Python 3.
+			# NOTE: This will fail if PYTHON_INCLUDE_DIRS
+			#   has multiple directories.
+			if(${PYTHONLIBS_VERSION_STRING} VERSION_LESS "3.0.0")
+				set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
+			else()
+				file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam
+					"using python : : ${PYTHON_EXECUTABLE} : ${PYTHON_INCLUDE_DIRS} ;\n")
+				set(BUILD_OPTIONS --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
+			endif()
 
 			if (DARWIN)
 				if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -126,7 +138,7 @@ else (WINDOWS)
 		endif()
 
 		set(BOOST_FILENAME boost_1_66_0)
-		condor_pre_external( BOOST boost-1.66.0 "lib;boost" "done")
+		condor_pre_external( BOOST boost-1.66.0-p1 "lib;boost" "done")
 
 		set(BOOST_MIN_BUILD_DEP --with-thread --with-test --with-python)
 		if (LINUX)
@@ -149,7 +161,8 @@ else (WINDOWS)
 			 DOWNLOAD_DIR ${BOOST_STAGE}/dl
 			 URL ${EXTERNALS_SOURCE_URL}/${BOOST_FILENAME}.tar.gz
 			#--Patch step ----------
-			PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/no_numpy.patch -p0
+			PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/no_numpy.patch -p0 &&
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/python37.patch -p0
 			#--Configure step ----------
 			 CONFIGURE_COMMAND ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${BOOTSTRAP_PYTHON_OPTION} ${CMD_TERM} echo "Configure complete"
 			#--Build Step ----------
