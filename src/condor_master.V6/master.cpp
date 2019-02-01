@@ -156,6 +156,7 @@ public:
 		if ( watchdog_secs > 0 ) {
 			watchdog_secs = watchdog_secs / 1e6 / 3;
 			if (watchdog_secs <= 0) { watchdog_secs = 1; }
+			if (watchdog_secs > 20) { watchdog_secs = 10; }
 			Timeslice ts;
 			ts.setDefaultInterval(watchdog_secs);
 			m_watchdog_timer = daemonCore->Register_Timer(ts,
