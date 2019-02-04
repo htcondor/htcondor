@@ -2696,6 +2696,11 @@ default=false
 type=bool
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_DEPTH_FIRST]
+default=false
+type=bool
+tags=negotiator
+
 [NEGOTIATOR_INFORM_STARTD]
 default=false
 type=bool
