@@ -201,6 +201,7 @@ src/safefile/stamp-h2
 src/safefile/safe_id_range_list.h.in.tmp
 src/safefile/safe_id_range_list.h.tmp_out
 src/condor_tools/condor_gpu_discovery
+src/condor_tools/condor_gpu_utilization
 src/condor_utils/tests/_ring_buffer_tester
 src/python-bindings/tests_tmp
 src/python-bindings/test_driver
