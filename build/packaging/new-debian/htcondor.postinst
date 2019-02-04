@@ -57,22 +57,6 @@ case "$1" in
         condor_make_homedir
         # tell systemd to create tmpfiles, but do no harm if not available
         systemd-tmpfiles --create --exclude-prefix=/dev || true
-        # take care of starting condor if it is not yet running -- if it is
-        # already running this command should have no effect
-        if [ -x "/etc/init.d/condor" ]; then
-            if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
-                invoke-rc.d condor start || exit $?
-            else
-                /etc/init.d/condor start || exit $?
-            fi
-            update-rc.d condor defaults 30 70 >/dev/null || exit 0
-        fi
-        # send the restart command to condor, as we know that the installation
-        # is finished. condor_master should figure this out on its own within
-        # 5 minutes, but there is no need to wait
-        # check for a running condor master first, as otherwise the restart
-        # command fails and consequently package installation fails
-        condor_status -master 2> /dev/null && condor_restart || true
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

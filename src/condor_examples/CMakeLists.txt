@@ -156,22 +156,25 @@ elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 						DESTINATION	"${C_ETC}"
 						RENAME	condor_config)
 
-	#Debian init script need to be patched because /etc/sysconfig/condor -> /etc/default/condor
-	add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
-						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-						COMMAND cp
-						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.rpm condor.boot.debian
-						COMMAND patch
-						ARGS condor.boot.debian ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.debian.patch )
+	# Older OSes use an init script
+	if (CONDOR_PLATFORM MATCHES "Debian8" OR CONDOR_PLATFORM MATCHES "Ubuntu14")
+		#Debian init script need to be patched because /etc/sysconfig/condor -> /etc/default/condor
+		add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
+							WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+							COMMAND cp
+							ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.rpm condor.boot.debian
+							COMMAND patch
+							ARGS condor.boot.debian ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.debian.patch )
 
-	add_custom_target(	patch_init_script
-						ALL
-						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian)
+		add_custom_target(	patch_init_script
+							ALL
+							DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian)
 
-	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
-			DESTINATION	"${C_INIT}"
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS}
-			RENAME	condor)
+		install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
+				DESTINATION	"${C_INIT}"
+				PERMISSIONS ${CONDOR_SCRIPT_PERMS}
+				RENAME	condor)
+	endif()
 else()
 	#Other Platform
 	install(FILES		condor_config.generic
