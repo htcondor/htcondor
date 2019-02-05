@@ -324,10 +324,14 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 				_subdagNodesSuccessful + _subdagNodesFailed;
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
 	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
-	fprintf( fp, "    \"graph_height\":%d,\n", _graphHeight );
-	fprintf( fp, "    \"graph_width\":%d,\n", _graphWidth );
-	fprintf( fp, "    \"graph_num_edges\":%d,\n", _graphNumEdges );
-	fprintf( fp, "    \"graph_num_vertices\":%d,\n", _graphNumVertices );
+
+	bool report_graph_metrics = param_boolean( "DAGMAN_REPORT_GRAPH_METRICS", false );
+	if ( report_graph_metrics == true ) {
+		fprintf( fp, "    \"graph_height\":%d,\n", _graphHeight );
+		fprintf( fp, "    \"graph_width\":%d,\n", _graphWidth );
+		fprintf( fp, "    \"graph_num_edges\":%d,\n", _graphNumEdges );
+		fprintf( fp, "    \"graph_num_vertices\":%d,\n", _graphNumVertices );
+	}
 
 		// Last item must NOT have trailing comma!
 	fprintf( fp, "    \"dag_status\":%d\n", status );
