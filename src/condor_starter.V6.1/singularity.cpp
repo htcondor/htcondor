@@ -245,6 +245,14 @@ Singularity::setup(ClassAd &machineAd,
 	}
 	if (tmp) free(tmp);
 
+	// if the startd has assigned us a gpu, add --nv to the sing exec
+	// arguments to mount the nvidia devices
+	std::string assignedGpus;
+	machineAd.LookupString("AssignedGPUs", assignedGpus);
+	if  (assignedGpus.length() > 0) {
+		sing_args.AppendArg("--nv");
+	}
+
 	sing_args.AppendArg("-C");
 	sing_args.AppendArg(image.c_str());
 
