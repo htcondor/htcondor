@@ -180,6 +180,15 @@ int DockerAPI::createContainer(
 		free(user_name);
 	}
 #endif
+	MyString args_error;
+	char *tmp = param("DOCKER_EXTRA_ARGUMENTS");
+	if(!runArgs.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
+		dprintf(D_ALWAYS,"docker: failed to parse extra arguments: %s\n",
+		args_error.Value());
+		free(tmp);
+		return -1;
+	}
+	if (tmp) free(tmp);
 
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );
