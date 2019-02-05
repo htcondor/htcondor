@@ -32,9 +32,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item GPU resource monitoring is no longer enabled by default after reports
-indicating excessive CPU usage.  GPU resource monitoring may be enable by
-adding `use feature: GPUsMonitor' to the HTCondor configuration.
+\item GPU resource monitoring is no longer enabled by default after we
+received reports indicating excessive CPU usage.  We believe we've fixed
+the problem, but would like to get updated reports from users who were
+previously affected.  To enable (the patched) GPU resource monitoring,
+add `use feature: GPUsMonitor' to the HTCondor configuration.  Thank you.
+
 \Ticket{6857}
 
 \end{itemize}
