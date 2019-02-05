@@ -232,9 +232,9 @@ int main() {
 				fprintf( stdout, "- GPUsSlot%u\n", i );
 				fflush( stdout );
 
-				fprintf( stderr, "Used %lu samples to cover %lu microseconds (%2.2f samples per second)\n",
+				/* debug fprintf( stderr, "Used %lu samples to cover %lu microseconds (%2.2f samples per second)\n",
 					runningSampleCounts[i], lastSamples[i] - firstSamples[i],
-					1000000/((lastSamples[i] - firstSamples[i])/(1.0 * runningSampleCounts[i])) );
+					1000000/((lastSamples[i] - firstSamples[i])/(1.0 * runningSampleCounts[i])) ); */
 
 				// Report only the usage for each reporting period.
 				elapsedTimes[i] = 0;
