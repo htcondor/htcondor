@@ -714,6 +714,12 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_REPORT_GRAPH_METRICS]
+default=false
+type=bool
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_PEGASUS_REPORT_METRICS]
 default=$(LIBEXEC)/condor_dagman_metrics_reporter
 win32_default=$(BIN)\condor_dagman_metrics_reporter.exe
