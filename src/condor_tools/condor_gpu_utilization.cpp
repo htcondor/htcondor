@@ -43,7 +43,7 @@ void fail() {
 	while( 1 ) { sleep( 1024 ); }
 }
 
-nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastSample, unsigned long long * elapsedTime, unsigned maxSampleCount ) {
+nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastSample, unsigned long long * elapsedTime, unsigned maxSampleCount, unsigned long long * runningSampleCount ) {
 	if( elapsedTime == NULL || lastSample == NULL ) {
 		return NVML_ERROR_INVALID_ARGUMENT;
 	}
@@ -61,6 +61,7 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 		default:
 			return r;
 	}
+	(* runningSampleCount) += sampleCount;
 
 	// Samples are usually but not always in order.
 	qsort( samples, sampleCount, sizeof( nvmlSample_t ), compareSamples );
@@ -101,7 +102,7 @@ int main() {
 #endif
 
 	void * nvml_handle = NULL;
-	const char * nvml_library = "libnvidia-ml.so";
+	const char * nvml_library = "libnvidia-ml.so.1";
 	nvml_handle = dlopen( nvml_library, RTLD_LAZY );
 	if(! nvml_handle) {
 		fprintf( stderr, "Unable to load %s, aborting.\n", nvml_library );
@@ -109,12 +110,12 @@ int main() {
 	}
 	dlerror();
 
-	nvmlInit                   = (nvml_void)dlsym( nvml_handle, "nvmlInit" );
+	nvmlInit                   = (nvml_void)dlsym( nvml_handle, "nvmlInit_v2" );
 	nvmlShutdown               = (nvml_void)dlsym( nvml_handle, "nvmlShutdown" );
-	nvmlDeviceGetCount         = (nvml_unsigned_int)dlsym( nvml_handle, "nvmlDeviceGetCount" );
+	nvmlDeviceGetCount         = (nvml_unsigned_int)dlsym( nvml_handle, "nvmlDeviceGetCount_v2" );
 	nvmlDeviceGetSamples       = (nvml_dgs)dlsym( nvml_handle, "nvmlDeviceGetSamples" );
 	nvmlDeviceGetMemoryInfo    = (nvml_dm)dlsym( nvml_handle, "nvmlDeviceGetMemoryInfo" );
-	nvmlDeviceGetHandleByIndex = (nvml_dghbi)dlsym( nvml_handle, "nvmlDeviceGetHandleByIndex" );
+	nvmlDeviceGetHandleByIndex = (nvml_dghbi)dlsym( nvml_handle, "nvmlDeviceGetHandleByIndex_v2" );
 	nvmlErrorString            = (cc_nvml)dlsym( nvml_handle, "nvmlErrorString" );
 
 	nvmlReturn_t r = nvmlInit();
@@ -140,6 +141,7 @@ int main() {
 	unsigned long long lastSamples[deviceCount];
 	unsigned long long firstSamples[deviceCount];
 	unsigned long long elapsedTimes[deviceCount];
+	unsigned long long runningSampleCounts[deviceCount];
 	for( unsigned i = 0; i < deviceCount; ++i ) {
 		r = nvmlDeviceGetHandleByIndex( i, &(devices[i]) );
 		if( r != NVML_SUCCESS ) {
@@ -150,6 +152,7 @@ int main() {
 		lastSamples[i] = 0;
 		firstSamples[i] = 0;
 		elapsedTimes[i] = 0;
+		runningSampleCounts[i] = 0;
 
 		nvmlValueType_t sampleValueType;
 		r = nvmlDeviceGetSamples( devices[i], NVML_GPU_UTILIZATION_SAMPLES, 0, & sampleValueType, & maxSampleCounts[i], NULL );
@@ -171,17 +174,33 @@ int main() {
 	// the NVML library causes a one-second 99% usage spike on an other-
 	// wise idle GPU.  So we'll ignore as much of that as we easily can.
 	for( unsigned i = 0; i < deviceCount; ++i ) {
-		getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i] );
+		getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i], &runningSampleCounts[i] );
 		firstSamples[i] = lastSamples[i];
 		elapsedTimes[i] = 0;
+		runningSampleCounts[i] = 0;
 	}
+
+
+	// The documented minimum duration for a sample is 1/6 of a second,
+	// so the minimum sampling rate in seconds is the size of the smallest
+	// sample buffer divided by six (assuming that each max sample count
+	// is minimal).
+	unsigned minMaxSampleCount = (unsigned)-1;
+	for( unsigned i = 0; i < deviceCount; ++i ) {
+		if( maxSampleCounts[i] < minMaxSampleCount ) {
+			minMaxSampleCount = maxSampleCounts[i];
+		}
+	}
+	unsigned long long sampleInterval = (minMaxSampleCount * 1000000)/6;
+
 
 	time_t lastReport = time( NULL );
 	while( 1 ) {
-		usleep( 100000 );
+		// Take samples three times as often as we have to minimize aliasing.
+		usleep( sampleInterval / 3 );
 
 		for( unsigned i = 0; i < deviceCount; ++i ) {
-			r = getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i] );
+			r = getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i], &runningSampleCounts[i] );
 			if( r != NVML_SUCCESS ) {
 				fprintf( stderr, "getElapsedTimeForDevice(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
 				fail();
@@ -213,10 +232,15 @@ int main() {
 				fprintf( stdout, "- GPUsSlot%u\n", i );
 				fflush( stdout );
 
+				/* debug fprintf( stderr, "Used %lu samples to cover %lu microseconds (%2.2f samples per second)\n",
+					runningSampleCounts[i], lastSamples[i] - firstSamples[i],
+					1000000/((lastSamples[i] - firstSamples[i])/(1.0 * runningSampleCounts[i])) ); */
+
 				// Report only the usage for each reporting period.
 				elapsedTimes[i] = 0;
 				firstSamples[i] = lastSamples[i];
 				memoryUsage[i] = 0;
+				runningSampleCounts[i] = 0;
 			}
 			lastReport = time( NULL );
 		}
