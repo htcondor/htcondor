@@ -40,6 +40,12 @@ add `use feature: GPUsMonitor' to the HTCondor configuration.  Thank you.
 
 \Ticket{6857}
 
+\item Discovered a bug in DAGMan where graph metrics reporting could sometimes 
+send the \condor{dagman} process into an infinite loop. We worked around this 
+by disabling graph metrics reporting by default, via the new  
+\Macro{DAGMAN\_REPORT\_GRAPH\_METRICS} configuration knob.
+\Ticket{6896}
+
 \end{itemize}
 
 

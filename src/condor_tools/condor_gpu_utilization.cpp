@@ -1,12 +1,36 @@
 #include <stdio.h>
+#ifdef WIN32
+#else
 #include <sys/select.h>
+#include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>
 #include <string.h>
+#include <vector>
 
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOSERVICE
+#define NOMCX
+#define NOIME
+#include <Windows.h>
+#define CUDACALL __stdcall
+#else
 #include <dlfcn.h>
+#define CUDACALL
+#endif
+
 #include "nvml_stub.h"
+
+#ifdef WIN32
+// to simplfy the dynamic loading of .so/.dll, make a Windows function
+// for looking up a symbol that looks like the equivalent *nix function.
+static void* dlsym(void* hlib, const char * symbol) {
+	return (void*)GetProcAddress((HINSTANCE)(LONG_PTR)hlib, symbol);
+}
+#endif
+
 
 typedef nvmlReturn_t (*nvml_void)(void);
 typedef nvmlReturn_t (*nvml_dghbi)(unsigned int, nvmlDevice_t *);
@@ -36,23 +60,30 @@ int compareSamples( const void * vpA, const void * vpB ) {
 	}
 }
 
+#ifdef WIN32
+void fail() {
+	fprintf(stderr, "Hanging to prevent process churn.\n");
+	while (1) { Sleep(1024*1000); }
+}
+#else
 void fail() __attribute__((__noreturn__));
-
 void fail() {
 	fprintf( stderr, "Hanging to prevent process churn.\n" );
 	while( 1 ) { sleep( 1024 ); }
 }
+#endif
 
 nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastSample, unsigned long long * elapsedTime, unsigned maxSampleCount, unsigned long long * runningSampleCount ) {
 	if( elapsedTime == NULL || lastSample == NULL ) {
 		return NVML_ERROR_INVALID_ARGUMENT;
 	}
 
-	unsigned sampleCount = maxSampleCount;
-	nvmlSample_t samples[maxSampleCount];
+	unsigned int sampleCount = maxSampleCount;
+	std::vector<nvmlSample_t> samples;
+	samples.resize(maxSampleCount);
 	nvmlValueType_t sampleValueType;
 
-	nvmlReturn_t r = nvmlDeviceGetSamples( d, NVML_GPU_UTILIZATION_SAMPLES, * lastSample, & sampleValueType, & sampleCount, samples );
+	nvmlReturn_t r = nvmlDeviceGetSamples( d, NVML_GPU_UTILIZATION_SAMPLES, * lastSample, & sampleValueType, & sampleCount, &samples[0] );
 	switch( r ) {
 		case NVML_ERROR_NOT_FOUND:
 			return NVML_SUCCESS;
@@ -64,7 +95,7 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 	(* runningSampleCount) += sampleCount;
 
 	// Samples are usually but not always in order.
-	qsort( samples, sampleCount, sizeof( nvmlSample_t ), compareSamples );
+	qsort( &samples[0], sampleCount, sizeof( nvmlSample_t ), compareSamples );
 
 	// Convert the percentage to elapsed time, since that's what we
 	// actually care about (and the data representation is simpler).
@@ -96,11 +127,20 @@ int main() {
 	// The actual filtering is done by the startd on the basis
 	// of the SlotMergeConstraint we set for each ad we emit.
 #if defined(WINDOWS)
-	putenv( "CUDA_VISIBLE_DEVICES=" );
+	_putenv( "CUDA_VISIBLE_DEVICES=" );
 #else
 	unsetenv( "CUDA_VISIBLE_DEVICES" );
 #endif
 
+#ifdef WIN32
+	HINSTANCE nvml_handle = NULL;
+	const char * nvml_library = "nvml.dll";
+	nvml_handle = LoadLibrary(nvml_library);
+	if (! nvml_handle) {
+		fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), nvml_library);
+		fail();
+	}
+#else
 	void * nvml_handle = NULL;
 	const char * nvml_library = "libnvidia-ml.so.1";
 	nvml_handle = dlopen( nvml_library, RTLD_LAZY );
@@ -109,6 +149,7 @@ int main() {
 		fail();
 	}
 	dlerror();
+#endif
 
 	nvmlInit                   = (nvml_void)dlsym( nvml_handle, "nvmlInit_v2" );
 	nvmlShutdown               = (nvml_void)dlsym( nvml_handle, "nvmlShutdown" );
@@ -135,13 +176,13 @@ int main() {
 		fail();
 	}
 
-	nvmlDevice_t devices[deviceCount];
-	unsigned maxSampleCounts[deviceCount];
-	unsigned long long memoryUsage[deviceCount];
-	unsigned long long lastSamples[deviceCount];
-	unsigned long long firstSamples[deviceCount];
-	unsigned long long elapsedTimes[deviceCount];
-	unsigned long long runningSampleCounts[deviceCount];
+	std::vector<nvmlDevice_t> devices; devices.resize(deviceCount);
+	std::vector<unsigned int> maxSampleCounts; maxSampleCounts.resize(deviceCount);
+	std::vector<unsigned long long> memoryUsage; memoryUsage.resize(deviceCount);
+	std::vector<unsigned long long> lastSamples; lastSamples.resize(deviceCount);
+	std::vector<unsigned long long> firstSamples; firstSamples.resize(deviceCount);
+	std::vector<unsigned long long> elapsedTimes; elapsedTimes.resize(deviceCount);
+	std::vector<unsigned long long> runningSampleCounts; runningSampleCounts.resize(deviceCount);
 	for( unsigned i = 0; i < deviceCount; ++i ) {
 		r = nvmlDeviceGetHandleByIndex( i, &(devices[i]) );
 		if( r != NVML_SUCCESS ) {
@@ -191,13 +232,17 @@ int main() {
 			minMaxSampleCount = maxSampleCounts[i];
 		}
 	}
-	unsigned long long sampleInterval = (minMaxSampleCount * 1000000)/6;
+	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1000000)/6;
 
 
 	time_t lastReport = time( NULL );
 	while( 1 ) {
 		// Take samples three times as often as we have to minimize aliasing.
-		usleep( sampleInterval / 3 );
+	#ifdef WIN32
+		Sleep(sampleIntervalMicrosec / 3000 ); // Sleep is millisec
+	#else
+		usleep(sampleIntervalMicrosec / 3 );
+	#endif
 
 		for( unsigned i = 0; i < deviceCount; ++i ) {
 			r = getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i], &runningSampleCounts[i] );
@@ -252,6 +297,10 @@ int main() {
 		return 1;
 	}
 
+#ifdef WIN32
+	if (nvml_handle) FreeLibrary(nvml_handle);
+#else
 	dlclose( nvml_handle );
+#endif
 	return 0;
 }
