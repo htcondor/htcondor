@@ -34,12 +34,12 @@ def cleanup_table(data):
 
     for index, token in enumerate(data):
         if type(token) is bs4.element.Tag:
-            #print("token.name = " + str(token.name))
+            print("\n\ntoken = " + str(token))
             # Remove all the <tr class="hline">...</tr> tags
             if token.name == "tr" and "class" in token.attrs.keys():
                 data.remove(token)
-            #for child in token.children:
-            #    print("child = " + str(child))
+            for child in token.children:
+                print("child = " + str(child))
                     
     return data
 
