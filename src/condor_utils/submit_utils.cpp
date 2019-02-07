@@ -4348,6 +4348,13 @@ int SubmitHash::SetExecutable()
 		AssignJobString(ATTR_DOCKER_IMAGE, image);
 		free(docker_image);
 		role = SFR_PSEUDO_EXECUTABLE;
+
+		MyString DockerNetworkType = submit_param_mystring(SUBMIT_KEY_DockerNetworkType, ATTR_JOB_DOCKER_NETWORK_TYPE);
+		if ( ! DockerNetworkType.empty() ) {
+			AssignJobString(ATTR_JOB_DOCKER_NETWORK_TYPE,  DockerNetworkType.Value());
+		} else {
+			DockerNetworkType = "";
+		}
 	}
 
 	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );

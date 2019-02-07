@@ -234,6 +234,7 @@
 // docker "universe" Parameters
 //
 #define SUBMIT_KEY_DockerImage "docker_image"
+#define SUBMIT_KEY_DockerNetworkType "docker_network_type"
 
 //
 // VM universe Parameters

@@ -180,6 +180,13 @@ int DockerAPI::createContainer(
 		free(user_name);
 	}
 #endif
+	std::string networkType;
+	jobAd.LookupString(ATTR_JOB_DOCKER_NETWORK_TYPE, networkType);
+	if (networkType == "host") {
+		runArgs.AppendArg("--network=host");
+	}
+
+
 	MyString args_error;
 	char *tmp = param("DOCKER_EXTRA_ARGUMENTS");
 	if(!runArgs.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
