@@ -65,6 +65,21 @@ by disabling graph metrics reporting by default, via the new
 default configuration when started as a service.
 \Ticket{6853}
 
+\item \Condor{q} -autocluster data is now much more up-to-date.
+\Ticket{6833}
+
+\item Improved efficiency of negotiation code in the \Condor{schedd}.
+\Ticket{6834}
+
+\item Made Collector.locateAll() method more efficient in the Python
+bindings.
+\Ticket{6831}
+
+\item The Job Router no longer sets an incorrect \AttrNI{User} job
+attribute when routing a job between two \Condor{schedd}s with
+different values for configuration parameter \MacroNI{UID\_DOMAIN}.
+\Ticket{6856}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
