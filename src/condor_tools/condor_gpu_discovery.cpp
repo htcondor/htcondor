@@ -46,6 +46,82 @@
 #define CUDACALL
 #endif
 
+#ifdef CUDA_9_AND_10
+
+static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
+static char printable_digit(unsigned char n) { return (n >= ' ' && n <= '~') ? n : '.'; }
+static const char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[16]) {
+	char *p = buf;
+	char *endp = buf + bufsiz -1;
+	for (int ix = 0; ix < 16; ++ix) {
+		if (ix == 4 || ix == 6 || ix == 8 || ix == 10) *p++ = '-';
+		unsigned char ch = uuid[ix];
+		*p++ = hex_digit((ch >> 4) & 0xF);
+		*p++ = hex_digit(ch & 0xF);
+		if (p >= endp) break;
+	}
+	*p = 0;
+	return buf;
+}
+
+// because on linux, these become gnu_dev_major and gnu_dev_minor (sigh)
+#undef major
+#undef minor
+// basic device properties we can query from the driver
+class BasicProps {
+public:
+	BasicProps() : totalGlobalMem(0), major(0), minor(0), multiProcessorCount(0), clockRate(0), ECCEnabled(0) {
+		memset(uuid, 0, sizeof(uuid));
+		memset(pciId, 0, sizeof(pciId));
+	}
+
+	std::string   name;                 /**< ASCII string identifying device */
+	unsigned char uuid[16];             // uuids are big-endian 32 lower case hex digits shown as: "xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx" where M indicates version and N indicates sub-version
+	char          pciId[16];            // null terminated string in form [domain]:[bus]:[device].[function], each field is hex. max of 12 chars, [domain}: or .[function] may be omitted
+	size_t        totalGlobalMem;       /**< Global memory available on device in bytes */
+	int           major;                /**< Major compute capability */
+	int           minor;                /**< Minor compute capability */
+	int           multiProcessorCount;  /**< Number of multiprocessors on device */
+	int           clockRate;            /**< Clock frequency in kilohertz */
+	int           ECCEnabled;           /**< Device has ECC support enabled */
+
+	bool hasUuid() { return uuid[0] || uuid[6] || uuid[8]; }
+	const char * printUuid() {
+		static char buf[32 + 8];
+		return print_uuid(buf, sizeof(buf), uuid);
+	}
+};
+
+typedef cudaError_t (CUDACALL* dev_basic_props)(int, BasicProps *);
+typedef cudaError_t(CUDACALL* cuda_DevicePropBuf_int)(struct cudaDevicePropBuffer *, int);
+cuda_DevicePropBuf_int cudaGetDevicePropertiesOfIndeterminateStructure = NULL;
+
+void hex_dump(FILE* out, const unsigned char * buf, size_t cb, int offset)
+{
+	char line[6 + 16 * 3 + 2 + 16 + 2 + 2];
+	for (size_t lx = 0; lx < cb && lx < 0xFFFF; lx += 16) {
+		memset(line, ' ', sizeof(line));
+		line[sizeof(line) - 1] = 0;
+		sprintf(line, "%04X:", (int)lx);
+		char * pb = line + 5;
+		*pb++ = ' ';
+		char * pa = pb + 16 * 3 + 2;
+		for (size_t ix = 0; ix < 16; ++ix) {
+			if (lx + ix >= cb) break;
+			unsigned char ch = buf[lx + ix];
+			*pa++ = printable_digit(ch);
+			*pb++ = hex_digit((ch >> 4) & 0xF);
+			*pb++ = hex_digit(ch & 0xF);
+			*pb++ = ' ';
+		}
+		fprintf(out, "%s\n", line);
+		if ((int)lx > offset && (int)lx <= offset+16) fprintf(out, "strings: %04X\n", offset);
+	}
+}
+
+#endif
+
+
 #ifdef WIN32
 // to simplfy the dynamic loading of .so/.dll, make a Windows function
 // for looking up a symbol that looks like the equivalent *nix function.
@@ -249,8 +325,12 @@ cudaError_t CUDACALL sim_cudaRuntimeGetVersion(int* pver) {
 	return cudaSuccess; 
 }
 
+#ifdef CUDA_9_AND_10
+cudaError_t CUDACALL sim_getBasicProps(int devID, BasicProps * p) {
+#else
 cudaError_t CUDACALL sim_cudaGetDeviceProperties(struct cudaDeviceProp * p, int devID) {
 	memset(p, 0, sizeof(*p));
+#endif
 	if (sim_index < 0 || sim_index > sim_index_max)
 		return cudaErrorNoDevice;
 
@@ -264,7 +344,15 @@ cudaError_t CUDACALL sim_cudaGetDeviceProperties(struct cudaDeviceProp * p, int 
 		dev = aSimConfig[sim_index].device;
 	}
 
+#ifdef CUDA_9_AND_10
+	p->name = dev->name;
+	unsigned char uuid[16] = {0x01,0x22,0x33,0x34,  0x44,0x45, 0x56,0x67, 0x89,0x9a, 0xab,0xbc,0xcd,0xde,0xef,0xf0 };
+	uuid[0] = (unsigned char)devID;
+	memcpy(p->uuid, uuid, 16);
+	sprintf(p->pciId, "0000:%02x:00.0", devID + 0x40);
+#else
 	strncpy(p->name, dev->name, sizeof(p->name) - 1);
+#endif
 	p->major = (dev->SM & 0xF0) >> 4;
 	p->minor = (dev->SM & 0x0F);
 	p->multiProcessorCount = dev->multiProcessorCount;
@@ -342,37 +430,60 @@ int print_error(int mode, const char * fmt, ...) {
 void* g_cu_handle = NULL;
 // functions for runtime linking to nvcuda library
 typedef void * cudev;
-typedef cudaError_t (CUDACALL* cuda_uint_t)(unsigned int);
-cuda_uint_t cuInit = NULL;
+typedef CUresult (CUDACALL* cu_uint_t)(unsigned int);
+cu_uint_t cuInit = NULL;
 typedef cudaError_t (CUDACALL* cuda_dev_int_t)(cudev*,int);
 cuda_dev_int_t cuDeviceGet = NULL;
 typedef cudaError_t (CUDACALL* cuda_ga_t)(int*,int,cudev);
 cuda_ga_t cuDeviceGetAttribute = NULL;
 typedef cudaError_t (CUDACALL* cuda_name_t)(char*,int,cudev);
 cuda_name_t cuDeviceGetName = NULL;
+typedef CUresult (CUDACALL * cuda_uuid_t)(unsigned char uuid[16], cudev);
+cuda_uuid_t cuDeviceGetUuid = NULL;
+typedef CUresult (CUDACALL * cuda_luid_t)(char *, unsigned int *, cudev);
+cuda_luid_t cuDeviceGetLuid = NULL;
+typedef CUresult (CUDACALL * cuda_pciid_t)(char *, int, cudev);
+cuda_pciid_t cuDeviceGetPCIBusId = NULL; // buffer should have room for 12 characters, 13 with a null terminator
 typedef cudaError_t (CUDACALL* cuda_cc_t)(int*,int*,cudev);
 cuda_cc_t cuDeviceComputeCapability = NULL;
 typedef cudaError_t (CUDACALL* cuda_size_t)(size_t*,cudev);
-cuda_size_t cuDeviceTotalMem = NULL;
+cuda_size_t cuDeviceTotalMem = NULL; // "useCuDeviceTotalMem_v2"
 typedef cudaError_t (CUDACALL* cuda_int_t)(int*);
 cuda_int_t cuDeviceGetCount = NULL;
 
 bool cu_Init(void* cu_handle) {
 	g_cu_handle = cu_handle;
+#ifdef CUDA_9_AND_10
+	print_error(MODE_DIAGNOSTIC_MSG, "diag: using nvcuda for gpu discovery\n");
+#else
 	print_error(MODE_DIAGNOSTIC_MSG, "diag: simulating cudart using nvcuda\n");
-	cuInit = (cuda_uint_t)dlsym(cu_handle, "cuInit");
+#endif
+	cuInit = (cu_uint_t)dlsym(cu_handle, "cuInit");
 	if ( ! cuInit) return false;
 
 	cuDeviceGet = (cuda_dev_int_t)dlsym(cu_handle, "cuDeviceGet");
 	cuDeviceGetAttribute = (cuda_ga_t)dlsym(cu_handle, "cuDeviceGetAttribute");
 	cuDeviceGetName = (cuda_name_t)dlsym(cu_handle, "cuDeviceGetName");
+	cuDeviceGetPCIBusId = (cuda_pciid_t)dlsym(cu_handle, "cuDeviceGetPCIBusId");
+	cuDeviceGetUuid = (cuda_uuid_t)dlsym(cu_handle, "cuDeviceGetUuid");
+	cuDeviceGetLuid = (cuda_luid_t)dlsym(cu_handle, "cuDeviceGetLuid");
 	cuDeviceComputeCapability = (cuda_cc_t)dlsym(cu_handle, "cuDeviceComputeCapability");
-	cuDeviceTotalMem = (cuda_size_t)dlsym(cu_handle, "cuDeviceTotalMem");
+	cuDeviceTotalMem = (cuda_size_t)dlsym(cu_handle, "cuDeviceTotalMem_v2");
+	if ( ! cuDeviceTotalMem) {
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: dlsym failed for cuDeviceTotalMem_v2, a max of 4GB Memory will be reported\n");
+		cuDeviceTotalMem = (cuda_size_t)dlsym(cu_handle, "cuDeviceTotalMem");
+	}
 	cuDeviceGetCount = (cuda_int_t)dlsym(cu_handle, "cuDeviceGetCount");
 
-	cudaError ret = cuInit(0);
-	if (ret != cudaSuccess) print_error(MODE_ERROR, "Error: cuInit returned %d\n", ret);
-	return ret == cudaSuccess;
+	CUresult ret = cuInit(0);
+	if (ret != CUDA_SUCCESS) {
+		if (ret == CUDA_ERROR_NO_DEVICE) {
+			print_error(MODE_DIAGNOSTIC_MSG, "diag: cuInit found no CUDA-capable devices. code=%d\n", ret);
+		} else {
+			print_error(MODE_ERROR, "Error: cuInit returned %d\n", ret);
+		}
+	}
+	return ret == CUDA_SUCCESS;
 }
 
 cudaError_t CUDACALL cu_cudaRuntimeGetVersion(int* pver) { 
@@ -409,18 +520,50 @@ cudaError_t CUDACALL cu_cudaRuntimeGetVersion(int* pver) {
 		}
 	}
 	RegCloseKey(hkey);
+#else
+	void* handle = dlopen("libnvcuda.so", RTLD_LAZY);
+	if (handle) {
+		typedef cudaError_t (CUDACALL* cuda_t)(int*);
+		cuda_t cudaRuntimeGetVersion = (cuda_t)dlsym(handle, "cudaRuntimeGetVersion");
+		if (cudaRuntimeGetVersion) {
+			ret = cudaRuntimeGetVersion(pver);
+		}
+		dlclose(handle);
+	}
 #endif
 	return ret; 
 }
 
+#ifdef CUDA_9_AND_10
+cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
+#else
 cudaError_t CUDACALL cu_cudaGetDeviceProperties(struct cudaDeviceProp * p, int devID) {
 	memset(p, 0, sizeof(*p));
+#endif
 	cudev dev;
 	cudaError_t res = cuDeviceGet(&dev, devID);
 	if (cudaSuccess == res) {
+
+	if (g_diagnostic) {
+		print_error(MODE_DIAGNOSTIC_MSG, "# querying ordinal:%d, dev:%p using cuDevice* API\n", devID, dev);
+		size_t mem = 0;
+		cudaError_t er = cuDeviceTotalMem(&mem, (cudev)(size_t)devID);
+		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%d) returns %d, value = %llu\n", devID, er, (unsigned long long)mem);
+	}
+
+	#ifdef CUDA_9_AND_10
+		char name[256];
+		memset(name, 0, sizeof(name));
+		cuDeviceGetName(name, sizeof(name), dev);
+		p->name = name;
+		if (cuDeviceGetUuid) cuDeviceGetUuid(p->uuid, dev);
+		if (cuDeviceGetPCIBusId) cuDeviceGetPCIBusId(p->pciId, sizeof(p->pciId), dev);
+	#else
 		cuDeviceGetName(p->name, sizeof(p->name), dev);
+	#endif
 		cuDeviceComputeCapability(&p->major, &p->minor, dev);
-		cuDeviceTotalMem(&p->totalGlobalMem, dev);
+		cudaError_t er = cuDeviceTotalMem(&p->totalGlobalMem, dev);
+		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%p) returns %d, value = %llu\n", dev, er, (unsigned long long)p->totalGlobalMem);
 		cuDeviceGetAttribute(&p->clockRate, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, dev);
 		cuDeviceGetAttribute(&p->multiProcessorCount, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, dev);
 		cuDeviceGetAttribute(&p->ECCEnabled, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, dev);
@@ -428,6 +571,61 @@ cudaError_t CUDACALL cu_cudaGetDeviceProperties(struct cudaDeviceProp * p, int d
 	return res; 
 }
 
+#ifdef CUDA_9_AND_10
+cudaError_t basicPropsFromCudaProps(cudaDevicePropStrings * dps, cudaDevicePropInts * dpi, BasicProps * p)
+{
+	p->name = dps->name;
+	p->totalGlobalMem = dpi->totalGlobalMem;
+	p->major = dpi->major;
+	p->minor = dpi->minor;
+	p->clockRate = dpi->clockRate;
+	p->multiProcessorCount = dpi->multiProcessorCount;
+	p->ECCEnabled = dpi->ECCEnabled;
+	memcpy(p->uuid, dps->uuid, sizeof(p->uuid));
+	if (dpi->pciBusID || dpi->pciDeviceID) {
+		sprintf(p->pciId, "%04x:%02x:%02x.0", dpi->pciDomainID, dpi->pciBusID, dpi->pciDeviceID);
+	}
+	return cudaSuccess;
+}
+cudaError_t CUDACALL cuda9_getBasicProps(int devID, BasicProps * p) {
+	cudaDevicePropBuffer buf;
+	memset(buf.props, 0, sizeof(buf.props));
+	cudaError_t err = cudaGetDevicePropertiesOfIndeterminateStructure(&buf, devID);
+	if (cudaSuccess != err)
+		return err;
+
+	const int ints_offset = 256;
+	if (g_diagnostic) {
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: cudaDviceProperties 9 buffer:\n");
+		hex_dump(stdout, &buf.props[0], sizeof(buf), ints_offset);
+	}
+
+	cudaDevicePropStrings * dps = (cudaDevicePropStrings *)(&buf);
+	cudaDevicePropInts * dpi = (cudaDevicePropInts *)(&buf.props[ints_offset]);
+
+	return basicPropsFromCudaProps(dps, dpi, p);
+}
+cudaError_t CUDACALL cuda10_getBasicProps(int devID, BasicProps * p) {
+	cudaDevicePropBuffer buf;
+	memset(buf.props, 0, sizeof(buf.props));
+	cudaError_t err = cudaGetDevicePropertiesOfIndeterminateStructure(&buf, devID);
+	if (cudaSuccess != err)
+		return err;
+
+	// skip over the integers, and align on a size_t boundary
+	const int ints_offset = (sizeof(cudaDevicePropStrings) + sizeof(size_t) - 1) & ~(sizeof(size_t) - 1);
+
+	if (g_diagnostic) {
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: cudaDviceProperties 10 buffer:\n");
+		hex_dump(stdout, &buf.props[0], sizeof(buf), ints_offset);
+	}
+
+	cudaDevicePropStrings * dps = (cudaDevicePropStrings *)(&buf);
+	cudaDevicePropInts * dpi = (cudaDevicePropInts *)(&buf.props[ints_offset]);
+	memcpy(p->uuid, dps->uuid, sizeof(dps->uuid));
+	return basicPropsFromCudaProps(dps, dpi, p);
+}
+#endif
 
 static struct {
 	clGetPlatformIDs_t GetPlatformIDs;
@@ -481,7 +679,7 @@ clReturn oclGetInfo(cl_platform_id plid, cl_e_platform_info eInfo, std::string &
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
 		if ( ! g_buffer) { print_error(MODE_ERROR, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
-		g_cBuffer = cb*2;
+		g_cBuffer = (unsigned int)(cb*2);
 		clr = ocl.GetPlatformInfo(plid, eInfo, g_cBuffer, g_buffer, &cb);
 	}
 	if (clr == CL_SUCCESS) {
@@ -501,7 +699,7 @@ clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, std::string & val)
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
 		if ( ! g_buffer) { print_error(MODE_ERROR, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
-		g_cBuffer = cb*2;
+		g_cBuffer = (unsigned int)(cb*2);
 		clr = ocl.GetDeviceInfo(did, eInfo, g_cBuffer, g_buffer, &cb);
 	}
 	if (clr == CL_SUCCESS) {
@@ -586,7 +784,7 @@ int ocl_Init(void) {
 		print_error(MODE_VERBOSE, "\tDEVICES = %d\n", cDevs);
 
 		if (CL_SUCCESS == clr && cDevs > 0) {
-			unsigned int ixFirst = cl_gpu_ids.size();
+			unsigned int ixFirst = (unsigned int)cl_gpu_ids.size();
 			cl_gpu_ids.reserve(ixFirst + cDevs);
 			for (unsigned int jj = 0; jj < cDevs; ++jj) { cl_gpu_ids.push_back(NULL); }
 			clr = ocl.GetDeviceIDs(plid, f_types, cDevs, &cl_gpu_ids[ixFirst], NULL);
@@ -627,7 +825,7 @@ int ocl_Init(void) {
 	}
 
 	ocl_log = 0;
-	ocl_device_count = cl_gpu_ids.size();
+	ocl_device_count = (int)cl_gpu_ids.size();
 	return 0;
 }
 
@@ -653,6 +851,7 @@ bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
 	return true;
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
@@ -672,6 +871,7 @@ main( int argc, const char** argv)
 	//int opt_rdp = 0;
 	std::list<int> dwl; // Device White List
 	int opt_nvcuda = 0; // use nvcuda rather than cudarl
+	int opt_cudarl = 0; // force use of use cudarl rather than nvcuda
 	int opt_opencl = 0; // prefer opencl detection
 	int opt_cuda_only = 0; // require cuda detection
 	const char * opt_tag = "GPUs";
@@ -691,7 +891,7 @@ main( int argc, const char** argv)
 		if(! addToDeviceWhiteList( cvd, dwl )) { return 1; }
 	}
 #if defined(WINDOWS)
-	putenv( "CUDA_VISIBLE_DEVICES=" );
+	_putenv( "CUDA_VISIBLE_DEVICES=" );
 #else
 	unsetenv( "CUDA_VISIBLE_DEVICES" );
 #endif
@@ -704,7 +904,7 @@ main( int argc, const char** argv)
 		if(! addToDeviceWhiteList( gdo, dwl )) { return 1; }
 	}
 #if defined( WINDOWS)
-	putenv( "GPU_DEVICE_ORDINAL=" );
+	_putenv( "GPU_DEVICE_ORDINAL=" );
 #else
 	unsetenv( "GPU_DEVICE_ORDINAL" );
 #endif
@@ -727,8 +927,7 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "cron", 4)) {
 			opt_cron = 1;
-		}
-		else if (is_dash_arg_prefix(argv[i], "mixed", 3) || is_dash_arg_prefix(argv[i], "hetero", 3)) {
+		} else if (is_dash_arg_prefix(argv[i], "mixed", 3) || is_dash_arg_prefix(argv[i], "hetero", 3)) {
 			opt_hetero = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "opencl", -1)) {
@@ -786,6 +985,9 @@ main( int argc, const char** argv)
 			// use nvcuda instead of cudart, (option is for testing...)
 			opt_nvcuda = 1;
 		} 
+		else if (is_dash_arg_prefix(argv[i], "rl", 2) || is_dash_arg_prefix(argv[i], "cudarl", 6)) {
+			opt_cudarl = 1;
+		}
 		else {
 			fprintf(stderr, "option %s is not valid\n", argv[i]);
 			usage(stderr, argv[0]);
@@ -798,16 +1000,24 @@ main( int argc, const char** argv)
 	cuda_t cudaGetDeviceCount = NULL; 
 	cuda_t cudaDriverGetVersion = NULL;
 	cuda_t cudaRuntimeGetVersion = NULL;
+#ifdef CUDA_9_AND_10
+	dev_basic_props getBasicProps = NULL;
+#else
 	typedef cudaError_t (CUDACALL* cuda_DeviceProp_int)(struct cudaDeviceProp *, int);
 	cuda_DeviceProp_int cudaGetDeviceProperties = NULL;
+#endif
 
 	// function pointers for the NVIDIA management layer, used for dynamic attributes.
     //nvmlReturn_t is the Return type for all of these functions
 	typedef nvmlReturn_t (*nvml_void)(void);
-	nvml_void nvmlInit = NULL;
+	nvml_void nvmlInit = NULL;  // use "nvmlInit_v2"
 	nvml_void nvmlShutdown = NULL;
 	typedef nvmlReturn_t (*nvml_unsigned_int_Device)(unsigned int, nvmlDevice_t *);
 	nvml_unsigned_int_Device nvmlDeviceGetHandleByIndex = NULL;
+	typedef nvmlReturn_t (*nvml_charptr_Device)(const char *, nvmlDevice_t *);
+	nvml_charptr_Device nvmlDeviceGetHandleByPciBusId = NULL;  // use "nvmlDeviceGetHandleByPciBusId_v2"
+	typedef nvmlReturn_t(*nvml_ucharptr_Device)(const unsigned char *, nvmlDevice_t *);
+	nvml_ucharptr_Device nvmlDeviceGetHandleByUUID = NULL;
 	//typedef nvmlReturn_t (*nvml_Device_EnableState)(nvmlDevice_t, nvmlEnableState_t *);
 	//nvml_Device_EnableState nvmlDeviceGetDisplayMode = NULL;
 	//nvml_Device_EnableState nvmlDeviceGetPersistenceMode = NULL; 
@@ -840,7 +1050,11 @@ main( int argc, const char** argv)
 		cudaGetDeviceCount = sim_cudaGetDeviceCount;
 		cudaDriverGetVersion = sim_cudaDriverGetVersion;
 		cudaRuntimeGetVersion = sim_cudaRuntimeGetVersion;
+#ifdef CUDA_9_AND_10
+		getBasicProps = sim_getBasicProps;
+#else
 		cudaGetDeviceProperties = sim_cudaGetDeviceProperties;
+#endif
 
 		nvmlInit = sim_nvmlInit;
 		nvmlShutdown = sim_nvmlInit;
@@ -863,16 +1077,34 @@ main( int argc, const char** argv)
 		}
 
 		const char * cudart_library = "cudart.dll"; // "cudart32_55.dll"
+		#ifdef CUDA_9_AND_10
+		if ( ! opt_cudarl) cuda_handle = LoadLibrary("nvcuda.dll");
+		if (cuda_handle && cu_Init(cuda_handle)) {
+			opt_nvcuda = 1;
+			cudart_library = "nvcuda.dll";
+		} else {
+			if ( ! cuda_handle) {
+				if ( ! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "can't open nvcuda.dll. Error %d\r\n", GetLastError());
+			} else {
+				FreeLibrary(cuda_handle);
+				cuda_handle = NULL;
+			}
+			cuda_handle = LoadLibrary(cudart_library);
+			if (cuda_handle) {
+				opt_nvcuda = 0;
+		#else
+		const char * cudart_library = "cudart.dll"; // "cudart32_55.dll"
 		cuda_handle = LoadLibrary(cudart_library);
 		if ( ! cuda_handle) {
 			cuda_handle = LoadLibrary("nvcuda.dll");
 			if (cuda_handle && cu_Init(cuda_handle)) {
 				opt_nvcuda = 1;
 				print_error(MODE_DIAGNOSTIC_ERR, "using nvcuda.dll to simulate cudart\n");
+		#endif
 			} else if (ocl_handle) {
 				// if no cuda, fall back to OpenCL detection
 			} else {
-				print_error(MODE_DIAGNOSTIC_ERR, "Error %d: Cant open library: %s\r\n", GetLastError(), cudart_library);
+				print_error(MODE_DIAGNOSTIC_ERR, "Error %d: Can't open library: %s\r\n", GetLastError(), cudart_library);
 				if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
@@ -884,7 +1116,7 @@ main( int argc, const char** argv)
 		if (opt_dynamic) {
 			nvml_handle = LoadLibrary(nvml_library);
 			if ( ! nvml_handle) {
-				print_error(MODE_ERROR, "Error %d: Cant open library: %s\r\n", GetLastError(), nvml_library);
+				print_error(MODE_ERROR, "Error %d: Can't open library: %s\r\n", GetLastError(), nvml_library);
 			}
 		}
 	#else
@@ -892,22 +1124,40 @@ main( int argc, const char** argv)
 			const char * opencl_library = "libOpenCL.so";
 			ocl_handle = dlopen(opencl_library, RTLD_LAZY);
 			if ( ! ocl_handle && opt_opencl) {
-				print_error(MODE_ERROR, "Error %s: Cant open library: %s\n", dlerror(), opencl_library);
+				print_error(MODE_ERROR, "Error %s: Can't open library: %s\n", dlerror(), opencl_library);
 			}
 			dlerror(); //Reset error
 		}
 
 		const char * cudart_library = "libcudart.so";
+		#ifdef CUDA_9_AND_10
+		const char * nvcuda_library = "libcuda.so";
+		if ( ! opt_cudarl) cuda_handle = dlopen(nvcuda_library, RTLD_LAZY);
+		if (cuda_handle && cu_Init(cuda_handle)) {
+			opt_nvcuda = 1;
+			cudart_library = nvcuda_library;
+		} else {
+			if ( ! cuda_handle) {
+				if ( ! opt_cudarl) print_error(MODE_DIAGNOSTIC_MSG, "Can't open %s. Error %d\n", nvcuda_library, dlerror());
+			} else {
+				dlclose(cuda_handle);
+				cuda_handle = NULL;
+			}
+			cuda_handle = dlopen(cudart_library, RTLD_LAZY);
+			if (cuda_handle) {
+				opt_nvcuda = 0;
+		#else
 		cuda_handle = dlopen(cudart_library, RTLD_LAZY);
 		if ( ! cuda_handle) {
-			cuda_handle = dlopen("libnvcuda.so", RTLD_LAZY);
+			cuda_handle = dlopen("libcuda.so", RTLD_LAZY);
 			if (cuda_handle && cu_Init(cuda_handle)) {
 				opt_nvcuda = 1;
 				print_error(MODE_DIAGNOSTIC_ERR, "using libnvcuda.so to simulate libcudart\n");
+		#endif
 			} else if (ocl_handle) {
 				// if no cuda, fall back to OpenCL detection
 			} else {
-				print_error(MODE_DIAGNOSTIC_ERR, "Error %s: Cant open library: %s\n", dlerror(), cudart_library);
+				print_error(MODE_DIAGNOSTIC_ERR, "Error %s: Can't open library: %s\n", dlerror(), cudart_library);
 				if ( ! opt_cron) fprintf(stdout, "Detected%s=0\n", opt_tag);
 				if (opt_config) fprintf(stdout, "NUM_DETECTED_%s=0\n", opt_tag);
 				return 0;
@@ -986,11 +1236,25 @@ main( int argc, const char** argv)
 			// cudart functions from nvcuda functions. 
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cuDriverGetVersion");
 			cudaRuntimeGetVersion = cu_cudaRuntimeGetVersion;
+		#ifdef CUDA_9_AND_10
+			getBasicProps = cu_getBasicProps;
+		#else
 			cudaGetDeviceProperties = cu_cudaGetDeviceProperties;
+		#endif
 		} else {
 			cudaDriverGetVersion = (cuda_t) dlsym(cuda_handle, "cudaDriverGetVersion");
 			cudaRuntimeGetVersion = (cuda_t) dlsym(cuda_handle, "cudaRuntimeGetVersion");
+		#ifdef CUDA_9_AND_10
+			if (cudaRuntimeGetVersion) {
+				int runtimeVersion = 0;
+				cudaRuntimeGetVersion(&runtimeVersion);
+				// cudaGetDeviceProperties fills out an unversioned structure that changed between cuda9 and cuda 10
+				getBasicProps = (runtimeVersion >= 10 * 1000) ? cuda10_getBasicProps : cuda9_getBasicProps;
+				cudaGetDevicePropertiesOfIndeterminateStructure = (cuda_DevicePropBuf_int)dlsym(cuda_handle, "cudaGetDeviceProperties");
+			}
+		#else
 			cudaGetDeviceProperties = (cuda_DeviceProp_int) dlsym(cuda_handle, "cudaGetDeviceProperties");
+		#endif
 		}
 	}
 
@@ -998,13 +1262,15 @@ main( int argc, const char** argv)
 	// that's ok it just means there is no dynamic info.
 	//
 	if ( ! opt_simulate && nvml_handle) {
-		nvmlInit = (nvml_void) dlsym(nvml_handle, "nvmlInit"); // (void)
+		nvmlInit = (nvml_void) dlsym(nvml_handle, "nvmlInit_v2"); // (void)
 		if ( ! nvmlInit) {
 			have_nvml = 0;
 		} else {
 			have_nvml = 1;
 			nvmlShutdown = (nvml_void) dlsym(nvml_handle, "nvmlShutdown"); // (void)
-			nvmlDeviceGetHandleByIndex = (nvml_unsigned_int_Device) dlsym(nvml_handle, "nvmlDeviceGetHandleByIndex"); //(unsigned int, nvmlUnit_t *)
+			nvmlDeviceGetHandleByIndex = (nvml_unsigned_int_Device) dlsym(nvml_handle, "nvmlDeviceGetHandleByIndex_v2"); //(unsigned int, nvmlUnit_t *)
+			nvmlDeviceGetHandleByPciBusId = (nvml_charptr_Device) dlsym(nvml_handle, "nvmlDeviceGetHandleByPciBusId_v2");
+			nvmlDeviceGetHandleByUUID = (nvml_ucharptr_Device) dlsym(nvml_handle, "nvmlDeviceGetHandleByUUID");
 			//nvmlDeviceGetDisplayMode = (nvml_Device_EnableState) dlsym(nvml_handle, "nvmlDeviceGetDisplayMode"); //(nvmlDevice_t, nvmlEnableState_t *)
 			//nvmlDeviceGetPersistenceMode = (nvml_Device_EnableState) dlsym(nvml_handle, "nvmlDeviceGetPersistenceMode"); //(nvmlDevice_t, nvmlEnableState_t *);
 			//nvmlDeviceGetEccMode = (nvml_Device_EnableState_EnableState) dlsym(nvml_handle, "nvmlDeviceGetEccMode"); //(nvmlDevice_t, nvmlEnableState_t *, nvmlEnableState_t *);
@@ -1069,6 +1335,54 @@ main( int argc, const char** argv)
 		sprintf(prefix,"%s%d",opt_pre,dev);
 		KVP& props = dev_props.find(prefix)->second;
 
+	#ifdef CUDA_9_AND_10
+		if (opt_basic && getBasicProps) {
+			int driverVersion=0, runtimeVersion=0;
+
+			//printf("%sDev=%d\n",  prefix,dev);
+
+			if (cudaDriverGetVersion) {
+				cudaDriverGetVersion(&driverVersion);
+				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
+			}
+			if (cudaRuntimeGetVersion) {
+				cudaRuntimeGetVersion(&runtimeVersion);
+				if (runtimeVersion) {
+					props["RuntimeVersion"] = Format("%d.%d", runtimeVersion/1000, runtimeVersion%100);
+				}
+			}
+
+			if (dev < g_cl_cCuda) {
+				cl_device_id did = cl_gpu_ids[g_cl_ixFirstCuda + dev];
+				std::string fullver;
+				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VERSION, fullver)) {
+					size_t ix = fullver.find_first_of(' '); // skip OpenCL
+					std::string vervend = fullver.substr(ix+1);
+					ix = vervend.find_first_of(' '); 
+					std::string ver = vervend.substr(0, ix); // split version from vendor info.
+					props["OpenCLVersion"] = ver;
+				}
+			}
+
+			BasicProps bp;
+			if (cudaSuccess == getBasicProps(dev, &bp)) {
+				props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
+				/*if (bp.hasUuid())*/ props["DeviceUuid"] = Format("\"%s\"", bp.printUuid());
+				if (bp.pciId[0]) props["DevicePciBusId"] = Format("\"%s\"", bp.pciId);
+				props["Capability"] = Format("%d.%d", bp.major, bp.minor);
+				props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
+				props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
+				if (opt_extra) {
+					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
+					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
+					if (bp.major <= 6) {
+						props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.major, bp.minor));
+					} else {
+						// CoresPerCU not meaningful for Architecture 7 and later
+					}
+				}
+			}
+	#else
 		if (opt_basic && cudaGetDeviceProperties) {
 			cudaDeviceProp deviceProp;
 			int driverVersion=0, runtimeVersion=0;
@@ -1108,6 +1422,7 @@ main( int argc, const char** argv)
 				}
 			}
 
+	#endif // CUDA_9_AND_10
 		} else if (opt_basic && ocl_handle) {
 			cl_device_id did = cl_gpu_ids[dev];
 
@@ -1197,6 +1512,7 @@ main( int argc, const char** argv)
 	if ( !have_nvml ) return 1;
 
 	// everything after here is dynamic properties
+	bool future_lookup = false; // TODO: look NVML devices by UUID or by PciBusId
 
 	for (dev = 0; dev < deviceCount; dev++) {
 
@@ -1208,7 +1524,13 @@ main( int argc, const char** argv)
 		sprintf(prefix,"%s%d",opt_pre,dev);
 		// get a handle to this device
 		nvmlDevice_t device;
-		if (nvmlDeviceGetHandleByIndex(dev,&device) != NVML_SUCCESS) {
+		if (future_lookup) {
+			// call  the alternate nvmlDeviceGetHandle functions to make fedora shut up
+			// TODO: get handle by PCI id or by GUID since NVML index isn't guaranteed to match driver index
+			if (nvmlDeviceGetHandleByPciBusId) nvmlDeviceGetHandleByPciBusId("domain:bus:device.function", &device);
+			unsigned char uuid[16]; memset(uuid, 0, sizeof(uuid));
+			if (nvmlDeviceGetHandleByUUID) nvmlDeviceGetHandleByUUID(uuid, &device);
+		} else if (nvmlDeviceGetHandleByIndex(dev,&device) != NVML_SUCCESS) {
 			continue;
 		}
 
