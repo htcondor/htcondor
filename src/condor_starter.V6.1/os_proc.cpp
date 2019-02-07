@@ -186,29 +186,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		args.AppendArg(getArgv0());
 	}
 	
-		// Support USER_JOB_WRAPPER parameter...
-	char *wrapper = NULL;
-	if( (wrapper=param("USER_JOB_WRAPPER")) ) {
-
-			// make certain this wrapper program exists and is executable
-		if( access(wrapper,X_OK) < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "Cannot find/execute USER_JOB_WRAPPER file %s\n",
-					 wrapper );
-			free( wrapper );
-			job_not_started = true;
-			return 0;
-		}
-		has_wrapper = true;
-			// Now, we've got a valid wrapper.  We want that to become
-			// "JobName" so we exec it directly, and we want to put
-			// what was the JobName (with the full path) as the first
-			// argument to the wrapper
-		args.AppendArg(JobName.Value());
-		JobName = wrapper;
-		free(wrapper);
-	}
-	
 		// Support USE_PARROT 
 	bool use_parrot = false;
 	if( JobAd->LookupBool( ATTR_USE_PARROT, use_parrot) ) {
@@ -392,21 +369,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		nice_inc = 0;
 	}
 
-		// in the below dprintfs, we want to skip past argv[0], which
-		// is sometimes condor_exec, in the Args string. 
-
-	MyString args_string;
-	args.GetArgsStringForDisplay(&args_string, 1);
-	if( has_wrapper ) { 
-			// print out exactly what we're doing so folks can debug
-			// it, if they need to.
-		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.Value(), 
-				 args_string.Value() );
-	} else {
-		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.Value(),
-				 args_string.Value() );
-	}
-
 		// Grab the full environment back out of the Env object 
 	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_string;
@@ -561,6 +523,44 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
 	}
+		// Support USER_JOB_WRAPPER parameter...
+	char *wrapper = NULL;
+	if( (wrapper=param("USER_JOB_WRAPPER")) ) {
+
+			// make certain this wrapper program exists and is executable
+		if( access(wrapper,X_OK) < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "Cannot find/execute USER_JOB_WRAPPER file %s\n",
+					 wrapper );
+			free( wrapper );
+			job_not_started = true;
+			return 0;
+		}
+		has_wrapper = true;
+			// Now, we've got a valid wrapper.  We want that to become
+			// "JobName" so we exec it directly, and we want to put
+			// what was the JobName (with the full path) as the first
+			// argument to the wrapper
+		args.InsertArg(JobName.Value(),0);
+		JobName = wrapper;
+		free(wrapper);
+	}
+		// in the below dprintfs, we want to skip past argv[0], which
+		// is sometimes condor_exec, in the Args string. 
+
+	MyString args_string;
+	args.GetArgsStringForDisplay(&args_string, 1);
+	if( has_wrapper ) { 
+			// print out exactly what we're doing so folks can debug
+			// it, if they need to.
+		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.Value(), 
+				 args_string.Value() );
+	} else {
+		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.Value(),
+				 args_string.Value() );
+	}
+
+	
 
 	set_priv ( priv );
 
