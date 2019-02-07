@@ -62,10 +62,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item GPU resource monitoring is no longer enabled by default after reports
-indicating excessive CPU usage.  GPU resource monitoring may be enable by
-adding `use feature: GPUsMonitor' to the HTCondor configuration.
+\item GPU resource monitoring is no longer enabled by default after we
+received reports indicating excessive CPU usage.  We believe we've fixed
+the problem, but would like to get updated reports from users who were
+previously affected.  To enable (the patched) GPU resource monitoring,
+add `use feature: GPUsMonitor' to the HTCondor configuration.  Thank you.
+
 \Ticket{6857}
+
+\item Discovered a bug in DAGMan where graph metrics reporting could sometimes 
+send the \condor{dagman} process into an infinite loop. We worked around this 
+by disabling graph metrics reporting by default, via the new  
+\Macro{DAGMAN\_REPORT\_GRAPH\_METRICS} configuration knob.
+\Ticket{6896}
 
 \end{itemize}
 
@@ -82,7 +91,24 @@ adding `use feature: GPUsMonitor' to the HTCondor configuration.
 
 \begin{itemize}
 
-\item None.
+\item Fixed bug that prevented HTCondor on Windows from running jobs in the
+default configuration when started as a service.
+\Ticket{6853}
+
+\item \Condor{q} -autocluster data is now much more up-to-date.
+\Ticket{6833}
+
+\item Improved efficiency of negotiation code in the \Condor{schedd}.
+\Ticket{6834}
+
+\item Made Collector.locateAll() method more efficient in the Python
+bindings.
+\Ticket{6831}
+
+\item The Job Router no longer sets an incorrect \AttrNI{User} job
+attribute when routing a job between two \Condor{schedd}s with
+different values for configuration parameter \MacroNI{UID\_DOMAIN}.
+\Ticket{6856}
 
 \end{itemize}
 
