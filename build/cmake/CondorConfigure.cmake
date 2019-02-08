@@ -340,6 +340,9 @@ if( NOT WINDOWS)
 	find_multiple( "resolv" HAVE_LIBRESOLV )
     find_multiple ("dl" HAVE_LIBDL )
 	find_library( HAVE_LIBLTDL "ltdl" )
+	find_multiple( "cares" HAVE_LIBCARES )
+	# On RedHat6, there's a libcares19 package, but no libcares
+	find_multiple( "cares19" HAVE_LIBCARES19 )
 	find_multiple( "pam" HAVE_LIBPAM )
 	find_program( BISON bison )
 	find_program( FLEX flex )
@@ -940,6 +943,7 @@ else ()
     else()
         add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
     endif()
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.14.1)
 
         if (LINUX)
@@ -1071,6 +1075,10 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 if (HAVE_EXT_OPENSSL)
 	add_definitions(-DWITH_OPENSSL) # used only by SOAP
 endif(HAVE_EXT_OPENSSL)
+
+if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
+	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
+endif()
 
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.

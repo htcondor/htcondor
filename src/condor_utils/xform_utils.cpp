@@ -252,11 +252,7 @@ XFormHash::XFormHash()
 	: LiveProcessString(NULL), LiveRowString(NULL), LiveStepString(NULL)
 	, LiveRulesFileMacroDef(NULL), LiveIteratingMacroDef(NULL)
 {
-	memset(&LocalMacroSet, 0, sizeof(LocalMacroSet));
-	LocalMacroSet.options = CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX;
-	LocalMacroSet.apool = ALLOCATION_POOL();
-	LocalMacroSet.sources = std::vector<const char*>();
-	LocalMacroSet.errors = new CondorError();
+	LocalMacroSet.initialize();
 	setup_macro_defaults();
 }
 

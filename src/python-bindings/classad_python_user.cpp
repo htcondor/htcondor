@@ -234,7 +234,7 @@ python_invoke (const char *                 name,
         boost::python::object pyFunc = module.attr(functionName.c_str());
         return python_invoke_internal(pyFunc, arguments, state, result);
     }
-    catch (boost::python::error_already_set)
+    catch (boost::python::error_already_set&)
     {
         result.SetErrorValue();
         if (PyErr_Occurred())

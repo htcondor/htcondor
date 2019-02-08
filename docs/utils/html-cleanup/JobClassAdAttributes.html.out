@@ -1,0 +1,1857 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head><title>Job ClassAd Attributes</title>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+<meta content="TeX4ht (http://www.tug.org/tex4ht/)" name="generator"/>
+<meta content="TeX4ht (http://www.tug.org/tex4ht/)" name="originator"/>
+<!-- 3,sec-filename,next,info,NoFonts,fonts,html -->
+<meta content="ref.tex" name="src"/>
+<link href="ref.css" rel="stylesheet" type="text/css"/>
+</head><body>
+      <h1> Job ClassAd Attributes</h1>
+<dl class="description"><dt class="description">
+<code>Absent</code>: </dt><dd class="description">Boolean set to true <code>True</code> if the ad is absent.
+
+
+</dd><dt class="description">
+<code>AcctGroup</code>: </dt><dd class="description">The accounting group name, as set in the submit description file via the <b>accounting_group</b>
+     command. This attribute is only present if an accounting group was requested by the submission. See
+     section <a href="UserPrioritiesandNegotiation.html#x34-2390003.6.7">3.6.7<!--tex4ht:ref: sec:group-accounting --></a> for more information about accounting groups.
+
+
+</dd><dt class="description">
+<code>AcctGroupUser</code>: </dt><dd class="description">The user name associated with the accounting group. This attribute is only present if an
+     accounting group was requested by the submission.
+
+
+</dd><dt class="description">
+<code>AllRemoteHosts</code>: </dt><dd class="description">String containing a comma-separated list of all the remote machines running a parallel or
+     mpi universe job.
+
+
+</dd><dt class="description">
+<code>Args</code>: </dt><dd class="description">A string representing the command line arguments passed to the job, when those arguments are
+     specified using the <span class="emph">old</span> syntax, as specified in section <a href="Condorsubmit.html#x149-108400012">12<!--tex4ht:ref: man-condor-submit-arguments --></a>.
+
+
+</dd><dt class="description">
+<code>Arguments</code>: </dt><dd class="description">A string representing the command line arguments passed to the job, when those arguments are
+     specified using the <span class="emph">new</span> syntax, as specified in section <a href="Condorsubmit.html#x149-108400012">12<!--tex4ht:ref: man-condor-submit-arguments --></a>.
+
+
+</dd><dt class="description">
+<code>BatchQueue</code>: </dt><dd class="description">For grid universe jobs destined for PBS, LSF or SGE, the name of the queue in the remote
+     batch system.
+
+
+</dd><dt class="description">
+<code>BlockReadKbytes</code>: </dt><dd class="description">The integer number of KiB read from disk for this job.
+
+
+</dd><dt class="description">
+<code>BlockReads</code>: </dt><dd class="description">The integer number of disk blocks read for this job.
+
+
+</dd><dt class="description">
+<code>BlockWriteKbytes</code>: </dt><dd class="description">The integer number of KiB written to disk for this job.
+
+
+</dd><dt class="description">
+<code>BlockWrites</code>: </dt><dd class="description">The integer number of blocks written to disk for this job.
+
+
+</dd><dt class="description">
+<code>BoincAuthenticatorFile</code>: </dt><dd class="description">Used for grid type boinc jobs; a string taken from the definition of the submit
+     description file command <b>boinc_authenticator_file</b>. Defines the path and file name of the file
+     containing the authenticator string to use to authenticate to the BOINC service.
+
+
+</dd><dt class="description">
+<code>CkptArch</code>: </dt><dd class="description">String describing the architecture of the machine this job executed on at the time it last produced
+     a checkpoint. If the job has never produced a checkpoint, this attribute is <code>undefined</code>.
+
+
+</dd><dt class="description">
+<code>CkptOpSys</code>: </dt><dd class="description">String describing the operating system of the machine this job executed on at the time it last
+     produced a checkpoint. If the job has never produced a checkpoint, this attribute is <code>undefined</code>.
+
+
+
+
+</dd><dt class="description">
+<code>ClusterId</code>: </dt><dd class="description">Integer cluster identifier for this job. A cluster is a group of jobs that were submitted together.
+     Each job has its own unique job identifier within the cluster, but shares a common cluster identifier.
+     The value changes each time a job or set of jobs are queued for execution under HTCondor.
+
+
+</dd><dt class="description">
+<code>Cmd</code>: </dt><dd class="description">The path to and the file name of the job to be executed.
+
+
+</dd><dt class="description">
+<code>CommittedTime</code>: </dt><dd class="description">The number of seconds of wall clock time that the job has been allocated a machine, excluding the
+     time spent on run attempts that were evicted without a checkpoint. Like <code>RemoteWallClockTime</code>, this
+     includes time the job spent in a suspended state, so the total committed wall time spent running
+     is
+                                                                                         
+
+                                                                                         
+     <pre><tspan font-family="ectt" font-size="1000">CommittedTime</tspan><tspan font-family="ectt" font-size="1000"> -</tspan><tspan font-family="ectt" font-size="1000"> CommittedSuspensionTime</tspan></pre>
+<!--l. 133--><p class="nopar">
+</p></dd><dt class="description">
+<code>CommittedSlotTime</code>: </dt><dd class="description">This attribute is identical to <code>CommittedTime</code> except that the time is multiplied by
+     the <code>SlotWeight</code> of the machine(s) that ran the job. This relies on <code>SlotWeight</code> being listed in
+     <code>SYSTEM_JOB_MACHINE_ATTRS</code> .
+
+
+</dd><dt class="description">
+<code>CommittedSuspensionTime</code>: </dt><dd class="description">A running total of the number of seconds the job has spent in suspension during time
+     in which the job was not evicted without a checkpoint. This number is updated when the job is checkpointed
+     and when it exits.
+
+
+</dd><dt class="description">
+<code>CompletionDate</code>: </dt><dd class="description">The time when the job completed, or the value 0 if the job has not yet completed. Measured in
+     the number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+
+</dd><dt class="description">
+<code>ConcurrencyLimits</code>: </dt><dd class="description">A string list, delimited by commas and space characters. The items in the list
+     identify named resources that the job requires. The value can be a ClassAd expression which, when
+     evaluated in the context of the job ClassAd and a matching machine ClassAd, results in a string
+     list.
+
+
+</dd><dt class="description">
+<code>CumulativeSlotTime</code>: </dt><dd class="description">This attribute is identical to <code>RemoteWallClockTime</code> except that the time is multiplied by
+     the <code>SlotWeight</code> of the machine(s) that ran the job. This relies on <code>SlotWeight</code> being listed in
+     <code>SYSTEM_JOB_MACHINE_ATTRS</code> .
+
+
+</dd><dt class="description">
+<code>CumulativeSuspensionTime</code>: </dt><dd class="description">A running total of the number of seconds the job has spent in suspension for the life
+     of the job.
+
+
+</dd><dt class="description">
+<code>CumulativeTransferTime</code>: </dt><dd class="description">The total time, in seconds, that condor has spent transferring the input and output
+     sandboxes for the life of the job.
+
+
+</dd><dt class="description">
+<code>CurrentHosts</code>: </dt><dd class="description">The number of hosts in the claimed state, due to this job.
+
+
+</dd><dt class="description">
+<code>DAGManJobId</code>: </dt><dd class="description">For a DAGMan node job only, the <code>ClusterId</code> job ClassAd attribute of the <i>condor_dagman</i> job
+     which is the parent of this node job. For nested DAGs, this attribute holds only the <code>ClusterId</code> of the job’s
+     immediate parent.
+
+
+</dd><dt class="description">
+<code>DAGParentNodeNames</code>: </dt><dd class="description">For a DAGMan node job only, a comma separated list of each <i>JobName</i> which is a
+     parent node of this job’s node. This attribute is passed through to the job via the <i>condor_submit</i>
+     command line, if it does not exceed the line length defined with <code>_POSIX_ARG_MAX</code>. For example, if
+     a node job has two parents with <i>JobName</i>s B and C, the <i>condor_submit</i> command line will
+     contain
+                                                                                         
+
+                                                                                         
+     <pre><tspan font-family="ectt" font-size="1000"> </tspan><tspan font-family="ectt" font-size="1000"> -append</tspan><tspan font-family="ectt" font-size="1000"> +DAGParentNodeNames=B,C</tspan></pre>
+<!--l. 220--><p class="nopar">
+</p></dd><dt class="description">
+<code>DAGManNodesLog</code>: </dt><dd class="description">For a DAGMan node job only, gives the path to an event log used exclusively by DAGMan to
+     monitor the state of the DAG’s jobs. Events are written to this log file in addition to any log file specified in
+     the job’s submit description file.
+
+
+</dd><dt class="description">
+<code>DAGManNodesMask</code>: </dt><dd class="description">For a DAGMan node job only, a comma-separated list of the event codes that should be written
+     to the log specified by <code>DAGManNodesLog</code>, known as the auxiliary log. All events not specified in the
+     <code>DAGManNodesMask</code> string are not written to the auxiliary event log. The value of this attribute is determined
+     by DAGMan, and it is passed to the job via the <i>condor_submit</i> command line. By default, the following
+     events are written to the auxiliary job log:
+         <ul class="itemize1">
+<li class="itemize"><code>Submit</code>, event code is 0
+         </li>
+<li class="itemize"><code>Execute</code>, event code is 1
+         </li>
+<li class="itemize"><code>Executable error</code>, event code is 2
+         </li>
+<li class="itemize"><code>Job evicted</code>, event code is 4
+         </li>
+<li class="itemize"><code>Job terminated</code>, event code is 5
+         </li>
+<li class="itemize"><code>Shadow exception</code>, event code is 7
+         </li>
+<li class="itemize"><code>Job aborted</code>, event code is 9
+         </li>
+<li class="itemize"><code>Job suspended</code>, event code is 10
+         </li>
+<li class="itemize"><code>Job unsuspended</code>, event code is 11
+         </li>
+<li class="itemize"><code>Job held</code>, event code is 12
+                                                                                         
+
+                                                                                         
+         </li>
+<li class="itemize"><code>Job released</code>, event code is 13
+         </li>
+<li class="itemize"><code>Post script terminated</code>, event code is 16
+         </li>
+<li class="itemize"><code>Globus submit</code>, event code is 17
+         </li>
+<li class="itemize"><code>Grid submit</code>, event code is 27</li></ul>
+<!--l. 259--><p class="noindent">If <code>DAGManNodesLog</code> is not defined, it has no effect. The value of <code>DAGManNodesMask</code> does not affect events
+     recorded in the job event log file referred to by <code>UserLog</code>.
+
+
+</p></dd><dt class="description">
+<code>DelegateJobGSICredentialsLifetime</code>: </dt><dd class="description">An integer that specifies the maximum number of seconds for which
+     delegated proxies should be valid. The default behavior is determined by the configuration setting
+     <code>DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME</code> , which defaults to one day. A value of 0 indicates that the
+     delegated proxy should be valid for as long as allowed by the credential used to create the proxy. This setting
+     currently only applies to proxies delegated for non-grid jobs and HTCondor-C jobs. It does not currently apply
+     to globus grid jobs, which always behave as though this setting were 0. This setting has no effect if the
+     configuration setting <code>DELEGATE_JOB_GSI_CREDENTIALS</code>  is false, because in that case the job proxy is copied
+     rather than delegated.
+
+
+</dd><dt class="description">
+<code>DiskUsage</code>: </dt><dd class="description">Amount of disk space (KiB) in the HTCondor execute directory on the execute machine that this job
+     has used. An initial value may be set at the job’s request, placing into the job’s submit description file a
+     setting such as
+                                                                                         
+
+                                                                                         
+     <pre><tspan font-family="ectt" font-size="1000"> </tspan><tspan font-family="ectt" font-size="1000"> #</tspan><tspan font-family="ectt" font-size="1000"> 1</tspan><tspan font-family="ectt" font-size="1000"> megabyte</tspan><tspan font-family="ectt" font-size="1000"> initial</tspan><tspan font-family="ectt" font-size="1000"> value</tspan><tspan font-family="ectt" font-size="1000"> </tspan><br/>
+<tspan font-family="ectt" font-size="1000"> </tspan><tspan font-family="ectt" font-size="1000"> +DiskUsage</tspan><tspan font-family="ectt" font-size="1000"> =</tspan><tspan font-family="ectt" font-size="1000"> 1024</tspan></pre>
+<!--l. 290--><p class="nopar"> <b>vm</b> universe jobs will default to an initial value of the disk image size. If not initialized by the job, non-<b>vm</b>
+     universe jobs will default to an initial value of the sum of the job’s executable and all input
+     files.
+
+
+</p></dd><dt class="description">
+<code>EC2AccessKeyId</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_access_key_id</b>. Defines the path and file name of the file containing the EC2 Query API’s
+     access key.
+
+
+</dd><dt class="description">
+<code>EC2AmiID</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file command
+     <b>ec2_ami_id</b>. Identifies the machine image of the instance.
+
+
+</dd><dt class="description">
+<code>EC2BlockDeviceMapping</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description
+     file command <b>ec2_block_device_mapping</b>. Defines the map from block device names to kernel device
+     names for the instance.
+
+
+</dd><dt class="description">
+<code>EC2ElasticIp</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_elastic_ip</b>. Specifies an Elastic IP address to associate with the instance.
+
+
+</dd><dt class="description">
+<code>EC2IamProfileArn</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_iam_profile_arn</b>. Specifies the IAM (instance) profile to associate with this
+     instance.
+
+
+</dd><dt class="description">
+<code>EC2IamProfileName</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_iam_profile_name</b>. Specifies the IAM (instance) profile to associate with this
+     instance.
+                                                                                         
+
+                                                                                         
+
+
+</dd><dt class="description">
+<code>EC2InstanceName</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string set for the job once the instance starts running, as
+     assigned by the EC2 service, that represents the unique ID assigned to the instance by the EC2
+     service.
+
+
+</dd><dt class="description">
+<code>EC2InstanceName</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string set for the job once the instance starts running, as
+     assigned by the EC2 service, that represents the unique ID assigned to the instance by the EC2
+     service.
+
+
+</dd><dt class="description">
+<code>EC2InstanceType</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_instance_type</b>. Specifies a service-specific instance type.
+
+
+</dd><dt class="description">
+<code>EC2KeyPair</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file command
+     <b>ec2_keypair</b>. Defines the key pair associated with the EC2 instance.
+
+
+</dd><dt class="description">
+<code>EC2ParameterNames</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_parameter_names</b>. Contains a space or comma separated list of the names of additional
+     parameters to pass when instantiating an instance.
+
+
+</dd><dt class="description">
+<code>EC2SpotPrice</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_spot_price</b>. Defines the maximum amount per hour a job submitter is willing to pay to run
+     this job.
+
+
+</dd><dt class="description">
+<code>EC2SpotRequestID</code>: </dt><dd class="description">Used for grid type ec2 jobs; identifies the spot request HTCondor made on behalf of this
+     job.
+
+
+</dd><dt class="description">
+<code>EC2StatusReasonCode</code>: </dt><dd class="description">Used for grid type ec2 jobs; reports the reason for the most recent EC2-level state
+     transition. Can be used to determine if a spot request was terminated due to a rise in the spot
+     price.
+
+
+</dd><dt class="description">
+<code>EC2TagNames</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description
+     file command <b>ec2_tag_names</b>. Defines the set, and case, of tags associated with the EC2
+     instance.
+
+
+</dd><dt class="description">
+<code>EC2KeyPairFile</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_keypair_file</b>. Defines the path and file name of the file into which to write the SSH key used
+     to access the image, once it is running.
+
+
+</dd><dt class="description">
+<code>EC2RemoteVirtualMachineName</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string set for the job once the instance starts
+     running, as assigned by the EC2 service, that represents the host name upon which the instance runs, such
+     that the user can communicate with the running instance.
+
+
+</dd><dt class="description">
+<code>EC2SecretAccessKey</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_secret_access_key</b>. Defines that path and file name of the file containing the EC2 Query
+     API’s secret access key.
+
+
+</dd><dt class="description">
+<code>EC2SecurityGroups</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_security_groups</b>. Defines the list of EC2 security groups which should be associated with
+     the job.
+
+
+</dd><dt class="description">
+<code>EC2SecurityIDs</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_security_ids</b>. Defines the list of EC2 security group IDs which should be associated with the
+     job.
+
+
+</dd><dt class="description">
+<code>EC2UserData</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description
+     file command <b>ec2_user_data</b>. Defines a block of data that can be accessed by the virtual
+     machine.
+
+
+</dd><dt class="description">
+<code>EC2UserDataFile</code>: </dt><dd class="description">Used for grid type ec2 jobs; a string taken from the definition of the submit description file
+     command <b>ec2_user_data_file</b>. Specifies a path and file name of a file containing data that can be accessed
+     by the virtual machine.
+
+
+</dd><dt class="description">
+<code>EmailAttributes</code>: </dt><dd class="description">A string containing a comma-separated list of job ClassAd attributes. For each attribute name
+     in the list, its value will be included in the e-mail notification upon job completion.
+
+
+</dd><dt class="description">
+<code>EncryptExecuteDirectory</code>: </dt><dd class="description">A boolean value taken from the submit description file command
+     <b>encrypt_execute_directory</b>. It specifies if HTCondor should encrypt the remote scratch directory on the
+     machine where the job executes.
+
+
+</dd><dt class="description">
+<code>EnteredCurrentStatus</code>: </dt><dd class="description">An integer containing the epoch time of when the job entered into its current status So for
+     example, if the job is on hold, the ClassAd expression
+                                                                                         
+
+                                                                                         
+     <pre><tspan font-family="ectt" font-size="1000"> </tspan><tspan font-family="ectt" font-size="1000"> </tspan><tspan font-family="ectt" font-size="1000"> </tspan><tspan font-family="ectt" font-size="1000"> time()</tspan><tspan font-family="ectt" font-size="1000"> -</tspan><tspan font-family="ectt" font-size="1000"> EnteredCurrentStatus</tspan></pre>
+<!--l. 526--><p class="nopar"> will equal the number of seconds that the job has been on hold.
+
+
+</p></dd><dt class="description">
+<code>Env</code>: </dt><dd class="description">A string representing the environment variables passed to the job, when those arguments are specified using
+     the <span class="emph">old</span> syntax, as specified in section <a href="Condorsubmit.html#x149-108400012">12<!--tex4ht:ref: man-condor-submit-environment --></a>.
+
+
+</dd><dt class="description">
+<code>Environment</code>: </dt><dd class="description">A string representing the environment variables passed to the job, when those arguments are
+     specified using the <span class="emph">new</span> syntax, as specified in section <a href="Condorsubmit.html#x149-108400012">12<!--tex4ht:ref: man-condor-submit-environment --></a>.
+
+
+</dd><dt class="description">
+<code>ExecutableSize</code>: </dt><dd class="description">Size of the executable in KiB.
+
+
+</dd><dt class="description">
+<code>ExitBySignal</code>: </dt><dd class="description">An attribute that is <code>True</code> when a user job exits via a signal and <code>False</code> otherwise. For
+     some grid universe jobs, how the job exited is unavailable. In this case, <code>ExitBySignal</code> is set to
+     <code>False</code>.
+
+
+</dd><dt class="description">
+<code>ExitCode</code>: </dt><dd class="description">When a user job exits by means other than a signal, this is the exit return code of the user job.
+     For some grid universe jobs, how the job exited is unavailable. In this case, <code>ExitCode</code> is set to
+     0.
+
+
+</dd><dt class="description">
+<code>ExitSignal</code>: </dt><dd class="description">When a user job exits by means of an unhandled signal, this attribute takes on the numeric value of
+     the signal. For some grid universe jobs, how the job exited is unavailable. In this case, <code>ExitSignal</code> will be
+     undefined.
+
+
+</dd><dt class="description">
+<code>ExitStatus</code>: </dt><dd class="description">The way that HTCondor previously dealt with a job’s exit status. This attribute should no longer be
+     used. It is not always accurate in heterogeneous pools, or if the job exited with a signal. Instead, see the
+     attributes: <code>ExitBySignal</code>, <code>ExitCode</code>, and <code>ExitSignal</code>.
+
+
+</dd><dt class="description">
+<code>GceAuthFile</code>: </dt><dd class="description">Used for grid type gce jobs; a string taken from the definition of the submit description file command
+     <b>gce_auth_file</b>. Defines the path and file name of the file containing authorization credentials to use the
+     GCE service.
+
+
+</dd><dt class="description">
+<code>GceImage</code>: </dt><dd class="description">Used for grid type gce jobs; a string taken from the definition of the submit description file command
+     <b>gce_image</b>. Identifies the machine image of the instance.
+
+
+</dd><dt class="description">
+<code>GceJsonFile</code>: </dt><dd class="description">Used for grid type gce jobs; a string taken from the definition of the submit description file command
+     <b>gce_json_file</b>. Specifies the path and file name of a file containing a set of JSON object members that
+     should be added to the instance description submitted to the GCE service.
+
+
+</dd><dt class="description">
+<code>GceMachineType</code>: </dt><dd class="description">Used for grid type gce jobs; a string taken from the definition of the submit description file
+     command <b>gce_machine_type</b>. Specifies the hardware profile that should be used for a GCE
+     instance.
+
+
+</dd><dt class="description">
+<code>GceMetadata</code>: </dt><dd class="description">Used for grid type gce jobs; a string taken from the definition of the submit description file
+     command <b>gce_metadata</b>. Defines a set of name/value pairs that can be accessed by the virtual
+     machine.
+
+
+</dd><dt class="description">
+<code>GceMetadataFile</code>: </dt><dd class="description">Used for grid type gce jobs; a string taken from the definition of the submit description file
+     command <b>gce_metadata_file</b>. Specifies a path and file name of a file containing a set of name/value pairs
+     that can be accessed by the virtual machine.
+
+
+</dd><dt class="description">
+<code>GcePreemptible</code>: </dt><dd class="description">Used for grid type gce jobs; a boolean taken from the definition of the submit description file
+     command <b>gce_preemptible</b>. Specifies whether the virtual machine instance created in GCE should be
+     preemptible.
+
+
+</dd><dt class="description">
+<code>GlobalJobId</code>: </dt><dd class="description">A string intended to be a unique job identifier within a pool. It currently contains
+     the <i>condor_schedd</i> daemon <code>Name</code> attribute, a job identifier composed of attributes <code>ClusterId</code>
+     and <code>ProcId</code> separated by a period, and the job’s submission time in seconds since 1970-01-01
+     00:00:00 UTC, separated by <span class="obeylines-h"><span class="verb">#</span></span> characters. The value <span class="obeylines-h"><span class="verb">submit.example.com#152.3#1358363336</span></span> is an
+     example.
+
+
+</dd><dt class="description">
+<code>GridJobStatus</code>: </dt><dd class="description">A string containing the job’s status as reported by the remote job management system.
+
+
+</dd><dt class="description">
+<code>GridResource</code>: </dt><dd class="description">A string defined by the right hand side of the the submit description file command
+     <b>grid_resource</b>. It specifies the target grid type, plus additional parameters specific to the grid
+     type.
+
+
+</dd><dt class="description">
+<code>HoldKillSig</code>: </dt><dd class="description">Currently only for scheduler and local universe jobs, a string containing a name of a signal to be sent
+     to the job if the job is put on hold.
+
+
+</dd><dt class="description">
+<code>HoldReason</code>: </dt><dd class="description">A string containing a human-readable message about why a job is on hold. This is the message that
+     will be displayed in response to the command <span class="obeylines-h"><span class="verb">condor_q -hold</span></span>. It can be used to determine if a job should be
+     released or not.
+
+
+</dd><dt class="description">
+<code>HoldReasonCode</code>: </dt><dd class="description">An integer value that represents the reason that a job was put on hold.
+     <div class="center">
+<!--l. 709--><p class="noindent">
+<!--l. 711--></p><div class="longtable"> <table><colgroup id="TBL-35-1g"><col id="TBL-35-1"/><col id="TBL-35-2"/></colgroup><colgroup id="TBL-35-3g"><col id="TBL-35-3"/></colgroup>
+<tr id="TBL-35-1-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-1-1" style="white-space:wrap; text-align:left;">
+<!--l. 711--><p class="noindent"><span class="emph">Integer Code</span></p></td><td class="td11" id="TBL-35-1-2" style="white-space:wrap; text-align:left;">
+<!--l. 711--><p class="noindent"><span class="emph">Reason for Hold</span> </p></td><td class="td11" id="TBL-35-1-3" style="white-space:wrap; text-align:left;">
+<!--l. 711--><p class="noindent"><span class="emph">HoldReasonSubCode</span> </p></td>
+</tr><tr id="TBL-35-2-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-2-1" style="white-space:wrap; text-align:left;">
+<!--l. 711--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-3-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-3-1" style="white-space:wrap; text-align:left;"> </td><td class="td11" id="TBL-35-3-2" style="white-space:wrap; text-align:left;"> </td><td class="td11" id="TBL-35-3-3" style="white-space:wrap; text-align:left;">
+</td></tr>
+<tr id="TBL-35-9-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-9-1" style="white-space:wrap; text-align:left;">
+<!--l. 714--><p class="noindent">1                </p></td><td class="td11" id="TBL-35-9-2" style="white-space:wrap; text-align:left;">
+<!--l. 714--><p class="noindent">The user put the job on hold with <i>condor_hold</i>.             </p></td><td class="td11" id="TBL-35-9-3" style="white-space:wrap; text-align:left;">
+<!--l. 714--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-10-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-10-1" style="white-space:wrap; text-align:left;">
+<!--l. 715--><p class="noindent">2                </p></td><td class="td11" id="TBL-35-10-2" style="white-space:wrap; text-align:left;">
+<!--l. 715--><p class="noindent">Globus middleware reported an error.                           </p></td><td class="td11" id="TBL-35-10-3" style="white-space:wrap; text-align:left;">
+<!--l. 716--><p class="noindent">The GRAM error number.</p></td>
+</tr><tr id="TBL-35-11-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-11-1" style="white-space:wrap; text-align:left;">
+<!--l. 717--><p class="noindent">3                </p></td><td class="td11" id="TBL-35-11-2" style="white-space:wrap; text-align:left;">
+<!--l. 717--><p class="noindent">The  <code>PERIODIC_HOLD</code> expression  evaluated  to  <code>True</code>.  Or,
+<code>ON_EXIT_HOLD</code> was true                                              </p></td><td class="td11" id="TBL-35-11-3" style="white-space:wrap; text-align:left;">
+<!--l. 717--><p class="noindent">User Specified                </p></td>
+</tr><tr id="TBL-35-12-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-12-1" style="white-space:wrap; text-align:left;">
+<!--l. 718--><p class="noindent">4                </p></td><td class="td11" id="TBL-35-12-2" style="white-space:wrap; text-align:left;">
+<!--l. 718--><p class="noindent">The credentials for the job are invalid.                          </p></td><td class="td11" id="TBL-35-12-3" style="white-space:wrap; text-align:left;">
+<!--l. 718--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-13-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-13-1" style="white-space:wrap; text-align:left;">
+<!--l. 719--><p class="noindent">5                </p></td><td class="td11" id="TBL-35-13-2" style="white-space:wrap; text-align:left;">
+<!--l. 719--><p class="noindent">A job policy expression evaluated to <code>Undefined</code>.             </p></td><td class="td11" id="TBL-35-13-3" style="white-space:wrap; text-align:left;">
+<!--l. 719--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-14-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-14-1" style="white-space:wrap; text-align:left;">
+<!--l. 720--><p class="noindent">6                </p></td><td class="td11" id="TBL-35-14-2" style="white-space:wrap; text-align:left;">
+<!--l. 720--><p class="noindent">The <i>condor_starter</i> failed to start the executable.           </p></td><td class="td11" id="TBL-35-14-3" style="white-space:wrap; text-align:left;">
+<!--l. 721--><p class="noindent">The Unix errno number.  </p></td>
+</tr><tr id="TBL-35-15-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-15-1" style="white-space:wrap; text-align:left;">
+<!--l. 722--><p class="noindent">7                </p></td><td class="td11" id="TBL-35-15-2" style="white-space:wrap; text-align:left;">
+<!--l. 722--><p class="noindent">The standard output file for the job could not be opened. </p></td><td class="td11" id="TBL-35-15-3" style="white-space:wrap; text-align:left;">
+<!--l. 723--><p class="noindent">The Unix errno number.  </p></td>
+</tr><tr id="TBL-35-16-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-16-1" style="white-space:wrap; text-align:left;">
+<!--l. 724--><p class="noindent">8                </p></td><td class="td11" id="TBL-35-16-2" style="white-space:wrap; text-align:left;">
+<!--l. 724--><p class="noindent">The standard input file for the job could not be opened.   </p></td><td class="td11" id="TBL-35-16-3" style="white-space:wrap; text-align:left;">
+<!--l. 725--><p class="noindent">The Unix errno number.  </p></td>
+</tr><tr id="TBL-35-17-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-17-1" style="white-space:wrap; text-align:left;">
+<!--l. 726--><p class="noindent">9                </p></td><td class="td11" id="TBL-35-17-2" style="white-space:wrap; text-align:left;">
+<!--l. 726--><p class="noindent">The  standard  output  stream  for  the  job  could  not  be
+opened.                                                                   </p></td><td class="td11" id="TBL-35-17-3" style="white-space:wrap; text-align:left;">
+<!--l. 727--><p class="noindent">The Unix errno number.  </p></td>
+</tr><tr id="TBL-35-18-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-18-1" style="white-space:wrap; text-align:left;">
+<!--l. 728--><p class="noindent">10              </p></td><td class="td11" id="TBL-35-18-2" style="white-space:wrap; text-align:left;">
+<!--l. 728--><p class="noindent">The standard input stream for the job could not be opened.</p></td><td class="td11" id="TBL-35-18-3" style="white-space:wrap; text-align:left;">
+<!--l. 729--><p class="noindent">The Unix errno number.  </p></td>
+</tr><tr id="TBL-35-19-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-19-1" style="white-space:wrap; text-align:left;">
+<!--l. 730--><p class="noindent">11              </p></td><td class="td11" id="TBL-35-19-2" style="white-space:wrap; text-align:left;">
+<!--l. 730--><p class="noindent">An  internal  HTCondor  protocol  error  was  encountered
+when transferring files.                                               </p></td><td class="td11" id="TBL-35-19-3" style="white-space:wrap; text-align:left;">
+<!--l. 730--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-20-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-20-1" style="white-space:wrap; text-align:left;">
+<!--l. 731--><p class="noindent">12              </p></td><td class="td11" id="TBL-35-20-2" style="white-space:wrap; text-align:left;">
+<!--l. 731--><p class="noindent">The <i>condor_starter</i> or <i>condor_shadow</i> failed to receive or
+write job files.                                                          </p></td><td class="td11" id="TBL-35-20-3" style="white-space:wrap; text-align:left;">
+<!--l. 732--><p class="noindent">The Unix errno number.  </p></td>
+</tr><tr id="TBL-35-21-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-21-1" style="white-space:wrap; text-align:left;">
+<!--l. 733--><p class="noindent">13              </p></td><td class="td11" id="TBL-35-21-2" style="white-space:wrap; text-align:left;">
+<!--l. 733--><p class="noindent">The <i>condor_starter</i> or <i>condor_shadow</i> failed to read or
+send job files.                                                           </p></td><td class="td11" id="TBL-35-21-3" style="white-space:wrap; text-align:left;">
+<!--l. 734--><p class="noindent">The Unix errno number.  </p></td>
+</tr><tr id="TBL-35-22-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-22-1" style="white-space:wrap; text-align:left;">
+<!--l. 735--><p class="noindent">14              </p></td><td class="td11" id="TBL-35-22-2" style="white-space:wrap; text-align:left;">
+<!--l. 735--><p class="noindent">The initial working directory of the job cannot be accessed.</p></td><td class="td11" id="TBL-35-22-3" style="white-space:wrap; text-align:left;">
+<!--l. 736--><p class="noindent">The Unix errno number.  </p></td>
+</tr><tr id="TBL-35-23-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-23-1" style="white-space:wrap; text-align:left;">
+<!--l. 737--><p class="noindent">15              </p></td><td class="td11" id="TBL-35-23-2" style="white-space:wrap; text-align:left;">
+<!--l. 737--><p class="noindent">The user requested the job be submitted on hold.            </p></td><td class="td11" id="TBL-35-23-3" style="white-space:wrap; text-align:left;">
+<!--l. 737--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-24-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-24-1" style="white-space:wrap; text-align:left;">
+<!--l. 738--><p class="noindent">16              </p></td><td class="td11" id="TBL-35-24-2" style="white-space:wrap; text-align:left;">
+<!--l. 738--><p class="noindent">Input files are being spooled.                                       </p></td><td class="td11" id="TBL-35-24-3" style="white-space:wrap; text-align:left;">
+<!--l. 738--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-25-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-25-1" style="white-space:wrap; text-align:left;">
+<!--l. 739--><p class="noindent">17              </p></td><td class="td11" id="TBL-35-25-2" style="white-space:wrap; text-align:left;">
+<!--l. 739--><p class="noindent">A  standard  universe  job  is  not  compatible  with  the
+<i>condor_shadow</i>   version   available   on   the   submitting
+machine.                                                                 </p></td><td class="td11" id="TBL-35-25-3" style="white-space:wrap; text-align:left;">
+<!--l. 740--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-26-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-26-1" style="white-space:wrap; text-align:left;">
+<!--l. 741--><p class="noindent">18              </p></td><td class="td11" id="TBL-35-26-2" style="white-space:wrap; text-align:left;">
+<!--l. 741--><p class="noindent">An  internal  HTCondor  protocol  error  was  encountered
+when transferring files.                                               </p></td><td class="td11" id="TBL-35-26-3" style="white-space:wrap; text-align:left;">
+<!--l. 742--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-27-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-27-1" style="white-space:wrap; text-align:left;">
+<!--l. 743--><p class="noindent">19              </p></td><td class="td11" id="TBL-35-27-2" style="white-space:wrap; text-align:left;">
+<!--l. 743--><p class="noindent"><code>&lt;Keyword&gt;_HOOK_PREPARE_JOB</code>  was defined but could not
+be executed or returned failure.                                   </p></td><td class="td11" id="TBL-35-27-3" style="white-space:wrap; text-align:left;">
+<!--l. 743--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-28-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-28-1" style="white-space:wrap; text-align:left;">
+<!--l. 744--><p class="noindent">20              </p></td><td class="td11" id="TBL-35-28-2" style="white-space:wrap; text-align:left;">
+<!--l. 744--><p class="noindent">The job missed its deferred execution time and therefore
+failed to run.                                                            </p></td><td class="td11" id="TBL-35-28-3" style="white-space:wrap; text-align:left;">
+<!--l. 744--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-29-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-29-1" style="white-space:wrap; text-align:left;">
+<!--l. 744--><p class="noindent"> </p></td>
+</tr>
+<tr id="TBL-35-30-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-30-1" style="white-space:wrap; text-align:left;">
+<!--l. 745--><p class="noindent">21              </p></td><td class="td11" id="TBL-35-30-2" style="white-space:wrap; text-align:left;">
+<!--l. 745--><p class="noindent">The job was put on hold because <code>WANT_HOLD</code> in the machine
+policy was true.                                                        </p></td><td class="td11" id="TBL-35-30-3" style="white-space:wrap; text-align:left;">
+<!--l. 745--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-31-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-31-1" style="white-space:wrap; text-align:left;">
+<!--l. 746--><p class="noindent">22              </p></td><td class="td11" id="TBL-35-31-2" style="white-space:wrap; text-align:left;">
+<!--l. 746--><p class="noindent">Unable to initialize job event log.                                 </p></td><td class="td11" id="TBL-35-31-3" style="white-space:wrap; text-align:left;">
+<!--l. 746--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-32-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-32-1" style="white-space:wrap; text-align:left;">
+<!--l. 747--><p class="noindent">23              </p></td><td class="td11" id="TBL-35-32-2" style="white-space:wrap; text-align:left;">
+<!--l. 747--><p class="noindent">Failed to access user account.                                      </p></td><td class="td11" id="TBL-35-32-3" style="white-space:wrap; text-align:left;">
+<!--l. 747--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-33-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-33-1" style="white-space:wrap; text-align:left;">
+<!--l. 748--><p class="noindent">24              </p></td><td class="td11" id="TBL-35-33-2" style="white-space:wrap; text-align:left;">
+<!--l. 748--><p class="noindent">No compatible shadow.                                              </p></td><td class="td11" id="TBL-35-33-3" style="white-space:wrap; text-align:left;">
+<!--l. 748--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-34-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-34-1" style="white-space:wrap; text-align:left;">
+<!--l. 749--><p class="noindent">25              </p></td><td class="td11" id="TBL-35-34-2" style="white-space:wrap; text-align:left;">
+<!--l. 749--><p class="noindent">Invalid cron settings.                                                 </p></td><td class="td11" id="TBL-35-34-3" style="white-space:wrap; text-align:left;">
+<!--l. 749--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-35-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-35-1" style="white-space:wrap; text-align:left;">
+<!--l. 750--><p class="noindent">26              </p></td><td class="td11" id="TBL-35-35-2" style="white-space:wrap; text-align:left;">
+<!--l. 750--><p class="noindent"><code>SYSTEM_PERIODIC_HOLD</code>  evaluated to true.                    </p></td><td class="td11" id="TBL-35-35-3" style="white-space:wrap; text-align:left;">
+<!--l. 750--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-36-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-36-1" style="white-space:wrap; text-align:left;">
+<!--l. 751--><p class="noindent">27              </p></td><td class="td11" id="TBL-35-36-2" style="white-space:wrap; text-align:left;">
+<!--l. 751--><p class="noindent">The system periodic job policy evaluated to undefined.     </p></td><td class="td11" id="TBL-35-36-3" style="white-space:wrap; text-align:left;">
+<!--l. 751--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-37-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-37-1" style="white-space:wrap; text-align:left;">
+<!--l. 752--><p class="noindent">28              </p></td><td class="td11" id="TBL-35-37-2" style="white-space:wrap; text-align:left;">
+<!--l. 752--><p class="noindent">Failed  while  using  glexec  to  set  up  the  job’s  working
+directory (chown sandbox to the user).                          </p></td><td class="td11" id="TBL-35-37-3" style="white-space:wrap; text-align:left;">
+<!--l. 752--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-38-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-38-1" style="white-space:wrap; text-align:left;">
+<!--l. 753--><p class="noindent">30              </p></td><td class="td11" id="TBL-35-38-2" style="white-space:wrap; text-align:left;">
+<!--l. 753--><p class="noindent">Failed  while  using  glexec  to  prepare  output  for  transfer
+(chown sandbox to condor).                                        </p></td><td class="td11" id="TBL-35-38-3" style="white-space:wrap; text-align:left;">
+<!--l. 753--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-39-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-39-1" style="white-space:wrap; text-align:left;">
+<!--l. 754--><p class="noindent">32              </p></td><td class="td11" id="TBL-35-39-2" style="white-space:wrap; text-align:left;">
+<!--l. 754--><p class="noindent">The maximum total input file transfer size was exceeded.
+(See <code>MAX_TRANSFER_INPUT_MB</code> .)                                  </p></td><td class="td11" id="TBL-35-39-3" style="white-space:wrap; text-align:left;">
+<!--l. 754--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-40-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-40-1" style="white-space:wrap; text-align:left;">
+<!--l. 755--><p class="noindent">33              </p></td><td class="td11" id="TBL-35-40-2" style="white-space:wrap; text-align:left;">
+<!--l. 755--><p class="noindent">The maximum total output file transfer size was exceeded.
+(See <code>MAX_TRANSFER_OUTPUT_MB</code> .)                                 </p></td><td class="td11" id="TBL-35-40-3" style="white-space:wrap; text-align:left;">
+<!--l. 755--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-41-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-41-1" style="white-space:wrap; text-align:left;">
+<!--l. 756--><p class="noindent">34              </p></td><td class="td11" id="TBL-35-41-2" style="white-space:wrap; text-align:left;">
+<!--l. 756--><p class="noindent">Memory usage exceeds a memory limit.                         </p></td><td class="td11" id="TBL-35-41-3" style="white-space:wrap; text-align:left;">
+<!--l. 756--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-42-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-42-1" style="white-space:wrap; text-align:left;">
+<!--l. 757--><p class="noindent">35              </p></td><td class="td11" id="TBL-35-42-2" style="white-space:wrap; text-align:left;">
+<!--l. 757--><p class="noindent">Specified Docker image was invalid.                              </p></td><td class="td11" id="TBL-35-42-3" style="white-space:wrap; text-align:left;">
+<!--l. 757--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-43-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-43-1" style="white-space:wrap; text-align:left;">
+<!--l. 758--><p class="noindent">36              </p></td><td class="td11" id="TBL-35-43-2" style="white-space:wrap; text-align:left;">
+<!--l. 758--><p class="noindent">Job failed when sent the checkpoint signal it requested.    </p></td><td class="td11" id="TBL-35-43-3" style="white-space:wrap; text-align:left;">
+<!--l. 758--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-44-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-44-1" style="white-space:wrap; text-align:left;">
+<!--l. 759--><p class="noindent">37              </p></td><td class="td11" id="TBL-35-44-2" style="white-space:wrap; text-align:left;">
+<!--l. 759--><p class="noindent">User error in the EC2 universe:                                    </p></td><td class="td11" id="TBL-35-44-3" style="white-space:wrap; text-align:left;">
+<!--l. 760--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-45-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-45-1" style="white-space:wrap; text-align:left;">
+<!--l. 760--><p class="noindent"> </p></td><td class="td11" id="TBL-35-45-2" style="white-space:wrap; text-align:left;">
+<!--l. 760--><p class="noindent">                                  Public key file not
+defined.                                                                   </p></td><td class="td11" id="TBL-35-45-3" style="white-space:wrap; text-align:left;">
+<!--l. 760--><p class="noindent">1                                 </p></td>
+</tr><tr id="TBL-35-46-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-46-1" style="white-space:wrap; text-align:left;">
+<!--l. 761--><p class="noindent"> </p></td><td class="td11" id="TBL-35-46-2" style="white-space:wrap; text-align:left;">
+<!--l. 761--><p class="noindent">                                 Private key file not
+defined.                                                                   </p></td><td class="td11" id="TBL-35-46-3" style="white-space:wrap; text-align:left;">
+<!--l. 761--><p class="noindent">2                                 </p></td>
+</tr><tr id="TBL-35-47-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-47-1" style="white-space:wrap; text-align:left;">
+<!--l. 762--><p class="noindent"> </p></td><td class="td11" id="TBL-35-47-2" style="white-space:wrap; text-align:left;">
+<!--l. 762--><p class="noindent">               Grid resource string missing EC2 service
+URL.                                                                      </p></td><td class="td11" id="TBL-35-47-3" style="white-space:wrap; text-align:left;">
+<!--l. 762--><p class="noindent">4                                 </p></td>
+</tr><tr id="TBL-35-48-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-48-1" style="white-space:wrap; text-align:left;">
+<!--l. 763--><p class="noindent"> </p></td><td class="td11" id="TBL-35-48-2" style="white-space:wrap; text-align:left;">
+<!--l. 763--><p class="noindent">                                         Failed to
+authenticate.                                                            </p></td><td class="td11" id="TBL-35-48-3" style="white-space:wrap; text-align:left;">
+<!--l. 763--><p class="noindent">9                                 </p></td>
+</tr><tr id="TBL-35-49-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-49-1" style="white-space:wrap; text-align:left;">
+<!--l. 764--><p class="noindent"> </p></td><td class="td11" id="TBL-35-49-2" style="white-space:wrap; text-align:left;">
+<!--l. 764--><p class="noindent">   Can’t use existing SSH keypair with the given server’s
+type.                                                                      </p></td><td class="td11" id="TBL-35-49-3" style="white-space:wrap; text-align:left;">
+<!--l. 764--><p class="noindent">10                               </p></td>
+</tr><tr id="TBL-35-50-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-50-1" style="white-space:wrap; text-align:left;">
+<!--l. 765--><p class="noindent"> </p></td>
+</tr>
+<tr id="TBL-35-51-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-51-1" style="white-space:wrap; text-align:left;">
+<!--l. 765--><p class="noindent"> </p></td><td class="td11" id="TBL-35-51-2" style="white-space:wrap; text-align:left;">
+<!--l. 765--><p class="noindent">              You, or somebody like you, cancelled this
+request.                                                                   </p></td><td class="td11" id="TBL-35-51-3" style="white-space:wrap; text-align:left;">
+<!--l. 765--><p class="noindent">20                               </p></td>
+</tr><tr id="TBL-35-52-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-52-1" style="white-space:wrap; text-align:left;">
+<!--l. 767--><p class="noindent">38              </p></td><td class="td11" id="TBL-35-52-2" style="white-space:wrap; text-align:left;">
+<!--l. 767--><p class="noindent">Internal error in the EC2 universe:                               </p></td><td class="td11" id="TBL-35-52-3" style="white-space:wrap; text-align:left;">
+<!--l. 768--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-53-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-53-1" style="white-space:wrap; text-align:left;">
+<!--l. 768--><p class="noindent"> </p></td><td class="td11" id="TBL-35-53-2" style="white-space:wrap; text-align:left;">
+<!--l. 768--><p class="noindent">                              Grid resource type not
+EC2.                                                                      </p></td><td class="td11" id="TBL-35-53-3" style="white-space:wrap; text-align:left;">
+<!--l. 768--><p class="noindent">3                                 </p></td>
+</tr><tr id="TBL-35-54-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-54-1" style="white-space:wrap; text-align:left;">
+<!--l. 769--><p class="noindent"> </p></td><td class="td11" id="TBL-35-54-2" style="white-space:wrap; text-align:left;">
+<!--l. 769--><p class="noindent">                              Grid resource type not
+set.                                                                        </p></td><td class="td11" id="TBL-35-54-3" style="white-space:wrap; text-align:left;">
+<!--l. 769--><p class="noindent">5                                 </p></td>
+</tr><tr id="TBL-35-55-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-55-1" style="white-space:wrap; text-align:left;">
+<!--l. 770--><p class="noindent"> </p></td><td class="td11" id="TBL-35-55-2" style="white-space:wrap; text-align:left;">
+<!--l. 770--><p class="noindent">                               Grid job ID is not for
+EC2.                                                                      </p></td><td class="td11" id="TBL-35-55-3" style="white-space:wrap; text-align:left;">
+<!--l. 770--><p class="noindent">7                                 </p></td>
+</tr><tr id="TBL-35-56-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-56-1" style="white-space:wrap; text-align:left;">
+<!--l. 771--><p class="noindent"> </p></td><td class="td11" id="TBL-35-56-2" style="white-space:wrap; text-align:left;">
+<!--l. 771--><p class="noindent">                             Unexpected remote job
+status.                                                                    </p></td><td class="td11" id="TBL-35-56-3" style="white-space:wrap; text-align:left;">
+<!--l. 771--><p class="noindent">21                               </p></td>
+</tr><tr id="TBL-35-57-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-57-1" style="white-space:wrap; text-align:left;">
+<!--l. 773--><p class="noindent">39              </p></td><td class="td11" id="TBL-35-57-2" style="white-space:wrap; text-align:left;">
+<!--l. 773--><p class="noindent">Adminstrator error in the EC2 universe:                        </p></td><td class="td11" id="TBL-35-57-3" style="white-space:wrap; text-align:left;">
+<!--l. 774--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-58-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-58-1" style="white-space:wrap; text-align:left;">
+<!--l. 774--><p class="noindent"> </p></td><td class="td11" id="TBL-35-58-2" style="white-space:wrap; text-align:left;">
+<!--l. 774--><p class="noindent">                                   EC2_GAHP not
+defined.                                                                   </p></td><td class="td11" id="TBL-35-58-3" style="white-space:wrap; text-align:left;">
+<!--l. 774--><p class="noindent">6                                 </p></td>
+</tr><tr id="TBL-35-59-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-59-1" style="white-space:wrap; text-align:left;">
+<!--l. 776--><p class="noindent">40              </p></td><td class="td11" id="TBL-35-59-2" style="white-space:wrap; text-align:left;">
+<!--l. 776--><p class="noindent">Connection problem in the EC2 universe                       </p></td><td class="td11" id="TBL-35-59-3" style="white-space:wrap; text-align:left;">
+<!--l. 777--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-60-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-60-1" style="white-space:wrap; text-align:left;">
+<!--l. 777--><p class="noindent"> </p></td><td class="td11" id="TBL-35-60-2" style="white-space:wrap; text-align:left;">
+<!--l. 777--><p class="noindent">                             …while creating an SSH
+keypair.                                                                  </p></td><td class="td11" id="TBL-35-60-3" style="white-space:wrap; text-align:left;">
+<!--l. 777--><p class="noindent">11                               </p></td>
+</tr><tr id="TBL-35-61-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-61-1" style="white-space:wrap; text-align:left;">
+<!--l. 778--><p class="noindent"> </p></td><td class="td11" id="TBL-35-61-2" style="white-space:wrap; text-align:left;">
+<!--l. 778--><p class="noindent">                        …while starting an on-demand
+instance.                                                                 </p></td><td class="td11" id="TBL-35-61-3" style="white-space:wrap; text-align:left;">
+<!--l. 778--><p class="noindent">12                               </p></td>
+</tr><tr id="TBL-35-62-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-62-1" style="white-space:wrap; text-align:left;">
+<!--l. 779--><p class="noindent"> </p></td><td class="td11" id="TBL-35-62-2" style="white-space:wrap; text-align:left;">
+<!--l. 779--><p class="noindent">                            …while requesting a spot
+instance.                                                                 </p></td><td class="td11" id="TBL-35-62-3" style="white-space:wrap; text-align:left;">
+<!--l. 779--><p class="noindent">17                               </p></td>
+</tr><tr id="TBL-35-63-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-63-1" style="white-space:wrap; text-align:left;">
+<!--l. 781--><p class="noindent">41              </p></td><td class="td11" id="TBL-35-63-2" style="white-space:wrap; text-align:left;">
+<!--l. 781--><p class="noindent">Server error in the EC2 universe:                                 </p></td><td class="td11" id="TBL-35-63-3" style="white-space:wrap; text-align:left;">
+<!--l. 782--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-64-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-64-1" style="white-space:wrap; text-align:left;">
+<!--l. 782--><p class="noindent"> </p></td><td class="td11" id="TBL-35-64-2" style="white-space:wrap; text-align:left;">
+<!--l. 782--><p class="noindent">                       Abnormal instance termination
+reason.                                                                    </p></td><td class="td11" id="TBL-35-64-3" style="white-space:wrap; text-align:left;">
+<!--l. 782--><p class="noindent">13                               </p></td>
+</tr><tr id="TBL-35-65-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-65-1" style="white-space:wrap; text-align:left;">
+<!--l. 783--><p class="noindent"> </p></td><td class="td11" id="TBL-35-65-2" style="white-space:wrap; text-align:left;">
+<!--l. 783--><p class="noindent">                    Unrecognized instance termination
+reason.                                                                    </p></td><td class="td11" id="TBL-35-65-3" style="white-space:wrap; text-align:left;">
+<!--l. 783--><p class="noindent">14                               </p></td>
+</tr><tr id="TBL-35-66-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-66-1" style="white-space:wrap; text-align:left;">
+<!--l. 784--><p class="noindent"> </p></td><td class="td11" id="TBL-35-66-2" style="white-space:wrap; text-align:left;">
+<!--l. 784--><p class="noindent">                          Resource was down for too
+long.                                                                       </p></td><td class="td11" id="TBL-35-66-3" style="white-space:wrap; text-align:left;">
+<!--l. 784--><p class="noindent">22                               </p></td>
+</tr><tr id="TBL-35-67-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-67-1" style="white-space:wrap; text-align:left;">
+<!--l. 786--><p class="noindent">42              </p></td><td class="td11" id="TBL-35-67-2" style="white-space:wrap; text-align:left;">
+<!--l. 786--><p class="noindent">Instance  potentially  lost  due  to  an  error  in  the  EC2
+universe:                                                                 </p></td><td class="td11" id="TBL-35-67-3" style="white-space:wrap; text-align:left;">
+<!--l. 787--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-68-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-68-1" style="white-space:wrap; text-align:left;">
+<!--l. 787--><p class="noindent"> </p></td><td class="td11" id="TBL-35-68-2" style="white-space:wrap; text-align:left;">
+<!--l. 787--><p class="noindent">                 Connection error while terminating an
+instance.                                                                 </p></td><td class="td11" id="TBL-35-68-3" style="white-space:wrap; text-align:left;">
+<!--l. 787--><p class="noindent">15                               </p></td>
+</tr><tr id="TBL-35-69-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-69-1" style="white-space:wrap; text-align:left;">
+<!--l. 788--><p class="noindent"> </p></td><td class="td11" id="TBL-35-69-2" style="white-space:wrap; text-align:left;">
+<!--l. 788--><p class="noindent">                 Failed to terminate instance too many
+times.                                                                     </p></td><td class="td11" id="TBL-35-69-3" style="white-space:wrap; text-align:left;">
+<!--l. 788--><p class="noindent">16                               </p></td>
+</tr><tr id="TBL-35-70-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-70-1" style="white-space:wrap; text-align:left;">
+<!--l. 789--><p class="noindent"> </p></td><td class="td11" id="TBL-35-70-2" style="white-space:wrap; text-align:left;">
+<!--l. 789--><p class="noindent">              Connection error while terminating a spot
+request.                                                                   </p></td><td class="td11" id="TBL-35-70-3" style="white-space:wrap; text-align:left;">
+<!--l. 789--><p class="noindent">17                               </p></td>
+</tr><tr id="TBL-35-71-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-71-1" style="white-space:wrap; text-align:left;">
+<!--l. 790--><p class="noindent"> </p></td>
+</tr>
+<tr id="TBL-35-72-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-72-1" style="white-space:wrap; text-align:left;">
+<!--l. 790--><p class="noindent"> </p></td><td class="td11" id="TBL-35-72-2" style="white-space:wrap; text-align:left;">
+<!--l. 790--><p class="noindent">           Failed to terminated a spot request too many
+times.                                                                     </p></td><td class="td11" id="TBL-35-72-3" style="white-space:wrap; text-align:left;">
+<!--l. 790--><p class="noindent">18                               </p></td>
+</tr><tr id="TBL-35-73-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-73-1" style="white-space:wrap; text-align:left;">
+<!--l. 791--><p class="noindent"> </p></td><td class="td11" id="TBL-35-73-2" style="white-space:wrap; text-align:left;">
+<!--l. 791--><p class="noindent">         Spot instance request purged before instance ID
+acquired.                                                                 </p></td><td class="td11" id="TBL-35-73-3" style="white-space:wrap; text-align:left;">
+<!--l. 791--><p class="noindent">19                               </p></td>
+</tr><tr id="TBL-35-74-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-74-1" style="white-space:wrap; text-align:left;">
+<!--l. 793--><p class="noindent">43              </p></td><td class="td11" id="TBL-35-74-2" style="white-space:wrap; text-align:left;">
+<!--l. 793--><p class="noindent">Pre script failed.                                                       </p></td><td class="td11" id="TBL-35-74-3" style="white-space:wrap; text-align:left;">
+<!--l. 793--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-75-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-75-1" style="white-space:wrap; text-align:left;">
+<!--l. 794--><p class="noindent">44              </p></td><td class="td11" id="TBL-35-75-2" style="white-space:wrap; text-align:left;">
+<!--l. 794--><p class="noindent">Post script failed.                                                      </p></td><td class="td11" id="TBL-35-75-3" style="white-space:wrap; text-align:left;">
+<!--l. 794--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-76-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-76-1" style="white-space:wrap; text-align:left;"> </td>
+</tr><tr id="TBL-35-77-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-77-1" style="white-space:wrap; text-align:left;"> </td>
+</tr><tr id="TBL-35-78-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-78-1" style="white-space:wrap; text-align:left;">
+<!--l. 795--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-79-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-79-1" style="white-space:wrap; text-align:left;">
+<!--l. 795--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-80-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-80-1" style="white-space:wrap; text-align:left;">
+<!--l. 795--><p class="noindent"> </p></td>
+</tr>
+<tr id="TBL-35-7-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-7-1" style="white-space:wrap; text-align:left;">
+<!--l. 713--><p class="noindent"> </p></td>
+</tr><tr id="TBL-35-8-" style="vertical-align:baseline;"><td class="td11" id="TBL-35-8-1" style="white-space:wrap; text-align:left;">
+<!--l. 713--><p class="noindent"> </p></td>
+</tr>
+</table></div>
+</div>
+</dd><dt class="description">
+<code>HoldReasonSubCode</code>: </dt><dd class="description">An integer value that represents further information to go along with the <code>HoldReasonCode</code>,
+     for some values of <code>HoldReasonCode</code>. See <code>HoldReasonCode</code> for the values.
+
+</dd><dt class="description">
+<code>HookKeyword</code>: </dt><dd class="description">A string that uniquely identifies a set of job hooks, and added to the ClassAd once a job is
+     fetched.
+
+
+</dd><dt class="description">
+<code>ImageSize</code>: </dt><dd class="description">Maximum observed memory image size (i.e. virtual memory) of the job in KiB. The initial value is
+     equal to the size of the executable for non-vm universe jobs, and 0 for vm universe jobs. When the job writes a
+     checkpoint, the <code>ImageSize</code> attribute is set to the size of the checkpoint file (since the checkpoint file contains
+     the job’s memory image). A vanilla universe job’s <code>ImageSize</code> is recomputed internally every 15
+     seconds. How quickly this updated information becomes visible to <i>condor_q</i> is controlled by
+     <code>SHADOW_QUEUE_UPDATE_INTERVAL</code> and <code>STARTER_UPDATE_INTERVAL</code>.
+     <!--l. 827--><p class="noindent">Under Linux, <code>ProportionalSetSize</code> is a better indicator of memory usage for jobs with significant
+     sharing of memory between processes, because <code>ImageSize</code> is simply the sum of virtual memory
+     sizes across all of the processes in the job, which may count the same memory pages more than
+     once.
+
+
+</p></dd><dt class="description">
+<code>IOWait</code>: </dt><dd class="description">I/O wait time of the job recorded by the cgroup controller in seconds.
+
+
+</dd><dt class="description">
+<code>IwdFlushNFSCache</code>: </dt><dd class="description">A boolean expression that controls whether or not HTCondor attempts to flush a submit
+     machine’s NFS cache, in order to refresh an HTCondor job’s initial working directory. The value will be <code>True</code>,
+     unless a job explicitly adds this attribute, setting it to <code>False</code>.
+
+
+</dd><dt class="description">
+<code>JobAdInformationAttrs</code>: </dt><dd class="description">A comma-separated list of attribute names. The named attributes and their values are
+     written in the job event log whenever any event is being written to the log. This is the same as the
+     configuration setting <code>EVENT_LOG_INFORMATION_ATTRS</code> (see page <a href="ConfigurationMacros.html#x33-1890003.5.2">617<!--tex4ht:ref: param:EventLogJobAdInformationAttrs --></a>) but it applies to the job event log
+     instead of the system event log.
+
+
+</dd><dt class="description">
+<code>JobDescription</code>: </dt><dd class="description">A string that may be defined for a job by setting <b>description</b> in the submit description file.
+     When set, tools which display the executable such as <i>condor_q</i> will instead use this string. For interactive jobs
+     that do not have a submit description file, this string will default to <code>"Interactive job"</code>.
+
+
+</dd><dt class="description">
+<code>JobCurrentStartDate</code>: </dt><dd class="description">Time at which the job most recently began running. Measured in the number of seconds
+     since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+
+</dd><dt class="description">
+<code>JobCurrentStartExecutingDate</code>: </dt><dd class="description">Time at which the job most recently finished transferring its input sandbox and
+     began executing. Measured in the number of seconds since the epoch (00:00:00 UTC, Jan 1,
+     1970)
+
+
+</dd><dt class="description">
+<code>JobCurrentStartTransferOutputDate</code>: </dt><dd class="description">Time at which the job most recently finished executing and began
+     transferring its output sandbox. Measured in the number of seconds since the epoch (00:00:00 UTC, Jan 1,
+     1970)
+
+
+</dd><dt class="description">
+<code>JobLeaseDuration</code>: </dt><dd class="description">The number of seconds set for a job lease, the amount of time that a job may continue running
+     on a remote resource, despite its submitting machine’s lack of response. See section <a href="SpecialEnvironmentConsiderations.html#x26-1440002.14.4">2.14.4<!--tex4ht:ref: sec:Job-Lease --></a> for details on job
+     leases.
+
+
+</dd><dt class="description">
+<code>JobMaxVacateTime</code>: </dt><dd class="description">An integer expression that specifies the time in seconds requested by the job for being allowed
+     to gracefully shut down.
+
+
+</dd><dt class="description">
+<code>JobNotification</code>: </dt><dd class="description">An integer indicating what events should be emailed to the user. The integer values correspond
+     to the user choices for the submit command <b>notification</b>.
+     <div class="center">
+<!--l. 919--><p class="noindent">
+</p><div class="table">
+<!--l. 920--><p class="noindent"></p><hr class="float"/><div class="float"> <!--tex4ht:inline--><div class="tabular"> <table><colgroup id="TBL-36-1g"><col id="TBL-36-1"/><col id="TBL-36-2"/></colgroup><tr id="TBL-36-1-" style="vertical-align:baseline;"><td class="td11" id="TBL-36-1-1" style="white-space:wrap; text-align:left;"><!--l. 922--><p class="noindent"><span class="emph">Value</span> </p></td><td class="td11" id="TBL-36-1-2" style="white-space:wrap; text-align:left;"><!--l. 922--><p class="noindent"><span class="emph">Notification value</span> </p></td>
+</tr><tr id="TBL-36-2-" style="vertical-align:baseline;"><td class="td11" id="TBL-36-2-1" style="white-space:wrap; text-align:left;"><!--l. 923--><p class="noindent">0                 </p></td><td class="td11" id="TBL-36-2-2" style="white-space:wrap; text-align:left;"><!--l. 923--><p class="noindent">Never                                                                              </p></td></tr><tr id="TBL-36-3-" style="vertical-align:baseline;"><td class="td11" id="TBL-36-3-1" style="white-space:wrap; text-align:left;"><!--l. 924--><p class="noindent">1 </p></td> <td class="td11" id="TBL-36-3-2" style="white-space:wrap; text-align:left;"><!--l. 924--><p class="noindent">Always</p></td>
+</tr><tr id="TBL-36-4-" style="vertical-align:baseline;"><td class="td11" id="TBL-36-4-1" style="white-space:wrap; text-align:left;"><!--l. 925--><p class="noindent">2                 </p></td><td class="td11" id="TBL-36-4-2" style="white-space:wrap; text-align:left;"><!--l. 925--><p class="noindent">Complete                                                                         </p></td>
+</tr><tr id="TBL-36-5-" style="vertical-align:baseline;"><td class="td11" id="TBL-36-5-1" style="white-space:wrap; text-align:left;"><!--l. 926--><p class="noindent">3                 </p></td><td class="td11" id="TBL-36-5-2" style="white-space:wrap; text-align:left;"><!--l. 926--><p class="noindent">Error                                                                              </p></td></tr><tr class="hline"><td><hr/></td><td><hr/></td></tr><tr id="TBL-36-6-" style="vertical-align:baseline;"><td class="td11" id="TBL-36-6-1" style="white-space:wrap; text-align:left;"> </td></tr></table>
+</div> </div><hr class="endfloat"/>
+</div>
+</div>
+</dd><dt class="description">
+<code>JobPrio</code>: </dt><dd class="description">Integer priority for this job, set by <i>condor_submit</i> or <i>condor_prio</i>. The default value is 0. The higher the
+     number, the greater (better) the priority.
+
+
+</dd><dt class="description">
+<code>JobRunCount</code>: </dt><dd class="description">This attribute is retained for backwards compatibility. It may go away in the future. It is equivalent
+     to <code>NumShadowStarts</code> for all universes except <b>scheduler</b>. For the <b>scheduler</b> universe, this attribute is
+     equivalent to <code>NumJobStarts</code>.
+
+
+</dd><dt class="description">
+<code>JobStartDate</code>: </dt><dd class="description">Time at which the job first began running. Measured in the number of seconds since the epoch
+     (00:00:00 UTC, Jan 1, 1970). Due to a long standing bug in the 8.6 series and earlier, the job classad that is
+     internal to the <i>condor_startd</i> and <i>condor_starter</i> sets this to the time that the job most recently began
+     executing. This bug is scheduled to be fixed in the 8.7 series.
+
+
+
+</dd><dt class="description">
+<code>JobStatus</code>: </dt><dd class="description">Integer which indicates the current status of the job.
+     <div class="center">
+<!--l. 963--><p class="noindent">
+</p><div class="table">
+<!--l. 964--><p class="noindent"></p><hr class="float"/><div class="float"> <!--tex4ht:inline--><div class="tabular"> <table><colgroup id="TBL-37-1g"><col id="TBL-37-1"/><col id="TBL-37-2"/></colgroup><tr id="TBL-37-1-" style="vertical-align:baseline;"><td class="td11" id="TBL-37-1-1" style="white-space:wrap; text-align:left;"><!--l. 966--><p class="noindent"><span class="emph">Value</span> </p></td><td class="td11" id="TBL-37-1-2" style="white-space:wrap; text-align:left;"><!--l. 966--><p class="noindent"><span class="emph">Status</span> </p></td></tr><tr id="TBL-37-2-" style="vertical-align:baseline;"><td class="td11" id="TBL-37-2-1" style="white-space:wrap; text-align:left;"><!--l. 967--><p class="noindent">1 </p></td> <td class="td11" id="TBL-37-2-2" style="white-space:wrap; text-align:left;"><!--l. 967--><p class="noindent">Idle</p></td>
+</tr><tr id="TBL-37-3-" style="vertical-align:baseline;"><td class="td11" id="TBL-37-3-1" style="white-space:wrap; text-align:left;"><!--l. 968--><p class="noindent">2                 </p></td><td class="td11" id="TBL-37-3-2" style="white-space:wrap; text-align:left;"><!--l. 968--><p class="noindent">Running                                                                          </p></td>
+</tr><tr id="TBL-37-4-" style="vertical-align:baseline;"><td class="td11" id="TBL-37-4-1" style="white-space:wrap; text-align:left;"><!--l. 969--><p class="noindent">3                 </p></td><td class="td11" id="TBL-37-4-2" style="white-space:wrap; text-align:left;"><!--l. 969--><p class="noindent">Removed                                                                         </p></td></tr><tr id="TBL-37-5-" style="vertical-align:baseline;"><td class="td11" id="TBL-37-5-1" style="white-space:wrap; text-align:left;"><!--l. 970--><p class="noindent">4 </p></td> <td class="td11" id="TBL-37-5-2" style="white-space:wrap; text-align:left;"><!--l. 970--><p class="noindent">Completed</p></td>
+</tr><tr id="TBL-37-6-" style="vertical-align:baseline;"><td class="td11" id="TBL-37-6-1" style="white-space:wrap; text-align:left;"><!--l. 971--><p class="noindent">5                 </p></td><td class="td11" id="TBL-37-6-2" style="white-space:wrap; text-align:left;"><!--l. 971--><p class="noindent">Held                                                                               </p></td></tr><tr id="TBL-37-7-" style="vertical-align:baseline;"><td class="td11" id="TBL-37-7-1" style="white-space:wrap; text-align:left;"><!--l. 972--><p class="noindent">6 </p></td> <td class="td11" id="TBL-37-7-2" style="white-space:wrap; text-align:left;"><!--l. 972--><p class="noindent">Transferring Output</p></td>
+</tr><tr id="TBL-37-8-" style="vertical-align:baseline;"><td class="td11" id="TBL-37-8-1" style="white-space:wrap; text-align:left;"><!--l. 973--><p class="noindent">7                 </p></td><td class="td11" id="TBL-37-8-2" style="white-space:wrap; text-align:left;"><!--l. 973--><p class="noindent">Suspended                                                                       </p></td>
+</tr><tr class="hline"><td><hr/></td><td><hr/></td></tr><tr id="TBL-37-9-" style="vertical-align:baseline;"><td class="td11" id="TBL-37-9-1" style="white-space:wrap; text-align:left;"> </td></tr></table></div></div><hr class="endfloat"/>
+</div>
+</div>
+</dd><dt class="description">
+<code>JobUniverse</code>: </dt><dd class="description">Integer which indicates the job universe.
+     <div class="center">
+<!--l. 999--><p class="noindent">
+</p><div class="table">
+<!--l. 1000--><p class="noindent"></p><hr class="float"/><div class="float"> <!--tex4ht:inline--><div class="tabular"> <table><colgroup id="TBL-38-1g"><col id="TBL-38-1"/><col id="TBL-38-2"/></colgroup><tr id="TBL-38-1-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-1-1" style="white-space:wrap; text-align:left;"><!--l. 1002--><p class="noindent"><span class="emph">Value</span> </p></td><td class="td11" id="TBL-38-1-2" style="white-space:wrap; text-align:left;"><!--l. 1002--><p class="noindent"><span class="emph">Universe</span> </p></td></tr><tr id="TBL-38-2-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-2-1" style="white-space:wrap; text-align:left;"><!--l. 1003--><p class="noindent">1 </p></td> <td class="td11" id="TBL-38-2-2" style="white-space:wrap; text-align:left;"><!--l. 1003--><p class="noindent">standard</p></td>
+</tr><tr id="TBL-38-3-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-3-1" style="white-space:wrap; text-align:left;"><!--l. 1004--><p class="noindent">5                 </p></td><td class="td11" id="TBL-38-3-2" style="white-space:wrap; text-align:left;"><!--l. 1004--><p class="noindent">vanilla, docker       </p></td>
+</tr><tr id="TBL-38-4-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-4-1" style="white-space:wrap; text-align:left;"><!--l. 1006--><p class="noindent">7                 </p></td><td class="td11" id="TBL-38-4-2" style="white-space:wrap; text-align:left;"><!--l. 1006--><p class="noindent">scheduler              </p></td></tr><tr id="TBL-38-5-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-5-1" style="white-space:wrap; text-align:left;"><!--l. 1007--><p class="noindent">8 </p></td> <td class="td11" id="TBL-38-5-2" style="white-space:wrap; text-align:left;"><!--l. 1007--><p class="noindent">MPI</p></td>
+</tr><tr id="TBL-38-6-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-6-1" style="white-space:wrap; text-align:left;"><!--l. 1008--><p class="noindent">9                 </p></td><td class="td11" id="TBL-38-6-2" style="white-space:wrap; text-align:left;"><!--l. 1008--><p class="noindent">grid                    </p></td>
+</tr><tr id="TBL-38-7-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-7-1" style="white-space:wrap; text-align:left;"><!--l. 1009--><p class="noindent">10               </p></td><td class="td11" id="TBL-38-7-2" style="white-space:wrap; text-align:left;"><!--l. 1009--><p class="noindent">java                    </p></td>
+</tr><tr id="TBL-38-8-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-8-1" style="white-space:wrap; text-align:left;"><!--l. 1010--><p class="noindent">11               </p></td><td class="td11" id="TBL-38-8-2" style="white-space:wrap; text-align:left;"><!--l. 1010--><p class="noindent">parallel                </p></td>
+</tr><tr id="TBL-38-9-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-9-1" style="white-space:wrap; text-align:left;"><!--l. 1011--><p class="noindent">12               </p></td><td class="td11" id="TBL-38-9-2" style="white-space:wrap; text-align:left;"><!--l. 1011--><p class="noindent">local                    </p></td></tr><tr id="TBL-38-10-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-10-1" style="white-space:wrap; text-align:left;"><!--l. 1012--><p class="noindent">13 </p></td> <td class="td11" id="TBL-38-10-2" style="white-space:wrap; text-align:left;"><!--l. 1012--><p class="noindent">vm</p></td>
+</tr><tr class="hline"><td><hr/></td><td><hr/></td></tr><tr id="TBL-38-11-" style="vertical-align:baseline;"><td class="td11" id="TBL-38-11-1" style="white-space:wrap; text-align:left;"> </td></tr></table></div></div><hr class="endfloat"/>
+</div>
+</div>
+</dd><dt class="description">
+<code>KeepClaimIdle</code>: </dt><dd class="description">An integer value that represents the number of seconds that the <i>condor_schedd</i> will
+     continue to keep a claim, in the Claimed Idle state, after the job with this attribute defined
+     completes, and there are no other jobs ready to run from this user. This attribute may improve the
+     performance of linear DAGs, in the case when a dependent job can not be scheduled until its
+     parent has completed. Extending the claim on the machine may permit the dependent job to be
+     scheduled with less delay than with waiting for the <i>condor_negotiator</i> to match with a new
+     machine.
+
+
+</dd><dt class="description">
+<code>KillSig</code>: </dt><dd class="description">The Unix signal number that the job wishes to be sent before being forcibly killed. It is relevant only for
+     jobs running on Unix machines.
+                                                                                         
+
+                                                                                         
+
+
+</dd><dt class="description">
+<code>KillSigTimeout</code>: </dt><dd class="description">This attribute is replaced by the functionality in <code>JobMaxVacateTime</code> as of HTCondor version
+     7.7.3. The number of seconds that the job (other than the standard universe) requests the <i>condor_starter</i> wait
+     after sending the signal defined as <code>KillSig</code> and before forcibly removing the job. The actual amount of time
+     will be the minimum of this value and the execute machine’s configuration variable <code>KILLING_TIMEOUT</code>
+.
+
+
+</dd><dt class="description">
+<code>LastCheckpointPlatform</code>: </dt><dd class="description">An opaque string which is the <code>CheckpointPlatform</code> identifier from the last machine
+     where this standard universe job had successfully produced a checkpoint.
+
+
+</dd><dt class="description">
+<code>LastCkptServer</code>: </dt><dd class="description">Host name of the last checkpoint server used by this job. When a pool is using multiple
+     checkpoint servers, this tells the job where to find its checkpoint file.
+
+
+</dd><dt class="description">
+<code>LastCkptTime</code>: </dt><dd class="description">Time at which the job last performed a successful checkpoint. Measured in the number of seconds
+     since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+
+</dd><dt class="description">
+<code>LastMatchTime</code>: </dt><dd class="description">An integer containing the epoch time when the job was last successfully matched with a resource
+     (gatekeeper) Ad.
+
+
+</dd><dt class="description">
+<code>LastRejMatchReason</code>: </dt><dd class="description">If, at any point in the past, this job failed to match with a resource ad, this attribute will
+     contain a string with a human-readable message about why the match failed.
+
+
+</dd><dt class="description">
+<code>LastRejMatchTime</code>: </dt><dd class="description">An integer containing the epoch time when HTCondor-G last tried to find a match for the job,
+     but failed to do so.
+
+
+</dd><dt class="description">
+<code>LastRemotePool</code>: </dt><dd class="description">The name of the <i>condor_collector</i> of the pool in which a job ran via flocking in the most recent
+     run attempt. This attribute is not defined if the job did not run via flocking.
+
+
+</dd><dt class="description">
+<code>LastSuspensionTime</code>: </dt><dd class="description">Time at which the job last performed a successful suspension. Measured in the number of
+     seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+
+</dd><dt class="description">
+<code>LastVacateTime</code>: </dt><dd class="description">Time at which the job was last evicted from a remote workstation. Measured in the number of
+     seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+
+</dd><dt class="description">
+<code>LeaveJobInQueue</code>: </dt><dd class="description">A boolean expression that defaults to <code>False</code>, causing the job to be removed from the
+     queue upon completion. An exception is if the job is submitted using <code>condor_submit -spool</code>.
+     For this case, the default expression causes the job to be kept in the queue for 10 days after
+     completion.
+
+
+</dd><dt class="description">
+<code>LocalSysCpu</code>: </dt><dd class="description">An accumulated number of seconds of system CPU time that the job caused to the machine upon
+     which the job was submitted.
+
+
+</dd><dt class="description">
+<code>LocalUserCpu</code>: </dt><dd class="description">An accumulated number of seconds of user CPU time that the job caused to the machine upon
+     which the job was submitted.
+
+
+</dd><dt class="description">
+<code>MachineAttr&lt;X&gt;&lt;N&gt;</code>: </dt><dd class="description">Machine attribute of name <code>&lt;X&gt;</code> that is placed into this job ClassAd, as specified by the
+     configuration variable <code>SYSTEM_JOB_MACHINE_ATTRS</code>. With the potential for multiple run attempts, <code>&lt;N&gt;</code>
+     represents an integer value providing historical values of this machine attribute for multiple runs. The most
+     recent run will have a value of <code>&lt;N&gt;</code> equal to <code>0</code>. The next most recent run will have a value of <code>&lt;N&gt;</code> equal to
+     <code>1</code>.
+
+
+</dd><dt class="description">
+<code>MaxHosts</code>: </dt><dd class="description">The maximum number of hosts that this job would like to claim. As long as <code>CurrentHosts</code> is the same
+     as <code>MaxHosts</code>, no more hosts are negotiated for.
+                                                                                         
+
+                                                                                         
+
+
+</dd><dt class="description">
+<code>MaxJobRetirementTime</code>: </dt><dd class="description">Maximum time in seconds to let this job run uninterrupted before kicking it off when it is
+     being preempted. This can only decrease the amount of time from what the corresponding startd expression
+     allows.
+
+
+</dd><dt class="description">
+<code>MaxTransferInputMB</code>: </dt><dd class="description">This integer expression specifies the maximum allowed total size in Mbytes of the input files
+     that are transferred for a job. This expression does <span class="emph">not</span> apply to grid universe, standard universe, or files
+     transferred via file transfer plug-ins. The expression may refer to attributes of the job. The special value -1
+     indicates no limit. If not set, the system setting <code>MAX_TRANSFER_INPUT_MB</code>  is used. If the observed size of all
+     input files at submit time is larger than the limit, the job will be immediately placed on hold with a
+     <code>HoldReasonCode</code> value of 32. If the job passes this initial test, but the size of the input files increases or the
+     limit decreases so that the limit is violated, the job will be placed on hold at the time when the file transfer is
+     attempted.
+
+
+</dd><dt class="description">
+<code>MaxTransferOutputMB</code>: </dt><dd class="description">This integer expression specifies the maximum allowed total size in Mbytes of the output
+     files that are transferred for a job. This expression does <span class="emph">not</span> apply to grid universe, standard universe, or files
+     transferred via file transfer plug-ins. The expression may refer to attributes of the job. The special value -1
+     indicates no limit. If not set, the system setting <code>MAX_TRANSFER_OUTPUT_MB</code>  is used. If the total
+     size of the job’s output files to be transferred is larger than the limit, the job will be placed
+     on hold with a <code>HoldReasonCode</code> value of 33. The output will be transferred up to the point
+     when the limit is hit, so some files may be fully transferred, some partially, and some not at
+     all.
+
+
+</dd><dt class="description">
+<code>MemoryUsage</code>: </dt><dd class="description">An integer expression in units of Mbytes that represents the peak memory usage for the job. Its
+     purpose is to be compared with the value defined by a job with the <b>request_memory</b> submit command, for
+     purposes of policy evaluation.
+
+
+</dd><dt class="description">
+<code>MinHosts</code>: </dt><dd class="description">The minimum number of hosts that must be in the claimed state for this job, before the job may enter
+     the running state.
+
+
+</dd><dt class="description">
+<code>NextJobStartDelay</code>: </dt><dd class="description">An integer number of seconds delay time after this job starts until the next
+                                                                                         
+
+                                                                                         
+     job is started. The value is limited by the configuration variable <code>MAX_NEXT_JOB_START_DELAY</code>
+.
+
+
+</dd><dt class="description">
+<code>NiceUser</code>: </dt><dd class="description">Boolean value which when <code>True</code> indicates that this job is a <span class="emph">nice</span> job, raising its user priority value, thus
+     causing it to run on a machine only when no other HTCondor jobs want the machine.
+
+
+</dd><dt class="description">
+<code>Nonessential</code>: </dt><dd class="description">A boolean value only relevant to grid universe jobs, which when <code>True</code> tells HTCondor to simply
+     abort (remove) any problematic job, instead of putting the job on hold. It is the equivalent of doing
+     <i>condor_rm</i> followed by <i>condor_rm</i> <b>-forcex</b> any time the job would have otherwise gone on hold. If not
+     explicitly set to <code>True</code>, the default value will be <code>False</code>.
+
+
+</dd><dt class="description">
+<code>NTDomain</code>: </dt><dd class="description">A string that identifies the NT domain under which a job’s owner authenticates on a platform running
+     Windows.
+
+
+</dd><dt class="description">
+<code>NumCkpts</code>: </dt><dd class="description">A count of the number of checkpoints written by this job during its lifetime.
+
+
+</dd><dt class="description">
+<code>NumGlobusSubmits</code>: </dt><dd class="description">An integer that is incremented each time the <i>condor_gridmanager</i> receives confirmation of a
+     successful job submission into Globus.
+
+
+</dd><dt class="description">
+<code>NumJobCompletions</code>: </dt><dd class="description">An integer, initialized to zero, that is incremented by the <i>condor_shadow</i> each time
+     the job’s executable exits of its own accord, with or without errors, and successfully completes
+     file transfer (if requested). Jobs which have done so normally enter the completed state; this
+     attribute is therefore normally only of use when, for example, <code>on_exit_remove</code> or <code>on_exit_hold</code> is
+     set.
+
+
+</dd><dt class="description">
+<code>NumJobMatches</code>: </dt><dd class="description">An integer that is incremented by the <i>condor_schedd</i> each time the job is matched with a resource
+     ad by the negotiator.
+                                                                                         
+
+                                                                                         
+
+
+</dd><dt class="description">
+<code>NumJobReconnects</code>: </dt><dd class="description">An integer count of the number of times a job successfully reconnected after being
+     disconnected. This occurs when the <i>condor_shadow</i> and <i>condor_starter</i> lose contact, for example because of
+     transient network failures or a <i>condor_shadow</i> or <i>condor_schedd</i> restart. This attribute is only defined for
+     jobs that can reconnected: those in the <b>vanilla</b> and <b>java</b> universes.
+
+
+</dd><dt class="description">
+<code>NumJobStarts</code>: </dt><dd class="description">An integer count of the number of times the job started executing. This is not (yet) defined for
+     <b>standard</b> universe jobs.
+
+
+</dd><dt class="description">
+<code>NumPids</code>: </dt><dd class="description">A count of the number of child processes that this job has.
+
+
+</dd><dt class="description">
+<code>NumRestarts</code>: </dt><dd class="description">A count of the number of restarts from a checkpoint attempted by this job during its
+     lifetime.
+
+
+</dd><dt class="description">
+<code>NumShadowExceptions</code>: </dt><dd class="description">An integer count of the number of times the <i>condor_shadow</i> daemon had a fatal error for a
+     given job.
+
+
+</dd><dt class="description">
+<code>NumShadowStarts</code>: </dt><dd class="description">An integer count of the number of times a <i>condor_shadow</i> daemon was started
+     for a given job. This attribute is not defined for <b>scheduler</b> universe jobs, since they do not
+     have a <i>condor_shadow</i> daemon associated with them. For <b>local</b> universe jobs, this attribute <span class="emph">is</span>
+     defined, even though the process that manages the job is technically a <i>condor_starter</i> rather
+     than a <i>condor_shadow</i>. This keeps the management of the local universe and other universes
+     as similar as possible. <b>Note that this attribute is incremented every time the job is
+     matched, even if the match is rejected by the execute machine; in other words, the
+     value of this attribute may be greater than the number of times the job actually
+     ran.</b>
+</dd><dt class="description">
+<code>NumSystemHolds</code>: </dt><dd class="description">An integer that is incremented each time HTCondor-G places a job on hold due to some sort of
+                                                                                         
+
+                                                                                         
+     error condition. This counter is useful, since HTCondor-G will always place a job on hold when it gives up on
+     some error condition. Note that if the user places the job on hold using the <i>condor_hold</i> command, this
+     attribute is not incremented.
+
+
+</dd><dt class="description">
+<code>OtherJobRemoveRequirements</code>: </dt><dd class="description">A string that defines a list of jobs. When the job with this attribute defined is
+     removed, all other jobs defined by the list are also removed. The string is an expression that defines a
+     constraint equivalent to the one implied by the command
+                                                                                         
+
+                                                                                         
+     <pre><tspan font-family="ectt" font-size="1000"> </tspan><tspan font-family="ectt" font-size="1000"> condor_rm</tspan><tspan font-family="ectt" font-size="1000"> -constraint</tspan><tspan font-family="ectt" font-size="1000"> &lt;constraint&gt;</tspan></pre>
+<!--l. 1354--><p class="nopar"> This attribute is used for jobs managed with <i>condor_dagman</i> to ensure that node jobs of the DAG are
+     removed when the <i>condor_dagman</i> job itself is removed. Note that the list of jobs defined by this attribute
+     must not form a cyclic removal of jobs, or the <i>condor_schedd</i> will go into an infinite loop when any of the jobs
+     is removed.
+
+
+</p></dd><dt class="description">
+<code>OutputDestination</code>: </dt><dd class="description">A URL, as defined by submit command <b>output_destination</b>.
+
+
+</dd><dt class="description">
+<code>Owner</code>: </dt><dd class="description">String describing the user who submitted this job.
+
+
+</dd><dt class="description">
+<code>ParallelShutdownPolicy</code>: </dt><dd class="description">A string that is only relevant to parallel universe jobs. Without this attribute defined,
+     the default policy applied to parallel universe jobs is to consider the whole job completed when the first node
+     exits, killing processes running on all remaining nodes. If defined to the following strings, HTCondor’s
+     behavior changes:
+         <dl class="description"><dt class="description">
+<code>"WAIT_FOR_ALL"</code> </dt><dd class="description">HTCondor will wait until every node in the parallel job has completed to consider
+         the job finished.</dd></dl>
+</dd><dt class="description">
+<code>PostArgs</code>: </dt><dd class="description">Defines the command-line arguments for the post command using the <span class="emph">old</span> argument syntax, as specified
+     in section <a href="Condorsubmit.html#x149-108400012">12<!--tex4ht:ref: man-condor-submit-arguments --></a>. If both <code>PostArgs</code> and <code>PostArguments</code> exists, the former is ignored.
+
+
+</dd><dt class="description">
+<code>PostArguments</code>: </dt><dd class="description">Defines the command-line arguments for the post command using the <span class="emph">new</span> argument
+     syntax, as specified in section <a href="Condorsubmit.html#x149-108400012">12<!--tex4ht:ref: man-condor-submit-arguments --></a>, excepting that double quotes must be escaped with a backslash
+     instead of another double quote. If both <code>PostArgs</code> and <code>PostArguments</code> exists, the former is
+     ignored.
+
+
+</dd><dt class="description">
+<code>PostCmd</code>: </dt><dd class="description">A job in the vanilla, Docker, Java, or virtual machine universes may specify a command to run after the
+     <b>Executable</b> has exited, but before file transfer is started. Unlike a DAGMan POST script command, this
+     command <span class="emph">is</span> run on the execute machine; however, it is not run in the same environment as the <b>Executable</b>.
+     Instead, its environment is set by <code>PostEnv</code> or <code>PostEnvironment</code>. Like the DAGMan POST script command,
+     this command is not run in the same universe as the <b>Executable</b>; in particular, this command is not run in a
+     Docker container, nor in a virtual machine, nor in Java. This command is also not run with any
+     of vanilla universe’s features active, including (but not limited to): cgroups, PID namespaces,
+     bind mounts, CPU affinity, Singularity, or job wrappers. This command is <span class="emph">not</span> automatically
+     transferred with the job, so if you’re using file transfer, you must add it to the <b>transfer_input_files</b>
+     list.
+     <!--l. 1429--><p class="noindent">If the specified command is in the job’s execute directory, or any sub-directory, you should not set
+     <b>vm_no_output_vm</b>, as that will delete all the files in the job’s execute directory before this command has
+     a chance to run. If you don’t want any output back from your VM universe job, but you do want to run a post
+     command, do not set <b>vm_no_output_vm</b> and instead delete the job’s execute directory in your post
+     command.
+
+
+</p></dd><dt class="description">
+<code>PostCmdExitBySignal</code>: </dt><dd class="description">If <code>SuccessPostExitCode</code> or <code>SuccessPostExitSignal</code> were set, and the post command has
+     run, this attribute will true if the the post command exited on a signal and false if it did not. It is otherwise
+     unset.
+
+
+</dd><dt class="description">
+<code>PostCmdExitCode</code>: </dt><dd class="description">If <code>SuccessPostExitCode</code> or <code>SuccessPostExitSignal</code> were set, the post command has run, and
+     the post command did not exit on a signal, then this attribute will be set to the exit code. It is otherwise
+     unset.
+
+
+</dd><dt class="description">
+<code>PostCmdExitSignal</code>: </dt><dd class="description">If <code>SuccessPostExitCode</code> or <code>SuccessPostExitSignal</code> were set, the post command has run,
+     and the post command exited on a signal, then this attribute will be set to that signal. It is otherwise
+     unset.
+
+
+</dd><dt class="description">
+<code>PostEnv</code>: </dt><dd class="description">Defines the environment for the Postscript using the Old environment syntax. If both <code>PostEnv</code> and
+     <code>PostEnvironment</code> exist, the former is ignored.
+
+
+</dd><dt class="description">
+<code>PostEnvironment</code>: </dt><dd class="description">Defines the environment for the Postscript using the New environment syntax. If both <code>PostEnv</code>
+                                                                                         
+
+                                                                                         
+     and <code>PostEnvironment</code> exist, the former is ignored.
+
+
+</dd><dt class="description">
+<code>PreArgs</code>: </dt><dd class="description">Defines the command-line arguments for the pre command using the <span class="emph">old</span> argument syntax, as specified in
+     section <a href="Condorsubmit.html#x149-108400012">12<!--tex4ht:ref: man-condor-submit-arguments --></a>. If both <code>PreArgs</code> and <code>PreArguments</code> exists, the former is ignored.
+
+
+</dd><dt class="description">
+<code>PreArguments</code>: </dt><dd class="description">Defines the command-line arguments for the pre command using the <span class="emph">new</span> argument syntax, as
+     specified in section <a href="Condorsubmit.html#x149-108400012">12<!--tex4ht:ref: man-condor-submit-arguments --></a>, excepting that double quotes must be escape with a backslash instead of another
+     double quote. If both <code>PreArgs</code> and <code>PreArguments</code> exists, the former is ignored.
+
+
+</dd><dt class="description">
+<code>PreCmd</code>: </dt><dd class="description">A job in the vanilla, Docker, Java, or virtual machine universes may specify a command to run after file
+     transfer (if any) completes but before the <b>Executable</b> is started. Unlike a DAGMan PRE script command,
+     this command <span class="emph">is</span> run on the execute machine; however, it is not run in the same environment as the
+     <b>Executable</b>. Instead, its environment is set by <code>PreEnv</code> or <code>PreEnvironment</code>. Like the DAGMan POST script
+     command, this command is not run in the same universe as the <b>Executable</b>; in particular, this command is
+     not run in a Docker container, nor in a virtual machine, nor in Java. This command is also not run with any
+     of vanilla universe’s features active, including (but not limited to): cgroups, PID namespaces,
+     bind mounts, CPU affinity, Singularity, or job wrappers. This command is <span class="emph">not</span> automatically
+     transferred with the job, so if you’re using file transfer, you must add it to the <b>transfer_input_files</b>
+     list.
+
+
+</dd><dt class="description">
+<code>PreCmdExitBySignal</code>: </dt><dd class="description">If <code>SuccessPreExitCode</code> or <code>SuccessPreExitSignal</code> were set, and the pre command has run,
+     this attribute will true if the the pre command exited on a signal and false if it did not. It is otherwise
+     unset.
+
+
+</dd><dt class="description">
+<code>PreCmdExitCode</code>: </dt><dd class="description">If <code>SuccessPreExitCode</code> or <code>SuccessPreExitSignal</code> were set, the pre command has run, and the
+     pre command did not exit on a signal, then this attribute will be set to the exit code. It is otherwise
+     unset.
+
+
+</dd><dt class="description">
+<code>PreCmdExitSignal</code>: </dt><dd class="description">If <code>SuccessPreExitCode</code> or <code>SuccessPreExitSignal</code> were set, the pre command has run, and
+     the pre command exited on a signal, then this attribute will be set to that signal. It is otherwise
+     unset.
+                                                                                         
+
+                                                                                         
+
+
+</dd><dt class="description">
+<code>PreEnv</code>: </dt><dd class="description">Defines the environment for the prescript using the Old environment syntax. If both <code>PreEnv</code> and
+     <code>PreEnvironment</code> exist, the former is ignored.
+
+
+</dd><dt class="description">
+<code>PreEnvironment</code>: </dt><dd class="description">Defines the environment for the prescript using the New environment syntax. If both <code>PreEnv</code> and
+     <code>PreEnvironment</code> exist, the former is ignored.
+
+
+</dd><dt class="description">
+<code>PreJobPrio1</code>: </dt><dd class="description">An integer value representing a user’s priority to affect of choice of jobs to run. A larger value gives
+     higher priority. When not explicitly set for a job, 0 is used for comparison purposes. This attribute, when set,
+     is considered first: before <code>PreJobPrio2</code>, before <code>JobPrio</code>, before <code>PostJobPrio1</code>, before <code>PostJobPrio2</code>, and
+     before <code>QDate</code>.
+
+
+</dd><dt class="description">
+<code>PreJobPrio2</code>: </dt><dd class="description">An integer value representing a user’s priority to affect of choice of jobs to run. A larger value gives
+     higher priority. When not explicitly set for a job, 0 is used for comparison purposes. This attribute, when set,
+     is considered after <code>PreJobPrio1</code>, but before <code>JobPrio</code>, before <code>PostJobPrio1</code>, before <code>PostJobPrio2</code>, and before
+     <code>QDate</code>.
+
+
+</dd><dt class="description">
+<code>PostJobPrio1</code>: </dt><dd class="description">An integer value representing a user’s priority to affect of choice of jobs to run. A larger value gives
+     higher priority. When not explicitly set for a job, 0 is used for comparison purposes. This attribute, when set,
+     is considered after <code>PreJobPrio1</code>, after <code>PreJobPrio1</code>, and after <code>JobPrio</code>, but before <code>PostJobPrio2</code>, and before
+     <code>QDate</code>.
+
+
+</dd><dt class="description">
+<code>PostJobPrio2</code>: </dt><dd class="description">An integer value representing a user’s priority to affect of choice of jobs to run. A larger value gives
+     higher priority. When not explicitly set for a job, 0 is used for comparison purposes. This attribute, when set,
+     is considered after <code>PreJobPrio1</code>, after <code>PreJobPrio1</code>, after <code>JobPrio</code>, and after <code>PostJobPrio1</code>, but before
+     <code>QDate</code>.
+
+
+</dd><dt class="description">
+<code>PreserveRelativeExecutable</code>: </dt><dd class="description">When <code>True</code>, the <i>condor_starter</i> will not prepend <code>Iwd</code> to <code>Cmd</code>, when <code>Cmd</code> is a relative
+                                                                                         
+
+                                                                                         
+     path name and <code>TransferExecutable</code> is <code>False</code>. The default value is <code>False</code>. This attribute is primarily of
+     interest for users of <code>USER_JOB_WRAPPER</code> for the purpose of allowing an executable’s location to be resolved by
+     the user’s path in the job wrapper.
+
+
+
+
+</dd><dt class="description">
+<code>ProcId</code>: </dt><dd class="description">Integer process identifier for this job. Within a cluster of many jobs, each job has the same
+     <code>ClusterId</code>, but will have a unique <code>ProcId</code>. Within a cluster, assignment of a <code>ProcId</code> value will start
+     with the value 0. The job (process) identifier described here is unrelated to operating system
+     PIDs.
+
+
+</dd><dt class="description">
+<code>ProportionalSetSizeKb</code>: </dt><dd class="description">On Linux execute machines with kernel version more recent than 2.6.27, this is the
+     maximum observed proportional set size (PSS) in KiB, summed across all processes in the job. If the execute
+     machine does not support monitoring of PSS or PSS has not yet been measured, this attribute will be
+     undefined. PSS differs from <code>ImageSize</code> in how memory shared between processes is accounted. The PSS for
+     one process is the sum of that process’ memory pages divided by the number of processes sharing each of the
+     pages. <code>ImageSize</code> is the same, except there is no division by the number of processes sharing the
+     pages.
+
+
+</dd><dt class="description">
+<code>QDate</code>: </dt><dd class="description">Time at which the job was submitted to the job queue. Measured in the number of seconds since the epoch
+     (00:00:00 UTC, Jan 1, 1970).
+
+
+</dd><dt class="description">
+<code>RecentBlockReadKbytes</code>: </dt><dd class="description">The integer number of KiB read from disk for this job over the previous time interval
+     defined by configuration variable <code>STATISTICS_WINDOW_SECONDS</code>.
+
+
+</dd><dt class="description">
+<code>RecentBlockReads</code>: </dt><dd class="description">The integer number of disk blocks read for this job over the previous time interval defined by
+     configuration variable <code>STATISTICS_WINDOW_SECONDS</code>.
+
+
+</dd><dt class="description">
+<code>RecentBlockWriteKbytes</code>: </dt><dd class="description">The integer number of KiB written to disk for this job over the previous time interval
+     defined by configuration variable <code>STATISTICS_WINDOW_SECONDS</code>.
+                                                                                         
+
+                                                                                         
+
+
+</dd><dt class="description">
+<code>RecentBlockWrites</code>: </dt><dd class="description">The integer number of blocks written to disk for this job over the previous time interval
+     defined by configuration variable <code>STATISTICS_WINDOW_SECONDS</code>.
+
+
+</dd><dt class="description">
+<code>ReleaseReason</code>: </dt><dd class="description">A string containing a human-readable message about why the job was released from
+     hold.
+
+
+</dd><dt class="description">
+<code>RemoteIwd</code>: </dt><dd class="description">The path to the directory in which a job is to be executed on a remote machine.
+
+
+</dd><dt class="description">
+<code>RemotePool</code>: </dt><dd class="description">The name of the <i>condor_collector</i> of the pool in which a job is running via flocking. This attribute is
+     not defined if the job is not running via flocking.
+
+
+</dd><dt class="description">
+<code>RemoteSysCpu</code>: </dt><dd class="description">The total number of seconds of system CPU time (the time spent at system calls) the job used on
+     remote machines. This does not count time spent on run attempts that were evicted without a
+     checkpoint.
+
+
+</dd><dt class="description">
+<code>CumulativeRemoteSysCpu</code>: </dt><dd class="description">The total number of seconds of system CPU time the job used on remote machines,
+     summed over all execution attempts.
+
+
+</dd><dt class="description">
+<code>RemoteUserCpu</code>: </dt><dd class="description">The total number of seconds of user CPU time the job used on remote machines. This does not
+     count time spent on run attempts that were evicted without a checkpoint. A job in the virtual machine
+     universe will only report this attribute if run on a KVM hypervisor.
+
+
+</dd><dt class="description">
+<code>CumulativeRemoteUserCpu</code>: </dt><dd class="description">The total number of seconds of user CPU time the job used on remote machines,
+     summed over all execution attempts.
+                                                                                         
+
+                                                                                         
+
+
+</dd><dt class="description">
+<code>RemoteWallClockTime</code>: </dt><dd class="description">Cumulative number of seconds the job has been allocated a machine. This also includes
+     time spent in suspension (if any), so the total real time spent running is
+                                                                                         
+
+                                                                                         
+     <pre><tspan font-family="ectt" font-size="1000">RemoteWallClockTime</tspan><tspan font-family="ectt" font-size="1000"> -</tspan><tspan font-family="ectt" font-size="1000"> CumulativeSuspensionTime</tspan></pre>
+<!--l. 1741--><p class="nopar"> Note that this number does not get reset to zero when a job is forced to migrate from one machine to another.
+     <code>CommittedTime</code>, on the other hand, is just like <code>RemoteWallClockTime</code> except it does get reset to 0 whenever
+     the job is evicted without a checkpoint.
+
+
+</p></dd><dt class="description">
+<code>RemoveKillSig</code>: </dt><dd class="description">Currently only for scheduler universe jobs, a string containing a name of a signal to be sent to the
+     job if the job is removed.
+
+
+</dd><dt class="description">
+<code>RequestCpus</code>: </dt><dd class="description">The number of CPUs requested for this job. If dynamic <i>condor_startd</i> provisioning is enabled, it is
+     the minimum number of CPUs that are needed in the created dynamic slot.
+
+
+</dd><dt class="description">
+<code>RequestDisk</code>: </dt><dd class="description">The amount of disk space in KiB requested for this job. If dynamic <i>condor_startd</i>
+     provisioning is enabled, it is the minimum amount of disk space needed in the created dynamic
+     slot.
+
+
+</dd><dt class="description">
+<code>RequestedChroot</code>: </dt><dd class="description">A full path to the directory that the job requests the <i>condor_starter</i> use as an argument to
+     chroot().
+
+
+</dd><dt class="description">
+<code>RequestMemory</code>: </dt><dd class="description">The amount of memory space in MiB requested for this job. If dynamic <i>condor_startd</i>
+     provisioning is enabled, it is the minimum amount of memory needed in the created dynamic slot. If not set
+     by the job, its definition is specified by configuration variable <code>JOB_DEFAULT_REQUESTMEMORY</code>
+.
+
+
+</dd><dt class="description">
+<code>Requirements</code>: </dt><dd class="description">A classad expression evaluated by the <i>condor_negotiator</i>, <i>condor_schedd</i>, and {Condorstartd in the
+     context of slot ad. If true, this job is eligible to run on that slot. If the job requirements does not mention the
+                                                                                         
+
+                                                                                         
+     (startd) attribute <code>OPSYS</code> , the schedd will append a clause to Requirements forcing the job to match the same
+     <code>OPSYS</code>  as the submit machine. The schedd appends a simliar clause to match the <code>ARCH</code> . The schedd
+     parameter <code>APPEND_REQUIREMENTS</code> , will, if set, append that value to every job’s requirements
+     expression.
+
+
+</dd><dt class="description">
+<code>ResidentSetSize</code>: </dt><dd class="description">Maximum observed physical memory in use by the job in KiB while running.
+
+
+</dd><dt class="description">
+<code>StackSize</code>: </dt><dd class="description">Utilized for Linux jobs only, the number of bytes allocated for stack space for this job. This number of
+     bytes replaces the default allocation of 512 Mbytes.
+
+
+</dd><dt class="description">
+<code>StageOutFinish</code>: </dt><dd class="description">An attribute representing a Unix epoch time that is defined for a job that is spooled to a remote
+     site using <code>condor_submit -spool</code> or HTCondor-C and causes HTCondor to hold the output in the spool
+     while the job waits in the queue in the <code>Completed</code> state. This attribute is defined when retrieval of the output
+     finishes.
+
+
+</dd><dt class="description">
+<code>StageOutStart</code>: </dt><dd class="description">An attribute representing a Unix epoch time that is defined for a job that is spooled to a remote
+     site using <code>condor_submit -spool</code> or HTCondor-C and causes HTCondor to hold the output in the spool
+     while the job waits in the queue in the <code>Completed</code> state. This attribute is defined when retrieval of the output
+     begins.
+
+
+</dd><dt class="description">
+<code>StreamErr</code>: </dt><dd class="description">An attribute utilized only for grid universe jobs. The default value is <code>True</code>. If <code>True</code>, and <code>TransferErr</code> is
+     <code>True</code>, then standard error is streamed back to the submit machine, instead of doing the transfer (as a
+     whole) after the job completes. If <code>False</code>, then standard error is transferred back to the submit
+     machine (as a whole) after the job completes. If <code>TransferErr</code> is <code>False</code>, then this job attribute is
+     ignored.
+
+
+</dd><dt class="description">
+<code>StreamOut</code>: </dt><dd class="description">An attribute utilized only for grid universe jobs. The default value is <code>True</code>. If <code>True</code>, and <code>TransferOut</code> is
+     <code>True</code>, then job output is streamed back to the submit machine, instead of doing the transfer (as
+     a whole) after the job completes. If <code>False</code>, then job output is transferred back to the submit
+     machine (as a whole) after the job completes. If <code>TransferOut</code> is <code>False</code>, then this job attribute is
+     ignored.
+                                                                                         
+
+                                                                                         
+
+
+</dd><dt class="description">
+<code>SubmitterAutoregroup</code>: </dt><dd class="description">A boolean attribute defined by the <i>condor_negotiator</i> when it makes a match. It will be
+     <code>True</code> if the resource was claimed via negotiation when the configuration variable <code>GROUP_AUTOREGROUP</code>  was
+     <code>True</code>. It will be <code>False</code> otherwise.
+
+
+</dd><dt class="description">
+<code>SubmitterGlobalJobId</code>: </dt><dd class="description">When HTCondor-C submits a job to a remote <i>condor_schedd</i>, it sets this attribute in the
+     remote job ad to match the <code>GlobalJobId</code> attribute of the original, local job.
+
+
+</dd><dt class="description">
+<code>SubmitterGroup</code>: </dt><dd class="description">The accounting group name defined by the <i>condor_negotiator</i> when it makes a
+     match.
+
+
+</dd><dt class="description">
+<code>SubmitterNegotiatingGroup</code>: </dt><dd class="description">The accounting group name under which the resource negotiated when it was
+     claimed, as set by the <i>condor_negotiator</i>.
+
+
+</dd><dt class="description">
+<code>SuccessPreExitBySignal</code>: </dt><dd class="description">Specifies if a succesful pre command must exit with a signal.
+
+
+</dd><dt class="description">
+<code>SuccessPreExitCode</code>: </dt><dd class="description">Specifies the code with which the pre command must exit to be considered successful. Pre
+     commands which are not successful cause the job to go on hold with <code>ExitCode</code> set to <code>PreCmdExitCode</code>. The
+     exit status of a pre command without one of <code>SuccessPreExitCode</code> or <code>SuccessPreExitSignal</code> defined is
+     ignored.
+
+
+</dd><dt class="description">
+<code>SuccessPreExitSignal</code>: </dt><dd class="description">Specifies the signal on which the pre command must exit be considered successful. Pre
+     commands which are not successful cause the job to go on hold with <code>ExitSignal</code> set to <code>PreCmdExitSignal</code>.
+     The exit status of a pre command without one of <code>SuccessPreExitCode</code> or <code>SuccessPreExitSignal</code> defined is
+     ignored.
+
+
+</dd><dt class="description">
+<code>SuccessPostExitBySignal</code>: </dt><dd class="description">Specifies if a succesful post command must exit with a signal.
+
+
+</dd><dt class="description">
+<code>SuccessPostExitCode</code>: </dt><dd class="description">Specifies the code with which the post command must exit to be considered successful. Post
+     commands which are not successful cause the job to go on hold with <code>ExitCode</code> set to <code>PostCmdExitCode</code>. The
+     exit status of a post command without one of <code>SuccessPostExitCode</code> or <code>SuccessPostExitSignal</code> defined is
+     ignored.
+
+
+</dd><dt class="description">
+<code>SuccessPostExitSignal</code>: </dt><dd class="description">Specifies the signal on which the post command must exit be considered successful. Post
+     commands which are not successful cause the job to go on hold with <code>ExitSignal</code> set to <code>PostCmdExitSignal</code>.
+     The exit status of a post command without one of <code>SuccessPostExitCode</code> or <code>SuccessPostExitSignal</code> defined
+     is ignored.
+
+
+</dd><dt class="description">
+<code>TotalSuspensions</code>: </dt><dd class="description">A count of the number of times this job has been suspended during its lifetime.
+
+
+</dd><dt class="description">
+<code>TransferErr</code>: </dt><dd class="description">An attribute utilized only for grid universe jobs. The default value is <code>True</code>. If <code>True</code>, then the error
+     output from the job is transferred from the remote machine back to the submit machine. The name
+     of the file after transfer is the file referred to by job attribute <code>Err</code>. If <code>False</code>, no transfer takes
+     place (remote to submit machine), and the name of the file is the file referred to by job attribute
+     <code>Err</code>.
+
+
+</dd><dt class="description">
+<code>TransferExecutable</code>: </dt><dd class="description">An attribute utilized only for grid universe jobs. The default value is <code>True</code>. If <code>True</code>, then the
+     job executable is transferred from the submit machine to the remote machine. The name of the file (on the
+     submit machine) that is transferred is given by the job attribute <code>Cmd</code>. If <code>False</code>, no transfer takes
+     place, and the name of the file used (on the remote machine) will be as given in the job attribute
+     <code>Cmd</code>.
+
+
+</dd><dt class="description">
+<code>TransferIn</code>: </dt><dd class="description">An attribute utilized only for grid universe jobs. The default value is <code>True</code>. If <code>True</code>, then the job
+     input is transferred from the submit machine to the remote machine. The name of the file that
+     is transferred is given by the job attribute <code>In</code>. If <code>False</code>, then the job’s input is taken from a
+     file on the remote machine (pre-staged), and the name of the file is given by the job attribute
+                                                                                         
+
+                                                                                         
+     <code>In</code>.
+
+
+</dd><dt class="description">
+<code>TransferInputSizeMB</code>: </dt><dd class="description">The total size in Mbytes of input files to be transferred for the job. Files transferred via file
+     transfer plug-ins are not included. This attribute is automatically set by <i>condor_submit</i>; jobs submitted via
+     other submission methods, such as SOAP, may not define this attribute.
+
+
+</dd><dt class="description">
+<code>TransferOut</code>: </dt><dd class="description">An attribute utilized only for grid universe jobs. The default value is <code>True</code>. If <code>True</code>, then the output
+     from the job is transferred from the remote machine back to the submit machine. The name
+     of the file after transfer is the file referred to by job attribute <code>Out</code>. If <code>False</code>, no transfer takes
+     place (remote to submit machine), and the name of the file is the file referred to by job attribute
+     <code>Out</code>.
+
+
+</dd><dt class="description">
+<code>TransferringInput</code>: </dt><dd class="description">A boolean value that indicates whether the job is currently transferring input files.
+     The value is <code>Undefined</code> if the job is not scheduled to run or has not yet attempted to start
+     transferring input. When this value is <code>True</code>, to see whether the transfer is active or queued, check
+     <code>TransferQueued</code>.
+
+
+</dd><dt class="description">
+<code>TransferringOutput</code>: </dt><dd class="description">A boolean value that indicates whether the job is currently transferring output files.
+     The value is <code>Undefined</code> if the job is not scheduled to run or has not yet attempted to start
+     transferring output. When this value is <code>True</code>, to see whether the transfer is active or queued, check
+     <code>TransferQueued</code>.
+
+
+</dd><dt class="description">
+<code>TransferQueued</code>: </dt><dd class="description">
+<!--l. 2041--><p class="noindent">A boolean value that indicates whether the job is currently waiting to transfer files because of limits placed by
+     <code>MAX_CONCURRENT_DOWNLOADS</code>  or <code>MAX_CONCURRENT_UPLOADS</code> .
+
+
+</p></dd><dt class="description">
+<code>UserLog</code>: </dt><dd class="description">The full path and file name on the submit machine of the log file of job events.
+
+</dd><dt class="description">
+<code>WantGracefulRemoval</code>: </dt><dd class="description">A boolean expression that, when <code>True</code>, specifies that a graceful shutdown of the job should
+     be done when the job is removed or put on hold.
+
+</dd><dt class="description">
+<code>WindowsBuildNumber</code>: </dt><dd class="description">An integer, extracted from the platform type of the machine upon which this job is
+     submitted, representing a build number for a Windows operating system. This attribute only exists for jobs
+     submitted from Windows machines.
+
+</dd><dt class="description">
+<code>WindowsMajorVersion</code>: </dt><dd class="description">An integer, extracted from the platform type of the machine upon which this job is
+     submitted, representing a major version number (currently 5 or 6) for a Windows operating system. This
+     attribute only exists for jobs submitted from Windows machines.
+
+</dd><dt class="description">
+<code>WindowsMinorVersion</code>: </dt><dd class="description">An integer, extracted from the platform type of the machine upon which this job is
+     submitted, representing a minor version number (currently 0, 1, or 2) for a Windows operating system. This
+     attribute only exists for jobs submitted from Windows machines.
+
+
+</dd><dt class="description">
+<code>X509UserProxy</code>: </dt><dd class="description">The full path and file name of the file containing the X.509 user proxy.
+
+
+</dd><dt class="description">
+<code>X509UserProxyEmail</code>: </dt><dd class="description">
+</dd><dt class="description">
+</dt><dd class="description">For a job with an X.509 proxy credential, this is the email address extracted from the proxy.
+
+
+</dd><dt class="description">
+<code>X509UserProxyExpiration</code>: </dt><dd class="description">For a job that defines the submit description file command <b>x509userproxy</b>, this is
+     the time at which the indicated X.509 proxy credential will expire, measured in the number of seconds since
+     the epoch (00:00:00 UTC, Jan 1, 1970).
+
+
+</dd><dt class="description">
+<code>X509UserProxyFirstFQAN</code>: </dt><dd class="description">For a vanilla or grid universe job that defines the submit description file command
+     <b>x509userproxy</b>, this is the VOMS Fully Qualified Attribute Name (FQAN) of the primary role of the
+     credential. A credential may have multiple roles defined, but by convention the one listed first is the primary
+     role.
+                                                                                         
+
+                                                                                         
+
+
+</dd><dt class="description">
+<code>X509UserProxyFQAN</code>: </dt><dd class="description">For a vanilla or grid universe job that defines the submit description file command
+     <b>x509userproxy</b>, this is a serialized list of the DN and all FQAN. A comma is used as a separator, and any
+     existing commas in the DN or FQAN are replaced with the string <code>&amp;comma;</code>. Likewise, any ampersands in the
+     DN or FQAN are replaced with <code>&amp;amp;</code>.
+
+
+</dd><dt class="description">
+<code>X509UserProxySubject</code>: </dt><dd class="description">For a vanilla or grid universe job that defines the submit description file command
+     <b>x509userproxy</b>, this attribute contains the Distinguished Name (DN) of the credential used to submit the
+     job.
+
+
+</dd><dt class="description">
+<code>X509UserProxyVOName</code>: </dt><dd class="description">For a vanilla or grid universe job that defines the submit description file command
+     <b>x509userproxy</b>, this is the name of the VOMS virtual organization (VO) that the user’s credential is part
+     of.
+     </dd></dl>
+<!--l. 2143--><p class="indent">   The following job ClassAd attributes are relevant only for <b>vm</b> universe jobs.
+
+</p><dl class="description"><dt class="description">
+<code>VM_MACAddr</code>: </dt><dd class="description">The MAC address of the virtual machine’s network interface, in the standard format of six
+     groups of two hexadecimal digits separated by colons. This attribute is currently limited to apply only
+     to Xen virtual machines.
+     </dd></dl>
+<!--l. 2182--><p class="indent">   The following job ClassAd attributes appear in the job ClassAd only for the <i>condor_dagman</i> job submitted
+under DAGMan. They represent status information for the DAG.
+
+
+</p><dl class="description"><dt class="description">
+<code>DAG_InRecovery</code>: </dt><dd class="description">The value 1 if the DAG is in recovery mode, and The value 0 otherwise.
+
+
+</dd><dt class="description">
+<code>DAG_NodesDone</code>: </dt><dd class="description">The number of DAG nodes that have finished successfully. This means that the entire node
+     has finished, not only an actual HTCondor job or jobs.
+
+
+</dd><dt class="description">
+<code>DAG_NodesFailed</code>: </dt><dd class="description">The number of DAG nodes that have failed. This value includes all retries, if there are
+     any.
+
+
+</dd><dt class="description">
+<code>DAG_NodesPostrun</code>: </dt><dd class="description">The number of DAG nodes for which a POST script is running or has been deferred
+     because of a POST script throttle setting.
+
+
+</dd><dt class="description">
+<code>DAG_NodesPrerun</code>: </dt><dd class="description">The number of DAG nodes for which a PRE script is running or has been deferred
+     because of a PRE script throttle setting.
+
+
+</dd><dt class="description">
+<code>DAG_NodesQueued</code>: </dt><dd class="description">The number of DAG nodes for which the actual HTCondor job or jobs are queued. The
+     queued jobs may be in any state.
+
+
+</dd><dt class="description">
+<code>DAG_NodesReady</code>: </dt><dd class="description">The number of DAG nodes that are ready to run, but which have not yet started running.
+
+
+</dd><dt class="description">
+<code>DAG_NodesTotal</code>: </dt><dd class="description">The total number of nodes in the DAG, including the FINAL node, if there is a FINAL
+     node.
+
+
+</dd><dt class="description">
+<code>DAG_NodesUnready</code>: </dt><dd class="description">The number of DAG nodes that are not ready to run. This is a node in which one or
+     more of the parent nodes has not yet finished.
+
+
+</dd><dt class="description">
+<code>DAG_Status</code>: </dt><dd class="description">The overall status of the DAG, with the same values as the macro <code>$DAG_STATUS</code> used in DAGMan
+     FINAL nodes.
+                                                                                         
+
+                                                                                         
+     <div class="center">
+<!--l. 2270--><p class="noindent">
+</p><div class="table">
+<!--l. 2271--><p class="noindent"></p><hr class="float"/><div class="float"> <!--tex4ht:inline--><div class="tabular"> <table><colgroup id="TBL-39-1g"><col id="TBL-39-1"/><col id="TBL-39-2"/></colgroup><tr id="TBL-39-1-" style="vertical-align:baseline;"><td class="td11" id="TBL-39-1-1" style="white-space:wrap; text-align:left;"><!--l. 2273--><p class="noindent"><span class="emph">Value</span> </p></td><td class="td11" id="TBL-39-1-2" style="white-space:wrap; text-align:left;"><!--l. 2273--><p class="noindent"><span class="emph">Status</span> </p></td></tr><tr id="TBL-39-2-" style="vertical-align:baseline;"><td class="td11" id="TBL-39-2-1" style="white-space:wrap; text-align:left;"><!--l. 2274--><p class="noindent">0 </p></td> <td class="td11" id="TBL-39-2-2" style="white-space:wrap; text-align:left;"><!--l. 2274--><p class="noindent">OK</p></td>
+</tr><tr id="TBL-39-3-" style="vertical-align:baseline;"><td class="td11" id="TBL-39-3-1" style="white-space:wrap; text-align:left;"><!--l. 2275--><p class="noindent">1                 </p></td><td class="td11" id="TBL-39-3-2" style="white-space:wrap; text-align:left;"><!--l. 2275--><p class="noindent">error; an error condition different than those listed here            </p></td>
+</tr><tr id="TBL-39-4-" style="vertical-align:baseline;"><td class="td11" id="TBL-39-4-1" style="white-space:wrap; text-align:left;"><!--l. 2276--><p class="noindent">2                 </p></td><td class="td11" id="TBL-39-4-2" style="white-space:wrap; text-align:left;"><!--l. 2276--><p class="noindent">one or more nodes in the DAG have failed                              </p></td></tr><tr id="TBL-39-5-" style="vertical-align:baseline;"><td class="td11" id="TBL-39-5-1" style="white-space:wrap; text-align:left;"><!--l. 2277--><p class="noindent">3 </p></td> <td class="td11" id="TBL-39-5-2" style="white-space:wrap; text-align:left;"><!--l. 2277--><p class="noindent">the DAG has been aborted by an ABORT-DAG-ON specification</p></td>
+</tr><tr id="TBL-39-6-" style="vertical-align:baseline;"><td class="td11" id="TBL-39-6-1" style="white-space:wrap; text-align:left;"><!--l. 2278--><p class="noindent">4                 </p></td><td class="td11" id="TBL-39-6-2" style="white-space:wrap; text-align:left;"><!--l. 2278--><p class="noindent">removed; the DAG has been removed by <i>condor_rm</i> </p></td>
+</tr><tr id="TBL-39-7-" style="vertical-align:baseline;"><td class="td11" id="TBL-39-7-1" style="white-space:wrap; text-align:left;"><!--l. 2279--><p class="noindent">5                 </p></td><td class="td11" id="TBL-39-7-2" style="white-space:wrap; text-align:left;"><!--l. 2279--><p class="noindent">a cycle was found in the DAG                                              </p></td>
+</tr><tr id="TBL-39-8-" style="vertical-align:baseline;"><td class="td11" id="TBL-39-8-1" style="white-space:wrap; text-align:left;"><!--l. 2280--><p class="noindent">6                 </p></td><td class="td11" id="TBL-39-8-2" style="white-space:wrap; text-align:left;"><!--l. 2280--><p class="noindent">the DAG has been suspended (see section <a href="DAGManApplications.html#x22-890002.10.8">2.10.8<!--tex4ht:ref: sec:DagSuspend --></a>)                    </p></td>
+</tr><tr class="hline"><td><hr/></td><td><hr/></td></tr><tr id="TBL-39-9-" style="vertical-align:baseline;"><td class="td11" id="TBL-39-9-1" style="white-space:wrap; text-align:left;"> </td></tr></table></div></div><hr class="endfloat"/>
+</div>
+</div>
+</dd></dl>
+<!--l. 2286--><p class="indent">   The following job ClassAd attributes do <span class="emph">not</span> appear in the job ClassAd as kept by the <i>condor_schedd</i> daemon.
+They appear in the job ClassAd written to the job’s execute directory while the job is running.
+
+
+</p><dl class="description"><dt class="description">
+<code>CpusProvisioned</code>: </dt><dd class="description">The number of Cpus allocated to the job. With statically-allocated slots, it is the number
+     of Cpus allocated to the slot. With dynamically-allocated slots, it is based upon the job attribute
+     <code>RequestCpus</code>, but may be larger due to the minimum given to a dynamic slot.
+
+
+</dd><dt class="description">
+<code>DiskProvisioned</code>: </dt><dd class="description">The amount of disk space in KiB allocated to the job. With statically-allocated slots, it
+     is the amount of disk space allocated to the slot. With dynamically-allocated slots, it is based upon
+     the job attribute <code>RequestDisk</code>, but may be larger due to the minimum given to a dynamic slot.
+
+
+</dd><dt class="description">
+<code>MemoryProvisioned</code>: </dt><dd class="description">The amount of memory in MiB allocated to the job. With statically-allocated slots,
+     it is the amount of memory space allocated to the slot. With dynamically-allocated slots, it is based
+     upon the job attribute <code>RequestMemory</code>, but may be larger due to the minimum given to a dynamic
+     slot.
+
+
+</dd><dt class="description">
+<code>&lt;Name&gt;Provisioned</code>: </dt><dd class="description">The amount of the custom resource identified by <code>&lt;Name&gt;</code> allocated to the job. For
+                                                                                         
+
+                                                                                         
+     jobs  using  GPUs,  <code>&lt;Name&gt;</code> will  be  <code>GPUs</code>.  With  statically-allocated  slots,  it  is  the  amount  of  the
+     resource allocated to the slot. With dynamically-allocated slots, it is based upon the job attribute
+     <code>Request&lt;Name&gt;</code>, but may be larger due to the minimum given to a dynamic slot.
+     </dd></dl>
+<!--l. 95--><p class="indent">       
+</p></body></html>

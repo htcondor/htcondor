@@ -494,15 +494,18 @@ class Scheduler : public Service
 	void			schedd_exit();
 	void			invalidate_ads();
 	void			update_local_ad_file(); // warning, may be removed
-	
+
 	// negotiation
 	int				negotiatorSocketHandler(Stream *);
 	int				negotiate(int, Stream *);
 	int				reschedule_negotiator(int, Stream *);
 	void			negotiationFinished( char const *owner, char const *remote_pool, bool satisfied );
 
-	void				reschedule_negotiator_timer() { reschedule_negotiator(0, NULL); }
+	void			reschedule_negotiator_timer() { reschedule_negotiator(0, NULL); }
 	void			release_claim(int, Stream *);
+	// I think this is actually a serious bug...
+	int				release_claim_command_handler(int i, Stream * s) { release_claim(i, s); return 0; }
+
 	AutoCluster		autocluster;
 		// send a reschedule command to the negotiatior unless we
 		// have recently sent one and not yet heard from the negotiator
@@ -931,6 +934,8 @@ private:
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
 	void		remove_unused_owners();
 	void			child_exit(int, int);
+	// AFAICT, reapers should be be registered void to begin with.
+	int				child_exit_from_reaper(int a, int b) { child_exit(a, b); return 0; }
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
 	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
 	void			clean_shadow_recs();

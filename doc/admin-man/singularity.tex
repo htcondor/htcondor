@@ -57,3 +57,12 @@ Then, the user adds to their submit file:
 
 That would cause the job to run on the native host for CentOS6 hosts
 and inside a CentOS6 Singularity container on CentOS7 hosts.
+
+If the administrator wants to have the singularity exec command run with 
+additional arguments, the optional parameter
+
+\begin{verbatim}
+SINGULARITY_EXTRA_ARGUMENTS = "--some-argument"
+\end{verbatim}
+
+may be used to pass additional command line arguments to singularity.

@@ -92,7 +92,7 @@ bool credmon_fill_watchfile_name(char* watchfilename, const char* user, const ch
 			strncpy(username, user, 255);
 			username[255] = 0;
 		}
-		if(param_boolean("TOKENS", false)) {
+		if(param_boolean("CREDD_OAUTH_MODE", false)) {
 			sprintf(watchfilename, "%s%c%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, username, DIR_DELIM_CHAR, name);
 		} else {
 			sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
@@ -198,7 +198,7 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 	}
 
 	// now poll repeatedly for existence of watch file
-	int retries = 20;
+	int retries = param_integer("CREDD_POLLING_TIMEOUT", 20);
 	while (retries-- > 0) {
 		if (credmon_poll_continue(user, retries)) {
 			dprintf(D_FULLDEBUG, "CREDMON: SUCCESS: file %s found after %i seconds\n", watchfilename, 20-retries);
@@ -210,94 +210,6 @@ bool credmon_poll(const char* user, bool force_fresh, bool send_signal) {
 
 	dprintf(D_ALWAYS, "CREDMON: FAILURE: credmon never created %s after 20 seconds!\n", watchfilename);
 	return false;
-}
-
-
-
-// takes a username, or NULL to refresh ALL credentials
-// if force_fresh, we delete the file we are polling first
-// if send_signal we SIGUP the credmon
-// (we allow it, but you probably shouldn't force_fresh and not send_signal)
-bool credmon_poll_obselete(const char* user, bool force_fresh, bool send_signal) {
-
-	// construct filename to poll for
-	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY"));
-	if(!cred_dir) {
-		dprintf(D_ALWAYS, "CREDMON: ERROR: got credmon_poll() but SEC_CREDENTIAL_DIRECTORY not defined!\n");
-		return false;
-	}
-
-	// this will be the filename we poll for
-	char watchfilename[PATH_MAX];
-
-	// if user == NULL this is a special case.  we want the credd to
-	// refresh ALL credentials, which we know it has done when it writes
-	// the file CREDMON_COMPLETE in the cred_dir
-	if (user == NULL) {
-		// we will watch for the file that signifies ALL creds were processed
-		sprintf(watchfilename, "%s%cCREDMON_COMPLETE", cred_dir.ptr(), DIR_DELIM_CHAR);
-	} else {
-		// get username (up to '@' if present, else whole thing)
-		char username[256];
-		const char *at = strchr(user, '@');
-		if(at) {
-			strncpy(username, user, (at-user));
-			username[at-user] = 0;
-		} else {
-			strncpy(username, user, 255);
-			username[255] = 0;
-		}
-		sprintf(watchfilename, "%s%c%s.cc", cred_dir.ptr(), DIR_DELIM_CHAR, username);
-	}
-
-	if(force_fresh) {
-		// unlink it first so we know we got a fresh copy
-		priv_state priv = set_root_priv();
-		unlink(watchfilename);
-		set_priv(priv);
-	}
-
-	if(send_signal) {
-		// now signal the credmon
-		pid_t credmon_pid = get_credmon_pid();
-		if (credmon_pid == -1) {
-			dprintf(D_ALWAYS, "CREDMON: failed to get pid of credmon.\n");
-			return false;
-		}
-
-		dprintf(D_FULLDEBUG, "CREDMON: sending SIGHUP to credmon pid %i\n", credmon_pid);
-#ifdef WIN32
-		//TODO: send reconfig signal to credmon
-		int rc = -1;
-#else
-		int rc = kill(credmon_pid, SIGHUP);
-#endif
-		if (rc == -1) {
-			dprintf(D_ALWAYS, "CREDMON: failed to signal credmon: %i\n", errno);
-			return false;
-		}
-	}
-
-	// now poll for existence of watch file
-	int retries = 20;
-	struct stat junk_buf;
-	while (retries > 0) {
-		int rc = stat(watchfilename, &junk_buf);
-		if (rc==-1) {
-			dprintf(D_FULLDEBUG, "CREDMON: warning, got errno %i, waiting for %s to appear (%i seconds left)\n", errno, watchfilename, retries);
-			sleep(1);
-			retries--;
-		} else {
-			break;
-		}
-	}
-	if (retries == 0) {
-		dprintf(D_ALWAYS, "CREDMON: FAILURE: credmon never created %s after 20 seconds!\n", watchfilename);
-		return false;
-	}
-
-	dprintf(D_FULLDEBUG, "CREDMON: SUCCESS: file %s found after %i seconds\n", watchfilename, 20-retries);
-	return true;
 }
 
 bool credmon_mark_creds_for_sweeping(const char* user) {
@@ -436,7 +348,7 @@ void credmon_sweep_creds() {
 	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
 	if (n >= 0) {
 		while (n--) {
-			if(param_boolean("TOKENS", false)) {
+			if(param_boolean("CREDD_OAUTH_MODE", false)) {
 				process_cred_mark_dir(namelist[n]->d_name);
 			} else {
 				fullpathname.formatstr("%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, namelist[n]->d_name);

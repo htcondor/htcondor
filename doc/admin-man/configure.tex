@@ -8428,6 +8428,13 @@ These macros affect the \Condor{negotiator}.
   for a description of a pie slice.
   It defaults to 120 seconds.
 
+\label{param:NegotiatorDepthFirst}
+\item[\Macro{NEGOTIATOR\_DEPTH\_FIRST}]
+  A boolean value which defaults to false.  When partitionable slots
+are enabled, and this parameter is true, the negotiator tries to pack
+as many jobs as possible on each machine before moving on to the next
+machine.
+
 \label{param:UseResourceRequestCounts}
 \item[\Macro{USE\_RESOURCE\_REQUEST\_COUNTS}]
   A boolean value that defaults to \Expr{True}. 

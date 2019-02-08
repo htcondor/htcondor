@@ -29,7 +29,7 @@
 #include "remoteresource.h"
 #include "directory.h"
 #include "secure_file.h"
-#include "condor_base64.h"
+#include "zkm_base64.h"
 
 
 #if defined(Solaris)
@@ -2166,6 +2166,8 @@ case CONDOR_getdir:
 		ad->LookupInteger("ProcId", proc_id);
 		ad->LookupString("Owner", user);
 
+		bool trust_cred_dir = param_boolean("TRUST_CREDENTIAL_DIRECTORY", false);
+
 		MyString cred_dir_name;
 		if (!param(cred_dir_name, "SEC_CREDENTIAL_DIRECTORY")) {
 			dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY defined.\n");
@@ -2193,13 +2195,15 @@ case CONDOR_getdir:
 			// read the file (fourth argument "true" means as_root)
 			unsigned char *buf = 0;
 			size_t len = 0;
-			bool rc = read_secure_file(fullname.Value(), (void**)(&buf), &len, true);
+			const bool as_root = true;
+			const int verify_mode = trust_cred_dir ? 0 : SECURE_FILE_VERIFY_ALL;
+			bool rc = read_secure_file(fullname.Value(), (void**)(&buf), &len, as_root, verify_mode);
 			if(!rc) {
 				dprintf( D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.Value() );
 				had_error = true;
 				break;
 			}
-			MyString b64 = condor_base64_encode(buf, len);
+			MyString b64 = zkm_base64_encode(buf, len);
 			free(buf);
 
 			ClassAd ad;

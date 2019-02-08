@@ -84,7 +84,7 @@ void	main_shutdown_normal(); // do graceful or peaceful depending on daemonCore 
 void	main_shutdown_fast();
 void	invalidate_ads();
 void	main_config();
-int	agent_starter(ReliSock *);
+int	agent_starter(ReliSock *, Stream *);
 int	handle_agent_fetch_log(ReliSock *);
 int	admin_command_handler(Service *, int, Stream *);
 int	ready_command_handler(Service *, int, Stream *);
@@ -156,6 +156,7 @@ public:
 		if ( watchdog_secs > 0 ) {
 			watchdog_secs = watchdog_secs / 1e6 / 3;
 			if (watchdog_secs <= 0) { watchdog_secs = 1; }
+			if (watchdog_secs > 20) { watchdog_secs = 10; }
 			Timeslice ts;
 			ts.setDefaultInterval(watchdog_secs);
 			m_watchdog_timer = daemonCore->Register_Timer(ts,
@@ -858,7 +859,7 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 }
 
 int
-agent_starter( ReliSock * s )
+agent_starter( ReliSock * s, Stream * )
 {
 	ReliSock* stream = (ReliSock*)s;
 	char *subsys = NULL;

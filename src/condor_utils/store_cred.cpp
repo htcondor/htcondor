@@ -32,6 +32,7 @@
 #include "credmon_interface.h"
 #include "secure_file.h"
 #include "condor_base64.h"
+#include "zkm_base64.h"
 #include "my_popen.h"
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
@@ -92,7 +93,7 @@ OAUTH_STORE_CRED(const char *user, const char *pw, const int len, int mode, int 
 	// into the file.
 	int rawlen = -1;
 	unsigned char* rawbuf = NULL;
-	condor_base64_decode(pw, &rawbuf, &rawlen);
+	zkm_base64_decode(pw, &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
 		dprintf(D_ALWAYS, "Failed to decode credential!\n");
@@ -199,7 +200,7 @@ UNIX_STORE_CRED(const char *user, const char *pw, const int len, int mode, int &
 	// into the file.
 	int rawlen = -1;
 	unsigned char* rawbuf = NULL;
-	condor_base64_decode(pw, &rawbuf, &rawlen);
+	zkm_base64_decode(pw, &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
 		dprintf(D_ALWAYS, "Failed to decode credential!\n");
@@ -888,7 +889,7 @@ int store_cred_handler(void *, int /*i*/, Stream *s)
 #else
 
 	// see if we're in "new" mode.  call a hook to translate refresh into access
-	if(param_boolean("TOKENS", false)) {
+	if(param_boolean("CREDD_OAUTH_MODE", false)) {
 		char* cthook = param("SEC_CREDD_TOKEN_HOOK");
 		if (!cthook) {
 			dprintf(D_ALWAYS, "CREDS: no SEC_CREDD_TOKEN_HOOK... skipping\n");
@@ -1073,7 +1074,7 @@ static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode) {
 	
 }
 
-void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
+int store_pool_cred_handler(class Service *, int, Stream *s)
 {
 	int result;
 	char *pw = NULL;
@@ -1082,7 +1083,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
-		return;
+		return CLOSE_STREAM;
 	}
 
 	// if we're the CREDD_HOST, make sure any password setting is done locally
@@ -1107,7 +1108,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 			if (!addr || strcmp(my_ip_str.Value(), addr)) {
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password remotely\n");
 				free(credd_host);
-				return;
+				return CLOSE_STREAM;
 			}
 		}
 		free(credd_host);
@@ -1130,7 +1131,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	}
 
 	// construct the full pool username
-	username += domain;	
+	username += domain;
 
 	// do the real work
 	if (pw && *pw) {
@@ -1154,6 +1155,8 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 spch_cleanup:
 	if (pw) free(pw);
 	if (domain) free(domain);
+
+	return CLOSE_STREAM;
 }
 
 int 

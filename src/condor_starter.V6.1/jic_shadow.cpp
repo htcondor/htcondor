@@ -47,6 +47,7 @@
 #include "secure_file.h"
 #include "credmon_interface.h"
 #include "condor_base64.h"
+#include "zkm_base64.h"
 
 #include <algorithm>
 
@@ -2673,7 +2674,7 @@ JICShadow::initUserCredentials() {
 
 
 	// NEW METHOD (skips rest of function)
-	if (param_boolean("TOKENS", false)) {
+	if (param_boolean("CREDD_OAUTH_MODE", false)) {
 		// just call the refresh code, which both fetches from the shadow and updates the sandbox
 		return refreshSandboxCredentialsMultiple();
 	}
@@ -2756,7 +2757,7 @@ JICShadow::initUserCredentials() {
 
 	int rawlen = -1;
 	unsigned char* rawbuf = NULL;
-	condor_base64_decode(credential.c_str(), &rawbuf, &rawlen);
+	zkm_base64_decode(credential.c_str(), &rawbuf, &rawlen);
 
 	if (rawlen <= 0) {
 		dprintf(D_ALWAYS, "CREDMON: failed to decode credential into file (%s)!\n", filename);
@@ -2927,7 +2928,7 @@ resettimer:
 		if (m_refresh_sandbox_creds_tid == -1) {
 			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
 				sec_cred_refresh,
-				(TimerHandlercpp)&JICShadow::refreshSandboxCredentials,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentials_from_timer,
 				"refreshSandboxCredentials",
 				this );
 		} else {
@@ -2958,7 +2959,7 @@ JICShadow::refreshSandboxCredentialsMultiple()
 		if (m_refresh_sandbox_creds_tid == -1) {
 			m_refresh_sandbox_creds_tid = daemonCore->Register_Timer(
 				sec_cred_refresh,
-				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple,
+				(TimerHandlercpp)&JICShadow::refreshSandboxCredentialsMultiple_from_timer,
 				"refreshSandboxCredentialsMultiple",
 				this );
 		} else {
@@ -3033,7 +3034,7 @@ JICShadow::refreshSandboxCredentialsMultiple()
 		// write file as user
 		priv_state p = set_user_priv();
 
-                rc = write_secure_file(tmp_filename.Value(), buf, len, false);
+		rc = write_secure_file(tmp_filename.Value(), buf, len, false);
 		dprintf(D_SECURITY, "CREDS: writing %s, result %i\n", tmp_filename.Value(), rc);
 
 		// move file into place (as user);

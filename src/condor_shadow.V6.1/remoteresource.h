@@ -511,7 +511,7 @@ private:
 	void setRemoteProxyRenewTime(time_t expiration_time);
 	void setRemoteProxyRenewTime();
 	void startCheckingProxy();
-	int attemptShutdownTimeout();
+	void attemptShutdownTimeout();
 	void attemptShutdown();
 	void abortFileTransfer();
 	int transferStatusUpdateCallback(FileTransfer *transobject);

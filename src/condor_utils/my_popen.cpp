@@ -608,8 +608,10 @@ my_popenv_impl( const char *const args[],
 		}
 
 		if ( ! fail_quietly) {
-			dprintf(D_ALWAYS, "my_popenv: Failed to exec in child, errno=%d (%s)\n",
-				exit_code, strerror(exit_code));
+			dprintf(D_ALWAYS, "my_popenv: Failed to exec %s, errno=%d (%s)\n",
+				(args && args[0]) ? args[0] : "null",
+				exit_code,
+				strerror(exit_code));
 		}
 		errno = exit_code;
 		return NULL;

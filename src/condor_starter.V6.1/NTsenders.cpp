@@ -29,7 +29,7 @@
 #include "condor_event.h"
 #include "condor_config.h"
 #include "secure_file.h"
-#include "condor_base64.h"
+#include "zkm_base64.h"
 
 #include "NTsenders.h"
 
@@ -2299,7 +2299,7 @@ REMOTE_CONDOR_getcreds()
 		// into the file.
 		int rawlen = -1;
 		unsigned char* rawbuf = NULL;
-		condor_base64_decode(b64.Value(), &rawbuf, &rawlen);
+		zkm_base64_decode(b64.Value(), &rawbuf, &rawlen);
 
 		if (rawlen <= 0) {
 			EXCEPT("Failed to decode credential sent by shadow!");

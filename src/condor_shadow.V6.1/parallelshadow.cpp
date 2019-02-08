@@ -173,7 +173,7 @@ ParallelShadow::spawn( void )
 }
 
 
-int 
+void
 ParallelShadow::getResources( void )
 {
     dprintf ( D_FULLDEBUG, "Getting machines from schedd now...\n" );
@@ -314,7 +314,7 @@ ParallelShadow::getResources( void )
 			if (!job_ad->LookupInteger(ATTR_MAX_HOSTS, jobAdNumInProc)) {
 				dprintf(D_ALWAYS, "ERROR: no attribute MaxHosts in parallel job\n");	
 				delete sock;
-				return false;
+				return;
 			};
 			ASSERT( jobAdNumInProc == numInProc);
         } // end of for loop for this proc
@@ -331,7 +331,6 @@ ParallelShadow::getResources( void )
     startMaster();
 
     delete sock;
-    return TRUE;
 }
 
 

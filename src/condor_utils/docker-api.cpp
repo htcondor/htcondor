@@ -127,6 +127,37 @@ int DockerAPI::createContainer(
 		std::string volume = *it;
 		runArgs.AppendArg(volume);
 	}
+
+	// if the startd has assigned us a gpu, add in the
+	// nvidia devices.  AssignedGPUS looks like CUDA0, CUDA1, etc.
+	// map these to /dev/nvidia0, /dev/nvidia1...
+	// arguments to mount the nvidia devices
+	std::string assignedGpus;
+	machineAd.LookupString("AssignedGPUs", assignedGpus);
+	if  (assignedGpus.length() > 0) {
+		
+		// Always need to map these two devices
+		runArgs.AppendArg("--device");
+		runArgs.AppendArg("/dev/nvidiactl");
+
+		runArgs.AppendArg("--device");
+		runArgs.AppendArg("/dev/nvidia-uvm");
+
+		size_t offset = 0;
+
+			// For each CUDA substring in assignedGpus...
+		while ((offset = assignedGpus.find("CUDA", offset)) != std::string::npos) {
+			offset += 4; // strlen("CUDA")
+			size_t comma = assignedGpus.find(",", offset);
+
+			// ...append to command line args -device /dev/nvidiaXX
+			std::string deviceName("/dev/nvidia");
+			deviceName += assignedGpus.substr(offset, comma - offset);
+			runArgs.AppendArg("--device");
+			runArgs.AppendArg(deviceName);
+		}
+	}
+
 	
 	// Start in the sandbox.
 	runArgs.AppendArg( "--workdir" );
@@ -180,6 +211,22 @@ int DockerAPI::createContainer(
 		free(user_name);
 	}
 #endif
+	std::string networkType;
+	jobAd.LookupString(ATTR_JOB_DOCKER_NETWORK_TYPE, networkType);
+	if (networkType == "host") {
+		runArgs.AppendArg("--network=host");
+	}
+
+
+	MyString args_error;
+	char *tmp = param("DOCKER_EXTRA_ARGUMENTS");
+	if(!runArgs.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
+		dprintf(D_ALWAYS,"docker: failed to parse extra arguments: %s\n",
+		args_error.Value());
+		free(tmp);
+		return -1;
+	}
+	if (tmp) free(tmp);
 
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );

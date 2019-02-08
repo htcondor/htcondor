@@ -83,9 +83,12 @@ class VMGahpServer : public Service {
 		bool write_line(const char *command);
 		bool write_line(const char *command, int req, const char *args);
 		int pipe_ready(int pipe_end);
-		int err_pipe_ready(int pipe_end);
+		int err_pipe_ready(void);
+		int err_pipe_ready_from_pipe(int) { return err_pipe_ready(); }
+		void err_pipe_ready_from_timer(void) { (void)err_pipe_ready(); }
 		int poll();
-		int poll_now();
+		void poll_from_timer() { (void)poll(); }
+		void poll_now();
 		void poll_real_soon();
 
 		int new_reqid(void);

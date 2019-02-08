@@ -96,7 +96,7 @@ class GahpServer : public Service {
 
 	static int m_reaperid;
 
-	static void Reaper(Service *,int pid,int status);
+	static int Reaper(Service *,int pid,int status);
 
 	class GahpStatistics {
 	public:
@@ -132,7 +132,7 @@ class GahpServer : public Service {
 	void AddGahpClient();
 	void RemoveGahpClient();
 
-	int ProxyCallback();
+	void ProxyCallback();
 	void doProxyCheck();
 	GahpProxyInfo *RegisterProxy( Proxy *proxy );
 	void UnregisterProxy( Proxy *proxy );

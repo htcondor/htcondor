@@ -714,6 +714,12 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_REPORT_GRAPH_METRICS]
+default=false
+type=bool
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_PEGASUS_REPORT_METRICS]
 default=$(LIBEXEC)/condor_dagman_metrics_reporter
 win32_default=$(BIN)\condor_dagman_metrics_reporter.exe
@@ -2689,6 +2695,11 @@ tags=negotiator,matchmaker
 default=false
 type=bool
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_DEPTH_FIRST]
+default=false
+type=bool
+tags=negotiator
 
 [NEGOTIATOR_INFORM_STARTD]
 default=false

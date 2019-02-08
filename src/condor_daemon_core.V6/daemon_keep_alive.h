@@ -22,7 +22,7 @@
 #define _CONDOR_DAEMON_KEEP_ALIVE_H_
 
 /** This class contains all the logic to maintain a keep-alive heartbeat
-    between a daemoncore parent and its children, enabling a parent to
+	between a daemoncore parent and its children, enabling a parent to
 	kill children that appear to be hung.  
 	These methods used to be embedded into the DaemonCore class itself,
 	but now they have been pulled out into this DaemonKeepAlive helper
@@ -49,17 +49,19 @@ protected:
 
 	void reconfig(void);
 	bool get_stats();
-    int HandleChildAliveCommand(int command, Stream* stream);
+	int HandleChildAliveCommand(int command, Stream* stream);
 
 private:
-    int SendAliveToParent();
-    int KillHungChild(void* pidentry);
+	int SendAliveToParent();
+	void SendAliveToParentFromTimer() { (void)SendAliveToParent(); }
+	int KillHungChild(void* pidentry);
 	int ScanForHungChildren();
+	void ScanForHungChildrenFromTimer() { (void)ScanForHungChildren(); }
 
-    int max_hang_time;
+	int max_hang_time;
 	int max_hang_time_raw;
 	int m_child_alive_period;
-    int send_child_alive_timer;
+	int send_child_alive_timer;
 	int scan_for_hung_children_timer;
 	bool m_want_send_child_alive;
 

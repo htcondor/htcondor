@@ -10,7 +10,7 @@ class DockerProc : public VanillaProc {
 
 		virtual int StartJob();
 		virtual bool JobReaper( int pid, int status );
-		virtual bool ExecReaper( int pid, int status );
+		virtual int ExecReaper( int pid, int status );
 		virtual bool JobExit();
 
 		virtual void Suspend();

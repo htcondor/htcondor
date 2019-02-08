@@ -175,7 +175,9 @@ Source90: find-requires.sh
 %if %bundle_uw_externals
 Source101: blahp-1.16.5.1.tar.gz
 Source102: boost_1_49_0.tar.gz
+Source103: c-ares-1.3.0.tar.gz
 Source105: drmaa-1.6.1.tar.gz
+Source106: glite-ce-cream-client-api-c-1.14.0-4.sl6.tar.gz
 Source107: glite-ce-wsdl-1.14.0-4.sl6.tar.gz
 Source108: glite-lbjp-common-gsoap-plugin-3.1.2-2.src.tar.gz
 Source109: glite-lbjp-common-gss-3.1.3-2.src.tar.gz
@@ -292,6 +294,7 @@ Requires: libcgroup >= 0.37
 %endif
 
 %if %cream && ! %uw_build
+BuildRequires: glite-ce-cream-client-devel
 BuildRequires: glite-lbjp-common-gsoap-plugin-devel
 BuildRequires: log4cpp-devel
 BuildRequires: gridsite-devel
@@ -496,6 +499,22 @@ Requires: %name-classads = %{version}-%{release}
 A collection of tests to verify that HTCondor is operating properly.
 
 #######################
+%if %cream
+%package cream-gahp
+Summary: HTCondor's CREAM Gahp
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-classads = %{version}-%{release}
+%if %uw_build
+Requires: %name-external-libs%{?_isa} = %version-%release
+%endif
+
+%description cream-gahp
+The condor-cream-gahp enables CREAM interoperability for HTCondor.
+
+%endif
+
+#######################
 %if %parallel_setup
 %package parallel-setup
 Summary: Configure HTCondor for Parallel Universe jobs
@@ -656,6 +675,9 @@ Requires: %name-procd = %version-%release
 Requires: %name-kbdd = %version-%release
 Requires: %name-vm-gahp = %version-%release
 Requires: %name-classads = %version-%release
+%if %cream
+Requires: %name-cream-gahp = %version-%release
+%endif
 Requires: python2-condor = %version-%release
 Requires: %name-bosco = %version-%release
 %if %std_univ
@@ -721,6 +743,11 @@ cmake \
        -DBUILD_TESTING:BOOL=FALSE \
        -DHAVE_BACKFILL:BOOL=FALSE \
        -DHAVE_BOINC:BOOL=FALSE \
+%if %cream
+       -DWITH_CREAM:BOOL=TRUE \
+%else
+       -DWITH_CREAM:BOOL=FALSE \
+%endif
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/usr \
@@ -779,6 +806,11 @@ cmake \
        -DWITH_BLAHP:BOOL=TRUE \
 %else
        -DWITH_BLAHP:BOOL=FALSE \
+%endif
+%if %cream
+       -DWITH_CREAM:BOOL=TRUE \
+%else
+       -DWITH_CREAM:BOOL=FALSE \
 %endif
 %if %glexec
        -DWANT_GLEXEC:BOOL=TRUE \
@@ -1476,6 +1508,13 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
+
+%if %cream
+%files cream-gahp
+%defattr(-,root,root,-)
+%doc LICENSE-2.0.txt NOTICE.txt
+%_sbindir/cream_gahp
+%endif
 
 %if %parallel_setup
 %files parallel-setup

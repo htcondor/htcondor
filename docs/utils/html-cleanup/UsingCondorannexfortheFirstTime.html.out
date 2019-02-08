@@ -1,0 +1,235 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head><title>Using condor_annex for the First Time</title>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+<meta content="TeX4ht (http://www.tug.org/tex4ht/)" name="generator"/>
+<meta content="TeX4ht (http://www.tug.org/tex4ht/)" name="originator"/>
+<!-- 3,sec-filename,next,info,NoFonts,fonts,html -->
+<meta content="ref.tex" name="src"/>
+<link href="ref.css" rel="stylesheet" type="text/css"/>
+</head><body>
+      <h1> Using <i>condor_annex</i> for the First Time</h1>
+<!--l. 486--><p class="indent">   This guide assumes that you already have an AWS account, as well as a log-in account on a Linux machine with
+a public address and a system administrator who’s willing to open a port for you. All the terminal commands
+(shown in a box without a title) and file edits (shown in a box with an <span class="emph">emphasized title</span>) take place on the Linux
+machine. You can perform the web-based steps from wherever is convenient, although it will save you some copying
+if you run the browser on the Linux machine.
+<!--l. 494--></p><p class="indent">   Before using <i>condor_annex</i> for the first time, you’ll have to do three things:
+<!--l. 496--></p><p class="indent">
+</p><ol class="enumerate1">
+<li class="enumerate" id="x64-522002x1">install a personal HTCondor
+     </li>
+<li class="enumerate" id="x64-522004x2">prepare your AWS account
+                                                                                         
+
+                                                                                         
+     </li>
+<li class="enumerate" id="x64-522006x3">configure <i>condor_annex</i></li></ol>
+<!--l. 502--><p class="indent">   Instructions for each follow.
+<!--l. 504--></p><p class="noindent">
+</p><h2> Install a Personal HTCondor</h2>
+<!--l. 506--><p class="noindent">We recommend that you install a personal HTCondor to make use of <i>condor_annex</i>; it’s simpler to configure that
+way. These instructions assume version 8.7.8 of HTCondor, but should work the 8.8.x series as well; change ‘8.7.8’ in
+the instructions wherever it appears.
+<!--l. 511--></p><p class="indent">   These instructions assume that it’s OK to create a directory named <code>condor-8.7.8</code> in your home directory;
+adjust them accordingly if you want to install HTCondor somewhere else.
+<!--l. 515--></p><p class="indent">   Start by downloading (from <a class="url" href="https://research.cs.wisc.edu/htcondor/downloads/">https://research.cs.wisc.edu/htcondor/downloads/</a>) the 8.7.8 release from the
+“tarballs” section that matches your Linux version. (If you don’t know your Linux version, ask your system
+administrator.) These instructions assume that the file you downloaded is located in your home directory on the
+Linux machine, so copy it there if necessary.
+<!--l. 522--></p><p class="indent">   Then do the following; note that in this box, like other terminal boxes, the commands you type are preceded by
+by ‘$’ to distinguish them from any expected output, so don’t copy that part of each of the following lines.
+(Lines which end in a ‘\’ continue on the following line; be sure to copy both lines. Don’t copy the ‘\’
+itself.)
+<!--l. 535--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ mkdir ~/condor-8.7.8; cd ~/condor-8.7.8; mkdir local <br/>
+$ tar -z -x -f ~/condor-8.7.8-*-stripped.tar.gz <br/>
+$ ./condor-8.7.8-*-stripped/condor_install --local-dir `pwd`/local \<br/>
+--make-personal-condor <br/>
+$ . ./condor.sh <br/>
+$ condor_master </pre></div>
+<!--l. 537--><p class="noindent">
+</p><h3>Testing</h3>
+<!--l. 540--><p class="noindent">Give HTCondor a few seconds to spin up and the try a few commands to make sure the basics are working. Your
+output will vary depending on the time of day, the name of your Linux machine, and its core count, but it should
+generally be pretty similar to the following.
+<!--l. 573--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ condor_q <br/>
+ Schedd: submit-3.batlab.org : &lt;127.0.0.1:12815?... @ 02/03/17 13:57:35 <br/>
+OWNER    BATCH_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS <br/>
+<br/>
+0 jobs; 0 completed, 0 removed, 0 idle, 0 running, 0 held, 0 suspended <br/>
+$ condor_status -any <br/>
+MyType             TargetType         Name <br/>
+<br/>
+Negotiator         None               NEGOTIATOR <br/>
+Collector          None               Personal Condor at 127.0.0.1@submit-3 <br/>
+Machine            Job                slot1@submit-3.batlab.org <br/>
+Machine            Job                slot2@submit-3.batlab.org <br/>
+Machine            Job                slot3@submit-3.batlab.org <br/>
+Machine            Job                slot4@submit-3.batlab.org <br/>
+Machine            Job                slot5@submit-3.batlab.org <br/>
+Machine            Job                slot6@submit-3.batlab.org <br/>
+Machine            Job                slot7@submit-3.batlab.org <br/>
+Machine            Job                slot8@submit-3.batlab.org <br/>
+Scheduler          None               submit-3.batlab.org <br/>
+DaemonMaster       None               submit-3.batlab.org <br/>
+Accounting         none               &lt;none&gt; </pre></div>
+<!--l. 575--><p class="indent">   You should also try to submit a job; create the following file. (We’ll refer to the contents of the box by the
+<span class="emph">emphasized filename</span> in later terminals and/or files.)
+<!--l. 583--></p><p class="indent"> </p><div style="background-color: #EFE;"><i><pre>~/condor-annex/sleep.submit</pre></i></div><div style="background-color: #DED; border: 1px solid #666;"><pre>executable = /bin/sleep <br/>
+arguments = 600 <br/>
+queue </pre></div>
+<!--l. 585--><p class="indent">   and submit it:
+<!--l. 592--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ condor_submit ~/condor-annex/sleep.submit <br/>
+Submitting job(s). <br/>
+1 job(s) submitted to cluster 1. <br/>
+$ condor_reschedule </pre></div>
+<!--l. 594--><p class="indent">   After a little while:
+<!--l. 605--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ condor_q <br/>
+<br/>
+<br/>
+ Schedd: submit-3.batlab.org : &lt;127.0.0.1:12815?... @ 02/03/17 13:57:35 <br/>
+OWNER    BATCH_NAME         SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS <br/>
+tlmiller CMD: /bin/sleep   2/3  13:56      _      1      _      1 3.0 <br/>
+<br/>
+1 jobs; 0 completed, 0 removed, 0 idle, 1 running, 0 held, 0 suspended </pre></div>
+<!--l. 607--><p class="noindent">
+</p><h3>Configure Public Interface</h3>
+<!--l. 609--><p class="noindent">The default personal HTCondor uses the “loopback” interface, which basically just means it won’t talk to anyone
+other than itself. For <i>condor_annex</i> to work, your personal HTCondor needs to use the Linux machine’s public
+interface. In most cases, that’s as simple as adding the following lines:
+<!--l. 617--></p><p class="indent"> </p><div style="background-color: #EFE;"><i><pre>~/condor-8.7.8/local/condor_config.local</pre></i></div><div style="background-color: #DED; border: 1px solid #666;"><pre>NETWORK_INTERFACE = * <br/>
+CONDOR_HOST = $(FULL_HOSTNAME) </pre></div>
+<!--l. 619--><p class="indent">   Restart HTCondor to force the changes to take effect:
+<!--l. 624--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ condor_restart <br/>
+Sent "Restart" command to local master </pre></div>
+<!--l. 626--><p class="indent">   To verify that this change worked, repeat the steps under section <a href="#x64-5240006.3.1">6.3.1<!--tex4ht:ref: sec:clouds-user-guide-testing --></a>. Then proceed onto the next
+section.
+<!--l. 629--></p><p class="noindent">
+</p><h3>Configure a Pool Password</h3>
+<!--l. 631--><p class="noindent">In this section, you’ll configure your personal HTCondor to use a pool password. This is a simple but effective
+method of securing HTCondor’s communications to AWS.
+<!--l. 635--></p><p class="indent">   Add the following lines:
+<!--l. 647--></p><p class="indent"> </p><div style="background-color: #EFE;"><i><pre>~/condor-8.7.8/local/condor_config.local</pre></i></div><div style="background-color: #DED; border: 1px solid #666;"><pre>SEC_PASSWORD_FILE = $(LOCAL_DIR)/condor_pool_password
+<br/>
+SEC_DAEMON_INTEGRITY = REQUIRED <br/>
+SEC_DAEMON_AUTHENTICATION = REQUIRED <br/>
+SEC_DAEMON_AUTHENTICATION_METHODS = PASSWORD <br/>
+SEC_NEGOTIATOR_INTEGRITY = REQUIRED <br/>
+SEC_NEGOTIATOR_AUTHENTICATION = REQUIRED <br/>
+SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD <br/>
+SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD <br/>
+ALLOW_DAEMON = condor_pool@* </pre></div>
+<!--l. 649--><p class="indent">   You also need to run the following command, which prompts you to enter a password:
+<!--l. 655--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ condor_store_cred -c add -f `condor_config_val SEC_PASSWORD_FILE` <br/>
+Enter password: </pre></div>
+<!--l. 657--><p class="indent">   Enter a password.
+<!--l. 659--></p><p class="noindent">
+</p><h3>Tell HTCondor about the Open Port</h3>
+<!--l. 661--><p class="noindent">By default, HTCondor will use port 9618. If the Linux machine doesn’t already have HTCondor installed,
+and the admin is willing to open that port, then you don’t have to do anything. Otherwise, you’ll
+need to add a line like the following, replacing ‘9618’ with whatever port the administrator opened for
+you.
+<!--l. 668--></p><p class="indent"> </p><div style="background-color: #EFE;"><i><pre>~/condor-8.7.8/local/condor_config.local</pre></i></div><div style="background-color: #DED; border: 1px solid #666;"><pre>COLLECTOR_HOST = $(FULL_HOSTNAME):9618
+</pre></div>
+<!--l. 670--><p class="noindent">
+</p><h3>Activate the New Configuration</h3>
+<!--l. 672--><p class="noindent">Force HTCondor to read the new configuration by restarting it:
+<!--l. 676--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ condor_restart </pre></div>
+<!--l. 678--><p class="noindent">
+</p><h2> Prepare your AWS account</h2>
+<!--l. 680--><p class="noindent">Since v8.7.1, the <i>condor_annex</i> tool has included a <span class="texttt">-setup</span> command which will prepare your AWS
+account.
+<!--l. 683--></p><p class="indent">   If, and only if, you will be using <i>condor_annex</i> from an EC2 instance to which you have assigned an IAM role with sufficient
+privileges<span class="footnote-mark"><a href="ref65.html#fn4x7"><sup class="textsuperscript">4</sup></a></span> ,
+you may skip down to the <b></b> heading after running the following command.
+<!--l. 700--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ condor_annex -setup FROM INSTANCE <br/>
+Creating configuration bucket (this takes less than a minute)....... complete. <br/>
+Creating Lambda functions (this takes about a minute)........ complete. <br/>
+Creating instance profile (this takes about two minutes)................... complete. <br/>
+Creating security group (this takes less than a minute)..... complete. <br/>
+Setup successful. </pre></div>
+<!--l. 702--><p class="indent">   Otherwise, continue by obtaining an access key, as follows.
+                                                                                         
+
+                                                                                         
+   </p><h3>Obtaining an Access Key</h3>
+<!--l. 706--><p class="noindent">In order to use AWS, <i>condor_annex</i> needs a pair of security tokens (like a user name and password).
+Like a user name, the “access key” is (more or less) public information; the corresponding “secret key”
+is like a password and must be kept a secret. To help keep both halves secret, <i>condor_annex</i> (and
+HTCondor) are never told these keys directly; instead, you tell HTCondor which file to look in to find each
+one.
+<!--l. 713--></p><p class="indent">   Create those two files now; we’ll tell you how to fill them in shortly. By convention, these files exist
+in your <span class="texttt">~/.condor</span> directory, which is where the <span class="texttt">-setup</span> command will store the rest of the data it
+needs.
+<!--l. 723--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ mkdir ~/.condor <br/>
+$ cd ~/.condor <br/>
+$ touch publicKeyFile privateKeyFile <br/>
+$ chmod 600 publicKeyFile privateKeyFile </pre></div>
+<!--l. 725--><p class="indent">   The last command ensures that only you can read or write to those files.
+<!--l. 727--></p><p class="indent">   To donwload a new pair of security tokens for <i>condor_annex</i> to use, go to the IAM console at the following
+URL; log in if you need to:<br/><br/><a class="url" href="https://console.aws.amazon.com/iam/home?region=us-east-1#/users">https://console.aws.amazon.com/iam/home?region=us-east-1#/users</a><br/><br/>The following instructions assume you are logged in as a user with the privilege to create new users. (The ‘root’ user
+for any account has this privilege; other accounts may as well.)
+<!--l. 736--></p><p class="indent">
+</p><ol class="enumerate1">
+<li class="enumerate" id="x64-530002x1">Click the “Add User” button.
+     </li>
+<li class="enumerate" id="x64-530004x2">Enter name in the <b>User name</b> box; “annex-user” is a fine choice.
+     </li>
+<li class="enumerate" id="x64-530006x3">Click the check box labelled “Programmatic access”.
+     </li>
+<li class="enumerate" id="x64-530008x4">Click the button labelled “Next: Permissions”.
+     </li>
+<li class="enumerate" id="x64-530010x5">Select “Attach existing policies directly”.
+     </li>
+<li class="enumerate" id="x64-530012x6">Type “AdministratorAccess” in the box labelled “Filter”.
+     </li>
+<li class="enumerate" id="x64-530014x7">Click the check box on the single line that will appear below (labelled “AdministratorAccess”).
+                                                                                         
+
+                                                                                         
+     </li>
+<li class="enumerate" id="x64-530016x8">Click the “Next: review” button (you may need to scroll down).
+     </li>
+<li class="enumerate" id="x64-530018x9">Click the “Create user” button.
+     </li>
+<li class="enumerate" id="x64-530020x10">From the line labelled “annex-user”, copy the value in the column labelled “Access key ID” to the file
+     <span class="texttt">publicKeyFile</span>.
+     </li>
+<li class="enumerate" id="x64-530022x11">On the line labelled “annex-user”, click the “Show” link in the column labelled “Secret access key”; copy
+     the revealed value to the file <span class="texttt">privateKeyFile</span>.
+     </li>
+<li class="enumerate" id="x64-530024x12">Hit the “Close” button.</li></ol>
+<!--l. 751--><p class="indent">   The ‘annex-user’ now has full privileges to your account.
+<!--l. 753--></p><p class="noindent">
+</p><h2> Configure <i>condor_annex</i></h2>
+<!--l. 755--><p class="noindent">The following command will setup your AWS account. It will create a number of persistent components, none of
+which will cost you anything to keep around. These components can take quite some time to create; <i>condor_annex</i>
+checks each for completion every ten seconds and prints an additional dot (past the first three) when it does so, to
+let you know that everything’s still working.
+<!--l. 768--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ condor_annex -setup <br/>
+Creating configuration bucket (this takes less than a minute)....... complete. <br/>
+Creating Lambda functions (this takes about a minute)........ complete. <br/>
+Creating instance profile (this takes about two minutes)................... complete. <br/>
+Creating security group (this takes less than a minute)..... complete. <br/>
+Setup successful. </pre></div>
+<!--l. 770--><p class="noindent">
+</p><h5 class="subsubsectionHead">Checking the Setup</h5>
+<!--l. 773--><p class="noindent">You can verify at this point (or any later time) that the setup procedure completed successfully by running the
+following command.
+<!--l. 782--></p><p class="indent"> </p><div style="background-color: #EEE; border: 1px solid #666;"><pre>$ condor_annex -check-setup <br/>
+Checking for configuration bucket... OK. <br/>
+Checking for Lambda functions... OK. <br/>
+Checking for instance profile... OK. <br/>
+Checking for security group... OK. </pre></div>
+<!--l. 784--><p class="indent">   You’re ready to run <i>condor_annex</i>!
+<!--l. 786--></p><p class="noindent">
+</p><h5 class="subsubsectionHead">Undoing the Setup Command</h5>
+<!--l. 788--><p class="noindent">There is not as yet a way to undo the setup command automatically, but it won’t cost you anything extra to leave
+your account setup for <i>condor_annex</i> indefinitely. If, however, you want to be tidy, you may delete the components
+setup created by going to the CloudFormation console at the following URL and deleting the entries whose names
+begin with ‘HTCondorAnnex-’:<br/><br/><a class="url" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active">https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active</a><br/><br/>The setup procedure also creates an SSH key pair which may be useful for debugging; the private key was stored in
+<span class="texttt">~/.condor/HTCondorAnnex-KeyPair.pem</span>. To remove the corresponding public key from your AWS
+account, go to the key pair console at the following URL and delete the ‘HTCondorAnnex-KeyPair’
+key:<br/><br/><a class="url" href="https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName">https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName</a>
+<!--l. 1--></p><p class="indent">       
+</p></body></html>

@@ -3201,7 +3201,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		}
 	}
 
-	if(param_boolean("TOKENS", false)) {
+	if(param_boolean("CREDD_OAUTH_MODE", false)) {
 		const char* sandbox_cred_dir = jic->getCredPath();
 		proc_env->SetEnv( "_CONDOR_CREDS", sandbox_cred_dir );
 	} else {
@@ -3633,7 +3633,7 @@ CStarter::updateX509Proxy( int cmd, Stream* s )
 bool
 CStarter::removeCredentials( void )
 {
-	if (false == param_boolean("TOKENS", false)) {
+	if (!param_boolean("CREDD_OAUTH_MODE", false)) {
 		// nothing to do...  success?
 		return true;
 	}
