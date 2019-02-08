@@ -7,7 +7,7 @@
 
 \SynProg{\Condor{annex}} \Opt{-help}
 
-\SynProg{\Condor{annex}} \oOptArg{-aws-region}{<region>} \OptArg{-setup}{[/full/path/to/access/key/file [/full/path/to/secret/key/file]]}
+\SynProg{\Condor{annex}} \oOptArg{-aws-region}{<region>} \OptArg{-setup}{[FROM INSTANCE|[/full/path/to/access/key/file [/full/path/to/secret/key/file]]]}
 
 \SynProg{\Condor{annex}} \oOpt{-aws-on-demand}
   \OptArg{-annex-name}{<name of the annex>}
@@ -47,6 +47,10 @@ Using \Condor{annex} with AWS requires a one-time setup procedure
 performed by invoking \Condor{annex} with the \Opt{-setup} flag
 (the second form listed above).  You may check if this procedure has been
 performed with the \Opt{-check-setup} flag (the seventh form listed above).
+If you use the setup flag on an instance whose role gives it sufficient
+privileges, you may, instead of specifying your API keys, pass
+\Expr{FROM INSTANCE} to \Opt{-setup} to ask \Condor{annex} to use the
+instance's role credentials.
 
 To reset the lease on an existing annex, invoke \Condor{annex} with
 only the \Opt{-annex-name} option and \Opt{-duration} flag (the fifth form
