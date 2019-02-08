@@ -59,6 +59,13 @@ all queued Scheduler Universe jobs have equal priority, they get started in
 order of subnmission.
 \Ticket{6703}
 
+\item A family of HTCondor daemons can now share a security session that
+allows them to trust each other without doing a security negotiation
+when a network connection is made amongst them.
+This ``family'' security session can be disabled by setting the new
+configuration parameter \MacroNI{SEC\_USE\_FAMILY\_SESSION} to \Expr{False}.
+\Ticket{6788}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
