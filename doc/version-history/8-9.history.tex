@@ -67,7 +67,7 @@ users to use different accounts from the same machine.  However,
 if a user started an EC2 instance with the privileges necessary to start
 other instances, and ran HTCondor in that instance, HTCondor was unable to
 use that instance's privileges; the user still had to specify their
-credentials.  Instead, the user may now specify ``FROM INSTANCE'' instead
+credentials.  Instead, the user may now specify \Expr{FROM INSTANCE} instead
 of the name of a credential file to indicate that HTCondor should use the
 instance's credentials.
 
@@ -88,8 +88,15 @@ against a .dag file, you can use the -priority <N> flag to set the priority
 for the overall \Condor{dagman} job. When the \Condor{schedd} is starting new 
 Scheduler Universe jobs, the highest priority queued job will start first. If 
 all queued Scheduler Universe jobs have equal priority, they get started in 
-order of subnmission.
+order of submission.
 \Ticket{6703}
+
+\item A family of HTCondor daemons can now share a security session that
+allows them to trust each other without doing a security negotiation
+when a network connection is made amongst them.
+This ``family'' security session can be disabled by setting the new
+configuration parameter \MacroNI{SEC\_USE\_FAMILY\_SESSION} to \Expr{False}.
+\Ticket{6788}
 
 \end{itemize}
 
@@ -97,7 +104,10 @@ order of subnmission.
 
 \begin{itemize}
 
-\item None.
+\item Fixed potential authentication failures between the \Condor{schedd}
+and \Condor{startd} when multiple \Condor{startd}s are using the same
+shared port server.
+\Ticket{5604}
 
 \end{itemize}
 

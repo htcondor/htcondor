@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Build RPMs for Redhat Enterprise Linux and clones
 if [ -f /etc/redhat-release -o -f /etc/debian_version ]; then

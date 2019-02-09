@@ -11121,6 +11121,15 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
   These identities is automatically added to the DAEMON, READ, and CLIENT
   authorization levels in these daemons when needed.
 
+\label{param:SecUseFamilySession}
+\item[\Macro{SEC\_USE\_FAMILY\_SESSION}]
+  The ``family'' session is a special security session that's shared
+  between an HTCondor daemon and all of its descendant daemons.
+  It allows a family of daemons to communicate securely without
+  an expensive authentication negotiation on each network connection.
+  It bypasses the security authorization settings.
+  The default value is \Expr{True}.
+
 \label{param:KerberosServerKeytab}
 \item[\Macro{KERBEROS\_SERVER\_KEYTAB}]
   The path and file name of the keytab file that holds the necessary Kerberos
