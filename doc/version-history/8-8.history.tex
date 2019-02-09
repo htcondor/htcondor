@@ -80,6 +80,14 @@ attribute when routing a job between two \Condor{schedd}s with
 different values for configuration parameter \MacroNI{UID\_DOMAIN}.
 \Ticket{6856}
 
+\item The new \Expr{minihtcondor} package now starts HTCondor automatically
+at after installation.
+\Ticket{6888}
+
+\item The \Condor{master} now sends status updates to \Prog{systemd} every 10
+seconds.
+\Ticket{6888}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
