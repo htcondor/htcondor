@@ -189,7 +189,10 @@ int main() {
 	std::vector<unsigned long long> runningSampleCounts; runningSampleCounts.resize(deviceCount);
 	for( unsigned i = 0; i < deviceCount; ++i ) {
 		r = nvmlDeviceGetHandleByIndex( i, &(devices[i]) );
-		if( r != NVML_SUCCESS ) {
+		if( r == NVML_ERROR_NO_PERMISSION ) {
+			// Ignore devices we don't have permission for rather than fail.
+			continue;
+		} else if( r != NVML_SUCCESS ) {
 			fprintf( stderr, "nvmlGetDeviceHandleByIndex(%u) failed (%d: %s), aborting.\n", i, r, nvmlErrorString( r ) );
 			fail();
 		}
