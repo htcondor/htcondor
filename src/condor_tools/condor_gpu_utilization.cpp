@@ -145,8 +145,12 @@ int main() {
 	const char * nvml_library = "libnvidia-ml.so.1";
 	nvml_handle = dlopen( nvml_library, RTLD_LAZY );
 	if(! nvml_handle) {
-		fprintf( stderr, "Unable to load %s, aborting.\n", nvml_library );
-		fail();
+		const char * nvml_fallback_library = "libnvidia-ml.so";
+		nvml_handle = dlopen( nvml_fallback_library, RTLD_LAZY );
+		if(! nvml_handle) {
+			fprintf( stderr, "Unable to load %s or %s, aborting.\n", nvml_library, nvml_fallback_library );
+			fail();
+		}
 	}
 	dlerror();
 #endif
