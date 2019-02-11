@@ -33,6 +33,31 @@ The details of each version are described below.
 	sending multiple files, especially in wide-area network settings.
 \Ticket{6884}
 
+\item We've added six new events to the job event log, recording details
+about file transfer.  For both file transfer -in (before/to the job) and
+-out (after/from the job), we log if the transfer was queued, when it started,
+and when it finished.  If the event was queued, the start event will note
+for how long; the first transfer event written will additionally include
+the starter's address, which has not otherwise been printed.
+
+We've also added several transfer-related attributes to the job ad.  For jobs
+which do file transfer, we now set
+\Attr{JobCurrentFinishTransferOutputDate}, to complement
+\Attr{JobCurrentStartTransferOutputDate}, as well as the corresponding
+attributes for input transfer:
+\Attr{JobCurrentStartTransferInputDate} and
+\Attr{JobCurrentFinishTransferInputDate}.  The new attributes are added at
+the same time as \Attr{JobCurrentStartTransferOutputDate}, that is, at
+job termination.  This set of attributes use the older and more deceptive
+definitions of file transfer timing.  To obtain the times recorded by the
+new events, instead reference \Attr{TransferInQueued},
+\Attr{TransferInStarted}, \Attr{TransferInFinished},
+\Attr{TransferOutQueued}, \Attr{TransferOutStarted}, and
+\Attr{TransferOutFinished}.  HTCondor sets these attributes (roughly) at
+the time they occur.
+
+\Ticket{6854}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
