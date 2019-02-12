@@ -104,6 +104,16 @@ bool FileTransfer::ServerShouldBlock = true;
 const int FINAL_UPDATE_XFER_PIPE_CMD = 1;
 const int IN_PROGRESS_UPDATE_XFER_PIPE_CMD = 0;
 
+/**
+ * The `FileTransferItem` represents a single work item for the DoUpload
+ * side of the file transfer obejct to perform.
+ *
+ * All state information about the file transfer should be kept here.
+ *
+ * Importantly, the FileTransferItem implements the `<` operator, allowing
+ * it to be sorted in a list.  This allows, for example, all the CEDAR-based
+ * transfers to be performed prior to the non-CEDAR transfers.
+ */
 class FileTransferItem {
 public:
 	const std::string &srcName() const { return m_src_name; }
@@ -3103,6 +3113,31 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 	return ( status >= 0 );
 }
 
+/**
+ * This function is responsible for invoking a given multifile transfer plugin on a set of
+ * files in the execution sandbox AND sending the appropriate response back to the DoDownload
+ * side of the file transfer.
+ *
+ * This can only be called from the DoUpload context; as it will write to the provided ReliSock,
+ * many assumptions are made about where it is invoking from inside DoUpload.  For example, it
+ * assumes that DoUpload is responsible for the transfer header for the first file.
+ *
+ * The implementation consists of invoking the `InvokeMultipleFileTransferPlugin` method and
+ * parsing the output as appropriate.
+ *
+ * For each transfer performed by the multi plugin, it will:
+ *   - send a transfer header (EOM, INT/TransferCommand::Other, EOM, S/filename, EOM).
+ *     Transfer header is skipped for the first file; DoUpload is supposed to do this.
+ *   - Send a classad summarizing the transfer result.
+ *   - EOM*.
+ *
+ *  * Depending on the setting of send_trailing_eom, it may skip the EOM for the
+ *  very last transfer.
+ *
+ * - @param pluginPath: The location of the
+ * - @returns: -1 on fatal error, 0 for a non-fatal error, and otherwise a fake number
+ *   of bytes to use for the transfer summary.
+ */
 int
 FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err)
 {
@@ -3148,6 +3183,9 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 				return -1;
 			}
 		}
+			// From here on out, we are mostly converting the outcome of the multifile
+			// transfer plugin to the ClassAd format required by the file transfer object.
+
 		count++;
 		ClassAd file_info;
 		file_info.InsertAttr("ProtocolVersion", 1);
@@ -3269,6 +3307,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	filesize_t sandbox_size = 0;
 	FileTransferList::iterator filelist_it;
+		// Calculate the sandbox size as the sum of the known file transfer items
+		// (only those that are transferred via CEDAR).
 	sandbox_size = std::accumulate(filelist.begin(),
 		filelist.end(),
 		sandbox_size,
@@ -3296,7 +3336,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		return_and_resetpriv( -1 );
 	}
 
-	// Pre-compute various attributes about the file transfers
+	// Pre-compute various attributes about the file transfers.
+	//
+	// Right now, this is limited to calculating output URLs (must be done after prior
+	// expansion of the transfer list); in the future, it might be a good place
+	// to augment the file transfer items with checksum information.
 	for (auto &fileitem : filelist) {
 			// Pre-calculate if the uploader will be doing some uploads;
 			// if so, we want to determine this now so we can sort correctly.
@@ -3457,7 +3501,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			dprintf(D_FULLDEBUG, "Will upload output URL using multi-file plugin.\n");
 		}
 
-		// Flush out any transfers if we can no longer defer plugins.
+		// Flush out any transfers if we can no longer defer the prior work we had built up.
+		// We can't defer if the plugin name changed *or* we hit a transfer that doesn't
+		// require a plugin at all.
 		if (!currentUploadPlugin.empty() && (multifilePluginPath != currentUploadPlugin)) {
 			dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
 			auto result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack);
@@ -3502,6 +3548,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 			// Frustratingly, we cannot skip the header of the first transfer command
 			// if we are defering uploads as we may have to acquire a transfer token below.
+			// The protocol also requires us to acquire a transfer token AFTER the filename
+			// is sent; hence, we cannot simply reorder the logic.
+			//
+			// Because we send the header now, `InvokeMultiUploadPlugin` does not for the first
+			// transfer command.
 		bool no_defer_header = multifilePluginPath.empty() || !currentUploadDeferred;
 		if (no_defer_header) {
 			if( !s->snd_int(static_cast<int>(file_command), false) ) {
@@ -3565,6 +3616,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		// Multifile uploads imply we execute multiple commands at once; although we can lie to the other side,
 		// maintenance of the state becomes quite complex.  Hence, we defer uploads only when the protocol
 		// is completely asynchronous.
+		//
+		// NOTE: if we ever want to reacquire the token (or acquire an alternate token for non-CEDAR transfers),
+		// then this would provide a natural synchronization point.
 		bool can_defer_uploads = !PeerDoesGoAhead || (peer_goes_ahead_always && I_go_ahead_always);
 
 		UpdateXferStatus(XFER_STATUS_ACTIVE);
@@ -3619,6 +3673,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 				const std::string &local_output_url = fileitem.destUrl();
 
+				// Potentially execute the multifile plugin.  Note all the error handling
+				// occurs outside this gigantic if block - we must carefully set `rc` for it
+				// to work correctly.
 				if (!multifilePluginPath.empty()) {
 					currentUploadPlugin = multifilePluginPath;
 
@@ -3632,6 +3689,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					currentUploadRequests += xfer_str;
 					currentUploadDeferred ++;
 
+					// If we cannot defer uploads, we must execute the plugin now -- with one file.
 					if (!can_defer_uploads) {
 						dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
 						auto result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, false, errstack);
@@ -3854,7 +3912,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	// to keep the queue slot held when this transfer plugin is invoked.
 	xfer_queue.ReleaseTransferQueueSlot();
 
-	// Clear out the multi-upload queue
+	// Clear out the multi-upload queue; we must do the error handling locally if it fails.
 	if (!currentUploadRequests.empty()) {
 		auto result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack);
 		if (-1 == result) {
