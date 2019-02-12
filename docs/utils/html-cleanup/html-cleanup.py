@@ -5,6 +5,9 @@ import os
 import re
 import sys
 
+from url_data import *
+
+
 
 def dump(obj):
     for attr in dir(obj):
@@ -31,17 +34,28 @@ def cleanup_pre_contents(data):
 
 # Cleans up the markup of a table
 def cleanup_table(data):
-
     for index, token in enumerate(data):
         if type(token) is bs4.element.Tag:
-            print("\n\ntoken = " + str(token))
+            #print("\n\ntoken = " + str(token))
             # Remove all the <tr class="hline">...</tr> tags
             if token.name == "tr" and "class" in token.attrs.keys():
                 data.remove(token)
-            for child in token.children:
-                print("child = " + str(child))
-                    
+            #for child in token.children:
+            #    print("child = " + str(child))
     return data
+
+# Updates a link URL and also adds in the correct title
+def update_link(data):
+    updated_link = data
+    # Try updating the link. If the link is external, the following block will fail and the link will remain as-is.
+    try:
+        # Determine what page this is linking to
+        old_url = data['href'].split("#")[0]
+        updated_link['href'] = updated_urls[old_url]
+        updated_link.string = updated_titles[old_url]
+    except:
+        print("Link " + str(data) + " is external, ignoring")
+    return updated_link
 
 
 def main():
@@ -219,6 +233,15 @@ def main():
         new_tag = soup.new_tag("table")
         new_tag.contents = cleanup_table(tag.contents)
         tag.replace_with(new_tag)
+
+    # Update links to point to correct URLs
+    a_tags = soup.find_all("a")
+    print("Found " + str(len(a_tags)) + " a tags")
+    for tag in a_tags:
+        if "href" in tag.attrs.keys():
+            updated_link = update_link(tag)
+            tag.replace_with(updated_link)
+
 
 
     # Does outputting pretty HTML matter? 

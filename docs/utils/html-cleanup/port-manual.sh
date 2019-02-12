@@ -8,7 +8,7 @@ cd ../dst
 
 
 # Overview
-pandoc -f html -t rst Overview.html.out -o ../../../overview/index.rst
+#pandoc -f html -t rst Overview.html.out -o ../../../overview/index.rst
 pandoc -f html -t rst HighThroughputComputingHTCanditsRequirements.html.out -o ../../../overview/high-throughput-computing-requirements.rst
 pandoc -f html -t rst HTCondorsPower.html.out -o ../../../overview/htcondors-power.rst
 pandoc -f html -t rst ExceptionalFeatures.html.out -o ../../../overview/exceptional-features.rst
@@ -19,7 +19,7 @@ pandoc -f html -t rst ContactInformation.html.out -o ../../../overview/contact-i
 pandoc -f html -t rst PrivacyNotice.html.out -o ../../../overview/privacy-notice.rst
 
 # User's Manual
-pandoc -f html -t rst UsersManual.html.out -o ../../../users-manual/index.rst
+#pandoc -f html -t rst UsersManual.html.out -o ../../../users-manual/index.rst
 pandoc -f html -t rst WelcometoHTCondor.html.out -o ../../../users-manual/welcome-to-htcondor.rst
 pandoc -f html -t rst Introduction.html.out -o ../../../users-manual/introduction-users-manual.rst
 pandoc -f html -t rst MatchmakingwithClassAds.html.out -o ../../../users-manual/matchmaking-with-classads.rst
@@ -37,7 +37,7 @@ pandoc -f html -t rst SpecialEnvironmentConsiderations.html.out -o ../../../user
 pandoc -f html -t rst PotentialProblems.html.out -o ../../../users-manual/potential-problems.rst
 
 # Administrator's Manual
-pandoc -f html -t rst AdministratorsManual.html.out -o ../../../admin-manual/index.rst
+#pandoc -f html -t rst AdministratorsManual.html.out -o ../../../admin-manual/index.rst
 pandoc -f html -t rst Introduction1.html.out -o ../../../admin-manual/introduction-admin-manual.rst
 pandoc -f html -t rst InstallationStartUpShutDownandReconfiguration.html.out -o ../../../admin-manual/installation-startup-shutdown-reconfiguration.rst
 pandoc -f html -t rst IntroductiontoConfiguration.html.out -o ../../../admin-manual/introduction-to-configuration.rst
@@ -58,7 +58,7 @@ pandoc -f html -t rst SingularitySupport.html.out -o ../../../admin-manual/singu
 pandoc -f html -t rst PowerManagement.html.out -o ../../../admin-manual/power-management.rst
 
 # Miscellaneous Concepts
-pandoc -f html -t rst MiscellaneousConcepts.html.out -o ../../../misc-concepts/index.rst
+#pandoc -f html -t rst MiscellaneousConcepts.html.out -o ../../../misc-concepts/index.rst
 pandoc -f html -t rst HTCondorsClassAdMechanism.html.out -o ../../../misc-concepts/classad-mechanism.rst
 pandoc -f html -t rst HTCondorsCheckpointMechanism.html.out -o ../../../misc-concepts/checkpoint-mechanism.rst
 pandoc -f html -t rst ComputingOnDemandCOD.html.out -o ../../../misc-concepts/computing-on-demand.rst
@@ -66,14 +66,14 @@ pandoc -f html -t rst Hooks.html.out -o ../../../misc-concepts/hooks.rst
 pandoc -f html -t rst LogginginHTCondor.html.out -o ../../../misc-concepts/logging.rst
 
 # Grid Computing
-pandoc -f html -t rst GridComputing.html.out -o ../../../grid-computing/index.rst
+#pandoc -f html -t rst GridComputing.html.out -o ../../../grid-computing/index.rst
 pandoc -f html -t rst Introduction2.html.out -o ../../../grid-computing/introduction-grid-computing.rst
 pandoc -f html -t rst ConnectingHTCondorPoolswithFlocking.html.out -o ../../../grid-computing/connecting-pools-with-flocking.rst
 pandoc -f html -t rst TheGridUniverse.html.out -o ../../../grid-computing/grid-universe.rst
 pandoc -f html -t rst TheHTCondorJobRouter.html.out -o ../../../grid-computing/job-router.rst
 
 # Cloud Computing
-pandoc -f html -t rst CloudComputing.html.out -o ../../../cloud-computing/index.rst
+#pandoc -f html -t rst CloudComputing.html.out -o ../../../cloud-computing/index.rst
 pandoc -f html -t rst Introduction3.html.out -o ../../../cloud-computing/introduction-cloud-computing.rst
 pandoc -f html -t rst HTCondorAnnexUsersGuide.html.out -o ../../../cloud-computing/annex-users-guide.rst
 pandoc -f html -t rst UsingCondorannexfortheFirstTime.html.out -o ../../../cloud-computing/using-annex-first-time.rst
@@ -81,7 +81,7 @@ pandoc -f html -t rst HTCondorAnnexCustomizationGuide.html.out -o ../../../cloud
 pandoc -f html -t rst HTCondorAnnexConfiguration.html.out -o ../../../cloud-computing/annex-configuration.rst
 
 # Application Programming Interfaces (APIs)
-pandoc -f html -t rst ApplicationProgrammingInterfacesAPIs.html.out -o ../../../apis/index.rst
+#pandoc -f html -t rst ApplicationProgrammingInterfacesAPIs.html.out -o ../../../apis/index.rst
 pandoc -f html -t rst PythonBindings.html.out -o ../../../apis/python-bindings.rst
 pandoc -f html -t rst Chirp.html.out -o ../../../apis/chirp.rst
 pandoc -f html -t rst TheHTCondorUserandJobLogReaderAPI.html.out -o ../../../apis/user-job-log-reader-api.rst
@@ -89,22 +89,22 @@ pandoc -f html -t rst TheCommandLineInterface.html.out -o ../../../apis/command-
 pandoc -f html -t rst TheDRMAAAPI.html.out -o ../../../apis/drmaa-api.rst
 
 # Platform-Specific Information
-pandoc -f html -t rst PlatformSpecificInformation.html.out -o ../../../platform-specific/index.rst
+#pandoc -f html -t rst PlatformSpecificInformation.html.out -o ../../../platform-specific/index.rst
 pandoc -f html -t rst Linux.html.out -o ../../../platform-specific/linux.rst
 pandoc -f html -t rst MicrosoftWindows.html.out -o ../../../platform-specific/microsoft-windows.rst
 pandoc -f html -t rst MacintoshOSX.html.out -o ../../../platform-specific/macintosh-osx.rst
 
 # Frequently Asked Questions
-pandoc -f html -t rst FrequentlyAskedQuestionsFAQ.html.out -o ../../../faq/index.rst
+#pandoc -f html -t rst FrequentlyAskedQuestionsFAQ.html.out -o ../../../faq/index.rst
 
 # Contrib and Source Modules
-pandoc -f html -t rst ContribandSourceModules.html.out -o ../../../contrib-source-modules/index.rst
+#pandoc -f html -t rst ContribandSourceModules.html.out -o ../../../contrib-source-modules/index.rst
 pandoc -f html -t rst Introduction4.html.out -o ../../../contrib-source-modules/introduction-contrib-source-modules.rst
 pandoc -f html -t rst TheHTCondorViewClientContribModule.html.out -o ../../../contrib-source-modules/view-client-contrib-module.rst
 pandoc -f html -t rst JobMonitorLogViewer.html.out -o ../../../contrib-source-modules/job-monitor-log-viewer.rst
 
 # Version History and Release Notes
-pandoc -f html -t rst VersionHistoryandReleaseNotes.html.out -o ../../../version-history/index.rst
+#pandoc -f html -t rst VersionHistoryandReleaseNotes.html.out -o ../../../version-history/index.rst
 pandoc -f html -t rst IntroductiontoHTCondorVersions.html.out -o ../../../version-history/introduction-version-history.rst
 pandoc -f html -t rst Upgradingfromthe86seriestothe88seriesofHTCondor.html.out -o ../../../version-history/upgrading-from-86-to-88-series.rst
 pandoc -f html -t rst DevelopmentReleaseSeries89.html.out -o ../../../version-history/development-release-series-89.rst
@@ -193,7 +193,7 @@ pandoc -f html -t rst giddalloc.html.out -o ../../../man-pages/giddalloc.rst
 pandoc -f html -t rst procdctl.html.out -o ../../../man-pages/procdctl.rst
 
 # ClassAd Attributes
-pandoc -f html -t rst ClassAdAttributes.html.out -o ../../../classad-attributes/index.rst
+#pandoc -f html -t rst ClassAdAttributes.html.out -o ../../../classad-attributes/index.rst
 pandoc -f html -t rst ClassAdTypes.html.out -o ../../../classad-attributes/classad-types.rst
 pandoc -f html -t rst JobClassAdAttributes.html.out -o ../../../classad-attributes/job-classad-attributes.rst
 pandoc -f html -t rst MachineClassAdAttributes.html.out -o ../../../classad-attributes/machine-classad-attributes.rst
@@ -207,7 +207,7 @@ pandoc -f html -t rst ClassAdAttributesAddedbytheCondorcollector.html.out -o ../
 pandoc -f html -t rst DaemonCoreStatisticsAttributes.html.out -o ../../../classad-attributes/daemon-core-statistics-attributes.rst
 
 # Codes and Other Needed Values
-pandoc -f html -t rst CodesandOtherNeededValues.html.out -o ../../../codes-other-values/index.rst
+#pandoc -f html -t rst CodesandOtherNeededValues.html.out -o ../../../codes-other-values/index.rst
 pandoc -f html -t rst CondorshadowExitCodes.html.out -o ../../../man-pages/condor_shadow-exit-codes.rst
 pandoc -f html -t rst JobEventLogCodes.html.out -o ../../../codes-other-values/job-event-log-codes.rst
 pandoc -f html -t rst WellknownPortNumbers.html.out -o ../../../codes-other-values/well-known-port-numbers.rst
