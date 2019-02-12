@@ -3221,7 +3221,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		if ( m_final_transfer_flag ) {
 			if (OutputDestination) {
 				local_output_url = OutputDestination;
-				local_output_url += DIR_DELIM_CHAR;
+				local_output_url += '/';
 				local_output_url += filename;
 			}
 			else {
