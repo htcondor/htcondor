@@ -2003,8 +2003,25 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				fullname = NULL_FILE;
 			}
 			else if(res) {
+					// If we are a client downloading the output sandbox, it makes no sense for
+					// us to "download" _to_ a URL; the server sent us this in a logic error
+					// unless it was simply a status report (reply == 999)
+				if (IsUrl(remap_filename.Value())) {
+					if (reply != 999) {
+						error_buf.formatstr("Remap of output file resulted in a URL: %s", remap_filename.Value());
+						dprintf(D_ALWAYS, "REMAP: DoDownload: %s\n",error_buf.Value());
+						download_success = false;
+						try_again = false;
+						hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+						hold_subcode = EPERM;
+						fullname = NULL_FILE;
+					} else {
+						// fullname is used in various error messages; keep it
+						// as something reasonabel.
+						fullname.formatstr("%s%c%s",Iwd,DIR_DELIM_CHAR,filename.Value());
+					}
 				// legit remap was found
-				if(fullpath(remap_filename.Value())) {
+				} else if(fullpath(remap_filename.Value())) {
 					fullname = remap_filename;
 				}
 				else {
@@ -2018,7 +2035,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			}
 #ifdef WIN32
 			// check for write permission on this file, if we are supposed to check
-			if ( perm_obj && (perm_obj->write_access(fullname.Value()) != 1) ) {
+			if ( (fullname != NULL_FILE) && perm_obj && (perm_obj->write_access(fullname.Value()) != 1) ) {
 				// we do _not_ have permission to write this file!!
 				error_buf.formatstr("Permission denied to write file %s!",
 				                   fullname.Value());
@@ -3200,9 +3217,23 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			file_command = 5;
 		}
 
-		if ( m_final_transfer_flag && OutputDestination ) {
-			dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:7 for OutputDestionation: %s\n",
-					OutputDestination);
+		std::string local_output_url;
+		if ( m_final_transfer_flag ) {
+			if (OutputDestination) {
+				local_output_url = OutputDestination;
+				local_output_url += DIR_DELIM_CHAR;
+				local_output_url += filename;
+			}
+			else {
+				MyString remap_filename;
+				if ((1 == filename_remap_find(download_filename_remaps.Value(), filename, remap_filename, 0)) && IsUrl(remap_filename.Value())) {
+					local_output_url = remap_filename.Value();
+				}
+			}
+		}
+		if ( !local_output_url.empty() ) {
+			dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:7 for output URL destination: %s\n",
+				local_output_url.c_str());
 
 			// switch from whatever command we had before to new classad
 			// command new classad command 999 and subcommand 7.
@@ -3334,27 +3365,21 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			// hook to move the output file"
 
 			if(file_subcommand == 7) {
-				// make the URL out of Attr OutputDestination and filename
 				MyString source_filename;
 				source_filename = Iwd;
 				source_filename += DIR_DELIM_CHAR;
 				source_filename += filename;
 
-				MyString URL;
-				URL = OutputDestination;
-				URL += DIR_DELIM_CHAR;
-				URL += filename;
-
 				// actually invoke the plugin.  this could block indefinitely.
 				ClassAd pluginStatsAd;
-				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.Value(), URL.Value());
+				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.Value(), local_output_url.c_str());
 				dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.Value());
-				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), URL.Value(), &pluginStatsAd, LocalProxyName.Value());
-				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.Value(), URL.Value(), rc);
+				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), local_output_url.c_str(), &pluginStatsAd, LocalProxyName.Value());
+				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.Value(), local_output_url.c_str(), rc);
 
 				// report the results:
 				file_info.Assign("Filename", source_filename);
-				file_info.Assign("OutputDestination", URL);
+				file_info.Assign("OutputDestination", local_output_url);
 
 				// will either be 0 (success) or -4 (GET_FILE_PLUGIN_FAILED)
 				file_info.Assign("Result", rc);
@@ -3541,7 +3566,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		if( dest_filename.FindChar(DIR_DELIM_CHAR) < 0 &&
 			dest_filename != condor_basename(JobStdoutFile.Value()) &&
-			dest_filename != condor_basename(JobStderrFile.Value()) )
+			dest_filename != condor_basename(JobStderrFile.Value()) &&
+			(file_command != 999 || file_subcommand != 7) )
 		{
 			Info.addSpooledFile( dest_filename.Value() );
 		}
