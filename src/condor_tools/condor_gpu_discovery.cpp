@@ -65,12 +65,10 @@ static const char * print_uuid(char* buf, int bufsiz, const unsigned char uuid[1
 }
 
 // because on linux, these become gnu_dev_major and gnu_dev_minor (sigh)
-#undef major
-#undef minor
 // basic device properties we can query from the driver
 class BasicProps {
 public:
-	BasicProps() : totalGlobalMem(0), major(0), minor(0), multiProcessorCount(0), clockRate(0), ECCEnabled(0) {
+	BasicProps() : totalGlobalMem(0), ccMajor(0), ccMinor(0), multiProcessorCount(0), clockRate(0), ECCEnabled(0) {
 		memset(uuid, 0, sizeof(uuid));
 		memset(pciId, 0, sizeof(pciId));
 	}
@@ -79,8 +77,8 @@ public:
 	unsigned char uuid[16];             // uuids are big-endian 32 lower case hex digits shown as: "xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx" where M indicates version and N indicates sub-version
 	char          pciId[16];            // null terminated string in form [domain]:[bus]:[device].[function], each field is hex. max of 12 chars, [domain}: or .[function] may be omitted
 	size_t        totalGlobalMem;       /**< Global memory available on device in bytes */
-	int           major;                /**< Major compute capability */
-	int           minor;                /**< Minor compute capability */
+	int           ccMajor;              /**< Major compute capability */
+	int           ccMinor;              /**< Minor compute capability */
 	int           multiProcessorCount;  /**< Number of multiprocessors on device */
 	int           clockRate;            /**< Clock frequency in kilohertz */
 	int           ECCEnabled;           /**< Device has ECC support enabled */
@@ -353,8 +351,8 @@ cudaError_t CUDACALL sim_cudaGetDeviceProperties(struct cudaDeviceProp * p, int 
 #else
 	strncpy(p->name, dev->name, sizeof(p->name) - 1);
 #endif
-	p->major = (dev->SM & 0xF0) >> 4;
-	p->minor = (dev->SM & 0x0F);
+	p->ccMajor = (dev->SM & 0xF0) >> 4;
+	p->ccMinor = (dev->SM & 0x0F);
 	p->multiProcessorCount = dev->multiProcessorCount;
 	p->clockRate = dev->clockRate;
 	p->totalGlobalMem = dev->totalGlobalMem;
@@ -561,7 +559,7 @@ cudaError_t CUDACALL cu_cudaGetDeviceProperties(struct cudaDeviceProp * p, int d
 	#else
 		cuDeviceGetName(p->name, sizeof(p->name), dev);
 	#endif
-		cuDeviceComputeCapability(&p->major, &p->minor, dev);
+		cuDeviceComputeCapability(&p->ccMajor, &p->ccMinor, dev);
 		cudaError_t er = cuDeviceTotalMem(&p->totalGlobalMem, dev);
 		print_error(MODE_DIAGNOSTIC_MSG, "# cuDeviceTotalMem(%p) returns %d, value = %llu\n", dev, er, (unsigned long long)p->totalGlobalMem);
 		cuDeviceGetAttribute(&p->clockRate, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, dev);
@@ -576,8 +574,8 @@ cudaError_t basicPropsFromCudaProps(cudaDevicePropStrings * dps, cudaDevicePropI
 {
 	p->name = dps->name;
 	p->totalGlobalMem = dpi->totalGlobalMem;
-	p->major = dpi->major;
-	p->minor = dpi->minor;
+	p->ccMajor = dpi->ccMajor;
+	p->ccMinor = dpi->ccMinor;
 	p->clockRate = dpi->clockRate;
 	p->multiProcessorCount = dpi->multiProcessorCount;
 	p->ECCEnabled = dpi->ECCEnabled;
@@ -1369,14 +1367,14 @@ main( int argc, const char** argv)
 				props["DeviceName"] = Format("\"%s\"", bp.name.c_str());
 				/*if (bp.hasUuid())*/ props["DeviceUuid"] = Format("\"%s\"", bp.printUuid());
 				if (bp.pciId[0]) props["DevicePciBusId"] = Format("\"%s\"", bp.pciId);
-				props["Capability"] = Format("%d.%d", bp.major, bp.minor);
+				props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor);
 				props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false";
 				props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.));
 				if (opt_extra) {
 					props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f);
 					props["ComputeUnits"] = Format("%u", bp.multiProcessorCount);
-					if (bp.major <= 6) {
-						props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.major, bp.minor));
+					if (bp.ccMajor <= 6) {
+						props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(bp.ccMajor, bp.ccMinor));
 					} else {
 						// CoresPerCU not meaningful for Architecture 7 and later
 					}
@@ -1412,7 +1410,7 @@ main( int argc, const char** argv)
 
 			if (cudaSuccess == cudaGetDeviceProperties(&deviceProp, dev)) {
 				props["DeviceName"] = Format("\"%s\"", deviceProp.name);
-				props["Capability"] = Format("%d.%d", deviceProp.major, deviceProp.minor);
+				props["Capability"] = Format("%d.%d", deviceProp.ccMajor, deviceProp.ccMinor);
 				props["ECCEnabled"] = deviceProp.ECCEnabled ? "true" : "false";
 				props["GlobalMemoryMb"] = Format("%.0f", deviceProp.totalGlobalMem/(1024.*1024.));
 				if (opt_extra) {

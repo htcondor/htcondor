@@ -1,49 +1,19 @@
 #include <stdio.h>
-#ifdef WIN32
-#else
-#include <sys/select.h>
-#include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <time.h>
-#include <string.h>
+
+#include <string>
 #include <vector>
 
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOSERVICE
-#define NOMCX
-#define NOIME
-#include <Windows.h>
-#define CUDACALL __stdcall
-#else
-#include <dlfcn.h>
-#define CUDACALL
-#endif
+#include "pi_sleep.h"
+#include "pi_dynlink.h"
 
 #include "nvml_stub.h"
+#include "cuda_header_doc.h"
+#include "cuda_device_enumeration.h"
 
-#ifdef WIN32
-// to simplfy the dynamic loading of .so/.dll, make a Windows function
-// for looking up a symbol that looks like the equivalent *nix function.
-static void* dlsym(void* hlib, const char * symbol) {
-	return (void*)GetProcAddress((HINSTANCE)(LONG_PTR)hlib, symbol);
-}
-#endif
-
-
-typedef nvmlReturn_t (*nvml_void)(void);
-typedef nvmlReturn_t (*nvml_dghbi)(unsigned int, nvmlDevice_t *);
-typedef nvmlReturn_t (*nvml_unsigned_int)(unsigned int *);
-typedef nvmlReturn_t (*nvml_dgs)( nvmlDevice_t, nvmlSamplingType_t, unsigned long long, nvmlValueType_t *, unsigned int *, nvmlSample_t * );
-typedef nvmlReturn_t (*nvml_dm)( nvmlDevice_t, nvmlMemory_t * );
-typedef const char * (*cc_nvml)( nvmlReturn_t );
-
-nvml_dgs nvmlDeviceGetSamples = NULL;
-nvml_unsigned_int nvmlDeviceGetCount = NULL;
-nvml_dghbi nvmlDeviceGetHandleByIndex = NULL;
-nvml_dm nvmlDeviceGetMemoryInfo = NULL;
-cc_nvml nvmlErrorString = NULL;
+#define DEFINE_GPU_FUNCTION_POINTERS
+#include "gpu_function_pointers.h"
 
 unsigned debug = 0;
 unsigned reportInterval = 10;
@@ -60,18 +30,14 @@ int compareSamples( const void * vpA, const void * vpB ) {
 	}
 }
 
-#ifdef WIN32
-void fail() {
-	fprintf(stderr, "Hanging to prevent process churn.\n");
-	while (1) { Sleep(1024*1000); }
-}
-#else
+#ifndef WINDOWS
 void fail() __attribute__((__noreturn__));
+#endif
+
 void fail() {
 	fprintf( stderr, "Hanging to prevent process churn.\n" );
 	while( 1 ) { sleep( 1024 ); }
 }
-#endif
 
 nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastSample, unsigned long long * elapsedTime, unsigned maxSampleCount, unsigned long long * runningSampleCount ) {
 	if( elapsedTime == NULL || lastSample == NULL ) {
@@ -121,9 +87,6 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 }
 
 int main() {
-	nvml_void nvmlInit = NULL;
-	nvml_void nvmlShutdown = NULL;
-
 	// The actual filtering is done by the startd on the basis
 	// of the SlotMergeConstraint we set for each ad we emit.
 #if defined(WINDOWS)
@@ -132,47 +95,33 @@ int main() {
 	unsetenv( "CUDA_VISIBLE_DEVICES" );
 #endif
 
-#ifdef WIN32
-	HINSTANCE nvml_handle = NULL;
-	const char * nvml_library = "nvml.dll";
-	nvml_handle = LoadLibrary(nvml_library);
-	if (! nvml_handle) {
-		fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), nvml_library);
+	auto cuda_handle = setCUDAFunctionPointers();
+	if(! cuda_handle) { fail(); }
+	if( cuInit(0) != CUDA_SUCCESS ) {
+		fprintf( stderr, "cuInit(0) failed, aborting.\n" );
 		fail();
 	}
-#else
-	void * nvml_handle = NULL;
-	const char * nvml_library = "libnvidia-ml.so.1";
-	nvml_handle = dlopen( nvml_library, RTLD_LAZY );
-	if(! nvml_handle) {
-		const char * nvml_fallback_library = "libnvidia-ml.so";
-		nvml_handle = dlopen( nvml_fallback_library, RTLD_LAZY );
-		if(! nvml_handle) {
-			fprintf( stderr, "Unable to load %s or %s, aborting.\n", nvml_library, nvml_fallback_library );
-			fail();
-		}
-	}
-	dlerror();
-#endif
 
-	nvmlInit                   = (nvml_void)dlsym( nvml_handle, "nvmlInit_v2" );
-	nvmlShutdown               = (nvml_void)dlsym( nvml_handle, "nvmlShutdown" );
-	nvmlDeviceGetCount         = (nvml_unsigned_int)dlsym( nvml_handle, "nvmlDeviceGetCount_v2" );
-	nvmlDeviceGetSamples       = (nvml_dgs)dlsym( nvml_handle, "nvmlDeviceGetSamples" );
-	nvmlDeviceGetMemoryInfo    = (nvml_dm)dlsym( nvml_handle, "nvmlDeviceGetMemoryInfo" );
-	nvmlDeviceGetHandleByIndex = (nvml_dghbi)dlsym( nvml_handle, "nvmlDeviceGetHandleByIndex_v2" );
-	nvmlErrorString            = (cc_nvml)dlsym( nvml_handle, "nvmlErrorString" );
-
-	nvmlReturn_t r = nvmlInit();
-	if( r != NVML_SUCCESS ) {
+	auto nvml_handle = setNVMLFunctionPointers();
+	if(! nvml_handle) { fail();	}
+	if( nvmlInit() != NVML_SUCCESS ) {
 		fprintf( stderr, "nvmlInit() failed, aborting.\n" );
 		fail();
 	}
 
-	unsigned int deviceCount;
-	r = nvmlDeviceGetCount( &deviceCount );
-	if( r != NVML_SUCCESS ) {
+	std::vector< BasicProps > cudaDevices;
+	if(! enumerateCUDADevices( cudaDevices )) {
+		fprintf( stderr, "Failed to enumerate CUDA devices, aborting.\n" );
+		fail();
+	}
+
+	unsigned int deviceCount = 0;
+	if( nvmlDeviceGetCount(& deviceCount) != NVML_SUCCESS ) {
 		fprintf( stderr, "nvmlDeviceGetCount() failed, aborting.\n" );
+		fail();
+	}
+	if( deviceCount != cudaDevices.size() ) {
+		fprintf( stderr, "nvmlDeviceGetCount() disagrees with CUDA device count, aborting.\n" );
 		fail();
 	}
 	if( deviceCount <= 0 ) {
@@ -180,6 +129,7 @@ int main() {
 		fail();
 	}
 
+	nvmlReturn_t r;
 	std::vector<nvmlDevice_t> devices; devices.resize(deviceCount);
 	std::vector<unsigned int> maxSampleCounts; maxSampleCounts.resize(deviceCount);
 	std::vector<unsigned long long> memoryUsage; memoryUsage.resize(deviceCount);
@@ -188,7 +138,7 @@ int main() {
 	std::vector<unsigned long long> elapsedTimes; elapsedTimes.resize(deviceCount);
 	std::vector<unsigned long long> runningSampleCounts; runningSampleCounts.resize(deviceCount);
 	for( unsigned i = 0; i < deviceCount; ++i ) {
-		r = nvmlDeviceGetHandleByIndex( i, &(devices[i]) );
+		r = nvmlDeviceGetHandleByPciBusId( cudaDevices[i].pciId, &(devices[i]) );
 		if( r == NVML_ERROR_NO_PERMISSION ) {
 			// Ignore devices we don't have permission for rather than fail.
 			continue;
@@ -245,11 +195,7 @@ int main() {
 	time_t lastReport = time( NULL );
 	while( 1 ) {
 		// Take samples three times as often as we have to minimize aliasing.
-	#ifdef WIN32
-		Sleep(sampleIntervalMicrosec / 3000 ); // Sleep is millisec
-	#else
 		usleep(sampleIntervalMicrosec / 3 );
-	#endif
 
 		for( unsigned i = 0; i < deviceCount; ++i ) {
 			r = getElapsedTimeForDevice( devices[i], &lastSamples[i], &elapsedTimes[i], maxSampleCounts[i], &runningSampleCounts[i] );
@@ -304,10 +250,7 @@ int main() {
 		return 1;
 	}
 
-#ifdef WIN32
-	if (nvml_handle) FreeLibrary(nvml_handle);
-#else
 	dlclose( nvml_handle );
-#endif
+	dlclose( cuda_handle );
 	return 0;
 }

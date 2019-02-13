@@ -1,8 +1,6 @@
-all : condor_gpu_discovery condor_gpu_utilization
+all : condor_gpu_discovery
 
 condor_gpu_discovery : condor_gpu_discovery.cpp
-
-condor_gpu_utilization : condor_gpu_utilization.cpp
 
 % : %.cpp
 	g++ $< -o $@ -ldl

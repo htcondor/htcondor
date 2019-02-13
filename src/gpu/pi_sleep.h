@@ -1,0 +1,21 @@
+#ifndef   _PI_SLEEP_H
+#define   _PI_SLEEP_H
+
+#ifndef WIN32
+
+#include <unistd.h>
+
+#else
+
+#define WIN32_LEAN_AND_MEAN
+#define NOSERVICE
+#define NOMCX
+#define NOIME
+#include <Windows.h>
+
+unsigned int sleep( unsigned int seconds ) { Sleep( seconds * 1000 ); }
+int usleep( useconds_t usec ) { Sleep( usec / 1000 ); }
+
+#endif /* WIN32 */
+
+#endif /* _PI_SLEEP_H */
