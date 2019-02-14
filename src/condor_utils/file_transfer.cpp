@@ -2344,7 +2344,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				}
 			} else {
 				// unrecongized subcommand
-				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", subcommand);
+				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", static_cast<int>(subcommand));
 				dPrintAd(D_FULLDEBUG, file_info);
 				
 				rc = 0;
@@ -3138,14 +3138,14 @@ FileTransfer::UploadThread(void *arg, Stream *s)
  * - @returns: -1 on fatal error, 0 for a non-fatal error, and otherwise a fake number
  *   of bytes to use for the transfer summary.
  */
-int
+size_t
 FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err)
 {
 	std::vector<std::unique_ptr<ClassAd>> result_ads;
 	auto result = InvokeMultipleFileTransferPlugin(err, pluginPath, input,
 		LocalProxyName.Value(), true, &result_ads);
 
-	unsigned bytes = 0;
+	size_t bytes = 0;
 	int count = 0;
 	bool classad_contents_good = true;
 	for (const auto &xfer_result: result_ads) {
@@ -3282,7 +3282,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	int first_failed_hold_code = 0;
 	int first_failed_hold_subcode = 0;
 	MyString first_failed_error_desc;
-	int first_failed_line_number;
+	int first_failed_line_number = 0;
 
 	uploadStartTime = condor_gettimestamp_double();
 
@@ -3544,7 +3544,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: outgoing file_command is %i for %s\n",
-				file_command, filename.c_str() );
+				static_cast<int>(file_command), filename.c_str() );
 
 			// Frustratingly, we cannot skip the header of the first transfer command
 			// if we are defering uploads as we may have to acquire a transfer token below.
@@ -3737,7 +3737,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				}
 			} else {
 				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",
-						file_subcommand, filename.c_str());
+						static_cast<int>(file_subcommand), filename.c_str());
 				bytes = 0;
 				rc = 0;
 			}
