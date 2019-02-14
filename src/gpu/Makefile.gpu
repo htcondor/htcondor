@@ -1,13 +1,11 @@
 HEADERS = \
 	pi_sleep.h \
 	pi_dynlink.h \
-	gpu_function_pointers.h \
 	cuda_device_enumeration.h
 
 OBJECTS = \
-	condor_gpu_utilization.o \
-	gpu_function_pointers.o \
-	cuda_device_enumeration.o
+	cuda_device_enumeration.o \
+	condor_gpu_utilization.o
 
 TARGETS = \
 	condor_gpu_utilization

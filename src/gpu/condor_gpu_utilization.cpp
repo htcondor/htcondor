@@ -25,9 +25,6 @@
 #include "cuda_header_doc.h"
 #include "cuda_device_enumeration.h"
 
-#define DEFINE_GPU_FUNCTION_POINTERS
-#include "gpu_function_pointers.h"
-
 unsigned debug = 0;
 unsigned reportInterval = 10;
 
