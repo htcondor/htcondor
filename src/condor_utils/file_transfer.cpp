@@ -2045,7 +2045,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
-		dprintf( D_SECURITY, "FILETRANSFER: incoming file_command is %i\n", xfer_command);
+		dprintf( D_SECURITY, "FILETRANSFER: incoming file_command is %i\n", static_cast<int>(xfer_command));
 		if( xfer_command == TransferCommand::Finished ) {
 			break;
 		}
