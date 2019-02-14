@@ -3138,7 +3138,7 @@ FileTransfer::UploadThread(void *arg, Stream *s)
  * - @returns: -1 on fatal error, 0 for a non-fatal error, and otherwise a fake number
  *   of bytes to use for the transfer summary.
  */
-size_t
+ssize_t
 FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err)
 {
 	std::vector<std::unique_ptr<ClassAd>> result_ads;
