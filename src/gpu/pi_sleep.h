@@ -8,9 +8,9 @@
 #else
 
 inline unsigned int
-sleep( unsigned int seconds ) { Sleep( seconds * 1000 ); }
+sleep( unsigned int seconds ) { Sleep( seconds * 1000 ); return 0; }
 inline int
-usleep( unsigned int usec ) { Sleep( usec / 1000 ); }
+usleep( unsigned int usec ) { Sleep( usec / 1000 ); return 0; }
 
 #endif /* WIN32 */
 

@@ -4,8 +4,8 @@
 #ifdef WIN32
 
 /* Ignored on Windows. */
-#define RTLD_LAZY
-#define RTLD_NOW
+#define RTLD_LAZY 0x00001
+#define RTLD_NOW  0x00002
 
 typedef HINSTANCE dlopen_return_t;
 
