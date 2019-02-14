@@ -5,6 +5,19 @@
 #include <string>
 #include <vector>
 
+// This is a mess, but since Windows.h isn't as safe to include as
+// unistd.h and dlfcn.h, we do the song-and-dance routine here, so
+// that sources files including "condor_common.h", which has a
+// different song-and-dance, can safely use the pi_* headers.  *sigh*
+
+#if       defined(WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOSERVICE
+#define NOMCX
+#define NOIME
+#include <Windows.h>
+#endif /* defined(WIN32) */
+
 #include "pi_sleep.h"
 #include "pi_dynlink.h"
 

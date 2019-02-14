@@ -7,14 +7,10 @@
 
 #else
 
-#define WIN32_LEAN_AND_MEAN
-#define NOSERVICE
-#define NOMCX
-#define NOIME
-#include <Windows.h>
-
-unsigned int sleep( unsigned int seconds ) { Sleep( seconds * 1000 ); }
-int usleep( useconds_t usec ) { Sleep( usec / 1000 ); }
+inline unsigned int
+sleep( unsigned int seconds ) { Sleep( seconds * 1000 ); }
+inline int
+usleep( useconds_t usec ) { Sleep( usec / 1000 ); }
 
 #endif /* WIN32 */
 

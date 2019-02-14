@@ -3,11 +3,9 @@
 
 #ifdef WIN32
 
-#define WIN32_LEAN_AND_MEAN
-#define NOSERVICE
-#define NOMCX
-#define NOIME
-#include <Windows.h>
+/* Ignored on Windows. */
+#define RTLD_LAZY
+#define RTLD_NOW
 
 typedef HINSTANCE dlopen_return_t;
 
