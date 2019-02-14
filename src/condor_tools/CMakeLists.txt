@@ -130,10 +130,4 @@ endif()
 ############################################################
 # GPU Support
 ############################################################
-if ( LINUX AND HAVE_LIBDL AND HAVE_DLFCN_H AND HAVE_DLOPEN )
-	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
-	condor_exe( condor_gpu_utilization "condor_gpu_utilization.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
-else ()
-	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )
-	condor_exe( condor_gpu_utilization "condor_gpu_utilization.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
-endif()
+condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
