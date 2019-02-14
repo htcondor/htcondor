@@ -51,7 +51,6 @@ CUDACALL cu_cudaRuntimeGetVersion( int * pver ) {
 	int bitness = KEY_WOW64_64KEY; //KEY_WOW64_32KEY; KEY_WOW64_64KEY
 	int res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, reg_key, 0, KEY_READ | bitness, &hkey);
 	if (res != ERROR_SUCCESS) {
-		print_error(MODE_ERROR, "can't open %s\n", reg_key);
 		return ret;
 	}
 	char version[100];
