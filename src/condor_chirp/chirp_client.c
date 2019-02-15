@@ -984,6 +984,9 @@ convert_result( int result )
 			case CHIRP_ERROR_CROSS_DEVICE_LINK:
 				errno = EXDEV;
 				break;
+			case CHIRP_ERROR_OFFLINE:
+				errno = ETIMEDOUT;
+				break;
 			case CHIRP_ERROR_UNKNOWN:
 				chirp_fatal_response();
 				break;

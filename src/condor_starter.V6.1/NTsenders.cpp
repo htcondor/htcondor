@@ -33,7 +33,7 @@
 
 #include "NTsenders.h"
 
-#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d\n", x, errno);errno=ETIMEDOUT;return x;}
+#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d\n", x, errno);errno=ETIMEDOUT;return -1;}
 
 static int CurrentSysCall;
 extern ReliSock *syscall_sock;

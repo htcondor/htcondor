@@ -860,6 +860,8 @@ int IOProxyHandler::convert( int result, int unix_errno )
 #endif
 		case EXDEV:
 			return CHIRP_ERROR_CROSS_DEVICE_LINK;
+		case ETIMEDOUT:
+			return CHIRP_ERROR_OFFLINE;
 		default:
 			dprintf(D_ALWAYS, "Starter ioproxy server got unknown unix errno:%d\n", unix_errno);
 			return CHIRP_ERROR_UNKNOWN;
