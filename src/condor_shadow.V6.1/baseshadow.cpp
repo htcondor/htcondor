@@ -984,12 +984,11 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		event.total_remote_rusage = run_remote_rusage;
 	
 		/*
-		  we want to log the events from the perspective of the user
-		  job, so if the shadow *sent* the bytes, then that means the
-		  user job *received* the bytes
+		  Both the job ad and the terminated event record bytes
+		  transferred from the perspective of the job, not the shadow.
 		*/
-		jobAd->LookupFloat(ATTR_BYTES_SENT, event.recvd_bytes);
-		jobAd->LookupFloat(ATTR_BYTES_RECVD, event.sent_bytes);
+		jobAd->LookupFloat(ATTR_BYTES_RECVD, event.recvd_bytes);
+		jobAd->LookupFloat(ATTR_BYTES_SENT, event.sent_bytes);
 
 		event.total_recvd_bytes = event.recvd_bytes;
 		event.total_sent_bytes = event.sent_bytes;
