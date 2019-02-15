@@ -41,15 +41,14 @@ if ( WITH_CREAM )
 		endif()
 
 #########################################
-		condor_pre_external( CREAMSOAP gsoap_2.7.16-p2 "lib;include" "done")
+		condor_pre_external( CREAMSOAP gsoap_2.7.16-p1 "lib;include" "done")
 		ExternalProject_Add(creamsoap
 			#-- Download Step ----------
 			DOWNLOAD_DIR ${CREAMSOAP_STAGE}/dl
 			URL ${EXTERNALS_SOURCE_URL}/gsoap_2.7.16.zip
 			#--Patch step ----------
 			PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch &&
-				patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_ipv6.patch &&
-				patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_ssl.patch
+				patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_ipv6.patch
 			#--Configure step ----------
 			CONFIGURE_COMMAND CFLAGS=-DWITH_IPV6 ./configure --prefix=${CREAMSOAP_INSTALL_LOC}
 			#--Build Step ----------
@@ -88,14 +87,13 @@ if ( WITH_CREAM )
 			set( CANL_C_FLAGS CFLAGS=-I/usr/include/c-ares19 LIBCARES_LIBS=-lcares19 )
 		endif()
 
-		condor_pre_external( CANL_C canl-c-3.0.0 "lib;include" "done")
+		condor_pre_external( CANL_C canl-c-2.1.6 "lib;include" "done")
 		ExternalProject_Add(canl_c
 			#-- Download Step ----------
 			DOWNLOAD_DIR ${CANL_C_STAGE}/dl
-			URL ${EXTERNALS_SOURCE_URL}/canl-c-3.0.0.tar.gz
+			URL ${EXTERNALS_SOURCE_URL}/canl-c-2.1.6.tar.gz
 			#--Patch step ----------
-			PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/canl_install.patch &&
-				patch -N -p 0 -i ${CMAKE_CURRENT_SOURCE_DIR}/canl_ssl.patch
+			PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/canl_install.patch
 			#--Configure step ----------
 			CONFIGURE_COMMAND ./configure --root=/ --prefix=${CANL_C_INSTALL_LOC} --libdir=lib
 			#--Build Step ----------
@@ -109,15 +107,14 @@ if ( WITH_CREAM )
 
 #########################################
 
-		condor_pre_external( GRIDSITE gridsite-3.0.0 "lib;include" "done")
+		condor_pre_external( GRIDSITE gridsite-2.2.6 "lib;include" "done")
 		ExternalProject_Add(gridsite
 			DEPENDS ${CANL_C_REF}
 			#-- Download Step ----------
 			DOWNLOAD_DIR ${GRIDSITE_STAGE}/dl
-			URL ${EXTERNALS_SOURCE_URL}/gridsite-3.0.0-20170225gitd51b2fd.tar.gz
+			URL ${EXTERNALS_SOURCE_URL}/gridsite-core_R_2_2_6.tar.gz
 			#--Patch step ----------
-			PATCH_COMMAND sed -i -e "s|^CANL_C_CFLAGS.*|CANL_C_CFLAGS=-I${CANL_C_INSTALL_LOC}/include|" -e "s|^CANL_C_LIBS.*|CANL_C_LIBS=-L${CANL_C_INSTALL_LOC}/lib -lcanl_c|" src/Makefile &&
-				patch -N -p 0 -i ${CMAKE_CURRENT_SOURCE_DIR}/gridsite_ssl.patch
+			PATCH_COMMAND sed -i -e "s|^CANL_C_CFLAGS.*|CANL_C_CFLAGS=-I${CANL_C_INSTALL_LOC}/include|" -e "s|^CANL_C_LIBS.*|CANL_C_LIBS=-L${CANL_C_INSTALL_LOC}/lib -lcanl_c|" src/Makefile
 			#--Configure step ----------
 			CONFIGURE_COMMAND echo "no config"
 			#--Build Step ----------
@@ -160,7 +157,7 @@ if ( WITH_CREAM )
 #########################################
 
 		# build gsoap plugin.
-		condor_pre_external( CREAM_SOAP_PLUGIN glite-lbjp-common-gsoap-plugin-3.2.12-p1 "lib;include" "done")
+		condor_pre_external( CREAM_SOAP_PLUGIN glite-lbjp-common-gsoap-plugin-3.2.12 "lib;include" "done")
 		ExternalProject_Add(cream_soap_plugin
 			DEPENDS ${CREAMSOAP_REF} ${GLITE_SECURITY_REF}
 			#-- Download Step ----------
@@ -203,7 +200,7 @@ if ( WITH_CREAM )
 #########################################
 
 		# build cream c api library
-		condor_pre_external( CREAM glite-ce-cream-client-api-c-1.15.4-p2 "lib;include;include/glite/security;opt" "done")
+		condor_pre_external( CREAM glite-ce-cream-client-api-c-1.15.4-p1 "lib;include;include/glite/security;opt" "done")
 
 		if(BOOST_INSTALL_LOC)
 			set (BOOST_PATH ${BOOST_INSTALL_LOC})
@@ -213,7 +210,7 @@ if ( WITH_CREAM )
 			set (BOOST_LIB libboost_thread.a libbosst_filesystem.a libboost_system.a)
 		endif()
 
-		set (CREAM_PATCH patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch -p1 && patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/cream_ssl.patch -p0)
+		set (CREAM_PATCH patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch -p1)
 		if ( PREFER_CPP11 )
 			set (CREAM_PATCH ${CREAM_PATCH} && patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/cream_cpp11.patch -p1)
 		endif()

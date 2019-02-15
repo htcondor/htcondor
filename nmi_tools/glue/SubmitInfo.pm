@@ -287,6 +287,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
+								  '-DWITH_CREAM:BOOL' => 'OFF',
 								  '-DWITH_BOINC:BOOL' => 'OFF',
 			},
 			'prereqs'	=> [ ],
