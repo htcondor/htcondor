@@ -17,8 +17,8 @@
  ############################################################### 
 
 # Sources for some of the source tarballs:
-#   http://scientific.zcu.cz/emi/emi.canl.c/canl-c-3.0.0.tar.gz
-#   https://github.com/CESNET/gridsite.git (commit d51b2fd0)
+#   http://mirror.batlab.org/pub/linux/epel/6/SRPMS/canl-c-2.1.6-1.el6.src.rpm
+#   http://mirror.batlab.org/pub/linux/epel/6/SRPMS/gridsite-2.2.6-1.el6.src.rpm
 #   http://emisoft.web.cern.ch/emisoft/dist/EMI/3/sl6/SRPMS/updates/glite-lbjp-common-gss-3.2.16-1.el6.src.rpm
 #   http://emisoft.web.cern.ch/emisoft/dist/EMI/3/sl6/SRPMS/updates/glite-lbjp-common-gsoap-plugin-3.2.12-1.el6.src.rpm
 #   http://emisoft.web.cern.ch/emisoft/dist/EMI/3/sl6/SRPMS/base/glite-ce-wsdl-1.15.1-1.sl6.src.rpm
