@@ -24,9 +24,10 @@
 #   http://emisoft.web.cern.ch/emisoft/dist/EMI/3/sl6/SRPMS/base/glite-ce-wsdl-1.15.1-1.sl6.src.rpm
 #   http://emisoft.web.cern.ch/emisoft/dist/EMI/3/sl6/SRPMS/updates/glite-ce-cream-client-api-c-1.15.4-2.el6.src.rpm
 
-if (LINUX)
+include (FindOpenSSL)
+if (LINUX AND "${OPENSSL_VERSION}" VERSION_LESS "1.1.0")
 	option( WITH_CREAM "Compiling with support for CREAM" ON )
-endif(LINUX)
+endif()
 
 if ( WITH_CREAM )
 
