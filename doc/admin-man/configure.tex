@@ -8971,8 +8971,10 @@ These macros affect the \Condor{credd}.
 
 \label{param:CreddPollingTimeout}
 \item[\Macro{CREDD\_POLLING\_TIMEOUT}]
-  An integer value that determines how long the \Condor{credd} daemon will
-  poll for credentials in seconds. The default value is 20.
+  An integer value representing the number of seconds that the \Condor{credd},
+  \Condor{starter}, and \Condor{schedd} daemons will
+  wait for valid credentials to be produced by a credential montior (CREDMON) service. 
+  The default value is 20.
 
 \label{param:CreddCacheLocally}
 \item[\Macro{CREDD\_CACHE\_LOCALLY}]

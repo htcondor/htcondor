@@ -118,6 +118,19 @@ at after installation.
 seconds.
 \Ticket{6888}
 
+\item In order to work better with HTCondor 8.9.1 and later, remove support
+for remote submission to \Condor{schedd}s older than version 7.5.0.
+\Ticket{6844}
+
+\item Fixed a bug that caused \Condor{gpu\_discovery} to report the wrong value
+for DeviceMemory and possibly other attributes of the GPU when CUDA 10 was
+installed as the default runtime.  Also fixed a bug that would sometimes cause
+the reported value of DeviceMemory to be limited to 4 Gigabytes.
+\Ticket{6883}
+
+\item Fixed a bug that caused execute nodes to ignore config knob \Macro{CREDD\_POLLING\_TIMEOUT}.
+\Ticket{6887}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
