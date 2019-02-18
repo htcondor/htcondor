@@ -101,6 +101,10 @@ the reported value of DeviceMemory to be limited to 4 Gigabytes.
 \item Fixed a bug that caused execute nodes to ignore config knob \Macro{CREDD\_POLLING\_TIMEOUT}.
 \Ticket{6887}
 
+\item Python binding API method Schedd.submit() and submitMany() now edits job \AttrNI{Requirements}
+	expression to consider the job ad's \AttrNI{RequestCPUs} and \AttrNI{RequestGPUs} attributes.
+\Ticket{6918}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
