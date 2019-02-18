@@ -2805,7 +2805,7 @@ int process_job_credentials()
 		// it.  we forward this URL to the user so they can obtain the
 		// tokens needed.
 
-		MyString tokens_needed = submit_hash.submit_param_mystring("UseOAuthServies", "use_oauth_services");
+		MyString tokens_needed = submit_hash.submit_param_mystring("UseOAuthServices", "use_oauth_services");
 
 		if (!tokens_needed.empty()) {
 			MyString URL = credd_has_tokens(tokens_needed);

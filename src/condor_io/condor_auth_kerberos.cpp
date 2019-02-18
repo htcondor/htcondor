@@ -225,6 +225,7 @@ bool Condor_Auth_Kerberos::Initialize()
 		m_initSuccess = true;
 	}
 #else
+	error_message_ptr = error_message;
 	krb5_auth_con_free_ptr = krb5_auth_con_free;
 	krb5_auth_con_genaddrs_ptr = krb5_auth_con_genaddrs;
 	krb5_auth_con_getaddrs_ptr = krb5_auth_con_getaddrs;
