@@ -3122,7 +3122,7 @@ void export_schedd()
             ":param action: Action to perform; must be from enum JobAction.\n"
             ":param job_spec: Job specification; can either be a list of job IDs or a string specifying a constraint to match jobs.\n"
             ":return: Number of jobs changed.")
-        .def("submit", &Schedd::submit, submit_overloads("Submit one or more jobs to the HTCondor schedd.\n"
+        .def("submit", &Schedd::submit, submit_overloads("Submit one or more jobs to the HTCondor schedd. DEPRECATED! Use Submit class instead.\n"
             ":param ad: ClassAd describing job cluster.\n"
             ":param count: Number of jobs to submit to cluster.\n"
             ":param spool: Set to true to spool files separately.\n"
@@ -3132,7 +3132,7 @@ void export_schedd()
 #else
             ":return: Newly created cluster ID.", (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::object())))
 #endif
-        .def("submitMany", &Schedd::submitMany, "Submit one or more jobs to the HTCondor schedd.\n"
+        .def("submitMany", &Schedd::submitMany, "Submit one or more jobs to the HTCondor schedd. DEPRECATED! Use Submit class instead.\n"
              ":param cluster_ad: ClassAd describing the job cluster.  All jobs inherit from this base ad.\n"
              ":param proc_ads: A list of 2-tuples.  The tuples have the format (proc_ad, count).  This will result in 'count' jobs being submitted, inheriting from the proc_ad and cluster_ad.\n"
              ":param spool: Set to true to spool files separately.\n"
