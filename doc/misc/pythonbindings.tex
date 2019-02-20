@@ -283,6 +283,10 @@ The first job that matches it will not be returned, and iteration will cease.
 Submit one or more jobs to the \Condor{schedd} daemon.
 Returns the newly created cluster ID.
 
+Note this method is deprecated and may be removed in future HTCondor releases. 
+To submit jobs, please use the  Submit Class (documented below) instead of 
+this method.
+
 This method requires the invoker to provide a ClassAd for the new job cluster;
 such a ClassAd contains attributes with different names than the commands in
 a submit description file.  As an example, the stdout file is referred to as
@@ -314,6 +318,10 @@ These are useful for interacting with the job spool at a later time.
 Submit multiple jobs to the \Condor{schedd} daemon, possibly including several
 distinct processes.
 Returns the newly created cluster ID.
+
+Note this method is deprecated and may be removed in future HTCondor releases. 
+To submit jobs, please use the  Submit Class (documented below) instead of 
+this method.
 
 This method requires the invoker to provide a ClassAd, \texttt{cluster\_ad} for the new job cluster;
 this is the same format as in the \texttt{submit()} method.

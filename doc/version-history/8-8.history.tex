@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.8.1 not yet released.
-%\item HTCondor version 8.8.1 released on Month Date, 2018.
+\item HTCondor version 8.8.1 released on February 19, 2019.
 
 \end{itemize}
 
@@ -61,24 +60,27 @@ by disabling graph metrics reporting by default, via the new
 
 \begin{itemize}
 
+\item Fixed a bug that caused \Condor{gpu\_discovery} to report the wrong value
+for DeviceMemory and possibly other attributes of the GPU when CUDA 10 was
+installed as the default run-time.  Also fixed a bug that would sometimes cause
+the reported value of DeviceMemory to be limited to 4 Gigabytes.
+\Ticket{6883}
+
 \item Fixed bug that prevented HTCondor on Windows from running jobs in the
 default configuration when started as a service.
 \Ticket{6853}
 
-\item \Condor{q} -autocluster data is now much more up-to-date.
-\Ticket{6833}
-
-\item Improved efficiency of negotiation code in the \Condor{schedd}.
-\Ticket{6834}
+\item The Job Router no longer sets an incorrect \Attr{User} job
+attribute when routing a job between two \Condor{schedd}s with
+different values for configuration parameter \MacroNI{UID\_DOMAIN}.
+\Ticket{6856}
 
 \item Made Collector.locateAll() method more efficient in the Python
 bindings.
 \Ticket{6831}
 
-\item The Job Router no longer sets an incorrect \AttrNI{User} job
-attribute when routing a job between two \Condor{schedd}s with
-different values for configuration parameter \MacroNI{UID\_DOMAIN}.
-\Ticket{6856}
+\item Improved efficiency of negotiation code in the \Condor{schedd}.
+\Ticket{6834}
 
 \item The new \Expr{minihtcondor} package now starts HTCondor automatically
 at after installation.
@@ -88,18 +90,22 @@ at after installation.
 seconds.
 \Ticket{6888}
 
+\item \Condor{q} -autocluster data is now much more up-to-date.
+\Ticket{6833}
+
 \item In order to work better with HTCondor 8.9.1 and later, remove support
 for remote submission to \Condor{schedd}s older than version 7.5.0.
 \Ticket{6844}
 
-\item Fixed a bug that caused \Condor{gpu\_discovery} to report the wrong value
-for DeviceMemory and possibly other attributes of the GPU when CUDA 10 was
-installed as the default runtime.  Also fixed a bug that would sometimes cause
-the reported value of DeviceMemory to be limited to 4 Gigabytes.
-\Ticket{6883}
+\item Fixed a bug that would cause DAGMan jobs to fail when using Kerberos Authentication on Debian or Ubuntu.
+\Ticket{6917}
 
 \item Fixed a bug that caused execute nodes to ignore config knob \Macro{CREDD\_POLLING\_TIMEOUT}.
 \Ticket{6887}
+
+\item Python binding API method Schedd.submit() and submitMany() now edits job \Attr{Requirements}
+expression to consider the job ad's \Attr{RequestCPUs} and \Attr{RequestGPUs} attributes.
+\Ticket{6918}
 
 \end{itemize}
 
