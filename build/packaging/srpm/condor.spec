@@ -1783,6 +1783,16 @@ fi
 %endif
 
 %changelog
+* Tue Feb 19 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.1-1
+- Fixed excessive CPU consumption with GPU monitoring
+- GPU monitoring is off by default; enable with "use feature: GPUsMonitor"
+- HTCondor now works with the new CUDA version 10 libraries
+- Fixed a bug where sometimes jobs would not start on a Windows execute node
+- Fixed a bug that could cause DAGman to go into an infinite loop on exit
+- The JobRouter doesn't forward the USER attribute between two UID Domains
+- Made Collector.locateAll() more efficient in the Python bindings
+- Improved efficiency of the negotiation code in the condor_schedd
+
 * Thu Jan 03 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.0-1
 - Automatically add AWS resources to your pool using HTCondor Annex
 - The Python bindings now include submit functionality
