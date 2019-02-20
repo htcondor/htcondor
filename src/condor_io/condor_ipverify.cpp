@@ -107,8 +107,7 @@ IpVerify::~IpVerify()
 int
 IpVerify::Init()
 {
-	char *pAllow = NULL, *pDeny = NULL, *pOldAllow = NULL, *pOldDeny = NULL,
-		*pNewAllow = NULL, *pNewDeny = NULL;
+	char *pAllow = NULL, *pDeny = NULL;
 	DCpermission perm;
 	const char* const ssysname = get_mySubSystem()->getName();	
 
@@ -154,21 +153,13 @@ IpVerify::Init()
 			// subsystems only load the CLIENT lists, since they have no
 			// command port and don't need the other authorization lists.
 			if(strcmp(PermString(perm),"CLIENT")==0){ 
-				pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
-				pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param, ssysname );
-				pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
-				pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param, ssysname );
+				pAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
+				pDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
 			}
 		} else {
-			pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
-			pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param, ssysname );
-			pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
-			pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param, ssysname );
+			pAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
+			pDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
 		}
-		// concat the two
-		pAllow = merge(pNewAllow, pOldAllow);
-		// concat the two
-		pDeny = merge(pNewDeny, pOldDeny);
 		if( pAllow ) {
 			dprintf ( D_SECURITY, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.Value());
 		}
@@ -216,49 +207,11 @@ IpVerify::Init()
 			free(pDeny);
 			pDeny = NULL;
 		}
-		if (pOldAllow) {
-			free(pOldAllow);
-			pOldAllow = NULL;
-		}
-		if (pOldDeny) {
-			free(pOldDeny);
-			pOldDeny = NULL;
-		}
-		if (pNewAllow) {
-			free(pNewAllow);
-			pNewAllow = NULL;
-		}
-		if (pNewDeny) {
-			free(pNewDeny);
-			pNewDeny = NULL;
-		}
 	}
 	dprintf(D_FULLDEBUG|D_SECURITY,"Initialized the following authorization table:\n");
 	if(PermHashTable)	
 		PrintAuthTable(D_FULLDEBUG|D_SECURITY);
 	return TRUE;
-}
-
-char * IpVerify :: merge(char * pNewList, char * pOldList)
-{
-    char * pList = NULL;
-
-    if (pOldList) {
-        if (pNewList) {
-            pList = (char *)malloc(strlen(pOldList) + strlen(pNewList) + 2);
-            ASSERT( pList );
-            sprintf(pList, "%s,%s", pNewList, pOldList);
-        }
-        else {
-            pList = strdup(pOldList);
-        }
-    }
-    else {
-        if (pNewList) {
-            pList = strdup(pNewList);
-        }
-    }
-    return pList;
 }
 
 bool IpVerify :: has_user(UserPerm_t * perm, const char * user, perm_mask_t & mask )
