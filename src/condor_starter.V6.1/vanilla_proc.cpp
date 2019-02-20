@@ -502,7 +502,7 @@ VanillaProc::StartJob()
 	}
 
 	// mount_under_scratch only works with rootly powers
-	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap()) {
+	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
 		const char* working_dir = Starter->GetWorkingDir();
 
 		if (IsDirectory(working_dir)) {
