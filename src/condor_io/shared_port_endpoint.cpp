@@ -48,6 +48,39 @@ static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
+MyString
+SharedPortEndpoint::GenerateEndpointName(char const *daemon_name) {
+	static unsigned short rand_tag = 0;
+	static unsigned int sequence = 0;
+	if( !rand_tag ) {
+		// We use a random tag in our name so that if we have
+		// re-used the PID of a daemon that recently ran and
+		// somebody tries to connect to that daemon, they are
+		// unlikely to connect to us.
+		rand_tag = (unsigned short)(get_random_float()*(((float)0xFFFF)+1));
+	}
+
+	MyString buffer;
+	if(! daemon_name) {
+		daemon_name = "unknown";
+	} else {
+		buffer = daemon_name;
+		buffer.lower_case();
+		daemon_name = buffer.c_str();
+	}
+
+	MyString m_local_id;
+	if( !sequence ) {
+		m_local_id.formatstr("%s_%lu_%04hx",buffer.c_str(),(unsigned long)getpid(),rand_tag);
+	}
+	else {
+		m_local_id.formatstr("%s_%lu_%04hx_%u",buffer.c_str(),(unsigned long)getpid(),rand_tag,sequence);
+	}
+	sequence++;
+
+	return m_local_id;
+}
+
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	m_is_file_socket(true),
 	m_listening(false),
@@ -67,28 +100,12 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 		// thing to do.
 
 	if( sock_name ) {
-			// we were given a name, so just use that
+		// we were given a name, so just use that
 		m_local_id = sock_name;
-	}
-	else {
-		static unsigned short rand_tag = 0;
-		static unsigned int sequence = 0;
-		if( !rand_tag ) {
-				// We use a random tag in our name so that if we have
-				// re-used the PID of a daemon that recently ran and
-				// somebody tries to connect to that daemon, they are
-				// unlikely to connect to us.
-			rand_tag = (unsigned short)(get_random_float()*(((float)0xFFFF)+1));
-		}
-
-		if( !sequence ) {
-			m_local_id.formatstr("%lu_%04hx",(unsigned long)getpid(),rand_tag);
-		}
-		else {
-			m_local_id.formatstr("%lu_%04hx_%u",(unsigned long)getpid(),rand_tag,sequence);
-		}
-
-		sequence++;
+	} else {
+		char const * daemon_name = get_mySubSystem()->getLocalName();
+		if(! daemon_name) { daemon_name = get_mySubSystem()->getName(); }
+		m_local_id = GenerateEndpointName(daemon_name);
 	}
 #ifdef WIN32
 	wake_select_source = NULL;
