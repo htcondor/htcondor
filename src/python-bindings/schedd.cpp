@@ -3104,7 +3104,7 @@ void export_schedd()
         .value("GroupBy", CondorQ::fetch_GroupBy)
         .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
         .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
-        .value("IncludeClusterAd"), CondorQ::fetch_IncludeClusterAd)
+        .value("IncludeClusterAd", CondorQ::fetch_IncludeClusterAd)
         ;
 
     enum_<BlockingMode>("BlockingMode")
