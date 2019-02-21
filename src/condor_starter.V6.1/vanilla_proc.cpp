@@ -1132,7 +1132,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		// will be killed, and when it does, this job will get unfrozen
 		// and continue running.
 
-		if (usage < (0.9 * m_memory_limit)) {
+		if (usage < m_memory_limit) {
 			long long oomData = 0xdeadbeef;
 			int efd = -1;
 			ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
