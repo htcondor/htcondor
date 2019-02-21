@@ -12,13 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import logging as _logging
-
-# SET UP NULL LOG HANDLER
-_logger = _logging.getLogger(__name__)
-_logger.setLevel(_logging.DEBUG)
-_logger.addHandler(_logging.NullHandler())
-
-
-from .classad import *

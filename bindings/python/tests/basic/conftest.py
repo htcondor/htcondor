@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging as _logging
+import os
 
-# SET UP NULL LOG HANDLER
-_logger = _logging.getLogger(__name__)
-_logger.setLevel(_logging.DEBUG)
-_logger.addHandler(_logging.NullHandler())
+import pytest
+
+import htcondor.basic as htc
 
 
-from .classad import *
+@pytest.fixture(scope="function")
+def cluster(tmpdir):
+    log_file = os.path.join(tmpdir, "log")
+    s = htc.Submit({"executable": r"foobar", "args": "hello world", "log": log_file})
+    h = s.queue(count=1)
+    yield h
+    h.remove()
