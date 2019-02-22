@@ -32,6 +32,7 @@
 #include "HashTable.h"
 #include "condor_uid.h"
 #include "condor_email.h"
+#include "shared_port_endpoint.h"
 
 // Initialize static data members
 const int GridUniverseLogic::job_added_delay = 3;
@@ -573,12 +574,16 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		dprintf(D_FULLDEBUG,"Really Execing %s\n",args_string.Value());
 	}
 
+	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( "gridmanager" );
 	pid = daemonCore->Create_Process( 
 		gman_binary,			// Program to exec
 		args,					// Command-line args
 		PRIV_ROOT,				// Run as root, so it can switch to
 		                        //   PRIV_CONDOR
-		rid						// Reaper ID
+		rid,					// Reaper ID
+		TRUE, TRUE, NULL, NULL, NULL, NULL,
+		NULL, NULL, 0, NULL, 0, NULL, NULL,
+		daemon_sock.c_str()
 		);
 
 	free(gman_binary);
