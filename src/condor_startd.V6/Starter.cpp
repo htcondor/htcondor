@@ -36,6 +36,7 @@
 #include "classadHistory.h"
 #include "classad_helpers.h"
 #include "ipv6_hostname.h"
+#include "shared_port_endpoint.h"
 
 #if defined(LINUX)
 #include "glexec_starter.linux.h"
@@ -1166,10 +1167,11 @@ int Starter::execDCStarter(
 	FamilyInfo fi;
 	fi.max_snapshot_interval = pid_snapshot_interval;
 
+	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( "starter" );
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
-						NULL, 0, NULL, 0, NULL, NULL, NULL, NULL, fs_remap);
+						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, fs_remap);
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
