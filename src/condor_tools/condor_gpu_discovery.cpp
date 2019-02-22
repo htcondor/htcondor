@@ -1162,9 +1162,13 @@ main( int argc, const char** argv)
 			}
 		}
 		dlerror(); //Reset error
-		const char * nvml_library = "libnvidia-ml.so";
+		const char * nvml_library = "libnvidia-ml.so.1";
 		if (opt_dynamic) {
 			nvml_handle = dlopen(nvml_library, RTLD_LAZY);
+			if ( ! nvml_handle) {
+				nvml_library = "libnvidia-ml.so";
+				nvml_handle = dlopen(nvml_library, RTLD_LAZY);
+			}
 			if ( ! nvml_handle) {
 				print_error(MODE_ERROR, "Error %s: Cant open library: %s\n", dlerror(), nvml_library);
 			}
