@@ -348,11 +348,23 @@ cudaError_t CUDACALL sim_getBasicProps(int devID, BasicProps * p) {
 
 int sim_jitter = 0;
 nvmlReturn_t sim_nvmlInit(void) { sim_jitter = (int)(time(NULL) % 10); return NVML_SUCCESS; }
-nvmlReturn_t sim_nvmlDeviceGetHandleByIndex(unsigned int ix, nvmlDevice_t * pdev) { *pdev=(nvmlDevice_t)(size_t)(ix+1); return NVML_SUCCESS; };
 nvmlReturn_t sim_nvmlDeviceGetFanSpeed(nvmlDevice_t dev, unsigned int * pval) { *pval = 9+sim_jitter+(int)(size_t)dev; return NVML_SUCCESS; }
 nvmlReturn_t sim_nvmlDeviceGetPowerUsage(nvmlDevice_t dev, unsigned int * pval) { *pval = 29+sim_jitter+(int)(size_t)dev; return NVML_SUCCESS; }
 nvmlReturn_t sim_nvmlDeviceGetTemperature(nvmlDevice_t dev, nvmlTemperatureSensors_t /*sensor*/, unsigned int * pval) { *pval = 89+sim_jitter+(int)(size_t)dev; return NVML_SUCCESS;}
 nvmlReturn_t sim_nvmlDeviceGetTotalEccErrors(nvmlDevice_t /*dev*/, nvmlMemoryErrorType_t /*met*/, nvmlEccCounterType_t /*mec*/, unsigned long long * pval) { *pval = 0; /*sim_jitter-1+(int)dev;*/ return NVML_SUCCESS; }
+
+nvmlReturn_t
+sim_nvmlDeviceGetHandleByPciBusId(const char * pciBusId, nvmlDevice_t * pdev) {
+	unsigned int devID;
+	if( sscanf(pciBusId, "\"0000:%02x:00.0\"", & devID) != 1 ) {
+		return NVML_ERROR_NOT_FOUND;
+	}
+	devID -= 0x40;
+	* pdev = (nvmlDevice_t)(size_t)(devID+1);
+	return NVML_SUCCESS;
+};
+
+
 
 int g_verbose = 0;
 int g_diagnostic = 0;
@@ -976,17 +988,8 @@ main( int argc, const char** argv)
 	typedef nvmlReturn_t (*nvml_void)(void);
 	nvml_void nvmlInit = NULL;  // use "nvmlInit_v2"
 	nvml_void nvmlShutdown = NULL;
-	typedef nvmlReturn_t (*nvml_unsigned_int_Device)(unsigned int, nvmlDevice_t *);
-	nvml_unsigned_int_Device nvmlDeviceGetHandleByIndex = NULL;
 	typedef nvmlReturn_t (*nvml_charptr_Device)(const char *, nvmlDevice_t *);
 	nvml_charptr_Device nvmlDeviceGetHandleByPciBusId = NULL;  // use "nvmlDeviceGetHandleByPciBusId_v2"
-	typedef nvmlReturn_t(*nvml_ucharptr_Device)(const unsigned char *, nvmlDevice_t *);
-	nvml_ucharptr_Device nvmlDeviceGetHandleByUUID = NULL;
-	//typedef nvmlReturn_t (*nvml_Device_EnableState)(nvmlDevice_t, nvmlEnableState_t *);
-	//nvml_Device_EnableState nvmlDeviceGetDisplayMode = NULL;
-	//nvml_Device_EnableState nvmlDeviceGetPersistenceMode = NULL; 
-	//typedef nvmlReturn_t (*nvml_Device_EnableState_EnableState)(nvmlDevice_t, nvmlEnableState_t *, nvmlEnableState_t *);
-	//nvml_Device_EnableState_EnableState nvmlDeviceGetEccMode = NULL;
 	typedef nvmlReturn_t (*nvml_Device_unsigned_int)(nvmlDevice_t, unsigned int *);
 	nvml_Device_unsigned_int nvmlDeviceGetFanSpeed = NULL;
 	nvml_Device_unsigned_int nvmlDeviceGetPowerUsage = NULL;
@@ -1018,7 +1021,7 @@ main( int argc, const char** argv)
 
 		nvmlInit = sim_nvmlInit;
 		nvmlShutdown = sim_nvmlInit;
-		nvmlDeviceGetHandleByIndex = sim_nvmlDeviceGetHandleByIndex;
+		nvmlDeviceGetHandleByPciBusId = sim_nvmlDeviceGetHandleByPciBusId;
 		nvmlDeviceGetFanSpeed = sim_nvmlDeviceGetFanSpeed;
 		nvmlDeviceGetPowerUsage = sim_nvmlDeviceGetPowerUsage;
 		nvmlDeviceGetTemperature = sim_nvmlDeviceGetTemperature;
@@ -1205,9 +1208,7 @@ main( int argc, const char** argv)
 		} else {
 			have_nvml = 1;
 			nvmlShutdown = (nvml_void) dlsym(nvml_handle, "nvmlShutdown"); // (void)
-			nvmlDeviceGetHandleByIndex = (nvml_unsigned_int_Device) dlsym(nvml_handle, "nvmlDeviceGetHandleByIndex_v2"); //(unsigned int, nvmlUnit_t *)
 			nvmlDeviceGetHandleByPciBusId = (nvml_charptr_Device) dlsym(nvml_handle, "nvmlDeviceGetHandleByPciBusId_v2");
-			nvmlDeviceGetHandleByUUID = (nvml_ucharptr_Device) dlsym(nvml_handle, "nvmlDeviceGetHandleByUUID");
 			//nvmlDeviceGetDisplayMode = (nvml_Device_EnableState) dlsym(nvml_handle, "nvmlDeviceGetDisplayMode"); //(nvmlDevice_t, nvmlEnableState_t *)
 			//nvmlDeviceGetPersistenceMode = (nvml_Device_EnableState) dlsym(nvml_handle, "nvmlDeviceGetPersistenceMode"); //(nvmlDevice_t, nvmlEnableState_t *);
 			//nvmlDeviceGetEccMode = (nvml_Device_EnableState_EnableState) dlsym(nvml_handle, "nvmlDeviceGetEccMode"); //(nvmlDevice_t, nvmlEnableState_t *, nvmlEnableState_t *);
