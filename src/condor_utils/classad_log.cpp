@@ -83,7 +83,7 @@ FILE* LoadClassAdLog(
 	m_original_log_birthdate = time(NULL);
 
 	// TODO: this should open O_BINARY because on windows, text files have \r\n with the c-runtime magically adding/removing \r as needed.
-	int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
+	int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		errmsg.formatstr("failed to open log %s, errno = %d\n", filename, errno);
 		return NULL;
@@ -267,10 +267,10 @@ bool TruncateClassAdLog(
 	FILE *new_log_fp;
 
 	tmp_log_filename.formatstr( "%s.tmp", filename);
-	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
+	new_log_fd = safe_create_replace_if_exists(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (new_log_fd < 0) {
-		errmsg.formatstr("failed to rotate log: safe_open_wrapper(%s) returns %d\n",
-				tmp_log_filename.Value(), new_log_fd);
+		errmsg.formatstr("failed to rotate log: safe_create_replace_if_exists(%s) failed with errno %d (%s)\n",
+			tmp_log_filename.Value(), errno, strerror(errno));
 		return false;
 	}
 
@@ -278,6 +278,8 @@ bool TruncateClassAdLog(
 	if (new_log_fp == NULL) {
 		errmsg.formatstr("failed to rotate log: fdopen(%s) returns NULL\n",
 				tmp_log_filename.Value());
+		close(new_log_fd);
+		unlink(tmp_log_filename.Value());
 		return false;
 	}
 
@@ -300,12 +302,15 @@ bool TruncateClassAdLog(
 	// functions just EXCEPT'ed rather than returning errors.
 	if ( ! success) {
 		fclose(new_log_fp);
+		unlink(tmp_log_filename.Value());
 		return false;
 	}
 
 	fclose(new_log_fp);	// avoid sharing violation on move
 	if (rotate_file(tmp_log_filename.Value(), filename) < 0) {
 		errmsg.formatstr("failed to rotate job queue log!\n");
+
+		unlink(tmp_log_filename.Value());
 
 		int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 		if (log_fd < 0) {
@@ -314,6 +319,7 @@ bool TruncateClassAdLog(
 			log_fp = fdopen(log_fd, "a+");
 			if (log_fp == NULL) {
 				errmsg.formatstr("failed to refdopen log %s, errno = %d after failing to rotate log.",filename,errno);
+				close(log_fd);
 			}
 		}
 
