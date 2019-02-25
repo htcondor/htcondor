@@ -356,7 +356,7 @@ nvmlReturn_t sim_nvmlDeviceGetTotalEccErrors(nvmlDevice_t /*dev*/, nvmlMemoryErr
 nvmlReturn_t
 sim_nvmlDeviceGetHandleByPciBusId(const char * pciBusId, nvmlDevice_t * pdev) {
 	unsigned int devID;
-	if( sscanf(pciBusId, "\"0000:%02x:00.0\"", & devID) != 1 ) {
+	if( sscanf(pciBusId, "0000:%02x:00.0", & devID) != 1 ) {
 		return NVML_ERROR_NOT_FOUND;
 	}
 	devID -= 0x40;
@@ -1418,7 +1418,8 @@ main( int argc, const char** argv)
 		char prefix[100];
 		sprintf(prefix,"%s%d",opt_pre,dev);
 		KVP& props = dev_props.find(prefix)->second;
-		result = nvmlDeviceGetHandleByPciBusId( props["DevicePciBusId"].c_str(), & device );
+		std::string unquoted = props["DevicePciBusId"].substr( 1, props["DevicePciBusId"].length() - 2 );
+		result = nvmlDeviceGetHandleByPciBusId( unquoted.c_str(), & device );
 		if( result != NVML_SUCCESS ) {
 			continue;
 		}

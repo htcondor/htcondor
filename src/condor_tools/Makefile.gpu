@@ -3,7 +3,7 @@ all : condor_gpu_discovery
 condor_gpu_discovery : condor_gpu_discovery.cpp
 
 % : %.cpp
-	g++ $< -o $@ -ldl
+	g++ -g $< -o $@ -ldl
 
 clean :
 	rm -f condor_gpu_discovery condor_gpu_utilization
