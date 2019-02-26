@@ -1027,15 +1027,11 @@ OsProc::makeCpuAffinityMask(int slotId) {
 void
 OsProc::SetupSingularitySsh() {
 #ifdef LINUX
-	// Right now, this only works if we are root.
-	if (!can_switch_ids()) {
-		return;
-	}
 	
 	// First, create a unix domain socket that we can listen on
 	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (uds < 0) {
-		dprintf(D_ALWAYS, "Cannot create unix domain socket for docker ssh_to_job\n");
+		dprintf(D_ALWAYS, "Cannot create unix domain socket for singularity ssh_to_job\n");
 		return;
 	}
 
@@ -1106,20 +1102,29 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	}
 	ArgList args;
 	args.AppendArg("/usr/bin/nsenter");
-	args.AppendArg("-a"); // all namespaces
 	args.AppendArg("-t"); // target pid
 	char buf[32];
 	sprintf(buf,"%d", pid);
 	args.AppendArg(buf); // pid of running job
 
-	args.AppendArg("/usr/sbin/chroot");
+	bool setuid = param_boolean("SINGULARITY_IS_SETUID", true);
+	if (setuid) {
+		// The default case where singularity is using a setuid wrapper
+		args.AppendArg("-a"); // all namespaces
+		args.AppendArg("/usr/sbin/chroot");
 
-	args.AppendArg("--userspec");
-	sprintf(buf, "%d", get_user_uid());
-	args.AppendArg(buf);
+		args.AppendArg("--userspec");
+		sprintf(buf, "%d", get_user_uid());
+		args.AppendArg(buf);
 	
-	sprintf(buf,"/proc/%d/root", pid);
-	args.AppendArg(buf);
+		sprintf(buf,"/proc/%d/root", pid);
+		args.AppendArg(buf);
+	} else {
+		args.AppendArg("-U"); // enter only the User namespace
+		args.AppendArg("-r"); // chroot
+		args.AppendArg("-preserve-credentials");
+	
+	}
 
 	Env env;
 	MyString env_errors;
@@ -1128,7 +1133,7 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	singExecPid = daemonCore->Create_Process(
 		"/usr/bin/nsenter",
 		args,
-		PRIV_ROOT,
+		setuid ? PRIV_ROOT : PRIV_USER,
 		singReaperId,
 		FALSE,
 		FALSE,
