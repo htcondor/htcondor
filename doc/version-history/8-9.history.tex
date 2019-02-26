@@ -71,6 +71,12 @@ additional jobs' resources will be coalesced into a single slot, on which
 the now-job will be run.
 \Ticket{6694}
 
+\item In the Python bindings, the \Expr{JobEventLog} class now has a
+\Expr{close} method.  It is also now its own iterable context manager
+(implements \Expr{\_\_enter\_\_} and \Expr{\_\_exit\_\_}).
+The \Expr{JobEvent} class now implements \Expr{\_\_str\_\_} and \Expr{\_\_repr\_\_}.
+\Ticket{6814}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
