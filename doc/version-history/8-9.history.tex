@@ -66,6 +66,11 @@ This ``family'' security session can be disabled by setting the new
 configuration parameter \MacroNI{SEC\_USE\_FAMILY\_SESSION} to \Expr{False}.
 \Ticket{6788}
 
+\item The \Condor{now} tool now supports vacating more than one job; the
+additional jobs' resources will be coalesced into a single slot, on which
+the now-job will be run.
+\Ticket{6694}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
