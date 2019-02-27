@@ -1110,14 +1110,18 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	bool setuid = param_boolean("SINGULARITY_IS_SETUID", true);
 	if (setuid) {
 		// The default case where singularity is using a setuid wrapper
-		args.AppendArg("-a"); // all namespaces
-		args.AppendArg("/usr/sbin/chroot");
+		args.AppendArg("-m"); // mount namespace
+		args.AppendArg("-i"); // ipc namespace
+		args.AppendArg("-p"); // pid namespace
+		args.AppendArg("-r"); // root directory
+		args.AppendArg("-w"); // cwd is container's
 
-		args.AppendArg("--userspec");
+		args.AppendArg("-S");
 		sprintf(buf, "%d", get_user_uid());
 		args.AppendArg(buf);
 	
-		sprintf(buf,"/proc/%d/root", pid);
+		args.AppendArg("-G");
+		sprintf(buf, "%d", get_user_gid());
 		args.AppendArg(buf);
 	} else {
 		args.AppendArg("-U"); // enter only the User namespace
