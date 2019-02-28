@@ -19,8 +19,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.9.0 not yet released.
-%\item HTCondor version 8.9.0 released on Month Date, 2018.
+\item HTCondor version 8.9.0 released on February 28, 2019.
 
 \end{itemize}
 
@@ -35,8 +34,8 @@ secure pools. This release contains two security related configuration changes.
 \item Absent any configuration, the default behavior is to deny authorization
 to all users.
 
-\item In the configuration files, if \MacroNI{ALLOW\_DAEMON} and
-\MacroNI{DENY\_DAEMON} are omitted, \MacroNI{ALLOW\_WRITE} and
+\item In the configuration files, if \MacroNI{ALLOW\_DAEMON} or
+\MacroNI{DENY\_DAEMON} are omitted, \MacroNI{ALLOW\_WRITE} or
 \MacroNI{DENY\_WRITE} are no longer used in their place.
 
 On most pools, the easiest way to get the previous behavior is to add the
@@ -65,9 +64,9 @@ Also, CCB requires \Expr{DAEMON} level access.
 \begin{itemize}
 
 \item Changed the default security behavior to deny authorization by default.
-Also, \MacroNI{ALLOW\_DAEMON} and \MacroNI{DENY\_DAEMON} no longer fall back
-to using \MacroNI{ALLOW\_WRITE} and \MacroNI{DENY\_WRITE} when reading
-configuration files.
+Also, neither \MacroNI{ALLOW\_DAEMON} nor \MacroNI{DENY\_DAEMON} fall back
+to using the corresponding \MacroNI{ALLOW\_WRITE} or \MacroNI{DENY\_WRITE}
+when reading configuration files.
 \Ticket{6824}
 
 \item A family of HTCondor daemons can now share a security session that
