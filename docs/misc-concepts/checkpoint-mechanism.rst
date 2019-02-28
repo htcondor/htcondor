@@ -25,11 +25,12 @@ program to use HTCondor checkpoints. However, the checkpoint services
 provided by HTCondor are strictly optional. So, while there are some
 classes of jobs for which HTCondor does not provide checkpoint services,
 these jobs may still be submitted to HTCondor to take advantage of
-HTCondor’s resource management functionality. See
-section \ `2.4.1 <RunningaJobtheStepsToTake.html#x16-190002.4.1>`__ on
-page \ `33 <RunningaJobtheStepsToTake.html#x16-190002.4.1>`__ for a
-description of the classes of jobs for which HTCondor does not provide
-checkpoint services.
+HTCondor’s resource management functionality. See section \ `Running a
+Job: the Steps To Take <../users-manual/running-a-job-steps.html>`__ on
+page \ `Running a Job: the Steps To
+Take <../users-manual/running-a-job-steps.html>`__ for a description of
+the classes of jobs for which HTCondor does not provide checkpoint
+services.
 
 The taking of process checkpoints is implemented in the HTCondor system
 call library as a signal handler. When HTCondor sends a checkpoint
@@ -78,21 +79,21 @@ outside of the HTCondor batch environment. Standalone checkpoints are
 described in section \ `4.2.1 <#x49-4160004.2.1>`__.
 
 HTCondor can produce and use compressed checkpoints. Configuration
-variables (detailed in
-section \ `3.5.10 <ConfigurationMacros.html#x33-1970003.5.10>`__ control
-whether compression is used. The default is to not compress.
+variables (detailed in section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ control whether
+compression is used. The default is to not compress.
 
 By default, a checkpoint is written to a file on the local disk of the
 machine where the job was submitted. An HTCondor pool can also be
 configured with a checkpoint server or servers that serve as a
-repository for checkpoints, as described in
-section \ `3.10 <TheCheckpointServer.html#x38-3250003.10>`__ on
-page \ `1114 <TheCheckpointServer.html#x38-3250003.10>`__. When a host
-is configured to use a checkpoint server, jobs submitted on that machine
-write and read checkpoints to and from the server, rather than the local
-disk of the submitting machine, taking the burden of storing checkpoint
-files off of the submitting machines and placing it instead on server
-machines (with disk space dedicated for the purpose of storing
+repository for checkpoints, as described in section \ `The Checkpoint
+Server <../admin-manual/checkpoint-server.html>`__ on page \ `The
+Checkpoint Server <../admin-manual/checkpoint-server.html>`__. When a
+host is configured to use a checkpoint server, jobs submitted on that
+machine write and read checkpoints to and from the server, rather than
+the local disk of the submitting machine, taking the burden of storing
+checkpoint files off of the submitting machines and placing it instead
+on server machines (with disk space dedicated for the purpose of storing
 checkpoints).
 
 Standalone Checkpoint Mechanism
@@ -116,9 +117,9 @@ The message is of the form:
 
 Platforms that use address space randomization will need a modified
 invocation of the program, as described in
-section \ `8.1.1 <Linux.html#x75-5720008.1.1>`__ on
-page \ `1617 <Linux.html#x75-5720008.1.1>`__. The invocation disables
-the address space randomization.
+section \ `Linux <../platform-specific/linux.html>`__ on
+page \ `Linux <../platform-specific/linux.html>`__. The invocation
+disables the address space randomization.
 
 To force the program to write a checkpoint image and stop, send it the
 SIGTSTP signal or press control-Z. To force the program to write a
@@ -135,7 +136,7 @@ the checkpoint is called ``P1.ckpt``, use
 
 Again, platforms that implement address space randomization will need a
 modified invocation, as described in
-section \ `8.1.1 <Linux.html#x75-5720008.1.1>`__.
+section \ `Linux <../platform-specific/linux.html>`__.
 
 By default, the program will restart in the same directory in which it
 originally ran, and the program will fail if it can not change to that

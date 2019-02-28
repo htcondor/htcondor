@@ -14,9 +14,10 @@ In the table, clipped means that HTCondor does not support checkpointing
 or remote system calls on the given platform. This means that standard
 universe jobs are not supported. Some clipped platforms will have
 further limitations with respect to supported universes. See
-section \ `2.4.1 <RunningaJobtheStepsToTake.html#x16-180002.4.1>`__ on
-page \ `32 <RunningaJobtheStepsToTake.html#x16-180002.4.1>`__ for more
-details on job universes within HTCondor and their abilities and
+section \ `Running a Job: the Steps To
+Take <../users-manual/running-a-job-steps.html>`__ on page \ `Running a
+Job: the Steps To Take <../users-manual/running-a-job-steps.html>`__ for
+more details on job universes within HTCondor and their abilities and
 limitations.
 
 The HTCondor source code is available for public download alongside the
@@ -24,39 +25,37 @@ binary distributions.
 
 --------------
 
-Architecture
-
-Operating System
-
-Intel x86
-
-- RedHat Enterprise Linux 6
-
-- All versions Windows 7 or greater (clipped)
-
-x86\_64
-
-- Red Hat Enterprise Linux 6
-
-- All versions Windows 7 or greater (clipped)
-
-- Red Hat Enterprise Linux 7
-
-- Debian Linux 8.0 (jessie)
-
-- Debian Linux 9.0 (stretch) (clipped)
-
-- Macintosh OS X 10.10 through 10.13 (clipped)
-
-- Ubuntu 14.04; Trusty Tahr
-
-- Ubuntu 16.04; Xenial Xerus (clipped)
-
-- Ubuntu 18.04; Bionic Beaver (clipped)
-
---------------
-
---------------
++--------------------------------------+--------------------------------------+
+| Architecture                         | Operating System                     |
++--------------------------------------+--------------------------------------+
+| Intel x86                            | - RedHat Enterprise Linux 6          |
++--------------------------------------+--------------------------------------+
+|                                      | - All versions Windows 7 or greater  |
+|                                      | (clipped)                            |
++--------------------------------------+--------------------------------------+
+| x86\_64                              | - Red Hat Enterprise Linux 6         |
++--------------------------------------+--------------------------------------+
+|                                      | - All versions Windows 7 or greater  |
+|                                      | (clipped)                            |
++--------------------------------------+--------------------------------------+
+|                                      | - Red Hat Enterprise Linux 7         |
++--------------------------------------+--------------------------------------+
+|                                      | - Debian Linux 8.0 (jessie)          |
++--------------------------------------+--------------------------------------+
+|                                      | - Debian Linux 9.0 (stretch)         |
+|                                      | (clipped)                            |
++--------------------------------------+--------------------------------------+
+|                                      | - Macintosh OS X 10.10 through 10.13 |
+|                                      | (clipped)                            |
++--------------------------------------+--------------------------------------+
+|                                      | - Ubuntu 14.04; Trusty Tahr          |
++--------------------------------------+--------------------------------------+
+|                                      | - Ubuntu 16.04; Xenial Xerus         |
+|                                      | (clipped)                            |
++--------------------------------------+--------------------------------------+
+|                                      | - Ubuntu 18.04; Bionic Beaver        |
+|                                      | (clipped)                            |
++--------------------------------------+--------------------------------------+
 
 | 
 
@@ -80,41 +79,17 @@ supported.
 
 --------------
 
-**Platform**
-
-**Compiler**
-
-**Notes**
-
-Red Hat Enterprise Linux 6 on x86\_64
-
-gcc, g++, and g77
-
-as shipped
-
-Red Hat Enterprise Linux 7 on x86\_64
-
-gcc, g++, and g77
-
-as shipped
-
-Debian Linux 8.0 (jessie) on x86\_64
-
-gcc, g++, gfortran
-
-as shipped
-
-Ubuntu 14.04 on x86\_64
-
-gcc, g++, gfortran
-
-as shipped
-
---------------
-
---------------
-
---------------
++-----------------------------------------+----------------------+--------------+
+| **Platform**                            | **Compiler**         | **Notes**    |
++-----------------------------------------+----------------------+--------------+
+| Red Hat Enterprise Linux 6 on x86\_64   | gcc, g++, and g77    | as shipped   |
++-----------------------------------------+----------------------+--------------+
+| Red Hat Enterprise Linux 7 on x86\_64   | gcc, g++, and g77    | as shipped   |
++-----------------------------------------+----------------------+--------------+
+| Debian Linux 8.0 (jessie) on x86\_64    | gcc, g++, gfortran   | as shipped   |
++-----------------------------------------+----------------------+--------------+
+| Ubuntu 14.04 on x86\_64                 | gcc, g++, gfortran   | as shipped   |
++-----------------------------------------+----------------------+--------------+
 
 | 
 

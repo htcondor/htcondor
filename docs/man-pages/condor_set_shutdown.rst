@@ -1,7 +1,7 @@
       
 
-condor\_set\_shutdown
-=====================
+*condor\_set\_shutdown*
+=======================
 
 Set a program to execute upon *condor\_master* shut down
 

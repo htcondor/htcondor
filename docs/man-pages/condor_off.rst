@@ -1,7 +1,7 @@
       
 
-condor\_off
-===========
+*condor\_off*
+=============
 
 Shutdown HTCondor daemons
 

@@ -1,7 +1,7 @@
       
 
-condor\_vacate\_job
-===================
+*condor\_vacate\_job*
+=====================
 
 vacate jobs in the HTCondor queue from the hosts where they are running
 

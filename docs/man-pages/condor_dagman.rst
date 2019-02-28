@@ -1,7 +1,7 @@
       
 
-condor\_dagman
-==============
+*condor\_dagman*
+================
 
 meta scheduler of the jobs submitted as the nodes of a DAG or DAGs
 
@@ -91,8 +91,8 @@ Options
     once the number of idle procs falls below the specified limit.
     *NumberOfProcs* is a non-negative integer. If this option is
     omitted, the number of idle procs is limited by the configuration
-    variable ``DAGMAN_MAX_JOBS_IDLE`` (see
-     `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__), which
+    variable ``DAGMAN_MAX_JOBS_IDLE`` (see  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 1000. To disable this limit, set *NumberOfProcs* to 0.
     Note that submit description files that queue multiple procs can
     cause the *NumberOfProcs* limit to be exceeded. Setting
@@ -108,21 +108,24 @@ Options
     in the cluster. *NumberOfClusters* is a non-negative integer. If
     this option is omitted, the number of clusters is limited by the
     configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED`` (see
-     `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__), which
+     `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 0 (unlimited).
  **-maxpre **\ *NumberOfPreScripts*
     Sets the maximum number of PRE scripts within the DAG that may be
     running at one time. *NumberOfPreScripts* is a non-negative integer.
     If this option is omitted, the number of PRE scripts is limited by
     the configuration variable ``DAGMAN_MAX_PRE_SCRIPTS`` (see
-     `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__), which
+     `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
  **-maxpost **\ *NumberOfPostScripts*
     Sets the maximum number of POST scripts within the DAG that may be
     running at one time. *NumberOfPostScripts* is a non-negative
     integer. If this option is omitted, the number of POST scripts is
     limited by the configuration variable ``DAGMAN_MAX_POST_SCRIPTS``
-    (see  `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__), which
+    (see  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
  **-noeventchecks**
     This argument is no longer used; it is now ignored. Its
@@ -280,8 +283,8 @@ Examples
 
 *condor\_dagman* is normally not run directly, but submitted as an
 HTCondor job by running condor\_submit\_dag. See the condor\_submit\_dag
-manual page \ `2235 <Condorsubmitdag.html#x150-109200012>`__ for
-examples.
+manual page \ `condor\_submitdag <../man-pages/condor_submitdag.html>`__
+for examples.
 
 Author
 ------

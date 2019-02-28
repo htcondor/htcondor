@@ -24,7 +24,7 @@ process and network connection to a remote machine, without regard to
 the number of jobs queued or running.
 
 HTCondor-C Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''
 
 There are two aspects to configuration to enable the submission and
 execution of HTCondor-C jobs. These two aspects correspond to the
@@ -80,7 +80,7 @@ trusts the identity claimed by a host or IP address.
 Other working authentication methods are GSI, SSL, KERBEROS, and FS.
 
 HTCondor-C Job Submission
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 Job submission of HTCondor-C jobs is the same as for any HTCondor job.
 The **universe** is **grid**. The submit command **grid\_resource**
@@ -195,13 +195,13 @@ If the remote *condor\_collector* is not listening on the standard port
 
 File transfer of a job’s executable, ``stdin``, ``stdout``, and
 ``stderr`` are automatic. When other files need to be transferred using
-HTCondor’s file transfer mechanism (see
-section \ `2.5.9 <SubmittingaJob.html#x17-380002.5.9>`__ on
-page \ `91 <SubmittingaJob.html#x17-380002.5.9>`__), the mechanism is
+HTCondor’s file transfer mechanism (see section \ `Submitting a
+Job <../users-manual/submitting-a-job.html>`__ on page \ `Submitting a
+Job <../users-manual/submitting-a-job.html>`__), the mechanism is
 applied based on the resulting job universe on the remote machine.
 
 HTCondor-C Jobs Between Differing Platforms
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''
 
 HTCondor-C jobs given to a remote machine running Windows must specify
 the Windows domain of the remote machine. This is accomplished by
@@ -240,7 +240,7 @@ system; if a machine crashes, all of these functions are again available
 as the machine returns.
 
 Globus Protocols and Terminology
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''
 
 The Globus software provides a well-defined set of protocols that allow
 authentication, data transfer, and remote job execution. Authentication
@@ -313,7 +313,7 @@ usage: **gt2** and **gt5**. HTCondor supports both of them.
     to be more scalable and robust. It is usually referred to as GRAM5.
 
 The gt2 Grid Type
-~~~~~~~~~~~~~~~~~
+'''''''''''''''''
 
 HTCondor-G supports submitting jobs to remote resources running the
 Globus Toolkit’s GRAM2 (or pre-WS GRAM) service. This flavor of GRAM is
@@ -589,7 +589,7 @@ This example’s attribute name for the additional RSL is ``project``, and
 the value assigned is ``Test_Project``.
 
 The gt5 Grid Type
-~~~~~~~~~~~~~~~~~
+'''''''''''''''''
 
 The Globus GRAM5 protocol works the same as the gt2 grid type. Its
 implementation differs from gt2 in the following 3 items:
@@ -608,7 +608,7 @@ disabled, each resource must be accurately identified as either gt2 or
 gt5 in the **grid\_resource** submit command.
 
 Credential Management with *MyProxy*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''
 
 HTCondor-G can use *MyProxy* software to automatically renew GSI proxies
 for **grid** **universe** jobs with grid type **gt2**. *MyProxy* is a
@@ -673,7 +673,9 @@ practices are recommended.
 #. Use the following options when initializing the credential on the
    *MyProxy* server:
 
-   myproxy-init -s <host> -x -r <cert subject> -k <cred name>
+   ::
+
+       myproxy-init -s <host> -x -r <cert subject> -k <cred name>
 
    The option **-x -r **\ *<cert subject>* essentially tells the
    *MyProxy* server to require two forms of authentication:
@@ -684,15 +686,16 @@ practices are recommended.
 #. A submit description file may include the password. An example
    contains commands of the form:
 
-   | executable      = /usr/bin/my-executable  
-   | universe        = grid  
-   | grid\_resource   = gt2 condor-unsup-7  
-   | MyProxyHost     = example.cs.wisc.edu:7512  
-   | MyProxyServerDN = /O=doesciencegrid.org/OU=People/CN=Jane Doe 25900
-    
-   | MyProxyPassword = password  
-   | MyProxyCredentialName = my\_executable\_run  
-   | queue
+   ::
+
+       executable      = /usr/bin/my-executable 
+       universe        = grid 
+       grid_resource   = gt2 condor-unsup-7 
+       MyProxyHost     = example.cs.wisc.edu:7512 
+       MyProxyServerDN = /O=doesciencegrid.org/OU=People/CN=Jane Doe 25900 
+       MyProxyPassword = password 
+       MyProxyCredentialName = my_executable_run 
+       queue
 
    Note that placing the password within the submit description file is
    not really secure, as it relies upon security provided by the file
@@ -701,7 +704,9 @@ practices are recommended.
 #. Use the **-p** option to *condor\_submit*. The submit command appears
    as
 
-   condor\_submit -p mypassword /home/user/myjob.submit
+   ::
+
+       condor_submit -p mypassword /home/user/myjob.submit
 
    The argument list for *condor\_submit* defaults to being publicly
    available. An attacker with a login on that local machine could
@@ -719,12 +724,14 @@ this with ``ldd myproxy-get-delegation``), point
 directory and then calls *myproxy-get-delegation*. Here is an example of
 such a wrapper script:
 
-| #!/bin/sh  
-| export LD\_LIBRARY\_PATH=/opt/myglobus/lib  
-| exec /opt/myglobus/bin/myproxy-get-delegation $@
+::
+
+    #!/bin/sh 
+    export LD_LIBRARY_PATH=/opt/myglobus/lib 
+    exec /opt/myglobus/bin/myproxy-get-delegation $@
 
 The Grid Monitor
-~~~~~~~~~~~~~~~~
+''''''''''''''''
 
 HTCondor’s Grid Monitor is designed to improve the scalability of
 machines running the Globus Toolkit’s GRAM2 gatekeeper. Normally, this
@@ -759,7 +766,7 @@ The Grid Monitor is enabled by default, and the configuration macro
 ``GRID_MONITOR`` identifies the location of the executable.
 
 Limitations of HTCondor-G
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 Submitting jobs to run under the grid universe has not yet been
 perfected. The following is a list of known limitations:
@@ -780,7 +787,9 @@ HTCondor jobs may be submitted to NorduGrid resources using the **grid**
 universe. The **grid\_resource** command specifies the name of the
 NorduGrid resource as follows:
 
-grid\_resource = nordugrid ng.example.com
+::
+
+    grid_resource = nordugrid ng.example.com
 
 NorduGrid uses X.509 credentials for authentication, usually in the form
 a proxy certificate. *condor\_submit* looks in default locations for the
@@ -798,7 +807,9 @@ command **nordugrid\_rsl** adds additional attributes to the job RSL
 that HTCondor constructs. The format this submit description file
 command is
 
-nordugrid\_rsl = (name=value)(name=value)
+::
+
+    nordugrid_rsl = (name=value)(name=value)
 
 The unicore Grid Type
 ---------------------
@@ -811,7 +822,9 @@ HTCondor jobs may be submitted to Unicore resources using the **grid**
 universe. The **grid\_resource** command specifies the name of the
 Unicore resource as follows:
 
-grid\_resource = unicore usite.example.com vsite
+::
+
+    grid_resource = unicore usite.example.com vsite
 
 **usite.example.com** is the host name of the Unicore gateway machine to
 which the HTCondor job is to be submitted. **vsite** is the name of the
@@ -839,7 +852,9 @@ SLURM system using the **grid** universe and the **grid\_resource**
 command by placing a variant of the following into the submit
 description file.
 
-grid\_resource = batch pbs
+::
+
+    grid_resource = batch pbs
 
 The second argument on the right hand side will be one of ``pbs``,
 ``lsf``, ``sge``, or ``slurm``.
@@ -854,8 +869,10 @@ configuration file is in ``$(GLITE_LOCATION)``/etc/batch\_gahp.config.
 The batch GAHP’s auxiliary binaries are to be in the directory
 ``$(GLITE_LOCATION)``/bin. The HTCondor configuration file appears
 
-| GLITE\_LOCATION = $(LIBEXEC)/glite  
-| BATCH\_GAHP     = $(GLITE\_LOCATION)/bin/batch\_gahp
+::
+
+    GLITE_LOCATION = $(LIBEXEC)/glite 
+    BATCH_GAHP     = $(GLITE_LOCATION)/bin/batch_gahp
 
 The batch GAHP’s configuration file has variables that must be modified
 to tell it where to find
@@ -878,7 +895,9 @@ may be submitted to a local PBS system using the **grid** universe and
 the **grid\_resource** command by placing the following into the submit
 description file.
 
-grid\_resource = pbs
+::
+
+    grid_resource = pbs
 
 HTCondor jobs may be submitted to the Platform LSF batch system. Find
 the Platform product from the page
@@ -890,7 +909,9 @@ may be submitted to a local Platform LSF system using the **grid**
 universe and the **grid\_resource** command by placing the following
 into the submit description file.
 
-grid\_resource = lsf
+::
+
+    grid_resource = lsf
 
 The popular Grid Engine batch system (formerly known as Sun Grid Engine
 and abbreviated SGE) is available in two varieties: Oracle Grid Engine
@@ -903,7 +924,9 @@ may be submitted to a local SGE system using the **grid** universe and
 adding the **grid\_resource** command by placing into the submit
 description file:
 
-grid\_resource = sge
+::
+
+    grid_resource = sge
 
 The *condor\_qsub* command line tool will take PBS/SGE style batch files
 or command line arguments and submit the job to HTCondor instead. See
@@ -925,14 +948,16 @@ The **ec2** grid type uses the EC2 Query API, also called the EC2 REST
 API.
 
 EC2 Job Submission
-~~~~~~~~~~~~~~~~~~
+''''''''''''''''''
 
 HTCondor jobs are submitted to an EC2 service with the **grid**
 universe, setting the **grid\_resource** command to **ec2**, followed by
 the service’s URL. For example, partial contents of the submit
 description file may be
 
-grid\_resource = ec2 https://ec2.us-east-1.amazonaws.com/
+::
+
+    grid_resource = ec2 https://ec2.us-east-1.amazonaws.com/
 
 (Replace ’us-east-1’ with the AWS region you’d like to use.)
 
@@ -955,8 +980,10 @@ first authentication method uses the EC2 API’s built-in authentication.
 Specify the service with expected ``http://`` or ``https://`` URL, and
 set the EC2 access key and secret access key as follows:
 
-| ec2\_access\_key\_id = /path/to/access.key  
-| ec2\_secret\_access\_key = /path/to/secret.key
+::
+
+    ec2_access_key_id = /path/to/access.key 
+    ec2_secret_access_key = /path/to/secret.key
 
 The ``euca3://`` and ``euca3s://`` protocols must use this
 authentication method. These protocols exist to work correctly when the
@@ -972,9 +999,11 @@ path to the X.509 private key, which is not the same as the built-in
 authentication’s secret key. The following example illustrates the
 specification for X.509 authentication:
 
-| grid\_resource = ec2 x509://service.example  
-| ec2\_access\_key\_id = /path/to/x.509/public.key  
-| ec2\_secret\_access\_key = /path/to/x.509/private.key
+::
+
+    grid_resource = ec2 x509://service.example 
+    ec2_access_key_id = /path/to/x.509/public.key 
+    ec2_secret_access_key = /path/to/x.509/private.key
 
 If using an X.509 proxy, specify the proxy in both places.
 
@@ -1024,7 +1053,9 @@ followed by kernel name; maps are separated by a commas, and/or spaces.
 For example, to specify that the first ephemeral device should be
 ``/dev/sdb`` and the second ``/dev/sdc``:
 
-ec2\_block\_device\_mapping = ephemeral0:/dev/sdb, ephemeral1:/dev/sdc
+::
+
+    ec2_block_device_mapping = ephemeral0:/dev/sdb, ephemeral1:/dev/sdc
 
 Each virtual machine instance can be given up to 16 KiB of unique data,
 accessible by the instance by connecting to a well-known address. This
@@ -1044,7 +1075,7 @@ specify an IAM (instance) profile for an EC2 job, use submit commands
 **ec2\_iam\_profile\_name** or **ec2\_iam\_profile\_arn**.
 
 Termination of EC2 Jobs
-~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''
 
 A protocol defines the shutdown procedure for jobs running as EC2
 instances. The service is told to shut down the instance, and the
@@ -1063,7 +1094,7 @@ terminated. If the job has not terminated after a total of four checks,
 the job is placed on hold.
 
 Using Spot Instances
-~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''
 
 EC2 jobs may also be submitted to clouds that support spot instances. A
 spot instance differs from a conventional, or dedicated, instance in two
@@ -1074,7 +1105,9 @@ the most the submitter is willing to pay per hour to run the VM. Within
 HTCondor, the submit command **ec2\_spot\_price** specifies this
 floating point value. For example, to bid 1.1 cents per hour on Amazon:
 
-ec2\_spot\_price = 0.011
+::
+
+    ec2_spot_price = 0.011
 
 Note that the EC2 API does not specify how the cloud provider should
 interpret the bid. Empirically, Amazon uses fractional US dollars.
@@ -1092,7 +1125,7 @@ More information about Amazon’s spot instances is available at
 `http://aws.amazon.com/ec2/spot-instances/ <http://aws.amazon.com/ec2/spot-instances/>`__.
 
 Advanced Usage
-~~~~~~~~~~~~~~
+''''''''''''''
 
 Additional control of EC2 instances is available in the form of
 permitting the direct specification of instance creation parameters. To
@@ -1106,11 +1139,13 @@ written as underscores in the submit command name.
 For example, the submit description file commands to set parameter
 ``IamInstanceProfile.Name`` to value ``ExampleProfile`` are
 
-| ec2\_parameter\_names = IamInstanceProfile.Name  
-| ec2\_parameter\_IamInstanceProfile\_Name = ExampleProfile
+::
+
+    ec2_parameter_names = IamInstanceProfile.Name 
+    ec2_parameter_IamInstanceProfile_Name = ExampleProfile
 
 EC2 Configuration Variables
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''
 
 The configuration variables ``EC2_GAHP`` and ``EC2_GAHP_LOG`` must be
 set, and by default are equal to $(SBIN)/ec2\_gahp and
@@ -1122,7 +1157,7 @@ disambiguate between the logs of different resources specified by the
 same user.
 
 Communicating with an EC2 Service
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''
 
 The **ec2** grid type does not presently permit the explicit use of an
 HTTP proxy.
@@ -1153,7 +1188,7 @@ appropriately (by retrying with an exponential back-off), it may be more
 efficient to configure a longer interval.
 
 Secure Communication with and EC2 Service
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''
 
 The specification of a service with an ``https://``, an ``x509://``, or
 an ``euca3s://`` URL validates that service’s certificate, checking that
@@ -1163,8 +1198,10 @@ These CAs will usually work without any additional configuration. For
 other providers, a specification of trusted CAs may be needed. Without,
 errors such as the following will be in the EC2 GAHP log:
 
-| 06/13/13 15:16:16 curl\_easy\_perform() failed (60):  
-| 'Peer certificate cannot be authenticated with given CA certificates'.
+::
+
+    06/13/13 15:16:16 curl_easy_perform() failed (60): 
+    'Peer certificate cannot be authenticated with given CA certificates'.
 
 Specify trusted CAs by including their certificates in a group of
 trusted CAs either in an on disk directory or in a single file. Either
@@ -1202,7 +1239,7 @@ The EC2 GAHP supplies no default value, if it does not find a CA
 directory.
 
 EC2 GAHP Statistics
-~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''
 
 The EC2 GAHP tracks, and reports in the corresponding grid resource ad,
 statistics related to resource’s rate limit.
@@ -1235,14 +1272,16 @@ information about Google Compute Engine is available at
 `http://cloud.google.com/Compute <http://cloud.google.com/Compute>`__.
 
 GCE Job Submission
-~~~~~~~~~~~~~~~~~~
+''''''''''''''''''
 
 HTCondor jobs are submitted to the GCE service with the **grid**
 universe, setting the **grid\_resource** command to **gce**, followed by
 the service’s URL, your GCE project, and the desired GCE zone to be
 used. The submit description file command will be similar to:
 
-grid\_resource = gce https://www.googleapis.com/compute/v1 my\_proj us-central1-a
+::
+
+    grid_resource = gce https://www.googleapis.com/compute/v1 my_proj us-central1-a
 
 Since the HTCondor job is a virtual machine image, most of the submit
 description file commands specifying input or output files are not
@@ -1266,7 +1305,9 @@ Given an authorization file, specify its location in the submit
 description file using the **gce\_auth\_file** command, as in the
 example:
 
-gce\_auth\_file = /path/to/auth-file
+::
+
+    gce_auth_file = /path/to/auth-file
 
 GCE allows the choice of different hardware configurations for instances
 to run on. Select which configuration to use for the **gce** grid type
@@ -1283,7 +1324,9 @@ the submit description file using the **gce\_metadata** command. The
 value should be a comma-separated list of name=value settings, as the
 example:
 
-gce\_metadata = setting1=foo,setting2=bar
+::
+
+    gce_metadata = setting1=foo,setting2=bar
 
 Second, the data can be stored in a file, and the file name is specified
 with the **gce\_metadata\_file** submit description file command. This
@@ -1306,18 +1349,22 @@ between a comma and the closing brace.
 
 Here’s a sample JSON file that sets two additional elements:
 
-| "canIpForward": True,  
-| "description": "My first instance"
+::
+
+    "canIpForward": True, 
+    "description": "My first instance"
 
 GCE Configuration Variables
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''
 
 The following configuration parameters are specific to the **gce** grid
 type. The values listed here are the defaults. Different values may be
 specified in the HTCondor configuration files.
 
-| GCE\_GAHP     = $(SBIN)/gce\_gahp  
-| GCE\_GAHP\_LOG = /tmp/GceGahpLog.$(USERNAME)
+::
+
+    GCE_GAHP     = $(SBIN)/gce_gahp 
+    GCE_GAHP_LOG = /tmp/GceGahpLog.$(USERNAME)
 
 The Azure Grid Type
 -------------------
@@ -1330,14 +1377,16 @@ information about Azure is available at
 `https://azure.microsoft.com <https://azure.microsoft.com>`__.
 
 Azure Job Submission
-~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''
 
 HTCondor jobs are submitted to the Azyre service with the **grid**
 universe, setting the **grid\_resource** command to **azure**, followed
 by your Azure subscription id. The submit description file command will
 be similar to:
 
-grid\_resource = azure 4843bfe3-1ebe-423e-a6ea-c777e57700a9
+::
+
+    grid_resource = azure 4843bfe3-1ebe-423e-a6ea-c777e57700a9
 
 Since the HTCondor job is a virtual machine image, most of the submit
 description file commands specifying input or output files are not
@@ -1366,7 +1415,9 @@ Once you have created a file containing the service account credentials,
 you can specify its location in the submit description file using the
 **azure\_auth\_file** command, as in the example:
 
-azure\_auth\_file = /path/to/auth-file
+::
+
+    azure_auth_file = /path/to/auth-file
 
 Azure allows the choice of different hardware configurations for
 instances to run on. Select which configuration to use for the **azure**
@@ -1396,12 +1447,16 @@ description file command **x509userproxy** will be used.
 
 A CREAM resource specification is of the form:
 
-grid\_resource = cream <web-services-address> <batch-system> <queue-name>
+::
+
+    grid_resource = cream <web-services-address> <batch-system> <queue-name>
 
 The <web-services-address> appears the same for most servers, differing
 only in the host name, as
 
-<machinename[:port]>/ce-cream/services/CREAM2
+::
+
+    <machinename[:port]>/ce-cream/services/CREAM2
 
 Future versions of HTCondor may require only the host name, filling in
 other aspects of the web service for the user.
@@ -1415,9 +1470,10 @@ be used. Values for this will vary by site, with no typical values.
 
 A full example for the specification of a CREAM **grid\_resource** is
 
-| grid\_resource = cream https://cream-12.pd.infn.it:8443/ce-cream/services/CREAM2
- 
-|    pbs cream\_1
+::
+
+    grid_resource = cream https://cream-12.pd.infn.it:8443/ce-cream/services/CREAM2 
+       pbs cream_1
 
 This is a single line within the submit description file, although it is
 shown here on two lines for formatting reasons.
@@ -1428,7 +1484,9 @@ command **cream\_attributes** adds additional attributes to the
 CREAM-style job ClassAd that HTCondor constructs. The format for this
 submit description file command is
 
-cream\_attributes = name=value;name=value
+::
+
+    cream_attributes = name=value;name=value
 
 The BOINC Grid Type
 -------------------
@@ -1439,7 +1497,7 @@ computing. More information about BOINC is available at
 `http://boinc.berkeley.edu/ <http://boinc.berkeley.edu/>`__.
 
 BOINC Job Submission
-~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''
 
 HTCondor jobs are submitted to a BOINC service with the **grid**
 universe, setting the **grid\_resource** command to **boinc**, followed
@@ -1451,7 +1509,9 @@ account for HTCondor to use. Write the authenticator string in a file
 and specify its location in the submit description file using the
 **boinc\_authenticator\_file** command, as in the example:
 
-boinc\_authenticator\_file = /path/to/auth-file
+::
+
+    boinc_authenticator_file = /path/to/auth-file
 
 Before submitting BOINC jobs, register the application with the BOINC
 server. This includes describing the application’s resource requirements
@@ -1467,13 +1527,15 @@ must match the application description on the BOINC server. If
 transferred.
 
 BOINC Configuration Variables
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''
 
 The following configuration variable is specific to the **boinc** grid
 type. The value listed here is the default. A different value may be
 specified in the HTCondor configuration files.
 
-BOINC\_GAHP = $(SBIN)/boinc\_gahp
+::
+
+    BOINC_GAHP = $(SBIN)/boinc_gahp
 
 Matchmaking in the Grid Universe
 --------------------------------
@@ -1499,19 +1561,23 @@ accomplished by using *condor\_advertise* to send a ClassAd representing
 the grid resource, which is then used by HTCondor to make matches.
 
 Job Submission
-~~~~~~~~~~~~~~
+''''''''''''''
 
 To submit a grid universe job intended for a single, specific **gt2**
 resource, the submit description file for the job explicitly specifies
 the resource:
 
-grid\_resource = gt2 grid.example.com/jobmanager-pbs
+::
+
+    grid_resource = gt2 grid.example.com/jobmanager-pbs
 
 If there were multiple **gt2** resources that might be matched to the
 job, the submit description file changes:
 
-| grid\_resource   = $$(resource\_name)  
-| requirements    = TARGET.resource\_name =!= UNDEFINED
+::
+
+    grid_resource   = $$(resource_name) 
+    requirements    = TARGET.resource_name =!= UNDEFINED
 
 The **grid\_resource** command uses a substitution macro. The
 substitution macro defines the value of ``resource_name`` using
@@ -1527,15 +1593,16 @@ As a more complex example, consider a job that wants to run not only on
 a **gt2** resource, but on one that has the Bamboozle software
 installed. The complete submit description file might appear:
 
-| universe        = grid  
-| executable      = analyze\_bamboozle\_data  
-| output          = aaa.$(Cluster).out  
-| error           = aaa.$(Cluster).err  
-| log             = aaa.log  
-| grid\_resource   = $$(resource\_name)  
-| requirements    = (TARGET.HaveBamboozle == True) && (TARGET.resource\_name =!= UNDEFINED)
- 
-| queue
+::
+
+    universe        = grid 
+    executable      = analyze_bamboozle_data 
+    output          = aaa.$(Cluster).out 
+    error           = aaa.$(Cluster).err 
+    log             = aaa.log 
+    grid_resource   = $$(resource_name) 
+    requirements    = (TARGET.HaveBamboozle == True) && (TARGET.resource_name =!= UNDEFINED) 
+    queue
 
 Any grid resource which has the ``HaveBamboozle`` attribute defined as
 well as set to ``True`` is further checked to have the ``resource_name``
@@ -1548,7 +1615,7 @@ resource’s ad. This means that the job can be matched with a resource of
 any type, not just **gt2**.
 
 Advertising Grid Resources to HTCondor
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''
 
 Any grid resource that wishes to be matched by HTCondor with a job must
 advertise itself to HTCondor using a ClassAd. To properly advertise, a
@@ -1568,23 +1635,27 @@ To advertise a grid site, place the attributes in a file. Here is a
 sample ClassAd that describes a grid resource that is capable of running
 a **gt2** job.
 
-| # example grid resource ClassAd for a gt2 job  
-| MyType         = "Machine"  
-| TargetType     = "Job"  
-| Name           = "Example1\_Gatekeeper"  
-| Machine        = "Example1\_Gatekeeper"  
-| resource\_name  = "gt2 grid.example.com/jobmanager-pbs"  
-| UpdateSequenceNumber  = 4  
-| Requirements   = (TARGET.JobUniverse == 9)  
-| Rank           = 0.000000  
-| CurrentRank    = 0.000000
+::
+
+    # example grid resource ClassAd for a gt2 job 
+    MyType         = "Machine" 
+    TargetType     = "Job" 
+    Name           = "Example1_Gatekeeper" 
+    Machine        = "Example1_Gatekeeper" 
+    resource_name  = "gt2 grid.example.com/jobmanager-pbs" 
+    UpdateSequenceNumber  = 4 
+    Requirements   = (TARGET.JobUniverse == 9) 
+    Rank           = 0.000000 
+    CurrentRank    = 0.000000
 
 Some attributes are defined as expressions, while others are integers,
 floating point values, or strings. The type is important, and must be
 correct for the ClassAd to be effective. The attributes
 
-| MyType         = "Machine"  
-| TargetType     = "Job"
+::
+
+    MyType         = "Machine" 
+    TargetType     = "Job"
 
 identify the grid resource as a machine, and that the machine is to be
 matched with a job. In HTCondor, machines are matched with jobs, and
@@ -1594,8 +1665,10 @@ are surrounded by double quote marks.
 The attributes ``Name`` and ``Machine`` are likely to be defined to be
 the same string value as in the example:
 
-| Name           = "Example1\_Gatekeeper"  
-| Machine        = "Example1\_Gatekeeper"
+::
+
+    Name           = "Example1_Gatekeeper" 
+    Machine        = "Example1_Gatekeeper"
 
 Both give the fully qualified host name for the resource. The ``Name``
 may be different on an SMP machine, where the individual CPUs are given
@@ -1607,7 +1680,9 @@ Where the job depends on the resource to specify the value of the
 ClassAd for the grid resource (machine) defines this value. The example
 given as
 
-grid\_resource = "gt2 grid.example.com/jobmanager-pbs"
+::
+
+    grid_resource = "gt2 grid.example.com/jobmanager-pbs"
 
 defines this value. Note that the invented name of this variable must
 match the one utilized within the submit description file. To make the
@@ -1622,7 +1697,9 @@ ads may be lost without notice or may arrive out of order. Out of order
 arrival leads to the definition of an attribute which provides an
 ordering. This positive integer value is given in the example ClassAd as
 
-UpdateSequenceNumber  = 4
+::
+
+    UpdateSequenceNumber  = 4
 
 This value must increase for each subsequent ClassAd. If state
 information for the ClassAd is kept in a file, a script executed each
@@ -1633,15 +1710,19 @@ seconds (since the epoch, as given by the C time() function call).
 The requirements that the grid resource sets for any job that it will
 accept are given as
 
-Requirements     = (TARGET.JobUniverse == 9)
+::
+
+    Requirements     = (TARGET.JobUniverse == 9)
 
 This set of requirements state that any job is required to be for the
 **grid** universe.
 
 The attributes
 
-| Rank             = 0.000000  
-| CurrentRank      = 0.000000
+::
+
+    Rank             = 0.000000 
+    CurrentRank      = 0.000000
 
 are both necessary for HTCondor’s negotiation to proceed, but are not
 relevant to grid matchmaking. Set both to the floating point value 0.0.
@@ -1649,18 +1730,20 @@ relevant to grid matchmaking. Set both to the floating point value 0.0.
 The example machine ClassAd becomes more complex for the case where the
 grid resource allows matches with more than one job:
 
-| # example grid resource ClassAd for a gt2 job  
-| MyType         = "Machine"  
-| TargetType     = "Job"  
-| Name           = "Example1\_Gatekeeper"  
-| Machine        = "Example1\_Gatekeeper"  
-| resource\_name  = "gt2 grid.example.com/jobmanager-pbs"  
-| UpdateSequenceNumber  = 4  
-| Requirements   = (CurMatches < 10) && (TARGET.JobUniverse == 9)  
-| Rank           = 0.000000  
-| CurrentRank    = 0.000000  
-| WantAdRevaluate = True  
-| CurMatches     = 1
+::
+
+    # example grid resource ClassAd for a gt2 job 
+    MyType         = "Machine" 
+    TargetType     = "Job" 
+    Name           = "Example1_Gatekeeper" 
+    Machine        = "Example1_Gatekeeper" 
+    resource_name  = "gt2 grid.example.com/jobmanager-pbs" 
+    UpdateSequenceNumber  = 4 
+    Requirements   = (CurMatches < 10) && (TARGET.JobUniverse == 9) 
+    Rank           = 0.000000 
+    CurrentRank    = 0.000000 
+    WantAdRevaluate = True 
+    CurMatches     = 1
 
 In this example, the two attributes ``WantAdRevaluate`` and
 ``CurMatches`` appear, and the ``Requirements`` expression has changed.
@@ -1679,8 +1762,10 @@ jobs it has. This integer value is given as the ``CurMatches`` attribute
 in the advertised ClassAd. It is then compared in order to limit the
 number of jobs matched with the grid resource.
 
-| Requirements   = (CurMatches < 10) && (TARGET.JobUniverse == 9)  
-| CurMatches     = 1
+::
+
+    Requirements   = (CurMatches < 10) && (TARGET.JobUniverse == 9) 
+    CurMatches     = 1
 
 This example assumes that the grid resource already has one job, and is
 willing to accept a maximum of 9 jobs. If ``CurMatches`` does not appear
@@ -1690,8 +1775,10 @@ For multiple matching of a site ClassAd to work correctly, it is also
 necessary to add the following to the configuration file read by the
 *condor\_negotiator*:
 
-| NEGOTIATOR\_MATCHLIST\_CACHING = False  
-| NEGOTIATOR\_IGNORE\_USER\_PRIORITIES = True
+::
+
+    NEGOTIATOR_MATCHLIST_CACHING = False 
+    NEGOTIATOR_IGNORE_USER_PRIORITIES = True
 
 This ClassAd (likely in a file) is to be periodically sent to the
 *condor\_collector* daemon using *condor\_advertise*. A recommended
@@ -1703,7 +1790,7 @@ The required argument for the *condor\_advertise* command is
 *UPDATE\_STARTD\_AD*.
 
 Advanced usage
-~~~~~~~~~~~~~~
+''''''''''''''
 
 What if a job fails to run at a grid site due to an error? It will be
 returned to the queue, and HTCondor will attempt to match it and re-run
@@ -1712,8 +1799,10 @@ may be bad, but you can give it some assistance. Let’s say that you want
 to avoid running at the last grid site you ran at. You could add this to
 your job description:
 
-| match\_list\_length = 1  
-| Rank              = TARGET.Name != LastMatchName0
+::
+
+    match_list_length = 1 
+    Rank              = TARGET.Name != LastMatchName0
 
 This will prefer to run at a grid site that was not just tried, but it
 will allow the job to be run there if there is no other option.
@@ -1756,16 +1845,19 @@ per Globus submission, plus 4. The plus 4 is necessary in case the job
 goes on hold before being submitted to Globus, although this is
 unlikely.
 
-| periodic\_release = ( NumSystemHolds <= ((NumGlobusSubmits \* 4) + 4) ) \\
- 
-|    && (NumGlobusSubmits < 4) && \\  
-|    ( HoldReason != "via condor\_hold (by user $ENV(USER))" ) && \\  
-|    ((time() - EnteredCurrentStatus) > ( NumSystemHolds \*60\*5 ))
+::
+
+    periodic_release = ( NumSystemHolds <= ((NumGlobusSubmits * 4) + 4) ) \ 
+       && (NumGlobusSubmits < 4) && \ 
+       ( HoldReason != "via condor_hold (by user $ENV(USER))" ) && \ 
+       ((time() - EnteredCurrentStatus) > ( NumSystemHolds *60*5 ))
 
 The following example forces Globus resubmission after a job has been
 held 4 times per Globus submission.
 
-globus\_resubmit = NumSystemHolds == (NumGlobusSubmits + 1) \* 4
+::
+
+    globus_resubmit = NumSystemHolds == (NumGlobusSubmits + 1) * 4
 
 If you are concerned about unknown or malicious grid sites reporting to
 your *condor\_collector*, you should use HTCondor’s security options,

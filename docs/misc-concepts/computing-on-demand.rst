@@ -79,7 +79,7 @@ configuration file).
 In addition, the tools to request and manage COD claims require that the
 user issuing the commands be authenticated. Use one of the strong
 authentication methods described in
-section \ `3.8.1 <Security.html#x36-2690003.8.1>`__ on HTCondor’s
+section \ `Security <../admin-manual/security.html>`__ on HTCondor’s
 Security Model. If one of these methods cannot be used, then file system
 authentication may be used when directly logging in to that machine (to
 be claimed) and issuing the command locally.
@@ -118,7 +118,7 @@ configuration file. The third explains how to define these attributes
 using the *condor\_cod* tool.
 
 COD Application Attributes
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''
 
 Attributes for a COD application are either required or optional. The
 following attributes are required:
@@ -263,10 +263,11 @@ When using COD, the job ID is only used to identify the job in various
 log messages and in the COD-specific output of *condor\_status*. The COD
 job ID is part of the information included in all events written to the
 ``StarterUserLog`` regarding a given job. The COD job ID is also used in
-the HTCondor debugging logs described in
-section \ `3.5.2 <ConfigurationMacros.html#x33-1890003.5.2>`__ on
-page \ `608 <ConfigurationMacros.html#x33-1890003.5.2>`__. For example,
-in the *condor\_starter* daemon’s log file for COD jobs (called
+the HTCondor debugging logs described in section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__. For example, in
+the *condor\_starter* daemon’s log file for COD jobs (called
 ``StarterLog.cod`` by default) or in the *condor\_startd* daemon’s log
 file (called ``StartLog`` by default).
 
@@ -293,7 +294,7 @@ section \ `4.3.4 <#x50-4290004.3.4>`__ below for details on using
 *condor\_cod* *activate*.
 
 Defining Attributes in the HTCondor Configuration Files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 To define COD attributes in the HTCondor configuration file for a given
 application, the user selects a keyword to uniquely name ClassAd
@@ -333,7 +334,7 @@ COD resource they are using is running as root, the user must also
 define ``Owner`` to be the user that the COD application should run as.
 
 Defining Attributes with the *condor\_cod* Tool
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''
 
 COD users may define attributes dynamically (at the time they spawn a
 COD application). In this case, the user writes the ClassAd attributes
@@ -395,12 +396,16 @@ Here is a list of the commands:
 To issue these commands, a user or application invokes the *condor\_cod*
 tool. A command may be specified as the first argument to this tool, as
 
-condor\_cod request -name c02.cs.wisc.edu
+::
+
+    condor_cod request -name c02.cs.wisc.edu
 
 or the *condor\_cod* tool can be installed in such a way that the same
 binary is used for a set of names, as
 
-condor\_cod\_request -name c02.cs.wisc.edu
+::
+
+    condor_cod_request -name c02.cs.wisc.edu
 
 Other than the command name itself (which must be included in full)
 additional options supported by each tool can be abbreviated to the
@@ -415,7 +420,7 @@ In addition, there is a **-cod** option to *condor\_status*.
 The following sections describe each option in greater detail.
 
 Request
-~~~~~~~
+'''''''
 
 A user must be granted authorization to create COD claims on a specific
 machine. In addition, when the user uses these COD claims, the
@@ -428,14 +433,18 @@ accomplished by specifying the name of the *condor\_startd* daemon
 desired by invoking *condor\_cod\_request* with the **-name** option and
 the resource name (usually the host name). For example:
 
-condor\_cod\_request -name c02.cs.wisc.edu
+::
+
+    condor_cod_request -name c02.cs.wisc.edu
 
 If the *condor\_startd* daemon desired belongs to a different HTCondor
 pool than the one where executing the COD commands, use the **-pool**
 option to provide the name of the central manager machine of the other
 pool. For example:
 
-condor\_cod\_request -name c02.cs.wisc.edu -pool condor.cs.wisc.edu
+::
+
+    condor_cod_request -name c02.cs.wisc.edu -pool condor.cs.wisc.edu
 
 An alternative is to provide the IP address and port number where the
 *condor\_startd* daemon is listening with the **-addr** option. This
@@ -443,7 +452,9 @@ information can be found in the *condor\_startd* ClassAd as the
 attribute ``StartdIpAddr`` or by reading the log file when the
 *condor\_startd* first starts up. For example:
 
-condor\_cod\_request -addr "<128.105.146.102:40967>"
+::
+
+    condor_cod_request -addr "<128.105.146.102:40967>"
 
 If neither **-name** or **-addr** are specified, *condor\_cod\_request*
 attempts to connect to the *condor\_startd* daemon running on the local
@@ -454,14 +465,18 @@ machine and has multiple slots, specify which resource on the machine to
 use for COD by providing the full name of the resource, not just the
 host name. For example:
 
-condor\_cod\_request -name slot2@c02.cs.wisc.edu
+::
+
+    condor_cod_request -name slot2@c02.cs.wisc.edu
 
 A constraint on what slot is desired may be provided, instead of
 specifying it by name. For example, to run on machine c02.cs.wisc.edu,
 not caring which slot is used, so long as it the machine is not
 currently running a job, use something like:
 
-condor\_cod\_request -name c02.cs.wisc.edu -requirements 'State!="Claimed"'
+::
+
+    condor_cod_request -name c02.cs.wisc.edu -requirements 'State!="Claimed"'
 
 In general, be careful with shell quoting issues, so that your shell is
 not confused by the ClassAd expression syntax (in particular if the
@@ -492,7 +507,9 @@ whole ClassAd is also being written to a file.
 The claim ID as given after listing the machine ClassAd appears as this
 example:
 
-ID of new claim is: "<128.105.121.21:49973>#1073352104#4"
+::
+
+    ID of new claim is: "<128.105.121.21:49973>#1073352104#4"
 
 When using this claim ID in further commands, include the quote marks as
 well as all the characters in between the quote marks.
@@ -518,7 +535,7 @@ specified number of seconds unless the lease is renewed with
 *condor\_cod\_renew*. The default lease is infinitely long.
 
 Activate
-~~~~~~~~
+''''''''
 
 Once a user has created a valid COD claim and has the claim ID, the next
 step is to spawn a COD job using the claim. The way to do this is to
@@ -548,12 +565,16 @@ application’s configuration attributes. To continue the example from
 that section, the user would spawn their job by specifying
 -keyword FractGen, for example:
 
-condor\_cod\_activate -id "<claim\_id>" -keyword FractGen
+::
+
+    condor_cod_activate -id "<claim_id>" -keyword FractGen
 
 Substitute the <claim\_id> with the valid Cod Claim Id. Using the same
 example as given above, this example would be:
 
-condor\_cod\_activate -id "<128.105.121.21:49973>#1073352104#4" -keyword FractGen
+::
+
+    condor_cod_activate -id "<128.105.121.21:49973>#1073352104#4" -keyword FractGen
 
 If the job attributes are placed into a file to be passed to the
 *condor\_cod\_activate* tool, the user must provide the name of the file
@@ -561,7 +582,9 @@ using the **-jobad** option. For example, if the job attributes were
 defined in a file named ``cod-fractgen.txt``, the user spawns the job
 using the command:
 
-condor\_cod\_activate -id "<claim\_id>" -jobad cod-fractgen.txt
+::
+
+    condor_cod_activate -id "<claim_id>" -jobad cod-fractgen.txt
 
 Alternatively, if the filename specified with **-jobad** is ``-``, the
 *condor\_cod\_activate* tool reads the job ClassAd from standard input
@@ -575,13 +598,15 @@ in the job’s ClassAd, or it can be specified on the command line to
 For example, to launch a COD job with keyword foo as cluster 23, proc 5,
 or 23.5, the user invokes:
 
-condor\_cod\_activate -id "<claim\_id>" -key foo -cluster 23 -proc 5
+::
+
+    condor_cod_activate -id "<claim_id>" -key foo -cluster 23 -proc 5
 
 The **-cluster** and **-proc** arguments are optional, since the job ID
 is not required for COD. If not specified, the job ID defaults to 1.0.
 
 Suspend
-~~~~~~~
+'''''''
 
 Once a COD application has been activated with *condor\_cod\_activate*
 and is running on a COD resource, it may be temporarily suspended using
@@ -597,7 +622,9 @@ should be suspended to prevent the resource from being wasted.
 The interface of *condor\_cod\_suspend* supports the single option
 **-id**, to specify the COD claim ID to be suspended. For example:
 
-condor\_cod\_suspend -id "<claim\_id>"
+::
+
+    condor_cod_suspend -id "<claim_id>"
 
 If the user attempts to suspend a COD job that is not running,
 *condor\_cod\_suspend* exits with an error message. The COD job may not
@@ -605,7 +632,7 @@ be running because it is already suspended or because the job was never
 spawned on the given COD claim in the first place.
 
 Renew
-~~~~~
+'''''
 
 This command tells the *condor\_startd* to renew the lease on the COD
 claim for the amount of lease time specified when the claim was created.
@@ -615,13 +642,15 @@ leases.
 The *condor\_cod\_renew* tool supports only the **-id** option to
 specify the COD claim ID the user wishes to renew. For example:
 
-condor\_cod\_renew -id "<claim\_id>"
+::
+
+    condor_cod_renew -id "<claim_id>"
 
 If the user attempts to renew a COD job that no longer exists,
 *condor\_cod\_renew* exits with an error message.
 
 Resume
-~~~~~~
+''''''
 
 Once a COD application has been suspended with *condor\_cod\_suspend*,
 it can be resumed using *condor\_cod\_resume*. In this case, the claim
@@ -632,13 +661,15 @@ is resumed.
 The *condor\_cod\_resume* tool supports only the **-id** option to
 specify the COD claim ID the user wishes to resume. For example:
 
-condor\_cod\_resume -id "<claim\_id>"
+::
+
+    condor_cod_resume -id "<claim_id>"
 
 If the user attempts to resume a COD job that is not suspended,
 *condor\_cod\_resume* exits with an error message.
 
 Deactivate
-~~~~~~~~~~
+''''''''''
 
 If a given COD application does not exit on its own and needs to be
 removed manually, invoke the *condor\_cod\_deactivate* command to kill
@@ -646,7 +677,9 @@ the job, but leave the COD claim ID valid for future COD jobs. The user
 must specify the claim ID they wish to deactivate using the **-id**
 option. For example:
 
-condor\_cod\_deactivate -id "<claim\_id>"
+::
+
+    condor_cod_deactivate -id "<claim_id>"
 
 By default, *condor\_cod\_deactivate* attempts to gracefully cleanup the
 COD application and give it time to exit. In this case the COD claim
@@ -661,7 +694,9 @@ option to tell the *condor\_starter* to quickly kill the job and all its
 descendants using SIGKILL. In this case the COD claim goes into the
 Killing state. For example:
 
-condor\_cod\_deactivate -id "<claim\_id>" -fast
+::
+
+    condor_cod_deactivate -id "<claim_id>" -fast
 
 In either case, once the COD job has finally exited, the COD claim will
 go into the Idle state and will be available for future COD
@@ -676,7 +711,7 @@ that is neither Running nor Suspended, the *condor\_cod* tool exits with
 an error message.
 
 Release
-~~~~~~~
+'''''''
 
 If users no longer wish to use a given COD claim, they can release the
 claim with the *condor\_cod\_release* command. If there is a COD job
@@ -699,7 +734,7 @@ behavior is to use a graceful shutdown, sending whatever signal is
 specified in the ``KillSig`` attribute for the job (SIGTERM by default).
 
 Delegate proxy
-~~~~~~~~~~~~~~
+''''''''''''''
 
 In some cases, a user will want to delegate a copy of their user
 credentials (in the form of an x509 proxy) to the machine where one of

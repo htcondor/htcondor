@@ -1,7 +1,7 @@
       
 
-condor\_tail
-============
+*condor\_tail*
+==============
 
 Display the last contents of a running job’s standard output or file
 

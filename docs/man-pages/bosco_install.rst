@@ -1,7 +1,7 @@
       
 
-bosco\_install
-==============
+*bosco\_install*
+================
 
 Synopsis
 --------

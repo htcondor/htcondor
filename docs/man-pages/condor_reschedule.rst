@@ -1,7 +1,7 @@
       
 
-condor\_reschedule
-==================
+*condor\_reschedule*
+====================
 
 Update scheduling information to the central manager
 

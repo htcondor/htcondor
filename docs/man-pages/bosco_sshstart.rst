@@ -1,7 +1,7 @@
       
 
-bosco\_ssh\_start
-=================
+*bosco\_ssh\_start*
+===================
 
 Synopsis
 --------

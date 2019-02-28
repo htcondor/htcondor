@@ -1,7 +1,7 @@
       
 
-condor\_update\_machine\_ad
-===========================
+*condor\_update\_machine\_ad*
+=============================
 
 update a machine ClassAd
 

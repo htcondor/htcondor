@@ -1,7 +1,7 @@
       
 
-condor\_findhost
-================
+*condor\_findhost*
+==================
 
 find machine(s) in the pool that can be used with minimal impact on
 currently running HTCondor jobs and best meet any specified constraints

@@ -63,7 +63,8 @@ and described:
     does not have this integrity information. Also note that integrity
     checks are not performed upon job data files that are transferred by
     HTCondor via the File Transfer Mechanism described in
-    section \ `2.5.9 <SubmittingaJob.html#x17-380002.5.9>`__.
+    section \ `Submitting a
+    Job <../users-manual/submitting-a-job.html>`__.
 
 HTCondor’s Security Model
 -------------------------
@@ -110,7 +111,7 @@ issues can be addressed with HTCondor’s authentication, encryption, and
 integrity features.
 
 Access Level Descriptions
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 Authorization is granted based on specified access levels. This list
 describes each access level, and provides examples of their usage. The
@@ -332,7 +333,7 @@ queued jobs and available machines within a pool go through the process
 of matchmaking (deciding out which machines will run which jobs).
 
 Configuration
-~~~~~~~~~~~~~
+'''''''''''''
 
 The configuration macro names that determine what features will be used
 during client-daemon communication follow the pattern:
@@ -426,41 +427,11 @@ communication cannot continue.
 
 --------------
 
-Daemon Setting
-
-NEVER
-
-OPTIONAL
-
-REQUIRED
-
-Client
-
-NEVER
-
-No
-
-No
-
-Fail
-
---------------
-
---------------
-
---------------
-
---------------
-
-Setting
-
-REQUIRED
-
-Fail
-
-Yes
-
-Yes
++-----------+------------+--------+-------+--------+
+| Client    | NEVER      | No     | No    | Fail   |
++-----------+------------+--------+-------+--------+
+| Setting   | REQUIRED   | Fail   | Yes   | Yes    |
++-----------+------------+--------+-------+--------+
 
 | 
 
@@ -479,59 +450,13 @@ cannot be resolved.
 
 --------------
 
-Daemon Setting
-
-NEVER
-
-OPTIONAL
-
-PREFERRED
-
-REQUIRED
-
-NEVER
-
-No
-
-No
-
-No
-
-Fail
-
-Client
-
-OPTIONAL
-
-No
-
-No
-
-Yes
-
-Yes
-
-Setting
-
-PREFERRED
-
-No
-
-Yes
-
-Yes
-
-Yes
-
-REQUIRED
-
-Fail
-
-Yes
-
-Yes
-
-Yes
++-----------+-------------+--------+-------+-------+-------+
+| Client    | OPTIONAL    | No     | No    | Yes   | Yes   |
++-----------+-------------+--------+-------+-------+-------+
+| Setting   | PREFERRED   | No     | Yes   | Yes   | Yes   |
++-----------+-------------+--------+-------+-------+-------+
+|           | REQUIRED    | Fail   | Yes   | Yes   | Yes   |
++-----------+-------------+--------+-------+-------+-------+
 
 | 
 
@@ -564,7 +489,7 @@ default to the settings specified for other access levels. For example,
 ``WRITE``, which then defaults to the general DEFAULT setting.
 
 Configuration for Security Methods
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''
 
 Authentication and encryption can each be accomplished by a variety of
 methods or technologies. Which method is utilized is determined during
@@ -729,7 +654,7 @@ Unix machine is FS, KERBEROS, GSI. This default value for a Windows
 machine is NTSSPI, KERBEROS, GSI.
 
 GSI Authentication
-~~~~~~~~~~~~~~~~~~
+''''''''''''''''''
 
 The GSI (Grid Security Infrastructure) protocol provides an avenue for
 HTCondor to do PKI-based (Public Key Infrastructure) authentication
@@ -958,7 +883,7 @@ locations.
     the pool or who issue administrative commands.
 
 SSL Authentication
-~~~~~~~~~~~~~~~~~~
+''''''''''''''''''
 
 SSL authentication is similar to GSI authentication, but without GSI’s
 delegation (proxy) capabilities. SSL utilizes X.509 certificates.
@@ -995,7 +920,7 @@ files, each which may contain a single CA certificate. The directories
 must be prepared using the OpenSSL ``c_rehash`` utility.
 
 Kerberos Authentication
-~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''
 
 If Kerberos is used for authentication, then a mapping from a Kerberos
 domain (called a realm) to an HTCondor UID domain is necessary. There
@@ -1066,7 +991,7 @@ the only supported way to use KERBEROS authentication on Unix platforms
 is to start daemons HTCondor as user root.
 
 Password Authentication
-~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''
 
 The password method provides mutual authentication through the use of a
 shared secret. This is often a good choice when strong security is
@@ -1193,7 +1118,7 @@ authentication can be done using another method such as FS.
         ALLOW_ADVERTISE_STARTD = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu
 
 File System Authentication
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''
 
 This form of authentication utilizes the ownership of a file in the
 identity verification of a client. A daemon authenticating a client
@@ -1204,7 +1129,7 @@ becomes the trusted authority. This authentication method is only
 appropriate for clients and daemons that are on the same computer.
 
 File System Remote Authentication
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''
 
 Like file system authentication, this form of authentication utilizes
 the ownership of a file in the identity verification of a client. In
@@ -1214,7 +1139,7 @@ a file in a specific location, but the location is not restricted to
 variable ``FS_REMOTE_DIR`` .
 
 Windows Authentication
-~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''
 
 This authentication is done only among Windows machines using a
 proprietary method. The Windows security interface SSPI is used to
@@ -1228,20 +1153,20 @@ Unix, and probably should not be used for authentication between two
 computers.
 
 Ask MUNGE for Authentication
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''
 
 Ask the MUNGE service to validate both sides of the authentication. See:
 https://dun.github.io/munge/ for instructions on installing.
 
 Claim To Be Authentication
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''
 
 Claim To Be authentication accepts any identity claimed by the client.
 As such, it does not authenticate. It is included in HTCondor and in the
 list of authentication methods for testing purposes only.
 
 Anonymous Authentication
-~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''
 
 Anonymous authentication causes authentication to be skipped entirely.
 As such, it does not authenticate. It is included in HTCondor and in the
@@ -1713,7 +1638,7 @@ be modified by configuration.
    the *condor\_schedd* and ``DAEMON`` access to the *condor\_shadow*.
 
 Example of Authorization Security Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''
 
 An example of the configuration variables for the user-side
 authorization is derived from the necessary access levels as described
@@ -1766,7 +1691,7 @@ In this example the owner has a login of username, and the machine’s
 name is represented by hostname.
 
 Debugging Security Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''
 
 If the authorization policy denies a network request, an explanation of
 why the request was denied is printed in the log file of the daemon that
@@ -2327,7 +2252,7 @@ matches, and the user is not in the execute machine’s password file,
 then the job execution attempt will be aborted.
 
 Running HTCondor as Non-Root
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''
 
 While we strongly recommend starting up the HTCondor daemons as root, we
 understand that it is not always possible to do so. The main problems of
@@ -2453,7 +2378,7 @@ either root or a user such as condor that exists only to run HTCondor
 jobs.
 
 Who Jobs Run As
-~~~~~~~~~~~~~~~
+'''''''''''''''
 
 Under Unix, HTCondor runs jobs as one of
 
@@ -2584,7 +2509,7 @@ Notes:
    when it treats the account as a dedicated account.
 
 Working Directories for Jobs
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''
 
 Every executing process has a notion of its current working directory.
 This is the directory that acts as the base for all file system access.

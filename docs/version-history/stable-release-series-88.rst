@@ -64,8 +64,8 @@ New Features:
    #6823). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6823>`__
 -  Made the Python bindings’ ``JobEvent`` API more Pythonic by handling
    optional event attributes as if the ``JobEvent`` object were a
-   dictionary, instead. See section
-   `7.1.1 <PythonBindings.html#x69-5500007.1.1>`__ for details. `(Ticket
+   dictionary, instead. See section `Python
+   Bindings <../apis/python-bindings.html>`__ for details. `(Ticket
    #6820). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6820>`__
 -  Added job ad attribute ``BlockReadKbytes`` and ``BlockWriteKybtes``
    which describe the number of kbytes read and written by the job to

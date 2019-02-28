@@ -19,9 +19,10 @@ through configuration. This occurs when all slots on a machine agree
 that a low power state is desired.
 
 A slot’s readiness to hibernate is determined by the evaluating the
-``HIBERNATE`` configuration variable (see
-section \ `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__ on
-page \ `679 <ConfigurationMacros.html#x33-1950003.5.8>`__) within the
+``HIBERNATE`` configuration variable (see section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__) within the
 context of the slot. Readiness is evaluated at fixed intervals, as
 determined by the ``HIBERNATE_CHECK_INTERVAL`` configuration variable. A
 non-zero value of this variable enables the power management facility.
@@ -90,12 +91,12 @@ Returning From a Low Power State
 The HTCondor command line tool *condor\_power* may wake a machine from a
 low power state by sending a UDP Wake On LAN (WOL) packet. See the
 *condor\_power* manual page on
-page \ `1968 <Condorpower.html#x126-89100012>`__.
+page \ `condor\_power <../man-pages/condor_power.html>`__.
 
 To automatically call *condor\_power* under specific conditions,
 *condor\_rooster* may be used. The configuration options for
-*condor\_rooster* are described in
-section \ `3.5.29 <ConfigurationMacros.html#x33-2250003.5.29>`__.
+*condor\_rooster* are described in section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 Keeping a ClassAd for a Hibernating Machine
 -------------------------------------------
@@ -106,15 +107,17 @@ hibernation. This is required by *condor\_rooster* so that it can
 evaluate the ``UNHIBERNATE`` expression of the offline machines.
 
 To do this, define a log file using the ``OFFLINE_LOG`` configuration
-variable. See
-section \ `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__ on
-page \ `681 <ConfigurationMacros.html#x33-1950003.5.8>`__ for the
+variable. See section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ for the
 definition. An optional expiration time for each ClassAd can be
 specified with ``OFFLINE_EXPIRE_ADS_AFTER`` . The timing begins from the
 time the hibernating machine’s ClassAd enters the *condor\_collector*
-daemon. See
-section \ `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__ on
-page \ `681 <ConfigurationMacros.html#x33-1950003.5.8>`__ for the
+daemon. See section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ for the
 definition.
 
 Linux Platform Details
@@ -140,9 +143,10 @@ chosen.
 This ordered detection may be bypassed, to use a specified method
 instead by setting the configuration variable
 ``LINUX_HIBERNATION_METHOD`` with one of the defined strings. This
-variable is defined in
-section \ `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__ on
-page \ `681 <ConfigurationMacros.html#x33-1950003.5.8>`__. If no usable
+variable is defined in section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__. If no usable
 methods are detected or the method specified by
 ``LINUX_HIBERNATION_METHOD`` is either not detected or invalid,
 hibernation is disabled.

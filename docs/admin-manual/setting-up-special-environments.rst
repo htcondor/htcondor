@@ -10,8 +10,8 @@ Using HTCondor with AFS
 -----------------------
 
 Configuration variables that allow machines to interact with and use a
-shared file system are given at
-section \ `3.5.5 <ConfigurationMacros.html#x33-1920003.5.5>`__.
+shared file system are given at section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 Limitations with AFS occur because HTCondor does not currently have a
 way to authenticate itself to AFS. This is true of the HTCondor daemons
@@ -23,7 +23,7 @@ Some of this must be done by the administrator(s) installing HTCondor.
 Other things must be done by HTCondor users who submit jobs.
 
 AFS and HTCondor for Administrators
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''
 
 The largest result from the lack of authentication with AFS is that the
 directory defined by the configuration variable ``LOCAL_DIR`` and its
@@ -61,7 +61,7 @@ process running on any of our machines, instead of any process on any
 machine with AFS on the Internet.
 
 AFS and HTCondor for Users
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''
 
 The *condor\_shadow* daemon runs on the machine where jobs are
 submitted. It performs all file system access on behalf of the jobs.
@@ -110,8 +110,8 @@ file transfer mechanism, in which transfers are from the machine where
 the job is submitted to the machine where the job is executed. Each file
 to be transferred by specifying a URL, causing a plug-in to be invoked,
 is specified separately in the job submit description file with the
-command **transfer\_input\_files**; see
-section \ `2.5.9 <SubmittingaJob.html#x17-440002.5.9>`__ for details.
+command **transfer\_input\_files**; see section \ `Submitting a
+Job <../users-manual/submitting-a-job.html>`__ for details.
 
 For transferring output files, either the entire output sandbox, which
 are all files produced or modified by the job as it executes, or a
@@ -119,8 +119,9 @@ subset of these files, as specified by the submit description file
 command **transfer\_output\_files** are transferred to the directory
 specified by the URL. The URL itself is specified in the separate submit
 description file command **output\_destination**; see
-section \ `2.5.9 <SubmittingaJob.html#x17-440002.5.9>`__ for details.
-The plug-in is invoked once for each output file to be transferred.
+section \ `Submitting a Job <../users-manual/submitting-a-job.html>`__
+for details. The plug-in is invoked once for each output file to be
+transferred.
 
 Configuration identifies the availability of the one or more plug-in(s).
 The plug-ins must be installed and available on every execute machine
@@ -286,7 +287,7 @@ To enable HTTP public file transfers, a system administrator must
 perform several steps as described below.
 
 Install a web service for public input files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''
 
 An HTTP service must be installed and configured on the submit node. Any
 regular web server software such as Apache
@@ -295,7 +296,7 @@ regular web server software such as Apache
 must be running a Linux system.
 
 Configuration knobs for public input files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''
 
 Several knobs must be set and configured correctly for this
 functionality to work:
@@ -321,7 +322,7 @@ functionality to work:
    The default setting is <condor>.
 
 Additional HTTP infrastructure for public input files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The main advantage of using HTTP for file transfers is that system
 administrators can use additional infrastructure (such as Squid caching)
@@ -391,7 +392,7 @@ and the ``LOCAL_CONFIG_FILE`` configuration variable would be set to
                         $(ETC)/$(HOSTNAME).local
 
 Platform-Specific Configuration File Settings
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''
 
 The configuration variables that are truly platform-specific are:
 
@@ -433,7 +434,7 @@ the ``DAEMON_LIST`` will be the same for each, so there is no reason not
 to put that in the global configuration file.
 
 Other Uses for Platform-Specific Configuration Files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 It is certainly possible that an installation may want other
 configuration variables to be platform-specific as well. Perhaps a
@@ -608,14 +609,18 @@ can write, and the file will not get in the way. The **-pidfile** and
 the process ID in a file. It will be necessary to add lines to the XDM
 configuration similar to
 
-  condor\_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
+::
+
+      condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
 
 This will start the *condor\_kbdd* as the user who is currently logged
 in and write the log to a file in the directory ``$HOME/.kbdd.log/``.
 This will also save the process ID of the daemon to ``˜/.kbdd.pid``, so
 that when the user logs out, XDM can do:
 
-  condor\_kbdd -k $HOME/.kbdd.pid
+::
+
+      condor_kbdd -k $HOME/.kbdd.pid
 
 This will shut down the process recorded in file ``˜/.kbdd.pid`` and
 exit.
@@ -692,11 +697,12 @@ main *condor\_collector* and the HTCondorView collector are started up
 by the same *condor\_master* daemon on the same machine. In this
 example, the HTCondorView collector uses port 12345.
 
-|   VIEW\_SERVER = $(COLLECTOR)  
-|   VIEW\_SERVER\_ARGS = -f -p 12345  
-|   VIEW\_SERVER\_ENVIRONMENT = "\_CONDOR\_COLLECTOR\_LOG=$(LOG)/ViewServerLog"
- 
-|   DAEMON\_LIST = MASTER, NEGOTIATOR, COLLECTOR, VIEW\_SERVER
+::
+
+      VIEW_SERVER = $(COLLECTOR) 
+      VIEW_SERVER_ARGS = -f -p 12345 
+      VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog" 
+      DAEMON_LIST = MASTER, NEGOTIATOR, COLLECTOR, VIEW_SERVER
 
 For this change to take effect, restart the *condor\_master* on this
 host. This may be accomplished with the *condor\_restart* command, if
@@ -715,7 +721,9 @@ HTCondorView server.
 
 Define the following configuration variable:
 
-  CONDOR\_VIEW\_HOST = full.hostname[:portnumber]
+::
+
+      CONDOR_VIEW_HOST = full.hostname[:portnumber]
 
 where full.hostname is the full host name of the machine running the
 HTCondorView collector. The full host name is optionally followed by a
@@ -734,7 +742,9 @@ change to take effect, so it will begin forwarding updates. A query to
 the HTCondorView collector will verify that it is working. A query
 example:
 
-  condor\_status -pool condor.view.host[:portnumber]
+::
+
+      condor_status -pool condor.view.host[:portnumber]
 
 A *condor\_collector* may also be configured to report to multiple
 HTCondorView servers. The configuration variable ``CONDOR_VIEW_HOST``
@@ -745,25 +755,24 @@ The following demonstrates an example configuration for two HTCondorView
 servers, where both HTCondorView servers (and the *condor\_collector*)
 are running on the same machine, localhost.localdomain:
 
-| VIEWSERV01 = $(COLLECTOR)  
-| VIEWSERV01\_ARGS = -f -p 12345 -local-name VIEWSERV01  
-| VIEWSERV01\_ENVIRONMENT = "\_CONDOR\_COLLECTOR\_LOG=$(LOG)/ViewServerLog01"
- 
-| VIEWSERV01.POOL\_HISTORY\_DIR = $(LOCAL\_DIR)/poolhist01  
-| VIEWSERV01.KEEP\_POOL\_HISTORY = TRUE  
-| VIEWSERV01.CONDOR\_VIEW\_HOST =  
-|   
-| VIEWSERV02 = $(COLLECTOR)  
-| VIEWSERV02\_ARGS = -f -p 24680 -local-name VIEWSERV02  
-| VIEWSERV02\_ENVIRONMENT = "\_CONDOR\_COLLECTOR\_LOG=$(LOG)/ViewServerLog02"
- 
-| VIEWSERV02.POOL\_HISTORY\_DIR = $(LOCAL\_DIR)/poolhist02  
-| VIEWSERV02.KEEP\_POOL\_HISTORY = TRUE  
-| VIEWSERV02.CONDOR\_VIEW\_HOST =  
-|   
-| CONDOR\_VIEW\_HOST = localhost.localdomain:12345 localhost.localdomain:24680
- 
-| DAEMON\_LIST = $(DAEMON\_LIST) VIEWSERV01 VIEWSERV02
+::
+
+    VIEWSERV01 = $(COLLECTOR) 
+    VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01 
+    VIEWSERV01_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog01" 
+    VIEWSERV01.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist01 
+    VIEWSERV01.KEEP_POOL_HISTORY = TRUE 
+    VIEWSERV01.CONDOR_VIEW_HOST = 
+     
+    VIEWSERV02 = $(COLLECTOR) 
+    VIEWSERV02_ARGS = -f -p 24680 -local-name VIEWSERV02 
+    VIEWSERV02_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog02" 
+    VIEWSERV02.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist02 
+    VIEWSERV02.KEEP_POOL_HISTORY = TRUE 
+    VIEWSERV02.CONDOR_VIEW_HOST = 
+     
+    CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680 
+    DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
 
 Note that the value of ``CONDOR_VIEW_HOST`` for VIEWSERV01 and
 VIEWSERV02 is unset, to prevent them from inheriting the global value of
@@ -811,13 +820,17 @@ The configuration for the host specifies ``VMP_VM_LIST`` . This
 specifies host names or IP addresses of all inner virtual machines
 running on this host. An example configuration on the host machine:
 
-VMP\_VM\_LIST = vmware1.domain.com, vmware2.domain.com
+::
+
+    VMP_VM_LIST = vmware1.domain.com, vmware2.domain.com
 
 The configuration for each separate inner virtual machine specifies
 ``VMP_HOST_MACHINE`` . This specifies the host for the inner virtual
 machine. An example configuration on an inner virtual machine:
 
-VMP\_HOST\_MACHINE = host.domain.com
+::
+
+    VMP_HOST_MACHINE = host.domain.com
 
 Given this configuration, as well as communication between HTCondor
 daemons running on the host and on the inner virtual machine, the policy
@@ -837,8 +850,10 @@ inner virtual machine ought to use this syntax to avoid starting jobs
 when its host is too busy processing other items. An example
 configuration for ``START`` on an inner virtual machine:
 
-| START = ( (KeyboardIdle > 150 ) && ( HOST\_KeyboardIdle > 150 ) \\  
-|         && ( LoadAvg <= 0.3 ) && ( HOST\_TotalLoadAvg <= 0.3 ) )
+::
+
+    START = ( (KeyboardIdle > 150 ) && ( HOST_KeyboardIdle > 150 ) \ 
+            && ( LoadAvg <= 0.3 ) && ( HOST_TotalLoadAvg <= 0.3 ) )
 
 HTCondor’s Dedicated Scheduling
 -------------------------------
@@ -887,8 +902,10 @@ Each execute machine defines the configuration variable
 ``DedicatedScheduler`` , which identifies the dedicated scheduler it is
 managed by. The local configuration file contains a modified form of
 
-| DedicatedScheduler = "DedicatedScheduler@full.host.name"  
-| STARTD\_ATTRS = $(STARTD\_ATTRS), DedicatedScheduler
+::
+
+    DedicatedScheduler = "DedicatedScheduler@full.host.name" 
+    STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
 
 Substitute the host name of the dedicated scheduler machine for the
 string "full.host.name".
@@ -896,8 +913,10 @@ string "full.host.name".
 If running personal HTCondor, the name of the scheduler includes the
 user name it was started as, so the configuration appears as:
 
-| DedicatedScheduler = "DedicatedScheduler@username@full.host.name"  
-| STARTD\_ATTRS = $(STARTD\_ATTRS), DedicatedScheduler
+::
+
+    DedicatedScheduler = "DedicatedScheduler@username@full.host.name" 
+    STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
 
 All dedicated execute machines must have policy expressions which allow
 for jobs to always run, but not be preempted. The resource must also be
@@ -909,7 +928,9 @@ requirements on a resource for it to be considered dedicated.
 Job ClassAds from the dedicated scheduler contain the attribute
 ``Scheduler``. The attribute is defined by a string of the form
 
-Scheduler = "DedicatedScheduler@full.host.name"
+::
+
+    Scheduler = "DedicatedScheduler@full.host.name"
 
 The host name of the dedicated scheduler substitutes for the string
 full.host.name.
@@ -923,14 +944,16 @@ Resources
     run jobs that require the dedicated resource. To enact this policy,
     configure the following expressions:
 
-    | START     = Scheduler =?= $(DedicatedScheduler)  
-    | SUSPEND   = False  
-    | CONTINUE  = True  
-    | PREEMPT   = False  
-    | KILL      = False  
-    | WANT\_SUSPEND   = False  
-    | WANT\_VACATE    = False  
-    | RANK      = Scheduler =?= $(DedicatedScheduler)
+    ::
+
+        START     = Scheduler =?= $(DedicatedScheduler) 
+        SUSPEND   = False 
+        CONTINUE  = True 
+        PREEMPT   = False 
+        KILL      = False 
+        WANT_SUSPEND   = False 
+        WANT_VACATE    = False 
+        RANK      = Scheduler =?= $(DedicatedScheduler)
 
     The ``START`` expression specifies that a job with the ``Scheduler``
     attribute must match the string corresponding ``DedicatedScheduler``
@@ -954,7 +977,9 @@ Resources
     To implement this, configure the machine as a dedicated resource as
     above, modifying only the ``START`` expression:
 
-    START = True
+    ::
+
+        START = True
 
  Policy Scenario: Adding Desktop Resources To The Mix
     A third policy example allows all jobs. These desktop machines use a
@@ -969,13 +994,14 @@ Resources
     set in the global configuration. Locally, the configuration is
     modified to this hybrid policy by adding a second case.
 
-    | SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND))  
-    | PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT))  
-    | RANK\_FACTOR    = 1000000  
-    | RANK   = (Scheduler =?= $(DedicatedScheduler) \* $(RANK\_FACTOR)) \\
-     
-    |                + $(RANK)  
-    | START  = (Scheduler =?= $(DedicatedScheduler)) \|\| ($(START))
+    ::
+
+        SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND)) 
+        PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT)) 
+        RANK_FACTOR    = 1000000 
+        RANK   = (Scheduler =?= $(DedicatedScheduler) * $(RANK_FACTOR)) \ 
+                       + $(RANK) 
+        START  = (Scheduler =?= $(DedicatedScheduler)) || ($(START))
 
     Define ``RANK_FACTOR`` to be a larger value than the maximum value
     possible for the existing rank expression. ``RANK`` is a floating
@@ -1010,9 +1036,11 @@ beginning. Thus, the administrator should be careful when enabling
 preemption of these dedicated resources. Enable dedicated preemption
 with the configuration:
 
-| STARTD\_JOB\_EXPRS = JobPrio  
-| SCHEDD\_PREEMPTION\_REQUIREMENTS = (My.JobPrio < Target.JobPrio)  
-| SCHEDD\_PREEMPTION\_RANK = 0.0
+::
+
+    STARTD_JOB_EXPRS = JobPrio 
+    SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio) 
+    SCHEDD_PREEMPTION_RANK = 0.0
 
 In this example, preemption is enabled by user-defined job priority. If
 a set of machines is running a job at user priority 5, and the user
@@ -1045,7 +1073,9 @@ configuration variable.
 The submit description file for a parallel universe job which must not
 cross group boundaries contains
 
-+WantParallelSchedulingGroups = True
+::
+
+    +WantParallelSchedulingGroups = True
 
 The dedicated scheduler enforces the allocation to within a group.
 
@@ -1132,17 +1162,19 @@ page \ `648 <ConfigurationMacros.html#x33-1950003.5.8>`__.
 
 The following example shows a possible configuration to enable backfill:
 
-| # Turn on backfill functionality, and use BOINC  
-| ENABLE\_BACKFILL = TRUE  
-| BACKFILL\_SYSTEM = BOINC  
-|   
-| # Spawn a backfill job if we've been Unclaimed for more than 5  
-| # minutes  
-| START\_BACKFILL = $(StateTimer) > (5 \* $(MINUTE))  
-|   
-| # Evict a backfill job if the machine is busy (based on keyboard  
-| # activity or cpu load)  
-| EVICT\_BACKFILL = $(MachineBusy)
+::
+
+    # Turn on backfill functionality, and use BOINC 
+    ENABLE_BACKFILL = TRUE 
+    BACKFILL_SYSTEM = BOINC 
+     
+    # Spawn a backfill job if we've been Unclaimed for more than 5 
+    # minutes 
+    START_BACKFILL = $(StateTimer) > (5 * $(MINUTE)) 
+     
+    # Evict a backfill job if the machine is busy (based on keyboard 
+    # activity or cpu load) 
+    EVICT_BACKFILL = $(MachineBusy)
 
 Overview of the BOINC system
 ''''''''''''''''''''''''''''
@@ -1295,7 +1327,9 @@ Optional configuration variables:
     is to use the **–attach\_project** argument to specify a project URL
     and account key. For example:
 
-    BOINC\_Arguments = --attach\_project http://einstein.phys.uwm.edu [account\_key]
+    ::
+
+        BOINC_Arguments = --attach_project http://einstein.phys.uwm.edu [account_key]
 
  ``BOINC_Environment``
     Environment variables that should be set for the *boinc\_client*.
@@ -1310,27 +1344,31 @@ Optional configuration variables:
 
 The following example shows one possible usage of these settings:
 
-| # Define a shared macro that can be used to define other settings.  
-| # This directory must be manually created before attempting to run  
-| # any backfill jobs.  
-| BOINC\_HOME = $(LOCAL\_DIR)/boinc  
-|   
-| # Path to the boinc\_client to use, and required universe setting  
-| BOINC\_Executable = /usr/local/bin/boinc\_client  
-| BOINC\_Universe = vanilla  
-|   
-| # What initial working directory should BOINC use?  
-| BOINC\_InitialDir = $(BOINC\_HOME)  
-|   
-| # Where to place stdout and stderr  
-| BOINC\_Output = $(BOINC\_HOME)/boinc.out  
-| BOINC\_Error = $(BOINC\_HOME)/boinc.err
+::
+
+    # Define a shared macro that can be used to define other settings. 
+    # This directory must be manually created before attempting to run 
+    # any backfill jobs. 
+    BOINC_HOME = $(LOCAL_DIR)/boinc 
+     
+    # Path to the boinc_client to use, and required universe setting 
+    BOINC_Executable = /usr/local/bin/boinc_client 
+    BOINC_Universe = vanilla 
+     
+    # What initial working directory should BOINC use? 
+    BOINC_InitialDir = $(BOINC_HOME) 
+     
+    # Where to place stdout and stderr 
+    BOINC_Output = $(BOINC_HOME)/boinc.out 
+    BOINC_Error = $(BOINC_HOME)/boinc.err
 
 If the HTCondor daemons reading this configuration are running as root,
 an additional variable must be defined:
 
-| # Specify the user that the boinc\_client should run as:  
-| BOINC\_Owner = nobody
+::
+
+    # Specify the user that the boinc_client should run as: 
+    BOINC_Owner = nobody
 
 In this case, HTCondor would spawn the *boinc\_client* as nobody, so the
 directory specified in ``$(BOINC_HOME)`` would have to be writable by
@@ -1366,17 +1404,21 @@ BOINC project:
    the file define the project URL and the authentication key. The
    format is:
 
-   | <account>  
-   |   <master\_url>[URL]</master\_url>  
-   |   <authenticator>[key]</authenticator>  
-   | </account>
+   ::
+
+       <account> 
+         <master_url>[URL]</master_url> 
+         <authenticator>[key]</authenticator> 
+       </account>
 
    For example:
 
-   | <account>  
-   |   <master\_url>http://einstein.phys.uwm.edu</master\_url>  
-   |   <authenticator>aaaa1111bbbb2222cccc3333</authenticator>  
-   | </account>
+   ::
+
+       <account> 
+         <master_url>http://einstein.phys.uwm.edu</master_url> 
+         <authenticator>aaaa1111bbbb2222cccc3333</authenticator> 
+       </account>
 
    Of course, the <authenticator> tag would use the real authentication
    key returned when the account was created at a given project.
@@ -1411,7 +1453,9 @@ when dealing with the Windows installation:
    The Windows client is called *boinc.exe*. Therefore, the
    configuration variable ``BOINC_Executable`` is written:
 
-   BOINC\_Executable = C:\\PROGRA~1\\BOINC\\boinc.exe
+   ::
+
+       BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
 
    The Unix administrative tool *boinc\_cmd* is called *boinccmd.exe* on
    Windows.
@@ -1422,15 +1466,19 @@ when dealing with the Windows installation:
    application via the ``BOINC_Arguments`` configuration variable. For
    Windows, rewrite the argument line as:
 
-   | BOINC\_Arguments = --dir $(BOINC\_HOME) \\  
-   |           --attach\_project http://einstein.phys.uwm.edu [account\_key]
+   ::
+
+       BOINC_Arguments = --dir $(BOINC_HOME) \ 
+                 --attach_project http://einstein.phys.uwm.edu [account_key]
 
    As a consequence of setting the BOINC home directory, some projects
    may fail with the authentication error:
 
-   | Scheduler request failed: Peer  
-   | certificate cannot be authenticated  
-   | with known CA certificates.
+   ::
+
+       Scheduler request failed: Peer 
+       certificate cannot be authenticated 
+       with known CA certificates.
 
    To resolve this issue, copy the ``ca-bundle.crt`` file from the BOINC
    installation directory to ``$(BOINC_HOME)``. This file appears to be
@@ -1446,7 +1494,9 @@ when dealing with the Windows installation:
 
    Setting this option causes the addition of the job attribute
 
-   RunAsUser = True
+   ::
+
+       RunAsUser = True
 
    to the backfill client. This further implies that the configuration
    variable ``STARTER_ALLOW_RUNAS_OWNER`` be set to ``True`` to insure
@@ -1487,7 +1537,9 @@ takes care of killing all child processes.
 To enable the use of per job PID namespaces, set the configuration to
 include
 
-  USE\_PID\_NAMESPACES = True
+::
+
+      USE_PID_NAMESPACES = True
 
 This configuration variable defaults to ``False``, thus the use of per
 job PID namespaces is disabled by default.
@@ -1535,9 +1587,11 @@ specified with the ``MIN_TRACKING_GID`` and ``MAX_TRACKING_GID``
 settings. For example, the following would enable GID-based tracking for
 an execute machine with 8 slots.
 
-| USE\_GID\_PROCESS\_TRACKING = True  
-| MIN\_TRACKING\_GID = 750  
-| MAX\_TRACKING\_GID = 757
+::
+
+    USE_GID_PROCESS_TRACKING = True 
+    MIN_TRACKING_GID = 750 
+    MAX_TRACKING_GID = 757
 
 If the defined range is too small, such that there is not a GID
 available when starting a job, then the *condor\_starter* will fail as
@@ -1579,8 +1633,10 @@ default, and needs to be enabled with a boot time option.
 This setting needs to be inherited down to the per-job cgroup with the
 following commands in ``rc.local``:
 
-| /usr/sbin/cgconfigparser -l /etc/cgconfig.conf  
-| /bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone\_children
+::
+
+    /usr/sbin/cgconfigparser -l /etc/cgconfig.conf 
+    /bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone_children
 
 When cgroups are correctly configured and running, the virtual file
 system mounted on ``/cgroup`` should have several subdirectories under
@@ -1633,48 +1689,43 @@ An initial sample of a ``USER_JOB_WRAPPER`` script is provided in the
 installation at ``$(LIBEXEC)/condor_limits_wrapper.sh``. Here is the
 contents of that file:
 
-| #!/bin/bash  
-| # Copyright 2008 Red Hat, Inc.  
-| #  
-| # Licensed under the Apache License, Version 2.0 (the "License");  
-| # you may not use this file except in compliance with the License.  
-| # You may obtain a copy of the License at  
-| #  
-| #     http://www.apache.org/licenses/LICENSE-2.0  
-| #  
-| # Unless required by applicable law or agreed to in writing, software
- 
-| # distributed under the License is distributed on an "AS IS" BASIS,  
-| # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- 
-| # See the License for the specific language governing permissions and
- 
-| # limitations under the License.  
-|   
-| if [[ $\_CONDOR\_MACHINE\_AD != "" ]]; then  
-|    mem\_limit=$((\`egrep '^Memory' $\_CONDOR\_MACHINE\_AD \| cut -d ' ' -f 3\` \* 1024))
- 
-|    disk\_limit=\`egrep '^Disk' $\_CONDOR\_MACHINE\_AD \| cut -d ' ' -f 3\`
- 
-|   
-|    ulimit -d $mem\_limit  
-|    if [[ $? != 0 ]] \|\| [[ $mem\_limit = "" ]]; then  
-|       echo "Failed to set Memory Resource Limit" > $\_CONDOR\_WRAPPER\_ERROR\_FILE
- 
-|       exit 1  
-|    fi  
-|    ulimit -f $disk\_limit  
-|    if [[ $? != 0 ]] \|\| [[ $disk\_limit = "" ]]; then  
-|       echo "Failed to set Disk Resource Limit" > $\_CONDOR\_WRAPPER\_ERROR\_FILE
- 
-|       exit 1  
-|    fi  
-| fi  
-|   
-| exec "$@"  
-| error=$?  
-| echo "Failed to exec($error): $@" > $\_CONDOR\_WRAPPER\_ERROR\_FILE  
-| exit 1
+::
+
+    #!/bin/bash 
+    # Copyright 2008 Red Hat, Inc. 
+    # 
+    # Licensed under the Apache License, Version 2.0 (the "License"); 
+    # you may not use this file except in compliance with the License. 
+    # You may obtain a copy of the License at 
+    # 
+    #     http://www.apache.org/licenses/LICENSE-2.0 
+    # 
+    # Unless required by applicable law or agreed to in writing, software 
+    # distributed under the License is distributed on an "AS IS" BASIS, 
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+    # See the License for the specific language governing permissions and 
+    # limitations under the License. 
+     
+    if [[ $_CONDOR_MACHINE_AD != "" ]]; then 
+       mem_limit=$((`egrep '^Memory' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` * 1024)) 
+       disk_limit=`egrep '^Disk' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` 
+     
+       ulimit -d $mem_limit 
+       if [[ $? != 0 ]] || [[ $mem_limit = "" ]]; then 
+          echo "Failed to set Memory Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE 
+          exit 1 
+       fi 
+       ulimit -f $disk_limit 
+       if [[ $? != 0 ]] || [[ $disk_limit = "" ]]; then 
+          echo "Failed to set Disk Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE 
+          exit 1 
+       fi 
+    fi 
+     
+    exec "$@" 
+    error=$? 
+    echo "Failed to exec($error): $@" > $_CONDOR_WRAPPER_ERROR_FILE 
+    exit 1
 
 If used in an unmodified form, this script sets the job’s limits on a
 per slot basis for memory and disk usage, with the limits defined by the
@@ -1772,9 +1823,11 @@ use. With partitionable slots, this is done in the per slot definition,
 and must be a percentage of the total swap space on the system. For
 example,
 
-| NUM\_SLOTS\_TYPE\_1 = 1  
-| SLOT\_TYPE\_1\_PARTITIONABLE = true  
-| SLOT\_TYPE\_1 = cpus=100%,swap=10%
+::
+
+    NUM_SLOTS_TYPE_1 = 1 
+    SLOT_TYPE_1_PARTITIONABLE = true 
+    SLOT_TYPE_1 = cpus=100%,swap=10%
 
 Optionally, if the administrator sets the config file setting
 ``PROPORTIONAL_SWAP_ASSSIGNMENT`` = true, the maximum amount of swap
@@ -1828,7 +1881,9 @@ HTCondor should constrain the number of running jobs which need the X
 software to 3. The administrator picks XSW as the name of the resource
 and sets the configuration
 
-XSW\_LIMIT = 3
+::
+
+    XSW_LIMIT = 3
 
 where ``XSW`` is the invented name of this resource, and this name is
 appended with the string ``_LIMIT``. With this limit, a maximum of 3
@@ -1840,7 +1895,9 @@ configuration may specify a concurrency limit for all resources that are
 not covered by specifically-named limits. The configuration variable
 ``CONCURRENCY_LIMIT_DEFAULT`` sets this value. For example,
 
-CONCURRENCY\_LIMIT\_DEFAULT = 1
+::
+
+    CONCURRENCY_LIMIT_DEFAULT = 1
 
 will enforce a limit of at most 1 running job that declares a usage of
 an unnamed resource. If ``CONCURRENCY_LIMIT_DEFAULT`` is omitted from
@@ -1853,16 +1910,22 @@ submit description file or adding an attribute to the job ClassAd. In
 the submit description file, an example job that requires the X software
 adds:
 
-concurrency\_limits = XSW
+::
+
+    concurrency_limits = XSW
 
 This results in the job ClassAd attribute
 
-ConcurrencyLimits = "XSW"
+::
+
+    ConcurrencyLimits = "XSW"
 
 Jobs may declare that they need more than one type of resource. In this
 case, specify a comma-separated list of resources:
 
-concurrency\_limits = XSW, DATABASE, FILESERVER
+::
+
+    concurrency_limits = XSW, DATABASE, FILESERVER
 
 The units of these limits are arbitrary. This job consumes one unit of
 each resource. Jobs can declare that they use more than one unit with
@@ -1870,16 +1933,20 @@ syntax that follows the resource name by a colon character and the
 integer number of resources. For example, if the above job uses three
 units of the file server resource, it is declared with
 
-concurrency\_limits = XSW, DATABASE, FILESERVER:3
+::
+
+    concurrency_limits = XSW, DATABASE, FILESERVER:3
 
 If there are sets of resources which have the same capacity for each
 member of the set, the configuration may become tedious, as it defines
 each member of the set individually. A shortcut defines a name for a
 set. For example, define the sets called ``LARGE`` and ``SMALL``:
 
-| CONCURRENCY\_LIMIT\_DEFAULT = 5  
-| CONCURRENCY\_LIMIT\_DEFAULT\_LARGE = 100  
-| CONCURRENCY\_LIMIT\_DEFAULT\_SMALL = 25
+::
+
+    CONCURRENCY_LIMIT_DEFAULT = 5 
+    CONCURRENCY_LIMIT_DEFAULT_LARGE = 100 
+    CONCURRENCY_LIMIT_DEFAULT_SMALL = 25
 
 To use the set name in a concurrency limit, the syntax follows the set
 name with a period and then the set member’s name. Continuing this
@@ -1899,23 +1966,31 @@ concurrency limit to limit the number of network intensive jobs on each
 network to 10. Configuration of each execute machine advertises which
 local network it is on. A machine on ``"NETWORK_A"`` configures
 
-| NETWORK = "NETWORK\_A"  
-| STARTD\_ATTRS = $(STARTD\_ATTRS) NETWORK
+::
+
+    NETWORK = "NETWORK_A" 
+    STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 and a machine on ``"NETWORK_B"`` configures
 
-| NETWORK = "NETWORK\_B"  
-| STARTD\_ATTRS = $(STARTD\_ATTRS) NETWORK
+::
+
+    NETWORK = "NETWORK_B" 
+    STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 The configuration for the negotiator sets the concurrency limits:
 
-| NETWORK\_A\_LIMIT = 10  
-| NETWORK\_B\_LIMIT = 10
+::
+
+    NETWORK_A_LIMIT = 10 
+    NETWORK_B_LIMIT = 10
 
 Each network intensive job identifies itself by specifying the limit
 within the submit description file:
 
-concurrency\_limits\_expr = TARGET.NETWORK
+::
+
+    concurrency_limits_expr = TARGET.NETWORK
 
 The concurrency limit is applied based on the network of the matched
 machine.
@@ -1926,13 +2001,17 @@ the matched machine. The other limit is of a specialized application
 called ``"SWX"`` in this example. The negotiator configuration is
 extended to also include
 
-SWX\_LIMIT = 15
+::
+
+    SWX_LIMIT = 15
 
 The network intensive job that also uses two units of the ``SWX``
 application identifies the needed resources in the single submit
 command:
 
-concurrency\_limits\_expr = strcat("SWX:2 ", TARGET.NETWORK)
+::
+
+    concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
 
 Submit command **concurrency\_limits\_expr** may not be used together
 with submit command **concurrency\_limits**.

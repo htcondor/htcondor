@@ -17,6 +17,7 @@ implemented as of v8.7.8, rather than as it ought to behave.
    :maxdepth: 2
    :glob:
 
+   introduction-cloud-computing
    annex-users-guide
    using-annex-first-time
    annex-customization-guide

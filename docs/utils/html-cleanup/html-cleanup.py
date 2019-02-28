@@ -5,6 +5,9 @@ import os
 import re
 import sys
 
+from url_data import *
+
+
 
 def dump(obj):
     for attr in dir(obj):
@@ -31,17 +34,49 @@ def cleanup_pre_contents(data):
 
 # Cleans up the markup of a table
 def cleanup_table(data):
-
+    # First, determine how many columns this table has.
+    num_columns = 0
+    for index, token in enumerate(data):
+        if token.name == "tr":
+            this_row_columns = len(list(token.children))
+            if this_row_columns > num_columns:
+                num_columns = this_row_columns
+    # Now determine which elements we want to remove from the table.
+    # Do not remove them now, that causes the iterator to miss elements.
+    # Instead flag them for removal later.
+    tokens_to_remove = []
     for index, token in enumerate(data):
         if type(token) is bs4.element.Tag:
-            #print("token.name = " + str(token.name))
+            #print("\n\ntoken name = " + str(token.name) + ", # children = " + str(len(list(token.children))))
+            #print("token = " + str(token))
             # Remove all the <tr class="hline">...</tr> tags
             if token.name == "tr" and "class" in token.attrs.keys():
-                data.remove(token)
-            #for child in token.children:
-            #    print("child = " + str(child))
-                    
+                tokens_to_remove.append(token)
+                #print("Marking index " + str(index) + " for removal")
+            elif token.name == "colgroup":
+                tokens_to_remove.append(token)
+                #print("Marking index " + str(index) + " for removal")
+            elif len(list(token.children)) != num_columns:
+                tokens_to_remove.append(token)
+                #print("Marking index " + str(index) + " for removal")
+    # Now, finally, remove all the bad elements.
+    for index, token in enumerate(tokens_to_remove):
+        data.remove(token)
     return data
+
+# Updates a link URL and also adds in the correct title
+def update_link(data):
+    updated_link = data
+    # Try updating the link. If the link is external, the following block will fail and the link will remain as-is.
+    try:
+        # Determine what page this is linking to
+        old_url = data['href'].split("#")[0]
+        updated_link['href'] = updated_urls[old_url]
+        updated_link.string = updated_titles[old_url]
+    except:
+        print("Link " + str(data) + " is external, ignoring")
+    return updated_link
+
 
 
 def main():
@@ -76,15 +111,16 @@ def main():
         tag.decompose()
 
     # Delete the "Contents" and "Index" links. Also delete all empty links.
+    # Wait, we can use the empty links to identify indexes. Keep them for now.
     links_tags = soup.find_all("a")
     for tag in links_tags:
         if tag.string:
             if tag.string == "Contents" or tag.string == "Index":
                 tag.decompose()
-        else:
-            # We don't want to delete links that have an href set
-            if "href" not in tag.attrs:
-                tag.decompose()
+        #else:
+        #    # We don't want to delete links that have an href set
+        #    if "href" not in tag.attrs:
+        #        tag.decompose()
 
     # Delete the table of contents
     toc_tags = soup.find_all("div", attrs={"class": "sectionTOCS"})
@@ -179,6 +215,10 @@ def main():
                 new_tag.contents = tag.contents
         tag.replace_with(new_tag)
 
+    # Soup is confused. Reload.
+    html_dump = str(soup)
+    soup = bs4.BeautifulSoup(html_dump, features="lxml")
+
     # Convert all <div class="verbatim">...</div> tags to <pre>...</pre>
     pre_tags = soup.find_all("div", attrs={"class": "verbatim"})
     print("Found " + str(len(pre_tags)) + " verbatim divs")
@@ -220,11 +260,37 @@ def main():
         new_tag.contents = cleanup_table(tag.contents)
         tag.replace_with(new_tag)
 
+    # Update links to point to correct URLs
+    a_tags = soup.find_all("a")
+    print("Found " + str(len(a_tags)) + " a tags")
+    for tag in a_tags:
+        if "href" in tag.attrs.keys():
+            updated_link = update_link(tag)
+            tag.replace_with(updated_link)
+
+    # Soup is confused. Reload.
+    html_dump = str(soup)
+    soup = bs4.BeautifulSoup(html_dump, features="lxml")
+
+    # Update images to point to correct src files
+    # .... not worth it. We only have ~10 images in strange formats. Do it manually.
+
+    # Is there anything we can do to automate the index items?
+    # .... maybe by looking at the <a id="...">...</a> tags generated from the \Macro tags?
+    index_tags = soup.find_all("a")
+    print("Found " + str(len(index_tags)) + " a tags which may or may not be index items")
+    for tag in index_tags:
+        if "id" in tag.attrs.keys():
+            new_tag = soup.new_tag("div")
+            #new_tag.string = "INDEX GOES HERE"
+            #tag.replace_with(new_tag)
+            
+
 
     # Does outputting pretty HTML matter? 
     # Actually we do NOT want pretty HTML, since this introduces spacing that confuses pandoc.
-    # pretty_html = soup.prettify().encode('utf-8')
-    # print(str(pretty_html))
+    #pretty_html = soup.prettify().encode('utf-8')
+    #print(str(pretty_html))
     output_html = str(soup)
 
     # Overwrite the original file with the parseable markup

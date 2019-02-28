@@ -53,8 +53,9 @@ results in the jobs with checkpoints remaining indefinitely queued, due
 to the lack of finding their checkpoints. It is therefore best to either
 remove jobs from the queues or let them complete before installing a
 checkpoint server. It is advisable to shut the pool down before doing
-any maintenance on the checkpoint server. See
-section \ `3.2.5 <InstallationStartUpShutDownandReconfiguration.html#x30-1670003.2.5>`__
+any maintenance on the checkpoint server. See section \ `Installation,
+Start Up, Shut Down and
+Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
 for details on shutting down the pool.
 
 A graduated installation of the checkpoint server may be accomplished by
@@ -97,19 +98,20 @@ There are three steps necessary towards running a checkpoint server:
     The other optional variables are:
 
      ``DAEMON_LIST``
-        Described in
-        section \ `3.5.7 <ConfigurationMacros.html#x33-1940003.5.7>`__.
-        To have the checkpoint server managed by the *condor\_master*,
-        the ``DAEMON_LIST`` variable’s value must list both ``MASTER``
-        and ``CKPT_SERVER``. Also add ``STARTD`` to allow jobs to run on
-        the checkpoint server machine. Similarly, add ``SCHEDD`` to
-        permit the submission of jobs from the checkpoint server
-        machine.
+        Described in section \ `Configuration
+        Macros <../admin-manual/configuration-macros.html>`__. To have
+        the checkpoint server managed by the *condor\_master*, the
+        ``DAEMON_LIST`` variable’s value must list both ``MASTER`` and
+        ``CKPT_SERVER``. Also add ``STARTD`` to allow jobs to run on the
+        checkpoint server machine. Similarly, add ``SCHEDD`` to permit
+        the submission of jobs from the checkpoint server machine.
 
     The remainder of these variables are the checkpoint server-specific
     versions of the HTCondor logging entries, as described in
-    section \ `3.5.2 <ConfigurationMacros.html#x33-1890003.5.2>`__ on
-    page \ `608 <ConfigurationMacros.html#x33-1890003.5.2>`__.
+    section \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__ on
+    page \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__.
 
      ``CKPT_SERVER_LOG``
         The location of the checkpoint server log.
@@ -125,8 +127,8 @@ There are three steps necessary towards running a checkpoint server:
     that host to enable the *condor\_master* to notice the new
     configuration. Do this by sending a *condor\_restart* command from
     any machine with administrator access to the pool. See
-    section \ `3.8.9 <Security.html#x36-2920003.8.9>`__ on
-    page \ `1052 <Security.html#x36-2920003.8.9>`__ for full details
+    section \ `Security <../admin-manual/security.html>`__ on
+    page \ `Security <../admin-manual/security.html>`__ for full details
     about IP/host-based security in HTCondor.
 
     Note that when the *condor\_ckpt\_server* starts up, it will
@@ -156,10 +158,11 @@ There are three steps necessary towards running a checkpoint server:
 
     Once these variables are in place, send the command
     *condor\_reconfig* to all machines in the pool, so the changes take
-    effect. This is described in
-    section \ `3.2.6 <InstallationStartUpShutDownandReconfiguration.html#x30-1680003.2.6>`__
-    on
-    page \ `513 <InstallationStartUpShutDownandReconfiguration.html#x30-1680003.2.6>`__.
+    effect. This is described in section \ `Installation, Start Up, Shut
+    Down and
+    Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
+    on page \ `Installation, Start Up, Shut Down and
+    Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__.
 
 Configuring the Pool to Use Multiple Checkpoint Servers
 -------------------------------------------------------
@@ -186,12 +189,13 @@ Additionally, variable ``STARTER_CHOOSES_CKPT_SERVER`` should be set to
 ``True`` (the default) on these submitting machines. When ``True``, this
 variable specifies that the checkpoint server specified by the machine
 running the job should be used instead of the checkpoint server
-specified by the submitting machine. See
-section \ `3.5.6 <ConfigurationMacros.html#x33-1930003.5.6>`__ on
-page \ `635 <ConfigurationMacros.html#x33-1930003.5.6>`__ for more
-details. This allows the job to use the checkpoint server closest to the
-machine on which it is running, instead of the server closest to the
-submitting machine. For convenience, set these parameters in the global
+specified by the submitting machine. See section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ for more details.
+This allows the job to use the checkpoint server closest to the machine
+on which it is running, instead of the server closest to the submitting
+machine. For convenience, set these parameters in the global
 configuration file.
 
 Second, set ``CKPT_SERVER_HOST`` on each machine. This identifies the
@@ -201,9 +205,10 @@ checkpoint servers, set this in the local configuration file.
 
 Third, send a *condor\_reconfig* command to all machines in the pool, so
 that the changes take effect. This is described in
-section \ `3.2.6 <InstallationStartUpShutDownandReconfiguration.html#x30-1680003.2.6>`__
-on
-page \ `513 <InstallationStartUpShutDownandReconfiguration.html#x30-1680003.2.6>`__.
+section \ `Installation, Start Up, Shut Down and
+Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__
+on page \ `Installation, Start Up, Shut Down and
+Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__.
 
 After completing these three steps, the jobs in the pool will send their
 checkpoints to the nearest checkpoint server. On restart, a job will
@@ -302,9 +307,9 @@ domain.
 The checkpoint server domain ``Requirements`` or ``Rank`` expressions
 can be automatically appended to all standard universe jobs submitted in
 the pool using the configuration variables ``APPEND_REQ_STANDARD`` or
-``APPEND_RANK_STANDARD``. See
-section \ `3.5.12 <ConfigurationMacros.html#x33-1990003.5.12>`__ on
-page \ `724 <ConfigurationMacros.html#x33-1990003.5.12>`__ for more
-details.
+``APPEND_RANK_STANDARD``. See section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ for more details.
 
       

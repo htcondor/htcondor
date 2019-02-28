@@ -1,7 +1,7 @@
       
 
-condor\_prio
-============
+*condor\_prio*
+==============
 
 change priority of jobs in the HTCondor queue
 

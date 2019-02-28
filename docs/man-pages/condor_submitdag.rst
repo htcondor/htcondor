@@ -1,7 +1,7 @@
       
 
-condor\_submit\_dag
-===================
+*condor\_submit\_dag*
+=====================
 
 Manage and queue jobs within a specified DAG for execution on remote
 machines
@@ -84,8 +84,8 @@ Options
     once the number of idle procs falls below the specified limit.
     *NumberOfProcs* is a non-negative integer. If this option is
     omitted, the number of idle procs is limited by the configuration
-    variable ``DAGMAN_MAX_JOBS_IDLE`` (see
-     `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__), which
+    variable ``DAGMAN_MAX_JOBS_IDLE`` (see  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 1000. To disable this limit, set *NumberOfProcs* to 0.
     Note that submit description files that queue multiple procs can
     cause the *NumberOfProcs* limit to be exceeded. Setting
@@ -101,7 +101,8 @@ Options
     in the cluster. *NumberOfClusters* is a non-negative integer. If
     this option is omitted, the number of clusters is limited by the
     configuration variable ``DAGMAN_MAX_JOBS_SUBMITTED`` (see
-     `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__), which
+     `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 0 (unlimited).
  **-dagman **\ *DagmanExecutable*
     Allows the specification of an alternate *condor\_dagman* executable
@@ -112,14 +113,16 @@ Options
     running at one time. *NumberOfPreScripts* is a non-negative integer.
     If this option is omitted, the number of PRE scripts is limited by
     the configuration variable ``DAGMAN_MAX_PRE_SCRIPTS`` (see
-     `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__), which
+     `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
  **-maxpost **\ *NumberOfPostScripts*
     Sets the maximum number of POST scripts within the DAG that may be
     running at one time. *NumberOfPostScripts* is a non-negative
     integer. If this option is omitted, the number of POST scripts is
     limited by the configuration variable ``DAGMAN_MAX_POST_SCRIPTS``
-    (see  `3.5.23 <ConfigurationMacros.html#x33-2120003.5.23>`__), which
+    (see  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__), which
     defaults to 20.
  **-notification **\ *value*
     Sets the e-mail notification for DAGMan itself. This information

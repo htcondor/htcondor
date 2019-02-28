@@ -21,10 +21,10 @@ a higher job priority than 5.
 
 For the simple case, each job can be given a distinct priority. For an
 already queued job, its priority may be set with the *condor\_prio*
-command; see the example in
-section \ `2.6.4 <ManagingaJob.html#x18-570002.6.4>`__, or the
-*condor\_prio* manual page \ `1976 <Condorprio.html#x128-90500012>`__
-for details. This sets the value of job ClassAd attribute ``JobPrio``.
+command; see the example in section \ `Managing a
+Job <../users-manual/managing-a-job.html>`__, or the *condor\_prio*
+manual page \ `condor\_prio <../man-pages/condor_prio.html>`__ for
+details. This sets the value of job ClassAd attribute ``JobPrio``.
 
 A fine-grained categorization of jobs and their ordering is available
 for experts by using the job ClassAd attributes: ``PreJobPrio1``,
@@ -37,7 +37,8 @@ Machines are allocated to users based upon a user’s priority. A lower
 numerical value for user priority means higher priority, so a user with
 priority 5 will get more resources than a user with priority 50. User
 priorities in HTCondor can be examined with the *condor\_userprio*
-command (see page \ `2298 <Condoruserprio.html#x160-116800012>`__).
+command (see
+page \ `condor\_userprio <../man-pages/condor_userprio.html>`__).
 HTCondor administrators can set and change individual user priorities
 with the same utility.
 
@@ -77,9 +78,9 @@ preempt lower priority jobs that have run for at least one hour. So in
 the previous example, in the worse case it could take up to a maximum of
 one hour until the higher priority user receives a fair share of
 machines. For a general discussion of limiting preemption, please see
-section
-`3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2520003.7.1>`__
-of the Administrator’s manual.
+section `Policy Configuration for Execute Hosts and for Submit
+Hosts <../admin-manual/policy-configuration.html>`__ of the
+Administrator’s manual.
 
 User priorities are keyed on ``<username>@<domain>``, for example
 ``johndoe@cs.wisc.edu``. The domain name to use, if any, is configured
@@ -88,7 +89,7 @@ resource allocation is not impacted by which machine the user submits
 from or even if the user submits jobs from multiple machines.
 
 An extra feature is the ability to submit a job as a nice job (see
-page \ `2205 <Condorsubmit.html#x149-108400012>`__). Nice jobs
+page \ `condor\_submit <../man-pages/condor_submit.html>`__). Nice jobs
 artificially boost the user priority by ten million just for the nice
 job. This effectively means that nice jobs will only run on machines
 that no other HTCondor job (that is, non-niced job) wants. In a similar

@@ -78,7 +78,7 @@ directories:
     directory containing source for some interfaces.
 
 Preparation
-~~~~~~~~~~~
+'''''''''''
 
 Before installation, you need to make a few important decisions about
 the basic layout of your pool. These decisions answer the following
@@ -150,7 +150,7 @@ questions:
     enforce security and policy decisions. You can install HTCondor as
     any user; however there are serious security and performance
     consequences do doing a non-root installation. Please see
-    section \ `3.8.13 <Security.html#x36-2970003.8.13>`__ in the manual
+    section \ `Security <../admin-manual/security.html>`__ in the manual
     for the details and ramifications of installing and running HTCondor
     as a Unix user other than root.
 
@@ -197,7 +197,7 @@ be shared?
     specify either via the ``CONDOR_IDS`` environment variable or the
     ``CONDOR_IDS`` config file setting which uid.gid pair should be used
     for the ownership of various HTCondor files. See
-    section \ `3.8.13 <Security.html#x36-2960003.8.13>`__ on UIDs in
+    section \ `Security <../admin-manual/security.html>`__ on UIDs in
     HTCondor in the Administrator’s Manual for details.
 
  6. Where should the machine-specific directories for HTCondor go?
@@ -238,11 +238,11 @@ be shared?
         machine. As a result, disk space requirements for the ``spool``
         directory can be quite large, particularly if users are
         submitting jobs with very large executables or image sizes. By
-        using a checkpoint server (see
-        section \ `3.10 <TheCheckpointServer.html#x38-3250003.10>`__ on
-        Installing a Checkpoint Server on for details), you can ease the
-        disk space requirements, since all checkpoint files are stored
-        on the server instead of the spool directories for each machine.
+        using a checkpoint server (see section \ `The Checkpoint
+        Server <../admin-manual/checkpoint-server.html>`__ on Installing
+        a Checkpoint Server on for details), you can ease the disk space
+        requirements, since all checkpoint files are stored on the
+        server instead of the spool directories for each machine.
         However, the initial checkpoint files (the executables for all
         the clusters you submit) are still stored in the spool
         directory, so you will need some space, even with a checkpoint
@@ -303,13 +303,14 @@ be shared?
         global file permitting different daemons to run, different
         policies for when to start and stop HTCondor jobs, and so on.
         There may be configuration files specific to each platform in
-        the pool. See
-        section \ `3.14.4 <SettingUpforSpecialEnvironments.html#x42-3530003.14.4>`__
+        the pool. See section \ `Setting Up for Special
+        Environments <../admin-manual/setting-up-special-environments.html>`__
         on about Configuring HTCondor for Multiple Platforms for
         details.
 
         The location of configuration files is described in
-        section \ `3.3.2 <IntroductiontoConfiguration.html#x31-1710003.3.2>`__.
+        section \ `Introduction to
+        Configuration <../admin-manual/introduction-to-configuration.html>`__.
 
      Release Directory
         Every binary distribution contains a contains five
@@ -379,7 +380,8 @@ be shared?
 
  8. Am I using AFS?
     If you are using AFS at your site, be sure to read the
-    section \ `3.14.1 <SettingUpforSpecialEnvironments.html#x42-3450003.14.1>`__
+    section \ `Setting Up for Special
+    Environments <../admin-manual/setting-up-special-environments.html>`__
     in the manual. HTCondor does not currently have a way to
     authenticate itself to AFS. A solution is not ready for Version
     8.9.1. This implies that you are probably not going to want to have
@@ -388,8 +390,8 @@ be shared?
     you can share one copy of those files and upgrade them in a
     centralized location. You will also have to do something special if
     you submit jobs to HTCondor from a directory on AFS. Again, read
-    manual
-    section \ `3.14.1 <SettingUpforSpecialEnvironments.html#x42-3450003.14.1>`__
+    manual section \ `Setting Up for Special
+    Environments <../admin-manual/setting-up-special-environments.html>`__
     for all the details.
 
  9. Do I have enough disk space for HTCondor?
@@ -402,7 +404,7 @@ be shared?
     question 6 above for details on this.
 
 Unix Installation from a repository
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''
 
 Installing HTCondor from repositories preferred for systems that you
 administer. If you do not have administrative access, use the tarball
@@ -414,7 +416,7 @@ Debian and Ubuntu LTS. Visit the installation documentation at
 `https://research.cs.wisc.edu/htcondor/instructions/ <https://research.cs.wisc.edu/htcondor/instructions/>`__
 
 Unix Installation from a Tarball
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''
 
 **Note that installation from a tarball is no longer the preferred
 method for installing HTCondor on Unix systems. Installation via RPM or
@@ -539,10 +541,11 @@ pool, run
     --local-dir=/scratch/condor --type=execute,submit
 
 See the *condor\_configure* manual
-page \ `1850 <Condorconfigure.html#x106-73900012>`__ for details.
+page \ `condor\_configure <../man-pages/condor_configure.html>`__ for
+details.
 
 Starting HTCondor Under Unix After Installation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''
 
 Now that HTCondor has been installed on the machine(s), there are a few
 things to check before starting up HTCondor.
@@ -551,8 +554,8 @@ things to check before starting up HTCondor.
    a lot of possible settings and you should at least take a look at the
    first two main sections to make sure everything looks okay. In
    particular, you might want to set up security for HTCondor. See the
-   section \ `3.8.1 <Security.html#x36-2690003.8.1>`__ to learn how to
-   do this.
+   section \ `Security <../admin-manual/security.html>`__ to learn how
+   to do this.
 #. For Linux platforms, run the *condor\_kbdd* to monitor keyboard and
    mouse activity on all machines within the pool that will run a
    *condor\_startd*; these are machines that execute jobs. To do this,
@@ -664,18 +667,20 @@ can and should do:
    following commands that you would normally use to link your code:
    gcc, g++, g77, cc, acc, c89, CC, f77, fort77 and ld. If you complete
    the full install, you will be able to use condor\_compile with any
-   command whatsoever, in particular, make. See
-   section \ `3.14.5 <SettingUpforSpecialEnvironments.html#x42-3560003.14.5>`__
+   command whatsoever, in particular, make. See section \ `Setting Up
+   for Special
+   Environments <../admin-manual/setting-up-special-environments.html>`__
    in the manual for directions.
 #. Try building and submitting some test jobs. See ``examples/README``
    for details.
-#. If your site uses the AFS network file system, see
-   section \ `3.14.1 <SettingUpforSpecialEnvironments.html#x42-3450003.14.1>`__
+#. If your site uses the AFS network file system, see section \ `Setting
+   Up for Special
+   Environments <../admin-manual/setting-up-special-environments.html>`__
    in the manual.
 #. We strongly recommend that you start up HTCondor (run the
    *condor\_master* daemon) as user root. If you must start HTCondor as
    some user other than root, see
-   section \ `3.8.13 <Security.html#x36-2970003.8.13>`__.
+   section \ `Security <../admin-manual/security.html>`__.
 
 Installation on Windows
 -----------------------
@@ -701,7 +706,7 @@ Local System account. Running the HTCondor services as any other account
 (such as a domain user) is not supported and could be problematic.
 
 Installation Requirements
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 -  HTCondor for Windows is supported for Windows Vista or a more recent
    version.
@@ -713,7 +718,7 @@ Installation Requirements
 -  HTCondor for Windows uses the Visual C++ 2012 C runtime library.
 
 Preparing to Install HTCondor under Windows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''
 
 Before installing the Windows version of HTCondor, there are two major
 decisions to make about the basic layout of the pool.
@@ -756,7 +761,7 @@ section \ `3.2.3 <#x30-1610003.2.3>`__. If unsure, read on.
    space.
 
 Installation Procedure Using the MSI Program
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''
 
 Installation of HTCondor must be done by a user with administrator
 privileges. After installation, the HTCondor services will be run under
@@ -838,8 +843,8 @@ and choosing options within the following steps.
  STEP 4: The Account Domain.
     Enter the machine’s accounting (or UID) domain. On this version of
     HTCondor for Windows, this setting is only used for user priorities
-    (see
-    section \ `3.6 <UserPrioritiesandNegotiation.html#x34-2320003.6>`__)
+    (see section \ `User Priorities and
+    Negotiation <../admin-manual/user-priorities-negotiation.html>`__)
     and to form a default e-mail address for the user.
 
  STEP 5: E-mail Settings.
@@ -887,7 +892,7 @@ and choosing options within the following steps.
     For more details on these access permissions, and others that can be
     manually changed in your configuration file, please see the section
     titled Setting Up IP/Host-Based Security in HTCondor in section
-    section \ `3.8.9 <Security.html#x36-2920003.8.9>`__.
+    section \ `Security <../admin-manual/security.html>`__.
 
  STEP 8: VM Universe Setting.
     A radio button determines whether this machine will be configured to
@@ -943,7 +948,7 @@ and choosing options within the following steps.
     required file services are available.
 
 Unattended Installation Procedure Using the Included Setup Program
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 This section details how to run the HTCondor for Windows installer in an
 unattended batch mode. This mode is one that occurs completely from the
@@ -1017,18 +1022,18 @@ of each property as it applies to unattended installations:
     is a list of host names that are allowed to issue READ commands to
     HTCondor daemons. This value should be set in accordance with the
     ``HOSTALLOW_READ`` setting in the configuration file, as described
-    in section \ `3.8.9 <Security.html#x36-2920003.8.9>`__.
+    in section \ `Security <../admin-manual/security.html>`__.
  HOSTALLOWWRITE
     is a list of host names that are allowed to issue WRITE commands to
     HTCondor daemons. This value should be set in accordance with the
     ``HOSTALLOW_WRITE`` setting in the configuration file, as described
-    in section \ `3.8.9 <Security.html#x36-2920003.8.9>`__.
+    in section \ `Security <../admin-manual/security.html>`__.
  HOSTALLOWADMINISTRATOR
     is a list of host names that are allowed to issue ADMINISTRATOR
     commands to HTCondor daemons. This value should be set in accordance
     with the ``HOSTALLOW_ADMINISTRATOR`` setting in the configuration
     file, as described in
-    section \ `3.8.9 <Security.html#x36-2920003.8.9>`__.
+    section \ `Security <../admin-manual/security.html>`__.
  INSTALLDIR
     defines the path to the directory where HTCondor will be installed.
  POOLHOSTNAME
@@ -1082,7 +1087,7 @@ Microsoft’s website at
 `http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx <http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx>`__.
 
 Manual Installation HTCondor on Windows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''
 
 If you are to install HTCondor on many different machines, you may wish
 to use some other mechanism to install HTCondor on additional machines
@@ -1157,7 +1162,7 @@ using the provided GUI-based setup program:
     in these directories are subject to removal.
 
 Starting HTCondor Under Windows After Installation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''''
 
 After the installation of HTCondor is completed, the HTCondor service
 must be started. If you used the GUI-based setup program to install
@@ -1196,11 +1201,12 @@ and the HTCondor bin directory should be in your path, so you can issue
 the normal HTCondor commands, such as *condor\_q* and *condor\_status*.
 
 HTCondor is Running Under Windows ... Now What?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''
 
 Once HTCondor services are running, try submitting test jobs. Example 2
-within section \ `2.5.1 <SubmittingaJob.html#x17-290002.5.1>`__ presents
-a vanilla universe job.
+within section \ `Submitting a
+Job <../users-manual/submitting-a-job.html>`__ presents a vanilla
+universe job.
 
 Upgrading – Installing a New Version on an Existing Pool
 --------------------------------------------------------
@@ -1295,7 +1301,7 @@ All of the commands described in this section are subject to the
 security policy chosen for the HTCondor pool. As such, the commands must
 be either run from a machine that has the proper authorization, or run
 by a user that is authorized to issue the commands.
-Section \ `3.8 <Security.html#x36-2680003.8>`__ details the
+Section \ `Security <../admin-manual/security.html>`__ details the
 implementation of security in HTCondor.
 
  Shutting Down HTCondor
@@ -1435,8 +1441,9 @@ each copy of the global configuration file before issuing the
 Issuing a *condor\_reconfig* command is inadequate for some
 configuration variables. For those, a restart of HTCondor is required.
 Those configuration variables that require a restart are listed in
-section \ `3.3.11 <IntroductiontoConfiguration.html#x31-1800003.3.11>`__.
+section \ `Introduction to
+Configuration <../admin-manual/introduction-to-configuration.html>`__.
 The manual page for *condor\_restart* is at
- `2051 <Condorrestart.html#x136-97600012>`__.
+ `condor\_restart <../man-pages/condor_restart.html>`__.
 
       

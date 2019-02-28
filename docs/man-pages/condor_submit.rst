@@ -1,7 +1,7 @@
       
 
-condor\_submit
-==============
+*condor\_submit*
+================
 
 Queue jobs for execution under HTCondor
 
@@ -216,12 +216,12 @@ Submit Description File Commands
 --------------------------------
 
 Note: more information on submitting HTCondor jobs can be found here:
- `2.5 <SubmittingaJob.html#x17-280002.5>`__.
+ `Submitting a Job <../users-manual/submitting-a-job.html>`__.
 
 As of version 8.5.6, the *condor\_submit* language supports multi-line
 values in commands. The syntax is the same as the configuration language
-(see more details here:
- `3.3.5 <IntroductiontoConfiguration.html#x31-1740003.3.5>`__).
+(see more details here:  `Introduction to
+Configuration <../admin-manual/introduction-to-configuration.html>`__).
 
 Each submit description file describes one or more clusters of jobs to
 be placed in the HTCondor execution pool. All jobs in a cluster must
@@ -575,7 +575,8 @@ BASIC COMMANDS
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor\_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  `2.10.9 <DAGManApplications.html#x22-940002.10.9>`__ for more
+    (see  `DAGMan
+    Applications <../users-manual/dagman-applications.html>`__ for more
     details).
 
  queue [**<int expr>**\ ]
@@ -809,9 +810,9 @@ COMMANDS FOR MATCHMAKING
     View the requirements of a job which has already been submitted
     (along with everything else about the job ClassAd) with the command
     *condor\_q -l*; see the command reference for *condor\_q* on
-    page \ `1984 <Condorq.html#x130-92000012>`__. Also, see the HTCondor
-    Users Manual for complete information on the syntax and available
-    attributes that can be used in the ClassAd expression.
+    page \ `condor\_q <../man-pages/condor_q.html>`__. Also, see the
+    HTCondor Users Manual for complete information on the syntax and
+    available attributes that can be used in the ClassAd expression.
 
 FILE TRANSFER COMMANDS
 
@@ -2233,8 +2234,8 @@ ADVANCED COMMANDS
     attributes and their values are written to the job event log
     whenever any event is being written to the log. This implements the
     same thing as the configuration variable
-    ``EVENT_LOG_INFORMATION_ATTRS`` (see
-    page \ `617 <ConfigurationMacros.html#x33-1890003.5.2>`__), but it
+    ``EVENT_LOG_INFORMATION_ATTRS`` (see page \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__), but it
     applies to the job event log, instead of the system event log.
  JobBatchName = <batch\_name>
     Set the batch name for this submit. The batch name is displayed by
@@ -2436,8 +2437,9 @@ ADVANCED COMMANDS
     above. Often, the command name does not directly correspond to an
     attribute name; furthermore, many submit commands result in actions
     more complex than simply setting an attribute or attributes. See
-     `2351 <JobClassAdAttributes.html#x170-1234000A.2>`__ for a list of
-    HTCondor job attributes.
+     `Job ClassAd
+    Attributes <../classad-attributes/job-classad-attributes.html>`__
+    for a list of HTCondor job attributes.
 
 MACROS AND COMMENTS
 

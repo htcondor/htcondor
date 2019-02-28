@@ -28,23 +28,24 @@ every time will need to use a separate subdirectory for the output of
 each run.
 
 The *condor\_submit* manual page is on
-page \ `2135 <Condorsubmit.html#x149-108000012>`__ and contains a
-complete and full description of how to use *condor\_submit*. It also
-includes descriptions \ `2139 <Condorsubmit.html#x149-108400012>`__ of
+page \ `condor\_submit <../man-pages/condor_submit.html>`__ and contains
+a complete and full description of how to use *condor\_submit*. It also
+includes
+descriptions \ `condor\_submit <../man-pages/condor_submit.html>`__ of
 all of the many commands that may be placed into a submit description
 file. In addition, the index lists entries for each command under the
 heading of Submit Commands.
 
 Note that job ClassAd attributes can be set directly in a submit file
 using the **+<attribute> = <value>** syntax (see
- `2206 <Condorsubmit.html#x149-108400012>`__ for details.)
+ `condor\_submit <../man-pages/condor_submit.html>`__ for details.)
 
 Sample submit description files
 -------------------------------
 
 In addition to the examples of submit description files given here,
 there are more in the *condor\_submit* manual page (see
- `2135 <Condorsubmit.html#x149-108000012>`__).
+ `condor\_submit <../man-pages/condor_submit.html>`__).
 
  Example 1
 
@@ -764,8 +765,10 @@ examples, you see that writing ClassAd expressions is intuitive,
 especially if you are familiar with the programming language C. There
 are some pretty nifty expressions you can write with ClassAds. A
 complete description of ClassAds and their expressions can be found in
-section \ `4.1 <HTCondorsClassAdMechanism.html#x48-3980004.1>`__ on
-page \ `1277 <HTCondorsClassAdMechanism.html#x48-3980004.1>`__.
+section \ `HTCondor's ClassAd
+Mechanism <../misc-concepts/classad-mechanism.html>`__ on
+page \ `HTCondor's ClassAd
+Mechanism <../misc-concepts/classad-mechanism.html>`__.
 
 All of the commands in the submit description file are case insensitive,
 except for the ClassAd attribute string values. ClassAd attribute names
@@ -789,14 +792,14 @@ in the queue, can be seen with the *condor\_q -l* command. This shows
 all the defined attributes for current jobs in the queue.
 
 A list of defined ClassAd attributes for job ClassAds is given in the
-unnumbered Appendix on
-page \ `2351 <JobClassAdAttributes.html#x170-1234000A.2>`__. A list of
-defined ClassAd attributes for machine ClassAds is given in the
-unnumbered Appendix on
-page \ `2397 <MachineClassAdAttributes.html#x171-1235000A.3>`__.
+unnumbered Appendix on page \ `Job ClassAd
+Attributes <../classad-attributes/job-classad-attributes.html>`__. A
+list of defined ClassAd attributes for machine ClassAds is given in the
+unnumbered Appendix on page \ `Machine ClassAd
+Attributes <../classad-attributes/machine-classad-attributes.html>`__.
 
 Rank Expression Examples
-~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''
 
 When considering the match between a job and a machine, rank is used to
 choose a match from among all machines that satisfy the job’s
@@ -997,7 +1000,7 @@ the submitting machine. This specification is done within the job’s
 submit description file.
 
 Specifying If and When to Transfer Files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''
 
 To enable the file transfer mechanism, place two commands in the job’s
 submit description file: **should\_transfer\_files** and
@@ -1095,7 +1098,7 @@ would produce undefined file access semantics. Therefore, this
 combination is prohibited by *condor\_submit*.
 
 Specifying What Files to Transfer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''
 
 If the file transfer mechanism is enabled, HTCondor will transfer the
 following files before the job is run on a remote machine.
@@ -1219,7 +1222,7 @@ Note that only the base name is used in the naming and placement of the
 file specified with ``d1/o3``.
 
 File Paths for File Transfer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''
 
 The file transfer mechanism specifies file names and/or paths on both
 the file system of the submit machine and on the file system of the
@@ -1454,7 +1457,7 @@ the examples:
         Queue
 
 Public Input Files
-~~~~~~~~~~~~~~~~~~
+''''''''''''''''''
 
 There are some cases where HTCondor’s file transfer mechanism is
 inefficient. For jobs that need to run a large number of times, the
@@ -1492,7 +1495,7 @@ available and world-readable, so this feature should not be used for any
 sensitive data.
 
 Behavior for Error Cases
-~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''
 
 This section describes HTCondor’s behavior for some error cases in
 dealing with the transfer of files.
@@ -1527,14 +1530,15 @@ dealing with the transfer of files.
        because the system is out of disk space.
 
 File Transfer Using a URL
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 Instead of file transfer that goes only between the submit machine and
 the execute machine, HTCondor has the ability to transfer files from a
 location specified by a URL for a job’s input file, or from the execute
 machine to a location specified by a URL for a job’s output file(s).
 This capability requires administrative set up, as described in
-section \ `3.14.2 <SettingUpforSpecialEnvironments.html#x42-3480003.14.2>`__.
+section \ `Setting Up for Special
+Environments <../admin-manual/setting-up-special-environments.html>`__.
 
 The transfer of an input file is restricted to vanilla and vm universe
 jobs only. HTCondor’s file transfer mechanism must be enabled.
@@ -1576,7 +1580,7 @@ is specified by further adding a submit command of the form:
     transfer_output_files = file1, file2
 
 Requirements and Rank for File Transfer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''
 
 The ``requirements`` expression for a job must depend on the
 should\_transfer\_files command. The job must specify the correct logic
@@ -1666,13 +1670,13 @@ set and reference environment variables for a job or job cluster.
 Within a submit description file, the user may define environment
 variables for the job’s environment by using the **environment**
 command. See within the *condor\_submit* manual page at
-section \ `12 <Condorsubmit.html#x149-108400012>`__ for more details
-about this command.
+section \ `condor\_submit <../man-pages/condor_submit.html>`__ for more
+details about this command.
 
 The submitter’s entire environment can be copied into the job ClassAd
 for the job at job submission. The **getenv** command within the submit
 description file does this, as described at
-section \ `12 <Condorsubmit.html#x149-108400012>`__.
+section \ `condor\_submit <../man-pages/condor_submit.html>`__.
 
 If the environment is set with the **environment** command and
 **getenv** is also set to true, values specified with **environment**
@@ -1695,8 +1699,9 @@ executing job that may be useful for the job to reference.
    which the job is run. On machines with only a single slot, the value
    of this variable will be 1, just like the ``SlotID`` attribute in the
    machine’s ClassAd. This setting is available in all universes. See
-   section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2530003.7.1>`__
-   for more details about SMP machines and their configuration.
+   section \ `Policy Configuration for Execute Hosts and for Submit
+   Hosts <../admin-manual/policy-configuration.html>`__ for more details
+   about SMP machines and their configuration.
 -  ``X509_USER_PROXY`` gives the full path to the X.509 user proxy file
    if one is associated with the job. Typically, a user will specify
    **x509userproxy** in the submit description file. This setting is
@@ -1750,15 +1755,15 @@ program is to be executed on a machine with the same platform as the
 machine where the job is submitted.
 
 Cross submission works for all universes except ``scheduler`` and
-``local``. See
-section \ `5.3.11 <TheGridUniverse.html#x56-4870005.3.11>`__ for how
-matchmaking works in the ``grid`` universe. The burden is on the user to
-both obtain and specify the correct executable for the target
-architecture. To list the architecture and operating systems of the
-machines in a pool, run *condor\_status*.
+``local``. See section \ `The Grid
+Universe <../grid-computing/grid-universe.html>`__ for how matchmaking
+works in the ``grid`` universe. The burden is on the user to both obtain
+and specify the correct executable for the target architecture. To list
+the architecture and operating systems of the machines in a pool, run
+*condor\_status*.
 
 Vanilla Universe Example for Execution on Differing Architectures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 A more complex example of a heterogeneous submission occurs when a job
 may be executed on many different architectures to gain full use of a
@@ -1846,7 +1851,7 @@ executable is missing when it happens to match the job with a resource
 that requires the missing binary.
 
 Standard Universe Example for Execution on Differing Architectures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Jobs submitted to the standard universe may produce checkpoints. A
 checkpoint can then be used to start up and continue execution of a
@@ -1923,7 +1928,7 @@ The complete submit description file for this example:
       Queue
 
 Vanilla Universe Example for Execution on Differing Operating Systems
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The addition of several related OpSys attributes assists in selection of
 specific operating systems and versions in heterogeneous pools.
@@ -2015,8 +2020,8 @@ description file, place
 
 Access to GPU resources by an HTCondor job needs special configuration
 of the machines that offer GPUs. Details of how to set up the
-configuration are in
-section \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2580003.7.1>`__.
+configuration are in section \ `Policy Configuration for Execute Hosts
+and for Submit Hosts <../admin-manual/policy-configuration.html>`__.
 
 Interactive Jobs
 ----------------

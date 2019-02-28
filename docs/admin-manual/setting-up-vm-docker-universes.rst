@@ -15,7 +15,8 @@ What follows is not a comprehensive list of the options that help set up
 to use the **vm** universe; rather, it is intended to serve as a
 starting point for those users interested in getting **vm** universe
 jobs up and running quickly. Details of configuration variables are in
-section \ `3.5.25 <ConfigurationMacros.html#x33-2210003.5.25>`__.
+section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 Begin by installing the virtualization package on all execute machines,
 according to the vendor’s instructions. We have successfully used
@@ -67,7 +68,7 @@ options would look like this:
     VM_GAHP_LOG = $(LOG)/VMGahpLog
 
 VMware-Specific Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''
 
 To use VMware, identify the location of the *Perl* executable on the
 execute machine. In most cases, the default value should suffice:
@@ -126,7 +127,7 @@ To work around this problem:
    components.
 
 Xen-Specific and KVM-Specific Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''
 
 Once the configuration options have been set, restart the
 *condor\_startd* daemon on that host. For example:
@@ -161,7 +162,7 @@ versions, depending on features provided by the underlying tool
 *libvirt*.
 
 When a vm Universe Job Fails to Start
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''
 
 If a vm universe job should fail to launch, HTCondor will attempt to
 distinguish between a problem with the user’s job description, and a
@@ -282,7 +283,8 @@ variable ``DOCKER`` must be set. It defines the location of the Docker
 CLI and can also specify that the *condor\_starter* daemon has been
 given a password-less sudo permission to start the container as root.
 Details of the ``DOCKER`` configuration variable are in
-section \ `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__.
+section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 Docker must be installed as root by following these steps on an
 Enterprise Linux machine.

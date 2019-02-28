@@ -20,7 +20,7 @@ allow some flexibility in the execution of jobs that miss their
 execution time.
 
 Deferred Execution Time
-~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''
 
 A job’s deferral time is the exact time that HTCondor should attempt to
 execute the job. The deferral time attribute is defined as an expression
@@ -51,7 +51,7 @@ The deferral time is specified in the job’s submit description file with
 the command **deferral\_time**.
 
 Deferral Window
-~~~~~~~~~~~~~~~
+'''''''''''''''
 
 If a job arrives at its execution machine after the deferral time has
 passed, the job is evicted from the machine and put on hold in the job
@@ -73,7 +73,7 @@ The deferral window is specified in the job’s submit description file
 with the command **deferral\_window**.
 
 Preparation Time
-~~~~~~~~~~~~~~~~
+''''''''''''''''
 
 When a job defines a deferral time far in the future and then is matched
 to an execution machine, potential computation cycles are lost because
@@ -85,7 +85,7 @@ number of seconds. At this number of seconds before the deferral time,
 the job may be matched with a machine.
 
 Usage Examples
-~~~~~~~~~~~~~~
+''''''''''''''
 
 Here are examples of how the job deferral time, deferral window, and the
 preparation time may be used.
@@ -143,7 +143,7 @@ begin execution.
        deferral_prep_time = 60
 
 Limitations
-~~~~~~~~~~~
+'''''''''''
 
 There are some limitations to HTCondor’s job deferral feature.
 
@@ -178,7 +178,7 @@ enabled by specifying an **on\_exit\_remove** command for the job, such
 that the job does not leave the queue until desired.
 
 Semantics for CronTab Specification
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''
 
 A job’s execution schedule is defined by a set of specifications within
 the submit description file. HTCondor uses these to calculate a
@@ -192,29 +192,17 @@ values in the allowed values ranges.
 
 --------------
 
-Submit Command
-
-Allowed Values
-
-**cron\_minute**
-
-0 - 59
-
-**cron\_hour**
-
-0 - 23
-
-**cron\_day\_of\_month**
-
-1 - 31
-
-**cron\_month**
-
-1 - 12
-
-**cron\_day\_of\_week**
-
-0 - 7 (Sunday is 0 or 7)
++----------------------------+----------------------------+
+| **cron\_minute**           | 0 - 59                     |
++----------------------------+----------------------------+
+| **cron\_hour**             | 0 - 23                     |
++----------------------------+----------------------------+
+| **cron\_day\_of\_month**   | 1 - 31                     |
++----------------------------+----------------------------+
+| **cron\_month**            | 1 - 12                     |
++----------------------------+----------------------------+
+| **cron\_day\_of\_week**    | 0 - 7 (Sunday is 0 or 7)   |
++----------------------------+----------------------------+
 
 | 
 
@@ -286,7 +274,7 @@ operator, ranges, lists, and steps (strides) within ranges.
     (0,3,6,9,12,15,18,21).
 
 Preparation Time and Execution Window
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''
 
 The **cron\_prep\_time** command is analogous to the deferral time’s
 **deferral\_prep\_time** command. It specifies the number of seconds
@@ -330,7 +318,7 @@ execution, as long as it arrives and can begin within 6 minutes of the
 deferral time, as seen by the time kept on the execution machine.
 
 Scheduling
-~~~~~~~~~~
+''''''''''
 
 When a job using the CronTab functionality is submitted to HTCondor, use
 of at least one of the submit description file commands beginning with
@@ -368,7 +356,7 @@ ensure that a job remains in the queue. This job maintains its original
 ``ClusterId`` and ``ProcId``.
 
 Usage Examples
-~~~~~~~~~~~~~~
+''''''''''''''
 
 Here are some examples of the submit commands necessary to schedule jobs
 to run at multifarious times. Please note that it is not necessary to
@@ -411,7 +399,7 @@ with a 2-minute preparation time:
        cron_prep_time = 120
 
 Limitations
-~~~~~~~~~~~
+'''''''''''
 
 The use of the CronTab functionality has all of the same limitations of
 deferral times, because the mechanism is based upon deferral times.

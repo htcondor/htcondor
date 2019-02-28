@@ -31,9 +31,9 @@ the pool for which HTCondor can use the Java Virtual Machine.
 If there is no output from the *condor\_status* command, then HTCondor
 does not know the location details of the Java Virtual Machine on
 machines in the pool, or no machines have Java correctly installed. In
-this case, contact your system administrator or see section
-`3.15 <JavaSupportInstallation.html#x43-3830003.15>`__ for more
-information on getting HTCondor to work together with Java.
+this case, contact your system administrator or see section `Java
+Support Installation <../admin-manual/java-support-installation.html>`__
+for more information on getting HTCondor to work together with Java.
 
 A Simple Example Java Application
 ---------------------------------
@@ -106,7 +106,8 @@ submit description file becomes:
       queue
 
 For more information about using HTCondor’s file transfer mechanisms,
-see section \ `2.5.9 <SubmittingaJob.html#x17-380002.5.9>`__.
+see section \ `Submitting a
+Job <../users-manual/submitting-a-job.html>`__.
 
 To submit the job, where the submit description file is named
 ``Hello.cmd``, execute

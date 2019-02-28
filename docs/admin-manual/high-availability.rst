@@ -92,13 +92,13 @@ machine (correctly) interprets this situation as the *condor\_schedd*
 daemon is no longer running. This machine’s *condor\_master* daemon then
 acquires the lock and runs the *condor\_schedd* daemon.
 
-See section \ `3.5.7 <ConfigurationMacros.html#x33-1940003.5.7>`__, in
-the section on *condor\_master* Configuration File Macros for details
-relating to the configuration variables used to set timing and polling
-intervals.
+See section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__, in the section on
+*condor\_master* Configuration File Macros for details relating to the
+configuration variables used to set timing and polling intervals.
 
 Working with Remote Job Submission
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''
 
 Remote job submission requires identification of the job queue,
 submitting with a command similar to:
@@ -117,10 +117,12 @@ each potentially running *condor\_schedd* daemon. In addition, the value
 chosen for the variable ``SCHEDD_NAME`` will need to include the at
 symbol (@), such that HTCondor will not modify the value set for this
 variable. See the description of ``MASTER_NAME`` in
-section \ `3.5.7 <ConfigurationMacros.html#x33-1940003.5.7>`__ on
-page \ `646 <ConfigurationMacros.html#x33-1940003.5.7>`__ for defaults
-and composition of valid values for ``SCHEDD_NAME``. As an example,
-include in each local configuration a value similar to:
+section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ for defaults and
+composition of valid values for ``SCHEDD_NAME``. As an example, include
+in each local configuration a value similar to:
 
 ::
 
@@ -136,7 +138,7 @@ High Availability of the Central Manager
 ----------------------------------------
 
 Interaction with Flocking
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 The HTCondor high availability mechanisms discussed in this section
 currently do not work well in configurations involving flocking. The
@@ -158,7 +160,7 @@ to pools with high availability mechanisms enabled.
    *condor\_schedd*.
 
 Introduction
-~~~~~~~~~~~~
+''''''''''''
 
 The *condor\_negotiator* and *condor\_collector* daemons are the heart
 of the HTCondor matchmaking system. The availability of these daemons is
@@ -243,14 +245,14 @@ file transfer and then exit. Do not place ``TRANSFERER`` into
 invoke or watch over.
 
 Configuration
-~~~~~~~~~~~~~
+'''''''''''''
 
 The high availability of central manager machines is enabled through
 configuration. It is disabled by default. All machines in a pool must be
 configured appropriately in order to make the high availability
-mechanism work. See
-section \ `3.5.26 <ConfigurationMacros.html#x33-2220003.5.26>`__, for
-definitions of these configuration variables.
+mechanism work. See section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__, for definitions
+of these configuration variables.
 
 The *condor\_had* and *condor\_replication* daemons use the
 *condor\_shared\_port* daemon by default. If you want to use more than
@@ -311,7 +313,7 @@ following operations:
    ``DC_DAEMON_LIST`` in the configuration file.
 
 Sample Configuration
-~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''
 
 This section provides sample configurations for high availability.
 

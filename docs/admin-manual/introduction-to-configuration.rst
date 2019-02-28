@@ -8,10 +8,12 @@ configuration, relating to all parts of the HTCondor system. If you’re
 setting up an HTCondor pool, you should read this section before you
 read the other configuration-related sections:
 
--  Section \ `3.4 <ConfigurationTemplates.html#x32-1820003.4>`__
-   contains information about configuration templates, which are now the
+-  Section \ `Configuration
+   Templates <../admin-manual/configuration-templates.html>`__ contains
+   information about configuration templates, which are now the
    preferred way to set many configuration macros.
--  Section \ `3.5 <ConfigurationMacros.html#x33-1870003.5>`__ contains
+-  Section \ `Configuration
+   Macros <../admin-manual/configuration-macros.html>`__ contains
    information about the hundreds of individual configuration macros. In
    general, it is best to try to achieve your desired configuration
    using configuration templates before resorting to setting individual
@@ -19,8 +21,9 @@ read the other configuration-related sections:
    configuration macros.
 -  The settings that control the policy under which HTCondor will start,
    suspend, resume, vacate or kill jobs are described in
-   section \ `3.7 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2410003.7>`__
-   on Policy Configuration for the *condor\_startd*.
+   section \ `Policy Configuration for Execute Hosts and for Submit
+   Hosts <../admin-manual/policy-configuration.html>`__ on Policy
+   Configuration for the *condor\_startd*.
 
 HTCondor Configuration Files
 ----------------------------
@@ -985,8 +988,9 @@ determined automatically at run time but which can be overwritten.
     it must run on the same ``ARCH`` and ``OPSYS`` of the machine where
     it was submitted, unless the user specifies ``ARCH`` and/or
     ``OPSYS`` explicitly in their submit file. See the *condor\_submit*
-    manual page on page \ `2135 <Condorsubmit.html#x149-108000012>`__
-    for details.
+    manual page on
+    page \ `condor\_submit <../man-pages/condor_submit.html>`__ for
+    details.
  ``$(OPSYS)``
     Defines the string used to identify the operating system of the
     local machine to HTCondor. If it is not defined in the configuration
@@ -1020,16 +1024,15 @@ determined automatically at run time but which can be overwritten.
     this will be the other UID.
  ``$(FILESYSTEM_DOMAIN)``
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See
-    section \ `3.5.5 <ConfigurationMacros.html#x33-1920003.5.5>`__,
-    Shared File System Configuration File Entries for the full
-    description of its use and under what conditions it could be
-    desirable to change it.
+    evaluated on. See section \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__, Shared File
+    System Configuration File Entries for the full description of its
+    use and under what conditions it could be desirable to change it.
  ``$(UID_DOMAIN)``
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See
-    section \ `3.5.5 <ConfigurationMacros.html#x33-1920003.5.5>`__ for
-    the full description of this configuration variable.
+    evaluated on. See section \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__ for the full
+    description of this configuration variable.
 
 Since ``$(ARCH)`` and ``$(OPSYS)`` will automatically be set to the
 correct values, we recommend that you do not overwrite them.

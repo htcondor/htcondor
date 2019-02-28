@@ -56,7 +56,7 @@ sure to copy both lines. Don’t copy the ‘\\’ itself.)
     $ condor_master 
 
 Testing
-~~~~~~~
+'''''''
 
 Give HTCondor a few seconds to spin up and the try a few commands to
 make sure the basics are working. Your output will vary depending on the
@@ -126,7 +126,7 @@ After a little while:
     1 jobs; 0 completed, 0 removed, 0 idle, 1 running, 0 held, 0 suspended 
 
 Configure Public Interface
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''
 
 The default personal HTCondor uses the “loopback” interface, which
 basically just means it won’t talk to anyone other than itself. For
@@ -156,7 +156,7 @@ To verify that this change worked, repeat the steps under section
 `6.3.1 <#x64-5240006.3.1>`__. Then proceed onto the next section.
 
 Configure a Pool Password
-~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''
 
 In this section, you’ll configure your personal HTCondor to use a pool
 password. This is a simple but effective method of securing HTCondor’s
@@ -194,7 +194,7 @@ password:
 Enter a password.
 
 Tell HTCondor about the Open Port
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''
 
 By default, HTCondor will use port 9618. If the Linux machine doesn’t
 already have HTCondor installed, and the admin is willing to open that
@@ -213,7 +213,7 @@ administrator opened for you.
     COLLECTOR_HOST = $(FULL_HOSTNAME):9618
 
 Activate the New Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''
 
 Force HTCondor to read the new configuration by restarting it:
 
@@ -244,7 +244,7 @@ privileges\ `:sup:`4` <ref65.html#fn4x7>`__ , you may skip down to the
 Otherwise, continue by obtaining an access key, as follows.
 
 Obtaining an Access Key
-~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''
 
 In order to use AWS, *condor\_annex* needs a pair of security tokens
 (like a user name and password). Like a user name, the “access key” is

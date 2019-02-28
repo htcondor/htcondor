@@ -1,7 +1,7 @@
       
 
-condor\_preen
-=============
+*condor\_preen*
+===============
 
 remove extraneous files from HTCondor directories
 

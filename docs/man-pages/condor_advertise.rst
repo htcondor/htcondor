@@ -1,7 +1,7 @@
       
 
-condor\_advertise
-=================
+*condor\_advertise*
+===================
 
 Send a ClassAd to the *condor\_collector* daemon
 

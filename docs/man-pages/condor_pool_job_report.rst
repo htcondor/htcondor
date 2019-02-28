@@ -1,7 +1,7 @@
       
 
-condor\_pool\_job\_report
-=========================
+*condor\_pool\_job\_report*
+===========================
 
 generate report about all jobs that have run in the last 24 hours on all
 execute hosts

@@ -18,9 +18,9 @@ macro later in the configuration.
 
 Detailed information about configuration templates (such as the macros
 they set) can be obtained using the *condor\_config\_val* ``use`` option
-(see `12 <Condorconfigval.html#x105-73100012>`__). (This document does
-not contain such information because the *condor\_config\_val* command
-is a better way to obtain it.)
+(see `condor\_configval <../man-pages/condor_config_val.html>`__). (This
+document does not contain such information because the
+*condor\_config\_val* command is a better way to obtain it.)
 
 Configuration Templates: Using Predefined Sets of Configuration
 ---------------------------------------------------------------
@@ -118,16 +118,17 @@ incorporates.
 
        Configures a custom machine resource monitor with the given name,
        mode, period, executable, and metrics. See
-       `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for the definitions of
+       `Hooks <../misc-concepts/hooks.html>`__ for the definitions of
        these terms.
 
     -  ``PartitionableSlot( slot_type_num [, allocation] )``
 
        Sets up a partitionable slot of the specified slot type number
        and allocation (defaults for slot\_type\_num and allocation are 1
-       and 100% respectively).
-       See \ `3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2540003.7.1>`__
-       for information on partitionalble slot policies.
+       and 100% respectively). See \ `Policy Configuration for Execute
+       Hosts and for Submit
+       Hosts <../admin-manual/policy-configuration.html>`__ for
+       information on partitionalble slot policies.
 
     -  ``AssignAccountingGroup( map_filename )`` Sets up a
        *condor\_schedd* job transform that assigns an accounting group
@@ -146,55 +147,55 @@ incorporates.
     -  ``StartdCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor\_startd* job hook.
-       (See `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``StartdCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor\_startd* job hook.
-       (See `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``StartdCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor\_startd* job hook.
-       (See `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``ScheddCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor\_schedd* job hook.
-       (See `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``ScheddCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor\_schedd* job hook.
-       (See `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``ScheddCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor\_schedd* job hook.
-       (See `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )``
 
        Create a one-shot job hook.
-       (See `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe          [,hook_args] )``
 
        Create a periodic job hook.
-       (See `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
     -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args]          )``
 
        Create a (nearly) continuous job hook.
-       (See `4.4.3 <Hooks.html#x51-4450004.4.3>`__ for more information
+       (See `Hooks <../misc-concepts/hooks.html>`__ for more information
        about job hooks.)
 
         

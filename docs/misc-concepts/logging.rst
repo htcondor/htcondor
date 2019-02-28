@@ -17,9 +17,9 @@ Job and Daemon Logs
     machine. The submit description file for the job requests a job
     event log with the submit command **log**. The log is created and
     remains on the submit machine. Contents of the log are detailed in
-    section \ `2.6.7 <ManagingaJob.html#x18-600002.6.7>`__. Examples of
-    events are that the job is running, that the job is placed on hold,
-    or that the job completed.
+    section \ `Managing a Job <../users-manual/managing-a-job.html>`__.
+    Examples of events are that the job is running, that the job is
+    placed on hold, or that the job completed.
  daemon logs
     Each daemon configured to have a log writes events relevant to that
     daemon. Each event written consists of a timestamp and message. The
@@ -182,9 +182,9 @@ DAGMan Logs
     must be unique while any and all submitted DAGs and other jobs from
     the submit host run. The syntax used in the definition of this
     configuration variable is different to enable the setting of a
-    unique file name. See
-    section \ `3.5.23 <ConfigurationMacros.html#x33-2160003.5.23>`__ for
-    the complete definition.
+    unique file name. See section \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__ for the
+    complete definition.
 
     Configuration variables that affect this log are
 
@@ -208,8 +208,8 @@ DAGMan Logs
 
  the ``jobstate.log`` file
     This optional, machine-readable log enables automated monitoring of
-    DAG.
-    Section \ `2.10.14 <DAGManApplications.html#x22-1110002.10.14>`__
-    details this log.
+    DAG. Section \ `DAGMan
+    Applications <../users-manual/dagman-applications.html>`__ details
+    this log.
 
       

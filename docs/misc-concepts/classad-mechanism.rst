@@ -111,7 +111,7 @@ The New form:
 HTCondor will convert to and from Old ClassAd syntax as needed.
 
 New ClassAd Attribute References
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''
 
 Expressions often refer to ClassAd attributes. These attribute
 references work differently in Old ClassAds as compared with New
@@ -158,7 +158,7 @@ ClassAd expressions are formed by composing literals, attribute
 references and other sub-expressions with operators and functions.
 
 Literals
-~~~~~~~~
+''''''''
 
 Literals in the ClassAd language may be of integer, real, string,
 undefined or error types. The syntax of these literals is as follows:
@@ -183,7 +183,7 @@ undefined or error types. The syntax of these literals is as follows:
     value.
 
 Attributes
-~~~~~~~~~~
+''''''''''
 
 Every expression in a ClassAd is named by an attribute name. Together,
 the (name,expression) pair is called an attribute. An attribute may be
@@ -201,7 +201,7 @@ prefixes is not significant. The semantics of supplying a prefix are
 discussed in Section \ `4.1.3 <#x48-4060004.1.3>`__.
 
 Operators
-~~~~~~~~~
+'''''''''
 
 The operators that may be used in ClassAd expressions are similar to
 those available in C. The available operators and their relative
@@ -231,7 +231,7 @@ operators, which are discussed in
 Section \ `4.1.3 <#x48-4090004.1.3>`__.
 
 Predefined Functions
-~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''
 
 Any ClassAd expression may utilize predefined functions. Function names
 are case insensitive. Parameters to functions and a return value from a
@@ -822,7 +822,8 @@ characters other than these as options are ignored.
 
     The maps for the ``userMap()`` function are defined by the following
     configuration macros: ``<SUBSYS>_CLASSAD_USER_MAP_NAMES`` (see
-     `3.5.1 <ConfigurationMacros.html#x33-1880003.5.1>`__),
+     `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__),
     ``CLASSAD_USER_MAPFILE_<name> (see  3.5.1)`` and
     ``CLASSAD_USER_MAPDATA_<name> (see  3.5.1)``.
 
@@ -838,13 +839,13 @@ machine and job ClassAds to test if they can be matched. The semantics
 of evaluating such constraints is defined below.
 
 Literals
-~~~~~~~~
+''''''''
 
 Literals are self-evaluating, Thus, integer, string, real, undefined and
 error values evaluate to themselves.
 
 Attribute References
-~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''
 
 Since the expression evaluation is being carried out in the context of
 two ClassAds, there is a potential for name space ambiguities. The
@@ -883,7 +884,7 @@ ClassAd A that is being evaluated in a context with another ClassAd B:
    evaluation. The value of the reference is ``ERROR``.
 
 Operators
-~~~~~~~~~
+'''''''''
 
 All operators in the ClassAd language are total, and thus have well
 defined behavior regardless of the supplied operands. Furthermore, most
@@ -957,7 +958,7 @@ have these exceptional values.
       expression.
 
 Expression Examples
-~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''
 
 The ``=?=`` operator is similar to the ``==`` operator. It checks if the
 left hand side operand is identical in both type and value to the the
@@ -1203,7 +1204,7 @@ constraints over these ClassAds. These constraints can take the form of
 over other ClassAds.
 
 Constraints and Preferences
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''
 
 The ``requirements`` and ``rank`` expressions within the submit
 description file are the mechanism by which users specify the
@@ -1253,7 +1254,7 @@ real-valued expressions, respectively. If the actual type of the
 expression is not of the expected type, the value is assumed to be zero.
 
 Querying with ClassAd Expressions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''
 
 The flexibility of this system may also be used when querying ClassAds
 through the *condor\_status* and *condor\_q* tools which allow users to

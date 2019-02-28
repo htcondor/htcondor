@@ -22,7 +22,8 @@ We hope that you will contribute to the development of HTCondor through
 this reporting feature. However, you are free to disable it at any time
 by changing the configuration variables ``CONDOR_DEVELOPERS`` and
 ``CONDOR_DEVELOPERS_COLLECTOR`` , both described in section
-`3.5.14 <ConfigurationMacros.html#x33-2010003.5.14>`__ of this manual.
+`Configuration Macros <../admin-manual/configuration-macros.html>`__ of
+this manual.
 
 Example of data reported:
 

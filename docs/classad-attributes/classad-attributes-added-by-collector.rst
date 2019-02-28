@@ -19,7 +19,8 @@ ClassAd Attributes Added by the *condor\_collector*
     A bitmap representing the status of the most recent updates received
     from the daemon. This attribute is only added if
     ``COLLECTOR_DAEMON_HISTORY_SIZE`` is non-zero. See
-    page \ `733 <ConfigurationMacros.html#x33-2010003.5.14>`__ for more
+    page \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__ for more
     information on this setting. This attribute is added if
     ``COLLECTOR_DAEMON_STATS`` is ``True``.
  ``UpdatesLost``:

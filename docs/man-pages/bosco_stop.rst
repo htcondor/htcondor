@@ -1,7 +1,7 @@
       
 
-bosco\_stop
-===========
+*bosco\_stop*
+=============
 
 Shut down HTCondor daemons in a Bosco installation.
 

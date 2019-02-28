@@ -1,7 +1,7 @@
       
 
-condor\_gather\_info
-====================
+*condor\_gather\_info*
+======================
 
 Gather information about an HTCondor installation and a queued job
 

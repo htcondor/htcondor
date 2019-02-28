@@ -1,7 +1,7 @@
       
 
-condor\_top
-===========
+*condor\_top*
+=============
 
 Display status and runtime statistics of a HTCondor daemon
 
