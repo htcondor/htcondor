@@ -1,50 +1,48 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.dist import Distribution
-import pip
-import os
-import sys
-import io
 
-import classad
+import os
+import classad # for version number
 
 package_name = "htcondor"
-ver_append = ""
 long_description = open("README.rst", "r").read()
 
+# make sure binary extensions are included in distributions
 package_data = {}
 if os.name == "posix":
-    package_data["htcondor"] = ["*.so", "condor_libs/*.so*"]
+    package_data["htcondor"] = ["*.so"]
     package_data["classad"] = ["*.so"]
 else:
-    package_data["htcondor"] = ["*.pyd", "*.dll", "condor_libs/*.dll*"]
+    package_data["htcondor"] = ["*.pyd", "*.dll"]
     package_data["classad"] = ["*.pyd", "*.dll"]
 
-
 class BinaryDistribution(Distribution):
-    """ Forces BinaryDistribution. """
+    """Forces distributions to include platform name and python ABI tag."""
 
     def has_ext_modules(self):
         return True
 
-    def is_pure(self):
-        return False
-
 
 setup(
     name=package_name,
-    version=classad.version() + ver_append,
+    version=classad.version(),
+    author="The HTCondor Team",
+    author_email="htcondor-admin@cs.wisc.edu",
+    maintainer="Brian Bockelman, Jason Patton, Tim Theisen",
     url="http://htcondor.org/",
+    project_urls={
+        "Documentation": "https://htcondor-python.readthedocs.io",
+        "Source Code": "https://github.com/htcondor/htcondor",
+    },
     license="ASL 2.0",
+    keywords="htcondor classad htc dhtc condor",
     description="HTCondor Python bindings",
     long_description=long_description,
-    distclass=BinaryDistribution,
-    packages=["htcondor", "classad"],
+    packages=find_packages(),
     package_data=package_data,
-    zip_safe=False,
-    maintainer="Brian Bockelman, Jason Patton, Tim Theisen",
     include_package_data=True,
-    # data_files=[("", ["LICENSE-2.0.txt"])],
-    keywords="htcondor classad htc dhtc condor",
+    distclass=BinaryDistribution,
+    zip_safe=False,
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",

@@ -1,0 +1,6 @@
+include htcondor/*.so
+include htcondor/*.dll
+include htcondor/*.pyd
+include classad/*.so
+include classad/*.dll
+include classad/*.pyd
