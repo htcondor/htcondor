@@ -1,7 +1,7 @@
       
 
-condor\_dagman\_metrics\_reporter
-=================================
+*condor\_dagman\_metrics\_reporter*
+===================================
 
 Report the statistics of a DAGMan run to a central HTTP server
 

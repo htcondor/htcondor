@@ -113,7 +113,7 @@ pandoc -f html -t rst DevelopmentReleaseSeries87.html.out -o ../../../version-hi
 pandoc -f html -t rst StableReleaseSeries86.html.out -o ../../../version-history/stable-release-series-86.rst
 
 # Command Reference Manual (man-pages)
-pandoc -f html -t rst CommandReferenceManualmanpages.html.out -o ../../../man-pages/index.rst
+#pandoc -f html -t rst CommandReferenceManualmanpages.html.out -o ../../../man-pages/index.rst
 pandoc -f html -t rst Boscocluster.html.out -o ../../../man-pages/bosco_cluster.rst
 pandoc -f html -t rst Boscofindplatform.html.out -o ../../../man-pages/bosco_findplatform.rst
 pandoc -f html -t rst Boscoinstall.html.out -o ../../../man-pages/bosco_install.rst

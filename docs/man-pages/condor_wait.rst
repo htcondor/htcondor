@@ -1,7 +1,7 @@
       
 
-condor\_wait
-============
+*condor\_wait*
+==============
 
 Wait for jobs to finish
 

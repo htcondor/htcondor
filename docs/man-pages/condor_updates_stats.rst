@@ -1,7 +1,7 @@
       
 
-condor\_updates\_stats
-======================
+*condor\_updates\_stats*
+========================
 
 Display output from *condor\_status*
 

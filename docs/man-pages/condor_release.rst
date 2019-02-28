@@ -1,7 +1,7 @@
       
 
-condor\_release
-===============
+*condor\_release*
+=================
 
 release held jobs in the HTCondor queue
 

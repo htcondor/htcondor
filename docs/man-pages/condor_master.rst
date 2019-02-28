@@ -1,7 +1,7 @@
       
 
-condor\_master
-==============
+*condor\_master*
+================
 
 The master HTCondor Daemon
 

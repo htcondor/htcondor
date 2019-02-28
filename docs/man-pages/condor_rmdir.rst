@@ -1,7 +1,7 @@
       
 
-condor\_rmdir
-=============
+*condor\_rmdir*
+===============
 
 Windows-only no-fail deletion of directories
 

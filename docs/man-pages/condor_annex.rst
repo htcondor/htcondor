@@ -1,7 +1,7 @@
       
 
-condor\_annex
-=============
+*condor\_annex*
+===============
 
 Add cloud resources to the pool.
 

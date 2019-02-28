@@ -1,7 +1,7 @@
       
 
-condor\_now
-===========
+*condor\_now*
+=============
 
 Start a job now.
 

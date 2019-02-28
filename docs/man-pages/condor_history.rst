@@ -1,7 +1,7 @@
       
 
-condor\_history
-===============
+*condor\_history*
+=================
 
 View log of HTCondor jobs completed to date
 

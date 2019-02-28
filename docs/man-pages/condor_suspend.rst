@@ -1,7 +1,7 @@
       
 
-condor\_suspend
-===============
+*condor\_suspend*
+=================
 
 suspend jobs from the HTCondor queue
 

@@ -1,7 +1,7 @@
       
 
-condor\_configure
-=================
+*condor\_configure*
+===================
 
 Configure or install HTCondor
 

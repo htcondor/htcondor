@@ -1,7 +1,7 @@
       
 
-condor\_sos
-===========
+*condor\_sos*
+=============
 
 Issue a command that will be serviced with a higher priority
 

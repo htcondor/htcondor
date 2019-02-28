@@ -195,7 +195,7 @@ providing the following conditions are met:
 #. The requesting client must be authorized for ``DAEMON`` level access.
 
 Using a pool password on Windows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''
 
 In order for ``PASSWORD`` authenticated communication to work, a pool
 password must be chosen and distributed. The chosen pool password must

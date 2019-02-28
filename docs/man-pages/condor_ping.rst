@@ -1,7 +1,7 @@
       
 
-condor\_ping
-============
+*condor\_ping*
+==============
 
 Attempt a security negotiation to determine if it succeeds
 

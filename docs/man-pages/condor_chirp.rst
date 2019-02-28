@@ -1,7 +1,7 @@
       
 
-condor\_chirp
-=============
+*condor\_chirp*
+===============
 
 Access files or job ClassAd from an executing job
 

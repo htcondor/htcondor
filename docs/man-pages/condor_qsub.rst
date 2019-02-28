@@ -1,7 +1,7 @@
       
 
-condor\_qsub
-============
+*condor\_qsub*
+==============
 
 Queue jobs that use PBS/SGE-style submission
 
@@ -147,61 +147,44 @@ Options
     requests are supported. *resource\_spec* is a comma separated list
     of key/value pairs. Each pair is of the form
     ``resource_name=value``. ``resource_name`` and ``value`` may be
+    +--------------------------+--------------------------+--------------------------+
+    | ``resource_name``        | ``value``                | Description              |
+    +--------------------------+--------------------------+--------------------------+
+    | arch                     | string                   | Sets ``Arch`` machine    |
+    |                          |                          | attribute. Enclose in    |
+    |                          |                          | double quotes.           |
+    +--------------------------+--------------------------+--------------------------+
+    | file                     | size                     | Disk space requested.    |
+    +--------------------------+--------------------------+--------------------------+
+    | host                     | string                   | Host machine on which    |
+    |                          |                          | the job must run.        |
+    +--------------------------+--------------------------+--------------------------+
+    | mem                      | size                     | Amount of memory         |
+    |                          |                          | requested.               |
+    +--------------------------+--------------------------+--------------------------+
+    | nodes                    | ``{<node_count> | <hostn | Number and/or properties |
+    |                          | ame>} [:ppn=<ppn>] [:gpu | of nodes to be used. For |
+    |                          | s=<gpu>] [:<property> [: | examples, please see     |
+    |                          | <property>] …] [+ …]``   | `http://docs.adaptivecom |
+    |                          |                          | puting.com/torque/4-1-3/ |
+    |                          |                          | Content/topics/2-jobs/re |
+    |                          |                          | questingRes.htm#qsub <ht |
+    |                          |                          | tp://docs.adaptivecomput |
+    |                          |                          | ing.com/torque/4-1-3/Con |
+    |                          |                          | tent/topics/2-jobs/reque |
+    |                          |                          | stingRes.htm#qsub>`__    |
+    +--------------------------+--------------------------+--------------------------+
+    | opsys                    | string                   | Sets ``OpSys`` machine   |
+    |                          |                          | attribute. Enclose in    |
+    |                          |                          | double quotes.           |
+    +--------------------------+--------------------------+--------------------------+
+    | procs                    | integer                  | Number of CPUs           |
+    |                          |                          | requested.               |
+    +--------------------------+--------------------------+--------------------------+
 
-    ``resource_name``
-
-    ``value``
-
-    Description
-
-    arch
-
-    string
-
-    Sets ``Arch`` machine attribute. Enclose in double quotes.
-
-    file
-
-    size
-
-    Disk space requested.
-
-    host
-
-    string
-
-    Host machine on which the job must run.
-
-    mem
-
-    size
-
-    Amount of memory requested.
-
-    nodes
-
-    ``{<node_count> | <hostname>} [:ppn=<ppn>] [:gpus=<gpu>] [:<property> [:<property>] …] [+ …]``
-
-    Number and/or properties of nodes to be used. For examples, please
-    see
-    `http://docs.adaptivecomputing.com/torque/4-1-3/Content/topics/2-jobs/requestingRes.htm#qsub <http://docs.adaptivecomputing.com/torque/4-1-3/Content/topics/2-jobs/requestingRes.htm#qsub>`__
-
-    opsys
-
-    string
-
-    Sets ``OpSys`` machine attribute. Enclose in double quotes.
-
-    procs
-
-    integer
-
-    Number of CPUs requested.
-
-    | A size value is an integer specified in bytes, following the
+    A size value is an integer specified in bytes, following the
     PBS/Torque default. Append ``Kb``, ``Mb``, ``Gb``, or ``Tb`` to
     specify the value in powers of two quantities greater than bytes.
-
  **-m **\ *a\|e\|n*
     (Notification option) Identify when HTCondor sends notification
     e-mail. If *a*, send e-mail when the job terminates abnormally. If

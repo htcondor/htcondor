@@ -1,7 +1,7 @@
       
 
-condor\_qedit
-=============
+*condor\_qedit*
+===============
 
 modify job attributes
 

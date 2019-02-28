@@ -28,7 +28,7 @@ Port Usage in HTCondor
 ----------------------
 
 IPv4 Port Specification
-~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''
 
 The general form for IPv4 port specification is
 
@@ -59,7 +59,7 @@ specification:
     Provides the daemon’s private address in form of ``IP:port``.
 
 Default Port Usage
-~~~~~~~~~~~~~~~~~~
+''''''''''''''''''
 
 Every HTCondor daemon listens on a network port for incoming commands.
 (Using *condor\_shared\_port*, this port may be shared between multiple
@@ -101,20 +101,24 @@ fixed ports: 5651, 5652, 5653, and 5654. There is currently no way to
 configure alternative values for any of these ports.
 
 Using a Non Standard, Fixed Port for the *condor\_collector*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 By default, HTCondor uses port 9618 for the *condor\_collector* daemon.
 To use a different port number for this daemon, the configuration
 variables that tell HTCondor these communication details are modified.
 Instead of
 
-| CONDOR\_HOST = machX.cs.wisc.edu  
-| COLLECTOR\_HOST = $(CONDOR\_HOST)
+::
+
+    CONDOR_HOST = machX.cs.wisc.edu 
+    COLLECTOR_HOST = $(CONDOR_HOST)
 
 the configuration might be
 
-| CONDOR\_HOST = machX.cs.wisc.edu  
-| COLLECTOR\_HOST = $(CONDOR\_HOST):9650
+::
+
+    CONDOR_HOST = machX.cs.wisc.edu 
+    COLLECTOR_HOST = $(CONDOR_HOST):9650
 
 If a non standard port is defined, the same value of ``COLLECTOR_HOST``
 (including the port) must be used for all machines in the HTCondor pool.
@@ -127,10 +131,12 @@ When querying the *condor\_collector* for a remote pool that is running
 on a non standard port, any HTCondor tool that accepts the **-pool**
 argument can optionally be given a port number. For example:
 
-        % condor\_status -pool foo.bar.org:1234
+::
+
+            % condor_status -pool foo.bar.org:1234
 
 Using a Dynamically Assigned Port for the *condor\_collector*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 On single machine pools, it is permitted to configure the
 *condor\_collector* daemon to use a dynamically assigned port, as given
@@ -150,8 +156,10 @@ defined, as it provides a known file where the IP address and port
 information will be stored. All HTCondor clients know to look at the
 information stored in this file. For example:
 
-| COLLECTOR\_HOST = $(CONDOR\_HOST):0  
-| COLLECTOR\_ADDRESS\_FILE = $(LOG)/.collector\_address
+::
+
+    COLLECTOR_HOST = $(CONDOR_HOST):0 
+    COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
 Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in
 section \ `Configuration
@@ -164,7 +172,7 @@ page \ `Configuration
 Macros <../admin-manual/configuration-macros.html>`__.
 
 Restricting Port Usage to Operate with Firewalls
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''
 
 If an HTCondor pool is completely behind a firewall, then no special
 consideration or port usage is needed. However, if there is a firewall
@@ -251,23 +259,27 @@ ports used for these machines are not restricted. This can be
 accomplished by adding the following to the local configuration file of
 those machines not behind a firewall:
 
-| HIGHPORT = UNDEFINED  
-| LOWPORT  = UNDEFINED
+::
+
+    HIGHPORT = UNDEFINED 
+    LOWPORT  = UNDEFINED
 
 If the maximum number of ports allocated using ``HIGHPORT`` and
 ``LOWPORT`` is too few, socket binding errors of the form
 
-failed to bind any port within <$LOWPORT> - <$HIGHPORT>
+::
+
+    failed to bind any port within <$LOWPORT> - <$HIGHPORT>
 
 are likely to appear repeatedly in log files.
 
 Multiple Collectors
-~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''
 
 This section has not yet been written
 
 Port Conflicts
-~~~~~~~~~~~~~~
+''''''''''''''
 
 This section has not yet been written
 
@@ -324,7 +336,9 @@ daemon, which is then responsible for enforcing the security policy.
 When the *condor\_master* is configured to use the shared port by
 setting the configuration variable
 
-  USE\_SHARED\_PORT = True
+::
+
+      USE_SHARED_PORT = True
 
 the *condor\_shared\_port* daemon is treated specially. ``SHARED_PORT``
 is automatically added to ``DAEMON_LIST`` . A command such as
@@ -339,7 +353,9 @@ port that are destined for the *condor\_collector* can be forwarded. As
 an example, the shared port socket name of the *condor\_collector* with
 shared port number 11000 is
 
-COLLECTOR\_HOST = cm.host.name:11000?sock=collector
+::
+
+    COLLECTOR_HOST = cm.host.name:11000?sock=collector
 
 This example assumes that the socket name used by the
 *condor\_collector* is ``collector``, and it runs on ``cm.host.name``.
@@ -348,7 +364,9 @@ choose this socket name. If multiple *condor\_collector* daemons are
 started on the same machine, the socket name can be explicitly set in
 the daemon’s invocation arguments, as in the example:
 
-COLLECTOR\_ARGS = -sock collector
+::
+
+    COLLECTOR_ARGS = -sock collector
 
 When the *condor\_collector* address is a shared port, TCP updates will
 be automatically used instead of UDP, because the *condor\_shared\_port*
@@ -399,7 +417,9 @@ This functionality is on by default. To disable this functionality, the
 boolean configuration variable ``BIND_ALL_INTERFACES`` is defined and
 set to ``False``:
 
-BIND\_ALL\_INTERFACES = FALSE
+::
+
+    BIND_ALL_INTERFACES = FALSE
 
 This functionality has limitations. Here are descriptions of the
 limitations.
@@ -490,14 +510,18 @@ HTCondor:
 In this example, ``farm-server.farm.org`` maps to the private interface.
 In the central manager’s global (to the cluster) configuration file:
 
-CONDOR\_HOST = farm-server.farm.org
+::
+
+    CONDOR_HOST = farm-server.farm.org
 
 In the central manager’s local configuration file:
 
-| NETWORK\_INTERFACE = <IP address of farm-server.farm.org>  
-| NEGOTIATOR = $(SBIN)/condor\_negotiator  
-| COLLECTOR = $(SBIN)/condor\_collector  
-| DAEMON\_LIST = MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD
+::
+
+    NETWORK_INTERFACE = <IP address of farm-server.farm.org> 
+    NEGOTIATOR = $(SBIN)/condor_negotiator 
+    COLLECTOR = $(SBIN)/condor_collector 
+    DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD
 
 If the central manager and farm machines are all NT, then only vanilla
 universe will work now. However, if this is set up for Unix, then at
@@ -519,12 +543,14 @@ central manager. Inform HTCondor that an NFS or AFS file system exists
 and that is done in this manner. In the global (to the farm)
 configuration file:
 
-| # If you have NFS  
-| USE\_NFS = True  
-| # If you have AFS  
-| HAS\_AFS = True  
-| USE\_AFS = True  
-| # if you want both NFS and AFS, then enable both sets above
+::
+
+    # If you have NFS 
+    USE_NFS = True 
+    # If you have AFS 
+    HAS_AFS = True 
+    USE_AFS = True 
+    # if you want both NFS and AFS, then enable both sets above
 
 Now, if the cluster is set up so that it is possible for a machine name
 to never have a domain name (for example, there is machine name but no
@@ -540,7 +566,9 @@ network interface on which the client machine desires to communicate
 with the rest of the HTCondor pool. In this case, the local
 configuration file for the client should have
 
-  NETWORK\_INTERFACE = <IP address of desired interface>
+::
+
+      NETWORK_INTERFACE = <IP address of desired interface>
 
 A Checkpoint Server on a Machine with Multiple NICs
 '''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -627,8 +655,10 @@ dual-homed machine in both networks.
 The configuration of variable ``CCB_ADDRESS`` on machines in the private
 network causes registration with the CCB server as in the example:
 
-|   CCB\_ADDRESS = $(COLLECTOR\_HOST)  
-|   PRIVATE\_NETWORK\_NAME = cs.wisc.edu
+::
+
+      CCB_ADDRESS = $(COLLECTOR_HOST) 
+      PRIVATE_NETWORK_NAME = cs.wisc.edu
 
 The definition of ``PRIVATE_NETWORK_NAME`` ensures that all
 communication between nodes within the private network continues to
@@ -652,7 +682,9 @@ administrative commands required to be sent to the *condor\_master* from
 outside of the private network, then CCB may be disabled in the
 *condor\_master* by assigning ``MASTER.CCB_ADDRESS`` to nothing:
 
-  MASTER.CCB\_ADDRESS =
+::
+
+      MASTER.CCB_ADDRESS =
 
 Completing the count of TCP connections in this example: suppose the
 pool consists of 500 8-slot execute nodes and CCB is not disabled in the
@@ -661,7 +693,9 @@ of needed file descriptors plus some extra for other transient
 connections to the collector is 500\*(1+1+8)=5000. Be generous, and give
 it twice as many descriptors as needed by CCB alone:
 
-  COLLECTOR.MAX\_FILE\_DESCRIPTORS = 10000
+::
+
+      COLLECTOR.MAX_FILE_DESCRIPTORS = 10000
 
 Security and CCB
 ''''''''''''''''
@@ -757,7 +791,9 @@ configuration, the number of file descriptors available to the
 *condor\_collector* is 10240. For very large pools, the number of
 descriptor can be modified with the configuration:
 
-  COLLECTOR\_MAX\_FILE\_DESCRIPTORS = 40960
+::
+
+      COLLECTOR_MAX_FILE_DESCRIPTORS = 40960
 
 If there are insufficient file descriptors for all of the daemons
 sending updates to the *condor\_collector*, a warning will be printed in
@@ -840,12 +876,16 @@ When you specify an IPv6 address and a port number simultaneously, you
 must separate the IPv6 address from the port number by placing square
 brackets around the address. For instance:
 
-COLLECTOR\_HOST = [2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
+::
+
+    COLLECTOR_HOST = [2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
 
 If you do not (or may not) specify a port, do not use the square
 brackets. For instance:
 
-NETWORK\_INTERFACE = 1234:5678::90ab
+::
+
+    NETWORK_INTERFACE = 1234:5678::90ab
 
 IPv6 without DNS
 ''''''''''''''''
@@ -854,14 +894,20 @@ When using the configuration variable ``NO_DNS`` , IPv6 addresses are
 turned into host names by taking the IPv6 address, changing colons to
 dashes, and appending ``$(DEFAULT_DOMAIN_NAME)``. So,
 
-2607:f388:1086:0:21b:24ff:fedf:b520
+::
+
+    2607:f388:1086:0:21b:24ff:fedf:b520
 
 becomes
 
-2607-f388-1086-0-21b-24ff-fedf-b520.example.com
+::
+
+    2607-f388-1086-0-21b-24ff-fedf-b520.example.com
 
 assuming
 
-DEFAULT\_DOMAIN\_NAME=example.com
+::
+
+    DEFAULT_DOMAIN_NAME=example.com
 
       

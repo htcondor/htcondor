@@ -1,7 +1,7 @@
       
 
-condor\_store\_cred
-===================
+*condor\_store\_cred*
+=====================
 
 securely stash a password
 

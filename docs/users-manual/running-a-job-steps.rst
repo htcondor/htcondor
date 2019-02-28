@@ -110,7 +110,7 @@ facilitating the execution of a virtual machine. The docker universe
 runs a Docker container as an HTCondor job.
 
 Standard Universe
-~~~~~~~~~~~~~~~~~
+'''''''''''''''''
 
 In the standard universe, HTCondor provides checkpointing and remote
 system calls. These features make a job more reliable and allow it
@@ -194,7 +194,7 @@ There are a few restrictions on standard universe jobs:
    universe user job application itself are both 64-bit executables.
 
 Vanilla Universe
-~~~~~~~~~~~~~~~~
+''''''''''''''''
 
 The vanilla universe in HTCondor is intended for programs which cannot
 be successfully re-linked. Shell scripts are another case where the
@@ -226,7 +226,7 @@ Job <../users-manual/submitting-a-job.html>`__ on page \ `Submitting a
 Job <../users-manual/submitting-a-job.html>`__.
 
 Grid Universe
-~~~~~~~~~~~~~
+'''''''''''''
 
 The Grid universe in HTCondor is intended to provide the standard
 HTCondor interface to users who wish to start jobs intended for remote
@@ -238,7 +238,7 @@ page \ `condor\_submit <../man-pages/condor_submit.html>`__ has detailed
 descriptions of the grid-related attributes.
 
 Java Universe
-~~~~~~~~~~~~~
+'''''''''''''
 
 A program submitted to the Java universe may run on any sort of machine
 with a JVM regardless of its location, owner, or JVM version. HTCondor
@@ -246,7 +246,7 @@ will take care of all the details such as finding the JVM binary and
 setting the classpath.
 
 Scheduler Universe
-~~~~~~~~~~~~~~~~~~
+''''''''''''''''''
 
 The scheduler universe allows users to submit lightweight jobs to be run
 immediately, alongside the *condor\_schedd* daemon on the submit host
@@ -267,7 +267,7 @@ such as the vanilla universe. The scheduler universe may be retired in
 the future, in favor of the newer local universe.
 
 Local Universe
-~~~~~~~~~~~~~~
+''''''''''''''
 
 The local universe allows an HTCondor job to be submitted and executed
 with different assumptions for the execution conditions of the job. The
@@ -277,7 +277,7 @@ never be preempted. The job’s requirements expression is evaluated
 against the *condor\_schedd*\ ’s ClassAd.
 
 Parallel Universe
-~~~~~~~~~~~~~~~~~
+'''''''''''''''''
 
 The parallel universe allows parallel programs, such as MPI jobs, to be
 run within the opportunistic HTCondor environment. Please see
@@ -286,7 +286,7 @@ Applications) <../users-manual/parallel-applications.html>`__ for more
 details.
 
 VM Universe
-~~~~~~~~~~~
+'''''''''''
 
 HTCondor facilitates the execution of VMware and Xen virtual machines
 with the vm universe.
@@ -296,7 +296,7 @@ Applications <../users-manual/virtual-machine-applications.html>`__ for
 details.
 
 Docker Universe
-~~~~~~~~~~~~~~~
+'''''''''''''''
 
 The docker universe runs a docker container on an execute host as a job.
 Please see section \ `Docker Universe

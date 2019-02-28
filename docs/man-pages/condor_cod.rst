@@ -1,7 +1,7 @@
       
 
-condor\_cod
-===========
+*condor\_cod*
+=============
 
 manage COD machines and jobs
 

@@ -34,14 +34,34 @@ def cleanup_pre_contents(data):
 
 # Cleans up the markup of a table
 def cleanup_table(data):
+    # First, determine how many columns this table has.
+    num_columns = 0
+    for index, token in enumerate(data):
+        if token.name == "tr":
+            this_row_columns = len(list(token.children))
+            if this_row_columns > num_columns:
+                num_columns = this_row_columns
+    # Now determine which elements we want to remove from the table.
+    # Do not remove them now, that causes the iterator to miss elements.
+    # Instead flag them for removal later.
+    tokens_to_remove = []
     for index, token in enumerate(data):
         if type(token) is bs4.element.Tag:
-            #print("\n\ntoken = " + str(token))
+            #print("\n\ntoken name = " + str(token.name) + ", # children = " + str(len(list(token.children))))
+            #print("token = " + str(token))
             # Remove all the <tr class="hline">...</tr> tags
             if token.name == "tr" and "class" in token.attrs.keys():
-                data.remove(token)
-            #for child in token.children:
-            #    print("child = " + str(child))
+                tokens_to_remove.append(token)
+                #print("Marking index " + str(index) + " for removal")
+            elif token.name == "colgroup":
+                tokens_to_remove.append(token)
+                #print("Marking index " + str(index) + " for removal")
+            elif len(list(token.children)) != num_columns:
+                tokens_to_remove.append(token)
+                #print("Marking index " + str(index) + " for removal")
+    # Now, finally, remove all the bad elements.
+    for index, token in enumerate(tokens_to_remove):
+        data.remove(token)
     return data
 
 # Updates a link URL and also adds in the correct title
@@ -195,6 +215,10 @@ def main():
                 new_tag.contents = tag.contents
         tag.replace_with(new_tag)
 
+    # Soup is confused. Reload.
+    html_dump = str(soup)
+    soup = bs4.BeautifulSoup(html_dump, features="lxml")
+
     # Convert all <div class="verbatim">...</div> tags to <pre>...</pre>
     pre_tags = soup.find_all("div", attrs={"class": "verbatim"})
     print("Found " + str(len(pre_tags)) + " verbatim divs")
@@ -258,8 +282,8 @@ def main():
     for tag in index_tags:
         if "id" in tag.attrs.keys():
             new_tag = soup.new_tag("div")
-            new_tag.string = "INDEX GOES HERE"
-            tag.replace_with(new_tag)
+            #new_tag.string = "INDEX GOES HERE"
+            #tag.replace_with(new_tag)
             
 
 

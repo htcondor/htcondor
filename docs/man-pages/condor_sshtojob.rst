@@ -1,7 +1,7 @@
       
 
-condor\_ssh\_to\_job
-====================
+*condor\_ssh\_to\_job*
+======================
 
 create an ssh session to a running job
 

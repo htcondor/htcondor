@@ -1,7 +1,7 @@
       
 
-condor\_restart
-===============
+*condor\_restart*
+=================
 
 Restart a set of HTCondor daemons
 

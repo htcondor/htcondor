@@ -1,7 +1,7 @@
       
 
-condor\_continue
-================
+*condor\_continue*
+==================
 
 continue suspended jobs from the HTCondor queue
 

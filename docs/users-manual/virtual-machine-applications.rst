@@ -124,7 +124,7 @@ Further commands specify information that is specific to the virtual
 machine type targeted.
 
 VMware-Specific Submit Commands
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''
 
 Specific to VMware, the submit description file command **vmware\_dir**
 gives the path and directory (on the machine from which the job is
@@ -192,7 +192,7 @@ directory are transferred to the machine assigned to execute the
 HTCondor job.
 
 Xen-Specific Submit Commands
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''
 
 A Xen **vm** universe job requires specification of the guest kernel.
 The **xen\_kernel** command accomplishes this, utilizing one of the
@@ -253,7 +253,7 @@ Disk Images
 -----------
 
 VMware on Windows and Linux
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''
 
 Following the platform-specific guest OS installation instructions found
 at
@@ -261,7 +261,7 @@ at
 creates a VMware disk image.
 
 Xen and KVM
-~~~~~~~~~~~
+'''''''''''
 
 While the following web page contains instructions specific to Fedora on
 how to create a virtual guest image, it should provide a good starting

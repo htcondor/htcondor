@@ -1,7 +1,7 @@
       
 
-condor\_transform\_ads
-======================
+*condor\_transform\_ads*
+========================
 
 Transform ClassAds according to specified rules, and output the
 transformed ClassAds.

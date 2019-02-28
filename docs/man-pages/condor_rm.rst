@@ -1,7 +1,7 @@
       
 
-condor\_rm
-==========
+*condor\_rm*
+============
 
 remove jobs from the HTCondor queue
 

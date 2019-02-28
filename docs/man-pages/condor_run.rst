@@ -1,7 +1,7 @@
       
 
-condor\_run
-===========
+*condor\_run*
+=============
 
 Submit a shell command-line as an HTCondor job
 

@@ -1,7 +1,7 @@
       
 
-condor\_check\_userlogs
-=======================
+*condor\_check\_userlogs*
+=========================
 
 Check job event log files for errors
 

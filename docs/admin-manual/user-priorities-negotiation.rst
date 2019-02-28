@@ -622,29 +622,17 @@ include:
 
 Table 3.1: Attributes visible to GROUP\_SORT\_EXPR
 
-Attribute Name
-
-Description
-
-AccountingGroup
-
-A string containing the group name
-
-GroupQuota
-
-The computed limit for this group
-
-GroupQuotaInUse
-
-The total slot weight used by this group
-
-GroupQuotaAllocated
-
-Quota allocated this cycle
-
---------------
-
---------------
++-----------------------+--------------------------------------------+
+| Attribute Name        | Description                                |
++-----------------------+--------------------------------------------+
+| AccountingGroup       | A string containing the group name         |
++-----------------------+--------------------------------------------+
+| GroupQuota            | The computed limit for this group          |
++-----------------------+--------------------------------------------+
+| GroupQuotaInUse       | The total slot weight used by this group   |
++-----------------------+--------------------------------------------+
+| GroupQuotaAllocated   | Quota allocated this cycle                 |
++-----------------------+--------------------------------------------+
 
 --------------
 

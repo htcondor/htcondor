@@ -1,7 +1,7 @@
       
 
-condor\_gpu\_discovery
-======================
+*condor\_gpu\_discovery*
+========================
 
 Output GPU-related ClassAd attributes
 

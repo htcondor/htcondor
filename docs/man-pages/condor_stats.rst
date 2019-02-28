@@ -1,7 +1,7 @@
       
 
-condor\_stats
-=============
+*condor\_stats*
+===============
 
 Display historical information about the HTCondor pool
 

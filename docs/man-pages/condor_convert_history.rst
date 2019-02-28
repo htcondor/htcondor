@@ -1,7 +1,7 @@
       
 
-condor\_convert\_history
-========================
+*condor\_convert\_history*
+==========================
 
 Convert the history file to the new format
 

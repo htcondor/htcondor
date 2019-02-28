@@ -81,7 +81,7 @@ that there is no more work to perform, the claim will be evicted, and
 the slot will return to the Owner state.
 
 Work Fetching Hooks Invoked by HTCondor
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''
 
 There are a handful of hooks invoked by HTCondor related to fetching
 work, some of which are called by the *condor\_startd* and others by the
@@ -308,7 +308,7 @@ what output is expected, and, when relevant, the exit status expected.
        Ignored.
 
 Keywords to Define Job Fetch Hooks in the HTCondor Configuration files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Hooks are defined in the HTCondor configuration files by prefixing the
 name of the hook with a keyword. This way, a given machine can have
@@ -358,7 +358,7 @@ each site is encouraged to use different (more specific) names as
 appropriate for their own needs.
 
 Defining the FetchWorkDelay Expression
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+''''''''''''''''''''''''''''''''''''''
 
 There are two events that trigger the *condor\_startd* to attempt to
 fetch new work:
@@ -401,7 +401,7 @@ If this expression is not defined, the *condor\_startd* will default to
 a five minute (300 second) delay between all attempts to fetch work.
 
 Example Hook: Specifying the Executable at Execution Time
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The availability of multiple versions of an application leads to the
 need to specify one of the versions. As an example, consider that the
@@ -493,7 +493,7 @@ hooks are invoked at various stages of the job’s life, and how to
 configure HTCondor to use these Hooks.
 
 Hooks Invoked for Job Routing
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''''''''''
 
 The Job Router Hooks allow for replacement of the transformation engine
 used by HTCondor for routing a job. Since the external transformation

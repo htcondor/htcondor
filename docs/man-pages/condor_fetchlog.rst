@@ -1,7 +1,7 @@
       
 
-condor\_fetchlog
-================
+*condor\_fetchlog*
+==================
 
 Retrieve a daemon’s log file that is located on another computer
 
