@@ -452,7 +452,7 @@ Bugs Fixed:
    on startup if cgroup limits were enabled. `(Ticket
    #6501). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6501>`__
 -  Fixed a bug in Startd Cron (see
-   `4.4.3 <Hooks.html#x51-4450004.4.3>`__) where, in effect,
+   `Hooks <../misc-concepts/hooks.html>`__) where, in effect,
    ``SlotMergeConstraint`` was ignored. `(Ticket
    #6488). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6488>`__
 -  Fixed a bug when IPv6 is enabled which could cause the

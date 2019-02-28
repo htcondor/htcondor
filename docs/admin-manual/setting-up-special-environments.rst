@@ -10,8 +10,8 @@ Using HTCondor with AFS
 -----------------------
 
 Configuration variables that allow machines to interact with and use a
-shared file system are given at
-section \ `3.5.5 <ConfigurationMacros.html#x33-1920003.5.5>`__.
+shared file system are given at section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 Limitations with AFS occur because HTCondor does not currently have a
 way to authenticate itself to AFS. This is true of the HTCondor daemons
@@ -110,8 +110,8 @@ file transfer mechanism, in which transfers are from the machine where
 the job is submitted to the machine where the job is executed. Each file
 to be transferred by specifying a URL, causing a plug-in to be invoked,
 is specified separately in the job submit description file with the
-command **transfer\_input\_files**; see
-section \ `2.5.9 <SubmittingaJob.html#x17-440002.5.9>`__ for details.
+command **transfer\_input\_files**; see section \ `Submitting a
+Job <../users-manual/submitting-a-job.html>`__ for details.
 
 For transferring output files, either the entire output sandbox, which
 are all files produced or modified by the job as it executes, or a
@@ -119,8 +119,9 @@ subset of these files, as specified by the submit description file
 command **transfer\_output\_files** are transferred to the directory
 specified by the URL. The URL itself is specified in the separate submit
 description file command **output\_destination**; see
-section \ `2.5.9 <SubmittingaJob.html#x17-440002.5.9>`__ for details.
-The plug-in is invoked once for each output file to be transferred.
+section \ `Submitting a Job <../users-manual/submitting-a-job.html>`__
+for details. The plug-in is invoked once for each output file to be
+transferred.
 
 Configuration identifies the availability of the one or more plug-in(s).
 The plug-ins must be installed and available on every execute machine

@@ -4,11 +4,11 @@ Policy Configuration for Execute Hosts and for Submit Hosts
 ===========================================================
 
 Note: configuration templates make it easier to implement certain
-policies; see information on policy templates
-here: \ `3.4.2 <ConfigurationTemplates.html#x32-1840003.4.2>`__.
+policies; see information on policy templates here: \ `Configuration
+Templates <../admin-manual/configuration-templates.html>`__.
 
-*condor\_startd* Policy Configuration
--------------------------------------
+*condor_startd* :index:`Policy Configuration<single: condor_startd; policy configuration>`
+------------------------------------------------------------------------------------------
 
 This section describes the configuration of machines, such that they,
 through the *condor\_startd* daemon, implement a desired policy for when
@@ -20,12 +20,12 @@ Please read this section carefully before changing any of the settings
 described here, as a wrong setting can have a severe impact on either
 the owners of machines in the pool or the users of the pool.
 
-*condor\_startd* Terminology
-''''''''''''''''''''''''''''
+*condor_startd* :index:`Terminology<single: condor_startd; terminology>`
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Understanding the configuration requires an understanding of ClassAd
-expressions, which are detailed in
-section \ `4.1 <HTCondorsClassAdMechanism.html#x48-3980004.1>`__.
+expressions, which are detailed in section \ `HTCondor's ClassAd
+Mechanism <../misc-concepts/classad-mechanism.html>`__.
 
 Each machine runs one *condor\_startd* daemon. Each machine may contain
 one or more cores (or CPUs). The HTCondor construct of a slot describes
@@ -85,9 +85,9 @@ evaluates the expression against its own ClassAd. If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ClassAd, such as ``Owner`` or
 ``Imagesize``), the expression is (usually) undefined. See
-section \ `4.1 <HTCondorsClassAdMechanism.html#x48-3980004.1>`__ for
-specifics on how undefined terms are handled in ClassAd expression
-evaluation.
+section \ `HTCondor's ClassAd
+Mechanism <../misc-concepts/classad-mechanism.html>`__ for specifics on
+how undefined terms are handled in ClassAd expression evaluation.
 
 A note of caution is in order when modifying the ``START`` expression to
 reference job ClassAd attributes. When using the ``POLICY : Desktop``
@@ -346,7 +346,8 @@ is described below.
     E
        The transition from Unclaimed to Backfill happens if the machine
        is configured to run backfill computations (see
-       section \ `3.14.10 <SettingUpforSpecialEnvironments.html#x42-3700003.14.10>`__)
+       section \ `Setting Up for Special
+       Environments <../admin-manual/setting-up-special-environments.html>`__)
        and the ``START_BACKFILL`` expression evaluates to TRUE.
     P
        The transition from Unclaimed to Drained happens if draining of
@@ -735,7 +736,8 @@ skipped, and the machine goes directly to the Claimed/Idle state
 state (transition **6**), even if it is only for a brief period of time.
 
 If the machine has been configured to perform backfill jobs (see
-section \ `3.14.10 <SettingUpforSpecialEnvironments.html#x42-3700003.14.10>`__),
+section \ `Setting Up for Special
+Environments <../admin-manual/setting-up-special-environments.html>`__),
 while it is in Unclaimed/Idle it will evaluate the ``START_BACKFILL``
 expression. Once ``START_BACKFILL`` evaluates to TRUE, the machine will
 enter the Backfill/Idle state (transition **7**) to begin the process of
@@ -979,8 +981,8 @@ If the machine enters the Killing activity, (because either
 ``True``), it attempts to force the *condor\_starter* to immediately
 kill the underlying HTCondor job. Once the machine has begun to hard
 kill the HTCondor job, the *condor\_startd* starts a timer, the length
-of which is defined by the ``KILLING_TIMEOUT``
- `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__ macro. This macro
+of which is defined by the ``KILLING_TIMEOUT``  `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ macro. This macro
 is defined in seconds and defaults to 30. If this timer expires and the
 machine is still in the Killing activity, something has gone seriously
 wrong with the *condor\_starter* and the startd tries to vacate the job
@@ -1000,10 +1002,11 @@ etc), the machine will enter the Owner state (transition **25**).
 
 The Backfill state is used whenever the machine is performing low
 priority background tasks to keep itself busy. For more information
-about backfill support in HTCondor, see
-section \ `3.14.10 <SettingUpforSpecialEnvironments.html#x42-3700003.14.10>`__
-on
-page \ `1193 <SettingUpforSpecialEnvironments.html#x42-3700003.14.10>`__.
+about backfill support in HTCondor, see section \ `Setting Up for
+Special
+Environments <../admin-manual/setting-up-special-environments.html>`__
+on page \ `Setting Up for Special
+Environments <../admin-manual/setting-up-special-environments.html>`__.
 This state is only used if the machine has been configured to enable
 backfill computation, if a specific backfill manager has been installed
 and configured, and if the machine is otherwise idle (not being used
@@ -1117,8 +1120,8 @@ It serves as a quick reference.
  ``CLAIM_WORKLIFE``
     This expression specifies the number of seconds after which a claim
     will stop accepting additional jobs. This configuration macro is
-    fully documented here:
-     `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__.
+    fully documented here:  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__.
  ``MachineMaxVacateTime``
     When the machine enters the Preempting/Vacating state, this
     expression specifies the maximum time in seconds that the
@@ -1880,11 +1883,14 @@ This example policy is controlled with the following configuration
 variables.
 
 -  ``SLOTS_CONNECTED_TO_CONSOLE`` , with definition at
-   section \ `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__
+   section \ `Configuration
+   Macros <../admin-manual/configuration-macros.html>`__
 -  ``SLOTS_CONNECTED_TO_KEYBOARD`` , with definition at
-   section \ `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__
+   section \ `Configuration
+   Macros <../admin-manual/configuration-macros.html>`__
 -  ``DISCONNECTED_KEYBOARD_IDLE_BOOST`` , with definition at
-   section \ `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__
+   section \ `Configuration
+   Macros <../admin-manual/configuration-macros.html>`__
 
 Each slot has its own machine ClassAd. Yet, the policy expressions for
 the multi-core machine are propagated and inherited from configuration
@@ -2389,8 +2395,8 @@ This example policy tells *condor\_defrag* to initiate draining jobs
 from 1 machine per hour, but to avoid initiating new draining if there
 are 20 completely defragmented machines or 10 machines in a draining
 state. A full description of each configuration variable used by the
-*condor\_defrag* daemon may be found in
-section \ `3.5.33 <ConfigurationMacros.html#x33-2290003.5.33>`__.
+*condor\_defrag* daemon may be found in section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 By default, when a machine is drained, existing jobs are gracefully
 evicted. This means that each job will be allowed to use the remaining
@@ -2440,8 +2446,8 @@ in the attributes ``TotalMachineDrainingUnclaimedTime`` and
 these values across the pool and advertises the result in its daemon
 ClassAd in the attributes ``AvgDrainingBadput`` and
 ``AvgDrainingUnclaimed``. Details of all attributes published by the
-*condor\_defrag* daemon are described in
-section \ `A.8 <DefragClassAdAttributes.html#x176-1240000A.8>`__.
+*condor\_defrag* daemon are described in section \ `Defrag ClassAd
+Attributes <../classad-attributes/defrag-classad-attributes.html>`__.
 
 The following command may be used to view the *condor\_defrag* daemon
 ClassAd:
@@ -2478,8 +2484,9 @@ For each entry in this list there must be a corresponding
 transform rules. Transforms use the same syntax as *condor\_job\_router*
 transforms; although unlike the *condor\_job\_router* there is no
 default transform, and all matching transforms are applied - not just
-the first one. (See `5.4 <TheHTCondorJobRouter.html#x57-4910005.4>`__
-for information on the *condor\_job\_router*.)
+the first one. (See `The HTCondor Job
+Router <../grid-computing/job-router.html>`__ for information on the
+*condor\_job\_router*.)
 
 The following example shows a set of two transforms: one that
 automatically assigns an accounting group to jobs based on the

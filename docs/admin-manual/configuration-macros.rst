@@ -5,15 +5,17 @@ Configuration Macros
 
 The section contains a list of the individual configuration macros for
 HTCondor. Before attempting to set up HTCondor configuration, you should
-probably read the introduction to configuration section
-( `3.3 <IntroductiontoConfiguration.html#x31-1690003.3>`__) and possibly
-the configuration template section
-( `3.4 <ConfigurationTemplates.html#x32-1820003.4>`__).
+probably read the introduction to configuration section ( `Introduction
+to
+Configuration <../admin-manual/introduction-to-configuration.html>`__)
+and possibly the configuration template section ( `Configuration
+Templates <../admin-manual/configuration-templates.html>`__).
 
 The settings that control the policy under which HTCondor will start,
-suspend, resume, vacate or kill jobs are described in
-section \ `3.7 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2410003.7>`__
-on Policy Configuration for the *condor\_startd*, not in this section.
+suspend, resume, vacate or kill jobs are described in section \ `Policy
+Configuration for Execute Hosts and for Submit
+Hosts <../admin-manual/policy-configuration.html>`__ on Policy
+Configuration for the *condor\_startd*, not in this section.
 
 HTCondor-wide Configuration File Entries
 ----------------------------------------
@@ -30,8 +32,8 @@ File System Configuration File Entries”.
     on the same machine. If for some reason they were not run on the
     same machine, ``$(CONDOR_HOST)`` would not be needed. Some of the
     host-based security macros use ``$(CONDOR_HOST)`` by default. See
-    section \ `3.8.9 <Security.html#x36-2920003.8.9>`__, on Setting up
-    IP/host-based security in HTCondor for details.
+    section \ `Security <../admin-manual/security.html>`__, on Setting
+    up IP/host-based security in HTCondor for details.
  ``COLLECTOR_HOST``
     The host name of the machine where the *condor\_collector* is
     running for your pool. Normally, it is defined relative to the
@@ -52,15 +54,14 @@ File System Configuration File Entries”.
     there is a conflict with another service listening on the same
     network port. For more information about specifying a non-standard
     port for the *condor\_collector* daemon, see
-    section \ `3.9.1 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3040003.9.1>`__
-    on
-    page \ `1082 <NetworkingincludessectionsonPortUsageandCCB.html#x37-3040003.9.1>`__.
+    section \ `Networking <../admin-manual/networking.html>`__ on
+    page \ `Networking <../admin-manual/networking.html>`__.
 
     Multiple *condor\_collector* daemons may be running simultaneously,
     if ``COLLECTOR_HOST`` is defined with a comma separated list of
     hosts. Multiple *condor\_collector* daemons may run for the
-    implementation of high availability; see
-    section \ `3.13 <TheHighAvailabilityofDaemons.html#x41-3360003.13>`__
+    implementation of high availability; see section \ `The High
+    Availability of Daemons <../admin-manual/high-availability.html>`__
     for details. With more than one running, updates are sent to all.
     With more than one running, queries are sent to one of the
     *condor\_collector* daemons, chosen at random.
@@ -83,10 +84,10 @@ File System Configuration File Entries”.
     number. This service is optional, and requires additional
     configuration to enable it. There is no default value for
     ``CONDOR_VIEW_HOST``. If ``CONDOR_VIEW_HOST`` is not defined, no
-    HTCondorView server is used. See
-    section \ `3.14.7 <SettingUpforSpecialEnvironments.html#x42-3600003.14.7>`__
-    on
-    page \ `1175 <SettingUpforSpecialEnvironments.html#x42-3600003.14.7>`__
+    HTCondorView server is used. See section \ `Setting Up for Special
+    Environments <../admin-manual/setting-up-special-environments.html>`__
+    on page \ `Setting Up for Special
+    Environments <../admin-manual/setting-up-special-environments.html>`__
     for more details.
  ``SCHEDD_HOST``
     The host name of the machine where the *condor\_schedd* is running

@@ -63,7 +63,8 @@ and described:
     does not have this integrity information. Also note that integrity
     checks are not performed upon job data files that are transferred by
     HTCondor via the File Transfer Mechanism described in
-    section \ `2.5.9 <SubmittingaJob.html#x17-380002.5.9>`__.
+    section \ `Submitting a
+    Job <../users-manual/submitting-a-job.html>`__.
 
 HTCondor’s Security Model
 -------------------------

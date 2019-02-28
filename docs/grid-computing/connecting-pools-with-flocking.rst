@@ -14,9 +14,9 @@ daemon (which runs on each machine that may submit jobs) to implement
 flocking.
 
 NOTE: Flocking to pools which use HTCondor’s high availability
-mechanisms is not advised. See section
- `3.13.2 <TheHighAvailabilityofDaemons.html#x41-3390003.13.2>`__ for a
-discussion of the issues.
+mechanisms is not advised. See section  `The High Availability of
+Daemons <../admin-manual/high-availability.html>`__ for a discussion of
+the issues.
 
 Flocking Configuration
 ----------------------
@@ -65,9 +65,9 @@ configuration, set the following configuration variables:
 
     This example configuration presumes that the *condor\_collector* and
     *condor\_negotiator* daemons are running on the same machine. See
-    section \ `3.8.7 <Security.html#x36-2880003.8.7>`__ on
-    page \ `1032 <Security.html#x36-2880003.8.7>`__ for a discussion of
-    security macros and their use.
+    section \ `Security <../admin-manual/security.html>`__ on
+    page \ `Security <../admin-manual/security.html>`__ for a discussion
+    of security macros and their use.
 
 The configuration macros that must be set in pool B are ones that
 authorize jobs from machine A to flock to pool B.
@@ -109,7 +109,7 @@ the location of input, output and error files. The common case will be
 that machines within separate pools do not have a shared file system.
 Therefore, when submitting jobs, the user will need to enable file
 transfer mechanisms. These mechanisms are discussed in
-section \ `2.5.9 <SubmittingaJob.html#x17-380002.5.9>`__ on
-page \ `91 <SubmittingaJob.html#x17-380002.5.9>`__.
+section \ `Submitting a Job <../users-manual/submitting-a-job.html>`__
+on page \ `Submitting a Job <../users-manual/submitting-a-job.html>`__.
 
       

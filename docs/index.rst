@@ -1,7 +1,7 @@
-Welcome to the HTCondor Manual
-==============================
+HTCondor Manual
+===============
 
-Contents:
+Center for High Throughput Computing, University of Wisconsin–Madison.
 
 .. toctree::
    :maxdepth: 2
@@ -21,4 +21,6 @@ Contents:
    man-pages/index
    classad-attributes/index
    codes-other-values/index
+
+:ref:`genindex`
 

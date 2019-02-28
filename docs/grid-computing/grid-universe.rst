@@ -195,9 +195,9 @@ If the remote *condor\_collector* is not listening on the standard port
 
 File transfer of a job’s executable, ``stdin``, ``stdout``, and
 ``stderr`` are automatic. When other files need to be transferred using
-HTCondor’s file transfer mechanism (see
-section \ `2.5.9 <SubmittingaJob.html#x17-380002.5.9>`__ on
-page \ `91 <SubmittingaJob.html#x17-380002.5.9>`__), the mechanism is
+HTCondor’s file transfer mechanism (see section \ `Submitting a
+Job <../users-manual/submitting-a-job.html>`__ on page \ `Submitting a
+Job <../users-manual/submitting-a-job.html>`__), the mechanism is
 applied based on the resulting job universe on the remote machine.
 
 HTCondor-C Jobs Between Differing Platforms

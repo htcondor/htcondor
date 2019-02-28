@@ -58,6 +58,7 @@ def update_link(data):
     return updated_link
 
 
+
 def main():
 
     # Command line arguments
@@ -90,15 +91,16 @@ def main():
         tag.decompose()
 
     # Delete the "Contents" and "Index" links. Also delete all empty links.
+    # Wait, we can use the empty links to identify indexes. Keep them for now.
     links_tags = soup.find_all("a")
     for tag in links_tags:
         if tag.string:
             if tag.string == "Contents" or tag.string == "Index":
                 tag.decompose()
-        else:
-            # We don't want to delete links that have an href set
-            if "href" not in tag.attrs:
-                tag.decompose()
+        #else:
+        #    # We don't want to delete links that have an href set
+        #    if "href" not in tag.attrs:
+        #        tag.decompose()
 
     # Delete the table of contents
     toc_tags = soup.find_all("div", attrs={"class": "sectionTOCS"})
@@ -242,12 +244,29 @@ def main():
             updated_link = update_link(tag)
             tag.replace_with(updated_link)
 
+    # Soup is confused. Reload.
+    html_dump = str(soup)
+    soup = bs4.BeautifulSoup(html_dump, features="lxml")
+
+    # Update images to point to correct src files
+    # .... not worth it. We only have ~10 images in strange formats. Do it manually.
+
+    # Is there anything we can do to automate the index items?
+    # .... maybe by looking at the <a id="...">...</a> tags generated from the \Macro tags?
+    index_tags = soup.find_all("a")
+    print("Found " + str(len(index_tags)) + " a tags which may or may not be index items")
+    for tag in index_tags:
+        if "id" in tag.attrs.keys():
+            new_tag = soup.new_tag("div")
+            new_tag.string = "INDEX GOES HERE"
+            tag.replace_with(new_tag)
+            
 
 
     # Does outputting pretty HTML matter? 
     # Actually we do NOT want pretty HTML, since this introduces spacing that confuses pandoc.
-    # pretty_html = soup.prettify().encode('utf-8')
-    # print(str(pretty_html))
+    #pretty_html = soup.prettify().encode('utf-8')
+    #print(str(pretty_html))
     output_html = str(soup)
 
     # Overwrite the original file with the parseable markup

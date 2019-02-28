@@ -7,8 +7,8 @@ Upgrading from the 8.6 series of HTCondor to the 8.8 series will bring
 new features introduced in the 8.7 series of HTCondor. These new
 features include the following (note that this list contains only the
 most significant changes; a full list of changes can be found in the
-version
-history: \ `11.5 <DevelopmentReleaseSeries87.html#x88-61200011.5>`__):
+version history: \ `Development Release Series
+8.7 <../version-history/development-release-series-87.html>`__):
 
 -  *condor\_annex* is tool to help users and administrators use cloud
    resources to run HTCondor jobs. It automates the processes of

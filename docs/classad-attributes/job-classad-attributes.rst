@@ -9,7 +9,8 @@ Job ClassAd Attributes
     The accounting group name, as set in the submit description file via
     the **accounting\_group** command. This attribute is only present if
     an accounting group was requested by the submission. See
-    section \ `3.6.7 <UserPrioritiesandNegotiation.html#x34-2390003.6.7>`__
+    section \ `User Priorities and
+    Negotiation <../admin-manual/user-priorities-negotiation.html>`__
     for more information about accounting groups.
  ``AcctGroupUser``:
     The user name associated with the accounting group. This attribute
@@ -21,11 +22,13 @@ Job ClassAd Attributes
  ``Args``:
     A string representing the command line arguments passed to the job,
     when those arguments are specified using the old syntax, as
-    specified in section \ `12 <Condorsubmit.html#x149-108400012>`__.
+    specified in
+    section \ `condor\_submit <../man-pages/condor_submit.html>`__.
  ``Arguments``:
     A string representing the command line arguments passed to the job,
     when those arguments are specified using the new syntax, as
-    specified in section \ `12 <Condorsubmit.html#x149-108400012>`__.
+    specified in
+    section \ `condor\_submit <../man-pages/condor_submit.html>`__.
  ``BatchQueue``:
     For grid universe jobs destined for PBS, LSF or SGE, the name of the
     queue in the remote batch system.
@@ -306,11 +309,13 @@ Job ClassAd Attributes
  ``Env``:
     A string representing the environment variables passed to the job,
     when those arguments are specified using the old syntax, as
-    specified in section \ `12 <Condorsubmit.html#x149-108400012>`__.
+    specified in
+    section \ `condor\_submit <../man-pages/condor_submit.html>`__.
  ``Environment``:
     A string representing the environment variables passed to the job,
     when those arguments are specified using the new syntax, as
-    specified in section \ `12 <Condorsubmit.html#x149-108400012>`__.
+    specified in
+    section \ `condor\_submit <../man-pages/condor_submit.html>`__.
  ``ExecutableSize``:
     Size of the executable in KiB.
  ``ExitBySignal``:

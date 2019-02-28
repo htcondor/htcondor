@@ -202,8 +202,8 @@ An Example Configuration
 
 The following sample configuration sets up potential job routing to
 three routes (grid sites). Definitions of the configuration variables
-specific to the Job Router are in section 
-`3.5.19 <ConfigurationMacros.html#x33-2060003.5.19>`__. One route is an
+specific to the Job Router are in section  `Configuration
+Macros <../admin-manual/configuration-macros.html>`__. One route is an
 HTCondor site accessed via the Globus gt2 protocol. A second route is a
 PBS site, also accessed via Globus gt2. The third site is an HTCondor
 site accessed by HTCondor-C. The *condor\_job\_router* daemon does not
@@ -223,8 +223,9 @@ convenient way to set up and install a trusted CA, if needed.
 
 Note that, as of version 8.5.6, the configuration language supports
 multi-line values, as shown in the example below (see section
- `3.3.5 <IntroductiontoConfiguration.html#x31-1740003.3.5>`__ for more
-details).
+ `Introduction to
+Configuration <../admin-manual/introduction-to-configuration.html>`__
+for more details).
 
 ::
 
@@ -285,7 +286,7 @@ possible routes and it may specify specific modifications that should be
 made to the job when it is sent along a specific route. In addition to
 this mechanism for transforming the job, external programs may be
 invoked to transform the job. For more information, see
-section \ `4.4.2 <Hooks.html#x51-4440004.4.2>`__.
+section \ `Hooks <../misc-concepts/hooks.html>`__.
 
 The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.

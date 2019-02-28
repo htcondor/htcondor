@@ -5,7 +5,8 @@ Job Event Log Codes
 
 Table \ `B.2 <#x182-12460022>`__ lists codes that appear as the first
 field within a job event log file. See more detailed descriptions of
-these values in section \ `2.6.7 <ManagingaJob.html#x18-600002.6.7>`__.
+these values in section \ `Managing a
+Job <../users-manual/managing-a-job.html>`__.
 
 --------------
 

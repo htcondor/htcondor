@@ -230,8 +230,8 @@ started under HTCondor and what they do:
  *condor\_procd*
     This daemon controls and monitors process families within HTCondor.
     Its use is optional in general, but it must be used if group-ID
-    based tracking (see
-    Section \ `3.14.12 <SettingUpforSpecialEnvironments.html#x42-3780003.14.12>`__)
+    based tracking (see Section \ `Setting Up for Special
+    Environments <../admin-manual/setting-up-special-environments.html>`__)
     is enabled.
  *condor\_job\_router*
     This daemon transforms **vanilla** universe jobs into **grid**

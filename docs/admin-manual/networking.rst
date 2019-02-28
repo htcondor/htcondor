@@ -11,7 +11,7 @@ in a pool that spans firewalls and private networks.
 The security section of the manual contains some information that is
 relevant to the discussion of network communication which will not be
 duplicated here, so please see
-section \ `3.8 <Security.html#x36-2680003.8>`__ as well.
+section \ `Security <../admin-manual/security.html>`__ as well.
 
 Firewalls, private networks, and network address translation (NAT) pose
 special problems for HTCondor. There are currently two main mechanisms
@@ -79,9 +79,10 @@ As an optimization for daemons and tools communicating with another
 daemon that is running on the same host, each HTCondor daemon can be
 configured to write its IP address and port number into a well-known
 file. The file names are controlled using the ``<SUBSYS>_ADDRESS_FILE``
-configuration variables, as described in
-section \ `3.5.3 <ConfigurationMacros.html#x33-1900003.5.3>`__ on
-page \ `618 <ConfigurationMacros.html#x33-1900003.5.3>`__.
+configuration variables, as described in section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 NOTE: In the 6.6 stable series, and HTCondor versions earlier than
 6.7.5, the *condor\_negotiator* also listened on a fixed, well-known
@@ -153,11 +154,14 @@ information stored in this file. For example:
 | COLLECTOR\_ADDRESS\_FILE = $(LOG)/.collector\_address
 
 Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in
-section \ `3.5.3 <ConfigurationMacros.html#x33-1900003.5.3>`__ on
-page \ `618 <ConfigurationMacros.html#x33-1900003.5.3>`__, and
-``COLLECTOR_HOST`` is in
-section \ `3.5.1 <ConfigurationMacros.html#x33-1880003.5.1>`__ on
-page \ `586 <ConfigurationMacros.html#x33-1880003.5.1>`__.
+section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__, and
+``COLLECTOR_HOST`` is in section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 Restricting Port Usage to Operate with Firewalls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -174,17 +178,18 @@ section \ `3.9.1 <#x37-3050003.9.1>`__, if a dynamically assigned port
 is desired for the *condor\_collector* daemon.
 
 All of the HTCondor daemons on a machine may be configured to share a
-single port. See
-section \ `3.5.30 <ConfigurationMacros.html#x33-2260003.5.30>`__ for
-more information.
+single port. See section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ for more
+information.
 
 The configuration variables ``HIGHPORT`` and ``LOWPORT`` facilitate
 setting a restricted range of ports that HTCondor will use. This may be
 useful when some machines are behind a firewall. The configuration
 macros ``HIGHPORT`` and ``LOWPORT`` will restrict dynamic ports to the
 range specified. The configuration variables are fully defined in
-section \ `3.5.4 <ConfigurationMacros.html#x33-1910003.5.4>`__. All of
-these ports must be greater than 0 and less than 65,536. Note that both
+section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__. All of these
+ports must be greater than 0 and less than 65,536. Note that both
 ``HIGHPORT`` and ``LOWPORT`` must be at least 1024 for HTCondor version
 6.6.8. In general, use ports greater than 1024, in order to avoid port
 conflicts with standard services on the machine. Another reason for
@@ -196,12 +201,12 @@ cannot work.
 The range of ports assigned may be restricted based on incoming
 (listening) and outgoing (connect) ports with the configuration
 variables ``IN_HIGHPORT`` , ``IN_LOWPORT`` , ``OUT_HIGHPORT`` , and
-``OUT_LOWPORT`` . See
-section \ `3.5.4 <ConfigurationMacros.html#x33-1910003.5.4>`__ for
-complete definitions of these configuration variables. A range of ports
-lower than 1024 for daemons running as root is appropriate for incoming
-ports, but not for outgoing ports. The use of ports below 1024 (versus
-above 1024) has security implications; therefore, it is inappropriate to
+``OUT_LOWPORT`` . See section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ for complete
+definitions of these configuration variables. A range of ports lower
+than 1024 for daemons running as root is appropriate for incoming ports,
+but not for outgoing ports. The use of ports below 1024 (versus above
+1024) has security implications; therefore, it is inappropriate to
 assign a range that crosses the 1024 boundary.
 
 NOTE: Setting ``HIGHPORT`` and ``LOWPORT`` will not automatically force

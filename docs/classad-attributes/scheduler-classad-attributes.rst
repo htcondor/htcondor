@@ -224,8 +224,10 @@ Scheduler ClassAd Attributes
  ``MaxJobsRunning``:
     The same integer value as set by the evaluation of the configuration
     variable ``MAX_JOBS_RUNNING`` . See the definition at
-    section \ `3.5.9 <ConfigurationMacros.html#x33-1960003.5.9>`__ on
-    page \ `687 <ConfigurationMacros.html#x33-1960003.5.9>`__.
+    section \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__ on
+    page \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__.
  ``MonitorSelfAge``:
     The number of seconds that this daemon has been running.
  ``MonitorSelfCPUUsage``:
@@ -469,13 +471,17 @@ Scheduler ClassAd Attributes
  ``StartLocalUniverse``:
     The same boolean value as set in the configuration variable
     ``START_LOCAL_UNIVERSE`` . See the definition at
-    section \ `3.5.9 <ConfigurationMacros.html#x33-1960003.5.9>`__ on
-    page \ `684 <ConfigurationMacros.html#x33-1960003.5.9>`__.
+    section \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__ on
+    page \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__.
  ``StartSchedulerUniverse``:
     The same boolean value as set in the configuration variable
     ``START_SCHEDULER_UNIVERSE`` . See the definition at
-    section \ `3.5.9 <ConfigurationMacros.html#x33-1960003.5.9>`__ on
-    page \ `686 <ConfigurationMacros.html#x33-1960003.5.9>`__.
+    section \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__ on
+    page \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__.
  ``StatsLastUpdateTime``:
     A Statistics attribute defining the time that statistics about jobs
     were last updated, represented as the number of seconds elapsed

@@ -6,11 +6,10 @@ Managing a Job
 This section provides a brief summary of what can be done once jobs are
 submitted. The basic mechanisms for monitoring a job are introduced, but
 the commands are discussed briefly. You are encouraged to look at the
-man pages of the commands referred to (located in
-Chapter \ `12 <CommandReferenceManualmanpages.html#x90-63900012>`__
-beginning on
-page \ `1739 <CommandReferenceManualmanpages.html#x90-63900012>`__) for
-more information.
+man pages of the commands referred to (located in Chapter \ `Command
+Reference Manual (man pages) <../man-pages/index.html>`__ beginning on
+page \ `Command Reference Manual (man
+pages) <../man-pages/index.html>`__) for more information.
 
 When jobs are submitted, HTCondor will attempt to find resources to run
 the jobs. A list of all those with jobs submitted may be obtained
@@ -76,9 +75,10 @@ queue:
     waiting for a machine to become available.
     H: The job is the hold state. In the hold state, the job will not be
     scheduled to run until it is released. See the *condor\_hold* manual
-    page located on page \ `1918 <Condorhold.html#x117-82200012>`__ and
-    the *condor\_release* manual page located on
-    page \ `2040 <Condorrelease.html#x134-95900012>`__.
+    page located on
+    page \ `condor\_hold <../man-pages/condor_hold.html>`__ and the
+    *condor\_release* manual page located on
+    page \ `condor\_release <../man-pages/condor_release.html>`__.
 
 The RUN\_TIME time reported for a job is the time that has been
 committed to the job.
@@ -191,9 +191,10 @@ Jobs in universes other than the standard universe that are running when
 placed on hold will start over from the beginning when released.
 
 The manual page for *condor\_hold* on
-page \ `1918 <Condorhold.html#x117-82200012>`__ and the manual page for
-*condor\_release* on page \ `2040 <Condorrelease.html#x134-95900012>`__
-contain usage details.
+page \ `condor\_hold <../man-pages/condor_hold.html>`__ and the manual
+page for *condor\_release* on
+page \ `condor\_release <../man-pages/condor_release.html>`__ contain
+usage details.
 
 Changing the priority of jobs
 -----------------------------
@@ -393,10 +394,12 @@ A variety of errors and unusual conditions may cause a job to be placed
 into the Hold state. The job will stay in this state and in the job
 queue until conditions are corrected and *condor\_release* is invoked.
 
-A table listing the reasons why a job may be held is at
-section \ `A.2 <JobClassAdAttributes.html#x170-1234000A.2>`__. A string
-identifying the reason that a particular job is in the Hold state may be
-displayed by invoking *condor\_q*. For the example job ID 16.0, use:
+A table listing the reasons why a job may be held is at section \ `Job
+ClassAd
+Attributes <../classad-attributes/job-classad-attributes.html>`__. A
+string identifying the reason that a particular job is in the Hold state
+may be displayed by invoking *condor\_q*. For the example job ID 16.0,
+use:
 
 ::
 

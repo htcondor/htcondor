@@ -14,9 +14,10 @@ In the table, clipped means that HTCondor does not support checkpointing
 or remote system calls on the given platform. This means that standard
 universe jobs are not supported. Some clipped platforms will have
 further limitations with respect to supported universes. See
-section \ `2.4.1 <RunningaJobtheStepsToTake.html#x16-180002.4.1>`__ on
-page \ `32 <RunningaJobtheStepsToTake.html#x16-180002.4.1>`__ for more
-details on job universes within HTCondor and their abilities and
+section \ `Running a Job: the Steps To
+Take <../users-manual/running-a-job-steps.html>`__ on page \ `Running a
+Job: the Steps To Take <../users-manual/running-a-job-steps.html>`__ for
+more details on job universes within HTCondor and their abilities and
 limitations.
 
 The HTCondor source code is available for public download alongside the

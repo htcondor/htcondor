@@ -42,11 +42,11 @@ New Features:
 
    By default, any user with access to a privileged EC2 instance has
    access to that instance’s privileges. If you would like to make use
-   of this feature, please read
-   `6.4.1 <HTCondorAnnexCustomizationGuide.html#x66-5390006.4.1>`__
-   before adding privileges (an instance role) to an instance which
-   allows access by other users, specifically including the submitting
-   of jobs to or running jobs on that instance. `(Ticket
+   of this feature, please read `HTCondor Annex Customization
+   Guide <../cloud-computing/annex-customization-guide.html>`__ before
+   adding privileges (an instance role) to an instance which allows
+   access by other users, specifically including the submitting of jobs
+   to or running jobs on that instance. `(Ticket
    #6789). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6789>`__
 
 -  the *condor\_hdfs* daemon which allowed the hdfs daemons to run under

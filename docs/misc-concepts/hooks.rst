@@ -105,9 +105,10 @@ what output is expected, and, when relevant, the exit status expected.
    information for the *condor\_starter* to eventually spawn the work.
    The required and optional attributes in this ClassAd are identical to
    the ones described for Computing on Demand (COD) jobs in
-   section \ `4.3.3 <ComputingOnDemandCOD.html#x50-4240004.3.3>`__ on
-   COD Application Attributes,
-   page \ `1336 <ComputingOnDemandCOD.html#x50-4240004.3.3>`__.
+   section \ `Computing On Demand
+   COD <../misc-concepts/computing-on-demand.html>`__ on COD Application
+   Attributes, page \ `Computing On Demand
+   COD <../misc-concepts/computing-on-demand.html>`__.
 
     Command-line arguments passed to the hook
        None.
@@ -688,7 +689,8 @@ send updates to the collector immediately.
  Configuration
 
 Configuration variables related to Daemon ClassAd Hooks are defined in
-section  `3.5.31 <ConfigurationMacros.html#x33-2270003.5.31>`__.
+section  `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 Here is a complete configuration example. It defines all three of the
 available types of jobs: ones that use the *condor\_startd*, benchmark

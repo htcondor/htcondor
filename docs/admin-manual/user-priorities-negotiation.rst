@@ -23,8 +23,8 @@ two priority values assigned to HTCondor users:
 
 This section describes these two priorities and how they affect resource
 allocations in HTCondor. Documentation on configuring and controlling
-priorities may be found in
-section \ `3.5.15 <ConfigurationMacros.html#x33-2020003.5.15>`__.
+priorities may be found in section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__.
 
 Real User Priority (RUP)
 ------------------------
@@ -73,8 +73,9 @@ EUP may be useful:
     low priority for resources, therefore using resources not used by
     other HTCondor users.
  Remote Users
-    HTCondor’s flocking feature (see
-    section \ `5.2 <ConnectingHTCondorPoolswithFlocking.html#x55-4510005.2>`__)
+    HTCondor’s flocking feature (see section \ `Connecting HTCondor
+    Pools with
+    Flocking <../grid-computing/connecting-pools-with-flocking.html>`__)
     allows jobs to run in a pool other than the local one. In addition,
     the submit-only feature allows a user to submit jobs to another
     pool. In such situations, submitters from other domains can submit
@@ -87,7 +88,7 @@ EUP may be useful:
 The priority boost factors for individual users can be set with the
 **setfactor** option of *condor\_userprio*. Details may be found in the
 *condor\_userprio* manual page on
-page \ `2298 <Condoruserprio.html#x160-116800012>`__.
+page \ `condor\_userprio <../man-pages/condor_userprio.html>`__.
 
 Priorities in Negotiation and Preemption
 ----------------------------------------
@@ -112,9 +113,9 @@ time interval. Note that ``PREEMPTION_REQUIREMENTS`` only applies to
 preemptions due to user priority. It does not have any effect if the
 machine’s ``RANK`` expression prefers a different job, or if the
 machine’s policy causes the job to vacate due to other activity on the
-machine. See section
-`3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2520003.7.1>`__
-for the current default policy on preemption.
+machine. See section `Policy Configuration for Execute Hosts and for
+Submit Hosts <../admin-manual/policy-configuration.html>`__ for the
+current default policy on preemption.
 
 The following ephemeral attributes may be used within policy
 definitions. Care should be taken when using these attributes, due to
@@ -136,9 +137,11 @@ that may change within the time period associated with a single
 negotiation cycle. Therefore, the configuration variables
 ``PREEMPTION_REQUIREMENTS_STABLE`` and and ``PREEMPTION_RANK_STABLE``
 exist to inform the *condor\_negotiator* daemon that values may change.
-See section \ `3.5.15 <ConfigurationMacros.html#x33-2020003.5.15>`__ on
-page \ `741 <ConfigurationMacros.html#x33-2020003.5.15>`__ for
-definitions of these configuration variables.
+See section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ on
+page \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ for definitions of
+these configuration variables.
 
  ``SubmitterUserPrio``:
     A floating point value representing the user priority of the

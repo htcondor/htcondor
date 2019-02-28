@@ -79,8 +79,8 @@ Machine ClassAd Attributes
  ``ConsoleIdle``:
     The number of seconds since activity on the system console keyboard
     or console mouse has last been detected. The value can be modified
-    with ``SLOTS_CONNECTED_TO_CONSOLE`` as defined at
-     `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__.
+    with ``SLOTS_CONNECTED_TO_CONSOLE`` as defined at  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__.
  ``Cpus``:
     The number of CPUs (cores) in this slot. It is 1 for a single CPU
     slot, 2 for a dual CPU slot, etc. For a partitionable slot, it is
@@ -192,8 +192,8 @@ Machine ClassAd Attributes
  ``HasFileTransferPluginMethods``:
     A string of comma-separated file transfer protocols that the machine
     can support. The value can be modified with ``FILETRANSFER_PLUGINS``
-    as defined at
-     `3.5.11 <ConfigurationMacros.html#x33-1980003.5.11>`__.
+    as defined at  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__.
  ``Has_sse4_1``:
     A boolean value set to ``True`` if the machine being advertised
     supports the SSE 4.1 instructions, and ``Undefined`` otherwise.
@@ -328,8 +328,8 @@ Machine ClassAd Attributes
     keyboard activity from telnet and rlogin sessions. Note that
     ``KeyboardIdle`` will always be equal to or less than
     ``ConsoleIdle``. The value can be modified with
-    ``SLOTS_CONNECTED_TO_KEYBOARD`` as defined at
-     `3.5.8 <ConfigurationMacros.html#x33-1950003.5.8>`__.
+    ``SLOTS_CONNECTED_TO_KEYBOARD`` as defined at  `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__.
  ``KFlops``:
     Relative floating point performance as determined via a Linpack
     benchmark.
@@ -774,7 +774,8 @@ Machine ClassAd Attributes
     computing fair shares, and enforcing group quotas. For example,
     claiming a slot with ``SlotWeight = 2`` is equivalent to claiming
     two ``SlotWeight = 1`` slots. See the description of ``SlotWeight``
-    on page \ `678 <ConfigurationMacros.html#x33-1950003.5.8>`__.
+    on page \ `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__.
  ``StartdIpAddr``:
     String with the IP and port address of the *condor\_startd* daemon
     which is publishing this machine ClassAd. When using CCB,

@@ -35,9 +35,10 @@ meaningful batch names for their jobs, to make it easier to keep track
 of related jobs.
 
 (For information about specifying batch names for your jobs, see the
-*condor\_submit* ( `12 <Condorsubmit.html#x149-108000012>`__) and
-*condor\_submit\_dag* ( `12 <Condorsubmitdag.html#x150-109200012>`__)
-man pages.)
+*condor\_submit* ( `condor\_submit <../man-pages/condor_submit.html>`__)
+and *condor\_submit\_dag*
+( `condor\_submitdag <../man-pages/condor_submitdag.html>`__) man
+pages.)
 
 A batch of jobs is defined as follows:
 

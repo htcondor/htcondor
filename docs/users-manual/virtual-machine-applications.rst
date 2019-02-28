@@ -9,8 +9,9 @@ disk image is intended to be a virtual machine. In this manner, the
 virtual machine is the job to be executed.
 
 This section describes this type of HTCondor job. See
-section \ `3.5.25 <ConfigurationMacros.html#x33-2210003.5.25>`__ for
-details of configuration variables.
+section \ `Configuration
+Macros <../admin-manual/configuration-macros.html>`__ for details of
+configuration variables.
 
 The Submit Description File
 ---------------------------

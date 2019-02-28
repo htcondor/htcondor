@@ -114,7 +114,8 @@ Options
     ClassAd. *WhichStatistics* is specified using the same syntax as
     defined for ``STATISTICS_TO_PUBLISH``. A definition is in the
     HTCondor Administrator’s manual section on configuration
-    (section `3.5.1 <ConfigurationMacros.html#x33-1880003.5.1>`__).
+    (section `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__).
  **-storage**
     (Query option) Display attributes of machines with network storage
     resources.
@@ -289,8 +290,8 @@ General Remarks
 -  Note that the ``ActivityTime`` in the ``Idle`` state is not the
    amount of time that the machine has been idle. See the section on
    *condor\_startd* states in the Administrator’s Manual for more
-   information
-   (section `3.2 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2490162>`__).
+   information (section `Policy Configuration for Execute Hosts and for
+   Submit Hosts <../admin-manual/policy-configuration.html>`__).
 -  When using *condor\_status* on a pool with SMP machines, you can
    either provide the host name, in which case you will get back
    information about all slots that are represented on that host, or you

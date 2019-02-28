@@ -822,7 +822,8 @@ characters other than these as options are ignored.
 
     The maps for the ``userMap()`` function are defined by the following
     configuration macros: ``<SUBSYS>_CLASSAD_USER_MAP_NAMES`` (see
-     `3.5.1 <ConfigurationMacros.html#x33-1880003.5.1>`__),
+     `Configuration
+    Macros <../admin-manual/configuration-macros.html>`__),
     ``CLASSAD_USER_MAPFILE_<name> (see  3.5.1)`` and
     ``CLASSAD_USER_MAPDATA_<name> (see  3.5.1)``.
 

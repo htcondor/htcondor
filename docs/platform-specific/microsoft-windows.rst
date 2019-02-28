@@ -15,17 +15,18 @@ are no remote system calls.
 
 This section contains additional information specific to running
 HTCondor on Windows. In order to effectively use HTCondor, first read
-the overview chapter
-(section `1.1 <HighThroughputComputingHTCanditsRequirements.html#x4-40001.1>`__)
-and the user’s manual
-(section `2.1 <WelcometoHTCondor.html#x13-130002.1>`__). If
+the overview chapter (section `High Throughput Computing (HTC) and its
+Requirements <../overview/high-throughput-computing-requirements.html>`__)
+and the user’s manual (section `Welcome to
+HTCondor <../users-manual/welcome-to-htcondor.html>`__). If
 administrating or customizing the policy and set up of HTCondor, also
-read the administrator’s manual chapter
-(section `3.1 <Introduction1.html#x29-1480003.1>`__). After reading
-these chapters, review the information in this chapter for important
-information and differences when using and administrating HTCondor on
-Windows. For information on installing HTCondor for Windows, see
-section \ `3.2.3 <InstallationStartUpShutDownandReconfiguration.html#x30-1580003.2.3>`__.
+read the administrator’s manual chapter (section `Administrators' Manual
+Introduction <../admin-manual/introduction-admin-manual.html>`__). After
+reading these chapters, review the information in this chapter for
+important information and differences when using and administrating
+HTCondor on Windows. For information on installing HTCondor for Windows,
+see section \ `Installation, Start Up, Shut Down and
+Reconfiguration <../admin-manual/installation-startup-shutdown-reconfiguration.html>`__.
 
 Limitations under Windows
 -------------------------
@@ -545,10 +546,10 @@ access.
 
 Finally, HTCondor has all the IP/Host-based security mechanisms present
 in the full-blown version of HTCondor. See
-section \ `3.8.9 <Security.html#x36-2920003.8.9>`__ starting on
-page \ `1052 <Security.html#x36-2920003.8.9>`__ for complete information
-on how to allow/deny access to HTCondor based upon machine host name or
-IP address.
+section \ `Security <../admin-manual/security.html>`__ starting on
+page \ `Security <../admin-manual/security.html>`__ for complete
+information on how to allow/deny access to HTCondor based upon machine
+host name or IP address.
 
 Network files and HTCondor
 --------------------------
@@ -666,7 +667,7 @@ registry using *condor\_store\_cred* on all Windows machines.
 
 Tell HTCondor to use the condor-guest user as the owner of jobs, when
 required. Details for this are in
-section \ `3.8.13 <Security.html#x36-2980003.8.13>`__.
+section \ `Security <../admin-manual/security.html>`__.
 
 Interoperability between HTCondor for Unix and HTCondor for Windows
 -------------------------------------------------------------------

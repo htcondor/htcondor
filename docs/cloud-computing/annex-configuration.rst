@@ -54,20 +54,22 @@ directory when reading its configuration.
 
 The *condor\_annex* log is a daemon-style log. It is configured as if
 *condor\_annex* were a daemon with subsystem type ``ANNEX``; see section
-`3.5.2 <ConfigurationMacros.html#x33-1890003.5.2>`__ for details.
+`Configuration Macros <../admin-manual/configuration-macros.html>`__ for
+details.
 
 *condor\_annex* uses special helper programs, called GAHPs, to interact
 with the different cloud services. These programs do their own logging,
 writing to the annex GAHP log. The annex GAHP log is configured as if it
 were a daemon, but with subsystem type ``ANNEX_GAHP``; see section
-`3.5.2 <ConfigurationMacros.html#x33-1890003.5.2>`__ for details.
+`Configuration Macros <../admin-manual/configuration-macros.html>`__ for
+details.
 
 The annex audit log records two lines for each invocation of
 *condor\_annex*: the command as issued and the results as returned. The
 location of the audit log is set by ``ANNEX_AUDIT_LOG`` , which is the
 ``AUDIT``-level log for the ``ANNEX`` subsystem; see
-``<SUBSYS>_<LEVEL>_LOG``
-(`3.5.2 <ConfigurationMacros.html#x33-1890003.5.2>`__) for details.
+``<SUBSYS>_<LEVEL>_LOG`` (`Configuration
+Macros <../admin-manual/configuration-macros.html>`__) for details.
 Because annex creation commands typically make extensive use of values
 set in configuration, *condor\_annex* will write the configuration it
 used for annex creation commands into the audit log if ``ANNEX_DEBUG``

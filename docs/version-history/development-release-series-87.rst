@@ -219,10 +219,11 @@ New Features:
    *condor\_drain* command, or configure the *condor\_defrag* daemon, to
    set a different ``START`` expression for the duration of the
    draining. See the definition of ``DEFRAG_DRAINING_START_EXPR`` (
-   `3.5.33 <ConfigurationMacros.html#x33-2290003.5.33>`__) and the
-   *condor\_drain* manual ( `12 <Condordrain.html#x111-77600012>`__) for
-   details. See also the known issues above for information which may
-   influence your choice of ``START`` expressions. `(Ticket
+   `Configuration Macros <../admin-manual/configuration-macros.html>`__)
+   and the *condor\_drain* manual (
+   `condor\_drain <../man-pages/condor_drain.html>`__) for details. See
+   also the known issues above for information which may influence your
+   choice of ``START`` expressions. `(Ticket
    #6664). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6664>`__
 -  Docker universe jobs now run with the supplemental group ids of the
    running user, not just the primary group. `(Ticket
@@ -613,8 +614,8 @@ New Features:
    know about. The annex instance ads fabricated for this purpose are
    not real slot ads, so some options you may know from *condor\_status*
    do not apply to the *status* command of *condor\_annex*. See
-   section \ `6 <CloudComputing.html#x58-4970006>`__ for details.
-   `(Ticket
+   section \ `Cloud Computing <../cloud-computing/index.html>`__ for
+   details. `(Ticket
    #6321). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6321>`__
 -  Added a “merge” mode to *condor\_status*. When invoked with the
    [**-merge  **\ *<file>*] option, ads will be read from *file*, which
@@ -635,9 +636,9 @@ New Features:
 -  Updated *condor\_annex* *-check-setup* to check collector security as
    well as connectivity. `(Ticket
    #6322). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=6322>`__
--  Added submit warnings. See section
-   `3.7.2 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2670003.7.2>`__.
-   `(Ticket
+-  Added submit warnings. See section `Policy Configuration for Execute
+   Hosts and for Submit
+   Hosts <../admin-manual/policy-configuration.html>`__. `(Ticket
    #5971). <https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=5971>`__
 -  ``openmpiscript`` now uses *condor\_chirp* to run Open MPI’s execute
    daemons (orted) directly under the *condor\_starter* (instead of

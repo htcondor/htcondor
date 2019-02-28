@@ -82,8 +82,8 @@ variety of ways. For example,
     lists the machine ClassAds for all machines in the pool.
 
 Refer to the *condor\_status* command reference page located on
-page \ `2113 <Condorstatus.html#x147-106400012>`__ for a complete
-description of the *condor\_status* command.
+page \ `condor\_status <../man-pages/condor_status.html>`__ for a
+complete description of the *condor\_status* command.
 
 The following shows a portion of a machine ClassAd for a single machine:
 turunmaa.cs.wisc.edu. Some of the listed attributes are used by HTCondor

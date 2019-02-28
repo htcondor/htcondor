@@ -56,16 +56,16 @@ In general, modifying a host’s configuration with *condor\_config\_val*
 requires the ``CONFIG`` access level, which is disabled on all hosts by
 default. Administrators have more fine-grained control over which access
 levels can modify which settings. See
-section \ `3.8.1 <Security.html#x36-2690003.8.1>`__ on
-page \ `962 <Security.html#x36-2690003.8.1>`__ for more details on
+section \ `Security <../admin-manual/security.html>`__ on
+page \ `Security <../admin-manual/security.html>`__ for more details on
 security settings. Further, security considerations require proper
 settings of configuration variables
-``SETTABLE_ATTRS_<PERMISSION-LEVEL>`` (see
-`3.5.3 <ConfigurationMacros.html#x33-1900003.5.3>`__),
-``ENABLE_PERSISTENT_CONFIG`` (see
-`3.5.3 <ConfigurationMacros.html#x33-1900003.5.3>`__), and
-``HOSTALLOW…`` (see
-`3.5.3 <ConfigurationMacros.html#x33-1900003.5.3>`__) in order to use
+``SETTABLE_ATTRS_<PERMISSION-LEVEL>`` (see `Configuration
+Macros <../admin-manual/configuration-macros.html>`__),
+``ENABLE_PERSISTENT_CONFIG`` (see `Configuration
+Macros <../admin-manual/configuration-macros.html>`__), and
+``HOSTALLOW…`` (see `Configuration
+Macros <../admin-manual/configuration-macros.html>`__) in order to use
 *condor\_config\_val* to change any configuration variable.
 
 It is generally wise to test a new configuration on a single machine to
@@ -179,15 +179,16 @@ Options
     (location option) The specific daemon to query.
  **use** *category*\ [*:set name*\ ] [**-expand**\ ]
     Display information about configuration templates (see
-     `3.4 <ConfigurationTemplates.html#x32-1820003.4>`__). Specifying
-    only a *category* will list the *template\_names* available for that
-    category. Specifying a *category* and a *template\_name* will
-    display the definition of that configuration template. Adding the
-    **-expand** option will display the expanded definition (with macro
-    substitutions). (**-expand** has no effect if a *template\_name* is
-    not specified.) Note that there is no dash before **use** and that
-    spaces are not allowed next to the colon character separating
-    *category* and *template\_name*.
+     `Configuration
+    Templates <../admin-manual/configuration-templates.html>`__).
+    Specifying only a *category* will list the *template\_names*
+    available for that category. Specifying a *category* and a
+    *template\_name* will display the definition of that configuration
+    template. Adding the **-expand** option will display the expanded
+    definition (with macro substitutions). (**-expand** has no effect if
+    a *template\_name* is not specified.) Note that there is no dash
+    before **use** and that spaces are not allowed next to the colon
+    character separating *category* and *template\_name*.
 
 Exit Status
 -----------

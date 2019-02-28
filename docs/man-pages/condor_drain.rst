@@ -55,9 +55,9 @@ become available for use by other jobs until the machine exits the
 draining state (see below). The **-start** expression you supply
 replaces the draining machine’s normal ``START`` expression for the
 duration of the draining state, potentially making those resources
-available. See section
-`3.7.1 <PolicyConfigurationforExecuteHostsandforSubmitHosts.html#x35-2630003.7.1>`__
-for more information.
+available. See section `Policy Configuration for Execute Hosts and for
+Submit Hosts <../admin-manual/policy-configuration.html>`__ for more
+information.
 
 Once draining is complete, the machine will enter the Drained/Idle
 state. To resume normal operation (negotiation) at that time or any

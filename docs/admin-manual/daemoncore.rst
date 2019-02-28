@@ -77,9 +77,10 @@ no chance to write a checkpoint.
 
 For all daemons, a reconfigure results in the daemon re-reading its
 configuration file(s), causing any settings that have changed to take
-effect. See
-section \ `3.3 <IntroductiontoConfiguration.html#x31-1690003.3>`__ on
-page \ `515 <IntroductiontoConfiguration.html#x31-1690003.3>`__,
+effect. See section \ `Introduction to
+Configuration <../admin-manual/introduction-to-configuration.html>`__ on
+page \ `Introduction to
+Configuration <../admin-manual/introduction-to-configuration.html>`__,
 Configuring HTCondor for full details on what settings are in the
 configuration files and what they do.
 
@@ -150,7 +151,8 @@ These arguments and what they do are described below:
  -local-name name
     Specify a local name for this instance of the daemon. This local
     name will be used to look up configuration parameters.
-    Section \ `3.3.3 <IntroductiontoConfiguration.html#x31-1720003.3.3>`__
+    Section \ `Introduction to
+    Configuration <../admin-manual/introduction-to-configuration.html>`__
     contains details on how this local name will be used in the
     configuration.
  -p port
