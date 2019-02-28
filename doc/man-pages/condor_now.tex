@@ -9,7 +9,7 @@
 
 \SynProg{\Condor{now}} \oOptArg{-name}{scheduler \oOptArg{-pool}{central-manager}}
 	\oOpt{-debug}
-	\Arg{now-job} \Arg{vacate-job}
+	\Arg{now-job} \Arg{vacate-job} \oArg{vacate-job+}
 
 \Description
 
@@ -17,6 +17,10 @@
 is immediately vacated; after it terminates, if the schedd still has the
 claim to the vacated job's slot -- and it usually will -- the schedd will
 immediately start the now-job on that slot.
+
+If you specify multiple \Arg{vacate-job}s, each will be immediately vacated;
+after they all terminate, the schedd will try to coalesce their slots into a
+single, larger, slot and then use that slot to run the now-job.
 
 You must specify each job using both the cluster and proc IDs.
 

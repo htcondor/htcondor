@@ -1783,6 +1783,11 @@ fi
 %endif
 
 %changelog
+* Thu Feb 28 2019 Tim Theisen <tim@cs.wisc.edu> - 8.9.0-1
+- Absent any configuration, HTCondor denies authorization to all users
+- All HTCondor daemons under a condor_master share a security session
+- Scheduler Universe jobs are prioritized by job priority
+
 * Tue Feb 19 2019 Tim Theisen <tim@cs.wisc.edu> - 8.8.1-1
 - Fixed excessive CPU consumption with GPU monitoring
 - GPU monitoring is off by default; enable with "use feature: GPUsMonitor"

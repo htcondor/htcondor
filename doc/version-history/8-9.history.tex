@@ -77,15 +77,71 @@ the time they occur.
 
 \begin{itemize}
 
-\item HTCondor version 8.9.0 not yet released.
-%\item HTCondor version 8.9.0 released on Month Date, 2018.
+\item HTCondor version 8.9.0 released on February 28, 2019.
 
 \end{itemize}
 
+\noindent Known Issues:
+
+This release may require configuration changes to work as before.
+During this release series, we are making changes to make it easier to deploy
+secure pools. This release contains two security related configuration changes.
+
+\begin{itemize}
+
+\item Absent any configuration, the default behavior is to deny authorization
+to all users.
+
+\item In the configuration files, if \MacroNI{ALLOW\_DAEMON} or
+\MacroNI{DENY\_DAEMON} are omitted, \MacroNI{ALLOW\_WRITE} or
+\MacroNI{DENY\_WRITE} are no longer used in their place.
+
+On most pools, the easiest way to get the previous behavior is to add the
+following to your configuration:
+
+\begin{verbatim}
+ALLOW_READ = *
+ALLOW_DAEMON = $(ALLOW_WRITE)
+\end{verbatim}
+
+The main configuration file (\File{/etc/condor/condor\_config}) already
+implements the above change by calling \Expr{use SECURITY : HOST\_BASED}.
+
+With the addition of the automatic security session for a family of HTCondor
+daemons and the existing match password authentication between the execute
+and submit daemons, most hosts in a pool may not require changes to the
+configuration files.
+On the central manager, you do need to ensure \Expr{DAEMON} level access
+for your submit nodes.
+Also, CCB requires \Expr{DAEMON} level access.
+
+\end{itemize}
 
 \noindent New Features:
 
 \begin{itemize}
+
+\item Changed the default security behavior to deny authorization by default.
+Also, neither \MacroNI{ALLOW\_DAEMON} nor \MacroNI{DENY\_DAEMON} fall back
+to using the corresponding \MacroNI{ALLOW\_WRITE} or \MacroNI{DENY\_WRITE}
+when reading configuration files.
+\Ticket{6824}
+
+\item A family of HTCondor daemons can now share a security session that
+allows them to trust each other without doing a security negotiation
+when a network connection is made amongst them.
+This ``family'' security session can be disabled by setting the new
+configuration parameter \MacroNI{SEC\_USE\_FAMILY\_SESSION} to \Expr{False}.
+\Ticket{6788}
+
+\item Scheduler Universe jobs now start in order of priority, instead of random
+order. This is most typically used for DAGMan. When running \Condor{submit\_dag}
+against a .dag file, you can use the -priority <N> flag to set the priority
+for the overall \Condor{dagman} job. When the \Condor{schedd} is starting new
+Scheduler Universe jobs, the highest priority queued job will start first. If
+all queued Scheduler Universe jobs have equal priority, they get started in
+order of submission.
+\Ticket{6703}
 
 \item  Normally, HTCondor requires the user to specify their credentials
 when using EC2 (via the grid universe or via \Condor{annex}).  This allows
@@ -104,25 +160,20 @@ role) to an instance which allows access by other users, specifically
 including the submitting of jobs to or running jobs on that instance.
 \Ticket{6789}
 
+\item The \Condor{now} tool now supports vacating more than one job; the
+additional jobs' resources will be coalesced into a single slot, on which
+the now-job will be run.
+\Ticket{6694}
+
+\item In the Python bindings, the \Expr{JobEventLog} class now has a
+\Expr{close} method.  It is also now its own iterable context manager
+(implements \Expr{\_\_enter\_\_} and \Expr{\_\_exit\_\_}).
+The \Expr{JobEvent} class now implements \Expr{\_\_str\_\_} and \Expr{\_\_repr\_\_}.
+\Ticket{6814}
+
 \item the \Condor{hdfs} daemon which allowed the hdfs daemons to run under
-the \Condor{master} has been removed from the contributed source. 
+the \Condor{master} has been removed from the contributed source.
 \Ticket{6809}
-
-\item Scheduler Universe jobs now start in order of priority, instead of random 
-order. This is most typically used for DAGMan. When running \Condor{submit\_dag}
-against a .dag file, you can use the -priority <N> flag to set the priority
-for the overall \Condor{dagman} job. When the \Condor{schedd} is starting new 
-Scheduler Universe jobs, the highest priority queued job will start first. If 
-all queued Scheduler Universe jobs have equal priority, they get started in 
-order of submission.
-\Ticket{6703}
-
-\item A family of HTCondor daemons can now share a security session that
-allows them to trust each other without doing a security negotiation
-when a network connection is made amongst them.
-This ``family'' security session can be disabled by setting the new
-configuration parameter \MacroNI{SEC\_USE\_FAMILY\_SESSION} to \Expr{False}.
-\Ticket{6788}
 
 \end{itemize}
 
