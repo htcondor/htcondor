@@ -20,7 +20,7 @@ it with the HTCondor community.
    :maxdepth: 2
    :glob:
 
-   python-bindings
+   python-bindings/index.rst
    chirp
    user-job-log-reader-api
    command-line-interface
