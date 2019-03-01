@@ -2034,12 +2034,12 @@ render_job_status_char(std::string & result, ClassAd*ad, Formatter &)
 	}
 
 		// adjust status field to indicate file transfer status
-	int transferring_input = false;
-	int transferring_output = false;
-	int transfer_queued = false;
-	ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL,transferring_input);
-	ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,transferring_output);
-	ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,transfer_queued);
+	bool transferring_input = false;
+	bool transferring_output = false;
+	bool transfer_queued = false;
+	ad->LookupBool(ATTR_TRANSFERRING_INPUT,transferring_input);
+	ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,transferring_output);
+	ad->LookupBool(ATTR_TRANSFER_QUEUED,transfer_queued);
 	if( transferring_input ) {
 		put_result[0] = '<';
 		put_result[1] = transfer_queued ? 'q' : ' ';
@@ -2141,16 +2141,16 @@ render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/)
 	} else {
 
 		int ix = 0;
-		int bb = false;
-		ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL, bb);
+		bool bb = false;
+		ad->LookupBool(ATTR_TRANSFERRING_INPUT, bb);
 		ix += bb?1:0;
 
 		bb = false;
-		ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,bb);
+		ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,bb);
 		ix += bb?2:0;
 
 		bb = false;
-		ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,bb);
+		ad->LookupBool(ATTR_TRANSFER_QUEUED,bb);
 		ix += bb?4:0;
 
 		if (ix) {

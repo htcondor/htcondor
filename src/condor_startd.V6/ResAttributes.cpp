@@ -1077,10 +1077,9 @@ MachAttributes::start_benchmarks( Resource* rip, int &count )
 		return;
 	}
 
-	// This should be a bool, but EvalBool() expects an int
-	int run_benchmarks = 0;
-	if ( cp->EvalBool( ATTR_RUN_BENCHMARKS, cp, run_benchmarks ) == 0 ) {
-		run_benchmarks = 0;
+	bool run_benchmarks = false;
+	if ( cp->LookupBool( ATTR_RUN_BENCHMARKS, run_benchmarks ) == 0 ) {
+		run_benchmarks = false;
 	}
 	if ( !run_benchmarks ) {
 		return;

@@ -583,8 +583,8 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		m_match_ad.LookupString(ATTR_NAME,slot_name_buf);
 		char const *slot_name = slot_name_buf.c_str();
 
-		int offline = false;
-		m_match_ad.EvalBool(ATTR_OFFLINE,NULL,offline);
+		bool offline = false;
+		m_match_ad.LookupBool(ATTR_OFFLINE,offline);
 
 		if( offline ) {
 			dprintf(D_ALWAYS,"Job %d.%d (delivered=%d) matched to offline machine %s.\n",

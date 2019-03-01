@@ -10832,12 +10832,10 @@ DaemonCore::evalExpr( ClassAd* ad, const char* param_name,
 			free(expr);
 			return false;
 		}
-		int result = 0;
-		if (ad->EvalBool(attr_name, NULL, result) && result) {
+		if (ad->LookupBool(attr_name, value) && value) {
 			dprintf( D_ALWAYS,
 					 "The %s expression \"%s\" evaluated to TRUE: %s\n",
 					 attr_name, expr, message );
-			value = true;
 		}
 		free(expr);
 	}

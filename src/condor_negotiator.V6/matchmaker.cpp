@@ -3303,7 +3303,7 @@ trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
 	ExprTree *shutdownfast_expr = NULL;	
 	const time_t now = time(NULL);
 	time_t myCurrentTime = now;
-	int shutdown;
+	bool shutdown;
 
 	/* 
 		Trim out any startd ads that have a DaemonShutdown attribute that evaluates
@@ -3343,10 +3343,10 @@ trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
 			// Now that CurrentTime is set into the future, evaluate
 			// if the Shutdown expression(s)
 			if (shutdown_expr) {
-				ad->EvalBool(ATTR_DAEMON_SHUTDOWN, NULL, shutdown);
+				ad->LookupBool(ATTR_DAEMON_SHUTDOWN, shutdown);
 			}
 			if (shutdownfast_expr) {
-				ad->EvalBool(ATTR_DAEMON_SHUTDOWN_FAST, NULL, shutdown);
+				ad->LookupBool(ATTR_DAEMON_SHUTDOWN_FAST, shutdown);
 			}
 
 			// Put CurrentTime back to how we found it, ie = time()
@@ -5666,8 +5666,8 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	request.LookupInteger (ATTR_PROC_ID, proc);
 
-	int offline = false;
-	offer->EvalBool(ATTR_OFFLINE,NULL,offline);
+	bool offline = false;
+	offer->LookupBool(ATTR_OFFLINE,offline);
 	if( offline ) {
 		want_claiming = 0;
 		RegisterAttemptedOfflineMatch( &request, offer );

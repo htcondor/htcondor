@@ -3084,11 +3084,11 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 
 		// should we leave the job in the queue?
-	int leave_job_in_q = 0;
+	bool leave_job_in_q = false;
 	{
 		ClassAd completeAd(*ad);
 		JobQueue->AddAttrsFromTransaction(key,completeAd);
-		completeAd.EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
+		completeAd.LookupBool(ATTR_JOB_LEAVE_IN_QUEUE,leave_job_in_q);
 		if ( leave_job_in_q ) {
 			return DESTROYPROC_SUCCESS_DELAY;
 		}
@@ -3267,8 +3267,8 @@ int DestroyCluster(int cluster_id, const char* reason)
 				}
 
 					// should we leave the job in the queue?
-				int leave_job_in_q = 0;
-				ad->EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
+				bool leave_job_in_q = false;
+				ad->LookupBool(ATTR_JOB_LEAVE_IN_QUEUE,leave_job_in_q);
 				if ( leave_job_in_q ) {
 						// leave it in the queue.... move on to the next one
 					continue;

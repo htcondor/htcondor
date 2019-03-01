@@ -3108,13 +3108,9 @@ service_this_universe(int universe, ClassAd* job)
 	   Note: EvalBool returns 0 if evaluation is undefined or error, and
 	   return 1 otherwise....
 	*/
-	int want_matching;
-	if ( job->EvalBool(ATTR_WANT_MATCHING,NULL,want_matching) == 1 ) {
-		if ( want_matching ) {
-			return true;
-		} else {
-			return false;
-		}
+	bool want_matching;
+	if ( job->LookupBool(ATTR_WANT_MATCHING,want_matching) == 1 ) {
+		return want_matching;
 	}
 
 	/* If we made it to here, the WantMatching was not defined.  So
@@ -4060,9 +4056,9 @@ jobIsFinished( int cluster, int proc, void* )
 	MyString iwd;
 	MyString owner;
 	bool is_nfs;
-	int want_flush = 0;
+	bool want_flush = false;
 
-	job_ad->EvalBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, NULL, want_flush );
+	job_ad->LookupBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, want_flush );
 	if ( job_ad->LookupString( ATTR_OWNER, owner ) &&
 		 job_ad->LookupString( ATTR_JOB_IWD, iwd ) &&
 		 want_flush &&
@@ -16566,15 +16562,15 @@ void
 WriteCompletionVisa(ClassAd* ad)
 {
 	priv_state prev_priv_state;
-	int value;
+	bool value;
 	MyString iwd;
 
 	ASSERT(ad);
 
-	if (!ad->EvalBool(ATTR_WANT_SCHEDD_COMPLETION_VISA, NULL, value) ||
+	if (!ad->LookupBool(ATTR_WANT_SCHEDD_COMPLETION_VISA, value) ||
 	    !value)
 	{
-		if (!ad->EvalBool(ATTR_JOB_SANDBOX_JOBAD, NULL, value) ||
+		if (!ad->LookupBool(ATTR_JOB_SANDBOX_JOBAD, value) ||
 		    !value)
 		{
 			return;

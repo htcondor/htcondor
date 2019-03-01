@@ -1299,7 +1299,7 @@ void GlobusJob::doEvaluateState()
 					// See if the user wants to rematch. We evaluate the
 					// expressions here because GM_CLEAR_REQUEST may
 					// decide to hold the job before it evaluates it.
-					jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+					jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 
 					gmState = GM_CLEAR_REQUEST;
 				}
@@ -2136,7 +2136,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 			}
 			if ( wantResubmit ) {
 				wantResubmit = 0;

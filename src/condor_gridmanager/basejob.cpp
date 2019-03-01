@@ -113,7 +113,7 @@ BaseJob::BaseJob( ClassAd *classad )
 	wantRematch = 0;
 	doResubmit = 0;		// set if gridmanager wants to resubmit job
 	wantResubmit = 0;	// set if user wants to resubmit job via RESUBMIT_CHECK
-	jobAd->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
+	jobAd->LookupBool(ATTR_GLOBUS_RESUBMIT_CHECK,wantResubmit);
 
 	jobAd->EnableDirtyTracking();
 	jobAd->ClearAllDirtyFlags();

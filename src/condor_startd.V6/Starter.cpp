@@ -203,14 +203,14 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 bool
 Starter::provides( const char* ability )
 {
-	int has_it = 0;
+	bool has_it = false;
 	if( ! s_ad ) {
 		return false;
 	}
-	if( ! s_ad->EvalBool(ability, NULL, has_it) ) { 
-		has_it = 0;
+	if( ! s_ad->LookupBool(ability, has_it) ) {
+		has_it = false;
 	}
-	return (bool)has_it;
+	return has_it;
 }
 
 

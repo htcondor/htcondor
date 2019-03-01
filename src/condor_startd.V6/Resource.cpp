@@ -3068,7 +3068,7 @@ Resource::willingToRun(ClassAd* request_ad)
 			// the full-blown ATTR_REQUIREMENTS since that includes
 			// the valid checkpoint platform clause, which will always
 			// be undefined (and irrelevant for our decision here).
-		if (r_classad->EvalBool(ATTR_START, NULL, slot_requirements) == 0) {
+		if (r_classad->LookupBool(ATTR_START, slot_requirements) == 0) {
 				// Without a request classad, treat UNDEFINED as TRUE.
 			slot_requirements = 1;
 		}

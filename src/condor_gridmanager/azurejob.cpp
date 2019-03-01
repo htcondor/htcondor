@@ -300,11 +300,11 @@ void AzureJob::doEvaluateState()
 		gahp_error_code = "";
 
 		// JEF: Crash the gridmanager if requested by the job
-		int should_crash = 0;
+		bool should_crash = false;
 		jobAd->Assign( "GMState", gmState );
 		jobAd->MarkAttributeClean( "GMState" );
 
-		if ( jobAd->EvalBool( "CrashGM", NULL, should_crash ) && should_crash ) {
+		if ( jobAd->LookupBool( "CrashGM", should_crash ) && should_crash ) {
 			EXCEPT( "Crashing gridmanager at the request of job %d.%d",
 					procID.cluster, procID.proc );
 		}
@@ -578,7 +578,7 @@ void AzureJob::doEvaluateState()
 
 				// Only allow a rematch *if* we are also going to perform a resubmit
 				if ( wantResubmit || doResubmit ) {
-					jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+					jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 				}
 
 				if ( wantResubmit ) {

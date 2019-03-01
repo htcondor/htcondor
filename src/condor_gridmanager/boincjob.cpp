@@ -649,7 +649,7 @@ void BoincJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
 			}
 			if ( wantResubmit ) {
 				wantResubmit = 0;

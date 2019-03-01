@@ -555,8 +555,8 @@ static bool checkOffer(
 	}
 	ac.both_match++;
 
-	int offline = 0;
-	if (offer->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+	bool offline = false;
+	if (offer->LookupBool(ATTR_OFFLINE, offline) && offline) {
 		ac.fOffline++;
 		if (pmat) pmat->append_to_fail_list(anaMachines::Offline, slotname);
 	}
@@ -922,8 +922,8 @@ bool doJobRunAnalysis (
 		}
 		ac.both_match++;
 
-		int offline = 0;
-		if (offer->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+		bool offline = false;
+		if (offer->LookupBool(ATTR_OFFLINE, offline) && offline) {
 			ac.fOffline++;
 			if (pmat) pmat->append_to_fail_list(anaMachines::Offline, slotname.c_str(), verb_width);
 			continue;
@@ -1405,8 +1405,8 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 	std::string slotname = "";
 	slot->LookupString(ATTR_NAME , slotname);
 
-	int offline = 0;
-	if (slot->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+	bool offline = false;
+	if (slot->LookupBool(ATTR_OFFLINE, offline) && offline) {
 		sprintf(return_buff, "%-24.24s  is offline\n", slotname.c_str());
 		return return_buff;
 	}

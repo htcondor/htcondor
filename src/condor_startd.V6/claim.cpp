@@ -1881,7 +1881,7 @@ Claim::verifyCODAttrs( ClassAd* req )
 	}
 
 	req->LookupString( ATTR_JOB_KEYWORD, &c_cod_keyword );
-	req->EvalBool( ATTR_HAS_JOB_AD, NULL, c_has_job_ad );
+	req->LookupBool( ATTR_HAS_JOB_AD, c_has_job_ad );
 
 	if( c_cod_keyword || c_has_job_ad ) {
 		return true;
