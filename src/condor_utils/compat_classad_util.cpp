@@ -519,16 +519,12 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 }
 
 
-#define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
-
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 {
 	static classad::ExprTree *tree = NULL;
 	static char * saved_constraint = NULL;
 	classad::Value result;
 	bool constraint_changed = true;
-	double doubleVal;
-	long long intVal;
 	bool boolVal;
 
 	if ( saved_constraint ) {
@@ -561,12 +557,8 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 		dprintf( D_ALWAYS, "can't evaluate constraint: %s\n", constraint );
 		return false;
 	}
-	if( result.IsBooleanValue( boolVal ) ) {
+	if( result.IsBooleanValueEquiv( boolVal ) ) {
 		return boolVal;
-	} else if( result.IsIntegerValue( intVal ) ) {
-		return intVal != 0;
-	} else if( result.IsRealValue( doubleVal ) ) {
-		return IS_DOUBLE_TRUE(doubleVal);
 	}
 	dprintf( D_FULLDEBUG, "constraint (%s) does not evaluate to bool\n",
 		constraint );
@@ -576,8 +568,6 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 {
 	classad::Value result;
-	double doubleVal;
-	long long intVal;
 	bool boolVal;
 
 	// Evaluate constraint with ad in the target scope so that constraints
@@ -586,12 +576,8 @@ bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 		return false;
 	}
 
-	if( result.IsBooleanValue( boolVal ) ) {
+	if( result.IsBooleanValueEquiv( boolVal ) ) {
 		return boolVal;
-	} else if( result.IsIntegerValue( intVal ) ) {
-		return intVal != 0;
-	} else if( result.IsRealValue( doubleVal ) ) {
-		return IS_DOUBLE_TRUE(doubleVal);
 	}
 
 	return false;

@@ -1938,143 +1938,53 @@ LookupString( const char *name, std::string &value ) const
 int ClassAd::
 LookupInteger( const char *name, int &value ) const 
 {
-	bool    boolVal;
-	int     haveInteger;
-	string  sName(name);
-	int		tmp_val;
-
-	if( EvaluateAttrInt(sName, tmp_val ) ) {
-		value = tmp_val;
-		haveInteger = TRUE;
-	} else if( EvaluateAttrBool(sName, boolVal ) ) {
-		value = boolVal ? 1 : 0;
-		haveInteger = TRUE;
-	} else {
-		haveInteger = FALSE;
-	}
-	return haveInteger;
+	return EvaluateAttrNumber(name, value);
 }
 
 int ClassAd::
 LookupInteger( const char *name, long &value ) const 
 {
-	bool    boolVal;
-	int     haveInteger;
-	string  sName(name);
-	long	tmp_val;
-
-	if( EvaluateAttrInt(sName, tmp_val ) ) {
-		value = tmp_val;
-		haveInteger = TRUE;
-	} else if( EvaluateAttrBool(sName, boolVal ) ) {
-		value = boolVal ? 1 : 0;
-		haveInteger = TRUE;
-	} else {
-		haveInteger = FALSE;
-	}
-	return haveInteger;
+	return EvaluateAttrNumber(name, value);
 }
 
 int ClassAd::
 LookupInteger( const char *name, long long &value ) const 
 {
-	bool    boolVal;
-	int     haveInteger;
-	string  sName(name);
-	long long	tmp_val;
-
-	if( EvaluateAttrInt(sName, tmp_val ) ) {
-		value = tmp_val;
-		haveInteger = TRUE;
-	} else if( EvaluateAttrBool(sName, boolVal ) ) {
-		value = boolVal ? 1 : 0;
-		haveInteger = TRUE;
-	} else {
-		haveInteger = FALSE;
-	}
-	return haveInteger;
+	return EvaluateAttrNumber(name, value);
 }
 
 int ClassAd::
 LookupFloat( const char *name, float &value ) const
 {
-	double  doubleVal;
-	long long intVal;
-	int     haveFloat;
-
-	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
-		haveFloat = TRUE;
-		value = (float) doubleVal;
-	} else if(EvaluateAttrInt( string( name ), intVal ) ) {
-		haveFloat = TRUE;
-		value = (float)intVal;
-	} else {
-		haveFloat = FALSE;
+	double dval;
+	bool rc = EvaluateAttrNumber(name, dval);
+	if ( rc ) {
+		value = dval;
 	}
-	return haveFloat;
+	return rc;
 }
 
 int ClassAd::
 LookupFloat( const char *name, double &value ) const
 {
-	double  doubleVal;
-	long long intVal;
-	int     haveFloat;
-
-	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
-		haveFloat = TRUE;
-		value = doubleVal;
-	} else if(EvaluateAttrInt( string( name ), intVal ) ) {
-		haveFloat = TRUE;
-		value = (double)intVal;
-	} else {
-		haveFloat = FALSE;
-	}
-	return haveFloat;
+	return EvaluateAttrNumber(name, value);
 }
 
 int ClassAd::
 LookupBool( const char *name, int &value ) const
 {
-	long long intVal;
-	bool  boolVal;
-	int haveBool;
-	string sName;
-
-	sName = string(name);
-
-	if (EvaluateAttrBool(name, boolVal)) {
-		haveBool = true;
-		value = boolVal ? 1 : 0;
-	} else if (EvaluateAttrInt(name, intVal)) {
-		haveBool = true;
-		value = (intVal != 0) ? 1 : 0;
-	} else {
-		haveBool = false;
+	bool bval;
+	bool rc = EvaluateAttrBoolEquiv(name, bval);
+	if ( rc ) {
+		value = bval;
 	}
-	return haveBool;
+	return rc;
 }
 
 int ClassAd::
 LookupBool( const char *name, bool &value ) const
 {
-	long long intVal;
-	bool  boolVal;
-	int haveBool;
-	string sName;
-
-	sName = string(name);
-
-	if (EvaluateAttrBool(name, boolVal)) {
-		haveBool = true;
-		value = boolVal ? true : false;
-	} else if (EvaluateAttrInt(name, intVal)) {
-		haveBool = true;
-		value = (intVal != 0) ? true : false;
-	} else {
-		haveBool = false;
-	}
-	return haveBool;
+	return EvaluateAttrBoolEquiv(name, value);
 }
 
 int ClassAd::
@@ -2136,7 +2046,7 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
             foundAttr = true;
         }		
     } else if( target->Lookup(name) ) {
-        if( this->EvaluateAttrString( name, strVal ) ) {
+        if( target->EvaluateAttrString( name, strVal ) ) {
             foundAttr = true;
         }		
     }
@@ -2182,10 +2092,9 @@ int ClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 {
 	int rc = 0;
-	classad::Value val;
 
 	if( target == this || target == NULL ) {
-		if( EvaluateAttr( name, val ) ) { 
+		if( EvaluateAttrNumber( name, value ) ) {
 			rc = 1;
 		}
 	}
@@ -2193,42 +2102,17 @@ EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 	{
 	  getTheMatchAd( this, target );
 	  if( this->Lookup( name ) ) {
-		  if( this->EvaluateAttr( name, val ) ) {
+		  if( this->EvaluateAttrNumber( name, value ) ) {
 			  rc = 1;
 		  }
 	  } else if( target->Lookup( name ) ) {
-		  if( target->EvaluateAttr( name, val ) ) {
+		  if( target->EvaluateAttrNumber( name, value ) ) {
 			  rc = 1;
 		  }
 	  }
 	  releaseTheMatchAd();
 	}
-	
-	
-	// we have a "val" now cast if needed.
-	if ( 1 == rc ) 
-	{
-	  double doubleVal;
-	  long long intVal;
-	  bool boolVal;
 
-	  if( val.IsRealValue( doubleVal ) ) {
-	    value = ( long long )doubleVal;
-	  }
-	  else if( val.IsIntegerValue( intVal ) ) {
-	    value = intVal;
-	  }
-	  else if( val.IsBooleanValue( boolVal ) ) {
-	    value = ( long long )boolVal;
-	  }
-	  else 
-	  { 
-	    // if we got here there is an issue with evaluation.
-	    rc = 0;
-	  }
-			
-	}
-	
 	return rc;
 }
 
@@ -2236,122 +2120,52 @@ int ClassAd::
 EvalFloat (const char *name, classad::ClassAd *target, double &value)
 {
 	int rc = 0;
-	classad::Value val;
-	double doubleVal;
-	long long intVal;
-	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		if( EvaluateAttr( name, val ) ) {
-			if( val.IsRealValue( doubleVal ) ) {
-				value = doubleVal;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal;
-				rc = 1;
-			}
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal;
-				rc = 1;
-			}
+		if( EvaluateAttrNumber( name, value ) ) {
+			rc = 1;
 		}
 		return rc;
 	}
 
 	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttr( name, val ) ) {
-			if( val.IsRealValue( doubleVal ) ) {
-				value = doubleVal;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal;
-				rc = 1;
-			}
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal;
-				rc = 1;
-			}
+		if( this->EvaluateAttrNumber( name, value ) ) {
+			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttr( name, val ) ) {
-			if( val.IsRealValue( doubleVal ) ) {
-				value = doubleVal;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal;
-				rc = 1;
-			}
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal;
-				rc = 1;
-			}
+		if( target->EvaluateAttrNumber( name, value ) ) {
+			rc = 1;
 		}
 	}
 	releaseTheMatchAd();
 	return rc;
 }
 
-#define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
-
 int ClassAd::
 EvalBool  (const char *name, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
-	classad::Value val;
-	double doubleVal;
-	long long intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		if( EvaluateAttr( name, val ) ) {
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal ? 1 : 0;
-				rc = 1;
-			} else if( val.IsIntegerValue( intVal ) ) {
-				value = intVal ? 1 : 0;
-				rc = 1;
-			} else if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
-				rc = 1;
-			}
+		if( EvaluateAttrBoolEquiv( name, boolVal ) ) {
+			value = boolVal ? 1 : 0;
+			rc = 1;
 		}
 		return rc;
 	}
 
 	getTheMatchAd( this, target );
 	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttr( name, val ) ) {
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal ? 1 : 0;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal ? 1 : 0;
-				rc = 1;
-			}
-			if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
-				rc = 1;
-			}
+		if( this->EvaluateAttrBoolEquiv( name, boolVal ) ) {
+			value = boolVal ? 1 : 0;
+			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttr( name, val ) ) {
-			if( val.IsBooleanValue( boolVal ) ) {
-				value = boolVal ? 1 : 0;
-				rc = 1;
-			}
-			if( val.IsIntegerValue( intVal ) ) {
-				value = intVal ? 1 : 0;
-				rc = 1;
-			}
-			if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
-				rc = 1;
-			}
+		if( target->EvaluateAttrBoolEquiv( name, boolVal ) ) {
+			value = boolVal ? 1 : 0;
+			rc = 1;
 		}
 	}
 
