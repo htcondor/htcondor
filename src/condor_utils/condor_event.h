@@ -217,11 +217,11 @@ class ULogEvent {
     /// The event last read, or to be written.
     ULogEventNumber    eventNumber;
 
-	/** Get the time at which this event occurred, in the form
-	    of a struct tm.
+	/** Get the time at which this event occurred, prior to 8.8.2 this was a struct tm, but
+		but keeping that in sync with the eventclock was a problem, so we got rid of it
 		@return The time at which this event occurred.
 	*/
-	const struct tm& GetEventTime() const { return eventTime; }
+	time_t GetEventTime() const { return eventclock; }
 
 	/** Get the time at which this event occurred, in the form
 	    of a time_t.
@@ -316,21 +316,8 @@ class ULogEvent {
 	bool read_line_value(const char * prefix, MyString & val, FILE* file, bool & got_sync_line, bool chomp=true);
 
   private:
-    /// The time this event occurred (eventclock is Unix timestamp;
-	/// eventTime is local time); these MUST correspond to the same
-	/// time!!
-	/// We should get rid of one of these (see gittrac #5468).
+    /// The time this event occurred as a UNIX timestamp
 	time_t				eventclock;
-    struct tm			eventTime;
-
-/*
-define ULOG_MICROSECONDS on linux to get microsecond resolution in the
-user log.  This is write only, and probably breaks compatability with
-log readers.
-*/
-#ifdef ULOG_MICROSECONDS
-	struct timeval     eventTimeval;
-#endif
 };
 
 //----------------------------------------------------------------------------
